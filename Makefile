@@ -13,12 +13,12 @@ all: $(config) buildroot/Makefile
 
 $(config):
 	@+$(call bmake,list-defconfigs)
-	@echo "ERROR: No configuration selected."
+	@echo "\e[7mERROR: No configuration selected.\e[0m"
 	@echo "Please choose a configuration from the list above by running"
 	@echo "'make <board>_defconfig' before building an image."
 	@exit 1
 
-%: buildroot/Makefile
+%: | buildroot/Makefile
 	@+$(call bmake,$@)
 
 buildroot/Makefile:
@@ -28,3 +28,4 @@ run:
 	@echo "Starting Qemu  ::  Ctrl-a x -- exit | Ctrl-a c -- toggle console/monitor"
 	@(cd $(O)/images && ./qemu.sh)
 
+.PHONY: all run
