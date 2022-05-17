@@ -1,0 +1,18 @@
+config BR2_PACKAGE_SKELETON_INIT_FINIT
+	bool
+	select BR2_PACKAGE_HAS_SKELETON
+	select BR2_PACKAGE_SKELETON_INIT_COMMON
+
+config BR2_PACKAGE_PROVIDES_SKELETON
+	default "skeleton-init-finit" if BR2_PACKAGE_SKELETON_INIT_FINIT
+
+if BR2_PACKAGE_SKELETON_INIT_FINIT
+menu "finit init skeleton"
+
+config BR2_PACKAGE_SKELETON_INIT_FINIT_TELNETD
+	bool "/etc/inetd.conf telnetd"
+	help
+	  Enable telnetd from inetd service (disabled).
+
+endmenu
+endif

@@ -1,0 +1,153 @@
+config BR2_PACKAGE_FINIT
+	bool "finit"
+	depends on BR2_USE_MMU # fork()
+	select BR2_PACKAGE_LIBITE
+	select BR2_PACKAGE_LIBUEV
+	select BR2_PACKAGE_SKELETON_INIT_FINIT # before BR2_INIT_FINIT support
+	help
+	  The original Asus EeePC fastinit clone, on steroids.  With process
+	  supervision, plugin support, and more!
+
+	  https://github.com/troglobit/finit
+
+if BR2_PACKAGE_FINIT
+
+config BR2_PACKAGE_FINIT_CUSTOM_FSTAB
+	string "Custom /etc/fstab"
+	default "/etc/fstab"
+	help
+	  In certain use-cases, e.g., embedded systems with a secondary
+	  partition, or when testing in factory production.  Users may
+	  want to mount system partitions from an fstab file other than
+	  /etC/fstab.
+
+	  This menuconfing setting changes the default fstab Finit looks
+	  for.  To select a different at boot time, use kernel command
+	  line option finit.fstab=/etc/fstab.alt, as usual, for command
+	  line options destined for PID 1, remember the -- separator and
+	  put them last.
+
+config BR2_PACKAGE_FINIT_INITCTL_GROUP
+	string "Group for /run/finit/socket"
+	default "wheel"
+	help
+	  On systems with multiple administrators, set the group
+	  to their shared UNIX group, usually "wheel", to allow
+	  them to start/stop services and reboot the system.
+
+config BR2_PACKAGE_FINIT_KEVENTD
+	bool "finit-keventd"
+	default n
+	help
+	  Build bundled finit-keventd, which monitors kernel events
+	  for AC power status and generates sys/pwr/fail condition.
+	  This is a new feature in Finit v4.1 and is still very much
+	  in an experimental state.
+
+	  For lxc/docker application builds you do not need this.
+
+config BR2_PACKAGE_FINIT_SULOGIN
+	bool "finit-sulogin"
+	default n
+	help
+	  Build bundled finit-sulogin, which handles rescue mode
+	  and cases where fsck fails.  Its job is to ask for the
+	  password for the root user, and start a login shell so
+	  an administrator can perform corrective maintenance.
+
+	  This is disabled by default since most users prefer the
+	  distribution specific (Busybox) sulogin instead.
+
+	  For lxc/docker application builds you do not need this.
+
+config BR2_PACKAGE_FINIT_WATCHDOG
+	bool "finit-watchdogd"
+	default n
+	help
+	  Build bundled finit-watchdogd, which provides a simplistic
+	  watchdog daemon that runs in the background, kicking the
+	  systemd default /dev/watchdog to prevent reboot.  This is
+	  useful in very small systems where its grownup old cousin
+	  watchdogd cannot be used.
+
+	  For lxc/docker application builds you do not need this.
+
+if BR2_PACKAGE_FINIT_WATCHDOG
+
+config BR2_PACKAGE_FINIT_WATCHDOG_DEV
+	string "watchdog device"
+	default "/dev/watchdog"
+	help
+	  Device node to use for finit-watchdogd.  The default is
+	  usually sufficient, but some systems have more than one.
+
+endif
+
+config BR2_PACKAGE_FINIT_PLUGIN_HOTPLUG
+	bool "hotplug plugin (mdev/udev)"
+	help
+	  By default, Finit builds and launches its hotplug plugin.
+	  It is responsible for detecting and starting the mdev tool,
+	  or udevd daemon.  The former exists in many BusyBox based
+	  systems and is called for "cold plugging".  The latter has
+	  many various incarnations and is mostly used for desktop
+	  systems.
+
+	  For lxc/docker application builds you do not need this.
+
+config BR2_PACKAGE_FINIT_PLUGIN_HOOK_SCRIPTS
+	bool "hook scripts"
+	default n
+	help
+	  Adds a run-parts(8) script runner for Finit hook points.  When
+	  enabled, it allows extending and customizing the boot process
+	  and do early boot debugging long before regular services are
+	  available.
+
+	  For example, say that you want to enable some kernel tracing
+	  before modules are loaded.  With hook-scripts, you can just
+	  drop in a shell script in /libexec/finit/hook/mount/all/ that
+	  will poke the right control files in tracefs.
+
+config BR2_PACKAGE_FINIT_PLUGIN_MODULES_LOAD
+	bool "Scan /etc/modules-load.d"
+	help
+	  Scans /etc/modules-load.d for modules to load.
+
+	  For lxc/docker application builds you do not need this.
+
+config BR2_PACKAGE_FINIT_PLUGIN_MODPROBE
+	bool "Coldplug modules using modalias magic"
+	help
+	  Coldplug modules using modalias magic.  Everything is
+	  handled automatically based on device trees and their
+	  matching kernel modules.
+
+	  For lxc/docker application builds you do not need this.
+
+config BR2_PACKAGE_FINIT_PLUGIN_RTC
+	bool "RTC plugin"
+	help
+	  By default, Finit builds and launches its RTC plugin.  It is
+	  responsible for restoring the system clock from the RTC clock
+	  at boot, and saving the system clock to RTC at reboot.
+
+	  For lxc/docker application builds you do not need this.
+
+config BR2_PACKAGE_FINIT_PLUGIN_TTY
+	bool "TTY plugin"
+	help
+	  Automatically resart tty services that are plugged in.
+
+	  For lxc/docker application builds you do not need this.
+
+config BR2_PACKAGE_FINIT_PLUGIN_URANDOM
+	bool "/dev/urandom plugin"
+	help
+	  By default, Finit builds and launches its urandom plugin.  It
+	  is responsible for seeding /dev/urandom from a previously saved
+	  seed at boot, and saving a seed at reboot.
+
+	  For lxc/docker application builds you do not need this.
+
+endif

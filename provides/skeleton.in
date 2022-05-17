@@ -1,0 +1,3 @@
+config BR2_ROOTFS_SKELETON_FINIT
+	bool "Finit services skeleton"
+	select BR2_PACKAGE_SKELETON_INIT_FINIT

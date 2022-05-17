@@ -1,0 +1,2 @@
+source "$BR2_EXTERNAL_INFIX_PATH/package/finit/Config.in"
+source "$BR2_EXTERNAL_INFIX_PATH/package/skeleton-init-finit/Config.in"

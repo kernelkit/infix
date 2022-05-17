@@ -1,0 +1,3 @@
+# <file system>	<mount pt>	<type>	<options>	<dump>	<pass>
+/dev/root	/		auto	rw,noauto	0	1
+tmpfs		/tmp		tmpfs	mode=1777	0	0

@@ -1,0 +1,5 @@
+# TCP connection
+#GDBSERVER_ARGS="--multi :1235"
+
+# Qemu debug console
+GDBSERVER_ARGS="--multi /dev/hvc1"

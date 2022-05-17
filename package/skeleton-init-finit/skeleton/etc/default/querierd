@@ -1,0 +1,3 @@
+# -i NAME :: Set daemon identity (syslog, .conf, .sock, .pid, etc.)
+# -l LVL  :: Log level
+QUERIERD_ARGS=""
