@@ -20,7 +20,7 @@ BR2_TARGET_ROOTFS_EXT2=y
 # BR2_TARGET_ROOTFS_TAR is not set
 
 # Image
-BR2_ROOTFS_POST_BUILD_SCRIPT="board/qemu/x86_64/post-build.sh"
+BR2_ROOTFS_POST_BUILD_SCRIPT="board/qemu/x86_64/post-build.sh $(BR2_EXTERNAL_INFIX_PATH)/board/common/post-build.sh"
 
 # Image
 BR2_ROOTFS_POST_IMAGE_SCRIPT="board/qemu/post-image.sh $(BR2_EXTERNAL_INFIX_PATH)/board/common/post-image.sh"
