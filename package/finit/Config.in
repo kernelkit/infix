@@ -12,20 +12,36 @@ config BR2_PACKAGE_FINIT
 
 if BR2_PACKAGE_FINIT
 
+config BR2_PACKAGE_FINIT_ADVANCED
+	bool "Advanced options"
+	default n
+	help
+          Take extra care to verify the resulting system behavior when
+	  changing these option(s).  They are marked advanced for the
+	  very reason that they may brick your system!
+
+if BR2_PACKAGE_FINIT_ADVANCED
+
 config BR2_PACKAGE_FINIT_CUSTOM_FSTAB
 	string "Custom /etc/fstab"
 	default "/etc/fstab"
 	help
 	  In certain use-cases, e.g., embedded systems with a secondary
-	  partition, or when testing in factory production.  Users may
+	  partition, or when testing in factory production, users may
 	  want to mount system partitions from an fstab file other than
-	  /etC/fstab.
+	  /etc/fstab.
 
-	  This menuconfing setting changes the default fstab Finit looks
-	  for.  To select a different at boot time, use kernel command
-	  line option finit.fstab=/etc/fstab.alt, as usual, for command
-	  line options destined for PID 1, remember the -- separator and
-	  put them last.
+	  This setting allows changing the default fstab Finit looks for.
+	  It can be set to any file in fstab format, even the emtpy string
+	  in case you do not want a default fstab.
+
+	  To select a different fstab at boot time, use the following kernel
+	  command  line option.  Remeber the -- separator for kernel options
+	  and options destined for PID 1.
+
+	      finit.fstab=/etc/fstab.alt
+
+endif
 
 config BR2_PACKAGE_FINIT_INITCTL_GROUP
 	string "Group for /run/finit/socket"

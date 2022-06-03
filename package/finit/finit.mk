@@ -33,11 +33,12 @@ FINIT_CONF_OPTS =					\
 	--disable-silent-rules				\
 	--with-group=$(BR2_PACKAGE_FINIT_INITCTL_GROUP)
 
-# Disable/Enable features
-ifeq ($(BR2_PACKAGE_FINIT_CUSTOM_FSTAB),)
-FINIT_CONF_OPTS += --with-fstab=yes
-else
+ifeq ($(BR2_PACKAGE_FINIT_ADVANCED),y)
+ifneq ($(BR2_PACKAGE_FINIT_CUSTOM_FSTAB),)
 FINIT_CONF_OPTS += --with-fstab=$(BR2_PACKAGE_FINIT_CUSTOM_FSTAB)
+else
+FINIT_CONF_OPTS += --without-fstab
+endif
 endif
 
 ifeq ($(BR2_PACKAGE_FINIT_KEVENTD),y)
