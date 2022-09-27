@@ -9,8 +9,6 @@ rm "$TARGET_DIR/etc/os-release"
 	echo "ID=infix"
 	echo "VERSION_ID=${BR2_VERSION}"
 	echo "PRETTY_NAME=\"Inf/IX by KernelKit\""
-	echo "VARIANT=AMD64"
-	echo "VARIANT_ID=amd64"
 	echo "HOME_URL=https://github.com/KernelKit"
 } > "$TARGET_DIR/etc/os-release"
 
