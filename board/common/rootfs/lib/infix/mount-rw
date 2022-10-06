@@ -1,0 +1,40 @@
+#!/bin/sh
+
+# Called from /etc/fstab to ensure we have something writable mounted
+# at /rw, which is used by Inf/IX to store device modifications made
+# to /etc, /home, /root, and /var/lib.
+#
+# If a disk partiion labeled "infix-rw" is available, that is used to
+# persist changes to the aforementioned directories. Otherwise fall
+# back to a tmpfs based RAM disk. This effectively brings up the
+# system with the default configuration, but obviously any subsequent
+# configuration is ephemeral.
+
+set -e
+
+err=0
+
+mount_rw()
+{
+    # If something is already setup, leave it be.
+    mountpoint -q /rw && return 0
+
+    # TODO: Also look for UBI partitions
+    mount $tab LABEL=infix-rw && return 0
+
+    return 1
+}
+
+if ! mount_rw; then
+    err=1
+
+    logger -k -p user.crit -t "$(basename $0)" \
+	   "No persistent storage found for /rw, falling back to tmpfs."
+
+    mount tmpfs-rw
+fi
+
+# Allow users in wheel group to write to /rw
+chgrp wheel /rw && chmod g+w   /rw
+
+exit $err

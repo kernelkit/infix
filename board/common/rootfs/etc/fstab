@@ -1,0 +1,38 @@
+# Virtual filesystems
+devtmpfs	/dev		devtmpfs	defaults		0	0
+mkdir#-p	/dev/pts	helper		none			0	0
+devpts		/dev/pts	devpts		mode=620,ptmxmode=0666	0	0
+mkdir#-p	/dev/shm	helper		none			0	0
+tmpfs		/dev/shm	tmpfs		mode=0777		0	0
+proc		/proc		proc		defaults		0	0
+tmpfs		/tmp		tmpfs		mode=1777,nosuid,nodev	0	0
+tmpfs		/run		tmpfs		mode=0755,nosuid,nodev	0	0
+sysfs		/sys		sysfs		defaults		0	0
+debugfs	/sys/kernel/debug	debugfs		nofail			0	0
+
+# Optional host share when running in Qemu
+hostfs		/host		9p		nofail,cache=none,msize=16384	0	0
+
+# Use persistent storage if available, fallback to ramdisk otherwise
+LABEL=infix-rw	/rw		auto		noatime,nodiratime,noauto	0	0
+tmpfs-rw	/rw		tmpfs		noatime,nodiratime,noauto	0	0
+/lib/infix/mount-rw# /rw	helper		none				0	0
+
+# Ensure that all overlay directories are available
+mkdir#-p#-m0755	/tmp/infix/var.u	helper	none	0	0
+mkdir#-p#-m0755	/tmp/infix/var.w	helper	none	0	0
+mkdir#-p#-m0755	/rw/infix/varlib.u	helper	none	0	0
+mkdir#-p#-m0755	/rw/infix/varlib.w	helper	none	0	0
+mkdir#-p#-m0755	/rw/infix/etc.u		helper	none	0	0
+mkdir#-p#-m0755	/rw/infix/etc.w		helper	none	0	0
+mkdir#-p#-m0700	/rw/infix/root.u	helper	none	0	0
+mkdir#-p#-m0700	/rw/infix/root.w	helper	none	0	0
+mkdir#-p#-m0700	/rw/infix/home.u	helper	none	0	0
+mkdir#-p#-m0700	/rw/infix/home.w	helper	none	0	0
+
+# Overlay selected parts of the fileinfix with persistent storage
+rw-var	/var		overlay	lowerdir=/var,upperdir=/tmp/infix/var.u,workdir=/tmp/infix/var.w		0	0
+rw-vlib	/var/lib	overlay	lowerdir=/var/lib,upperdir=/rw/infix/varlib.u,workdir=/rw/infix/varlib.w	0	0
+rw-etc	/etc		overlay	lowerdir=/etc,upperdir=/rw/infix/etc.u,workdir=/rw/infix/etc.w			0	0
+rw-root	/root		overlay	lowerdir=/root,upperdir=/rw/infix/root.u,workdir=/rw/infix/root.w		0	0
+rw-home	/home		overlay	lowerdir=/home,upperdir=/rw/infix/home.u,workdir=/rw/infix/home.w		0	0
