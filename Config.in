@@ -3,3 +3,10 @@ menu "Packages"
 source "$BR2_EXTERNAL_INFIX_PATH/package/Config.in"
 
 endmenu
+
+menu "QEMU Virtualization"
+
+source "$BR2_EXTERNAL_INFIX_PATH/qemu/Config.in"
+
+endmenu
+

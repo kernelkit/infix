@@ -1,0 +1,68 @@
+config QEMU_MACHINE
+	string
+	default "qemu-system-aarch64 -M virt -cpu cortex-a72" if BR2_aarch64
+
+config QEMU_KERNEL
+	string
+	default "images/Image" if BR2_aarch64
+
+config QEMU_ROOTFS
+	string
+	default "images/rootfs.squashfs"
+
+config QEMU_RW
+	string "Writable layer"
+	default "images/rw.ext4"
+
+config QEMU_CONSOLE
+	string
+	default "ttyAMA0" if BR2_aarch64
+
+choice
+     prompt "Rootfs type"
+     default QEMU_ROOTFS_INITRD
+
+config QEMU_ROOTFS_INITRD
+     bool "Initrd"
+
+config QEMU_ROOTFS_VSCSI
+     bool "Virtio SCSI"
+
+endchoice
+
+choice
+     prompt "Networking"
+     default QEMU_NET_USER
+
+config QEMU_NET_NONE
+     bool "None"
+
+config QEMU_NET_BRIDGE
+     bool "Bridged"
+
+config QEMU_NET_USER
+     bool "User mode"
+
+config QEMU_NET_TAP
+     bool "TAP"
+
+endchoice
+
+config QEMU_NET_MODEL
+	string "Interface model"
+	default "virtio"
+
+config QEMU_NET_BRIDGE_DEV
+	string "Bridge device"
+	depends on QEMU_NET_BRIDGE
+	default "virbr0"
+
+config QEMU_NET_TAP_N
+	int "Number of TAPs"
+	depends on QEMU_NET_TAP
+	default 1
+
+config QEMU_APPEND
+	string "Extra kernel options"
+config QEMU_EXTRA
+	string "Extra QEMU options"

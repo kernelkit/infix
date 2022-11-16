@@ -18,14 +18,11 @@ $(config):
 	@echo "'make <board>_defconfig' before building an image."
 	@exit 1
 
+
 %: | buildroot/Makefile
 	@+$(call bmake,$@)
 
 buildroot/Makefile:
 	@git submodule update --init
 
-run:
-	@echo "Starting Qemu  ::  Ctrl-a x -- exit | Ctrl-a c -- toggle console/monitor"
-	@(cd $(O)/images && ./qemu.sh)
-
-.PHONY: all run
+.PHONY: all
