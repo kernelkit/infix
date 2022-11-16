@@ -14,5 +14,7 @@ export EDITOR=/usr/bin/mg
 
 alias ip='ip --color=auto'
 alias ipb='ip -br'
+alias ipaddr='ip addr'
+alias iplink='ip link'
 alias bridge='bridge --color=auto'
 
