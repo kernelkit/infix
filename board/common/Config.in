@@ -1,0 +1,12 @@
+menuconfig FIT_IMAGE
+	bool "Build FIT image"
+
+config FIT_ARCH
+	string
+	depends on FIT_IMAGE
+	default "arm64" if BR2_aarch64
+
+config FIT_KERNEL_LOAD_ADDR
+	string "Kernel load address"
+	depends on FIT_IMAGE
+

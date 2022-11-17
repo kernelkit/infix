@@ -10,3 +10,4 @@ source "$BR2_EXTERNAL_INFIX_PATH/qemu/Config.in"
 
 endmenu
 
+source "$BR2_EXTERNAL_INFIX_PATH/board/common/Config.in"
