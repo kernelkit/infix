@@ -55,7 +55,6 @@ rw_args()
     [ "$QEMU_RW" ] || return
 
     if ! [ -f $QEMU_RW ]; then
-	echo Creating $QEMU_RW
 	dd if=/dev/zero of=$QEMU_RW bs=16M count=1
 	mkfs.ext4 -L infix-rw $QEMU_RW
     fi
