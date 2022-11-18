@@ -1,0 +1,82 @@
+#!/bin/sh
+fn=$(mktemp /tmp/system-help.XXXXXX)
+H1=$(printf '\e[7m')
+H2=$(printf '\e[1m')
+H0=$(printf '\e[0m')
+
+#clear
+cat << EOF > "$fn"
+${H2}Syntax:${H0}
+  cmd [optional arg]   E.g., use 'date -h' to get help for date command
+
+${H2}File system:${H0}
+  pwd | ls | cd        Show directory (contents) or change directory
+  cat file             Show file contents
+  vi  | mg [file]      Edit file with the VI or Micro Emacs editor
+
+${H2}Services:${H0}
+  initctl list         Lists all configurable services (svc's)
+  initctl enable svc   Enable a service 'svc'
+  initctl reload       Reload init process' state, start/stop svc's
+  initctl start svc    Start a stopped service 'svc'
+  initctl stop svc     Stop 'svc'
+  initctl restart svc  Restart a running 'svc'
+  initctl status [svc] Display running status of all services, or one 'svc'
+
+${H2}Tools:${H0}
+  date    [-h]         Display current time, or sets the system date
+  hwclock [-h]         Query or set the hardware clock (RTC)
+  logout | Ctrl-D      Log out from TTY
+  mdio | mvls          Low-level MDIO access, also for Marvell switch status
+  tail -F file         Continuously read from a file Useful for monitoring the
+                       health of services, see 'ls /var/log/' for log files
+  reboot               Restart the device
+  reset                Reset the shell prompt if it gets garbled
+
+${H2}Network Tools:${H0}
+  ethtool    [-h]      Ethernet stats, and low-level MAC/PHY settings
+  traceroute [-h]      Trace the route ip packets follow going to a host
+  tcpdump    [-h]      Display network packet headers in real-time
+  arping     [-h]      Ping hosts by ARP requests/replies
+  ping       [-h]      Send ICMP ECHO_REQUEST packets to network hosts
+  netcalc    [-h]      Calculate IP network settings from a IP address
+  netcat     [-h]      NetCat - TCP/IP swiss army knife (alias: nc)
+
+  ifconfig   [--help]  See/Reconfigure available network interfaces
+  route      [--help]  Edit the kernel's routing tables
+
+  ifup | ifdown IFACE  Bring up/down interfaces in /etc/network/interfaces
+
+  ip [link|addr]       Manage available network interfaces
+  ip [rule|route]      Manage routing tables
+  bridge [link|vlan]   Manage bridge ports and VLANs
+
+  scp                  Securely copy a file to a remote host file system
+  tftp                 Copy a file to/from a remote host
+  ftpput               Store a local file on a remote machine via FTP
+  ftpget               Retrieve a remote file via FTP
+  wget                 Get a file using HTTP or FTP from a remote host
+
+${H2}Overview:${H0}
+  df -h                List disk usage (in human readable format)
+  free                 List memory usage
+  ps                   List running processes
+  show [arg]           Show system status, see 'show help' for more info
+  top                  Displays CPU usage and top list of running tasks
+
+${H2}Interesting Files:${H0}
+  /etc/default/svc     Command line args for service 'svc' (see above)
+  /etc/rc.local        Local setup, runs after all services have started
+  /etc/network/        Directory of networking setup, most interesting is >
+     interfaces        > Bridge setup and VLAN interfaces config
+
+${H2}Examples:${H0}
+                       cd /tmp; wget ftp://192.168.55.43/some_file
+                       cd /var/log; tftp -p -l messages 192.168.55.43
+                       cat /proc/net/arp
+		       edit /etc/network/interfaces
+EOF
+
+#less -R "$fn"
+cat "$fn"
+rm "$fn"
