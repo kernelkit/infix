@@ -103,17 +103,17 @@ rstp()
 
 fdb()
 {
-	bridge fdb show
+	bridge -color fdb show
 }
 
 mdb()
 {
-	bridge mdb show
+	bridge -color mdb show
 }
 
 routes()
 {
-	ip route show
+	ip -color route show
 }
 
 igmp()
