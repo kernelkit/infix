@@ -16,10 +16,7 @@ load_cfg()
 }
 
 load_cfg
-[ "$FIT_IMAGE" = "y" ] || {
-    echo "FIT_IMAGE not set, skipping" >&2
-    exit 0
-}
+[ "$FIT_IMAGE" = "y" ] || exit 0
 
 work=$(pwd)/build/fit-image-local
 dtbs=$(find $BINARIES_DIR -name '*.dtb')
