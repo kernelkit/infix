@@ -1,14 +1,17 @@
 config QEMU_MACHINE
 	string
-	default "qemu-system-aarch64 -M virt -cpu cortex-a72" if BR2_aarch64
+	default "qemu-system-aarch64 -M virt -cpu cortex-a72"               if BR2_aarch64
+	default "qemu-system-x86_64 -M q35,accel=kvm -cpu host -enable-kvm" if BR2_x86_64
 
 config QEMU_KERNEL
 	string
-	default "images/Image" if BR2_aarch64
+	default "images/Image"   if BR2_aarch64
+	default "images/bzImage" if BR2_x86_64
 
 config QEMU_ROOTFS
 	string
-	default "images/rootfs.squashfs"
+	default "images/rootfs.ext2"     if BR2_TARGET_ROOTFS_EXT2
+	default "images/rootfs.squashfs" if BR2_TARGET_ROOTFS_SQUASHFS
 
 config QEMU_RW
 	string "Writable layer"
@@ -17,6 +20,7 @@ config QEMU_RW
 config QEMU_CONSOLE
 	string
 	default "ttyAMA0" if BR2_aarch64
+	default "ttyS0"   if BR2_x86_64
 
 choice
      prompt "Rootfs type"
