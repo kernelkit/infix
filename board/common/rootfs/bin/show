@@ -10,7 +10,7 @@ eval "$TTY"
 
 usage()
 {
-    cat <<EOF
+	cat <<EOF
 usage:
   show [opt] cmd
 
@@ -35,190 +35,190 @@ EOF
 
 ports()
 {
-    printf "\e[7mPORT             STATE          ADDRESS <FLAGS>                               \e[0m\n"
-    if grep -q port /etc/iproute2/group && [ -z "$all" ]; then
-	ip $opt link show group port
-    else
-	ip $opt link show
-    fi
-    printf "\e[2m______________________________________________________________________________\e[0m\n"
-    printf "\e[2mUse: '[ip|bridge] --help' and '[ip|bridge] link help' for more details.\e[0m\n"
+	printf "\e[7mPORT             STATE          ADDRESS <FLAGS>                               \e[0m\n"
+	if grep -q port /etc/iproute2/group && [ -z "$all" ]; then
+		ip $opt link show group port
+	else
+		ip $opt link show
+	fi
+	printf "\e[2m______________________________________________________________________________\e[0m\n"
+	printf "\e[2mUse: '[ip|bridge] --help' and '[ip|bridge] link help' for more details.\e[0m\n"
 }
 
 vlans()
 {
-    printf "\e[7mINTERFACE         VLAN  FLAGS                                                 \e[0m\n"
-    bridge vlan show |tail +2 | awk 'NF { iface=$1; vid=$2; printf("%-16s  %4d  ", iface, vid); for (i=3; i <= NF; i++) printf("%s ", $i); printf("\n"); }'
-    printf "\e[2m______________________________________________________________________________\e[0m\n"
-    printf "\e[2mSee: 'bridge --help' and 'bridge vlan help' for more details.\e[0m\n"
+	printf "\e[7mINTERFACE         VLAN  FLAGS                                                 \e[0m\n"
+	bridge vlan show |tail +2 | awk 'NF { iface=$1; vid=$2; printf("%-16s  %4d  ", iface, vid); for (i=3; i <= NF; i++) printf("%s ", $i); printf("\n"); }'
+	printf "\e[2m______________________________________________________________________________\e[0m\n"
+	printf "\e[2mSee: 'bridge --help' and 'bridge vlan help' for more details.\e[0m\n"
 }
 
 ifaces()
 {
-    printf "\e[7mINTERFACE        STATE          ADDRESS                                       \e[0m\n"
-    if [ -n "$all" ]; then
-	ip $opt addr show
-    else
-	ip $opt addr show |awk '{ if ($1 !~ /eth[0-9]*/ && $1 !~ /.*@NONE/) { print }}'
-    fi
-    printf "\e[2m______________________________________________________________________________\e[0m\n"
-    printf "\e[2mSee: 'ip --help' and 'ip address help' for more details.\e[0m\n"
+	printf "\e[7mINTERFACE        STATE          ADDRESS                                       \e[0m\n"
+	if [ -n "$all" ]; then
+		ip $opt addr show
+	else
+		ip $opt addr show |awk '{ if ($1 !~ /eth[0-9]*/ && $1 !~ /.*@NONE/) { print }}'
+	fi
+	printf "\e[2m______________________________________________________________________________\e[0m\n"
+	printf "\e[2mSee: 'ip --help' and 'ip address help' for more details.\e[0m\n"
 }
 
 log()
 {
-    if [ -n "$1" ] && [ -r "/var/log/$1" ]; then
-	fn="/var/log/$1"
-    else
-	fn="/var/log/syslog"
-    fi
-    if [ -n "$all" ]; then
-	cat $fn
-    else
-	tail -$LINES $fn
-    fi
-    printf "\e[2m______________________________________________________________________________\e[0m\n"
-    printf "\e[2mSee: 'tail -25 /log/FILE', 'tail -F /log/FILE' to continuously monitor files.\e[0m\n"
+	if [ -n "$1" ] && [ -r "/var/log/$1" ]; then
+		fn="/var/log/$1"
+	else
+		fn="/var/log/syslog"
+	fi
+	if [ -n "$all" ]; then
+		cat $fn
+	else
+		tail -$LINES $fn
+	fi
+	printf "\e[2m______________________________________________________________________________\e[0m\n"
+	printf "\e[2mSee: 'tail -25 /log/FILE', 'tail -F /log/FILE' to continuously monitor files.\e[0m\n"
 }
 
 rmon()
 {
-    if [ -z "$*" ]; then
-	echo "Missing argument, see 'show port' for available interfaces"
-	exit 1
-    fi
-    for port in $*; do
-	ethtool -S "$port"
-    done
-    printf "\e[2m______________________________________________________________________________\e[0m\n"
-    printf "\e[2mSee: 'ethtool --help' for more details.\e[0m\n"
+	if [ -z "$*" ]; then
+		echo "Missing argument, see 'show port' for available interfaces"
+		exit 1
+	fi
+	for port in $*; do
+		ethtool -S "$port"
+	done
+	printf "\e[2m______________________________________________________________________________\e[0m\n"
+	printf "\e[2mSee: 'ethtool --help' for more details.\e[0m\n"
 }
 
 rstp()
 {
-    mstpctl showbridge
-    echo "br0 port info"
-    mstpctl showport br0
+	mstpctl showbridge
+	echo "br0 port info"
+	mstpctl showport br0
 }
 
 fdb()
 {
-    bridge fdb show
+	bridge fdb show
 }
 
 mdb()
 {
-    bridge mdb show
+	bridge mdb show
 }
 
 routes()
 {
-    ip route show
+	ip route show
 }
 
 igmp()
 {
-    querierctl $@
+	querierctl $@
 }
 
 system()
 {
-    printf "\e[7mSYSTEM INFORMATION                                                            \e[0m\n"
-    echo "System Name        : $(uname -n)"
-    echo "System Description : $PRETTY_NAME"
-    echo "System Contact     : $HOME_URL"
-    echo "System Timezone    : $TZ"
-    echo "System Type        : $NAME"
-    echo "System Version     : $(cat /etc/version)"
-    echo "System Arch        : $(uname -m)"
-    echo "Kernel Version     : $(uname -sr)"
+	printf "\e[7mSYSTEM INFORMATION                                                            \e[0m\n"
+	echo "System Name        : $(uname -n)"
+	echo "System Description : $PRETTY_NAME"
+	echo "System Contact     : $HOME_URL"
+	echo "System Timezone    : $TZ"
+	echo "System Type        : $NAME"
+	echo "System Version     : $(cat /etc/version)"
+	echo "System Arch        : $(uname -m)"
+	echo "Kernel Version     : $(uname -sr)"
 }
 
 version()
 {
-    cat /etc/version
+	cat /etc/version
 }
 
 while [ "$1" != "" ]; do
-    case $1 in
-	-a)
-	    all=1
-	    ;;
-	-f)
-	    opt=""
-	    ;;
-	-h)
-	    usage
-	    exit 0
-	    ;;
-	*)
-	    break
-    esac
-    shift
+	case $1 in
+		-a)
+			all=1
+			;;
+		-f)
+			opt=""
+			;;
+		-h)
+			usage
+			exit 0
+			;;
+		*)
+			break
+	esac
+	shift
 done
 
 cmd=$1
 if [ -n "$cmd" ]; then
-   shift
+	shift
 fi
 
 case $cmd in
-    help)
-	usage
-	;;
-    port*)
-	ports
-	;;
-    vlan*)
-	vlans
-	;;
-    fdb)
-        fdb
-        ;;
-    mdb)
-        mdb
-        ;;
-    if*)
-	ifaces
-	;;
-    ip)
-	cmd=$1
-	shift
-	case $cmd in
-	    addr*)
-		ifaces
-		;;
-	    route*)
-		routes
-		;;
-	    igmp*)
-		igmp "$*"
-		;;
-	    *)
+	help)
 		usage
 		;;
-	esac
-	;;
-    log)
-	log "$1"
-	;;
-    rmon)
-	rmon "$*"
-	;;
-    route*)
-	routes
-	;;
-    span*)
-	rstp
-	;;
-    sys*)
-	system
-	;;
-    ver*)
-	version
-	;;
-    *)
-	usage
-	exit 1
-	;;
+	port*)
+		ports
+		;;
+	vlan*)
+		vlans
+		;;
+	fdb)
+		fdb
+		;;
+	mdb)
+		mdb
+		;;
+	if*)
+		ifaces
+		;;
+	ip)
+		cmd=$1
+		shift
+		case $cmd in
+			addr*)
+				ifaces
+				;;
+			route*)
+				routes
+				;;
+			igmp*)
+				igmp "$*"
+				;;
+			*)
+				usage
+				;;
+		esac
+		;;
+	log)
+		log "$1"
+		;;
+	rmon)
+		rmon "$*"
+		;;
+	route*)
+		routes
+		;;
+	span*)
+		rstp
+		;;
+	sys*)
+		system
+		;;
+	ver*)
+		version
+		;;
+	*)
+		usage
+		exit 1
+		;;
 esac
