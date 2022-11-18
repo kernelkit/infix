@@ -23,6 +23,8 @@ commands:
   ports         Show ports available for bridging
   vlans         Show port groups in bridge
   ifaces        Show interfaces and their addresses
+  fdb           Show forwarding database (unicast)
+  mdb           Show multicast forwarding database
   ip route      Show routing table
   log [FILE]    Show latest entries from syslog, or other FILE
   rmon PORT     Show RMON counters for PORT (when applicable)
@@ -99,6 +101,16 @@ rstp()
     mstpctl showport br0
 }
 
+fdb()
+{
+    bridge fdb show
+}
+
+mdb()
+{
+    bridge mdb show
+}
+
 routes()
 {
     ip route show
@@ -160,6 +172,12 @@ case $cmd in
     vlan*)
 	vlans
 	;;
+    fdb)
+        fdb
+        ;;
+    mdb)
+        mdb
+        ;;
     if*)
 	ifaces
 	;;
