@@ -45,6 +45,13 @@ endef
 SKELETON_INIT_FINIT_TARGET_FINALIZE_HOOKS += SKELETON_INIT_FINIT_SET_DROPBEAR
 endif
 
+ifeq ($(BR2_PACKAGE_LLDPD),y)
+define SKELETON_INIT_FINIT_SET_LLDPD
+	ln -sf ../available/lldpd.conf $(FINIT_D)/enabled/lldpd.conf
+endef
+SKELETON_INIT_FINIT_TARGET_FINALIZE_HOOKS += SKELETON_INIT_FINIT_SET_LLDPD
+endif
+
 ifeq ($(BR2_PACKAGE_MINI_SNMPD),y)
 define SKELETON_INIT_FINIT_SET_MINI_SNMPD
 	ln -sf ../available/mini-snmpd.conf $(FINIT_D)/enabled/mini-snmpd.conf
