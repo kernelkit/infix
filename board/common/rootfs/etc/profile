@@ -1,0 +1,25 @@
+export PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin
+
+if [ "$PS1" ]; then
+	if [ "${BASH-}" ] && [ "$BASH" != "/bin/sh" ]; then
+		if [ -f /etc/bash.bashrc ]; then
+			. /etc/bash.bashrc
+		fi
+	else
+		if [ "`id -u`" -eq 0 ]; then
+			export PS1='# '
+		else
+			export PS1='$ '
+		fi
+	fi
+fi
+
+export EDITOR='/bin/vi'
+
+# Source configuration files from /etc/profile.d
+for i in /etc/profile.d/*.sh ; do
+	if [ -r "$i" ]; then
+		. $i
+	fi
+done
+unset i
