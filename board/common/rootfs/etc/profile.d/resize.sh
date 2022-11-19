@@ -1,0 +1,2 @@
+TTY=`resize`
+eval $TTY
