@@ -25,6 +25,7 @@ ${H2}Services:${H0}
 
 ${H2}Tools:${H0}
   date    [-h]         Display current time, or sets the system date
+  factory              Factory reset the device (on the next boot)
   hwclock [-h]         Query or set the hardware clock (RTC)
   logout | Ctrl-D      Log out from TTY
   mdio | mvls          Low-level MDIO access, also for Marvell switch status

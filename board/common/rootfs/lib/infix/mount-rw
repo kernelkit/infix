@@ -12,7 +12,9 @@
 
 set -e
 
+nm=$(basename $0)
 err=0
+opt="-k"
 
 mount_rw()
 {
@@ -28,13 +30,25 @@ mount_rw()
 if ! mount_rw; then
     err=1
 
-    logger -k -p user.crit -t "$(basename $0)" \
+    logger $opt -p user.crit -t "$nm" \
 	   "No persistent storage found for /rw, falling back to tmpfs."
 
     mount tmpfs-rw
 fi
 
+# fall back to console logging if sysklogd is too old
+if ! logger -? |grep -q "Log to kernel"; then
+    opt="-c"
+fi
+
 # Allow users in wheel group to write to /rw
 chgrp wheel /rw && chmod g+w   /rw
+
+# Check for factory reset
+if [ -f /rw/infix/.reset ]; then
+	logger $opt -p user.crit -t "$nm" "Resetting to factory defaults."
+	rm -rf /rw/infix/* /rw/infix/.reset
+	sync
+fi
 
 exit $err
