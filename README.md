@@ -6,7 +6,7 @@ _      __     ___    _        ______    __      __   ____   _
  _|  |_  |  |  \    |  |  (      /  /     _|  |_   /  /\  \
 (      )_|  |___\   |_/    \____/  (_____(      )_/  /__\  \_
 ```
-An embedded Linux Network Operating System (NOS) based on [Buildroot][1].
+An embedded Linux Network Operating System (NOS) based on [Buildroot][1] and [Finit][2].
 
 
 Hardware
