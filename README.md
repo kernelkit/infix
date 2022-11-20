@@ -1,8 +1,12 @@
-Inf/IX
-======
-
-Embedded Linux distribution built on [Buildroot][Buildroot] and
-[Finit][Finit].
+```
+_      __     ___    _        ______    __      __   ____   _
+(_    _) |    \  |  | \    ___)     )  / (_    _) \  \  /  /
+  |  |   |  |\ \ |  |  |  (__      /  /    |  |    \  \/  /
+  |  |   |  | \ \|  |  |   __)    /  /     |  |     >    <
+ _|  |_  |  |  \    |  |  (      /  /     _|  |_   /  /\  \
+(      )_|  |___\   |_/    \____/  (_____(      )_/  /__\  \_
+```
+An embedded Linux Network Operating System (NOS) based on [Buildroot][1].
 
 
 Hardware
@@ -21,7 +25,8 @@ information.
 
 ### amd64
 
-Primarily intended to be run under QEMU.
+Primarily intended to be run under QEMU for development & test as well
+as evaluation purposed.
 
 
 QEMU
@@ -32,5 +37,5 @@ A virtualized instance can easily be launched by issuing `make run`.
 Some settings, e.g. networking, can be configured via `make
 menuconfig` under `External options -> QEMU virtualization`.
 
-[Buildroot]: https://buildroot.org/
-[Finit]: https://github.com/troglobit/finit
+[1]: https://buildroot.org/
+[2]: https://github.com/troglobit/finit
