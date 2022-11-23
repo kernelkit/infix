@@ -45,6 +45,14 @@ endef
 SKELETON_INIT_FINIT_TARGET_FINALIZE_HOOKS += SKELETON_INIT_FINIT_SET_DROPBEAR
 endif
 
+# OpenSSH
+ifeq ($(BR2_PACKAGE_OPENSSH),y)
+define SKELETON_INIT_FINIT_SET_OPENSSH
+	ln -sf ../available/sshd.conf $(FINIT_D)/enabled/sshd.conf
+endef
+SKELETON_INIT_FINIT_TARGET_FINALIZE_HOOKS += SKELETON_INIT_FINIT_SET_OPENSSH
+endif
+
 ifeq ($(BR2_PACKAGE_LLDPD),y)
 define SKELETON_INIT_FINIT_SET_LLDPD
 	ln -sf ../available/lldpd.conf $(FINIT_D)/enabled/lldpd.conf

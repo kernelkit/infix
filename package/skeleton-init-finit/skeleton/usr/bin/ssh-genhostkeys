@@ -1,0 +1,15 @@
+#!/bin/sh
+
+if sshd -t; then
+	initctl cond set ssh-hostkeys
+	exit 0
+fi
+
+if sshd -t 2>&1 |grep hostkeys; then
+	ssh-keygen -A
+	initctl cond set ssh-hostkeys
+else
+	logger -t sshd "invadlid sshd_config, check with: sshd -t"
+fi
+
+exit 0
