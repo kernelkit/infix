@@ -93,6 +93,7 @@ $QEMU_MACHINE -nographic \
 	      $(rootfs_args) \
 	      $(rw_args) \
 	      $(net_args) \
+	      -device i6300esb -rtc clock=host \
 	      -append "$(append_args)" \
 	      $QEMU_EXTRA
 
