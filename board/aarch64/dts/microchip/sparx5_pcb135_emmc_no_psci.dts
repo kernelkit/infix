@@ -1,0 +1,22 @@
+/* Upstream device trees specify regular PSCI support for SparX-5i,
+ * but the U-Boot that Microchip ships does not actually support it.
+ * Therefore, wrap the upstream version to disable PSCI and revert to
+ * spin tables for SMP bringup.
+ */
+
+/dts-v1/;
+#include "microchip/sparx5_pcb135_emmc.dts"
+
+&cpu0 {
+	enable-method = "spin-table";
+	cpu-release-addr = <0x0 0x0000fff8>;
+};
+
+&cpu1 {
+	enable-method = "spin-table";
+	cpu-release-addr = <0x0 0x0000fff8>;
+};
+
+/ {
+	/delete-node/ psci;
+};
