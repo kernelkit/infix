@@ -55,5 +55,13 @@ DBGACK |o o| GND
 | `TCK`       | `SCK`          |
 | `TDO`       | `MISO`         |
 
+With the cable in place, build U-Boot with the correct configuration:
+
+    make fireant_boot_defconfig && make
+
+To flash it to the board, connect the cable to `J4` and run:
+
+    make board-sparx-flash-uboot
+
 [BB3]: http://dangerousprototypes.com/docs/Bus_Blaster#Bus_Blaster_v3
 [dangerspi]: https://github.com/wkz/dangerspi
