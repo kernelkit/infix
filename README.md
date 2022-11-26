@@ -16,6 +16,7 @@ By default, Inf/IX builds with support for the following boards (you
 may enable additional boards in the config, of course):
 
 - Marvell CN-9130 CRB
+- Marvell EspressoBIN
 - Microchip SparX-5i PCB135 (eMMC)
 
 See the aarch64 specific [documentation](board/aarch64/README.md) for more
@@ -24,7 +25,7 @@ information.
 ### amd64
 
 Primarily intended to be run under QEMU for development & test as well
-as evaluation purposed.
+as evaluation purposes.
 
 
 QEMU
