@@ -1,3 +1,5 @@
+<img align="right" src="doc/text3133.png" alt="inf/IX Linux Networking Made Easy">
+
 Introduction
 ------------
 
