@@ -88,6 +88,7 @@ fi
 
 load_qemucfg .config
 
+echo "Starting Qemu  ::  Ctrl-a x -- exit | Ctrl-a c -- toggle console/monitor"
 $QEMU_MACHINE -nographic \
 	      -kernel $QEMU_KERNEL \
 	      $(rootfs_args) \
@@ -96,6 +97,3 @@ $QEMU_MACHINE -nographic \
 	      -device i6300esb -rtc clock=host \
 	      -append "$(append_args)" \
 	      $QEMU_EXTRA
-
-
-
