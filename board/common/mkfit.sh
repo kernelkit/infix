@@ -67,7 +67,7 @@ cat <<EOF >$work/infix.its
 
 / {
 	timestamp = <$(date +%s)>;
-	description = "Inf/IX ($FIT_ARCH)";
+	description = "Infix ($FIT_ARCH)";
 	creator = "infix";
 	#address-cells = <0x1>;
 
@@ -84,7 +84,7 @@ $(cat $work/kernel-load.itsi)
 		};
 
 		ramdisk {
-			description = "Inf/IX";
+			description = "Infix";
 			type = "ramdisk";
 			os = "linux";
 			arch = "$FIT_ARCH";

@@ -25,11 +25,11 @@
      showgrid="false"
      inkscape:snap-others="false"
      inkscape:zoom="3.2002729"
-     inkscape:cx="363.87522"
-     inkscape:cy="316.84798"
+     inkscape:cx="356.21962"
+     inkscape:cy="317.00422"
      inkscape:window-width="2560"
      inkscape:window-height="1385"
-     inkscape:window-x="0"
+     inkscape:window-x="1920"
      inkscape:window-y="0"
      inkscape:window-maximized="1"
      inkscape:current-layer="layer1" />
@@ -54,15 +54,15 @@
      id="layer1">
     <text
        xml:space="preserve"
-       transform="matrix(0.26458333,0,0,0.26458333,59.788381,-17.900401)"
+       transform="matrix(0.26458333,0,0,0.26458333,57.060209,-16.445051)"
        id="text3133"
-       style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:120px;line-height:1.25;font-family:'Cormorant Garamond';-inkscape-font-specification:'Cormorant Garamond, Bold';font-variant-ligatures:discretionary-ligatures historical-ligatures;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;white-space:pre;shape-inside:url(#rect3135);fill:#000000;fill-opacity:1;stroke:none"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:120px;line-height:1.25;font-family:'URW Bookman';-inkscape-font-specification:'URW Bookman, Normal';font-variant-ligatures:discretionary-ligatures historical-ligatures;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;white-space:pre;shape-inside:url(#rect3135);fill:#000000;fill-opacity:1;stroke:none"
        inkscape:export-filename="/home/jocke/text3133.png"
        inkscape:export-xdpi="96"
        inkscape:export-ydpi="96"><tspan
          x="111.9668"
-         y="401.57241"
-         id="tspan24000">inf/IX</tspan></text>
+         y="396.05172"
+         id="tspan64">Infix</tspan></text>
     <text
        xml:space="preserve"
        transform="scale(0.26458333)"

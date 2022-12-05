@@ -1,9 +1,9 @@
-<img align="right" src="doc/text3134.png" alt="inf/IX Linux Networking Made Easy">
+<img align="right" src="doc/text3134.png" alt="Infix Linux Networking Made Easy">
 
 Introduction
 ------------
 
-Inf/IX is an embedded Linux Network Operating System (NOS) based on
+Infix is an embedded Linux Network Operating System (NOS) based on
 [Buildroot][1] and [Finit][2].
 
 
@@ -12,7 +12,7 @@ Hardware
 
 ### aarch64
 
-By default, Inf/IX builds with support for the following boards (you
+By default, Infix builds with support for the following boards (you
 may enable additional boards in the config, of course):
 
 - Marvell CN-9130 CRB

@@ -1,7 +1,7 @@
 #!/bin/sh
 
 # Called from /etc/fstab to ensure we have something writable mounted
-# at /rw, which is used by Inf/IX to store device modifications made
+# at /rw, which is used by Infix to store device modifications made
 # to /etc, /home, /root, and /var/lib.
 #
 # If a disk partiion labeled "infix-rw" is available, that is used to

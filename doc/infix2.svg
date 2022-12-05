@@ -25,24 +25,16 @@
      showgrid="false"
      inkscape:snap-others="false"
      inkscape:zoom="3.2002729"
-     inkscape:cx="363.87522"
-     inkscape:cy="316.84798"
+     inkscape:cx="356.21962"
+     inkscape:cy="317.00422"
      inkscape:window-width="2560"
      inkscape:window-height="1385"
-     inkscape:window-x="0"
+     inkscape:window-x="1920"
      inkscape:window-y="0"
      inkscape:window-maximized="1"
      inkscape:current-layer="layer1" />
   <defs
      id="defs2">
-    <linearGradient
-       id="linearGradient27041"
-       inkscape:swatch="solid">
-      <stop
-         style="stop-color:#000000;stop-opacity:1;"
-         offset="0"
-         id="stop27039" />
-    </linearGradient>
     <rect
        x="321.21882"
        y="290.93293"
@@ -57,59 +49,59 @@
        id="rect3135" />
     <meshgradient
        inkscape:collect="always"
-       id="meshgradient27087"
+       id="meshgradient1074"
        gradientUnits="userSpaceOnUse"
-       x="114.0308"
-       y="313.79787">
+       x="115.6868"
+       y="307.97171">
       <meshrow
-         id="meshrow27089">
+         id="meshrow1076">
         <meshpatch
-           id="meshpatch27091">
+           id="meshpatch1078">
           <stop
-             path="c 96.6719,0  193.344,0  290.015,0"
+             path="c 86.5999,0  173.2,0  259.8,0"
              style="stop-color:#ffffff;stop-opacity:1"
-             id="stop27093" />
+             id="stop1080" />
           <stop
-             path="c 0,35.9164  0,71.8328  0,107.749"
+             path="c 0,29.36  0,58.72  0,88.08"
              style="stop-color:#000000;stop-opacity:1"
-             id="stop27095" />
+             id="stop1082" />
           <stop
-             path="c -96.6719,0  -193.344,0  -290.015,0"
+             path="c -86.5999,0  -173.2,0  -259.8,0"
              style="stop-color:#ffffff;stop-opacity:1"
-             id="stop27097" />
+             id="stop1084" />
           <stop
-             path="c 0,-35.9164  0,-71.8328  0,-107.749"
+             path="c 0,-29.36  0,-58.72  0,-88.08"
              style="stop-color:#000000;stop-opacity:1"
-             id="stop27099" />
+             id="stop1086" />
         </meshpatch>
       </meshrow>
     </meshgradient>
     <meshgradient
        inkscape:collect="always"
-       id="meshgradient27113"
+       id="meshgradient1088"
        gradientUnits="userSpaceOnUse"
        x="61.218925"
-       y="68.793075">
+       y="68.793076">
       <meshrow
-         id="meshrow27115">
+         id="meshrow1090">
         <meshpatch
-           id="meshpatch27117">
+           id="meshpatch1092">
           <stop
-             path="c 9.37354,0  18.7471,0  28.1206,0"
+             path="c 9.37353,0  18.7471,0  28.1206,0"
              style="stop-color:#ffffff;stop-opacity:1"
-             id="stop27119" />
+             id="stop1094" />
           <stop
-             path="c 0,6.51424  0,13.0285  0,19.5427"
+             path="c 0,6.51423  0,13.0285  0,19.5427"
              style="stop-color:#000000;stop-opacity:1"
-             id="stop27121" />
+             id="stop1096" />
           <stop
-             path="c -9.37354,0  -18.7471,0  -28.1206,0"
+             path="c -9.37353,0  -18.7471,0  -28.1206,0"
              style="stop-color:#ffffff;stop-opacity:1"
-             id="stop27123" />
+             id="stop1098" />
           <stop
-             path="c 0,-6.51424  0,-13.0285  0,-19.5427"
+             path="c 0,-6.51423  0,-13.0285  0,-19.5427"
              style="stop-color:#000000;stop-opacity:1"
-             id="stop27125" />
+             id="stop1100" />
         </meshpatch>
       </meshrow>
     </meshgradient>
@@ -120,15 +112,15 @@
      id="layer1">
     <text
        xml:space="preserve"
-       transform="matrix(0.26458333,0,0,0.26458333,59.788381,-17.900401)"
+       transform="matrix(0.26458333,0,0,0.26458333,57.060209,-16.445051)"
        id="text3133"
-       style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:120px;line-height:1.25;font-family:'Cormorant Garamond';-inkscape-font-specification:'Cormorant Garamond, Bold';font-variant-ligatures:discretionary-ligatures historical-ligatures;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;white-space:pre;shape-inside:url(#rect3135);opacity:1;mix-blend-mode:difference;fill:url(#meshgradient27087);fill-opacity:1;stroke:none"
-       inkscape:export-filename="/home/jocke/text3134.png"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:120px;line-height:1.25;font-family:'URW Bookman';-inkscape-font-specification:'URW Bookman, Normal';font-variant-ligatures:discretionary-ligatures historical-ligatures;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;white-space:pre;shape-inside:url(#rect3135);mix-blend-mode:difference;fill:url(#meshgradient1074);fill-opacity:1;stroke:none"
+       inkscape:export-filename="/home/jocke/text3133.png"
        inkscape:export-xdpi="96"
        inkscape:export-ydpi="96"><tspan
          x="111.9668"
-         y="401.57241"
-         id="tspan27608">inf/IX</tspan></text>
+         y="396.05172"
+         id="tspan1205">Infix</tspan></text>
     <text
        xml:space="preserve"
        transform="scale(0.26458333)"
@@ -148,8 +140,8 @@
        id="path4"
        inkscape:connector-curvature="0"
        d="m 83.526238,68.793075 -5.55894,5.422039 2.04676,1.992008 0.50866,-0.506842 -0.50866,-0.83688 2.90663,-2.82889 -0.69032,-0.671861 1.97409,-1.909501 z m -17.197591,0.471481 c -0.363329,0 -0.726658,0.353611 -0.726658,0.707223 v 7.307966 c 0,0.35361 0.363329,0.707221 0.726658,0.707221 h 6.842702 l 0.666105,-0.942965 v -2.357405 h -0.484439 v 2.357405 h -0.484437 v -2.357405 h -0.484443 v 2.357405 h -0.484437 v -2.357405 h -0.484437 v 2.357405 h -0.484443 v -2.357405 h -0.484437 v 2.357405 h -0.484439 v -2.357405 h -0.484441 v 2.357405 h -0.484439 v -2.357405 h -0.484437 v 2.357405 h -1.69554 l -0.242221,-0.235737 v -1.650187 l 0.242221,-0.117864 v -1.296576 l -0.242221,-0.117865 v -1.296574 l 0.242221,-0.235741 h 1.816648 l 0.06056,-0.942964 h 0.908327 l 0.121104,-0.942963 h 2.906636 l 0.121104,0.942963 h 0.908325 l 0.06056,0.942964 h 1.816649 l 0.24222,0.235741 v 1.296574 l -0.24222,0.117865 v 0.82509 l 0.36333,-0.530413 0.84777,-0.648287 v -3.418243 c 0,-0.353612 -0.36334,-0.707223 -0.72666,-0.707223 z m 18.214921,0.518631 -1.71976,1.661972 0.3391,0.330036 1.70765,-1.673759 z m 0.69032,0.67186 -1.71976,1.661973 0.33911,0.330038 1.70765,-1.673761 z m 0.69033,0.671861 -1.71976,1.661973 0.33911,0.330038 1.70764,-1.67376 z m 0.67821,0.660075 -1.71976,1.661973 0.33911,0.330037 1.70765,-1.67376 z m -3.34263,0.577564 -2.6523,2.581362 0.52077,0.836879 -2.39798,2.333835 1.02944,1.001899 2.39797,-2.333834 0.85988,0.495057 2.65231,-2.581365 z m 4.03296,0.08251 -1.71976,1.661973 0.33911,0.330037 1.70765,-1.67376 z m 0.69033,0.671861 -1.71977,1.673759 0.33911,0.330037 1.70765,-1.673758 z m 0.69032,0.671862 -1.97409,1.921287 -0.70244,-0.683647 -2.90663,2.840678 -0.85988,-0.506845 -0.52077,0.506845 2.05886,2.003793 5.57105,-5.422037 z m -11.48121,0.165019 -0.7751,0.589353 -1.91354,2.805313 2.16786,2.10988 -0.52077,0.495057 -2.07097,-2.003799 -0.545,0.80152 1.92565,1.874143 -0.50866,0.506838 -1.828762,-1.768057 -0.544991,0.801521 1.683423,1.6384 -0.520768,0.506843 -1.574432,-1.532319 -0.544992,0.80152 1.441207,1.402657 -0.520774,0.506846 -1.344317,-1.308361 -0.544996,0.801515 1.198989,1.166923 c -5.122947,5.5399 -12.062538,-2.157035 -6.975926,-7.814813 v -1.768058 c -9.446566,7.89732 1.574427,18.764965 8.707797,11.221266 l 1.198982,1.166912 0.82355,-0.530416 -1.33221,-1.308357 0.50866,-0.495065 1.44121,1.402668 0.82355,-0.530416 -1.58654,-1.532329 0.52077,-0.506835 1.68343,1.638396 0.82354,-0.530415 -1.82876,-1.768053 0.52078,-0.506843 1.92565,1.874141 0.82354,-0.530416 -2.07098,-2.015584 0.52078,-0.506843 2.16786,2.10988 2.88241,-1.862355 0.59344,-0.754368 -2.56753,-2.498854 -1.97408,1.921287 -1.71977,-1.673758 1.97409,-1.921289 z"
-       style="opacity:1;mix-blend-mode:difference;fill:url(#meshgradient27113);fill-opacity:1;stroke-width:0.119;stroke-miterlimit:4;stroke-dasharray:none"
-       inkscape:export-filename="/home/jocke/text3134.png"
+       style="mix-blend-mode:difference;fill:url(#meshgradient1088);fill-opacity:1;stroke-width:0.119479"
+       inkscape:export-filename="/home/jocke/text3133.png"
        inkscape:export-xdpi="96"
        inkscape:export-ydpi="96" />
   </g>
