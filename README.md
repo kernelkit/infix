@@ -1,6 +1,6 @@
 <img align="right" src="doc/text3134.png" alt="Infix Linux Networking Made Easy">
 
-Infix is an embedded Linux Network Operating System (NOS)  
+Infix is an embedded Linux Network Operating System (NOS)
 based on [Buildroot][1] and [Finit][2].
 
 
