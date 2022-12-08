@@ -1,7 +1,7 @@
 include $(sort $(wildcard $(BR2_EXTERNAL_INFIX_PATH)/package/*/*.mk))
 -include $(BR2_EXTERNAL_INFIX_PATH)/board/$(patsubst "%",%,$(BR2_ARCH))/board.mk
 
-.PHONY:
+.PHONY: local.mk
 local.mk:
 	@echo "Installing local override for certain packages ..."
 	@(cd $O && ln -s $(BR2_EXTERNAL_INFIX_PATH)/local.mk .)
