@@ -61,6 +61,12 @@ config QEMU_NET_BRIDGE_DEV
 	depends on QEMU_NET_BRIDGE
 	default "virbr0"
 
+config QEMU_NET_USER_OPTS
+	string "User mode options"
+	depends on QEMU_NET_USER
+	help
+	  Extra -nic user,<OPTIONS>
+
 config QEMU_NET_TAP_N
 	int "Number of TAPs"
 	depends on QEMU_NET_TAP

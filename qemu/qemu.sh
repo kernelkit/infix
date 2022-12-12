@@ -75,7 +75,9 @@ net_args()
 	    echo -n "-nic tap,ifname=qtap$i,script=no,model=$QEMU_NET_MODEL "
 	done
     elif [ "$QEMU_NET_USER" = "y" ]; then
-	echo -n "-nic user,model=$QEMU_NET_MODEL "
+	[ "$QEMU_NET_USER_OPTS" ] && QEMU_NET_USER_OPTS="$QEMU_NET_USER_OPTS,"
+
+	echo -n "-nic user,${QEMU_NET_USER_OPTS}model=$QEMU_NET_MODEL "
     else
 	echo -n "-nic none"
     fi
