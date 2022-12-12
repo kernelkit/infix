@@ -1,0 +1,11 @@
+config BR2_PACKAGE_IFUPDOWN2
+	bool "ifupdown2"
+	select BR2_PACKAGE_IPROUTE2
+	select BR2_PACKAGE_PYTHON3 # need, e.g., xml
+	select BR2_PACKAGE_PYTHON_MAKO # runtime
+	select BR2_PACKAGE_PYTHON_SIX # runtime
+	select BR2_PACKAGE_PYTHON_SETUPTOOLS # runtime
+	help
+	  Second generation high level tools to configure network interfaces.
+
+	  https://github.com/CumulusNetworks/ifupdown2/
