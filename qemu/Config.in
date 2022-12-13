@@ -10,8 +10,8 @@ config QEMU_KERNEL
 
 config QEMU_ROOTFS
 	string
-	default "images/rootfs.ext2"     if BR2_TARGET_ROOTFS_EXT2
 	default "images/rootfs.squashfs" if BR2_TARGET_ROOTFS_SQUASHFS
+	default "images/rootfs.ext2"     if BR2_TARGET_ROOTFS_EXT2
 
 config QEMU_RW
 	string "Writable layer"
