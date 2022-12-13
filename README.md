@@ -1,7 +1,7 @@
 <img align="right" src="doc/text3134.png" alt="Infix Linux Networking Made Easy">
 
 Infix is an embedded Linux Network Operating System (NOS)
-based on [Buildroot][1] and [Finit][2].
+based on [Buildroot][1], [Finit][2], and [ifupdown2][3].
 
 
 Hardware
@@ -35,3 +35,4 @@ menuconfig` under `External options -> QEMU virtualization`.
 
 [1]: https://buildroot.org/
 [2]: https://github.com/troglobit/finit
+[3]: https://github.com/kernelkit/ifupdown2
