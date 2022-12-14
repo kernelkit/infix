@@ -1,0 +1,8 @@
+config BR2_PACKAGE_PYTHON_TEMPLATING
+	bool "python-templating"
+	help
+	  This is the old version of the Mako templating library for Python.
+	  It provides a familiar, non-XML syntax which compiles into Python
+	  modules for maximum performance.
+
+	  https://pypi.python.org/pypi/Mako
