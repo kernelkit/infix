@@ -1,0 +1,35 @@
+config BR2_PACKAGE_MDNSD
+	bool "mdnsd - Embeddable mDNS-SD daemon"
+	help
+	  Small mDNS-SD daemon for advertising services of an embedded
+	  systems.   No NSS integration with GLIBC.
+
+	  Includes the mquery tool, similar to mdns-scan.
+
+	  https://github.com/troglobit/mdnsd/
+
+if BR2_PACKAGE_MDNSD
+
+comment "Services to advertise"
+
+config BR2_PACKAGE_MDNSD_FTP_SERVICE
+	bool "FTP service"
+	default n
+
+config BR2_PACKAGE_MDNSD_HTTP_SERVICE
+	bool "HTTP service"
+	default n
+
+config BR2_PACKAGE_MDNSD_IPP_SERVICE
+	bool "IPP service"
+	default n
+
+config BR2_PACKAGE_MDNSD_PRINTER_SERVICE
+	bool "Printer service"
+	default n
+
+config BR2_PACKAGE_MDNSD_SSH_SERVICE
+	bool "SSH service"
+	default y
+
+endif
