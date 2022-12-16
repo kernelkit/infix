@@ -1,0 +1,6 @@
+{
+    "README": "Default mgmt interface prefix is 'eth'",
+    "main": {
+	"module_globals": { "mgmt_intf_prefix": "mgmt" }
+    }
+}
