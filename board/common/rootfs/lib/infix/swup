@@ -1,0 +1,39 @@
+#!/bin/sh
+# Find any switch ports, classify and rename to Infix std
+#
+
+ident=$(basename "$0")
+num=0
+
+# Perform any interface renames as dictated by /etc/mactab.
+if [ -f /etc/mactab ]; then
+	logger -k -p user.notice -t "$ident" "calling nameif -c /etc/mactab"
+	nameif -s
+fi
+
+# Find CPU interfaces used for connecting to a switch managed by DSA
+for netif in /sys/class/net/*; do
+	iface=$(basename "$netif")
+	[ -f "/sys/class/net/$iface/dsa/tagging" ] || continue
+
+	# Disable SLAAC frames and such, that's for the port interfaces, and
+	# bring it up so we get link events from the ports to the bridge.
+	sysctl -q "net.ipv6.conf.$iface.disable_ipv6=1"
+
+	dsa="dsa$num"
+	logger -k -p user.notice -t "$ident" "Found DSA interface, renaming $iface -> $dsa"
+	ip link set dev "$iface" name $dsa
+	num=$((num + 1))
+done
+
+# Verify that the 'port' group exists
+if ! grep -q port /etc/iproute2/group; then
+	mkdir -p /etc/iproute2
+	echo "1	port" >> /etc/iproute2/group
+fi
+
+# Find and mark all switch ports
+ports=$(devlink port 2>/dev/null | awk '/flavour physical/{print $5}')
+for iface in $ports; do
+	ip link set "$iface" group port
+done
