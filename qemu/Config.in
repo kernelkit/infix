@@ -1,30 +1,23 @@
-config QEMU_MACHINE
-	string
-	default "qemu-system-aarch64 -M virt -cpu cortex-a72"               if BR2_aarch64
-	default "qemu-system-x86_64 -M q35,accel=kvm -cpu host -enable-kvm" if BR2_x86_64
+comment "System setup"
 
-config QEMU_KERNEL
-	string
-	default "images/Image"   if BR2_aarch64
-	default "images/bzImage" if BR2_x86_64
+choice
+	prompt "Loader"
+	default QEMU_LOADER_KERNEL
 
-config QEMU_ROOTFS
-	string
-	default "images/rootfs.squashfs" if BR2_TARGET_ROOTFS_SQUASHFS
-	default "images/rootfs.ext2"     if BR2_TARGET_ROOTFS_EXT2
+config QEMU_LOADER_KERNEL
+	bool "Kernel"
 
-config QEMU_RW
-	string "Writable layer"
-	default "images/cfg.ext4"
+config QEMU_LOADER_UBOOT
+	bool "U-Boot"
 
-config QEMU_CONSOLE
-	string
-	default "ttyAMA0" if BR2_aarch64
-	default "ttyS0"   if BR2_x86_64
+endchoice
 
 choice
      prompt "Rootfs type"
      default QEMU_ROOTFS_INITRD
+
+config QEMU_ROOTFS_MMC
+     bool "MMC"
 
 config QEMU_ROOTFS_INITRD
      bool "Initrd"
@@ -34,8 +27,53 @@ config QEMU_ROOTFS_VSCSI
 
 endchoice
 
+config QEMU_MACHINE
+	string
+	default "qemu-system-aarch64 -M virt -cpu cortex-a72"               if BR2_aarch64
+	default "qemu-system-x86_64 -M q35,accel=kvm -cpu host -enable-kvm" if BR2_x86_64
+
+config QEMU_KERNEL
+	string
+	depends on QEMU_LOADER_KERNEL
+	default "images/Image"   if BR2_aarch64
+	default "images/bzImage" if BR2_x86_64
+
+config QEMU_BIOS
+	string
+	depends on QEMU_LOADER_UBOOT
+	default "images/u-boot.bin"
+
+config QEMU_ROOTFS
+	string
+	default "images/mmc.img" if QEMU_ROOTFS_MMC
+	default "images/rootfs.squashfs"
+
+config QEMU_RW
+	string "Writable layer"
+	depends on !QEMU_ROOTFS_MMC
+	default "images/cfg.ext4"
+
+config QEMU_CONSOLE
+	string
+	depends on !QEMU_ROOTFS_MMC
+	default "ttyAMA0" if BR2_aarch64
+	default "ttyS0"   if BR2_x86_64
+
+config QEMU_DTB_EXTEND
+	string
+	default "images/u-boot.dtb" if QEMU_LOADER_UBOOT
+
+config QEMU_APPEND
+	string "Extra kernel options"
+	depends on !QEMU_ROOTFS_MMC
+
+config QEMU_EXTRA
+	string "Extra QEMU options"
+
+comment "Networking"
+
 choice
-     prompt "Networking"
+     prompt "Mode"
      default QEMU_NET_USER
 
 config QEMU_NET_NONE
@@ -45,7 +83,7 @@ config QEMU_NET_BRIDGE
      bool "Bridged"
 
 config QEMU_NET_USER
-     bool "User mode"
+     bool "User"
 
 config QEMU_NET_TAP
      bool "TAP"
@@ -72,7 +110,4 @@ config QEMU_NET_TAP_N
 	depends on QEMU_NET_TAP
 	default 1
 
-config QEMU_APPEND
-	string "Extra kernel options"
-config QEMU_EXTRA
-	string "Extra QEMU options"
+

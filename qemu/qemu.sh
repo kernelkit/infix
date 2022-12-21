@@ -15,14 +15,27 @@ load_qemucfg()
     rm $tmp
 
     [ "$QEMU_MACHINE" ] || die "Missing QEMU_MACHINE"
-    [ "$QEMU_KERNEL"  ] || die "Missing QEMU_KERNEL"
     [ "$QEMU_ROOTFS"  ] || die "Missing QEMU_ROOTFS"
-    [ "$QEMU_CONSOLE" ] || die "Missing QEMU_CONSOLE"
+
+    [ "$QEMU_KERNEL" -a "$QEMU_BIOS" ] \
+	&& die "QEMU_KERNEL conflicts with QEMU_BIOS"
+
+    [ ! "$QEMU_KERNEL" -a ! "$QEMU_BIOS"  ] \
+	&& die "QEMU_KERNEL or QEMU_BIOS must be set"
+}
+
+loader_args()
+{
+    if [ "$QEMU_BIOS" ]; then
+	echo -n "-bios $QEMU_BIOS "
+    elif [ "$QEMU_KERNEL" ]; then
+	echo -n "-kernel $QEMU_KERNEL "
+    fi
 }
 
 append_args()
 {
-    echo -n "console=$QEMU_CONSOLE "
+    [ "$QEMU_CONSOLE" ] && echo -n "console=$QEMU_CONSOLE "
 
     if [ "$QEMU_ROOTFS_INITRD" = "y" ]; then
 	# Size of initrd, rounded up to nearest kb
@@ -45,6 +58,10 @@ rootfs_args()
 {
     if [ "$QEMU_ROOTFS_INITRD" = "y" ]; then
 	echo -n "-initrd $QEMU_ROOTFS "
+    elif [ "$QEMU_ROOTFS_MMC" = "y" ]; then
+	echo -n "-device sdhci-pci "
+	echo -n "-device sd-card,drive=mmc "
+	echo -n "-drive id=mmc,file=$QEMU_ROOTFS,if=none,format=raw "
     elif [ "$QEMU_ROOTFS_VSCSI" = "y" ]; then
 	echo -n "-drive file=$QEMU_ROOTFS,if=virtio,format=raw,bus=0,unit=0 "
     fi
@@ -87,6 +104,49 @@ net_args()
     fi
 }
 
+wdt_args()
+{
+    echo -n "-device i6300esb -rtc clock=host"
+}
+
+run_qemu()
+{
+    local qemu
+    read qemu <<EOF
+	$QEMU_MACHINE \
+	  -nographic \
+	  $(loader_args) \
+	  $(rootfs_args) \
+	  $(rw_args) \
+	  $(net_args) \
+	  $(wdt_args) \
+	  $QEMU_EXTRA
+EOF
+
+    if [ "$QEMU_KERNEL" ]; then
+	$qemu -append "$(append_args)" "$@"
+    else
+	$qemu "$@"
+    fi
+}
+
+dtb_args()
+{
+    [ "$QEMU_DTB_EXTEND" ] || return
+
+    # Extract a copy of the DT generated internally by QEMU
+    run_qemu -M dumpdtb=images/qemu.dtb >/dev/null 2>&1
+
+    # Then, concatenate it with the ones supplied by the user
+    echo "images/qemu.dtb $QEMU_DTB_EXTEND" | \
+	xargs -n 1 dtc -I dtb -O dts | \
+	{ echo "/dts-v1/;"; sed  -e 's:/dts-v[0-9]\+/;::'; } | \
+	dtc >images/qemu-extended.dtb 2>/dev/null
+
+    # And use the combined result to start the instance
+    echo -n "-dtb images/qemu-extended.dtb "
+}
+
 if [ "$1" ]; then
     [ -d "$1" ] || die "Usage: qemu.sh <build-dir>"
     cd $1
@@ -95,12 +155,4 @@ fi
 load_qemucfg .config
 
 echo "Starting Qemu  ::  Ctrl-a x -- exit | Ctrl-a c -- toggle console/monitor"
-$QEMU_MACHINE -nographic \
-	      -kernel $QEMU_KERNEL \
-	      $(rootfs_args) \
-	      $(rw_args) \
-	      $(net_args) \
-	      -device i6300esb -rtc clock=host \
-	      -device virtio-rng-pci \
-	      -append "$(append_args)" \
-	      $QEMU_EXTRA
+run_qemu $(dtb_args)
