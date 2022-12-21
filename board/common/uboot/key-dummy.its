@@ -1,0 +1,24 @@
+/dts-v1/;
+
+/ {
+	description = "dummy to convert keys in PEM format for inclusion in U-Boot's control DT";
+	creator = "infix";
+	#address-cells = <0x1>;
+
+	images {
+		ramdisk {
+			description = "null";
+			type = "ramdisk";
+			os = "linux";
+			compression = "none";
+			data = /incbin/("/dev/null");
+
+			signature-1 {
+				algo = "sha256,rsa4096";
+				key-name-hint = "infix";
+			};
+		};
+	};
+
+	configurations {};
+};

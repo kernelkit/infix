@@ -1,3 +1,23 @@
+comment "Image Signing"
+
+choice
+	prompt "Signing key source"
+	default SIGN_SRC_DIR
+
+config SIGN_SRC_DIR
+	bool "Directory"
+
+config SIGN_SRC_PKCS11
+	bool "PKCS#11 URL"
+
+endchoice
+
+config SIGN_KEY
+	string "Signing key"
+	default "$(BR2_EXTERNAL_INFIX_PATH)/board/common/dev-key" if SIGN_SRC_DIR
+
+comment "Development Images"
+
 menuconfig FIT_IMAGE
 	bool "Build FIT image"
 
