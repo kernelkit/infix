@@ -1,4 +1,24 @@
 
+.PHONY: board-enable-qemu-uboot
+board-enable-qemu-uboot:
+	@echo "Enabling build of QEMU compatible U-Boot"
+	./utils/config --file $(BR2_CONFIG) \
+		--enable PACKAGE_HOST_UBOOT_TOOLS \
+		--enable PACKAGE_HOST_UBOOT_TOOLS_FIT_SUPPORT \
+		--enable PACKAGE_HOST_UBOOT_TOOLS_FIT_SIGNATURE_SUPPORT \
+		--enable TARGET_UBOOT \
+		--enable TARGET_UBOOT_BUILD_SYSTEM_KCONFIG \
+		--enable TARGET_UBOOT_CUSTOM_VERSION \
+		--set-str TARGET_UBOOT_CUSTOM_VERSION_VALUE \
+			"2023.04-rc2" \
+		--set-str TARGET_UBOOT_PATCH \
+			'$$(BR2_EXTERNAL_INFIX_PATH)/board/common/uboot/patches' \
+	 	--set-str TARGET_UBOOT_BOARD_DEFCONFIG \
+			"qemu_arm64" \
+		--set-str TARGET_UBOOT_CONFIG_FRAGMENT_FILES \
+			'$$(BR2_EXTERNAL_INFIX_PATH)/board/common/uboot/extras.config' \
+		--enable TARGET_UBOOT_FORMAT_DTB
+
 .PHONY: board-enable-sparx-fit
 board-enable-sparx-fit:
 	@echo "Enabling SparX-5i compatible FIT options"
