@@ -97,5 +97,6 @@ $QEMU_MACHINE -nographic \
 	      $(rw_args) \
 	      $(net_args) \
 	      -device i6300esb -rtc clock=host \
+	      -device virtio-rng-pci \
 	      -append "$(append_args)" \
 	      $QEMU_EXTRA
