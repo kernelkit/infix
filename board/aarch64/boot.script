@@ -1,0 +1,7 @@
+blkmap get boot dev devnum
+load blkmap ${devnum} ${kernel_addr_r} /boot/Image
+#TODO: LOAD FDT
+
+setenv bootargs "${bootargs_root} ${bootargs_rauc} ${bootargs_log}"
+
+booti ${kernel_addr_r} ${ramdisk} ${fdt_addr}
