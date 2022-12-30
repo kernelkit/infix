@@ -10,6 +10,7 @@ signkey=$3
 
 $common/sign.sh $arch $signkey
 $common/mkfit.sh
+$common/mkmmc.sh
 
 if [ "$BR2_ARCH" = "x86_64" ]; then
 	"$common/mkgns3a.sh"
