@@ -35,35 +35,6 @@ commands:
 EOF
 }
 
-# Update port classification, new ports may have been probed
-update_port_group()
-{
-	if ! grep -q port /etc/iproute2/group; then
-		mkdir -p /etc/iproute2
-		echo "1	port" >> /etc/iproute2/group
-	fi
-
-	# Clear port group
-	ifaces=$(command ip -br link | awk '{print $1}' | sed 's/@.*//g')
-	for iface in $ifaces; do
-		ip link set "$iface" group default
-	done
-
-	ports=$(devlink port 2>/dev/null | awk '/flavour physical/{print $5}')
-	for iface in $ports; do
-		ip link set "$iface" group port
-	done
-
-	# Fallback: check if user has configured any bridge ports
-	if [ -z "$ports" ]; then
-		for iface in $ifaces; do
-			if [ -d "/sys/class/net/$iface/brport" ]; then
-				ip link set "$iface" group port
-			fi
-		done
-	fi
-}
-
 # Usage 1: show port eth0
 # Usage 2: show port
 # Usage 3: show ports
@@ -79,8 +50,6 @@ ports()
 		done
 		return
 	fi
-
-	update_port_group
 
 	printf "\e[7mPORT             STATE          ADDRESS <FLAGS>                               \e[0m\n"
 	if grep -q port /etc/iproute2/group && [ -z "$all" ]; then
