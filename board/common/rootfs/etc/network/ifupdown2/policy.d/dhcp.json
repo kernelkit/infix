@@ -1,0 +1,5 @@
+{
+    "dhcp": {
+	"defaults": { "dhcp-wait": "no" }
+    }
+}
