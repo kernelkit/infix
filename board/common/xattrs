@@ -1,0 +1,3 @@
+# Allow users in wheel group to reboot and perform a factory reset
+/sbin/initctl f 4750 root wheel  - - - - -
+/sbin/factory f 4750 root wheel  - - - - -

@@ -1,0 +1,10 @@
+config BR2_PACKAGE_FACTORY
+	bool "factory-reset"
+	help
+	  Simple factory reset program/login-shell for instructing the
+	  system to factory reset itself, and reboot.
+
+	  The program is made to run as SUID root to be able to tell the
+	  system to reboot.  Sufficient care has been taken to make the
+	  factory program as secure as possible.  With the worst possible
+	  eftect to only be abused to reboot the system.
