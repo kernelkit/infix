@@ -33,9 +33,9 @@ cat <<EOF >"$BINARIES_DIR/infix.gns3a"
             "version": "0.0"
         },
         {
-            "filename": "rw.ext4",
-            "filesize": $(stat --printf='%s' "$BINARIES_DIR/rw.ext4"),
-            "md5sum": "$(md5sum "$BINARIES_DIR/rw.ext4" | awk '{print $1}')",
+            "filename": "cfg.ext4",
+            "filesize": $(stat --printf='%s' "$BINARIES_DIR/cfg.ext4"),
+            "md5sum": "$(md5sum "$BINARIES_DIR/cfg.ext4" | awk '{print $1}')",
             "version": "0.0"
         }
     ],
@@ -44,7 +44,7 @@ cat <<EOF >"$BINARIES_DIR/infix.gns3a"
             "name": "0.0",
             "images": {
                 "cdrom_image": "rootfs.iso9660",
-                "hda_disk_image": "rw.ext4"
+                "hda_disk_image": "cfg.ext4"
             }
         }
     ]

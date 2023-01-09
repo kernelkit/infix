@@ -15,7 +15,7 @@ config QEMU_ROOTFS
 
 config QEMU_RW
 	string "Writable layer"
-	default "images/rw.ext4"
+	default "images/cfg.ext4"
 
 config QEMU_CONSOLE
 	string

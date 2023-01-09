@@ -56,7 +56,7 @@ rw_args()
 
     if ! [ -f "$QEMU_RW" ]; then
 	dd if=/dev/zero of="$QEMU_RW" bs=16M count=1 >/dev/null 2>&1
-	mkfs.ext4 -L infix-rw "$QEMU_RW"             >/dev/null 2>&1
+	mkfs.ext4 -L cfg "$QEMU_RW"             >/dev/null 2>&1
     fi
 
     echo -n "-drive file=$QEMU_RW,if=virtio,format=raw,bus=0,unit=1 "

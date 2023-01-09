@@ -14,26 +14,10 @@ cfgfs		/config		configfs	nofail,noauto		0	0
 # Optional host share when running in Qemu
 hostfs		/host		9p		nofail,cache=none,msize=16384	0	0
 
-# Use persistent storage if available, fallback to ramdisk otherwise
-LABEL=infix-rw	/rw		auto		noatime,nodiratime,noauto	0	0
-tmpfs-rw	/rw		tmpfs		noatime,nodiratime,noauto	0	0
-/lib/infix/mount-rw# /rw	helper		none				0	0
-
-# Ensure that all overlay directories are available
-mkdir#-p#-m0755	/tmp/infix/var.u	helper	none	0	0
-mkdir#-p#-m0755	/tmp/infix/var.w	helper	none	0	0
-mkdir#-p#-m0755	/rw/infix/varlib.u	helper	none	0	0
-mkdir#-p#-m0755	/rw/infix/varlib.w	helper	none	0	0
-mkdir#-p#-m0755	/rw/infix/etc.u		helper	none	0	0
-mkdir#-p#-m0755	/rw/infix/etc.w		helper	none	0	0
-mkdir#-p#-m0700	/rw/infix/root.u	helper	none	0	0
-mkdir#-p#-m0700	/rw/infix/root.w	helper	none	0	0
-mkdir#-p#-m0700	/rw/infix/home.u	helper	none	0	0
-mkdir#-p#-m0700	/rw/infix/home.w	helper	none	0	0
-
-# Overlay selected parts of the fileinfix with persistent storage
-rw-var	/var		overlay	lowerdir=/var,upperdir=/tmp/infix/var.u,workdir=/tmp/infix/var.w		0	0
-rw-vlib	/var/lib	overlay	lowerdir=/var/lib,upperdir=/rw/infix/varlib.u,workdir=/rw/infix/varlib.w	0	0
-rw-etc	/etc		overlay	lowerdir=/etc,upperdir=/rw/infix/etc.u,workdir=/rw/infix/etc.w			0	0
-rw-root	/root		overlay	lowerdir=/root,upperdir=/rw/infix/root.u,workdir=/rw/infix/root.w		0	0
-rw-home	/home		overlay	lowerdir=/home,upperdir=/rw/infix/home.u,workdir=/rw/infix/home.w		0	0
+# The chosen backing storage for the overlays placed on /cfg, /etc,
+# /home, /root, and /var, are determined dynamically by /lib/infix/mnt
+# depending on the available devices.
+mnttmp		/mnt/tmp	tmpfs		defaults			0	0
+LABEL=var	/mnt/var	auto		noatime,nodiratime,noauto	0	0
+LABEL=cfg	/mnt/cfg	auto		noatime,nodiratime,noauto	0	0
+/lib/infix/mnt# /cfg		helper		none				0	0

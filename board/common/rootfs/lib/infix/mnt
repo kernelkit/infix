@@ -1,0 +1,118 @@
+#!/bin/sh
+
+# Called from /etc/fstab to ensure we have something writable mounted
+# at /cfg, /etc, /home, /root, and /var.
+#
+# /mnt/cfg is used to store device modifications made to /etc, /home,
+# /root.
+#
+# /mnt/var is used as the backins store for /var. If /mnt/var is not
+# available, /mnt/cfg will still be be used to persist /var/lib.
+#
+# If a disk partiion with the corresponding label ("cfg"/"var") is
+# available, that is used to persist changes to the aforementioned
+# directories. Otherwise fall back to a tmpfs based RAM disk. This
+# effectively brings up the system with the default configuration, but
+# obviously any subsequent configuration is ephemeral.
+
+set -e
+
+nm=$(basename $0)
+err=0
+opt="-k"
+
+mount_rw()
+{
+    # If something is already setup, leave it be.
+    mountpoint -q /$1 && return 0
+
+    # TODO: Also look for UBI partitions
+    mount LABEL=$1 && return 0
+
+    return 1
+}
+
+mount_overlay()
+{
+    local tag=$1
+    local src=$2
+    local dst=$3
+    local u=$src/infix/$tag.u
+    local w=$src/infix/$tag.w
+
+    mkdir -p -m 0755 $u
+    mkdir -p -m 0755 $w
+
+    mount -t overlay $tag-overlay $dst \
+	  -o lowerdir=$dst,upperdir=$u,workdir=$w
+}
+
+use_etc()
+{
+    # Finit's condition system is not yet bootstrapped when /etc/fstab
+    # is parsed, so we have to manually check for the boot/etc
+    # condition.
+    cat /proc/1/cmdline | awk '
+	$0 == "finit.cond" {
+		cond=1;
+		next;
+	}
+	cond == 1 {
+		exit(index($0, "etc") == 0);
+	}
+    '
+}
+
+# Fall back to console logging if sysklogd is too old
+if ! logger -? |grep -q "Log to kernel"; then
+    opt="-c"
+fi
+
+varsrc=/mnt/var
+if ! mount_rw var >/dev/null 2>&1; then
+    logger $opt -p user.warn -t "$nm" \
+	   "No persistent storage found for /var, only /var/lib is persisted."
+    varsrc=/mnt/tmp
+    vlibsrc=/mnt/cfg
+fi
+
+cfgsrc=/mnt/cfg
+etcsrc=/mnt/tmp
+if ! mount_rw cfg; then
+    err=1
+
+    logger $opt -p user.crit -t "$nm" \
+	   "No persistent storage found for /cfg, falling back to tmpfs."
+
+    cfgsrc=/mnt/tmp
+
+    # Even if /mnt/var isn't available, if /mnt/cfg isn't either, then
+    # there's no point in overlaying one ramdisk on top of another.
+    vlibsrc=
+else
+    if use_etc; then
+	etcsrc=/mnt/cfg
+    fi
+
+    # Check for factory reset
+    if [ -f /mnt/cfg/infix/.reset ]; then
+	logger $opt -p user.crit -t "$nm" "Resetting to factory defaults."
+	rm -rf /mnt/cfg/infix /mnt/var/infix
+	sync
+    fi
+
+    # Ensure that all users in wheel can create the .reset file
+    mkdir -p /mnt/cfg/infix
+    chgrp wheel /mnt/cfg/infix
+fi
+
+
+mount_overlay cfg  $cfgsrc /cfg
+mount_overlay etc  $etcsrc /etc
+mount_overlay home $cfgsrc /home
+mount_overlay root $cfgsrc /root
+mount_overlay var  $varsrc /var
+
+[ "$vlibsrc" ] && mount_overlay vlib $vlibsrc /var/lib
+
+exit $err
