@@ -6,15 +6,6 @@
 	#address-cells = <0x1>;
 
 	images {
-		boot-script {
-			type = "script";
-			data = /incbin/("boot.script");
-			signature-1 {
-				algo = "sha256,rsa4096";
-				key-name-hint = "infix";
-			};
-		};
-
 		rootfs {
 			description = "Infix";
 			type = "ramdisk";
@@ -32,7 +23,6 @@
 		default = "verity";
 		verity {
 			ramdisk = "rootfs";
-			script = "boot-script";
 		};
 	};
 };
