@@ -1,0 +1,66 @@
+name: Bob the Builder
+
+on:
+  push:
+    branches:
+      - '*'
+  pull_request:
+    branches:
+      - '*'
+
+jobs:
+  build:
+    name: Build ${{ matrix.platform }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        platform: [aarch64, amd64]
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set Build Variables
+        id: vars
+        run: |
+          echo "dir=infix-${{ matrix.platform }}"        >> $GITHUB_OUTPUT
+          echo "tgz=infix-${{ matrix.platform }}.tar.gz" >> $GITHUB_OUTPUT
+      - name: Restore Cache of dl/
+        uses: actions/cache@v2
+        with:
+          path: dl/
+          key: dl-${{ matrix.platform }}-${{ hashFiles('.git/modules/buildroot/HEAD', 'configs/*', 'package/*/*.hash') }}
+          restore-keys: |
+            dl-${{ matrix.platform }}-
+            dl-
+      - name: Restore Cache of .ccache/
+        uses: actions/cache@v2
+        with:
+          path: .buildroot-ccache/
+          key: ccache-${{ matrix.board }}-os-${{ hashFiles('.git/modules/buildroot/HEAD', 'package/*/*.hash') }}
+          restore-keys: |
+            ccache-${{ matrix.board }}-os-
+            ccache-${{ matrix.board }}-
+            ccache--os-
+      - name: Configure & Build
+        run: |
+          make ${{ matrix.platform }}_defconfig
+          make
+      - name: Prepare Artifact
+        # The tarball helps retain file modes and gives us a containing
+        # directory, something the upload-artifact does not support.
+        # Downside, we get a zip with a tar.gz on download
+        run: |
+          cd output
+          mv images ${{ steps.vars.outputs.dir }}
+          tar cfz ${{ steps.vars.outputs.tgz }} ${{ steps.vars.outputs.dir }}
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: ${{ steps.vars.outputs.tgz }}
+          path: output/${{ steps.vars.outputs.tgz }}
+      - name: Upload to latest
+        uses: pyTooling/Actions/releaser@main
+        with:
+          tag: latest
+          rm: true
+          token: ${{ secrets.GITHUB_TOKEN }}
+          files: output/*.tgz
