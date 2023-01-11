@@ -1,0 +1,4 @@
+BOOT_ORDER=primary secondary net
+BOOT_primary_LEFT=1
+BOOT_secondary_LEFT=1
+BOOT_net_LEFT=1

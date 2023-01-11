@@ -18,6 +18,7 @@ hostfs		/host		9p		nofail,cache=none,msize=16384	0	0
 # /home, /root, and /var, are determined dynamically by /lib/infix/mnt
 # depending on the available devices.
 mnttmp		/mnt/tmp	tmpfs		defaults			0	0
+LABEL=aux	/mnt/aux	auto		noatime,nodiratime,noauto	0	0
 LABEL=var	/mnt/var	auto		noatime,nodiratime,noauto	0	0
 LABEL=cfg	/mnt/cfg	auto		noatime,nodiratime,noauto	0	0
 /lib/infix/mnt# /cfg		helper		none				0	0

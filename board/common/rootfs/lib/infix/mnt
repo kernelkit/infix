@@ -77,6 +77,11 @@ if ! logger -? |grep -q "Log to kernel"; then
     opt="-c"
 fi
 
+if ! mount_rw aux >/dev/null 2>&1; then
+    logger $opt -p user.warn -t "$nm" \
+	   "No auxiliary partition found, software updates not supported."
+fi
+
 varsrc=/mnt/var
 if ! mount_rw var >/dev/null 2>&1; then
     logger $opt -p user.warn -t "$nm" \
