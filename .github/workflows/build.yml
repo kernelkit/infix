@@ -17,14 +17,14 @@ jobs:
         platform: [aarch64, amd64]
       fail-fast: false
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Set Build Variables
         id: vars
         run: |
           echo "dir=infix-${{ matrix.platform }}"        >> $GITHUB_OUTPUT
           echo "tgz=infix-${{ matrix.platform }}.tar.gz" >> $GITHUB_OUTPUT
       - name: Restore Cache of dl/
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: dl/
           key: dl-${{ matrix.platform }}-${{ hashFiles('.git/modules/buildroot/HEAD', 'configs/*', 'package/*/*.hash') }}
@@ -32,7 +32,7 @@ jobs:
             dl-${{ matrix.platform }}-
             dl-
       - name: Restore Cache of .ccache/
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: .buildroot-ccache/
           key: ccache-${{ matrix.board }}-os-${{ hashFiles('.git/modules/buildroot/HEAD', 'package/*/*.hash') }}
@@ -52,8 +52,9 @@ jobs:
           cd output
           mv images ${{ steps.vars.outputs.dir }}
           tar cfz ${{ steps.vars.outputs.tgz }} ${{ steps.vars.outputs.dir }}
+          ls -l
       - name: Upload Artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: ${{ steps.vars.outputs.tgz }}
           path: output/${{ steps.vars.outputs.tgz }}
@@ -63,4 +64,4 @@ jobs:
           tag: latest
           rm: true
           token: ${{ secrets.GITHUB_TOKEN }}
-          files: output/*.tgz
+          files: output/*.tar.gz
