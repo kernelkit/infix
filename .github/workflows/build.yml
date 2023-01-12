@@ -53,6 +53,7 @@ jobs:
           mv images ${{ steps.vars.outputs.dir }}
           tar cfz ${{ steps.vars.outputs.tgz }} ${{ steps.vars.outputs.dir }}
           ls -l
+          ls -l ${{ steps.vars.outputs.dir }}
       - name: Upload Artifact
         uses: actions/upload-artifact@v3
         with:
@@ -62,6 +63,6 @@ jobs:
         uses: pyTooling/Actions/releaser@main
         with:
           tag: latest
-          rm: true
+          rm: false
           token: ${{ secrets.GITHUB_TOKEN }}
           files: output/*.tar.gz
