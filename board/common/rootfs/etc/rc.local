@@ -1,0 +1,8 @@
+#!/bin/sh
+# This file is run at the very end of runlevel S (bootstrap)
+#
+# Note: 1) not all initctl commands are allowed here
+#       2) ensure the script calls `exit 0` at the end
+#
+
+exit 0
