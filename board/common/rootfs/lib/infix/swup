@@ -29,10 +29,13 @@ for netif in /sys/class/net/*; do
 	num=$((num + 1))
 done
 
-# Verify that the 'port' group exists
+# Verify that the 'port' and 'iface' groups exists
+[ -d /etc/iproute2 ] || mkdir -p /etc/iproute2
 if ! grep -q port /etc/iproute2/group; then
-	mkdir -p /etc/iproute2
 	echo "1	port" >> /etc/iproute2/group
+fi
+if ! grep -q iface /etc/iproute2/group; then
+	echo "2	iface" >> /etc/iproute2/group
 fi
 
 # Find and mark all switch ports
@@ -47,6 +50,9 @@ ports=$(ip -json link | jq -r '.[].ifname | match("^e[[:digit:]]+").string')
 for iface in $ports; do
 	ip link set "$iface" group port
 done
+
+# At least loopback in iface group
+ip link set lo group iface
 
 # Factory default: all switch ports in VLAN 1 of br0
 # need to check for 'length > 0' because ip command
@@ -66,4 +72,5 @@ if [ ! -f /etc/network/interfaces.d/br0 ] && [ -n "$ports" ]; then
 		    vlan-id 1
 		    vlan-raw-device br0
 	EOF
+	ip link set vlan1 group iface
 fi
