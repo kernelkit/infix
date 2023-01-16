@@ -1,0 +1,41 @@
+# ifupdown2 template: copy to a file named: br0
+
+# Set up br0 with four ports and two VLANs
+# Will be automatically started at boot.
+#auto br0
+#iface br0
+#    bridge-ports eth0 eth1 eth2 eth3
+#    bridge-vlan-aware yes
+#    bridge-stp on
+#    bridge-vids 1 2
+
+# Ensure all access ports are untagged members
+#auto eth0
+#iface eth0
+#    bridge-access 1
+#auto eth1
+#iface eth1
+#    bridge-access 1
+#auto eth2
+#iface eth2
+#    bridge-access 2
+#auto eth3
+#iface eth3
+#    bridge-access 2
+
+# Create a layer 3 routable interface on top
+# of br0, for VLAN 1, with DHCP address.
+#auto vlan1
+#iface vlan1 inet dhcp
+#    vlan-id 1
+#    vlan-raw-device br0
+
+# Create a layer 3 routable interface on top
+# of br0, for VLAN 1, with static IP address.
+#auto vlan2
+#iface vlan2 inet static
+#    vlan-id 2
+#    vlan-raw-device br0
+#    address 10.0.2.1
+#    netmask 255.255.255.0
+
