@@ -74,6 +74,8 @@ ifaces()
 	printf "\e[7mINTERFACE        STATE          ADDRESS                                       \e[0m\n"
 	if [ -n "$all" ]; then
 		ip $opt addr show
+        elif grep -q iface /etc/iproute2/group; then
+                ip $opt addr show group iface
 	else
 		ip $opt addr show |awk '{ if ($1 !~ /eth[0-9]*/ && $1 !~ /.*@NONE/) { print }}'
 	fi
