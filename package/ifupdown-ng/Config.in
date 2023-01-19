@@ -1,0 +1,21 @@
+config BR2_PACKAGE_IFUPDOWN_NG
+	bool "ifupdown-ng"
+	depends on BR2_USE_MMU # fork()
+	depends on BR2_TOOLCHAIN_HEADERS_AT_LEAST_3_4 # iproute2
+	depends on BR2_PACKAGE_BUSYBOX_SHOW_OTHERS
+	select BR2_PACKAGE_LIBBSD if BR2_TOOLCHAIN_USES_GLIBC
+	# runtime for ip binary
+	select BR2_PACKAGE_IPROUTE2 if !BR2_PACKAGE_BUSYBOX
+	# runtime for run-parts
+	select BR2_PACKAGE_DEBIANUTILS if !BR2_PACKAGE_BUSYBOX
+	help
+	  ifupdown-ng is a network device manager that is largely
+	  compatible with Debian ifupdown, BusyBox ifupdown and Cumulus
+	  Networks ifupdown2.
+
+	  https://github.com/ifupdown-ng/ifupdown-ng
+
+comment "ifupdown needs a toolchain w/ headers >= 3.4"
+	depends on BR2_USE_MMU
+	depends on !BR2_TOOLCHAIN_HEADERS_AT_LEAST_3_4
+	depends on BR2_PACKAGE_BUSYBOX_SHOW_OTHERS

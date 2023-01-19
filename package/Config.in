@@ -1,6 +1,7 @@
 source "$BR2_EXTERNAL_INFIX_PATH/package/factory/Config.in"
 source "$BR2_EXTERNAL_INFIX_PATH/package/finit/Config.in"
 source "$BR2_EXTERNAL_INFIX_PATH/package/ifupdown2/Config.in"
+source "$BR2_EXTERNAL_INFIX_PATH/package/ifupdown-ng/Config.in"
 source "$BR2_EXTERNAL_INFIX_PATH/package/mdnsd/Config.in"
 source "$BR2_EXTERNAL_INFIX_PATH/package/python-templating/Config.in"
 source "$BR2_EXTERNAL_INFIX_PATH/package/skeleton-init-finit/Config.in"
