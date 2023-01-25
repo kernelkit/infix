@@ -4,8 +4,10 @@
 #
 ################################################################################
 
-IFUPDOWN_NG_VERSION = 0.12.1
-IFUPDOWN_NG_SITE = $(call github,ifupdown-ng,ifupdown-ng,ifupdown-ng-$(IFUPDOWN_NG_VERSION))
+IFUPDOWN_NG_VERSION = 10288c2d1b38321c1af9428250f798d4d84b4e01
+IFUPDOWN_NG_SITE = $(call github,kernelkit,ifupdown-ng,$(IFUPDOWN_NG_VERSION))
+#IFUPDOWN_NG_VERSION = 0.12.1
+#IFUPDOWN_NG_SITE = $(call github,ifupdown-ng,ifupdown-ng,ifupdown-ng-$(IFUPDOWN_NG_VERSION))
 IFUPDOWN_NG_LICENSE = ISC
 IFUPDOWN_NG_LICENSE_FILES = COPYING
 

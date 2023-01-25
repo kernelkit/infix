@@ -1,3 +1,6 @@
-# Locally calculated
+# KernelKit integration branch
+sha256  d9a3d50ab852bc7beed5e04d3a36b81d28acd921ea2f867a869497ef1a66023b  ifupdown-ng-10288c2d1b38321c1af9428250f798d4d84b4e01.tar.gz
+
+# Upstream. Locally calculated
 sha256  d42c8c18222efbce0087b92a14ea206de4e865d5c9dde6c0864dcbb2b45f2d85  ifupdown-ng-0.12.1.tar.gz
 sha256  dac461b054f4dc686b1a787534a2d919af37a769926ff33516f26d4f79844876  COPYING
