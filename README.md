@@ -1,7 +1,7 @@
 <img align="right" src="doc/text3134.png" alt="Infix Linux Networking Made Easy">
 
 Infix is an embedded Linux Network Operating System (NOS)
-based on [Buildroot][1], [Finit][2], and [ifupdown2][3].
+based on [Buildroot][1], [Finit][2], and [ifupdown-ng][3].
 
 > Login with user 'root', no password by default on plain builds.  See
 > the online `help` command for an introduction to the system.
@@ -50,7 +50,7 @@ available by default for use as switch ports or routing.
 [0]: https://github.com/kernelkit/infix/releases/tag/latest
 [1]: https://buildroot.org/
 [2]: https://github.com/troglobit/finit
-[3]: https://github.com/kernelkit/ifupdown2
+[3]: https://github.com/ifupdown-ng/ifupdown-ng
 [9]: https://docs.gns3.com/docs/using-gns3/beginners/import-gns3-appliance/
 [QEMU]: https://www.qemu.org/
 [GNS3]: https://gns3.com/
