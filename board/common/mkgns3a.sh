@@ -4,14 +4,15 @@ cat <<EOF >"$BINARIES_DIR/infix.gns3a"
 {
     "name": "infix",
     "category": "router",
-    "description": "Infix Network Operating System",
+    "description": "Infix is a Network Operating System based on Linux.  It can be set up both as a switch, with offloading using switchdev, and a router with firewalling.",
     "vendor_name": "KernelKit",
     "vendor_url": "https://github.com/kernelkit/",
     "product_name": "Infix",
     "registry_version": 6,
     "status": "stable",
     "maintainer": "KernelKit",
-    "maintainer_email": "infix@example.com",
+    "maintainer_email": "kernelkit@googlegroups.com",
+    "usage": "Default login is 'root', no password.\n\nType 'help' for an overview of commands and relevant configuration files.\n\nThe /etc directory is writable, use the passwd tool after login as part of your set up.\nFor networking, classify interfaces as switchports with /etc/mactab, syntax: 'MAC-address  eN', where N is the port number (1-MAX).\nTo set up bridging and management interfaces, use /etc/network/interfaces, and /etc/network/interfaces.d/",
     "port_name_format": "eth{0}",
     "linked_clone": true,
     "qemu": {
@@ -29,18 +30,18 @@ cat <<EOF >"$BINARIES_DIR/infix.gns3a"
             "filename": "rootfs.iso9660",
             "filesize": $(stat --printf='%s' "$BINARIES_DIR/rootfs.iso9660"),
             "md5sum": "$(md5sum "$BINARIES_DIR/rootfs.iso9660" | awk '{print $1}')",
-            "version": "v0.0"
+            "version": "0.0"
         },
         {
             "filename": "rw.ext4",
             "filesize": $(stat --printf='%s' "$BINARIES_DIR/rw.ext4"),
             "md5sum": "$(md5sum "$BINARIES_DIR/rw.ext4" | awk '{print $1}')",
-            "version": "v0.0"
+            "version": "0.0"
         }
     ],
     "versions": [
         {
-            "name": "v0.0",
+            "name": "0.0",
             "images": {
                 "cdrom_image": "rootfs.iso9660",
                 "hda_disk_image": "rw.ext4"
