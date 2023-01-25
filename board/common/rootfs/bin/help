@@ -1,16 +1,20 @@
 #!/bin/sh
-fn=$(mktemp /tmp/system-help.XXXXXX)
-H1=$(printf '\e[7m')
-H2=$(printf '\e[1m')
-H0=$(printf '\e[0m')
+H1=$(printf '\033[7m')
+H2=$(printf '\033[1m')
+DM=$(printf '\033[2m')
+UL=$(printf '\033[4m')
+IT=$(printf '\033[3m')
+BL=$(printf '\033[5m')
+H0=$(printf '\033[0m')
 
-#clear
-cat << EOF > "$fn"
+overview()
+{
+	cat <<EOF
 ${H2}Syntax:${H0}
   cmd [optional arg]   E.g., use 'date -h' to get help for date command
 
 ${H2}File system:${H0}
-  pwd | ls | cd        Show directory (contents) or change directory
+  pwd | ls | cd        Show directory, contents, or change directory
   cat file             Show file contents
   vi  | mg [file]      Edit file with the VI or Micro Emacs editor
 
@@ -31,6 +35,9 @@ ${H2}Tools:${H0}
   mdio | mvls          Low-level MDIO access, also for Marvell switch status
   tail -F file         Continuously read from a file Useful for monitoring the
                        health of services, see 'ls /var/log/' for log files
+  less [file]          Pagers provding easily scrollable content (q quits) >
+  more [file]          > e.g., 'cat very-long-file | less'
+  passwd               Change user password
   reboot               Restart the device
   reset                Reset the shell prompt if it gets garbled
 
@@ -58,26 +65,542 @@ ${H2}Network Tools:${H0}
   ftpget               Retrieve a remote file via FTP
   wget                 Get a file using HTTP or FTP from a remote host
 
-${H2}Overview:${H0}
+${H2}Overview Commands${H0}
   df -h                List disk usage (in human readable format)
   free                 List memory usage
   ps                   List running processes
   show [arg]           Show system status, see 'show help' for more info
   top                  Displays CPU usage and top list of running tasks
 
-${H2}Interesting Files:${H0}
+${H2}Interesting Files${H0}
   /etc/default/svc     Command line args for service 'svc' (see above)
   /etc/rc.local        Local setup, runs after all services have started
-  /etc/network/        Directory of networking setup, most interesting is >
-     interfaces        > Bridge setup and VLAN interfaces config
+  /etc/network/        Directory of networking setup, see 'help net'
 
-${H2}Examples:${H0}
-                       cd /tmp; wget ftp://192.168.55.43/some_file
-                       cd /var/log; tftp -p -l messages 192.168.55.43
-                       cat /proc/net/arp
-		       edit /etc/network/interfaces
+${H2}Example Commands${H0}
+  cd   /tmp; wget ftp://192.168.55.43/file && cat file
+  cd   /var/log; tftp -p -l messages 192.168.55.43
+  cat  /proc/net/arp
+  edit /etc/network/interfaces
+
+${H2}See Also${H0}
+  help edit            Tutorial on VI and Mg editors
+  help net             Network set up introduction
+  help net | less      Read with less pager, use 'h' for help, 'q' to quit
+
 EOF
+}
 
-#less -R "$fn"
-cat "$fn"
-rm "$fn"
+vi()
+{
+	cat <<EOF
+${H1}Visual Editor (vi)                                                             ${H0}
+
+Vi is the de facto standard editor in UNIX systems.  It comes with two modes:
+
+  - ${H2}Command mode (default):${H0} administrative tasks such as saving files,
+    executing commands, moving the cursor, cutting and pasting lines or words,
+    as well as finding and replacing.  ${UL}Return to command mode with Esc${H0}
+
+  - ${H2}Insert mode:${H0} Everything that's typed in this mode is interpreted as
+    input and placed in the file.
+
+${H2}Navigation commands${H0}
+
+  h - move the cursor one character to the left
+  j - move the cursor down one character
+  k - mode the cursor up one character
+  l - move the cursor right one character
+  b - move to beginning of word, or previous word
+  w - move to next word
+  0 - move to beginning of line
+  $ - move to end of line
+ :0 - move to beginning of file
+  G - move to end of file
+
+${H2}Editing commands${H0}
+
+  u - undo last operation
+  x - delete the character the cursor is on
+ cw - change word, from position of cursor
+ dw - delete to end of word
+ dd - delete the line the character is on
+  p - paste (line, word, or char) after cursor
+  P - paste (line, word, or char) before cursor
+
+${H2}Saving and quit commands${H0}
+
+  :w            - save the current file
+  :w filename   - save a copy of the file named filename
+  :w!           - try to save the file, even if it is read only
+  :wq           - save and quit vi
+  ZZ            - save and quit vi
+  :wq!          - try to save the file if it is read only, quit if successful
+  :wq filename  - save a copy of the file named filename and quit
+  :wq! filename - save a copy of the file named filename and quit,
+                  override read only permissions if possible
+  :q            - quit vi
+  :q!           - quit vi even if the file has unsaved changes
+
+${H2}Enter insert mode${H0}
+
+  a - append new text after the cursor
+  i - insert text before the cursor
+  o - open a new line below the cursor
+  O - open a new line above the cursor
+
+> Return to command mode with Esc
+
+EOF
+}
+
+emacs()
+{
+	cat <<EOF
+${H1}Micro Emacs (mg)                                                               ${H0}
+
+Mg is a bit more user-friendly than vi.  It has the same familiar interface
+as Notepad, but with slightly different keybindings.
+
+${H2}Introduction${H0}
+
+Most commands involve using the Control ("Ctrl") or the Meta ("Alt") key.
+The following conventions are used in the online help:
+
+  C-<chr>   means hold down the Control key while typing the character <chr>
+  M-<chr>   means hold down the Alt key while typing the character <chr>
+
+If you don't have a Meta/Alt key, you can use Esc instead.  Press and release
+the Esc key and then type <chr>. This is equivalent to M-<chr>.
+
+${H2}Navigation${H0}
+
+Though arrow keys, Home/End, and PgUp/PgDn usually work, using Mg over serial
+console can sometimes cause these keys to be mismapped by terminal program.
+
+  C-f          Move forward one character (can also use right arrow key)
+  C-b          Move backward one character (can also use left arrow key)
+  C-p          Move up one line (can also use up arrow key)
+  C-n          Move down one line (can also use down arrow key)
+  M-f          Move forward one word
+  M-b          Move backward one word
+  C-a          Move to beginning of line (can also use Home key)
+  C-e          Move to end of line (can also use End key)
+  C-v          Move forward one page (can also use PgDn/Page Down key)
+  M-v          Move backward one page (can also use PgUp/Page Up key)
+  M-<          Move to beginning of file
+  M->          Move to end of file
+  C-x g        Move to line number
+
+${H2}Editing${H0}
+
+All edit commands that kill (cut) text is placed in a kill ring (clipboard).
+Note: when marking text, there is no visual mark.
+
+  C-_          Undo, also C-x u
+  M-%          Replace word/string in file, from cursor position
+  M-q          Reformat paragraph (set fill column with C-x f)
+  C-s          Search forward (type C-s again to find next)
+  C-r          Reversed search
+  C-Space      Set beginning of mark (beginning of selected text)
+  C-x C-x      Jump back and forth between mark and cursor position
+  C-x h        Mark whole buffer
+  C-w          Wipe (cut) region from mark to cursor position
+  M-w          Copy region from mark to cursor position
+  C-y          Yank (paste) text from kill ring
+  C-k          Kill (cut) to end of line
+  M-Backspace  Kill (delete) previous word
+  M-d          Kill (delete) next word
+  C-d          Delete character to the right
+  C-o          Open new line at cursor
+
+${H2}General Commands${H0}
+
+  C-g          Abort current command
+  C-l          Recenter buffer on current line
+  C-h b        List all keybindings
+  M-!          Run shell command, output in new buffer
+  C-z          Suspend Mg, return to shell, use 'fg' to get back
+  C-x C-f      Open file
+  C-x C-i      Insert file at cursor position
+  C-x C-s      Save file
+  C-x s        Save file (interactive)
+  C-x k        Kill (close) file
+  C-x C-b      List open buffers (files)
+  C-x b        Switch to another buffer
+  C-x C-c      Exit
+
+${H2}Window Commands${H0}
+
+  C-x 0        Unsplit, keep other window
+  C-x 1        Unsplit, keep this window
+  C-x 2        Split window in two
+  C-x o        Go to other window
+  C-x p        Go to previous window
+  C-x n        Go to next window
+  C-x ^        Enlarge this split
+
+EOF
+}
+
+editor()
+{
+	case $1 in
+		vi)
+			vi
+			;;
+		ed* | em* | mg)
+			emacs
+			;;
+		*)
+			vi
+			emacs
+			cat <<EOF
+${H1}Summary                                                                        ${H0}
+
+Use Mg if you are a beginner.  This is also the default for the 'edit' alias.
+
+EOF
+			;;
+	esac
+}
+
+networking()
+{
+	cat <<EOF
+${H1}Networking                                                                     ${H0}
+
+This section details how to set up everything from basic to advanced networking.
+Topics covered include:
+
+ - Static vs Dynamic Addresses
+ - VLAN Interfaces
+ - Bridging Interfaces
+ - Link Aggregation (bonding)
+ - Persistent Configuration
+
+Please note, the terms 'port' and 'interface' may be used interchangably in
+the following text (and elsewher online as well).  Usually the term 'port' is
+reserved for Ethernet links attached to a switch or bridge, while the term
+'interface' more generically refers to the physical interface in a system.
+
+
+${H2}Static vs Dynamic Addresses${H0}
+
+An IPv4 address consists of four "octets" separated by periods.  A static IPv4
+address can look like this:
+
+    192.168.1.42
+
+However, for networking to function properly, a device usually needs a netmask,
+default route, NTP server, and at least one DNS address.  Setting all these up
+statically is a lot of work to maintain, in particular with many devices.
+
+For both IPv4 and IPv6 there is an alternative called DHCP.  It is a dynamic
+protocol where a server on request from a client device hands out a "lease" of
+an IP address, as well as lot of other network parameters, including but not
+limited to the ones already mentioned.  A client device can give hints to the
+server, e.g., its hostname, MAC address (default), or other client identifier.
+It is up to the server to honor these hints or not, but it is very common to
+set up the server to honor the client's hostname and automatically update the
+central name server (DNS) when the client is online.
+
+        |  There are many other interesting aspects to DHCP not covered here.
+        |  For instance, DHCP relay servers (proxies), that can be used to
+        |  forward DHCP requests from very large networks to a central server.
+        |  Some relay "agents" even support something called Option 82, which
+        |  when running on a simple switch, can attach port and relay info to
+        |  the client's DHCP request -- allowing the server to assign an IP
+        |  address per port, even on remote switches (with a relay agent).
+
+When your interface is setup with DHCP, use the 'ifconfig' or 'ip addr' tools
+to see which address you got, if needed (see next section).
+
+In cases when the DHCP client cannot find a DHCP server, and thus not obtain a
+lesae, the system falls back to set a link-local address (169.254.*.*).  This
+can be disabled by editing the file /etc/dhcpcd.conf, adding:
+
+    noipv4ll
+
+A link-local address is however very useful, in particular in combination with
+mDNS to discover and access a device you do not know, or do not want to know,
+the IP address to.  See more in the next section.
+
+
+${H2}DNS and mDNS${H0}
+
+Managing a central DNS is both painful and time consuming, most networks, and
+in particular industrial, therefore only set up a DNS for static servers and
+resources.  Leaving end devices, switches, and in many cases even routers,
+without a human-friendly name on the network.  This have misled many to think
+that they need to know the IP address, and often opt for static addresses on
+equipment.  Meaning many devices out-of-the-box have a static address set that
+need to be manually changed before the device is deployed on the network.
+
+A less time consuming, and human-friendly, way is to enable mDNS (multicast
+DNS).  With this protocol the device notifies all neighbors on the same LAN
+of how to reach it:
+
+    "Hello everyone, my address is 169.254.47.11, you can call me device.local"
+
+Any other device that also has mDNS enabled can then automaticall update a
+local database of name-to-address mappings.  Usually the name sent out is
+the device's hostname.  (It is up to the device manufacturer to set a useful
+default hostname, i.e., model-01-02-03, where the suffix is the last octets
+of the base MAC address, from the product label on the case.)
+
+As you can see, in combination with a link-local address (previous section)
+mDNS is a very attractive combination that greatly simplify device management.
+
+Tools:
+
+    avahi-browse -a
+    ping foo.local
+
+mDNS, or more correctly mDNS-SD, is also used for *Service Discovery*.  E.g.,
+a printer can publish IPP records with meta data on the printer type and model
+or donwload URL for drivers.  Switches and routers usually publish how they
+can be reached: HTTP/HTTPS and SSH.
+
+Note: there are other mechanisms for device discovery.  Microsoft have been
+      slow to adopt mDNS, having relied on their own SSDP protocol.  For the
+      full experince Apple's "Bonjour" can be installed in Windows.
+
+      mDNS is supported in this product and should be enabled by default.  To
+      verify it works, open the Windows File Explorer (Win+E) and scroll to
+      Network in the left-hand menu.  An icon with a matching hostname can be
+      found there which, when clicked, opens up the device's Web Interface.
+      macOS users have mDNS fully integrated by default.  Linux users can use
+      'mdns-scan' or Avahi, as shown above.  The latter two can also just set
+      their web browsers to https://hostname-01-02-03.local
+
+
+${H2}VLAN Interfaces${H0}
+
+A VLAN interface in Linux is an "upper" interface, e.g., 'eth0.1'.  It is
+where you set an IP address and interact with th rest of the world.  The
+base/raw/lower interface, here 'eth0', is the physical interface on which
+Ethernet packets ingress and egress with a VLAN tag.  To create 'eth0.1':
+
+    ip link add eth0.1 link eth0 vlan id 1
+
+In Linux a VLAN interface is a "stackable" entity.  Many VLAN interfaces
+can be built on top of each other.  When injecting a packet on the top
+most interface, the kernel adds the corresponding VLAN "tag" when the
+packet goes down the order of stacked interfaces, and then finally hits
+the physical interface and proceeds to egress onto the media.
+
+    ip link add eth0.1.2 link eth0.1 vlan id 2
+
+Injecting a packet on 'eth0.1.2' creates a double-tagged VLAN frame when
+the packet egresses 'eth0'.  The outermost tag has VID 1 and the inner
+VID is 2.
+
+VLAN interfaces can be used for many things, here we will focus on their
+use as upper interface on a bridge.
+
+
+${H2}Bridging Interfaces${H0}
+
+A bridge is the correct name for a switch.  In the context of this text,
+however, we will use the term to refer to the Linux bridge module in the
+kernel, which implements an advanced software switch.  The Linux bridge
+supports "offloading" many switching functions to an underlying switching
+chipset, when available.  This greatly simplifies managing that switch since
+the same tools one use to manage the bridge will, by extension, also be used
+to manage the switch.
+
+To create a bridge in Linux:
+
+    ip link add br0 type bridge
+
+To add three ports (interfaces) to the bridge we use:
+
+    ip link set eth0 master br0
+    ip link set eth1 master br0
+    ip link set eth2 master br0
+
+Bring all ports and the bridge 'up' and you have a working switch!  Any frame
+injected on eth0 (from the outside) can be switched to either of eth1, eth2,
+*or* br0.  As soon as the bridge has learned where end devices are connected,
+none of the other ports will see the traffic -- like a regular switch.
+
+Note: these ports should not (cannot) have any IP address.  Instead, any IP
+      address is set on 'br0'.  To disable IPv6 link-local address, set the
+      /proc/sys/net/ipv6/conf/eth0/disable_ipv6 sysctl file to '1'.
+
+
+${H2}Bridging and VLANs${H0}
+
+A VLAN-aware bridge works the same way, only with VLAN separation taken into
+account.  All communication, as well as MAC address learning, is limited to
+ports in the same VLAN.  The syntax is slightly different and requires a few
+more steps:
+
+    ip link add br0 type bridge vlan_filtering 1
+    ip link set eth0 master br0
+    ip link set eth1 master br0
+    ip link set eth2 master br0
+    ip link set eth3 master br0
+
+To assign ports to different VLANs, and make sure they are regular "access"
+ports (untagged).  We assign eth0 and eth1 to VLAN 1 and the others to VLAN 2:
+
+    bridge vlan add vid 1 dev eth0 pvid untagged
+    bridge vlan add vid 1 dev eth1 pvid untagged
+    bridge vlan add vid 2 dev eth2 pvid untagged
+    bridge vlan add vid 2 dev eth3 pvid untagged
+
+Here's the twist, to be able to reach the bridge (switch) itself from each
+VLAN, we need to ensure the bridge itself is a tagged member of each VLAN:
+
+    bridge vlan add vid 1 dev br0 self
+    bridge vlan add vid 2 dev br0 self
+
+This way we can add VLAN interfaces on top of br0, which we in turn can set
+a static or dynamic IP address on:
+
+    ip link add vlan1 link br0 type vlan id 1
+    ip link add vlan2 link br0 type vlan id 2
+
+The resulting stack of interfaces look like this:
+
+                         :
+                vlan1    :     vlan2       Layer-3 :: IP Networking
+                    \\    :    /            _________________________
+                  .-------------.
+                  |     br0     |          Layer-2 :: Switching
+                  '-------------'          _________________________
+                  /   |  :  |   \\
+              eth0 eth1  :  eth2 eth3      Layer-1 :: Link layer
+                         :
+
+${H2}Interesting Files:${H0}
+
+ - /etc/network/interfaces      The original, useful for small setups
+ - /etc/network/interfaces.d/*  Snippets, useful for non-trivial setups
+ - /etc/mactab                  Rename interfaces: 'NAME16CHARS WHITESPACE MAC'
+ - /etc/sysctl.conf             Interface and TCP/IP settings, e.g., routing
+ - /etc/sysctl.d/*              Snippets, useful for per-subsystem settings
+
+
+${H2}Persistent Configuration${H0}
+
+A simple end device can get by with the following in /etc/network/interfaces:
+
+    auto lo
+    iface lo inet loopback
+
+    auto eth0
+    iface eth0 inet dhcp
+
+This brings up both the loopback (required for UNIX networking to function),
+and the (presumed only) Ethernet interface.  The loopback gets its standard
+address, 127.0.0.1, and eth0 will request its IP address using DHCP.
+
+To set up the bridge example (above), is actually quite a lot easier than
+using the command line ip and bridge tools.  Create the file 'bridge':
+
+    edit /etc/network/interfaces.d/bridge
+
+Paste in the following content:
+
+    iface e0
+        bridge-access 1
+    iface e1
+        bridge-access 1
+    iface e2
+        bridge-access 2
+    iface e3
+        bridge-access 2
+
+    auto br0
+    iface br0
+        bridge-ports e0 e1 e2 e3 
+        bridge-vlan-aware yes
+        bridge-stp on
+        bridge-vids 1 2
+
+    auto vlan1
+    iface vlan1 inet dhcp
+        vlan-id 1
+        vlan-raw-device br0
+
+    auto vlan2
+    iface vlan2 inet static
+        vlan-id 2
+        vlan-raw-device br0
+        address 192.168.2.1/24
+
+Notice how 'vlan1' only has a DHCP and 'vlan2' uses a static address.  It is
+possible to combine the two if needed.  Use 'inet dhcp' and add an 'address'
+statement to the iface stanza.
+
+
+${H2}Port Classification${H0}
+
+The bundled 'show' script is a very handy tool.  It use several tricks to make
+information about the system more accessible.  On switching capable hardware
+products, switch ports are identified early at system bootstrap and placed in
+the 'port' group.  See 'ip link' output:
+
+    ...
+    4: e0: <BROADCAST,MULTICAST> master br0 state UP ${UL}group port${H0}
+           link/ether 52:54:00:12:34:56 brd ff:ff:ff:ff:ff:ff
+    ...
+
+When running in Qemu or other hardware it may be useful to manually classify
+certain interfaces as ports.  This can be achieved in many ways, here we show
+two.  First /etc/mactab, which is read at boot to rename interfaces according
+their matching MAC address, one interface per line:
+
+    e0    52:54:00:12:34:56
+    e1    52:54:00:12:34:57
+    e2    52:54:00:12:34:58
+    e3    52:54:00:12:34:59
+
+Another way is to add something like this to /etc/rc.local:
+
+    for port in eth0 eth1 eth3 eth4; do
+        ip link set \$port group port
+    done
+
+
+${H1}Summary                                                                        ${H0}
+
+All persistent networking is set up in /etc/network/interfaces using the
+program ifupdown-ng.  The tools to reconfigure networking at runtime are:
+
+   ifup   [-a] [IFACES]
+   ifdown [-a] [IFACES]
+
+When changing the configuration at runtime you usually have to bring the
+affected interfaces down (ifdown e0 e1 e2 e3), if they were set up with
+/etc/network/interfaces before.  Then do the change, and bring it all up
+again.
+
+Both tools understand dependencies between interfaces, so when a 'ifup -a'
+command is received it brings up all interfaces: adding links to br0 before
+adding VLANs, the vlan1 and vlan2 interfaces on top so it of it all.  Then
+finally it can start the DHCP client on vlan1 and set the static IP address
+on vlan2.
+
+       ${BL}>>> Be careful with these tools when logged in remotely! <<<${H0}
+
+EOF
+}
+
+topic=$1
+[ -n "$topic" ] && shift
+
+case $topic in
+	ed*)
+		editor $*
+		;;
+	net*)
+		networking
+		;;
+	*)
+		overview
+		;;
+esac
