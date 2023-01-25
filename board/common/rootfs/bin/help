@@ -10,15 +10,21 @@ H0=$(printf '\033[0m')
 overview()
 {
 	cat <<EOF
-${H2}Syntax:${H0}
+${H1}Help System            Press 'Q' to quit | Arrow keys and PgUp/PgDn to scroll   ${H0}
+
+${H2}See Also${H0}
+  help edit            Tutorial on VI and Mg editors
+  help net             Network set up introduction
+
+${H2}General Syntax${H0}
   cmd [optional arg]   E.g., use 'date -h' to get help for date command
 
-${H2}File system:${H0}
+${H2}File system${H0}
   pwd | ls | cd        Show directory, contents, or change directory
   cat file             Show file contents
   vi  | mg [file]      Edit file with the VI or Micro Emacs editor
 
-${H2}Services:${H0}
+${H2}Services${H0}
   initctl list         Lists all configurable services (svc's)
   initctl enable svc   Enable a service 'svc'
   initctl reload       Reload init process' state, start/stop svc's
@@ -27,7 +33,7 @@ ${H2}Services:${H0}
   initctl restart svc  Restart a running 'svc'
   initctl status [svc] Display running status of all services, or one 'svc'
 
-${H2}Tools:${H0}
+${H2}Tools${H0}
   date    [-h]         Display current time, or sets the system date
   factory              Factory reset the device (on the next boot)
   hwclock [-h]         Query or set the hardware clock (RTC)
@@ -41,7 +47,7 @@ ${H2}Tools:${H0}
   reboot               Restart the device
   reset                Reset the shell prompt if it gets garbled
 
-${H2}Network Tools:${H0}
+${H2}Network Tools${H0}
   ethtool    [-h]      Ethernet stats, and low-level MAC/PHY settings
   traceroute [-h]      Trace the route ip packets follow going to a host
   tcpdump    [-h]      Display network packet headers in real-time
@@ -86,7 +92,6 @@ ${H2}Example Commands${H0}
 ${H2}See Also${H0}
   help edit            Tutorial on VI and Mg editors
   help net             Network set up introduction
-  help net | less      Read with less pager, use 'h' for help, 'q' to quit
 
 EOF
 }
@@ -475,14 +480,6 @@ The resulting stack of interfaces look like this:
               eth0 eth1  :  eth2 eth3      Layer-1 :: Link layer
                          :
 
-${H2}Interesting Files:${H0}
-
- - /etc/network/interfaces      The original, useful for small setups
- - /etc/network/interfaces.d/*  Snippets, useful for non-trivial setups
- - /etc/mactab                  Rename interfaces: 'NAME16CHARS WHITESPACE MAC'
- - /etc/sysctl.conf             Interface and TCP/IP settings, e.g., routing
- - /etc/sysctl.d/*              Snippets, useful for per-subsystem settings
-
 
 ${H2}Persistent Configuration${H0}
 
@@ -566,6 +563,16 @@ Another way is to add something like this to /etc/rc.local:
     done
 
 
+${H2}Interesting Files${H0}
+
+ - /etc/dhcpcd.conf             General DHCP and ZeroConf (LL) settings
+ - /etc/network/interfaces      The original, useful for small setups
+ - /etc/network/interfaces.d/*  Snippets, useful for non-trivial setups
+ - /etc/mactab                  Rename interfaces: 'NAME16CHARS WHITESPACE MAC'
+ - /etc/sysctl.conf             Interface and TCP/IP settings, e.g., routing
+ - /etc/sysctl.d/*              Snippets, useful for per-subsystem settings
+
+
 ${H1}Summary                                                                        ${H0}
 
 All persistent networking is set up in /etc/network/interfaces using the
@@ -590,10 +597,12 @@ on vlan2.
 EOF
 }
 
-topic=$1
-[ -n "$topic" ] && shift
+topic()
+{
+	topic=$1
+	[ -n "$1" ] && shift
 
-case $topic in
+	case $topic in
 	ed*)
 		editor $*
 		;;
@@ -603,4 +612,22 @@ case $topic in
 	*)
 		overview
 		;;
-esac
+	esac
+}
+
+if [ -t 1 ] ; then
+	fn=$(mktemp /tmp/system-help.XXXXXX)
+	topic $* >"$fn"
+	if command -v most; then
+		most "$fn"
+	elif command -v less; then
+		less -R "$fn"
+	elif command -v more; then
+		more "$fn"
+	else
+		cat "$fn"
+	fi
+	rm "$fn"
+else
+	topic $*
+fi

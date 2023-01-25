@@ -3,6 +3,7 @@ alias la='ls -A'
 alias ll='ls -alF'
 alias ls='ls --color=auto'
 
+alias less=most
 alias vim='vi'
 alias view='vi -R'
 alias emacs='mg'
@@ -17,4 +18,3 @@ alias ipb='ip -br'
 alias ipaddr='ip addr'
 alias iplink='ip link'
 alias bridge='bridge --color=auto'
-
