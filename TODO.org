@@ -1,3 +1,4 @@
+* TODO add setup-bridge wizard, based on pdmenu
 * TODO split out qemu Config.in to a "make run-menuconfing"
 * TODO rename qemu/ to run/, perhaps?
 * TODO ship qemu/* with output/images/ for stand-alone runs of older builds
