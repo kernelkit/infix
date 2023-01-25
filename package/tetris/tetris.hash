@@ -1,0 +1,5 @@
+# From https://github.com/troglobit/tetris/releases/
+sha256 2c6e17f927d4b73dca97c7d280d3848a515a87ca70ecdf072808561e47bf757c  tetris-1.4.0.tar.gz
+
+# Locally calculated
+sha256 a84e2b5247b2013a69496eecdd16e6051c04f1f3cb259b5f6ca8e671101a1f94  LICENSE
