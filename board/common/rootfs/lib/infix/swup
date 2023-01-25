@@ -59,7 +59,15 @@ ip link set lo group iface
 # outputs empty json objects for non-port group ifs
 ports=$(ip -json link show group port | jq -r '.[].ifname | select(length > 0)' | tr "\n" " ")
 if [ ! -f /etc/network/interfaces.d/br0 ] && [ -n "$ports" ]; then
-	cat <<-EOF >/etc/network/interfaces.d/br0
+	touch /etc/network/interfaces.d/br0
+	for port in $porst; do
+		cat <<-EOF
+			iface $port
+			    bridge-access 1
+		EOF
+	done
+	cat <<-EOF >>/etc/network/interfaces.d/br0
+
 		auto br0
 		iface br0
 		    bridge-ports $ports
