@@ -42,8 +42,10 @@ ${H2}Tools${H0}
   tail -F file         Continuously read from a file Useful for monitoring the
                        health of services, see 'ls /var/log/' for log files
   less [file]          Pagers provding easily scrollable content (q quits) >
-  more [file]          > e.g., 'cat very-long-file | less'
+  more [file]            > e.g., 'cat very-long-file | less'
+  most [file]            > e.g., 'cat very-long-file | most'
   passwd               Change user password
+  pwgen                Password generator
   reboot               Restart the device
   reset                Reset the shell prompt if it gets garbled
 
@@ -52,9 +54,13 @@ ${H2}Network Tools${H0}
   traceroute [-h]      Trace the route ip packets follow going to a host
   tcpdump    [-h]      Display network packet headers in real-time
   arping     [-h]      Ping hosts by ARP requests/replies
-  ping       [-h]      Send ICMP ECHO_REQUEST packets to network hosts
+  fping      [-h]      Send ICMP ECHO_REQUEST packets to multiple hosts
+  ping       [-h]      Send ICMP ECHO_REQUEST packets to a network host
+  lynx URL   [-h]      The text mode web browser
   netcalc    [-h]      Calculate IP network settings from a IP address
   netcat     [-h]      NetCat - TCP/IP swiss army knife (alias: nc)
+  socat      [-h]      Multipurpose socket relay program
+  ttyd       [-h]      Sharing a terminal over the web
 
   ifconfig   [--help]  See/Reconfigure available network interfaces
   route      [--help]  Edit the kernel's routing tables
