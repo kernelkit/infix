@@ -18,7 +18,7 @@ cat <<EOF >"$BINARIES_DIR/infix.gns3a"
     "qemu": {
         "adapter_type": "virtio-net-pci",
         "adapters": 10,
-        "ram": 192,
+        "ram": 256,
         "cpus": 1,
         "hda_disk_interface": "virtio",
         "arch": "x86_64",
