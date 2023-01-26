@@ -1,5 +1,6 @@
 name: Bob the Builder
 
+# Consider switching to 'on: workflow_dispatch' when activity increases.
 on:
   push:
     branches:
@@ -45,24 +46,32 @@ jobs:
           make ${{ matrix.platform }}_defconfig
           make
       - name: Prepare Artifact
-        # The tarball helps retain file modes and gives us a containing
-        # directory, something the upload-artifact does not support.
-        # Downside, we get a zip with a tar.gz on download
         run: |
           cd output
           mv images ${{ steps.vars.outputs.dir }}
           tar cfz ${{ steps.vars.outputs.tgz }} ${{ steps.vars.outputs.dir }}
           ls -l
           ls -l ${{ steps.vars.outputs.dir }}
-      - name: Upload Artifact
-        uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v3
         with:
-          name: ${{ steps.vars.outputs.tgz }}
           path: output/${{ steps.vars.outputs.tgz }}
-      - name: Upload to latest
-        uses: pyTooling/Actions/releaser@main
+  release:
+    name: Upload Latest Build
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v3
+      - uses: pyTooling/Actions/releaser@main
         with:
           tag: latest
-          rm: false
+          rm: true
           token: ${{ secrets.GITHUB_TOKEN }}
-          files: output/*.tar.gz
+          files: artifact/*
+      - name: Summary
+        run: |
+          cat <<EOF >> $GITHUB_STEP_SUMMARY
+          # Latest Build Complete! :rocket:
+          
+          For the public download links of these build artifacts, please see:
+           <https://github.com/kernelkit/infix/releases/tag/latest>
+          EOF
