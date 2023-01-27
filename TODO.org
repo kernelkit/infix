@@ -1,4 +1,14 @@
-* TODO add setup-bridge wizard, based on pdmenu
+* TODO GNS3 debug interfaces.d malfunction
+* TODO add default sysctl.conf
+* TODO fix execute perms on /etc/rc.local
+* TODO document how to set up passwordless SSH
+* TODO add setup wizard, based on pdmenu
+
+ - setup-port script to tweak ethtool settings
+ - setup-iface script to configure a layer-3 interface
+ - setup-bridge script that creates a new bridge with config from cmdline
+ - setup-firewall script that can do basic firewall rules and masquerading
+
 * TODO split out qemu Config.in to a "make run-menuconfing"
 * TODO rename qemu/ to run/, perhaps?
 * TODO ship qemu/* with output/images/ for stand-alone runs of older builds
