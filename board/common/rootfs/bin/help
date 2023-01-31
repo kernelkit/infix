@@ -269,7 +269,10 @@ editor()
 			cat <<EOF
 ${H1}Summary                                                                        ${H0}
 
-Use Mg if you are a beginner.  This is also the default for the 'edit' alias.
+Use Mg or GNU Nano if you are a beginner.  The system is set up to so you can
+use the 'edit' command, which will start GNU Nano:
+
+    edit /etc/rc.local                       # Starts GNU Nano
 
 EOF
 			;;

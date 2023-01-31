@@ -3,15 +3,13 @@ alias la='ls -A'
 alias ll='ls -alF'
 alias ls='ls --color=auto'
 
-alias less=most
+export EDITOR=/usr/bin/edit
+alias less=pager
 alias vim='vi'
 alias view='vi -R'
 alias emacs='mg'
-alias edit='mg'
-alias editor=edit
 alias sensible-editor=edit
-alias sensible-pager=less
-export EDITOR=/usr/bin/mg
+alias sensible-pager=pager
 
 alias ip='ip --color=auto'
 alias ipb='ip -br'
