@@ -7,6 +7,17 @@ IT=$(printf '\033[3m')
 BL=$(printf '\033[5m')
 H0=$(printf '\033[0m')
 
+noansi()
+{
+        H1=""
+        H2=""
+        DM=""
+        UL=""
+        IT=""
+        BL=""
+        H0=""
+}
+
 overview()
 {
 	cat <<EOF
@@ -613,6 +624,7 @@ topic()
 
 	case $topic in
 	ed*)
+		# shellcheck disable=SC2068
 		editor $*
 		;;
 	net*)
@@ -624,19 +636,28 @@ topic()
 	esac
 }
 
+if [ "$1" = "-p" ]; then
+	shift
+	pager="cat"
+	noansi
+else
+	if command -v most; then
+		pager=most
+	elif command -v less; then
+		pager="less -R"
+	elif command -v more; then
+		pager="more"
+	else
+		pager="cat"
+	fi
+fi
+
 if [ -t 1 ] ; then
 	fn=$(mktemp /tmp/system-help.XXXXXX)
-	topic $* >"$fn"
-	if command -v most; then
-		most "$fn"
-	elif command -v less; then
-		less -R "$fn"
-	elif command -v more; then
-		more "$fn"
-	else
-		cat "$fn"
-	fi
+	# shellcheck disable=SC2086,SC2068
+	topic $@ >"$fn"
+	$pager "$fn"
 	rm "$fn"
 else
-	topic $*
+	topic "$*"
 fi
