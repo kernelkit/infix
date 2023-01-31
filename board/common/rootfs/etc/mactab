@@ -1,0 +1,3 @@
+# /etc/mactab: rename interfaces, use 'eN' to classify as bridge ports
+# MAC			IFNAME
+# 01:02:03:c0:ff:ee	e0
