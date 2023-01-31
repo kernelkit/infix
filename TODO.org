@@ -1,6 +1,3 @@
-* TODO GNS3 debug interfaces.d malfunction
-* TODO add default sysctl.conf
-* TODO fix execute perms on /etc/rc.local
 * TODO document how to set up passwordless SSH
 * TODO add setup wizard, based on pdmenu
 
