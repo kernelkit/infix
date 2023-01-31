@@ -3,11 +3,31 @@
 # shellcheck disable=SC2048,SC2086
 . /etc/os-release
 
+H1=$(printf '\033[7m')
+H2=$(printf '\033[1m')
+DM=$(printf '\033[2m')
+UL=$(printf '\033[4m')
+IT=$(printf '\033[3m')
+BL=$(printf '\033[5m')
+H0=$(printf '\033[0m')
+
 opt="-br"
 all=""
+plain=""
 
 TTY=$(resize)
 eval "$TTY"
+
+noansi()
+{
+        H1=""
+        H2=""
+        DM=""
+        UL=""
+        IT=""
+        BL=""
+        H0=""
+}
 
 usage()
 {
@@ -19,6 +39,7 @@ options:
   -a            Show all, of something
   -f            Show full output, not brief port/iface listings
   -h            Show this help text
+  -p            Show plain output, now bells or whistles
 
 commands:
   port PORT     Show port configuration and link information
@@ -51,27 +72,32 @@ ports()
 		return
 	fi
 
-	printf "\e[7mPORT             STATE          ADDRESS <FLAGS>                               \e[0m\n"
+	echo "${H1}PORT             STATE          ADDRESS <FLAGS>                               ${H0}"
 	if grep -q port /etc/iproute2/group && [ -z "$all" ]; then
 		ip $opt link show group port
 	else
 		ip $opt link show
 	fi
-	printf "\e[2m______________________________________________________________________________\e[0m\n"
-	printf "\e[2mUse: '[ip|bridge] --help' and '[ip|bridge] link help' for more details.\e[0m\n"
+
+	if [ -z "$plain" ]; then
+		echo "${DM}______________________________________________________________________________${H0}"
+		echo "${DM}Use: '[ip|bridge] --help' and '[ip|bridge] link help' for more details.${H0}"
+	fi
 }
 
 vlans()
 {
-	printf "\e[7mINTERFACE         VLAN  FLAGS                                                 \e[0m\n"
+	printf "${H1}INTERFACE         VLAN  FLAGS                                                 ${H0}\n"
 	bridge vlan show |tail +2 | awk 'NF { iface=$1; vid=$2; printf("%-16s  %4d  ", iface, vid); for (i=3; i <= NF; i++) printf("%s ", $i); printf("\n"); }'
-	printf "\e[2m______________________________________________________________________________\e[0m\n"
-	printf "\e[2mSee: 'bridge --help' and 'bridge vlan help' for more details.\e[0m\n"
+	if [ -z "$plain" ]; then
+		echo "${DM}______________________________________________________________________________${H0}"
+		echo "${DM}See: 'bridge --help' and 'bridge vlan help' for more details.${H0}"
+	fi
 }
 
 ifaces()
 {
-	printf "\e[7mINTERFACE        STATE          ADDRESS                                       \e[0m\n"
+	printf "${H1}INTERFACE        STATE          ADDRESS                                       ${H0}\n"
 	if [ -n "$all" ]; then
 		ip $opt addr show
         elif grep -q iface /etc/iproute2/group; then
@@ -79,8 +105,10 @@ ifaces()
 	else
 		ip $opt addr show |awk '{ if ($1 !~ /eth[0-9]*/ && $1 !~ /.*@NONE/) { print }}'
 	fi
-	printf "\e[2m______________________________________________________________________________\e[0m\n"
-	printf "\e[2mSee: 'ip --help' and 'ip address help' for more details.\e[0m\n"
+	if [ -z "$plain" ]; then
+		echo "${DM}______________________________________________________________________________${H0}"
+		echo "${DM}See: 'ip --help' and 'ip address help' for more details.${H0}"
+	fi
 }
 
 log()
@@ -95,8 +123,10 @@ log()
 	else
 		tail -$LINES $fn
 	fi
-	printf "\e[2m______________________________________________________________________________\e[0m\n"
-	printf "\e[2mSee: 'tail -25 /log/FILE', 'tail -F /log/FILE' to continuously monitor files.\e[0m\n"
+	if [ -z "$plain" ]; then
+		echo "${DM}______________________________________________________________________________${H0}"
+		echo "${DM}See: 'tail -25 /log/FILE', 'tail -F /log/FILE' to continuously monitor files.${H0}"
+	fi
 }
 
 rmon()
@@ -108,8 +138,10 @@ rmon()
 	for port in $*; do
 		ethtool -S "$port"
 	done
-	printf "\e[2m______________________________________________________________________________\e[0m\n"
-	printf "\e[2mSee: 'ethtool --help' for more details.\e[0m\n"
+	if [ -z "$plain" ]; then
+		echo "${DM}______________________________________________________________________________${H0}"
+		echo "${DM}See: 'ethtool --help' for more details.${H0}"
+	fi
 }
 
 rstp()
@@ -141,7 +173,7 @@ igmp()
 
 system()
 {
-	printf "\e[7mSYSTEM INFORMATION                                                            \e[0m\n"
+	echo "${H1}SYSTEM INFORMATION                                                            ${H0}"
 	echo "System Name        : $(uname -n)"
 	echo "System Description : $PRETTY_NAME"
 	echo "System Contact     : $HOME_URL"
@@ -165,6 +197,10 @@ while [ "$1" != "" ]; do
 		-f)
 			opt=""
 			;;
+		-p)
+			plain="yes"
+			noansi
+			;;
 		-h)
 			usage
 			exit 0
@@ -185,6 +221,7 @@ case $cmd in
 		usage
 		;;
 	port*)
+		shift
 		ports $*
 		;;
 	vlan*)
