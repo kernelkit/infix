@@ -64,6 +64,7 @@ if [ ! -f /etc/network/interfaces.d/br0 ] && [ -n "$ports" ]; then
 		cat <<-EOF
 			iface $port
 			    bridge-access 1
+			    post-up ip link set $port group port
 		EOF
 	done
 	cat <<-EOF >>/etc/network/interfaces.d/br0
@@ -79,6 +80,7 @@ if [ ! -f /etc/network/interfaces.d/br0 ] && [ -n "$ports" ]; then
 		iface vlan1 inet dhcp
 		    vlan-id 1
 		    vlan-raw-device br0
+		    post-up ip link set vlan1 group iface
 	EOF
 	ip link set vlan1 group iface
 fi
