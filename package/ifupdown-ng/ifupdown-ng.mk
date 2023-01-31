@@ -4,7 +4,7 @@
 #
 ################################################################################
 
-IFUPDOWN_NG_VERSION = 10288c2d1b38321c1af9428250f798d4d84b4e01
+IFUPDOWN_NG_VERSION = 8c3ba98e5887d6db1586fa58bacdfbf7cf7e3de3
 IFUPDOWN_NG_SITE = $(call github,kernelkit,ifupdown-ng,$(IFUPDOWN_NG_VERSION))
 #IFUPDOWN_NG_VERSION = 0.12.1
 #IFUPDOWN_NG_SITE = $(call github,ifupdown-ng,ifupdown-ng,ifupdown-ng-$(IFUPDOWN_NG_VERSION))
