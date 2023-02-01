@@ -3,14 +3,7 @@
 # shellcheck disable=SC2048,SC2086
 . /etc/os-release
 
-H1=$(printf '\033[7m')
-H2=$(printf '\033[1m')
-DM=$(printf '\033[2m')
-UL=$(printf '\033[4m')
-IT=$(printf '\033[3m')
-BL=$(printf '\033[5m')
-H0=$(printf '\033[0m')
-
+bopt="-c"
 opt="-br"
 all=""
 plain=""
@@ -18,15 +11,61 @@ plain=""
 TTY=$(resize)
 eval "$TTY"
 
-noansi()
+# COLUMS and ROWS should be set on the console, if not, use fallback
+if [ -z "$COLUMNS" ]; then
+	if command -v tput; then
+		COLUMNS=$(tput cols)
+	else
+		COLUMNS=80
+	fi
+fi
+
+h1()
 {
-        H1=""
-        H2=""
-        DM=""
-        UL=""
-        IT=""
-        BL=""
-        H0=""
+	STR="$*"
+	if [ -n "$plain" ]; then
+		echo "$STR" | tr '[:lower:]' '[:upper:]'
+	else
+		printf "\033[7m%-${COLUMNS}s\033[0m\n" "$STR"
+	fi
+}
+
+h2()
+{
+	STR="$*"
+	if [ -n "$plain" ]; then
+		echo "$STR"
+		echo "$STR" | sed 's/./-/g'
+	else
+		printf "\033[1m%-${COLUMNS}s\033[0m\n" "$STR"
+	fi
+}
+
+dm()
+{
+	if [ -n "$plain" ]; then
+		echo "${*}"
+	else
+		printf "\033[2m%s\033[0m\n" "$*"
+	fi
+}
+
+ul()
+{
+	if [ -n "$plain" ]; then
+		printf "__%s__" "$*"
+	else
+		printf "\033[4%s\033[0m" "$*"
+	fi
+}
+
+em()
+{
+	if [ -n "$plain" ]; then
+		printf "**%s**" "$*"
+	else
+		printf "\033[5m%s\033[0m" "$*"
+	fi
 }
 
 usage()
@@ -72,7 +111,7 @@ ports()
 		return
 	fi
 
-	echo "${H1}PORT             STATE          ADDRESS <FLAGS>                               ${H0}"
+	h1 "PORT             STATE          MAC ADDRESS        FLAGS"
 	if grep -q port /etc/iproute2/group && [ -z "$all" ]; then
 		ip $opt link show group port
 	else
@@ -80,24 +119,24 @@ ports()
 	fi
 
 	if [ -z "$plain" ]; then
-		echo "${DM}______________________________________________________________________________${H0}"
-		echo "${DM}Use: '[ip|bridge] --help' and '[ip|bridge] link help' for more details.${H0}"
+		dm "______________________________________________________________________________"
+		dm "Use: '[ip|bridge] --help' and '[ip|bridge] link help' for more details."
 	fi
 }
 
 vlans()
 {
-	printf "${H1}INTERFACE         VLAN  FLAGS                                                 ${H0}\n"
-	bridge vlan show |tail +2 | awk 'NF { iface=$1; vid=$2; printf("%-16s  %4d  ", iface, vid); for (i=3; i <= NF; i++) printf("%s ", $i); printf("\n"); }'
+	h1 "INTERFACE         VLAN  FLAGS"
+	bridge $bopt vlan show |tail +2 | awk 'NF { iface=$1; vid=$2; printf("%-16s  %4d  ", iface, vid); for (i=3; i <= NF; i++) printf("%s ", $i); printf("\n"); }'
 	if [ -z "$plain" ]; then
-		echo "${DM}______________________________________________________________________________${H0}"
-		echo "${DM}See: 'bridge --help' and 'bridge vlan help' for more details.${H0}"
+		dm "______________________________________________________________________________"
+		dm "See: 'bridge --help' and 'bridge vlan help' for more details."
 	fi
 }
 
 ifaces()
 {
-	printf "${H1}INTERFACE        STATE          ADDRESS                                       ${H0}\n"
+	h1 "INTERFACE        STATE          ADDRESS"
 	if [ -n "$all" ]; then
 		ip $opt addr show
         elif grep -q iface /etc/iproute2/group; then
@@ -106,8 +145,8 @@ ifaces()
 		ip $opt addr show |awk '{ if ($1 !~ /eth[0-9]*/ && $1 !~ /.*@NONE/) { print }}'
 	fi
 	if [ -z "$plain" ]; then
-		echo "${DM}______________________________________________________________________________${H0}"
-		echo "${DM}See: 'ip --help' and 'ip address help' for more details.${H0}"
+		dm "______________________________________________________________________________"
+		dm "See: 'ip --help' and 'ip address help' for more details."
 	fi
 }
 
@@ -124,8 +163,8 @@ log()
 		tail -$LINES $fn
 	fi
 	if [ -z "$plain" ]; then
-		echo "${DM}______________________________________________________________________________${H0}"
-		echo "${DM}See: 'tail -25 /log/FILE', 'tail -F /log/FILE' to continuously monitor files.${H0}"
+		dm "______________________________________________________________________________"
+		dm "See: 'tail -25 /log/FILE', 'tail -F /log/FILE' to continuously monitor files."
 	fi
 }
 
@@ -139,8 +178,8 @@ rmon()
 		ethtool -S "$port"
 	done
 	if [ -z "$plain" ]; then
-		echo "${DM}______________________________________________________________________________${H0}"
-		echo "${DM}See: 'ethtool --help' for more details.${H0}"
+		dm "______________________________________________________________________________"
+		dm "See: 'ethtool --help' for more details."
 	fi
 }
 
@@ -153,17 +192,17 @@ rstp()
 
 fdb()
 {
-	bridge -color fdb show
+	bridge $bopt fdb show
 }
 
 mdb()
 {
-	bridge -color mdb show
+	bridge $bopt mdb show
 }
 
 routes()
 {
-	ip -color route show
+	ip $opt route show
 }
 
 igmp()
@@ -173,7 +212,7 @@ igmp()
 
 system()
 {
-	echo "${H1}SYSTEM INFORMATION                                                            ${H0}"
+	h1 "SYSTEM INFORMATION"
 	echo "System Name        : $(uname -n)"
 	echo "System Description : $PRETTY_NAME"
 	echo "System Contact     : $HOME_URL"
@@ -196,10 +235,15 @@ while [ "$1" != "" ]; do
 			;;
 		-f)
 			opt=""
+			if [ -n "$plain" ]; then
+				opt="-color=never"
+				bopt="-color=never"
+			fi
 			;;
 		-p)
 			plain="yes"
-			noansi
+			opt="$opt -color=never"
+			bopt="$bopt -color=never"
 			;;
 		-h)
 			usage
@@ -221,7 +265,6 @@ case $cmd in
 		usage
 		;;
 	port*)
-		shift
 		ports $*
 		;;
 	vlan*)
