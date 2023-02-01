@@ -1,0 +1,47 @@
+From 1f92833303f4aa662737191ec68522f0105f2bb2 Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Wed, 1 Feb 2023 13:09:32 +0100
+Subject: [PATCH] Fix build on non-systemd systems
+Organization: Addiva Elektronik
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ src/plugin/api/system/dns_resolver/load.c  | 4 ++--
+ src/plugin/api/system/dns_resolver/store.c | 4 ++--
+ 2 files changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/src/plugin/api/system/dns_resolver/load.c b/src/plugin/api/system/dns_resolver/load.c
+index 6ec1500..d7e8653 100644
+--- a/src/plugin/api/system/dns_resolver/load.c
++++ b/src/plugin/api/system/dns_resolver/load.c
+@@ -18,9 +18,9 @@
+ #include "plugin/data/system/dns_resolver/server/list.h"
+ #include "plugin/data/system/dns_resolver/search/list.h"
+ #include "plugin/data/system/ip_address.h"
+-
++#ifdef SYSTEMD
+ #include <systemd/sd-bus.h>
+-
++#endif
+ #include <sysrepo.h>
+ 
+ #include <utlist.h>
+diff --git a/src/plugin/api/system/dns_resolver/store.c b/src/plugin/api/system/dns_resolver/store.c
+index 790be71..c3e49e3 100644
+--- a/src/plugin/api/system/dns_resolver/store.c
++++ b/src/plugin/api/system/dns_resolver/store.c
+@@ -12,9 +12,9 @@
+  */
+ #include "store.h"
+ #include "plugin/common.h"
+-
++#ifdef SYSTEMD
+ #include <systemd/sd-bus.h>
+-
++#endif
+ #include <sysrepo.h>
+ 
+ #include <utlist.h>
+-- 
+2.34.1
+

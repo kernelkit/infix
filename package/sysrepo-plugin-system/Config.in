@@ -1,0 +1,17 @@
+config BR2_PACKAGE_SYSREPO_PLUGIN_SYSTEM
+	bool "sysrepo-plugin-system"
+	depends on BR2_USE_MMU
+	depends on BR2_TOOLCHAIN_HAS_SYNC_4 # libyang
+	depends on BR2_TOOLCHAIN_HAS_THREADS_NPTL
+	select BR2_PACKAGE_LIBYANG
+	select BR2_PACKAGE_SYSREPO
+	select BR2_PACKAGE_SYSREPO_PLUGINS_COMMON
+	select BR2_PACKAGE_UMGMT
+	help
+	  This Sysrepo plugin is based on the ietf-system YANG module
+	  which provides "configuration and identification of some
+	  common system properties within a device containing a NETCONF
+	  server". More information about the specific YANG module can
+	  be found in RFC 7317: A YANG Data Model for System Management.
+
+	  https://github.com/telekom/sysrepo-plugin-system
