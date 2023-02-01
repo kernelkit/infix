@@ -49,7 +49,7 @@ menu:network:Network:Network Settings
 
 menu:system:System:System Settings
 	exec:List _log files:truncate:ls -l /var/log
-	exec:Show _log file:edit,truncate:show -a log ~Show logfile, Enter for syslog:syslog~
+	exec:Show _log file:edit,truncate:show -p -a log ~Show logfile, Enter for syslog:syslog~
 	exec:Change _hostname:edit:hostnm ~Enter new hostname \[-a-zA-Z0-9\]:~
 	exec:Change your _password::passwd
 	exec:Edit _rc.local::edit /etc/rc.local
