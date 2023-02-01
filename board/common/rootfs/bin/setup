@@ -1,0 +1,72 @@
+#!/usr/bin/pdmenu
+
+title:Setup & Diagnostics
+
+color:desktop:blue:blue
+color:title:blue:white
+color:base:blue:white
+
+menu:main:Main Menu:Use arrow keys, Enter, Escape, and Q to navigate
+	show:_System Settings..::system
+	show:_Network Settings..::network
+	show:_Tools..::tools
+	nop
+	exec:Show _fdb:truncate:show -p fdb
+	exec:Show _mdb:truncate:show -p mdb
+	exec:Show _ports:truncate:show -p ports
+	exec:Show _vlans:truncate:show -p  vlans
+	exec:Show _interfaces:truncate:show -p iface
+	exec:Show _routes:truncate:show -p route
+	nop
+	exec:Show _online users:truncate:w
+	exec:Show _CPU Load::top
+	nop
+	show:_Help..::help
+	exit:_Quit
+
+menu:help:Help:Help Menu
+	exec:Introduction:truncate:/bin/help -p
+	exec:Editors:truncate:/bin/help -p edit
+	exec:Networking:truncate:/bin/help -p net
+	nop
+	exit:_Main menu..
+
+menu:network:Network:Network Settings
+	exec:Show all _links:truncated:ip -br link
+	exec:Show all _addresses:truncated:ip -br address
+	exec:Show managed _interfaces:truncated:ifparse --all
+	nop
+	exec:Take _interface down:edit:ifdown ~Enter name of interface to take down:~
+	exec:Take _interface up:edit:ifup ~Enter name of interface to take up:~
+	nop
+	exec:Edit _dhcpcd.conf::edit /etc/dhcpcd.conf
+	exec:Edit _dnsmasq.conf::edit /etc/dnsmasq.conf
+	exec:Edit _interfaces::edit /etc/network/interfaces
+	exec:Edit _mactab::edit /etc/mactab
+	exec:Edit _sysctl.conf::edit /etc/sysctl.conf
+	nop
+	exit:_Main menu..
+
+menu:system:System:System Settings
+	exec:List _log files:truncate:ls -l /var/log
+	exec:Show _log file:edit,truncate:show -a log ~Show logfile, Enter for syslog:syslog~
+	exec:Change _hostname:edit:hostnm ~Enter new hostname \[-a-zA-Z0-9\]:~
+	exec:Change your _password::passwd
+	exec:Edit _rc.local::edit /etc/rc.local
+	nop
+	exec:_Show State of Services:truncate:initctl -p
+	exec:_Reload services:truncate:initctl reload;sleep 2;initctl -p
+	exec:Show _available services:truncate:initctl -p ls
+	exec:_Enable service:edit:initctl enable ~Enter name of service (filename) to enable:~
+	exec:_Disable service:edit:initctl disable ~Enter name of service (filename) to disable:~
+	nop
+	exit:_Main menu..
+
+menu:tools:Tools:Tools
+	exec:_ping:edit,pause:ping ~Enter address (IP or name) to ping:~
+	exec:_SSH:edit,pause:ssh ~Enter [username@]address (IP or name) to SSH to:~
+	exec:_telnet:edit,pause:telnet ~Enter address (IP or name) to telnet to:~
+	exec:_traceroute:edit,pause:mtr ~Enter address (IP or name) to traceroute to:~
+	exec:_www:edit,pause:lynx ~Enter URL to browse:~
+	nop
+	exit:_Main menu..
