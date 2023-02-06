@@ -3,6 +3,10 @@
 Infix is an embedded Linux Network Operating System (NOS)
 based on [Buildroot][1], [Finit][2], and [ifupdown-ng][3].
 
+See the [GitHub Releases](https://github.com/kernelkit/infix/releases)
+page for out pre-built images.  The *Latest Build* has the bleeding edge
+images, if possible we recommend using a versioned release.
+
 > Login with user 'root', no password by default on plain builds.  See
 > the online `help` command for an introduction to the system.
 
