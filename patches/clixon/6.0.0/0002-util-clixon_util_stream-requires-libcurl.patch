@@ -1,0 +1,75 @@
+From 327f9ee93a67fd908d70ec4956bed3d067a1c278 Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Tue, 7 Feb 2023 18:30:33 +0100
+Subject: [PATCH 2/4] util: clixon_util_stream requires libcurl
+Organization: Addiva Elektronik
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ configure        | 4 ++++
+ configure.ac     | 4 ++++
+ util/Makefile.in | 4 +++-
+ 3 files changed, 11 insertions(+), 1 deletion(-)
+
+diff --git a/configure b/configure
+index 33aa03e1..2275c84f 100755
+--- a/configure
++++ b/configure
+@@ -643,6 +643,7 @@ HAVE_HTTP1
+ HAVE_LIBNGHTTP2
+ enable_netsnmp
+ with_restconf
++with_curl
+ LINKAGE
+ LIBSTATIC_SUFFIX
+ SH_SUFFIX
+@@ -5040,6 +5041,9 @@ fi
+ 
+ $as_echo "#define CLIXON_PUBLISH_STREAMS 1" >>confdefs.h
+ 
++   with_curl=yes
++else
++   with_curl=''
+ fi
+ 
+ for ac_header in cligen/cligen.h
+diff --git a/configure.ac b/configure.ac
+index c941465a..1d3cee77 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -114,6 +114,7 @@ AC_SUBST(LIBS)
+ AC_SUBST(SH_SUFFIX)
+ AC_SUBST(LIBSTATIC_SUFFIX)
+ AC_SUBST(LINKAGE)
++AC_SUBST(with_curl)
+ AC_SUBST(with_restconf)  # Set to native or fcgi -> compile apps/restconf
+ AC_SUBST(enable_netsnmp) # Enable build of apps/snmp
+ AC_SUBST(HAVE_LIBNGHTTP2,false) # consider using neutral constant such as with-http2
+@@ -228,6 +229,9 @@ if test "$ac_enable_publish" = "yes"; then
+    AC_CHECK_HEADERS(curl.h,[], AC_MSG_ERROR([curl missing]))	
+    AC_CHECK_LIB(curl, curl_global_init,, AC_MSG_ERROR([libcurl missing]))
+    AC_DEFINE(CLIXON_PUBLISH_STREAMS, 1, [Enable publish of notification streams using SSE and curl])
++   with_curl=yes
++else
++   with_curl=''
+ fi
+ 
+ AC_CHECK_HEADERS(cligen/cligen.h,, AC_MSG_ERROR([CLIgen missing. Try: git clone https://github.com/clicon/cligen.git]))
+diff --git a/util/Makefile.in b/util/Makefile.in
+index fbb435af..dcf8f12e 100644
+--- a/util/Makefile.in
++++ b/util/Makefile.in
+@@ -104,7 +104,9 @@ APPSRC   += clixon_util_dispatcher.c
+ APPSRC   += clixon_netconf_ssh_callhome.c
+ APPSRC   += clixon_netconf_ssh_callhome_client.c
+ ifdef with_restconf
+-APPSRC   += clixon_util_stream.c # Needs curl
++ifdef with_libcurl
++APPSRC   += clixon_util_stream.c
++endif
+ ifeq ($(with_restconf), native)
+ APPSRC   += clixon_restconf_callhome_client.c
+ endif
+-- 
+2.34.1
+

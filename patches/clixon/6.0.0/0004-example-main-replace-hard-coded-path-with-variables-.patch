@@ -1,0 +1,53 @@
+From 7bbc0e1e82dcfc9ba1334475386866bb885e7ec6 Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Tue, 7 Feb 2023 18:32:32 +0100
+Subject: [PATCH 4/4] example/main: replace hard-coded path with variables from
+ configure
+Organization: Addiva Elektronik
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ example/main/example.xml.in | 20 ++++++++++----------
+ 1 file changed, 10 insertions(+), 10 deletions(-)
+
+diff --git a/example/main/example.xml.in b/example/main/example.xml.in
+index 4cb2a3e4..36f225d2 100644
+--- a/example/main/example.xml.in
++++ b/example/main/example.xml.in
+@@ -1,23 +1,23 @@
+ <clixon-config xmlns="http://clicon.org/config">
+-  <CLICON_CONFIGFILE>/usr/local/etc/example.xml</CLICON_CONFIGFILE>
++  <CLICON_CONFIGFILE>@sysconfdir@/example.xml</CLICON_CONFIGFILE>
+   <CLICON_FEATURE>ietf-netconf:startup</CLICON_FEATURE>
+   <CLICON_FEATURE>ietf-netconf:confirmed-commit</CLICON_FEATURE>
+   <CLICON_FEATURE>clixon-restconf:allow-auth-none</CLICON_FEATURE>
+   <CLICON_FEATURE>clixon-restconf:fcgi</CLICON_FEATURE>
+-  <CLICON_YANG_DIR>/usr/local/share/clixon</CLICON_YANG_DIR>
++  <CLICON_YANG_DIR>@YANG_INSTALLDIR@</CLICON_YANG_DIR>
+   <CLICON_YANG_DIR>@YANG_STANDARD_DIR@</CLICON_YANG_DIR>
+   <CLICON_YANG_MODULE_MAIN>clixon-example</CLICON_YANG_MODULE_MAIN>
+   <CLICON_CLI_MODE>example</CLICON_CLI_MODE>
+-  <CLICON_BACKEND_DIR>/usr/local/lib/example/backend</CLICON_BACKEND_DIR>
+-  <CLICON_NETCONF_DIR>/usr/local/lib/example/netconf</CLICON_NETCONF_DIR>
+-  <CLICON_RESTCONF_DIR>/usr/local/lib/example/restconf</CLICON_RESTCONF_DIR>
+-  <CLICON_CLI_DIR>/usr/local/lib/example/cli</CLICON_CLI_DIR>
+-  <CLICON_CLISPEC_DIR>/usr/local/lib/example/clispec</CLICON_CLISPEC_DIR>
+-  <CLICON_SOCK>/usr/local/var/example/example.sock</CLICON_SOCK>
+-  <CLICON_BACKEND_PIDFILE>/usr/local/var/example/example.pidfile</CLICON_BACKEND_PIDFILE>
++  <CLICON_BACKEND_DIR>@exec_prefix@/lib/example/backend</CLICON_BACKEND_DIR>
++  <CLICON_NETCONF_DIR>@exec_prefix@/lib/example/netconf</CLICON_NETCONF_DIR>
++  <CLICON_RESTCONF_DIR>@exec_prefix@/lib/example/restconf</CLICON_RESTCONF_DIR>
++  <CLICON_CLI_DIR>@exec_prefix@/lib/example/cli</CLICON_CLI_DIR>
++  <CLICON_CLISPEC_DIR>@exec_prefix@/lib/example/clispec</CLICON_CLISPEC_DIR>
++  <CLICON_SOCK>@localstatedir@/run/example.sock</CLICON_SOCK>
++  <CLICON_BACKEND_PIDFILE>@localstatedir@/run/example.pidfile</CLICON_BACKEND_PIDFILE>
+   <CLICON_CLI_LINESCROLLING>0</CLICON_CLI_LINESCROLLING>
+   <CLICON_CLI_TAB_MODE>0</CLICON_CLI_TAB_MODE>
+-  <CLICON_XMLDB_DIR>/usr/local/var/example</CLICON_XMLDB_DIR>
++  <CLICON_XMLDB_DIR>@localstatedir@/lib/example</CLICON_XMLDB_DIR>
+   <CLICON_STARTUP_MODE>init</CLICON_STARTUP_MODE>
+   <CLICON_NACM_MODE>disabled</CLICON_NACM_MODE>
+   <CLICON_STREAM_DISCOVERY_RFC5277>true</CLICON_STREAM_DISCOVERY_RFC5277>
+-- 
+2.34.1
+
