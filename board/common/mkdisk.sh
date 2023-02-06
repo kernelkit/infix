@@ -166,7 +166,9 @@ case "$arch" in
 	;;
     x86_64)
 	mkdir -p $root/aux/grub
-	cp -f $BR2_EXTERNAL_INFIX_PATH/board/amd64/grub.cfg $root/aux/grub/grub.cfg
+	cp -f $BR2_EXTERNAL_INFIX_PATH/board/amd64/grub.cfg \
+	      $BR2_EXTERNAL_INFIX_PATH/board/amd64/grubenv  \
+	   $root/aux/grub/
 	;;
     *)
 	;;

@@ -11,6 +11,9 @@ load_cfg SIGN_KEY
 ixmsg "Signing SquashFS Image"
 $common/sign.sh $BR2_ARCH $SIGN_KEY
 
+ixmsg "Creating RAUC Update Bundle"
+$common/mkrauc.sh $BR2_ARCH $SIGN_KEY
+
 load_cfg DISK_IMAGE
 if [ "$DISK_IMAGE" = "y" ]; then
     ixmsg "Creating Disk Image"
