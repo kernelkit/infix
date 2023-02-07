@@ -1,0 +1,13 @@
+clixonlibdir  = $(libdir)/clixon
+backenddir    = $(clixonlibdir)/backend
+clidir        = $(clixonlibdir)/cli
+clispecdir    = $(clixonlibdir)/clispec
+yangdir       = $(datarootdir)/clixon
+
+backend_LTLIBRARIES =
+cli_LTLIBRARIES =
+clispec_DATA =
+yang_DATA =
+
+cli_libadd = -lclixon -lclixon_cli
+cli_ldflags = -module -avoid-version -shared

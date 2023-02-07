@@ -1,0 +1,9 @@
+CLICON_MODE="exec";
+CLICON_PROMPT="%U@%H> ";
+CLICON_PLUGIN="cli";
+
+exit("Exit"), cli_quit();
+
+show("Show various system state and configuration") {
+	system-information("System information"), cli_sysinfo();
+}
