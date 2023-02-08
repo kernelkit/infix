@@ -24,27 +24,29 @@ opt="-k"
 mount_rw()
 {
     # If something is already setup, leave it be.
-    mountpoint -q /$1 && return 0
+    mountpoint -q "/$1" && return 0
 
     # TODO: Also look for UBI partitions
-    mount LABEL=$1 && return 0
+    mount LABEL="$1" && return 0
 
     return 1
 }
 
+# mkdir -p -m 0755 only applies to the deepest directory
+# shellcheck disable=SC2174
 mount_overlay()
 {
-    local tag=$1
-    local src=$2
-    local dst=$3
-    local u=$src/infix/$tag.u
-    local w=$src/infix/$tag.w
+    tag="$1"
+    src="$2"
+    dst="$3"
+    u="$src/infix/$tag.u"
+    w="$src/infix/$tag.w"
 
-    mkdir -p -m 0755 $u
-    mkdir -p -m 0755 $w
+    mkdir -p -m 0755 "$u"
+    mkdir -p -m 0755 "$w"
 
-    mount -t overlay $tag-overlay $dst \
-	  -o lowerdir=$dst,upperdir=$u,workdir=$w
+    mount -t overlay "$tag-overlay" "$dst" \
+	  -o lowerdir="$dst",upperdir="$u",workdir="$w"
 }
 
 use_etc()
@@ -52,7 +54,7 @@ use_etc()
     # Finit's condition system is not yet bootstrapped when /etc/fstab
     # is parsed, so we have to manually check for the boot/etc
     # condition.
-    cat /proc/1/cmdline | awk '
+    awk '
 	$0 == "finit.cond" {
 		cond=1;
 		next;
@@ -60,7 +62,7 @@ use_etc()
 	cond == 1 {
 		exit(index($0, "etc") == 0);
 	}
-    '
+    ' /proc/1/cmdline
 }
 
 # Fall back to console logging if sysklogd is too old
@@ -78,7 +80,7 @@ fi
 
 cfgsrc=/mnt/cfg
 etcsrc=/mnt/tmp
-if ! mount_rw cfg; then
+if ! mount_rw cfg >/dev/null 2>&1; then
     err=1
 
     logger $opt -p user.crit -t "$nm" \
@@ -113,6 +115,6 @@ mount_overlay home $cfgsrc /home
 mount_overlay root $cfgsrc /root
 mount_overlay var  $varsrc /var
 
-[ "$vlibsrc" ] && mount_overlay vlib $vlibsrc /var/lib
+[ "$vlibsrc" ] && mount_overlay vlib "$vlibsrc" /var/lib
 
 exit $err
