@@ -1,3 +1,5 @@
+finitdir      = $(sysconfdir)/finit.d
+
 clixonlibdir  = $(libdir)/clixon
 backenddir    = $(clixonlibdir)/backend
 clidir        = $(clixonlibdir)/cli
