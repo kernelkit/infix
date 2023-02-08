@@ -16,29 +16,29 @@ CLIXON_DEPENDENCIES = cligen #libcurl libxml2
 # /usr/local/etc/clixon.xml unless this option is specified.
 CLIXON_CONF_OPTS += --with-configfile=/etc/clixon.xml
 
-ifeq ($(BR_PACKAGE_CLIXON_RESTCONF_NATIVE),y)
+ifeq ($(BR2_PACKAGE_CLIXON_RESTCONF_NATIVE),y)
 CLIXON_CONF_OPTS += --with-restconf=native
 endif
 
-ifeq ($(BR_PACKAGE_CLIXON_HTTP1),y)
+ifeq ($(BR2_PACKAGE_CLIXON_HTTP1),y)
 CLIXON_CONF_OPTS += --enable-http1
 else
 CLIXON_CONF_OPTS += --disable-http1
 endif
 
-ifeq ($(BR_PACKAGE_CLIXON_HTTP2),y)
+ifeq ($(BR2_PACKAGE_CLIXON_HTTP2),y)
 CLIXON_DEPENDENCIES += nghttp2
 CLIXON_CONF_OPTS += --enable-nghttp2
 else
 CLIXON_CONF_OPTS += --disable-nghttp2
 endif
 
-ifeq ($(BR_PACKAGE_CLIXON_RESTCONF_FCGI),y)
+ifeq ($(BR2_PACKAGE_CLIXON_RESTCONF_FCGI),y)
 CLIXON_DEPENDENCIES += nginx
 CLIXON_CONF_OPTS += --with-restconf=fcgi
 endif
 
-ifeq ($(BR_PACKAGE_CLIXON_RESTCONF_NONE),y)
+ifeq ($(BR2_PACKAGE_CLIXON_RESTCONF_NONE),y)
 CLIXON_CONF_OPTS += --without-restconf
 endif
 
