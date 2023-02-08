@@ -32,10 +32,3 @@ if [ -f "$TARGET_DIR/etc/dhcpcd.conf" ]; then
 		EOF
 	fi
 fi
-
-# Enable NETCONF over SSH
-if [ -f "$TARGET_DIR/etc/ssh/sshd_config" ]; then
-	if ! grep -q clixon_netconf "$TARGET_DIR/etc/ssh/sshd_config"; then
-		sed -i '/^Subsystem[[:space:]]sftp.*/a Subsystem	netconf	/usr/bin/clixon_netconf -f /etc/example.xml' "$TARGET_DIR/etc/ssh/sshd_config"
-	fi
-fi
