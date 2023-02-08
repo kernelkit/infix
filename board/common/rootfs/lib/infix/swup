@@ -60,8 +60,8 @@ ip link set lo group iface
 ports=$(ip -json link show group port | jq -r '.[].ifname | select(length > 0)' | tr "\n" " ")
 if [ ! -f /etc/network/interfaces.d/br0 ] && [ -n "$ports" ]; then
 	touch /etc/network/interfaces.d/br0
-	for port in $porst; do
-		cat <<-EOF
+	for port in $ports; do
+		cat <<-EOF >>/etc/network/interfaces.d/br0
 			iface $port
 			    bridge-access 1
 			    post-up ip link set $port group port
