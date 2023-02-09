@@ -60,7 +60,10 @@ use_etc()
 		next;
 	}
 	cond == 1 {
-		exit(index($0, "etc") == 0);
+		use_etc = index($0, "etc") != 0;
+	}
+	END {
+	    exit(use_etc ? 0 : 1);
 	}
     ' /proc/1/cmdline
 }
