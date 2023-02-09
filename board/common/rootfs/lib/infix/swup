@@ -1,77 +1,35 @@
 #!/bin/sh
-# Find any switch ports, classify and rename to Infix std
-#
 
-ident=$(basename "$0")
-num=0
-
-# Perform any interface renames as dictated by, first, any Qemu
-# override (for testing), and then the user specific /etc/mactab
-for file in /sys/firmware/qemu_fw_cfg/by_name/opt/mactab/raw /etc/mactab; do
-	if [ -f $file ]; then
-		logger -k -p user.notice -t "$ident" "calling nameif -c $file"
-		nameif -c $file -s
-	fi
-done
-
-# Find CPU interfaces used for connecting to a switch managed by DSA
-for netif in /sys/class/net/*; do
-	iface=$(basename "$netif")
-	[ -f "/sys/class/net/$iface/dsa/tagging" ] || continue
-
-	# Disable SLAAC frames and such, that's for the port interfaces, and
-	# bring it up so we get link events from the ports to the bridge.
-	sysctl -q "net.ipv6.conf.$iface.disable_ipv6=1"
-
-	dsa="dsa$num"
-	logger -k -p user.notice -t "$ident" "Found DSA interface, renaming $iface -> $dsa"
-	ip link set dev "$iface" name $dsa
-	num=$((num + 1))
-done
-
-# Find and mark all switch ports
-ports=$(devlink port 2>/dev/null | awk '/flavour physical/{print $5}')
-for iface in $ports; do
-	ip link set "$iface" group port
-done
-
-# Testing, e.g., using /etc/mactab may use TAP devices to create
-# emulated switch ports, make sure to mark them as well
-ports=$(ip -json link | jq -r '.[].ifname | match("^e[[:digit:]]+").string')
-for iface in $ports; do
-	ip link set "$iface" group port
-done
-
-# At least loopback in iface group
-ip link set lo group iface
+# Only create a default config on unmanaged nodes.
+initctl cond get boot/etc || exit 0
 
 # Factory default: all switch ports in VLAN 1 of br0
 # need to check for 'length > 0' because ip command
 # outputs empty json objects for non-port group ifs
 ports=$(ip -json link show group port | jq -r '.[].ifname | select(length > 0)' | tr "\n" " ")
-if [ ! -f /etc/network/interfaces.d/br0 ] && [ -n "$ports" ]; then
-	touch /etc/network/interfaces.d/br0
-	for port in $ports; do
-		cat <<-EOF >>/etc/network/interfaces.d/br0
-			iface $port
-			    bridge-access 1
-			    post-up ip link set $port group port
-		EOF
-	done
-	cat <<-EOF >>/etc/network/interfaces.d/br0
+[ -f /etc/network/interfaces.d/br0 ] || [ -z "$ports" ] && exit 0
 
-		auto br0
-		iface br0
-		    bridge-ports $ports
-		    bridge-vlan-aware yes
-		    bridge-stp on
-		    bridge-vids 1
-
-		auto vlan1
-		iface vlan1 inet dhcp
-		    vlan-id 1
-		    vlan-raw-device br0
-		    post-up ip link set vlan1 group iface
+touch /etc/network/interfaces.d/br0
+for port in $ports; do
+    cat <<-EOF >>/etc/network/interfaces.d/br0
+		iface $port
+		    bridge-access 1
+		    post-up ip link set $port group port
 	EOF
-	ip link set vlan1 group iface
-fi
+done
+cat <<-EOF >>/etc/network/interfaces.d/br0
+
+	auto br0
+	iface br0
+	    bridge-ports $ports
+	    bridge-vlan-aware yes
+	    bridge-stp on
+	    bridge-vids 1
+
+	auto vlan1
+	iface vlan1 inet dhcp
+	    vlan-id 1
+	    vlan-raw-device br0
+	    post-up ip link set vlan1 group iface
+EOF
+ip link set vlan1 group iface
