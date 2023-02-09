@@ -38,7 +38,7 @@ append_args()
 	echo -n "debug "
     fi
 
-    echo -n "${QEMU_APPEND} "
+    echo -n "${QEMU_APPEND} ${QEMU_EXTRA_APPEND} "
 }
 
 rootfs_args()
