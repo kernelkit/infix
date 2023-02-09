@@ -29,15 +29,6 @@ for netif in /sys/class/net/*; do
 	num=$((num + 1))
 done
 
-# Verify that the 'port' and 'iface' groups exists
-[ -d /etc/iproute2 ] || mkdir -p /etc/iproute2
-if ! grep -q port /etc/iproute2/group; then
-	echo "1	port" >> /etc/iproute2/group
-fi
-if ! grep -q iface /etc/iproute2/group; then
-	echo "2	iface" >> /etc/iproute2/group
-fi
-
 # Find and mark all switch ports
 ports=$(devlink port 2>/dev/null | awk '/flavour physical/{print $5}')
 for iface in $ports; do
