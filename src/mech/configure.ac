@@ -18,6 +18,8 @@ AC_PROG_CC
 AC_PROG_INSTALL
 
 AC_CHECK_LIB([clixon], [yang_len_get],, AC_MSG_ERROR([Clixon not found]))
+PKG_CHECK_MODULES([augeas],  [augeas >= 1.12.0])
+
 
 test "x$prefix" = xNONE && prefix=$ac_default_prefix
 test "x$exec_prefix" = xNONE && exec_prefix='${prefix}'

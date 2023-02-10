@@ -1,3 +1,6 @@
+CFLAGS   = -Wall -Wextra -Werror -Wno-unused-parameter
+CPPFLAGS = -I $(top_srcdir)/include/
+
 finitdir      = $(sysconfdir)/finit.d
 
 clixonlibdir  = $(libdir)/clixon
@@ -13,3 +16,8 @@ yang_DATA =
 
 cli_libadd = -lclixon -lclixon_cli
 cli_ldflags = -module -avoid-version -shared
+
+backend_cflags = $(CFLAGS) $(augeas_CFLAGS)
+backend_libadd = $(augeas_LIBS) -lclixon -lclixon_backend
+backend_ldflags = -module -avoid-version -shared
+
