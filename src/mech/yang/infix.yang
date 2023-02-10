@@ -15,10 +15,11 @@ module infix {
     import ietf-datastores {
         prefix ds;
     }
-    import clixon-autocli{
+*/
+    import clixon-autocli {
         prefix autocli;
     }
-*/
+
     description
         "Base model
          ";

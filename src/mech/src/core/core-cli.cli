@@ -1,0 +1,74 @@
+CLICON_MODE="exec";
+CLICON_PROMPT="%U@%H:%w> ";
+CLICON_PLUGIN="core-cli";
+
+exit("Exit"), cli_quit();
+
+# Autocli syntax tree operations, from clixon's "main" example
+edit @datamodelmode, cli_auto_edit("basemodel");
+up, cli_auto_up("basemodel");
+top, cli_auto_top("basemodel");
+set @datamodel, cli_auto_set();
+merge @datamodel, cli_auto_merge();
+create @datamodel, cli_auto_create();
+delete("Delete a configuration item") {
+      @datamodel, cli_auto_del();
+      all("Delete whole candidate configuration"), delete_all("candidate");
+}
+validate("Validate changes"), cli_validate();
+commit("Commit the changes"), cli_commit(); {
+  [persist-id("Specify the 'persist' value of a previous confirmed-commit") <persist-id-val:string show:"string">("The 'persist' value of the persistent confirmed-commit")], cli_commit(); {
+    <cancel:string keyword:cancel>("Cancel an ongoing confirmed-commit"), cli_commit();
+    <confirmed:string keyword:confirmed>("Require a confirming commit") {
+       [persist("Make this confirmed-commit persistent") <persist-val:string show:"string">("The value that must be provided as 'persist-id' in the confirming-commit or cancel-commit")]
+       [<timeout:uint32 range[1:4294967295] show:"1..4294967295">("The rollback timeout in seconds")], cli_commit();
+    }
+  }
+}
+copy("Copy and create a new object") {
+    running("Copy from running db")  startup("Copy to startup config"), db_copy("running", "startup");
+    interface("Copy interface"){
+	(<name:string>|<name:string expand_dbvar("candidate","/ietf-interfaces:interfaces/interface=%s/name")>("name of interface to copy from")) to("Copy to interface") <toname:string>("Name of interface to copy to"), cli_copy_config("candidate","//interface[%s='%s']","urn:ietf:params:xml:ns:yang:ietf-interfaces","name","name","toname");
+    }
+}
+
+show("Show various system state and configuration") {
+	system-information("System information"), cli_sysinfo();
+
+	auto("Show expand x") {
+		xml @datamodelshow, cli_show_auto("candidate", "xml", true, false, "report-all");
+		text @datamodelshow, cli_show_auto("candidate", "text", true, false, "report-all");
+		json @datamodelshow, cli_show_auto("candidate", "json", true, false, "report-all");
+		netconf @datamodelshow, cli_show_auto("candidate", "netconf", true, false, "report-all");
+		cli @datamodelshow, cli_show_auto("candidate", "cli", true, false, "report-all", "set ");
+	}
+
+	configuration("Show configuration"), cli_show_auto_mode("candidate", "text", true, false); {
+		xml("Show configuration as XML"), cli_show_auto_mode("candidate", "xml", true, false); {
+			default("With-default mode") {
+				report-all, cli_show_auto_mode("candidate", "xml", true, false, "report-all");
+				trim, cli_show_auto_mode("candidate", "xml", true, false, "trim");
+				explicit, cli_show_auto_mode("candidate", "xml", true, false, "explicit");
+				report-all-tagged, cli_show_auto_mode("candidate", "xml", true, false, "report-all-tagged");
+				report-all-tagged-default, cli_show_auto_mode("candidate", "xml", true, false, "report-all-tagged-default");
+				report-all-tagged-strip, cli_show_auto_mode("candidate", "xml", true, false, "report-all-tagged-strip");
+			}
+		}
+		cli("Show configuration as CLI commands"), cli_show_auto_mode("candidate", "cli", true, false, "explicit", "set ");
+		netconf("Show configuration as netconf edit-config operation"), cli_show_auto_mode("candidate", "netconf", true, false);
+		text("Show configuration as text"), cli_show_auto_mode("candidate", "text", true, false);
+		json("Show configuration as JSON"), cli_show_auto_mode("candidate", "json", true, false);
+	}
+	state("Show configuration and state"), cli_show_auto_mode("running", "text", true, true); {
+		xml("Show configuration and state as XML"), cli_show_auto_mode("running", "xml", true, true); {
+			default("With-default mode") {
+				report-all, cli_show_auto_mode("running", "xml", true, true, "report-all");
+				trim, cli_show_auto_mode("running", "xml", true, true, "trim");
+				explicit, cli_show_auto_mode("running", "xml", true, true, "explicit");
+				report-all-tagged, cli_show_auto_mode("running", "xml", true, true, "report-all-tagged");
+				report-all-tagged-default, cli_show_auto_mode("running", "xml", true, true, "report-all-tagged-default");
+				report-all-tagged-strip, cli_show_auto_mode("running", "xml", true, true, "report-all-tagged-strip");
+			}
+		}
+	}
+}
