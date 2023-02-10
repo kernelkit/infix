@@ -120,4 +120,9 @@ mount_overlay var  $varsrc /var
 
 [ "$vlibsrc" ] && mount_overlay vlib "$vlibsrc" /var/lib
 
+# Keep transient configs in a ramdisk and symlink out to /cfg for
+# startup.
+mkdir -p /mnt/tmp/infix/db
+ln -s /cfg/startup_db /mnt/tmp/infix/db/startup_db
+
 exit $err

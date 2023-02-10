@@ -1,0 +1,9 @@
+#!/bin/sh
+
+set -e
+
+# TODO: Copy in a proper factory config from
+# /usr/share/vendor/<hardware-id>_db or similar.
+touch /mnt/tmp/infix/db/factory_db
+
+[ -f /cfg/startup_db ] || cp /mnt/tmp/infix/db/factory_db /cfg/startup_db
