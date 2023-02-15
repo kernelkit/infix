@@ -34,7 +34,7 @@ CLIXON_CONF_OPTS += --disable-nghttp2
 endif
 
 ifeq ($(BR2_PACKAGE_CLIXON_RESTCONF_FCGI),y)
-CLIXON_DEPENDENCIES += nginx
+CLIXON_DEPENDENCIES += nginx libfcgi
 CLIXON_CONF_OPTS += --with-restconf=fcgi
 endif
 

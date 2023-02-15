@@ -42,6 +42,7 @@ config BR2_PACKAGE_CLIXON_RESTCONF_FCGI
 	bool "nginx"
 	select BR2_PACKAGE_NGINX
 	select BR2_PACKAGE_NGINX_HTTP_FASTCGI_MODULE
+	select BR2_PACKAGE_LIBFCGI
 	help
 	  Enable RESTCONF using NGINX fastcgi instead of native.
 
