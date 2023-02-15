@@ -68,6 +68,13 @@ endef
 SKELETON_INIT_FINIT_TARGET_FINALIZE_HOOKS += SKELETON_INIT_FINIT_SET_LLDPD
 endif
 
+ifeq ($(BR2_PACKAGE_NGINX),y)
+define SKELETON_INIT_FINIT_SET_NGINX
+	ln -sf ../available/nginx.conf $(FINIT_D)/enabled/nginx.conf
+endef
+SKELETON_INIT_FINIT_TARGET_FINALIZE_HOOKS += SKELETON_INIT_FINIT_SET_NGINX
+endif
+
 ifeq ($(BR2_PACKAGE_MINI_SNMPD),y)
 define SKELETON_INIT_FINIT_SET_MINI_SNMPD
 	ln -sf ../available/mini-snmpd.conf $(FINIT_D)/enabled/mini-snmpd.conf
