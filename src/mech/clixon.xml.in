@@ -23,4 +23,9 @@
   <CLICON_NACM_MODE>disabled</CLICON_NACM_MODE>
   <CLICON_STREAM_DISCOVERY_RFC5277>true</CLICON_STREAM_DISCOVERY_RFC5277>
   <CLICON_YANG_LIBRARY>false</CLICON_YANG_LIBRARY>
+  <CLICON_BACKEND_RESTCONF_PROCESS>true</CLICON_BACKEND_RESTCONF_PROCESS>
+  <restconf>
+    <enable>true</enable>
+    <fcgi-socket>@RUNSTATEDIR@/clixon/restconf.sock</fcgi-socket>
+  </restconf>
 </clixon-config>
