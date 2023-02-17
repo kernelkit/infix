@@ -78,6 +78,16 @@ endef
 SKELETON_INIT_FINIT_TARGET_FINALIZE_HOOKS += SKELETON_INIT_FINIT_SET_DROPBEAR
 endif
 
+ifeq ($(BR2_PACKAGE_FRR),y)
+define SKELETON_INIT_FINIT_SET_FRR
+	for svc in babeld bfdd bgpd eigrpd isisd ldpd pathd ripd ripng static ospfd ospf6d vrrpd zebra; do	\
+		cp $(SKELETON_INIT_FINIT_AVAILABLE)/frr/$$svc.conf $(FINIT_D)/available/$$svc.conf;		\
+	done
+	ln -sf ../available/zebra.conf $(FINIT_D)/enabled/zebra.conf
+endef
+SKELETON_INIT_FINIT_TARGET_FINALIZE_HOOKS += SKELETON_INIT_FINIT_SET_FRR
+endif # BR2_PACKAGE_FRR
+
 ifeq ($(BR2_PACKAGE_INADYN),y)
 define SKELETON_INIT_FINIT_SET_INADYN
 	cp $(SKELETON_INIT_FINIT_AVAILABLE)/inadyn.conf $(FINIT_D)/available/
@@ -135,47 +145,47 @@ endif
 
 ifeq ($(BR2_PACKAGE_QUAGGA),y)
 define SKELETON_INIT_FINIT_SET_QUAGGA
-	cp $(SKELETON_INIT_FINIT_AVAILABLE)/quagga/quagga-zebra.conf $(FINIT_D)/available/
+	cp $(SKELETON_INIT_FINIT_AVAILABLE)/quagga/zebra.conf $(FINIT_D)/available/
 	ln -sf ../available/zebra.conf $(FINIT_D)/enabled/zebra.conf
 endef
 SKELETON_INIT_FINIT_TARGET_FINALIZE_HOOKS += SKELETON_INIT_FINIT_SET_QUAGGA
 
 ifeq ($(BR2_PACKAGE_QUAGGA_ISISD),y)
 define SKELETON_INIT_FINIT_SET_QUAGGA_ISISD
-	cp $(SKELETON_INIT_FINIT_AVAILABLE)/quagga/quagga-isisd.conf $(FINIT_D)/available/
-	ln -sf ../available/quagga-isisd.conf $(FINIT_D)/enabled/quagga-isisd.conf
+	cp $(SKELETON_INIT_FINIT_AVAILABLE)/quagga/isisd.conf $(FINIT_D)/available/
+	ln -sf ../available/isisd.conf $(FINIT_D)/enabled/isisd.conf
 endef
 SKELETON_INIT_FINIT_TARGET_FINALIZE_HOOKS += SKELETON_INIT_FINIT_SET_QUAGGA_ISISD
 endif
 
 ifeq ($(BR2_PACKAGE_QUAGGA_OSPFD),y)
 define SKELETON_INIT_FINIT_SET_QUAGGA_OSPFD
-	cp $(SKELETON_INIT_FINIT_AVAILABLE)/quagga/quagga-ospfd.conf $(FINIT_D)/available/
-	ln -sf ../available/quagga-ospfd.conf $(FINIT_D)/enabled/quagga-ospfd.conf
+	cp $(SKELETON_INIT_FINIT_AVAILABLE)/quagga/ospfd.conf $(FINIT_D)/available/
+	ln -sf ../available/ospfd.conf $(FINIT_D)/enabled/ospfd.conf
 endef
 SKELETON_INIT_FINIT_TARGET_FINALIZE_HOOKS += SKELETON_INIT_FINIT_SET_QUAGGA_OSPFD
 endif
 
 ifeq ($(BR2_PACKAGE_QUAGGA_OSP6D),y)
 define SKELETON_INIT_FINIT_SET_QUAGGA_OSP6D
-	cp $(SKELETON_INIT_FINIT_AVAILABLE)/quagga/quagga-ospf6d.conf $(FINIT_D)/available/
-	ln -sf ../available/quagga-ospf6d.conf $(FINIT_D)/enabled/quagga-ospf6d.conf
+	cp $(SKELETON_INIT_FINIT_AVAILABLE)/quagga/ospf6d.conf $(FINIT_D)/available/
+	ln -sf ../available/ospf6d.conf $(FINIT_D)/enabled/ospf6d.conf
 endef
 SKELETON_INIT_FINIT_TARGET_FINALIZE_HOOKS += SKELETON_INIT_FINIT_SET_QUAGGA_OSP6D
 endif
 
 ifeq ($(BR2_PACKAGE_QUAGGA_RIPD),y)
 define SKELETON_INIT_FINIT_SET_QUAGGA_RIPD
-	cp $(SKELETON_INIT_FINIT_AVAILABLE)/quagga/quagga-ripd.conf $(FINIT_D)/available/
-	ln -sf ../available/quagga-ripd.conf $(FINIT_D)/enabled/quagga-ripd.conf
+	cp $(SKELETON_INIT_FINIT_AVAILABLE)/quagga/ripd.conf $(FINIT_D)/available/
+	ln -sf ../available/ripd.conf $(FINIT_D)/enabled/ripd.conf
 endef
 SKELETON_INIT_FINIT_TARGET_FINALIZE_HOOKS += SKELETON_INIT_FINIT_SET_QUAGGA_RIPD
 endif
 
 ifeq ($(BR2_PACKAGE_QUAGGA_RIPNGD),y)
 define SKELETON_INIT_FINIT_SET_QUAGGA_RIPNG
-	cp $(SKELETON_INIT_FINIT_AVAILABLE)/quagga/quagga-ripng.conf $(FINIT_D)/available/
-	ln -sf ../available/quagga-ripng.conf $(FINIT_D)/enabled/quagga-ripng.conf
+	cp $(SKELETON_INIT_FINIT_AVAILABLE)/quagga/ripng.conf $(FINIT_D)/available/
+	ln -sf ../available/ripng.conf $(FINIT_D)/enabled/ripng.conf
 endef
 SKELETON_INIT_FINIT_TARGET_FINALIZE_HOOKS += SKELETON_INIT_FINIT_SET_QUAGGA_RIPNG
 endif
