@@ -10,7 +10,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
-#define RESETME    "/rw/infix/.reset"
+#define RESETME    "/mnt/cfg/infix/.reset"
 #define touch(f)   mknod((f), S_IFREG|0644, 0)
 
 char rawgetch(void)
