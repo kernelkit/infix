@@ -1,0 +1,99 @@
+#!/bin/sh
+#set -x
+
+mode=/mnt/cfg/infix/.use_etc
+boot=/tmp/.boot_mode
+if [ -f $boot ]; then
+    current=$(cat $boot)
+else
+    current="unknown"
+fi
+m=on
+n=off
+
+select_mode()
+{
+    if [ -f $mode ]; then
+	m=off
+	n=on
+    fi
+
+    exec 3>&1
+    selection=$(dialog --erase-on-exit --no-tags \
+		    --hline "Arrow keys + space to select, enter to confirm" \
+		    --backtitle "Select Operating Mode" \
+		    --title "Select Operating Mode" \
+		    --radiolist "System currently runs in: $current mode" 10 60 1 \
+		    "1" "Managed NETCONF, XML datastore" "$m" \
+		    "2" "Native Linux, /etc datastore"   "$n" \
+		    2>&1 1>&3)
+    exit_status=$?
+    exec 3>&-
+    case $exit_status in
+	1)				# cancel
+	    exit 0
+	    ;;
+	255)			# escape
+	    exit 1
+	    ;;
+    esac
+}
+
+usage()
+{
+    cat <<EOF
+usage:
+  chom [-h] [etc | netconf]
+
+options:
+  -h            Show this help text
+
+arguments:
+  etc           Change to Linux native mode, /etc
+  netconf       Change to NETCONF mode, XML
+
+EOF
+}
+
+case $1 in
+    -h)
+	usage
+	exit 0
+	;;
+    net* | xml)
+	selection=1
+	;;
+    nat* | etc*)
+	selection=2
+	;;
+    *)
+	;;
+esac
+
+if [ -z "$selection" ]; then
+    use_dialog=1
+    select_mode
+fi
+
+case $selection in
+    1)
+	rm -f $mode 2>/dev/null
+	grep -qi netconf $boot 2>/dev/null && exit 0
+	result="Manageed NETCONF"
+	;;
+    2)
+	touch $mode 2>/dev/null
+	grep -qi native $boot  2>/dev/null && exit 0
+	result="Native Linux, /etc"
+	;;
+esac
+
+if [ -n "$use_dialog" ]; then
+    dialog --erase-on-exit --cr-wrap --title "Activate Mode Change?" --yesno "\n   Reboot to $result mode now?" 8 50
+    if [ $? -eq 0 ]; then
+	reboot
+    fi
+fi
+
+echo "Remember to reboot later to activate the change."
+exit 0

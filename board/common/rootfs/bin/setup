@@ -60,6 +60,8 @@ menu:system:System:System Settings
 	exec:_Enable service:edit:initctl enable ~Enter name of service (filename) to enable:~
 	exec:_Disable service:edit:initctl disable ~Enter name of service (filename) to disable:~
 	nop
+	exec:_Change Operating Mode::chom
+	nop
 	exit:_Main menu..
 
 menu:tools:Tools:Tools
