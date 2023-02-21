@@ -1,0 +1,266 @@
+From e9a394da1d75b2b3bea81e53ec2899d240a98861 Mon Sep 17 00:00:00 2001
+From: Tobias Waldekranz <tobias@waldekranz.com>
+Date: Thu, 16 Feb 2023 15:13:33 +0100
+Subject: [PATCH v2 7/9] test: blkmap: Add test suite
+
+Verify that:
+
+- Block maps can be created and destroyed
+- Mappings aren't allowed to overlap
+- Multiple mappings can be attached and be read/written from/to
+
+Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
+---
+ MAINTAINERS               |   1 +
+ configs/sandbox_defconfig |   1 +
+ test/dm/Makefile          |   1 +
+ test/dm/blkmap.c          | 201 ++++++++++++++++++++++++++++++++++++++
+ 4 files changed, 204 insertions(+)
+ create mode 100644 test/dm/blkmap.c
+
+diff --git a/MAINTAINERS b/MAINTAINERS
+index 316b85fed7..bbcb5117fe 100644
+--- a/MAINTAINERS
++++ b/MAINTAINERS
+@@ -799,6 +799,7 @@ S:	Maintained
+ F:	cmd/blkmap.c
+ F:	drivers/block/blkmap.c
+ F:	include/blkmap.h
++F:	test/dm/blkmap.c
+ 
+ BOOTDEVICE
+ M:	Simon Glass <sjg@chromium.org>
+diff --git a/configs/sandbox_defconfig b/configs/sandbox_defconfig
+index 34c342b6f5..06021e4902 100644
+--- a/configs/sandbox_defconfig
++++ b/configs/sandbox_defconfig
+@@ -145,6 +145,7 @@ CONFIG_ADC=y
+ CONFIG_ADC_SANDBOX=y
+ CONFIG_AXI=y
+ CONFIG_AXI_SANDBOX=y
++CONFIG_BLKMAP=y
+ CONFIG_SYS_IDE_MAXBUS=1
+ CONFIG_SYS_ATA_BASE_ADDR=0x100
+ CONFIG_SYS_ATA_STRIDE=4
+diff --git a/test/dm/Makefile b/test/dm/Makefile
+index 7a79b6e1a2..e15bdbf04b 100644
+--- a/test/dm/Makefile
++++ b/test/dm/Makefile
+@@ -29,6 +29,7 @@ obj-$(CONFIG_ADC) += adc.o
+ obj-$(CONFIG_SOUND) += audio.o
+ obj-$(CONFIG_AXI) += axi.o
+ obj-$(CONFIG_BLK) += blk.o
++obj-$(CONFIG_BLKMAP) += blkmap.o
+ obj-$(CONFIG_BUTTON) += button.o
+ obj-$(CONFIG_DM_BOOTCOUNT) += bootcount.o
+ obj-$(CONFIG_DM_REBOOT_MODE) += reboot-mode.o
+diff --git a/test/dm/blkmap.c b/test/dm/blkmap.c
+new file mode 100644
+index 0000000000..7a163d6eae
+--- /dev/null
++++ b/test/dm/blkmap.c
+@@ -0,0 +1,201 @@
++// SPDX-License-Identifier: GPL-2.0+
++/*
++ * Copyright (c) 2023 Addiva Elektronik
++ * Author: Tobias Waldekranz <tobias@waldekranz.com>
++ */
++
++#include <common.h>
++#include <blk.h>
++#include <blkmap.h>
++#include <dm.h>
++#include <asm/test.h>
++#include <dm/test.h>
++#include <test/test.h>
++#include <test/ut.h>
++
++#define BLKSZ 0x200
++
++struct mapping {
++	int src;
++	int cnt;
++	int dst;
++};
++
++const struct mapping unordered_mapping[] = {
++	{ 0, 1, 3 },
++	{ 1, 3, 0 },
++	{ 4, 2, 6 },
++	{ 6, 2, 4 },
++
++	{ 0, 0, 0 }
++};
++
++const struct mapping identity_mapping[] = {
++	{ 0, 8, 0 },
++
++	{ 0, 0, 0 }
++};
++
++static char identity[8 * BLKSZ];
++static char unordered[8 * BLKSZ];
++static char buffer[8 * BLKSZ];
++
++static void mkblob(void *base, const struct mapping *m)
++{
++	int nr;
++
++	for (; m->cnt; m++) {
++		for (nr = 0; nr < m->cnt; nr++) {
++			memset(base + (m->dst + nr) * BLKSZ,
++			       m->src + nr, BLKSZ);
++		}
++	}
++}
++
++static int dm_test_blkmap_read(struct unit_test_state *uts)
++{
++	struct udevice *dev, *blk;
++	const struct mapping *m;
++
++	ut_assertok(blkmap_create("rdtest", &dev));
++	ut_assertok(blk_get_from_parent(dev, &blk));
++
++	/* Generate an ordered and an unordered pattern in memory */
++	mkblob(unordered, unordered_mapping);
++	mkblob(identity, identity_mapping);
++
++	/* Create a blkmap that cancels out the disorder */
++	for (m = unordered_mapping; m->cnt; m++) {
++		ut_assertok(blkmap_map_mem(dev, m->src, m->cnt,
++					   unordered + m->dst * BLKSZ));
++	}
++
++	/* Read out the data via the blkmap device to another area,
++	 * and verify that it matches the ordered pattern.
++	 */
++	ut_asserteq(8, blk_read(blk, 0, 8, buffer));
++	ut_assertok(memcmp(buffer, identity, sizeof(buffer)));
++
++	ut_assertok(blkmap_destroy(dev));
++	return 0;
++}
++DM_TEST(dm_test_blkmap_read, 0);
++
++static int dm_test_blkmap_write(struct unit_test_state *uts)
++{
++	struct udevice *dev, *blk;
++	const struct mapping *m;
++
++	ut_assertok(blkmap_create("wrtest", &dev));
++	ut_assertok(blk_get_from_parent(dev, &blk));
++
++	/* Generate an ordered and an unordered pattern in memory */
++	mkblob(unordered, unordered_mapping);
++	mkblob(identity, identity_mapping);
++
++	/* Create a blkmap that mimics the disorder */
++	for (m = unordered_mapping; m->cnt; m++) {
++		ut_assertok(blkmap_map_mem(dev, m->src, m->cnt,
++					   buffer + m->dst * BLKSZ));
++	}
++
++	/* Write the ordered data via the blkmap device to another
++	 * area, and verify that the result matches the unordered
++	 * pattern.
++	 */
++	ut_asserteq(8, blk_write(blk, 0, 8, identity));
++	ut_assertok(memcmp(buffer, unordered, sizeof(buffer)));
++
++	ut_assertok(blkmap_destroy(dev));
++	return 0;
++}
++DM_TEST(dm_test_blkmap_write, 0);
++
++static int dm_test_blkmap_slicing(struct unit_test_state *uts)
++{
++	struct udevice *dev;
++
++	ut_assertok(blkmap_create("slicetest", &dev));
++
++	ut_assertok(blkmap_map_mem(dev, 8, 8, NULL));
++
++	/* Can't overlap on the low end */
++	ut_asserteq(-EBUSY, blkmap_map_mem(dev,  4, 5, NULL));
++	/* Can't be inside */
++	ut_asserteq(-EBUSY, blkmap_map_mem(dev, 10, 2, NULL));
++	/* Can't overlap on the high end */
++	ut_asserteq(-EBUSY, blkmap_map_mem(dev, 15, 4, NULL));
++
++	/* But we should be able to add slices right before and
++	 * after
++	 */
++	ut_assertok(blkmap_map_mem(dev,  4, 4, NULL));
++	ut_assertok(blkmap_map_mem(dev, 16, 4, NULL));
++
++	ut_assertok(blkmap_destroy(dev));
++	return 0;
++}
++DM_TEST(dm_test_blkmap_slicing, 0);
++
++static int dm_test_blkmap_creation(struct unit_test_state *uts)
++{
++	struct udevice *first, *second;
++
++	ut_assertok(blkmap_create("first", &first));
++
++	/* Can't have two "first"s */
++	ut_asserteq(-EBUSY, blkmap_create("first", &second));
++
++	/* But "second" should be fine */
++	ut_assertok(blkmap_create("second", &second));
++
++	/* Once "first" is destroyed, we should be able to create it
++	 * again
++	 */
++	ut_assertok(blkmap_destroy(first));
++	ut_assertok(blkmap_create("first", &first));
++
++	ut_assertok(blkmap_destroy(first));
++	ut_assertok(blkmap_destroy(second));
++	return 0;
++}
++DM_TEST(dm_test_blkmap_creation, 0);
++
++static int dm_test_cmd_blkmap(struct unit_test_state *uts)
++{
++	ulong loadaddr = env_get_hex("loadaddr", 0);
++	struct udevice *dev;
++
++	console_record_reset();
++
++	ut_assertok(run_command("blkmap info", 0));
++	ut_assert_console_end();
++
++	ut_assertok(run_command("blkmap create ramdisk", 0));
++	ut_assert_nextline("Created \"ramdisk\"");
++	ut_assert_console_end();
++
++	ut_assertnonnull((dev = blkmap_from_label("ramdisk")));
++
++	ut_assertok(run_commandf("blkmap map ramdisk 0 800 mem 0x%lx", loadaddr));
++	ut_assert_nextline("Block 0x0+0x800 mapped to 0x%lx", loadaddr);
++	ut_assert_console_end();
++
++	ut_assertok(run_command("blkmap info", 0));
++	ut_assert_nextline("Device 0: Vendor: U-Boot Rev: 1.0 Prod: blkmap");
++	ut_assert_nextline("            Type: Hard Disk");
++	ut_assert_nextline("            Capacity: 1.0 MB = 0.0 GB (2048 x 512)");
++	ut_assert_console_end();
++
++	ut_assertok(run_command("blkmap get ramdisk dev devnum", 0));
++	ut_asserteq(dev_seq(dev), env_get_hex("devnum", 0xdeadbeef));
++
++	ut_assertok(run_command("blkmap destroy ramdisk", 0));
++	ut_assert_nextline("Destroyed \"ramdisk\"");
++	ut_assert_console_end();
++
++	ut_assertok(run_command("blkmap info", 0));
++	ut_assert_console_end();
++	return 0;
++}
++DM_TEST(dm_test_cmd_blkmap, 0);
+-- 
+2.34.1
+
