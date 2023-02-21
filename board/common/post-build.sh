@@ -15,3 +15,7 @@ rm "$TARGET_DIR/etc/os-release"
 } > "$TARGET_DIR/etc/os-release"
 
 echo "Infix by KernelKit $GIT_VERSION -- $(date +"%b %e %H:%M %Z %Y")" > "$TARGET_DIR/etc/version"
+
+# Allow pdmenu (setup) to be a login shell
+grep -qsE '^/usr/bin/pdmenu$$' "$TARGET_DIR/etc/shells" \
+        || echo "/usr/bin/pdmenu" >> "$TARGET_DIR/etc/shells"
