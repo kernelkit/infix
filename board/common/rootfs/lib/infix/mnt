@@ -51,6 +51,10 @@ mount_overlay()
 
 use_etc()
 {
+    if [ -f /mnt/cfg/infix/.use_etc ]; then
+	    return 0
+    fi
+
     # Finit's condition system is not yet bootstrapped when /etc/fstab
     # is parsed, so we have to manually check for the boot/etc
     # condition.
@@ -95,15 +99,19 @@ if ! mount_rw cfg >/dev/null 2>&1; then
     # there's no point in overlaying one ramdisk on top of another.
     vlibsrc=
 else
-    if use_etc; then
-	etcsrc=/mnt/cfg
-    fi
-
     # Check for factory reset
     if [ -f /mnt/cfg/infix/.reset ]; then
 	logger $opt -p user.crit -t "$nm" "Resetting to factory defaults."
 	rm -rf /mnt/cfg/infix /mnt/var/infix
 	sync
+    fi
+
+    # Report to the setup tool the current boot mode
+    if use_etc; then
+	etcsrc=/mnt/cfg
+	echo "native /etc"  > /tmp/.boot_mode
+    else
+	echo "NETCONF" > /tmp/.boot_mode
     fi
 
     # Ensure that all users in wheel can create the .reset file

@@ -78,7 +78,7 @@ options:
   -a            Show all, of something
   -f            Show full output, not brief port/iface listings
   -h            Show this help text
-  -p            Show plain output, now bells or whistles
+  -p            Show plain output, no bells or whistles
 
 commands:
   port PORT     Show port configuration and link information
@@ -214,6 +214,7 @@ system()
 {
 	h1 "SYSTEM INFORMATION"
 	echo "System Name        : $(uname -n)"
+	echo "System Boot Mode   : $(cat /tmp/.boot_mode)"
 	echo "System Description : $PRETTY_NAME"
 	echo "System Contact     : $HOME_URL"
 	echo "System Timezone    : $TZ"
