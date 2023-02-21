@@ -12,6 +12,8 @@ if [ "$PS1" ]; then
 			export PS1='$ '
 		fi
 	fi
+
+	export COLORTERM=truecolor
 fi
 
 export EDITOR='/bin/vi'

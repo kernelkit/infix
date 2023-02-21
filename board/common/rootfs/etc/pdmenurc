@@ -66,10 +66,11 @@ menu:system:System:System Settings
 	exit:_Main menu..
 
 menu:tools:Tools:Tools
-	exec:_ping:edit,pause:ping ~Enter address (IP or name) to ping:~
+	exec:_Ping:edit,pause:ping ~Enter address (IP or name) to ping:~
+	exec:_Shell Prompt::/bin/bash --login
 	exec:_SSH:edit,pause:ssh ~Enter [username@]address (IP or name) to SSH to:~
-	exec:_telnet:edit,pause:telnet ~Enter address (IP or name) to telnet to:~
-	exec:_traceroute:edit,pause:mtr ~Enter address (IP or name) to traceroute to:~
-	exec:_www:edit,pause:lynx ~Enter URL to browse:~
+	exec:_Telnet:edit,pause:telnet ~Enter address (IP or name) to telnet to:~
+	exec:_Traceroute:edit,pause:mtr ~Enter address (IP or name) to traceroute to:~
+	exec:Browse _WWW:edit,pause:lynx ~Enter URL to browse:~
 	nop
 	exit:_Main menu..
