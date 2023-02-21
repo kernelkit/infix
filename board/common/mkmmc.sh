@@ -8,8 +8,6 @@ tmp=$BUILD_DIR/genimage.tmp
 
 
 mkdir -p $root/aux
-cp -f $BINARIES_DIR/rootfs.itbh $root/aux/primary.itbh
-cp -f $BINARIES_DIR/rootfs.itbh $root/aux/secondary.itbh
 cp -f $BINARIES_DIR/uboot-env.bin $root/aux/uboot.env
 
 rm -rf $tmp
