@@ -1,0 +1,3 @@
+SUBDIRS         = src
+DISTCLEANFILES  = *~ *.d
+ACLOCAL_AMFLAGS = -I m4
