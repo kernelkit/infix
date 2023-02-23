@@ -1,0 +1,14 @@
+config BR2_PACKAGE_PROFETH_SUPPORTED
+	bool
+	default y
+       	depends on BR2_PACKAGE_P_NET
+	depends on BR2_PACKAGE_NETSNMP_SERVER
+
+config BR2_PACKAGE_PROFETH
+	bool "profeth"
+	depends on BR2_PACKAGE_PROFETH_SUPPORTED
+	help
+	  Simple profinet switch management
+
+comment "profeth needs p-net"
+	depends on !BR2_PACKAGE_PROFETH_SUPPORTED

@@ -1,0 +1,42 @@
+menuconfig BR2_PACKAGE_P_NET
+	bool "p-net"
+	depends on BR2_PACKAGE_NETSNMP_SERVER
+	select BR2_PACKAGE_OSAL
+	help
+          The rt-labs PROFINET stack p-net is used for PROFINET device
+          implementations. It is easy to use and provides a small
+          footprint. It is especially well suited for embedded systems
+          where resources are limited and efficiency is crucial.
+
+          It is written in C and can be run on bare-metal hardware, an
+          RTOS such as rt-kernel, or on Linux or Windows. The main
+          requirement is that the platform can send and receive RAW
+          Ethernet Layer 2 frames. The p-net stack is supplied with
+          full sources including a porting layer.
+
+          https://github.com/rtlabs-com/p-net
+
+if BR2_PACKAGE_P_NET
+
+config BR2_PACKAGE_P_NET_MAX_SLOTS
+	int "PNET_MAX_SLOTS"
+	default 5
+	help
+	  Per API. Should be > 1 to allow at least one I/O module
+
+config BR2_PACKAGE_P_NET_MAX_SUBSLOTS
+	int "PNET_MAX_SUBSLOTS"
+	default 3
+	help
+	  Per slot (DAP requires 2 + PNET_MAX_PHYSICAL_PORTS)
+
+config BR2_PACKAGE_P_NET_MAX_PHYSICAL_PORTS
+	int "PNET_MAX_PHYSICAL_PORTS"
+	default 1
+	help
+	  Max number of physical ports
+
+endif
+
+comment "p-net needs the netsnmp server"
+	depends on !BR2_PACKAGE_NETSNMP_SERVER
