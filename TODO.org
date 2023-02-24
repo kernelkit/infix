@@ -1,3 +1,13 @@
+* TODO doc: User Guide
+
+- Feature set and scope, e.g.
+  - Device discovery: SSDP, LLDP, mDNS-SD how do they work, interfacing with Windows/macOS/Linux
+  - Network redundancy protocols: STP/RSTP, MRP
+- Configuring the system; using ifupdown2, enabling/disabling services
+- Diagnosing the system; using rmon, port mirroring, debugging services, searching logs
+- Limitations, e.g., PRP/HSR or IEEE 802.1CB will not be possible to support
+- Tips & Trix
+
 * TODO document how to set up passwordless SSH
 * TODO add setup wizard, based on pdmenu
 
