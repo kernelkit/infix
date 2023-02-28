@@ -89,12 +89,12 @@ net_args()
     elif [ "$QEMU_NET_TAP" = "y" ]; then
 	QEMU_NET_TAP_N=${QEMU_NET_TAP_N:-1}
 	mactab=$(dirname "$QEMU_ROOTFS")/mactab
-	rm "$mactab"
+	rm -f "$mactab"
 	for i in $(seq 0 $(($QEMU_NET_TAP_N - 1))); do
-		echo "e$i	52:54:00:12:34:$((56 + i))" >>"$mactab"
-		echo -n "-nic tap,ifname=qtap$i,script=no,model=$QEMU_NET_MODEL "
+	    printf "e$i	52:54:00:12:34:%02x\n" $((0x56 + i)) >>"$mactab"
+	    echo -n "-netdev tap,id=nd$i,ifname=qtap$i -device e1000,netdev=nd$i "
 	done
-	echo -n "-fw_cfg name=opt/mactab,file="$mactab" "
+	echo -n "-fw_cfg name=opt/mactab,file=$mactab "
     elif [ "$QEMU_NET_USER" = "y" ]; then
 	[ "$QEMU_NET_USER_OPTS" ] && QEMU_NET_USER_OPTS="$QEMU_NET_USER_OPTS,"
 
