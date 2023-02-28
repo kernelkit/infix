@@ -11,6 +11,8 @@ CLIXON_LICENSE_FILES = LICENSE.md
 CLIXON_INSTALL_STAGING = YES
 CLIXON_DEPENDENCIES = cligen #libcurl libxml2
 
+CLIXON_CONF_OPTS = INSTALLFLAGS=" "
+
 # autotools-package.mk dutifully sets sysconfdir to /etc, but
 # unfortunately clixon uses a hard-coded default location of
 # /usr/local/etc/clixon.xml unless this option is specified.
