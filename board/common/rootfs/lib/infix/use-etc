@@ -1,0 +1,6 @@
+#!/bin/sh
+
+[ -f /mnt/cfg/infix/.use_etc ] && exit 0
+initctl cond get boot/etc  && exit 0
+
+exit 1

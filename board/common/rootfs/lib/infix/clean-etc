@@ -1,8 +1,7 @@
 #!/bin/sh
 
 # This is an unmanaged node, leave /etc as-is
-[ -f /mnt/cfg/infix/.use_etc ] && exit 0
-initctl cond get boot/etc  && exit 0
+/lib/infix/use-etc && exit 0
 
 # This is a managed node, ignore all default configuration...
 rm -f /etc/rc.local

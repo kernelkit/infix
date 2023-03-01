@@ -1,7 +1,7 @@
 #!/bin/sh
 
 # Only create a default config on unmanaged nodes.
-initctl cond get boot/etc || exit 0
+/lib/infix/use-etc || exit 0
 
 # Factory default: all switch ports in VLAN 1 of br0
 # need to check for 'length > 0' because ip command
