@@ -564,9 +564,15 @@ int app_utils_pnet_cfg_init_netifs (
    }
 
    /* Read IP, netmask, gateway from operating system */
-   ip = pnal_get_ip_address (if_cfg->main_netif_name);
-   netmask = pnal_get_netmask (if_cfg->main_netif_name);
-   gateway = pnal_get_gateway (if_cfg->main_netif_name);
+   if (pnal_get_ipmask(if_cfg->main_netif_name, &ip, &netmask))
+   {
+      APP_LOG_INFO ("No valid interface address on %s yet.", if_cfg->main_netif_name);
+   }
+   gateway = pnal_get_gateway(if_cfg->main_netif_name);
+   if (gateway == PNAL_IPADDR_INVALID)
+   {
+      APP_LOG_INFO ("System has no default gateway set.\n");
+   }
 
    app_utils_copy_ip_to_struct (&if_cfg->ip_cfg.ip_addr, ip);
    app_utils_copy_ip_to_struct (&if_cfg->ip_cfg.ip_gateway, gateway);
@@ -863,3 +869,10 @@ void app_utils_cyclic_data_poll (app_api_t * p_api)
       }
    }
 }
+
+/**
+ * Local Variables:
+ *  indent-tabs-mode: nil
+ *  c-file-style: "ellemtel"
+ * End:
+ */
