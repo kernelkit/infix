@@ -39,7 +39,7 @@ extern "C" {
 
 #define APP_GSDML_API 0
 
-#define APP_GSDML_DEFAULT_STATION_NAME "rt-labs-dev"
+#define APP_GSDML_DEFAULT_STATION_NAME "infix"
 
 /* GSDML tag: VendorID */
 #define APP_GSDML_VENDOR_ID 0x0493
@@ -80,7 +80,7 @@ extern "C" {
 #define APP_GSDML_ORDER_ID "12345 Abcdefghijk"
 
 /* GSDML tag: ModuleInfo / Name */
-#define APP_GSDML_PRODUCT_NAME "P-Net Sample Application"
+#define APP_GSDML_PRODUCT_NAME "Infix Switch 10p"
 
 /* GSDML tag: MinDeviceInterval */
 #define APP_GSDML_MIN_DEVICE_INTERVAL 32 /* 1 ms */
