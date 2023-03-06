@@ -14,7 +14,7 @@ FINIT_INSTALL_STAGING = YES
 FINIT_D = $(TARGET_DIR)/etc/finit.d
 
 # Create configure script using autoreconf when building from git
-FINIT_VERSION = f7bacf8b1bf70da194065955a5d75bbcff1d9f2c
+FINIT_VERSION = 571250a9b98d6a924ca2ce704083e8dda881a4f2
 FINIT_SITE = $(call github,troglobit,finit,$(FINIT_VERSION))
 FINIT_AUTORECONF = YES
 FINIT_DEPENDENCIES += host-automake host-autoconf host-libtool
