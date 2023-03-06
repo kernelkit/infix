@@ -1,7 +1,18 @@
 #!/bin/sh
 
 # Only create a default config on unmanaged nodes.
-/lib/infix/use-etc || exit 0
+if ! /lib/infix/use-etc; then
+    initctl cond set netconf
+    exit 0
+fi
+
+# PROFINET is a variant of native /etc, make sure to
+# enable it and disable the default LLDP daemon.
+if grep -qi profinet /mnt/cfg/infix/.use_etc; then
+    initctl enable profeth
+    initctl enable snmpd
+    initctl disable lldpd
+fi
 
 # Factory default: all switch ports in VLAN 1 of br0
 # need to check for 'length > 0' because ip command

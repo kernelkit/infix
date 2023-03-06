@@ -10,12 +10,19 @@ else
 fi
 m=on
 n=off
+p=off
 
 select_mode()
 {
     if [ -f $mode ]; then
 	m=off
-	n=on
+	if grep -qi profinet $boot; then
+	    n=off
+	    p=on
+	else
+	    n=on
+	    p=off
+	fi
     fi
 
     exec 3>&1
@@ -23,14 +30,15 @@ select_mode()
 		    --hline "Arrow keys + space to select, enter to confirm" \
 		    --backtitle "Select Operating Mode" \
 		    --title "Select Operating Mode" \
-		    --radiolist "System currently runs in: $current mode" 10 60 1 \
+		    --radiolist "System currently runs in: $current mode" 13 60 1 \
 		    "1" "Managed NETCONF, XML datastore" "$m" \
 		    "2" "Native Linux, /etc datastore"   "$n" \
+		    "3" "PROFINET, /etc variant"         "$p" \
 		    2>&1 1>&3)
     exit_status=$?
     exec 3>&-
     case $exit_status in
-	1)				# cancel
+	1)			# cancel
 	    exit 0
 	    ;;
 	255)			# escape
@@ -51,6 +59,7 @@ options:
 arguments:
   etc           Change to Linux native mode, /etc
   netconf       Change to NETCONF mode, XML
+  profinet      Change to PROFINET mode, /etc variant
 
 EOF
 }
@@ -65,6 +74,9 @@ case $1 in
 	;;
     nat* | etc*)
 	selection=2
+	;;
+    profinet)
+	selection=3
 	;;
     *)
 	;;
@@ -82,9 +94,14 @@ case $selection in
 	result="Manageed NETCONF"
 	;;
     2)
-	touch $mode 2>/dev/null
+	echo "native /etc" > $mode
 	grep -qi native $boot  2>/dev/null && exit 0
 	result="Native Linux, /etc"
+	;;
+    3)
+	echo "PROFINET" > $mode
+	grep -qi profinet $boot  2>/dev/null && exit 0
+	result="PROFINET"
 	;;
 esac
 

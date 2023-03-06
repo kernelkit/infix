@@ -114,7 +114,11 @@ else
     # Report to the setup tool the current boot mode
     if use_etc; then
 	etcsrc=/mnt/cfg
-	echo "native /etc"  > /tmp/.boot_mode
+	if [ -f /mnt/cfg/infix/.use_etc ]; then
+	    cat /mnt/cfg/infix/.use_etc > /tmp/.boot_mode
+	else
+	    echo "native /etc"  > /tmp/.boot_mode
+	fi
     else
 	echo "NETCONF" > /tmp/.boot_mode
     fi
