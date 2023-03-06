@@ -45,8 +45,8 @@ config QEMU_BIOS
 
 config QEMU_ROOTFS
 	string
-	default "images/mmc.img" if QEMU_ROOTFS_MMC
-	default "images/rootfs.squashfs"
+	default "images/mmc.img" if QEMU_LOADER_UBOOT
+	default "images/rootfs.squashfs" if QEMU_LOADER_KERNEL
 
 config QEMU_RW
 	string "Writable layer"
