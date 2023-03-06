@@ -1,8 +1,6 @@
 CFLAGS   = -Wall -Wextra -Werror -Wno-unused-parameter
 CPPFLAGS = -I $(top_srcdir)/include/
 
-finitdir      = $(sysconfdir)/finit.d
-
 clixonlibdir  = $(libdir)/clixon
 backenddir    = $(clixonlibdir)/backend
 clidir        = $(clixonlibdir)/cli
