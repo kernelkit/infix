@@ -500,6 +500,7 @@ int main (int argc, char * argv[])
    }
 
    /* Start main loop */
+   pnal_snmp_set_agentx_socket(app_get_pnet_instance (sample_app), "/var/run/agentx/master");
    if (app_start (sample_app, RUN_IN_SEPARATE_THREAD) != 0)
    {
       printf ("Failed to start\n");
