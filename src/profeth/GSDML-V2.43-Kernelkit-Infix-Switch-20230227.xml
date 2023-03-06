@@ -14,7 +14,7 @@
       </ISO15745Reference>
    </ProfileHeader>
    <ProfileBody>
-      <DeviceIdentity VendorID="0xdead" DeviceID="0x0001">
+      <DeviceIdentity VendorID="0x0493" DeviceID="0x0002">
          <InfoText TextId="IDT_DEV_INFO"/>
          <VendorName Value="Kernelkit"/>
       </DeviceIdentity>
