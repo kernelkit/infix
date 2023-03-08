@@ -5,7 +5,7 @@
 TAP=qtap0
 ETH=eth2
 BR=qbr0
-ADDR=192.168.2.1/24
+ADDR=192.168.0.1/24
 
 if [ -n "$1" ]; then
     ETH=$1
