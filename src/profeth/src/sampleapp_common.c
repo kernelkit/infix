@@ -896,6 +896,7 @@ static void app_plug_dap (app_data_t * app, uint16_t number_of_ports)
       .insize = 0,
       .outsize = 0,
    };
+   uint16_t i;
 
    APP_LOG_DEBUG ("\nPlug DAP module and its submodules\n");
 
@@ -926,53 +927,17 @@ static void app_plug_dap (app_data_t * app, uint16_t number_of_ports)
       PNET_SUBMOD_DAP_INTERFACE_1_IDENT,
       &cfg_dap_data);
 
-   app_exp_submodule_ind (
-      app->net,
-      app,
-      APP_GSDML_API,
-      PNET_SLOT_DAP_IDENT,
-      PNET_SUBSLOT_DAP_INTERFACE_1_PORT_1_IDENT,
-      PNET_MOD_DAP_IDENT,
-      PNET_SUBMOD_DAP_INTERFACE_1_PORT_1_IDENT,
-      &cfg_dap_data);
-
-   if (number_of_ports >= 2)
+   for (i = 1; i <= number_of_ports; i++)
    {
-      app_exp_submodule_ind (
-         app->net,
-         app,
-         APP_GSDML_API,
-         PNET_SLOT_DAP_IDENT,
-         PNET_SUBSLOT_DAP_INTERFACE_1_PORT_2_IDENT,
-         PNET_MOD_DAP_IDENT,
-         PNET_SUBMOD_DAP_INTERFACE_1_PORT_2_IDENT,
-         &cfg_dap_data);
-   }
-
-   if (number_of_ports >= 3)
-   {
-      app_exp_submodule_ind (
-         app->net,
-         app,
-         APP_GSDML_API,
-         PNET_SLOT_DAP_IDENT,
-         PNET_SUBSLOT_DAP_INTERFACE_1_PORT_3_IDENT,
-         PNET_MOD_DAP_IDENT,
-         PNET_SUBMOD_DAP_INTERFACE_1_PORT_3_IDENT,
-         &cfg_dap_data);
-   }
-
-   if (number_of_ports >= 4)
-   {
-      app_exp_submodule_ind (
-         app->net,
-         app,
-         APP_GSDML_API,
-         PNET_SLOT_DAP_IDENT,
-         PNET_SUBSLOT_DAP_INTERFACE_1_PORT_4_IDENT,
-         PNET_MOD_DAP_IDENT,
-         PNET_SUBMOD_DAP_INTERFACE_1_PORT_4_IDENT,
-         &cfg_dap_data);
+	   app_exp_submodule_ind (
+		   app->net,
+		   app,
+		   APP_GSDML_API,
+		   PNET_SLOT_DAP_IDENT,
+		   0x8000 + i,
+		   PNET_MOD_DAP_IDENT,
+		   0x8000 + i,
+		   &cfg_dap_data);
    }
 
    APP_LOG_DEBUG ("Done plugging DAP\n\n");

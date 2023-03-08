@@ -23,7 +23,7 @@
       </DeviceFunction>
       <ApplicationProcess>
          <DeviceAccessPointList>
-            <DeviceAccessPointItem ID="DAP_1" PNIO_Version="V2.43" PhysicalSlots="0" ModuleIdentNumber="0x00000001" MinDeviceInterval="32" DNS_CompatibleName="infix" FixedInSlots="0" ObjectUUID_LocalIndex="1" DeviceAccessSupported="false" MultipleWriteSupported="true" CheckDeviceID_Allowed="true" NameOfStationNotTransferable="false" LLDP_NoD_Supported="true" ResetToFactoryModes="1..2">
+            <DeviceAccessPointItem ID="DAP_1" PNIO_Version="V2.43" PhysicalSlots="0" ModuleIdentNumber="0x00000001" MinDeviceInterval="4096" DNS_CompatibleName="infix" FixedInSlots="0" ObjectUUID_LocalIndex="1" DeviceAccessSupported="false" MultipleWriteSupported="true" CheckDeviceID_Allowed="true" NameOfStationNotTransferable="false" LLDP_NoD_Supported="true" ResetToFactoryModes="1..2">
                <ModuleInfo>
                   <Name TextId="IDT_DAP_NAME"/>
                   <InfoText TextId="IDT_DAP_INFO"/>
@@ -58,75 +58,75 @@
                   </VirtualSubmoduleItem>
                </VirtualSubmoduleList>
                <SystemDefinedSubmoduleList>
-                  <InterfaceSubmoduleItem ID="IDS_I" SubmoduleIdentNumber="0x00008000" SubslotNumber="32768" TextId="IDT_IFACE" SupportedRT_Classes="RT_CLASS_1" SupportedProtocols="SNMP;LLDP" NetworkComponentDiagnosisSupported="false" PTP_BoundarySupported="true" DCP_BoundarySupported="true">
+                  <InterfaceSubmoduleItem ID="IDS_INT1" SubmoduleIdentNumber="0x00008000" SubslotNumber="32768" TextId="IDT_IFACE" SupportedRT_Classes="RT_CLASS_1" SupportedProtocols="SNMP;LLDP" NetworkComponentDiagnosisSupported="false" PTP_BoundarySupported="true" DCP_BoundarySupported="true">
                      <ApplicationRelations StartupMode="Advanced">
                         <TimingProperties SendClock="32" ReductionRatio="1 2 4 8 16 32 64 128 256 512"/>
                      </ApplicationRelations>
                   </InterfaceSubmoduleItem>
-                  <PortSubmoduleItem ID="IDS_P1" SubmoduleIdentNumber="0x00008001" SubslotNumber="32769" TextId="IDT_P1" MaxPortRxDelay="350" MaxPortTxDelay="160">
+                  <PortSubmoduleItem ID="IDS_P1" SubmoduleIdentNumber="0x00008001" SubslotNumber="32769" TextId="IDT_P1" MaxPortRxDelay="350" MaxPortTxDelay="160" PortDeactivationSupported="false" SupportsRingportConfig="false" IsDefaultRingport="false" CheckMAUTypeSupported="false">
                      <MAUTypeList>
                         <MAUTypeItem Value="30"/>
                         <MAUTypeItem Value="16"/>
                         <MAUTypeItem Value="5"/>
                      </MAUTypeList>
                   </PortSubmoduleItem>
-                  <PortSubmoduleItem ID="IDS_P2" SubmoduleIdentNumber="0x00008002" SubslotNumber="32770" TextId="IDT_P2" MaxPortRxDelay="350" MaxPortTxDelay="160">
+                  <PortSubmoduleItem ID="IDS_P2" SubmoduleIdentNumber="0x00008002" SubslotNumber="32770" TextId="IDT_P2" MaxPortRxDelay="350" MaxPortTxDelay="160" PortDeactivationSupported="false" SupportsRingportConfig="false" IsDefaultRingport="false" CheckMAUTypeSupported="false">
                      <MAUTypeList>
                         <MAUTypeItem Value="30"/>
                         <MAUTypeItem Value="16"/>
                         <MAUTypeItem Value="5"/>
                      </MAUTypeList>
                   </PortSubmoduleItem>
-                  <PortSubmoduleItem ID="IDS_P3" SubmoduleIdentNumber="0x00008003" SubslotNumber="32771" TextId="IDT_P3" MaxPortRxDelay="350" MaxPortTxDelay="160">
+                  <PortSubmoduleItem ID="IDS_P3" SubmoduleIdentNumber="0x00008003" SubslotNumber="32771" TextId="IDT_P3" MaxPortRxDelay="350" MaxPortTxDelay="160" PortDeactivationSupported="false" SupportsRingportConfig="false" IsDefaultRingport="false" CheckMAUTypeSupported="false">
                      <MAUTypeList>
                         <MAUTypeItem Value="30"/>
                         <MAUTypeItem Value="16"/>
                         <MAUTypeItem Value="5"/>
                      </MAUTypeList>
                   </PortSubmoduleItem>
-                  <PortSubmoduleItem ID="IDS_P4" SubmoduleIdentNumber="0x00008004" SubslotNumber="32772" TextId="IDT_P4" MaxPortRxDelay="350" MaxPortTxDelay="160">
+                  <PortSubmoduleItem ID="IDS_P4" SubmoduleIdentNumber="0x00008004" SubslotNumber="32772" TextId="IDT_P4" MaxPortRxDelay="350" MaxPortTxDelay="160" PortDeactivationSupported="false" SupportsRingportConfig="false" IsDefaultRingport="false" CheckMAUTypeSupported="false">
                      <MAUTypeList>
                         <MAUTypeItem Value="30"/>
                         <MAUTypeItem Value="16"/>
                         <MAUTypeItem Value="5"/>
                      </MAUTypeList>
                   </PortSubmoduleItem>
-                  <PortSubmoduleItem ID="IDS_P5" SubmoduleIdentNumber="0x00008005" SubslotNumber="32773" TextId="IDT_P5" MaxPortRxDelay="350" MaxPortTxDelay="160">
+                  <PortSubmoduleItem ID="IDS_P5" SubmoduleIdentNumber="0x00008005" SubslotNumber="32773" TextId="IDT_P5" MaxPortRxDelay="350" MaxPortTxDelay="160" PortDeactivationSupported="false" SupportsRingportConfig="false" IsDefaultRingport="false" CheckMAUTypeSupported="false">
                      <MAUTypeList>
                         <MAUTypeItem Value="30"/>
                         <MAUTypeItem Value="16"/>
                         <MAUTypeItem Value="5"/>
                      </MAUTypeList>
                   </PortSubmoduleItem>
-                  <PortSubmoduleItem ID="IDS_P6" SubmoduleIdentNumber="0x00008006" SubslotNumber="32774" TextId="IDT_P6" MaxPortRxDelay="350" MaxPortTxDelay="160">
+                  <PortSubmoduleItem ID="IDS_P6" SubmoduleIdentNumber="0x00008006" SubslotNumber="32774" TextId="IDT_P6" MaxPortRxDelay="350" MaxPortTxDelay="160" PortDeactivationSupported="false" SupportsRingportConfig="false" IsDefaultRingport="false" CheckMAUTypeSupported="false">
                      <MAUTypeList>
                         <MAUTypeItem Value="30"/>
                         <MAUTypeItem Value="16"/>
                         <MAUTypeItem Value="5"/>
                      </MAUTypeList>
                   </PortSubmoduleItem>
-                  <PortSubmoduleItem ID="IDS_P7" SubmoduleIdentNumber="0x00008007" SubslotNumber="32775" TextId="IDT_P7" MaxPortRxDelay="350" MaxPortTxDelay="160">
+                  <PortSubmoduleItem ID="IDS_P7" SubmoduleIdentNumber="0x00008007" SubslotNumber="32775" TextId="IDT_P7" MaxPortRxDelay="350" MaxPortTxDelay="160" PortDeactivationSupported="false" SupportsRingportConfig="false" IsDefaultRingport="false" CheckMAUTypeSupported="false">
                      <MAUTypeList>
                         <MAUTypeItem Value="30"/>
                         <MAUTypeItem Value="16"/>
                         <MAUTypeItem Value="5"/>
                      </MAUTypeList>
                   </PortSubmoduleItem>
-                  <PortSubmoduleItem ID="IDS_P8" SubmoduleIdentNumber="0x00008008" SubslotNumber="32776" TextId="IDT_P8" MaxPortRxDelay="350" MaxPortTxDelay="160">
+                  <PortSubmoduleItem ID="IDS_P8" SubmoduleIdentNumber="0x00008008" SubslotNumber="32776" TextId="IDT_P8" MaxPortRxDelay="350" MaxPortTxDelay="160" PortDeactivationSupported="false" SupportsRingportConfig="false" IsDefaultRingport="false" CheckMAUTypeSupported="false">
                      <MAUTypeList>
                         <MAUTypeItem Value="30"/>
                         <MAUTypeItem Value="16"/>
                         <MAUTypeItem Value="5"/>
                      </MAUTypeList>
                   </PortSubmoduleItem>
-                  <PortSubmoduleItem ID="IDS_P9" SubmoduleIdentNumber="0x00008009" SubslotNumber="32777" TextId="IDT_P9" MaxPortRxDelay="350" MaxPortTxDelay="160">
+                  <PortSubmoduleItem ID="IDS_P9" SubmoduleIdentNumber="0x00008009" SubslotNumber="32777" TextId="IDT_P9" MaxPortRxDelay="350" MaxPortTxDelay="160" PortDeactivationSupported="false" SupportsRingportConfig="false" IsDefaultRingport="false" CheckMAUTypeSupported="false">
                      <MAUTypeList>
                         <MAUTypeItem Value="30"/>
                         <MAUTypeItem Value="16"/>
                         <MAUTypeItem Value="5"/>
                      </MAUTypeList>
                   </PortSubmoduleItem>
-                  <PortSubmoduleItem ID="IDS_P10" SubmoduleIdentNumber="0x0000800a" SubslotNumber="32778" TextId="IDT_P10" MaxPortRxDelay="350" MaxPortTxDelay="160">
+                  <PortSubmoduleItem ID="IDS_P10" SubmoduleIdentNumber="0x0000800a" SubslotNumber="32778" TextId="IDT_P10" MaxPortRxDelay="350" MaxPortTxDelay="160" PortDeactivationSupported="false" SupportsRingportConfig="false" IsDefaultRingport="false" CheckMAUTypeSupported="false">
                      <MAUTypeList>
                         <MAUTypeItem Value="30"/>
                         <MAUTypeItem Value="16"/>
@@ -135,44 +135,42 @@
                   </PortSubmoduleItem>
                </SystemDefinedSubmoduleList>
                <!-- <Graphics> -->
-               <!--    <GraphicItemRef Type="DeviceSymbol" GraphicItemTarget="Kernelkit-Infix-Switch"/> -->
+               <!--    <GraphicItemRef Type="DeviceSymbol" GraphicItemTarget="Kernelkit_Infix_Switch1"/> -->
                <!-- </Graphics> -->
             </DeviceAccessPointItem>
          </DeviceAccessPointList>
 
          <!-- <GraphicsList> -->
-         <!--    <GraphicItem ID="Kernelkit-Infix-Image" GraphicFile="GSDML-Kernelkit-Infix-Switch"/> -->
+         <!--    <GraphicItem ID="Kernelkit_Infix_Switch1" GraphicFile="GSDML_VendorID_DeviceID-Switch-10-Port"/> -->
          <!-- </GraphicsList> -->
 
 	 <ExternalTextList>
             <PrimaryLanguage>
                <Text TextId="IDT_DEV_INFO" Value="Infix 10-port Switch"/>
                <Text TextId="IDT_DAP_NAME" Value="Infix 10-port Switch"/>
-               <Text TextId="IDT_DAP_INFO" Value="Infix 10-port Switch"/>
-
-               <Text TextId="IDT_SS_IFACE" Value="X1"/>
-               <Text TextId="IDT_SS_P1"  Value="X1 P1"/>
-               <Text TextId="IDT_SS_P2"  Value="X1 P2"/>
-               <Text TextId="IDT_SS_P3"  Value="X1 P3"/>
-               <Text TextId="IDT_SS_P4"  Value="X1 P4"/>
-               <Text TextId="IDT_SS_P5"  Value="X1 P5"/>
-               <Text TextId="IDT_SS_P6"  Value="X1 P6"/>
-               <Text TextId="IDT_SS_P7"  Value="X1 P7"/>
-               <Text TextId="IDT_SS_P8"  Value="X1 P8"/>
-               <Text TextId="IDT_SS_P9"  Value="X1 P9"/>
-               <Text TextId="IDT_SS_P10" Value="X1 P10"/>
-
+               <Text TextId="IDT_DAP_INFO" Value="Infix 10-port PROFINET Switch, managed, supports Conformance Clas A,B"/>
                <Text TextId="IDT_IFACE" Value="PN-IO"/>
-               <Text TextId="IDT_P1"  Value="eth1"/>
-               <Text TextId="IDT_P2"  Value="eth2"/>
-               <Text TextId="IDT_P3"  Value="eth3"/>
-               <Text TextId="IDT_P4"  Value="eth4"/>
-               <Text TextId="IDT_P5"  Value="eth5"/>
-               <Text TextId="IDT_P6"  Value="eth6"/>
-               <Text TextId="IDT_P7"  Value="eth7"/>
-               <Text TextId="IDT_P8"  Value="eth8"/>
-               <Text TextId="IDT_P9"  Value="eth9"/>
-               <Text TextId="IDT_P10" Value="eth10"/>
+               <Text TextId="IDT_SS_IFACE" Value="X1"/>
+               <Text TextId="IDT_SS_P1"  Value="X1 P0"/>
+               <Text TextId="IDT_SS_P2"  Value="X1 P1"/>
+               <Text TextId="IDT_SS_P3"  Value="X1 P2"/>
+               <Text TextId="IDT_SS_P4"  Value="X1 P3"/>
+               <Text TextId="IDT_SS_P5"  Value="X1 P4"/>
+               <Text TextId="IDT_SS_P6"  Value="X1 P5"/>
+               <Text TextId="IDT_SS_P7"  Value="X1 P6"/>
+               <Text TextId="IDT_SS_P8"  Value="X1 P7"/>
+               <Text TextId="IDT_SS_P9"  Value="X1 P8"/>
+               <Text TextId="IDT_SS_P10" Value="X1 P9"/>
+               <Text TextId="IDT_P1"  Value="e0"/>
+               <Text TextId="IDT_P2"  Value="e1"/>
+               <Text TextId="IDT_P3"  Value="e2"/>
+               <Text TextId="IDT_P4"  Value="e3"/>
+               <Text TextId="IDT_P5"  Value="e4"/>
+               <Text TextId="IDT_P6"  Value="e5"/>
+               <Text TextId="IDT_P7"  Value="e6"/>
+               <Text TextId="IDT_P8"  Value="e7"/>
+               <Text TextId="IDT_P9"  Value="e8"/>
+               <Text TextId="IDT_P10" Value="e9"/>
             </PrimaryLanguage>
          </ExternalTextList>
       </ApplicationProcess>
