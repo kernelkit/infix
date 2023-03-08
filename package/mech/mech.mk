@@ -13,6 +13,7 @@ MECH_AUTORECONF = YES
 define MECH_INSTALL_EXTRA
 	cp $(MECH_PKGDIR)/clixon.conf   $(FINIT_D)/available/
 	ln -sf ../available/clixon.conf $(FINIT_D)/enabled/clixon.conf
+	cp $(MECH_PKGDIR)/tmpfiles.conf $(TARGET_DIR)/etc/tmpfiles.d/mech.conf
 endef
 MECH_TARGET_FINALIZE_HOOKS += MECH_INSTALL_EXTRA
 
