@@ -20,12 +20,11 @@ define PROFETH_INSTALL_EXTRA
 	cp $(PROFETH_PKGDIR)/sysctl.conf $(TARGET_DIR)/etc/sysctl.d/profeth.conf
 	cp $(PROFETH_PKGDIR)/set_profinet_leds $(TARGET_DIR)/usr/sbin/
 	cp $(PROFETH_PKGDIR)/set_network_parameters $(TARGET_DIR)/usr/sbin/
-	mkdir -p $(TARGET_DIR)/etc/profeth
 	mkdir -p $(TARGET_DIR)/etc/snmp
 	mkdir -p $(TARGET_DIR)/etc/tmpfiles.d
 	mkdir -p $(TARGET_DIR)/etc/default
 	cp $(PROFETH_PKGDIR)/snmpd.conf $(TARGET_DIR)/etc/snmp/
-	cp $(PROFETH_PKGDIR)/tmpfiles.conf $(TARGET_DIR)/etc/tmpfiles.d/snmpd.conf
+	cp $(PROFETH_PKGDIR)/tmpfiles.conf $(TARGET_DIR)/etc/tmpfiles.d/profeth.conf
 	cp $(PROFETH_PKGDIR)/default $(TARGET_DIR)/etc/default/profeth
 endef
 PROFETH_TARGET_FINALIZE_HOOKS += PROFETH_INSTALL_EXTRA
