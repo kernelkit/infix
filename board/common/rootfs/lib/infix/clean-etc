@@ -4,7 +4,7 @@
 /lib/infix/use-etc && exit 0
 
 # This is a managed node, ignore all default configuration...
-rm -f /etc/rc.local
+rm -f  /etc/rc.local
 rm -rf /etc/finit.d/enabled/*.conf
 rm -rf /etc/network/interfaces*
 

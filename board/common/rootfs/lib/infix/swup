@@ -1,15 +1,7 @@
 #!/bin/sh
+# Only runs in native /etc and PROFINET nodes.
 
-# Only create a default config on unmanaged nodes.
-if ! /lib/infix/use-etc; then
-    initctl cond set netconf
-    exit 0
-fi
-
-# PROFINET is a variant of native /etc, make sure to
-# enable it and disable the default LLDP daemon.
-if grep -qi profinet /mnt/cfg/infix/.use_etc; then
-    initctl enable profeth
+if initctl cond get boot/profinet; then
     initctl enable snmpd
     initctl disable lldpd
 fi

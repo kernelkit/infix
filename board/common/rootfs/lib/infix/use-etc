@@ -1,6 +1,21 @@
 #!/bin/sh
 
-[ -f /mnt/cfg/infix/.use_etc ] && exit 0
-initctl cond get boot/etc  && exit 0
+if [ -f /mnt/cfg/infix/.use_etc ]; then
+    exit 0
+fi
 
-exit 1
+# Finit's condition system may not yet be bootstrapped when this script
+# is called, e.g., when /etc/fstab is parsed, so we have to manually
+# check for the boot/etc condition.
+awk '
+    $0 == "finit.cond" {
+	cond=1;
+	next;
+    }
+    cond == 1 {
+	use_etc = index($0, "etc") != 0;
+    }
+    END {
+    	exit(use_etc ? 0 : 1);
+    }
+' /proc/1/cmdline

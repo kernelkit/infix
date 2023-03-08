@@ -151,6 +151,7 @@ endif
 ifeq ($(BR2_PACKAGE_PROFETH),y)
 define SKELETON_INIT_FINIT_SET_PROFETH
 	cp $(SKELETON_INIT_FINIT_AVAILABLE)/profeth.conf $(FINIT_D)/available/
+	ln -sf ../available/profeth.conf $(FINIT_D)/enabled/
 endef
 SKELETON_INIT_FINIT_TARGET_FINALIZE_HOOKS += SKELETON_INIT_FINIT_SET_PROFETH
 endif
