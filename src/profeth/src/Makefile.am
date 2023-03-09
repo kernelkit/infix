@@ -6,8 +6,6 @@ profeth_SOURCES = profeth.c \
 	app_log.c app_log.h \
 	app_utils.c app_utils.h \
 	pnal_filetools.c pnal_filetools.h \
-	pnal.h \
-	pnal_sys.h \
 	sampleapp_common.c sampleapp_common.h
 
 profeth_CFLAGS  = -Wall -Wextra -Werror -Wno-unused-parameter

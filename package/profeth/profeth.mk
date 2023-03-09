@@ -3,6 +3,7 @@
 # profeth
 #
 ################################################################################
+
 PROFETH_VERSION = 1.0
 PROFETH_LICENSE = GPL-3.0
 PROFETH_SITE_METHOD = local
@@ -10,9 +11,13 @@ PROFETH_SITE = $(BR2_EXTERNAL_INFIX_PATH)/src/profeth
 PROFETH_DEPENDENCIES = p-net
 PROFETH_AUTORECONF = YES
 
+# Ugly workaround to be able to build standalone applications using the
+# p-net library.  This should probably be addressed with upstream.
 define PROFETH_POST_RSYNC_INSTALL_OPTS
-	@echo Installing generated options.h from p-net
-	cp $(BUILD_DIR)/p-net*/buildroot-build/src/options.h $(@D)/src/options.h
+	@echo "*** Installing pnal headers and generated options.h from p-net"
+	cp $(P_NET_SRCDIR)/src/ports/linux/pnal_sys.h $(@D)/src/
+	cp $(P_NET_SRCDIR)/src/pnal.h                 $(@D)/src/
+	cp $(P_NET_BUILDDIR)/src/options.h            $(@D)/src/
 endef
 PROFETH_POST_RSYNC_HOOKS += PROFETH_POST_RSYNC_INSTALL_OPTS
 
