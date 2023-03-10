@@ -14,7 +14,7 @@ endchoice
 
 config SIGN_KEY
 	string "Signing key"
-	default "$(BR2_EXTERNAL_INFIX_PATH)/board/common/dev-key" if SIGN_SRC_DIR
+	default "${BR2_EXTERNAL_INFIX_PATH}/board/common/dev-key" if SIGN_SRC_DIR
 
 comment "Development Images"
 
