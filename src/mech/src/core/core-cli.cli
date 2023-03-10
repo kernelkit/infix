@@ -32,8 +32,23 @@ copy("Copy and create a new object") {
     }
 }
 
+follow("Continuously monitor a log file, default syslog"),   cli_exec_log(); {
+    <fn:string logfiles()>(""),                              cli_exec_log();
+}
+
+help("Show help"), cli_help();
+
 show("Show various system state and configuration") {
-	system-information("System information"), cli_sysinfo();
+	system-information("System information"),            cli_exec_show();
+	fdb("Show forwarding database (unicast)"),           cli_exec_show();
+	mdb("Show multicast forwarding database (unicast)"), cli_exec_show();
+	ports("Show ports available for bridging"),          cli_exec_show();
+	vlans("Show port groups in bridge"),                 cli_exec_show();
+	ifaces("Show interfaces and their addresses"),       cli_exec_show();
+	log("Show latest syslog entries"),                   cli_exec_log(); {
+		<fn:string logfiles()>(""),                  cli_exec_log();
+	}
+	version("Show operating system version"),            cli_exec_show();
 
 	auto("Show expand x") {
 		xml @datamodelshow, cli_show_auto("candidate", "xml", true, false, "report-all");
@@ -72,3 +87,6 @@ show("Show various system state and configuration") {
 		}
 	}
 }
+
+# Hidden shell command, after 'show' command to avoid any possible completion problems
+shell("Start domain shell"), hide, cli_exec_shell();
