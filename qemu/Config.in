@@ -9,6 +9,11 @@ config QEMU_LOADER_KERNEL
 
 config QEMU_LOADER_UBOOT
 	bool "U-Boot"
+	depends on BR2_aarch64
+
+config QEMU_LOADER_OVMF
+	bool "OVMF (UEFI)"
+	depends on BR2_x86_64
 
 endchoice
 
@@ -40,8 +45,9 @@ config QEMU_KERNEL
 
 config QEMU_BIOS
 	string
-	depends on QEMU_LOADER_UBOOT
-	default "images/u-boot.bin"
+	depends on !QEMU_LOADER_KERNEL
+	default "images/u-boot.bin" if QEMU_LOADER_UBOOT
+	default "OVMF.fd"           if QEMU_LOADER_OVMF
 
 config QEMU_ROOTFS
 	string
