@@ -132,19 +132,28 @@ EOF
 
 dtb_args()
 {
-    [ "$QEMU_DTB_EXTEND" ] || return
+    [ "$QEMU_LOADER_UBOOT" ] || return
 
-    # Extract a copy of the DT generated internally by QEMU
-    run_qemu -M dumpdtb=images/qemu.dtb >/dev/null 2>&1
+    if [ "$QEMU_DTB_EXTEND" ]; then
+	# On the current architecture, QEMU will generate an internal
+	# DT based on the system configuration.
 
-    # Then, concatenate it with the ones supplied by the user
-    echo "images/qemu.dtb $QEMU_DTB_EXTEND" | \
-	xargs -n 1 dtc -I dtb -O dts | \
-	{ echo "/dts-v1/;"; sed  -e 's:/dts-v[0-9]\+/;::'; } | \
-	dtc >images/qemu-extended.dtb 2>/dev/null
+	# So we extract a copy of that
+	run_qemu -M dumpdtb=images/qemu.dtb >/dev/null 2>&1
 
-    # And use the combined result to start the instance
-    echo -n "-dtb images/qemu-extended.dtb "
+	# Extend it with the environment and signing information in
+	# u-boot.dtb.
+	echo "images/qemu.dtb images/u-boot.dtb" | \
+	    xargs -n 1 dtc -I dtb -O dts | \
+	    { echo "/dts-v1/;"; sed  -e 's:/dts-v[0-9]\+/;::'; } | \
+	    dtc >images/qemu-extended.dtb 2>/dev/null
+
+	# And use the combined result to start the instance
+	echo -n "-dtb images/qemu-extended.dtb "
+    else
+	# Otherwise we just use the unmodified one
+	echo -n "-dtb images/u-boot.dtb "
+    fi
 }
 
 if [ "$1" ]; then

@@ -66,8 +66,9 @@ config QEMU_CONSOLE
 	default "ttyS0"   if BR2_x86_64
 
 config QEMU_DTB_EXTEND
-	string
-	default "images/u-boot.dtb" if QEMU_LOADER_UBOOT
+	bool
+	depends on QEMU_LOADER_UBOOT
+	default y if BR2_aarch64
 
 config QEMU_APPEND
 	string "Extra kernel options"
