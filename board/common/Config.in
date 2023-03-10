@@ -16,10 +16,48 @@ config SIGN_KEY
 	string "Signing key"
 	default "${BR2_EXTERNAL_INFIX_PATH}/board/common/dev-key" if SIGN_SRC_DIR
 
-comment "Development Images"
+comment "Additional Artifacts"
+
+menuconfig DISK_IMAGE
+	bool "Disk image"
+	help
+	  Compose a full disk image with redundant firmware partitions,
+	  configuration partition, etc.
+
+	  This is useful when:
+	  - Bringing up a blank system during manufacturing
+	  - Creating a GNS3 appliance
+	  - Developing/debugging issues in the boot process in QEMU
+
+config DISK_IMAGE_SIZE
+	string "Image size"
+	depends on DISK_IMAGE
+	default "512M"
+	help
+	  Create a disk image of this size. Suffixes like K/M/G may be
+	  used to multiply by powers of 1024. Suffixes like KB/MB/GB may
+	  be used to multiply by powers of 1000.
+
+	  Minimum supported size is 512M.
+
+config GNS3_APPLIANCE
+	bool "GNS3 Appliance"
+	select DISK_IMAGE
+	default y if BR2_x86_64
+	help
+	  Create a GNS3 appliance description that, together with the
+	  disk image, can be imported into GNS3.
 
 menuconfig FIT_IMAGE
-	bool "Build FIT image"
+	bool "Traditional FIT image"
+	help
+	  Create a "regular" FIT image where the kernel and DTBs are
+	  stored in the FIT rather than inside the rootfs (like it
+	  normally is in Infix).
+
+	  This is useful when trying out Infix on targets whose
+	  bootloader might not be capable of booting a raw Squash, but
+	  is able to handle an FIT.
 
 config FIT_ARCH
 	string

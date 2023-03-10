@@ -47,16 +47,16 @@ config QEMU_BIOS
 	string
 	depends on !QEMU_LOADER_KERNEL
 	default "images/u-boot.bin" if QEMU_LOADER_UBOOT
-	default "OVMF.fd"           if QEMU_LOADER_OVMF
+	default "images/OVMF.fd"    if QEMU_LOADER_OVMF
 
 config QEMU_ROOTFS
 	string
-	default "images/mmc.img" if QEMU_LOADER_UBOOT
-	default "images/rootfs.squashfs" if QEMU_LOADER_KERNEL
+	default "images/disk.img"        if !QEMU_ROOTFS_INITRD
+	default "images/rootfs.squashfs" if QEMU_ROOTFS_INITRD
 
 config QEMU_RW
 	string "Writable layer"
-	depends on !QEMU_ROOTFS_MMC
+	depends on QEMU_ROOTFS_INITRD
 	default "images/cfg.ext4"
 
 config QEMU_CONSOLE

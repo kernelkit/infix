@@ -42,7 +42,7 @@ append_args()
 	local size=$((($(stat -c %s $QEMU_ROOTFS) + 1023) >> 10))
 	echo -n "root=/dev/ram ramdisk_size=${size} "
     elif [ "$QEMU_ROOTFS_VSCSI" = "y" ]; then
-	echo -n "root=/dev/vda "
+	echo -n "root=PARTLABEL=primary "
     fi
 
     if [ "$V" != "1" ]; then

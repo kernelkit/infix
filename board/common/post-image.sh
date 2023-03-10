@@ -1,21 +1,25 @@
 #!/bin/sh
-# shellcheck disable=SC1090
-. "$BR2_CONFIG" 2>/dev/null
 
 common=$(dirname "$(readlink -f "$0")")
+. $common/lib.sh
 
-# Temporary, separate handling of aarch64 and amd64 images.
-# Best would be to have the same for both, i.e., boot GNS3
-# with u-boot.
-if [ "$BR2_ARCH" = "aarch64" ]; then
-    # shellcheck disable=SC2034
-    imgdir=$1
-    arch=$2
-    signkey=$3
+load_cfg BR2_EXTERNAL_INFIX_PATH
 
-    $common/sign.sh $arch $signkey
+load_cfg BR2_ARCH
+load_cfg SIGN_KEY
+$common/sign.sh $BR2_ARCH $SIGN_KEY
+
+load_cfg DISK_IMAGE
+if [ "$DISK_IMAGE" = "y" ]; then
+    $common/mkdisk.sh -a $BR2_ARCH
+fi
+
+load_cfg GNS3_APPLIANCE
+if [ "$GNS3_APPLIANCE" = "y" ]; then
+    $common/mkgns3a.sh
+fi
+
+load_cfg FIT_IMAGE
+if [ "$FIT_IMAGE" = "y" ]; then
     $common/mkfit.sh
-    $common/mkmmc.sh
-elif [ "$BR2_ARCH" = "x86_64" ]; then
-    "$common/mkgns3a.sh"
 fi
