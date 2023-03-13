@@ -54,11 +54,6 @@ config QEMU_ROOTFS
 	default "images/disk.img"        if !QEMU_ROOTFS_INITRD
 	default "images/rootfs.squashfs" if QEMU_ROOTFS_INITRD
 
-config QEMU_RW
-	string "Writable layer"
-	depends on QEMU_ROOTFS_INITRD
-	default "images/cfg.ext4"
-
 config QEMU_CONSOLE
 	string
 	depends on !QEMU_ROOTFS_MMC
@@ -69,6 +64,15 @@ config QEMU_DTB_EXTEND
 	bool
 	depends on QEMU_LOADER_UBOOT
 	default y if BR2_aarch64
+
+config QEMU_RW
+	string "Writable layer"
+	depends on QEMU_ROOTFS_INITRD
+	default "images/cfg.ext4"
+
+config QEMU_HOST
+	string "Export host filesystem path"
+	default "images"
 
 config QEMU_APPEND
 	string "Extra kernel options"

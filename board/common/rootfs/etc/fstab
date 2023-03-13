@@ -21,4 +21,5 @@ mnttmp		/mnt/tmp	tmpfs		defaults			0	0
 LABEL=aux	/mnt/aux	auto		noatime,nodiratime,noauto	0	0
 LABEL=var	/mnt/var	auto		noatime,nodiratime,noauto	0	0
 LABEL=cfg	/mnt/cfg	auto		noatime,nodiratime,noauto	0	0
+hostfs		/mnt/host	9p		cache=none,msize=16384,noauto	0	0
 /lib/infix/mnt# /cfg		helper		none				0	0

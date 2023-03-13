@@ -110,4 +110,11 @@ mount_overlay var  $varsrc /var
 mkdir -p /mnt/tmp/infix/db
 ln -s /cfg/startup_db /mnt/tmp/infix/db/startup_db
 
+for tag in $(ls /sys/bus/virtio/devices/*/mount_tag 2>/dev/null); do
+    if [ "$(cat $tag | tr -d '\0')" = hostfs ]; then
+	mount hostfs
+	break
+    fi
+done
+
 exit $err

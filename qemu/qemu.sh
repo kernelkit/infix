@@ -79,6 +79,13 @@ rw_args()
     echo -n "-drive file=$QEMU_RW,if=virtio,format=raw,bus=0,unit=1 "
 }
 
+host_args()
+{
+    [ "${QEMU_HOST}" ] || return
+
+    echo -n "-virtfs local,path=${QEMU_HOST},security_model=none,writeout=immediate,mount_tag=hostfs "
+}
+
 net_args()
 {
     QEMU_NET_MODEL=${QEMU_NET_MODEL:-virtio}
@@ -118,6 +125,7 @@ run_qemu()
 	  $(loader_args) \
 	  $(rootfs_args) \
 	  $(rw_args) \
+	  $(host_args) \
 	  $(net_args) \
 	  $(wdt_args) \
 	  $QEMU_EXTRA
