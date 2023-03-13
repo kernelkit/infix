@@ -3,6 +3,7 @@
 # mech
 #
 ################################################################################
+
 MECH_VERSION = 1.0
 MECH_LICENSE = GPL
 MECH_SITE_METHOD = local
