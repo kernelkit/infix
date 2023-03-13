@@ -32,14 +32,14 @@ int cli_exec_shell(clicon_handle h, cvec *cvv, cvec *argv)
 
 int cli_exec_show(clicon_handle h, cvec *cvv, cvec *argv)
 {
-	char cmd[256];
-	int pos = 0;
-	int i;
+	char cmd[256] = "show -n ";
+	char *arg;
 
-	for (i = 0; i < cvec_len(cvv); i++)
-		pos += snprintf(&cmd[pos], sizeof(cmd) - pos, "%s ",
-				cv_string_get(cvec_i(cvv, i)));
+	arg = cv_string_get(cvec_i(cvv, 0));
+	if (!arg)
+		return -1;
 
+	strncat(cmd, &arg[5], sizeof(cmd) - strlen(cmd) - 1);
 	return exec(h, cmd);
 }
 
