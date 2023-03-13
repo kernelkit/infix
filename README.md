@@ -75,9 +75,9 @@ packages.  This is extracted automatically at build time using the tool
 Buildroot, would need separate auditing to ensure it does not link with
 any GPL[^1] licensed library.
 
-[^1] Infix builds use the GNU libc (GLIBC) which is covered by the
-  [LGPL][4].  The LGPL *does allow* proprietary software, as long as
-  said software is linking dynamically, [not statically][5], to GLIBC.
+[^1]: Infix image builds use GNU libc (GLIBC) which is covered by the
+	[LGPL][4].  The LGPL *does allow* proprietary software, as long as
+	said software is linking dynamically, [not statically][5], to GLIBC.
 
 [0]: https://github.com/kernelkit/infix/releases/tag/latest
 [1]: https://buildroot.org/
