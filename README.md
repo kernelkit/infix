@@ -1,7 +1,9 @@
 <img align="right" src="doc/text3134.png" alt="Infix Linux Networking Made Easy">
 
-Infix is an embedded Linux Network Operating System (NOS)
-based on [Buildroot][1], [Finit][2], and [ifupdown-ng][3].
+Infix is an embedded Linux Network Operating System (NOS) based on
+[Buildroot][1], [Finit][2], [ifupdown-ng][3], and [Clixon][6].
+Providing an easy-to-maintain and easy-to-port Open Source base for
+networked equipment.
 
 See the [GitHub Releases](https://github.com/kernelkit/infix/releases)
 page for out pre-built images.  The *Latest Build* has the bleeding edge
@@ -29,7 +31,8 @@ information.
 ### amd64
 
 Primarily intended to be run under [QEMU][] for development & test as
-well as evaluation, demo and [training][] purposes, e.g. using [GNS3][].
+well as evaluation, demo and [training][] purposes, e.g. using [GNS3][]
+or [Qeneth][7].
 
 
 QEMU
@@ -85,6 +88,8 @@ any GPL[^1] licensed library.
 [3]: https://github.com/ifupdown-ng/ifupdown-ng
 [4]: https://en.wikipedia.org/wiki/GNU_Lesser_General_Public_License
 [5]: https://lwn.net/Articles/117972/
+[6]: https://github.com/clicon/clixon
+[7]: https://github.com/wkz/qeneth
 [9]: https://docs.gns3.com/docs/using-gns3/beginners/import-gns3-appliance/
 [QEMU]: https://www.qemu.org/
 [GNS3]: https://gns3.com/
