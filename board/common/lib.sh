@@ -1,3 +1,8 @@
+ixmsg()
+{
+    printf "\e[37;44m#!:   $@\e[0m\n"
+}
+
 die()
 {
     echo "$@" >&2
