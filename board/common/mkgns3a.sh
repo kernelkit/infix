@@ -27,15 +27,15 @@ cat <<EOF >"$BINARIES_DIR/infix.gns3a"
     },
     "images": [
         {
-            "filename": "rootfs.iso9660",
-            "filesize": $(stat --printf='%s' "$BINARIES_DIR/rootfs.iso9660"),
-            "md5sum": "$(md5sum "$BINARIES_DIR/rootfs.iso9660" | awk '{print $1}')",
+            "filename": "OVMF.fd",
+            "filesize": $(stat --printf='%s' "$BINARIES_DIR/OVMF.fd"),
+            "md5sum": "$(md5sum "$BINARIES_DIR/OVMF.fd" | awk '{print $1}')",
             "version": "0.0"
         },
         {
-            "filename": "cfg.ext4",
-            "filesize": $(stat --printf='%s' "$BINARIES_DIR/cfg.ext4"),
-            "md5sum": "$(md5sum "$BINARIES_DIR/cfg.ext4" | awk '{print $1}')",
+            "filename": "disk.img",
+            "filesize": $(stat --printf='%s' "$BINARIES_DIR/disk.img"),
+            "md5sum": "$(md5sum "$BINARIES_DIR/disk.img" | awk '{print $1}')",
             "version": "0.0"
         }
     ],
@@ -43,8 +43,8 @@ cat <<EOF >"$BINARIES_DIR/infix.gns3a"
         {
             "name": "0.0",
             "images": {
-                "cdrom_image": "rootfs.iso9660",
-                "hda_disk_image": "cfg.ext4"
+                "bios_image": "OVMF.fd",
+                "hda_disk_image": "disk.img"
             }
         }
     ]
