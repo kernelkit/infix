@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 CLICON_MODE="exec";
 CLICON_PROMPT="%U@%H:%w> ";
 CLICON_PLUGIN="core-cli";
