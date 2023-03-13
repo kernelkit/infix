@@ -78,6 +78,7 @@ options:
   -a            Show all, of something
   -f            Show full output, not brief port/iface listings
   -h            Show this help text
+  -n            Show output without any footer
   -p            Show plain output, no bells or whistles
 
 commands:
@@ -118,7 +119,7 @@ ports()
 		ip $opt link show
 	fi
 
-	if [ -z "$plain" ]; then
+	if [ -z "$plain" ] && [ -z "$nofoot" ]; then
 		dm "______________________________________________________________________________"
 		dm "Use: '[ip|bridge] --help' and '[ip|bridge] link help' for more details."
 	fi
@@ -128,7 +129,7 @@ vlans()
 {
 	h1 "INTERFACE         VLAN  FLAGS"
 	bridge $bopt vlan show |tail +2 | awk 'NF { iface=$1; vid=$2; printf("%-16s  %4d  ", iface, vid); for (i=3; i <= NF; i++) printf("%s ", $i); printf("\n"); }'
-	if [ -z "$plain" ]; then
+	if [ -z "$plain" ] && [ -z "$nofoot" ]; then
 		dm "______________________________________________________________________________"
 		dm "See: 'bridge --help' and 'bridge vlan help' for more details."
 	fi
@@ -144,7 +145,7 @@ ifaces()
 	else
 		ip $opt addr show |awk '{ if ($1 !~ /eth[0-9]*/ && $1 !~ /.*@NONE/) { print }}'
 	fi
-	if [ -z "$plain" ]; then
+	if [ -z "$plain" ] && [ -z "$nofoot" ]; then
 		dm "______________________________________________________________________________"
 		dm "See: 'ip --help' and 'ip address help' for more details."
 	fi
@@ -162,7 +163,7 @@ log()
 	else
 		tail -$LINES $fn
 	fi
-	if [ -z "$plain" ]; then
+	if [ -z "$plain" ] && [ -z "$nofoot" ]; then
 		dm "______________________________________________________________________________"
 		dm "See: 'tail -25 /log/FILE', 'tail -F /log/FILE' to continuously monitor files."
 	fi
@@ -177,7 +178,7 @@ rmon()
 	for port in $*; do
 		ethtool -S "$port"
 	done
-	if [ -z "$plain" ]; then
+	if [ -z "$plain" ] && [ -z "$nofoot" ]; then
 		dm "______________________________________________________________________________"
 		dm "See: 'ethtool --help' for more details."
 	fi
@@ -240,6 +241,9 @@ while [ "$1" != "" ]; do
 				opt="-color=never"
 				bopt="-color=never"
 			fi
+			;;
+		-n)
+			nofoot="yes"
 			;;
 		-p)
 			plain="yes"
