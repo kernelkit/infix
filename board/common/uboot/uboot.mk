@@ -11,7 +11,7 @@
 # built in to the final U-Boot image's control DT via the
 # CONFIG_DEVICE_TREE_INCLUDES option (see extras.config).
 define UBOOT_PRE_BUILD_INSTALL_KEY
-	@echo "Installing Infix signing key ($(SIGN_KEY))"
+	@$(call IXMSG,"Installing Infix signing key ($(SIGN_KEY))")
 	$(HOST_DIR)/bin/dtc <(echo '/dts-v1/; / { signature {}; };') >$(@D)/infix-key.dtb
 	$(HOST_DIR)/bin/mkimage \
 		-k $(SIGN_KEY) \
@@ -29,7 +29,7 @@ endef
 UBOOT_PRE_BUILD_HOOKS += UBOOT_PRE_BUILD_INSTALL_KEY
 
 define UBOOT_PRE_BUILD_INSTALL_ENV
-	@echo "Installing Infix environment extensions"
+	@$(call IXMSG,"Installing Infix environment extensions")
 	cp -f $(BR2_EXTERNAL_INFIX_PATH)/board/common/uboot/env.dtsi \
 		$(@D)/arch/$(UBOOT_ARCH)/dts/infix-env.dtsi
 	cp -af $(BR2_EXTERNAL_INFIX_PATH)/board/common/uboot/scripts \

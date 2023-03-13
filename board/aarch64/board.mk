@@ -1,7 +1,7 @@
 
 .PHONY: board-enable-qemu-uboot
 board-enable-qemu-uboot:
-	@echo "Enabling build of QEMU compatible U-Boot"
+	@$(call IXMSG,"Enabling build of QEMU compatible U-Boot")
 	./utils/config --file $(BR2_CONFIG) \
 		--enable PACKAGE_HOST_UBOOT_TOOLS \
 		--enable PACKAGE_HOST_UBOOT_TOOLS_FIT_SUPPORT \
@@ -21,7 +21,7 @@ board-enable-qemu-uboot:
 
 .PHONY: board-enable-sparx-fit
 board-enable-sparx-fit:
-	@echo "Enabling SparX-5i compatible FIT options"
+	@$(call IXMSG,"Enabling SparX-5i compatible FIT options")
 	@BR2_PREFIX= ./utils/config --file $(BR2_CONFIG) \
 	 	--enable FIT_IMAGE \
 	 	--set-str FIT_KERNEL_LOAD_ADDR "0x7 0x00000000"
