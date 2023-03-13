@@ -9,6 +9,6 @@ rm -rf /etc/finit.d/enabled/*.conf
 rm -rf /etc/network/interfaces*
 
 #...except for some core services
-for svc in getty sysklogd; do
+for svc in clixon getty sysklogd; do
     ln -s ../available/$svc.conf /etc/finit.d/enabled/$svc.conf
 done
