@@ -52,7 +52,7 @@ int cli_exec_log(clicon_handle h, cvec *cvv, cvec *argv)
 	if (!strncmp("follow", cv_string_get(cvec_i(cvv, 0)), 6))
 		snprintf(cmd, sizeof(cmd), "tail -F ");
 	else
-		snprintf(cmd, sizeof(cmd), "cat ");
+		snprintf(cmd, sizeof(cmd), "more ");
 
 	cv = cvec_find(cvv, "fn");
 	if (cv) {
