@@ -46,7 +46,7 @@ int ietf_sys_tr_commit_hostname(cxobj *src, cxobj *tgt)
 	free(old);
 
 	if (src)
-		err = err ? : system("initctl touch sysklogd");
+		err = err ? : system("initctl -b touch sysklogd");
 
 	return err;
 }

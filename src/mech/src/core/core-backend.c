@@ -8,7 +8,7 @@
 
 int core_commit_done(clicon_handle h, transaction_data td)
 {
-	if (transaction_src(td) && system("initctl reload"))
+	if (transaction_src(td) && system("initctl -b reload"))
 		clicon_log(LOG_CRIT, "Failed to reload services");
 
 	return 0;
