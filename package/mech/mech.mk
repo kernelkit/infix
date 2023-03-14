@@ -18,4 +18,16 @@ define MECH_INSTALL_EXTRA
 endef
 MECH_TARGET_FINALIZE_HOOKS += MECH_INSTALL_EXTRA
 
+define MECH_GEN_YANG_TREE
+	if which pyang 2>/dev/null; then \
+		pyang -f tree \
+			-p $(TARGET_DIR)/usr/share/clixon \
+			$$(find $(TARGET_DIR)/usr/share/clixon/ -name '*@*.yang') >$(BINARIES_DIR)/mech-yang.txt; \
+		pyang -f jstree \
+			-p $(TARGET_DIR)/usr/share/clixon \
+			$$(find $(TARGET_DIR)/usr/share/clixon/ -name '*@*.yang') >$(BINARIES_DIR)/mech-yang.html; \
+	fi
+endef
+MECH_POST_INSTALL_TARGET_HOOKS += MECH_GEN_YANG_TREE
+
 $(eval $(autotools-package))
