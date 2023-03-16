@@ -3,6 +3,7 @@
 #include <augeas.h>
 #include <errno.h>
 #include <stdio.h>
+#include <syslog.h>
 #include <unistd.h>
 
 #include "common.h"
@@ -44,9 +45,92 @@ int ietf_sys_tr_commit_hostname(cxobj *src, cxobj *tgt)
 	free(old);
 
 	if (src)
-		err = err ? : system("initctl -b touch sysklogd");
+		err = err ? : system("initctl -nbq touch sysklogd");
 
 	return err;
+}
+
+static bool is_true(cxobj *xp, char *name)
+{
+	cxobj *obj;
+
+	if (!xp || !name)
+		return false;
+
+	obj = xml_find(xp, name);
+	if (obj && !strcmp(xml_body(obj), "true"))
+		return true;
+
+	return false;
+}
+
+int ietf_sys_tr_commit_ntp(cxobj *src, cxobj *tgt)
+{
+	const char *fn = "/etc/chrony.conf";
+	cxobj *obj, *srv = NULL;
+	int valid = 0;
+	FILE *fp;
+
+	if (!tgt)
+		return 0;
+
+	fp = fopen(fn, "w");
+	if (!fp) {
+		clicon_log(LOG_WARNING, "ietf-system: failed updating %s: %s", fn, strerror(errno));
+		return -1;
+	}
+
+	while ((srv = xml_child_each(tgt, srv, CX_ELMNT))) {
+		char *type = "server";
+		int server = 0;
+		cxobj *tmp;
+
+		if (strcmp(xml_name(srv), "server"))
+			continue;
+
+		obj = xml_find(srv, "association-type");
+		if (obj)
+			type = xml_body(obj);
+
+		tmp = xml_find(srv, "udp");
+		if (tmp) {
+			obj = xml_find(tmp, "address");
+			if (obj) {
+				fprintf(fp, "%s %s", type, xml_body(obj));
+				server++;
+			}
+			obj = xml_find(tmp, "port");
+			if (server && obj)
+				fprintf(fp, " port %s", xml_body(obj));
+		}
+
+		if (server) {
+			if (is_true(srv, "iburst"))
+				fprintf(fp, " iburst");
+			if (is_true(srv, "prefer"))
+				fprintf(fp, " prefer");
+			fprintf(fp, "\n");
+			valid++;
+		}
+	}
+
+	fprintf(fp, "driftfile /var/lib/chrony/drift\n");
+	fprintf(fp, "makestep 1.0 3\n");
+	fprintf(fp, "maxupdateskew 100.0\n");
+	fprintf(fp, "dumpdir /var/lib/chrony\n");
+	fprintf(fp, "rtcfile /var/lib/chrony/rtc\n");
+	fclose(fp);
+
+	if (valid && is_true(tgt, "enabled")) {
+		/*
+		 * If chrony is alrady enabled we tell Finit it's been
+		 * modified , so Finit restarts it, otherwise enable it.
+		 */
+		system("initctl -nbq touch chronyd");
+		return system("initctl -nbq enable chronyd");
+	}
+
+	return system("initctl -nbq disable chronyd");
 }
 
 int ietf_sys_tr_commit(clicon_handle h, transaction_data td)
@@ -68,11 +152,14 @@ int ietf_sys_tr_commit(clicon_handle h, transaction_data td)
 
 	err = ietf_sys_tr_commit_hostname(slen ? xml_find(ssys[0], "hostname") : NULL,
 					  tlen ? xml_find(tsys[0], "hostname") : NULL);
-	/* if (err) */
-	/* 	goto err; */
+	if (err)
+		goto err;
 
+	err = ietf_sys_tr_commit_ntp(slen ? xml_find(ssys[0], "ntp") : NULL,
+				     tlen ? xml_find(tsys[0], "ntp") : NULL);
+	if (err)
+		goto err;
 err:
-
 	err = err ? : aug_save(aug);
 	return err;
 }
