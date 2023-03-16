@@ -10,6 +10,20 @@
 
 static augeas *aug;
 
+static bool is_true(cxobj *xp, char *name)
+{
+	cxobj *obj;
+
+	if (!xp || !name)
+		return false;
+
+	obj = xml_find(xp, name);
+	if (obj && !strcmp(xml_body(obj), "true"))
+		return true;
+
+	return false;
+}
+
 int ietf_sys_tr_begin(clicon_handle h, transaction_data td)
 {
 	return aug_load(aug);
@@ -50,18 +64,42 @@ int ietf_sys_tr_commit_hostname(cxobj *src, cxobj *tgt)
 	return err;
 }
 
-static bool is_true(cxobj *xp, char *name)
+/*
+ * On GLIBC systems the file /etc/timezone contains the name of the
+ * current timezone, the file /etc/localtime is a copy or symlink to
+ * the file /usr/share/zoneinfo/$(cat /etc/timezone)
+ */
+int ietf_sys_tr_commit_clock(cxobj *src, cxobj *tgt)
 {
+	const char *fn = "/etc/timezone";
+	char *timezone;
+	char cmd[512];
 	cxobj *obj;
+	FILE *fp;
 
-	if (!xp || !name)
-		return false;
+	if (!tgt)
+		return 0;
 
-	obj = xml_find(xp, name);
-	if (obj && !strcmp(xml_body(obj), "true"))
-		return true;
+	obj = xml_find(tgt, "timezone-name");
+	if (!obj)
+		return 0;
 
-	return false;
+	timezone = xml_body(obj);
+
+	snprintf(cmd, sizeof(cmd), "cp /usr/share/zoneinfo/%s /etc/localtime", timezone);
+	if (system(cmd)) {
+		clicon_log(LOG_WARNING, "ietf-system: failed setting timezone %s", timezone);
+		return -1;
+	}
+
+	fp = fopen(fn, "w");
+	if (!fp) {
+		clicon_log(LOG_WARNING, "ietf-system: failed updating %s: %s", fn, strerror(errno));
+		return -1;
+	}
+	fprintf(fp, "%s\n", timezone);
+
+	return fclose(fp);
 }
 
 int ietf_sys_tr_commit_ntp(cxobj *src, cxobj *tgt)
@@ -155,6 +193,10 @@ int ietf_sys_tr_commit(clicon_handle h, transaction_data td)
 	if (err)
 		goto err;
 
+	err = ietf_sys_tr_commit_clock(slen ? xml_find(ssys[0], "clock") : NULL,
+				       tlen ? xml_find(tsys[0], "clock") : NULL);
+	if (err)
+		goto err;
 	err = ietf_sys_tr_commit_ntp(slen ? xml_find(ssys[0], "ntp") : NULL,
 				     tlen ? xml_find(tsys[0], "ntp") : NULL);
 	if (err)

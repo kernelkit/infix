@@ -4,6 +4,7 @@
   <CLICON_FEATURE>ietf-netconf:confirmed-commit</CLICON_FEATURE>
   <CLICON_FEATURE>clixon-restconf:allow-auth-none</CLICON_FEATURE>
   <CLICON_FEATURE>clixon-restconf:fcgi</CLICON_FEATURE>
+  <CLICON_FEATURE>ietf-system:timezone-name</CLICON_FEATURE>
   <CLICON_FEATURE>ietf-system:ntp</CLICON_FEATURE>
   <CLICON_FEATURE>ietf-system:ntp-udp-port</CLICON_FEATURE>
   <CLICON_YANG_DIR>@DATAROOTDIR@/clixon</CLICON_YANG_DIR>
