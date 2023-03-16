@@ -10,7 +10,7 @@ module infix {
     import ietf-system {
         prefix sys;
     }
-/*
+
     import ietf-interfaces {
         prefix if;
     }
@@ -20,7 +20,7 @@ module infix {
     import iana-if-type {
         prefix ianaift;
     }
-*/
+
     import clixon-autocli {
         prefix autocli;
     }
