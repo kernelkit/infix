@@ -214,6 +214,26 @@ err:
 	return err;
 }
 
+static int do_rpc(clicon_handle h,            /* Clicon handle */
+		  cxobj        *xe,           /* Request: <rpc><xn></rpc> */
+		  cbuf         *cbret,        /* Reply eg <rpc-reply>... */
+		  void         *arg,          /* client_entry */
+		  void         *regarg)       /* Argument given at register */
+{
+	char  *namespace = NETCONF_BASE_NAMESPACE;
+
+//	if ((namespace = xml_find_type_value(xe, NULL, "xmlns", CX_ATTR)) == NULL){
+//		clicon_err(OE_XML, ENOENT, "No namespace given in RPC %s", xml_name(xe));
+//		return -1;
+//	}
+
+	cprintf(cbret, "<rpc-reply xmlns=\"%s\"><ok/></rpc-reply>", namespace);
+	if (regarg && !strcmp(regarg, "system-shutdown"))
+		return system("poweroff");
+
+	return system("reboot");
+}
+
 static clixon_plugin_api ietf_system_api = {
 	.ca_name = "ietf-system",
 	.ca_init = clixon_plugin_init,
@@ -230,6 +250,21 @@ clixon_plugin_api *clixon_plugin_init(clicon_handle h)
 	    aug_load_file(aug, "/etc/hosts")) {
 		clicon_err(OE_UNIX, EINVAL,
 			   "ietf-system: Augeas initialization failed");
+		return NULL;
+	}
+
+	if (rpc_callback_register(h, do_rpc, NULL,
+				  "urn:ietf:params:xml:ns:yang:ietf-system",
+				  "system-restart") < 0) {
+		clicon_err(OE_PLUGIN, EINVAL,
+			   "ietf-system: failed registering RPC callback");
+		return NULL;
+	}
+	if (rpc_callback_register(h, do_rpc, NULL,
+				  "urn:ietf:params:xml:ns:yang:ietf-system",
+				  "system-shutdown") < 0) {
+		clicon_err(OE_PLUGIN, EINVAL,
+			   "ietf-system: failed registering RPC callback");
 		return NULL;
 	}
 
