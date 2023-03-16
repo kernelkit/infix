@@ -114,8 +114,11 @@ int ietf_sys_tr_commit_ntp(cxobj *src, cxobj *tgt)
 	int valid = 0;
 	FILE *fp;
 
-	if (!tgt)
+	if (!tgt) {
+		if (src)
+			goto disable;
 		return 0;
+	}
 
 	fp = fopen(fn, "w");
 	if (!fp) {
@@ -172,7 +175,7 @@ int ietf_sys_tr_commit_ntp(cxobj *src, cxobj *tgt)
 		system("initctl -nbq touch chronyd");
 		return system("initctl -nbq enable chronyd");
 	}
-
+disable:
 	return system("initctl -nbq disable chronyd");
 }
 
