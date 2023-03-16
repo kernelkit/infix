@@ -121,7 +121,7 @@ run_qemu()
     local qemu
     read qemu <<EOF
 	$QEMU_MACHINE \
-	  -nographic \
+	  -nographic -rtc base=utc,clock=vm \
 	  $(loader_args) \
 	  $(rootfs_args) \
 	  $(rw_args) \
