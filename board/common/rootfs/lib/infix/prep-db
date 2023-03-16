@@ -1,9 +1,19 @@
 #!/bin/sh
-
 set -e
 
-# TODO: Copy in a proper factory config from
-# /usr/share/vendor/<hardware-id>_db or similar.
-touch /mnt/tmp/infix/db/factory_db
+FACTORY=/mnt/tmp/infix/db/factory_db
 
-[ -f /cfg/startup_db ] || cp /mnt/tmp/infix/db/factory_db /cfg/startup_db
+# TODO: Maybe copy in a proper factory config from
+# /usr/share/vendor/<hardware-id>_db or similar.
+# Right now we generate one from probed data.
+cat <<EOF >$FACTORY
+<config>
+<restconf xmlns="http://clicon.org/restconf">
+   <enable>true</enable>
+   <auth-type>none</auth-type>
+   <fcgi-socket>/run/clixon/restconf.sock</fcgi-socket>
+</restconf>
+</config>
+EOF
+
+[ -f /cfg/startup_db ] || cp "$FACTORY" /cfg/startup_db

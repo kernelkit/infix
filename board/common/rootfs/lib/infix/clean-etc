@@ -5,10 +5,19 @@
 
 # This is a managed node, ignore all default configuration...
 rm -f  /etc/rc.local
-rm -rf /etc/finit.d/enabled/*.conf
 rm -rf /etc/network/interfaces*
 
 #...except for some core services
-for svc in clixon getty sysklogd; do
-    ln -s ../available/$svc.conf /etc/finit.d/enabled/$svc.conf
+reserved()
+{
+    for svc in clixon getty nginx sysklogd; do
+	[ "$1" = "${svc}.conf" ] && return 0
+    done
+
+    return 1
+}
+
+for file in /etc/finit.d/enabled/*.conf; do
+    reserved "$(basename "$file")" && continue
+    rm "$file"
 done
