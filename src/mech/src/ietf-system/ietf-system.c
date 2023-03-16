@@ -5,9 +5,7 @@
 #include <stdio.h>
 #include <unistd.h>
 
-#include <cligen/cligen.h>
-#include <clixon/clixon.h>
-#include <clixon/clixon_backend.h>
+#include "common.h"
 
 static augeas *aug;
 
@@ -57,6 +55,8 @@ int ietf_sys_tr_commit(clicon_handle h, transaction_data td)
 	yang_stmt *yspec = clicon_dbspec_yang(h);
 	int slen = 0, tlen = 0, err = -EINVAL;
 	cxobj **ssys, **tsys;
+
+	show_transaction("ietf-system", td, true);
 
 	if (src && clixon_xml_find_instance_id(src, yspec, &ssys, &slen,
 					       "/sys:system") < 0)
