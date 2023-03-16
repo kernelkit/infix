@@ -35,4 +35,12 @@ module infix {
       reference
 	"N/A";
     }
+    revision 2023-03-16 {
+      description "Add timezone deviations for system/clock.";
+      reference "N/A";
+    }
+
+    deviation /sys:system/clock/timezone-utc-offset {
+      deviate not-supported;
+    }
 }
