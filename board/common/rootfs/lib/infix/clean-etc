@@ -10,7 +10,7 @@ rm -rf /etc/network/interfaces*
 #...except for some core services
 reserved()
 {
-    for svc in clixon getty nginx sysklogd; do
+    for svc in clixon getty lldpd nginx sysklogd; do
 	[ "$1" = "${svc}.conf" ] && return 0
     done
 

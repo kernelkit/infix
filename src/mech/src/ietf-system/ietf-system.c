@@ -24,6 +24,11 @@ static bool is_true(cxobj *xp, char *name)
 	return false;
 }
 
+static int sys_reload_services(void)
+{
+	return system("initctl -nbq touch sysklogd lldpd");
+}
+
 int ietf_sys_tr_begin(clicon_handle h, transaction_data td)
 {
 	return aug_load(aug);
@@ -59,7 +64,7 @@ int ietf_sys_tr_commit_hostname(cxobj *src, cxobj *tgt)
 	free(old);
 
 	if (src)
-		err = err ? : system("initctl -nbq touch sysklogd");
+		err = err ? : sys_reload_services();
 
 	return err;
 }
