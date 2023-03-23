@@ -1,6 +1,8 @@
 /* SPDX-License-Identifier: Apache-2.0 */
 
+#include <ctype.h>
 #include <errno.h>
+#include <jansson.h>
 #include <stdio.h>
 #include <syslog.h>
 #include <unistd.h>
@@ -142,12 +144,125 @@ err:
 	return err;
 }
 
+/* Verify obj is a string and then lowercase print it in fmt */
+void cprint_xml_string(cbuf *cb, const char *fmt, json_t *obj, const char *key)
+{
+	json_t *val;
+	char *str;
+
+	val = json_object_get(obj, key);
+	if (!val || !json_is_string(val))
+		return;
+
+	str = strdup(json_string_value(val));
+	if (!str)
+		return;
+
+	for (size_t i = 0; i < strlen(str); i++)
+		str[i] = tolower(str[i]);
+	cprintf(cb, fmt, str);
+	free(str);
+}
+
+void cprint_ifdata(cbuf *cb, char *ifname)
+{
+	json_t *root = NULL, *obj;
+	json_error_t error;
+	FILE *fp = NULL;
+	char cmd[128];
+	size_t len;
+	char *buf;
+
+	buf = malloc(BUFSIZ);
+	if (!buf)
+		goto err;
+
+	snprintf(cmd, sizeof(cmd), "ip -j -p link show %s", ifname);
+	fp = popen(cmd, "r");
+	if (!fp)
+		goto err;
+
+	len = fread(buf, 1, 4096, fp);
+	if (len == 0 || ferror(fp))
+		goto err;
+
+	root = json_loadb(buf, len, 0, &error);
+	if (!root)
+		goto err;
+	if (!json_is_array(root)) {
+		if (!json_is_object(root))
+			goto err;
+		obj = root;
+	} else
+		obj = json_array_get(root, 0);
+
+	cprintf(cb,
+		"<interface xmlns:ex=\"urn:example:clixon\">\n"
+		"  <name>%s</name>\n"
+		"  <type>ex:eth</type>\n", ifname);
+	cprint_xml_string(cb, "  <phys-address>%s</phys-address>\n", obj, "address");
+	cprint_xml_string(cb, "  <oper-status>%s</oper-status>\n", obj, "operstate");
+	cprintf(cb, "</interface>");
+err:
+	if (root)
+		json_decref(root);
+	if (fp)
+		pclose(fp);
+	if (buf)
+		free(buf);
+}
+
+int ietf_if_statedata(clicon_handle h, cvec *nsc, char *xpath, cxobj *xstate)
+{
+	cxobj    **xvec = NULL;
+	size_t     xlen = 0;
+	cbuf      *cb = NULL;
+	cxobj     *xt = NULL;
+	cvec      *nsc1 = NULL;
+//	yang_stmt *yspec = NULL;
+	int        rc = -1;
+
+	if ((cb = cbuf_new()) == NULL) {
+		clicon_err(OE_UNIX, errno, "cbuf_new");
+		goto done;
+	}
+
+//	yspec = clicon_dbspec_yang(h);
+	if ((nsc1 = xml_nsctx_init(NULL, "urn:ietf:params:xml:ns:yang:ietf-interfaces")) == NULL)
+		goto done;
+	if (xmldb_get0(h, "running", YB_MODULE, nsc1, "/interfaces/interface/name", 1, 0, &xt, NULL, NULL) < 0)
+		goto done;
+	if (xpath_vec(xt, nsc1, "/interfaces/interface/name", &xvec, &xlen) < 0)
+		goto done;
+	if (xlen) {
+		cprintf(cb, "<interfaces xmlns=\"urn:ietf:params:xml:ns:yang:ietf-interfaces\">");
+		for (size_t i = 0; i < xlen; i++)
+			cprint_ifdata(cb, xml_body(xvec[i]));
+		cprintf(cb, "</interfaces>");
+		if (clixon_xml_parse_string(cbuf_get(cb), YB_NONE, NULL, &xstate, NULL) < 0)
+			goto done;
+	}
+	rc = 0;
+done:
+	if (nsc1)
+		xml_nsctx_free(nsc1);
+	if (xt)
+		xml_free(xt);
+	if (cb)
+		cbuf_free(cb);
+	if (xvec)
+		free(xvec);
+	return rc;
+}
+
 static clixon_plugin_api ietf_interfaces_api = {
 	.ca_name = "ietf-interfaces",
 	.ca_init = clixon_plugin_init,
 
 	.ca_trans_begin = ietf_if_tr_begin,
 	.ca_trans_commit = ietf_if_tr_commit,
+
+	.ca_statedata = ietf_if_statedata,
 };
 
 clixon_plugin_api *clixon_plugin_init(clicon_handle h)
