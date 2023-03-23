@@ -1,14 +1,24 @@
 /* SPDX-License-Identifier: Apache-2.0 */
 
 #include <augeas.h>
+#include <ctype.h>
 #include <errno.h>
 #include <stdio.h>
+#include <string.h>
 #include <syslog.h>
+#include <sys/utsname.h>
+#include <sys/sysinfo.h>
+#include <time.h>
 #include <unistd.h>
 
 #include "common.h"
 
 static augeas *aug;
+static char   *ver = NULL;
+static char   *rel = NULL;
+static char   *sys = NULL;
+static char   *os  = NULL;
+
 
 static bool is_true(cxobj *xp, char *name)
 {
@@ -214,6 +224,122 @@ err:
 	return err;
 }
 
+static char *strip_quotes(char *str)
+{
+	char *ptr;
+
+	while (*str && (isspace(*str) || *str == '"'))
+		str++;
+
+	for (ptr = str + strlen(str); ptr > str; ptr--) {
+		if (*ptr != '"')
+			continue;
+
+		*ptr = 0;
+		break;
+	}
+
+	return str;
+}
+
+static void setvar(char *line, const char *nm, char **var)
+{
+	char *ptr;
+
+	if (!strncmp(line, nm, strlen(nm)) && (ptr = strchr(line, '='))) {
+		if (*var)
+			free(*var);
+		*var = strdup(strip_quotes(++ptr));
+	}
+}
+
+static void os_init(void)
+{
+	struct utsname uts;
+	char line[80];
+	FILE *fp;
+
+	if (!uname(&uts)) {
+		os  = strdup(uts.sysname);
+		ver = strdup(uts.release);
+		rel = strdup(uts.release);
+		sys = strdup(uts.machine);
+	}
+
+	fp = fopen("/etc/os-release", "r");
+	if (!fp) {
+		fp = fopen("/usr/lib/os-release", "r");
+		if (!fp)
+			return;
+	}
+
+	while (fgets(line, sizeof(line), fp)) {
+		line[strlen(line) - 1] = 0; /* drop \n */
+		setvar(line, "NAME", &os);
+		setvar(line, "VERSION_ID", &ver);
+		setvar(line, "BUILD_ID", &rel);
+		setvar(line, "ARCHITECTURE", &sys);
+	}
+	fclose(fp);
+}
+
+static char *fmtime(time_t t, char *buf, size_t len)
+{
+        const char *isofmt = "%FT%T%z";
+        struct tm tm;
+        size_t i, n;
+
+        localtime_r(&t, &tm);
+        n = strftime(buf, len, isofmt, &tm);
+        i = n - 5;
+        if (buf[i] == '+' || buf[i] == '-') {
+                buf[i + 6] = buf[i + 5];
+                buf[i + 5] = buf[i + 4];
+                buf[i + 4] = buf[i + 3];
+                buf[i + 3] = ':';
+        }
+
+        return buf;
+}
+
+int ietf_sys_statedata(clicon_handle h, cvec *nsc, char *xpath, cxobj *xstate)
+{
+        struct sysinfo si;
+        time_t now, boot;
+        char buf[42];
+	cbuf *cb;
+	int rc;
+
+	cb = cbuf_new();
+	if (!cb) {
+		clicon_err(OE_UNIX, errno, "ietf-system:cbuf_new");
+		return -1;
+	}
+
+        tzset();
+        sysinfo(&si);
+        now = time(NULL);
+        boot = now - si.uptime;
+
+	cprintf(cb, "<system-state xmlns=\"urn:ietf:params:xml:ns:yang:ietf-system\">");
+	cprintf(cb, "  <platform>\n");
+	cprintf(cb, "    <os-name>%s</os-name>\n", os);
+	cprintf(cb, "    <os-version>%s</os-version>\n", ver);
+	if (rel)
+		cprintf(cb, "    <os-release>%s</os-release>\n", rel);
+	cprintf(cb, "    <machine>%s</machine>\n", sys);
+	cprintf(cb, "  </platform>\n");
+	cprintf(cb, "  <clock>\n");
+	cprintf(cb, "    <current-datetime>%s</current-datetime>\n", fmtime(now, buf, sizeof(buf)));
+	cprintf(cb, "    <boot-datetime>%s</boot-datetime>\n", fmtime(boot, buf, sizeof(buf)));
+	cprintf(cb, "  </clock>\n");
+	cprintf(cb, "</system-state>");
+	rc = clixon_xml_parse_string(cbuf_get(cb), YB_NONE, NULL, &xstate, NULL) < 0 ? -1 : 0;
+	cbuf_free(cb);
+
+	return rc;
+}
+
 static int do_rpc(clicon_handle h,            /* Clicon handle */
 		  cxobj        *xe,           /* Request: <rpc><xn></rpc> */
 		  cbuf         *cbret,        /* Reply eg <rpc-reply>... */
@@ -240,10 +366,14 @@ static clixon_plugin_api ietf_system_api = {
 
 	.ca_trans_begin = ietf_sys_tr_begin,
 	.ca_trans_commit = ietf_sys_tr_commit,
+
+	.ca_statedata = ietf_sys_statedata,
 };
 
 clixon_plugin_api *clixon_plugin_init(clicon_handle h)
 {
+	os_init();
+
 	aug = aug_init(NULL, "", 0);
 	if (!aug ||
 	    aug_load_file(aug, "/etc/hostname") ||
