@@ -1,4 +1,9 @@
 #!/bin/sh
+. "$BR2_CONFIG"
+. "$TARGET_DIR/usr/lib/os-release"
+if [ -n "${ID_LIKE}" ]; then
+    ID="${ID} ${ID_LIKE}"
+fi
 
 GIT_VERSION=$(git -C $BR2_EXTERNAL_INFIX_PATH describe --always --dirty --tags)
 
@@ -9,8 +14,11 @@ rm "$TARGET_DIR/etc/os-release"
 	echo "NAME=\"Infix\""
 	echo "VERSION=${GIT_VERSION}"
 	echo "ID=infix"
+	echo "ID_LIKE=\"${ID}\""
 	echo "VERSION_ID=${GIT_VERSION}"
+	echo "BUILD_ID=\"${NAME} ${VERSION}\""
 	echo "PRETTY_NAME=\"Infix by KernelKit\""
+	echo "ARCHITECTURE=\"${INFIX_ARCH}\""
 	echo "HOME_URL=https://github.com/KernelKit"
 } > "$TARGET_DIR/etc/os-release"
 

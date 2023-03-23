@@ -18,6 +18,15 @@ config SIGN_KEY
 
 comment "Additional Artifacts"
 
+# For /etc/os-release, uses CondtionArchitechture= from systemd.unit(5)
+config INFIX_ARCH
+	string
+	default "arm"     if BR2_arm
+	default "arm64"   if BR2_aarch64
+	default "mips64"  if BR2_mips64
+	default "riscv64" if BR2_riscv
+	default "x86_64"  if BR2_x86_64
+
 menuconfig DISK_IMAGE
 	bool "Disk image"
 	help
