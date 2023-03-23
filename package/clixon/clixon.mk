@@ -68,9 +68,12 @@ endef
 CLIXON_POST_INSTALL_TARGET_HOOKS += CLIXON_INSTALL_EXAMPLE
 endif
 
-define CLIXON_INSTALL_CLEANUP
+define CLIXON_INSTALL_EXTRA
 	rm -rf $(TARGET_DIR)/var/clixon
+	ln -sf clixon_cli $(TARGET_DIR)/usr/bin/clish
+	grep -qsE '^/usr/bin/clish$$' "$(TARGET_DIR)/etc/shells" \
+		|| echo "/usr/bin/clish" >> "$(TARGET_DIR)/etc/shells"
 endef
-CLIXON_POST_INSTALL_TARGET_HOOKS += CLIXON_INSTALL_CLEANUP
+CLIXON_POST_INSTALL_TARGET_HOOKS += CLIXON_INSTALL_EXTRA
 
 $(eval $(autotools-package))
