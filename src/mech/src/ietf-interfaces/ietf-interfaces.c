@@ -32,71 +32,52 @@ int ietf_if_tr_commit_interface(cxobj *src, cxobj *tgt)
 	cxobj *obj, *iface = NULL;
 
 	if (!tgt) {
-		clicon_log(LOG_NOTICE, "No tgt, removing all network settings!");
+		clicon_log(LOG_DEBUG, "ietf-interfaces: no tgt, removing all network settings!");
 		return system("rm -f /etc/network/interfaces.d/*");
 	}
 
-	clicon_log(LOG_NOTICE, "Let's find some interfaces!");
 	while ((iface = xml_child_each(tgt, iface, CX_ELMNT))) {
 		char *ifname, *addr, *len;
 		char cmd[128], fn[60];
 		cxobj *ip, *address;
 		FILE *fp;
 
-		clicon_log(LOG_NOTICE, "Found something ...");
 		if (strcmp(xml_name(iface), "interface")) {
 			clicon_log(LOG_NOTICE, "Not an interface ...");
 			continue;
 		}
 
-		clicon_log(LOG_NOTICE, "An interface!");
 		obj = xml_find(iface, "name");
-		if (!obj) {
-			clicon_log(LOG_NOTICE, "No name!");
+		if (!obj)
 			continue;
-		}
 
 		ifname = xml_body(obj);
-		clicon_log(LOG_NOTICE, "iface %s", ifname);
 		snprintf(fn, sizeof(fn), fmt, ifname);
-		clicon_log(LOG_NOTICE, "fn %s", fn);
 		if (!is_true(iface, "enabled")) {
-			clicon_log(LOG_NOTICE, "%s not enabled", ifname);
 		delete:
-			clicon_log(LOG_NOTICE, "deletinf %s", fn);
 			snprintf(cmd, sizeof(cmd), "rm -f %s", fn);
 			system(cmd);
 			continue;
 		}
 
 		ip = xml_find(iface, "ipv4");
-		if (!ip || !is_true(ip, "enabled")) {
-			clicon_log(LOG_NOTICE, "no ipv4 or not enabled");
+		if (!ip || !is_true(ip, "enabled"))
 			goto delete;
-		}
 
 		/* XXX: iterate over address, may be more than one */
 		address = xml_find(ip, "address");
-		if (!address) {
-			clicon_log(LOG_NOTICE, "no address");
+		if (!address)
 			goto delete;
-		}
 
 		obj = xml_find(address, "ip");
-		if (!obj) {
-			clicon_log(LOG_NOTICE, "no address/ip");
+		if (!obj)
 			goto delete;
-		}
 		addr = xml_body(obj);
-		clicon_log(LOG_NOTICE, "address %s", addr);
 		
 		obj = xml_find(address, "prefix-length");
-		if (!obj) {
-			clicon_log(LOG_NOTICE, "no address/plen");
+		if (!obj)
 			goto delete;
-		}
 		len = xml_body(obj);
-		clicon_log(LOG_NOTICE, "address %s/%s", addr, len);
 
 		fp = fopen(fn, "w");
 		if (!fp) {
