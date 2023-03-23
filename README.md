@@ -1,5 +1,16 @@
 <img align="right" src="doc/text3134.png" alt="Infix Linux Networking Made Easy">
 
+* [Introduction](#introduction)
+* [Hardware](#hardware)
+* [Qemu](#qemu)
+* [GNS3](#gns3)
+* [Building](#building)
+* [Origin & Licensing](origin--licensing)
+
+
+Introduction
+------------
+
 Infix is an embedded Linux Network Operating System (NOS) based on
 [Buildroot][1], [Finit][2], [ifupdown-ng][3], and [Clixon][6].
 Providing an easy-to-maintain and easy-to-port Open Source base for
@@ -54,6 +65,27 @@ Infix will show up in the "Router" category, it has 10 interfaces
 available by default for use as switch ports or routing.
 
 
+Building
+--------
+
+Buildroot is almost stand-alone, but need a few locally installed tools
+to bootstrap itself.  For details, see the [excellent manual][manual].
+Briefly, to build an Infix image; select the target and then make:
+
+    make amd64_defconfig
+    make
+
+Online help is available:
+
+    make help
+
+To see available defconfigs for supported targets, use:
+
+    make list-defconfigs
+
+> **Note:** build dependencies (Debian/Ubuntu): <kbd>sudo apt install make libssl-dev</kbd>
+
+
 Origin & Licensing
 ------------------
 
@@ -94,3 +126,4 @@ any GPL[^1] licensed library.
 [QEMU]: https://www.qemu.org/
 [GNS3]: https://gns3.com/
 [training]: https://addiva-elektronik.github.io/
+[manual]: https://buildroot.org/downloads/manual/manual.html
