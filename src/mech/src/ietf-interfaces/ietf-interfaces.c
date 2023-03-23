@@ -26,6 +26,23 @@ int ietf_if_tr_begin(clicon_handle h, transaction_data td)
 	return 0;
 }
 
+void sysfs_net_write(char *ifname, char *fn, char *data)
+{
+	char filename[128];
+	FILE *fp;
+
+	snprintf(filename, sizeof(filename), "/sys/class/net/%s/%s", ifname, fn);
+	fp = fopen(filename, "w");
+	if (!fp) {
+		clicon_log(LOG_WARNING, "ietf-interfaces: failed writing '%s' to %s: %s",
+			   data, filename, strerror(errno));
+		return;
+	}
+
+	fprintf(fp, "%s\n", data);
+	fclose(fp);
+}
+
 int ietf_if_tr_commit_interface(cxobj *src, cxobj *tgt)
 {
 	const char *fmt = "/etc/network/interfaces.d/%s.conf";
@@ -37,7 +54,7 @@ int ietf_if_tr_commit_interface(cxobj *src, cxobj *tgt)
 	}
 
 	while ((iface = xml_child_each(tgt, iface, CX_ELMNT))) {
-		char *ifname, *addr, *len;
+		char *ifname, *addr, *len, *desc = NULL;
 		char cmd[128], fn[60];
 		cxobj *ip, *address;
 		FILE *fp;
@@ -59,6 +76,10 @@ int ietf_if_tr_commit_interface(cxobj *src, cxobj *tgt)
 			system(cmd);
 			continue;
 		}
+
+		obj = xml_find(iface, "description");
+		if (obj)
+			desc = xml_body(obj);
 
 		ip = xml_find(iface, "ipv4");
 		if (!ip || !is_true(ip, "enabled"))
@@ -88,6 +109,8 @@ int ietf_if_tr_commit_interface(cxobj *src, cxobj *tgt)
 		fprintf(fp, "iface %s inet static\n"
 			"	address %s/%s\n", ifname, addr, len);
 		fclose(fp);
+
+		sysfs_net_write(ifname, "ifalias", desc ?: "");
 	}
 
 	return 0;
