@@ -219,7 +219,6 @@ int ietf_if_statedata(clicon_handle h, cvec *nsc, char *xpath, cxobj *xstate)
 	cbuf      *cb = NULL;
 	cxobj     *xt = NULL;
 	cvec      *nsc1 = NULL;
-//	yang_stmt *yspec = NULL;
 	int        rc = -1;
 
 	if ((cb = cbuf_new()) == NULL) {
@@ -227,7 +226,6 @@ int ietf_if_statedata(clicon_handle h, cvec *nsc, char *xpath, cxobj *xstate)
 		goto done;
 	}
 
-//	yspec = clicon_dbspec_yang(h);
 	if ((nsc1 = xml_nsctx_init(NULL, "urn:ietf:params:xml:ns:yang:ietf-interfaces")) == NULL)
 		goto done;
 	if (xmldb_get0(h, "running", YB_MODULE, nsc1, "/interfaces/interface/name", 1, 0, &xt, NULL, NULL) < 0)
