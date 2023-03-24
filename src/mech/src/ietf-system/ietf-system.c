@@ -13,6 +13,8 @@
 
 #include "common.h"
 
+#define XMLNS "urn:ietf:params:xml:ns:yang:ietf-system"
+
 static augeas *aug;
 static char   *ver = NULL;
 static char   *rel = NULL;
@@ -321,7 +323,7 @@ int ietf_sys_statedata(clicon_handle h, cvec *nsc, char *xpath, cxobj *xstate)
         now = time(NULL);
         boot = now - si.uptime;
 
-	cprintf(cb, "<system-state xmlns=\"urn:ietf:params:xml:ns:yang:ietf-system\">");
+	cprintf(cb, "<system-state xmlns=\"%s\">", XMLNS);
 	cprintf(cb, "  <platform>\n");
 	cprintf(cb, "    <os-name>%s</os-name>\n", os);
 	cprintf(cb, "    <os-version>%s</os-version>\n", ver);
@@ -340,24 +342,83 @@ int ietf_sys_statedata(clicon_handle h, cvec *nsc, char *xpath, cxobj *xstate)
 	return rc;
 }
 
+static int set_datetime(cxobj *xe)
+{
+	const char *isofmt = "%FT%T%z";
+        struct timeval tv;
+        struct tm tm;
+	char tz[24];
+	int rc = -1;
+	cxobj *obj;
+	char *buf;
+	size_t n;
+
+	obj = xml_find(xe, "current-datetime");
+	if (!obj)
+		return 0;
+
+	buf = strdup(xml_body(obj));
+	if (!buf)
+		return -1;
+
+	n = strlen(buf);
+	if (buf[n - 3] == ':' && (buf[n - 6] == '+' || buf[n - 6] == '-')) {
+                buf[n - 3] = buf[n - 2];
+                buf[n - 2] = buf[n - 1];
+                buf[n - 1] = 0;
+        } else
+                isofmt = "%FT%TZ";
+
+        memset(&tm, 0, sizeof(tm));
+        if (!strptime(buf, isofmt, &tm)) {
+                clicon_log(LOG_WARNING, "ietf-system:failed strptime: %s", strerror(errno));
+		goto done;
+	}
+
+	snprintf(tz, sizeof(tz), "UTC%s%ld", tm.tm_gmtoff > 0 ? "+" : "", tm.tm_gmtoff / 3600);
+	setenv("TZ", tz, 1);
+//	clicon_log(LOG_ERR, "time %s gmtoff %ld TZ=%s", buf, tm.tm_gmtoff, tz);
+
+        tv.tv_sec = mktime(&tm);
+        tv.tv_usec = 0;
+        if (settimeofday(&tv, NULL)) {
+                clicon_log(LOG_WARNING, "ietf-system:failed settimeofday: %s", strerror(errno));
+		goto done;
+	}
+
+	rc = 0;
+done:
+	unsetenv("TZ");
+        free(buf);
+	return rc;
+}
+
 static int do_rpc(clicon_handle h,            /* Clicon handle */
 		  cxobj        *xe,           /* Request: <rpc><xn></rpc> */
 		  cbuf         *cbret,        /* Reply eg <rpc-reply>... */
 		  void         *arg,          /* client_entry */
 		  void         *regarg)       /* Argument given at register */
 {
-	char  *namespace = NETCONF_BASE_NAMESPACE;
+	char *namespace;
+	char *op;
 
-//	if ((namespace = xml_find_type_value(xe, NULL, "xmlns", CX_ATTR)) == NULL){
-//		clicon_err(OE_XML, ENOENT, "No namespace given in RPC %s", xml_name(xe));
-//		return -1;
-//	}
+	if ((namespace = xml_find_type_value(xe, NULL, "xmlns", CX_ATTR)) == NULL) {
+		clicon_err(OE_XML, ENOENT, "No namespace given in RPC %s", xml_name(xe));
+		return -1;
+	}
+	if (strcmp(namespace, XMLNS))
+		return 0;	/* not for us */
 
-	cprintf(cbret, "<rpc-reply xmlns=\"%s\"><ok/></rpc-reply>", namespace);
-	if (regarg && !strcmp(regarg, "system-shutdown"))
+	cprintf(cbret, "<rpc-reply xmlns=\"%s\"><ok/></rpc-reply>", NETCONF_BASE_NAMESPACE);
+
+	op = xml_name(xe);
+	if (!strcmp(op, "set-current-datetime"))
+		return set_datetime(xe);
+	if (!strcmp(op, "system-shutdown"))
 		return system("poweroff");
-
-	return system("reboot");
+	if (!strcmp(op, "system-restart"))
+		return system("reboot");
+	return 0;
 }
 
 static clixon_plugin_api ietf_system_api = {
@@ -369,6 +430,15 @@ static clixon_plugin_api ietf_system_api = {
 
 	.ca_statedata = ietf_sys_statedata,
 };
+
+static void register_rpc(clicon_handle h, const char *rpc)
+{
+	int rc;
+
+	rc = rpc_callback_register(h, do_rpc, NULL, XMLNS, rpc);
+	if (rc < 0)
+		clicon_err(OE_PLUGIN, EINVAL, "ietf-system: failed registering RPC %s", rpc);
+}
 
 clixon_plugin_api *clixon_plugin_init(clicon_handle h)
 {
@@ -383,20 +453,9 @@ clixon_plugin_api *clixon_plugin_init(clicon_handle h)
 		return NULL;
 	}
 
-	if (rpc_callback_register(h, do_rpc, NULL,
-				  "urn:ietf:params:xml:ns:yang:ietf-system",
-				  "system-restart") < 0) {
-		clicon_err(OE_PLUGIN, EINVAL,
-			   "ietf-system: failed registering RPC callback");
-		return NULL;
-	}
-	if (rpc_callback_register(h, do_rpc, NULL,
-				  "urn:ietf:params:xml:ns:yang:ietf-system",
-				  "system-shutdown") < 0) {
-		clicon_err(OE_PLUGIN, EINVAL,
-			   "ietf-system: failed registering RPC callback");
-		return NULL;
-	}
+	register_rpc(h, "set-current-datetime");
+	register_rpc(h, "system-restart");
+	register_rpc(h, "system-shutdown");
 
 	return &ietf_system_api;
 }

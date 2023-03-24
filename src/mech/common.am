@@ -1,5 +1,6 @@
 CFLAGS   = -Wall -Wextra -Werror -Wno-unused-parameter
 CPPFLAGS = -I$(top_srcdir)/include/
+CPPFLAGS += -D_DEFAULT_SOURCE -D_XOPEN_SOURCE
 
 clixonlibdir  = $(libdir)/clixon
 backenddir    = $(clixonlibdir)/backend
