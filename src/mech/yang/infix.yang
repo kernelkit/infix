@@ -1,46 +1,25 @@
 module infix {
-    yang-version 1.1;
-    namespace "urn:kernelkit:infix";
-    prefix ix;
+  yang-version 1.1;
+  namespace "urn:kernelkit:yang:infix";
+  prefix ix;
 
-    import ietf-datastores {
-        prefix ds;
-    }
+  include infix-native;
+  include infix-if;
+  include infix-if-bridge;
+  include infix-if-lag;
+  include infix-if-veth;
+  include infix-if-vlan;
 
-    import ietf-system {
-        prefix sys;
-    }
+  organization "Kernelkit";
+  contact
+    "https://github.com/kernelkit/";
+  description
+    "Infix's native system model";
 
-    import ietf-interfaces {
-        prefix if;
-    }
-    import ietf-ip {
-        prefix ip;
-    }
-    import iana-if-type {
-        prefix ianaift;
-    }
-
-    import clixon-autocli {
-        prefix autocli;
-    }
-
+  revision 2023-03-17 {
     description
-        "Base model
-         ";
-
-    revision 2023-02-10 {
-      description
-	"Initial revision.";
-      reference
-	"N/A";
-    }
-    revision 2023-03-16 {
-      description "Add timezone deviations for system/clock.";
-      reference "N/A";
-    }
-
-    deviation /sys:system/clock/timezone-utc-offset {
-      deviate not-supported;
-    }
+      "Initial revision.";
+    reference
+      "github.com/kernelkit/infix";
+  }
 }

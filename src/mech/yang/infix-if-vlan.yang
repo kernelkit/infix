@@ -1,0 +1,35 @@
+submodule infix-if-vlan {
+  yang-version 1.1;
+  belongs-to infix {
+    prefix ix;
+  }
+
+  include infix-if;
+
+  typedef vid {
+    type uint16 {
+      range "1..4095";
+    }
+  }
+
+  augment "/native/interfaces/interface/type" {
+    case vlan {
+      container vlan {
+        description
+          "VLAN specific configuration";
+
+        leaf interface {
+          type interface-ref;
+          mandatory true;
+          description
+            "Lower interface from which the specified VLAN is demuxed";
+        }
+
+        leaf id {
+          type vid;
+          mandatory true;
+        }
+      }
+    }
+  }
+}

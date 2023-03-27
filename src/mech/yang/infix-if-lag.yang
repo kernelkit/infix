@@ -1,0 +1,39 @@
+submodule infix-if-lag {
+  yang-version 1.1;
+  belongs-to infix {
+    prefix ix;
+  }
+
+  include infix-if;
+
+  augment "/native/interfaces/interface/type" {
+    case lag {
+      container lag {
+        presence lag;
+        description
+          "Link aggregation configuration";
+      }
+    }
+  }
+
+  augment "/native/interfaces/interface/port" {
+    case lag-port {
+      container lag-port {
+        description
+          "LAG port configuration";
+
+        leaf lag {
+          type interface-ref;
+	  mandatory true;
+	  description
+	    "LAG interface to which this interface is attached";
+
+	  must "deref(.)/../lag" {
+	    error-message
+	      "Must refer to a LAG interface";
+	  }
+	}
+      }
+    }
+  }
+}

@@ -1,0 +1,64 @@
+submodule infix-if-bridge {
+  yang-version 1.1;
+  belongs-to infix {
+    prefix ix;
+  }
+
+  include infix-if;
+
+  augment "/native/interfaces/interface/type" {
+    case bridge {
+      container bridge {
+        presence bridge;
+        description
+          "Bridge configuration";
+
+	container vlans {
+	  list vlan {
+	    key vid;
+
+	    leaf vid {
+	      type uint16;
+	    }
+
+	    leaf-list untagged {
+	      type interface-ref;
+
+	      must "deref(.)/../bridge-port/bridge = ../../../../name" {
+	        error-message
+	          "All interfaces must be attached to this bridge";
+	      }
+	    }
+	    leaf-list tagged {
+	      type interface-ref;
+	    }
+	  }
+	}
+      }
+    }
+  }
+  augment "/native/interfaces/interface/port" {
+    case bridge-port {
+      container bridge-port {
+        description
+          "Bridge port specific configuration";
+
+        leaf bridge {
+          type interface-ref;
+	  mandatory true;
+	  description
+	    "Bridge interface to which this interface is attached";
+
+	  must "deref(.)/../bridge" {
+	    error-message
+	      "Must refer to a bridge interface";
+	  }
+        }
+
+        leaf pvid {
+          type uint16;
+        }
+      }
+    }
+  }
+}

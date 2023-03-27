@@ -1,0 +1,8 @@
+submodule infix-native {
+  yang-version 1.1;
+  belongs-to infix {
+    prefix ix;
+  }
+
+  container native;
+}
