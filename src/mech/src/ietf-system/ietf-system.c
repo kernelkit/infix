@@ -3,11 +3,14 @@
 #include <augeas.h>
 #include <ctype.h>
 #include <errno.h>
+#include <stdarg.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <syslog.h>
 #include <sys/utsname.h>
 #include <sys/sysinfo.h>
+#include <sys/wait.h>
 #include <time.h>
 #include <unistd.h>
 
@@ -21,6 +24,56 @@ static char   *rel = NULL;
 static char   *sys = NULL;
 static char   *os  = NULL;
 
+/**
+ * Like system(), but takes a formatted string as argument.
+ * @param fmt  printf style format list to command to run
+ *
+ * This system() wrapper greatly simplifies operations that usually
+ * consist of composing a command from parts into a dynamic buffer
+ * before calling it.  The return value from system() is also parsed,
+ * checking for proper exit and signals.
+ *
+ * @returns If the command exits normally, the return code of the command
+ * is returned.  Otherwise, if the command is signalled, the return code
+ * is -1 and @a errno is set to @c EINTR.
+ */
+static int run(const char *fmt, ...)
+{
+	va_list ap;
+	char *cmd;
+	int len;
+	int rc;
+
+	va_start(ap, fmt);
+	len = vsnprintf(NULL, 0, fmt, ap);
+	va_end(ap);
+
+	cmd = alloca(++len);
+	if (!cmd) {
+		errno = ENOMEM;
+		return -1;
+	}
+
+	va_start(ap, fmt);
+	vsnprintf(cmd, len, fmt, ap);
+	va_end(ap);
+
+	rc = system(cmd);
+	if (rc == -1)
+		return -1;
+
+	if (WIFEXITED(rc)) {
+		errno = 0;
+		rc = WEXITSTATUS(rc);
+	} else if (WIFSIGNALED(rc)) {
+		errno = EINTR;
+		rc = -1;
+	}
+
+//	clicon_debug(LOG_ERR, "ietf-system:run(%s) => %d", cmd, rc);
+
+	return rc;
+}
 
 static bool is_true(cxobj *xp, char *name)
 {
@@ -38,7 +91,7 @@ static bool is_true(cxobj *xp, char *name)
 
 static int sys_reload_services(void)
 {
-	return system("initctl -nbq touch sysklogd lldpd");
+	return run("initctl -nbq touch sysklogd lldpd");
 }
 
 int ietf_sys_tr_begin(clicon_handle h, transaction_data td)
@@ -104,7 +157,7 @@ int ietf_sys_tr_commit_clock(cxobj *src, cxobj *tgt)
 	timezone = xml_body(obj);
 
 	snprintf(cmd, sizeof(cmd), "cp /usr/share/zoneinfo/%s /etc/localtime", timezone);
-	if (system(cmd)) {
+	if (run(cmd)) {
 		clicon_log(LOG_WARNING, "ietf-system: failed setting timezone %s", timezone);
 		return -1;
 	}
@@ -184,11 +237,11 @@ int ietf_sys_tr_commit_ntp(cxobj *src, cxobj *tgt)
 		 * If chrony is alrady enabled we tell Finit it's been
 		 * modified , so Finit restarts it, otherwise enable it.
 		 */
-		system("initctl -nbq touch chronyd");
-		return system("initctl -nbq enable chronyd");
+		run("initctl -nbq touch chronyd");
+		return run("initctl -nbq enable chronyd");
 	}
 disable:
-	return system("initctl -nbq disable chronyd");
+	return run("initctl -nbq disable chronyd");
 }
 
 int ietf_sys_tr_commit(clicon_handle h, transaction_data td)
@@ -415,9 +468,9 @@ static int do_rpc(clicon_handle h,            /* Clicon handle */
 	if (!strcmp(op, "set-current-datetime"))
 		return set_datetime(xe);
 	if (!strcmp(op, "system-shutdown"))
-		return system("poweroff");
+		return run("poweroff");
 	if (!strcmp(op, "system-restart"))
-		return system("reboot");
+		return run("reboot");
 	return 0;
 }
 
