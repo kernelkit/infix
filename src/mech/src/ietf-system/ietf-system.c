@@ -342,8 +342,7 @@ int ietf_sys_tr_commit(clicon_handle h, transaction_data td)
 	int slen = 0, tlen = 0, err = -EINVAL;
 	cxobj **ssys, **tsys;
 
-	show_transaction("ietf-system", td, true);
-
+//	show_transaction("ietf-system", td, true);
 	if (src && clixon_xml_find_instance_id(src, yspec, &ssys, &slen,
 					       "/sys:system") < 0)
 		goto err;
