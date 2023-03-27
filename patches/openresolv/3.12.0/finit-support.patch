@@ -1,0 +1,12 @@
+diff -ru openresolv-3.12.0.orig/resolvconf.in openresolv-3.12.0/resolvconf.in
+--- openresolv-3.12.0.orig/resolvconf.in	2020-12-27 19:05:10.000000000 +0100
++++ openresolv-3.12.0/resolvconf.in	2023-03-27 00:19:03.365164029 +0200
+@@ -315,6 +315,8 @@
+ 			then
+ 				/usr/bin/systemctl restart $1.service
+ 			fi'
++	elif [ -x /sbin/initctl ]; then
++		RESTARTCMD="/sbin/initctl -bnq restart \$1"
+ 	elif [ -x /sbin/rc-service ] &&
+ 	     { [ -s /libexec/rc/init.d/softlevel ] ||
+ 	     [ -s /run/openrc/softlevel ]; }

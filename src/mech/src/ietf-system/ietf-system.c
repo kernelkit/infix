@@ -89,6 +89,20 @@ static bool is_true(cxobj *xp, char *name)
 	return false;
 }
 
+static char *get_str(cxobj *xp, char *name)
+{
+	cxobj *obj;
+
+	if (!xp || !name)
+		return NULL;
+
+	obj = xml_find(xp, name);
+	if (obj)
+		return xml_body(obj);
+
+	return NULL;
+}
+
 static int sys_reload_services(void)
 {
 	return run("initctl -nbq touch sysklogd lldpd");
@@ -244,6 +258,83 @@ disable:
 	return run("initctl -nbq disable chronyd");
 }
 
+/*
+ * dnsmasq is the resolver, it gets its nameservers from various
+ * sources: static, dhcp, vpn, via the resolvconf wrapper.
+ */
+int ietf_sys_tr_commit_dns(cxobj *src, cxobj *tgt)
+{
+	const char *fn = "/etc/resolv.conf.head";
+	cxobj *obj, *opt = NULL, *srv = NULL;
+	int first = 1, valid = 0;
+	FILE *fp;
+
+	clicon_log(LOG_ERR, "ietf-system: dns src %p tgt %p", src, tgt);
+	if (!tgt)
+		goto disable;
+
+	fp = fopen(fn, "w");
+	if (!fp) {
+		clicon_log(LOG_WARNING, "ietf-system: failed updating %s: %s", fn, strerror(errno));
+		return -1;
+	}
+
+	obj = xml_find(tgt, "options");
+	if (obj) {
+		char *str;
+
+		fprintf(fp, "options");
+		str  = get_str(obj, "timeout");
+		if (str)
+			fprintf(fp, " timeout:%s", str);
+		str = get_str(obj, "attempts");
+		if (str)
+			fprintf(fp, " attempts:%s ", str);
+		fprintf(fp, "\n");
+	}
+
+	while ((opt = xml_child_each(tgt, opt, CX_ELMNT))) {
+		if (strcmp(xml_name(opt), "search"))
+			continue;
+
+		if (first) {
+			fprintf(fp, "search ");
+			first = 0;
+		}
+		fprintf(fp, "%s ", xml_body(opt));
+	}
+	if (!first)
+		fprintf(fp, "\n");
+
+	while ((srv = xml_child_each(tgt, srv, CX_ELMNT))) {
+		cxobj *tmp;
+
+		if (strcmp(xml_name(srv), "server"))
+			continue;
+
+		tmp = xml_find(srv, "udp-and-tcp");
+		if (tmp) {
+			obj = xml_find(tmp, "address");
+			if (obj) {
+				fprintf(fp, "nameserver %s\n", xml_body(obj));
+				valid++;
+			}
+		}
+	}
+	fclose(fp);
+disable:
+	if (!valid)
+		remove(fn);
+
+	if (run("initctl cond get hook/sys/up")) {
+		clicon_log(LOG_ERR, "ietf-system: failed cond get hook/sys/up");
+		return 0;
+	}
+
+	clicon_log(LOG_ERR, "ietf-status: calling resolvconf -u");
+	return run("resolvconf -u");
+}
+
 int ietf_sys_tr_commit(clicon_handle h, transaction_data td)
 {
 	cxobj *src = transaction_src(td), *tgt = transaction_target(td);
@@ -270,8 +361,14 @@ int ietf_sys_tr_commit(clicon_handle h, transaction_data td)
 				       tlen ? xml_find(tsys[0], "clock") : NULL);
 	if (err)
 		goto err;
+
 	err = ietf_sys_tr_commit_ntp(slen ? xml_find(ssys[0], "ntp") : NULL,
 				     tlen ? xml_find(tsys[0], "ntp") : NULL);
+	if (err)
+		goto err;
+
+	err = ietf_sys_tr_commit_dns(slen ? xml_find(ssys[0], "dns-resolver") : NULL,
+				     tlen ? xml_find(tsys[0], "dns-resolver") : NULL);
 	if (err)
 		goto err;
 err:
