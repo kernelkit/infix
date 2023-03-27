@@ -3,16 +3,17 @@ CLICON_MODE="exec";
 CLICON_PROMPT="%U@%H:%w> ";
 CLICON_PLUGIN="core-cli";
 
-exit("Exit"), cli_quit();
-
 # Autocli syntax tree operations, from clixon's "main" example
-edit @datamodelmode, cli_auto_edit("basemodel");
-up, cli_auto_up("basemodel");
-top, cli_auto_top("basemodel");
+edit @datamodelmode, cli_auto_edit("basemodel");       # XXX: remove in favor of configure
+configure @datamodelmode, cli_auto_edit("basemodel");  # XXX: should edit 'native' candiate
+up, cli_auto_up("basemodel");      # XXX: remove
+end, cli_auto_up("basemodel");
+top, cli_auto_top("basemodel");    # XXX: remove
+leave, cli_auto_top("basemodel");  # XXX: should leave configure mode and validate candiate
 set @datamodel, cli_auto_set();
 merge @datamodel, cli_auto_merge();
 create @datamodel, cli_auto_create();
-delete("Delete a configuration item") {
+no("Delete a configuration item") {
       @datamodel, cli_auto_del();
       all("Delete whole candidate configuration"), delete_all("candidate");
 }
@@ -33,11 +34,44 @@ copy("Copy and create a new object") {
     }
 }
 
+debug("Debugging parts of the system"){
+    cli("Set cli debug")	 <level:int32>("Set debug level (0..n)"), cli_debug_cli();
+    backend("Set backend debug") <level:int32>("Set debug level (0..n)"), cli_debug_backend();
+    restconf("Set restconf debug") <level:int32>("Set debug level (0..n)"), cli_debug_restconf();
+}
+
+discard("Discard edits (rollback 0)"), discard_changes();
+
+exit("Exit"), cli_quit();
+quit("Exit"), hide, cli_quit();
+
 follow("Continuously monitor a log file, default syslog"),   cli_exec_log(); {
     <fn:string logfiles()>(""),                              cli_exec_log();
 }
 
 help("Show help"), cli_help();
+
+load("Load configuration from XML file") <filename:string>("Filename (local filename)"),load_config_file("filename", "replace");{
+    replace("Replace candidate with file contents"), load_config_file("filename", "replace");{
+	cli("Replace candidate with file containing CLI commands"), load_config_file("filename", "replace", "cli");
+	xml("Replace candidate with file containing XML"), load_config_file("filename", "replace", "xml");
+	json("Replace candidate with file containing JSON"), load_config_file("filename", "replace", "json");
+	text("Replace candidate with file containing TEXT"), load_config_file("filename", "replace", "text");
+    }
+    merge("Merge file with existent candidate"), load_config_file("filename", "merge");{
+	cli("Merge candidate with file containing CLI commands"), load_config_file("filename", "merge", "cli");
+	xml("Merge candidate with file containing XML"), load_config_file("filename", "merge", "xml");
+	json("Merge candidate with file containing JSON"), load_config_file("filename", "merge", "json");
+	text("Merge candidate with file containing TEXT"), load_config_file("filename", "merge", "text");
+    }
+}
+save("Save candidate configuration to XML file") <filename:string>("Filename (local filename)"), save_config_file("candidate","filename", "xml");{
+    cli("Save configuration as CLI commands"), save_config_file("candidate","filename", "cli");
+    xml("Save configuration as XML"), save_config_file("candidate","filename", "xml");
+    json("Save configuration as JSON"), save_config_file("candidate","filename", "json");
+    text("Save configuration as TEXT"), save_config_file("candidate","filename", "text");
+    netconf("Save configuration as NETCONF"), save_config_file("candidate","filename", "netconf");
+}
 
 show("Show various system state and configuration") {
 	system-information("System information"),            cli_exec_show();
@@ -57,6 +91,11 @@ show("Show various system state and configuration") {
 		json @datamodelshow, cli_show_auto("candidate", "json", true, false, "report-all");
 		netconf @datamodelshow, cli_show_auto("candidate", "netconf", true, false, "report-all");
 		cli @datamodelshow, cli_show_auto("candidate", "cli", true, false, "report-all", "set ");
+	}
+
+	compare("Compare candidate and running databases"), compare_dbs((int32)0);{
+		xml("Show comparison in xml"), compare_dbs((int32)0);
+		text("Show comparison in text"), compare_dbs((int32)1);
 	}
 
 	configuration("Show configuration"), cli_show_auto_mode("candidate", "text", true, false); {
@@ -87,7 +126,12 @@ show("Show various system state and configuration") {
 			}
 		}
 	}
+	yang("Show yang specs"), show_yang(); {
+		clixon-example("Show clixon-example yang spec"), show_yang("clixon-example");
+	}
 }
 
 # Hidden shell command, after 'show' command to avoid any possible completion problems
-shell("Start domain shell"), hide, cli_exec_shell();
+shell("Start domain shell"), hide, cli_exec_shell();{
+  <source:rest>("Single shell command"), cli_exec_shell();
+}
