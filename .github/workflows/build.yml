@@ -1,13 +1,15 @@
 name: Bob the Builder
 
-# Consider switching to 'on: workflow_dispatch' when activity increases.
+#on:
+#  push:
+#    branches:
+#      - '*'
+#  pull_request:
+#    branches:
+#      - '*'
 on:
-  push:
-    branches:
-      - '*'
   pull_request:
-    branches:
-      - '*'
+  workflow_dispatch:
 
 jobs:
   build:
