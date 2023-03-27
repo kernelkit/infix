@@ -77,7 +77,7 @@ endif
 
 ifeq ($(BR2_PACKAGE_FRR),y)
 define SKELETON_INIT_FINIT_SET_FRR
-	for svc in babeld bfdd bgpd eigrpd isisd ldpd pathd ripd ripng static ospfd ospf6d vrrpd zebra; do	\
+	for svc in babeld bfdd bgpd eigrpd isisd ldpd ospfd ospf6d pathd ripd ripng staticd vrrpd zebra; do	\
 		cp $(SKELETON_INIT_FINIT_AVAILABLE)/frr/$$svc.conf $(FINIT_D)/available/$$svc.conf;		\
 	done
 	ln -sf ../available/zebra.conf $(FINIT_D)/enabled/zebra.conf
