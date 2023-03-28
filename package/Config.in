@@ -1,5 +1,6 @@
 source "$BR2_EXTERNAL_INFIX_PATH/package/cligen/Config.in"
 source "$BR2_EXTERNAL_INFIX_PATH/package/clixon/Config.in"
+source "$BR2_EXTERNAL_INFIX_PATH/package/confd/Config.in"
 source "$BR2_EXTERNAL_INFIX_PATH/package/factory/Config.in"
 source "$BR2_EXTERNAL_INFIX_PATH/package/finit/Config.in"
 source "$BR2_EXTERNAL_INFIX_PATH/package/ifupdown2/Config.in"
