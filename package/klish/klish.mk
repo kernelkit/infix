@@ -13,6 +13,8 @@ KLISH_DEPENDENCIES = libxml2
 KLISH_INSTALL_STAGING = YES
 KLISH_AUTORECONF = YES
 
+KLISH_CONF_OPTS += --with-libxml2
+
 define KLISH_INSTALL_CONFIG
 	$(INSTALL) -t $(TARGET_DIR)/etc/klish -D -m 0644 \
 		$(@D)/klish.conf $(@D)/klishd.conf
