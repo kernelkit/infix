@@ -23,7 +23,8 @@ PKG_CHECK_MODULES([augeas],  [augeas  >= 1.12.0])
 PKG_CHECK_MODULES([jansson], [jansson >= 2.0.0])
 
 # Plugin installation path for sysrepo-plugind
-PKG_CHECK_VAR([SRPD_PLUGINS_PATH], [sysrepo], [plugindir])
+PKG_CHECK_VAR([srpdplugindir], [sysrepo], [SRPD_PLUGINS_PATH])
+AC_SUBST(srpdplugindir)
 
 test "x$prefix" = xNONE && prefix=$ac_default_prefix
 test "x$exec_prefix" = xNONE && exec_prefix='${prefix}'

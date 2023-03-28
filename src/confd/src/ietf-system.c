@@ -21,8 +21,8 @@
 
 #define DEBUG(frmt, ...)
 //#define DEBUG(frmt, ...) syslog(LOG_DEBUG, "%s: "frmt, __func__, ##__VA_ARGS__)
-#define ERROR(frmt, ...) syslog(LOG_ERR, "%s: "frmt, __func__, ##__VA_ARGS__)
-#define ERRNO(frmt, ...) syslog(LOG_ERR, "%s: "frmt": ", __func__, ##__VA_ARGS__, strerror(errno))
+#define ERROR(frmt, ...) syslog(LOG_ERR, "%s: " frmt, __func__, ##__VA_ARGS__)
+#define ERRNO(frmt, ...) syslog(LOG_ERR, "%s: " frmt ": %s", __func__, ##__VA_ARGS__, strerror(errno))
 
 /* Return seconds since boot */
 static long get_uptime(void)
@@ -54,22 +54,26 @@ static int get_time_as_str(time_t *time, char *buf, int bufsz)
 	return 0;
 }
 
-static int clock_cb(sr_session_ctx_t *session, const char *module,
-		    const char *path, const char *request_path,
-		    unsigned request_id, struct lyd_node **parent,
-		    void *priv)
+static int clock_cb(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
+		    const char *path, const char *request_path, uint32_t request_id,
+		    struct lyd_node **parent, void *priv)
 {
-	static char boottime[64];
-	char curtime[64];
-	time_t t;
-	char *buf;
+	static char boottime[64] = { 0 };
 	const struct ly_ctx *ctx;
+	char curtime[64];
+	char *buf;
+	time_t t;
+	int rc;
 
 	DEBUG("path=%s, request_path=%s", path, request_path);
+	ctx = sr_acquire_context(sr_session_get_connection(session));
 
-	ctx = sr_get_context(sr_session_get_connection(session));
-
-	*parent = lyd_new_path(NULL, ctx, CLOCK_PATH, NULL, 0, 0);
+	rc = lyd_new_path(NULL, ctx, CLOCK_PATH, NULL, 0, parent);
+	if (rc) {
+	fail:
+		ERROR("Failed building data tree, libyang error %d", rc);
+		return SR_ERR_INTERNAL;
+	}
 
 	lyd_print_mem(&buf, *parent, LYD_XML, 0);
 	DEBUG("%s", buf);
@@ -79,17 +83,15 @@ static int clock_cb(sr_session_ctx_t *session, const char *module,
 		get_time_as_str(&t, boottime, sizeof(boottime));
 	}
 
-	if (!lyd_new_path(*parent, NULL, CLOCK_PATH"/boot-datetime",
-			  boottime, 0, 0)) {
-		ERROR("lyd_new_path() boot-datetime failed");
-	}
+	rc = lyd_new_path(*parent, NULL, CLOCK_PATH "/boot-datetime", boottime, 0, NULL);
+	if (rc)
+		goto fail;
 
 	t = time(NULL);
 	get_time_as_str(&t, curtime, sizeof(curtime));
-	if (!lyd_new_path(*parent, NULL, CLOCK_PATH"/current-datetime",
-			  curtime, 0, 0)) {
-		ERROR("lyd_new_path() current-datetime failed");
-	}
+	rc = lyd_new_path(*parent, NULL, CLOCK_PATH "/current-datetime", curtime, 0, NULL);
+	if (rc)
+		goto fail;
 
 	lyd_print_mem(&buf, *parent, LYD_XML, 0);
 	DEBUG("%s", buf);
@@ -97,35 +99,43 @@ static int clock_cb(sr_session_ctx_t *session, const char *module,
 	return SR_ERR_OK;
 }
 
-static int platform_cb(sr_session_ctx_t *session, const char *module,
-		       const char *path, const char *request_path,
-		       unsigned request_id, struct lyd_node **parent,
-		       void *priv)
+static int platform_cb(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
+		       const char *path, const char *request_path, uint32_t request_id,
+		       struct lyd_node **parent, void *priv)
 {
+	const struct ly_ctx *ctx;
 	struct utsname data;
 	char *buf;
-	const struct ly_ctx *ctx;
+	int rc;
 
 	DEBUG("path=%s request_path=%s", path, request_path);
+	ctx = sr_acquire_context(sr_session_get_connection(session));
 
 	/* POSIX func */
 	uname(&data);
 
-	ctx = sr_get_context(sr_session_get_connection(session));
-
-	*parent = lyd_new_path(NULL, ctx, PLATFORM_PATH, NULL, 0, 0);
+	rc = lyd_new_path(NULL, ctx, PLATFORM_PATH, NULL, 0, parent);
+	if (rc) {
+	fail:
+		ERROR("Failed building data tree, libyang error %d", rc);
+		return SR_ERR_INTERNAL;
+	}
 
 	lyd_print_mem(&buf, *parent, LYD_XML, 0);
 	DEBUG("%s", buf);
 
-	lyd_new_path(*parent, NULL, PLATFORM_PATH"/os-name",
-		     data.sysname, 0, 0);
-	lyd_new_path(*parent, NULL, PLATFORM_PATH"/os-release",
-		     data.release, 0, 0);
-	lyd_new_path(*parent, NULL, PLATFORM_PATH"/os-version",
-		     data.version, 0, 0);
-	lyd_new_path(*parent, NULL, PLATFORM_PATH"/machine",
-		     data.machine, 0, 0);
+	rc = lyd_new_path(*parent, NULL, PLATFORM_PATH"/os-name", data.sysname, 0, NULL);
+	if (rc)
+		goto fail;
+	rc = lyd_new_path(*parent, NULL, PLATFORM_PATH"/os-release", data.release, 0, NULL);
+	if (rc)
+		goto fail;
+	rc = lyd_new_path(*parent, NULL, PLATFORM_PATH"/os-version", data.version, 0, NULL);
+	if (rc)
+		goto fail;
+	rc = lyd_new_path(*parent, NULL, PLATFORM_PATH"/machine", data.machine, 0, NULL);
+	if (rc)
+		goto fail;
 
 	lyd_print_mem(&buf, *parent, LYD_XML, 0);
 	DEBUG("%s", buf);
@@ -133,20 +143,25 @@ static int platform_cb(sr_session_ctx_t *session, const char *module,
 	return SR_ERR_OK;
 }
 
-static int exec_rpc_cb(sr_session_ctx_t *session, const char *path,
+static int exec_rpc_cb(sr_session_ctx_t *session, uint32_t sub_id, const char *path,
 		       const sr_val_t *input, const size_t input_cnt,
 		       sr_event_t event, unsigned request_id,
 		       sr_val_t **output, size_t *output_cnt,
 		       void *priv)
 {
+	int rc;
+
 	DEBUG("path: %s", path);
-	system(priv);
+
+	rc = system(priv);
+	if (WIFSIGNALED(rc) || (WIFEXITED(rc) && WEXITSTATUS(rc)))
+		return SR_ERR_INTERNAL;
 
 	return SR_ERR_OK;
 }
 
 /* '/ietf-system:set-current-date-time' */
-static int set_datetime_rpc_cb(sr_session_ctx_t *session,
+static int set_datetime_rpc_cb(sr_session_ctx_t *session, uint32_t sub_id,
 			       const char *path, const sr_val_t *input,
 			       const size_t input_cnt, sr_event_t event,
 			       unsigned request_id, sr_val_t **output,
@@ -186,7 +201,7 @@ static int set_datetime_rpc_cb(sr_session_ctx_t *session,
 	return SR_ERR_OK;
 }
 
-int hostname_change_cb(sr_session_ctx_t *session, const char *module,
+int hostname_change_cb(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
 		       const char *xpath, sr_event_t event,
 		       unsigned request_id, void *priv)
 {
@@ -232,42 +247,47 @@ free_vals:
 	return SR_ERR_OK;
 }
 
+#define YANG_PATH_ "/usr/share/yang/modules/sysrepo/"
+
 int sr_plugin_init_cb(sr_session_ctx_t *sess, void **priv)
 {
 	int r;
 	sr_subscription_ctx_t *sub = NULL;
+	sr_conn_ctx_t *conn;
 
 	openlog("sysrepo ietf-system plugin", LOG_USER, 0);
+	conn = sr_session_get_connection(sess);
+	sr_install_module(conn, YANG_PATH_"ietf-system.yang", NULL, NULL);
 
-	r = sr_oper_get_items_subscribe(sess, "ietf-system",
+	r = sr_oper_get_subscribe(sess, "ietf-system",
 					CLOCK_PATH,
 					clock_cb, NULL,
-					SR_SUBSCR_CTX_REUSE, &sub);
+					SR_SUBSCR_DEFAULT, &sub);
 	if (r != SR_ERR_OK)
 		goto err;
 
-	r = sr_oper_get_items_subscribe(sess, "ietf-system",
+	r = sr_oper_get_subscribe(sess, "ietf-system",
 					PLATFORM_PATH,
 					platform_cb, NULL,
-					SR_SUBSCR_CTX_REUSE, &sub);
+					SR_SUBSCR_DEFAULT, &sub);
 	if (r != SR_ERR_OK)
 		goto err;
 
 	r = sr_rpc_subscribe(sess, "/ietf-system:system-restart",
 			     exec_rpc_cb, "shutdown -r now",
-			     0, SR_SUBSCR_CTX_REUSE, &sub);
+			     0, SR_SUBSCR_DEFAULT, &sub);
 	if (r != SR_ERR_OK)
 		goto err;
 
 	r = sr_rpc_subscribe(sess, "/ietf-system:system-shutdown",
 			     exec_rpc_cb, "shutdown -h now",
-			     0, SR_SUBSCR_CTX_REUSE, &sub);
+			     0, SR_SUBSCR_DEFAULT, &sub);
 	if (r != SR_ERR_OK)
 		goto err;
 
 	r = sr_rpc_subscribe(sess, "/ietf-system:set-current-datetime",
 			     set_datetime_rpc_cb, NULL,
-			     0, SR_SUBSCR_CTX_REUSE, &sub);
+			     0, SR_SUBSCR_DEFAULT, &sub);
 	if (r != SR_ERR_OK)
 		goto err;
 
@@ -275,7 +295,7 @@ int sr_plugin_init_cb(sr_session_ctx_t *sess, void **priv)
 	r = sr_module_change_subscribe(sess, "ietf-system",
 				       "/ietf-system:system/hostname",
 				        hostname_change_cb, NULL, 0,
-				        SR_SUBSCR_CTX_REUSE |
+				        SR_SUBSCR_DEFAULT |
 				        SR_SUBSCR_ENABLED, &sub);
 
 	if (r != SR_ERR_OK) {
