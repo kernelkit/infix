@@ -247,8 +247,6 @@ free_vals:
 	return SR_ERR_OK;
 }
 
-#define YANG_PATH_ "/usr/share/yang/modules/sysrepo/"
-
 int sr_plugin_init_cb(sr_session_ctx_t *sess, void **priv)
 {
 	int r;

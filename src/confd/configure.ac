@@ -33,6 +33,9 @@ DATAROOTDIR=`eval echo $datarootdir`
 DATAROOTDIR=`eval echo $DATAROOTDIR`
 AC_SUBST(DATAROOTDIR)
 
+YANGDIR=`eval echo $datarootdir/yang/modules/confd`
+AC_SUBST(YANGDIR)
+
 LIBDIR=`eval echo $libdir`
 LIBDIR=`eval echo $LIBDIR`
 AC_SUBST(LIBDIR)

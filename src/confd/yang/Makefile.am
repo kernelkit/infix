@@ -1,2 +1,2 @@
-yangdir   = $(datarootdir)/yang/modules/sysrepo
+yangdir   = $(YANGDIR)
 yang_DATA = $(wildcard *.yang)
