@@ -249,7 +249,7 @@ int sr_plugin_init_cb(sr_session_ctx_t *sess, void **priv)
 {
 	sr_subscription_ctx_t *sub = NULL;
 	sr_conn_ctx_t *conn;
-	char *features[] = {
+	const char *features[] = {
 		"ntp",
 		"ntp-udp-port",
 		"timezone-name",
@@ -259,7 +259,7 @@ int sr_plugin_init_cb(sr_session_ctx_t *sess, void **priv)
 
 	openlog("sysrepo ietf-system plugin", LOG_USER, 0);
 	conn = sr_session_get_connection(sess);
-	sr_install_module(conn, YANG_PATH_"ietf-system.yang", NULL, features);
+	sr_install_module(conn, YANG_PATH_"ietf-system@2014-08-06.yang", NULL, features);
 
 	rc = sr_oper_get_subscribe(sess, "ietf-system", CLOCK_PATH_,
 				   clock_cb, NULL, SR_SUBSCR_DEFAULT, &sub);
