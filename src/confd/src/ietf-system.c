@@ -16,8 +16,8 @@
 #include <libyang/libyang.h>
 #include <sysrepo.h>
 
-#define CLOCK_PATH "/ietf-system:system-state/clock"
-#define PLATFORM_PATH "/ietf-system:system-state/platform"
+#define CLOCK_PATH_    "/ietf-system:system-state/clock"
+#define PLATFORM_PATH_ "/ietf-system:system-state/platform"
 
 #define DEBUG(frmt, ...)
 //#define DEBUG(frmt, ...) syslog(LOG_DEBUG, "%s: "frmt, __func__, ##__VA_ARGS__)
@@ -68,7 +68,7 @@ static int clock_cb(sr_session_ctx_t *session, uint32_t sub_id, const char *modu
 	DEBUG("path=%s, request_path=%s", path, request_path);
 	ctx = sr_acquire_context(sr_session_get_connection(session));
 
-	rc = lyd_new_path(NULL, ctx, CLOCK_PATH, NULL, 0, parent);
+	rc = lyd_new_path(NULL, ctx, CLOCK_PATH_, NULL, 0, parent);
 	if (rc) {
 	fail:
 		ERROR("Failed building data tree, libyang error %d", rc);
@@ -83,13 +83,13 @@ static int clock_cb(sr_session_ctx_t *session, uint32_t sub_id, const char *modu
 		get_time_as_str(&t, boottime, sizeof(boottime));
 	}
 
-	rc = lyd_new_path(*parent, NULL, CLOCK_PATH "/boot-datetime", boottime, 0, NULL);
+	rc = lyd_new_path(*parent, NULL, CLOCK_PATH_ "/boot-datetime", boottime, 0, NULL);
 	if (rc)
 		goto fail;
 
 	t = time(NULL);
 	get_time_as_str(&t, curtime, sizeof(curtime));
-	rc = lyd_new_path(*parent, NULL, CLOCK_PATH "/current-datetime", curtime, 0, NULL);
+	rc = lyd_new_path(*parent, NULL, CLOCK_PATH_ "/current-datetime", curtime, 0, NULL);
 	if (rc)
 		goto fail;
 
@@ -114,7 +114,7 @@ static int platform_cb(sr_session_ctx_t *session, uint32_t sub_id, const char *m
 	/* POSIX func */
 	uname(&data);
 
-	rc = lyd_new_path(NULL, ctx, PLATFORM_PATH, NULL, 0, parent);
+	rc = lyd_new_path(NULL, ctx, PLATFORM_PATH_, NULL, 0, parent);
 	if (rc) {
 	fail:
 		ERROR("Failed building data tree, libyang error %d", rc);
@@ -124,16 +124,16 @@ static int platform_cb(sr_session_ctx_t *session, uint32_t sub_id, const char *m
 	lyd_print_mem(&buf, *parent, LYD_XML, 0);
 	DEBUG("%s", buf);
 
-	rc = lyd_new_path(*parent, NULL, PLATFORM_PATH"/os-name", data.sysname, 0, NULL);
+	rc = lyd_new_path(*parent, NULL, PLATFORM_PATH_"/os-name", data.sysname, 0, NULL);
 	if (rc)
 		goto fail;
-	rc = lyd_new_path(*parent, NULL, PLATFORM_PATH"/os-release", data.release, 0, NULL);
+	rc = lyd_new_path(*parent, NULL, PLATFORM_PATH_"/os-release", data.release, 0, NULL);
 	if (rc)
 		goto fail;
-	rc = lyd_new_path(*parent, NULL, PLATFORM_PATH"/os-version", data.version, 0, NULL);
+	rc = lyd_new_path(*parent, NULL, PLATFORM_PATH_"/os-version", data.version, 0, NULL);
 	if (rc)
 		goto fail;
-	rc = lyd_new_path(*parent, NULL, PLATFORM_PATH"/machine", data.machine, 0, NULL);
+	rc = lyd_new_path(*parent, NULL, PLATFORM_PATH_"/machine", data.machine, 0, NULL);
 	if (rc)
 		goto fail;
 
@@ -167,9 +167,9 @@ static int set_datetime_rpc_cb(sr_session_ctx_t *session, uint32_t sub_id,
 			       unsigned request_id, sr_val_t **output,
 			       size_t *output_cnt, void *priv)
 {
+	struct timeval tv;
 	struct tm tm;
 	time_t t;
-	struct timeval tv;
 
 	memset(&tm, 0, sizeof(tm));
 
@@ -205,41 +205,39 @@ int hostname_change_cb(sr_session_ctx_t *session, uint32_t sub_id, const char *m
 		       const char *xpath, sr_event_t event,
 		       unsigned request_id, void *priv)
 {
-	int r;
 	sr_val_t *old_val, *new_val, *val;
 	sr_change_iter_t *iter;
 	sr_change_oper_t op;
+	int rc;
 
 	if (event != SR_EV_ENABLED && event != SR_EV_DONE)
 		return SR_ERR_OK;
 
-	r = sr_get_changes_iter(session, "//.", &iter);
-	if (r != SR_ERR_OK) {
-		ERROR("failed to get changes iter: %s", sr_strerror(r));
-		return r;
+	rc = sr_get_changes_iter(session, "//.", &iter);
+	if (rc) {
+		ERROR("failed to get changes iter: %s", sr_strerror(rc));
+		return rc;
 	}
 
-	while (sr_get_change_next(session, iter, &op, &old_val,
-				  &new_val) == SR_ERR_OK) {
+	while (sr_get_change_next(session, iter, &op, &old_val, &new_val) == SR_ERR_OK) {
 		val = new_val ? new_val : old_val;
 		if (strcmp(val->xpath, "/ietf-system:system/hostname"))
 			goto free_vals;
 
 		switch (op) {
-			case SR_OP_CREATED:
-			case SR_OP_MODIFIED:
-				if (sethostname(new_val->data.string_val,
-						strlen(new_val->data.string_val))) {
-					ERRNO("Failed to set hostname");
-					return SR_ERR_SYS;
-				}
+		case SR_OP_CREATED:
+		case SR_OP_MODIFIED:
+			if (sethostname(new_val->data.string_val,
+					strlen(new_val->data.string_val))) {
+				ERRNO("Failed to set hostname");
+				return SR_ERR_SYS;
+			}
 
-				DEBUG("Set hostname to '%s'",
-				      new_val->data.string_val);
-				break;
+			DEBUG("Set hostname to '%s'", new_val->data.string_val);
+			break;
 		}
 
-free_vals:
+	free_vals:
 		sr_free_val(old_val);
 		sr_free_val(new_val);
 	}
@@ -249,72 +247,59 @@ free_vals:
 
 int sr_plugin_init_cb(sr_session_ctx_t *sess, void **priv)
 {
-	int r;
 	sr_subscription_ctx_t *sub = NULL;
 	sr_conn_ctx_t *conn;
+	int rc;
 
 	openlog("sysrepo ietf-system plugin", LOG_USER, 0);
 	conn = sr_session_get_connection(sess);
 	sr_install_module(conn, YANG_PATH_"ietf-system.yang", NULL, NULL);
 
-	r = sr_oper_get_subscribe(sess, "ietf-system",
-					CLOCK_PATH,
-					clock_cb, NULL,
-					SR_SUBSCR_DEFAULT, &sub);
-	if (r != SR_ERR_OK)
+	rc = sr_oper_get_subscribe(sess, "ietf-system", CLOCK_PATH_,
+				   clock_cb, NULL, SR_SUBSCR_DEFAULT, &sub);
+	if (rc != SR_ERR_OK)
 		goto err;
 
-	r = sr_oper_get_subscribe(sess, "ietf-system",
-					PLATFORM_PATH,
-					platform_cb, NULL,
-					SR_SUBSCR_DEFAULT, &sub);
-	if (r != SR_ERR_OK)
+	rc = sr_oper_get_subscribe(sess, "ietf-system", PLATFORM_PATH_,
+				   platform_cb, NULL, SR_SUBSCR_DEFAULT, &sub);
+	if (rc != SR_ERR_OK)
 		goto err;
 
-	r = sr_rpc_subscribe(sess, "/ietf-system:system-restart",
-			     exec_rpc_cb, "shutdown -r now",
-			     0, SR_SUBSCR_DEFAULT, &sub);
-	if (r != SR_ERR_OK)
+	rc = sr_rpc_subscribe(sess, "/ietf-system:system-restart",
+			      exec_rpc_cb, "reboot",
+			      0, SR_SUBSCR_DEFAULT, &sub);
+	if (rc != SR_ERR_OK)
 		goto err;
 
-	r = sr_rpc_subscribe(sess, "/ietf-system:system-shutdown",
-			     exec_rpc_cb, "shutdown -h now",
-			     0, SR_SUBSCR_DEFAULT, &sub);
-	if (r != SR_ERR_OK)
+	rc = sr_rpc_subscribe(sess, "/ietf-system:system-shutdown",
+			      exec_rpc_cb, "poweroff", 0, SR_SUBSCR_DEFAULT, &sub);
+	if (rc != SR_ERR_OK)
 		goto err;
 
-	r = sr_rpc_subscribe(sess, "/ietf-system:set-current-datetime",
-			     set_datetime_rpc_cb, NULL,
-			     0, SR_SUBSCR_DEFAULT, &sub);
-	if (r != SR_ERR_OK)
+	rc = sr_rpc_subscribe(sess, "/ietf-system:set-current-datetime",
+			      set_datetime_rpc_cb, NULL, 0, SR_SUBSCR_DEFAULT, &sub);
+	if (rc != SR_ERR_OK)
 		goto err;
 
-
-	r = sr_module_change_subscribe(sess, "ietf-system",
-				       "/ietf-system:system/hostname",
+	rc = sr_module_change_subscribe(sess, "ietf-system", "/ietf-system:system/hostname",
 				        hostname_change_cb, NULL, 0,
-				        SR_SUBSCR_DEFAULT |
-				        SR_SUBSCR_ENABLED, &sub);
-
-	if (r != SR_ERR_OK) {
+					SR_SUBSCR_DEFAULT | SR_SUBSCR_ENABLED, &sub);
+	if (rc != SR_ERR_OK) {
 		ERROR("failed to subscribe to changes of hostname: %s",
-		      sr_strerror(r));
+		      sr_strerror(rc));
 		goto err;
 	}
 
-
 	*(sr_subscription_ctx_t **)priv = sub;
-
 	DEBUG("init ok");
 
 	return SR_ERR_OK;
 
 err:
-	ERROR("init failed: %s", sr_strerror(r));
-
+	ERROR("init failed: %s", sr_strerror(rc));
 	sr_unsubscribe(sub);
 
-	return r;
+	return rc;
 }
 
 void sr_plugin_cleanup_cb(sr_session_ctx_t *session, void *priv)
