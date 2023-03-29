@@ -13,6 +13,7 @@ config BR2_PACKAGE_KLISH_PLUGIN_SYSREPO
 config BR2_PACKAGE_KLISH_PLUGIN_SYSREPO_XML
 	bool "install xml"
 	depends on BR2_PACKAGE_KLISH_PLUGIN_SYSREPO
+	depends on !BR2_PACKAGE_KLINFIX
 	default y
 	help
 	  Install the default XML spec bundled with the project, which
