@@ -1,0 +1,8 @@
+config BR2_PACKAGE_KLINFIX
+	bool "klinfix"
+	select BR2_PACKAGE_KLISH
+	select BR2_PACKAGE_KLISH_PLUGIN_SYSREPO
+	select BR2_PACKAGE_SYSREPO
+	help
+	  A plugin to klish with an opinionated config and some
+	  command extensions, suitable for systems running Infix.
