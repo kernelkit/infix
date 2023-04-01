@@ -1,86 +1,12 @@
 /* SPDX-License-Identifier: BSD-3-Clause */
 
-#include <augeas.h>
-#include <stdio.h>
-#include <syslog.h>
-#include <stdlib.h>
-#include <string.h>
+#include "core.h"
 #include <sys/utsname.h>
-#include <time.h>
-#include <sys/time.h>
-#include <errno.h>
-#include <unistd.h>
-
-/* Linux specific */
 #include <sys/sysinfo.h>
-
-#include <libyang/libyang.h>
-#include <sysrepo.h>
-#include <sysrepo/values.h>
-#include <sysrepo/xpath.h>
 
 #define CLOCK_PATH_    "/ietf-system:system-state/clock"
 #define PLATFORM_PATH_ "/ietf-system:system-state/platform"
 
-
-#define NELEMS(arr) (sizeof(arr) / sizeof(arr[0]))
-
-#define DEBUG(frmt, ...)
-//#define DEBUG(frmt, ...) syslog(LOG_DEBUG, "%s: "frmt, __func__, ##__VA_ARGS__)
-#define ERROR(frmt, ...) syslog(LOG_ERR, "%s: " frmt, __func__, ##__VA_ARGS__)
-#define ERRNO(frmt, ...) syslog(LOG_ERR, "%s: " frmt ": %s", __func__, ##__VA_ARGS__, strerror(errno))
-
-static augeas *aug;
-
-
-/**
- * Like system(), but takes a formatted string as argument.
- * @param fmt  printf style format list to command to run
- *
- * This system() wrapper greatly simplifies operations that usually
- * consist of composing a command from parts into a dynamic buffer
- * before calling it.  The return value from system() is also parsed,
- * checking for proper exit and signals.
- *
- * @returns If the command exits normally, the return code of the command
- * is returned.  Otherwise, if the command is signalled, the return code
- * is -1 and @a errno is set to @c EINTR.
- */
-static int run(const char *fmt, ...)
-{
-	va_list ap;
-	char *cmd;
-	int len;
-	int rc;
-
-	va_start(ap, fmt);
-	len = vsnprintf(NULL, 0, fmt, ap);
-	va_end(ap);
-
-	cmd = alloca(++len);
-	if (!cmd) {
-		errno = ENOMEM;
-		return -1;
-	}
-
-	va_start(ap, fmt);
-	vsnprintf(cmd, len, fmt, ap);
-	va_end(ap);
-
-	rc = system(cmd);
-	if (rc == -1)
-		return -1;
-
-	if (WIFEXITED(rc)) {
-		errno = 0;
-		rc = WEXITSTATUS(rc);
-	} else if (WIFSIGNALED(rc)) {
-		errno = EINTR;
-		rc = -1;
-	}
-
-	return rc;
-}
 
 /* Return seconds since boot */
 static long get_uptime(void)
@@ -344,6 +270,7 @@ fail:
 static int change_ntp(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
 	const char *xpath, sr_event_t event, unsigned request_id, void *priv)
 {
+	struct confd *confd = (struct confd *)priv;
 	const char *fn = CHRONY_NEXT;
 	int valid = -1;
 	sr_data_t *sdt;
@@ -453,6 +380,7 @@ static int change_ntp(sr_session_ctx_t *session, uint32_t sub_id, const char *mo
 static int change_hostname(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
 	const char *xpath, sr_event_t event, unsigned request_id, void *priv)
 {
+	struct confd *confd = (struct confd *)priv;
 	const char *host, *nm, *tmp;
 	char **hosts, *current;
 	int err, i, nhosts;
@@ -479,18 +407,18 @@ static int change_hostname(sr_session_ctx_t *session, uint32_t sub_id, const cha
 	}
 	ERROR("Got hostname %s", nm);
 
-	aug_get(aug, "etc/hostname/hostname", &tmp);
+	aug_get(confd->aug, "etc/hostname/hostname", &tmp);
 	current = strdup(tmp);
 	ERROR("Current hostname %s", current);
 
 	err = sethostname(nm, strlen(nm));
-	err = err ? : aug_set(aug, "etc/hostname/hostname", nm);
+	err = err ? : aug_set(confd->aug, "etc/hostname/hostname", nm);
 
-	nhosts = aug_match(aug, "etc/hosts/*/canonical", &hosts);
+	nhosts = aug_match(confd->aug, "etc/hosts/*/canonical", &hosts);
 	for (i = 0; i < nhosts; i++) {
-		aug_get(aug, hosts[i], &host);
+		aug_get(confd->aug, hosts[i], &host);
 		if (!strcmp(host, current))
-			err = err ? : aug_set(aug, hosts[i], nm);
+			err = err ? : aug_set(confd->aug, hosts[i], nm);
 		free(hosts[i]);
 	}
 	free(hosts);
@@ -502,44 +430,15 @@ static int change_hostname(sr_session_ctx_t *session, uint32_t sub_id, const cha
 	}
 
 	ERROR("Reload hostname-dependent services ...");
-	err = err ? : aug_save(aug);
+	err = err ? : aug_save(confd->aug);
 	if (sys_reload_services())
 		return SR_ERR_SYS;
 
 	return SR_ERR_OK;
 }
 
-static int register_change(sr_session_ctx_t *session, const char *xpath,
-			   sr_module_change_cb cb, void *arg, sr_subscription_ctx_t **sub)
+int ietf_system_init(struct confd *confd)
 {
-	int rc = sr_module_change_subscribe(session, "ietf-system", xpath, cb, arg, 0,
-					    SR_SUBSCR_DEFAULT | SR_SUBSCR_ENABLED, sub);
-	if (rc)
-		ERROR("failed subscribing to changes of %s: %s", xpath, sr_strerror(rc));
-	return rc;
-}
-
-static int register_rpc(sr_session_ctx_t *session, const char *xpath,
-			sr_rpc_cb cb, void *arg, sr_subscription_ctx_t **sub)
-{
-	int rc = sr_rpc_subscribe(session, xpath, cb, arg, 0, SR_SUBSCR_DEFAULT, sub);
-	if (rc)
-		ERROR("failed subscribing to %s rpc: %s", xpath, sr_strerror(rc));
-	return rc;
-}
-
-#define REGISTER_CHANGE(s,x,c,a,u) \
-	if (rc = register_change(s, x, c, a, u))\
-		goto err
-
-#define REGISTER_RPC(s,x,c,a,u) \
-	if (rc = register_rpc(s, x, c, a, u))	\
-		goto err
-
-int sr_plugin_init_cb(sr_session_ctx_t *session, void **priv)
-{
-	sr_subscription_ctx_t *sub = NULL;
-	sr_conn_ctx_t *conn;
 	const char *features[] = {
 		"ntp",
 		"ntp-udp-port",
@@ -548,50 +447,38 @@ int sr_plugin_init_cb(sr_session_ctx_t *session, void **priv)
 	};
 	int rc;
 
-	aug = aug_init(NULL, "", 0);
-	if (!aug ||
-	    aug_load_file(aug, "/etc/hostname") ||
-	    aug_load_file(aug, "/etc/hosts")) {
+	if (aug_load_file(confd->aug, "/etc/hostname") ||
+	    aug_load_file(confd->aug, "/etc/hosts")) {
 		ERROR("ietf-system: Augeas initialization failed");
 		goto err;
 	}
 
-	openlog("ietf-system", LOG_USER, 0);
-	conn = sr_session_get_connection(session);
-	sr_install_module(conn, YANG_PATH_"ietf-system@2014-08-06.yang", NULL, features);
+	if (rc = sr_install_module(confd->conn, YANG_PATH_"ietf-system@2014-08-06.yang", NULL, features))
+		goto err;
 
-	rc = sr_oper_get_subscribe(session, "ietf-system", CLOCK_PATH_,
-				   clock_cb, NULL, SR_SUBSCR_DEFAULT, &sub);
+	rc = sr_oper_get_subscribe(confd->session, "ietf-system", CLOCK_PATH_,
+				   clock_cb, NULL, SR_SUBSCR_DEFAULT, &confd->sub);
 	if (rc != SR_ERR_OK)
 		goto err;
 
-	rc = sr_oper_get_subscribe(session, "ietf-system", PLATFORM_PATH_,
-				   platform_cb, NULL, SR_SUBSCR_DEFAULT, &sub);
+	rc = sr_oper_get_subscribe(confd->session, "ietf-system", PLATFORM_PATH_,
+				   platform_cb, NULL, SR_SUBSCR_DEFAULT, &confd->sub);
 	if (rc != SR_ERR_OK)
 		goto err;
 
-	REGISTER_RPC(session, "/ietf-system:system-restart",  rpc_exec, "reboot", &sub);
-	REGISTER_RPC(session, "/ietf-system:system-shutdown", rpc_exec, "poweroff", &sub);
-	REGISTER_RPC(session, "/ietf-system:set-current-datetime", rpc_set_datetime, NULL, &sub);
+	REGISTER_RPC(confd->session, "/ietf-system:system-restart",  rpc_exec, "reboot", &confd->sub);
+	REGISTER_RPC(confd->session, "/ietf-system:system-shutdown", rpc_exec, "poweroff", &confd->sub);
+	REGISTER_RPC(confd->session, "/ietf-system:set-current-datetime", rpc_set_datetime, NULL, &confd->sub);
 
-	REGISTER_CHANGE(session, "/ietf-system:system/hostname", change_hostname, NULL, &sub);
-	REGISTER_CHANGE(session, "/ietf-system:system/ntp", change_ntp, NULL, &sub);
+	REGISTER_CHANGE(confd->session, "/ietf-system:system/hostname", change_hostname, NULL, &confd->sub);
+	REGISTER_CHANGE(confd->session, "/ietf-system:system/ntp", change_ntp, NULL, &confd->sub);
 
-	*(sr_subscription_ctx_t **)priv = sub;
 	DEBUG("init ok");
 
 	return SR_ERR_OK;
-
 err:
 	ERROR("init failed: %s", sr_strerror(rc));
-	sr_unsubscribe(sub);
+	sr_unsubscribe(confd->sub);
 
 	return rc;
-}
-
-void sr_plugin_cleanup_cb(sr_session_ctx_t *session, void *priv)
-{
-        sr_unsubscribe((sr_subscription_ctx_t *)priv);
-
-        DEBUG("cleanup ok");
 }

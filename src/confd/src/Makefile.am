@@ -6,4 +6,4 @@ plugin_LTLIBRARIES      = confd-plugin.la
 confd_plugin_la_CFLAGS  = $(augeas_CFLAGS) $(sysrepo_CFLAGS) $(CFLAGS)
 confd_plugin_la_LIBADD  = $(augeas_LIBS)   $(sysrepo_LIBS)   $(CFLAGS)
 confd_plugin_la_LDFLAGS = -module -avoid-version -shared
-confd_plugin_la_SOURCES = ietf-system.c
+confd_plugin_la_SOURCES = core.c core.h run.c ietf-system.c
