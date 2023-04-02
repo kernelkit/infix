@@ -25,12 +25,12 @@
 #define ERROR(frmt, ...) syslog(LOG_ERR, "%s: " frmt, __func__, ##__VA_ARGS__)
 #define ERRNO(frmt, ...) syslog(LOG_ERR, "%s: " frmt ": %s", __func__, ##__VA_ARGS__, strerror(errno))
 
-#define REGISTER_CHANGE(s,x,c,a,u) \
-	if (rc = register_change(s, x, c, a, u))\
+#define REGISTER_CHANGE(s,m,x,f,c,a,u)			\
+	if (rc = register_change(s, m, x, f, c, a, u))	\
 		goto err
 
-#define REGISTER_RPC(s,x,c,a,u) \
-	if (rc = register_rpc(s, x, c, a, u))	\
+#define REGISTER_RPC(s,x,c,a,u)				\
+	if (rc = register_rpc(s, x, c, a, u))		\
 		goto err
 
 struct confd {
@@ -41,11 +41,10 @@ struct confd {
 	augeas                 *aug;
 };
 
-static inline int register_change(sr_session_ctx_t *session, const char *xpath,
-	sr_module_change_cb cb, void *arg, sr_subscription_ctx_t **sub)
+static inline int register_change(sr_session_ctx_t *session, const char *module, const char *xpath,
+			int flags, sr_module_change_cb cb, void *arg, sr_subscription_ctx_t **sub)
 {
-	int rc = sr_module_change_subscribe(session, "ietf-system", xpath, cb, arg, 0,
-					    SR_SUBSCR_DEFAULT | SR_SUBSCR_ENABLED, sub);
+	int rc = sr_module_change_subscribe(session, module, xpath, cb, arg, 0, flags | SR_SUBSCR_DEFAULT, sub);
 	if (rc)
 		ERROR("failed subscribing to changes of %s: %s", xpath, sr_strerror(rc));
 	return rc;

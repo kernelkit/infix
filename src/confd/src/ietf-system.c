@@ -466,14 +466,12 @@ int ietf_system_init(struct confd *confd)
 	if (rc != SR_ERR_OK)
 		goto err;
 
+	REGISTER_CHANGE(confd->session, "ietf-system", "/ietf-system:system/hostname", 0, change_hostname, confd, &confd->sub);
+	REGISTER_CHANGE(confd->session, "ietf-system", "/ietf-system:system/ntp", 0, change_ntp, confd, &confd->sub);
+
 	REGISTER_RPC(confd->session, "/ietf-system:system-restart",  rpc_exec, "reboot", &confd->sub);
 	REGISTER_RPC(confd->session, "/ietf-system:system-shutdown", rpc_exec, "poweroff", &confd->sub);
 	REGISTER_RPC(confd->session, "/ietf-system:set-current-datetime", rpc_set_datetime, NULL, &confd->sub);
-
-	REGISTER_CHANGE(confd->session, "/ietf-system:system/hostname", change_hostname, NULL, &confd->sub);
-	REGISTER_CHANGE(confd->session, "/ietf-system:system/ntp", change_ntp, NULL, &confd->sub);
-
-	DEBUG("init ok");
 
 	return SR_ERR_OK;
 err:
