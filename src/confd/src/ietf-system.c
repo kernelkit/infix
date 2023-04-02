@@ -381,10 +381,11 @@ static int change_hostname(sr_session_ctx_t *session, uint32_t sub_id, const cha
 	const char *xpath, sr_event_t event, unsigned request_id, void *priv)
 {
 	struct confd *confd = (struct confd *)priv;
-	const char *host, *nm, *tmp;
+	const char *host, *tmp = NULL;
 	char **hosts, *current;
 	int err, i, nhosts;
-	int rc;
+	int rc = SR_ERR_SYS;
+	char *nm;
 
 	switch (event) {
 	case SR_EV_ENABLED:	/* first time, on register. */
@@ -402,27 +403,39 @@ static int change_hostname(sr_session_ctx_t *session, uint32_t sub_id, const cha
 
 	nm = sr_get_str(session, xpath);
 	if (!nm) {
-		ERROR("No valid hostname in current session");
-		nm = "infix";	/* XXX: derive from global "options.h" */
+		/* XXX: derive from global "options.h" or /usr/share/factory/ */
+		nm = strdup("infix");
+		if (!nm)
+			goto err;
 	}
-	ERROR("Got hostname %s", nm);
 
-	aug_get(confd->aug, "etc/hostname/hostname", &tmp);
+	if (aug_get(confd->aug, "etc/hostname/hostname", &tmp) <= 0)
+		goto err;
+
 	current = strdup(tmp);
-	ERROR("Current hostname %s", current);
+	if (!current)
+		goto err;
 
 	err = sethostname(nm, strlen(nm));
 	err = err ? : aug_set(confd->aug, "etc/hostname/hostname", nm);
 
 	nhosts = aug_match(confd->aug, "etc/hosts/*/canonical", &hosts);
 	for (i = 0; i < nhosts; i++) {
-		aug_get(confd->aug, hosts[i], &host);
+		if (aug_get(confd->aug, hosts[i], &host) <= 0)
+			continue;
+
 		if (!strcmp(host, current))
 			err = err ? : aug_set(confd->aug, hosts[i], nm);
+
 		free(hosts[i]);
 	}
-	free(hosts);
+
+	if (nhosts)
+		free(hosts);
 	free(current);
+err:
+	if (nm)
+		free(nm);
 
 	if (err) {
 		ERROR("Failed activating changes.");
