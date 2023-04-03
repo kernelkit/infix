@@ -8,34 +8,24 @@
 #define PLATFORM_PATH_ "/ietf-system:system-state/platform"
 
 
-/* Return seconds since boot */
-static long get_uptime(void)
+
+static char *fmtime(time_t t, char *buf, size_t len)
 {
-	struct sysinfo info;
+        const char *isofmt = "%FT%T%z";
+        struct tm tm;
+        size_t i, n;
 
-	/*
-	 * !!!Linux specific!!! Use '/var/run/utmp' BOOT record
-	 * to be portable. But utmp file can be missing in some
-	 * Unixes.
-	 */
-	sysinfo(&info);
-	return info.uptime;
-}
+        localtime_r(&t, &tm);
+        n = strftime(buf, len, isofmt, &tm);
+        i = n - 5;
+        if (buf[i] == '+' || buf[i] == '-') {
+                buf[i + 6] = buf[i + 5];
+                buf[i + 5] = buf[i + 4];
+                buf[i + 4] = buf[i + 3];
+                buf[i + 3] = ':';
+        }
 
-static int get_time_as_str(time_t *time, char *buf, int bufsz)
-{
-	int n;
-
-	n = strftime(buf, bufsz, "%Y-%m-%dT%H:%M:%S%z",
-		     localtime(time));
-	if (!n)
-		return -1;
-
-	/* Buf ends with +hhmm but should be +hh:mm, fix this */
-	memmove(buf + n - 1, buf + n - 2, 3);
-	buf[n - 2] = ':';
-
-	return 0;
+        return buf;
 }
 
 static int clock_cb(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
@@ -45,8 +35,8 @@ static int clock_cb(sr_session_ctx_t *session, uint32_t sub_id, const char *modu
 	static char boottime[64] = { 0 };
 	const struct ly_ctx *ctx;
 	char curtime[64];
+	time_t now, boot;
 	char *buf;
-	time_t t;
 	int rc;
 
 	DEBUG("path=%s, request_path=%s", path, request_path);
@@ -62,17 +52,20 @@ static int clock_cb(sr_session_ctx_t *session, uint32_t sub_id, const char *modu
 	lyd_print_mem(&buf, *parent, LYD_XML, 0);
 	DEBUG("%s", buf);
 
-	if (!*boottime) {
-		t = time(NULL) - get_uptime();
-		get_time_as_str(&t, boottime, sizeof(boottime));
+	now = time(NULL);
+	if (!boottime[0]) {
+		struct sysinfo si;
+
+		sysinfo(&si);
+		boot = now - si.uptime;
+		fmtime(boot, boottime, sizeof(boottime));
 	}
 
 	rc = lyd_new_path(*parent, NULL, CLOCK_PATH_ "/boot-datetime", boottime, 0, NULL);
 	if (rc)
 		goto fail;
 
-	t = time(NULL);
-	get_time_as_str(&t, curtime, sizeof(curtime));
+	fmtime(now, curtime, sizeof(curtime));
 	rc = lyd_new_path(*parent, NULL, CLOCK_PATH_ "/current-datetime", curtime, 0, NULL);
 	if (rc)
 		goto fail;
