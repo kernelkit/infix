@@ -1,0 +1,30 @@
+From 90fdcdeb39e35193fe4e8f5d5277cf9ca28d5055 Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Sun, 2 Apr 2023 22:16:50 +0200
+Subject: [PATCH 1/4] rsync: fix return value when copying a single file
+Organization: Addiva Elektronik
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ src/rsync.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/src/rsync.c b/src/rsync.c
+index 392e1d2..92b8d63 100644
+--- a/src/rsync.c
++++ b/src/rsync.c
+@@ -85,9 +85,9 @@ int rsync(char *src, char *dst, int opt, int (*filter)(const char *file))
+ 			return 1;
+ 
+ 		if (copy(src, dst, keep_mtim))
+-			result++;
++			return 1;
+ 
+-		return errno;
++		return 0;
+ 	}
+ 
+ 	/* Copy dir as well? */
+-- 
+2.34.1
+
