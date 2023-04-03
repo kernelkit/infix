@@ -7,7 +7,69 @@
 #define CLOCK_PATH_    "/ietf-system:system-state/clock"
 #define PLATFORM_PATH_ "/ietf-system:system-state/platform"
 
+static char   *ver = NULL;
+static char   *rel = NULL;
+static char   *sys = NULL;
+static char   *os  = NULL;
 
+static char *strip_quotes(char *str)
+{
+	char *ptr;
+
+	while (*str && (isspace(*str) || *str == '"'))
+		str++;
+
+	for (ptr = str + strlen(str); ptr > str; ptr--) {
+		if (*ptr != '"')
+			continue;
+
+		*ptr = 0;
+		break;
+	}
+
+	return str;
+}
+
+static void setvar(char *line, const char *nm, char **var)
+{
+	char *ptr;
+
+	if (!strncmp(line, nm, strlen(nm)) && (ptr = strchr(line, '='))) {
+		if (*var)
+			free(*var);
+		*var = strdup(strip_quotes(++ptr));
+	}
+}
+
+static void os_init(void)
+{
+	struct utsname uts;
+	char line[80];
+	FILE *fp;
+
+	if (!uname(&uts)) {
+		os  = strdup(uts.sysname);
+		ver = strdup(uts.release);
+		rel = strdup(uts.release);
+		sys = strdup(uts.machine);
+	}
+
+	fp = fopen("/etc/os-release", "r");
+	if (!fp) {
+		fp = fopen("/usr/lib/os-release", "r");
+		if (!fp)
+			return;
+	}
+
+	while (fgets(line, sizeof(line), fp)) {
+		line[strlen(line) - 1] = 0; /* drop \n */
+		setvar(line, "NAME", &os);
+		setvar(line, "VERSION_ID", &ver);
+		setvar(line, "BUILD_ID", &rel);
+		setvar(line, "ARCHITECTURE", &sys);
+	}
+	fclose(fp);
+}
 
 static char *fmtime(time_t t, char *buf, size_t len)
 {
@@ -88,9 +150,6 @@ static int platform_cb(sr_session_ctx_t *session, uint32_t sub_id, const char *m
 	DEBUG("path=%s request_path=%s", path, request_path);
 	ctx = sr_acquire_context(sr_session_get_connection(session));
 
-	/* POSIX func */
-	uname(&data);
-
 	rc = lyd_new_path(NULL, ctx, PLATFORM_PATH_, NULL, 0, parent);
 	if (rc) {
 	fail:
@@ -101,16 +160,16 @@ static int platform_cb(sr_session_ctx_t *session, uint32_t sub_id, const char *m
 	lyd_print_mem(&buf, *parent, LYD_XML, 0);
 	DEBUG("%s", buf);
 
-	rc = lyd_new_path(*parent, NULL, PLATFORM_PATH_"/os-name", data.sysname, 0, NULL);
+	rc = lyd_new_path(*parent, NULL, PLATFORM_PATH_"/os-name", os, 0, NULL);
 	if (rc)
 		goto fail;
-	rc = lyd_new_path(*parent, NULL, PLATFORM_PATH_"/os-release", data.release, 0, NULL);
+	rc = lyd_new_path(*parent, NULL, PLATFORM_PATH_"/os-release", rel, 0, NULL);
 	if (rc)
 		goto fail;
-	rc = lyd_new_path(*parent, NULL, PLATFORM_PATH_"/os-version", data.version, 0, NULL);
+	rc = lyd_new_path(*parent, NULL, PLATFORM_PATH_"/os-version", ver, 0, NULL);
 	if (rc)
 		goto fail;
-	rc = lyd_new_path(*parent, NULL, PLATFORM_PATH_"/machine", data.machine, 0, NULL);
+	rc = lyd_new_path(*parent, NULL, PLATFORM_PATH_"/machine", sys, 0, NULL);
 	if (rc)
 		goto fail;
 
@@ -452,6 +511,8 @@ int ietf_system_init(struct confd *confd)
 		NULL
 	};
 	int rc;
+
+	os_init();
 
 	if (aug_load_file(confd->aug, "/etc/hostname") ||
 	    aug_load_file(confd->aug, "/etc/hosts")) {
