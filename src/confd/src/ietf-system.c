@@ -560,6 +560,103 @@ static int change_ntp(sr_session_ctx_t *session, uint32_t sub_id, const char *mo
 	return SR_ERR_OK;
 }
 
+#define RESOLV_CONF "/etc/resolv.conf.head"
+#define RESOLV_PREV RESOLV_CONF "-"
+#define RESOLV_NEXT RESOLV_CONF "+"
+
+static int change_dns(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
+	const char *xpath, sr_event_t event, unsigned request_id, void *priv)
+{
+	struct confd *confd = (struct confd *)priv;
+	const char *fn = RESOLV_NEXT;
+	int timeout, attempts;
+	int rc = SR_ERR_SYS;
+	int valid = -1;
+	sr_data_t *sdt;
+	sr_val_t *val;
+	size_t cnt;
+	FILE *fp;
+
+	switch (event) {
+	case SR_EV_ENABLED:	/* first time, on register. */
+	case SR_EV_CHANGE:	/* regular change (copy cand running) */
+		/* Generate next config */
+		break;
+
+	case SR_EV_ABORT:	/* User abort, or other plugin failed */
+		remove(RESOLV_NEXT);
+		return SR_ERR_OK;
+
+	case SR_EV_DONE:
+		/* Check if passed validation in previous event */
+		if (access(RESOLV_NEXT, F_OK))
+			return SR_ERR_OK;
+
+		remove(RESOLV_PREV);
+		rename(RESOLV_CONF, RESOLV_PREV);
+		rename(RESOLV_NEXT, RESOLV_CONF);
+
+		/* in bootstrap, another resolvconf will soon take your call */
+		if (run("initctl cond get hook/sys/up"))
+			return 0;
+
+		run("resolvconf -u");
+		return SR_ERR_OK;
+	}
+
+	fp = fopen(fn, "w");
+	if (!fp) {
+		ERROR("failed updating %s: %s", fn, strerror(errno));
+		sr_free_values(val, cnt);
+		return SR_ERR_SYS;
+	}
+
+	timeout  = sr_get_int(session, "/ietf-system:system/dns-resolver/options/timeout");
+	attempts = sr_get_int(session, "/ietf-system:system/dns-resolver/options/attempts");
+	if (timeout || attempts) {
+		fprintf(fp, "options");
+		if (timeout)
+			fprintf(fp, " timeout:%d", timeout);
+		if (attempts)
+			fprintf(fp, " attempts:%d ", attempts);
+		fprintf(fp, "\n");
+	}
+
+	if (rc = sr_get_items(session, "/ietf-system:system/dns-resolver/search", 0, 0, &val, &cnt))
+		goto fail;
+
+	if (cnt) {
+		fprintf(fp, "search ");
+		for (size_t i = 0; i < cnt; i++)
+			fprintf(fp, "%s ", val[i].data.string_val);
+		fprintf(fp, "\n");
+	}
+	sr_free_values(val, cnt);
+
+	if (rc = sr_get_items(session, "/ietf-system:system/dns-resolver/server", 0, 0, &val, &cnt))
+		goto fail;
+
+	for (size_t i = 0; i < cnt; i++) {
+		const char *xpath = val[i].xpath;
+		char *type, *ptr;
+		int server = 0;
+
+		/* Get /ietf-system:system/dns-resolver/server[name='foo'] */
+		ptr = sr_get_str(session, "%s/udp-and-tcp/address", xpath);
+		if (ptr)
+			fprintf(fp, "nameserver %s\n", ptr);
+	}
+	sr_free_values(val, cnt);
+
+	rc = SR_ERR_OK;
+fail:
+	fclose(fp);
+	if (rc)
+		remove(fn);
+
+	return rc;
+}
+
 static int change_hostname(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
 	const char *xpath, sr_event_t event, unsigned request_id, void *priv)
 {
@@ -667,6 +764,7 @@ int ietf_system_init(struct confd *confd)
 	REGISTER_CHANGE(confd->session, "ietf-system", "/ietf-system:system/hostname", 0, change_hostname, confd, &confd->sub);
 	REGISTER_CHANGE(confd->session, "ietf-system", "/ietf-system:system/clock", 0, change_clock, confd, &confd->sub);
 	REGISTER_CHANGE(confd->session, "ietf-system", "/ietf-system:system/ntp", 0, change_ntp, confd, &confd->sub);
+	REGISTER_CHANGE(confd->session, "ietf-system", "/ietf-system:system/dns-resolver", 0, change_dns, confd, &confd->sub);
 
 	REGISTER_RPC(confd->session, "/ietf-system:system-restart",  rpc_exec, "reboot", &confd->sub);
 	REGISTER_RPC(confd->session, "/ietf-system:system-shutdown", rpc_exec, "poweroff", &confd->sub);
