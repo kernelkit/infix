@@ -423,6 +423,7 @@ static int change_clock(sr_session_ctx_t *session, uint32_t sub_id, const char *
 		return SR_ERR_OK;
 	}
 
+	/* XXX: add support also for /ietf-system:system/clock/timezone-utc-offset (deviation) */
 	timezone = sr_get_str(session, "/ietf-system:system/clock/timezone-name");
 	if (!timezone) {
 		ERROR("Failed reading timezone-name");
@@ -644,6 +645,7 @@ static int change_dns(sr_session_ctx_t *session, uint32_t sub_id, const char *mo
 		/* Get /ietf-system:system/dns-resolver/server[name='foo'] */
 		ptr = sr_get_str(session, "%s/udp-and-tcp/address", xpath);
 		if (ptr)
+			/* XXX: add support also for udp-and-tcp/port */
 			fprintf(fp, "nameserver %s\n", ptr);
 	}
 	sr_free_values(val, cnt);
