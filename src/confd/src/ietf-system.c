@@ -326,6 +326,68 @@ fail:
 	return str;
 }
 
+#define TIMEZONE_CONF "/etc/timezone"
+#define TIMEZONE_PREV TIMEZONE_CONF "-"
+#define TIMEZONE_NEXT TIMEZONE_CONF "+"
+
+static int change_clock(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
+	const char *xpath, sr_event_t event, unsigned request_id, void *priv)
+{
+	struct confd *confd = (struct confd *)priv;
+	const char *fn = TIMEZONE_CONF;
+	char *timezone;
+	FILE *fp;
+	int rc;
+
+	switch (event) {
+	case SR_EV_ENABLED:	/* first time, on register. */
+	case SR_EV_CHANGE:	/* regular change (copy cand running) */
+		/* Set up next timezone */
+		break;
+
+	case SR_EV_ABORT:	/* User abort, or other plugin failed */
+		remove(TIMEZONE_NEXT);
+		return SR_ERR_OK;
+
+	case SR_EV_DONE:
+		/* Check if passed validation in previous event */
+		if (access(TIMEZONE_NEXT, F_OK))
+			return SR_ERR_OK;
+
+		remove(TIMEZONE_PREV);
+		rename(TIMEZONE_CONF, TIMEZONE_PREV);
+		rename(TIMEZONE_NEXT, TIMEZONE_CONF);
+
+		remove("/etc/localtime-");
+		rename("/etc/localtime",  "/etc/localtime-");
+		rename("/etc/localtime+", "/etc/localtime");
+
+		return SR_ERR_OK;
+	}
+
+	timezone = sr_get_str(session, "/ietf-system:system/clock/timezone-name");
+	if (!timezone) {
+		ERROR("Failed reading timezone-name");
+		return SR_ERR_VALIDATION_FAILED;
+	}
+
+	remove("/etc/localtime+");
+	if (run("ln -s /usr/share/zoneinfo/%s /etc/localtime+", timezone)) {
+		ERROR("No such timezone %s", timezone);
+		return SR_ERR_VALIDATION_FAILED;
+	}
+
+	fp = fopen(TIMEZONE_NEXT, "w");
+	if (!fp) {
+		ERRNO("Failed preparing %s", TIMEZONE_NEXT);
+		return SR_ERR_SYS;
+	}
+	fprintf(fp, "%s\n", timezone);
+	fclose(fp);
+
+	return SR_ERR_OK;
+}
+
 #define CHRONY_CONF "/etc/chrony.conf"
 #define CHRONY_PREV CHRONY_CONF "-"
 #define CHRONY_NEXT CHRONY_CONF "+"
@@ -545,6 +607,7 @@ int ietf_system_init(struct confd *confd)
 		goto err;
 
 	REGISTER_CHANGE(confd->session, "ietf-system", "/ietf-system:system/hostname", 0, change_hostname, confd, &confd->sub);
+	REGISTER_CHANGE(confd->session, "ietf-system", "/ietf-system:system/clock", 0, change_clock, confd, &confd->sub);
 	REGISTER_CHANGE(confd->session, "ietf-system", "/ietf-system:system/ntp", 0, change_ntp, confd, &confd->sub);
 
 	REGISTER_RPC(confd->session, "/ietf-system:system-restart",  rpc_exec, "reboot", &confd->sub);

@@ -48,6 +48,9 @@ int sr_plugin_init_cb(sr_session_ctx_t *session, void **priv)
 		goto err;
 	}
 
+	if (rc = sr_install_module(confd.conn, YANG_PATH_"kernelkit-infix-deviations.yang", NULL, NULL))
+		goto err;
+
 	return SR_ERR_OK;
 err:
 	ERROR("init failed: %s", sr_strerror(rc));
