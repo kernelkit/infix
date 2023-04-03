@@ -260,6 +260,64 @@ static void print_val(sr_val_t *val)
 	free(str);
 }
 
+int sr_get_int(sr_session_ctx_t *session, const char *fmt, ...)
+{
+	sr_val_t *val = NULL;
+	char *xpath;
+	va_list ap;
+	int rc = 0;
+	int len;
+
+	va_start(ap, fmt);
+	len = vsnprintf(NULL, 0, fmt, ap) + 1;
+	va_end(ap);
+
+	xpath = alloca(len);
+	if (!xpath)
+		goto fail;
+
+	va_start(ap, fmt);
+	vsnprintf(xpath, len, fmt, ap);
+	va_end(ap);
+
+	if (sr_get_item(session, xpath, 0, &val) || !val)
+		goto fail;
+
+	switch (val->type) {
+	case SR_INT8_T:
+		rc = val->data.int8_val;
+		break;
+	case SR_UINT8_T:
+		rc = val->data.uint8_val;
+		break;
+	case SR_INT16_T:
+		rc = val->data.int16_val;
+		break;
+	case SR_UINT16_T:
+		rc = val->data.uint16_val;
+		break;
+	case SR_INT32_T:
+		rc = val->data.int32_val;
+		break;
+	case SR_UINT32_T:
+		rc = val->data.uint32_val;
+		break;
+	case SR_INT64_T:
+		rc = val->data.int64_val;
+		break;
+	case SR_UINT64_T:
+		rc = val->data.uint64_val;
+		break;
+	default:
+		goto fail;
+	}
+
+fail:
+	if (val)
+		sr_free_val(val);
+	return rc;
+}
+
 int sr_get_bool(sr_session_ctx_t *session, const char *fmt, ...)
 {
 	sr_val_t *val = NULL;
