@@ -1,4 +1,4 @@
-AM_CPPFLAGS             = -DYANG_PATH_=\"$(YANGDIR)/\"
+AM_CPPFLAGS             = -D_DEFAULT_SOURCE -D_XOPEN_SOURCE -DYANG_PATH_=\"$(YANGDIR)/\"
 
 plugindir               = $(srpdplugindir)
 plugin_LTLIBRARIES      = confd-plugin.la

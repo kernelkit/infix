@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: BSD-3-Clause */
 
 #include "core.h"
+#include <ctype.h>
 #include <sys/utsname.h>
 #include <sys/sysinfo.h>
 
@@ -200,38 +201,48 @@ static int rpc_set_datetime(sr_session_ctx_t *session, uint32_t sub_id,
 			    unsigned request_id, sr_val_t **output,
 			    size_t *output_cnt, void *priv)
 {
-	struct timeval tv;
-	struct tm tm;
-	time_t t;
+	const char *isofmt = "%FT%T%z";
+	static int rc = SR_ERR_SYS;
+        struct timeval tv;
+        struct tm tm;
+	char tz[24];
+	char *buf;
+	size_t n;
 
-	memset(&tm, 0, sizeof(tm));
+	buf = strdup(input->data.string_val);
+	if (!buf)
+		return SR_ERR_NO_MEMORY;
 
-	/* Parse 'current-datetime'. */
-	sscanf(input->data.string_val, "%d-%d-%dT%d:%d:%d", &tm.tm_year,
-	       &tm.tm_mon, &tm.tm_mday, &tm.tm_hour, &tm.tm_min,
-	       &tm.tm_sec);
+	n = strlen(buf);
+	if (buf[n - 3] == ':' && (buf[n - 6] == '+' || buf[n - 6] == '-')) {
+                buf[n - 3] = buf[n - 2];
+                buf[n - 2] = buf[n - 1];
+                buf[n - 1] = 0;
+        } else
+                isofmt = "%FT%TZ";
 
-	DEBUG("Setting datetime to '%d-%02d-%02d %02d:%02d:%02d'",
-	      tm.tm_year, tm.tm_mon, tm.tm_mday, tm.tm_hour, tm.tm_min,
-	      tm.tm_sec);
-
-	tm.tm_year -= 1900;
-	tm.tm_mon--;
-
-	/*
-	 * We suppose that this is a local time and ignore timezone.
-	 */
-
-	t = mktime(&tm);
-
-	tv.tv_sec = t;
-	tv.tv_usec = 0;
-	if (settimeofday(&tv, NULL)) {
-		ERRNO("settimeofday() failed");
-		return SR_ERR_SYS;
+        memset(&tm, 0, sizeof(tm));
+        if (!strptime(buf, isofmt, &tm)) {
+                ERRNO("ietf-system:failed strptime: %s", strerror(errno));
+		goto done;
 	}
 
-	return SR_ERR_OK;
+	snprintf(tz, sizeof(tz), "UTC%s%ld", tm.tm_gmtoff > 0 ? "+" : "", tm.tm_gmtoff / 3600);
+	setenv("TZ", tz, 1);
+
+        tv.tv_sec = mktime(&tm);
+        tv.tv_usec = 0;
+	if (settimeofday(&tv, NULL)) {
+		ERRNO("ietf-system:settimeofday() failed");
+		goto done;
+	}
+
+	rc = SR_ERR_OK;
+done:
+	unsetenv("TZ");
+        free(buf);
+
+	return rc;
 }
 
 static int sys_reload_services(void)
