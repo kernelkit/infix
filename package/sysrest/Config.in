@@ -1,0 +1,6 @@
+config BR2_PACKAGE_SYSREST
+	bool "sysrest"
+	depends on BR2_PACKAGE_SYSREPO
+	select BR2_PACKAGE_LIBCFGI
+	help
+	  RESTCONF front-end for Sysrepo

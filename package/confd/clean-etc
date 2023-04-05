@@ -7,7 +7,7 @@
 # ... except for some core services
 reserved()
 {
-    for svc in dnsmasq getty klish lldpd nginx sysklogd sysrepo; do
+    for svc in dnsmasq getty klish lldpd nginx sysklogd sysrepo sysrest; do
 	[ "$1" = "${svc}.conf" ] && return 0
     done
 
