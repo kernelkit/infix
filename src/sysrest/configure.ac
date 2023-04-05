@@ -17,8 +17,9 @@ AC_PROG_INSTALL
 # Check for pkg-config first, warn if it's not installed
 PKG_PROG_PKG_CONFIG
 
-PKG_CHECK_MODULES([sysrepo], [sysrepo >= 2.2.36])
 PKG_CHECK_MODULES([fcgi],    [fcgi  >= 2.4.2])
+PKG_CHECK_MODULES([sysrepo], [sysrepo >= 2.2.36])
+PKG_CHECK_MODULES([libyang], [libyang >= 2.1.55])
 
 # Plugin installation path for sysrepo-plugind
 dnl PKG_CHECK_VAR([srpdplugindir], [sysrepo], [SRPD_PLUGINS_PATH])
