@@ -1,11 +1,12 @@
 #include <err.h>
 #include <libgen.h>
 #include <stdlib.h>
+#include <sysexits.h>
 #include <net/if.h>
 #include <libite/lite.h>
 
 #define _PATH_NET "/run/net"
-#define DEBUG 1
+#define DEBUG 0
 #define dbg(fmt, args...) if (DEBUG) warnx(fmt, ##args)
 
 static char **handled;
@@ -51,7 +52,7 @@ static int if_find(char *ifname)
 	return 0;
 }
 
-static int deps(char *ipath, char *ifname, char *action)
+static int deps(char *ipath, char *ifname, const char *action)
 {
 	char path[strlen(ipath) + 42];
 	int num, rc = -1;
@@ -94,47 +95,94 @@ done:
 	return rc;
 }
 
-static int activate(const char *net, char *gen)
+static int iter(char *path, size_t len, const char *action)
+{
+	char **files;
+	int rc = 0;
+	int num;
+
+	num = dir(path, NULL, NULL, &files, 0);
+	if_alloc(num);
+
+	for (int j = 0; j < num; j++) {
+		char *ifname = files[j];
+		char ipath[len];
+
+		snprintf(ipath, sizeof(ipath), "%s/%s", path, ifname);
+		dbg("Calling deps(%s, %s, %s)", ipath, ifname, action);
+		rc += deps(ipath, ifname, action);
+		free(ifname);
+	}
+
+	if_free();
+
+	return rc;
+}
+
+static int deactivate(const char *net, char *gen)
 {
 	char path[strlen(net) + strlen(gen) + 5 + IFNAMSIZ];
 	char *action[] = {
 		"ip-addr.dn",
 		"ip-link.dn",
-		"ip-link.up",
-		"ip-addr.up",
 	};
-	char **files;
 	int rc = 0;
 
 	snprintf(path, sizeof(path), "%s/%s", net, gen);
-
-	for (size_t i = 0; i < NELEMS(action); i++) {
-		char *act = action[i];
-		int num;
-
-		num = dir(path, NULL, NULL, &files, 0);
-		if_alloc(num);
-
-		for (int j = 0; j < num; j++) {
-			char ipath[sizeof(path)];
-			char *ifname = files[j];
-
-			snprintf(ipath, sizeof(ipath), "%s/%s", path, ifname);
-			rc += deps(ipath, ifname, act);
-			free(ifname);
-		}
-
-		if_free();
-	}
+	for (size_t i = 0; i < NELEMS(action); i++)
+		rc += iter(path, sizeof(path), action[i]);
 
 	return rc;
+}
+
+static int activate(const char *net, char *gen)
+{
+	char path[strlen(net) + strlen(gen) + 5 + IFNAMSIZ];
+	char *action[] = {
+		"ip-link.up",
+		"ip-addr.up",
+	};
+	int rc = 0;
+
+	snprintf(path, sizeof(path), "%s/%s", net, gen);
+	for (size_t i = 0; i < NELEMS(action); i++)
+		rc += iter(path, sizeof(path), action[i]);
+
+	return rc;
+}
+
+static int load_gen(const char *net, char *gen, char *buf, size_t len)
+{
+	FILE *fp;
+
+	fp = fopenf("r", "%s/%s", net, gen);
+	if (!fp)
+		return EX_OSFILE;
+	if (!fgets(buf, len, fp))
+		return EX_IOERR;
+	fclose(fp);
+	chomp(buf);
+
+	return 0;
+}
+
+static int save_gen(const char *net, char *gen, char *buf)
+{
+	FILE *fp;
+
+	fp = fopenf("w", "%s/%s", net, gen);
+	if (!fp)
+		return -1;
+	fprintf(fp, "%s\n", buf);
+	fclose(fp);
+
+	return 0;
 }
 
 int main(void)
 {
 	const char *net = _PATH_NET;
-	char next[512];
-	FILE *fp;
+	char curr[512], next[512];
 	int rc;
 
 	if (getenv("NET_DIR"))
@@ -144,24 +192,31 @@ int main(void)
 			err(1, "makedir");
 	}
 
-	fp = fopenf("r", "%s/next", net);
-	if (!fp)
+	if ((rc = load_gen(net, "next", next, sizeof(next)))) {
+		if (rc == EX_IOERR)
+			warnx("missing next generation");
 		exit(0); /* nothing to do */
+	}
 
-	if (!fgets(next, sizeof(next), fp))
-		err(1, "missing next generation");
-	fclose(fp);
+	if ((rc = load_gen(net, "gen", curr, sizeof(curr)))) {
+		if (rc == EX_IOERR)
+			errx(rc, "missing current generation");
+		/* no current generation */
+	} else {
+		rc = deactivate(net, curr);
+		if (rc)
+			err(1, "failed deactivating current generation");
+	}
 
-	rc = activate(net, chomp(next));
+	rc = activate(net, next);
 	if (rc)
 		err(1, "failed activating next generation");
 
-	fp = fopenf("w", "%s/gen", net);
-	if (!fp)
+	if (save_gen(net, "gen", next))
 		err(1, "next generation applied, failed current");
 
-	fprintf(fp, "%s\n", next);
-	fclose(fp);
+	if (fremove("%s/next", net))
+		err(1, "failed removing %s/next", net);
 
-	return fremove("%s/next", net);
+	return 0;
 }
