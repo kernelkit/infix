@@ -1,0 +1,20 @@
+module infix-system {
+	prefix "infix-sys";
+	yang-version 1.1;
+	namespace "urn:infix:params:xml:ns:yang:infix-system";
+
+	import ietf-system {
+		prefix "sys";
+	}
+
+	revision 2014-08-06 {
+		description "Initial revision.";
+	}
+
+	augment "/sys:system" {
+		leaf motd {
+			type string;
+			description "Set the MotD (Message of the Day), which is shown after login";
+		}
+	}
+}
