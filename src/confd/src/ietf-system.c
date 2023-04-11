@@ -659,6 +659,33 @@ fail:
 	return rc;
 }
 
+static int change_motd(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
+		       const char *xpath, sr_event_t event, unsigned request_id, void *priv)
+{
+	char *nm;
+	FILE *fp;
+
+	/* Ignore all events except SR_EV_DONE */
+	if (event != SR_EV_DONE)
+		return SR_ERR_OK;
+
+	fp = fopen("/etc/motd", "w");
+	if (!fp)
+		return SR_ERR_SYS;
+
+	nm = sr_get_str(session, xpath);
+	if (nm) {
+		fprintf(fp, "%s\n", nm);
+	} else {
+		/* XXX: derive from global "options.h" or /usr/share/factory/ */
+		fprintf(fp, "\033[1;90mNote:\033[0m ");
+		fprintf(fp, "\033[0;90m use help, show, and setup commands to set up and diagnose the system\033[0m\n");
+	}
+	fclose(fp);
+
+	return SR_ERR_OK;
+}
+
 static int change_hostname(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
 	const char *xpath, sr_event_t event, unsigned request_id, void *priv)
 {
@@ -752,6 +779,9 @@ int ietf_system_init(struct confd *confd)
 
 	if (rc = sr_install_module(confd->conn, YANG_PATH_"ietf-system@2014-08-06.yang", NULL, features))
 		goto err;
+	/* Augment to ietf-systems */
+	if (rc = sr_install_module(confd->conn, YANG_PATH_"infix-system@2014-08-06.yang", NULL, NULL))
+		goto err;
 
 	rc = sr_oper_get_subscribe(confd->session, "ietf-system", CLOCK_PATH_,
 				   clock_cb, NULL, SR_SUBSCR_DEFAULT, &confd->sub);
@@ -764,6 +794,7 @@ int ietf_system_init(struct confd *confd)
 		goto err;
 
 	REGISTER_CHANGE(confd->session, "ietf-system", "/ietf-system:system/hostname", 0, change_hostname, confd, &confd->sub);
+	REGISTER_CHANGE(confd->session, "ietf-system", "/ietf-system:system/infix-system:motd", 0, change_motd, confd, &confd->sub);
 	REGISTER_CHANGE(confd->session, "ietf-system", "/ietf-system:system/clock", 0, change_clock, confd, &confd->sub);
 	REGISTER_CHANGE(confd->session, "ietf-system", "/ietf-system:system/ntp", 0, change_ntp, confd, &confd->sub);
 	REGISTER_CHANGE(confd->session, "ietf-system", "/ietf-system:system/dns-resolver", 0, change_dns, confd, &confd->sub);

@@ -22,6 +22,8 @@ define SYSREPO_PLUGIN_SYSTEM_INSTALL_YANG_MODELS
                 $(TARGET_DIR)/usr/share/yang/modules/sysrepo-plugin-system/iana-crypt-hash@2014-08-06.yang
 	$(INSTALL) -D -m 0644 $(@D)/yang/ietf-system@2014-08-06.yang \
                 $(TARGET_DIR)/usr/share/yang/modules/sysrepo-plugin-system/ietf-system@2014-08-06.yang
+	$(INSTALL) -D -m 0644 $(@D)/yang/infix-system@2014-08-06.yang \
+                $(TARGET_DIR)/usr/share/yang/modules/sysrepo-plugin-system/infix-system@2014-08-06.yang
 endef
 SYSREPO_PLUGIN_SYSTEM_POST_INSTALL_TARGET_HOOKS += SYSREPO_PLUGIN_SYSTEM_INSTALL_YANG_MODELS
 
