@@ -40,7 +40,7 @@ mkdir -p $NET_DIR/0
 echo 0 > $NET_DIR/next
 
 mkdir -p $NET_DIR/0/lo/deps
-gensh $NET_DIR/0/lo/ip-link.up
+gensh $NET_DIR/0/lo/ip.init
 
 mkdir -p $NET_DIR/0/eth0/deps
 mkdir -p $NET_DIR/0/eth1/deps
@@ -48,26 +48,26 @@ mkdir -p $NET_DIR/0/eth2/deps
 mkdir -p $NET_DIR/0/eth3/deps
 mkdir -p $NET_DIR/0/eth4/deps
 
-gensh $NET_DIR/0/eth0/ip-link.up
-gensh $NET_DIR/0/eth1/ip-link.up
-gensh $NET_DIR/0/eth2/ip-link.up
-gensh $NET_DIR/0/eth3/ip-link.up
-gensh $NET_DIR/0/eth4/ip-link.up
+gensh $NET_DIR/0/eth0/ip.init
+gensh $NET_DIR/0/eth1/ip.init
+gensh $NET_DIR/0/eth2/ip.init
+gensh $NET_DIR/0/eth3/ip.init
+gensh $NET_DIR/0/eth4/ip.init
 
 mkdir -p $NET_DIR/0/lag0/deps
 ln -sf ../../eth3 $NET_DIR/0/lag0/deps/
 ln -sf ../../eth4 $NET_DIR/0/lag0/deps/
-gensh $NET_DIR/0/lag0/ip-link.up
+gensh $NET_DIR/0/lag0/ip.init
 
 mkdir -p $NET_DIR/0/br0/deps
 ln -sf ../../eth1 $NET_DIR/0/br0/deps/
 ln -sf ../../eth2 $NET_DIR/0/br0/deps/
 ln -sf ../../lag0 $NET_DIR/0/br0/deps/
-gensh $NET_DIR/0/br0/ip-link.up
+gensh $NET_DIR/0/br0/ip.init
 
 mkdir -p $NET_DIR/0/vlan1/deps
 ln -sf ../../br0 $NET_DIR/0/vlan1/deps/
-gensh $NET_DIR/0/vlan1/ip-link.up
+gensh $NET_DIR/0/vlan1/ip.init
 
 check "initial startup, gen 0"
 
@@ -92,8 +92,8 @@ ln -sf ../../eth3 $NET_DIR/1/br0/deps/
 mkdir -p $NET_DIR/1/vlan1/deps
 ln -sf ../../br0 $NET_DIR/1/vlan1/deps/
 
-gensh $NET_DIR/0/eth3/ip-link.dn
-gensh $NET_DIR/1/eth3/ip-link.up
+gensh $NET_DIR/0/eth3/ip.exit
+gensh $NET_DIR/1/eth3/ip.init
 echo 1 > $NET_DIR/next
 
 check "move eth3 from lag0 to br0"

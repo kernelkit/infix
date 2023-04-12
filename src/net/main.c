@@ -123,8 +123,9 @@ static int deactivate(const char *net, char *gen)
 {
 	char path[strlen(net) + strlen(gen) + 5 + IFNAMSIZ];
 	char *action[] = {
-		"ip-addr.dn",
-		"ip-link.dn",
+		"ip.exit",
+		"bridge.exit",
+		"ethtool.exit",
 	};
 	int rc = 0;
 
@@ -139,8 +140,9 @@ static int activate(const char *net, char *gen)
 {
 	char path[strlen(net) + strlen(gen) + 5 + IFNAMSIZ];
 	char *action[] = {
-		"ip-link.up",
-		"ip-addr.up",
+		"ethtool.init",
+		"bridge.init",
+		"ip.init",
 	};
 	int rc = 0;
 

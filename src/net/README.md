@@ -11,7 +11,7 @@ Concept Overview
 ----------------
 
 net applies a configuration from `/run/net/next`, where `next` is a file
-that holds the number of the current generation.  It is up to the user,
+that holds the number of the next net generation.  It is up to the user,
 i.e., sysrepo, to create the below tree structure with commands to run.
 
 The setup we start with and later move `eth4` from `lag0` to `br0`.
@@ -25,29 +25,23 @@ The setup we start with and later move `eth4` from `lag0` to `br0`.
                  eth4  eth5
 
 Consider the case when `next` contains `0`, net reads all interfaces, in
-dependency order, from `/run/net/0/` running all `ip-link` and `ip-addr`
-commands.  When done, it writes `0` to the file `/run/net/gen` and then
-removes the `next` file to confirm the generation has been activated.
+dependency order, from `/run/net/0/` running all `cmd.init` scripts.
+When done, it writes `0` to the file `/run/net/gen` and then removes the
+`next` file to confirm the generation has been activated.
 
 **Note:** it is currently up to the user to remove any old generation.
 
      /run/net/0/
-	   |-- lo/
-	   |    |-- deps/
-	   |    |-- ip-link.up
-	   |    `-- ip-addr.up
 	   |-- br0/
 	   |    |-- deps/
 	   |    |    |-- eth1 -> ../../eth1
 	   |    |    |-- eth2 -> ../../eth2
 	   |    |    |-- eth3 -> ../../eth3
 	   |    |    `-- lag0 -> ../../lag0
-	   |    |-- ip-link.up
-	   |    `-- ip-addr.up
+	   |    `-- ip.init
 	   |-- eth0/
 	   |    |-- deps/
-	   |    |-- ip-link.up
-	   |    `-- ip-addr.up
+	   |    `-- ip.init
 	   |-- ethX/
 	   |    |-- ...
 	   :    :
@@ -55,13 +49,11 @@ removes the `next` file to confirm the generation has been activated.
 	   |    |-- deps/
 	   |    |    |-- eth4 -> ../../eth4
 	   |    |    `-- eth5 -> ../../eth5
-	   |    |-- ip-link.up
-	   |    `-- ip-addr.up
+	   |    `-- ip.init
 	   `-- vlan1/
 	        |-- deps/
 	        |    `-- br0 -> ../../br0
-	        |-- ip-link.up
-	        `-- ip-addr.up
+	        `-- ip.init
 
 The `deps/` sub-directory for each of the interfaces contains symlinks
 to any interfaces this interface may depend on.  I.e., those interfaces
@@ -70,7 +62,7 @@ are evaluated first.
 Essentially, all leaves must be set up before their parents.  Moving a
 leaf from one parent to another, e.g., from lag0 to br0, is tricky, it
 involves traversing the previous dependency order when removing leaves,
-and traversing the next dependency order when addning, see next section
+and traversing the next dependency order when adding, see next section
 for an example.
 
 
@@ -83,52 +75,45 @@ and generate the `next` generation.  However, as mentioned previously,
 when moving leaves between parents we must do so in the dependency order
 of the current generation.
 
-So, the user (sysrepo) needs to add `.dn` scripts in the current tree,
-and `.up` scripts in the next.
+So, the user (sysrepo) needs to add `cmd.exit` scripts in the current
+tree for every leaf that leaves a parent, and `cmd.init` scripts for
+leaves that are new or added to parents in the next generation.
 
 In our example, interface `eth4` is moved from `lag0` to `br0`, so we
-need to run `eth4/ip-link.dn` in the current generation first to remove
-`eth4` from `lag0` before its `ip-link.up` script in the next generation
+need to run `eth4/ip.exit` in the current generation first to remove
+`eth4` from `lag0` before its `ip.init` script in the next generation
 sets `eth4` as a bridge member instead.
 
-We traverse the current generation and execute all `.dn` scripts:
+We traverse the current generation and execute all `cmd.exit` scripts:
 
     /run/net/<GEN>/
-	   |-- lo/
-	   |    `-- deps/
 	   |-- br0/
 	   |    |-- deps/
 	   |    |    |-- eth1 -> ../../eth1
 	   |    |    |-- eth2 -> ../../eth2
 	   |    |    |-- eth3 -> ../../eth3
 	   |    |    `-- lag0 -> ../../lag0
-	   |    `-- ip-link.up
+	   |    `-- ip.init
 	   |-- eth0/
 	   |    |-- deps/
-	   |    |-- ip-link.up
-	   |    `-- ip-addr.up
+	   |    `-- ip.init
 	   |-- eth4/
 	   |    |-- deps/
-	   |    |-- ip-link.dn
-	   |    `-- ip-link.up
+	   |    |-- ip.exit
+	   |    `-- ip.init
 	   |-- lag0/
 	   |    |-- deps/
 	   |    |    |-- eth4 -> ../../eth4
 	   |    |    `-- eth5 -> ../../eth5
-	   |    `-- ip-link.up
+	   |    `-- ip.init
 	   `-- vlan1/
 	        |-- deps/
 	        |    `-- br0 -> ../../br0
-	        |-- ip-link.up
-	        `-- ip-addr.up
+	        `-- ip.init
 
-Now we can run all the `.up` scripts in the next generation:
+Now we can run all the `cmd.init` scripts in the next generation:
 
     /run/net/<GEN+1>/
-	   |-- lo/
-	   |    |-- deps/
-	   |    |-- ip-link.up
-	   |    `-- ip-addr.up
 	   |-- br0/
 	   |    |-- deps/
 	   |    |    |-- eth1 -> ../../eth1
@@ -136,23 +121,25 @@ Now we can run all the `.up` scripts in the next generation:
 	   |    |    |-- eth3 -> ../../eth3
 	   |    |    |-- eth4 -> ../../eth4
 	   |    |    `-- lag0 -> ../../lag0
-	   |    `-- ip-link.up
+	   |    `-- ip.init
 	   |-- eth0/
 	   |    |-- deps/
-	   |    |-- ip-link.up
-	   |    `-- ip-addr.up
+	   |    `-- ip.init
 	   |-- eth4/
 	   |    |-- deps/
-	   |    |-- ip-link.dn
-	   |    `-- ip-link.up
+	   |    `-- ip.init
 	   |-- lag0/
 	   |    |-- deps/
 	   |    |    `-- eth5 -> ../../eth5
-	   |    `-- ip-link.up
+	   |    `-- ip.init
 	   `-- vlan1/
 	        |-- deps/
 	        |    `-- br0 -> ../../br0
-	        |-- ip-link.up
-	        `-- ip-addr.up
+	        `-- ip.init
 
-
+When there are no changes compared to the previous generation, the
+`cmd.init` scripts can be empty.  The existence of an `ip.init` script,
+however, means that it is allowed to be brought up on `net up`.  The
+existence of a directory (named after an interface) means the interface
+should be brought down on `net down`.  Doing `net up ifname` is a subset
+of that for a single interface `ifname`.
