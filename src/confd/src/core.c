@@ -45,6 +45,9 @@ int sr_plugin_init_cb(sr_session_ctx_t *session, void **priv)
 	if (rc = ietf_system_init(&confd))
 		goto err;
 
+	/* if (rc = ietf_interfaces_init(&confd)) */
+	/* 	goto err; */
+
 	/* YOUR_INIT GOES HERE */
 
 	/* Set up hook to save startup-config to persisten backend store */
