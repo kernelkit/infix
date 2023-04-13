@@ -1,6 +1,0 @@
-config BR2_PACKAGE_CLIGEN
-	bool "cligen"
-	help
-	  CLIgen is a Command-Line Interface generator.
-
-	  https://github.com/clicon/cligen
