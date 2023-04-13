@@ -58,6 +58,7 @@ jobs:
         with:
           path: output/${{ steps.vars.outputs.tgz }}
   release:
+    if: github.repository == 'kernelkit/infix' && github.ref == 'refs/heads/main'
     name: Upload Latest Build
     needs: build
     runs-on: ubuntu-latest
