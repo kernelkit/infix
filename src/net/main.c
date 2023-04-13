@@ -93,26 +93,7 @@ done:
 
 static int save_rdeps(const char *path, char *gen)
 {
-	char ipath[strlen(path) + strlen(gen) + 16 + 4];
-#if 0
-	char **list;
-	int i, num;
-
-	snprintf(ipath, sizeof(ipath), "%s/%s", path, gen);
-	num = dir(ipath, NULL, NULL, &list, 0);
-	if (!num)
-		return -1;
-
-	for (i = 0; i < num; i++) {
-		snprintf(ipath, sizeof(ipath), "%s/%s/%s", path, gen, list[i]);
-		if (access(ipath, X_OK))
-			continue;
-
-		savedep(ipath);
-	}
-#endif
-	snprintf(ipath, sizeof(ipath), "%s/%s", path, gen);
-	return systemf("sed '1!G;h;$!d' < %s/deps >%s/rdeps", ipath, ipath);
+	return systemf("sed '1!G;h;$!d' < %s/%s/deps >%s/%s/rdeps", path, gen, path, gen);
 }
 
 static int pipeit(FILE *pp, const char *action)
