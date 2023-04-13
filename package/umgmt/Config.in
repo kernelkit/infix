@@ -1,6 +1,0 @@
-config BR2_PACKAGE_UMGMT
-	bool "umgmt"
-	help
-	  C library for user management on linux systems.
-
-	  https://github.com/sartura/umgmt
