@@ -15,6 +15,10 @@ AC_CONFIG_FILES([
 AC_PROG_CC
 AC_PROG_INSTALL
 
+AC_CONFIG_LIBOBJ_DIR(lib)
+AC_REPLACE_FUNCS(vasprintf)
+AC_REPLACE_FUNCS(asprintf)
+
 # Check for pkg-config first, warn if it's not installed
 PKG_PROG_PKG_CONFIG
 
