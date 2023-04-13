@@ -44,30 +44,29 @@ mkdir -p $NET_DIR/0/eth3/deps
 mkdir -p $NET_DIR/0/eth4/deps
 mkdir -p $NET_DIR/0/eth5/deps
 
-gensh $NET_DIR/0/eth0/ip.init
-gensh $NET_DIR/0/eth1/ip.init
-gensh $NET_DIR/0/eth2/ip.init
-gensh $NET_DIR/0/eth3/ip.init
-gensh $NET_DIR/0/eth4/ip.init
-gensh $NET_DIR/0/eth5/ip.init
+gensh $NET_DIR/0/eth0/init.ip
+gensh $NET_DIR/0/eth1/init.ip
+gensh $NET_DIR/0/eth2/init.ip
+gensh $NET_DIR/0/eth3/init.ip
+gensh $NET_DIR/0/eth4/init.ip
+gensh $NET_DIR/0/eth5/init.ip
 
 mkdir -p $NET_DIR/0/lag0/deps
 ln -sf ../../eth4 $NET_DIR/0/lag0/deps/
 ln -sf ../../eth5 $NET_DIR/0/lag0/deps/
-gensh $NET_DIR/0/lag0/lag.init
-gensh $NET_DIR/0/lag0/ip.init
+gensh $NET_DIR/0/lag0/init.ip
 
 mkdir -p $NET_DIR/0/br0/deps
 ln -sf ../../eth1 $NET_DIR/0/br0/deps/
 ln -sf ../../eth2 $NET_DIR/0/br0/deps/
 ln -sf ../../eth3 $NET_DIR/0/br0/deps/
 ln -sf ../../lag0 $NET_DIR/0/br0/deps/
-gensh $NET_DIR/0/br0/bridge.init
-gensh $NET_DIR/0/br0/ip.init
+gensh $NET_DIR/0/br0/init.bridge
+gensh $NET_DIR/0/br0/init.ip
 
 mkdir -p $NET_DIR/0/vlan1/deps
 ln -sf ../../br0 $NET_DIR/0/vlan1/deps/
-gensh $NET_DIR/0/vlan1/ip.init
+gensh $NET_DIR/0/vlan1/init.ip
 
 check "initial startup, gen 0"
 cat $NET_DIR/0/rdeps
@@ -94,8 +93,8 @@ ln -sf ../../eth4 $NET_DIR/1/br0/deps/
 mkdir -p $NET_DIR/1/vlan1/deps
 ln -sf ../../br0 $NET_DIR/1/vlan1/deps/
 
-gensh $NET_DIR/0/eth4/ip.exit
-gensh $NET_DIR/1/eth4/ip.init
+gensh $NET_DIR/0/eth4/exit.ip
+gensh $NET_DIR/1/eth4/init.ip
 echo 1 > $NET_DIR/next
 
 check "move eth4 from lag0 to br0"
@@ -114,8 +113,8 @@ mkdir -p $NET_DIR/2/eth5/deps
 mkdir -p $NET_DIR/2/lag0/deps
 ln -sf ../../eth5 $NET_DIR/2/lag0/deps/
 
-gensh $NET_DIR/1/vlan1/ip.exit
-gensh $NET_DIR/1/br0/ip.exit
+gensh $NET_DIR/1/vlan1/exit.ip
+gensh $NET_DIR/1/br0/exit.ip
 echo 2 > $NET_DIR/next
 
 check "delete vlan1 and br0"

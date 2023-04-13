@@ -127,14 +127,23 @@ static int pipeit(FILE *pp, const char *action)
 
 static int run(const char *action)
 {
+	char *ptr;
 	int rc;
 
-	if (strstr(action, "/ip.") || strstr(action, "/lag."))
+	ptr = strrchr(action, '.');
+	if (!ptr) {
+		warnx("invalid action script: '%s'", action);
+		return 0;
+	}
+
+	if (strcmp(action, ".ip"))
 		return pipeit(ip, action);
-	if (strstr(action, "/bridge."))
+	if (strcmp(action, ".bridge"))
 		return pipeit(bridge, action);
 
-	 /* ethool does not support batch mode (yet) */
+	 /* other actions are plain shell scripts (.sh) */
+	log("running %s ...", action);
+
 	rc = systemf("%s", action);
 	if (rc)
 		warn("failed %s, rc %d", action, rc);
@@ -237,9 +246,9 @@ static int deactivate(const char *net, char *gen)
 {
 	char path[strlen(net) + strlen(gen) + 5 + IFNAMSIZ];
 	char *action[] = {
-		"bridge.exit",
-		"ip.exit",
-		"ethtool.exit",
+		"exit.bridge",
+		"exit.ip",
+		"exit-ethtool.sh",
 	};
 	int rc = 0;
 
@@ -254,9 +263,9 @@ static int activate(const char *net, char *gen)
 {
 	char path[strlen(net) + strlen(gen) + 5 + IFNAMSIZ];
 	char *action[] = {
-		"ethtool.init",
-		"ip.init",
-		"bridge.init",
+		"init-ethtool.sh",
+		"init.ip",
+		"init.bridge",
 	};
 	int rc = 0;
 

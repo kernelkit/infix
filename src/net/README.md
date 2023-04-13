@@ -25,7 +25,7 @@ The setup we start with and later move `eth4` from `lag0` to `br0`.
                  eth4  eth5
 
 Consider the case when `next` contains `0`, net reads all interfaces, in
-dependency order, from `/run/net/0/` running all `cmd.init` scripts.
+dependency order, from `/run/net/0/` running all `init.cmd` scripts.
 When done, it writes `0` to the file `/run/net/gen` and then removes the
 `next` file to confirm the generation has been activated.
 
@@ -38,10 +38,10 @@ When done, it writes `0` to the file `/run/net/gen` and then removes the
 	   |    |    |-- eth2 -> ../../eth2
 	   |    |    |-- eth3 -> ../../eth3
 	   |    |    `-- lag0 -> ../../lag0
-	   |    `-- ip.init
+	   |    `-- init.ip
 	   |-- eth0/
 	   |    |-- deps/
-	   |    `-- ip.init
+	   |    `-- init.ip
 	   |-- ethX/
 	   |    |-- ...
 	   :    :
@@ -49,11 +49,11 @@ When done, it writes `0` to the file `/run/net/gen` and then removes the
 	   |    |-- deps/
 	   |    |    |-- eth4 -> ../../eth4
 	   |    |    `-- eth5 -> ../../eth5
-	   |    `-- ip.init
+	   |    `-- init.ip
 	   `-- vlan1/
 	        |-- deps/
 	        |    `-- br0 -> ../../br0
-	        `-- ip.init
+	        `-- init.ip
 
 The `deps/` sub-directory for each of the interfaces contains symlinks
 to any interfaces this interface may depend on.  I.e., those interfaces
@@ -75,16 +75,16 @@ and generate the `next` generation.  However, as mentioned previously,
 when moving leaves between parents we must do so in the dependency order
 of the current generation.
 
-So, the user (sysrepo) needs to add `cmd.exit` scripts in the current
-tree for every leaf that leaves a parent, and `cmd.init` scripts for
+So, the user (sysrepo) needs to add `exit.cmd` scripts in the current
+tree for every leaf that leaves a parent, and `init.cmd` scripts for
 leaves that are new or added to parents in the next generation.
 
 In our example, interface `eth4` is moved from `lag0` to `br0`, so we
-need to run `eth4/ip.exit` in the current generation first to remove
-`eth4` from `lag0` before its `ip.init` script in the next generation
+need to run `eth4/exit.ip` in the current generation first to remove
+`eth4` from `lag0` before its `init.ip` script in the next generation
 sets `eth4` as a bridge member instead.
 
-We traverse the current generation and execute all `cmd.exit` scripts:
+We traverse the current generation and execute all `exit.cmd` scripts:
 
     /run/net/<GEN>/
 	   |-- br0/
@@ -93,25 +93,25 @@ We traverse the current generation and execute all `cmd.exit` scripts:
 	   |    |    |-- eth2 -> ../../eth2
 	   |    |    |-- eth3 -> ../../eth3
 	   |    |    `-- lag0 -> ../../lag0
-	   |    `-- ip.init
+	   |    `-- init.ip
 	   |-- eth0/
 	   |    |-- deps/
-	   |    `-- ip.init
+	   |    `-- init.ip
 	   |-- eth4/
 	   |    |-- deps/
-	   |    |-- ip.exit
-	   |    `-- ip.init
+	   |    |-- exit.ip
+	   |    `-- init.ip
 	   |-- lag0/
 	   |    |-- deps/
 	   |    |    |-- eth4 -> ../../eth4
 	   |    |    `-- eth5 -> ../../eth5
-	   |    `-- ip.init
+	   |    `-- init.ip
 	   `-- vlan1/
 	        |-- deps/
 	        |    `-- br0 -> ../../br0
-	        `-- ip.init
+	        `-- init.ip
 
-Now we can run all the `cmd.init` scripts in the next generation:
+Now we can run all the `init.cmd` scripts in the next generation:
 
     /run/net/<GEN+1>/
 	   |-- br0/
@@ -121,24 +121,24 @@ Now we can run all the `cmd.init` scripts in the next generation:
 	   |    |    |-- eth3 -> ../../eth3
 	   |    |    |-- eth4 -> ../../eth4
 	   |    |    `-- lag0 -> ../../lag0
-	   |    `-- ip.init
+	   |    `-- init.ip
 	   |-- eth0/
 	   |    |-- deps/
-	   |    `-- ip.init
+	   |    `-- init.ip
 	   |-- eth4/
 	   |    |-- deps/
-	   |    `-- ip.init
+	   |    `-- init.ip
 	   |-- lag0/
 	   |    |-- deps/
 	   |    |    `-- eth5 -> ../../eth5
-	   |    `-- ip.init
+	   |    `-- init.ip
 	   `-- vlan1/
 	        |-- deps/
 	        |    `-- br0 -> ../../br0
-	        `-- ip.init
+	        `-- init.ip
 
 When there are no changes compared to the previous generation, the
-`cmd.init` scripts can be empty.  The existence of an `ip.init` script,
+`init.cmd` scripts can be empty.  The existence of an `init.ip` script,
 however, means that it is allowed to be brought up on `net up`.  The
 existence of a directory (named after an interface) means the interface
 should be brought down on `net down`.  Doing `net up ifname` is a subset
