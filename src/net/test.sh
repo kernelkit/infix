@@ -8,6 +8,7 @@ export NET_DIR
 gensh()
 {
     cat <<-EOF >"$1"
+
 	EOF
     chmod +x "$1"
 }
@@ -89,6 +90,7 @@ ln -sf ../../eth1 $NET_DIR/1/br0/deps/
 ln -sf ../../eth2 $NET_DIR/1/br0/deps/
 ln -sf ../../eth3 $NET_DIR/1/br0/deps/
 ln -sf ../../eth4 $NET_DIR/1/br0/deps/
+ln -sf ../../lag0 $NET_DIR/1/br0/deps/
 
 mkdir -p $NET_DIR/1/vlan1/deps
 ln -sf ../../br0 $NET_DIR/1/vlan1/deps/
