@@ -1,0 +1,22 @@
+config BR2_PACKAGE_KLISH_PLUGIN_SYSREPO
+	bool "klish-plugin-sysrepo"
+	depends on BR2_PACKAGE_KLISH
+	depends on BR2_PACKAGE_SYSREPO
+	help
+	  This plugin allows klish framework to implement Juniper-like
+	  interface for configuration. It uses sysrepo project as
+	  background for datastores and libyang for yang files parsing
+	  and configuration schemes.
+
+	  https://src.libcode.org/pkun/klish-plugin-sysrepo/
+
+config BR2_PACKAGE_KLISH_PLUGIN_SYSREPO_XML
+	bool "install xml"
+	depends on BR2_PACKAGE_KLISH_PLUGIN_SYSREPO
+	depends on !BR2_PACKAGE_KLINFIX
+	default y
+	help
+	  Install the default XML spec bundled with the project, which
+	  exports the 'show' command, and the 'configure' view, etc.
+
+	  If unsure, say Y.

@@ -1,0 +1,7 @@
+config BR2_PACKAGE_FAUX
+	bool "faux"
+	depends on BR2_USE_MMU
+	help
+	  The library contains a set of auxiliary functions.
+
+	  https://src.libcode.org/pkun/faux/

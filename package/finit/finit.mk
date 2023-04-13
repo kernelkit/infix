@@ -89,6 +89,12 @@ else
 FINIT_CONF_OPTS += --disable-rtc-plugin
 endif
 
+ifeq ($(BR2_PACKAGE_FINIT_RTC_DATE),y)
+FINIT_CONF_OPTS += --with-rtc-date="$(BR2_PACKAGE_FINIT_RTC_DATE)"
+else
+FINIT_CONF_OPTS += --without-rtc-date
+endif
+
 ifeq ($(BR2_PACKAGE_FINIT_PLUGIN_TTY),y)
 FINIT_CONF_OPTS += --enable-tty-plugin
 else

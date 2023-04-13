@@ -1,0 +1,22 @@
+config BR2_PACKAGE_KLISH
+	bool "klish"
+	depends on BR2_USE_MMU
+	select BR2_PACKAGE_FAUX
+	select BR2_PACKAGE_LIBXML2
+	help
+	  Klish is a framework for implementing a CISCO-like or
+	  Juniper-like CLI on a UNIX systems.
+
+	  https://src.libcode.org/pkun/klish/
+
+config BR2_PACKAGE_KLISH_DEFAULT_XML
+	bool "install xml"
+	depends on BR2_PACKAGE_KLISH
+	depends on !BR2_PACKAGE_KLINFIX
+	default y
+	help
+	  Install a small XML spec containing a definition of an
+	  'exit' command. This lets klish work out-of-the-box, even if
+	  no other specs are available.
+
+	  If unsure, say Y.

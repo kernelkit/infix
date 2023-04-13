@@ -150,6 +150,28 @@ config BR2_PACKAGE_FINIT_PLUGIN_RTC
 
 	  For lxc/docker application builds you do not need this.
 
+if BR2_PACKAGE_FINIT_PLUGIN_RTC
+
+config BR2_PACKAGE_FINIT_RTC_DATE
+	string "Fallback RTC date"
+	help
+	  On many embedded systems there is no RTC battery, maybe there
+	  is a "supercap" but on first boot it is usually out of juice.
+	  When this happens the RTC will return its default value, or
+	  the driver will fail and report error.  In these cases Linux
+	  will detect a too old/invalid date set from userspace.  Any
+	  date prior to 2000-01-01 00:00 is denied.  (Previously this
+	  was the start of the UNIX epoch, Jan 1 1970.)
+
+	  This setting changes the default fallback date/time the RTC
+	  plugin uses in case of such failures.  Useful, e.g., for an
+	  HTTPS certificate generated at first boot before any network
+	  connection (DHCP/NTP) has been made to get the current time.
+	  Ensuring the default system time to be closer to actual time
+	  for a period after releasing a firmware image.
+
+endif
+
 config BR2_PACKAGE_FINIT_PLUGIN_TTY
 	bool "TTY plugin"
 	help

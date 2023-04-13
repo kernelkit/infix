@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<KLISH
+    xmlns="https://klish.libcode.org/klish3"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="https://src.libcode.org/pkun/klish/src/master/klish.xsd">
+
+  <PLUGIN name="klish"/>
+
+  <ENTRY name="COMMAND" purpose="ptype">
+    <ENTRY name="completion" purpose="completion">
+      <ACTION sym="completion_COMMAND"/>
+    </ENTRY>
+    <ENTRY name="help" purpose="help">
+      <ACTION sym="completion_COMMAND"/>
+    </ENTRY>
+    <ACTION sym="COMMAND"/>
+  </ENTRY>
+
+  <ENTRY name="main" mode="switch" container="true">
+
+    <ENTRY name="prompt" purpose="prompt">
+      <ACTION sym="prompt">%u@%h&gt; </ACTION>
+    </ENTRY>
+
+    <ENTRY name="exit" help="Exit view">
+      <ENTRY name="COMMAND" purpose="ptype" ref="/COMMAND"/>
+      <ACTION sym="nav">pop</ACTION>
+      <ACTION sym="printl">Exiting klish session</ACTION>
+    </ENTRY>
+
+    <HOTKEY key="^Z" cmd="exit"/>
+
+  </ENTRY>
+
+</KLISH>

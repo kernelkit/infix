@@ -1,0 +1,60 @@
+commit 9e18bd10df1ac2aabd46a790ac6148c638a513b8
+Author: Joachim Wiberg <troglobit@gmail.com>
+Date:   Fri Mar 31 10:44:32 2023 +0200
+
+    netopeer2-server: add support for running in foreground with syslog
+    
+    Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+
+diff --git a/src/main.c b/src/main.c
+index 6d054f5..c403000 100644
+--- a/src/main.c
++++ b/src/main.c
+@@ -1082,6 +1082,7 @@ print_usage(char *progname)
+     fprintf(stdout, " -f PATH    Path to netopeer2 server files directory (default path is \"%s\")\n", SERVER_DIR);
+     fprintf(stdout, " -U[PATH]   Listen on a local UNIX socket (default path is \"%s\").\n", NP2SRV_UNIX_SOCK_PATH);
+     fprintf(stdout, " -m MODE    Set mode for the listening UNIX socket.\n");
++    fprintf(stdout, " -n         Run in foreground and log to syslog.\n");
+     fprintf(stdout, " -u UID     Set UID/user for the listening UNIX socket.\n");
+     fprintf(stdout, " -g GID     Set GID/group for the listening UNIX socket.\n");
+     fprintf(stdout, " -t TIMEOUT Timeout in seconds of all sysrepo functions (applying edit-config, reading data, ...),\n");
+@@ -1112,7 +1113,7 @@ main(int argc, char *argv[])
+ {
+     int ret = EXIT_SUCCESS;
+     int c, *idx, i;
+-    int daemonize = 1, verb = 0;
++    int daemonize = 1, verb = 0, use_syslog = 0;
+     int pidfd;
+     const char *pidfile = NP2SRV_PID_FILE_PATH;
+     char pid[8];
+@@ -1145,7 +1146,7 @@ main(int argc, char *argv[])
+     np2srv.server_dir = SERVER_DIR;
+ 
+     /* process command line options */
+-    while ((c = getopt(argc, argv, "dhVp:f:U::m:u:g:t:x:v:c:")) != -1) {
++    while ((c = getopt(argc, argv, "dhVp:f:U::m:nu:g:t:x:v:c:")) != -1) {
+         switch (c) {
+         case 'd':
+             daemonize = 0;
+@@ -1202,6 +1203,10 @@ main(int argc, char *argv[])
+                 return EXIT_FAILURE;
+             }
+             break;
++	case 'n':
++	    daemonize = 0;
++	    use_syslog = 1;
++	    break;
+         case 'u':
+             np2srv.unix_uid = strtoul(optarg, &ptr, 10);
+             if (*ptr) {
+@@ -1306,6 +1311,10 @@ main(int argc, char *argv[])
+         np2_stderr_log = 0;
+     }
+ 
++    /* use syslog even if running in foreground */
++    if (use_syslog == 1)
++        np2_stderr_log = 0;
++
+     /* make sure we are the only instance - lock the PID file and write the PID */
+     pidfd = open(pidfile, O_RDWR | O_CREAT, 0640);
+     if (pidfd < 0) {

@@ -1,0 +1,215 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<KLISH
+	xmlns="https://klish.libcode.org/klish3"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="https://src.libcode.org/pkun/klish/src/master/klish.xsd">
+
+  <PLUGIN name="klish"/>
+  <PLUGIN name="klinfix"/>
+  <PLUGIN name="script"/>
+
+  <PLUGIN name="sysrepo">
+    ShowBrackets = y
+    ShowSemicolons = y
+    FirstKeyWithStatement = n
+    MultiKeysWithStatement = y
+    Colorize = y
+    Indent = 2
+  </PLUGIN>
+
+  <PTYPE name="DATASTORE">
+    <COMPL>
+      <ACTION sym="printl">factory-config</ACTION>
+      <ACTION sym="printl">startup-config</ACTION>
+      <ACTION sym="printl">running-config</ACTION>
+    </COMPL>
+    <ACTION sym="STRING"/>
+  </PTYPE>
+
+  <PTYPE name="RW_DATASTORE">
+    <COMPL>
+      <ACTION sym="printl">startup-config</ACTION>
+      <ACTION sym="printl">running-config</ACTION>
+    </COMPL>
+    <ACTION sym="STRING"/>
+  </PTYPE>
+
+  <PTYPE name="PLINE_SET">
+    <COMPL>
+      <ACTION sym="srp_compl@sysrepo"/>
+    </COMPL>
+    <HELP>
+      <ACTION sym="srp_help@sysrepo"/>
+    </HELP>
+    <ACTION sym="PLINE_SET@sysrepo"/>
+  </PTYPE>
+
+  <PTYPE name="PLINE_DEL">
+    <COMPL>
+      <ACTION sym="srp_compl@sysrepo"/>
+    </COMPL>
+    <HELP>
+      <ACTION sym="srp_help@sysrepo"/>
+    </HELP>
+    <ACTION sym="PLINE_DEL@sysrepo"/>
+  </PTYPE>
+
+  <PTYPE name="PLINE_EDIT">
+    <COMPL>
+      <ACTION sym="srp_compl@sysrepo"/>
+    </COMPL>
+    <HELP>
+      <ACTION sym="srp_help@sysrepo"/>
+    </HELP>
+    <ACTION sym="PLINE_EDIT@sysrepo"/>
+  </PTYPE>
+
+  <PTYPE name="PLINE_INSERT_FROM">
+    <COMPL>
+      <ACTION sym="srp_compl@sysrepo"/>
+    </COMPL>
+    <HELP>
+      <ACTION sym="srp_help@sysrepo"/>
+    </HELP>
+    <ACTION sym="PLINE_INSERT_FROM@sysrepo"/>
+  </PTYPE>
+
+  <PTYPE name="PLINE_INSERT_TO">
+    <COMPL>
+      <ACTION sym="srp_compl_insert_to@sysrepo"/>
+    </COMPL>
+    <HELP>
+      <ACTION sym="srp_help_insert_to@sysrepo"/>
+    </HELP>
+    <ACTION sym="PLINE_INSERT_TO@sysrepo"/>
+  </PTYPE>
+
+
+  <VIEW name="main">
+    <HOTKEY key="^D" cmd="exit"/>
+
+    <PROMPT>
+      <ACTION sym="prompt" exec_on="always">%u@%h:exec> </ACTION>
+    </PROMPT>
+
+    <COMMAND name="shell" help="Enter system shell">
+      <ACTION sym="script" interactive="true">/bin/sh -l</ACTION>
+    </COMMAND>
+
+    <COMMAND name="exit" help="Exit">
+      <ACTION sym="nav">pop</ACTION>
+    </COMMAND>
+    <COMMAND name="logout" help="Alias for exit">
+      <ACTION sym="nav">pop</ACTION>
+    </COMMAND>
+
+    <COMMAND name="configure" help="Create new candidate-config based on running-config">
+      <ACTION sym="nav">replace configure</ACTION>
+    </COMMAND>
+
+    <COMMAND name="copy" help="Copy">
+      <PARAM name="src" ptype="/DATASTORE"    help="Source datastore"/>
+      <PARAM name="dst" ptype="/RW_DATASTORE" help="Destination datastore"/>
+      <ACTION sym="klix_copy@klinfix"/>
+    </COMMAND>
+
+    <COMMAND name="show" help="Show" mode="switch">
+      <COMMAND name="running-config" help="Show running-config">
+	<ACTION sym="srp_show_running@sysrepo"/>
+      </COMMAND>
+    </COMMAND>
+
+  </VIEW>
+
+  <VIEW name="configure">
+
+    <PROMPT>
+      <ACTION sym="srp_prompt_edit_path@sysrepo"/>
+      <ACTION sym="prompt" exec_on="always">%u@%h:configure> </ACTION>
+    </PROMPT>
+
+    <HOTKEY key="^C" cmd="up"/>
+    <HOTKEY key="^D" cmd="abort"/>
+    <HOTKEY key="^Z" cmd="leave"/>
+
+    <!-- Move -->
+
+    <COMMAND name="abort" help="Abandon candidate">
+      <ACTION sym="srp_rollback@sysrepo"/>
+      <ACTION sym="nav">replace main</ACTION>
+    </COMMAND>
+
+    <COMMAND name="leave" help="Finalize candidate and apply to running-config">
+      <ACTION sym="klix_commit@klinfix"/>
+      <ACTION sym="nav" exec_on="success">replace main</ACTION>
+    </COMMAND>
+
+    <COMMAND name="exit" help="Ascend to the parent configuration node, or abort (from top)">
+      <ACTION sym="srp_up@sysrepo"/>
+      <ACTION sym="klix_commit@klinfix" exec_on="fail"/>
+      <ACTION sym="nav" exec_on="success">replace main</ACTION>
+    </COMMAND>
+
+    <COMMAND name="up" help="Ascend to the parent configuration node">
+      <ACTION sym="srp_up@sysrepo"/>
+    </COMMAND>
+
+    <COMMAND name="top" help="Ascend to the configuration root">
+      <ACTION sym="srp_top@sysrepo"/>
+    </COMMAND>
+
+    <COMMAND name="edit" help="Descend to the specified configuration node">
+      <PARAM name="path" ptype="/PLINE_EDIT" max="100"/>
+      <ACTION sym="srp_edit@sysrepo"/>
+    </COMMAND>
+
+    <!-- Edit -->
+
+    <COMMAND name="set" help="Set configuration setting">
+      <PARAM name="path" ptype="/PLINE_SET" max="100"/>
+      <ACTION sym="srp_set@sysrepo"/>
+    </COMMAND>
+
+    <COMMAND name="delete" help="Delete configuration setting(s)">
+      <PARAM name="path" ptype="/PLINE_DEL" max="100"/>
+      <ACTION sym="srp_del@sysrepo"/>
+    </COMMAND>
+
+    <COMMAND name="no" help="Alias for delete">
+      <PARAM name="path" ptype="/PLINE_DEL" max="100"/>
+      <ACTION sym="srp_del@sysrepo"/>
+    </COMMAND>
+
+    <COMMAND name="commit" help="Commit current candidate to running-config">
+      <ACTION sym="klix_commit@klinfix"/>
+    </COMMAND>
+
+    <COMMAND name="rollback" help="Restore candidate to running-config">
+      <ACTION sym="srp_rollback@sysrepo"/>
+    </COMMAND>
+
+    <!-- Display -->
+
+    <COMMAND name="check" help="Validate candidate">
+      <ACTION sym="srp_verify@sysrepo"/>
+    </COMMAND>
+
+    <COMMAND name="show" help="Show configuration">
+      <PARAM name="path" ptype="/PLINE_EDIT" min="0" max="100"/>
+      <ACTION sym="srp_show@sysrepo"/>
+    </COMMAND>
+
+    <COMMAND name="diff" help="Summarize uncommitted changes">
+      <PARAM name="path" ptype="/PLINE_EDIT" min="0" max="100"/>
+      <ACTION sym="srp_diff@sysrepo"/>
+    </COMMAND>
+
+    <!-- Misc -->
+
+    <COMMAND name="do" help="Execute operational mode command">
+      <VIEW name="operational" ref="/main"/>
+    </COMMAND>
+
+  </VIEW>
+
+</KLISH>
