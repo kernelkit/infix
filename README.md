@@ -12,7 +12,7 @@ Introduction
 ------------
 
 Infix is an embedded Linux Network Operating System (NOS) based on
-[Buildroot][1], [Finit][2], [ifupdown-ng][3], and [Clixon][6].
+[Buildroot][1], [Finit][2], [ifupdown-ng][3], and [sysrepo][6].
 Providing an easy-to-maintain and easy-to-port Open Source base for
 networked equipment.
 
@@ -120,7 +120,7 @@ any GPL[^1] licensed library.
 [3]: https://github.com/ifupdown-ng/ifupdown-ng
 [4]: https://en.wikipedia.org/wiki/GNU_Lesser_General_Public_License
 [5]: https://lwn.net/Articles/117972/
-[6]: https://github.com/clicon/clixon
+[6]: https://www.sysrepo.org/
 [7]: https://github.com/wkz/qeneth
 [9]: https://docs.gns3.com/docs/using-gns3/beginners/import-gns3-appliance/
 [QEMU]: https://www.qemu.org/
