@@ -72,9 +72,6 @@ static void savedep(char *ipath)
 	ifname = basename(path);
 	path = dirname(path);
 
-	if (!strcmp(ifname, "deps"))
-		return;
-
 	fp = fopenf("a+", "%s/deps", path);
 	if (!fp)
 		return;
@@ -138,6 +135,22 @@ static int run(const char *action)
 	return 0;
 }
 
+static int dir_filter(const char *file)
+{
+	char *files[] =  {
+		"deps",
+		"rdeps",
+	};
+	size_t i;
+
+	for (i = 0; i < NELEMS(files); i++) {
+		if (!strcmp(file, files[i]))
+			return 0;
+	}
+
+	return 1;
+}
+
 static int deps(char *ipath, char *ifname, const char *action)
 {
 	char path[strlen(ipath) + 42];
@@ -146,7 +159,7 @@ static int deps(char *ipath, char *ifname, const char *action)
 	char *cmd;
 
 	snprintf(path, sizeof(path), "%s/deps", ipath);
-	num = dir(path, NULL, NULL, &files, 0);
+	num = dir(path, NULL, dir_filter, &files, 0);
 	for (int i = 0; i < num; i++) {
 		char dpath[sizeof(path) + strlen(files[i])];
 		char *ifnm = files[i];
@@ -188,7 +201,7 @@ static int iter(char *path, size_t len, const char *action)
 	int rc = 0;
 	int num;
 
-	num = dir(path, NULL, NULL, &files, 0);
+	num = dir(path, NULL, dir_filter, &files, 0);
 	if_alloc(num);
 
 	for (int j = 0; j < num; j++) {
