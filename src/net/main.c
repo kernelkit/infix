@@ -60,10 +60,17 @@ static int if_find(char *ifname)
 
 static void savedep(char *ipath)
 {
-	char *ifname = basename(ipath);
-	char *path = dirname(ipath);
-	char buf[20];
+	char line[20];
+	char *ifname;
+	char *path;
 	FILE *fp;
+
+	path = strdupa(ipath);
+	if (!path)
+		return;
+
+	ifname = basename(path);
+	path = dirname(path);
 
 	if (!strcmp(ifname, "deps"))
 		return;
@@ -73,8 +80,8 @@ static void savedep(char *ipath)
 		return;
 
 	(void)fseek(fp, 0L, SEEK_SET);
-	while (fgets(buf, sizeof(buf), fp)) {
-		if (!strcmp(chomp(buf), ifname))
+	while (fgets(line, sizeof(line), fp)) {
+		if (!strcmp(chomp(line), ifname))
 			goto done;
 	}
 
