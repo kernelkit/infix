@@ -144,7 +144,6 @@ static int platform_cb(sr_session_ctx_t *session, uint32_t sub_id, const char *m
 		       struct lyd_node **parent, void *priv)
 {
 	const struct ly_ctx *ctx;
-	struct utsname data;
 	char *buf;
 	int rc;
 
@@ -248,16 +247,6 @@ done:
 static int sys_reload_services(void)
 {
 	return run("initctl -nbq touch sysklogd lldpd");
-}
-
-static void print_val(sr_val_t *val)
-{
-	char *str;
-
-	if (sr_print_val_mem(&str, val))
-		return;
-	ERROR("%s", str);
-	free(str);
 }
 
 int sr_get_int(sr_session_ctx_t *session, const char *fmt, ...)
@@ -391,11 +380,8 @@ fail:
 static int change_clock(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
 	const char *xpath, sr_event_t event, unsigned request_id, void *priv)
 {
-	struct confd *confd = (struct confd *)priv;
-	const char *fn = TIMEZONE_CONF;
 	char *timezone;
 	FILE *fp;
-	int rc;
 
 	switch (event) {
 	case SR_EV_ENABLED:	/* first time, on register. */
@@ -420,6 +406,9 @@ static int change_clock(sr_session_ctx_t *session, uint32_t sub_id, const char *
 		rename("/etc/localtime",  "/etc/localtime-");
 		rename("/etc/localtime+", "/etc/localtime");
 
+		return SR_ERR_OK;
+
+	default:
 		return SR_ERR_OK;
 	}
 
@@ -454,10 +443,8 @@ static int change_clock(sr_session_ctx_t *session, uint32_t sub_id, const char *
 static int change_ntp(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
 	const char *xpath, sr_event_t event, unsigned request_id, void *priv)
 {
-	struct confd *confd = (struct confd *)priv;
 	const char *fn = CHRONY_NEXT;
 	int valid = -1;
-	sr_data_t *sdt;
 	sr_val_t *val;
 	size_t cnt;
 	FILE *fp;
@@ -492,13 +479,17 @@ static int change_ntp(sr_session_ctx_t *session, uint32_t sub_id, const char *mo
 		run("initctl -nbq touch chronyd");
 		run("initctl -nbq enable chronyd");
 		return SR_ERR_OK;
+
+	default:
+		return SR_ERR_OK;
 	}
 
-	if (rc = sr_get_items(session, "/ietf-system:system/ntp/server", 0, 0, &val, &cnt)) {
+	rc = sr_get_items(session, "/ietf-system:system/ntp/server", 0, 0, &val, &cnt);
+	if (rc) {
 		remove(CHRONY_NEXT);
 		return rc;
 	}
-	
+
 	fp = fopen(fn, "w");
 	if (!fp) {
 		ERROR("failed updating %s: %s", fn, strerror(errno));
@@ -511,7 +502,7 @@ static int change_ntp(sr_session_ctx_t *session, uint32_t sub_id, const char *mo
 		char *type, *ptr;
 		int server = 0;
 
-		/* 
+		/*
 		 * Handle empty startup-config on SR_EV_ENABLED,
 		 * prevents subscribe failure due to false invalid.
 		 */
@@ -528,7 +519,8 @@ static int change_ntp(sr_session_ctx_t *session, uint32_t sub_id, const char *mo
 				free(type);
 			free(ptr);
 
-			if (ptr = sr_get_str(session, "%s/udp/port", xpath)) {
+			ptr = sr_get_str(session, "%s/udp/port", xpath);
+			if (ptr) {
 				fprintf(fp, " port %s", ptr);
 				free(ptr);
 			}
@@ -568,12 +560,9 @@ static int change_ntp(sr_session_ctx_t *session, uint32_t sub_id, const char *mo
 static int change_dns(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
 	const char *xpath, sr_event_t event, unsigned request_id, void *priv)
 {
-	struct confd *confd = (struct confd *)priv;
 	const char *fn = RESOLV_NEXT;
 	int timeout, attempts;
 	int rc = SR_ERR_SYS;
-	int valid = -1;
-	sr_data_t *sdt;
 	sr_val_t *val;
 	size_t cnt;
 	FILE *fp;
@@ -603,6 +592,9 @@ static int change_dns(sr_session_ctx_t *session, uint32_t sub_id, const char *mo
 
 		run("resolvconf -u");
 		return SR_ERR_OK;
+
+	default:
+		return SR_ERR_OK;
 	}
 
 	fp = fopen(fn, "w");
@@ -623,7 +615,8 @@ static int change_dns(sr_session_ctx_t *session, uint32_t sub_id, const char *mo
 		fprintf(fp, "\n");
 	}
 
-	if (rc = sr_get_items(session, "/ietf-system:system/dns-resolver/search", 0, 0, &val, &cnt))
+	rc = sr_get_items(session, "/ietf-system:system/dns-resolver/search", 0, 0, &val, &cnt);
+	if (rc)
 		goto fail;
 
 	if (cnt) {
@@ -634,13 +627,13 @@ static int change_dns(sr_session_ctx_t *session, uint32_t sub_id, const char *mo
 	}
 	sr_free_values(val, cnt);
 
-	if (rc = sr_get_items(session, "/ietf-system:system/dns-resolver/server", 0, 0, &val, &cnt))
+	rc = sr_get_items(session, "/ietf-system:system/dns-resolver/server", 0, 0, &val, &cnt);
+	if (rc)
 		goto fail;
 
 	for (size_t i = 0; i < cnt; i++) {
 		const char *xpath = val[i].xpath;
-		char *type, *ptr;
-		int server = 0;
+		char *ptr;
 
 		/* Get /ietf-system:system/dns-resolver/server[name='foo'] */
 		ptr = sr_get_str(session, "%s/udp-and-tcp/address", xpath);
@@ -693,22 +686,10 @@ static int change_hostname(sr_session_ctx_t *session, uint32_t sub_id, const cha
 	const char *host, *tmp = NULL;
 	char **hosts, *current;
 	int err, i, nhosts;
-	int rc = SR_ERR_SYS;
 	char *nm;
 
-	switch (event) {
-	case SR_EV_ENABLED:	/* first time, on register. */
-	case SR_EV_CHANGE:	/* regular change (copy cand running) */
-		/* Wait for DONE to activate changes */
+	if (event != SR_EV_DONE)
 		return SR_ERR_OK;
-
-	case SR_EV_ABORT:	/* User abort, or other plugin failed */
-		return SR_ERR_OK;
-
-	case SR_EV_DONE:
-		/* Activate changes */
-		break;
-	}
 
 	nm = sr_get_str(session, xpath);
 	if (!nm) {
@@ -777,10 +758,12 @@ int ietf_system_init(struct confd *confd)
 		goto err;
 	}
 
-	if (rc = sr_install_module(confd->conn, YANG_PATH_"ietf-system@2014-08-06.yang", NULL, features))
+	rc = sr_install_module(confd->conn, YANG_PATH_"ietf-system@2014-08-06.yang", NULL, features);
+	if (rc)
 		goto err;
 	/* Augment to ietf-systems */
-	if (rc = sr_install_module(confd->conn, YANG_PATH_"infix-system@2014-08-06.yang", NULL, NULL))
+	rc = sr_install_module(confd->conn, YANG_PATH_"infix-system@2014-08-06.yang", NULL, NULL);
+	if (rc)
 		goto err;
 
 	rc = sr_oper_get_subscribe(confd->session, "ietf-system", CLOCK_PATH_,

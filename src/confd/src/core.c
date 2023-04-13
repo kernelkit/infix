@@ -42,31 +42,36 @@ int sr_plugin_init_cb(sr_session_ctx_t *session, void **priv)
 	if (!confd.aug)
 		goto err;
 
-	if (rc = ietf_system_init(&confd))
+	rc = ietf_interfaces_init(&confd);
+	if (rc)
 		goto err;
-
-	/* if (rc = ietf_interfaces_init(&confd)) */
-	/* 	goto err; */
+	rc = ietf_system_init(&confd);
+	if (rc)
+		goto err;
 
 	/* YOUR_INIT GOES HERE */
 
 	/* Set up hook to save startup-config to persisten backend store */
-	if (rc = sr_session_start(confd.conn, SR_DS_STARTUP, &startup))
+	rc = sr_session_start(confd.conn, SR_DS_STARTUP, &startup);
+	if (rc)
 		goto err;
 
-	if (rc = sr_module_change_subscribe(startup, "ietf-system", "/ietf-system:system//.",
-			startup_save_hook, NULL, 0, SR_SUBSCR_PASSIVE | SR_SUBSCR_DONE_ONLY, &confd.sub)) {
+	rc = sr_module_change_subscribe(startup, "ietf-system", "/ietf-system:system//.",
+					startup_save_hook, NULL, 0, SR_SUBSCR_PASSIVE | SR_SUBSCR_DONE_ONLY, &confd.sub);
+	if (rc) {
 		ERROR("failed setting up startup-config hook: %s", sr_strerror(rc));
 		goto err;
 	}
 
-	if (rc = sr_module_change_subscribe(session, "ietf-system", "/ietf-system:system//.",
-			commit_done_hook, NULL, 0, SR_SUBSCR_PASSIVE | SR_SUBSCR_DONE_ONLY, &confd.sub)) {
+	rc = sr_module_change_subscribe(session, "ietf-system", "/ietf-system:system//.",
+					commit_done_hook, NULL, 0, SR_SUBSCR_PASSIVE | SR_SUBSCR_DONE_ONLY, &confd.sub);
+	if (rc) {
 		ERROR("failed setting up startup-config hook: %s", sr_strerror(rc));
 		goto err;
 	}
 
-	if (rc = sr_install_module(confd.conn, YANG_PATH_"kernelkit-infix-deviations.yang", NULL, NULL))
+	rc = sr_install_module(confd.conn, YANG_PATH_"kernelkit-infix-deviations.yang", NULL, NULL);
+	if (rc)
 		goto err;
 
 	return SR_ERR_OK;

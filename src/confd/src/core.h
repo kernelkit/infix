@@ -25,12 +25,22 @@
 #define ERROR(frmt, ...) syslog(LOG_ERR, "%s: " frmt, __func__, ##__VA_ARGS__)
 #define ERRNO(frmt, ...) syslog(LOG_ERR, "%s: " frmt ": %s", __func__, ##__VA_ARGS__, strerror(errno))
 
-#define REGISTER_CHANGE(s,m,x,f,c,a,u)			\
-	if (rc = register_change(s, m, x, f, c, a, u))	\
+static inline void print_val(sr_val_t *val)
+{
+	char *str;
+
+	if (sr_print_val_mem(&str, val))
+		return;
+	ERROR("%s", str);
+	free(str);
+}
+
+#define REGISTER_CHANGE(s,m,x,f,c,a,u)				\
+	if ((rc = register_change(s, m, x, f, c, a, u)))	\
 		goto err
 
 #define REGISTER_RPC(s,x,c,a,u)				\
-	if (rc = register_rpc(s, x, c, a, u))		\
+	if ((rc = register_rpc(s, x, c, a, u)))		\
 		goto err
 
 struct confd {
@@ -63,7 +73,10 @@ static inline int register_rpc(sr_session_ctx_t *session, const char *xpath,
 /* core.c */
 int run(const char *fmt, ...);
 
-/* ietf-syste.c */
+/* ietf-interfaces.c */
+int ietf_interfaces_init(struct confd *confd);
+
+/* ietf-system.c */
 int ietf_system_init(struct confd *confd);
 
 #endif	/* CONFD_CORE_H_ */
