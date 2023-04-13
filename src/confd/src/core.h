@@ -17,6 +17,12 @@
 #include <sysrepo/values.h>
 #include <sysrepo/xpath.h>
 
+#ifndef HAVE_VASPRINTF
+int vasprintf(char **strp, const char *fmt, va_list ap);
+#endif
+#ifndef HAVE_ASPRINTF
+int asprintf(char **strp, const char *fmt, ...);
+#endif
 
 #define NELEMS(arr) (sizeof(arr) / sizeof(arr[0]))
 
