@@ -8,11 +8,13 @@ name: Bob the Builder
 #    branches:
 #      - '*'
 on:
-  pull_request:
+  pull_request_review:
+    types: [submitted]
   workflow_dispatch:
 
 jobs:
   build:
+    if: github.event.review.state == 'approved' || github.event_name == 'workflow_dispatch'
     name: Build ${{ matrix.platform }}
     runs-on: ubuntu-latest
     strategy:
