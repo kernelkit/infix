@@ -309,38 +309,6 @@ fail:
 	return rc;
 }
 
-int sr_get_bool(sr_session_ctx_t *session, const char *fmt, ...)
-{
-	sr_val_t *val = NULL;
-	char *xpath;
-	va_list ap;
-	int rc = 0;
-	int len;
-
-	va_start(ap, fmt);
-	len = vsnprintf(NULL, 0, fmt, ap) + 1;
-	va_end(ap);
-
-	xpath = alloca(len);
-	if (!xpath)
-		goto fail;
-
-	va_start(ap, fmt);
-	vsnprintf(xpath, len, fmt, ap);
-	va_end(ap);
-
-	if (sr_get_item(session, xpath, 0, &val))
-		goto fail;
-	if (!val || val->type != SR_BOOL_T)
-		goto fail;
-
-	rc = val->data.bool_val;
-fail:
-	if (val)
-		sr_free_val(val);
-	return rc;
-}
-
 #define TIMEZONE_CONF "/etc/timezone"
 #define TIMEZONE_PREV TIMEZONE_CONF "-"
 #define TIMEZONE_NEXT TIMEZONE_CONF "+"
@@ -436,7 +404,7 @@ static int change_ntp(sr_session_ctx_t *session, uint32_t sub_id, const char *mo
 		remove(CHRONY_PREV);
 		rename(CHRONY_CONF, CHRONY_PREV);
 		rename(CHRONY_NEXT, CHRONY_CONF);
-		if (!sr_get_bool(session, "/ietf-system:system/ntp/enabled")) {
+		if (srx_get_bool(session, "/ietf-system:system/ntp/enabled") == 0) {
 			systemf("initctl -nbq disable chronyd");
 			return SR_ERR_OK;
 		}
@@ -495,9 +463,9 @@ static int change_ntp(sr_session_ctx_t *session, uint32_t sub_id, const char *mo
 		}
 
 		if (server) {
-			if (sr_get_bool(session, "%s/iburst", xpath))
+			if (srx_get_bool(session, "%s/iburst", xpath) > 0)
 				fprintf(fp, " iburst");
-			if (sr_get_bool(session, "%s/prefer", xpath))
+			if (srx_get_bool(session, "%s/prefer", xpath) > 0)
 				fprintf(fp, " prefer");
 
 			fprintf(fp, "\n");
