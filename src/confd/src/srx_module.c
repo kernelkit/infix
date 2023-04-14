@@ -3,7 +3,7 @@
 #include <libyang/libyang.h>
 
 #include "core.h"
-#include "sr_ext.h"
+#include "srx_module.h"
 
 sr_error_t srx_require_module(sr_conn_ctx_t *conn,
 			      const struct srx_module_requirement *mr)
