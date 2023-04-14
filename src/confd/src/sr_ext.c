@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: BSD-3-Clause */
+
 #include <libyang/libyang.h>
 
 #include "sr_ext.h"

@@ -1,4 +1,5 @@
 /* SPDX-License-Identifier: BSD-3-Clause */
+
 #ifndef CONFD_CORE_H_
 #define CONFD_CORE_H_
 

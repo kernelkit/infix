@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: BSD-3-Clause */
+
 #ifndef CONFD_SR_EXT_H_
 #define CONFD_SR_EXT_H_
 
