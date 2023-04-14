@@ -32,21 +32,48 @@ static int srx_vaget(sr_session_ctx_t *session, const char *fmt, va_list ap, sr_
 	return 0;
 }
 
-int srx_get_bool(sr_session_ctx_t *session, const char *fmt, ...)
+static int get_vabool(sr_session_ctx_t *session, int *result, const char *fmt, va_list ap)
 {
 	sr_val_t *val = NULL;
-	int result = -1;
+	va_list apdup;
+	int rc;
+
+	va_copy(apdup, ap);
+	rc = srx_vaget(session, fmt, apdup, &val, SR_BOOL_T);
+	va_end(apdup);
+
+	if (rc)
+		return rc;
+
+	*result = val->data.bool_val;
+	sr_free_val(val);
+
+	return 0;
+}
+
+int srx_get_bool(sr_session_ctx_t *session, int *result, const char *fmt, ...)
+{
 	va_list ap;
+	int rc;
 
 	va_start(ap, fmt);
-	if (srx_vaget(session, fmt, ap, &val, SR_BOOL_T))
-		goto fail;
-
-	result = val->data.bool_val;
-	sr_free_val(val);
-fail:
+	rc = get_vabool(session, result, fmt, ap);
 	va_end(ap);
-	return result;
+
+	return rc;
+}
+
+int srx_enabled(sr_session_ctx_t *session, const char *fmt, ...)
+{
+	va_list ap;
+	int v = 0;
+	int rc;
+
+	va_start(ap, fmt);
+	rc = get_vabool(session, &v, fmt, ap);
+	va_end(ap);
+
+	return rc ? 0 : v;
 }
 
 int srx_get_int(sr_session_ctx_t *session, int *result, sr_val_type_t type, const char *fmt, ...)

@@ -346,7 +346,7 @@ static int change_ntp(sr_session_ctx_t *session, uint32_t sub_id, const char *mo
 		remove(CHRONY_PREV);
 		rename(CHRONY_CONF, CHRONY_PREV);
 		rename(CHRONY_NEXT, CHRONY_CONF);
-		if (srx_get_bool(session, "/ietf-system:system/ntp/enabled") == 0) {
+		if (srx_enabled(session, "/ietf-system:system/ntp/enabled")) {
 			systemf("initctl -nbq disable chronyd");
 			return SR_ERR_OK;
 		}
@@ -405,9 +405,9 @@ static int change_ntp(sr_session_ctx_t *session, uint32_t sub_id, const char *mo
 		}
 
 		if (server) {
-			if (srx_get_bool(session, "%s/iburst", xpath) > 0)
+			if (srx_enabled(session, "%s/iburst", xpath) > 0)
 				fprintf(fp, " iburst");
-			if (srx_get_bool(session, "%s/prefer", xpath) > 0)
+			if (srx_enabled(session, "%s/prefer", xpath) > 0)
 				fprintf(fp, " prefer");
 
 			fprintf(fp, "\n");

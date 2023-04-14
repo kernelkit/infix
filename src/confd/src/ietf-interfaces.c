@@ -33,7 +33,6 @@ static int ifchange(sr_session_ctx_t *session, uint32_t sub_id, const char *modu
 		size_t addrcnt;
 		char *ifname;
 		char *ptr;
-		int ena;
 
 		ifname = srx_get_str(session, "%s/name", xpath);
 		ptr = srx_get_str(session, "%s/description", xpath);
@@ -63,8 +62,7 @@ static int ifchange(sr_session_ctx_t *session, uint32_t sub_id, const char *modu
 			free(plen);
 		}
 
-		ena = srx_get_bool(session, "%s/enabled", xpath);
-		systemf("ip link set %s %s", ifname, ena <= 0 ? "down" : "up");
+		systemf("ip link set %s %s", ifname, srx_enabled(session, "%s/enabled", xpath) ? "up" : "down");
 	}
 	sr_free_values(val, cnt);
 

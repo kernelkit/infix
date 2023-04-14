@@ -10,5 +10,6 @@
 char *srx_get_str  (sr_session_ctx_t *session, const char *fmt, ...);
 int   srx_get_int  (sr_session_ctx_t *session, int *result, sr_val_type_t type, const char *fmt, ...);
 int   srx_get_bool (sr_session_ctx_t *session, const char *fmt, ...);
+int   srx_enabled  (sr_session_ctx_t *session, const char *fmt, ...);
 
 #endif /* CONFD_SRX_VAL_H_ */
