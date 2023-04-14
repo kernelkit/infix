@@ -4,10 +4,25 @@
 #include <sysexits.h>
 #include <net/if.h>
 #include <libite/lite.h>
+#include <libite/queue.h>
 
 #define _PATH_NET "/run/net"
 #define dbg(fmt, args...) if (debug)   warnx(fmt, ##args)
 #define log(fmt, args...) if (verbose) warnx(fmt, ##args)
+
+typedef enum {
+	INVAL = -1,
+	DO = 0,
+	UP = 1,
+	DOWN = 2,
+} cmd_t;
+
+struct iface {
+        TAILQ_ENTRY(iface) link;
+        char ifname[IFNAMSIZ];
+};
+
+static TAILQ_HEAD(iflist, iface) iface_list = TAILQ_HEAD_INITIALIZER(iface_list);
 
 static char **handled;
 static int if_num;
@@ -140,6 +155,7 @@ static int dir_filter(const char *file)
 	char *files[] =  {
 		"deps",
 		"rdeps",
+		"admin-state",
 	};
 	size_t i;
 
@@ -316,39 +332,9 @@ static void pipe_init(void)
 		err(1, "failed starting bridge command pipe");
 }
 
-static int usage(int code)
-{
-	printf("Usage: %s [-dh]\n"
-	       "\n"
-	       "Options:\n"
-	       "  -d      Debug\n"
-	       "  -h      This help text\n"
-	       "  -v      Verbose, show actions taken\n"
-	       "\n", __progname);
-
-	return code;
-}
-
-int main(int argc, char *argv[])
+static const char *getnet(void)
 {
 	const char *net = _PATH_NET;
-	char curr[512], next[512];
-	int rc, c;
-
-	while ((c = getopt(argc, argv, "dhv")) != EOF) {
-		switch (c) {
-		case 'd':
-			debug = 1;
-			break;
-		case 'h':
-			return usage(0);
-		case 'v':
-			verbose = 1;
-			break;
-		default:
-			return usage(1);
-		}
-	}
 
 	if (getenv("NET_DIR"))
 		net = getenv("NET_DIR");
@@ -356,6 +342,120 @@ int main(int argc, char *argv[])
 		if (makedir(net, 0755))
 			err(1, "makedir");
 	}
+
+	return net;
+}
+
+static void addif(char *ifname)
+{
+	struct iface *entry;
+
+	entry = malloc(sizeof(*entry));
+	if (!entry)
+		err(1, "malloc");
+
+	strlcpy(entry->ifname, ifname, sizeof(entry->ifname));
+	TAILQ_INSERT_TAIL(&iface_list, entry, link);
+}
+
+static void freeifs(void)
+{
+	struct iface *iface, *tmp;
+
+	TAILQ_FOREACH_SAFE(iface, &iface_list, link, tmp) {
+		TAILQ_REMOVE(&iface_list, iface, link);
+		free(iface);
+	}
+}
+
+/* build list from current generation */
+static void getifs(void)
+{
+	const char *net = getnet();
+	char **files;
+	int num;
+
+	num = dir(net, NULL, dir_filter, &files, 0);
+	for (int i = 0; i < num; i++)
+		addif(files[i]);
+}
+
+static char *ifadmin(const char *ifname, char *buf, size_t len)
+{
+	const char *net = getnet();
+
+	if (!net)
+		return NULL;
+
+	snprintf(buf, len, "%s/%s/admin-state", net, ifname);
+	return buf;
+}
+
+/* is the interface eligible for being taken up/down? */
+static int allowed(const char *ifname)
+{
+	char buf[128];
+	int rc = 1;
+	FILE *fp;
+
+	if (!ifadmin(ifname, buf, sizeof(buf)))
+		goto fail;
+
+	fp = fopen(buf, "r");
+	if (fp) {
+		if (fgets(buf, sizeof(buf), fp)) {
+			chomp(buf);
+			if (!strcmp(buf, "disabled"))
+				rc = 0;
+		}
+		fclose(fp);
+	}
+fail:
+	return rc;
+}
+
+static int ifupdown(int updown)
+{
+	struct iface *iface;
+	int rc = 0;
+
+	if (TAILQ_EMPTY(&iface_list))
+		getifs();
+
+	TAILQ_FOREACH(iface, &iface_list, link) {
+		const char *action;
+		int result;
+
+		if (!allowed(iface->ifname))
+			continue;
+
+		action = updown ? "up" : "down";
+		result = systemf("ip link set %s %s", iface->ifname, action);
+		if (!result) {
+			char buf[128];
+			FILE *fp;
+
+			if (!ifadmin(iface->ifname, buf, sizeof(buf)))
+				continue;
+
+			fp = fopen(buf, "w");
+			if (fp) {
+				fprintf(fp, "%s\n", action);
+				fclose(fp);
+			}
+		}
+
+		rc += result;
+	}
+
+	return rc;
+}
+
+static int activate_next(void)
+{
+	const char *net = getnet();
+	char curr[512], next[512];
+	int rc;
 
 	pipe_init();
 
@@ -389,4 +489,88 @@ int main(int argc, char *argv[])
 		err(1, "failed removing %s/next", net);
 
 	return 0;
+}
+
+static int act(cmd_t cmd)
+{
+	switch (cmd) {
+	case DO:
+		return activate_next();
+	case UP:
+		return ifupdown(1);
+	case DOWN:
+		return ifupdown(0);
+	default:
+		break;
+	}
+
+	freeifs();
+
+	return EX_USAGE;
+}
+
+static int usage(int code)
+{
+	printf("Usage: %s [-dh] [do | (up | down [ifname ...])]\n"
+	       "\n"
+	       "Options:\n"
+	       "  -a      Act on all interfaces, ignored, for compat only.\n"
+	       "  -d      Debug\n"
+	       "  -h      This help text\n"
+	       "  -v      Verbose, show actions taken\n"
+	       "\n"
+	       "Commands:\n"
+	       "  do      Activate next network generation\n"
+	       "  up      Bring up one/many or all interfaces in the current generation\n"
+	       "  down    Take down one/many or all interfaces in the current generation\n"
+	       "\n"
+	       "Args:\n"
+	       "  ifname  Zero, one, or many interface names to act on.\n"
+	       "\n", __progname);
+
+	return code;
+}
+
+int main(int argc, char *argv[])
+{
+	cmd_t cmd = INVAL;
+	int c;
+
+	while ((c = getopt(argc, argv, "adhv")) != EOF) {
+		switch (c) {
+		case 'a':
+			/* compat with ifup/ifdown */
+			break;
+		case 'd':
+			debug = 1;
+			break;
+		case 'h':
+			return usage(0);
+		case 'v':
+			verbose = 1;
+			break;
+		default:
+			return usage(1);
+		}
+	}
+
+	for (c = optind; c < argc; c++) {
+		if (cmd == INVAL) {
+			if (!strcmp("do", argv[c]))
+				cmd = DO;
+			if (!strcmp("up", argv[c]))
+				cmd = UP;
+			if (!strcmp("down", argv[c]))
+				cmd = DOWN;
+
+			continue;
+		}
+
+		addif(argv[c]);
+	}
+
+	if (cmd == INVAL)
+		return usage(EX_USAGE);
+
+	return act(cmd);
 }

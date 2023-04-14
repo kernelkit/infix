@@ -15,7 +15,7 @@ gensh()
 
 check()
 {
-    if ./net -v; then
+    if ./net -v do; then
 	printf "\n[\033[1;32m OK \033[0m] Checking %s\n" "$1"
 	return 0
     fi
