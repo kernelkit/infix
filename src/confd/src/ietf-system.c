@@ -758,11 +758,11 @@ int ietf_system_init(struct confd *confd)
 		goto err;
 	}
 
-	rc = sr_install_module(confd->conn, YANG_PATH_"ietf-system@2014-08-06.yang", NULL, features);
+	rc = sr_install_module(confd->conn, YANG_PATH_"/ietf-system@2014-08-06.yang", NULL, features);
 	if (rc)
 		goto err;
 	/* Augment to ietf-systems */
-	rc = sr_install_module(confd->conn, YANG_PATH_"infix-system@2014-08-06.yang", NULL, NULL);
+	rc = sr_install_module(confd->conn, YANG_PATH_"/infix-system@2014-08-06.yang", NULL, NULL);
 	if (rc)
 		goto err;
 

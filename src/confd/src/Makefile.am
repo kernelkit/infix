@@ -1,5 +1,5 @@
 CFLAGS                  = -Wall -Wextra -Werror -Wno-unused-parameter
-AM_CPPFLAGS             = -D_DEFAULT_SOURCE -D_XOPEN_SOURCE -D_GNU_SOURCE -DYANG_PATH_=\"$(YANGDIR)/\"
+AM_CPPFLAGS             = -D_DEFAULT_SOURCE -D_XOPEN_SOURCE -D_GNU_SOURCE -DYANG_PATH_=\"$(YANGDIR)\"
 
 plugindir               = $(srpdplugindir)
 plugin_LTLIBRARIES      = confd-plugin.la
