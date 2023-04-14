@@ -13,6 +13,7 @@
 #include <unistd.h>
 
 #include <augeas.h>
+#include <libite/lite.h>
 #include <libyang/libyang.h>
 #include <sysrepo.h>
 #include <sysrepo/values.h>
@@ -24,8 +25,6 @@ int vasprintf(char **strp, const char *fmt, va_list ap);
 #ifndef HAVE_ASPRINTF
 int asprintf(char **strp, const char *fmt, ...);
 #endif
-
-#define NELEMS(arr) (sizeof(arr) / sizeof(arr[0]))
 
 #define DEBUG(fmt, ...)
 //#define DEBUG(fmt, ...) syslog(LOG_DEBUG, "%s: "fmt, __func__, ##__VA_ARGS__)

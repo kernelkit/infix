@@ -22,9 +22,10 @@ AC_REPLACE_FUNCS(asprintf)
 # Check for pkg-config first, warn if it's not installed
 PKG_PROG_PKG_CONFIG
 
-PKG_CHECK_MODULES([sysrepo], [sysrepo >= 2.2.36])
 PKG_CHECK_MODULES([augeas],  [augeas  >= 1.12.0])
 PKG_CHECK_MODULES([jansson], [jansson >= 2.0.0])
+PKG_CHECK_MODULES([libite],  [libite >= 2.5.0])
+PKG_CHECK_MODULES([sysrepo], [sysrepo >= 2.2.36])
 
 # Plugin installation path for sysrepo-plugind
 PKG_CHECK_VAR([srpdplugindir], [sysrepo], [SRPD_PLUGINS_PATH])
