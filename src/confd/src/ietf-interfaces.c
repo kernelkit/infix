@@ -4,13 +4,34 @@
 #include "srx_module.h"
 #include "srx_val.h"
 
-const struct srx_module_requirement ietf_if_reqs[] = {
+static const char *ipfeat[] = {
+	"ipv4-non-contiguous-netmasks",
+	NULL
+};
+
+static const struct srx_module_requirement ietf_if_reqs[] = {
 	{ .dir = YANG_PATH_, .name = "ietf-interfaces", .rev = "2018-02-20" },
 	{ .dir = YANG_PATH_, .name = "iana-if-type", .rev = "2017-01-19" },
-	{ .dir = YANG_PATH_, .name = "ietf-ip", .rev = "2018-02-22" },
+	{ .dir = YANG_PATH_, .name = "ietf-ip", .rev = "2018-02-22", .features = ipfeat },
 
 	{ NULL }
 };
+
+static int inet_mask2len(char *netmask)
+{
+	struct in_addr ina;
+	int len = 0;
+
+	if (inet_pton(AF_INET, netmask, &ina) != 1)
+		return 0;
+
+	while (ina.s_addr) {
+		ina.s_addr >>= 1;
+		len++;
+	}
+
+	return len;
+}
 
 static int ifchange(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
 		    const char *xpath, sr_event_t event, unsigned request_id, void *priv)
@@ -52,17 +73,33 @@ static int ifchange(sr_session_ctx_t *session, uint32_t sub_id, const char *modu
 		snprintf(path, sizeof(path), "%s/ietf-ip:ipv4/address", xpath);
 		rc = sr_get_items(session, path, 0, 0, &addr, &addrcnt);
 		for (size_t j = 0; j < addrcnt; j++) {
-			char *address;
-			char *plen;
+			char *address, *netmask;
+			int plen = 0;
 
 			address = srx_get_str(session, "%s/ip", addr[j].xpath);
-			plen = srx_get_str(session, "%s/prefix-length", addr[j].xpath);
-			systemf("ip addr add %s/%s dev %s", address, plen, ifname);
+			SRX_GET_UINT8(session, plen, "%s/prefix-length", addr[j].xpath);
+			if (!plen) {
+				netmask = srx_get_str(session, "%s/netmask", addr[j].xpath);
+				ERROR("read netmask instead: %s", netmask ?: "<NIL>");
+				if (netmask) {
+					plen = inet_mask2len(netmask);
+					free(netmask);
+				}
+			}
+			if (plen > 0) {
+				char *add = "add";
+
+				if (!srx_enabled(session, "%s/enabled", addr[j].xpath))
+					add = "del";
+
+				ERROR("Preparing to %s addess %s", add, address);
+				systemf("ip addr add %s/%d dev %s", address, plen, ifname);
+			}
 			free(address);
-			free(plen);
 		}
 
 		systemf("ip link set %s %s", ifname, srx_enabled(session, "%s/enabled", xpath) ? "up" : "down");
+		free(ifname);
 	}
 	sr_free_values(val, cnt);
 
