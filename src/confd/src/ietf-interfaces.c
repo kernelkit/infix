@@ -13,16 +13,16 @@ const struct srx_module_requirement ietf_if_reqs[] = {
 
 int ietf_interfaces_init(struct confd *confd)
 {
-	int err;
+	int rc;
 
-	err = srx_require_modules(confd->conn, ietf_if_reqs);
-	if (err)
+	rc = srx_require_modules(confd->conn, ietf_if_reqs);
+	if (rc)
 		goto err;
 
 	return SR_ERR_OK;
 err:
-	ERROR("init failed: %s", sr_strerror(err));
+	ERROR("init failed: %s", sr_strerror(rc));
 	sr_unsubscribe(confd->sub);
 
-	return err;
+	return rc;
 }
