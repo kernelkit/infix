@@ -26,10 +26,10 @@ int asprintf(char **strp, const char *fmt, ...);
 
 #define NELEMS(arr) (sizeof(arr) / sizeof(arr[0]))
 
-#define DEBUG(frmt, ...)
-//#define DEBUG(frmt, ...) syslog(LOG_DEBUG, "%s: "frmt, __func__, ##__VA_ARGS__)
-#define ERROR(frmt, ...) syslog(LOG_ERR, "%s: " frmt, __func__, ##__VA_ARGS__)
-#define ERRNO(frmt, ...) syslog(LOG_ERR, "%s: " frmt ": %s", __func__, ##__VA_ARGS__, strerror(errno))
+#define DEBUG(fmt, ...)
+//#define DEBUG(fmt, ...) syslog(LOG_DEBUG, "%s: "fmt, __func__, ##__VA_ARGS__)
+#define ERROR(fmt, ...) syslog(LOG_ERR, "%s: " fmt, __func__, ##__VA_ARGS__)
+#define ERRNO(fmt, ...) syslog(LOG_ERR, "%s: " fmt ": %s", __func__, ##__VA_ARGS__, strerror(errno))
 
 static inline void print_val(sr_val_t *val)
 {
