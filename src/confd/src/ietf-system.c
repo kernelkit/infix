@@ -189,7 +189,7 @@ static int rpc_exec(sr_session_ctx_t *session, uint32_t sub_id, const char *path
 {
 	DEBUG("path: %s", path);
 
-	if (run(priv))
+	if (systemf(priv))
 		return SR_ERR_INTERNAL;
 
 	return SR_ERR_OK;
@@ -248,7 +248,7 @@ done:
 
 static int sys_reload_services(void)
 {
-	return run("initctl -nbq touch sysklogd lldpd");
+	return systemf("initctl -nbq touch sysklogd lldpd");
 }
 
 int sr_get_int(sr_session_ctx_t *session, const char *fmt, ...)
@@ -388,7 +388,7 @@ static int change_clock(sr_session_ctx_t *session, uint32_t sub_id, const char *
 	}
 
 	remove("/etc/localtime+");
-	if (run("ln -s /usr/share/zoneinfo/%s /etc/localtime+", timezone)) {
+	if (systemf("ln -s /usr/share/zoneinfo/%s /etc/localtime+", timezone)) {
 		ERROR("No such timezone %s", timezone);
 		return SR_ERR_VALIDATION_FAILED;
 	}
@@ -437,15 +437,15 @@ static int change_ntp(sr_session_ctx_t *session, uint32_t sub_id, const char *mo
 		rename(CHRONY_CONF, CHRONY_PREV);
 		rename(CHRONY_NEXT, CHRONY_CONF);
 		if (!sr_get_bool(session, "/ietf-system:system/ntp/enabled")) {
-			run("initctl -nbq disable chronyd");
+			systemf("initctl -nbq disable chronyd");
 			return SR_ERR_OK;
 		}
 		/*
 		 * If chrony is alrady enabled we tell Finit it's been
 		 * modified , so Finit restarts it, otherwise enable it.
 		 */
-		run("initctl -nbq touch chronyd");
-		run("initctl -nbq enable chronyd");
+		systemf("initctl -nbq touch chronyd");
+		systemf("initctl -nbq enable chronyd");
 		return SR_ERR_OK;
 
 	default:
@@ -555,10 +555,10 @@ static int change_dns(sr_session_ctx_t *session, uint32_t sub_id, const char *mo
 		rename(RESOLV_NEXT, RESOLV_CONF);
 
 		/* in bootstrap, another resolvconf will soon take your call */
-		if (run("initctl cond get hook/sys/up"))
+		if (systemf("initctl cond get hook/sys/up"))
 			return 0;
 
-		run("resolvconf -u");
+		systemf("resolvconf -u");
 		return SR_ERR_OK;
 
 	default:

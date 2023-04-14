@@ -7,7 +7,7 @@ static struct confd confd;
 static int startup_save_hook(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
 	const char *xpath, sr_event_t event, unsigned request_id, void *priv)
 {
-	if (run("sysrepocfg -X/cfg/startup-config.cfg -d startup -f json"))
+	if (systemf("sysrepocfg -X/cfg/startup-config.cfg -d startup -f json"))
 		return SR_ERR_SYS;
 
 	return SR_ERR_OK;
