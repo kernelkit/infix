@@ -1,6 +1,8 @@
 /* SPDX-License-Identifier: BSD-3-Clause */
 
 #include "core.h"
+#include "srx_val.h"
+
 #include <ctype.h>
 #include <sys/utsname.h>
 #include <sys/sysinfo.h>
@@ -339,40 +341,6 @@ fail:
 	return rc;
 }
 
-char *sr_get_str(sr_session_ctx_t *session, const char *fmt, ...)
-{
-	char *str = NULL;
-	sr_val_t *val;
-	char *xpath;
-	va_list ap;
-	int len;
-
-	va_start(ap, fmt);
-	len = vsnprintf(NULL, 0, fmt, ap) + 1;
-	va_end(ap);
-
-	xpath = alloca(len);
-	if (!xpath)
-		return NULL;
-
-	va_start(ap, fmt);
-	vsnprintf(xpath, len, fmt, ap);
-	va_end(ap);
-
-	if (sr_get_item(session, xpath, 0, &val)) {
-		ERROR("Failed reading string value from xpath %s", xpath);
-		goto fail;
-	}
-	if (!val || val->type != SR_STRING_T)
-		goto fail;
-
-	str = strdup(val->data.string_val);
-fail:
-	if (val)
-		sr_free_val(val);
-	return str;
-}
-
 #define TIMEZONE_CONF "/etc/timezone"
 #define TIMEZONE_PREV TIMEZONE_CONF "-"
 #define TIMEZONE_NEXT TIMEZONE_CONF "+"
@@ -413,7 +381,7 @@ static int change_clock(sr_session_ctx_t *session, uint32_t sub_id, const char *
 	}
 
 	/* XXX: add support also for /ietf-system:system/clock/timezone-utc-offset (deviation) */
-	timezone = sr_get_str(session, "/ietf-system:system/clock/timezone-name");
+	timezone = srx_get_str(session, "/ietf-system:system/clock/timezone-name");
 	if (!timezone) {
 		ERROR("Failed reading timezone-name");
 		return SR_ERR_VALIDATION_FAILED;
@@ -510,16 +478,16 @@ static int change_ntp(sr_session_ctx_t *session, uint32_t sub_id, const char *mo
 			valid = 0;
 
 		/* Get /ietf-system:system/ntp/server[name='foo'] */
-		ptr = sr_get_str(session, "%s/udp/address", xpath);
+		ptr = srx_get_str(session, "%s/udp/address", xpath);
 		if (ptr) {
-			type = sr_get_str(session, "%s/association-type", xpath);
+			type = srx_get_str(session, "%s/association-type", xpath);
 			fprintf(fp, "%s %s", type ?: "server", ptr);
 			server++;
 			if (type)
 				free(type);
 			free(ptr);
 
-			ptr = sr_get_str(session, "%s/udp/port", xpath);
+			ptr = srx_get_str(session, "%s/udp/port", xpath);
 			if (ptr) {
 				fprintf(fp, " port %s", ptr);
 				free(ptr);
@@ -636,7 +604,7 @@ static int change_dns(sr_session_ctx_t *session, uint32_t sub_id, const char *mo
 		char *ptr;
 
 		/* Get /ietf-system:system/dns-resolver/server[name='foo'] */
-		ptr = sr_get_str(session, "%s/udp-and-tcp/address", xpath);
+		ptr = srx_get_str(session, "%s/udp-and-tcp/address", xpath);
 		if (ptr)
 			/* XXX: add support also for udp-and-tcp/port */
 			fprintf(fp, "nameserver %s\n", ptr);
@@ -666,7 +634,7 @@ static int change_motd(sr_session_ctx_t *session, uint32_t sub_id, const char *m
 	if (!fp)
 		return SR_ERR_SYS;
 
-	nm = sr_get_str(session, xpath);
+	nm = srx_get_str(session, xpath);
 	if (nm) {
 		fprintf(fp, "%s\n", nm);
 	} else {
@@ -691,7 +659,7 @@ static int change_hostname(sr_session_ctx_t *session, uint32_t sub_id, const cha
 	if (event != SR_EV_DONE)
 		return SR_ERR_OK;
 
-	nm = sr_get_str(session, xpath);
+	nm = srx_get_str(session, xpath);
 	if (!nm) {
 		/* XXX: derive from global "options.h" or /usr/share/factory/ */
 		nm = strdup("infix");
