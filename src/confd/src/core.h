@@ -75,10 +75,6 @@ static inline int register_rpc(sr_session_ctx_t *session, const char *xpath,
 	return rc;
 }
 
-
-/* core.c */
-int run(const char *fmt, ...);
-
 /* ietf-interfaces.c */
 int ietf_interfaces_init(struct confd *confd);
 
