@@ -251,64 +251,6 @@ static int sys_reload_services(void)
 	return systemf("initctl -nbq touch sysklogd lldpd");
 }
 
-int sr_get_int(sr_session_ctx_t *session, const char *fmt, ...)
-{
-	sr_val_t *val = NULL;
-	char *xpath;
-	va_list ap;
-	int rc = 0;
-	int len;
-
-	va_start(ap, fmt);
-	len = vsnprintf(NULL, 0, fmt, ap) + 1;
-	va_end(ap);
-
-	xpath = alloca(len);
-	if (!xpath)
-		goto fail;
-
-	va_start(ap, fmt);
-	vsnprintf(xpath, len, fmt, ap);
-	va_end(ap);
-
-	if (sr_get_item(session, xpath, 0, &val) || !val)
-		goto fail;
-
-	switch (val->type) {
-	case SR_INT8_T:
-		rc = val->data.int8_val;
-		break;
-	case SR_UINT8_T:
-		rc = val->data.uint8_val;
-		break;
-	case SR_INT16_T:
-		rc = val->data.int16_val;
-		break;
-	case SR_UINT16_T:
-		rc = val->data.uint16_val;
-		break;
-	case SR_INT32_T:
-		rc = val->data.int32_val;
-		break;
-	case SR_UINT32_T:
-		rc = val->data.uint32_val;
-		break;
-	case SR_INT64_T:
-		rc = val->data.int64_val;
-		break;
-	case SR_UINT64_T:
-		rc = val->data.uint64_val;
-		break;
-	default:
-		goto fail;
-	}
-
-fail:
-	if (val)
-		sr_free_val(val);
-	return rc;
-}
-
 #define TIMEZONE_CONF "/etc/timezone"
 #define TIMEZONE_PREV TIMEZONE_CONF "-"
 #define TIMEZONE_NEXT TIMEZONE_CONF "+"
@@ -497,7 +439,7 @@ static int change_dns(sr_session_ctx_t *session, uint32_t sub_id, const char *mo
 	const char *xpath, sr_event_t event, unsigned request_id, void *priv)
 {
 	const char *fn = RESOLV_NEXT;
-	int timeout, attempts;
+	int timeout = 0, attempts = 0;
 	int rc = SR_ERR_SYS;
 	sr_val_t *val;
 	size_t cnt;
@@ -540,8 +482,8 @@ static int change_dns(sr_session_ctx_t *session, uint32_t sub_id, const char *mo
 		return SR_ERR_SYS;
 	}
 
-	timeout  = sr_get_int(session, "/ietf-system:system/dns-resolver/options/timeout");
-	attempts = sr_get_int(session, "/ietf-system:system/dns-resolver/options/attempts");
+	SRX_GET_UINT8(session, timeout, "/ietf-system:system/dns-resolver/options/timeout");
+	SRX_GET_UINT8(session, timeout, "/ietf-system:system/dns-resolver/options/attempts");
 	if (timeout || attempts) {
 		fprintf(fp, "options");
 		if (timeout)

@@ -49,6 +49,54 @@ fail:
 	return result;
 }
 
+int srx_get_int(sr_session_ctx_t *session, int *result, sr_val_type_t type, const char *fmt, ...)
+{
+	sr_val_t *val = NULL;
+	va_list ap;
+	int rc;
+
+	va_start(ap, fmt);
+	rc = srx_vaget(session, fmt, ap, &val, type);
+	va_end(ap);
+
+	if (rc)
+		return rc;
+	rc = -1;
+
+	switch (val->type) {
+	case SR_INT8_T:
+		*result = val->data.int8_val;
+		break;
+	case SR_UINT8_T:
+		*result = val->data.uint8_val;
+		break;
+	case SR_INT16_T:
+		*result = val->data.int16_val;
+		break;
+	case SR_UINT16_T:
+		*result = val->data.uint16_val;
+		break;
+	case SR_INT32_T:
+		*result = val->data.int32_val;
+		break;
+	case SR_UINT32_T:
+		*result = val->data.uint32_val;
+		break;
+	case SR_INT64_T:
+		*result = val->data.int64_val;
+		break;
+	case SR_UINT64_T:
+		*result = val->data.uint64_val;
+		break;
+	default:
+		goto fail;
+	}
+
+	rc = 0;
+fail:
+	sr_free_val(val);
+	return rc;
+}
 
 char *srx_get_str(sr_session_ctx_t *session, const char *fmt, ...)
 {
