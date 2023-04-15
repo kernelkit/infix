@@ -259,7 +259,6 @@ static int change_clock(sr_session_ctx_t *session, uint32_t sub_id, const char *
 	const char *xpath, sr_event_t event, unsigned request_id, void *priv)
 {
 	char *timezone;
-	FILE *fp;
 
 	switch (event) {
 	case SR_EV_ENABLED:	/* first time, on register. */
@@ -303,13 +302,10 @@ static int change_clock(sr_session_ctx_t *session, uint32_t sub_id, const char *
 		return SR_ERR_VALIDATION_FAILED;
 	}
 
-	fp = fopen(TIMEZONE_NEXT, "w");
-	if (!fp) {
+	if (writesf(timezone, TIMEZONE_NEXT)) {
 		ERRNO("Failed preparing %s", TIMEZONE_NEXT);
 		return SR_ERR_SYS;
 	}
-	fprintf(fp, "%s\n", timezone);
-	fclose(fp);
 
 	return SR_ERR_OK;
 }
@@ -533,26 +529,26 @@ fail:
 static int change_motd(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
 		       const char *xpath, sr_event_t event, unsigned request_id, void *priv)
 {
-	char *nm;
-	FILE *fp;
+	/* XXX: derive from global "options.h" or /usr/share/factory/ */
+	const char *msg = "\033[1;90mNote:\033[0m"
+		"\033[0;90m use help, show, and setup commands to set up and diagnose the system\033[0m";
+	char *str;
+	int rc;
 
 	/* Ignore all events except SR_EV_DONE */
 	if (event != SR_EV_DONE)
 		return SR_ERR_OK;
 
-	fp = fopen("/etc/motd", "w");
-	if (!fp)
-		return SR_ERR_SYS;
-
-	nm = srx_get_str(session, xpath);
-	if (nm) {
-		fprintf(fp, "%s\n", nm);
+	str = srx_get_str(session, xpath);
+	if (str) {
+		rc = writesf(str, "/etc/motd");
+		free(str);
 	} else {
-		/* XXX: derive from global "options.h" or /usr/share/factory/ */
-		fprintf(fp, "\033[1;90mNote:\033[0m ");
-		fprintf(fp, "\033[0;90m use help, show, and setup commands to set up and diagnose the system\033[0m\n");
+		rc = writesf(msg, "/etc/motd");
 	}
-	fclose(fp);
+
+	if (rc)
+		return SR_ERR_SYS;
 
 	return SR_ERR_OK;
 }

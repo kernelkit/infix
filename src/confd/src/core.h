@@ -19,6 +19,8 @@
 #include <sysrepo/values.h>
 #include <sysrepo/xpath.h>
 
+#include "helpers.h"
+
 #ifndef HAVE_VASPRINTF
 int vasprintf(char **strp, const char *fmt, va_list ap);
 #endif

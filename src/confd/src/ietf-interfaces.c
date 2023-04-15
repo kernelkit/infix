@@ -57,16 +57,9 @@ static int ifchange(sr_session_ctx_t *session, uint32_t sub_id, const char *modu
 
 		ifname = srx_get_str(session, "%s/name", xpath);
 		ptr = srx_get_str(session, "%s/description", xpath);
-		if (ptr) {
-			FILE *fp;
-
-			fp = fopenf("w", "/sys/class/net/%s/ifalias", ifname);
-			if (fp) {
-				fprintf(fp, "%s\n", ptr);
-				fclose(fp);
-			}
-			free(ptr);
-		}
+		if (ptr)
+			writesf(ptr, "/sys/class/net/%s/ifalias", ifname);
+		free(ptr);
 
 		systemf("ip addr flush dev %s", ifname);
 
