@@ -51,7 +51,7 @@ append_args()
 	echo -n "debug "
     fi
 
-    echo -n "${QEMU_APPEND} ${QEMU_EXTRA_APPEND} "
+    echo -n "${QEMU_APPEND} bonding.max_bonds=0 dummy.numdummies=0 fb_tunnels=none ${QEMU_EXTRA_APPEND} "
 }
 
 rootfs_args()
