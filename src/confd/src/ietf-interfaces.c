@@ -115,7 +115,7 @@ static void ifpopul(sr_session_ctx_t *session)
 			continue;
 
 		snprintf(xpath, sizeof(xpath), INTERFACE_XPATH "/phys-address", iface->ifname);
-		rc = sr_set_item_str(session, xpath, iface->hwaddr, 0, 0);
+		rc = sr_set_item_str(session, xpath, iface->hwaddr, NULL, 0);
 		if (rc)
 			ERROR("failed setting item %s", xpath);
 	}
@@ -131,7 +131,7 @@ static void ifinit(sr_session_ctx_t *session)
 	int rc = 0;
 
 	TAILQ_FOREACH(iface, &iface_list, link) {
-		char xpath[sizeof(INTERFACE_XPATH) + IFNAMSIZ + 42];
+		char xpath[sizeof(INTERFACE_XPATH) + IFNAMSIZ + 128];
 		sr_val_t val;
 
 		snprintf(xpath, sizeof(xpath), INTERFACE_XPATH "/type", iface->ifname);
@@ -143,9 +143,25 @@ static void ifinit(sr_session_ctx_t *session)
 			continue;
 
 		val.type = SR_IDENTITYREF_T;
-		rc = sr_set_item(session, xpath, &val, 0);
-		if (rc)
+		if ((rc = sr_set_item(session, xpath, &val, 0)))
+			goto fail;
+
+		if (strcmp(iface->ifname, "lo"))
+			continue;
+
+		snprintf(xpath, sizeof(xpath), INTERFACE_XPATH
+			 "/ietf-ip:ipv4/address[ip='%s']/prefix-length", iface->ifname, "127.0.0.1");
+		if ((rc = sr_set_item_str(session, xpath, "8", NULL, 0)))
+			goto fail;
+
+		snprintf(xpath, sizeof(xpath), INTERFACE_XPATH
+			 "/ietf-ip:ipv6/address[ip='%s']/prefix-length", iface->ifname, "::1");
+		rc = sr_set_item_str(session, xpath, "128", NULL, 0);
+		if (rc) {
+		fail:
 			ERROR("failed setting item %s", xpath);
+			continue;
+		}
 	}
 
 	rc = sr_apply_changes(session, 0);
