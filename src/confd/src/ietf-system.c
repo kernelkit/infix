@@ -117,6 +117,7 @@ static int clock_cb(sr_session_ctx_t *session, uint32_t sub_id, const char *modu
 
 	lyd_print_mem(&buf, *parent, LYD_XML, 0);
 	DEBUG("%s", buf);
+	free(buf);
 
 	now = time(NULL);
 	if (!boottime[0]) {
@@ -138,6 +139,7 @@ static int clock_cb(sr_session_ctx_t *session, uint32_t sub_id, const char *modu
 
 	lyd_print_mem(&buf, *parent, LYD_XML, 0);
 	DEBUG("%s", buf);
+	free(buf);
 
 	sr_release_context(sr_session_get_connection(session));
 	return SR_ERR_OK;
@@ -164,6 +166,7 @@ static int platform_cb(sr_session_ctx_t *session, uint32_t sub_id, const char *m
 
 	lyd_print_mem(&buf, *parent, LYD_XML, 0);
 	DEBUG("%s", buf);
+	free(buf);
 
 	rc = lyd_new_path(*parent, NULL, PLATFORM_PATH_"/os-name", os, 0, NULL);
 	if (rc)
@@ -180,6 +183,7 @@ static int platform_cb(sr_session_ctx_t *session, uint32_t sub_id, const char *m
 
 	lyd_print_mem(&buf, *parent, LYD_XML, 0);
 	DEBUG("%s", buf);
+	free(buf);
 
 	sr_release_context(sr_session_get_connection(session));
 	return SR_ERR_OK;
