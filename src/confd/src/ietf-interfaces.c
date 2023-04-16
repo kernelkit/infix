@@ -295,7 +295,7 @@ int ietf_interfaces_init(struct confd *confd)
 
 	rc = srx_require_modules(confd->conn, ietf_if_reqs);
 	if (rc)
-		goto err;
+		goto fail;
 
 	ifprobe();
 
@@ -308,7 +308,7 @@ int ietf_interfaces_init(struct confd *confd)
 	ifinit(confd->session);
 
 	return SR_ERR_OK;
-err:
+fail:
 	ERROR("init failed: %s", sr_strerror(rc));
 	sr_unsubscribe(confd->sub);
 

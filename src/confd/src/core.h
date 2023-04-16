@@ -46,15 +46,15 @@ static inline void print_val(sr_val_t *val)
 
 #define REGISTER_CHANGE(s,m,x,f,c,a,u)				\
 	if ((rc = register_change(s, m, x, f, c, a, u)))	\
-		goto err
+		goto fail
 
 #define REGISTER_OPER(s,m,x,c,a,f,u)				\
 	if ((rc = register_oper(s, m, x, c, a, f, u)))		\
-		goto err
+		goto fail
 
 #define REGISTER_RPC(s,x,c,a,u)				\
 	if ((rc = register_rpc(s, x, c, a, u)))		\
-		goto err
+		goto fail
 
 struct confd {
 	sr_session_ctx_t       *session;
