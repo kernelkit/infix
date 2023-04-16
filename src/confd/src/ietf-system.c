@@ -606,7 +606,6 @@ err:
 		return err;
 	}
 
-	ERROR("Reload hostname-dependent services ...");
 	err = err ? : aug_save(confd->aug);
 	if (sys_reload_services())
 		return SR_ERR_SYS;

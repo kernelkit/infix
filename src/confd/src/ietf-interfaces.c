@@ -76,7 +76,6 @@ static int ifchange(sr_session_ctx_t *session, uint32_t sub_id, const char *modu
 			SRX_GET_UINT8(session, plen, "%s/prefix-length", addr[j].xpath);
 			if (!plen) {
 				netmask = srx_get_str(session, "%s/netmask", addr[j].xpath);
-				ERROR("read netmask instead: %s", netmask ?: "<NIL>");
 				if (netmask) {
 					plen = inet_mask2len(netmask);
 					free(netmask);
