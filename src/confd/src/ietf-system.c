@@ -101,23 +101,10 @@ static int clock_cb(sr_session_ctx_t *session, uint32_t sub_id, const char *modu
 	const struct ly_ctx *ctx;
 	char curtime[64];
 	time_t now, boot;
-	char *buf;
+	int first = 1;
 	int rc;
 
-	DEBUG("path=%s, request_path=%s", path, request_path);
 	ctx = sr_acquire_context(sr_session_get_connection(session));
-
-	rc = lyd_new_path(NULL, ctx, CLOCK_PATH_, NULL, 0, parent);
-	if (rc) {
-	fail:
-		ERROR("Failed building data tree, libyang error %d", rc);
-		sr_release_context(sr_session_get_connection(session));
-		return SR_ERR_INTERNAL;
-	}
-
-	lyd_print_mem(&buf, *parent, LYD_XML, 0);
-	DEBUG("%s", buf);
-	free(buf);
 
 	now = time(NULL);
 	if (!boottime[0]) {
@@ -127,22 +114,21 @@ static int clock_cb(sr_session_ctx_t *session, uint32_t sub_id, const char *modu
 		boot = now - si.uptime;
 		fmtime(boot, boottime, sizeof(boottime));
 	}
-
-	rc = lyd_new_path(*parent, NULL, CLOCK_PATH_ "/boot-datetime", boottime, 0, NULL);
-	if (rc)
-		goto fail;
-
 	fmtime(now, curtime, sizeof(curtime));
-	rc = lyd_new_path(*parent, NULL, CLOCK_PATH_ "/current-datetime", curtime, 0, NULL);
-	if (rc)
+
+	if ((rc = srx_set_item(ctx, parent, &first, CLOCK_PATH_, "boot-datetime", boottime)))
+		goto fail;
+	if ((rc = srx_set_item(ctx, parent, &first, CLOCK_PATH_, "current-datetime", curtime)))
 		goto fail;
 
-	lyd_print_mem(&buf, *parent, LYD_XML, 0);
-	DEBUG("%s", buf);
-	free(buf);
+	if (rc) {
+	fail:
+		ERROR("Failed building data tree, libyang error %d", rc);
+		rc = SR_ERR_INTERNAL;
+	}
 
 	sr_release_context(sr_session_get_connection(session));
-	return SR_ERR_OK;
+	return rc;
 }
 
 static int platform_cb(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
@@ -150,43 +136,28 @@ static int platform_cb(sr_session_ctx_t *session, uint32_t sub_id, const char *m
 		       struct lyd_node **parent, void *priv)
 {
 	const struct ly_ctx *ctx;
-	char *buf;
+	int first = 1;
 	int rc;
 
-	DEBUG("path=%s request_path=%s", path, request_path);
 	ctx = sr_acquire_context(sr_session_get_connection(session));
 
-	rc = lyd_new_path(NULL, ctx, PLATFORM_PATH_, NULL, 0, parent);
+	if ((rc = srx_set_item(ctx, parent, &first, PLATFORM_PATH_, "os-name", os)))
+		goto fail;
+	if ((rc = srx_set_item(ctx, parent, &first, PLATFORM_PATH_, "os-release", rel)))
+		goto fail;
+	if ((rc = srx_set_item(ctx, parent, &first, PLATFORM_PATH_, "os-version", ver)))
+		goto fail;
+	if ((rc = srx_set_item(ctx, parent, &first, PLATFORM_PATH_, "machine", sys)))
+		goto fail;
+
 	if (rc) {
 	fail:
 		ERROR("Failed building data tree, libyang error %d", rc);
-		sr_release_context(sr_session_get_connection(session));
-		return SR_ERR_INTERNAL;
+		rc = SR_ERR_INTERNAL;
 	}
 
-	lyd_print_mem(&buf, *parent, LYD_XML, 0);
-	DEBUG("%s", buf);
-	free(buf);
-
-	rc = lyd_new_path(*parent, NULL, PLATFORM_PATH_"/os-name", os, 0, NULL);
-	if (rc)
-		goto fail;
-	rc = lyd_new_path(*parent, NULL, PLATFORM_PATH_"/os-release", rel, 0, NULL);
-	if (rc)
-		goto fail;
-	rc = lyd_new_path(*parent, NULL, PLATFORM_PATH_"/os-version", ver, 0, NULL);
-	if (rc)
-		goto fail;
-	rc = lyd_new_path(*parent, NULL, PLATFORM_PATH_"/machine", sys, 0, NULL);
-	if (rc)
-		goto fail;
-
-	lyd_print_mem(&buf, *parent, LYD_XML, 0);
-	DEBUG("%s", buf);
-	free(buf);
-
 	sr_release_context(sr_session_get_connection(session));
-	return SR_ERR_OK;
+	return rc;
 }
 
 static int rpc_exec(sr_session_ctx_t *session, uint32_t sub_id, const char *path,
