@@ -111,6 +111,7 @@ static int clock_cb(sr_session_ctx_t *session, uint32_t sub_id, const char *modu
 	if (rc) {
 	fail:
 		ERROR("Failed building data tree, libyang error %d", rc);
+		sr_release_context(sr_session_get_connection(session));
 		return SR_ERR_INTERNAL;
 	}
 
@@ -138,6 +139,7 @@ static int clock_cb(sr_session_ctx_t *session, uint32_t sub_id, const char *modu
 	lyd_print_mem(&buf, *parent, LYD_XML, 0);
 	DEBUG("%s", buf);
 
+	sr_release_context(sr_session_get_connection(session));
 	return SR_ERR_OK;
 }
 
@@ -156,6 +158,7 @@ static int platform_cb(sr_session_ctx_t *session, uint32_t sub_id, const char *m
 	if (rc) {
 	fail:
 		ERROR("Failed building data tree, libyang error %d", rc);
+		sr_release_context(sr_session_get_connection(session));
 		return SR_ERR_INTERNAL;
 	}
 
@@ -178,6 +181,7 @@ static int platform_cb(sr_session_ctx_t *session, uint32_t sub_id, const char *m
 	lyd_print_mem(&buf, *parent, LYD_XML, 0);
 	DEBUG("%s", buf);
 
+	sr_release_context(sr_session_get_connection(session));
 	return SR_ERR_OK;
 }
 
