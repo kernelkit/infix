@@ -65,6 +65,8 @@ static int ifchange(sr_session_ctx_t *session, uint32_t sub_id, const char *modu
 			"/proc/sys/net/ipv4/conf/%s/forwarding", ifname);
 
 		systemf("ip addr flush dev %s", ifname);
+		if (!srx_enabled(session, "%s//ietf-ip:ipv4/enabled", xpath))
+			goto ipv6;
 
 		snprintf(path, sizeof(path), "%s/ietf-ip:ipv4/address", xpath);
 		rc = sr_get_items(session, path, 0, 0, &addr, &addrcnt);
@@ -81,17 +83,16 @@ static int ifchange(sr_session_ctx_t *session, uint32_t sub_id, const char *modu
 					free(netmask);
 				}
 			}
-			if (plen > 0) {
-				char *add = "add";
 
-				if (!srx_enabled(session, "%s/enabled", addr[j].xpath))
-					add = "del";
-
-				ERROR("Preparing to %s addess %s", add, address);
+			if (plen == 0)
+				ERROR("%s: missing netmask or invalid prefix-length", address);
+			else
 				systemf("ip addr add %s/%d dev %s", address, plen, ifname);
-			}
 			free(address);
 		}
+
+	ipv6:
+		/* XXX todo */
 
 		systemf("ip link set %s %s", ifname, srx_enabled(session, "%s/enabled", xpath) ? "up" : "down");
 		free(ifname);
