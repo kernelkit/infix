@@ -50,6 +50,7 @@ static int ifchange(sr_session_ctx_t *session, uint32_t sub_id, const char *modu
 	for (size_t i = 0; i < cnt; i++) {
 		const char *xpath = val[i].xpath;
 		char path[strlen(xpath) + 64];
+		int dad_xmit = 1;
 		sr_val_t *addr;
 		size_t addrcnt;
 		char *ifname;
@@ -65,7 +66,7 @@ static int ifchange(sr_session_ctx_t *session, uint32_t sub_id, const char *modu
 			"/proc/sys/net/ipv4/conf/%s/forwarding", ifname);
 
 		systemf("ip addr flush dev %s", ifname);
-		if (!srx_enabled(session, "%s//ietf-ip:ipv4/enabled", xpath))
+		if (!srx_enabled(session, "%s/ietf-ip:ipv4/enabled", xpath))
 			goto ipv6;
 
 		snprintf(path, sizeof(path), "%s/ietf-ip:ipv4/address", xpath);
@@ -90,10 +91,38 @@ static int ifchange(sr_session_ctx_t *session, uint32_t sub_id, const char *modu
 				systemf("ip addr add %s/%d dev %s", address, plen, ifname);
 			free(address);
 		}
-
 	ipv6:
-		/* XXX todo */
+		writedf(srx_enabled(session, "%s/ietf-ip:ipv6/forwarding", xpath),
+			"/proc/sys/net/ipv6/conf/%s/forwarding", ifname);
 
+		SRX_GET_UINT32(session, dad_xmit, "%s/ietf-ip:ipv6/dup-addr-detect-transmits", xpath);
+		writedf(dad_xmit, "/proc/sys/net/ipv6/conf/%s/dad_transmits", ifname);
+
+		if (!srx_enabled(session, "%s/ietf-ip:ipv6/enabled", xpath)) {
+			writedf(1, "/proc/sys/net/ipv6/conf/%s/disable_ipv6", ifname);
+			goto done;
+
+		}
+		writedf(0, "/proc/sys/net/ipv6/conf/%s/disable_ipv6", ifname);
+
+		writedf(srx_enabled(session, "%s/ietf-ip:ipv6/autoconf/create-global-addresses", xpath),
+			"/proc/sys/net/ipv6/conf/%s/autoconf", ifname);
+
+		snprintf(path, sizeof(path), "%s/ietf-ip:ipv6/address", xpath);
+		rc = sr_get_items(session, path, 0, 0, &addr, &addrcnt);
+		for (size_t j = 0; j < addrcnt; j++) {
+			char *address;
+			int plen = 0;
+
+			address = srx_get_str(session, "%s/ip", addr[j].xpath);
+			SRX_GET_UINT8(session, plen, "%s/prefix-length", addr[j].xpath);
+			if (plen == 0)
+				ERROR("%s: missing netmask or invalid prefix-length", address);
+			else
+				systemf("ip addr add %s/%d dev %s", address, plen, ifname);
+			free(address);
+		}
+	done:
 		systemf("ip link set %s %s", ifname, srx_enabled(session, "%s/enabled", xpath) ? "up" : "down");
 		free(ifname);
 	}
