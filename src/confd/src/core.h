@@ -14,6 +14,7 @@
 
 #include <augeas.h>
 #include <libite/lite.h>
+#include <libite/queue.h>
 #include <libyang/libyang.h>
 #include <sysrepo.h>
 #include <sysrepo/values.h>
