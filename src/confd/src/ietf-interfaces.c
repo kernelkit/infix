@@ -61,6 +61,9 @@ static int ifchange(sr_session_ctx_t *session, uint32_t sub_id, const char *modu
 			writesf(ptr, "/sys/class/net/%s/ifalias", ifname);
 		free(ptr);
 
+		writedf(srx_enabled(session, "%s/ietf-ip:ipv4/forwarding", xpath),
+			"/proc/sys/net/ipv4/conf/%s/forwarding", ifname);
+
 		systemf("ip addr flush dev %s", ifname);
 
 		snprintf(path, sizeof(path), "%s/ietf-ip:ipv4/address", xpath);
