@@ -3,24 +3,45 @@
 #include <stdarg.h>
 #include "core.h"
 
+static FILE *open_file(const char *mode, const char *fmt, va_list ap)
+{
+	va_list apc;
+	char *file;
+	int len;
+
+	va_copy(apc, ap);
+	len = vsnprintf(NULL, 0, fmt, apc);
+	va_end(apc);
+
+	file = alloca(len + 1);
+	if (!file) {
+		errno = ENOMEM;
+		return NULL;
+	}
+
+	va_copy(apc, ap);
+	vsnprintf(file, len + 1, fmt, apc);
+	va_end(apc);
+
+	return fopen(file, mode);
+}
+
 /*
  * Write interger value to a file composed from fmt and optional args.
  */
 int writedf(int value, const char *fmt, ...)
 {
 	va_list ap;
-	int rc = -1;
 	FILE *fp;
 
 	va_start(ap, fmt);
-	fp = fopenf("w", fmt, ap);
-	if (fp) {
-		fprintf(fp, "%d\n", value);
-		rc = fclose(fp);
-	}
+	fp = open_file("r+", fmt, ap);
 	va_end(ap);
+	if (!fp)
+		return -1;
 
-	return rc;
+	fprintf(fp, "%d\n", value);
+	return fclose(fp);
 }
 
 /*
@@ -29,17 +50,15 @@ int writedf(int value, const char *fmt, ...)
 int writesf(const char *str, const char *fmt, ...)
 {
 	va_list ap;
-	int rc = -1;
 	FILE *fp;
 
 	va_start(ap, fmt);
-	fp = fopenf("w", fmt, ap);
-	if (fp) {
-		fprintf(fp, "%s\n", str);
-		rc = fclose(fp);
-	}
+	fp = open_file("r+", fmt, ap);
 	va_end(ap);
+	if (!fp)
+		return -1;
 
-	return rc;
+	fprintf(fp, "%s\n", str);
+	return fclose(fp);
 }
 
