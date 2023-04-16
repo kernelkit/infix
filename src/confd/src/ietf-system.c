@@ -636,16 +636,16 @@ int ietf_system_init(struct confd *confd)
 	if (aug_load_file(confd->aug, "/etc/hostname") ||
 	    aug_load_file(confd->aug, "/etc/hosts")) {
 		ERROR("ietf-system: Augeas initialization failed");
-		goto err;
+		goto fail;
 	}
 
 	rc = sr_install_module(confd->conn, YANG_PATH_"/ietf-system@2014-08-06.yang", NULL, features);
 	if (rc)
-		goto err;
+		goto fail;
 	/* Augment to ietf-systems */
 	rc = sr_install_module(confd->conn, YANG_PATH_"/infix-system@2014-08-06.yang", NULL, NULL);
 	if (rc)
-		goto err;
+		goto fail;
 
 	REGISTER_CHANGE(confd->session, "ietf-system", "/ietf-system:system/hostname", 0, change_hostname, confd, &confd->sub);
 	REGISTER_CHANGE(confd->session, "ietf-system", "/ietf-system:system/infix-system:motd", 0, change_motd, confd, &confd->sub);
@@ -661,7 +661,7 @@ int ietf_system_init(struct confd *confd)
 	REGISTER_RPC(confd->session, "/ietf-system:set-current-datetime", rpc_set_datetime, NULL, &confd->sub);
 
 	return SR_ERR_OK;
-err:
+fail:
 	ERROR("init failed: %s", sr_strerror(rc));
 	sr_unsubscribe(confd->sub);
 
