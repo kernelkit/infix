@@ -639,21 +639,14 @@ int ietf_system_init(struct confd *confd)
 	if (rc)
 		goto err;
 
-	rc = sr_oper_get_subscribe(confd->session, "ietf-system", CLOCK_PATH_,
-				   clock_cb, NULL, SR_SUBSCR_DEFAULT, &confd->sub);
-	if (rc != SR_ERR_OK)
-		goto err;
-
-	rc = sr_oper_get_subscribe(confd->session, "ietf-system", PLATFORM_PATH_,
-				   platform_cb, NULL, SR_SUBSCR_DEFAULT, &confd->sub);
-	if (rc != SR_ERR_OK)
-		goto err;
-
 	REGISTER_CHANGE(confd->session, "ietf-system", "/ietf-system:system/hostname", 0, change_hostname, confd, &confd->sub);
 	REGISTER_CHANGE(confd->session, "ietf-system", "/ietf-system:system/infix-system:motd", 0, change_motd, confd, &confd->sub);
 	REGISTER_CHANGE(confd->session, "ietf-system", "/ietf-system:system/clock", 0, change_clock, confd, &confd->sub);
 	REGISTER_CHANGE(confd->session, "ietf-system", "/ietf-system:system/ntp", 0, change_ntp, confd, &confd->sub);
 	REGISTER_CHANGE(confd->session, "ietf-system", "/ietf-system:system/dns-resolver", 0, change_dns, confd, &confd->sub);
+
+	REGISTER_OPER(confd->session, "ietf-system", CLOCK_PATH_, clock_cb, NULL, 0, &confd->sub);
+	REGISTER_OPER(confd->session, "ietf-system", PLATFORM_PATH_, platform_cb, NULL, 0, &confd->sub);
 
 	REGISTER_RPC(confd->session, "/ietf-system:system-restart",  rpc_exec, "reboot", &confd->sub);
 	REGISTER_RPC(confd->session, "/ietf-system:system-shutdown", rpc_exec, "poweroff", &confd->sub);

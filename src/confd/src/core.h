@@ -47,6 +47,10 @@ static inline void print_val(sr_val_t *val)
 	if ((rc = register_change(s, m, x, f, c, a, u)))	\
 		goto err
 
+#define REGISTER_OPER(s,m,x,c,a,f,u)				\
+	if ((rc = register_oper(s, m, x, c, a, f, u)))		\
+		goto err
+
 #define REGISTER_RPC(s,x,c,a,u)				\
 	if ((rc = register_rpc(s, x, c, a, u)))		\
 		goto err
@@ -65,6 +69,15 @@ static inline int register_change(sr_session_ctx_t *session, const char *module,
 	int rc = sr_module_change_subscribe(session, module, xpath, cb, arg, 0, flags | SR_SUBSCR_DEFAULT, sub);
 	if (rc)
 		ERROR("failed subscribing to changes of %s: %s", xpath, sr_strerror(rc));
+	return rc;
+}
+
+static inline int register_oper(sr_session_ctx_t *session, const char *module, const char *xpath,
+			sr_oper_get_items_cb cb, void *arg, int flags, sr_subscription_ctx_t **sub)
+{
+	int rc = sr_oper_get_subscribe(session, module, xpath, cb, arg, flags | SR_SUBSCR_DEFAULT, sub);
+	if (rc)
+		ERROR("failed subscribing to %s oper: %s", xpath, sr_strerror(rc));
 	return rc;
 }
 
