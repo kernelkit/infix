@@ -5,7 +5,8 @@
 
 #include "core.h"
 
-#define SRX_GET_UINT8(s,v,fmt,...) srx_get_int(s, &v, SR_UINT8_T, fmt, ##__VA_ARGS__)
+#define SRX_GET_UINT8(s,v,fmt,...)  srx_get_int(s, &v, SR_UINT8_T, fmt, ##__VA_ARGS__)
+#define SRX_GET_UINT32(s,v,fmt,...) srx_get_int(s, &v, SR_UINT32_T, fmt, ##__VA_ARGS__)
 
 char *srx_get_str  (sr_session_ctx_t *session, const char *fmt, ...);
 int   srx_get_int  (sr_session_ctx_t *session, int *result, sr_val_type_t type, const char *fmt, ...);
