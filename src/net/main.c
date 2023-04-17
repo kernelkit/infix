@@ -1,5 +1,6 @@
 #include <err.h>
 #include <libgen.h>
+#include <search.h>
 #include <stdlib.h>
 #include <sysexits.h>
 #include <net/if.h>
@@ -24,8 +25,6 @@ struct iface {
 
 static TAILQ_HEAD(iflist, iface) iface_list = TAILQ_HEAD_INITIALIZER(iface_list);
 
-static char **handled;
-static int if_num;
 static int debug;
 static int verbose;
 static int dep;
@@ -33,44 +32,40 @@ static int dep;
 static FILE *ip, *bridge;
 static char *prognm;
 
-
-static void if_alloc(int num)
+static void addif(char *ifname)
 {
-	handled = calloc(num, sizeof(char *));
-	if (!handled)
-		err(1, "calloc");
-	if_num = num;
+	struct iface *entry;
+
+	entry = malloc(sizeof(*entry));
+	if (!entry)
+		err(1, "malloc");
+
+	strlcpy(entry->ifname, ifname, sizeof(entry->ifname));
+	TAILQ_INSERT_TAIL(&iface_list, entry, link);
 }
 
-static void if_free()
+static int findif(char *ifname)
 {
-	for (int i = 0; i < if_num; i++) {
-		if (handled[i])
-			free(handled[i]);
-	}
-	free(handled);
-}
+	struct iface *iface;
 
-static void if_done(char *ifname)
-{
-	for (int i = 0; i < if_num; i++) {
-		if (handled[i]) {
-			if (strcmp(handled[i], ifname))
-				continue;
-			return;
-		}
-		handled[i] = strdup(ifname);
-		break;
-	}
-}
+	TAILQ_FOREACH(iface, &iface_list, link) {
+		if (strcmp(iface->ifname, ifname))
+			continue;
 
-static int if_find(char *ifname)
-{
-	for (int i = 0; i < if_num; i++) {
-		if (handled[i] && !strcmp(handled[i], ifname))
-			return 1;
+		return 1;
 	}
+
 	return 0;
+}
+
+static void freeifs(void)
+{
+	struct iface *iface, *tmp;
+
+	TAILQ_FOREACH_SAFE(iface, &iface_list, link, tmp) {
+		TAILQ_REMOVE(&iface_list, iface, link);
+		free(iface);
+	}
 }
 
 static void savedep(char *ipath)
@@ -192,7 +187,7 @@ static int deps(char *ipath, char *ifname, const char *action)
 	}
 
 	savedep(ipath);
-	if (if_find(ifname))
+	if (findif(ifname))
 		return 0;
 
 	snprintf(path, sizeof(path), "%s/%s", ipath, action);
@@ -206,8 +201,8 @@ static int deps(char *ipath, char *ifname, const char *action)
 	rc = run(cmd);
 done:
 	free(cmd);
-	if_done(ifname);
-	
+	addif(ifname);
+
 	return rc;
 }
 
@@ -218,7 +213,6 @@ static int iter(char *path, size_t len, const char *action)
 	int num;
 
 	num = dir(path, NULL, dir_filter, &files, 0);
-	if_alloc(num);
 
 	for (int j = 0; j < num; j++) {
 		char *ifname = files[j];
@@ -231,7 +225,7 @@ static int iter(char *path, size_t len, const char *action)
 		free(ifname);
 	}
 
-	if_free();
+	freeifs();
 
 	return rc;
 }
@@ -344,28 +338,6 @@ static const char *getnet(void)
 	}
 
 	return net;
-}
-
-static void addif(char *ifname)
-{
-	struct iface *entry;
-
-	entry = malloc(sizeof(*entry));
-	if (!entry)
-		err(1, "malloc");
-
-	strlcpy(entry->ifname, ifname, sizeof(entry->ifname));
-	TAILQ_INSERT_TAIL(&iface_list, entry, link);
-}
-
-static void freeifs(void)
-{
-	struct iface *iface, *tmp;
-
-	TAILQ_FOREACH_SAFE(iface, &iface_list, link, tmp) {
-		TAILQ_REMOVE(&iface_list, iface, link);
-		free(iface);
-	}
 }
 
 /* build list from current generation */
