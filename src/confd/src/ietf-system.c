@@ -6,9 +6,18 @@
 #include <ctype.h>
 #include <sys/utsname.h>
 #include <sys/sysinfo.h>
+#include <sys/types.h>
+#include <pwd.h>
+#include <assert.h>
 
 #define CLOCK_PATH_    "/ietf-system:system-state/clock"
 #define PLATFORM_PATH_ "/ietf-system:system-state/platform"
+
+struct sr_change {
+	sr_change_oper_t op;
+	sr_val_t *old;
+	sr_val_t *new;
+};
 
 static char   *ver = NULL;
 static char   *rel = NULL;
@@ -91,6 +100,31 @@ static char *fmtime(time_t t, char *buf, size_t len)
         }
 
         return buf;
+}
+
+static sr_error_t _sr_change_iter(augeas *aug, sr_session_ctx_t *session, char *xpath,
+				  sr_error_t cb(augeas *, struct sr_change *))
+{
+	struct sr_change change = {};
+	sr_change_iter_t *iter;
+	sr_error_t err;
+
+	err = sr_dup_changes_iter(session, xpath, &iter);
+	if (err)
+		return err;
+
+	while (sr_get_change_next(session, iter, &change.op, &change.old, &change.new) == SR_ERR_OK) {
+		err = cb(aug, &change);
+		sr_free_val(change.old);
+		sr_free_val(change.new);
+		if (err) {
+			sr_free_change_iter(iter);
+			return err;
+		}
+	}
+	sr_free_change_iter(iter);
+
+	return SR_ERR_OK;
 }
 
 static int clock_cb(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
@@ -228,6 +262,27 @@ done:
 static int sys_reload_services(void)
 {
 	return systemf("initctl -nbq touch sysklogd lldpd");
+}
+
+static int aug_set_dynpath(augeas *aug, const char *val, const char *fmt, ...)
+{
+	va_list ap;
+	char *path;
+	int res;
+
+	va_start(ap, fmt);
+	res = vasprintf(&path, fmt, ap);
+	va_end(ap);
+	if (res == -1)
+		return res;
+
+	res = aug_set(aug, path, val);
+	if (res != 0)
+		ERROR("Unable to set aug path \"%s\" to \"%s\"\n", path, val);
+
+	free(path);
+
+	return res;
 }
 
 #define TIMEZONE_CONF "/etc/timezone"
@@ -505,6 +560,239 @@ fail:
 	return rc;
 }
 
+static int is_valid_username(const char *user)
+{
+	size_t i;
+
+	/* The username should not start with a digit or hyphen */
+	if (!isalpha(user[0]) && (user[0] != '_'))
+		return 0;
+
+	for (i = 1; i < strlen(user); i++) {
+		if (!isalnum(user[i]) && (user[i] != '_') && (user[i] != '-') && (user[i] != '.'))
+			return 0;
+	}
+
+	return 1;
+}
+
+static int sys_del_user(char *user)
+{
+	char *args[] = {
+		"deluser", user, NULL
+	};
+	int err;
+
+	err = systemv_silent(args);
+	if (err) {
+		ERROR("Error deleting user \"%s\"\n", user);
+		return SR_ERR_SYS;
+	}
+	DEBUG("User \"%s\" deleted\n", user);
+
+	return SR_ERR_OK;
+}
+
+static int sys_add_new_user(char *name)
+{
+	char *args[] = {
+		"adduser", "-D", name, NULL
+	};
+	int err;
+
+	/**
+	 * The Busybox implementation of adduser -D sets the password to "!",
+	 * which should prevent the new user from logging in until Augeas has
+	 * updated it.
+	 */
+	err = systemv_silent(args);
+	if (err) {
+		ERROR("Error creating new user \"%s\"\n", name);
+		return SR_ERR_SYS;
+	}
+	DEBUG("New user \"%s\" created\n", name);
+
+	return SR_ERR_OK;
+}
+
+static sr_error_t handle_sr_passwd_update(augeas *aug, struct sr_change *change)
+{
+	sr_xpath_ctx_t state;
+	struct passwd *pw;
+	const char *hash;
+	sr_val_t *val;
+	char *xpath;
+	char *user;
+
+	val = change->old ? : change->new;
+	assert(val);
+
+	xpath = sr_xpath_key_value(val->xpath, "user", "name", &state);
+	user = strdup(xpath);
+	sr_xpath_recover(&state);
+
+	pw = getpwnam(user);
+	if (!pw) {
+		DEBUG("Skipping attribute for missing user (%s)\n", user);
+		return SR_ERR_OK;
+	}
+
+	switch (change->op) {
+	case SR_OP_CREATED:
+	case SR_OP_MODIFIED:
+		assert(change->new);
+
+		if (change->new->type != SR_STRING_T) {
+			ERROR("Internal error, expected pass to be string type\n");
+			return SR_ERR_INTERNAL;
+		}
+		hash = change->new->data.string_val;
+
+		/*
+		 * The iana-crypt-hash yang model is used to validate password
+		 * hash sanity, this is an emergency sanity check. We DON'T
+		 * want an empty string here.
+		 */
+		if (!hash || !strlen(hash)) {
+			ERROR("Password hash sanity check failed\n");
+			return SR_ERR_INTERNAL;
+		}
+		if (aug_set_dynpath(aug, hash, "etc/shadow/%s/password", user))
+			return SR_ERR_SYS;
+		DEBUG("Password updated for user %s\n", user);
+	break;
+	case SR_OP_DELETED:
+		if (aug_set_dynpath(aug, "!", "etc/shadow/%s/password", user))
+			return SR_ERR_SYS;
+		DEBUG("Password deleted for user %s\n", user);
+	break;
+	case SR_OP_MOVED:
+		return SR_ERR_OK;
+	}
+
+	return SR_ERR_OK;
+}
+
+static sr_error_t check_sr_user_update(augeas *aug, struct sr_change *change)
+{
+	sr_xpath_ctx_t state;
+	sr_val_t *val;
+	char *name;
+
+	val = change->old ? : change->new;
+	assert(val);
+
+	name = sr_xpath_key_value(val->xpath, "user", "name", &state);
+	if (!is_valid_username(name)) {
+		ERROR("Invalid username \"%s\"\n", name);
+		return SR_ERR_VALIDATION_FAILED;
+	}
+	DEBUG("Username \"%s\" is valid\n", name);
+
+	return SR_ERR_OK;
+}
+
+static sr_error_t handle_sr_user_update(augeas *aug, struct sr_change *change)
+{
+	sr_xpath_ctx_t state;
+	char *name;
+	sr_error_t err;
+
+	switch (change->op) {
+	case SR_OP_CREATED:
+		assert(change->new);
+
+		name = sr_xpath_key_value(change->new->xpath, "user", "name", &state);
+		err = sys_add_new_user(name);
+		if (err) {
+			sr_xpath_recover(&state);
+			return err;
+		}
+		DEBUG("User %s created\n", name);
+		sr_xpath_recover(&state);
+	break;
+	case SR_OP_DELETED:
+		assert(change->old);
+
+		name = sr_xpath_key_value(change->old->xpath, "user", "name", &state);
+		err = sys_del_user(name);
+		if (err) {
+			sr_xpath_recover(&state);
+			return err;
+		}
+		DEBUG("User %s deleted\n", name);
+		sr_xpath_recover(&state);
+	break;
+	case SR_OP_MOVED:
+	case SR_OP_MODIFIED:
+		return SR_ERR_OK;
+	}
+
+	return SR_ERR_OK;
+}
+
+static sr_error_t change_auth_check(augeas *aug, sr_session_ctx_t *session)
+{
+	sr_error_t err;
+
+	err = _sr_change_iter(aug, session, "/ietf-system:system/authentication/user",
+			      check_sr_user_update);
+	if (err)
+		return err;
+
+	return SR_ERR_OK;
+}
+
+static sr_error_t change_auth_done(augeas *aug, sr_session_ctx_t *session)
+{
+	sr_error_t err;
+
+	err = _sr_change_iter(aug, session, "/ietf-system:system/authentication/user",
+			      handle_sr_user_update);
+	if (err)
+		return err;
+
+	/**
+	 * Load any newly created user into aug.
+	 *
+	 * We want aug_load_file() here but it seems broken. The file doesn't appear
+	 * to be reloaded after calling it. It returns no error and it seems to find
+	 * the appropriate lens. Further investigation needed.
+	 */
+	err = aug_load(aug);
+	if (err) {
+		ERROR("Error loading files into aug tree\n");
+		return SR_ERR_INTERNAL;
+	}
+
+	err = _sr_change_iter(aug, session, "/ietf-system:system/authentication/user[*]/password",
+			      handle_sr_passwd_update);
+	if (err)
+		return err;
+
+	err = aug_save(aug);
+	if (err) {
+		ERROR("Error saving auth changes\n");
+		return SR_ERR_SYS;
+	}
+	DEBUG("Changes to authentication saved\n");
+
+	return SR_ERR_OK;
+}
+
+static int change_auth(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
+		       const char *xpath, sr_event_t event, unsigned request_id, void *priv)
+{
+	struct confd *confd = (struct confd *)priv;
+
+	if (event == SR_EV_CHANGE)
+		return change_auth_check(confd->aug, session);
+	if (event == SR_EV_DONE)
+		return change_auth_done(confd->aug, session);
+
+	return SR_ERR_OK;
+}
+
 static int change_motd(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
 		       const char *xpath, sr_event_t event, unsigned request_id, void *priv)
 {
@@ -601,6 +889,8 @@ err:
 int ietf_system_init(struct confd *confd)
 {
 	const char *features[] = {
+		"authentication",
+		"local-users",
 		"ntp",
 		"ntp-udp-port",
 		"timezone-name",
@@ -610,6 +900,7 @@ int ietf_system_init(struct confd *confd)
 
 	os_init();
 
+	/* TODO: Every file and lens seems to be already loaded at aug_init() */
 	if (aug_load_file(confd->aug, "/etc/hostname") ||
 	    aug_load_file(confd->aug, "/etc/hosts")) {
 		ERROR("ietf-system: Augeas initialization failed");
@@ -625,6 +916,7 @@ int ietf_system_init(struct confd *confd)
 	if (rc)
 		goto fail;
 
+	REGISTER_CHANGE(confd->session, "ietf-system", "/ietf-system:system/authentication", 0, change_auth, confd, &confd->sub);
 	REGISTER_CHANGE(confd->session, "ietf-system", "/ietf-system:system/hostname", 0, change_hostname, confd, &confd->sub);
 	REGISTER_CHANGE(confd->session, "ietf-system", "/ietf-system:system/infix-system:motd", 0, change_motd, confd, &confd->sub);
 	REGISTER_CHANGE(confd->session, "ietf-system", "/ietf-system:system/clock", 0, change_clock, confd, &confd->sub);
