@@ -31,7 +31,7 @@ static int verbose;
 static int dep;
 
 static FILE *ip, *bridge;
-extern char *__progname;
+static char *prognm;
 
 
 static void if_alloc(int num)
@@ -509,6 +509,22 @@ static int act(cmd_t cmd)
 	return EX_USAGE;
 }
 
+cmd_t transform(char *arg0)
+{
+	prognm = strrchr(arg0, '/');
+	if (prognm)
+		prognm++;
+	else
+		prognm = arg0;
+
+	if (!strcmp(prognm, "ifup"))
+		return UP;
+	if (!strcmp(prognm, "ifdown"))
+		return DOWN;
+
+	return INVAL;
+}
+
 static int usage(int code)
 {
 	printf("Usage: %s [-dh] [do | (up | down [ifname ...])]\n"
@@ -525,16 +541,18 @@ static int usage(int code)
 	       "  down    Take down one/many or all interfaces in the current generation\n"
 	       "\n"
 	       "Args:\n"
-	       "  ifname  Zero, one, or many interface names to act on.\n"
-	       "\n", __progname);
+	       "  ifname  Zero, one, or more interface names to act on.\n"
+	       "\n", prognm);
 
 	return code;
 }
 
 int main(int argc, char *argv[])
 {
-	cmd_t cmd = INVAL;
+	cmd_t cmd;
 	int c;
+
+	cmd = transform(argv[0]);
 
 	while ((c = getopt(argc, argv, "adhv")) != EOF) {
 		switch (c) {
