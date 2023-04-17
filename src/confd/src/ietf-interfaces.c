@@ -31,7 +31,7 @@ static const char *ipfeat[] = {
 
 static const struct srx_module_requirement ietf_if_reqs[] = {
 	{ .dir = YANG_PATH_, .name = "ietf-interfaces", .rev = "2018-02-20", .features = iffeat },
-	{ .dir = YANG_PATH_, .name = "iana-if-type", .rev = "2017-01-19" },
+	{ .dir = YANG_PATH_, .name = "iana-if-type", .rev = "2023-01-26" },
 	{ .dir = YANG_PATH_, .name = "ietf-ip", .rev = "2018-02-22", .features = ipfeat },
 
 	{ NULL }

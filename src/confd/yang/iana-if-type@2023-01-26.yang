@@ -16,7 +16,7 @@ module iana-if-type {
              United States
 
      Tel:    +1 310 301 5800
-     <mailto:iana&iana.org>";
+     <mailto:iana@iana.org>";
   description
     "This YANG module defines YANG identities for IANA-registered
      interface types.
@@ -28,7 +28,7 @@ module iana-if-type {
      the IANA web site.
 
      Requests for new values should be made to IANA via
-     email (iana&iana.org).
+     email (iana@iana.org).
 
      Copyright (c) 2014 IETF Trust and the persons identified as
      authors of the code.  All rights reserved.
@@ -45,6 +45,124 @@ module iana-if-type {
   reference
     "IANA 'ifType definitions' registry.
      <http://www.iana.org/assignments/smi-numbers>";
+
+  revision 2023-01-26 {
+    description
+      "Fix incorrect quotation for previous 3 revision statements.";
+  }
+  
+  revision 2022-08-24 {
+    description
+      "Updated reference for ifType 303.";
+  }
+
+  revision 2022-08-17 {
+    description
+      "Changed gpon description to refer to G.984.";
+  }
+
+  revision 2022-03-07 {
+    description
+      "Coalesced revision history entries for 2018-06-28.";
+  }
+
+  revision 2021-06-21 {
+    description
+      "Corrected reference for ifType 303.";
+  }
+
+  revision 2021-05-17 {
+    description
+      "Registered ifType 303.";
+  }
+
+  revision 2021-04-22 {
+    description
+      "Registered ifType 302.";
+  }
+
+  revision 2021-04-01 {
+    description
+      "Updated reference for 301.";
+  }
+
+  revision 2021-02-18 {
+    description
+      "Registered ifType 301.";
+  }
+
+  revision 2020-08-27 {
+    description
+      "Added missing references.";
+  }
+
+  revision 2020-07-13 {
+    description
+      "Added identity cpri.";
+  }
+
+  revision 2020-07-10 {
+    description
+      "Registered ifType 300.";
+  }
+
+  revision 2020-01-10 {
+    description
+      "Registered ifType 299.";
+  }
+
+  revision 2019-10-16 {
+    description
+      "Registered ifType 298.";
+  }
+  revision 2019-07-16 {
+    description
+      "Registered ifType 297.";
+  }
+  revision 2019-06-21 {
+    description
+      "Updated reference associated with ifTypes 295-296.";
+  }
+  
+  revision 2019-02-08 {
+    description
+      "Corrected formatting issue.";
+  }
+
+  revision 2019-01-31 {
+    description
+      "Registered ifTypes 295-296.";
+  }
+
+  revision 2018-07-03 {
+    description
+      "Corrected revision date.";
+  }
+
+  revision 2018-06-29 {
+    description
+      "Corrected formatting issue.";
+  }
+
+  revision 2018-06-28 {
+    description
+      "Registered ifTypes 293 and 294.";
+  }
+
+  revision 2018-06-22 {
+    description
+      "Registered ifType 292.";
+  }
+
+  revision 2018-06-21 {
+    description
+      "Registered ifType 291.";
+  }
+
+  revision 2017-03-30 {
+    description
+      "Registered ifType 290.";
+  }
 
   revision 2017-01-19 {
     description
@@ -1410,7 +1528,7 @@ module iana-if-type {
     base iana-interface-type;
     description
       "Gigabit-capable passive optical networks (G-PON) as per
-       ITU-T G.948.";
+       ITU-T G.984.";
   }
   identity vdsl2 {
     base iana-interface-type;
@@ -1549,11 +1667,17 @@ module iana-if-type {
     base iana-interface-type;
     description
       "CATV Downstream OFDM interface.";
+    reference
+      "Cable Modem Operations Support System Interface 
+       Specification";
   }
   identity docsOfdmaUpstream {
     base iana-interface-type;
     description
       "CATV Upstream OFDMA interface.";
+    reference
+      "Cable Modem Operations Support System Interface 
+       Specification";
   }
   identity gfast {
     base iana-interface-type;
@@ -1585,21 +1709,29 @@ module iana-if-type {
     base iana-interface-type;
     description
       "Cable SCTE 55-1 OOB Forward Channel.";
+    reference
+      "ANSI/SCTE 55-1 2009";
   }
   identity docsCableScte55d1RetOob {
     base iana-interface-type;
     description
       "Cable SCTE 55-1 OOB Return Channel.";
+    reference
+      "ANSI/SCTE 55-1 2009";
   }
   identity docsCableScte55d2DsOob {
     base iana-interface-type;
     description
       "Cable SCTE 55-2 OOB Downstream Channel.";
+    reference
+      "ANSI/SCTE 55-2 2008";
   }
   identity docsCableScte55d2UsOob {
     base iana-interface-type;
     description
       "Cable SCTE 55-2 OOB Upstream Channel.";
+    reference
+      "ANSI/SCTE 55-2 2008";
   }
   identity docsCableNdf {
     base iana-interface-type;
@@ -1615,5 +1747,105 @@ module iana-if-type {
     base iana-interface-type;
     description
       "Packet Transfer Mode.";
+    reference
+      "IEEE G.993.1, Annex H; IEEE G.993.2; IEEE G.9701";
+  }
+  identity ghn {
+    base iana-interface-type;
+    description
+      "G.hn port.";
+    reference
+      "IEEE G.9961";
+  }
+  identity otnOtsi {
+    base iana-interface-type;
+    description
+      "Optical Tributary Signal.";
+    reference
+      "ITU-T G.959.1";
+  }
+  identity otnOtuc {
+    base iana-interface-type;
+    description
+      "OTN OTUCn.";
+    reference
+      "ITU-T G.709/Y.1331";
+  }
+  identity otnOduc {
+    base iana-interface-type;
+    description
+      "OTN ODUC.";
+    reference
+      "ITU-T G.709";
+  }
+  identity otnOtsig {
+    base iana-interface-type;
+    description
+      "OTN OTUC Signal.";
+    reference
+      "ITU-T G.709";
+  }
+  identity microwaveCarrierTermination {
+    base iana-interface-type;
+    description
+      "air interface of a single microwave carrier.";
+    reference
+      "RFC 8561 - A YANG Data Model for Microwave Radio Link";
+  }
+  identity microwaveRadioLinkTerminal {
+    base iana-interface-type;
+    description
+      "radio link interface for one or several aggregated microwave carriers.";
+    reference
+      "RFC 8561 - A YANG Data Model for Microwave Radio Link";
+  }
+  identity ieee8021axDrni {
+    base iana-interface-type;
+    description
+      "IEEE 802.1AX Distributed Resilient Network Interface.";
+    reference
+      "IEEE 802.1AX-Rev-d2-0";
+  }
+  identity ax25 {
+    base iana-interface-type;
+    description
+      "AX.25 network interfaces.";
+    reference
+      "AX.25 Link Access Protocol for Amateur Packet Radio version 2.2";
+  }
+  identity ieee19061nanocom {
+    base iana-interface-type;
+    description
+      "Nanoscale and Molecular Communication.";
+    reference
+      "IEEE 1906.1-2015";
+  }
+  identity cpri {
+    base iana-interface-type;
+    description
+      "Common Public Radio Interface.";
+    reference
+      "CPRI v7.0";
+  }
+  identity omni {
+    base iana-interface-type;
+    description
+      "Overlay Multilink Network Interface (OMNI).";
+    reference
+      "draft-templin-6man-omni-00";
+  }
+  identity roe {
+    base iana-interface-type;
+    description
+      "Radio over Ethernet Interface.";
+    reference
+      "1914.3-2018 - IEEE Standard for Radio over Ethernet Encapsulations and Mappings";
+  }
+  identity p2pOverLan {
+    base iana-interface-type;
+    description
+      "Point to Point over LAN interface.";
+    reference
+      "RFC 9296 - ifStackTable for the Point-to-Point (P2P) Interface over a LAN Type: Definition and Examples";
   }
 }
