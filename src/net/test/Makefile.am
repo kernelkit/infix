@@ -4,5 +4,6 @@ pkgdata_DATA       = $(EXTRA_DIST)
 TEST_EXTENSIONS    = .sh
 TESTS_ENVIRONMENT  = unshare -mrun
 TESTS              = three-independent.sh
+TESTS 		  += bridge.sh
 
 CLEANFILES         = *~ *.trs *.log

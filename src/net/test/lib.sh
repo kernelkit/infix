@@ -20,6 +20,12 @@ export NET_DIR
 gen=-1
 
 NET=$(command -v net)
+if [ -n "$NET" ]; then
+    # Verify we didn't find Samba net command, our net live in sbin
+    if [ "$(dirname "$NET")" = "/usr/bin" ]; then
+	NET=""
+    fi
+fi
 [ -n "$NET" ] || NET=../src/net
 
 # Exit immediately on error, treat unset variables as error
@@ -175,6 +181,61 @@ create_iface()
     echo "up" > "$ifdir/admin-state"
 }
 
+add_brport()
+{
+    brname=$1
+    brdir="$NET_DIR/$gen/$brname"
+    shift
+    # shellcheck disable=SC2124
+    brports=$@
+
+    mkdir -p "$brdir/deps"
+    for port in $brports; do
+	pdir="$NET_DIR/$gen/$port"
+	ln -s "../../$port" "$brdir/deps/$port"
+
+	create_iface "$port"
+	cat <<-EOF >"$pdir/init.ip"
+		link add $port type dummy
+		link set $port master $brname
+		link set $port up
+		EOF
+    done
+}
+
+del_brport()
+{
+    brname=$1
+    brdir="$NET_DIR/$gen/$brname"
+    shift
+    # shellcheck disable=SC2124
+    brports=$@
+
+    for port in $brports; do
+	cat <<-EOF >"$pdir/exit.ip"
+		link set $port nomaster
+		EOF
+    done
+}
+
+create_bridge()
+{
+    brname=$1
+    brdir="$NET_DIR/$gen/$brname"
+    shift
+    # shellcheck disable=SC2124
+    brports=$@
+
+    create_iface "$brname"
+    cat <<-EOF > "$brdir/init.ip"
+	link add $brname type bridge
+	link set $brname up
+	EOF
+
+    # shellcheck disable=SC2086
+    add_brport "$brname" $brports
+}
+
 remove_iface()
 {
     ifname=$1
@@ -187,7 +248,11 @@ EOF
 assert_iface()
 {
     ifname=$1
-    address=$2
+    if [ $# -gt 1 ]; then
+	address=$2
+    else
+	address=""
+    fi
     state=$(tr '[:lower:]' '[:upper:]' < "$NET_DIR/$gen/$ifname/admin-state")
 
     addr=$(ip -br -j addr show "$ifname" | jq -r '.[] | .addr_info[0].local')
@@ -197,7 +262,9 @@ assert_iface()
 
 #    echo "$state => $ifname: $updn $addr"
     assert "Verify $ifname state $state"      "$state"   = "$updn"
-    assert "Verify $ifname address $address"  "$address" = "$addr"
+    if [ -n "$address" ]; then
+	assert "Verify $ifname address $address"  "$address" = "$addr"
+    fi
 }
 
 assert_noiface()
@@ -232,6 +299,31 @@ assert_iface_flag()
 
 #    echo "FLAG $flag found $found, expected $val"
     assert "$msg" "$found" = "$val"
+}
+
+assert_bridge_ports()
+{
+    br="$1"
+    val="$2"
+    shift 2
+    # shellcheck disable=SC2124
+    ports=$@
+
+    for port in $ports; do
+	found=false
+	for brport in $(bridge -j link |jq -r --arg br "$br" '.[] | select(.master == $br).ifname'); do
+	    if [ "$port" = "$brport" ]; then
+		found=true
+		break;
+	    fi
+	done
+	if [ "$val" = "false" ]; then
+	    not="NOT "
+	else
+	    not=""
+	fi
+	assert "Port $port is ${not}a $br bridge port" "$found" = "$val"
+    done
 }
 
 setup
