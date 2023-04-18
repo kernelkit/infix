@@ -114,8 +114,10 @@ static int pipeit(FILE *pp, const char *action)
 
 	log("running %s ...", action);
 
-	while (fgets(line, sizeof(line), fp))
+	while (fgets(line, sizeof(line), fp)) {
+		dbg("%s: read line: %s", action, line);
 		fputs(line, pp);
+	}
 
 	return fclose(fp);
 }
@@ -332,6 +334,7 @@ static const char *getnet(void)
 
 	if (getenv("NET_DIR"))
 		net = getenv("NET_DIR");
+	dbg("net directory %s", net);
 	if (access(net, X_OK)) {
 		if (makedir(net, 0755))
 			err(1, "makedir");
