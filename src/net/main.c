@@ -546,7 +546,7 @@ int main(int argc, char *argv[])
 
 	for (c = optind; c < argc; c++) {
 		if (cmd == INVAL) {
-			if (!strcmp("do", argv[c]))
+			if (!strcmp("do", argv[c]) || !strcmp("apply", argv[c]))
 				cmd = DO;
 			if (!strcmp("up", argv[c]))
 				cmd = UP;
