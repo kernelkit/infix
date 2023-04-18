@@ -19,6 +19,9 @@ export NET_DIR
 
 gen=-1
 
+NET=$(command -v net)
+[ -n "$NET" ] || NET=../src/net
+
 # Exit immediately on error, treat unset variables as error
 set -eu
 
@@ -115,10 +118,11 @@ netdo()
 {
     if [ -n "$DEBUG" ]; then
 	tree "$NET_DIR/"
-	echo "Calling: ../src/net $DEBUG apply"
+	echo "Calling: $NET $DEBUG apply"
     fi
 
-    ../src/net $DEBUG apply
+    # shellcheck disable=SC2086
+    $NET $DEBUG apply
 
     if [ -n "$DEBUG" ]; then
 	ip link
@@ -129,7 +133,8 @@ netdo()
 
 netdown()
 {
-    ../src/net $DEBUG down $@
+    # shellcheck disable=SC2086,SC2068
+    $NET $DEBUG down $@
 
     if [ -n "$DEBUG" ]; then
 	ip link
@@ -139,7 +144,8 @@ netdown()
 
 netup()
 {
-    ../src/net $DEBUG up $@
+    # shellcheck disable=SC2086,SC2068
+    $NET $DEBUG up $@
 
     if [ -n "$DEBUG" ]; then
 	ip link
