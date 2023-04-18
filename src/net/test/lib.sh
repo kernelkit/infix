@@ -115,15 +115,117 @@ netdo()
 {
     if [ -n "$DEBUG" ]; then
 	tree "$NET_DIR/"
+	echo "Calling: ../src/net $DEBUG apply"
     fi
 
-    ../net "$DEBUG" apply
+    ../src/net $DEBUG apply
 
     if [ -n "$DEBUG" ]; then
 	ip link
 	ip addr
 	tree "$NET_DIR/"
     fi
+}
+
+netdown()
+{
+    ../src/net $DEBUG down $@
+
+    if [ -n "$DEBUG" ]; then
+	ip link
+	ip addr
+    fi
+}
+
+netup()
+{
+    ../src/net $DEBUG up $@
+
+    if [ -n "$DEBUG" ]; then
+	ip link
+	ip addr
+    fi
+}
+
+create_iface()
+{
+    ifname=$1
+    ifdir="$NET_DIR/$gen/$ifname"
+    if [ $# -eq 2 ]; then
+	address=$2
+    else
+	address=""
+    fi
+
+    mkdir -p "$ifdir/deps"
+    touch "$ifdir/init.ip"
+    if [ -n "$address" ]; then
+	cat <<-EOF >"$ifdir/init.ip"
+		link add $ifname type dummy
+		addr add $address dev $ifname
+		link set $ifname up
+		EOF
+    fi
+    echo "up" > "$ifdir/admin-state"
+}
+
+remove_iface()
+{
+    ifname=$1
+
+    cat <<-EOF >"$NET_DIR/$gen/$ifname/exit.ip"
+	link del $ifname
+EOF
+}
+
+assert_iface()
+{
+    ifname=$1
+    address=$2
+    state=$(tr '[:lower:]' '[:upper:]' < "$NET_DIR/$gen/$ifname/admin-state")
+
+    addr=$(ip -br -j addr show "$ifname" | jq -r '.[] | .addr_info[0].local')
+    plen=$(ip -br -j addr show "$ifname" | jq -r '.[] | .addr_info[0].prefixlen')
+    addr="$addr/$plen"
+    updn=$(ip -br -j link show "$ifname" | jq -r '.[] | .flags[] | select(index("UP"))' | head -1)
+
+#    echo "$state => $ifname: $updn $addr"
+    assert "Verify $ifname state $state"      "$state"   = "$updn"
+    assert "Verify $ifname address $address"  "$address" = "$addr"
+}
+
+assert_noiface()
+{
+    ifname=$1
+    rc=true
+
+    for iface in $(ip -j -br link show |jq -r '.[] .ifname'); do
+	[ "$iface" = "$ifname" ] || continue
+
+	rc=false
+	break
+    done
+
+    assert "Verify $ifname has been removed" $rc
+}
+
+assert_iface_flag()
+{
+    found=false
+    ifname=$2
+    flag=$3
+    msg=$1
+    val=$4
+
+    for f in $(ip -j -br link show "$ifname" |jq -r '.[] .flags[]'); do
+#	echo "$ifname: FLAG $f ..."
+	[ "$f" = "$flag" ] || continue
+	found=true
+	break
+    done
+
+#    echo "FLAG $flag found $found, expected $val"
+    assert "$msg" "$found" = "$val"
 }
 
 setup

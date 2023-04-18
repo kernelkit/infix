@@ -1,4 +1,4 @@
-EXTRA_DIST         = three-independent.sh
+EXTRA_DIST         = lib.sh $(TESTS)
 CLEANFILES         = *~ *.trs *.log
 
 TEST_EXTENSIONS    = .sh
