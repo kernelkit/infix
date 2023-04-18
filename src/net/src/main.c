@@ -343,26 +343,48 @@ static const char *getnet(void)
 	return net;
 }
 
+static char *getpath(void)
+{
+	const char *net = getnet();
+	char path[strlen(net) + 42];
+	char buf[40];
+	FILE *fp;
+
+	snprintf(path, sizeof(path), "%s/gen", net);
+	fp = fopen(path, "r");
+	if (!fp)
+		err(1, "cannot find %s", path);
+	if (!fgets(buf, sizeof(buf), fp))
+		err(1, "failed reading %s", path);
+	fclose(fp);
+
+	snprintf(path, sizeof(path), "%s/%d", net, atoi(buf));
+	return strdup(path);
+}
+
 /* build list from current generation */
 static void getifs(void)
 {
-	const char *net = getnet();
+	char *path = getpath();
 	char **files;
 	int num;
 
-	num = dir(net, NULL, dir_filter, &files, 0);
-	for (int i = 0; i < num; i++)
+	dbg("fetching available interfaces from %s", path);
+	num = dir(path, NULL, dir_filter, &files, 0);
+	for (int i = 0; i < num; i++) {
+		dbg("adding %s ...", files[i]);
 		addif(files[i]);
+	}
 }
 
 static char *ifadmin(const char *ifname, char *buf, size_t len)
 {
-	const char *net = getnet();
+	char *path = getpath();
 
-	if (!net)
+	if (!path)
 		return NULL;
 
-	snprintf(buf, len, "%s/%s/admin-state", net, ifname);
+	snprintf(buf, len, "%s/%s/admin-state", path, ifname);
 	return buf;
 }
 
@@ -391,20 +413,23 @@ fail:
 
 static int ifupdown(int updown)
 {
+	const char *action = updown ? "up" : "down";
 	struct iface *iface;
 	int rc = 0;
 
+	dbg("preparing for if%s ...", action);
 	if (TAILQ_EMPTY(&iface_list))
 		getifs();
 
 	TAILQ_FOREACH(iface, &iface_list, link) {
-		const char *action;
 		int result;
 
-		if (!allowed(iface->ifname))
+		if (!allowed(iface->ifname)) {
+			dbg("skipping if%s %s", action, iface->ifname);
 			continue;
+		}
 
-		action = updown ? "up" : "down";
+		dbg("if%s %s", action, iface->ifname);
 		result = systemf("ip link set %s %s", iface->ifname, action);
 		if (!result) {
 			char buf[128];
@@ -413,6 +438,7 @@ static int ifupdown(int updown)
 			if (!ifadmin(iface->ifname, buf, sizeof(buf)))
 				continue;
 
+			dbg("updating %s '%s'", buf, action);
 			fp = fopen(buf, "w");
 			if (fp) {
 				fprintf(fp, "%s\n", action);
@@ -454,8 +480,10 @@ static int activate_next(void)
 	if (rc)
 		err(1, "failed activating next generation");
 
-	if (save_rdeps(net, next))
-		err(1, "failed saving interface deps in %s", next);
+	if (dep) {
+		if (save_rdeps(net, next))
+			err(1, "failed saving interface deps in %s", next);
+	}
 
 	if (save_gen(net, "gen", next))
 		err(1, "next generation applied, failed current");
@@ -468,6 +496,7 @@ static int activate_next(void)
 
 static int act(cmd_t cmd)
 {
+	dbg("cmd %d", cmd);
 	switch (cmd) {
 	case DO:
 		return activate_next();
@@ -502,7 +531,7 @@ cmd_t transform(char *arg0)
 
 static int usage(int code)
 {
-	printf("Usage: %s [-dh] [do | (up | down [ifname ...])]\n"
+	printf("Usage: %s [-adhv] [do | (up | down [ifname ...])]\n"
 	       "\n"
 	       "Options:\n"
 	       "  -a      Act on all interfaces, ignored, for compat only.\n"
