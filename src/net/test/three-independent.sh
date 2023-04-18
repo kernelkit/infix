@@ -3,28 +3,7 @@
 # - Verify removal of one
 # - Verify net down
 # - Verify net up <one>
-
-NET_DIR=/tmp/net
-export NET_DIR
-
-gen=-1
-
-init()
-{
-    ip link set lo up
-}
-
-netdo()
-{
-    ../net -vd apply
-}
-
-create_ng()
-{
-    _=$((gen += 1))
-    mkdir -p "$NET_DIR/$gen"
-    echo $gen > "$NET_DIR/next"
-}
+. "./lib.sh"
 
 create_iface()
 {
@@ -51,33 +30,19 @@ check_iface()
     addr="$addr/$plen"
     updn=$(ip -br -j link show "$ifname" | jq -r '.[] | .flags[] | select(index("UP"))' | head -1)
 
-    echo "$state => $ifname: $updn $addr"
-
-    if [ "$state" != "$updn" ]; then
-	echo "Failed to bring $ifname $state ($updn)"
-	exit 1
-    fi
-    if [ "$address" != "$addr" ]; then
-	echo "Failed to set $ifname $address ($addr)"
-	exit 1
-    fi
+#    echo "$state => $ifname: $updn $addr"
+    assert "Verify $ifname state $state"      "$state"   = "$updn"
+    assert "Verify $ifname address $address"  "$address" = "$addr"
 }
 
-init
-
-create_ng
+say "Verify bringup of generation $gen"
 create_iface eth0 10.0.0.1/24
 create_iface eth1 10.0.1.1/24
 create_iface eth2 10.0.2.1/24
-tree "$NET_DIR/"
+
 netdo
 
 check_iface eth0 10.0.0.1/24
 check_iface eth1 10.0.1.1/24
 check_iface eth2 10.0.2.1/24
 
-ip link
-ip addr
-
-
-tree "$NET_DIR/"
