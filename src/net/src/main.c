@@ -223,12 +223,13 @@ static int iter(char *path, size_t len, const char *action)
 {
 	char **files;
 	int rc = 0;
+	FILE *pp;
 	int num;
 
 	num = dir(path, NULL, dir_filter, &files, 0);
 
-	for (int j = 0; j < num; j++) {
-		char *ifname = files[j];
+	for (int i = 0; i < num; i++) {
+		char *ifname = files[i];
 		char ipath[len];
 
 		snprintf(ipath, sizeof(ipath), "%s/%s", path, ifname);
@@ -239,6 +240,12 @@ static int iter(char *path, size_t len, const char *action)
 	}
 
 	freeifs();
+
+	pp = pipep(action);
+	if (pp) {
+		log("closing pipe for %s", action);
+		pclose(pp);
+	}
 
 	return rc;
 }
