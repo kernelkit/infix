@@ -170,10 +170,11 @@ create_iface()
     fi
 
     mkdir -p "$ifdir/deps"
-    touch "$ifdir/init.ip"
+    if [ ! -f "$ifdir/init.ip" ]; then
+	echo "link add $ifname type dummy" > "$ifdir/init.ip"
+    fi
     if [ -n "$address" ]; then
-	cat <<-EOF >"$ifdir/init.ip"
-		link add $ifname type dummy
+	cat <<-EOF >>"$ifdir/init.ip"
 		addr add $address dev $ifname
 		link set $ifname up
 		EOF
@@ -181,59 +182,63 @@ create_iface()
     echo "up" > "$ifdir/admin-state"
 }
 
+# shellcheck disable=SC2124
 add_brport()
 {
     brname=$1
-    brdir="$NET_DIR/$gen/$brname"
     shift
-    # shellcheck disable=SC2124
     brports=$@
+    brdir="$NET_DIR/$gen/$brname"
 
     mkdir -p "$brdir/deps"
     for port in $brports; do
-	pdir="$NET_DIR/$gen/$port"
 	ln -s "../../$port" "$brdir/deps/$port"
 
 	create_iface "$port"
-	cat <<-EOF >"$pdir/init.ip"
-		link add $port type dummy
+	cat <<-EOF >> "$brdir/init.ip"
+		# Attaching port $port to bridge $brname
 		link set $port master $brname
 		link set $port up
 		EOF
     done
 }
 
+# shellcheck disable=SC2124
 del_brport()
 {
     brname=$1
-    brdir="$NET_DIR/$gen/$brname"
     shift
-    # shellcheck disable=SC2124
     brports=$@
+    brdir="$NET_DIR/$gen/$brname"
 
     for port in $brports; do
-	cat <<-EOF >"$pdir/exit.ip"
+	cat <<-EOF >"$brdir/exit.ip"
 		link set $port nomaster
 		EOF
     done
 }
 
+# shellcheck disable=SC2124,SC2086
 create_bridge()
 {
     brname=$1
-    brdir="$NET_DIR/$gen/$brname"
-    shift
-    # shellcheck disable=SC2124
+    bropts=$2
+    shift 2
     brports=$@
+    brdir="$NET_DIR/$gen/$brname"
 
-    create_iface "$brname"
+    mkdir -p "$brdir/deps"
     cat <<-EOF > "$brdir/init.ip"
-	link add $brname type bridge
+	link add $brname type bridge $bropts
+	EOF
+
+    add_brport "$brname" $brports
+    cat <<-EOF >> "$brdir/init.ip"
 	link set $brname up
 	EOF
 
-    # shellcheck disable=SC2086
-    add_brport "$brname" $brports
+    echo "up" > "$brdir/admin-state"
+}
 }
 
 remove_iface()
