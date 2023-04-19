@@ -182,6 +182,34 @@ create_iface()
     echo "up" > "$ifdir/admin-state"
 }
 
+create_vlan_iface()
+{
+    ifname=$1
+    link=$2
+    vid=$3
+    if [ $# -eq 4 ]; then
+	address=$4
+    else
+	address=""
+    fi
+    ifdir="$NET_DIR/$gen/$ifname"
+
+    mkdir -p "$ifdir/deps"
+    ln -s "../../$link" "$ifdir/deps/$link"
+
+    cat <<-EOF >"$ifdir/init.ip"
+	link add $ifname link $link type vlan id $vid
+	link set $ifname up
+	EOF
+    if [ -n "$address" ]; then
+	cat <<-EOF >>"$ifdir/init.ip"
+		addr add $address dev $ifname
+		EOF
+    fi
+
+    echo "up" > "$ifdir/admin-state"
+}
+
 # shellcheck disable=SC2124
 add_brport()
 {
@@ -239,6 +267,74 @@ create_bridge()
 
     echo "up" > "$brdir/admin-state"
 }
+
+# Create init.bridge commands to be run for $ifname on $brname
+# shellcheck disable=SC2124,SC2086
+bridge_init()
+{
+    brname=$1
+    ifname=$2
+    shift 2
+    vlans=$@
+    ifdir="$NET_DIR/$gen/$ifname"
+
+    echo "" > "$ifdir/init.bridge"
+    for vlan in $vlans; do
+	echo "vlan add vid $vlan dev $brname self" >> "$ifdir/init.bridge"
+    done
+}
+
+# shellcheck disable=SC2124
+add_lagport()
+{
+    lagnm=$1
+    shift
+    lagports=$@
+    lagdir="$NET_DIR/$gen/$lagnm"
+
+    for port in $lagports; do
+	ln -s "../../$port" "$lagdir/deps/$port"
+
+	cat <<-EOF >>"$lagdir/init.ip"
+		# Attaching port $port to $lagnm
+		link set $port master $lagnm
+		link set $port up
+		EOF
+    done
+}
+
+# shellcheck disable=SC2124
+del_lagport()
+{
+    lagnm=$1
+    shift
+    lagports=$@
+    lagdir="$NET_DIR/$gen/$lagnm"
+
+    for port in $lagports; do
+	cat <<-EOF >>"$lagdir/exit.ip"
+		link set $port nomaster
+		EOF
+    done
+}
+
+# shellcheck disable=SC2124,SC2086
+create_lag()
+{
+    lagnm=$1
+    lagopts=$2
+    shift 2
+    ports=$@
+    lagdir="$NET_DIR/$gen/$lagnm"
+
+    mkdir -p "$lagdir/deps"
+    cat <<-EOF > "$lagdir/init.ip"
+	link add $lagnm type bond $lagopts
+	link set $lagnm up
+	EOF
+
+    add_lagport "$lagnm" $ports
+    echo "up" > "$lagdir/admin-state"
 }
 
 remove_iface()
@@ -328,6 +424,29 @@ assert_bridge_ports()
 	    not=""
 	fi
 	assert "Port $port is ${not}a $br bridge port" "$found" = "$val"
+    done
+}
+
+assert_lag_ports()
+{
+    lag="$1"
+    val="$2"
+    shift 2
+    # shellcheck disable=SC2124
+    ports=$@
+
+    for port in $ports; do
+	found=false
+
+	if [ "$lag" = "$(ip -d -j link show $port |jq -r '.[].master')" ]; then
+	    found=true
+	fi
+	if [ "$val" = "false" ]; then
+	    not="NOT "
+	else
+	    not=""
+	fi
+	assert "Port $port is ${not}a $lag member port" "$found" = "$val"
     done
 }
 
