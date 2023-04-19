@@ -20,7 +20,7 @@ assert_iface eth2 10.0.2.1/24
 sep
 say "Verify removal of an interface"
 remove_iface eth1
-create_ng
+init_next_gen
 create_iface eth0
 create_iface eth2
 

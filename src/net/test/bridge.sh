@@ -21,7 +21,7 @@ assert_iface br0
 ################################################
 sep
 say "Verify add another bridge port"
-create_ng
+init_next_gen
 
 create_iface br0
 create_iface eth3
@@ -36,7 +36,7 @@ assert_iface br0
 sep
 say "Verify delete a bridge port"
 del_brport br0 eth1
-create_ng
+init_next_gen
 
 create_iface br0
 create_iface eth1
