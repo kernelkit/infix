@@ -100,7 +100,7 @@ trapit()
     done
 }
 
-create_ng()
+init_next_gen()
 {
     _=$((gen += 1))
     mkdir -p "$NET_DIR/$gen"
@@ -110,7 +110,7 @@ create_ng()
 setup()
 {
     say "Test start $(date)"
-    create_ng
+    init_next_gen
 
     # Runs once when including lib.sh
     mkdir -p "${NET_DIR}"
