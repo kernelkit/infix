@@ -103,6 +103,24 @@ static int save_rdeps(const char *path, char *gen)
 	return systemf("sed '1!G;h;$!d' < %s/%s/deps >%s/%s/rdeps", path, gen, path, gen);
 }
 
+static FILE *pipep(const char *action)
+{
+	char *ptr;
+
+	ptr = strrchr(action, '.');
+	if (!ptr) {
+		warnx("missing action type, assuming shell script: '%s'", action);
+		return NULL;
+	}
+
+	if (!strcmp(ptr, ".ip"))
+		return ip;
+	if (!strcmp(ptr, ".bridge"))
+		return bridge;
+
+	return NULL;
+}
+
 static int pipeit(FILE *pp, const char *action)
 {
 	char line[256];
@@ -112,11 +130,10 @@ static int pipeit(FILE *pp, const char *action)
 	if (!fp)
 		return 0;	/* nop */
 
-	log("running %s ...", action);
-
 	while (fgets(line, sizeof(line), fp)) {
-		dbg("%s: read line: %s", action, line);
-		fputs(line, pp);
+		chomp(line);
+		dbg(">>> %s", line);
+		fprintf(pp, "%s\n", line);
 	}
 
 	return fclose(fp);
@@ -124,22 +141,16 @@ static int pipeit(FILE *pp, const char *action)
 
 static int run(const char *action)
 {
-	char *ptr;
+	FILE *pp = pipep(action);
 	int rc;
 
-	ptr = strrchr(action, '.');
-	if (!ptr) {
-		warnx("invalid action script: '%s'", action);
-		return 0;
+	if (pp) {
+		log("running pipe action %s:", action);
+		return pipeit(pp, action);
 	}
 
-	if (strcmp(action, ".ip"))
-		return pipeit(ip, action);
-	if (strcmp(action, ".bridge"))
-		return pipeit(bridge, action);
-
 	 /* other actions are plain shell scripts (.sh) */
-	log("running %s ...", action);
+	log("running shell action %s:", action);
 
 	rc = systemf("%s", action);
 	if (rc)
