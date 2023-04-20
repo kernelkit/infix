@@ -1,0 +1,5 @@
+config BR2_PACKAGE_NET
+	bool "net"
+	select BR2_PACKAGE_LIBITE
+	help
+	  Handles transitions between network states.
