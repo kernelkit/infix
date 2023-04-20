@@ -38,9 +38,11 @@ When done, it writes `0` to the file `/run/net/gen` and then removes the
 	   |    |    |-- eth2 -> ../../eth2
 	   |    |    |-- eth3 -> ../../eth3
 	   |    |    `-- lag0 -> ../../lag0
+	   |    |-- admin-state
 	   |    `-- init.ip
 	   |-- eth0/
 	   |    |-- deps/
+	   |    |-- admin-state
 	   |    `-- init.ip
 	   |-- ethX/
 	   |    |-- ...
@@ -49,10 +51,12 @@ When done, it writes `0` to the file `/run/net/gen` and then removes the
 	   |    |-- deps/
 	   |    |    |-- eth4 -> ../../eth4
 	   |    |    `-- eth5 -> ../../eth5
+	   |    |-- admin-state
 	   |    `-- init.ip
 	   `-- vlan1/
 	        |-- deps/
 	        |    `-- br0 -> ../../br0
+	        |-- admin-state
 	        `-- init.ip
 
 The `deps/` sub-directory for each of the interfaces contains symlinks
@@ -93,22 +97,27 @@ We traverse the current generation and execute all `exit.cmd` scripts:
 	   |    |    |-- eth2 -> ../../eth2
 	   |    |    |-- eth3 -> ../../eth3
 	   |    |    `-- lag0 -> ../../lag0
+	   |    |-- admin-state
 	   |    `-- init.ip
 	   |-- eth0/
 	   |    |-- deps/
+	   |    |-- admin-state
 	   |    `-- init.ip
 	   |-- eth4/
 	   |    |-- deps/
+	   |    |-- admin-state
 	   |    |-- exit.ip
 	   |    `-- init.ip
 	   |-- lag0/
 	   |    |-- deps/
 	   |    |    |-- eth4 -> ../../eth4
 	   |    |    `-- eth5 -> ../../eth5
+	   |    |-- admin-state
 	   |    `-- init.ip
 	   `-- vlan1/
 	        |-- deps/
 	        |    `-- br0 -> ../../br0
+	        |-- admin-state
 	        `-- init.ip
 
 Now we can run all the `init.cmd` scripts in the next generation:
@@ -121,25 +130,38 @@ Now we can run all the `init.cmd` scripts in the next generation:
 	   |    |    |-- eth3 -> ../../eth3
 	   |    |    |-- eth4 -> ../../eth4
 	   |    |    `-- lag0 -> ../../lag0
+	   |    |-- admin-state
 	   |    `-- init.ip
 	   |-- eth0/
 	   |    |-- deps/
+	   |    |-- admin-state
 	   |    `-- init.ip
 	   |-- eth4/
 	   |    |-- deps/
+	   |    |-- admin-state
 	   |    `-- init.ip
 	   |-- lag0/
 	   |    |-- deps/
 	   |    |    `-- eth5 -> ../../eth5
+	   |    |-- admin-state
 	   |    `-- init.ip
 	   `-- vlan1/
 	        |-- deps/
 	        |    `-- br0 -> ../../br0
+	        |-- admin-state
 	        `-- init.ip
 
-When there are no changes compared to the previous generation, the
-`init.cmd` scripts can be empty.  The existence of an `init.ip` script,
-however, means that it is allowed to be brought up on `net up`.  The
-existence of a directory (named after an interface) means the interface
-should be brought down on `net down`.  Doing `net up ifname` is a subset
-of that for a single interface `ifname`.
+When there are no changes compared to the previous generation, the base
+structure with deps need to remain intact, but there's no need for any
+`init.cmd` scripts.  However, for the purpose of supporting the commands
+`net down` and `net up`, the user must have an `admin-state` file per
+interface which must contain one of:
+
+  - disabled
+  - up
+  - down
+
+This describes the state which the user's last `init.ip` or `exit.ip`
+command, or the `net [up | down]` action, left the interface in.  When
+the `disabled` keyword is used it means the net tool is not allowed to
+apply any `up` or `down` action on the interface.
