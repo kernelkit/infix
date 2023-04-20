@@ -22,6 +22,7 @@ assert_iface br0
 sep
 say "Verify add another bridge port (eth3)"
 init_next_gen eth0 eth1 eth2 br0
+init_deps br0 eth0 eth1 eth2
 
 create_iface eth3
 add_brport br0 eth3
@@ -37,6 +38,7 @@ say "Verify delete a bridge port (eth1)"
 del_brport br0 eth1
 
 init_next_gen eth0 eth2 eth3 br0
+init_deps br0 eth0 eth2 eth3
 
 netdo
 

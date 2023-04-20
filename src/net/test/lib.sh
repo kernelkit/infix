@@ -113,6 +113,18 @@ init_next_gen()
     done
 }
 
+init_deps()
+{
+    parent=$1
+    shift
+
+    mkdir -p "$NET_DIR/$gen/$parent/deps"
+    #shellcheck disable=SC2068
+    for iface in $@; do
+	ln -s "../../$iface" "$NET_DIR/$gen/$parent/deps/$iface"
+    done
+}
+
 setup()
 {
     say "Test start $(date)"
