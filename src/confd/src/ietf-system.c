@@ -548,16 +548,22 @@ static int change_hostname(sr_session_ctx_t *session, uint32_t sub_id, const cha
 	if (!nm) {
 		/* XXX: derive from global "options.h" or /usr/share/factory/ */
 		nm = strdup("infix");
-		if (!nm)
+		if (!nm) {
+			err = SR_ERR_NO_MEMORY;
 			goto err;
+		}
 	}
 
-	if (aug_get(confd->aug, "etc/hostname/hostname", &tmp) <= 0)
+	if (aug_get(confd->aug, "etc/hostname/hostname", &tmp) <= 0) {
+		err = SR_ERR_INTERNAL;
 		goto err;
+	}
 
 	current = strdup(tmp);
-	if (!current)
+	if (!current) {
+		err = SR_ERR_NO_MEMORY;
 		goto err;
+	}
 
 	err = sethostname(nm, strlen(nm));
 	err = err ? : aug_set(confd->aug, "etc/hostname/hostname", nm);
@@ -607,6 +613,7 @@ int ietf_system_init(struct confd *confd)
 	if (aug_load_file(confd->aug, "/etc/hostname") ||
 	    aug_load_file(confd->aug, "/etc/hosts")) {
 		ERROR("ietf-system: Augeas initialization failed");
+		rc = SR_ERR_INTERNAL;
 		goto fail;
 	}
 

@@ -13,6 +13,7 @@ sr_error_t srx_require_module(sr_conn_ctx_t *conn,
 	struct lys_module *mod;
 	const char **f;
 	char *path;
+	int len;
 
 	ly = sr_acquire_context(conn);
 	if (!ly)
@@ -42,10 +43,12 @@ sr_error_t srx_require_module(sr_conn_ctx_t *conn,
 		/* `search_dirs` argument is ignored by sysrepo 2.2.60,
 		 * so we supply the full path instead.
 		 */
-		asprintf(&path, "%s/%s%s%s.yang", mr->dir ? : "", mr->name,
-			 mr->rev ? "@" : "", mr->rev ? : "");
-		err = sr_install_module(conn, path, NULL, mr->features);
-		free(path);
+		len = asprintf(&path, "%s/%s%s%s.yang", mr->dir ? : "", mr->name,
+			       mr->rev ? "@" : "", mr->rev ? : "");
+		if (len > 0) {
+			err = sr_install_module(conn, path, NULL, mr->features);
+			free(path);
+		}
 	}
 
 	return err;
