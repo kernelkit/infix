@@ -51,10 +51,7 @@ assert_lag_ports lag0 true eth4 eth5
 say "Verify moving a port from lag0 to br0"
 
 del_lagport lag0 eth4
-
-init_next_gen
-create_iface_data eth4
-create_iface_data br0
+init_next_gen eth0 eth1 eth2 eth3 eth4 eth5 lag0 br0 vlan1
 add_brport br0 eth4
 
 netdo

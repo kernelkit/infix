@@ -100,11 +100,17 @@ trapit()
     done
 }
 
+# shellcheck disable=SC2120
 init_next_gen()
 {
     _=$((gen += 1))
     mkdir -p "$NET_DIR/$gen"
     echo $gen > "$NET_DIR/next"
+
+    # shellcheck disable=SC2068
+    for iface in $@; do
+	create_iface_data "$iface"
+    done
 }
 
 setup()
