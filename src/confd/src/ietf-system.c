@@ -634,7 +634,5 @@ int ietf_system_init(struct confd *confd)
 	return SR_ERR_OK;
 fail:
 	ERROR("init failed: %s", sr_strerror(rc));
-	sr_unsubscribe(confd->sub);
-
 	return rc;
 }
