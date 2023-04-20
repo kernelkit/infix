@@ -18,7 +18,7 @@ TEST_DIR=$(dirname "$0")
 ################################################
 say "Verify bringup of bridge with three ports and an upper VLAN interface"
 
-create_iface eth0
+create_iface eth0 10.0.0.1/24
 create_iface eth1
 create_iface eth2
 create_iface eth3
@@ -31,10 +31,6 @@ create_bridge br0 "vlan_filtering 1" eth1 eth2 eth3 lag0
 bridge_init br0 br0 1 2 3
 
 create_vlan_iface vlan1 br0 1 192.168.1.1/24
-for file in $(find "$NET_DIR" -name init.ip); do
-    echo "========================= $file"
-    cat "$file"
-done
 netdo
 
 #ip -d -j link show eth4 |jq -r '.[].master'
@@ -48,6 +44,7 @@ assert_iface vlan1 192.168.1.1/24
 assert_lag_ports lag0 true eth4 eth5
 
 ################################################
+sep
 say "Verify moving a port from lag0 to br0"
 
 del_lagport lag0 eth4
@@ -56,12 +53,21 @@ add_brport br0 eth4
 
 netdo
 
-bridge link
-ip -d link show eth5
-ip -d link show eth4
-
 assert_lag_ports lag0 true eth5
 assert_lag_ports lag0 false eth4
 
 assert_bridge_ports br0 true eth1 eth2 eth3 eth4 lag0
 assert_iface br0
+
+################################################
+sep
+say "Verify removing VLAN interface (vlan1) and bridge (br0)"
+remove_iface vlan1
+remove_iface br0
+init_next_gen eth0 eth1 eth2 eth3 eth4 eth5 lag0
+
+netdo
+
+for iface in eth0 eth1 eth2 eth3 eth4 lag0 eth5; do
+    assert_iface $iface
+done
