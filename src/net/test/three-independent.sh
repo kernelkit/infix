@@ -21,8 +21,8 @@ sep
 say "Verify removal of an interface"
 remove_iface eth1
 init_next_gen
-create_iface eth0
-create_iface eth2
+create_iface_data eth0
+create_iface_data eth2
 
 netdo
 

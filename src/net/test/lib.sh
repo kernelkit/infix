@@ -159,6 +159,15 @@ netup()
     fi
 }
 
+create_iface_data()
+{
+    ifname=$1
+    ifdir="$NET_DIR/$gen/$ifname"
+
+    mkdir -p "$ifdir/deps"
+    echo "up" > "$ifdir/admin-state"
+}
+
 create_iface()
 {
     ifname=$1
@@ -169,7 +178,8 @@ create_iface()
 	address=""
     fi
 
-    mkdir -p "$ifdir/deps"
+    create_iface_data $ifname
+
     if [ ! -f "$ifdir/init.ip" ]; then
 	echo "link add $ifname type dummy" > "$ifdir/init.ip"
     fi
@@ -179,7 +189,6 @@ create_iface()
 		link set $ifname up
 		EOF
     fi
-    echo "up" > "$ifdir/admin-state"
 }
 
 create_vlan_iface()
@@ -222,7 +231,6 @@ add_brport()
     for port in $brports; do
 	ln -s "../../$port" "$brdir/deps/$port"
 
-	create_iface "$port"
 	cat <<-EOF >> "$brdir/init.ip"
 		# Attaching port $port to bridge $brname
 		link set $port master $brname
