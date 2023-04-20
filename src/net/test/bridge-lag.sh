@@ -49,6 +49,8 @@ say "Verify moving a port from lag0 to br0"
 
 del_lagport lag0 eth4
 init_next_gen eth0 eth1 eth2 eth3 eth4 eth5 lag0 br0 vlan1
+init_deps br0 eth1 eth2 eth3 lag0
+init_deps lag0 eth5
 add_brport br0 eth4
 
 netdo
