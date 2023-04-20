@@ -264,7 +264,7 @@ static int rdeps(char *path, size_t len, const char *action)
 	while (fgets(ifname, sizeof(ifname), fp)) {
 		snprintf(cmd, sizeof(cmd), "%s/%s/%s", path, chomp(ifname), action);
 		if (access(cmd, F_OK)) {
-			dbg("skipping %s, errno %d: %s", cmd, errno, strerror(errno));
+//			dbg("skipping %s, errno %d: %s", cmd, errno, strerror(errno));
 			continue;
 		}
 		rc += run(cmd);
@@ -443,7 +443,7 @@ static int ifupdown(int updown)
 		int result;
 
 		if (!allowed(iface->ifname)) {
-			dbg("skipping if%s %s", action, iface->ifname);
+//			dbg("skipping if%s %s", action, iface->ifname);
 			continue;
 		}
 
