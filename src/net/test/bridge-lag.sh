@@ -46,3 +46,25 @@ assert_bridge_ports br0 true eth1 eth2 eth3 lag0
 assert_iface br0
 assert_iface vlan1 192.168.1.1/24
 assert_lag_ports lag0 true eth4 eth5
+
+################################################
+say "Verify moving a port from lag0 to br0"
+
+del_lagport lag0 eth4
+
+init_next_gen
+create_iface_data eth4
+create_iface_data br0
+add_brport br0 eth4
+
+netdo
+
+bridge link
+ip -d link show eth5
+ip -d link show eth4
+
+assert_lag_ports lag0 true eth5
+assert_lag_ports lag0 false eth4
+
+assert_bridge_ports br0 true eth1 eth2 eth3 eth4 lag0
+assert_iface br0
