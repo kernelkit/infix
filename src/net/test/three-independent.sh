@@ -20,9 +20,7 @@ assert_iface eth2 10.0.2.1/24
 sep
 say "Verify removal of an interface"
 remove_iface eth1
-init_next_gen
-create_iface_data eth0
-create_iface_data eth2
+init_next_gen eth0 eth2
 
 netdo
 
