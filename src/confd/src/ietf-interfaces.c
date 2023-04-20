@@ -132,7 +132,7 @@ static void ifinit(sr_session_ctx_t *session)
 
 	TAILQ_FOREACH(iface, &iface_list, link) {
 		char xpath[sizeof(INTERFACE_XPATH) + IFNAMSIZ + 128];
-		sr_val_t val;
+		sr_val_t val = {};
 
 		snprintf(xpath, sizeof(xpath), INTERFACE_XPATH "/type", iface->ifname);
 		if (!strcmp("lo", iface->ifname))
