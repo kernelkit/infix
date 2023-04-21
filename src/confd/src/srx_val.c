@@ -3,6 +3,28 @@
 #include <stdarg.h>
 #include "core.h"
 
+int srx_set_item(sr_session_ctx_t *session, const sr_val_t *val, sr_edit_options_t opts,
+		 const char *fmt, ...)
+{
+	char *xpath;
+	va_list ap;
+	size_t len;
+
+	va_start(ap, fmt);
+	len = vsnprintf(NULL, 0, fmt, ap) + 1;
+	va_end(ap);
+
+	xpath = alloca(len);
+	if (!val)
+		return -1;
+
+	va_start(ap, fmt);
+	vsnprintf(xpath, len, fmt, ap);
+	va_end(ap);
+
+	return sr_set_item(session, xpath, val, opts);
+}
+
 int lydx_new_path(const struct ly_ctx *ctx, struct lyd_node **parent, int *first,
 		  char *xpath_base, char *node, const char *fmt, ...)
 {
