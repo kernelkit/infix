@@ -284,13 +284,13 @@ static int ifoper(sr_session_ctx_t *session, uint32_t sub_id, const char *module
 	TAILQ_FOREACH(iface, &iface_list, link) {
 		snprintf(xpath, sizeof(xpath), INTERFACE_XPATH, iface->ifname);
 
-		if ((rc = srx_set_item(ctx, parent, &first, xpath, "if-index", "%d", iface->ifindex)))
+		if ((rc = lydx_new_path(ctx, parent, &first, xpath, "if-index", "%d", iface->ifindex)))
 			goto fail;
 
-		if ((rc = srx_set_item(ctx, parent, &first, xpath, "admin-status", "up")))
+		if ((rc = lydx_new_path(ctx, parent, &first, xpath, "admin-status", "up")))
 			goto fail;
 
-		if ((rc = srx_set_item(ctx, parent, &first, xpath, "oper-status", "up")))
+		if ((rc = lydx_new_path(ctx, parent, &first, xpath, "oper-status", "up")))
 			goto fail;
 
 		if (rc) {

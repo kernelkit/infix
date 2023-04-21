@@ -3,8 +3,8 @@
 #include <stdarg.h>
 #include "core.h"
 
-int srx_set_item(const struct ly_ctx *ctx, struct lyd_node **parent, int *first,
-		 char *xpath_base, char *node, const char *fmt, ...)
+int lydx_new_path(const struct ly_ctx *ctx, struct lyd_node **parent, int *first,
+		  char *xpath_base, char *node, const char *fmt, ...)
 {
 	char xpath[strlen(xpath_base) + strlen(node) + 2];
 	va_list ap;

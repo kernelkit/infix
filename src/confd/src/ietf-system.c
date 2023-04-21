@@ -116,9 +116,9 @@ static int clock_cb(sr_session_ctx_t *session, uint32_t sub_id, const char *modu
 	}
 	fmtime(now, curtime, sizeof(curtime));
 
-	if ((rc = srx_set_item(ctx, parent, &first, CLOCK_PATH_, "boot-datetime", boottime)))
+	if ((rc = lydx_new_path(ctx, parent, &first, CLOCK_PATH_, "boot-datetime", boottime)))
 		goto fail;
-	if ((rc = srx_set_item(ctx, parent, &first, CLOCK_PATH_, "current-datetime", curtime)))
+	if ((rc = lydx_new_path(ctx, parent, &first, CLOCK_PATH_, "current-datetime", curtime)))
 		goto fail;
 
 	if (rc) {
@@ -141,13 +141,13 @@ static int platform_cb(sr_session_ctx_t *session, uint32_t sub_id, const char *m
 
 	ctx = sr_acquire_context(sr_session_get_connection(session));
 
-	if ((rc = srx_set_item(ctx, parent, &first, PLATFORM_PATH_, "os-name", os)))
+	if ((rc = lydx_new_path(ctx, parent, &first, PLATFORM_PATH_, "os-name", os)))
 		goto fail;
-	if ((rc = srx_set_item(ctx, parent, &first, PLATFORM_PATH_, "os-release", rel)))
+	if ((rc = lydx_new_path(ctx, parent, &first, PLATFORM_PATH_, "os-release", rel)))
 		goto fail;
-	if ((rc = srx_set_item(ctx, parent, &first, PLATFORM_PATH_, "os-version", ver)))
+	if ((rc = lydx_new_path(ctx, parent, &first, PLATFORM_PATH_, "os-version", ver)))
 		goto fail;
-	if ((rc = srx_set_item(ctx, parent, &first, PLATFORM_PATH_, "machine", sys)))
+	if ((rc = lydx_new_path(ctx, parent, &first, PLATFORM_PATH_, "machine", sys)))
 		goto fail;
 
 	if (rc) {
