@@ -1,5 +1,7 @@
 /* SPDX-License-Identifier: BSD-3-Clause */
 
+#include <fnmatch.h>
+
 #include <net/if.h>
 
 #include "core.h"
@@ -169,6 +171,67 @@ static void ifinit(sr_session_ctx_t *session)
 		ERROR("faled: %s", sr_strerror(rc));
 }
 
+static int ifchange_cand_infer_type(sr_session_ctx_t *session, const char *xpath)
+{
+	sr_val_t inferred = { .type = SR_STRING_T };
+	sr_error_t err = SR_ERR_OK;
+	char *ifname, *type;
+
+	type = srx_get_str(session, "%s/type", xpath);
+	if (type) {
+		free(type);
+		return SR_ERR_OK;
+	}
+
+	ifname = srx_get_str(session, "%s/name", xpath);
+	if (!ifname)
+		return SR_ERR_INTERNAL;
+
+	if (!fnmatch("br+([0-9])", ifname, FNM_EXTMATCH))
+		inferred.data.string_val = "iana-if-type:bridge";
+	else if (!fnmatch("lag+([0-9])", ifname, FNM_EXTMATCH))
+		inferred.data.string_val = "iana-if-type:ieee8023adLag";
+	else if (!fnmatch("vlan+([0-9])", ifname, FNM_EXTMATCH))
+		inferred.data.string_val = "iana-if-type:l2vlan";
+	else if (!fnmatch("*.+([0-9])", ifname, FNM_EXTMATCH))
+		inferred.data.string_val = "iana-if-type:l2vlan";
+
+	free(ifname);
+
+	if (inferred.data.string_val)
+		err = srx_set_item(session, &inferred, 0, "%s/type", xpath);
+
+	return err;
+}
+
+static int ifchange_cand(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
+			 const char *xpath, sr_event_t event, unsigned request_id, void *priv)
+{
+	sr_change_iter_t *iter;
+	sr_change_oper_t op;
+	sr_val_t *old, *new;
+	sr_error_t err;
+
+	if (event != SR_EV_UPDATE)
+		return SR_ERR_OK;
+
+	err = sr_dup_changes_iter(session, "/ietf-interfaces:interfaces/interface", &iter);
+	if (err)
+		return err;
+
+	while (sr_get_change_next(session, iter, &op, &old, &new) == SR_ERR_OK) {
+		if (op != SR_OP_CREATED)
+			continue;
+
+		err = ifchange_cand_infer_type(session, new->xpath);
+		if (err)
+			break;
+	}
+
+	sr_free_change_iter(iter);
+	return SR_ERR_OK;
+}
+
 static int ifchange(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
 		    const char *xpath, sr_event_t event, unsigned request_id, void *priv)
 {
@@ -317,6 +380,10 @@ int ietf_interfaces_init(struct confd *confd)
 
 	REGISTER_CHANGE(confd->session, "ietf-interfaces", "/ietf-interfaces:interfaces", 0, ifchange, confd, &confd->sub);
 	REGISTER_OPER(confd->session, "ietf-interfaces", "/ietf-interfaces:interfaces", ifoper, NULL, 0, &confd->sub);
+
+	sr_session_switch_ds(confd->session, SR_DS_CANDIDATE);
+	REGISTER_CHANGE(confd->session, "ietf-interfaces", "/ietf-interfaces:interfaces",
+			SR_SUBSCR_UPDATE, ifchange_cand, confd, &confd->sub);
 
 	sr_session_switch_ds(confd->session, SR_DS_OPERATIONAL);
 	ifpopul(confd->session);
