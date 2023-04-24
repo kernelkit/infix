@@ -44,6 +44,13 @@ endef
 SKELETON_INIT_FINIT_TARGET_FINALIZE_HOOKS += SKELETON_INIT_FINIT_SET_AVAHI
 endif
 
+ifeq ($(BR2_PACKAGE_AVAHI_AUTOIPD),y)
+define SKELETON_INIT_FINIT_SET_AVAHI_AUTOIPD
+	echo "service [2345789] name:zeroconf :%i avahi-autoipd --syslog %i -- ZeroConf for %i" > $(FINIT_D)/available/zeroconf@.conf
+endef
+SKELETON_INIT_FINIT_TARGET_FINALIZE_HOOKS += SKELETON_INIT_FINIT_SET_AVAHI_AUTOIPD
+endif
+
 ifeq ($(BR2_PACKAGE_CHRONY),y)
 define SKELETON_INIT_FINIT_SET_CHRONY
 	cp $(SKELETON_INIT_FINIT_AVAILABLE)/chronyd.conf $(FINIT_D)/available/
