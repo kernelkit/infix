@@ -1,3 +1,2 @@
-clicon   -1 clicon   -1 *      - -             wheel Clixon backend
-factory  -1 wheel    -1 =reset - /sbin/factory - Reset to factory defaults
-www-data -1 www-data -1 *      - -             clicon www-data
+admin	 -1 wheel    -1 =admin /home/admin /bin/bash	 -     Administrator
+factory	 -1 wheel    -1 =reset -	   /sbin/factory -     Reset to factory defaults
