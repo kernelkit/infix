@@ -297,7 +297,6 @@ endif
 
 define SKELETON_INIT_FINIT_INSTALL_TARGET_CMDS
 	$(call SYSTEM_RSYNC,$(SKELETON_INIT_FINIT_PKGDIR)/skeleton,$(TARGET_DIR))
-	rm -rf $(TARGET_DIR)/etc/finit.d/available $(TARGET_DIR)/etc/finit.d/enabled
 	mkdir -p $(TARGET_DIR)/etc/finit.d/available
 	mkdir -p $(TARGET_DIR)/etc/finit.d/enabled
 	for svc in getty inetd ntpd telnetd; do \
