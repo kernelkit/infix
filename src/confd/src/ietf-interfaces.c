@@ -35,6 +35,7 @@ static const struct srx_module_requirement ietf_if_reqs[] = {
 	{ .dir = YANG_PATH_, .name = "ietf-interfaces", .rev = "2018-02-20", .features = iffeat },
 	{ .dir = YANG_PATH_, .name = "iana-if-type", .rev = "2023-01-26" },
 	{ .dir = YANG_PATH_, .name = "ietf-ip", .rev = "2018-02-22", .features = ipfeat },
+	{ .dir = YANG_PATH_, .name = "infix-ip", .rev = "2023-04-24" },
 
 	{ NULL }
 };
@@ -232,6 +233,16 @@ static int ifchange_cand(sr_session_ctx_t *session, uint32_t sub_id, const char 
 	return SR_ERR_OK;
 }
 
+static void zeroconf_init(char *ifname)
+{
+	systemf("initctl enable zeroconf@%s.conf", ifname);
+}
+
+static void zeroconf_exit(char *ifname)
+{
+	systemf("initctl disable zeroconf@%s.conf", ifname);
+}
+
 static int ifchange(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
 		    const char *xpath, sr_event_t event, unsigned request_id, void *priv)
 {
@@ -265,8 +276,15 @@ static int ifchange(sr_session_ctx_t *session, uint32_t sub_id, const char *modu
 			"/proc/sys/net/ipv4/conf/%s/forwarding", ifname);
 
 		systemf("ip addr flush dev %s", ifname);
-		if (!srx_enabled(session, "%s/ietf-ip:ipv4/enabled", xpath))
+		if (!srx_enabled(session, "%s/ietf-ip:ipv4/enabled", xpath)) {
+			zeroconf_exit(ifname);
 			goto ipv6;
+		}
+
+		if (!srx_enabled(session, "%s/ietf-ip:ipv4/autoconf/enabled", xpath))
+			zeroconf_exit(ifname);
+		else
+			zeroconf_init(ifname);
 
 		snprintf(path, sizeof(path), "%s/ietf-ip:ipv4/address", xpath);
 		rc = sr_get_items(session, path, 0, 0, &addr, &addrcnt);

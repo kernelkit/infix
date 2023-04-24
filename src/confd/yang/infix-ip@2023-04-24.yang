@@ -1,0 +1,47 @@
+module infix-ip {
+  yang-version 1.1;
+  namespace "urn:infix:params:xml:ns:yang:infix-ip";
+  prefix infix-ip;
+
+  import ietf-interfaces {
+    prefix if;
+  }
+  import ietf-ip {
+    prefix ip;
+  }
+  import ietf-inet-types {
+    prefix inet;
+  }
+  import ietf-yang-types {
+    prefix yang;
+  }
+
+  description
+    "This module augments ietf-ip with an IPv4 link-local autoconf";
+
+  revision 2023-04-24 {
+    description
+      "Initial revision.";
+    reference
+      "RFC 7277: A YANG Data Model for IP Management";
+  }
+
+  /*
+   * Data nodes
+   */
+  augment "/if:interfaces/if:interface/ip:ipv4" {
+    container autoconf {
+      description
+	"Parameters to control the autoconfiguration of IPv4 address.";
+
+      leaf enabled {
+	type boolean;
+	default false;
+	description
+	  "Use a ZeroConf/IPv4LL agent to retrieve an 169.254/16 address.";
+	reference
+	  "RFC 3927: Dynamic Configuration of IPv4 Link-Local Addresses";
+      }
+    }
+  }
+}
