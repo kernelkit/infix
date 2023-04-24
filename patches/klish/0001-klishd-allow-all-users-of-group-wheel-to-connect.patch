@@ -1,0 +1,47 @@
+From 667a24c8d6c3abbebfefbcafa0543e9cfe8df970 Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Mon, 24 Apr 2023 09:22:39 +0200
+Subject: [PATCH] klishd: allow all users of group 'wheel' to connect
+Organization: Addiva Elektronik
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ bin/klishd/klishd.c | 10 ++++++++++
+ 1 file changed, 10 insertions(+)
+
+diff --git a/bin/klishd/klishd.c b/bin/klishd/klishd.c
+index 3f68b28..81dc392 100644
+--- a/bin/klishd/klishd.c
++++ b/bin/klishd/klishd.c
+@@ -1,4 +1,5 @@
+ #define _GNU_SOURCE
++#include <grp.h>
+ #include <stdlib.h>
+ #include <stdint.h>
+ #include <stdio.h>
+@@ -451,6 +452,7 @@ static int create_listen_unix_sock(const char *path)
+ 	int sock = -1;
+ 	int opt = 1;
+ 	struct sockaddr_un laddr = {};
++	struct group *gr;
+ 
+ 	assert(path);
+ 	if (!path)
+@@ -482,6 +484,14 @@ static int create_listen_unix_sock(const char *path)
+ 		goto err;
+ 	}
+ 
++	gr = getgrnam("wheel");
++	if (gr) {
++		if (chown(path, -1, gr->gr_gid))
++			syslog(LOG_ERR, "Failed chown(wheel) %s: %s", path, strerror(errno));
++		else
++			chmod(path, 0770);
++	}
++
+ 	return sock;
+ 
+ err:
+-- 
+2.34.1
+
