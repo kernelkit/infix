@@ -70,6 +70,13 @@ int sr_plugin_init_cb(sr_session_ctx_t *session, void **priv)
 		goto err;
 	}
 
+	rc = sr_module_change_subscribe(session, "ietf-interfaces", "/ietf-interfaces:interfaces//.",
+					commit_done_hook, NULL, 0, SR_SUBSCR_PASSIVE | SR_SUBSCR_DONE_ONLY, &confd.sub);
+	if (rc) {
+		ERROR("failed setting up startup-config hook: %s", sr_strerror(rc));
+		goto err;
+	}
+
 	rc = sr_install_module(confd.conn, YANG_PATH_"/kernelkit-infix-deviations.yang", NULL, NULL);
 	if (rc)
 		goto err;
