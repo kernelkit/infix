@@ -124,7 +124,7 @@ static void ifpopul(sr_session_ctx_t *session)
 
 	rc = sr_apply_changes(session, 0);
 	if (rc)
-		ERROR("faled: %s", sr_strerror(rc));
+		ERROR("failed: %s", sr_strerror(rc));
 }
 
 static void ifinit(sr_session_ctx_t *session)
@@ -168,7 +168,7 @@ static void ifinit(sr_session_ctx_t *session)
 
 	rc = sr_apply_changes(session, 0);
 	if (rc)
-		ERROR("faled: %s", sr_strerror(rc));
+		ERROR("failed: %s", sr_strerror(rc));
 }
 
 static int ifchange_cand_infer_type(sr_session_ctx_t *session, const char *xpath)
