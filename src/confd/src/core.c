@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: BSD-3-Clause */
 
 #include "core.h"
+#include "srx_module.h"
 
 static struct confd confd;
 
@@ -21,6 +22,12 @@ static int commit_done_hook(sr_session_ctx_t *session, uint32_t sub_id, const ch
 
 	return SR_ERR_OK;
 }
+
+static const struct srx_module_requirement core_reqs[] = {
+	{ .dir = YANG_PATH_, .name = "kernelkit-infix-deviations", .rev = "2023-04-03" },
+
+	{ NULL }
+};
 
 int sr_plugin_init_cb(sr_session_ctx_t *session, void **priv)
 {
@@ -77,7 +84,7 @@ int sr_plugin_init_cb(sr_session_ctx_t *session, void **priv)
 		goto err;
 	}
 
-	rc = sr_install_module(confd.conn, YANG_PATH_"/kernelkit-infix-deviations.yang", NULL, NULL);
+	rc = srx_require_modules(confd.conn, core_reqs);
 	if (rc)
 		goto err;
 
