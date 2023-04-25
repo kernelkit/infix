@@ -203,7 +203,7 @@ static int rpc_exec(sr_session_ctx_t *session, uint32_t sub_id, const char *path
 {
 	DEBUG("path: %s", path);
 
-	if (systemf(priv))
+	if (system(priv))
 		return SR_ERR_INTERNAL;
 
 	return SR_ERR_OK;
