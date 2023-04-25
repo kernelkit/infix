@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: BSD-3-Clause */
 
 #include "core.h"
+#include "srx_module.h"
 #include "srx_val.h"
 
 #include <ctype.h>
@@ -886,16 +887,24 @@ err:
 	return SR_ERR_OK;
 }
 
+static const char *sysfeat[] = {
+	"authentication",
+	"local-users",
+	"ntp",
+	"ntp-udp-port",
+	"timezone-name",
+	NULL
+};
+
+static const struct srx_module_requirement ietf_system_reqs[] = {
+	{ .dir = YANG_PATH_, .name = "ietf-system", .rev = "2014-08-06", .features = sysfeat },
+	{ .dir = YANG_PATH_, .name = "infix-system", .rev = "2014-08-06" },
+
+	{ NULL }
+};
+
 int ietf_system_init(struct confd *confd)
 {
-	const char *features[] = {
-		"authentication",
-		"local-users",
-		"ntp",
-		"ntp-udp-port",
-		"timezone-name",
-		NULL
-	};
 	int rc;
 
 	os_init();
@@ -908,11 +917,7 @@ int ietf_system_init(struct confd *confd)
 		goto fail;
 	}
 
-	rc = sr_install_module(confd->conn, YANG_PATH_"/ietf-system@2014-08-06.yang", NULL, features);
-	if (rc)
-		goto fail;
-	/* Augment to ietf-systems */
-	rc = sr_install_module(confd->conn, YANG_PATH_"/infix-system@2014-08-06.yang", NULL, NULL);
+	rc = srx_require_modules(confd->conn, ietf_system_reqs);
 	if (rc)
 		goto fail;
 
