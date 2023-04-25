@@ -1,6 +1,9 @@
 /* SPDX-License-Identifier: BSD-3-Clause */
 
 #include <fnmatch.h>
+#include <stdbool.h>
+
+#include <jansson.h>
 
 #include <net/if.h>
 
@@ -172,6 +175,41 @@ static void ifinit(sr_session_ctx_t *session)
 		ERROR("failed: %s", sr_strerror(rc));
 }
 
+static bool iface_is_phys(const char *ifname)
+{
+	bool is_phys = false;
+	json_error_t jerr;
+	const char *attr;
+	json_t *link;
+	FILE *proc;
+
+	proc = popenf("re", "ip -d -j link show dev %s", ifname);
+	if (!proc)
+		goto out;
+
+	link = json_loadf(proc, 0, &jerr);
+	pclose(proc);
+
+	if (!link)
+		goto out;
+
+	if (json_unpack(link, "[{s:s}]", "link_type", &attr))
+		goto out_free;
+
+	if (strcmp(attr, "ether"))
+		goto out_free;
+
+	if (!json_unpack(link, "[{s: { s:s }}]", "linkinfo", "info_kind", &attr))
+		goto out_free;
+
+	is_phys = true;
+
+out_free:
+	json_decref(link);
+out:
+	return is_phys;
+}
+
 static int ifchange_cand_infer_type(sr_session_ctx_t *session, const char *xpath)
 {
 	sr_val_t inferred = { .type = SR_STRING_T };
@@ -188,7 +226,9 @@ static int ifchange_cand_infer_type(sr_session_ctx_t *session, const char *xpath
 	if (!ifname)
 		return SR_ERR_INTERNAL;
 
-	if (!fnmatch("br+([0-9])", ifname, FNM_EXTMATCH))
+	if (iface_is_phys(ifname))
+		inferred.data.string_val = "iana-if-type:ethernetCsmacd";
+	else if (!fnmatch("br+([0-9])", ifname, FNM_EXTMATCH))
 		inferred.data.string_val = "iana-if-type:bridge";
 	else if (!fnmatch("lag+([0-9])", ifname, FNM_EXTMATCH))
 		inferred.data.string_val = "iana-if-type:ieee8023adLag";

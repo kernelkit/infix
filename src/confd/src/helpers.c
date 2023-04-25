@@ -1,7 +1,29 @@
 /* SPDX-License-Identifier: BSD-3-Clause */
 
+#include <errno.h>
 #include <stdarg.h>
 #include "core.h"
+
+FILE *popenf(const char *type, const char *cmdf, ...)
+{
+	va_list ap;
+	char *cmd;
+	FILE *fp;
+	int len;
+
+	va_start(ap, cmdf);
+	len = vasprintf(&cmd, cmdf, ap);
+	va_end(ap);
+
+	if (len < 0) {
+		errno = ENOMEM;
+		return NULL;
+	}
+
+	fp = popen(cmd, type);
+	free(cmd);
+	return fp;
+}
 
 static FILE *open_file(const char *mode, const char *fmt, va_list ap)
 {
