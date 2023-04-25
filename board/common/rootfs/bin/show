@@ -218,7 +218,7 @@ system()
 	echo "System Boot Mode   : $(cat /tmp/.boot_mode)"
 	echo "System Description : $PRETTY_NAME"
 	echo "System Contact     : $HOME_URL"
-	echo "System Timezone    : $TZ"
+	echo "System Timezone    : $(cat /etc/timezone)"
 	echo "System Type        : $NAME"
 	echo "System Version     : $(cat /etc/version)"
 	echo "System Arch        : $(uname -m)"
