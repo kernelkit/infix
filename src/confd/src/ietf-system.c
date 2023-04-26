@@ -510,7 +510,7 @@ static int change_motd(sr_session_ctx_t *session, uint32_t sub_id, const char *m
 {
 	/* XXX: derive from global "options.h" or /usr/share/factory/ */
 	const char *msg = "\033[1;90mNote:\033[0m"
-		"\033[0;90m use help, show, and setup commands to set up and diagnose the system\033[0m";
+		"\033[0;90m configuration is done using the CLI, type 'cli' at the shell prompt.\033[0m";
 	char *str;
 	int rc;
 
