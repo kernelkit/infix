@@ -46,9 +46,10 @@ jobs:
       - name: Restore Cache of .ccache/
         uses: actions/cache@v3
         with:
-          path: .buildroot-ccache/
-          key: ccache-${{ matrix.platform }}-os-${{ hashFiles('.git/modules/buildroot/HEAD', 'package/*/*.hash') }}
+          path: .ccache/
+          key: ccache-${{ matrix.platform }}-${{ matrix.variant }}-${{ hashFiles('.git/modules/buildroot/HEAD', 'package/*/*.hash') }}
           restore-keys: |
+            ccache-${{ matrix.platform }}-${{ matrix.variant }}-
             ccache-${{ matrix.platform }}-
             ccache-
       - name: Configure & Build
