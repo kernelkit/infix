@@ -160,24 +160,24 @@ cp -f $BINARIES_DIR/rootfs.itbh $root/aux/secondary.itbh
 
 case "$arch" in
     aarch64)
-	mkenvimage -s 0x4000 -o $root/aux/uboot.env \
-		   $BR2_EXTERNAL_INFIX_PATH/board/common/uboot/aux-env.txt
+	mkenvimage -s 0x4000 -o "$root/aux/uboot.env" \
+		   "$BR2_EXTERNAL_INFIX_PATH/board/common/uboot/aux-env.txt"
 	;;
     x86_64)
-	mkdir -p $root/aux/grub
-	cp -f $BR2_EXTERNAL_INFIX_PATH/board/amd64/grub.cfg \
-	      $BR2_EXTERNAL_INFIX_PATH/board/amd64/grubenv  \
-	   $root/aux/grub/
+	mkdir -p "$root/aux/grub"
+	cp -f "$BR2_EXTERNAL_INFIX_PATH/board/$arch/grub.cfg" \
+	      "$BR2_EXTERNAL_INFIX_PATH/board/$arch/grubenv"  \
+	      "$root/aux/grub/"
 	;;
     *)
 	;;
 esac
 
-rm -rf $tmp
+rm -rf "$tmp"
 
 genimage \
-    --rootpath $root \
-    --tmppath  $tmp \
-    --inputpath $BINARIES_DIR \
-    --outputpath $BINARIES_DIR \
-    --config $root/genimage.cfg
+    --rootpath "$root" \
+    --tmppath  "$tmp" \
+    --inputpath "$BINARIES_DIR" \
+    --outputpath "$BINARIES_DIR" \
+    --config "$root/genimage.cfg"

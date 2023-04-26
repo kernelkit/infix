@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        platform: [aarch64, amd64]
+        platform: [aarch64, x86_64_classic, x86_64]
       fail-fast: false
     steps:
       - uses: actions/checkout@v3

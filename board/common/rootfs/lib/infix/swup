@@ -1,5 +1,5 @@
 #!/bin/sh
-# Only runs in native /etc and PROFINET nodes.
+# Only runs in classic /etc nodes.
 
 if initctl cond get boot/profinet; then
     initctl enable snmpd

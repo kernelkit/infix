@@ -1,2 +1,0 @@
-#!/bin/sh
-dialog --msgbox "This build is hardwired to native /etc mode." 6 48

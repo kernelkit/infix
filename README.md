@@ -39,7 +39,7 @@ may enable additional boards in the config, of course):
 See the aarch64 specific [documentation](board/aarch64/README.md) for more
 information.
 
-### amd64
+### x86_64
 
 Primarily intended to be run under [QEMU][] for development & test as
 well as evaluation, demo and [training][] purposes, e.g. using [GNS3][]
@@ -59,10 +59,12 @@ under `External options -> QEMU virtualization`.
 GNS3
 ----
 
-Download the [latest build][0] of amd64, unpack in a dedicated directory
-and use ["Import Appliance"][9] to install the `.gns3a` file into GNS3.
-Infix will show up in the "Router" category, it has 10 interfaces
-available by default for use as switch ports or routing.
+Download the [latest build][0] of the `x86_64`, or `x86_64_classic`
+flavor.  Unpack in a dedicated directory and use ["Import Appliance"][9]
+to install the `.gns3a` file into GNS3.  Infix (`x86_64`) is in the
+"Router" category, it has 10 interfaces available by default for use as
+switch ports or routing.  The *classic* build only has one interface by
+default, geared more towards acting as an end device.
 
 
 Building
@@ -70,9 +72,10 @@ Building
 
 Buildroot is almost stand-alone, but need a few locally installed tools
 to bootstrap itself.  For details, see the [excellent manual][manual].
+
 Briefly, to build an Infix image; select the target and then make:
 
-    make amd64_defconfig
+    make x86_64_defconfig
     make
 
 Online help is available:
