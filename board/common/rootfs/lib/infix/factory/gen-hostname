@@ -1,0 +1,42 @@
+#!/bin/sh
+
+set -e
+
+base_mac_lowest_physical()
+{
+    ip -d -j link show | jq -r '
+         .[] |
+         select(.link_type == "ether") |
+         select(has("linkinfo") | not) | .address' \
+    | sort | head -n 1
+}
+
+source_base_mac()
+{
+    # TODO: Source the base MAC from the vital product data memory, if
+    # available.
+    # base_mac=$(base_mac_vpd)
+    # [ "$base_mac" ] && return
+
+    base_mac=$(base_mac_lowest_physical)
+    [ "$base_mac" ] && return
+
+    base_mac=00:00:00:00:00:00
+}
+
+if [ "$1" ]; then
+    sysname="$1"
+else
+    sysname="$(cat /etc/hostname)"
+fi
+
+source_base_mac
+sysname="${sysname}-$(echo $base_mac | tail -c 9 | tr ':' '-')"
+
+cat <<EOF
+{
+  "ietf-system:system": {
+    "hostname": "${sysname}"
+  }
+}
+EOF
