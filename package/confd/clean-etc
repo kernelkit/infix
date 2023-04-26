@@ -1,10 +1,5 @@
 #!/bin/sh
 
-# This is an unmanaged node, leave /etc as-is
-/lib/infix/use-etc && exit 0
-
-# This is a managed node, ignore all default configuration ...
-# ... except for some core services
 reserved()
 {
     for svc in avahi dnsmasq getty klish lldpd nginx ssdpd sshd sysklogd sysrepo; do

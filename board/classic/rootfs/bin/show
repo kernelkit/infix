@@ -215,7 +215,7 @@ system()
 {
 	h1 "SYSTEM INFORMATION"
 	echo "System Name        : $(uname -n)"
-	echo "System Boot Mode   : $(cat /tmp/.boot_mode)"
+	echo "System Variant     : $VARIANT"
 	echo "System Description : $PRETTY_NAME"
 	echo "System Contact     : $HOME_URL"
 	echo "System Timezone    : $(cat /etc/timezone)"
