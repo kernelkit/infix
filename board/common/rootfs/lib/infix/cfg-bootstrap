@@ -1,0 +1,25 @@
+#!/bin/sh
+
+set -e
+
+PATH=/lib/infix/factory:$PATH
+
+[ "$FACTORY_D" ] || FACTORY_D=/etc/auto-factory.d
+[ "$CFG_D" ]     || CFG_D=/cfg
+
+gen-hostname   >$FACTORY_D/20-auto-hostname.json
+gen-interfaces >$FACTORY_D/20-auto-interfaces.json
+
+jq -s add $(find $FACTORY_D -name '*.json') >$CFG_D/auto-factory-config.cfg
+
+# TODO: Look for statically defined factory-config, based on the
+# system's product ID.
+
+# If we haven't found a better one, settle for auto-factory-config as
+# the system's factory-config.
+[ -h $CFG_D/factory-config.cfg ] || \
+    ln -sf auto-factory-config.cfg $CFG_D/factory-config.cfg
+
+# On first boot, install factory-config as startup-config
+[ -f $CFG_D/startup-config.cfg ] || \
+    cp $CFG_D/factory-config.cfg $CFG_D/startup-config.cfg
