@@ -32,7 +32,7 @@ select_mode()
 		    --title "Select Operating Mode" \
 		    --radiolist "System currently runs in: $current mode" 13 60 1 \
 		    "1" "Managed NETCONF, XML datastore" "$m" \
-		    "2" "Native Linux, /etc datastore"   "$n" \
+		    "2" "Classic Linux, /etc datastore"   "$n" \
 		    "3" "PROFINET, /etc variant"         "$p" \
 		    2>&1 1>&3)
     exit_status=$?
@@ -57,7 +57,7 @@ options:
   -h            Show this help text
 
 arguments:
-  etc           Change to Linux native mode, /etc
+  etc           Change to Linux classic mode, /etc
   netconf       Change to NETCONF mode, XML
   profinet      Change to PROFINET mode, /etc variant
 
@@ -94,9 +94,9 @@ case $selection in
 	result="Manageed NETCONF"
 	;;
     2)
-	echo "native /etc" > $mode
-	grep -qi native $boot  2>/dev/null && exit 0
-	result="Native Linux, /etc"
+	echo "classic /etc" > $mode
+	grep -qi classic $boot  2>/dev/null && exit 0
+	result="Classic Linux, /etc"
 	;;
     3)
 	echo "PROFINET" > $mode

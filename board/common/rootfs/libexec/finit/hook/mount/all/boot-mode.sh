@@ -17,7 +17,7 @@ if /lib/infix/use-etc; then
 	    set_cond etc
 	fi
     else
-	echo "native /etc"  > /tmp/.boot_mode
+	echo "classic /etc"  > /tmp/.boot_mode
 	set_cond etc
     fi
 else

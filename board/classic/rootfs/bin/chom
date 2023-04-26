@@ -1,0 +1,2 @@
+#!/bin/sh
+dialog --msgbox "This build is hardwired to classic /etc mode." 6 48
