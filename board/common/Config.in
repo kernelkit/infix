@@ -43,9 +43,11 @@ config DISK_IMAGE_SIZE
 	depends on DISK_IMAGE
 	default "512M"
 	help
-	  Create a disk image of this size. Suffixes like K/M/G may be
-	  used to multiply by powers of 1024. Suffixes like KB/MB/GB may
-	  be used to multiply by powers of 1000.
+	  Create a disk image of this size.  A K/M/G suffix may be used
+	  to multiply by powers of 1024.  Suffixes like KB/MB/GB may be
+	  used to multiply by powers of 1000.  The image will be split
+	  proportionally to fit the two rootfs, a kernel, a writable
+	  /cfg and /var partiotions.
 
 	  Minimum supported size is 512M.
 
