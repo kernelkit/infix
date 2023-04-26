@@ -60,8 +60,7 @@ menu:system:System:System Settings
 	exec:_Enable service:edit:initctl enable ~Enter name of service (filename) to enable:~
 	exec:_Disable service:edit:initctl disable ~Enter name of service (filename) to disable:~
 	nop
-	exec:_Change Operating Mode::chom
-	exec:_Factory Reset::yorn "Reboot and factory reset device, are you sure?" factory -y
+	exec:_Factory Reset::yorn "Factory reset device (reboots), are you sure?" factory -y
 	nop
 	exit:_Main menu..
 

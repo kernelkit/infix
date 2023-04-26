@@ -1,5 +1,4 @@
 #!/bin/sh
-
 # Called from /etc/fstab to ensure we have something writable mounted
 # at /cfg, /etc, /home, /root, and /var.
 #
@@ -14,6 +13,7 @@
 # directories. Otherwise fall back to a tmpfs based RAM disk. This
 # effectively brings up the system with the default configuration, but
 # obviously any subsequent configuration is ephemeral.
+. /etc/os-release
 
 set -e
 
@@ -88,7 +88,8 @@ else
 	sync
     fi
 
-    if /lib/infix/use-etc; then
+    # Check build: NETCONF or Classic
+    if [ "$VARIANT_ID" != "netconf" ]; then
 	etcsrc=/mnt/cfg
     fi
 

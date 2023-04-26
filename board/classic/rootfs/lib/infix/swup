@@ -1,10 +1,4 @@
 #!/bin/sh
-# Only runs in classic /etc nodes.
-
-if initctl cond get boot/profinet; then
-    initctl enable snmpd
-    initctl disable lldpd
-fi
 
 # Factory default: all switch ports in VLAN 1 of br0
 # need to check for 'length > 0' because ip command
