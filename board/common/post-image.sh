@@ -15,9 +15,10 @@ ixmsg "Creating RAUC Update Bundle"
 $common/mkrauc.sh $BR2_ARCH $SIGN_KEY
 
 load_cfg DISK_IMAGE
+load_cfg DISK_IMAGE_SIZE
 if [ "$DISK_IMAGE" = "y" ]; then
     ixmsg "Creating Disk Image"
-    $common/mkdisk.sh -a $BR2_ARCH
+    $common/mkdisk.sh -a $BR2_ARCH -s $DISK_IMAGE_SIZE
 fi
 
 load_cfg GNS3_APPLIANCE

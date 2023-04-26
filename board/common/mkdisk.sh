@@ -17,7 +17,6 @@ size2int()
 
 dimension()
 {
-
     if [ $total -ge $((4 << G)) ]; then
 	bootsize=$(( 8 << M))
 	auxsize=$((  8 << M))
