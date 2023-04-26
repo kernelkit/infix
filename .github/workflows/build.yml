@@ -15,39 +15,51 @@ on:
 jobs:
   build:
     if: github.event.review.state == 'approved' || github.event_name == 'workflow_dispatch'
-    name: Build ${{ matrix.platform }}
+    name: Build ${{ matrix.platform }} ${{ matrix.variant }}
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        platform: [aarch64, x86_64_classic, x86_64]
+        platform: [aarch64, x86_64]
+        variant: [netconf, classic]
       fail-fast: false
     steps:
       - uses: actions/checkout@v3
       - name: Set Build Variables
         id: vars
         run: |
-          echo "dir=infix-${{ matrix.platform }}"        >> $GITHUB_OUTPUT
-          echo "tgz=infix-${{ matrix.platform }}.tar.gz" >> $GITHUB_OUTPUT
+          if [ "${{ matrix.variant }}" = "netconf" ]; then
+              target=${{ matrix.platform }}
+          else
+              target=${{ matrix.platform }}-${{ matrix.variant }}
+          fi
+          echo "dir=infix-$target"        >> $GITHUB_OUTPUT
+          echo "tgz=infix-$target.tar.gz" >> $GITHUB_OUTPUT
       - name: Restore Cache of dl/
         uses: actions/cache@v3
         with:
           path: dl/
-          key: dl-${{ matrix.platform }}-${{ hashFiles('.git/modules/buildroot/HEAD', 'configs/*', 'package/*/*.hash') }}
+          key: dl-${{ matrix.platform }}-${{ matrix.variant }}-${{ hashFiles('.git/modules/buildroot/HEAD', 'configs/*', 'package/*/*.hash') }}
           restore-keys: |
+            dl-${{ matrix.platform }}-${{ matrix.variant }}-
             dl-${{ matrix.platform }}-
             dl-
       - name: Restore Cache of .ccache/
         uses: actions/cache@v3
         with:
           path: .buildroot-ccache/
-          key: ccache-${{ matrix.board }}-os-${{ hashFiles('.git/modules/buildroot/HEAD', 'package/*/*.hash') }}
+          key: ccache-${{ matrix.platform }}-os-${{ hashFiles('.git/modules/buildroot/HEAD', 'package/*/*.hash') }}
           restore-keys: |
-            ccache-${{ matrix.board }}-os-
-            ccache-${{ matrix.board }}-
-            ccache--os-
+            ccache-${{ matrix.platform }}-
+            ccache-
       - name: Configure & Build
         run: |
-          make ${{ matrix.platform }}_defconfig
+          if [ "${{ matrix.variant }}" = "netconf" ]; then
+              target=${{ matrix.platform }}_defconfig
+          else
+              target=${{ matrix.platform }}_${{ matrix.variant }}_defconfig
+          fi
+          echo "Buildring $target ..."
+          make $target
           make
       - name: Prepare Artifact
         run: |
