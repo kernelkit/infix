@@ -1,6 +1,6 @@
 #!/bin/sh
 
-NM="infix-${1:-custom}"
+NM="${1:-custom}"
 RAM=${2:-512}
 IFNUM=${3:-1}
 

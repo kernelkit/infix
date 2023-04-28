@@ -4,8 +4,9 @@ set -e
 
 GIT_VERSION=$(git -C $BR2_EXTERNAL_INFIX_PATH describe --always --dirty --tags)
 
-arch=$1
-sign=$2
+name=$1
+arch=$2
+sign=$3
 
 crt=$(ls $sign/*.crt)
 key=$(ls $sign/*.key)
@@ -38,7 +39,7 @@ filename=rootfs.img
 hooks=post-install
 EOF
 
-rm -f $BINARIES_DIR/infix-$arch.pkg
+rm -f $BINARIES_DIR/$name.pkg
 
 rauc --cert=$crt --key=$key \
-    bundle $work $BINARIES_DIR/infix-$arch.pkg
+    bundle $work $BINARIES_DIR/$name.pkg
