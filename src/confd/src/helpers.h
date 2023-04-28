@@ -3,9 +3,12 @@
 #ifndef CONFD_HELPERS_H_
 #define CONFD_HELPERS_H_
 
-FILE *popenf(const char *type, const char *cmdf, ...);
+FILE *popenf(const char *type, const char *cmdf, ...)
+	__attribute__ ((format (printf, 2, 3)));
 
-int writedf(int value, const char *fmt, ...);
-int writesf(const char *str, const char *fmt, ...);
+int writedf(int value, const char *fmt, ...)
+	__attribute__ ((format (printf, 2, 3)));
+int writesf(const char *str, const char *fmt, ...)
+	__attribute__ ((format (printf, 2, 3)));
 
 #endif /* CONFD_HELPERS_H_ */
