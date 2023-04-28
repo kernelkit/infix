@@ -6,6 +6,12 @@
 FILE *popenf(const char *type, const char *cmdf, ...)
 	__attribute__ ((format (printf, 2, 3)));
 
+int vreadllf(long long *value, const char *fmt, va_list ap);
+int readllf(long long *value, const char *fmt, ...)
+	__attribute__ ((format (printf, 2, 3)));
+int readdf(int *value, const char *fmt, ...)
+	__attribute__ ((format (printf, 2, 3)));
+
 int writedf(int value, const char *fmt, ...)
 	__attribute__ ((format (printf, 2, 3)));
 int writesf(const char *str, const char *fmt, ...)
