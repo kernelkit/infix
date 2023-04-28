@@ -11,9 +11,14 @@
 int srx_set_item(sr_session_ctx_t *session, const sr_val_t *val, sr_edit_options_t opts,
 		 const char *fmt, ...) __attribute__ ((format (printf, 4, 5)));
 
-char *srx_get_str  (sr_session_ctx_t *session, const char *fmt, ...);
-int   srx_get_int  (sr_session_ctx_t *session, int *result, sr_val_type_t type, const char *fmt, ...);
-int   srx_get_bool (sr_session_ctx_t *session, const char *fmt, ...);
-int   srx_enabled  (sr_session_ctx_t *session, const char *fmt, ...);
+char *srx_get_str  (sr_session_ctx_t *session, const char *fmt, ...)
+	__attribute__ ((format (printf, 2, 3)));
+
+int   srx_get_int  (sr_session_ctx_t *session, int *result, sr_val_type_t type, const char *fmt, ...)
+	__attribute__ ((format (printf, 4, 5)));
+int   srx_get_bool (sr_session_ctx_t *session, const char *fmt, ...)
+	__attribute__ ((format (printf, 2, 3)));
+int   srx_enabled  (sr_session_ctx_t *session, const char *fmt, ...)
+	__attribute__ ((format (printf, 2, 3)));
 
 #endif /* CONFD_SRX_VAL_H_ */
