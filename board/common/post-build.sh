@@ -32,6 +32,10 @@ rm "$TARGET_DIR/etc/os-release"
 
 echo "Infix by KernelKit $GIT_VERSION -- $(date +"%b %e %H:%M %Z %Y")" > "$TARGET_DIR/etc/version"
 
-# Allow pdmenu (setup) to be a login shell
+# Allow pdmenu (setup) and bash to be a login shells, bash
+# is added automatically when selected in menuyconfig, but
+# not when BusyBox provides a symlink (for ash).
 grep -qsE '^/usr/bin/pdmenu$$' "$TARGET_DIR/etc/shells" \
         || echo "/usr/bin/pdmenu" >> "$TARGET_DIR/etc/shells"
+grep -qsE '^/bin/bash$$' "$TARGET_DIR/etc/shells" \
+        || echo "/bin/bash" >> "$TARGET_DIR/etc/shells"
