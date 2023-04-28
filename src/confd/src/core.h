@@ -22,6 +22,7 @@
 
 #include "helpers.h"
 #include "systemv.h"
+#include "netdo.h"
 
 #ifndef HAVE_VASPRINTF
 int vasprintf(char **strp, const char *fmt, va_list ap);
@@ -63,6 +64,7 @@ struct confd {
 	sr_subscription_ctx_t  *sub;
 
 	augeas                 *aug;
+	struct netdo		netdo;
 };
 
 static inline int register_change(sr_session_ctx_t *session, const char *module, const char *xpath,

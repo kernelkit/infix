@@ -8,6 +8,8 @@
 #include <net/if.h>
 
 #include "core.h"
+#include "lyx.h"
+#include "netdo.h"
 #include "srx_module.h"
 #include "srx_val.h"
 
@@ -38,7 +40,7 @@ static bool iface_is_phys(const char *ifname)
 	json_t *link;
 	FILE *proc;
 
-	proc = popenf("re", "ip -d -j link show dev %s", ifname);
+	proc = popenf("re", "ip -d -j link show dev %s 2>/dev/null", ifname);
 	if (!proc)
 		goto out;
 
@@ -128,10 +130,112 @@ static int ifchange_cand(sr_session_ctx_t *session, uint32_t sub_id, const char 
 	return SR_ERR_OK;
 }
 
-static int ifchange(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
-		    const char *xpath, sr_event_t event, unsigned request_id, void *priv)
+static sr_error_t ifchange_one(struct confd *confd, struct lyd_node *iface)
 {
+	const char *ifname = lydx_get_cattr(iface, "name");
+	bool is_phys = iface_is_phys(ifname);
+	enum lydx_op op = lydx_get_op(iface);
+	const char *attr;
+	FILE *ip;
+
+	DEBUG("%s(%s) %s", ifname, is_phys ? "phys" : "virt",
+	      (op == LYDX_OP_NONE) ? "mod" : ((op == LYDX_OP_CREATE) ? "add" : "del"));
+
+	if (op == LYDX_OP_DELETE) {
+		ip = netdo_get_file(&confd->netdo, ifname, NETDO_EXIT, NETDO_IP);
+		if (!ip)
+			return SR_ERR_INTERNAL;
+
+		if (is_phys) {
+			fprintf(ip, "link set dev %s down\n", ifname);
+			fprintf(ip, "addr flush dev %s\n", ifname);
+		} else {
+			fprintf(ip, "link del dev %s\n", ifname);
+		}
+
+		return SR_ERR_OK;
+	}
+
+	ip = netdo_get_file(&confd->netdo, ifname, NETDO_INIT, NETDO_IP);
+	if (!ip)
+		return SR_ERR_INTERNAL;
+
+	attr = ((op == LYDX_OP_CREATE) && !is_phys) ? "add" : "set";
+	fprintf(ip, "link %s dev %s", attr, ifname);
+
+	/* Generic attributes */
+
+	attr = lydx_get_cattr(iface, "enabled");
+	if (!attr && (op == LYDX_OP_CREATE))
+		/* When adding an interface to the configuration, we
+		 * need to bring it up, even when "enabled" is not
+		 * explicitly set.
+		 */
+		attr = "true";
+
+	attr = attr ? (!strcmp(attr, "true") ? " up" : " down") : "";
+	fprintf(ip, "%s", attr);
+
+	/* Type specific attributes */
+
+	fputc('\n', ip);
+
+	/* IP Addresses */
+
 	return SR_ERR_OK;
+}
+
+static int ifchange(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
+		    const char *xpath, sr_event_t event, unsigned request_id, void *_confd)
+{
+	struct lyd_node *diff, *cifs, *difs, *iface;
+	struct confd *confd = _confd;
+	sr_data_t *cfg;
+	sr_error_t err;
+
+	switch (event) {
+	case SR_EV_CHANGE:
+		break;
+	case SR_EV_ABORT:
+		return netdo_abort(&confd->netdo);
+	case SR_EV_DONE:
+		err = netdo_done(&confd->netdo);
+		if (err)
+			return err;
+
+		return systemf("%s", "net do");
+	default:
+		return SR_ERR_OK;
+	}
+
+	err = sr_get_data(session, "/interfaces/interface//.", 0, 0, 0, &cfg);
+	if (err)
+		return err;
+
+	err = srx_get_diff(session, (struct lyd_node **)&diff);
+	if (err)
+		goto err_release_data;
+
+	cifs = lydx_get_descendant(cfg->tree, "interfaces", "interface", NULL);
+	difs = lydx_get_descendant(diff, "interfaces", "interface", NULL);
+
+	err = netdo_change(&confd->netdo, cifs, difs);
+	if (err)
+		goto err_free_diff;
+
+	LY_LIST_FOR(difs, iface) {
+		err = ifchange_one(confd, iface);
+		if (err) {
+			netdo_abort(&confd->netdo);
+			break;
+		}
+	}
+
+err_free_diff:
+	lyd_free_tree(diff);
+err_release_data:
+	sr_release_data(cfg);
+	return err;
 }
 
 int ietf_interfaces_init(struct confd *confd)
@@ -139,6 +243,10 @@ int ietf_interfaces_init(struct confd *confd)
 	int rc;
 
 	rc = srx_require_modules(confd->conn, ietf_if_reqs);
+	if (rc)
+		goto fail;
+
+	rc = netdo_boot();
 	if (rc)
 		goto fail;
 
