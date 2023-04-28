@@ -48,6 +48,60 @@ static FILE *open_file(const char *mode, const char *fmt, va_list ap)
 	return fopen(file, mode);
 }
 
+int vreadllf(long long *value, const char *fmt, va_list ap)
+{
+	char line[0x100];
+	FILE *fp;
+
+	fp = open_file("r", fmt, ap);
+	if (!fp)
+		return -1;
+
+	if (!fgets(line, sizeof(line), fp)) {
+		fclose(fp);
+		return -1;
+	}
+
+	fclose(fp);
+
+	errno = 0;
+	*value = strtoll(line, NULL, 0);
+
+	return errno ? -1 : 0;
+}
+
+int readllf(long long *value, const char *fmt, ...)
+{
+	va_list ap;
+	int rc;
+
+	va_start(ap, fmt);
+	rc = vreadllf(value, fmt, ap);
+	va_end(ap);
+
+	return rc;
+}
+
+int readdf(int *value, const char *fmt, ...)
+{
+	long long tmp;
+	va_list ap;
+	int rc;
+
+	va_start(ap, fmt);
+	rc = vreadllf(&tmp, fmt, ap);
+	va_end(ap);
+
+	if (rc)
+		return rc;
+
+	if (tmp < INT_MIN || tmp > INT_MAX)
+		return -1;
+
+	*value = tmp;
+	return 0;
+}
+
 /*
  * Write interger value to a file composed from fmt and optional args.
  */
