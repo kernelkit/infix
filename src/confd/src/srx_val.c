@@ -25,43 +25,6 @@ int srx_set_item(sr_session_ctx_t *session, const sr_val_t *val, sr_edit_options
 	return sr_set_item(session, xpath, val, opts);
 }
 
-int lydx_new_path(const struct ly_ctx *ctx, struct lyd_node **parent, int *first,
-		  char *xpath_base, char *node, const char *fmt, ...)
-{
-	char xpath[strlen(xpath_base) + strlen(node) + 2];
-	va_list ap;
-	size_t len;
-	char *val;
-	int rc;
-
-	va_start(ap, fmt);
-	len = vsnprintf(NULL, 0, fmt, ap) + 1;
-	va_end(ap);
-
-	val = alloca(len);
-	if (!val)
-		return -1;
-
-	snprintf(xpath, sizeof(xpath), "%s/%s", xpath_base, node);
-	va_start(ap, fmt);
-	vsnprintf(val, len, fmt, ap);
-	va_end(ap);
-
-	DEBUG("Setting first:%d xpath %s to %s", *first, xpath, val);
-
-	if (*first)
-		rc = lyd_new_path(NULL, ctx, xpath, val, 0, parent);
-	else
-		rc = lyd_new_path(*parent, NULL, xpath, val, 0, NULL);
-
-	*first = 0;
-	if (rc)
-		ERROR("Failed building data tree, xpath %s, libyang error %d: %s",
-		      xpath, rc, ly_errmsg(ctx));
-
-	return rc;
-}
-
 static int srx_vaget(sr_session_ctx_t *session, const char *fmt, va_list ap, sr_val_type_t type, sr_val_t **val, size_t *cnt)
 {
 	va_list apdup;

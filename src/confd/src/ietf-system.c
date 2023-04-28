@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: BSD-3-Clause */
 
 #include "core.h"
+#include "lyx.h"
 #include "srx_module.h"
 #include "srx_val.h"
 
