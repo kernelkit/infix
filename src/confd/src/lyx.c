@@ -2,6 +2,116 @@
 
 #include <stdarg.h>
 #include "core.h"
+#include "lyx.h"
+
+enum lydx_op lydx_get_op(struct lyd_node *node)
+{
+	const char *opstr = NULL;
+
+	for (; !opstr && node; node = lyd_parent(node))
+		opstr = lydx_get_mattr(node, "yang:operation");
+
+	if (opstr && !strcmp(opstr, "create"))
+		return LYDX_OP_CREATE;
+
+	if (opstr && !strcmp(opstr, "delete"))
+		return LYDX_OP_DELETE;
+
+	return LYDX_OP_NONE;
+}
+
+struct lyd_node *lydx_get_sibling(struct lyd_node *sibling, const char *name)
+{
+	struct lyd_node *node;
+
+	if (!sibling)
+		return NULL;
+
+	LY_LIST_FOR(sibling, node) {
+		if (node->schema && node->schema->name &&
+		    !strcmp(node->schema->name, name))
+			return node;
+	}
+
+	return NULL;
+}
+
+struct lyd_node *lydx_get_child(struct lyd_node *parent, const char *name)
+{
+	return lydx_get_sibling(lyd_child(parent), name);
+}
+
+struct lyd_node *lydx_get_descendant(struct lyd_node *from, ...)
+{
+	struct lyd_node *node = NULL;
+	const char *name;
+	va_list ap;
+
+	va_start(ap, from);
+	while ((name = va_arg(ap, const char *))) {
+		node = lydx_get_sibling(from, name);
+		from = lyd_child(node);
+	}
+	va_end(ap);
+
+	return node;
+}
+
+const char *lydx_get_mattr(struct lyd_node *node, const char *name)
+{
+	struct lyd_meta *meta;
+
+	if (!node)
+		return NULL;
+
+	meta = lyd_find_meta(node->meta, NULL, name);
+	if (!meta)
+		return NULL;
+
+	return lyd_get_meta_value(meta);
+}
+
+const char *lydx_get_attr(struct lyd_node *sibling, const char *name)
+{
+	struct lyd_node *node;
+
+	node = lydx_get_sibling(sibling, name);
+	if (!node)
+		return NULL;
+
+	return lyd_get_value(node);
+}
+
+const char *lydx_get_cattr(struct lyd_node *parent, const char *name)
+{
+	return lydx_get_attr(lyd_child(parent), name);
+}
+
+const char *lydx_get_vattrf(struct lyd_node *sibling, const char *namefmt, va_list ap)
+{
+	const char *val;
+	char *name;
+
+	if (vasprintf(&name, namefmt, ap) < 0)
+		return NULL;
+
+	val = lydx_get_attr(sibling, name);
+	free(name);
+
+	return val;
+}
+
+const char *lydx_get_attrf(struct lyd_node *sibling, const char *namefmt, ...)
+{
+	const char *val;
+	va_list ap;
+
+	va_start(ap, namefmt);
+	val = lydx_get_vattrf(sibling, namefmt, ap);
+	va_end(ap);
+
+	return val;
+}
 
 int lydx_new_path(const struct ly_ctx *ctx, struct lyd_node **parent, int *first,
 		  char *xpath_base, char *node, const char *fmt, ...)
