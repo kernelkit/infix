@@ -4,7 +4,7 @@ common=$(dirname "$(readlink -f "$0")")
 
 load_cfg BR2_DEFCONFIG
 load_cfg BR2_EXTERNAL_INFIX_PATH
-NAME=infix-$(basename "$BR2_DEFCONFIG" _defconfig | tr _ -)
+NAME=infix-$(basename "$BR2_DEFCONFIG" _defconfig | tr _ - | sed 's/x86-64/x86_64/')
 
 ver()
 {
