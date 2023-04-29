@@ -66,7 +66,7 @@ jobs:
         run: |
           cd output
           mv images ${{ steps.vars.outputs.dir }}
-          tar cfz ${{ steps.vars.outputs.tgz }} ${{ steps.vars.outputs.dir }}
+          tar chfz ${{ steps.vars.outputs.tgz }} ${{ steps.vars.outputs.dir }}
           ls -l
           ls -l ${{ steps.vars.outputs.dir }}
       - uses: actions/upload-artifact@v3
