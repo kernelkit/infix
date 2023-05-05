@@ -16,12 +16,61 @@ Infix is an embedded Linux Network Operating System (NOS) based on
 Providing an easy-to-maintain and easy-to-port Open Source base for
 networked equipment.
 
-See the [GitHub Releases](https://github.com/kernelkit/infix/releases)
-page for out pre-built images.  The *Latest Build* has the bleeding edge
-images, if possible we recommend using a versioned release.
+> See the [GitHub Releases](https://github.com/kernelkit/infix/releases)
+> page for out pre-built images.  The *Latest Build* has the bleeding edge
+> images, if possible we recommend using a versioned release.
 
-> Login with user 'root', no password by default on plain builds.  See
-> the online `help` command for an introduction to the system.
+Infix has two main *flavors*, or defconfigs:
+
+ - **NETCONF:** the default, is configured using the `cli` tool, or any
+   external NETCONF client, after boot.  It uses sysrepo as the data
+   store to generate configuration files in `/etc` and control the
+   system daemons, e.g., enable DHCP client on an interface.
+
+ - **Classic:** built from `$ARCH_classic_defconfig`.  Here it is up to
+   the administrator to modify configuration files in `/etc` and control
+   the system daemons using the `initctl` tool.  After login, see the
+   online `help` command for an introduction to the system.
+
+Both flavors have a `root` user, which is only allowed to log in from
+the console port, no password by default on standard builds.  There is
+also a `factory` user, password `reset`, to perform factory reset on
+systems that do not have a reset button.
+
+Additionally, the standard builds also have an `admin` user, which is
+allowed to log in from remote, password `admin` on standard builds.  It
+is the recommended account to use for managing Infix.
+
+
+Hybrid Mode
+-----------
+
+Since Infix is under heavy development, it does not yet have all its
+bells and whistles in place, in particular the default build.  To that
+end it is possible to manually manage certain services that are not yet
+possible to configure using NETCONF.
+
+At bootstrap Finit can optionally start scripts from a [run-parts(8)][]
+like directory: `/cfg/start.d`.  To enable this mode, see the following
+example:
+
+```sh
+root@infix:~$ mkdir /cfg/start.d
+root@infix:~$ cd /cfg/start.d
+root@infix:/cfg/start.d$ cat <<EOF >10-enable-ospf.sh
+#!/bin/sh
+# Use vtysh to modify the OSPF configuration
+rm /etc/frr/frr.conf
+ln -s /cfg/frr/frr.conf /etc/frr/
+initctl enable zebra
+initctl enable ospfd
+initctl enable bfdd
+EOF
+root@infix:/cfg/start.d$ chmod +x 10-enable-ospf.sh
+```
+
+Reboot to activate the changes.  To activate the changes without
+rebooting, run the script and call `initctl reload`.
 
 
 Hardware
@@ -130,3 +179,4 @@ any GPL[^1] licensed library.
 [GNS3]: https://gns3.com/
 [training]: https://addiva-elektronik.github.io/
 [manual]: https://buildroot.org/downloads/manual/manual.html
+[run-parts(8)]: https://manpages.ubuntu.com/manpages/trusty/man8/run-parts.8.html
