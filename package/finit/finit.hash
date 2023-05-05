@@ -2,8 +2,8 @@
 sha256  262d8cfea80d94e048e3f1b149f5d940b4579a38f2b7dba563cf4b0b497e7422  finit-4.3.tar.gz
 
 # Locally calculated
-sha256  abdb9adbbc1faacc35c80bc2974c7d6b842e3e50b066d688385b5d21be86206f  LICENSE
+sha256  3a2b964c1772d03ab17b73a389ecce9151e0b190a9247817a2c009b16d356422  LICENSE
 
 # Snapshot before 4.4-rc1
-sha256  4abed02dca80a8fff128bf823aea3491e3b48fdedc7228803b985b5eca0c03a5  finit-700c32fd73ae362af05fb094cb4b069f5147aabf.tar.gz
+sha256  91f99b1977444863e0c3b9e96f91f03228abe15afab24181acbefe74e8aca809  finit-4fbcd1bbad88fb4cd8e4859b0dfaeb9a474bedcc.tar.gz
 
