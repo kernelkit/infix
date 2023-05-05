@@ -8,6 +8,8 @@
 #define SRX_GET_UINT8(s,v,fmt,...)  srx_get_int(s, &v, SR_UINT8_T, fmt, ##__VA_ARGS__)
 #define SRX_GET_UINT32(s,v,fmt,...) srx_get_int(s, &v, SR_UINT32_T, fmt, ##__VA_ARGS__)
 
+sr_error_t srx_get_diff(sr_session_ctx_t *session, struct lyd_node **treep);
+
 int srx_set_item(sr_session_ctx_t *session, const sr_val_t *val, sr_edit_options_t opts,
 		 const char *fmt, ...) __attribute__ ((format (printf, 4, 5)));
 
