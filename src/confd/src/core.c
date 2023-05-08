@@ -17,6 +17,10 @@ static int startup_save_hook(sr_session_ctx_t *session, uint32_t sub_id, const c
 static int commit_done_hook(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
 	const char *xpath, sr_event_t event, unsigned request_id, void *priv)
 {
+	/* No need to reload if the system is still bootstrapping. */
+	if (system("runlevel >/dev/null"))
+		return SR_ERR_OK;
+
 	if (system("initctl -nbq reload"))
 		return SR_ERR_SYS;
 
