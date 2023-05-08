@@ -18,15 +18,10 @@ static const char *iffeat[] = {
 	NULL
 };
 
-static const char *ipfeat[] = {
-	"ipv4-non-contiguous-netmasks",
-	NULL
-};
-
 static const struct srx_module_requirement ietf_if_reqs[] = {
 	{ .dir = YANG_PATH_, .name = "ietf-interfaces", .rev = "2018-02-20", .features = iffeat },
 	{ .dir = YANG_PATH_, .name = "iana-if-type", .rev = "2023-01-26" },
-	{ .dir = YANG_PATH_, .name = "ietf-ip", .rev = "2018-02-22", .features = ipfeat },
+	{ .dir = YANG_PATH_, .name = "ietf-ip", .rev = "2018-02-22" },
 	{ .dir = YANG_PATH_, .name = "infix-ip", .rev = "2023-04-24" },
 
 	{ NULL }
