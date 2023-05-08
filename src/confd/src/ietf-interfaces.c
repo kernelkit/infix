@@ -5,6 +5,7 @@
 
 #include <jansson.h>
 
+#include <arpa/inet.h>
 #include <net/if.h>
 
 #include "core.h"
@@ -125,15 +126,102 @@ static int ifchange_cand(sr_session_ctx_t *session, uint32_t sub_id, const char 
 	return SR_ERR_OK;
 }
 
-static sr_error_t ifchange_one(struct confd *confd, struct lyd_node *iface)
+static bool is_std_lo_addr(const char *ifname, const char *ip, const char *pf)
+{
+	struct in6_addr in6, lo6;
+	struct in_addr in4;
+
+	if (strcmp(ifname, "lo"))
+		return false;
+
+	if (inet_pton(AF_INET, ip, &in4) == 1)
+		return (ntohl(in4.s_addr) == INADDR_LOOPBACK) && !strcmp(pf, "8");
+
+	if (inet_pton(AF_INET6, ip, &in6) == 1) {
+		inet_pton(AF_INET6, "::1", &lo6);
+
+		return !memcmp(&in6, &lo6, sizeof(in6))
+			&& !strcmp(pf, "128");
+	}
+
+	return false;
+}
+
+static sr_error_t ifchange_ipvx_addr(FILE *ip, const char *ifname,
+				     struct lyd_node *addr)
+{
+	enum lydx_op op = lydx_get_op(addr);
+	const char *oip, *opf, *nip, *npf;
+	const char *addcmd = "add";
+
+	nip = lydx_get_cattr(addr, "ip");
+	npf = lydx_get_cattr(addr, "prefix-length");
+	if (!nip || !npf)
+		return SR_ERR_INVAL_ARG;
+
+	if (op != LYDX_OP_CREATE) {
+		oip = lydx_get_mattr(lydx_get_child(addr, "ip"), "yang:orig-value") ? : nip;
+		opf = lydx_get_mattr(lydx_get_child(addr, "prefix-length"), "yang:orig-value") ? : npf;
+		if (!oip || !opf)
+			return SR_ERR_INVAL_ARG;
+
+		fprintf(ip, "address delete %s/%s dev %s\n", oip, opf, ifname);
+
+		if (op == LYDX_OP_DELETE)
+			return SR_ERR_OK;
+	}
+
+	/* When bringing up loopback, the kernel will automatically
+	 * add the standard addresses, so don't treat the existance of
+	 * these as an error.
+	 */
+	if ((op == LYDX_OP_CREATE) && is_std_lo_addr(ifname, nip, npf))
+		addcmd = "replace";
+
+	fprintf(ip, "address %s %s/%s dev %s\n", addcmd, nip, npf, ifname);
+	return SR_ERR_OK;
+}
+
+static sr_error_t ifchange_ipvx_addrs(FILE *ip, const char *ifname,
+				      struct lyd_node *addrs)
+{
+	sr_error_t err = SR_ERR_OK;
+	struct lyd_node *addr;
+
+	LYX_LIST_FOR_EACH(addrs, addr, "address") {
+		err = ifchange_ipvx_addr(ip, ifname, addr);
+		if (err)
+			break;
+	}
+
+	return err;
+}
+
+static sr_error_t ifchange_ipv4(FILE *ip, const char *ifname,
+				struct lyd_node *ipv4)
+{
+	return ifchange_ipvx_addrs(ip, ifname, lyd_child(ipv4));
+}
+
+static sr_error_t ifchange_ipv6(FILE *ip, const char *ifname,
+				struct lyd_node *ipv6)
+{
+	return ifchange_ipvx_addrs(ip, ifname, lyd_child(ipv6));
+}
+
+static sr_error_t ifchange(struct confd *confd, struct lyd_node *iface)
 {
 	const char *ifname = lydx_get_cattr(iface, "name");
-	bool is_phys = iface_is_phys(ifname);
 	enum lydx_op op = lydx_get_op(iface);
+	struct lyd_node *node;
 	const char *attr;
+	sr_error_t err;
+	bool fixed;
 	FILE *ip;
 
-	DEBUG("%s(%s) %s", ifname, is_phys ? "phys" : "virt",
+	fixed = iface_is_phys(ifname) || !strcmp(ifname, "lo");
+
+	DEBUG("%s(%s) %s", ifname, fixed ? "fixed" : "dynamic",
 	      (op == LYDX_OP_NONE) ? "mod" : ((op == LYDX_OP_CREATE) ? "add" : "del"));
 
 	if (op == LYDX_OP_DELETE) {
@@ -141,7 +229,7 @@ static sr_error_t ifchange_one(struct confd *confd, struct lyd_node *iface)
 		if (!ip)
 			return SR_ERR_INTERNAL;
 
-		if (is_phys) {
+		if (fixed) {
 			fprintf(ip, "link set dev %s down\n", ifname);
 			fprintf(ip, "addr flush dev %s\n", ifname);
 		} else {
@@ -155,7 +243,7 @@ static sr_error_t ifchange_one(struct confd *confd, struct lyd_node *iface)
 	if (!ip)
 		return SR_ERR_INTERNAL;
 
-	attr = ((op == LYDX_OP_CREATE) && !is_phys) ? "add" : "set";
+	attr = ((op == LYDX_OP_CREATE) && !fixed) ? "add" : "set";
 	fprintf(ip, "link %s dev %s", attr, ifname);
 
 	/* Generic attributes */
@@ -177,11 +265,25 @@ static sr_error_t ifchange_one(struct confd *confd, struct lyd_node *iface)
 
 	/* IP Addresses */
 
+	node = lydx_get_child(iface, "ipv4");
+	if (node) {
+		err = ifchange_ipv4(ip, ifname, node);
+		if (err)
+			return err;
+	}
+
+	node = lydx_get_child(iface, "ipv6");
+	if (node) {
+		err = ifchange_ipv6(ip, ifname, node);
+		if (err)
+			return err;
+	}
+
 	return SR_ERR_OK;
 }
 
-static int ifchange(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
-		    const char *xpath, sr_event_t event, unsigned request_id, void *_confd)
+static int ifschange(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
+		     const char *xpath, sr_event_t event, unsigned request_id, void *_confd)
 {
 	struct lyd_node *diff, *cifs, *difs, *iface;
 	struct confd *confd = _confd;
@@ -218,8 +320,8 @@ static int ifchange(sr_session_ctx_t *session, uint32_t sub_id, const char *modu
 	if (err)
 		goto err_free_diff;
 
-	LY_LIST_FOR(difs, iface) {
-		err = ifchange_one(confd, iface);
+	LYX_LIST_FOR_EACH(difs, iface, "interface") {
+		err = ifchange(confd, iface);
 		if (err) {
 			netdo_abort(&confd->netdo);
 			break;
@@ -245,7 +347,7 @@ int ietf_interfaces_init(struct confd *confd)
 	if (rc)
 		goto fail;
 
-	REGISTER_CHANGE(confd->session, "ietf-interfaces", "/ietf-interfaces:interfaces", 0, ifchange, confd, &confd->sub);
+	REGISTER_CHANGE(confd->session, "ietf-interfaces", "/ietf-interfaces:interfaces", 0, ifschange, confd, &confd->sub);
 
 	sr_session_switch_ds(confd->session, SR_DS_CANDIDATE);
 	REGISTER_CHANGE(confd->session, "ietf-interfaces", "/ietf-interfaces:interfaces",
