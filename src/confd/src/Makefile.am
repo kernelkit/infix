@@ -8,4 +8,4 @@ confd_plugin_la_CFLAGS  = $(augeas_CFLAGS) $(libite_CFLAGS) $(sysrepo_CFLAGS) $(
 confd_plugin_la_LIBADD  = $(augeas_LIBS)   $(libite_LIBS)   $(sysrepo_LIBS)
 confd_plugin_la_LDFLAGS = -module -avoid-version -shared
 confd_plugin_la_SOURCES = core.c core.h helpers.c helpers.h srx_module.c srx_module.h srx_val.c srx_val.h \
-			  ietf-system.c ietf-interfaces.c systemv.c
+			  ietf-system.c ietf-interfaces.c systemv.c systemv.h

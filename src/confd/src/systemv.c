@@ -12,7 +12,7 @@
 /**
  * Reimplementation of system() without /bin/sh intermediary
  */
-int fsystemv(char **args, FILE *in, FILE *out, FILE *err)
+static int fsystemv(char **args, FILE *in, FILE *out, FILE *err)
 {
 	struct sigaction sa = { .sa_handler = SIG_IGN };
 	sigset_t oldmask;
