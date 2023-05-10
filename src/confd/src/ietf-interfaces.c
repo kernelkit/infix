@@ -9,8 +9,8 @@
 #include <net/if.h>
 
 #include "core.h"
+#include "dagger.h"
 #include "lyx.h"
-#include "netdo.h"
 #include "srx_module.h"
 #include "srx_val.h"
 
@@ -147,8 +147,8 @@ static bool is_std_lo_addr(const char *ifname, const char *ip, const char *pf)
 	return false;
 }
 
-static sr_error_t ifchange_ipvx_addr(FILE *ip, const char *ifname,
-				     struct lyd_node *addr)
+static sr_error_t netdag_gen_ipvx_addr(FILE *ip, const char *ifname,
+				       struct lyd_node *addr)
 {
 	enum lydx_op op = lydx_get_op(addr);
 	const char *oip, *opf, *nip, *npf;
@@ -182,14 +182,14 @@ static sr_error_t ifchange_ipvx_addr(FILE *ip, const char *ifname,
 	return SR_ERR_OK;
 }
 
-static sr_error_t ifchange_ipvx_addrs(FILE *ip, const char *ifname,
-				      struct lyd_node *addrs)
+static sr_error_t netdag_gen_ipvx_addrs(FILE *ip, const char *ifname,
+					struct lyd_node *addrs)
 {
 	sr_error_t err = SR_ERR_OK;
 	struct lyd_node *addr;
 
 	LYX_LIST_FOR_EACH(addrs, addr, "address") {
-		err = ifchange_ipvx_addr(ip, ifname, addr);
+		err = netdag_gen_ipvx_addr(ip, ifname, addr);
 		if (err)
 			break;
 	}
@@ -197,25 +197,25 @@ static sr_error_t ifchange_ipvx_addrs(FILE *ip, const char *ifname,
 	return err;
 }
 
-static sr_error_t ifchange_ipv4(FILE *ip, const char *ifname,
-				struct lyd_node *ipv4)
+static sr_error_t netdag_gen_ipv4(FILE *ip, const char *ifname,
+				  struct lyd_node *ipv4)
 {
-	return ifchange_ipvx_addrs(ip, ifname, lyd_child(ipv4));
+	return netdag_gen_ipvx_addrs(ip, ifname, lyd_child(ipv4));
 }
 
-static sr_error_t ifchange_ipv6(FILE *ip, const char *ifname,
-				struct lyd_node *ipv6)
+static sr_error_t netdag_gen_ipv6(FILE *ip, const char *ifname,
+				  struct lyd_node *ipv6)
 {
-	return ifchange_ipvx_addrs(ip, ifname, lyd_child(ipv6));
+	return netdag_gen_ipvx_addrs(ip, ifname, lyd_child(ipv6));
 }
 
-static sr_error_t ifchange(struct confd *confd, struct lyd_node *iface)
+static sr_error_t netdag_gen_iface(struct dagger *net, struct lyd_node *iface)
 {
 	const char *ifname = lydx_get_cattr(iface, "name");
 	enum lydx_op op = lydx_get_op(iface);
+	sr_error_t err = SR_ERR_INTERNAL;
 	struct lyd_node *node;
 	const char *attr;
-	sr_error_t err;
 	bool fixed;
 	FILE *ip;
 
@@ -225,9 +225,9 @@ static sr_error_t ifchange(struct confd *confd, struct lyd_node *iface)
 	      (op == LYDX_OP_NONE) ? "mod" : ((op == LYDX_OP_CREATE) ? "add" : "del"));
 
 	if (op == LYDX_OP_DELETE) {
-		ip = netdo_get_file(&confd->netdo, ifname, NETDO_EXIT, NETDO_IP);
+		ip = dagger_fopen_current(net, "exit", ifname, 50, "delete.ip");
 		if (!ip)
-			return SR_ERR_INTERNAL;
+			goto err;
 
 		if (fixed) {
 			fprintf(ip, "link set dev %s down\n", ifname);
@@ -236,12 +236,13 @@ static sr_error_t ifchange(struct confd *confd, struct lyd_node *iface)
 			fprintf(ip, "link del dev %s\n", ifname);
 		}
 
+		fclose(ip);
 		return SR_ERR_OK;
 	}
 
-	ip = netdo_get_file(&confd->netdo, ifname, NETDO_INIT, NETDO_IP);
+	ip = dagger_fopen_next(net, "init", ifname, 50, "init.ip");
 	if (!ip)
-		return SR_ERR_INTERNAL;
+		goto err;
 
 	attr = ((op == LYDX_OP_CREATE) && !fixed) ? "add" : "set";
 	fprintf(ip, "link %s dev %s", attr, ifname);
@@ -267,23 +268,42 @@ static sr_error_t ifchange(struct confd *confd, struct lyd_node *iface)
 
 	node = lydx_get_child(iface, "ipv4");
 	if (node) {
-		err = ifchange_ipv4(ip, ifname, node);
+		err = netdag_gen_ipv4(ip, ifname, node);
 		if (err)
-			return err;
+			goto err_close_ip;
 	}
 
 	node = lydx_get_child(iface, "ipv6");
 	if (node) {
-		err = ifchange_ipv6(ip, ifname, node);
+		err = netdag_gen_ipv6(ip, ifname, node);
 		if (err)
-			return err;
+			goto err_close_ip;
 	}
+
+err_close_ip:
+	fclose(ip);
+err:
+	return err;
+}
+
+static sr_error_t netdag_init(struct dagger *net, struct lyd_node *cifs,
+			      struct lyd_node *difs)
+{
+	struct lyd_node *iface;
+
+	LYX_LIST_FOR_EACH(cifs, iface, "interface")
+		if (dagger_add_node(net, lydx_get_cattr(iface, "name")))
+			return SR_ERR_INTERNAL;
+
+	LYX_LIST_FOR_EACH(cifs, iface, "interface")
+		if (dagger_add_node(net, lydx_get_cattr(iface, "name")))
+			return SR_ERR_INTERNAL;
 
 	return SR_ERR_OK;
 }
 
-static int ifschange(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
-		     const char *xpath, sr_event_t event, unsigned request_id, void *_confd)
+static int ifchange(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
+		    const char *xpath, sr_event_t event, unsigned request_id, void *_confd)
 {
 	struct lyd_node *diff, *cifs, *difs, *iface;
 	struct confd *confd = _confd;
@@ -294,20 +314,20 @@ static int ifschange(sr_session_ctx_t *session, uint32_t sub_id, const char *mod
 	case SR_EV_CHANGE:
 		break;
 	case SR_EV_ABORT:
-		return netdo_abort(&confd->netdo);
+		return dagger_abandon(&confd->netdag);
 	case SR_EV_DONE:
-		err = netdo_done(&confd->netdo);
-		if (err)
-			return err;
-
-		return systemf("%s", "net do");
+		return dagger_evolve_or_abandon(&confd->netdag);
 	default:
 		return SR_ERR_OK;
 	}
 
-	err = sr_get_data(session, "/interfaces/interface//.", 0, 0, 0, &cfg);
+	err = dagger_claim(&confd->netdag, "/run/net");
 	if (err)
 		return err;
+
+	err = sr_get_data(session, "/interfaces/interface//.", 0, 0, 0, &cfg);
+	if (err)
+		goto err_abandon;
 
 	err = srx_get_diff(session, (struct lyd_node **)&diff);
 	if (err)
@@ -316,22 +336,24 @@ static int ifschange(sr_session_ctx_t *session, uint32_t sub_id, const char *mod
 	cifs = lydx_get_descendant(cfg->tree, "interfaces", "interface", NULL);
 	difs = lydx_get_descendant(diff, "interfaces", "interface", NULL);
 
-	err = netdo_change(&confd->netdo, cifs, difs);
+	err = netdag_init(&confd->netdag, cifs, difs);
 	if (err)
 		goto err_free_diff;
 
 	LYX_LIST_FOR_EACH(difs, iface, "interface") {
-		err = ifchange(confd, iface);
-		if (err) {
-			netdo_abort(&confd->netdo);
+		err = netdag_gen_iface(&confd->netdag, iface);
+		if (err)
 			break;
-		}
 	}
 
 err_free_diff:
 	lyd_free_tree(diff);
 err_release_data:
 	sr_release_data(cfg);
+err_abandon:
+	if (err)
+		dagger_abandon(&confd->netdag);
+
 	return err;
 }
 
@@ -343,11 +365,7 @@ int ietf_interfaces_init(struct confd *confd)
 	if (rc)
 		goto fail;
 
-	rc = netdo_boot();
-	if (rc)
-		goto fail;
-
-	REGISTER_CHANGE(confd->session, "ietf-interfaces", "/ietf-interfaces:interfaces", 0, ifschange, confd, &confd->sub);
+	REGISTER_CHANGE(confd->session, "ietf-interfaces", "/ietf-interfaces:interfaces", 0, ifchange, confd, &confd->sub);
 
 	sr_session_switch_ds(confd->session, SR_DS_CANDIDATE);
 	REGISTER_CHANGE(confd->session, "ietf-interfaces", "/ietf-interfaces:interfaces",
