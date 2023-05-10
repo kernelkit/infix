@@ -36,6 +36,9 @@ int asprintf(char **strp, const char *fmt, ...);
 #define ERROR(fmt, ...) syslog(LOG_ERR, "%s: " fmt, __func__, ##__VA_ARGS__)
 #define ERRNO(fmt, ...) syslog(LOG_ERR, "%s: " fmt ": %s", __func__, ##__VA_ARGS__, strerror(errno))
 
+#define CB_PRIO_PRIMARY   65535
+#define CB_PRIO_PASSIVE   65000
+
 static inline void print_val(sr_val_t *val)
 {
 	char *str;
@@ -67,12 +70,20 @@ struct confd {
 	struct dagger		netdag;
 };
 
+uint32_t core_hook_prio(void);
+
+int core_commit_done(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
+	const char *xpath, sr_event_t event, unsigned request_id, void *priv);
+
 static inline int register_change(sr_session_ctx_t *session, const char *module, const char *xpath,
 			int flags, sr_module_change_cb cb, void *arg, sr_subscription_ctx_t **sub)
 {
-	int rc = sr_module_change_subscribe(session, module, xpath, cb, arg, 0, flags | SR_SUBSCR_DEFAULT, sub);
+	int rc = sr_module_change_subscribe(session, module, xpath, cb, arg, CB_PRIO_PRIMARY, flags | SR_SUBSCR_DEFAULT, sub);
 	if (rc)
 		ERROR("failed subscribing to changes of %s: %s", xpath, sr_strerror(rc));
+	else if (!flags)
+		sr_module_change_subscribe(session, module, xpath, core_commit_done, NULL, core_hook_prio(),
+				SR_SUBSCR_UPDATE | SR_SUBSCR_DONE_ONLY | SR_SUBSCR_PASSIVE, sub);
 	return rc;
 }
 
