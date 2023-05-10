@@ -56,8 +56,8 @@ static inline void print_val(sr_val_t *val)
 	if ((rc = register_oper(s, m, x, c, a, f, u)))		\
 		goto fail
 
-#define REGISTER_RPC(s,x,c,a,u)				\
-	if ((rc = register_rpc(s, x, c, a, u)))		\
+#define REGISTER_RPC(s,x,c,a,u)					\
+	if ((rc = register_rpc(s, x, c, a, u)))			\
 		goto fail
 
 struct confd {
@@ -74,21 +74,24 @@ int core_commit_done(sr_session_ctx_t *session, uint32_t sub_id, const char *mod
 	const char *xpath, sr_event_t event, unsigned request_id, void *priv);
 
 static inline int register_change(sr_session_ctx_t *session, const char *module, const char *xpath,
-			int flags, sr_module_change_cb cb, void *arg, sr_subscription_ctx_t **sub)
+	int flags, sr_module_change_cb cb, void *arg, sr_subscription_ctx_t **sub)
 {
-	int rc = sr_module_change_subscribe(session, module, xpath, cb, arg, CB_PRIO_PRIMARY, flags | SR_SUBSCR_DEFAULT, sub);
+	int hook_flags = SR_SUBSCR_UPDATE | SR_SUBSCR_DONE_ONLY | SR_SUBSCR_PASSIVE;
+	int rc = sr_module_change_subscribe(session, module, xpath, cb, arg,
+				CB_PRIO_PRIMARY, flags | SR_SUBSCR_DEFAULT, sub);
 	if (rc)
 		ERROR("failed subscribing to changes of %s: %s", xpath, sr_strerror(rc));
 	else if (!flags)
-		sr_module_change_subscribe(session, module, xpath, core_commit_done, NULL, core_hook_prio(),
-				SR_SUBSCR_UPDATE | SR_SUBSCR_DONE_ONLY | SR_SUBSCR_PASSIVE, sub);
+		sr_module_change_subscribe(session, module, xpath, core_commit_done, NULL,
+				core_hook_prio(), hook_flags, sub);
 	return rc;
 }
 
 static inline int register_oper(sr_session_ctx_t *session, const char *module, const char *xpath,
-			sr_oper_get_items_cb cb, void *arg, int flags, sr_subscription_ctx_t **sub)
+	sr_oper_get_items_cb cb, void *arg, int flags, sr_subscription_ctx_t **sub)
 {
-	int rc = sr_oper_get_subscribe(session, module, xpath, cb, arg, flags | SR_SUBSCR_DEFAULT, sub);
+	int rc = sr_oper_get_subscribe(session, module, xpath, cb, arg,
+				flags | SR_SUBSCR_DEFAULT, sub);
 	if (rc)
 		ERROR("failed subscribing to %s oper: %s", xpath, sr_strerror(rc));
 	return rc;
