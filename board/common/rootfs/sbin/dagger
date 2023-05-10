@@ -1,0 +1,175 @@
+#!/bin/sh
+
+set -e
+
+inform()
+{
+    local level="$1"
+    shift
+
+    logger -p "daemon.$level" -t dagger -c $LOGGER_STDOUT "$@"
+}
+
+abort()
+{
+    inform err "Aborting: $*"
+    exit 1
+}
+
+generate_order()
+{
+    [ -f "$1/bottom-up-order" ] && [ -f "$1/top-down-order" ] && return
+
+    # The bottom-up order corresponds to a DFS through the DAG, with
+    # duplicates removed
+    find -L "$1/dag" -depth -mindepth 1 -exec basename {} \; \
+	| awk '!seen[$0]++' \
+	      >"$1/bottom-up-order"
+
+    # The reverse is a valid top-down order
+    sed '1!G;h;$!d' "$1/bottom-up-order" >"$1/top-down-order"
+}
+
+action_exec()
+{
+    local actdir="$2/action/$1"
+    local order="$actdir/order"
+    local code=0
+
+    generate_order "$2"
+
+    if [ ! -r "$order" ]; then
+	order="$2/bottom-up-order"
+	inform warn "No order defined for $actdir, falling back to bottom-up"
+    fi
+
+    for node in $(cat "$order"); do
+	for work in $(find "$actdir/$node" -type f -executable 2>/dev/null | sort); do
+	    $work >>"$work.log" 2>&1 || code=$?
+	    echo "[exit:$code]" >>"$work.log"
+
+	    [ $code -eq 0 ] || abort "$work failed with exitcode $code"
+	done
+    done
+}
+
+do_exec()
+{
+    local action="$1"
+    local current=
+
+    current=$([ -f "$basedir/current" ] && cat "$basedir/current")
+    [ "$current" ] && [ -d "$basedir/$current" ] \
+	|| abort "Current generation does not exist"
+
+    action_exec "$1" "$basedir/$current"
+}
+
+do_abandon()
+{
+    local next=
+
+    next=$([ -f "$basedir/next" ] && cat "$basedir/next" || true)
+    [ "$next" ] && [ -d "$basedir/$next" ] \
+	|| abort "Next generation does not exist"
+
+    rm -rf "$basedir/$next" "$basedir/next"
+    inform info "Abandoned generation $next"
+}
+
+do_evolve()
+{
+    local current=
+    local next=
+
+    current=$([ -f "$basedir/current" ] && cat "$basedir/current" || true)
+    [ ! "$current" ] || [ -d "$basedir/$current" ] \
+	|| abort "Current generation does not exist"
+
+    next=$([ -f "$basedir/next" ] && cat "$basedir/next" || true)
+    [ "$next" ] && [ -d "$basedir/$next" ] \
+	|| abort "Next generation does not exist"
+
+    [ "$current" ] && action_exec exit "$basedir/$current"
+
+    action_exec init "$basedir/$next"
+
+    mv "$basedir/next" "$basedir/current"
+    inform info "Evolved to generation $next"
+}
+
+usage()
+{
+    cat <<EOF
+usage: dagger [-d] [-C <root>] <command> [<args>]
+
+Directed Acyclic Graph Generational Execution Runner
+
+Global options:
+
+  -d
+    In addition to the system log, also log messages to stderr.
+
+  -C <root>
+    Instead of the current working directory, use <root> as the dagger
+    root directory.
+
+Commands:
+
+  abandon
+    Abandon a prepared, but not yet applied, next generation.
+
+  evolve
+    Run the exit action of the current generation, followed by the
+    init action of the next generation.
+
+  exec <action>
+    Run the specified action of the current generation.
+
+  help
+    Show this message.
+
+EOF
+}
+
+basedir=$(pwd)
+
+# Global options
+while getopts "dC:" opt; do
+    case $opt in
+	d)
+	    LOGGER_STDOUT=-s
+	    ;;
+	C)
+	    basedir=$OPTARG
+	    ;;
+	*)
+	    usage && exit 1
+    esac
+done
+shift $((OPTIND - 1))
+
+if [ $# -lt 1 ]; then
+    usage && exit 1
+fi
+
+cmd=$1
+shift
+
+case $cmd in
+    "help")
+	usage && exit 0
+	;;
+    "abandon")
+	do_abandon
+	;;
+    "evolve")
+	do_evolve
+	;;
+    "exec")
+	do_exec "$@"
+	;;
+
+    *)
+	usage && exit 1
+esac
