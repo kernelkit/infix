@@ -62,7 +62,8 @@ static inline void print_val(sr_val_t *val)
 		goto fail
 
 struct confd {
-	sr_session_ctx_t       *session;
+	sr_session_ctx_t       *session; /* running datastore */
+	sr_session_ctx_t       *startup; /* startup datastore */
 	sr_conn_ctx_t          *conn;
 	sr_subscription_ctx_t  *sub;
 
@@ -70,23 +71,39 @@ struct confd {
 	struct dagger		netdag;
 };
 
-uint32_t core_hook_prio(void);
-
-int core_commit_done(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
-	const char *xpath, sr_event_t event, unsigned request_id, void *priv);
+uint32_t core_hook_prio    (void);
+int      core_commit_done  (sr_session_ctx_t *, uint32_t, const char *, const char *, sr_event_t, unsigned, void *);
+int      core_startup_save (sr_session_ctx_t *, uint32_t, const char *, const char *, sr_event_t, unsigned, void *);
 
 static inline int register_change(sr_session_ctx_t *session, const char *module, const char *xpath,
 	int flags, sr_module_change_cb cb, void *arg, sr_subscription_ctx_t **sub)
 {
 	int hook_flags = SR_SUBSCR_UPDATE | SR_SUBSCR_DONE_ONLY | SR_SUBSCR_PASSIVE;
-	int rc = sr_module_change_subscribe(session, module, xpath, cb, arg,
+	struct confd *confd = (struct confd *)arg;
+	int rc;
+
+	rc = sr_module_change_subscribe(session, module, xpath, cb, arg,
 				CB_PRIO_PRIMARY, flags | SR_SUBSCR_DEFAULT, sub);
-	if (rc)
+	if (rc) {
 		ERROR("failed subscribing to changes of %s: %s", xpath, sr_strerror(rc));
-	else if (!flags)
-		sr_module_change_subscribe(session, module, xpath, core_commit_done, NULL,
+		return rc;
+	}
+
+	/*
+	 * For standard subscribtions we hook into the callback chain
+	 * for all modules to figure out, per changeset, which of the
+	 * callbacks is the last one.  This is where we want to call the
+	 * global commit-done hook for candidate -> running changes and
+	 * the startup-save hook for running -> startup copying.
+	 */
+	if (!flags) {
+		sr_module_change_subscribe(confd->session, module, xpath, core_commit_done, NULL,
 				core_hook_prio(), hook_flags, sub);
-	return rc;
+		sr_module_change_subscribe(confd->startup, module, xpath, core_startup_save, NULL,
+				core_hook_prio(), hook_flags, sub);
+	}
+
+	return 0;
 }
 
 static inline int register_oper(sr_session_ctx_t *session, const char *module, const char *xpath,
