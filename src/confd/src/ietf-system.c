@@ -595,12 +595,28 @@ static int sys_del_user(char *user)
 	return SR_ERR_OK;
 }
 
+/*
+ * XXX: drop superuser/wheel exception as soon as we have clish-ng in place.
+ *      It is supposed to connect to the netopeer server via 127.0.0.1 so
+ *      that the full NACM applies to the user instead of the file system
+ *      permissions that apply to the current klish.
+ */
 static int sys_add_new_user(char *name)
 {
-	char *args[] = {
+	char *sargs[] = {
+		"adduser", "-D", "-S", "-G", "wheel", name, NULL
+	};
+	char *uargs[] = {
 		"adduser", "-D", name, NULL
 	};
+	char **args;
 	int err;
+
+	/* XXX: group mapping to wheel should be done using nacm ACLs instead. */
+	if (!strcmp(name, "admin"))
+		args = sargs;	/* superuser */
+	else
+		args = uargs;	/* user */
 
 	/**
 	 * The Busybox implementation of adduser -D sets the password to "!",

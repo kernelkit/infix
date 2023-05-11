@@ -51,6 +51,21 @@ sr_error_t srx_require_module(sr_conn_ctx_t *conn,
 		}
 	}
 
+	/*
+	 * XXX: allow admin users access to the same modules as 'root'
+	 */
+	if (!err) {
+		int i;
+
+		for (i = 0; i < SR_MOD_DS_PLUGIN_COUNT; i++) {
+			err = sr_set_module_ds_access(conn, mr->name, i, "root", "wheel", 0660);
+			if (err) {
+				ERROR("Failed setting group 'wheel' permissions on %s", mr->name);
+				err = 0;
+			}
+		}
+	}
+
 	return err;
 }
 
