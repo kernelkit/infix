@@ -9,18 +9,18 @@ static uint32_t hook_prio = CB_PRIO_PASSIVE;
 static int num_changes;
 static int cur_change;
 
-static int startup_save_hook(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
+uint32_t core_hook_prio(void)
+{
+	return hook_prio--;
+}
+
+int core_startup_save(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
 	const char *xpath, sr_event_t event, unsigned request_id, void *priv)
 {
 	if (systemf("sysrepocfg -X/cfg/startup-config.cfg -d startup -f json"))
 		return SR_ERR_SYS;
 
 	return SR_ERR_OK;
-}
-
-uint32_t core_hook_prio(void)
-{
-	return hook_prio--;
 }
 
 /*
@@ -66,7 +66,6 @@ static const struct srx_module_requirement core_reqs[] = {
 
 int sr_plugin_init_cb(sr_session_ctx_t *session, void **priv)
 {
-	sr_session_ctx_t *startup;
 	int rc = SR_ERR_SYS;
 
 	openlog("confd", LOG_USER, 0);
@@ -78,6 +77,11 @@ int sr_plugin_init_cb(sr_session_ctx_t *session, void **priv)
 	confd.sub     = NULL;
 
 	if (!confd.conn)
+		goto err;
+
+	/* The startup datastore is used for the core_startup_save() hook */
+	rc = sr_session_start(confd.conn, SR_DS_STARTUP, &confd.startup);
+	if (rc)
 		goto err;
 
 	confd.aug = aug_init(NULL, "", 0);
@@ -92,18 +96,6 @@ int sr_plugin_init_cb(sr_session_ctx_t *session, void **priv)
 		goto err;
 
 	/* YOUR_INIT GOES HERE */
-
-	/* Set up hook to save startup-config to persistent backend store */
-	rc = sr_session_start(confd.conn, SR_DS_STARTUP, &startup);
-	if (rc)
-		goto err;
-
-	rc = sr_module_change_subscribe(startup, "ietf-system", "/ietf-system:system//.",
-		startup_save_hook, NULL, CB_PRIO_PASSIVE, SR_SUBSCR_PASSIVE | SR_SUBSCR_DONE_ONLY, &confd.sub);
-	if (rc) {
-		ERROR("failed setting up startup-config hook: %s", sr_strerror(rc));
-		goto err;
-	}
 
 	rc = srx_require_modules(confd.conn, core_reqs);
 	if (rc)
