@@ -46,7 +46,8 @@ endif
 
 ifeq ($(BR2_PACKAGE_AVAHI_AUTOIPD),y)
 define SKELETON_INIT_FINIT_SET_AVAHI_AUTOIPD
-	echo "service [2345789] name:zeroconf :%i avahi-autoipd --syslog %i -- ZeroConf for %i" > $(FINIT_D)/available/zeroconf@.conf
+	echo "service [2345789] name:zeroconf :%i avahi-autoipd --force-bind --syslog %i -- ZeroConf for %i" \
+		> $(FINIT_D)/available/zeroconf@.conf
 endef
 SKELETON_INIT_FINIT_TARGET_FINALIZE_HOOKS += SKELETON_INIT_FINIT_SET_AVAHI_AUTOIPD
 endif
