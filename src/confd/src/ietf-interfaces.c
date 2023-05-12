@@ -147,8 +147,8 @@ static bool is_std_lo_addr(const char *ifname, const char *ip, const char *pf)
 	return false;
 }
 
-static sr_error_t netdag_gen_ipvx_addr(FILE *ip, const char *ifname,
-				       struct lyd_node *addr)
+static int netdag_gen_ipvx_addr(FILE *ip, const char *ifname,
+				struct lyd_node *addr)
 {
 	enum lydx_op op = lydx_get_op(addr);
 	struct lyd_node *adr, *pfx;
@@ -158,7 +158,7 @@ static sr_error_t netdag_gen_ipvx_addr(FILE *ip, const char *ifname,
 	adr = lydx_get_child(addr, "ip");
 	pfx = lydx_get_child(addr, "prefix-length");
 	if (!adr || !pfx)
-		return SR_ERR_INVAL_ARG;
+		return -EINVAL;
 
 	lydx_get_diff(adr, &adrd);
 	lydx_get_diff(pfx, &pfxd);
@@ -168,7 +168,7 @@ static sr_error_t netdag_gen_ipvx_addr(FILE *ip, const char *ifname,
 			adrd.old, pfxd.old, ifname);
 
 		if (op == LYDX_OP_DELETE)
-			return SR_ERR_OK;
+			return 0;
 	}
 
 	/* When bringing up loopback, the kernel will automatically
@@ -181,14 +181,14 @@ static sr_error_t netdag_gen_ipvx_addr(FILE *ip, const char *ifname,
 
 	fprintf(ip, "address %s %s/%s dev %s\n", addcmd,
 		adrd.new, pfxd.new, ifname);
-	return SR_ERR_OK;
+	return 0;
 }
 
-static sr_error_t netdag_gen_ipvx_addrs(FILE *ip, const char *ifname,
-					struct lyd_node *ipvx)
+static int netdag_gen_ipvx_addrs(FILE *ip, const char *ifname,
+				 struct lyd_node *ipvx)
 {
-	sr_error_t err = SR_ERR_OK;
 	struct lyd_node *addr;
+	int err = 0;
 
 	LYX_LIST_FOR_EACH(lyd_child(ipvx), addr, "address") {
 		err = netdag_gen_ipvx_addr(ip, ifname, addr);
@@ -199,7 +199,7 @@ static sr_error_t netdag_gen_ipvx_addrs(FILE *ip, const char *ifname,
 	return err;
 }
 
-static sr_error_t netdag_gen_ipv4_addrs(FILE *ip, struct lyd_node *dif)
+static int netdag_gen_ipv4_addrs(FILE *ip, struct lyd_node *dif)
 {
 	struct lyd_node *ipv4 = lydx_get_child(dif, "ipv4");
 	const char *ifname = lydx_get_cattr(dif, "name");
@@ -210,7 +210,7 @@ static sr_error_t netdag_gen_ipv4_addrs(FILE *ip, struct lyd_node *dif)
 	return netdag_gen_ipvx_addrs(ip, ifname, ipv4);
 }
 
-static sr_error_t netdag_gen_ipv6_addrs(FILE *ip, struct lyd_node *dif)
+static int netdag_gen_ipv6_addrs(FILE *ip, struct lyd_node *dif)
 {
 	struct lyd_node *ipv6 = lydx_get_child(dif, "ipv6");
 	const char *ifname = lydx_get_cattr(dif, "name");
@@ -221,7 +221,7 @@ static sr_error_t netdag_gen_ipv6_addrs(FILE *ip, struct lyd_node *dif)
 	return netdag_gen_ipvx_addrs(ip, ifname, ipv6);
 }
 
-static sr_error_t netdag_gen_ipv6_autoconf(FILE *ip, struct lyd_node *dif)
+static int netdag_gen_ipv6_autoconf(FILE *ip, struct lyd_node *dif)
 {
 	struct lyd_node *node;
 	struct lydx_diff nd;
@@ -248,8 +248,8 @@ static sr_error_t netdag_gen_ipv6_autoconf(FILE *ip, struct lyd_node *dif)
 	return 0;
 }
 
-static sr_error_t netdag_gen_ipv4_autoconf(struct dagger *net,
-					   struct lyd_node *dif)
+static int netdag_gen_ipv4_autoconf(struct dagger *net,
+				    struct lyd_node *dif)
 {
 	const char *ifname = lydx_get_cattr(dif, "name");
 	struct lyd_node *node;
@@ -274,7 +274,7 @@ static sr_error_t netdag_gen_ipv4_autoconf(struct dagger *net,
 		initctl = dagger_fopen_next(net, "init", ifname,
 					    60, "zeroconf-up.sh");
 		if (!initctl)
-			return SR_ERR_INTERNAL;
+			return -EIO;
 
 		fprintf(initctl,
 			"initctl -bnq enable zeroconf@%s.conf\n", ifname);
@@ -282,7 +282,7 @@ static sr_error_t netdag_gen_ipv4_autoconf(struct dagger *net,
 		initctl = dagger_fopen_current(net, "exit", ifname,
 					       40, "zeroconf-down.sh");
 		if (!initctl)
-			return SR_ERR_INTERNAL;
+			return -EIO;
 
 		fprintf(initctl,
 			"initctl -bnq disable zeroconf@%s.conf\n", ifname);
@@ -297,10 +297,10 @@ static sr_error_t netdag_gen_iface(struct dagger *net,
 {
 	const char *ifname = lydx_get_cattr(dif, "name");
 	enum lydx_op op = lydx_get_op(dif);
-	sr_error_t err = SR_ERR_OK;
 	const char *attr;
 	bool fixed;
 	FILE *ip;
+	int err;
 
 	fixed = iface_is_phys(ifname) || !strcmp(ifname, "lo");
 
@@ -310,7 +310,7 @@ static sr_error_t netdag_gen_iface(struct dagger *net,
 	if (op == LYDX_OP_DELETE) {
 		ip = dagger_fopen_current(net, "exit", ifname, 50, "exit.ip");
 		if (!ip) {
-			err = SR_ERR_INTERNAL;
+			err = -EIO;
 			goto err;
 		}
 
@@ -326,8 +326,10 @@ static sr_error_t netdag_gen_iface(struct dagger *net,
 	}
 
 	ip = dagger_fopen_next(net, "init", ifname, 50, "init.ip");
-	if (!ip)
+	if (!ip) {
+		err = -EIO;
 		goto err;
+	}
 
 	attr = ((op == LYDX_OP_CREATE) && !fixed) ? "add" : "set";
 
@@ -362,7 +364,7 @@ err:
 	if (err)
 		ERROR("Failed to setup %s: %d\n", ifname, err);
 
-	return err;
+	return err ? SR_ERR_INTERNAL : SR_ERR_OK;
 }
 
 static sr_error_t netdag_init(struct dagger *net, struct lyd_node *cifs,
