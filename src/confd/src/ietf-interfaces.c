@@ -292,15 +292,67 @@ static int netdag_gen_ipv4_autoconf(struct dagger *net,
 	return 0;
 }
 
+static int netdag_gen_sysctl_bool(struct dagger *net,
+				  const char *ifname, FILE **fpp,
+				  struct lyd_node *node,
+				  const char *fmt, ...)
+{
+	struct lydx_diff nd;
+	va_list ap;
+
+	if (!node)
+		return 0;
+
+	lydx_get_diff(node, &nd);
+
+	if ((!nd.new || nd.is_default) &&
+	    (!nd.old || nd.was_default))
+		return 0;
+
+	*fpp = *fpp ? : dagger_fopen_next(net, "init", ifname,
+					  60, "init.sysctl");
+	if (!*fpp)
+		return -EIO;
+
+	va_start(ap, fmt);
+	vfprintf(*fpp, fmt, ap);
+	va_end(ap);
+	fprintf(*fpp, " = %u\n", !strcmp(nd.val, "true") ? 1 : 0);
+	return 0;
+}
+static int netdag_gen_sysctl(struct dagger *net,
+			     struct lyd_node *dif)
+{
+	const char *ifname = lydx_get_cattr(dif, "name");
+	struct lyd_node *node;
+	FILE *sysctl = NULL;
+	int err = 0;
+
+	node = lydx_get_descendant(lyd_child(dif), "ipv4", "forwarding", NULL);
+	err = err ? : netdag_gen_sysctl_bool(net, ifname, &sysctl, node,
+					     "net.ipv4.conf.%s.forwarding",
+					     ifname);
+
+	node = lydx_get_descendant(lyd_child(dif), "ipv6", "forwarding", NULL);
+	err = err ? : netdag_gen_sysctl_bool(net, ifname, &sysctl, node,
+					     "net.ipv6.conf.%s.forwarding",
+					     ifname);
+
+	if (sysctl)
+		fclose(sysctl);
+
+	return err;
+}
+
 static sr_error_t netdag_gen_iface(struct dagger *net,
 				   struct lyd_node *dif, struct lyd_node *cif)
 {
 	const char *ifname = lydx_get_cattr(dif, "name");
 	enum lydx_op op = lydx_get_op(dif);
 	const char *attr;
+	int err = 0;
 	bool fixed;
 	FILE *ip;
-	int err;
 
 	fixed = iface_is_phys(ifname) || !strcmp(ifname, "lo");
 
@@ -357,6 +409,8 @@ static sr_error_t netdag_gen_iface(struct dagger *net,
 	attr = lydx_get_cattr(cif, "enabled");
 	if (!attr || !strcmp(attr, "true"))
 		fprintf(ip, "link set dev %s up\n", ifname);
+
+	err = err ? : netdag_gen_sysctl(net, dif);
 
 err_close_ip:
 	fclose(ip);
