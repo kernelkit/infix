@@ -78,7 +78,6 @@ int      core_startup_save (sr_session_ctx_t *, uint32_t, const char *, const ch
 static inline int register_change(sr_session_ctx_t *session, const char *module, const char *xpath,
 	int flags, sr_module_change_cb cb, void *arg, sr_subscription_ctx_t **sub)
 {
-	int hook_flags = SR_SUBSCR_UPDATE | SR_SUBSCR_DONE_ONLY | SR_SUBSCR_PASSIVE;
 	struct confd *confd = (struct confd *)arg;
 	int rc;
 
@@ -98,9 +97,9 @@ static inline int register_change(sr_session_ctx_t *session, const char *module,
 	 */
 	if (!flags) {
 		sr_module_change_subscribe(confd->session, module, xpath, core_commit_done, NULL,
-				core_hook_prio(), hook_flags, sub);
+				core_hook_prio(), SR_SUBSCR_PASSIVE, sub);
 		sr_module_change_subscribe(confd->startup, module, xpath, core_startup_save, NULL,
-				core_hook_prio(), hook_flags, sub);
+				core_hook_prio(), SR_SUBSCR_PASSIVE, sub);
 	}
 
 	return 0;
