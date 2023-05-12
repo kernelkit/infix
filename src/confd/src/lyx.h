@@ -3,6 +3,9 @@
 #ifndef CONFD_LY_EXT_H_
 #define CONFD_LY_EXT_H_
 
+#include <stdbool.h>
+#include <stdio.h>
+
 #include <libyang/libyang.h>
 
 #define LYX_LIST_FOR_EACH(_from, _iter, _name) \
@@ -14,7 +17,20 @@ enum lydx_op {
 	LYDX_OP_DELETE,
 };
 
+struct lydx_diff {
+	enum lydx_op op;
+	bool modified;
+	bool is_default;
+	bool was_default;
+
+	const char *old;
+	const char *val;
+	const char *new;
+};
+void lydx_diff_print(struct lydx_diff *nd, FILE *fp);
+
 enum lydx_op lydx_get_op(struct lyd_node *node);
+void lydx_get_diff(struct lyd_node *node, struct lydx_diff *nd);
 
 struct lyd_node *lydx_get_sibling(struct lyd_node *sibling, const char *name);
 struct lyd_node *lydx_get_child(struct lyd_node *parent, const char *name);

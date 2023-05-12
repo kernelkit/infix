@@ -20,6 +20,53 @@ enum lydx_op lydx_get_op(struct lyd_node *node)
 	return LYDX_OP_NONE;
 }
 
+void lydx_diff_print(struct lydx_diff *nd, FILE *fp)
+{
+	static const char opchar[] = {
+		[LYDX_OP_CREATE] = '+',
+		[LYDX_OP_DELETE] = '-',
+		[LYDX_OP_NONE]   = '%',
+	};
+
+	fprintf(fp, "%c%s %s%s ->%s%s\n",
+		opchar[nd->op], nd->modified ? "(mod)" : "",
+		nd->old ? : "", nd->was_default ? "(D)" : "",
+		nd->new ? : "", nd->is_default ? "(D)" : "");
+}
+
+void lydx_get_diff(struct lyd_node *node, struct lydx_diff *nd)
+{
+
+	const char *old, *odflt;
+
+	memset(nd, 0, sizeof(*nd));
+
+	nd->op = lydx_get_op(node);
+	nd->val = lyd_get_value(node);
+	nd->modified = true;
+
+	switch (nd->op) {
+	case LYDX_OP_DELETE:
+		nd->old = nd->val;
+		nd->was_default = !!(node->flags & LYD_DEFAULT);
+		break;
+
+	default:
+		nd->new = nd->val;
+		nd->is_default = !!(node->flags & LYD_DEFAULT);
+
+		if (nd->op == LYDX_OP_CREATE)
+			break;
+
+		old = lydx_get_mattr(node, "yang:orig-value");
+		nd->old = old ? : nd->new;
+		nd->modified = old ? true : false;
+
+	        odflt = lydx_get_mattr(node, "yang:orig-default");
+		nd->was_default = odflt && !strcmp(odflt, "true");
+	}
+}
+
 struct lyd_node *lydx_get_sibling(struct lyd_node *sibling, const char *name)
 {
 	struct lyd_node *node;
@@ -50,6 +97,9 @@ struct lyd_node *lydx_get_descendant(struct lyd_node *from, ...)
 	va_start(ap, from);
 	while ((name = va_arg(ap, const char *))) {
 		node = lydx_get_sibling(from, name);
+		if (!node)
+			break;
+
 		from = lyd_child(node);
 	}
 	va_end(ap);
