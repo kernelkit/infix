@@ -111,10 +111,24 @@ int dagger_claim(struct dagger *d, const char *path)
 		return -1;
 	}
 
-	if (readdf(&d->current, "%s/current", path))
+	if (readdf(&d->current, "%s/current", path)) {
 		d->current = -1;
+	} else {
+		err = systemf("mkdir -p %s/%d/action/exit"
+			      " && "
+			      "ln -s ../../top-down-order %s/%d/action/exit/order",
+			      path, d->current, path, d->current);
+		if (err)
+			return err;
+	}
 
 	d->next = d->current + 1;
+	err = systemf("mkdir -p %s/%d/action/init"
+		      " && "
+		      "ln -s ../../bottom-up-order %s/%d/action/init/order",
+		      path, d->next, path, d->next);
+	if (err)
+		return err;
 
 	strlcpy(d->path, path, sizeof(d->path));
 	return 0;
