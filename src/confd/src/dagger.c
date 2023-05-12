@@ -32,6 +32,8 @@ static FILE *dagger_fopen(struct dagger *d, int gen, const char *action,
 			fputs("#!/sbin/bridge -batch\n\n", fp);
 		else if (!strcmp(ext, ".ip"))
 			fputs("#!/sbin/ip -batch\n\n", fp);
+		else if (!strcmp(ext, ".sysctl"))
+			fputs("#!/sbin/sysctl -p\n\n", fp);
 	}
 
 	err = fchmod(fileno(fp), 0774);
