@@ -5,12 +5,10 @@
 
 static struct confd confd;
 
-static uint32_t hook_prio = CB_PRIO_PASSIVE;
-static int num_changes;
-static int cur_change;
-
 uint32_t core_hook_prio(void)
 {
+	static uint32_t hook_prio = CB_PRIO_PASSIVE;
+
 	return hook_prio--;
 }
 
@@ -31,22 +29,23 @@ int core_startup_save(sr_session_ctx_t *session, uint32_t sub_id, const char *mo
 int core_commit_done(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
 	const char *xpath, sr_event_t event, unsigned request_id, void *priv)
 {
+	static int num_changes = 0;
+
 	switch (event) {
-	case SR_EV_UPDATE:
+	case SR_EV_CHANGE:
 		num_changes++;
 		return SR_ERR_OK;
+	case SR_EV_ABORT:
+		num_changes = 0;
+		return SR_ERR_OK;
 	case SR_EV_DONE:
-		cur_change++;
-		if (cur_change == num_changes)
+		if (--num_changes == 0)
 			break;
 		return SR_ERR_OK;
 	default:
 		ERROR("core_commit_done() should not be called with event %d", event);
 		return SR_ERR_SYS;
 	}
-
-	/* reset for next changeset */
-	num_changes = cur_change = 0;
 
 	/* skip reload in bootstrap, implicit reload in runlevel change */
 	if (systemf("runlevel >/dev/null 2>&1"))
