@@ -151,21 +151,21 @@ static sr_error_t netdag_gen_ipvx_addr(FILE *ip, const char *ifname,
 				       struct lyd_node *addr)
 {
 	enum lydx_op op = lydx_get_op(addr);
-	const char *oip, *opf, *nip, *npf;
+	struct lyd_node *adr, *pfx;
+	struct lydx_diff adrd, pfxd;
 	const char *addcmd = "add";
 
-	nip = lydx_get_cattr(addr, "ip");
-	npf = lydx_get_cattr(addr, "prefix-length");
-	if (!nip || !npf)
+	adr = lydx_get_child(addr, "ip");
+	pfx = lydx_get_child(addr, "prefix-length");
+	if (!adr || !pfx)
 		return SR_ERR_INVAL_ARG;
 
-	if (op != LYDX_OP_CREATE) {
-		oip = lydx_get_mattr(lydx_get_child(addr, "ip"), "yang:orig-value") ? : nip;
-		opf = lydx_get_mattr(lydx_get_child(addr, "prefix-length"), "yang:orig-value") ? : npf;
-		if (!oip || !opf)
-			return SR_ERR_INVAL_ARG;
+	lydx_get_diff(adr, &adrd);
+	lydx_get_diff(pfx, &pfxd);
 
-		fprintf(ip, "address delete %s/%s dev %s\n", oip, opf, ifname);
+	if (op != LYDX_OP_CREATE) {
+		fprintf(ip, "address delete %s/%s dev %s\n",
+			adrd.old, pfxd.old, ifname);
 
 		if (op == LYDX_OP_DELETE)
 			return SR_ERR_OK;
@@ -175,20 +175,22 @@ static sr_error_t netdag_gen_ipvx_addr(FILE *ip, const char *ifname,
 	 * add the standard addresses, so don't treat the existance of
 	 * these as an error.
 	 */
-	if ((op == LYDX_OP_CREATE) && is_std_lo_addr(ifname, nip, npf))
+	if ((op == LYDX_OP_CREATE) &&
+	    is_std_lo_addr(ifname, adrd.new, pfxd.new))
 		addcmd = "replace";
 
-	fprintf(ip, "address %s %s/%s dev %s\n", addcmd, nip, npf, ifname);
+	fprintf(ip, "address %s %s/%s dev %s\n", addcmd,
+		adrd.new, pfxd.new, ifname);
 	return SR_ERR_OK;
 }
 
 static sr_error_t netdag_gen_ipvx_addrs(FILE *ip, const char *ifname,
-					struct lyd_node *addrs)
+					struct lyd_node *ipvx)
 {
 	sr_error_t err = SR_ERR_OK;
 	struct lyd_node *addr;
 
-	LYX_LIST_FOR_EACH(addrs, addr, "address") {
+	LYX_LIST_FOR_EACH(lyd_child(ipvx), addr, "address") {
 		err = netdag_gen_ipvx_addr(ip, ifname, addr);
 		if (err)
 			break;
@@ -197,16 +199,26 @@ static sr_error_t netdag_gen_ipvx_addrs(FILE *ip, const char *ifname,
 	return err;
 }
 
-static sr_error_t netdag_gen_ipv4(FILE *ip, const char *ifname,
-				  struct lyd_node *ipv4)
+static sr_error_t netdag_gen_ipv4_addrs(FILE *ip, struct lyd_node *dif)
 {
-	return netdag_gen_ipvx_addrs(ip, ifname, lyd_child(ipv4));
+	struct lyd_node *ipv4 = lydx_get_child(dif, "ipv4");
+	const char *ifname = lydx_get_cattr(dif, "name");
+
+	if (!ipv4)
+		return 0;
+
+	return netdag_gen_ipvx_addrs(ip, ifname, ipv4);
 }
 
-static sr_error_t netdag_gen_ipv6(FILE *ip, const char *ifname,
-				  struct lyd_node *ipv6)
+static sr_error_t netdag_gen_ipv6_addrs(FILE *ip, struct lyd_node *dif)
 {
-	return netdag_gen_ipvx_addrs(ip, ifname, lyd_child(ipv6));
+	struct lyd_node *ipv6 = lydx_get_child(dif, "ipv6");
+	const char *ifname = lydx_get_cattr(dif, "name");
+
+	if (!ipv6)
+		return 0;
+
+	return netdag_gen_ipvx_addrs(ip, ifname, ipv6);
 }
 
 static sr_error_t netdag_gen_ipv6_autoconf(FILE *ip, struct lyd_node *dif)
@@ -286,7 +298,6 @@ static sr_error_t netdag_gen_iface(struct dagger *net,
 	const char *ifname = lydx_get_cattr(dif, "name");
 	enum lydx_op op = lydx_get_op(dif);
 	sr_error_t err = SR_ERR_OK;
-	struct lyd_node *node;
 	const char *attr;
 	bool fixed;
 	FILE *ip;
@@ -319,36 +330,28 @@ static sr_error_t netdag_gen_iface(struct dagger *net,
 		goto err;
 
 	attr = ((op == LYDX_OP_CREATE) && !fixed) ? "add" : "set";
+
+	/* Bring interface down during configuration */
 	fprintf(ip, "link %s dev %s down", attr, ifname);
 
-	err = netdag_gen_ipv4_autoconf(net, dif);
+	/* Set generic link attributes */
+	err = err ? : netdag_gen_ipv4_autoconf(net, dif);
+	err = err ? : netdag_gen_ipv6_autoconf(ip, dif);
 	if (err)
 		goto err_close_ip;
 
-	err = netdag_gen_ipv6_autoconf(ip, dif);
-	if (err)
-		goto err_close_ip;
-
-	/* Type specific attributes */
+	/* Set type specific attributes */
+	/* TODO */
 
 	fputc('\n', ip);
 
-	/* IP Addresses */
+	/* Set Addresses */
+	err = err ? : netdag_gen_ipv4_addrs(ip, dif);
+	err = err ? : netdag_gen_ipv6_addrs(ip, dif);
+	if (err)
+		goto err_close_ip;
 
-	node = lydx_get_child(dif, "ipv4");
-	if (node) {
-		err = netdag_gen_ipv4(ip, ifname, node);
-		if (err)
-			goto err_close_ip;
-	}
-
-	node = lydx_get_child(dif, "ipv6");
-	if (node) {
-		err = netdag_gen_ipv6(ip, ifname, node);
-		if (err)
-			goto err_close_ip;
-	}
-
+	/* Bring interface back up, if enabled */
 	attr = lydx_get_cattr(cif, "enabled");
 	if (!attr || !strcmp(attr, "true"))
 		fprintf(ip, "link set dev %s up\n", ifname);
@@ -357,7 +360,7 @@ err_close_ip:
 	fclose(ip);
 err:
 	if (err)
-		fprintf(stderr, "FAIL %s: %d\n", ifname, err);
+		ERROR("Failed to setup %s: %d\n", ifname, err);
 
 	return err;
 }
