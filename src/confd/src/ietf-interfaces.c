@@ -209,11 +209,83 @@ static sr_error_t netdag_gen_ipv6(FILE *ip, const char *ifname,
 	return netdag_gen_ipvx_addrs(ip, ifname, lyd_child(ipv6));
 }
 
-static sr_error_t netdag_gen_iface(struct dagger *net, struct lyd_node *iface)
+static sr_error_t netdag_gen_ipv6_autoconf(FILE *ip, struct lyd_node *dif)
 {
-	const char *ifname = lydx_get_cattr(iface, "name");
-	enum lydx_op op = lydx_get_op(iface);
-	sr_error_t err = SR_ERR_INTERNAL;
+	struct lyd_node *node;
+	struct lydx_diff nd;
+
+	node = lydx_get_descendant(lyd_child(dif),
+				   "ipv6",
+				   "autoconf",
+				   "create-global-addresses",
+				   NULL);
+	if (!node)
+		return 0;
+
+	lydx_get_diff(node, &nd);
+
+	if ((!nd.new || nd.is_default) &&
+	    (!nd.old || nd.was_default))
+		return 0;
+
+	if (!nd.new || !strcmp(nd.val, "true"))
+		fputs(" addrgenmode eui64", ip);
+	else
+		fputs(" addrgenmode none", ip);
+
+	return 0;
+}
+
+static sr_error_t netdag_gen_ipv4_autoconf(struct dagger *net,
+					   struct lyd_node *dif)
+{
+	const char *ifname = lydx_get_cattr(dif, "name");
+	struct lyd_node *node;
+	struct lydx_diff nd;
+	FILE *initctl;
+
+	node = lydx_get_descendant(lyd_child(dif),
+				   "ipv4",
+				   "autoconf",
+				   "enabled",
+				   NULL);
+	if (!node)
+		return 0;
+
+	lydx_get_diff(node, &nd);
+
+	if ((!nd.new || nd.is_default) &&
+	    (!nd.old || nd.was_default))
+		return 0;
+
+	if (!strcmp(nd.val, "true")) {
+		initctl = dagger_fopen_next(net, "init", ifname,
+					    60, "zeroconf-up.sh");
+		if (!initctl)
+			return SR_ERR_INTERNAL;
+
+		fprintf(initctl,
+			"initctl -bnq enable zeroconf@%s.conf\n", ifname);
+	} else {
+		initctl = dagger_fopen_current(net, "exit", ifname,
+					       40, "zeroconf-down.sh");
+		if (!initctl)
+			return SR_ERR_INTERNAL;
+
+		fprintf(initctl,
+			"initctl -bnq disable zeroconf@%s.conf\n", ifname);
+	}
+
+	fclose(initctl);
+	return 0;
+}
+
+static sr_error_t netdag_gen_iface(struct dagger *net,
+				   struct lyd_node *dif, struct lyd_node *cif)
+{
+	const char *ifname = lydx_get_cattr(dif, "name");
+	enum lydx_op op = lydx_get_op(dif);
+	sr_error_t err = SR_ERR_OK;
 	struct lyd_node *node;
 	const char *attr;
 	bool fixed;
@@ -225,9 +297,11 @@ static sr_error_t netdag_gen_iface(struct dagger *net, struct lyd_node *iface)
 	      (op == LYDX_OP_NONE) ? "mod" : ((op == LYDX_OP_CREATE) ? "add" : "del"));
 
 	if (op == LYDX_OP_DELETE) {
-		ip = dagger_fopen_current(net, "exit", ifname, 50, "delete.ip");
-		if (!ip)
+		ip = dagger_fopen_current(net, "exit", ifname, 50, "exit.ip");
+		if (!ip) {
+			err = SR_ERR_INTERNAL;
 			goto err;
+		}
 
 		if (fixed) {
 			fprintf(ip, "link set dev %s down\n", ifname);
@@ -245,20 +319,15 @@ static sr_error_t netdag_gen_iface(struct dagger *net, struct lyd_node *iface)
 		goto err;
 
 	attr = ((op == LYDX_OP_CREATE) && !fixed) ? "add" : "set";
-	fprintf(ip, "link %s dev %s", attr, ifname);
+	fprintf(ip, "link %s dev %s down", attr, ifname);
 
-	/* Generic attributes */
+	err = netdag_gen_ipv4_autoconf(net, dif);
+	if (err)
+		goto err_close_ip;
 
-	attr = lydx_get_cattr(iface, "enabled");
-	if (!attr && (op == LYDX_OP_CREATE))
-		/* When adding an interface to the configuration, we
-		 * need to bring it up, even when "enabled" is not
-		 * explicitly set.
-		 */
-		attr = "true";
-
-	attr = attr ? (!strcmp(attr, "true") ? " up" : " down") : "";
-	fprintf(ip, "%s", attr);
+	err = netdag_gen_ipv6_autoconf(ip, dif);
+	if (err)
+		goto err_close_ip;
 
 	/* Type specific attributes */
 
@@ -266,23 +335,30 @@ static sr_error_t netdag_gen_iface(struct dagger *net, struct lyd_node *iface)
 
 	/* IP Addresses */
 
-	node = lydx_get_child(iface, "ipv4");
+	node = lydx_get_child(dif, "ipv4");
 	if (node) {
 		err = netdag_gen_ipv4(ip, ifname, node);
 		if (err)
 			goto err_close_ip;
 	}
 
-	node = lydx_get_child(iface, "ipv6");
+	node = lydx_get_child(dif, "ipv6");
 	if (node) {
 		err = netdag_gen_ipv6(ip, ifname, node);
 		if (err)
 			goto err_close_ip;
 	}
 
+	attr = lydx_get_cattr(cif, "enabled");
+	if (!attr || !strcmp(attr, "true"))
+		fprintf(ip, "link set dev %s up\n", ifname);
+
 err_close_ip:
 	fclose(ip);
 err:
+	if (err)
+		fprintf(stderr, "FAIL %s: %d\n", ifname, err);
+
 	return err;
 }
 
@@ -305,7 +381,7 @@ static sr_error_t netdag_init(struct dagger *net, struct lyd_node *cifs,
 static int ifchange(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
 		    const char *xpath, sr_event_t event, unsigned request_id, void *_confd)
 {
-	struct lyd_node *diff, *cifs, *difs, *iface;
+	struct lyd_node *diff, *cifs, *difs, *cif, *dif;
 	struct confd *confd = _confd;
 	sr_data_t *cfg;
 	sr_error_t err;
@@ -340,8 +416,13 @@ static int ifchange(sr_session_ctx_t *session, uint32_t sub_id, const char *modu
 	if (err)
 		goto err_free_diff;
 
-	LYX_LIST_FOR_EACH(difs, iface, "interface") {
-		err = netdag_gen_iface(&confd->netdag, iface);
+	LYX_LIST_FOR_EACH(difs, dif, "interface") {
+		LYX_LIST_FOR_EACH(cifs, cif, "interface")
+			if (!strcmp(lydx_get_cattr(dif, "name"),
+				    lydx_get_cattr(cif, "name")))
+				break;
+
+		err = netdag_gen_iface(&confd->netdag, dif, cif);
 		if (err)
 			break;
 	}
