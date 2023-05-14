@@ -4,6 +4,5 @@ sha256  262d8cfea80d94e048e3f1b149f5d940b4579a38f2b7dba563cf4b0b497e7422  finit-
 # Locally calculated
 sha256  3a2b964c1772d03ab17b73a389ecce9151e0b190a9247817a2c009b16d356422  LICENSE
 
-# Snapshot before 4.4-rc1
-sha256  91f99b1977444863e0c3b9e96f91f03228abe15afab24181acbefe74e8aca809  finit-4fbcd1bbad88fb4cd8e4859b0dfaeb9a474bedcc.tar.gz
-
+# GIT Snapshot
+sha256  8c880293409cf566f6256bff193f985c50bd2eb99d2ff964dcaa9590251ed27e  finit-438d6b4e638418a2a22024a3cead2f47909d72b9.tar.gz
