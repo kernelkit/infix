@@ -34,7 +34,7 @@ void lydx_diff_print(struct lydx_diff *nd, FILE *fp)
 		nd->new ? : "", nd->is_default ? "(D)" : "");
 }
 
-void lydx_get_diff(struct lyd_node *node, struct lydx_diff *nd)
+bool lydx_get_diff(struct lyd_node *node, struct lydx_diff *nd)
 {
 
 	const char *old, *odflt;
@@ -43,7 +43,6 @@ void lydx_get_diff(struct lyd_node *node, struct lydx_diff *nd)
 
 	nd->op = lydx_get_op(node);
 	nd->val = lyd_get_value(node);
-	nd->modified = true;
 
 	switch (nd->op) {
 	case LYDX_OP_DELETE:
@@ -65,6 +64,12 @@ void lydx_get_diff(struct lyd_node *node, struct lydx_diff *nd)
 	        odflt = lydx_get_mattr(node, "yang:orig-default");
 		nd->was_default = odflt && !strcmp(odflt, "true");
 	}
+
+	nd->modified = \
+		(nd->old && !nd->was_default) ||
+		(nd->new && !nd->is_default);
+
+	return nd->modified;
 }
 
 struct lyd_node *lydx_get_sibling(struct lyd_node *sibling, const char *name)
