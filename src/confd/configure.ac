@@ -19,6 +19,16 @@ AC_CONFIG_LIBOBJ_DIR(lib)
 AC_REPLACE_FUNCS(vasprintf)
 AC_REPLACE_FUNCS(asprintf)
 
+# Check feature flags
+AC_ARG_WITH(login-shell,
+        AS_HELP_STRING([--with-login-shell=shell], [Login shell for new users, default: /bin/sh]),
+	[login_shell=$withval], [login_shell=yes])
+
+AS_IF([test "x$with_login_shell" != "xno"], [
+	AS_IF([test "x$login_shell" = "xyes"], [login_shell=/bin/sh])
+	AC_DEFINE_UNQUOTED(LOGIN_SHELL, "$login_shell", [Default: /bin/sh])],[
+	AC_DEFINE_UNQUOTED(LOGIN_SHELL, "/bin/sh")])
+
 # Check for pkg-config first, warn if it's not installed
 PKG_PROG_PKG_CONFIG
 

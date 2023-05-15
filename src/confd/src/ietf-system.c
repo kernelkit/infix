@@ -619,11 +619,12 @@ static int sys_del_user(char *user)
  */
 static int sys_add_new_user(char *name)
 {
+	char *shell = LOGIN_SHELL;
 	char *sargs[] = {
-		"adduser", "-D", "-S", "-G", "wheel", name, NULL
+		"adduser", "-D", "-s", shell, "-S", "-G", "wheel", name, NULL
 	};
 	char *uargs[] = {
-		"adduser", "-D", name, NULL
+		"adduser", "-D", "-s", shell, name, NULL
 	};
 	char **args;
 	int err;
@@ -633,6 +634,9 @@ static int sys_add_new_user(char *name)
 		args = sargs;	/* superuser */
 	else
 		args = uargs;	/* user */
+
+	if (!shell || !whichp(shell))
+		args[2] = "/bin/sh";
 
 	/**
 	 * The Busybox implementation of adduser -D sets the password to "!",
@@ -694,12 +698,12 @@ static sr_error_t handle_sr_passwd_update(augeas *aug, struct sr_change *change)
 		if (aug_set_dynpath(aug, hash, "etc/shadow/%s/password", user))
 			return SR_ERR_SYS;
 		DEBUG("Password updated for user %s\n", user);
-	break;
+		break;
 	case SR_OP_DELETED:
 		if (aug_set_dynpath(aug, "!", "etc/shadow/%s/password", user))
 			return SR_ERR_SYS;
 		DEBUG("Password deleted for user %s\n", user);
-	break;
+		break;
 	case SR_OP_MOVED:
 		return SR_ERR_OK;
 	}
