@@ -126,6 +126,25 @@ static int ifchange_cand(sr_session_ctx_t *session, uint32_t sub_id, const char 
 	return SR_ERR_OK;
 }
 
+static int netdag_exit_reload(struct dagger *net)
+{
+	FILE *initctl;
+
+	/* We may end up writing this file multiple times, e.g. if
+	 * multiple services are disabled in the same config cycle,
+	 * but since the contents of the file are static it doesn't
+	 * matter.
+	 */
+	initctl = dagger_fopen_current(net, "exit", "@post",
+				       90, "reload.sh");
+	if (!initctl)
+		return -EIO;
+
+	fputs("initctl -bnq reload\n", initctl);
+	fclose(initctl);
+	return 0;
+}
+
 static bool is_std_lo_addr(const char *ifname, const char *ip, const char *pf)
 {
 	struct in6_addr in6, lo6;
@@ -255,6 +274,7 @@ static int netdag_gen_ipv4_autoconf(struct dagger *net,
 	struct lyd_node *node;
 	struct lydx_diff nd;
 	FILE *initctl;
+	int err = 0;
 
 	node = lydx_get_descendant(lyd_child(dif),
 				   "ipv4",
@@ -286,10 +306,12 @@ static int netdag_gen_ipv4_autoconf(struct dagger *net,
 
 		fprintf(initctl,
 			"initctl -bnq disable zeroconf@%s.conf\n", ifname);
+
+		err = netdag_exit_reload(net);
 	}
 
 	fclose(initctl);
-	return 0;
+	return err;
 }
 
 static int netdag_gen_sysctl_bool(struct dagger *net,
