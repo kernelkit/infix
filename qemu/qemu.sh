@@ -35,8 +35,10 @@ loader_args()
 
 append_args()
 {
-    [ "$QEMU_CONSOLE" ] && echo -n "console=$QEMU_CONSOLE "
+# Disabled, not needed anymore with virtconsole (hvc0)
+#    [ "$QEMU_CONSOLE" ] && echo -n "console=$QEMU_CONSOLE "
 
+    echo -n "console=hvc0 "
     if [ "$QEMU_ROOTFS_INITRD" = "y" ]; then
 	# Size of initrd, rounded up to nearest kb
 	local size=$((($(stat -c %s $QEMU_ROOTFS) + 1023) >> 10))
@@ -121,7 +123,9 @@ run_qemu()
     local qemu
     read qemu <<EOF
 	$QEMU_MACHINE \
-	  -nographic -rtc base=utc,clock=vm \
+	  -display none -rtc base=utc,clock=vm \
+	  -device virtio-serial -chardev stdio,mux=on,id=console0 \
+	  -device virtconsole,chardev=console0 -mon chardev=console0 \
 	  $(loader_args) \
 	  $(rootfs_args) \
 	  $(rw_args) \
@@ -172,4 +176,8 @@ fi
 load_qemucfg .config
 
 echo "Starting Qemu  ::  Ctrl-a x -- exit | Ctrl-a c -- toggle console/monitor"
+line=$(stty -g)
+stty raw
 run_qemu $(dtb_args)
+stty "$line"
+
