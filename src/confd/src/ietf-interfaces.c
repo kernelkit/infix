@@ -253,10 +253,7 @@ static int netdag_gen_ipv6_autoconf(FILE *ip, struct lyd_node *dif)
 	if (!node)
 		return 0;
 
-	lydx_get_diff(node, &nd);
-
-	if ((!nd.new || nd.is_default) &&
-	    (!nd.old || nd.was_default))
+	if (!lydx_get_diff(node, &nd))
 		return 0;
 
 	if (!nd.new || !strcmp(nd.val, "true"))
@@ -284,10 +281,7 @@ static int netdag_gen_ipv4_autoconf(struct dagger *net,
 	if (!node)
 		return 0;
 
-	lydx_get_diff(node, &nd);
-
-	if ((!nd.new || nd.is_default) &&
-	    (!nd.old || nd.was_default))
+	if (!lydx_get_diff(node, &nd))
 		return 0;
 
 	if (!strcmp(nd.val, "true")) {
@@ -325,10 +319,7 @@ static int netdag_gen_sysctl_bool(struct dagger *net,
 	if (!node)
 		return 0;
 
-	lydx_get_diff(node, &nd);
-
-	if ((!nd.new || nd.is_default) &&
-	    (!nd.old || nd.was_default))
+	if (!lydx_get_diff(node, &nd))
 		return 0;
 
 	*fpp = *fpp ? : dagger_fopen_next(net, "init", ifname,

@@ -30,7 +30,7 @@ struct lydx_diff {
 void lydx_diff_print(struct lydx_diff *nd, FILE *fp);
 
 enum lydx_op lydx_get_op(struct lyd_node *node);
-void lydx_get_diff(struct lyd_node *node, struct lydx_diff *nd);
+bool lydx_get_diff(struct lyd_node *node, struct lydx_diff *nd);
 
 struct lyd_node *lydx_get_sibling(struct lyd_node *sibling, const char *name);
 struct lyd_node *lydx_get_child(struct lyd_node *parent, const char *name);
