@@ -12,9 +12,9 @@ int readllf(long long *value, const char *fmt, ...)
 int readdf(int *value, const char *fmt, ...)
 	__attribute__ ((format (printf, 2, 3)));
 
-int writedf(int value, const char *fmt, ...)
-	__attribute__ ((format (printf, 2, 3)));
-int writesf(const char *str, const char *fmt, ...)
-	__attribute__ ((format (printf, 2, 3)));
+int writedf(int value, const char *mode, const char *fmt, ...)
+	__attribute__ ((format (printf, 3, 4)));
+int writesf(const char *str, const char *mode, const char *fmt, ...)
+	__attribute__ ((format (printf, 3, 4)));
 
 #endif /* CONFD_HELPERS_H_ */

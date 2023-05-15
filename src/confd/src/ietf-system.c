@@ -354,7 +354,7 @@ static int change_clock(sr_session_ctx_t *session, uint32_t sub_id, const char *
 		return SR_ERR_VALIDATION_FAILED;
 	}
 
-	if (writesf(timezone, TIMEZONE_NEXT)) {
+	if (writesf(timezone, "w", TIMEZONE_NEXT)) {
 		ERRNO("Failed preparing %s", TIMEZONE_NEXT);
 		return SR_ERR_SYS;
 	}
@@ -830,26 +830,26 @@ static int change_auth(sr_session_ctx_t *session, uint32_t sub_id, const char *m
 static int change_motd(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
 		       const char *xpath, sr_event_t event, unsigned request_id, void *priv)
 {
-	/* XXX: derive from global "options.h" or /usr/share/factory/ */
-	const char *msg = "\033[1;90mNote:\033[0m"
-		"\033[0;90m configuration is done using the CLI, type 'cli' at the shell prompt.\033[0m";
-	char *str;
-	int rc;
+	const char *fn = "/etc/motd";
+	char *message;
+	int rc = 0;
 
 	/* Ignore all events except SR_EV_DONE */
 	if (event != SR_EV_DONE)
 		return SR_ERR_OK;
 
-	str = srx_get_str(session, xpath);
-	if (str) {
-		rc = writesf(str, "/etc/motd");
-		free(str);
+	message = srx_get_str(session, xpath);
+	if (message) {
+		rc = writesf(message, "w", fn);
+		free(message);
 	} else {
-		rc = writesf(msg, "/etc/motd");
+		remove(fn);
 	}
 
-	if (rc)
+	if (rc) {
+		ERROR("failed writing /etc/motd: %s", strerror(errno));
 		return SR_ERR_SYS;
+	}
 
 	return SR_ERR_OK;
 }

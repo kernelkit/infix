@@ -105,13 +105,13 @@ int readdf(int *value, const char *fmt, ...)
 /*
  * Write interger value to a file composed from fmt and optional args.
  */
-int writedf(int value, const char *fmt, ...)
+int writedf(int value, const char *mode, const char *fmt, ...)
 {
 	va_list ap;
 	FILE *fp;
 
 	va_start(ap, fmt);
-	fp = open_file("r+", fmt, ap);
+	fp = open_file(mode, fmt, ap);
 	va_end(ap);
 	if (!fp)
 		return -1;
@@ -123,13 +123,13 @@ int writedf(int value, const char *fmt, ...)
 /*
  * Write str to a file composed from fmt and optional args.
  */
-int writesf(const char *str, const char *fmt, ...)
+int writesf(const char *str, const char *mode, const char *fmt, ...)
 {
 	va_list ap;
 	FILE *fp;
 
 	va_start(ap, fmt);
-	fp = open_file("r+", fmt, ap);
+	fp = open_file(mode, fmt, ap);
 	va_end(ap);
 	if (!fp)
 		return -1;
