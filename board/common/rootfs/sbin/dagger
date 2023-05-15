@@ -33,17 +33,22 @@ generate_order()
 action_exec()
 {
     local actdir="$2/action/$1"
-    local order="$actdir/order"
+    local orderfile="$actdir/order"
     local code=0
 
     generate_order "$2"
 
-    if [ ! -r "$order" ]; then
-	order="$2/bottom-up-order"
+    if [ ! -r "$orderfile" ]; then
+	orderfile="$2/bottom-up-order"
 	inform warn "No order defined for $actdir, falling back to bottom-up"
     fi
 
-    for node in $(cat "$order"); do
+    local order=$(cat "$orderfile")
+
+    [ -d "$actdir/@pre"  ] && order="@pre $order"
+    [ -d "$actdir/@post" ] && order="$order @post"
+
+    for node in $order; do
 	for work in $(find "$actdir/$node" -type f -executable 2>/dev/null | sort); do
 	    $work >>"$work.log" 2>&1 || code=$?
 	    echo "[exit:$code]" >>"$work.log"
