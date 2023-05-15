@@ -1,19 +1,35 @@
 /* SPDX-License-Identifier: BSD-3-Clause */
 
+#include <assert.h>
+#include <ctype.h>
+#include <pwd.h>
+#include <sys/utsname.h>
+#include <sys/sysinfo.h>
+#include <sys/types.h>
+
 #include "core.h"
 #include "lyx.h"
 #include "srx_module.h"
 #include "srx_val.h"
 
-#include <ctype.h>
-#include <sys/utsname.h>
-#include <sys/sysinfo.h>
-#include <sys/types.h>
-#include <pwd.h>
-#include <assert.h>
-
 #define CLOCK_PATH_    "/ietf-system:system-state/clock"
 #define PLATFORM_PATH_ "/ietf-system:system-state/platform"
+
+static const char *sysfeat[] = {
+	"authentication",
+	"local-users",
+	"ntp",
+	"ntp-udp-port",
+	"timezone-name",
+	NULL
+};
+
+static const struct srx_module_requirement ietf_system_reqs[] = {
+	{ .dir = YANG_PATH_, .name = "ietf-system", .rev = "2014-08-06", .features = sysfeat },
+	{ .dir = YANG_PATH_, .name = "infix-system", .rev = "2023-04-11" },
+
+	{ NULL }
+};
 
 struct sr_change {
 	sr_change_oper_t op;
@@ -903,22 +919,6 @@ err:
 
 	return SR_ERR_OK;
 }
-
-static const char *sysfeat[] = {
-	"authentication",
-	"local-users",
-	"ntp",
-	"ntp-udp-port",
-	"timezone-name",
-	NULL
-};
-
-static const struct srx_module_requirement ietf_system_reqs[] = {
-	{ .dir = YANG_PATH_, .name = "ietf-system", .rev = "2014-08-06", .features = sysfeat },
-	{ .dir = YANG_PATH_, .name = "infix-system", .rev = "2014-08-06" },
-
-	{ NULL }
-};
 
 int ietf_system_init(struct confd *confd)
 {

@@ -2,9 +2,7 @@
 
 #include <fnmatch.h>
 #include <stdbool.h>
-
 #include <jansson.h>
-
 #include <arpa/inet.h>
 #include <net/if.h>
 

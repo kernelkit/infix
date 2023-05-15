@@ -7,7 +7,7 @@ module infix-system {
 		prefix "sys";
 	}
 
-	revision 2014-08-06 {
+	revision 2023-04-11 {
 		description "Initial revision.";
 	}
 
