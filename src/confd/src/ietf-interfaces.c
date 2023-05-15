@@ -284,7 +284,7 @@ static int netdag_gen_ipv4_autoconf(struct dagger *net,
 	if (!lydx_get_diff(node, &nd))
 		return 0;
 
-	if (!strcmp(nd.val, "true")) {
+	if (nd.new && !strcmp(nd.val, "true")) {
 		initctl = dagger_fopen_next(net, "init", ifname,
 					    60, "zeroconf-up.sh");
 		if (!initctl)
@@ -330,7 +330,7 @@ static int netdag_gen_sysctl_bool(struct dagger *net,
 	va_start(ap, fmt);
 	vfprintf(*fpp, fmt, ap);
 	va_end(ap);
-	fprintf(*fpp, " = %u\n", !strcmp(nd.val, "true") ? 1 : 0);
+	fprintf(*fpp, " = %u\n", (nd.new && !strcmp(nd.val, "true")) ? 1 : 0);
 	return 0;
 }
 static int netdag_gen_sysctl(struct dagger *net,
