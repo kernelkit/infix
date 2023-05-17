@@ -1,0 +1,17 @@
+config BR2_PACKAGE_CONMON
+	bool "conmon"
+	depends on BR2_TOOLCHAIN_HAS_THREADS # libglib2
+	depends on BR2_USE_MMU # libglib2
+	depends on BR2_USE_WCHAR # libglib2
+	depends on !BR2_TOOLCHAIN_USES_UCLIBC # no fexecve
+	select BR2_PACKAGE_LIBGLIB2
+	help
+	  Conmon is an OCI container runtime monitor, commonly used as an
+          interface between runc/crun and podman/CRI-O.
+
+	  https://github.com/containers/conmon
+
+comment "conmon needs a glibc or musl toolchain w/ threads, wchar"
+	depends on !BR2_USE_WCHAR || !BR2_TOOLCHAIN_HAS_THREADS || \
+		BR2_TOOLCHAIN_USES_UCLIBC
+	depends on BR2_USE_MMU
