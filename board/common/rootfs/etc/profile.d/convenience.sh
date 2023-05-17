@@ -16,3 +16,5 @@ alias ipaddr='ip addr'
 alias iplink='ip link'
 alias bridge='bridge --color=auto'
 alias cli='klish'
+
+alias docker=podman
