@@ -75,10 +75,19 @@ rw_args()
 
     if ! [ -f "$QEMU_RW" ]; then
 	dd if=/dev/zero of="$QEMU_RW" bs=16M count=1 >/dev/null 2>&1
-	mkfs.ext4 -L cfg "$QEMU_RW"             >/dev/null 2>&1
+	mkfs.ext4 -L cfg "$QEMU_RW" >/dev/null 2>&1
     fi
 
     echo -n "-drive file=$QEMU_RW,if=virtio,format=raw,bus=0,unit=1 "
+
+    if [ "$QEMU_RW_VAR_OPT" ]; then
+	if ! [ -f "$QEMU_RW_VAR" ]; then
+	    dd if=/dev/zero of="$QEMU_RW_VAR" bs=256M count=1 >/dev/null 2>&1
+	    mkfs.ext4 -L var "$QEMU_RW_VAR" >/dev/null 2>&1
+	fi
+
+	echo -n "-drive file=$QEMU_RW_VAR,if=virtio,format=raw,bus=0,unit=2 "
+    fi
 }
 
 host_args()
