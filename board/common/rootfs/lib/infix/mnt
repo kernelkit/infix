@@ -5,7 +5,7 @@
 # /mnt/cfg is used to store device modifications made to /etc, /home,
 # /root.
 #
-# /mnt/var is used as the backins store for /var. If /mnt/var is not
+# /mnt/var is used as the backing store for /var.  If /mnt/var isn't
 # available, /mnt/cfg will still be be used to persist /var/lib.
 #
 # If a disk partiion with the corresponding label ("cfg"/"var") is
@@ -30,6 +30,21 @@ mount_rw()
     mount LABEL="$1" 2>/dev/null && return 0
 
     return 1
+}
+
+# Bind mount /var or /var/lib to ensure applications like podman can set
+# up overlay mounts for containers.  Overlays cannot sit on top of other
+# overlays.  We always copy the contents of /var or /var/lib from the
+# rootfs to get updates, e.g., new packages added in an upgrade.
+mount_bind()
+{
+    src="$1"
+    dst="$2"
+
+    mkdir -p "$src"
+    cp -af "$dst/." "$src/" ||:
+
+    mount -o bind "$src" "$dst"
 }
 
 # mkdir -p -m 0755 only applies to the deepest directory
@@ -64,7 +79,11 @@ if ! mount_rw var >/dev/null 2>&1; then
     logger $opt -p user.warn -t "$nm" \
 	   "No persistent storage found for /var, only /var/lib is persisted."
     varsrc=/mnt/tmp
-    vlibsrc=/mnt/cfg
+    vlibsrc=/mnt/cfg/vlib
+else
+    mount_bind "$varsrc" /var
+    varsrc=
+    vlibsrc=
 fi
 
 cfgsrc=/mnt/cfg
@@ -102,9 +121,9 @@ mount_overlay cfg  $cfgsrc /cfg
 mount_overlay etc  $etcsrc /etc
 mount_overlay home $cfgsrc /home
 mount_overlay root $cfgsrc /root
-mount_overlay var  $varsrc /var
 
-[ "$vlibsrc" ] && mount_overlay vlib "$vlibsrc" /var/lib
+[ "$varsrc" ]  && mount_overlay var "$varsrc"  /var
+[ "$vlibsrc" ] && mount_bind        "$vlibsrc" /var/lib
 
 # Keep transient configs in a ramdisk and symlink out to /cfg for
 # startup.
