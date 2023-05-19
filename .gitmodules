@@ -1,3 +1,6 @@
 [submodule "buildroot"]
 	path = buildroot
 	url = ../buildroot.git
+[submodule "9pm"]
+	path = 9pm
+	url = ../9pm
