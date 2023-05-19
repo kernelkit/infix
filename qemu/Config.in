@@ -66,9 +66,19 @@ config QEMU_DTB_EXTEND
 	default y if BR2_aarch64
 
 config QEMU_RW
-	string "Writable layer"
+	string "Writable /cfg layer"
 	depends on QEMU_ROOTFS_INITRD
 	default "images/cfg.ext4"
+
+config QEMU_RW_VAR_OPT
+	bool "Separate writable /var (256MB)"
+
+if QEMU_RW_VAR_OPT
+
+config QEMU_RW_VAR
+	string "Writable /var layer"
+	default "images/var.ext4"
+endif
 
 config QEMU_HOST
 	string "Export host filesystem path"
