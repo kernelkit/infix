@@ -213,6 +213,46 @@ dtb_args()
     fi
 }
 
+generate_dot()
+{
+    [ "$CONFIG_QEMU_NET_TAP" = "y" ] || return
+
+    hostports="<qtap0> qtap0"
+    targetports="<e0> e0"
+    edges="host:qtap0 -- target:e0;"
+    for tap in $(seq 1 $(($CONFIG_QEMU_NET_TAP_N - 1))); do
+	hostports="$hostports | <qtap$tap> qtap$tap "
+	targetports="$targetports | <e$tap> e$tap "
+	edges="$edges host:qtap$tap -- target:e$tap;"
+    done
+    cat >qemu.dot <<EOF
+graph "qemu" {
+	layout="neato";
+	overlap="false";
+	esep="+20";
+
+        node [shape=record, fontname="monospace"];
+	edge [color="cornflowerblue", penwidth="2"];
+
+	host [
+	    label="host | { $hostports }"
+	    pos="0,0!",
+
+	    kind="controller",
+	];
+
+        target [
+	    label="{ $targetports } | target",
+	    pos="10,0!",
+
+	    kind="infix",
+	];
+
+	$edges
+}
+EOF
+}
+
 menuconfig()
 {
     grep -q QEMU_MACHINE Config.in || die "$prognm: must be run from the output/images directory"
@@ -243,6 +283,8 @@ else
     # Shipped defaults from release tarball
     load_qemucfg qemu.cfg
 fi
+
+generate_dot
 
 echo "Starting Qemu  ::  Ctrl-a x -- exit | Ctrl-a c -- toggle console/monitor"
 line=$(stty -g)
