@@ -81,6 +81,8 @@ define PODMAN_INSTALL_TARGET_CMDS
 	$(INSTALL) -d -m 755 $(TARGET_DIR)/etc/containers
 	$(INSTALL) -D -m 644 $(PODMAN_PKGDIR)/containers-policy.json \
 		$(TARGET_DIR)/etc/containers/policy.json
+	$(INSTALL) -D -m 755 $(PODMAN_PKGDIR)/podman-service \
+		$(TARGET_DIR)/usr/bin/podman-service
 	$(PODMAN_SECCOMP_PROFILE)
 endef
 

@@ -1,0 +1,36 @@
+commit 5db2fb2c325807c67b38d18b454bbfc55b51b77f
+Author: Joachim Wiberg <troglobit@gmail.com>
+Date:   Sat May 20 10:08:31 2023 +0200
+
+    initctl: let -f force-skip check for built-in service
+    
+    When calling `initctl -b create` from a start script at bootstrap you
+    risk blocking the boot since Finit currently cannot reply to IPC during
+    that period.
+    
+    This patch allows -f to override this builtin check for the following
+    initctl commands:
+    
+     - touch
+     - show
+     - edit
+     - create
+     - delete
+    
+    Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+
+diff --git a/src/serv.c b/src/serv.c
+index 570f5ac..2029ddd 100644
+--- a/src/serv.c
++++ b/src/serv.c
+@@ -41,6 +41,10 @@ static int is_builtin(char *arg)
+ {
+ 	svc_t *svc;
+ 
++	/* skip check, we may be in non-responsive bootstrap */
++	if (iforce)
++		return 0;
++
+ 	svc = client_svc_find(arg);
+ 	if (!svc)
+ 		return 0;
