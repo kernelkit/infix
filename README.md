@@ -52,7 +52,7 @@ possible to configure using NETCONF.
 
 At bootstrap Finit can optionally start scripts from a [run-parts(8)][]
 like directory: `/cfg/start.d`.  To enable this mode, see the following
-example:
+examples:
 
 ```sh
 root@infix:~$ mkdir /cfg/start.d
@@ -65,8 +65,21 @@ ln -s /cfg/frr/frr.conf /etc/frr/
 initctl enable zebra
 initctl enable ospfd
 initctl enable bfdd
+exit 0
 EOF
 root@infix:/cfg/start.d$ chmod +x 10-enable-ospf.sh
+```
+
+This is also the way to start containers (provided the images have been
+downloaded with `podman pull` first):
+
+```
+root@infix:/cfg/start.d$ cat <<EOF >20-enable-container.sh
+#!/bin/sh
+podman-service -e -d "Nginx container" -p "-p 80:80" nginx:alpine
+exit 0
+EOF
+root@infix:/cfg/start.d$ chmod +x 20-enable-container.sh
 ```
 
 Reboot to activate the changes.  To activate the changes without
