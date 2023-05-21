@@ -1,0 +1,119 @@
+#!/bin/sh
+# Create CNI profiles for podman
+
+dir=/etc/cni/net.d
+force=
+num=90
+
+usage()
+{
+    cat <<EOF
+usage:
+  cni [opt] cmd
+
+options:
+  -f                                       Force operation, e.g. overwrite
+  -h                                       Show this help text
+  -n NUM                                   Create $dir/NUM-name-type.conflist
+
+commands:
+  create host NAME IFNAME IPADDR/PREFIX    Create CNI host-device profile
+  help                                     Show this help text
+  list                                     List available profiles
+  show PROFILE                             Show profile from list command
+
+EOF
+}
+
+create_host()
+{
+    nm=$1
+    iface=$2
+    addr=$3
+    fn="$dir/$num-$nm-host.conflist"
+
+    if [ -f "$fn" ] && [ "$force" = "" ]; then
+	echo "$fn: already exists, use -f to force overwriting it."
+	exit 1
+    fi
+
+    cat <<EOF > "$fn"
+{
+  "cniVersion": "0.4.0",
+  "name": "$nm",
+  "plugins": [
+    {
+      "type": "host-device",
+      "device": "$iface",
+      "ipam": {
+        "type": "static",
+        "addresses": [
+          {
+            "address": "$addr"
+          }
+        ]
+      }
+    }
+  ]
+}
+EOF
+}
+
+while [ "$1" != "" ]; do
+    case $1 in
+	-f | --force)
+	    force=true
+	    ;;
+
+	-h | --help)
+	    usage
+	    exit 0
+	    ;;
+
+	-n | --num)
+	    num=$2
+	    shift
+	    ;;
+
+	*)
+	    break
+    esac
+    shift
+done
+
+cmd=$1
+if [ -n "$cmd" ]; then
+   shift
+fi
+
+case $cmd in
+    c | create)
+	type=$1
+	shift
+	case $type in
+	    host | veth)
+		#shellcheck disable=SC2068
+		create_host $@
+		;;
+	    *)
+		echo "Unsupported type"
+		usage
+		exit 1
+		;;
+	esac
+	;;
+
+    l | ls | list)
+	ls -l $dir
+	;;
+
+    show | sh | cat)
+	fn=$1
+	[ -f "$fn" ] || fn="$dir/$1"
+	jq . "$fn"
+	;;
+
+    help | *)
+	usage
+	;;
+esac
