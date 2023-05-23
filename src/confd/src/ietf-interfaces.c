@@ -441,7 +441,7 @@ static sr_error_t netdag_init(struct dagger *net, struct lyd_node *cifs,
 		if (dagger_add_node(net, lydx_get_cattr(iface, "name")))
 			return SR_ERR_INTERNAL;
 
-	LYX_LIST_FOR_EACH(cifs, iface, "interface")
+	LYX_LIST_FOR_EACH(difs, iface, "interface")
 		if (dagger_add_node(net, lydx_get_cattr(iface, "name")))
 			return SR_ERR_INTERNAL;
 
