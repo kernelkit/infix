@@ -10,7 +10,8 @@ PATH=/lib/infix/factory:$PATH
 gen-hostname   >$FACTORY_D/20-auto-hostname.json
 gen-interfaces >$FACTORY_D/20-auto-interfaces.json
 
-jq -s add $(find $FACTORY_D -name '*.json') >$CFG_D/auto-factory-config.cfg
+jq -s 'reduce .[] as $item ({}; . * $item)' $(find $FACTORY_D -name '*.json') \
+    >$CFG_D/auto-factory-config.cfg
 
 # TODO: Look for statically defined factory-config, based on the
 # system's product ID.
