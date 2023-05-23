@@ -104,6 +104,9 @@ int sr_plugin_init_cb(sr_session_ctx_t *session, void **priv)
 	rc = ietf_system_init(&confd);
 	if (rc)
 		goto err;
+	rc = infix_dhcp_init(&confd);
+	if (rc)
+		goto err;
 
 	/* YOUR_INIT GOES HERE */
 

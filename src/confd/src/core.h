@@ -137,4 +137,7 @@ int ietf_interfaces_init(struct confd *confd);
 /* ietf-system.c */
 int ietf_system_init(struct confd *confd);
 
+/* infix-dhcp.c */
+int infix_dhcp_init(struct confd *confd);
+
 #endif	/* CONFD_CORE_H_ */
