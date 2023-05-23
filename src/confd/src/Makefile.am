@@ -8,4 +8,5 @@ confd_plugin_la_CFLAGS  = $(augeas_CFLAGS) $(jansson_CFLAGS) $(libite_CFLAGS) $(
 confd_plugin_la_LIBADD  = $(augeas_LIBS)   $(jansson_LIBS)   $(libite_LIBS)   $(sysrepo_LIBS)
 confd_plugin_la_LDFLAGS = -module -avoid-version -shared
 confd_plugin_la_SOURCES = core.c core.h helpers.c helpers.h srx_module.c srx_module.h srx_val.c srx_val.h \
-			  ietf-system.c ietf-interfaces.c systemv.c systemv.h lyx.c lyx.h dagger.c dagger.h
+			  ietf-system.c ietf-interfaces.c systemv.c systemv.h lyx.c lyx.h dagger.c dagger.h \
+			  infix-dhcp.c

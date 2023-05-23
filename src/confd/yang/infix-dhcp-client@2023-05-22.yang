@@ -1,0 +1,56 @@
+module infix-dhcp-client {
+  yang-version 1.1;
+  namespace "urn:ietf:params:xml:ns:yang:infix-dhcp-client";
+  prefix dhc4-clnt;
+
+  import ietf-interfaces {
+    prefix "if";
+  }
+
+  contact      "kernelkit@googlegroups.com";
+  description  "This module implements an IPv4 DHCP client";
+
+  revision 2023-05-22 {
+    description   "Initial revision.";
+    reference     "rfc2131 rfc7950";
+  }
+
+  /*
+   * Data Nodes
+   */
+
+  container dhcp-client {
+    description
+      "DHCPv4 client configuration";
+    leaf enabled {
+      type boolean;
+      default "true";
+      description
+        "Globally enables the DHCP client function.";
+    }
+    list client-if {
+      key "if-name";
+      description
+        "The list of interfaces for which the client will
+         be requesting DHCPv4 configuration.";
+      leaf if-name {
+        type if:interface-ref;
+        mandatory true;
+        description
+          "Reference to the interface entry that the requested
+           configuration is relevant to.";
+      }
+      leaf enabled {
+        type boolean;
+        default "true";
+        description
+          "Enables the DHCP client function for this interface.";
+      }
+      leaf client-id {
+	type string;
+	description
+	  "DHCP client identifier";
+      }
+    }
+  }
+}
