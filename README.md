@@ -70,6 +70,11 @@ EOF
 root@infix:/cfg/start.d$ chmod +x 10-enable-ospf.sh
 ```
 
+> **Note:** Neither [Frr](https://frrouting.org) (Zebra/OSPF/BFD) or
+> [podman](https://podman.io) are enabled in default Infix builds.
+> Please use customer specific builds, or enable it yourself in Infix by
+> using `make menuconfig` followed by rebuilding the image.
+
 This is also the way to start containers (provided the images have been
 downloaded with `podman pull` first):
 
