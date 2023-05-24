@@ -1,60 +1,79 @@
-commit 9e18bd10df1ac2aabd46a790ac6148c638a513b8
-Author: Joachim Wiberg <troglobit@gmail.com>
-Date:   Fri Mar 31 10:44:32 2023 +0200
+From 519b1368bf36cda4bc761c6390697cc730e73f63 Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Wed, 24 May 2023 06:55:41 +0200
+Subject: [PATCH] netopeer2-server: add support for running in foreground with
+ syslog
+Organization: Addiva Elektronik
 
-    netopeer2-server: add support for running in foreground with syslog
-    
-    Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ doc/netopeer2-server.8 | 7 +++++--
+ src/main.c             | 9 +++++++--
+ 2 files changed, 12 insertions(+), 4 deletions(-)
 
+diff --git a/doc/netopeer2-server.8 b/doc/netopeer2-server.8
+index 4caf0f7..617c552 100644
+--- a/doc/netopeer2-server.8
++++ b/doc/netopeer2-server.8
+@@ -2,13 +2,13 @@
+ .\" groff -man -Tascii netopeer2-server.8
+ .\"
+ 
+-.TH "netopeer2-server" 8 "2021-11-10" "Netopeer"
++.TH "netopeer2-server" 8 "2023-05-25" "Netopeer"
+ .SH NAME
+ netopeer2-server \- NETCONF server daemon build on libnetconf2 with sysrepo datastore
+ .
+ .SH SYNOPSIS
+ .B netopeer2-server
+-[\fB-dhV\fP] [\fB-p\fP \fIPATH\fP] [\fB-U\fP[\fIPATH\fP]] [\fB-m\fP \fIMODE\fP] [\fB-u\fP \fIUID\fP]
++[\fB-dFhV\fP] [\fB-p\fP \fIPATH\fP] [\fB-U\fP[\fIPATH\fP]] [\fB-m\fP \fIMODE\fP] [\fB-u\fP \fIUID\fP]
+ [\fB-g\fP \fIGID\fP] [\fB-t\fP \fITIMEOUT\fP] [\fB-v\fP \fILEVEL\fP] [\fB-c\fP \fICATEGORY\fP]
+ .br
+ .
+@@ -22,6 +22,9 @@ YANG module data in sysrepo.
+ .BR "\-d"
+ Debug mode (do not daemonize and print verbose messages to stderr instead of syslog).
+ .TP
++.BR "\-F"
++Run in foreground (do not daemonize) and log to syslog.
++.TP
+ .BR "\-h"
+ Display help.
+ .TP
 diff --git a/src/main.c b/src/main.c
-index 6d054f5..c403000 100644
+index 59cc87e..b210d40 100644
 --- a/src/main.c
 +++ b/src/main.c
-@@ -1082,6 +1082,7 @@ print_usage(char *progname)
-     fprintf(stdout, " -f PATH    Path to netopeer2 server files directory (default path is \"%s\")\n", SERVER_DIR);
-     fprintf(stdout, " -U[PATH]   Listen on a local UNIX socket (default path is \"%s\").\n", NP2SRV_UNIX_SOCK_PATH);
-     fprintf(stdout, " -m MODE    Set mode for the listening UNIX socket.\n");
-+    fprintf(stdout, " -n         Run in foreground and log to syslog.\n");
-     fprintf(stdout, " -u UID     Set UID/user for the listening UNIX socket.\n");
-     fprintf(stdout, " -g GID     Set GID/group for the listening UNIX socket.\n");
-     fprintf(stdout, " -t TIMEOUT Timeout in seconds of all sysrepo functions (applying edit-config, reading data, ...),\n");
-@@ -1112,7 +1113,7 @@ main(int argc, char *argv[])
+@@ -1078,9 +1078,10 @@ print_version(void)
+ static void
+ print_usage(char *progname)
  {
-     int ret = EXIT_SUCCESS;
-     int c, *idx, i;
--    int daemonize = 1, verb = 0;
-+    int daemonize = 1, verb = 0, use_syslog = 0;
-     int pidfd;
-     const char *pidfile = NP2SRV_PID_FILE_PATH;
-     char pid[8];
-@@ -1145,7 +1146,7 @@ main(int argc, char *argv[])
+-    fprintf(stdout, "Usage: %s [-dhV] [-p PATH] [-U[PATH]] [-m MODE] [-u UID] [-g GID] [-t TIMEOUT] [-x PATH]\n", progname);
++    fprintf(stdout, "Usage: %s [-dFhV] [-p PATH] [-U[PATH]] [-m MODE] [-u UID] [-g GID] [-t TIMEOUT] [-x PATH]\n", progname);
+     fprintf(stdout, "          [-v LEVEL] [-c CATEGORY]\n");
+     fprintf(stdout, " -d         Debug mode (do not daemonize and print verbose messages to stderr instead of syslog).\n");
++    fprintf(stdout, " -F         Run in foreground, like -d, but log to syslog.\n");
+     fprintf(stdout, " -h         Display help.\n");
+     fprintf(stdout, " -V         Show program version.\n");
+     fprintf(stdout, " -p PATH    Path to pidfile (default path is \"%s\").\n", NP2SRV_PID_FILE_PATH);
+@@ -1152,11 +1153,15 @@ main(int argc, char *argv[])
      np2srv.server_dir = SERVER_DIR;
  
      /* process command line options */
--    while ((c = getopt(argc, argv, "dhVp:f:U::m:u:g:t:x:v:c:")) != -1) {
-+    while ((c = getopt(argc, argv, "dhVp:f:U::m:nu:g:t:x:v:c:")) != -1) {
+-    while ((c = getopt(argc, argv, "dhVp:f:U::m:u:g:n:i:t:x:v:c:")) != -1) {
++    while ((c = getopt(argc, argv, "dFhVp:f:U::m:u:g:n:i:t:x:v:c:")) != -1) {
          switch (c) {
          case 'd':
              daemonize = 0;
-@@ -1202,6 +1203,10 @@ main(int argc, char *argv[])
-                 return EXIT_FAILURE;
-             }
              break;
-+	case 'n':
-+	    daemonize = 0;
-+	    use_syslog = 1;
-+	    break;
-         case 'u':
-             np2srv.unix_uid = strtoul(optarg, &ptr, 10);
-             if (*ptr) {
-@@ -1306,6 +1311,10 @@ main(int argc, char *argv[])
-         np2_stderr_log = 0;
-     }
- 
-+    /* use syslog even if running in foreground */
-+    if (use_syslog == 1)
-+        np2_stderr_log = 0;
-+
-     /* make sure we are the only instance - lock the PID file and write the PID */
-     pidfd = open(pidfile, O_RDWR | O_CREAT, 0640);
-     if (pidfd < 0) {
++	case 'F':
++            daemonize = 0;
++            np2_stderr_log = 0;
++            break;
+         case 'h':
+             print_usage(argv[0]);
+             return EXIT_SUCCESS;
+-- 
+2.34.1
+
