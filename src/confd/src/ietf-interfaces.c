@@ -517,12 +517,9 @@ int ietf_interfaces_init(struct confd *confd)
 		goto fail;
 
 	REGISTER_CHANGE(confd->session, "ietf-interfaces", "/ietf-interfaces:interfaces", 0, ifchange, confd, &confd->sub);
-
-	sr_session_switch_ds(confd->session, SR_DS_CANDIDATE);
-	REGISTER_CHANGE(confd->session, "ietf-interfaces", "/ietf-interfaces:interfaces",
+	REGISTER_CHANGE(confd->cand, "ietf-interfaces", "/ietf-interfaces:interfaces",
 			SR_SUBSCR_UPDATE, ifchange_cand, confd, &confd->sub);
 
-	sr_session_switch_ds(confd->session, SR_DS_RUNNING);
 	return SR_ERR_OK;
 fail:
 	ERROR("init failed: %s", sr_strerror(rc));
