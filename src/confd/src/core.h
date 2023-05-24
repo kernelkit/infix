@@ -64,6 +64,7 @@ static inline void print_val(sr_val_t *val)
 struct confd {
 	sr_session_ctx_t       *session; /* running datastore */
 	sr_session_ctx_t       *startup; /* startup datastore */
+	sr_session_ctx_t       *cand;    /* candidate datastore */
 	sr_conn_ctx_t          *conn;
 	sr_subscription_ctx_t  *sub;
 

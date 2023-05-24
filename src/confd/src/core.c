@@ -83,6 +83,11 @@ int sr_plugin_init_cb(sr_session_ctx_t *session, void **priv)
 	if (rc)
 		goto err;
 
+	/* Used by, e.g., ietf-interfaces, to update interfaces types */
+	rc = sr_session_start(confd.conn, SR_DS_CANDIDATE, &confd.cand);
+	if (rc)
+		goto err;
+
 	confd.aug = aug_init(NULL, "", 0);
 	if (!confd.aug)
 		goto err;
