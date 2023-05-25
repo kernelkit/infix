@@ -73,7 +73,8 @@ struct confd {
 };
 
 uint32_t core_hook_prio    (void);
-int      core_commit_done  (sr_session_ctx_t *, uint32_t, const char *, const char *, sr_event_t, unsigned, void *);
+int      core_pre_hook     (sr_session_ctx_t *, uint32_t, const char *, const char *, sr_event_t, unsigned, void *);
+int      core_post_hook    (sr_session_ctx_t *, uint32_t, const char *, const char *, sr_event_t, unsigned, void *);
 int      core_startup_save (sr_session_ctx_t *, uint32_t, const char *, const char *, sr_event_t, unsigned, void *);
 
 static inline int register_change(sr_session_ctx_t *session, const char *module, const char *xpath,
@@ -81,6 +82,11 @@ static inline int register_change(sr_session_ctx_t *session, const char *module,
 {
 	struct confd *confd = (struct confd *)arg;
 	int rc;
+
+	if (!flags) {
+		sr_module_change_subscribe(confd->session, module, xpath, core_pre_hook, NULL,
+				0, SR_SUBSCR_PASSIVE, sub);
+	}
 
 	rc = sr_module_change_subscribe(session, module, xpath, cb, arg,
 				CB_PRIO_PRIMARY, flags | SR_SUBSCR_DEFAULT, sub);
@@ -97,7 +103,7 @@ static inline int register_change(sr_session_ctx_t *session, const char *module,
 	 * the startup-save hook for running -> startup copying.
 	 */
 	if (!flags) {
-		sr_module_change_subscribe(confd->session, module, xpath, core_commit_done, NULL,
+		sr_module_change_subscribe(confd->session, module, xpath, core_post_hook, NULL,
 				core_hook_prio(), SR_SUBSCR_PASSIVE, sub);
 		sr_module_change_subscribe(confd->startup, module, xpath, core_startup_save, NULL,
 				core_hook_prio(), SR_SUBSCR_PASSIVE, sub);

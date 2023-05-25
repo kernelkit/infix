@@ -21,12 +21,18 @@ int core_startup_save(sr_session_ctx_t *session, uint32_t sub_id, const char *mo
 	return SR_ERR_OK;
 }
 
+int core_pre_hook(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
+	const char *xpath, sr_event_t event, unsigned request_id, void *priv)
+{
+	return 0;
+}
+
 /*
  * Run on UPDATE to see how many modules have changes in the inbound changeset
  * Run on DONE, after the last module callback has run, to activate changes.
  * For details, see https://github.com/sysrepo/sysrepo/issues/2188
  */
-int core_commit_done(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
+int core_post_hook(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
 	const char *xpath, sr_event_t event, unsigned request_id, void *priv)
 {
 	static int num_changes = 0;
