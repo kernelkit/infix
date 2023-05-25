@@ -1,0 +1,68 @@
+{
+    "ietf-netconf-acm:nacm": {
+	"groups": {
+	    "group": [
+		{
+		    "name": "admin",
+		    "user-name": [
+			"admin"
+		    ]
+		}
+	    ]
+	},
+	"rule-list": [
+	    {
+		"name": "guest-acl",
+		"group": [
+		    "guest"
+		],
+		"rule": [
+		    {
+			"name": "deny-ncm",
+			"module-name": "ietf-netconf-monitoring",
+			"access-operations": "*",
+			"action": "deny",
+			"comment": "Disallow guests access to any NETCONF monitoring information."
+		    }
+		]
+	    },
+	    {
+		"name": "limited-acl",
+		"group": [
+		    "limited"
+		],
+		"rule": [
+		    {
+			"name": "permit-ncm",
+			"module-name": "ietf-netconf-monitoring",
+			"access-operations": "read",
+			"action": "permit",
+			"comment": "Allow read access to the NETCONF monitoring information."
+		    },
+		    {
+			"name": "permit-exec",
+			"module-name": "*",
+			"access-operations": "exec",
+			"action": "permit",
+			"comment": "Allow invocation of the supported server operations."
+		    }
+		]
+	    },
+	    {
+		"name": "admin-acl",
+		"group": [
+		    "admin"
+		],
+		"rule": [
+		    {
+			"name": "permit-all",
+			"module-name": "*",
+			"access-operations": "*",
+			"action": "permit",
+			"comment": "Allow 'admin' group complete access to all operations and data."
+		    }
+		]
+	    }
+	]
+    }
+}
