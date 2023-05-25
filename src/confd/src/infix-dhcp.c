@@ -28,6 +28,35 @@ static int is_enabled(struct lyd_node *parent, const char *name)
 	return 0;
 }
 
+static void add(const char *ifname, const char *client_id)
+{
+	char *args = NULL;
+	FILE *fp;
+
+	fp = fopenf("w", "/etc/finit.d/available/dhcp-%s.conf", ifname);
+	if (!fp) {
+		ERROR("failed creating DHCP client service for %s: %s",
+		      ifname, strerror(errno));
+		return;
+	}
+
+	if (client_id && client_id[0]) {
+		args = alloca(strlen(client_id) + 12);
+		if (args)
+			sprintf(args, "-C -x 61:'\"%s\"'", client_id);
+	}
+	fprintf(fp, "service name:dhcp :%s udhcpc -f -S -i %s %s -- DHCP client @%s\n",
+		ifname, ifname, args ?: "", ifname);
+	fclose(fp);
+
+	systemf("initctl enable dhcp-%s", ifname);
+}
+
+static void del(const char *ifname)
+{
+	systemf("initctl delete dhcp-%s", ifname);
+}
+
 static int client_change(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
 	const char *xpath, sr_event_t event, unsigned request_id, void *_confd)
 {
@@ -45,12 +74,13 @@ static int client_change(sr_session_ctx_t *session, uint32_t sub_id, const char 
 		return SR_ERR_OK;
 	}
 
-	ERROR("Got DHCP client change");
-	err = sr_get_data(session, "/dhcp-client//.", 0, 0, 0, &cfg);
-	if (err)
+	err = sr_get_data(session, "/infix-dhcp-client:dhcp-client//.", 0, 0, 0, &cfg);
+	if (err) {
+		ERROR("DHCP client fail 1");
 		goto err_abandon;
+	}
 
-	err = srx_get_diff(session, (struct lyd_node **)&diff);
+	err = srx_get_diff(session, &diff);
 	if (err)
 		goto err_release_data;
 
@@ -60,31 +90,24 @@ static int client_change(sr_session_ctx_t *session, uint32_t sub_id, const char 
 	cifs = lydx_get_descendant(cfg->tree, "dhcp-client", "client-if", NULL);
 	difs = lydx_get_descendant(diff, "dhcp-client", "client-if", NULL);
 
+	/* find the modified one, delete or recreate only that */
 	LYX_LIST_FOR_EACH(difs, dif, "client-if") {
-		/* find the modified one, delete or recreate only that */
-		LYX_LIST_FOR_EACH(cifs, cif, "client-if") {
-			const char *ifname = lydx_get_cattr(dif, "if-name");
-			FILE *fp;
+		const char *ifname = lydx_get_cattr(dif, "if-name");
 
+		if (lydx_get_op(dif) == LYDX_OP_DELETE) {
+			del(ifname);
+			continue;
+		}
+
+		LYX_LIST_FOR_EACH(cifs, cif, "client-if") {
 			if (strcmp(ifname, lydx_get_cattr(cif, "if-name")))
 				continue;
 
-			if (!ena || !is_enabled(cif, "enabled")) {
-				systemf("initctl delete dhcp-%s", ifname);
-				continue;
-			}
-
-			fp = fopenf("w", "/etc/finit.d/available/dhcp-%s.conf", ifname);
-			if (!fp) {
-				ERROR("failed creating DHCP client service for %s: %s",
-				      ifname, strerror(errno));
-				continue;
-			}
-
-			fprintf(fp, "service name:dhcp :%s udhcpc -f -S -i %s -- DHCP client @%s",
-				ifname, ifname, ifname);
-			fclose(fp);
-			systemf("initctl enable dhcp-%s", ifname);
+			if (!ena || !is_enabled(cif, "enabled"))
+				del(ifname);
+			else
+				add(ifname, lydx_get_cattr(cif, "client-id"));
+			break;
 		}
 	}
 
