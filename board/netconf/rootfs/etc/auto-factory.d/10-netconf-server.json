@@ -1,0 +1,16 @@
+{
+    "ietf-netconf-server:netconf-server": {
+	"listen": {
+	    "endpoint": [
+		{
+		    "name": "default-ssh",
+		    "ssh": {
+			"tcp-server-parameters": {
+			    "local-address": "::"
+			}
+		    }
+		}
+	    ]
+	}
+    }
+}
