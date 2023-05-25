@@ -15,7 +15,7 @@ sr_error_t srx_get_diff(sr_session_ctx_t *session, struct lyd_node **treep)
 	 * tree being the first member. */
 	tree = *((struct lyd_node **)iter);
 
-	if (lyd_dup_single(tree, NULL, LYD_DUP_RECURSIVE, treep))
+	if (lyd_dup_siblings(tree, NULL, LYD_DUP_RECURSIVE, treep))
 		err = SR_ERR_LY;
 
 	sr_free_change_iter(iter);
