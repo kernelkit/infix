@@ -601,6 +601,7 @@ static int sys_del_user(char *user)
 	};
 	int err;
 
+	erasef("/var/run/sshd/%s.keys", user);
 	err = systemv_silent(args);
 	if (err) {
 		ERROR("Error deleting user \"%s\"\n", user);
@@ -769,6 +770,63 @@ static sr_error_t handle_sr_user_update(augeas *aug, struct sr_change *change)
 	return SR_ERR_OK;
 }
 
+static int lyx_list_is_empty(struct lyd_node *parent, const char *list)
+{
+	struct lyd_node *elem;
+	int num = 0;
+
+	LYX_LIST_FOR_EACH(parent, elem, list)
+		num++;
+
+	return num == 0;
+}
+
+static sr_error_t generate_auth_keys(sr_session_ctx_t *session, const char *xpath)
+{
+	struct lyd_node *auth, *user, *key;
+	sr_error_t err = 0;
+	sr_data_t *cfg;
+
+	err = sr_get_data(session, xpath, 0, 0, 0, &cfg);
+	if (err)
+		return err;
+
+	auth = lydx_get_descendant(cfg->tree, "system", "authentication", NULL);
+	if (!auth) {
+		ERROR("cannot find 'ietf-system:authentication'");
+		goto err_release_data;
+	}
+
+	LYX_LIST_FOR_EACH(lyd_child(auth), user, "user") {
+		const char *username = lydx_get_cattr(user, "name");
+		FILE *fp;
+
+		if (lyx_list_is_empty(lyd_child(user), "authorized-key")) {
+			erasef("/var/run/sshd/%s.keys", username);
+			continue;
+		}
+
+		fp = fopenf("w", "/var/run/sshd/%s.keys", username);
+		if (!fp) {
+			ERROR("failed opening %s authorized_keys file: %s", username, strerror(errno));
+			continue;
+		}
+
+		LYX_LIST_FOR_EACH(lyd_child(user), key, "authorized-key") {
+			fprintf(fp, "%s %s %s\n",
+				lydx_get_cattr(key, "algorithm"),
+				lydx_get_cattr(key, "key-data"),
+				lydx_get_cattr(key, "name") ?: username);
+		}
+		fclose(fp);
+	}
+
+err_release_data:
+	sr_release_data(cfg);
+
+	return err;
+}
+
 static sr_error_t change_auth_check(augeas *aug, sr_session_ctx_t *session)
 {
 	sr_error_t err;
@@ -813,6 +871,13 @@ static sr_error_t change_auth_done(augeas *aug, sr_session_ctx_t *session)
 		ERROR("Error saving auth changes\n");
 		return SR_ERR_SYS;
 	}
+
+	err = generate_auth_keys(session, "/ietf-system:system/authentication/user//.");
+	if (err) {
+		ERROR("failed saving authorized-key data.");
+		return err;
+	}
+
 	DEBUG("Changes to authentication saved\n");
 
 	return SR_ERR_OK;
