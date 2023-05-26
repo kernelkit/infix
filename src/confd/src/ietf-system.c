@@ -513,7 +513,7 @@ static int change_dns(sr_session_ctx_t *session, uint32_t sub_id, const char *mo
 		rename(RESOLV_NEXT, RESOLV_CONF);
 
 		/* in bootstrap, another resolvconf will soon take your call */
-		if (systemf("initctl cond get hook/sys/up"))
+		if (systemf("initctl -bq cond get hook/sys/up"))
 			return 0;
 
 		systemf("resolvconf -u");
