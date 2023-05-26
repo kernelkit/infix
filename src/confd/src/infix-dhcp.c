@@ -22,10 +22,10 @@ static int is_enabled(struct lyd_node *parent, const char *name)
 	const char *attr;
 
 	attr = lydx_get_cattr(parent, name);
-	if (!attr || !strcmp(attr, "true"))
-		return 1;
+	if (!attr || strcmp(attr, "true"))
+		return 0;
 
-	return 0;
+	return 1;
 }
 
 static void add(const char *ifname, const char *client_id)
@@ -45,16 +45,17 @@ static void add(const char *ifname, const char *client_id)
 		if (args)
 			sprintf(args, "-C -x 61:'\"%s\"'", client_id);
 	}
-	fprintf(fp, "service name:dhcp :%s udhcpc -f -S -i %s %s -- DHCP client @%s\n",
+	fprintf(fp, "service name:dhcp :%s udhcpc -f -S -R -i %s %s -- DHCP client @%s\n",
 		ifname, ifname, args ?: "", ifname);
 	fclose(fp);
 
-	systemf("initctl enable dhcp-%s", ifname);
+	if (systemf("initctl -bfq enable dhcp-%s", ifname))
+		ERROR("failed enabling DHCP client on %s", ifname);
 }
 
 static void del(const char *ifname)
 {
-	systemf("initctl delete dhcp-%s", ifname);
+	systemf("initctl -bfq delete dhcp-%s", ifname);
 }
 
 static int client_change(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
