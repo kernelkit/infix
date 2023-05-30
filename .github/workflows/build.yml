@@ -9,7 +9,9 @@ name: Bob the Builder
 #      - '*'
 on:
   pull_request_review:
-    types: [submitted]
+    types:
+      - submitted
+      - closed
   workflow_dispatch:
 
 jobs:
