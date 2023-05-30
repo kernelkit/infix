@@ -17,9 +17,17 @@ static const char *iffeat[] = {
 	NULL
 };
 
+static const char *ifextfeat[] = {
+	"sub-interfaces",
+	NULL
+};
+
 static const struct srx_module_requirement ietf_if_reqs[] = {
 	{ .dir = YANG_PATH_, .name = "ietf-interfaces", .rev = "2018-02-20", .features = iffeat },
 	{ .dir = YANG_PATH_, .name = "iana-if-type", .rev = "2023-01-26" },
+	{ .dir = YANG_PATH_, .name = "ietf-if-extensions", .rev = "2023-01-26", .features = ifextfeat },
+	{ .dir = YANG_PATH_, .name = "ieee802-dot1q-types", .rev = "2022-10-29" },
+	{ .dir = YANG_PATH_, .name = "ietf-if-vlan-encapsulation", .rev = "2023-01-26" },
 	{ .dir = YANG_PATH_, .name = "ietf-ip", .rev = "2018-02-22" },
 	{ .dir = YANG_PATH_, .name = "infix-ip", .rev = "2023-04-24" },
 
@@ -360,6 +368,7 @@ static sr_error_t netdag_gen_iface(struct dagger *net,
 {
 	const char *ifname = lydx_get_cattr(dif, "name");
 	enum lydx_op op = lydx_get_op(dif);
+	struct lyd_node *node;
 	const char *attr;
 	int err = 0;
 	bool fixed;
@@ -394,12 +403,32 @@ static sr_error_t netdag_gen_iface(struct dagger *net,
 		goto err;
 	}
 
-	attr = ((op == LYDX_OP_CREATE) && !fixed) ? "add" : "set";
+	node = lydx_get_descendant(lyd_child(dif), "encapsulation", "dot1q-vlan", "outer-tag", NULL);
+	if (node) {
+		struct lydx_diff typed, vidd;
+		struct lyd_node *type, *vid;
+		const char *parent;
 
-	/* Bring interface down during configuration */
-	fprintf(ip, "link %s dev %s down", attr, ifname);
+		type = lydx_get_child(node, "tag-type");
+		vid = lydx_get_child(node, "vlan-id");
+		if (!type || !vid)
+			goto err_close_ip;
+
+		lydx_get_diff(type, &typed);
+		lydx_get_diff(vid, &vidd);
+		if ((typed.old && strcmp(typed.new, typed.old)) || (vidd.old && strcmp(vidd.new, vidd.old)))
+			fprintf(ip, "link del %s", ifname);
+
+		parent = lydx_get_cattr(dif, "parent-interface");
+		fprintf(ip, "link add %s link %s type vlan id %s proto %s\n", ifname,
+			parent, vidd.val, strcmp(typed.val, "c-vlan") ? "802.1Q" : "802.1ad");
+	} else {
+		if ((op == LYDX_OP_CREATE) && !fixed)
+			fprintf(ip, "link add dev %s down\n", ifname);
+	}
 
 	/* Set generic link attributes */
+	fprintf(ip, "link set %s down", ifname);
 	err = err ? : netdag_gen_ipv4_autoconf(net, dif);
 	err = err ? : netdag_gen_ipv6_autoconf(ip, dif);
 	if (err)
