@@ -363,6 +363,29 @@ static int netdag_gen_sysctl(struct dagger *net,
 	return err;
 }
 
+static int netdag_gen_iface_del(struct dagger *net, struct lyd_node *dif,
+				       struct lyd_node *cif, bool fixed)
+{
+	const char *ifname = lydx_get_cattr(dif, "name");
+	FILE *ip;
+
+	DEBUG_IFACE(dif, "");
+
+	ip = dagger_fopen_current(net, "exit", ifname, 50, "exit.ip");
+	if (!ip)
+		return -EIO;
+
+	if (fixed) {
+		fprintf(ip, "link set dev %s down\n", ifname);
+		fprintf(ip, "addr flush dev %s\n", ifname);
+	} else {
+		fprintf(ip, "link del dev %s\n", ifname);
+	}
+
+	fclose(ip);
+	return 0;
+}
+
 static sr_error_t netdag_gen_iface(struct dagger *net,
 				   struct lyd_node *dif, struct lyd_node *cif)
 {
@@ -380,21 +403,8 @@ static sr_error_t netdag_gen_iface(struct dagger *net,
 	      (op == LYDX_OP_NONE) ? "mod" : ((op == LYDX_OP_CREATE) ? "add" : "del"));
 
 	if (op == LYDX_OP_DELETE) {
-		ip = dagger_fopen_current(net, "exit", ifname, 50, "exit.ip");
-		if (!ip) {
-			err = -EIO;
-			goto err;
-		}
-
-		if (fixed) {
-			fprintf(ip, "link set dev %s down\n", ifname);
-			fprintf(ip, "addr flush dev %s\n", ifname);
-		} else {
-			fprintf(ip, "link del dev %s\n", ifname);
-		}
-
-		fclose(ip);
-		return SR_ERR_OK;
+		err = netdag_gen_iface_del(net, dif, cif, fixed);
+		goto err;
 	}
 
 	ip = dagger_fopen_next(net, "init", ifname, 50, "init.ip");
