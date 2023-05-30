@@ -34,7 +34,7 @@ int srx_set_item(sr_session_ctx_t *session, const sr_val_t *val, sr_edit_options
 	va_end(ap);
 
 	xpath = alloca(len);
-	if (!val)
+	if (!xpath)
 		return -1;
 
 	va_start(ap, fmt);
