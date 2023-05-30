@@ -129,10 +129,8 @@ int infix_dhcp_init(struct confd *confd)
 	if (rc)
 		goto fail;
 
-	ERROR("Loaded DHCP model");
 	REGISTER_CHANGE(confd->session, "infix-dhcp-client", "/infix-dhcp-client:dhcp-client",
 			0, client_change, confd, &confd->sub);
-	ERROR("Registered DHCP change callback");
 	return SR_ERR_OK;
 fail:
 	ERROR("init failed: %s", sr_strerror(rc));
