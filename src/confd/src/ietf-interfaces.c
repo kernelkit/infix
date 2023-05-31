@@ -79,6 +79,89 @@ out:
 	return is_phys;
 }
 
+static int ifchange_cand_infer_vlan(sr_session_ctx_t *session, const char *xpath)
+{
+	sr_val_t inferred = { .type = SR_STRING_T };
+	char *ifname, *type, *vidstr;
+	sr_error_t err = SR_ERR_OK;
+	size_t cnt;
+	long vid;
+
+	type = srx_get_str(session, "%s/type", xpath);
+	if (!type || strcmp(type, "iana-if-type:l2vlan"))
+		goto out;
+
+	ifname = srx_get_str(session, "%s/name", xpath);
+	if (!ifname)
+		goto out_free_type;
+
+	if (fnmatch("*.+([0-9])", ifname, FNM_EXTMATCH))
+		goto out_free_ifname;
+
+	vidstr = rindex(ifname, '.');
+	if (!vidstr)
+		goto out_free_ifname;
+
+	*vidstr++ = '\0';
+	vid = strtol(vidstr, NULL, 10);
+	if (vid < 1 || vid > 4095)
+		goto out_free_ifname;
+
+	err = srx_nitems(session, &cnt,
+			 "/interfaces/interface[name='%s']/name", ifname);
+	if (err || !cnt)
+		goto out_free_ifname;
+
+	err = srx_nitems(session, &cnt,
+			 "%s/ietf-if-extensions:parent-interface", xpath);
+	if (!err && !cnt) {
+		inferred.data.string_val = ifname;
+		err = srx_set_item(session, &inferred, 0,
+				   "%s/ietf-if-extensions:parent-interface", xpath);
+		if (err)
+			goto out_free_ifname;
+	}
+
+	err = srx_nitems(session, &cnt,
+			 "%s"
+			 "/ietf-if-extensions:encapsulation"
+			 "/ietf-if-vlan-encapsulation:dot1q-vlan"
+			 "/outer-tag/tag-type", xpath);
+	if (!err && !cnt) {
+		inferred.data.string_val = "ieee802-dot1q-types:c-vlan";
+		err = srx_set_item(session, &inferred, 0,
+				   "%s"
+				   "/ietf-if-extensions:encapsulation"
+				   "/ietf-if-vlan-encapsulation:dot1q-vlan"
+				   "/outer-tag/tag-type", xpath);
+		if (err)
+			goto out_free_ifname;
+	}
+
+	err = srx_nitems(session, &cnt,
+			 "%s"
+			 "/ietf-if-extensions:encapsulation"
+			 "/ietf-if-vlan-encapsulation:dot1q-vlan"
+			 "/outer-tag/vlan-id", xpath);
+	if (!err && !cnt) {
+		inferred.data.string_val = vidstr;
+		err = srx_set_item(session, &inferred, 0,
+				   "%s"
+				   "/ietf-if-extensions:encapsulation"
+				   "/ietf-if-vlan-encapsulation:dot1q-vlan"
+				   "/outer-tag/vlan-id", xpath);
+		if (err)
+			goto out_free_ifname;
+	}
+
+out_free_ifname:
+	free(ifname);
+out_free_type:
+	free(type);
+out:
+	return err;
+}
+
 static int ifchange_cand_infer_type(sr_session_ctx_t *session, const char *xpath)
 {
 	sr_val_t inferred = { .type = SR_STRING_T };
@@ -134,6 +217,10 @@ static int ifchange_cand(sr_session_ctx_t *session, uint32_t sub_id, const char 
 			continue;
 
 		err = ifchange_cand_infer_type(session, new->xpath);
+		if (err)
+			break;
+
+		err = ifchange_cand_infer_vlan(session, new->xpath);
 		if (err)
 			break;
 	}
