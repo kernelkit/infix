@@ -500,7 +500,7 @@ static int ifchange(sr_session_ctx_t *session, uint32_t sub_id, const char *modu
 	if (err)
 		return err;
 
-	err = sr_get_data(session, "/interfaces/interface//.", 0, 0, 0, &cfg);
+	err = sr_get_data(session, "/interfaces/interface", 0, 0, 0, &cfg);
 	if (err)
 		goto err_abandon;
 
