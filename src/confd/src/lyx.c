@@ -41,6 +41,9 @@ bool lydx_get_diff(struct lyd_node *node, struct lydx_diff *nd)
 
 	memset(nd, 0, sizeof(*nd));
 
+	if (!node)
+		goto out;
+
 	nd->op = lydx_get_op(node);
 	nd->val = lyd_get_value(node);
 
@@ -69,6 +72,7 @@ bool lydx_get_diff(struct lyd_node *node, struct lydx_diff *nd)
 		(nd->old && !nd->was_default) ||
 		(nd->new && !nd->is_default);
 
+out:
 	return nd->modified;
 }
 
