@@ -12,6 +12,16 @@
 #include "srx_module.h"
 #include "srx_val.h"
 
+#define ERR_IFACE(_iface, _err, _fmt, ...)				\
+	({								\
+		ERROR("%s: " _fmt, lydx_get_cattr(_iface, "name"),	\
+		      ##__VA_ARGS__);					\
+		_err;							\
+	})
+
+#define DEBUG_IFACE(_iface, _fmt, ...)				\
+	DEBUG("%s: " _fmt, lydx_get_cattr(_iface, "name"), ##__VA_ARGS__)
+
 static const char *iffeat[] = {
 	"if-mib",
 	NULL
@@ -363,6 +373,108 @@ static int netdag_gen_sysctl(struct dagger *net,
 	return err;
 }
 
+static int netdag_gen_vlan(struct dagger *net, struct lyd_node *dif,
+			   struct lyd_node *cif, FILE *ip)
+{
+	const char *parent, *ifname = lydx_get_cattr(cif, "name");
+	struct lydx_diff typed, vidd;
+	struct lyd_node *otag;
+	const char *proto;
+	int err;
+
+	DEBUG("");
+
+	parent = lydx_get_cattr(cif, "parent-interface");
+	fprintf(ip, " link %s", parent);
+
+	err = dagger_add_dep(net, ifname, parent);
+	if (err)
+		return ERR_IFACE(cif, err, "Unable to add dep \"%s\"", parent);
+
+	otag = lydx_get_descendant(lyd_child(dif ? : cif),
+				   "encapsulation",
+				   "dot1q-vlan",
+				   "outer-tag",
+				   NULL);
+	if (!otag)
+		return 0;
+
+	fprintf(ip, " type vlan");
+
+	if (lydx_get_diff(lydx_get_child(otag, "tag-type"), &typed)) {
+		if (!strcmp(typed.new, "ieee802-dot1q-types:c-vlan"))
+			proto = "802.1Q";
+		else if (!strcmp(typed.new, "ieee802-dot1q-types:s-vlan"))
+			proto = "802.1ad";
+		else
+			return ERR_IFACE(cif, -ENOSYS, "Unsupported tag type \"%s\"",
+					 typed.new);
+
+		fprintf(ip, " proto %s", proto);
+	}
+
+	if (lydx_get_diff(lydx_get_child(otag, "vlan-id"), &vidd))
+		fprintf(ip, " id %s", vidd.new);
+
+	DEBUG("");
+	return 0;
+}
+
+static int netdag_gen_afspec_add(struct dagger *net, struct lyd_node *dif,
+				 struct lyd_node *cif, FILE *ip)
+{
+	const char *ifname = lydx_get_cattr(cif, "name");
+	const char *iftype = lydx_get_cattr(cif, "type");
+	int err;
+
+	DEBUG_IFACE(dif, "");
+
+	fprintf(ip, "link add dev %s down", ifname);
+
+	if (iftype && !strcmp(iftype, "iana-if-type:l2vlan")) {
+		err = netdag_gen_vlan(net, NULL, cif, ip);
+	} else {
+		ERROR("Unable to add unsupported interface type \"%s\"",
+		      iftype);
+		return -ENOSYS;
+	}
+
+	if (err)
+		return err;
+
+	fputc('\n', ip);
+	return 0;
+}
+
+static int netdag_gen_afspec_set(struct dagger *net, struct lyd_node *dif,
+				 struct lyd_node *cif, FILE *ip)
+{
+	const char *iftype = lydx_get_cattr(cif, "type");
+
+	DEBUG_IFACE(dif, "");
+
+	if (iftype && !strcmp(iftype, "iana-if-type:l2vlan"))
+		return netdag_gen_vlan(net, dif, cif, ip);
+
+	ERROR("Unable to configure unsupported interface type \"%s\"", iftype);
+	return -ENOSYS;
+}
+
+static bool netdag_must_del(struct lyd_node *dif, struct lyd_node *cif)
+{
+	const char *iftype = lydx_get_cattr(cif, "type");
+
+	if (iftype && !strcmp(iftype, "iana-if-type:l2vlan"))
+		return lydx_get_cattr(dif, "parent-interface") ||
+			lydx_get_descendant(lyd_child(dif),
+					    "encapsulation",
+					    "dot1q-vlan",
+					    "outer-tag",
+					    NULL);
+
+	return false;
+}
+
 static int netdag_gen_iface_del(struct dagger *net, struct lyd_node *dif,
 				       struct lyd_node *cif, bool fixed)
 {
@@ -391,7 +503,6 @@ static sr_error_t netdag_gen_iface(struct dagger *net,
 {
 	const char *ifname = lydx_get_cattr(dif, "name");
 	enum lydx_op op = lydx_get_op(dif);
-	struct lyd_node *node;
 	const char *attr;
 	int err = 0;
 	bool fixed;
@@ -407,47 +518,57 @@ static sr_error_t netdag_gen_iface(struct dagger *net,
 		goto err;
 	}
 
+	/* Although, from a NETCONF perspective, we are handling a
+	 * modification, we may have to remove the interface and
+	 * recreate it from scratch.  E.g. Linux can't modify the
+	 * parent ("link") of an existing interface, but this is
+	 * perfectly legal according to the YANG model.
+	 */
+	if (op != LYDX_OP_CREATE && netdag_must_del(dif, cif)) {
+		DEBUG_IFACE(dif, "Must delete");
+
+		err = netdag_gen_iface_del(net, dif, cif, fixed);
+		if (err)
+			goto err;
+
+		/* Interface has been removed, convert the config to a
+		 * diff, so that all settings/addresses are applied
+		 * again.
+		 */
+		lyd_new_meta(cif->schema->module->ctx, cif, NULL,
+			     "yang:operation", "create", false, NULL);
+		dif = cif;
+		op = LYDX_OP_CREATE;
+	}
+
 	ip = dagger_fopen_next(net, "init", ifname, 50, "init.ip");
 	if (!ip) {
 		err = -EIO;
 		goto err;
 	}
 
-	node = lydx_get_descendant(lyd_child(dif), "encapsulation", "dot1q-vlan", "outer-tag", NULL);
-	if (node) {
-		struct lydx_diff typed, vidd;
-		struct lyd_node *type, *vid;
-		const char *parent;
-
-		type = lydx_get_child(node, "tag-type");
-		vid = lydx_get_child(node, "vlan-id");
-		if (!type || !vid)
+	if (!fixed && op == LYDX_OP_CREATE) {
+		err = netdag_gen_afspec_add(net, dif, cif, ip);
+		if (err)
 			goto err_close_ip;
-
-		lydx_get_diff(type, &typed);
-		lydx_get_diff(vid, &vidd);
-		if ((typed.old && strcmp(typed.new, typed.old)) || (vidd.old && strcmp(vidd.new, vidd.old)))
-			fprintf(ip, "link del %s", ifname);
-
-		parent = lydx_get_cattr(dif, "parent-interface");
-		fprintf(ip, "link add %s link %s type vlan id %s proto %s\n", ifname,
-			parent, vidd.val, strcmp(typed.val, "c-vlan") ? "802.1Q" : "802.1ad");
-	} else {
-		if ((op == LYDX_OP_CREATE) && !fixed)
-			fprintf(ip, "link add dev %s down\n", ifname);
 	}
 
+	fprintf(ip, "link set dev %s down", ifname);
+
 	/* Set generic link attributes */
-	fprintf(ip, "link set %s down", ifname);
 	err = err ? : netdag_gen_ipv4_autoconf(net, dif);
 	err = err ? : netdag_gen_ipv6_autoconf(ip, dif);
 	if (err)
 		goto err_close_ip;
 
-	/* Set type specific attributes */
-	/* TODO */
-
 	fputc('\n', ip);
+
+	/* Set type specific attributes */
+	if (!fixed && op != LYDX_OP_CREATE) {
+		err = netdag_gen_afspec_set(net, dif, cif, ip);
+		if (err)
+			goto err_close_ip;
+	}
 
 	/* Set Addresses */
 	err = err ? : netdag_gen_ipv4_addrs(ip, dif);
