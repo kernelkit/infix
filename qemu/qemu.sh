@@ -135,6 +135,8 @@ run_qemu()
 	  -display none -rtc base=utc,clock=vm \
 	  -device virtio-serial -chardev stdio,mux=on,id=console0 \
 	  -device virtconsole,chardev=console0 -mon chardev=console0 \
+	  -chardev socket,id=gdbserver,path=gdbserver.sock,server=on,wait=off \
+	  -device virtconsole,name=console1,chardev=gdbserver \
 	  $(loader_args) \
 	  $(rootfs_args) \
 	  $(rw_args) \
