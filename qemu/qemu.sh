@@ -184,7 +184,13 @@ if [ "$1" ]; then
     cd $1
 fi
 
-load_qemucfg .config
+if [ -f .config ]; then
+    # 'make run' from output/ or build directory
+    load_qemucfg .config
+else
+    # ./qemu.sh from output/images/ or release tarball
+    load_qemucfg qemu.cfg
+fi
 
 echo "Starting Qemu  ::  Ctrl-a x -- exit | Ctrl-a c -- toggle console/monitor"
 line=$(stty -g)
