@@ -78,7 +78,8 @@ do_abandon()
     [ "$next" ] && [ -d "$basedir/$next" ] \
 	|| abort "Next generation does not exist"
 
-    rm -rf "$basedir/$next" "$basedir/next"
+    mv "$basedir/$next" "$basedir/$next-ABANDONED-$(date +%F-%T)"
+    rm "$basedir/next"
     inform info "Abandoned generation $next"
 }
 
