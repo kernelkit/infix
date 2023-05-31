@@ -52,3 +52,7 @@ fi
 
 # For use outside of the build system, e.g., Qeneth
 ln -sf rootfs.squashfs "$BINARIES_DIR/$NAME$(ver).img"
+
+# Create the necessary files to run Qemu from a build
+grep QEMU_ "$BR2_CONFIG" | sed 's/"images[\/]*/"/g' > "/$BINARIES_DIR/qemu.cfg"
+cp "$BR2_EXTERNAL_INFIX_PATH/qemu/qemu.sh" "/$BINARIES_DIR/"
