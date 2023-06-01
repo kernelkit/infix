@@ -199,3 +199,38 @@ fail:
 	va_end(ap);
 	return str;
 }
+
+int srx_vnitems(sr_session_ctx_t *session, size_t *cntp, const char *fmt, va_list ap)
+{
+	sr_val_t *val = NULL;
+	va_list apdup;
+	int rc;
+
+	errno = 0;
+
+	va_copy(apdup, ap);
+	rc = srx_vaget(session, fmt, apdup, SR_UNKNOWN_T, &val, cntp);
+	va_end(apdup);
+
+	if (rc)
+		/* We don't care about srx_vaget's extra validation,
+		 * we're only interested in the number of items
+		 * found.
+		 */
+		return errno ? 0 : rc;
+
+	sr_free_values(val, *cntp);
+	return 0;
+}
+
+int srx_nitems(sr_session_ctx_t *session, size_t *cntp, const char *fmt, ...)
+{
+	va_list ap;
+	int rc;
+
+	va_start(ap, fmt);
+	rc = srx_vnitems(session, cntp, fmt, ap);
+	va_end(ap);
+
+	return rc;
+}
