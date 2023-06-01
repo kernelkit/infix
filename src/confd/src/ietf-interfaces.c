@@ -518,7 +518,7 @@ static int netdag_gen_afspec_add(struct dagger *net, struct lyd_node *dif,
 
 	fprintf(ip, "link add dev %s down", ifname);
 
-	if (iftype && !strcmp(iftype, "iana-if-type:l2vlan")) {
+	if (!strcmp(iftype, "iana-if-type:l2vlan")) {
 		err = netdag_gen_vlan(net, NULL, cif, ip);
 	} else {
 		ERROR("Unable to add unsupported interface type \"%s\"",
@@ -540,7 +540,7 @@ static int netdag_gen_afspec_set(struct dagger *net, struct lyd_node *dif,
 
 	DEBUG_IFACE(dif, "");
 
-	if (iftype && !strcmp(iftype, "iana-if-type:l2vlan"))
+	if (!strcmp(iftype, "iana-if-type:l2vlan"))
 		return netdag_gen_vlan(net, dif, cif, ip);
 
 	ERROR("Unable to configure unsupported interface type \"%s\"", iftype);
@@ -551,7 +551,7 @@ static bool netdag_must_del(struct lyd_node *dif, struct lyd_node *cif)
 {
 	const char *iftype = lydx_get_cattr(cif, "type");
 
-	if (iftype && !strcmp(iftype, "iana-if-type:l2vlan"))
+	if (!strcmp(iftype, "iana-if-type:l2vlan"))
 		return lydx_get_cattr(dif, "parent-interface") ||
 			lydx_get_descendant(lyd_child(dif),
 					    "encapsulation",
@@ -763,7 +763,8 @@ int ietf_interfaces_init(struct confd *confd)
 	if (rc)
 		goto fail;
 
-	REGISTER_CHANGE(confd->session, "ietf-interfaces", "/ietf-interfaces:interfaces", 0, ifchange, confd, &confd->sub);
+	REGISTER_CHANGE(confd->session, "ietf-interfaces", "/ietf-interfaces:interfaces",
+			0, ifchange, confd, &confd->sub);
 	REGISTER_CHANGE(confd->cand, "ietf-interfaces", "/ietf-interfaces:interfaces",
 			SR_SUBSCR_UPDATE, ifchange_cand, confd, &confd->sub);
 
