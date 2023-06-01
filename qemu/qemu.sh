@@ -1,4 +1,37 @@
 #!/bin/sh
+# This script can be used to start an Infix OS image in Qemu.  It reads
+# either a .config, generated from Config.in, or qemu.cfg from a release
+# tarball, for the required configuration data.
+#
+# Debian/Ubuntu users can change the configuration post-release, install
+# the kconfig-frontends package:
+#
+#    sudo apt install kconfig-frontends
+#
+# and then call this script with:
+#
+#    ./qemu.sh -c
+#
+# To bring up a menuconfig dialog.  Select `Exit` and save the changes.
+# For more help, see:_
+#
+#    ./qemu.sh -h
+#
+
+# Local variables
+prognm=$(basename "$0")
+
+usage()
+{
+    echo "usage: $prognm [opts] [buildroot-output-path]"
+    echo
+    echo " -c    Run menuconfig from release tarball or images diratory"
+    echo " -h    This help text"
+    echo
+    echo "Note: 'kconfig-frontends' must be installed for -c to work."
+
+    exit 0
+}
 
 die()
 {
@@ -179,16 +212,43 @@ dtb_args()
     fi
 }
 
+menuconfig()
+{
+    command -v kconfig-mconf >/dev/null || die "Cannot find kconfig-mconf, try installing the kconfig-frontends package."
+
+    # Setting CONFIG_ variable cannot be used to drop CONFIG_ prefix so
+    # we use sed to drop any such prefix on successful exit
+    kconfig-mconf Config.in
+    if [ -f .config ]; then
+	sed -i 's/CONFIG_//g' .config
+	exit 0
+    else
+	exit 1
+    fi
+}
+
+while [ "$1" != "" ]; do
+    case $1 in
+	-c)
+	    menuconfig
+	    ;;
+	-h | *)
+	    usage
+	    ;;
+    esac
+    shift
+done
+
 if [ "$1" ]; then
-    [ -d "$1" ] || die "Usage: qemu.sh <build-dir>"
-    cd $1
+    [ -d "$1" ] || usage
+    cd "$1" || die "Failed chanding to output directory $1"
 fi
 
+# 'make run' from output/ or build directory, but can also be ./qemu.sh
+# run from output/images/ or an unpacked release tarball.
 if [ -f .config ]; then
-    # 'make run' from output/ or build directory
     load_qemucfg .config
 else
-    # ./qemu.sh from output/images/ or release tarball
     load_qemucfg qemu.cfg
 fi
 
