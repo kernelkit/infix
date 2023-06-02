@@ -1,0 +1,128 @@
+#!/bin/sh
+
+set -e
+
+INFIX_TEST=ghcr.io/kernelkit/infix-test:0.2
+
+extract_yang()
+{
+    local imgfile="$1"
+
+    [ "$imgfile" ] || { true && return; }
+
+    unsquashfs -q -n -f \
+               -d $envdir/yangdir \
+	       "$imgfile" \
+	       /usr/share/yang
+
+    INFAMY_ARGS="$INFAMY_ARGS -y $envdir/yangdir"
+}
+
+start_topology()
+{
+    local qenethdir="$1"
+    local imgfile="$2"
+
+    [ "$qenethdir" ] || { true && return; }
+
+    rm -rf $envdir/qeneth
+    cp -a "$qenethdir" $envdir/qeneth
+    if [ "$imgfile" ]; then
+	local imgname=$(basename "$imgfile")
+	imgfile=$(readlink -f "$imgfile")
+
+	ln -sf "$imgfile" $envdir/qeneth/"$imgname"
+    fi
+
+    (cd $envdir/qeneth/ && $qeneth generate && $qeneth start)
+    INFAMY_ARGS="$INFAMY_ARGS $envdir/qeneth/topology.dot"
+}
+
+usage()
+{
+    cat <<EOF
+usage: test/env [-C] [-f <IMAGE>] [-q <QENETH-DIR>] <COMMAND> [<ARGS>...]
+
+  Run <COMMAND> in a pre-packaged container with all the packages
+  required for running the test suite installed.
+
+  Option:
+
+    -C
+      Don't containerize the command, run it directly in the current
+      namespaces
+
+    -f <IMAGE>
+      Infix image to test
+
+    -q <QENETH-DIR>
+      Directory containing a topology.dot.in, suitable for consumption
+      by qeneth
+EOF
+}
+
+testdir=$(dirname $(readlink -f "$0"))
+ixdir=$(readlink -f "$testdir/..")
+envdir="$HOME/.infix-test-venv"
+qeneth="$ixdir/qeneth/qeneth"
+
+# Global options
+containerize=yes
+while getopts "Cf:q:" opt; do
+    case ${opt} in
+	C)
+	    containerize=
+	    ;;
+	f)
+	    imgfile="$OPTARG"
+	    ;;
+	q)
+	    qenethdir="$OPTARG"
+	    ;;
+    esac
+done
+
+if [ "$containerize" ]; then
+    if which podman >/dev/null; then
+	runner=podman
+    elif which docker >/dev/null; then
+	runner=docker
+    else
+	echo "Error: Neither podman nor docker is installed"
+	exit 1
+    fi
+
+    kvm=
+    if [ -c /dev/kvm ]; then
+	kvm="--device=/dev/kvm"
+    fi
+
+    exec $runner run \
+	 --cap-add=NET_ADMIN \
+	 --device=/dev/net/tun \
+	 --interactive \
+	 --rm \
+	 --security-opt seccomp=unconfined \
+	 --sysctl net.ipv6.conf.all.disable_ipv6=0 \
+	 --tty \
+	 --volume "$ixdir":"$ixdir" \
+	 --workdir $(pwd) \
+	 $kvm \
+	 $INFIX_TEST \
+	 "$0" -C "$@"
+fi
+
+shift $((OPTIND - 1))
+
+if [ $# -lt 1 ]; then
+    usage && exit 1
+fi
+
+. "$envdir/bin/activate"
+export PYTHONPATH="$testdir"
+
+extract_yang "$imgfile"
+start_topology "$qenethdir" "$imgfile"
+export INFAMY_ARGS
+
+exec "$@"

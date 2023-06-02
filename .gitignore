@@ -3,4 +3,5 @@
 /.ccache
 /dl
 /output*
+/test/.venv
 /local.mk
