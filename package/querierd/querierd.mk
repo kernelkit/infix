@@ -4,7 +4,7 @@
 #
 ################################################################################
 
-QUERIERD_VERSION = 0.9
+QUERIERD_VERSION = 0.10
 QUERIERD_SITE    = \
 	https://github.com/westermo/querierd/releases/download/v$(QUERIERD_VERSION)
 QUERIERD_LICENSE = BSD-3-Clause
