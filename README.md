@@ -1,6 +1,10 @@
 <img align="right" src="doc/text3134.png" alt="Infix Linux Networking Made Easy">
 
 * [Introduction](#introduction)
+* [NETCONF Mode](#netconf-mode)
+  * [NETCONF Mode](#netconf-mode)
+  * [Classic Mode](#classic-mode)
+  * [Hybrid Mode](#hybrid-mode)
 * [Hardware](#hardware)
 * [Qemu](#qemu)
 * [GNS3](#gns3)
@@ -19,40 +23,50 @@ networked equipment.
 > See the [GitHub Releases](https://github.com/kernelkit/infix/releases)
 > page for out pre-built images.  The *Latest Build* has the bleeding edge
 > images, if possible we recommend using a versioned release.
+>
+> For customer specific builds of Infix, see your respective repository.
 
 Infix has two main *flavors*, or defconfigs:
 
- - **NETCONF:** the default, is configured using the `cli` tool, or any
-   external NETCONF client, after boot.  It uses sysrepo as the data
-   store to generate configuration files in `/etc` and control the
-   system daemons, e.g., enable DHCP client on an interface.
+ - **NETCONF:** the default, managed using, e.g., the `cli` tool
+ - **Classic:** built from `$ARCH_classic_defconfig`, more below
 
- - **Classic:** built from `$ARCH_classic_defconfig`.  Here it is up to
-   the administrator to modify configuration files in `/etc` and control
-   the system daemons using the `initctl` tool.  After login, see the
-   online `help` command for an introduction to the system.
-
-Both flavors have a `root` user, which is only allowed to log in from
-the console port, no password by default on standard builds.  There is
-also a `factory` user, password `reset`, to perform factory reset on
-systems that do not have a reset button.
-
-Additionally, the standard builds also have an `admin` user, which is
-allowed to log in from remote, password `admin` on standard builds.  It
-is the recommended account to use for managing Infix.
+Both flavors have an `admin` user, which is allowed to log in from
+remote, password `admin` on standard builds.  It is the recommended
+account to use for managing Infix.  (The `root` account is currently
+also available, but will soon become a non-login account used only for
+running system services.)
 
 
-Hybrid Mode
------------
+### NETCONF Mode
 
-Since Infix is under heavy development, it does not yet have all its
-bells and whistles in place, in particular the default build.  To that
-end it is possible to manually manage certain services that are not yet
+NETCONF is the primary reason Infix exists.  Configuration of an Infix
+device can be done either remotely, using tools like [netconf-client][]
+or [netopeer2-cli][], or locally using the [`cli` tool](doc/cli.md).
+
+Infix use [sysrepo][6] as the data store for NETCONF.  A set of plugins
+configure the network, using iproute2, generate configuration files in
+`/etc`, and control the system daemons, e.g., enable DHCP client on an
+interface.
+
+
+### Classic Mode
+
+Here it is up to the administrator to modify configuration files in
+`/etc` and control the system daemons using the `initctl` tool.
+
+See the online `help` command for an introduction to the system.
+
+
+### Hybrid Mode
+
+Since Infix is under heavy development, it does not yet have all bells
+and whistles in place, in particular in the default build.  To that end
+it is possible to manually manage certain services that are not yet
 possible to configure using NETCONF.
 
-At bootstrap Finit can optionally start scripts from a [run-parts(8)][]
-like directory: `/cfg/start.d`.  To enable this mode, see the following
-examples:
+At bootstrap Finit can start user scripts from a [run-parts(8)][] like
+directory: `/cfg/start.d`.  For example, the following starts OSPF:
 
 ```sh
 root@infix:~$ mkdir /cfg/start.d
@@ -192,9 +206,12 @@ any GPL[^1] licensed library.
 [5]: https://lwn.net/Articles/117972/
 [6]: https://www.sysrepo.org/
 [7]: https://github.com/wkz/qeneth
+[8]: https://addiva-elektronik.github.io/2023/05/12/using-netconf-client-and-server-to-update-switch-configuration/
 [9]: https://docs.gns3.com/docs/using-gns3/beginners/import-gns3-appliance/
 [QEMU]: https://www.qemu.org/
 [GNS3]: https://gns3.com/
 [training]: https://addiva-elektronik.github.io/
 [manual]: https://buildroot.org/downloads/manual/manual.html
 [run-parts(8)]: https://manpages.ubuntu.com/manpages/trusty/man8/run-parts.8.html
+[netconf-client]: https://pypi.org/project/netconf-client/
+[netopeer2-cli]: https://github.com/CESNET/netopeer2
