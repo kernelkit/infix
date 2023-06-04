@@ -23,14 +23,15 @@ prognm=$(basename "$0")
 
 usage()
 {
-    echo "usage: $prognm [opts] [buildroot-output-path]"
+    echo "usage: $prognm [opts]"
     echo
-    echo " -c    Run menuconfig from release tarball or images diratory"
+    echo " -c    Run menuconfig to change Qemu settings"
     echo " -h    This help text"
     echo
-    echo "Note: 'kconfig-frontends' must be installed for -c to work."
+    echo "Note: 'kconfig-frontends' package (Debian/Ubuntu) must be installed"
+    echo "      for -c to work: sudo apt install kconfig-frontents"
 
-    exit 0
+    exit 1
 }
 
 die()
@@ -43,40 +44,40 @@ load_qemucfg()
 {
     local tmp=$(mktemp -p /tmp)
 
-    grep ^QEMU_ $1 >$tmp
+    grep ^CONFIG_QEMU_ $1 >$tmp
     .  $tmp
     rm $tmp
 
-    [ "$QEMU_MACHINE" ] || die "Missing QEMU_MACHINE"
-    [ "$QEMU_ROOTFS"  ] || die "Missing QEMU_ROOTFS"
+    [ "$CONFIG_QEMU_MACHINE" ] || die "Missing QEMU_MACHINE"
+    [ "$CONFIG_QEMU_ROOTFS"  ] || die "Missing QEMU_ROOTFS"
 
-    [ "$QEMU_KERNEL" -a "$QEMU_BIOS" ] \
+    [ "$CONFIG_QEMU_KERNEL" -a "$CONFIG_QEMU_BIOS" ] \
 	&& die "QEMU_KERNEL conflicts with QEMU_BIOS"
 
-    [ ! "$QEMU_KERNEL" -a ! "$QEMU_BIOS"  ] \
+    [ ! "$CONFIG_QEMU_KERNEL" -a ! "$CONFIG_QEMU_BIOS" ] \
 	&& die "QEMU_KERNEL or QEMU_BIOS must be set"
 }
 
 loader_args()
 {
-    if [ "$QEMU_BIOS" ]; then
-	echo -n "-bios $QEMU_BIOS "
-    elif [ "$QEMU_KERNEL" ]; then
-	echo -n "-kernel $QEMU_KERNEL "
+    if [ "$CONFIG_QEMU_BIOS" ]; then
+	echo -n "-bios $CONFIG_QEMU_BIOS "
+    elif [ "$CONFIG_QEMU_KERNEL" ]; then
+	echo -n "-kernel $CONFIG_QEMU_KERNEL "
     fi
 }
 
 append_args()
 {
 # Disabled, not needed anymore with virtconsole (hvc0)
-#    [ "$QEMU_CONSOLE" ] && echo -n "console=$QEMU_CONSOLE "
+#    [ "$CONFIG_QEMU_CONSOLE" ] && echo -n "console=$CONFIG_QEMU_CONSOLE "
 
     echo -n "console=hvc0 "
-    if [ "$QEMU_ROOTFS_INITRD" = "y" ]; then
+    if [ "$CONFIG_QEMU_ROOTFS_INITRD" = "y" ]; then
 	# Size of initrd, rounded up to nearest kb
-	local size=$((($(stat -c %s $QEMU_ROOTFS) + 1023) >> 10))
+	local size=$((($(stat -c %s $CONFIG_QEMU_ROOTFS) + 1023) >> 10))
 	echo -n "root=/dev/ram ramdisk_size=${size} "
-    elif [ "$QEMU_ROOTFS_VSCSI" = "y" ]; then
+    elif [ "$CONFIG_QEMU_ROOTFS_VSCSI" = "y" ]; then
 	echo -n "root=PARTLABEL=primary "
     fi
 
@@ -91,35 +92,35 @@ append_args()
 
 rootfs_args()
 {
-    if [ "$QEMU_ROOTFS_INITRD" = "y" ]; then
-	echo -n "-initrd $QEMU_ROOTFS "
-    elif [ "$QEMU_ROOTFS_MMC" = "y" ]; then
+    if [ "$CONFIG_QEMU_ROOTFS_INITRD" = "y" ]; then
+	echo -n "-initrd $CONFIG_QEMU_ROOTFS "
+    elif [ "$CONFIG_QEMU_ROOTFS_MMC" = "y" ]; then
 	echo -n "-device sdhci-pci "
 	echo -n "-device sd-card,drive=mmc "
-	echo -n "-drive id=mmc,file=$QEMU_ROOTFS,if=none,format=raw "
-    elif [ "$QEMU_ROOTFS_VSCSI" = "y" ]; then
-	echo -n "-drive file=$QEMU_ROOTFS,if=virtio,format=raw,bus=0,unit=0 "
+	echo -n "-drive id=mmc,file=$CONFIG_QEMU_ROOTFS,if=none,format=raw "
+    elif [ "$CONFIG_QEMU_ROOTFS_VSCSI" = "y" ]; then
+	echo -n "-drive file=$CONFIG_QEMU_ROOTFS,if=virtio,format=raw,bus=0,unit=0 "
     fi
 }
 
 rw_args()
 {
-    [ "$QEMU_RW" ] || return
+    [ "$CONFIG_QEMU_RW" ] || return
 
-    if ! [ -f "$QEMU_RW" ]; then
-	dd if=/dev/zero of="$QEMU_RW" bs=16M count=1 >/dev/null 2>&1
-	mkfs.ext4 -L cfg "$QEMU_RW" >/dev/null 2>&1
+    if ! [ -f "$CONFIG_QEMU_RW" ]; then
+	dd if=/dev/zero of="$CONFIG_QEMU_RW" bs=16M count=1 >/dev/null 2>&1
+	mkfs.ext4 -L cfg "$CONFIG_QEMU_RW" >/dev/null 2>&1
     fi
 
-    echo -n "-drive file=$QEMU_RW,if=virtio,format=raw,bus=0,unit=1 "
+    echo -n "-drive file=$CONFIG_QEMU_RW,if=virtio,format=raw,bus=0,unit=1 "
 
-    if [ "$QEMU_RW_VAR_OPT" ]; then
-	if ! [ -f "$QEMU_RW_VAR" ]; then
-	    dd if=/dev/zero of="$QEMU_RW_VAR" bs=256M count=1 >/dev/null 2>&1
-	    mkfs.ext4 -L var "$QEMU_RW_VAR" >/dev/null 2>&1
+    if [ "$CONFIG_QEMU_RW_VAR_OPT" ]; then
+	if ! [ -f "$CONFIG_QEMU_RW_VAR" ]; then
+	    dd if=/dev/zero of="$CONFIG_QEMU_RW_VAR" bs=256M count=1 >/dev/null 2>&1
+	    mkfs.ext4 -L var "$CONFIG_QEMU_RW_VAR" >/dev/null 2>&1
 	fi
 
-	echo -n "-drive file=$QEMU_RW_VAR,if=virtio,format=raw,bus=0,unit=2 "
+	echo -n "-drive file=$CONFIG_QEMU_RW_VAR,if=virtio,format=raw,bus=0,unit=2 "
     fi
 }
 
@@ -134,22 +135,22 @@ net_args()
 {
     QEMU_NET_MODEL=${QEMU_NET_MODEL:-virtio}
 
-    if [ "$QEMU_NET_BRIDGE" = "y" ]; then
+    if [ "$CONFIG_QEMU_NET_BRIDGE" = "y" ]; then
 	QEMU_NET_BRIDGE_DEV=${QEMU_NET_BRIDGE_DEV:-virbr0}
-	echo -n "-nic bridge,br=$QEMU_NET_BRIDGE_DEV,model=$QEMU_NET_MODEL "
-    elif [ "$QEMU_NET_TAP" = "y" ]; then
+	echo -n "-nic bridge,br=$CONFIG_QEMU_NET_BRIDGE_DEV,model=$CONFIG_QEMU_NET_MODEL "
+    elif [ "$CONFIG_QEMU_NET_TAP" = "y" ]; then
 	QEMU_NET_TAP_N=${QEMU_NET_TAP_N:-1}
-	mactab=$(dirname "$QEMU_ROOTFS")/mactab
+	mactab=$(dirname "$CONFIG_QEMU_ROOTFS")/mactab
 	rm -f "$mactab"
-	for i in $(seq 0 $(($QEMU_NET_TAP_N - 1))); do
+	for i in $(seq 0 $(($CONFIG_QEMU_NET_TAP_N - 1))); do
 	    printf "e$i	52:54:00:12:34:%02x\n" $((0x56 + i)) >>"$mactab"
 	    echo -n "-netdev tap,id=nd$i,ifname=qtap$i -device e1000,netdev=nd$i "
 	done
 	echo -n "-fw_cfg name=opt/mactab,file=$mactab "
-    elif [ "$QEMU_NET_USER" = "y" ]; then
-	[ "$QEMU_NET_USER_OPTS" ] && QEMU_NET_USER_OPTS="$QEMU_NET_USER_OPTS,"
+    elif [ "$CONFIG_QEMU_NET_USER" = "y" ]; then
+	[ "$CONFIG_QEMU_NET_USER_OPTS" ] && QEMU_NET_USER_OPTS="$CONFIG_QEMU_NET_USER_OPTS,"
 
-	echo -n "-nic user,${QEMU_NET_USER_OPTS}model=$QEMU_NET_MODEL "
+	echo -n "-nic user,${QEMU_NET_USER_OPTS}model=$CONFIG_QEMU_NET_MODEL "
     else
 	echo -n "-nic none"
     fi
@@ -164,7 +165,7 @@ run_qemu()
 {
     local qemu
     read qemu <<EOF
-	$QEMU_MACHINE \
+	$CONFIG_QEMU_MACHINE \
 	  -display none -rtc base=utc,clock=vm \
 	  -device virtio-serial -chardev stdio,mux=on,id=console0 \
 	  -device virtconsole,chardev=console0 -mon chardev=console0 \
@@ -176,10 +177,10 @@ run_qemu()
 	  $(host_args) \
 	  $(net_args) \
 	  $(wdt_args) \
-	  $QEMU_EXTRA
+	  $CONFIG_QEMU_EXTRA
 EOF
 
-    if [ "$QEMU_KERNEL" ]; then
+    if [ "$CONFIG_QEMU_KERNEL" ]; then
 	$qemu -append "$(append_args)" "$@"
     else
 	$qemu "$@"
@@ -188,43 +189,35 @@ EOF
 
 dtb_args()
 {
-    [ "$QEMU_LOADER_UBOOT" ] || return
+    [ "$CONFIG_QEMU_LOADER_UBOOT" ] || return
 
-    if [ "$QEMU_DTB_EXTEND" ]; then
+    if [ "$CONFIG_QEMU_DTB_EXTEND" ]; then
 	# On the current architecture, QEMU will generate an internal
 	# DT based on the system configuration.
 
 	# So we extract a copy of that
-	run_qemu -M dumpdtb=images/qemu.dtb >/dev/null 2>&1
+	run_qemu -M dumpdtb=qemu.dtb >/dev/null 2>&1
 
 	# Extend it with the environment and signing information in
 	# u-boot.dtb.
-	echo "images/qemu.dtb images/u-boot.dtb" | \
+	echo "qemu.dtb u-boot.dtb" | \
 	    xargs -n 1 dtc -I dtb -O dts | \
 	    { echo "/dts-v1/;"; sed  -e 's:/dts-v[0-9]\+/;::'; } | \
-	    dtc >images/qemu-extended.dtb 2>/dev/null
+	    dtc >qemu-extended.dtb 2>/dev/null
 
 	# And use the combined result to start the instance
-	echo -n "-dtb images/qemu-extended.dtb "
+	echo -n "-dtb qemu-extended.dtb "
     else
 	# Otherwise we just use the unmodified one
-	echo -n "-dtb images/u-boot.dtb "
+	echo -n "-dtb u-boot.dtb "
     fi
 }
 
 menuconfig()
 {
-    command -v kconfig-mconf >/dev/null || die "Cannot find kconfig-mconf, try installing the kconfig-frontends package."
-
-    # Setting CONFIG_ variable cannot be used to drop CONFIG_ prefix so
-    # we use sed to drop any such prefix on successful exit
-    kconfig-mconf Config.in
-    if [ -f .config ]; then
-	sed -i 's/CONFIG_//g' .config
-	exit 0
-    else
-	exit 1
-    fi
+    grep -q QEMU_MACHINE Config.in || die "$prognm: must be run from the output/images directory"
+    command -v kconfig-mconf >/dev/null || die "$prognm: cannot find kconfig-mconf for menuconfig"
+    exec kconfig-mconf Config.in
 }
 
 while [ "$1" != "" ]; do
@@ -232,23 +225,20 @@ while [ "$1" != "" ]; do
 	-c)
 	    menuconfig
 	    ;;
-	-h | *)
+	-h)
 	    usage
 	    ;;
+	*)
+	    break
     esac
     shift
 done
 
-if [ "$1" ]; then
-    [ -d "$1" ] || usage
-    cd "$1" || die "Failed chanding to output directory $1"
-fi
-
-# 'make run' from output/ or build directory, but can also be ./qemu.sh
-# run from output/images/ or an unpacked release tarball.
 if [ -f .config ]; then
+    # Customized settings from 'qemu.sh -c'
     load_qemucfg .config
 else
+    # Shipped defaults from release tarball
     load_qemucfg qemu.cfg
 fi
 

@@ -1,4 +1,18 @@
-comment "System setup"
+mainmenu "QEMU Virtualization"
+
+choice
+	prompt "Target Architecture"
+	default QEMU_aarch64
+
+config QEMU_x86_64
+	bool "x86_64"
+	select QEMU_ARCH_IS_64
+
+config QEMU_aarch64
+	bool "AArch64 (little endian)"
+	select QEMU_ARCH_IS_64
+
+endchoice
 
 choice
 	prompt "Loader"
@@ -9,11 +23,11 @@ config QEMU_LOADER_KERNEL
 
 config QEMU_LOADER_UBOOT
 	bool "U-Boot"
-	depends on BR2_aarch64
+	depends on QEMU_aarch64
 
 config QEMU_LOADER_OVMF
 	bool "OVMF (UEFI)"
-	depends on BR2_x86_64
+	depends on QEMU_x86_64
 
 endchoice
 
@@ -34,41 +48,41 @@ endchoice
 
 config QEMU_MACHINE
 	string
-	default "qemu-system-aarch64 -M virt -cpu cortex-a72 -m 256M"   if BR2_aarch64
-	default "qemu-system-x86_64 -M q35,accel=kvm -cpu host -m 512M" if BR2_x86_64
+	default "qemu-system-aarch64 -M virt -cpu cortex-a72 -m 256M"   if QEMU_aarch64
+	default "qemu-system-x86_64 -M q35,accel=kvm -cpu host -m 512M" if QEMU_x86_64
 
 config QEMU_KERNEL
 	string
 	depends on QEMU_LOADER_KERNEL
-	default "images/Image"   if BR2_aarch64
-	default "images/bzImage" if BR2_x86_64
+	default "Image"   if QEMU_aarch64
+	default "bzImage" if QEMU_x86_64
 
 config QEMU_BIOS
 	string
 	depends on !QEMU_LOADER_KERNEL
-	default "images/u-boot.bin" if QEMU_LOADER_UBOOT
-	default "images/OVMF.fd"    if QEMU_LOADER_OVMF
+	default "u-boot.bin" if QEMU_LOADER_UBOOT
+	default "OVMF.fd"    if QEMU_LOADER_OVMF
 
 config QEMU_ROOTFS
 	string
-	default "images/disk.img"        if !QEMU_ROOTFS_INITRD
-	default "images/rootfs.squashfs" if QEMU_ROOTFS_INITRD
+	default "disk.img"        if !QEMU_ROOTFS_INITRD
+	default "rootfs.squashfs" if QEMU_ROOTFS_INITRD
 
 config QEMU_CONSOLE
 	string
 	depends on !QEMU_ROOTFS_MMC
-	default "ttyAMA0" if BR2_aarch64
-	default "ttyS0"   if BR2_x86_64
+	default "ttyAMA0" if QEMU_aarch64
+	default "ttyS0"   if QEMU_x86_64
 
 config QEMU_DTB_EXTEND
 	bool
 	depends on QEMU_LOADER_UBOOT
-	default y if BR2_aarch64
+	default y if QEMU_aarch64
 
 config QEMU_RW
 	string "Writable /cfg layer"
 	depends on QEMU_ROOTFS_INITRD
-	default "images/cfg.ext4"
+	default "cfg.ext4"
 
 config QEMU_RW_VAR_OPT
 	bool "Separate writable /var (256MB)"
@@ -77,12 +91,12 @@ if QEMU_RW_VAR_OPT
 
 config QEMU_RW_VAR
 	string "Writable /var layer"
-	default "images/var.ext4"
+	default "var.ext4"
 endif
 
 config QEMU_HOST
 	string "Export host filesystem path"
-	default "images"
+	default "/tmp"
 
 config QEMU_APPEND
 	string "Extra kernel options"
@@ -130,5 +144,3 @@ config QEMU_NET_TAP_N
 	int "Number of TAPs"
 	depends on QEMU_NET_TAP
 	default 1
-
-
