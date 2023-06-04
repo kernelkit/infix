@@ -11,6 +11,8 @@ local.mk:
 
 .PHONY: run
 run:
-	@$(BR2_EXTERNAL_INFIX_PATH)/qemu/qemu.sh $O
+	@(cd $O/images && ./qemu.sh)
 
-
+.PHONY: run-menuconfig
+run-menuconfig:
+	@(cd $O/images && CONFIG_="CONFIG_" BR2_CONFIG=".config" ../build/buildroot-config/mconf Config.in)
