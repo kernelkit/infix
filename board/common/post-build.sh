@@ -1,15 +1,17 @@
 #!/bin/sh
-. "$BR2_CONFIG"
+# shellcheck disable=SC1090,SC1091
+. "$BR2_CONFIG" 2>/dev/null
 . "$TARGET_DIR/usr/lib/os-release"
+
 if [ -n "${ID_LIKE}" ]; then
     ID="${ID} ${ID_LIKE}"
 fi
 
-GIT_VERSION=$(git -C $BR2_EXTERNAL_INFIX_PATH describe --always --dirty --tags)
+GIT_VERSION=$(git -C "$BR2_EXTERNAL_INFIX_PATH" describe --always --dirty --tags)
 
 # This is a symlink to /usr/lib/os-release, so we remove this to keep
 # original Buildroot information.
-rm "$TARGET_DIR/etc/os-release"
+rm -f "$TARGET_DIR/etc/os-release"
 {
     echo "NAME=\"Infix\""
     echo "VERSION=${GIT_VERSION}"
