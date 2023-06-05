@@ -9,6 +9,7 @@ LT_INIT
 AC_CONFIG_FILES([
 	Makefile
 	src/Makefile
+	src/confd/Makefile
 	yang/Makefile
 ])
 
