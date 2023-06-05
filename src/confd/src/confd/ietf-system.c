@@ -26,9 +26,8 @@ static const char *sysfeat[] = {
 };
 
 static const struct srx_module_requirement ietf_system_reqs[] = {
-	{ .dir = YANG_PATH_, .name = "ietf-system", .rev = "2014-08-06", .features = sysfeat },
+	{ .dir = YANG_PATH_, .name = "ietf-system",  .rev = "2014-08-06", .features = sysfeat },
 	{ .dir = YANG_PATH_, .name = "infix-system", .rev = "2023-04-11" },
-
 	{ NULL }
 };
 

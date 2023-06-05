@@ -21,10 +21,4 @@ int asprintf(char **strp, const char *fmt, ...);
 #define ERROR(fmt, ...) syslog(LOG_ERR, "%s: " fmt, __func__, ##__VA_ARGS__)
 #define ERRNO(fmt, ...) syslog(LOG_ERR, "%s: " fmt ": %s", __func__, ##__VA_ARGS__, strerror(errno))
 
-static const struct srx_module_requirement core_reqs[] = {
-	{ .dir = YANG_PATH_, .name = "kernelkit-infix-deviations", .rev = "2023-04-03" },
-
-	{ NULL }
-};
-
 #endif	/* CONFD_COMMON_H_ */

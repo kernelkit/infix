@@ -1,20 +1,30 @@
 module infix-system {
-	prefix "infix-sys";
-	yang-version 1.1;
-	namespace "urn:infix:params:xml:ns:yang:infix-system";
+  yang-version 1.1;
+  namespace "urn:infix:system:ns:yang:1.0";
+  prefix infix-sys;
 
-	import ietf-system {
-		prefix "sys";
-	}
+  import ietf-system {
+    prefix sys;
+  }
 
-	revision 2023-04-11 {
-		description "Initial revision.";
-	}
+  organization "KernelKit";
+  contact      "kernelkit@googlegroups.com";
+  description  "Infix augments and deviations to ietf-system.";
 
-	augment "/sys:system" {
-		leaf motd {
-			type string;
-			description "Set the MotD (Message of the Day), which is shown after login";
-		}
-	}
+  revision 2023-04-11 {
+    description "Initial revision.";
+    reference "internal";
+  }
+
+  augment "/sys:system" {
+    description "Augments to ietf-system not found in any other model.";
+    leaf motd {
+      type string;
+      description "Set the MotD (Message of the Day), shown after login";
+    }
+  }
+
+  deviation "/sys:system/sys:clock/sys:timezone/sys:timezone-utc-offset/sys:timezone-utc-offset" {
+    deviate not-supported;
+  }
 }
