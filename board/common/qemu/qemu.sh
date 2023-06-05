@@ -220,6 +220,8 @@ menuconfig()
     exec kconfig-mconf Config.in
 }
 
+cd $(dirname $(readlink -f "$0"))
+
 while [ "$1" != "" ]; do
     case $1 in
 	-c)
