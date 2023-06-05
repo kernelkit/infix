@@ -11,8 +11,9 @@ local.mk:
 
 .PHONY: run
 run:
-	@(cd $O/images && ./qemu.sh)
+	@$(BINARIES_DIR)/qemu.sh
 
 .PHONY: run-menuconfig
 run-menuconfig:
-	@(cd $O/images && CONFIG_="CONFIG_" BR2_CONFIG=".config" ../build/buildroot-config/mconf Config.in)
+	CONFIG_="CONFIG_" BR2_CONFIG="$(BINARIES_DIR)/.config" \
+		$(BUILD_DIR)/buildroot-config/mconf $(BINARIES_DIR)/Config.in
