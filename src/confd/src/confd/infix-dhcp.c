@@ -8,7 +8,7 @@
 #include <sys/types.h>
 
 #include "core.h"
-#include "lyx.h"
+#include "../lib/lyx.h"
 #include "srx_module.h"
 #include "srx_val.h"
 
