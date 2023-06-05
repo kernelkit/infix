@@ -2,7 +2,7 @@
 
 #include <libyang/libyang.h>
 
-#include "core.h"
+#include "common.h"
 #include "srx_module.h"
 
 sr_error_t srx_require_module(sr_conn_ctx_t *conn,

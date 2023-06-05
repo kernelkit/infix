@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: BSD-3-Clause */
 
 #include <stdarg.h>
-#include "core.h"
+#include "common.h"
 #include "lyx.h"
 
 enum lydx_op lydx_get_op(struct lyd_node *node)

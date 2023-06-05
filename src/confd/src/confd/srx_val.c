@@ -2,6 +2,7 @@
 
 #include <stdarg.h>
 #include "core.h"
+#include "../lib/common.h"
 
 sr_error_t srx_get_diff(sr_session_ctx_t *session, struct lyd_node **treep)
 {
