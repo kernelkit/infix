@@ -105,10 +105,6 @@ int sr_plugin_init_cb(sr_session_ctx_t *session, void **priv)
 
 	/* YOUR_INIT GOES HERE */
 
-	rc = srx_require_modules(confd.conn, core_reqs);
-	if (rc)
-		goto err;
-
 	return SR_ERR_OK;
 err:
 	ERROR("init failed: %s", sr_strerror(rc));

@@ -230,12 +230,6 @@ int sr_plugin_init_cb(sr_session_ctx_t *session, void **priv)
 		return err;
 	}
 
-	err = srx_require_modules(conn, core_reqs);
-	if (err) {
-		ERROR("Error requiring OP modules: %s", sr_strerror(err));
-		return err;
-	}
-
 	return SR_ERR_OK;
 }
 
