@@ -9,7 +9,7 @@
 #include "core.h"
 #include "dagger.h"
 #include "../lib/lyx.h"
-#include "srx_module.h"
+#include "../lib/srx_module.h"
 #include "srx_val.h"
 
 #define ERR_IFACE(_iface, _err, _fmt, ...)				\
