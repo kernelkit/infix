@@ -8,6 +8,7 @@
 
 #include "core.h"
 #include "dagger.h"
+#include "../lib/common.h"
 #include "../lib/lyx.h"
 #include "../lib/srx_module.h"
 #include "srx_val.h"

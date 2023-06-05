@@ -20,21 +20,10 @@
 #include <sysrepo/values.h>
 #include <sysrepo/xpath.h>
 
+#include "../lib/common.h"
 #include "dagger.h"
 #include "helpers.h"
 #include "systemv.h"
-
-#ifndef HAVE_VASPRINTF
-int vasprintf(char **strp, const char *fmt, va_list ap);
-#endif
-#ifndef HAVE_ASPRINTF
-int asprintf(char **strp, const char *fmt, ...);
-#endif
-
-#define DEBUG(fmt, ...)
-//#define DEBUG(fmt, ...) syslog(LOG_DEBUG, "%s: "fmt, __func__, ##__VA_ARGS__)
-#define ERROR(fmt, ...) syslog(LOG_ERR, "%s: " fmt, __func__, ##__VA_ARGS__)
-#define ERRNO(fmt, ...) syslog(LOG_ERR, "%s: " fmt ": %s", __func__, ##__VA_ARGS__, strerror(errno))
 
 #define CB_PRIO_PRIMARY   65535
 #define CB_PRIO_PASSIVE   65000

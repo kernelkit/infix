@@ -2,6 +2,7 @@
 
 #include "core.h"
 #include "dagger.h"
+#include "../lib/common.h"
 
 static FILE *dagger_fopen(struct dagger *d, int gen, const char *action,
 			  const char *node, unsigned char prio,

@@ -2,6 +2,7 @@
 
 #include "core.h"
 #include "../lib/srx_module.h"
+#include "../lib/common.h"
 
 static struct confd confd;
 
@@ -62,12 +63,6 @@ int core_post_hook(sr_session_ctx_t *session, uint32_t sub_id, const char *modul
 
 	return SR_ERR_OK;
 }
-
-static const struct srx_module_requirement core_reqs[] = {
-	{ .dir = YANG_PATH_, .name = "kernelkit-infix-deviations", .rev = "2023-04-03" },
-
-	{ NULL }
-};
 
 int sr_plugin_init_cb(sr_session_ctx_t *session, void **priv)
 {
