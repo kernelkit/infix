@@ -9,7 +9,7 @@
 
 #include "core.h"
 #include "../lib/lyx.h"
-#include "srx_module.h"
+#include "../lib/srx_module.h"
 #include "srx_val.h"
 
 static const struct srx_module_requirement infix_dhcp_reqs[] = {
