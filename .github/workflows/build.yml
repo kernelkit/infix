@@ -64,6 +64,10 @@ jobs:
           echo "Buildring $target ..."
           make $target
           make
+      - name: Test
+        if: matrix.platform == 'x86_64' && matrix.variant == 'netconf'
+        run: |
+          make infix-check
       - name: Prepare Artifact
         run: |
           cd output
