@@ -1,67 +1,35 @@
 /* SPDX-License-Identifier: BSD-3-Clause */
 
+#include <errno.h>
 #include <libyang/libyang.h>
 
 #include "common.h"
 #include "srx_module.h"
 
-sr_error_t srx_require_module(sr_conn_ctx_t *conn,
-			      const struct srx_module_requirement *mr)
+sr_error_t srx_require_module(sr_conn_ctx_t *conn, const struct srx_module_requirement *mr)
 {
 	sr_error_t err = SR_ERR_OK;
-	const struct ly_ctx *ly;
-	struct lys_module *mod;
-	const char **f;
 	char *path;
 	int len;
 
-	ly = sr_acquire_context(conn);
-	if (!ly)
-		return SR_ERR_INVAL_ARG;
-
-	mod = ly_ctx_get_module(ly, mr->name, mr->rev);
-	sr_release_context(conn);
-
-	if (mod && mod->implemented) {
-		if (!mr->features)
-			return SR_ERR_OK;
-
-		for (f = mr->features; *f; f++) {
-			switch (lys_feature_value(mod, *f)) {
-			case LY_SUCCESS:
-				continue;
-			case LY_ENOT:
-				err = sr_enable_module_feature(conn, mr->name, *f);
-				if (err)
-					return err;
-				break;
-			default:
-				return SR_ERR_UNSUPPORTED;
-			}
-		}
-	} else {
-		/* `search_dirs` argument is ignored by sysrepo 2.2.60,
-		 * so we supply the full path instead.
-		 */
-		len = asprintf(&path, "%s/%s%s%s.yang", mr->dir ? : "", mr->name,
-			       mr->rev ? "@" : "", mr->rev ? : "");
-		if (len > 0) {
-			err = sr_install_module(conn, path, NULL, mr->features);
-			free(path);
-		}
+	len = asprintf(&path, "%s%s%s.yang", mr->name, mr->rev ? "@" : "", mr->rev ? : "");
+	if (len == -1) {
+		ERROR("failed asprintf(): %s", strerror(errno));
+		return SR_ERR_SYS;
 	}
 
-	/*
-	 * XXX: allow admin users access to the same modules as 'root'
-	 */
-	if (!err) {
-		int i;
+	err = sr_install_module2(conn, path, mr->dir, mr->features, NULL,
+				 "root", "wheel", 0660, NULL, NULL, 0);
+	free(path);
+	if (err == SR_ERR_EXISTS) {
+		/* Probably loaded as a dependency */
+		err = 0;
 
-		for (i = 0; i < SR_MOD_DS_PLUGIN_COUNT; i++) {
-			err = sr_set_module_ds_access(conn, mr->name, i, "root", "wheel", 0660);
+		/* Ensure all requested features are enabled */
+		for (int i = 0; mr->features[i]; i++) {
+			err = sr_enable_module_feature(conn, mr->name, mr->features[i]);
 			if (err) {
-				ERROR("Failed setting group 'wheel' permissions on %s", mr->name);
-				err = 0;
+				ERROR("failed enabling %s:%s, error %d", mr->name, mr->features[i], err);
 			}
 		}
 	}
@@ -69,8 +37,7 @@ sr_error_t srx_require_module(sr_conn_ctx_t *conn,
 	return err;
 }
 
-sr_error_t srx_require_modules(sr_conn_ctx_t *conn,
-			       const struct srx_module_requirement *mrs)
+sr_error_t srx_require_modules(sr_conn_ctx_t *conn, const struct srx_module_requirement *mrs)
 {
 	sr_error_t err = SR_ERR_OK;
 

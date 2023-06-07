@@ -1,0 +1,135 @@
+From 5e919a20585392b4f2e0344bee2ac54d59c91ba4 Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Wed, 7 Jun 2023 15:19:13 +0200
+Subject: [PATCH] Refactor _sr_install_modules() to use ly_ctx_load_module()
+Organization: Addiva Elektronik
+
+This fixes issues with sysrepo discarding searchpaths and thus not
+supporting include statements with yang submodules.  By delegating all
+the logic to libyang we can trust it resolves all YANG features.
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ src/common.c  |  5 ++++-
+ src/common.h  |  3 ++-
+ src/sysrepo.c | 29 ++++++++++++++++-------------
+ 3 files changed, 22 insertions(+), 15 deletions(-)
+
+diff --git a/src/common.c b/src/common.c
+index 08630446..84149063 100644
+--- a/src/common.c
++++ b/src/common.c
+@@ -3601,7 +3601,7 @@ sr_get_trim_predicates(const char *expr, char **expr2)
+ }
+ 
+ sr_error_info_t *
+-sr_get_schema_name_format(const char *schema_path, char **module_name, LYS_INFORMAT *format)
++sr_get_schema_name_format(const char *schema_path, char **module_name, char **module_rev, LYS_INFORMAT *format)
+ {
+     sr_error_info_t *err_info = NULL;
+     const char *ptr;
+@@ -3631,6 +3631,9 @@ sr_get_schema_name_format(const char *schema_path, char **module_name, LYS_INFOR
+     if (ptr) {
+         /* truncate revision */
+         ((char *)ptr)[0] = '\0';
++        if (module_rev) {
++            *module_rev = strdup(++ptr);
++        }
+     }
+ 
+     return NULL;
+diff --git a/src/common.h b/src/common.h
+index d955ba49..d8448da4 100644
+--- a/src/common.h
++++ b/src/common.h
+@@ -958,10 +958,11 @@ sr_error_info_t *sr_get_trim_predicates(const char *expr, char **expr2);
+  *
+  * @param[in] schema_path Path to the module file.
+  * @param[out] module_name Name of the module.
++ * @param[out] module_rev Optional module revision.
+  * @param[out] format Module format.
+  * @return err_info, NULL on success.
+  */
+-sr_error_info_t *sr_get_schema_name_format(const char *schema_path, char **module_name, LYS_INFORMAT *format);
++sr_error_info_t *sr_get_schema_name_format(const char *schema_path, char **module_name, char **module_rev, LYS_INFORMAT *format);
+ 
+ /**
+  * @brief Get datastore string name.
+diff --git a/src/sysrepo.c b/src/sysrepo.c
+index 7271c273..2c0d61fd 100644
+--- a/src/sysrepo.c
++++ b/src/sysrepo.c
+@@ -1226,6 +1226,10 @@ sr_install_module_set_searchdirs(struct ly_ctx *new_ctx, const char *search_dirs
+     sdirs_str = strdup(search_dirs);
+     SR_CHECK_MEM_GOTO(!sdirs_str, err_info, cleanup);
+ 
++    if (ly_ctx_set_options(new_ctx, LY_CTX_PREFER_SEARCHDIRS)) {
++        sr_log_msg(0, SR_LL_WRN, "Failed enabling LY_CTX_PREFER_SEARCHDIRS option.");
++    }
++
+     /* add each search dir */
+     for (ptr = strtok_r(sdirs_str, ":", &ptr2); ptr; ptr = strtok_r(NULL, ":", &ptr2)) {
+         if (!ly_ctx_set_searchdir(new_ctx, ptr)) {
+@@ -1304,15 +1308,15 @@ sr_install_modules_prepare_mod(struct ly_ctx *new_ctx, sr_conn_ctx_t *conn, sr_i
+ {
+     sr_error_info_t *err_info = NULL;
+     const struct lys_module *ly_mod;
+-    struct ly_in *in = NULL;
+     char *mod_name = NULL;
++    char *mod_rev = NULL;
+     LYS_INFORMAT format;
+     sr_datastore_t ds;
+ 
+     *installed = 0;
+ 
+     /* learn module name and format */
+-    if ((err_info = sr_get_schema_name_format(new_mod->schema_path, &mod_name, &format))) {
++    if ((err_info = sr_get_schema_name_format(new_mod->schema_path, &mod_name, &mod_rev, &format))) {
+         goto cleanup;
+     }
+ 
+@@ -1345,14 +1349,9 @@ sr_install_modules_prepare_mod(struct ly_ctx *new_ctx, sr_conn_ctx_t *conn, sr_i
+         goto cleanup;
+     }
+ 
+-    /* parse the module with the features */
+-    if (ly_in_new_filepath(new_mod->schema_path, 0, &in)) {
+-        sr_errinfo_new(&err_info, SR_ERR_INVAL_ARG, "Failed to create input handler for \"%s\".",
+-                new_mod->schema_path);
+-        goto cleanup;
+-    }
+-    if (lys_parse(new_ctx, in, format, new_mod->features, (struct lys_module **)&new_mod->ly_mod)) {
+-        sr_errinfo_new_ly(&err_info, new_ctx, NULL);
++    new_mod->ly_mod = ly_ctx_load_module(new_ctx, mod_name, mod_rev, new_mod->features);
++    if (!new_mod->ly_mod) {
++        sr_errinfo_new(&err_info, SR_ERR_INVAL_ARG, "Failed to create input handler for \"%s\".", mod_name);
+         goto cleanup;
+     }
+ 
+@@ -1375,8 +1374,12 @@ sr_install_modules_prepare_mod(struct ly_ctx *new_ctx, sr_conn_ctx_t *conn, sr_i
+     }
+ 
+ cleanup:
+-    ly_in_free(in, 0);
+-    free(mod_name);
++    if (mod_name) {
++        free(mod_name);
++    }
++    if (mod_rev) {
++        free(mod_rev);
++    }
+     return err_info;
+ }
+ 
+@@ -1834,7 +1837,7 @@ sr_update_modules_prepare(struct ly_ctx *new_ctx, sr_conn_ctx_t *conn, const cha
+     for (i = 0; i < schema_path_count; ++i) {
+         /* learn about the module */
+         upd_mods[i].schema_path = schema_paths[i];
+-        if ((err_info = sr_get_schema_name_format(upd_mods[i].schema_path, &upd_mods[i].name, &upd_mods[i].format))) {
++        if ((err_info = sr_get_schema_name_format(upd_mods[i].schema_path, &upd_mods[i].name, NULL, &upd_mods[i].format))) {
+             goto cleanup;
+         }
+ 
+-- 
+2.34.1
+
