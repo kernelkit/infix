@@ -1,0 +1,38 @@
+graph "dual" {
+	layout="neato";
+	overlap="false";
+	splines="true";
+	esep="+20";
+
+        node [shape=record, fontname="monospace"];
+	edge [color="cornflowerblue", penwidth="2"];
+
+	qn_template="infix-x86_64";
+	qn_append="quiet";
+
+        host [
+	    label="host | { <d1a> d1a | <d1b> d1b | <d2a> d2a | <d2b> d2b }",
+	    color="grey",fontcolor="grey",pos="0,15!",
+	    kind="controller",
+	];
+
+        dut1 [
+	    label="{ <eth0> eth0 | <eth1> eth1 } | dut1 | { <eth2> eth2 | <eth3> eth3 }",
+	    pos="10,18!",
+	    kind="infix",
+	];
+        dut2 [
+	    label="{ <eth0> eth0 | <eth1> eth1 } | dut2 | { <eth2> eth2 | <eth3> eth3 }",
+	    pos="10,12!",
+	    kind="infix",
+	];
+
+	host:d1a -- dut1:eth0
+	host:d1b -- dut1:eth1
+
+	host:d2a -- dut2:eth0
+	host:d2b -- dut2:eth1
+
+	dut1:eth2 -- dut2:eth3
+	dut2:eth2 -- dut1:eth3
+}
