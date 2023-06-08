@@ -1,0 +1,44 @@
+name: Reggie Regression
+
+on:
+  push:
+    branches:
+      - '*'
+  pull_request:
+    branches:
+      - '*'
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: NETCONF Regression Testing
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Restore Cache of dl/
+        uses: actions/cache@v3
+        with:
+          path: dl/
+          key: dl-x86_64-netconf-${{ hashFiles('.git/modules/buildroot/refs/heads/master', 'package/*/*.hash') }}
+          restore-keys: |
+            dl-x86_64-netconf-
+            dl-x86_64-
+            dl-
+      - name: Restore Cache of .ccache/
+        uses: actions/cache@v3
+        with:
+          path: .ccache/
+          key: ccache-x86_64-netconf-${{ hashFiles('.git/modules/buildroot/refs/head/master', 'package/*/*.hash') }}
+          restore-keys: |
+            ccache-x86_64-netconf-
+            ccache-x86_64-
+            ccache-
+      - name: Configure Minimal NETCONF
+        run: |
+          make x86_64_minimal_defconfig
+      - name: Build
+        run: |
+          make
+      - name: Regression Test
+        run: |
+          make infix-check
