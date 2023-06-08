@@ -20,14 +20,17 @@ ver()
     printf "-%s" "$GITVER"
 }
 
-load_cfg BR2_ARCH
-load_cfg SIGN_KEY
+load_cfg SIGN_ENABLED
+if [ "$SIGN_ENABLED" = "y" ]; then
+    load_cfg BR2_ARCH
+    load_cfg SIGN_KEY
 
-ixmsg "Signing SquashFS Image"
-$common/sign.sh $BR2_ARCH $SIGN_KEY
+    ixmsg "Signing SquashFS Image"
+    $common/sign.sh $BR2_ARCH $SIGN_KEY
 
-ixmsg "Creating RAUC Update Bundle"
-$common/mkrauc.sh $NAME $BR2_ARCH $SIGN_KEY
+    ixmsg "Creating RAUC Update Bundle"
+    $common/mkrauc.sh $NAME $BR2_ARCH $SIGN_KEY
+fi
 
 load_cfg DISK_IMAGE
 load_cfg DISK_IMAGE_SIZE

@@ -1,7 +1,10 @@
-comment "Image Signing"
+menuconfig SIGN_ENABLED
+	bool "Image Signing"
+	default y
 
 choice
 	prompt "Signing key source"
+	depends on SIGN_ENABLED
 	default SIGN_SRC_DIR
 
 config SIGN_SRC_DIR
@@ -14,9 +17,8 @@ endchoice
 
 config SIGN_KEY
 	string "Signing key"
+	depends on SIGN_ENABLED
 	default "${BR2_EXTERNAL_INFIX_PATH}/board/common/dev-key" if SIGN_SRC_DIR
-
-comment "Additional Artifacts"
 
 menuconfig DISK_IMAGE
 	bool "Disk image"
