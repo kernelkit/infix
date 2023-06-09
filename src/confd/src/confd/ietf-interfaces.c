@@ -85,12 +85,14 @@ static int ifchange_cand_infer_vlan(sr_session_ctx_t *session, const char *xpath
 	sr_val_t inferred = { .type = SR_STRING_T };
 	char *ifname, *type, *vidstr;
 	sr_error_t err = SR_ERR_OK;
-	size_t cnt;
+	size_t cnt = 0;
 	long vid;
 
 	type = srx_get_str(session, "%s/type", xpath);
-	if (!type || strcmp(type, "iana-if-type:l2vlan"))
+	if (!type)
 		goto out;
+	if (strcmp(type, "iana-if-type:l2vlan"))
+		goto out_free_type;
 
 	ifname = srx_get_str(session, "%s/name", xpath);
 	if (!ifname)
@@ -513,7 +515,7 @@ static int netdag_gen_afspec_add(struct dagger *net, struct lyd_node *dif,
 {
 	const char *ifname = lydx_get_cattr(cif, "name");
 	const char *iftype = lydx_get_cattr(cif, "type");
-	int err;
+	int err = 0;
 
 	DEBUG_IFACE(dif, "");
 
