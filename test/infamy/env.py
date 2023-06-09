@@ -85,7 +85,12 @@ class Env(object):
         hostport = list(self.ptop.neighbors(f"{node}:{port}"))[0]
         hnode, hport = hostport.split(":")
 
+        print(f"Probing {node} on port {hport} for IPv6LL mgmt address ...")
         mgmtip = neigh.ll6ping(hport)
+        if not mgmtip:
+            raise Exception(f"Failed, cannot find mgmt IP for {node}")
+
+        print(f"Mgmt IP {mgmtip}")
         return netconf.Device(
             location=netconf.Location(mgmtip),
             mapping=mapping,
