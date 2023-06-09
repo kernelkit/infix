@@ -45,6 +45,28 @@ int srx_set_item(sr_session_ctx_t *session, const sr_val_t *val, sr_edit_options
 	return sr_set_item(session, xpath, val, opts);
 }
 
+int srx_set_str(sr_session_ctx_t *session, const char *str, sr_edit_options_t opts,
+		const char *fmt, ...)
+{
+	char *xpath;
+	va_list ap;
+	size_t len;
+
+	va_start(ap, fmt);
+	len = vsnprintf(NULL, 0, fmt, ap) + 1;
+	va_end(ap);
+
+	xpath = alloca(len);
+	if (!xpath)
+		return -1;
+
+	va_start(ap, fmt);
+	vsnprintf(xpath, len, fmt, ap);
+	va_end(ap);
+
+	return sr_set_item_str(session, xpath, str, NULL, opts);
+}
+
 static int srx_vaget(sr_session_ctx_t *session, const char *fmt, va_list ap, sr_val_type_t type, sr_val_t **val, size_t *cnt)
 {
 	va_list apdup;
