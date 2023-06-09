@@ -4,6 +4,7 @@ import os
 import pydot
 import shlex
 import sys
+import time
 
 from . import neigh, netconf, tap, topology
 
@@ -90,7 +91,7 @@ class Env(object):
         if not mgmtip:
             raise Exception(f"Failed, cannot find mgmt IP for {node}")
 
-        print(f"Mgmt IP {mgmtip}")
+        time.sleep(10)
         return netconf.Device(
             location=netconf.Location(mgmtip),
             mapping=mapping,
