@@ -1,0 +1,36 @@
+module infix-interfaces {
+  yang-version 1.1;
+  namespace "urn:infix:interfaces:ns:yang:1.0";
+  prefix infix-if;
+
+  include infix-if-veth;
+
+  import ietf-interfaces {
+    prefix if;
+  }
+
+  organization "KernelKit";
+  contact      "kernelkit@googlegroups.com";
+  description  "Linux bridge and lag extensions for ietf-interfaces.";
+
+  revision 2023-06-05 {
+    description "Initial revision.";
+    reference "internal";
+  }
+
+  /*
+   * Data Nodes
+   */
+
+  augment "/if:interfaces/if:interface" {
+    description "Augments the interface model with mutually exclusive guards.";
+
+    choice port {
+      description "An interface can only be member of either a bridge or a link aggregate.";
+    }
+  }
+
+  deviation "/if:interfaces-state" {
+    deviate not-supported;
+  }
+}

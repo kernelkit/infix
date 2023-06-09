@@ -23,6 +23,8 @@
 #define DEBUG_IFACE(_iface, _fmt, ...)				\
 	DEBUG("%s: " _fmt, lydx_get_cattr(_iface, "name"), ##__VA_ARGS__)
 
+#define IF_XPATH "/ietf-interfaces:interfaces/interface"
+
 static const char *iffeat[] = {
 	"if-mib",
 	NULL
@@ -41,6 +43,8 @@ static const struct srx_module_requirement ietf_if_reqs[] = {
 	{ .dir = YANG_PATH_, .name = "ietf-if-vlan-encapsulation", .rev = "2023-01-26" },
 	{ .dir = YANG_PATH_, .name = "ietf-ip", .rev = "2018-02-22" },
 	{ .dir = YANG_PATH_, .name = "infix-ip", .rev = "2023-04-24" },
+	{ .dir = YANG_PATH_, .name = "infix-if-type", .rev = "2023-06-09" },
+	{ .dir = YANG_PATH_, .name = "infix-interfaces", .rev = "2023-06-05" },
 
 	{ NULL }
 };
@@ -98,6 +102,58 @@ static char *iface_xpath(const char *xpath)
 	ptr[1] = 0;
 
 	return path;
+}
+
+static int ifchange_cand_infer_veth(sr_session_ctx_t *session, const char *path)
+{
+	char *ifname, *type, *peer, *xpath, *val;
+	sr_error_t err = SR_ERR_OK;
+	size_t cnt = 0;
+
+	xpath = iface_xpath(path);
+	if (!xpath)
+		return SR_ERR_SYS;
+
+	type = srx_get_str(session, "%s/type", xpath);
+	if (!type || strcmp(type, "infix-if-type:veth"))
+		goto out;
+
+	ifname = srx_get_str(session, "%s/name", xpath);
+	if (!ifname)
+		goto out_free_type;
+
+	peer = srx_get_str(session, "%s/veth/peer", xpath);
+	if (!peer) {
+		ERROR("INFER VETH name %s no peer", ifname);
+		goto out_free_ifname;
+	}
+
+	err = srx_nitems(session, &cnt, "/interfaces/interface[name='%s']/name", peer);
+	if (err || cnt) {
+		ERROR("%s nitems: %zu, err %d", peer, cnt, err);
+		goto out_free_peer;
+	}
+
+	val = "infix-if-type:veth";
+	err = srx_set_str(session, val, 0, IF_XPATH "[name='%s']/type", peer);
+	if (err) {
+		ERROR("failed setting iface %s type %s, err %d", peer, val, err);
+		goto out_free_peer;
+	}
+
+	err = srx_set_str(session, ifname, 0, IF_XPATH "[name='%s']/infix-interfaces:veth/peer", peer);
+	if (err)
+		ERROR("failed setting iface %s peer %s, err %d", peer, ifname, err);
+
+out_free_peer:
+	free(peer);
+out_free_ifname:
+	free(ifname);
+out_free_type:
+	free(type);
+out:
+	free(xpath);
+	return err;
 }
 
 static int ifchange_cand_infer_vlan(sr_session_ctx_t *session, const char *path)
@@ -217,6 +273,8 @@ static int ifchange_cand_infer_type(sr_session_ctx_t *session, const char *path)
 		inferred.data.string_val = "iana-if-type:bridge";
 	else if (!fnmatch("lag+([0-9])", ifname, FNM_EXTMATCH))
 		inferred.data.string_val = "iana-if-type:ieee8023adLag";
+	else if (!fnmatch("veth+([0-9a-z_-])", ifname, FNM_EXTMATCH))
+		inferred.data.string_val = "infix-if-type:veth";
 	else if (!fnmatch("vlan+([0-9])", ifname, FNM_EXTMATCH))
 		inferred.data.string_val = "iana-if-type:l2vlan";
 	else if (!fnmatch("*.+([0-9])", ifname, FNM_EXTMATCH))
@@ -262,6 +320,10 @@ static int ifchange_cand(sr_session_ctx_t *session, uint32_t sub_id, const char 
 		}
 
 		err = ifchange_cand_infer_type(session, new->xpath);
+		if (err)
+			break;
+
+		err = ifchange_cand_infer_veth(session, new->xpath);
 		if (err)
 			break;
 
@@ -505,19 +567,45 @@ static int netdag_gen_sysctl(struct dagger *net,
 	return err;
 }
 
+static int netdag_gen_veth(struct dagger *net, struct lyd_node *dif,
+			   struct lyd_node *cif, FILE *ip)
+{
+	const char *ifname = lydx_get_cattr(cif, "name");
+	struct lyd_node *node;
+	const char *peer;
+	int err;
+
+	node = lydx_get_descendant(lyd_child(cif), "veth", NULL);
+	if (!node)
+		return -EINVAL;
+
+	peer = lydx_get_cattr(node, "peer");
+	if (dagger_should_skip(net, ifname)) {
+		ERROR("%s already exists, skipping", ifname);
+		err = dagger_add_dep(net, ifname, peer);
+		if (err)
+			return ERR_IFACE(cif, err, "Unable to add dep \"%s\" to %s",
+					 peer, ifname);
+	} else {
+		ERROR("Creating veth %s peer %s", ifname, peer);
+		dagger_skip_iface(net, peer);
+		fprintf(ip, "link add dev %s down type veth peer %s\n", ifname, peer);
+	}
+
+	return 0;
+}
+
 static int netdag_gen_vlan(struct dagger *net, struct lyd_node *dif,
 			   struct lyd_node *cif, FILE *ip)
 {
-	const char *parent, *ifname = lydx_get_cattr(cif, "name");
+	const char *parent = lydx_get_cattr(cif, "parent-interface");
+	const char *ifname = lydx_get_cattr(cif, "name");
 	struct lydx_diff typed, vidd;
 	struct lyd_node *otag;
 	const char *proto;
 	int err;
 
 	DEBUG("");
-
-	parent = lydx_get_cattr(cif, "parent-interface");
-	fprintf(ip, " link %s", parent);
 
 	err = dagger_add_dep(net, ifname, parent);
 	if (err)
@@ -528,10 +616,12 @@ static int netdag_gen_vlan(struct dagger *net, struct lyd_node *dif,
 				   "dot1q-vlan",
 				   "outer-tag",
 				   NULL);
-	if (!otag)
+	if (!otag) {
+		ERROR("missing mandatory outer-tag");
 		return 0;
+	}
 
-	fprintf(ip, " type vlan");
+	fprintf(ip, "link add dev %s down link %s type vlan", ifname, parent);
 
 	if (lydx_get_diff(lydx_get_child(otag, "tag-type"), &typed)) {
 		if (!strcmp(typed.new, "ieee802-dot1q-types:c-vlan"))
@@ -548,6 +638,7 @@ static int netdag_gen_vlan(struct dagger *net, struct lyd_node *dif,
 	if (lydx_get_diff(lydx_get_child(otag, "vlan-id"), &vidd))
 		fprintf(ip, " id %s", vidd.new);
 
+	fputc('\n', ip);
 	DEBUG("");
 	return 0;
 }
@@ -561,9 +652,11 @@ static int netdag_gen_afspec_add(struct dagger *net, struct lyd_node *dif,
 
 	DEBUG_IFACE(dif, "");
 
-	fprintf(ip, "link add dev %s down", ifname);
-
-	if (!strcmp(iftype, "iana-if-type:l2vlan")) {
+	if (!strcmp(iftype, "iana-if-type:bridge")) {
+		fprintf(ip, "link add dev %s type bridge\n", ifname);
+	} else if (!strcmp(iftype, "infix-if-type:veth")) {
+		err = netdag_gen_veth(net, NULL, cif, ip);
+	} else if (!strcmp(iftype, "iana-if-type:l2vlan")) {
 		err = netdag_gen_vlan(net, NULL, cif, ip);
 	} else {
 		ERROR("Unable to add unsupported interface type \"%s\"",
@@ -574,7 +667,6 @@ static int netdag_gen_afspec_add(struct dagger *net, struct lyd_node *dif,
 	if (err)
 		return err;
 
-	fputc('\n', ip);
 	return 0;
 }
 
@@ -587,6 +679,8 @@ static int netdag_gen_afspec_set(struct dagger *net, struct lyd_node *dif,
 
 	if (!strcmp(iftype, "iana-if-type:l2vlan"))
 		return netdag_gen_vlan(net, dif, cif, ip);
+	if (!strcmp(iftype, "infix-if-type:veth"))
+		return 0;
 
 	ERROR("Unable to configure unsupported interface type \"%s\"", iftype);
 	return -ENOSYS;
@@ -603,6 +697,8 @@ static bool netdag_must_del(struct lyd_node *dif, struct lyd_node *cif)
 					    "dot1q-vlan",
 					    "outer-tag",
 					    NULL);
+	if (!strcmp(iftype, "infix-if-type:veth"))
+		return lydx_get_descendant(lyd_child(dif), "peer", NULL);
 
 	return false;
 }
