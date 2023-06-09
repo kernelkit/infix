@@ -54,4 +54,9 @@ if [ "$FIT_IMAGE" = "y" ]; then
 fi
 
 # For use outside of the build system, e.g., Qeneth
-ln -sf rootfs.squashfs "$BINARIES_DIR/$NAME$(ver).img"
+if [ -z "${NAME##*minimal*}" ]; then
+    COMMON_NAME=$(echo "$NAME" | sed 's/-minimal//')
+    ln -sf rootfs.squashfs "$BINARIES_DIR/$COMMON_NAME$(ver).img"
+else
+    ln -sf rootfs.squashfs "$BINARIES_DIR/$NAME$(ver).img"
+fi
