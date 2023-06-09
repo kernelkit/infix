@@ -44,6 +44,7 @@ class Device(object):
                                 0, 0, socket.SOL_TCP)
         sock = socket.socket(ai[0][0], ai[0][1], 0)
         sock.settimeout(60)
+        print(f"Connecting to mgmt IP {location.host}:{location.port} ...")
         sock.connect(ai[0][4])
         sock.settimeout(None)
 
