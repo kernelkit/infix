@@ -80,14 +80,37 @@ out:
 	return is_phys;
 }
 
-static int ifchange_cand_infer_vlan(sr_session_ctx_t *session, const char *xpath)
+/*
+ * Needed because we do deep searches for changes in interfaces,
+ * e.g. changes in bridge port settings, veth peers, etc.
+ */
+static char *iface_xpath(const char *xpath)
+{
+	char *path, *ptr;
+
+	path = strdup(xpath);
+	if (!path)
+		return NULL;
+	if (!(ptr = strstr(path, "]/"))) {
+		free(path);
+		return NULL;
+	}
+	ptr[1] = 0;
+
+	return path;
+}
+
+static int ifchange_cand_infer_vlan(sr_session_ctx_t *session, const char *path)
 {
 	sr_val_t inferred = { .type = SR_STRING_T };
-	char *ifname, *type, *vidstr;
+	char *ifname, *type, *vidstr, *xpath;
 	sr_error_t err = SR_ERR_OK;
 	size_t cnt = 0;
 	long vid;
 
+	xpath = iface_xpath(path);
+	if (!xpath)
+		return SR_ERR_SYS;;
 	type = srx_get_str(session, "%s/type", xpath);
 	if (!type)
 		goto out;
@@ -162,24 +185,31 @@ out_free_ifname:
 out_free_type:
 	free(type);
 out:
+	free(xpath);
 	return err;
 }
 
-static int ifchange_cand_infer_type(sr_session_ctx_t *session, const char *xpath)
+static int ifchange_cand_infer_type(sr_session_ctx_t *session, const char *path)
 {
 	sr_val_t inferred = { .type = SR_STRING_T };
+	char *ifname, *type, *xpath;
 	sr_error_t err = SR_ERR_OK;
-	char *ifname, *type;
+
+	xpath = iface_xpath(path);
+	if (!path)
+		return SR_ERR_SYS;
 
 	type = srx_get_str(session, "%s/type", xpath);
 	if (type) {
 		free(type);
-		return SR_ERR_OK;
+		goto out;
 	}
 
 	ifname = srx_get_str(session, "%s/name", xpath);
-	if (!ifname)
-		return SR_ERR_INTERNAL;
+	if (!ifname) {
+		err = SR_ERR_INTERNAL;
+		goto out;
+	}
 
 	if (iface_is_phys(ifname))
 		inferred.data.string_val = "iana-if-type:ethernetCsmacd";
@@ -197,6 +227,8 @@ static int ifchange_cand_infer_type(sr_session_ctx_t *session, const char *xpath
 	if (inferred.data.string_val)
 		err = srx_set_item(session, &inferred, 0, "%s/type", xpath);
 
+out:
+	free(xpath);
 	return err;
 }
 
@@ -208,16 +240,26 @@ static int ifchange_cand(sr_session_ctx_t *session, uint32_t sub_id, const char 
 	sr_val_t *old, *new;
 	sr_error_t err;
 
-	if (event != SR_EV_UPDATE)
+	switch (event) {
+	case SR_EV_UPDATE:
+	case SR_EV_CHANGE:
+		break;
+	default:
 		return SR_ERR_OK;
+	}
 
-	err = sr_dup_changes_iter(session, "/ietf-interfaces:interfaces/interface", &iter);
+	err = sr_dup_changes_iter(session, "/ietf-interfaces:interfaces/interface//*", &iter);
 	if (err)
 		return err;
 
 	while (sr_get_change_next(session, iter, &op, &old, &new) == SR_ERR_OK) {
-		if (op != SR_OP_CREATED)
+		switch (op) {
+		case SR_OP_CREATED:
+		case SR_OP_MODIFIED:
+			break;
+		default:
 			continue;
+		}
 
 		err = ifchange_cand_infer_type(session, new->xpath);
 		if (err)
