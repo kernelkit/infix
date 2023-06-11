@@ -1,0 +1,114 @@
+submodule infix-if-bridge {
+  yang-version 1.1;
+  belongs-to infix-interfaces {
+    prefix infix-if;
+  }
+
+  import iana-if-type {
+    prefix ianaift;
+  }
+  import ietf-interfaces {
+    prefix if;
+  }
+  import ieee802-dot1q-types {
+    prefix dot1q-types;
+  }
+
+  organization "KernelKit";
+  contact      "kernelkit@googlegroups.com";
+  description  "Linux bridge extension for ietf-interfaces.";
+
+  revision 2023-05-31 {
+    description "Initial revision.";
+    reference "internal";
+  }
+
+  /*
+   * Features
+   */
+
+  feature vlan-filtering {
+    description "Indicates if this bridge supports VLAN filtering.";
+  }
+
+  /*
+   * Data Nodes
+   */
+
+  augment "/if:interfaces/if:interface" {
+    when "derived-from-or-self(if:type,'ianaift:bridge')" {
+      description "Only shown for if:type bridge";
+    }
+
+    description "Augment generic interfaces with a basic 802.1Q bridge.";
+
+    container bridge {
+      description "IEEE 802.1Q style bridge.";
+
+      container vlans {
+        if-feature "vlan-filtering";
+        description "A VLAN filtering bridge has at least one VLAN.";
+
+        list vlan {
+          key "vid";
+          description "List of VLANs associated with the Bridge.";
+
+          leaf vid {
+            type dot1q-types:vlanid;
+            description "The VLAN identifier to which this entry applies.";
+          }
+
+          leaf-list untagged-ports {
+            type if:interface-ref;
+            description "The set of ports in the untagged set for VLAN.";
+          }
+
+          leaf-list tagged-ports {
+            type if:interface-ref;
+            description "The set of ports in the tagged set for VLAN.";
+          }
+        }
+      }
+    }
+  }
+
+  augment "/if:interfaces/if:interface/infix-if:port" {
+    when "derived-from-or-self(if:type,'ianaift:bridge') or "+
+         "derived-from-or-self(if:type,'ianaift:ethernetCsmacd') or "+
+         "derived-from-or-self(if:type,'ianaift:ieee8023adLag') or "+
+         "derived-from-or-self(if:type,'ianaift:ilan')" {
+      description "Applies when a Bridge interface exists.";
+    }
+
+    description "Augments the interface model with the Bridge Port";
+
+    case bridge-port {
+      description "Extension of the IETF Interfaces model (RFC7223).";
+
+      container bridge-port {
+        leaf bridge {
+          type if:interface-ref;
+          must "deref(.)/../bridge" {
+            error-message "Must refer to a bridge interface.";
+          }
+          mandatory true;
+          description "Bridge interface to which this interface is attached.";
+        }
+
+        leaf pvid {
+	  if-feature "vlan-filtering";
+          type dot1q-types:vlanid;
+          default "1";
+          description "The primary VID assigned to this bridge port.";
+        }
+
+        leaf default-priority {
+	  if-feature "vlan-filtering";
+          type dot1q-types:priority-type;
+          default "0";
+          description "The default priority assigned to this bridge port.";
+        }
+      }
+    }
+  }
+}

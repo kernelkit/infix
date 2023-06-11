@@ -3,6 +3,7 @@ module infix-interfaces {
   namespace "urn:infix:interfaces:ns:yang:1.0";
   prefix infix-if;
 
+  include infix-if-bridge;
   include infix-if-veth;
 
   import ietf-interfaces {
