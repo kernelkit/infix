@@ -18,17 +18,6 @@ static const struct srx_module_requirement infix_dhcp_reqs[] = {
 	{ NULL }
 };
 
-static int is_enabled(struct lyd_node *parent, const char *name)
-{
-	const char *attr;
-
-	attr = lydx_get_cattr(parent, name);
-	if (!attr || strcmp(attr, "true"))
-		return 0;
-
-	return 1;
-}
-
 static void add(const char *ifname, const char *client_id)
 {
 	char *args = NULL;
@@ -87,7 +76,7 @@ static int client_change(sr_session_ctx_t *session, uint32_t sub_id, const char 
 		goto err_release_data;
 
 	global = lydx_get_descendant(cfg->tree, "dhcp-client", NULL);
-	ena = is_enabled(global, "enabled");
+	ena = lydx_is_enabled(global, "enabled");
 
 	cifs = lydx_get_descendant(cfg->tree, "dhcp-client", "client-if", NULL);
 	difs = lydx_get_descendant(diff, "dhcp-client", "client-if", NULL);
@@ -105,7 +94,7 @@ static int client_change(sr_session_ctx_t *session, uint32_t sub_id, const char 
 			if (strcmp(ifname, lydx_get_cattr(cif, "if-name")))
 				continue;
 
-			if (!ena || !is_enabled(cif, "enabled"))
+			if (!ena || !lydx_is_enabled(cif, "enabled"))
 				del(ifname);
 			else
 				add(ifname, lydx_get_cattr(cif, "client-id"));
