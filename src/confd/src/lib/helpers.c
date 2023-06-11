@@ -1,10 +1,39 @@
 /* SPDX-License-Identifier: BSD-3-Clause */
+/*
+ * XXX: Helper functions not yet available in a libite (-lite) release.
+ * XXX: With the next major release, v2.6.0, these will clash and can be
+ * XXX: removed.
+ */
 
 #include <errno.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <limits.h>
 #include <stdlib.h>
+#include <libite/lite.h>
+
+int fexistf(const char *fmt, ...)
+{
+	va_list ap;
+	char *file;
+	int len;
+
+	va_start(ap, fmt);
+	len = vsnprintf(NULL, 0, fmt, ap);
+	va_end(ap);
+
+	file = alloca(len + 1);
+	if (!file) {
+		errno = ENOMEM;
+		return -1;
+	}
+
+	va_start(ap, fmt);
+	vsnprintf(file, len + 1, fmt, ap);
+	va_end(ap);
+
+	return fexist(file);
+}
 
 FILE *popenf(const char *type, const char *cmdf, ...)
 {
@@ -27,6 +56,7 @@ FILE *popenf(const char *type, const char *cmdf, ...)
 	return fp;
 }
 
+/* XXX: -lite v2.6.0 has vfopenf() to replace this. */
 static FILE *open_file(const char *mode, const char *fmt, va_list ap)
 {
 	va_list apc;
