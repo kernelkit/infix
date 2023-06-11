@@ -677,6 +677,8 @@ static int netdag_gen_afspec_set(struct dagger *net, struct lyd_node *dif,
 
 	DEBUG_IFACE(dif, "");
 
+	if (!strcmp(iftype, "iana-if-type:bridge"))
+		return 0;
 	if (!strcmp(iftype, "iana-if-type:l2vlan"))
 		return netdag_gen_vlan(net, dif, cif, ip);
 	if (!strcmp(iftype, "infix-if-type:veth"))
@@ -686,10 +688,33 @@ static int netdag_gen_afspec_set(struct dagger *net, struct lyd_node *dif,
 	return -ENOSYS;
 }
 
+static int netdag_bridge_links(struct dagger *net, struct lyd_node *dif,
+			       struct lyd_node *cif, FILE *ip)
+{
+	const char *ifname = lydx_get_cattr(cif, "name");
+	struct lyd_node *node;
+	int err = 0;
+
+	node = lydx_get_descendant(lyd_child(cif), "bridge-port", NULL);
+	if (node) {
+		const char *brname = lydx_get_cattr(node, "bridge");
+
+		fprintf(ip, " master %s", brname);
+
+		err = dagger_add_dep(net, ifname, brname);
+		if (err)
+			return ERR_IFACE(cif, err, "Unable to add dep \"%s\" to %s", brname, ifname);
+	}
+
+	return err;
+}
+
 static bool netdag_must_del(struct lyd_node *dif, struct lyd_node *cif)
 {
 	const char *iftype = lydx_get_cattr(cif, "type");
 
+	if (!strcmp(iftype, "iana-if-type:bridge"))
+		return 0;
 	if (!strcmp(iftype, "iana-if-type:l2vlan"))
 		return lydx_get_cattr(dif, "parent-interface") ||
 			lydx_get_descendant(lyd_child(dif),
@@ -786,6 +811,10 @@ static sr_error_t netdag_gen_iface(struct dagger *net,
 	/* Set generic link attributes */
 	err = err ? : netdag_gen_ipv4_autoconf(net, dif);
 	err = err ? : netdag_gen_ipv6_autoconf(ip, dif);
+	if (err)
+		goto err_close_ip;
+
+	err = netdag_bridge_links(net, dif, cif, ip);
 	if (err)
 		goto err_close_ip;
 
