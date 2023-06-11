@@ -15,6 +15,7 @@ enum lydx_op {
 	LYDX_OP_NONE,
 	LYDX_OP_CREATE,
 	LYDX_OP_DELETE,
+	LYDX_OP_REPLACE,
 };
 
 struct lydx_diff {

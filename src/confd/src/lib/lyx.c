@@ -17,15 +17,19 @@ enum lydx_op lydx_get_op(struct lyd_node *node)
 	if (opstr && !strcmp(opstr, "delete"))
 		return LYDX_OP_DELETE;
 
+	if (opstr && !strcmp(opstr, "replace"))
+		return LYDX_OP_REPLACE;
+
 	return LYDX_OP_NONE;
 }
 
 void lydx_diff_print(struct lydx_diff *nd, FILE *fp)
 {
 	static const char opchar[] = {
-		[LYDX_OP_CREATE] = '+',
-		[LYDX_OP_DELETE] = '-',
-		[LYDX_OP_NONE]   = '%',
+		[LYDX_OP_CREATE]  = '+',
+		[LYDX_OP_DELETE]  = '-',
+		[LYDX_OP_REPLACE] = '|',
+		[LYDX_OP_NONE]    = '%',
 	};
 
 	fprintf(fp, "%c%s %s%s ->%s%s\n",
