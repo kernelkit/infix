@@ -376,7 +376,7 @@ static bool is_std_lo_addr(const char *ifname, const char *ip, const char *pf)
 	return false;
 }
 
-static int netdag_gen_ipvx_addr(FILE *ip, const char *ifname,
+static int netdag_gen_diff_addr(FILE *ip, const char *ifname,
 				struct lyd_node *addr)
 {
 	enum lydx_op op = lydx_get_op(addr);
@@ -413,14 +413,14 @@ static int netdag_gen_ipvx_addr(FILE *ip, const char *ifname,
 	return 0;
 }
 
-static int netdag_gen_ipvx_addrs(FILE *ip, const char *ifname,
+static int netdag_gen_diff_addrs(FILE *ip, const char *ifname,
 				 struct lyd_node *ipvx)
 {
 	struct lyd_node *addr;
 	int err = 0;
 
 	LYX_LIST_FOR_EACH(lyd_child(ipvx), addr, "address") {
-		err = netdag_gen_ipvx_addr(ip, ifname, addr);
+		err = netdag_gen_diff_addr(ip, ifname, addr);
 		if (err)
 			break;
 	}
@@ -428,73 +428,101 @@ static int netdag_gen_ipvx_addrs(FILE *ip, const char *ifname,
 	return err;
 }
 
-static int netdag_gen_ipv4_addrs(FILE *ip, struct lyd_node *dif)
+static int netdag_set_conf_addrs(FILE *ip, const char *ifname,
+				 struct lyd_node *ipvx)
 {
-	struct lyd_node *ipv4 = lydx_get_child(dif, "ipv4");
-	const char *ifname = lydx_get_cattr(dif, "name");
+	struct lyd_node *addr;
 
-	if (!ipv4)
-		return 0;
-
-	return netdag_gen_ipvx_addrs(ip, ifname, ipv4);
-}
-
-static int netdag_gen_ipv6_addrs(FILE *ip, struct lyd_node *dif)
-{
-	struct lyd_node *ipv6 = lydx_get_child(dif, "ipv6");
-	const char *ifname = lydx_get_cattr(dif, "name");
-
-	if (!ipv6)
-		return 0;
-
-	return netdag_gen_ipvx_addrs(ip, ifname, ipv6);
-}
-
-static int netdag_gen_ipv6_autoconf(FILE *ip, struct lyd_node *dif)
-{
-	struct lyd_node *node;
-	struct lydx_diff nd;
-
-	node = lydx_get_descendant(lyd_child(dif),
-				   "ipv6",
-				   "autoconf",
-				   "create-global-addresses",
-				   NULL);
-	if (!node)
-		return 0;
-
-	if (!lydx_get_diff(node, &nd))
-		return 0;
-
-	if (!nd.new || !strcmp(nd.val, "true"))
-		fputs(" addrgenmode eui64", ip);
-	else
-		fputs(" addrgenmode none", ip);
+	LYX_LIST_FOR_EACH(lyd_child(ipvx), addr, "address") {
+		fprintf(ip, "address add %s/%s dev %s\n",
+			lydx_get_cattr(addr, "ip"),
+			lydx_get_cattr(addr, "prefix-length"),
+			ifname);
+	}
 
 	return 0;
 }
 
-static int netdag_gen_ipv4_autoconf(struct dagger *net,
+static int netdag_gen_ip_addrs(FILE *ip, const char *proto,
+	struct lyd_node *cif, struct lyd_node *dif)
+{
+	struct lyd_node *ipconf = lydx_get_child(cif, proto);
+	struct lyd_node *ipdiff = lydx_get_child(dif, proto);
+	const char *ifname = lydx_get_cattr(dif, "name");
+
+	if (!ipconf || !lydx_is_enabled(ipconf, "enabled")) {
+		if (if_nametoindex(ifname))
+			systemf("ip -%c addr flush dev %s\n", proto[3], ifname);
+		return 0;
+	}
+
+	if (lydx_get_op(lydx_get_child(ipdiff, "enabled")) == LYDX_OP_REPLACE)
+		return netdag_set_conf_addrs(ip, ifname, ipconf);
+
+	return netdag_gen_diff_addrs(ip, ifname, ipdiff);
+}
+
+static int netdag_gen_ipv6_autoconf(FILE *ip, struct lyd_node *cif,
 				    struct lyd_node *dif)
 {
+	struct lyd_node *ipconf = lydx_get_child(cif, "ipv6");
+	struct lyd_node *ipdiff = lydx_get_child(dif, "ipv6");
+	struct lyd_node *node;
+	struct lydx_diff nd;
+
+	if (!ipconf || !lydx_is_enabled(ipconf, "enabled"))
+		goto disable;
+
+	if (lydx_get_op(lydx_get_child(ipdiff, "enabled")) == LYDX_OP_REPLACE) {
+		node = lydx_get_child(ipconf, "autoconf");
+		if (node && lydx_is_enabled(node, "create-global-addresses"))
+			goto enable;
+		goto disable;
+	}
+
+	node = lydx_get_descendant(lydx_get_child(ipdiff, "autoconf"),
+			"create-global-addresses", NULL);
+	if (!node || !lydx_get_diff(node, &nd))
+		return 0;
+
+	if (!nd.new || !strcmp(nd.val, "true")) {
+	enable:
+		fputs(" addrgenmode eui64", ip);
+	} else {
+	disable:
+		fputs(" addrgenmode none", ip);
+	}
+
+	return 0;
+}
+
+static int netdag_gen_ipv4_autoconf(struct dagger *net, struct lyd_node *cif,
+				    struct lyd_node *dif)
+{
+	struct lyd_node *ipconf = lydx_get_child(cif, "ipv4");
+	struct lyd_node *ipdiff = lydx_get_child(dif, "ipv4");
 	const char *ifname = lydx_get_cattr(dif, "name");
 	struct lyd_node *node;
 	struct lydx_diff nd;
 	FILE *initctl;
 	int err = 0;
 
-	node = lydx_get_descendant(lyd_child(dif),
-				   "ipv4",
-				   "autoconf",
-				   "enabled",
-				   NULL);
-	if (!node)
-		return 0;
+	if (!ipconf || !lydx_is_enabled(ipconf, "enabled"))
+		goto disable;
 
-	if (!lydx_get_diff(node, &nd))
+	if (lydx_get_op(lydx_get_child(ipdiff, "enabled")) == LYDX_OP_REPLACE) {
+		node = lydx_get_child(ipconf, "autoconf");
+		if (node && lydx_is_enabled(node, "enabled"))
+			goto enable;
+		goto disable;
+	}
+
+	node = lydx_get_descendant(lydx_get_child(ipdiff, "autoconf"), "enabled", NULL);
+	if (!node || !lydx_get_diff(node, &nd))
 		return 0;
 
 	if (nd.new && !strcmp(nd.val, "true")) {
+	enable:
 		initctl = dagger_fopen_next(net, "init", ifname,
 					    60, "zeroconf-up.sh");
 		if (!initctl)
@@ -503,10 +531,15 @@ static int netdag_gen_ipv4_autoconf(struct dagger *net,
 		fprintf(initctl,
 			"initctl -bnq enable zeroconf@%s.conf\n", ifname);
 	} else {
+	disable:
 		initctl = dagger_fopen_current(net, "exit", ifname,
 					       40, "zeroconf-down.sh");
-		if (!initctl)
+		if (!initctl) {
+			/* check if in bootstrap (pre gen 0) */
+			if (errno == EUNATCH)
+				return 0;
 			return -EIO;
+		}
 
 		fprintf(initctl,
 			"initctl -bnq disable zeroconf@%s.conf\n", ifname);
@@ -809,8 +842,8 @@ static sr_error_t netdag_gen_iface(struct dagger *net,
 	fprintf(ip, "link set dev %s down", ifname);
 
 	/* Set generic link attributes */
-	err = err ? : netdag_gen_ipv4_autoconf(net, dif);
-	err = err ? : netdag_gen_ipv6_autoconf(ip, dif);
+	err = err ? : netdag_gen_ipv4_autoconf(net, cif, dif);
+	err = err ? : netdag_gen_ipv6_autoconf(ip, cif, dif);
 	if (err)
 		goto err_close_ip;
 
@@ -828,8 +861,8 @@ static sr_error_t netdag_gen_iface(struct dagger *net,
 	}
 
 	/* Set Addresses */
-	err = err ? : netdag_gen_ipv4_addrs(ip, dif);
-	err = err ? : netdag_gen_ipv6_addrs(ip, dif);
+	err = err ? : netdag_gen_ip_addrs(ip, "ipv4", cif, dif);
+	err = err ? : netdag_gen_ip_addrs(ip, "ipv6", cif, dif);
 	if (err)
 		goto err_close_ip;
 
