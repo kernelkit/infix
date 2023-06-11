@@ -12,8 +12,10 @@ static FILE *dagger_fopen(struct dagger *d, int gen, const char *action,
 	FILE *fp;
 	int err;
 
-	if (prio > 99)
+	if (prio > 99) {
+		errno = ERANGE;
 		return NULL;
+	}
 
 	err = systemf("mkdir -p %s/%d/action/%s/%s",
 		      d->path, gen, action, node);
@@ -55,8 +57,10 @@ FILE *dagger_fopen_next(struct dagger *d, const char *action, const char *node,
 FILE *dagger_fopen_current(struct dagger *d, const char *action, const char *node,
 			   unsigned char prio, const char *script)
 {
-	if (d->current < 0)
+	if (d->current < 0) {
+		errno = EUNATCH;
 		return NULL;
+	}
 
 	return dagger_fopen(d, d->current, action, node, prio, script);
 }
