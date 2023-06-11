@@ -98,6 +98,17 @@ int dagger_evolve_or_abandon(struct dagger *d)
 	return err;
 }
 
+void dagger_skip_iface(struct dagger *d, const char *ifname)
+{
+	touchf("%s/%d/skip/%s", d->path, d->next, ifname);
+}
+
+int dagger_should_skip(struct dagger *d, const char *ifname)
+{
+	return fexistf("%s/%d/skip/%s", d->path, d->next, ifname);
+}
+
+
 int dagger_claim(struct dagger *d, const char *path)
 {
 	int err;
@@ -128,8 +139,10 @@ int dagger_claim(struct dagger *d, const char *path)
 	d->next = d->current + 1;
 	err = systemf("mkdir -p %s/%d/action/init"
 		      " && "
+		      "mkdir -p %s/%d/skip"
+		      " && "
 		      "ln -s ../../bottom-up-order %s/%d/action/init/order",
-		      path, d->next, path, d->next);
+		      path, d->next, path, d->next, path, d->next);
 	if (err)
 		return err;
 
