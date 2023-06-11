@@ -48,4 +48,15 @@ int lydx_new_path(const struct ly_ctx *ctx, struct lyd_node **parent, int *first
 		  char *node, const char *fmt, ...)
 	__attribute__ ((format (printf, 6, 7)));
 
+static inline int lydx_is_enabled(struct lyd_node *parent, const char *name)
+{
+	const char *attr;
+
+	attr = lydx_get_cattr(parent, name);
+	if (!attr || strcmp(attr, "true"))
+		return 0;
+
+	return 1;
+}
+
 #endif	/* CONFD_LY_EXT_H_ */
