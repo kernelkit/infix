@@ -1,0 +1,30 @@
+#!/bin/sh
+
+# generate a new key
+PRIVPEM=$(openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -outform PEM 2>/dev/null)
+# remove header/footer and newlines
+PRIVKEY=$(echo "$PRIVPEM" | grep -v -- "-----" | tr -d "\n")
+
+# get public key
+PUBPEM=$(echo "$PRIVPEM" | openssl rsa -pubout 2>/dev/null)
+# remove header/footer and newlines
+PUBKEY=$(echo "$PUBPEM" | grep -v -- "-----" | tr -d "\n")
+
+# generate edit config
+cat <<EOF
+{
+  "ietf-keystore:keystore": {
+    "asymmetric-keys": {
+      "asymmetric-key": [
+        {
+          "name": "genkey",
+          "algorithm": "rsa2048",
+          "public-key": "$PUBKEY",
+          "private-key": "$PRIVKEY",
+          "certificates": {}
+        }
+      ]
+    }
+  }
+}
+EOF
