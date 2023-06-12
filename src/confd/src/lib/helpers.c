@@ -2,7 +2,9 @@
 
 #include <errno.h>
 #include <stdarg.h>
-#include "core.h"
+#include <stdio.h>
+#include <limits.h>
+#include <stdlib.h>
 
 FILE *popenf(const char *type, const char *cmdf, ...)
 {

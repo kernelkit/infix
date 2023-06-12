@@ -22,7 +22,7 @@
 
 #include "../lib/common.h"
 #include "dagger.h"
-#include "helpers.h"
+#include "../lib/helpers.h"
 #include "systemv.h"
 
 #define CB_PRIO_PRIMARY   65535
