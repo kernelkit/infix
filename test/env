@@ -68,7 +68,7 @@ qeneth="$ixdir/qeneth/qeneth"
 
 # Global options
 containerize=yes
-while getopts "Cf:q:" opt; do
+while getopts "Cf:q:t:" opt; do
     case ${opt} in
 	C)
 	    containerize=
@@ -78,6 +78,9 @@ while getopts "Cf:q:" opt; do
 	    ;;
 	q)
 	    qenethdir="$OPTARG"
+	    ;;
+	t)
+	    topology="$OPTARG"
 	    ;;
     esac
 done
@@ -123,6 +126,7 @@ export PYTHONPATH="$testdir"
 
 extract_yang "$imgfile"
 start_topology "$qenethdir" "$imgfile"
+[ "$topology" ] && INFAMY_ARGS="$INFAMY_ARGS $topology"
 export INFAMY_ARGS
 
 exec "$@"
