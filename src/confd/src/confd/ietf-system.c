@@ -16,21 +16,6 @@
 #define CLOCK_PATH_    "/ietf-system:system-state/clock"
 #define PLATFORM_PATH_ "/ietf-system:system-state/platform"
 
-static const char *sysfeat[] = {
-	"authentication",
-	"local-users",
-	"ntp",
-	"ntp-udp-port",
-	"timezone-name",
-	NULL
-};
-
-static const struct srx_module_requirement ietf_system_reqs[] = {
-	{ .dir = YANG_PATH_, .name = "ietf-system",  .rev = "2014-08-06", .features = sysfeat },
-	{ .dir = YANG_PATH_, .name = "infix-system", .rev = "2023-04-11" },
-	{ NULL }
-};
-
 struct sr_change {
 	sr_change_oper_t op;
 	sr_val_t *old;
@@ -991,7 +976,7 @@ err:
 
 int ietf_system_init(struct confd *confd)
 {
-	int rc;
+	int rc = 0;
 
 	os_init();
 
@@ -1002,10 +987,6 @@ int ietf_system_init(struct confd *confd)
 		rc = SR_ERR_INTERNAL;
 		goto fail;
 	}
-
-	rc = srx_require_modules(confd->conn, ietf_system_reqs);
-	if (rc)
-		goto fail;
 
 	REGISTER_CHANGE(confd->session, "ietf-system", "/ietf-system:system/authentication", 0, change_auth, confd, &confd->sub);
 	REGISTER_CHANGE(confd->session, "ietf-system", "/ietf-system:system/hostname", 0, change_hostname, confd, &confd->sub);

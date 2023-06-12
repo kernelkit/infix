@@ -25,30 +25,6 @@
 
 #define IF_XPATH "/ietf-interfaces:interfaces/interface"
 
-static const char *iffeat[] = {
-	"if-mib",
-	NULL
-};
-
-static const char *ifextfeat[] = {
-	"sub-interfaces",
-	NULL
-};
-
-static const struct srx_module_requirement ietf_if_reqs[] = {
-	{ .dir = YANG_PATH_, .name = "ietf-interfaces", .rev = "2018-02-20", .features = iffeat },
-	{ .dir = YANG_PATH_, .name = "iana-if-type", .rev = "2023-01-26" },
-	{ .dir = YANG_PATH_, .name = "ietf-if-extensions", .rev = "2023-01-26", .features = ifextfeat },
-	{ .dir = YANG_PATH_, .name = "ieee802-dot1q-types", .rev = "2022-10-29" },
-	{ .dir = YANG_PATH_, .name = "ietf-if-vlan-encapsulation", .rev = "2023-01-26" },
-	{ .dir = YANG_PATH_, .name = "ietf-ip", .rev = "2018-02-22" },
-	{ .dir = YANG_PATH_, .name = "infix-ip", .rev = "2023-04-24" },
-	{ .dir = YANG_PATH_, .name = "infix-if-type", .rev = "2023-06-09" },
-	{ .dir = YANG_PATH_, .name = "infix-interfaces", .rev = "2023-06-05" },
-
-	{ NULL }
-};
-
 static bool iface_is_phys(const char *ifname)
 {
 	bool is_phys = false;
@@ -960,11 +936,7 @@ err_abandon:
 
 int ietf_interfaces_init(struct confd *confd)
 {
-	int rc;
-
-	rc = srx_require_modules(confd->conn, ietf_if_reqs);
-	if (rc)
-		goto fail;
+	int rc = 0;
 
 	REGISTER_CHANGE(confd->session, "ietf-interfaces", "/ietf-interfaces:interfaces",
 			0, ifchange, confd, &confd->sub);
