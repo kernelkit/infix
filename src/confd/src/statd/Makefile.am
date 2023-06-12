@@ -8,5 +8,6 @@ statd_plugin_la_CFLAGS  = $(augeas_CFLAGS) $(jansson_CFLAGS) $(libite_CFLAGS) $(
 statd_plugin_la_LIBADD  = $(augeas_LIBS)   $(jansson_LIBS)   $(libite_LIBS)   $(sysrepo_LIBS)
 statd_plugin_la_LDFLAGS = -module -avoid-version -shared
 statd_plugin_la_SOURCES = core.c ../lib/common.h \
+			  ../lib/helpers.h ../lib/helpers.c \
 			  ../lib/lyx.h ../lib/lyx.c \
 			  ../lib/srx_module.h ../lib/srx_module.c
