@@ -61,7 +61,7 @@ jobs:
       - name: Test
         if: matrix.platform == 'x86_64' && matrix.variant == 'netconf'
         run: |
-          make infix-check
+          make test-qeneth
       - name: Prepare Artifact
         run: |
           cd output
