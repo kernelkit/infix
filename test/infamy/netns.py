@@ -22,14 +22,14 @@ class IsolatedMacVlan:
             done
             """)
         except Exception as e:
-            self.__exit__(self, None, None, None)
+            self.__exit__(None, None, None)
             raise e
 
         if self.lo:
             try:
                 self.run(["ip", "link", "set", "dev", "lo", "up"])
             except Exception as e:
-                self.__exit__(self, None, None, None)
+                self.__exit__(None, None, None)
                 raise e
 
         return self
