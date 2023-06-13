@@ -2,7 +2,7 @@
 
 set -e
 
-INFIX_TEST=ghcr.io/kernelkit/infix-test:0.2
+INFIX_TEST=ghcr.io/kernelkit/infix-test:0.3
 
 extract_yang()
 {
@@ -36,17 +36,24 @@ start_topology()
 
     (cd $envdir/qeneth/ && $qeneth generate && $qeneth start)
     INFAMY_ARGS="$INFAMY_ARGS $envdir/qeneth/topology.dot"
+
+    cat <<EOF >"$envdir/bin/qeneth"
+#!/bin/sh
+set -x
+cd $envdir/qeneth && exec $ixdir/qeneth/qeneth "\$@"
+EOF
+    chmod +x "$envdir/bin/qeneth"
 }
 
 usage()
 {
     cat <<EOF
-usage: test/env [-C] [-f <IMAGE>] [-q <QENETH-DIR>] <COMMAND> [<ARGS>...]
+usage: test/env [-C [-K]] [-f <IMAGE>] [-q <QENETH-DIR>] <COMMAND> [<ARGS>...]
 
   Run <COMMAND> in a pre-packaged container with all the packages
   required for running the test suite installed.
 
-  Option:
+  Options:
 
     -C
       Don't containerize the command, run it directly in the current
