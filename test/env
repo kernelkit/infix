@@ -48,7 +48,8 @@ EOF
 usage()
 {
     cat <<EOF
-usage: test/env [-C [-K]] [-f <IMAGE>] [-q <QENETH-DIR>] <COMMAND> [<ARGS>...]
+usage: test/env [<OPTS>]    -f <IMAGE> -q <QENETH-DIR> <COMMAND> [<ARGS>...]
+       test/env [<OPTS>] -C -f <IMAGE> -t <TOPOLOGY>   <COMMAND> [<ARGS>...]
 
   Run <COMMAND> in a pre-packaged container with all the packages
   required for running the test suite installed.
@@ -60,7 +61,9 @@ usage: test/env [-C [-K]] [-f <IMAGE>] [-q <QENETH-DIR>] <COMMAND> [<ARGS>...]
       namespaces
 
     -f <IMAGE>
-      Infix image to test
+      Infix image to test. YANG models from this image are extracted
+      for use by Infamy. When starting a qeneth network, this image is
+      used on all nodes.
 
     -h
       Show this help message
@@ -72,7 +75,14 @@ usage: test/env [-C [-K]] [-f <IMAGE>] [-q <QENETH-DIR>] <COMMAND> [<ARGS>...]
 
     -q <QENETH-DIR>
       Directory containing a topology.dot.in, suitable for consumption
-      by qeneth
+      by qeneth. A copy of this network is created, and launched. The
+      resulting topology is used as the default physical topology when
+      running tests
+
+    -t <TOPOLOGY>
+      Rather than starting a qeneth network, attach to this existing
+      topology. Mostly useful together with -C
+
 EOF
 }
 
