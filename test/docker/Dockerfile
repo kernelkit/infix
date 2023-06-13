@@ -1,6 +1,7 @@
 FROM alpine:3.18.0
 
 RUN apk add --no-cache \
+    busybox-extras \
     e2fsprogs \
     gcc \
     graphviz \
@@ -12,7 +13,8 @@ RUN apk add --no-cache \
     qemu-img \
     qemu-system-x86_64 \
     ruby-mustache \
-    squashfs-tools
+    squashfs-tools \
+    tcpdump
 
 # Alpine's QEMU package does not bundle this for some reason, copied
 # from Ubuntu
