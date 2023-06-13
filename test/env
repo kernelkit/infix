@@ -62,6 +62,14 @@ usage: test/env [-C [-K]] [-f <IMAGE>] [-q <QENETH-DIR>] <COMMAND> [<ARGS>...]
     -f <IMAGE>
       Infix image to test
 
+    -h
+      Show this help message
+
+    -K
+      Even if /dev/kvm is usable, do not map it the container. This is
+      useful to see how tests will run in a CI setting, where KVM is
+      typically not available
+
     -q <QENETH-DIR>
       Directory containing a topology.dot.in, suitable for consumption
       by qeneth
@@ -75,13 +83,21 @@ qeneth="$ixdir/qeneth/qeneth"
 
 # Global options
 containerize=yes
-while getopts "Cf:q:t:" opt; do
+[ -c /dev/kvm ] && kvm="--device=/dev/kvm"
+
+while getopts "Cf:hKq:t:" opt; do
     case ${opt} in
 	C)
 	    containerize=
 	    ;;
 	f)
 	    imgfile="$OPTARG"
+	    ;;
+	h)
+	    usage && exit 0
+	    ;;
+	K)
+	    kvm=
 	    ;;
 	q)
 	    qenethdir="$OPTARG"
@@ -100,11 +116,6 @@ if [ "$containerize" ]; then
     else
 	echo "Error: Neither podman nor docker is installed"
 	exit 1
-    fi
-
-    kvm=
-    if [ -c /dev/kvm ]; then
-	kvm="--device=/dev/kvm"
     fi
 
     exec $runner run \
