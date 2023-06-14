@@ -1,4 +1,6 @@
 ---
+- case: meta/wait.py
+
 - name:  ietf-system
   suite: ietf_system/all.yaml
 
