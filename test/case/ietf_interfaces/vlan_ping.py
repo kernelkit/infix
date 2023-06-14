@@ -8,7 +8,7 @@ with infamy.Test() as test:
         target = env.attach("target", "mgmt")
 
     with test.step("Configure VLAN 10 on target:data with IP 10.0.0.2"):
-        _, tport = env.xlate("target", "data")
+        _, tport = env.ltop.xlate("target", "data")
 
         target.put_config_dict("ietf-interfaces", {
             "interfaces": {
@@ -45,7 +45,7 @@ with infamy.Test() as test:
         })
 
     with test.step("Ping 10.0.0.2 from VLAN 10 on host:data with IP 10.0.0.1"):
-        _, hport = env.xlate("host", "data")
+        _, hport = env.ltop.xlate("host", "data")
 
         with infamy.IsolatedMacVlan(hport) as ns:
             pingtest = ns.runsh("""

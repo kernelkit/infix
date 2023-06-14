@@ -6,51 +6,122 @@ def qstrip(text):
         return text[1:-1]
     return text
 
-def match_kind(n1, n2):
-    return qstrip(n1["kind"]) == qstrip(n2["kind"])
+def match_kind(n1attrs, n2attrs):
+    return n1attrs.get("kind") == n2attrs.get("kind")
 
-def find_mapping(phy, log, node_match=match_kind):
-    def annotate(nxg, dotg):
-        for e in list(nxg.edges):
+class Topology:
+    def __init__(self, dotg):
+        self.dotg = dotg
+        edges = { tuple(e.get_source().split(":")): { tuple(e.get_destination().split(":")): { "weight": 1 } } \
+                  for e in self.dotg.get_edges() \
+                 }
+        self.g = nx.Graph(edges, weight=1)
+        for e in list(self.g.edges):
             s, d = e
-            nxg.nodes[s]["kind"] = "port"
-            nxg.nodes[d]["kind"] = "port"
+            self.g.nodes[s]["kind"] = "port"
+            self.g.nodes[d]["kind"] = "port"
 
-            sn, sp = s.split(":")
-            dn, dp = d.split(":")
+            sn, sp = s
+            dn, dp = d
 
             try:
-                sk = dotg.get_node(sn)[0].get_attributes()["kind"]
+                sk = qstrip(self.dotg.get_node(sn)[0].get_attributes()["kind"])
             except:
                 raise ValueError("\"{}\"'s kind is not known".format(sn))
 
             try:
-                dk = dotg.get_node(dn)[0].get_attributes()["kind"]
+                dk = qstrip(self.dotg.get_node(dn)[0].get_attributes()["kind"])
             except:
                 raise ValueError("\"{}\"'s kind is not known".format(dn))
 
-            nxg.add_node(sn, kind=sk)
-            nxg.add_edge(sn, s)
-            nxg.add_node(dn, kind=dk)
-            nxg.add_edge(dn, d)
+            self.g.add_node(sn, kind=sk)
+            self.g.add_edge(sn, s, weight=0)
+            self.g.add_node(dn, kind=dk)
+            self.g.add_edge(dn, d, weight=0)
 
-    phyedges = [(e.get_source(), e.get_destination()) for e in phy.get_edges()]
-    logedges = [(e.get_source(), e.get_destination()) for e in log.get_edges()]
+    def map_to(self, phy, node_match=match_kind):
+        def _map_node(lnode, pnode):
+            if lnode in self.mapping:
+                assert(self.mapping[lnode][None] == pnode)
+            else:
+                self.mapping[lnode] = { None: pnode }
 
-    phyedges.sort()
-    logedges.sort()
-    nxphy = nx.Graph(phyedges)
-    nxlog = nx.Graph(logedges)
-    annotate(nxphy, phy)
-    annotate(nxlog, log)
+        def _map_port(log, phy):
+            (lnode, lport) = log
+            (pnode, pport) = phy
 
-    nxmap = isomorphism.GraphMatcher(nxphy, nxlog, node_match=node_match)
-    if nxmap.subgraph_is_isomorphic():
-        return { v: k for (k, v) in nxmap.mapping.items() }
+            if lport in self.mapping[lnode]:
+                assert(self.mapping[lnode][lport] == pport)
+            else:
+                self.mapping[lnode][lport] = pport
 
-    return None
+        nxmap = isomorphism.GraphMatcher(phy.g, self.g, node_match=node_match)
+        if not nxmap.subgraph_is_isomorphic():
+            return False
 
-# This let's us call this script like so...
+        self.phy = phy
+        self.mapping = {}
+        for (phy, log) in nxmap.mapping.items():
+            if isinstance(log, tuple):
+                lnode, lport = log
+                pnode, pport = phy
+
+                _map_node(lnode, pnode)
+                _map_port((lnode, lport), (pnode, pport))
+            else:
+                _map_node(log, phy)
+
+        return True
+
+    def xlate(self, lnode, lport=None):
+        assert(self.mapping)
+
+        if lnode not in self.mapping:
+            return None
+
+        nodemap = self.mapping[lnode]
+
+        if lport not in nodemap:
+            return None
+
+        if not lport:
+            return nodemap[None]
+
+        return (nodemap[None], nodemap[lport])
+
+    def get_nodes(self, flt):
+        out = []
+        for name in self.g.nodes:
+            if flt(name, self.g.nodes[name]):
+                out.append(name)
+
+        return out
+
+    def get_ports(self, node):
+        ports = self.get_nodes(lambda name, _: name.startswith(f"{node}:"))
+        return { p.removeprefix(f"{node}:") for p in ports }
+
+    def get_path(self, src, dst):
+        path = nx.shortest_path(self.g, src, dst)
+        return path[1:-1] if path else None
+
+    def get_paths(self, src, dst):
+        paths = nx.all_shortest_paths(self.g, src, dst)
+        if not paths:
+            return None
+
+        return map(lambda path: path[1:-1], paths)
+
+    def get_ctrl(self):
+        ns = self.get_nodes(lambda _, attrs: attrs.get("kind") == "controller")
+        assert(len(ns) == 1)
+        return ns[0]
+
+    def get_infixen(self):
+        return self.get_nodes(lambda _, attrs: attrs.get("kind") == "infix")
+
+
+# Support calling this script like so...
 #
 #     python3 topology.py <physical> <logical>
 #
@@ -61,8 +132,12 @@ if __name__ == "__main__":
     import pydot
     import sys
 
-    pdot = pydot.graph_from_dot_file(sys.argv[1])[0]
-    ldot = pydot.graph_from_dot_file(sys.argv[2])[0]
-    mapping = find_mapping(pdot, ldot)
+    phy = Topology(pydot.graph_from_dot_file(sys.argv[1])[0])
+    log = Topology(pydot.graph_from_dot_file(sys.argv[2])[0])
+    if log.map_to(phy):
+        print(json.dumps(log.mapping))
+        print(json.dumps(tuple(log.get_paths("host", "target"))))
+        sys.exit(0)
 
-    print(json.dumps(mapping))
+    print("{}")
+    sys.exit(1)
