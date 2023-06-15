@@ -178,9 +178,9 @@ linux-pc:#
 
 For Windows clients, Infix advertises itself via the SSDP
 protocol. The Infix unit will appear as a *Network Infrastructure* 
-equipment icon in the *Network* tab o Windows Explorer.
+equipment icon in the *Network* tab of Windows Explorer.
 
-In Linux, the *ssdp-scan*[^3] tool be used to find Infix units via
+In Linux, the *ssdp-scan*[^3] tool can be used to find Infix units via
 SSDP.
 
 ```
