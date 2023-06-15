@@ -4,17 +4,18 @@ Discover Infix Units
 ```
  .----.      Ethernet       .-------.
  | PC +---------------------+ Infix |
- '----'if1              eth0'-------'
+ '----' if1            eth0 '-------'
 ```
 Figure 1: PC directly connected over Ethernet to Infix unit (here eth0).
 
 
-When you wish to discover the IP address of an Infix switch, the simplest way is
-probably *ping the IPv6 all-hosts* address (ff02::1) over a directly connected
-Ethernet cable. The units link-local IPv6 address is seen in the response.
+When you wish to discover the IP address of an Infix switch, the simplest
+way is probably to *ping the IPv6 all-hosts* address (ff02::1) over a
+directly connected Ethernet cable. The unit's link-local IPv6 address is
+seen in the response.
 
-In the example below, the PC is connected to Infix via interface
-*tap0* (if1=tap0 in the figure above) and Infix responds with address
+In the example below, the PC is connected to Infix via interface *tap0*
+(*tap0* is *if1* in Figure 1) and Infix responds with address
 *fe80::ff:fe00:0*.
 
 ```
@@ -47,7 +48,7 @@ protocols in addition to [LLDP](#lldp).
 
 Infix supports LLDP (IEEE 802.1AB). For a unit with factory default
 settings, the PC can readout the link-local IPv6 address from the
-Management Address TLV using *tcpdump* or other sniffing tools[¹].
+Management Address TLV using *tcpdump* or other sniffing tools[^1].
 ```
 linux-pc:# tcpdump -i tap0 -Qin -v ether proto 0x88cc
 tcpdump: listening on tap0, link-type EN10MB (Ethernet), snapshot length 262144 bytes
@@ -81,10 +82,10 @@ tcpdump: listening on tap0, link-type EN10MB (Ethernet), snapshot length 262144 
 linux-pc:# 
 ```
 
-If the unit has an IPv4 address assigned, it is shown in an additional Management
-Address TLV.
+If the unit has an IPv4 address assigned, it is shown in an additional
+Management Address TLV.
 
-> **Note** The Management Addresses shown by LLDP is not
+> **Note** The Management Addresses shown by LLDP are not
 > necessarily associated with the port transmitting the LLDP message. 
 
 In the example below, the IPv4 address (10.0.1.1) happens to be
@@ -128,13 +129,17 @@ tcpdump: listening on tap0, link-type EN10MB (Ethernet), snapshot length 262144 
 linux-pc:#
 ```
 
+[^1]: [lldpd: implementation of IEEE 802.1ab
+    (LLDP)](https://github.com/lldp/lldpd) includes *lldpcli*, which
+    is handy to sniff and display LLDP packets.
+
 ### mDNS
 
 DNS-SD/mDNS can be used to discover Infix units and services. Infix
 units present their IP addresses, services and hostname within the
 .local domain. This method has good client support in Apple and Linux
-systems. On Linux, tools such as *avahi-browse* or [mdns-scan][²] can be
-used to search for devices advertising their services via mDNS.
+systems. On Linux, tools such as *avahi-browse* or *mdns-scan*[^2] can
+be used to search for devices advertising their services via mDNS.
 
 ```
 linux-pc:# avahi-browse -ar
@@ -165,6 +170,9 @@ linux-pc:# avahi-browse -ar
 ^C
 linux-pc:#
 ```
+[^2]: [mdns-scan](http://0pointer.de/lennart/projects/mdns-scan/): a
+    tool for scanning for mDNS/DNS-SD published services on the local
+    network
 
 ### SSDP
 
@@ -172,7 +180,7 @@ For Windows clients, Infix advertises itself via the SSDP
 protocol. The Infix unit will appear as a *Network Infrastructure* 
 equipment icon in the *Network* tab o Windows Explorer.
 
-In Linux, the [ssdp-scan][3] tool be used to find Infix units via
+In Linux, the *ssdp-scan*[^3] tool be used to find Infix units via
 SSDP.
 
 ```
@@ -182,12 +190,12 @@ linux-pc:#
 ```
 
 > Note 1: Infix presents itself with a HTTP URL, however, currently no
-> Web server is running. Still, the IP address is discovered and used
-> for SSH access, etc.
+> Web server is running. Still, the IP address 10.0.1.1 is discovered
+> and can be used for SSH access, etc.
 
 > Note 2: SSDP is limited to IPv4. Thus, it is only valid as discovery
-> mechanism when Infix (as well as the client) has an IPv4 assigned.
+> mechanism when Infix as well as the client PC has an IPv4 address
+> assigned.
 
-[¹]: [lldpd: implementation of IEEE 802.1ab (LLDP)](https://github.com/lldp/lldpd) includes *lldpcli*, which is handy to sniff and display LLDP packets.
-[²]: [mdns-scan](http://0pointer.de/lennart/projects/mdns-scan/): a tool for scanning for mDNS/DNS-SD published services on the local network 
-[³]: [SSDP Responder for Linux/UNIX](https://github.com/troglobit/ssdp-responder)
+[^3]: [SSDP Responder for
+    Linux/UNIX](https://github.com/troglobit/ssdp-responder)
