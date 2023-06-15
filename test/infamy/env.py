@@ -27,6 +27,7 @@ class Env(object):
         pdot = pydot.graph_from_dot_file(self.args.ptop[0])[0]
         self.ptop = topology.Topology(pdot)
 
+        self.ltop = None
         if self.args.ltop:
             ldot = pydot.graph_from_dot_file(self.args.ltop)[0]
             self.ltop = topology.Topology(ldot)
