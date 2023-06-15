@@ -24,5 +24,8 @@ test-run: | ~/.infix-test-venv
 test-run-sh:
 	$(call test-env-run,/bin/sh)
 
+test-run-play:
+	$(call test-env-run,$(test-dir)/case/meta/play.py)
+
 ~/.infix-test-venv:
 	$(test-dir)/docker/init-venv.sh $(test-dir)/docker/pip-requirements.txt
