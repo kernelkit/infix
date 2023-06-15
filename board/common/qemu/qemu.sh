@@ -76,7 +76,7 @@ append_args()
     if [ "$CONFIG_QEMU_ROOTFS_INITRD" = "y" ]; then
 	# Size of initrd, rounded up to nearest kb
 	local size=$((($(stat -c %s $CONFIG_QEMU_ROOTFS) + 1023) >> 10))
-	echo -n "root=/dev/ram ramdisk_size=${size} "
+	echo -n "root=/dev/ram0 ramdisk_size=${size} "
     elif [ "$CONFIG_QEMU_ROOTFS_VSCSI" = "y" ]; then
 	echo -n "root=PARTLABEL=primary "
     fi
