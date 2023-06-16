@@ -6,3 +6,6 @@
 
 - name:  ietf-interfaces
   suite: ietf_interfaces/all.yaml
+
+- name:  infix-interfaces
+  suite: infix_interfaces/all.yaml
