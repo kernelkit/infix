@@ -58,17 +58,16 @@ jobs:
           echo "Buildring $target ..."
           make $target
           make
-      - name: Test
-        if: matrix.platform == 'x86_64' && matrix.variant == 'netconf'
-        run: |
-          make test-qeneth
       - name: Prepare Artifact
         run: |
           cd output
           mv images ${{ steps.vars.outputs.dir }}
+          ln -s ${{ steps.vars.outputs.dir }} images
           tar chfz ${{ steps.vars.outputs.tgz }} ${{ steps.vars.outputs.dir }}
-          ls -l
-          ls -l ${{ steps.vars.outputs.dir }}
+      - name: Test
+        if: matrix.platform == 'x86_64' && matrix.variant == 'netconf'
+        run: |
+          make test-qeneth
       - uses: actions/upload-artifact@v3
         with:
           path: output/${{ steps.vars.outputs.tgz }}
