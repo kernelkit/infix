@@ -1,0 +1,56 @@
+From 1d5954d87cdc8a180d917a1d807000e0b4a3a2de Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Fri, 16 Jun 2023 16:17:27 +0200
+Subject: [PATCH] sysrepoctl: add support for -Cfactory -d running
+Organization: Addiva Elektronik
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ src/common.h                 | 3 +++
+ src/executables/sysrepocfg.c | 2 ++
+ src/sysrepo.c                | 2 +-
+ 3 files changed, 6 insertions(+), 1 deletion(-)
+
+diff --git a/src/common.h b/src/common.h
+index 37f7ede6..a092728f 100644
+--- a/src/common.h
++++ b/src/common.h
+@@ -42,6 +42,9 @@ struct srplg_ntf_s;
+ /** macro for checking conventional datastore type */
+ #define SR_IS_CONVENTIONAL_DS(ds) ((ds == SR_DS_STARTUP) || (ds == SR_DS_RUNNING) || (ds == SR_DS_CANDIDATE))
+ 
++/**  macro for checking allowed source datastore */
++#define SR_IS_COPY_SRC_DS(ds) ((ds == SR_DS_STARTUP) || (ds == SR_DS_RUNNING) || (ds == SR_DS_CANDIDATE) || (ds == SR_DS_FACTORY_DEFAULT))
++
+ /** macro for checking standard (modifiable) datastore type */
+ #define SR_IS_STANDARD_DS(ds) (SR_IS_CONVENTIONAL_DS(ds) || (ds == SR_DS_OPERATIONAL))
+ 
+diff --git a/src/executables/sysrepocfg.c b/src/executables/sysrepocfg.c
+index 4067063c..839f093b 100644
+--- a/src/executables/sysrepocfg.c
++++ b/src/executables/sysrepocfg.c
+@@ -647,6 +647,8 @@ arg_get_ds(const char *optarg, sr_datastore_t *ds)
+         *ds = SR_DS_CANDIDATE;
+     } else if (!strcmp(optarg, "operational")) {
+         *ds = SR_DS_OPERATIONAL;
++    } else if (!strcmp(optarg, "factory")) {
++        *ds = SR_DS_FACTORY_DEFAULT;
+     } else {
+         error_print(0, "Unknown datastore \"%s\"", optarg);
+         return -1;
+diff --git a/src/sysrepo.c b/src/sysrepo.c
+index 2c0d61fd..26c65851 100644
+--- a/src/sysrepo.c
++++ b/src/sysrepo.c
+@@ -4012,7 +4012,7 @@ sr_copy_config(sr_session_ctx_t *session, const char *module_name, sr_datastore_
+     struct sr_mod_info_s mod_info;
+     const struct lys_module *ly_mod = NULL;
+ 
+-    SR_CHECK_ARG_APIRET(!session || !SR_IS_CONVENTIONAL_DS(src_datastore) || !SR_IS_CONVENTIONAL_DS(session->ds),
++    SR_CHECK_ARG_APIRET(!session || !SR_IS_COPY_SRC_DS(src_datastore) || !SR_IS_CONVENTIONAL_DS(session->ds),
+             session, err_info);
+ 
+     if (src_datastore == session->ds) {
+-- 
+2.34.1
+
