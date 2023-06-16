@@ -1,0 +1,186 @@
+From 429d89a2254b29cd51758e4c6d2f7178d8b2120a Mon Sep 17 00:00:00 2001
+From: Michal Vasko <mvasko@cesnet.cz>
+Date: Thu, 15 Jun 2023 09:36:57 +0200
+Subject: [PATCH 1/2] lyd mods UPDATE allow custom start data for internal
+ modules
+Organization: Addiva Elektronik
+
+Compile-time variable with the path to a file with the data.
+NOTE: Squashed two upstream commits in backport to kkit.
+
+Signed-off-by: Michal Vasko <mvasko@cesnet.cz>
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ CMakeLists.txt  | 24 +++++++++++++++-
+ README.md       |  5 ++++
+ src/config.h.in |  4 +++
+ src/lyd_mods.c  | 73 +++++++++++++++++++++++++++++++++++++++++++++++--
+ 4 files changed, 103 insertions(+), 3 deletions(-)
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index f4b0b2f2..08480779 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -100,7 +100,29 @@ endif()
+ option(ENABLE_EXAMPLES "Build examples." ON)
+ option(ENABLE_COVERAGE "Build code coverage report from tests" OFF)
+ option(INSTALL_SYSCTL_CONF "Install sysctl conf file to allow shared access to SHM files." OFF)
+-set(YANG_MODULE_DIR "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_DATADIR}/yang/modules/sysrepo" CACHE STRING "Directory where to copy the YANG modules to")
++set(YANG_MODULE_DIR "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_DATADIR}/yang/modules/sysrepo" CACHE STRING "Directory where to copy the YANG modules to.")
++set(INTERNAL_MODULE_DATA_PATH "" CACHE STRING "Path to a file with startup and factory-default data of internal modules. Contents of the file are compiled into the library.")
++if(INTERNAL_MODULE_DATA_PATH)
++    if(NOT EXISTS "${INTERNAL_MODULE_DATA_PATH}")
++        message(FATAL_ERROR "File \"${INTERNAL_MODULE_DATA_PATH}\" does not exist.")
++    endif()
++    string(REGEX MATCH "[.](xml|json)$" EXT ${INTERNAL_MODULE_DATA_PATH})
++    if(NOT EXT)
++        message(FATAL_ERROR "File \"${INTERNAL_MODULE_DATA_PATH}\" with an unknown extension.")
++    endif()
++
++    file(READ "${INTERNAL_MODULE_DATA_PATH}" INTERNAL_MODULE_DATA_RAW)
++    string(REPLACE "\n" "\\\n" INTERNAL_MODULE_DATA ${INTERNAL_MODULE_DATA_RAW})
++
++    if(${EXT} STREQUAL ".xml")
++        set(INTERNAL_MODULE_DATA_FORMAT LYD_XML)
++    else()
++        set(INTERNAL_MODULE_DATA_FORMAT LYD_JSON)
++    endif()
++else()
++    # empty data but the code needs a format
++    set(INTERNAL_MODULE_DATA_FORMAT LYD_XML)
++endif()
+ 
+ # ietf-yang-library revision
+ set(YANGLIB_REVISION "2019-01-04" CACHE STRING
+diff --git a/README.md b/README.md
+index 3d0e7aa4..39c47473 100644
+--- a/README.md
++++ b/README.md
+@@ -147,6 +147,11 @@ Set [NACM](#NACM) configuration data and 'sysrepo-monitoring' default permission
+ ```
+ -DNACM_SRMON_DATA_PERM=000
+ ```
++
++Set `startup` and `factory-default` datastore data for internal modules (such as `ietf-netconf-acm`):
++```
++-DINTERNAL_MODULE_DATA_PATH=/etc/config/factory_default_config.xml
++```
+ ### Useful CMake Build Options
+ 
+ #### Changing Compiler
+diff --git a/src/config.h.in b/src/config.h.in
+index 92040b0e..7f7b915c 100644
+--- a/src/config.h.in
++++ b/src/config.h.in
+@@ -76,6 +76,10 @@
+ /** if not set, defaults to "SR_REPO_PATH/yang" */
+ #define SR_YANG_PATH "@YANG_MODULE_PATH@"
+ 
++/** internal module startup and factory-default data and their format */
++#define SR_INT_MOD_DATA "@INTERNAL_MODULE_DATA@"
++#define SR_INT_MOD_DATA_FORMAT @INTERNAL_MODULE_DATA_FORMAT@
++
+ /** where SHM files are stored */
+ #define SR_SHM_DIR "@SHM_DIR@"
+ 
+diff --git a/src/lyd_mods.c b/src/lyd_mods.c
+index 13397fa8..94e97b97 100644
+--- a/src/lyd_mods.c
++++ b/src/lyd_mods.c
+@@ -4,8 +4,8 @@
+  * @brief Sysrepo module data routines
+  *
+  * @copyright
+- * Copyright (c) 2018 - 2022 Deutsche Telekom AG.
+- * Copyright (c) 2018 - 2022 CESNET, z.s.p.o.
++ * Copyright (c) 2018 - 2023 Deutsche Telekom AG.
++ * Copyright (c) 2018 - 2023 CESNET, z.s.p.o.
+  *
+  * This source code is licensed under BSD 3-Clause License (the "License").
+  * You may not use this file except in compliance with the License.
+@@ -943,6 +943,70 @@ sr_lydmods_print(struct lyd_node **sr_mods)
+     return NULL;
+ }
+ 
++/**
++ * @brief Set startup and factory-default datastore data for implemented internal modules.
++ *
++ * @param[in] ly_ctx Context with the internal modules.
++ * @return err_info, NULL on success.
++ */
++static sr_error_info_t *
++sr_lydmods_create_data(const struct ly_ctx *ly_ctx)
++{
++    sr_error_info_t *err_info = NULL;
++    const struct lys_module *ly_mod;
++    struct lyd_node *data = NULL, *mod_data = NULL, *mod_diff = NULL;
++    uint32_t idx = 0;
++    int rc;
++
++    if (!strlen(SR_INT_MOD_DATA)) {
++        /* no data to set */
++        goto cleanup;
++    }
++
++    /* parse and validate the data */
++    if (lyd_parse_data_mem(ly_ctx, SR_INT_MOD_DATA, SR_INT_MOD_DATA_FORMAT, 0, LYD_VALIDATE_NO_STATE, &data)) {
++        sr_errinfo_new_ly(&err_info, ly_ctx, NULL);
++        goto cleanup;
++    }
++
++    while ((ly_mod = ly_ctx_get_module_iter(ly_ctx, &idx))) {
++        if (!ly_mod->implemented) {
++            continue;
++        }
++
++        /* get the data for this module */
++        lyd_free_siblings(mod_data);
++        mod_data = sr_module_data_unlink(&data, ly_mod);
++        if (!mod_data) {
++            continue;
++        }
++
++        /* generate a diff */
++        lyd_free_siblings(mod_diff);
++        if (lyd_diff_siblings(NULL, mod_data, LYD_DIFF_DEFAULTS, &mod_diff)) {
++            sr_errinfo_new_ly(&err_info, ly_ctx, mod_data);
++            goto cleanup;
++        }
++        assert(mod_diff);
++
++        /* store the data using the internal JSON plugin */
++        if ((rc = srpds_json.store_cb(ly_mod, SR_DS_STARTUP, mod_diff, mod_data))) {
++            SR_ERRINFO_DSPLUGIN(&err_info, rc, "store", srpds_json.name, ly_mod->name);
++            goto cleanup;
++        }
++        if ((rc = srpds_json.store_cb(ly_mod, SR_DS_FACTORY_DEFAULT, mod_diff, mod_data))) {
++            SR_ERRINFO_DSPLUGIN(&err_info, rc, "store", srpds_json.name, ly_mod->name);
++            goto cleanup;
++        }
++    }
++
++cleanup:
++    lyd_free_siblings(mod_data);
++    lyd_free_siblings(mod_diff);
++    lyd_free_siblings(data);
++    return err_info;
++}
++
+ /**
+  * @brief Create default sysrepo module data. All libyang internal implemented modules
+  * are installed into sysrepo. Sysrepo internal modules ietf-netconf, ietf-netconf-with-defaults,
+@@ -1042,6 +1106,11 @@ sr_lydmods_create(struct ly_ctx *ly_ctx, struct lyd_node **sr_mods_p)
+         goto cleanup;
+     }
+ 
++    /* set the startup and factory-default data, if any */
++    if ((err_info = sr_lydmods_create_data(ly_ctx))) {
++        goto cleanup;
++    }
++
+ cleanup:
+     free(new_mods);
+     if (err_info) {
+-- 
+2.34.1
+
