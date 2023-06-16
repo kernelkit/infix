@@ -15,6 +15,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+      - name: Set Build Variables
+        id: vars
+        run: |
+          target=x86_64-minimal
+          echo "dir=infix-$target"        >> $GITHUB_OUTPUT
+          echo "tgz=infix-$target.tar.gz" >> $GITHUB_OUTPUT
       - name: Restore Cache of dl/
         uses: actions/cache@v3
         with:
@@ -39,6 +45,16 @@ jobs:
       - name: Build
         run: |
           make
+      - name: Prepare Artifact
+        run: |
+          cd output
+          mv images ${{ steps.vars.outputs.dir }}
+          ln -s ${{ steps.vars.outputs.dir }} images
+          tar cfz ${{ steps.vars.outputs.tgz }} ${{ steps.vars.outputs.dir }}
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          path: output/${{ steps.vars.outputs.tgz }}
       - name: Regression Test
         run: |
           make test-qeneth
