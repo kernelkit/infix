@@ -26,58 +26,64 @@ rm -rf /etc/sysrepo/* /dev/shm/sr_*
 mkdir -p /etc/sysrepo/
 cp "$FACTORY" "$INIT_DATA"
 sysrepoctl -s $SEARCH							\
-	   -i ietf-system@2014-08-06.yang				\
+	   -i ietf-system@2014-08-06.yang      -g wheel -p 0660		\
            	-e authentication					\
 		-e local-users						\
 		-e ntp							\
 		-e ntp-udp-port						\
 		-e timezone-name					\
-	   -i nc-notifications@2008-07-14.yang				\
-	   -i notifications@2008-07-14.yang				\
-	   -i ietf-keystore@2019-07-02.yang				\
+	   -i nc-notifications@2008-07-14.yang -g wheel -p 0660		\
+	   -i notifications@2008-07-14.yang    -g wheel -p 0660		\
+	   -i ietf-keystore@2019-07-02.yang    -g wheel -p 0660		\
 	   	-e keystore-supported					\
 	   	-e local-definitions-supported				\
 	   	-e key-generation					\
-	   -i ietf-truststore@2019-07-02.yang				\
+	   -i ietf-truststore@2019-07-02.yang	-g wheel -p 0660	\
 		-e truststore-supported					\
 		-e x509-certificates					\
-	   -i ietf-tcp-common@2019-07-02.yang				\
+	   -i ietf-tcp-common@2019-07-02.yang	-g wheel -p 0660	\
 		-e keepalives-supported					\
-	   -i ietf-ssh-server@2019-07-02.yang				\
+	   -i ietf-ssh-server@2019-07-02.yang	-g wheel -p 0660	\
 		-e local-client-auth-supported				\
-	   -i ietf-tls-server@2019-07-02.yang				\
+	   -i ietf-tls-server@2019-07-02.yang	-g wheel -p 0660	\
 		-e local-client-auth-supported				\
- 	   -i ietf-netconf-server@2019-07-02.yang			\
+ 	   -i ietf-netconf-server@2019-07-02.yang -g wheel -p 0660	\
 	   	-e ssh-listen						\
 		-e tls-listen						\
 		-e ssh-call-home					\
 		-e tls-call-home					\
-	   -i ietf-interfaces@2018-02-20.yang    -e if-mib		\
-	   -i ietf-ip@2018-02-22.yang					\
-	   -i ietf-network-instance@2019-01-21.yang			\
-	   -i ietf-netconf-monitoring@2010-10-04.yang			\
-	   -i ietf-netconf-nmda@2019-01-07.yang				\
+	   -i ietf-interfaces@2018-02-20.yang   -g wheel -p 0660	\
+		-e if-mib						\
+	   -i ietf-ip@2018-02-22.yang		-g wheel -p 0660	\
+	   -i ietf-network-instance@2019-01-21.yang -g wheel -p 0660	\
+	   -i ietf-netconf-monitoring@2010-10-04.yang -g wheel -p 0660	\
+	   -i ietf-netconf-nmda@2019-01-07.yang -g wheel -p 0660	\
 		-e origin						\
 		-e with-defaults					\
 	   -i ietf-subscribed-notifications@2019-09-09.yang		\
+		-g wheel -p 0660 					\
 		-e encode-xml						\
 		-e replay						\
 		-e subtree						\
 		-e xpath						\
-	   -i ietf-yang-push@2019-09-09.yang     -e on-change		\
-	   -i iana-if-type@2023-01-26.yang				\
-	   -i ietf-if-extensions@2023-01-26.yang -e sub-interfaces	\
-	   -i ieee802-dot1q-types@2022-10-29.yang			\
+	   -i ietf-yang-push@2019-09-09.yang    -g wheel -p 0660	\
+		-e on-change						\
+	   -i iana-if-type@2023-01-26.yang	-g wheel -p 0660	\
+	   -i ietf-if-extensions@2023-01-26.yang -g wheel -p 0660	\
+		-e sub-interfaces					\
+	   -i ieee802-dot1q-types@2022-10-29.yang -g wheel -p 0660	\
 	   -i ietf-if-vlan-encapsulation@2023-01-26.yang		\
-	   -i infix-ip@2023-04-24.yang					\
-	   -i infix-if-type@2023-06-09.yang				\
-	   -i infix-interfaces@2023-06-05.yang   -e vlan-filtering	\
-	   -i infix-system@2023-04-11.yang				\
+		-g wheel -p 0660 					\
+	   -i infix-ip@2023-04-24.yang		-g wheel -p 0660	\
+	   -i infix-if-type@2023-06-09.yang	-g wheel -p 0660	\
+	   -i infix-interfaces@2023-06-05.yang	-g wheel -p 0660	\
+		-e vlan-filtering					\
+	   -i infix-system@2023-04-11.yang	-g wheel -p 0660	\
 	   -I "${INIT_DATA}"
 rc=$?
 
 # Enable features required by netopeer2
-sysrepoctl -c ietf-netconf						\
+sysrepoctl -c ietf-netconf			-g wheel -p 0660	\
 		-e writable-running					\
 		-e candidate						\
 		-e rollback-on-error					\
