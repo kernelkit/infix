@@ -3,6 +3,7 @@ from collections import namedtuple
 from dataclasses import dataclass
 
 import socket
+import time
 
 import libyang
 import lxml
@@ -109,7 +110,13 @@ class Device(object):
 
     def put_config(self, edit):
         xml = "<config xmlns=\"urn:ietf:params:xml:ns:netconf:base:1.0\">" + edit + "</config>"
-        self.ncc.edit_config(xml, default_operation='merge')
+        for _ in range(0,3):
+            try:
+                self.ncc.edit_config(xml, default_operation='merge')
+            except self.ncc.RpcError:
+                time.sleep(1)
+                continue
+            break
 
     def put_config_dict(self, modname, edit):
         mod = self.ly.get_module(modname)
