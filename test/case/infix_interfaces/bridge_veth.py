@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 #
-# PING -->     br0 10.0.0.2
-#             /
-#   PC ---- e0
+# PING -->     br0
+#             /   \
+#   PC ---- e0     veth 10.0.0.2
 #
 
 import infamy
@@ -22,14 +22,6 @@ with infamy.Test() as test:
                         "name": "br0",
                         "type": "iana-if-type:bridge",
                         "enabled": True,
-                        "ipv4": {
-                            "address": [
-                                {
-                                    "ip": "10.0.0.2",
-                                    "prefix-length": 24,
-                                }
-                            ]
-                        }
                     },
                     {
                         "name": tport,
@@ -39,11 +31,38 @@ with infamy.Test() as test:
                             "bridge": "br0"
                         }
                     },
+                    {
+                        "name": "veth0a",
+                        "type": "infix-if-type:veth",
+                        "enabled": True,
+                        "infix-interfaces:veth": {
+                            "peer": "veth0b"
+                        },
+                        "infix-interfaces:bridge-port": {
+                            "bridge": "br0"
+                        }
+                    },
+                    {
+                        "name": "veth0b",
+                        "type": "infix-if-type:veth",
+                        "enabled": True,
+                        "infix-interfaces:veth": {
+                            "peer": "veth0a"
+                        },
+                        "ipv4": {
+                            "address": [
+                                {
+                                    "ip": "10.0.0.2",
+                                    "prefix-length": 24,
+                                }
+                            ]
+                        }
+                    },
                 ]
             }
         })
 
-    with test.step("Ping bridge 10.0.0.2 from host:data with IP 10.0.0.1"):
+    with test.step("Ping other end of bridged veth pair on 10.0.0.2 from host:data with IP 10.0.0.1"):
         _, hport = env.ltop.xlate("host", "data")
 
         with infamy.IsolatedMacVlan(hport) as ns:
@@ -53,7 +72,7 @@ with infamy.Test() as test:
             ip link set iface up
             ip addr add 10.0.0.1/24 dev iface
 
-            ping -c1 -w5 10.0.0.2 || exit 1
+            ping -c1 -w10 10.0.0.2 || exit 1
             """)
 
         if pingtest.returncode:
