@@ -109,7 +109,7 @@ class Device(object):
 
     def put_config(self, edit):
         xml = "<config xmlns=\"urn:ietf:params:xml:ns:netconf:base:1.0\">" + edit + "</config>"
-        self.ncc.edit_config(xml)
+        self.ncc.edit_config(xml, default_operation='merge')
 
     def put_config_dict(self, modname, edit):
         mod = self.ly.get_module(modname)
