@@ -32,6 +32,38 @@ submodule infix-if-bridge {
   }
 
   /*
+   * Typedefs
+   */
+  typedef ieee-reserved-groups {
+    type union {
+      type uint8 {
+	range "0..15";
+      }
+      type enumeration {
+	enum stp {
+	  value 0;
+	  description "Spanning Tree (STP/RSPT/MSTP).";
+	}
+	enum lacp {
+	  value 2;
+	  description "802.3 Slow Protocols, e.g., LACP.";
+	}
+	enum dot1x {
+	  value 3;
+	  description "802.1X Port-Based Network Access Control.";
+	}
+	enum lldp {
+	  value 14;
+	  description "802.1AB Link Layer Discovery Protocol (LLDP).";
+	}
+      }
+    }
+    description
+      "This is a user-friendly enumeration of the different reserved IEEE
+       reserved link-local multicast groups, in 01:80:C2:00:00:0X.";
+  }
+
+  /*
    * Data Nodes
    */
 
@@ -44,6 +76,12 @@ submodule infix-if-bridge {
 
     container bridge {
       description "IEEE 802.1Q style bridge.";
+
+      leaf-list ieee-group-forward {
+	type ieee-reserved-groups;
+	description
+	  "List of IEEE link-local protocols to forward, e.g., STP, LLDP";
+      }
 
       container vlans {
         if-feature "vlan-filtering";
