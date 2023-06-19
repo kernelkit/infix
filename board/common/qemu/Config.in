@@ -37,9 +37,11 @@ choice
 
 config QEMU_ROOTFS_MMC
      bool "MMC"
+     depends on QEMU_aarch64
 
 config QEMU_ROOTFS_INITRD
      bool "Initrd"
+     depends on QEMU_LOADER_KERNEL
 
 config QEMU_ROOTFS_VSCSI
      bool "Virtio SCSI"
