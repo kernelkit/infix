@@ -46,6 +46,19 @@ config QEMU_ROOTFS_VSCSI
 
 endchoice
 
+choice
+     prompt "Console"
+     default QEMU_CONSOLE_VIRTIO
+
+config QEMU_CONSOLE_VIRTIO
+     bool "Virtio (hvc0)"
+     depends on QEMU_LOADER_KERNEL
+
+config QEMU_CONSOLE_SERIAL
+     bool "Serial (ttyS0/ttyAMA0)"
+
+endchoice
+
 config QEMU_MACHINE
 	string
 	default "qemu-system-aarch64 -M virt -cpu cortex-a72 -m 256M"   if QEMU_aarch64
@@ -67,12 +80,6 @@ config QEMU_ROOTFS
 	string
 	default "disk.img"        if !QEMU_ROOTFS_INITRD
 	default "rootfs.squashfs" if QEMU_ROOTFS_INITRD
-
-config QEMU_CONSOLE
-	string
-	depends on !QEMU_ROOTFS_MMC
-	default "ttyAMA0" if QEMU_aarch64
-	default "ttyS0"   if QEMU_x86_64
 
 config QEMU_DTB_EXTEND
 	bool
