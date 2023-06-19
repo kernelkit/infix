@@ -576,6 +576,50 @@ static int netdag_gen_sysctl(struct dagger *net,
 	return err;
 }
 
+static int bridge_fwd_mask(struct lyd_node *cif)
+{
+	struct lyd_node *node, *proto;
+	int fwd_mask = 0;
+
+	node = lydx_get_descendant(lyd_child(cif), "bridge", NULL);
+	if (!node)
+		goto fail;
+
+	LYX_LIST_FOR_EACH(lyd_child(node), proto, "ieee-group-forward") {
+		struct lyd_node_term  *leaf  = (struct lyd_node_term *)proto;
+		struct lysc_node_leaf *sleaf = (struct lysc_node_leaf *)leaf->schema;
+
+		if ((sleaf->nodetype & (LYS_LEAF | LYS_LEAFLIST)) && (sleaf->type->basetype == LY_TYPE_UNION)) {
+			struct lyd_value *actual = &leaf->value.subvalue->value;
+			int val;
+
+			if (actual->realtype->basetype == LY_TYPE_UINT8)
+				val = actual->uint8;
+			else
+				val = actual->enum_item->value;
+
+			fwd_mask |= 1 << val;
+		}
+	}
+
+fail:
+	return fwd_mask;
+}
+
+static int netdag_gen_bridge(struct dagger *net, struct lyd_node *dif,
+			     struct lyd_node *cif, FILE *ip, int add)
+{
+	const char *brname = lydx_get_cattr(cif, "name");
+
+	(void)net;
+	(void)dif;
+
+	fprintf(ip, "link %s dev %s type bridge group_fwd_mask %d\n",
+		add ? "add" : "set", brname, bridge_fwd_mask(cif));
+
+	return 0;
+}
+
 static int netdag_gen_veth(struct dagger *net, struct lyd_node *dif,
 			   struct lyd_node *cif, FILE *ip)
 {
@@ -652,59 +696,16 @@ static int netdag_gen_vlan(struct dagger *net, struct lyd_node *dif,
 	return 0;
 }
 
-static int netdag_get_bridge_fwd_mask(struct lyd_node *cif)
-{
-	struct lyd_node *node, *proto;
-	int fwd_mask = 0;
-
-	node = lydx_get_descendant(lyd_child(cif), "bridge", NULL);
-	if (!node)
-		goto fail;
-
-	LYX_LIST_FOR_EACH(lyd_child(node), proto, "ieee-group-forward") {
-		struct lyd_node_term  *leaf  = (struct lyd_node_term *)proto;
-		struct lysc_node_leaf *sleaf = (struct lysc_node_leaf *)leaf->schema;
-
-		if ((sleaf->nodetype & (LYS_LEAF | LYS_LEAFLIST)) && (sleaf->type->basetype == LY_TYPE_UNION)) {
-			struct lyd_value *actual = &leaf->value.subvalue->value;
-			int val;
-
-			if (actual->realtype->basetype == LY_TYPE_UINT8)
-				val = actual->uint8;
-			else
-				val = actual->enum_item->value;
-
-			fwd_mask |= 1 << val;
-		}
-	}
-
-fail:
-	return fwd_mask;
-}
-
-static int netdag_set_bridge(struct dagger *net, struct lyd_node *dif,
-			     struct lyd_node *cif, FILE *ip)
-{
-	const char *ifname = lydx_get_cattr(cif, "name");
-
-	fprintf(ip, "link set dev %s type bridge group_fwd_mask %d\n",
-		ifname, netdag_get_bridge_fwd_mask(cif));
-
-	return 0;
-}
-
 static int netdag_gen_afspec_add(struct dagger *net, struct lyd_node *dif,
 				 struct lyd_node *cif, FILE *ip)
 {
-	const char *ifname = lydx_get_cattr(cif, "name");
 	const char *iftype = lydx_get_cattr(cif, "type");
 	int err = 0;
 
 	DEBUG_IFACE(dif, "");
 
 	if (!strcmp(iftype, "iana-if-type:bridge")) {
-		fprintf(ip, "link add dev %s type bridge group_fwd_mask %d\n",
-			ifname, netdag_get_bridge_fwd_mask(cif));
+		err = netdag_gen_bridge(net, dif, cif, ip, 1);
 	} else if (!strcmp(iftype, "infix-if-type:veth")) {
 		err = netdag_gen_veth(net, NULL, cif, ip);
 	} else if (!strcmp(iftype, "iana-if-type:l2vlan")) {
@@ -729,7 +730,7 @@ static int netdag_gen_afspec_set(struct dagger *net, struct lyd_node *dif,
 	DEBUG_IFACE(dif, "");
 
 	if (!strcmp(iftype, "iana-if-type:bridge"))
-		return netdag_set_bridge(net, dif, cif, ip);
+		return netdag_gen_bridge(net, dif, cif, ip, 0);
 	if (!strcmp(iftype, "iana-if-type:l2vlan"))
 		return netdag_gen_vlan(net, dif, cif, ip);
 	if (!strcmp(iftype, "infix-if-type:veth"))
