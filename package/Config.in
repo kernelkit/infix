@@ -1,4 +1,5 @@
 source "$BR2_EXTERNAL_INFIX_PATH/package/confd/Config.in"
+source "$BR2_EXTERNAL_INFIX_PATH/package/statd/Config.in"
 source "$BR2_EXTERNAL_INFIX_PATH/package/conmon/Config.in"
 source "$BR2_EXTERNAL_INFIX_PATH/package/factory/Config.in"
 source "$BR2_EXTERNAL_INFIX_PATH/package/faux/Config.in"
