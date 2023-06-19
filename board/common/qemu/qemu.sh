@@ -152,9 +152,9 @@ rw_args()
 
 host_args()
 {
-    [ "${QEMU_HOST}" ] || return
+    [ "$CONFIG_QEMU_HOST" ] || return
 
-    echo -n "-virtfs local,path=${QEMU_HOST},security_model=none,writeout=immediate,mount_tag=hostfs "
+    echo -n "-virtfs local,path=$CONFIG_QEMU_HOST,security_model=none,writeout=immediate,mount_tag=hostfs "
 }
 
 net_args()
