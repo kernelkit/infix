@@ -69,10 +69,16 @@ loader_args()
 
 append_args()
 {
-# Disabled, not needed anymore with virtconsole (hvc0)
-#    [ "$CONFIG_QEMU_CONSOLE" ] && echo -n "console=$CONFIG_QEMU_CONSOLE "
+    if [ "$CONFIG_QEMU_CONSOLE_VIRTIO" ]; then
+	echo -n "console=hvc0 "
+    elif [ "$CONFIG_QEMU_x86_64" ]; then
+	echo -n "console=ttyS0 "
+    elif [ "$CONFIG_QEMU_aarch64" ]; then
+	echo -n "console=ttyAMA0 "
+    else
+	die "Unknown console"
+    fi
 
-    echo -n "console=hvc0 "
     if [ "$CONFIG_QEMU_ROOTFS_INITRD" = "y" ]; then
 	# Size of initrd, rounded up to nearest kb
 	local size=$((($(stat -c %s $CONFIG_QEMU_ROOTFS) + 1023) >> 10))
@@ -101,6 +107,26 @@ rootfs_args()
     elif [ "$CONFIG_QEMU_ROOTFS_VSCSI" = "y" ]; then
 	echo -n "-drive file=$CONFIG_QEMU_ROOTFS,if=virtio,format=raw,bus=0,unit=0 "
     fi
+}
+
+serial_args()
+{
+    echo -n "-display none "
+    echo -n "-device virtio-serial "
+
+    echo -n "-chardev stdio,id=console0,mux=on "
+    echo -n "-mon chardev=console0 "
+
+    if [ "$CONFIG_QEMU_CONSOLE_VIRTIO" ]; then
+	echo -n "-device virtconsole,nr=0,name=console,chardev=console0 "
+    elif [ "$CONFIG_QEMU_CONSOLE_SERIAL" ]; then
+	echo -n "-serial chardev:console0 "
+    else
+	die "Unknown console"
+    fi
+
+    echo -n "-chardev socket,id=gdbserver,path=gdbserver.sock,server=on,wait=off "
+    echo -n "-device virtconsole,nr=1,name=gdbserver,chardev=gdbserver "
 }
 
 rw_args()
@@ -166,13 +192,9 @@ run_qemu()
     local qemu
     read qemu <<EOF
 	$CONFIG_QEMU_MACHINE \
-	  -display none -rtc base=utc,clock=vm \
-	  -device virtio-serial -chardev stdio,mux=on,id=console0 \
-	  -device virtconsole,chardev=console0 -mon chardev=console0 \
-	  -chardev socket,id=gdbserver,path=gdbserver.sock,server=on,wait=off \
-	  -device virtconsole,name=console1,chardev=gdbserver \
 	  $(loader_args) \
 	  $(rootfs_args) \
+	  $(serial_args) \
 	  $(rw_args) \
 	  $(host_args) \
 	  $(net_args) \
