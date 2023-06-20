@@ -576,6 +576,51 @@ static int netdag_gen_sysctl(struct dagger *net,
 	return err;
 }
 
+static int bridge_gen_ports(struct dagger *net, struct lyd_node *dif, struct lyd_node *cif, FILE *ip)
+{
+	struct lyd_node *node, *bridge;
+	struct lydx_diff brdiff;
+	const char *ifname;
+	int err = 0;
+
+	node = lydx_get_descendant(lyd_child(dif), "bridge-port", NULL);
+	bridge = lydx_get_child(node, "bridge");
+	if (!node || !bridge)
+		return 0;	/* not a bridge port, skip */
+
+	ifname = lydx_get_cattr(cif, "name");
+
+	if (lydx_get_diff(bridge, &brdiff) && brdiff.old) {
+		FILE *prev;
+
+		prev = dagger_fopen_current(net, "exit", brdiff.old, 60, "exit.ip");
+		if (!prev) {
+			err = -EIO;
+			goto fail;
+		}
+		fprintf(prev, "link set %s nomaster\n", ifname);
+		fclose(prev);
+	}
+
+	if (brdiff.new) {
+		FILE *next;
+
+		next = dagger_fopen_next(net, "init", brdiff.new, 60, "init.ip");
+		if (!next) {
+			err = -EIO;
+			goto fail;
+		}
+		fprintf(next, "link set %s master %s\n", ifname, brdiff.new);
+		fclose(next);
+
+		err = dagger_add_dep(net, brdiff.new, ifname);
+		if (err)
+			return ERR_IFACE(cif, err, "Unable to add dep \"%s\" to %s", ifname, brdiff.new);
+	}
+fail:
+	return err;
+}
+
 static int bridge_fwd_mask(struct lyd_node *cif)
 {
 	struct lyd_node *node, *proto;
@@ -740,27 +785,6 @@ static int netdag_gen_afspec_set(struct dagger *net, struct lyd_node *dif,
 	return -ENOSYS;
 }
 
-static int netdag_bridge_links(struct dagger *net, struct lyd_node *dif,
-			       struct lyd_node *cif, FILE *ip)
-{
-	const char *ifname = lydx_get_cattr(cif, "name");
-	struct lyd_node *node;
-	int err = 0;
-
-	node = lydx_get_descendant(lyd_child(cif), "bridge-port", NULL);
-	if (node) {
-		const char *brname = lydx_get_cattr(node, "bridge");
-
-		fprintf(ip, " master %s", brname);
-
-		err = dagger_add_dep(net, ifname, brname);
-		if (err)
-			return ERR_IFACE(cif, err, "Unable to add dep \"%s\" to %s", brname, ifname);
-	}
-
-	return err;
-}
-
 static bool netdag_must_del(struct lyd_node *dif, struct lyd_node *cif)
 {
 	const char *iftype = lydx_get_cattr(cif, "type");
@@ -866,11 +890,11 @@ static sr_error_t netdag_gen_iface(struct dagger *net,
 	if (err)
 		goto err_close_ip;
 
-	err = netdag_bridge_links(net, dif, cif, ip);
+	fputc('\n', ip);
+
+	err = bridge_gen_ports(net, dif, cif, ip);
 	if (err)
 		goto err_close_ip;
-
-	fputc('\n', ip);
 
 	/* Set type specific attributes */
 	if (!fixed && op != LYDX_OP_CREATE) {

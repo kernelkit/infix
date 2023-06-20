@@ -22,7 +22,7 @@ static FILE *dagger_fopen(struct dagger *d, int gen, const char *action,
 	if (err)
 		return NULL;
 
-	fp = fopenf("w", "%s/%d/action/%s/%s/%02u-%s",
+	fp = fopenf("a", "%s/%d/action/%s/%s/%02u-%s",
 		    d->path, gen, action, node, prio, script);
 	if (!fp)
 		return NULL;
