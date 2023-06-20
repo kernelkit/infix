@@ -4,47 +4,55 @@
 #include "dagger.h"
 #include "../lib/common.h"
 
+#define PATH_ACTION_ "%s/%d/action/%s/%s"
+
 static FILE *dagger_fopen(struct dagger *d, int gen, const char *action,
 			  const char *node, unsigned char prio,
 			  const char *script)
 {
+	char *path = NULL;
 	const char *ext;
-	FILE *fp;
-	int err;
+	FILE *fp = NULL;
 
 	if (prio > 99) {
 		errno = ERANGE;
 		return NULL;
 	}
 
-	err = systemf("mkdir -p %s/%d/action/%s/%s",
-		      d->path, gen, action, node);
-	if (err)
+	if (systemf("mkdir -p " PATH_ACTION_, d->path, gen, action, node))
 		return NULL;
 
-	fp = fopenf("a", "%s/%d/action/%s/%s/%02u-%s",
-		    d->path, gen, action, node, prio, script);
-	if (!fp)
+	if (asprintf(&path, PATH_ACTION_"/%02u-%s", d->path, gen, action, node, prio, script) == -1)
 		return NULL;
 
-	ext = rindex(script, '.');
-	if (ext) {
-		if (!strcmp(ext, ".sh"))
-			fputs("#!/bin/sh\n\n", fp);
-		else if (!strcmp(ext, ".bridge"))
-			fputs("#!/sbin/bridge -batch\n\n", fp);
-		else if (!strcmp(ext, ".ip"))
-			fputs("#!/sbin/ip -batch\n\n", fp);
-		else if (!strcmp(ext, ".sysctl"))
-			fputs("#!/sbin/sysctl -p\n\n", fp);
+	if (!fexist(path)) {
+		fp = fopen(path, "w");
+		if (!fp)
+			goto fail;
+
+		ext = rindex(script, '.');
+		if (ext) {
+			if (!strcmp(ext, ".sh"))
+				fputs("#!/bin/sh\n\n", fp);
+			else if (!strcmp(ext, ".bridge"))
+				fputs("#!/sbin/bridge -batch\n\n", fp);
+			else if (!strcmp(ext, ".ip"))
+				fputs("#!/sbin/ip -batch\n\n", fp);
+			else if (!strcmp(ext, ".sysctl"))
+				fputs("#!/sbin/sysctl -p\n\n", fp);
+		}
+
+		if (fchmod(fileno(fp), 0774)) {
+			fclose(fp);
+			fp = NULL;
+		}
+	} else {
+		fp = fopen(path, "a");
+		if (!fp)
+			goto fail;
 	}
-
-	err = fchmod(fileno(fp), 0774);
-	if (err) {
-		fclose(fp);
-		return NULL;
-	}
-
+fail:
+	free(path);
 	return fp;
 }
 
