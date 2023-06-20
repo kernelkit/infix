@@ -99,16 +99,12 @@ static int ifchange_cand_infer_veth(sr_session_ctx_t *session, const char *path)
 		goto out_free_type;
 
 	peer = srx_get_str(session, "%s/veth/peer", xpath);
-	if (!peer) {
-		ERROR("INFER VETH name %s no peer", ifname);
+	if (!peer)
 		goto out_free_ifname;
-	}
 
 	err = srx_nitems(session, &cnt, "/interfaces/interface[name='%s']/name", peer);
-	if (err || cnt) {
-		ERROR("%s nitems: %zu, err %d", peer, cnt, err);
+	if (err || cnt)
 		goto out_free_peer;
-	}
 
 	val = "infix-if-type:veth";
 	err = srx_set_str(session, val, 0, IF_XPATH "[name='%s']/type", peer);
@@ -679,13 +675,11 @@ static int netdag_gen_veth(struct dagger *net, struct lyd_node *dif,
 
 	peer = lydx_get_cattr(node, "peer");
 	if (dagger_should_skip(net, ifname)) {
-		ERROR("%s already exists, skipping", ifname);
 		err = dagger_add_dep(net, ifname, peer);
 		if (err)
 			return ERR_IFACE(cif, err, "Unable to add dep \"%s\" to %s",
 					 peer, ifname);
 	} else {
-		ERROR("Creating veth %s peer %s", ifname, peer);
 		dagger_skip_iface(net, peer);
 		fprintf(ip, "link add dev %s down type veth peer %s\n", ifname, peer);
 	}
@@ -715,7 +709,7 @@ static int netdag_gen_vlan(struct dagger *net, struct lyd_node *dif,
 				   "outer-tag",
 				   NULL);
 	if (!otag) {
-		ERROR("missing mandatory outer-tag");
+		ERROR("%s: missing mandatory outer-tag", ifname);
 		return 0;
 	}
 
@@ -756,8 +750,7 @@ static int netdag_gen_afspec_add(struct dagger *net, struct lyd_node *dif,
 	} else if (!strcmp(iftype, "iana-if-type:l2vlan")) {
 		err = netdag_gen_vlan(net, NULL, cif, ip);
 	} else {
-		ERROR("Unable to add unsupported interface type \"%s\"",
-		      iftype);
+		ERROR("unsupported interface type \"%s\"", iftype);
 		return -ENOSYS;
 	}
 
@@ -781,7 +774,7 @@ static int netdag_gen_afspec_set(struct dagger *net, struct lyd_node *dif,
 	if (!strcmp(iftype, "infix-if-type:veth"))
 		return 0;
 
-	ERROR("Unable to configure unsupported interface type \"%s\"", iftype);
+	ERROR("unsupported interface type \"%s\"", iftype);
 	return -ENOSYS;
 }
 
@@ -920,7 +913,7 @@ err_close_ip:
 	fclose(ip);
 err:
 	if (err)
-		ERROR("Failed to setup %s: %d\n", ifname, err);
+		ERROR("Failed setting up %s: %d", ifname, err);
 
 	return err ? SR_ERR_INTERNAL : SR_ERR_OK;
 }
@@ -1012,6 +1005,6 @@ int ietf_interfaces_init(struct confd *confd)
 
 	return SR_ERR_OK;
 fail:
-	ERROR("init failed: %s", sr_strerror(rc));
+	ERROR("failed, error %d: %s", rc, sr_strerror(rc));
 	return rc;
 }
