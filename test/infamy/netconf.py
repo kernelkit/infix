@@ -9,6 +9,7 @@ import libyang
 import lxml
 import netconf_client.connect
 import netconf_client.ncclient
+from netconf_client.error import RpcError
 
 modinfo_fields = ("identifier", "version", "format", "namespace")
 ModInfoTuple = namedtuple("ModInfoTuple", modinfo_fields)
@@ -113,7 +114,8 @@ class Device(object):
         for _ in range(0,3):
             try:
                 self.ncc.edit_config(xml, default_operation='merge')
-            except self.ncc.RpcError:
+            except RpcError as _e:
+                print(f"Failed sending edit-config RPC: {_e} retying ...")
                 time.sleep(1)
                 continue
             break
