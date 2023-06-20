@@ -96,12 +96,15 @@ submodule infix-if-bridge {
             description "The VLAN identifier to which this entry applies.";
           }
 
-          leaf-list untagged-ports {
+          leaf-list untagged {
             type if:interface-ref;
             description "The set of ports in the untagged set for VLAN.";
           }
 
-          leaf-list tagged-ports {
+          leaf-list tagged {
+	    must "not(../untagged[contains(., current())])" {
+	      error-message "Cannot be an untagged port at the same time.";
+	    }
             type if:interface-ref;
             description "The set of ports in the tagged set for VLAN.";
           }
