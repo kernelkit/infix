@@ -3,8 +3,11 @@
 
 #include <limits.h>
 #include <stdio.h>
+#include "core.h"
 
 struct dagger {
+	sr_session_ctx_t *session;
+
 	int current, next;
 	FILE *next_fp;
 

@@ -572,6 +572,58 @@ static int netdag_gen_sysctl(struct dagger *net,
 	return err;
 }
 
+static int bridge_diff_vlan_port(struct dagger *net, FILE *br, const char *brname, int vid,
+				       const char *brport, int tagged, enum lydx_op op)
+{
+	int pvid = 0;
+
+	srx_get_int(net->session, &pvid, SR_UINT16_T, IF_XPATH "[name='%s']/bridge-port/pvid", brport);
+
+	if (op != LYDX_OP_CREATE) {
+		fprintf(br, "vlan del vid %d dev %s\n", vid, brport);
+		if (op == LYDX_OP_DELETE)
+			return 0;
+	}
+
+	fprintf(br, "vlan add vid %d dev %s %s %s %s\n", vid, brport, vid == pvid ? "pvid" : "",
+		tagged ? "" : "untagged", strcmp(brname, brport) ? "" : "self");
+
+	return 0;
+}
+
+static int bridge_diff_vlan_ports(struct dagger *net, FILE *br, const char *brname,
+				   int vid, struct lyd_node *ports, int tagged)
+{
+	const char *type = tagged ? "tagged" : "untagged";
+	struct lyd_node *port;
+	int err = 0;
+
+	LYX_LIST_FOR_EACH(lyd_child(ports), port, type) {
+		const char *brport = lyd_get_value(port);
+		enum lydx_op op = lydx_get_op(port);
+
+		err = bridge_diff_vlan_port(net, br, brname, vid, brport, tagged, op);
+		if (err)
+			break;
+	}
+
+	return err;
+}
+
+static int bridge_vlan_settings(struct lyd_node *cif, const char **proto, int *pvid)
+{
+	struct lyd_node *node;
+
+	node = lydx_get_descendant(lyd_child(cif), "bridge", "vlans", NULL);
+	if (node) {
+		*pvid = 1;
+		*proto = "802.1Q";
+		return 1;
+	}
+
+	return 0;
+}
+
 static int bridge_gen_ports(struct dagger *net, struct lyd_node *dif, struct lyd_node *cif, FILE *ip)
 {
 	struct lyd_node *node, *bridge;
@@ -589,7 +641,7 @@ static int bridge_gen_ports(struct dagger *net, struct lyd_node *dif, struct lyd
 	if (lydx_get_diff(bridge, &brdiff) && brdiff.old) {
 		FILE *prev;
 
-		prev = dagger_fopen_current(net, "exit", brdiff.old, 60, "exit.ip");
+		prev = dagger_fopen_current(net, "exit", brdiff.old, 55, "exit.ip");
 		if (!prev) {
 			err = -EIO;
 			goto fail;
@@ -601,7 +653,7 @@ static int bridge_gen_ports(struct dagger *net, struct lyd_node *dif, struct lyd
 	if (brdiff.new) {
 		FILE *next;
 
-		next = dagger_fopen_next(net, "init", brdiff.new, 60, "init.ip");
+		next = dagger_fopen_next(net, "init", brdiff.new, 55, "init.ip");
 		if (!next) {
 			err = -EIO;
 			goto fail;
@@ -651,14 +703,49 @@ static int netdag_gen_bridge(struct dagger *net, struct lyd_node *dif,
 			     struct lyd_node *cif, FILE *ip, int add)
 {
 	const char *brname = lydx_get_cattr(cif, "name");
+	const char *op = add ? "add" : "set";
+	struct lyd_node *vlans, *vlan;
+	int vlan_filtering, pvid, fwd_mask;
+	const char *proto;
+	FILE *br = NULL;
+	int err = 0;
 
-	(void)net;
-	(void)dif;
+	vlan_filtering = bridge_vlan_settings(cif, &proto, &pvid);
+	fwd_mask = bridge_fwd_mask(cif);
 
-	fprintf(ip, "link %s dev %s type bridge group_fwd_mask %d\n",
-		add ? "add" : "set", brname, bridge_fwd_mask(cif));
+	fprintf(ip, "link %s dev %s type bridge group_fwd_mask %d vlan_filtering %d",
+		op, brname, fwd_mask, vlan_filtering ? 1 : 0);
+	if (!vlan_filtering) {
+		fprintf(ip, "\n");
+		goto done;
+	}
+	fprintf(ip, " vlan_protocol %s vlan_default_pvid %d\n", proto, pvid);
 
-	return 0;
+	vlans = lydx_get_descendant(lyd_child(dif), "bridge", "vlans", NULL);
+	if (!vlans)
+		goto done;
+
+	br = dagger_fopen_next(net, "init", brname, 60, "init.bridge");
+	if (!br) {
+		err = -EIO;
+		goto done;
+	}
+
+	LYX_LIST_FOR_EACH(lyd_child(vlans), vlan, "vlan") {
+		int vid = atoi(lydx_get_cattr(vlan, "vid"));
+
+		err = bridge_diff_vlan_ports(net, br, brname, vid, vlan, 0);
+		if (err)
+			break;
+
+		err = bridge_diff_vlan_ports(net, br, brname, vid, vlan, 1);
+		if (err)
+			break;
+	}
+
+	fclose(br);
+done:
+	return err;
 }
 
 static int netdag_gen_veth(struct dagger *net, struct lyd_node *dif,
@@ -921,8 +1008,8 @@ err:
 	return err ? SR_ERR_INTERNAL : SR_ERR_OK;
 }
 
-static sr_error_t netdag_init(struct dagger *net, struct lyd_node *cifs,
-			      struct lyd_node *difs)
+static sr_error_t netdag_init(sr_session_ctx_t *session, struct dagger *net,
+			      struct lyd_node *cifs, struct lyd_node *difs)
 {
 	struct lyd_node *iface;
 
@@ -934,6 +1021,7 @@ static sr_error_t netdag_init(struct dagger *net, struct lyd_node *cifs,
 		if (dagger_add_node(net, lydx_get_cattr(iface, "name")))
 			return SR_ERR_INTERNAL;
 
+	net->session = session;
 	return SR_ERR_OK;
 }
 
@@ -971,7 +1059,7 @@ static int ifchange(sr_session_ctx_t *session, uint32_t sub_id, const char *modu
 	cifs = lydx_get_descendant(cfg->tree, "interfaces", "interface", NULL);
 	difs = lydx_get_descendant(diff, "interfaces", "interface", NULL);
 
-	err = netdag_init(&confd->netdag, cifs, difs);
+	err = netdag_init(session, &confd->netdag, cifs, difs);
 	if (err)
 		goto err_free_diff;
 
