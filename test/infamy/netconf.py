@@ -115,7 +115,7 @@ class Device(object):
             try:
                 self.ncc.edit_config(xml, default_operation='merge')
             except RpcError as _e:
-                print(f"Failed sending edit-config RPC: {_e} retying ...")
+                print(f"Failed sending edit-config RPC: {_e}  Retrying ...")
                 time.sleep(1)
                 continue
             break
