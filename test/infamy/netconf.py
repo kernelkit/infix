@@ -40,6 +40,7 @@ class Device(object):
         self._ncc_init(location)
         self._ly_init(yangdir)
         # self.update_schema()
+        self.ncc.copy_config('running', 'startup')
 
     def _ncc_init(self, location):
         ai = socket.getaddrinfo(location.host, location.port,
