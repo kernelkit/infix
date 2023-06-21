@@ -805,6 +805,9 @@ static int netdag_gen_iface_del(struct dagger *net, struct lyd_node *dif,
 
 	DEBUG_IFACE(dif, "");
 
+	if (dagger_should_skip_current(net, ifname))
+		return 0;
+
 	ip = dagger_fopen_current(net, "exit", ifname, 50, "exit.ip");
 	if (!ip)
 		return -EIO;
