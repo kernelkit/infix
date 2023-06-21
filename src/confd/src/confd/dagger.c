@@ -147,7 +147,7 @@ int dagger_claim(struct dagger *d, const char *path)
 	} else {
 		err = systemf("mkdir -p %s/%d/action/exit"
 			      " && "
-			      "ln -s ../../top-down-order %s/%d/action/exit/order",
+			      "ln -sf ../../top-down-order %s/%d/action/exit/order",
 			      path, d->current, path, d->current);
 		if (err)
 			return err;
