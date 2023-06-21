@@ -12,7 +12,7 @@ with infamy.Test() as test:
         env = infamy.Env(infamy.std_topology("1x2"))
         target = env.attach("target", "mgmt")
 
-    with test.step("Configure two bridges linked with a veth pair furthest bridge has IP 10.0.0.2"):
+    with test.step("Configure single bridge with a single physical port, bridge @ IP 10.0.0.2"):
         _, tport = env.ltop.xlate("target", "data")
 
         target.put_config_dict("ietf-interfaces", {
