@@ -120,6 +120,11 @@ int dagger_should_skip(struct dagger *d, const char *ifname)
 	return fexistf("%s/%d/skip/%s", d->path, d->next, ifname);
 }
 
+int dagger_should_skip_current(struct dagger *d, const char *ifname)
+{
+	return fexistf("%s/%d/skip/%s", d->path, d->current, ifname);
+}
+
 
 int dagger_claim(struct dagger *d, const char *path)
 {
