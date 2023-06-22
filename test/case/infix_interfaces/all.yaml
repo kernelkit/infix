@@ -2,3 +2,4 @@
 - case: bridge_basic.py
 - case: bridge_veth.py
 - case: dual_bridge.py
+- case: bridge_vlan.py
