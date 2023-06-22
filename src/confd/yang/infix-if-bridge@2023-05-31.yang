@@ -87,6 +87,18 @@ submodule infix-if-bridge {
         if-feature "vlan-filtering";
         description "A VLAN filtering bridge has at least one VLAN.";
 
+	leaf proto {
+	  type dot1q-types:dot1q-tag-type;
+	  default dot1q-types:c-vlan;
+	  description "Standard (1Q/c-vlan) or provider (1ad/s-vlan) bridge.";
+	}
+
+	leaf pvid {
+	  type dot1q-types:vlanid;
+	  default 1;
+	  description "Default primary VID for untagged frames, default: 1.";
+	}
+
         list vlan {
           key "vid";
           description "List of VLANs associated with the Bridge.";
