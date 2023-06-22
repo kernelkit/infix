@@ -8,16 +8,10 @@ NAME=infix-$(basename "$BR2_DEFCONFIG" _defconfig | tr _ - | sed 's/x86-64/x86_6
 
 ver()
 {
-    [ -n "$RELEASE" ] || return
-    GITVER=$(git describe --tags --dirty)
-    if echo "$GITVER" |grep -q 'latest-'; then
-	latest=$(echo "$GITVER" | sed 's/latest-[0-9]*-\(g.*\)/\1/')
-	cd "$BR2_EXTERNAL_INFIX_PATH/buildroot" || exit 1
-	br2ver=$(git describe --tags --dirty | sed 's/..\([^-]*\).*/\1/g')
-	cd - || exit 1
-	GITVER=$br2ver-$latest
+    if [ -n "$INFIX_RELEASE" ]; then
+	printf -- "-%s" "$INFIX_RELEASE"
+	return
     fi
-    printf "-%s" "$GITVER"
 }
 
 load_cfg SIGN_ENABLED
@@ -53,10 +47,12 @@ if [ "$FIT_IMAGE" = "y" ]; then
     $common/mkfit.sh
 fi
 
-# For use outside of the build system, e.g., Qeneth
 if [ -z "${NAME##*minimal*}" ]; then
-    COMMON_NAME=$(echo "$NAME" | sed 's/-minimal//')
-    ln -sf rootfs.squashfs "$BINARIES_DIR/$COMMON_NAME$(ver).img"
-else
-    ln -sf rootfs.squashfs "$BINARIES_DIR/$NAME$(ver).img"
+    NAME=$(echo "$NAME" | sed 's/-minimal//')
+fi
+
+rel=$(ver)
+ln -sf rootfs.squashfs "$BINARIES_DIR/${NAME}${rel}.img"
+if [ -n "$rel" ]; then
+    ln -sf "$BINARIES_DIR/${NAME}${rel}.img" "$BINARIES_DIR/${NAME}.img"
 fi

@@ -3,8 +3,11 @@
 set -e
 
 GIT_VERSION=$(git -C $BR2_EXTERNAL_INFIX_PATH describe --always --dirty --tags)
+if [ -n "$INFIX_RELEASE" ]; then
+    rel="-${INFIX_RELEASE}"
+fi
 
-name=$1
+name=$1${rel}
 arch=$2
 sign=$3
 

@@ -1,6 +1,10 @@
 #!/bin/sh
 
-NM="${1:-custom}"
+if [ -n "$INFIX_RELEASE" ]; then
+    rel="-${INFIX_RELEASE}"
+fi
+
+NM="${1:-custom}${rel}"
 RAM=${2:-512}
 IFNUM=${3:-1}
 
