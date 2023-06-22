@@ -610,14 +610,37 @@ static int bridge_diff_vlan_ports(struct dagger *net, FILE *br, const char *brna
 	return err;
 }
 
+static const char *bridge_tagtype2str(const char *type)
+{
+	const char *proto;
+
+	if (!strcmp(type, "ieee802-dot1q-types:c-vlan"))
+		proto = "802.1Q";
+	else if (!strcmp(type, "ieee802-dot1q-types:s-vlan"))
+		proto = "802.1ad";
+	else
+		proto = NULL;
+
+	return proto;
+}
+
 static int bridge_vlan_settings(struct lyd_node *cif, const char **proto, int *pvid)
 {
 	struct lyd_node *node;
 
 	node = lydx_get_descendant(lyd_child(cif), "bridge", "vlans", NULL);
 	if (node) {
-		*pvid = 1;
-		*proto = "802.1Q";
+		const char *type = lydx_get_cattr(node, "proto");
+		const char *vid = lydx_get_cattr(node, "pvid");
+
+		if (!type || !vid) {
+			ERROR("Missing bridge proto %s or pvid %s, defaulting to 1Q and 1.", type, vid);
+			*proto = "802.1Q";
+			*pvid = 1;
+			return 1;
+		}
+		*pvid  = atoi(vid);
+		*proto = bridge_tagtype2str(type);
 		return 1;
 	}
 
@@ -716,9 +739,15 @@ static int netdag_gen_bridge(struct dagger *net, struct lyd_node *dif,
 	fprintf(ip, "link %s dev %s type bridge group_fwd_mask %d vlan_filtering %d",
 		op, brname, fwd_mask, vlan_filtering ? 1 : 0);
 	if (!vlan_filtering) {
-		fprintf(ip, "\n");
+		fputc('\n', ip);
+		goto done;
+	} else if (!proto) {
+		fputc('\n', ip);
+		ERROR("%s: unsupported bridge proto", brname);
+		err = -ENOSYS;
 		goto done;
 	}
+
 	fprintf(ip, " vlan_protocol %s vlan_default_pvid %d\n", proto, pvid);
 
 	vlans = lydx_get_descendant(lyd_child(dif), "bridge", "vlans", NULL);
@@ -803,13 +832,9 @@ static int netdag_gen_vlan(struct dagger *net, struct lyd_node *dif,
 	fprintf(ip, "link add dev %s down link %s type vlan", ifname, parent);
 
 	if (lydx_get_diff(lydx_get_child(otag, "tag-type"), &typed)) {
-		if (!strcmp(typed.new, "ieee802-dot1q-types:c-vlan"))
-			proto = "802.1Q";
-		else if (!strcmp(typed.new, "ieee802-dot1q-types:s-vlan"))
-			proto = "802.1ad";
-		else
-			return ERR_IFACE(cif, -ENOSYS, "Unsupported tag type \"%s\"",
-					 typed.new);
+		proto = bridge_tagtype2str(typed.new);
+		if (!proto)
+			return ERR_IFACE(cif, -ENOSYS, "Unsupported tag type \"%s\"", typed.new);
 
 		fprintf(ip, " proto %s", proto);
 	}
@@ -1089,9 +1114,9 @@ int ietf_interfaces_init(struct confd *confd)
 {
 	int rc = 0;
 
-	REGISTER_CHANGE(confd->session, "ietf-interfaces", "/ietf-interfaces:interfaces",
+	REGISTER_CHANGE(confd->session, "ietf-interfaces", "/ietf-interfaces:interfaces//.",
 			0, ifchange, confd, &confd->sub);
-	REGISTER_CHANGE(confd->cand, "ietf-interfaces", "/ietf-interfaces:interfaces",
+	REGISTER_CHANGE(confd->cand, "ietf-interfaces", "/ietf-interfaces:interfaces//.",
 			SR_SUBSCR_UPDATE, ifchange_cand, confd, &confd->sub);
 
 	return SR_ERR_OK;
