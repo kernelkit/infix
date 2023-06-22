@@ -1,0 +1,100 @@
+name: Release General
+
+on:
+  push:
+    tags:
+      - 'v[0-9]*.*'
+
+jobs:
+  build:
+    if: github.repository == 'kernelkit/infix' && startsWith(github.ref, 'refs/tags/')
+    name: Build Infix ${{ github.ref_name }} [${{ matrix.platform }}-${{ matrix.variant }}]
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        platform: [aarch64, x86_64]
+        variant: [netconf, classic]
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set Release Variables
+        id: build
+        run: |
+          ver=${GITHUB_REF#refs/tags/v}
+          echo "ver=${ver}" >> $GITHUB_OUTPUT
+          if echo $ver | grep -qE '[0-9.]+(-alpha|-beta|-rc)[0-9]*'; then
+            echo "pre=true"  >> $GITHUB_OUTPUT
+          else
+            echo "pre=false" >> $GITHUB_OUTPUT
+          fi
+          if [ "${{ matrix.variant }}" = "netconf" ]; then
+              target=${{ matrix.platform }}-${ver}
+          else
+              target=${{ matrix.platform }}-${{ matrix.variant }}-${ver}
+          fi
+          echo "dir=infix-$target"        >> $GITHUB_OUTPUT
+          echo "tgz=infix-$target.tar.gz" >> $GITHUB_OUTPUT
+      - name: Restore Cache of dl/
+        uses: actions/cache@v3
+        with:
+          path: dl/
+          key: dl-${{ matrix.platform }}-${{ matrix.variant }}-${{ hashFiles('.git/modules/buildroot/HEAD', 'configs/*', 'package/*/*.hash') }}
+          restore-keys: |
+            dl-${{ matrix.platform }}-${{ matrix.variant }}-
+            dl-${{ matrix.platform }}-
+            dl-
+      - name: Restore Cache of .ccache/
+        uses: actions/cache@v3
+        with:
+          path: .ccache/
+          key: ccache-${{ matrix.platform }}-${{ matrix.variant }}-${{ hashFiles('.git/modules/buildroot/HEAD', 'package/*/*.hash') }}
+          restore-keys: |
+            ccache-${{ matrix.platform }}-${{ matrix.variant }}-
+            ccache-${{ matrix.platform }}-
+            ccache-
+      - name: Configure & Build
+        env:
+          INFIX_RELEASE: ${{ steps.build.outputs.ver }}
+        run: |
+          if [ "${{ matrix.variant }}" = "netconf" ]; then
+              target=${{ matrix.platform }}_defconfig
+          else
+              target=${{ matrix.platform }}_${{ matrix.variant }}_defconfig
+          fi
+          echo "Buildring $target ..."
+          make $target
+          make
+      - name: Prepare Artifact
+        run: |
+          cd output
+          mv images ${{ steps.build.outputs.dir }}
+          ln -s ${{ steps.build.outputs.dir }} images
+          tar chfz ${{ steps.build.outputs.tgz }} ${{ steps.build.outputs.dir }}
+      - uses: actions/upload-artifact@v3
+        with:
+          path: output/${{ steps.build.outputs.tgz }}
+  release:
+    name: Release Infix ${{ github.ref_name }}
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v3
+      - name: Extract ChangeLog entry ...
+        run: |
+          awk '/-----*/{if (x == 1) exit; x=1;next}x' ChangeLog.md \
+              |head -n -1 > release.md
+          cat release.md
+      - uses: ncipollo/release-action@v1
+        with:
+          name: Infix ${{ github.ref_name }}
+          prerelease: ${{ needs.build.outputs.pre }}
+          bodyFile:  release.md
+          artifacts: artifact/*
+      - name: Summary
+        run: |
+          cat <<EOF >> $GITHUB_STEP_SUMMARY
+          # Infix ${{ github.ref_name }} Released! :rocket:
+          
+          For the public download links of this release, please see:
+           <https://github.com/kernelkit/infix/releases/tag/${{ github.ref_name }}>
+          EOF
