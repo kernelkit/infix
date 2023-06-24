@@ -1,35 +1,15 @@
 Containers in Infix
 ===================
 
-The default builds of Infix do not enable any container support.  This
-because it is not a common customer feature, and it extends build times
-due to bringing in a build-time dependency on Go.
-
-However,customer specific builds may have it, and you can also roll your
-own based on any of the available `defconfigs`.  For example:
-
-    cd infix/
-    make x86_64_defconfig
+Default builds of Infix do not enable any container support.  See below
+section, [Enabling Container Support](#enabling-container-support), for
+details on how to enable it.
 
 
 Docker Containers with Podman
 -----------------------------
 
-Run menuconfig, search for `podman`, enable that and build:
-
-	make menuconfig
-	...
-	make
-
-Enabling [podman][] select `crun`, `conmon`, and all other dependencies.
-The build will take a while, but eventually you can:
-
-    make run
-
-> A convenience alias `docker=podman` is available, but remember, not
-> all features or syntax of docker is available in podman.
-
-Test it out with an example:
+We assume you've booted into Infix and start with a familiar example:
 
     podman run -it --rm docker://hello-world
 
@@ -45,6 +25,9 @@ try to connect to the web server:
 or
 
     lynx http://localhost
+
+> A convenience alias `docker=podman` is available, but remember, not
+> all features or syntax of docker is available in podman.
 
 
 ### Multiple Networks
@@ -80,7 +63,7 @@ used to hand over control of physical ports to a container.
 > SECCOMP is recommended, which is out of scope for this tutorial.
 
 
-### NETCONF Build
+### Hybrid Mode
 
 If you've followed this tutorial then you now have a NETCONF based Infix
 system running.  To run containers on it you need to leverage the Hybrid
@@ -105,5 +88,30 @@ rebooting, run the script and call `initctl reload`.
 > be lost on reboot, so to retain custom CNI profiles after reboot you
 > need to either save them and restore in the script above, or recreate
 > them on every boot.
+
+
+Enabling Container Support
+--------------------------
+
+Container support is not enabled by default because it is not a common
+customer feature, it also prolongs build times a lot due to bringing in
+a build-time dependency on Go.
+
+However, customer specific builds may have it, and you can also roll
+your own based on any of the available `defconfigs`.  For example:
+
+    cd infix/
+    make x86_64_defconfig
+
+Run menuconfig, search for `podman` using `/`, enable it and build:
+
+	make menuconfig
+	...
+	make
+
+Enabling [podman][] select `crun`, `conmon`, and all other dependencies.
+The build will take a while, but eventually you can:
+
+    make run
 
 [podman]: https://podman.io
