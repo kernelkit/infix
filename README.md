@@ -175,7 +175,7 @@ Origin & Licensing
 
 Infix is entirely built on Open Source components (packages).  Most of
 them, as well as the build system with its helper scripts and tools, is
-from [Buiildroot][1], which is distributed under the terms of the GNU
+from [Buildroot][1], which is distributed under the terms of the GNU
 General Public License (GPL).  See the file COPYING for details.
 
 Some files in Buildroot contain a different license statement.  Those
