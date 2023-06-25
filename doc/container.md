@@ -3,7 +3,10 @@ Containers in Infix
 
 Default builds of Infix do not enable any container support.  See below
 section, [Enabling Container Support](#enabling-container-support), for
-details on how to enable it.
+details on how to enable it using Podman.
+
+Networking in containers is provided by both Infix and the Container
+Network Interface ([CNI](https://www.cni.dev/)) that Podman supports.
 
 
 Docker Containers with Podman
@@ -36,15 +39,16 @@ It is also possible to start a container with multiple networks.  The
 approach shown here uses CNI profiles, which means the interfaces names
 inside the container will always be: `eth0`, `eth1`, etc.
 
-Pending VETH support in Infix/NETCONF, the following example sets up a
-VETH pair, then creates a CNI profile, and finally starts a container
-with two profiles, the default podman bridge and the VETH profile:
+A common setup is to use a VETH pair, with one end in the container and
+the other end routed, or bridged, to the rest of the world.  The Infix
+[CLI Guide](cli.md) provides examples of both.  In either case you need
+to create a matching CNI profile for one end of the VETH pair before
+starting the container, here we use two network profiles, the default
+podman bridge and the VETH profile:
 
-     ip link add local1 type veth peer local1_peer
-     ip link set local1 up
-     ip addr add 192.168.0.1/24 dev local1
-     cni create host net1 local1_peer 192.168.0.42/24
-     podman run -d --rm --net=podman,net1 --privileged docker://troglobit/buildroot:latest
+     cni create host net1 veth0b 192.168.0.42/24
+     podman run -d --rm --net=podman,net1 --entrypoint "/linuxrc" \
+             --privileged docker://troglobit/buildroot:latest
 
 The first profile (`podman`) is a the default bridged profile.  When a
 container is started with that (default behavior), podman dynamically
@@ -70,12 +74,14 @@ system running.  To run containers on it you need to leverage the Hybrid
 mode, described in the README but also repeated below.
 
 To start containers in *Hybrid Mode*, provided the images have been
-downloaded with `podman pull` first):
+downloaded with `podman pull docker://troglobit/buildroot:latest`):
 
 ```
 root@infix:/cfg/start.d$ cat <<EOF >20-enable-container.sh
 #!/bin/sh
-podman-service -e -d "Nginx container" -p "-p 80:80" nginx:alpine
+# Remember to create the veth0a <--> vet0b pair in the CLI first!
+cni create host net1 veth0b 192.168.0.42/24
+podman-service -e -d "System container" -p "--net=podman,net1 -p 22:22 --entrypoint='/linuxrc' --privileged" buildroot:latest
 exit 0
 EOF
 root@infix:/cfg/start.d$ chmod +x 20-enable-container.sh
