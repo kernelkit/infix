@@ -133,6 +133,29 @@ root@infix-12-34-56:configure> set veth peer veth0b
 [edit interfaces interface veth0a]
 root@infix-12-34-56:configure> set ipv4 address 192.168.0.1 prefix-length 24
 [edit interfaces interface veth0a]
+root@infix-12-34-56:configure> up
+[edit interfaces]
+root@infix-12-34-56:configure> diff
+interfaces {
++  interface veth0a {
++    type veth;
++    ipv4 {
++      address 192.168.0.1 {
++        prefix-length 24;
++      }
++    }
++    veth {
++      peer veth0b;
++    }
++  }
++  interface veth0b {
++    type veth;
++    veth {
++      peer veth0a;
++    }
++  }
+}
+[edit interfaces]
 root@infix-12-34-56:configure> leave
 ```
 
@@ -160,6 +183,41 @@ root@infix-12-34-56:configure> up
 root@infix-12-34-56:configure> set interface eth0 bridge-port bridge br0
 [edit interfaces]
 root@infix-12-34-56:configure> set interface veth0b bridge-port bridge br0
+[edit interfaces]
+root@infix-12-34-56:configure> diff
+interfaces {
++  interface br0 {
++    type bridge;
++    bridge {
++      ieee-group-forward lldp;
++    }
++  }
+  interface eth0 {
++    bridge-port {
++      bridge br0;
++    }
+  }
++  interface veth0a {
++    type veth;
++    ipv4 {
++      address 192.168.0.1 {
++        prefix-length 24;
++      }
++    }
++    veth {
++      peer veth0b;
++    }
++  }
++  interface veth0b {
++    type veth;
++    veth {
++      peer veth0a;
++    }
++    bridge-port {
++      bridge br0;
++    }
++  }
+}
 [edit interfaces]
 root@infix-12-34-56:configure> leave
 ```
