@@ -1,6 +1,17 @@
 Containers in Infix
 ===================
 
+* [Introduction](#introduction)
+* [Docker Containers with Podman](#docker-containers-with-podman)
+  * [Multiple Networks](#multiple-networks)
+  * [Hybrid Mode](#hybrid-mode)
+* [Enabling Containers](#enabling-containers)
+* [Debugging Containers](#debugging-containers)
+
+
+Introduction
+------------
+
 Default builds of Infix do not enable any container support.  See below
 section, [Enabling Container Support](#enabling-container-support), for
 details on how to enable it using Podman.
@@ -119,5 +130,99 @@ Enabling [podman][] select `crun`, `conmon`, and all other dependencies.
 The build will take a while, but eventually you can:
 
     make run
+
+
+Debugging Containers
+--------------------
+
+If the host system is not powered down or rebooted properly, containers
+may not start up as they should on the following boot.  Below is a very
+common problem and solution shown.
+
+```
+root@infix-12-34-56:~$ podman ps
+CONTAINER ID  IMAGE       COMMAND     CREATED     STATUS      PORTS       NAMES
+root@infix-12-34-56:~$ grep nginx /var/log/syslog
+Jun 25 10:15:48 infix-12-34-56 finit[1]: Service pod:nginx[2376] died, restarting in 5000 msec (10/10)
+Jun 25 10:15:48 infix-12-34-56 finit[1]: Starting pod:nginx[2408]
+Jun 25 10:15:53 infix-12-34-56 finit[1]: Service pod:nginx keeps crashing, not restarting.
+```
+
+If this the system is isolated from remote network access, start by
+verifying the image is downloaded:
+
+```
+root@infix-12-34-56:/cfg/start.d$ podman images
+REPOSITORY                     TAG         IMAGE ID      CREATED      SIZE
+docker.io/library/nginx        alpine      4937520ae206  10 days ago  43.2 MB
+docker.io/troglobit/buildroot  latest      68faf6b20f1a  6 weeks ago  41.4 MB
+```
+
+OK, let's see what the `podman-service` step (above) created:
+
+```
+root@infix-12-34-56:/cfg/start.d$ initctl show pod-nginx.conf
+service name:pod :nginx podman run --name nginx --rm  -p 80:80 nginx:alpine   -- Nginx container
+```
+
+Try starting the container manually.  Remember to add the `-d` flag to
+emulate detached/background operation:
+
+```
+root@infix-12-34-56:/cfg/start.d$ podman run --name nginx --rm -d -p 8080:80 nginx:alpine
+Error: creating container storage: the container name "nginx" is already in use by 9c73bd8d505b1585d241595bfadede361b87f6c1be9a5656253b5a4d73da57e0. You have to remove that container to be able to reuse that name: that name is already in use
+```
+
+Aha, a lingering image with the same name!  Where is it?
+
+```
+root@infix-12-34-56:/cfg/start.d$ podman ps --all
+CONTAINER ID  IMAGE                                 COMMAND               CREATED            STATUS                        PORTS               NAMES
+f3386ae9517f  docker.io/troglobit/buildroot:latest                        About an hour ago  Exited (0) About an hour ago                      ecstatic_panini
+bf0c6178ea26  docker.io/troglobit/buildroot:latest                        About an hour ago  Exited (0) About an hour ago                      determined_brown
+385155f479c0  docker.io/troglobit/buildroot:latest                        About an hour ago  Exited (0) About an hour ago                      vibrant_engelbart
+99a1b3319d9e  docker.io/troglobit/buildroot:latest                        About an hour ago  Exited (0) About an hour ago                      dreamy_tesla
+9c73bd8d505b  docker.io/library/nginx:alpine        nginx -g daemon o...  11 minutes ago     Created                       0.0.0.0:80->80/tcp  nginx
+8a5290504ebc  docker.io/troglobit/buildroot:latest                        10 minutes ago     Created                                           mystifying_liskov
+```
+
+Oh, we have two lingering containers that were created but did not stop
+correctly.  Let's remove them:
+
+```
+root@infix-12-34-56:/cfg/start.d$ docker rm -f 9c73bd8d505b
+9c73bd8d505b
+root@infix-12-34-56:/cfg/start.d$ docker rm -f 8a5290504ebc
+8a5290504ebc
+```
+
+Now we can manually restart the (supervised) container:
+
+```
+root@infix-12-34-56:/cfg/start.d$ initctl restart pod:nginx
+root@infix-12-34-56:/cfg/start.d$ initctl status pod:nginx
+     Status : running
+   Identity : pod:nginx
+Description : Nginx container
+     Origin : /etc/finit.d/enabled/pod-nginx.conf
+    Command : podman run --name nginx --rm -p 80:80 nginx:alpine
+   PID file : none
+        PID : 2669
+       User : root
+      Group : root
+     Uptime : 15 sec
+   Restarts : 11 (0/10)
+  Runlevels : [---234-----]
+     Memory : 63.8M
+     CGroup : /system/pod-nginx cpu 0 [100, max] mem [0, max]
+              ├─ 2669 podman run --name nginx --rm -p 80:80 nginx:alpine
+              └─ 2816 conmon --api-version 1 -c 44d24aa7e98b67ff811596984462b902af3b09a04b4f9bef86e11d246b8cc2ff -u 44d24aa7e98b67ff8
+
+Jun 25 10:15:48 infix-12-34-56 finit[1]: Service pod:nginx[2376] died, restarting in 5000 msec (10/10)
+Jun 25 10:15:48 infix-12-34-56 finit[1]: Starting pod:nginx[2408]
+Jun 25 10:15:53 infix-12-34-56 finit[1]: Service pod:nginx keeps crashing, not restarting.
+Jun 25 10:47:55 infix-12-34-56 finit[1]: Starting pod:nginx[2669]
+```
+
 
 [podman]: https://podman.io
