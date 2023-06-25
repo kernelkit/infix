@@ -71,11 +71,11 @@ directory: `/cfg/start.d`.  For example, the following starts OSPF:
 ```sh
 root@infix:~$ mkdir /cfg/start.d
 root@infix:~$ cd /cfg/start.d
+root@infix:~$ cp -a /etc/frr .
 root@infix:/cfg/start.d$ cat <<EOF >10-enable-ospf.sh
 #!/bin/sh
 # Use vtysh to modify the OSPF configuration
-rm /etc/frr/frr.conf
-ln -s /cfg/frr/frr.conf /etc/frr/
+mount --bind /cfg/frr /etc/frr
 initctl enable zebra
 initctl enable ospfd
 initctl enable bfdd
@@ -103,6 +103,8 @@ root@infix:/cfg/start.d$ chmod +x 20-enable-container.sh
 
 Reboot to activate the changes.  To activate the changes without
 rebooting, run the script and call `initctl reload`.
+
+For more information, see [Containers in Infix](doc/container.md).
 
 
 Hardware
