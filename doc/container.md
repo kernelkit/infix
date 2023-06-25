@@ -92,11 +92,15 @@ root@infix:/cfg/start.d$ cat <<EOF >20-enable-container.sh
 #!/bin/sh
 # Remember to create the veth0a <--> vet0b pair in the CLI first!
 cni create host net1 veth0b 192.168.0.42/24
-podman-service -e -d "System container" -p "--net=podman,net1 -p 22:22 --entrypoint='/linuxrc' --privileged" buildroot:latest
+podman-service -e -d "System container" -p "--net=podman,net1 -p 222:22 --entrypoint='/linuxrc' --privileged" buildroot:latest
 exit 0
 EOF
 root@infix:/cfg/start.d$ chmod +x 20-enable-container.sh
 ```
+
+Here we map the host port 222 to the SSH port of the container, but one
+can just as easily map the host's port 22 (SSH).  Just make sure to
+first disable the host's SSH service.
 
 Reboot to activate the changes.  To activate the changes without
 rebooting, run the script and call `initctl reload`.
