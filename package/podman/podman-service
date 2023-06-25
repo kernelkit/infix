@@ -54,7 +54,7 @@ service_generate()
     fi
 
     cat <<EOF | $gen
-service name:pod :$name podman run --name $name --rm $pmargs $image $cmd $arg -- $description
+service name:pod :$name log podman run --name $name --rm $pmargs $image $cmd $arg -- $description
 EOF
     if [ -n "$enable" ]; then
 	initctl -fb enable "pod-$name"
