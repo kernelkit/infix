@@ -57,7 +57,7 @@ to create a matching CNI profile for one end of the VETH pair before
 starting the container, here we use two network profiles, the default
 podman bridge and the VETH profile:
 
-     cni create host net1 veth0b 192.168.0.42/24
+     cni create host net1 veth0a 192.168.0.42/24
      podman run -d --rm --net=podman,net1 --entrypoint "/linuxrc" \
              --privileged docker://troglobit/buildroot:latest
 
@@ -91,7 +91,7 @@ downloaded with `podman pull docker://troglobit/buildroot:latest`):
 root@infix:/cfg/start.d$ cat <<EOF >20-enable-container.sh
 #!/bin/sh
 # Remember to create the veth0a <--> vet0b pair in the CLI first!
-cni create host net1 veth0b 192.168.0.42/24
+cni create host net1 veth0a 192.168.0.42/24
 podman-service -e -d "System container" -p "--net=podman,net1 -p 222:22 --entrypoint='/linuxrc' --privileged" buildroot:latest
 exit 0
 EOF
