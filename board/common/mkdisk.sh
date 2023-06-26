@@ -157,6 +157,7 @@ awk \
 mkdir -p $root/aux
 cp -f $BINARIES_DIR/rootfs.itbh $root/aux/primary.itbh
 cp -f $BINARIES_DIR/rootfs.itbh $root/aux/secondary.itbh
+cp -f $BUILD_DIR/mkrauc/rauc.status $root/aux/rauc.status
 
 case "$arch" in
     aarch64)
