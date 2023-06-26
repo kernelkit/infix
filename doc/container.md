@@ -19,29 +19,28 @@ details on how to enable it using Podman.
 Networking in containers is provided by both Infix and the Container
 Network Interface ([CNI](https://www.cni.dev/)) that Podman supports.
 
+> A convenience alias `docker=podman` is available in Infix, remember,
+> not all features or syntax of docker is available in podman.
+
 
 Docker Containers with Podman
 -----------------------------
 
-We assume you've booted into Infix and start with a familiar example:
+We assume you've booted into Infix and start with a familiar example.
+This downloads the `hello-world` example container image and runs it:
 
     podman run -it --rm docker://hello-world
 
-or a little web server:
+We can also set up a port forward to a little web server:
 
     podman run -d --rm -p 80:80 docker://nginx:alpine
 
-In detached (`-d`) state you can check the status using `podman ps` or
+In detached (`-d`) state you can check the status using `podman ps` and
 try to connect to the web server:
 
     curl http://localhost
 
-or
-
-    lynx http://localhost
-
-> A convenience alias `docker=podman` is available, but remember, not
-> all features or syntax of docker is available in podman.
+or connect to port 80 of your running Infix system with a browser.
 
 
 ### Multiple Networks
@@ -77,30 +76,95 @@ used to hand over control of physical ports to a container.
 > might not be what you want for a production system.  For that at least
 > SECCOMP is recommended, which is out of scope for this tutorial.
 
+### Real Example
+
+To be able to preserve state in containers between reboots we need a
+writable layer, this is done with `podman create`, after which we can
+use `podman start`.   We build on the previous example:
+
+    cni create host net1 veth0a 192.168.0.42/24
+    podman create --name system --conmon-pidfile=/run/pod:system.pid \
+           --restart=no --systemd=false --tz=local --privileged      \
+           --net=podman,net1 --entrypoint "/linuxrc" -p 222:22       \
+           docker://troglobit/buildroot:latest
+
+Here we map the host port 222 to the SSH port of the container, but one
+can just as easily map the host's port 22 (SSH).  Just make sure to
+first disable the host's SSH service.
+
+> **Note:** the new options used here are required for enabling
+> monitoring and automate start/stop of containers at boot/reboot.
+
+This creates the named container `system` which we can now start:
+
+    podman start system
+
+and stop:
+
+    podman stop system
+
+For this particular image[^1] we need to modify its defaults a bit,
+because it is set up to run a DHCP client on the first Ethernet
+interface, which in our case is the `podman` default CNI bridge.  In
+fact, we don't want the container to set up any networking since that is
+handled by Infix and podman.
+
+    root@infix-12-34-56:~$ podman start system
+    root@infix-12-34-56:~$ podman exec -it system sh
+    / # rm -rf /etc/network/interfaces
+    / # exit
+    root@infix-12-34-56:~$ podman stop system
+
+The change is now saved in the writable layer and the next time the
+container is started it will look like this:
+
+    root@infix-12-34-56:~$ podman start system
+    root@infix-12-34-56:~$ podman exec -it system sh
+    / # ifconfig
+    eth0      Link encap:Ethernet  HWaddr A2:32:4C:2B:5E:51
+              inet addr:10.88.0.11  Bcast:10.88.255.255  Mask:255.255.0.0
+              inet6 addr: fe80::a032:4cff:fe2b:5e51/64 Scope:Link
+              UP BROADCAST RUNNING MULTICAST  MTU:1500  Metric:1
+              RX packets:204 errors:0 dropped:107 overruns:0 frame:0
+              TX packets:15 errors:0 dropped:0 overruns:0 carrier:0
+              collisions:0 txqueuelen:0
+              RX bytes:48240 (47.1 KiB)  TX bytes:1102 (1.0 KiB)
+    
+    eth1      Link encap:Ethernet  HWaddr 56:B5:4E:D1:9C:E5
+              inet addr:192.168.0.42  Bcast:192.168.0.255  Mask:255.255.255.0
+              inet6 addr: fe80::54b5:4eff:fed1:9ce5/64 Scope:Link
+              UP BROADCAST RUNNING MULTICAST  MTU:1500  Metric:1
+              RX packets:274 errors:0 dropped:213 overruns:0 frame:0
+              TX packets:16 errors:0 dropped:0 overruns:0 carrier:0
+              collisions:0 txqueuelen:1000
+              RX bytes:60926 (59.4 KiB)  TX bytes:1377 (1.3 KiB)
+
+Automating start/stop at boot/reboot is documented in the next section.
+
+[^1]: A common task one has to do for many other standard images, e.g.,
+    Alpine Linux and BusyBox available on Docker Hub.
 
 ### Hybrid Mode
 
-If you've followed this tutorial then you now have a NETCONF based Infix
-system running.  To run containers on it you need to leverage the Hybrid
-mode, described in the README but also repeated below.
+Since container setup and configuration is not modeled in YANG yet, we
+use the Infix *Hybrid mode*, also described in the README.
 
 To start containers in *Hybrid Mode*, provided the images have been
-downloaded with `podman pull docker://troglobit/buildroot:latest`):
+downloaded with `podman pull docker://troglobit/buildroot:latest` and
+a container created (above):
 
 ```
 root@infix:/cfg/start.d$ cat <<EOF >20-enable-container.sh
 #!/bin/sh
 # Remember to create the veth0a <--> vet0b pair in the CLI first!
 cni create host net1 veth0a 192.168.0.42/24
-podman-service -e -d "System container" -p "--net=podman,net1 -p 222:22 --entrypoint='/linuxrc' --privileged" buildroot:latest
-exit 0
+cat <<EOF > /etc/finit.d/available/pod:system.conf
+service name:pod :system pid:!/run/pod:system.pid podman --syslog start system -- System container
 EOF
+initctl enable pod:system
+exit 0
 root@infix:/cfg/start.d$ chmod +x 20-enable-container.sh
 ```
-
-Here we map the host port 222 to the SSH port of the container, but one
-can just as easily map the host's port 22 (SSH).  Just make sure to
-first disable the host's SSH service.
 
 Reboot to activate the changes.  To activate the changes without
 rebooting, run the script and call `initctl reload`.
