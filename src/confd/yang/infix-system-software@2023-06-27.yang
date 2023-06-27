@@ -1,0 +1,147 @@
+submodule infix-system-software {
+  yang-version 1.1;
+  belongs-to infix-system {
+    prefix ixsys;
+  }
+
+  import ietf-yang-types {
+    prefix yang;
+  }
+
+  import ietf-netconf-acm {
+    prefix nacm;
+  }
+
+  import ietf-system {
+    prefix sys;
+  }
+
+  organization "KernelKit";
+  contact      "kernelkit@googlegroups.com";
+  description  "Software status and upgrade.";
+
+  revision 2023-06-27 {
+    description "Initial revision.";
+    reference "internal";
+  }
+
+  grouping rauc-stage-log {
+    leaf datetime {
+      type yang:date-and-time;
+    }
+
+    leaf count {
+      type uint32;
+    }
+  }
+
+  grouping installer-state {
+    leaf operation {
+      type string;
+    }
+
+    container progress {
+      leaf percentage {
+	type uint8 {
+	  range "0 .. 100";
+	}
+      }
+
+      leaf message {
+	type string;
+      }
+    }
+
+    leaf last-error {
+      type string;
+    }
+  }
+
+  augment "/sys:system-state" {
+    container software {
+      leaf compatible {
+	type string;
+      }
+
+      leaf variant {
+	type string;
+      }
+
+      leaf booted {
+	type string;
+      }
+
+      container installer {
+	uses installer-state;
+
+	notification state-changed {
+	  uses installer-state;
+	}
+      }
+
+      list slot {
+	key "name";
+
+	leaf name {
+	  type string;
+	}
+
+	leaf bootname {
+	  type string;
+	}
+
+	leaf class {
+	  type string;
+	}
+
+	leaf state {
+	  type string;
+	}
+
+	container bundle {
+	  leaf compatible {
+	    type string;
+	  }
+
+	  leaf version {
+	    type string;
+	  }
+	}
+
+	leaf size {
+	  type uint64;
+	}
+
+	leaf sha256 {
+	  type string {
+	    pattern '[a-fA-F0-9]{64}';
+	  }
+	}
+	container installed {
+	  uses rauc-stage-log;
+	}
+
+	container activated {
+	  uses rauc-stage-log;
+	}
+      }
+    }
+  }
+
+  rpc install-bundle {
+    nacm:default-deny-all;
+    description
+      "Upgrade the system's software by installing the specified bundle.";
+    input {
+      leaf url {
+	type string;
+	mandatory true;
+	description
+	  "The location of the software bundle, specified as a Uniform
+               Resource Locator (URL).
+
+               Supported protocols include FTP, HTTP(S) and SCP.";
+      }
+    }
+  }
+}
