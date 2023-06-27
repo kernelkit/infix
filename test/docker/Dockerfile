@@ -10,6 +10,7 @@ RUN apk add --no-cache \
     iputils \
     libc-dev \
     libyang-dev \
+    linux-headers \
     python3-dev \
     qemu-img \
     qemu-system-x86_64 \

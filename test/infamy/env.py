@@ -13,6 +13,7 @@ class ArgumentParser(argparse.ArgumentParser):
 
         self.add_argument("-d", "--debug", default=False, action="store_true")
         self.add_argument("-l", "--logical-topology", dest="ltop", default=ltop)
+        self.add_argument("-p", "--package", default=None)
         self.add_argument("-y", "--yangdir", default=None)
         self.add_argument("ptop", nargs=1, metavar="topology")
 
