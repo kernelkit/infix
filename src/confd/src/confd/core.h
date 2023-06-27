@@ -134,4 +134,7 @@ int infix_dhcp_init(struct confd *confd);
 /* infix-factory.c */
 int infix_factory_init(struct confd *confd);
 
+/* infix-system-software.c */
+int infix_system_sw_init(struct confd *confd);
+
 #endif	/* CONFD_CORE_H_ */

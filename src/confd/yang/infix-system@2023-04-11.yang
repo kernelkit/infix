@@ -7,6 +7,8 @@ module infix-system {
     prefix sys;
   }
 
+  include infix-system-software;
+
   organization "KernelKit";
   contact      "kernelkit@googlegroups.com";
   description  "Infix augments and deviations to ietf-system.";
