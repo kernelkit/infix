@@ -2,7 +2,9 @@
 from collections import namedtuple
 from dataclasses import dataclass
 
+import logging
 import socket
+import sys
 import time
 
 import libyang
@@ -20,6 +22,27 @@ class ModInfo(ModInfoTuple):
 NS = {
     "ietf-netconf-monitoring": "urn:ietf:params:xml:ns:yang:ietf-netconf-monitoring",
 }
+
+class Manager(netconf_client.ncclient.Manager):
+    """Wrapper for the real manager
+
+    Just ensures that we can enable debugging without issues when
+    operating on an IPv6 socket.
+
+    """
+    def _fetch_connection_ip(self):
+        """Retrieves and stores the connection's local and remote IP"""
+        self._local_ip = None
+        self._peer_ip = None
+        try:
+            self._local_ip = self.session.sock.sock.getsockname()[0]
+            self._peer_ip  = self.session.sock.sock.getpeername()[0]
+        except (AttributeError, socket_error):
+            pass
+
+    def _debug(self):
+        self.set_logger_level(logging.DEBUG)
+        self.logger().addHandler(logging.StreamHandler(sys.stderr))
 
 @dataclass
 class Location:
@@ -54,7 +77,7 @@ class Device(object):
         session = netconf_client.connect.connect_ssh(sock=sock,
                                                      username=location.username,
                                                      password=location.password)
-        self.ncc = netconf_client.ncclient.Manager(session)
+        self.ncc = Manager(session)
 
     def _ly_init(self, yangdir):
         self.ly = libyang.Context(yangdir)
