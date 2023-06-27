@@ -2,7 +2,7 @@
 
 set -e
 
-INFIX_TEST=ghcr.io/kernelkit/infix-test:0.4
+INFIX_TEST=ghcr.io/kernelkit/infix-test:0.5
 
 extract_yang()
 {
@@ -73,6 +73,9 @@ usage: test/env [<OPTS>]    -f <IMAGE> -q <QENETH-DIR> <COMMAND> [<ARGS>...]
       useful to see how tests will run in a CI setting, where KVM is
       typically not available
 
+    -p <BUNDLE>
+      Infix RAUC bundle to use for upgrade tests.
+
     -q <QENETH-DIR>
       Directory containing a topology.dot.in, suitable for consumption
       by qeneth. A copy of this network is created, and launched. The
@@ -95,7 +98,7 @@ qeneth="$ixdir/qeneth/qeneth"
 containerize=yes
 [ -c /dev/kvm ] && kvm="--device=/dev/kvm"
 
-while getopts "Cf:hKq:t:" opt; do
+while getopts "Cf:hKp:q:t:" opt; do
     case ${opt} in
 	C)
 	    containerize=
@@ -108,6 +111,9 @@ while getopts "Cf:hKq:t:" opt; do
 	    ;;
 	K)
 	    kvm=
+	    ;;
+	p)
+	    INFAMY_ARGS="$INFAMY_ARGS -p $OPTARG"
 	    ;;
 	q)
 	    qenethdir="$OPTARG"
