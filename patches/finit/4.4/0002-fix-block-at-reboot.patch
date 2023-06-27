@@ -1,0 +1,58 @@
+From 6f0d448765d61a741add34baec422c24e357e7dc Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Tue, 27 Jun 2023 12:18:09 +0200
+Subject: [PATCH] Fix #227: delayed service_kill() may stall shutdown/reboot
+Organization: Addiva Elektronik
+
+This turns out to be the root-cause of #227.  Finit is waiting forever
+for proceeses to stop at shutdown/reboot, while a subreaper has already
+collected the PID, or Finit for some reason did not collect the PID.
+
+When the process timeout calls service_kill() we now check if the kernel
+actually knows of this process or not.  If it's already been collected,
+we can notify Finit of this by calling service_monitor() to clean up the
+'svc' and in turn call sm_step() to finalize the state transition.
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ src/service.c | 17 +++++++++++++----
+ 1 file changed, 13 insertions(+), 4 deletions(-)
+
+diff --git a/src/service.c b/src/service.c
+index 21acd28..ddd7e4f 100644
+--- a/src/service.c
++++ b/src/service.c
+@@ -850,17 +850,26 @@ fail:
+  */
+ static void service_kill(svc_t *svc)
+ {
++	char *nm, *id = svc_ident(svc, NULL, 0);
++
+ 	service_timeout_cancel(svc);
+ 
+ 	if (svc->pid <= 1) {
+ 		/* Avoid killing ourselves or all processes ... */
+-		dbg("%s: Aborting SIGKILL, already terminated.", svc_ident(svc, NULL, 0));
++		dbg("%s: Aborting SIGKILL, already terminated.", id);
+ 		return;
+ 	}
+ 
+-	dbg("%s: Sending SIGKILL to process group %d", pid_get_name(svc->pid, NULL, 0), svc->pid);
+-	logit(LOG_CONSOLE | LOG_NOTICE, "Stopping %s[%d], sending SIGKILL ...",
+-	      svc_ident(svc, NULL, 0), svc->pid);
++	nm = pid_get_name(svc->pid, NULL, 0);
++	if (!nm) {
++		/* PID possibly monitored by someone else? */
++		dbg("%s: Aborting SIGKILL, PID[%d] no longer exists.", id, svc->pid);
++		service_monitor(svc->pid, 0);
++		return;
++	}
++
++	dbg("%s: Sending SIGKILL to process group %d", nm, svc->pid);
++	logit(LOG_CONSOLE | LOG_NOTICE, "Stopping %s[%d], sending SIGKILL ...", id, svc->pid);
+ 	if (runlevel != 1)
+ 		print_desc("Killing ", svc->desc);
+ 
+-- 
+2.34.1
+
