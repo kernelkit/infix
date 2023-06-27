@@ -125,3 +125,21 @@ class Device(object):
         mod = self.ly.get_module(modname)
         lyd = mod.parse_data_dict(edit, no_state=True)
         return self.put_config(lyd.print_mem("xml", with_siblings=True, pretty=False))
+
+    def call(self, call):
+        return self.ncc.dispatch(call)
+
+    def call_dict(self, modname, call):
+        mod = self.ly.get_module(modname)
+        lyd = mod.parse_data_dict(call, rpc=True)
+        return self.call(lyd.print_mem("xml", with_siblings=True, pretty=False))
+
+    def call_action(self, action):
+        xml = "<action xmlns=\"urn:ietf:params:xml:ns:yang:1\">" + action + "</action>"
+        return self.ncc.dispatch(xml)
+
+    def call_action_dict(self, modname, action):
+        mod = self.ly.get_module(modname)
+        lyd = mod.parse_data_dict(action, rpc=True)
+        return self.call_action(lyd.print_mem("xml", with_siblings=True, pretty=False))
+
