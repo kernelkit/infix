@@ -2,7 +2,7 @@
 
 reserved()
 {
-    for svc in avahi dnsmasq getty klish lldpd nginx ssdpd sshd sysklogd sysrepo; do
+    for svc in avahi dnsmasq getty klish lldpd nginx rauc ssdpd sshd sysklogd sysrepo; do
 	[ "$1" = "${svc}.conf" ] && return 0
     done
 
