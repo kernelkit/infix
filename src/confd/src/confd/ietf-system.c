@@ -138,7 +138,6 @@ static int clock_cb(sr_session_ctx_t *session, uint32_t sub_id, const char *modu
 	const struct ly_ctx *ctx;
 	char curtime[64];
 	time_t now, boot;
-	int first = 1;
 	int rc;
 
 	ctx = sr_acquire_context(sr_session_get_connection(session));
@@ -153,9 +152,9 @@ static int clock_cb(sr_session_ctx_t *session, uint32_t sub_id, const char *modu
 	}
 	fmtime(now, curtime, sizeof(curtime));
 
-	if ((rc = lydx_new_path(ctx, parent, &first, CLOCK_PATH_, "boot-datetime", boottime)))
+	if ((rc = lydx_new_path(ctx, parent, CLOCK_PATH_, "boot-datetime", boottime)))
 		goto fail;
-	if ((rc = lydx_new_path(ctx, parent, &first, CLOCK_PATH_, "current-datetime", curtime)))
+	if ((rc = lydx_new_path(ctx, parent, CLOCK_PATH_, "current-datetime", curtime)))
 		goto fail;
 
 	if (rc) {
@@ -173,18 +172,17 @@ static int platform_cb(sr_session_ctx_t *session, uint32_t sub_id, const char *m
 		       struct lyd_node **parent, void *priv)
 {
 	const struct ly_ctx *ctx;
-	int first = 1;
 	int rc;
 
 	ctx = sr_acquire_context(sr_session_get_connection(session));
 
-	if ((rc = lydx_new_path(ctx, parent, &first, PLATFORM_PATH_, "os-name", os)))
+	if ((rc = lydx_new_path(ctx, parent, PLATFORM_PATH_, "os-name", os)))
 		goto fail;
-	if ((rc = lydx_new_path(ctx, parent, &first, PLATFORM_PATH_, "os-release", rel)))
+	if ((rc = lydx_new_path(ctx, parent, PLATFORM_PATH_, "os-release", rel)))
 		goto fail;
-	if ((rc = lydx_new_path(ctx, parent, &first, PLATFORM_PATH_, "os-version", ver)))
+	if ((rc = lydx_new_path(ctx, parent, PLATFORM_PATH_, "os-version", ver)))
 		goto fail;
-	if ((rc = lydx_new_path(ctx, parent, &first, PLATFORM_PATH_, "machine", sys)))
+	if ((rc = lydx_new_path(ctx, parent, PLATFORM_PATH_, "machine", sys)))
 		goto fail;
 
 	if (rc) {

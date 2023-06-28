@@ -51,7 +51,7 @@ static json_t *get_ip_link_json(char *ifname)
 }
 
 static int add_ip_link_data(const struct ly_ctx *ctx, struct lyd_node **parent,
-			    char *xpath, json_t *iface, int *first)
+			    char *xpath, json_t *iface)
 {
 	json_t *j_val;
 	char *val;
@@ -63,7 +63,7 @@ static int add_ip_link_data(const struct ly_ctx *ctx, struct lyd_node **parent,
 		return SR_ERR_SYS;
 	}
 
-	err = lydx_new_path(ctx, parent, first, xpath, "if-index", "%lld",
+	err = lydx_new_path(ctx, parent, xpath, "if-index", "%lld",
 			    json_integer_value(j_val));
 	if (err) {
 		ERROR("Error adding 'if-index' to data tree, libyang error %d", err);
@@ -82,7 +82,7 @@ static int add_ip_link_data(const struct ly_ctx *ctx, struct lyd_node **parent,
 
 	to_lowercase(val);
 
-	err = lydx_new_path(ctx, parent, first, xpath, "oper-status", val);
+	err = lydx_new_path(ctx, parent, xpath, "oper-status", val);
 	if (err) {
 		ERROR("Error adding 'oper-status' to data tree, libyang error %d", err);
 		free(val);
@@ -98,7 +98,6 @@ static int add_ip_link(const struct ly_ctx *ctx, struct lyd_node **parent, char 
 	char xpath[XPATH_MAX] = {};
 	json_t *j_root;
 	json_t *j_iface;
-	int first = 1;
 	int err;
 
 	j_root = get_ip_link_json(ifname);
@@ -117,7 +116,7 @@ static int add_ip_link(const struct ly_ctx *ctx, struct lyd_node **parent, char 
 	snprintf(xpath, sizeof(xpath), "%s/interface[name='%s']",
 		 XPATH_IFACE_BASE, ifname);
 
-	err = add_ip_link_data(ctx, parent, xpath, j_iface, &first);
+	err = add_ip_link_data(ctx, parent, xpath, j_iface);
 	if (err) {
 		ERROR("Error adding ip-link info for %s", ifname);
 		json_decref(j_root);

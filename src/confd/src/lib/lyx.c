@@ -176,7 +176,7 @@ const char *lydx_get_attrf(struct lyd_node *sibling, const char *namefmt, ...)
 	return val;
 }
 
-int lydx_new_path(const struct ly_ctx *ctx, struct lyd_node **parent, int *first,
+int lydx_new_path(const struct ly_ctx *ctx, struct lyd_node **parent,
 		  char *xpath_base, char *node, const char *fmt, ...)
 {
 	char xpath[strlen(xpath_base) + strlen(node) + 2];
@@ -198,14 +198,9 @@ int lydx_new_path(const struct ly_ctx *ctx, struct lyd_node **parent, int *first
 	vsnprintf(val, len, fmt, ap);
 	va_end(ap);
 
-	DEBUG("Setting first:%d xpath %s to %s", *first, xpath, val);
+	DEBUG("Setting xpath %s to %s", xpath, val);
 
-	if (*first)
-		rc = lyd_new_path(NULL, ctx, xpath, val, 0, parent);
-	else
-		rc = lyd_new_path(*parent, NULL, xpath, val, 0, NULL);
-
-	*first = 0;
+	rc = lyd_new_path(*parent, NULL, xpath, val, 0, NULL);
 	if (rc)
 		ERROR("Failed building data tree, xpath %s, libyang error %d: %s",
 		      xpath, rc, ly_errmsg(ctx));
