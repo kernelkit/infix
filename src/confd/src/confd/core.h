@@ -17,6 +17,7 @@
 #include <libite/queue.h>
 #include <libyang/libyang.h>
 #include <sysrepo.h>
+#include <sysrepo/error_format.h>
 #include <sysrepo/values.h>
 #include <sysrepo/xpath.h>
 
@@ -56,6 +57,7 @@ struct confd {
 	sr_session_ctx_t       *cand;    /* candidate datastore */
 	sr_conn_ctx_t          *conn;
 	sr_subscription_ctx_t  *sub;
+	sr_subscription_ctx_t  *fsub;    /* factory-default sub */
 
 	augeas                 *aug;
 	struct dagger		netdag;
@@ -128,5 +130,8 @@ int ietf_system_init(struct confd *confd);
 
 /* infix-dhcp.c */
 int infix_dhcp_init(struct confd *confd);
+
+/* infix-factory.c */
+int infix_factory_init(struct confd *confd);
 
 #endif	/* CONFD_CORE_H_ */
