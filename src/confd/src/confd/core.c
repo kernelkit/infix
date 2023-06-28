@@ -75,6 +75,7 @@ int sr_plugin_init_cb(sr_session_ctx_t *session, void **priv)
 	confd.session = session;
 	confd.conn    = sr_session_get_connection(session);
 	confd.sub     = NULL;
+	confd.fsub    = NULL;
 
 	if (!confd.conn)
 		goto err;
@@ -102,6 +103,9 @@ int sr_plugin_init_cb(sr_session_ctx_t *session, void **priv)
 	rc = infix_dhcp_init(&confd);
 	if (rc)
 		goto err;
+	rc = infix_factory_init(&confd);
+	if (rc)
+		goto err;
 
 	/* YOUR_INIT GOES HERE */
 
@@ -109,12 +113,16 @@ int sr_plugin_init_cb(sr_session_ctx_t *session, void **priv)
 err:
 	ERROR("init failed: %s", sr_strerror(rc));
 	sr_unsubscribe(confd.sub);
+	sr_unsubscribe(confd.fsub);
 
 	return rc;
 }
 
 void sr_plugin_cleanup_cb(sr_session_ctx_t *session, void *priv)
 {
-        sr_unsubscribe((sr_subscription_ctx_t *)priv);
+	struct confd *confd = (struct confd *)priv;
+
+        sr_unsubscribe(confd->sub);
+        sr_unsubscribe(confd->fsub);
 	closelog();
 }
