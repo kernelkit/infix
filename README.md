@@ -84,18 +84,13 @@ EOF
 root@infix:/cfg/start.d$ chmod +x 10-enable-ospf.sh
 ```
 
-> **Note:** Neither [Frr](https://frrouting.org) (Zebra/OSPF/BFD) or
-> [podman](https://podman.io) are enabled in default Infix builds.
-> Please use customer specific builds, or enable it yourself in Infix by
-> using `make menuconfig` followed by rebuilding the image.
-
 This is also the way to start containers (provided the images have been
 downloaded with `podman pull` first):
 
 ```
 root@infix:/cfg/start.d$ cat <<EOF >20-enable-container.sh
 #!/bin/sh
-podman-service -e -d "Nginx container" -p "-p 80:80" nginx:alpine
+podman-service -e -d "Nginx container" -p "-p 80:80 -v /cfg/www:/usr/share/nginx/html:ro" nginx:alpine
 exit 0
 EOF
 root@infix:/cfg/start.d$ chmod +x 20-enable-container.sh
@@ -103,6 +98,12 @@ root@infix:/cfg/start.d$ chmod +x 20-enable-container.sh
 
 Reboot to activate the changes.  To activate the changes without
 rebooting, run the script and call `initctl reload`.
+
+> **Note:** Neither [Frr](https://frrouting.org) (Zebra/OSPF/BFD) or
+> [podman](https://podman.io) are enabled in default Infix builds.  Some
+> customers have them enabled in their specific builds, and you can also
+> enable it yourself in Infix by using `make menuconfig` followed by
+> rebuilding the image.
 
 For more information, see [Containers in Infix](doc/container.md).
 

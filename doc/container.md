@@ -40,7 +40,13 @@ try to connect to the web server:
 
     curl http://localhost
 
-or connect to port 80 of your running Infix system with a browser.
+or connect to port 80 of your running Infix system with a browser.  See
+the following sections for how to add more interfaces and start/stop the
+container at boot/reboot.
+
+> To add your own content to web server, place the HTML files in, e.g.,
+> `/cfg/www/*.html` and add `-v /cfg/www:/usr/share/nginx/html:ro` to
+> the command line (above).  <https://hub.docker.com/_/nginx/>
 
 
 ### Multiple Networks
