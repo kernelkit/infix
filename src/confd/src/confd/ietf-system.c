@@ -264,7 +264,7 @@ done:
 
 static int sys_reload_services(void)
 {
-	return systemf("initctl -nbq touch sysklogd lldpd");
+	return systemf("initctl -nbq touch sysklogd");
 }
 
 static int aug_set_dynpath(augeas *aug, const char *val, const char *fmt, ...)
@@ -958,6 +958,9 @@ static int change_hostname(sr_session_ctx_t *session, uint32_t sub_id, const cha
 	if (nhosts)
 		free(hosts);
 	free(current);
+
+	/* Inform any running lldpd and avahi of the change ... */
+	systemf("lldpcli configure system hostname %s", nm);
 err:
 	if (nm)
 		free(nm);
