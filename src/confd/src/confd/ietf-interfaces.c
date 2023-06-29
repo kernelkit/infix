@@ -474,7 +474,7 @@ static int netdag_gen_ipv4_autoconf(struct dagger *net, struct lyd_node *cif,
 	struct lyd_node *ipconf = lydx_get_child(cif, "ipv4");
 	struct lyd_node *ipdiff = lydx_get_child(dif, "ipv4");
 	const char *ifname = lydx_get_cattr(dif, "name");
-	struct lyd_node *node;
+	struct lyd_node *node, *zcip;
 	struct lydx_diff nd;
 	FILE *initctl;
 	int err = 0;
@@ -489,10 +489,11 @@ static int netdag_gen_ipv4_autoconf(struct dagger *net, struct lyd_node *cif,
 		goto disable;
 	}
 
-	node = lydx_get_descendant(lydx_get_child(ipdiff, "autoconf"), "enabled", NULL);
-	if (!node || !lydx_get_diff(node, &nd))
+	zcip = lydx_get_child(ipdiff, "autoconf");
+	if (!zcip || !(node = lydx_get_child(zcip, "enabled")))
 		return 0;
 
+	lydx_get_diff(node, &nd);
 	if (nd.new && !strcmp(nd.val, "true")) {
 	enable:
 		initctl = dagger_fopen_next(net, "init", ifname,
