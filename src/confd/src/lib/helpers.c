@@ -10,7 +10,45 @@
 #include <stdio.h>
 #include <limits.h>
 #include <stdlib.h>
+#include <sys/wait.h>
 #include <libite/lite.h>
+
+/*
+ * Run cmd in background after delay microseconds.
+ */
+int runbg(char *const args[], int delay)
+{
+	int pid = fork();
+
+	if (!pid) {
+		usleep(delay * 300);
+		_exit(execvp(args[0], args));
+	}
+
+	return pid;
+}
+
+/*
+ * Reap forked child from runbg()
+ */
+int run_status(int pid)
+{
+	int rc;
+
+	/* WNOHANG */
+	if (waitpid(pid, &rc, 0) == -1)
+		return -1;
+
+	if (WIFEXITED(rc)) {
+		errno = 0;
+		rc = WEXITSTATUS(rc);
+	} else if (WIFSIGNALED(rc)) {
+		errno = EINTR;
+		rc = -1;
+	}
+
+	return rc;
+}
 
 int fexistf(const char *fmt, ...)
 {

@@ -3,6 +3,9 @@
 #ifndef CONFD_HELPERS_H_
 #define CONFD_HELPERS_H_
 
+int runbg(char *const args[], int delay);
+int run_status(int pid);
+
 int fexistf(const char *fmt, ...)
 	__attribute__ ((format (printf, 1, 2)));
 FILE *popenf(const char *type, const char *cmdf, ...)
