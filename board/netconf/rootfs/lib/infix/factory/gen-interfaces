@@ -9,12 +9,7 @@ gen_interface()
         "name": "$1",
         "type": "iana-if-type:ethernetCsmacd",
         "ietf-ip:ipv6": {
-	  "enabled": true,
-	  "forwarding": false,
-	  "dup-addr-detect-transmits": 1,
-	  "autoconf": {
-	    "create-global-addresses": true
-	  }
+	    "enabled": true
 	}
       }
 EOF
