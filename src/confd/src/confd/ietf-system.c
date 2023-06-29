@@ -203,9 +203,11 @@ static int rpc_exec(sr_session_ctx_t *session, uint32_t sub_id, const char *path
 		    sr_val_t **output, size_t *output_cnt,
 		    void *priv)
 {
-	DEBUG("path: %s", path);
+	char *args[] = { (char *)priv, NULL };
 
-	if (system(priv))
+	DEBUG("%s", path);
+
+	if (runbg(args, 500) == -1)
 		return SR_ERR_INTERNAL;
 
 	return SR_ERR_OK;
