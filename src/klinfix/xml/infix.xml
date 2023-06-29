@@ -92,6 +92,14 @@
       <ACTION sym="prompt" exec_on="always">%u@%h:exec> </ACTION>
     </PROMPT>
 
+    <COMMAND name="poweroff" help="Poweroff system (system policy may yield reboot)">
+      <ACTION sym="script">poweroff</ACTION>
+    </COMMAND>
+
+    <COMMAND name="reboot" help="Reboot system">
+      <ACTION sym="script">reboot</ACTION>
+    </COMMAND>
+
     <COMMAND name="shell" help="Enter system shell">
       <ACTION sym="script" interactive="true">/bin/sh -l</ACTION>
     </COMMAND>
