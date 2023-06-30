@@ -3,3 +3,5 @@
 - case: bridge_veth.py
 - case: dual_bridge.py
 - case: bridge_vlan.py
+- case: ipv4_autoconf.py
+
