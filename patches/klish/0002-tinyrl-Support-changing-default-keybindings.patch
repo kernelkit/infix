@@ -1,0 +1,64 @@
+From f50b01653fa07010b7c77933946850ab62f6e0de Mon Sep 17 00:00:00 2001
+From: Tobias Waldekranz <tobias@waldekranz.com>
+Date: Mon, 24 Apr 2023 13:35:37 +0200
+Subject: [PATCH] tinyrl: Support changing default keybindings
+Organization: Addiva Elektronik
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ bin/klish/interactive.c |  1 +
+ tinyrl/tinyrl.h         |  1 +
+ tinyrl/tinyrl/tinyrl.c  | 13 +++++++++++++
+ 3 files changed, 15 insertions(+)
+
+diff --git a/bin/klish/interactive.c b/bin/klish/interactive.c
+index 3da71e9..217c2d7 100644
+--- a/bin/klish/interactive.c
++++ b/bin/klish/interactive.c
+@@ -211,6 +211,7 @@ static bool_t process_hotkey_param(ctx_t *ctx, const faux_msg_t *msg)
+ 		if (!cmd)
+ 			continue;
+ 		ctx->hotkeys[code] = cmd;
++		tinyrl_unbind_key(ctx->tinyrl, code);
+ 	}
+ 
+ 	return BOOL_TRUE;
+diff --git a/tinyrl/tinyrl.h b/tinyrl/tinyrl.h
+index 0754da6..a85d93b 100644
+--- a/tinyrl/tinyrl.h
++++ b/tinyrl/tinyrl.h
+@@ -70,6 +70,7 @@ tinyrl_t *tinyrl_new(FILE *istream, FILE *ostream,
+ void tinyrl_free(tinyrl_t *tinyrl);
+ 
+ bool_t tinyrl_bind_key(tinyrl_t *tinyrl, int key, tinyrl_key_func_t *fn);
++bool_t tinyrl_unbind_key(tinyrl_t *tinyrl, int key);
+ void tinyrl_set_hotkey_fn(tinyrl_t *tinyrl, tinyrl_key_func_t *fn);
+ void tinyrl_set_istream(tinyrl_t *tinyrl, FILE *istream);
+ FILE *tinyrl_istream(const tinyrl_t *tinyrl);
+diff --git a/tinyrl/tinyrl/tinyrl.c b/tinyrl/tinyrl/tinyrl.c
+index fd8dfc5..61ba97d 100644
+--- a/tinyrl/tinyrl/tinyrl.c
++++ b/tinyrl/tinyrl/tinyrl.c
+@@ -174,6 +174,19 @@ bool_t tinyrl_bind_key(tinyrl_t *tinyrl, int key, tinyrl_key_func_t *fn)
+ 	return BOOL_TRUE;
+ }
+ 
++bool_t tinyrl_unbind_key(tinyrl_t *tinyrl, int key)
++{
++	assert(tinyrl);
++	if (!tinyrl)
++		return BOOL_FALSE;
++	if ((key < 0) || (key > 255))
++		return BOOL_FALSE;
++
++	tinyrl->handlers[key] = tinyrl_key_default;
++
++	return BOOL_TRUE;
++}
++
+ 
+ void tinyrl_set_hotkey_fn(tinyrl_t *tinyrl, tinyrl_key_func_t *fn)
+ {
+-- 
+2.34.1
+
