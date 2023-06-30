@@ -1,7 +1,6 @@
 <img align="right" src="doc/text3134.png" alt="Infix Linux Networking Made Easy">
 
 * [Introduction](#introduction)
-* [NETCONF Mode](#netconf-mode)
   * [NETCONF Mode](#netconf-mode)
   * [Classic Mode](#classic-mode)
   * [Hybrid Mode](#hybrid-mode)
@@ -9,6 +8,8 @@
 * [Qemu](#qemu)
 * [GNS3](#gns3)
 * [Building](#building)
+* [Testing](doc/testing.md)
+* [Docker Image](test/docker/README.md)
 * [Origin & Licensing](origin--licensing)
 
 
