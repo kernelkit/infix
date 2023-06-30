@@ -1,2 +1,3 @@
 ---
 - case: vlan_ping.py
+- case: ipv4_address.py
