@@ -3,6 +3,7 @@ FROM alpine:3.18.0
 RUN apk add --no-cache \
     busybox-extras \
     e2fsprogs \
+    fakeroot \
     gcc \
     graphviz \
     iproute2 \
