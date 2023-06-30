@@ -96,16 +96,25 @@ class Device(object):
         return list(filter(lambda m: m["name"] in modnames,
                            self.modules.values()))
 
-    def get_config(self, xpath):
+    def _get(self, xpath, getter):
         # Figure out which modules we are referencing
         mods = self._modules_in_xpath(xpath)
 
         # Fetch the data
         xmlns = " ".join([f"xmlns:{m['name']}=\"{m['namespace']}\"" for m in mods])
         filt = f"<filter type=\"xpath\" select=\"{xpath}\" {xmlns} />"
-        cfg = lxml.etree.tostring(self.ncc.get_config(filter=filt).data_ele[0])
+        cfg = lxml.etree.tostring(getter(filter=filt).data_ele[0])
 
         return self.ly.parse_data_mem(cfg, "xml", parse_only=True)
+
+    def get(self, xpath):
+        return self._get(xpath, self.ncc.get)
+
+    def get_dict(self, xpath):
+        return self.get(xpath).print_dict()
+
+    def get_config(self, xpath):
+        return self._get(xpath, self.ncc.get_config)
 
     def get_config_dict(self, xpath):
         return self.get_config(xpath).print_dict()
