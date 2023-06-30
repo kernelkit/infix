@@ -21,6 +21,7 @@ class ModInfo(ModInfoTuple):
 
 NS = {
     "ietf-netconf-monitoring": "urn:ietf:params:xml:ns:yang:ietf-netconf-monitoring",
+    "nc": "urn:ietf:params:xml:ns:netconf:base:1.0",
 }
 
 class Manager(netconf_client.ncclient.Manager):
@@ -143,7 +144,19 @@ class Device(object):
         return self.get_config(xpath).print_dict()
 
     def put_config(self, edit):
-        xml = "<config xmlns=\"urn:ietf:params:xml:ns:netconf:base:1.0\">" + edit + "</config>"
+        yang2nc = {
+            "none": None,
+            "delete": "delete",
+        }
+
+        xml = f"<config xmlns=\"{NS['nc']}\" xmlns:nc=\"{NS['nc']}\">" + edit + "</config>"
+
+        # Translate any edit operations from the yang format generated
+        # by diffing trees with libyang, to their NETCONF equivalents.
+        for src,dst in yang2nc.items():
+            xml = xml.replace(f"yang:operation=\"{src}\"",
+                              f"nc:operation=\"{dst}\"" if dst else "")
+
         for _ in range(0,3):
             try:
                 self.ncc.edit_config(xml, default_operation='merge')
@@ -156,6 +169,13 @@ class Device(object):
     def put_config_dict(self, modname, edit):
         mod = self.ly.get_module(modname)
         lyd = mod.parse_data_dict(edit, no_state=True)
+        return self.put_config(lyd.print_mem("xml", with_siblings=True, pretty=False))
+
+    def put_diff_dicts(self, modname, old, new):
+        mod = self.ly.get_module(modname)
+        oldd = mod.parse_data_dict(old, no_state=True)
+        newd = mod.parse_data_dict(new, no_state=True)
+        lyd = oldd.diff(newd)
         return self.put_config(lyd.print_mem("xml", with_siblings=True, pretty=False))
 
     def call(self, call):
@@ -174,4 +194,3 @@ class Device(object):
         mod = self.ly.get_module(modname)
         lyd = mod.parse_data_dict(action, rpc=True)
         return self.call_action(lyd.print_mem("xml", with_siblings=True, pretty=False))
-
