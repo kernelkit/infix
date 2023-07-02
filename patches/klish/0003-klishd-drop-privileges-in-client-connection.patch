@@ -1,0 +1,84 @@
+From e44383bfd17bae32d76f702ab4eb9cea6db88b6d Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Mon, 3 Jul 2023 00:25:46 +0200
+Subject: [PATCH] klishd: drop privileges in client connection
+Organization: Addiva Elektronik
+
+When a client connects over the AF_UNIX socket we should drop privileges
+to match the uid and gid of that user.  The '%u' translation done by the
+klish_prompt() function needs the USER env. variable to be set, so we do
+that too here.
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ bin/klishd/klishd.c | 31 +++++++++++++++++++++++++++++--
+ 1 file changed, 29 insertions(+), 2 deletions(-)
+
+diff --git a/bin/klishd/klishd.c b/bin/klishd/klishd.c
+index 81dc392..f16b9b9 100644
+--- a/bin/klishd/klishd.c
++++ b/bin/klishd/klishd.c
+@@ -82,6 +82,9 @@ int main(int argc, char **argv)
+ 	faux_error_t *error = faux_error_new();
+ 	faux_ini_t *config = NULL;
+ 	int client_fd = -1;
++	struct passwd *pw;
++	struct ucred uc;
++	socklen_t len;
+ 
+ 	// Parse command line options
+ 	opts = opts_init();
+@@ -187,6 +190,25 @@ err: // For listen daemon
+ 	retval = -1; // Pessimism for service process
+ 	eloop = NULL;
+ 
++	len = sizeof(struct ucred);
++	if (getsockopt(client_fd, SOL_SOCKET, SO_PEERCRED, &uc, &len) == -1) {
++		syslog(LOG_ERR, "Failed reading peer credentials, aborting.");
++		goto err_creds;
++	}
++
++	pw = getpwuid(uc.uid);
++	if (!pw) {
++		syslog(LOG_ERR, "Failed getting user information for UID %d, aborting.", uc.uid);
++		goto err_creds;
++	}
++
++	syslog(LOG_WARNING, "User %s from PID %d connected (UID:%d GID:%d)", pw->pw_name, uc.pid, uc.uid, uc.gid);
++	setenv("USER", pw->pw_name, 1);
++	if (setgid(uc.gid) || setuid(uc.uid)) {
++		syslog(LOG_ERR, "Failed dropping privileges to (UID:%d GID:%d): %s", uc.uid, uc.gid, strerror(errno));
++		goto err_creds;
++	}
++
+ 	// Re-Initialize syslog
+ 	openlog(LOG_SERVICE_NAME, logoptions, opts->log_facility);
+ 	if (!opts->verbose)
+@@ -215,9 +237,10 @@ err: // For listen daemon
+ 
+ 	retval = 0;
+ err_client:
+-
+ 	ktpd_session_free(ktpd_session);
+ 	faux_eloop_free(eloop);
++
++err_creds:
+ 	close(client_fd);
+ 
+ 	// Free scheme
+@@ -463,7 +486,11 @@ static int create_listen_unix_sock(const char *path)
+ 		goto err;
+ 	}
+ 	if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt))) {
+-		syslog(LOG_ERR, "Can't set socket options: %s\n", strerror(errno));
++		syslog(LOG_ERR, "Can't set SO_REUSEADDR socket option: %s", strerror(errno));
++		goto err;
++	}
++	if (setsockopt(sock, SOL_SOCKET, SO_PASSCRED, &opt, sizeof(opt))) {
++		syslog(LOG_ERR, "Can't set SO_PASSCRED socket option: %s", strerror(errno));
+ 		goto err;
+ 	}
+ 
+-- 
+2.34.1
+
