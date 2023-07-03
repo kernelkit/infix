@@ -14,6 +14,6 @@ NET_AUTORECONF = YES
 define NET_INSTALL_EXTRA
 	chmod +x $(TARGET_DIR)/usr/share/net/*.sh
 endef
-NET_TARGET_FINALIZE_HOOKS += NET_INSTALL_EXTRA
+NET_POST_INSTALL_TARGET_HOOKS += NET_INSTALL_EXTRA
 
 $(eval $(autotools-package))
