@@ -5,7 +5,8 @@
 ################################################################################
 
 NET_VERSION = 1.0
-NET_LICENSE = ISC
+NET_LICENSE = MIT
+NET_LICENSE_FILES = LICENSE
 NET_SITE_METHOD = local
 NET_SITE = $(BR2_EXTERNAL_INFIX_PATH)/src/net
 NET_DEPENDENCIES = libite
