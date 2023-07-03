@@ -26,6 +26,6 @@ define CONFD_INSTALL_EXTRA
 	mkdir -p $(TARGET_DIR)/lib/infix
 	cp $(CONFD_PKGDIR)/clean-etc     $(TARGET_DIR)/lib/infix/
 endef
-CONFD_TARGET_FINALIZE_HOOKS += CONFD_INSTALL_EXTRA
+CONFD_POST_INSTALL_TARGET_HOOKS += CONFD_INSTALL_EXTRA
 
 $(eval $(autotools-package))
