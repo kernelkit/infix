@@ -3,7 +3,7 @@ Contributing to Infix
 
 We welcome any and all help in the form of bug reports, fixes, patches
 to add new features -- *preferably as GitHub pull requests*.  Other
-methods are of course also possible: emailing the [maintainers][] a
+methods are of course also possible: emailing the [maintainers][1] a
 patch or even a raw file, a feature request or an alert of a problem.
 
 If you are unsure of what to do, or how to implement an idea or bugfix,
