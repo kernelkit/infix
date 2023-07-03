@@ -208,7 +208,6 @@ endif # BR2_PACKAGE_QUAGGA
 ifeq ($(BR2_PACKAGE_SMCROUTE),y)
 define SKELETON_INIT_FINIT_SET_SMCROUTE
 	cp $(SKELETON_INIT_FINIT_AVAILABLE)/smcroute.conf $(FINIT_D)/available/
-	ln -sf ../available/smcroute.conf $(FINIT_D)/enabled/smcroute.conf
 endef
 SKELETON_INIT_FINIT_POST_INSTALL_TARGET_HOOKS += SKELETON_INIT_FINIT_SET_SMCROUTE
 endif
