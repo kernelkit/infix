@@ -21,10 +21,6 @@ define CONFD_INSTALL_EXTRA
 	cp $(CONFD_PKGDIR)/sysrepo.conf  $(FINIT_D)/available/
 	ln -sf ../available/sysrepo.conf $(FINIT_D)/enabled/sysrepo.conf
 	cp $(CONFD_PKGDIR)/tmpfiles.conf $(TARGET_DIR)/etc/tmpfiles.d/confd.conf
-	mkdir -p $(TARGET_DIR)/usr/share/factory/cfg
-	cp $(CONFD_PKGDIR)/factory-config.cfg $(TARGET_DIR)/usr/share/factory/cfg/startup-config.cfg
-	mkdir -p $(TARGET_DIR)/lib/infix
-	cp $(CONFD_PKGDIR)/clean-etc     $(TARGET_DIR)/lib/infix/
 endef
 CONFD_POST_INSTALL_TARGET_HOOKS += CONFD_INSTALL_EXTRA
 
