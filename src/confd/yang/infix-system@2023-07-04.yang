@@ -1,0 +1,47 @@
+module infix-system {
+  yang-version 1.1;
+  namespace "urn:infix:system:ns:yang:1.0";
+  prefix infix-sys;
+
+  import ietf-system {
+    prefix sys;
+  }
+  include infix-system-software;
+
+  organization "KernelKit";
+  contact      "kernelkit@googlegroups.com";
+  description  "Infix augments and deviations to ietf-system.";
+
+  revision 2023-07-04 {
+    description "Updating/adding deviation specifications:
+                 - timezone-utc-offset (updated)
+                 - radius (added)
+                 - dns-resolver port (added)";
+    reference "internal";
+  }
+
+  revision 2023-04-11 {
+    description "Initial revision.";
+    reference "internal";
+  }
+
+  augment "/sys:system" {
+    description "Augments to ietf-system not found in any other model.";
+    leaf motd {
+      type string;
+      description "Set the MotD (Message of the Day), shown after login";
+    }
+  }
+
+  deviation "/sys:system/sys:clock/sys:timezone/sys:timezone-utc-offset" {
+    deviate not-supported;
+  }
+
+  deviation "/sys:system/sys:radius" {
+    deviate not-supported;
+  }
+
+  deviation "/sys:system/sys:dns-resolver/sys:server/sys:transport/sys:udp-and-tcp/sys:udp-and-tcp/sys:port" {
+    deviate not-supported;
+  }
+}
