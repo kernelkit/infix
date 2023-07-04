@@ -3,6 +3,7 @@
 
 #include <sysrepo.h>
 #include <sysrepo_types.h>
+#include <sysrepo/values.h>
 
 #include <klish/kplugin.h>
 #include <klish/kcontext.h>
@@ -140,6 +141,51 @@ err:
 	return -1;
 }
 
+int klix_rpc(kcontext_t *ctx)
+{
+	sr_session_ctx_t *sess;
+	sr_conn_ctx_t *conn;
+	const char *xpath;
+	sr_val_t *output;
+	size_t cnt;
+	int err;
+
+	xpath = kcontext_script(ctx);
+	if (!xpath) {
+		fprintf(stderr, "Error: cannot find rpc xpath\n");
+		goto err;
+	}
+
+	if (sr_connect(SR_CONN_DEFAULT, &conn)) {
+		fprintf(stderr, "Error: Connection to datastore failed\n");
+		goto err;
+	}
+
+	if (sr_session_start(conn, SR_DS_OPERATIONAL, &sess)) {
+		fprintf(stderr, "Error: Unable to open transaction to running-config\n");
+		goto err_disconnect;
+	}
+
+	if ((err = sr_rpc_send(sess, xpath, NULL, 0, 0, &output, &cnt))) {
+		fprintf(stderr, "Failed sending RPC %s: %s", xpath, sr_strerror(err));
+		goto err_disconnect;
+	}
+
+	for (size_t i = 0; i < cnt; i++) {
+		sr_print_val(&output[i]);
+		puts("");
+	}
+
+	sr_free_values(output, cnt);
+	sr_disconnect(conn);
+	return 0;
+
+err_disconnect:
+	sr_disconnect(conn);
+err:
+	return -1;
+}
+
 int kplugin_klinfix_fini(kcontext_t *ctx)
 {
 	return 0;
@@ -151,5 +197,7 @@ int kplugin_klinfix_init(kcontext_t *ctx)
 
 	kplugin_add_syms(plugin, ksym_new("klix_copy", klix_copy));
 	kplugin_add_syms(plugin, ksym_new("klix_commit", klix_commit));
+	kplugin_add_syms(plugin, ksym_new("klix_rpc", klix_rpc));
+
 	return 0;
 }

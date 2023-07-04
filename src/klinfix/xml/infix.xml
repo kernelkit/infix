@@ -93,11 +93,11 @@
     </PROMPT>
 
     <COMMAND name="poweroff" help="Poweroff system (system policy may yield reboot)">
-      <ACTION sym="script">poweroff</ACTION>
+      <ACTION sym="klix_rpc@klinfix" ptype="STRING">/ietf-system:system-shutdown</ACTION>
     </COMMAND>
 
     <COMMAND name="reboot" help="Reboot system">
-      <ACTION sym="script">reboot</ACTION>
+      <ACTION sym="klix_rpc@klinfix" ptype="STRING">/ietf-system:system-restart</ACTION>
     </COMMAND>
 
     <COMMAND name="shell" help="Enter system shell">
