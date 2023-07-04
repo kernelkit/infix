@@ -143,17 +143,35 @@ err:
 
 int klix_rpc(kcontext_t *ctx)
 {
+	kpargv_pargs_node_t *iter;
+	size_t icnt = 0, ocnt = 0;
+	sr_val_t *input = NULL;
 	sr_session_ctx_t *sess;
 	sr_conn_ctx_t *conn;
 	const char *xpath;
 	sr_val_t *output;
-	size_t cnt;
+	kparg_t *parg;
 	int err;
 
 	xpath = kcontext_script(ctx);
 	if (!xpath) {
 		fprintf(stderr, "Error: cannot find rpc xpath\n");
 		goto err;
+	}
+
+	iter = kpargv_pargs_iter(kcontext_pargv(ctx));
+	while ((parg = kpargv_pargs_each(&iter))) {
+		const char *key = kentry_name(kparg_entry(parg));
+		const char *val = kparg_value(parg);
+
+		/* skip leading part of command line: 'set datetime' */
+		if (!strcmp(key, val))
+			continue;
+
+		sr_realloc_values(icnt, icnt + 1, &input);
+		/* e.g. /ietf-system:set-current-datetime/current-datetime */
+		sr_val_build_xpath(&input[icnt], "%s/%s", xpath, key);
+		sr_val_set_str_data(&input[icnt++], SR_STRING_T, val);
 	}
 
 	if (sr_connect(SR_CONN_DEFAULT, &conn)) {
@@ -166,23 +184,25 @@ int klix_rpc(kcontext_t *ctx)
 		goto err_disconnect;
 	}
 
-	if ((err = sr_rpc_send(sess, xpath, NULL, 0, 0, &output, &cnt))) {
+	if ((err = sr_rpc_send(sess, xpath, input, icnt, 0, &output, &ocnt))) {
 		fprintf(stderr, "Failed sending RPC %s: %s", xpath, sr_strerror(err));
 		goto err_disconnect;
 	}
 
-	for (size_t i = 0; i < cnt; i++) {
+	for (size_t i = 0; i < ocnt; i++) {
 		sr_print_val(&output[i]);
 		puts("");
 	}
 
-	sr_free_values(output, cnt);
+	sr_free_values(input, icnt);
+	sr_free_values(output, ocnt);
 	sr_disconnect(conn);
 	return 0;
 
 err_disconnect:
 	sr_disconnect(conn);
 err:
+	sr_free_values(input, icnt);
 	return -1;
 }
 
