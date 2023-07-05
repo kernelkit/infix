@@ -57,7 +57,7 @@ static void set_sock_rcvbuf(int sd, int size)
                perror("setsockopt");
                return;
        }
-       DEBUG("Socket receive buffer size increased to: %d bytes\n", size);
+       DEBUG("Socket receive buffer size increased to: %d bytes", size);
 }
 
 static int nl_sock_init(void)
@@ -67,7 +67,7 @@ static int nl_sock_init(void)
 
 	sock = socket(PF_NETLINK, SOCK_RAW, NETLINK_ROUTE);
 	if (sock < 0) {
-		ERROR("Error, creating netlink socket: %s\n", strerror(errno));
+		ERROR("Error, creating netlink socket: %s", strerror(errno));
 		return -1;
 	}
 
@@ -76,7 +76,7 @@ static int nl_sock_init(void)
 	addr.nl_groups = RTMGRP_LINK;
 
 	if (bind(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
-		ERROR("Error, binding netlink socket: %s\n", strerror(errno));
+		ERROR("Error, binding netlink socket: %s", strerror(errno));
 		close(sock);
 		return -1;
 	}
@@ -244,23 +244,23 @@ static int sr_ifaces_cb(sr_session_ctx_t *session, uint32_t, const char *,
 	sr_conn_ctx_t *con;
 	int err;
 
-	DEBUG("Incoming query for xpath: %s\n", path);
+	DEBUG("Incoming query for xpath: %s", path);
 
 	con = sr_session_get_connection(session);
 	if (!con) {
-		ERROR("Error, getting connection\n");
+		ERROR("Error, getting connection");
 		return SR_ERR_INTERNAL;
 	}
 
 	ctx = sr_acquire_context(con);
 	if (!ctx) {
-		ERROR("Error, acquiring context\n");
+		ERROR("Error, acquiring context");
 		return SR_ERR_INTERNAL;
 	}
 
 	err = ly_add_ip_link(ctx, parent, sub->ifname);
 	if (err)
-		ERROR("Error, adding ip link info\n");
+		ERROR("Error, adding ip link info");
 
 	sr_release_context(con);
 
@@ -288,7 +288,7 @@ static int sub_to_iface(struct statd *statd, const char *ifname)
 
 	sub = sub_find_iface(&statd->subs, ifname);
 	if (sub) {
-		DEBUG("Interface %s already subscribed\n", ifname);
+		DEBUG("Interface %s already subscribed", ifname);
 		return SR_ERR_OK;
 	}
 
@@ -302,20 +302,20 @@ static int sub_to_iface(struct statd *statd, const char *ifname)
 	snprintf(path, sizeof(path), "%s/interface[name='%s']",
 		 XPATH_IFACE_BASE, ifname);
 
-	DEBUG("Subscribe to events for \"%s\"\n", path);
+	DEBUG("Subscribe to events for \"%s\"", path);
 	err = sr_oper_get_subscribe(statd->sr_ses, "ietf-interfaces",
 				    path, sr_ifaces_cb, sub,
 				    SR_SUBSCR_DEFAULT | SR_SUBSCR_NO_THREAD | SR_SUBSCR_DONE_ONLY,
 				    &sub->sr_sub);
 	if (err) {
-		ERROR("Error, subscribing to path \"%s\": %s\n", path, sr_strerror(err));
+		ERROR("Error, subscribing to path \"%s\": %s", path, sr_strerror(err));
 		free(sub);
 		return SR_ERR_INTERNAL;
 	}
 
 	err = sr_get_event_pipe(sub->sr_sub, &sr_ev_pipe);
 	if (err) {
-		ERROR("Error, getting sysrepo event pipe: %s\n", sr_strerror(err));
+		ERROR("Error, getting sysrepo event pipe: %s", sr_strerror(err));
 		sr_unsubscribe(sub->sr_sub);
 		free(sub);
 		return SR_ERR_INTERNAL;
@@ -336,7 +336,7 @@ static void unsub_to_ifaces(struct statd *statd)
 
 	while (!TAILQ_EMPTY(&statd->subs)) {
 		sub = TAILQ_FIRST(&statd->subs);
-		DEBUG("Unsubscribe from \"%s\" (all)\n", sub->ifname);
+		DEBUG("Unsubscribe from \"%s\" (all)", sub->ifname);
 		sub_delete(statd->ev_loop, &statd->subs, sub);
 	}
 }
@@ -350,7 +350,7 @@ static int unsub_to_iface(struct statd *statd, char *ifname)
 		ERROR("Error, can't find interface to delete (%s)", ifname);
 		return SR_ERR_INTERNAL;
 	}
-	DEBUG("Unsubscribe from \"%s\"\n", sub->ifname);
+	DEBUG("Unsubscribe from \"%s\"", sub->ifname);
 	sub_delete(statd->ev_loop, &statd->subs, sub);
 
 	return SR_ERR_OK;
@@ -393,7 +393,7 @@ static void nl_event_cb(struct ev_loop *, struct ev_io *w, int)
 
 	len = recv(statd->nl.sd, buf, sizeof(buf), 0);
 	if (len < 0) {
-		ERROR("Error, netlink recv failed: %s\n", strerror(errno));
+		ERROR("Error, netlink recv failed: %s", strerror(errno));
 		close(statd->nl.sd);
 		/* NOTE: This is likely caused by a full kernel buffer, which
 		 * means we can't trust our list. So we exit hard and let finit
@@ -405,7 +405,7 @@ static void nl_event_cb(struct ev_loop *, struct ev_io *w, int)
 	for (nlh = (struct nlmsghdr *)buf; NLMSG_OK(nlh, len); nlh = NLMSG_NEXT(nlh, len)) {
 		err = nl_process_msg(nlh, statd);
 		if (err)
-			ERROR("Error, processing netlink message: %s\n", sr_strerror(err));
+			ERROR("Error, processing netlink message: %s", sr_strerror(err));
 	}
 }
 
@@ -454,32 +454,32 @@ int main(void)
 
 	statd.nl.sd = nl_sock_init();
 	if (statd.nl.sd < 0) {
-		ERROR("Error, opening netlink socket\n");
+		ERROR("Error, opening netlink socket");
 		return EXIT_FAILURE;
 	}
-	INFO("Status daemon starting\n");
+	INFO("Status daemon starting");
 
 	set_sock_rcvbuf(statd.nl.sd, SOCK_RMEM_SIZE);
 
 	err = sr_connect(SR_CONN_DEFAULT, &sr_conn);
 	if (err) {
-		ERROR("Error, connecting to sysrepo: %s\n", sr_strerror(err));
+		ERROR("Error, connecting to sysrepo: %s", sr_strerror(err));
 		return EXIT_FAILURE;
 	}
-	DEBUG("Connected to sysrepo\n");
+	DEBUG("Connected to sysrepo");
 
 	err = sr_session_start(sr_conn, SR_DS_OPERATIONAL, &statd.sr_ses);
 	if (err) {
-		ERROR("Error, start sysrepo session: %s\n", sr_strerror(err));
+		ERROR("Error, start sysrepo session: %s", sr_strerror(err));
 		sr_disconnect(sr_conn);
 		return EXIT_FAILURE;
 	}
-	DEBUG("Session started (%p)\n", statd.sr_ses);
+	DEBUG("Session started (%p)", statd.sr_ses);
 
-	DEBUG("Attempting to register existing interfaces\n");
+	DEBUG("Attempting to register existing interfaces");
 	err = sub_to_ifaces(&statd);
 	if (err) {
-		ERROR("Error, registering existing interfaces\n");
+		ERROR("Error, registering existing interfaces");
 		sr_disconnect(sr_conn);
 		return EXIT_FAILURE;
 	}
@@ -492,11 +492,11 @@ int main(void)
 	statd.nl.watcher.data = &statd;
 	ev_io_start(statd.ev_loop, &statd.nl.watcher);
 
-	INFO("Status daemon entering main event loop\n");
+	INFO("Status daemon entering main event loop");
 	ev_run(statd.ev_loop, 0);
 
 	/* We should never get here during normal operation */
-	INFO("Status daemon shutting down\n");
+	INFO("Status daemon shutting down");
 	unsub_to_ifaces(&statd);
 	sr_session_stop(statd.sr_ses);
 	sr_disconnect(sr_conn);
