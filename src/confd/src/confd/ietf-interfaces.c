@@ -814,7 +814,7 @@ static int netdag_gen_vlan(struct dagger *net, struct lyd_node *dif,
 	const char *proto;
 	int err;
 
-	DEBUG("");
+	DEBUG("ifname %s parent %s", ifname, parent);
 
 	err = dagger_add_dep(net, ifname, parent);
 	if (err)
@@ -844,7 +844,7 @@ static int netdag_gen_vlan(struct dagger *net, struct lyd_node *dif,
 		fprintf(ip, " id %s", vidd.new);
 
 	fputc('\n', ip);
-	DEBUG("");
+
 	return 0;
 }
 

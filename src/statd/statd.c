@@ -235,7 +235,7 @@ static int ly_add_ip_link(const struct ly_ctx *ctx, struct lyd_node **parent, ch
 	return SR_ERR_OK;
 }
 
-static int sr_ifaces_cb(sr_session_ctx_t *session, uint32_t, const char *,
+static int sr_ifaces_cb(sr_session_ctx_t *session, uint32_t, const char *path,
 			const char *, const char *, uint32_t,
 			struct lyd_node **parent, void *priv)
 {
@@ -267,9 +267,14 @@ static int sr_ifaces_cb(sr_session_ctx_t *session, uint32_t, const char *,
 	return err;
 }
 
-static void sig_event_cb(struct ev_loop *loop, struct ev_signal *, int)
+static void sigint_cb(struct ev_loop *loop, struct ev_signal *, int)
 {
 	ev_break(loop, EVBREAK_ALL);
+}
+
+static void sigusr1_cb(struct ev_loop *, struct ev_signal *, int)
+{
+	debug ^= 1;
 }
 
 static void sr_event_cb(struct ev_loop *, struct ev_io *w, int)
@@ -442,12 +447,20 @@ static int sub_to_ifaces(struct statd *statd)
 	return SR_ERR_OK;
 }
 
-int main(void)
+int main(int argc, char *argv[])
 {
-	struct ev_signal sig_watcher;
+	struct ev_signal sigint_watcher, sigusr1_watcher;
 	struct statd statd = {};
+	int log_opts = LOG_USER;
 	sr_conn_ctx_t *sr_conn;
 	int err;
+
+	if (argc > 1 && !strcmp(argv[1], "-d")) {
+		log_opts |= LOG_PERROR;
+		debug = 1;
+	}
+
+	openlog("statd", log_opts, 0);
 
 	TAILQ_INIT(&statd.subs);
 	statd.ev_loop = EV_DEFAULT;
@@ -484,9 +497,13 @@ int main(void)
 		return EXIT_FAILURE;
 	}
 
-	ev_signal_init(&sig_watcher, sig_event_cb, SIGINT);
-	sig_watcher.data = &statd;
-	ev_signal_start(statd.ev_loop, &sig_watcher);
+	ev_signal_init(&sigint_watcher, sigint_cb, SIGINT);
+	sigint_watcher.data = &statd;
+	ev_signal_start(statd.ev_loop, &sigint_watcher);
+
+	ev_signal_init(&sigusr1_watcher, sigusr1_cb, SIGUSR1);
+	sigusr1_watcher.data = &statd;
+	ev_signal_start(statd.ev_loop, &sigusr1_watcher);
 
 	ev_io_init(&statd.nl.watcher, nl_event_cb, statd.nl.sd, EV_READ);
 	statd.nl.watcher.data = &statd;

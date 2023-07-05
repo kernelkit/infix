@@ -66,9 +66,18 @@ int core_post_hook(sr_session_ctx_t *session, uint32_t sub_id, const char *modul
 
 int sr_plugin_init_cb(sr_session_ctx_t *session, void **priv)
 {
+	int log_opts = LOG_USER;
 	int rc = SR_ERR_SYS;
+	char *env;
 
-	openlog("confd", LOG_USER, 0);
+	/* Convert into command line option+SIGUSR1 when converting to standalone confd */
+	env = getenv("DEBUG");
+	if (env) {
+		log_opts |= LOG_PERROR;
+		debug = 1;
+	}
+
+	openlog("confd", log_opts, 0);
 
 	/* Save context with default running config datastore for all our models */
 	*priv = (void *)&confd;

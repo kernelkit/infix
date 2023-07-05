@@ -186,7 +186,7 @@ static int infix_system_sw_state(sr_session_ctx_t *session, uint32_t sub_id,
 	RaucInstaller *rauc;
 	struct lyd_node *sw;
 
-	DEBUG("");
+	DEBUG("%s", path);
 
 	rauc = infix_system_sw_new_rauc();
 	if (!rauc)
