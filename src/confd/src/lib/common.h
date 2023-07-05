@@ -7,6 +7,9 @@
 #include <sysrepo.h>
 #include <sysrepo.h>
 #include "srx_module.h"
+#include "common.h"
+
+extern int debug;
 
 #ifndef HAVE_VASPRINTF
 int vasprintf(char **strp, const char *fmt, va_list ap);
@@ -15,8 +18,7 @@ int vasprintf(char **strp, const char *fmt, va_list ap);
 int asprintf(char **strp, const char *fmt, ...);
 #endif
 
-#define DEBUG(fmt, ...)
-//#define DEBUG(fmt, ...) syslog(LOG_DEBUG, "%s: "fmt, __func__, ##__VA_ARGS__)
+#define DEBUG(fmt, ...) do { if (debug) syslog(LOG_DEBUG, fmt, ##__VA_ARGS__); } while (0)
 #define INFO(fmt, ...) syslog(LOG_INFO, fmt, ##__VA_ARGS__)
 #define ERROR(fmt, ...) syslog(LOG_ERR, "%s: " fmt, __func__, ##__VA_ARGS__)
 #define ERRNO(fmt, ...) syslog(LOG_ERR, "%s: " fmt ": %s", __func__, ##__VA_ARGS__, strerror(errno))

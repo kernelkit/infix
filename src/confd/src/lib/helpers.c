@@ -13,6 +13,8 @@
 #include <sys/wait.h>
 #include <libite/lite.h>
 
+int debug;			/* Sets debug level (0:off) */
+
 /* TODO remove once confd / statd lib situation is resolved */
 #ifndef vasprintf
 int vasprintf(char **strp, const char *fmt, va_list ap);

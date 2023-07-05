@@ -10,7 +10,7 @@ CPPFLAGS := -I$(CONFD_SRC_LIB)
 TARGET = statd
 SRC = statd.c
 LIB_SRC = $(CONFD_SRC_LIB)/helpers.c $(CONFD_SRC_LIB)/lyx.c $(CONFD_LIB)/vasprintf.c
-LIB_HDR = $(CONFD_SRC_LIB)/helpers.h $(CONFD_SRC_LIB)/lyx.h
+LIB_HDR = $(CONFD_SRC_LIB)/helpers.h $(CONFD_SRC_LIB)/lyx.h $(CONFD_SRC_LIB)/common.h
 
 all: $(TARGET)
 
