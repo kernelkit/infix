@@ -1,0 +1,46 @@
+module infix-system {
+  yang-version 1.1;
+  namespace "urn:infix:system:ns:yang:1.0";
+  prefix infix-sys;
+
+  import ietf-system {
+    prefix sys;
+  }
+
+  include infix-system-software;
+
+  organization "KernelKit";
+  contact      "kernelkit@googlegroups.com";
+  description  "Infix augments and deviations to ietf-system.";
+
+  revision 2023-07-06 {
+    description "Add support for user login shell.";
+    reference "internal";
+  }
+
+  revision 2023-04-11 {
+    description "Initial revision.";
+    reference "internal";
+  }
+
+  augment "/sys:system" {
+    description "Augment of ietf-system for modifying /etc/motd.";
+    leaf motd {
+      type string;
+      description "Set the MotD (Message of the Day), shown after login";
+    }
+  }
+
+  augment "/sys:system/sys:authentication/sys:user" {
+    description "Augment of ietf-system to support setting login shell for users.";
+    leaf shell {
+      type string;
+      default "/bin/clish";
+      description "Set UNIX login shell for user, e.g., /bin/bash";
+    }
+  }
+
+  deviation "/sys:system/sys:clock/sys:timezone/sys:timezone-utc-offset/sys:timezone-utc-offset" {
+    deviate not-supported;
+  }
+}

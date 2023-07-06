@@ -34,13 +34,18 @@ rm -f "$TARGET_DIR/etc/os-release"
 
 echo "Infix by KernelKit $GIT_VERSION -- $(date +"%b %e %H:%M %Z %Y")" > "$TARGET_DIR/etc/version"
 
-# Allow pdmenu (setup) and bash to be a login shells, bash
-# is added automatically when selected in menuyconfig, but
-# not when BusyBox provides a symlink (for ash).
+# Allow pdmenu (setup) and bash to be login shells, bash is added
+# automatically when selected in menuyconfig, but not when BusyBox
+# provides a symlink (for ash).  The /bin/{true,false} are old UNIX
+# beart means of disabling a user.
 grep -qsE '^/usr/bin/pdmenu$$' "$TARGET_DIR/etc/shells" \
         || echo "/usr/bin/pdmenu" >> "$TARGET_DIR/etc/shells"
 grep -qsE '^/bin/bash$$' "$TARGET_DIR/etc/shells" \
         || echo "/bin/bash" >> "$TARGET_DIR/etc/shells"
+grep -qsE '^/bin/true$$' "$TARGET_DIR/etc/shells" \
+        || echo "/bin/true" >> "$TARGET_DIR/etc/shells"
+grep -qsE '^/bin/false$$' "$TARGET_DIR/etc/shells" \
+        || echo "/bin/false" >> "$TARGET_DIR/etc/shells"
 
 # Menuconfig support for modifying Qemu args in release tarballs
 cp "$BR2_EXTERNAL_INFIX_PATH/board/common/qemu/qemu.sh" "$BINARIES_DIR/"

@@ -2,6 +2,7 @@
 
 #include <assert.h>
 #include <ctype.h>
+#include <paths.h>
 #include <pwd.h>
 #include <sys/utsname.h>
 #include <sys/sysinfo.h>
@@ -581,6 +582,35 @@ static int is_valid_username(const char *user)
 	return 1;
 }
 
+static char *sys_find_usable_shell(sr_session_ctx_t *sess, char *name)
+{
+	char *shell = NULL;
+	char xpath[256];
+	sr_data_t *cfg;
+
+	snprintf(xpath, sizeof(xpath), XPATH_AUTH_"/user[name='%s']/infix-system:shell", name);
+	if (!sr_get_data(sess, xpath, 0, 0, 0, &cfg)) {
+		struct lyd_node *node;
+
+		if (!lyd_find_path(cfg->tree, xpath, 0, &node))
+			shell = (char *)lyd_get_value(node);
+	}
+
+	/* Verify the given shell exists (and is a login shell) */
+	if (!shell)
+		shell = LOGIN_SHELL;
+	else if (!whichp(shell))
+		shell = LOGIN_SHELL;
+
+	if (!whichp(shell))
+		shell = _PATH_BSHELL;
+
+	shell = strdup(shell);
+	sr_release_data(cfg);
+
+	return shell;
+}
+
 static int sys_del_user(char *user)
 {
 	char *args[] = {
@@ -605,9 +635,9 @@ static int sys_del_user(char *user)
  *      that the full NACM applies to the user instead of the file system
  *      permissions that apply to the current klish.
  */
-static int sys_add_new_user(char *name)
+static int sys_add_new_user(sr_session_ctx_t *sess, char *name)
 {
-	char *shell = LOGIN_SHELL;
+	char *shell = sys_find_usable_shell(sess, name);
 	char *sargs[] = {
 		"adduser", "-d", "-s", shell, "-S", "-G", "wheel", name, NULL
 	};
@@ -623,17 +653,15 @@ static int sys_add_new_user(char *name)
 	else
 		args = uargs;	/* user */
 
-	if (!shell || !whichp(shell))
-		args[2] = "/bin/sh";
-
 	/**
 	 * The Busybox implementation of 'adduser -d' sets the password
 	 * to "*", which prevents new users from logging in until Augeas
 	 * has set a password or SSH public keys have been installed.
 	 */
 	err = systemv_silent(args);
+	free(shell);
 	if (err) {
-		ERROR("Error creating new user \"%s\"\n", name);
+		ERROR("Failed creating new user \"%s\"\n", name);
 		return SR_ERR_SYS;
 	}
 	DEBUG("New user \"%s\" created\n", name);
@@ -709,6 +737,41 @@ static sr_error_t handle_sr_passwd_update(augeas *aug, sr_session_ctx_t *, struc
 	return SR_ERR_OK;
 }
 
+static sr_error_t handle_sr_shell_update(augeas *aug, sr_session_ctx_t *sess, struct sr_change *change)
+{
+	sr_xpath_ctx_t state;
+	char *shell = NULL;
+	struct passwd *pw;
+	const char *user;
+	sr_val_t *val;
+	int err;
+
+	val = change->old ? : change->new;
+	assert(val);
+
+	user = sr_xpath_key_value(val->xpath, "user", "name", &state);
+
+	pw = getpwnam(user);
+	if (!pw) {
+		DEBUG("Skipping attribute for missing user (%s)", user);
+		err = SR_ERR_OK;
+		goto err;
+	}
+
+	shell = sys_find_usable_shell(sess, (char *)user);
+	if (aug_set_dynpath(aug, shell, "etc/passwd/%s/shell", user)) {
+		err = SR_ERR_SYS;
+		goto err;
+	}
+	DEBUG("Login shell updated for user %s", user);
+	err = SR_ERR_OK;
+err:
+	if (shell)
+		free(shell);
+	sr_xpath_recover(&state);
+	return err;
+}
+
 static sr_error_t check_sr_user_update(augeas *aug, sr_session_ctx_t *, struct sr_change *change)
 {
 	sr_xpath_ctx_t state;
@@ -739,14 +802,14 @@ static sr_error_t handle_sr_user_update(augeas *aug, sr_session_ctx_t *sess, str
 		assert(change->new);
 
 		name = sr_xpath_key_value(change->new->xpath, "user", "name", &state);
-		err = sys_add_new_user(name);
+		err = sys_add_new_user(sess, name);
 		if (err) {
 			sr_xpath_recover(&state);
 			return err;
 		}
 		DEBUG("User %s created\n", name);
 		sr_xpath_recover(&state);
-	break;
+		break;
 	case SR_OP_DELETED:
 		assert(change->old);
 
@@ -758,7 +821,7 @@ static sr_error_t handle_sr_user_update(augeas *aug, sr_session_ctx_t *sess, str
 		}
 		DEBUG("User %s deleted\n", name);
 		sr_xpath_recover(&state);
-	break;
+		break;
 	case SR_OP_MOVED:
 	case SR_OP_MODIFIED:
 		return SR_ERR_OK;
@@ -860,6 +923,11 @@ static sr_error_t change_auth_done(augeas *aug, sr_session_ctx_t *session)
 
 	err = _sr_change_iter(aug, session, XPATH_AUTH_"/user[*]/password",
 			      handle_sr_passwd_update);
+	if (err)
+		return err;
+
+	err = _sr_change_iter(aug, session, XPATH_AUTH_"/user[*]/shell",
+			      handle_sr_shell_update);
 	if (err)
 		return err;
 
