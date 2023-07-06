@@ -971,9 +971,12 @@ static int change_hostname(sr_session_ctx_t *session, uint32_t sub_id, const cha
 		free(hosts);
 	free(current);
 
-	/* Inform any running lldpd and avahi of the change ... */
-	systemf("lldpcli configure system hostname %s", nm);
-	systemf("avahi-set-host-name %s", nm);
+	/* skip in bootstrap, daemons not started yet*/
+	if (!systemf("runlevel >/dev/null 2>&1")) {
+		/* Inform any running lldpd and avahi of the change ... */
+		systemf("lldpcli configure system hostname %s", nm);
+		systemf("avahi-set-host-name %s", nm);
+	}
 err:
 	if (nm)
 		free(nm);
