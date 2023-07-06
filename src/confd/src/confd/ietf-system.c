@@ -607,10 +607,10 @@ static int sys_add_new_user(char *name)
 {
 	char *shell = LOGIN_SHELL;
 	char *sargs[] = {
-		"adduser", "-D", "-s", shell, "-S", "-G", "wheel", name, NULL
+		"adduser", "-d", "-s", shell, "-S", "-G", "wheel", name, NULL
 	};
 	char *uargs[] = {
-		"adduser", "-D", "-s", shell, name, NULL
+		"adduser", "-d", "-s", shell, name, NULL
 	};
 	char **args;
 	int err;
@@ -625,9 +625,9 @@ static int sys_add_new_user(char *name)
 		args[2] = "/bin/sh";
 
 	/**
-	 * The Busybox implementation of adduser -D sets the password to "!",
-	 * which should prevent the new user from logging in until Augeas has
-	 * updated it.
+	 * The Busybox implementation of 'adduser -d' sets the password
+	 * to "*", which prevents new users from logging in until Augeas
+	 * has set a password or SSH public keys have been installed.
 	 */
 	err = systemv_silent(args);
 	if (err) {
@@ -674,12 +674,13 @@ static sr_error_t handle_sr_passwd_update(augeas *aug, struct sr_change *change)
 
 		/*
 		 * The iana-crypt-hash yang model is used to validate password
-		 * hash sanity, this is an emergency sanity check. We DON'T
-		 * want an empty string here.
+		 * hash sanity.  This check traps empty passwords, which we do
+		 * not allow.  But instead of disabling ("!") the user, we set
+		 * it as "*", meaning the user can log in with SSH keys.
 		 */
 		if (!hash || !strlen(hash)) {
-			ERROR("Password hash sanity check failed\n");
-			return SR_ERR_INTERNAL;
+			ERROR("Empty passwords are not allowed, disabling password login.\n");
+			hash = "*";
 		}
 		if (aug_set_dynpath(aug, hash, "etc/shadow/%s/password", user))
 			return SR_ERR_SYS;
