@@ -678,27 +678,44 @@ static int sys_add_new_user(sr_session_ctx_t *sess, char *name)
 	return SR_ERR_OK;
 }
 
-static sr_error_t handle_sr_passwd_update(augeas *aug, sr_session_ctx_t *, struct sr_change *change)
+static char *change_get_user(struct sr_change *change)
 {
 	sr_xpath_ctx_t state;
 	struct passwd *pw;
-	const char *hash;
 	sr_val_t *val;
-	char *xpath;
 	char *user;
 
 	val = change->old ? : change->new;
 	assert(val);
 
-	xpath = sr_xpath_key_value(val->xpath, "user", "name", &state);
-	user = strdup(xpath);
-	sr_xpath_recover(&state);
-
-	pw = getpwnam(user);
-	if (!pw) {
-		DEBUG("Skipping attribute for missing user (%s)", user);
-		return SR_ERR_OK;
+	user = sr_xpath_key_value(val->xpath, "user", "name", &state);
+	if (!user) {
+		sr_xpath_recover(&state);
+		return NULL;
 	}
+
+	user = strdup(user);
+	sr_xpath_recover(&state);
+	if (user) {
+		pw = getpwnam(user);
+		if (!pw) {
+			DEBUG("Skipping attribute for missing user (%s)", user);
+			free(user);
+			user = NULL;
+		}
+	}
+
+	return user;
+}
+
+static sr_error_t handle_sr_passwd_update(augeas *aug, sr_session_ctx_t *, struct sr_change *change)
+{
+	const char *hash;
+	char *user;
+
+	user = change_get_user(change);
+	if (!user)
+		return SR_ERR_OK;
 
 	switch (change->op) {
 	case SR_OP_CREATED:
@@ -739,36 +756,24 @@ static sr_error_t handle_sr_passwd_update(augeas *aug, sr_session_ctx_t *, struc
 
 static sr_error_t handle_sr_shell_update(augeas *aug, sr_session_ctx_t *sess, struct sr_change *change)
 {
-	sr_xpath_ctx_t state;
 	char *shell = NULL;
-	struct passwd *pw;
-	const char *user;
-	sr_val_t *val;
+	char *user;
 	int err;
 
-	val = change->old ? : change->new;
-	assert(val);
-
-	user = sr_xpath_key_value(val->xpath, "user", "name", &state);
-
-	pw = getpwnam(user);
-	if (!pw) {
-		DEBUG("Skipping attribute for missing user (%s)", user);
-		err = SR_ERR_OK;
-		goto err;
-	}
+	user = change_get_user(change);
+	if (!user)
+		return SR_ERR_OK;
 
 	shell = sys_find_usable_shell(sess, (char *)user);
 	if (aug_set_dynpath(aug, shell, "etc/passwd/%s/shell", user)) {
+		ERROR("Failed updating shell to %s for user %s", shell, user);
 		err = SR_ERR_SYS;
-		goto err;
+	} else {
+		DEBUG("Login shell updated for user %s", user);
+		err = SR_ERR_OK;
 	}
-	DEBUG("Login shell updated for user %s", user);
-	err = SR_ERR_OK;
-err:
-	if (shell)
-		free(shell);
-	sr_xpath_recover(&state);
+	free(shell);
+
 	return err;
 }
 
