@@ -108,7 +108,7 @@ static char *fmtime(time_t t, char *buf, size_t len)
 }
 
 static sr_error_t _sr_change_iter(augeas *aug, sr_session_ctx_t *session, char *xpath,
-				  sr_error_t cb(augeas *, struct sr_change *))
+				  sr_error_t cb(augeas *, sr_session_ctx_t *, struct sr_change *))
 {
 	struct sr_change change = {};
 	sr_change_iter_t *iter;
@@ -119,7 +119,7 @@ static sr_error_t _sr_change_iter(augeas *aug, sr_session_ctx_t *session, char *
 		return err;
 
 	while (sr_get_change_next(session, iter, &change.op, &change.old, &change.new) == SR_ERR_OK) {
-		err = cb(aug, &change);
+		err = cb(aug, session, &change);
 		sr_free_val(change.old);
 		sr_free_val(change.new);
 		if (err) {
@@ -650,7 +650,7 @@ static int sys_add_new_user(char *name)
 	return SR_ERR_OK;
 }
 
-static sr_error_t handle_sr_passwd_update(augeas *aug, struct sr_change *change)
+static sr_error_t handle_sr_passwd_update(augeas *aug, sr_session_ctx_t *, struct sr_change *change)
 {
 	sr_xpath_ctx_t state;
 	struct passwd *pw;
@@ -709,7 +709,7 @@ static sr_error_t handle_sr_passwd_update(augeas *aug, struct sr_change *change)
 	return SR_ERR_OK;
 }
 
-static sr_error_t check_sr_user_update(augeas *aug, struct sr_change *change)
+static sr_error_t check_sr_user_update(augeas *aug, sr_session_ctx_t *, struct sr_change *change)
 {
 	sr_xpath_ctx_t state;
 	sr_val_t *val;
@@ -728,7 +728,7 @@ static sr_error_t check_sr_user_update(augeas *aug, struct sr_change *change)
 	return SR_ERR_OK;
 }
 
-static sr_error_t handle_sr_user_update(augeas *aug, struct sr_change *change)
+static sr_error_t handle_sr_user_update(augeas *aug, sr_session_ctx_t *sess, struct sr_change *change)
 {
 	sr_xpath_ctx_t state;
 	char *name;
