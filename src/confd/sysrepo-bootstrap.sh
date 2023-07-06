@@ -83,6 +83,9 @@ sysrepoctl -s $SEARCH							\
 	   -I "${INIT_DATA}"
 rc=$?
 
+# Unlike `sysrepoctl -i` the `-c` command requires separate invocations.
+# NOTE: we ignore any errors from these at bootstrap since sysrepo may
+#       already enable some of these feature, resulting in error here.
 # Enable features required by netopeer2
 sysrepoctl -c ietf-netconf			-g wheel -p 0660	\
 		-e writable-running					\
@@ -93,6 +96,8 @@ sysrepoctl -c ietf-netconf			-g wheel -p 0660	\
 		-e url							\
 		-e xpath						\
 		-e confirmed-commit
+# Allow wheel group users (admin) to modify NACM
+sysrepoctl -c ietf-netconf-acm -g wheel -p 0660
 
 # On first boot, install factory-config as startup-config
 # Otherwise, load startup-config to {startup}.  Due to a
