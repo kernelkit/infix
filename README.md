@@ -70,9 +70,9 @@ At bootstrap Finit can start user scripts from a [run-parts(8)][] like
 directory: `/cfg/start.d`.  For example, the following starts OSPF:
 
 ```sh
+root@infix:~$ cp -a /etc/frr /cfg/
 root@infix:~$ mkdir /cfg/start.d
 root@infix:~$ cd /cfg/start.d
-root@infix:~$ cp -a /etc/frr .
 root@infix:/cfg/start.d$ cat <<EOF >10-enable-ospf.sh
 #!/bin/sh
 # Use vtysh to modify the OSPF configuration
@@ -80,6 +80,7 @@ mount --bind /cfg/frr /etc/frr
 initctl enable zebra
 initctl enable ospfd
 initctl enable bfdd
+(sleep 1; vtysh -b)&
 exit 0
 EOF
 root@infix:/cfg/start.d$ chmod +x 10-enable-ospf.sh
