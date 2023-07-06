@@ -15,6 +15,9 @@
     MultiKeysWithStatement = y
     Colorize = y
     Indent = 2
+    HidePasswords = y
+    DefaultKeys = n
+    EnableNACM = y
   </PLUGIN>
 
   <PTYPE name="DATASTORE">
@@ -156,8 +159,8 @@
 
     <!-- Move -->
 
-    <COMMAND name="abort" help="Abandon candidate">
-      <ACTION sym="srp_rollback@sysrepo"/>
+    <COMMAND name="abort" help="Abandon changes made candidate">
+      <ACTION sym="srp_reset@sysrepo"/>
       <ACTION sym="nav">replace main</ACTION>
     </COMMAND>
 
@@ -206,8 +209,8 @@
       <ACTION sym="klix_commit@klinfix"/>
     </COMMAND>
 
-    <COMMAND name="rollback" help="Restore candidate to running-config">
-      <ACTION sym="srp_rollback@sysrepo"/>
+    <COMMAND name="reset" help="Reset candidate to running-config">
+      <ACTION sym="srp_reset@sysrepo"/>
     </COMMAND>
 
     <!-- Display -->
