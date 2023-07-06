@@ -13,6 +13,8 @@
 #include "../lib/srx_module.h"
 #include "srx_val.h"
 
+#define XPATH_BASE_    "/ietf-system:system"
+#define XPATH_AUTH_    XPATH_BASE_"/authentication"
 #define CLOCK_PATH_    "/ietf-system:system-state/clock"
 #define PLATFORM_PATH_ "/ietf-system:system-state/platform"
 
@@ -327,7 +329,7 @@ static int change_clock(sr_session_ctx_t *session, uint32_t sub_id, const char *
 	}
 
 	/* XXX: add support also for /ietf-system:system/clock/timezone-utc-offset (deviation) */
-	timezone = srx_get_str(session, "/ietf-system:system/clock/timezone-name");
+	timezone = srx_get_str(session, XPATH_BASE_"/clock/timezone-name");
 	if (!timezone) {
 		ERROR("Failed reading timezone-name");
 		return SR_ERR_VALIDATION_FAILED;
@@ -379,7 +381,7 @@ static int change_ntp(sr_session_ctx_t *session, uint32_t sub_id, const char *mo
 		remove(CHRONY_PREV);
 		rename(CHRONY_CONF, CHRONY_PREV);
 		rename(CHRONY_NEXT, CHRONY_CONF);
-		if (srx_enabled(session, "/ietf-system:system/ntp/enabled")) {
+		if (srx_enabled(session, XPATH_BASE_"/ntp/enabled")) {
 			systemf("initctl -nbq disable chronyd");
 			return SR_ERR_OK;
 		}
@@ -395,7 +397,7 @@ static int change_ntp(sr_session_ctx_t *session, uint32_t sub_id, const char *mo
 		return SR_ERR_OK;
 	}
 
-	rc = sr_get_items(session, "/ietf-system:system/ntp/server", 0, 0, &val, &cnt);
+	rc = sr_get_items(session, XPATH_BASE_"/ntp/server", 0, 0, &val, &cnt);
 	if (rc) {
 		remove(CHRONY_NEXT);
 		return rc;
@@ -515,8 +517,8 @@ static int change_dns(sr_session_ctx_t *session, uint32_t sub_id, const char *mo
 		return SR_ERR_SYS;
 	}
 
-	SRX_GET_UINT8(session, timeout, "/ietf-system:system/dns-resolver/options/timeout");
-	SRX_GET_UINT8(session, timeout, "/ietf-system:system/dns-resolver/options/attempts");
+	SRX_GET_UINT8(session, timeout, XPATH_BASE_"/dns-resolver/options/timeout");
+	SRX_GET_UINT8(session, timeout, XPATH_BASE_"/dns-resolver/options/attempts");
 	if (timeout || attempts) {
 		fprintf(fp, "options");
 		if (timeout)
@@ -526,7 +528,7 @@ static int change_dns(sr_session_ctx_t *session, uint32_t sub_id, const char *mo
 		fprintf(fp, "\n");
 	}
 
-	rc = sr_get_items(session, "/ietf-system:system/dns-resolver/search", 0, 0, &val, &cnt);
+	rc = sr_get_items(session, XPATH_BASE_"/dns-resolver/search", 0, 0, &val, &cnt);
 	if (rc)
 		goto fail;
 
@@ -538,7 +540,7 @@ static int change_dns(sr_session_ctx_t *session, uint32_t sub_id, const char *mo
 	}
 	sr_free_values(val, cnt);
 
-	rc = sr_get_items(session, "/ietf-system:system/dns-resolver/server", 0, 0, &val, &cnt);
+	rc = sr_get_items(session, XPATH_BASE_"/dns-resolver/server", 0, 0, &val, &cnt);
 	if (rc)
 		goto fail;
 
@@ -826,7 +828,7 @@ static sr_error_t change_auth_check(augeas *aug, sr_session_ctx_t *session)
 {
 	sr_error_t err;
 
-	err = _sr_change_iter(aug, session, "/ietf-system:system/authentication/user",
+	err = _sr_change_iter(aug, session, XPATH_AUTH_"/user",
 			      check_sr_user_update);
 	if (err)
 		return err;
@@ -838,7 +840,7 @@ static sr_error_t change_auth_done(augeas *aug, sr_session_ctx_t *session)
 {
 	sr_error_t err;
 
-	err = _sr_change_iter(aug, session, "/ietf-system:system/authentication/user",
+	err = _sr_change_iter(aug, session, XPATH_AUTH_"/user",
 			      handle_sr_user_update);
 	if (err)
 		return err;
@@ -856,7 +858,7 @@ static sr_error_t change_auth_done(augeas *aug, sr_session_ctx_t *session)
 		return SR_ERR_INTERNAL;
 	}
 
-	err = _sr_change_iter(aug, session, "/ietf-system:system/authentication/user[*]/password",
+	err = _sr_change_iter(aug, session, XPATH_AUTH_"/user[*]/password",
 			      handle_sr_passwd_update);
 	if (err)
 		return err;
@@ -867,7 +869,7 @@ static sr_error_t change_auth_done(augeas *aug, sr_session_ctx_t *session)
 		return SR_ERR_SYS;
 	}
 
-	err = generate_auth_keys(session, "/ietf-system:system/authentication/user//.");
+	err = generate_auth_keys(session, XPATH_AUTH_"/user//.");
 	if (err) {
 		ERROR("failed saving authorized-key data.");
 		return err;
@@ -1002,12 +1004,12 @@ int ietf_system_init(struct confd *confd)
 		goto fail;
 	}
 
-	REGISTER_CHANGE(confd->session, "ietf-system", "/ietf-system:system/authentication", 0, change_auth, confd, &confd->sub);
-	REGISTER_CHANGE(confd->session, "ietf-system", "/ietf-system:system/hostname", 0, change_hostname, confd, &confd->sub);
-	REGISTER_CHANGE(confd->session, "ietf-system", "/ietf-system:system/infix-system:motd", 0, change_motd, confd, &confd->sub);
-	REGISTER_CHANGE(confd->session, "ietf-system", "/ietf-system:system/clock", 0, change_clock, confd, &confd->sub);
-	REGISTER_CHANGE(confd->session, "ietf-system", "/ietf-system:system/ntp", 0, change_ntp, confd, &confd->sub);
-	REGISTER_CHANGE(confd->session, "ietf-system", "/ietf-system:system/dns-resolver", 0, change_dns, confd, &confd->sub);
+	REGISTER_CHANGE(confd->session, "ietf-system", XPATH_AUTH_, 0, change_auth, confd, &confd->sub);
+	REGISTER_CHANGE(confd->session, "ietf-system", XPATH_BASE_"/hostname", 0, change_hostname, confd, &confd->sub);
+	REGISTER_CHANGE(confd->session, "ietf-system", XPATH_BASE_"/infix-system:motd", 0, change_motd, confd, &confd->sub);
+	REGISTER_CHANGE(confd->session, "ietf-system", XPATH_BASE_"/clock", 0, change_clock, confd, &confd->sub);
+	REGISTER_CHANGE(confd->session, "ietf-system", XPATH_BASE_"/ntp", 0, change_ntp, confd, &confd->sub);
+	REGISTER_CHANGE(confd->session, "ietf-system", XPATH_BASE_"/dns-resolver", 0, change_dns, confd, &confd->sub);
 
 	REGISTER_OPER(confd->session, "ietf-system", CLOCK_PATH_, clock_cb, NULL, 0, &confd->sub);
 	REGISTER_OPER(confd->session, "ietf-system", PLATFORM_PATH_, platform_cb, NULL, 0, &confd->sub);
