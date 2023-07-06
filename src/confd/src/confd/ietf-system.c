@@ -334,7 +334,7 @@ static int change_clock(sr_session_ctx_t *session, uint32_t sub_id, const char *
 	}
 
 	remove("/etc/localtime+");
-	if (systemf("ln -s /usr/share/zoneinfo/%s /etc/localtime+", timezone)) {
+	if (systemf("ln -sf /usr/share/zoneinfo/%s /etc/localtime+", timezone)) {
 		ERROR("No such timezone %s", timezone);
 		return SR_ERR_VALIDATION_FAILED;
 	}
@@ -635,6 +635,15 @@ static int sys_add_new_user(char *name)
 		return SR_ERR_SYS;
 	}
 	DEBUG("New user \"%s\" created\n", name);
+
+	/*
+	 * OpenSSH in Infix has been set up to use /var/run/sshd/%s.keys
+	 * but libSSH used by netopeer2-server still reads the classic
+	 * /home/%s/.ssh/authorized_keys file.  This creates a both the
+	 * directory and the symlink owned by root to prevent tampering.
+	 */
+	fmkpath(0750, "/home/%s/.ssh", name);
+	systemf("ln -sf /var/run/sshd/%s.keys /home/%s/.ssh/authorized_keys", name, name);
 
 	return SR_ERR_OK;
 }
