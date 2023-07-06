@@ -666,7 +666,7 @@ static sr_error_t handle_sr_passwd_update(augeas *aug, struct sr_change *change)
 
 	pw = getpwnam(user);
 	if (!pw) {
-		DEBUG("Skipping attribute for missing user (%s)\n", user);
+		DEBUG("Skipping attribute for missing user (%s)", user);
 		return SR_ERR_OK;
 	}
 
@@ -693,12 +693,12 @@ static sr_error_t handle_sr_passwd_update(augeas *aug, struct sr_change *change)
 		}
 		if (aug_set_dynpath(aug, hash, "etc/shadow/%s/password", user))
 			return SR_ERR_SYS;
-		DEBUG("Password updated for user %s\n", user);
+		DEBUG("Password updated for user %s", user);
 		break;
 	case SR_OP_DELETED:
 		if (aug_set_dynpath(aug, "!", "etc/shadow/%s/password", user))
 			return SR_ERR_SYS;
-		DEBUG("Password deleted for user %s\n", user);
+		DEBUG("Password deleted for user %s", user);
 		break;
 	case SR_OP_MOVED:
 		return SR_ERR_OK;
