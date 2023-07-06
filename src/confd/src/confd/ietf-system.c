@@ -582,7 +582,7 @@ static int is_valid_username(const char *user)
 static int sys_del_user(char *user)
 {
 	char *args[] = {
-		"deluser", user, NULL
+		"deluser", "--remove-home", user, NULL
 	};
 	int err;
 
