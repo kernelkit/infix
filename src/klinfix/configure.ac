@@ -19,6 +19,7 @@ AC_PROG_INSTALL
 PKG_PROG_PKG_CONFIG
 
 PKG_CHECK_MODULES([sysrepo], [sysrepo >= 2.2.60])
+PKG_CHECK_MODULES([libyang], [libyang >= 2.1.80])
 AC_CHECK_LIB([klish], [kplugin_new],, AC_MSG_ERROR([Klish not found]))
 
 test "x$prefix" = xNONE && prefix=$ac_default_prefix

@@ -8,6 +8,8 @@
 #include <klish/kplugin.h>
 #include <klish/kcontext.h>
 
+#include <libyang/libyang.h>
+
 const uint8_t kplugin_klinfix_major = 1;
 const uint8_t kplugin_klinfix_minor = 0;
 
