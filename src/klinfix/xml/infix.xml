@@ -124,6 +124,34 @@
       <ACTION sym="klix_copy@klinfix"/>
     </COMMAND>
 
+    <COMMAND name="password" help="Password tools" mode="switch">
+      <COMMAND name="generate" help="Generate random passwords using pwgen">
+	<ACTION sym="script">pwgen -c -n -B -C</ACTION>
+      </COMMAND>
+
+      <COMMAND name="encrypt" help="Encrypt a password string">
+        <COMMAND name="salt" min="0" help="Random data to salt with before hashing.">
+          <PARAM name="pwsalt" ptype="/STRING" help="Must not use prefix like $1$"/>
+        </COMMAND>
+        <COMMAND name="type" min="0" help="Optional hash algorithm type.">
+          <PARAM name="pwhash" ptype="/STRING" help="Hash algorithm.">
+            <COMPL>
+              <ACTION sym="printl">md5</ACTION>
+              <ACTION sym="printl">sha256</ACTION>
+              <ACTION sym="printl">sha512</ACTION>
+            </COMPL>
+          </PARAM>
+        </COMMAND>
+
+        <PARAM name="pwpass" min="0" ptype="/STRING" help="Optional clear text password (no spaces)"/>
+        <ACTION sym="script" interactive="true">
+          type=${KLISH_PARAM_pwhash:-md5}
+          salt=${KLISH_PARAM_pwsalt:+-S $KLISH_PARAM_pwsalt}
+          mkpasswd -m $type $salt $KLISH_PARAM_pwpass
+        </ACTION>
+      </COMMAND>
+    </COMMAND>
+
     <COMMAND name="set" help="Set" mode="switch">
       <COMMAND name="datetime" help="Set current date and time">
 	<PARAM name="current-datetime" ptype="/STRING" help="yyyy-mm-ddThh:mm:ss(Z|+/-hh:mm)"/>
