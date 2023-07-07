@@ -139,6 +139,36 @@
       <COMMAND name="datetime" help="Show current date and time">
 	<ACTION sym="script">date -Isec</ACTION>
       </COMMAND>
+
+      <!-- https://www.cisco.com/c/en/us/td/docs/wireless/access_point/mob_exp/83/cmd-ref/me_cr_book/me_ports_and_interfaces_cli.html -->
+      <COMMAND name="interfaces" help="Show link layer interfaces">
+	<ACTION sym="script">ip -color link</ACTION>
+
+	<SWITCH name="optional" min="0">
+	  <COMMAND name="brief" help="Simplified (human-readable) output" mode="switch">
+	    <ACTION sym="script">ip -color -br link</ACTION>
+	  </COMMAND>
+
+	  <COMMAND name="detailed" help="Detailed (full) output" mode="switch">
+	    <ACTION sym="script">ip -color -d link</ACTION>
+	  </COMMAND>
+	</SWITCH>
+      </COMMAND>
+
+      <COMMAND name="ip" help="Show IP level status (Layer-3)">
+	<ACTION sym="script">ip -color addr</ACTION>
+
+	<SWITCH name="optional" min="0">
+	  <COMMAND name="brief" help="Simplified (human-readable) output" mode="switch">
+	    <ACTION sym="script">ip -color -br addr</ACTION>
+	  </COMMAND>
+
+	  <COMMAND name="detailed" help="Detailed (full) output" mode="switch">
+	    <ACTION sym="script">ip -color -d addr</ACTION>
+	  </COMMAND>
+	</SWITCH>
+      </COMMAND>
+
       <COMMAND name="running-config" help="Show running-config">
 	<ACTION sym="srp_show_running@sysrepo"/>
       </COMMAND>
