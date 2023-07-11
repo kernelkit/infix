@@ -5,6 +5,7 @@
 ################################################################################
 FACTORY_VERSION = 1.0
 FACTORY_LICENSE = MIT
+FACTORY_LICENSE_FILES = LICENSE
 FACTORY_SITE_METHOD = local
 FACTORY_SITE = $(BR2_EXTERNAL_INFIX_PATH)/src/factory
 

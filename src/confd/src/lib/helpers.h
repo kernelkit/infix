@@ -3,6 +3,10 @@
 #ifndef CONFD_HELPERS_H_
 #define CONFD_HELPERS_H_
 
+#include <stdarg.h>
+
+int vasprintf(char **strp, const char *fmt, va_list ap);
+
 int runbg(char *const args[], int delay);
 int run_status(int pid);
 

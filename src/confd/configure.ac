@@ -10,7 +10,6 @@ AC_CONFIG_FILES([
 	Makefile
 	src/Makefile
 	src/confd/Makefile
-	src/statd/Makefile
 	yang/Makefile
 ])
 

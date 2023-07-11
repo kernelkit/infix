@@ -1,2 +1,3 @@
 ---
 - case: hostname.py
+- case: add_delete_user.py
