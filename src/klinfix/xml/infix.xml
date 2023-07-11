@@ -87,6 +87,12 @@
     <ACTION sym="PLINE_INSERT_TO@sysrepo"/>
   </PTYPE>
 
+  <PTYPE name="LOGFILES">
+    <COMPL>
+      <ACTION sym="klix_files@klinfix">/var/log</ACTION>
+    </COMPL>
+    <ACTION sym="STRING"/>
+  </PTYPE>
 
   <VIEW name="main">
     <HOTKEY key="^D" cmd="exit"/>
@@ -220,9 +226,44 @@
 	</SWITCH>
       </COMMAND>
 
+      <COMMAND name="log" help="Show log file, default: syslog">
+	<PARAM name="fn" ptype="/LOGFILES" min="0" help="Optional log file to show"/>
+	<SWITCH name="optional" min="0">
+	  <COMMAND name="tail" help="Show log tail, last N lines only">
+	    <PARAM name="lines" ptype="/UINT" help="Last number of lines to show"/>
+	  </COMMAND>
+	</SWITCH>
+	<ACTION sym="script">
+	  file=${KLISH_PARAM_fn:-syslog}
+	  if [ -n "$KLISH_PARAM_lines" ]; then
+	    tail -n $KLISH_PARAM_lines /log/$file
+	  else
+	    cat /log/$file
+	  fi
+	</ACTION>
+      </COMMAND>
+
+      <COMMAND name="factory-config" help="Show factory-config">
+	<ACTION sym="script">cat /cfg/factory-config.cfg | jq .</ACTION>
+      </COMMAND>
+
       <COMMAND name="running-config" help="Show running-config">
+	<!-- TODO: add PARAM for xml/json output, and coloring like factory -->
 	<ACTION sym="srp_show_running@sysrepo"/>
       </COMMAND>
+
+      <COMMAND name="startup-config" help="Show startup-config">
+	<ACTION sym="script">cat /cfg/startup-config.cfg | jq .</ACTION>
+      </COMMAND>
+    </COMMAND>
+
+    <COMMAND name="follow" help="Monitor a log file, use Ctrl-C to abort">
+      <PARAM name="fn" ptype="/LOGFILES" help="Optional log file to monitor, default: syslog"/>
+      <ACTION sym="script" interactive="true">
+	file=${KLISH_PARAM_fn:-syslog}
+	echo -e "\e[1mPress Ctrl-C to abort ────────────────────────────────────────────\e[0m"
+	tail -F /log/$file
+      </ACTION>
     </COMMAND>
 
   </VIEW>
