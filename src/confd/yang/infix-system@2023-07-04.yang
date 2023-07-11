@@ -6,6 +6,9 @@ module infix-system {
   import ietf-system {
     prefix sys;
   }
+  import iana-timezones {
+    prefix iana-tz;
+  }
   include infix-system-software;
 
   organization "KernelKit";
@@ -14,6 +17,7 @@ module infix-system {
 
   revision 2023-07-04 {
     description "Updating/adding deviation specifications:
+                 - timezone-name (use tz defs from iana-timezone.yang)
                  - timezone-utc-offset (updated path for 'not-supported')
                  - radius ('not-supported')
                  - dns-resolver port ('not-supported')
@@ -38,6 +42,12 @@ module infix-system {
     leaf motd {
       type string;
       description "Set the MotD (Message of the Day), shown after login";
+    }
+  }
+
+  deviation "/sys:system/sys:clock/sys:timezone/sys:timezone-name/sys:timezone-name" {
+    deviate replace {
+      type iana-tz:iana-timezone;
     }
   }
 

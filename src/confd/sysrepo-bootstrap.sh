@@ -32,6 +32,7 @@ sysrepoctl -s $SEARCH							\
 		-e ntp							\
 		-e ntp-udp-port						\
 		-e timezone-name					\
+	   -i iana-timezones@2013-11-19.yang   -g wheel -p 0660		\
 	   -i nc-notifications@2008-07-14.yang -g wheel -p 0660		\
 	   -i notifications@2008-07-14.yang    -g wheel -p 0660		\
 	   -i ietf-keystore@2019-07-02.yang    -g wheel -p 0660		\
