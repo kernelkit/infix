@@ -1,5 +1,9 @@
 #include <assert.h>
+#include <dirent.h>
+#include <errno.h>
 #include <stdio.h>
+#include <string.h>
+#include <sys/types.h>
 
 #include <sysrepo.h>
 #include <sysrepo_types.h>
@@ -12,6 +16,35 @@
 
 const uint8_t kplugin_klinfix_major = 1;
 const uint8_t kplugin_klinfix_minor = 0;
+
+int klix_files(kcontext_t *ctx)
+{
+	const char *path;
+	struct dirent *d;
+	DIR *dir;
+
+	path = kcontext_script(ctx);
+	if (!path) {
+		fprintf(stderr, "Error: missing path argument to file search.\n");
+		return -1;
+	}
+
+	dir = opendir(path);
+	if (!dir) {
+		fprintf(stderr, "Error: %s", strerror(errno));
+		return -1;
+	}
+
+	while ((d = readdir(dir))) {
+		if (d->d_type != DT_REG)
+			continue;
+
+		printf("%s\n", d->d_name);
+	}
+	closedir(dir);
+
+	return 0;
+}
 
 int klix_ds_from_str(const char *text, sr_datastore_t *ds)
 {
@@ -219,6 +252,7 @@ int kplugin_klinfix_init(kcontext_t *ctx)
 
 	kplugin_add_syms(plugin, ksym_new("klix_copy", klix_copy));
 	kplugin_add_syms(plugin, ksym_new("klix_commit", klix_commit));
+	kplugin_add_syms(plugin, ksym_new("klix_files", klix_files));
 	kplugin_add_syms(plugin, ksym_new("klix_rpc", klix_rpc));
 
 	return 0;
