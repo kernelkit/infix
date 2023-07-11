@@ -37,10 +37,6 @@
     <ACTION sym="STRING"/>
   </PTYPE>
 
-  <PTYPE name="GETSTR">
-    <ACTION sym="STRING"/>
-  </PTYPE>
-
   <PTYPE name="PLINE_SET">
     <COMPL>
       <ACTION sym="srp_compl@sysrepo"/>
@@ -130,7 +126,7 @@
 
     <COMMAND name="set" help="Set" mode="switch">
       <COMMAND name="datetime" help="Set current date and time">
-	<PARAM name="current-datetime" ptype="/GETSTR" help="yyyy-mm-ddThh:mm:ss(Z|+/-hh:mm)"/>
+	<PARAM name="current-datetime" ptype="/STRING" help="yyyy-mm-ddThh:mm:ss(Z|+/-hh:mm)"/>
 	<ACTION sym="klix_rpc@klinfix">/ietf-system:set-current-datetime</ACTION>
       </COMMAND>
     </COMMAND>
