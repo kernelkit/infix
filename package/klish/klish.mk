@@ -17,6 +17,8 @@ KLISH_CONF_OPTS += --with-libxml2
 
 define KLISH_INSTALL_CONFIG
 	$(INSTALL) -t $(TARGET_DIR)/etc/klish -D -m 0644 \
+		$(@D)/plugins/klish/xml/ptypes.xml
+	$(INSTALL) -t $(TARGET_DIR)/etc/klish -D -m 0644 \
 		$(@D)/klish.conf $(@D)/klishd.conf
 
 #	klish's default pager settings assumes that less understands
