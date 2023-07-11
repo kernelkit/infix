@@ -159,7 +159,7 @@
     </COMMAND>
 
     <COMMAND name="set" help="Set" mode="switch">
-      <COMMAND name="datetime" help="Set current date and time">
+      <COMMAND name="datetime" help="Set current date and time, ISO-8601 format">
 	<PARAM name="current-datetime" ptype="/STRING" help="yyyy-mm-ddThh:mm:ss(Z|+/-hh:mm)"/>
 	<ACTION sym="klix_rpc@klinfix">/ietf-system:set-current-datetime</ACTION>
       </COMMAND>
@@ -193,8 +193,11 @@
 	</SWITCH>
       </COMMAND>
 
-      <COMMAND name="datetime" help="Show current date and time">
-	<ACTION sym="script">date -Isec</ACTION>
+      <COMMAND name="datetime" help="Show current date and time, default RFC2822 format">
+	<ACTION sym="script">date -R</ACTION>
+	<COMMAND name="iso" min="0" help="NETCONF/ISO-8601 format">
+	  <ACTION sym="script">date -Isec</ACTION>
+	</COMMAND>
       </COMMAND>
 
       <!-- https://www.cisco.com/c/en/us/td/docs/wireless/access_point/mob_exp/83/cmd-ref/me_cr_book/me_ports_and_interfaces_cli.html -->
