@@ -1,0 +1,66 @@
+From d91dccba60d6d3def03647f899e4b7ab03e42e50 Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Wed, 12 Jul 2023 10:29:54 +0200
+Subject: [PATCH 4/7] tinyrl: add UTF8 support for Ctrl-W (backword)
+Organization: Addiva Elektronik
+
+Introduce local helper function for walking backwards on a line, UTF8
+safe, so that we can restore the Ctrl-W keybinding.
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ tinyrl/tinyrl/keys.c | 32 ++++++++++++++++++--------------
+ 1 file changed, 18 insertions(+), 14 deletions(-)
+
+diff --git a/tinyrl/tinyrl/keys.c b/tinyrl/tinyrl/keys.c
+index 21de784..a99173f 100644
+--- a/tinyrl/tinyrl/keys.c
++++ b/tinyrl/tinyrl/keys.c
+@@ -230,26 +230,30 @@ bool_t tinyrl_key_delete(tinyrl_t *tinyrl, unsigned char key)
+ 	return BOOL_TRUE;
+ }
+ 
++static int is_prev_space(tinyrl_t *tinyrl)
++{
++	if (tinyrl->utf8) {
++		off_t new_pos = utf8_move_left(tinyrl->line.str, tinyrl->line.pos);
++
++		return iswspace(tinyrl->line.str[new_pos]);
++	}
++
++	return isspace(tinyrl->line.str[tinyrl->line.pos - 1]);
++}
+ 
+ bool_t tinyrl_key_backword(tinyrl_t *tinyrl, unsigned char key)
+ {
+-	bool_t result = BOOL_FALSE;
+-/*
+-    // remove current whitespace before cursor 
+-	while (tinyrl->point > 0 && isspace(tinyrl->line[tinyrl->point - 1]))
+-        tinyrl_key_backspace(tinyrl, KEY_BS);
++	(void)key;
+ 
+-    // delete word before cusor 
+-	while (tinyrl->point > 0 && !isspace(tinyrl->line[tinyrl->point - 1]))
+-        tinyrl_key_backspace(tinyrl, KEY_BS);
++	// remove current whitespace before cursor
++	while (tinyrl->line.pos > 0 && is_prev_space(tinyrl))
++		tinyrl_key_backspace(tinyrl, KEY_BS);
+ 
+-	result = BOOL_TRUE;
+-*/
+-	// Happy compiler
+-	tinyrl = tinyrl;
+-	key = key;
++	// delete word before cusor
++	while (tinyrl->line.pos > 0 && !is_prev_space(tinyrl))
++		tinyrl_key_backspace(tinyrl, KEY_BS);
+ 
+-	return result;
++	return BOOL_TRUE;
+ }
+ 
+ 
+-- 
+2.34.1
+

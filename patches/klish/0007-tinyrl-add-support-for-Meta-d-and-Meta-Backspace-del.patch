@@ -1,0 +1,119 @@
+From fde25d13a2b5b91fe807503cb264426371cf35fa Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Wed, 12 Jul 2023 12:44:08 +0200
+Subject: [PATCH 7/7] tinyrl: add support for Meta-d and Meta-Backspace (delete
+ word)
+Organization: Addiva Elektronik
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ tinyrl/tinyrl/keys.c    | 23 +++++++++++++++++++++++
+ tinyrl/tinyrl/private.h |  1 +
+ tinyrl/tinyrl/tinyrl.c  |  6 ++++++
+ tinyrl/vt100.h          |  4 +++-
+ tinyrl/vt100/vt100.c    |  4 ++++
+ 5 files changed, 37 insertions(+), 1 deletion(-)
+
+diff --git a/tinyrl/tinyrl/keys.c b/tinyrl/tinyrl/keys.c
+index 10ea6a3..ddbbfe3 100644
+--- a/tinyrl/tinyrl/keys.c
++++ b/tinyrl/tinyrl/keys.c
+@@ -226,6 +226,14 @@ bool_t tinyrl_key_delete(tinyrl_t *tinyrl, unsigned char key)
+ 	return BOOL_TRUE;
+ }
+ 
++static int is_space(tinyrl_t *tinyrl)
++{
++	if (tinyrl->utf8)
++		return iswspace(tinyrl->line.str[tinyrl->line.pos]);
++
++	return isspace(tinyrl->line.str[tinyrl->line.pos]);
++}
++
+ static int is_prev_space(tinyrl_t *tinyrl)
+ {
+ 	if (tinyrl->utf8) {
+@@ -263,6 +271,21 @@ bool_t tinyrl_key_backword(tinyrl_t *tinyrl, unsigned char key)
+ 	return BOOL_TRUE;
+ }
+ 
++bool_t tinyrl_key_delword(tinyrl_t *tinyrl, unsigned char key)
++{
++	(void)key;
++
++	// remove current whitespace at cursor
++	while (tinyrl->line.pos < tinyrl->line.len && is_space(tinyrl))
++		tinyrl_key_delete(tinyrl, KEY_DEL);
++
++	// delete word at cusor
++	while (tinyrl->line.pos < tinyrl->line.len && !is_space(tinyrl))
++		tinyrl_key_delete(tinyrl, KEY_DEL);
++
++	return BOOL_TRUE;
++}
++
+ bool_t tinyrl_key_left_word(tinyrl_t *tinyrl, unsigned char key)
+ {
+ 	(void)key;
+diff --git a/tinyrl/tinyrl/private.h b/tinyrl/tinyrl/private.h
+index 370f8a6..a230939 100644
+--- a/tinyrl/tinyrl/private.h
++++ b/tinyrl/tinyrl/private.h
+@@ -29,6 +29,7 @@ bool_t tinyrl_key_left(tinyrl_t *tinyrl, unsigned char key);
+ bool_t tinyrl_key_right(tinyrl_t *tinyrl, unsigned char key);
+ bool_t tinyrl_key_backspace(tinyrl_t *tinyrl, unsigned char key);
+ bool_t tinyrl_key_backword(tinyrl_t *tinyrl, unsigned char key);
++bool_t tinyrl_key_delword(tinyrl_t *tinyrl, unsigned char key);
+ bool_t tinyrl_key_delete(tinyrl_t *tinyrl, unsigned char key);
+ bool_t tinyrl_key_left_word(tinyrl_t *tinyrl, unsigned char key);
+ bool_t tinyrl_key_right_word(tinyrl_t *tinyrl, unsigned char key);
+diff --git a/tinyrl/tinyrl/tinyrl.c b/tinyrl/tinyrl/tinyrl.c
+index 2c83106..96fa7a5 100644
+--- a/tinyrl/tinyrl/tinyrl.c
++++ b/tinyrl/tinyrl/tinyrl.c
+@@ -512,6 +512,12 @@ bool_t tinyrl_esc_seq(tinyrl_t *tinyrl, const char *esc_seq)
+ 	case VT100_CURSOR_BKWORD:
+ 		result = tinyrl_key_left_word(tinyrl, 0);
+ 		break;
++	case VT100_DEL_FDWORD:
++		result = tinyrl_key_delword(tinyrl, 0);
++		break;
++	case VT100_DEL_BKWORD:
++		result = tinyrl_key_backword(tinyrl, 0);
++		break;
+ 	case VT100_HOME:
+ 		result = tinyrl_key_start_of_line(tinyrl, 0);
+ 		break;
+diff --git a/tinyrl/vt100.h b/tinyrl/vt100.h
+index 7eca40e..7cb1c31 100644
+--- a/tinyrl/vt100.h
++++ b/tinyrl/vt100.h
+@@ -67,7 +67,9 @@ typedef enum {
+ 	VT100_INSERT,		// No action at the moment
+ 	VT100_DELETE,		// Delete character on the right
+ 	VT100_PGUP,		// No action at the moment
+-	VT100_PGDOWN		// No action at the moment
++	VT100_PGDOWN,		// No action at the moment
++	VT100_DEL_BKWORD,	// Delete word to the left
++	VT100_DEL_FDWORD,	// Delete word to the right
+ } vt100_esc_e;
+ 
+ 
+diff --git a/tinyrl/vt100/vt100.c b/tinyrl/vt100/vt100.c
+index 8dbf474..229af7e 100644
+--- a/tinyrl/vt100/vt100.c
++++ b/tinyrl/vt100/vt100.c
+@@ -40,6 +40,10 @@ static vt100_decode_t esc_map[] = {
+ 	{"[3~", VT100_DELETE},
+ 	{"[5~", VT100_PGUP},
+ 	{"[6~", VT100_PGDOWN},
++	{"b", VT100_CURSOR_BKWORD},
++	{"f", VT100_CURSOR_FDWORD},
++	{"\177", VT100_DEL_BKWORD},
++	{"d", VT100_DEL_FDWORD},
+ };
+ 
+ 
+-- 
+2.34.1
+
