@@ -5,7 +5,8 @@
 ################################################################################
 
 KLISH_VERSION = tags/3.0.0
-KLISH_SITE = https://src.libcode.org/pkun/klish.git
+KLISH_SITE = https://github.com/kernelkit/klish.git
+#KLISH_SITE = https://src.libcode.org/pkun/klish.git
 KLISH_SITE_METHOD = git
 KLISH_LICENSE = BSD-3
 KLISH_LICENSE_FILES = LICENCE
