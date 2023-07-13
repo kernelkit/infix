@@ -2,10 +2,11 @@
 
 import infamy
 import copy
-import crypt
+from passlib.hash import sha256_crypt
 import random
 import string
 import re
+
 
 def generate_restrictred_credential():
     credential = "".join(random.choices(string.ascii_lowercase, k=64))
@@ -15,6 +16,7 @@ def generate_restrictred_credential():
 
     return credential
 
+
 with infamy.Test() as test:
     with test.step("Initialize"):
         env = infamy.Env(infamy.std_topology("1x1"))
@@ -23,8 +25,7 @@ with infamy.Test() as test:
     with test.step("Add new user"):
         username = generate_restrictred_credential()
         password = generate_restrictred_credential()
-        salt = crypt.mksalt(crypt.METHOD_SHA256)
-        hashed_password = crypt.crypt(password, salt)
+        hashed_password = sha256_crypt.using(rounds=5000).hash(password)
         print(f"username: {username}")
         print(f"password: {password}")
         print(f"hashed_password: {hashed_password}")
