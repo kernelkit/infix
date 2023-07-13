@@ -15,15 +15,21 @@ the image, e.g., with missing Alpine packages.
         docker build -t ghcr.io/kernelkit/infix-test:0.4 .
 
  3. Update the `test/env` file to use the new version
- 4. Verify your new image works properly
+ 4. Verify your new image works properly (remember to remove your `~/.infix-test-venv`)
  5. Send PR to co-maintainer for review
 
 The co-maintainer should then verify themselves before approving the PR.
 A crucial step to remember is to:
 
- 1. Push the new image version to <https://ghcr.io>.  For instructions on
-    how to do this, see [the GitHub Container Registry docs](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry)
- 2. Merge the PR to the `main` branch.
+ 1. Push the new image version to <https://ghcr.io>.  For details on how
+    to do this, see this excellent guide to the [GitHub Container
+    Registry](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry):
+ 2. Shorthand after setup (above):
+
+         echo $CR_PAT | docker login ghcr.io -u troglobit --password-stdin
+         docker push ghcr.io/kernelkit/infix-test:0.4
+
+ 3. Merge the PR to the `main` branch.
 
 > **Note:** the co-maintainer may delegate the chore of uploading the
 > new image to the one who prepared the PR (you), provided of course
