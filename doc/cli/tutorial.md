@@ -1,34 +1,22 @@
-CLI User Guide
-==============
+User Guide
+==========
 
-* [Introduction](#introduction)
-* [Admin Exec](#admin-exec)
-* [Configure Context](#configure-context)
-  * [Set IP Address on an Interface](#set-ip-address-on-an-interface)
-  * [Creating a VETH pair](#creating-a-veth-pair)
-  * [Creating a Bridge](#creating-a-bridge)
-  * [Saving Changes](#saving-changes)
+The command line interface (CLI, see-el-i) is built on the open source
+component [klish][1], which implements a CISCO like, or Juniper Networks
+JunOS-like CLI on a UNIX system.
 
-
-Introduction
-------------
-
-The Infix CLI is built on the [klish project][1], which is a framework
-for implementing a CISCO, or Juniper Networks JunOS-like CLI on a UNIX
-system.
-
-Currently, when the `admin` user logs in the default shell is Bash.  To
-access the CLI, type:
+New users always get the CLI as the default "shell" when logging in, but
+the default `admin` user logs in to the Bash.  To access the CLI, type:
 
     cli
 
 Key commands available in any context are:
 
     help
-	show
+    show
 
-For each command it is also possible to press the `?` key and `TAB` to
-get more help and suggestions for completion.
+For each command it also possible to press the `?` key and `TAB` to get
+more help and suggestions for completion.
 
 
 Admin Exec
@@ -41,7 +29,7 @@ managing configuration files/profiles and doing advanced debugging.
 Available commands can be seen by pressing `?` at the prompt:
 
 ```
-root@infix-12-34-56:exec> 
+admin@infix-12-34-56:exec>
   configure  Create new candidate-config based on running-config
   copy       Copy
   exit       Exit
@@ -57,7 +45,7 @@ Enter the configure context from admin-exec by typing `configure`
 followed by Enter.  Available commands, press `?` at the prompt:
 
 ```
-root@infix-12-34-56:configure> 
+admin@infix-12-34-56:configure>
   abort     Abandon candidate
   check     Validate candidate
   commit    Commit current candidate to running-config
@@ -79,7 +67,7 @@ root@infix-12-34-56:configure>
 The `edit` command lets you change to a sub-configure context, e.g.:
 
 ```
-root@infix-12-34-56:configure> edit interfaces interface eth0 
+admin@infix-12-34-56:configure> edit interfaces interface eth0
 [edit interfaces interface eth0]
 ```
 
@@ -87,18 +75,18 @@ Notice the `[edit ...]` displayed, it shows your current location.
 Use `up` to go back to the previous context.
 
 ```
-root@infix-12-34-56:configure> up
+admin@infix-12-34-56:configure> up
 [edit]
 ```
 
 ### Set IP Address on an Interface
 
 ```
-root@infix-12-34-56:configure> 
+admin@infix-12-34-56:configure>
 [edit]
-root@infix-12-34-56:configure> edit interfaces interface eth0 
+admin@infix-12-34-56:configure> edit interfaces interface eth0
 [edit interfaces interface eth0]
-root@infix-12-34-56:configure> set ipv4 address 192.168.2.200 prefix-length 24
+admin@infix-12-34-56:configure> set ipv4 address 192.168.2.200 prefix-length 24
 [edit interfaces interface eth0]
 ```
 
@@ -106,7 +94,7 @@ From anywhere in configure context you can see the changes you have
 made by typing `diff`:
 
 ```
-root@infix-12-34-56:configure> diff
+admin@infix-12-34-56:configure> diff
 interfaces {
   interface eth0 {
 +    ipv4 {
@@ -125,17 +113,17 @@ pair which is useful for connecting, e.g., a container to the physical
 world.  Here we also add an IPv4 address to one end of the pair.
 
 ```
-root@infix-12-34-56:configure>
+admin@infix-12-34-56:configure>
 [edit]
-root@infix-12-34-56:configure> edit interfaces interface veth0a
+admin@infix-12-34-56:configure> edit interfaces interface veth0a
 [edit interfaces interface veth0a]
-root@infix-12-34-56:configure> set veth peer veth0b
+admin@infix-12-34-56:configure> set veth peer veth0b
 [edit interfaces interface veth0a]
-root@infix-12-34-56:configure> set ipv4 address 192.168.0.1 prefix-length 24
+admin@infix-12-34-56:configure> set ipv4 address 192.168.0.1 prefix-length 24
 [edit interfaces interface veth0a]
-root@infix-12-34-56:configure> up
+admin@infix-12-34-56:configure> up
 [edit interfaces]
-root@infix-12-34-56:configure> diff
+admin@infix-12-34-56:configure> diff
 interfaces {
 +  interface veth0a {
 +    type veth;
@@ -156,7 +144,7 @@ interfaces {
 +  }
 }
 [edit interfaces]
-root@infix-12-34-56:configure> leave
+admin@infix-12-34-56:configure> leave
 ```
 
 See the bridging example below for more.
@@ -172,19 +160,19 @@ Here we create a non-VLAN filtering bridge that forwards any, normally
 link-local, LLDP traffic.
 
 ```
-root@infix-12-34-56:exec> configure
+admin@infix-12-34-56:exec> configure
 [edit]
-root@infix-12-34-56:configure> edit interfaces interface br0
+admin@infix-12-34-56:configure> edit interfaces interface br0
 [edit interfaces interface br0]
-root@infix-12-34-56:configure> set bridge ieee-group-forward lldp
+admin@infix-12-34-56:configure> set bridge ieee-group-forward lldp
 [edit interfaces interface br0]
-root@infix-12-34-56:configure> up
+admin@infix-12-34-56:configure> up
 [edit interfaces]
-root@infix-12-34-56:configure> set interface eth0 bridge-port bridge br0
+admin@infix-12-34-56:configure> set interface eth0 bridge-port bridge br0
 [edit interfaces]
-root@infix-12-34-56:configure> set interface veth0b bridge-port bridge br0
+admin@infix-12-34-56:configure> set interface veth0b bridge-port bridge br0
 [edit interfaces]
-root@infix-12-34-56:configure> diff
+admin@infix-12-34-56:configure> diff
 interfaces {
 +  interface br0 {
 +    type bridge;
@@ -219,7 +207,7 @@ interfaces {
 +  }
 }
 [edit interfaces]
-root@infix-12-34-56:configure> leave
+admin@infix-12-34-56:configure> leave
 ```
 
 Both a physical port `eth0` and a virtual port `veth0b` (bridge side of
@@ -233,17 +221,19 @@ is filtered, except LLDP frames as shown above.
 Apply the changes (from candidate to running):
 
 ```
-root@infix-12-34-56:configure> leave
-root@infix-12-34-56:exec> show running-config 
+admin@infix-12-34-56:configure> leave
+admin@infix-12-34-56:exec> show running-config
+...
 interfaces {
   interface eth0 {
-    type ethernetCsmacd;
-    ipv4 {
-      address 192.168.2.200 {
-        prefix-length 24;
-      }
-    }
+	type ethernetCsmacd;
+	ipv4 {
+	  address 192.168.2.200 {
+		prefix-length 24;
+	  }
+	}
   }
+...
 ```
 
 Since we did not get any warnings we can save the running (RAM only)
@@ -251,8 +241,11 @@ configuration to startup, so the changes are made persistent across
 reboots:
 
 ```
-root@infix-12-34-56:exec> copy running-config startup-config 
+admin@infix-12-34-56:exec> copy running-config startup-config
 ```
+
+The `startup-config` can also be inspected with the `show` command to
+verify the changes are saved.
 
 > **Note:** most (all) commands need to be spelled out, no short forms
 > are allowed at the moment.  Use the `TAB` key to make this easier.

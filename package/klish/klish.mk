@@ -21,11 +21,6 @@ define KLISH_INSTALL_CONFIG
 		$(@D)/plugins/klish/xml/ptypes.xml
 	$(INSTALL) -t $(TARGET_DIR)/etc/klish -D -m 0644 \
 		$(@D)/klish.conf $(@D)/klishd.conf
-
-#	klish's default pager settings assumes that less understands
-#	all GNU options, so we disable it.
-	sed -i -e 's/#UsePager=y/UsePager=n/' \
-		$(TARGET_DIR)/etc/klish/klish.conf
 endef
 KLISH_POST_INSTALL_TARGET_HOOKS += KLISH_INSTALL_CONFIG
 
