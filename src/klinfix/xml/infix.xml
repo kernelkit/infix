@@ -98,7 +98,7 @@
     <HOTKEY key="^D" cmd="exit"/>
 
     <PROMPT>
-      <ACTION sym="prompt" exec_on="always">%u@%h:exec> </ACTION>
+      <ACTION sym="prompt" exec_on="always">%u@%h:/> </ACTION>
     </PROMPT>
 
     <COMMAND name="help" help="Help system (also try '?' key)">
@@ -135,7 +135,7 @@
     </COMMAND>
 
     <COMMAND name="configure" help="Create new candidate-config based on running-config">
-      <ACTION sym="nav">replace configure</ACTION>
+      <ACTION sym="nav">replace config</ACTION>
     </COMMAND>
 
     <COMMAND name="copy" help="Copy">
@@ -285,11 +285,11 @@
 
   </VIEW>
 
-  <VIEW name="configure">
+  <VIEW name="config">
 
     <PROMPT>
-      <ACTION sym="srp_prompt_edit_path@sysrepo"/>
-      <ACTION sym="prompt" exec_on="always">%u@%h:configure> </ACTION>
+      <ACTION sym="prompt">%u@%h:%w</ACTION>
+      <ACTION sym="srp_prompt@sysrepo">%w/> </ACTION>
     </PROMPT>
 
     <HOTKEY key="^D" cmd="exit"/>
@@ -304,6 +304,7 @@
 
     <COMMAND name="leave" help="Apply candidate to running-config and return to admin-exec">
       <ACTION sym="klix_commit@klinfix"/>
+      <ACTION sym="srp_top@sysrepo"/>
       <ACTION sym="nav" exec_on="success">replace main</ACTION>
     </COMMAND>
 
