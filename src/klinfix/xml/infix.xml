@@ -292,30 +292,29 @@
       <ACTION sym="prompt" exec_on="always">%u@%h:configure> </ACTION>
     </PROMPT>
 
-    <HOTKEY key="^C" cmd="up"/>
-    <HOTKEY key="^D" cmd="abort"/>
+    <HOTKEY key="^D" cmd="exit"/>
     <HOTKEY key="^Z" cmd="leave"/>
 
     <!-- Move -->
 
-    <COMMAND name="abort" help="Abandon changes made candidate">
+    <COMMAND name="abort" help="Abort changes in candidate and return to admin-exec">
       <ACTION sym="srp_reset@sysrepo"/>
       <ACTION sym="nav">replace main</ACTION>
     </COMMAND>
 
-    <COMMAND name="leave" help="Finalize candidate and apply to running-config">
+    <COMMAND name="leave" help="Apply candidate to running-config and return to admin-exec">
       <ACTION sym="klix_commit@klinfix"/>
-      <ACTION sym="nav" exec_on="success">replace main</ACTION>
-    </COMMAND>
-
-    <COMMAND name="exit" help="Ascend to the parent configuration node, or abort (from top)">
-      <ACTION sym="srp_up@sysrepo"/>
-      <ACTION sym="klix_commit@klinfix" exec_on="fail"/>
       <ACTION sym="nav" exec_on="success">replace main</ACTION>
     </COMMAND>
 
     <COMMAND name="up" help="Ascend to the parent configuration node">
       <ACTION sym="srp_up@sysrepo"/>
+    </COMMAND>
+
+    <COMMAND name="exit" help="Ascend to parent configuration node, or abort (from top)">
+      <ACTION sym="srp_up@sysrepo"/>
+      <ACTION sym="srp_reset@sysrepo" exec_on="fail" update_retcode="false"/>
+      <ACTION sym="nav" exec_on="fail">replace main</ACTION>
     </COMMAND>
 
     <COMMAND name="top" help="Ascend to the configuration root">
