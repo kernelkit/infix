@@ -101,6 +101,20 @@
       <ACTION sym="prompt" exec_on="always">%u@%h:exec> </ACTION>
     </PROMPT>
 
+    <COMMAND name="help" help="Help system (also try '?' key)">
+      <PARAM name="topic" ptype="/STRING" min="0" help="Help topic">
+        <COMPL>
+          <ACTION sym="printl">keybindings</ACTION>
+          <ACTION sym="printl">tutorial</ACTION>
+          <ACTION sym="printl">introduction</ACTION>
+        </COMPL>
+      </PARAM>
+      <ACTION sym="script">
+        topic=${KLISH_PARAM_topic:-quick}
+        lowdown -t term /usr/share/infix/cli/${topic}.md
+      </ACTION>
+    </COMMAND>
+
     <COMMAND name="poweroff" help="Poweroff system (system policy may yield reboot)">
       <ACTION sym="klix_rpc@klinfix" ptype="STRING">/ietf-system:system-shutdown</ACTION>
     </COMMAND>
