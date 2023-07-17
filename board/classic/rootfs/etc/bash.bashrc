@@ -13,3 +13,6 @@ export PROMPT_COMMAND=prompt_command
 # check the window size after each command and, if necessary,
 # update the values of LINES and COLUMNS.
 shopt -s checkwinsize
+
+# Disble built-ins
+enable -n help
