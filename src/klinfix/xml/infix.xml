@@ -267,6 +267,18 @@
 	</ACTION>
       </COMMAND>
 
+      <COMMAND name="uptime" help="Show system uptime">
+	<ACTION sym="script">uptime</ACTION>
+      </COMMAND>
+<!-- TODO hostname, contact, location, base MAC, serial n:o, etc.
+      <COMMAND name="system-information" help="Show system information">
+	<ACTION sym="script">sysinfo</ACTION>
+      </COMMAND>
+-->
+      <COMMAND name="version" help="Show firmware version">
+	<ACTION sym="script">uptime</ACTION>
+      </COMMAND>
+
       <COMMAND name="factory-config" help="Show factory-config">
 	<ACTION sym="script">cat /cfg/factory-config.cfg | jq .</ACTION>
       </COMMAND>
@@ -288,6 +300,12 @@
 	echo -e "\e[1mPress Ctrl-C to abort ────────────────────────────────────────────\e[0m"
 	tail -F /log/$file
       </ACTION>
+    </COMMAND>
+
+    <COMMAND name="netcalc" help="IP subnet calculator">
+      <PARAM name="addrlen" ptype="/STRING" help="ADDRESS[/LEN]"/>
+      <PARAM name="netmask" ptype="/STRING" min="0" help="Optional NETMASK"/>
+      <ACTION sym="script">netcalc $KLISH_PARAM_addrlen $KLISH_PARAM_netmask</ACTION>
     </COMMAND>
 
     <COMMAND name="ping" help="Ping a network host or multicast group">
