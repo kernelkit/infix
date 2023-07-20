@@ -4,11 +4,14 @@
 # existing interfaces. This syncs the default settings to all known
 # interfaces at boot, such that physical interfaces will start from
 # the same point as virtual ones.
+tmp=$(mktemp)
 
-sysctl net.ipv4.conf.default  >/tmp/sysctl-ip-default
-sysctl net.ipv6.conf.default >>/tmp/sysctl-ip-default
+sysctl net.ipv4.conf.default  >$tmp
+sysctl net.ipv6.conf.default >>$tmp
 
 for iface in $(ip -j link show | jq -r .[].ifname); do
-    sed -e "s/.default./.${iface}./g" /tmp/sysctl-ip-default \
-	| sysctl -p -
+    sed -e "s/.default./.${iface}./g" $tmp | sysctl -p -
 done
+
+rm $tmp
+
