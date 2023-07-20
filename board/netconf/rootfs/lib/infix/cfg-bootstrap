@@ -13,11 +13,15 @@ gen-interfaces >$FACTORY_D/20-auto-interfaces.json
 
 [ -s $GENCFG_D/20-auto-hostkey.json ] || gen-hostkeys >$GENCFG_D/20-auto-hostkey.json
 
+# Allow regenerating default factory-config, but keep it read-ony
+# to prevent it from being overwritten by mistake by users.
+rm -f $CFG_D/auto-factory-config.cfg
 # shellcheck disable=SC2046
 jq -s 'reduce .[] as $item ({}; . * $item)' \
    $(find $FACTORY_D -name '*.json') \
    $(find $GENCFG_D  -name '*.json') \
-    >$CFG_D/auto-factory-config.cfg
+   >$CFG_D/auto-factory-config.cfg
+chmod 444 $CFG_D/auto-factory-config.cfg
 
 # TODO: Look for statically defined factory-config, based on the
 # system's product ID.
