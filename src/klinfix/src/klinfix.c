@@ -46,6 +46,13 @@ int klix_files(kcontext_t *ctx)
 	return 0;
 }
 
+int klix_ifaces(kcontext_t *ctx)
+{
+	(void)ctx;
+	system("ls /sys/class/net");
+	return 0;
+}
+
 int klix_ds_from_str(const char *text, sr_datastore_t *ds)
 {
 	size_t len = strlen(text);
@@ -148,6 +155,8 @@ int klix_commit(kcontext_t *ctx)
 	sr_conn_ctx_t *conn;
 	int err;
 
+	(void)ctx;
+
 	if (sr_connect(SR_CONN_DEFAULT, &conn)) {
 		fprintf(stderr, "Error: Connection to datastore failed\n");
 		goto err;
@@ -243,6 +252,8 @@ err:
 
 int kplugin_klinfix_fini(kcontext_t *ctx)
 {
+	(void)ctx;
+
 	return 0;
 }
 
@@ -253,6 +264,7 @@ int kplugin_klinfix_init(kcontext_t *ctx)
 	kplugin_add_syms(plugin, ksym_new("klix_copy", klix_copy));
 	kplugin_add_syms(plugin, ksym_new("klix_commit", klix_commit));
 	kplugin_add_syms(plugin, ksym_new("klix_files", klix_files));
+	kplugin_add_syms(plugin, ksym_new("klix_ifaces", klix_ifaces));
 	kplugin_add_syms(plugin, ksym_new("klix_rpc", klix_rpc));
 
 	return 0;
