@@ -1,1 +1,1 @@
-service <!> [2345789] /usr/bin/klishd -d -- CLI backend
+service <!> log [2345789] /usr/bin/klishd -d -- CLI backend daemon
