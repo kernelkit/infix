@@ -209,7 +209,8 @@ int klix_rpc(kcontext_t *ctx)
 		const char *val = kparg_value(parg);
 
 		/* skip leading part of command line: 'set datetime' */
-		if (!strcmp(key, val))
+//		fprintf(stderr, "%s(): got key %s val %s\n", __func__, key, val ?: "<NIL>");
+		if (!val || !strcmp(key, val))
 			continue;
 
 		sr_realloc_values(icnt, icnt + 1, &input);
@@ -228,8 +229,9 @@ int klix_rpc(kcontext_t *ctx)
 		goto err_disconnect;
 	}
 
+//	fprintf(stderr, "%s(): sending RPC %s, icnt %zu\n", __func__, xpath, icnt);
 	if ((err = sr_rpc_send(sess, xpath, input, icnt, 0, &output, &ocnt))) {
-		fprintf(stderr, "Failed sending RPC %s: %s", xpath, sr_strerror(err));
+		fprintf(stderr, "Failed sending RPC %s: %s\n", xpath, sr_strerror(err));
 		goto err_disconnect;
 	}
 

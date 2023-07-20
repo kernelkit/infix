@@ -7,17 +7,18 @@
   <PLUGIN name="klish"/>
   <PLUGIN name="klinfix"/>
   <PLUGIN name="script"/>
-
   <PLUGIN name="sysrepo">
     ShowBrackets = y
     ShowSemicolons = y
+    KeysWithStatement = y
     FirstKeyWithStatement = n
-    MultiKeysWithStatement = y
     Colorize = y
     Indent = 2
-    HidePasswords = y
-    DefaultKeys = n
+    DefaultKeys = y
+    ShowDefaultKeys = y
+    HidePasswords = n
     EnableNACM = y
+    Oneliners = y
   </PLUGIN>
 
   <PTYPE name="DATASTORE">
@@ -118,7 +119,12 @@
       </PARAM>
       <ACTION sym="script">
         topic=${KLISH_PARAM_topic:-quick}
-        lowdown -t term /usr/share/infix/cli/${topic}.md
+	fn="/usr/share/infix/cli/${topic}.md"
+	if [ -f "$fn" ]; then
+	  lowdown -t term "$fn"
+	else
+	  echo "Topic not available."
+	fi
       </ACTION>
     </COMMAND>
 
@@ -157,20 +163,21 @@
       </COMMAND>
 
       <COMMAND name="encrypt" help="Encrypt a password string">
-        <COMMAND name="salt" min="0" help="Random data to salt with before hashing.">
-          <PARAM name="pwsalt" ptype="/STRING" help="Must not use prefix like $1$"/>
-        </COMMAND>
-        <COMMAND name="type" min="0" help="Optional hash algorithm type.">
-          <PARAM name="pwhash" ptype="/STRING" help="Hash algorithm.">
-            <COMPL>
-              <ACTION sym="printl">md5</ACTION>
-              <ACTION sym="printl">sha256</ACTION>
-              <ACTION sym="printl">sha512</ACTION>
-            </COMPL>
-          </PARAM>
-        </COMMAND>
-
-        <PARAM name="pwpass" min="0" ptype="/STRING" help="Optional clear text password (no spaces)"/>
+	<SWITCH name="optional" min="0" max="4">
+          <COMMAND name="salt" help="Random data to salt with before hashing.">
+            <PARAM name="pwsalt" ptype="/STRING" help="Must not use prefix like $1$"/>
+          </COMMAND>
+          <COMMAND name="type" help="Optional hash algorithm type.">
+            <PARAM name="pwhash" ptype="/STRING" help="Hash algorithm.">
+              <COMPL>
+		<ACTION sym="printl">md5</ACTION>
+		<ACTION sym="printl">sha256</ACTION>
+		<ACTION sym="printl">sha512</ACTION>
+              </COMPL>
+            </PARAM>
+          </COMMAND>
+	  <PARAM name="pwpass" ptype="/STRING" help="Optional clear text password (no spaces)"/>
+	</SWITCH>
         <ACTION sym="script" interactive="true">
           type=${KLISH_PARAM_pwhash:-md5}
           salt=${KLISH_PARAM_pwsalt:+-S $KLISH_PARAM_pwsalt}
@@ -216,9 +223,11 @@
 
       <COMMAND name="datetime" help="Show current date and time, default RFC2822 format">
 	<ACTION sym="script">date -R</ACTION>
-	<COMMAND name="iso" min="0" help="NETCONF/ISO-8601 format">
-	  <ACTION sym="script">date -Isec</ACTION>
-	</COMMAND>
+	<SWITCH name="optional" min="0">
+	  <COMMAND name="iso" min="0" help="NETCONF/ISO-8601 format">
+	    <ACTION sym="script">date -Isec</ACTION>
+	  </COMMAND>
+	</SWITCH>
       </COMMAND>
 
       <!-- https://www.cisco.com/c/en/us/td/docs/wireless/access_point/mob_exp/83/cmd-ref/me_cr_book/me_ports_and_interfaces_cli.html -->
@@ -280,7 +289,7 @@
       </COMMAND>
 
       <COMMAND name="factory-config" help="Show factory-config">
-	<ACTION sym="script">cat /cfg/factory-config.cfg | jq .</ACTION>
+	<ACTION sym="script">jq -C . /cfg/factory-config.cfg</ACTION>
       </COMMAND>
 
       <COMMAND name="running-config" help="Show running-config">
@@ -289,7 +298,7 @@
       </COMMAND>
 
       <COMMAND name="startup-config" help="Show startup-config">
-	<ACTION sym="script">cat /cfg/startup-config.cfg | jq .</ACTION>
+	<ACTION sym="script">jq -C . /cfg/startup-config.cfg</ACTION>
       </COMMAND>
     </COMMAND>
 
@@ -309,7 +318,7 @@
     </COMMAND>
 
     <COMMAND name="ping" help="Ping a network host or multicast group">
-      <SWITCH name="optional" min="0">
+      <SWITCH name="optional" min="0" max="9">
 	<COMMAND name="interface" help="Bypass routing table and use this interface">
 	  <PARAM name="iface" ptype="/PORTAR" help="Interface"/>
 	</COMMAND>
@@ -337,7 +346,7 @@
 
     <COMMAND name="tcpdump" help="Capture network traffic">
       <PARAM name="iface" ptype="/PORTAR" help="Interrface to run capture on"/>
-      <SWITCH name="optional" min="0">
+      <SWITCH name="optional" min="0" max="7">
 	<COMMAND name="count" help="Number of packets to capture, default: unlimited">
 	  <PARAM name="count" ptype="/UINT"/>
 	</COMMAND>
@@ -345,7 +354,7 @@
 	  <PARAM name="sz"  ptype="/UINT"/>
 	</COMMAND>
 	<COMMAND name="expression" help="Optional pcap filter expression">
-	  <PARAM name="expr" ptype="/STRING"/>
+	  <PARAM name="expr" ptype="/STRING" help='Filter expression, e.g. "tcp port 80"'/>
 	</COMMAND>
 	<COMMAND name="verbose" help="Verbose output"/>
       </SWITCH>
@@ -361,8 +370,7 @@
   <VIEW name="config">
 
     <PROMPT>
-      <ACTION sym="prompt">%u@%h:%w</ACTION>
-      <ACTION sym="srp_prompt@sysrepo">%w/> </ACTION>
+      <ACTION sym="srp_prompt@sysrepo">%u@%h:%w%x/> </ACTION>
     </PROMPT>
 
     <HOTKEY key="^D" cmd="exit"/>
