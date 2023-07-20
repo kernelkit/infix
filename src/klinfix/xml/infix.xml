@@ -94,6 +94,13 @@
     <ACTION sym="STRING"/>
   </PTYPE>
 
+  <PTYPE name="PORTAR">
+    <COMPL>
+      <ACTION sym="klix_ifaces@klinfix"/>
+    </COMPL>
+    <ACTION sym="STRING"/>
+  </PTYPE>
+
   <VIEW name="main">
     <HOTKEY key="^D" cmd="exit"/>
 
@@ -283,6 +290,54 @@
       </ACTION>
     </COMMAND>
 
+    <COMMAND name="ping" help="Ping a network host or multicast group">
+      <SWITCH name="optional" min="0">
+	<COMMAND name="interface" help="Bypass routing table and use this interface">
+	  <PARAM name="iface" ptype="/PORTAR" help="Interface"/>
+	</COMMAND>
+	<COMMAND name="count" help="Number of packets to send, default: unlimited">
+	  <PARAM name="cnt" ptype="/UINT"/>
+	</COMMAND>
+	<COMMAND name="size" help="Define size of empty payload of packets">
+	  <PARAM name="sz" ptype="/UINT"/>
+	</COMMAND>
+	<COMMAND name="ttl" help="TTL to set in packets, default: 64 (multicast: 1)">
+	  <PARAM name="ttl" ptype="/UINT"/>
+	</COMMAND>
+	<COMMAND name="flood" help="Flood ping mode"/>
+      </SWITCH>
+      <PARAM name="addr" ptype="/STRING" help="Host address or multicast group"/>
+      <ACTION sym="script" interactive="true">
+        count=${KLISH_PARAM_cnt:+-c $KLISH_PARAM_cnt}
+        iface=${KLISH_PARAM_iface:+-I $KLISH_PARAM_iface}
+        size=${KLISH_PARAM_sz:+-s $KLISH_PARAM_sz}
+        ttl=${KLISH_PARAM_ttl:+-t $KLISH_PARAM_ttl}
+        flood=${KLISH_PARAM_flood:+-f}
+	ping $iface $flood $count $size $ttl $KLISH_PARAM_addr
+      </ACTION>
+    </COMMAND>
+
+    <COMMAND name="tcpdump" help="Capture network traffic">
+      <PARAM name="iface" ptype="/PORTAR" help="Interrface to run capture on"/>
+      <SWITCH name="optional" min="0">
+	<COMMAND name="count" help="Number of packets to capture, default: unlimited">
+	  <PARAM name="count" ptype="/UINT"/>
+	</COMMAND>
+	<COMMAND name="size" help="Number of bytes of each packet to capture">
+	  <PARAM name="sz"  ptype="/UINT"/>
+	</COMMAND>
+	<COMMAND name="expression" help="Optional pcap filter expression">
+	  <PARAM name="expr" ptype="/STRING"/>
+	</COMMAND>
+	<COMMAND name="verbose" help="Verbose output"/>
+      </SWITCH>
+      <ACTION sym="script" interactive="true">
+        count=${KLISH_PARAM_cnt:+-c $KLISH_PARAM_cnt}
+        size=${KLISH_PARAM_sz:+-s $KLISH_PARAM_sz}
+        verbose=${KLISH_PARAM_verbose:+-vvv}
+	tcpdump -ln $count $size $verbose -i $KLISH_PARAM_iface $KLISH_PARAM_expr
+      </ACTION>
+    </COMMAND>
   </VIEW>
 
   <VIEW name="config">
