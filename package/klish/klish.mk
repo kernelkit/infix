@@ -4,7 +4,7 @@
 #
 ################################################################################
 
-KLISH_VERSION = fd1cf46f9fcce955abf130d8882b04f0601e8ed9
+KLISH_VERSION = 8022195e6ed8122bbf2de6d31aba85bef85f072c
 KLISH_SITE = https://github.com/kernelkit/klish.git
 #KLISH_VERSION = tags/3.0.0
 #KLISH_SITE = https://src.libcode.org/pkun/klish.git
@@ -22,6 +22,7 @@ define KLISH_INSTALL_CONFIG
 		$(@D)/plugins/klish/xml/ptypes.xml
 	$(INSTALL) -t $(TARGET_DIR)/etc/klish -D -m 0644 \
 		$(@D)/klish.conf $(@D)/klishd.conf
+	sed -i 's/#HistorySaveAlways=n/HistorySaveAlways=y/' $(TARGET_DIR)/etc/klish/klish.conf
 endef
 KLISH_POST_INSTALL_TARGET_HOOKS += KLISH_INSTALL_CONFIG
 
