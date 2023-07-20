@@ -25,31 +25,24 @@ module infix-dhcp-client {
     leaf enabled {
       type boolean;
       default "true";
-      description
-        "Globally enables the DHCP client function.";
+      description "Globally enables the DHCP client function.";
     }
     list client-if {
       key "if-name";
-      description
-        "The list of interfaces for which the client will
-         be requesting DHCPv4 configuration.";
+      description "List of interfaces requesting DHCPv4 configuration.";
       leaf if-name {
         type if:interface-ref;
         mandatory true;
-        description
-          "Reference to the interface entry that the requested
-           configuration is relevant to.";
+        description "Name of the interface.";
       }
       leaf enabled {
         type boolean;
         default "true";
-        description
-          "Enables the DHCP client function for this interface.";
+        description "Enable DHCP client for this interface.";
       }
       leaf client-id {
 	type string;
-	description
-	  "DHCP client identifier.  When unset, the MAC address is used.";
+	description "Optional Client ID, option 61, default: MAC address.";
       }
     }
   }
