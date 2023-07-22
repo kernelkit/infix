@@ -24,7 +24,7 @@ The system has several datastores (or files):
    number of ports/interfaces.   This file is generated at boot, if it
    does not exist, i.e., only on first boot or after factory reset.
  - `startup-config` is created from `factory-config` at boot if it does
-   not exist.  It is loaded as the system configuration on each reboot.
+   not exist.  It is loaded as the system configuration on each boot.
  - `running-config` is what is actively running on the system.  If no
    changes have been made since the system booted, it is the same as
    `startup-config`.
@@ -35,9 +35,9 @@ The system has several datastores (or files):
 To save configuration changes made to the `running-config` so the system
 will use them consecutive reboots, use the `copy` command:
 
-    admin@infix-12-34-56:exec> copy running-config startup-config
+    admin@infix-12-34-56:/> copy running-config startup-config
 
-In configure context the following commands are available:
+In *configure context* the following commands are available:
 
 | **Command**       | **Description**                                        |
 |-------------------|--------------------------------------------------------|
@@ -64,38 +64,43 @@ We inspect the system status to ensure the change took effect.  Then we
 save the changes for the next reboot.
 
 ```
-admin@infix-12-34-56:exec> configure
-[edit]
-admin@infix-12-34-56:configure> edit interfaces interface eth0
-[edit interfaces interface eth0]
-admin@infix-12-34-56:configure> set ipv4 <TAB>
-      address     autoconf bind-ni-name      enabled   forwarding          mtu     neighbor
-[edit interfaces interface eth0]
-admin@infix-12-34-56:configure> set ipv4 address 192.168.2.200 prefix-length 24
-[edit interfaces interface eth0]
-admin@infix-12-34-56:configure> show
+admin@infix-12-34-56:/> configure
+admin@infix-12-34-56:/config/> edit interfaces interface eth0
+admin@infix-12-34-56:/config/interfaces/interface/eth0/> set ipv4 <TAB>
+      address     autoconf bind-ni-name      enabled
+	  forwarding  mtu      neighbor
+admin@infix-12-34-56:/config/interfaces/interface/eth0/> set ipv4 address 192.168.2.200 prefix-length 24
+admin@infix-12-34-56:/config/interfaces/interface/eth0/> show
 type ethernetCsmacd;
 ipv4 address 192.168.2.200 prefix-length 24;
 ipv6 enabled true;
-[edit interfaces interface eth0]
-admin@infix-12-34-56:configure> diff
-interfaces interface eth0+ ipv4+ address 192.168.2.200+ prefix-length 24;
-[edit interfaces interface eth0]
-admin@infix-12-34-56:configure> leave
-admin@infix-12-34-56:exec> show interfaces brief
+admin@infix-12-34-56:/config/interfaces/interface/eth0/> diff
+interfaces {
+  interface eth0 {
++    ipv4 {
++      address 192.168.2.200 {
++        prefix-length 24;
++      }
++    }
+  }
+}
+admin@infix-12-34-56:/config/interfaces/interface/eth0/> leave
+admin@infix-12-34-56:/> show interfaces brief
 lo               UNKNOWN        00:00:00:00:00:00 <LOOPBACK,UP,LOWER_UP>
 eth0             UP             52:54:00:12:34:56 <BROADCAST,MULTICAST,UP,LOWER_UP>
 admin@infix-12-34-56:exec> show ip brief
 lo               UNKNOWN        127.0.0.1/8 ::1/128
 eth0             UP             192.168.2.200/24 fe80::5054:ff:fe12:3456/64
-admin@infix-12-34-56:exec> copy running-config startup-config
+admin@infix-12-34-56:/> copy running-config startup-config
 ```
 
 One of the ideas behind a separate running and startup configuration is
 to be able to verify a configuration change.  In case of an inadvertent
 change that, e.g., breaks networking, it is trivial to revert back by:
 
-    admin@infix-12-34-56:exec> copy startup-config running-config
+```
+admin@infix-12-34-56:/> copy startup-config running-config
+```
 
 Or restarting the device.
 
