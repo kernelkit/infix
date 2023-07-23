@@ -4,6 +4,7 @@ alias ll='ls -alF'
 alias ls='ls --color=auto'
 
 export EDITOR=/usr/bin/edit
+export VISUAL=/usr/bin/edit
 export LESS="-P %f (press h for help or q to quit)"
 alias vim='vi'
 alias view='vi -R'
