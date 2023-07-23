@@ -1,0 +1,58 @@
+From 2effd39272fb6137220700f00e3901e4575772ac Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Sun, 23 Jul 2023 10:44:46 +0200
+Subject: [PATCH 1/2] Redcuce *quick* size and make help text in status area
+ permanent
+Organization: Addiva Elektronik
+
+In an effort to improve on the usability for beginners, without getting
+in the way of experienced Mg users, the initial help text in the status
+area is now shown permanently.  I.e., whenever Mg clears the statis area
+we show the help text.
+
+Since we now show the help text in the status area we can drop it from
+the *quick* help buffer and reduce the height to save screen estate.
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ src/echo.c | 1 +
+ src/help.c | 4 +---
+ 2 files changed, 2 insertions(+), 3 deletions(-)
+
+diff --git a/src/echo.c b/src/echo.c
+index 397ddc4..46a095f 100644
+--- a/src/echo.c
++++ b/src/echo.c
+@@ -46,6 +46,7 @@ eerase(void)
+ 	tteeol();
+ 	ttflush();
+ 	epresf = FALSE;
++	ewprintf(" %s", hlp);
+ }
+ 
+ /*
+diff --git a/src/help.c b/src/help.c
+index 03bd8f8..cc49bed 100644
+--- a/src/help.c
++++ b/src/help.c
+@@ -239,8 +239,6 @@ quickhelp(int f, int n)
+ 	addline(bp, "C-x C-s save     C-x C-b list    C-x 2 split two  C-k     kill-ln C-r r-search");
+ 	addline(bp, "C-x s   save-all C-x h   mark    C-x ^ enlarge    C-y     yank    M-% replace");
+ 	addline(bp, "C-x i   insert   C-x g   goto-ln C-x o other win  C-x C-x swap    M-q reformat");
+-	addline(bp, "______________________________________________________________________________");
+-	addlinef(bp, "%s", hlp);
+ 
+ 	rc = popbuftop(bp, WNONE);
+ 	if (rc == TRUE) {
+@@ -249,7 +247,7 @@ quickhelp(int f, int n)
+ 		prevwind(0, 0);
+ 
+ 		/* Attempt to shkrink window to size fo quick help */
+-		n = curwp->w_ntrows - 8;
++		n = curwp->w_ntrows - 6;
+ 		shrinkwind(FFRAND, n);
+ 
+ 		prevwind(0, 0);
+-- 
+2.34.1
+

@@ -1,0 +1,73 @@
+From eb6a25f194bc76f2fefff319bcf9cb7d64b17e11 Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Sun, 23 Jul 2023 10:44:46 +0200
+Subject: [PATCH] Backport v3.7 help text fixes to v3.5
+Organization: Addiva Elektronik
+
+ - Follow-up to #17: reorder and imporve *quick* buffer
+ - Replace 2nd undo command in *quick* with mark-all instead
+ - Move C + M help last on the line
+ - Redcuce *quick* size and make help text in status area permanent
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ src/echo.c |  1 +
+ src/help.c | 16 +++++++---------
+ 2 files changed, 8 insertions(+), 9 deletions(-)
+
+diff --git a/src/echo.c b/src/echo.c
+index 12a0853..e7388c9 100644
+--- a/src/echo.c
++++ b/src/echo.c
+@@ -46,6 +46,7 @@ eerase(void)
+ 	tteeol();
+ 	ttflush();
+ 	epresf = FALSE;
++	ewprintf(" %s", hlp);
+ }
+ 
+ /*
+diff --git a/src/help.c b/src/help.c
+index 19fe9bf..980b0ae 100644
+--- a/src/help.c
++++ b/src/help.c
+@@ -19,7 +19,7 @@
+ 
+ #define KEYNAMESZ	6 /* max is "C-SPC" */
+ 
+-const char *hlp = "C-h q  toggle quick help  |  C-h t  show tutorial  |  C-h b  show key bindings";
++const char *hlp = "C-h q  quick help | C-h t  tutorial | C-h b  key bindings | C = Ctrl | M = Alt";
+ 
+ static int	showall(struct buffer *, KEYMAP *, char *);
+ static int	findbind(KEYMAP *, PF, char *, size_t);
+@@ -237,13 +237,11 @@ quickhelp(int f, int n)
+ 	bp->b_flag |= BFREADONLY;
+ 
+ 	addline(bp, "FILE             BUFFER          WINDOW           MARK/KILL       MISC");
+-	addline(bp, "C-x C-c  exit    C-x C-k close   C-0   only other C-space  mark   C-_ undo");
+-	addline(bp, "C-x C-f  find    C-x k   other   C-1   only this  C-w      wipe   C-s search");
+-	addline(bp, "C-x C-s  save    C-x C-b list    C-2   split two  C-k      close  C-r r-search");
+-	addline(bp, "C-x s    all     C-x b   switch  C-x ^ enlarge    C-y      yank   M-% replace");
+-	addline(bp, "C-x i    insert  C-x g   goto ln C-x o other win  C-x C-x  swap   M-q reformat");
+-	addline(bp, "______________________________________________________________________________");
+-	addlinef(bp, "%s", hlp);
++	addline(bp, "C-x C-c exit     C-x b   switch  C-x 0 only other C-space mark    C-_ undo");
++	addline(bp, "C-x C-f find     C-x k   close   C-x 1 only this  C-w     kill-rg C-s search");
++	addline(bp, "C-x C-s save     C-x C-b list    C-x 2 split two  C-k     kill-ln C-r r-search");
++	addline(bp, "C-x s   save-all C-x h   mark    C-x ^ enlarge    C-y     yank    M-% replace");
++	addline(bp, "C-x i   insert   C-x g   goto-ln C-x o other win  C-x C-x swap    M-q reformat");
+ 
+ 	rc = popbuftop(bp, WNONE);
+ 	if (rc == TRUE) {
+@@ -252,7 +250,7 @@ quickhelp(int f, int n)
+ 		prevwind(0, 0);
+ 
+ 		/* Attempt to shkrink window to size fo quick help */
+-		n = curwp->w_ntrows - 8;
++		n = curwp->w_ntrows - 6;
+ 		shrinkwind(FFRAND, n);
+ 
+ 		prevwind(0, 0);
+-- 
+2.34.1
+
