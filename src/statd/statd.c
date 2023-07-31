@@ -247,10 +247,67 @@ err_out:
 	return SR_ERR_SYS;
 }
 
+static const char *get_yang_link_type(char *xpath, json_t *iface)
+{
+	json_t *j_type;
+	const char *type;
+
+	j_type = json_object_get(iface, "link_type");
+	if (!json_is_string(j_type)) {
+		ERROR("Expected a JSON string for 'link_type'");
+		/* This will throw a YANG / ly error */
+		return "";
+	}
+
+	type = json_string_value(j_type);
+
+	if (strcmp(type, "ether") == 0) {
+		const char *kind;
+		json_t *j_val;
+
+		j_val = json_object_get(iface, "linkinfo");
+		if (!j_val)
+			return "iana-if-type:ethernetCsmacd";
+
+		j_val = json_object_get(j_val, "info_kind");
+		if (!j_val)
+			return "iana-if-type:ethernetCsmacd";
+
+		if (!json_is_string(j_val)) {
+			ERROR("Expected a JSON string for 'info_kind'");
+			return "iana-if-type:other";
+		}
+		kind = json_string_value(j_val);
+
+		if (strcmp(kind, "veth") == 0)
+			return "infix-if-type:veth";
+		if (strcmp(kind, "vlan") == 0)
+			return "iana-if-type:l2vlan";
+		if (strcmp(kind, "bridge") == 0)
+			return "iana-if-type:bridge";
+
+		/**
+		 * We could return ethernetCsmacd here, but it might hide some
+		 * special type that we actually want to explicitly identify.
+		 */
+		ERROR("Unable to determine info_kind for \"%s\"", xpath);
+
+		return "iana-if-type:other";
+	}
+
+	if (strcmp(type, "loopback") == 0)
+		return "iana-if-type:softwareLoopback";
+
+	ERROR("Unable to determine iana-if-type for \"%s\"", xpath);
+
+	return "iana-if-type:other";
+}
+
 static int ly_add_ip_link_data(const struct ly_ctx *ctx, struct lyd_node **parent,
 			       char *xpath, json_t *iface)
 {
 	const char *val;
+	const char *type;
 	json_t *j_val;
 	int err;
 
@@ -284,6 +341,13 @@ static int ly_add_ip_link_data(const struct ly_ctx *ctx, struct lyd_node **paren
 	if (err) {
 		ERROR("Error, adding 'stats64' to data tree");
 		return err;
+	}
+
+	type = get_yang_link_type(xpath, iface);
+	err = lydx_new_path(ctx, parent, xpath, "type", type);
+	if (err) {
+		ERROR("Error, adding 'type' to data tree, libyang error %d", err);
+		return SR_ERR_LY;
 	}
 
 	return SR_ERR_OK;
