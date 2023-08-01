@@ -60,12 +60,6 @@ static void set_sock_rcvbuf(int sd, int size)
        DEBUG("Socket receive buffer size increased to: %d bytes\n", size);
 }
 
-static void str_to_lowercase(char *str)
-{
-	for (int i = 0; str[i]; i++)
-		str[i] = tolower((unsigned char)str[i]);
-}
-
 static int nl_sock_init(void)
 {
 	struct sockaddr_nl addr;
@@ -145,11 +139,37 @@ static json_t *json_get_ip_link(char *ifname)
 	return j_root;
 }
 
+static const char *get_yang_operstate(const char *operstate)
+{
+	size_t i;
+	struct {
+		const char *kern;
+		const char *yang;
+
+	} map[] = {
+		{"DOWN",                "down"},
+		{"UP",                  "up"},
+		{"DORMANT",             "dormant"},
+		{"TESTING",             "testing"},
+		{"LOWERLAYERDOWN",      "lower-layer-down"},
+		{"NOTPRESENT",          "not-present"},
+	};
+
+	for (i = 0; i < sizeof(map) / sizeof(map[0]); i++) {
+		if (strcmp(operstate, map[i].kern) != 0)
+			continue;
+
+		return map[i].yang;
+	}
+
+	return "unknown";
+}
+
 static int ly_add_ip_link_data(const struct ly_ctx *ctx, struct lyd_node **parent,
 			       char *xpath, json_t *iface)
 {
+	const char *val;
 	json_t *j_val;
-	char *val;
 	int err;
 
 	j_val = json_object_get(iface, "ifindex");
@@ -171,14 +191,8 @@ static int ly_add_ip_link_data(const struct ly_ctx *ctx, struct lyd_node **paren
 		return SR_ERR_SYS;
 	}
 
-	val = strdup(json_string_value(j_val));
-	if (!val)
-		return SR_ERR_SYS;
-
-	str_to_lowercase(val);
-
+	val = get_yang_operstate(json_string_value(j_val));
 	err = lydx_new_path(ctx, parent, xpath, "oper-status", val);
-	free(val);
 	if (err) {
 		ERROR("Error, adding 'oper-status' to data tree, libyang error %d", err);
 		return SR_ERR_LY;
