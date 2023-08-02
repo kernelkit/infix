@@ -1050,6 +1050,10 @@ static int change_hostname(sr_session_ctx_t *session, uint32_t sub_id, const cha
 		goto err;
 	}
 
+	/* skip in bootstrap, lldpd and avahi have not started yet */
+	if (systemf("runlevel >/dev/null 2>&1"))
+		goto err;
+
 	/* Inform any running lldpd and avahi of the change ... */
 	systemf("lldpcli configure system hostname %s", nm);
 	systemf("avahi-set-host-name %s", nm);
