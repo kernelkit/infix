@@ -74,9 +74,10 @@ submodule infix-system-software {
       container installer {
 	uses installer-state;
 
-	notification state-changed {
-	  uses installer-state;
-	}
+	// TODO: Support sending notifications during bundle installation
+	// notification state-changed {
+	//   uses installer-state;
+	// }
       }
 
       list slot {
