@@ -1021,7 +1021,7 @@ static sr_error_t netdag_gen_iface(struct dagger *net,
 	/* Bring interface back up, if enabled */
 	attr = lydx_get_cattr(cif, "enabled");
 	if (!attr || !strcmp(attr, "true"))
-		fprintf(ip, "link set dev %s up\n", ifname);
+		fprintf(ip, "link set dev %s up state up\n", ifname);
 
 	err = err ? : netdag_gen_sysctl(net, dif);
 
