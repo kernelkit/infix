@@ -113,9 +113,9 @@ static json_t *json_get_ip_link(char *ifname)
 	FILE *proc;
 
 	if (ifname)
-		snprintf(cmd, sizeof(cmd), "ip -d -j link show dev %s 2>/dev/null", ifname);
+		snprintf(cmd, sizeof(cmd), "ip -s -d -j link show dev %s 2>/dev/null", ifname);
 	else
-		snprintf(cmd, sizeof(cmd), "ip -d -j link show 2>/dev/null");
+		snprintf(cmd, sizeof(cmd), "ip -s -d -j link show 2>/dev/null");
 
 	proc = popenf("re", cmd);
 	if (!proc) {
@@ -165,6 +165,88 @@ static const char *get_yang_operstate(const char *operstate)
 	return "unknown";
 }
 
+static int ly_add_ip_link_stat(const struct ly_ctx *ctx, struct lyd_node **parent,
+			       char *xpath, json_t *j_iface)
+{
+	struct lyd_node *node = NULL;
+	char *stat_xpath;
+	json_t *j_stat;
+	json_t *j_val;
+	int err;
+
+	err = asprintf(&stat_xpath, "%s/statistics", xpath);
+	if (err == -1) {
+		ERROR("Error, creating statistics xpath");
+		return SR_ERR_SYS;
+	}
+
+	j_stat = json_object_get(j_iface, "stats64");
+	if (!j_stat) {
+		ERROR("Didn't find 'stats64' in JSON data");
+		goto err_out;
+	}
+
+	err = lyd_new_path(*parent, ctx, stat_xpath, NULL, 0, &node);
+	if (err) {
+		ERROR("Failed adding 'statistics' node, libyang error %d: %s",
+		      err, ly_errmsg(ctx));
+		goto err_out;
+	}
+
+	j_val = json_object_get(j_stat, "tx");
+	if (!j_val) {
+		ERROR("Didn't find 'tx' in JSON stats64 data");
+		goto err_out;
+	}
+
+	j_val = json_object_get(j_val, "bytes");
+	if (!j_val) {
+		ERROR("Didn't find 'bytes' in JSON stats64 tx data");
+		goto err_out;
+	}
+	if (!json_is_integer(j_val)) {
+		ERROR("Didn't get integer for 'bytes' in JSON stats64 tx data");
+		goto err_out;
+	}
+	err = lydx_new_path(ctx, &node, stat_xpath, "out-octets", "%lld",
+			    json_integer_value(j_val));
+	if (err) {
+		ERROR("Error, adding 'out-octets' to data tree, libyang error %d", err);
+		goto err_out;
+	}
+
+	j_val = json_object_get(j_stat, "rx");
+	if (!j_val) {
+		ERROR("Didn't find 'rx' in JSON stats64 data");
+		goto err_out;
+	}
+
+	j_val = json_object_get(j_val, "bytes");
+	if (!j_val) {
+		ERROR("Didn't find 'bytes' in JSON stats64 rx data");
+		goto err_out;
+	}
+	if (!json_is_integer(j_val)) {
+		ERROR("Didn't get integer for 'bytes' in JSON stats64 rx data");
+		goto err_out;
+	}
+	err = lydx_new_path(ctx, &node, stat_xpath, "in-octets", "%lld",
+			    json_integer_value(j_val));
+	if (err) {
+		ERROR("Error, adding 'in-octets' to data tree, libyang error %d", err);
+		goto err_out;
+	}
+
+	free(stat_xpath);
+
+	return SR_ERR_OK;
+
+err_out:
+	free(stat_xpath);
+
+	return SR_ERR_SYS;
+}
+
 static int ly_add_ip_link_data(const struct ly_ctx *ctx, struct lyd_node **parent,
 			       char *xpath, json_t *iface)
 {
@@ -196,6 +278,12 @@ static int ly_add_ip_link_data(const struct ly_ctx *ctx, struct lyd_node **paren
 	if (err) {
 		ERROR("Error, adding 'oper-status' to data tree, libyang error %d", err);
 		return SR_ERR_LY;
+	}
+
+	err = ly_add_ip_link_stat(ctx, parent, xpath, iface);
+	if (err) {
+		ERROR("Error, adding 'stats64' to data tree");
+		return err;
 	}
 
 	return SR_ERR_OK;
