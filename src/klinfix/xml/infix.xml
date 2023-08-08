@@ -344,6 +344,11 @@
       <ACTION sym="srp_verify@sysrepo"/>
     </COMMAND>
 
+    <COMMAND name="help" help="Show YANG description for setting(s)">
+      <PARAM name="path" ptype="/PLINE_SET" max="100" min="0"/>
+      <ACTION sym="srp_help_text@sysrepo"/>
+    </COMMAND>
+
     <COMMAND name="show" help="Show configuration">
       <PARAM name="path" ptype="/PLINE_EDIT" min="0" max="100"/>
       <ACTION sym="srp_show@sysrepo"/>
