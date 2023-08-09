@@ -1,5 +1,5 @@
 AC_PREREQ(2.61)
-AC_INIT([klinfix], [1.0.0],
+AC_INIT([klish-plugin-infix], [1.0.0],
 	[https://github.com/kernelkit/infix/issues])
 AM_INIT_AUTOMAKE(1.11 foreign subdir-objects)
 AM_SILENT_RULES(yes)

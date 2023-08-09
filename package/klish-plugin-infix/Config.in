@@ -1,5 +1,5 @@
-config BR2_PACKAGE_KLINFIX
-	bool "klinfix"
+config BR2_PACKAGE_KLISH_PLUGIN_INFIX
+	bool "klish-plugin-infix"
 	select BR2_PACKAGE_KLISH
 	select BR2_PACKAGE_KLISH_PLUGIN_SYSREPO
 	select BR2_PACKAGE_SYSREPO

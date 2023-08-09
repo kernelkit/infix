@@ -12,7 +12,7 @@ config BR2_PACKAGE_KLISH
 config BR2_PACKAGE_KLISH_DEFAULT_XML
 	bool "install xml"
 	depends on BR2_PACKAGE_KLISH
-	depends on !BR2_PACKAGE_KLINFIX
+	depends on !BR2_PACKAGE_KLISH_PLUGIN_INFIX
 	default y
 	help
 	  Install a small XML spec containing a definition of an

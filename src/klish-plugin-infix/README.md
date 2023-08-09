@@ -1,10 +1,10 @@
-Infix Extensions to klish-plugin-sysrepo
-----------------------------------------
+Infix Extensions to Klish
+-------------------------
 
-Tailor `klish` and `klish-plugin-sysrepo` to suit Infix. The resulting
+Tailor `klish` and `klish-plugin-sysrepo` to suit Infix.  The resulting
 CLI is, in many respects, still very similar to Juniper's JunOS, since
-that is also the primary inspiration for klish, with some additions
-and modifications.
+that is also the primary inspiration for klish, with some additions and
+modifications.
 
 Broadly speaking, the CLI is split up in two major modes:
 
