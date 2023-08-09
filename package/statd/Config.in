@@ -1,5 +1,8 @@
 config BR2_PACKAGE_STATD
 	bool "statd"
+	select BR2_PACKAGE_JANSSON
+	select BR2_PACKAGE_LIBEV
+	select BR2_PACKAGE_SYSREPO
 	help
 	  Operational Status Daemon. Responsible for handling sysrepo
 	  operational run-time info. Such as interface state and address.
