@@ -5,7 +5,7 @@
 	xsi:schemaLocation="https://src.libcode.org/pkun/klish/src/master/klish.xsd">
 
   <PLUGIN name="klish"/>
-  <PLUGIN name="klinfix"/>
+  <PLUGIN name="infix"/>
   <PLUGIN name="script"/>
   <PLUGIN name="sysrepo">
     ShowBrackets = y
@@ -90,14 +90,14 @@
 
   <PTYPE name="LOGFILES">
     <COMPL>
-      <ACTION sym="klix_files@klinfix">/var/log</ACTION>
+      <ACTION sym="files@infix">/var/log</ACTION>
     </COMPL>
     <ACTION sym="STRING"/>
   </PTYPE>
 
   <PTYPE name="PORTAR">
     <COMPL>
-      <ACTION sym="klix_ifaces@klinfix"/>
+      <ACTION sym="ifaces@infix"/>
     </COMPL>
     <ACTION sym="STRING"/>
   </PTYPE>
@@ -129,11 +129,11 @@
     </COMMAND>
 
     <COMMAND name="poweroff" help="Poweroff system (system policy may yield reboot)">
-      <ACTION sym="klix_rpc@klinfix" ptype="STRING">/ietf-system:system-shutdown</ACTION>
+      <ACTION sym="rpc@infix" ptype="STRING">/ietf-system:system-shutdown</ACTION>
     </COMMAND>
 
     <COMMAND name="reboot" help="Reboot system">
-      <ACTION sym="klix_rpc@klinfix" ptype="STRING">/ietf-system:system-restart</ACTION>
+      <ACTION sym="rpc@infix" ptype="STRING">/ietf-system:system-restart</ACTION>
     </COMMAND>
 
     <COMMAND name="shell" help="Enter system shell">
@@ -154,7 +154,7 @@
     <COMMAND name="copy" help="Copy">
       <PARAM name="src" ptype="/DATASTORE"    help="Source datastore"/>
       <PARAM name="dst" ptype="/RW_DATASTORE" help="Destination datastore"/>
-      <ACTION sym="klix_copy@klinfix"/>
+      <ACTION sym="copy@infix"/>
     </COMMAND>
 
     <COMMAND name="password" help="Password tools" mode="switch">
@@ -189,7 +189,7 @@
     <COMMAND name="set" help="Set" mode="switch">
       <COMMAND name="datetime" help="Set current date and time, ISO-8601 format">
 	<PARAM name="current-datetime" ptype="/STRING" help="yyyy-mm-ddThh:mm:ss(Z|+/-hh:mm)"/>
-	<ACTION sym="klix_rpc@klinfix">/ietf-system:set-current-datetime</ACTION>
+	<ACTION sym="rpc@infix">/ietf-system:set-current-datetime</ACTION>
       </COMMAND>
     </COMMAND>
 
@@ -384,7 +384,7 @@
     </COMMAND>
 
     <COMMAND name="leave" help="Apply candidate to running-config and return to admin-exec">
-      <ACTION sym="klix_commit@klinfix"/>
+      <ACTION sym="commit@infix"/>
       <ACTION sym="srp_top@sysrepo"/>
       <ACTION sym="nav" exec_on="success">replace main</ACTION>
     </COMMAND>
@@ -426,7 +426,7 @@
     </COMMAND>
 
     <COMMAND name="commit" help="Commit current candidate to running-config">
-      <ACTION sym="klix_commit@klinfix"/>
+      <ACTION sym="commit@infix"/>
     </COMMAND>
 
     <COMMAND name="reset" help="Reset candidate to running-config">

@@ -14,10 +14,10 @@
 
 #include <libyang/libyang.h>
 
-const uint8_t kplugin_klinfix_major = 1;
-const uint8_t kplugin_klinfix_minor = 0;
+const uint8_t kplugin_infix_major = 1;
+const uint8_t kplugin_infix_minor = 0;
 
-int klix_files(kcontext_t *ctx)
+int infix_files(kcontext_t *ctx)
 {
 	const char *path;
 	struct dirent *d;
@@ -46,14 +46,14 @@ int klix_files(kcontext_t *ctx)
 	return 0;
 }
 
-int klix_ifaces(kcontext_t *ctx)
+int infix_ifaces(kcontext_t *ctx)
 {
 	(void)ctx;
 	system("ls /sys/class/net");
 	return 0;
 }
 
-int klix_ds_from_str(const char *text, sr_datastore_t *ds)
+int infix_ds_from_str(const char *text, sr_datastore_t *ds)
 {
 	size_t len = strlen(text);
 
@@ -73,7 +73,7 @@ int klix_ds_from_str(const char *text, sr_datastore_t *ds)
 	return 0;
 }
 
-int klix_copy(kcontext_t *ctx)
+int infix_copy(kcontext_t *ctx)
 {
 	kpargv_t *pargv = kcontext_pargv(ctx);
 	sr_datastore_t srcds, dstds;
@@ -87,13 +87,13 @@ int klix_copy(kcontext_t *ctx)
 	if (!srcarg || !dstarg)
 		goto err;
 
-	if (klix_ds_from_str(kparg_value(srcarg), &srcds)) {
+	if (infix_ds_from_str(kparg_value(srcarg), &srcds)) {
 		fprintf(stderr,
 			"Error: \"%s\" is not the name of any known datastore\n",
 			kparg_value(srcarg));
 		goto err;
 	}
-	if (klix_ds_from_str(kparg_value(dstarg), &dstds)) {
+	if (infix_ds_from_str(kparg_value(dstarg), &dstds)) {
 		fprintf(stderr,
 			"Error: \"%s\" is not the name of any known datastore\n",
 			kparg_value(dstarg));
@@ -149,7 +149,7 @@ err:
 	return -1;
 }
 
-int klix_commit(kcontext_t *ctx)
+int infix_commit(kcontext_t *ctx)
 {
 	sr_session_ctx_t *sess;
 	sr_conn_ctx_t *conn;
@@ -185,7 +185,7 @@ err:
 	return -1;
 }
 
-int klix_rpc(kcontext_t *ctx)
+int infix_rpc(kcontext_t *ctx)
 {
 	kpargv_pargs_node_t *iter;
 	size_t icnt = 0, ocnt = 0;
@@ -252,22 +252,22 @@ err:
 	return -1;
 }
 
-int kplugin_klinfix_fini(kcontext_t *ctx)
+int kplugin_infix_fini(kcontext_t *ctx)
 {
 	(void)ctx;
 
 	return 0;
 }
 
-int kplugin_klinfix_init(kcontext_t *ctx)
+int kplugin_infix_init(kcontext_t *ctx)
 {
 	kplugin_t *plugin = kcontext_plugin(ctx);
 
-	kplugin_add_syms(plugin, ksym_new("klix_copy", klix_copy));
-	kplugin_add_syms(plugin, ksym_new("klix_commit", klix_commit));
-	kplugin_add_syms(plugin, ksym_new("klix_files", klix_files));
-	kplugin_add_syms(plugin, ksym_new("klix_ifaces", klix_ifaces));
-	kplugin_add_syms(plugin, ksym_new("klix_rpc", klix_rpc));
+	kplugin_add_syms(plugin, ksym_new("copy", infix_copy));
+	kplugin_add_syms(plugin, ksym_new("commit", infix_commit));
+	kplugin_add_syms(plugin, ksym_new("files", infix_files));
+	kplugin_add_syms(plugin, ksym_new("ifaces", infix_ifaces));
+	kplugin_add_syms(plugin, ksym_new("rpc", infix_rpc));
 
 	return 0;
 }
