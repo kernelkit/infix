@@ -136,7 +136,7 @@ endchoice
 
 config QEMU_NET_MODEL
 	string "Interface model"
-	default "virtio"
+	default "virtio-net-pci"
 
 config QEMU_NET_BRIDGE_DEV
 	string "Bridge device"

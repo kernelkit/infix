@@ -157,26 +157,36 @@ host_args()
     echo -n "-virtfs local,path=$CONFIG_QEMU_HOST,security_model=none,writeout=immediate,mount_tag=hostfs "
 }
 
+net_dev_args()
+{
+    local name="e$1"
+    local mac=$(printf "02:00:00:00:00:%02x" $1)
+
+    echo -n "-device $CONFIG_QEMU_NET_MODEL,netdev=$name,mac=$mac "
+    echo "$name	$mac" >>"$mactab"
+}
+
 net_args()
 {
-    QEMU_NET_MODEL=${QEMU_NET_MODEL:-virtio}
+    # Infix will pick up this file via fwcfg and install it to /etc
+    mactab=$(dirname "$CONFIG_QEMU_ROOTFS")/mactab
+    :> "$mactab"
+    echo -n "-fw_cfg name=opt/mactab,file=$mactab "
 
     if [ "$CONFIG_QEMU_NET_BRIDGE" = "y" ]; then
-	QEMU_NET_BRIDGE_DEV=${QEMU_NET_BRIDGE_DEV:-virbr0}
-	echo -n "-nic bridge,br=$CONFIG_QEMU_NET_BRIDGE_DEV,model=$CONFIG_QEMU_NET_MODEL "
+	echo -n "-netdev bridge,id=e0,br=$CONFIG_QEMU_NET_BRIDGE_DEV "
+	net_dev_args 0
     elif [ "$CONFIG_QEMU_NET_TAP" = "y" ]; then
-	QEMU_NET_TAP_N=${QEMU_NET_TAP_N:-1}
-	mactab=$(dirname "$CONFIG_QEMU_ROOTFS")/mactab
-	rm -f "$mactab"
 	for i in $(seq 0 $(($CONFIG_QEMU_NET_TAP_N - 1))); do
-	    printf "e$i	52:54:00:12:34:%02x\n" $((0x56 + i)) >>"$mactab"
-	    echo -n "-netdev tap,id=nd$i,ifname=qtap$i -device e1000,netdev=nd$i "
+	    echo -n "-netdev tap,id=e$i,ifname=qtap$i "
+	    net_dev_args $i
 	done
-	echo -n "-fw_cfg name=opt/mactab,file=$mactab "
     elif [ "$CONFIG_QEMU_NET_USER" = "y" ]; then
-	[ "$CONFIG_QEMU_NET_USER_OPTS" ] && QEMU_NET_USER_OPTS="$CONFIG_QEMU_NET_USER_OPTS,"
+	local useropts=
+	[ "$CONFIG_QEMU_NET_USER_OPTS" ] && useropts=",$CONFIG_QEMU_NET_USER_OPTS"
 
-	echo -n "-nic user,${QEMU_NET_USER_OPTS}model=$CONFIG_QEMU_NET_MODEL "
+	echo -n "-netdev user,id=e0${useropts} "
+	net_dev_args 0
     else
 	echo -n "-nic none"
     fi
