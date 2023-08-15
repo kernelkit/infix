@@ -4,4 +4,6 @@
 - case: dual_bridge.py
 - case: bridge_vlan.py
 - case: ipv4_autoconf.py
-
+- case: bridge_fwd_sgl_dut.py
+- case: bridge_fwd_dual_dut.py
+- case: bridge_vlan_separation.py
