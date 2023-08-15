@@ -6,15 +6,28 @@ def qstrip(text):
         return text[1:-1]
     return text
 
-def match_kind(n1attrs, n2attrs):
+def match_node(n1attrs, n2attrs):
     return n1attrs.get("kind") == n2attrs.get("kind")
+
+def match_edge(e1attrs, e2attrs):
+    if "kind" in e1attrs or "kind" in e2attrs:
+        return e1attrs.get("kind") == e2attrs.get("kind")
+
+    return True
+
 
 class Topology:
     def __init__(self, dotg):
         self.dotg = dotg
-        edges = { tuple(e.get_source().split(":")): { tuple(e.get_destination().split(":")): { "weight": 1 } } \
-                  for e in self.dotg.get_edges() \
-                 }
+        edges = {}
+        for e in self.dotg.get_edges():
+            attrs = e.get_attributes()
+            if "weight" not in attrs:
+                attrs["weight"] = 1
+            
+            edges[tuple(e.get_source().split(":"))] = { tuple(e.get_destination().split(":")): attrs }
+
+
         self.g = nx.Graph(edges, weight=1)
         for e in list(self.g.edges):
             s, d = e
@@ -39,7 +52,7 @@ class Topology:
             self.g.add_node(dn, kind=dk)
             self.g.add_edge(dn, d, weight=0)
 
-    def map_to(self, phy, node_match=match_kind):
+    def map_to(self, phy):
         def _map_node(lnode, pnode):
             if lnode in self.mapping:
                 assert(self.mapping[lnode][None] == pnode)
@@ -55,7 +68,7 @@ class Topology:
             else:
                 self.mapping[lnode][lport] = pport
 
-        nxmap = isomorphism.GraphMatcher(phy.g, self.g, node_match=node_match)
+        nxmap = isomorphism.GraphMatcher(phy.g, self.g, edge_match=match_edge, node_match=match_node)
         if not nxmap.subgraph_is_isomorphic():
             return False
 
@@ -136,7 +149,6 @@ if __name__ == "__main__":
     log = Topology(pydot.graph_from_dot_file(sys.argv[2])[0])
     if log.map_to(phy):
         print(json.dumps(log.mapping))
-        print(json.dumps(tuple(log.get_paths("host", "target"))))
         sys.exit(0)
 
     print("{}")

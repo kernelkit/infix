@@ -251,7 +251,7 @@ generate_dot()
 
     hostports="<qtap0> qtap0"
     targetports="<e0> e0"
-    edges="host:qtap0 -- target:e0;"
+    edges="host:qtap0 -- target:e0 [kind=mgmt];"
     for tap in $(seq 1 $(($CONFIG_QEMU_NET_TAP_N - 1))); do
 	hostports="$hostports | <qtap$tap> qtap$tap "
 	targetports="$targetports | <e$tap> e$tap "
