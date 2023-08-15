@@ -243,26 +243,26 @@ following layout. The disk is expected to use the GPT partitioning
 scheme. Partitions marked with an asterisk are optional.
 
     .-----------.
-	| GPT Table |
-	:-----------:
-	|    boot*  |
-	:-----------:
-	|    aux    |
-	:-----------:
-	|           |
-	|  primary  |
-	|           |
-	:-----------:
-	|           |
-	| secondary |
-	|           |
-	:-----------:
-	|    cfg    |
-	:-----------:
-	|           |
-	|    var*   |
-	|           |
-	'-----------'
+    | GPT Table |
+    :-----------:
+    |    boot*  |
+    :-----------:
+    |    aux    |
+    :-----------:
+    |           |
+    |  primary  |
+    |           |
+    :-----------:
+    |           |
+    | secondary |
+    |           |
+    :-----------:
+    |    cfg    |
+    :-----------:
+    |           |
+    |    var*   |
+    |           |
+    '-----------'
 
 ### `boot` - Bootloader
 
@@ -295,8 +295,8 @@ Typical layout when using U-Boot bootloader:
 
     /
     ├ primary.itbh
-	├ secondary.itbh
-	└ uboot.env
+    ├ secondary.itbh
+    └ uboot.env
 
 During boot, an ITB header along with the corresponding root
 filesystem image are concatenated in memory, by U-Boot, to form a

@@ -11,8 +11,8 @@ traffic at various points.
 TL;DR
 -----
 
-	make x86_64_defconfig
-	make
+    make x86_64_defconfig
+    make
     make test-qeneth
 
 Runs the test suite on a set of virtual Infix nodes.
