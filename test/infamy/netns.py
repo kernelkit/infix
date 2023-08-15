@@ -63,6 +63,26 @@ class IsolatedMacVlan:
         args, kwargs = self._mangle_subprocess_args(args, kwargs)
         return subprocess.Popen(*args, **kwargs)
 
-    def runsh(self, script):
+    def runsh(self, script, *args, **kwargs):
         return self.run("/bin/sh", text=True, input=script,
-                        stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+                        stdout=subprocess.PIPE, stderr=subprocess.STDOUT, *args, **kwargs)
+    
+    def addip(self, addr, subnet=24):
+        self.runsh(f"""
+            set -ex 
+            ip link set iface up
+            ip addr add {addr}/{subnet} dev iface
+            """, check=True)
+    
+    def ping(self, daddr, count=1, timeout=2, check=False):
+        return self.runsh(f"""set -ex; ping -c {count} -w {timeout} {daddr}""", check=check)
+        
+    def must_reach(self, daddr):
+        res = self.ping(daddr)
+        if res.returncode != 0:
+            raise Exception(res.stdout)
+
+    def must_not_reach(self, daddr):
+        res = self.ping(daddr)
+        if res.returncode == 0:
+            raise Exception(res.stdout)
