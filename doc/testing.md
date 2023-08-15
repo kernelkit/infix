@@ -142,32 +142,34 @@ words, the test requires a _logical_ topology like the one below.
 
 <img align="right" src="testing-log.dot.svg" alt="Example Logical Topology">
 
-    graph "dhcp-client-server" {
-        host [
-            label="host | { <c1> c1 | <srv> srv | <c2> c2 }",
-            kind="controller",
-        ];
+```dot
+graph "dhcp-client-server" {
+    host [
+        label="host | { <c1> c1 | <srv> srv | <c2> c2 }",
+        kind="controller",
+    ];
 
-        server [
-            label="{ <mgmt> mgmt } | server | { <c1> c1 | <c2> c2 }",
-            kind="infix",
-        ];
-        client1 [
-            label="{ <mgmt> mgmt } | client1 | { <srv> srv }",
-            kind="infix",
-        ];
-        client2 [
-            label="{ <mgmt> mgmt } | client2 | { <srv> srv }",
-            kind="infix",
-        ];
+    server [
+        label="{ <mgmt> mgmt } | server | { <c1> c1 | <c2> c2 }",
+        kind="infix",
+    ];
+    client1 [
+        label="{ <mgmt> mgmt } | client1 | { <srv> srv }",
+        kind="infix",
+    ];
+    client2 [
+        label="{ <mgmt> mgmt } | client2 | { <srv> srv }",
+        kind="infix",
+    ];
 
-        host:srv -- server:mgmt
-        host:c1  -- client1:mgmt
-        host:c2  -- client2:mgmt
+    host:srv -- server:mgmt
+    host:c1  -- client1:mgmt
+    host:c2  -- client2:mgmt
 
-        server:c1 -- client1:srv;
-        server:c2 -- client2:srv;
-    }
+    server:c1 -- client1:srv;
+    server:c2 -- client2:srv;
+}
+```
 
 When running in a virtualized environment, one could simply create a
 setup that matches the test's logical topology.  But in scenarios when
@@ -187,72 +189,76 @@ _physical_ topology below.
 
 <img align="right" src="testing-phy.dot.svg" alt="Example Physical Topology">
 
-    graph "quad-ring" {
-        host [
-            label="host | { <d1a> d1a | <d1b> d1b | <d1c> d1c | <d2a> d2a | <d2b> d2b | <d2c> d2c | <d3a> d3a | <d3b> d3b | <d3c> d3c | <d4a> d4a | <d4b> d4b | <d4c> d4c }",
-            kind="controller",
-        ];
+```dot
+graph "quad-ring" {
+    host [
+        label="host | { <d1a> d1a | <d1b> d1b | <d1c> d1c | <d2a> d2a | <d2b> d2b | <d2c> d2c | <d3a> d3a | <d3b> d3b | <d3c> d3c | <d4a> d4a | <d4b> d4b | <d4c> d4c }",
+        kind="controller",
+    ];
 
-        dut1 [
-            label="{ <e1> e1 | <e2> e2 | <e3> e3 } | dut1 | { <e4> e4 | <e5> e5 }",
-            kind="infix",
-        ];
-        dut2 [
-            label="{ <e1> e1 | <e2> e2 | <e3> e3 } | dut2 | { <e4> e4 | <e5> e5 }",
-            kind="infix",
-        ];
-        dut3 [
-            label="{ <e1> e1 | <e2> e2 | <e3> e3 } | dut3 | { <e4> e4 | <e5> e5 }",
-            kind="infix",
-        ];
-        dut4 [
-            label="{ <e1> e1 | <e2> e2 | <e3> e3 } | dut4 | { <e4> e4 | <e5> e5 }",
-            kind="infix",
-        ];
+    dut1 [
+        label="{ <e1> e1 | <e2> e2 | <e3> e3 } | dut1 | { <e4> e4 | <e5> e5 }",
+        kind="infix",
+    ];
+    dut2 [
+        label="{ <e1> e1 | <e2> e2 | <e3> e3 } | dut2 | { <e4> e4 | <e5> e5 }",
+        kind="infix",
+    ];
+    dut3 [
+        label="{ <e1> e1 | <e2> e2 | <e3> e3 } | dut3 | { <e4> e4 | <e5> e5 }",
+        kind="infix",
+    ];
+    dut4 [
+        label="{ <e1> e1 | <e2> e2 | <e3> e3 } | dut4 | { <e4> e4 | <e5> e5 }",
+        kind="infix",
+    ];
 
-        host:d1a -- dut1:e1
-        host:d1b -- dut1:e2
-        host:d1c -- dut1:e3
+    host:d1a -- dut1:e1
+    host:d1b -- dut1:e2
+    host:d1c -- dut1:e3
 
-        host:d2a -- dut2:e1
-        host:d2b -- dut2:e2
-        host:d2c -- dut2:e3
+    host:d2a -- dut2:e1
+    host:d2b -- dut2:e2
+    host:d2c -- dut2:e3
 
-        host:d3a -- dut3:e1
-        host:d3b -- dut3:e2
-        host:d3c -- dut3:e3
+    host:d3a -- dut3:e1
+    host:d3b -- dut3:e2
+    host:d3c -- dut3:e3
 
-        host:d4a -- dut4:e1
-        host:d4b -- dut4:e2
-        host:d4c -- dut4:e3
+    host:d4a -- dut4:e1
+    host:d4b -- dut4:e2
+    host:d4c -- dut4:e3
 
-        dut1:e5 -- dut2:e4
-        dut2:e5 -- dut3:e4
-        dut3:e5 -- dut4:e4
-        dut4:e5 -- dut1:e4
-    }
+    dut1:e5 -- dut2:e4
+    dut2:e5 -- dut3:e4
+    dut3:e5 -- dut4:e4
+    dut4:e5 -- dut1:e4
+}
+```
 
 Our test (in fact, all tests) receives the physical topology as an
 input parameter, and then maps the desired logical topology onto it,
 producing a mapping from logical nodes and ports to their physical
 counterparts.
 
-    {
-      "client1": "dut1",
-      "client1:mgmt": "dut1:e1",
-      "client1:srv": "dut1:e4",
-      "client2": "dut3",
-      "client2:mgmt": "dut3:e2",
-      "client2:srv": "dut3:e5",
-      "host": "host",
-      "host:c1": "host:d1a",
-      "host:c2": "host:d3b",
-      "host:srv": "host:d4c",
-      "server": "dut4",
-      "server:c1": "dut4:e5",
-      "server:c2": "dut4:e4",
-      "server:mgmt": "dut4:e3"
-    }
+```dot
+{
+  "client1": "dut1",
+  "client1:mgmt": "dut1:e1",
+  "client1:srv": "dut1:e4",
+  "client2": "dut3",
+  "client2:mgmt": "dut3:e2",
+  "client2:srv": "dut3:e5",
+  "host": "host",
+  "host:c1": "host:d1a",
+  "host:c2": "host:d3b",
+  "host:srv": "host:d4c",
+  "server": "dut4",
+  "server:c1": "dut4:e5",
+  "server:c2": "dut4:e4",
+  "server:mgmt": "dut4:e3"
+}
+```
 
 With this information, the test knows that, in this particular
 environment, the server should be managed via the port called `d4c` on
