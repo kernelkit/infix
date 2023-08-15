@@ -15,18 +15,15 @@ module infix-system {
   contact      "kernelkit@googlegroups.com";
   description  "Infix augments and deviations to ietf-system.";
 
-  revision 2023-07-06 {
-    description "Add support for user login shell.";
-    reference "internal";
-  }
+  revision 2023-08-15 {
+    description "Add support for user login shell.
 
-  revision 2023-07-04 {
-    description "Updating/adding deviation specifications:
-                 - timezone-name (use tz defs from iana-timezone.yang)
-                 - timezone-utc-offset (updated path for 'not-supported')
-                 - radius ('not-supported')
-                 - dns-resolver port ('not-supported')
-                 - authentication username (limit length and pattern)";
+                 Update/add deviation specifications:
+                  - timezone-name (use tz defs from iana-timezone.yang)
+                  - timezone-utc-offset (updated path for 'not-supported')
+                  - radius ('not-supported')
+                  - dns-resolver port ('not-supported')
+                  - authentication username (limit length and pattern)";
     reference "internal";
   }
 
