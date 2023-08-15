@@ -1,178 +1,48 @@
-<img align="right" src="doc/text3134.png" alt="Infix Linux Networking Made Easy">
-
-* [Introduction](#introduction)
-  * [NETCONF Mode](#netconf-mode)
-  * [Classic Mode](#classic-mode)
-  * [Hybrid Mode](#hybrid-mode)
-* [Hardware](#hardware)
-* [Qemu](#qemu)
-* [GNS3](#gns3)
-* [Building](#building)
-* [Testing](doc/testing.md)
-* [Docker Image](test/docker/README.md)
-* [Origin & Licensing](origin--licensing)
-
+<img align="right" src="doc/image930-scaled.png" alt="Linux Networking Made Easy">
 
 Introduction
 ------------
 
-Infix is an embedded Linux Network Operating System (NOS) based on
-[Buildroot][1], [Finit][2], [ifupdown-ng][3], and [sysrepo][6].
-Providing an easy-to-maintain and easy-to-port Open Source base for
-networked equipment.
+Infix is a Linux Network Operating System (NOS) based on [Buildroot][1],
+and [sysrepo][2].  A powerful mix that ease porting to different target
+platforms, simplify long-term maintenance, and also provide made-easy
+management using NETCONF[^1].
+
+Infix can run on many different types of architectures and boards, much
+thanks to Linux and Buildroot.  Currently the focus is on 64-bit ARM
+devices, optionally with switching fabric supported by Linux switchdev.
+The [following boards](board/aarch64/README.md) are fully supported:
+
+ - Marvell CN9130 CRB
+ - Marvell EspressoBIN
+ - Microchip SparX-5i PCB135 (eMMC)
+
+An x86_64 build is also available, primarily intended for development
+and testing, but can also be used for evaluation and demo purposes.  For
+more information, see: [Infix in Virtual Environments](doc/virtual.md).
 
 > See the [GitHub Releases](https://github.com/kernelkit/infix/releases)
-> page for out pre-built images.  The *Latest Build* has the bleeding edge
-> images, if possible we recommend using a versioned release.
+> page for our pre-built images.  The *Latest Build* has the bleeding
+> edge images, if possible we recommend using a versioned release.
 >
-> For customer specific builds of Infix, see your respective repository.
-
-Infix has two main *flavors*, or defconfigs:
-
- - **NETCONF:** the default, managed using, e.g., the `cli` tool
- - **Classic:** built from `$ARCH_classic_defconfig`, more below
-
-Both flavors have an `admin` user, which is allowed to log in from
-remote, password `admin` on standard builds.  It is the recommended
-account to use for managing Infix.  (The `root` account is currently
-also available, but will soon become a non-login account used only for
-running system services.)
+> For *customer specific builds* of Infix, see your product repository.
 
 
-### NETCONF Mode
+Topics
+------
 
-NETCONF is the primary reason Infix exists.  Configuration of an Infix
-device can be done either remotely, using tools like [netconf-client][]
-or [netopeer2-cli][], or locally using the [`cli` tool](doc/cli.md).
+ - **CLI Topics**
+   - [Introduction to the CLI](doc/cli/introduction.md)
+   - [CLI User's Guide](doc/cli/tutorial.md)
+   - [Quick Overview](doc/cli/quick.md)
 
-Infix use [sysrepo][6] as the data store for NETCONF.  A set of plugins
-configure the network, using iproute2, generate configuration files in
-`/etc`, and control the system daemons, e.g., enable DHCP client on an
-interface.
-
-
-### Classic Mode
-
-Here it is up to the administrator to modify configuration files in
-`/etc` and control the system daemons using the `initctl` tool.
-
-See the online `help` command for an introduction to the system.
-
-
-### Hybrid Mode
-
-Since Infix is under heavy development, it does not yet have all bells
-and whistles in place, in particular in the default build.  To that end
-it is possible to manually manage certain services that are not yet
-possible to configure using NETCONF.
-
-At bootstrap Finit can start user scripts from a [run-parts(8)][] like
-directory: `/cfg/start.d`.  For example, the following starts OSPF:
-
-```sh
-root@infix:~$ cp -a /etc/frr /cfg/
-root@infix:~$ mkdir /cfg/start.d
-root@infix:~$ cd /cfg/start.d
-root@infix:/cfg/start.d$ cat <<EOF >10-enable-ospf.sh
-#!/bin/sh
-# Use vtysh to modify the OSPF configuration
-mount --bind /cfg/frr /etc/frr
-initctl enable zebra
-initctl enable ospfd
-initctl enable bfdd
-(sleep 1; vtysh -b)&
-exit 0
-EOF
-root@infix:/cfg/start.d$ chmod +x 10-enable-ospf.sh
-```
-
-This is also the way to start containers (provided the images have been
-downloaded with `podman pull` first):
-
-```
-root@infix:/cfg/start.d$ cat <<EOF >20-enable-container.sh
-#!/bin/sh
-podman-service -e -d "Nginx container" -p "-p 80:80 -v /cfg/www:/usr/share/nginx/html:ro" nginx:alpine
-exit 0
-EOF
-root@infix:/cfg/start.d$ chmod +x 20-enable-container.sh
-```
-
-Reboot to activate the changes.  To activate the changes without
-rebooting, run the script and call `initctl reload`.
-
-> **Note:** Neither [Frr](https://frrouting.org) (Zebra/OSPF/BFD) or
-> [podman](https://podman.io) are enabled in default Infix builds.  Some
-> customers have them enabled in their specific builds, and you can also
-> enable it yourself in Infix by using `make menuconfig` followed by
-> rebuilding the image.
-
-For more information, see [Containers in Infix](doc/container.md).
-
-
-Hardware
---------
-
-### aarch64
-
-By default, Infix builds with support for the following boards (you
-may enable additional boards in the config, of course):
-
-- Marvell CN9130 CRB
-- Marvell EspressoBIN
-- Microchip SparX-5i PCB135 (eMMC)
-
-See the aarch64 specific [documentation](board/aarch64/README.md) for more
-information.
-
-### x86_64
-
-Primarily intended to be run under [QEMU][] for development & test as
-well as evaluation, demo and [training][] purposes, e.g. using [GNS3][]
-or [Qeneth][7].
-
-
-QEMU
-----
-
-A virtualized instance can easily be launched from a Linux system, with
-Qemu installed, by issuing `make run`.
-
-Some settings, e.g. networking, can be configured via `make menuconfig`
-under `External options -> QEMU virtualization`.
-
-
-GNS3
-----
-
-Download the [latest build][0] of the `x86_64`, or `x86_64_classic`
-flavor.  Unpack in a dedicated directory and use ["Import Appliance"][9]
-to install the `.gns3a` file into GNS3.  Infix (`x86_64`) is in the
-"Router" category, it has 10 interfaces available by default for use as
-switch ports or routing.  The *classic* build only has one interface by
-default, geared more towards acting as an end device.
-
-
-Building
---------
-
-Buildroot is almost stand-alone, but need a few locally installed tools
-to bootstrap itself.  For details, see the [excellent manual][manual].
-
-Briefly, to build an Infix image; select the target and then make:
-
-    make x86_64_defconfig
-    make
-
-Online help is available:
-
-    make help
-
-To see available defconfigs for supported targets, use:
-
-    make list-defconfigs
-
-> **Note:** build dependencies (Debian/Ubuntu): <kbd>sudo apt install make libssl-dev</kbd>
+ - **Infix In-Depth**
+   - [Infix Variants](doc/variant.md)
+   - [Boot Procedure](doc/boot.md)
+   - [Containers in Infix](doc/container.md)
+   - [Developer's Guide](doc/developers-guide.md)
+   - [Discover Your Device](doc/discovery.md)
+   - [Virtual Environments](doc/virtual.md)
 
 
 Origin & Licensing
@@ -197,26 +67,15 @@ Infix releases include the license information covering all Open Source
 packages.  This is extracted automatically at build time using the tool
 `make legal-info`.  Any proprietary software built on top of Infix, or
 Buildroot, would need separate auditing to ensure it does not link with
-any GPL[^1] licensed library.
+any GPL[^2] licensed library.
 
-[^1]: Infix image builds use GNU libc (GLIBC) which is covered by the
-	[LGPL][4].  The LGPL *does allow* proprietary software, as long as
+[^1]: or RESTCONF, <https://datatracker.ietf.org/doc/html/rfc8040>, for
+    mode information, see [Infix Variants](doc/variant.md).
+[^2]: Infix image builds use GNU libc (GLIBC) which is covered by the
+	[LGPL][8].  The LGPL *does allow* proprietary software, as long as
 	said software is linking dynamically, [not statically][5], to GLIBC.
 
-[0]: https://github.com/kernelkit/infix/releases/tag/latest
 [1]: https://buildroot.org/
-[2]: https://github.com/troglobit/finit
-[3]: https://github.com/ifupdown-ng/ifupdown-ng
-[4]: https://en.wikipedia.org/wiki/GNU_Lesser_General_Public_License
+[2]: https://www.sysrepo.org/
 [5]: https://lwn.net/Articles/117972/
-[6]: https://www.sysrepo.org/
-[7]: https://github.com/wkz/qeneth
-[8]: https://addiva-elektronik.github.io/2023/05/12/using-netconf-client-and-server-to-update-switch-configuration/
-[9]: https://docs.gns3.com/docs/using-gns3/beginners/import-gns3-appliance/
-[QEMU]: https://www.qemu.org/
-[GNS3]: https://gns3.com/
-[training]: https://addiva-elektronik.github.io/
-[manual]: https://buildroot.org/downloads/manual/manual.html
-[run-parts(8)]: https://manpages.ubuntu.com/manpages/trusty/man8/run-parts.8.html
-[netconf-client]: https://pypi.org/project/netconf-client/
-[netopeer2-cli]: https://github.com/CESNET/netopeer2
+[8]: https://en.wikipedia.org/wiki/GNU_Lesser_General_Public_License
