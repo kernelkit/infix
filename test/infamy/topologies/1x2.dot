@@ -19,6 +19,6 @@ graph "1x2" {
 	    kind="infix",
 	];
 
-	host:tgt -- target:mgmt
+	host:tgt -- target:mgmt [kind=mgmt]
 	host:data -- target:data
 }
