@@ -104,18 +104,11 @@ static void sub_delete(struct ev_loop *loop, struct sub_head *subs, struct sub *
 	free(sub);
 }
 
-
-static json_t *json_get_ip_link(char *ifname)
+static json_t *_json_get_ip_output(const char *cmd)
 {
-	char cmd[512] = {}; /* Size is arbitrary */
 	json_error_t j_err;
 	json_t *j_root;
 	FILE *proc;
-
-	if (ifname)
-		snprintf(cmd, sizeof(cmd), "ip -s -d -j link show dev %s 2>/dev/null", ifname);
-	else
-		snprintf(cmd, sizeof(cmd), "ip -s -d -j link show 2>/dev/null");
 
 	proc = popenf("re", cmd);
 	if (!proc) {
@@ -137,6 +130,30 @@ static json_t *json_get_ip_link(char *ifname)
 	}
 
 	return j_root;
+}
+
+static json_t *json_get_ip_link(const char *ifname)
+{
+	char cmd[512] = {}; /* Size is arbitrary */
+
+	if (ifname)
+		snprintf(cmd, sizeof(cmd), "ip -s -d -j link show dev %s 2>/dev/null", ifname);
+	else
+		snprintf(cmd, sizeof(cmd), "ip -s -d -j link show 2>/dev/null");
+
+	return _json_get_ip_output(cmd);
+}
+
+static json_t *json_get_ip_addr(const char *ifname)
+{
+	char cmd[512] = {}; /* Size is arbitrary */
+
+	if (ifname)
+		snprintf(cmd, sizeof(cmd), "ip -j addr show dev %s 2>/dev/null", ifname);
+	else
+		snprintf(cmd, sizeof(cmd), "ip -j addr show 2>/dev/null");
+
+	return _json_get_ip_output(cmd);
 }
 
 static const char *get_yang_operstate(const char *operstate)
@@ -350,6 +367,117 @@ static int ly_add_ip_link_data(const struct ly_ctx *ctx, struct lyd_node **paren
 		return SR_ERR_LY;
 	}
 
+	j_val = json_object_get(iface, "address");
+	if (!json_is_string(j_val)) {
+		ERROR("Expected a JSON string for 'address'");
+		return SR_ERR_SYS;
+	}
+
+	err = lydx_new_path(ctx, parent, xpath, "phys-address", json_string_value(j_val));
+	if (err) {
+		ERROR("Error, adding 'phys-address' to data tree, libyang error %d", err);
+		return SR_ERR_LY;
+	}
+
+	return SR_ERR_OK;
+}
+
+static int ly_add_ip_addr_data(const struct ly_ctx *ctx, struct lyd_node **parent,
+			       char *xpath, json_t *j_iface, char *ifname)
+{
+	struct lyd_node *ipv4_node = NULL;
+	json_t *j_val;
+	json_t *j_arr;
+	size_t index;
+	int err;
+
+	err = lyd_new_path(*parent, ctx, xpath, NULL, 0, &ipv4_node);
+	if (err) {
+		ERROR("Failed adding 'ipv4' node (%s), libyang error %d: %s",
+		      xpath, err, ly_errmsg(ctx));
+		return SR_ERR_LY;
+	}
+
+	/**
+	 * TODO: Not sure how to handle loopback MTU (65536) which is
+	 * out of bounds for both YANG and uint16_t. For now, we skip it.
+	 */
+	if (strcmp(ifname, "lo") != 0) {
+		j_val = json_object_get(j_iface, "mtu");
+		if (!json_is_integer(j_val)) {
+			ERROR("Expected a JSON integer for 'mtu'");
+			return SR_ERR_SYS;
+		}
+
+		err = lydx_new_path(ctx, &ipv4_node, xpath, "mtu", "%lld",
+				    json_integer_value(j_val));
+		if (err) {
+			ERROR("Error, adding 'mtu' to data tree, libyang error %d", err);
+			return SR_ERR_LY;
+		}
+	}
+
+	j_arr = json_object_get(j_iface, "addr_info");
+	if (!json_is_array(j_arr)) {
+		ERROR("Expected a JSON array for 'addr_info'");
+		return SR_ERR_SYS;
+	}
+
+	json_array_foreach(j_arr, index, j_val) {
+		struct lyd_node *addr_node = NULL;
+		char *addr_xpath;
+		json_t *j_family;
+		json_t *j_local;
+		json_t *j_prefix;
+		const char *ip;
+
+		j_family = json_object_get(j_val, "family");
+		if (!json_is_string(j_family)) {
+			ERROR("Expected a JSON string for ipv4 'family'");
+			return SR_ERR_SYS;
+		}
+		/* TODO: We only handle ipv4 for now */
+		if (strcmp(json_string_value(j_family), "inet") != 0)
+			continue;
+
+		j_local = json_object_get(j_val, "local");
+		if (!json_is_string(j_local)) {
+			ERROR("Expected a JSON string for ipv4 'local'");
+			return SR_ERR_SYS;
+		}
+		ip = json_string_value(j_local);
+
+		err = asprintf(&addr_xpath, "%s/address[ip='%s']", xpath, ip);
+		if (err == -1) {
+			ERROR("Error, creating address xpath");
+			return SR_ERR_SYS;
+		}
+
+		err = lyd_new_path(ipv4_node, ctx, addr_xpath, NULL, 0, &addr_node);
+		if (err) {
+			ERROR("Failed adding ipv4 'address' node (%s), libyang error %d: %s",
+			      addr_xpath, err, ly_errmsg(ctx));
+			free(addr_xpath);
+			return SR_ERR_LY;
+		}
+
+		j_prefix = json_object_get(j_val, "prefixlen");
+		if (!json_is_integer(j_prefix)) {
+			ERROR("Expected a JSON integer for ipv4 'prefixlen'");
+			free(addr_xpath);
+			return SR_ERR_SYS;
+		}
+
+		err = lydx_new_path(ctx, &addr_node, addr_xpath, "prefix-length",
+				    "%lld", json_integer_value(j_prefix));
+		if (err) {
+			ERROR("Error, adding ipv4 'prefix-length' to data tree, libyang error %d", err);
+			free(addr_xpath);
+			return SR_ERR_LY;
+		}
+		free(addr_xpath);
+	}
+
 	return SR_ERR_OK;
 }
 
@@ -382,6 +510,42 @@ static int ly_add_ip_link(const struct ly_ctx *ctx, struct lyd_node **parent, ch
 		json_decref(j_root);
 		return err;
 	}
+
+	json_decref(j_root);
+
+	return SR_ERR_OK;
+}
+
+static int ly_add_ip_addr(const struct ly_ctx *ctx, struct lyd_node **parent, char *ifname)
+{
+	char xpath[XPATH_MAX] = {};
+	json_t *j_root;
+	json_t *j_iface;
+	int err;
+
+	j_root = json_get_ip_addr(ifname);
+	if (!j_root) {
+		ERROR("Error, parsing ip-addr JSON");
+		return SR_ERR_SYS;
+	}
+	if (json_array_size(j_root) != 1) {
+		ERROR("Error, expected JSON array of single iface");
+		json_decref(j_root);
+		return SR_ERR_SYS;
+	}
+
+	j_iface = json_array_get(j_root, 0);
+
+	snprintf(xpath, sizeof(xpath), "%s/interface[name='%s']/ietf-ip:ipv4",
+		 XPATH_IFACE_BASE, ifname);
+
+	err = ly_add_ip_addr_data(ctx, parent, xpath, j_iface, ifname);
+	if (err) {
+		ERROR("Error, adding ip-addr info for %s", ifname);
+		json_decref(j_root);
+		return err;
+	}
+
 	json_decref(j_root);
 
 	return SR_ERR_OK;
@@ -411,6 +575,10 @@ static int sr_ifaces_cb(sr_session_ctx_t *session, uint32_t, const char *path,
 	}
 
 	err = ly_add_ip_link(ctx, parent, sub->ifname);
+	if (err)
+		ERROR("Error, adding ip link info");
+
+	err = ly_add_ip_addr(ctx, parent, sub->ifname);
 	if (err)
 		ERROR("Error, adding ip link info");
 
