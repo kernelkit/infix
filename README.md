@@ -1,4 +1,4 @@
-<img align="right" src="doc/image930-scaled.png" alt="Linux Networking Made Easy">
+![Infix - Linux <3 NETCONF](doc/logo.png)
 
 Introduction
 ------------
