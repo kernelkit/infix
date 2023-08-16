@@ -2,16 +2,15 @@ Contributing to Infix
 =====================
 
 We welcome any and all help in the form of bug reports, fixes, patches
-to add new features -- *preferably as GitHub pull requests*.  Other
-methods are of course also possible: emailing the [maintainers][1] a
-patch or even a raw file, a feature request or an alert of a problem.
+to add new features -- *preferably as GitHub pull requests*.
 
-If you are unsure of what to do, or how to implement an idea or bugfix,
-open an issue with `"[RFC: Unsure if this is a bug ... ?"`, or use the
-GitHub discussions forum, so we can discuss it.  Talking about the code
-first is the best way to get started before submitting a pull request.
+If you are unsure of what to do, or how to implement an idea or bug fix,
+open an issue with `"[RFC]: Unsure if this is a bug ... ?"`, or use the
+[GitHub discussions forum](https://github.com/orgs/kernelkit/discussions).
+Talking about code and problems first is often the best way to get started
+before submitting a pull request.
 
-Either way, when sending an email, patch, or pull request, start by
+When submitting a bug report, patch, or pull request, please start by
 stating the version the change is made against, what it does, and why.
 
 Please take care to ensure you follow the project coding style and the
@@ -72,7 +71,6 @@ The *"maintainers have the right and responsibility to remove, edit,
 or reject comments, commits, code, wiki edits, issues, and other
 contributions that are not aligned to this Code of Conduct."*
 
-[1]:        ../doc/MAINTAINERS
 [KNF]:      https://en.wikipedia.org/wiki/Kernel_Normal_Form
 [gitbook]:  https://git-scm.com/book/ch5-2.html
 [conduct]:  CODE-OF-CONDUCT.md
