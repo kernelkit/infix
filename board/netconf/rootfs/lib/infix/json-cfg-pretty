@@ -1,0 +1,99 @@
+#!/bin/bash
+
+CYAN='\033[0;36m' # Used in headers
+NC='\033[0m' # No Color
+
+usage() {
+    printf "Please provide a valid base field as the first argument\n"
+    exit 1
+}
+
+if [ -z "$1" ]; then
+    usage
+fi
+
+json=$(cat)
+
+show_ietf_interface() {
+    name="$1"
+    shift
+
+    iface=$(echo "$json" | jq --arg name "$name" \
+            '.["ietf-interfaces:interfaces"].interface[] | select(.name == $name)')
+    if [ -z "$iface" ]; then
+        printf "Error, interface named \"$name\" not found"
+        exit 1
+    fi
+
+    printf "%-20s : %s\n" "name" "$name"
+    printf "%-20s : %s\n" "interface-index" "$(echo "$iface" | jq -r '.["if-index"]')"
+    printf "%-20s : %s\n" "operational-status" "$(echo "$iface" | jq -r '.["oper-status"]')"
+    printf "%-20s : %s\n" "physical-address" "$(echo "$iface" | jq -r '.["phys-address"]')"
+
+    # MTU isn't set for loopback
+    mtu="$(echo "$iface" | jq -r '.["ietf-ip:ipv4"] | select(.mtu != null) | .mtu')"
+    if [ -n "$mtu" ]; then
+        printf "%-20s : %s\n" "mtu" "$mtu"
+    fi
+
+    printf "\n${CYAN}%-5s${NC}\n" "ipv4:"
+    addresses=$(echo "$iface" | jq -c --arg field "$field" '.["ietf-ip:ipv4"].address[]' 2>/dev/null)
+    for addr in $addresses; do
+        ip="$(echo "$addr" | jq -r '."ip"')"
+        prefix="$(echo "$addr" | jq -r '."prefix-length"')"
+        printf "%-5s %s/%s\n" "" "$ip" "$prefix"
+    done
+
+    printf "\n${CYAN}%-5s %5s\n${NC}" "in:" "octets"
+    printf "%-5s %s\n" "" "$(echo "$iface" | jq -r '.statistics["in-octets"]')"
+
+    printf "\n${CYAN}%-5s %5s${NC}\n" "out:" "octets"
+    printf "%-5s %s\n" "" "$(echo "$iface" | jq -r '.statistics["out-octets"]')"
+}
+
+show_ietf_interfaces() {
+    field="ietf-interfaces:interfaces"
+
+    if [ $# -ne 0 ]; then
+        show_ietf_interface "$1"
+        return
+    fi
+
+    interfaces=$(echo "$json" | jq -c --arg field "$field" '.[$field].interface[]')
+
+    printf "${CYAN}%-15s %-15s %-18s %s${NC}\n" "NAME" "STATE" "MAC" "IPv4"
+    for iface in $interfaces; do
+        name="$(echo "$iface" | jq -r '.["name"]')"
+        status="$(echo "$iface" | jq -r '.["oper-status"]')"
+        mac="$(echo "$iface" | jq -r '.["phys-address"]')"
+        printf "%-15s %-15s %-18s " "$name" "$status" "$mac"
+
+        addresses=$(echo "$iface" | jq -c --arg field "$field" '.["ietf-ip:ipv4"].address[]' 2>/dev/null)
+        first="true"
+        for addr in $addresses; do
+            ip="$(echo "$addr" | jq -r '."ip"')"
+            prefix="$(echo "$addr" | jq -r '."prefix-length"')"
+            if [ $first = "true" ]; then
+                printf "%s/%s\n" "$ip" "$prefix"
+                first="false"
+            else
+                printf "%-50s %s/%s\n" "" "$ip" "$prefix"
+            fi
+        done
+        if [ $first = "true" ]; then
+            printf "\n"
+        fi
+    done
+}
+
+field="$1"
+shift
+
+case "$field" in
+    "ietf-interfaces")
+        show_ietf_interfaces $*
+        ;;
+    *)
+        usage
+        ;;
+esac
