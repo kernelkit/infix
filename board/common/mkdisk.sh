@@ -30,14 +30,14 @@ dimension()
 	cfgsize=$((256 << M))
 	# var is at least ~1.75G
     elif [ $total -ge $((1 << G)) ]; then
-	bootsize=$(( 4 << M))
-	auxsize=$((  4 << M))
+	bootsize=$(( 8 << M))
+	auxsize=$((  8 << M))
 	imgsize=$((256 << M))
 	cfgsize=$(( 64 << M))
 	# var is at least ~0.5G
     elif [ $total -ge $((512 << M)) ]; then
-	bootsize=$(( 4 << M))
-	auxsize=$((  4 << M))
+	bootsize=$(( 8 << M))
+	auxsize=$((  8 << M))
 	imgsize=$((192 << M))
 	cfgsize=$(( 16 << M))
 	# var is at least ~100M
@@ -80,7 +80,7 @@ probeboot()
 
 genboot()
 {
-    if [ -d $BINARIES_DIR/efi-part/EFI ]; then
+    if [ -d "$bootdata" ]; then
 	bootimg=$(cat <<EOF
 image efi-part.vfat {
 	size = $bootsize
@@ -102,6 +102,17 @@ EOF
 EOF
 		  )
 
+    elif [ -f "$bootdata" ]; then
+	bootpart=$(cat <<EOF
+	partition boot {
+		offset = $bootoffs
+		partition-type-uuid = U
+		bootable = true
+		image = $bootdata
+		size = $bootsize
+	}
+EOF
+		   )
     fi
 }
 
@@ -110,14 +121,21 @@ root=$BUILD_DIR/genimage.root
 tmp=$BUILD_DIR/genimage.tmp
 
 total=$((512 << M))
-bootoffs=
+bootoffs=$((32 << K))
+bootdata=
 bootimg=
 bootpart=
 
-while getopts "a:s:" opt; do
+while getopts "a:b:B:s:" opt; do
     case ${opt} in
 	a)
 	    arch=$OPTARG
+	    ;;
+	b)
+	    bootdata=$OPTARG
+	    ;;
+	B)
+	    bootoffs=$(($OPTARG))
 	    ;;
 	s)
 	    total=$(size2int $OPTARG)
@@ -157,7 +175,7 @@ awk \
 mkdir -p $root/aux
 cp -f $BINARIES_DIR/rootfs.itbh $root/aux/primary.itbh
 cp -f $BINARIES_DIR/rootfs.itbh $root/aux/secondary.itbh
-cp -f $BUILD_DIR/mkrauc/rauc.status $root/aux/rauc.status
+cp -f $BINARIES_DIR/rauc.status $root/aux/rauc.status
 
 case "$arch" in
     aarch64)
