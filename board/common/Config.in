@@ -31,7 +31,7 @@ menuconfig DISK_IMAGE
 	  - Creating a GNS3 appliance
 	  - Developing/debugging issues in the boot process in QEMU
 
-config DISK_IMAGE_SIZE
+menuconfig DISK_IMAGE_SIZE
 	string "Image size"
 	depends on DISK_IMAGE
 	default "512M"
@@ -43,6 +43,59 @@ config DISK_IMAGE_SIZE
 	  /cfg and /var partiotions.
 
 	  Minimum supported size is 512M.
+
+choice
+	prompt "Bootloader"
+	depends on DISK_IMAGE
+	default DISK_IMAGE_BOOT_EFI if BR2_x86_64
+	default DISK_IMAGE_BOOT_NONE
+
+config DISK_IMAGE_BOOT_NONE
+	bool "None"
+	help
+	  Do not create any bootloader partition in the disk image.
+
+config DISK_IMAGE_BOOT_EFI
+	bool "EFI"
+	help
+	  Create a boot partition from a directory containing an EFI
+	  boot application, e.g. GRUB.
+
+config DISK_IMAGE_BOOT_BIN
+	bool "Binary"
+	help
+	  Create a boot partition from a raw image containing the boot
+	  application, e.g. U-Boot.
+
+endchoice
+
+config DISK_IMAGE_BOOT_DATA
+	string "Bootloader data"
+	depends on DISK_IMAGE
+	depends on DISK_IMAGE_BOOT_EFI || DISK_IMAGE_BOOT_BIN
+	default "${BINARIES_DIR}/efi-part/EFI" if BR2_x86_64
+	help
+	  Path to the directory or file holding the bootloader data.
+
+config DISK_IMAGE_BOOT_OFFSET
+	hex "Bootloader offset"
+	depends on DISK_IMAGE
+	depends on DISK_IMAGE_BOOT_EFI || DISK_IMAGE_BOOT_BIN
+	default 0x8000
+	help
+	  Offset at which the bootloader partition is placed. Remember
+	  to make sure that the GPT still fits at the start of the
+	  image.
+
+config DISK_IMAGE_RELEASE_URL
+	string "Infix URL"
+	depends on DISK_IMAGE
+	depends on !BR2_TARGET_ROOTFS_SQUASHFS
+	default "https://github.com/kernelkit/infix/releases/download/latest/infix-${BR2_ARCH}.tar.gz"
+	help
+	  In situations where Infix itself is not being built, but a
+	  disk image is, i.e. when building a bootloader: place this
+	  Infix release in the primary and secondary partitions.
 
 menuconfig GNS3_APPLIANCE
 	bool "GNS3 Appliance"
