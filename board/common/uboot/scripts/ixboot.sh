@@ -2,9 +2,11 @@ for tgt in "${boot_targets}"; do
     if test "${tgt}" = "mmc0"; then
 	setenv devtype "mmc"
 	setenv devnum 0
+	mmc dev 0
     elif test "${tgt}" = "mmc1"; then
 	setenv devtype "mmc"
 	setenv devnum 1
+	mmc dev 1
     else
 	setenv devtype "${tgt}"
 	setenv devnum 0
