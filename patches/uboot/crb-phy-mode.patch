@@ -1,0 +1,13 @@
+Index: uboot-2023.07.02/arch/arm/dts/cn9130-crb.dtsi
+===================================================================
+--- uboot-2023.07.02.orig/arch/arm/dts/cn9130-crb.dtsi
++++ uboot-2023.07.02/arch/arm/dts/cn9130-crb.dtsi
+@@ -239,7 +239,7 @@
+ 
+ &cp0_eth0 {
+ 	status = "okay";
+-	phy-mode = "sfi";
++	phy-mode = "10gbase-r";
+ };
+ 
+ &cp0_eth1 {
