@@ -67,11 +67,20 @@ class IsolatedMacVlan:
         return self.run("/bin/sh", text=True, input=script,
                         stdout=subprocess.PIPE, stderr=subprocess.STDOUT, *args, **kwargs)
     
-    def addip(self, addr, subnet=24):
+    def addroute(self, subnet, nexthop, prefix_length=""):
+        if prefix_length:
+            prefix_length=f"/{prefix_length}"
+        
+        self.runsh(f"""
+            set -ex
+            ip route add {subnet}{prefix_length} via {nexthop}
+            """, check=True)
+
+    def addip(self, addr, prefix_length=24):
         self.runsh(f"""
             set -ex 
             ip link set iface up
-            ip addr add {addr}/{subnet} dev iface
+            ip addr add {addr}/{prefix_length} dev iface
             """, check=True)
     
     def ping(self, daddr, count=1, timeout=2, check=False):
@@ -86,3 +95,4 @@ class IsolatedMacVlan:
         res = self.ping(daddr)
         if res.returncode == 0:
             raise Exception(res.stdout)
+        
