@@ -950,7 +950,17 @@ static sr_error_t change_auth_done(augeas *aug, sr_session_ctx_t *session)
 
 	err = aug_save(aug);
 	if (err) {
-		ERROR("Error saving auth changes\n");
+		char **matches;
+
+		ERROR("Error saving auth changes:");
+		int num = aug_match(aug, "/augeas//error", &matches);
+		for (int i = 0; i < num; i++) {
+			ERROR("   %s", matches[i]);
+			free(matches[i]);
+		}
+		if (num)
+			free(matches);
+
 		return SR_ERR_SYS;
 	}
 
