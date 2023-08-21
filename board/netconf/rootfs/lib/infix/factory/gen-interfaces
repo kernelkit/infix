@@ -7,7 +7,7 @@ gen_interface()
     cat <<EOF
       ,{
         "name": "$1",
-        "type": "iana-if-type:ethernetCsmacd",
+        "type": "infix-if-type:ethernet",
         "ietf-ip:ipv6": {
 	    "enabled": true
 	}
@@ -27,7 +27,7 @@ cat <<EOF
     "interface": [
       {
         "name": "lo",
-        "type": "iana-if-type:softwareLoopback",
+        "type": "infix-if-type:loopback",
         "ietf-ip:ipv4": {
           "address": [{ "ip": "127.0.0.1", "prefix-length": 8 }]
         },

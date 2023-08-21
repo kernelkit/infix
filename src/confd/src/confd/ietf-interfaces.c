@@ -142,7 +142,7 @@ static int ifchange_cand_infer_vlan(sr_session_ctx_t *session, const char *path)
 	type = srx_get_str(session, "%s/type", xpath);
 	if (!type)
 		goto out;
-	if (strcmp(type, "iana-if-type:l2vlan"))
+	if (strcmp(type, "infix-if-type:vlan"))
 		goto out_free_type;
 
 	ifname = srx_get_str(session, "%s/name", xpath);
@@ -240,17 +240,17 @@ static int ifchange_cand_infer_type(sr_session_ctx_t *session, const char *path)
 	}
 
 	if (iface_is_phys(ifname))
-		inferred.data.string_val = "iana-if-type:ethernetCsmacd";
+		inferred.data.string_val = "infix-if-type:ethernet";
 	else if (!fnmatch("br+([0-9])", ifname, FNM_EXTMATCH))
-		inferred.data.string_val = "iana-if-type:bridge";
+		inferred.data.string_val = "infix-if-type:bridge";
 	else if (!fnmatch("lag+([0-9])", ifname, FNM_EXTMATCH))
-		inferred.data.string_val = "iana-if-type:ieee8023adLag";
+		inferred.data.string_val = "infix-if-type:lag";
 	else if (!fnmatch("veth+([0-9a-z_-])", ifname, FNM_EXTMATCH))
 		inferred.data.string_val = "infix-if-type:veth";
 	else if (!fnmatch("vlan+([0-9])", ifname, FNM_EXTMATCH))
-		inferred.data.string_val = "iana-if-type:l2vlan";
+		inferred.data.string_val = "infix-if-type:vlan";
 	else if (!fnmatch("*.+([0-9])", ifname, FNM_EXTMATCH))
-		inferred.data.string_val = "iana-if-type:l2vlan";
+		inferred.data.string_val = "infix-if-type:vlan";
 
 	free(ifname);
 
@@ -856,11 +856,11 @@ static int netdag_gen_afspec_add(struct dagger *net, struct lyd_node *dif,
 
 	DEBUG_IFACE(dif, "");
 
-	if (!strcmp(iftype, "iana-if-type:bridge")) {
+	if (!strcmp(iftype, "infix-if-type:bridge")) {
 		err = netdag_gen_bridge(net, dif, cif, ip, 1);
 	} else if (!strcmp(iftype, "infix-if-type:veth")) {
 		err = netdag_gen_veth(net, NULL, cif, ip);
-	} else if (!strcmp(iftype, "iana-if-type:l2vlan")) {
+	} else if (!strcmp(iftype, "infix-if-type:vlan")) {
 		err = netdag_gen_vlan(net, NULL, cif, ip);
 	} else {
 		ERROR("unsupported interface type \"%s\"", iftype);
@@ -880,9 +880,9 @@ static int netdag_gen_afspec_set(struct dagger *net, struct lyd_node *dif,
 
 	DEBUG_IFACE(dif, "");
 
-	if (!strcmp(iftype, "iana-if-type:bridge"))
+	if (!strcmp(iftype, "infix-if-type:bridge"))
 		return netdag_gen_bridge(net, dif, cif, ip, 0);
-	if (!strcmp(iftype, "iana-if-type:l2vlan"))
+	if (!strcmp(iftype, "infix-if-type:vlan"))
 		return netdag_gen_vlan(net, dif, cif, ip);
 	if (!strcmp(iftype, "infix-if-type:veth"))
 		return 0;
@@ -895,9 +895,9 @@ static bool netdag_must_del(struct lyd_node *dif, struct lyd_node *cif)
 {
 	const char *iftype = lydx_get_cattr(cif, "type");
 
-	if (!strcmp(iftype, "iana-if-type:bridge"))
+	if (!strcmp(iftype, "infix-if-type:bridge"))
 		return 0;
-	if (!strcmp(iftype, "iana-if-type:l2vlan"))
+	if (!strcmp(iftype, "infix-if-type:vlan"))
 		return lydx_get_cattr(dif, "parent-interface") ||
 			lydx_get_descendant(lyd_child(dif),
 					    "encapsulation",

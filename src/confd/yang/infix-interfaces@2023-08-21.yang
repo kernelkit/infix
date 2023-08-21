@@ -6,6 +6,9 @@ module infix-interfaces {
   include infix-if-bridge;
   include infix-if-veth;
 
+  import infix-if-type {
+    prefix infixift;
+  }
   import ietf-interfaces {
     prefix if;
   }
@@ -13,6 +16,12 @@ module infix-interfaces {
   organization "KernelKit";
   contact      "kernelkit@googlegroups.com";
   description  "Linux bridge and lag extensions for ietf-interfaces.";
+
+  revision 2023-08-21 {
+    description "Add deviation to if:type to limit the iana-if-types to
+                 only those supported, also reduce list for CLI <TAB>.";
+    reference "internal";
+  }
 
   revision 2023-06-05 {
     description "Initial revision.";
@@ -28,6 +37,14 @@ module infix-interfaces {
 
     choice port {
       description "An interface can only be member of either a bridge or a link aggregate.";
+    }
+  }
+
+  deviation "/if:interfaces/if:interface/if:type" {
+    deviate replace {
+      type identityref {
+	base infixift:infix-interface-type;
+      }
     }
   }
 

@@ -76,8 +76,8 @@ sysrepoctl -s $SEARCH							\
 	   -i ietf-if-vlan-encapsulation@2023-01-26.yang		\
 		-g wheel -p 0660 					\
 	   -i infix-ip@2023-04-24.yang		-g wheel -p 0660	\
-	   -i infix-if-type@2023-06-09.yang	-g wheel -p 0660	\
-	   -i infix-interfaces@2023-06-05.yang	-g wheel -p 0660	\
+	   -i infix-if-type@2023-08-21.yang	-g wheel -p 0660	\
+	   -i infix-interfaces@2023-08-21.yang	-g wheel -p 0660	\
 		-e vlan-filtering					\
 	   -i infix-shell-type@2023-08-21.yang	-g wheel -p 0660	\
 	   -i infix-system@2023-08-15.yang	-g wheel -p 0660	\

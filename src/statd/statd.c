@@ -267,24 +267,24 @@ static const char *get_yang_link_type(char *xpath, json_t *iface)
 
 		j_val = json_object_get(iface, "linkinfo");
 		if (!j_val)
-			return "iana-if-type:ethernetCsmacd";
+			return "infix-if-type:ethernet";
 
 		j_val = json_object_get(j_val, "info_kind");
 		if (!j_val)
-			return "iana-if-type:ethernetCsmacd";
+			return "infix-if-type:ethernet";
 
 		if (!json_is_string(j_val)) {
 			ERROR("Expected a JSON string for 'info_kind'");
-			return "iana-if-type:other";
+			return "infix-if-type:other";
 		}
 		kind = json_string_value(j_val);
 
 		if (strcmp(kind, "veth") == 0)
 			return "infix-if-type:veth";
 		if (strcmp(kind, "vlan") == 0)
-			return "iana-if-type:l2vlan";
+			return "infix-if-type:vlan";
 		if (strcmp(kind, "bridge") == 0)
-			return "iana-if-type:bridge";
+			return "infix-if-type:bridge";
 
 		/**
 		 * We could return ethernetCsmacd here, but it might hide some
@@ -292,15 +292,15 @@ static const char *get_yang_link_type(char *xpath, json_t *iface)
 		 */
 		ERROR("Unable to determine info_kind for \"%s\"", xpath);
 
-		return "iana-if-type:other";
+		return "infix-if-type:other";
 	}
 
 	if (strcmp(type, "loopback") == 0)
-		return "iana-if-type:softwareLoopback";
+		return "infix-if-type:loopback";
 
-	ERROR("Unable to determine iana-if-type for \"%s\"", xpath);
+	ERROR("Unable to determine infix-if-type for \"%s\"", xpath);
 
-	return "iana-if-type:other";
+	return "infix-if-type:other";
 }
 
 static int ly_add_ip_link_data(const struct ly_ctx *ctx, struct lyd_node **parent,

@@ -1,0 +1,71 @@
+module infix-if-type {
+  yang-version 1.1;
+  namespace "urn:infix:types:ns:yang:1.0";
+  prefix infixift;
+
+  import iana-if-type {
+    prefix ianaift;
+  }
+
+  organization "KernelKit";
+  contact      "kernelkit@googlegroups.com";
+  description  "Infix extensions to IANA interfaces types";
+
+  revision 2023-08-21 {
+    description "Add infix-inteface-type to reduce number of supported
+                 interfaces.  The derived identities are based on both
+                 this new identity and their parent iana-if-type.";
+    reference "internal";
+  }
+
+  revision 2023-06-09 {
+    description "Initial revision.";
+    reference "internal";
+  }
+
+  /*
+   * Identities
+   */
+
+  identity infix-interface-type {
+    base ianaift:iana-interface-type;
+    description "Subset of supported iana-if-types.";
+  }
+
+  identity bridge {
+    base infix-interface-type;
+    base ianaift:bridge;
+    description "IEEE bridge interface.";
+  }
+  identity ethernet {
+    base infix-interface-type;
+    base ianaift:ethernetCsmacd;
+    description "Any Ethernet-like interfaces, regardless of speed, RFC 3635.";
+    reference   "RFC 3635";
+  }
+  identity lag {
+    base infix-interface-type;
+    base ianaift:ieee8023adLag;
+    description "IEEE link aggregate interface.";
+  }
+  identity loopback {
+    base infix-interface-type;
+    base ianaift:softwareLoopback;
+    description "Linux loopback interface.";
+  }
+  identity other {
+    base infix-interface-type;
+    base ianaift:other;
+    description "Other interface, i.e., unknown.";
+  }
+  identity veth {
+    base infix-interface-type;
+    base ianaift:ilan;
+    description "Linux virtual Ethernet pair.";
+  }
+  identity vlan {
+    base infix-interface-type;
+    base ianaift:l2vlan;
+    description "Layer 2 Virtual LAN using 802.1Q.";
+  }
+}
