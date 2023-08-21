@@ -20,12 +20,12 @@ with infamy.Test() as test:
                 "interface": [
                     {
                         "name": "br0",
-                        "type": "iana-if-type:bridge",
+                        "type": "infix-if-type:bridge",
                         "enabled": True,
                     },
                     {
                         "name": "br1",
-                        "type": "iana-if-type:bridge",
+                        "type": "infix-if-type:bridge",
                         "enabled": True,
                         "ipv4": {
                             "address": [
@@ -60,7 +60,7 @@ with infamy.Test() as test:
                     },
                     {
                         "name": tport,
-                        "type": "iana-if-type:ethernetCsmacd",
+                        "type": "infix-if-type:ethernet",
                         "enabled": True,
                         "infix-interfaces:bridge-port": {
                             "bridge": "br0"

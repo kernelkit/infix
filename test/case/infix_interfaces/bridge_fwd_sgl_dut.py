@@ -31,12 +31,12 @@ with infamy.Test() as test:
                 "interface": [
                     {
                         "name": "br0",
-                        "type": "iana-if-type:bridge",
+                        "type": "infix-if-type:bridge",
                         "enabled": True,
                     },
                     {
                         "name": tport0,
-                        "type": "iana-if-type:ethernetCsmacd",
+                        "type": "infix-if-type:ethernet",
                         "enabled": True,
                         "infix-interfaces:bridge-port": {
                             "bridge": "br0"
@@ -44,7 +44,7 @@ with infamy.Test() as test:
                     },
                     {
                         "name": tport1,
-                        "type": "iana-if-type:ethernetCsmacd",
+                        "type": "infix-if-type:ethernet",
                         "enabled": True,
                         "infix-interfaces:bridge-port": {
                             "bridge": "br0"

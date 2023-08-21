@@ -18,7 +18,7 @@ with infamy.Test() as test:
                 "interface": [
                     {
                         "name": tport,
-                        "type": "iana-if-type:ethernetCsmacd",
+                        "type": "infix-if-type:ethernet",
                         "enabled": True,
                         "ipv4": {
                             "autoconf": {

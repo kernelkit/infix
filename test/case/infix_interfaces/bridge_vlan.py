@@ -22,7 +22,7 @@ with infamy.Test() as test:
                 "interface": [
                     {
                         "name": "br0",
-                        "type": "iana-if-type:bridge",
+                        "type": "infix-if-type:bridge",
                         "enabled": True,
                         "bridge": {
                             "vlans": {
@@ -39,7 +39,7 @@ with infamy.Test() as test:
                     },
                     {
                         "name": "vlan10",
-                        "type": "iana-if-type:l2vlan",
+                        "type": "infix-if-type:vlan",
                         "enabled": True,
                         "parent-interface": "br0",
                         "encapsulation": {
@@ -61,7 +61,7 @@ with infamy.Test() as test:
                     },
                     {
                         "name": tport,
-                        "type": "iana-if-type:ethernetCsmacd",
+                        "type": "infix-if-type:ethernet",
                         "enabled": True,
                         "infix-interfaces:bridge-port": {
                             "pvid": 10,
