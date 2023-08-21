@@ -13,12 +13,6 @@ CONFD_LICENSE_FILES = LICENSE
 CONFD_DEPENDENCIES = augeas jansson libite sysrepo
 CONFD_AUTORECONF = YES
 
-ifeq ($(BR2_SYSTEM_BIN_SH_BASH),y)
-CONFD_CONF_OPTS += --with-login-shell=/bin/bash
-else
-CONFD_CONF_OPTS += --with-login-shell=/bin/sh
-endif
-
 define CONFD_INSTALL_EXTRA
 	cp $(CONFD_PKGDIR)/sysrepo.conf  $(FINIT_D)/available/
 	ln -sf ../available/sysrepo.conf $(FINIT_D)/enabled/sysrepo.conf
