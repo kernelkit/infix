@@ -79,7 +79,7 @@ with infamy.Test() as test:
             "interfaces": {
                 "interface": [{
                     "name": f"{interface_name}",
-                    "type": "iana-if-type:ethernetCsmacd",
+                    "type": "infix-if-type:ethernet",
                     "ipv4": {
                         "address": [{
                             "ip": f"{new_ip_address}",

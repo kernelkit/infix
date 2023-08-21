@@ -24,7 +24,7 @@ def config_target(target, tport0, tport1, enable_fwd):
                 "interface": [
                     {
                         "name": tport0,
-                        "type": "iana-if-type:ethernetCsmacd",
+                        "type": "infix-if-type:ethernet",
                         "enabled": True,
                         "ipv4": {
                             "forwarding": enable_fwd,
@@ -36,7 +36,7 @@ def config_target(target, tport0, tport1, enable_fwd):
                     },
                     {
                         "name": tport1,
-                        "type": "iana-if-type:ethernetCsmacd",
+                        "type": "infix-if-type:ethernet",
                         "enabled": True,
                         "ipv4": {
                             "forwarding": enable_fwd,

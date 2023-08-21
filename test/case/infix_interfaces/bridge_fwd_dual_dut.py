@@ -36,7 +36,7 @@ with infamy.Test() as test:
                 "interface": [
                     {
                         "name": "br0",
-                        "type": "iana-if-type:bridge",
+                        "type": "infix-if-type:bridge",
                         "enabled": True,
                         "bridge": {
                             "vlans": {
@@ -52,7 +52,7 @@ with infamy.Test() as test:
                     },
                     {
                         "name": tport10,
-                        "type": "iana-if-type:ethernetCsmacd",
+                        "type": "infix-if-type:ethernet",
                         "enabled": True,
                         "infix-interfaces:bridge-port": {
                             "pvid": 10,
@@ -61,7 +61,7 @@ with infamy.Test() as test:
                     },
                     {
                         "name": tport11,
-                        "type": "iana-if-type:ethernetCsmacd",
+                        "type": "infix-if-type:ethernet",
                         "enabled": True,
                         "infix-interfaces:bridge-port": {
                             "pvid": 10,
@@ -70,7 +70,7 @@ with infamy.Test() as test:
                     },
                     {
                         "name": tport12,
-                        "type": "iana-if-type:ethernetCsmacd",
+                        "type": "infix-if-type:ethernet",
                         "enabled": True,
                         "infix-interfaces:bridge-port": {
                             "bridge": "br0",
@@ -85,7 +85,7 @@ with infamy.Test() as test:
                 "interface": [
                     {
                         "name": "br0",
-                        "type": "iana-if-type:bridge",
+                        "type": "infix-if-type:bridge",
                         "enabled": True,
                         "bridge": {
                             "vlans": {
@@ -101,7 +101,7 @@ with infamy.Test() as test:
                     },
                     {
                         "name": tport20,
-                        "type": "iana-if-type:ethernetCsmacd",
+                        "type": "infix-if-type:ethernet",
                         "enabled": True,
                         "infix-interfaces:bridge-port": {
                             "pvid": 10,
@@ -110,7 +110,7 @@ with infamy.Test() as test:
                     },
                     {
                         "name": tport21,
-                        "type": "iana-if-type:ethernetCsmacd",
+                        "type": "infix-if-type:ethernet",
                         "enabled": True,
                         "infix-interfaces:bridge-port": {
                             "pvid": 10,
@@ -119,7 +119,7 @@ with infamy.Test() as test:
                     },
                     {
                         "name": tport22,
-                        "type": "iana-if-type:ethernetCsmacd",
+                        "type": "infix-if-type:ethernet",
                         "enabled": True,
                         "infix-interfaces:bridge-port": {
                             "bridge": "br0",

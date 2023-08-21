@@ -15,12 +15,12 @@ with infamy.Test() as test:
                 "interface": [
                     {
                         "name": tport,
-                        "type": "iana-if-type:ethernetCsmacd",
+                        "type": "infix-if-type:ethernet",
                         "enabled": True,
                     },
                     {
                         "name": f"{tport}.10",
-                        "type": "iana-if-type:l2vlan",
+                        "type": "infix-if-type:vlan",
                         "parent-interface": tport,
                         "encapsulation": {
                             "dot1q-vlan": {
