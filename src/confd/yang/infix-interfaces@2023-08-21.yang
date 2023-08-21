@@ -3,9 +3,6 @@ module infix-interfaces {
   namespace "urn:infix:interfaces:ns:yang:1.0";
   prefix infix-if;
 
-  include infix-if-bridge;
-  include infix-if-veth;
-
   import infix-if-type {
     prefix infixift;
   }
@@ -13,13 +10,22 @@ module infix-interfaces {
     prefix if;
   }
 
+  include infix-if-base;
+  include infix-if-bridge;
+  include infix-if-veth;
+
   organization "KernelKit";
   contact      "kernelkit@googlegroups.com";
   description  "Linux bridge and lag extensions for ietf-interfaces.";
 
   revision 2023-08-21 {
-    description "Add deviation to if:type to limit the iana-if-types to
-                 only those supported, also reduce list for CLI <TAB>.";
+    description "Move port augment to submodule for infix-if-bridge and
+                 infix-if-lag (later) which reference it.
+
+                 Add deviation to if:type to limit the iana-if-types to
+                 only those supported, also reduce list for CLI <TAB>.
+
+                 Lint: move include and import to match canonical order.";
     reference "internal";
   }
 
@@ -31,14 +37,6 @@ module infix-interfaces {
   /*
    * Data Nodes
    */
-
-  augment "/if:interfaces/if:interface" {
-    description "Augments the interface model with mutually exclusive guards.";
-
-    choice port {
-      description "An interface can only be member of either a bridge or a link aggregate.";
-    }
-  }
 
   deviation "/if:interfaces/if:interface/if:type" {
     deviate replace {
