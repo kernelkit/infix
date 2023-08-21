@@ -9,6 +9,13 @@ GREY_BG="\e[48;5;235m"
 RESET="\e[0m"
 
 HEADER_WIDHT=80
+declare -A IETF_TYPE_MAP
+
+IETF_TYPE_MAP["iana-if-type:softwareLoopback"]="loopback"
+IETF_TYPE_MAP["iana-if-type:ethernetCsmacd"]="ethernet"
+IETF_TYPE_MAP["iana-if-type:l2vlan"]="vlan"
+IETF_TYPE_MAP["infix-if-type:veth"]="veth"
+IETF_TYPE_MAP["iana-if-type:bridge"]="bridge"
 
 usage() {
     printf "Please provide a valid base field as the first argument\n"
@@ -68,7 +75,7 @@ show_ietf_interfaces() {
 
     interfaces=$(echo "$json" | jq -c --arg field "$field" '.[$field].interface[]')
 
-    HEADER=$(printf "%-15s %-14s %s\n" "INTERFACE" "STATE" "PROTOCOL/ADDRESS")
+    HEADER=$(printf "%-15s %-14s %-25s %s\n" "INTERFACE" "STATE" "PROTOCOL/ADDRESS" "SOURCE")
     HEADER_LEN=${#HEADER}
     RIGHT_PADDING=$(( HEADER_WIDHT - HEADER_LEN ))
 
@@ -78,17 +85,24 @@ show_ietf_interfaces() {
         name="$(echo "$iface" | jq -r '.["name"]')"
         state="$(echo "$iface" | jq -r '.["oper-status"]')"
         mac="$(echo "$iface" | jq -r '.["phys-address"]')"
+        type="$(echo "$iface" | jq -r '.["type"]')"
         state_color=""
+
+        if [[ -v IETF_TYPE_MAP["$type"] ]]; then
+            src="${IETF_TYPE_MAP["$type"]}"
+        else
+            src="unknown"
+        fi
 
         if [ "$state" = "up" ]; then
             state_color="$GREEN"
         elif [ "$state" = "down" ]; then
             state_color="$RED"
         fi
-        printf "%-15s ${state_color}%-15s${NC}" "$name" "$state"
+        printf "%-15s ${state_color}%-15s${NC}%s" "$name" "$state"
 
         addresses=$(echo "$iface" | jq -c --arg field "$field" '.["ietf-ip:ipv4"].address[]' 2>/dev/null)
-        printf "%s\n" "$mac"
+        printf "%-25s %s\n" "$mac" "$src"
         for addr in $addresses; do
             ip="$(echo "$addr" | jq -r '."ip"')"
             prefix="$(echo "$addr" | jq -r '."prefix-length"')"
