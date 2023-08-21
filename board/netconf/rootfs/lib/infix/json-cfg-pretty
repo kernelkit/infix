@@ -5,6 +5,11 @@ RED='\033[0;31m'
 GREEN='\033[0;32m'
 NC='\033[0m' # No Color
 
+GREY_BG="\e[48;5;235m"
+RESET="\e[0m"
+
+HEADER_WIDHT=80
+
 usage() {
     printf "Please provide a valid base field as the first argument\n"
     exit 1
@@ -63,7 +68,12 @@ show_ietf_interfaces() {
 
     interfaces=$(echo "$json" | jq -c --arg field "$field" '.[$field].interface[]')
 
-    printf "${CYAN}%-15s %-15s %-18s %s${NC}\n" "NAME" "STATE" "MAC" "IPv4"
+    HEADER=$(printf "%-15s %-15s %-18s %s\n" "NAME" "STATE" "MAC" "IPv4")
+    HEADER_LEN=${#HEADER}
+    RIGHT_PADDING=$(( HEADER_WIDHT - HEADER_LEN ))
+
+    printf "${GREY_BG}%s%${RIGHT_PADDING}s${RESET}\n" "$HEADER" ""
+
     for iface in $interfaces; do
         name="$(echo "$iface" | jq -r '.["name"]')"
         state="$(echo "$iface" | jq -r '.["oper-status"]')"
