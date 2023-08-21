@@ -9,6 +9,10 @@ module infix-system {
   import iana-timezones {
     prefix iana-tz;
   }
+  import infix-shell-type {
+    prefix infixsh;
+  }
+
   include infix-system-software;
 
   organization "KernelKit";
@@ -32,12 +36,20 @@ module infix-system {
     reference "internal";
   }
 
+  /*
+   * Typedefs
+   */
+
   typedef username {
     type string {
       length "1..256";
       pattern "[_a-zA-Z0-9][-._a-zA-Z0-9]*$?";
     }
   }
+
+  /*
+   * Data nodes
+   */
 
   augment "/sys:system" {
     description "Augment of ietf-system for modifying /etc/motd.";
@@ -50,9 +62,11 @@ module infix-system {
   augment "/sys:system/sys:authentication/sys:user" {
     description "Augment of ietf-system to support setting login shell for users.";
     leaf shell {
-      type string;
-      default "/bin/clish";
-      description "Set UNIX login shell for user, e.g., /bin/bash";
+      type identityref {
+	base infixsh:shell-type;
+      }
+      default infixsh:false;
+      description "Set UNIX login shell for user, default: none (security)";
     }
   }
 

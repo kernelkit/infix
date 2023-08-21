@@ -584,7 +584,7 @@ static int is_valid_username(const char *user)
 
 static char *sys_find_usable_shell(sr_session_ctx_t *sess, char *name)
 {
-	char *shell = NULL;
+	char *shell = NULL, *conf = NULL;
 	char xpath[256];
 	sr_data_t *cfg;
 
@@ -593,17 +593,29 @@ static char *sys_find_usable_shell(sr_session_ctx_t *sess, char *name)
 		struct lyd_node *node;
 
 		if (!lyd_find_path(cfg->tree, xpath, 0, &node))
-			shell = (char *)lyd_get_value(node);
+			conf = (char *)lyd_get_value(node);
 	}
 
-	/* Verify the given shell exists (and is a login shell) */
-	if (!shell)
-		shell = LOGIN_SHELL;
-	else if (!whichp(shell))
-		shell = LOGIN_SHELL;
+	/* Verify the configured shell exists (and is a login shell) */
+	if (conf) {
+		struct { char *name, *shell; } shells[] = {
+			{ "infix-shell-type:sh",    "/bin/sh"    },
+			{ "infix-shell-type:bash",  "/bin/bash"  },
+			{ "infix-shell-type:clish", "/bin/clish" },
+			{ "infix-shell-type:false", "/bin/false" },
+		};
 
-	if (!whichp(shell))
-		shell = _PATH_BSHELL;
+		for (size_t i = 0; i < NELEMS(shells); i++) {
+			if (strcmp(shells[i].name, conf))
+				continue;
+
+			shell = shells[i].shell;
+			break;
+		}
+	}
+
+	if (!shell || !whichp(shell))
+		shell = LOGIN_SHELL;
 
 	shell = strdup(shell);
 	sr_release_data(cfg);
