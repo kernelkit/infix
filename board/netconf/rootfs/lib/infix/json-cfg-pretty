@@ -68,7 +68,7 @@ show_ietf_interfaces() {
 
     interfaces=$(echo "$json" | jq -c --arg field "$field" '.[$field].interface[]')
 
-    HEADER=$(printf "%-15s %-15s %-18s %s\n" "NAME" "STATE" "MAC" "IPv4")
+    HEADER=$(printf "%-15s %-14s %s\n" "INTERFACE" "STATE" "PROTOCOL/ADDRESS")
     HEADER_LEN=${#HEADER}
     RIGHT_PADDING=$(( HEADER_WIDHT - HEADER_LEN ))
 
@@ -85,21 +85,16 @@ show_ietf_interfaces() {
         elif [ "$state" = "down" ]; then
             state_color="$RED"
         fi
-        printf "%-15s ${state_color}%-15s${NC} %-18s " "$name" "$state" "$mac"
+        printf "%-15s ${state_color}%-15s${NC}" "$name" "$state"
 
         addresses=$(echo "$iface" | jq -c --arg field "$field" '.["ietf-ip:ipv4"].address[]' 2>/dev/null)
-        first="true"
+        printf "%s\n" "$mac"
         for addr in $addresses; do
             ip="$(echo "$addr" | jq -r '."ip"')"
             prefix="$(echo "$addr" | jq -r '."prefix-length"')"
-            if [ $first = "true" ]; then
-                printf "%s/%s\n" "$ip" "$prefix"
-                first="false"
-            else
-                printf "%-50s %s/%s\n" "" "$ip" "$prefix"
-            fi
+            printf "%-30s %s/%s\n" "" "$ip" "$prefix"
         done
-        if [ $first = "true" ]; then
+        if [ -n "$addresses" ]; then
             printf "\n"
         fi
     done
