@@ -1,0 +1,17 @@
+diff -ruN tcpdump-4.99.4.orig/tcpdump.c tcpdump-4.99.4/tcpdump.c
+--- tcpdump-4.99.4.orig/tcpdump.c	2023-04-07 20:30:58.000000000 +0200
++++ tcpdump-4.99.4/tcpdump.c	2023-07-17 18:08:51.322519509 +0200
+@@ -2535,12 +2535,7 @@
+ 		 * to a file from the -V file).  Print a message to
+ 		 * the standard error on UN*X.
+ 		 */
+-		if (!ndo->ndo_vflag && !WFileName) {
+-			(void)fprintf(stderr,
+-			    "%s: verbose output suppressed, use -v[v]... for full protocol decode\n",
+-			    program_name);
+-		} else
+-			(void)fprintf(stderr, "%s: ", program_name);
++		(void)fprintf(stderr, "%s: ", program_name);
+ 		dlt = pcap_datalink(pd);
+ 		dlt_name = pcap_datalink_val_to_name(dlt);
+ 		(void)fprintf(stderr, "listening on %s", device);
