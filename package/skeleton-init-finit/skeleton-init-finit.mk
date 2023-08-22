@@ -39,7 +39,6 @@ ifeq ($(BR2_PACKAGE_AVAHI_DAEMON),y)
 define SKELETON_INIT_FINIT_SET_AVAHI
 	cp $(SKELETON_INIT_FINIT_AVAILABLE)/avahi.conf $(FINIT_D)/available/
 	cp $(SKELETON_INIT_FINIT_AVAILABLE)/avahi-dnsconfd.conf $(FINIT_D)/available/
-	ln -sf ../available/avahi.conf $(FINIT_D)/enabled/avahi.conf
 endef
 SKELETON_INIT_FINIT_POST_INSTALL_TARGET_HOOKS += SKELETON_INIT_FINIT_SET_AVAHI
 endif
@@ -103,7 +102,6 @@ endif
 ifeq ($(BR2_PACKAGE_LLDPD),y)
 define SKELETON_INIT_FINIT_SET_LLDPD
 	cp $(SKELETON_INIT_FINIT_AVAILABLE)/lldpd.conf $(FINIT_D)/available/
-	ln -sf ../available/lldpd.conf $(FINIT_D)/enabled/lldpd.conf
 endef
 SKELETON_INIT_FINIT_POST_INSTALL_TARGET_HOOKS += SKELETON_INIT_FINIT_SET_LLDPD
 endif
@@ -118,7 +116,6 @@ endif
 ifeq ($(BR2_PACKAGE_NETSNMP),y)
 define SKELETON_INIT_FINIT_SET_NETSNMP
 	cp $(SKELETON_INIT_FINIT_AVAILABLE)/snmpd.conf $(FINIT_D)/available/
-	ln -sf ../available/snmpd.conf $(FINIT_D)/enabled/snmpd.conf
 endef
 SKELETON_INIT_FINIT_POST_INSTALL_TARGET_HOOKS += SKELETON_INIT_FINIT_SET_NETSNMP
 endif
@@ -126,7 +123,6 @@ endif
 ifeq ($(BR2_PACKAGE_NGINX),y)
 define SKELETON_INIT_FINIT_SET_NGINX
 	cp $(SKELETON_INIT_FINIT_AVAILABLE)/nginx.conf $(FINIT_D)/available/
-	ln -sf ../available/nginx.conf $(FINIT_D)/enabled/nginx.conf
 endef
 SKELETON_INIT_FINIT_POST_INSTALL_TARGET_HOOKS += SKELETON_INIT_FINIT_SET_NGINX
 endif
@@ -216,7 +212,6 @@ endif
 ifeq ($(BR2_PACKAGE_SSDP_RESPONDER),y)
 define SKELETON_INIT_FINIT_SET_SSDP_RESPONDER
 	cp $(SKELETON_INIT_FINIT_AVAILABLE)/ssdpd.conf $(FINIT_D)/available/
-	ln -sf ../available/ssdpd.conf $(FINIT_D)/enabled/ssdpd.conf
 endef
 SKELETON_INIT_FINIT_POST_INSTALL_TARGET_HOOKS += SKELETON_INIT_FINIT_SET_SSDP_RESPONDER
 endif
@@ -252,11 +247,9 @@ endef
 SKELETON_INIT_FINIT_POST_INSTALL_TARGET_HOOKS += SKELETON_INIT_FINIT_SET_WATCHDOGD
 endif
 
-# Enable gdbserver when running in Qemu mode
-ifeq ($(QEMU_GDB),y)
+ifeq ($(BR2_TOOLCHAIN_EXTERNAL_GDB_SERVER_COPY),y)
 define SKELETON_INIT_FINIT_SET_GDBSERVER
 	cp $(SKELETON_INIT_FINIT_AVAILABLE)/gdbserver.conf $(FINIT_D)/available/
-	ln -sf ../available/gdbserver.conf $(FINIT_D)/enabled/gdbserver.conf
 endef
 SKELETON_INIT_FINIT_POST_INSTALL_TARGET_HOOKS += SKELETON_INIT_FINIT_SET_GDBSERVER
 endif
