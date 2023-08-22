@@ -1,8 +1,9 @@
 /* SPDX-License-Identifier: BSD-3-Clause */
 
+#include <srx/srx_module.h>
+#include <srx/common.h>
+
 #include "core.h"
-#include "../lib/srx_module.h"
-#include "../lib/common.h"
 
 static struct confd confd;
 

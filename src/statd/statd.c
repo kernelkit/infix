@@ -16,9 +16,9 @@
 #include <linux/if.h>
 #include <sys/queue.h>
 
-#include "common.h"
-#include "helpers.h"
-#include "lyx.h"
+#include <srx/common.h>
+#include <srx/helpers.h>
+#include <srx/lyx.h>
 
 #define XPATH_MAX PATH_MAX
 #define XPATH_IFACE_BASE "/ietf-interfaces:interfaces"

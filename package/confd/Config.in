@@ -5,6 +5,7 @@ config BR2_PACKAGE_CONFD
 	select BR2_PACKAGE_LIBITE
 	select BR2_PACKAGE_NETOPEER2
 	select BR2_PACKAGE_SYSREPO
+	select BR2_PACKAGE_LIBSRX
 	help
 	  A plugin to sysrepo that provides the core YANG models used to
 	  manage an Infix based system.  Configuration can be done using
