@@ -1,8 +1,10 @@
+/* SPDX-License-Identifier: BSD-3-Clause */
+
 #include <libite/lite.h>
+#include <srx/common.h>
 
 #include "core.h"
 #include "dagger.h"
-#include "../lib/common.h"
 
 #define PATH_ACTION_ "%s/%d/action/%s/%s"
 

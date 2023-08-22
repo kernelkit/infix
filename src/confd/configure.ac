@@ -1,10 +1,7 @@
 AC_PREREQ(2.61)
-AC_INIT([confd], [1.0.0],
-	[https://github.com/kernelkit/infix/issues])
+AC_INIT([confd], [1.0.0], [https://github.com/kernelkit/infix/issues])
 AM_INIT_AUTOMAKE(1.11 foreign subdir-objects)
 AM_SILENT_RULES(yes)
-
-LT_INIT
 
 AC_CONFIG_FILES([
 	Makefile
@@ -15,6 +12,7 @@ AC_CONFIG_FILES([
 
 AC_PROG_CC
 AC_PROG_INSTALL
+LT_INIT
 
 AC_CONFIG_LIBOBJ_DIR(lib)
 AC_REPLACE_FUNCS(vasprintf)
@@ -38,6 +36,7 @@ PKG_CHECK_MODULES([glib],    [glib-2.0 >= 2.50 gio-2.0 gio-unix-2.0])
 PKG_CHECK_MODULES([jansson], [jansson >= 2.0.0])
 PKG_CHECK_MODULES([libite],  [libite >= 2.5.0])
 PKG_CHECK_MODULES([sysrepo], [sysrepo >= 2.2.36])
+PKG_CHECK_MODULES([libsrx],  [libsrx >= 1.0.0])
 
 # Plugin installation path for sysrepo-plugind
 PKG_CHECK_VAR([srpdplugindir], [sysrepo], [SRPD_PLUGINS_PATH])

@@ -21,10 +21,11 @@
 #include <sysrepo/values.h>
 #include <sysrepo/xpath.h>
 
-#include "../lib/common.h"
+#include <srx/common.h>
+#include <srx/helpers.h>
+#include <srx/systemv.h>
+
 #include "dagger.h"
-#include "../lib/helpers.h"
-#include "systemv.h"
 
 #define CB_PRIO_PRIMARY   65535
 #define CB_PRIO_PASSIVE   65000

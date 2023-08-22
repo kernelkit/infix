@@ -3,9 +3,9 @@
 #include <jansson.h>
 #include <stdio.h>
 #include <ctype.h>
-#include "../lib/common.h"
-#include "../lib/helpers.h"
-#include "../lib/lyx.h"
+#include <srx/common.h>
+#include <srx/helpers.h>
+#include <srx/lyx.h>
 
 /* TODO: break out and find a reasonable value */
 #define XPATH_MAX PATH_MAX

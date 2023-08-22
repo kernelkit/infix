@@ -8,11 +8,12 @@
 #include <sys/sysinfo.h>
 #include <sys/types.h>
 
+#include <srx/common.h>
+#include <srx/lyx.h>
+#include <srx/srx_module.h>
+#include <srx/srx_val.h>
+
 #include "core.h"
-#include "../lib/common.h"
-#include "../lib/lyx.h"
-#include "../lib/srx_module.h"
-#include "srx_val.h"
 
 #define XPATH_BASE_    "/ietf-system:system"
 #define XPATH_AUTH_    XPATH_BASE_"/authentication"

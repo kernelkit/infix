@@ -1,11 +1,11 @@
 /* SPDX-License-Identifier: BSD-3-Clause */
+#include <sysrepo/error_format.h>
+
+#include <srx/common.h>
+#include <srx/lyx.h>
 
 #include "core.h"
-#include "../lib/common.h"
-#include "../lib/lyx.h"
 #include "rauc-installer.h"
-
-#include <sysrepo/error_format.h>
 
 #define SW_STATE_PATH_    "/ietf-system:system-state/infix-system:software"
 
