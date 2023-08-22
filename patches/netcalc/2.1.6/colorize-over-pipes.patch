@@ -1,0 +1,13 @@
+diff -ruN netcalc-2.1.6.orig/src/netcalc.c netcalc-2.1.6/src/netcalc.c
+--- netcalc-2.1.6.orig/src/netcalc.c	2020-06-07 00:07:47.000000000 +0200
++++ netcalc-2.1.6/src/netcalc.c	2023-07-17 20:46:27.798167801 +0200
+@@ -615,9 +615,6 @@
+ 	if (!abox_start)
+ 		err(1, "Fatal error");
+ 
+-	if (!isatty(STDIN_FILENO) || !isatty(STDOUT_FILENO))
+-		colorize = 0;
+-
+ 	if (split_errv4 || split_errv6 || range_err) {
+  nothing:
+ 		warnx("No (valid) commands received, nothing to do.");
