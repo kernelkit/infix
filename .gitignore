@@ -1,7 +1,9 @@
 *~
 .gdb_history
+/.backup
 /.ccache
 /dl
 /output*
+/x-*
 /test/.venv
 /local.mk
