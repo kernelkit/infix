@@ -57,7 +57,7 @@ inside the container will always be: `eth0`, `eth1`, etc.
 
 A common setup is to use a VETH pair, with one end in the container and
 the other end routed, or bridged, to the rest of the world.  The Infix
-[CLI Guide](cli.md) provides examples of both.  In either case you need
+[CLI Guide](cli/introduction.md) provides examples of both.  In either case you need
 to create a matching CNI profile for one end of the VETH pair before
 starting the container, here we use two network profiles, the default
 podman bridge and the VETH profile:
