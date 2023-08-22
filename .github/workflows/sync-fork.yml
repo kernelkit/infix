@@ -1,0 +1,26 @@
+# To enable automatic sync of your Infix fork every day, or on dispatch,
+# set the repoistory or organisation variable (not secret):
+#
+#     SYNC_FORK = 'true'
+#
+# See https://docs.github.com/en/actions/learn-github-actions/variables
+name: Synchronize your fork of Infix with upstream
+
+on:
+  schedule:
+    - cron: 42 2 * * *
+  workflow_dispatch:
+
+jobs:
+  sync_fork:
+    if: ${{github.repository_owner != 'kernelkit' && vars.SYNC_FORK == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: TobKed/github-forks-sync-action@master
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          upstream_repository: KernelKit/infix
+          upstream_branch: main
+          target_branch: main
+          force: true
+          tags: true
