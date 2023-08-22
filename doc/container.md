@@ -153,7 +153,7 @@ Automating start/stop at boot/reboot is documented in the next section.
 ### Hybrid Mode
 
 Since container setup and configuration is not modeled in YANG yet, we
-use the Infix *Hybrid mode*, also described in the README.
+use the Infix *Hybrid mode*, described in [Infix Variants](variant.md).
 
 To start containers in *Hybrid Mode*, provided the images have been
 downloaded with `podman pull docker://troglobit/buildroot:latest` and

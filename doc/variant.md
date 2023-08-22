@@ -63,6 +63,15 @@ To work around that we use the [run-parts(8)][] feature of the system,
 available in some customer specific images.  The system runs any user
 scripts in `/cfg/start.d` before leaving runlevel S (bootstrap).
 
+> **Note:** a vanilla Infix build does not support Hybrid Mode out of
+> the box.  You can enable it, and build your own images by adding the
+> following line to `board/common/rootfs/etc/finit.conf`:
+>
+>         runparts /cfg/start.d
+>
+> See the [Developer's Guide](developers-guide.md) for a build HowTo.
+
+
 ### Starting OSPF
 
 For example, the following starts OSPF:
