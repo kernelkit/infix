@@ -138,4 +138,7 @@ int infix_factory_init(struct confd *confd);
 /* infix-system-software.c */
 int infix_system_sw_init(struct confd *confd);
 
+/* infix-services.c */
+int infix_services_init(struct confd *confd);
+
 #endif	/* CONFD_CORE_H_ */
