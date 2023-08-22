@@ -1,0 +1,36 @@
+module infix-services {
+  yang-version 1.1;
+  namespace "urn:ietf:params:xml:ns:yang:infix-services";
+  prefix infix-svc;
+
+  organization "KernelKit";
+  contact      "kernelkit@googlegroups.com";
+  description  "Infix services, generic.";
+
+  revision 2023-08-22 {
+    description "Initial revision, add SSDP and mDNS/SD enable/disable only.";
+    reference "internal";
+  }
+
+  /*
+   * Data nodes
+   */
+
+  container mdns {
+    description "Advertise system and services over mDNS-SD, IPv4 and IPv6.";
+
+    leaf enabled {
+      type boolean;
+      description "Globally enable or disable mDNS/SD on all interfaces.";
+    }
+  }
+      
+  container ssdp {
+    description "Advertise system over SSDP (Windows uPnP), IPv4 only.";
+
+    leaf enabled {
+      type boolean;
+      description "Globally enable or disable SSDP on all interfaces.";
+    }
+  }
+}
