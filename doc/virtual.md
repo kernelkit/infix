@@ -33,8 +33,8 @@ from a pre-built Infix release tarball, using <kbd>./qemu.sh -c</kbd>
 
 The Infix test suite is built around Qemu and [Qeneth][qeth], see:
 
- * [Testing](doc/testing.md)
- * [Docker Image](test/docker/README.md)
+ * [Testing](testing.md)
+ * [Docker Image](../test/docker/README.md)
 
 
 GNS3
@@ -52,6 +52,6 @@ an end device.
 [Qemu]: https://www.qemu.org/
 [GNS3]: https://gns3.com/
 [virt]: https://virt-manager.org/
-[rels]; https://github.com/kernelkit/infix/releases
+[rels]: https://github.com/kernelkit/infix/releases
 [qeth]: https://github.com/wkz/qeneth
 [APPL]: https://docs.gns3.com/docs/using-gns3/beginners/import-gns3-appliance/

@@ -66,8 +66,8 @@ see also [Infix in Virtual Environments](virtual.md).
 
 The Infix automated test suite is built around Qemu and [Qeneth][2], see:
 
- * [Testing](doc/testing.md)
- * [Docker Image](test/docker/README.md)
+ * [Testing](testing.md)
+ * [Docker Image](../test/docker/README.md)
 
 
 Contributing
