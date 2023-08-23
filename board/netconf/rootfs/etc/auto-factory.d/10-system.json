@@ -2,6 +2,9 @@
     "ietf-system:system": {
 	"hostname": "infix"
     },
+    "ieee802-dot1ab-lldp:lldp": {
+	"infix-lldp:enabled": true
+    },
     "infix-services:mdns": {
 	"enabled": true
     },
