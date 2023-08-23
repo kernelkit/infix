@@ -79,6 +79,8 @@ sysrepoctl -s $SEARCH							\
 	   -i infix-if-type@2023-08-21.yang	-g wheel -p 0660	\
 	   -i infix-interfaces@2023-08-21.yang	-g wheel -p 0660	\
 		-e vlan-filtering					\
+	   -i ieee802-dot1ab-lldp@2022-03-15.yang -g wheel -p 0660	\
+	   -i infix-lldp@2023-08-23.yang	-g wheel -p 0660	\
 	   -i infix-dhcp-client@2023-05-22.yang -g wheel -p 0660	\
 	   -i infix-shell-type@2023-08-21.yang	-g wheel -p 0660	\
 	   -i infix-system@2023-08-15.yang	-g wheel -p 0660	\
