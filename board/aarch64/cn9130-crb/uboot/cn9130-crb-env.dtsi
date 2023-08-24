@@ -1,6 +1,19 @@
 / {
 	config {
 		environment {
+			/* After the MMC driver has enabled bus power,
+			 * the controller seems to sometimes detect a
+			 * card removal state , which causes it to
+			 * disable power again. This hack re-enables the
+			 * bus power in those cases.
+			 */
+			bootcmd = "
+setexpr.b pwrctl *0xf2780029
+setexpr pwrctl ${pwrctl} \"|\" 1
+mw.b 0xf2780029 ${pwrctl}
+
+run ixboot
+";
 			boot_targets = "mmc1";
 			ethprime = "eth1";
 
