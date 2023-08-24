@@ -5,7 +5,7 @@ if test "${slot}" = "primary"; then
     run ixprepblk
 elif test "${slot}" = "secondary"; then
     run ixprepblk
-elif test "${slot}" = "dhcp"; then
+elif test "${slot}" = "net"; then
     run ixprepdhcp
 fi
 
