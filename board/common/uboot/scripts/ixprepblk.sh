@@ -10,7 +10,7 @@ if load ${devtype} ${devnum}:${auxpart} ${ramdisk_addr_r} /${slot}.itbh; then
 
 	if part start ${devtype} ${devnum} ${slot} devoffs; then
 	    if ${devtype} read ${sqaddr} ${devoffs} ${sqblkcnt}; then
-		setenv bootargs_root "root=PARTLABEL=${slot}"
+		setenv bootargs_root "root=PARTLABEL=${slot} rootwait"
 		setenv prepared ok
 	    fi
 	fi
