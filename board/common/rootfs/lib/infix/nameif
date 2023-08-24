@@ -25,7 +25,7 @@ for netif in /sys/class/net/*; do
 
 	dsa="dsa$num"
 	logger -k -p user.notice -t "$ident" "Found DSA interface, renaming $iface -> $dsa"
-	ip link set dev "$iface" name $dsa
+	ip link set dev "$iface" name $dsa group internal
 	num=$((num + 1))
 done
 
