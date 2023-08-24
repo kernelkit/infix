@@ -18,12 +18,22 @@ load_cfg()
 load_cfg
 [ "$FIT_IMAGE" = "y" ] || exit 0
 
-work=$(pwd)/build/fit-image-local
+work=$BUILD_DIR/fit-image-local
 dtbs=$(find $BINARIES_DIR -name '*.dtb')
 kernel=$(find $BINARIES_DIR -name '*Image' | head -n1)
 squash=$BINARIES_DIR/rootfs.squashfs
 
 mkdir -p $work
+gzip <$kernel >$work/Image.gz
+kernel=$work/Image.gz
+
+rm -rf $work/rootfs
+unsquashfs -f -d $work/rootfs $squash
+rm -f $work/rootfs/boot/*Image
+
+squash=$work/rootfs-no-kernel.squashfs
+rm -f $squash
+mksquashfs $work/rootfs $squash
 
 # mkimage will only align images to 4 bytes, but U-Boot will leave
 # both DTB and ramdisk in place when starting the kernel. So we pad
@@ -79,7 +89,7 @@ cat <<EOF >$work/infix.its
 			arch = "$FIT_ARCH";
 			os = "linux";
 $(cat $work/kernel-load.itsi)
-			compression = "none";
+			compression = "gzip";
 			data = /incbin/("$kernel");
 		};
 
