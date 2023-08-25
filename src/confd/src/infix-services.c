@@ -81,7 +81,7 @@ static int mdns_change(sr_session_ctx_t *session, uint32_t sub_id, const char *m
 static int ssdp_change(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
 	const char *xpath, sr_event_t event, unsigned request_id, void *_confd)
 {
-	return svc_change(session, event, xpath, "ssdp", "ssdpd");
+	return svc_change(session, event, xpath, "ssdp", "ssdp-responder");
 }
 
 static int lldp_change(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
