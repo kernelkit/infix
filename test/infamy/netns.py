@@ -1,7 +1,9 @@
 import subprocess
 
 class IsolatedMacVlan:
+    """Create an isolated interface on top of a PC interface."""
     def __init__(self, parent, ifname="iface", lo=True):
+        self.sleeper = None
         self.parent, self.ifname, self.lo = parent, ifname, lo
 
     def __enter__(self):
@@ -66,11 +68,11 @@ class IsolatedMacVlan:
     def runsh(self, script, *args, **kwargs):
         return self.run("/bin/sh", text=True, input=script,
                         stdout=subprocess.PIPE, stderr=subprocess.STDOUT, *args, **kwargs)
-    
+
     def addroute(self, subnet, nexthop, prefix_length=""):
         if prefix_length:
             prefix_length=f"/{prefix_length}"
-        
+
         self.runsh(f"""
             set -ex
             ip route add {subnet}{prefix_length} via {nexthop}
@@ -82,10 +84,10 @@ class IsolatedMacVlan:
             ip link set iface up
             ip addr add {addr}/{prefix_length} dev iface
             """, check=True)
-    
+
     def ping(self, daddr, count=1, timeout=2, check=False):
         return self.runsh(f"""set -ex; ping -c {count} -w {timeout} {daddr}""", check=check)
-        
+
     def must_reach(self, daddr):
         res = self.ping(daddr)
         if res.returncode != 0:
@@ -95,4 +97,3 @@ class IsolatedMacVlan:
         res = self.ping(daddr)
         if res.returncode == 0:
             raise Exception(res.stdout)
-        
