@@ -2,6 +2,7 @@ import os
 
 from .env import Env
 from .netns import IsolatedMacVlan
+from .sniffer import Sniffer
 from .tap import Test
 
 def std_topology(name):
