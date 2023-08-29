@@ -5,9 +5,10 @@
 ################################################################################
 
 STATD_VERSION = 1.0
-STATD_LICENSE = MIT
 STATD_SITE_METHOD = local
 STATD_SITE = $(BR2_EXTERNAL_INFIX_PATH)/src/statd
+STATD_LICENSE = BSD-3-Clause
+STATD_LICENSE_FILES = LICENSE
 STATD_DEPENDENCIES = sysrepo libev libsrx jansson
 
 define STATD_BUILD_CMDS
