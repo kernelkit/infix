@@ -432,6 +432,22 @@ static int ly_add_ip_link_data(const struct ly_ctx *ctx, struct lyd_node **paren
 		return err;
 	}
 
+	j_val = json_object_get(j_iface, "link");
+	if (j_val) {
+		if (!json_is_string(j_val)) {
+			ERROR("Expected a JSON string for 'link'");
+			return SR_ERR_SYS;
+		}
+
+		err = lydx_new_path(ctx, parent, xpath,
+				    "ietf-if-extensions:parent-interface", "%s",
+				    json_string_value(j_val));
+		if (err) {
+			ERROR("Error, adding 'link' to data tree, libyang error %d", err);
+			return SR_ERR_LY;
+		}
+	}
+
 	return SR_ERR_OK;
 }
 
