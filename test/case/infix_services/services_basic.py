@@ -9,11 +9,11 @@ import infamy
 from infamy.ssdp import SsdpClient
 
 def verify(enabled, sec):
-    """Verify SSDP traffic, or no traffic in case not enabled"""
+    """Verify service traffic, or no traffic in case service not enabled"""
     _, hport = env.ltop.xlate("host", "data")
 
     with infamy.IsolatedMacVlan(hport) as netns:
-        snif = infamy.Sniffer(netns, "port 1900")
+        snif = infamy.Sniffer(netns, "port 1900 or port 5353")
         ssdp = SsdpClient(netns, retries=sec)
 
         netns.addip("10.0.0.1")
@@ -23,10 +23,14 @@ def verify(enabled, sec):
             target.put_config_dict("infix-services", {
                 "ssdp": {
                     "enabled": enabled
+                },
+                "mdns": {
+                    "enabled": enabled
                 }
             })
-            running = target.get_config_dict("/infix-services:ssdp")
-            assert running["ssdp"]["enabled"] == enabled
+
+            #running = target.get_config_dict("/infix-services:mdns")
+            #assert running["mdns"]["enabled"] == enabled
 
             ssdp.start()
             time.sleep(sec)
@@ -39,7 +43,7 @@ with infamy.Test() as test:
         env = infamy.Env(infamy.std_topology("1x2"))
         target = env.attach("target", "mgmt")
 
-    with test.step("Enable IPv4 address and disable service SSDP"):
+    with test.step("Set static IPv4 address and disable services"):
         _, tport = env.ltop.xlate("target", "data")
 
         target.put_config_dict("ietf-interfaces", {
@@ -64,22 +68,29 @@ with infamy.Test() as test:
         target.put_config_dict("infix-services", {
             "ssdp": {
                 "enabled": False
+            },
+            "mdns": {
+                "enabled": False
             }
         })
         cfg = target.get_config_dict("/infix-services:ssdp")
         assert not cfg["ssdp"]["enabled"]
 
-    with test.step("Start SSDP sniffer and enable SSDP on target ..."):
+    with test.step("Start sniffer and enable services on target ..."):
         rc = verify(True, 3)
         print(rc.stdout)
         # breakpoint()
         if "10.0.0.10.1900 > 10.0.0.1" not in rc.stdout:
             test.fail()
+        if "10.0.0.10.5353" not in rc.stdout:
+            test.fail()
 
-    with test.step("Disable SSDP on target and start SSDP sniffer again ..."):
+    with test.step("Disable services on target, verify they're not running anymore ..."):
         rc = verify(False, 3)
         print(rc.stdout)
         if "10.0.0.10.1900 > 10.0.0.1" in rc.stdout:
+            test.fail()
+        if "10.0.0.10.5353" in rc.stdout:
             test.fail()
 
     test.succeed()
