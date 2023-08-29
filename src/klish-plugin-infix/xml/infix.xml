@@ -239,9 +239,13 @@
       </COMMAND>
     </SWITCH>
     <ACTION sym="script" interactive="false">
-      name="${KLISH_PARAM_name:-}"
+      if [ -n "$KLISH_PARAM_name" ]; then
       sysrepocfg -f json -X -d operational -m ietf-interfaces | \
-      /lib/infix/json-cfg-pretty "ietf-interfaces" "$name"
+        /lib/infix/cli-pretty "ietf-interfaces" -n "$KLISH_PARAM_name"
+      else
+      sysrepocfg -f json -X -d operational -m ietf-interfaces | \
+        /lib/infix/cli-pretty "ietf-interfaces"
+      fi
     </ACTION>
   </COMMAND>
 
