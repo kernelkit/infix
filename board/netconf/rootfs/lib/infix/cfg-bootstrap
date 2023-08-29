@@ -32,4 +32,4 @@ chmod 444 $CFG_D/auto-factory-config.cfg
     ln -sf auto-factory-config.cfg $CFG_D/factory-config.cfg
 
 # Bootstrap sysrepo db with all modules required by confd
-confd-bootstrap.sh $CFG_D/factory-config.cfg $CFG_D/startup-config.cfg
+/usr/libexec/confd/confd-bootstrap.sh $CFG_D/factory-config.cfg $CFG_D/startup-config.cfg
