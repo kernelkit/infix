@@ -1,0 +1,16 @@
+Index: linux-6.1.32/arch/arm64/boot/dts/marvell/cn9130-crb.dtsi
+===================================================================
+--- linux-6.1.32.orig/arch/arm64/boot/dts/marvell/cn9130-crb.dtsi
++++ linux-6.1.32/arch/arm64/boot/dts/marvell/cn9130-crb.dtsi
+@@ -284,6 +284,11 @@
+ 				reg = <10>;
+ 				label = "cpu";
+ 				ethernet = <&cp0_eth0>;
++				phy-mode = "10gbase-r";
++				fixed-link {
++					speed = <10000>;
++					full-duplex;
++				};
+ 			};
+ 
+ 		};
