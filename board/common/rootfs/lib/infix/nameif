@@ -35,12 +35,5 @@ for iface in $ports; do
 	ip link set "$iface" group port
 done
 
-# Testing, e.g., using /etc/mactab may use TAP devices to create
-# emulated switch ports, make sure to mark them as well
-ports=$(ip -json link | jq -r '.[].ifname | match("^e[[:digit:]]+").string')
-for iface in $ports; do
-	ip link set "$iface" group port
-done
-
 # At least loopback in iface group
 ip link set lo group iface
