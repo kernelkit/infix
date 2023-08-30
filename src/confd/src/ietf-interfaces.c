@@ -50,7 +50,7 @@ static bool iface_is_phys(const char *ifname)
 	if (strcmp(attr, "ether"))
 		goto out_free;
 
-	if (!json_unpack(link, "[{s: { s:s }}]", "linkinfo", "info_kind", &attr))
+	if (json_unpack(link, "[{s:s}]", "parentbus", &attr))
 		goto out_free;
 
 	is_phys = true;
