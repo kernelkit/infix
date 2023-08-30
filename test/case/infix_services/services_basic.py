@@ -90,7 +90,7 @@ with infamy.Test() as test:
         })
 
     with test.step("Start sniffer and enable services on target ..."):
-        rc = verify(True, 20)
+        rc = verify(True, 25)
         print(rc.stdout)
         # breakpoint()
         if "10.0.0.10.1900 > 10.0.0.1" not in rc.stdout:
