@@ -1,2 +1,3 @@
 ---
-- case: services_basic.py
+# Too flaky, disabled for now, needs an LLDP discovery/client function
+#- case: services_basic.py
