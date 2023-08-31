@@ -3,7 +3,7 @@
 #ifndef CONFD_SRX_VAL_H_
 #define CONFD_SRX_VAL_H_
 
-#include "core.h"
+#include "common.h"
 
 #define SRX_GET_UINT8(s,v,fmt,...)  srx_get_int(s, &v, SR_UINT8_T, fmt, ##__VA_ARGS__)
 #define SRX_GET_UINT32(s,v,fmt,...) srx_get_int(s, &v, SR_UINT32_T, fmt, ##__VA_ARGS__)
