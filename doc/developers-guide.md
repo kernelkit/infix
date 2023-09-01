@@ -39,7 +39,8 @@ Building
 --------
 
 Buildroot is almost stand-alone, it needs a few locally installed tools
-to bootstrap itself.  For details, see the [excellent manual][manual].
+to bootstrap itself.  For details, see the Getting Started and System
+Requirements sections of the [excellent manual][1].
 
 > **Note:** installation for Debian/Ubuntu based systems: <kbd>sudo apt
 > install make libssl-dev</kbd>
