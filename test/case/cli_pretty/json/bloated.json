@@ -1,0 +1,321 @@
+{
+  "ietf-interfaces:interfaces": {
+    "interface": [
+      {
+        "TEST-DESCR": "Normal loopback",
+        "name": "lo",
+        "type": "iana-if-type:softwareLoopback",
+        "oper-status": "up",
+        "if-index": 1,
+        "phys-address": "00:00:00:00:00:00",
+        "statistics": {
+          "in-octets": "3099",
+          "out-octets": "3099"
+        },
+        "ietf-ip:ipv4": {
+          "address": [
+            {
+              "ip": "127.0.0.1",
+              "prefix-length": 8
+            }
+          ]
+        }
+      },
+      {
+        "TEST-DESCR": "Bridge interface with IP",
+        "name": "e0",
+        "type": "iana-if-type:ethernetCsmacd",
+        "oper-status": "up",
+        "if-index": 2,
+        "phys-address": "02:00:00:00:00:00",
+        "statistics": {
+          "in-octets": "0",
+          "out-octets": "21286"
+        },
+        "ietf-ip:ipv4": {
+          "mtu": 1500,
+          "address": [
+            {
+              "ip": "192.168.1.1",
+              "prefix-length": 24
+            }
+          ]
+        },
+        "infix-interfaces:bridge-port": {
+          "bridge": "br0"
+        }
+      },
+      {
+        "TEST-DESCR": "Bridge interface without IP",
+        "name": "e1",
+        "type": "iana-if-type:ethernetCsmacd",
+        "oper-status": "up",
+        "if-index": 4,
+        "phys-address": "02:00:00:00:00:00",
+        "statistics": {
+          "in-octets": "0",
+          "out-octets": "21286"
+        },
+        "ietf-ip:ipv4": {
+          "mtu": 1500
+        },
+        "infix-interfaces:bridge-port": {
+          "bridge": "br0"
+        }
+      },
+      {
+        "TEST-DESCR": "Bridge interface without IP",
+        "name": "e1",
+        "type": "iana-if-type:ethernetCsmacd",
+        "oper-status": "up",
+        "if-index": 4,
+        "phys-address": "02:00:00:00:00:00",
+        "statistics": {
+          "in-octets": "0",
+          "out-octets": "21286"
+        },
+        "ietf-ip:ipv4": {
+          "mtu": 1500
+        },
+        "infix-interfaces:bridge-port": {
+          "bridge": "br1"
+        }
+      },
+      {
+        "TEST-DESCR": "Interface without IP",
+        "name": "e10",
+        "type": "iana-if-type:ethernetCsmacd",
+        "oper-status": "up",
+        "if-index": 4,
+        "phys-address": "02:00:00:00:00:00",
+        "statistics": {
+          "in-octets": "0",
+          "out-octets": "21286"
+        },
+        "ietf-ip:ipv4": {
+          "mtu": 1500
+        }
+      },
+      {
+        "TEST-DESCR": "Interface with single IP",
+        "name": "e11",
+        "type": "iana-if-type:ethernetCsmacd",
+        "oper-status": "up",
+        "if-index": 4,
+        "phys-address": "02:00:00:00:ee:ff",
+        "statistics": {
+          "in-octets": "21280",
+          "out-octets": "21281"
+        },
+        "ietf-ip:ipv4": {
+          "mtu": 1500,
+          "address": [
+            {
+              "ip": "192.168.5.1",
+              "prefix-length": 24
+            }
+          ]
+        }
+      },
+      {
+        "TEST-DESCR": "Interface with many IP",
+        "name": "e12",
+        "type": "iana-if-type:ethernetCsmacd",
+        "oper-status": "up",
+        "if-index": 4,
+        "phys-address": "02:00:00:00:ee:ff",
+        "statistics": {
+          "in-octets": "21280",
+          "out-octets": "21281"
+        },
+        "ietf-ip:ipv4": {
+          "mtu": 1500,
+          "address": [
+            {
+              "ip": "192.168.1.1",
+              "prefix-length": 24
+            },
+            {
+              "ip": "192.168.2.1",
+              "prefix-length": 24
+            },
+            {
+              "ip": "192.168.3.1",
+              "prefix-length": 24
+            },
+            {
+              "ip": "192.168.4.1",
+              "prefix-length": 24
+            },
+            {
+              "ip": "10.0.1.1",
+              "prefix-length": 24
+            }
+          ]
+        }
+      },
+      {
+        "TEST-DESCR": "Interface with VLAN on top",
+        "name": "e20",
+        "type": "iana-if-type:ethernetCsmacd",
+        "oper-status": "up",
+        "if-index": 4,
+        "phys-address": "02:00:00:00:ee:ff",
+        "statistics": {
+          "in-octets": "21280",
+          "out-octets": "21281"
+        },
+        "ietf-ip:ipv4": {
+          "mtu": 1500,
+          "address": [
+            {
+              "ip": "192.168.1.1",
+              "prefix-length": 24
+            }
+          ]
+        }
+      },
+      {
+        "TEST-DESCR": "Bridge without IP",
+        "name": "br0",
+        "type": "iana-if-type:bridge",
+        "oper-status": "up",
+        "if-index": 2,
+        "phys-address": "02:00:00:00:00:00",
+        "statistics": {
+          "in-octets": "0",
+          "out-octets": "378"
+        },
+        "ietf-ip:ipv4": {
+          "mtu": 1500
+        }
+      },
+      {
+        "TEST-DESCR": "Bridge with IP",
+        "name": "br1",
+        "type": "iana-if-type:bridge",
+        "oper-status": "up",
+        "if-index": 3,
+        "phys-address": "02:00:00:00:00:00",
+        "statistics": {
+          "in-octets": "0",
+          "out-octets": "378"
+        },
+        "ietf-ip:ipv4": {
+          "mtu": 1500,
+          "address": [
+            {
+              "ip": "192.168.1.1",
+              "prefix-length": 24
+            }
+          ]
+        }
+      },
+      {
+        "TEST-DESCR": "Empty bridge with IP",
+        "name": "br2",
+        "type": "iana-if-type:bridge",
+        "oper-status": "up",
+        "if-index": 3,
+        "phys-address": "02:00:00:00:00:00",
+        "statistics": {
+          "in-octets": "0",
+          "out-octets": "378"
+        },
+        "ietf-ip:ipv4": {
+          "mtu": 1500,
+          "address": [
+            {
+              "ip": "192.168.1.1",
+              "prefix-length": 24
+            },
+            {
+              "ip": "10.0.1.1",
+              "prefix-length": 24
+            }
+          ]
+        }
+      },
+      {
+        "TEST-DESCR": "VLAN on bridge",
+        "name": "vlan1",
+        "type": "iana-if-type:l2vlan",
+        "oper-status": "up",
+        "if-index": 4,
+        "phys-address": "02:00:00:00:00:00",
+        "statistics": {
+          "in-octets": "0",
+          "out-octets": "0"
+        },
+        "ietf-if-extensions:parent-interface": "br0",
+        "ietf-ip:ipv4": {
+          "mtu": 1500
+        },
+        "ietf-if-vlan-encapsulation:dot1q-vlan": {
+          "outer-tag": {
+            "tag-type": "ieee802-dot1q-types:c-vlan",
+            "vlan-id": 10
+          }
+        }
+      },
+      {
+        "TEST-DESCR": "VLAN with IP on bridge",
+        "name": "vlan2",
+        "type": "iana-if-type:l2vlan",
+        "oper-status": "up",
+        "if-index": 4,
+        "phys-address": "02:00:00:00:00:00",
+        "statistics": {
+          "in-octets": "0",
+          "out-octets": "0"
+        },
+        "ietf-if-extensions:parent-interface": "br0",
+        "ietf-ip:ipv4": {
+          "mtu": 1500,
+          "address": [
+            {
+              "ip": "192.168.2.1",
+              "prefix-length": 24
+            }
+          ]
+        },
+        "ietf-if-vlan-encapsulation:dot1q-vlan": {
+          "outer-tag": {
+            "tag-type": "ieee802-dot1q-types:c-vlan",
+            "vlan-id": 20
+          }
+        }
+      },
+      {
+        "name": "vlan20",
+        "type": "iana-if-type:l2vlan",
+        "oper-status": "up",
+        "if-index": 4,
+        "phys-address": "02:00:00:00:00:00",
+        "statistics": {
+          "in-octets": "0",
+          "out-octets": "0"
+        },
+        "ietf-if-extensions:parent-interface": "e20",
+        "ietf-ip:ipv4": {
+          "mtu": 1500
+        },
+        "ietf-ip:ipv4": {
+          "mtu": 1500,
+          "address": [
+            {
+              "ip": "192.168.2.1",
+              "prefix-length": 24
+            }
+          ]
+        },
+        "ietf-if-vlan-encapsulation:dot1q-vlan": {
+          "outer-tag": {
+            "tag-type": "ieee802-dot1q-types:c-vlan",
+            "vlan-id": 10
+          }
+        }
+      }
+    ]
+  }
+}
