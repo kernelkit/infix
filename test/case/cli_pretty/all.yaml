@@ -1,0 +1,39 @@
+---
+- case: run.sh
+  name: "interfaces-empty"
+  opts:
+    - "json/empty.json"
+    - "ietf-interfaces"
+
+- case: run.sh
+  name: "interfaces-factory"
+  opts:
+    - "json/factory.json"
+    - "ietf-interfaces"
+
+- case: run.sh
+  name: "interfaces-bloated"
+  opts:
+    - "json/bloated.json"
+    - "ietf-interfaces"
+
+- case: run.sh
+  name: "interface-ethernet"
+  opts:
+    - "json/bloated.json"
+    - "ietf-interfaces"
+    - "-n e0"
+
+- case: run.sh
+  name: "interface-vlan"
+  opts:
+    - "json/bloated.json"
+    - "ietf-interfaces"
+    - "-n vlan1"
+
+- case: run.sh
+  name: "interface-birdge"
+  opts:
+    - "json/bloated.json"
+    - "ietf-interfaces"
+    - "-n br0"
