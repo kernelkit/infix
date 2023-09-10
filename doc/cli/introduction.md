@@ -88,7 +88,7 @@ admin@infix-12-34-56:/config/interfaces/interface/eth0/> leave
 admin@infix-12-34-56:/> show interfaces brief
 lo               UNKNOWN        00:00:00:00:00:00 <LOOPBACK,UP,LOWER_UP>
 eth0             UP             52:54:00:12:34:56 <BROADCAST,MULTICAST,UP,LOWER_UP>
-admin@infix-12-34-56:exec> show ip brief
+admin@infix-12-34-56:/> show ip brief
 lo               UNKNOWN        127.0.0.1/8 ::1/128
 eth0             UP             192.168.2.200/24 fe80::5054:ff:fe12:3456/64
 admin@infix-12-34-56:/> copy running-config startup-config
