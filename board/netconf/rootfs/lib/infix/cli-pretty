@@ -75,9 +75,11 @@ class Iface:
 
     def pr_proto_ipv4(self, pipe=''):
         for addr in self.ipv4_addr:
+            origin = f"({addr['origin']})" if addr.get('origin') else ""
+
             row =  f"{pipe:<{Pad.iface}}"
             row += f"{'ipv4':<{Pad.proto}}"
-            row += f"{'':<{Pad.state}}{addr['ip']}/{addr['prefix-length']}"
+            row += f"{'':<{Pad.state}}{addr['ip']}/{addr['prefix-length']} {origin}"
             print(row)
 
     def pr_proto_eth(self):
