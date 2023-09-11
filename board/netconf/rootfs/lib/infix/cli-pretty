@@ -39,6 +39,13 @@ class Iface:
         self.oper_status = data.get('oper-status', None)
         self.phys_address = data.get('phys-address', None)
 
+        if data.get('statistics', None):
+            self.in_octets = data.get('statistics').get('in-octets', None)
+            self.out_octets = data.get('statistics').get('out-octets', None)
+        else:
+            self.in_octets = None
+            self.out_octets = None
+
         self.parent = data.get('ietf-if-extensions:parent-interface', None)
 
         if self.data.get('ietf-ip:ipv4'):
@@ -142,6 +149,11 @@ class Iface:
                 first = False
         else:
                 print(f"{'ipv4 addresses':<{20}}:")
+
+        if self.in_octets and self.out_octets:
+            print(f"{'in-octets':<{20}}: {self.in_octets}")
+            print(f"{'out-octets':<{20}}: {self.out_octets}")
+
 
 def find_iface(_ifaces, name):
     for _iface in [Iface(data) for data in _ifaces]:
