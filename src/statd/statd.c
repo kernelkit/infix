@@ -451,12 +451,53 @@ static int ly_add_ip_link_data(const struct ly_ctx *ctx, struct lyd_node **paren
 	return SR_ERR_OK;
 }
 
+static int ly_add_ipv4_address(const struct ly_ctx *ctx, struct lyd_node *ipv4_node,
+			       char *xpath, json_t *j_addr, const char *ip)
+{
+	struct lyd_node *addr_node = NULL;
+	char *addr_xpath;
+	json_t *j_val;
+	int err;
+
+	err = asprintf(&addr_xpath, "%s/address[ip='%s']", xpath, ip);
+	if (err == -1) {
+		ERROR("Error, creating address xpath");
+		return SR_ERR_SYS;
+	}
+
+	err = lyd_new_path(ipv4_node, ctx, addr_xpath, NULL, 0, &addr_node);
+	if (err) {
+		ERROR("Failed adding ipv4 'address' node (%s), libyang error %d: %s",
+		      addr_xpath, err, ly_errmsg(ctx));
+		free(addr_xpath);
+		return SR_ERR_LY;
+	}
+
+	j_val = json_object_get(j_addr, "prefixlen");
+	if (!json_is_integer(j_val)) {
+		ERROR("Expected a JSON integer for ipv4 'prefixlen'");
+		free(addr_xpath);
+		return SR_ERR_SYS;
+	}
+
+	err = lydx_new_path(ctx, &addr_node, addr_xpath, "prefix-length",
+			    "%lld", json_integer_value(j_val));
+	if (err) {
+		ERROR("Error, adding ipv4 'prefix-length' to data tree, libyang error %d", err);
+		free(addr_xpath);
+		return SR_ERR_LY;
+	}
+	free(addr_xpath);
+
+	return SR_ERR_OK;
+}
+
 static int ly_add_ip_addr_data(const struct ly_ctx *ctx, struct lyd_node **parent,
 			       char *xpath, json_t *j_iface, char *ifname)
 {
 	struct lyd_node *ipv4_node = NULL;
 	json_t *j_val;
-	json_t *j_arr;
+	json_t *j_addr;
 	size_t index;
 	int err;
 
@@ -486,21 +527,18 @@ static int ly_add_ip_addr_data(const struct ly_ctx *ctx, struct lyd_node **paren
 		}
 	}
 
-	j_arr = json_object_get(j_iface, "addr_info");
-	if (!json_is_array(j_arr)) {
+	j_val = json_object_get(j_iface, "addr_info");
+	if (!json_is_array(j_val)) {
 		ERROR("Expected a JSON array for 'addr_info'");
 		return SR_ERR_SYS;
 	}
 
-	json_array_foreach(j_arr, index, j_val) {
-		struct lyd_node *addr_node = NULL;
-		char *addr_xpath;
+	json_array_foreach(j_val, index, j_addr) {
 		json_t *j_family;
 		json_t *j_local;
-		json_t *j_prefix;
 		const char *ip;
 
-		j_family = json_object_get(j_val, "family");
+		j_family = json_object_get(j_addr, "family");
 		if (!json_is_string(j_family)) {
 			ERROR("Expected a JSON string for ipv4 'family'");
 			return SR_ERR_SYS;
@@ -509,42 +547,17 @@ static int ly_add_ip_addr_data(const struct ly_ctx *ctx, struct lyd_node **paren
 		if (strcmp(json_string_value(j_family), "inet") != 0)
 			continue;
 
-		j_local = json_object_get(j_val, "local");
+		j_local = json_object_get(j_addr, "local");
 		if (!json_is_string(j_local)) {
 			ERROR("Expected a JSON string for ipv4 'local'");
 			return SR_ERR_SYS;
 		}
 		ip = json_string_value(j_local);
 
-		err = asprintf(&addr_xpath, "%s/address[ip='%s']", xpath, ip);
-		if (err == -1) {
-			ERROR("Error, creating address xpath");
-			return SR_ERR_SYS;
-		}
+		err = ly_add_ipv4_address(ctx, ipv4_node, xpath, j_addr, ip);
+		if (err)
+			return err;
 
-		err = lyd_new_path(ipv4_node, ctx, addr_xpath, NULL, 0, &addr_node);
-		if (err) {
-			ERROR("Failed adding ipv4 'address' node (%s), libyang error %d: %s",
-			      addr_xpath, err, ly_errmsg(ctx));
-			free(addr_xpath);
-			return SR_ERR_LY;
-		}
-
-		j_prefix = json_object_get(j_val, "prefixlen");
-		if (!json_is_integer(j_prefix)) {
-			ERROR("Expected a JSON integer for ipv4 'prefixlen'");
-			free(addr_xpath);
-			return SR_ERR_SYS;
-		}
-
-		err = lydx_new_path(ctx, &addr_node, addr_xpath, "prefix-length",
-				    "%lld", json_integer_value(j_prefix));
-		if (err) {
-			ERROR("Error, adding ipv4 'prefix-length' to data tree, libyang error %d", err);
-			free(addr_xpath);
-			return SR_ERR_LY;
-		}
-		free(addr_xpath);
 	}
 
 	return SR_ERR_OK;
