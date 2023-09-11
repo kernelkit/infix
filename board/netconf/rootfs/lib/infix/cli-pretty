@@ -35,30 +35,30 @@ class Iface:
     def __init__(self, data):
         self.data = data
         self.name = data.get('name', '')
-        self.index = data.get('if-index', None)
-        self.oper_status = data.get('oper-status', None)
-        self.phys_address = data.get('phys-address', None)
+        self.index = data.get('if-index', '')
+        self.oper_status = data.get('oper-status', '')
+        self.phys_address = data.get('phys-address', '')
 
-        if data.get('statistics', None):
-            self.in_octets = data.get('statistics').get('in-octets', None)
-            self.out_octets = data.get('statistics').get('out-octets', None)
+        if data.get('statistics'):
+            self.in_octets = data.get('statistics').get('in-octets', '')
+            self.out_octets = data.get('statistics').get('out-octets', '')
         else:
-            self.in_octets = None
-            self.out_octets = None
+            self.in_octets = ''
+            self.out_octets = ''
 
         self.parent = data.get('ietf-if-extensions:parent-interface', None)
 
         if self.data.get('ietf-ip:ipv4'):
-            self.mtu = self.data.get('ietf-ip:ipv4').get('mtu', None)
-            self.ipv4_addr = self.data.get('ietf-ip:ipv4').get('address', None)
+            self.mtu = self.data.get('ietf-ip:ipv4').get('mtu', '')
+            self.ipv4_addr = self.data.get('ietf-ip:ipv4').get('address', '')
         else:
-            self.mtu = None
+            self.mtu = ''
             self.ipv4_addr = []
 
         if self.data.get('infix-interfaces:bridge-port'):
             self.bridge = self.data.get('infix-interfaces:bridge-port').get('bridge', None)
         else:
-            self.bridge = None
+            self.bridge = ''
 
     def is_vlan(self):
         return self.data['type'] == "iana-if-type:l2vlan"
@@ -131,8 +131,7 @@ class Iface:
 
     def pr_iface(self):
         print(f"{'name':<{20}}: {self.name}")
-        if self.index:
-            print(f"{'index':<{20}}: {self.index}")
+        print(f"{'index':<{20}}: {self.index}")
         if self.mtu:
             print(f"{'mtu':<{20}}: {self.mtu}")
         if self.oper_status:
