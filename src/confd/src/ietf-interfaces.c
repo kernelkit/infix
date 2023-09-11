@@ -381,7 +381,7 @@ static int netdag_gen_diff_addr(FILE *ip, const char *ifname,
 	    is_std_lo_addr(ifname, adrd.new, pfxd.new))
 		addcmd = "replace";
 
-	fprintf(ip, "address %s %s/%s dev %s\n", addcmd,
+	fprintf(ip, "address %s %s/%s dev %s proto 4\n", addcmd,
 		adrd.new, pfxd.new, ifname);
 	return 0;
 }
