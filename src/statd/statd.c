@@ -158,6 +158,28 @@ static json_t *json_get_ip_addr(const char *ifname)
 	return _json_get_ip_output(cmd);
 }
 
+static const char *get_yang_origin(const char *protocol)
+{
+	size_t i;
+	struct {
+		const char *kern;
+		const char *yang;
+
+	} map[] = {
+		{"static",	"static"},
+		{"dhcp",	"dhcp"},
+	};
+
+	for (i = 0; i < sizeof(map) / sizeof(map[0]); i++) {
+		if (strcmp(protocol, map[i].kern) != 0)
+			continue;
+
+		return map[i].yang;
+	}
+
+	return "other";
+}
+
 static const char *get_yang_operstate(const char *operstate)
 {
 	size_t i;
@@ -451,6 +473,27 @@ static int ly_add_ip_link_data(const struct ly_ctx *ctx, struct lyd_node **paren
 	return SR_ERR_OK;
 }
 
+static int ly_add_ipv4_address_origin(const struct ly_ctx *ctx, struct lyd_node *addr_node,
+				      char *addr_xpath, json_t *j_proto)
+{
+	const char *origin;
+	int err;
+
+	if (!json_is_string(j_proto)) {
+		ERROR("Expected a JSON string for ipv4 'protocol'");
+		return SR_ERR_SYS;
+	}
+
+	origin = get_yang_origin(json_string_value(j_proto));
+	err = lydx_new_path(ctx, &addr_node, addr_xpath, "origin", "%s", origin);
+	if (err) {
+		ERROR("Error, adding ipv4 'origin' to data tree, libyang error %d", err);
+		return SR_ERR_LY;
+	}
+
+	return SR_ERR_OK;
+}
+
 static int ly_add_ipv4_address(const struct ly_ctx *ctx, struct lyd_node *ipv4_node,
 			       char *xpath, json_t *j_addr, const char *ip)
 {
@@ -487,9 +530,16 @@ static int ly_add_ipv4_address(const struct ly_ctx *ctx, struct lyd_node *ipv4_n
 		free(addr_xpath);
 		return SR_ERR_LY;
 	}
+
+	j_val = json_object_get(j_addr, "protocol");
+	if (j_val)
+		err = ly_add_ipv4_address_origin(ctx, addr_node, addr_xpath, j_val);
+	else
+		err = SR_ERR_OK;
+
 	free(addr_xpath);
 
-	return SR_ERR_OK;
+	return err;
 }
 
 static int ly_add_ip_addr_data(const struct ly_ctx *ctx, struct lyd_node **parent,
@@ -555,8 +605,10 @@ static int ly_add_ip_addr_data(const struct ly_ctx *ctx, struct lyd_node **paren
 		ip = json_string_value(j_local);
 
 		err = ly_add_ipv4_address(ctx, ipv4_node, xpath, j_addr, ip);
-		if (err)
+		if (err) {
+			ERROR("Error, adding ipv4 address");
 			return err;
+		}
 
 	}
 
