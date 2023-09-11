@@ -74,12 +74,7 @@ class Iface:
 
 
     def pr_proto_ipv4(self, pipe=''):
-        addr = self.data.get("ietf-ip:ipv4")
-        if not addr:
-            return
-
-        addresses = self.data.get("ietf-ip:ipv4", {}).get("address", [])
-        for addr in addresses:
+        for addr in self.ipv4_addr:
             row =  f"{pipe:<{Pad.iface}}"
             row += f"{'ipv4':<{Pad.proto}}"
             row += f"{'':<{Pad.state}}{addr['ip']}/{addr['prefix-length']}"
