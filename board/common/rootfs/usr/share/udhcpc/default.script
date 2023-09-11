@@ -8,7 +8,7 @@ ACTION="$1"
 RESOLV_CONF="/etc/resolv.conf"
 [ -e $RESOLV_CONF ] || touch $RESOLV_CONF
 [ -n "$broadcast" ] && BROADCAST="broadcast $broadcast"
-[ -n "$subnet" ] && NETMASK="netmask $subnet"
+[ -n "$subnet" ] && NETMASK="$subnet"
 # Handle stateful DHCPv6 like DHCPv4
 [ -n "$ipv6" ] && ip="$ipv6/128"
 
@@ -32,8 +32,7 @@ wait_for_ipv6_default_route() {
 
 case "$ACTION" in
 	deconfig)
-		/sbin/ifconfig $interface up
-		/sbin/ifconfig $interface 0.0.0.0
+		/bin/ip link set dev $interface up
 
 		# drop info from this interface
 		# resolv.conf may be a symlink to /tmp/, so take care
@@ -57,7 +56,7 @@ case "$ACTION" in
 		if [ -x /usr/sbin/avahi-autoipd ]; then
 			/usr/sbin/avahi-autoipd -c $interface && /usr/sbin/avahi-autoipd -k $interface
 		fi
-		/sbin/ifconfig $interface $ip $BROADCAST $NETMASK
+		/bin/ip addr add dev $interface $ip/$NETMASK $BROADCAST proto 5
 		if [ -n "$ipv6" ] ; then
 			wait_for_ipv6_default_route
 		fi
