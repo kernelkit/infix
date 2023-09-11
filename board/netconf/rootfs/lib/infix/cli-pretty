@@ -135,11 +135,13 @@ class Iface:
 
         if self.ipv4_addr:
             first = True
-            print("")
             for addr in self.ipv4_addr:
                 key = 'ipv4 addresses' if first else ''
-                print(f"{key:<{20}}: {addr['ip']}/{addr['prefix-length']}")
+                colon = ':' if first else ' '
+                print(f"{key:<{20}}{colon} {addr['ip']}/{addr['prefix-length']}")
                 first = False
+        else:
+                print(f"{'ipv4 addresses':<{20}}:")
 
 def find_iface(_ifaces, name):
     for _iface in [Iface(data) for data in _ifaces]:
