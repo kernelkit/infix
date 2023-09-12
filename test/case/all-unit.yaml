@@ -1,0 +1,5 @@
+---
+# Tests in this suite can be run on localhost without a target environment
+
+- name:  cli-pretty
+  suite: cli_pretty/all.yaml

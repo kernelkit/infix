@@ -1,5 +1,5 @@
 test-dir := $(BR2_EXTERNAL_INFIX_PATH)/test
-INFIX_TESTS ?= $(test-dir)/case/all.yaml
+INFIX_TESTS ?= $(test-dir)/case/all-unit.yaml $(test-dir)/case/all.yaml
 
 test-env = $(test-dir)/env \
 	-f $(BINARIES_DIR)/infix-x86_64.img \
