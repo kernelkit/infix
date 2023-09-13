@@ -30,8 +30,21 @@ wait_for_ipv6_default_route() {
 	printf " timeout!\n"
 }
 
+flush_dhcp_addresses() {
+	addrs=$(ip -j addr show dev $interface | jq -c \
+		'.[0].addr_info[] | select(.family == "inet") | select(.protocol == "dhcp")')
+
+	for addr in $addrs; do
+		ip="$(echo "$addr" | jq -r '."local"')"
+		prefix="$(echo "$addr" | jq -r '."prefixlen"')"
+		ip addr del "$ip/$prefix" dev "$interface"
+	done
+}
+
 case "$ACTION" in
 	deconfig)
+		flush_dhcp_addresses
+
 		/bin/ip link set dev $interface up
 
 		# drop info from this interface
