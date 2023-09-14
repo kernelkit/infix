@@ -1,0 +1,8 @@
+#include "cn9130.dtsi"
+
+&cp0_syscon0 {
+	cp0_pinctrl: pinctrl {
+		/* For some reason, this is missing from cn9130.dtsi */
+		compatible = "marvell,cp115-standalone-pinctrl";
+	};
+};

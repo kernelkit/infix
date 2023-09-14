@@ -1,0 +1,611 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright (C) 2021 Marvell International Ltd.
+ * Copyright (C) 2023 Addiva Elektronik AB
+ *
+ * Device tree for Alder board
+ */
+
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/leds/common.h>
+
+#include "../marvell/cn9130-patched.dtsi"
+
+#include "alder-mpp.h"
+
+/ {
+	model = "Alder";
+	compatible = "alder,alder",
+		"marvell,armada-ap807-quad",
+		"marvell,armada-ap807";
+
+	chosen {
+		stdout-path = "serial0:115200n8";
+	};
+
+	memory@0 {
+		device_type = "memory";
+		reg = <0x0 0x0 0x0 0x80000000>;
+	};
+};
+
+
+/* UART0 (Console) */
+
+&cp0_pinctrl {
+	cp0_uart0_pins: cp0-uart0-pins {
+		marvell,pins = CP_UA0_RXD(MPP_ID), CP_UA0_TXD(MPP_ID);
+		marvell,function = "uart0";
+	};
+};
+
+&uart0 {
+	status = "okay";
+	pinctrl-names = "default";
+	pinctrl-0 = <&cp0_uart0_pins>;
+};
+
+
+/* GPIO */
+
+&cp0_gpio1 {
+	status = "okay";
+};
+
+&cp0_gpio2 {
+	status = "okay";
+};
+
+
+/* I2C0 (EEPROM) */
+
+&cp0_pinctrl {
+	cp0_i2c0_pins: cp0-i2c0-pins {
+		marvell,pins = CP_I2C0_SCK(MPP_ID), CP_I2C0_SDA(MPP_ID);
+		marvell,function = "i2c0";
+	};
+};
+
+&cp0_i2c0 {
+	status = "okay";
+	pinctrl-names = "default";
+	pinctrl-0 = <&cp0_i2c0_pins>;
+
+	eeprom@50 {
+		// AT24C256C-MAHL-T
+		compatible = "atmel,24c256";
+                reg = <0x50>;
+	};
+};
+
+
+/* I2C1 (Mux) */
+
+&cp0_pinctrl {
+	cp0_i2c1_pins: cp0-i2c1-pins {
+		marvell,pins = CP_I2C1_SCK(MPP_ID), CP_I2C1_SDA(MPP_ID);
+		marvell,function = "i2c1";
+	};
+};
+
+&cp0_i2c1 {
+	status = "okay";
+	pinctrl-names = "default";
+	pinctrl-0 = <&cp0_i2c1_pins>;
+
+	i2cmux@70 {
+		compatible = "nxp,pca9548";
+		#address-cells = <1>;
+                #size-cells = <0>;
+                reg = <0x70>;
+
+		reset-gpios = I2C_RESETn(MPP_GPIO_REF);
+
+		i2c_sysmgmt: i2c@0 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0>;
+		};
+
+		i2c_pwr: i2c@1 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <1>;
+		};
+
+		i2c_sw: i2c@2 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <2>;
+		};
+
+		i2c_sfp9: i2c@3 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <3>;
+		};
+
+		i2c_sfpa: i2c@4 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <4>;
+		};
+
+		i2c@5 {
+			status = "disabled";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <5>;
+		};
+
+		i2c@6 {
+			status = "disabled";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <6>;
+		};
+
+		i2c@7 {
+			status = "disabled";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <7>;
+		};
+
+	};
+};
+
+
+/* System Management */
+
+&i2c_sysmgmt {
+	eeprom@b {
+		label = "vpd";
+                reg = <0x0b>;
+		compatible = "atmel,24c02";
+		read-only;
+
+		nvmem-layout {
+			compatible = "onie,tlv-layout";
+
+			base_mac: mac-address {
+				#nvmem-cell-cells = <1>;
+			};
+		};
+	};
+};
+
+/* AP SDHCI (eMMC) */
+
+&ap_sdhci0 {
+	status = "okay";
+	pinctrl-names = "default";
+	/* pinctrl-0 = <&ap_emmc_pins>; No pinctrl in Linux? */
+	bus-width = <8>;
+	mmc-ddr-1_8v;
+	mmc-hs400-1_8v;
+};
+
+
+/* CP SDHCI (Micro-SD) */
+
+/ {
+	cp0_reg_sd_vccq: cp0_sd_vccq@0 {
+		compatible = "regulator-gpio";
+		regulator-name = "cp0_sd_vccq";
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <3300000>;
+		/* gpios = <&CP_SD_HST_18_EN>; */
+		states = <1800000 0x1
+			  3300000 0x0>;
+	};
+
+	cp0_reg_sd_vcc: cp0_sd_vcc@0 {
+		compatible = "regulator-fixed";
+		regulator-name = "cp0_sd_vcc";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		/* gpio = <&CP_SD_CRD_PWR_OFF>; */
+		enable-active-high;
+		regulator-always-on;
+	};
+};
+
+&cp0_pinctrl {
+	cp0_sdhci_pins: cp0-sdhi-pins-0 {
+		marvell,pins = \
+			CP_SD_CRD_PWR_OFF(MPP_ID), CP_SD_HST_18_EN(MPP_ID),	\
+			CP_SD_CRD_DT(MPP_ID), CP_SD_LED(MPP_ID),		\
+			CP_SD_CLK(MPP_ID), CP_SD_CMD(MPP_ID),			\
+			CP_SD_D0(MPP_ID), CP_SD_D1(MPP_ID), 			\
+			CP_SD_D2(MPP_ID), CP_SD_D3(MPP_ID);
+		marvell,function = "sdio";
+	};
+};
+
+&cp0_sdhci0 {
+	status = "disabled";
+	pinctrl-names = "default";
+	pinctrl-0 = <&cp0_sdhci_pins>;
+	bus-width = <4>;
+	/* cd-gpios = <&CP_SD_CRD_DT>; */
+	vqmmc-supply = <&cp0_reg_sd_vccq>;
+	vmmc-supply = <&cp0_reg_sd_vcc>;
+};
+
+
+/* SPI1 (Boot FLASH) */
+
+&cp0_pinctrl {
+	cp0_spi1_pins: cp0-spi-pins-0 {
+		marvell,pins = \
+			CP_SPI1_MISO(MPP_ID), CP_SPI1_CS0(MPP_ID), \
+			CP_SPI1_MOSI(MPP_ID), CP_SPI1_SCK(MPP_ID);
+		marvell,function = "spi1";
+	};
+};
+
+&cp0_spi1 {
+	status = "okay";
+	pinctrl-names = "default";
+	pinctrl-0 = <&cp0_spi1_pins>;
+
+	/* Boot flash */
+	spi-flash@0 {
+		#address-cells = <0x1>;
+		#size-cells = <0x1>;
+		compatible = "jedec,spi-nor", "spi-flash";
+		reg = <0x0>;
+		/* On-board MUX does not allow higher frequencies */
+		spi-max-frequency = <40000000>;
+
+		partitions {
+			compatible = "fixed-partitions";
+			#address-cells = <1>;
+			#size-cells = <1>;
+
+			boot0@0 {
+				label = "boot0";
+				reg = <0x0 0x200000>;
+			};
+
+			boot1@200000 {
+				label = "boot1";
+				reg = <0x200000 0x200000>;
+			};
+		};
+	};
+};
+
+
+/* USB1 */
+
+/ {
+	cp0_usb3_0_phy1: cp0_usb3_phy {
+		compatible = "usb-nop-xceiv";
+		vcc-supply = <&reg_cp0_usb3_vbus1>;
+	};
+
+	reg_cp0_usb3_vbus1: reg_cp0_usb3_vbus1 {
+		compatible = "regulator-fixed";
+		regulator-name = "cp0-xhci1-vbus";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		enable-active-high;
+		gpio = USB1_VBUS_ENABLE(MPP_GPIO_REF);
+	};
+};
+
+&cp0_utmi {
+	status = "okay";
+};
+
+&cp0_utmi1 {
+	status = "okay";
+};
+
+&cp0_usb3_1 {
+	status = "disabled";
+	usb-phy = <&cp0_usb3_0_phy1>;
+	phys = <&cp0_utmi1>, <&cp0_comphy3 1>;
+	phy-names = "usb", "usb3";
+	dr_mode = "host";
+};
+
+
+
+
+/* ETH0 (DSA connection to switch) */
+
+&cp0_crypto {
+	status = "okay";
+};
+
+&cp0_ethernet {
+	status = "okay";
+};
+
+&cp0_eth0 {
+	status = "okay";
+	phy-mode = "10gbase-r";
+	phys = <&cp0_comphy4 0>;
+	managed = "in-band-status";
+
+	nvmem-cells = <&base_mac 0>;
+	nvmem-cell-names = "mac-address";
+};
+
+
+/* MDIO (Switch) */
+
+&cp0_pinctrl {
+	cp0_mdio_pins: cp0-mdio-pins-0 {
+		marvell,pins = CP_SMI_MDIO(MPP_ID), CP_SMI_MDC(MPP_ID);
+		marvell,function = "ge";
+	};
+};
+
+&cp0_mdio {
+	status = "okay";
+	pinctrl-names = "default";
+	pinctrl-0 = <&cp0_mdio_pins>;
+
+	sw: switch@0 {
+		compatible = "marvell,mv88e6190";
+		#address-cells = <1>;
+		#size-cells = <0>;
+		reg = <0>;
+
+		reset-gpios = SW_RESETn(MPP_GPIO_REF);
+
+		interrupts-extended = SW_INTn(MPP_IRQ_REF);
+		interrupt-controller;
+
+		dsa,member = <0 0>;
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			port@0 {
+				reg = <0x0>;
+				label = "cpu";
+				ethernet = <&cp0_eth0>;
+				phy-mode = "10gbase-r";
+				fixed-link {
+					speed = <10000>;
+					full-duplex;
+				};
+			};
+
+#define SWP(_n, _label, _mac_offs, _phymode, _phy) \
+			port@_n { \
+				reg = <0x ## _n>; \
+				label = _label; \
+				phy-mode = _phymode; \
+				phy-handle = <&_phy>; \
+				\
+				nvmem-cells = <&base_mac _mac_offs>; \
+				nvmem-cell-names = "mac-address"; \
+			}
+
+			SWP(9,  "x1",  1, "usxgmii",  xphy9);
+			SWP(a,  "x2",  2, "usxgmii",  xphya);
+
+			SWP(8,  "x3",  3,    "gmii", swphy8);
+			SWP(7,  "x4",  4,    "gmii", swphy7);
+			SWP(6,  "x5",  5,    "gmii", swphy6);
+			SWP(5,  "x6",  6,    "gmii", swphy5);
+			SWP(4,  "x7",  7,    "gmii", swphy4);
+			SWP(3,  "x8",  8,    "gmii", swphy3);
+			SWP(2,  "x9",  9,    "gmii", swphy2);
+			SWP(1, "x10", 10,    "gmii", swphy1);
+#undef SWP
+		};
+
+		mdio {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			swphy1: ethernet-phy@1 { reg = <0x1>; };
+			swphy2: ethernet-phy@2 { reg = <0x2>; };
+			swphy3: ethernet-phy@3 { reg = <0x3>; };
+			swphy4: ethernet-phy@4 { reg = <0x4>; };
+			swphy5: ethernet-phy@5 { reg = <0x5>; };
+			swphy6: ethernet-phy@6 { reg = <0x6>; };
+			swphy7: ethernet-phy@7 { reg = <0x7>; };
+			swphy8: ethernet-phy@8 { reg = <0x8>; };
+		};
+	};
+};
+
+
+/* XMDIO (88X3310P 10G PHYs) */
+
+&cp0_pinctrl {
+	cp0_xmdio_pins: cp0-xmdio-pins-0 {
+		marvell,pins = CP_XSMI_MDIO(MPP_ID), CP_XSMI_MDC(MPP_ID);
+		marvell,function = "xg";
+	};
+};
+
+&ETH9_RESETn(MPP_GPIO_CHIP) {
+	xphy9-reset-hog {
+		gpio-hog;
+		gpios = ETH9_RESETn(MPP_GPIO_REF_NO_CHIP);
+		output-low;
+		line-name = "x1-phy-reset";
+	};
+};
+
+&ETH10_RESETn(MPP_GPIO_CHIP) {
+	xphya-reset-hog {
+		gpio-hog;
+		gpios = ETH10_RESETn(MPP_GPIO_REF_NO_CHIP);
+		output-low;
+		line-name = "x2-phy-reset";
+	};
+};
+
+&cp0_xmdio {
+	status = "okay";
+	pinctrl-names = "default";
+	pinctrl-0 = <&cp0_xmdio_pins>;
+
+	/* 88X3310 specifices 35ns minimum MDC period (28.57 MHz). */
+	clock-frequency = <28571428>;
+
+	xphy9: ethernet-phy@4 {
+		compatible = "ethernet-phy-ieee802.3-c45";
+		reg = <4>;
+		sfp = <&sfp9>;
+	};
+
+	xphya: ethernet-phy@5 {
+		compatible = "ethernet-phy-ieee802.3-c45";
+		reg = <5>;
+		sfp = <&sfpa>;
+	};
+};
+
+/ {
+	sfp9: sfp@9 {
+		compatible = "sff,sfp";
+		i2c-bus = <&i2c_sfp9>;
+		mod-def0-gpios = SFP9_MOD_ABS(MPP_GPIO_REF);
+		los-gpios = SFP9_RX_LOS(MPP_GPIO_REF);
+		tx-disable-gpios = SFP9_TX_DISABLE(MPP_GPIO_REF);
+		tx-fault-gpios = SFP9_TX_FAULT(MPP_GPIO_REF);
+		rate-select0-gpios = SFP9_RS0(MPP_GPIO_REF);
+		rate-select1-gpios = SFP9_RS1(MPP_GPIO_REF);
+		maximum-power-milliwatt = <3000>;
+	};
+
+	sfpa: sfp@a {
+		compatible = "sff,sfp";
+		i2c-bus = <&i2c_sfpa>;
+		mod-def0-gpios = SFP10_MOD_ABS(MPP_GPIO_REF);
+		los-gpios = SFP10_RX_LOS(MPP_GPIO_REF);
+		tx-disable-gpios = SFP10_TX_DISABLE(MPP_GPIO_REF);
+		tx-fault-gpios = SFP10_TX_FAULT(MPP_GPIO_REF);
+		rate-select0-gpios = SFP10_RS0(MPP_GPIO_REF);
+		rate-select1-gpios = SFP10_RS1(MPP_GPIO_REF);
+		maximum-power-milliwatt = <3000>;
+	};
+};
+
+
+/* Power Board */
+
+&i2c_pwr {
+	// Shared IRQ on I2C_IRQ
+
+	// 0x26  U13 PCF8574        GPIO I/O
+	gpio_pwr1: gpio@26 {
+		compatible = "nxp,pcf8574a";
+		#gpio-cells = <2>;
+		gpio-controller;
+		reg = <0x26>;
+#define GPIO_PWR1_UNUSED0	gpio_pwr1 0 GPIO_ACTIVE_HIGH
+#define GPIO_PWR1_UNUSED1	gpio_pwr1 1 GPIO_ACTIVE_HIGH
+#define GPIO_POE_PGOOD		gpio_pwr1 2 GPIO_ACTIVE_HIGH
+#define GPIO_RESET_BUTTON	gpio_pwr1 3 GPIO_ACTIVE_LOW
+#define GPIO_VIN1_PGOOD		gpio_pwr1 4 GPIO_ACTIVE_LOW
+#define GPIO_LED_VIN1_ALERT	gpio_pwr1 5 GPIO_ACTIVE_LOW
+#define GPIO_VIN2_PGOOD		gpio_pwr1 6 GPIO_ACTIVE_LOW
+#define GPIO_LED_VIN2_ALERT	gpio_pwr1 7 GPIO_ACTIVE_LOW
+	};
+
+	//0x27  U3  PCF8574        GPIO LED
+	gpio_pwr2: gpio@27 {
+		compatible = "nxp,pcf8574a";
+		#gpio-cells = <2>;
+		gpio-controller;
+		reg = <0x27>;
+#define GPIO_LED2G		gpio_pwr2 0 GPIO_ACTIVE_LOW
+#define GPIO_LED2R		gpio_pwr2 1 GPIO_ACTIVE_LOW
+#define GPIO_LED1G		gpio_pwr2 2 GPIO_ACTIVE_LOW
+#define GPIO_LED1R		gpio_pwr2 3 GPIO_ACTIVE_LOW
+#define GPIO_LED4G		gpio_pwr2 4 GPIO_ACTIVE_LOW
+#define GPIO_LED4R		gpio_pwr2 5 GPIO_ACTIVE_LOW
+#define GPIO_LED3G		gpio_pwr2 6 GPIO_ACTIVE_LOW
+#define GPIO_LED3R		gpio_pwr2 7 GPIO_ACTIVE_LOW
+	};
+
+	//0x28* U5  TPS23861PWR    PoE Controller
+	//0x30  U5  TPS23861PWR    PoE Controller broadcast
+
+	//0x50  U15 AT24C256C      EEPROM
+	eeprom@50 {
+		// AT24C256C-MAHL-T
+		compatible = "atmel,24c256";
+                reg = <0x50>;
+	};
+};
+
+
+/* System LEDs */
+
+/ {
+	leds: leds {
+		compatible = "gpio-leds";
+
+		led-statg {
+			function = LED_FUNCTION_STATUS;
+			color = <LED_COLOR_ID_GREEN>;
+			gpios = <&GPIO_LED1G>;
+		};
+
+		led-statr {
+			function = LED_FUNCTION_STATUS;
+			color = <LED_COLOR_ID_RED>;
+			gpios = <&GPIO_LED1R>;
+		};
+
+		led-faultg {
+			function = LED_FUNCTION_FAULT;
+			color = <LED_COLOR_ID_GREEN>;
+			gpios = <&GPIO_LED2G>;
+		};
+
+		led-faultr {
+			function = LED_FUNCTION_FAULT;
+			color = <LED_COLOR_ID_RED>;
+			gpios = <&GPIO_LED2R>;
+		};
+
+		led-lang {
+			function = LED_FUNCTION_LAN;
+			color = <LED_COLOR_ID_GREEN>;
+			gpios = <&GPIO_LED3G>;
+		};
+
+		led-lanr {
+			function = LED_FUNCTION_LAN;
+			color = <LED_COLOR_ID_RED>;
+			gpios = <&GPIO_LED3R>;
+		};
+
+		led-dbgg {
+			function = LED_FUNCTION_DEBUG;
+			color = <LED_COLOR_ID_GREEN>;
+			gpios = <&GPIO_LED4G>;
+		};
+
+		led-dbgr {
+			function = LED_FUNCTION_DEBUG;
+			color = <LED_COLOR_ID_RED>;
+			gpios = <&GPIO_LED4R>;
+		};
+
+		led-vin1_alert {
+			function = "power-1";
+			color = <LED_COLOR_ID_RED>;
+			gpios = <&GPIO_LED_VIN1_ALERT>;
+		};
+
+		led-vin2_alert {
+			function = "power-2";
+			color = <LED_COLOR_ID_RED>;
+			gpios = <&GPIO_LED_VIN2_ALERT>;
+		};
+	};
+};

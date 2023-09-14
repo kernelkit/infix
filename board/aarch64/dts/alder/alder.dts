@@ -1,0 +1,9 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright (C) 2021 Marvell International Ltd.
+ * Copyright (C) 2023 Addiva Elektronik AB
+ *
+ * Device tree for Alder board
+ */
+
+#include "alder.dtsi"
