@@ -9,3 +9,6 @@
 
 - name:  infix-interfaces
   suite: infix_interfaces/all.yaml
+
+#- name:  infix-services
+#  suite: infix_services/all.yaml

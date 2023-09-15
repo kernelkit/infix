@@ -143,7 +143,7 @@
 <COMMAND name="exit" help="Exit">
   <ACTION sym="nav">pop</ACTION>
 </COMMAND>
-<COMMAND name="logout" help="Alias for exit">
+<COMMAND name="logout" help="Alias to exit">
   <ACTION sym="nav">pop</ACTION>
 </COMMAND>
 
@@ -239,9 +239,13 @@
       </COMMAND>
     </SWITCH>
     <ACTION sym="script" interactive="false">
-      name="${KLISH_PARAM_name:-}"
+      if [ -n "$KLISH_PARAM_name" ]; then
       sysrepocfg -f json -X -d operational -m ietf-interfaces | \
-      /lib/infix/json-cfg-pretty "ietf-interfaces" "$name"
+        /lib/infix/cli-pretty "ietf-interfaces" -n "$KLISH_PARAM_name"
+      else
+      sysrepocfg -f json -X -d operational -m ietf-interfaces | \
+        /lib/infix/cli-pretty "ietf-interfaces"
+      fi
     </ACTION>
   </COMMAND>
 
@@ -393,6 +397,10 @@
   <ACTION sym="srp_up@sysrepo"/>
 </COMMAND>
 
+<COMMAND name="end" help="Alias to up, leave this subsection/node">
+  <ACTION sym="srp_up@sysrepo"/>
+</COMMAND>
+
 <COMMAND name="exit" help="Ascend to parent configuration node, or abort (from top)">
   <ACTION sym="srp_up@sysrepo"/>
   <ACTION sym="srp_reset@sysrepo" exec_on="fail" update_retcode="false"/>
@@ -420,7 +428,7 @@
   <ACTION sym="srp_del@sysrepo"/>
 </COMMAND>
 
-<COMMAND name="no" help="Alias for delete">
+<COMMAND name="no" help="Alias to delete">
   <PARAM name="path" ptype="/PLINE_DEL" max="100"/>
   <ACTION sym="srp_del@sysrepo"/>
 </COMMAND>

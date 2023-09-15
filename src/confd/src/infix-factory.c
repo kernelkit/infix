@@ -8,11 +8,12 @@
 #include <sys/sysinfo.h>
 #include <sys/types.h>
 
+#include <srx/common.h>
+#include <srx/lyx.h>
+#include <srx/srx_module.h>
+#include <srx/srx_val.h>
+
 #include "core.h"
-#include "../lib/common.h"
-#include "../lib/lyx.h"
-#include "../lib/srx_module.h"
-#include "srx_val.h"
 
 static const struct srx_module_requirement reqs[] = {
 	{ .dir = YANG_PATH_, .name = "infix-factory-default", .rev = "2023-06-28" },

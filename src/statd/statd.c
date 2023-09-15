@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: BSD-3-Clause */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -16,9 +18,9 @@
 #include <linux/if.h>
 #include <sys/queue.h>
 
-#include "common.h"
-#include "helpers.h"
-#include "lyx.h"
+#include <srx/common.h>
+#include <srx/helpers.h>
+#include <srx/lyx.h>
 
 #define XPATH_MAX PATH_MAX
 #define XPATH_IFACE_BASE "/ietf-interfaces:interfaces"
@@ -320,15 +322,60 @@ static const char *get_yang_link_type(char *xpath, json_t *iface)
 	return "infix-if-type:other";
 }
 
+static int ly_add_ip_link_br(const struct ly_ctx *ctx, struct lyd_node **parent,
+			     char *xpath, json_t *j_iface)
+{
+	struct lyd_node *br_node = NULL;
+	char *br_xpath;
+	json_t *j_val;
+	int err;
+
+	j_val = json_object_get(j_iface, "master");
+	if (!j_val) {
+		/* Interface has no bridge */
+		return SR_ERR_OK;
+	}
+
+	if (!json_is_string(j_val)) {
+		ERROR("Expected a JSON string for bridge 'master'");
+		return SR_ERR_SYS;
+	}
+
+	err = asprintf(&br_xpath, "%s/infix-interfaces:bridge-port", xpath);
+	if (err == -1) {
+		ERROR("Error, creating bridge xpath");
+		return SR_ERR_SYS;
+	}
+
+	err = lyd_new_path(*parent, ctx, br_xpath, NULL, 0, &br_node);
+	if (err) {
+		ERROR("Failed adding 'bridge' node (%s), libyang error %d: %s",
+		      br_xpath, err, ly_errmsg(ctx));
+		free(br_xpath);
+		return SR_ERR_LY;
+	}
+
+	err = lydx_new_path(ctx, &br_node, br_xpath, "bridge",
+			"%s", json_string_value(j_val));
+	if (err) {
+		ERROR("Error, adding 'bridge' to data tree, libyang error %d", err);
+		free(br_xpath);
+		return SR_ERR_LY;
+	}
+	free(br_xpath);
+
+	return SR_ERR_OK;
+}
+
 static int ly_add_ip_link_data(const struct ly_ctx *ctx, struct lyd_node **parent,
-			       char *xpath, json_t *iface)
+			       char *xpath, json_t *j_iface)
 {
 	const char *val;
 	const char *type;
 	json_t *j_val;
 	int err;
 
-	j_val = json_object_get(iface, "ifindex");
+	j_val = json_object_get(j_iface, "ifindex");
 	if (!json_is_integer(j_val)) {
 		ERROR("Expected a JSON integer for 'ifindex'");
 		return SR_ERR_SYS;
@@ -341,7 +388,7 @@ static int ly_add_ip_link_data(const struct ly_ctx *ctx, struct lyd_node **paren
 		return SR_ERR_LY;
 	}
 
-	j_val = json_object_get(iface, "operstate");
+	j_val = json_object_get(j_iface, "operstate");
 	if (!json_is_string(j_val)) {
 		ERROR("Expected a JSON string for 'operstate'");
 		return SR_ERR_SYS;
@@ -354,20 +401,20 @@ static int ly_add_ip_link_data(const struct ly_ctx *ctx, struct lyd_node **paren
 		return SR_ERR_LY;
 	}
 
-	err = ly_add_ip_link_stat(ctx, parent, xpath, iface);
+	err = ly_add_ip_link_stat(ctx, parent, xpath, j_iface);
 	if (err) {
 		ERROR("Error, adding 'stats64' to data tree");
 		return err;
 	}
 
-	type = get_yang_link_type(xpath, iface);
+	type = get_yang_link_type(xpath, j_iface);
 	err = lydx_new_path(ctx, parent, xpath, "type", type);
 	if (err) {
 		ERROR("Error, adding 'type' to data tree, libyang error %d", err);
 		return SR_ERR_LY;
 	}
 
-	j_val = json_object_get(iface, "address");
+	j_val = json_object_get(j_iface, "address");
 	if (!json_is_string(j_val)) {
 		ERROR("Expected a JSON string for 'address'");
 		return SR_ERR_SYS;
@@ -377,6 +424,28 @@ static int ly_add_ip_link_data(const struct ly_ctx *ctx, struct lyd_node **paren
 	if (err) {
 		ERROR("Error, adding 'phys-address' to data tree, libyang error %d", err);
 		return SR_ERR_LY;
+	}
+
+	err = ly_add_ip_link_br(ctx, parent, xpath, j_iface);
+	if (err) {
+		ERROR("Error, adding bridge to data tree, libyang error %d", err);
+		return err;
+	}
+
+	j_val = json_object_get(j_iface, "link");
+	if (j_val) {
+		if (!json_is_string(j_val)) {
+			ERROR("Expected a JSON string for 'link'");
+			return SR_ERR_SYS;
+		}
+
+		err = lydx_new_path(ctx, parent, xpath,
+				    "ietf-if-extensions:parent-interface", "%s",
+				    json_string_value(j_val));
+		if (err) {
+			ERROR("Error, adding 'link' to data tree, libyang error %d", err);
+			return SR_ERR_LY;
+		}
 	}
 
 	return SR_ERR_OK;

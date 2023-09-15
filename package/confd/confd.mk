@@ -5,12 +5,12 @@
 ################################################################################
 
 CONFD_VERSION = 1.0
-CONFD_LICENSE = BSD-3-Clause
 CONFD_SITE_METHOD = local
 CONFD_SITE = $(BR2_EXTERNAL_INFIX_PATH)/src/confd
-CONFD_LICENSE = BSD-3
+CONFD_LICENSE = BSD-3-Clause
 CONFD_LICENSE_FILES = LICENSE
-CONFD_DEPENDENCIES = augeas jansson libite sysrepo
+CONFD_REDISTRIBUTE = NO
+CONFD_DEPENDENCIES = augeas jansson libite sysrepo libsrx
 CONFD_AUTORECONF = YES
 
 define CONFD_INSTALL_EXTRA

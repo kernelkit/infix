@@ -4,8 +4,9 @@ Developer's Guide
 Cloning
 -------
 
-Please see the [Contributing](#contributing) section, below, for details
-on how to fork and clone when contributing to Infix.
+When [pre-built releases][0] are not enough, for instance when you want
+to add or modify some Open Source components, you can clone the Infix
+tree to your PC:
 
 ```bash
 $ mkdir ~/Projects; cd ~/Projects
@@ -13,6 +14,10 @@ $ git clone https://github.com/kernelkit/infix.git
 $ cd infix/
 $ git submodule update --init
 ```
+
+> Please see the [Contributing](#contributing) section, below, for
+> details on how to fork and clone when contributing to Infix.
+
 
 ### Customer Builds
 
@@ -39,12 +44,21 @@ Building
 --------
 
 Buildroot is almost stand-alone, it needs a few locally installed tools
-to bootstrap itself.  For details, see the [excellent manual][manual].
+to bootstrap itself.  The most common ones are usually part of the base
+install of the OS, but specific ones for building need the following.
+The instructions here are for Debian/Ubuntu based systems (YMMV):
 
-> **Note:** installation for Debian/Ubuntu based systems: <kbd>sudo apt
-> install make libssl-dev</kbd>
+```bash
+$ sudo apt install bc binutils build-essential bzip2 cpio \
+                   diffutils file findutils git gzip      \
+                   libncurses-dev libssl-dev perl patch   \
+                   python rsync sed tar unzip wget
+```
 
-Briefly, to build an Infix image; select the target and then make:
+> For details, see the Getting Started and System Requirements sections
+> of the [excellent manual][1].
+
+To build an Infix image; select the target and then make:
 
     make x86_64_defconfig
     make
@@ -56,6 +70,32 @@ Online help is available:
 To see available defconfigs for supported targets, use:
 
     make list-defconfigs
+
+
+Development
+-----------
+
+When changing a package, locally kept sources, or when using `local.mk`,
+you only want to rebuild the parts you have modified:
+
+    make foo-rebuild
+
+or
+
+    make foo-reconfigure
+
+or, when nothing seems to bite:
+
+    make foo-dirclean foo-rebuild
+
+As shown here, you can combine multiple build targets and steps in one
+go, like this:
+
+    make foo-rebuild bar-rebuild all run
+
+This rebuilds (and installs) `foo` and `bar`, the `all` target calls
+on Buildroot to finalize the target filesystem and generate the images.
+The final `run` argument is explained below.
 
 
 Testing
@@ -105,5 +145,6 @@ $ git submodule update --init
     is highly recommended as a baseline and reference.  For integration
 	of local changes another company-specific branch can be used instead.
 
+[0]: https://github.com/kernelkit/infix/releases
 [1]: https://buildroot.org/downloads/manual/manual.html
 [2]: https://github.com/wkz/qeneth

@@ -1,5 +1,7 @@
-#ifndef _CONFD_DAGGER_H
-#define _CONFD_DAGGER_H
+/* SPDX-License-Identifier: BSD-3-Clause */
+
+#ifndef CONFD_DAGGER_H_
+#define CONFD_DAGGER_H_
 
 #include <limits.h>
 #include <stdio.h>
@@ -31,4 +33,4 @@ int dagger_should_skip_current(struct dagger *d, const char *ifname);
 
 int dagger_claim(struct dagger *d, const char *path);
 
-#endif	/* _CONFD_DAGGER_H */
+#endif	/* CONFD_DAGGER_H_ */

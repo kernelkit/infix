@@ -1,0 +1,7 @@
+config BR2_PACKAGE_LIBSRX
+	bool "libsrx"
+	select BR2_PACKAGE_SYSREPO
+	help
+	  Extensions and helper APIs for sysrepo plugins.
+
+	  https://github.com/kernelkit/infix

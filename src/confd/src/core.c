@@ -1,8 +1,9 @@
 /* SPDX-License-Identifier: BSD-3-Clause */
 
+#include <srx/srx_module.h>
+#include <srx/common.h>
+
 #include "core.h"
-#include "../lib/srx_module.h"
-#include "../lib/common.h"
 
 static struct confd confd;
 
@@ -116,6 +117,9 @@ int sr_plugin_init_cb(sr_session_ctx_t *session, void **priv)
 	if (rc)
 		goto err;
 	rc = infix_system_sw_init(&confd);
+	if (rc)
+		goto err;
+	rc = infix_services_init(&confd);
 	if (rc)
 		goto err;
 

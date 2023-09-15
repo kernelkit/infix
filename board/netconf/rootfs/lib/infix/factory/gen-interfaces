@@ -19,7 +19,7 @@ phys_ifaces=$(ip -d -j link show | jq -r '
 	 .[] |
 	 select(.link_type == "ether") |
 	 select(.group != "internal")  |
-	 select(has("linkinfo") | not) |
+	 select(has("parentbus")) |
 	 .ifname')
 
 cat <<EOF

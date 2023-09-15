@@ -6,12 +6,13 @@
 #include <arpa/inet.h>
 #include <net/if.h>
 
+#include <srx/common.h>
+#include <srx/lyx.h>
+#include <srx/srx_module.h>
+#include <srx/srx_val.h>
+
 #include "core.h"
 #include "dagger.h"
-#include "../lib/common.h"
-#include "../lib/lyx.h"
-#include "../lib/srx_module.h"
-#include "srx_val.h"
 
 #define ERR_IFACE(_iface, _err, _fmt, ...)				\
 	({								\
@@ -49,7 +50,7 @@ static bool iface_is_phys(const char *ifname)
 	if (strcmp(attr, "ether"))
 		goto out_free;
 
-	if (!json_unpack(link, "[{s: { s:s }}]", "linkinfo", "info_kind", &attr))
+	if (json_unpack(link, "[{s:s}]", "parentbus", &attr))
 		goto out_free;
 
 	is_phys = true;

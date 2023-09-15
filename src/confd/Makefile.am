@@ -1,4 +1,5 @@
-SUBDIRS         = src yang
-DISTCLEANFILES  = *~ *.d
-ACLOCAL_AMFLAGS = -I m4
-dist_bin_SCRIPTS= sysrepo-bootstrap.sh
+SUBDIRS             = src yang
+dist_doc_DATA       = README.md LICENSE
+pkglibexec_SCRIPTS  = confd-bootstrap.sh
+DISTCLEANFILES      = *~ *.d
+ACLOCAL_AMFLAGS     = -I m4
