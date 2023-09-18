@@ -473,6 +473,35 @@ static int ly_add_ip_link_data(const struct ly_ctx *ctx, struct lyd_node **paren
 	return SR_ERR_OK;
 }
 
+static int ly_add_mtu(const struct ly_ctx *ctx, struct lyd_node *node,
+		      char *xpath, json_t *j_iface, char *ifname)
+{
+	json_t *j_val;
+	int err;
+
+	/**
+	 * TODO: Not sure how to handle loopback MTU (65536) which is
+	 * out of bounds for both YANG and uint16_t. For now, we skip it.
+	 */
+	if (strcmp(ifname, "lo") == 0)
+		return SR_ERR_OK;
+
+	j_val = json_object_get(j_iface, "mtu");
+	if (!json_is_integer(j_val)) {
+		ERROR("Expected a JSON integer for 'mtu'");
+		return SR_ERR_SYS;
+	}
+
+	err = lydx_new_path(ctx, &node, xpath, "mtu", "%lld",
+			    json_integer_value(j_val));
+	if (err) {
+		ERROR("Error, adding 'mtu' to data tree, libyang error %d", err);
+		return SR_ERR_LY;
+	}
+
+	return SR_ERR_OK;
+}
+
 static int ly_add_ipv4_address_origin(const struct ly_ctx *ctx, struct lyd_node *addr_node,
 				      char *addr_xpath, json_t *j_proto)
 {
@@ -495,12 +524,20 @@ static int ly_add_ipv4_address_origin(const struct ly_ctx *ctx, struct lyd_node 
 }
 
 static int ly_add_ipv4_address(const struct ly_ctx *ctx, struct lyd_node *ipv4_node,
-			       char *xpath, json_t *j_addr, const char *ip)
+			       char *xpath, json_t *j_addr)
 {
 	struct lyd_node *addr_node = NULL;
 	char *addr_xpath;
+	const char *ip;
 	json_t *j_val;
 	int err;
+
+	j_val = json_object_get(j_addr, "local");
+	if (!json_is_string(j_val)) {
+		ERROR("Expected a JSON string for ipv4 'local'");
+		return SR_ERR_SYS;
+	}
+	ip = json_string_value(j_val);
 
 	err = asprintf(&addr_xpath, "%s/address[ip='%s']", xpath, ip);
 	if (err == -1) {
@@ -542,7 +579,7 @@ static int ly_add_ipv4_address(const struct ly_ctx *ctx, struct lyd_node *ipv4_n
 	return err;
 }
 
-static int ly_add_ip_addr_data(const struct ly_ctx *ctx, struct lyd_node **parent,
+static int ly_add_ipv4_addr_data(const struct ly_ctx *ctx, struct lyd_node **parent,
 			       char *xpath, json_t *j_iface, char *ifname)
 {
 	struct lyd_node *ipv4_node = NULL;
@@ -558,23 +595,10 @@ static int ly_add_ip_addr_data(const struct ly_ctx *ctx, struct lyd_node **paren
 		return SR_ERR_LY;
 	}
 
-	/**
-	 * TODO: Not sure how to handle loopback MTU (65536) which is
-	 * out of bounds for both YANG and uint16_t. For now, we skip it.
-	 */
-	if (strcmp(ifname, "lo") != 0) {
-		j_val = json_object_get(j_iface, "mtu");
-		if (!json_is_integer(j_val)) {
-			ERROR("Expected a JSON integer for 'mtu'");
-			return SR_ERR_SYS;
-		}
-
-		err = lydx_new_path(ctx, &ipv4_node, xpath, "mtu", "%lld",
-				    json_integer_value(j_val));
-		if (err) {
-			ERROR("Error, adding 'mtu' to data tree, libyang error %d", err);
-			return SR_ERR_LY;
-		}
+	err = ly_add_mtu(ctx, ipv4_node, xpath, j_iface, ifname);
+	if (err) {
+		ERROR("Error, adding ipv4 MTU");
+		return err;
 	}
 
 	j_val = json_object_get(j_iface, "addr_info");
@@ -585,31 +609,20 @@ static int ly_add_ip_addr_data(const struct ly_ctx *ctx, struct lyd_node **paren
 
 	json_array_foreach(j_val, index, j_addr) {
 		json_t *j_family;
-		json_t *j_local;
-		const char *ip;
 
 		j_family = json_object_get(j_addr, "family");
 		if (!json_is_string(j_family)) {
 			ERROR("Expected a JSON string for ipv4 'family'");
 			return SR_ERR_SYS;
 		}
-		/* TODO: We only handle ipv4 for now */
-		if (strcmp(json_string_value(j_family), "inet") != 0)
-			continue;
 
-		j_local = json_object_get(j_addr, "local");
-		if (!json_is_string(j_local)) {
-			ERROR("Expected a JSON string for ipv4 'local'");
-			return SR_ERR_SYS;
+		if (strcmp(json_string_value(j_family), "inet") == 0) {
+			err = ly_add_ipv4_address(ctx, ipv4_node, xpath, j_addr);
+			if (err) {
+				ERROR("Error, adding ipv4 address");
+				return err;
+			}
 		}
-		ip = json_string_value(j_local);
-
-		err = ly_add_ipv4_address(ctx, ipv4_node, xpath, j_addr, ip);
-		if (err) {
-			ERROR("Error, adding ipv4 address");
-			return err;
-		}
-
 	}
 
 	return SR_ERR_OK;
@@ -673,7 +686,7 @@ static int ly_add_ip_addr(const struct ly_ctx *ctx, struct lyd_node **parent, ch
 	snprintf(xpath, sizeof(xpath), "%s/interface[name='%s']/ietf-ip:ipv4",
 		 XPATH_IFACE_BASE, ifname);
 
-	err = ly_add_ip_addr_data(ctx, parent, xpath, j_iface, ifname);
+	err = ly_add_ipv4_addr_data(ctx, parent, xpath, j_iface, ifname);
 	if (err) {
 		ERROR("Error, adding ip-addr info for %s", ifname);
 		json_decref(j_root);
