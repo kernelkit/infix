@@ -41,6 +41,21 @@
             }
           ]
         },
+        "ietf-ip:ipv6": {
+          "mtu": 1500,
+          "address": [
+            {
+              "ip": "fe80::beff:407a:d738:abb4",
+              "prefix-length": 64,
+              "origin": "link-layer"
+            },
+            {
+              "ip": "fe80::beff:aaaa:d738:abb4",
+              "prefix-length": 64,
+              "origin": "random"
+            }
+          ]
+        },
         "infix-interfaces:bridge-port": {
           "bridge": "br0"
         }
@@ -114,6 +129,21 @@
               "ip": "192.168.5.1",
               "prefix-length": 24,
               "origin" : "static"
+            }
+          ]
+        },
+        "ietf-ip:ipv6": {
+          "mtu": 1500,
+          "address": [
+            {
+              "ip": "fe80::beff:407a:d738:abb4",
+              "prefix-length": 64,
+              "origin": "link-layer"
+            },
+            {
+              "ip": "fe80::beff:aaaa:d738:abb4",
+              "prefix-length": 64,
+              "origin": "random"
             }
           ]
         }
