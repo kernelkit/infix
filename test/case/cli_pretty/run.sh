@@ -1,8 +1,6 @@
-#!/bin/bash
+#!/bin/sh
 
 SCRIPT_PATH="$(dirname "$(readlink -f "$0")")"
-
-set -o pipefail
 
 if [ $# -lt 2 ]; then
     echo "Usage: $0 JSON-FILE MODULE [ ARGS ]"
@@ -13,6 +11,11 @@ json=$1; shift
 module=$1; shift
 
 echo "1..1"
+
+if [ ! -e "$SCRIPT_PATH/$json" ]; then
+    echo "not ok 1 - $SCRIPT_PATH/$json not found"
+    exit 1
+fi
 
 cat "$SCRIPT_PATH/$json" | \
     "$SCRIPT_PATH"/../../../board/netconf/rootfs/lib/infix/cli-pretty \
