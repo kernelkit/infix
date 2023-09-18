@@ -9,10 +9,10 @@ parser.add_argument("-n", "--name", help="Focus on specific name")
 args = parser.parse_args()
 
 class Pad:
-    iface = 15 + 2 # + 2 is ASCII tree for nesting
-    proto = 18
-    state = 15
-    data = 30
+    iface = 16
+    proto = 11
+    state = 12
+    data = 41
 
 class Decore():
     @staticmethod
@@ -55,6 +55,11 @@ class Iface:
             self.mtu = ''
             self.ipv4_addr = []
 
+        if self.data.get('ietf-ip:ipv6'):
+            self.ipv6_addr = self.data.get('ietf-ip:ipv6').get('address', '')
+        else:
+            self.ipv6_addr = []
+
         if self.data.get('infix-interfaces:bridge-port'):
             self.bridge = self.data.get('infix-interfaces:bridge-port').get('bridge', None)
         else:
@@ -82,6 +87,15 @@ class Iface:
             row += f"{'':<{Pad.state}}{addr['ip']}/{addr['prefix-length']} {origin}"
             print(row)
 
+    def pr_proto_ipv6(self, pipe=''):
+        for addr in self.ipv6_addr:
+            origin = f"({addr['origin']})" if addr.get('origin') else ""
+
+            row =  f"{pipe:<{Pad.iface}}"
+            row += f"{'ipv6':<{Pad.proto}}"
+            row += f"{'':<{Pad.state}}{addr['ip']}/{addr['prefix-length']} {origin}"
+            print(row)
+
     def pr_proto_eth(self):
         row = f"{'ethernet':<{Pad.proto}}"
         dec = Decore.green if self.data['oper-status'] == "up" else Decore.red
@@ -101,8 +115,10 @@ class Iface:
 
         if lowers:
             self.pr_proto_ipv4(pipe='│')
+            self.pr_proto_ipv6(pipe='│')
         else:
             self.pr_proto_ipv4()
+            self.pr_proto_ipv6()
 
         for i, lower in enumerate(lowers):
             pipe = '└ ' if (i == len(lowers) -1)  else '├ '
@@ -115,8 +131,10 @@ class Iface:
 
         if self.parent:
             self.pr_proto_ipv4(pipe='│')
+            self.pr_proto_ipv6(pipe='│')
         else:
             self.pr_proto_ipv4()
+            self.pr_proto_ipv6()
             return
 
         parent = find_iface(_ifaces, self.parent)
@@ -145,6 +163,16 @@ class Iface:
                 first = False
         else:
                 print(f"{'ipv4 addresses':<{20}}:")
+
+        if self.ipv6_addr:
+            first = True
+            for addr in self.ipv6_addr:
+                key = 'ipv6 addresses' if first else ''
+                colon = ':' if first else ' '
+                print(f"{key:<{20}}{colon} {addr['ip']}/{addr['prefix-length']}")
+                first = False
+        else:
+                print(f"{'ipv6 addresses':<{20}}:")
 
         if self.in_octets and self.out_octets:
             print(f"{'in-octets':<{20}}: {self.in_octets}")
@@ -187,6 +215,7 @@ def pr_interface_list(json):
         iface.pr_name()
         iface.pr_proto_eth()
         iface.pr_proto_ipv4()
+        iface.pr_proto_ipv6()
 
 def ietf_interfaces(json, name):
     if not json or not json.get("ietf-interfaces:interfaces"):
