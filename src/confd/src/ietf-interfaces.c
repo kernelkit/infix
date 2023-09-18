@@ -435,36 +435,44 @@ static int netdag_gen_ip_addrs(FILE *ip, const char *proto,
 	return netdag_gen_diff_addrs(ip, ifname, ipdiff);
 }
 
-static int netdag_gen_ipv6_autoconf(FILE *ip, struct lyd_node *cif,
-				    struct lyd_node *dif)
+static int netdag_gen_ipv6_autoconf(struct dagger *net, struct lyd_node *cif,
+				    struct lyd_node *dif, FILE *ip)
 {
+	const char *preferred_lft = "86400", *valid_lft = "604800";
 	struct lyd_node *ipconf = lydx_get_child(cif, "ipv6");
-	struct lyd_node *ipdiff = lydx_get_child(dif, "ipv6");
+	const char *ifname = lydx_get_cattr(dif, "name");
+	int global = 0, random = 0;
 	struct lyd_node *node;
-	struct lydx_diff nd;
+	FILE *fp;
 
-	if (!ipconf || !lydx_is_enabled(ipconf, "enabled"))
-		goto disable;
-
-	if (lydx_get_op(lydx_get_child(ipdiff, "enabled")) == LYDX_OP_REPLACE) {
-		node = lydx_get_child(ipconf, "autoconf");
-		if (node && lydx_is_enabled(node, "create-global-addresses"))
-			goto enable;
-		goto disable;
-	}
-
-	node = lydx_get_descendant(lydx_get_child(ipdiff, "autoconf"),
-			"create-global-addresses", NULL);
-	if (!node || !lydx_get_diff(node, &nd))
-		return 0;
-
-	if (!nd.new || !strcmp(nd.val, "true")) {
-	enable:
-		fputs(" addrgenmode eui64", ip);
-	} else {
-	disable:
+	if (!ipconf || !lydx_is_enabled(ipconf, "enabled")) {
 		fputs(" addrgenmode none", ip);
+		return 0;
 	}
+
+	node = lydx_get_child(ipconf, "autoconf");
+	if (node) {
+		global = lydx_is_enabled(node, "create-global-addresses");
+		random = lydx_is_enabled(node, "create-temporary-addresses");
+
+		preferred_lft = lydx_get_cattr(node, "temporary-preferred-lifetime");
+		valid_lft     = lydx_get_cattr(node, "temporary-valid-lifetime");
+	}
+
+	fp = dagger_fopen_next(net, "init", ifname, 45, "init.sysctl");
+	if (fp) {
+		/* Autoconfigure addresses using Prefix Information in Router Advertisements */
+		fprintf(fp, "net.ipv6.conf.%s.autoconf = %d\n", ifname, global);
+		/* The amount of Duplicate Address Detection probes to send. */
+		fprintf(fp, "net.ipv6.conf.%s.dad_transmits = %s\n", ifname,
+			lydx_get_cattr(ipconf, "dup-addr-detect-transmits"));
+		/* Preferred and valid lifetimes for temporary (random) addresses */
+		fprintf(fp, "net.ipv6.conf.%s.temp_prefered_lft = %s\n", ifname, preferred_lft);
+		fprintf(fp, "net.ipv6.conf.%s.temp_valid_lft = %s\n", ifname, valid_lft);
+		fclose(fp);
+	}
+
+	fprintf(ip, " addrgenmode %s", random ? "random" : "eui64");
 
 	return 0;
 }
@@ -996,7 +1004,7 @@ static sr_error_t netdag_gen_iface(struct dagger *net,
 
 	/* Set generic link attributes */
 	err = err ? : netdag_gen_ipv4_autoconf(net, cif, dif);
-	err = err ? : netdag_gen_ipv6_autoconf(ip, cif, dif);
+	err = err ? : netdag_gen_ipv6_autoconf(net, cif, dif, ip);
 	if (err)
 		goto err_close_ip;
 
