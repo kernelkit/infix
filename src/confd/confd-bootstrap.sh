@@ -56,6 +56,7 @@ sysrepoctl -s $SEARCH							\
 	   -i ietf-interfaces@2018-02-20.yang   -g wheel -p 0660	\
 		-e if-mib						\
 	   -i ietf-ip@2018-02-22.yang		-g wheel -p 0660	\
+		-e ipv6-privacy-autoconf				\
 	   -i ietf-network-instance@2019-01-21.yang -g wheel -p 0660	\
 	   -i ietf-netconf-monitoring@2010-10-04.yang -g wheel -p 0660	\
 	   -i ietf-netconf-nmda@2019-01-07.yang -g wheel -p 0660	\
