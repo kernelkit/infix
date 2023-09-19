@@ -157,9 +157,12 @@ class Iface:
         if self.ipv4_addr:
             first = True
             for addr in self.ipv4_addr:
+                origin = f"({addr['origin']})" if addr.get('origin') else ""
                 key = 'ipv4 addresses' if first else ''
                 colon = ':' if first else ' '
-                print(f"{key:<{20}}{colon} {addr['ip']}/{addr['prefix-length']}")
+                row = f"{key:<{20}}{colon} "
+                row += f"{addr['ip']}/{addr['prefix-length']} {origin}"
+                print(row)
                 first = False
         else:
                 print(f"{'ipv4 addresses':<{20}}:")
@@ -167,9 +170,12 @@ class Iface:
         if self.ipv6_addr:
             first = True
             for addr in self.ipv6_addr:
+                origin = f"({addr['origin']})" if addr.get('origin') else ""
                 key = 'ipv6 addresses' if first else ''
                 colon = ':' if first else ' '
-                print(f"{key:<{20}}{colon} {addr['ip']}/{addr['prefix-length']}")
+                row = f"{key:<{20}}{colon} "
+                row += f"{addr['ip']}/{addr['prefix-length']} {origin}"
+                print(row)
                 first = False
         else:
                 print(f"{'ipv6 addresses':<{20}}:")
