@@ -18,6 +18,11 @@ module infix-interfaces {
   contact      "kernelkit@googlegroups.com";
   description  "Linux bridge and lag extensions for ietf-interfaces.";
 
+  revision 2023-09-19 {
+    description "Add deviation to allow setting phys-address on links.";
+    reference "internal";
+  }
+
   revision 2023-08-21 {
     description "Move port augment to submodule for infix-if-bridge and
                  infix-if-lag (later) which reference it.
@@ -43,6 +48,12 @@ module infix-interfaces {
       type identityref {
 	base infixift:infix-interface-type;
       }
+    }
+  }
+
+  deviation "/if:interfaces/if:interface/if:phys-address" {
+    deviate replace {
+      config true;
     }
   }
 

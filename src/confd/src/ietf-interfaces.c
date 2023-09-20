@@ -416,6 +416,36 @@ static int netdag_set_conf_addrs(FILE *ip, const char *ifname,
 	return 0;
 }
 
+static int netdag_gen_link_addr(FILE *ip, struct lyd_node *cif, struct lyd_node *dif)
+{
+	const char *ifname = lydx_get_cattr(dif, "name");
+	const char *mac = NULL;
+	struct lyd_node *node;
+	char buf[32];
+
+	node = lydx_get_child(dif, "phys-address");
+	if (lydx_get_op(node) == LYDX_OP_DELETE) {
+		FILE *fp;
+
+		fp = popenf("r", "ethtool -P %s |awk '{print $3}'", ifname);
+		if (fp) {
+			if (fgets(buf, sizeof(buf), fp))
+				mac = chomp(buf);
+			pclose(fp);
+		}
+	} else {
+		mac = lyd_get_value(node);
+	}
+
+	if (!mac || !strlen(mac)) {
+		DEBUG("No change in %s phys-address, skipping ...", ifname);
+		return 0;
+	}
+
+	fprintf(ip, "link set %s address %s\n", ifname, mac);
+	return 0;
+}
+
 static int netdag_gen_ip_addrs(FILE *ip, const char *proto,
 	struct lyd_node *cif, struct lyd_node *dif)
 {
@@ -1022,6 +1052,7 @@ static sr_error_t netdag_gen_iface(struct dagger *net,
 	}
 
 	/* Set Addresses */
+	err = err ? : netdag_gen_link_addr(ip, cif, dif);
 	err = err ? : netdag_gen_ip_addrs(ip, "ipv4", cif, dif);
 	err = err ? : netdag_gen_ip_addrs(ip, "ipv6", cif, dif);
 	if (err)
