@@ -6,6 +6,7 @@ import logging
 import socket
 import sys
 import time
+import uuid   # For _ncc_get_data() extension
 
 import libyang
 import lxml
@@ -44,6 +45,13 @@ class Manager(netconf_client.ncclient.Manager):
     def _debug(self):
         self.set_logger_level(logging.DEBUG)
         self.logger().addHandler(logging.StreamHandler(sys.stderr))
+
+class NccGetDataReply:
+    """Fold in to DataReply class when upstreaming"""
+    def __init__(self, raw, ele):
+        self.data_ele = ele.find("{urn:ietf:params:xml:ns:yang:ietf-netconf-nmda}data")
+        self.data_xml = lxml.etree.tostring(self.data_ele)
+        self.raw_reply = raw
 
 @dataclass
 class Location:
@@ -120,6 +128,25 @@ class Device(object):
         return list(filter(lambda m: m["name"] in modnames,
                            self.modules.values()))
 
+    def _ncc_make_rpc(self, guts, msg_id=None):
+        if not msg_id:
+            msg_id = uuid.uuid4()
+
+        return '<rpc message-id="{id}" xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">{guts}</rpc>' \
+            .format(guts=guts, id=msg_id).encode("utf-8")
+
+    def _ncc_get_data_rpc(self, datastore="operational", filter=None, msg_id=None):
+        pieces = []
+        pieces.append('<get-data xmlns="urn:ietf:params:xml:ns:yang:ietf-netconf-nmda">')
+        pieces.append(f'<datastore xmlns:ds="urn:ietf:params:xml:ns:yang:ietf-datastores">'
+                      f'ds:{datastore}'
+                      f'</datastore>')
+        if filter:
+            xmlns = " ".join([f"xmlns:{m['name']}=\"{m['namespace']}\"" for m in self._modules_in_xpath(filter)])
+            pieces.append(f'<xpath-filter {xmlns}>{filter}</xpath-filter>')
+        pieces.append("</get-data>")
+        return self._ncc_make_rpc("".join(pieces), msg_id=msg_id)
+
     def _get(self, xpath, getter):
         # Figure out which modules we are referencing
         mods = self._modules_in_xpath(xpath)
@@ -127,15 +154,31 @@ class Device(object):
         # Fetch the data
         xmlns = " ".join([f"xmlns:{m['name']}=\"{m['namespace']}\"" for m in mods])
         filt = f"<filter type=\"xpath\" select=\"{xpath}\" {xmlns} />"
+        # pylint: disable=c-extension-no-member
         cfg = lxml.etree.tostring(getter(filter=filt).data_ele[0])
 
         return self.ly.parse_data_mem(cfg, "xml", parse_only=True)
 
+    def _get_data(self, xpath):
+        """Local member wrapper for netconf-client <get-data> RPC"""
+        # pylint: disable=protected-access
+        (raw, ele) = self.ncc._send_rpc(self._ncc_get_data_rpc(filter=xpath))
+        data = NccGetDataReply(raw, ele)
+        # pylint: disable=c-extension-no-member
+        cfg = lxml.etree.tostring(data.data_ele[0])
+        return self.ly.parse_data_mem(cfg, "xml", parse_only=True)
+
     def get(self, xpath):
+        """RPC <get> (legacy NETCONF) fetches config:false data"""
         return self._get(xpath, self.ncc.get)
 
     def get_dict(self, xpath):
+        """Return Python dictionary of <get> RPC data"""
         return self.get(xpath).print_dict()
+
+    def get_data(self, xpath):
+        """RPC <get-data> to fetch operational data"""
+        return self._get_data(xpath).print_dict()
 
     def get_config(self, xpath):
         return self._get(xpath, self.ncc.get_config)
