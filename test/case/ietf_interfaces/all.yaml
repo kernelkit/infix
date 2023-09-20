@@ -1,5 +1,6 @@
 ---
 - case: vlan_ping.py
 - case: ipv4_address.py
+- case: iface_phys_address.py
 - case: iface_status.py
 - case: routing_basic.py
