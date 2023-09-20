@@ -169,6 +169,7 @@ static const char *get_yang_origin(const char *protocol)
 		{"kernel_ll",	"link-layer"},
 		{"static",	"static"},
 		{"dhcp",	"dhcp"},
+		{"random",	"random"},
 	};
 
 	for (i = 0; i < sizeof(map) / sizeof(map[0]); i++) {
