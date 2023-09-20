@@ -2,6 +2,13 @@
 Fetch interface status from remote device.
 """
 
+def _iface_xpath(iface, path=None):
+    """Compose complete XPath to a YANG node in /ietf-interfaces"""
+    xpath = f"/ietf-interfaces:interfaces/interface[name='{iface}']"
+    if path:
+        xpath.join(f"/{path}")
+    return xpath
+
 def _iface_extract_param(json_content, param):
     """Returns (extracted) value for parameter 'param'"""
     interfaces = json_content.get('interfaces')
@@ -15,32 +22,29 @@ def _iface_extract_param(json_content, param):
 
     return None
 
+def _iface_get_param(target, iface, param=None):
+    """Fetch target dict for iface and extract param from JSON"""
+    try:
+        content = target.get_data(_iface_xpath(iface, param))
+        return _iface_extract_param(content, param)
+    except:
+        return None
+
 def interface_exist(target, iface):
     """Verify that the target interface exists"""
-    try: 
-        content = target.get_dict(f"/ietf-interfaces:interfaces/ietf-interfaces:interface[name='{iface}']")
-        name = _iface_extract_param(content, 'name')
-        return name != None
-    except:
-        return False
+    return _iface_get_param(target, iface, "name") is not None
 
 def get_if_index(target, iface):
-    """Return value of 'if-index' (interface index) parameter for the target interface"""
-    try:
-        content = target.get_dict(f"/ietf-interfaces:interfaces/ietf-interfaces:interface[name='{iface}']/ietf-interfaces:if-index")
-        if_index = _iface_extract_param(content, 'if-index')
-        return if_index
-    except:
-        return None
+    """Fetch interface 'if-index' (operational status)"""
+    return _iface_get_param(target, iface, "if-index")
 
 def get_oper_status(target, iface):
-    """Return value of 'oper-status' (operational status) parameter for the target interface"""
-    try:
-        content = target.get_dict(f"/ietf-interfaces:interfaces/ietf-interfaces:interface[name='{iface}']/ietf-interfaces:oper-status")
-        oper_status = _iface_extract_param(content, 'oper-status')
-        return oper_status
-    except:
-        return None
+    """Fetch interface 'oper-status' (operational status)"""
+    return _iface_get_param(target, iface, "oper-status")
+
+def get_phys_address(target, iface):
+    """Fetch interface MAC address (operational status)"""
+    return _iface_get_param(target, iface, "phys-address")
 
 def print_iface_status(target):
     """Print status parameters for all target interfaces"""
