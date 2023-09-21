@@ -54,78 +54,15 @@ module infix-ip {
     deviate not-supported;
   }
   
-  deviation "/if:interfaces/if:interface/ip:ipv4/ip:address/ip:origin" {
-    deviate not-supported;
-  }
-
-  deviation "/if:interfaces/if:interface/ip:ipv4/ip:neighbor/ip:origin" {
-    deviate not-supported;
-  }
-
-  deviation "/if:interfaces/if:interface/ip:ipv6/ip:address/ip:origin" {
+  deviation "/if:interfaces/if:interface/ip:ipv4/ip:neighbor" {
     deviate not-supported;
   }
 
   deviation "/if:interfaces/if:interface/ip:ipv6/ip:address/ip:status" {
     deviate not-supported;
   }
-  
-  deviation "/if:interfaces/if:interface/ip:ipv6/ip:neighbor/ip:origin" {
-    deviate not-supported;
-  }
-  
-  deviation "/if:interfaces/if:interface/ip:ipv6/ip:neighbor/ip:is-router" {
-    deviate not-supported;
-  }
 
-  deviation "/if:interfaces/if:interface/ip:ipv6/ip:neighbor/ip:state" {
+  deviation "/if:interfaces/if:interface/ip:ipv6/ip:neighbor" {
     deviate not-supported;
   }
-
-  deviation "/if:interfaces/if:interface/ip:ipv6/ip:autoconf/ip:create-temporary-addresses" {
-    deviate not-supported;
-  }
-  
-  deviation "/if:interfaces/if:interface/ip:ipv6/ip:autoconf/ip:temporary-valid-lifetime" {
-    deviate not-supported;
-  }
-
-  deviation "/if:interfaces/if:interface/ip:ipv6/ip:autoconf/ip:temporary-preferred-lifetime" {
-    deviate not-supported;
-  }
-
-  deviation "/if:interfaces-state/if:interface/ip:ipv4/ip:forwarding" {
-    deviate not-supported;
-  }
-  
-  deviation "/if:interfaces-state/if:interface/ip:ipv4/ip:address/ip:subnet/ip:netmask" {
-    deviate not-supported;
-  }
-
-  deviation "/if:interfaces-state/if:interface/ip:ipv4/ip:address/ip:origin" {
-    deviate not-supported;
-  }
-
-  deviation "/if:interfaces-state/if:interface/ip:ipv4/ip:neighbor" {
-    deviate not-supported;
-  }
-
-  deviation "/if:interfaces-state/if:interface/ip:ipv6/ip:forwarding" {
-    deviate not-supported;
-  }
-
-  deviation "/if:interfaces-state/if:interface/ip:ipv6/ip:mtu" {
-    deviate not-supported;
-  }
-
-  deviation "/if:interfaces-state/if:interface/ip:ipv6/ip:address" {
-    deviate not-supported;
-  }  
-
-  deviation "/if:interfaces-state/if:interface/ip:ipv6/ip:neighbor" {
-    deviate not-supported;
-  }  
-  
 }
-
-
