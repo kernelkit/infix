@@ -2,7 +2,7 @@
 
 ## Interface LEGO®
 
-![Linux Networking Blocks](lego.svg)
+![Linux Networking Blocks](img/lego.svg)
 
 | **Type** | **Yang Model**    | **Description**                                               |
 |----------|-------------------|---------------------------------------------------------------|
@@ -10,6 +10,7 @@
 | ip       | ietf-ip, infix-ip | IP address to the subordinate interface                       |
 | vlan     | ietf-vlan-encap   | Capture all traffic belonging to a specific 802.1Q VID        |
 | lag[^1]  | infix-if-lag      | Bonds multiple interfaces into one, creating a link aggregate |
+| lo       | ietf-interfaces   | Software loopback interface                                   |
 | eth      | ietf-interfaces   | Physical Ethernet device/port                                 |
 | veth     | infix-if-veth     | Virtual Ethernet pair, typically one end is in a container    |
 
@@ -21,7 +22,7 @@ The blocks you choose, and how you connect them, defines your dataplane.
 Here we see an example of how to bridge a virtual port with a physical
 LAN.
 
-![Example of a 4-port switch with a link aggregate and a VETH pair to a container](dataplane.svg)
+![Example of a 4-port switch with a link aggregate and a VETH pair to a container](img/dataplane.svg)
 
 Depending on the (optional) VLAN filtering of the bridge, the container
 may have full or limited connectivity with outside ports, as well as the
