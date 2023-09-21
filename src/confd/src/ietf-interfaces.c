@@ -865,7 +865,13 @@ static int netdag_gen_vlan(struct dagger *net, struct lyd_node *dif,
 				   "outer-tag",
 				   NULL);
 	if (!otag) {
-		ERROR("%s: missing mandatory outer-tag", ifname);
+		/*
+		 * Note: this is only an error if outer-tag is missing
+		 * from cif, otherwise it just means the interface had a
+		 * a change that was not related to the VLAN config.
+		 */
+		if (!dif)
+			ERROR("%s: missing mandatory outer-tag", ifname);
 		return 0;
 	}
 
