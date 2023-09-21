@@ -41,7 +41,6 @@ static int svc_change(sr_session_ctx_t *session, sr_event_t event, const char *x
 	}
 
 	snprintf(path, sizeof(path), "%s//.", xpath);
-	ERROR("HELO getting data from %s", path);
 	err = sr_get_data(session, path, 0, 0, 0, &cfg);
 	if (err) {
 		ERROR("no data for %s", path);
@@ -59,8 +58,6 @@ static int svc_change(sr_session_ctx_t *session, sr_event_t event, const char *x
 	}
 
 	ena = lydx_is_enabled(srv, "enabled");
-	ERROR("Service %s (%s) is %s", name, svc, ena ? "enabled" : "disabled");
-
 	if (systemf("initctl -nbq %s %s", ena ? "enable" : "disable", svc))
 		ERROR("Failed %s %s", ena ? "enabling" : "disabling", name);
 
