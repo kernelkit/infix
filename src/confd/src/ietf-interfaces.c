@@ -427,11 +427,18 @@ static int netdag_gen_link_addr(FILE *ip, struct lyd_node *cif, struct lyd_node 
 	if (lydx_get_op(node) == LYDX_OP_DELETE) {
 		FILE *fp;
 
-		fp = popenf("r", "ethtool -P %s |awk '{print $3}'", ifname);
+		/*
+		 * Only physical interfaces support this, virtual ones
+		 * we remove, see netdag_must_del() for details.
+		 */
+		fp = popenf("r", "ip -d -j link show dev %s |jq -rM .[].permaddr", ifname);
 		if (fp) {
 			if (fgets(buf, sizeof(buf), fp))
 				mac = chomp(buf);
 			pclose(fp);
+
+			if (mac && !strcmp(mac, "null"))
+				return 0;
 		}
 	} else {
 		mac = lyd_get_value(node);
