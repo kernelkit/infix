@@ -943,21 +943,49 @@ static int netdag_gen_afspec_set(struct dagger *net, struct lyd_node *dif,
 	return -ENOSYS;
 }
 
+static bool is_phys_addr_deleted(struct lyd_node *dif)
+{
+	struct lyd_node *node;
+
+	node = lydx_get_child(dif, "phys-address");
+	if (node && lydx_get_op(node) == LYDX_OP_DELETE)
+		return true;
+
+	return false;
+}
+
 static bool netdag_must_del(struct lyd_node *dif, struct lyd_node *cif)
 {
 	const char *iftype = lydx_get_cattr(cif, "type");
 
-	if (!strcmp(iftype, "infix-if-type:bridge"))
-		return 0;
-	if (!strcmp(iftype, "infix-if-type:vlan"))
-		return lydx_get_cattr(dif, "parent-interface") ||
-			lydx_get_descendant(lyd_child(dif),
-					    "encapsulation",
-					    "dot1q-vlan",
-					    "outer-tag",
-					    NULL);
-	if (!strcmp(iftype, "infix-if-type:veth"))
-		return lydx_get_descendant(lyd_child(dif), "peer", NULL);
+	if (!strcmp(iftype, "infix-if-type:bridge")) {
+		if (is_phys_addr_deleted(dif))
+			return true;
+	} else if (!strcmp(iftype, "infix-if-type:vlan")) {
+		if (is_phys_addr_deleted(dif))
+			return true;
+
+		if (lydx_get_cattr(dif, "parent-interface") ||
+		    lydx_get_descendant(lyd_child(dif),
+					"encapsulation",
+					"dot1q-vlan",
+					"outer-tag",
+					NULL))
+			return true;
+	} else if (!strcmp(iftype, "infix-if-type:veth")) {
+		if (is_phys_addr_deleted(dif))
+			return true;
+
+		if (lydx_get_descendant(lyd_child(dif), "peer", NULL))
+			return true;
+/*
+	} else if (!strcmp(iftype, "infix-if-type:lag")) {
+		if (is_phys_addr_deleted(dif))
+			return true;
+
+		... REMEMBER WHEN ADDING BOND SUPPORT ...
+*/
+	}
 
 	return false;
 }
