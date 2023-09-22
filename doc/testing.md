@@ -43,7 +43,7 @@ Tenets
 Architectural Overview
 ----------------------
 
-![Infix Testing Architecture](testing-overview.svg)
+![Infix Testing Architecture](img/testing-overview.svg)
 
 The test system is made up of several independent components, which
 are typically used in concert to run a full test suite.
@@ -140,7 +140,7 @@ DHCP server, and the other two as DHCP clients - with all three having
 a management connection to the host PC running the test.  In other
 words, the test requires a _logical_ topology like the one below.
 
-<img align="right" src="testing-log.dot.svg" alt="Example Logical Topology">
+<img align="right" src="img/testing-log.dot.svg" alt="Example Logical Topology">
 
 ```dot
 graph "dhcp-client-server" {
@@ -187,7 +187,7 @@ degrees), we can deploy well-known algorithms to find such subgraphs.
 Continuing our example, let's say we want to run our DHCP test on the
 _physical_ topology below.
 
-<img align="right" src="testing-phy.dot.svg" alt="Example Physical Topology">
+<img align="right" src="img/testing-phy.dot.svg" alt="Example Physical Topology">
 
 ```dot
 graph "quad-ring" {

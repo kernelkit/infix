@@ -19,6 +19,11 @@ module infix-ip {
   description
     "This module augments ietf-ip with an IPv4 link-local autoconf";
 
+  revision 2023-09-14 {
+    description
+      "Added deviations for unsupported parts of ietf-ip.";
+  }
+
   revision 2023-04-24 {
     description
       "Initial revision.";
@@ -43,5 +48,21 @@ module infix-ip {
 	  "RFC 3927: Dynamic Configuration of IPv4 Link-Local Addresses";
       }
     }
+  }
+
+  deviation "/if:interfaces/if:interface/ip:ipv4/ip:address/ip:subnet/ip:netmask" {
+    deviate not-supported;
+  }
+  
+  deviation "/if:interfaces/if:interface/ip:ipv4/ip:neighbor" {
+    deviate not-supported;
+  }
+
+  deviation "/if:interfaces/if:interface/ip:ipv6/ip:address/ip:status" {
+    deviate not-supported;
+  }
+
+  deviation "/if:interfaces/if:interface/ip:ipv6/ip:neighbor" {
+    deviate not-supported;
   }
 }
