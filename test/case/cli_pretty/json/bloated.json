@@ -4,7 +4,7 @@
       {
         "TEST-DESCR": "Normal loopback",
         "name": "lo",
-        "type": "iana-if-type:softwareLoopback",
+        "type": "infix-if-type:loopback",
         "oper-status": "up",
         "if-index": 1,
         "phys-address": "00:00:00:00:00:00",
@@ -24,7 +24,7 @@
       {
         "TEST-DESCR": "Bridge interface with IP",
         "name": "e0",
-        "type": "iana-if-type:ethernetCsmacd",
+        "type": "infix-if-type:ethernet",
         "oper-status": "up",
         "if-index": 2,
         "phys-address": "02:00:00:00:00:00",
@@ -63,7 +63,7 @@
       {
         "TEST-DESCR": "Bridge interface without IP",
         "name": "e1",
-        "type": "iana-if-type:ethernetCsmacd",
+        "type": "infix-if-type:ethernet",
         "oper-status": "up",
         "if-index": 4,
         "phys-address": "02:00:00:00:00:00",
@@ -81,7 +81,7 @@
       {
         "TEST-DESCR": "Bridge interface without IP",
         "name": "e1",
-        "type": "iana-if-type:ethernetCsmacd",
+        "type": "infix-if-type:ethernet",
         "oper-status": "up",
         "if-index": 4,
         "phys-address": "02:00:00:00:00:00",
@@ -99,7 +99,7 @@
       {
         "TEST-DESCR": "Interface without IP",
         "name": "e10",
-        "type": "iana-if-type:ethernetCsmacd",
+        "type": "infix-if-type:ethernet",
         "oper-status": "up",
         "if-index": 4,
         "phys-address": "02:00:00:00:00:00",
@@ -114,7 +114,7 @@
       {
         "TEST-DESCR": "Interface with single IP",
         "name": "e11",
-        "type": "iana-if-type:ethernetCsmacd",
+        "type": "infix-if-type:ethernet",
         "oper-status": "up",
         "if-index": 4,
         "phys-address": "02:00:00:00:ee:ff",
@@ -151,7 +151,7 @@
       {
         "TEST-DESCR": "Interface with many IP",
         "name": "e12",
-        "type": "iana-if-type:ethernetCsmacd",
+        "type": "infix-if-type:ethernet",
         "oper-status": "up",
         "if-index": 4,
         "phys-address": "02:00:00:00:ee:ff",
@@ -192,7 +192,7 @@
       {
         "TEST-DESCR": "Interface with VLAN on top",
         "name": "e20",
-        "type": "iana-if-type:ethernetCsmacd",
+        "type": "infix-if-type:ethernet",
         "oper-status": "up",
         "if-index": 4,
         "phys-address": "02:00:00:00:ee:ff",
@@ -213,7 +213,7 @@
       {
         "TEST-DESCR": "Bridge without IP",
         "name": "br0",
-        "type": "iana-if-type:bridge",
+        "type": "infix-if-type:bridge",
         "oper-status": "up",
         "if-index": 2,
         "phys-address": "02:00:00:00:00:00",
@@ -228,7 +228,7 @@
       {
         "TEST-DESCR": "Bridge with IP",
         "name": "br1",
-        "type": "iana-if-type:bridge",
+        "type": "infix-if-type:bridge",
         "oper-status": "up",
         "if-index": 3,
         "phys-address": "02:00:00:00:00:00",
@@ -249,7 +249,7 @@
       {
         "TEST-DESCR": "Empty bridge with IP",
         "name": "br2",
-        "type": "iana-if-type:bridge",
+        "type": "infix-if-type:bridge",
         "oper-status": "up",
         "if-index": 3,
         "phys-address": "02:00:00:00:00:00",
@@ -274,7 +274,7 @@
       {
         "TEST-DESCR": "VLAN on bridge",
         "name": "vlan1",
-        "type": "iana-if-type:l2vlan",
+        "type": "infix-if-type:vlan",
         "oper-status": "up",
         "if-index": 4,
         "phys-address": "02:00:00:00:00:00",
@@ -296,7 +296,7 @@
       {
         "TEST-DESCR": "VLAN with IP on bridge",
         "name": "vlan2",
-        "type": "iana-if-type:l2vlan",
+        "type": "infix-if-type:vlan",
         "oper-status": "up",
         "if-index": 4,
         "phys-address": "02:00:00:00:00:00",
@@ -323,7 +323,7 @@
       },
       {
         "name": "vlan20",
-        "type": "iana-if-type:l2vlan",
+        "type": "infix-if-type:vlan",
         "oper-status": "up",
         "if-index": 4,
         "phys-address": "02:00:00:00:00:00",
