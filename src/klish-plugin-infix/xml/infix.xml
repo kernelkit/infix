@@ -179,7 +179,7 @@
       <PARAM name="pwpass" ptype="/STRING" help="Optional clear text password (no spaces)"/>
     </SWITCH>
     <ACTION sym="script" interactive="true">
-      type=${KLISH_PARAM_pwhash:-md5}
+      type=${KLISH_PARAM_pwhash:-sha512}
       salt=${KLISH_PARAM_pwsalt:+-S $KLISH_PARAM_pwsalt}
       mkpasswd -m $type $salt $KLISH_PARAM_pwpass
     </ACTION>
