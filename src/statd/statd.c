@@ -391,6 +391,26 @@ static int ly_add_ip_link_br(const struct ly_ctx *ctx, struct lyd_node **parent,
 	return SR_ERR_OK;
 }
 
+static int iface_has_flag(json_t *j_iface, const char *flag)
+{
+	json_t *j_flags, *j_flag;
+	size_t i;
+
+	j_flags = json_object_get(j_iface, "flags");
+	if (!j_flags)
+		return 0;
+
+	if (!json_is_array(j_flags))
+		return 0;
+
+	json_array_foreach(j_flags, i, j_flag) {
+		if (strcmp(json_string_value(j_flag), flag) == 0)
+			return 1;
+	}
+
+	return 0;
+}
+
 static int ly_add_ip_link_data(const struct ly_ctx *ctx, struct lyd_node **parent,
 			       char *xpath, json_t *j_iface)
 {
@@ -409,6 +429,13 @@ static int ly_add_ip_link_data(const struct ly_ctx *ctx, struct lyd_node **paren
 			    json_integer_value(j_val));
 	if (err) {
 		ERROR("Error, adding 'if-index' to data tree, libyang error %d", err);
+		return SR_ERR_LY;
+	}
+
+	val = iface_has_flag(j_iface, "UP") ? "up" : "down"; /* 'testing' not supported */
+	err = lydx_new_path(ctx, parent, xpath, "admin-status", val);
+	if (err) {
+		ERROR("Error, adding 'admin-status' to data tree, libyang error %d", err);
 		return SR_ERR_LY;
 	}
 
