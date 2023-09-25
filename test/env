@@ -2,7 +2,7 @@
 
 set -e
 
-INFIX_TEST=ghcr.io/kernelkit/infix-test:0.6
+INFIX_TEST=ghcr.io/kernelkit/infix-test:0.7
 
 extract_yang()
 {
