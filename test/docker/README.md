@@ -8,6 +8,10 @@ The following is a checklist/reminder to maintainers for how to update
 the image, e.g., with missing Alpine packages.
 
  1. Update the Dockerfile
+
+        cd test/docker/
+        edit Dockerfile
+
  2. Build the new image version, for latest version, see released images
     here: <https://github.com/kernelkit/infix/pkgs/container/infix-test>
 	in this example we use version 0.4:

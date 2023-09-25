@@ -15,6 +15,7 @@ RUN apk add --no-cache \
     qemu-img \
     qemu-system-x86_64 \
     ruby-mustache \
+    socat \
     squashfs-tools \
     tcpdump
 
