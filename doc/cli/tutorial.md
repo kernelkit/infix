@@ -51,7 +51,7 @@ Enter the configure context from admin-exec by typing `configure`
 followed by Enter.  Available commands, press `?` at the prompt:
 
 ```
-admin@host:/>
+admin@host:/> configure
 admin@host:/config/>
   abort     Abandon candidate
   check     Validate candidate
