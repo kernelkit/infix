@@ -63,4 +63,7 @@ jobs:
           path: output/${{ steps.vars.outputs.tgz }}
       - name: Regression Test
         run: |
-          make test-qeneth
+          rc=true
+          make test-qeneth || rc=false
+          cat test/.log/last/result.md >> $GITHUB_STEP_SUMMARY
+          eval $rc

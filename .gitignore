@@ -6,4 +6,5 @@
 /output*
 /x-*
 /test/.venv
+/test/.log
 /local.mk
