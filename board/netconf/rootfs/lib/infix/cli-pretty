@@ -66,13 +66,10 @@ class Iface:
             self.bridge = ''
 
     def is_vlan(self):
-        return self.data['type'] == "iana-if-type:l2vlan"
-
-    def is_etherent(self):
-        return self.data['type'] == "iana-if-type:ethernetCsmacd"
+        return self.data['type'] == "infix-if-type:vlan"
 
     def is_bridge(self):
-        return self.data['type'] == "iana-if-type:bridge"
+        return self.data['type'] == "infix-if-type:bridge"
 
     def pr_name(self, pipe=""):
         print(f"{pipe}{self.name:<{Pad.iface - len(pipe)}}", end="")
