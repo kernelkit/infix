@@ -2,7 +2,9 @@ CFLAGS   += -Wall -Wextra -Werror
 LDLIBS   += -lsysrepo -lev -lyang -ljansson -lite -lsrx
 
 TARGET    = statd
-SRC       = statd.c
+SRC       = statd.c shared.c shared.h \
+	    iface-ip-link.c iface-ip-link.h \
+	    iface-ip-addr.c iface-ip-addr.h
 
 all: $(TARGET)
 
