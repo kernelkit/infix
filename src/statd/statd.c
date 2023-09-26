@@ -25,6 +25,7 @@
 #include "shared.h"
 #include "iface-ip-link.h"
 #include "iface-ip-addr.h"
+#include "iface-ethtool.h"
 
 #define SOCK_RMEM_SIZE 1000000  /* Arbitrary chosen, default = 212992 */
 #define NL_BUF_SIZE 4096 /* Arbitrary chosen */
@@ -140,13 +141,21 @@ static int sr_ifaces_cb(sr_session_ctx_t *session, uint32_t, const char *path,
 	}
 
 	err = ly_add_ip_link(ctx, parent, sub->ifname);
-	if (err)
+	if (err) {
 		ERROR("Error, adding ip link info");
+		goto out;
+	}
 
 	err = ly_add_ip_addr(ctx, parent, sub->ifname);
-	if (err)
-		ERROR("Error, adding ip link info");
+	if (err) {
+		ERROR("Error, adding ip addr info");
+		goto out;
+	}
 
+	err = ly_add_ethtool(ctx, parent, sub->ifname);
+	if (err)
+		ERROR("Error, adding ethtool info");
+out:
 	sr_release_context(con);
 
 	return err;
