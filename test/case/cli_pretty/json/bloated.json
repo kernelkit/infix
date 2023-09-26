@@ -190,6 +190,29 @@
         }
       },
       {
+        "TEST-DESCR": "Interface ieee802-ethernet-interface stats",
+        "name": "e13",
+        "type": "infix-if-type:ethernet",
+        "oper-status": "up",
+        "if-index": 4,
+        "phys-address": "02:ee:00:00:12:00",
+        "statistics": {
+          "in-octets": "11",
+          "out-octets": "22"
+        },
+        "ieee802-ethernet-interface:ethernet": {
+          "statistics": {
+            "frame": {
+              "in-frames": "1111",
+              "out-frames": "2222"
+            }
+          }
+        },
+        "ietf-ip:ipv4": {
+          "mtu": 1500
+        }
+      },
+      {
         "TEST-DESCR": "Interface with VLAN on top",
         "name": "e20",
         "type": "infix-if-type:ethernet",
