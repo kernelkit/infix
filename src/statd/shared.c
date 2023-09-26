@@ -13,20 +13,14 @@ json_t *json_get_output(const char *cmd)
 
 	proc = popenf("re", cmd);
 	if (!proc) {
-		ERROR("Error, running ip link command");
+		ERROR("Error, running command %s", cmd);
 		return NULL;
 	}
 
 	j_root = json_loadf(proc, 0, &j_err);
 	pclose(proc);
 	if (!j_root) {
-		ERROR("Error, parsing ip link JSON");
-		return NULL;
-	}
-
-	if (!json_is_array(j_root)) {
-		ERROR("Expected a JSON array from ip link");
-		json_decref(j_root);
+		ERROR("Error, parsing command JSON (%s)", cmd);
 		return NULL;
 	}
 
