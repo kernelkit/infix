@@ -32,6 +32,16 @@ class Decore():
         return Decore.decorate("32", txt, "39")
 
 class Iface:
+    def get_json_data(self, default, *args):
+        data = self.data
+        for arg in args:
+            if data.get(arg):
+                data = data.get(arg)
+            else:
+                return default
+
+        return data
+
     def __init__(self, data):
         self.data = data
         self.name = data.get('name', '')
@@ -180,6 +190,13 @@ class Iface:
         if self.in_octets and self.out_octets:
             print(f"{'in-octets':<{20}}: {self.in_octets}")
             print(f"{'out-octets':<{20}}: {self.out_octets}")
+
+        frame = self.get_json_data([], 'ieee802-ethernet-interface:ethernet',
+                                   'statistics', 'frame')
+        if frame:
+            print(f"")
+            for key, val in frame.items():
+                print(f"eth-{key:<{16}}: {val}")
 
 
 def find_iface(_ifaces, name):
