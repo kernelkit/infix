@@ -251,11 +251,21 @@ def ietf_interfaces(json, name):
         sys.exit(1)
     return iface.pr_iface()
 
+def main():
+    try:
+        json_data = json.load(sys.stdin)
+    except json.JSONDecodeError:
+        print("Error, invalid JSON input")
+        sys.exit(1)
+    except Exception as e:
+        print("Error, unexpected error parsing JSON")
+        sys.exit(1)
 
-json = json.load(sys.stdin)
+    if args.module == "ietf-interfaces":
+        sys.exit(ietf_interfaces(json_data, args.name))
+    else:
+        print(f"Error, unknown module {args.module}")
+        sys.exit(1)
 
-if args.module == "ietf-interfaces":
-    sys.exit(ietf_interfaces(json, args.name))
-else:
-    print(f"Error, unknown module {args.module}")
-    sys.exit(1)
+if __name__ == "__main__":
+    main()
