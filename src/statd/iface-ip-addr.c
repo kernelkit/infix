@@ -21,7 +21,7 @@ static json_t *json_get_ip_addr(const char *ifname)
 	return json_get_output(cmd);
 }
 
-static const char *get_yang_origin(const char *protocol)
+static const char *get_yang_origin(const char *proto, json_t *j_addr)
 {
 	size_t i;
 	struct {
@@ -30,13 +30,26 @@ static const char *get_yang_origin(const char *protocol)
 
 	} map[] = {
 		{"kernel_ll",	"link-layer"},
+		{"kernel_ra",	"link-layer"},
 		{"static",	"static"},
 		{"dhcp",	"dhcp"},
 		{"random",	"random"},
 	};
 
+	/**
+	 * kernel_ll/kernel_ll only has a link-layer origin if its address is
+	 * based on the link layer address (addrgenmode eui64).
+	 */
+        if ((strcmp(proto, "kernel_ll") == 0) || (strcmp(proto, "kernel_ra") == 0)) {
+                json_t *j_val;
+
+                j_val = json_object_get(j_addr, "stable-privacy");
+                if (j_val && json_is_boolean(j_val) && json_boolean_value(j_val))
+                        return "random";
+        }
+
 	for (i = 0; i < sizeof(map) / sizeof(map[0]); i++) {
-		if (strcmp(protocol, map[i].kern) != 0)
+		if (strcmp(proto, map[i].kern) != 0)
 			continue;
 
 		return map[i].yang;
@@ -98,18 +111,7 @@ static int ly_add_ip_addr_origin(const struct ly_ctx *ctx, struct lyd_node *addr
 		ERROR("Expected a JSON string for ip 'protocol'");
 		return SR_ERR_SYS;
 	}
-
-	origin = get_yang_origin(json_string_value(j_val));
-
-	/**
-	 * kernel_ll/link-layer only has a link-layer origin if its address is
-	 * based on the link layer address (addrgenmode eui64).
-	 */
-	if (strcmp(origin, "link-layer") == 0) {
-		j_val = json_object_get(j_addr, "stable-privacy");
-		if (j_val && json_is_boolean(j_val) && json_boolean_value(j_val))
-			origin = "random";
-	}
+	origin = get_yang_origin(json_string_value(j_val), j_addr);
 
 	err = lydx_new_path(ctx, &addr_node, addr_xpath, "origin", "%s", origin);
 	if (err) {
