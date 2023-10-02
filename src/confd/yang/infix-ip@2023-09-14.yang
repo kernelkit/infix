@@ -50,19 +50,11 @@ module infix-ip {
     }
   }
 
-  deviation "/if:interfaces/if:interface/ip:ipv4/ip:mtu" {
-    deviate not-supported;
-  }
-
   deviation "/if:interfaces/if:interface/ip:ipv4/ip:address/ip:subnet/ip:netmask" {
     deviate not-supported;
   }
   
   deviation "/if:interfaces/if:interface/ip:ipv4/ip:neighbor" {
-    deviate not-supported;
-  }
-
-  deviation "/if:interfaces/if:interface/ip:ipv6/ip:mtu" {
     deviate not-supported;
   }
 

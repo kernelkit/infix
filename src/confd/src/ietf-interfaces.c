@@ -416,6 +416,22 @@ static int netdag_set_conf_addrs(FILE *ip, const char *ifname,
 	return 0;
 }
 
+static int netdag_gen_link_mtu(FILE *ip, struct lyd_node *dif)
+{
+	const char *ifname = lydx_get_cattr(dif, "name");
+	struct lyd_node *node;
+	struct lydx_diff nd;
+
+	if (!strcmp(ifname, "lo")) /* skip for now */
+		return 0;
+
+	node = lydx_get_descendant(lyd_child(dif), "ipv4", "mtu", NULL);
+	if (node && lydx_get_diff(node, &nd))
+		fprintf(ip, "link set %s mtu %s\n", ifname, nd.new ? nd.val : "1500");
+
+	return 0;
+}
+
 static int netdag_gen_link_addr(FILE *ip, struct lyd_node *cif, struct lyd_node *dif)
 {
 	const char *ifname = lydx_get_cattr(dif, "name");
@@ -570,12 +586,12 @@ static int netdag_gen_ipv4_autoconf(struct dagger *net, struct lyd_node *cif,
 	return err;
 }
 
-static int netdag_gen_sysctl_bool(struct dagger *net,
-				  const char *ifname, FILE **fpp,
-				  struct lyd_node *node,
-				  const char *fmt, ...)
+static int netdag_gen_sysctl_setting(struct dagger *net, const char *ifname, FILE **fpp,
+				     int isboolean, const char *fallback,
+				     struct lyd_node *node, const char *fmt, ...)
 {
 	struct lydx_diff nd;
+	const char *value;
 	va_list ap;
 
 	if (!node)
@@ -584,18 +600,32 @@ static int netdag_gen_sysctl_bool(struct dagger *net,
 	if (!lydx_get_diff(node, &nd))
 		return 0;
 
-	*fpp = *fpp ? : dagger_fopen_next(net, "init", ifname,
-					  60, "init.sysctl");
+	*fpp = *fpp ? : dagger_fopen_next(net, "init", ifname, 60, "init.sysctl");
 	if (!*fpp)
 		return -EIO;
 
 	va_start(ap, fmt);
 	vfprintf(*fpp, fmt, ap);
 	va_end(ap);
-	fprintf(*fpp, " = %u\n", (nd.new && !strcmp(nd.val, "true")) ? 1 : 0);
+
+	if (isboolean) {
+		if (nd.new && !strcmp(nd.val, "true"))
+			value = "1";
+		else
+			value = "0";
+	} else {
+		if (nd.new)
+			value = nd.val;
+		else
+			value = fallback;
+	}
+
+	fprintf(*fpp, " = %s\n", value);
+
 	return 0;
 }
 static int netdag_gen_sysctl(struct dagger *net,
+			     struct lyd_node *cif,
 			     struct lyd_node *dif)
 {
 	const char *ifname = lydx_get_cattr(dif, "name");
@@ -604,15 +634,21 @@ static int netdag_gen_sysctl(struct dagger *net,
 	int err = 0;
 
 	node = lydx_get_descendant(lyd_child(dif), "ipv4", "forwarding", NULL);
-	err = err ? : netdag_gen_sysctl_bool(net, ifname, &sysctl, node,
-					     "net.ipv4.conf.%s.forwarding",
-					     ifname);
+	err = err ? : netdag_gen_sysctl_setting(net, ifname, &sysctl, 1, "0", node,
+						"net.ipv4.conf.%s.forwarding", ifname);
 
 	node = lydx_get_descendant(lyd_child(dif), "ipv6", "forwarding", NULL);
-	err = err ? : netdag_gen_sysctl_bool(net, ifname, &sysctl, node,
-					     "net.ipv6.conf.%s.forwarding",
-					     ifname);
+	err = err ? : netdag_gen_sysctl_setting(net, ifname, &sysctl, 1, "0", node,
+						"net.ipv6.conf.%s.forwarding", ifname);
 
+	if (!strcmp(ifname, "lo")) /* skip for now */
+		goto skip_mtu;
+
+	node = lydx_get_descendant(lyd_child(cif), "ipv6", "mtu", NULL);
+	err = err ? : netdag_gen_sysctl_setting(net, ifname, &sysctl, 0, "1280", node,
+						"net.ipv6.conf.%s.mtu", ifname);
+
+skip_mtu:
 	if (sysctl)
 		fclose(sysctl);
 
@@ -1093,6 +1129,7 @@ static sr_error_t netdag_gen_iface(struct dagger *net,
 	}
 
 	/* Set Addresses */
+	err = err ? : netdag_gen_link_mtu(ip, dif);
 	err = err ? : netdag_gen_link_addr(ip, cif, dif);
 	err = err ? : netdag_gen_ip_addrs(ip, "ipv4", cif, dif);
 	err = err ? : netdag_gen_ip_addrs(ip, "ipv6", cif, dif);
@@ -1104,7 +1141,7 @@ static sr_error_t netdag_gen_iface(struct dagger *net,
 	if (!attr || !strcmp(attr, "true"))
 		fprintf(ip, "link set dev %s up state up\n", ifname);
 
-	err = err ? : netdag_gen_sysctl(net, dif);
+	err = err ? : netdag_gen_sysctl(net, cif, dif);
 
 err_close_ip:
 	fclose(ip);
