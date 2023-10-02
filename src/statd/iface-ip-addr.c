@@ -1,3 +1,4 @@
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <jansson.h>
@@ -47,6 +48,7 @@ static const char *get_yang_origin(const char *protocol)
 static int ly_add_ip_mtu(const struct ly_ctx *ctx, struct lyd_node *node,
 			   char *xpath, json_t *j_iface, char *ifname)
 {
+	json_int_t j_mtu;
 	json_t *j_val;
 	int err;
 
@@ -57,14 +59,21 @@ static int ly_add_ip_mtu(const struct ly_ctx *ctx, struct lyd_node *node,
 	if (strcmp(ifname, "lo") == 0)
 		return SR_ERR_OK;
 
-	j_val = json_object_get(j_iface, "mtu");
-	if (!json_is_integer(j_val)) {
-		ERROR("Expected a JSON integer for 'mtu'");
-		return SR_ERR_SYS;
+	if (strstr(xpath, "ipv4")) {
+		j_val = json_object_get(j_iface, "mtu");
+		if (!json_is_integer(j_val)) {
+			ERROR("Expected a JSON integer for 'mtu'");
+			return SR_ERR_SYS;
+		}
+		j_mtu = json_integer_value(j_val);
+	} else {
+		if (readllf(&j_mtu, "/proc/sys/net/ipv6/conf/%s/mtu", ifname)) {
+			ERROR("Failed reading sysctl value of %s IPv6 MTU: %s", ifname, strerror(errno));
+			return SR_ERR_SYS;
+		}
 	}
 
-	err = lydx_new_path(ctx, &node, xpath, "mtu", "%lld",
-			    json_integer_value(j_val));
+	err = lydx_new_path(ctx, &node, xpath, "mtu", "%lld", j_mtu);
 	if (err) {
 		ERROR("Error, adding 'mtu' to data tree, libyang error %d", err);
 		return SR_ERR_LY;
