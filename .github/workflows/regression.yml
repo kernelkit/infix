@@ -61,9 +61,11 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           path: output/${{ steps.vars.outputs.tgz }}
+
       - name: Regression Test
-        run: |
-          rc=true
-          make test-qeneth || rc=false
-          cat test/.log/last/result.md >> $GITHUB_STEP_SUMMARY
-          eval $rc
+        run: make test-qeneth
+
+      - name: Publish Test Result
+        # Ensure this runs even if Regression Test fails
+        if: always()
+        run: cat test/.log/last/result-gh.md >> $GITHUB_STEP_SUMMARY
