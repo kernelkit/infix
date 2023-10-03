@@ -1,0 +1,39 @@
+#!/bin/sh
+# cond-load.sh [-b] <startup-config | failure-config>
+#
+# Import a configuration to the sysrepo datastore using `sysrepocfg -Ifile`
+#
+# If the '-b' option is used we set the Finit <usr/bootstrap> condition if
+# sysrepocfg returns OK.  This to be able to detect and trigger the Infix
+# Fail Secure Mode at boot.
+#
+set -e
+
+if [ "$1" = "-b" ]; then
+    bootstrap=true
+    shift
+else
+    bootstrap=false
+fi
+config=$1
+fn=/cfg/${config}.cfg
+
+if [ ! -f "$fn" ]; then
+    if [ ! -f "$config" ]; then
+	logger -sik -p user.error "No such file, $fn, aborting!"
+	exit 1
+    fi
+    fn=$config
+fi
+
+if ! sysrepocfg -v3 -I"$fn" -f json; then
+    if eval $bootstrap; then
+	logger -sik -p user.error "Failed bootstrapping system, reverting to Fail Secure mode!"
+	initctl -nbq cond set fail-startup
+	initctl -nbq runlevel 9
+    else
+	logger -sik -p user.error "Failed loading $fn, aborting!"
+    fi
+    exit 1
+fi
+logger -sik -p user.notice "Loaded $fn successfully."
