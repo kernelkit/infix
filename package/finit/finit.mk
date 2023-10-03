@@ -30,6 +30,7 @@ FINIT_CONF_OPTS =					\
 	--exec-prefix=					\
 	--disable-doc					\
 	--disable-contrib				\
+	--disable-rescue				\
 	--disable-silent-rules				\
 	--with-group=$(BR2_PACKAGE_FINIT_INITCTL_GROUP)
 
