@@ -1,16 +1,13 @@
 name: Bob the Builder
 
 on:
-  pull_request:
+  push:
     branches:
       - main
-    types:
-      - closed
   workflow_dispatch:
 
 jobs:
   build:
-    if: ${{github.ref_name == 'main' && github.event_name == 'push'}} || github.event_name == 'workflow_dispatch'
     name: Build ${{ matrix.platform }} ${{ matrix.variant }}
     runs-on: ubuntu-latest
     strategy:
@@ -81,7 +78,7 @@ jobs:
       - uses: pyTooling/Actions/releaser@main
         with:
           tag: latest
-          rm: true
+          rm: false
           token: ${{ secrets.GITHUB_TOKEN }}
           files: artifact/*
       - name: Summary
