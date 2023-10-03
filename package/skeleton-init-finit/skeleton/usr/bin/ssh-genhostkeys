@@ -1,15 +1,47 @@
 #!/bin/sh
+tmp=$(mktemp)
+dir=$(dirname $(grep -r '^HostKey' /etc/ssh/* |tail -1 | awk '{print $2}'))
 
-if sshd -t; then
+log()
+{
+    logger -sik -p security.notice -t sshd "$@"
+}
+warn()
+{
+    logger -sik -p security.warning -t sshd "$@"
+}
+err()
+{
+    logger -sik -p security.err -t sshd "$@"
+}
+
+check()
+{
+    if sshd -t >$tmp 2>&1; then
+	log "SSH hostkeys OK, setting ssh-hostkeys condition"
 	initctl cond set ssh-hostkeys
-	exit 0
+	return 0
+    fi
+    return 1
+}
+
+rc=0
+if ! check; then
+    files=$(awk '/invalid format/{print $6}' "$tmp" | sed 's/.*"\(.*\)".*/\1/')
+    for file in $files; do
+	warn "Removing $file: invalid format"
+	rm "$file"
+    done
+
+    log "Generating SSH hostkeys ..."
+    if ssh-keygen -A; then
+	mv /etc/ssh/ssh_host_* "$dir/"
+    fi
+    if ! check; then
+	err "Failed generating SSH hostkeys!"
+	rc=1
+    fi
 fi
 
-if sshd -t 2>&1 |grep hostkeys; then
-	ssh-keygen -A
-	initctl cond set ssh-hostkeys
-else
-	logger -t sshd "invadlid sshd_config, check with: sshd -t"
-fi
-
-exit 0
+rm "$tmp"
+exit $rc
