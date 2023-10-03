@@ -30,7 +30,9 @@ for netif in /sys/class/net/*; do
 done
 
 # Find and mark all switch ports
-ports=$(devlink port 2>/dev/null | awk '/flavour physical/{print $5}')
+ports=$(devlink -j port | jq -r '.port[]
+				 | select(.flavour == "physical")
+				 | .netdev')
 for iface in $ports; do
 	ip link set "$iface" group port
 done
