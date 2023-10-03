@@ -677,7 +677,7 @@ static int sys_add_new_user(sr_session_ctx_t *sess, char *name)
 		ERROR("Failed creating new user \"%s\"\n", name);
 		return SR_ERR_SYS;
 	}
-	DEBUG("New user \"%s\" created\n", name);
+	NOTE("New user \"%s\" created\n", name);
 
 	/*
 	 * OpenSSH in Infix has been set up to use /var/run/sshd/%s.keys
@@ -712,7 +712,7 @@ static char *change_get_user(struct sr_change *change)
 	if (user) {
 		pw = getpwnam(user);
 		if (!pw) {
-			DEBUG("Skipping attribute for missing user (%s)", user);
+			ERROR("Skipping attribute for missing user (%s)", user);
 			free(user);
 			user = NULL;
 		}
@@ -753,12 +753,12 @@ static sr_error_t handle_sr_passwd_update(augeas *aug, sr_session_ctx_t *, struc
 		}
 		if (aug_set_dynpath(aug, hash, "etc/shadow/%s/password", user))
 			return SR_ERR_SYS;
-		DEBUG("Password updated for user %s", user);
+		NOTE("Password updated for user %s", user);
 		break;
 	case SR_OP_DELETED:
 		if (aug_set_dynpath(aug, "!", "etc/shadow/%s/password", user))
 			return SR_ERR_SYS;
-		DEBUG("Password deleted for user %s", user);
+		NOTE("Password deleted for user %s", user);
 		break;
 	case SR_OP_MOVED:
 		return SR_ERR_OK;
@@ -801,10 +801,10 @@ static sr_error_t check_sr_user_update(augeas *aug, sr_session_ctx_t *, struct s
 
 	name = sr_xpath_key_value(val->xpath, "user", "name", &state);
 	if (!is_valid_username(name)) {
-		ERROR("Invalid username \"%s\"\n", name);
+		ERROR("Invalid username \"%s\"", name);
 		return SR_ERR_VALIDATION_FAILED;
 	}
-	DEBUG("Username \"%s\" is valid\n", name);
+	ERROR("Username \"%s\" is valid", name);
 
 	return SR_ERR_OK;
 }
@@ -825,7 +825,7 @@ static sr_error_t handle_sr_user_update(augeas *aug, sr_session_ctx_t *sess, str
 			sr_xpath_recover(&state);
 			return err;
 		}
-		DEBUG("User %s created\n", name);
+		NOTE("User %s created", name);
 		sr_xpath_recover(&state);
 		break;
 	case SR_OP_DELETED:
@@ -837,7 +837,7 @@ static sr_error_t handle_sr_user_update(augeas *aug, sr_session_ctx_t *sess, str
 			sr_xpath_recover(&state);
 			return err;
 		}
-		DEBUG("User %s deleted\n", name);
+		NOTE("User %s deleted", name);
 		sr_xpath_recover(&state);
 		break;
 	case SR_OP_MOVED:
