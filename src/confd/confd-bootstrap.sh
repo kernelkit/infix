@@ -105,17 +105,14 @@ sysrepoctl -c ietf-netconf			-g wheel -p 0660	\
 # Allow wheel group users (admin) to modify NACM
 sysrepoctl -c ietf-netconf-acm -g wheel -p 0660
 
-# On first boot, install factory-config as startup-config
-# Otherwise, load startup-config to {startup}.  Due to a
-# limitation in sysrepo we cannot initialize factory for
-# ietf-netconf-acm, so we cheat, see sysrepo#3079
-if [ -f "$STARTUP" ]; then
-    sysrepocfg -f json -I"$STARTUP"
-else
+# On first boot, install factory-config as startup-config.  Due to a
+# limitation in sysrepo we cannot initialize ietf-netconf-acm, so we
+# cheat, see sysrepo#3079
+if [ ! -f "$STARTUP" ]; then
     sysrepocfg -f json -X"$STARTUP"
 fi
 
-# Clear running-config
+# Clear running-config so we can load startup in the next step
 echo "{}" > "$INIT_DATA"
 sysrepocfg -f json -I"$INIT_DATA" -d running
 
