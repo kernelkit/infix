@@ -1,0 +1,39 @@
+From 7abdce276172fe74e24fd30d204a75e388bbab6c Mon Sep 17 00:00:00 2001
+From: Tobias Waldekranz <tobias@waldekranz.com>
+Date: Thu, 21 Sep 2023 11:10:26 +0200
+Subject: [PATCH 6/9] arm64: dts: marvell: cp11x: Provide clock names for MDIO
+ controllers
+
+This will let the driver figure out the rate of the core clk, such
+that custom MDC frequencies can be supported.
+
+Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
+---
+ arch/arm64/boot/dts/marvell/armada-cp11x.dtsi | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/marvell/armada-cp11x.dtsi b/arch/arm64/boot/dts/marvell/armada-cp11x.dtsi
+index 4ec1aae0a3a9..f268017498a9 100644
+--- a/arch/arm64/boot/dts/marvell/armada-cp11x.dtsi
++++ b/arch/arm64/boot/dts/marvell/armada-cp11x.dtsi
+@@ -180,6 +180,8 @@ CP11X_LABEL(mdio): mdio@12a200 {
+ 			reg = <0x12a200 0x10>;
+ 			clocks = <&CP11X_LABEL(clk) 1 9>, <&CP11X_LABEL(clk) 1 5>,
+ 				 <&CP11X_LABEL(clk) 1 6>, <&CP11X_LABEL(clk) 1 18>;
++			clock-names = "gop_clk", "mg_clk",
++				      "mg_core_clk", "axi_clk";
+ 			status = "disabled";
+ 		};
+ 
+@@ -190,6 +192,8 @@ CP11X_LABEL(xmdio): mdio@12a600 {
+ 			reg = <0x12a600 0x10>;
+ 			clocks = <&CP11X_LABEL(clk) 1 5>,
+ 				 <&CP11X_LABEL(clk) 1 6>, <&CP11X_LABEL(clk) 1 18>;
++			clock-names = "mg_clk",
++				      "mg_core_clk", "axi_clk";
+ 			status = "disabled";
+ 		};
+ 
+-- 
+2.34.1
+

@@ -1,0 +1,86 @@
+From ffd5442fcbadcbd8733b9ac870d83d7561cca9fc Mon Sep 17 00:00:00 2001
+From: Tobias Waldekranz <tobias@waldekranz.com>
+Date: Tue, 5 Sep 2023 21:15:52 +0200
+Subject: [PATCH 4/9] net: dsa: mv88e6xxx: Add "eth-mac" counter group support
+
+After this change, mv88e6xxx ports can report the applicable subset of
+their counters using ethtool's standardized "eth-mac" counter group.
+
+Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
+---
+ drivers/net/dsa/mv88e6xxx/chip.c | 52 ++++++++++++++++++++++++++++++++
+ 1 file changed, 52 insertions(+)
+
+diff --git a/drivers/net/dsa/mv88e6xxx/chip.c b/drivers/net/dsa/mv88e6xxx/chip.c
+index ea4fb0d3e628..ec3a4717bc44 100644
+--- a/drivers/net/dsa/mv88e6xxx/chip.c
++++ b/drivers/net/dsa/mv88e6xxx/chip.c
+@@ -1403,6 +1403,57 @@ static void mv88e6xxx_get_ethtool_stats(struct dsa_switch *ds, int port,
+ 
+ }
+ 
++static void mv88e6xxx_get_eth_mac_stats(struct dsa_switch *ds, int port,
++					struct ethtool_eth_mac_stats *mac_stats)
++{
++#define MV88E6XXX_ETH_MAC_STAT_MAPPING(_id, _member)			\
++	[MV88E6XXX_HW_STAT_ID_ ## _id] =				\
++		offsetof(struct ethtool_eth_mac_stats, stats._member)	\
++
++	static const size_t stat_map[MV88E6XXX_HW_STAT_ID_MAX] = {
++		MV88E6XXX_ETH_MAC_STAT_MAPPING(out_unicast, FramesTransmittedOK),
++		MV88E6XXX_ETH_MAC_STAT_MAPPING(single, SingleCollisionFrames),
++		MV88E6XXX_ETH_MAC_STAT_MAPPING(multiple, MultipleCollisionFrames),
++		MV88E6XXX_ETH_MAC_STAT_MAPPING(in_unicast, FramesReceivedOK),
++		MV88E6XXX_ETH_MAC_STAT_MAPPING(in_fcs_error, FrameCheckSequenceErrors),
++		MV88E6XXX_ETH_MAC_STAT_MAPPING(out_octets, OctetsTransmittedOK),
++		MV88E6XXX_ETH_MAC_STAT_MAPPING(deferred, FramesWithDeferredXmissions),
++		MV88E6XXX_ETH_MAC_STAT_MAPPING(late, LateCollisions),
++		MV88E6XXX_ETH_MAC_STAT_MAPPING(in_good_octets, OctetsReceivedOK),
++		MV88E6XXX_ETH_MAC_STAT_MAPPING(out_multicasts, MulticastFramesXmittedOK),
++		MV88E6XXX_ETH_MAC_STAT_MAPPING(out_broadcasts, BroadcastFramesXmittedOK),
++		MV88E6XXX_ETH_MAC_STAT_MAPPING(excessive, FramesWithExcessiveDeferral),
++		MV88E6XXX_ETH_MAC_STAT_MAPPING(in_multicasts, MulticastFramesReceivedOK),
++		MV88E6XXX_ETH_MAC_STAT_MAPPING(in_broadcasts, BroadcastFramesReceivedOK),
++	};
++	struct mv88e6xxx_chip *chip = ds->priv;
++	const struct mv88e6xxx_hw_stat *stat;
++	enum mv88e6xxx_hw_stat_id id;
++	u64 *member;
++	int ret;
++
++	mv88e6xxx_reg_lock(chip);
++	ret = mv88e6xxx_stats_snapshot(chip, port);
++	mv88e6xxx_reg_unlock(chip);
++
++	if (ret < 0)
++		return;
++
++	stat = mv88e6xxx_hw_stats;
++	for (id = 0; id < MV88E6XXX_HW_STAT_ID_MAX; id++, stat++) {
++		if (!stat_map[id])
++			continue;
++
++		member = (u64 *)(((char *)mac_stats) + stat_map[id]);
++		mv88e6xxx_stats_get_stat(chip, port, stat, member);
++	}
++
++	mac_stats->stats.FramesTransmittedOK += mac_stats->stats.MulticastFramesXmittedOK;
++	mac_stats->stats.FramesTransmittedOK += mac_stats->stats.BroadcastFramesXmittedOK;
++	mac_stats->stats.FramesReceivedOK += mac_stats->stats.MulticastFramesReceivedOK;
++	mac_stats->stats.FramesReceivedOK += mac_stats->stats.BroadcastFramesReceivedOK;
++}
++
+ static int mv88e6xxx_get_regs_len(struct dsa_switch *ds, int port)
+ {
+ 	struct mv88e6xxx_chip *chip = ds->priv;
+@@ -7160,6 +7211,7 @@ static const struct dsa_switch_ops mv88e6xxx_switch_ops = {
+ 	.phylink_mac_link_up	= mv88e6xxx_mac_link_up,
+ 	.get_strings		= mv88e6xxx_get_strings,
+ 	.get_ethtool_stats	= mv88e6xxx_get_ethtool_stats,
++	.get_eth_mac_stats	= mv88e6xxx_get_eth_mac_stats,
+ 	.get_sset_count		= mv88e6xxx_get_sset_count,
+ 	.port_enable		= mv88e6xxx_port_enable,
+ 	.port_disable		= mv88e6xxx_port_disable,
+-- 
+2.34.1
+
