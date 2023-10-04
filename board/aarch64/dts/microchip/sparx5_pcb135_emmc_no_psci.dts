@@ -5,7 +5,7 @@
  */
 
 /dts-v1/;
-#include "microchip/sparx5_pcb135_emmc.dts"
+#include "sparx5_pcb135_emmc.dts"
 
 &cpu0 {
 	enable-method = "spin-table";
