@@ -11,11 +11,14 @@ alias view='vi -R'
 alias emacs='mg'
 alias sensible-editor=edit
 alias sensible-pager=pager
+alias hd="hexdump -C"
 
 alias ip='ip --color=auto'
 alias ipb='ip -br'
 alias ipaddr='ip addr'
 alias iplink='ip link'
 alias bridge='bridge --color=auto'
+
+alias llping='ping -L ff02::1 -I'
 
 alias docker=podman
