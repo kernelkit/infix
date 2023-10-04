@@ -1,0 +1,40 @@
+From 99e3fc4a7c6d31f5d0fdc7bb5c409c776c19012c Mon Sep 17 00:00:00 2001
+From: Tobias Waldekranz <tobias@waldekranz.com>
+Date: Thu, 5 Oct 2023 16:09:25 +0200
+Subject: [PATCH 1/9] eth: fwnode: Fall back to NVMEM provided MAC address from
+ OF
+
+In the cases where the fwnode is an OF node, make use of any NVMEM
+source of the interface's MAC address that might have been specified
+in the device tree.
+
+Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
+---
+ net/ethernet/eth.c | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/net/ethernet/eth.c b/net/ethernet/eth.c
+index 2edc8b796a4e..04900a41fab3 100644
+--- a/net/ethernet/eth.c
++++ b/net/ethernet/eth.c
+@@ -609,11 +609,17 @@ static int fwnode_get_mac_addr(struct fwnode_handle *fwnode,
+  */
+ int fwnode_get_mac_address(struct fwnode_handle *fwnode, char *addr)
+ {
++	struct device_node *np;
++
+ 	if (!fwnode_get_mac_addr(fwnode, "mac-address", addr) ||
+ 	    !fwnode_get_mac_addr(fwnode, "local-mac-address", addr) ||
+ 	    !fwnode_get_mac_addr(fwnode, "address", addr))
+ 		return 0;
+ 
++	np = to_of_node(fwnode);
++	if (np)
++		return of_get_mac_address_nvmem(np, addr);
++
+ 	return -ENOENT;
+ }
+ EXPORT_SYMBOL(fwnode_get_mac_address);
+-- 
+2.34.1
+
