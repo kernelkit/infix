@@ -1,9 +1,0 @@
-#!/bin/sh
-
-for type in ecdsa ed25519 rsa; do
-    [ -f /var/lib/ssh/ssh_host_${type}_key ] \
-	|| ssh-keygen -N "" -t $type -f /var/lib/ssh/ssh_host_${type}_key \
-	|| exit 1
-done
-
-initctl cond set ssh-hostkeys
