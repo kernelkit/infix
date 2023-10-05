@@ -1,0 +1,13 @@
+{
+  "ietf-system:system": {
+    "authentication": {
+      "user": [
+        {
+          "name": "admin",
+          "password": "$6$bKPp6xu45L1cmp70$fcwDhGZct4q8LxwPASf9iVHyWqnklcdjeYi/SupLo1K9nb.aAQUz48.3qTcW38XL6gQzfHyGoyeDG2orjPUwm1",
+	  "infix-system:shell": "infix-shell-type:bash"
+        }
+      ]
+    }
+  }
+}

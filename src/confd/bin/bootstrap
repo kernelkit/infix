@@ -1,4 +1,6 @@
 #!/bin/sh
+# Bootstrap sysrepo db with all modules required by confd
+#
 # 1. Load all yang models with /cfg/factory-config
 # 2. [ if /cfg/startup-config is missing :: copy {factory} -> /cfg/startup-config ]
 # 3. Import /cfg/startup -> {startup} ]
@@ -9,14 +11,42 @@
 # It's all really simple ... this script takes care of 1-4
 #
 
-FACTORY=$1
-STARTUP=$2
+PATH=/usr/libexec/confd/:$PATH
 INIT_DATA=/etc/sysrepo/factory-default.json
 SEARCH=/usr/share/yang/modules/confd:/usr/share/yang/modules/libnetconf2:/usr/share/yang/modules/libyang:/usr/share/yang/modules/netopeer2:/usr/share/yang/modules/sysrepo
 
-if [ -z "$FACTORY" -o -z "$STARTUP" ]; then
-        echo "Missing argument to sysrepo-bootstrap.sh $FACTORY $STARTUP"
-        exit 1
+[ "$FACTORY_D" ] || FACTORY_D=/usr/share/confd/factory
+[ "$CFG_D" ]     || CFG_D=/cfg
+[ "$GENCFG_D" ]  || GENCFG_D=/cfg/factory.d
+
+FACTORY=$CFG_D/factory-config.cfg
+STARTUP=$CFG_D/startup-config.cfg
+
+# Generate device's factory-config at first boot
+if [ ! -d "$GENCFG_D" ]; then
+    mkdir -p $GENCFG_D
+
+    gen-hostname   >$GENCFG_D/20-auto-hostname.json
+    gen-interfaces >$GENCFG_D/20-auto-interfaces.json
+
+    [ -s $GENCFG_D/20-auto-hostkey.json ] || gen-hostkeys >$GENCFG_D/20-auto-hostkey.json
+
+    # Allow regenerating default factory-config, but keep it read-ony
+    # to prevent it from being overwritten by mistake by users.
+    rm -f $CFG_D/auto-factory-config.cfg
+    # shellcheck disable=SC2046
+    jq -s 'reduce .[] as $item ({}; . * $item)' \
+       $(find $FACTORY_D -name '*.json') \
+       $(find $GENCFG_D  -name '*.json') \
+       >$CFG_D/auto-factory-config.cfg
+    chmod 444 $CFG_D/auto-factory-config.cfg
+
+    # TODO: Look for statically defined factory-config, based on the
+    #       system's product ID, or just custom site-specific factory.
+
+    # If we haven't found a better one, settle for auto-factory-config as
+    # the system's factory-config.
+    [ -h $FACTORY ] || ln -sf auto-factory-config.cfg $FACTORY
 fi
 
 # Drop all pre-initialized data from netopeer2 install, then re-create
