@@ -29,7 +29,6 @@ fi
 if ! sysrepocfg -v3 -I"$fn" -f json; then
     if eval $bootstrap; then
 	logger -sik -p user.error "Failed bootstrapping system, reverting to Fail Secure mode!"
-	initctl -nbq cond set fail-startup
 	initctl -nbq runlevel 9
     else
 	logger -sik -p user.error "Failed loading $fn, aborting!"
