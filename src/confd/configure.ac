@@ -5,6 +5,7 @@ AM_SILENT_RULES(yes)
 
 AC_CONFIG_FILES([
 	Makefile
+	bin/Makefile
 	share/Makefile
 	share/factory.d/Makefile
 	share/failure.d/Makefile
