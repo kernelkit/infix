@@ -67,7 +67,7 @@ int core_post_hook(sr_session_ctx_t *session, uint32_t sub_id, const char *modul
 
 int sr_plugin_init_cb(sr_session_ctx_t *session, void **priv)
 {
-	int log_opts = LOG_USER;
+	int log_opts = LOG_PID | LOG_DAEMON;
 	int rc = SR_ERR_SYS;
 	char *env;
 
