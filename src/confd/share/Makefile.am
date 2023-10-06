@@ -1,2 +1,2 @@
-SUBDIRS             = factory failure
-pkgdata_DATA        = $(wildcard share/*)
+SUBDIRS             = factory.d failure.d
+dist_pkgdata_DATA   = README

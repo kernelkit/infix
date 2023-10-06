@@ -1,6 +1,40 @@
 #!/bin/sh
+# Generates ietf-intefaces + ietf-ip settings for all detected interfaces
+# Interfaces must be of type Ethernet (copper/sfp), not be "internal" DSA
+# ports, and must have a "parentbus", i.e., be physical ports.
+#
+# Usage: gen-interfaces [-4bd]
+#
+#   -b brN  Bridged mode, set all interfaces as ports in brN
+#   -4      Generic option for both modes, enables ZeroConf IPv4
+#   -d      Generic option for both modes, enables DHCPv4 client
+#   -g grp  Filter interfaces using 'ip link show group grp'
+#
+# By default this script generates plain interfaces with IPv6 autoconfig
+# (EUI64) enabled.  Useful both in a plain router and a Fail Secure mode
+# where any switchcore-backed ports should be prevented from switching.
+#
+# The default mode currently does not support the '-4' or '-d' options,
+# for IPv4 ZeroConf or DHCPv4 address, beacause they require source
+# routing, or similar, to work.  IPv6 does not require that and is
+# therefore the recommended access method.  A separate (and optional)
+# 'gen-cfg-custom' script is checked for in the bootstrap script which
+# can be used to enable IPv4 and DHCP on a single service interface if
+# needed.
+#
+# The -b option triggers the bridge mode, creating a 'brN' interface
+# using all interfaces classified in 'group port' by the nameif script.
+# In the bridge mode port interfaces do not have any IP address, the
+# IPv6 autoconfig address is instead set on 'brN'.  If the '-4' option
+# is set, ZeroConfig (169.254.x.y) is anabled on 'brN'.  If the '-d'
+# option is set, a DHCPv4 client is enabled on 'brN'.
 
 set -e
+
+bridge=
+ipv4=false
+ipv6=true
+dhcp=
 
 gen_interface()
 {
@@ -9,13 +43,45 @@ gen_interface()
         "name": "$1",
         "type": "infix-if-type:ethernet",
         "ietf-ip:ipv6": {
-	    "enabled": true
+	    "enabled": $2
+EOF
+    if [ -n "$3" ]; then
+	cat <<EOF
+	},
+	"infix-interfaces:bridge-port": {
+	    "bridge": "$3"
+EOF
+    fi
+    cat <<EOF
 	}
       }
 EOF
 }
 
-phys_ifaces=$(ip -d -j link show | jq -r '
+while [ "$1" != "" ]; do
+    case $1 in
+	-4)
+	    ipv4=true
+	    ;;
+	-b)
+	    bridge="$2"
+	    shift
+	    ipv6=false		# for bridge port interfaces
+	    ;;
+	-d)
+	    dhcp=true
+	    ;;
+	-g)
+	    group="group $2"	# -g port => 'ip link show group port'
+	    shift
+	    ;;
+	*)
+	    break
+    esac
+    shift
+done
+
+phys_ifaces=$(ip -d -j link show $group | jq -r '
 	 .[] |
 	 select(.link_type == "ether") |
 	 select(.group != "internal")  |
@@ -35,9 +101,42 @@ cat <<EOF
         "ietf-ip:ipv6": {
           "address": [{ "ip": "::1", "prefix-length": 128 }]
         }
+EOF
+if [ -n "$bridge" ]; then
+    cat <<EOF
+      },
+      {
+        "name": "$bridge",
+        "type": "infix-if-type:bridge",
+        "ietf-ip:ipv4": {
+	    "infix-ip:autoconf": {
+                "enabled": $ipv4
+            }
+        },
+	"ietf-ip:ipv6": {
+	    "enabled": true
+        }
+EOF
+fi
+
+cat <<EOF
       }
-$(for iface in $phys_ifaces; do gen_interface $iface; done)
+$(for iface in $phys_ifaces; do gen_interface $iface $ipv6 $bridge; done)
     ]
+EOF
+if [ "$dhcp" = "true" ] && [ -n "$bridge" ]; then
+cat <<EOF
+  },
+  "infix-dhcp-client:dhcp-client": {
+    "enabled": true,
+    "client-if": [
+      {
+        "if-name": "$bridge"
+      }
+    ]
+EOF
+fi
+cat <<EOF
   }
 }
 EOF

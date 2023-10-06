@@ -1,0 +1,34 @@
+# Defaults for /usr/libexec/confd/bootstrap                   -*-conf-*-
+# Copy and mofify this file to your br2-external overlay
+
+PATH=/usr/libexec/confd/:$PATH
+INIT_DATA=/etc/sysrepo/factory-default.json
+SEARCH=/usr/share/yang/modules/confd:/usr/share/yang/modules/libnetconf2:/usr/share/yang/modules/libyang:/usr/share/yang/modules/netopeer2:/usr/share/yang/modules/sysrepo
+
+CFG_PATH_=/cfg
+
+FACTORY_DEFAULTS_D=/usr/share/confd/factory.d
+FAILURE_DEFAULTS_D=/usr/share/confd/failure.d
+
+FACTORY_D=$CFG_PATH_/factory.d
+FAILURE_D=$CFG_PATH_/failure.d
+
+FACTORY_CFG=$CFG_PATH_/factory-config.cfg
+FAILURE_CFG=$CFG_PATH_/failure-config.cfg
+STARTUP_CFG=$CFG_PATH_/startup-config.cfg
+
+# Uncomment this line in to create a bridge (br0) with all (classified
+# 'gruop port') interfaces as bridge ports.  The br0 interface will get
+# an IPv6 EUI64 SLAAC address as well as an IPv4 ZeroConf address, and a
+# DHCPv4 address if the device is attached to a LAN with a DHCP server.
+#GEN_IFACE_OPTS="-g port -b br0 -4 -d"
+
+# Default hostname in Fail Secure mode, plus last three octets in the base
+# MAC address, e.g. "failed-c0-ff-ee".
+FAIL_HOSTNAME="failed"
+
+# Uncomment to regenerate factory-config (except hostkeys) on each boot.
+#FACTORY_OVERRIDE=true
+
+# Uncomment to regenerate failure-config (except hostkeys) on each boot.
+#FAILURE_OVERRIDE=true
