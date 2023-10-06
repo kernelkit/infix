@@ -14,8 +14,8 @@ CONFD_DEPENDENCIES = augeas jansson libite sysrepo libsrx
 CONFD_AUTORECONF = YES
 
 define CONFD_INSTALL_EXTRA
-	cp $(CONFD_PKGDIR)/sysrepo.conf  $(FINIT_D)/available/
-	ln -sf ../available/sysrepo.conf $(FINIT_D)/enabled/sysrepo.conf
+	cp $(CONFD_PKGDIR)/confd.conf  $(FINIT_D)/available/
+	ln -sf ../available/confd.conf $(FINIT_D)/enabled/confd.conf
 	cp $(CONFD_PKGDIR)/tmpfiles.conf $(TARGET_DIR)/etc/tmpfiles.d/confd.conf
 endef
 CONFD_POST_INSTALL_TARGET_HOOKS += CONFD_INSTALL_EXTRA
