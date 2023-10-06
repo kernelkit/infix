@@ -11,42 +11,87 @@
 # It's all really simple ... this script takes care of 1-4
 #
 
-PATH=/usr/libexec/confd/:$PATH
-INIT_DATA=/etc/sysrepo/factory-default.json
-SEARCH=/usr/share/yang/modules/confd:/usr/share/yang/modules/libnetconf2:/usr/share/yang/modules/libyang:/usr/share/yang/modules/netopeer2:/usr/share/yang/modules/sysrepo
+# /etc/confdrc controls the behavior or most of the gen-scripts,
+# customize in an overlay when using Infix as an br2-external.
+RC=/etc/confdrc
+if [ "$1" = "-f" ] && [ -f "$2" ]; then
+    RC=$2
+fi
 
-[ "$FACTORY_D" ] || FACTORY_D=/usr/share/confd/factory
-[ "$CFG_D" ]     || CFG_D=/cfg
-[ "$GENCFG_D" ]  || GENCFG_D=/cfg/factory.d
+if [ ! -f "$RC" ]; then
+    logger -sik -p user.error -t bootstrap "Missing rc file $RC" 2>/dev/null \
+        || echo "Missing rc file $RC"
+    exit 99
+fi
 
-FACTORY=$CFG_D/factory-config.cfg
-STARTUP=$CFG_D/startup-config.cfg
+# shellcheck disable=SC1090
+. "$RC"
 
-# Generate device's factory-config at first boot
-if [ ! -d "$GENCFG_D" ]; then
-    mkdir -p $GENCFG_D
+FACTORY_GEN="$(dirname "$FACTORY_CFG")/$(basename "$FACTORY_CFG" .cfg).gen"
+FAILURE_GEN="$(dirname "$FAILURE_CFG")/$(basename "$FAILURE_CFG" .cfg).gen"
 
-    gen-hostname   >$GENCFG_D/20-auto-hostname.json
-    gen-interfaces >$GENCFG_D/20-auto-interfaces.json
+# Generate device's factory-config at first boot or on override
+if [ ! -d "$FACTORY_D" ] || [ "$FACTORY_OVERRIDE" = "true" ]; then
+    mkdir -p "$FACTORY_D"
 
-    [ -s $GENCFG_D/20-auto-hostkey.json ] || gen-hostkeys >$GENCFG_D/20-auto-hostkey.json
+    # Save the original templates (from the original image) used to create factory-config
+    for file in $(find "$FACTORY_DEFAULTS_D" -type f); do
+	cp "$file" "$FACTORY_D"
+    done
 
-    # Allow regenerating default factory-config, but keep it read-ony
-    # to prevent it from being overwritten by mistake by users.
-    rm -f $CFG_D/auto-factory-config.cfg
+    # Create an overlay for /etc/hostname to change the default in an br2-external
+    gen-hostname                                            >"$FACTORY_D/20-hostname.json"
+    gen-interfaces "$GEN_IFACE_OPTS"                        >"$FACTORY_D/20-interfaces.json"
+
+    [ -s "$FACTORY_D/20-hostkey.json"   ] || gen-hostkeys   >"$FACTORY_D/20-hostkey.json"
+
+    # Optional commands (from an overlay) to run for br2-externals
+    [ -x "$(command -v gen-ifs-custom)" ] && gen-ifs-custom >"$FACTORY_D/20-interfaces.json"
+    [ -x "$(command -v gen-cfg-custom)" ] && gen-cfg-custom >"$FACTORY_D/30-config.json"
+
+    rm -f "$FACTORY_GEN"
     # shellcheck disable=SC2046
-    jq -s 'reduce .[] as $item ({}; . * $item)' \
-       $(find $FACTORY_D -name '*.json') \
-       $(find $GENCFG_D  -name '*.json') \
-       >$CFG_D/auto-factory-config.cfg
-    chmod 444 $CFG_D/auto-factory-config.cfg
+    jq -s 'reduce .[] as $item ({}; . * $item)'	\
+       $(find "$FACTORY_D" -name '*.json' | sort) >"$FACTORY_GEN"
+    chmod 444 "$FACTORY_GEN"
 
     # TODO: Look for statically defined factory-config, based on the
     #       system's product ID, or just custom site-specific factory.
 
-    # If we haven't found a better one, settle for auto-factory-config as
-    # the system's factory-config.
-    [ -h $FACTORY ] || ln -sf auto-factory-config.cfg $FACTORY
+    # If we haven't found a more specific, better match, settle for
+    # factory-config.gen as the system's factory-config.
+    [ -h "$FACTORY_CFG" ] || ln -sf "$(basename "$FACTORY_GEN")" "$FACTORY_CFG"
+fi
+
+# Generate device's failure-config at first boot
+if [ ! -d "$FAILURE_D" ] || [ "$FAILURE_OVERRIDE" = "true" ]; then
+    mkdir -p "$FAILURE_D"
+
+    # Save the original templates (from the original image) used to create failure-config
+    for file in $(find "$FAILURE_DEFAULTS_D" -type f); do
+	cp "$file" "$FAILURE_D"
+    done
+
+    gen-hostname   "$FAIL_HOSTNAME"                         >"$FAILURE_D/20-hostname.json"
+    gen-interfaces                                          >"$FAILURE_D/20-interfaces.json"
+
+    [ -s "$FAILURE_D/20-hostkey.json"   ] || gen-hostkeys   >"$FAILURE_D/20-hostkey.json"
+
+    # Optional failure/error config to generate (or override) for br2-externals
+    [ -x "$(command -v gen-err-custom)" ] && gen-err-custom >"$FAILURE_D/30-error.json"
+
+    rm -f "$FAILURE_GEN"
+    # shellcheck disable=SC2046
+    jq -s 'reduce .[] as $item ({}; . * $item)'	\
+       $(find "$FAILURE_D" -name '*.json' | sort) >"$FAILURE_GEN"
+    chmod 444 "$FAILURE_GEN"
+
+    [ -h "$FAILURE_CFG" ] || ln -sf "$(basename "$FAILURE_GEN")" "$FAILURE_CFG"
+fi
+
+if [ -n "$TESTING" ]; then
+	echo "Done."
+	exit 0
 fi
 
 # Drop all pre-initialized data from netopeer2 install, then re-create
@@ -54,7 +99,7 @@ fi
 # and then we initialize it all with our factory defaults.
 rm -rf /etc/sysrepo/* /dev/shm/sr_*
 mkdir -p /etc/sysrepo/
-cp "$FACTORY" "$INIT_DATA"
+cp "$FACTORY_CFG" "$INIT_DATA"
 sysrepoctl -s $SEARCH							\
 	   -i ietf-system@2014-08-06.yang      -g wheel -p 0660		\
            	-e authentication					\
@@ -138,8 +183,8 @@ sysrepoctl -c ietf-netconf-acm -g wheel -p 0660
 # On first boot, install factory-config as startup-config.  Due to a
 # limitation in sysrepo we cannot initialize ietf-netconf-acm, so we
 # cheat, see sysrepo#3079
-if [ ! -f "$STARTUP" ]; then
-    sysrepocfg -f json -X"$STARTUP"
+if [ ! -f "$STARTUP_CFG" ]; then
+    sysrepocfg -f json -X"$STARTUP_CFG"
 fi
 
 # Clear running-config so we can load startup in the next step
