@@ -9,11 +9,20 @@ die()
     exit 1
 }
 
+# Find all matching key=value assignments in output/.config
+# E.g., load_cfg DISK_IMAGE sets the following variables:
+#
+#      DISK_IMAGE=y
+#      DISK_IMAGE_SIZE="512"
+#      etc.
+#
+# shellcheck disable=SC1090
 load_cfg()
 {
-    local tmp=$(mktemp -p /tmp)
+    tmp=$(mktemp -p /tmp)
 
-    grep "$1" $BR2_CONFIG >$tmp
-    .  $tmp
-    rm $tmp
+    grep -E "${1}.*=" "$BR2_CONFIG" >"$tmp"
+    .  "$tmp"
+
+    rm "$tmp"
 }
