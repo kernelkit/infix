@@ -1,6 +1,6 @@
 #!/bin/sh
 common=$(dirname "$(readlink -f "$0")")
-. $common/lib.sh
+. "$common/lib.sh"
 
 load_cfg BR2_ARCH
 load_cfg BR2_DEFCONFIG
@@ -50,8 +50,6 @@ fi
 
 load_cfg GNS3_APPLIANCE
 if [ "$GNS3_APPLIANCE" = "y" ]; then
-    load_cfg GNS3_APPLIANCE_RAM
-    load_cfg GNS3_APPLIANCE_IFNUM
     ixmsg "Creating GNS3 Appliance, $GNS3_APPLIANCE_RAM MiB with $GNS3_APPLIANCE_IFNUM ports"
     $common/mkgns3a.sh $NAME $GNS3_APPLIANCE_RAM $GNS3_APPLIANCE_IFNUM
 fi
