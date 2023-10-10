@@ -100,7 +100,7 @@ config DISK_IMAGE_RELEASE_URL
 menuconfig GNS3_APPLIANCE
 	bool "GNS3 Appliance"
 	select DISK_IMAGE
-	default y if BR2_x86_64
+	default y
 	help
 	  Create a GNS3 appliance description that, together with the
 	  disk image, can be imported into GNS3.
