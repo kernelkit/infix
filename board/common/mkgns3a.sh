@@ -1,12 +1,47 @@
 #!/bin/sh
 
+# The aarch64 build currently has no "loader" but instead starts Linux
+# directly, so we need to add a basic cmdline.
+loader_args()
+{
+    if [ "$ARCH" != "x86_64" ]; then
+	cat <<EOF
+"kernel_command_line": "console=ttyAMA0 root=PARTLABEL=primary quiet",
+EOF
+    fi
+}
+
+loader_img()
+{
+    if [ "$ARCH" = "x86_64" ]; then
+	cat <<EOF
+"bios_image": "$loader",
+EOF
+    else
+	cat <<EOF
+"kernel_image": "$loader",
+EOF
+    fi
+}
+
 if [ -n "$INFIX_RELEASE" ]; then
     rel="-${INFIX_RELEASE}"
 fi
 
-NM="${1:-custom}${rel}"
-RAM=${2:-512}
-IFNUM=${3:-1}
+ARCH=$1
+NM="${2:-custom}${rel}"
+RAM=${3:-512}
+IFNUM=${4:-1}
+
+if [ "$ARCH" = "x86_64" ]; then
+    loader=OVMF.fd
+    accel=allow
+    opts=
+else
+    loader=Image
+    accel=disable
+    opts="-M virt -cpu cortex-a72"
+fi
 
 cat <<EOF >"$BINARIES_DIR/${NM}.gns3a"
 {
@@ -29,15 +64,17 @@ cat <<EOF >"$BINARIES_DIR/${NM}.gns3a"
         "ram": ${RAM},
         "cpus": 1,
         "hda_disk_interface": "virtio",
-        "arch": "x86_64",
+        "arch": "$ARCH",
         "console_type": "telnet",
-        "kvm": "allow"
+        $(loader_args)
+        "kvm": "$accel",
+	"options": "$opts"
     },
     "images": [
         {
-            "filename": "OVMF.fd",
-            "filesize": $(stat --printf='%s' "$BINARIES_DIR/OVMF.fd"),
-            "md5sum": "$(md5sum "$BINARIES_DIR/OVMF.fd" | awk '{print $1}')",
+            "filename": "$loader",
+            "filesize": $(stat --printf='%s' "$BINARIES_DIR/$loader"),
+            "md5sum": "$(md5sum "$BINARIES_DIR/$loader" | awk '{print $1}')",
             "version": "0.0"
         },
         {
@@ -51,7 +88,7 @@ cat <<EOF >"$BINARIES_DIR/${NM}.gns3a"
         {
             "name": "0.0",
             "images": {
-                "bios_image": "OVMF.fd",
+                $(loader_img)
                 "hda_disk_image": "disk.img"
             }
         }

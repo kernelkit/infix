@@ -51,7 +51,7 @@ fi
 load_cfg GNS3_APPLIANCE
 if [ "$GNS3_APPLIANCE" = "y" ]; then
     ixmsg "Creating GNS3 Appliance, $GNS3_APPLIANCE_RAM MiB with $GNS3_APPLIANCE_IFNUM ports"
-    $common/mkgns3a.sh $NAME $GNS3_APPLIANCE_RAM $GNS3_APPLIANCE_IFNUM
+    $common/mkgns3a.sh $BR2_ARCH $NAME $GNS3_APPLIANCE_RAM $GNS3_APPLIANCE_IFNUM
 fi
 
 load_cfg FIT_IMAGE
