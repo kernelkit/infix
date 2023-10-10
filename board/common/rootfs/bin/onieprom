@@ -1,0 +1,215 @@
+#!/usr/bin/env python3
+
+import binascii
+import struct
+
+HDRMGC = b"TlvInfo"
+HDRVER = 1
+HDRFMT = ">7sxBH"
+HDRLEN = struct.calcsize(HDRFMT)
+
+CRCFMT = ">BBL"
+CRCLEN = struct.calcsize(CRCFMT)
+
+def pack_varstr(s, maxlen=0xff):
+    b = bytes(s, "ascii")
+    assert(len(b) <= maxlen)
+    return b
+
+def unpack_varstr(b):
+    return b.decode("ascii")
+
+
+def pack_u8(num):
+    return struct.pack("B", num)
+
+def unpack_u8(b):
+    return struct.unpack("B", b)[0]
+
+
+def pack_u16(num):
+    return struct.pack(">H", num)
+
+def unpack_u16(b):
+    return struct.unpack(">H", b)[0]
+
+
+def pack_u32(num):
+    return struct.pack(">L", num)
+
+def unpack_u32(b):
+    return struct.unpack(">L", b)[0]
+
+
+def pack_date(datestr):
+    assert(len(datestr) == 19)
+    return pack_varstr(datestr, 19)
+
+def pack_country(cstr):
+    assert(len(cstr) == 2)
+    return pack_varstr(cstr, 2)
+
+def pack_mac(macstr):
+    return struct.pack("6B", *[int(o, 16) for o in macstr.split(":")])
+
+def unpack_mac(b):
+    o = struct.unpack("6B", b)
+    return f"{o[0]:02x}:{o[1]:02x}:{o[2]:02x}:{o[3]:02x}:{o[4]:02x}:{o[5]:02x}"
+
+OPS = {
+    "varstr":   (pack_varstr, unpack_varstr),
+    "u8":       (pack_u8, unpack_u8),
+    "u16":      (pack_u16, unpack_u16),
+    "u32":      (pack_u32, unpack_u32),
+
+    "date":     (pack_date, unpack_varstr),
+    "country":  (pack_country, unpack_varstr),
+    "mac":      (pack_mac, unpack_mac),
+}
+
+TLV = (
+    { "type": 0x21, "name": "product-name",     "ops": "varstr"  },
+    { "type": 0x22, "name": "part-number",      "ops": "varstr"  },
+    { "type": 0x23, "name": "serial-number",    "ops": "varstr"  },
+    { "type": 0x24, "name": "mac-address",      "ops": "mac"     },
+    { "type": 0x25, "name": "manufacture-date", "ops": "date"    },
+    { "type": 0x26, "name": "device-version",   "ops": "u8"      },
+    { "type": 0x27, "name": "label-revision",   "ops": "varstr"  },
+    { "type": 0x28, "name": "platform-name",    "ops": "varstr"  },
+    { "type": 0x29, "name": "onie-version",     "ops": "varstr"  },
+    { "type": 0x2a, "name": "num-macs",         "ops": "u16"     },
+    { "type": 0x2b, "name": "manufacturer",     "ops": "varstr"  },
+    { "type": 0x2c, "name": "country-code",     "ops": "country" },
+    { "type": 0x2d, "name": "vendor",           "ops": "varstr"  },
+    { "type": 0x2e, "name": "diag-version",     "ops": "varstr"  },
+    { "type": 0x2f, "name": "service-tag",      "ops": "varstr"  },
+)
+
+TLV_VENDOR_EXTENSION = 0xfd
+TLV_CRC32 = 0xfe
+
+def _tlv_by_lambda(fn):
+    info = next(filter(fn, TLV))
+    if "ops" in info:
+        return info, OPS[info["ops"]]
+    else:
+        return info
+
+def tlv_by_name(name):
+    try:
+        return _tlv_by_lambda(lambda info: info["name"] == name)
+    except StopIteration:
+        raise ValueError(f"Unknown type name \"{name}\"")
+
+def tlv_by_type(t):
+    try:
+        return _tlv_by_lambda(lambda info: info["type"] == t)
+    except StopIteration:
+        raise ValueError(f"Unknown type id {t}")
+
+def into_tlv(d):
+    def pack_vendor(exts):
+        out = b""
+        for (iana_pen, val) in exts:
+            b = bytes(val, "utf-8")
+            l = len(b) + struct.calcsize(">L")
+            assert(l <= 0xff)
+            out += struct.pack(">BBL", TLV_VENDOR_EXTENSION, l, iana_pen) + b
+
+        return out
+
+    out = b""
+
+    # Generate all optional data
+    for (k, v) in sorted(d.items()):
+        if k == "vendor-extension":
+            out += pack_vendor(v)
+        else:
+            info, (pack, _) = tlv_by_name(k)
+            val = pack(v)
+            out += struct.pack("BB", info["type"], len(val)) + val
+
+    # Prepend the header now that we know the total length of the
+    # optional fields - make sure sure to include the CRC TLV length,
+    # which is appended in the last step
+    out  = struct.pack(HDRFMT, HDRMGC, HDRVER, len(out) + CRCLEN) + out
+
+    out += struct.pack("BB", TLV_CRC32, struct.calcsize(">L"))
+    out += struct.pack(">L", binascii.crc32(out))
+    return out
+
+def from_tlv(b):
+    d = {}
+
+    def unpack_vendor(ext):
+        head, tail = ext[:4], ext[4:]
+        iana_pen = struct.unpack(">L", head)[0]
+        val = tail.decode("utf-8")
+
+        if "vendor-extension" not in d:
+            d["vendor-extension"] = []
+
+        d["vendor-extension"].append([iana_pen, val])
+
+    head, tail = b[:HDRLEN], b[HDRLEN:]
+    magic, ver, l = struct.unpack(HDRFMT, head)
+    assert(magic == HDRMGC)
+    assert(ver == 1)
+    assert(len(b) >= HDRLEN + l)
+
+    crcoffs = HDRLEN + l - CRCLEN
+    t, l, v = struct.unpack(CRCFMT, b[crcoffs:crcoffs+CRCLEN])
+    assert(t == TLV_CRC32)
+    assert(v == binascii.crc32(b[:crcoffs + struct.calcsize("BB")]))
+
+    while len(tail) >= 2:
+        t, l = struct.unpack("BB", tail[:2])
+        v = tail[2:l+2]
+        tail = tail[l+2:]
+
+        if t == TLV_VENDOR_EXTENSION:
+            unpack_vendor(v)
+            continue
+        elif t == TLV_CRC32:
+            break
+
+        info, (_, unpack) = tlv_by_type(t)
+        d[info["name"]] = unpack(v)
+
+    return d
+
+if __name__ == "__main__":
+    import argparse
+    import json
+    import os
+    import sys
+
+    parser = argparse.ArgumentParser(prog='onieprom')
+
+    parser.add_argument("infile", nargs="?", default=sys.stdin, type=argparse.FileType())
+    parser.add_argument("outfile", nargs="?", default=sys.stdout, type=argparse.FileType("w"))
+
+    parser.add_argument("-e", "--encode", default=False, action="store_true",
+                        help="Encode JSON input to binary output")
+
+    parser.add_argument("-d", "--decode", default=False, action="store_true",
+                        help="Decode binary input to JSON output")
+
+    args = parser.parse_args()
+
+    if (not args.encode) and (not args.decode):
+        c = args.infile.buffer.read(1)
+        args.infile.seek(0, 0)
+
+        if c == b"{":
+            args.encode = True
+        elif c == b"T":
+            args.decode = True
+        else:
+            sys.stderr.write("Neither encode nor decode specified, and could not infer operation from input")
+            sys.exit(1)
+
+    if args.encode:
+        args.outfile.buffer.write(into_tlv(json.load(args.infile)))
+    else:
+        args.outfile.write(json.dumps(from_tlv(args.infile.buffer.read())))
