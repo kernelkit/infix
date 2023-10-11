@@ -1,3 +1,97 @@
+menu "Branding"
+
+config INFIX_VENDOR
+	string "Vendor name"
+	default "KernelKit"
+	help
+	  The name of the operating system vendor. This is the name of the
+	  organization or company which produces the OS.
+
+	  This name is intended to be exposed in "About this system" UIs or
+	  software update UIs when needed to distinguish the OS vendor from
+	  the OS itself.  It is intended to be human readable.
+
+	  Used for VENDOR_NAME in /etc/os-release and GNS3 appliance files.
+
+config INFIX_VENDOR_HOME
+	string "Vendor URL"
+	help
+	  The homepage of the OS vendor.  The value should be in RFC3986
+	  format, and should be "http:" or "https:" URLs.  Only one URL shall
+	  be listed in the setting.
+
+	  Optional, used for VENDOR_HOME in /etc/os-release
+
+config INFIX_NAME
+	string "Operating system name"
+	default "Infix"
+	help
+	  Mandatory.  Used for identifying the OS as NAME in /etc/os-release
+	  and product_name in GNS3 appliance files.
+
+config INFIX_ID
+	string "Operating system identifier"
+	default "infix"
+	help
+	  A lower-case string (no spaces or other characters outside of 0–9,
+          a–z, '.', '_' and '-') identifying the operating system, excluding
+          any version information and suitable for processing by scripts or
+          usage in generated filenames.
+
+	  Mandatory.  Used for identifying the OS as ID in /etc/os-release and
+	  in the generated image name: ID-ARCH-VERSION.img
+
+config INFIX_TAGLINE
+	string "Operating system tagline"
+	default "Infix — a Network Operating System"
+	help
+	  Mandatory. Used for identifying the OS, e.g. as PRETTY_NAME in
+	  /etc/os-release and description in the GNS3 appliance.
+
+	  This is also show at boot when the system init process starts.
+
+config INFIX_DESC
+	string "Operating system description"
+	help
+	  Optional.  Used for long description texts about the OS.  E.g.,
+	  the GNS3 appliance file description field.  Saved in the file
+	  /etc/os-release as INFIX_DESC.
+
+config INFIX_HOME
+	string "Operating system URL"
+	help
+	  Used for identifying the OS, e.g. as HOME_URL in /etc/os-release
+
+config INFIX_DOC
+	string "Operating system docs"
+	help
+	  Optional.  Main documentation URL, will be shown in /etc/os-release
+	  as DOCUMENTATION_URL.
+
+config INFIX_SUPPORT
+	string "Operating system support"
+	help
+	  Main support page for the operating system, if there is any.  This
+	  is primarily intended for operating systems which vendors provide
+	  support for.  May be a http:, https:, or mailto: URI.
+
+	  Optional.  Shown, e.g., as SUPPORT_URL in /etc/os-release or
+	  maintainer_email in .gns3a.
+
+config INFIX_OEM_PATH
+	string "Path to OEM br2-external"
+	help
+	  A br2-external using Infix will likely want to version the branded
+	  OS using their own GIT tags.  Set this variable to point to the base
+	  directory (absolute path) and the Infix post-build.sh will call `git
+	  describe -C $INFIX_OEM_PATH`.
+
+	  Note: for release builds the global variable INFIX_RELEASE overrides
+	  the version information derived from `git describe`.  However, the
+	  GIT version is always saved as the BUILD_ID in /etc/os-releases.
+
+endmenu
+
 # For /etc/os-release, uses CondtionArchitechture= from systemd.unit(5)
 config INFIX_ARCH
 	string
