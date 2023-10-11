@@ -118,14 +118,14 @@ identifier.
 
 ![Switch example (eth0 and lo)](img/ip-address-example-switch.svg)
 
-    admin@infix-00-00-00:/> show interfaces 
+    admin@example:/> show interfaces 
     INTERFACE       PROTOCOL   STATE       DATA                                     
     eth0            ethernet   UP          02:00:00:00:00:00                        
                     ipv6                   fe80::ff:fe00:0/64 (link-layer)
     lo              ethernet   UP          00:00:00:00:00:00                        
                     ipv4                   127.0.0.1/8 (static)
                     ipv6                   ::1/128 (static)
-    admin@infix-00-00-00:/>
+    admin@example:/>
 
 To illustrate IP address configuration, the examples below uses a
 switch with a single Ethernet interface (eth0) and a loopback
@@ -141,7 +141,7 @@ default.
     admin@example:/config/> edit interfaces interface eth0 ipv4
     admin@example:/config/interfaces/interface/eth0/ipv4/> set address 10.0.1.1 prefix-length 24
     admin@example:/config/interfaces/interface/eth0/ipv4/> set autoconf enabled true 
-	admin@infix-example:/config/interfaces/interface/eth0/ipv4/> diff
+	admin@example:/config/interfaces/interface/eth0/ipv4/> diff
     +interfaces {
     +  interface eth0 {
     +    ipv4 {
@@ -154,8 +154,8 @@ default.
     +    }
     +  }
     +}
-    admin@infix-example:/config/interfaces/interface/eth0/ipv4/> leave
-    admin@infix-example:/> show interfaces 
+    admin@example:/config/interfaces/interface/eth0/ipv4/> leave
+    admin@example:/> show interfaces 
     INTERFACE       PROTOCOL   STATE       DATA                                     
     eth0            ethernet   UP          02:00:00:00:00:00                        
                     ipv4                   169.254.1.3/16 (random)
@@ -164,7 +164,7 @@ default.
     lo              ethernet   UP          00:00:00:00:00:00                        
                     ipv4                   127.0.0.1/8 (static)
                     ipv6                   ::1/128 (static)
-    admin@infix-example:/>
+    admin@example:/>
 
 As shown, the link-local IPv4 address is configured with `set autconf
 enabled true`.  The resulting address (169.254.1.3/16) is of type
@@ -237,7 +237,7 @@ default. The address is formed by concatenating the network prefix
 advertised by the router (here 2001:db8:0:1::0/64) and the interface
 identifier. The resulting address is of type *link-layer*, as it
 is formed based on the interface identifier ([IETF
-ip-yang][ietf-ip-yang])). 
+ip-yang][ietf-ip-yang]). 
 
     admin@example:/> show interfaces 
     INTERFACE       PROTOCOL   STATE       DATA                                     
@@ -252,18 +252,18 @@ ip-yang][ietf-ip-yang])).
 Disabling auto-configuration of global IPv6 addresses can be done as shown
 below.
 
-    admin@infix-00-00-00:/> configure
-    admin@infix-00-00-00:/config/> edit interfaces interface eth0 ipv6
-    admin@infix-00-00-00:/config/interfaces/interface/eth0/ipv6/> set autoconf create-global-addresses false 
-    admin@infix-00-00-00:/config/interfaces/interface/eth0/ipv6/> leave
-    admin@infix-00-00-00:/> show interfaces 
+    admin@example:/> configure
+    admin@example:/config/> edit interfaces interface eth0 ipv6
+    admin@example:/config/interfaces/interface/eth0/ipv6/> set autoconf create-global-addresses false 
+    admin@example:/config/interfaces/interface/eth0/ipv6/> leave
+    admin@example:/> show interfaces 
     INTERFACE       PROTOCOL   STATE       DATA                                     
     eth0            ethernet   UP          02:00:00:00:00:00                        
                     ipv6                   fe80::ff:fe00:0/64 (link-layer)
     lo              ethernet   UP          00:00:00:00:00:00                        
                     ipv4                   127.0.0.1/8 (static)
                     ipv6                   ::1/128 (static)
-    admin@infix-00-00-00:/>
+    admin@example:/>
 
 #### Random Link Identifiers for IPv6 Stateless Autoconfiguration
 
@@ -285,10 +285,10 @@ are formed from a link-identifier based on the MAC address.
 To avoid revealing identity information in the IPv6 address, it is
 possible to specify use of a random identifier ([ietf-ip][ietf-ip-yang] YANG and [RFC8981][ietf-ipv6-privacy]).
 
-    admin@infix-example:/> configure 
-    admin@infix-example:/config/> edit interfaces interface eth0 ipv6
-    admin@infix-example:/config/interfaces/interface/eth0/ipv6/> set autoconf create-temporary-addresses true 
-    admin@infix-example:/config/interfaces/interface/eth0/ipv6/> leave
+    admin@example:/> configure 
+    admin@example:/config/> edit interfaces interface eth0 ipv6
+    admin@example:/config/interfaces/interface/eth0/ipv6/> set autoconf create-temporary-addresses true 
+    admin@example:/config/interfaces/interface/eth0/ipv6/> leave
     admin@example:/> show interfaces 
     INTERFACE       PROTOCOL   STATE       DATA                                     
     eth0            ethernet   UP          02:00:00:00:00:00                        
