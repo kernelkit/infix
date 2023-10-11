@@ -123,10 +123,11 @@ tmp=$BUILD_DIR/genimage.tmp
 total=$((512 << M))
 bootoffs=$((32 << K))
 bootdata=
+diskimg=disk.img
 bootimg=
 bootpart=
 
-while getopts "a:b:B:s:" opt; do
+while getopts "a:b:B:n:s:" opt; do
     case ${opt} in
 	a)
 	    arch=$OPTARG
@@ -136,6 +137,9 @@ while getopts "a:b:B:s:" opt; do
 	    ;;
 	B)
 	    bootoffs=$(($OPTARG))
+	    ;;
+	n)
+	    diskimg=${OPTARG}
 	    ;;
 	s)
 	    total=$(size2int $OPTARG)
@@ -158,6 +162,7 @@ awk \
 	  -vimgsize=$imgsize \
 	  -vcfgsize=$cfgsize \
 	  -vvarsize=$varsize \
+	  -vdiskimg=$diskimg \
 	  -vbootimg="$bootimg" -vbootpart="$bootpart" \
 	  '{
 		sub(/@TOTALSIZE@/, total);
@@ -166,7 +171,7 @@ awk \
 		sub(/@IMGSIZE@/, imgsize);
 		sub(/@CFGSIZE@/, cfgsize);
 		sub(/@VARSIZE@/, varsize);
-
+		sub(/@DISKIMG@/, diskimg);
 		sub(/@BOOTIMG@/, bootimg);
 		sub(/@BOOTPART@/, bootpart);
 	  }1' \

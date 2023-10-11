@@ -30,7 +30,7 @@ image var.ext4 {
 	}
 }
 
-image disk.img {
+image @DISKIMG@ {
 	size = @TOTALSIZE@
 	hdimage {
 		partition-table-type = "gpt"
