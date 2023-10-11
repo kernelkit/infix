@@ -2,7 +2,7 @@ mainmenu "QEMU Virtualization"
 
 choice
 	prompt "Target Architecture"
-	default QEMU_aarch64
+	default @ARCH@
 
 config QEMU_x86_64
 	bool "x86_64"
@@ -64,7 +64,7 @@ endchoice
 config QEMU_MACHINE
 	string
 	default "qemu-system-aarch64 -M virt -cpu cortex-a72 -m 256M"   if QEMU_aarch64
-	default "qemu-system-x86_64 -M q35,accel=kvm -cpu host -m 512M" if QEMU_x86_64
+	default "qemu-system-x86_64 -M q35,accel=kvm -cpu host -m 256M" if QEMU_x86_64
 
 config QEMU_KERNEL
 	string
@@ -80,7 +80,7 @@ config QEMU_BIOS
 
 config QEMU_ROOTFS
 	string
-	default "disk.img"        if !QEMU_ROOTFS_INITRD
+	default "@DISK_IMG@" if !QEMU_ROOTFS_INITRD
 	default "rootfs.squashfs" if QEMU_ROOTFS_INITRD
 
 config QEMU_DTB_EXTEND

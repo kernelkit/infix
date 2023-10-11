@@ -7,6 +7,7 @@ load_cfg BR2_DEFCONFIG
 load_cfg BR2_EXTERNAL_INFIX_PATH
 load_cfg BR2_TARGET_ROOTFS
 NAME=infix-$(basename "$BR2_DEFCONFIG" _defconfig | tr _ - | sed 's/x86-64/x86_64/')
+diskimg=disk.img
 
 ver()
 {
@@ -71,3 +72,14 @@ if [ "$BR2_TARGET_ROOTFS_SQUASHFS" = "y" ]; then
 	ln -sf "$BINARIES_DIR/${NAME}${rel}.img" "$BINARIES_DIR/${NAME}.img"
     fi
 fi
+
+# Menuconfig support for modifying Qemu args in release tarballs
+cp "$BR2_EXTERNAL_INFIX_PATH/board/common/qemu/qemu.sh" "$BINARIES_DIR/"
+sed -e "s/@ARCH@/QEMU_$BR2_ARCH/" \
+    -e "s/@DISK_IMG@/$diskimg/"   \
+    < "$BR2_EXTERNAL_INFIX_PATH/board/common/qemu/Config.in.in" \
+    > "$BINARIES_DIR/Config.in"
+rm -f "$BINARIES_DIR/qemu.cfg"
+CONFIG_="CONFIG_" BR2_CONFIG="$BINARIES_DIR/qemu.cfg" \
+       "$O/build/buildroot-config/conf" --olddefconfig "$BINARIES_DIR/Config.in"
+rm -f "$BINARIES_DIR/qemu.cfg.old" "$BINARIES_DIR/.config.old"

@@ -46,13 +46,3 @@ grep -qsE '^/bin/true$$' "$TARGET_DIR/etc/shells" \
         || echo "/bin/true" >> "$TARGET_DIR/etc/shells"
 grep -qsE '^/bin/false$$' "$TARGET_DIR/etc/shells" \
         || echo "/bin/false" >> "$TARGET_DIR/etc/shells"
-
-# Menuconfig support for modifying Qemu args in release tarballs
-cp "$BR2_EXTERNAL_INFIX_PATH/board/common/qemu/qemu.sh" "$BINARIES_DIR/"
-sed "s/default QEMU_aarch64/default QEMU_$BR2_ARCH/" \
-    < "$BR2_EXTERNAL_INFIX_PATH/board/common/qemu/Config.in" \
-    > "$BINARIES_DIR/Config.in"
-rm -f "$BINARIES_DIR/qemu.cfg"
-CONFIG_="CONFIG_" BR2_CONFIG="$BINARIES_DIR/qemu.cfg" \
-       "$O/build/buildroot-config/conf" --olddefconfig "$BINARIES_DIR/Config.in"
-rm -f "$BINARIES_DIR/qemu.cfg.old" "$BINARIES_DIR/.config.old"
