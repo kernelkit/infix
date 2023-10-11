@@ -1,12 +1,18 @@
 #!/bin/sh
+# shellcheck disable=SC2086
+
 common=$(dirname "$(readlink -f "$0")")
 . "$common/lib.sh"
 
+# shellcheck disable=SC1091
+. "$TARGET_DIR/etc/os-release"
+
+load_cfg INFIX_ID
 load_cfg BR2_ARCH
 load_cfg BR2_DEFCONFIG
 load_cfg BR2_EXTERNAL_INFIX_PATH
 load_cfg BR2_TARGET_ROOTFS
-NAME=infix-$(basename "$BR2_DEFCONFIG" _defconfig | tr _ - | sed 's/x86-64/x86_64/')
+NAME="$INFIX_ID"-$(echo "$BR2_ARCH" | tr _ - | sed 's/x86-64/x86_64/')
 diskimg=disk.img
 
 ver()
@@ -32,7 +38,7 @@ fi
 load_cfg DISK_IMAGE
 if [ "$DISK_IMAGE" = "y" ]; then
     ixmsg "Creating Disk Image"
-
+    diskimg="${NAME}-disk.img"
     bootcfg=
     if [ "$DISK_IMAGE_BOOT_DATA" ]; then
 	bootcfg="-b $DISK_IMAGE_BOOT_DATA -B $DISK_IMAGE_BOOT_OFFSET"
@@ -45,14 +51,15 @@ if [ "$DISK_IMAGE" = "y" ]; then
 	[ -f "$archive" ] || wget -O"$archive" "$DISK_IMAGE_RELEASE_URL"
 	tar -xa --strip-components=1 -C "$BINARIES_DIR" -f "$archive"
     fi
+
     $common/mkrauc-status.sh "$BINARIES_DIR/${NAME}.pkg" >"$BINARIES_DIR/rauc.status"
-    $common/mkdisk.sh -a $BR2_ARCH -s $DISK_IMAGE_SIZE $bootcfg
+    $common/mkdisk.sh -a $BR2_ARCH -n $diskimg -s $DISK_IMAGE_SIZE $bootcfg
 fi
 
 load_cfg GNS3_APPLIANCE
 if [ "$GNS3_APPLIANCE" = "y" ]; then
     ixmsg "Creating GNS3 Appliance, $GNS3_APPLIANCE_RAM MiB with $GNS3_APPLIANCE_IFNUM ports"
-    $common/mkgns3a.sh $BR2_ARCH $NAME $GNS3_APPLIANCE_RAM $GNS3_APPLIANCE_IFNUM
+    $common/mkgns3a.sh $BR2_ARCH $NAME $diskimg $GNS3_APPLIANCE_RAM $GNS3_APPLIANCE_IFNUM
 fi
 
 load_cfg FIT_IMAGE
