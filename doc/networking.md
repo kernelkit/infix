@@ -118,14 +118,14 @@ identifier.
 
 ![Switch example (eth0 and lo)](img/ip-address-example-switch.svg)
 
-    root@infix-00-00-00:/> show interfaces 
+    admin@infix-00-00-00:/> show interfaces 
     INTERFACE       PROTOCOL   STATE       DATA                                     
     eth0            ethernet   UP          02:00:00:00:00:00                        
                     ipv6                   fe80::ff:fe00:0/64 (link-layer)
     lo              ethernet   UP          00:00:00:00:00:00                        
                     ipv4                   127.0.0.1/8 (static)
                     ipv6                   ::1/128 (static)
-    root@infix-00-00-00:/>
+    admin@infix-00-00-00:/>
 
 To illustrate IP address configuration, the examples below uses a
 switch with a single Ethernet interface (eth0) and a loopback
@@ -137,11 +137,11 @@ default.
 
 ![Setting static IPv4 (and link-local IPv4)](img/ip-address-example-ipv4-static.svg)
 
-    root@example:/> configure
-    root@example:/config/> edit interfaces interface eth0 ipv4
-    root@example:/config/interfaces/interface/eth0/ipv4/> set address 10.0.1.1 prefix-length 24
-    root@example:/config/interfaces/interface/eth0/ipv4/> set autoconf enabled true 
-	root@infix-example:/config/interfaces/interface/eth0/ipv4/> diff
+    admin@example:/> configure
+    admin@example:/config/> edit interfaces interface eth0 ipv4
+    admin@example:/config/interfaces/interface/eth0/ipv4/> set address 10.0.1.1 prefix-length 24
+    admin@example:/config/interfaces/interface/eth0/ipv4/> set autoconf enabled true 
+	admin@infix-example:/config/interfaces/interface/eth0/ipv4/> diff
     +interfaces {
     +  interface eth0 {
     +    ipv4 {
@@ -154,16 +154,8 @@ default.
     +    }
     +  }
     +}
-    root@infix-example:/config/interfaces/interface/eth0/ipv4/> leave
-    root@infix-example:/> show interfaces 
-    INTERFACE       PROTOCOL   STATE       DATA                                     
-    eth0            ethernet   UP          02:00:00:00:00:00                        
-                    ipv4                   10.0.1.1/24 (static)
-                    ipv6                   fe80::ff:fe00:0/64 (link-layer)
-    lo              ethernet   UP          00:00:00:00:00:00                        
-                    ipv4                   127.0.0.1/8 (static)
-                    ipv6                   ::1/128 (static)
-    root@infix-example:/> show interfaces 
+    admin@infix-example:/config/interfaces/interface/eth0/ipv4/> leave
+    admin@infix-example:/> show interfaces 
     INTERFACE       PROTOCOL   STATE       DATA                                     
     eth0            ethernet   UP          02:00:00:00:00:00                        
                     ipv4                   169.254.1.3/16 (random)
@@ -172,7 +164,7 @@ default.
     lo              ethernet   UP          00:00:00:00:00:00                        
                     ipv4                   127.0.0.1/8 (static)
                     ipv6                   ::1/128 (static)
-    root@infix-example:/>
+    admin@infix-example:/>
 
 As shown, the link-local IPv4 address is configured with `set autconf
 enabled true`.  The resulting address (169.254.1.3/16) is of type
@@ -182,12 +174,12 @@ enabled true`.  The resulting address (169.254.1.3/16) is of type
 
 ![Using DHCP for IPv4 address assignment](img/ip-address-example-ipv4-dhcp.svg)
 
-    root@example:/> configure 
-    root@example:/config/> edit dhcp-client 
-    root@example:/config/dhcp-client/> set client-if eth0
-    root@example:/config/dhcp-client/> set enabled true 
-    root@example:/config/dhcp-client/> leave
-    root@example:/> show interfaces 
+    admin@example:/> configure 
+    admin@example:/config/> edit dhcp-client 
+    admin@example:/config/dhcp-client/> set client-if eth0
+    admin@example:/config/dhcp-client/> set enabled true 
+    admin@example:/config/dhcp-client/> leave
+    admin@example:/> show interfaces 
     INTERFACE       PROTOCOL   STATE       DATA                                     
     eth0            ethernet   UP          02:00:00:00:00:00                        
                     ipv4                   10.1.2.100/24 (dhcp)
@@ -195,8 +187,7 @@ enabled true`.  The resulting address (169.254.1.3/16) is of type
     lo              ethernet   UP          00:00:00:00:00:00                        
                     ipv4                   127.0.0.1/8 (static)
                     ipv6                   ::1/128 (static)
-
-    root@example:/>
+    admin@example:/>
 
 The resulting address (10.1.2.100/24) is of type *dhcp*.
 
@@ -206,28 +197,28 @@ The resulting address (10.1.2.100/24) is of type *dhcp*.
 The (only) way to disable IPv6 link-local addresses is by disabling IPv6 on the interface.
 
 ```(disabling
-root@example:/> configure 
-root@example:/config/> edit interfaces interface eth0 ipv6
-root@example:/config/interfaces/interface/eth0/ipv6/> set enabled false
-root@example:/config/interfaces/interface/eth0/ipv6/> leave
-root@example:/> show interfaces 
+admin@example:/> configure 
+admin@example:/config/> edit interfaces interface eth0 ipv6
+admin@example:/config/interfaces/interface/eth0/ipv6/> set enabled false
+admin@example:/config/interfaces/interface/eth0/ipv6/> leave
+admin@example:/> show interfaces 
 INTERFACE       PROTOCOL   STATE       DATA                                     
 eth0            ethernet   UP          02:00:00:00:00:00                        
 lo              ethernet   UP          00:00:00:00:00:00                        
                 ipv4                   127.0.0.1/8 (static)
                 ipv6                   ::1/128 (static)
-root@example:/>
+admin@example:/>
 ```
 
 #### Static IPv6 address
 
 ![Setting static IPv6](img/ip-address-example-ipv6-static.svg)
 
-    root@example:/> configure 
-    root@example:/config/> edit interfaces interface eth0 ipv6
-    root@example:/config/interfaces/interface/eth0/ipv6/> set address 2001:db8::1 prefix-length 64
-    root@example:/config/interfaces/interface/eth0/ipv6/> leave
-    root@example:/> show interfaces 
+    admin@example:/> configure 
+    admin@example:/config/> edit interfaces interface eth0 ipv6
+    admin@example:/config/interfaces/interface/eth0/ipv6/> set address 2001:db8::1 prefix-length 64
+    admin@example:/config/interfaces/interface/eth0/ipv6/> leave
+    admin@example:/> show interfaces 
     INTERFACE       PROTOCOL   STATE       DATA                                     
     eth0            ethernet   UP          02:00:00:00:00:00                        
                     ipv6                   2001:db8::1/64 (static)
@@ -235,7 +226,7 @@ root@example:/>
     lo              ethernet   UP          00:00:00:00:00:00                        
                     ipv4                   127.0.0.1/8 (static)
                     ipv6                   ::1/128 (static)
-    root@example:/>
+    admin@example:/>
 
 #### Stateless Auto-configuration of Global IPv6 Address
 
@@ -244,33 +235,35 @@ root@example:/>
 Stateless address auto-configuration of global addresses is enabled by
 default. The address is formed by concatenating the network prefix
 advertised by the router (here 2001:db8:0:1::0/64) and the interface
-identifier. The resulting address is of type *other*.
+identifier. The resulting address is of type *link-layer*, as it
+is formed based on the interface identifier ([IETF
+ip-yang][ietf-ip-yang])). 
 
-    root@infix-example:/> show interfaces 
+    admin@example:/> show interfaces 
     INTERFACE       PROTOCOL   STATE       DATA                                     
     eth0            ethernet   UP          02:00:00:00:00:00                        
-                    ipv6                   2001:db8:0:1:0:ff:fe00:0/64 (other)
+                    ipv6                   2001:db8:0:1:0:ff:fe00:0/64 (link-layer)
                     ipv6                   fe80::ff:fe00:0/64 (link-layer)
     lo              ethernet   UP          00:00:00:00:00:00                        
                     ipv4                   127.0.0.1/8 (static)
                     ipv6                   ::1/128 (static)
-    root@infix-example:/>
+    admin@example:/>
 
 Disabling auto-configuration of global IPv6 addresses can be done as shown
 below.
 
-    root@infix-00-00-00:/> configure
-    root@infix-00-00-00:/config/> edit interfaces interface eth0 ipv6
-    root@infix-00-00-00:/config/interfaces/interface/eth0/ipv6/> set autoconf create-global-addresses false 
-    root@infix-00-00-00:/config/interfaces/interface/eth0/ipv6/> leave
-    root@infix-00-00-00:/> show interfaces 
+    admin@infix-00-00-00:/> configure
+    admin@infix-00-00-00:/config/> edit interfaces interface eth0 ipv6
+    admin@infix-00-00-00:/config/interfaces/interface/eth0/ipv6/> set autoconf create-global-addresses false 
+    admin@infix-00-00-00:/config/interfaces/interface/eth0/ipv6/> leave
+    admin@infix-00-00-00:/> show interfaces 
     INTERFACE       PROTOCOL   STATE       DATA                                     
     eth0            ethernet   UP          02:00:00:00:00:00                        
                     ipv6                   fe80::ff:fe00:0/64 (link-layer)
     lo              ethernet   UP          00:00:00:00:00:00                        
                     ipv4                   127.0.0.1/8 (static)
                     ipv6                   ::1/128 (static)
-    root@infix-00-00-00:/>
+    admin@infix-00-00-00:/>
 
 #### Random Link Identifiers for IPv6 Stateless Autoconfiguration
 
@@ -279,34 +272,35 @@ below.
 By default, the auto-configured link-local and global IPv6 addresses
 are formed from a link-identifier based on the MAC address.
 
-    root@infix-example:/> show interfaces 
+    admin@example:/> show interfaces 
     INTERFACE       PROTOCOL   STATE       DATA                                     
     eth0            ethernet   UP          02:00:00:00:00:00                        
-                    ipv6                   2001:db8:0:1:0:ff:fe00:0/64 (other)
+                    ipv6                   2001:db8:0:1:0:ff:fe00:0/64 (link-layer)
                     ipv6                   fe80::ff:fe00:0/64 (link-layer)
     lo              ethernet   UP          00:00:00:00:00:00                        
                     ipv4                   127.0.0.1/8 (static)
                     ipv6                   ::1/128 (static)
-    root@infix-example:/>
+    admin@example:/>
 
 To avoid revealing identity information in the IPv6 address, it is
 possible to specify use of a random identifier ([ietf-ip][ietf-ip-yang] YANG and [RFC8981][ietf-ipv6-privacy]).
 
-    root@infix-example:/> configure 
-    root@infix-example:/config/> edit interfaces interface eth0 ipv6
-    root@infix-example:/config/interfaces/interface/eth0/ipv6/> set autoconf create-temporary-addresses true 
-    root@infix-example:/config/interfaces/interface/eth0/ipv6/> leave
-    root@infix-example:/> show interfaces 
+    admin@infix-example:/> configure 
+    admin@infix-example:/config/> edit interfaces interface eth0 ipv6
+    admin@infix-example:/config/interfaces/interface/eth0/ipv6/> set autoconf create-temporary-addresses true 
+    admin@infix-example:/config/interfaces/interface/eth0/ipv6/> leave
+    admin@example:/> show interfaces 
     INTERFACE       PROTOCOL   STATE       DATA                                     
     eth0            ethernet   UP          02:00:00:00:00:00                        
-                    ipv6                   2001:db8:0:1:fba2:f413:dd22:13ad/64 (other)
-                    ipv6                   fe80::b886:6849:18dc:19ef/64 (random)
+                    ipv6                   2001:db8:0:1:b705:8374:638e:74a8/64 (random)
+                    ipv6                   fe80::ad3d:b274:885a:9ffb/64 (random)
     lo              ethernet   UP          00:00:00:00:00:00                        
                     ipv4                   127.0.0.1/8 (static)
                     ipv6                   ::1/128 (static)
-    root@infix-example:/>
+    admin@example:/>
 
-The link-local address has changed type to *random*.
+Both the link-local address (fe80::) and the global address (2001:)
+have changed type to *random*. 
 
 [ietf-ip-yang]:         https://www.rfc-editor.org/rfc/rfc8344.html
 [ietf-ipv6-privacy]:    https://www.rfc-editor.org/rfc/rfc8981.html
