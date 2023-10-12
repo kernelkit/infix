@@ -95,8 +95,8 @@ class Iface:
 
     def pr_proto_eth(self):
         row = f"{'ethernet':<{Pad.proto}}"
-        dec = Decore.green if self.data['oper-status'] == "up" else Decore.red
-        row += dec(f"{self.data['oper-status'].upper():<{Pad.state}}")
+        dec = Decore.green if self.oper_status == "up" else Decore.red
+        row += dec(f"{self.oper_status.upper():<{Pad.state}}")
         row += f"{self.data['phys-address']:<{Pad.data}}"
         print(row)
 
