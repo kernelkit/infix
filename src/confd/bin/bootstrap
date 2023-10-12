@@ -41,7 +41,8 @@ if [ ! -d "$FACTORY_D" ] || [ "$FACTORY_OVERRIDE" = "true" ]; then
 
     # Create an overlay for /etc/hostname to change the default in an br2-external
     gen-hostname                                            >"$FACTORY_D/20-hostname.json"
-    gen-interfaces "$GEN_IFACE_OPTS"                        >"$FACTORY_D/20-interfaces.json"
+    # shellcheck disable=SC2086
+    gen-interfaces $GEN_IFACE_OPTS                          >"$FACTORY_D/20-interfaces.json"
 
     [ -s "$FACTORY_D/20-hostkey.json"   ] || gen-hostkeys   >"$FACTORY_D/20-hostkey.json"
 
