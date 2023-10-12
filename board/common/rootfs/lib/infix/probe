@@ -1,0 +1,6 @@
+#!/bin/sh
+# Probe for various types of harware features
+
+if dmesg |grep -q QEMU || test -d /sys/module/qemu_fw_cfg; then
+   initctl cond set qemu
+fi
