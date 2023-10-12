@@ -322,9 +322,9 @@
         }
       },
       {
+        "TEST-DESCR": "VLAN without operstatus",
         "name": "vlan20",
         "type": "infix-if-type:vlan",
-        "oper-status": "up",
         "if-index": 4,
         "phys-address": "02:00:00:00:00:00",
         "statistics": {
