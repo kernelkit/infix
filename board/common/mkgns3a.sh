@@ -16,7 +16,7 @@ IFNUM=${5:-1}
 # directly, so we need to add a basic cmdline.
 loader_args()
 {
-    if [ "$ARCH" == "aarch64" ]; then
+    if [ "$ARCH" = "aarch64" ]; then
 	cat <<EOF
 "kernel_command_line": "console=ttyAMA0 root=PARTLABEL=primary quiet",
 EOF
