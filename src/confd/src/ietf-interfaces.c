@@ -812,15 +812,17 @@ static int netdag_gen_bridge(struct dagger *net, struct lyd_node *dif,
 	const char *op = add ? "add" : "set";
 	struct lyd_node *vlans, *vlan;
 	int vlan_filtering, pvid, fwd_mask;
+	int mcast_snooping;
 	const char *proto;
 	FILE *br = NULL;
 	int err = 0;
 
 	vlan_filtering = bridge_vlan_settings(cif, &proto, &pvid);
+	mcast_snooping = 0;	/* Not supported yet */
 	fwd_mask = bridge_fwd_mask(cif);
 
-	fprintf(ip, "link %s dev %s type bridge group_fwd_mask %d vlan_filtering %d",
-		op, brname, fwd_mask, vlan_filtering ? 1 : 0);
+	fprintf(ip, "link %s dev %s type bridge group_fwd_mask %d vlan_filtering %d mcast_snooping %d",
+		op, brname, fwd_mask, vlan_filtering ? 1 : 0, mcast_snooping ? 1 : 0);
 	if (!vlan_filtering) {
 		fputc('\n', ip);
 		goto done;
