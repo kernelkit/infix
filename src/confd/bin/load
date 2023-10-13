@@ -1,5 +1,5 @@
 #!/bin/sh
-# cond-load.sh [-b] <startup-config | failure-config>
+# load [-b] <startup-config | failure-config>
 #
 # Import a configuration to the sysrepo datastore using `sysrepocfg -Ifile`
 #
