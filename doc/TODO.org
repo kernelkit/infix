@@ -1,7 +1,7 @@
 * TODO doc: User Guide
 
 - Feature set and scope, e.g.
-  - Device discovery: SSDP, LLDP, mDNS-SD how do they work, interfacing with Windows/macOS/Linux
+  - Device discovery: LLDP, mDNS-SD how do they work, interfacing with Windows/macOS/Linux
   - Network redundancy protocols: STP/RSTP, MRP
 - Configuring the system; using ifupdown2, enabling/disabling services
 - Diagnosing the system; using rmon, port mirroring, debugging services, searching logs

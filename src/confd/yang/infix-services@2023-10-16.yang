@@ -7,8 +7,13 @@ module infix-services {
   contact      "kernelkit@googlegroups.com";
   description  "Infix services, generic.";
 
+  revision 2023-10-16 {
+    description "Drop SSDP support, mDNS-SD is now available in Windows 10.";
+    reference "internal";
+  }
+
   revision 2023-08-22 {
-    description "Initial revision, add SSDP and mDNS/SD enable/disable only.";
+    description "Initial revision, add SSDP and mDNS-SD enable/disable only.";
     reference "internal";
   }
 
@@ -22,15 +27,6 @@ module infix-services {
     leaf enabled {
       type boolean;
       description "Globally enable or disable mDNS/SD on all interfaces.";
-    }
-  }
-      
-  container ssdp {
-    description "Advertise system over SSDP (Windows uPnP), IPv4 only.";
-
-    leaf enabled {
-      type boolean;
-      description "Globally enable or disable SSDP on all interfaces.";
     }
   }
 }
