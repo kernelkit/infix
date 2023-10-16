@@ -140,6 +140,12 @@ static int sr_ifaces_cb(sr_session_ctx_t *session, uint32_t, const char *path,
 		return SR_ERR_INTERNAL;
 	}
 
+	/* Skip internal interfaces (such as dsa0) */
+	if (ip_link_check_group(sub->ifname, "internal") == 1) {
+		err = SR_ERR_OK;
+		goto out;
+	}
+
 	err = ly_add_ip_link(ctx, parent, sub->ifname);
 	if (err) {
 		ERROR("Error, adding ip link info");
