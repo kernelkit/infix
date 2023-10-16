@@ -41,8 +41,9 @@ admin@infix-00-00-00:~$
 
 ## Discovery mechanisms available in Infix
 
-Infix advertises its presence via the [mDNS](#mdns) and [SSDP](#ssdp) discovery
-protocols in addition to [LLDP](#lldp).
+Infix advertises its presence via the [mDNS](#mdns) and [LLDP](#lldp)
+discovery protocols.
+
 
 ### LLDP
 
@@ -173,29 +174,3 @@ linux-pc:#
 [^2]: [mdns-scan](http://0pointer.de/lennart/projects/mdns-scan/): a
     tool for scanning for mDNS/DNS-SD published services on the local
     network
-
-### SSDP
-
-For Windows clients, Infix advertises itself via the SSDP
-protocol. The Infix unit will appear as a *Network Infrastructure* 
-equipment icon in the *Network* tab of Windows Explorer.
-
-In Linux, the *ssdp-scan*[^3] tool can be used to find Infix units via
-SSDP.
-
-```
-linux-pc:# ssdp-scan tap0
-+ infix-00-00-00                            http://10.0.1.1
-linux-pc:# 
-```
-
-> Note 1: Infix presents itself with a HTTP URL, however, currently no
-> Web server is running. Still, the IP address 10.0.1.1 is discovered
-> and can be used for SSH access, etc.
-
-> Note 2: SSDP is limited to IPv4. Thus, it is only valid as discovery
-> mechanism when Infix as well as the client PC has an IPv4 address
-> assigned.
-
-[^3]: [SSDP Responder for
-    Linux/UNIX](https://github.com/troglobit/ssdp-responder)

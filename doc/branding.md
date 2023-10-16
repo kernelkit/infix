@@ -16,7 +16,7 @@ The hostname is used for the system default `/etc/hostname`, which
 is the base name for the "unique:ified" hostname + the last three
 octets of the base MAC[^1] address, e.g., `infix-c0-ff-ee`.  This in
 turn is the hostname that is set at first boot and also advertised
-by device discovery protocols like SSDP, mDNS/SD and LLDP.
+by device discovery protocols like mDNS-SD and LLDP.
 
 See the help texts for the *Infix Branding* settings to understand
 which ones are mandatory and which are optional, menuconfig does not

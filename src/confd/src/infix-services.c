@@ -16,7 +16,7 @@
 
 
 static const struct srx_module_requirement reqs[] = {
-	{ .dir = YANG_PATH_, .name = "infix-services",      .rev = "2023-08-22" },
+	{ .dir = YANG_PATH_, .name = "infix-services",      .rev = "2023-10-16" },
 	{ .dir = YANG_PATH_, .name = "ieee802-dot1ab-lldp", .rev = "2022-03-15" },
 	{ .dir = YANG_PATH_, .name = "infix-lldp",          .rev = "2023-08-23" },
 	{ NULL }
@@ -75,12 +75,6 @@ static int mdns_change(sr_session_ctx_t *session, uint32_t sub_id, const char *m
 	return svc_change(session, event, xpath, "mdns", "avahi");
 }
 
-static int ssdp_change(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
-	const char *xpath, sr_event_t event, unsigned request_id, void *_confd)
-{
-	return svc_change(session, event, xpath, "ssdp", "ssdp-responder");
-}
-
 static int lldp_change(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
 	const char *xpath, sr_event_t event, unsigned request_id, void *_confd)
 {
@@ -97,8 +91,6 @@ int infix_services_init(struct confd *confd)
 
 	REGISTER_CHANGE(confd->session, "infix-services", "/infix-services:mdns",
 			0, mdns_change, confd, &confd->sub);
-	REGISTER_CHANGE(confd->session, "infix-services", "/infix-services:ssdp",
-			0, ssdp_change, confd, &confd->sub);
 	REGISTER_CHANGE(confd->session, "ieee802-dot1ab-lldp", "/ieee802-dot1ab-lldp:lldp",
 			0, lldp_change, confd, &confd->sub);
 
