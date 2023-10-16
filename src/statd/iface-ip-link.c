@@ -81,6 +81,8 @@ static const char *get_yang_link_type(char *xpath, json_t *iface)
 			return "infix-if-type:vlan";
 		if (strcmp(kind, "bridge") == 0)
 			return "infix-if-type:bridge";
+		if (strcmp(kind, "dsa") == 0)
+			return "infix-if-type:ethernet";
 
 		/**
 		 * We could return ethernetCsmacd here, but it might hide some
