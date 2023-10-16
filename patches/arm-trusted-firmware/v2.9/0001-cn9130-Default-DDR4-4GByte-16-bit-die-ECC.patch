@@ -1,0 +1,40 @@
+From 4f0e44e9b494485dc63de3264aa99dad5def5f55 Mon Sep 17 00:00:00 2001
+From: Henrik Nordstrom <henrik.nordstrom@addiva.se>
+Date: Wed, 13 Sep 2023 22:45:00 +0200
+Subject: [PATCH 1/2] cn9130: Default DDR4 4GByte 16-bit/die ECC
+
+Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
+---
+ plat/marvell/octeontx/otx2/t91/t9130/board/dram_port.c | 8 ++++----
+ 1 file changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/plat/marvell/octeontx/otx2/t91/t9130/board/dram_port.c b/plat/marvell/octeontx/otx2/t91/t9130/board/dram_port.c
+index 82ce07b09..07753ea97 100644
+--- a/plat/marvell/octeontx/otx2/t91/t9130/board/dram_port.c
++++ b/plat/marvell/octeontx/otx2/t91/t9130/board/dram_port.c
+@@ -45,18 +45,18 @@ struct mv_ddr_iface dram_iface_ap0 = {
+ 		      {0x1, 0x0, 0, 0},
+ 		      {0x1, 0x0, 0, 0},
+ 		      {0x1, 0x0, 0, 0} },
+-		   SPEED_BIN_DDR_2400T,		/* speed_bin */
+-		   MV_DDR_DEV_WIDTH_8BIT,	/* sdram device width */
++		   SPEED_BIN_DDR_2400R,		/* speed_bin */
++		   MV_DDR_DEV_WIDTH_16BIT,	/* sdram device width */
+ 		   MV_DDR_DIE_CAP_8GBIT,	/* die capacity */
+ 		   MV_DDR_FREQ_SAR,		/* frequency */
+ 		   0, 0,			/* cas_l, cas_wl */
+-		   MV_DDR_TEMP_LOW} },		/* temperature */
++		   MV_DDR_TEMP_HIGH} },		/* temperature */
+ #if DDR32
+ 		MV_DDR_32BIT_ECC_PUP8_BUS_MASK,	/* subphys mask */
+ #else
+ 		MV_DDR_64BIT_ECC_PUP8_BUS_MASK,	/* subphys mask */
+ #endif
+-		MV_DDR_CFG_SPD,			/* ddr configuration data src */
++		MV_DDR_CFG_DEFAULT,		/* ddr configuration data src */
+ 		NOT_COMBINED,			/* ddr twin-die combined*/
+ 		{ {0} },			/* raw spd data */
+ 		{0},				/* timing parameters */
+-- 
+2.34.1
+
