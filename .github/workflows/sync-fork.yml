@@ -1,7 +1,7 @@
 # To enable automatic sync of your Infix fork every day, or on dispatch,
 # set the repoistory or organisation variable (not secret):
 #
-#     SYNC_FORK = 'true'
+#     SYNC_FORK = true
 #
 # You also need a GH_SYNC_REPO token allowed to update workflows.  For
 # more information on variables and secrets, see the GitHub docs.

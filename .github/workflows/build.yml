@@ -1,3 +1,9 @@
+# To enable this workflow of your Infix fork, set the repoistory or
+# organisation variable (not secret):
+#
+#     LATEST_BUILD = true
+#
+# https://docs.github.com/en/actions/learn-github-actions/variables#creating-configuration-variables-for-a-repository
 name: Bob the Builder
 
 on:
@@ -8,6 +14,7 @@ on:
 
 jobs:
   build:
+    if: ${{ vars.LATEST_BUILD == 'true' }}
     name: Build ${{ matrix.platform }} ${{ matrix.variant }}
     runs-on: ubuntu-latest
     strategy:
