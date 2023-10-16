@@ -41,6 +41,17 @@ config INFIX_ID
 	  Mandatory.  Used for identifying the OS as ID in /etc/os-release and
 	  in the generated image name: ID-ARCH-VERSION.img
 
+config INFIX_IMAGE_ID
+	string "Operating system image name"
+	default "${INFIX_ID}-${BR2_ARCH}"
+	help
+	  A lower-case string (no spaces or other characters outside of 0–9,
+	  a–z, ".", "_" and "-"), for naming critical image files, directories
+	  and archives containting the operating system.
+
+	  Mandatory.  When INFIX_RELEASE is set, this string is appended to
+	  the IMAGE_ID with a '-' separator.
+
 config INFIX_TAGLINE
 	string "Operating system tagline"
 	default "Infix — a Network Operating System"

@@ -12,7 +12,11 @@ load_cfg BR2_ARCH
 load_cfg BR2_DEFCONFIG
 load_cfg BR2_EXTERNAL_INFIX_PATH
 load_cfg BR2_TARGET_ROOTFS
-NAME="$INFIX_ID"-$(echo "$BR2_ARCH" | tr _ - | sed 's/x86-64/x86_64/')
+if [ -n "$IMAGE_ID" ]; then
+    NAME="$IMAGE_ID"
+else
+    NAME="$INFIX_ID"-$(echo "$BR2_ARCH" | tr _ - | sed 's/x86-64/x86_64/')
+fi
 diskimg=disk.img
 
 ver()
