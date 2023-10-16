@@ -228,6 +228,29 @@ static int ly_add_ip_link_br(const struct ly_ctx *ctx, struct lyd_node **parent,
 	return SR_ERR_OK;
 }
 
+static int ip_link_kind_is_dsa(json_t *j_iface)
+{
+	json_t *j_linkinfo;
+	json_t *j_val;
+
+	j_linkinfo = json_object_get(j_iface, "linkinfo");
+	if (!j_linkinfo)
+		return 0;
+
+	j_val = json_object_get(j_linkinfo, "info_kind");
+	if (!j_val)
+		return 0;
+
+	if (!json_is_string(j_val))
+		return 0;
+
+	if (strcmp("dsa", json_string_value(j_val)) != 0)
+		return 0;
+
+	/* This interface has linkinfo -> info_kind = "dsa" */
+	return 1;
+}
+
 static int ly_add_ip_link_parent(const struct ly_ctx *ctx, struct lyd_node **parent,
 				 char *xpath, json_t *j_iface)
 {
@@ -237,6 +260,11 @@ static int ly_add_ip_link_parent(const struct ly_ctx *ctx, struct lyd_node **par
 	j_val = json_object_get(j_iface, "link");
 	if (!j_val) {
 		/* Interface has no parent */
+		return SR_ERR_OK;
+	}
+
+	if (ip_link_kind_is_dsa(j_iface)) {
+		/* Skip adding parent interface data for dsa child */
 		return SR_ERR_OK;
 	}
 
