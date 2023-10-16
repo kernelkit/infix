@@ -8,13 +8,12 @@
 #   -b brN  Bridged mode, set all interfaces as ports in brN
 #   -4      Generic option for both modes, enables ZeroConf IPv4
 #   -d      Generic option for both modes, enables DHCPv4 client
-#   -g grp  Filter interfaces using 'ip link show group grp'
 #
 # By default this script generates plain interfaces with IPv6 autoconfig
 # (EUI64) enabled.  Useful both in a plain router and a Fail Secure mode
 # where any switchcore-backed ports should be prevented from switching.
 #
-# The default mode currently does not support the '-4' or '-d' options,
+# The default mode currently does not support the '-4' or '-d' options
 # for IPv4 ZeroConf or DHCPv4 address, beacause they require source
 # routing, or similar, to work.  IPv6 does not require that and is
 # therefore the recommended access method.  A separate (and optional)
@@ -22,18 +21,23 @@
 # can be used to enable IPv4 and DHCP on a single service interface if
 # needed.
 #
-# The -b option triggers the bridge mode, creating a 'brN' interface
-# using all interfaces classified in 'group port' by the nameif script.
-# In the bridge mode port interfaces do not have any IP address, the
-# IPv6 autoconfig address is instead set on 'brN'.  If the '-4' option
-# is set, ZeroConfig (169.254.x.y) is anabled on 'brN'.  If the '-d'
-# option is set, a DHCPv4 client is enabled on 'brN'.
-
+# The '-b brname' option triggers the bridge mode, creating a 'brname'
+# bridge interface using all interfaces classified in 'group port' by
+# the nameif script.  In the bridge mode port interfaces do not have any
+# IP address, the IPv6 autoconfig address is instead set on 'brN'.  If
+# the '-4' option is set, ZeroConfig (169.254.x.y) is anabled on 'brN'.
+# If the '-d' option is set, a DHCPv4 client is enabled on 'brN'.
+#
+# A "mixed mode" is also supported, where the system may have multiple
+# ports in a switchcore, but some Ethernet interfaces directly connected
+# to the SoC.  In this case, if '-b brname' is given, all 'group port'
+# interfaces will be placed in the bridge 'brname' and all other
+# interfaces will be brought up and given an IPv6 address (like above).
+#
 set -e
 
 bridge=
 ipv4=false
-ipv6=true
 dhcp=
 
 gen_interface()
@@ -66,14 +70,9 @@ while [ "$1" != "" ]; do
 	-b)
 	    bridge="$2"
 	    shift
-	    ipv6=false		# for bridge port interfaces
 	    ;;
 	-d)
 	    dhcp=true
-	    ;;
-	-g)
-	    group="group $2"	# -g port => 'ip link show group port'
-	    shift
 	    ;;
 	*)
 	    break
@@ -81,12 +80,31 @@ while [ "$1" != "" ]; do
     shift
 done
 
-phys_ifaces=$(ip -d -j link show $group | jq -r '
+phys_ifaces=$(ip -d -j link show | jq -r '
 	 .[] |
 	 select(.link_type == "ether") |
 	 select(.group != "internal")  |
 	 select(has("parentbus")) |
 	 .ifname')
+ports=$(ip -d -j link show group port | jq -r '
+	 .[] |
+	 select(.link_type == "ether") |
+	 select(.group != "internal")  |
+	 select(has("parentbus")) |
+	 .ifname')
+ifaces=""
+for phy in $phys_ifaces; do
+    found=""
+    for port in $ports; do
+	if [ $port = $phy ]; then
+	   found=true
+	   break
+	fi
+    done
+    if [ -z "$found" ]; then
+	ifaces="$ifaces $phy"
+    fi
+done
 
 cat <<EOF
 {
@@ -121,7 +139,8 @@ fi
 
 cat <<EOF
       }
-$(for iface in $phys_ifaces; do gen_interface $iface $ipv6 $bridge; done)
+$(for iface in $ifaces; do gen_interface $iface true; done)
+$(for iface in $ports; do gen_interface $iface false $bridge; done)
     ]
 EOF
 if [ "$dhcp" = "true" ] && [ -n "$bridge" ]; then
