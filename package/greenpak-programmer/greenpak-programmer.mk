@@ -4,9 +4,10 @@
 #
 ################################################################################
 
-GREENPAK_PROGRAMMER_VERSION = 1.0
+GREENPAK_PROGRAMMER_VERSION = 1.1
 GREENPAK_PROGRAMMER_SITE = https://github.com/addiva-elektronik/greenpak-programmer/releases/download/v$(GREENPAK_PROGRAMMER_VERSION)
 GREENPAK_PROGRAMMER_LICENSE = MIT
+GREENPAK_PROGRAMMER_LICENSE_FILES = LICENSE.txt
 GREENPAK_PROGRAMMER_INSTALL_STAGING = YES
 GREENPAK_PROGRAMMER_DEPENDENCIES = i2c-tools
 
