@@ -1,5 +1,5 @@
 config BR2_PACKAGE_GREENPAK_PROGRAMMER
-	bool "greenpak_programmer - GreenPAK Programming Utility"
+	bool "greenpak-programmer"
 	select BR2_PACKAGE_I2C_TOOLS
 	help
 	  Tool for programming GreenPAK chips in-circuit using I2C
