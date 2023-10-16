@@ -34,6 +34,12 @@ rm -f "$TARGET_DIR/etc/os-release"
     echo "VERSION=\"${VERSION}\""
     echo "VERSION_ID=${VERSION}"
     echo "BUILD_ID=\"${GIT_VERSION}\""
+    if [ -n "$INFIX_IMAGE_ID" ]; then
+	echo "IMAGE_ID=\"$INFIX_IMAGE_ID\""
+    fi
+    if [ -n "$INFIX_RELEASE" ]; then
+	echo "IMAGE_VERSION=\"$INFIX_RELEASE\""
+    fi
     if [ "$INFIX_VARIANT_NETCONF" = "y" ]; then
 	echo "VARIANT=\"Managed NETCONF\""
 	echo "VARIANT_ID=netconf"
