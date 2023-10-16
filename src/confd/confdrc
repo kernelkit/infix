@@ -18,10 +18,10 @@ FAILURE_CFG=$CFG_PATH_/failure-config.cfg
 STARTUP_CFG=$CFG_PATH_/startup-config.cfg
 
 # Uncomment this line in to create a bridge (br0) with all (classified
-# 'gruop port') interfaces as bridge ports.  The br0 interface will get
+# 'group port') interfaces as bridge ports.  The br0 interface will get
 # an IPv6 EUI64 SLAAC address as well as an IPv4 ZeroConf address, and a
 # DHCPv4 address if the device is attached to a LAN with a DHCP server.
-#GEN_IFACE_OPTS="-g port -b br0 -4 -d"
+#GEN_IFACE_OPTS="-b br0 -4 -d"
 
 # Default hostname in Fail Secure mode, plus last three octets in the base
 # MAC address, e.g. "failed-c0-ff-ee".
