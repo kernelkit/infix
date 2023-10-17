@@ -41,6 +41,64 @@ Verify the result after a build by inspecting:
     printed on a label on the device.
 
 
+Integration
+-----------
+
+When integrating your software stack with Infix there may be protocols
+that want to change system settings like hostname and dynamically set
+IP address and default gateway, e.g. PROFINET.  This section detail a
+few recommendations for maintaining co-existence in this scenario of
+the multiple producers problem.
+
+First, there's a clear difference between "singleton" like hostsname
+and an interface IP address.  Consider the case of a static IP and a
+DHCP assigned IP, these can co-exist because of the `proto NUM` field
+available in iproute2.  This is used in Infix so that static addresses
+can be flushed independently of DHCP addresses.  The same can be done
+by other "address providers", e.g., PROFINET.
+
+Changing properties like hostname should be done by injecting a change
+into Infix, by for example calling `sysrepocfg -Ediff.xml`.  Here is an
+example of how to get the current hostname and apply an XML diff:
+
+```
+root@infix-00-00-00:~# sysrepocfg -X -x "/system/hostname" > hostnm.xml
+root@infix-00-00-00:~# cat hostnm.xml
+<system xmlns="urn:ietf:params:xml:ns:yang:ietf-system">
+  <hostname>infix-00-00-00</hostname>
+</system>
+root@infix-00-00-00:~# edit hostnm.xml
+root@infix-00-00-00:~# sysrepocfg -Ehostnm.xml
+root@example:~# 
+```
+
+Second, perform all changes on `running-config`, the running datastore.
+That way you have a clear state to return to if your application needs
+to do a factory reset.  E.g., in PROFINET a type 1/2 factory reset will
+reset only the PROFINET specific settings.  That way you can actually
+have your system `startup-config` disable all physical ports and the
+PROFINET application enables only ports that are not deactivated.  (On
+factory reset it will not know of any ports to deactivate so it will
+activate all.)
+
+You can consider the system composed of two entities:
+
+  - NETCONF starts up the system using `startup-config`, then
+  - Hands over control to your application at runtime
+
+Infix is prepared for this by already having two "runlevels" for these
+two states.  The `startup-config` is applied in runlevel S (bootstrap)
+and the system then enters runlevel 2 for normal operation.
+
+This allow you to keep a set of functionality that is provided by the
+underlying system, and another managed by your application.  You can
+of course in your br2-external provide a sysrepo plugin that block 
+operations on certain datastores when your application is enabled.
+E.g., to prevent changes to startup after initial deployment.  In
+that case a proper factory reset would be needed to get back to a
+"pre-deployment" state where you can reconfigure your baseline.
+
+
 Releases
 --------
 
