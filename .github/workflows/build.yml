@@ -80,14 +80,20 @@ jobs:
     name: Upload Latest Build
     needs: build
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/download-artifact@v3
-      - uses: pyTooling/Actions/releaser@main
+      - uses: ncipollo/release-action@v1
         with:
-          tag: latest
-          rm: false
+          allowUpdates: true
+          omitName: true
+          omitBody: true
+          omitBodyDuringUpdate: true
+          prerelease: true
+          tag: "latest"
           token: ${{ secrets.GITHUB_TOKEN }}
-          files: artifact/*
+          artifacts: "artifact/*"
       - name: Summary
         run: |
           cat <<EOF >> $GITHUB_STEP_SUMMARY
