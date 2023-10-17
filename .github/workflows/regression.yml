@@ -31,7 +31,7 @@ jobs:
       - name: Set Build Variables
         id: vars
         run: |
-          target=x86_64-minimal
+          target=x86_64
           echo "dir=infix-$target"        >> $GITHUB_OUTPUT
           echo "tgz=infix-$target.tar.gz" >> $GITHUB_OUTPUT
       - name: Restore Cache of dl/
@@ -52,9 +52,9 @@ jobs:
             ccache-x86_64-netconf-
             ccache-x86_64-
             ccache-
-      - name: Configure Minimal NETCONF
+      - name: Configure NETCONF
         run: |
-          make x86_64_minimal_defconfig
+          make x86_64_defconfig
       - name: Build
         run: |
           make
