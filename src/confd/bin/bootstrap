@@ -31,7 +31,7 @@ FACTORY_GEN="$(dirname "$FACTORY_CFG")/$(basename "$FACTORY_CFG" .cfg).gen"
 FAILURE_GEN="$(dirname "$FAILURE_CFG")/$(basename "$FAILURE_CFG" .cfg).gen"
 
 # Generate device's factory-config at first boot or on override
-if [ ! -d "$FACTORY_D" ] || [ "$FACTORY_OVERRIDE" = "true" ]; then
+if [ ! -f "$FACTORY_GEN" ] || [ "$FACTORY_OVERRIDE" = "true" ]; then
     mkdir -p "$FACTORY_D"
 
     # Save the original templates (from the original image) used to create factory-config
@@ -65,7 +65,7 @@ if [ ! -d "$FACTORY_D" ] || [ "$FACTORY_OVERRIDE" = "true" ]; then
 fi
 
 # Generate device's failure-config at first boot
-if [ ! -d "$FAILURE_D" ] || [ "$FAILURE_OVERRIDE" = "true" ]; then
+if [ ! -f "$FAILURE_GEN" ] || [ "$FAILURE_OVERRIDE" = "true" ]; then
     mkdir -p "$FAILURE_D"
 
     # Save the original templates (from the original image) used to create failure-config
@@ -161,7 +161,7 @@ sysrepoctl -s $SEARCH							\
 	   -i infix-dhcp-client@2023-05-22.yang -g wheel -p 0660	\
 	   -i infix-shell-type@2023-08-21.yang	-g wheel -p 0660	\
 	   -i infix-system@2023-08-15.yang	-g wheel -p 0660	\
-	   -i infix-services@2023-08-22.yang	-g wheel -p 0660	\
+	   -i infix-services@2023-10-16.yang	-g wheel -p 0660	\
 	   -i ieee802-ethernet-interface@2019-06-21.yang   -g wheel -p 0660		\
 	   -I "${INIT_DATA}"
 rc=$?

@@ -415,17 +415,11 @@ a printer can publish IPP records with meta data on the printer type and model
 or donwload URL for drivers.  Switches and routers usually publish how they
 can be reached: HTTP/HTTPS and SSH.
 
-Note: there are other mechanisms for device discovery.  Microsoft have been
-      slow to adopt mDNS, having relied on their own SSDP protocol.  For the
-      full experince Apple's "Bonjour" can be installed in Windows.
-
-      mDNS is supported in this product and should be enabled by default.  To
-      verify it works, open the Windows File Explorer (Win+E) and scroll to
-      Network in the left-hand menu.  An icon with a matching hostname can be
-      found there which, when clicked, opens up the device's Web Interface.
-      macOS users have mDNS fully integrated by default.  Linux users can use
-      'mdns-scan' or Avahi, as shown above.  The latter two can also just set
-      their web browsers to https://hostname-01-02-03.local
+mDNS is supported in this product and should be enabled by default.  To
+verify that it works, in Windows, macOS, or Linux, open your web browser
+and point it to <https://hostname-01-02-03.local>.  This is the hostname
+and three last octets of the device's base MAC address.  You can also use
+mDNS browsers or command line tools like mdns-scan
 
 
 $(h2 "VLAN Interfaces")

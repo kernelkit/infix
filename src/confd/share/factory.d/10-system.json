@@ -7,8 +7,5 @@
     },
     "infix-services:mdns": {
 	"enabled": true
-    },
-    "infix-services:ssdp": {
-	"enabled": true
     }
 }
