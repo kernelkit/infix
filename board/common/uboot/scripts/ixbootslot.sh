@@ -14,7 +14,7 @@ if test "${prepared}" = "ok"; then
 	if iminfo ${ramdisk_addr_r}; then
 	    echo "${slot}: Booting..."
 
-	    setenv bootargs_rauc "rauc.slot=${slot}"
+	    setenv bootargs_user "rauc.slot=${slot}"
 
 	    blkmap create boot
 	    blkmap get boot dev blkmapnum
