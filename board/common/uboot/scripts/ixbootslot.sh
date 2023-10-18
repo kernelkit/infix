@@ -15,6 +15,12 @@ if test "${prepared}" = "ok"; then
 	    echo "${slot}: Booting..."
 
 	    setenv bootargs_user "rauc.slot=${slot}"
+	    if test "${factory_reset}" = "yes"; then
+		setenv bootargs_user "${bootargs_user} finit.cond=factory-reset"
+	    fi
+	    if test "${dev_mode}" = "yes"; then
+		setenv bootargs_user "${bootargs_user} finit.cond=dev-mode"
+	    fi
 
 	    blkmap create boot
 	    blkmap get boot dev blkmapnum
