@@ -1,3 +1,5 @@
+setenv valid_media no
+
 for tgt in "${boot_targets}"; do
     if test "${tgt}" = "mmc0"; then
 	setenv devtype "mmc"
@@ -25,8 +27,16 @@ for tgt in "${boot_targets}"; do
 	    setenv bootargs_log "loglevel=4"
 	fi
 
+	setenv valid_media yes
 	run ixbootmedia
     fi
 done
+
+if test "${valid_media}" = "no"; then
+    echo "NO BOOTABLE MEDIA FOUND, falling back to netboot"
+    setenv BOOT_ORDER "net"
+    setenv bootargs_log "debug"
+    run ixbootmedia
+fi
 
 reset
