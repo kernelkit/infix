@@ -17,7 +17,7 @@ for tgt in "${boot_targets}"; do
 	    env import -b ${loadaddr} ${filesize} BOOT_ORDER DEBUG
 	fi
 
-	test -n "${BOOT_ORDER}" || setenv BOOT_ORDER "primary secondary dhcp"
+	test -n "${BOOT_ORDER}" || setenv BOOT_ORDER "primary secondary net"
 
 	if test -n "${DEBUG}"; then
 	    setenv bootargs_log "debug"
