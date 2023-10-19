@@ -1,0 +1,216 @@
+From c801299f06f0e5c95bd597fe0ce4ad6c3df9a444 Mon Sep 17 00:00:00 2001
+From: Tobias Waldekranz <tobias@waldekranz.com>
+Date: Tue, 17 Oct 2023 13:22:00 +0200
+Subject: [PATCH 3/5] net: mv88e6xxx: Add support for 6393X
+
+Only built-in copper PHYs are supported as access ports. Support
+10GBASE-R SERDES connection to CPU.
+
+Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
+---
+ drivers/net/mv88e6xxx.c | 134 ++++++++++++++++++++++++++++++++++++++--
+ 1 file changed, 130 insertions(+), 4 deletions(-)
+
+diff --git a/drivers/net/mv88e6xxx.c b/drivers/net/mv88e6xxx.c
+index eddac332e0..4a4a3ae0b1 100644
+--- a/drivers/net/mv88e6xxx.c
++++ b/drivers/net/mv88e6xxx.c
+@@ -74,6 +74,7 @@
+ #define PORT_REG_STATUS_SPEED_1000	2
+ 
+ #define PORT_REG_STATUS_CMODE_MASK		0xF
++#define PORT_REG_STATUS_CMODE_10GBASE_R		0xd
+ #define PORT_REG_STATUS_CMODE_SGMII		0xa
+ #define PORT_REG_STATUS_CMODE_1000BASE_X	0x9
+ #define PORT_REG_STATUS_CMODE_100BASE_X		0x8
+@@ -155,6 +156,7 @@
+ #define PORT_SWITCH_ID_6250		0x2500
+ #define PORT_SWITCH_ID_6320		0x1150
+ #define PORT_SWITCH_ID_6352		0x3520
++#define PORT_SWITCH_ID_6393		0x3930
+ 
+ struct mv88e6xxx_priv {
+ 	int smi_addr;
+@@ -475,6 +477,17 @@ static bool mv88e6xxx_6352_family(struct udevice *dev)
+ 	return false;
+ }
+ 
++static bool mv88e6xxx_6393_family(struct udevice *dev)
++{
++	struct mv88e6xxx_priv *priv = dev_get_priv(dev);
++
++	switch (priv->id) {
++	case PORT_SWITCH_ID_6393:
++		return true;
++	}
++	return false;
++}
++
+ static int mv88e6xxx_get_cmode(struct udevice *dev, u8 port)
+ {
+ 	int res;
+@@ -529,7 +542,7 @@ static int mv88e6xxx_switch_reset(struct udevice *dev)
+ 	return 0;
+ }
+ 
+-static int mv88e6xxx_serdes_init(struct udevice *dev)
++static int mv88e6352_serdes_init(struct udevice *dev)
+ {
+ 	int val;
+ 
+@@ -549,6 +562,107 @@ static int mv88e6xxx_serdes_init(struct udevice *dev)
+ 	return 0;
+ }
+ 
++static int mv88e6393_serdes_erratum_4_6(struct udevice *dev, int port)
++{
++	int val;
++
++	/* mv88e6393x family errata 4.6:
++	 * Cannot clear PwrDn bit on SERDES if device is configured CPU_MGD
++	 * mode or P0_mode is configured for [x]MII.
++	 * Workaround: Set SERDES register 4.F002 bit 5=0 and bit 15=1.
++	 *
++	 * It seems that after this workaround the SERDES is automatically
++	 * powered up (the bit is cleared), so power it down.
++	 */
++	val = mv88e6xxx_phy_read_indirect(dev, port, MDIO_MMD_PHYXS, 0xf002);
++	if (val < 0)
++		return val;
++
++	val &= ~BIT(5);
++	val |= MDIO_CTRL1_RESET;
++	return mv88e6xxx_phy_write_indirect(dev, port, MDIO_MMD_PHYXS, 0xf002, val);
++}
++
++static int mv88e6393_serdes_erratum_5_2(struct udevice *dev, int port, int cmode)
++{
++	static const struct {
++		u16 dev, reg, val, mask;
++	} fixes[] = {
++		{ MDIO_MMD_VEND1, 0x8093, 0xcb5a, 0xffff },
++		{ MDIO_MMD_VEND1, 0x8171, 0x7088, 0xffff },
++		{ MDIO_MMD_VEND1, 0x80c9, 0x311a, 0xffff },
++		{ MDIO_MMD_VEND1, 0x80a2, 0x8000, 0xff7f },
++		{ MDIO_MMD_VEND1, 0x80a9, 0x0000, 0xfff0 },
++		{ MDIO_MMD_VEND1, 0x80a3, 0x0000, 0xf8ff },
++		{ MDIO_MMD_PHYXS, 0xf002, 0x8000, 0x8000 }
++	};
++	int val, i;
++
++	/* mv88e6393x family errata 5.2:
++	 * For optimal signal integrity the following sequence should be applied
++	 * to SERDES operating in 10G mode. These registers only apply to 10G
++	 * operation and have no effect on other speeds.
++	 */
++	if (cmode != PORT_REG_STATUS_CMODE_10GBASE_R)
++		return 0;
++
++	for (i = 0; i < ARRAY_SIZE(fixes); ++i) {
++		val = mv88e6xxx_phy_read_indirect(dev, port, fixes[i].dev, fixes[i].reg);
++		if (val < 0)
++			return val;
++
++		val &= ~fixes[i].mask;
++		val |= fixes[i].val;
++
++		val = mv88e6xxx_phy_write_indirect(dev, port, fixes[i].dev, fixes[i].reg, val);
++		if (val < 0)
++			return val;
++	}
++
++	return 0;
++}
++
++static int mv88e6393_serdes_init(struct udevice *dev, int port, int cmode)
++{
++	u16 base;
++	int val;
++
++	val = mv88e6393_serdes_erratum_4_6(dev, port);
++	if (val < 0)
++		return val;
++
++	val = mv88e6393_serdes_erratum_5_2(dev, port, cmode);
++	if (val < 0)
++		return val;
++
++	switch (cmode) {
++	case PORT_REG_STATUS_CMODE_10GBASE_R:
++		base = 0x1000;
++		break;
++	default:
++		return -EOPNOTSUPP;
++	}
++
++	val = mv88e6xxx_phy_read_indirect(dev, port, MDIO_MMD_PHYXS, base);
++	if (val < 0)
++		return val;
++
++	val &= ~MDIO_CTRL1_LPOWER;
++	val |= MDIO_CTRL1_RESET;
++
++	return mv88e6xxx_phy_write_indirect(dev, port, MDIO_MMD_PHYXS, base, val);
++}
++
++static int mv88e6xxx_serdes_init(struct udevice *dev, int cpu_port, int cmode)
++{
++	if (mv88e6xxx_6352_family(dev))
++		return mv88e6352_serdes_init(dev);
++	else if (mv88e6xxx_6393_family(dev))
++		return mv88e6393_serdes_init(dev, cpu_port, cmode);
++
++	return -EOPNOTSUPP;
++}
++
+ /*
+  * This function is used to pre-configure the required register
+  * offsets, so that the indirect register access to the PHY registers
+@@ -569,6 +683,15 @@ static int mv88e6xxx_priv_reg_offs_pre_init(struct udevice *dev)
+ 	 */
+ 	priv->port_reg_base = 0x10;
+ 	priv->id = mv88e6xxx_get_switch_id(dev);
++	if (priv->id == 0xfff0) {
++		/*
++		 * Look for a newer device in which ports start at
++		 * offset 0 (6390/6393 and compatible switches).
++		 */
++		priv->port_reg_base = 0;
++		priv->id = mv88e6xxx_get_switch_id(dev);
++	}
++
+ 	if (priv->id != 0xfff0) {
+ 		priv->global1 = 0x1B;
+ 		priv->global2 = 0x1C;
+@@ -844,6 +967,7 @@ static int mv88e6xxx_probe(struct udevice *dev)
+ 	case PORT_SWITCH_ID_6176:
+ 	case PORT_SWITCH_ID_6240:
+ 	case PORT_SWITCH_ID_6352:
++	case PORT_SWITCH_ID_6393:
+ 		priv->port_count = 11;
+ 		break;
+ 	case PORT_SWITCH_ID_6020:
+@@ -863,15 +987,17 @@ static int mv88e6xxx_probe(struct udevice *dev)
+ 	if (ret < 0)
+ 		goto err_remove_reset;
+ 
+-	if (mv88e6xxx_6352_family(dev)) {
++	if (mv88e6xxx_6352_family(dev) ||
++	    mv88e6xxx_6393_family(dev)) {
+ 		val = mv88e6xxx_get_cmode(dev, dsa_pdata->cpu_port);
+ 		if (val < 0)
+ 			goto err_remove_reset;
+ 		/* initialize serdes */
+ 		if (val == PORT_REG_STATUS_CMODE_100BASE_X ||
+ 		    val == PORT_REG_STATUS_CMODE_1000BASE_X ||
+-		    val == PORT_REG_STATUS_CMODE_SGMII) {
+-			ret = mv88e6xxx_serdes_init(dev);
++		    val == PORT_REG_STATUS_CMODE_SGMII ||
++		    val == PORT_REG_STATUS_CMODE_10GBASE_R) {
++			ret = mv88e6xxx_serdes_init(dev, dsa_pdata->cpu_port, val);
+ 			if (ret < 0)
+ 				goto err_remove_reset;
+ 		}
+-- 
+2.34.1
+
