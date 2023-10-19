@@ -1,0 +1,181 @@
+From d87aea2f0d0acfa0d54adb20a980256c0ba95023 Mon Sep 17 00:00:00 2001
+From: Tobias Waldekranz <tobias@waldekranz.com>
+Date: Tue, 17 Oct 2023 13:20:19 +0200
+Subject: [PATCH 2/5] net: mv88e6xxx: Support clause 45 addressing on internal
+ MDIO bus
+
+This is needed to access SERDES registers on newer chips, like the
+6393X.
+
+Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
+---
+ drivers/net/mv88e6xxx.c | 113 +++++++++++++++++++++++++++++++++++++---
+ 1 file changed, 106 insertions(+), 7 deletions(-)
+
+diff --git a/drivers/net/mv88e6xxx.c b/drivers/net/mv88e6xxx.c
+index 1bf7cfd6a6..eddac332e0 100644
+--- a/drivers/net/mv88e6xxx.c
++++ b/drivers/net/mv88e6xxx.c
+@@ -114,6 +114,9 @@
+ #define SMI_CMD_CLAUSE_22		BIT(12)
+ #define SMI_CMD_CLAUSE_22_OP_READ	(2 << 10)
+ #define SMI_CMD_CLAUSE_22_OP_WRITE	(1 << 10)
++#define SMI_CMD_CLAUSE_45_OP_WADDR	(0 << 10)
++#define SMI_CMD_CLAUSE_45_OP_WDATA	(1 << 10)
++#define SMI_CMD_CLAUSE_45_OP_RDATA	(3 << 10)
+ #define SMI_CMD_ADDR_SHIFT		5
+ #define SMI_CMD_ADDR_MASK		0x1f
+ #define SMI_CMD_REG_SHIFT		0
+@@ -126,6 +129,18 @@
+ 	(SMI_BUSY | SMI_CMD_CLAUSE_22 | SMI_CMD_CLAUSE_22_OP_WRITE) | \
+ 	(((addr) & SMI_CMD_ADDR_MASK) << SMI_CMD_ADDR_SHIFT) | \
+ 	(((reg) & SMI_CMD_REG_MASK) << SMI_CMD_REG_SHIFT)
++#define XSMI_CMD_WADDR(port, dev) \
++	(SMI_BUSY | SMI_CMD_CLAUSE_45_OP_WADDR) | \
++	(((port) & SMI_CMD_ADDR_MASK) << SMI_CMD_ADDR_SHIFT) | \
++	(((dev) & SMI_CMD_REG_MASK) << SMI_CMD_REG_SHIFT)
++#define XSMI_CMD_WDATA(port, dev) \
++	(SMI_BUSY | SMI_CMD_CLAUSE_45_OP_WDATA) | \
++	(((port) & SMI_CMD_ADDR_MASK) << SMI_CMD_ADDR_SHIFT) | \
++	(((dev) & SMI_CMD_REG_MASK) << SMI_CMD_REG_SHIFT)
++#define XSMI_CMD_RDATA(port, dev) \
++	(SMI_BUSY | SMI_CMD_CLAUSE_45_OP_RDATA) | \
++	(((port) & SMI_CMD_ADDR_MASK) << SMI_CMD_ADDR_SHIFT) | \
++	(((dev) & SMI_CMD_REG_MASK) << SMI_CMD_REG_SHIFT)
+ 
+ /* ID register values for different switch models */
+ #define PORT_SWITCH_ID_6020		0x0200
+@@ -273,7 +288,41 @@ static int mv88e6xxx_phy_wait(struct udevice *dev)
+ 	return -ETIMEDOUT;
+ }
+ 
+-static int mv88e6xxx_phy_read_indirect(struct udevice *dev, int phyad, int devad, int reg)
++static int mv88e6xxx_phy_read_indirect_c45(struct udevice *dev, int phyad, int devad, int reg)
++{
++	struct mv88e6xxx_priv *priv = dev_get_priv(dev);
++	int res;
++
++	res = mv88e6xxx_reg_write(dev, priv->global2,
++				  GLOBAL2_REG_PHY_DATA, reg);
++	if (res < 0)
++		return res;
++
++	res = mv88e6xxx_reg_write(dev, priv->global2,
++				  GLOBAL2_REG_PHY_CMD,
++				  XSMI_CMD_WADDR(phyad, devad));
++	if (res < 0)
++		return res;
++
++	res = mv88e6xxx_phy_wait(dev);
++	if (res < 0)
++		return res;
++
++	res = mv88e6xxx_reg_write(dev, priv->global2,
++				  GLOBAL2_REG_PHY_CMD,
++				  XSMI_CMD_RDATA(phyad, devad));
++	if (res < 0)
++		return res;
++
++	res = mv88e6xxx_phy_wait(dev);
++	if (res < 0)
++		return res;
++
++	return mv88e6xxx_reg_read(dev, priv->global2,
++				  GLOBAL2_REG_PHY_DATA);
++}
++
++static int mv88e6xxx_phy_read_indirect_c22(struct udevice *dev, int phyad, int reg)
+ {
+ 	struct mv88e6xxx_priv *priv = dev_get_priv(dev);
+ 	int res;
+@@ -293,8 +342,16 @@ static int mv88e6xxx_phy_read_indirect(struct udevice *dev, int phyad, int devad
+ 				  GLOBAL2_REG_PHY_DATA);
+ }
+ 
+-static int mv88e6xxx_phy_write_indirect(struct udevice *dev, int phyad,
+-					int devad, int reg, u16 data)
++static int mv88e6xxx_phy_read_indirect(struct udevice *dev, int phyad, int devad, int reg)
++{
++	if (devad == MDIO_DEVAD_NONE)
++		return mv88e6xxx_phy_read_indirect_c22(dev, phyad, reg);
++
++	return mv88e6xxx_phy_read_indirect_c45(dev, phyad, devad, reg);
++}
++
++static int mv88e6xxx_phy_write_indirect_c22(struct udevice *dev, int phyad,
++					    int reg, u16 data)
+ {
+ 	struct mv88e6xxx_priv *priv = dev_get_priv(dev);
+ 	int res;
+@@ -315,6 +372,50 @@ static int mv88e6xxx_phy_write_indirect(struct udevice *dev, int phyad,
+ 	return mv88e6xxx_phy_wait(dev);
+ }
+ 
++static int mv88e6xxx_phy_write_indirect_c45(struct udevice *dev, int phyad,
++					    int devad, int reg, u16 data)
++{
++	struct mv88e6xxx_priv *priv = dev_get_priv(dev);
++	int res;
++
++	res = mv88e6xxx_reg_write(dev, priv->global2,
++				  GLOBAL2_REG_PHY_DATA, reg);
++	if (res < 0)
++		return res;
++
++	res = mv88e6xxx_reg_write(dev, priv->global2,
++				  GLOBAL2_REG_PHY_CMD,
++				  XSMI_CMD_WADDR(phyad, devad));
++	if (res < 0)
++		return res;
++
++	res = mv88e6xxx_phy_wait(dev);
++	if (res < 0)
++		return res;
++
++	res = mv88e6xxx_reg_write(dev, priv->global2,
++				  GLOBAL2_REG_PHY_DATA, data);
++	if (res < 0)
++		return res;
++
++	res = mv88e6xxx_reg_write(dev, priv->global2,
++				  GLOBAL2_REG_PHY_CMD,
++				  XSMI_CMD_WDATA(phyad, devad));
++	if (res < 0)
++		return res;
++
++	return mv88e6xxx_phy_wait(dev);
++}
++
++static int mv88e6xxx_phy_write_indirect(struct udevice *dev, int phyad,
++					int devad, int reg, u16 data)
++{
++	if (devad == MDIO_DEVAD_NONE)
++		return mv88e6xxx_phy_write_indirect_c22(dev, phyad, reg, data);
++
++	return mv88e6xxx_phy_write_indirect_c45(dev, phyad, devad, reg, data);
++}
++
+ /* Wrapper function to make calls to phy_read_indirect simpler */
+ static int mv88e6xxx_phy_read(struct udevice *dev, int phy, int reg)
+ {
+@@ -493,15 +594,13 @@ static int mv88e6xxx_priv_reg_offs_pre_init(struct udevice *dev)
+ 
+ static int mv88e6xxx_mdio_read(struct udevice *dev, int addr, int devad, int reg)
+ {
+-	return mv88e6xxx_phy_read_indirect(dev->parent, DEVADDR_PHY(addr),
+-					   MDIO_DEVAD_NONE, reg);
++	return mv88e6xxx_phy_read_indirect(dev->parent, DEVADDR_PHY(addr), devad, reg);
+ }
+ 
+ static int mv88e6xxx_mdio_write(struct udevice *dev, int addr, int devad,
+ 				int reg, u16 val)
+ {
+-	return mv88e6xxx_phy_write_indirect(dev->parent, DEVADDR_PHY(addr),
+-					    MDIO_DEVAD_NONE, reg, val);
++	return mv88e6xxx_phy_write_indirect(dev->parent, DEVADDR_PHY(addr), devad, reg, val);
+ }
+ 
+ static const struct mdio_ops mv88e6xxx_mdio_ops = {
+-- 
+2.34.1
+

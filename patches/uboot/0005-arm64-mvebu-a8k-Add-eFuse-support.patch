@@ -1,0 +1,576 @@
+From c0495a607652aef38a4d4480ebdb6dd45e3dd9b9 Mon Sep 17 00:00:00 2001
+From: Tobias Waldekranz <tobias@waldekranz.com>
+Date: Tue, 24 Oct 2023 22:23:44 +0200
+Subject: [PATCH 5/5] arm64: mvebu: a8k: Add eFuse support
+
+Add support for reading and burning LD and HD fuses. Use a specialized
+commandline implementation over the standard "fuse" command because:
+
+- We want to reference fuses by the die and module they belong to,
+  rather than a plain integer bank ID.
+
+- Our lines are wider than 32 bits, meaning that we would have to use
+  similar tactics as arch/arm/mach-mvebu/efuse.c in order to support
+  fuse programming, which is cumbersome.
+
+Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
+---
+ arch/arm/mach-mvebu/Kconfig           |   7 +
+ arch/arm/mach-mvebu/armada8k/Makefile |   2 +
+ arch/arm/mach-mvebu/armada8k/efuse.c  | 516 ++++++++++++++++++++++++++
+ 3 files changed, 525 insertions(+)
+ create mode 100644 arch/arm/mach-mvebu/armada8k/efuse.c
+
+diff --git a/arch/arm/mach-mvebu/Kconfig b/arch/arm/mach-mvebu/Kconfig
+index ac484c73f6..45584b4282 100644
+--- a/arch/arm/mach-mvebu/Kconfig
++++ b/arch/arm/mach-mvebu/Kconfig
+@@ -421,6 +421,13 @@ config MVEBU_EFUSE_VHV_GPIO_ACTIVE_LOW
+ 	bool "VHV_Enable GPIO is Active Low"
+ 	depends on MVEBU_EFUSE_VHV_GPIO != ""
+ 
++config MVEBU_8K_EFUSE
++	bool "Enable eFuse support"
++	depends on ARMADA_8K
++	select HEX_DUMP
++	help
++	  Enable support for reading and writing eFuses on mvebu SoCs.
++
+ config SECURED_MODE_IMAGE
+ 	bool "Build image for trusted boot"
+ 	default false
+diff --git a/arch/arm/mach-mvebu/armada8k/Makefile b/arch/arm/mach-mvebu/armada8k/Makefile
+index 0a4756717a..c1be059b85 100644
+--- a/arch/arm/mach-mvebu/armada8k/Makefile
++++ b/arch/arm/mach-mvebu/armada8k/Makefile
+@@ -3,3 +3,5 @@
+ # Copyright (C) 2016 Stefan Roese <sr@denx.de>
+ 
+ obj-y = cpu.o cache_llc.o dram.o
++
++obj-$(CONFIG_MVEBU_8K_EFUSE) += efuse.o
+diff --git a/arch/arm/mach-mvebu/armada8k/efuse.c b/arch/arm/mach-mvebu/armada8k/efuse.c
+new file mode 100644
+index 0000000000..5438d4466d
+--- /dev/null
++++ b/arch/arm/mach-mvebu/armada8k/efuse.c
+@@ -0,0 +1,516 @@
++// SPDX-License-Identifier: GPL-2.0+
++/*
++ * Copyright (C) 2015-2016 Reinhard Pfau <reinhard.pfau@gdsys.cc>
++ */
++
++#include <command.h>
++#include <common.h>
++#include <errno.h>
++#include <hexdump.h>
++
++#include <asm/io.h>
++
++#include <linux/bitops.h>
++#include <linux/err.h>
++#include <linux/delay.h>
++
++enum mvebu_efuse_mod {
++	MVEBU_EFUSE_MOD_LD0,
++	MVEBU_EFUSE_MOD_LD1,
++	MVEBU_EFUSE_MOD_HD,
++};
++
++struct mvebu_efuse_ld {
++	u32 array[256 / 32];
++#define MVEBU_EFUSE_LD_PARITY_BIT BIT(31)
++	u32 burn;
++};
++
++struct mvebu_efuse_hd_line {
++	u32 array[2];
++#define MVEBU_EFUSE_HD_ECC_MASK 0xfe000000
++	u32 lock;
++	u32 pad;
++};
++
++struct mvebu_efuse_hd {
++#define MVEBU_EFUSE_HD_LINES 64
++	struct mvebu_efuse_hd_line line[MVEBU_EFUSE_HD_LINES];
++};
++
++struct mvebu_efuse_die {
++	union {
++		struct {
++			u32 resvd0;
++			u32 resvd1;
++			u32 ctrl;
++		};
++
++		u8 pad_ctrl[0xf00];
++	};
++
++	union {
++		struct mvebu_efuse_ld ld;
++		u8 pad_ld[0x100];
++	};
++
++	union {
++		struct mvebu_efuse_hd hd;
++	};
++};
++
++static const struct mvebu_efuse_die __iomem *mvebu_efuse_dies[] = {
++	(void __iomem *)0xf06f8000,
++	(void __iomem *)0xf2400000,
++};
++
++static void mvebu_efuse_program_set(const struct mvebu_efuse_die __iomem *die,
++				    bool enable)
++{
++	if (enable)
++		setbits_le32(&die->ctrl, BIT(31));
++	else
++		clrbits_le32(&die->ctrl, BIT(31));
++}
++
++static void mvebu_efuse_secure_set(const struct mvebu_efuse_die __iomem *die,
++				   bool enable)
++{
++	if (enable)
++		setbits_le32(&die->ctrl, BIT(7));
++	else
++		clrbits_le32(&die->ctrl, BIT(7));
++}
++
++static void mvebu_efuse_ld_select(const struct mvebu_efuse_die __iomem *die,
++				  bool ld1)
++{
++	if (ld1)
++		setbits_le32(&die->ctrl, BIT(6));
++	else
++		clrbits_le32(&die->ctrl, BIT(6));
++}
++
++static void mvebu_efuse_ld_read(const struct mvebu_efuse_die __iomem *die,
++				bool ld1, struct mvebu_efuse_ld *ld)
++{
++	size_t i;
++
++	mvebu_efuse_ld_select(die, ld1);
++
++	for (i = 0; i < ARRAY_SIZE(ld->array); i++) {
++		ld->array[i] = readl(&die->ld.array[i]);
++		if (i & 1)
++			ld->array[i] &= ~MVEBU_EFUSE_LD_PARITY_BIT;
++	}
++}
++
++static int mvebu_efuse_ld_write(const struct mvebu_efuse_die __iomem *die,
++				bool ld1, bool secure, const struct mvebu_efuse_ld *ld)
++{
++	size_t i;
++
++	for (i = 0; i < ARRAY_SIZE(ld->array); i++)
++		if ((i & 1) && (ld->array[i] & MVEBU_EFUSE_LD_PARITY_BIT))
++			return -EINVAL;
++
++	mvebu_efuse_ld_select(die, ld1);
++	mvebu_efuse_program_set(die, true);
++	mvebu_efuse_secure_set(die, secure);
++
++	for (i = 0; i < ARRAY_SIZE(ld->array); i++)
++		writel(ld->array[i], &die->ld.array[i]);
++
++	writel(0, &die->ld.burn);
++	mdelay(1);
++
++	mvebu_efuse_program_set(die, false);
++	return 0;
++}
++
++static int mvebu_efuse_hd_read_line(const struct mvebu_efuse_die __iomem *die,
++				    u8 line, struct mvebu_efuse_hd_line *hdl)
++{
++	if (line >= ARRAY_SIZE(die->hd.line))
++		return -ERANGE;
++
++	hdl->array[0] = readl(&die->hd.line[line].array[0]);
++	hdl->array[1] = readl(&die->hd.line[line].array[1]);
++	hdl->array[1] &= ~MVEBU_EFUSE_HD_ECC_MASK;
++	hdl->lock = readl(&die->hd.line[line].lock);
++	return 0;
++}
++
++static int mvebu_efuse_hd_write_line(const struct mvebu_efuse_die __iomem *die,
++				     u8 line, const struct mvebu_efuse_hd_line *hdl)
++{
++	if (line >= ARRAY_SIZE(die->hd.line))
++		return -ERANGE;
++
++	if (hdl->array[1] & MVEBU_EFUSE_HD_ECC_MASK)
++		return -EINVAL;
++
++	mvebu_efuse_program_set(die, true);
++
++	writel(hdl->array[0], &die->hd.line[line].array[0]);
++	writel(hdl->array[1], &die->hd.line[line].array[1]);
++	writel(0, &die->hd.line[line].lock);
++	mdelay(1);
++
++	mvebu_efuse_program_set(die, false);
++	return 0;
++}
++
++
++/*
++ * Commandline interface
++ */
++
++static int mvefuse_die(const char *diestr,
++		       const struct mvebu_efuse_die __iomem **diep)
++{
++	if (!strcmp(diestr, "ap")) {
++		*diep = mvebu_efuse_dies[0];
++	} else if (!strcmp(diestr, "cp0")) {
++		*diep = mvebu_efuse_dies[1];
++	} else {
++		printf("\"%s\" is not a valid die\n", diestr);
++		return CMD_RET_USAGE;
++	}
++
++	return 0;
++}
++
++static int mvefuse_mod(const char *fuse, enum mvebu_efuse_mod *modp)
++{
++	if (!strcmp(fuse, "ld0")) {
++		*modp = MVEBU_EFUSE_MOD_LD0;
++	} else if (!strcmp(fuse, "ld1")) {
++		*modp = MVEBU_EFUSE_MOD_LD1;
++	} else if (!strncmp(fuse, "hd", 2)) {
++		*modp = MVEBU_EFUSE_MOD_HD;
++	} else {
++		printf("\"%s\" is not a valid fuse\n", fuse);
++	 	return CMD_RET_USAGE;
++	}
++
++	return 0;
++}
++
++#define MVEFUSE_LINE_ALL 0xff
++
++static int mvefuse_line(const char *fuse, u8 *linep)
++{
++	unsigned long line;
++
++	if (!strcmp(fuse, "hd")) {
++		*linep = MVEFUSE_LINE_ALL;
++		return 0;
++	}
++
++	line = simple_strtoul(&fuse[2], NULL, 0);
++	if (line >= MVEBU_EFUSE_HD_LINES) {
++		printf("\"%s\" is not valid HD fuse\n", fuse);
++		return CMD_RET_USAGE;
++	}
++
++	*linep = line;
++	return 0;
++}
++
++static int mvefuse_parse(char * const *argv,
++			 const struct mvebu_efuse_die __iomem **diep,
++			 enum mvebu_efuse_mod *modp,
++			 u8 *linep)
++{
++	int err;
++
++	err = mvefuse_die(argv[0], diep);
++	if (err)
++		return err;
++
++	err = mvefuse_mod(argv[1], modp);
++	if (err)
++		return err;
++
++	if (*modp != MVEBU_EFUSE_MOD_HD)
++		return 0;
++
++	return mvefuse_line(argv[1], linep);
++}
++
++static int do_mvefuse_md_ld(const struct mvebu_efuse_die __iomem *die,
++			    bool ld1)
++{
++	struct mvebu_efuse_ld ld;
++
++	mvebu_efuse_ld_read(die, ld1, &ld);
++
++	print_hex_dump("", DUMP_PREFIX_OFFSET, 16, 4,
++		       ld.array, sizeof(ld.array), false);
++	return 0;
++}
++
++static int do_mvefuse_md_hd_line(const struct mvebu_efuse_die __iomem *die,
++				 u8 line)
++{
++	struct mvebu_efuse_hd_line hdl;
++	int err;
++
++	err = mvebu_efuse_hd_read_line(die, line, &hdl);
++	if (err) {
++		printf("Unable to read HD line %u: %d\n", line, err);
++		return CMD_RET_FAILURE;
++	}
++
++	printf("%08x %08x %s\n", hdl.array[0], hdl.array[1],
++	       hdl.lock ? "[LOCKED]" : "");
++	return 0;
++}
++
++static int do_mvefuse_md_hd_all(const struct mvebu_efuse_die __iomem *die)
++{
++	u8 line;
++	int err;
++
++	for (line = 0; line < MVEBU_EFUSE_HD_LINES; line++) {
++		printf("Line %02u: ", line);
++		err = do_mvefuse_md_hd_line(die, line);
++		if (err)
++			return err;
++	}
++
++	return 0;
++}
++
++static int do_mvefuse_md(struct cmd_tbl *cmdtp, int flag,
++			 int argc, char *const *argv)
++{
++	const struct mvebu_efuse_die __iomem *die;
++	enum mvebu_efuse_mod mod;
++	u8 line;
++	int err;
++
++	if (argc < 3)
++		return CMD_RET_USAGE;
++
++	err = mvefuse_parse(&argv[1], &die, &mod, &line);
++	if (err)
++		return err;
++
++	switch (mod) {
++	case MVEBU_EFUSE_MOD_LD0:
++		return do_mvefuse_md_ld(die, false);
++	case MVEBU_EFUSE_MOD_LD1:
++		return do_mvefuse_md_ld(die, true);
++	case MVEBU_EFUSE_MOD_HD:
++		if (line == MVEFUSE_LINE_ALL)
++			return do_mvefuse_md_hd_all(die);
++		else
++			return do_mvefuse_md_hd_line(die, line);
++	}
++
++	return CMD_RET_FAILURE;
++}
++
++static int do_mvefuse_mw_ld(const struct mvebu_efuse_die __iomem *die,
++			    bool ld1, int argc, char *const *argv,
++			    bool interactive)
++{
++	struct mvebu_efuse_ld ld;
++	bool secure = false;
++	size_t i;
++	int err;
++
++	mvebu_efuse_ld_read(die, ld1, &ld);
++
++	switch (argc) {
++	case 9:
++		if (!strcmp(argv[8], "lock"))
++			secure = true;
++		else
++			return CMD_RET_USAGE;
++
++		/* fallthrough */
++	case 8:
++		for (i = 0; i < ARRAY_SIZE(ld.array); i++)
++			ld.array[i] |= hextoul(argv[i], NULL);
++
++		break;
++
++	default:
++		return CMD_RET_USAGE;
++	}
++
++	if (interactive) {
++		printf("The following values will be written%s into %s:\n",
++		       secure ? ", and PERMANENTLY LOCKED," : "",
++		       ld1 ? "LD1" : "LD0");
++
++		print_hex_dump("", DUMP_PREFIX_OFFSET, 16, 4,
++			       ld.array, sizeof(ld.array), false);
++
++		puts("WARNING: This operation is irreversible\n"
++		     "Are you sure you want to continue? (y/N)\n");
++
++		if (!confirm_yesno()) {
++			puts("Programming aborted\n");
++			return CMD_RET_FAILURE;
++		}
++	}
++
++	err = mvebu_efuse_ld_write(die, ld1, secure, &ld);
++	if (err) {
++		printf("Failed to program %s: %d\n", ld1 ? "LD1" : "LD0", err);
++		return CMD_RET_FAILURE;
++	}
++
++	return 0;
++}
++
++static int do_mvefuse_mw_hd_line(const struct mvebu_efuse_die __iomem *die,
++				 u8 line, int argc, char *const *argv,
++				 bool interactive)
++{
++	struct mvebu_efuse_hd_line hdl;
++	int err;
++
++	mvebu_efuse_hd_read_line(die, line, &hdl);
++	if (hdl.lock) {
++		printf("Unable to program LOCKED line HD%u\n", line);
++		return CMD_RET_FAILURE;
++	}
++
++	switch (argc) {
++	case 3:
++		/* In contrast to the LD fuse array, HD fuse lines are
++		 * always locked when programmed, make sure the user
++		 * is aware of this by requiring the "lock" keyword to
++		 * be specified. */
++		if (strcmp(argv[2], "lock"))
++			return CMD_RET_USAGE;
++
++		hdl.array[0] |= hextoul(argv[0], NULL);
++		hdl.array[1] |= hextoul(argv[1], NULL);
++		break;
++
++	default:
++		return CMD_RET_USAGE;
++	}
++
++	if (interactive) {
++		printf("The following values will be PERMANENTLY written into HD%u:\n",
++		       line);
++
++		printf("%08x %08x\n", hdl.array[0], hdl.array[1]);
++
++		puts("WARNING: This operation is irreversible\n"
++		     "Are you sure you want to continue? (y/N)\n");
++
++		if (!confirm_yesno()) {
++			puts("Programming aborted\n");
++			return CMD_RET_FAILURE;
++		}
++	}
++
++	err = mvebu_efuse_hd_write_line(die, line, &hdl);
++	if (err) {
++		printf("Failed to program HD%u: %d\n", line, err);
++		return CMD_RET_FAILURE;
++	}
++
++	return 0;
++}
++
++static int do_mvefuse_mw(struct cmd_tbl *cmdtp, int flag,
++			 int argc, char *const *argv)
++{
++	const struct mvebu_efuse_die __iomem *die;
++	enum mvebu_efuse_mod mod;
++	bool interactive = true;
++	u8 line;
++	int err;
++
++	/* Pop off "md" */
++	argv++, argc--;
++
++	if (argc && (!strcmp("-y", argv[0]))) {
++		interactive = false;
++		argv++, argc--;
++	}
++
++	if (argc < 2)
++		return CMD_RET_USAGE;
++
++	err = mvefuse_parse(argv, &die, &mod, &line);
++	if (err)
++		return err;
++
++	/* Pop off <die> and <fuse> */
++	argv++, argc--;
++	argv++, argc--;
++
++	switch (mod) {
++	case MVEBU_EFUSE_MOD_LD0:
++		return do_mvefuse_mw_ld(die, false, argc, argv, interactive);
++	case MVEBU_EFUSE_MOD_LD1:
++		return do_mvefuse_mw_ld(die, true, argc, argv, interactive);
++	case MVEBU_EFUSE_MOD_HD:
++		if (line == MVEFUSE_LINE_ALL)
++			return CMD_RET_USAGE;
++		else
++			return do_mvefuse_mw_hd_line(die, line, argc, argv, interactive);
++	}
++
++	return CMD_RET_FAILURE;
++}
++
++static int do_mvefuse_unlocked(struct cmd_tbl *cmdtp, int flag,
++			       int argc, char *const argv[])
++{
++	const struct mvebu_efuse_die __iomem *die;
++	struct mvebu_efuse_hd_line hdl;
++	enum mvebu_efuse_mod mod;
++	u8 line;
++	int err;
++
++	if (argc != 3)
++		return CMD_RET_USAGE;
++
++	err = mvefuse_parse(&argv[1], &die, &mod, &line);
++	if (err)
++		return err;
++
++	if (mod != MVEBU_EFUSE_MOD_HD) {
++		printf("Only HD fuse lines have individual lock bits\n");
++		return CMD_RET_FAILURE;
++	}
++
++	if (line == MVEFUSE_LINE_ALL) {
++		printf("Only an individual fuse line can be tested\n");
++		return CMD_RET_FAILURE;
++	}
++
++	err = mvebu_efuse_hd_read_line(die, line, &hdl);
++	if (err) {
++		printf("Unable to read HD%u: %d\n", line, err);
++		return CMD_RET_FAILURE;
++	}
++
++	return !!hdl.lock;
++}
++
++U_BOOT_CMD_WITH_SUBCMDS(
++	mvefuse, "Marvell eFuse Access",
++	        "md <die> <fuse> - Dump the contents of <fuse> from <die>\n"
++	"mvefuse mw [-y] <die> <fuse> <words...> [lock] - Program <words..> into\n"
++	"    <fuse> in <die>, optionally permanently locking it\n"
++	"mvefuse unlocked <die> hd<0-63> - Test if an HD fuse line on <die> is \n"
++	"    unlocked\n"
++	"\n"
++	"<die>:    ap|cp0\n"
++	"<fuse>:   ld0|ld1|hd<0-63>\n",
++
++	U_BOOT_SUBCMD_MKENT(md, 3, 1, do_mvefuse_md),
++	U_BOOT_SUBCMD_MKENT(mw, 12, 1, do_mvefuse_mw),
++	U_BOOT_SUBCMD_MKENT(unlocked, 3, 1, do_mvefuse_unlocked));
+-- 
+2.34.1
+
