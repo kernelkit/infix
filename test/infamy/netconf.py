@@ -147,7 +147,7 @@ class Device(object):
         pieces.append("</get-data>")
         return self._ncc_make_rpc("".join(pieces), msg_id=msg_id)
 
-    def _get(self, xpath, getter):
+    def _get(self, xpath, getter, as_xml=False):
         # Figure out which modules we are referencing
         mods = self._modules_in_xpath(xpath)
 
@@ -155,30 +155,42 @@ class Device(object):
         xmlns = " ".join([f"xmlns:{m['name']}=\"{m['namespace']}\"" for m in mods])
         filt = f"<filter type=\"xpath\" select=\"{xpath}\" {xmlns} />"
         # pylint: disable=c-extension-no-member
-        cfg = lxml.etree.tostring(getter(filter=filt).data_ele[0])
+        data=getter(filter=filt).data_ele[0]
+        if as_xml:
+             return data
+        else:
+            cfg = lxml.etree.tostring(data)
+            return self.ly.parse_data_mem(cfg, "xml", parse_only=True)
 
-        return self.ly.parse_data_mem(cfg, "xml", parse_only=True)
-
-    def _get_data(self, xpath):
+    def _get_data(self, xpath,as_xml=False):
         """Local member wrapper for netconf-client <get-data> RPC"""
         # pylint: disable=protected-access
         (raw, ele) = self.ncc._send_rpc(self._ncc_get_data_rpc(filter=xpath))
         data = NccGetDataReply(raw, ele)
-        # pylint: disable=c-extension-no-member
-        cfg = lxml.etree.tostring(data.data_ele[0])
-        return self.ly.parse_data_mem(cfg, "xml", parse_only=True)
+        if(as_xml):
+            return data
+        else:
+            # pylint: disable=c-extension-no-member
+            cfg = lxml.etree.tostring(data.data_ele[0])
+            return self.ly.parse_data_mem(cfg, "xml", parse_only=True)
 
-    def get(self, xpath):
+    def get(self, xpath, as_xml=False):
         """RPC <get> (legacy NETCONF) fetches config:false data"""
-        return self._get(xpath, self.ncc.get)
+        return self._get(xpath, self.ncc.get, as_xml)
 
-    def get_dict(self, xpath):
+    def get_dict(self, xpath,as_xml=False):
         """Return Python dictionary of <get> RPC data"""
-        return self.get(xpath).print_dict()
+        if(as_xml):
+            return self.get(xpath, as_xml=True)
+        else:
+            return self.get(xpath).print_dict()
 
-    def get_data(self, xpath):
+    def get_data(self, xpath, as_xml=False):
         """RPC <get-data> to fetch operational data"""
-        return self._get_data(xpath).print_dict()
+        if(as_xml):
+            return self._get_data(xpath,as_xml)
+        else:
+            return self._get_data(xpath).print_dict()
 
     def get_config(self, xpath):
         return self._get(xpath, self.ncc.get_config)

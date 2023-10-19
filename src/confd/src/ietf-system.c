@@ -301,6 +301,8 @@ static int change_clock(sr_session_ctx_t *session, uint32_t sub_id, const char *
 	const char *xpath, sr_event_t event, unsigned request_id, void *priv)
 {
 	char *timezone;
+	char *tz_utc_offset;
+	char tz_name[14];
 
 	switch (event) {
 	case SR_EV_ENABLED:	/* first time, on register. */
@@ -329,13 +331,20 @@ static int change_clock(sr_session_ctx_t *session, uint32_t sub_id, const char *
 
 	default:
 		return SR_ERR_OK;
+
+	}
+	tz_utc_offset = srx_get_str(session, XPATH_BASE_"/clock/timezone-utc-offset");
+	timezone = srx_get_str(session, XPATH_BASE_"/clock/timezone-name");
+	if (!timezone && !tz_utc_offset) {
+		snprintf(tz_name,sizeof(tz_name),"Etc/UTC");
+		timezone = tz_name;
 	}
 
-	/* XXX: add support also for /ietf-system:system/clock/timezone-utc-offset (deviation) */
-	timezone = srx_get_str(session, XPATH_BASE_"/clock/timezone-name");
-	if (!timezone) {
-		ERROR("Failed reading timezone-name");
-		return SR_ERR_VALIDATION_FAILED;
+	if (tz_utc_offset) {
+		int8_t offset = atol(tz_utc_offset);
+		/* When using Etc/GMT offsets, the +/- is inverted in tzdata. */
+		snprintf(tz_name,sizeof(tz_name), "Etc/GMT%s%.2d", offset>-1?"":"+", -offset);
+		timezone = tz_name;
 	}
 
 	remove("/etc/localtime+");
