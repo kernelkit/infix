@@ -96,6 +96,7 @@ static char *fmtime(time_t t, char *buf, size_t len)
         struct tm tm;
         size_t i, n;
 
+	tzset();
         localtime_r(&t, &tm);
         n = strftime(buf, len, isofmt, &tm);
         i = n - 5;
