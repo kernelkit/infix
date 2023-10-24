@@ -137,6 +137,10 @@ endchoice
 config QEMU_NET_MODEL
 	string "Interface model"
 	default "virtio-net-pci"
+	help
+	  The default, virtio-net-pci, NIC works for most use-cases, but
+	  if you want to play with low-level stuff like ethtool, you
+	  might want to test the Intel 82545EM driver, e1000.
 
 config QEMU_NET_BRIDGE_DEV
 	string "Bridge device"
