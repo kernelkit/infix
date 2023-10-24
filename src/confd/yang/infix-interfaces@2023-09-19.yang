@@ -13,6 +13,7 @@ module infix-interfaces {
   include infix-if-base;
   include infix-if-bridge;
   include infix-if-veth;
+  include infix-if-vlan;
 
   organization "KernelKit";
   contact      "kernelkit@googlegroups.com";

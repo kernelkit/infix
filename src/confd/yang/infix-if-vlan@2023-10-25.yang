@@ -1,0 +1,49 @@
+submodule infix-if-vlan {
+  yang-version 1.1;
+  belongs-to infix-interfaces {
+    prefix infix-if;
+  }
+
+  import ietf-interfaces {
+    prefix if;
+  }
+
+  import infix-if-type {
+    prefix infixift;
+  }
+  import ieee802-dot1q-types {
+    prefix dot1q-types;
+  }
+  contact      "kernelkit@googlegroups.com";
+  description
+    "This module implements VLAN (8021q) encapsulation";
+
+  revision 2023-10-25 {
+    description "Initial revision";
+  }
+
+  augment "/if:interfaces/if:interface" {
+    when "derived-from-or-self(if:type, 'infixift:vlan')" {
+      description "Only shown for if:type vlan";
+    }
+    description "Augment to add  802.1Q VLAN tag classifications";
+    container vlan {
+      description "Configure 802.1q/802.1ad VLANs";
+      leaf tag-type {
+	type dot1q-types:dot1q-tag-type;
+	default dot1q-types:c-vlan;
+	description "VLAN type";
+      }
+      leaf id {
+	type dot1q-types:vlanid;
+	mandatory true;
+	description "VLAN Id";
+      }
+      leaf lower-layer-if {
+	type if:interface-ref;
+	mandatory true;
+	description "Base interface for VLAN";
+      }
+    }
+  }
+}

@@ -56,8 +56,6 @@ class Iface:
             self.in_octets = ''
             self.out_octets = ''
 
-        self.parent = data.get('ietf-if-extensions:parent-interface', None)
-
         if self.data.get('ietf-ip:ipv4'):
             self.mtu = self.data.get('ietf-ip:ipv4').get('mtu', '')
             self.ipv4_addr = self.data.get('ietf-ip:ipv4').get('address', '')
@@ -74,6 +72,11 @@ class Iface:
             self.bridge = self.data.get('infix-interfaces:bridge-port').get('bridge', None)
         else:
             self.bridge = ''
+
+        if self.data.get('infix-interfaces:vlan'):
+            self.lower_if = self.data.get('infix-interfaces:vlan', None).get('lower-layer-if',None)
+        else:
+            self.lower_if = ''
 
     def is_vlan(self):
         return self.data['type'] == "infix-if-type:vlan"
@@ -136,7 +139,7 @@ class Iface:
         self.pr_name(pipe="")
         self.pr_proto_eth()
 
-        if self.parent:
+        if self.lower_if:
             self.pr_proto_ipv4(pipe='│')
             self.pr_proto_ipv6(pipe='│')
         else:
@@ -144,7 +147,7 @@ class Iface:
             self.pr_proto_ipv6()
             return
 
-        parent = find_iface(_ifaces, self.parent)
+        parent = find_iface(_ifaces, self.lower_if)
         if not parent:
             print(f"Error, didn't find parent interface for vlan {self.name}")
             sys.exit(1)
@@ -227,7 +230,7 @@ def pr_interface_list(json):
             continue
 
         # These interfaces are printed by there parent, such as bridge
-        if iface.parent:
+        if iface.lower_if:
             continue
         if iface.bridge:
             continue

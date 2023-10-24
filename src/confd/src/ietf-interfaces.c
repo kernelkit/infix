@@ -168,43 +168,37 @@ static int ifchange_cand_infer_vlan(sr_session_ctx_t *session, const char *path)
 		goto out_free_ifname;
 
 	err = srx_nitems(session, &cnt,
-			 "%s/ietf-if-extensions:parent-interface", xpath);
+			 "%s/infix-if-vlan:vlan"
+			 "/lower-layer-if", xpath);
 	if (!err && !cnt) {
 		inferred.data.string_val = ifname;
 		err = srx_set_item(session, &inferred, 0,
-				   "%s/ietf-if-extensions:parent-interface", xpath);
+				   "%s/infix-if-vlan:vlan"
+				   "/lower-layer-if", xpath);
 		if (err)
 			goto out_free_ifname;
 	}
 
 	err = srx_nitems(session, &cnt,
-			 "%s"
-			 "/ietf-if-extensions:encapsulation"
-			 "/ietf-if-vlan-encapsulation:dot1q-vlan"
-			 "/outer-tag/tag-type", xpath);
+			 "%s/infix-if-vlan:vlan"
+			 "/tag-type", xpath);
 	if (!err && !cnt) {
 		inferred.data.string_val = "ieee802-dot1q-types:c-vlan";
 		err = srx_set_item(session, &inferred, 0,
-				   "%s"
-				   "/ietf-if-extensions:encapsulation"
-				   "/ietf-if-vlan-encapsulation:dot1q-vlan"
-				   "/outer-tag/tag-type", xpath);
+				   "%s/infix-if-vlan:vlan"
+				   "/tag-type", xpath);
 		if (err)
 			goto out_free_ifname;
 	}
 
 	err = srx_nitems(session, &cnt,
-			 "%s"
-			 "/ietf-if-extensions:encapsulation"
-			 "/ietf-if-vlan-encapsulation:dot1q-vlan"
-			 "/outer-tag/vlan-id", xpath);
+			 "%s/infix-if-vlan:vlan"
+			 "/id", xpath);
 	if (!err && !cnt) {
 		inferred.data.string_val = vidstr;
 		err = srx_set_item(session, &inferred, 0,
-				   "%s"
-				   "/ietf-if-extensions:encapsulation"
-				   "/ietf-if-vlan-encapsulation:dot1q-vlan"
-				   "/outer-tag/vlan-id", xpath);
+				   "%s/infix-if-vlan:vlan"
+				   "/id", xpath);
 		if (err)
 			goto out_free_ifname;
 	}
@@ -891,38 +885,36 @@ static int netdag_gen_veth(struct dagger *net, struct lyd_node *dif,
 static int netdag_gen_vlan(struct dagger *net, struct lyd_node *dif,
 			   struct lyd_node *cif, FILE *ip)
 {
-	const char *parent = lydx_get_cattr(cif, "parent-interface");
 	const char *ifname = lydx_get_cattr(cif, "name");
 	struct lydx_diff typed, vidd;
-	struct lyd_node *otag;
+	struct lyd_node *vlan;
+	const char *lower_if;
 	const char *proto;
 	int err;
 
-	DEBUG("ifname %s parent %s", ifname, parent);
-
-	err = dagger_add_dep(net, ifname, parent);
-	if (err)
-		return ERR_IFACE(cif, err, "Unable to add dep \"%s\"", parent);
-
-	otag = lydx_get_descendant(lyd_child(dif ? : cif),
-				   "encapsulation",
-				   "dot1q-vlan",
-				   "outer-tag",
-				   NULL);
-	if (!otag) {
+	vlan = lydx_get_descendant(lyd_child(dif ? : cif), "vlan", NULL);
+	if (!vlan) {
 		/*
-		 * Note: this is only an error if outer-tag is missing
+		 * Note: this is only an error if vlan subcontext is missing
 		 * from cif, otherwise it just means the interface had a
 		 * a change that was not related to the VLAN config.
 		 */
 		if (!dif)
-			ERROR("%s: missing mandatory outer-tag", ifname);
+			ERROR("%s: missing mandatory vlan", ifname);
 		return 0;
 	}
+	
+	lower_if = lydx_get_cattr(vlan, "lower-layer-if");
+	DEBUG("ifname %s lower if %s\n", ifname, lower_if);
 
-	fprintf(ip, "link add dev %s down link %s type vlan", ifname, parent);
+	err = dagger_add_dep(net, ifname, lower_if);
+	if (err)
+		return ERR_IFACE(cif, err, "Unable to add dep \"%s\"", lower_if);
 
-	if (lydx_get_diff(lydx_get_child(otag, "tag-type"), &typed)) {
+
+	fprintf(ip, "link add dev %s down link %s type vlan", ifname, lower_if);
+
+	if (lydx_get_diff(lydx_get_child(vlan, "tag-type"), &typed)) {
 		proto = bridge_tagtype2str(typed.new);
 		if (!proto)
 			return ERR_IFACE(cif, -ENOSYS, "Unsupported tag type \"%s\"", typed.new);
@@ -930,7 +922,7 @@ static int netdag_gen_vlan(struct dagger *net, struct lyd_node *dif,
 		fprintf(ip, " proto %s", proto);
 	}
 
-	if (lydx_get_diff(lydx_get_child(otag, "vlan-id"), &vidd))
+	if (lydx_get_diff(lydx_get_child(vlan, "id"), &vidd))
 		fprintf(ip, " id %s", vidd.new);
 
 	fputc('\n', ip);
@@ -996,24 +988,15 @@ static bool netdag_must_del(struct lyd_node *dif, struct lyd_node *cif)
 {
 	const char *iftype = lydx_get_cattr(cif, "type");
 
-	if (!strcmp(iftype, "infix-if-type:bridge")) {
+	if (strcmp(iftype, "infix-if-type:ethernet")) {
 		if (is_phys_addr_deleted(dif))
 			return true;
-	} else if (!strcmp(iftype, "infix-if-type:vlan")) {
-		if (is_phys_addr_deleted(dif))
-			return true;
+	}
 
-		if (lydx_get_cattr(dif, "parent-interface") ||
-		    lydx_get_descendant(lyd_child(dif),
-					"encapsulation",
-					"dot1q-vlan",
-					"outer-tag",
-					NULL))
+	if (!strcmp(iftype, "infix-if-type:vlan")) {
+		if (lydx_get_descendant(lyd_child(dif), "vlan", NULL))
 			return true;
 	} else if (!strcmp(iftype, "infix-if-type:veth")) {
-		if (is_phys_addr_deleted(dif))
-			return true;
-
 		if (lydx_get_descendant(lyd_child(dif), "peer", NULL))
 			return true;
 /*
