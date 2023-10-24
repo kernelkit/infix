@@ -21,14 +21,9 @@ with infamy.Test() as test:
                     {
                         "name": f"{tport}.10",
                         "type": "infix-if-type:vlan",
-                        "parent-interface": tport,
-                        "encapsulation": {
-                            "dot1q-vlan": {
-                                "outer-tag": {
-                                    "tag-type": "ieee802-dot1q-types:c-vlan",
-                                    "vlan-id": 10,
-                                }
-                            }
+                        "vlan": {
+                            "id": 10,
+                            "lower-layer-if": tport,
                         },
 
                         "ipv4": {

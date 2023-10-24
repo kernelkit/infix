@@ -41,14 +41,9 @@ with infamy.Test() as test:
                         "name": "vlan10",
                         "type": "infix-if-type:vlan",
                         "enabled": True,
-                        "parent-interface": "br0",
-                        "encapsulation": {
-                            "dot1q-vlan": {
-                                "outer-tag": {
-                                    "tag-type": "ieee802-dot1q-types:c-vlan",
-                                    "vlan-id": 10,
-                                }
-                            }
+                        "vlan": {
+                            "lower-layer-if": "br0",
+                            "id": 10,
                         },
                         "ipv4": {
                             "address": [

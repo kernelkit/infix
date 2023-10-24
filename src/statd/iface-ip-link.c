@@ -254,9 +254,10 @@ static int ip_link_kind_is_dsa(json_t *j_iface)
 static int ly_add_ip_link_parent(const struct ly_ctx *ctx, struct lyd_node **parent,
 				 char *xpath, json_t *j_iface)
 {
+	struct lyd_node *vlan_node;
+	char *vlan_xpath;
 	json_t *j_val;
 	int err;
-
 	j_val = json_object_get(j_iface, "link");
 	if (!j_val) {
 		/* Interface has no parent */
@@ -272,15 +273,29 @@ static int ly_add_ip_link_parent(const struct ly_ctx *ctx, struct lyd_node **par
 		ERROR("Expected a JSON string for 'link'");
 		return SR_ERR_SYS;
 	}
+	err = asprintf(&vlan_xpath, "%s/infix-interfaces:vlan", xpath);
+	if (err == -1) {
+		ERROR("Error, creating vlan xpath");
+		return SR_ERR_SYS;
+	}
 
-	err = lydx_new_path(ctx, parent, xpath,
-			    "ietf-if-extensions:parent-interface", "%s",
-			    json_string_value(j_val));
+	err = lyd_new_path(*parent, ctx, vlan_xpath, NULL, 0, &vlan_node);
 	if (err) {
-		ERROR("Error, adding 'link' to data tree, libyang error %d", err);
+		ERROR("Failed adding 'lower-layer-if' node (%s), libyang error %d: %s",
+		      vlan_xpath, err, ly_errmsg(ctx));
+		free(vlan_xpath);
 		return SR_ERR_LY;
 	}
 
+	err = lydx_new_path(ctx, &vlan_node, vlan_xpath, "lower-layer-if",
+			    "%s", json_string_value(j_val));
+	if (err) {
+		ERROR("Error, adding 'lower-layer-if' to data tree, libyang error %d", err);
+		free(vlan_xpath);
+		return SR_ERR_LY;
+	}
+
+	free(vlan_xpath);
 	return SR_ERR_OK;
 }
 
