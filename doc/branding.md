@@ -103,7 +103,31 @@ Releases
 --------
 
 A release build requires the global variable `INFIX_RELEASE` to be set.
-It can be derived from GIT, if the source tree is kept in GIT VCS.
+It can be derived from GIT, if the source tree is kept in GIT VCS.  First,
+let us talk about versioning in general.
+
+### Versioning
+
+Two popular scheme for versioning a product derived from Infix:
+
+ 1. Track Infix major.minor, e.g. *Foobar v23.08.z*, where `z` is
+    your patch level.  I.e., Foobar v23.08.0 could be based on Infix
+    v23.08.0, or v23.08.12, it is up to you.  Maybe you based it on
+    v23.08.12 and then back ported changes from v23.10.0, but it was
+    the first release you made to your customer(s).
+ 2. Start from v1.0.0 and step the major number every time you sync
+    with a new Infix release, or every time Infix bumps to the next
+    Buildroot LTS.
+
+The important thing is to be consistent, not only for your own sake,
+but also for your end customers.  The *major.minor.patch* style is
+the most common and often recommended style, which usually maps well
+to other systems, e.g. PROFINET GSDML files require this (*VX.Y.Z*).
+But you can of course use only two numbers, *major.minor*, as well.
+
+> What could be confusing, however, is if you use the name *Infix*
+> with your own versioning scheme.
+
 
 ### `INFIX_RELEASE`
 
@@ -122,3 +146,4 @@ Infix tree and can be changed by setting the menuconfig branding
 variable `INFIX_OEM_PATH` to that of the br2-external.  It is also
 possible to set the `GIT_VERSION` variable in your `post-build.sh`
 script to change how the VCS version is extracted.
+
