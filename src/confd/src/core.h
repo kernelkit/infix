@@ -132,6 +132,9 @@ int ietf_system_init(struct confd *confd);
 /* infix-dhcp.c */
 int infix_dhcp_init(struct confd *confd);
 
+/* ietf-factory-default */
+int ietf_factory_default_init(struct confd *confd);
+
 /* infix-factory.c */
 int infix_factory_init(struct confd *confd);
 

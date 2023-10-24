@@ -28,6 +28,7 @@ confd_plugin_la_SOURCES =			\
 	dagger.c	dagger.h		\
 	ietf-interfaces.c			\
 	ietf-system.c				\
+	ietf-factory-default.c			\
 	infix-dhcp.c				\
 	infix-services.c			\
 	infix-factory.c				\

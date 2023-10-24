@@ -1,0 +1,12 @@
+#!/bin/sh
+Q=$@
+
+echo "$Q, are you sure? (y/N)"
+read -n1 yorn
+
+if [ x$yorn != "xy" ]; then
+   echo "Ok, aborting"
+   exit 1
+fi
+
+exit 0
