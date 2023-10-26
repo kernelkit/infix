@@ -15,15 +15,21 @@ if [ "$1" = "-b" ]; then
 else
     bootstrap=false
 fi
+
 config=$1
-fn=/cfg/${config}.cfg
+if [ -f "$config" ]; then
+    fn="$config"
+else
+    if [ -f "/cfg/${config}.cfg" ]; then
+	fn="/cfg/${config}.cfg"
+    else
+	fn="/run/confd/${config}.cfg"
+    fi
+fi
 
 if [ ! -f "$fn" ]; then
-    if [ ! -f "$config" ]; then
-	logger -sik -p user.error "No such file, $fn, aborting!"
-	exit 1
-    fi
-    fn=$config
+    logger -sik -p user.error "No such file, $fn, aborting!"
+    exit 1
 fi
 
 if ! sysrepocfg -v3 -I"$fn" -f json; then
