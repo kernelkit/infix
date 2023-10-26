@@ -6,15 +6,24 @@ INIT_DATA=/etc/sysrepo/factory-default.json
 SEARCH=/usr/share/yang/modules/confd:/usr/share/yang/modules/libnetconf2:/usr/share/yang/modules/libyang:/usr/share/yang/modules/netopeer2:/usr/share/yang/modules/sysrepo
 
 CFG_PATH_=/cfg
+RUN_PATH_=/run/confd
 
+# Static defaults, base Infix and any br2-external derivative.
 FACTORY_DEFAULTS_D=/usr/share/confd/factory.d
 FAILURE_DEFAULTS_D=/usr/share/confd/failure.d
 
-FACTORY_D=$CFG_PATH_/factory.d
-FAILURE_D=$CFG_PATH_/failure.d
+# Generated config snippets, e.g., hostname, password, and interfaces.
+FACTORY_D=$RUN_PATH_/factory.d
+FAILURE_D=$RUN_PATH_/failure.d
 
-FACTORY_CFG=$CFG_PATH_/factory-config.cfg
-FAILURE_CFG=$CFG_PATH_/failure-config.cfg
+# The default config snippets and generated snippets are collated into
+# RAM-only name-config.gen , which are candidates for name-config.cfg
+FACTORY_GEN=$RUN_PATH_/factory-config.gen
+FAILURE_GEN=$RUN_PATH_/failure-config.gen
+
+# The resulting .cfg files can be peristent (factory-config) or not.
+FACTORY_CFG=$RUN_PATH_/factory-config.cfg
+FAILURE_CFG=$RUN_PATH_/failure-config.cfg
 STARTUP_CFG=$CFG_PATH_/startup-config.cfg
 
 # Uncomment this line in to create a bridge (br0) with all (classified
@@ -26,9 +35,3 @@ STARTUP_CFG=$CFG_PATH_/startup-config.cfg
 # Default hostname in Fail Secure mode, plus last three octets in the base
 # MAC address, e.g. "failed-c0-ff-ee".
 FAIL_HOSTNAME="failed"
-
-# Uncomment to regenerate factory-config (except hostkeys) on each boot.
-#FACTORY_OVERRIDE=true
-
-# Uncomment to regenerate failure-config (except hostkeys) on each boot.
-#FAILURE_OVERRIDE=true

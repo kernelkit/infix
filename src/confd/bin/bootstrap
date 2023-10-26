@@ -1,14 +1,14 @@
 #!/bin/sh
-# Bootstrap sysrepo db with all modules required by confd
+# Bootstrap system factory-config, failure-config and sysrepo db.
 #
-# 1. Load all yang models with /cfg/factory-config
-# 2. [ if /cfg/startup-config is missing :: copy {factory} -> /cfg/startup-config ]
-# 3. Import /cfg/startup -> {startup} ]
-# 4. Clear running-config :: import NULL -> {running}
-# 5. Start sysrepo-plugind
-# 6. Activate startup-config by :: copy {startup} -> {running}
+# The system factory-config and failure-config are derived from default
+# settings snippets, from /usr/share/confd/factory.d, and some generated
+# snippets, e.g., device unique password, hostname (based on base MAC
+# address), and number of interfaces.
 #
-# It's all really simple ... this script takes care of 1-4
+# The resulting factory-config is used to create the syrepo db (below)
+# {factory} datastore.  Hence, the factory-config file must match the
+# the YANG models of the active image.
 #
 
 # /etc/confdrc controls the behavior or most of the gen-scripts,
@@ -27,17 +27,30 @@ fi
 # shellcheck disable=SC1090
 . "$RC"
 
-FACTORY_GEN="$(dirname "$FACTORY_CFG")/$(basename "$FACTORY_CFG" .cfg).gen"
-FAILURE_GEN="$(dirname "$FAILURE_CFG")/$(basename "$FAILURE_CFG" .cfg).gen"
+# shellcheck disable=SC2046,SC2086
+collate()
+{
+    gen=$1; shift
+    cfg=$1; shift
+    dir=$*
 
-# Generate device's factory-config at first boot or on override
-if [ ! -f "$FACTORY_GEN" ] || [ "$FACTORY_OVERRIDE" = "true" ]; then
-    mkdir -p "$FACTORY_D"
+    rm -f "$gen"
+    jq -s 'reduce .[] as $item ({}; . * $item)' $(find $dir -name '*.json' | sort) >"$gen"
+    chmod 444 "$gen"
 
-    # Save the original templates (from the original image) used to create factory-config
-    for file in $(find "$FACTORY_DEFAULTS_D" -type f); do
-	cp "$file" "$FACTORY_D"
-    done
+    if [ ! -f "$cfg" ]; then
+	cp "$gen" "$cfg"
+    fi
+}
+
+# TODO: Look for statically defined factory-config, based on the
+#       system's product ID, or just custom site-specific factory.
+#
+# If we haven't found a more specific, better match, settle for
+# factory-config.gen as the system's factory-config.
+factory()
+{
+    gen=$1
 
     # Create an overlay for /etc/hostname to change the default in an br2-external
     gen-hostname                                            >"$FACTORY_D/20-hostname.json"
@@ -52,26 +65,17 @@ if [ ! -f "$FACTORY_GEN" ] || [ "$FACTORY_OVERRIDE" = "true" ]; then
 
     rm -f "$FACTORY_GEN"
     # shellcheck disable=SC2046
-    jq -s 'reduce .[] as $item ({}; . * $item)'	\
-       $(find "$FACTORY_D" -name '*.json' | sort) >"$FACTORY_GEN"
+    jq -s 'reduce .[] as $item ({}; . * $item)' \
+       $(find "$FACTORY_DEFAULTS_D" "$FACTORY_D" -name '*.json' | sort) \
+       >"$FACTORY_GEN"
     chmod 444 "$FACTORY_GEN"
 
-    # TODO: Look for statically defined factory-config, based on the
-    #       system's product ID, or just custom site-specific factory.
+    collate "$FACTORY_GEN" "$FACTORY_CFG" "$FACTORY_DEFAULTS_D" "$FACTORY_D"
+}
 
-    # If we haven't found a more specific, better match, settle for
-    # factory-config.gen as the system's factory-config.
-    [ -h "$FACTORY_CFG" ] || ln -sf "$(basename "$FACTORY_GEN")" "$FACTORY_CFG"
-fi
-
-# Generate device's failure-config at first boot
-if [ ! -f "$FAILURE_GEN" ] || [ "$FAILURE_OVERRIDE" = "true" ]; then
-    mkdir -p "$FAILURE_D"
-
-    # Save the original templates (from the original image) used to create failure-config
-    for file in $(find "$FAILURE_DEFAULTS_D" -type f); do
-	cp "$file" "$FAILURE_D"
-    done
+failure()
+{
+    gen=$1
 
     gen-hostname   "$FAIL_HOSTNAME"                         >"$FAILURE_D/20-hostname.json"
     gen-interfaces                                          >"$FAILURE_D/20-interfaces.json"
@@ -81,14 +85,11 @@ if [ ! -f "$FAILURE_GEN" ] || [ "$FAILURE_OVERRIDE" = "true" ]; then
     # Optional failure/error config to generate (or override) for br2-externals
     [ -x "$(command -v gen-err-custom)" ] && gen-err-custom >"$FAILURE_D/30-error.json"
 
-    rm -f "$FAILURE_GEN"
-    # shellcheck disable=SC2046
-    jq -s 'reduce .[] as $item ({}; . * $item)'	\
-       $(find "$FAILURE_D" -name '*.json' | sort) >"$FAILURE_GEN"
-    chmod 444 "$FAILURE_GEN"
+    collate "$FAILURE_GEN" "$FAILURE_CFG" "$FAILURE_DEFAULTS_D" "$FAILURE_D"
+}
 
-    [ -h "$FAILURE_CFG" ] || ln -sf "$(basename "$FAILURE_GEN")" "$FAILURE_CFG"
-fi
+factory "$FACTORY_GEN"
+failure "$FAILURE_GEN"
 
 if [ -n "$TESTING" ]; then
 	echo "Done."
