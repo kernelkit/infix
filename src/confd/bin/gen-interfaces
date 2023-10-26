@@ -85,13 +85,13 @@ phys_ifaces=$(ip -d -j link show | jq -r '
 	 select(.link_type == "ether") |
 	 select(.group != "internal")  |
 	 select(has("parentbus")) |
-	 .ifname')
+	 .ifname' | sort -V)
 ports=$(ip -d -j link show group port | jq -r '
 	 .[] |
 	 select(.link_type == "ether") |
 	 select(.group != "internal")  |
 	 select(has("parentbus")) |
-	 .ifname')
+	 .ifname' | sort -V)
 ifaces=""
 for phy in $phys_ifaces; do
     found=""
