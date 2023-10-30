@@ -73,10 +73,6 @@ if [ "$FIT_IMAGE" = "y" ]; then
 fi
 
 if [ "$BR2_TARGET_ROOTFS_SQUASHFS" = "y" ]; then
-    if [ -z "${NAME##*minimal*}" ]; then
-	NAME=$(echo "$NAME" | sed 's/-minimal//')
-    fi
-
     rel=$(ver)
     ln -sf rootfs.squashfs "$BINARIES_DIR/${NAME}${rel}.img"
     if [ -n "$rel" ]; then
