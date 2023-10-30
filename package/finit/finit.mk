@@ -4,7 +4,7 @@
 #
 ################################################################################
 
-FINIT_VERSION = 4.5-rc5
+FINIT_VERSION = 4.5
 FINIT_SITE = https://github.com/troglobit/finit/releases/download/$(FINIT_VERSION)
 FINIT_LICENSE = MIT
 FINIT_LICENSE_FILES = LICENSE
@@ -117,6 +117,12 @@ ifeq ($(BR2_PACKAGE_ALSA_UTILS),y)
 FINIT_CONF_OPTS += --enable-alsa-utils-plugin
 else
 FINIT_CONF_OPTS += --disable-alsa-utils-plugin
+endif
+
+ifeq ($(BR2_PACKAGE_BASH_COMPLETION),y)
+FINIT_CONF_OPTS += --with-bash-completiond-dir
+else
+FINIT_CONF_OPTS += --without-bash-completiond-dir
 endif
 
 ifeq ($(BR2_PACKAGE_DBUS),y)
