@@ -199,7 +199,7 @@ class Iface:
         if frame:
             print(f"")
             for key, val in frame.items():
-                print(f"eth-{key:<{16}}: {val}")
+                print(f"eth-{key:<{25}}: {val}")
 
 
 def find_iface(_ifaces, name):
