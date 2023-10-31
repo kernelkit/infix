@@ -1,0 +1,150 @@
+module infix-routing {
+    yang-version 1.1;
+    namespace "urn:infix:routing:ns:yang:1.0";
+    prefix infix-r;
+    import ietf-routing {
+      prefix ietf-r;
+    }
+
+    import ietf-ipv4-unicast-routing {
+      prefix v4ur;
+    }
+    import ietf-ipv6-unicast-routing {
+      prefix v6ur;
+    }
+    /*
+    import ietf-ospf {
+      prefix ospf;
+    }
+    */
+    revision 2013-10-27 {
+      description "Initial revision.";
+      reference "internal";
+    }
+    /* General routing */
+    deviation "/ietf-r:routing/ietf-r:interfaces" {
+      description "Initial limitation";
+      deviate not-supported;
+    }
+    deviation "/ietf-r:routing/ietf-r:router-id" {
+      description "Set in OSPF";
+      deviate not-supported;
+    }
+    deviation "/ietf-r:routing-state" {
+      description "Obsolete";
+      deviate not-supported;
+    }
+
+    /* Static routes */
+    deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ietf-r:static-routes/v4ur:ipv4/v4ur:route/v4ur:next-hop/v4ur:next-hop-options/v4ur:next-hop-list" {
+      deviate not-supported;
+    }
+    deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ietf-r:static-routes/v6ur:ipv6/v6ur:route/v6ur:next-hop/v6ur:next-hop-options/v6ur:next-hop-list" {
+      deviate not-supported;
+    }
+    /* show routes */
+    deviation "/ietf-r:routing/ietf-r:ribs/ietf-r:rib/ietf-r:default-rib" {
+      deviate not-supported;
+    }
+    deviation "/ietf-r:routing/ietf-r:ribs/ietf-r:rib/ietf-r:active-route" {
+      deviate not-supported;
+    }
+
+    /* OSPF */
+    deviation "/ietf-r:routing/ietf-r:ribs/ietf-r:rib/ietf-r:routes/ietf-r:route/ospf:metric" {
+      deviate not-supported;
+    }
+    deviation "/ietf-r:routing/ietf-r:ribs/ietf-r:rib/ietf-r:routes/ietf-r:route/ospf:tag" {
+      deviate not-supported;
+    }
+    deviation "/ietf-r:routing/ietf-r:ribs/ietf-r:rib/ietf-r:routes/ietf-r:route/ospf:route-type" {
+      deviate not-supported;
+    }
+
+    deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf/ospf:spf-control" {
+      deviate not-supported;
+    }
+    deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf/ospf:preference" {
+      deviate not-supported;
+    }
+    deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf/ospf:stub-router" {
+      deviate not-supported;
+    }
+    deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf/ospf:topologies" {
+      deviate not-supported;
+    }
+    deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf/ospf:statistics" {
+      deviate not-supported;
+    }
+    deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf/ospf:database-control" {
+      deviate not-supported;
+    }
+    deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf/ospf:lsa-log" {
+      deviate not-supported;
+    }
+    deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf/ospf:spf-log" {
+      deviate not-supported;
+    }
+    deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf/ospf:fast-reroute" {
+      deviate not-supported;
+    }
+    deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf/ospf:node-tags" {
+      deviate not-supported;
+    }
+    deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf/ospf:local-rib" {
+      deviate not-supported;
+    }
+    deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf/ospf:mpls" {
+      deviate not-supported;
+    }
+    deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf/ospf:nsr" {
+      deviate not-supported;
+    }
+
+    */
+    /* OSPF Area */
+    /*
+    deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf/ospf:areas/ospf:area/ospf:virtual-links" {
+      deviate not-supported;
+    }
+    deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf/ospf:areas/ospf:area/ospf:sham-links" {
+      deviate not-supported;
+    }
+
+    deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf/ospf:areas/ospf:area/ospf:interfaces" {
+      deviate not-supported;
+    }
+    deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf/ospf:areas/ospf:area/ospf:database" {
+      deviate not-supported;
+    }
+    deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf/ospf:areas/ospf:area/ospf:topologies" {
+      deviate not-supported;
+    }
+
+    deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf/ospf:areas/ospf:area/ospf:statistics" {
+      deviate not-supported;
+    }
+    */
+
+    /* OSPF database */
+    /*
+    deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf/ospf:database/ospf:as-scope-lsa-type/ospf:as-scope-lsas/ospf:as-scope-lsa/ospf:version/ospf:ospfv3" {
+      deviate not-supported;
+    }
+    deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf/ospf:database/ospf:as-scope-lsa-type/ospf:as-scope-lsas/ospf:as-scope-lsa/ospf:version/ospf:ospfv2/ospf:ospfv2/ospf:body/ospf:opaque" {
+      deviate not-supported;
+    }
+    deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf/ospf:database/ospf:as-scope-lsa-type/ospf:as-scope-lsas/ospf:as-scope-lsa/ospf:version/ospf:ospfv2/ospf:ospfv2/ospf:body/ospf:external" {
+      deviate not-supported;
+    }
+    deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf/ospf:database/ospf:as-scope-lsa-type/ospf:as-scope-lsas/ospf:as-scope-lsa/ospf:version/ospf:ospfv2/ospf:ospfv2/ospf:body/ospf:summary" {
+      deviate not-supported;
+    }
+    deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf/ospf:database/ospf:as-scope-lsa-type/ospf:as-scope-lsas/ospf:as-scope-lsa/ospf:version/ospf:ospfv2/ospf:ospfv2/ospf:body/ospf:router" {
+      deviate not-supported;
+    }
+    deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf/ospf:database/ospf:as-scope-lsa-type/ospf:as-scope-lsas/ospf:as-scope-lsa/ospf:version/ospf:ospfv2/ospf:ospfv2/ospf:header" {
+      deviate not-supported;
+    }
+    */
+ }
