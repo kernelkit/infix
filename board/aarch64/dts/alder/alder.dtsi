@@ -546,6 +546,18 @@
 /* System LEDs */
 
 / {
+	power-a {
+		compatible = "gpio-charger";
+		charger-type = "mains";
+		gpios = <&GPIO_VIN1_PGOOD>;
+	};
+
+	power-b {
+		compatible = "gpio-charger";
+		charger-type = "mains";
+		gpios = <&GPIO_VIN2_PGOOD>;
+	};
+
 	leds: leds {
 		compatible = "gpio-leds";
 
@@ -600,13 +612,13 @@
 		};
 
 		led-vin1-alert {
-			function = "power-1";
+			function = "power-a";
 			color = <LED_COLOR_ID_RED>;
 			gpios = <&GPIO_LED_VIN1_ALERT>;
 		};
 
 		led-vin2-alert {
-			function = "power-2";
+			function = "power-b";
 			color = <LED_COLOR_ID_RED>;
 			gpios = <&GPIO_LED_VIN2_ALERT>;
 		};
