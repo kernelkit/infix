@@ -585,25 +585,27 @@
 			gpios = <&GPIO_LED3R>;
 		};
 
-		led-dbgg {
-			function = LED_FUNCTION_DEBUG;
+		led-bootg {
+			function = LED_FUNCTION_BOOT;
 			color = <LED_COLOR_ID_GREEN>;
 			gpios = <&GPIO_LED4G>;
 		};
 
-		led-dbgr {
-			function = LED_FUNCTION_DEBUG;
+		led-bootr {
+			function = LED_FUNCTION_BOOT;
 			color = <LED_COLOR_ID_RED>;
 			gpios = <&GPIO_LED4R>;
+			default-state = "on";
+			linux,default-trigger = "timer";
 		};
 
-		led-vin1_alert {
+		led-vin1-alert {
 			function = "power-1";
 			color = <LED_COLOR_ID_RED>;
 			gpios = <&GPIO_LED_VIN1_ALERT>;
 		};
 
-		led-vin2_alert {
+		led-vin2-alert {
 			function = "power-2";
 			color = <LED_COLOR_ID_RED>;
 			gpios = <&GPIO_LED_VIN2_ALERT>;
