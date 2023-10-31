@@ -4,6 +4,11 @@ on:
   push:
     tags:
       - 'v[0-9]*.*'
+  workflow_dispatch:
+    inputs:
+      version:
+        required: false
+        type: string
 
 jobs:
   build:
@@ -20,7 +25,11 @@ jobs:
       - name: Set Release Variables
         id: build
         run: |
-          ver=${GITHUB_REF#refs/tags/v}
+          if [ -n "${{ inputs.version }}" ]; then
+              ver=${{ inputs.version }}
+          else
+              ver=${GITHUB_REF#refs/tags/v}
+          fi
           echo "ver=${ver}" >> $GITHUB_OUTPUT
           if echo $ver | grep -qE '[0-9.]+(-alpha|-beta|-rc)[0-9]*'; then
             echo "pre=true"  >> $GITHUB_OUTPUT
