@@ -302,6 +302,7 @@
 
 &cp0_utmi1 {
 	status = "okay";
+	dr_mode = "host";
 };
 
 &cp0_usb3_1 {
