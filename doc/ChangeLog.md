@@ -4,6 +4,129 @@ Change Log
 All notable changes to the project are documented in this file.
 
 
+[v23.10.0][] - 2023-10-31
+-------------------------
+
+> **Note:** upcoming releases will lock the `root` user for system-only
+> services.  Instead an `admin` user will be the only default user with
+> the CLI as its login shell.  This user is already available, so please
+> consider updating any guidelines or documentation you may have.
+
+### YANG Status
+
+ - [ietf-system][]:
+   - [infix-system][]: MotD (Message of the Day) augment
+   - [infix-system][]: user login shell augment, default: `/bin/false`
+   - [infix-system-software][]: system-state/software augment for
+     remotely querying firmware version information
+   - [infix-system-software][]: firmware upgrade with `install-bundle` RPC
+   - [infix-system][]: timezone-name deviation, using with IANA timezones,
+     deviation for UTC offset, only support per-hour offsets with [tzdata][].
+     Also, username deviation, clarifying Linux restrictions.
+   - [infix-system][]: deviations for unsupported features, e.g. RADIUS
+ - [ietf-interfaces][]:
+   - [infix-interfaces][]: deviation for `if:phys-address` to allow read-write
+   - [ietf-ip][]: augmented with IPv4LL similar to standardized IPv6LL
+   - [infix-ip][]: deviations (`not-supported`) added for IPv4 and IPv6:
+     - `/if:interfaces/if:interface/ip:ipv4/ip:address/ip:subnet/ip:netmask`
+	 - `/if:interfaces/if:interface/ip:ipv6/ip:address/ip:status`
+	 - `/if:interfaces/if:interface/ip:ipv4/ip:mtu`
+	 - `/if:interfaces/if:interface/ip:ipv6/ip:mtu`
+	 - `/if:interfaces/if:interface/ip:ipv4/ip:neighbor`
+     - `/if:interfaces/if:interface/ip:ipv6/ip:neighbor`
+   - ~~[ietf-if-vlan-encapsulation][]:~~ Removed in favor of a native model.
+   - [infix-if-bridge][]: Linux bridge interfaces with native VLAN support
+   - [infix-if-type][]: deviation for interface types, limiting number
+     to supported types only.  New identities are derived from default
+     IANA interface types, ensuring compatibility with other standard
+     models, e.g., `ieee802-ethernet-interface.yang`
+   - [infix-if-veth][]: Linux VETH pairs
+   - [infix-if-vlan][]: Linux VLAN interfaces, e.g. `eth0.10` (New model!)
+ - Configurable services:
+   - [ieee802-dot1ab-lldp][]: stripped down to an `enabled` setting
+   - [infix-services][]: support for enabling mDNS service/device discovery
+
+[tzdata]:          https://www.iana.org/time-zones
+[ieee802-dot1ab-lldp]: https://github.com/kernelkit/infix/tree/50a550b/src/confd/yang/ieee802-dot1ab-lldp%402022-03-15.yang
+[ietf-system]:     https://www.rfc-editor.org/rfc/rfc7317.html
+[ietf-interfaces]: https://www.rfc-editor.org/rfc/rfc7223.html
+[ietf-ip]:         https://www.rfc-editor.org/rfc/rfc8344.html
+[ietf-if-vlan-encapsulation]: https://www.ietf.org/id/draft-ietf-netmod-sub-intf-vlan-model-08.html
+[infix-if-bridge]: https://github.com/kernelkit/infix/blob/fc5310b/src/confd/yang/infix-if-bridge%402023-08-21.yang
+[infix-if-type]:   https://github.com/kernelkit/infix/tree/fc5310b/src/confd/yang/infix-if-type%402023-08-21.yang
+[infix-if-veth]:   https://github.com/kernelkit/infix/tree/fc5310b/src/confd/yang/infix-if-veth%402023-06-05.yang
+[infix-if-vlan]:   https://github.com/kernelkit/infix/blob/fc5310b/src/confd/yang/infix-if-vlan%402023-10-25.yang
+
+[infix-interfaces]: https://github.com/kernelkit/infix/tree/fc5310b/src/confd/yang/infix-interfaces%402023-09-19.yang
+[infix-ip]:        https://github.com/kernelkit/infix/tree/fc5310b/src/confd/yang/infix-ip%402023-09-14.yang
+[infix-services]:  https://github.com/kernelkit/infix/blob/fc5310b/src/confd/yang/infix-services%402023-10-16.yang
+[infix-system]:    https://github.com/kernelkit/infix/blob/fc5310b/src/confd/yang/infix-system%402023-10-19.yang
+[infix-system-software]: https://github.com/kernelkit/infix/tree/fc5310b/src/confd/yang/infix-system-software%402023-06-27.yang
+
+### Changes
+
+- Add support for setting/querying IPv4/IPv6 MTU, see #152 for details.
+- Add support for *Fail Secure Mode*: if loading `startup-config` fails,
+  e.g. YANG model validation failure after upgrade, the system now falls back
+  to load `failure-config` instead of just crashing.  This config, along with
+  `factory-config`, is generated on every boot to match the active image's
+  YANG models.  In case neither config can be loaded, or even bootstrapping
+  YANG models fail, the system will go into an RMA state -- Return to
+  Manufacturer, clearly signaled on the console and, on devices that support
+  it, angry LED signaling.  See #154 for more.
+- Add support for generating GNS3 appliance file for NETCONF Aarch64.
+- Add support for UTC offset (+/- HH:00) in `ietf-system`, PR #174
+- Add support for `ietf-factory-default` RPC, PR #175
+- Add support for performing factory reset (using #175 RPC) from CLI
+- Replace `ietf-if-vlan-encapsulation` YANG model with the native
+  `infix-if-vlan` model.  This fits better with Linux VLAN interfaces and
+  simplifies the syntax greatly.  For details, see PR #179
+  
+        admin@example:/config/interfaces/interface/eth0.10/> set vlan id 10 lower-layer-if eth0
+
+- The following new NETCONF interface operational counters have been added:
+  
+| **YANG**                    | **Linux / Ethtool**               |
+|-----------------------------|-----------------------------------|
+| `out-frames`                | `FramesTransmittedOK`             |
+| `out-multicast-frames`      | `MulticastFramesXmittedOK`        |
+| `out-broadcast-frames`      | `BroadcastFramesXmittedOK`        |
+| `in-total-frames`           | `FramesReceivedOK`                |
+|                             | + `FrameCheckSequenceErrors`      |
+|                             | + `FramesLostDueToIntMACRcvError` |
+|                             | + `AlignmentErrors`               |
+|                             | + `etherStatsOversizePkts`        |
+|                             | + `etherStatsJabbers`             |
+| `in-frames`                 | `FramesReceivedOK`                |
+| `in-multicast-frames`       | `MulticastFramesReceivedOK`       |
+| `in-broadcast-frames`       | `BroadcastFramesReceivedOK`       |
+| `in-error-undersize-frames` | `undersize_pkts`                  |
+| `in-error-fcs-frames`       | `FrameCheckSequenceErrors`        |
+
+- Greatly improved branding support using `make menuconfig`.  All the
+  identifying strings, including firmware image, is in `/etc/os-release`, will
+  be used in CLI `show system-information`, the WebUI About dialog, and any
+  prominent areas when booting up (on console), logging in to CLI and WebUI.
+- IGMP/MLD snooping is now disabled by default on new bridges.  Support
+  for multicast filtering bridges expected no later than v24.01.
+- The SSDP responder, device discovery in Windows, has been removed in favor
+  of Windows 10 (build 1709) native support for mDNS-SD.  Details in #166
+- A GreenPAK programmer has been added, not enabled by default.  This is a
+  popular programmable little chip from Renesas.  Worth a look!
+- The `confd` script `gen-interfaces` can now generate bridges and stand-alone
+  interfaces with IPv6 (SLAAC) for `factory-config` et al.
+- Drop `x86_64_minimal_defconfig`, previously used for regression tests only
+- Documentation updates of how IPv4/IPv6 addresses are shown in NETCONF
+  operational data, as well as the built-in CLI, see #163 for details.
+
+### Fixes
+
+- Fix #106: confd: drop deviation `ietf-system:timezone-utc-offset`
+- Fix #151: Operational status broken in v23.09
+- Fix #159: Hacky generation of `/etc/resolv.conf` at boot 
+- Fix #162: VLAN interface without encapsulation is accepted by YANG model
+
+
 [v23.09.0][] - 2023-10-02
 -------------------------
 
@@ -216,7 +339,8 @@ Supported YANG models in addition to those used by sysrepo and netopeer:
  - N/A
 
 [buildroot]:  https://buildroot.org/
-[UNRELEASED]: https://github.com/kernelkit/infix/compare/v23.08.0...HEAD
+[UNRELEASED]: https://github.com/kernelkit/infix/compare/v23.10.0...HEAD
+[v23.10.0]:   https://github.com/kernelkit/infix/compare/v23.09.0...v23.10.0
 [v23.09.0]:   https://github.com/kernelkit/infix/compare/v23.08.0...v23.09.0
 [v23.08.0]:   https://github.com/kernelkit/infix/compare/v23.06.0...v23.08.0
 [v23.06.0]:   https://github.com/kernelkit/infix/compare/BASE...v23.06.0
