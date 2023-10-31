@@ -62,9 +62,24 @@ config QEMU_CONSOLE_SERIAL
 endchoice
 
 config QEMU_MACHINE
-	string
-	default "qemu-system-aarch64 -M virt -cpu cortex-a72 -m 256M"   if QEMU_aarch64
-	default "qemu-system-x86_64 -M q35,accel=kvm -cpu host -m 256M" if QEMU_x86_64
+	string "Select emulated machine"
+	default "qemu-system-aarch64 -M virt -cpu cortex-a72"   if QEMU_aarch64
+	default "qemu-system-x86_64 -M q35,accel=kvm -cpu host" if QEMU_x86_64
+	help
+	  You should not have to change this setting, although you may
+	  want to tweak it, or change the acceleration.
+
+	  The default is based on the Buildroot architecture, selected by
+	  the defconfig you started with.  Currently Infix supports only
+	  aarch64 (ARM64) and x86_64 (AMD64).
+
+config QEMU_MACHINE_RAM
+	string "RAM size (k/M/G)"
+	default "256M"
+	help
+	  The default, 255 MiB, works for most configurations, even less for
+	  the Infix Classic builds.  However, if you get kernel panic with:
+	  "System is deadlocked on memory", try increasing this one.
 
 config QEMU_KERNEL
 	string
