@@ -159,7 +159,7 @@
 
 <COMMAND name="password" help="Password tools" mode="switch">
   <COMMAND name="generate" help="Generate random passwords using pwgen">
-    <ACTION sym="script">pwgen -c -n -B -C</ACTION>
+    <ACTION sym="script">pwgen -C -s 13 20</ACTION>
   </COMMAND>
 
   <COMMAND name="encrypt" help="Encrypt a password string">
