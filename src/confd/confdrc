@@ -36,3 +36,8 @@ STARTUP_CFG=$CFG_PATH_/startup-config.cfg
 # Default hostname in Fail Secure mode, plus last three octets in the base
 # MAC address, e.g. "failed-c0-ff-ee".
 FAIL_HOSTNAME="failed"
+
+# Optional overrides by br2-external
+if [ -f /etc/confdrc.local ]; then
+    . /etc/confdrc.local
+fi
