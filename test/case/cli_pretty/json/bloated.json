@@ -32,6 +32,11 @@
           "in-octets": "0",
           "out-octets": "21286"
         },
+        "ieee802-ethernet-interface:ethernet": {
+          "auto-negotiation": {
+            "enable": false
+          }
+        },
         "ietf-ip:ipv4": {
           "mtu": 1500,
           "address": [
@@ -80,7 +85,7 @@
       },
       {
         "TEST-DESCR": "Bridge interface without IP",
-        "name": "e1",
+        "name": "e2",
         "type": "infix-if-type:ethernet",
         "oper-status": "up",
         "if-index": 4,
@@ -88,6 +93,11 @@
         "statistics": {
           "in-octets": "0",
           "out-octets": "21286"
+        },
+        "ieee802-ethernet-interface:ethernet": {
+          "auto-negotiation": {
+            "enable": "invalid-data"
+          }
         },
         "ietf-ip:ipv4": {
           "mtu": 1500

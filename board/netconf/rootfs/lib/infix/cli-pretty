@@ -35,7 +35,7 @@ class Iface:
     def get_json_data(self, default, *args):
         data = self.data
         for arg in args:
-            if data.get(arg):
+            if arg in data:
                 data = data.get(arg)
             else:
                 return default
@@ -47,6 +47,8 @@ class Iface:
         self.name = data.get('name', '')
         self.index = data.get('if-index', '')
         self.oper_status = data.get('oper-status', '')
+        self.autoneg = self.get_json_data('unknown', 'ieee802-ethernet-interface:ethernet',
+                                          'auto-negotiation', 'enable')
         self.phys_address = data.get('phys-address', '')
 
         if data.get('statistics'):
@@ -161,6 +163,11 @@ class Iface:
             print(f"{'mtu':<{20}}: {self.mtu}")
         if self.oper_status:
             print(f"{'operational status':<{20}}: {self.oper_status}")
+
+        if self.autoneg != 'unknown':
+            val = "on" if self.autoneg else "off"
+            print(f"{'auto-negotiation':<{20}}: {val}")
+
         if self.phys_address:
             print(f"{'physical address':<{20}}: {self.phys_address}")
 
