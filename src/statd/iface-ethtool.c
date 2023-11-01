@@ -8,7 +8,7 @@
 
 #include "shared.h"
 
-static json_t *json_get_ethtool(const char *ifname)
+static json_t *json_get_ethtool_groups(const char *ifname)
 {
 	char cmd[512] = {}; /* Size is arbitrary */
 
@@ -16,6 +16,16 @@ static json_t *json_get_ethtool(const char *ifname)
 
 	return json_get_output(cmd);
 }
+
+static json_t *json_get_ethtool(const char *ifname)
+{
+	char cmd[512] = {}; /* Size is arbitrary */
+
+	snprintf(cmd, sizeof(cmd), "/lib/infix/ethtool-to-json %s", ifname);
+
+	return json_get_output(cmd);
+}
+
 
 /* We print errors here, but don't return them */
 static void ly_add_lld(const struct ly_ctx *ctx, struct lyd_node *node, char *xpath,
@@ -101,14 +111,12 @@ static void ly_add_in_err_oz_frames(const struct ly_ctx *ctx, struct lyd_node *n
 		ERROR("Error, adding ethtool '%s', libyang error %d", yang, err);
 }
 
-static int ly_add_eth_stats(const struct ly_ctx *ctx, struct lyd_node **parent,
-			    const char *ifname, json_t *j_iface)
+static int ly_add_eth_group_stats(const struct ly_ctx *ctx, char *xpath_base,
+				  struct lyd_node *eth, json_t *j_iface)
 {
-	char xpath_base[XPATH_BASE_MAX] = {};
 	char xpath[XPATH_MAX] = {};
 	struct lyd_node *frame = NULL;
 	struct lyd_node *stat = NULL;
-	struct lyd_node *eth = NULL;
 	json_t *j_mac;
 	json_t *j_rmon;
 	int err;
@@ -120,17 +128,6 @@ static int ly_add_eth_stats(const struct ly_ctx *ctx, struct lyd_node **parent,
 	j_rmon = json_object_get(j_iface, "rmon");
 	if (!j_rmon)
 		return SR_ERR_OK;
-
-	snprintf(xpath_base, sizeof(xpath_base),
-		 "%s/interface[name='%s']/ieee802-ethernet-interface:ethernet",
-		 XPATH_IFACE_BASE, ifname);
-
-	err = lyd_new_path(*parent, ctx, xpath_base, NULL, 0, &eth);
-	if (err) {
-		ERROR("Failed adding 'eth' node (%s), libyang error %d: %s",
-		      xpath_base, err, ly_errmsg(ctx));
-		return SR_ERR_LY;
-	}
 
 	snprintf(xpath, sizeof(xpath), "%s/statistics", xpath_base);
 	err = lyd_new_path(eth, ctx, xpath, NULL, 0, &stat);
@@ -166,13 +163,71 @@ static int ly_add_eth_stats(const struct ly_ctx *ctx, struct lyd_node **parent,
 	return SR_ERR_OK;
 }
 
-int ly_add_ethtool(const struct ly_ctx *ctx, struct lyd_node **parent, char *ifname)
+static int ly_add_ethtool_std(const struct ly_ctx *ctx, char *xpath_base,
+			      struct lyd_node *eth, char *ifname)
+{
+	struct lyd_node *autoneg = NULL;
+	char xpath[XPATH_MAX] = {};
+	const char *ethtool_str;
+	char *yang_str = "";
+	json_t *j_root;
+	json_t *j_val;
+	int err;
+
+	snprintf(xpath, sizeof(xpath), "%s/auto-negotiation", xpath_base);
+	err = lyd_new_path(eth, ctx, xpath, NULL, 0, &autoneg);
+	if (err) {
+		ERROR("Failed adding 'auto-negotiation' node (%s), libyang error %d: %s",
+		      xpath, err, ly_errmsg(ctx));
+		return SR_ERR_LY;
+	}
+
+	j_root = json_get_ethtool(ifname);
+	if (!j_root) {
+		ERROR("Error, parsing ethtool JSON");
+		return SR_ERR_SYS;
+	}
+
+	j_val = json_object_get(j_root, "Auto-negotiation");
+	if (!j_val) {
+		json_decref(j_root);
+		return SR_ERR_OK;
+	}
+
+	if (!json_is_string(j_val)) {
+		ERROR("Expected a JSON string for ip 'Auto-negotiation'");
+		json_decref(j_root);
+		return SR_ERR_SYS;
+	}
+	ethtool_str = json_string_value(j_val);
+
+	if (strcmp(ethtool_str, "off") == 0) {
+		yang_str = "false";
+	} else if (strcmp(ethtool_str, "on") == 0) {
+		yang_str = "true";
+	} else {
+		ERROR("Error, got unknown auto-neg value from ethtool: %s", ethtool_str);
+		json_decref(j_root);
+		return SR_ERR_SYS;
+	}
+
+	err = lydx_new_path(ctx, &autoneg, xpath, "enable", yang_str);
+	if (err)
+		ERROR("Error, adding auto-negotiation enable, libyang error %d", err);
+
+	json_decref(j_root);
+
+	return err;
+}
+
+static int ly_add_ethtool_groups(const struct ly_ctx *ctx, char *xpath_base,
+				 struct lyd_node *eth, char *ifname)
 {
 	json_t *j_iface;
 	json_t *j_root;
 	int err;
 
-	j_root = json_get_ethtool(ifname);
+	j_root = json_get_ethtool_groups(ifname);
 	if (!j_root) {
 		ERROR("Error, parsing ethtool JSON");
 		return SR_ERR_SYS;
@@ -190,7 +245,7 @@ int ly_add_ethtool(const struct ly_ctx *ctx, struct lyd_node **parent, char *ifn
 		return SR_ERR_SYS;
 	}
 
-	err = ly_add_eth_stats(ctx, parent, ifname, j_iface);
+	err = ly_add_eth_group_stats(ctx, xpath_base, eth, j_iface);
 	if (err) {
 		ERROR("Error, adding ethtool statistics data");
 		json_decref(j_root);
@@ -198,6 +253,30 @@ int ly_add_ethtool(const struct ly_ctx *ctx, struct lyd_node **parent, char *ifn
 	}
 
 	json_decref(j_root);
+
+	return SR_ERR_OK;
+}
+
+int ly_add_ethtool(const struct ly_ctx *ctx, struct lyd_node **parent, char *ifname)
+{
+	char xpath_base[XPATH_BASE_MAX] = {};
+	struct lyd_node *eth = NULL;
+	int err;
+
+	snprintf(xpath_base, sizeof(xpath_base),
+		 "%s/interface[name='%s']/ieee802-ethernet-interface:ethernet",
+		 XPATH_IFACE_BASE, ifname);
+
+	err = lyd_new_path(*parent, ctx, xpath_base, NULL, 0, &eth);
+	if (err) {
+		ERROR("Failed adding 'eth' node (%s), libyang error %d: %s",
+		      xpath_base, err, ly_errmsg(ctx));
+		return SR_ERR_LY;
+	}
+
+
+	ly_add_ethtool_std(ctx, xpath_base, eth, ifname);
+	ly_add_ethtool_groups(ctx, xpath_base, eth, ifname);
 
 	return SR_ERR_OK;
 }
