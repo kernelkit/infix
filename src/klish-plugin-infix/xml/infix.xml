@@ -293,7 +293,7 @@
     </COMMAND>
 
     <COMMAND name="factory-config" help="Show factory-config">
-      <ACTION sym="script">jq -C . /cfg/factory-config.cfg</ACTION>
+      <ACTION sym="script">jq -C . /etc/factory-config.cfg</ACTION>
     </COMMAND>
 
     <COMMAND name="running-config" help="Show running-config">
