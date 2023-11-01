@@ -1,6 +1,7 @@
 #!/bin/sh
 # Bootstrap system factory-config, failure-config and sysrepo db.
 #
+########################################################################
 # The system factory-config and failure-config are derived from default
 # settings snippets, from /usr/share/confd/factory.d, and some generated
 # snippets, e.g., device unique password, hostname (based on base MAC
@@ -9,7 +10,16 @@
 # The resulting factory-config is used to create the syrepo db (below)
 # {factory} datastore.  Hence, the factory-config file must match the
 # the YANG models of the active image.
+########################################################################
+# NOTE: with the Infix defaults, a br2-external can provide a build-time
+#       /etc/factory-config.cfg to override the behavior of this script.
 #
+#       This applies also for /etc/failure-config.cfg, but we recommend
+#       strongly that you instead provide gen-err-custom, see below.
+#
+# TODO: Look for statically defined factory-config, based on system's
+#       product ID, or just custom site-specific factory on /cfg.
+########################################################################
 
 # /etc/confdrc controls the behavior or most of the gen-scripts,
 # customize in an overlay when using Infix as an br2-external.
@@ -27,12 +37,24 @@ fi
 # shellcheck disable=SC1090
 . "$RC"
 
+# Gather all .json files in $dir, sort them numerically, and use jq
+# magic to create a configuration file without duplicates.  Allowing
+# overrides of the Infix defaults in a br2-external.
+#
+#   10-foo.json         -- Static Infix default
+#   20-bar.json         -- Generated Infix bar
+#   30-config.json      -- By br2-external provided gen-cfg-custom
+#   30-foo.json         -- Static br2-external replacing 10-foo.json
+#
+# Note: to override just the base hostname, used in gen-hostname, set
+#       BR2_TARGET_GENERIC_HOSTNAME in your br2-external's defconfig.
+#
 # shellcheck disable=SC2046,SC2086
 collate()
 {
     gen=$1; shift
     cfg=$1; shift
-    dir=$*
+    dir=$1
 
     rm -f "$gen"
     jq -s 'reduce .[] as $item ({}; . * $item)' $(find $dir -name '*.json' | sort) >"$gen"
@@ -43,14 +65,12 @@ collate()
     fi
 }
 
-# TODO: Look for statically defined factory-config, based on the
-#       system's product ID, or just custom site-specific factory.
-#
-# If we haven't found a more specific, better match, settle for
-# factory-config.gen as the system's factory-config.
 factory()
 {
     gen=$1
+
+    # Fetch defaults, simplifies sort in collate()
+    cp "$FACTORY_DEFAULTS_D"/* "$FACTORY_D/"
 
     # Create an overlay for /etc/hostname to change the default in an br2-external
     gen-hostname                                            >"$FACTORY_D/20-hostname.json"
@@ -63,19 +83,15 @@ factory()
     [ -x "$(command -v gen-ifs-custom)" ] && gen-ifs-custom >"$FACTORY_D/20-interfaces.json"
     [ -x "$(command -v gen-cfg-custom)" ] && gen-cfg-custom >"$FACTORY_D/30-config.json"
 
-    rm -f "$FACTORY_GEN"
-    # shellcheck disable=SC2046
-    jq -s 'reduce .[] as $item ({}; . * $item)' \
-       $(find "$FACTORY_DEFAULTS_D" "$FACTORY_D" -name '*.json' | sort) \
-       >"$FACTORY_GEN"
-    chmod 444 "$FACTORY_GEN"
-
-    collate "$FACTORY_GEN" "$FACTORY_CFG" "$FACTORY_DEFAULTS_D" "$FACTORY_D"
+    collate "$FACTORY_GEN" "$FACTORY_CFG" "$FACTORY_D"
 }
 
 failure()
 {
     gen=$1
+
+    # Fetch defaults, simplifies sort in collate()
+    cp "$FAILURE_DEFAULTS_D"/* "$FAILURE_D"
 
     gen-hostname   "$FAIL_HOSTNAME"                         >"$FAILURE_D/20-hostname.json"
     gen-interfaces                                          >"$FAILURE_D/20-interfaces.json"
@@ -85,7 +101,7 @@ failure()
     # Optional failure/error config to generate (or override) for br2-externals
     [ -x "$(command -v gen-err-custom)" ] && gen-err-custom >"$FAILURE_D/30-error.json"
 
-    collate "$FAILURE_GEN" "$FAILURE_CFG" "$FAILURE_DEFAULTS_D" "$FAILURE_D"
+    collate "$FAILURE_GEN" "$FAILURE_CFG" "$FAILURE_D"
 }
 
 factory "$FACTORY_GEN"

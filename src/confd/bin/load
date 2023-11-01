@@ -9,6 +9,9 @@
 #
 set -e
 
+# shellcheck disable=SC1091
+. /etc/confdrc
+
 if [ "$1" = "-b" ]; then
     bootstrap=true
     shift
@@ -20,10 +23,10 @@ config=$1
 if [ -f "$config" ]; then
     fn="$config"
 else
-    if [ -f "/cfg/${config}.cfg" ]; then
-	fn="/cfg/${config}.cfg"
+    if [ -f "$CFG_PATH_/${config}.cfg" ]; then
+	fn="$CFG_PATH_/${config}.cfg"
     else
-	fn="/run/confd/${config}.cfg"
+	fn="$SYS_PATH_/${config}.cfg"
     fi
 fi
 

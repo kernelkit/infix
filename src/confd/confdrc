@@ -6,6 +6,7 @@ INIT_DATA=/etc/sysrepo/factory-default.json
 SEARCH=/usr/share/yang/modules/confd:/usr/share/yang/modules/libnetconf2:/usr/share/yang/modules/libyang:/usr/share/yang/modules/netopeer2:/usr/share/yang/modules/sysrepo
 
 CFG_PATH_=/cfg
+SYS_PATH_=/etc
 RUN_PATH_=/run/confd
 
 # Static defaults, base Infix and any br2-external derivative.
@@ -22,8 +23,8 @@ FACTORY_GEN=$RUN_PATH_/factory-config.gen
 FAILURE_GEN=$RUN_PATH_/failure-config.gen
 
 # The resulting .cfg files can be peristent (factory-config) or not.
-FACTORY_CFG=$RUN_PATH_/factory-config.cfg
-FAILURE_CFG=$RUN_PATH_/failure-config.cfg
+FACTORY_CFG=$SYS_PATH_/factory-config.cfg
+FAILURE_CFG=$SYS_PATH_/failure-config.cfg
 STARTUP_CFG=$CFG_PATH_/startup-config.cfg
 
 # Uncomment this line in to create a bridge (br0) with all (classified
