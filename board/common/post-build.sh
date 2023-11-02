@@ -29,7 +29,7 @@ rm -f "$TARGET_DIR/etc/os-release"
 {
     echo "NAME=\"$INFIX_NAME\""
     echo "ID=$INFIX_ID"
-    echo "PRETTY_NAME=\"$INFIX_TAGLINE\""
+    echo "PRETTY_NAME=\"$INFIX_TAGLINE $VERSION\""
     echo "ID_LIKE=\"${ID}\""
     echo "VERSION=\"${VERSION}\""
     echo "VERSION_ID=${VERSION}"
