@@ -15,23 +15,23 @@ All notable changes to the project are documented in this file.
 ### YANG Status
 
  - [ietf-system][]:
-   - [infix-system][]: MotD (Message of the Day) augment
-   - [infix-system][]: user login shell augment, default: `/bin/false`
-   - [infix-system-software][]: system-state/software augment for
-     remotely querying firmware version information
+   - **augments:**
+     - MotD (Message of the Day)
+	 - User login shell, default: `/bin/false`
+	 - State information for remotely querying firmware version information
+   - **deviations:**
+     - timezone-name, using IANA timezones instead of plain string
+	 - UTC offset, only support per-hour offsets with [tzdata][]
+	 - Usernames, clarifying Linux restrictions
+     - Unsupported features marked as deviations, e.g. RADIUS
    - [infix-system-software][]: firmware upgrade with `install-bundle` RPC
-   - [infix-system][]: timezone-name deviation, using with IANA timezones,
-     deviation for UTC offset, only support per-hour offsets with [tzdata][].
-     Also, username deviation, clarifying Linux restrictions.
-   - [infix-system][]: deviations for unsupported features, e.g. RADIUS
  - [ietf-interfaces][]:
-   - [infix-interfaces][]: deviation for `if:phys-address` to allow read-write
-   - [ietf-ip][]: augmented with IPv4LL similar to standardized IPv6LL
-   - [infix-ip][]: deviations (`not-supported`) added for IPv4 and IPv6:
+   - deviation to allow read-write `if:phys-address` for custom MAC address
+   - [ietf-ip][]: augments
+     - IPv4LL similar to standardized IPv6LL
+   - [ietf-ip][]: deviations (`not-supported`) added for IPv4 and IPv6:
      - `/if:interfaces/if:interface/ip:ipv4/ip:address/ip:subnet/ip:netmask`
 	 - `/if:interfaces/if:interface/ip:ipv6/ip:address/ip:status`
-	 - `/if:interfaces/if:interface/ip:ipv4/ip:mtu`
-	 - `/if:interfaces/if:interface/ip:ipv6/ip:mtu`
 	 - `/if:interfaces/if:interface/ip:ipv4/ip:neighbor`
      - `/if:interfaces/if:interface/ip:ipv6/ip:neighbor`
    - ~~[ietf-if-vlan-encapsulation][]:~~ Removed in favor of a native model.
@@ -42,7 +42,7 @@ All notable changes to the project are documented in this file.
      models, e.g., `ieee802-ethernet-interface.yang`
    - [infix-if-veth][]: Linux VETH pairs
    - [infix-if-vlan][]: Linux VLAN interfaces, e.g. `eth0.10` (New model!)
- - Configurable services:
+ - **Configurable services:**
    - [ieee802-dot1ab-lldp][]: stripped down to an `enabled` setting
    - [infix-services][]: support for enabling mDNS service/device discovery
 
@@ -57,10 +57,8 @@ All notable changes to the project are documented in this file.
 [infix-if-veth]:   https://github.com/kernelkit/infix/tree/fc5310b/src/confd/yang/infix-if-veth%402023-06-05.yang
 [infix-if-vlan]:   https://github.com/kernelkit/infix/blob/fc5310b/src/confd/yang/infix-if-vlan%402023-10-25.yang
 
-[infix-interfaces]: https://github.com/kernelkit/infix/tree/fc5310b/src/confd/yang/infix-interfaces%402023-09-19.yang
 [infix-ip]:        https://github.com/kernelkit/infix/tree/fc5310b/src/confd/yang/infix-ip%402023-09-14.yang
 [infix-services]:  https://github.com/kernelkit/infix/blob/fc5310b/src/confd/yang/infix-services%402023-10-16.yang
-[infix-system]:    https://github.com/kernelkit/infix/blob/fc5310b/src/confd/yang/infix-system%402023-10-19.yang
 [infix-system-software]: https://github.com/kernelkit/infix/tree/fc5310b/src/confd/yang/infix-system-software%402023-06-27.yang
 
 ### Changes
