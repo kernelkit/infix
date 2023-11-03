@@ -17,9 +17,36 @@
 
 set -e
 
-nm=$(basename $0)
+nm=$(basename "$0")
 err=0
 opt="-k"
+
+# External button or bootloader changed kernel command line
+check_factory()
+{
+    if [ -f /mnt/cfg/infix/.reset ]; then
+	return 0;
+    fi
+
+    if grep -q 'finit.cond=factory-reset' /proc/cmdline; then
+	return 0;
+    fi
+
+    # Add to your br2-external to extend factory-reset check
+    if [ ! -x /lib/infix/check-factory ]; then
+	return 1;
+    fi
+
+    /lib/infix/check-factory
+}
+
+factory_reset()
+{
+    # XXX: flash LEDs to confirm factory-reset in progress
+    logger $opt -p user.crit -t "$nm" "Resetting to factory defaults."
+    rm -rf /mnt/cfg/* /mnt/var/*
+    sync
+}
 
 mount_rw()
 {
@@ -59,6 +86,10 @@ mount_overlay()
 
     mkdir -p -m 0755 "$u"
     mkdir -p -m 0755 "$w"
+
+    # Ensure that all users in wheel can create the .reset file
+    # on /cfg and upload docker images to /var
+    chgrp wheel "$(dirname "$u")"
 
     mount -t overlay "$tag-overlay" "$dst" \
 	  -o lowerdir="$dst",upperdir="$u",workdir="$w"
@@ -100,21 +131,14 @@ if ! mount_rw cfg >/dev/null 2>&1; then
     # there's no point in overlaying one ramdisk on top of another.
     vlibsrc=
 else
-    # Check for factory reset
-    if [ -f /mnt/cfg/infix/.reset ]; then
-	logger $opt -p user.crit -t "$nm" "Resetting to factory defaults."
-	rm -rf /mnt/cfg/infix /mnt/var/infix
-	sync
-    fi
-
-    # Check build: NETCONF or Classic
+    # Classic Infix has read-write /etc across boots
     if [ "$VARIANT_ID" != "netconf" ]; then
 	etcsrc=/mnt/cfg
     fi
+fi
 
-    # Ensure that all users in wheel can create the .reset file
-    mkdir -p /mnt/cfg/infix
-    chgrp wheel /mnt/cfg/infix
+if check_factory; then
+    factory_reset
 fi
 
 mount_overlay cfg  $cfgsrc /cfg
