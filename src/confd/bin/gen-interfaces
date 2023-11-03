@@ -1,14 +1,15 @@
 #!/bin/sh
-# Generates ietf-intefaces + ietf-ip settings for all detected interfaces
-# Interfaces must be of type Ethernet (copper/sfp), not be "internal" DSA
-# ports, and must have a "parentbus", i.e., be physical ports.
+# Generates ietf-intefaces + ietf-ip settings for all detected interfaces.
 #
-# Usage: gen-interfaces [-4bd]
+#   Interfaces must be of type Ethernet (copper/sfp), not be "internal"
+#   DSA ports, and must have a "parentbus", i.e., be physical ports.
 #
-#   -b brN  Bridged mode, set all interfaces as ports in brN
-#   -4      Generic option for both modes, enables ZeroConf IPv4
-#   -d      Generic option for both modes, enables DHCPv4 client
+# The script mainly caters to two modes of operation: switch and router.
+# There is also a mixed mode with limited usability.  Other use-cases or
+# combinations we recommend overriding this script in your br2-external
+# rootfs overlay.
 #
+### Router Mode (default) ##############################################
 # By default this script generates plain interfaces with IPv6 autoconfig
 # (EUI64) enabled.  Useful both in a plain router and a Fail Secure mode
 # where any switchcore-backed ports should be prevented from switching.
@@ -21,6 +22,14 @@
 # can be used to enable IPv4 and DHCP on a single service interface if
 # needed.
 #
+# Note: interfaces classified as ports, i.e., switchcore interfaces, or
+#       have been classified 'group port' by other means will by default
+#       *not* get an IPv6 address.  This is by design, some may want to
+#       have port isolation and *no* IP communication by default.  But,
+#       if you want IPv6 SLAAC on your port interfaces by default, add
+#       the -6 option to GEN_IFACE_OPTS in your /etc/confdrc.local
+#
+### Bridge Mode ########################################################
 # The '-b brname' option triggers the bridge mode, creating a 'brname'
 # bridge interface using all interfaces classified in 'group port' by
 # the nameif script.  In the bridge mode port interfaces do not have any
@@ -28,6 +37,7 @@
 # the '-4' option is set, ZeroConfig (169.254.x.y) is anabled on 'brN'.
 # If the '-d' option is set, a DHCPv4 client is enabled on 'brN'.
 #
+### Mixed Mode #########################################################
 # A "mixed mode" is also supported, where the system may have multiple
 # ports in a switchcore, but some Ethernet interfaces directly connected
 # to the SoC.  In this case, if '-b brname' is given, all 'group port'
@@ -38,7 +48,27 @@ set -e
 
 bridge=
 ipv4=false
+ipv6=false
 dhcp=
+
+usage()
+{
+    cat <<EOF
+Usage: gen-interfaces [-46d] [-b brN]
+
+  -4      Enable IPv4 ZeroConf, only for brN in bridge mode
+  -6      Enable IPv6 SLACC on *port* interfaces too
+  -b brN  Bridged mode, add all port interfaces to brN
+  -d      Enable DHCPv4 client, only for brN in bridge mode
+
+IPv6 SLACC is default in non-bridged mode, but not for the port
+interfaces, i.e., switchcore interfaces or otherwise classifed
+as ports.  Hence, -6 is necessary for platforms that have all
+ports from a switchcore but do not want switching enabled.
+
+EOF
+    exit 0
+}
 
 gen_interface()
 {
@@ -67,12 +97,18 @@ while [ "$1" != "" ]; do
 	-4)
 	    ipv4=true
 	    ;;
+	-6)
+	    ipv6=true
+	    ;;
 	-b)
 	    bridge="$2"
 	    shift
 	    ;;
 	-d)
 	    dhcp=true
+	    ;;
+	-h)
+	    usage
 	    ;;
 	*)
 	    break
@@ -140,7 +176,7 @@ fi
 cat <<EOF
       }
 $(for iface in $ifaces; do gen_interface $iface true; done)
-$(for iface in $ports; do gen_interface $iface false $bridge; done)
+$(for iface in $ports; do gen_interface $iface $ipv6 $bridge; done)
     ]
 EOF
 if [ "$dhcp" = "true" ] && [ -n "$bridge" ]; then
