@@ -192,10 +192,9 @@ submodule infix-system-software {
 	type string;
 	mandatory true;
 	description
-	  "The location of the software bundle, specified as a Uniform
-               Resource Locator (URL).
-
-               Supported protocols include FTP, HTTP(S) and SCP.";
+          "The location of the software bundle, specified as a Uniform
+           Resource Locator (URL).  Currently supported protocols include
+           FTP, HTTP(S) and SCP.";
       }
     }
   }
