@@ -57,10 +57,10 @@ inside the container will always be: `eth0`, `eth1`, etc.
 
 A common setup is to use a VETH pair, with one end in the container and
 the other end routed, or bridged, to the rest of the world.  The Infix
-[CLI Guide](cli/introduction.md) provides examples of both.  In either case you need
-to create a matching CNI profile for one end of the VETH pair before
-starting the container, here we use two network profiles, the default
-podman bridge and the VETH profile:
+[CLI Guide](cli/introduction.md) provides examples of both.  In either
+case you need to create a matching CNI profile for one end of the VETH
+pair before starting the container, here we use two network profiles,
+the default podman bridge and the VETH profile:
 
      cni create host net1 veth0a 192.168.0.42/24
      podman run -d --rm --net=podman,net1 --entrypoint "/linuxrc" \
@@ -160,7 +160,7 @@ downloaded with `podman pull docker://troglobit/buildroot:latest` and
 a container created (above):
 
 ```
-root@infix:/cfg/start.d$ cat <<EOF >20-enable-container.sh
+root@infix:/cfg/start.d$ cat <<HERE >20-enable-container.sh
 #!/bin/sh
 # Remember to create the veth0a <--> vet0b pair in the CLI first!
 cni create host net1 veth0a 192.168.0.42/24
@@ -169,6 +169,7 @@ service name:pod :system pid:!/run/pod:system.pid podman --syslog start system -
 EOF
 initctl enable pod:system
 exit 0
+HERE
 root@infix:/cfg/start.d$ chmod +x 20-enable-container.sh
 ```
 
