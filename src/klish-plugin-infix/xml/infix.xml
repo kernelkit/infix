@@ -240,7 +240,8 @@
     </SWITCH>
     <ACTION sym="script" interactive="false">
       if [ -n "$KLISH_PARAM_name" ]; then
-      sysrepocfg -f json -X -d operational -m ietf-interfaces | \
+        sysrepocfg -f json -X -d operational -x \
+        "/ietf-interfaces:interfaces/interface[name='$KLISH_PARAM_name']" | \
         /lib/infix/cli-pretty "ietf-interfaces" -n "$KLISH_PARAM_name"
       else
       sysrepocfg -f json -X -d operational -m ietf-interfaces | \
