@@ -86,6 +86,9 @@ class Iface:
     def is_bridge(self):
         return self.data['type'] == "infix-if-type:bridge"
 
+    def is_veth(self):
+        return self.data['type'] == "infix-if-type:veth"
+
     def pr_name(self, pipe=""):
         print(f"{pipe}{self.name:<{Pad.iface - len(pipe)}}", end="")
 
@@ -137,6 +140,20 @@ class Iface:
             lower.pr_name(pipe)
             lower.pr_proto_eth()
 
+    def pr_veth(self, _ifaces):
+        self.pr_name(pipe="")
+        self.pr_proto_eth()
+
+        if self.lower_if:
+            row = f"{'':<{Pad.iface}}"
+            row += f"{'veth':<{Pad.proto}}"
+            row += f"{'':<{Pad.state}}"
+            row += f"peer:{self.lower_if}"
+            print(row)
+
+        self.pr_proto_ipv4()
+        self.pr_proto_ipv6()
+
     def pr_vlan(self, _ifaces):
         self.pr_name(pipe="")
         self.pr_proto_eth()
@@ -163,6 +180,9 @@ class Iface:
             print(f"{'mtu':<{20}}: {self.mtu}")
         if self.oper_status:
             print(f"{'operational status':<{20}}: {self.oper_status}")
+
+        if self.lower_if:
+            print(f"{'lower-layer-if':<{20}}: {self.lower_if}")
 
         if self.autoneg != 'unknown':
             val = "on" if self.autoneg else "off"
@@ -230,6 +250,10 @@ def pr_interface_list(json):
     for iface in [Iface(data) for data in ifaces]:
         if iface.is_bridge():
             iface.pr_bridge(ifaces)
+            continue
+
+        if iface.is_veth():
+            iface.pr_veth(ifaces)
             continue
 
         if iface.is_vlan():

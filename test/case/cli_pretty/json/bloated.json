@@ -383,6 +383,144 @@
             "vlan-id": 10
           }
         }
+      },
+      {
+        "TEST-DESCR": "veth pair with minimal data",
+        "name": "veth0c",
+        "type": "infix-if-type:veth",
+        "oper-status": "up",
+        "if-index": 13,
+        "phys-address": "8a:f9:5e:d3:0c:80",
+        "statistics": {
+          "in-octets": "488",
+          "out-octets": "488"
+        },
+        "ieee802-ethernet-interface:ethernet": {
+          "auto-negotiation": {
+            "enable": false
+          }
+        },
+        "ietf-ip:ipv4": {
+          "mtu": 1500
+        },
+        "ietf-ip:ipv6": {
+          "mtu": 1500
+        },
+        "infix-interfaces:vlan": {
+          "lower-layer-if": "veth0b"
+        }
+      },
+      {
+        "TEST-DESCR": "veth pair with minimal data",
+        "name": "veth0d",
+        "type": "infix-if-type:veth",
+        "oper-status": "up",
+        "if-index": 13,
+        "phys-address": "8a:f9:5e:d3:0c:81",
+        "statistics": {
+          "in-octets": "488",
+          "out-octets": "488"
+        },
+        "ieee802-ethernet-interface:ethernet": {
+          "auto-negotiation": {
+            "enable": false
+          }
+        },
+        "ietf-ip:ipv4": {
+          "mtu": 1500
+        },
+        "ietf-ip:ipv6": {
+          "mtu": 1500
+        },
+        "infix-interfaces:vlan": {
+          "lower-layer-if": "veth0b"
+        }
+      },
+      {
+        "name": "veth0a",
+        "type": "infix-if-type:veth",
+        "oper-status": "up",
+        "if-index": 13,
+        "phys-address": "8a:f9:5e:d3:0c:32",
+        "statistics": {
+          "in-octets": "488",
+          "out-octets": "488"
+        },
+        "ieee802-ethernet-interface:ethernet": {
+          "auto-negotiation": {
+            "enable": false
+          }
+        },
+        "ietf-ip:ipv4": {
+          "mtu": 1500,
+          "address": [
+            {
+              "ip": "192.168.1.1",
+              "prefix-length": 24,
+              "origin" : "static"
+            },
+            {
+              "ip": "192.168.2.1",
+              "prefix-length": 24,
+              "origin" : "static"
+            }
+          ]
+        },
+        "ietf-ip:ipv6": {
+          "mtu": 1500,
+          "address": [
+            {
+              "ip": "fe80::beff:407a:d738:aaaa",
+              "prefix-length": 64,
+              "origin": "link-layer"
+            },
+            {
+              "ip": "fe80::beff:aaaa:d738:aaab",
+              "prefix-length": 64,
+              "origin": "random"
+            }
+          ]
+        },
+        "infix-interfaces:vlan": {
+          "lower-layer-if": "veth0b"
+        }
+      },
+      {
+        "name": "veth0b",
+        "type": "infix-if-type:veth",
+        "oper-status": "up",
+        "if-index": 13,
+        "phys-address": "8a:f9:5e:d3:0c:32",
+        "statistics": {
+          "in-octets": "488",
+          "out-octets": "488"
+        },
+        "ieee802-ethernet-interface:ethernet": {
+          "auto-negotiation": {
+            "enable": false
+          }
+        },
+        "ietf-ip:ipv4": {
+          "mtu": 1500
+        },
+        "ietf-ip:ipv6": {
+          "mtu": 1500,
+          "address": [
+            {
+              "ip": "fe80::beff:407a:d738:aaac",
+              "prefix-length": 64,
+              "origin": "link-layer"
+            },
+            {
+              "ip": "fe80::beff:aaaa:d738:aaad",
+              "prefix-length": 64,
+              "origin": "random"
+            }
+          ]
+        },
+        "infix-interfaces:vlan": {
+          "lower-layer-if": "veth0a"
+        }
       }
     ]
   }
