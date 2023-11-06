@@ -7,7 +7,7 @@
         "type": "infix-if-type:loopback",
         "oper-status": "up",
         "if-index": 1,
-        "phys-address": "00:00:00:00:00:00",
+        "phys-address": "02:00:00:06:a7:a0",
         "statistics": {
           "in-octets": "3099",
           "out-octets": "3099"
@@ -27,7 +27,7 @@
         "type": "infix-if-type:ethernet",
         "oper-status": "up",
         "if-index": 2,
-        "phys-address": "02:00:00:00:00:00",
+        "phys-address": "02:00:00:2d:66:d6",
         "statistics": {
           "in-octets": "0",
           "out-octets": "21286"
@@ -71,7 +71,7 @@
         "type": "infix-if-type:ethernet",
         "oper-status": "up",
         "if-index": 4,
-        "phys-address": "02:00:00:00:00:00",
+        "phys-address": "02:00:00:3c:12:5a",
         "statistics": {
           "in-octets": "0",
           "out-octets": "21286"
@@ -89,7 +89,7 @@
         "type": "infix-if-type:ethernet",
         "oper-status": "up",
         "if-index": 4,
-        "phys-address": "02:00:00:00:00:00",
+        "phys-address": "02:00:00:23:47:13",
         "statistics": {
           "in-octets": "0",
           "out-octets": "21286"
@@ -112,7 +112,7 @@
         "type": "infix-if-type:ethernet",
         "oper-status": "up",
         "if-index": 4,
-        "phys-address": "02:00:00:00:00:00",
+        "phys-address": "02:00:00:7f:d9:23",
         "statistics": {
           "in-octets": "0",
           "out-octets": "21286"
@@ -127,7 +127,7 @@
         "type": "infix-if-type:ethernet",
         "oper-status": "up",
         "if-index": 4,
-        "phys-address": "02:00:00:00:ee:ff",
+        "phys-address": "02:00:00:2c:21:89",
         "statistics": {
           "in-octets": "21280",
           "out-octets": "21281"
@@ -164,7 +164,7 @@
         "type": "infix-if-type:ethernet",
         "oper-status": "up",
         "if-index": 4,
-        "phys-address": "02:00:00:00:ee:ff",
+        "phys-address": "02:00:00:3f:83:71",
         "statistics": {
           "in-octets": "21280",
           "out-octets": "21281"
@@ -205,7 +205,7 @@
         "type": "infix-if-type:ethernet",
         "oper-status": "up",
         "if-index": 4,
-        "phys-address": "02:ee:00:00:12:00",
+        "phys-address": "02:00:00:05:0d:36",
         "statistics": {
           "in-octets": "11",
           "out-octets": "22"
@@ -228,7 +228,7 @@
         "type": "infix-if-type:ethernet",
         "oper-status": "up",
         "if-index": 4,
-        "phys-address": "02:00:00:00:ee:ff",
+        "phys-address": "02:00:00:76:88:bc",
         "statistics": {
           "in-octets": "21280",
           "out-octets": "21281"
@@ -249,7 +249,7 @@
         "type": "infix-if-type:bridge",
         "oper-status": "up",
         "if-index": 2,
-        "phys-address": "02:00:00:00:00:00",
+        "phys-address": "02:00:00:1f:b5:07",
         "statistics": {
           "in-octets": "0",
           "out-octets": "378"
@@ -264,7 +264,7 @@
         "type": "infix-if-type:bridge",
         "oper-status": "up",
         "if-index": 3,
-        "phys-address": "02:00:00:00:00:00",
+        "phys-address": "02:00:00:0e:01:c6",
         "statistics": {
           "in-octets": "0",
           "out-octets": "378"
@@ -285,7 +285,7 @@
         "type": "infix-if-type:bridge",
         "oper-status": "up",
         "if-index": 3,
-        "phys-address": "02:00:00:00:00:00",
+        "phys-address": "02:00:00:71:78:7c",
         "statistics": {
           "in-octets": "0",
           "out-octets": "378"
@@ -310,7 +310,7 @@
         "type": "infix-if-type:vlan",
         "oper-status": "up",
         "if-index": 4,
-        "phys-address": "02:00:00:00:00:00",
+        "phys-address": "02:00:00:37:2e:bd",
         "statistics": {
           "in-octets": "0",
           "out-octets": "0"
@@ -332,7 +332,7 @@
         "type": "infix-if-type:vlan",
         "oper-status": "up",
         "if-index": 4,
-        "phys-address": "02:00:00:00:00:00",
+        "phys-address": "02:00:00:1b:48:9b",
         "statistics": {
           "in-octets": "0",
           "out-octets": "0"
@@ -359,7 +359,7 @@
         "name": "vlan20",
         "type": "infix-if-type:vlan",
         "if-index": 4,
-        "phys-address": "02:00:00:00:00:00",
+        "phys-address": "02:00:00:4f:e7:9e",
         "statistics": {
           "in-octets": "0",
           "out-octets": "0"
@@ -390,7 +390,7 @@
         "type": "infix-if-type:veth",
         "oper-status": "up",
         "if-index": 13,
-        "phys-address": "8a:f9:5e:d3:0c:80",
+        "phys-address": "02:00:00:38:27:36",
         "statistics": {
           "in-octets": "488",
           "out-octets": "488"
@@ -416,7 +416,7 @@
         "type": "infix-if-type:veth",
         "oper-status": "up",
         "if-index": 13,
-        "phys-address": "8a:f9:5e:d3:0c:81",
+        "phys-address": "02:00:00:47:17:0c",
         "statistics": {
           "in-octets": "488",
           "out-octets": "488"
@@ -441,7 +441,7 @@
         "type": "infix-if-type:veth",
         "oper-status": "up",
         "if-index": 13,
-        "phys-address": "8a:f9:5e:d3:0c:32",
+        "phys-address": "02:00:00:48:5a:03",
         "statistics": {
           "in-octets": "488",
           "out-octets": "488"
@@ -490,7 +490,7 @@
         "type": "infix-if-type:veth",
         "oper-status": "up",
         "if-index": 13,
-        "phys-address": "8a:f9:5e:d3:0c:32",
+        "phys-address": "02:00:00:02:e5:1e",
         "statistics": {
           "in-octets": "488",
           "out-octets": "488"
