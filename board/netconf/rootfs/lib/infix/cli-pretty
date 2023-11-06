@@ -248,18 +248,20 @@ def pr_interface_list(json):
         iface.pr_proto_ipv6()
 
 def ietf_interfaces(json, name):
-    if not json or not json.get("ietf-interfaces:interfaces"):
-        print(f"Error, top level \"ietf-interfaces:interfaces\" missing")
-        sys.exit(1)
-
-    if not name:
-        return pr_interface_list(json)
-
-    iface = find_iface(json["ietf-interfaces:interfaces"]["interface"], name)
-    if not iface:
-        print(f"Interface {name} not found")
-        sys.exit(1)
-    return iface.pr_iface()
+    if name:
+        if not json.get("ietf-interfaces:interfaces"):
+            print(f"No interface data found for \"{name}\"")
+            sys.exit(1)
+        iface = find_iface(json["ietf-interfaces:interfaces"]["interface"], name)
+        if not iface:
+            print(f"Interface \"{name}\" not found")
+            sys.exit(1)
+        iface.pr_iface()
+    else:
+        if not json.get("ietf-interfaces:interfaces"):
+            print(f"Error, top level \"ietf-interfaces:interfaces\" missing")
+            sys.exit(1)
+        pr_interface_list(json)
 
 def main():
     try:
