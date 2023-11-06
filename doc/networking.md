@@ -8,7 +8,7 @@
 | -------- | ----------------- | ------------------------------------------------------------- |
 | bridge   | infix-if-bridge   | SW implementation of an IEEE 802.1Q bridge                    |
 | ip       | ietf-ip, infix-ip | IP address to the subordinate interface                       |
-| vlan     | ietf-vlan-encap   | Capture all traffic belonging to a specific 802.1Q VID        |
+| vlan     | infix-if-vlan     | Capture all traffic belonging to a specific 802.1Q VID        |
 | lag[^1]  | infix-if-lag      | Bonds multiple interfaces into one, creating a link aggregate |
 | lo       | ietf-interfaces   | Software loopback interface                                   |
 | eth      | ietf-interfaces   | Physical Ethernet device/port                                 |
@@ -72,8 +72,8 @@ A VLAN interface is basically a filtering abstraction. When you run `tcpdump` on
 ```
 admin@example:/> configure 
 admin@example:/config/> edit interfaces interface eth0.20
-admin@example:/config/interfaces/interface/eth0.20/> set encapsulation dot1q-vlan outer-tag tag-type c-vlan vlan-id 20
-admin@example:/config/interfaces/interface/eth0.20/> set parent-interface eth0
+admin@example:/config/interfaces/interface/eth0.20/> set vlan id 20
+admin@example:/config/interfaces/interface/eth0.20/> set vlan lower-layer-if eth0
 admin@example:/config/interfaces/interface/eth0.20/> leave
 ```
 
