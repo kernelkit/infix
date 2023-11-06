@@ -50,12 +50,12 @@
           "mtu": 1500,
           "address": [
             {
-              "ip": "fe80::beff:407a:d738:abb4",
+              "ip": "fe80::beff:dd09:6bca:a41e",
               "prefix-length": 64,
               "origin": "link-layer"
             },
             {
-              "ip": "fe80::beff:aaaa:d738:abb4",
+              "ip": "fe80::beff:cda1:ab44:c775",
               "prefix-length": 64,
               "origin": "random"
             }
@@ -146,12 +146,12 @@
           "mtu": 1500,
           "address": [
             {
-              "ip": "fe80::beff:407a:d738:abb4",
+              "ip": "fe80::beff:f45c:96c8:d582",
               "prefix-length": 64,
               "origin": "link-layer"
             },
             {
-              "ip": "fe80::beff:aaaa:d738:abb4",
+              "ip": "fe80::beff:e7a3:64a5:1e55",
               "prefix-length": 64,
               "origin": "random"
             }
