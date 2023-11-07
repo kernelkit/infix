@@ -27,3 +27,40 @@ json_t *json_get_output(const char *cmd)
 	return j_root;
 }
 
+int ip_link_check_group(const char *ifname, const char *group)
+{
+	char cmd[512] = {}; /* Size is arbitrary */
+	json_t *j_iface;
+	json_t *j_root;
+	json_t *j_val;
+
+	snprintf(cmd, sizeof(cmd), "ip -s -d -j link show dev %s 2>/dev/null", ifname);
+
+	j_root = json_get_output(cmd);
+	if (!j_root) {
+		ERROR("Error, parsing ip-link JSON");
+		return -1;
+	}
+	if (json_array_size(j_root) != 1) {
+		ERROR("Error, expected JSON array of single iface");
+		json_decref(j_root);
+		return -1;
+	}
+
+	j_iface = json_array_get(j_root, 0);
+
+	j_val = json_object_get(j_iface, "group");
+	if (!json_is_string(j_val)) {
+		ERROR("Error, expected a JSON string for 'group'");
+		json_decref(j_root);
+		return -1;
+	}
+	if (strcmp(json_string_value(j_val), group) == 0) {
+		json_decref(j_root);
+		return 1;
+	}
+
+	json_decref(j_root);
+
+	return 0;
+}

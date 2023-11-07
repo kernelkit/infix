@@ -1,0 +1,332 @@
+#!/usr/bin/env python3
+
+import subprocess
+import json
+import sys # (built-in module)
+
+def json_get_yang_type(iface_in):
+    if iface_in['link_type'] == "loopback":
+        return "infix-if-type:loopback"
+
+    if iface_in['link_type'] != "ether":
+        return "infix-if-type:other";
+
+    if not 'linkinfo' in iface_in:
+        return "infix-if-type:ethernet"
+
+    if not 'info_kind' in iface_in['linkinfo']:
+        return "infix-if-type:ethernet";
+
+    if iface_in['linkinfo']['info_kind'] == "veth":
+        return "infix-if-type:veth";
+
+    if iface_in['linkinfo']['info_kind'] == "vlan":
+        return "infix-if-type:vlan";
+
+    if iface_in['linkinfo']['info_kind'] == "bridge":
+        return "infix-if-type:bridge";
+
+    if iface_in['linkinfo']['info_kind'] == "dsa":
+        return "infix-if-type:ethernet";
+
+    # Fallback
+    return "infix-if-type:ethernet";
+
+def json_get_yang_origin(addr):
+    map = {
+        "kernel_ll":        "link-layer",
+        "kernel_ra":        "link-layer",
+        "static":           "static",
+        "dhcp":             "dhcp",
+        "random":           "random",
+    }
+    proto = addr['protocol']
+
+    if proto == "kernel_ll" or proto == "kernel_ra":
+        if "stable-privacy" in addr:
+            return "random"
+
+    return map.get(proto, "other")
+
+def get_proc_value(procfile):
+    try:
+        with open(procfile, 'r') as file:
+            data = file.read().strip()
+            return data
+    except FileNotFoundError:
+        # This is considered OK
+        return None
+    except IOError:
+        print(f"Error: reading from {procfile}", file=sys.stderr)
+
+# This function returns a value from a nested json dict
+def lookup(json, *keys):
+    curr = json
+    for key in keys:
+        if isinstance(curr, dict) and key in curr:
+            curr = curr[key]
+        else:
+            return None
+    return curr
+
+# This function inserts a value into a nested json dict
+def insert(json, *path_and_value):
+    if len(path_and_value) < 2:
+        raise ValueError("Error: insert() takes at least two args")
+
+    *path, value = path_and_value
+
+    curr = json
+    for key in path[:-1]:
+        if key not in curr or not isinstance(curr[key], dict):
+            curr[key] = {}
+        curr = curr[key]
+
+    curr[path[-1]] = value
+
+def run_cmd(cmd):
+    try:
+        output = subprocess.check_output(cmd, stderr=subprocess.DEVNULL, text=True)
+        return output.splitlines()
+    except subprocess.CalledProcessError:
+        print(f"Error: command returned error", file=sys.stderr)
+        sys.exit(1)
+
+def run_json_cmd(cmd):
+    try:
+        result = subprocess.run(cmd, check=True, stdout=subprocess.PIPE,
+                                stderr=subprocess.PIPE, text=True)
+        output = result.stdout
+        data = json.loads(output)
+    except subprocess.CalledProcessError as e:
+        print(f"Error: unable to get data:", file=sys.stderr)
+        print(f"{e.stderr}", file=sys.stderr)
+        sys.exit(1)
+    except json.JSONDecodeError as e:
+        print(f"Error: parsing JSON output: {e.msg}", file=sys.stderr)
+        sys.exit(1)
+    return data
+
+def iface_is_dsa(iface_in):
+    if not "linkinfo" in iface_in:
+        return False
+    if not "info_kind" in iface_in['linkinfo']:
+        return False
+    if iface_in['linkinfo']['info_kind'] != "dsa":
+        return False
+    return True
+
+def add_ip_link(ifname, iface_out):
+    cmd = ['ip', '-s', '-d', '-j', 'link', 'show', 'dev', ifname]
+
+    data = run_json_cmd(cmd)
+    if len(data) != 1:
+        print(f"Error: expected ip link output to be array with length 1", file=sys.stderr)
+        sys,exit(1)
+
+    iface_in = data[0]
+    iface_out = yang_data['ietf-interfaces:interfaces']['interface'][0]
+
+    if 'ifname' in iface_in:
+        iface_out['name'] = iface_in['ifname']
+
+    if 'ifindex' in iface_in:
+        iface_out['if-index'] = iface_in['ifindex']
+
+    if 'address' in iface_in:
+        iface_out['phys-address'] = iface_in['address']
+
+    if 'master' in iface_in:
+        insert(iface_out, "infix-interfaces:bridge-port", "bridge", iface_in['master'])
+
+    if 'link' in iface_in and not iface_is_dsa(iface_in):
+        insert(iface_out, "infix-interfaces:vlan", "lower-layer-if", iface_in['link'])
+
+    if 'operstate' in iface_in:
+        map = {
+                "DOWN":                "down",
+                "UP":                  "up",
+                "DORMANT":             "dormant",
+                "TESTING":             "testing",
+                "LOWERLAYERDOWN":      "lower-layer-down",
+                "NOTPRESENT":          "not-present"
+                }
+        val = map.get(iface_in['operstate'], "unknown")
+        iface_out['oper-status'] =  val
+
+    if 'link_type' in iface_in:
+        val = json_get_yang_type(iface_in)
+        iface_out['type'] = val
+
+    val = lookup(iface_in, "stats64", "rx", "bytes")
+    if val is not None:
+        insert(iface_out, "statistics", "out-octets", str(val))
+
+    val = lookup(iface_in, "stats64", "tx", "bytes")
+    if val is not None:
+        insert(iface_out, "statistics", "in-octets", str(val))
+
+def add_ip_addr(ifname, iface_out):
+    cmd = ['ip', '-j', 'addr', 'show', 'dev', ifname]
+
+    data = run_json_cmd(cmd)
+    if len(data) != 1:
+        print(f"Error: expected ip addr output to be array with length 1", file=sys.stderr)
+        sys,exit(1)
+
+    iface_in = data[0]
+
+    if 'mtu' in iface_in and ifname != "lo":
+        insert(iface_out, "ietf-ip:ipv4", "mtu", iface_in['mtu'])
+
+    # We avoid importing os to check if the file exists (for performance)
+    val = get_proc_value(f"/proc/sys/net/ipv6/conf/{ifname}/mtu")
+    if val is not None:
+        insert(iface_out, "ietf-ip:ipv6", "mtu", int(val))
+
+    if 'addr_info' in iface_in:
+        inet = []
+        inet6 = []
+
+        for addr in iface_in['addr_info']:
+            new = {}
+
+            if not 'family' in addr:
+                print(f"Error: 'family' missing from 'addr_info'", file=sys.stderr)
+                continue
+
+            if 'local' in addr:
+                new['ip'] = addr['local']
+            if 'prefixlen' in addr:
+                new['prefix-length'] = addr['prefixlen']
+            if 'protocol' in addr:
+                new['origin'] = json_get_yang_origin(addr)
+
+            if addr['family'] == "inet":
+                inet.append(new)
+            elif addr['family'] == "inet6":
+                inet6.append(new)
+            else:
+                print(f"Error: invalid 'family' in 'addr_info'", file=sys.stderr)
+                sys.exit(1)
+
+        insert(iface_out, "ietf-ip:ipv4", "address", inet)
+        insert(iface_out, "ietf-ip:ipv6", "address", inet6)
+
+def add_ethtool_groups(ifname, iface_out):
+    cmd = ['ethtool', '--json', '-S', ifname, '--all-groups']
+
+    data = run_json_cmd(cmd)
+    if len(data) != 1:
+        print(f"Error: expected ethtool groups output to be array with length 1", file=sys.stderr)
+        sys,exit(1)
+
+    iface_in = data[0]
+
+    # TODO: room for improvement here, the "frame" creation could be more dynamic.
+    if "eth-mac" in iface_in or "rmon" in iface_in:
+        insert(iface_out, "ieee802-ethernet-interface:ethernet", "statistics", "frame", {})
+        frame = iface_out['ieee802-ethernet-interface:ethernet']['statistics']['frame']
+
+    if "eth-mac" in iface_in:
+        mac_in = iface_in['eth-mac']
+
+        if "FramesTransmittedOK" in mac_in:
+            frame['out-frames'] = str(mac_in['FramesTransmittedOK'])
+        if "MulticastFramesXmittedOK" in mac_in:
+            frame['out-multicast-frames'] = str(mac_in['MulticastFramesXmittedOK'])
+        if "BroadcastFramesXmittedOK" in mac_in:
+            frame['out-broadcast-frames'] = str(mac_in['BroadcastFramesXmittedOK'])
+        if "FramesReceivedOK" in mac_in:
+            frame['in-frames'] = str(mac_in['FramesReceivedOK'])
+        if "MulticastFramesReceivedOK" in mac_in:
+            frame['in-multicast-frames'] = str(mac_in['MulticastFramesReceivedOK'])
+        if "BroadcastFramesReceivedOK" in mac_in:
+            frame['in-broadcast-frames'] = str(mac_in['BroadcastFramesReceivedOK'])
+        if "FrameCheckSequenceErrors" in mac_in:
+            frame['in-error-fcs-frames'] = str(mac_in['FrameCheckSequenceErrors'])
+        if "FramesLostDueToIntMACRcvError" in mac_in:
+            frame['in-error-mac-internal-frames'] = str(mac_in['FramesLostDueToIntMACRcvError'])
+
+        tot = 0
+        found = False
+        if "FramesReceivedOK" in mac_in:
+            tot += mac_in['FramesReceivedOK']
+            found = True
+        if "FrameCheckSequenceErrors" in mac_in:
+            tot += mac_in['FrameCheckSequenceErrors']
+            found = True
+        if "FramesLostDueToIntMACRcvError" in mac_in:
+            tot += mac_in['FramesLostDueToIntMACRcvError']
+            found = True
+        if "AlignmentErrors" in mac_in:
+            tot += mac_in['AlignmentErrors']
+            found = True
+        if "etherStatsOversizePkts" in mac_in:
+            tot += mac_in['etherStatsOversizePkts']
+            found = True
+        if "etherStatsJabbers" in mac_in:
+            tot += mac_in['etherStatsJabbers']
+            found = True
+        if found:
+            frame['in-total-frames'] = str(tot)
+
+    if "rmon" in iface_in:
+        rmon_in = iface_in['rmon']
+
+        if "undersize_pkts" in rmon_in:
+            frame['in-error-undersize-frames'] = str(rmon_in['undersize_pkts'])
+
+        tot = 0
+        found = False
+        if "etherStatsJabbers" in rmon_in:
+            tot += rmon_in['etherStatsJabbers']
+            found = True
+        if "etherStatsOversizePkts" in rmon_in:
+            tot += rmon_in['etherStatsOversizePkts']
+            found = True
+        if found:
+            frame['in-error-oversize-frames'] = str(tot)
+
+def add_ethtool_std(ifname, iface_out):
+    cmd = ['ethtool', ifname]
+    keys = ['Duplex', 'Auto-negotiation']
+    result = {}
+
+    lines = run_cmd(cmd)
+    for line in lines:
+        line = line.strip()
+        key = line.split(':', 1)[0].strip()
+        if key in keys:
+            key, value = line.split(':', 1)
+            result[key.strip()] = value.strip()
+
+    if "Auto-negotiation" in result:
+        if result['Auto-negotiation'] == "on":
+            insert(iface_out, "ieee802-ethernet-interface:ethernet", "auto-negotiation", "enable", True)
+        else:
+            insert(iface_out, "ieee802-ethernet-interface:ethernet", "auto-negotiation", "enable", False)
+
+if __name__ == "__main__":
+    yang_data = {
+        "ietf-interfaces:interfaces": {
+            "interface": [{}]
+        }
+    }
+
+    # For now, we handle each interface separately, as this is how it's
+    # currently implemented in sysrepo. I.e sysrepo will subscribe to
+    # each individual interface and query it for YANG data.
+    if len(sys.argv) != 2:
+        print(f"usage: yanger IFNAME", file=sys.stderr)
+        sys.exit(1)
+
+    ifname = sys.argv[1]
+    iface_out = yang_data['ietf-interfaces:interfaces']['interface'][0]
+
+    add_ip_link(ifname, iface_out)
+    add_ip_addr(ifname, iface_out)
+    add_ethtool_groups(ifname, iface_out)
+    add_ethtool_std(ifname, iface_out)
+
+    print(json.dumps(yang_data, indent=2))
