@@ -5,5 +5,6 @@
 
 int systemv(char **args);
 int systemv_silent(char **args);
+int fsystemv(char **args, FILE *in, FILE *out, FILE *err);
 
 #endif /* CONFD_SYSTEMV_H_ */
