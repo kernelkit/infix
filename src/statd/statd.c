@@ -1,3 +1,4 @@
+#define _GNU_SOURCE
 /* SPDX-License-Identifier: BSD-3-Clause */
 
 #include <stdio.h>
@@ -17,18 +18,20 @@
 #include <ctype.h>
 #include <linux/if.h>
 #include <sys/queue.h>
+#include <sys/mman.h>
 
 #include <srx/common.h>
 #include <srx/helpers.h>
 #include <srx/lyx.h>
+#include <srx/systemv.h>
 
 #include "shared.h"
-#include "iface-ip-link.h"
-#include "iface-ip-addr.h"
-#include "iface-ethtool.h"
 
 #define SOCK_RMEM_SIZE 1000000  /* Arbitrary chosen, default = 212992 */
 #define NL_BUF_SIZE 4096 /* Arbitrary chosen */
+
+#define XPATH_MAX PATH_MAX
+#define XPATH_IFACE_BASE "/ietf-interfaces:interfaces"
 
 TAILQ_HEAD(sub_head, sub);
 
@@ -117,6 +120,59 @@ static json_t *json_get_ip_link(void)
 	return json_get_output(cmd);
 }
 
+static int ly_add_yanger_data(const struct ly_ctx *ctx, struct lyd_node **parent,
+			      char *ifname)
+{
+	char *args[] = {
+		"/lib/infix/yanger",
+		ifname,
+		NULL
+	};
+	FILE *stream;
+	int err;
+	int fd;
+
+	fd = memfd_create("my_temp_file", 0);
+	if (fd == -1) {
+		ERROR("Error, unable to create memfd");
+		return SR_ERR_SYS;
+	}
+
+	/* Wrap the file descriptor in a FILE stream for fwrite */
+	stream = fdopen(fd, "w+");
+	if (stream == NULL) {
+		ERROR("Error, unable to fdopen memfd");
+		close(fd);
+		return SR_ERR_SYS;
+	}
+
+	err = fsystemv(args, NULL, stream, NULL);
+	if (err) {
+		ERROR("Error, running yanger");
+		fclose(stream);
+		close(fd);
+		return SR_ERR_SYS;
+	}
+
+	fflush(stream);
+
+	if (lseek(fd, 0, SEEK_SET) == (off_t)-1) {
+		ERROR("Error, unable reset stream (seek)");
+		fclose(stream);
+		close(fd);
+		return SR_ERR_SYS;
+	}
+
+	err = lyd_parse_data_fd(ctx, fd, LYD_JSON, LYD_PARSE_ONLY , 0, parent);
+	if (err)
+		ERROR("Error, parsing yanger data (%d)", err);
+
+	fclose(stream);
+	close(fd);
+
+	return err;
+}
+
 static int sr_ifaces_cb(sr_session_ctx_t *session, uint32_t, const char *path,
 			const char *, const char *, uint32_t,
 			struct lyd_node **parent, void *priv)
@@ -140,28 +196,10 @@ static int sr_ifaces_cb(sr_session_ctx_t *session, uint32_t, const char *path,
 		return SR_ERR_INTERNAL;
 	}
 
-	/* Skip internal interfaces (such as dsa0) */
-	if (ip_link_check_group(sub->ifname, "internal") == 1) {
-		err = SR_ERR_OK;
-		goto out;
-	}
-
-	err = ly_add_ip_link(ctx, parent, sub->ifname);
-	if (err) {
-		ERROR("Error, adding ip link info");
-		goto out;
-	}
-
-	err = ly_add_ip_addr(ctx, parent, sub->ifname);
-	if (err) {
-		ERROR("Error, adding ip addr info");
-		goto out;
-	}
-
-	err = ly_add_ethtool(ctx, parent, sub->ifname);
+	err = ly_add_yanger_data(ctx, parent, sub->ifname);
 	if (err)
-		ERROR("Error, adding ethtool info");
-out:
+		ERROR("Error adding yanger data");
+
 	sr_release_context(con);
 
 	return err;
@@ -190,6 +228,16 @@ static int sub_to_iface(struct statd *statd, const char *ifname)
 	struct sub *sub;
 	int sr_ev_pipe;
 	int err;
+
+	/**
+	 * Skip internal interfaces (such as dsa0)
+	 *
+	 * NOTE: this is a good solution but it might be to slow if a lot of
+	 * new interfaces pops up at the same time. We don't want to delay
+	 * processing the netlink messages to much.
+	 */
+	if (ip_link_check_group(ifname, "internal") == 1)
+		return SR_ERR_OK;
 
 	sub = sub_find_iface(&statd->subs, ifname);
 	if (sub) {
