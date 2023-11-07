@@ -2,6 +2,7 @@
 #include <dirent.h>
 #include <errno.h>
 #include <stdio.h>
+#include <stdarg.h>
 #include <string.h>
 #include <sys/types.h>
 
@@ -14,8 +15,41 @@
 
 #include <libyang/libyang.h>
 
+#define ERRMSG "Error: "
+
 const uint8_t kplugin_infix_major = 1;
 const uint8_t kplugin_infix_minor = 0;
+
+
+/*
+ * Print sysrepo session errors followed by an optional string.
+ */
+static void emsg(sr_session_ctx_t *sess, const char *fmt, ...)
+{
+	const sr_error_info_t *err = NULL;
+	va_list ap;
+	size_t i;
+	int rc;
+
+	if (!sess)
+		goto end;
+
+	rc = sr_session_get_error(sess, &err);
+	if ((rc != SR_ERR_OK) || !err)
+		goto end;
+
+	// Show the first error only. Because probably next errors are
+	// originated from internal sysrepo code but is not from subscribers.
+//	for (i = 0; i < err->err_count; i++)
+	for (i = 0; i < (err->err_count < 1 ? err->err_count : 1); i++)
+		fprintf(stderr, ERRMSG "%s\n", err->err[i].message);
+end:
+	if (fmt) {
+		va_start(ap, fmt);
+		vfprintf(stderr, fmt, ap);
+		va_end(ap);
+	}
+}
 
 int infix_files(kcontext_t *ctx)
 {
@@ -25,13 +59,13 @@ int infix_files(kcontext_t *ctx)
 
 	path = kcontext_script(ctx);
 	if (!path) {
-		fprintf(stderr, "Error: missing path argument to file search.\n");
+		fprintf(stderr, ERRMSG "missing path argument to file search.\n");
 		return -1;
 	}
 
 	dir = opendir(path);
 	if (!dir) {
-		fprintf(stderr, "Error: %s", strerror(errno));
+		fprintf(stderr, ERRMSG "%s", strerror(errno));
 		return -1;
 	}
 
@@ -88,15 +122,11 @@ int infix_copy(kcontext_t *ctx)
 		goto err;
 
 	if (infix_ds_from_str(kparg_value(srcarg), &srcds)) {
-		fprintf(stderr,
-			"Error: \"%s\" is not the name of any known datastore\n",
-			kparg_value(srcarg));
+		fprintf(stderr, ERRMSG "\"%s\" is not the name of any known datastore\n", kparg_value(srcarg));
 		goto err;
 	}
 	if (infix_ds_from_str(kparg_value(dstarg), &dstds)) {
-		fprintf(stderr,
-			"Error: \"%s\" is not the name of any known datastore\n",
-			kparg_value(dstarg));
+		fprintf(stderr, ERRMSG "\"%s\" is not the name of any known datastore\n", kparg_value(dstarg));
 		goto err;
 	}
 
@@ -107,8 +137,7 @@ int infix_copy(kcontext_t *ctx)
 		break;
 	default:
 		fprintf(stderr,
-			"Error: \"%s\" is not a valid source datastore\n",
-			kparg_value(srcarg));
+			ERRMSG "\"%s\" is not a valid source datastore\n", kparg_value(srcarg));
 		goto err;
 	}
 
@@ -117,26 +146,22 @@ int infix_copy(kcontext_t *ctx)
 	case SR_DS_RUNNING:
 		break;
 	default:
-		fprintf(stderr,
-			"Error: \"%s\" is not a valid destination datastore\n",
-			kparg_value(dstarg));
+		fprintf(stderr, ERRMSG "\"%s\" is not a valid destination datastore\n", kparg_value(dstarg));
 		goto err;
 	}
 
 	if (sr_connect(SR_CONN_DEFAULT, &conn)) {
-		fprintf(stderr, "Error: Connection to datastore failed\n");
+		fprintf(stderr, ERRMSG "connection to datastore failed\n");
 		goto err;
 	}
 	if (sr_session_start(conn, dstds, &sess)) {
-		fprintf(stderr, "Error: Unable to open transaction to %s\n",
-			kparg_value(dstarg));
+		fprintf(stderr, ERRMSG "unable to open transaction to %s\n", kparg_value(dstarg));
 		goto err_disconnect;
 	}
 
 	err = sr_copy_config(sess, NULL, srcds, 0);
 	if (err) {
-		fprintf(stderr, "Error: Unable to copy configuration (%d)\n",
-			err);
+		emsg(sess, ERRMSG "unable to copy configuration (%d)\n", err);
 		goto err_disconnect;
 	}
 
@@ -158,22 +183,22 @@ int infix_commit(kcontext_t *ctx)
 	(void)ctx;
 
 	if (sr_connect(SR_CONN_DEFAULT, &conn)) {
-		fprintf(stderr, "Error: Connection to datastore failed\n");
+		fprintf(stderr, ERRMSG "connection to datastore failed\n");
 		goto err;
 	}
 
 	if (sr_session_start(conn, SR_DS_RUNNING, &sess)) {
-		fprintf(stderr,
-			"Error: Unable to open transaction to running-config\n");
+		fprintf(stderr, ERRMSG "unable to open transaction to running-config\n");
 		goto err_disconnect;
 	}
 
 	err = sr_copy_config(sess, NULL, SR_DS_CANDIDATE, 0);
 	if (err) {
-		fprintf(stderr,
-			"Error: Unable to commit candidate to running (%d)\n",
-			err);
-		goto err;
+		if (err == SR_ERR_CALLBACK_FAILED)
+			emsg(sess, "Please check your changes, try 'diff' and 'do show interfaces'.\n");
+		else
+			emsg(sess, "Failed committing candidate to running: %s\n", sr_strerror(err));
+		goto err_disconnect;
 	}
 
 	sr_disconnect(conn);
@@ -199,7 +224,7 @@ int infix_rpc(kcontext_t *ctx)
 
 	xpath = kcontext_script(ctx);
 	if (!xpath) {
-		fprintf(stderr, "Error: cannot find rpc xpath\n");
+		fprintf(stderr, ERRMSG "cannot find rpc xpath\n");
 		goto err;
 	}
 
@@ -220,18 +245,18 @@ int infix_rpc(kcontext_t *ctx)
 	}
 
 	if (sr_connect(SR_CONN_DEFAULT, &conn)) {
-		fprintf(stderr, "Error: Connection to datastore failed\n");
+		fprintf(stderr, ERRMSG "connection to datastore failed\n");
 		goto err;
 	}
 
 	if (sr_session_start(conn, SR_DS_OPERATIONAL, &sess)) {
-		fprintf(stderr, "Error: Unable to open transaction to running-config\n");
+		emsg(sess, ERRMSG "unable to open transaction to running-config\n");
 		goto err_disconnect;
 	}
 
 //	fprintf(stderr, "%s(): sending RPC %s, icnt %zu\n", __func__, xpath, icnt);
 	if ((err = sr_rpc_send(sess, xpath, input, icnt, 0, &output, &ocnt))) {
-		fprintf(stderr, "Failed sending RPC %s: %s\n", xpath, sr_strerror(err));
+		emsg(sess, ERRMSG "failed sending RPC %s: %s\n", xpath, sr_strerror(err));
 		goto err_disconnect;
 	}
 
