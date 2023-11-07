@@ -65,9 +65,11 @@ prohibited.
 
 ### VLAN Interfaces
 
-Creating a VLAN can be done in many ways. This section assumes VLAN interfaces created atop another Linux interface.  E.g., the VLAN interfaces created on top of the bridge in the picture above.
+Creating a VLAN can be done in many ways. This section assumes VLAN interfaces created atop another Linux interface.  E.g., the VLAN interfaces created on top of the Ethernet interface or bridge in the picture below.
 
-A VLAN interface is basically a filtering abstraction. When you run `tcpdump` on a VLAN interface you will only see the frames matching the VLAN ID of the interface, compared to *all* the VLAN IDs if you run `tcpdump` on the parent interface.
+![VLAN interface on top of Ethernet or Bridge interfaces](img/interface-vlan-variants.svg)
+
+A VLAN interface is basically a filtering abstraction. When you run `tcpdump` on a VLAN interface you will only see the frames matching the VLAN ID of the interface, compared to *all* the VLAN IDs if you run `tcpdump` on the lower-layer interface.
 
 ```
 admin@example:/> configure 
@@ -77,7 +79,19 @@ admin@example:/config/interfaces/interface/eth0.20/> set vlan lower-layer-if eth
 admin@example:/config/interfaces/interface/eth0.20/> leave
 ```
 
-> **Note:** If you name your VLAN interface `foo0.N`, where `N` is a number, Infix will set the interface type automatically for you.
+The example below assumes bridge br0 is already created.
+
+```
+admin@example:/> configure 
+admin@example:/config/> edit interfaces interface vlan10
+admin@example:/config/interfaces/interface/vlan10/> set vlan id 10
+admin@example:/config/interfaces/interface/vlan10/> set vlan lower-layer-if br0
+admin@example:/config/interfaces/interface/vlan10/> leave
+```
+
+As conventions, a VLAN interface for VID 20 on top of an Ethernet interface *eth0* is named *eth0.20*, and a VLAN interface for VID 10 on top of a bridge interface *br0* is named *vlan10*. 
+
+> **Note:** If you name your VLAN interface `foo0.N` or `vlanN`, where `N` is a number, Infix will set the interface type automatically for you.
 
 ## Management Plane
 
