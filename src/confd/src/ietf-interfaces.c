@@ -933,6 +933,7 @@ static int netdag_gen_vlan(struct dagger *net, struct lyd_node *dif,
 static int netdag_gen_afspec_add(struct dagger *net, struct lyd_node *dif,
 				 struct lyd_node *cif, FILE *ip)
 {
+	const char *ifname = lydx_get_cattr(cif, "name");
 	const char *iftype = lydx_get_cattr(cif, "type");
 	int err = 0;
 
@@ -944,8 +945,12 @@ static int netdag_gen_afspec_add(struct dagger *net, struct lyd_node *dif,
 		err = netdag_gen_veth(net, NULL, cif, ip);
 	} else if (!strcmp(iftype, "infix-if-type:vlan")) {
 		err = netdag_gen_vlan(net, NULL, cif, ip);
+	} else if (!strcmp(iftype, "infix-if-type:ethernet")) {
+		sr_session_set_error_message(net->session, "Cannot create fixed Ethernet interface %s,"
+					     " wrong type or name.", ifname);
+		return -ENOENT;
 	} else {
-		ERROR("unsupported interface type \"%s\"", iftype);
+		sr_session_set_error_message(net->session, "Unsupported interface type \"%s\"", iftype);
 		return -ENOSYS;
 	}
 
@@ -1049,7 +1054,7 @@ static sr_error_t netdag_gen_iface(struct dagger *net,
 
 	fixed = iface_is_phys(ifname) || !strcmp(ifname, "lo");
 
-	DEBUG("%s(%s) %s", ifname, fixed ? "fixed" : "dynamic",
+	ERROR("%s(%s) %s", ifname, fixed ? "fixed" : "dynamic",
 	      (op == LYDX_OP_NONE) ? "mod" : ((op == LYDX_OP_CREATE) ? "add" : "del"));
 
 	if (op == LYDX_OP_DELETE) {
