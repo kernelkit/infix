@@ -4,7 +4,7 @@
 #
 ################################################################################
 
-FAUX_VERSION = 99c9cf7b95d8e2955519e2bec5ddb021eeda2d55
+FAUX_VERSION = df1d569287bc45d8fd880287c00e3874c5627c19
 FAUX_SITE = https://github.com/kernelkit/faux.git
 #FAUX_VERSION = tags/2.1.0
 #FAUX_SITE = https://src.libcode.org/pkun/faux.git
