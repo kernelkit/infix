@@ -299,7 +299,7 @@
 
     <COMMAND name="running-config" help="Show running-config">
       <!-- TODO: add PARAM for xml/json output, and coloring like factory -->
-      <ACTION sym="srp_show_running@sysrepo"/>
+      <ACTION sym="srp_show@sysrepo">running</ACTION>
     </COMMAND>
 
     <COMMAND name="startup-config" help="Show startup-config">
