@@ -45,6 +45,7 @@ class Iface:
     def __init__(self, data):
         self.data = data
         self.name = data.get('name', '')
+        self.type = data.get('type', '')
         self.index = data.get('if-index', '')
         self.oper_status = data.get('oper-status', '')
         self.autoneg = self.get_json_data('unknown', 'ieee802-ethernet-interface:ethernet',
@@ -81,10 +82,10 @@ class Iface:
             self.lower_if = ''
 
     def is_vlan(self):
-        return self.data['type'] == "infix-if-type:vlan"
+        return self.type == "infix-if-type:vlan"
 
     def is_bridge(self):
-        return self.data['type'] == "infix-if-type:bridge"
+        return self.type == "infix-if-type:bridge"
 
     def is_veth(self):
         return self.data['type'] == "infix-if-type:veth"
@@ -115,7 +116,7 @@ class Iface:
         row = f"{'ethernet':<{Pad.proto}}"
         dec = Decore.green if self.oper_status == "up" else Decore.red
         row += dec(f"{self.oper_status.upper():<{Pad.state}}")
-        row += f"{self.data['phys-address']:<{Pad.data}}"
+        row += f"{self.phys_address:<{Pad.data}}"
         print(row)
 
     def pr_bridge(self, _ifaces):
