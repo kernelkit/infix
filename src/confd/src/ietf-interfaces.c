@@ -1054,7 +1054,7 @@ static sr_error_t netdag_gen_iface(struct dagger *net,
 
 	fixed = iface_is_phys(ifname) || !strcmp(ifname, "lo");
 
-	ERROR("%s(%s) %s", ifname, fixed ? "fixed" : "dynamic",
+	DEBUG("%s(%s) %s", ifname, fixed ? "fixed" : "dynamic",
 	      (op == LYDX_OP_NONE) ? "mod" : ((op == LYDX_OP_CREATE) ? "add" : "del"));
 
 	if (op == LYDX_OP_DELETE) {
