@@ -23,6 +23,8 @@ define KLISH_INSTALL_CONFIG
 	$(INSTALL) -t $(TARGET_DIR)/etc/klish -D -m 0644 \
 		$(@D)/klish.conf $(@D)/klishd.conf
 	sed -i 's/#HistorySaveAlways=n/HistorySaveAlways=y/' $(TARGET_DIR)/etc/klish/klish.conf
+	# Fix line drawing characters 'show interfaces'
+	sed -i 's/\(Pager.*\)-R\(.*\)/\1-r\2/' $(TARGET_DIR)/etc/klish/klish.conf
 endef
 KLISH_POST_INSTALL_TARGET_HOOKS += KLISH_INSTALL_CONFIG
 
