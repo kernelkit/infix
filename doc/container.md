@@ -5,7 +5,7 @@ Containers in Infix
 * [Docker Containers with Podman](#docker-containers-with-podman)
   * [Multiple Networks](#multiple-networks)
   * [Hybrid Mode](#hybrid-mode)
-* [Enabling Containers](#enabling-containers)
+* [Enabling Container Support](#enabling-container-support)
 * [Debugging Containers](#debugging-containers)
 
 

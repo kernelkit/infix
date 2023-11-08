@@ -123,6 +123,30 @@ For more information, see [Containers in Infix](container.md).
 > of course also enable it yourself in Infix by using `make menuconfig`
 > followed by rebuilding the image.
 
+### Customizing Services
+
+When running containers a common question is: "what if we want an outside
+SSH connection on port 22 to be forwarded to the container instead of the
+Infix system?"  There are two possible answers that currently require a
+Hybrid Mode fix since it is not yet possible to configure the SSH daemon:
+
+  1. Disable SSH daemon
+  2. Run SSH daemon on another port
+
+The first one is simple, use what you have learned above about start.d
+scripts and add one that does `initctl disable sshd`.
+
+The second is a little bit more involved:
+
+```
+root@infix:/cfg/start.d$ cat <<EOF >10-custom-sshd-port.sh
+#!/bin/sh
+echo SSHD_OPTS=\"-p222\" > /etc/default/sshd
+EOF
+root@infix:/cfg/start.d$ chmod +x 10-custom-sshd-port.sh
+```
+
+
 
 [1]: https://www.sysrepo.org/
 [2]: https://github.com/CESNET/netopeer
