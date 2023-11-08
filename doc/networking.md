@@ -47,13 +47,16 @@ Here we add two ports to bridge `br0`: `eth0` and `eth1`.
 
 #### VLAN Filtering Bridge
 
-By default bridges in Linux do not filter based on VLAN tags.   It can be enabled in Infix when creating a bridge by adding a port to a VLAN as a tagged or untagged member:
+By default bridges in Linux do not filter based on VLAN tags.   It can be enabled in Infix when creating a bridge by adding a port to a VLAN as a tagged or untagged member. 
+Use the port default VID (PVID) setting to control VLAN association for traffic ingressing a port untagged (default PVID: 1). 
 
 ```
 admin@example:/config/> edit interfaces interface br0 
 admin@example:/config/interfaces/interface/br0/> up
 admin@example:/config/interfaces/> set interface eth0 bridge-port bridge br0
+admin@example:/config/interfaces/> set interface eth0 bridge-port pvid 10
 admin@example:/config/interfaces/> set interface eth1 bridge-port bridge br0
+admin@example:/config/interfaces/> set interface eth1 bridge-port pvid 20
 admin@example:/config/interfaces/> edit interface br0
 admin@example:/config/interfaces/interface/br0/> set bridge vlans vlan 10 untagged eth0
 admin@example:/config/interfaces/interface/br0/> set bridge vlans vlan 20 untagged eth1
@@ -62,6 +65,14 @@ admin@example:/config/interfaces/interface/br0/> set bridge vlans vlan 20 untagg
 This sets `eth0` as an untagged member of VLAN 10 and `eth1` as an
 untagged member of VLAN 20.  Switching between these ports is thus
 prohibited.
+
+To terminate a VLAN in the switch itself, either for switch management of for routing, the bridge must become a (tagged) member of the VLAN. 
+
+```
+admin@example:/config/interfaces/interface/br0/> set bridge vlans vlan 10 tagged br0
+admin@example:/config/interfaces/interface/br0/> set bridge vlans vlan 20 tagged br0
+```
+> To route or manage via, a VLAN interface needs to be created on top of the bridge, see section [VLAN Interfaces](#vlan-interfaces) below.
 
 ### VLAN Interfaces
 
@@ -79,7 +90,7 @@ admin@example:/config/interfaces/interface/eth0.20/> set vlan lower-layer-if eth
 admin@example:/config/interfaces/interface/eth0.20/> leave
 ```
 
-The example below assumes bridge br0 is already created.
+The example below assumes bridge br0 is already created, see [VLAN Filtering Bridge](#vlan-filtering-bridge).
 
 ```
 admin@example:/> configure 
