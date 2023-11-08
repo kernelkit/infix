@@ -18,6 +18,12 @@ submodule infix-if-bridge {
   contact      "kernelkit@googlegroups.com";
   description  "Linux bridge extension for ietf-interfaces.";
 
+  revision 2023-11-08 {
+    description "Dropped support for configuring bridge pvid.
+                 Bridge ports need explicit VLAN assignment.";
+    reference "internal";
+  }
+
   revision 2023-08-21 {
     description "Minor, lint ordering and add missing description.";
     reference "internal";
@@ -96,12 +102,6 @@ submodule infix-if-bridge {
 	  type dot1q-types:dot1q-tag-type;
 	  default dot1q-types:c-vlan;
 	  description "Standard (1Q/c-vlan) or provider (1ad/s-vlan) bridge.";
-	}
-
-	leaf pvid {
-	  type dot1q-types:vlanid;
-	  default 1;
-	  description "Default primary VID for untagged frames, default: 1.";
 	}
 
         list vlan {

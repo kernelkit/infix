@@ -701,24 +701,20 @@ static const char *bridge_tagtype2str(const char *type)
 	return proto;
 }
 
-static int bridge_vlan_settings(struct lyd_node *cif, const char **proto, int *pvid)
+static int bridge_vlan_settings(struct lyd_node *cif, const char **proto)
 {
-	struct lyd_node *node;
+	struct lyd_node *vlans, *vlan;
 
-	node = lydx_get_descendant(lyd_child(cif), "bridge", "vlans", NULL);
-	if (node) {
-		const char *type = lydx_get_cattr(node, "proto");
-		const char *vid = lydx_get_cattr(node, "pvid");
+	vlans = lydx_get_descendant(lyd_child(cif), "bridge", "vlans", NULL);
+	if (vlans) {
+		const char *type = lydx_get_cattr(vlans, "proto");
+		int num = 0;
 
-		if (!type || !vid) {
-			ERROR("Missing bridge proto %s or pvid %s, defaulting to 1Q and 1.", type, vid);
-			*proto = "802.1Q";
-			*pvid = 1;
-			return 1;
-		}
-		*pvid  = atoi(vid);
 		*proto = bridge_tagtype2str(type);
-		return 1;
+		LYX_LIST_FOR_EACH(lyd_child(vlans), vlan, "vlan")
+			num++;
+
+		return num;
 	}
 
 	return 0;
@@ -805,13 +801,13 @@ static int netdag_gen_bridge(struct dagger *net, struct lyd_node *dif,
 	const char *brname = lydx_get_cattr(cif, "name");
 	const char *op = add ? "add" : "set";
 	struct lyd_node *vlans, *vlan;
-	int vlan_filtering, pvid, fwd_mask;
+	int vlan_filtering, fwd_mask;
 	int mcast_snooping;
 	const char *proto;
 	FILE *br = NULL;
 	int err = 0;
 
-	vlan_filtering = bridge_vlan_settings(cif, &proto, &pvid);
+	vlan_filtering = bridge_vlan_settings(cif, &proto);
 	mcast_snooping = 0;	/* Not supported yet */
 	fwd_mask = bridge_fwd_mask(cif);
 
@@ -827,7 +823,12 @@ static int netdag_gen_bridge(struct dagger *net, struct lyd_node *dif,
 		goto done;
 	}
 
-	fprintf(ip, " vlan_protocol %s vlan_default_pvid %d\n", proto, pvid);
+	/*
+	 * Issue #198: we require explicit VLAN assignment for ports
+	 *             when VLAN filtering is enabled.  We strongly
+	 *             believe this is the only sane way of doing it.
+	 */
+	fprintf(ip, " vlan_protocol %s vlan_default_pvid 0\n", proto);
 
 	vlans = lydx_get_descendant(lyd_child(dif), "bridge", "vlans", NULL);
 	if (!vlans)
@@ -842,10 +843,12 @@ static int netdag_gen_bridge(struct dagger *net, struct lyd_node *dif,
 	LYX_LIST_FOR_EACH(lyd_child(vlans), vlan, "vlan") {
 		int vid = atoi(lydx_get_cattr(vlan, "vid"));
 
+		/* untagged ports */
 		err = bridge_diff_vlan_ports(net, br, brname, vid, vlan, 0);
 		if (err)
 			break;
 
+		/* tagged ports */
 		err = bridge_diff_vlan_ports(net, br, brname, vid, vlan, 1);
 		if (err)
 			break;
