@@ -1,11 +1,12 @@
 #!/bin/sh
 Q=$@
 
-echo "$Q, are you sure? (y/N)"
+/bin/echo -n "$Q, are you sure (y/N)? "
 read -n1 yorn
+echo
 
-if [ x$yorn != "xy" ]; then
-   echo "Ok, aborting"
+if [ x$yorn != "xy" ] && [ x$yorn != "xY" ]; then
+   echo "OK, aborting."
    exit 1
 fi
 
