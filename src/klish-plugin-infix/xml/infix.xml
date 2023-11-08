@@ -18,7 +18,7 @@
   ShowDefaultKeys = y
   HidePasswords = n
   EnableNACM = y
-  Oneliners = y
+  Oneliners = n
 </PLUGIN>
 
 <PTYPE name="DATASTORE">
@@ -137,7 +137,7 @@
 </COMMAND>
 
 <COMMAND name="shell" help="Enter system shell">
-  <ACTION sym="script" interactive="true">/bin/sh -l</ACTION>
+  <ACTION sym="script" in="tty" out="tty" interrupt="true">/bin/sh -l</ACTION>
 </COMMAND>
 
 <COMMAND name="exit" help="Exit">
@@ -178,7 +178,7 @@
       </COMMAND>
       <PARAM name="pwpass" ptype="/STRING" help="Optional clear text password (no spaces)"/>
     </SWITCH>
-    <ACTION sym="script" interactive="true">
+    <ACTION sym="script" in="tty" out="tty" interrupt="true">
       type=${KLISH_PARAM_pwhash:-sha512}
       salt=${KLISH_PARAM_pwsalt:+-S $KLISH_PARAM_pwsalt}
       mkpasswd -m $type $salt $KLISH_PARAM_pwpass
@@ -234,18 +234,18 @@
   <COMMAND name="interfaces" help="Show interface info">
     <SWITCH name="optional" min="0" max="1">
       <COMMAND name="name" help="Show detailed info about NAME">
-        <PARAM name="name" ptype="/PORTAR" help="Hash algorithm.">
+        <PARAM name="name" ptype="/PORTAR" help="Interface.">
         </PARAM>
       </COMMAND>
     </SWITCH>
-    <ACTION sym="script" interactive="false">
+    <ACTION sym="script">
       if [ -n "$KLISH_PARAM_name" ]; then
         sysrepocfg -f json -X -d operational -x \
-        "/ietf-interfaces:interfaces/interface[name='$KLISH_PARAM_name']" | \
-        /lib/infix/cli-pretty "ietf-interfaces" -n "$KLISH_PARAM_name"
+          "/ietf-interfaces:interfaces/interface[name='$KLISH_PARAM_name']" | \
+          /lib/infix/cli-pretty "ietf-interfaces" -n "$KLISH_PARAM_name"
       else
-      sysrepocfg -f json -X -d operational -m ietf-interfaces | \
-        /lib/infix/cli-pretty "ietf-interfaces"
+        sysrepocfg -f json -X -d operational -m ietf-interfaces | \
+          /lib/infix/cli-pretty "ietf-interfaces"
       fi
     </ACTION>
   </COMMAND>
@@ -307,14 +307,14 @@
     </COMMAND>
   </COMMAND>
   <COMMAND name="factory-reset" help="Restore the system to factory  state">
-      <ACTION sym="script" interactive="true">/bin/yorn "This will restore the device to factory state"</ACTION>
+      <ACTION sym="script" in="tty" out="tty" interrupt="true">/bin/yorn "This will restore the device to factory state"</ACTION>
       <ACTION sym="rpc@infix">/ietf-factory-default:factory-reset</ACTION>
   </COMMAND>
 
 
   <COMMAND name="follow" help="Monitor a log file, use Ctrl-C to abort">
     <PARAM name="fn" ptype="/LOGFILES" help="Optional log file to monitor, default: syslog"/>
-    <ACTION sym="script" interactive="true">
+    <ACTION sym="script" in="tty" out="tty" interrupt="true">
       file=${KLISH_PARAM_fn:-syslog}
       echo -e "\e[1mPress Ctrl-C to abort ────────────────────────────────────────────\e[0m"
       tail -F /log/$file
@@ -344,7 +344,7 @@
       <COMMAND name="flood" help="Flood ping mode"/>
     </SWITCH>
     <PARAM name="addr" ptype="/STRING" help="Host address or multicast group"/>
-    <ACTION sym="script" interactive="true">
+    <ACTION sym="script" in="tty" out="tty" interrupt="true">
       count=${KLISH_PARAM_cnt:+-c $KLISH_PARAM_cnt}
       iface=${KLISH_PARAM_iface:+-I $KLISH_PARAM_iface}
       size=${KLISH_PARAM_sz:+-s $KLISH_PARAM_sz}
@@ -368,7 +368,7 @@
       </COMMAND>
       <COMMAND name="verbose" help="Verbose output"/>
     </SWITCH>
-    <ACTION sym="script" interactive="true">
+    <ACTION sym="script" in="tty" out="tty" interrupt="true">
       count=${KLISH_PARAM_cnt:+-c $KLISH_PARAM_cnt}
       size=${KLISH_PARAM_sz:+-s $KLISH_PARAM_sz}
       verbose=${KLISH_PARAM_verbose:+-vvv}
