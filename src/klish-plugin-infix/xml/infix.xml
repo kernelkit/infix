@@ -137,7 +137,7 @@
 </COMMAND>
 
 <COMMAND name="shell" help="Enter system shell">
-  <ACTION sym="script" in="tty" out="tty" interrupt="true">/bin/sh -l</ACTION>
+  <ACTION sym="script" in="tty" out="tty" interrupt="true">/bin/bash -l</ACTION>
 </COMMAND>
 
 <COMMAND name="exit" help="Exit">
