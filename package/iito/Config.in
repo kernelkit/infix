@@ -1,0 +1,11 @@
+config BR2_PACKAGE_IITO
+	bool "iito"
+	depends on BR2_PACKAGE_HAS_UDEV
+	select BR2_PACKAGE_JANSSON
+	select BR2_PACKAGE_LIBEV
+	help
+	  If Input, Then Output
+
+	  Monitor input sources, and reflect their state on output sinks.
+
+	  https://github.com/kernelkit/iito
