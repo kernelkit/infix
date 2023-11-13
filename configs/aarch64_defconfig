@@ -13,6 +13,7 @@ BR2_TARGET_GENERIC_ISSUE="Infix by KernelKit"
 BR2_INIT_FINIT=y
 BR2_ROOTFS_DEVICE_CREATION_DYNAMIC_EUDEV=y
 BR2_ROOTFS_DEVICE_TABLE="system/device_table.txt ${BR2_EXTERNAL_INFIX_PATH}/board/common/xattrs ${BR2_EXTERNAL_INFIX_PATH}/board/netconf/xattrs"
+# BR2_TARGET_ENABLE_ROOT_LOGIN is not set
 BR2_TARGET_GENERIC_GETTY_TERM="xterm"
 BR2_SYSTEM_DHCP="eth0"
 BR2_ENABLE_LOCALE_WHITELIST="C en_US en_CA"
@@ -108,7 +109,7 @@ BR2_PACKAGE_HOST_UBOOT_TOOLS_FIT_SUPPORT=y
 BR2_PACKAGE_HOST_UBOOT_TOOLS_FIT_SIGNATURE_SUPPORT=y
 INFIX_VENDOR_HOME="https://github.com/kernelkit"
 INFIX_DESC="Infix is a Network Operating System based on Linux.  It can be set up both as a switch, with offloading using switchdev, and a router with firewalling."
-INFIX_HOME="https://github.com/kernelkit/infix"
+INFIX_HOME="https://github.com/kernelkit/infix/"
 INFIX_DOC="https://github.com/kernelkit/infix/tree/main/doc"
 INFIX_SUPPORT="mailto:kernelkit@googlegroups.com"
 BR2_PACKAGE_CONFD=y
