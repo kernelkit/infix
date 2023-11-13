@@ -1,0 +1,128 @@
+{
+    "input": {
+	"path": {
+	    "locate":       { "path": "/run/led/locate" },
+
+	    "status-prime": { "path": "/run/led/status-prime" },
+	    "status-ok":    { "path": "/run/led/status-ok" },
+	    "status-err":   { "path": "/run/led/status-err" },
+	    "status-crit":  { "path": "/run/led/status-crit" },
+
+	    "fault-prime":  { "path": "/run/led/fault-prime" },
+	    "fault-ok":     { "path": "/run/led/fault-ok" },
+	    "fault-err":    { "path": "/run/led/fault-err" },
+	    "fault-crit":   { "path": "/run/led/fault-crit" },
+
+	    "lan-prime":    { "path": "/run/led/lan-prime" },
+	    "lan-ok":       { "path": "/run/led/lan-ok" },
+	    "lan-err":      { "path": "/run/led/lan-err" },
+	    "lan-crit":     { "path": "/run/led/lan-crit" },
+
+	    "startup":   { "path": "/run/finit/cond/run/startup/success" },
+	    "fail-safe": { "path": "/run/finit/cond/run/failure/success" },
+	    "panic":     { "path": "/run/finit/cond/run/failure/failure" }
+	},
+	"udev": {
+	    "power-a": { "subsystem": "power_supply" },
+	    "power-b": { "subsystem": "power_supply" }
+	}
+    },
+
+    "output": {
+	"led": {
+	    "red:status": {
+		"rules": [
+		    { "if": "locate", "then": "@off" },
+		    { "if": "panic", "then": "@blink-5hz" },
+		    { "if": "status-crit", "then": "@blink-1hz" },
+		    { "if": "status-err", "then": "@on" }
+		]
+	    },
+	    "green:status": {
+		"rules": [
+		    { "if": "locate", "then": "@blink-1hz" },
+		    { "if": "status-prime", "then": "@blink-1hz" },
+		    { "if": "status-ok", "then": "@on" }
+		]
+	    },
+	    "red:fault": {
+		"rules": [
+		    { "if": "locate", "then": "@off" },
+		    { "if": "panic", "then": "@blink-5hz" },
+		    { "if": "fault-crit", "then": "@blink-1hz" },
+		    { "if": "fault-err", "then": "@on" }
+		]
+	    },
+	    "green:fault": {
+		"rules": [
+		    { "if": "locate", "then": "@blink-1hz" },
+		    { "if": "fault-prime", "then": "@blink-1hz" },
+		    { "if": "fault-ok", "then": "@on" }
+		]
+	    },
+	    "red:lan": {
+		"rules": [
+		    { "if": "locate", "then": "@off" },
+		    { "if": "panic", "then": "@blink-5hz" },
+		    { "if": "lan-crit", "then": "@blink-1hz" },
+		    { "if": "lan-err", "then": "@on" }
+		]
+	    },
+	    "green:lan": {
+		"rules": [
+		    { "if": "locate", "then": "@blink-1hz" },
+		    { "if": "lan-prime", "then": "@blink-1hz" },
+		    { "if": "lan-ok", "then": "@on" }
+		]
+	    },
+
+	    "red:boot": {
+		"rules": [
+		    { "if": "locate", "then": "@off" },
+		    { "if": "panic", "then": "@blink-5hz" },
+		    { "if": "fail-safe", "then": "@blink-5hz" }
+		]
+	    },
+	    "green:boot": {
+		"rules": [
+		    { "if": "locate", "then": "@blink-1hz" },
+		    { "if": "panic", "then": "@off" },
+		    { "if": "startup", "then": "@on" },
+		    { "if": "true", "then": "@blink-1hz" }
+		]
+	    },
+
+	    "red:power-a": {
+		"rules": [
+		    { "if": "panic", "then": "@blink-5hz" },
+		    { "if": "!power-a:online", "then": "@blink-1hz" }
+		]
+	    },
+	    "red:power-b": {
+		"rules": [
+		    { "if": "panic", "then": "@blink-5hz" },
+		    { "if": "!power-b:online", "then": "@blink-1hz" }
+		]
+	    }
+	}
+    },
+
+    "aliases": {
+	"on": {
+	    "brightness": true
+	},
+	"off": {
+	    "brightness": false
+	},
+	"blink-1hz": {
+	    "trigger": "timer",
+	    "delay_on": 500,
+	    "delay_off": 500
+	},
+	"blink-5hz": {
+	    "trigger": "timer",
+	    "delay_on": 100,
+	    "delay_off": 100
+	}
+    }
+}
