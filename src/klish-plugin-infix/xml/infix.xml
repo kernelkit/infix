@@ -306,8 +306,8 @@
       <ACTION sym="script">jq -C . /cfg/startup-config.cfg</ACTION>
     </COMMAND>
   </COMMAND>
-  <COMMAND name="factory-reset" help="Restore the system to factory  state">
-      <ACTION sym="script" in="tty" out="tty" interrupt="true">/bin/yorn "This will restore the device to factory state"</ACTION>
+  <COMMAND name="factory-reset" help="Restore the system to factory default state">
+      <ACTION sym="script" in="tty" out="tty" interrupt="true">/bin/yorn "This will restore the device to factory defaults"</ACTION>
       <ACTION sym="rpc@infix">/ietf-factory-default:factory-reset</ACTION>
   </COMMAND>
 
