@@ -75,7 +75,7 @@ To see available defconfigs for supported targets, use:
 Development
 -----------
 
-When changing a package, locally kept sources, or when using `local.mk`,
+When changing a package, locally kept sources, or when using [`local.mk`](override-package.md),
 you only want to rebuild the parts you have modified:
 
     make foo-rebuild
