@@ -138,6 +138,7 @@ if [ "$containerize" ]; then
     exec $runner run \
 	 --cap-add=NET_ADMIN \
 	 --device=/dev/net/tun \
+	 --expose 9000-9050 \
 	 --interactive \
 	 --rm \
 	 --security-opt seccomp=unconfined \
