@@ -1,0 +1,3 @@
+---
+- case: defconfig.sh
+  name: "validate defconfigs"
