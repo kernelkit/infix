@@ -624,3 +624,24 @@
 		};
 	};
 };
+
+/* Watchdog */
+
+&cp0_pinctrl {
+	watchdog_pins: watchdog-pins {
+		marvell,pins = WDT_TICKLE(MPP_ID);
+		marvell,function = "gpio";
+	};
+};
+
+/ {
+        sysmgmt-watchdog {
+                pinctrl-names = "default";
+                pinctrl-0 = <&watchdog_pins>;
+                compatible = "linux,wdt-gpio";
+                gpios = WDT_TICKLE(MPP_GPIO_REF);
+                always-running;
+                hw_algo = "toggle";
+                hw_margin_ms = <20000>; /* toggle period must be below 1 minute */
+        };
+};
