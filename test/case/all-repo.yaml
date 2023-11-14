@@ -1,0 +1,5 @@
+---
+# Tests in this suite sanity check the repo, e.g. defconfigs
+
+- name:  repo
+  suite: repo/all.yaml
