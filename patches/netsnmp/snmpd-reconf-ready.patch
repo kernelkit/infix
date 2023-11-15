@@ -1,0 +1,29 @@
+--- a/agent/snmpd.c	2023-11-10 08:51:59.539942616 +0100
++++ b/agent/snmpd.c	2023-11-10 08:56:27.719112830 +0100
+@@ -179,6 +179,7 @@
+ #define TIMETICK         500000L
+ 
+ int             snmp_dump_packet;
++static char    *pid_file = NULL;
+ static int      reconfig = 0;
+ int             Facility = LOG_DAEMON;
+ 
+@@ -397,7 +398,6 @@
+     int             dont_fork = 0, do_help = 0;
+     int             log_set = 0;
+     int             agent_mode = -1;
+-    char           *pid_file = NULL;
+     char            option_compatability[] = "-Le";
+ #ifndef WIN32
+     int             prepared_sockets = 0;
+@@ -1174,6 +1174,10 @@
+     ret = sigprocmask(SIG_UNBLOCK, &set, NULL);
+     netsnmp_assert(ret == 0);
+ #endif
++    if (pid_file) {
++	/* Signal readiness after reconf (Finit) */
++	utimensat(0, pid_file, NULL, 0);
++    }
+ }
+ 
+ /*******************************************************************-o-******
