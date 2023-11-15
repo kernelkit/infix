@@ -290,7 +290,7 @@ def add_ethtool_groups(ifname, iface_out):
 
 def add_ethtool_std(ifname, iface_out):
     cmd = ['ethtool', ifname]
-    keys = ['Duplex', 'Auto-negotiation']
+    keys = ['Speed', 'Duplex', 'Auto-negotiation']
     result = {}
 
     lines = run_cmd(cmd)
@@ -314,6 +314,13 @@ def add_ethtool_std(ifname, iface_out):
             insert(iface_out, "ieee802-ethernet-interface:ethernet", "duplex", "full")
         else:
             insert(iface_out, "ieee802-ethernet-interface:ethernet", "duplex", "unknown")
+
+    if "Speed" in result and result['Speed'] != "Unknown!":
+        # Avoid importing re (performance)
+        num = ''.join(filter(str.isdigit, result['Speed']))
+        if num:
+            num = round((int(num) / 1000), 3)
+            insert(iface_out, "ieee802-ethernet-interface:ethernet", "speed", str(num))
 
 if __name__ == "__main__":
     yang_data = {
