@@ -51,6 +51,7 @@ class Iface:
         self.autoneg = self.get_json_data('unknown', 'ieee802-ethernet-interface:ethernet',
                                           'auto-negotiation', 'enable')
         self.duplex = self.get_json_data('', 'ieee802-ethernet-interface:ethernet', 'duplex')
+        self.speed = self.get_json_data('', 'ieee802-ethernet-interface:ethernet', 'speed')
         self.phys_address = data.get('phys-address', '')
 
         if data.get('statistics'):
@@ -192,6 +193,10 @@ class Iface:
 
         if self.duplex:
             print(f"{'duplex':<{20}}: {self.duplex}")
+
+        if self.speed:
+            mbs = float(self.speed) * 1000
+            print(f"{'speed':<{20}}: {int(mbs)}")
 
         if self.phys_address:
             print(f"{'physical address':<{20}}: {self.phys_address}")
