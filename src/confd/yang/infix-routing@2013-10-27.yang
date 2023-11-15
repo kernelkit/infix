@@ -35,6 +35,20 @@ module infix-routing {
       deviate not-supported;
     }
 
+    typedef infix-control-plane-name {
+      type enumeration {
+	enum default {
+	  description "Only support one instance per routing type";
+	}
+      }
+    }
+
+    deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ietf-r:name" {
+      description "Limitation: Only one routing instance per protocol.";
+      deviate replace {
+	type infix-control-plane-name;
+      }
+    }
     /* Static routes */
     deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ietf-r:static-routes/v4ur:ipv4/v4ur:route/v4ur:next-hop/v4ur:next-hop-options/v4ur:next-hop-list" {
       deviate not-supported;
@@ -51,6 +65,7 @@ module infix-routing {
     }
 
     /* OSPF */
+    /*
     deviation "/ietf-r:routing/ietf-r:ribs/ietf-r:rib/ietf-r:routes/ietf-r:route/ospf:metric" {
       deviate not-supported;
     }
