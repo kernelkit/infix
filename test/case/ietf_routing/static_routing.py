@@ -139,7 +139,7 @@ def config_remove_routes(target):
     new = copy.deepcopy(running)
     new["routing"]["control-plane-protocols"].clear()
     target.put_diff_dicts("ietf-routing",running,new)
-    time.sleep(3) # Replace with operatinal check when available
+    time.sleep(2) # Replace with operatinal check when available
 
 with infamy.Test() as test:
     with test.step("Initialize"):
@@ -154,6 +154,7 @@ with infamy.Test() as test:
 
         config_target1(target1, target1data, target1_to_target2)
         config_target2(target2, target2_to_target1)
+        time.sleep(2) # Replace with operatinal check when available
     with test.step("Ping from host to 192.168.200.1(dut2) through dut1"):
         _, hport0 = env.ltop.xlate("host", "data1")
         with infamy.IsolatedMacVlan(hport0) as ns0:
