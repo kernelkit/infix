@@ -307,6 +307,14 @@ def add_ethtool_std(ifname, iface_out):
         else:
             insert(iface_out, "ieee802-ethernet-interface:ethernet", "auto-negotiation", "enable", False)
 
+    if "Duplex" in result:
+        if result['Duplex'] == "Half":
+            insert(iface_out, "ieee802-ethernet-interface:ethernet", "duplex", "half")
+        elif result['Duplex'] == "Full":
+            insert(iface_out, "ieee802-ethernet-interface:ethernet", "duplex", "full")
+        else:
+            insert(iface_out, "ieee802-ethernet-interface:ethernet", "duplex", "unknown")
+
 if __name__ == "__main__":
     yang_data = {
         "ietf-interfaces:interfaces": {
