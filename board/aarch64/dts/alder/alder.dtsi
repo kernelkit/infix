@@ -454,17 +454,59 @@
 	/* 88X3310 specifices 35ns minimum MDC period (28.57 MHz). */
 	clock-frequency = <28571428>;
 
-	xphy9: ethernet-phy@4 {
-		compatible = "ethernet-phy-ieee802.3-c45";
-		reg = <4>;
-		sfp = <&sfp9>;
-	};
+#define XPHY(_n, _sfp) \
+	ethernet-phy@_n { \
+		compatible = "ethernet-phy-ieee802.3-c45"; \
+		reg = <_n>; \
+		sfp = <&_sfp>; \
+		\
+		leds { \
+			#address-cells = <1>; \
+			#size-cells = <0>; \
+			\
+			led@0 { \
+				reg = <0>; \
+				function = "tp"; \
+				color = <LED_COLOR_ID_YELLOW>; \
+				default-state = "off"; \
+				\
+				marvell,media = "copper"; \
+				marvell,polarity = "active-high"; \
+			}; \
+			led@1 { \
+				reg = <1>; \
+				function = "tp"; \
+				color = <LED_COLOR_ID_GREEN>; \
+				default-state = "keep"; \
+				\
+				marvell,media = "copper"; \
+				marvell,polarity = "active-high"; \
+			}; \
+			\
+			led@2 { \
+				reg = <2>; \
+				function = "sfp"; \
+				color = <LED_COLOR_ID_YELLOW>; \
+				default-state = "off"; \
+				\
+				marvell,media = "fiber"; \
+				marvell,polarity = "active-high"; \
+			}; \
+			led@3 { \
+				reg = <3>; \
+				function = "sfp"; \
+				color = <LED_COLOR_ID_GREEN>; \
+				default-state = "keep"; \
+				\
+				marvell,media = "fiber"; \
+				marvell,polarity = "active-high"; \
+			}; \
+		}; \
+	}
 
-	xphya: ethernet-phy@5 {
-		compatible = "ethernet-phy-ieee802.3-c45";
-		reg = <5>;
-		sfp = <&sfpa>;
-	};
+	xphy9: XPHY(4, sfp9);
+	xphya: XPHY(5, sfpa);
+#undef XPHY
 };
 
 / {
