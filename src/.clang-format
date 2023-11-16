@@ -1,8 +1,25 @@
 # SPDX-License-Identifier: GPL-2.0
+#
 # clang-format style for Infix native source (Liunx kernel v6.5.6 style++)
 # Infix overrides, e.g., ColumnLimit: 0, at the end of this file.
-
 #
+# Call from command line.  The ṕrogram looks in parent dirs until it finds
+# the .clang-format file.
+#
+#    clang-format -i SOURCE
+#
+
+######
+# Emacs users, add the following to your .emacs for Alt-Shift-F on buffer:
+#
+# (use-package format-all
+#   :config
+#   (global-set-key (kbd "M-F") #'format-all-buffer)
+#   (add-hook 'prog-mode-hook #'format-all-ensure-formatter))
+#
+######
+
+#########################################################################
 # Linux clang-format configuration file. Intended for clang-format >= 11.
 #
 # For more information, see:
