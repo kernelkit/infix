@@ -14,7 +14,6 @@
 
 #include "core.h"
 
-
 static const struct srx_module_requirement infix_dhcp_reqs[] = {
 	{ .dir = YANG_PATH_, .name = "infix-dhcp-client", .rev = "2023-05-22" },
 	{ NULL }
@@ -38,7 +37,7 @@ static void add(const char *ifname, const char *client_id)
 			sprintf(args, "-C -x 61:'\"%s\"'", client_id);
 	}
 	fprintf(fp, "service name:dhcp :%s udhcpc -f -S -R -i %s %s -- DHCP client @%s\n",
-		ifname, ifname, args ?: "", ifname);
+	        ifname, ifname, args ?: "", ifname);
 	fclose(fp);
 
 	if (systemf("initctl -bfq enable dhcp-%s", ifname))
@@ -51,12 +50,12 @@ static void del(const char *ifname)
 }
 
 static int client_change(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
-	const char *xpath, sr_event_t event, unsigned request_id, void *_confd)
+                         const char *xpath, sr_event_t event, unsigned request_id, void *_confd)
 {
 	struct lyd_node *global, *diff, *cifs, *difs, *cif, *dif;
-	sr_error_t err = 0;
-	sr_data_t *cfg;
-	int ena = 0;
+	sr_error_t       err = 0;
+	sr_data_t       *cfg;
+	int              ena = 0;
 
 	switch (event) {
 	case SR_EV_DONE:
@@ -78,7 +77,7 @@ static int client_change(sr_session_ctx_t *session, uint32_t sub_id, const char 
 		goto err_release_data;
 
 	global = lydx_get_descendant(cfg->tree, "dhcp-client", NULL);
-	ena = lydx_is_enabled(global, "enabled");
+	ena    = lydx_is_enabled(global, "enabled");
 
 	cifs = lydx_get_descendant(cfg->tree, "dhcp-client", "client-if", NULL);
 	difs = lydx_get_descendant(diff, "dhcp-client", "client-if", NULL);
@@ -112,7 +111,6 @@ err_abandon:
 	return err;
 }
 
-
 int infix_dhcp_init(struct confd *confd)
 {
 	int rc;
@@ -122,7 +120,7 @@ int infix_dhcp_init(struct confd *confd)
 		goto fail;
 
 	REGISTER_CHANGE(confd->session, "infix-dhcp-client", "/infix-dhcp-client:dhcp-client",
-			0, client_change, confd, &confd->sub);
+	                0, client_change, confd, &confd->sub);
 	return SR_ERR_OK;
 fail:
 	ERROR("init failed: %s", sr_strerror(rc));
