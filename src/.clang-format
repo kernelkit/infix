@@ -710,8 +710,6 @@ UseTab: Always
 #
 # Infix overrides
 #
-AlignConsecutiveAssignments: true
-AlignConsecutiveDeclarations: true
 ColumnLimit: 0
 ForEachMacros: ['LYX_LIST_FOR_EACH', 'TAILQ_FOREACH']
 UseTab: AlignWithSpaces
