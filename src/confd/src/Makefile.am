@@ -7,12 +7,12 @@ plugin_LTLIBRARIES      = confd-plugin.la
 confd_plugin_la_LDFLAGS = -module -avoid-version -shared
 
 confd_plugin_la_CFLAGS  =			\
-	$(augeas_CFLAGS)			\
+	$(augeas_CFLAGS)				\
 	$(glib_CFLAGS)				\
-	$(jansson_CFLAGS)			\
-	$(libite_CFLAGS)			\
-	$(sysrepo_CFLAGS)			\
-	$(libsrx_CFLAGS)			\
+	$(jansson_CFLAGS)				\
+	$(libite_CFLAGS)				\
+	$(sysrepo_CFLAGS)				\
+	$(libsrx_CFLAGS)				\
 	$(CFLAGS)
 
 confd_plugin_la_LIBADD  =			\
@@ -25,28 +25,27 @@ confd_plugin_la_LIBADD  =			\
 
 confd_plugin_la_SOURCES =			\
 	core.c		core.h			\
-	dagger.c	dagger.h		\
-	ietf-interfaces.c			\
+	dagger.c		dagger.h		\
+	ietf-interfaces.c				\
 	ietf-system.c				\
 	ietf-factory-default.c			\
 	infix-dhcp.c				\
-	infix-services.c			\
+	infix-services.c				\
 	infix-factory.c				\
 	infix-system-software.c
 
-rauc_installer_sources = \
+rauc_installer_sources = 			\
 	rauc-installer.c rauc-installer.h
 
 BUILT_SOURCES = $(rauc_installer_sources)
 EXTRA_DIST    = de.pengutronix.rauc.Installer.xml
 
 $(rauc_installer_sources): de.pengutronix.rauc.Installer.xml
-	$(AM_V_GEN) gdbus-codegen			\
-		--generate-c-code rauc-installer	\
+	$(AM_V_GEN) gdbus-codegen				\
+		--generate-c-code rauc-installer		\
 		--c-generate-autocleanup all		\
-		--c-namespace Rauc			\
+		--c-namespace Rauc				\
 		--interface-prefix de.pengutronix.rauc.	\
 		$<
 
-nodist_confd_plugin_la_SOURCES = \
-	$(rauc_installer_sources)
+nodist_confd_plugin_la_SOURCES = $(rauc_installer_sources)
