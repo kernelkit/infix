@@ -119,6 +119,9 @@ int sr_plugin_init_cb(sr_session_ctx_t *session, void **priv)
 	rc = ietf_factory_default_init(&confd);
 	if(rc)
 		goto err;
+	rc = ietf_routing_init(&confd);
+	if(rc)
+		goto err;
 	rc = infix_system_sw_init(&confd);
 	if (rc)
 		goto err;
