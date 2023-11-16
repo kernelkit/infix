@@ -1,4 +1,3 @@
-#define _GNU_SOURCE
 /* SPDX-License-Identifier: BSD-3-Clause */
 
 #include <stdio.h>
