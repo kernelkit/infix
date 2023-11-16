@@ -1,4 +1,5 @@
 CFLAGS   += -Wall -Wextra -Werror
+CPPFLAGS += -D_GNU_SOURCE
 LDLIBS   += -lsysrepo -lev -lyang -ljansson -lite -lsrx
 
 TARGET    = statd
