@@ -13,7 +13,7 @@ json_t *json_get_output(const char *cmd)
 	json_t *j_root;
 	FILE *proc;
 
-	proc = popenf("re", cmd);
+	proc = popenf("re", "%s", cmd);
 	if (!proc) {
 		ERROR("Error, running command %s", cmd);
 		return NULL;
