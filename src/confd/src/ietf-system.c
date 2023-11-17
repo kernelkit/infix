@@ -157,9 +157,9 @@ static int clock_cb(sr_session_ctx_t *session, uint32_t sub_id, const char *modu
 	}
 	fmtime(now, curtime, sizeof(curtime));
 
-	if ((rc = lydx_new_path(ctx, parent, CLOCK_PATH_, "boot-datetime", boottime)))
+	if ((rc = lydx_new_path(ctx, parent, CLOCK_PATH_, "boot-datetime", "%s", boottime)))
 		goto fail;
-	if ((rc = lydx_new_path(ctx, parent, CLOCK_PATH_, "current-datetime", curtime)))
+	if ((rc = lydx_new_path(ctx, parent, CLOCK_PATH_, "current-datetime", "%s", curtime)))
 		goto fail;
 
 	if (rc) {
@@ -181,13 +181,13 @@ static int platform_cb(sr_session_ctx_t *session, uint32_t sub_id, const char *m
 
 	ctx = sr_acquire_context(sr_session_get_connection(session));
 
-	if ((rc = lydx_new_path(ctx, parent, PLATFORM_PATH_, "os-name", os)))
+	if ((rc = lydx_new_path(ctx, parent, PLATFORM_PATH_, "os-name", "%s", os)))
 		goto fail;
-	if ((rc = lydx_new_path(ctx, parent, PLATFORM_PATH_, "os-release", rel)))
+	if ((rc = lydx_new_path(ctx, parent, PLATFORM_PATH_, "os-release", "%s", rel)))
 		goto fail;
-	if ((rc = lydx_new_path(ctx, parent, PLATFORM_PATH_, "os-version", ver)))
+	if ((rc = lydx_new_path(ctx, parent, PLATFORM_PATH_, "os-version", "%s", ver)))
 		goto fail;
-	if ((rc = lydx_new_path(ctx, parent, PLATFORM_PATH_, "machine", sys)))
+	if ((rc = lydx_new_path(ctx, parent, PLATFORM_PATH_, "machine", "%s", sys)))
 		goto fail;
 
 	if (rc) {
@@ -1010,9 +1010,9 @@ static int change_motd(sr_session_ctx_t *session, uint32_t sub_id, const char *m
 	if (event != SR_EV_DONE)
 		return SR_ERR_OK;
 
-	message = srx_get_str(session, xpath);
+	message = srx_get_str(session, "%s", xpath);
 	if (message) {
-		rc = writesf(message, "w", fn);
+		rc = writesf(message, "w", "%s", fn);
 		free(message);
 	} else {
 		remove(fn);
@@ -1038,7 +1038,7 @@ static int change_hostname(sr_session_ctx_t *session, uint32_t sub_id, const cha
 	if (event != SR_EV_DONE)
 		return SR_ERR_OK;
 
-	nm = srx_get_str(session, xpath);
+	nm = srx_get_str(session, "%s", xpath);
 	if (!nm) {
 		/* XXX: derive from global "options.h" or /usr/share/factory/ */
 		nm = strdup("infix");
