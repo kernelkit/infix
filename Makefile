@@ -11,6 +11,9 @@ bmake   = $(MAKE) -C buildroot O=$(O) $1
 all: $(config) buildroot/Makefile
 	@+$(call bmake,$@)
 
+check dep:
+	@make -C src $@
+
 $(config):
 	@+$(call bmake,list-defconfigs)
 	@echo "\e[7mERROR: No configuration selected.\e[0m"
@@ -25,4 +28,5 @@ $(config):
 buildroot/Makefile:
 	@git submodule update --init
 
-.PHONY: all
+.PHONY: all check
+
