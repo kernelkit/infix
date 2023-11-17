@@ -1,20 +1,27 @@
 CFLAGS   += -Wall -Wextra -Werror
 CPPFLAGS += -D_GNU_SOURCE
-LDLIBS   += -lsysrepo -lev -lyang -ljansson -lite -lsrx
+LDLIBS   += -lsysrepo -lev -lyang -ljansson -lsrx -lite
 
 TARGET    = statd
-SRC       = statd.c shared.c shared.h
+HEADERS   = shared.h
+SRC       = statd.c shared.c
+OBJ       = $(SRC:.c=.o)
 
 all: $(TARGET)
 
-$(TARGET): $(SRC)
-	$(CC) $(CPPFLAGS) $(LDLIBS) $(CFLAGS) -o $(TARGET) $(SRC)
+.c.o:
+	$(CC) $(CFLAGS) $(CPPFLAGS) -c -o $@ $<
+
+$(OBJ): $(SRC) $(HEADERS)
+
+$(TARGET): $(OBJ)
+	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^ $(LDLIBS)
 
 clean:
-	-rm statd
+	-rm -f $(TARGET) $(OBJ)
 
 distclean: clean
 	-rm *~
 
-install:
-	install -D statd $(DESTDIR)/sbin/
+install: $(TARGET)
+	install -D $(TARGET) $(DESTDIR)/sbin/
