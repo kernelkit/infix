@@ -12,6 +12,7 @@ all: $(config) buildroot/Makefile
 	@+$(call bmake,$@)
 
 check dep:
+	@echo "Starting local check, stage $@ ..."
 	@make -C src $@
 
 $(config):

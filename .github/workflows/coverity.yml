@@ -47,15 +47,21 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get -y update
-          sudo apt-get -y install pkg-config libsystemd-dev
-      - name: Configure
+          sudo apt-get -y install pkg-config libjansson-dev libev-dev libite-dev \
+                                  libaugeas-dev libglib2.0-dev libpcre2-dev
+      - name: Build dependencies
         run: |
-          ./autogen.sh
-          ./configure --prefix=
-      - name: Build
+          git clone https://github.com/CESNET/libyang.git
+          mkdir libyang/build
+          (cd libyang/build && cmake .. && make all && sudo make install)
+          git clone https://github.com/sysrepo/sysrepo.git
+          mkdir sysrepo/build
+          (cd sysrepo/build && cmake .. && make all && sudo make install)
+          make dep
+      - name: Check applications
         run: |
           export PATH=`pwd`/coverity/bin:$PATH
-          cov-build --dir cov-int make
+          cov-build --dir cov-int make check
       - name: Submit results to Coverity Scan
         env:
           TOKEN: ${{ secrets.COVERITY_SCAN_TOKEN }}

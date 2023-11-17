@@ -1,12 +1,14 @@
 # Host build of critical components, for Coverity Scan mostly
 APPS = confd statd factory
 
+.PHONY: alla
 all:
 	@echo "*** all not supported, only check possible ***"
 	false
 
-dep: libsrx
-	(cd $< && make -f check.mk $@)
+.PHONY: dep
+dep:
+	(cd libsrx && make -f check.mk dep)
 
 check: $(APPS)
 	rm -rf staging
