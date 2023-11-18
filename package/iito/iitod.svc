@@ -1,0 +1,1 @@
+service [S0123456789] <!pid/syslogd> iitod -- LED daemon
