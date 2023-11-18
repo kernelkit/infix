@@ -4,7 +4,7 @@
 #
 ################################################################################
 
-IITO_VERSION = 1.0.0
+IITO_VERSION = 1.1.0
 IITO_SITE = https://github.com/kernelkit/iito/releases/download/v$(IITO_VERSION)
 IITO_LICENSE = GPL-2.0
 IITO_LICENSE_FILES = COPYING
