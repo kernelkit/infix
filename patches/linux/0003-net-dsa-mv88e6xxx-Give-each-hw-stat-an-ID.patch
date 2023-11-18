@@ -1,7 +1,7 @@
-From 63c14938bdaa1891386989aa46bee4571c1c0777 Mon Sep 17 00:00:00 2001
+From f960475a96d2852d06ee062c970e35074f87659c Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Tue, 5 Sep 2023 21:10:15 +0200
-Subject: [PATCH 3/9] net: dsa: mv88e6xxx: Give each hw stat an ID
+Subject: [PATCH 03/15] net: dsa: mv88e6xxx: Give each hw stat an ID
 
 With the upcoming standard counter group support, we are no longer
 reading out the whole set of counters, but rather mapping a subset to
@@ -17,7 +17,7 @@ Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
  1 file changed, 78 insertions(+), 63 deletions(-)
 
 diff --git a/drivers/net/dsa/mv88e6xxx/chip.c b/drivers/net/dsa/mv88e6xxx/chip.c
-index 1e944cf08233..ea4fb0d3e628 100644
+index 139f4d55a284..4afe5c212a36 100644
 --- a/drivers/net/dsa/mv88e6xxx/chip.c
 +++ b/drivers/net/dsa/mv88e6xxx/chip.c
 @@ -1019,68 +1019,83 @@ static int mv88e6xxx_stats_snapshot(struct mv88e6xxx_chip *chip, int port)

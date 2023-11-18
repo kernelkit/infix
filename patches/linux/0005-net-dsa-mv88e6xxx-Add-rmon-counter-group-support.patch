@@ -1,7 +1,7 @@
-From 2cfafa598282efc980baf00b312a61032b9f5aa9 Mon Sep 17 00:00:00 2001
+From a85c55f3232d402780a22d42859bdc81150469b4 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Wed, 6 Sep 2023 10:55:53 +0200
-Subject: [PATCH 5/9] net: dsa: mv88e6xxx: Add "rmon" counter group support
+Subject: [PATCH 05/15] net: dsa: mv88e6xxx: Add "rmon" counter group support
 
 After this change, mv88e6xxx ports can report the applicable subset of
 their counters using ethtool's standardized "rmon" counter group.
@@ -12,7 +12,7 @@ Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
  1 file changed, 56 insertions(+)
 
 diff --git a/drivers/net/dsa/mv88e6xxx/chip.c b/drivers/net/dsa/mv88e6xxx/chip.c
-index ec3a4717bc44..eb5990cfc7d4 100644
+index 2cfc072b41b1..90dcd6c3be31 100644
 --- a/drivers/net/dsa/mv88e6xxx/chip.c
 +++ b/drivers/net/dsa/mv88e6xxx/chip.c
 @@ -1454,6 +1454,61 @@ static void mv88e6xxx_get_eth_mac_stats(struct dsa_switch *ds, int port,
@@ -77,7 +77,7 @@ index ec3a4717bc44..eb5990cfc7d4 100644
  static int mv88e6xxx_get_regs_len(struct dsa_switch *ds, int port)
  {
  	struct mv88e6xxx_chip *chip = ds->priv;
-@@ -7212,6 +7267,7 @@ static const struct dsa_switch_ops mv88e6xxx_switch_ops = {
+@@ -7214,6 +7269,7 @@ static const struct dsa_switch_ops mv88e6xxx_switch_ops = {
  	.get_strings		= mv88e6xxx_get_strings,
  	.get_ethtool_stats	= mv88e6xxx_get_ethtool_stats,
  	.get_eth_mac_stats	= mv88e6xxx_get_eth_mac_stats,
