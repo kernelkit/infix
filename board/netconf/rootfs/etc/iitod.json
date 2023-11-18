@@ -29,6 +29,21 @@
     },
 
     "output": {
+	"led-group": {
+	    "port-link-act": {
+		"match": ["*:green:tp", "*:green:sfp", "*:green:port" ],
+
+		"rules": [
+		    { "if": "true", "then": { "trigger": "netdev", "link": 1, "rx": 1, "tx": 1 } }
+		]
+	    },
+	    "port-alarm": {
+		"match": ["*:yellow:tp", "*:yellow:sfp", "*:yellow:port" ],
+
+		"rules": [
+		]
+	    }
+	},
 	"led": {
 	    "red:status": {
 		"rules": [
