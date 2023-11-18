@@ -1,0 +1,321 @@
+From 913a57a304e8024f4cea872fa904cee867c469a2 Mon Sep 17 00:00:00 2001
+From: Tobias Waldekranz <tobias@waldekranz.com>
+Date: Thu, 16 Nov 2023 19:44:32 +0100
+Subject: [PATCH 14/15] net: dsa: mv88e6xxx: Add LED infrastructure
+
+Parse DT for LEDs and register them for devices that support it,
+though no actual implementations exist yet.
+
+Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
+---
+ drivers/net/dsa/mv88e6xxx/Makefile |   1 +
+ drivers/net/dsa/mv88e6xxx/chip.c   |   8 +-
+ drivers/net/dsa/mv88e6xxx/chip.h   |  17 +++
+ drivers/net/dsa/mv88e6xxx/leds.c   | 184 +++++++++++++++++++++++++++++
+ drivers/net/dsa/mv88e6xxx/leds.h   |  12 ++
+ 5 files changed, 221 insertions(+), 1 deletion(-)
+ create mode 100644 drivers/net/dsa/mv88e6xxx/leds.c
+ create mode 100644 drivers/net/dsa/mv88e6xxx/leds.h
+
+diff --git a/drivers/net/dsa/mv88e6xxx/Makefile b/drivers/net/dsa/mv88e6xxx/Makefile
+index 1409e691ab77..ab07996aeb7f 100644
+--- a/drivers/net/dsa/mv88e6xxx/Makefile
++++ b/drivers/net/dsa/mv88e6xxx/Makefile
+@@ -9,6 +9,7 @@ mv88e6xxx-objs += global2.o
+ mv88e6xxx-objs += global2_avb.o
+ mv88e6xxx-objs += global2_scratch.o
+ mv88e6xxx-$(CONFIG_NET_DSA_MV88E6XXX_PTP) += hwtstamp.o
++mv88e6xxx-objs += leds.o
+ mv88e6xxx-objs += phy.o
+ mv88e6xxx-objs += port.o
+ mv88e6xxx-objs += port_hidden.o
+diff --git a/drivers/net/dsa/mv88e6xxx/chip.c b/drivers/net/dsa/mv88e6xxx/chip.c
+index 90dcd6c3be31..d343ea5cc4a1 100644
+--- a/drivers/net/dsa/mv88e6xxx/chip.c
++++ b/drivers/net/dsa/mv88e6xxx/chip.c
+@@ -37,6 +37,7 @@
+ #include "global1.h"
+ #include "global2.h"
+ #include "hwtstamp.h"
++#include "leds.h"
+ #include "phy.h"
+ #include "port.h"
+ #include "ptp.h"
+@@ -4259,11 +4260,16 @@ static int mv88e6xxx_setup(struct dsa_switch *ds)
+ 
+ static int mv88e6xxx_port_setup(struct dsa_switch *ds, int port)
+ {
+-	return mv88e6xxx_setup_devlink_regions_port(ds, port);
++	int err = 0;
++
++	err = err ? : mv88e6xxx_setup_devlink_regions_port(ds, port);
++	err = err ? : mv88e6xxx_port_setup_leds(ds, port);
++	return err;
+ }
+ 
+ static void mv88e6xxx_port_teardown(struct dsa_switch *ds, int port)
+ {
++	/* LED resources are devm_ managed */
+ 	mv88e6xxx_teardown_devlink_regions_port(ds, port);
+ }
+ 
+diff --git a/drivers/net/dsa/mv88e6xxx/chip.h b/drivers/net/dsa/mv88e6xxx/chip.h
+index 268c97cde8d8..fb0d2584af1b 100644
+--- a/drivers/net/dsa/mv88e6xxx/chip.h
++++ b/drivers/net/dsa/mv88e6xxx/chip.h
+@@ -205,6 +205,7 @@ struct mv88e6xxx_irq_ops;
+ struct mv88e6xxx_gpio_ops;
+ struct mv88e6xxx_avb_ops;
+ struct mv88e6xxx_ptp_ops;
++struct mv88e6xxx_led_ops;
+ 
+ struct mv88e6xxx_irq {
+ 	u16 masked;
+@@ -329,6 +330,8 @@ struct mv88e6xxx_hw_stat {
+ 	int type;
+ };
+ 
++struct mv88e6xxx_led;
++
+ struct mv88e6xxx_chip {
+ 	const struct mv88e6xxx_info *info;
+ 
+@@ -672,6 +675,9 @@ struct mv88e6xxx_ops {
+ 	/* Precision Time Protocol operations */
+ 	const struct mv88e6xxx_ptp_ops *ptp_ops;
+ 
++	/* LED operations */
++	const struct mv88e6xxx_led_ops *led_ops;
++
+ 	/* Phylink */
+ 	void (*phylink_get_caps)(struct mv88e6xxx_chip *chip, int port,
+ 				 struct phylink_config *config);
+@@ -748,6 +754,17 @@ struct mv88e6xxx_ptp_ops {
+ 	u32 cc_mult_dem;
+ };
+ 
++struct mv88e6xxx_led_ops {
++	int (*brightness_set)(struct mv88e6xxx_led *led,
++			      enum led_brightness brightness);
++	int (*blink_set)(struct mv88e6xxx_led *led,
++			 unsigned long *delay_on, unsigned long *delay_off);
++	int (*hw_control_is_supported)(struct mv88e6xxx_led *led,
++				       unsigned long flags);
++	int (*hw_control_set)(struct mv88e6xxx_led *led, unsigned long flags);
++	int (*hw_control_get)(struct mv88e6xxx_led *led, unsigned long *flags);
++};
++
+ static inline bool mv88e6xxx_has_stu(struct mv88e6xxx_chip *chip)
+ {
+ 	return chip->info->max_sid > 0 &&
+diff --git a/drivers/net/dsa/mv88e6xxx/leds.c b/drivers/net/dsa/mv88e6xxx/leds.c
+new file mode 100644
+index 000000000000..42e1661e1f47
+--- /dev/null
++++ b/drivers/net/dsa/mv88e6xxx/leds.c
+@@ -0,0 +1,184 @@
++// SPDX-License-Identifier: GPL-2.0-or-later
++#include <net/dsa.h>
++
++#include "chip.h"
++#include "port.h"
++
++struct mv88e6xxx_led {
++	struct mv88e6xxx_chip *chip;
++	int port;
++	u8 index;
++
++	struct led_classdev ldev;
++};
++
++static int mv88e6xxx_led_brightness_set(struct led_classdev *ldev,
++					enum led_brightness brightness)
++{
++	const struct mv88e6xxx_led_ops *ops;
++	struct mv88e6xxx_led *led;
++
++	led = container_of(ldev, struct mv88e6xxx_led, ldev);
++	ops = led->chip->info->ops->led_ops;
++
++	if (!ops->brightness_set)
++		return -EOPNOTSUPP;
++
++	return ops->brightness_set(led, brightness);
++}
++
++static int mv88e6xxx_led_blink_set(struct led_classdev *ldev,
++				    unsigned long *delay_on,
++				    unsigned long *delay_off)
++{
++	const struct mv88e6xxx_led_ops *ops;
++	struct mv88e6xxx_led *led;
++
++	led = container_of(ldev, struct mv88e6xxx_led, ldev);
++	ops = led->chip->info->ops->led_ops;
++
++	if (!ops->blink_set)
++		return -EOPNOTSUPP;
++
++	return ops->blink_set(led, delay_on, delay_off);
++}
++
++static int mv88e6xxx_led_hw_control_is_supported(struct led_classdev *ldev,
++						  unsigned long flags)
++{
++	const struct mv88e6xxx_led_ops *ops;
++	struct mv88e6xxx_led *led;
++
++	led = container_of(ldev, struct mv88e6xxx_led, ldev);
++	ops = led->chip->info->ops->led_ops;
++
++	if (!ops->hw_control_is_supported)
++		return -EOPNOTSUPP;
++
++	return ops->hw_control_is_supported(led, flags);
++}
++
++static int mv88e6xxx_led_hw_control_set(struct led_classdev *ldev,
++					 unsigned long flags)
++{
++	const struct mv88e6xxx_led_ops *ops;
++	struct mv88e6xxx_led *led;
++
++	led = container_of(ldev, struct mv88e6xxx_led, ldev);
++	ops = led->chip->info->ops->led_ops;
++
++	if (!ops->hw_control_set)
++		return -EOPNOTSUPP;
++
++	return ops->hw_control_set(led, flags);
++}
++
++static int mv88e6xxx_led_hw_control_get(struct led_classdev *ldev,
++					 unsigned long *flags)
++{
++	const struct mv88e6xxx_led_ops *ops;
++	struct mv88e6xxx_led *led;
++
++	led = container_of(ldev, struct mv88e6xxx_led, ldev);
++	ops = led->chip->info->ops->led_ops;
++
++	if (!ops->hw_control_get)
++		return -EOPNOTSUPP;
++
++	return ops->hw_control_get(led, flags);
++}
++
++static struct device *mv88e6xxx_led_hw_control_get_device(struct led_classdev *ldev)
++{
++	struct mv88e6xxx_led *led;
++	struct dsa_port *dp;
++
++	led = container_of(ldev, struct mv88e6xxx_led, ldev);
++	dp = dsa_to_port(led->chip->ds, led->port);
++
++	if (dp && dp->slave)
++		return &dp->slave->dev;
++
++	return NULL;
++}
++
++static int mv88e6xxx_port_setup_led(struct mv88e6xxx_chip *chip, int port,
++				    struct device_node *np)
++{
++	struct led_init_data init_data = {};
++	struct mv88e6xxx_led *led;
++	char *devname;
++	u32 index;
++	int err;
++
++	err = of_property_read_u32(np, "reg", &index);
++	if (err)
++		return err;
++
++	if (index >= 2)
++		return -EINVAL;
++
++	led = devm_kzalloc(chip->dev, sizeof(*led), GFP_KERNEL);
++	if (!led)
++		return -ENOMEM;
++
++	*led = (struct mv88e6xxx_led) {
++		.chip = chip,
++		.port = port,
++		.index = index,
++
++		.ldev = {
++			.max_brightness = 1,
++			.brightness_set_blocking = mv88e6xxx_led_brightness_set,
++			.blink_set = mv88e6xxx_led_blink_set,
++
++#ifdef CONFIG_LEDS_TRIGGERS
++			.hw_control_trigger = "netdev",
++			.hw_control_get_device = mv88e6xxx_led_hw_control_get_device,
++
++			.hw_control_is_supported = mv88e6xxx_led_hw_control_is_supported,
++			.hw_control_set = mv88e6xxx_led_hw_control_set,
++			.hw_control_get = mv88e6xxx_led_hw_control_get,
++#endif
++		},
++	};
++
++	devname = devm_kasprintf(chip->dev, GFP_KERNEL, "%s.%d",
++				 dev_name(chip->dev), port);
++	if (!devname)
++		return -ENOMEM;
++
++	init_data = (struct led_init_data) {
++		.fwnode = of_fwnode_handle(np),
++		.devname_mandatory = true,
++		.devicename = devname,
++	};
++
++	return devm_led_classdev_register_ext(chip->dev, &led->ldev, &init_data);
++}
++
++int mv88e6xxx_port_setup_leds(struct dsa_switch *ds, int port)
++{
++	struct dsa_port *dp = dsa_to_port(ds, port);
++	struct mv88e6xxx_chip *chip = ds->priv;
++	struct device_node *pnp, *np;
++	int err;
++
++	if (!chip->info->ops->led_ops)
++		return 0;
++
++	if (!dp->dn)
++		return 0;
++
++	pnp = of_get_child_by_name(dp->dn, "leds");
++	if (!pnp)
++		return 0;
++
++	for_each_available_child_of_node(pnp, np) {
++		err = mv88e6xxx_port_setup_led(chip, port, np);
++		if (err)
++			return err;
++	}
++
++	return 0;
++}
+diff --git a/drivers/net/dsa/mv88e6xxx/leds.h b/drivers/net/dsa/mv88e6xxx/leds.h
+new file mode 100644
+index 000000000000..8afa2a0c0527
+--- /dev/null
++++ b/drivers/net/dsa/mv88e6xxx/leds.h
+@@ -0,0 +1,12 @@
++/* SPDX-License-Identifier: GPL-2.0-or-later */
++
++/* Marvell 88E6xxx Switch leds support. */
++
++#ifndef _MV88E6XXX_LEDS_H
++#define _MV88E6XXX_LEDS_H
++
++#include "chip.h"
++
++int mv88e6xxx_port_setup_leds(struct dsa_switch *ds, int port);
++
++#endif /* _MV88E6XXX_LEDS_H */
+-- 
+2.34.1
+

@@ -1,7 +1,8 @@
-From 0de9c5dfc6395eb2e3066488638ac86de58b8068 Mon Sep 17 00:00:00 2001
+From 46bbea6b9d692ac7460e4e278cedee9f88b6da0b Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Tue, 19 Sep 2023 18:38:10 +0200
-Subject: [PATCH 9/9] net: phy: marvell10g: Support firmware loading on 88X3310
+Subject: [PATCH 09/15] net: phy: marvell10g: Support firmware loading on
+ 88X3310
 
 If a device is found waiting for firmware to be loaded into its RAM,
 ask userspace for the binary and load it over XMDIO.
