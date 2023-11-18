@@ -378,29 +378,57 @@
 				};
 			};
 
-#define SWP(_n, _label, _mac_offs, _phymode, _phy) \
-			port@_n { \
+#define SWP_COMMON(_n, _label, _mac_offs, _phymode, _phy) \
 				reg = <0x ## _n>; \
 				label = _label; \
 				phy-mode = _phymode; \
 				phy-handle = <&_phy>; \
 				\
 				nvmem-cells = <&base_mac _mac_offs>; \
-				nvmem-cell-names = "mac-address"; \
+				nvmem-cell-names = "mac-address"
+
+#define XSWP(_n, _label, _mac_offs, _phy) \
+			port@_n { \
+				SWP_COMMON(_n, _label, _mac_offs, "usxgmii", _phy); \
 			}
 
-			SWP(9,  "x1",  1, "usxgmii",  xphy9);
-			SWP(a,  "x2",  2, "usxgmii",  xphya);
+#define GSWP(_n, _label, _mac_offs, _phy) \
+			port@_n { \
+				SWP_COMMON(_n, _label, _mac_offs, "gmii", _phy); \
+				\
+				leds { \
+					#address-cells = <1>; \
+					#size-cells = <0>; \
+					\
+					led@0 { \
+						reg = <0>; \
+						function = "tp"; \
+						color = <LED_COLOR_ID_YELLOW>; \
+						default-state = "off"; \
+					}; \
+					led@1 { \
+						reg = <1>; \
+						function = "tp"; \
+						color = <LED_COLOR_ID_GREEN>; \
+						default-state = "keep"; \
+					}; \
+				}; \
+			}
 
-			SWP(8,  "x3",  3,    "gmii", swphy8);
-			SWP(7,  "x4",  4,    "gmii", swphy7);
-			SWP(6,  "x5",  5,    "gmii", swphy6);
-			SWP(5,  "x6",  6,    "gmii", swphy5);
-			SWP(4,  "x7",  7,    "gmii", swphy4);
-			SWP(3,  "x8",  8,    "gmii", swphy3);
-			SWP(2,  "x9",  9,    "gmii", swphy2);
-			SWP(1, "x10", 10,    "gmii", swphy1);
-#undef SWP
+			XSWP(9,  "x1",  1,  xphy9);
+			XSWP(a,  "x2",  2,  xphya);
+
+			GSWP(8,  "x3",  3, swphy8);
+			GSWP(7,  "x4",  4, swphy7);
+			GSWP(6,  "x5",  5, swphy6);
+			GSWP(5,  "x6",  6, swphy5);
+			GSWP(4,  "x7",  7, swphy4);
+			GSWP(3,  "x8",  8, swphy3);
+			GSWP(2,  "x9",  9, swphy2);
+			GSWP(1, "x10", 10, swphy1);
+#undef GSWP
+#undef XSWP
+#undef SWP_COMMON
 		};
 
 		mdio {
