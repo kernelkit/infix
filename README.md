@@ -1,4 +1,5 @@
-<img align="right" src="doc/logo.png" alt="Infix - Linux <3 NETCONF" width=480>
+[![License Badge][]][License] [![Coverity Status][]][Coverity Scan]
+<img align="right" src="doc/logo.png" alt="Infix - Linux <3 NETCONF" width=480 border=10>
 <details><summary><b>Documentation</b></summary>
 
  - **Infix In-Depth**
@@ -19,7 +20,8 @@
 Infix is a Linux Network Operating System (NOS) based on [Buildroot][1],
 and [sysrepo][2].  A powerful mix that ease porting to different
 platforms, simplify long-term maintenance, and provide made-easy
-management using NETCONF[^1] (remote) or the built-in [CLI][3].
+management using NETCONF[^1] (remote) or the built-in [command
+line interface (CLI)][3] (click the foldout for an example).
 
 <details><summary><b>Example CLI Session</b></summary>
 
@@ -86,3 +88,7 @@ more information, see: [Infix in Virtual Environments](doc/virtual.md).
 [1]: https://buildroot.org/
 [2]: https://www.sysrepo.org/
 [3]: doc/cli/introduction.md
+[License]:         https://en.wikipedia.org/wiki/GPL_license
+[License Badge]:   https://img.shields.io/badge/License-GPL%20v2-blue.svg
+[Coverity Scan]:   https://scan.coverity.com/projects/29393
+[Coverity Status]: https://scan.coverity.com/projects/29393/badge.svg
