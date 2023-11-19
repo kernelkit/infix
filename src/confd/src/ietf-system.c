@@ -525,7 +525,6 @@ static int change_dns(sr_session_ctx_t *session, uint32_t sub_id, const char *mo
 	fp = fopen(fn, "w");
 	if (!fp) {
 		ERROR("failed updating %s: %s", fn, strerror(errno));
-		sr_free_values(val, cnt);
 		return SR_ERR_SYS;
 	}
 
