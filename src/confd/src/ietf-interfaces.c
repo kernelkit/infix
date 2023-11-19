@@ -69,9 +69,13 @@ static char *iface_xpath(const char *xpath)
 {
 	char *path, *ptr;
 
+	if (!xpath)
+		return NULL;
+
 	path = strdup(xpath);
 	if (!path)
 		return NULL;
+
 	if (!(ptr = strstr(path, "]/"))) {
 		free(path);
 		return NULL;
@@ -219,7 +223,7 @@ static int ifchange_cand_infer_type(sr_session_ctx_t *session, const char *path)
 	sr_error_t err = SR_ERR_OK;
 
 	xpath = iface_xpath(path);
-	if (!path)
+	if (!xpath)
 		return SR_ERR_SYS;
 
 	type = srx_get_str(session, "%s/type", xpath);
