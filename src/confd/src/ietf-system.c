@@ -800,6 +800,7 @@ static sr_error_t handle_sr_shell_update(augeas *aug, sr_session_ctx_t *sess, st
 		err = SR_ERR_OK;
 	}
 	free(shell);
+	free(user);
 
 	return err;
 }
