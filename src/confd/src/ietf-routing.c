@@ -55,8 +55,7 @@ static int parse_static_routes(sr_session_ctx_t *session, struct lyd_node *paren
 	ipv4 = lydx_get_child(parent, "ipv4");
 
 	v4routes = lydx_get_child(ipv4, "route");
-	LY_LIST_FOR(v4routes, route)
-	{
+	LY_LIST_FOR(v4routes, route) {
 		parse_route(route, fp);
 		num_routes++;
 	}

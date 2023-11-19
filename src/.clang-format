@@ -711,6 +711,6 @@ UseTab: Always
 # Infix overrides
 #
 ColumnLimit: 0
-ForEachMacros: ['LYX_LIST_FOR_EACH', 'TAILQ_FOREACH']
+ForEachMacros: ['LYX_LIST_FOR_EACH', 'TAILQ_FOREACH', 'LY_LIST_FOR']
 UseTab: AlignWithSpaces
 ...
