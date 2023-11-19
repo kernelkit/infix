@@ -529,7 +529,7 @@ static int change_dns(sr_session_ctx_t *session, uint32_t sub_id, const char *mo
 	}
 
 	SRX_GET_UINT8(session, timeout, XPATH_BASE_"/dns-resolver/options/timeout");
-	SRX_GET_UINT8(session, timeout, XPATH_BASE_"/dns-resolver/options/attempts");
+	SRX_GET_UINT8(session, attempts, XPATH_BASE_"/dns-resolver/options/attempts");
 	if (timeout || attempts) {
 		fprintf(fp, "options");
 		if (timeout)
