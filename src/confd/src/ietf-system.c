@@ -254,7 +254,7 @@ static int rpc_set_datetime(sr_session_ctx_t *session, uint32_t sub_id,
 
         tv.tv_sec = mktime(&tm);
         tv.tv_usec = 0;
-	if (settimeofday(&tv, NULL)) {
+	if (tv.tv_sec == (time_t)-1 || settimeofday(&tv, NULL)) {
 		ERRNO("ietf-system:settimeofday() failed");
 		goto done;
 	}
