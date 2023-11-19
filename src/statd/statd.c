@@ -343,7 +343,7 @@ static void nl_event_cb(struct ev_loop *, struct ev_io *w, int)
 	int err;
 	int len;
 
-	len = recv(statd->nl.sd, buf, sizeof(buf), 0);
+	len = recv(statd->nl.sd, buf, sizeof(buf) - 1, 0);
 	if (len < 0) {
 		ERROR("Error, netlink recv failed: %s", strerror(errno));
 		close(statd->nl.sd);
@@ -353,6 +353,9 @@ static void nl_event_cb(struct ev_loop *, struct ev_io *w, int)
 		 */
 		exit(EXIT_FAILURE);
 	}
+
+	/* nl_process_msg() expects NULL terminated buffer */
+	buf[len] = 0;
 
 	for (nlh = (struct nlmsghdr *)buf; NLMSG_OK(nlh, len); nlh = NLMSG_NEXT(nlh, len)) {
 		err = nl_process_msg(nlh, statd);
