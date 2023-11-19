@@ -732,6 +732,7 @@ static char *change_get_user(struct sr_change *change)
 
 static sr_error_t handle_sr_passwd_update(augeas *aug, sr_session_ctx_t *, struct sr_change *change)
 {
+	sr_error_t err = SR_ERR_OK;
 	const char *hash;
 	char *user;
 
@@ -746,7 +747,8 @@ static sr_error_t handle_sr_passwd_update(augeas *aug, sr_session_ctx_t *, struc
 
 		if (change->new->type != SR_STRING_T) {
 			ERROR("Internal error, expected pass to be string type\n");
-			return SR_ERR_INTERNAL;
+			err = SR_ERR_INTERNAL;
+			break;
 		}
 		hash = change->new->data.string_val;
 
@@ -761,19 +763,22 @@ static sr_error_t handle_sr_passwd_update(augeas *aug, sr_session_ctx_t *, struc
 			hash = "*";
 		}
 		if (aug_set_dynpath(aug, hash, "etc/shadow/%s/password", user))
-			return SR_ERR_SYS;
-		NOTE("Password updated for user %s", user);
+			err = SR_ERR_SYS;
+		else
+			NOTE("Password updated for user %s", user);
 		break;
 	case SR_OP_DELETED:
 		if (aug_set_dynpath(aug, "!", "etc/shadow/%s/password", user))
-			return SR_ERR_SYS;
-		NOTE("Password deleted for user %s", user);
+			err = SR_ERR_SYS;
+		else
+			NOTE("Password deleted for user %s", user);
 		break;
 	case SR_OP_MOVED:
-		return SR_ERR_OK;
+		break;
 	}
 
-	return SR_ERR_OK;
+	free(user);
+	return err;
 }
 
 static sr_error_t handle_sr_shell_update(augeas *aug, sr_session_ctx_t *sess, struct sr_change *change)
