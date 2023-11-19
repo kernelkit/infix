@@ -311,7 +311,7 @@ static int change_clock(sr_session_ctx_t *session, uint32_t sub_id, const char *
 		break;
 
 	case SR_EV_ABORT:	/* User abort, or other plugin failed */
-		remove(TIMEZONE_NEXT);
+		(void)remove(TIMEZONE_NEXT);
 		return SR_ERR_OK;
 
 	case SR_EV_DONE:
@@ -319,13 +319,13 @@ static int change_clock(sr_session_ctx_t *session, uint32_t sub_id, const char *
 		if (access(TIMEZONE_NEXT, F_OK))
 			return SR_ERR_OK;
 
-		remove(TIMEZONE_PREV);
-		rename(TIMEZONE_CONF, TIMEZONE_PREV);
-		rename(TIMEZONE_NEXT, TIMEZONE_CONF);
+		(void)remove(TIMEZONE_PREV);
+		(void)rename(TIMEZONE_CONF, TIMEZONE_PREV);
+		(void)rename(TIMEZONE_NEXT, TIMEZONE_CONF);
 
-		remove("/etc/localtime-");
-		rename("/etc/localtime",  "/etc/localtime-");
-		rename("/etc/localtime+", "/etc/localtime");
+		(void)remove("/etc/localtime-");
+		(void)rename("/etc/localtime",  "/etc/localtime-");
+		(void)rename("/etc/localtime+", "/etc/localtime");
 
 		return SR_ERR_OK;
 
@@ -347,7 +347,7 @@ static int change_clock(sr_session_ctx_t *session, uint32_t sub_id, const char *
 		timezone = tz_name;
 	}
 
-	remove("/etc/localtime+");
+	(void)remove("/etc/localtime+");
 	if (systemf("ln -sf /usr/share/zoneinfo/%s /etc/localtime+", timezone)) {
 		ERROR("No such timezone %s", timezone);
 		return SR_ERR_VALIDATION_FAILED;
@@ -382,7 +382,7 @@ static int change_ntp(sr_session_ctx_t *session, uint32_t sub_id, const char *mo
 		break;
 
 	case SR_EV_ABORT:	/* User abort, or other plugin failed */
-		remove(CHRONY_NEXT);
+		(void)remove(CHRONY_NEXT);
 		return SR_ERR_OK;
 
 	case SR_EV_DONE:
@@ -390,9 +390,9 @@ static int change_ntp(sr_session_ctx_t *session, uint32_t sub_id, const char *mo
 		if (access(CHRONY_NEXT, F_OK))
 			return SR_ERR_OK;
 
-		remove(CHRONY_PREV);
-		rename(CHRONY_CONF, CHRONY_PREV);
-		rename(CHRONY_NEXT, CHRONY_CONF);
+		(void)remove(CHRONY_PREV);
+		(void)rename(CHRONY_CONF, CHRONY_PREV);
+		(void)rename(CHRONY_NEXT, CHRONY_CONF);
 		if (srx_enabled(session, XPATH_BASE_"/ntp/enabled")) {
 			systemf("initctl -nbq disable chronyd");
 			return SR_ERR_OK;
@@ -411,7 +411,7 @@ static int change_ntp(sr_session_ctx_t *session, uint32_t sub_id, const char *mo
 
 	rc = sr_get_items(session, XPATH_BASE_"/ntp/server", 0, 0, &val, &cnt);
 	if (rc) {
-		remove(CHRONY_NEXT);
+		(void)remove(CHRONY_NEXT);
 		return rc;
 	}
 
@@ -471,7 +471,7 @@ static int change_ntp(sr_session_ctx_t *session, uint32_t sub_id, const char *mo
 	fclose(fp);
 
 	if (!valid) {
-		remove(fn);
+		(void)remove(fn);
 		return SR_ERR_VALIDATION_FAILED;
 	}
 
@@ -499,7 +499,7 @@ static int change_dns(sr_session_ctx_t *session, uint32_t sub_id, const char *mo
 		break;
 
 	case SR_EV_ABORT:	/* User abort, or other plugin failed */
-		remove(RESOLV_NEXT);
+		(void)remove(RESOLV_NEXT);
 		return SR_ERR_OK;
 
 	case SR_EV_DONE:
@@ -507,9 +507,9 @@ static int change_dns(sr_session_ctx_t *session, uint32_t sub_id, const char *mo
 		if (access(RESOLV_NEXT, F_OK))
 			return SR_ERR_OK;
 
-		remove(RESOLV_PREV);
-		rename(RESOLV_CONF, RESOLV_PREV);
-		rename(RESOLV_NEXT, RESOLV_CONF);
+		(void)remove(RESOLV_PREV);
+		(void)rename(RESOLV_CONF, RESOLV_PREV);
+		(void)rename(RESOLV_NEXT, RESOLV_CONF);
 
 		/* in bootstrap, another resolvconf will soon take your call */
 		if (systemf("initctl -bq cond get hook/sys/up"))
@@ -571,7 +571,7 @@ static int change_dns(sr_session_ctx_t *session, uint32_t sub_id, const char *mo
 fail:
 	fclose(fp);
 	if (rc)
-		remove(fn);
+		(void)remove(fn);
 
 	return rc;
 }
@@ -1020,7 +1020,7 @@ static int change_motd(sr_session_ctx_t *session, uint32_t sub_id, const char *m
 		rc = writesf(message, "w", "%s", fn);
 		free(message);
 	} else {
-		remove(fn);
+		(void)remove(fn);
 	}
 
 	if (rc) {

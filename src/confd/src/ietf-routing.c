@@ -85,7 +85,7 @@ static int change_control_plane_protocols(sr_session_ctx_t *session, uint32_t su
 		break;
 
 	case SR_EV_ABORT: /* User abort, or other plugin failed */
-		remove(STATICD_CONF_NEXT);
+		(void)remove(STATICD_CONF_NEXT);
 		return SR_ERR_OK;
 
 	case SR_EV_DONE:
@@ -99,12 +99,13 @@ static int change_control_plane_protocols(sr_session_ctx_t *session, uint32_t su
 				goto err_abandon;
 			}
 			/* Remove all generated files */
-			remove(STATICD_CONF);
+			(void)remove(STATICD_CONF);
 			return SR_ERR_OK;
 		}
-		remove(STATICD_CONF_PREV);
-		rename(STATICD_CONF, STATICD_CONF_PREV);
-		rename(STATICD_CONF_NEXT, STATICD_CONF);
+
+		(void)remove(STATICD_CONF_PREV);
+		(void)rename(STATICD_CONF, STATICD_CONF_PREV);
+		(void)rename(STATICD_CONF_NEXT, STATICD_CONF);
 		if (systemf("initctl -bfq status staticd")) {
 			if (staticd_enabled) {
 				if (systemf("initctl -bfq enable staticd")) {
@@ -141,7 +142,7 @@ static int change_control_plane_protocols(sr_session_ctx_t *session, uint32_t su
 	fclose(fp);
 
 	if (!staticd_enabled)
-		remove(STATICD_CONF_NEXT);
+		(void)remove(STATICD_CONF_NEXT);
 	sr_release_data(cfg);
 err_abandon:
 	return rc;
