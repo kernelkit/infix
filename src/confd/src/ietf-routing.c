@@ -23,6 +23,7 @@ static int parse_route(struct lyd_node *parent, FILE *fp)
 {
 	const char *outgoing_interface, *next_hop_address, *special_next_hop, *destination_prefix;
 	struct lyd_node *next_hop;
+
 	destination_prefix = lydx_get_cattr(parent, "destination-prefix");
 	next_hop = lydx_get_child(parent, "next-hop");
 	outgoing_interface = lydx_get_cattr(next_hop, "outgoing-interface");
@@ -36,15 +37,14 @@ static int parse_route(struct lyd_node *parent, FILE *fp)
 		fputs(outgoing_interface, fp);
 	else if (next_hop_address)
 		fputs(next_hop_address, fp);
-	else if (strcmp(special_next_hop, "blackhole") == 0) {
+	else if (strcmp(special_next_hop, "blackhole") == 0)
 		fputs("blackhole", fp);
-	} else if (strcmp(special_next_hop, "unreachable") == 0) {
+	else if (strcmp(special_next_hop, "unreachable") == 0)
 		fputs("reject", fp);
-	} else if (strcmp(special_next_hop, "receive") == 0) {
+	else if (strcmp(special_next_hop, "receive") == 0)
 		fputs("Null0", fp);
-	}
-
 	fputs("\n", fp);
+
 	return SR_ERR_OK;
 }
 
@@ -52,13 +52,14 @@ static int parse_static_routes(sr_session_ctx_t *session, struct lyd_node *paren
 {
 	struct lyd_node *ipv4, *v4routes, *route;
 	int num_routes = 0;
-	ipv4 = lydx_get_child(parent, "ipv4");
 
+	ipv4 = lydx_get_child(parent, "ipv4");
 	v4routes = lydx_get_child(ipv4, "route");
 	LY_LIST_FOR(v4routes, route) {
 		parse_route(route, fp);
 		num_routes++;
 	}
+
 	DEBUG("Found %d routes in configuration", num_routes);
 	return num_routes;
 }
@@ -132,6 +133,7 @@ static int change_control_plane_protocols(sr_session_ctx_t *session, uint32_t su
 		LY_LIST_FOR(lyd_child(tmp), cplane)
 		{
 			const char *type;
+
 			type = lydx_get_cattr(cplane, "type");
 			if (!strcmp(type, "ietf-routing:static")) {
 				staticd_enabled = parse_static_routes(session, lydx_get_child(cplane, "static-routes"), fp);
@@ -150,7 +152,9 @@ err_abandon:
 int ietf_routing_init(struct confd *confd)
 {
 	int rc = 0;
+
 	REGISTER_CHANGE(confd->session, "ietf-routing", "/ietf-routing:routing/control-plane-protocols", 0, change_control_plane_protocols, confd, &confd->sub);
+
 	return SR_ERR_OK;
 fail:
 	ERROR("Init routing failed: %s", sr_strerror(rc));
