@@ -1,6 +1,35 @@
 #!/bin/sh
 # Probe for various types of harware features
 
-if dmesg |grep -q QEMU || test -d /sys/module/qemu_fw_cfg; then
-   initctl cond set qemu
+#TODO Rewrite this script in python before extending it further
+#TODO Remove fallback temporary development hash
+
+gen_qemu_system_file() {
+    vbd_json="$(onieprom /sys/firmware/qemu_fw_cfg/by_name/opt/vbd/raw)"
+    if [ $? -ne 0 ]; then
+        logger -p user.crit -t "probe" "Error, running onieprom tool"
+        exit 1
+    fi
+
+    pwhash="$(echo "$vbd_json" | jq -r '.["vendor-extension"][0][1]' | jq -r '.pwhash')"
+    if [ -z "$pwhash" ] || [ "$pwhash" = "null" ]; then
+        logger -p user.crit -t "probe" "Error, didn't find password hash"
+        exit 1
+    fi
+
+    system_json="$(echo "$vbd_json" | jq -r 'del(."vendor-extension")')"
+    system_json="$(echo "$system_json" | jq --arg val "$pwhash" '. += {"pwhash": $val}')"
+    echo "$system_json" > /run/system.json
+}
+
+if dmesg | grep -q QEMU || test -d /sys/module/qemu_fw_cfg; then
+    initctl cond set qemu
+    gen_qemu_system_file
+else
+    # NOTE: All this code will soon go away.
+    echo -e "\n\n\e[31mWARNING! Probe failed to get password hash from hardware\n" \
+            "Falling back to temporary hash\e[0m\n" > /dev/console
+    # Clear Test = admin
+    echo '{"pwhash": "$5$n2xoZAmITmPYjOTO$pbWHoa1Mu25a0e.akViAf9uWRvUgbq9BbcmzWWaNP0A"}' > /run/system.json
 fi
+

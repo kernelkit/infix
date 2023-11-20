@@ -65,6 +65,12 @@ collate()
     fi
 }
 
+console_error()
+{
+    logger -p user.crit -t "BOOTSTRAP" "CRITICAL ERROR! $1"
+    echo -e "\n\n\e[31mCRITICAL BOOTSTRAP ERROR\n$1\e[0m\n" > /dev/console
+}
+
 factory()
 {
     gen=$1
@@ -76,6 +82,11 @@ factory()
     gen-hostname                                            >"$FACTORY_D/20-hostname.json"
     # shellcheck disable=SC2086
     gen-interfaces $GEN_IFACE_OPTS                          >"$FACTORY_D/20-interfaces.json"
+
+    if ! gen-admin-auth                             >"$FACTORY_D/10-authentication.json"; then
+        console_error "Unable to create factory config, gen-admin-auth failed"
+        return
+    fi
 
     [ -s "$FACTORY_D/20-hostkey.json"   ] || gen-hostkeys   >"$FACTORY_D/20-hostkey.json"
 

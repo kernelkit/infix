@@ -1,0 +1,23 @@
+#!/bin/sh
+
+pwhash="$(cat /run/system.json | jq '.pwhash')"
+
+if [ -z "$pwhash" ] || [ "$pwhash" = "null" ]; then
+    exit 1
+fi
+
+cat <<EOF
+{
+  "ietf-system:system": {
+    "authentication": {
+      "user": [
+       {
+          "name": "admin",
+          "password": $pwhash,
+          "infix-system:shell": "infix-shell-type:clish"
+       }
+      ]
+    }
+  }
+}
+EOF
