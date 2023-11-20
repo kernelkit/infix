@@ -145,11 +145,6 @@ mount_bind         "$varsrc" /var
 
 [ "$vlibsrc" ] && mount_bind "$vlibsrc" /var/lib
 
-# Keep transient configs in a ramdisk and symlink out to /cfg for
-# startup.
-mkdir -p /mnt/tmp/infix/db
-ln -s /cfg/startup_db /mnt/tmp/infix/db/startup_db
-
 for tag in $(ls /sys/bus/virtio/devices/*/mount_tag 2>/dev/null); do
     if [ "$(cat $tag | tr -d '\0')" = hostfs ]; then
 	mount hostfs
