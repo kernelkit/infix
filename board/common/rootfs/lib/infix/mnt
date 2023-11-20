@@ -109,12 +109,8 @@ varsrc=/mnt/var
 if ! mount_rw var >/dev/null 2>&1; then
     logger $opt -p user.warn -t "$nm" \
 	   "No persistent storage found for /var, only /var/lib is persisted."
-    varsrc=/mnt/tmp
+    varsrc=/mnt/tmp/infix/var
     vlibsrc=/mnt/cfg/vlib
-else
-    mount_bind "$varsrc" /var
-    varsrc=
-    vlibsrc=
 fi
 
 cfgsrc=/mnt/cfg
@@ -145,9 +141,9 @@ mount_overlay cfg  $cfgsrc /cfg
 mount_overlay etc  $etcsrc /etc
 mount_overlay home $cfgsrc /home
 mount_overlay root $cfgsrc /root
+mount_bind         "$varsrc" /var
 
-[ "$varsrc" ]  && mount_overlay var "$varsrc"  /var
-[ "$vlibsrc" ] && mount_bind        "$vlibsrc" /var/lib
+[ "$vlibsrc" ] && mount_bind "$vlibsrc" /var/lib
 
 # Keep transient configs in a ramdisk and symlink out to /cfg for
 # startup.
