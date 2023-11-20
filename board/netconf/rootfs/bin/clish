@@ -1,1 +1,3 @@
-../usr/bin/klish
+#!/bin/bash -li
+# Source settings, aliases, and probe terminal size, then hand over to klish
+exec /usr/bin/klish
