@@ -117,20 +117,24 @@ def iface_is_dsa(iface_in):
         return False
     return True
 
-def add_ipv4_route(routes):
-    cmd = ['ip', '-4', '-s', '-d', '-j', 'route']
-    data = run_json_cmd(cmd)
+def get_routes(routes, proto, data):
     out={}
     out["route"] = []
 
+    if(proto == "ipv4"):
+        default = "0.0.0.0/0"
+        host_prefix_length="32"
+    else:
+        default = "::/0"
+        host_prefix_length="128"
     for d in data:
         new = {}
         next_hop = {}
         if(d['dst'] == "default"):
-            d['dst'] = "0.0.0.0/0"
+            d['dst'] = default
         if(d['dst'].find('/') == -1):
-            d['dst'] = d['dst']+"/32"
-        new['ietf-ipv4-unicast-routing:destination-prefix'] = d['dst']
+            d['dst'] = d['dst']+"/"+host_prefix_length
+        new[f'ietf-{proto}-unicast-routing:destination-prefix'] = d['dst']
         new['source-protocol'] = "infix-routing:"+d['protocol']
         if d.get("metric"):
             new['route-preference'] = d['metric']
@@ -144,7 +148,7 @@ def add_ipv4_route(routes):
 
         if d['type'] == "unicast":
             if(d.get("gateway")):
-                next_hop['ietf-ipv4-unicast-routing:next-hop-address'] = d['gateway']
+                next_hop[f'ietf-{proto}-unicast-routing:next-hop-address'] = d['gateway']
             elif(d.get("dev")):
                 next_hop['outgoing-interface'] = d['dev']
 
@@ -152,6 +156,16 @@ def add_ipv4_route(routes):
 
         out['route'].append(new)
     insert(routes, 'routes', out)
+
+def add_ipv4_route(routes):
+    cmd = ['ip', '-4', '-s', '-d', '-j', 'route']
+    data = run_json_cmd(cmd)
+    get_routes(routes, "ipv4", data)
+
+def add_ipv6_route(routes):
+    cmd = ['ip', '-6', '-s', '-d', '-j', 'route']
+    data = run_json_cmd(cmd)
+    get_routes(routes, "ipv6", data)
 
 def add_ip_link(ifname, iface_out, test):
     if test:
@@ -162,7 +176,7 @@ def add_ip_link(ifname, iface_out, test):
     data = run_json_cmd(cmd)
     if len(data) != 1:
         print(f"Error: expected ip link output to be array with length 1", file=sys.stderr)
-        sys,exit(1)
+        sys.exit(1)
 
     iface_in = data[0]
 
@@ -407,14 +421,20 @@ if __name__ == "__main__":
                 "ribs":  {
                     "rib": [{
                         "name": "ipv4",
-                        "address-family": "ipv4",
+                        "address-family": "ipv4"
+                    },
+                    {
+                        "name": "ipv6",
+                        "address-family": "ipv6"
                     }]
                 }
             }
         }
 
         ipv4routes = yang_data['ietf-routing:routing']['ribs']['rib'][0]
-        add_ipv4_route(ipv4routes);
+        ipv6routes = yang_data['ietf-routing:routing']['ribs']['rib'][1]
+        add_ipv4_route(ipv4routes)
+        add_ipv6_route(ipv6routes)
     else:
         print(f"Unsupported model {args.model}", file=sys.stderr)
         sys.exit(1)

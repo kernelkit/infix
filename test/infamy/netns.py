@@ -69,32 +69,35 @@ class IsolatedMacVlan:
         return self.run("/bin/sh", text=True, input=script,
                         stdout=subprocess.PIPE, stderr=subprocess.STDOUT, *args, **kwargs)
 
-    def addroute(self, subnet, nexthop, prefix_length=""):
+    def addroute(self, subnet, nexthop, proto="ipv4", prefix_length=""):
+        p=proto[3]
         if prefix_length:
             prefix_length=f"/{prefix_length}"
 
         self.runsh(f"""
             set -ex
-            ip route add {subnet}{prefix_length} via {nexthop}
+            ip -{p} route add {subnet}{prefix_length} via {nexthop}
             """, check=True)
 
-    def addip(self, addr, prefix_length=24):
+    def addip(self, addr, prefix_length=24, proto="ipv4"):
+        p=proto[3]
+
         self.runsh(f"""
             set -ex 
             ip link set iface up
-            ip addr add {addr}/{prefix_length} dev iface
+            ip -{p} addr add {addr}/{prefix_length} dev iface
             """, check=True)
 
 
     def ping(self, daddr, count=1, timeout=5, interval=2, check=False):
         return self.runsh(f"""set -ex; ping -c {count} -w {timeout} -i {interval} {daddr}""", check=check)
 
-    def must_reach(self, daddr):
-        res = self.ping(daddr)
+    def must_reach(self, *args, **kwargs):
+        res = self.ping(*args, **kwargs)
         if res.returncode != 0:
             raise Exception(res.stdout)
 
-    def must_not_reach(self, daddr):
-        res = self.ping(daddr)
+    def must_not_reach(self, *args, **kwargs):
+        res = self.ping(*args, **kwargs)
         if res.returncode == 0:
             raise Exception(res.stdout)
