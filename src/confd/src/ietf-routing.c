@@ -19,7 +19,7 @@ password zebra \n \
 enable password zebra  \n \
 log syslog informational \n"
 
-static int parse_route(struct lyd_node *parent, FILE *fp)
+static int parse_route(struct lyd_node *parent, FILE *fp, char *ip)
 {
 	const char *outgoing_interface, *next_hop_address, *special_next_hop, *destination_prefix;
 	struct lyd_node *next_hop;
@@ -30,7 +30,7 @@ static int parse_route(struct lyd_node *parent, FILE *fp)
 	next_hop_address = lydx_get_cattr(next_hop, "next-hop-address");
 	special_next_hop = lydx_get_cattr(next_hop, "special-next-hop");
 
-	fprintf(fp, "ip route %s ", destination_prefix);
+	fprintf(fp, "%s route %s ", ip, destination_prefix);
 
 	/* There can only be one */
 	if (outgoing_interface)
@@ -50,13 +50,21 @@ static int parse_route(struct lyd_node *parent, FILE *fp)
 
 static int parse_static_routes(sr_session_ctx_t *session, struct lyd_node *parent, FILE *fp)
 {
-	struct lyd_node *ipv4, *v4routes, *route;
+	struct lyd_node *ipv4, *v4routes, *ipv6, *v6routes, *route;
 	int num_routes = 0;
+	ipv4 = lydx_get_child(parent, "ipv4");
+	ipv6 = lydx_get_child(parent, "ipv6");
 
 	ipv4 = lydx_get_child(parent, "ipv4");
+	ipv6 = lydx_get_child(parent, "ipv6");
 	v4routes = lydx_get_child(ipv4, "route");
+	v6routes = lydx_get_child(ipv6, "route");
 	LY_LIST_FOR(v4routes, route) {
-		parse_route(route, fp);
+		parse_route(route, fp, "ip");
+		num_routes++;
+	}
+	LY_LIST_FOR(v6routes, route) {
+		parse_route(route, fp, "ipv6");
 		num_routes++;
 	}
 
@@ -128,10 +136,8 @@ static int change_control_plane_protocols(sr_session_ctx_t *session, uint32_t su
 	}
 
 	rc = sr_get_data(session, "/ietf-routing:routing/control-plane-protocols//.", 0, 0, 0, &cfg);
-	LY_LIST_FOR(lyd_child(cfg->tree), tmp)
-	{
-		LY_LIST_FOR(lyd_child(tmp), cplane)
-		{
+	LY_LIST_FOR(lyd_child(cfg->tree), tmp) {
+		LY_LIST_FOR(lyd_child(tmp), cplane) {
 			const char *type;
 
 			type = lydx_get_cattr(cplane, "type");

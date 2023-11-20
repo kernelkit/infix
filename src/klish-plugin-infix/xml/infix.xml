@@ -271,9 +271,20 @@
   </COMMAND>
 
   <COMMAND name="routes" help="Show routing table">
+    <PARAM name="name" ptype="/STRING" help="ipv4 or ipv6" min="0" max="1">
+	<COMPL>
+	  <ACTION sym="printl">ipv4</ACTION>
+	  <ACTION sym="printl">ipv6</ACTION>
+	</COMPL>
+    </PARAM>
     <ACTION sym="script">
+      if [ "$KLISH_PARAM_name" != "ipv4" ]; then
+        if [ "$KLISH_PARAM_name" != "ipv6" ]; then
+          KLISH_PARAM_name=ipv4
+        fi
+      fi
       sysrepocfg -f json -X -d operational -m ietf-routing | \
-      /libexec/infix/cli-pretty "ietf-routing"
+      /libexec/infix/cli-pretty "ietf-routing"  -n "$KLISH_PARAM_name"
     </ACTION>
   </COMMAND>
   <!-- https://www.cisco.com/c/en/us/td/docs/wireless/access_point/mob_exp/83/cmd-ref/me_cr_book/me_ports_and_interfaces_cli.html -->

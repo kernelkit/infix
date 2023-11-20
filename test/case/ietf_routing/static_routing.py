@@ -34,8 +34,14 @@ def config_target1(target, data, link):
                         "ipv4": {
                             "forwarding": True,
                             "address": [{
-                            "ip": "192.168.10.1",
-                            "prefix-length": 24
+                                "ip": "192.168.10.1",
+                                "prefix-length": 24
+                            }]},
+                        "ipv6": {
+                            "forwarding": True,
+                            "address": [{
+                                "ip": "2001:db8:3c4d:10::1",
+                                "prefix-length": 64
                             }]
                         }
                     },
@@ -49,6 +55,13 @@ def config_target1(target, data, link):
                             "ip": "192.168.50.1",
                             "prefix-length": 24
                             }]
+                        },
+                        "ipv6": {
+                            "forwarding": True,
+                            "address": [{
+                                "ip": "2001:db8:3c4d:50::1",
+                                "prefix-length": 64
+                            }]
                         }
                     },
                     {
@@ -60,7 +73,14 @@ def config_target1(target, data, link):
                             "ip": "192.168.100.1",
                             "prefix-length": 32
                             }]
+                        },
+                        "ipv6": {
+                            "address": [{
+                                "ip": "2001:db8:3c4d:100::1",
+                                "prefix-length": 128
+                            }]
                         }
+
                     }
                 ]
             }
@@ -79,6 +99,14 @@ def config_target1(target, data, link):
                                     "next-hop-address": "192.168.50.2"
                                 }
                             }]
+                        },
+                        "ipv6": {
+                            "route": [{
+                                 "destination-prefix": "2001:db8:3c4d:200::1/128",
+                                 "next-hop": {
+                                         "next-hop-address": "2001:db8:3c4d:50::2"
+                                 }
+                            }]
                         }
                     }
                 }]
@@ -96,8 +124,15 @@ def config_target2(target, link):
                         "ipv4": {
                             "forwarding": True,
                             "address": [{
-                            "ip": "192.168.50.2",
-                            "prefix-length": 24
+                                "ip": "192.168.50.2",
+                                "prefix-length": 24
+                            }]
+                        },
+                        "ipv6": {
+                            "forwarding": True,
+                            "address": [{
+                                "ip": "2001:db8:3c4d:50::2",
+                                "prefix-length": 64
                             }]
                         }
                     },
@@ -111,11 +146,19 @@ def config_target2(target, link):
                             "ip": "192.168.200.1",
                             "prefix-length": 32
                             }]
+                        },
+                        "ipv6": {
+                            "address": [{
+                                "ip": "2001:db8:3c4d:200::1",
+                                "prefix-length": 128
+                            }]
                         }
+
                     }
                 ]
             }
         })
+
     target.put_config_dict("ietf-routing", {
         "routing": {
             "control-plane-protocols": {
@@ -130,6 +173,14 @@ def config_target2(target, link):
                                          "next-hop-address": "192.168.50.1"
                                  }
                              }]
+                        },
+                        "ipv6": {
+                            "route": [{
+                                 "destination-prefix": "::/0",
+                                 "next-hop": {
+                                         "next-hop-address": "2001:db8:3c4d:50::1"
+                                 }
+                            }]
                         }
                     }
                 }]
@@ -149,36 +200,50 @@ with infamy.Test() as test:
         target1 = env.attach("target1", "mgmt")
         target2 = env.attach("target2", "mgmt")
 
-    with test.step("Configure target physical ports [enable routing]"):
+    with test.step("Configure targets"):
         _, target1data = env.ltop.xlate("target1", "data")
         _, target2_to_target1 = env.ltop.xlate("target2", "target1")
         _, target1_to_target2 = env.ltop.xlate("target1", "target2")
 
         config_target1(target1, target1data, target1_to_target2)
         config_target2(target2, target2_to_target1)
-        until(lambda: route.ipv4_route_exist(target1, "192.168.200.1/32"))
-        until(lambda: route.ipv4_route_exist(target2, "0.0.0.0/0"))
 
     with test.step("Wait for links"):
         until(lambda: iface.get_oper_up(target1, target1data))
         until(lambda: iface.get_oper_up(target1, target1data))
         until(lambda: iface.get_oper_up(target1, target1_to_target2))
         until(lambda: iface.get_oper_up(target2, target2_to_target1))
+    with test.step("Wait for routes"):
+        until(lambda: route.ipv4_route_exist(target1, "192.168.200.1/32"))
+        until(lambda: route.ipv4_route_exist(target2, "0.0.0.0/0"))
+        until(lambda: route.ipv6_route_exist(target1, "2001:db8:3c4d:200::1/128"))
+        until(lambda: route.ipv6_route_exist(target2, "::/0"))
 
-    with test.step("Ping from host to 192.168.200.1(dut2) through dut1"):
+
+    with test.step("Ping from host to 192.168.200.1 and 2001:db8:3c4d:200::1 (dut2) through dut1"):
         _, hport0 = env.ltop.xlate("host", "data1")
         with infamy.IsolatedMacVlan(hport0) as ns0:
+             ns0.addip("2001:db8:3c4d:10::2", prefix_length=64, proto="ipv6")
+             ns0.addroute("2001:db8:3c4d:200::1/128", "2001:db8:3c4d:10::1", proto="ipv6")
              ns0.addip("192.168.10.2")
              ns0.addroute("192.168.200.1/32", "192.168.10.1")
              ns0.must_reach("192.168.200.1")
+
     with test.step("Remove static routes on dut1"):
         config_remove_routes(target1);
         until(lambda: route.ipv4_route_exist(target1, "192.168.200.1/32") == False)
+        until(lambda: route.ipv6_route_exist(target1, "2001:db8:3c4d:200::1/128") == False)
 
-    with test.step("Ping from host to 192.168.200.1(dut2) through dut1 (should not be possible)"):
+    with test.step("Ping from host to 192.168.200.1 and 2001:db8:3c4d:200::1 (dut2) through dut1 (should not be possible)"):
         _, hport0 = env.ltop.xlate("host", "data1")
         with infamy.IsolatedMacVlan(hport0) as ns0:
-             ns0.addip("192.168.10.2")
-             ns0.addroute("192.168.200.1/32", "192.168.10.1")
-             ns0.must_not_reach("192.168.200.1")
+            ns0.addip("2001:db8:3c4d:10::2", prefix_length=64, proto="ipv6")
+            ns0.addroute("2001:db8:3c4d:200::1/128", "2001:db8:3c4d:10::1", proto="ipv6")
+            ns0.addip("192.168.10.2")
+            ns0.addroute("192.168.200.1/32", "192.168.10.1")
+
+            ns0.must_not_reach("192.168.200.1")
+            ns0.must_not_reach("2001:db8:3c4d:200::1")
+
+
     test.succeed()

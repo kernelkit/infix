@@ -5,6 +5,7 @@ def _get_routes(target,protocol):
         if r["name"] != protocol:
             continue
         return r.get("routes", {}).get("route",{})
+    return {}
 
 def _exist_route(target,destination_prefix, protocol):
     routes=_get_routes(target,protocol)
@@ -16,3 +17,6 @@ def _exist_route(target,destination_prefix, protocol):
 
 def ipv4_route_exist(target, destination_prefix):
     return _exist_route(target,destination_prefix, "ipv4")
+
+def ipv6_route_exist(target, destination_prefix):
+    return _exist_route(target,destination_prefix, "ipv6")

@@ -55,14 +55,14 @@ def get_json_data(default, indata, *args):
     return data
 
 class Route:
-    def __init__(self,data):
+    def __init__(self,data,ip):
         self.data = data
-        self.prefix = data.get('ietf-ipv4-unicast-routing:destination-prefix', '')
+        self.prefix = data.get(f'ietf-{ip}-unicast-routing:destination-prefix', '')
         self.protocol = data.get('source-protocol','')[14:]
         self.metric = data.get('route-preference','')
 
         interface = get_json_data(None, self.data, 'next-hop', 'outgoing-interface')
-        address = get_json_data(None, self.data, 'next-hop', 'ietf-ipv4-unicast-routing:next-hop-address')
+        address = get_json_data(None, self.data, 'next-hop', f'ietf-{ip}-unicast-routing:next-hop-address')
         special = get_json_data(None, self.data, 'next-hop', 'special-next-hop')
         if interface:
             self.next_hop = interface
@@ -369,24 +369,26 @@ def ietf_interfaces(json, name):
             sys.exit(1)
         pr_interface_list(json)
 
-def ietf_routing(json, protocol="ipv4"):
+def ietf_routing(json, ip="ipv4"):
     if not json.get("ietf-routing:routing"):
         print(f"Error, top level \"ietf-routing:routing\" missing")
         sys.exit(1)
-    routes = get_json_data({}, json, 'ietf-routing:routing','ribs', 'rib')[0]
-    routes = get_json_data(None, routes, "routes", "route")
-
     hdr = (f"{'PREFIX':<{PadRoute.prefix}}"
            f"{'NEXT-HOP':<{PadRoute.next_hop}}"
            f"{'METRIC':<{PadRoute.metric}}"
            f"{'PROTOCOL':<{PadRoute.protocol}}")
 
     print(Decore.invert(hdr))
+    for rib in  get_json_data({}, json, 'ietf-routing:routing','ribs', 'rib'):
+        if rib["name"] != ip:
+            continue;
+        routes = get_json_data(None, rib, "routes", "route")
 
-    if routes:
-        for r in routes:
-            route = Route(r)
-            route.print()
+
+        if routes:
+            for r in routes:
+                route = Route(r, ip)
+                route.print()
 
 def find_slot(_slots, name):
     for _slot in [Software(data) for data in _slots]:
