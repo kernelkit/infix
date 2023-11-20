@@ -1,4 +1,53 @@
 {
+  "ietf-routing:routing": {
+    "ribs": {
+      "rib": [
+        {
+          "name": "ipv4",
+          "address-family": "ietf-routing:ipv4",
+          "routes": {
+            "route": [
+              {
+                "next-hop": {
+                  "outgoing-interface": "e0"
+                },
+                "source-protocol": "infix-routing:kernel",
+                "ietf-ipv4-unicast-routing:destination-prefix": "1.1.1.0/24"
+              },
+              {
+                "next-hop": {
+                  "ietf-ipv4-unicast-routing:next-hop-address": "1.1.1.1"
+                },
+                "source-protocol": "infix-routing:static",
+                "ietf-ipv4-unicast-routing:destination-prefix": "192.168.100.0/24"
+              },
+              {
+                "next-hop": {
+                  "special-next-hop": "blackhole"
+                },
+                "source-protocol": "infix-routing:static",
+                "ietf-ipv4-unicast-routing:destination-prefix": "192.168.110.2/32"
+              },
+              {
+                "next-hop": {
+                  "special-next-hop": "blackhole"
+                },
+                "source-protocol": "infix-routing:static",
+                "ietf-ipv4-unicast-routing:destination-prefix": "192.168.120.2/32"
+              },
+              {
+                "next-hop": {
+                  "special-next-hop": "unreachable"
+                },
+                "source-protocol": "infix-routing:static",
+                "ietf-ipv4-unicast-routing:destination-prefix": "192.168.130.2/32"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
   "ietf-interfaces:interfaces": {
     "interface": [
       {
@@ -138,7 +187,7 @@
             {
               "ip": "10.140.211.247",
               "prefix-length": 24,
-              "origin" : "static"
+              "origin": "static"
             }
           ]
         },
@@ -175,22 +224,22 @@
             {
               "ip": "192.168.76.120",
               "prefix-length": 24,
-              "origin" : "static"
+              "origin": "static"
             },
             {
               "ip": "192.168.151.147",
               "prefix-length": 24,
-              "origin" : "static"
+              "origin": "static"
             },
             {
               "ip": "192.168.161.217",
               "prefix-length": 24,
-              "origin" : "dhcp"
+              "origin": "dhcp"
             },
             {
               "ip": "192.168.55.37",
               "prefix-length": 24,
-              "origin" : "dhcp"
+              "origin": "dhcp"
             },
             {
               "ip": "192.168.231.242",
@@ -457,12 +506,12 @@
             {
               "ip": "172.28.29.76",
               "prefix-length": 24,
-              "origin" : "static"
+              "origin": "static"
             },
             {
               "ip": "172.16.187.13",
               "prefix-length": 24,
-              "origin" : "static"
+              "origin": "static"
             }
           ]
         },

@@ -43,10 +43,37 @@ module infix-routing {
       }
     }
 
+    identity infix-source-protocol {
+      description "Infix naming of source protocols";
+    }
+    identity kernel {
+      description "Kernel added route";
+      base infix-source-protocol;
+    }
+    identity static {
+      description "Static added route";
+      base infix-source-protocol;
+    }
+    identity ospf {
+      description "OSPF added route";
+      base infix-source-protocol;
+    }
+    identity dhcp {
+      description "DHCP added route";
+      base infix-source-protocol;
+    }
     deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ietf-r:name" {
       description "Limitation: Only one routing instance per protocol.";
       deviate replace {
 	type infix-control-plane-name;
+      }
+    }
+    deviation "/ietf-r:routing/ietf-r:ribs/ietf-r:rib/ietf-r:routes/ietf-r:route/ietf-r:source-protocol" {
+      description "Use type names from iproute2";
+      deviate replace {
+	type identityref {
+	  base infix-source-protocol;
+	}
       }
     }
     /* Static routes */
@@ -61,6 +88,9 @@ module infix-routing {
       deviate not-supported;
     }
     deviation "/ietf-r:routing/ietf-r:ribs/ietf-r:rib/ietf-r:active-route" {
+      deviate not-supported;
+    }
+    deviation "/ietf-r:routing/ietf-r:ribs/ietf-r:rib/ietf-r:routes/ietf-r:route/ietf-r:next-hop/ietf-r:next-hop-options/ietf-r:next-hop-list" {
       deviate not-supported;
     }
 

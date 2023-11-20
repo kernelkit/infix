@@ -26,11 +26,12 @@
 
 #include "shared.h"
 
-#define SOCK_RMEM_SIZE 1000000  /* Arbitrary chosen, default = 212992 */
+#define SOCK_RMEM_SIZE 1000000 /* Arbitrary chosen, default = 212992 */
 #define NL_BUF_SIZE 4096 /* Arbitrary chosen */
 
 #define XPATH_MAX PATH_MAX
 #define XPATH_IFACE_BASE "/ietf-interfaces:interfaces"
+#define XPATH_ROUTING_BASE "/ietf-routing:routing"
 
 TAILQ_HEAD(sub_head, sub);
 
@@ -38,11 +39,12 @@ TAILQ_HEAD(sub_head, sub);
  * types, not only interfaces.
  */
 struct sub {
-	char ifname[IFNAMSIZ];
+	char name[IFNAMSIZ+3];
 	struct ev_io watcher;
 	sr_subscription_ctx_t *sr_sub;
 
-	TAILQ_ENTRY(sub) entries;
+	TAILQ_ENTRY(sub)
+	entries;
 };
 
 struct netlink {
@@ -59,11 +61,11 @@ struct statd {
 
 static void set_sock_rcvbuf(int sd, int size)
 {
-       if (setsockopt(sd, SOL_SOCKET, SO_RCVBUF, &size, sizeof(size)) < 0) {
-               perror("setsockopt");
-               return;
-       }
-       DEBUG("Socket receive buffer size increased to: %d bytes", size);
+	if (setsockopt(sd, SOL_SOCKET, SO_RCVBUF, &size, sizeof(size)) < 0) {
+		perror("setsockopt");
+		return;
+	}
+	DEBUG("Socket receive buffer size increased to: %d bytes", size);
 }
 
 static int nl_sock_init(void)
@@ -90,12 +92,12 @@ static int nl_sock_init(void)
 	return sock;
 }
 
-static struct sub *sub_find_iface(struct sub_head *subs, const char *ifname)
+static struct sub *sub_find(struct sub_head *subs, const char *name)
 {
 	struct sub *sub;
 
 	TAILQ_FOREACH(sub, subs, entries) {
-		if (strcmp(sub->ifname, ifname) == 0)
+		if (strcmp(sub->name, name) == 0)
 			return sub;
 	}
 
@@ -120,16 +122,25 @@ static json_t *json_get_ip_link(void)
 }
 
 static int ly_add_yanger_data(const struct ly_ctx *ctx, struct lyd_node **parent,
-			      char *ifname)
+			      char *model, const char *arg)
 {
-	char *args[] = {
+	char *yanger_args[4] = {
 		"/lib/infix/yanger",
-		ifname,
+		model,
+		NULL,
 		NULL
 	};
 	FILE *stream;
 	int err;
 	int fd;
+
+	if (!model) {
+		ERROR("Missing yang model to use");
+		return SR_ERR_SYS;
+	}
+
+	if (!strcmp(model, "ietf-interfaces"))
+		yanger_args[2] = (char *)arg;
 
 	fd = memfd_create("my_temp_file", 0);
 	if (fd == -1) {
@@ -145,7 +156,7 @@ static int ly_add_yanger_data(const struct ly_ctx *ctx, struct lyd_node **parent
 		return SR_ERR_SYS;
 	}
 
-	err = fsystemv(args, NULL, stream, NULL);
+	err = fsystemv(yanger_args, NULL, stream, NULL);
 	if (err) {
 		ERROR("Error, running yanger");
 		fclose(stream);
@@ -162,7 +173,7 @@ static int ly_add_yanger_data(const struct ly_ctx *ctx, struct lyd_node **parent
 		return SR_ERR_SYS;
 	}
 
-	err = lyd_parse_data_fd(ctx, fd, LYD_JSON, LYD_PARSE_ONLY , 0, parent);
+	err = lyd_parse_data_fd(ctx, fd, LYD_JSON, LYD_PARSE_ONLY, 0, parent);
 	if (err)
 		ERROR("Error, parsing yanger data (%d)", err);
 
@@ -179,13 +190,14 @@ static int sr_ifaces_cb(sr_session_ctx_t *session, uint32_t, const char *path,
 	struct sub *sub = priv;
 	const struct ly_ctx *ctx;
 	sr_conn_ctx_t *con;
+	char *ifname;
 	int err;
 
 	DEBUG("Incoming query for xpath: %s", path);
 
 	con = sr_session_get_connection(session);
 	if (!con) {
-		ERROR("Error, getting connection");
+		ERROR("Error, getting sr connection");
 		return SR_ERR_INTERNAL;
 	}
 
@@ -195,7 +207,39 @@ static int sr_ifaces_cb(sr_session_ctx_t *session, uint32_t, const char *path,
 		return SR_ERR_INTERNAL;
 	}
 
-	err = ly_add_yanger_data(ctx, parent, sub->ifname);
+	ifname = &sub->name[3];
+	err = ly_add_yanger_data(ctx, parent, "ietf-interfaces", ifname);
+	if (err)
+		ERROR("Error adding yanger data");
+
+	sr_release_context(con);
+
+	return err;
+}
+
+static int sr_routes_cb(sr_session_ctx_t *session, uint32_t, const char *path,
+			const char *, const char *, uint32_t,
+			struct lyd_node **parent, __attribute__((unused)) void *priv)
+{
+	const struct ly_ctx *ctx;
+	sr_conn_ctx_t *con;
+	sr_error_t err;
+
+	DEBUG("Incoming query for xpath: %s", path);
+
+	con = sr_session_get_connection(session);
+	if (!con) {
+		ERROR("Error, getting sr connection");
+		return SR_ERR_INTERNAL;
+	}
+
+	ctx = sr_acquire_context(con);
+	if (!ctx) {
+		ERROR("Error, acquiring context");
+		return SR_ERR_INTERNAL;
+	}
+
+	err = ly_add_yanger_data(ctx, parent, "ietf-routing", NULL);
 	if (err)
 		ERROR("Error adding yanger data");
 
@@ -221,48 +265,36 @@ static void sr_event_cb(struct ev_loop *, struct ev_io *w, int)
 	sr_subscription_process_events(sub->sr_sub, NULL, NULL);
 }
 
-static int sub_to_iface(struct statd *statd, const char *ifname)
+static int subscribe(struct statd *statd, char *model, char *xpath, const char *name,
+		     int (*cb)(sr_session_ctx_t *session, uint32_t, const char *, const char *,
+		     const char *, uint32_t, struct lyd_node **parent, void *priv))
 {
-	char path[XPATH_MAX] = {};
 	struct sub *sub;
 	int sr_ev_pipe;
-	int err;
+	sr_error_t err;
 
-	/**
-	 * Skip internal interfaces (such as dsa0)
-	 *
-	 * NOTE: this is a good solution but it might be to slow if a lot of
-	 * new interfaces pops up at the same time. We don't want to delay
-	 * processing the netlink messages to much.
-	 */
-	if (ip_link_check_group(ifname, "internal") == 1)
-		return SR_ERR_OK;
-
-	sub = sub_find_iface(&statd->subs, ifname);
+	sub = sub_find(&statd->subs, name);
 	if (sub) {
-		DEBUG("Interface %s already subscribed", ifname);
+		DEBUG("%s already subscribed", name);
 		return SR_ERR_OK;
 	}
-
 	sub = malloc(sizeof(struct sub));
-	if (!sub)
-		return SR_ERR_INTERNAL;
-
 	memset(sub, 0, sizeof(struct sub));
 
-	snprintf(sub->ifname, sizeof(sub->ifname), "%s", ifname);
-	snprintf(path, sizeof(path), "%s/interface[name='%s']",
-		 XPATH_IFACE_BASE, ifname);
+	if (strlen(name) > sizeof(sub->name)) {
+		ERROR("Subscriber name is to long");
+		return SR_ERR_INTERNAL;
+	}
+	snprintf(sub->name, sizeof(sub->name), "%s", name);
 
-	DEBUG("Subscribe to events for \"%s\"", path);
-	err = sr_oper_get_subscribe(statd->sr_ses, "ietf-interfaces",
-				    path, sr_ifaces_cb, sub,
+	DEBUG("Subscribe to events for \"%s\"", xpath);
+	err = sr_oper_get_subscribe(statd->sr_ses, model,xpath, cb, sub,
 				    SR_SUBSCR_DEFAULT | SR_SUBSCR_NO_THREAD | SR_SUBSCR_DONE_ONLY,
 				    &sub->sr_sub);
 	if (err) {
-		ERROR("Error, subscribing to path \"%s\": %s", path, sr_strerror(err));
+		ERROR("Error, subscribing to path \"%s\": %s", xpath, sr_strerror(err));
 		free(sub);
-		return SR_ERR_INTERNAL;
+		return err;
 	}
 
 	err = sr_get_event_pipe(sub->sr_sub, &sr_ev_pipe);
@@ -270,7 +302,7 @@ static int sub_to_iface(struct statd *statd, const char *ifname)
 		ERROR("Error, getting sysrepo event pipe: %s", sr_strerror(err));
 		sr_unsubscribe(sub->sr_sub);
 		free(sub);
-		return SR_ERR_INTERNAL;
+		return err;
 	}
 
 	TAILQ_INSERT_TAIL(&statd->subs, sub, entries);
@@ -282,30 +314,62 @@ static int sub_to_iface(struct statd *statd, const char *ifname)
 	return SR_ERR_OK;
 }
 
-static void unsub_to_ifaces(struct statd *statd)
+static int sub_to_routes(struct statd *statd)
+{
+	return subscribe(statd, "ietf-routing", XPATH_ROUTING_BASE, "routes", sr_routes_cb);
+}
+
+static int sub_to_iface(struct statd *statd, const char *ifname)
+{
+	char path[XPATH_MAX] = {};
+	char name[IFNAMSIZ+3];
+	snprintf(name,sizeof(name),"if-%s",ifname);
+
+	/**
+	 * Skip internal interfaces (such as dsa0)
+	 *
+	 * NOTE: this is a good solution but it might be to slow if a lot of
+	 * new interfaces pops up at the same time. We don't want to delay
+	 * processing the netlink messages to much.
+	 */
+	if (ip_link_check_group(ifname, "internal") == 1)
+		return SR_ERR_OK;
+
+	snprintf(path, sizeof(path), "%s/interface[name='%s']", XPATH_IFACE_BASE, ifname);
+	return subscribe(statd, "ietf-interfaces", path, name, sr_ifaces_cb);
+}
+
+static void unsub_to_all(struct statd *statd)
 {
 	struct sub *sub;
 
 	while (!TAILQ_EMPTY(&statd->subs)) {
 		sub = TAILQ_FIRST(&statd->subs);
-		DEBUG("Unsubscribe from \"%s\" (all)", sub->ifname);
+		DEBUG("Unsubscribe from \"%s\" (all)", sub->name);
 		sub_delete(statd->ev_loop, &statd->subs, sub);
 	}
 }
 
-static int unsub_to_iface(struct statd *statd, char *ifname)
+static int unsub_to_name(struct statd *statd, char *name)
 {
 	struct sub *sub;
 
-	sub = sub_find_iface(&statd->subs, ifname);
+	sub = sub_find(&statd->subs, name);
 	if (!sub) {
-		ERROR("Error, can't find interface to delete (%s)", ifname);
+		ERROR("Error, can't find indentity to delete (%s)", name);
 		return SR_ERR_INTERNAL;
 	}
-	DEBUG("Unsubscribe from \"%s\"", sub->ifname);
+	DEBUG("Unsubscribe from \"%s\"", sub->name);
 	sub_delete(statd->ev_loop, &statd->subs, sub);
 
 	return SR_ERR_OK;
+}
+static int unsub_to_iface(struct statd *statd, char *ifname)
+{
+	char name[IFNAMSIZ+3];
+	snprintf(name,sizeof(name),"if-%s",ifname);
+
+	return unsub_to_name(statd, name);
 }
 
 static int nl_process_msg(struct nlmsghdr *nlh, struct statd *statd)
@@ -337,7 +401,7 @@ static int nl_process_msg(struct nlmsghdr *nlh, struct statd *statd)
 
 static void nl_event_cb(struct ev_loop *, struct ev_io *w, int)
 {
-	struct statd *statd = (struct statd *) w->data;
+	struct statd *statd = (struct statd *)w->data;
 	char buf[NL_BUF_SIZE];
 	struct nlmsghdr *nlh;
 	int err;
@@ -379,13 +443,11 @@ static int sub_to_ifaces(struct statd *statd)
 	json_array_foreach(j_root, i, j_iface) {
 		json_t *j_ifname;
 		int err;
-
 		j_ifname = json_object_get(j_iface, "ifname");
 		if (!json_is_string(j_ifname)) {
 			ERROR("Got unexpected JSON type for 'ifname'");
 			continue;
 		}
-
 		err = sub_to_iface(statd, json_string_value(j_ifname));
 		if (err) {
 			ERROR("Unable to subscribe to %s", json_string_value(j_ifname));
@@ -447,6 +509,13 @@ int main(int argc, char *argv[])
 		return EXIT_FAILURE;
 	}
 
+	err = sub_to_routes(&statd);
+	if (err) {
+		ERROR("Error register for IPv4 routes");
+		sr_disconnect(sr_conn);
+		return EXIT_FAILURE;
+	}
+
 	ev_signal_init(&sigint_watcher, sigint_cb, SIGINT);
 	sigint_watcher.data = &statd;
 	ev_signal_start(statd.ev_loop, &sigint_watcher);
@@ -464,7 +533,7 @@ int main(int argc, char *argv[])
 
 	/* We should never get here during normal operation */
 	INFO("Status daemon shutting down");
-	unsub_to_ifaces(&statd);
+	unsub_to_all(&statd);
 	sr_session_stop(statd.sr_ses);
 	sr_disconnect(sr_conn);
 

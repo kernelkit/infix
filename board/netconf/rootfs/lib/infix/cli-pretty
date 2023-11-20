@@ -14,6 +14,12 @@ class Pad:
     state = 12
     data = 41
 
+class PadRoute:
+    prefix = 30
+    protocol = 10
+    next_hop = 30
+    metric = 10
+
 class Decore():
     @staticmethod
     def decorate(sgr, txt, restore="0"):
@@ -31,27 +37,53 @@ class Decore():
     def green(txt):
         return Decore.decorate("32", txt, "39")
 
+def get_json_data(default, indata, *args):
+    data = indata
+    for arg in args:
+        if arg in data:
+            data = data.get(arg)
+        else:
+            return default
+
+    return data
+
+class Route:
+    def __init__(self,data):
+        self.data = data
+        self.prefix = data.get('ietf-ipv4-unicast-routing:destination-prefix', '')
+        self.protocol = data.get('source-protocol','')[14:]
+        self.metric = data.get('route-preference','')
+
+        interface = get_json_data(None, self.data, 'next-hop', 'outgoing-interface')
+        address = get_json_data(None, self.data, 'next-hop', 'ietf-ipv4-unicast-routing:next-hop-address')
+        special = get_json_data(None, self.data, 'next-hop', 'special-next-hop')
+        if interface:
+            self.next_hop = interface
+        elif address:
+            self.next_hop = address
+        elif special:
+            self.next_hop = special
+        else:
+            self.next_hop = "unspecified"
+
+    def print(self):
+          row  = f"{self.prefix:<{PadRoute.prefix}}"
+          row += f"{self.next_hop:<{PadRoute.next_hop}}"
+          row += f"{self.metric:<{PadRoute.metric}}"
+          row += f"{self.protocol:<{PadRoute.protocol}}"
+          print(row)
+
 class Iface:
-    def get_json_data(self, default, *args):
-        data = self.data
-        for arg in args:
-            if arg in data:
-                data = data.get(arg)
-            else:
-                return default
-
-        return data
-
     def __init__(self, data):
         self.data = data
         self.name = data.get('name', '')
         self.type = data.get('type', '')
         self.index = data.get('if-index', '')
         self.oper_status = data.get('oper-status', '')
-        self.autoneg = self.get_json_data('unknown', 'ieee802-ethernet-interface:ethernet',
+        self.autoneg = get_json_data('unknown', self.data, 'ieee802-ethernet-interface:ethernet',
                                           'auto-negotiation', 'enable')
-        self.duplex = self.get_json_data('', 'ieee802-ethernet-interface:ethernet', 'duplex')
-        self.speed = self.get_json_data('', 'ieee802-ethernet-interface:ethernet', 'speed')
+        self.duplex = get_json_data('', self.data,'ieee802-ethernet-interface:ethernet','duplex')
+        self.speed = get_json_data('', self.data, 'ieee802-ethernet-interface:ethernet', 'speed')
         self.phys_address = data.get('phys-address', '')
 
         if data.get('statistics'):
@@ -231,8 +263,8 @@ class Iface:
             print(f"{'in-octets':<{20}}: {self.in_octets}")
             print(f"{'out-octets':<{20}}: {self.out_octets}")
 
-        frame = self.get_json_data([], 'ieee802-ethernet-interface:ethernet',
-                                   'statistics', 'frame')
+        frame = get_json_data([], self.data,'ieee802-ethernet-interface:ethernet',
+                              'statistics', 'frame')
         if frame:
             print(f"")
             for key, val in frame.items():
@@ -297,6 +329,25 @@ def ietf_interfaces(json, name):
             sys.exit(1)
         pr_interface_list(json)
 
+def ietf_routing(json, protocol="ipv4"):
+    if not json.get("ietf-routing:routing"):
+        print(f"Error, top level \"ietf-routing:routing\" missing")
+        sys.exit(1)
+    routes = get_json_data({}, json, 'ietf-routing:routing','ribs', 'rib')[0]
+    routes = get_json_data(None, routes, "routes", "route")
+
+    hdr = (f"{'PREFIX':<{PadRoute.prefix}}"
+           f"{'NEXT-HOP':<{PadRoute.next_hop}}"
+           f"{'METRIC':<{PadRoute.metric}}"
+           f"{'PROTOCOL':<{PadRoute.protocol}}")
+
+    print(Decore.invert(hdr))
+
+    if routes:
+        for r in routes:
+            route = Route(r)
+            route.print()
+
 def main():
     try:
         json_data = json.load(sys.stdin)
@@ -309,6 +360,8 @@ def main():
 
     if args.module == "ietf-interfaces":
         sys.exit(ietf_interfaces(json_data, args.name))
+    if args.module == "ietf-routing":
+        sys.exit(ietf_routing(json_data, args.name))
     else:
         print(f"Error, unknown module {args.module}")
         sys.exit(1)

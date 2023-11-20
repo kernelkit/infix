@@ -116,6 +116,40 @@ def iface_is_dsa(iface_in):
         return False
     return True
 
+def add_ipv4_route(routes):
+    cmd = ['ip', '-4', '-s', '-d', '-j', 'route']
+    data = run_json_cmd(cmd)
+    out={}
+    out["route"] = []
+
+    for d in data:
+        new = {}
+        next_hop = {}
+        if(d['dst'] == "default"):
+            d['dst'] = "0.0.0.0/0"
+        if(d['dst'].find('/') == -1):
+            d['dst'] = d['dst']+"/32"
+        new['ietf-ipv4-unicast-routing:destination-prefix'] = d['dst']
+        new['source-protocol'] = "infix-routing:"+d['protocol']
+        if d.get("metric"):
+            new['route-preference'] = d['metric']
+
+        if d['type'] == "blackhole":
+            next_hop['special-next-hop'] = "blackhole"
+        if d['type'] == "unreachable":
+            next_hop['special-next-hop'] = "unreachable"
+
+        if d['type'] == "unicast":
+            if(d.get("gateway")):
+                next_hop['ietf-ipv4-unicast-routing:next-hop-address'] = d['gateway']
+            elif(d.get("dev")):
+                next_hop['outgoing-interface'] = d['dev']
+
+        new['next-hop'] = next_hop
+
+        out['route'].append(new)
+    insert(routes, 'routes', out)
+
 def add_ip_link(ifname, iface_out):
     cmd = ['ip', '-s', '-d', '-j', 'link', 'show', 'dev', ifname]
 
@@ -125,7 +159,6 @@ def add_ip_link(ifname, iface_out):
         sys,exit(1)
 
     iface_in = data[0]
-    iface_out = yang_data['ietf-interfaces:interfaces']['interface'][0]
 
     if 'ifname' in iface_in:
         iface_out['name'] = iface_in['ifname']
@@ -323,25 +356,48 @@ def add_ethtool_std(ifname, iface_out):
             insert(iface_out, "ieee802-ethernet-interface:ethernet", "speed", str(num))
 
 if __name__ == "__main__":
-    yang_data = {
-        "ietf-interfaces:interfaces": {
-            "interface": [{}]
-        }
-    }
-
-    # For now, we handle each interface separately, as this is how it's
-    # currently implemented in sysrepo. I.e sysrepo will subscribe to
-    # each individual interface and query it for YANG data.
-    if len(sys.argv) != 2:
-        print(f"usage: yanger IFNAME", file=sys.stderr)
+    if len(sys.argv) < 2:
+        print(f"usage: yanger <model> [params]", file=sys.stderr)
         sys.exit(1)
 
-    ifname = sys.argv[1]
-    iface_out = yang_data['ietf-interfaces:interfaces']['interface'][0]
+    model = sys.argv[1]
+    if(model == 'ietf-interfaces'):
+        # For now, we handle each interface separately, as this is how it's
+        # currently implemented in sysrepo. I.e sysrepo will subscribe to
+        # each individual interface and query it for YANG data.
 
-    add_ip_link(ifname, iface_out)
-    add_ip_addr(ifname, iface_out)
-    add_ethtool_groups(ifname, iface_out)
-    add_ethtool_std(ifname, iface_out)
+        if len(sys.argv) != 3:
+            print(f"usage: yanger ietf-interfaces IFNAME", file=sys.stderr)
+            sys.exit(1)
 
+        yang_data = {
+            "ietf-interfaces:interfaces": {
+                "interface": [{}]
+            }
+        }
+
+        ifname = sys.argv[2]
+        iface_out = yang_data['ietf-interfaces:interfaces']['interface'][0]
+
+        add_ip_link(ifname, iface_out)
+        add_ip_addr(ifname, iface_out)
+        add_ethtool_groups(ifname, iface_out)
+        add_ethtool_std(ifname, iface_out)
+    elif(model == 'ietf-routing'):
+        yang_data = {
+            "ietf-routing:routing": {
+                "ribs":  {
+                    "rib": [{
+                        "name": "ipv4",
+                        "address-family": "ipv4",
+                    }]
+                }
+            }
+        }
+
+        ipv4routes = yang_data['ietf-routing:routing']['ribs']['rib'][0]
+        add_ipv4_route(ipv4routes);
+    else:
+        print(f"Unsupported model {model}", file=sys.stderr)
+        sys.exit(1)
     print(json.dumps(yang_data, indent=2))
