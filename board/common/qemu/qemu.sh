@@ -192,6 +192,38 @@ net_args()
     fi
 }
 
+# Vital Board Data, part of Vital Product data
+vbd_args()
+{
+    onieprom="$(dirname "$CONFIG_QEMU_ROOTFS")/onieprom"
+    vbd_file="$(dirname "$CONFIG_QEMU_ROOTFS")/vbd"
+
+    # This is you QEMU factory/default password:
+    pwhash=$(echo -n "admin" | mkpasswd -s -m sha256crypt)
+
+    # NOTE: This format will change!
+    json_data=$(cat <<EOF
+{
+  "manufacture-date": "$(date +"%d/%m/%Y %H:%M:%S")",
+  "vendor-extension": [
+    [
+      65536,
+      "{\"pwhash\":\"$pwhash\"}"
+    ]
+  ]
+}
+EOF
+)
+    :> "$vbd_file"
+
+    local tmp="$(mktemp --suffix=_infix_vbd)"
+    echo "$json_data" > "$tmp"
+    "$onieprom" "$tmp" "$vbd_file"
+    rm "$tmp"
+
+    echo -n "-fw_cfg name=opt/vbd,file=$vbd_file"
+}
+
 wdt_args()
 {
     echo -n "-device i6300esb -rtc clock=host"
@@ -209,6 +241,7 @@ run_qemu()
 	  $(host_args) \
 	  $(net_args) \
 	  $(wdt_args) \
+	  $(vbd_args) \
 	  $CONFIG_QEMU_EXTRA
 EOF
 
