@@ -137,10 +137,10 @@ if check_factory; then
     factory_reset
 fi
 
-mount_overlay cfg  $cfgsrc /cfg
-mount_overlay etc  $etcsrc /etc
-mount_overlay home $cfgsrc /home
-mount_overlay root $cfgsrc /root
+mount_overlay cfg  "$cfgsrc" /cfg
+mount_overlay etc  "$etcsrc" /etc
+mount_overlay home "$cfgsrc" /home
+mount_overlay root "$cfgsrc" /root
 mount_bind         "$varsrc" /var
 
 [ "$vlibsrc" ] && mount_bind "$vlibsrc" /var/lib
