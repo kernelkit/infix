@@ -298,8 +298,7 @@
     </COMMAND>
 
     <COMMAND name="running-config" help="Show running-config">
-      <!-- TODO: add PARAM for xml/json output, and coloring like factory -->
-      <ACTION sym="srp_show@sysrepo">running</ACTION>
+      <ACTION sym="script">sysrepocfg -X -f json | jq -C .</ACTION>
     </COMMAND>
 
     <COMMAND name="startup-config" help="Show startup-config">
