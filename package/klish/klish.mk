@@ -20,8 +20,8 @@ KLISH_CONF_OPTS += --with-libxml2
 define KLISH_INSTALL_CONFIG
 	$(INSTALL) -t $(TARGET_DIR)/etc/klish -D -m 0644 \
 		$(@D)/plugins/klish/xml/ptypes.xml
-	$(INSTALL) -t $(TARGET_DIR)/etc/klish -D -m 0644 \
-		$(KLISH_PKGDIR)/klish.conf $(@D)/klishd.conf
+	$(INSTALL) -m 0644 $(KLISH_PKGDIR)/klish.conf $(@D)/klish.conf
+	$(INSTALL) -m 0644 $(KLISH_PKGDIR)/klishd.conf $(@D)/klishd.conf
 endef
 KLISH_POST_INSTALL_TARGET_HOOKS += KLISH_INSTALL_CONFIG
 
