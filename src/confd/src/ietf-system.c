@@ -393,7 +393,7 @@ static int change_ntp(sr_session_ctx_t *session, uint32_t sub_id, const char *mo
 		(void)remove(CHRONY_PREV);
 		(void)rename(CHRONY_CONF, CHRONY_PREV);
 		(void)rename(CHRONY_NEXT, CHRONY_CONF);
-		if (srx_enabled(session, XPATH_BASE_"/ntp/enabled")) {
+		if (!srx_enabled(session, XPATH_BASE_"/ntp/enabled")) {
 			systemf("initctl -nbq disable chronyd");
 			return SR_ERR_OK;
 		}
