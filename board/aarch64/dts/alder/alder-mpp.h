@@ -25,7 +25,7 @@
 /* mpp21: Unused */
 /* mpp22: Unused */
 /* mpp23: Unused */
-#define SFP9_RX_LOS(X)        X("mpp24", cp0_gpio1, 24, GPIO_ACTIVE_HIGH)
+#define DDR_TEN(X)            X("mpp24", cp0_gpio1, 24, GPIO_ACTIVE_HIGH)
 #define ETH9_RESETn(X)        X("mpp25", cp0_gpio1, 25, GPIO_ACTIVE_LOW)
 #define SW_INTn(X)            X("mpp26", cp0_gpio1, 26, IRQ_TYPE_LEVEL_LOW)
 #define SFP9_RS1(X)           X("mpp27", cp0_gpio1, 27, GPIO_ACTIVE_HIGH)
@@ -54,7 +54,7 @@
 #define USB1_VBUS_ENABLE(X)   X("mpp50", cp0_gpio2, 18, GPIO_ACTIVE_HIGH)
 #define USB1_VBUS_ERROR_OC(X) X("mpp51", cp0_gpio2, 19, GPIO_ACTIVE_HIGH)
 /* mpp52: Unused */
-/* mpp53: Unused */
+#define SFP9_RX_LOS(X)        X("mpp53", cp0_gpio2, 21, GPIO_ACTIVE_HIGH)
 /* mpp54: Unused */
 #define CP_SD_LED(X)          X("mpp55", none,  0, 0)
 #define CP_SD_CLK(X)          X("mpp56", none,  0, 0)
