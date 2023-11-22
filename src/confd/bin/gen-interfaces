@@ -22,13 +22,6 @@
 # can be used to enable IPv4 and DHCP on a single service interface if
 # needed.
 #
-# Note: interfaces classified as ports, i.e., switchcore interfaces, or
-#       have been classified 'group port' by other means will by default
-#       *not* get an IPv6 address.  This is by design, some may want to
-#       have port isolation and *no* IP communication by default.  But,
-#       if you want IPv6 SLAAC on your port interfaces by default, add
-#       the -6 option to GEN_IFACE_OPTS in your /etc/confdrc.local
-#
 ### Bridge Mode ########################################################
 # The '-b brname' option triggers the bridge mode, creating a 'brname'
 # bridge interface using all interfaces classified in 'group port' by
@@ -48,46 +41,49 @@ set -e
 
 bridge=
 ipv4=false
-ipv6=false
 dhcp=
 
 usage()
 {
     cat <<EOF
-Usage: gen-interfaces [-46d] [-b brN]
+Usage: gen-interfaces [-4d] [-b brN]
 
   -4      Enable IPv4 ZeroConf, only for brN in bridge mode
-  -6      Enable IPv6 SLACC on *port* interfaces too
   -b brN  Bridged mode, add all port interfaces to brN
   -d      Enable DHCPv4 client, only for brN in bridge mode
-
-IPv6 SLACC is default in non-bridged mode, but not for the port
-interfaces, i.e., switchcore interfaces or otherwise classifed
-as ports.  Hence, -6 is necessary for platforms that have all
-ports from a switchcore but do not want switching enabled.
 
 EOF
     exit 0
 }
 
+# shellcheck disable=SC3043
 gen_interface()
 {
+    local ifname="$1"
+    local br="$2"
+
     cat <<EOF
       ,{
-        "name": "$1",
+        "name": "$ifname",
         "type": "infix-if-type:ethernet",
-        "ietf-ip:ipv6": {
-	    "enabled": $2
 EOF
-    if [ -n "$3" ]; then
+
+    if [ -n "$br" ]; then
 	cat <<EOF
+        "ietf-ip:ipv6": {
+	    "enabled": false
 	},
 	"infix-interfaces:bridge-port": {
-	    "bridge": "$3"
+	    "bridge": "$br"
+	}
+EOF
+    else
+	cat <<EOF
+        "ietf-ip:ipv6": {}
 EOF
     fi
+
     cat <<EOF
-	}
       }
 EOF
 }
@@ -96,9 +92,6 @@ while [ "$1" != "" ]; do
     case $1 in
 	-4)
 	    ipv4=true
-	    ;;
-	-6)
-	    ipv6=true
 	    ;;
 	-b)
 	    bridge="$2"
@@ -175,8 +168,8 @@ fi
 
 cat <<EOF
       }
-$(for iface in $ifaces; do gen_interface $iface true; done)
-$(for iface in $ports; do gen_interface $iface $ipv6 $bridge; done)
+$(for iface in $ifaces; do gen_interface $iface; done)
+$(for iface in $ports; do gen_interface $iface $bridge; done)
     ]
 EOF
 if [ "$dhcp" = "true" ] && [ -n "$bridge" ]; then
