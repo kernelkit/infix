@@ -1,6 +1,20 @@
 Developer's Guide
 =================
 
+Please note, by default the `root` account is disabled in Infix NETCONF
+builds.  Meaning, the only way to access the system is with the `admin`
+account, which is created based on credentials found in the VPD area --
+for Qemu devices this is emulated using `qemu_fw_cfg`.
+
+For developers this can be quite frustrating to be blocked from logging
+in to debug the system.  So we recommend enabling the `root` account in
+the Buildroot `make menuconfig` system.
+
+    make menuconfig
+         -> System configuration
+            -> [*]Enable root login with password
+
+
 Cloning
 -------
 
