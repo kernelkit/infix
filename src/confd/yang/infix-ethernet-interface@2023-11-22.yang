@@ -25,8 +25,9 @@ module infix-ethernet-interface {
 
 
   /* Deviations for config and status */
+
   deviation "/if:interfaces/if:interface/eth:ethernet" {
-    deviate replace {
+    deviate add {
       config false;
     }
   }
