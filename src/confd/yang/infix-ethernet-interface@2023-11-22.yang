@@ -1,0 +1,62 @@
+module infix-ethernet-interface {
+  yang-version 1.1;
+  namespace "urn:infix:ethernet-interface:ns:yang:1.0";
+  prefix infix-eth;
+
+  import ieee802-ethernet-interface {
+    prefix eth;
+  }
+  import ietf-interfaces {
+    prefix if;
+  }
+
+  organization "KernelKit";
+  contact      "kernelkit@googlegroups.com";
+  description  "Extensions and deviations to ieee802-ethernet-interface.yang";
+
+  revision 2023-11-22 {
+    description "Initial revision.";
+    reference "internal";
+  }
+
+  /*
+   * Data Nodes
+   */
+
+
+  /* Deviations for config and status */
+  deviation "/if:interfaces/if:interface/eth:ethernet" {
+    deviate replace {
+      config false;
+    }
+  }
+  deviation "/if:interfaces/if:interface/eth:ethernet/eth:flow-control" {
+    deviate not-supported;
+  }
+  deviation "/if:interfaces/if:interface/eth:ethernet/eth:max-frame-length" {
+    deviate not-supported;
+  }
+  deviation "/if:interfaces/if:interface/eth:ethernet/eth:mac-control-extension-control" {
+    deviate not-supported;
+  }
+  deviation "/if:interfaces/if:interface/eth:ethernet/eth:frame-limit-slow-protocol" {
+    deviate not-supported;
+  }
+  deviation "/if:interfaces/if:interface/eth:ethernet/eth:capabilities" {
+    deviate not-supported;
+  }
+
+  /* Deviations for statistics */
+  deviation "/if:interfaces/if:interface/eth:ethernet/eth:statistics/eth:frame/eth:in-total-frames" {
+    deviate not-supported;
+  }
+  deviation "/if:interfaces/if:interface/eth:ethernet/eth:statistics/eth:frame/eth:out-error-mac-internal-frames" {
+    deviate not-supported;
+  }
+  deviation "/if:interfaces/if:interface/eth:ethernet/eth:statistics/eth:phy" {
+    deviate not-supported;
+  }
+  deviation "/if:interfaces/if:interface/eth:ethernet/eth:statistics/eth:mac-control" {
+    deviate not-supported;
+  } 
+}
