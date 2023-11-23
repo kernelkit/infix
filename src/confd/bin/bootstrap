@@ -83,8 +83,9 @@ factory()
     # shellcheck disable=SC2086
     gen-interfaces $GEN_IFACE_OPTS                          >"$FACTORY_D/20-interfaces.json"
 
-    if ! gen-admin-auth                             >"$FACTORY_D/10-authentication.json"; then
-        console_error "Unable to create factory config, gen-admin-auth failed"
+    # Extract password for admin user from VPD
+    if ! gen-admin-auth infix-shell-type:clish >"$FACTORY_D/20-authentication.json"; then
+        console_error "Unable to create factory-config, gen-admin-auth failed"
         return
     fi
 
@@ -106,6 +107,12 @@ failure()
 
     gen-hostname   "$FAIL_HOSTNAME"                         >"$FAILURE_D/20-hostname.json"
     gen-interfaces                                          >"$FAILURE_D/20-interfaces.json"
+
+    # Same password as factory-config, but another login shell
+    if ! gen-admin-auth infix-shell-type:bash >"$FAILURE_D/20-authentication.json"; then
+        console_error "Unable to create failure-config, gen-admin-auth failed"
+        return
+    fi
 
     [ -s "$FAILURE_D/20-hostkey.json"   ] || gen-hostkeys   >"$FAILURE_D/20-hostkey.json"
 
