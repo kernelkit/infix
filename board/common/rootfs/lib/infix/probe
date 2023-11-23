@@ -38,9 +38,10 @@ if [ -f /sys/firmware/qemu_fw_cfg/rev ]; then
     #       more work, e.g. new qeneth template, to roll out.
     gen_qemu_system_file || gen_fallback_hash
 else
-    # NOTE: All this code will soon go away.
-    echo -e "\n\n\e[31mWARNING! Probe failed to get password hash from hardware\n" \
-            "Falling back to temporary hash\e[0m\n" > /dev/console
+    # shellcheck disable=SC3037
+    /bin/echo -e "\n\n\e[31mWARNING! Probe failed to get password hash from hardware\n" \
+              "Falling back to temporary hash\e[0m\n" > /dev/console
 
+    # NOTE: All this fallback will soon go away.
     gen_fallback_hash
 fi
