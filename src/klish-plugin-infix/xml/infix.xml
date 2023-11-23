@@ -230,6 +230,26 @@
     </SWITCH>
   </COMMAND>
 
+  <COMMAND name="software" help="Show software info">
+    <SWITCH name="optional" min="0" max="1">
+      <COMMAND name="name" help="Show detailed info about a partition">
+        <PARAM name="name" ptype="/STRING" help="Partition name">
+        </PARAM>
+      </COMMAND>
+    </SWITCH>
+    <ACTION sym="script">
+      tmp=$(mktemp)
+      sysrepocfg -d operational -X -f json -x /ietf-system:system-state/infix-system:software | \
+              jq -r '.[][].slot |= sort_by(.name)' > "$tmp"
+      if [ -n "$KLISH_PARAM_name" ]; then
+          cat "$tmp" | /lib/infix/cli-pretty "infix-system" -n "$KLISH_PARAM_name"
+      else
+          cat "$tmp" | /lib/infix/cli-pretty "infix-system"
+      fi
+      rm "$tmp"
+    </ACTION>
+  </COMMAND>
+
   <COMMAND name="routes" help="Show routing table">
     <ACTION sym="script">
       sysrepocfg -f json -X -d operational -m ietf-routing | \
@@ -295,7 +315,7 @@
     <ACTION sym="script">sysinfo</ACTION>
     </COMMAND>
   -->
-    <COMMAND name="version" help="Show firmware version">
+    <COMMAND name="version" help="Show software version">
       <ACTION sym="script">uptime</ACTION>
     </COMMAND>
 
