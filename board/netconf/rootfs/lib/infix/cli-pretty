@@ -20,6 +20,13 @@ class PadRoute:
     next_hop = 30
     metric = 10
 
+class PadSoftware:
+    name = 10
+    date = 25
+    hash = 64
+    state = 10
+    version = 23
+
 class Decore():
     @staticmethod
     def decorate(sgr, txt, restore="0"):
@@ -72,6 +79,39 @@ class Route:
         row += f"{self.metric:<{PadRoute.metric}}"
         row += f"{self.protocol:<{PadRoute.protocol}}"
         print(row)
+
+class Software:
+    """Software bundle class """
+    def __init__(self, data):
+        self.data = data
+        self.name = data.get('bootname', '')
+        self.size = data.get('size', '')
+        self.type = data.get('class', '')
+        self.hash = data.get('sha256', '')
+        self.state = data.get('state', '')
+        self.version = get_json_data(None, self.data, 'bundle', 'version')
+        self.date = get_json_data(None, self.data, 'installed', 'datetime')
+
+    def is_rootfs(self):
+        """True if bundle type is 'rootfs'"""
+        return self.type == "rootfs"
+
+    def print(self):
+        """Brief information about one bundle"""
+        row  = f"{self.name:<{PadSoftware.name}}"
+        row += f"{self.state:<{PadSoftware.state}}"
+        row += f"{self.version:<{PadSoftware.version}}"
+        row += f"{self.date:<{PadSoftware.date}}"
+        print(row)
+
+    def detail(self):
+        """Detailed information about one bundle"""
+        print(f"Name      : {self.name}")
+        print(f"State     : {self.state}")
+        print(f"Version   : {self.version}")
+        print(f"Size      : {self.size}")
+        print(f"SHA-256   : {self.hash}")
+        print(f"Installed : {self.date}")
 
 class Iface:
     def __init__(self, data):
@@ -348,6 +388,34 @@ def ietf_routing(json, protocol="ipv4"):
             route = Route(r)
             route.print()
 
+def find_slot(_slots, name):
+    for _slot in [Software(data) for data in _slots]:
+        if _slot.name == name:
+            return _slot
+
+    return False
+
+def infix_system(json, name):
+    if not json.get("ietf-system:system-state", "infix-system:software"):
+        print("Error, cannot find infix-system:software")
+        sys.exit(1)
+
+    slots = get_json_data({}, json, 'ietf-system:system-state', 'infix-system:software', 'slot')
+    if name:
+        slot = find_slot(slots, name)
+        if slot:
+            slot.detail()
+    else:
+        hdr = (f"{'NAME':<{PadSoftware.name}}"
+               f"{'STATE':<{PadSoftware.state}}"
+               f"{'VERSION':<{PadSoftware.version}}"
+               f"{'DATE':<{PadSoftware.date}}")
+        print(Decore.invert(hdr))
+        for _s in slots:
+            slot = Software(_s)
+            if slot.is_rootfs():
+                slot.print()
+
 def main():
     try:
         json_data = json.load(sys.stdin)
@@ -362,6 +430,8 @@ def main():
         sys.exit(ietf_interfaces(json_data, args.name))
     if args.module == "ietf-routing":
         sys.exit(ietf_routing(json_data, args.name))
+    if args.module == "infix-system":
+        sys.exit(infix_system(json_data, args.name))
     else:
         print(f"Error, unknown module {args.module}")
         sys.exit(1)
