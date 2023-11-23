@@ -140,7 +140,7 @@
   <ACTION sym="script" in="tty" out="tty" interrupt="true">/bin/bash -l</ACTION>
 </COMMAND>
 
-<COMMAND name="exit" help="Exit">
+<COMMAND name="exit" help="Exit from CLI (log out)">
   <ACTION sym="nav">pop</ACTION>
 </COMMAND>
 <COMMAND name="logout" help="Alias to exit">
@@ -151,7 +151,7 @@
   <ACTION sym="nav">replace config</ACTION>
 </COMMAND>
 
-<COMMAND name="copy" help="Copy">
+<COMMAND name="copy" help="Copy configuration, e.g., copy running-config startup-config">
   <PARAM name="src" ptype="/DATASTORE"    help="Source datastore"/>
   <PARAM name="dst" ptype="/RW_DATASTORE" help="Destination datastore"/>
   <ACTION sym="copy@infix"/>
@@ -186,14 +186,14 @@
   </COMMAND>
 </COMMAND>
 
-<COMMAND name="set" help="Set" mode="switch">
+<COMMAND name="set" help="Set operations, e.g., current date/time" mode="switch">
   <COMMAND name="datetime" help="Set current date and time, ISO-8601 format">
     <PARAM name="current-datetime" ptype="/STRING" help="yyyy-mm-ddThh:mm:ss(Z|+/-hh:mm)"/>
     <ACTION sym="rpc@infix">/ietf-system:set-current-datetime</ACTION>
   </COMMAND>
 </COMMAND>
 
-<COMMAND name="show" help="Show" mode="switch">
+<COMMAND name="show" help="Show system status and configuration files" mode="switch">
 
   <COMMAND name="bridge" help="Show bridge (ports/fdb/mdb/vlans)">
     <ACTION sym="script">bridge -color link</ACTION>
