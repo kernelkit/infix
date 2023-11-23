@@ -1,6 +1,8 @@
 #!/bin/sh
+# This script extracts the admin user's password hash from VPD
 
-pwhash="$(cat /run/system.json | jq '.pwhash')"
+shell="$1"
+pwhash="$(jq .pwhash /run/system.json)"
 
 if [ -z "$pwhash" ] || [ "$pwhash" = "null" ]; then
     exit 1
@@ -14,7 +16,7 @@ cat <<EOF
        {
           "name": "admin",
           "password": $pwhash,
-          "infix-system:shell": "infix-shell-type:clish"
+	  "infix-system:shell": "$shell"
        }
       ]
     }
