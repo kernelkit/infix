@@ -138,7 +138,7 @@ def into_tlv(d):
     out += struct.pack(">L", binascii.crc32(out))
     return out
 
-def from_tlv(b):
+def from_tlv(f):
     d = {}
 
     def unpack_vendor(ext):
@@ -151,10 +151,13 @@ def from_tlv(b):
 
         d["vendor-extension"].append([iana_pen, val])
 
-    head, tail = b[:HDRLEN], b[HDRLEN:]
+    head = f.read(HDRLEN)
     magic, ver, l = struct.unpack(HDRFMT, head)
     assert(magic == HDRMGC)
     assert(ver == 1)
+
+    tail = f.read(l)
+    b = head + tail
     assert(len(b) >= HDRLEN + l)
 
     crcoffs = HDRLEN + l - CRCLEN
@@ -186,8 +189,8 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(prog='onieprom')
 
-    parser.add_argument("infile", nargs="?", default=sys.stdin, type=argparse.FileType())
-    parser.add_argument("outfile", nargs="?", default=sys.stdout, type=argparse.FileType("w"))
+    parser.add_argument("infile", nargs="?", default=sys.stdin, type=argparse.FileType("rb", 0))
+    parser.add_argument("outfile", nargs="?", default=sys.stdout, type=argparse.FileType("wb"))
 
     parser.add_argument("-e", "--encode", default=False, action="store_true",
                         help="Encode JSON input to binary output")
@@ -198,7 +201,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if (not args.encode) and (not args.decode):
-        c = args.infile.buffer.read(1)
+        c = args.infile.read(1)
         args.infile.seek(0, 0)
 
         if c == b"{":
@@ -212,4 +215,4 @@ if __name__ == "__main__":
     if args.encode:
         args.outfile.buffer.write(into_tlv(json.load(args.infile)))
     else:
-        args.outfile.write(json.dumps(from_tlv(args.infile.buffer.read())))
+        args.outfile.write(json.dumps(from_tlv(args.infile)))
