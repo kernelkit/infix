@@ -35,7 +35,7 @@ The system has several datastores (or files):
 To save configuration changes made to the `running-config` so the system
 will use them consecutive reboots, use the `copy` command:
 
-    admin@infix-12-34-56:/> copy running-config startup-config
+    admin@host-12-34-56:/> copy running-config startup-config
 
 In *configure context* the following commands are available:
 
@@ -64,17 +64,17 @@ We inspect the system status to ensure the change took effect.  Then we
 save the changes for the next reboot.
 
 ```
-admin@infix-12-34-56:/> configure
-admin@infix-12-34-56:/config/> edit interfaces interface eth0
-admin@infix-12-34-56:/config/interfaces/interface/eth0/> set ipv4 <TAB>
+admin@host-12-34-56:/> configure
+admin@host-12-34-56:/config/> edit interfaces interface eth0
+admin@host-12-34-56:/config/interfaces/interface/eth0/> set ipv4 <TAB>
       address     autoconf bind-ni-name      enabled
 	  forwarding  mtu      neighbor
-admin@infix-12-34-56:/config/interfaces/interface/eth0/> set ipv4 address 192.168.2.200 prefix-length 24
-admin@infix-12-34-56:/config/interfaces/interface/eth0/> show
+admin@host-12-34-56:/config/interfaces/interface/eth0/> set ipv4 address 192.168.2.200 prefix-length 24
+admin@host-12-34-56:/config/interfaces/interface/eth0/> show
 type ethernetCsmacd;
 ipv4 address 192.168.2.200 prefix-length 24;
 ipv6 enabled true;
-admin@infix-12-34-56:/config/interfaces/interface/eth0/> diff
+admin@host-12-34-56:/config/interfaces/interface/eth0/> diff
 interfaces {
   interface eth0 {
 +    ipv4 {
@@ -84,14 +84,14 @@ interfaces {
 +    }
   }
 }
-admin@infix-12-34-56:/config/interfaces/interface/eth0/> leave
-admin@infix-12-34-56:/> show interfaces brief
+admin@host-12-34-56:/config/interfaces/interface/eth0/> leave
+admin@host-12-34-56:/> show interfaces brief
 lo               UNKNOWN        00:00:00:00:00:00 <LOOPBACK,UP,LOWER_UP>
 eth0             UP             52:54:00:12:34:56 <BROADCAST,MULTICAST,UP,LOWER_UP>
-admin@infix-12-34-56:/> show ip brief
+admin@host-12-34-56:/> show ip brief
 lo               UNKNOWN        127.0.0.1/8 ::1/128
 eth0             UP             192.168.2.200/24 fe80::5054:ff:fe12:3456/64
-admin@infix-12-34-56:/> copy running-config startup-config
+admin@host-12-34-56:/> copy running-config startup-config
 ```
 
 One of the ideas behind a separate running and startup configuration is
@@ -99,7 +99,7 @@ to be able to verify a configuration change.  In case of an inadvertent
 change that, e.g., breaks networking, it is trivial to revert back by:
 
 ```
-admin@infix-12-34-56:/> copy startup-config running-config
+admin@host-12-34-56:/> copy startup-config running-config
 ```
 
 Or restarting the device.
