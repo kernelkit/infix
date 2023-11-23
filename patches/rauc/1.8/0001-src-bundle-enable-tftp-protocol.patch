@@ -1,0 +1,29 @@
+From 6d1d38458c911b281fa7da59ce01cec590bc1c64 Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Thu, 23 Nov 2023 17:16:16 +0100
+Subject: [PATCH 1/2] src/bundle: enable tftp protocol
+Organization: Addiva Elektronik
+
+Despite its age, TFTP still reigns strong in some sectors.  Enable it
+for KernelKit//Infix.
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ src/bundle.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/src/bundle.c b/src/bundle.c
+index 05d4e72..b70e191 100644
+--- a/src/bundle.c
++++ b/src/bundle.c
+@@ -1322,6 +1322,7 @@ static gboolean is_remote_scheme(const gchar *scheme)
+ {
+ 	return (g_strcmp0(scheme, "http") == 0) ||
+ 	       (g_strcmp0(scheme, "https") == 0) ||
++	       (g_strcmp0(scheme, "tftp") == 0) ||
+ 	       (g_strcmp0(scheme, "sftp") == 0) ||
+ 	       (g_strcmp0(scheme, "ftp") == 0);
+ }
+-- 
+2.34.1
+
