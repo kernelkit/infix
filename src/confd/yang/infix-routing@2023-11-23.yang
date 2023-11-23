@@ -17,7 +17,13 @@ module infix-routing {
       prefix ospf;
     }
     */
-    revision 2013-10-27 {
+    revision 2023-11-23 {
+      description "Limit to one instance per control plane protocol,
+	and change to infix (iproute2) specific source protocol names
+	for routes";
+      reference "internal";
+    }
+    revision 2023-10-27 {
       description "Initial revision.";
       reference "internal";
     }
