@@ -1,9 +1,9 @@
 User Guide
 ==========
 
-The command line interface (CLI, see-el-i) is built on the open source
-component [klish][1], which implements a CISCO like, or Juniper Networks
-JunOS-like CLI on a UNIX system.
+The command line interface (CLI, see-ell-aye) is built on the open source
+component [klish][1], which implements a CISCO-like, or Juniper Networks
+JunOS-like, CLI for UNIX systems.
 
 New users always get the CLI as the default "shell" when logging in, but
 the default `admin` user logs in to the Bash.  To access the CLI, type:
@@ -18,11 +18,11 @@ Key commands available in any context are:
 For each command it also possible to press the `?` key and `TAB` to get
 more help and suggestions for completion.
 
-> **Note:** for the sake of brevity, the hostname in the following
-> examples has been shortened to `host`.  The default name is composed
-> from a product specific string followed by the last three octets of
-> the system base MAC address, e.g., `infix-12-34-56`.  An example of
-> how to change the hostname is included below.
+> **Note:** for the sake of brevity, the hostname in the following examples
+> has been shortened to `host`.  The default name is composed from a product
+> specific string followed by the last three octets of the system base MAC
+> address, e.g., `switch-12-34-56`.  An example of how to change the hostname
+> is included below.
 
 
 Admin Exec
