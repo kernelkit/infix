@@ -1,0 +1,115 @@
+#!/bin/sh
+
+set -e
+
+progname="$0"
+
+usage()
+{
+    cat <<EOF
+Usage: ${progname} <url-to-pkg> <block-dev>
+
+Provision Infix to a system (typically netbooted) with a blank block
+device
+
+  - Downloads an Infix install bundle, using curl(1)
+  - Creates an Infix compatible partition table on the block device
+  - Initializes auxiliary and configuration filesystems and metadata
+  - Installs Infix to both primary and secondary partitions
+
+EOF
+}
+
+step()
+{
+    current="$*"
+    printf "\e[37;44m>>> %-60s\e[0m\n" "${current} ..." >&2
+}
+
+ok()
+{
+    printf "\e[37;42m<<< %-56s  OK\e[0m\n\n" "${current}" >&2
+}
+
+err()
+{
+    printf "\e[37;41m!!! %-56s ERR\e[0m\n\n" "${current}" >&2
+    exit 1
+}
+
+while getopts "h" opt; do
+    case ${opt} in
+	h)
+	    usage && exit 0
+	    ;;
+    esac
+done
+shift $((OPTIND - 1))
+
+if [ $# -lt 2 ]; then
+    usage && exit 1
+fi
+
+url=$1
+blk=$2
+pkg=/tmp/pkg
+
+
+step "Downloading $url"
+curl -o $pkg $url || err
+rauc info $pkg || err
+ok
+
+
+step "Formatting $blk"
+[ -b $blk ] || { echo "$blk is not a block device" >&2; err; }
+/lib/infix/prod/fdisk $blk || err
+sleep 1
+ok
+
+for part in aux cfg var; do
+    step "Creating $part filesystem"
+    mkfs.ext4 -F -L $part /dev/disk/by-partlabel/$part || err
+    mount /mnt/$part || err
+    ok
+done
+
+step "Bootstrapping aux partition"
+if [ -f /etc/fw_env.config ]; then
+    size_n_file=$(awk '{ print("-s", $3, "-o", $1); }' /etc/fw_env.config)
+    mkenvimage $size_n_file - <<EOF
+BOOT_ORDER=primary secondary net
+BOOT_primary_LEFT=1
+BOOT_secondary_LEFT=1
+BOOT_net_LEFT=1
+EOF
+fi
+ok
+
+step "Preparing installation"
+rm -f /tmp/rauc
+[ -f /etc/default/rauc ] && cp /etc/default/rauc /tmp/rauc
+ok
+
+
+step "Installing to primary partition"
+echo "RAUC_ARGS=--override-boot-slot=secondary" >/etc/default/rauc
+initctl -b restart rauc || err
+rauc install $pkg || err
+ok
+
+
+step "Installing to secondary partition"
+echo "RAUC_ARGS=--override-boot-slot=primary" >/etc/default/rauc
+initctl -b restart rauc || err
+rauc install $pkg || err
+ok
+
+
+step "Finishing installation"
+rm /etc/default/rauc
+[ -f /tmp/rauc ] && cp /tmp/rauc /etc/default/rauc
+initctl -b restart rauc || err
+rauc status mark-active rootfs.0
+rauc status --detailed
+ok
