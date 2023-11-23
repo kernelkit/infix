@@ -380,6 +380,14 @@
       tcpdump -ln $count $size $verbose -i $KLISH_PARAM_iface $KLISH_PARAM_expr
     </ACTION>
   </COMMAND>
+
+  <COMMAND name="upgrade" help="Install a software update bundle">
+    <PARAM name="URI" ptype="/STRING" help="(ftp|tftp|http|https|sftp)://(dns.name | ip.address)/path/to/upgrade-bundle.pkg"/>
+    <ACTION sym="script" in="tty" out="tty" interrupt="true">
+      rauc install $KLISH_PARAM_URI
+    </ACTION>
+  </COMMAND>
+
 </VIEW>
 
 <VIEW name="config">
