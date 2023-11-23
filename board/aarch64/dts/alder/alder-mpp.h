@@ -63,7 +63,7 @@
 #define CP_SD_D1(X)           X("mpp59", none,  0, 0)
 #define CP_SD_D2(X)           X("mpp60", none,  0, 0)
 #define CP_SD_D3(X)           X("mpp61", none,  0, 0)
-#define DDR_TEN(X)            X("mpp62", cp0_gpio2, 30 GPIO_ACTIVE_HIGH)
+/* mpp62: Unused */
 
 /* Macros to extract MPP info in different formats */
 #define MPP_ID(_mpp, _chip, _no, _flags) _mpp
