@@ -20,6 +20,10 @@
 # TODO: Look for statically defined factory-config, based on system's
 #       product ID, or just custom site-specific factory on /cfg.
 ########################################################################
+STATUS=""
+
+# When logging errors, generating /etc/issue* or /etc/banner (SSH)
+. /etc/os-release
 
 # /etc/confdrc controls the behavior or most of the gen-scripts,
 # customize in an overlay when using Infix as an br2-external.
@@ -65,11 +69,21 @@ collate()
     fi
 }
 
+# Report error on console, syslog, and set login banners for getty + ssh
 console_error()
 {
-    logger -p user.crit -t "BOOTSTRAP" "CRITICAL ERROR! $1"
+    logger -p user.crit -t "BOOTSTRAP" "$1"
+
     # shellcheck disable=SC3037
     /bin/echo -e "\n\n\e[31mCRITICAL BOOTSTRAP ERROR\n$1\e[0m\n" > /dev/console
+
+    [ -z "$STATUS" ] || return
+    STATUS="CRITICAL ERROR: $1"
+
+    printf "\n$PRETTY_NAME\n%s\n\n" "$STATUS" | tee /etc/banner > /etc/issue.net
+    printf "\n$PRETTY_NAME (console)\n%s\n\n" "$STATUS"         > /etc/issue
+
+    return 0
 }
 
 factory()
@@ -111,8 +125,7 @@ failure()
 
     # Same password as factory-config, but another login shell
     if ! gen-admin-auth infix-shell-type:bash >"$FAILURE_D/20-authentication.json"; then
-        console_error "Unable to create failure-config, gen-admin-auth failed"
-        return
+        console_error "Invalid password hash in vital product data, failure-config incomplete!"
     fi
 
     [ -s "$FAILURE_D/20-hostkey.json"   ] || gen-hostkeys   >"$FAILURE_D/20-hostkey.json"
@@ -136,7 +149,12 @@ fi
 # and then we initialize it all with our factory defaults.
 rm -rf /etc/sysrepo/* /dev/shm/sr_*
 mkdir -p /etc/sysrepo/
-cp "$FACTORY_CFG" "$INIT_DATA"
+if [ -f "$FACTORY_CFG" ]; then
+    cp "$FACTORY_CFG" "$INIT_DATA"
+else
+    cp "$FAILURE_CFG" "$INIT_DATA"
+fi
+
 sysrepoctl -s $SEARCH							\
 	   -i ietf-system@2014-08-06.yang      -g wheel -p 0660		\
            	-e authentication					\
