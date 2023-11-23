@@ -1,0 +1,38 @@
+#!/bin/sh
+
+set -e
+
+disk=$1
+bootoffs=$2
+
+bootsize=8M
+auxsize=8M
+
+total=$(awk -vdisk="$(basename $disk)" '$4 == disk { print($3 / 1024); }' /proc/partitions)
+if [ "$total" -ge 4096 ]; then
+    imgsize=1024M
+    cfgsize=512M
+elif [ "$total" -ge 2048 ]; then
+    imgsize=512M
+    cfgsize=256M
+elif [ "$total" -ge 1024 ]; then
+    imgsize=256M
+    cfgsize=64M
+elif [ "$total" -ge 512 ]; then
+    imgsize=192M
+    cfgsize=16M
+else
+    echo "$disk is only ${total}M, at least 512M is required" >2
+    exit 1
+fi
+
+sgdisk \
+    -o \
+    -n1:${bootoffs}:+${bootsize} -t1:8301 -c1:boot \
+    -n2::+${auxsize} -t2:8301 -c2:aux \
+    -n3::+${imgsize} -t3:8300 -c3:primary \
+    -n4::+${imgsize} -t4:8300 -c4:secondary \
+    -n5::+${cfgsize} -t5:8302 -c5:cfg \
+    -n6::            -t6:8310 -c6:var \
+    -p \
+    $disk
