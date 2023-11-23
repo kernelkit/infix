@@ -5,7 +5,12 @@ shell="$1"
 pwhash="$(jq .pwhash /run/system.json)"
 
 if [ -z "$pwhash" ] || [ "$pwhash" = "null" ]; then
-    exit 1
+    # Do not fail, lock account instead.  This way developers can enable
+    # root account login at build-tiem to diagnose the system.
+    pwhash="!"
+    rc=1
+else
+    rc=0
 fi
 
 cat <<EOF
@@ -23,3 +28,5 @@ cat <<EOF
   }
 }
 EOF
+
+exit $rc
