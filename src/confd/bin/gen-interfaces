@@ -125,7 +125,7 @@ ifaces=""
 for phy in $phys_ifaces; do
     found=""
     for port in $ports; do
-	if [ $port = $phy ]; then
+	if [ "$port" = "$phy" ]; then
 	   found=true
 	   break
 	fi
@@ -168,8 +168,8 @@ fi
 
 cat <<EOF
       }
-$(for iface in $ifaces; do gen_interface $iface; done)
-$(for iface in $ports; do gen_interface $iface $bridge; done)
+$(for iface in $ifaces; do gen_interface "$iface"; done)
+$(for iface in $ports; do gen_interface "$iface" "$bridge"; done)
     ]
 EOF
 if [ "$dhcp" = "true" ] && [ -n "$bridge" ]; then
