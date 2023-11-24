@@ -118,6 +118,9 @@ config QEMU_RW_VAR
 	default "var.ext4"
 endif
 
+config QEMU_VPD
+	bool "Emulate a Vital Product Data (VPD) Memory"
+
 config QEMU_HOST
 	string "Export host filesystem path"
 	default "/tmp"
