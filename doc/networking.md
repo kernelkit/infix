@@ -327,6 +327,44 @@ possible to specify use of a random identifier ([ietf-ip][ietf-ip-yang] YANG and
 Both the link-local address (fe80::) and the global address (2001:)
 have changed type to *random*. 
 
+## Routing support
+| **Yang Model**                                  | **Description**                                            |
+|:----------------------------------------------- |:---------------------------------------------------------- |
+| ietf-routing                                    |  Base routing model, required for all other routing models |
+| ietf-ipv4-unicast-routing                       |  Static IPv4 unicast routing                               |
+
+The only name allowed for a control-plane-protocol is just now
+*default*. This will result in that you can only have one instance per
+routing protocol.
+
+### Static routes
+
+	admin@example:/config/> edit routing
+	admin@example:/config/> edit routing control-plane-protocols control-plane-protocol static name default static-routes ipv4
+	admin@example:/config/routing/control-plane-protocols/control-plane-protocol/static/name/default/static-routes/ipv4/> set route 192.168.200.0/24 next-hop next-hop-address 192.168.1.1
+	admin@example:/config/routing/control-plane-protocols/control-plane-protocol/static/name/default/static-routes/ipv4/> leave
+
+
+### View IPv4 routing table
+The routing table can be viewed by Netconf or CLI
+
+	admin@example:/> show routes
+	PREFIX                        NEXT-HOP                      METRIC    PROTOCOL
+	192.168.1.0/24                e0                                      kernel
+	192.168.200.0/24              192.168.1.1                   20        static
+
+The source protocol describes the origin of the route.
+
+| **Protocol** | **Description**                                                      |
+|:-------------|:---------------------------------------------------------------------|
+| kernel       | Added when setting a subnet address on an interface                  |
+| static       | User created static routes                                           |
+| dhcp         | Routes retrieved from DHCP                                           |
+
+
+The YANG model *ietf-routing* support multiple ribs but only two is
+currently supported, they are named ipv4 and ipv6.
+
 [ietf-ip-yang]:         https://www.rfc-editor.org/rfc/rfc8344.html
 [ietf-ipv6-privacy]:    https://www.rfc-editor.org/rfc/rfc8981.html
 
