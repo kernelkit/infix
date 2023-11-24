@@ -196,13 +196,15 @@ net_args()
 # Vital Product data
 vpd_args()
 {
-    onieprom="${imgdir}/onieprom"
     vpd_file="${imgdir}/vpd"
 
-    # This is you QEMU factory/default password:
-    pwhash=$(echo -n "admin" | mkpasswd -s -m sha256crypt)
+    if ! [ -f "$vpd_file" ]; then
+	onieprom="${imgdir}/onieprom"
 
-    cat <<EOF | "$onieprom" -e >"$vpd_file"
+	# This is you QEMU factory/default password:
+	pwhash=$(echo -n "admin" | mkpasswd -s -m sha256crypt)
+
+	cat <<EOF | "$onieprom" -e >"$vpd_file"
 {
   "manufacture-date": "$(date +"%d/%m/%Y %H:%M:%S")",
   "vendor-extension": [
@@ -213,7 +215,7 @@ vpd_args()
   ]
 }
 EOF
-
+    fi
     echo -n "-fw_cfg name=opt/vpd,file=$vpd_file"
 }
 
