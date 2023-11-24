@@ -2,11 +2,11 @@
 # This script extracts the admin user's password hash from VPD
 
 shell="$1"
-pwhash="$(jq .pwhash /run/system.json)"
+pwhash=$(jq -r '."factory-password-hash"' /run/system.json)
 
 if [ -z "$pwhash" ] || [ "$pwhash" = "null" ]; then
     # Do not fail, lock account instead.  This way developers can enable
-    # root account login at build-tiem to diagnose the system.
+    # root account login at build-time to diagnose the system.
     pwhash="!"
     rc=1
 else
@@ -20,7 +20,7 @@ cat <<EOF
       "user": [
        {
           "name": "admin",
-          "password": $pwhash,
+          "password": "$pwhash",
 	  "infix-system:shell": "$shell"
        }
       ]
