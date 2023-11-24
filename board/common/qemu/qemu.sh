@@ -207,7 +207,7 @@ vbd_args()
   "manufacture-date": "$(date +"%d/%m/%Y %H:%M:%S")",
   "vendor-extension": [
     [
-      65536,
+      61046,
       "{\"pwhash\":\"$pwhash\"}"
     ]
   ]
