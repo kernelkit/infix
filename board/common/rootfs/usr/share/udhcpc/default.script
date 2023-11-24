@@ -87,7 +87,7 @@ case "$ACTION" in
 			# format: dest1/mask gw1 ... destn/mask gwn
 			set -- $staticroutes
 			while [ -n "$1" -a -n "$2" ]; do
-				route add -net "$1" gw "$2" dev "$interface"
+				ip route add -net "$1" via "$2" dev "$interface" proto 16
 				shift 2
 			done
 		elif [ -n "$router" ] ; then
@@ -97,7 +97,7 @@ case "$ACTION" in
 			done
 
 			for i in $router ; do
-				route add default gw $i dev $interface
+				ip route add default via $i dev $interface proto 16
 			done
 		fi
 
