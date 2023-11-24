@@ -133,6 +133,8 @@ def add_ipv4_route(routes):
         new['source-protocol'] = "infix-routing:"+d['protocol']
         if d.get("metric"):
             new['route-preference'] = d['metric']
+        else:
+            new['route-preference'] = 0
 
         if d['type'] == "blackhole":
             next_hop['special-next-hop'] = "blackhole"
