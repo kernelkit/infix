@@ -62,7 +62,7 @@ To mitigate the risk of a malicious user being able to circumvent the
 bootloader's validation procedure, user configuration is kept to a
 minimum.  Two settings are available:
 
-- **Boot order**: Since Infix maintains two copies of its firmware,
+- **Boot order**: Since Infix maintains two copies of its software image,
   and as some bootloaders support netbooting, the order in which boot
   sources are considered can be configured. To select the active
   source, use [RAUC][]:
@@ -106,7 +106,7 @@ boot Infix over the network.  DHCP is used to configure the network
 and TFTP to transfer the image to the system's RAM.
 
 Access to U-Boot's shell is disabled to prevent side-loading of
-malicious firmware.  To configure the active boot partition, refer to
+malicious software.  To configure the active boot partition, refer to
 the [Bootloader Interface](#bootloader-interface) section.
 
 
@@ -128,11 +128,11 @@ Interface](#bootloader-interface).
 System Upgrade
 ==============
 
-Much of the minutiae of firmware upgrades is delegated to [RAUC][],
+Much of the minutiae of software upgrades is delegated to [RAUC][],
 which offers lots of benefits out-of-the-box:
 
 - Upgrade Bundles are always signed, such that their authenticity can
-  be verified by the running firmware, before the new one is
+  be verified by the running operating system, before the new one is
   installed.
 
 - The bureaucracy of interfacing with different bootloaders, manage
