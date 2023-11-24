@@ -1,7 +1,7 @@
 From 312d3efde0fbe7cec3bf7ba1908c213c9cf69337 Mon Sep 17 00:00:00 2001
 From: Andrew Lunn <andrew@lunn.ch>
 Date: Tue, 8 Aug 2023 23:04:33 +0200
-Subject: [PATCH 10/15] led: trig: netdev: Fix requesting offload device
+Subject: [PATCH 10/17] led: trig: netdev: Fix requesting offload device
 
 When the netdev trigger is activates, it tries to determine what
 device the LED blinks for, and what the current blink mode is.

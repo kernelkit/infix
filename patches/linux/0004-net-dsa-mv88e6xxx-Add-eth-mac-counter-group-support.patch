@@ -1,7 +1,7 @@
 From 6a612f46152d8567a16b7b15fdcc3081cbdbb3fb Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Tue, 5 Sep 2023 21:15:52 +0200
-Subject: [PATCH 04/15] net: dsa: mv88e6xxx: Add "eth-mac" counter group
+Subject: [PATCH 04/17] net: dsa: mv88e6xxx: Add "eth-mac" counter group
  support
 
 After this change, mv88e6xxx ports can report the applicable subset of
