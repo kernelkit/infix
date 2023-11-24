@@ -19,6 +19,7 @@
 #
 
 # Local variables
+imgdir=$(readlink -f $(dirname "$0"))
 prognm=$(basename "$0")
 
 usage()
@@ -169,7 +170,7 @@ net_dev_args()
 net_args()
 {
     # Infix will pick up this file via fwcfg and install it to /etc
-    mactab=$(dirname "$CONFIG_QEMU_ROOTFS")/mactab
+    mactab=${imgdir}/mactab
     :> "$mactab"
     echo -n "-fw_cfg name=opt/mactab,file=$mactab "
 
@@ -192,17 +193,16 @@ net_args()
     fi
 }
 
-# Vital Board Data, part of Vital Product data
-vbd_args()
+# Vital Product data
+vpd_args()
 {
-    onieprom="$(dirname "$CONFIG_QEMU_ROOTFS")/onieprom"
-    vbd_file="$(dirname "$CONFIG_QEMU_ROOTFS")/vbd"
+    onieprom="${imgdir}/onieprom"
+    vpd_file="${imgdir}/vpd"
 
     # This is you QEMU factory/default password:
     pwhash=$(echo -n "admin" | mkpasswd -s -m sha256crypt)
 
-    # NOTE: This format will change!
-    json_data=$(cat <<EOF
+    cat <<EOF | "$onieprom" -e >"$vpd_file"
 {
   "manufacture-date": "$(date +"%d/%m/%Y %H:%M:%S")",
   "vendor-extension": [
@@ -213,15 +213,8 @@ vbd_args()
   ]
 }
 EOF
-)
-    :> "$vbd_file"
 
-    local tmp="$(mktemp --suffix=_infix_vbd)"
-    echo "$json_data" > "$tmp"
-    "$onieprom" "$tmp" "$vbd_file"
-    rm "$tmp"
-
-    echo -n "-fw_cfg name=opt/vbd,file=$vbd_file"
+    echo -n "-fw_cfg name=opt/vpd,file=$vpd_file"
 }
 
 wdt_args()
@@ -241,7 +234,7 @@ run_qemu()
 	  $(host_args) \
 	  $(net_args) \
 	  $(wdt_args) \
-	  $(vbd_args) \
+	  $(vpd_args) \
 	  $CONFIG_QEMU_EXTRA
 EOF
 
