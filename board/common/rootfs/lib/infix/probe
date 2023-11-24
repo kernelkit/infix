@@ -1,47 +1,267 @@
-#!/bin/sh
-# Probe for various types of harware features
+#!/usr/bin/env python3
 
-#TODO Rewrite this script in python before extending it further
-#TODO Remove fallback temporary development hash for real hw
+import importlib.machinery
+import json
+import os
+import struct
+import subprocess
+import sys
 
-# Fallback for Qemu system, clear text pass: admin
-gen_fallback_hash()
-{
-    # shellcheck disable=SC2016
-    echo '{"pwhash": "$5$n2xoZAmITmPYjOTO$pbWHoa1Mu25a0e.akViAf9uWRvUgbq9BbcmzWWaNP0A"}' > /run/system.json
-}
+onieprom = importlib.machinery.SourceFileLoader("onieprom","/bin/onieprom").load_module()
 
-gen_qemu_system_file()
-{
-    vbd_json="$(onieprom /sys/firmware/qemu_fw_cfg/by_name/opt/vbd/raw)"
-    if [ $? -ne 0 ]; then
-        logger -p user.crit -t "probe" "Error, running onieprom tool"
-	return 1
-    fi
+KKIT_IANA_PEM = 61046
 
-    pwhash="$(echo "$vbd_json" | jq -r '.["vendor-extension"][0][1]' | jq -r '.pwhash')"
-    if [ -z "$pwhash" ] || [ "$pwhash" = "null" ]; then
-        logger -p user.crit -t "probe" "Error, didn't find password hash"
-        exit 1
-    fi
+class DTSystem:
+    BASE = "/sys/firmware/devicetree/base"
+    INFIX = BASE + "/chosen/infix"
 
-    system_json="$(echo "$vbd_json" | jq -r 'del(."vendor-extension")')"
-    system_json="$(echo "$system_json" | jq --arg val "$pwhash" '. += {"pwhash": $val}')"
-    echo "$system_json" > /run/system.json
+    def __init__(self):
+        self.vpdseq = 0
 
+        dt = {}
+        for root, _, files in os.walk(DTSystem.BASE):
+            if "phandle" not in files:
+                continue
+
+            phandle = os.path.join(root, "phandle")
+            if not os.path.exists(phandle):
+                continue
+
+            ph, = struct.unpack(">L", open(phandle, "rb").read())
+            dt[ph] = root
+
+        sys = {}
+        for root, dirs, _ in os.walk("/sys/devices"):
+            if "of_node" not in dirs:
+                continue
+
+            phandle = os.path.join(root, "of_node", "phandle")
+            if not os.path.exists(phandle):
+                continue
+
+            ph, = struct.unpack(">L", open(phandle, "rb").read())
+            sys[ph] = root
+
+        phs = set(list(dt.keys()) + list(sys.keys()))
+        self.devs = { ph: Device(ph, dt.get(ph), sys.get(ph)) for ph in phs }
+        self.base = Device(0, None, DTSystem.BASE)
+        self.infix = Device(0, None, DTSystem.INFIX)
+
+    def __get_phandle_array(self, name):
+        path = os.path.join(DTSystem.INFIX, name)
+        if not os.path.exists(path):
+            return ()
+
+        data = open(path, "rb").read()
+        elems = len(data) // struct.calcsize(">L")
+        return struct.unpack(">" + elems * "L", data)
+
+    def device_from_ph(self, ph):
+        return self.devs.get(ph)
+
+    def into_vpd(self, dev):
+        def parse():
+            if not dev.available():
+                return {}
+
+            try:
+                data = onieprom.from_tlv(open(dev.attrpath("nvmem"), "rb", 0))
+            except:
+                data = {}
+
+            return data
+
+        self.vpdseq += 1
+        return {
+            "board": dev.dtstr("infix,board", f"UNKNOWN{self.vpdseq}"),
+            "available": dev.available(),
+            "trusted": dev.hasdtattr("infix,trusted"),
+            "data": parse(),
+        }
+
+    def infix_devices(self, kind):
+        phs = self.__get_phandle_array(kind)
+        return [self.device_from_ph(ph) for ph in phs]
+
+    def infix_vpds(self):
+        return [self.into_vpd(dev) for dev in self.infix_devices("vpds")]
+
+class QEMUSystem:
+    BASE = "/sys/firmware/qemu_fw_cfg"
+    REV = BASE + "/rev"
+    VPD = BASE + "/by_name/opt/vpd/raw"
+
+    def product_vpd(self):
+        data = {}
+        if os.path.exists(QEMUSystem.VPD):
+            try:
+                data = onieprom.from_tlv(open(QEMUSystem.VPD, "rb", 0))
+            except:
+                pass
+
+        return {
+            "board": "product",
+            "available": os.path.exists(QEMUSystem.VPD),
+            "trusted": True,
+            "data": data,
+        }
+
+    def vpds(self):
+        return [self.product_vpd()]
+
+class Device:
+    def __init__(self, ph, dtpath, syspath):
+        self.ph, self.dtpath, self.syspath = ph, dtpath, syspath
+
+    def available(self):
+        return self.syspath != None
+
+    def __getitem__(self, attr):
+        return self.attr(attr).decode("utf-8").strip("\0")
+
+    def __setitem__(self, attr, value):
+        return self.attr(attr, val=value.encode("utf-8"))
+
+
+    def attrpath(self, attr):
+        return os.path.join(self.syspath, attr)
+
+    def hasattr(self, attr):
+        return os.path.exists(self.attrpath(attr))
+
+    def attr(self, attr, default=None, val=None):
+        if not self.hasattr(attr):
+            return default if val == None else False
+
+        if val:
+            open(self.attrpath(attr), "wb").write(value)
+            return True
+
+        return open(self.attrpath(attr), "rb").read()
+
+    def str(self, attr, default=None):
+        val = self.attr(attr)
+        return val.decode("utf-8").strip("\0") if val else default
+
+
+    def dtattrpath(self, attr):
+        return os.path.join(self.dtpath, attr)
+
+    def hasdtattr(self, attr):
+        return os.path.exists(self.dtattrpath(attr))
+
+    def dtattr(self, attr, default=None):
+        if not self.hasdtattr(attr):
+            return default
+
+        return open(self.dtattrpath(attr), "rb").read()
+
+    def dtstr(self, attr, default=None):
+        val = self.dtattr(attr)
+        return val.decode("utf-8").strip("\0") if val else default
+
+
+def vpd_get_json_ve(vpd, pem):
+    ves = vpd["data"].get("vendor-extension")
+    if not ves:
+        return {}
+
+    out = {}
+    for ve in filter(lambda ve: ve[0] == pem, ves):
+        out.update(json.loads(ve[1]))
+
+    return out
+
+def vpd_get_pwhash(vpd):
+    if not vpd.get("trusted"):
+        return None
+
+    kkit = vpd_get_json_ve(vpd, KKIT_IANA_PEM)
+    return kkit.get("pwhash")
+
+def vpd_inject(out, vpds):
+    out["vpd"] = { vpd["board"]: vpd for vpd in vpds }
+
+    product = out["vpd"].get("product", {}).get("data", {})
+    hoistattrs = ("vendor", "product-name", "part-number", "serial-number", "mac-address")
+    for attr in hoistattrs:
+        if attr in product:
+            out[attr] = product[attr]
+
+    for vpd in vpds:
+        pwhash = vpd_get_pwhash(vpd)
+        if pwhash:
+            out["factory-password-hash"] = pwhash
+            break
+
+def probe_qemusystem(out):
+    ADMINHASH = "$5$mI/zpOAqZYKLC2WU$i7iPzZiIjOjrBF3NyftS9CCq8dfYwHwrmUK097Jca9A"
+
+    qsys = QEMUSystem()
+    vpds = qsys.vpds()
+    vpd_inject(out, vpds)
+
+    for (attr, default) in (
+            ("vendor", "QEMU"),
+            ("product-name", "VM"),
+    ):
+        if not out[attr]:
+            out[attr] = default
+
+    if not out["factory-password-hash"] and \
+       not out["vpd"]["product"]["available"]:
+        # Virtual instance without VPD emulation, fallback to
+        # admin/admin
+        out["factory-password-hash"] = ADMINHASH
+
+    # Let others react to the fact that we are running in QEMU
+    subprocess.run("initctl -nbq cond set qemu".split())
     return 0
-}
 
-if [ -f /sys/firmware/qemu_fw_cfg/rev ]; then
-    initctl cond set qemu
-    # NOTE: eventually we want to remove this fallback too, but it needs a bit
-    #       more work, e.g. new qeneth template, to roll out.
-    gen_qemu_system_file || gen_fallback_hash
-else
-    # shellcheck disable=SC3037
-    /bin/echo -e "\n\n\e[31mWARNING! Probe failed to get password hash from hardware\n" \
-              "Falling back to temporary hash\e[0m\n" > /dev/console
+def probe_dtsystem(out):
+    dtsys = DTSystem()
+    vpds = dtsys.infix_vpds()
 
-    # NOTE: All this fallback will soon go away.
-    gen_fallback_hash
-fi
+    model = dtsys.base.str("model")
+    if model:
+        out["product-name"] = model
+
+    staticpw = dtsys.infix.str("factory-password-hash")
+    if not out["factory-password-hash"]:
+        out["factory-password-hash"] = staticpw
+
+    vpd_inject(out, vpds)
+    return 0
+
+def main():
+    out = {
+        "vendor": None,
+        "product-name": None,
+        "part-number": None,
+        "serial-number": None,
+        "mac-address": None,
+        "factory-password-hash": None,
+        "vpd": {}
+    }
+    vpds = []
+
+    if os.path.exists(QEMUSystem.REV):
+        err = probe_qemusystem(out)
+    elif os.path.exists(DTSystem.BASE):
+        err = probe_dtsystem(out)
+    else:
+        return 1
+
+    if err:
+        return err
+
+    if not out["factory-password-hash"]:
+        sys.stdout.write("\n\n\033[31mCRITICAL BOOTSTRAP ERROR\nNO FACTORY PASSWORD FOUND\033[0m\n\n")
+        err = 1
+
+    json.dump(out, open("/run/system.json", "w"))
+    os.chmod("/run/system.json", 0o444)
+    return err
+
+if __name__ == "__main__":
+    sys.exit(main())
