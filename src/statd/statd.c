@@ -26,6 +26,11 @@
 
 #include "shared.h"
 
+/* New kernel feature, not in sys/mman.h yet */
+#ifndef MFD_NOEXEC_SEAL
+#define MFD_NOEXEC_SEAL         0x0008U
+#endif
+
 #define SOCK_RMEM_SIZE 1000000 /* Arbitrary chosen, default = 212992 */
 #define NL_BUF_SIZE 4096 /* Arbitrary chosen */
 
@@ -142,7 +147,7 @@ static int ly_add_yanger_data(const struct ly_ctx *ctx, struct lyd_node **parent
 	if (!strcmp(model, "ietf-interfaces"))
 		yanger_args[2] = (char *)arg;
 
-	fd = memfd_create("my_temp_file", 0);
+	fd = memfd_create("my_temp_file", MFD_CLOEXEC | MFD_NOEXEC_SEAL);
 	if (fd == -1) {
 		ERROR("Error, unable to create memfd");
 		return SR_ERR_SYS;
