@@ -21,6 +21,10 @@
 
 	chosen {
 		stdout-path = "serial0:115200n8";
+
+		infix {
+			vpds = <&vpd_cpu &vpd_product &vpd_power>;
+		};
 	};
 
 	memory@0 {
@@ -71,10 +75,13 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&cp0_i2c0_pins>;
 
-	eeprom@50 {
+	vpd_cpu: eeprom@50 {
 		// AT24C256C-MAHL-T
 		compatible = "atmel,24c256";
                 reg = <0x50>;
+
+		infix,board = "cpu";
+		infix,trusted;
 	};
 };
 
@@ -159,11 +166,12 @@
 /* System Management */
 
 &i2c_sysmgmt {
-	eeprom@b {
+	vpd_product: eeprom@b {
 		label = "vpd";
                 reg = <0x0b>;
 		compatible = "atmel,24c02";
-		read-only;
+
+		infix,board = "product";
 
 		nvmem-layout {
 			compatible = "onie,tlv-layout";
@@ -605,10 +613,12 @@
 	//0x30  U5  TPS23861PWR    PoE Controller broadcast
 
 	//0x50  U15 AT24C256C      EEPROM
-	eeprom@50 {
+	vpd_power: eeprom@50 {
 		// AT24C256C-MAHL-T
 		compatible = "atmel,24c256";
                 reg = <0x50>;
+
+		infix,board = "power";
 	};
 };
 
