@@ -23,7 +23,7 @@ config SIGN_KEY
 menuconfig DISK_IMAGE
 	bool "Disk image"
 	help
-	  Compose a full disk image with redundant firmware partitions,
+	  Compose a full disk image with redundant Linux OS partitions,
 	  configuration partition, etc.
 
 	  This is useful when:
