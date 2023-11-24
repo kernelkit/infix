@@ -196,6 +196,8 @@ net_args()
 # Vital Product data
 vpd_args()
 {
+    [ "$CONFIG_QEMU_VPD" = "y" ] || return
+
     vpd_file="${imgdir}/vpd"
 
     if ! [ -f "$vpd_file" ]; then
