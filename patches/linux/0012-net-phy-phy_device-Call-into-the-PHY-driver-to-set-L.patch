@@ -1,7 +1,7 @@
 From a4f09c743da21f09b0fcc6e5842d665490f9f70e Mon Sep 17 00:00:00 2001
 From: Andrew Lunn <andrew@lunn.ch>
 Date: Tue, 8 Aug 2023 23:04:34 +0200
-Subject: [PATCH 12/15] net: phy: phy_device: Call into the PHY driver to set
+Subject: [PATCH 12/17] net: phy: phy_device: Call into the PHY driver to set
  LED offload
 
 Linux LEDs can be requested to perform hardware accelerated blinking

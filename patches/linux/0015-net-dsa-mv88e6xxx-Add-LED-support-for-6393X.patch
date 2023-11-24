@@ -1,7 +1,7 @@
-From 09fca5d7f66b1bdc6a5f72eb3d36bfd8c88bebcc Mon Sep 17 00:00:00 2001
+From 8510028fa738493a46b235057ed166f9bbbf0ed4 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Thu, 16 Nov 2023 21:59:35 +0100
-Subject: [PATCH 15/15] net: dsa: mv88e6xxx: Add LED support for 6393X
+Subject: [PATCH 15/17] net: dsa: mv88e6xxx: Add LED support for 6393X
 
 Trigger support:
 - "none"
@@ -11,11 +11,11 @@ Trigger support:
 Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
 ---
  drivers/net/dsa/mv88e6xxx/chip.c |   1 +
- drivers/net/dsa/mv88e6xxx/leds.c | 219 +++++++++++++++++++++++++++++++
+ drivers/net/dsa/mv88e6xxx/leds.c | 226 +++++++++++++++++++++++++++++++
  drivers/net/dsa/mv88e6xxx/leds.h |   2 +
  drivers/net/dsa/mv88e6xxx/port.c |  33 +++++
  drivers/net/dsa/mv88e6xxx/port.h |   7 +
- 5 files changed, 262 insertions(+)
+ 5 files changed, 269 insertions(+)
 
 diff --git a/drivers/net/dsa/mv88e6xxx/chip.c b/drivers/net/dsa/mv88e6xxx/chip.c
 index d343ea5cc4a1..7d6b2b85fc31 100644
@@ -30,7 +30,7 @@ index d343ea5cc4a1..7d6b2b85fc31 100644
  };
  
 diff --git a/drivers/net/dsa/mv88e6xxx/leds.c b/drivers/net/dsa/mv88e6xxx/leds.c
-index 42e1661e1f47..02daf976100d 100644
+index 42e1661e1f47..b2a55d96b506 100644
 --- a/drivers/net/dsa/mv88e6xxx/leds.c
 +++ b/drivers/net/dsa/mv88e6xxx/leds.c
 @@ -4,6 +4,13 @@
@@ -47,7 +47,7 @@ index 42e1661e1f47..02daf976100d 100644
  struct mv88e6xxx_led {
  	struct mv88e6xxx_chip *chip;
  	int port;
-@@ -12,6 +19,218 @@ struct mv88e6xxx_led {
+@@ -12,6 +19,225 @@ struct mv88e6xxx_led {
  	struct led_classdev ldev;
  };
  
@@ -163,9 +163,11 @@ index 42e1661e1f47..02daf976100d 100644
 +	if (mode < 0)
 +		return mode;
 +
++	mv88e6xxx_reg_lock(led->chip);
++
 +	err = mv88e6393x_port_led_read(led->chip, led->port, 0, &ctrl);
 +	if (err)
-+		return err;
++		goto out;
 +
 +	switch (led->index) {
 +	case 0:
@@ -177,7 +179,10 @@ index 42e1661e1f47..02daf976100d 100644
 +		ctrl |= mode << 4;
 +	}
 +
-+	return mv88e6393x_port_led_write(led->chip, led->port, 0, ctrl);
++	err = mv88e6393x_port_led_write(led->chip, led->port, 0, ctrl);
++out:
++	mv88e6xxx_reg_unlock(led->chip);
++	return err;
 +}
 +
 +static int mv88e6393x_led_get(struct mv88e6xxx_led *led)
@@ -185,7 +190,9 @@ index 42e1661e1f47..02daf976100d 100644
 +	u16 ctrl;
 +	int err;
 +
++	mv88e6xxx_reg_lock(led->chip);
 +	err = mv88e6393x_port_led_read(led->chip, led->port, 0, &ctrl);
++	mv88e6xxx_reg_unlock(led->chip);
 +	if (err)
 +		return err;
 +

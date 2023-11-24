@@ -1,7 +1,7 @@
 From d389cc01295ebd7be228c8240f0061134b27f215 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Thu, 21 Sep 2023 11:12:55 +0200
-Subject: [PATCH 08/15] net: mvmdio: Support setting the MDC frequency on XSMI
+Subject: [PATCH 08/17] net: mvmdio: Support setting the MDC frequency on XSMI
  controllers
 
 Support the standard "clock-frequency" attribute to set the generated

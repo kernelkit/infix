@@ -1,7 +1,7 @@
 From a85c55f3232d402780a22d42859bdc81150469b4 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Wed, 6 Sep 2023 10:55:53 +0200
-Subject: [PATCH 05/15] net: dsa: mv88e6xxx: Add "rmon" counter group support
+Subject: [PATCH 05/17] net: dsa: mv88e6xxx: Add "rmon" counter group support
 
 After this change, mv88e6xxx ports can report the applicable subset of
 their counters using ethtool's standardized "rmon" counter group.
