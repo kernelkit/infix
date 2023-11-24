@@ -7,9 +7,10 @@ pwhash=$(jq -r '."factory-password-hash"' /run/system.json)
 if [ -z "$pwhash" ] || [ "$pwhash" = "null" ]; then
     # Do not fail, lock account instead.  This way developers can enable
     # root account login at build-time to diagnose the system.
-    pwhash="!"
+    password=""
     rc=1
 else
+    password="\"password\": \"$pwhash\","
     rc=0
 fi
 
@@ -20,7 +21,7 @@ cat <<EOF
       "user": [
        {
           "name": "admin",
-          "password": "$pwhash",
+	  ${password}
 	  "infix-system:shell": "$shell"
        }
       ]
