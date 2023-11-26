@@ -34,11 +34,11 @@ In Infix ports are by default not switch ports, unless the customer specific fac
 
 ```
 admin@example:/> configure
-admin@example:/config/> edit interfaces interface br0
-admin@example:/config/interfaces/interface/br0/> up
-admin@example:/config/interfaces/> set interface eth0 bridge-port bridge br0
-admin@example:/config/interfaces/> set interface eth1 bridge-port bridge br0
-admin@example:/config/interfaces/> leave
+admin@example:/config/> edit interface br0
+admin@example:/config/interface/br0/> up
+admin@example:/config/> set interface eth0 bridge-port bridge br0
+admin@example:/config/> set interface eth1 bridge-port bridge br0
+admin@example:/config/> leave
 ```
 
 Here we add two ports to bridge `br0`: `eth0` and `eth1`. 
@@ -51,15 +51,15 @@ By default bridges in Linux do not filter based on VLAN tags.   It can be enable
 Use the port default VID (PVID) setting to control VLAN association for traffic ingressing a port untagged (default PVID: 1). 
 
 ```
-admin@example:/config/> edit interfaces interface br0 
-admin@example:/config/interfaces/interface/br0/> up
-admin@example:/config/interfaces/> set interface eth0 bridge-port bridge br0
-admin@example:/config/interfaces/> set interface eth0 bridge-port pvid 10
-admin@example:/config/interfaces/> set interface eth1 bridge-port bridge br0
-admin@example:/config/interfaces/> set interface eth1 bridge-port pvid 20
-admin@example:/config/interfaces/> edit interface br0
-admin@example:/config/interfaces/interface/br0/> set bridge vlans vlan 10 untagged eth0
-admin@example:/config/interfaces/interface/br0/> set bridge vlans vlan 20 untagged eth1
+admin@example:/config/> edit interface br0
+admin@example:/config/interface/br0/> up
+admin@example:/config/> set interface eth0 bridge-port bridge br0
+admin@example:/config/> set interface eth0 bridge-port pvid 10
+admin@example:/config interface eth1 bridge-port bridge br0
+admin@example:/config/> set interface eth1 bridge-port pvid 20
+admin@example:/config/> edit interface br0
+admin@example:/config/interface/br0/> set bridge vlans vlan 10 untagged eth0
+admin@example:/config/interface/br0/> set bridge vlans vlan 20 untagged eth1
 ```
 
 This sets `eth0` as an untagged member of VLAN 10 and `eth1` as an
@@ -69,8 +69,8 @@ prohibited.
 To terminate a VLAN in the switch itself, either for switch management or for routing, the bridge must become a (tagged) member of the VLAN. 
 
 ```
-admin@example:/config/interfaces/interface/br0/> set bridge vlans vlan 10 tagged br0
-admin@example:/config/interfaces/interface/br0/> set bridge vlans vlan 20 tagged br0
+admin@example:/config/interface/br0/> set bridge vlans vlan 10 tagged br0
+admin@example:/config/interface/br0/> set bridge vlans vlan 20 tagged br0
 ```
 > To route or to manage via a VLAN, a VLAN interface also needs to be created on top of the bridge, see section [VLAN Interfaces](#vlan-interfaces) below.
 
@@ -84,20 +84,20 @@ A VLAN interface is basically a filtering abstraction. When you run `tcpdump` on
 
 ```
 admin@example:/> configure 
-admin@example:/config/> edit interfaces interface eth0.20
-admin@example:/config/interfaces/interface/eth0.20/> set vlan id 20
-admin@example:/config/interfaces/interface/eth0.20/> set vlan lower-layer-if eth0
-admin@example:/config/interfaces/interface/eth0.20/> leave
+admin@example:/config/> edit interface eth0.20
+admin@example:/config/interface/eth0.20/> set vlan id 20
+admin@example:/config/interface/eth0.20/> set vlan lower-layer-if eth0
+admin@example:/config/interface/eth0.20/> leave
 ```
 
 The example below assumes bridge br0 is already created, see [VLAN Filtering Bridge](#vlan-filtering-bridge).
 
 ```
 admin@example:/> configure 
-admin@example:/config/> edit interfaces interface vlan10
-admin@example:/config/interfaces/interface/vlan10/> set vlan id 10
-admin@example:/config/interfaces/interface/vlan10/> set vlan lower-layer-if br0
-admin@example:/config/interfaces/interface/vlan10/> leave
+admin@example:/config/> edit interface vlan10
+admin@example:/config/interface/vlan10/> set vlan id 10
+admin@example:/config/interface/vlan10/> set vlan lower-layer-if br0
+admin@example:/config/interface/vlan10/> leave
 ```
 
 As conventions, a VLAN interface for VID 20 on top of an Ethernet interface *eth0* is named *eth0.20*, and a VLAN interface for VID 10 on top of a bridge interface *br0* is named *vlan10*. 
@@ -163,10 +163,10 @@ default.
 ![Setting static IPv4 (and link-local IPv4)](img/ip-address-example-ipv4-static.svg)
 
     admin@example:/> configure
-    admin@example:/config/> edit interfaces interface eth0 ipv4
-    admin@example:/config/interfaces/interface/eth0/ipv4/> set address 10.0.1.1 prefix-length 24
-    admin@example:/config/interfaces/interface/eth0/ipv4/> set autoconf enabled true 
-	admin@example:/config/interfaces/interface/eth0/ipv4/> diff
+    admin@example:/config/> edit interface eth0 ipv4
+    admin@example:/config/interface/eth0/ipv4/> set address 10.0.1.1 prefix-length 24
+    admin@example:/config/interface/eth0/ipv4/> set autoconf enabled true
+	admin@example:/config/interface/eth0/ipv4/> diff
     +interfaces {
     +  interface eth0 {
     +    ipv4 {
@@ -179,7 +179,7 @@ default.
     +    }
     +  }
     +}
-    admin@example:/config/interfaces/interface/eth0/ipv4/> leave
+    admin@example:/config/interface/eth0/ipv4/> leave
     admin@example:/> show interfaces 
     INTERFACE       PROTOCOL   STATE       DATA                                     
     eth0            ethernet   UP          02:00:00:00:00:00                        
@@ -202,7 +202,7 @@ enabled true`.  The resulting address (169.254.1.3/16) is of type
     admin@example:/> configure 
     admin@example:/config/> edit dhcp-client 
     admin@example:/config/dhcp-client/> set client-if eth0
-    admin@example:/config/dhcp-client/> set enabled true 
+    admin@example:/config/dhcp-client/> set enabled true
     admin@example:/config/dhcp-client/> leave
     admin@example:/> show interfaces 
     INTERFACE       PROTOCOL   STATE       DATA                                     
@@ -222,11 +222,11 @@ The resulting address (10.1.2.100/24) is of type *dhcp*.
 The (only) way to disable IPv6 link-local addresses is by disabling IPv6 on the interface.
 
 ```(disabling
-admin@example:/> configure 
-admin@example:/config/> edit interfaces interface eth0 ipv6
-admin@example:/config/interfaces/interface/eth0/ipv6/> set enabled false
-admin@example:/config/interfaces/interface/eth0/ipv6/> leave
-admin@example:/> show interfaces 
+admin@example:/> configure
+admin@example:/config/> edit interface eth0 ipv6
+admin@example:/config/interface/eth0/ipv6/> set enabled false
+admin@example:/config/interface/eth0/ipv6/> leave
+admin@example:/> show interfaces
 INTERFACE       PROTOCOL   STATE       DATA                                     
 eth0            ethernet   UP          02:00:00:00:00:00                        
 lo              ethernet   UP          00:00:00:00:00:00                        
@@ -239,10 +239,10 @@ admin@example:/>
 
 ![Setting static IPv6](img/ip-address-example-ipv6-static.svg)
 
-    admin@example:/> configure 
-    admin@example:/config/> edit interfaces interface eth0 ipv6
-    admin@example:/config/interfaces/interface/eth0/ipv6/> set address 2001:db8::1 prefix-length 64
-    admin@example:/config/interfaces/interface/eth0/ipv6/> leave
+    admin@example:/> configure
+    admin@example:/config/> edit interface eth0 ipv6
+    admin@example:/config/interface/eth0/ipv6/> set address 2001:db8::1 prefix-length 64
+    admin@example:/config/interface/eth0/ipv6/> leave
     admin@example:/> show interfaces 
     INTERFACE       PROTOCOL   STATE       DATA                                     
     eth0            ethernet   UP          02:00:00:00:00:00                        
@@ -264,7 +264,7 @@ identifier. The resulting address is of type *link-layer*, as it
 is formed based on the interface identifier ([IETF
 ip-yang][ietf-ip-yang]). 
 
-    admin@example:/> show interfaces 
+    admin@example:/> show interfaces
     INTERFACE       PROTOCOL   STATE       DATA                                     
     eth0            ethernet   UP          02:00:00:00:00:00                        
                     ipv6                   2001:db8:0:1:0:ff:fe00:0/64 (link-layer)
@@ -278,9 +278,9 @@ Disabling auto-configuration of global IPv6 addresses can be done as shown
 below.
 
     admin@example:/> configure
-    admin@example:/config/> edit interfaces interface eth0 ipv6
-    admin@example:/config/interfaces/interface/eth0/ipv6/> set autoconf create-global-addresses false 
-    admin@example:/config/interfaces/interface/eth0/ipv6/> leave
+    admin@example:/config/> edit interface eth0 ipv6
+    admin@example:/config/interface/eth0/ipv6/> set autoconf create-global-addresses false
+    admin@example:/config/interface/eth0/ipv6/> leave
     admin@example:/> show interfaces 
     INTERFACE       PROTOCOL   STATE       DATA                                     
     eth0            ethernet   UP          02:00:00:00:00:00                        
@@ -297,7 +297,7 @@ below.
 By default, the auto-configured link-local and global IPv6 addresses
 are formed from a link-identifier based on the MAC address.
 
-    admin@example:/> show interfaces 
+    admin@example:/> show interfaces
     INTERFACE       PROTOCOL   STATE       DATA                                     
     eth0            ethernet   UP          02:00:00:00:00:00                        
                     ipv6                   2001:db8:0:1:0:ff:fe00:0/64 (link-layer)
@@ -310,10 +310,10 @@ are formed from a link-identifier based on the MAC address.
 To avoid revealing identity information in the IPv6 address, it is
 possible to specify use of a random identifier ([ietf-ip][ietf-ip-yang] YANG and [RFC8981][ietf-ipv6-privacy]).
 
-    admin@example:/> configure 
-    admin@example:/config/> edit interfaces interface eth0 ipv6
-    admin@example:/config/interfaces/interface/eth0/ipv6/> set autoconf create-temporary-addresses true 
-    admin@example:/config/interfaces/interface/eth0/ipv6/> leave
+    admin@example:/> configure
+    admin@example:/config/> edit interface eth0 ipv6
+    admin@example:/config/interface/eth0/ipv6/> set autoconf create-temporary-addresses true
+    admin@example:/config/interface/eth0/ipv6/> leave
     admin@example:/> show interfaces 
     INTERFACE       PROTOCOL   STATE       DATA                                     
     eth0            ethernet   UP          02:00:00:00:00:00                        
@@ -328,30 +328,32 @@ Both the link-local address (fe80::) and the global address (2001:)
 have changed type to *random*. 
 
 ## Routing support
-| **Yang Model**                                  | **Description**                                            |
-|:----------------------------------------------- |:---------------------------------------------------------- |
-| ietf-routing                                    |  Base routing model, required for all other routing models |
-| ietf-ipv4-unicast-routing                       |  Static IPv4 unicast routing                               |
 
-The only name allowed for a control-plane-protocol is just now
-*default*. This will result in that you can only have one instance per
-routing protocol.
+| **Yang Model**            | **Description**                                           |
+|:--------------------------|:----------------------------------------------------------|
+| ietf-routing              | Base routing model, required for all other routing models |
+| ietf-ipv4-unicast-routing | Static IPv4 unicast routing                               |
 
 ### Static routes
 
-	admin@example:/config/> edit routing
-	admin@example:/config/> edit routing control-plane-protocols control-plane-protocol static name default static-routes ipv4
-	admin@example:/config/routing/control-plane-protocols/control-plane-protocol/static/name/default/static-routes/ipv4/> set route 192.168.200.0/24 next-hop next-hop-address 192.168.1.1
-	admin@example:/config/routing/control-plane-protocols/control-plane-protocol/static/name/default/static-routes/ipv4/> leave
+    admin@example:/> configure
+    admin@example:/config/> edit routing control-plane-protocol static name default
+    admin@example:/config/routing/control-plane-protocol/static/name/default/> set ipv4 route 192.168.200.0/24 next-hop next-hop-address 192.168.1.1
+    admin@example:/config/routing/control-plane-protocol/static/name/default/> leave
+    admin@example:/>
 
+> **Note:** The only name allowed for a control-plane-protocol is currently
+> *default*.  Meaning, you can only have one instance per routing protocol.
 
 ### View IPv4 routing table
-The routing table can be viewed by Netconf or CLI
 
-	admin@example:/> show routes
-	PREFIX                        NEXT-HOP                      METRIC    PROTOCOL
-	192.168.1.0/24                e0                                      kernel
-	192.168.200.0/24              192.168.1.1                   20        static
+The routing table can be viewed from the operational datastore over
+NETCONF or using the CLI:
+
+    admin@example:/> show routes
+    PREFIX                        NEXT-HOP                      METRIC    PROTOCOL
+    192.168.1.0/24                e0                                      kernel
+    192.168.200.0/24              192.168.1.1                   20        static
 
 The source protocol describes the origin of the route.
 
@@ -361,14 +363,15 @@ The source protocol describes the origin of the route.
 | static       | User created static routes                                           |
 | dhcp         | Routes retrieved from DHCP                                           |
 
-
-The YANG model *ietf-routing* support multiple ribs but only two is
-currently supported, they are named ipv4 and ipv6.
+The YANG model *ietf-routing* support multiple ribs but only two are
+currently supported, namely `ipv4` and `ipv6`.
 
 [ietf-ip-yang]:         https://www.rfc-editor.org/rfc/rfc8344.html
 [ietf-ipv6-privacy]:    https://www.rfc-editor.org/rfc/rfc8981.html
 
 [^1]: Please note, link aggregates are not yet supported in Infix.
-[^2]: Link-local IPv6 addresses are implicitly enabled when enabling IPv6. IPv6 can be enabled/disabled per interface in [ietf-ip][ietf-ip-yang] YANG model.
+[^2]: Link-local IPv6 addresses are implicitly enabled when enabling IPv6.
+    IPv6 can be enabled/disabled per interface in the [ietf-ip][ietf-ip-yang]
+    YANG model.
 
 
