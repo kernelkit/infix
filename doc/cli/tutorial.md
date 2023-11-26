@@ -133,15 +133,15 @@ admin@host:/config/>
 The `edit` command lets you change to a sub-configure context, e.g.:
 
 ```
-admin@host:/config/> edit interfaces interface eth0
-admin@host:/config/interfaces/interface/eth0/>
+admin@host:/config/> edit interface eth0
+admin@host:/config/interface/eth0/>
 ```
 
 Use `up` to go up one level.
 
 ```
-admin@host:/config/interfaces/interface/eth0/> up
-admin@host:/config/interfaces/>
+admin@host:/config/interface/eth0/> up
+admin@host:/config/>
 ```
 
 > **Note:** the tree structure in the configure context is automatically
@@ -154,16 +154,16 @@ admin@host:/config/interfaces/>
 ### Set IP Address on an Interface
 
 ```
-admin@host:/config/> edit interfaces interface eth0
-admin@host:/config/interfaces/interface/eth0/>
-admin@host:/config/interfaces/interface/eth0/> set ipv4 address 192.168.2.200 prefix-length 24
+admin@host:/config/> edit interface eth0
+admin@host:/config/interface/eth0/>
+admin@host:/config/interface/eth0/> set ipv4 address 192.168.2.200 prefix-length 24
 ```
 
 From anywhere in configure context you can see the changes you have
 made by typing `diff`:
 
 ```
-admin@host:/config/interfaces/interface/eth0/> diff
+admin@host:/config/interface/eth0/> diff
 interfaces {
   interface eth0 {
 +    ipv4 {
@@ -181,7 +181,7 @@ interfaces {
 Apply the changes (from candidate to `running-config`):
 
 ```
-admin@host:/config/interfaces/> leave
+admin@host:/config/interface/eth0/> leave
 admin@host:/> show running-config
 ...
 interfaces {
@@ -259,11 +259,11 @@ pair which is useful for connecting, e.g., a container to the physical
 world.  Here we also add an IPv4 address to one end of the pair.
 
 ```
-admin@host:/config/> edit interfaces interface veth0a
-admin@host:/config/interfaces/interface/veth0a/> set veth peer veth0b
-admin@host:/config/interfaces/interface/veth0a/> set ipv4 address 192.168.0.1 prefix-length 24
-admin@host:/config/interfaces/interface/veth0a/> up
-admin@host:/config/interfaces/> diff
+admin@host:/config/> edit interface veth0a
+admin@host:/config/interface/veth0a/> set veth peer veth0b
+admin@host:/config/interface/veth0a/> set ipv4 address 192.168.0.1 prefix-length 24
+admin@host:/config/interface/veth0a/> up
+admin@host:/config/> diff
 interfaces {
 +  interface veth0a {
 +    type veth;
@@ -283,7 +283,7 @@ interfaces {
 +    }
 +  }
 }
-admin@host:/config/interfaces/> leave
+admin@host:/config/> leave
 ```
 
 See the bridging example below for more.
@@ -301,12 +301,12 @@ between both its bridge ports: `eth0` and `vet0b`.
 
 ```
 admin@host:/> configure
-admin@host:/config/> edit interfaces interface br0
-admin@host:/config/interfaces/interface/br0/> set bridge ieee-group-forward lldp
-admin@host:/config/interfaces/interface/br0/> up
-admin@host:/config/interfaces/> set interface eth0 bridge-port bridge br0
-admin@host:/config/interfaces/> set interface veth0b bridge-port bridge br0
-admin@host:/config/interfaces/> diff
+admin@host:/config/> edit interface br0
+admin@host:/config/interface/br0/> set bridge ieee-group-forward lldp
+admin@host:/config/interface/br0/> up
+admin@host:/config/> set interface eth0 bridge-port bridge br0
+admin@host:/config/> set interface veth0b bridge-port bridge br0
+admin@host:/config/> diff
 interfaces {
 +  interface br0 {
 +    type bridge;

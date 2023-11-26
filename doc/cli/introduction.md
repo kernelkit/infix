@@ -65,16 +65,16 @@ save the changes for the next reboot.
 
 ```
 admin@host-12-34-56:/> configure
-admin@host-12-34-56:/config/> edit interfaces interface eth0
-admin@host-12-34-56:/config/interfaces/interface/eth0/> set ipv4 <TAB>
+admin@host-12-34-56:/config/> edit interface eth0
+admin@host-12-34-56:/config/interface/eth0/> set ipv4 <TAB>
       address     autoconf bind-ni-name      enabled
 	  forwarding  mtu      neighbor
-admin@host-12-34-56:/config/interfaces/interface/eth0/> set ipv4 address 192.168.2.200 prefix-length 24
-admin@host-12-34-56:/config/interfaces/interface/eth0/> show
+admin@host-12-34-56:/config/interface/eth0/> set ipv4 address 192.168.2.200 prefix-length 24
+admin@host-12-34-56:/config/interface/eth0/> show
 type ethernetCsmacd;
 ipv4 address 192.168.2.200 prefix-length 24;
 ipv6 enabled true;
-admin@host-12-34-56:/config/interfaces/interface/eth0/> diff
+admin@host-12-34-56:/config/interface/eth0/> diff
 interfaces {
   interface eth0 {
 +    ipv4 {
@@ -84,7 +84,7 @@ interfaces {
 +    }
   }
 }
-admin@host-12-34-56:/config/interfaces/interface/eth0/> leave
+admin@host-12-34-56:/config/interface/eth0/> leave
 admin@host-12-34-56:/> show interfaces brief
 lo               UNKNOWN        00:00:00:00:00:00 <LOOPBACK,UP,LOWER_UP>
 eth0             UP             52:54:00:12:34:56 <BROADCAST,MULTICAST,UP,LOWER_UP>
