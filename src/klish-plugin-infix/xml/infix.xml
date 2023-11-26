@@ -109,7 +109,7 @@
     <ACTION sym="prompt" exec_on="always">%u@%h:/> </ACTION>
 </PROMPT>
 
-<COMMAND name="help" help="Help system (also try '?' key)">
+<COMMAND name="help" help="Help system (try also the '?' key)">
   <PARAM name="topic" ptype="/STRING" min="0" help="Help topic">
     <COMPL>
       <ACTION sym="printl">keybindings</ACTION>
@@ -414,7 +414,7 @@
 
   <PROMPT>
     <ACTION sym="srp_prompt@sysrepo">%u@%h:%w%x/> </ACTION>
-</PROMPT>
+  </PROMPT>
 
 <HOTKEY key="^D" cmd="exit"/>
 <HOTKEY key="^Z" cmd="leave"/>
@@ -507,6 +507,5 @@
   <VIEW name="operational" ref="/main"/>
 </COMMAND>
 
-  </VIEW>
-
+</VIEW>
 </KLISH>
