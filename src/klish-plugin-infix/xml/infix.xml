@@ -95,7 +95,7 @@
   <ACTION sym="STRING"/>
 </PTYPE>
 
-<PTYPE name="PORTAR">
+<PTYPE name="IFACES">
   <COMPL>
     <ACTION sym="ifaces@infix"/>
   </COMPL>
@@ -260,7 +260,7 @@
   <COMMAND name="interfaces" help="Show interface info">
     <SWITCH name="optional" min="0" max="1">
       <COMMAND name="name" help="Show detailed info about NAME">
-        <PARAM name="name" ptype="/PORTAR" help="Interface.">
+        <PARAM name="name" ptype="/IFACES" help="Interface.">
         </PARAM>
       </COMMAND>
     </SWITCH>
@@ -355,7 +355,7 @@
   <COMMAND name="ping" help="Ping a network host or multicast group">
     <SWITCH name="optional" min="0" max="9">
       <COMMAND name="interface" help="Bypass routing table and use this interface">
-        <PARAM name="iface" ptype="/PORTAR" help="Interface"/>
+        <PARAM name="iface" ptype="/IFACES" help="Interface"/>
       </COMMAND>
       <COMMAND name="count" help="Number of packets to send, default: unlimited">
         <PARAM name="cnt" ptype="/UINT"/>
@@ -380,7 +380,7 @@
   </COMMAND>
 
   <COMMAND name="tcpdump" help="Capture network traffic">
-    <PARAM name="iface" ptype="/PORTAR" help="Interrface to run capture on"/>
+    <PARAM name="iface" ptype="/IFACES" help="Interrface to run capture on"/>
     <SWITCH name="optional" min="0" max="7">
       <COMMAND name="count" help="Number of packets to capture, default: unlimited">
         <PARAM name="count" ptype="/UINT"/>
