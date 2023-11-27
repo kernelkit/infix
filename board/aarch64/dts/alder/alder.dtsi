@@ -411,14 +411,14 @@
 					led@0 { \
 						reg = <0>; \
 						function = "tp"; \
-						color = <LED_COLOR_ID_YELLOW>; \
-						default-state = "off"; \
+						color = <LED_COLOR_ID_GREEN>; \
+						default-state = "keep"; \
 					}; \
 					led@1 { \
 						reg = <1>; \
 						function = "tp"; \
-						color = <LED_COLOR_ID_GREEN>; \
-						default-state = "keep"; \
+						color = <LED_COLOR_ID_YELLOW>; \
+						default-state = "off"; \
 					}; \
 				}; \
 			}
