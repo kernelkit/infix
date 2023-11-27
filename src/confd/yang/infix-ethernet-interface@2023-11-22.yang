@@ -23,14 +23,20 @@ module infix-ethernet-interface {
    * Data Nodes
    */
 
-
   /* Deviations for config and status */
+
+/* The following works with yanglint but is not supported by pyang.
+   Actually, the same error message is shown also by NETCONFc, so
+   we drop this for the v23.11 release.  Despite not supporting
+   writing to any of these nodes.
 
   deviation "/if:interfaces/if:interface/eth:ethernet" {
     deviate add {
       config false;
     }
   }
+*/
+
   deviation "/if:interfaces/if:interface/eth:ethernet/eth:flow-control" {
     deviate not-supported;
   }
