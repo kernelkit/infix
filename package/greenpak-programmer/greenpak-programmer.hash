@@ -1,5 +1,5 @@
-# From https://github.com/addiva-elektronik/greenpak-programmer/releases/download/v1.1/greenpak-programmer-1.1.tar.gz.sha256
-sha256  960521714312e3b519a238b6c527826c3aacf6af93252f9ceb2fa2a22e341449  greenpak-programmer-1.1.tar.gz
+# From https://github.com/addiva-elektronik/greenpak-programmer/releases/download/v1.2/greenpak-programmer-1.2.tar.gz.sha256
+sha256	6beec4e668f3f88c4a55c9784e4d34d1ec070a2f2cd33063c9cae0e02fc97cd9  greenpak-programmer-1.2.tar.gz
 
 # Locally generated
 sha256  c1673b6eecedfe5f461ee719291ff81b57d31f64f36cad3d00fb97b14dffc025  LICENSE.txt
