@@ -574,14 +574,26 @@
 
 /* Power Board */
 
+&cp0_pinctrl {
+	cp0_pwr_gpio_pins: cp0-pwr-gpio-0 {
+		marvell,pins = I2C_IRQ(MPP_ID);
+		marvell,function = "gpio";
+	};
+};
+
 &i2c_pwr {
 	// Shared IRQ on I2C_IRQ
+	pinctrl-names = "default";
+	pinctrl-0 = <&cp0_pwr_gpio_pins>;
 
 	// 0x26  U13 PCF8574        GPIO I/O
 	gpio_pwr1: gpio@26 {
 		compatible = "nxp,pcf8574a";
 		#gpio-cells = <2>;
 		gpio-controller;
+                #interrupt-cells = <2>;
+                interrupt-controller;
+		interrupts-extended = I2C_IRQ(MPP_IRQ_REF);
 		reg = <0x26>;
 #define GPIO_PWR1_UNUSED0	gpio_pwr1 0 GPIO_ACTIVE_HIGH
 #define GPIO_PWR1_UNUSED1	gpio_pwr1 1 GPIO_ACTIVE_HIGH
@@ -598,6 +610,9 @@
 		compatible = "nxp,pcf8574a";
 		#gpio-cells = <2>;
 		gpio-controller;
+                #interrupt-cells = <2>;
+                interrupt-controller;
+		interrupts-extended = I2C_IRQ(MPP_IRQ_REF);
 		reg = <0x27>;
 #define GPIO_LED2G		gpio_pwr2 0 GPIO_ACTIVE_LOW
 #define GPIO_LED2R		gpio_pwr2 1 GPIO_ACTIVE_LOW
