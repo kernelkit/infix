@@ -4,6 +4,17 @@ Change Log
 All notable changes to the project are documented in this file.
 
 
+[v23.11.0][] - 2023-11-28
+-------------------------
+
+> **Note:** this is the first release where the `root` account is disabled in
+> default builds.  Only the `admin` user, generated from `factory-config`, can
+> log in to the system.  This can be changed only in developer builds: `make
+> menuconfig` -> System configuration -> `[*]Enable root login with password`
+
+(More coming soon, this update is just a place holder for v23.11.0-rc1)
+
+
 [v23.10.0][] - 2023-10-31
 -------------------------
 
