@@ -442,14 +442,24 @@
 		mdio {
 			#address-cells = <1>;
 			#size-cells = <0>;
-			swphy1: ethernet-phy@1 { reg = <0x1>; };
-			swphy2: ethernet-phy@2 { reg = <0x2>; };
-			swphy3: ethernet-phy@3 { reg = <0x3>; };
-			swphy4: ethernet-phy@4 { reg = <0x4>; };
-			swphy5: ethernet-phy@5 { reg = <0x5>; };
-			swphy6: ethernet-phy@6 { reg = <0x6>; };
-			swphy7: ethernet-phy@7 { reg = <0x7>; };
-			swphy8: ethernet-phy@8 { reg = <0x8>; };
+
+#define SWPHY(_n) \
+			ethernet-phy@_n { \
+				compatible = "ethernet-phy-ieee802.3-c22"; \
+				reg = <_n>; \
+				eee-broken-100tx; \
+				eee-broken-1000t; \
+			}
+
+			swphy1: SWPHY(1);
+			swphy2: SWPHY(2);
+			swphy3: SWPHY(3);
+			swphy4: SWPHY(4);
+			swphy5: SWPHY(5);
+			swphy6: SWPHY(6);
+			swphy7: SWPHY(7);
+			swphy8: SWPHY(8);
+#undef SWPHY
 		};
 	};
 };
