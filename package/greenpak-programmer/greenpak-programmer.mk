@@ -4,7 +4,7 @@
 #
 ################################################################################
 
-GREENPAK_PROGRAMMER_VERSION = 1.1
+GREENPAK_PROGRAMMER_VERSION = 1.2
 GREENPAK_PROGRAMMER_SITE = https://github.com/addiva-elektronik/greenpak-programmer/releases/download/v$(GREENPAK_PROGRAMMER_VERSION)
 GREENPAK_PROGRAMMER_LICENSE = MIT
 GREENPAK_PROGRAMMER_LICENSE_FILES = LICENSE.txt
