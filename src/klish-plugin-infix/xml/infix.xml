@@ -21,19 +21,23 @@
   Oneliners = n
 </PLUGIN>
 
+<PTYPE name="CFG">
+  <COMPL>
+    <ACTION sym="datastore@infix">cfg</ACTION>
+  </COMPL>
+  <ACTION sym="STRING"/>
+</PTYPE>
+
 <PTYPE name="DATASTORE">
   <COMPL>
-    <ACTION sym="printl">factory-config</ACTION>
-    <ACTION sym="printl">startup-config</ACTION>
-    <ACTION sym="printl">running-config</ACTION>
+    <ACTION sym="datastore@infix">src</ACTION>
   </COMPL>
   <ACTION sym="STRING"/>
 </PTYPE>
 
 <PTYPE name="RW_DATASTORE">
   <COMPL>
-    <ACTION sym="printl">startup-config</ACTION>
-    <ACTION sym="printl">running-config</ACTION>
+    <ACTION sym="datastore@infix">dst</ACTION>
   </COMPL>
   <ACTION sym="STRING"/>
 </PTYPE>
@@ -91,6 +95,13 @@
 <PTYPE name="LOGFILES">
   <COMPL>
     <ACTION sym="files@infix">/var/log</ACTION>
+  </COMPL>
+  <ACTION sym="STRING"/>
+</PTYPE>
+
+<PTYPE name="FILES">
+  <COMPL>
+    <ACTION sym="files@infix">/cfg</ACTION>
   </COMPL>
   <ACTION sym="STRING"/>
 </PTYPE>
@@ -154,7 +165,16 @@
 <COMMAND name="copy" help="Copy configuration, e.g., copy running-config startup-config">
   <PARAM name="src" ptype="/DATASTORE"    help="Source datastore"/>
   <PARAM name="dst" ptype="/RW_DATASTORE" help="Destination datastore"/>
-  <ACTION sym="copy@infix"/>
+  <ACTION sym="copy@infix" in="tty" out="tty" interrupt="true"/>
+</COMMAND>
+
+<COMMAND name="dir" help="List available configuration files">
+  <ACTION sym="dir@infix"/>
+</COMMAND>
+
+<COMMAND name="erase" help="Erase a configuration file">
+  <PARAM name="file" ptype="/FILES" help="Configuration file"/>
+  <ACTION sym="erase@infix" in="tty" out="tty" interrupt="true"/>
 </COMMAND>
 
 <COMMAND name="password" help="Password tools" mode="switch">
