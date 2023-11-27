@@ -34,7 +34,7 @@
 #define CP_UA0_TXD(X)         X("mpp30", none, 0, 0)
 #define SFP10_TX_DISABLE(X)   X("mpp31", cp0_gpio1, 31, GPIO_ACTIVE_HIGH)
 #define SFP10_MOD_ABS(X)      X("mpp32", cp0_gpio2,  0, GPIO_ACTIVE_LOW)
-#define I2C_IRQ(X)            X("mpp33", cp0_gpio2,  1, GPIO_ACTIVE_HIGH)
+#define I2C_IRQ(X)            X("mpp33", cp0_gpio2,  1, IRQ_TYPE_LEVEL_LOW)
 #define SFP10_RS0(X)          X("mpp34", cp0_gpio2,  2, GPIO_ACTIVE_HIGH)
 #define CP_I2C1_SDA(X)        X("mpp35", none, 0, 0)
 #define CP_I2C1_SCK(X)        X("mpp36", none, 0, 0)
