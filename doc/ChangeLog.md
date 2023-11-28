@@ -12,7 +12,128 @@ All notable changes to the project are documented in this file.
 > log in to the system.  This can be changed only in developer builds: `make
 > menuconfig` -> System configuration -> `[*]Enable root login with password`
 
-(More coming soon, this update is just a place holder for v23.11.0-rc1)
+### YANG Status
+
+ - [ieee802-ethernet-interfaces][]: Currently supported (read-only) features:
+   - Status of auto-negotiation, and if enabled.
+   - Current speed and duplex
+   - Frame counters:
+
+| **YANG**                    | **Linux / Ethtool**               |
+|-----------------------------|-----------------------------------|
+| `out-frames`                | `FramesTransmittedOK`             |
+| `out-multicast-frames`      | `MulticastFramesXmittedOK`        |
+| `out-broadcast-frames`      | `BroadcastFramesXmittedOK`        |
+| `in-total-octets`           | `FramesReceivedOK`                |
+|                             | + `FrameCheckSequenceErrors`      |
+|                             | + `FramesLostDueToIntMACRcvError` |
+|                             | + `AlignmentErrors`               |
+|                             | + `etherStatsOversizePkts`        |
+|                             | + `etherStatsJabbers`             |
+| `in-frames`                 | `FramesReceivedOK`                |
+| `in-multicast-frames`       | `MulticastFramesReceivedOK`       |
+| `in-broadcast-frames`       | `BroadcastFramesReceivedOK`       |
+| `in-error-undersize-frames` | `undersize_pkts`                  |
+| `in-error-fcs-frames`       | `FrameCheckSequenceErrors`        |
+
+ - [ietf-system][]:
+   - **augments:**
+     - MotD (Message of the Day)
+	 - User login shell, default: `/bin/false` (no SSH or console login)
+	 - State information for remotely querying firmware version information
+   - **deviations:**
+     - timezone-name, using IANA timezones instead of plain string
+	 - UTC offset, only support per-hour offsets with [tzdata][]
+	 - Usernames, clarifying Linux restrictions
+     - Unsupported features marked as deviations, e.g. RADIUS
+   - [infix-system-software][]: firmware upgrade with `install-bundle` RPC
+ - [ietf-interfaces][]:
+   - deviation to allow read-write `if:phys-address` for custom MAC address
+   - [ietf-ip][]: augments
+     - IPv4LL similar to standardized IPv6LL
+   - [ietf-ip][]: deviations (`not-supported`) added for IPv4 and IPv6:
+     - `/if:interfaces/if:interface/ip:ipv4/ip:address/ip:subnet/ip:netmask`
+	 - `/if:interfaces/if:interface/ip:ipv6/ip:address/ip:status`
+	 - `/if:interfaces/if:interface/ip:ipv4/ip:neighbor`
+     - `/if:interfaces/if:interface/ip:ipv6/ip:neighbor`
+   - [ietf-routing][]: Base model for routing
+   - [ietf-ipv4-unicast-routing][]: Static unicast routing, incl. operational
+     data, i.e., setting static IPv4 routes and reading IPv4 routing table
+   - [infix-ethernet-interfaces][]: deviations for ieee802-ethernet-interfaces
+   - [infix-routing][]: Limit ietf-routing to one instance `default` per
+     routing protocol, also details unsupported features (deviations)
+   - [infix-if-bridge][]: Linux bridge interfaces with native VLAN support
+   - [infix-if-type][]: deviation for interface types, limiting number
+     to supported types only.  New identities are derived from default
+     IANA interface types, ensuring compatibility with other standard
+     models, e.g., `ieee802-ethernet-interface.yang`
+   - [infix-if-veth][]: Linux VETH pairs
+   - [infix-if-vlan][]: Linux VLAN interfaces, e.g. `eth0.10`
+ - **Configurable services:**
+   - [ieee802-dot1ab-lldp][]: stripped down to an `enabled` setting
+   - [infix-services][]: support for enabling mDNS service/device discovery
+
+[tzdata]:          https://www.iana.org/time-zones
+[ietf-system]:     https://www.rfc-editor.org/rfc/rfc7317.html
+[ietf-interfaces]: https://www.rfc-editor.org/rfc/rfc7223.html
+[ietf-ip]:         https://www.rfc-editor.org/rfc/rfc8344.html
+[ietf-if-vlan-encapsulation]: https://www.ietf.org/id/draft-ietf-netmod-sub-intf-vlan-model-08.html
+[ieee802-dot1ab-lldp]: https://github.com/kernelkit/infix/blob/985c2fd/src/confd/yang/ieee802-dot1ab-lldp%402022-03-15.yang
+[ieee802-ethernet-interfaces]: https://github.com/kernelkit/infix/blob/985c2fd/src/confd/yang/ieee802-ethernet-interface%402019-06-21.yang
+[infix-if-bridge]: https://github.com/kernelkit/infix/blob/985c2fd/src/confd/yang/infix-if-bridge%402023-11-08.yang
+[infix-if-type]:   https://github.com/kernelkit/infix/blob/985c2fd/src/confd/yang/infix-if-type%402023-08-21.yang
+[infix-if-veth]:   https://github.com/kernelkit/infix/blob/985c2fd/src/confd/yang/infix-if-veth%402023-06-05.yang
+[infix-if-vlan]:   https://github.com/kernelkit/infix/blob/985c2fd/src/confd/yang/infix-if-vlan%402023-10-25.yang
+[infix-ip]:        https://github.com/kernelkit/infix/tree/985c2fd/src/confd/yang/infix-ip%402023-09-14.yang
+[infix-services]:  https://github.com/kernelkit/infix/blob/985c2fd/src/confd/yang/infix-services%402023-10-16.yang
+[infix-system-software]: https://github.com/kernelkit/infix/tree/985c2fd/src/confd/yang/infix-system-software%402023-06-27.yang
+
+### Changes
+
+- The CLI built-in command `password generate` has been changed to use the
+  secure mode of the `pwgen` tool, and 13 chars for increased entropy
+- The `qemu.sh -c` command, available in developer builds and the release zip,
+  can now be used to modify the RAM size and enable VPD emulation
+- Add support for overriding generated factory defaults in derivatives
+  using a `/etc/confdrc.lcocal` file -- incl. updated branding docs.
+- Add support for detecting factory reset condition from a bootloader
+- Ensure `/var` is also cleared (properly) during factory reset
+- Add support for port auto-negotiation status in operational datastore
+- Add CLI support for showing veth pairs in `show interfaces`
+- Speedups to CLI detailed view of a single interface
+- Updated documentation of VLAN interfaces and VLAN filtering bridge
+- Updated documentation for how to customize services in *Hybrid Mode*
+- In RMA mode (runlevel 9), the system no longer has any login services
+- Disable `root` login in all NETCONF builds, only `admin` available
+- Add support for VPD data in ONIE EEPROM format
+- Add `iito`, the intelligent input/output daemon for LED control
+- Add port autoneg and speed/duplex status to operational data
+- Upgrade Linux to v6.5.11, with kkit extensions
+- Add support for static IPv4 routing using `ietf-routing@2018-03-13.yang` and
+  `ietf-ipv4-unicast-routing@2018-03-13.yang`, one `default` instance only
+- Add support for partitioning and self-provisioning of new devices
+- Add support for reading `admin` user's default password from VPD.  Devices
+  that do not have a VPD can set a password hash in the device tree
+- Add support for upgrading software bundles (images) from the CLI.
+  Supported remote servers: ftp, tftp, and http/https.
+- Traversing the CLI configure context has been simplified by collapsing all
+  YANG containers that only contain a single list element.  Example:
+  `edit interfaces interface eth0` becomes `edit interface eth0`
+- Add CLI support for creating configuration backups and transferring files
+  to/from remote servers: tftp, ftp, http/https (download only). Issue #155
+
+### Fixes
+
+- Fix #111: fix auto-inference of dynamic interface types (bridge, veth)
+- Fix #125: improved feedback on invalid input in configure context
+- Fix #198: drop bridge default PVID setting, for VLAN filtering bridge.
+- Fix #215: impossible to enable NTP client, regression from v23.06.0
+  All bridge ports must have explicit VLAN assignment (security)
+- Fix regression in CLI `show factory-config` command
+- Fix missing version in `/etc/os-release` variable `PRETTY_NAME`
+- Fix failure to start `podman` in GNS3 (missing Ext4 filesystem feature)
+- Fix initial terminal size probing in CLI when logging in from console port
+- Fix CLI `show running-config`, use proper JSON format like other files
 
 
 [v23.10.0][] - 2023-10-31
