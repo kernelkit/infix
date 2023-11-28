@@ -172,7 +172,7 @@
   <ACTION sym="dir@infix"/>
 </COMMAND>
 
-<COMMAND name="erase" help="Erase a configuration file">
+<COMMAND name="remove" help="Remove a configuration file">
   <PARAM name="file" ptype="/FILES" help="Configuration file"/>
   <ACTION sym="erase@infix" in="tty" out="tty" interrupt="true"/>
 </COMMAND>
