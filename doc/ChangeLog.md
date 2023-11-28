@@ -19,22 +19,22 @@ All notable changes to the project are documented in this file.
    - Current speed and duplex
    - Frame counters:
 
-| **YANG**                    | **Linux / Ethtool**               |
-|-----------------------------|-----------------------------------|
-| `out-frames`                | `FramesTransmittedOK`             |
-| `out-multicast-frames`      | `MulticastFramesXmittedOK`        |
-| `out-broadcast-frames`      | `BroadcastFramesXmittedOK`        |
-| `in-total-octets`           | `FramesReceivedOK`                |
-|                             | + `FrameCheckSequenceErrors`      |
-|                             | + `FramesLostDueToIntMACRcvError` |
-|                             | + `AlignmentErrors`               |
-|                             | + `etherStatsOversizePkts`        |
-|                             | + `etherStatsJabbers`             |
-| `in-frames`                 | `FramesReceivedOK`                |
-| `in-multicast-frames`       | `MulticastFramesReceivedOK`       |
-| `in-broadcast-frames`       | `BroadcastFramesReceivedOK`       |
-| `in-error-undersize-frames` | `undersize_pkts`                  |
-| `in-error-fcs-frames`       | `FrameCheckSequenceErrors`        |
+    | **YANG**                    | **Linux / Ethtool**               |
+    |-----------------------------|-----------------------------------|
+    | `out-frames`                | `FramesTransmittedOK`             |
+    | `out-multicast-frames`      | `MulticastFramesXmittedOK`        |
+    | `out-broadcast-frames`      | `BroadcastFramesXmittedOK`        |
+    | `in-total-octets`           | `FramesReceivedOK`                |
+    |                             | + `FrameCheckSequenceErrors`      |
+    |                             | + `FramesLostDueToIntMACRcvError` |
+    |                             | + `AlignmentErrors`               |
+    |                             | + `etherStatsOversizePkts`        |
+    |                             | + `etherStatsJabbers`             |
+    | `in-frames`                 | `FramesReceivedOK`                |
+    | `in-multicast-frames`       | `MulticastFramesReceivedOK`       |
+    | `in-broadcast-frames`       | `BroadcastFramesReceivedOK`       |
+    | `in-error-undersize-frames` | `undersize_pkts`                  |
+    | `in-error-fcs-frames`       | `FrameCheckSequenceErrors`        |
 
  - [ietf-system][]:
    - **augments:**
