@@ -1,0 +1,53 @@
+[
+  {
+    "ifindex": 6,
+    "ifname": "e4",
+    "flags": [
+      "BROADCAST",
+      "MULTICAST",
+      "UP",
+      "LOWER_UP"
+    ],
+    "mtu": 1500,
+    "qdisc": "pfifo_fast",
+    "operstate": "UP",
+    "linkmode": "DEFAULT",
+    "group": "default",
+    "txqlen": 1000,
+    "link_type": "ether",
+    "address": "02:00:00:00:00:04",
+    "broadcast": "ff:ff:ff:ff:ff:ff",
+    "promiscuity": 0,
+    "allmulti": 0,
+    "min_mtu": 68,
+    "max_mtu": 65535,
+    "inet6_addr_gen_mode": "eui64",
+    "num_tx_queues": 1,
+    "num_rx_queues": 1,
+    "gso_max_size": 65536,
+    "gso_max_segs": 65535,
+    "tso_max_size": 65536,
+    "tso_max_segs": 65535,
+    "gro_max_size": 65536,
+    "parentbus": "virtio",
+    "parentdev": "virtio6",
+    "stats64": {
+      "rx": {
+        "bytes": 1327,
+        "packets": 10,
+        "errors": 0,
+        "dropped": 0,
+        "over_errors": 0,
+        "multicast": 0
+      },
+      "tx": {
+        "bytes": 19022,
+        "packets": 95,
+        "errors": 0,
+        "dropped": 0,
+        "carrier_errors": 0,
+        "collisions": 0
+      }
+    }
+  }
+]

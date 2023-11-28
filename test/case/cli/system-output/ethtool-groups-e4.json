@@ -1,0 +1,61 @@
+[
+  {
+    "ifname": "e4",
+    "eth-phy": {},
+    "eth-mac": {
+      "FramesTransmittedOK": 713,
+      "SingleCollisionFrames": 0,
+      "MultipleCollisionFrames": 0,
+      "FramesReceivedOK": 418,
+      "FrameCheckSequenceErrors": 0,
+      "OctetsTransmittedOK": 129130,
+      "FramesWithDeferredXmissions": 0,
+      "LateCollisions": 0,
+      "OctetsReceivedOK": 72571,
+      "MulticastFramesXmittedOK": 605,
+      "BroadcastFramesXmittedOK": 69,
+      "FramesWithExcessiveDeferral": 0,
+      "MulticastFramesReceivedOK": 336,
+      "BroadcastFramesReceivedOK": 46
+    },
+    "eth-ctrl": {},
+    "rmon": {
+      "etherStatsUndersizePkts": 0,
+      "etherStatsOversizePkts": 0,
+      "etherStatsFragments": 0,
+      "etherStatsJabbers": 0,
+      "rx-pktsNtoM": [
+        {
+          "low": 64,
+          "high": 64,
+          "val": 12
+        },
+        {
+          "low": 65,
+          "high": 127,
+          "val": 603
+        },
+        {
+          "low": 128,
+          "high": 255,
+          "val": 168
+        },
+        {
+          "low": 256,
+          "high": 511,
+          "val": 348
+        },
+        {
+          "low": 512,
+          "high": 1023,
+          "val": 0
+        },
+        {
+          "low": 1024,
+          "high": 65535,
+          "val": 0
+        }
+      ]
+    }
+  }
+]

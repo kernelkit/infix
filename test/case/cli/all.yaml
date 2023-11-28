@@ -1,0 +1,3 @@
+---
+- case: run.sh
+  name: "cli-check-output"

@@ -153,8 +153,11 @@ def add_ipv4_route(routes):
         out['route'].append(new)
     insert(routes, 'routes', out)
 
-def add_ip_link(ifname, iface_out):
-    cmd = ['ip', '-s', '-d', '-j', 'link', 'show', 'dev', ifname]
+def add_ip_link(ifname, iface_out, test):
+    if test:
+        cmd = ['cat', f"{test}/ip-link-show-dev-{ifname}.json"]
+    else:
+        cmd = ['ip', '-s', '-d', '-j', 'link', 'show', 'dev', ifname]
 
     data = run_json_cmd(cmd)
     if len(data) != 1:
@@ -202,8 +205,11 @@ def add_ip_link(ifname, iface_out):
     if val is not None:
         insert(iface_out, "statistics", "in-octets", str(val))
 
-def add_ip_addr(ifname, iface_out):
-    cmd = ['ip', '-j', 'addr', 'show', 'dev', ifname]
+def add_ip_addr(ifname, iface_out, test):
+    if test:
+        cmd = ['cat', f"{test}/ip-addr-show-dev-{ifname}.json"]
+    else:
+        cmd = ['ip', '-j', 'addr', 'show', 'dev', ifname]
 
     data = run_json_cmd(cmd)
     if len(data) != 1:
@@ -249,8 +255,11 @@ def add_ip_addr(ifname, iface_out):
         insert(iface_out, "ietf-ip:ipv4", "address", inet)
         insert(iface_out, "ietf-ip:ipv6", "address", inet6)
 
-def add_ethtool_groups(ifname, iface_out):
-    cmd = ['ethtool', '--json', '-S', ifname, '--all-groups']
+def add_ethtool_groups(ifname, iface_out, test):
+    if test:
+        cmd = ['cat', f"{test}/ethtool-groups-{ifname}.json"]
+    else:
+        cmd = ['ethtool', '--json', '-S', ifname, '--all-groups']
 
     data = run_json_cmd(cmd)
     if len(data) != 1:
@@ -324,10 +333,14 @@ def add_ethtool_groups(ifname, iface_out):
         if found:
             frame['in-error-oversize-frames'] = str(tot)
 
-def add_ethtool_std(ifname, iface_out):
-    cmd = ['ethtool', ifname]
+def add_ethtool_std(ifname, iface_out, test):
     keys = ['Speed', 'Duplex', 'Auto-negotiation']
     result = {}
+
+    if test:
+        cmd = ['cat', f"{test}/ethtool-{ifname}.txt"]
+    else:
+        cmd = ['ethtool', ifname]
 
     lines = run_cmd(cmd)
     for line in lines:
@@ -363,6 +376,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="YANG data creator")
     parser.add_argument("model", help="IETF Model")
     parser.add_argument("-p", "--param", default=None, help="Model dependant parameter")
+    parser.add_argument("-t", "--test", default=None, help="Test data base path")
     args = parser.parse_args()
 
     if (args.model == 'ietf-interfaces'):
@@ -383,10 +397,10 @@ if __name__ == "__main__":
         ifname = args.param
         iface_out = yang_data['ietf-interfaces:interfaces']['interface'][0]
 
-        add_ip_link(ifname, iface_out)
-        add_ip_addr(ifname, iface_out)
-        add_ethtool_groups(ifname, iface_out)
-        add_ethtool_std(ifname, iface_out)
+        add_ip_link(ifname, iface_out, args.test)
+        add_ip_addr(ifname, iface_out, args.test)
+        add_ethtool_groups(ifname, iface_out, args.test)
+        add_ethtool_std(ifname, iface_out, args.test)
     elif (args.model == 'ietf-routing'):
         yang_data = {
             "ietf-routing:routing": {
