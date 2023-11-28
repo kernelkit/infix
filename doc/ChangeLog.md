@@ -14,7 +14,7 @@ All notable changes to the project are documented in this file.
 
 ### YANG Status
 
- - [ieee802-ethernet-interfaces][]: Currently supported (read-only) features:
+ - [ieee802-ethernet-interface][]: Currently supported (read-only) features:
    - Status of auto-negotiation, and if enabled.
    - Current speed and duplex
    - Frame counters:
@@ -59,7 +59,7 @@ All notable changes to the project are documented in this file.
    - [ietf-routing][]: Base model for routing
    - [ietf-ipv4-unicast-routing][]: Static unicast routing, incl. operational
      data, i.e., setting static IPv4 routes and reading IPv4 routing table
-   - [infix-ethernet-interfaces][]: deviations for ieee802-ethernet-interfaces
+   - [infix-ethernet-interface][]: deviations for ieee802-ethernet-interface
    - [infix-routing][]: Limit ietf-routing to one instance `default` per
      routing protocol, also details unsupported features (deviations)
    - [infix-if-bridge][]: Linux bridge interfaces with native VLAN support
@@ -78,13 +78,17 @@ All notable changes to the project are documented in this file.
 [ietf-interfaces]: https://www.rfc-editor.org/rfc/rfc7223.html
 [ietf-ip]:         https://www.rfc-editor.org/rfc/rfc8344.html
 [ietf-if-vlan-encapsulation]: https://www.ietf.org/id/draft-ietf-netmod-sub-intf-vlan-model-08.html
+[ietf-routing]:     https://www.rfc-editor.org/rfc/rfc8349
+[ietf-ipv4-unicast-routing]: https://www.rfc-editor.org/rfc/rfc8349#page-29
 [ieee802-dot1ab-lldp]: https://github.com/kernelkit/infix/blob/985c2fd/src/confd/yang/ieee802-dot1ab-lldp%402022-03-15.yang
-[ieee802-ethernet-interfaces]: https://github.com/kernelkit/infix/blob/985c2fd/src/confd/yang/ieee802-ethernet-interface%402019-06-21.yang
+[ieee802-ethernet-interface]: https://github.com/kernelkit/infix/blob/985c2fd/src/confd/yang/ieee802-ethernet-interface%402019-06-21.yang
+[infix-ethernet-interface]: https://github.com/kernelkit/infix/blob/985c2fd/src/confd/yang/infix-ethernet-interface%402023-11-22.yang
 [infix-if-bridge]: https://github.com/kernelkit/infix/blob/985c2fd/src/confd/yang/infix-if-bridge%402023-11-08.yang
 [infix-if-type]:   https://github.com/kernelkit/infix/blob/985c2fd/src/confd/yang/infix-if-type%402023-08-21.yang
 [infix-if-veth]:   https://github.com/kernelkit/infix/blob/985c2fd/src/confd/yang/infix-if-veth%402023-06-05.yang
 [infix-if-vlan]:   https://github.com/kernelkit/infix/blob/985c2fd/src/confd/yang/infix-if-vlan%402023-10-25.yang
 [infix-ip]:        https://github.com/kernelkit/infix/tree/985c2fd/src/confd/yang/infix-ip%402023-09-14.yang
+[infix-routing]:   https://github.com/kernelkit/infix/blob/985c2fd/src/confd/yang/infix-routing%402023-11-23.yang
 [infix-services]:  https://github.com/kernelkit/infix/blob/985c2fd/src/confd/yang/infix-services%402023-10-16.yang
 [infix-system-software]: https://github.com/kernelkit/infix/tree/985c2fd/src/confd/yang/infix-system-software%402023-06-27.yang
 
@@ -127,8 +131,8 @@ All notable changes to the project are documented in this file.
 - Fix #111: fix auto-inference of dynamic interface types (bridge, veth)
 - Fix #125: improved feedback on invalid input in configure context
 - Fix #198: drop bridge default PVID setting, for VLAN filtering bridge.
-- Fix #215: impossible to enable NTP client, regression from v23.06.0
   All bridge ports must have explicit VLAN assignment (security)
+- Fix #215: impossible to enable NTP client, regression from v23.06.0
 - Fix regression in CLI `show factory-config` command
 - Fix missing version in `/etc/os-release` variable `PRETTY_NAME`
 - Fix failure to start `podman` in GNS3 (missing Ext4 filesystem feature)
