@@ -316,7 +316,7 @@
     </COMMAND>
   -->
     <COMMAND name="version" help="Show software version">
-      <ACTION sym="script">uptime</ACTION>
+      <ACTION sym="script">cat /etc/version</ACTION>
     </COMMAND>
 
     <COMMAND name="factory-config" help="Show factory-config">
