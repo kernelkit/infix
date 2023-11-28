@@ -91,7 +91,7 @@ jobs:
       - uses: actions/download-artifact@v3
       - name: Extract ChangeLog entry ...
         run: |
-          awk '/-----*/{if (x == 1) exit; x=1;next}x' doc/ChangeLog.md \
+          awk '/^-----*$/{if (x == 1) exit; x=1;next}x' doc/ChangeLog.md \
               |head -n -1 > release.md
           cat release.md
       - uses: ncipollo/release-action@v1
