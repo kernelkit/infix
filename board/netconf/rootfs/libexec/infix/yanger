@@ -3,6 +3,7 @@
 import subprocess
 import json
 import sys # (built-in module)
+import argparse
 
 def json_get_yang_type(iface_in):
     if iface_in['link_type'] == "loopback":
@@ -358,18 +359,19 @@ def add_ethtool_std(ifname, iface_out):
             insert(iface_out, "ieee802-ethernet-interface:ethernet", "speed", str(num))
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print(f"usage: yanger <model> [params]", file=sys.stderr)
-        sys.exit(1)
 
-    model = sys.argv[1]
-    if(model == 'ietf-interfaces'):
+    parser = argparse.ArgumentParser(description="YANG data creator")
+    parser.add_argument("model", help="IETF Model")
+    parser.add_argument("-p", "--param", default=None, help="Model dependant parameter")
+    args = parser.parse_args()
+
+    if (args.model == 'ietf-interfaces'):
         # For now, we handle each interface separately, as this is how it's
         # currently implemented in sysrepo. I.e sysrepo will subscribe to
         # each individual interface and query it for YANG data.
 
-        if len(sys.argv) != 3:
-            print(f"usage: yanger ietf-interfaces IFNAME", file=sys.stderr)
+        if not args.param:
+            print(f"usage: yanger ietf-interfaces -p INTERFACE", file=sys.stderr)
             sys.exit(1)
 
         yang_data = {
@@ -378,14 +380,14 @@ if __name__ == "__main__":
             }
         }
 
-        ifname = sys.argv[2]
+        ifname = args.param
         iface_out = yang_data['ietf-interfaces:interfaces']['interface'][0]
 
         add_ip_link(ifname, iface_out)
         add_ip_addr(ifname, iface_out)
         add_ethtool_groups(ifname, iface_out)
         add_ethtool_std(ifname, iface_out)
-    elif(model == 'ietf-routing'):
+    elif (args.model == 'ietf-routing'):
         yang_data = {
             "ietf-routing:routing": {
                 "ribs":  {
@@ -400,6 +402,6 @@ if __name__ == "__main__":
         ipv4routes = yang_data['ietf-routing:routing']['ribs']['rib'][0]
         add_ipv4_route(ipv4routes);
     else:
-        print(f"Unsupported model {model}", file=sys.stderr)
+        print(f"Unsupported model {args.model}", file=sys.stderr)
         sys.exit(1)
     print(json.dumps(yang_data, indent=2))

@@ -129,9 +129,10 @@ static json_t *json_get_ip_link(void)
 static int ly_add_yanger_data(const struct ly_ctx *ctx, struct lyd_node **parent,
 			      char *model, const char *arg)
 {
-	char *yanger_args[4] = {
+	char *yanger_args[5] = {
 		"/libexec/infix/yanger",
 		model,
+		NULL,
 		NULL,
 		NULL
 	};
@@ -144,8 +145,10 @@ static int ly_add_yanger_data(const struct ly_ctx *ctx, struct lyd_node **parent
 		return SR_ERR_SYS;
 	}
 
-	if (!strcmp(model, "ietf-interfaces"))
-		yanger_args[2] = (char *)arg;
+	if (!strcmp(model, "ietf-interfaces")) {
+		yanger_args[2] = "-p";
+		yanger_args[3] = (char *)arg;
+	}
 
 	fd = memfd_create("my_temp_file", MFD_CLOEXEC | MFD_NOEXEC_SEAL);
 	if (fd == -1) {
