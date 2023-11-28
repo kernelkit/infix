@@ -89,8 +89,8 @@ class Software:
         self.type = data.get('class', '')
         self.hash = data.get('sha256', '')
         self.state = data.get('state', '')
-        self.version = get_json_data(None, self.data, 'bundle', 'version')
-        self.date = get_json_data(None, self.data, 'installed', 'datetime')
+        self.version = get_json_data('', self.data, 'bundle', 'version')
+        self.date = get_json_data('', self.data, 'installed', 'datetime')
 
     def is_rootfs(self):
         """True if bundle type is 'rootfs'"""
