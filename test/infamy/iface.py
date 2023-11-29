@@ -46,6 +46,14 @@ def get_phys_address(target, iface):
     """Fetch interface MAC address (operational status)"""
     return _iface_get_param(target, iface, "phys-address")
 
+def is_phys_address(target,iface,addr):
+    """Check if MAC address is a specific value"""
+    return get_phys_address(target,iface) == addr
+
+def get_oper_up(target,iface):
+    state=get_oper_status(target,iface)
+    return state == "up"
+
 def print_iface_status(target):
     """Print status parameters for all target interfaces"""
     try:

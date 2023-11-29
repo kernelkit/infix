@@ -3,7 +3,7 @@
 import copy
 import infamy
 import infamy.iface as iface
-
+from infamy.wait import wait_mac_address
 
 with infamy.Test() as test:
     with test.step("Initialize"):
@@ -37,8 +37,6 @@ with infamy.Test() as test:
                 del i["phys-address"]
                 break
         target.put_diff_dicts("ietf-interfaces", running, new)
-        mac = iface.get_phys_address(target, tport)
-        print(f"Target iface {tport} current mac: {mac}")
-        assert mac == pmac
+        wait_mac_address(target, tport, pmac)
 
     test.succeed()

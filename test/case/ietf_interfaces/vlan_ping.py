@@ -2,6 +2,7 @@
 
 import infamy
 import copy
+from infamy.wait import wait_links
 def test_ping(hport, should_pass):
       with infamy.IsolatedMacVlan(hport) as ns:
             pingtest = ns.runsh("""
@@ -10,13 +11,11 @@ def test_ping(hport, should_pass):
             ip link set iface up
             ip link add dev vlan10 link iface up type vlan id 10
             ip addr add 10.0.0.1/24 dev vlan10
-
-            ping -c1 -w5 10.0.0.2 || exit 1
             """)
-
-            if (pingtest.returncode and should_pass) or (not pingtest.returncode and not should_pass):
-                print(pingtest.stdout)
-                test.fail()
+            if(should_pass):
+                ns.must_reach("10.0.0.2")
+            else:
+                ns.must_not_reach("10.0.0.2")
 
 with infamy.Test() as test:
     with test.step("Initialize"):
@@ -54,6 +53,9 @@ with infamy.Test() as test:
                 ]
             }
         })
+
+    with test.step("Waiting for links to come up"):
+        wait_links(target, [tport])
 
     with test.step("Ping 10.0.0.2 from VLAN 10 on host:data with IP 10.0.0.1"):
         _, hport = env.ltop.xlate("host", "data")
