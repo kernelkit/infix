@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
 
 import infamy
+import infamy.iface as iface
 import copy
-from infamy.wait import wait_links
+
+from infamy import until
+
 def test_ping(hport, should_pass):
       with infamy.IsolatedMacVlan(hport) as ns:
             pingtest = ns.runsh("""
@@ -55,7 +58,7 @@ with infamy.Test() as test:
         })
 
     with test.step("Waiting for links to come up"):
-        wait_links(target, [tport])
+        until(lambda: iface.get_oper_up(target, tport))
 
     with test.step("Ping 10.0.0.2 from VLAN 10 on host:data with IP 10.0.0.1"):
         _, hport = env.ltop.xlate("host", "data")
