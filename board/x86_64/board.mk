@@ -1,6 +1,6 @@
 test-dir := $(BR2_EXTERNAL_INFIX_PATH)/test
-INFIX_TESTS ?= $(test-dir)/case/all-repo.yaml $(test-dir)/case/all-unit.yaml \
-	$(test-dir)/case/all.yaml
+UNIT_TESTS ?= $(test-dir)/case/all-repo.yaml $(test-dir)/case/all-unit.yaml
+INFIX_TESTS ?= $(test-dir)/case/all.yaml
 
 test-env = $(test-dir)/env \
 	-f $(BINARIES_DIR)/infix-x86_64.img \
@@ -11,6 +11,9 @@ test-env-qeneth = $(call test-env,-q $(test-dir)/virt/dual,$(1))
 test-env-run    = $(call test-env,-C -t $(BINARIES_DIR)/qemu.dot,$(1))
 
 .PHONY: test-%
+
+test-unit:
+	$(test-dir)/env $(test-dir)/9pm/9pm.py $(UNIT_TESTS)
 
 test-qeneth:
 	$(call test-env-qeneth,\

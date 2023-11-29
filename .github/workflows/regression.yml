@@ -48,6 +48,10 @@ jobs:
       - name: Configure NETCONF
         run: |
           make x86_64_defconfig
+
+      - name: Unit Test
+        run: make test-unit
+
       - name: Build
         run: |
           make
