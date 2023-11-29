@@ -9,8 +9,6 @@
 
 #define SW_STATE_PATH_    "/ietf-system:system-state/infix-system:software"
 
-static const struct lys_module *infix_system;
-
 static RaucInstaller *infix_system_sw_new_rauc(void)
 {
 	RaucInstaller *rauc;
@@ -183,6 +181,8 @@ static int infix_system_sw_state(sr_session_ctx_t *session, uint32_t sub_id,
 				 struct lyd_node **parent, void *priv)
 {
 	sr_error_t srerr = SR_ERR_INTERNAL;
+	const struct lys_module *ixsys;
+	const struct ly_ctx *ly;
 	RaucInstaller *rauc;
 	struct lyd_node *sw;
 
@@ -192,7 +192,15 @@ static int infix_system_sw_state(sr_session_ctx_t *session, uint32_t sub_id,
 	if (!rauc)
 		return SR_ERR_INTERNAL;
 
-	if (lyd_new_inner(*parent, infix_system, "software", 0, &sw))
+	ly = sr_acquire_context(sr_session_get_connection(session));
+	ixsys = ly_ctx_get_module_implemented(ly, "infix-system");
+	sr_release_context(sr_session_get_connection(session));
+	if (!ixsys) {
+		ERROR("infix-system module not found");
+		goto out;
+	}
+
+	if (lyd_new_inner(*parent, ixsys, "software", 0, &sw))
 		goto out;
 
 	srerr = infix_system_sw_state_fill(sw, rauc);
@@ -233,17 +241,7 @@ static int infix_system_sw_install(sr_session_ctx_t *session, uint32_t sub_id,
 
 int infix_system_sw_init(struct confd *confd)
 {
-	const struct ly_ctx *ly;
 	int rc = 0;
-
-	ly = sr_acquire_context(sr_session_get_connection(confd->session));
-	infix_system = ly_ctx_get_module_implemented(ly, "infix-system");
-	sr_release_context(sr_session_get_connection(confd->session));
-	if (!infix_system) {
-		ERROR("infix-system module not found");
-		rc = -ENOENT;
-		goto fail;
-	}
 
 	REGISTER_OPER(confd->session, "ietf-system", SW_STATE_PATH_,
 		      infix_system_sw_state, NULL, 0, &confd->sub);
