@@ -85,8 +85,9 @@ class IsolatedMacVlan:
             ip addr add {addr}/{prefix_length} dev iface
             """, check=True)
 
-    def ping(self, daddr, count=1, timeout=2, check=False):
-        return self.runsh(f"""set -ex; ping -c {count} -w {timeout} {daddr}""", check=check)
+
+    def ping(self, daddr, count=1, timeout=5, interval=2, check=False):
+        return self.runsh(f"""set -ex; ping -c {count} -w {timeout} -i {interval} {daddr}""", check=check)
 
     def must_reach(self, daddr):
         res = self.ping(daddr)

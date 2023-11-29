@@ -18,7 +18,7 @@ class Sniffer:
         os.unlink(self.pcap.name)
 
     def __enter__(self):
-        cmd = f"tcpdump -lni iface -w {self.pcap.name} {self.expr}"
+        cmd = f"tshark -lni iface -w {self.pcap.name} {self.expr}"
         arg = cmd.split(" ")
         self.proc = self.netns.popen(arg, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
 
@@ -34,8 +34,7 @@ class Sniffer:
             except OSError:
                 pass
         self.proc.wait()
-        return True
 
     def output(self):
         """Return PCAP output"""
-        return self.netns.runsh(f"tcpdump -n -r {self.pcap.name}")
+        return self.netns.runsh(f"tshark -n -r {self.pcap.name}")
