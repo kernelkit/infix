@@ -18,7 +18,8 @@ RUN apk add --no-cache \
     ruby-mustache \
     socat \
     squashfs-tools \
-    tcpdump
+    tcpdump \
+    tshark
 
 # Alpine's QEMU package does not bundle this for some reason, copied
 # from Ubuntu
