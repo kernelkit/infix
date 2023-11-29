@@ -8,6 +8,7 @@ RUN apk add --no-cache \
     graphviz \
     iproute2 \
     iputils \
+    jq \
     libc-dev \
     libyang-dev \
     linux-headers \
