@@ -1,3 +1,10 @@
+# This job can be started by a git tag or using the workflow dispatch.
+#
+# The version string *must* be of the format: vYY.MM(-alphaN|-betaN|-rcN)
+#
+# In /etc/os-release this string is used for VERSION, VERSION_ID, and
+# IMAGE_VERSION, with the 'v' prefix.  In release artifact filenames,
+# and zip file directory names, the 'v' is dropped per convention.
 name: Release General
 
 on:
@@ -28,18 +35,19 @@ jobs:
           if [ -n "${{ inputs.version }}" ]; then
               ver=${{ inputs.version }}
           else
-              ver=${GITHUB_REF#refs/tags/v}
+              ver=${GITHUB_REF#refs/tags/}
           fi
           echo "ver=${ver}" >> $GITHUB_OUTPUT
-          if echo $ver | grep -qE '[0-9.]+(-alpha|-beta|-rc)[0-9]*'; then
+          if echo $ver | grep -qE 'v[0-9\.]+(-alpha|-beta|-rc)[0-9]*'; then
             echo "pre=true"  >> $GITHUB_OUTPUT
           else
             echo "pre=false" >> $GITHUB_OUTPUT
           fi
+          fver=${ver#v}
           if [ "${{ matrix.variant }}" = "netconf" ]; then
-              target=${{ matrix.platform }}-${ver}
+              target=${{ matrix.platform }}-${fver}
           else
-              target=${{ matrix.platform }}-${{ matrix.variant }}-${ver}
+              target=${{ matrix.platform }}-${{ matrix.variant }}-${fver}
           fi
           echo "dir=infix-$target"        >> $GITHUB_OUTPUT
           echo "tgz=infix-$target.tar.gz" >> $GITHUB_OUTPUT
