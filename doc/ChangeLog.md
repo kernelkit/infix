@@ -4,7 +4,7 @@ Change Log
 All notable changes to the project are documented in this file.
 
 
-[v23.11.0][] - 2023-11-28
+[v23.11.0][] - 2023-11-30
 -------------------------
 
 > **Note:** this is the first release where the `root` account is disabled in
@@ -125,6 +125,7 @@ All notable changes to the project are documented in this file.
   `edit interfaces interface eth0` becomes `edit interface eth0`
 - Add CLI support for creating configuration backups and transferring files
   to/from remote servers: tftp, ftp, http/https (download only). Issue #155
+- Add `_netconf-ssh._tcp` record to mDNS-SD
 
 ### Fixes
 
@@ -138,6 +139,10 @@ All notable changes to the project are documented in this file.
 - Fix failure to start `podman` in GNS3 (missing Ext4 filesystem feature)
 - Fix initial terminal size probing in CLI when logging in from console port
 - Fix CLI `show running-config`, use proper JSON format like other files
+- Fix caching of libyang module references in confd.  Loading other plugins to
+  sysrepo-plugind modifies these references, which may can cause corruption
+- Fix missing `v` in `VERSION`, `VERSION_ID`, and `IMAGE_VERSION` in
+  `/etc/os-release` and other generated files for release builds.
 
 
 [v23.10.0][] - 2023-10-31
