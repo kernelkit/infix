@@ -56,9 +56,9 @@ class NccGetDataReply:
 @dataclass
 class Location:
     host: str
-    port: int = 830
+    password: str
     username: str = "admin"
-    password: str = "admin"
+    port: int = 830
 
 class Device(object):
     def __init__(self,
