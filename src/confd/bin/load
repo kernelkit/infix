@@ -12,13 +12,6 @@ set -e
 # shellcheck disable=SC1091
 . /etc/confdrc
 
-if [ "$1" = "-b" ]; then
-    bootstrap=true
-    shift
-else
-    bootstrap=false
-fi
-
 config=$1
 if [ -f "$config" ]; then
     fn="$config"
@@ -36,12 +29,16 @@ if [ ! -f "$fn" ]; then
 fi
 
 if ! sysrepocfg -v3 -I"$fn" -f json; then
-    if eval $bootstrap; then
-	logger -sik -p user.error "Failed bootstrapping system, reverting to Fail Secure mode!"
-	initctl -nbq runlevel 9
-    else
-	logger -sik -p user.error "Failed loading $fn, aborting!"
-    fi
+    case "$config" in
+	startup-config)
+	    logger -sik -p user.error "Failed loading $fn, reverting to Fail Secure mode!"
+	    ;;
+	failure-config)
+	    logger -sik -p user.error "Failed loading $fn, aborting!"
+	    initctl -nbq runlevel 9
+	    ;;
+    esac
+
     exit 1
 fi
 logger -sik -p user.notice "Loaded $fn successfully."

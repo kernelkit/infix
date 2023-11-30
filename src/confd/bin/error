@@ -2,4 +2,3 @@
 # Override using an overlay in your br2-external to change the behavior
 
 logger -sik -p user.error "The device has reached an unrecoverable error, please RMA."
-exec sleep infinity
