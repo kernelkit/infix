@@ -9,6 +9,17 @@
 #
 set -e
 
+banner_append()
+{
+    printf "\n$@\n" | tee -a \
+			  /etc/banner \
+			  /etc/issue \
+			  /etc/issue.net \
+			  >/dev/null
+    return 0
+}
+
+
 # shellcheck disable=SC1091
 . /etc/confdrc
 
@@ -35,6 +46,7 @@ if ! sysrepocfg -v3 -I"$fn" -f json; then
 	    ;;
 	failure-config)
 	    logger -sik -p user.error "Failed loading $fn, aborting!"
+	    banner_append "CRITICAL ERROR: Logins are disabled, no credentials available"
 	    initctl -nbq runlevel 9
 	    ;;
     esac
@@ -42,3 +54,6 @@ if ! sysrepocfg -v3 -I"$fn" -f json; then
     exit 1
 fi
 logger -sik -p user.notice "Loaded $fn successfully."
+if [ "$config" = "failure-config" ]; then
+    banner_append "ERROR: Corrupt startup-config, system has reverted to default login credentials"
+fi

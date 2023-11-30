@@ -80,9 +80,11 @@ console_error()
     [ -z "$STATUS" ] || return
     STATUS="CRITICAL ERROR: $1"
 
-    printf "\n$PRETTY_NAME\n%s\n\n" "$STATUS" | tee /etc/banner > /etc/issue.net
-    printf "\n$PRETTY_NAME (console)\n%s\n\n" "$STATUS"         > /etc/issue
-
+    printf "\n$STATUS\n" | tee -a \
+			       /etc/banner \
+			       /etc/issue \
+			       /etc/issue.net \
+			       >/dev/null
     return 0
 }
 
