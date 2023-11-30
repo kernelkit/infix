@@ -42,6 +42,10 @@ class Env(object):
         else:
             mapping = None
 
+        password=self.ptop.get_password(node)
+
+        if not password:
+            password = "admin"
         ctrl = self.ptop.get_ctrl()
         _, cport = self.ptop.get_path(ctrl, (node, port))[0]
 
@@ -51,7 +55,7 @@ class Env(object):
             raise Exception(f"Failed, cannot find mgmt IP for {node}")
 
         return netconf.Device(
-            location=netconf.Location(mgmtip),
+            location=netconf.Location(mgmtip, password),
             mapping=mapping,
             yangdir=self.args.yangdir
         )

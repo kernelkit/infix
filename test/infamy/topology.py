@@ -110,6 +110,12 @@ class Topology:
 
         return out
 
+    def get_password(self, node):
+        n = self.dotg.get_node(node)
+        b = n[0] if n else {}
+        password=b.get("password")
+        return qstrip(password) if password is not None else None
+
     def get_ports(self, node):
         ports = self.get_nodes(lambda name, _: name.startswith(f"{node}:"))
         return { p.removeprefix(f"{node}:") for p in ports }
