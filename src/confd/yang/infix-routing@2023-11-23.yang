@@ -68,6 +68,11 @@ module infix-routing {
       description "DHCP added route";
       base infix-source-protocol;
     }
+    identity zeroconf {
+      description "ZeroConf added route";
+      base infix-source-protocol;
+    }
+
     deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ietf-r:name" {
       description "Limitation: Only one routing instance per protocol.";
       deviate replace {
