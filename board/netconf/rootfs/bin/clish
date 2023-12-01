@@ -1,3 +1,4 @@
 #!/bin/bash -li
 # Source settings, aliases, and probe terminal size, then hand over to klish
+unset HISTFILE
 exec /usr/bin/klish
