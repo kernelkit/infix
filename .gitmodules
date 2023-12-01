@@ -2,8 +2,8 @@
 	path = buildroot
 	url = ../buildroot.git
 [submodule "9pm"]
-	path = 9pm
+	path = test/9pm
 	url = ../9pm
 [submodule "qeneth"]
-	path = qeneth
+	path = test/qeneth
 	url = ../qeneth.git

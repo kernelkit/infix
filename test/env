@@ -40,7 +40,7 @@ start_topology()
     cat <<EOF >"$envdir/bin/qeneth"
 #!/bin/sh
 set -x
-cd $envdir/qeneth && exec $ixdir/qeneth/qeneth "\$@"
+cd $senvdir/qeneth && exec $testdir/qeneth/qeneth "\$@"
 EOF
     chmod +x "$envdir/bin/qeneth"
 }
@@ -93,7 +93,7 @@ testdir=$(dirname $(readlink -f "$0"))
 ixdir=$(readlink -f "$testdir/..")
 logdir=$(readlink -f "$testdir/.log")
 envdir="$HOME/.infix-test-venv"
-qeneth="$ixdir/qeneth/qeneth"
+qeneth="$testdir/qeneth/qeneth"
 
 # Global options
 containerize=yes
