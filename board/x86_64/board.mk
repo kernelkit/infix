@@ -14,14 +14,14 @@ test-env-run    = $(call test-env,-C -t $(BINARIES_DIR)/qemu.dot,$(1))
 
 test-qeneth:
 	$(call test-env-qeneth,\
-		$(BR2_EXTERNAL_INFIX_PATH)/9pm/9pm.py \
+		$(BR2_EXTERNAL_INFIX_PATH)/test/9pm/9pm.py \
 			$(INFIX_TESTS))
 test-qeneth-sh:
 	$(call test-env-qeneth,/bin/sh)
 
 test-run: | ~/.infix-test-venv
 	$(call test-env-run,\
-		$(BR2_EXTERNAL_INFIX_PATH)/9pm/9pm.py \
+		$(BR2_EXTERNAL_INFIX_PATH)/test/9pm/9pm.py \
 			$(INFIX_TESTS))
 test-run-sh: | ~/.infix-test-venv
 	$(call test-env-run,/bin/sh)
