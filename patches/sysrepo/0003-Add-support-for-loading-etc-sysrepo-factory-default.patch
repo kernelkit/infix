@@ -1,7 +1,7 @@
-From bef358ba11b01c248b45fbe003d8d3ded0acb657 Mon Sep 17 00:00:00 2001
+From 2d3b9524b1448dd6a8ef83e4e101e509d2552dcc Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Fri, 16 Jun 2023 12:13:16 +0200
-Subject: [PATCH 2/2] Add support for loading /etc/sysrepo/factory-default
+Subject: [PATCH 3/4] Add support for loading /etc/sysrepo/factory-default
 Organization: Addiva Elektronik
 
 Follow-up to 3d07270 which adds support for compile-time defaults, this
@@ -16,10 +16,10 @@ Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
  3 files changed, 57 insertions(+), 6 deletions(-)
 
 diff --git a/src/common.c b/src/common.c
-index 84149063..ff9ba96e 100644
+index bef98f9a..bbb0c949 100644
 --- a/src/common.c
 +++ b/src/common.c
-@@ -1317,6 +1317,35 @@ sr_path_conn_lockfile(sr_cid_t cid, int creat, char **path)
+@@ -1306,6 +1306,35 @@ sr_path_conn_lockfile(sr_cid_t cid, int creat, char **path)
      return err_info;
  }
  
@@ -56,7 +56,7 @@ index 84149063..ff9ba96e 100644
  sr_remove_evpipes(void)
  {
 diff --git a/src/common.h b/src/common.h
-index d8448da4..37f7ede6 100644
+index ca5c08ca..e8d394ef 100644
 --- a/src/common.h
 +++ b/src/common.h
 @@ -479,6 +479,17 @@ sr_error_info_t *sr_path_yang_file(const char *mod_name, const char *mod_rev, ch

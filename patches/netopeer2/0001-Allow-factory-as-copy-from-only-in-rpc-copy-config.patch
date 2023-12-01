@@ -1,0 +1,27 @@
+From 1175168ef202c32ce07a674b0c14678c5c130274 Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Thu, 22 Jun 2023 10:24:57 +0200
+Subject: [PATCH] Allow 'factory' as copy-from (only) in rpc copy-config
+Organization: Addiva Elektronik
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ src/netconf.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/src/netconf.c b/src/netconf.c
+index 840debb..fa778d5 100644
+--- a/src/netconf.c
++++ b/src/netconf.c
+@@ -332,6 +332,8 @@ np2srv_rpc_copyconfig_cb(sr_session_ctx_t *session, uint32_t UNUSED(sub_id), con
+         ds = SR_DS_STARTUP;
+     } else if (!strcmp(nodeset->dnodes[0]->schema->name, "candidate")) {
+         ds = SR_DS_CANDIDATE;
++    } else if (!strcmp(nodeset->dnodes[0]->schema->name, "factory")) {
++        ds = SR_DS_FACTORY_DEFAULT; /* only allowed as copy-from */
+     } else {
+         assert(!strcmp(nodeset->dnodes[0]->schema->name, "url"));
+ #ifdef NP2SRV_URL_CAPAB
+-- 
+2.34.1
+

@@ -1,7 +1,8 @@
-From 5e919a20585392b4f2e0344bee2ac54d59c91ba4 Mon Sep 17 00:00:00 2001
+From 87224ddce4ed1a118b3efb24e0dc7167f8754c22 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Wed, 7 Jun 2023 15:19:13 +0200
-Subject: [PATCH] Refactor _sr_install_modules() to use ly_ctx_load_module()
+Subject: [PATCH 2/4] Refactor _sr_install_modules() to use
+ ly_ctx_load_module()
 Organization: Addiva Elektronik
 
 This fixes issues with sysrepo discarding searchpaths and thus not
@@ -16,10 +17,10 @@ Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
  3 files changed, 22 insertions(+), 15 deletions(-)
 
 diff --git a/src/common.c b/src/common.c
-index 08630446..84149063 100644
+index f8acfb81..bef98f9a 100644
 --- a/src/common.c
 +++ b/src/common.c
-@@ -3601,7 +3601,7 @@ sr_get_trim_predicates(const char *expr, char **expr2)
+@@ -3596,7 +3596,7 @@ sr_get_trim_predicates(const char *expr, char **expr2)
  }
  
  sr_error_info_t *
@@ -28,7 +29,7 @@ index 08630446..84149063 100644
  {
      sr_error_info_t *err_info = NULL;
      const char *ptr;
-@@ -3631,6 +3631,9 @@ sr_get_schema_name_format(const char *schema_path, char **module_name, LYS_INFOR
+@@ -3626,6 +3626,9 @@ sr_get_schema_name_format(const char *schema_path, char **module_name, LYS_INFOR
      if (ptr) {
          /* truncate revision */
          ((char *)ptr)[0] = '\0';
@@ -39,7 +40,7 @@ index 08630446..84149063 100644
  
      return NULL;
 diff --git a/src/common.h b/src/common.h
-index d955ba49..d8448da4 100644
+index 00cc909f..ca5c08ca 100644
 --- a/src/common.h
 +++ b/src/common.h
 @@ -958,10 +958,11 @@ sr_error_info_t *sr_get_trim_predicates(const char *expr, char **expr2);
@@ -56,10 +57,10 @@ index d955ba49..d8448da4 100644
  /**
   * @brief Get datastore string name.
 diff --git a/src/sysrepo.c b/src/sysrepo.c
-index 7271c273..2c0d61fd 100644
+index 1387ea9d..ee30c462 100644
 --- a/src/sysrepo.c
 +++ b/src/sysrepo.c
-@@ -1226,6 +1226,10 @@ sr_install_module_set_searchdirs(struct ly_ctx *new_ctx, const char *search_dirs
+@@ -1243,6 +1243,10 @@ sr_install_module_set_searchdirs(struct ly_ctx *new_ctx, const char *search_dirs
      sdirs_str = strdup(search_dirs);
      SR_CHECK_MEM_GOTO(!sdirs_str, err_info, cleanup);
  
@@ -70,7 +71,7 @@ index 7271c273..2c0d61fd 100644
      /* add each search dir */
      for (ptr = strtok_r(sdirs_str, ":", &ptr2); ptr; ptr = strtok_r(NULL, ":", &ptr2)) {
          if (!ly_ctx_set_searchdir(new_ctx, ptr)) {
-@@ -1304,15 +1308,15 @@ sr_install_modules_prepare_mod(struct ly_ctx *new_ctx, sr_conn_ctx_t *conn, sr_i
+@@ -1321,15 +1325,15 @@ sr_install_modules_prepare_mod(struct ly_ctx *new_ctx, sr_conn_ctx_t *conn, sr_i
  {
      sr_error_info_t *err_info = NULL;
      const struct lys_module *ly_mod;
@@ -88,7 +89,7 @@ index 7271c273..2c0d61fd 100644
          goto cleanup;
      }
  
-@@ -1345,14 +1349,9 @@ sr_install_modules_prepare_mod(struct ly_ctx *new_ctx, sr_conn_ctx_t *conn, sr_i
+@@ -1362,14 +1366,9 @@ sr_install_modules_prepare_mod(struct ly_ctx *new_ctx, sr_conn_ctx_t *conn, sr_i
          goto cleanup;
      }
  
@@ -106,7 +107,7 @@ index 7271c273..2c0d61fd 100644
          goto cleanup;
      }
  
-@@ -1375,8 +1374,12 @@ sr_install_modules_prepare_mod(struct ly_ctx *new_ctx, sr_conn_ctx_t *conn, sr_i
+@@ -1392,8 +1391,12 @@ sr_install_modules_prepare_mod(struct ly_ctx *new_ctx, sr_conn_ctx_t *conn, sr_i
      }
  
  cleanup:
@@ -121,7 +122,7 @@ index 7271c273..2c0d61fd 100644
      return err_info;
  }
  
-@@ -1834,7 +1837,7 @@ sr_update_modules_prepare(struct ly_ctx *new_ctx, sr_conn_ctx_t *conn, const cha
+@@ -1851,7 +1854,7 @@ sr_update_modules_prepare(struct ly_ctx *new_ctx, sr_conn_ctx_t *conn, const cha
      for (i = 0; i < schema_path_count; ++i) {
          /* learn about the module */
          upd_mods[i].schema_path = schema_paths[i];

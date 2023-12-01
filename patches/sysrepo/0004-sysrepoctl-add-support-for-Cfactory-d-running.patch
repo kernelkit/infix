@@ -1,18 +1,18 @@
-From 1d5954d87cdc8a180d917a1d807000e0b4a3a2de Mon Sep 17 00:00:00 2001
+From 7726017815243818f07936e4ff3bb979e9291f04 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Fri, 16 Jun 2023 16:17:27 +0200
-Subject: [PATCH] sysrepoctl: add support for -Cfactory -d running
+Subject: [PATCH 4/4] sysrepoctl: add support for -Cfactory -d running
 Organization: Addiva Elektronik
 
 Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
 ---
  src/common.h                 | 3 +++
- src/executables/sysrepocfg.c | 2 ++
+ src/executables/sysrepocfg.c | 2 +-
  src/sysrepo.c                | 2 +-
- 3 files changed, 6 insertions(+), 1 deletion(-)
+ 3 files changed, 5 insertions(+), 2 deletions(-)
 
 diff --git a/src/common.h b/src/common.h
-index 37f7ede6..a092728f 100644
+index e8d394ef..39fcce3a 100644
 --- a/src/common.h
 +++ b/src/common.h
 @@ -42,6 +42,9 @@ struct srplg_ntf_s;
@@ -26,23 +26,23 @@ index 37f7ede6..a092728f 100644
  #define SR_IS_STANDARD_DS(ds) (SR_IS_CONVENTIONAL_DS(ds) || (ds == SR_DS_OPERATIONAL))
  
 diff --git a/src/executables/sysrepocfg.c b/src/executables/sysrepocfg.c
-index 4067063c..839f093b 100644
+index 0c719e2c..65e56696 100644
 --- a/src/executables/sysrepocfg.c
 +++ b/src/executables/sysrepocfg.c
-@@ -647,6 +647,8 @@ arg_get_ds(const char *optarg, sr_datastore_t *ds)
+@@ -730,7 +730,7 @@ arg_get_ds(const char *optarg, sr_datastore_t *ds)
          *ds = SR_DS_CANDIDATE;
      } else if (!strcmp(optarg, "operational")) {
          *ds = SR_DS_OPERATIONAL;
-+    } else if (!strcmp(optarg, "factory")) {
-+        *ds = SR_DS_FACTORY_DEFAULT;
+-    } else if (!strcmp(optarg, "factory-default")) {
++    } else if (!strcmp(optarg, "factory-default") || !strcmp(optarg, "factory")) {
+         *ds = SR_DS_FACTORY_DEFAULT;
      } else {
          error_print(0, "Unknown datastore \"%s\"", optarg);
-         return -1;
 diff --git a/src/sysrepo.c b/src/sysrepo.c
-index 2c0d61fd..26c65851 100644
+index ee30c462..ca2a20b7 100644
 --- a/src/sysrepo.c
 +++ b/src/sysrepo.c
-@@ -4012,7 +4012,7 @@ sr_copy_config(sr_session_ctx_t *session, const char *module_name, sr_datastore_
+@@ -4037,7 +4037,7 @@ sr_copy_config(sr_session_ctx_t *session, const char *module_name, sr_datastore_
      struct sr_mod_info_s mod_info;
      const struct lys_module *ly_mod = NULL;
  
