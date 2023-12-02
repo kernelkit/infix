@@ -63,7 +63,7 @@ ok
 
 step "Formatting $blk"
 [ -b $blk ] || { echo "$blk is not a block device" >&2; err; }
-/lib/infix/prod/fdisk $blk || err
+/libexec/infix/prod/fdisk $blk || err
 sleep 1
 ok
 

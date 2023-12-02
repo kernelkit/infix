@@ -18,7 +18,7 @@ if [ ! -e "$SCRIPT_PATH/$json" ]; then
 fi
 
 cat "$SCRIPT_PATH/$json" | \
-    "$SCRIPT_PATH"/../../../board/netconf/rootfs/lib/infix/cli-pretty \
+    "$SCRIPT_PATH"/../../../board/netconf/rootfs/libexec/infix/cli-pretty \
     "$module" $*
 if [ $? -eq 0 ]; then
     echo "ok 1 - $json printed without crashing"

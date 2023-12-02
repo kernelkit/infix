@@ -12,11 +12,11 @@ debugfs	/sys/kernel/debug	debugfs		nofail			0	0
 cfgfs		/config		configfs	nofail,noauto		0	0
 
 # The chosen backing storage for the overlays placed on /cfg, /etc,
-# /home, /root, and /var, are determined dynamically by /lib/infix/mnt
+# /home, /root, and /var, are determined dynamically by /libexec/infix/mnt
 # depending on the available devices.
 mnttmp		/mnt/tmp	tmpfs		defaults			0	0
 LABEL=aux	/mnt/aux	auto		noatime,nodiratime,noauto	0	0
 LABEL=var	/mnt/var	auto		noatime,nodiratime,noauto	0	0
 LABEL=cfg	/mnt/cfg	auto		noatime,nodiratime,noauto	0	0
 hostfs		/mnt/host	9p		cache=none,msize=16384,noauto	0	0
-/lib/infix/mnt# /cfg		helper		none				0	0
+/libexec/infix/mnt# /cfg		helper		none				0	0
