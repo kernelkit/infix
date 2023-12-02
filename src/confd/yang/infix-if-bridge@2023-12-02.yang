@@ -18,17 +18,20 @@ submodule infix-if-bridge {
   contact      "kernelkit@googlegroups.com";
   description  "Linux bridge extension for ietf-interfaces.";
 
+  revision 2023-12-02 {
+    description "Extend bridge-port must expression to ensure a
+                 bridge cannot be a bridge-port to itself.";
+    reference "internal";
+  }
   revision 2023-11-08 {
     description "Dropped support for configuring bridge pvid.
                  Bridge ports need explicit VLAN assignment.";
     reference "internal";
   }
-
   revision 2023-08-21 {
     description "Minor, lint ordering and add missing description.";
     reference "internal";
   }
-
   revision 2023-05-31 {
     description "Initial revision.";
     reference "internal";
@@ -148,8 +151,8 @@ submodule infix-if-bridge {
 
         leaf bridge {
           type if:interface-ref;
-          must "deref(.)/../bridge" {
-            error-message "Must refer to a bridge interface.";
+          must "deref(.)/../bridge and not(. = ../../if:name)" {
+            error-message "Must refer to a bridge interface (and not itself).";
           }
           mandatory true;
           description "Bridge interface to which this interface is attached.";
