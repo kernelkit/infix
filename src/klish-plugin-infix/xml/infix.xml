@@ -262,9 +262,9 @@
       sysrepocfg -d operational -X -f json -x /ietf-system:system-state/infix-system:software | \
               jq -r '.[][].slot |= sort_by(.name)' > "$tmp"
       if [ -n "$KLISH_PARAM_name" ]; then
-          cat "$tmp" | /lib/infix/cli-pretty "infix-system" -n "$KLISH_PARAM_name"
+          cat "$tmp" | /libexec/infix/cli-pretty "infix-system" -n "$KLISH_PARAM_name"
       else
-          cat "$tmp" | /lib/infix/cli-pretty "infix-system"
+          cat "$tmp" | /libexec/infix/cli-pretty "infix-system"
       fi
       rm "$tmp"
     </ACTION>
@@ -273,7 +273,7 @@
   <COMMAND name="routes" help="Show routing table">
     <ACTION sym="script">
       sysrepocfg -f json -X -d operational -m ietf-routing | \
-      /lib/infix/cli-pretty "ietf-routing"
+      /libexec/infix/cli-pretty "ietf-routing"
     </ACTION>
   </COMMAND>
   <!-- https://www.cisco.com/c/en/us/td/docs/wireless/access_point/mob_exp/83/cmd-ref/me_cr_book/me_ports_and_interfaces_cli.html -->
@@ -288,10 +288,10 @@
       if [ -n "$KLISH_PARAM_name" ]; then
         sysrepocfg -f json -X -d operational -x \
           "/ietf-interfaces:interfaces/interface[name='$KLISH_PARAM_name']" | \
-          /lib/infix/cli-pretty "ietf-interfaces" -n "$KLISH_PARAM_name"
+          /libexec/infix/cli-pretty "ietf-interfaces" -n "$KLISH_PARAM_name"
       else
         sysrepocfg -f json -X -d operational -m ietf-interfaces | \
-          /lib/infix/cli-pretty "ietf-interfaces"
+          /libexec/infix/cli-pretty "ietf-interfaces"
       fi
     </ACTION>
   </COMMAND>
