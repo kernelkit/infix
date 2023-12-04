@@ -327,6 +327,35 @@ possible to specify use of a random identifier ([ietf-ip][ietf-ip-yang] YANG and
 Both the link-local address (fe80::) and the global address (2001:)
 have changed type to *random*. 
 
+### IPv4 forwarding
+To be able to route (static or dynamic) on the interface it is
+required to enable forwarding. This setting controlls if packets
+received on this interface can be forwarded.
+   ```
+   admin@example:/config/> edit interface eth0
+   admin@example:/config/interface/eth0/> set ipv4 forwarding
+   admin@example:/config/interface/eth0/> leave
+   admin@example:/>
+   ```
+
+### IPv6 forwarding
+This flag behaves totally different than for IPv4. For IPv6 the
+ability to route between interfaces is always enabled, instead this
+flag controls if the interface will be in host/router mode.
+
+| **Feature**                               | **Forward enabled** | **Forward disabled** |
+|:------------------------------------------|:--------------------|:---------------------|
+| IsRouter set in Neighbour Advertisements. | Yes                 | No                   |
+| Transmit Router Solicitations.            | No                  | Yes                  |
+| Router Advertisements are ignored         | No                  | Yes                  |
+| Accept Redirects                          | No                  | Yes                  |
+
+   ```
+   admin@example:/config/> edit interface eth0
+   admin@example:/config/interface/eth0/> set ipv6 forwarding
+   admin@example:/config/interface/eth0/> leave
+   admin@example:/>
+   ```
 ## Routing support
 
 | **Yang Model**            | **Description**                                           |
@@ -334,7 +363,9 @@ have changed type to *random*.
 | ietf-routing              | Base routing model, required for all other routing models |
 | ietf-ipv4-unicast-routing | Static IPv4 unicast routing                               |
 
-### Static routes
+
+### IPv4 Static routes
+Remember to enable [IPv4 forwarding](#IPv4-forwarding) for the interfaces.
 
     admin@example:/> configure
     admin@example:/config/> edit routing control-plane-protocol static name default
@@ -345,16 +376,45 @@ have changed type to *random*.
 > **Note:** The only name allowed for a control-plane-protocol is currently
 > *default*.  Meaning, you can only have one instance per routing protocol.
 
-### View IPv4 routing table
+
+### IPv6 Static routes
+
+    admin@example:/> configure
+    admin@example:/config/> edit routing control-plane-protocol static name default
+    admin@example:/config/routing/control-plane-protocol/static/name/default/> set ipv6 route 2001:db8:3c4d:200::/64 next-hop next-hop-address 2001:db8:3c4d:1::1
+    admin@example:/config/routing/control-plane-protocol/static/name/default/> leave
+    admin@example:/>
+
+> **Note:** The only name allowed for a control-plane-protocol is currently
+> *default*.  Meaning, you can only have one instance per routing protocol.
+
+### View routing table
 
 The routing table can be viewed from the operational datastore over
 NETCONF or using the CLI:
 
-    admin@example:/> show routes
+#### IPv4 routing table
+
+    admin@example:/> show routes ipv4
     PREFIX                        NEXT-HOP                      METRIC    PROTOCOL
     192.168.1.0/24                e0                                      kernel
     192.168.200.0/24              192.168.1.1                   20        static
+    admin@example:/>
 
+#### IPv6 routing table
+
+    admin@example:/> show routes ipv6
+    PREFIX                        NEXT-HOP                      METRIC    PROTOCOL
+    2001:db8:3c4d:50::/64         eth4                          256       kernel
+    fe80::/64                     eth5                          256       kernel
+    fe80::/64                     eth3                          256       kernel
+    fe80::/64                     eth1                          256       kernel
+    fe80::/64                     eth0                          256       kernel
+    fe80::/64                     eth2                          256       kernel
+    fe80::/64                     eth4                          256       kernel
+    admin@example:/>
+
+#### Source protocol
 The source protocol describes the origin of the route.
 
 | **Protocol** | **Description**                                                      |
