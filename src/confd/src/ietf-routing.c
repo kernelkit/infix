@@ -141,7 +141,7 @@ static int change_control_plane_protocols(sr_session_ctx_t *session, uint32_t su
 			const char *type;
 
 			type = lydx_get_cattr(cplane, "type");
-			if (!strcmp(type, "ietf-routing:static")) {
+			if (!strcmp(type, "static")) {
 				staticd_enabled = parse_static_routes(session, lydx_get_child(cplane, "static-routes"), fp);
 			}
 		}
