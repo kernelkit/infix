@@ -1,7 +1,7 @@
 name                : e4
 index               : 6
 mtu                 : 1500
-operational status  : up
+operational status  : down
 auto-negotiation    : on
 duplex              : full
 speed               : 10000
