@@ -250,6 +250,15 @@
     </SWITCH>
   </COMMAND>
 
+  <COMMAND name="ntp" help="Show NTP (client) status">
+    <ACTION sym="script">ntp tracking</ACTION>
+    <SWITCH name="optional" min="0">
+      <COMMAND name="sources" help="Show NTP sources">
+        <ACTION sym="script">ntp sources</ACTION>
+      </COMMAND>
+    </SWITCH>
+  </COMMAND>
+
   <COMMAND name="software" help="Show software info">
     <SWITCH name="optional" min="0" max="1">
       <COMMAND name="name" help="Show detailed info about a partition">
