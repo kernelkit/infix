@@ -1,0 +1,19 @@
+#!/bin/sh
+# Helper script to chronyc, checks if daemon is running
+
+if ! chronyc serverstats >/dev/null; then
+   echo "NTP client not enabled."
+   exit 1
+fi
+
+case $1 in
+    tracking)
+	chronyc tracking
+	;;
+    sources)
+	chronyc sources -v
+	;;
+    *)
+	echo "Unknown NTP command."
+	;;
+esac
