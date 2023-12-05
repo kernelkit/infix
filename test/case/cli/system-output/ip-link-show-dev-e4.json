@@ -10,7 +10,7 @@
     ],
     "mtu": 1500,
     "qdisc": "pfifo_fast",
-    "operstate": "UP",
+    "operstate": "DOWN",
     "linkmode": "DEFAULT",
     "group": "default",
     "txqlen": 1000,

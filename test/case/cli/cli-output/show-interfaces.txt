@@ -4,4 +4,4 @@ br0             ethernet   [32mUP          [39m02:00:00:00:00:00
 └ e1            ethernet   [32mUP          [39m02:00:00:00:00:01                        
 e2              ethernet   [32mUP          [39m02:00:00:00:00:02                        
 e3              ethernet   [32mUP          [39m02:00:00:00:00:03                        
-e4              ethernet   [32mUP          [39m02:00:00:00:00:04                        
+e4              ethernet   [31mDOWN        [39m02:00:00:00:00:04                        
