@@ -653,6 +653,193 @@ skip_mtu:
 	return err;
 }
 
+static int netdag_write_ethtool(struct dagger *net, const char *ifname,
+				const char *fmt, ...)
+{
+	va_list ap;
+	FILE *fp;
+
+	fp = dagger_fopen_next(net, "init", ifname, 65, "ethtool.sh");
+	if (!fp)
+		return -EIO;
+
+	va_start(ap, fmt);
+	vfprintf(fp, fmt, ap);
+	va_end(ap);
+
+	fclose(fp);
+
+	return 0;
+}
+
+static const char *lyd_get_autoneg(struct lyd_node *cif)
+{
+	struct lydx_diff nd;
+	struct lyd_node *node;
+
+	node = lydx_get_descendant(lyd_child(cif), "ethernet", "auto-negotiation", "enable", NULL);
+	if (node && lydx_get_diff(node, &nd) && nd.new)
+		return (strcmp(nd.val, "true") == 0) ? "on" : "off";
+
+	return NULL;
+}
+
+static const char *lyd_get_duplex(struct lyd_node *cif)
+{
+	struct lydx_diff nd;
+	struct lyd_node *node;
+
+	node = lydx_get_descendant(lyd_child(cif), "ethernet", "duplex", NULL);
+	if (node && lydx_get_diff(node, &nd) && nd.new)
+		return nd.val;
+
+	return NULL;
+}
+
+static int lyd_get_speed(struct lyd_node *cif)
+{
+	struct lydx_diff nd;
+	struct lyd_node *n;
+
+	n = lydx_get_descendant(lyd_child(cif), "ethernet", "speed", NULL);
+	if (n && lydx_get_diff(n, &nd) && nd.new)
+		return (int)(atof(nd.val) * 1000);
+
+	return 0;
+}
+
+static int lyd_speed_has_changed(struct lyd_node *dif)
+{
+	struct lydx_diff nd;
+	struct lyd_node *n;
+
+	n = lydx_get_descendant(lyd_child(dif), "ethernet", "speed", NULL);
+	return (n && lydx_get_diff(n, &nd));
+}
+
+static int lyd_duplex_has_changed(struct lyd_node *dif)
+{
+	struct lydx_diff nd;
+	struct lyd_node *n;
+
+	n = lydx_get_descendant(lyd_child(dif), "ethernet", "duplex", NULL);
+	return (n && lydx_get_diff(n, &nd));
+}
+
+static int lyd_autoneg_has_changed(struct lyd_node *dif)
+{
+	struct lydx_diff nd;
+	struct lyd_node *n;
+
+	n = lydx_get_descendant(lyd_child(dif), "ethernet", "auto-negotiation", "enable", NULL);
+	return (n && lydx_get_diff(n, &nd));
+}
+
+static int lyd_autoneg_is_on(struct lyd_node *cif)
+{
+	const char *val;
+
+	val = lyd_get_autoneg(cif);
+	if (!val) {
+		/* TODO Change this to error when auto-neg is true in factory config */
+		return 1;
+	}
+	return (strcmp(val, "on") == 0);
+}
+
+static int netdag_set_autoneg_off(struct dagger *net, const char *ifname,
+				  const char *duplex, int speed)
+{
+	if (!speed || !duplex) {
+		sr_session_set_error_message(net->session,
+					     "Autoneg off requires explicit speed and duplex");
+		return SR_ERR_INVAL_ARG;
+	}
+
+	return netdag_write_ethtool(net, ifname,
+				    "ethtool -s %s autoneg off duplex %s speed %d\n",
+				    ifname, duplex, speed);
+}
+
+static int netdag_set_autoneg_on(struct dagger *net, const char *ifname)
+{
+	return netdag_write_ethtool(net, ifname, "ethtool -s %s autoneg on\n", ifname);
+}
+
+static int netdag_set_autoneg(struct dagger *net, const char *ifname, struct lyd_node *cif)
+{
+	const char *autoneg = lyd_get_autoneg(cif);
+	const char *duplex = lyd_get_duplex(cif);
+	int speed = lyd_get_speed(cif);
+
+	if (!autoneg)
+		return SR_ERR_INVAL_ARG;
+
+	if (strcmp(autoneg, "off") == 0)
+		return netdag_set_autoneg_off(net, ifname, duplex, speed);
+
+	return netdag_set_autoneg_on(net, ifname);
+}
+
+static int netdag_set_speed(struct dagger *net, const char *ifname, struct lyd_node *cif)
+{
+	int speed = lyd_get_speed(cif);
+
+	if (!speed && !lyd_autoneg_is_on(cif)) {
+		sr_session_set_error_message(net->session,
+					     "Can't remove speed when autoneg is disabled");
+		return SR_ERR_INVAL_ARG;
+	}
+
+	return netdag_write_ethtool(net, ifname, "ethtool -s %s speed %d\n",
+				    ifname, speed);
+}
+
+static int netdag_set_duplex(struct dagger *net, const char *ifname, struct lyd_node *cif)
+{
+	const char *duplex = lyd_get_duplex(cif);
+
+	/**
+	 * Duplex has a default value, no need to check if autoneg is off and
+	 * the duplex is removed, which would be a problem otherwise.
+	 */
+
+	return netdag_write_ethtool(net, ifname, "ethtool -s %s duplex %s\n",
+				    ifname, duplex);
+}
+
+static int netdag_gen_ethtool(struct dagger *net, struct lyd_node *cif, struct lyd_node *dif)
+{
+	const char *ifname = lydx_get_cattr(cif, "name");
+	int err;
+
+	if (!strcmp(ifname, "lo"))
+		return SR_ERR_OK;
+
+	/**
+	 * Autoneg on means duplex and speed doesn't matter.
+	 * Autoneg off requires and set both speed and duplex.
+	 *
+	 * Either way, if autoneg has changed duplex and speed are handled.
+	 */
+	if (lyd_autoneg_has_changed(dif))
+		return netdag_set_autoneg(net, ifname, cif);
+
+	if (lyd_duplex_has_changed(dif)) {
+		err = netdag_set_duplex(net, ifname, cif);
+		if (err)
+			return err;
+	}
+
+	if (lyd_speed_has_changed(dif)) {
+		err = netdag_set_speed(net, ifname, cif);
+		if (err)
+			return err;
+	}
+
+	return SR_ERR_OK;
+}
+
 static int bridge_diff_vlan_port(struct dagger *net, FILE *br, const char *brname, int vid,
 				       const char *brport, int tagged, enum lydx_op op)
 {
@@ -1139,6 +1326,8 @@ static sr_error_t netdag_gen_iface(struct dagger *net,
 		fprintf(ip, "link set dev %s up state up\n", ifname);
 
 	err = err ? : netdag_gen_sysctl(net, cif, dif);
+
+	err = err ? : netdag_gen_ethtool(net, cif, dif);
 
 err_close_ip:
 	fclose(ip);
