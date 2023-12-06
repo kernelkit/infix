@@ -1,0 +1,1 @@
+CHRONY_ARGS="-f /etc/chrony/chrony.conf"

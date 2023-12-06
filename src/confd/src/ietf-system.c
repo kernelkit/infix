@@ -361,19 +361,14 @@ static int change_clock(sr_session_ctx_t *session, uint32_t sub_id, const char *
 	return SR_ERR_OK;
 }
 
-#define CHRONY_CONF "/etc/chrony.conf"
-#define CHRONY_PREV CHRONY_CONF "-"
-#define CHRONY_NEXT CHRONY_CONF "+"
-
 static int change_ntp(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
 	const char *xpath, sr_event_t event, unsigned request_id, void *priv)
 {
-	const char *fn = CHRONY_NEXT;
-	int valid = -1;
+	sr_change_iter_t *iter = NULL;
+	int rc, err = SR_ERR_OK;
+	int changes = 0;
 	sr_val_t *val;
 	size_t cnt;
-	FILE *fp;
-	int rc;
 
 	switch (event) {
 	case SR_EV_ENABLED:	/* first time, on register. */
@@ -382,26 +377,20 @@ static int change_ntp(sr_session_ctx_t *session, uint32_t sub_id, const char *mo
 		break;
 
 	case SR_EV_ABORT:	/* User abort, or other plugin failed */
-		(void)remove(CHRONY_NEXT);
 		return SR_ERR_OK;
 
 	case SR_EV_DONE:
-		/* Check if passed validation in previous event */
-		if (access(CHRONY_NEXT, F_OK))
-			return SR_ERR_OK;
-
-		(void)remove(CHRONY_PREV);
-		(void)rename(CHRONY_CONF, CHRONY_PREV);
-		(void)rename(CHRONY_NEXT, CHRONY_CONF);
 		if (!srx_enabled(session, XPATH_BASE_"/ntp/enabled")) {
+			systemf("rm -rf /etc/chrony/conf.d/* /etc/chrony/sources.d/*");
 			systemf("initctl -nbq disable chronyd");
 			return SR_ERR_OK;
 		}
-		/*
-		 * If chrony is alrady enabled we tell Finit it's been
-		 * modified , so Finit restarts it, otherwise enable it.
-		 */
-		systemf("initctl -nbq touch chronyd");
+
+		if (fexist("/run/chrony/.changes")) {
+			systemf("chronyc reload sources >/dev/null");
+			erase("/run/chrony/.changes");
+		}
+
 		systemf("initctl -nbq enable chronyd");
 		return SR_ERR_OK;
 
@@ -409,30 +398,57 @@ static int change_ntp(sr_session_ctx_t *session, uint32_t sub_id, const char *mo
 		return SR_ERR_OK;
 	}
 
-	rc = sr_get_items(session, XPATH_BASE_"/ntp/server", 0, 0, &val, &cnt);
-	if (rc) {
-		(void)remove(CHRONY_NEXT);
-		return rc;
+	/*
+	 * First remove .sources files for all deleted servers
+	 */
+	sr_get_changes_iter(session, XPATH_BASE_"/ntp/server[name=*]/name", &iter);
+	if (iter) {
+		sr_change_oper_t op;
+		sr_val_t *old, *new;
+
+		while (!sr_get_change_next(session, iter, &op, &old, &new)) {
+			char *name;
+
+			if (op != SR_OP_DELETED)
+				continue;
+
+			name = sr_val_to_str(old);
+			DEBUG("Removing NTP server %s\n", name);
+			erasef("/etc/chrony/sources.d/%s.sources", name);
+			free(name);
+			changes++;
+		}
+
+		sr_free_change_iter(iter);
 	}
 
-	fp = fopen(fn, "w");
-	if (!fp) {
-		ERROR("failed updating %s: %s", fn, strerror(errno));
-		sr_free_values(val, cnt);
-		return SR_ERR_SYS;
+	/*
+	 * Then add or recreate any new or modified sources
+	 */
+	rc = sr_get_items(session, XPATH_BASE_"/ntp/server", 0, 0, &val, &cnt);
+	if (rc) {
+		return SR_ERR_OK;
 	}
 
 	for (size_t i = 0; i < cnt; i++) {
 		const char *xpath = val[i].xpath;
-		char *type, *ptr;
+		char *type, *ptr, *name;
 		int server = 0;
+		FILE *fp;
 
-		/*
-		 * Handle empty startup-config on SR_EV_ENABLED,
-		 * prevents subscribe failure due to false invalid.
-		 */
-		if (i == 0)
-			valid = 0;
+		name = srx_get_str(session, "%s/name", xpath);
+		if (!name) {
+			ERROR("no name for xpath %s", xpath);
+			continue;
+		}
+
+		fp = fopenf("w", "/etc/chrony/sources.d/%s.sources", name);
+		if (!fp) {
+			ERROR("failed saving /etc/chrony/sources.d/%s.sources: %s",
+			      name, strerror(errno));
+			free(name);
+			continue;
+		}
 
 		/* Get /ietf-system:system/ntp/server[name='foo'] */
 		ptr = srx_get_str(session, "%s/udp/address", xpath);
@@ -456,26 +472,17 @@ static int change_ntp(sr_session_ctx_t *session, uint32_t sub_id, const char *mo
 				fprintf(fp, " iburst");
 			if (srx_enabled(session, "%s/prefer", xpath) > 0)
 				fprintf(fp, " prefer");
-
-			fprintf(fp, "\n");
-			valid++;
 		}
+		fprintf(fp, "\n");
+		fclose(fp);
+		changes++;
 	}
 	sr_free_values(val, cnt);
 
-	fprintf(fp, "driftfile /var/lib/chrony/drift\n");
-	fprintf(fp, "makestep 1.0 3\n");
-	fprintf(fp, "maxupdateskew 100.0\n");
-	fprintf(fp, "dumpdir /var/lib/chrony\n");
-	fprintf(fp, "rtcfile /var/lib/chrony/rtc\n");
-	fclose(fp);
+	if (changes)
+		touch("/run/chrony/.changes");
 
-	if (!valid) {
-		(void)remove(fn);
-		return SR_ERR_VALIDATION_FAILED;
-	}
-
-	return SR_ERR_OK;
+	return err;
 }
 
 #define RESOLV_CONF "/etc/resolv.conf.head"
