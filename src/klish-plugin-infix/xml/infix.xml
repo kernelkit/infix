@@ -296,7 +296,7 @@
           KLISH_PARAM_name=ipv4
         fi
       fi
-      sysrepocfg -f json -X -d operational -m ietf-routing | \
+      sysrepocfg -f json -X -d operational -x "/ietf-routing:routing/ribs" | \
       /libexec/infix/cli-pretty "ietf-routing"  -n "$KLISH_PARAM_name"
     </ACTION>
   </COMMAND>

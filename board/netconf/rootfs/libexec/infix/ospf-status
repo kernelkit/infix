@@ -1,0 +1,13 @@
+#!/bin/sh
+# This script is used to transform the output from the show ip ospf commands and order
+# them to match the ietf-ospf YANG model. For example, interfaces is ordered under
+# area but FRR has areas in interfaces.
+#
+# This makes the parsing for the operational parts of YANG model more easy
+#
+
+tempfile=`mktemp`
+vtysh -c "show ip ospf interface json" | jq '[.interfaces as $interfaces | $interfaces | to_entries | group_by(.value.area)[] | {(.[0].value.area): [.[] | {name: .key} + .value] }] | reduce .[] as $item ({}; . + $item)' > $tempfile
+vtysh -c "show ip ospf json" | jq  --slurpfile iface $tempfile '.areas |= with_entries(.value += {interfaces: (.key as $area | reduce $iface[] as $iface (null; if $iface[$area] then . + $iface[$area] else . end) | select(. != null))})'
+
+rm -f $tempfile

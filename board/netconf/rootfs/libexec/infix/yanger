@@ -167,6 +167,31 @@ def add_ipv6_route(routes):
     data = run_json_cmd(cmd)
     get_routes(routes, "ipv6", data)
 
+def add_ospf_area(ospf):
+    cmd = ['/libexec/infix/ospf-status']
+    data = run_json_cmd(cmd)
+    areas=[]
+    for area_id,values in data["areas"].items():
+        area={}
+        area["ietf-ospf:area-id"] = area_id
+        area["ietf-ospf:interfaces"] = {}
+        interfaces=[]
+        for iface in values["interfaces"]:
+            interface={}
+            interface["name"]=iface["name"]
+            if(iface.get("drId")):
+               interface["dr-router-id"]=iface["drId"]
+            if(iface.get("drAddress")):
+               interface["dr-ip-addr"]=iface["drAddress"]
+            if(iface.get("bdrId")):
+               interface["bdr-router-id"]=iface["bdrId"]
+            if(iface.get("bdrAddress")):
+               interface["bdr-ip-addr"]=iface["bdrAddress"]
+            interfaces.append(interface)
+        area["ietf-ospf:interfaces"]["ietf-ospf:interface"] = interfaces
+        areas.append(area)
+    insert(ospf, "area", areas)
+
 def add_ip_link(ifname, iface_out, test):
     if test:
         cmd = ['cat', f"{test}/ip-link-show-dev-{ifname}.json"]
@@ -435,6 +460,24 @@ if __name__ == "__main__":
         ipv6routes = yang_data['ietf-routing:routing']['ribs']['rib'][1]
         add_ipv4_route(ipv4routes)
         add_ipv6_route(ipv6routes)
+    elif (args.model == 'ietf-ospf'):
+        yang_data= {
+            "ietf-routing:routing": {
+                "control-plane-protocols": {
+                    "control-plane-protocol": [
+                    {
+                        "type": "ietf-ospf:ospfv2",
+                        "name": "default",
+                        "ietf-ospf:ospf": {
+                            "ietf-ospf:areas":
+                            {
+                            }
+                        }
+                    }]
+                }
+            }
+        }
+        add_ospf_area(yang_data['ietf-routing:routing']['control-plane-protocols']['control-plane-protocol'][0]["ietf-ospf:ospf"]["ietf-ospf:areas"])
     else:
         print(f"Unsupported model {args.model}", file=sys.stderr)
         sys.exit(1)
