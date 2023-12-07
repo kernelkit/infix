@@ -7,11 +7,13 @@ import socket
 import sys
 import time
 import uuid   # For _ncc_get_data() extension
+import os
 
 import libyang
 import lxml
 import netconf_client.connect
 import netconf_client.ncclient
+
 from netconf_client.error import RpcError
 
 modinfo_fields = ("identifier", "version", "format", "namespace")
@@ -53,6 +55,12 @@ class NccGetDataReply:
         self.data_xml = lxml.etree.tostring(self.data_ele)
         self.raw_reply = raw
 
+class NccGetSchemaReply:
+    def __init__(self, raw):
+        self.ele = lxml.etree.fromstring(raw.xml.decode())
+        self.ele = self.ele.find("{urn:ietf:params:xml:ns:yang:ietf-netconf-monitoring}data")
+        self.schema = self.ele.text
+
 @dataclass
 class Location:
     host: str
@@ -68,10 +76,13 @@ class Device(object):
 
         self.mapping = mapping
         self.ly = libyang.Context(yangdir)
-
         self._ncc_init(location)
+        self.modules = {}
+        self._ly_bootstrap(yangdir)
+
+        del self.ly
+        self.ly = libyang.Context(yangdir)
         self._ly_init(yangdir)
-        # self.update_schema()
         self.ncc.dispatch('<factory-default xmlns="urn:infix:factory-default:ns:yang:1.0"/>')
 
     def _ncc_init(self, location):
@@ -87,6 +98,19 @@ class Device(object):
                                                      username=location.username,
                                                      password=location.password)
         self.ncc = Manager(session)
+
+    def _ly_bootstrap(self,yangdir):
+        ly = libyang.Context(yangdir)
+        self.modules["ietf-netconf-monitoring"] = { "name": "ietf-netconf-monitoring" }
+
+        for v in self.modules.values():
+            mod = self.ly.load_module(v["name"])
+            mod.feature_enable_all()
+        schemas = self.get_schemas_list()
+        for schema in schemas:
+            if(os.path.exists(yangdir + "/" + schema['filename']) == False):
+                self.get_schema(schema, yangdir)
+                print(f"Downloading missing model {schema['identifier']}")
 
     def _ly_init(self, yangdir):
         self.ly = libyang.Context(yangdir)
@@ -249,3 +273,34 @@ class Device(object):
         mod = self.ly.get_module(modname)
         lyd = mod.parse_data_dict(action, rpc=True)
         return self.call_action(lyd.print_mem("xml", with_siblings=True, pretty=False))
+
+    def get_schemas_list(self):
+        schemas=[]
+
+        data= self.get_dict("/netconf-state")
+        for d in data["netconf-state"]["schemas"]["schema"]:
+            schema={}
+            schema["identifier"] = d['identifier']
+            schema["format"] = d["format"]
+            if d['version']:
+                schema["version"] = d['version']
+                schema["filename"]= f"{d['identifier']}@{d['version']}.yang"
+            else:
+                schema["filename"] = f"{d['identifier']}.yang"
+            schemas.append(schema)
+        return schemas
+
+    def get_schema(self, schema, outdir):
+        query = {
+            "get-schema": {
+                "identifier": schema['identifier'],
+                "version": schema['version'],
+                "format": "yang"
+            }
+        }
+        rpc_reply = self.call_dict("ietf-netconf-monitoring",  query)
+        data = NccGetSchemaReply(rpc_reply)
+
+        with open(outdir+"/"+schema["filename"], "w") as f:
+            f.write(data.schema)
+
