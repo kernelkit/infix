@@ -388,7 +388,8 @@ flag controls if the interface will be in host/router mode.
 |:--------------------------|:----------------------------------------------------------|
 | ietf-routing              | Base routing model, required for all other routing models |
 | ietf-ipv4-unicast-routing | Static IPv4 unicast routing                               |
-
+| ietf-ospf                 | OSPF routing                                              |
+| infix-routing             | Infix deviations                                          |
 
 ### IPv4 Static routes
 Remember to enable [IPv4 forwarding](#IPv4-forwarding) for the interfaces.
@@ -426,6 +427,18 @@ NETCONF or using the CLI:
     192.168.1.0/24                e0                                  kernel
     192.168.200.0/24              192.168.1.1                     20  static
     admin@example:/>
+
+#### OSPFv2 Routing
+Remember to enable [IPv4 forwarding](#IPv4-forwarding) for the
+interfaces you want to run OSPFv2.
+
+    admin@example:/config/> edit routing control-plane-protocol ietf-ospf:ospfv2 name default
+    admin@example:/config/routing/control-plane-protocol/ietf-ospf:ospfv2/name/default/> set ospf area 0.0.0.0 interface e0 enabled true
+    admin@example:/config/routing/control-plane-protocol/static/name/default/> leave
+    admin@example:/>
+
+> **Note:** The only name allowed for a control-plane-protocol is currently
+> *default*.  Meaning, you can only have one instance per routing protocol.
 
 #### IPv6 routing table
 

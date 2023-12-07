@@ -9,14 +9,21 @@ module infix-routing {
     import ietf-ipv4-unicast-routing {
       prefix v4ur;
     }
+
     import ietf-ipv6-unicast-routing {
       prefix v6ur;
     }
-    /*
     import ietf-ospf {
       prefix ospf;
     }
-    */
+
+    import ietf-interfaces {
+      prefix if;
+    }
+
+    import ietf-routing-types {
+      prefix rt-types;
+    }
     revision 2023-11-23 {
       description "Limit to one instance per control plane protocol,
 	and change to infix (iproute2) specific source protocol names
@@ -72,6 +79,24 @@ module infix-routing {
       description "ZeroConf added route";
       base infix-source-protocol;
     }
+    identity ra {
+      description "RA IPv6 route";
+      base infix-source-protocol;
+    }
+
+    typedef infix-distribute-protocol {
+      type enumeration {
+	enum ospf {
+	  description "Redistribute Ospf";
+	}
+	enum static {
+	  description "Redistribute Static routes";
+	}
+	enum connected {
+	  description "Redistribute Connected routes";
+	}
+      }
+    }
 
     deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ietf-r:name" {
       description "Limitation: Only one routing instance per protocol.";
@@ -106,7 +131,29 @@ module infix-routing {
     }
 
     /* OSPF */
-    /*
+
+    augment "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf" {
+      description "ietf-ospf does not contain redistribution
+	7. How should route redistribution be configured? I see ietf-rip.yang has a separate
+        container for that purpose, but ietf-ospf.yang (and other IGP modules) don't do the
+        same. I also noticed the BGP model is using definition from ietf-routing-policy.yang.
+
+        Different vendors handle redistribution in different ways. This could be added with
+        an augmentation if there were agreement.
+
+        https://marc.info/?l=ms-ospf&m=166258444409552&w=2";
+	container redistribute {
+	  list redistribute {
+	    key "protocol";
+	    description "Redistribute protocols into OSPF";
+	    leaf protocol {
+	      type infix-distribute-protocol;
+	      description "Set protocol to redistribute";
+	    }
+	  }
+	}
+    }
+
     deviation "/ietf-r:routing/ietf-r:ribs/ietf-r:rib/ietf-r:routes/ietf-r:route/ospf:metric" {
       deviate not-supported;
     }
@@ -114,6 +161,9 @@ module infix-routing {
       deviate not-supported;
     }
     deviation "/ietf-r:routing/ietf-r:ribs/ietf-r:rib/ietf-r:routes/ietf-r:route/ospf:route-type" {
+      deviate not-supported;
+    }
+    deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf/ospf:enabled" {
       deviate not-supported;
     }
 
@@ -157,19 +207,20 @@ module infix-routing {
       deviate not-supported;
     }
 
-    */
     /* OSPF Area */
-    /*
     deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf/ospf:areas/ospf:area/ospf:virtual-links" {
       deviate not-supported;
     }
     deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf/ospf:areas/ospf:area/ospf:sham-links" {
       deviate not-supported;
     }
-
-    deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf/ospf:areas/ospf:area/ospf:interfaces" {
+    deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf/ospf:areas/ospf:area/ospf:ranges" {
       deviate not-supported;
     }
+    deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf/ospf:areas/ospf:area/ospf:summary" {
+      deviate not-supported;
+    }
+
     deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf/ospf:areas/ospf:area/ospf:database" {
       deviate not-supported;
     }
@@ -180,10 +231,140 @@ module infix-routing {
     deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf/ospf:areas/ospf:area/ospf:statistics" {
       deviate not-supported;
     }
-    */
 
-    /* OSPF database */
+
+    /* OSPF Area Interface */
+    deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf/ospf:areas/ospf:area/ospf:interfaces/ospf:interface/ospf:multi-areas"    {
+      deviate not-supported;
+    }
+    deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf/ospf:areas/ospf:area/ospf:interfaces/ospf:interface/ospf:node-flag"    {
+      deviate not-supported;
+    }
+    deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf/ospf:areas/ospf:area/ospf:interfaces/ospf:interface/ospf:bfd"
+    {
+      deviate not-supported;
+    }
+    deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf/ospf:areas/ospf:area/ospf:interfaces/ospf:interface/ospf:interface-type"
+    {
+      deviate not-supported;
+    }
+    deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf/ospf:areas/ospf:area/ospf:interfaces/ospf:interface/ospf:priority"
+    {
+      deviate not-supported;
+    }
+    deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf/ospf:areas/ospf:area/ospf:interfaces/ospf:interface/ospf:fast-reroute"
+    {
+      deviate not-supported;
+    }
+    deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf/ospf:areas/ospf:area/ospf:interfaces/ospf:interface/ospf:authentication"
+    {
+      deviate not-supported;
+    }
+    deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf/ospf:areas/ospf:area/ospf:interfaces/ospf:interface/ospf:statistics"
+    {
+      deviate not-supported;
+    }
+    deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf/ospf:areas/ospf:area/ospf:interfaces/ospf:interface/ospf:neighbors"
+    {
+      deviate not-supported;
+    }
+    deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf/ospf:areas/ospf:area/ospf:interfaces/ospf:interface/ospf:database"
+    {
+      deviate not-supported;
+    }
+    deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf/ospf:areas/ospf:area/ospf:interfaces/ospf:interface/ospf:topologies"
+    {
+      deviate not-supported;
+    }
+    deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf/ospf:areas/ospf:area/ospf:interfaces/ospf:interface/ospf:instance-id"
+    {
+      deviate not-supported;
+    }
+    deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf/ospf:areas/ospf:area/ospf:interfaces/ospf:interface/ospf:interface-id"
+    {
+      deviate not-supported;
+    }
+    deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf/ospf:areas/ospf:area/ospf:interfaces/ospf:interface/ospf:demand-circuit"
+    {
+      deviate not-supported;
+    }
+    deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf/ospf:areas/ospf:area/ospf:interfaces/ospf:interface/ospf:static-neighbors"
+    {
+      deviate not-supported;
+    }
+    deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf/ospf:areas/ospf:area/ospf:interfaces/ospf:interface/ospf:ttl-security"
+    {
+      deviate not-supported;
+    }
     /*
+    deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf/ospf:areas/ospf:area/ospf:interfaces/ospf:interface/ospf:passive"
+    {
+      deviate not-supported;
+    }
+    deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf/ospf:areas/ospf:area/ospf:interfaces/ospf:interface/ospf:hello-interval"
+    {
+      deviate not-supported;
+    }
+    deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf/ospf:areas/ospf:area/ospf:interfaces/ospf:interface/ospf:dead-interval"
+    {
+      deviate not-supported;
+    }
+    deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf/ospf:areas/ospf:area/ospf:interfaces/ospf:interface/ospf:retransmit-interval"
+    {
+      deviate not-supported;
+    }
+    deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf/ospf:areas/ospf:area/ospf:interfaces/ospf:interface/ospf:transmit-delay"
+    {
+      deviate not-supported;
+    }
+    */
+    deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf/ospf:areas/ospf:area/ospf:interfaces/ospf:interface/ospf:lls"
+    {
+      deviate not-supported;
+    }
+    deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf/ospf:areas/ospf:area/ospf:interfaces/ospf:interface/ospf:cost"
+    {
+      deviate not-supported;
+    }
+    deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf/ospf:areas/ospf:area/ospf:interfaces/ospf:interface/ospf:mtu-ignore"
+    {
+      deviate not-supported;
+    }
+    deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf/ospf:areas/ospf:area/ospf:interfaces/ospf:interface/ospf:prefix-suppression"
+    {
+      deviate not-supported;
+    }
+    deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf/ospf:areas/ospf:area/ospf:interfaces/ospf:interface/ospf:state"
+    {
+      deviate not-supported;
+    }
+    deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf/ospf:areas/ospf:area/ospf:interfaces/ospf:interface/ospf:hello-timer"
+    {
+      deviate not-supported;
+    }
+    deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf/ospf:areas/ospf:area/ospf:interfaces/ospf:interface/ospf:wait-timer"
+    {
+      deviate not-supported;
+    }
+    /*
+    deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf/ospf:areas/ospf:area/ospf:interfaces/ospf:interface/ospf:dr-router-id"
+    {
+      deviate not-supported;
+    }
+    deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf/ospf:areas/ospf:area/ospf:interfaces/ospf:interface/ospf:dr-ip-addr"
+    {
+      deviate not-supported;
+    }
+    deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf/ospf:areas/ospf:area/ospf:interfaces/ospf:interface/ospf:bdr-router-id"
+    {
+      deviate not-supported;
+    }
+    deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf/ospf:areas/ospf:area/ospf:interfaces/ospf:interface/ospf:bdr-ip-addr"
+    {
+      deviate not-supported;
+    }
+    */
+    /* OSPF database */
     deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf/ospf:database/ospf:as-scope-lsa-type/ospf:as-scope-lsas/ospf:as-scope-lsa/ospf:version/ospf:ospfv3" {
       deviate not-supported;
     }
@@ -202,5 +383,4 @@ module infix-routing {
     deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf/ospf:database/ospf:as-scope-lsa-type/ospf:as-scope-lsas/ospf:as-scope-lsa/ospf:version/ospf:ospfv2/ospf:ospfv2/ospf:header" {
       deviate not-supported;
     }
-    */
  }

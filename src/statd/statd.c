@@ -36,7 +36,9 @@
 
 #define XPATH_MAX PATH_MAX
 #define XPATH_IFACE_BASE "/ietf-interfaces:interfaces"
-#define XPATH_ROUTING_BASE "/ietf-routing:routing"
+#define XPATH_ROUTING_BASE "/ietf-routing:routing/control-plane-protocols/control-plane-protocol"
+#define XPATH_ROUTING_TABLE "/ietf-routing:routing/ribs"
+#define XPATH_ROUTING_OSPF XPATH_ROUTING_BASE "/ospf"
 
 TAILQ_HEAD(sub_head, sub);
 
@@ -256,6 +258,37 @@ static int sr_routes_cb(sr_session_ctx_t *session, uint32_t, const char *path,
 	return err;
 }
 
+static int sr_ospf_cb(sr_session_ctx_t *session, uint32_t, const char *path,
+			const char *, const char *, uint32_t,
+			struct lyd_node **parent, __attribute__((unused)) void *priv)
+{
+	const struct ly_ctx *ctx;
+	sr_conn_ctx_t *con;
+	sr_error_t err;
+
+	DEBUG("Incoming query for xpath: %s", path);
+
+	con = sr_session_get_connection(session);
+	if (!con) {
+		ERROR("Error, getting sr connection");
+		return SR_ERR_INTERNAL;
+	}
+
+	ctx = sr_acquire_context(con);
+	if (!ctx) {
+		ERROR("Error, acquiring context");
+		return SR_ERR_INTERNAL;
+	}
+
+	err = ly_add_yanger_data(ctx, parent, "ietf-ospf", NULL);
+	if (err)
+		ERROR("Error adding yanger data");
+
+	sr_release_context(con);
+
+	return err;
+}
+
 static void sigint_cb(struct ev_loop *loop, struct ev_signal *, int)
 {
 	ev_break(loop, EVBREAK_ALL);
@@ -324,7 +357,7 @@ static int subscribe(struct statd *statd, char *model, char *xpath, const char *
 
 static int sub_to_routes(struct statd *statd)
 {
-	return subscribe(statd, "ietf-routing", XPATH_ROUTING_BASE, "routes", sr_routes_cb);
+	return subscribe(statd, "ietf-routing", XPATH_ROUTING_TABLE, "routes", sr_routes_cb);
 }
 
 static int sub_to_iface(struct statd *statd, const char *ifname)
@@ -467,6 +500,10 @@ static int sub_to_ifaces(struct statd *statd)
 	return SR_ERR_OK;
 }
 
+static int sub_to_ospf(struct statd *statd)
+{
+	return subscribe(statd, "ietf-routing", XPATH_ROUTING_OSPF, "ospf", sr_ospf_cb);
+}
 int main(int argc, char *argv[])
 {
 	struct ev_signal sigint_watcher, sigusr1_watcher;
@@ -523,7 +560,12 @@ int main(int argc, char *argv[])
 		sr_disconnect(sr_conn);
 		return EXIT_FAILURE;
 	}
-
+	err = sub_to_ospf(&statd);
+	if (err) {
+		ERROR("Error register for OSPF");
+		sr_disconnect(sr_conn);
+		return EXIT_FAILURE;
+	}
 	ev_signal_init(&sigint_watcher, sigint_cb, SIGINT);
 	sigint_watcher.data = &statd;
 	ev_signal_start(statd.ev_loop, &sigint_watcher);

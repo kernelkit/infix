@@ -1,2 +1,3 @@
 ---
 - case: static_routing.py
+- case: ospf_basic.py
