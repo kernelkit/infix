@@ -31,4 +31,8 @@ ENV PATH="${PATH}:/usr/lib/ruby/gems/3.2.0/bin"
 # Install all python packages used by the tests
 COPY init-venv.sh /root
 COPY pip-requirements.txt /root
+
+# Add bootstrap YANG models, the rest will be downloaded from the device
+ADD yang /root/yang
+
 RUN ~/init-venv.sh ~/pip-requirements.txt

@@ -2,21 +2,7 @@
 
 set -e
 
-INFIX_TEST=ghcr.io/kernelkit/infix-test:1.1
-
-extract_yang()
-{
-    local imgfile="$1"
-
-    [ "$imgfile" ] || { true && return; }
-
-    unsquashfs -q -n -f \
-               -d $envdir/yangdir \
-	       "$imgfile" \
-	       /usr/share/yang
-
-    INFAMY_ARGS="$INFAMY_ARGS -y $envdir/yangdir"
-}
+INFIX_TEST=ghcr.io/kernelkit/infix-test:1.2
 
 start_topology()
 {
@@ -49,7 +35,7 @@ usage()
 {
     cat <<EOF
 usage: test/env [<OPTS>]    -f <IMAGE> -q <QENETH-DIR> <COMMAND> [<ARGS>...]
-       test/env [<OPTS>] -C -f <IMAGE> -t <TOPOLOGY>   <COMMAND> [<ARGS>...]
+       test/env [<OPTS>] -C -t <TOPOLOGY>   <COMMAND> [<ARGS>...]
 
   Run <COMMAND> in a pre-packaged container with all the packages
   required for running the test suite installed.
@@ -61,8 +47,7 @@ usage: test/env [<OPTS>]    -f <IMAGE> -q <QENETH-DIR> <COMMAND> [<ARGS>...]
       namespaces
 
     -f <IMAGE>
-      Infix image to test. YANG models from this image are extracted
-      for use by Infamy. When starting a qeneth network, this image is
+      Infix image to test. When starting a qeneth network, this image is
       used on all nodes.
 
     -h
@@ -167,8 +152,7 @@ fi
 
 . "$envdir/bin/activate"
 export PYTHONPATH="$testdir"
-
-extract_yang "$imgfile"
+INFAMY_ARGS="$INFAMY_ARGS -y $envdir/yangdir"
 start_topology "$qenethdir" "$imgfile"
 [ "$topology" ] && INFAMY_ARGS="$INFAMY_ARGS $topology"
 export INFAMY_ARGS
