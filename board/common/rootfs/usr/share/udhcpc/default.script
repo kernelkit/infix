@@ -6,11 +6,13 @@
 
 ACTION="$1"
 RESOLV_CONF="/etc/resolv.conf"
+NTPFILE="/run/chrony/dhcp-sources.d/${interface}.sources"
 [ -e $RESOLV_CONF ] || touch $RESOLV_CONF
 [ -n "$broadcast" ] && BROADCAST="broadcast $broadcast"
 [ -n "$subnet" ] && NETMASK="$subnet"
 # Handle stateful DHCPv6 like DHCPv4
 [ -n "$ipv6" ] && ip="$ipv6/128"
+[ -n "$ntpsrv" ] && NTP="server $ntpsrv iburst"
 
 if [ -z "${IF_WAIT_DELAY}" ]; then
 	IF_WAIT_DELAY=10
@@ -53,7 +55,7 @@ case "$ACTION" in
 		grep -vE "# $interface\$" $RESOLV_CONF > $TMPFILE
 		cat $TMPFILE > $RESOLV_CONF
 		rm -f $TMPFILE
-
+		rm -f $NTPFILE
 		if [ -x /usr/sbin/avahi-autoipd ]; then
 			/usr/sbin/avahi-autoipd -c $interface && /usr/sbin/avahi-autoipd -k $interface
 		fi
@@ -63,6 +65,7 @@ case "$ACTION" in
 		if [ -x /usr/sbin/avahi-autoipd ]; then
 			/usr/sbin/avahi-autoipd -c $interface || /usr/sbin/avahi-autoipd -wD $interface --no-chroot
 		fi
+		rm -f $NTPFILE
 		;;
 
 	renew|bound)
@@ -122,7 +125,11 @@ case "$ACTION" in
 			echo adding dns $i
 			echo "nameserver $i # $interface" >> $RESOLV_CONF
 		done
-		;;
+
+		if [ -n "$NTP" ]; then
+		    echo "$NTP" > "$NTPFILE"
+		    chronyc reload sources >/dev/null
+		fi
 esac
 
 HOOK_DIR="$0.d"
