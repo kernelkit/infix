@@ -122,7 +122,33 @@ Multiple address assignment methods are available:
 | link-local | infix-ip          | Auto-assignment of IPv4 address in 169.254.x.x/16 range        |
 | dhcp       | infix-dhcp-client | Assignment of IPv4 address by DHCP server, e.g., *10.0.1.1/24* |
 
-DHCP address method is only available for *LAN* interfaces (ethernet, virtual ethernet (veth), bridge, etc.)
+Supported DHCP (request) options, configurability (Cfg) and defaults,
+are listed below.  Configurable options can be disabled on a per client
+interface basis, some options, like `clientid` and option 81, are
+possible to set the value of as well.
+
+| **Opt** | **Name**         | **Cfg** | **Description**                                     |
+|---------|------------------|---------|-----------------------------------------------------|
+| 1       | `subnet`         | No      | Request IP address and netmask                      |
+| 3       | `router`         | Yes     | Default route(s), see also option 121 and 249       |
+| 6       | `dns`            | Yes     | DNS server(s), static ones take precedence          |
+| 12      | `hostname`       | Yes     | DHCP cannot set hostname, only for informing server |
+| 15      | `domain`         | Yes     | Default domain name, for name resolution            |
+| 28      | `broadcast`      | Yes     | Broadcast address, calculated if disabled           |
+| 42      | `ntpsrv`         | Yes     | NTP server(s), static ones take precedence          |
+| 50      | `address`        | Yes     | Request (previously cached) address                 |
+| 61      | `clientid`       | Yes     | Default MAC address (and option 12)                 |
+| 81      | `fqdn`           | Yes     | Similar to option 12, request FQDN update in DNS    |
+| 119     | `search`         | Yes     | Request domain search list                          |
+| 121     | `staticroutes`   | Yes     | Classless static routes                             |
+| 249     | `msstaticroutes` | Yes     | Microsoft static route                              |
+|         |                  |         |                                                     |
+
+**Default:** `router`, `dns`, `domain`, `broadcast`, `ntpsrv`, `search`,
+             `address`, `staticroutes`, `msstaticroutes`
+
+> **Note:** DHCP address method is only available for *LAN* interfaces
+> (Ethernet, virtual Ethernet (veth), bridge, link aggregates, etc.)
 
 ### IPv6 Address Assignment
 
