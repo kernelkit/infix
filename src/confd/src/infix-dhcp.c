@@ -13,17 +13,19 @@
 #include <srx/srx_val.h>
 
 #include "core.h"
+#define  ARPING_MSEC  1000
 
 static const struct srx_module_requirement infix_dhcp_reqs[] = {
 	{ .dir = YANG_PATH_, .name = "infix-dhcp-client", .rev = "2023-05-22" },
 	{ NULL }
 };
 
-static void add(const char *ifname, const char *client_id)
+static void add(const char *ifname, bool arping, const char *client_id)
 {
 	const char *opts = "-O subnet -O router -O dns -O domain -O ntpsrv -O 121";
 	char *args = NULL, *ipcache = NULL;
 	char buf[256], vendor[128] = { 0 };
+	char do_arp[20] = { 0 };
 	FILE *fp, *xp;
 
 	fp = fopenf("w", "/etc/finit.d/available/dhcp-%s.conf", ifname);
@@ -32,6 +34,9 @@ static void add(const char *ifname, const char *client_id)
 		      ifname, strerror(errno));
 		return;
 	}
+
+	if (arping)
+		snprintf(do_arp, sizeof(do_arp), "-a%d", ARPING_MSEC);
 
 	if (fexistf("/var/lib/misc/%s.cache", ifname)) {
 		struct in_addr ina;
@@ -101,8 +106,8 @@ static void add(const char *ifname, const char *client_id)
 	fprintf(fp, "metric=100\n");
 	fprintf(fp, "service <!> name:dhcp :%s\\\n"
 		"	[2345] udhcpc -f -p /run/dhcp-%s.pid -t 10 -T 3 -A 10\\\n"
-		"		-S -R %s -o %s -i %s %s %s %s\\\n"
-		"		-- DHCP client @%s\n", ifname, ifname,
+		"		%s -S -R %s -o %s -i %s %s %s %s\\\n"
+		"		-- DHCP client @%s\n", ifname, ifname, do_arp,
 		buf, opts, ifname, args ?: "", ipcache ?: "", vendor, ifname);
 	fclose(fp);
 
@@ -158,13 +163,16 @@ static int client_change(sr_session_ctx_t *session, uint32_t sub_id, const char 
 		}
 
 		LYX_LIST_FOR_EACH(cifs, cif, "client-if") {
+			const char *cid = lydx_get_cattr(cif, "client-id");
+			bool arping = lydx_is_enabled(cif, "arping");
+
 			if (strcmp(ifname, lydx_get_cattr(cif, "if-name")))
 				continue;
 
 			if (!ena || !lydx_is_enabled(cif, "enabled"))
 				del(ifname);
 			else
-				add(ifname, lydx_get_cattr(cif, "client-id"));
+				add(ifname, arping, cid);
 			break;
 		}
 	}
