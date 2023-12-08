@@ -1,135 +1,149 @@
 #!/bin/sh
-
-# udhcpc script edited by Tim Riker <Tim@Rikers.org>
+# This script expect a system with resolvconf (openresolv) and iproute2
 
 [ -z "$1" ] && echo "Error: should be called from udhcpc" && exit 1
 
 ACTION="$1"
-RESOLV_CONF="/etc/resolv.conf"
+IP_CACHE="/var/lib/misc/${interface}.cache"
+RESOLV_CONF="/run/resolvconf/interfaces/${interface}.conf"
 NTPFILE="/run/chrony/dhcp-sources.d/${interface}.sources"
-[ -e $RESOLV_CONF ] || touch $RESOLV_CONF
 [ -n "$broadcast" ] && BROADCAST="broadcast $broadcast"
 [ -n "$subnet" ] && NETMASK="$subnet"
+[ -n "$metric" ] || metric=100
+
 # Handle stateful DHCPv6 like DHCPv4
 [ -n "$ipv6" ] && ip="$ipv6/128"
-[ -n "$ntpsrv" ] && NTP="server $ntpsrv iburst"
 
 if [ -z "${IF_WAIT_DELAY}" ]; then
 	IF_WAIT_DELAY=10
 fi
 
-wait_for_ipv6_default_route() {
-	printf "Waiting for IPv6 default route to appear"
-	while [ $IF_WAIT_DELAY -gt 0 ]; do
-		if ip -6 route list | grep -q default; then
-			printf "\n"
-			return
-		fi
-		sleep 1
-		printf "."
-		: $((IF_WAIT_DELAY -= 1))
-	done
-	printf " timeout!\n"
+log()
+{
+    logger -I $$ -t udhcpc -p user.notice "$*"
 }
 
-flush_dhcp_addresses() {
-	addrs=$(ip -j addr show dev $interface | jq -c \
-		'.[0].addr_info[] | select(.family == "inet") | select(.protocol == "dhcp")')
-
-	for addr in $addrs; do
-		ip="$(echo "$addr" | jq -r '."local"')"
-		prefix="$(echo "$addr" | jq -r '."prefixlen"')"
-		ip addr del "$ip/$prefix" dev "$interface"
-	done
+wwait_for_ipv6_default_route()
+{
+    log "waiting for IPv6 default route to be installed."
+    while [ $IF_WAIT_DELAY -gt 0 ]; do
+	if ip -6 route list proto dhcp dev $interface | grep -q default; then
+	    return
+	fi
+	sleep 1
+	printf "."
+	: $((IF_WAIT_DELAY -= 1))
+    done
+    log "Timed out witing for IPv6 default route!"
 }
 
+# RFC3442: If the DHCP server returns both a Classless
+# Static Routes option and a Router option, the DHCP
+# client MUST ignore the Router option.
+set_dhcp_routes()
+{
+    if [ -n "$staticroutes" ]; then
+	# format: dest1/mask gw1 ... destn/mask gwn
+	set -- $staticroutes
+	while [ -n "$1" -a -n "$2" ]; do
+	    log "adding route $1 via $2 dev $interface proto dhcp"
+	    ip route add "$1" via "$2" dev $interface metric $metric proto dhcp
+	    shift 2
+	done
+    elif [ -n "$router" ] ; then
+	for i in $router ; do
+	    ip route add default via $i dev $interface metric $((metric++)) proto dhcp
+	done
+    fi
+}
+
+clr_dhcp_routes()
+{
+    log "deleting DHCP routes from $interface"
+    ip route show proto dhcp dev $interface | while read rt via nh dev dev; do
+	log "removing $rt nh $nh on $dev"
+	ip route del $rt via $nh dev $dev proto dhcp
+    done
+}
+
+clr_dhcp_addresses()
+{
+    addrs=$(ip -j addr show dev $interface \
+		| jq -c '.[0].addr_info[] | select(.family == "inet") | select(.protocol == "dhcp")')
+
+    for addr in $addrs; do
+	ip="$(echo "$addr" | jq -r '."local"')"
+	prefix="$(echo "$addr" | jq -r '."prefixlen"')"
+	log "removing $ip/$prefix from $interface"
+	ip addr del "$ip/$prefix" dev "$interface"
+    done
+}
+
+log "action $ACTION"
 case "$ACTION" in
-	deconfig)
-		flush_dhcp_addresses
+    deconfig)
+	clr_dhcp_addresses
+	clr_dhcp_routes
+	/bin/ip link set dev $interface up
 
-		/bin/ip link set dev $interface up
+	# drop info from this interface
+	rm -f "$RESOLV_CONF"
+	rm -f "$NTPFILE"
+	if [ -x /usr/sbin/avahi-autoipd ]; then
+	    /usr/sbin/avahi-autoipd -c $interface && /usr/sbin/avahi-autoipd -k $interface
+	fi
+	;;
 
-		# drop info from this interface
-		# resolv.conf may be a symlink to /tmp/, so take care
-		TMPFILE=$(mktemp)
-		grep -vE "# $interface\$" $RESOLV_CONF > $TMPFILE
-		cat $TMPFILE > $RESOLV_CONF
-		rm -f $TMPFILE
-		rm -f $NTPFILE
-		if [ -x /usr/sbin/avahi-autoipd ]; then
-			/usr/sbin/avahi-autoipd -c $interface && /usr/sbin/avahi-autoipd -k $interface
-		fi
-		;;
+    leasefail|nak)
+	if [ -x /usr/sbin/avahi-autoipd ]; then
+	    /usr/sbin/avahi-autoipd -c $interface || /usr/sbin/avahi-autoipd -wD $interface --no-chroot
+	fi
+	;;
 
-	leasefail|nak)
-		if [ -x /usr/sbin/avahi-autoipd ]; then
-			/usr/sbin/avahi-autoipd -c $interface || /usr/sbin/avahi-autoipd -wD $interface --no-chroot
-		fi
-		rm -f $NTPFILE
-		;;
+    renew|bound)
+	if [ -x /usr/sbin/avahi-autoipd ]; then
+	    /usr/sbin/avahi-autoipd -c $interface && /usr/sbin/avahi-autoipd -k $interface
+	fi
 
-	renew|bound)
-		if [ -x /usr/sbin/avahi-autoipd ]; then
-			/usr/sbin/avahi-autoipd -c $interface && /usr/sbin/avahi-autoipd -k $interface
-		fi
-		/bin/ip addr add dev $interface $ip/$NETMASK $BROADCAST proto 5
-		if [ -n "$ipv6" ] ; then
-			wait_for_ipv6_default_route
-		fi
+	if /bin/ip addr add dev $interface $ip/$NETMASK $BROADCAST proto 5; then
+	    echo "$ip" > "$IP_CACHE"
+	fi
+	if [ -n "$ipv6" ] ; then
+	    wait_for_ipv6_default_route
+	fi
 
-		# RFC3442: If the DHCP server returns both a Classless
-		# Static Routes option and a Router option, the DHCP
-		# client MUST ignore the Router option.
-		if [ -n "$staticroutes" ]; then
-			echo "deleting routers"
-			route -n | while read dest gw mask flags metric ref use iface; do
-				[ "$iface" != "$interface" -o "$gw" = "0.0.0.0" ] || \
-					route del -net "$dest" netmask "$mask" gw "$gw" dev "$interface"
-			done
+	clr_dhcp_routes
+	set_dhcp_routes
 
-			# format: dest1/mask gw1 ... destn/mask gwn
-			set -- $staticroutes
-			while [ -n "$1" -a -n "$2" ]; do
-				ip route add -net "$1" via "$2" dev "$interface" proto 16
-				shift 2
-			done
-		elif [ -n "$router" ] ; then
-			echo "deleting routers"
-			while route del default gw 0.0.0.0 dev $interface 2> /dev/null; do
-				:
-			done
+	# drop info from this interface
+	truncate -s 0 "$RESOLV_CONF"
 
-			for i in $router ; do
-				ip route add default via $i dev $interface proto 16
-			done
-		fi
+	# prefer rfc3397 domain search list (option 119) if available
+	if [ -n "$search" ]; then
+	    search_list=$search
+	elif [ -n "$domain" ]; then
+	    search_list=$domain
+	fi
 
-		# drop info from this interface
-		# resolv.conf may be a symlink to /tmp/, so take care
-		TMPFILE=$(mktemp)
-		grep -vE "# $interface\$" $RESOLV_CONF > $TMPFILE
-		cat $TMPFILE > $RESOLV_CONF
-		rm -f $TMPFILE
+	if [ -n "$search_list" ]; then
+	    log "adding search $search_list"
+	    echo "search $search_list # $interface" >> $RESOLV_CONF
+	fi
 
-		# prefer rfc3397 domain search list (option 119) if available
-		if [ -n "$search" ]; then
-			search_list=$search
-		elif [ -n "$domain" ]; then
-			search_list=$domain
-		fi
+	for i in $dns ; do
+	    log "adding dns $i"
+	    echo "nameserver $i # $interface" >> $RESOLV_CONF
+	    resolvconf -u
+	done
 
-		[ -n "$search_list" ] &&
-			echo "search $search_list # $interface" >> $RESOLV_CONF
-
-		for i in $dns ; do
-			echo adding dns $i
-			echo "nameserver $i # $interface" >> $RESOLV_CONF
-		done
-
-		if [ -n "$NTP" ]; then
-		    echo "$NTP" > "$NTPFILE"
-		    chronyc reload sources >/dev/null
-		fi
+	if [ -n "$ntpsrv" ]; then
+	    truncate -s 0 "$NTPFILE"
+	    for srv in $ntpsrv; do
+		log "got NTP server $srv"
+		echo "server $srv iburst" >> "$NTPFILE"
+	    done
+	    chronyc reload sources >/dev/null
+	fi
 esac
 
 HOOK_DIR="$0.d"
