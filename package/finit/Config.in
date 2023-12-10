@@ -100,16 +100,16 @@ config BR2_PACKAGE_FINIT_WATCHDOG_DEV
 endif
 
 config BR2_PACKAGE_FINIT_PLUGIN_HOTPLUG
-	bool "hotplug plugin (mdev/udev)"
+	bool "Start (udevd/mdev -df) at boot"
 	help
-	  By default, Finit builds and launches its hotplug plugin.
-	  It is responsible for detecting and starting the mdev tool,
-	  or udevd daemon.  The former exists in many BusyBox based
-	  systems and is called for "cold plugging".  The latter has
-	  many various incarnations and is mostly used for desktop
-	  systems.
+	  By default, Finit installs /lib/finit/system/10-hotplug.conf
+	  which detects if the system has udevd or mdev daemon.  They
+	  are both used to probe for devices, load modules and firmware
+	  to devices that request it.
 
 	  For lxc/docker application builds you do not need this.
+
+	  With this you probably do not need the modprobe plugin.
 
 config BR2_PACKAGE_FINIT_PLUGIN_HOOK_SCRIPTS
 	bool "hook scripts"
@@ -140,6 +140,9 @@ config BR2_PACKAGE_FINIT_PLUGIN_MODPROBE
 	  matching kernel modules.
 
 	  For lxc/docker application builds you do not need this.
+
+	  You probably do not want this anymore, use udevd or mdev to
+	  probe devices, load modules and firmware instead.
 
 config BR2_PACKAGE_FINIT_PLUGIN_RTC
 	bool "RTC plugin"
