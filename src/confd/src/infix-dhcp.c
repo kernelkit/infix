@@ -14,79 +14,157 @@
 
 #include "core.h"
 #define  ARPING_MSEC  1000
+#define  MODULE       "infix-dhcp-client"
+#define  XPATH        "/infix-dhcp-client:dhcp-client"
 
-static const struct srx_module_requirement infix_dhcp_reqs[] = {
-	{ .dir = YANG_PATH_, .name = "infix-dhcp-client", .rev = "2023-05-22" },
+static const struct srx_module_requirement reqs[] = {
+	{ .dir = YANG_PATH_, .name = MODULE, .rev = "2023-05-22" },
 	{ NULL }
 };
 
-static void add(const char *ifname, bool arping, const char *client_id)
+static char *ip_cache(const char *ifname)
 {
-	const char *opts = "-O subnet -O router -O dns -O domain -O ntpsrv -O 121";
-	char *args = NULL, *ipcache = NULL;
-	char buf[256], vendor[128] = { 0 };
-	char do_arp[20] = { 0 };
-	FILE *fp, *xp;
+	struct in_addr ina;
+	char *ipcache;
+	char buf[20];
+	FILE *fp;
 
-	fp = fopenf("w", "/etc/finit.d/available/dhcp-%s.conf", ifname);
-	if (!fp) {
-		ERROR("failed creating DHCP client service for %s: %s",
-		      ifname, strerror(errno));
-		return;
+	if (!fexistf("/var/lib/misc/%s.cache", ifname))
+		return NULL;
+
+	fp = fopenf("r", "/var/lib/misc/%s.cache", ifname);
+	if (!fp)
+		return NULL;
+
+	if (!fgets(buf, sizeof(buf), fp)) {
+		fclose(fp);
+		return NULL;
 	}
+	fclose(fp);
+	chomp(buf);
+
+	if (!inet_aton(buf, &ina)) {
+		erasef("/var/lib/misc/%s.cache", ifname);
+		return NULL;
+	}
+
+	ipcache = malloc(20);
+	if (ipcache)
+		snprintf(ipcache, 20, "-r %.15s", buf);
+
+	return ipcache;
+}
+
+static char *hostname(char *str, size_t len)
+{
+	FILE *fp;
+	int pos;
+
+	fp = fopen("/etc/hostname", "r");
+	if (!fp)
+		return NULL;
+
+	pos = snprintf(str, len, "-x str:");
+	if (!fgets(&str[pos], len - pos, fp))
+		str[0] = 0;
+	fclose(fp);
+	chomp(str);
+
+	return str;
+}
+
+static char *os_name_version(char *str, size_t len)
+{
+	char buf[256];
+	FILE *fp;
+
+	if (!str || !len)
+		return NULL;
+
+	fp = fopen("/etc/os-relase", "r");
+	if (!fp)
+		return NULL;
+
+	str[0] = 0;
+	while (fgets(buf, sizeof(buf), fp)) {
+		if (!strncmp(buf, "NAME=", 5))
+			snprintf(str, len, "-V '%.32s ", &buf[5]);
+		if (!strncmp(buf, "VERSION=", 8)) {
+			strlcat(str, &buf[8], len);
+			strlcat(str, "'", len);
+			break;
+		}
+	}
+	fclose(fp);
+
+	if (strlen(str) > 0 && str[strlen(str) - 1] != '\'') {
+		str[0] = 0;
+		return NULL;
+	}
+
+	return str;
+}
+
+static char *dhcp_options(sr_session_ctx_t *session, const char *ifname)
+{
+	char xpath[sizeof(XPATH) + 50];
+	sr_error_t rc = SR_ERR_OK;
+	sr_val_t *values = NULL;
+	char *options = NULL;
+	size_t count = 0;
+
+	snprintf(xpath, sizeof(xpath), XPATH "/client-if[if-name='%s']/options", ifname);
+	rc = sr_get_items(session, xpath, 0, 0, &values, &count);
+	if (rc != SR_ERR_OK) {
+		ERROR("failed fetching DHCP options: %s", sr_strerror(rc));
+		goto out;
+	}
+
+	for (size_t i = 0; i < count; ++i) {
+		char *val = values[i].data.string_val;
+		size_t len = strlen(val) + 5;
+		char opt[len];
+
+		snprintf(opt, len, "-O %s ", val);
+		DEBUG("opt value[%zu]: %s", i, opt);
+		if (options) {
+			char *opts;
+
+			opts = realloc(options, strlen(options) + len + 1);
+			if (!opts) {
+				ERROR("failed reallocating options: %s", strerror(errno));
+				free(options);
+				options = NULL;
+				goto out;
+			}
+
+			options = strcat(opts, opt);
+		} else
+			options = strdup(opt);
+
+		DEBUG("options %s", options);
+	}
+
+out:
+	if (values)
+		sr_free_values(values, count);
+
+	return options;
+}
+
+static void add(sr_session_ctx_t *session, struct lyd_node *cfg, const char *ifname)
+{
+	const char *metric = lydx_get_cattr(cfg, "route-preference");
+	const char *client_id = lydx_get_cattr(cfg, "client-id");
+	char *args = NULL, *ipcache = NULL, *options = NULL;
+	bool arping = lydx_is_enabled(cfg, "arping");
+	char hostnm[300], vendor[128] = { 0 };
+	const char *action = "disable";
+	char do_arp[20] = { 0 };
+	FILE *fp;
 
 	if (arping)
 		snprintf(do_arp, sizeof(do_arp), "-a%d", ARPING_MSEC);
-
-	if (fexistf("/var/lib/misc/%s.cache", ifname)) {
-		struct in_addr ina;
-
-		xp = fopenf("r", "/var/lib/misc/%s.cache", ifname);
-		if (!xp)
-			goto nocache;
-
-		if (!fgets(buf, sizeof(buf), xp)) {
-			fclose(xp);
-			goto nocache;
-		}
-		fclose(xp);
-		chomp(buf);
-
-		if (!inet_aton(buf, &ina)) {
-			erasef("/var/lib/misc/%s.cache", ifname);
-			goto nocache;
-		}
-
-		ipcache = alloca(20);
-		if (ipcache)
-			snprintf(ipcache, 20, "-r %.15s", buf);
-	nocache:
-	}
-
-	xp = fopen("/etc/os-relase", "r");
-	if (xp) {
-		while (fgets(buf, sizeof(buf), xp)) {
-			if (!strncmp(buf, "NAME=", 5))
-				snprintf(vendor, sizeof(vendor), "-V '%.32s ", &buf[5]);
-			if (!strncmp(buf, "VERSION=", 8)) {
-				strlcat(vendor, &buf[8], sizeof(vendor));
-				strlcat(vendor, "'", sizeof(vendor));
-				break;
-			}
-		}
-		fclose(xp);
-	}
-
-	xp = fopen("/etc/hostname", "r");
-	if (xp) {
-		int pos;
-
-		pos = snprintf(buf, sizeof(buf), "-x hostname:");
-		if (!fgets(&buf[pos], sizeof(buf) - pos, xp))
-			buf[0] = 0;
-		fclose(xp);
-		chomp(buf);
-	}
 
 	if (client_id && client_id[0]) {
 		args = alloca(strlen(client_id) + 12);
@@ -94,25 +172,40 @@ static void add(const char *ifname, bool arping, const char *client_id)
 			sprintf(args, "-C -x 61:'\"%s\"'", client_id);
 	}
 
-	/*
-	 * XXX: hard-coded metric for now.  Should be 100 + ifmetric,
-	 * which in turn should be based on the iftype.  E.g., a WiFi
-	 * interface should have a base metric of 500 while a plain
-	 * Ethernet interface has a base metric of 0.  These are the
-	 * defaults, a user should be able to override this all by a
-	 * dhcp routing metric.
-	 */
-	fprintf(fp, "# Generated by Infix confd\n");
-	fprintf(fp, "metric=100\n");
-	fprintf(fp, "service <!> name:dhcp :%s\\\n"
-		"	[2345] udhcpc -f -p /run/dhcp-%s.pid -t 10 -T 3 -A 10\\\n"
-		"		%s -S -R %s -o %s -i %s %s %s %s\\\n"
-		"		-- DHCP client @%s\n", ifname, ifname, do_arp,
-		buf, opts, ifname, args ?: "", ipcache ?: "", vendor, ifname);
-	fclose(fp);
+	options = dhcp_options(session, ifname);
+	if (!options) {
+		ERROR("failed extracting DHCP options for client %s, aborting!", ifname);
+		goto err;
+	}
 
-	if (systemf("initctl -bfq enable dhcp-%s", ifname))
-		ERROR("failed enabling DHCP client on %s", ifname);
+	os_name_version(vendor, sizeof(vendor));
+	hostname(hostnm, sizeof(hostnm));
+	ipcache = ip_cache(ifname);
+
+	fp = fopenf("w", "/etc/finit.d/available/dhcp-%s.conf", ifname);
+	if (!fp) {
+		ERROR("failed creating DHCP client %s: %s", ifname, strerror(errno));
+		goto err;
+	}
+
+	fprintf(fp, "# Generated by Infix confd\n");
+	fprintf(fp, "metric=%s\n", metric);
+	fprintf(fp, "service <!> name:dhcp :%s\\\n"
+		"	[2345] udhcpc -f -p /run/dhcp-%s.pid -t 10 -T 3 -A 10 %s -S -R %s \\\n"
+		"		-o %s \\\n"
+		"       	-i %s %s %s %s \\\n"
+		"		-- DHCP client @%s\n",
+		ifname, ifname, do_arp, hostnm,
+		options,
+		ifname, args ?: "", ipcache ?: "", vendor, ifname);
+	fclose(fp);
+	action = "enable";
+err:
+	systemf("initctl -bfqn %s dhcp-%s", action, ifname);
+	if (options)
+		free(options);
+	if (ipcache)
+		free(ipcache);
 }
 
 static void del(const char *ifname)
@@ -120,8 +213,8 @@ static void del(const char *ifname)
 	systemf("initctl -bfq delete dhcp-%s", ifname);
 }
 
-static int client_change(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
-                         const char *xpath, sr_event_t event, unsigned request_id, void *_confd)
+static int change(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
+		  const char *xpath, sr_event_t event, unsigned request_id, void *_confd)
 {
 	struct lyd_node *global, *diff, *cifs, *difs, *cif, *dif;
 	sr_error_t       err = 0;
@@ -137,11 +230,9 @@ static int client_change(sr_session_ctx_t *session, uint32_t sub_id, const char 
 		return SR_ERR_OK;
 	}
 
-	err = sr_get_data(session, "/infix-dhcp-client:dhcp-client//.", 0, 0, 0, &cfg);
-	if (err) {
-		ERROR("DHCP client fail 1");
+	err = sr_get_data(session, XPATH "//.", 0, 0, 0, &cfg);
+	if (err)
 		goto err_abandon;
-	}
 
 	err = srx_get_diff(session, &diff);
 	if (err)
@@ -163,16 +254,13 @@ static int client_change(sr_session_ctx_t *session, uint32_t sub_id, const char 
 		}
 
 		LYX_LIST_FOR_EACH(cifs, cif, "client-if") {
-			const char *cid = lydx_get_cattr(cif, "client-id");
-			bool arping = lydx_is_enabled(cif, "arping");
-
 			if (strcmp(ifname, lydx_get_cattr(cif, "if-name")))
 				continue;
 
 			if (!ena || !lydx_is_enabled(cif, "enabled"))
 				del(ifname);
 			else
-				add(ifname, arping, cid);
+				add(session, cif, ifname);
 			break;
 		}
 	}
@@ -185,16 +273,102 @@ err_abandon:
 	return err;
 }
 
+/*
+ * YANG v1.1 doesn't support default values for leaf-list elements so
+ * we use the same inference technique used for inteface types to set
+ * a default list of sane options.
+ */
+static int infer_options(sr_session_ctx_t *session, const char *path)
+{
+	const char *opt[] = { "subnet", "router", "dns", "hostname", "domain",
+		"broadcast", "ntpsrv", "address", "staticroutes" };
+	char xpath[strlen(path) + 10];
+	sr_error_t rc = SR_ERR_OK;
+	sr_val_t *values = NULL;
+	size_t count = 0;
+	char *ptr;
+
+	strlcpy(xpath, path, sizeof(xpath));
+	ptr = strstr(xpath, "]/");
+	if (!ptr)
+		return SR_ERR_SYS;
+
+	ptr[1] = 0;
+	strlcat(xpath, "/options", sizeof(xpath));
+
+	rc = sr_get_items(session, xpath, 0, 0, &values, &count);
+	if (rc != SR_ERR_OK) {
+		ERROR("sr_get_items failed: %s", sr_strerror(rc));
+		goto out;
+	}
+
+	if (count > 0)
+		goto done;
+
+	for (size_t i = 0; i < NELEMS(opt); ++i) {
+		rc = sr_set_item_str(session, xpath, opt[i], NULL, SR_EDIT_DEFAULT);
+		if (rc != SR_ERR_OK) {
+			ERROR("failed infering option[%zu] = %s: %s", i, opt[i], sr_strerror(rc));
+			goto out;
+		}
+	}
+done:
+	for (size_t i = 0; i < count; ++i) {
+		DEBUG("DHCP option[%zu]: %s", i, values[i].data.string_val);
+	}
+out:
+	if (values)
+		sr_free_values(values, count);
+
+	return rc;
+}
+
+static int update(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
+		  const char *xpath, sr_event_t event, unsigned request_id, void *priv)
+{
+	sr_change_iter_t *iter;
+	sr_change_oper_t op;
+	sr_val_t *old, *new;
+	sr_error_t err;
+
+	switch (event) {
+	case SR_EV_UPDATE:
+	case SR_EV_CHANGE:
+		break;
+	default:
+		return SR_ERR_OK;
+	}
+
+	err = sr_dup_changes_iter(session, XPATH "//*", &iter);
+	if (err)
+		return err;
+
+	while (sr_get_change_next(session, iter, &op, &old, &new) == SR_ERR_OK) {
+		switch (op) {
+		case SR_OP_CREATED:
+		case SR_OP_MODIFIED:
+			break;
+		default:
+			continue;
+		}
+
+		infer_options(session, new->xpath);
+	}
+
+	sr_free_change_iter(iter);
+	return SR_ERR_OK;
+}
+
 int infix_dhcp_init(struct confd *confd)
 {
 	int rc;
 
-	rc = srx_require_modules(confd->conn, infix_dhcp_reqs);
+	rc = srx_require_modules(confd->conn, reqs);
 	if (rc)
 		goto fail;
 
-	REGISTER_CHANGE(confd->session, "infix-dhcp-client", "/infix-dhcp-client:dhcp-client",
-	                0, client_change, confd, &confd->sub);
+	REGISTER_CHANGE(confd->session, MODULE, XPATH, 0, change, confd, &confd->sub);
+	REGISTER_CHANGE(confd->session, MODULE, XPATH, SR_SUBSCR_UPDATE, update, confd, &confd->sub);
 	return SR_ERR_OK;
 fail:
 	ERROR("init failed: %s", sr_strerror(rc));

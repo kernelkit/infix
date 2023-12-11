@@ -25,51 +25,46 @@ module infix-dhcp-client {
   }
 
   typedef dhcp-options {
-    type union {
-      type uint8 {
-	range "0..61";
+    type enumeration {
+      enum subnet {
+	value 1;
+	description "Subnet (IP address and netmask)";
       }
-      type enumeration {
-	enum subnet {
-	  value 1;
-	  description "Subnet (IP address and netmask)";
-	}
-	enum router {
-	  value 3;
-	  description "Default route(s)";
-	}
-	enum dns {
-	  value 6;
-	  description "DNS server";
-	}
-	enum hostname {
-	  value 12;
-	  description "Hostname";
-	}
-	enum domain {
-	  value 15;
-	  description "Domain name";
-	}
-	enum broadcast {
-	  value 28;
-	  description "Broadcast address";
-	}
-	enum ntpsrv {
-	  value 42;
-	  description "NTP server";
-	}
-	enum address {
-	  value 50;
-	  description "Requested (previously cached) address";
-	}
-	enum clientid {
-	  value 61;
-	  description "Client ID (default MAC, and option 12)";
-	}
-	enum staticroutes {
-	  value 121;
-	  description "Classless static routes";
-	}
+      enum router {
+	value 3;
+	description "Default route(s)";
+      }
+      enum dns {
+	value 6;
+	description "DNS server";
+      }
+      enum hostname {
+	value 12;
+	description "Hostname";
+      }
+      enum domain {
+	value 15;
+	description "Domain name";
+      }
+      enum broadcast {
+	value 28;
+	description "Broadcast address";
+      }
+      enum ntpsrv {
+	value 42;
+	description "NTP server";
+      }
+      enum address {
+	value 50;
+	description "Requested (previously cached) address";
+      }
+      enum clientid {
+	value 61;
+	description "Client ID (default MAC, and option 12)";
+      }
+      enum staticroutes {
+	value 121;
+	description "Classless static routes";
       }
     }
     description "Supported DHCP client request options";
@@ -111,7 +106,10 @@ module infix-dhcp-client {
       }
       leaf-list options {
 	type dhcp-options;
-	description "DHCP options to request (and accept), default: supported.";
+	description
+	  "DHCP options to request (and accept).  The default is an empty list,
+           meaning all supported options.  To restrict the client to only get
+           IP address and default route, set this to: 'subnet router'";
       }
       leaf route-preference {
 	type route-preference;
