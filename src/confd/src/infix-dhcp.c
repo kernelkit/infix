@@ -22,17 +22,17 @@ static const struct srx_module_requirement reqs[] = {
 	{ NULL }
 };
 
-static char *ip_cache(const char *ifname)
+static char *ip_cache(const char *ifname, char *str, size_t len)
 {
+	const char *fn = "/var/lib/misc/%s.cache";
 	struct in_addr ina;
-	char *ipcache;
-	char buf[20];
+	char buf[128];
 	FILE *fp;
 
-	if (!fexistf("/var/lib/misc/%s.cache", ifname))
+	if (!fexistf(fn, ifname))
 		return NULL;
 
-	fp = fopenf("r", "/var/lib/misc/%s.cache", ifname);
+	fp = fopenf("r", fn, ifname);
 	if (!fp)
 		return NULL;
 
@@ -44,33 +44,57 @@ static char *ip_cache(const char *ifname)
 	chomp(buf);
 
 	if (!inet_aton(buf, &ina)) {
-		erasef("/var/lib/misc/%s.cache", ifname);
+		erasef(fn, ifname);
 		return NULL;
 	}
 
-	ipcache = malloc(20);
-	if (ipcache)
-		snprintf(ipcache, 20, "-r %.15s", buf);
+	snprintf(str, len, "-r %.15s ", buf);
 
-	return ipcache;
+	return str;
 }
 
-static char *hostname(char *str, size_t len)
+static char *hostname(const char *ifname, char *str, size_t len)
 {
 	FILE *fp;
 	int pos;
+
+	(void)ifname;
 
 	fp = fopen("/etc/hostname", "r");
 	if (!fp)
 		return NULL;
 
-	pos = snprintf(str, len, "-x str:");
+	pos = snprintf(str, len, "-x hostname:");
 	if (!fgets(&str[pos], len - pos, fp))
 		str[0] = 0;
 	fclose(fp);
 	chomp(str);
+	strlcat(str, " ", len);
 
 	return str;
+}
+
+static char *fqdn(const char *value, char *str, size_t len)
+{
+	snprintf(str, len, "-F \"%s\" ", value);
+	return str;
+}
+
+static char *unquote(char *buf)
+{
+	char q = buf[0];
+	char *ptr;
+
+	if (q != '"' && q != '\'')
+		return buf;
+
+	ptr = &buf[strlen(buf) - 1];
+	if (*ptr == q) {
+		*ptr = 0;
+		buf++;
+	}
+
+	return buf;
 }
 
 static char *os_name_version(char *str, size_t len)
@@ -81,23 +105,24 @@ static char *os_name_version(char *str, size_t len)
 	if (!str || !len)
 		return NULL;
 
-	fp = fopen("/etc/os-relase", "r");
+	fp = fopen("/etc/os-release", "r");
 	if (!fp)
 		return NULL;
 
 	str[0] = 0;
 	while (fgets(buf, sizeof(buf), fp)) {
+		chomp(buf);
 		if (!strncmp(buf, "NAME=", 5))
-			snprintf(str, len, "-V '%.32s ", &buf[5]);
+			snprintf(str, len, "-V \"%.32s ", unquote(&buf[5]));
 		if (!strncmp(buf, "VERSION=", 8)) {
-			strlcat(str, &buf[8], len);
-			strlcat(str, "'", len);
+			strlcat(str, unquote(&buf[8]), len);
+			strlcat(str, "\"", len);
 			break;
 		}
 	}
 	fclose(fp);
 
-	if (strlen(str) > 0 && str[strlen(str) - 1] != '\'') {
+	if (strlen(str) > 0 && str[strlen(str) - 1] != '"') {
 		str[0] = 0;
 		return NULL;
 	}
@@ -105,64 +130,95 @@ static char *os_name_version(char *str, size_t len)
 	return str;
 }
 
-static char *dhcp_options(sr_session_ctx_t *session, const char *ifname)
+static char *compose_option(const char *ifname, const char *name, const char *value,
+			    char *option, size_t len)
 {
-	char xpath[sizeof(XPATH) + 50];
-	sr_error_t rc = SR_ERR_OK;
-	sr_val_t *values = NULL;
-	char *options = NULL;
-	size_t count = 0;
+	if (value) {
+		if (isdigit(name[0])) {
+			unsigned long opt = strtoul(name, NULL, 0);
 
-	snprintf(xpath, sizeof(xpath), XPATH "/client-if[if-name='%s']/options", ifname);
-	rc = sr_get_items(session, xpath, 0, 0, &values, &count);
-	if (rc != SR_ERR_OK) {
-		ERROR("failed fetching DHCP options: %s", sr_strerror(rc));
-		goto out;
+			switch (opt) {
+			case 81:
+				return fqdn(value, option, len);
+			default:
+				break;
+			}
+
+			snprintf(option, len, "-x %s:%s ", name, value);
+		} else {
+			if (!strcmp(name, "fqdn"))
+				fqdn(value, option, len);
+			else
+				snprintf(option, len, "-x %s:'\"%s\"' ", name, value);
+		}
+	} else {
+		struct { char *name; char *(*cb)(const char *, char *, size_t); } opt[] = {
+			{ "hostname", hostname },
+			{ "address",  ip_cache },
+			{ "fqdn",     NULL     },
+			{ NULL, NULL }
+		};
+
+		for (size_t i = 0; opt[i].name; i++) {
+			if (strcmp(name, opt[i].name))
+				continue;
+
+			if (!opt[i].cb || !opt[i].cb(ifname, option, len))
+				return NULL;
+
+			return option;
+		}
+
+		snprintf(option, len, "-O %s ", name);
 	}
 
-	for (size_t i = 0; i < count; ++i) {
-		char *val = values[i].data.string_val;
-		size_t len = strlen(val) + 5;
-		char opt[len];
+	return option;
+}
 
-		snprintf(opt, len, "-O %s ", val);
-		DEBUG("opt value[%zu]: %s", i, opt);
+static char *dhcp_options(const char *ifname, struct lyd_node *cfg)
+{
+	struct lyd_node *option;
+	char *options = NULL;
+
+	LYX_LIST_FOR_EACH(lyd_child(cfg), option, "option") {
+		const char *value = lydx_get_cattr(option, "value");
+		const char *name  = lydx_get_cattr(option, "name");
+		char opt[300];
+
+		compose_option(ifname, name, value, opt, sizeof(opt));
 		if (options) {
 			char *opts;
 
-			opts = realloc(options, strlen(options) + len + 1);
+			opts = realloc(options, strlen(options) + strlen(opt) + 1);
 			if (!opts) {
 				ERROR("failed reallocating options: %s", strerror(errno));
 				free(options);
 				options = NULL;
-				goto out;
+				break;
 			}
 
 			options = strcat(opts, opt);
 		} else
 			options = strdup(opt);
-
-		DEBUG("options %s", options);
 	}
 
-out:
-	if (values)
-		sr_free_values(values, count);
-
+	if (!options)
+		options = strdup("-O router -O dns -O domain -O broadcast -O ntpsrv -O search "
+				 "-O address -O staticroutes -O msstaticroutes");
 	return options;
 }
 
-static void add(sr_session_ctx_t *session, struct lyd_node *cfg, const char *ifname)
+static void add(const char *ifname, struct lyd_node *cfg)
 {
 	const char *metric = lydx_get_cattr(cfg, "route-preference");
 	const char *client_id = lydx_get_cattr(cfg, "client-id");
 	char *args = NULL, *ipcache = NULL, *options = NULL;
-	bool arping = lydx_is_enabled(cfg, "arping");
-	char hostnm[300], vendor[128] = { 0 };
+	char vendor[128] = { 0 }, do_arp[20] = { 0 };
 	const char *action = "disable";
-	char do_arp[20] = { 0 };
+	bool arping;
 	FILE *fp;
 
+	arping = lydx_is_enabled(cfg, "arping");
 	if (arping)
 		snprintf(do_arp, sizeof(do_arp), "-a%d", ARPING_MSEC);
 
@@ -172,15 +228,13 @@ static void add(sr_session_ctx_t *session, struct lyd_node *cfg, const char *ifn
 			sprintf(args, "-C -x 61:'\"%s\"'", client_id);
 	}
 
-	options = dhcp_options(session, ifname);
+	options = dhcp_options(ifname, cfg);
 	if (!options) {
 		ERROR("failed extracting DHCP options for client %s, aborting!", ifname);
 		goto err;
 	}
 
 	os_name_version(vendor, sizeof(vendor));
-	hostname(hostnm, sizeof(hostnm));
-	ipcache = ip_cache(ifname);
 
 	fp = fopenf("w", "/etc/finit.d/available/dhcp-%s.conf", ifname);
 	if (!fp) {
@@ -190,12 +244,12 @@ static void add(sr_session_ctx_t *session, struct lyd_node *cfg, const char *ifn
 
 	fprintf(fp, "# Generated by Infix confd\n");
 	fprintf(fp, "metric=%s\n", metric);
-	fprintf(fp, "service <!> name:dhcp :%s\\\n"
-		"	[2345] udhcpc -f -p /run/dhcp-%s.pid -t 10 -T 3 -A 10 %s -S -R %s \\\n"
+	fprintf(fp, "service <!> name:dhcp :%s \\\n"
+		"	[2345] udhcpc -f -p /run/dhcp-%s.pid -t 10 -T 3 -A 10 %s -S -R \\\n"
 		"		-o %s \\\n"
-		"       	-i %s %s %s %s \\\n"
+		"		-i %s %s %s %s \\\n"
 		"		-- DHCP client @%s\n",
-		ifname, ifname, do_arp, hostnm,
+		ifname, ifname, do_arp,
 		options,
 		ifname, args ?: "", ipcache ?: "", vendor, ifname);
 	fclose(fp);
@@ -260,7 +314,7 @@ static int change(sr_session_ctx_t *session, uint32_t sub_id, const char *module
 			if (!ena || !lydx_is_enabled(cif, "enabled"))
 				del(ifname);
 			else
-				add(session, cif, ifname);
+				add(ifname, cif);
 			break;
 		}
 	}
@@ -273,92 +327,6 @@ err_abandon:
 	return err;
 }
 
-/*
- * YANG v1.1 doesn't support default values for leaf-list elements so
- * we use the same inference technique used for inteface types to set
- * a default list of sane options.
- */
-static int infer_options(sr_session_ctx_t *session, const char *path)
-{
-	const char *opt[] = { "subnet", "router", "dns", "hostname", "domain",
-		"broadcast", "ntpsrv", "address", "staticroutes" };
-	char xpath[strlen(path) + 10];
-	sr_error_t rc = SR_ERR_OK;
-	sr_val_t *values = NULL;
-	size_t count = 0;
-	char *ptr;
-
-	strlcpy(xpath, path, sizeof(xpath));
-	ptr = strstr(xpath, "]/");
-	if (!ptr)
-		return SR_ERR_SYS;
-
-	ptr[1] = 0;
-	strlcat(xpath, "/options", sizeof(xpath));
-
-	rc = sr_get_items(session, xpath, 0, 0, &values, &count);
-	if (rc != SR_ERR_OK) {
-		ERROR("sr_get_items failed: %s", sr_strerror(rc));
-		goto out;
-	}
-
-	if (count > 0)
-		goto done;
-
-	for (size_t i = 0; i < NELEMS(opt); ++i) {
-		rc = sr_set_item_str(session, xpath, opt[i], NULL, SR_EDIT_DEFAULT);
-		if (rc != SR_ERR_OK) {
-			ERROR("failed infering option[%zu] = %s: %s", i, opt[i], sr_strerror(rc));
-			goto out;
-		}
-	}
-done:
-	for (size_t i = 0; i < count; ++i) {
-		DEBUG("DHCP option[%zu]: %s", i, values[i].data.string_val);
-	}
-out:
-	if (values)
-		sr_free_values(values, count);
-
-	return rc;
-}
-
-static int update(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
-		  const char *xpath, sr_event_t event, unsigned request_id, void *priv)
-{
-	sr_change_iter_t *iter;
-	sr_change_oper_t op;
-	sr_val_t *old, *new;
-	sr_error_t err;
-
-	switch (event) {
-	case SR_EV_UPDATE:
-	case SR_EV_CHANGE:
-		break;
-	default:
-		return SR_ERR_OK;
-	}
-
-	err = sr_dup_changes_iter(session, XPATH "//*", &iter);
-	if (err)
-		return err;
-
-	while (sr_get_change_next(session, iter, &op, &old, &new) == SR_ERR_OK) {
-		switch (op) {
-		case SR_OP_CREATED:
-		case SR_OP_MODIFIED:
-			break;
-		default:
-			continue;
-		}
-
-		infer_options(session, new->xpath);
-	}
-
-	sr_free_change_iter(iter);
-	return SR_ERR_OK;
-}
-
 int infix_dhcp_init(struct confd *confd)
 {
 	int rc;
@@ -368,7 +336,6 @@ int infix_dhcp_init(struct confd *confd)
 		goto fail;
 
 	REGISTER_CHANGE(confd->session, MODULE, XPATH, 0, change, confd, &confd->sub);
-	REGISTER_CHANGE(confd->session, MODULE, XPATH, SR_SUBSCR_UPDATE, update, confd, &confd->sub);
 	return SR_ERR_OK;
 fail:
 	ERROR("init failed: %s", sr_strerror(rc));
