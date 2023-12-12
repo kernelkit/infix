@@ -18,7 +18,7 @@ class PadRoute:
     prefix = 30
     protocol = 10
     next_hop = 30
-    metric = 10
+    pref = 8
 
 class PadSoftware:
     name = 10
@@ -59,7 +59,7 @@ class Route:
         self.data = data
         self.prefix = data.get(f'ietf-{ip}-unicast-routing:destination-prefix', '')
         self.protocol = data.get('source-protocol','')[14:]
-        self.metric = data.get('route-preference','')
+        self.pref = data.get('route-preference','')
 
         interface = get_json_data(None, self.data, 'next-hop', 'outgoing-interface')
         address = get_json_data(None, self.data, 'next-hop', f'ietf-{ip}-unicast-routing:next-hop-address')
@@ -76,7 +76,7 @@ class Route:
     def print(self):
         row  = f"{self.prefix:<{PadRoute.prefix}}"
         row += f"{self.next_hop:<{PadRoute.next_hop}}"
-        row += f"{self.metric:<{PadRoute.metric}}"
+        row += f"{self.pref:>{PadRoute.pref}}  "
         row += f"{self.protocol:<{PadRoute.protocol}}"
         print(row)
 
@@ -375,7 +375,7 @@ def ietf_routing(json, ip="ipv4"):
         sys.exit(1)
     hdr = (f"{'PREFIX':<{PadRoute.prefix}}"
            f"{'NEXT-HOP':<{PadRoute.next_hop}}"
-           f"{'METRIC':<{PadRoute.metric}}"
+           f"{'PREF':>{PadRoute.pref}}  "
            f"{'PROTOCOL':<{PadRoute.protocol}}")
 
     print(Decore.invert(hdr))

@@ -422,25 +422,26 @@ NETCONF or using the CLI:
 #### IPv4 routing table
 
     admin@example:/> show routes ipv4
-    PREFIX                        NEXT-HOP                      METRIC    PROTOCOL
-    192.168.1.0/24                e0                                      kernel
-    192.168.200.0/24              192.168.1.1                   20        static
+    PREFIX                        NEXT-HOP                      PREF  PROTOCOL
+    192.168.1.0/24                e0                                  kernel
+    192.168.200.0/24              192.168.1.1                     20  static
     admin@example:/>
 
 #### IPv6 routing table
 
     admin@example:/> show routes ipv6
-    PREFIX                        NEXT-HOP                      METRIC    PROTOCOL
-    2001:db8:3c4d:50::/64         eth4                          256       kernel
-    fe80::/64                     eth5                          256       kernel
-    fe80::/64                     eth3                          256       kernel
-    fe80::/64                     eth1                          256       kernel
-    fe80::/64                     eth0                          256       kernel
-    fe80::/64                     eth2                          256       kernel
-    fe80::/64                     eth4                          256       kernel
+    PREFIX                        NEXT-HOP                      PREF  PROTOCOL
+    2001:db8:3c4d:50::/64         eth4                           256  kernel
+    fe80::/64                     eth5                           256  kernel
+    fe80::/64                     eth3                           256  kernel
+    fe80::/64                     eth1                           256  kernel
+    fe80::/64                     eth0                           256  kernel
+    fe80::/64                     eth2                           256  kernel
+    fe80::/64                     eth4                           256  kernel
     admin@example:/>
 
 #### Source protocol
+
 The source protocol describes the origin of the route.
 
 | **Protocol** | **Description**                                                      |
