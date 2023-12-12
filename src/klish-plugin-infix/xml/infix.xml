@@ -250,6 +250,10 @@
     </SWITCH>
   </COMMAND>
 
+  <COMMAND name="dns" help="Show DNS (client) status">
+    <ACTION sym="script">resolvconf -l</ACTION>
+  </COMMAND>
+
   <COMMAND name="ntp" help="Show NTP (client) status">
     <ACTION sym="script">ntp tracking</ACTION>
     <SWITCH name="optional" min="0">
