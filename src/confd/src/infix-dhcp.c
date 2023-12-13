@@ -175,6 +175,28 @@ static char *compose_option(const char *ifname, const char *name, const char *va
 	return option;
 }
 
+static char *compose_options(const char *ifname, char **options, const char *name, const char *value)
+{
+	char opt[300];
+
+	compose_option(ifname, name, value, opt, sizeof(opt));
+	if (*options) {
+		char *opts;
+
+		opts = realloc(*options, strlen(*options) + strlen(opt) + 1);
+		if (!opts) {
+			ERROR("failed reallocating options: %s", strerror(errno));
+			free(*options);
+			return NULL;
+		}
+
+		*options = strcat(opts, opt);
+	} else
+		*options = strdup(opt);
+
+	return *options;
+}
+
 static char *dhcp_options(const char *ifname, struct lyd_node *cfg)
 {
 	struct lyd_node *option;
@@ -183,29 +205,21 @@ static char *dhcp_options(const char *ifname, struct lyd_node *cfg)
 	LYX_LIST_FOR_EACH(lyd_child(cfg), option, "option") {
 		const char *value = lydx_get_cattr(option, "value");
 		const char *name  = lydx_get_cattr(option, "name");
-		char opt[300];
 
-		compose_option(ifname, name, value, opt, sizeof(opt));
-		if (options) {
-			char *opts;
-
-			opts = realloc(options, strlen(options) + strlen(opt) + 1);
-			if (!opts) {
-				ERROR("failed reallocating options: %s", strerror(errno));
-				free(options);
-				options = NULL;
-				break;
-			}
-
-			options = strcat(opts, opt);
-		} else
-			options = strdup(opt);
+		options = compose_options(ifname, &options, name, value);
 	}
 
-	if (!options)
-		options = strdup("-O router -O dns -O domain -O broadcast -O ntpsrv -O search "
-				 "-O address -O staticroutes -O msstaticroutes");
-	return options;
+	if (!options) {
+		const char *defaults[] = {
+			"router", "dns", "domain", "broadcast", "ntpsrv", "search",
+			"address", "staticroutes", "msstaticroutes"
+		};
+
+		for (size_t i = 0; i < NELEMS(defaults); i++)
+			options = compose_options(ifname, &options, defaults[i], NULL);
+	}
+
+	return options ?: strdup("-O subnet -O router -O domain");
 }
 
 static void add(const char *ifname, struct lyd_node *cfg)
