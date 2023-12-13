@@ -1,4 +1,4 @@
-"""Sniff for packets using tcpdump"""
+"""Sniff for network packets using tcpdump/tshark"""
 import os
 import signal
 import subprocess
