@@ -34,6 +34,22 @@ def interface_exist(target, iface):
     """Verify that the target interface exists"""
     return _iface_get_param(target, iface, "name") is not None
 
+def address_exist(target, iface, address, proto="dhcp"):
+    """Check if 'address' is set on iface"""
+    addrs = get_ipv4_address(target, iface)
+    if not addrs:
+        return False
+    for addr in addrs:
+        if addr['origin'] == "dhcp" and addr['ip'] == address:
+            return True
+
+def get_ipv4_address(target, iface):
+    """Fetch interface IPv4 addresses from (operational status)"""
+    ipv4 = _iface_get_param(target, iface, "ipv4")
+    if ipv4 is None or 'address' not in ipv4:
+        return None
+    return ipv4['address']
+
 def get_if_index(target, iface):
     """Fetch interface 'if-index' (operational status)"""
     return _iface_get_param(target, iface, "if-index")
