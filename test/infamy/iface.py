@@ -50,7 +50,7 @@ def get_oper_up(target,iface):
     state=get_oper_status(target,iface)
     return state == "up"
 
-def print_iface_status(target):
+def print_all(target):
     """Print status parameters for all target interfaces"""
     try:
         content = target.get_dict("/ietf-interfaces:interfaces")

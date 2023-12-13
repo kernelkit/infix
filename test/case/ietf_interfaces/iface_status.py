@@ -30,7 +30,7 @@ with infamy.Test() as test:
         env = infamy.Env(infamy.std_topology("1x1"))
         target = env.attach("target", "mgmt")
       
-    iface.print_iface_status(target)
+    iface.print_all(target)
 
     loopback_iface = "lo"
     _, mgmt_iface = env.ltop.xlate("target", "mgmt") 
