@@ -7,10 +7,10 @@ class Server:
     config_file = '/tmp/udhcpd.conf'
     leases_file = '/tmp/udhcpd.leases'
 
-    def __init__(self, netns, start='192.168.0.100', end='192.168.0.110', netmask='255.255.255.0', ip=None, router=None):
+    def __init__(self, netns, start='192.168.0.100', end='192.168.0.110', netmask='255.255.255.0', ip=None, router=None, prefix=None):
         self.process = None
         self.netns = netns
-        self._create_files(start, end, netmask, ip, router)
+        self._create_files(start, end, netmask, ip, router, prefix)
 
     def __del__(self):
         print(self.config_file)
@@ -23,7 +23,7 @@ class Server:
     def __exit__(self, _, __, ___):
         self.stop()
 
-    def _create_files(self, start, end, netmask, ip, router):
+    def _create_files(self, start, end, netmask, ip, router, prefix):
         f = open(self.leases_file, "w")
         f.close()
 
@@ -42,6 +42,8 @@ option lease 864000
 ''')
             if router:
                 f.write(f"option router {router}\n")
+            if prefix and router:
+                f.write(f"option staticroutes {prefix} {router}\n")
 
     def get_pid(self):
         return self.process.pid

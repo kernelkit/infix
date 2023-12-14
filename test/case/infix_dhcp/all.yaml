@@ -1,3 +1,4 @@
 ---
 - case: dhcp_basic.py
 - case: dhcp_router.py
+- case: dhcp_routes.py
