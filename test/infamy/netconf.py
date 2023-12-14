@@ -247,7 +247,7 @@ class Device(object):
 
     def put_config_dict(self, modname, edit):
         mod = self.ly.get_module(modname)
-        lyd = mod.parse_data_dict(edit, no_state=True)
+        lyd = mod.parse_data_dict(edit, no_state=True, validate=False)
         return self.put_config(lyd.print_mem("xml", with_siblings=True, pretty=False))
 
     def put_diff_dicts(self, modname, old, new):
