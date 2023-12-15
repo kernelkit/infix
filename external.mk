@@ -18,6 +18,9 @@ run-menuconfig: $(BUILD_DIR)/buildroot-config/mconf
 	CONFIG_="CONFIG_" BR2_CONFIG="$(BINARIES_DIR)/.config" \
 		$(BUILD_DIR)/buildroot-config/mconf $(BINARIES_DIR)/Config.in
 
+#
+# Buildroot package extensions
+#
 define FRR_POST_BUILD_HOOK
 	mkdir -p $(TARGET_DIR)/etc/iproute2/
 	cp -r $(@D)/tools/etc/iproute2/rt_protos.d/ $(TARGET_DIR)/etc/iproute2/
