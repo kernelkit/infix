@@ -7,7 +7,7 @@ test-env = $(test-dir)/env \
 	-p $(BINARIES_DIR)/infix-x86_64.pkg \
 	$(1) $(2)
 
-test-env-qeneth = $(call test-env,-q $(test-dir)/virt/dual,$(1))
+test-env-qeneth = $(call test-env,-q $(test-dir)/virt/quad,$(1))
 test-env-run    = $(call test-env,-C -t $(BINARIES_DIR)/qemu.dot,$(1))
 
 .PHONY: test-%
