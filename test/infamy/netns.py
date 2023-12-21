@@ -89,6 +89,17 @@ class IsolatedMacVlan:
             """, check=True)
 
 
+    def traceroute(self, addr):
+        res=self.runsh(f"""
+        set -ex
+        traceroute -n {addr}
+        """, check=True)
+        result=[]
+        for line in res.stdout.splitlines()[2:]:
+            l=line.split()
+            result.append(l)
+        return result
+
     def ping(self, daddr, count=1, timeout=5, interval=2, check=False):
         return self.runsh(f"""set -ex; ping -c {count} -w {timeout} -i {interval} {daddr}""", check=check)
 
