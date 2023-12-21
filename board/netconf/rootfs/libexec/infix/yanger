@@ -167,10 +167,53 @@ def add_ipv6_route(routes):
     data = run_json_cmd(cmd)
     get_routes(routes, "ipv6", data)
 
-def add_ospf_area(ospf):
+def frr_to_ietf_neighbor_state(state):
+    state=state.split("/")[0]
+    if(state == "TwoWay"):
+        return "2-way"
+    return state.lower()
+
+def add_ospf_routes(ospf):
+    cmd = ['vtysh', '-c', "show ip ospf rout json"]
+    data = run_json_cmd(cmd)
+    routes=[]
+    for prefix,info in data.items():
+        route={}
+        if prefix.find("/") == -1:
+            prefix = prefix+"/32"
+        route["prefix"] = prefix
+        nexthops=[]
+        routetype=info["routeType"].split(" ")
+        if(len(routetype) > 1):
+            if(routetype[1]=="E1"):
+                route["route-type"] = "external-1"
+            elif(routetype[1]=="E2"):
+                route["route-type"] = "external-2"
+            elif(routetype[1]=="IA"):
+                route["route-type"] = "inter-area"
+            else:
+                route["route-type"] = "intra-area"
+        else:
+            route["route-type"] = "intra-area"
+        for hop in info["nexthops"]:
+            nexthop={}
+            if(hop["ip"] != " "):
+                nexthop["next-hop"] = hop["ip"]
+            else:
+                nexthop["outgoing-interface"] = hop["directlyAttachedTo"]
+            nexthops.append(nexthop)
+        route["next-hops"] = {}
+        route["next-hops"]["next-hop"] = nexthops
+        routes.append(route)
+    insert(ospf, "ietf-ospf:local-rib", "ietf-ospf:route", routes)
+
+def add_ospf(ospf):
     cmd = ['/libexec/infix/ospf-status']
     data = run_json_cmd(cmd)
+    ospf["ietf-ospf:router-id"] = data["routerId"]
+    ospf["ietf-ospf:address-family"] = "ipv4"
     areas=[]
+
     for area_id,values in data["areas"].items():
         area={}
         area["ietf-ospf:area-id"] = area_id
@@ -178,6 +221,7 @@ def add_ospf_area(ospf):
         interfaces=[]
         for iface in values["interfaces"]:
             interface={}
+            interface["ietf-ospf:neighbors"] = {}
             interface["name"]=iface["name"]
             if(iface.get("drId")):
                interface["dr-router-id"]=iface["drId"]
@@ -187,10 +231,24 @@ def add_ospf_area(ospf):
                interface["bdr-router-id"]=iface["bdrId"]
             if(iface.get("bdrAddress")):
                interface["bdr-ip-addr"]=iface["bdrAddress"]
+
+            neighbors = []
+            for neigh in iface["neighbors"]:
+                neighbor={}
+                neighbor["neighbor-router-id"] = neigh["neighborIp"]
+                neighbor["address"] = neigh["ifaceAddress"]
+                neighbor["dr-router-id"] = neigh["routerDesignatedId"]
+                neighbor["bdr-router-id"] = neigh["routerDesignatedBackupId"]
+                neighbor["dead-timer"] = neigh["routerDeadIntervalTimerDueMsec"]
+                neighbor["state"]=frr_to_ietf_neighbor_state(neigh["nbrState"])
+                neighbors.append(neighbor)
+            interface["ietf-ospf:neighbors"] = {}
+            interface["ietf-ospf:neighbors"]["ietf-ospf:neighbor"] = neighbors
             interfaces.append(interface)
         area["ietf-ospf:interfaces"]["ietf-ospf:interface"] = interfaces
         areas.append(area)
-    insert(ospf, "area", areas)
+    insert(ospf, "ietf-ospf:areas", "area", areas)
+    add_ospf_routes(ospf)
 
 def add_ip_link(ifname, iface_out, test):
     if test:
@@ -477,7 +535,7 @@ if __name__ == "__main__":
                 }
             }
         }
-        add_ospf_area(yang_data['ietf-routing:routing']['control-plane-protocols']['control-plane-protocol'][0]["ietf-ospf:ospf"]["ietf-ospf:areas"])
+        add_ospf(yang_data['ietf-routing:routing']['control-plane-protocols']['control-plane-protocol'][0]["ietf-ospf:ospf"])
     else:
         print(f"Unsupported model {args.model}", file=sys.stderr)
         sys.exit(1)

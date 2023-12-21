@@ -135,6 +135,7 @@ module infix-routing {
     }
 
     /* OSPF */
+
     augment "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf" {
       description "ietf-ospf does not contain redistribution
 	7. How should route redistribution be configured? I see ietf-rip.yang has a separate
@@ -156,6 +157,7 @@ module infix-routing {
 	  }
 	}
     }
+
     deviation "/ietf-r:routing/ietf-r:ribs/ietf-r:rib/ietf-r:routes/ietf-r:route/ospf:metric" {
       deviate not-supported;
     }
@@ -213,9 +215,6 @@ module infix-routing {
     deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf/ospf:node-tags" {
       deviate not-supported;
     }
-    deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf/ospf:local-rib" {
-      deviate not-supported;
-    }
     deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf/ospf:mpls" {
       deviate not-supported;
     }
@@ -253,6 +252,11 @@ module infix-routing {
     }
 
     /* OSPF Area Interface */
+    deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf/ospf:areas/ospf:area/ospf:interfaces/ospf:interface/ospf:static-neighbors"
+    {
+      deviate not-supported;
+    }
+
     deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf/ospf:areas/ospf:area/ospf:interfaces/ospf:interface/ospf:multi-areas"    {
       deviate not-supported;
     }
@@ -266,6 +270,7 @@ module infix-routing {
     {
       deviate not-supported;
     }
+
     deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf/ospf:areas/ospf:area/ospf:interfaces/ospf:interface/ospf:interface-type"
     {
       deviate not-supported;
@@ -286,10 +291,7 @@ module infix-routing {
     {
       deviate not-supported;
     }
-    deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf/ospf:areas/ospf:area/ospf:interfaces/ospf:interface/ospf:neighbors"
-    {
-      deviate not-supported;
-    }
+
     deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf/ospf:areas/ospf:area/ospf:interfaces/ospf:interface/ospf:database"
     {
       deviate not-supported;
@@ -307,10 +309,6 @@ module infix-routing {
       deviate not-supported;
     }
     deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf/ospf:areas/ospf:area/ospf:interfaces/ospf:interface/ospf:demand-circuit"
-    {
-      deviate not-supported;
-    }
-    deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf/ospf:areas/ospf:area/ospf:interfaces/ospf:interface/ospf:static-neighbors"
     {
       deviate not-supported;
     }
