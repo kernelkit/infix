@@ -384,12 +384,13 @@ flag controls if the interface will be in host/router mode.
    ```
 ## Routing support
 
-| **Yang Model**            | **Description**                                           |
-|:--------------------------|:----------------------------------------------------------|
-| ietf-routing              | Base routing model, required for all other routing models |
-| ietf-ipv4-unicast-routing | Static IPv4 unicast routing                               |
-| ietf-ospf                 | OSPF routing                                              |
-| infix-routing             | Infix deviations                                          |
+| **Yang Model**            | **Description**                                                                       |
+|:--------------------------|:--------------------------------------------------------------------------------------|
+| ietf-routing              | Base model, used to set configuration and read operational status in the other models |
+| ietf-ipv4-unicast-routing | Static IPv4 unicast routing                                                           |
+| ietf-ipv6-unicast-routing | Static IPv6 unicast routing                                                           |
+| ietf-ospf                 | OSPF routing                                                                          |
+| infix-routing             | Infix deviations                                                                      |
 
 ### IPv4 Static routes
 Remember to enable [IPv4 forwarding](#IPv4-forwarding) for the interfaces.
@@ -415,19 +416,6 @@ Remember to enable [IPv4 forwarding](#IPv4-forwarding) for the interfaces.
 > **Note:** The only name allowed for a control-plane-protocol is currently
 > *default*.  Meaning, you can only have one instance per routing protocol.
 
-### View routing table
-
-The routing table can be viewed from the operational datastore over
-NETCONF or using the CLI:
-
-#### IPv4 routing table
-
-    admin@example:/> show routes ipv4
-    PREFIX                        NEXT-HOP                      PREF  PROTOCOL
-    192.168.1.0/24                e0                                  kernel
-    192.168.200.0/24              192.168.1.1                     20  static
-    admin@example:/>
-
 #### OSPFv2 Routing
 Remember to enable [IPv4 forwarding](#IPv4-forwarding) for the
 interfaces you want to run OSPFv2.
@@ -439,6 +427,33 @@ interfaces you want to run OSPFv2.
 
 > **Note:** The only name allowed for a control-plane-protocol is currently
 > *default*.  Meaning, you can only have one instance per routing protocol.
+
+### Stub area types
+NSSA and Stub areas are currently supported.
+
+To configure a NSSA area with summary routes:
+
+    admin@example:/config/> edit routing control-plane-protocol ietf-ospf:ospfv2 name default
+    admin@example:/config/routing/control-plane-protocol/ietf-ospf:ospfv2/name/default/> set ospf area 0.0.0.1 area-type nssa-area
+    admin@example:/config/routing/control-plane-protocol/ietf-ospf:ospfv2/name/default/> set ospf area 0.0.0.1 summary true
+    admin@example:/config/routing/control-plane-protocol/static/name/default/> leave
+    admin@example:/>
+
+### Debug OSPFv2
+Using NETCONF and the YANG model *ietf-routing* it is possible to read the OSPF routing table, neighbors
+and more, that may be useful for debugging the OSPFv2 setup.
+
+### View routing table
+The routing table can be viewed from the operational datastore over
+NETCONF or using the CLI:
+
+#### IPv4 routing table
+
+    admin@example:/> show routes ipv4
+    PREFIX                        NEXT-HOP                      PREF  PROTOCOL
+    192.168.1.0/24                e0                                  kernel
+    192.168.200.0/24              192.168.1.1                     20  static
+    admin@example:/>
 
 #### IPv6 routing table
 
