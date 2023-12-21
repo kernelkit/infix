@@ -176,6 +176,16 @@ const char *lydx_get_attrf(struct lyd_node *sibling, const char *namefmt, ...)
 	return val;
 }
 
+bool lydx_get_bool(struct lyd_node *parent, const char *name)
+{
+	const char *value = lydx_get_cattr(parent,name);
+	if(!value)
+		return false;
+	if(!strcmp(value, "true"))
+		return true;
+	return false;
+}
+
 int lydx_new_path(const struct ly_ctx *ctx, struct lyd_node **parent,
 		  char *xpath_base, char *node, const char *fmt, ...)
 {
