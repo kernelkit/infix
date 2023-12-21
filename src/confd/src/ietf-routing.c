@@ -25,7 +25,6 @@ log syslog informational\n"
 int parse_ospf_interfaces(sr_session_ctx_t *session, struct lyd_node *areas, FILE *fp)
 {
 	struct lyd_node *interface, *interfaces, *area;
-	int areas_enabled = 0;
 	LY_LIST_FOR(lyd_child(areas), area) {
 		interfaces = lydx_get_child(area, "interfaces");
 		const char *area_id = lydx_get_cattr(area, "area-id");
@@ -46,24 +45,49 @@ int parse_ospf_interfaces(sr_session_ctx_t *session, struct lyd_node *areas, FIL
 					fprintf(fp, "  ip ospf retransmit-interval %s\n", retransmit);
 				if (transmit)
 					fprintf(fp, "  ip ospf transmit-delay %s\n", transmit);
-				areas_enabled++;
 			}
 		}
 	}
-	return areas_enabled;
+	return 0;
 }
 
-int parse_redistribute(sr_session_ctx_t *session, struct lyd_node *redistributes, FILE *fp)
+int parse_ospf_redistribute(sr_session_ctx_t *session, struct lyd_node *redistributes, FILE *fp)
 {
 	struct lyd_node *tmp;
 	LY_LIST_FOR(lyd_child(redistributes), tmp) {
 		const char *protocol = lydx_get_cattr(tmp, "protocol");
 		fprintf(fp, "  redistribute %s\n", protocol);
 	}
-
 	return 0;
 }
 
+int parse_ospf_areas(sr_session_ctx_t *session, struct lyd_node *areas, FILE *fp)
+{
+	struct lyd_node *area;
+	int areas_configured = 0;
+	LY_LIST_FOR(lyd_child(areas), area) {
+		const char *area_id, *area_type, *default_cost;
+		int summary;
+		area_id = lydx_get_cattr(area, "area-id");
+		area_type = lydx_get_cattr(area, "area-type");
+		default_cost = lydx_get_cattr(area, "default-cost");
+		summary = lydx_get_bool(area, "summary");
+		if (area_type) {
+			int stub_or_nssa = 0;
+			if (!strcmp(area_type, "nssa-area")) {
+				stub_or_nssa = 1;
+				fprintf(fp, "  area %s nssa %s\n", area_id, !summary ? "no-summary" : "");
+			} else if (!strcmp(area_type, "stub-area")) {
+				stub_or_nssa = 1;
+				fprintf(fp, "  area %s stub %s\n", area_id, !summary ? "no-summary" : "");
+			}
+			if (stub_or_nssa && default_cost)
+				fprintf(fp, "  area %s default-cost %s\n", area_id, default_cost);
+		}
+		areas_configured++;
+	}
+	return areas_configured;
+}
 int parse_ospf(sr_session_ctx_t *session, struct lyd_node *ospf)
 {
 	struct lyd_node *areas;
@@ -76,9 +100,10 @@ int parse_ospf(sr_session_ctx_t *session, struct lyd_node *ospf)
 	}
 	fputs(FRR_STATIC_CONFIG, fp);
 	areas = lydx_get_child(ospf, "areas");
-	num_areas = parse_ospf_interfaces(session, areas, fp);
+	parse_ospf_interfaces(session, areas, fp);
 	fputs("router ospf\n", fp);
-	parse_redistribute(session, lydx_get_child(ospf, "redistribute"), fp);
+	num_areas = parse_ospf_areas(session, areas, fp);
+	parse_ospf_redistribute(session, lydx_get_child(ospf, "redistribute"), fp);
 
 	fclose(fp);
 
