@@ -41,6 +41,8 @@ const char *lydx_get_mattr(struct lyd_node *node, const char *name);
 const char *lydx_get_attr(struct lyd_node *sibling, const char *name);
 const char *lydx_get_cattr(struct lyd_node *parent, const char *name);
 
+bool lydx_get_bool(struct lyd_node *parent, const char *name);
+
 const char *lydx_get_vattrf(struct lyd_node *sibling, const char *namefmt, va_list ap);
 const char *lydx_get_attrf(struct lyd_node *sibling, const char *namefmt, ...)
 	__attribute__ ((format (printf, 2, 3)));
