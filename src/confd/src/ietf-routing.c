@@ -30,7 +30,7 @@ int parse_ospf_interfaces(sr_session_ctx_t *session, struct lyd_node *areas, FIL
 		const char *area_id = lydx_get_cattr(area, "area-id");
 		LY_LIST_FOR(lyd_child(interfaces), interface) {
 			const char *hello, *dead, *retransmit, *transmit;
-			if (lydx_get_cattr(interface, "enabled")) {
+			if (lydx_get_bool(interface, "enabled")) {
 				fprintf(fp, "interface %s\n", lydx_get_cattr(interface, "name"));
 				hello = lydx_get_cattr(interface, "hello-interval");
 				dead = lydx_get_cattr(interface, "dead-interval");
