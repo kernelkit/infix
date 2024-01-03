@@ -157,6 +157,14 @@ module infix-routing {
 	  }
 	}
     }
+    deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf/ospf:areas/ospf:area/ospf:interfaces/ospf:interface"
+    {
+       deviate add {
+	 must "current()/name = 'lo' or count(../../../../ospf:areas/ospf:area/ospf:interfaces/ospf:interface[ospf:name=current()/name]) <= 1" {
+	   error-message "Only one area per interface is allowed.";
+	 }
+       }
+    }
 
     deviation "/ietf-r:routing/ietf-r:ribs/ietf-r:rib/ietf-r:routes/ietf-r:route/ospf:metric" {
       deviate not-supported;
