@@ -439,6 +439,15 @@ To configure a NSSA area with summary routes:
     admin@example:/config/routing/control-plane-protocol/static/name/default/> leave
     admin@example:/>
 
+### Bidirectional Forwarding Detection (BFD)
+It is possible to enable BFD per interface to speed up detection of
+link loss.
+
+    admin@example:/config/> edit routing control-plane-protocol ietf-ospf:ospfv2 name default
+    admin@example:/config/routing/control-plane-protocol/ietf-ospf:ospfv2/name/default/ospf/> set area 0.0.0.0 interface e0 bfd enabled true
+    admin@example:/config/routing/control-plane-protocol/static/name/default/> leave
+    admin@example:/>
+
 ### Debug OSPFv2
 Using NETCONF and the YANG model *ietf-routing* it is possible to read the OSPF routing table, neighbors
 and more, that may be useful for debugging the OSPFv2 setup.

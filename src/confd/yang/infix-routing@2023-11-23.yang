@@ -266,11 +266,14 @@ module infix-routing {
     deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf/ospf:areas/ospf:area/ospf:interfaces/ospf:interface/ospf:node-flag"    {
       deviate not-supported;
     }
-    deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf/ospf:areas/ospf:area/ospf:interfaces/ospf:interface/ospf:bfd"
+    deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf/ospf:areas/ospf:area/ospf:interfaces/ospf:interface/ospf:bfd/ospf:local-multiplier"
     {
       deviate not-supported;
     }
-
+      deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf/ospf:areas/ospf:area/ospf:interfaces/ospf:interface/ospf:bfd/ospf:interval-config-type"
+    {
+      deviate not-supported;
+    }
     deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf/ospf:areas/ospf:area/ospf:interfaces/ospf:interface/ospf:interface-type"
     {
       deviate not-supported;
