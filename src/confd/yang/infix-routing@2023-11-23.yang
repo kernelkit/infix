@@ -130,9 +130,6 @@ module infix-routing {
     deviation "/ietf-r:routing/ietf-r:ribs/ietf-r:rib/ietf-r:active-route" {
       deviate not-supported;
     }
-    deviation "/ietf-r:routing/ietf-r:ribs/ietf-r:rib/ietf-r:routes/ietf-r:route/ietf-r:next-hop/ietf-r:next-hop-options/ietf-r:next-hop-list" {
-      deviate not-supported;
-    }
 
     /* OSPF */
 
