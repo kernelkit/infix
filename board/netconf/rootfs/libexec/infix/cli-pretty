@@ -60,25 +60,41 @@ class Route:
         self.prefix = data.get(f'ietf-{ip}-unicast-routing:destination-prefix', '')
         self.protocol = data.get('source-protocol','')[14:]
         self.pref = data.get('route-preference','')
-
-        interface = get_json_data(None, self.data, 'next-hop', 'outgoing-interface')
-        address = get_json_data(None, self.data, 'next-hop', f'ietf-{ip}-unicast-routing:next-hop-address')
-        special = get_json_data(None, self.data, 'next-hop', 'special-next-hop')
-        if interface:
-            self.next_hop = interface
-        elif address:
-            self.next_hop = address
-        elif special:
-            self.next_hop = special
+        self.next_hop = []
+        next_hop_list=get_json_data(None, self.data, 'next-hop', 'next-hop-list')
+        if next_hop_list:
+            for nh in next_hop_list["next-hop"]:
+                if(nh.get(f"ietf-{ip}-unicast-routing:address")):
+                    self.next_hop.append(nh[f"ietf-{ip}-unicast-routing:address"])
+                elif(nh.get("outgoing-interface")):
+                    self.next_hop.append(nh["outgoing-interface"])
+                else:
+                    self.next_hop.append("unspecified")
         else:
-            self.next_hop = "unspecified"
+            interface = get_json_data(None, self.data, 'next-hop', 'outgoing-interface')
+            address = get_json_data(None, self.data, 'next-hop', f'ietf-{ip}-unicast-routing:next-hop-address')
+            special = get_json_data(None, self.data, 'next-hop', 'special-next-hop')
+            nh = ""
+            if interface:
+                self.nh = interface
+            elif address:
+                self.nh = address
+            elif special:
+                self.nh = special
+            else:
+                self.nh =  "unspecified"
 
+            self.next_hop.append(nh)
     def print(self):
         row  = f"{self.prefix:<{PadRoute.prefix}}"
-        row += f"{self.next_hop:<{PadRoute.next_hop}}"
+        row += f"{self.next_hop[0]:<{PadRoute.next_hop}}"
         row += f"{self.pref:>{PadRoute.pref}}  "
         row += f"{self.protocol:<{PadRoute.protocol}}"
         print(row)
+        for nh in self.next_hop[1:]:
+            row  = f"{'':<{PadRoute.prefix}}"
+            row += f"{nh:<{PadRoute.next_hop}}"
+            print(row)
 
 class Software:
     """Software bundle class """
@@ -383,7 +399,6 @@ def ietf_routing(json, ip="ipv4"):
         if rib["name"] != ip:
             continue;
         routes = get_json_data(None, rib, "routes", "route")
-
 
         if routes:
             for r in routes:

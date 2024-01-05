@@ -129,7 +129,7 @@ def get_routes(routes, proto, data):
         host_prefix_length="128"
     for d in data:
         new = {}
-        next_hop = {}
+
         if(d['dst'] == "default"):
             d['dst'] = default
         if(d['dst'].find('/') == -1):
@@ -141,18 +141,28 @@ def get_routes(routes, proto, data):
         else:
             new['route-preference'] = 0
 
-        if d['type'] == "blackhole":
-            next_hop['special-next-hop'] = "blackhole"
-        if d['type'] == "unreachable":
-            next_hop['special-next-hop'] = "unreachable"
-
-        if d['type'] == "unicast":
-            if(d.get("gateway")):
-                next_hop[f'ietf-{proto}-unicast-routing:next-hop-address'] = d['gateway']
-            elif(d.get("dev")):
-                next_hop['outgoing-interface'] = d['dev']
-
-        new['next-hop'] = next_hop
+        if d.get('nexthops'):
+            next_hops = []
+            for n in d.get('nexthops'):
+                next_hop = {}
+                if(n.get("dev")):
+                    next_hop['outgoing-interface'] = n['dev']
+                if(n.get("gateway")):
+                    next_hop[f'ietf-{proto}-unicast-routing:address'] = n['gateway']
+                next_hops.append(next_hop)
+            insert(new,'next-hop','next-hop-list','next-hop',next_hops)
+        else:
+            next_hop = {}
+            if d['type'] == "blackhole":
+                next_hop['special-next-hop'] = "blackhole"
+            if d['type'] == "unreachable":
+                next_hop['special-next-hop'] = "unreachable"
+            if d['type'] == "unicast":
+                if(d.get("dev")):
+                    next_hop['outgoing-interface'] = d['dev']
+                if(d.get("gateway")):
+                    next_hop[f'ietf-{proto}-unicast-routing:next-hop-address'] = d['gateway']
+            new['next-hop'] = next_hop
 
         out['route'].append(new)
     insert(routes, 'routes', out)
