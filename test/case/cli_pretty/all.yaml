@@ -37,8 +37,3 @@
     - "json/bloated.json"
     - "ietf-interfaces"
     - "-n br0"
-- case: run.sh
-  name: "routing"
-  opts:
-    - "json/bloated.json"
-    - "ietf-routing"

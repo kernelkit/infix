@@ -33,7 +33,7 @@ print_update_txt() {
     echo "# the template file."
     echo
     echo "# Here's how you update the CLI output templates:"
-    echo "# $SCRIPT_PATH/run.sh update"
+    echo "# $SCRIPT_PATH/run.sh update <model>"
     echo
     echo "# Check the result"
     echo "# git diff"
@@ -47,27 +47,57 @@ if [ ! -e "$CLI_PRETTY_TOOL" ]; then
     exit 1
 fi
 
-if [ $# -eq 1 ] && [ $1 = "update" ]; then
-    "$SR_EMULATOR_TOOL" | "$CLI_PRETTY_TOOL" "ietf-interfaces" > "$CLI_OUTPUT_PATH/show-interfaces.txt"
-    for iface in "br0" "e0" "e1" "e2" "e3" "e4"; do
-        "$SR_EMULATOR_TOOL" | "$CLI_PRETTY_TOOL" "ietf-interfaces" -n "$iface" \
-            > "$CLI_OUTPUT_PATH/show-interface-${iface}.txt"
-    done
-    echo "All files updated. Check git diff and commit if they look OK"
+if [ $# -eq 2 ] && [ $1 = "update" ]; then
+    if [ $2  = "ietf-interfaces" ]; then
+      "$SR_EMULATOR_TOOL" | "$CLI_PRETTY_TOOL" "ietf-interfaces" > "$CLI_OUTPUT_PATH/show-interfaces.txt"
+      for iface in "br0" "e0" "e1" "e2" "e3" "e4"; do
+         "$SR_EMULATOR_TOOL" | "$CLI_PRETTY_TOOL" "ietf-interfaces" -n "$iface" \
+             > "$CLI_OUTPUT_PATH/show-interface-${iface}.txt"
+      done
+    elif [ $2 = "ietf-routing" ]; then
+      "$SR_EMULATOR_TOOL" | "$CLI_PRETTY_TOOL" "ietf-routing" -n "ipv4" > "$CLI_OUTPUT_PATH/show-routes-ipv4.txt"
+      "$SR_EMULATOR_TOOL" | "$CLI_PRETTY_TOOL" "ietf-routing" -n "ipv6" > "$CLI_OUTPUT_PATH/show-routes-ipv6.txt"
+    else
+      echo "Unsupported model $2"
+      exit 1
+    fi
+   echo "All files updated. Check git diff and commit if they look OK"
     exit 0
 fi
 
-echo "1..7"
+echo "1..9"
+echo "# Running:"
 
 # Show interfaces
-echo "# Running:"
 echo "# $SR_EMULATOR_TOOL | $CLI_PRETTY_TOOL ietf-interfaces"
 "$SR_EMULATOR_TOOL" | "$CLI_PRETTY_TOOL" "ietf-interfaces" > "$CLI_OUTPUT_FILE"
+# Show routes
 if ! diff -u "$CLI_OUTPUT_PATH/show-interfaces.txt" "$CLI_OUTPUT_FILE"; then
     print_update_txt
     fail "\"show interfaces\" output has changed"
 fi
 ok "\"show interfaces\" output looks intact"
+
+# Show ipv4 routes
+echo "# $SR_EMULATOR_TOOL | $CLI_PRETTY_TOOL ietf-routing -n ipv4"
+"$SR_EMULATOR_TOOL" | "$CLI_PRETTY_TOOL" "ietf-routing" -n "ipv4" > "$CLI_OUTPUT_FILE"
+# Show routes
+if ! diff -u "$CLI_OUTPUT_PATH/show-routes-ipv4.txt" "$CLI_OUTPUT_FILE"; then
+    print_update_txt
+    fail "\"show routes ipv4\" output has changed"
+fi
+ok "\"show routes ipv4\" output looks intact"
+
+# Show ipv6 routes
+echo "# $SR_EMULATOR_TOOL | $CLI_PRETTY_TOOL ietf-routing -n ipv6"
+"$SR_EMULATOR_TOOL" | "$CLI_PRETTY_TOOL" "ietf-routing" -n "ipv6" > "$CLI_OUTPUT_FILE"
+
+# Show routes
+if ! diff -u "$CLI_OUTPUT_PATH/show-routes-ipv6.txt" "$CLI_OUTPUT_FILE"; then
+    print_update_txt
+    fail "\"show routes ipv6\" output has changed"
+fi
+ok "\"show routes ipv6\" output looks intact"
 
 # Show detailed interfaces
 for iface in "br0" "e0" "e1" "e2" "e3" "e4"; do
@@ -78,3 +108,4 @@ for iface in "br0" "e0" "e1" "e2" "e3" "e4"; do
     fi
     ok "\"show interface name $iface\" output looks intact"
 done
+

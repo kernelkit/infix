@@ -129,7 +129,6 @@ def get_routes(routes, proto, data):
         host_prefix_length="128"
     for d in data:
         new = {}
-
         if(d['dst'] == "default"):
             d['dst'] = default
         if(d['dst'].find('/') == -1):
@@ -167,13 +166,20 @@ def get_routes(routes, proto, data):
         out['route'].append(new)
     insert(routes, 'routes', out)
 
-def add_ipv4_route(routes):
-    cmd = ['ip', '-4', '-s', '-d', '-j', 'route']
+def add_ipv4_route(routes, test):
+    if test:
+        cmd = ['cat', f"{test}/ip-4-route.json"]
+    else:
+        cmd = ['ip', '-4', '-s', '-d', '-j', 'route']
+
     data = run_json_cmd(cmd)
     get_routes(routes, "ipv4", data)
 
-def add_ipv6_route(routes):
-    cmd = ['ip', '-6', '-s', '-d', '-j', 'route']
+def add_ipv6_route(routes, test):
+    if test:
+        cmd = ['cat', f"{test}/ip-6-route.json"]
+    else:
+        cmd = ['ip', '-6', '-s', '-d', '-j', 'route']
     data = run_json_cmd(cmd)
     get_routes(routes, "ipv6", data)
 
@@ -526,8 +532,8 @@ if __name__ == "__main__":
 
         ipv4routes = yang_data['ietf-routing:routing']['ribs']['rib'][0]
         ipv6routes = yang_data['ietf-routing:routing']['ribs']['rib'][1]
-        add_ipv4_route(ipv4routes)
-        add_ipv6_route(ipv6routes)
+        add_ipv4_route(ipv4routes, args.test)
+        add_ipv6_route(ipv6routes, args.test)
     elif (args.model == 'ietf-ospf'):
         yang_data= {
             "ietf-routing:routing": {
