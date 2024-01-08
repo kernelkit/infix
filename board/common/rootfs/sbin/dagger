@@ -7,7 +7,7 @@ inform()
     local level="$1"
     shift
 
-    logger -p "daemon.$level" -t dagger -c $LOGGER_STDOUT "$@"
+    logger -p "daemon.$level" -I $PPID -t dagger -c $LOGGER_STDOUT "$@"
 }
 
 abort()
