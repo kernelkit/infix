@@ -131,6 +131,27 @@ module infix-routing {
       deviate not-supported;
     }
 
+    deviation "/ietf-r:routing/ietf-r:ribs/ietf-r:rib/ietf-r:routes/ietf-r:route/ospf:metric" {
+      deviate not-supported;
+    }
+
+    deviation "/ietf-r:routing/ietf-r:ribs/ietf-r:rib/ietf-r:routes/ietf-r:route/ospf:tag" {
+      deviate not-supported;
+    }
+    deviation "/ietf-r:routing/ietf-r:ribs/ietf-r:rib/ietf-r:routes/ietf-r:route/ospf:route-type" {
+      deviate not-supported;
+    }
+    deviation "/ietf-r:routing/ietf-r:ribs/ietf-r:rib/ietf-r:routes/ietf-r:route/ietf-r:active" {
+      deviate not-supported;
+    }
+    deviation "/ietf-r:routing/ietf-r:ribs/ietf-r:rib/ietf-r:routes/ietf-r:route/ietf-r:last-updated" {
+      deviate not-supported;
+    }
+    deviation "/ietf-r:routing/ietf-r:ribs/ietf-r:rib/ietf-r:description" {
+      deviate not-supported;
+    }
+
+
     /* OSPF */
 
     augment "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf" {
@@ -162,18 +183,6 @@ module infix-routing {
 	 }
        }
     }
-
-    deviation "/ietf-r:routing/ietf-r:ribs/ietf-r:rib/ietf-r:routes/ietf-r:route/ospf:metric" {
-      deviate not-supported;
-    }
-
-    deviation "/ietf-r:routing/ietf-r:ribs/ietf-r:rib/ietf-r:routes/ietf-r:route/ospf:tag" {
-      deviate not-supported;
-    }
-    deviation "/ietf-r:routing/ietf-r:ribs/ietf-r:rib/ietf-r:routes/ietf-r:route/ospf:route-type" {
-      deviate not-supported;
-    }
-
     deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf/ospf:auto-cost" {
       deviate not-supported;
     }
@@ -248,6 +257,13 @@ module infix-routing {
       deviate not-supported;
     }
 
+    /* OSPF Local RIB */
+    deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf/ospf:local-rib/ospf:route/ospf:metric" {
+      deviate not-supported;
+    }
+    deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf/ospf:local-rib/ospf:route/ospf:route-tag" {
+      deviate not-supported;
+    }
     /* OSPF Area Interface */
     deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf/ospf:areas/ospf:area/ospf:interfaces/ospf:interface/ospf:static-neighbors"
     {
@@ -288,6 +304,14 @@ module infix-routing {
       deviate not-supported;
     }
     deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf/ospf:areas/ospf:area/ospf:interfaces/ospf:interface/ospf:statistics"
+    {
+      deviate not-supported;
+    }
+    deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf/ospf:areas/ospf:area/ospf:interfaces/ospf:interface/ospf:neighbors/ospf:neighbor/ospf:statistics"
+    {
+      deviate not-supported;
+    }
+    deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf/ospf:areas/ospf:area/ospf:interfaces/ospf:interface/ospf:neighbors/ospf:neighbor/ospf:cost"
     {
       deviate not-supported;
     }
