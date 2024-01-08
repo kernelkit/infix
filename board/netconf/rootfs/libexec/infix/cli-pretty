@@ -74,17 +74,15 @@ class Route:
             interface = get_json_data(None, self.data, 'next-hop', 'outgoing-interface')
             address = get_json_data(None, self.data, 'next-hop', f'ietf-{ip}-unicast-routing:next-hop-address')
             special = get_json_data(None, self.data, 'next-hop', 'special-next-hop')
-            nh = ""
-            if interface:
-                self.nh = interface
-            elif address:
-                self.nh = address
-            elif special:
-                self.nh = special
-            else:
-                self.nh =  "unspecified"
 
-            self.next_hop.append(nh)
+            if address:
+                self.next_hop.append(address)
+            elif interface:
+                self.next_hop.append(interface)
+            elif special:
+                self.next_hop.append(special)
+            else:
+                self.next_hop.append("unspecified")
     def print(self):
         row  = f"{self.prefix:<{PadRoute.prefix}}"
         row += f"{self.next_hop[0]:<{PadRoute.next_hop}}"
