@@ -399,7 +399,6 @@ def ietf_routing(json, ip="ipv4"):
         if rib["name"] != ip:
             continue;
         routes = get_json_data(None, rib, "routes", "route")
-
         if routes:
             for r in routes:
                 route = Route(r, ip)
