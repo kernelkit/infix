@@ -35,8 +35,10 @@ int parse_ospf_interfaces(sr_session_ctx_t *session, struct lyd_node *areas, FIL
 			const char *hello, *dead, *retransmit, *transmit;
 			if (lydx_get_bool(interface, "enabled")) {
 				struct lyd_node *bfd;
+				int passive = 0;
 				bfd = lydx_get_child(interface, "bfd");
 				bfd_enabled += lydx_get_bool(bfd, "enabled");
+				passive = lydx_get_bool(interface, "passive");
 				fprintf(fp, "interface %s\n", lydx_get_cattr(interface, "name"));
 				hello = lydx_get_cattr(interface, "hello-interval");
 				dead = lydx_get_cattr(interface, "dead-interval");
@@ -53,6 +55,8 @@ int parse_ospf_interfaces(sr_session_ctx_t *session, struct lyd_node *areas, FIL
 					fprintf(fp, "  ip ospf transmit-delay %s\n", transmit);
 				if (bfd_enabled)
 					fputs("  ip ospf bfd\n", fp);
+				if(passive)
+					fputs("  ip ospf passive\n", fp);
 			}
 		}
 	}
