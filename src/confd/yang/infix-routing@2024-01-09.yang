@@ -158,6 +158,18 @@ module infix-routing {
 
 
     /* OSPF */
+    typedef infix-ospf-interface-type {
+      type enumeration {
+        enum broadcast {
+          description
+            "Specifies an OSPF broadcast multi-access network.";
+        }
+        enum point-to-point {
+          description
+            "Specifies an OSPF point-to-point network.";
+        }
+      }
+    }
 
     augment "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf" {
       description "ietf-ospf does not contain redistribution
@@ -188,6 +200,14 @@ module infix-routing {
 	 }
        }
     }
+
+    deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf/ospf:areas/ospf:area/ospf:interfaces/ospf:interface/ospf:interface-type"
+    {
+      deviate replace {
+	type infix-ospf-interface-type;
+      }
+    }
+
     deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf/ospf:auto-cost" {
       deviate not-supported;
     }
@@ -274,7 +294,6 @@ module infix-routing {
     {
       deviate not-supported;
     }
-
     deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf/ospf:areas/ospf:area/ospf:interfaces/ospf:interface/ospf:multi-areas"    {
       deviate not-supported;
     }
