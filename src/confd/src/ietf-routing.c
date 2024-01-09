@@ -36,7 +36,7 @@ int parse_ospf_interfaces(sr_session_ctx_t *session, struct lyd_node *areas, FIL
 			if (lydx_get_bool(interface, "enabled")) {
 				struct lyd_node *bfd;
 				bfd = lydx_get_child(interface, "bfd");
-				bfd_enabled = lydx_get_bool(bfd, "enabled");
+				bfd_enabled += lydx_get_bool(bfd, "enabled");
 				fprintf(fp, "interface %s\n", lydx_get_cattr(interface, "name"));
 				hello = lydx_get_cattr(interface, "hello-interval");
 				dead = lydx_get_cattr(interface, "dead-interval");
