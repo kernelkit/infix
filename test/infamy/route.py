@@ -37,3 +37,45 @@ def ipv4_route_exist(target, prefix, nexthop=None,source_protocol=None):
 
 def ipv6_route_exist(target, prefix, nexthop=None,source_protocol=None):
     return _exist_route(target, prefix, nexthop, "ipv6",source_protocol)
+
+
+def _get_ospf_status(target):
+    xpath="/ietf-routing:routing/control-plane-protocols/control-plane-protocol/ietf-ospf:ospf"
+    rib = target.get_data(xpath)["routing"]["control-plane-protocols"]["control-plane-protocol"]
+    for p in rib:
+        if p["type"] == "ietf-ospf:ospfv2":
+            return p["ospf"]
+
+def _get_ospf_status_area(target, area_id):
+    ospf=_get_ospf_status(target)
+    for area in ospf.get("areas").get("area"):
+        if area["area-id"] == area_id:
+            return area
+    return {}
+
+def _get_ospf_status_area_interface(target, area_id, ifname):
+    area=_get_ospf_status_area(target,area_id)
+    if area is None:
+        return {}
+
+    for interface in area.get("interfaces").get("interface"):
+        if interface["name"] == ifname:
+            return interface
+    return {}
+
+def ospf_get_neighbor(target, area_id, ifname, neighbour_id, full=True):
+    ospf_interface=_get_ospf_status_area_interface(target,area_id, ifname)
+    for neighbor in ospf_interface.get("neighbors").get("neighbor"):
+        if(neighbor["neighbor-router-id"] == neighbour_id):
+            if full == False:
+                return True
+            if(neighbor["state"] == "full"):
+                return True
+
+def ospf_get_interface_type(target, area_id, ifname):
+    ospf_interface=_get_ospf_status_area_interface(target,area_id,ifname)
+    return ospf_interface.get("interface-type", None)
+
+def ospf_get_interface_passive(target, area_id, ifname):
+    ospf_interface=_get_ospf_status_area_interface(target,area_id,ifname)
+    return ospf_interface.get("passive", False)
