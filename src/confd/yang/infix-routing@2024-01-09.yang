@@ -24,6 +24,11 @@ module infix-routing {
     import ietf-routing-types {
       prefix rt-types;
     }
+    revision 2024-01-09 {
+      description "Add operational, area, bfd support
+	and other minor features";
+      reference "internal";
+    }
     revision 2023-11-23 {
       description "Limit to one instance per control plane protocol,
 	and change to infix (iproute2) specific source protocol names
