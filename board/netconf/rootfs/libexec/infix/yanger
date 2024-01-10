@@ -247,6 +247,15 @@ def add_ospf(ospf):
                interface["bdr-router-id"]=iface["bdrId"]
             if(iface.get("bdrAddress")):
                interface["bdr-ip-addr"]=iface["bdrAddress"]
+            if(iface.get("timerPassiveIface")):
+                interface["passive"] = True
+            else:
+                interface["passive"] = False
+            interface["enabled"] = iface["ospfEnabled"]
+            if(iface["networkType"] == "POINTOPOINT"):
+                interface["interface-type"] = "point-to-point"
+            if(iface["networkType"] == "BROADCAST"):
+                interface["interface-type"] = "broadcast"
 
             neighbors = []
             for neigh in iface["neighbors"]:
