@@ -105,7 +105,7 @@ int parse_ospf_areas(sr_session_ctx_t *session, struct lyd_node *areas, FILE *fp
 }
 int parse_ospf(sr_session_ctx_t *session, struct lyd_node *ospf)
 {
-	struct lyd_node *areas;
+	struct lyd_node *areas, *default_route;
 	int num_areas = 0;
 	int bfd_enabled = 0;
 	FILE *fp;
@@ -120,7 +120,15 @@ int parse_ospf(sr_session_ctx_t *session, struct lyd_node *ospf)
 	fputs("router ospf\n", fp);
 	num_areas = parse_ospf_areas(session, areas, fp);
 	parse_ospf_redistribute(session, lydx_get_child(ospf, "redistribute"), fp);
-
+	default_route = lydx_get_child(ospf, "default-route-advertise");
+	if (default_route) {
+		if (lydx_get_bool(default_route, "enable")) {
+			fputs("  default-information originate", fp);
+			if (lydx_get_bool(default_route, "always"))
+				fputs(" always", fp);
+			fputs("\n", fp);
+		}
+	}
 	fclose(fp);
 
 	if (!bfd_enabled)
