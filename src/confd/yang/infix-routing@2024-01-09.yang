@@ -172,6 +172,22 @@ module infix-routing {
     }
 
     augment "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf" {
+      description "ietf-ospf lack the setting to generate a default route";
+      container default-route-advertise {
+	description "Distribute default route to network";
+	leaf enable {
+	  description "Distribute default route";
+	  type boolean;
+	}
+	leaf always {
+	  description "Always distribute default route, even if no local default route exist.
+            If set to false, a default route will only be distributed if a default route exist
+            in the local routing table.";
+	  type boolean;
+	}
+      }
+    }
+    augment "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf" {
       description "ietf-ospf does not contain redistribution
 	7. How should route redistribution be configured? I see ietf-rip.yang has a separate
         container for that purpose, but ietf-ospf.yang (and other IGP modules) don't do the
