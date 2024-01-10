@@ -283,7 +283,7 @@
     </ACTION>
   </COMMAND>
 
-  <COMMAND name="ospf" help="Show routing table">
+  <COMMAND name="ospf" help="Show OSPF status">
     <PARAM name="name" ptype="/STRING" help="neighbor, interfaces or bfd" min="0" max="1">
       <COMPL>
 	<ACTION sym="printl">neighbor</ACTION>
@@ -309,6 +309,7 @@
     fi
     </ACTION>
   </COMMAND>
+
   <COMMAND name="routes" help="Show routing table">
     <PARAM name="name" ptype="/STRING" help="ipv4 or ipv6" min="0" max="1">
 	<COMPL>
@@ -326,12 +327,14 @@
       /libexec/infix/cli-pretty "ietf-routing"  -n "$KLISH_PARAM_name"
     </ACTION>
   </COMMAND>
+
   <COMMAND name="hardware" help="Show hardware information">
     <ACTION sym="script">
       sysrepocfg -f json -X -d operational -x "/ietf-hardware:hardware" | \
       /libexec/infix/cli-pretty "ietf-hardware"
     </ACTION>
   </COMMAND>
+
   <!-- https://www.cisco.com/c/en/us/td/docs/wireless/access_point/mob_exp/83/cmd-ref/me_cr_book/me_ports_and_interfaces_cli.html -->
   <COMMAND name="interfaces" help="Show interface info">
     <SWITCH name="optional" min="0" max="1">
@@ -376,9 +379,9 @@
     <ACTION sym="script">
       file=${KLISH_PARAM_fn:-syslog}
       if [ -n "$KLISH_PARAM_lines" ]; then
-      tail -n $KLISH_PARAM_lines /log/$file
+        tail -n $KLISH_PARAM_lines /log/$file
       else
-      cat /log/$file
+        cat /log/$file
       fi
     </ACTION>
   </COMMAND>
@@ -411,7 +414,6 @@
       <ACTION sym="script" in="tty" out="tty" interrupt="true">/bin/yorn "This will restore the device to factory defaults"</ACTION>
       <ACTION sym="rpc@infix">/ietf-factory-default:factory-reset</ACTION>
   </COMMAND>
-
 
   <COMMAND name="follow" help="Monitor a log file, use Ctrl-C to abort">
     <PARAM name="fn" ptype="/LOGFILES" help="Optional log file to monitor, default: syslog"/>
