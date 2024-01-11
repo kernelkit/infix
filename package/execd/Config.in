@@ -1,0 +1,7 @@
+config BR2_PACKAGE_EXECD
+	bool "execd"
+	select BR2_PACKAGE_LIBUEV
+	select BR2_PACKAGE_LIBITE
+	help
+	  Generic job queue executor with retry on route changes.
+
