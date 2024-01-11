@@ -32,7 +32,7 @@ int parse_ospf_interfaces(sr_session_ctx_t *session, struct lyd_node *areas, FIL
 		interfaces = lydx_get_child(area, "interfaces");
 		const char *area_id = lydx_get_cattr(area, "area-id");
 		LY_LIST_FOR(lyd_child(interfaces), interface) {
-			const char *hello, *dead, *retransmit, *transmit, *interface_type;
+			const char *hello, *dead, *retransmit, *transmit, *interface_type, *cost;
 			if (lydx_get_bool(interface, "enabled")) {
 				struct lyd_node *bfd;
 				int passive = 0;
@@ -45,6 +45,7 @@ int parse_ospf_interfaces(sr_session_ctx_t *session, struct lyd_node *areas, FIL
 				retransmit = lydx_get_cattr(interface, "retransmit-interval");
 				transmit = lydx_get_cattr(interface, "transmit-delay");
 				interface_type = lydx_get_cattr(interface, "interface-type");
+				cost = lydx_get_cattr(interface, "cost");
 				fprintf(fp, "  ip ospf area %s\n", area_id);
 				if (dead)
 					fprintf(fp, "  ip ospf dead-interval %s\n", dead);
@@ -60,6 +61,8 @@ int parse_ospf_interfaces(sr_session_ctx_t *session, struct lyd_node *areas, FIL
 					fputs("  ip ospf passive\n", fp);
 				if (interface_type)
 					fprintf(fp, "  ip ospf network %s\n", interface_type);
+				if (cost)
+					fprintf(fp, "  ip ospf cost %s\n", cost);
 			}
 		}
 	}
