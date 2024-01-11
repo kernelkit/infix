@@ -44,7 +44,11 @@ def config_target1(target, data, link):
                 ]
             }
     })
-
+    target.put_config_dict("ietf-system", {
+        "system": {
+            "hostname": "R1"
+        }
+    })
     target.put_config_dict("ietf-routing", {
         "routing": {
             "control-plane-protocols": {
@@ -111,6 +115,11 @@ def config_target2(target, link):
             }
         })
 
+    target.put_config_dict("ietf-system", {
+        "system": {
+            "hostname": "R2"
+        }
+    })
     target.put_config_dict("ietf-routing", {
         "routing": {
             "control-plane-protocols": {
