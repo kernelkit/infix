@@ -44,6 +44,7 @@ module infix-routing {
       description "Initial limitation";
       deviate not-supported;
     }
+
     deviation "/ietf-r:routing/ietf-r:router-id" {
       description "Set in OSPF";
       deviate not-supported;
@@ -228,9 +229,6 @@ module infix-routing {
       deviate not-supported;
     }
     deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf/ospf:database" {
-      deviate not-supported;
-    }
-    deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf/ospf:explicit-router-id" {
       deviate not-supported;
     }
     deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf/ospf:graceful-restart" {
