@@ -19,18 +19,42 @@ neighbors=json.loads(neighbor_out)
 for ifname,iface in interfaces["interfaces"].items():
     iface["name"] = ifname
     iface["neighbors"] = []
-    for nbrAddress,nbrDatas in neighbors["neighbors"].items():
-        for nbrData in nbrDatas:
-            nbrIfname=nbrData["ifaceName"].split(":")[0]
-            if nbrIfname != ifname:
-                continue
-            nbrData["neighborIp"] = nbrAddress
-            iface["neighbors"].append(nbrData)
     for area_id in ospf["areas"]:
-        if(iface["area"] != area_id):
-           continue
+        area_type=""
+
+        stub=False
+        if("NSSA" in iface["area"]):
+            iface_area_id = iface["area"][:-7]
+            area_type = "nssa-area"
+        elif("Stub" in iface["area"]):
+            iface_area_id = iface["area"][:-7]
+            iface["areaId"] = iface["area"][:-7]
+            area_type = "stub-area"
+        else:
+            iface_area_id = iface["area"]
+            area_type = "normal-area"
+
+        if(iface_area_id != area_id):
+            continue
+
+        ospf["areas"][area_id]["area-type"] = area_type
+        iface["area"] = iface_area_id
+
+        for nbrAddress,nbrDatas in neighbors["neighbors"].items():
+            for nbrData in nbrDatas:
+                nbrIfname=nbrData["ifaceName"].split(":")[0]
+                if(("NSSA" in nbrData.get("areaId", {})) or ("Stub" in nbrData.get("areaId", {}))):
+                    nbrData["areaId"] = nbrData["areaId"][:-7]
+
+                if ((nbrIfname != ifname) and (area_id != nbrData.get("areaId"))):
+                    #print(f'Continute {ifname} {nbrData.get("areaId")}')
+                    continue
+                nbrData["neighborIp"] = nbrAddress
+                iface["neighbors"].append(nbrData)
+
         if(not ospf["areas"][area_id].get("interfaces", None)):
             ospf["areas"][area_id]["interfaces"] = []
         ospf["areas"][area_id]["interfaces"].append(iface)
+
 print(json.dumps(ospf))
 
