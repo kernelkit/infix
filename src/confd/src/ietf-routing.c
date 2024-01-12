@@ -111,6 +111,7 @@ int parse_ospf(sr_session_ctx_t *session, struct lyd_node *ospf)
 	struct lyd_node *areas, *default_route;
 	int num_areas = 0;
 	int bfd_enabled = 0;
+	const char *router_id;
 	FILE *fp;
 	fp = fopen(OSPFD_CONF_NEXT, "w");
 	if (!fp) {
@@ -119,6 +120,7 @@ int parse_ospf(sr_session_ctx_t *session, struct lyd_node *ospf)
 	}
 	fputs(FRR_STATIC_CONFIG, fp);
 	areas = lydx_get_child(ospf, "areas");
+	router_id = lydx_get_cattr(ospf, "explicit-router-id");
 	bfd_enabled = parse_ospf_interfaces(session, areas, fp);
 	fputs("router ospf\n", fp);
 	num_areas = parse_ospf_areas(session, areas, fp);
@@ -132,6 +134,8 @@ int parse_ospf(sr_session_ctx_t *session, struct lyd_node *ospf)
 			fputs("\n", fp);
 		}
 	}
+	if (router_id)
+		fprintf(fp, "  ospf router-id %s\n", router_id);
 	fclose(fp);
 
 	if (!bfd_enabled)
