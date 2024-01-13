@@ -2,3 +2,4 @@
 - case: static_routing.py
 - case: ospf_basic.py
 - case: ospf_unnumbered_interface.py
+- case: ospf_multiarea.py
