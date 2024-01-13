@@ -234,8 +234,10 @@ def add_ospf(ospf):
         area={}
         area["ietf-ospf:area-id"] = area_id
         area["ietf-ospf:interfaces"] = {}
+        if values.get("area-type"):
+            area["ietf-ospf:area-type"] = values["area-type"]
         interfaces=[]
-        for iface in values["interfaces"]:
+        for iface in values.get("interfaces", {}):
             interface={}
             interface["ietf-ospf:neighbors"] = {}
             interface["name"]=iface["name"]
