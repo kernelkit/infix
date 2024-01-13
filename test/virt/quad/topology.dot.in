@@ -1,0 +1,74 @@
+graph "quad" {
+	layout="neato";
+	overlap="false";
+	splines="true";
+	esep="+20";
+
+        node [shape=record, fontname="monospace"];
+	edge [color="cornflowerblue", penwidth="2"];
+
+	qn_template="infix-x86_64";
+	qn_append="quiet";
+
+        host [
+	    label="host | { <d1a> d1a | <d1b> d1b | <d1c> d1c | <d2a> d2a | <d2b> d2b | <d2c> d2c | <d2a> d3a | <d3b> d3b | <d3c> d3c | <d4a> d4a | <d4b> d4b | <d4c> d4c }}",
+	    color="grey",fontcolor="grey",pos="0,15!",
+	    kind="controller",
+	];
+
+        dut1 [
+	    label="{ <eth0> eth0 | <eth1> eth1 | <eth2> eth2 } | dut1 | { <eth3> eth3 | <eth4> eth4 | <eth5> eth5 | <eth6> eth6 | <eth7> eth7}",
+	    pos="10,18!",
+	    kind="infix",
+	    qn_console=9001,
+	    qn_mem="384M"
+	    ];
+        dut2 [
+	    label="{ <eth0> eth0 | <eth1> eth1 | <eth2> eth2 } | dut2 | { <eth3> eth3 | <eth4> eth4 | <eth5> eth5  | <eth6> eth6 | <eth7> eth7}",
+	    pos="10,12!",
+	    kind="infix",
+	    qn_console=9002,
+	    qn_mem="384M"
+	];
+	dut3 [
+	    label="{ <eth0> eth0 | <eth1> eth1 | <eth2> eth2 } | dut2 | { <eth3> eth3 | <eth4> eth4 | <eth5> eth5  | <eth6> eth6 | <eth7> eth7}",
+	    pos="10,12!",
+	    kind="infix",
+	    qn_console=9003,
+	    qn_mem="384M"
+	];
+
+	dut4 [
+	    label="{ <eth0> eth0 | <eth1> eth1 | <eth2> eth2 } | dut2 | { <eth3> eth3 | <eth4> eth4 | <eth5> eth5  | <eth6> eth6 | <eth7> eth7}",
+	    pos="10,12!",
+	    kind="infix",
+	    qn_console=9004,
+	    qn_mem="384M"
+	];
+
+	host:d1a -- dut1:eth0 [kind=mgmt]
+	host:d1b -- dut1:eth1
+	host:d1c -- dut1:eth2
+
+	host:d2a -- dut2:eth0 [kind=mgmt]
+	host:d2b -- dut2:eth1
+	host:d2c -- dut2:eth2
+
+	host:d3a -- dut3:eth0 [kind=mgmt]
+	host:d3b -- dut3:eth1
+	host:d3c -- dut3:eth2
+
+	host:d4a -- dut4:eth0 [kind=mgmt]
+	host:d4b -- dut4:eth1
+	host:d4c -- dut4:eth2
+
+	# Ring
+	dut1:eth4 -- dut2:eth3
+	dut2:eth4 -- dut3:eth3
+	dut3:eth4 -- dut4:eth3
+	dut4:eth4 -- dut1:eth3
+
+	# Cross-links
+	dut3:eth5 -- dut1:eth5
+	dut2:eth5 -- dut4:eth5
+}
