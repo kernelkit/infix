@@ -79,3 +79,11 @@ def ospf_get_interface_type(target, area_id, ifname):
 def ospf_get_interface_passive(target, area_id, ifname):
     ospf_interface=_get_ospf_status_area_interface(target,area_id,ifname)
     return ospf_interface.get("passive", False)
+
+def ospf_is_area_nssa(target, area_id):
+    area=_get_ospf_status_area(target, area_id)
+
+    if area.get("area-type", "") == "ietf-ospf:nssa-area":
+        return True
+
+    return False
