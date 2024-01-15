@@ -194,10 +194,12 @@ def add_ospf_routes(ospf):
     data = run_json_cmd(cmd)
     routes=[]
     for prefix,info in data.items():
+        if(prefix.find("/") == -1): # Ignore router IDs
+            continue
+
         route={}
-        if prefix.find("/") == -1:
-            prefix = prefix+"/32"
         route["prefix"] = prefix
+
         nexthops=[]
         routetype=info["routeType"].split(" ")
         if(len(routetype) > 1):
@@ -207,10 +209,8 @@ def add_ospf_routes(ospf):
                 route["route-type"] = "external-2"
             elif(routetype[1]=="IA"):
                 route["route-type"] = "inter-area"
-            else:
-                route["route-type"] = "intra-area"
-        else:
-            route["route-type"] = "intra-area"
+        elif(routetype[0] == "N"):
+             route["route-type"] = "intra-area"
         for hop in info["nexthops"]:
             nexthop={}
             if(hop["ip"] != " "):
