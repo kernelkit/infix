@@ -385,10 +385,6 @@ module infix-routing {
     {
       deviate not-supported;
     }
-    deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf/ospf:areas/ospf:area/ospf:interfaces/ospf:interface/ospf:state"
-    {
-      deviate not-supported;
-    }
     deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf/ospf:areas/ospf:area/ospf:interfaces/ospf:interface/ospf:hello-timer"
     {
       deviate not-supported;

@@ -259,6 +259,20 @@ def add_ospf(ospf):
             if(iface["networkType"] == "BROADCAST"):
                 interface["interface-type"] = "broadcast"
 
+            if iface.get("state"):
+                map = {
+                    "DependUpon":     "down", # Do not know what this is, never seen it and no entry in yang, but it listed before down in list in frr
+                    "Down":           "down",
+                    "Waiting":        "waiting",
+                    "Loopback":       "loopback",
+                    "Point-To-Point": "point-to-point",
+                    "DROther":        "dr-other",
+                    "Backup":         "bdr",
+                    "DR":             "dr"
+                }
+                val = map.get(iface["state"], "unknown")
+                interface["state"] = val
+
             neighbors = []
             for neigh in iface["neighbors"]:
                 neighbor={}
