@@ -1,0 +1,213 @@
+/* SPDX-License-Identifier: BSD-3-Clause */
+
+#include <assert.h>
+#include <ctype.h>
+#include <dirent.h>
+#include <pwd.h>
+#include <sys/utsname.h>
+#include <sys/sysinfo.h>
+#include <sys/types.h>
+
+#include <srx/common.h>
+#include <srx/lyx.h>
+#include <srx/srx_module.h>
+#include <srx/srx_val.h>
+
+#include "core.h"
+#define  ARPING_MSEC  1000
+#define  MODULE       "infix-containers"
+#define  CFG_XPATH    "/infix-containers:container"
+#define  INBOX_QUEUE  "/run/containers/inbox"
+#define  JOB_QUEUE    "/run/containers/queue"
+#define  LOGGER       "logger -t container -p local1.notice"
+
+static const struct srx_module_requirement reqs[] = {
+	{ .dir = YANG_PATH_, .name = MODULE, .rev = "2023-12-14" },
+	{ NULL }
+};
+
+static int job(const char *name, struct lyd_node *cif)
+{
+	const char *image = lydx_get_cattr(cif, "image");
+	struct lyd_node *net;
+	FILE *fp;
+
+	fp = fopenf("w", "%s/%s.sh", INBOX_QUEUE, name);
+	if (!fp) {
+		ERROR("Failed adding job %s.sh to job queue" INBOX_QUEUE, name);
+		return 1;
+	}
+
+	/* Stop any running container gracefully so it releases its IP addresses. */
+	fprintf(fp, "#!/bin/sh\n"
+		"container stop %s\n"
+		"container ", name);
+
+	LYX_LIST_FOR_EACH(lyd_child(cif), net, "dns")
+		fprintf(fp, "--dns %s ", lyd_get_value(net));
+
+	LYX_LIST_FOR_EACH(lyd_child(cif), net, "search")
+		fprintf(fp, "--dns-search %s ", lyd_get_value(net));
+
+	fprintf(fp, "create %s %s", name, image);
+
+	LYX_LIST_FOR_EACH(lyd_child(cif), net, "network") {
+		struct lyd_node *opt;
+		const char *name;
+		int first = 1;
+
+		name = lydx_get_cattr(net, "name");
+		fprintf(fp, " %s", name);
+		LYX_LIST_FOR_EACH(lyd_child(net), opt, "option") {
+			const char *option = lyd_get_value(opt);
+
+			fprintf(fp, "%s%s", first ? ":" : ",", option);
+			first = 0;
+		}
+	}
+
+	fprintf(fp, "\n");
+	fchmod(fileno(fp), 0700);
+
+	return fclose(fp);
+}
+
+static int add(const char *name, struct lyd_node *cif)
+{
+	FILE *fp;
+
+	if (job(name, cif))
+		return SR_ERR_SYS;
+
+	fp = fopenf("w", "/etc/finit.d/available/pod:%s.conf", name);
+	if (!fp) {
+		ERROR("Failed creating container %s monitor", name);
+		return SR_ERR_SYS;
+	}
+
+	fprintf(fp, "service name:pod log:prio:local1.err,tag:container :%s pid:!/run/pod:%s.pid \\\n"
+		"	[2345] <usr/pod:%s> podman start -a %s -- Container %s\n",
+		name, name, name, name, name);
+	fclose(fp);
+
+	if (systemf("initctl -nbq enable pod:%s", name)) {
+		ERROR("Failed enabling container %s monitor", name);
+		return SR_ERR_SYS;
+	}
+
+	return 0;
+}
+
+static int del(const char *name)
+{
+	char fn[strlen(JOB_QUEUE) + strlen(name) + 5];
+
+	/* Remove any pending download/create job first */
+	snprintf(fn, sizeof(fn), "%s/%s.sh", JOB_QUEUE, name);
+	erase(fn);
+	snprintf(fn, sizeof(fn), "%s/%s.sh", INBOX_QUEUE, name);
+	erase(fn);
+
+	return systemf("container delete %s", name);
+}
+
+static int change(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
+		  const char *xpath, sr_event_t event, unsigned request_id, void *_confd)
+{
+	struct lyd_node *diff, *cifs, *difs, *cif, *dif;
+	sr_error_t       err = 0;
+	sr_data_t       *cfg;
+
+	switch (event) {
+	case SR_EV_DONE:
+		break;
+	case SR_EV_CHANGE:
+	case SR_EV_ABORT:
+	default:
+		return SR_ERR_OK;
+	}
+
+	err = sr_get_data(session, CFG_XPATH "//.", 0, 0, 0, &cfg);
+	if (err)
+		goto err_abandon;
+
+	err = srx_get_diff(session, &diff);
+	if (err)
+		goto err_release_data;
+
+	cifs = lydx_get_descendant(cfg->tree, "container", "container", NULL);
+	difs = lydx_get_descendant(diff, "container", "container", NULL);
+
+	/* find the modified one, delete or recreate only that */
+	LYX_LIST_FOR_EACH(difs, dif, "container") {
+		const char *name = lydx_get_cattr(dif, "name");
+
+		ERROR("Change in container %s", name);
+		if (lydx_get_op(dif) == LYDX_OP_DELETE) {
+			ERROR("OP DELETE container %s", name);
+			del(name);
+			continue;
+		}
+
+		LYX_LIST_FOR_EACH(cifs, cif, "container") {
+			const char *nm = lydx_get_cattr(cif, "name");
+
+			ERROR("container %s vs %s", name, nm);
+			if (strcmp(name, nm)) {
+				ERROR("Skipping container %s", nm);
+				continue;
+			}
+
+			if (!lydx_is_enabled(cif, "enabled")) {
+				ERROR("container %s not enabled", nm);
+				del(name);
+			} else {
+				ERROR("container %s enabled", nm);
+				add(name, cif);
+			}
+			break;
+		}
+	}
+
+	lyd_free_tree(diff);
+err_release_data:
+	sr_release_data(cfg);
+err_abandon:
+
+	return err;
+}
+
+void infix_containers_launch(void)
+{
+	struct dirent *d;
+	DIR *dir;
+
+	dir = opendir(INBOX_QUEUE);
+	if (!dir) {
+		ERROR("Cannot open %s to launch scripts.", INBOX_QUEUE);
+		return;
+	}
+
+	while ((d = readdir(dir))) {
+		char fn[strlen(INBOX_QUEUE) + strlen(d->d_name) + 2];
+
+		snprintf(fn, sizeof(fn), "%s/%s", INBOX_QUEUE, d->d_name);
+		if (movefile(fn, JOB_QUEUE))
+			ERRNO("Failed moving %s to job queue %s", fn, JOB_QUEUE);
+	}
+}
+
+int infix_containers_init(struct confd *confd)
+{
+	int rc;
+
+	rc = srx_require_modules(confd->conn, reqs);
+	if (rc)
+		goto fail;
+
+	REGISTER_CHANGE(confd->session, MODULE, CFG_XPATH, 0, change, confd, &confd->sub);
+	return SR_ERR_OK;
+fail:
+	ERROR("init failed: %s", sr_strerror(rc));
+	return rc;
+}

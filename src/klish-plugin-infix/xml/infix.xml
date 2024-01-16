@@ -113,6 +113,27 @@
   <ACTION sym="STRING"/>
 </PTYPE>
 
+<PTYPE name="CONTAINERS">
+  <COMPL>
+    <ACTION sym="script">container list</ACTION>
+  </COMPL>
+  <ACTION sym="STRING"/>
+</PTYPE>
+
+<PTYPE name="CONTAINERSa">
+  <COMPL>
+    <ACTION sym="script">container -a list</ACTION>
+  </COMPL>
+  <ACTION sym="STRING"/>
+</PTYPE>
+
+<PTYPE name="IMAGES">
+  <COMPL>
+    <ACTION sym="script">container -a list images</ACTION>
+  </COMPL>
+  <ACTION sym="STRING"/>
+</PTYPE>
+
 <VIEW name="main">
   <HOTKEY key="^D" cmd="exit"/>
 
@@ -160,6 +181,65 @@
 
 <COMMAND name="configure" help="Create new candidate-config based on running-config">
   <ACTION sym="nav">replace config</ACTION>
+</COMMAND>
+
+<COMMAND name="container" help="Manage containers and their images" mode="switch">
+  <COMMAND name="attach" help="Attach to a running container (exec sh)">
+    <PARAM name="name" ptype="/CONTAINERS" help="Container name" />
+    <SWITCH name="optional" min="0">
+      <COMMAND name="command" help="Command to run">
+        <PARAM name="command" ptype="/STRING" help="Command to run2"/>
+      </COMMAND>
+    </SWITCH>
+    <ACTION sym="script" in="tty" out="tty" interrupt="true">
+      if [ -z "$KLISH_PARAM_name" ]; then
+        echo "Missing container name."
+      else
+        cmd=${KLISH_PARAM_command:-sh}
+        container attach $KLISH_PARAM_name $cmd
+      fi
+    </ACTION>
+  </COMMAND>
+
+  <COMMAND name="pull" help="Fetch a container image">
+    <PARAM name="image" ptype="/STRING" help="Image url and tag, e.g. docker://hello-world:latest" />
+    <SWITCH name="optional" min="0">
+      <COMMAND name="creds" help="Credentials">
+        <PARAM name="creds" ptype="/STRING" help="[username[:password]]"/>
+      </COMMAND>
+    </SWITCH>
+    <ACTION sym="script" out="tty" interrupt="true">
+      creds==${KLISH_PARAM_creds:+--creds=$KLISH_PARAM_creds}
+      container pull $creds $KLISH_PARAM_image
+    </ACTION>
+  </COMMAND>
+
+  <COMMAND name="remove" help="Remove a container image from local storage">
+    <PARAM name="name" ptype="/IMAGES" help="Image name" />
+    <ACTION sym="script" out="tty" interrupt="true">container remove $KLISH_PARAM_name</ACTION>
+  </COMMAND>
+
+  <COMMAND name="run" help="Run a container image, with optional command">
+    <PARAM name="image" ptype="/IMAGES" help="Image name" />
+    <SWITCH name="optional" min="0">
+      <COMMAND name="command" help="Command to run">
+        <PARAM name="command" ptype="/STRING" help="Command to run2"/>
+      </COMMAND>
+    </SWITCH>
+    <ACTION sym="script" out="tty" interrupt="true">
+      container run $KLISH_PARAM_image ${KLISH_PARAM_command}
+    </ACTION>
+  </COMMAND>
+
+  <COMMAND name="start" help="Start a container">
+    <PARAM name="name" ptype="/CONTAINERSa" help="Container name" />
+    <ACTION sym="script" out="tty" interrupt="true">container start $KLISH_PARAM_name</ACTION>
+  </COMMAND>
+
+  <COMMAND name="stop" help="Stop a container">
+    <PARAM name="name" ptype="/CONTAINERS" help="Container name" />
+    <ACTION sym="script" out="tty" interrupt="true">container stop $KLISH_PARAM_name</ACTION>
+  </COMMAND>
 </COMMAND>
 
 <COMMAND name="copy" help="Copy configuration, e.g., copy running-config startup-config">
@@ -237,6 +317,27 @@
             <ACTION sym="script">bridge -color -d vlan</ACTION>
           </COMMAND>
         </SWITCH>
+      </COMMAND>
+    </SWITCH>
+  </COMMAND>
+
+  <COMMAND name="container" help="Show container status">
+    <ACTION sym="script">podman ps</ACTION>
+
+    <SWITCH name="optional" min="0">
+      <COMMAND name="images" help="Show container images">
+        <ACTION sym="script">podman images</ACTION>
+        <SWITCH name="optional" min="0">
+          <COMMAND name="all" help="All images (default hides intermediate imaages)">
+            <ACTION sym="script">podman images -a</ACTION>
+          </COMMAND>
+        </SWITCH>
+      </COMMAND>
+      <COMMAND name="all" help="Show all containers (default only running)">
+        <ACTION sym="script">podman ps -a</ACTION>
+      </COMMAND>
+      <COMMAND name="log" help="Show container log (alias for show log container)">
+	<ACTION sym="script">cat /log/container</ACTION>
       </COMMAND>
     </SWITCH>
   </COMMAND>

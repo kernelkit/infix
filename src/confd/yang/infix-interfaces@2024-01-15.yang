@@ -12,12 +12,18 @@ module infix-interfaces {
 
   include infix-if-base;
   include infix-if-bridge;
+  include infix-if-container;
   include infix-if-veth;
   include infix-if-vlan;
 
   organization "KernelKit";
   contact      "kernelkit@googlegroups.com";
   description  "Linux bridge and lag extensions for ietf-interfaces.";
+
+  revision 2024-01-15 {
+    description "Add support for container ports (CNI networks).";
+    reference "internal";
+  }
 
   revision 2023-09-19 {
     description "Add deviation to allow setting phys-address on links.";

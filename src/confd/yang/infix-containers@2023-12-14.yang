@@ -1,0 +1,186 @@
+/*
+ * Infix Containers YANG module
+ */
+module infix-containers {
+  yang-version 1.1;
+  namespace "urn:ietf:params:xml:ns:yang:infix-containers";
+  prefix infix-cont;
+
+  import ietf-yang-types {
+    prefix yang;
+  }
+
+  import ietf-interfaces {
+    prefix if;
+  }
+
+  import ietf-inet-types {
+    prefix inet;
+  }
+
+  import infix-interfaces {
+    prefix infix-if;
+  }
+
+  revision 2023-12-14  {
+    description "Initial revision";
+    reference "internal";
+  }
+
+  /*
+   * Typedefs
+   */
+
+  typedef restart-policy {
+    type enumeration {
+      enum no {
+	description "Do not restart containers on exit.";
+	value 1;
+      }
+      enum always {
+	description "Restart containers when they exit, regardless of status.";
+	value 2;
+      }
+      enum on-failure {
+	description "Restart containers when they exit with a non-0 exit code.";
+	value 3;
+      }
+    }
+  }
+
+  /*
+   * Data Nodes
+   */
+
+  container container {
+    list container {
+      key "name";
+
+      leaf name {
+	description "Name of the Docker container";
+	type string;
+      }
+
+      leaf enabled {
+	description "Enable or disable a container configuration.";
+	type boolean;
+	default true;
+      }
+
+      leaf image {
+	description "Docker image used for the container";
+	mandatory true;
+	type string;
+      }
+
+      leaf restart {
+	description "Restart policy to follow when containers exit.";
+	type restart-policy;
+	default no;
+      }
+
+      leaf manual {
+	description "Auto-start or manual start after creation/reboot.";
+	type boolean;
+      }
+
+      choice network {
+	description "Select network mode: none, host, or container network interfaces.";
+
+	case host {
+	  leaf host {
+	    description "Run as host container, with full access to all network interfaces.";
+	    type boolean;
+	  }
+	}
+
+	case network {
+	  list network {
+	    key name;
+
+	    leaf name {
+	      description "CNI network to connect to the container.";
+	      type if:interface-ref;
+	      must "/if:interfaces/if:interface[if:name = current()]/infix-if:container-network" {
+		error-message "Container networks must be interfaces classified as container-network.";
+	      }
+	    }
+
+	    leaf-list option {
+	      description "Options for CNI bridges.
+                           Example: ip=1.2.3.4 to request a specific IP, both IPv4 and IPv6.
+                           interface_name=foo0 name to set interface name inside container.";
+	      type string;
+	    }
+	  }
+
+	  leaf-list publish {
+	    description "Publish container port, or a range of ports, to the host.";
+	    type string;
+	  }
+
+	  leaf-list dns {
+	    description "Set custom DNS servers, or 'none' to use /etc/resolv.conf in image.";
+	    type string;
+	  }
+
+	  leaf-list search {
+	    description "Set custom DNS search domains, or '.' to not set search domain.";
+	    type string;
+	  }
+	}
+      }
+                        
+      container statistics {
+	description "Statistics of the container";
+	config false;
+
+	leaf status {
+	  description "Status of the Docker container";
+	  type enumeration {
+	    enum running;
+	    enum stopped;
+	  }
+	}
+
+	leaf created {
+	  description "Creation timestamp of the container";
+	  type yang:date-and-time;
+	}
+      }
+    }
+  }
+
+  rpc container-pull {
+    description "Upgrade (fetch) a container image";
+
+    input {
+      leaf image {
+	description "Name of the container image to upgrade.";
+	type string;
+      }
+    }
+  }
+
+  rpc container-stop {
+    description "Stop a container";
+
+    input {
+      leaf name {
+	description "Name of the container to stop";
+	type string;
+      }
+    }
+  }
+
+  rpc container-start {
+    description "Start a container";
+
+    input {
+      leaf name {
+	description "Name of the container to start";
+	type string;
+      }
+    }
+  }
+}
