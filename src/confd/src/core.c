@@ -55,6 +55,9 @@ int core_post_hook(sr_session_ctx_t *session, uint32_t sub_id, const char *modul
 		return SR_ERR_SYS;
 	}
 
+	/* Everything done, including interfaces, launch all container scripts */
+	infix_containers_launch();
+
 	/* skip reload in bootstrap, implicit reload in runlevel change */
 	if (systemf("runlevel >/dev/null 2>&1"))
 		return SR_ERR_OK;
@@ -110,6 +113,9 @@ int sr_plugin_init_cb(sr_session_ctx_t *session, void **priv)
 	if (rc)
 		goto err;
 	rc = ietf_system_init(&confd);
+	if (rc)
+		goto err;
+	rc = infix_containers_init(&confd);
 	if (rc)
 		goto err;
 	rc = infix_dhcp_init(&confd);

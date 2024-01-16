@@ -1,0 +1,107 @@
+submodule infix-if-container {
+  yang-version 1.1;
+  belongs-to infix-interfaces {
+    prefix infix-if;
+  }
+
+  import ietf-inet-types {
+    prefix inet;
+  }
+  import ietf-interfaces {
+    prefix if;
+  }
+  import infix-if-type {
+    prefix infixift;
+  }
+
+  organization "KernelKit";
+  contact      "kernelkit@googlegroups.com";
+  description  "CNI network to interface mapper extension for ietf-interfaces.
+                This ensures a container interface can never be a bridge port,
+                or LAG member at the same time.";
+
+  revision 2024-01-15 {
+    description "Initial revision.";
+    reference "internal";
+  }
+
+  /*
+   * Identities
+   */
+
+  identity cni-type {
+    description "CNI network type";
+  }
+
+  identity cni-bridge {
+    base cni-type;
+    description "CNI standard bridge with IP masquerading, portmappping, and firewalling.";
+  }
+
+  identity cni-host {
+    base cni-type;
+    description "CNI host-device, e.g., one end of a VETH pair or other host interface.";
+  }
+
+  /*
+   * Data Nodes
+   */
+
+  augment "/if:interfaces/if:interface/infix-if:port" {
+    description "Augments the interface model with CNI networks.";
+
+    case container-network {
+      container container-network {
+	presence "Container network (CNI) mapping.";
+
+	leaf type {
+	  description "Bridge or host interface";
+	  type identityref {
+	    base cni-type;
+	  }
+	  default cni-host;
+	}
+
+	list subnet {
+	  description "Static IP ranges to hand out addresses to containers from.
+                       A cni-bridge will forward DNS, NTP, and SSH by default to
+                       the host interfaces.";
+	  when "../type = 'infix-if:cni-bridge'";
+	  key subnet;
+
+	  leaf subnet {
+	    type inet:ip-prefix;
+	    description "Subnet to assign addresses from, round-robin assignment.
+                         The default is from a standard Docker setup.";
+	    default "172.17.0.0/16";
+	  }
+
+	  leaf gateway {
+	    type inet:ip-address;
+	    description "Optional gateway address for the subnet, defaults to .1.
+	                 This will be used as the address of a cni-bridge.";
+	  }
+	}
+
+	list route {
+	  description "IPv4 or IPv6 routes to be added to container.
+
+                       For cni-bridge type interfaces the gateway can be omitted,
+                       the the IP address of the CNI bridge will then be used as
+                       the next-hop address.";
+	  key subnet;
+
+	  leaf subnet {
+	    type inet:ip-prefix;
+	    description "Destination (subnet) IP address.";
+	  }
+
+	  leaf gateway {
+	    type inet:ip-address;
+	    description "Optional gateway (next-hop) IP address for the route.";
+	  }
+	}
+      }
+    }
+  }
+}
