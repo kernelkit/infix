@@ -1,4 +1,3 @@
-#!/bin/bash -li
+#!/bin/sh
 # Source settings, aliases, and probe terminal size, then hand over to klish
-unset HISTFILE
-exec /usr/bin/klish
+exec env CLISH=yes bash -ilc /usr/bin/klish
