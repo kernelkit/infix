@@ -97,6 +97,7 @@ factory()
 
     # Create an overlay for /etc/hostname to change the default in an br2-external
     gen-hostname                                            >"$FACTORY_D/20-hostname.json"
+    gen-motd                                                >"$FACTORY_D/20-motd.json"
     # shellcheck disable=SC2086
     gen-interfaces $GEN_IFACE_OPTS                          >"$FACTORY_D/20-interfaces.json"
 
