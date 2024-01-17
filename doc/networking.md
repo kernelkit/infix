@@ -416,39 +416,39 @@ Remember to enable [IPv4 forwarding](#IPv4-forwarding) for the interfaces.
 > **Note:** The only name allowed for a control-plane-protocol is currently
 > *default*.  Meaning, you can only have one instance per routing protocol.
 
-#### OSPFv2 Routing
+### OSPFv2 Routing
 Remember to enable [IPv4 forwarding](#IPv4-forwarding) for the
 interfaces you want to run OSPFv2.
 
-    admin@example:/config/> edit routing control-plane-protocol ietf-ospf:ospfv2 name default
-    admin@example:/config/routing/control-plane-protocol/ietf-ospf:ospfv2/name/default/> set ospf area 0.0.0.0 interface e0 enabled true
-    admin@example:/config/routing/control-plane-protocol/static/name/default/> leave
+    admin@example:/config/> edit routing control-plane-protocol ospfv2 name default
+    admin@example:/config/routing/control-plane-protocol/ospfv2/name/default/> set ospf area 0.0.0.0 interface e0 enabled true
+    admin@example:/config/routing/control-plane-protocol/ospfv2/name/default/> leave
     admin@example:/>
 
 > **Note:** The only name allowed for a control-plane-protocol is currently
 > *default*.  Meaning, you can only have one instance per routing protocol.
 
-### Stub area types
+#### Stub area types
 NSSA and Stub areas are currently supported.
 
 To configure a NSSA area with summary routes:
 
-    admin@example:/config/> edit routing control-plane-protocol ietf-ospf:ospfv2 name default
-    admin@example:/config/routing/control-plane-protocol/ietf-ospf:ospfv2/name/default/> set ospf area 0.0.0.1 area-type nssa-area
-    admin@example:/config/routing/control-plane-protocol/ietf-ospf:ospfv2/name/default/> set ospf area 0.0.0.1 summary true
-    admin@example:/config/routing/control-plane-protocol/static/name/default/> leave
+    admin@example:/config/> edit routing control-plane-protocol ospfv2 name default
+    admin@example:/config/routing/control-plane-protocol/ospfv2/name/default/> set ospf area 0.0.0.1 area-type nssa-area
+    admin@example:/config/routing/control-plane-protocol/ospfv2/name/default/> set ospf area 0.0.0.1 summary true
+    admin@example:/config/routing/control-plane-protocol/ospfv2/name/default/> leave
     admin@example:/>
 
-### Bidirectional Forwarding Detection (BFD)
+#### Bidirectional Forwarding Detection (BFD)
 It is possible to enable BFD per interface to speed up detection of
 link loss.
 
-    admin@example:/config/> edit routing control-plane-protocol ietf-ospf:ospfv2 name default
-    admin@example:/config/routing/control-plane-protocol/ietf-ospf:ospfv2/name/default/ospf/> set area 0.0.0.0 interface e0 bfd enabled true
-    admin@example:/config/routing/control-plane-protocol/static/name/default/> leave
+    admin@example:/config/> edit routing control-plane-protocol ospfv2 name default
+    admin@example:/config/routing/control-plane-protocol/ospfv2/name/default/ospf/> set area 0.0.0.0 interface e0 bfd enabled true
+    admin@example:/config/routing/control-plane-protocol/ospfv2/name/default/> leave
     admin@example:/>
 
-### Debug OSPFv2
+#### Debug OSPFv2
 Using NETCONF and the YANG model *ietf-routing* it is possible to read the OSPF routing table, neighbors
 and more, that may be useful for debugging the OSPFv2 setup.
 
@@ -486,6 +486,7 @@ The source protocol describes the origin of the route.
 | kernel       | Added when setting a subnet address on an interface                  |
 | static       | User created static routes                                           |
 | dhcp         | Routes retrieved from DHCP                                           |
+| ospf         | Routes retreived from OSPFv2                                         |
 
 The YANG model *ietf-routing* support multiple ribs but only two are
 currently supported, namely `ipv4` and `ipv6`.
