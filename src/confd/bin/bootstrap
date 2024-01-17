@@ -102,7 +102,7 @@ factory()
     gen-interfaces $GEN_IFACE_OPTS                          >"$FACTORY_D/20-interfaces.json"
 
     # Extract password for admin user from VPD
-    if ! gen-admin-auth infix-shell-type:clish >"$FACTORY_D/20-authentication.json"; then
+    if ! gen-admin-auth infix-shell-type:bash >"$FACTORY_D/20-authentication.json"; then
         console_error "Unable to create factory-config, gen-admin-auth failed"
         return
     fi
