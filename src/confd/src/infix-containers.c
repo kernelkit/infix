@@ -29,7 +29,9 @@ static const struct srx_module_requirement reqs[] = {
 static int add(const char *name, struct lyd_node *cif)
 {
 	const char *image = lydx_get_cattr(cif, "image");
-	struct lyd_node *net;
+	const char *restart_policy;
+	struct lyd_node *node;
+	char *restart = "";	/* Default restart:10 */
 	FILE *fp;
 
 	fp = fopenf("w", "%s/%s.sh", INBOX_QUEUE, name);
@@ -41,24 +43,25 @@ static int add(const char *name, struct lyd_node *cif)
 	/* Stop any running container gracefully so it releases its IP addresses. */
 	fprintf(fp, "#!/bin/sh\n"
 		"container stop %s\n"
-		"container ", name);
+		"container delete %s\n"
+		"container", name, name);
 
-	LYX_LIST_FOR_EACH(lyd_child(cif), net, "dns")
-		fprintf(fp, "--dns %s ", lyd_get_value(net));
+	LYX_LIST_FOR_EACH(lyd_child(cif), node, "dns")
+		fprintf(fp, " --dns %s", lyd_get_value(node));
 
-	LYX_LIST_FOR_EACH(lyd_child(cif), net, "search")
-		fprintf(fp, "--dns-search %s ", lyd_get_value(net));
+	LYX_LIST_FOR_EACH(lyd_child(cif), node, "search")
+		fprintf(fp, " --dns-search %s", lyd_get_value(node));
 
-	fprintf(fp, "create %s %s", name, image);
+	fprintf(fp, " create %s %s", name, image);
 
-	LYX_LIST_FOR_EACH(lyd_child(cif), net, "network") {
+	LYX_LIST_FOR_EACH(lyd_child(cif), node, "network") {
 		struct lyd_node *opt;
 		const char *name;
 		int first = 1;
 
-		name = lydx_get_cattr(net, "name");
+		name = lydx_get_cattr(node, "name");
 		fprintf(fp, " %s", name);
-		LYX_LIST_FOR_EACH(lyd_child(net), opt, "option") {
+		LYX_LIST_FOR_EACH(lyd_child(node), opt, "option") {
 			const char *option = lyd_get_value(opt);
 
 			fprintf(fp, "%s%s", first ? ":" : ",", option);
@@ -76,9 +79,19 @@ static int add(const char *name, struct lyd_node *cif)
 		return SR_ERR_SYS;
 	}
 
-	fprintf(fp, "service name:container :%s log:prio:local1.err,tag:%s %s pid:!/run/container:%s.pid \\\n"
-		"	[2345] <usr/container:%s> podman start -a %s -- Container %s\n",
-		name, name, lydx_is_enabled(cif, "manual") ? "manual:yes" : "", name, name, name, name);
+	restart_policy = lydx_get_cattr(cif, "restart-policy");
+	if (restart_policy) {
+		if (!strcmp(restart_policy, "no"))
+			restart = "norestart";
+		else if (!strcmp(restart_policy, "always"))
+			restart = "restart:always";
+		/* default is to restart up to 10 times */
+	}
+
+	fprintf(fp, "service name:container :%s log:prio:local1.err,tag:%s pid:!/run/container:%s.pid \\\n"
+		"	[2345] %s %s <usr/container:%s> podman start -a %s -- Container %s\n",
+		name, name, name, lydx_is_enabled(cif, "manual") ? "manual:yes" : "", restart,
+		name, name, name);
 	fclose(fp);
 
 	if (systemf("initctl -nbq enable container:%s", name)) {
