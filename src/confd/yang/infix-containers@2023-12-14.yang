@@ -67,6 +67,22 @@ module infix-containers {
 	default true;
       }
 
+      list env {
+	description "Set environment variables, key=\"value\" pairs.";
+	key key;
+
+	leaf key {
+	  description "Single word, [A-Za-z_]";
+	  type string;
+	}
+
+	leaf value {
+	  description "Argument to key can be a single word or quoted multiple words.";
+	  mandatory true;
+	  type string;
+	}
+      }
+
       leaf image {
 	description "Docker image used for the container";
 	mandatory true;
