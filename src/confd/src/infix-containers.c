@@ -69,6 +69,9 @@ static int add(const char *name, struct lyd_node *cif)
 		}
 	}
 
+	if (lydx_is_enabled(cif, "host-network"))
+		fprintf(fp, " host");
+
 	fprintf(fp, "\n");
 	fchmod(fileno(fp), 0700);
 	fclose(fp);

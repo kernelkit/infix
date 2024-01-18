@@ -87,15 +87,16 @@ module infix-containers {
       choice network {
 	description "Select network mode: none, host, or container network interfaces.";
 
-	case host {
+	case host-network {
 	  leaf host {
-	    description "Run as host container, with full access to all network interfaces.";
+	    description "Run in same network namespace as host.";
 	    type boolean;
 	  }
 	}
 
 	case network {
 	  list network {
+	    description "Container network interface to connect to the container.";
 	    key name;
 
 	    leaf name {
