@@ -172,6 +172,16 @@ module infix-routing {
       }
     }
 
+
+    deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ietf-r:type" {
+      deviate add {
+	must "derived-from-or-self(., 'ospf:ospfv2') or "+
+	     "derived-from-or-self(., 'ietf-r:static')" {
+	  description "Only OSPFv2 and Static routes are supported in Infix.";
+	}
+      }
+    }
+
     augment "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf" {
       description "ietf-ospf lack the setting to generate a default route";
       container default-route-advertise {
