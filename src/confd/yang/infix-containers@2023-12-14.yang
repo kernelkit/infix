@@ -116,7 +116,11 @@ module infix-containers {
 	  }
 
 	  leaf-list publish {
-	    description "Publish container port, or a range of ports, to the host.";
+	    description "Publish container port, or a range of ports, to the host.
+                         Syntax: [[ip:][hostPort]:]containerPort[/protocol]
+                         Sample: 8080:80           -- forward tcp port 8080 to container port 80
+                                 69:69/udp         -- forward udp port 69 to container port 69
+                                 127.0.0.1:8080:80 -- forward only from loopback interface";
 	    type string;
 	  }
 
