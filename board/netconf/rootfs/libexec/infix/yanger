@@ -4,6 +4,7 @@ import subprocess
 import json
 import sys # (built-in module)
 import argparse
+from datetime import datetime
 
 def json_get_yang_type(iface_in):
     if iface_in['link_type'] == "loopback":
@@ -116,6 +117,49 @@ def iface_is_dsa(iface_in):
     if iface_in['linkinfo']['info_kind'] != "dsa":
         return False
     return True
+
+def get_vpd_vendor_extensions(data):
+    vendor_extensions=[]
+    for ext in data:
+        vendor_extension = {}
+        vendor_extension["iana-enterprise-number"] = ext[0]
+        vendor_extension["extension-data"] = ext[1]
+        vendor_extensions.append(vendor_extension)
+    return vendor_extensions
+
+def get_vpd_data(vpd):
+        component={}
+        component["name"]=vpd.get("board")
+        component["infix-hardware:vpd-data"] = {}
+
+        if vpd.get("data"):
+            if vpd["data"].get("manufacture-date"):
+                component["mfg-date"]=datetime.strptime(vpd["data"]["manufacture-date"],"%m/%d/%Y %H:%M:%S").strftime("%Y-%m-%-dT%H:%M:%SZ")
+            if vpd["data"].get("manufacter"):
+                component["mfg-name"]=vpd["data"]["manufacturer"]
+            if vpd["data"].get("product-name"):
+                component["model-name"]=vpd["data"]["product-name"]
+            if vpd["data"].get("serial-number"):
+                component["serial-num"]=vpd["data"]["serial-number"]
+
+            # Set VPD-data entrys
+            for k,v in vpd["data"].items():
+                if vpd["data"].get(k):
+                    if k != "vendor-extension":
+                        component["infix-hardware:vpd-data"][k] = v
+                    else:
+                        vendor_extensions=get_vpd_vendor_extensions(v)
+                        component["infix-hardware:vpd-data"]["infix-hardware:vendor-extension"] = vendor_extensions
+        return component
+
+def add_hardware(hw_out, test):
+    cmd = ['cat', "/run/system.json"]
+    data = run_json_cmd(cmd)
+    components=[]
+    for _,vpd in data.get("vpd").items():
+        component=get_vpd_data(vpd)
+        components.append(component)
+    insert(hw_out, "component", components)
 
 def get_routes(routes, proto, data):
     out={}
@@ -560,7 +604,7 @@ if __name__ == "__main__":
         add_ipv4_route(ipv4routes, args.test)
         add_ipv6_route(ipv6routes, args.test)
     elif (args.model == 'ietf-ospf'):
-        yang_data= {
+        yang_data = {
             "ietf-routing:routing": {
                 "control-plane-protocols": {
                     "control-plane-protocol": [
@@ -577,6 +621,12 @@ if __name__ == "__main__":
             }
         }
         add_ospf(yang_data['ietf-routing:routing']['control-plane-protocols']['control-plane-protocol'][0]["ietf-ospf:ospf"])
+    elif (args.model == 'ietf-hardware'):
+        yang_data = {
+            "ietf-hardware:hardware": {
+            }
+        }
+        add_hardware(yang_data["ietf-hardware:hardware"], args.test)
     else:
         print(f"Unsupported model {args.model}", file=sys.stderr)
         sys.exit(1)
