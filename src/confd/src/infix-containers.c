@@ -26,7 +26,7 @@ static const struct srx_module_requirement reqs[] = {
 	{ NULL }
 };
 
-static int job(const char *name, struct lyd_node *cif)
+static int add(const char *name, struct lyd_node *cif)
 {
 	const char *image = lydx_get_cattr(cif, "image");
 	struct lyd_node *net;
@@ -35,7 +35,7 @@ static int job(const char *name, struct lyd_node *cif)
 	fp = fopenf("w", "%s/%s.sh", INBOX_QUEUE, name);
 	if (!fp) {
 		ERROR("Failed adding job %s.sh to job queue" INBOX_QUEUE, name);
-		return 1;
+		return SR_ERR_SYS;
 	}
 
 	/* Stop any running container gracefully so it releases its IP addresses. */
@@ -68,29 +68,20 @@ static int job(const char *name, struct lyd_node *cif)
 
 	fprintf(fp, "\n");
 	fchmod(fileno(fp), 0700);
+	fclose(fp);
 
-	return fclose(fp);
-}
-
-static int add(const char *name, struct lyd_node *cif)
-{
-	FILE *fp;
-
-	if (job(name, cif))
-		return SR_ERR_SYS;
-
-	fp = fopenf("w", "/etc/finit.d/available/pod:%s.conf", name);
+	fp = fopenf("w", "/etc/finit.d/available/container:%s.conf", name);
 	if (!fp) {
 		ERROR("Failed creating container %s monitor", name);
 		return SR_ERR_SYS;
 	}
 
-	fprintf(fp, "service name:pod log:prio:local1.err,tag:container :%s pid:!/run/pod:%s.pid \\\n"
-		"	[2345] <usr/pod:%s> podman start -a %s -- Container %s\n",
-		name, name, name, name, name);
+	fprintf(fp, "service name:container :%s log:prio:local1.err,tag:%s %s pid:!/run/container:%s.pid \\\n"
+		"	[2345] <usr/container:%s> podman start -a %s -- Container %s\n",
+		name, name, lydx_is_enabled(cif, "manual") ? "manual:yes" : "", name, name, name, name);
 	fclose(fp);
 
-	if (systemf("initctl -nbq enable pod:%s", name)) {
+	if (systemf("initctl -nbq enable container:%s", name)) {
 		ERROR("Failed enabling container %s monitor", name);
 		return SR_ERR_SYS;
 	}
