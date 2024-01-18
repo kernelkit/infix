@@ -36,7 +36,7 @@ create()
 
     args="$args --restart=no --systemd=false --tz=local --privileged --replace --quiet"
 #    args="$args --log-opt tag=$name"
-    pidfn=/run/pod:${name}.pid
+    pidfn=/run/container:${name}.pid
 
     for net in "$@"; do
 	network="$network --net $net"
@@ -61,7 +61,7 @@ create()
     log "Calling \"podman create --name $name --conmon-pidfile=$pidfn $network $args $image\""
     if podman create --name "$name" --conmon-pidfile="$pidfn" $network $args "$image"; then
 	log "Successfully created container $name from $image"
-	initctl -nbq cond set pod:system
+	initctl -nbq cond set container:$name
 	exit 0
     fi
     log "Error: failed creating container $name, please check the configuration."
@@ -207,11 +207,11 @@ case $cmd in
 	;;
     start)
 	verify "$1" || exit 1
-	initctl -bq start "pod:$1"
+	initctl -bq start "container:$1"
 	;;
     stop)
 	verify "$1" || exit 1
-	initctl -bq stop "pod:$1" || podman kill "$1"
+	initctl -bq stop "container:$1" || podman kill "$1"
 	;;
     *)
 	usage
