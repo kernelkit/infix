@@ -34,15 +34,15 @@ module infix-containers {
   typedef restart-policy {
     type enumeration {
       enum no {
-	description "Do not restart containers on exit.";
+	description "Do not restart containers that exit/crash.";
 	value 1;
       }
-      enum always {
-	description "Restart containers when they exit, regardless of status.";
+      enum retry {
+	description "Restart containers up to 10 times before giving up.";
 	value 2;
       }
-      enum on-failure {
-	description "Restart containers when they exit with a non-0 exit code.";
+      enum always {
+	description "Always restart containers when they exit.";
 	value 3;
       }
     }
@@ -73,10 +73,10 @@ module infix-containers {
 	type string;
       }
 
-      leaf restart {
-	description "Restart policy to follow when containers exit.";
+      leaf restart-policy {
+	description "Restart policy to when containers exit/crash.";
 	type restart-policy;
-	default no;
+	default retry;
       }
 
       leaf manual {

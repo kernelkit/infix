@@ -219,6 +219,11 @@
     <ACTION sym="script" out="tty" interrupt="true">container remove $KLISH_PARAM_name</ACTION>
   </COMMAND>
 
+  <COMMAND name="restart" help="Restart a crashed container">
+    <PARAM name="name" ptype="/CONTAINERSa" help="Container name" />
+    <ACTION sym="script" out="tty" interrupt="true">container restart $KLISH_PARAM_name</ACTION>
+  </COMMAND>
+
   <COMMAND name="run" help="Run a container image, with optional command">
     <PARAM name="image" ptype="/IMAGES" help="Image name" />
     <SWITCH name="optional" min="0">

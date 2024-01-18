@@ -7,20 +7,6 @@ log()
     logger -I $PPID -t container -p local1.notice -- "$*"
 }
 
-verify()
-{
-    name=$1
-
-    for nm in $(podman ps -a --format "{{.Names}}"); do
-	if [ "$name" = "$nm" ]; then
-	    return;
-	fi
-    done
-
-    >&2 echo "$name: no such container."
-    exit 1
-}
-
 # shellcheck disable=SC2086
 create()
 {
@@ -61,6 +47,7 @@ create()
     log "Calling \"podman create --name $name --conmon-pidfile=$pidfn $network $args $image\""
     if podman create --name "$name" --conmon-pidfile="$pidfn" $network $args "$image"; then
 	log "Successfully created container $name from $image"
+	initctl show "container:$name" |grep -q manual:yes || initctl -bq start "container:$name"
 	initctl -nbq cond set container:$name
 	exit 0
     fi
@@ -104,6 +91,7 @@ commands:
   help                    Show this help text
   list   [image]          List names (only) of containers or images
   remove  IMAGE           Remove an (unused) container image
+  restart NAME            Restart a crashed container
   run     NAME CMD        Execute a command (interactively) in container
   show   [image]          Show containers or container images
   start   NAME            Start a container
@@ -206,11 +194,12 @@ case $cmd in
 	esac
 	;;
     start)
-	verify "$1" || exit 1
 	initctl -bq start "container:$1"
 	;;
+    restart)
+	initctl -bq restart "container:$1"
+	;;
     stop)
-	verify "$1" || exit 1
 	initctl -bq stop "container:$1" || podman kill "$1"
 	;;
     *)
