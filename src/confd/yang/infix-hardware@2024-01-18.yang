@@ -1,0 +1,31 @@
+module infix-hardware {
+    yang-version 1.1;
+    namespace "urn:infix:hardware:ns:yang:1.0";
+    prefix ih;
+    import ietf-hardware {
+      prefix iehw;
+    }
+    import iana-hardware {
+      prefix iahw;
+    }
+    revision 2024-01-18 {
+      description "Initial";
+      reference "internal";
+    }
+    identity power {
+      base iahw:hardware-class;
+    }
+    identity product {
+      base iahw:hardware-class;
+    }
+    augment "/iehw:hardware/iehw:component" {
+      leaf part-number {
+	type string;
+      }
+    }
+    augment "/iehw:hardware/iehw:component" {
+      leaf vendor {
+	type string;
+      }
+    }
+}
