@@ -1,6 +1,7 @@
 #!/bin/sh
 
 all=""
+port=""
 
 log()
 {
@@ -44,8 +45,8 @@ create()
     fi
 
     #  --syslog --log-level info
-    log "Calling \"podman create --name $name --conmon-pidfile=$pidfn $network $args $image\""
-    if podman create --name "$name" --conmon-pidfile="$pidfn" $network $args "$image"; then
+    log "Calling \"podman create --name $name --conmon-pidfile=$pidfn $network $port $args $image\""
+    if podman create --name "$name" --conmon-pidfile="$pidfn" $network $port $args "$image"; then
 	log "Successfully created container $name from $image"
 	initctl show "container:$name" |grep -q manual:yes || initctl -bq start "container:$name"
 	initctl -nbq cond set container:$name
@@ -83,6 +84,8 @@ options:
       --dns-search LIST   Set host lookup search list when creating container
   -f, --force             Force operation, e.g. remove
   -h, --help              Show this help text
+  -p, --publish PORT      Publish ports when creating container
+                          Syntax: [[ip:][hostPort]:]containerPort[/protocol]
   -s, --simple            Show output in simplified format
 
 commands:
@@ -118,6 +121,10 @@ while [ "$1" != "" ]; do
 	-h | --help)
 	    usage
 	    exit 0
+	    ;;
+	-p | --publish)
+	    shift
+	    port="$port -p $1"
 	    ;;
 	-s | --simple)
 	    simple=true
