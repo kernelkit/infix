@@ -31,8 +31,8 @@ static int add(const char *name, struct lyd_node *cif)
 	const char *image = lydx_get_cattr(cif, "image");
 	const char *restart_policy;
 	struct lyd_node *node;
+	FILE *fp, *ep = NULL;
 	char *restart = "";	/* Default restart:10 */
-	FILE *fp;
 
 	fp = fopenf("w", "%s/%s.sh", INBOX_QUEUE, name);
 	if (!fp) {
@@ -54,6 +54,16 @@ static int add(const char *name, struct lyd_node *cif)
 
 	LYX_LIST_FOR_EACH(lyd_child(cif), node, "publish")
 		fprintf(fp, " -p %s", lyd_get_value(node));
+
+	LYX_LIST_FOR_EACH(lyd_child(cif), node, "env") {
+		if (!ep)
+			ep = fopenf("w", "/run/containers/env/%s.env", name);
+		fprintf(ep, "%s=%s\n", lydx_get_cattr(node, "key"), lydx_get_cattr(node, "value"));
+	}
+	if (ep) {
+		fclose(ep);
+		fprintf(fp, " -e /run/containers/env/%s.env", name);
+	}
 
 	fprintf(fp, " create %s %s", name, image);
 
