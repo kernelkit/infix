@@ -29,7 +29,7 @@ static const struct srx_module_requirement reqs[] = {
 static int add(const char *name, struct lyd_node *cif)
 {
 	const char *image = lydx_get_cattr(cif, "image");
-	const char *restart_policy;
+	const char *restart_policy, *string;
 	struct lyd_node *node;
 	FILE *fp, *ep = NULL;
 	char *restart = "";	/* Default restart:10 */
@@ -51,6 +51,9 @@ static int add(const char *name, struct lyd_node *cif)
 
 	LYX_LIST_FOR_EACH(lyd_child(cif), node, "search")
 		fprintf(fp, " --dns-search %s", lyd_get_value(node));
+
+	if ((string = lydx_get_cattr(cif, "hostname")))
+		fprintf(fp, " --hostname %s", string);
 
 	LYX_LIST_FOR_EACH(lyd_child(cif), node, "publish")
 		fprintf(fp, " -p %s", lyd_get_value(node));
