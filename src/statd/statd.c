@@ -38,6 +38,7 @@
 #define XPATH_IFACE_BASE "/ietf-interfaces:interfaces"
 #define XPATH_ROUTING_BASE "/ietf-routing:routing/control-plane-protocols/control-plane-protocol"
 #define XPATH_ROUTING_TABLE "/ietf-routing:routing/ribs"
+#define XPATH_HARDWARE_BASE "/ietf-hardware:hardware"
 #define XPATH_ROUTING_OSPF XPATH_ROUTING_BASE "/ospf"
 
 TAILQ_HEAD(sub_head, sub);
@@ -129,7 +130,7 @@ static json_t *json_get_ip_link(void)
 }
 
 static int ly_add_yanger_data(const struct ly_ctx *ctx, struct lyd_node **parent,
-                              const char *model, const char *arg)
+			      const char *model, const char *arg)
 {
 	char *yanger_args[5] = {
 		"/libexec/infix/yanger",
@@ -308,7 +309,7 @@ static void sr_event_cb(struct ev_loop *, struct ev_io *w, int)
 
 static int subscribe(struct statd *statd, char *model, char *xpath, const char *name,
 		     int (*cb)(sr_session_ctx_t *session, uint32_t, const char *, const char *,
-                            const char *, uint32_t, struct lyd_node **parent, void *priv))
+			       const char *, uint32_t, struct lyd_node **parent, void *priv))
 {
 	struct sub *sub;
 	int sr_ev_pipe;
@@ -330,8 +331,8 @@ static int subscribe(struct statd *statd, char *model, char *xpath, const char *
 
 	DEBUG("Subscribe to events for \"%s\"", xpath);
 	err = sr_oper_get_subscribe(statd->sr_ses, model, xpath, cb, sub,
-	                            SR_SUBSCR_DEFAULT | SR_SUBSCR_NO_THREAD | SR_SUBSCR_DONE_ONLY,
-	                            &sub->sr_sub);
+				    SR_SUBSCR_DEFAULT | SR_SUBSCR_NO_THREAD | SR_SUBSCR_DONE_ONLY,
+				    &sub->sr_sub);
 	if (err) {
 		ERROR("Error, subscribing to path \"%s\": %s", xpath, sr_strerror(err));
 		free(sub);
@@ -500,6 +501,11 @@ static int sub_to_ifaces(struct statd *statd)
 	return SR_ERR_OK;
 }
 
+static int sub_to_hardware(struct statd *statd)
+{
+	return subscribe(statd, "ietf-hardware", XPATH_HARDWARE_BASE, "hardware", sr_generic_cb);
+}
+
 static int sub_to_ospf(struct statd *statd)
 {
 	return subscribe(statd, "ietf-routing", XPATH_ROUTING_OSPF, "ospf", sr_ospf_cb);
@@ -563,6 +569,12 @@ int main(int argc, char *argv[])
 	err = sub_to_ospf(&statd);
 	if (err) {
 		ERROR("Error register for OSPF");
+		sr_disconnect(sr_conn);
+		return EXIT_FAILURE;
+	}
+	err = sub_to_hardware(&statd);
+	if (err) {
+		ERROR("Error register for hardware status");
 		sr_disconnect(sr_conn);
 		return EXIT_FAILURE;
 	}
