@@ -1,3 +1,5 @@
 #!/bin/sh
+# Adding hint of 'help' command when starting CLI
+echo "See the 'help' command for an introduction to the system."
 # Source settings, aliases, and probe terminal size, then hand over to klish
 exec env CLISH=yes bash -ilc /usr/bin/klish
