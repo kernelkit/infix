@@ -68,15 +68,13 @@ static int add(const char *name, struct lyd_node *cif)
 		fprintf(fp, " -e /run/containers/env/%s.env", name);
 	}
 
-	fprintf(fp, " create %s %s", name, image);
-
 	LYX_LIST_FOR_EACH(lyd_child(cif), node, "network") {
 		struct lyd_node *opt;
 		const char *name;
 		int first = 1;
 
 		name = lydx_get_cattr(node, "name");
-		fprintf(fp, " %s", name);
+		fprintf(fp, " --net %s", name);
 		LYX_LIST_FOR_EACH(lyd_child(node), opt, "option") {
 			const char *option = lyd_get_value(opt);
 
@@ -86,7 +84,9 @@ static int add(const char *name, struct lyd_node *cif)
 	}
 
 	if (lydx_is_enabled(cif, "host-network"))
-		fprintf(fp, " host");
+		fprintf(fp, " --net host");
+
+	fprintf(fp, " create %s %s", name, image);
 
 	fprintf(fp, "\n");
 	fchmod(fileno(fp), 0700);

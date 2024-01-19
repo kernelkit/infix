@@ -26,9 +26,6 @@ create()
 #    args="$args --log-opt tag=$name"
     pidfn=/run/container:${name}.pid
 
-    for net in "$@"; do
-	network="$network --net $net"
-    done
     log "---------------------------------------"
     log "Got name: $name image: $image"
     log "Got networks: $network"
@@ -47,9 +44,10 @@ create()
 
     #  --syslog --log-level info
     log "Calling \"podman create --name $name --conmon-pidfile=$pidfn $hostname $env $network $port $args $image\""
+    set -x
     if podman create --name "$name" --conmon-pidfile="$pidfn" $hostname $env $network $port $args "$image"; then
 	log "Successfully created container $name from $image"
-	rm "/run/containers/env/${name}.env"
+	rm -f "/run/containers/env/${name}.env"
 	initctl show "container:$name" |grep -q manual:yes || initctl -bq start "container:$name"
 	initctl -nbq cond set container:$name
 	exit 0
@@ -88,6 +86,7 @@ options:
   -f, --force             Force operation, e.g. remove
   -h, --help              Show this help text
       --hostname NAME     Set hostname when creating container
+      --net NETWORK       Set network(s) when creating container
   -p, --publish PORT      Publish ports when creating container
                           Syntax: [[ip:][hostPort]:]containerPort[/protocol]
   -s, --simple            Show output in simplified format
@@ -133,6 +132,10 @@ while [ "$1" != "" ]; do
 	--hostname)
 	    shift
 	    hostname="--hostname $1"
+	    ;;
+	--net)
+	    shift
+	    network="$network --net $1"
 	    ;;
 	-p | --publish)
 	    shift
