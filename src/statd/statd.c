@@ -28,7 +28,7 @@
 
 /* New kernel feature, not in sys/mman.h yet */
 #ifndef MFD_NOEXEC_SEAL
-#define MFD_NOEXEC_SEAL         0x0008U
+#define MFD_NOEXEC_SEAL 0x0008U
 #endif
 
 #define SOCK_RMEM_SIZE 1000000 /* Arbitrary chosen, default = 212992 */
@@ -46,7 +46,7 @@ TAILQ_HEAD(sub_head, sub);
  * types, not only interfaces.
  */
 struct sub {
-	char name[IFNAMSIZ+3];
+	char name[IFNAMSIZ + 3];
 	struct ev_io watcher;
 	sr_subscription_ctx_t *sr_sub;
 
@@ -129,7 +129,7 @@ static json_t *json_get_ip_link(void)
 }
 
 static int ly_add_yanger_data(const struct ly_ctx *ctx, struct lyd_node **parent,
-			      char *model, const char *arg)
+                              char *model, const char *arg)
 {
 	char *yanger_args[5] = {
 		"/libexec/infix/yanger",
@@ -194,8 +194,8 @@ static int ly_add_yanger_data(const struct ly_ctx *ctx, struct lyd_node **parent
 }
 
 static int sr_ifaces_cb(sr_session_ctx_t *session, uint32_t, const char *path,
-			const char *, const char *, uint32_t,
-			struct lyd_node **parent, void *priv)
+                        const char *, const char *, uint32_t,
+                        struct lyd_node **parent, void *priv)
 {
 	struct sub *sub = priv;
 	const struct ly_ctx *ctx;
@@ -228,8 +228,8 @@ static int sr_ifaces_cb(sr_session_ctx_t *session, uint32_t, const char *path,
 }
 
 static int sr_routes_cb(sr_session_ctx_t *session, uint32_t, const char *path,
-			const char *, const char *, uint32_t,
-			struct lyd_node **parent, __attribute__((unused)) void *priv)
+                        const char *, const char *, uint32_t,
+                        struct lyd_node **parent, __attribute__((unused)) void *priv)
 {
 	const struct ly_ctx *ctx;
 	sr_conn_ctx_t *con;
@@ -259,8 +259,8 @@ static int sr_routes_cb(sr_session_ctx_t *session, uint32_t, const char *path,
 }
 
 static int sr_ospf_cb(sr_session_ctx_t *session, uint32_t, const char *path,
-			const char *, const char *, uint32_t,
-			struct lyd_node **parent, __attribute__((unused)) void *priv)
+                      const char *, const char *, uint32_t,
+                      struct lyd_node **parent, __attribute__((unused)) void *priv)
 {
 	const struct ly_ctx *ctx;
 	sr_conn_ctx_t *con;
@@ -307,8 +307,8 @@ static void sr_event_cb(struct ev_loop *, struct ev_io *w, int)
 }
 
 static int subscribe(struct statd *statd, char *model, char *xpath, const char *name,
-		     int (*cb)(sr_session_ctx_t *session, uint32_t, const char *, const char *,
-		     const char *, uint32_t, struct lyd_node **parent, void *priv))
+                     int (*cb)(sr_session_ctx_t *session, uint32_t, const char *, const char *,
+                               const char *, uint32_t, struct lyd_node **parent, void *priv))
 {
 	struct sub *sub;
 	int sr_ev_pipe;
@@ -329,9 +329,9 @@ static int subscribe(struct statd *statd, char *model, char *xpath, const char *
 	snprintf(sub->name, sizeof(sub->name), "%s", name);
 
 	DEBUG("Subscribe to events for \"%s\"", xpath);
-	err = sr_oper_get_subscribe(statd->sr_ses, model,xpath, cb, sub,
-				    SR_SUBSCR_DEFAULT | SR_SUBSCR_NO_THREAD | SR_SUBSCR_DONE_ONLY,
-				    &sub->sr_sub);
+	err = sr_oper_get_subscribe(statd->sr_ses, model, xpath, cb, sub,
+	                            SR_SUBSCR_DEFAULT | SR_SUBSCR_NO_THREAD | SR_SUBSCR_DONE_ONLY,
+	                            &sub->sr_sub);
 	if (err) {
 		ERROR("Error, subscribing to path \"%s\": %s", xpath, sr_strerror(err));
 		free(sub);
@@ -363,8 +363,8 @@ static int sub_to_routes(struct statd *statd)
 static int sub_to_iface(struct statd *statd, const char *ifname)
 {
 	char path[XPATH_MAX] = {};
-	char name[IFNAMSIZ+3];
-	snprintf(name,sizeof(name),"if-%s",ifname);
+	char name[IFNAMSIZ + 3];
+	snprintf(name, sizeof(name), "if-%s", ifname);
 
 	/**
 	 * Skip internal interfaces (such as dsa0)
@@ -407,8 +407,8 @@ static int unsub_to_name(struct statd *statd, char *name)
 }
 static int unsub_to_iface(struct statd *statd, char *ifname)
 {
-	char name[IFNAMSIZ+3];
-	snprintf(name,sizeof(name),"if-%s",ifname);
+	char name[IFNAMSIZ + 3];
+	snprintf(name, sizeof(name), "if-%s", ifname);
 
 	return unsub_to_name(statd, name);
 }
