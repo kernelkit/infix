@@ -129,11 +129,11 @@ static json_t *json_get_ip_link(void)
 }
 
 static int ly_add_yanger_data(const struct ly_ctx *ctx, struct lyd_node **parent,
-                              char *model, const char *arg)
+                              const char *model, const char *arg)
 {
 	char *yanger_args[5] = {
 		"/libexec/infix/yanger",
-		model,
+		(char *)model,
 		NULL,
 		NULL,
 		NULL
@@ -194,8 +194,8 @@ static int ly_add_yanger_data(const struct ly_ctx *ctx, struct lyd_node **parent
 }
 
 static int sr_ifaces_cb(sr_session_ctx_t *session, uint32_t, const char *path,
-                        const char *, const char *, uint32_t,
-                        struct lyd_node **parent, void *priv)
+			const char *, const char *, uint32_t,
+			struct lyd_node **parent, void *priv)
 {
 	struct sub *sub = priv;
 	const struct ly_ctx *ctx;
@@ -227,40 +227,9 @@ static int sr_ifaces_cb(sr_session_ctx_t *session, uint32_t, const char *path,
 	return err;
 }
 
-static int sr_routes_cb(sr_session_ctx_t *session, uint32_t, const char *path,
-                        const char *, const char *, uint32_t,
-                        struct lyd_node **parent, __attribute__((unused)) void *priv)
-{
-	const struct ly_ctx *ctx;
-	sr_conn_ctx_t *con;
-	sr_error_t err;
-
-	DEBUG("Incoming query for xpath: %s", path);
-
-	con = sr_session_get_connection(session);
-	if (!con) {
-		ERROR("Error, getting sr connection");
-		return SR_ERR_INTERNAL;
-	}
-
-	ctx = sr_acquire_context(con);
-	if (!ctx) {
-		ERROR("Error, acquiring context");
-		return SR_ERR_INTERNAL;
-	}
-
-	err = ly_add_yanger_data(ctx, parent, "ietf-routing", NULL);
-	if (err)
-		ERROR("Error adding yanger data");
-
-	sr_release_context(con);
-
-	return err;
-}
-
-static int sr_ospf_cb(sr_session_ctx_t *session, uint32_t, const char *path,
-                      const char *, const char *, uint32_t,
-                      struct lyd_node **parent, __attribute__((unused)) void *priv)
+static int sr_ospf_cb(sr_session_ctx_t *session, uint32_t, const char *,
+		      const char *path, const char *, uint32_t,
+		      struct lyd_node **parent, __attribute__((unused)) void *priv)
 {
 	const struct ly_ctx *ctx;
 	sr_conn_ctx_t *con;
@@ -289,6 +258,37 @@ static int sr_ospf_cb(sr_session_ctx_t *session, uint32_t, const char *path,
 	return err;
 }
 
+static int sr_generic_cb(sr_session_ctx_t *session, uint32_t, const char *model,
+			 const char *path, const char *, uint32_t,
+			 struct lyd_node **parent, __attribute__((unused)) void *priv)
+{
+	const struct ly_ctx *ctx;
+	sr_conn_ctx_t *con;
+	sr_error_t err;
+
+	DEBUG("Incoming query for xpath: %s", path);
+
+	con = sr_session_get_connection(session);
+	if (!con) {
+		ERROR("Error, getting sr connection");
+		return SR_ERR_INTERNAL;
+	}
+
+	ctx = sr_acquire_context(con);
+	if (!ctx) {
+		ERROR("Error, acquiring context");
+		return SR_ERR_INTERNAL;
+	}
+
+	err = ly_add_yanger_data(ctx, parent, model, NULL);
+	if (err)
+		ERROR("Error adding yanger data");
+
+	sr_release_context(con);
+
+	return err;
+}
+
 static void sigint_cb(struct ev_loop *loop, struct ev_signal *, int)
 {
 	ev_break(loop, EVBREAK_ALL);
@@ -307,8 +307,8 @@ static void sr_event_cb(struct ev_loop *, struct ev_io *w, int)
 }
 
 static int subscribe(struct statd *statd, char *model, char *xpath, const char *name,
-                     int (*cb)(sr_session_ctx_t *session, uint32_t, const char *, const char *,
-                               const char *, uint32_t, struct lyd_node **parent, void *priv))
+		     int (*cb)(sr_session_ctx_t *session, uint32_t, const char *, const char *,
+                            const char *, uint32_t, struct lyd_node **parent, void *priv))
 {
 	struct sub *sub;
 	int sr_ev_pipe;
@@ -357,7 +357,7 @@ static int subscribe(struct statd *statd, char *model, char *xpath, const char *
 
 static int sub_to_routes(struct statd *statd)
 {
-	return subscribe(statd, "ietf-routing", XPATH_ROUTING_TABLE, "routes", sr_routes_cb);
+	return subscribe(statd, "ietf-routing", XPATH_ROUTING_TABLE, "routes", sr_generic_cb);
 }
 
 static int sub_to_iface(struct statd *statd, const char *ifname)
