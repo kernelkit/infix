@@ -43,9 +43,10 @@ create()
     fi
 
     #  --syslog --log-level info
-    log "Calling \"podman create --name $name --conmon-pidfile=$pidfn $hostname $env $network $port $args $image\""
+    log "Calling \"podman create --name $name --conmon-pidfile=$pidfn $hostname $entrypoint $env $network $port $args $image $*\""
     set -x
-    if podman create --name "$name" --conmon-pidfile="$pidfn" $hostname $env $network $port $args "$image"; then
+    # shellcheck disable=SC2048
+    if podman create --name "$name" --conmon-pidfile="$pidfn" $hostname $entrypoint $env $network $port $args "$image" $*; then
 	log "Successfully created container $name from $image"
 	rm -f "/run/containers/env/${name}.env"
 	initctl show "container:$name" |grep -q manual:yes || initctl -bq start "container:$name"
@@ -83,6 +84,7 @@ options:
       --dns NAMESERVER    Set nameserver(s) when creating a container
       --dns-search LIST   Set host lookup search list when creating container
   -e, --env FILE          Environment variables when creating container
+      --entrypoint        Disable container image's ENTRYPOINT, run cmd + arg
   -f, --force             Force operation, e.g. remove
   -h, --help              Show this help text
       --hostname NAME     Set hostname when creating container
@@ -121,6 +123,9 @@ while [ "$1" != "" ]; do
 	-e | --env)
 	    shift
 	    env="$env --env-file=$1"
+	    ;;
+	--entrypoint)
+	    entrypoint="--entrypoint=\"\""
 	    ;;
 	-f | --force)
 	    force="-f"

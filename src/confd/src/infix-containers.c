@@ -86,7 +86,13 @@ static int add(const char *name, struct lyd_node *cif)
 	if (lydx_is_enabled(cif, "host-network"))
 		fprintf(fp, " --net host");
 
+	if ((string = lydx_get_cattr(cif, "entrypoint")))
+		fprintf(fp, " --entrypoint");
+
 	fprintf(fp, " create %s %s", name, image);
+
+ 	if ((string = lydx_get_cattr(cif, "entrypoint")))
+		fprintf(fp, " %s", string);
 
 	fprintf(fp, "\n");
 	fchmod(fileno(fp), 0700);

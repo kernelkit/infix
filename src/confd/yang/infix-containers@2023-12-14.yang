@@ -83,6 +83,11 @@ module infix-containers {
 	}
       }
 
+      leaf entrypoint {
+	description "Override the default ENTRYPOINT from the image.";
+	type string;
+      }
+
       leaf hostname {
 	description "Sets the container host name that is available inside the container.";
 	type inet:domain-name;
