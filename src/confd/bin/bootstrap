@@ -223,7 +223,7 @@ sysrepoctl -s $SEARCH							\
 	   -i infix-system@2023-10-19.yang	-g wheel -p 0660	\
 	   -i infix-services@2023-10-16.yang	-g wheel -p 0660	\
 	   -i ieee802-ethernet-interface@2019-06-21.yang -g wheel -p 0660 \
-	   -i infix-ethernet-interface@2023-11-22.yang -g wheel -p 0660 \
+	   -i infix-ethernet-interface@2024-01-22.yang -g wheel -p 0660 \
 	   -I "${INIT_DATA}"
 rc=$?
 

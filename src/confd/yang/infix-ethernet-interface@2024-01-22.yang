@@ -14,6 +14,11 @@ module infix-ethernet-interface {
   contact      "kernelkit@googlegroups.com";
   description  "Extensions and deviations to ieee802-ethernet-interface.yang";
 
+  revision 2024-01-22 {
+    description "Support ethernet but not negotiation-status";
+    reference "internal";
+  }
+
   revision 2023-11-22 {
     description "Initial revision.";
     reference "internal";
