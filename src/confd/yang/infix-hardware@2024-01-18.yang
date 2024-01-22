@@ -1,31 +1,89 @@
 module infix-hardware {
-    yang-version 1.1;
-    namespace "urn:infix:hardware:ns:yang:1.0";
-    prefix ih;
-    import ietf-hardware {
-      prefix iehw;
+  yang-version 1.1;
+  namespace "urn:infix:hardware:ns:yang:1.0";
+  prefix ih;
+  import ietf-hardware {
+    prefix iehw;
+  }
+  import iana-hardware {
+    prefix iahw;
+  }
+    
+  import ietf-yang-types {
+    prefix yang;
+  }
+
+  revision 2024-01-18 {
+    description "Initial";
+    reference "internal";
+  }
+  typedef country-code {
+    type string {
+      length 2;
+      pattern "[A-Za-z]+";
     }
-    import iana-hardware {
-      prefix iahw;
-    }
-    revision 2024-01-18 {
-      description "Initial";
-      reference "internal";
-    }
-    identity power {
-      base iahw:hardware-class;
-    }
-    identity product {
-      base iahw:hardware-class;
-    }
-    augment "/iehw:hardware/iehw:component" {
+    description "A two-letter country code.";
+  }
+
+  augment "/iehw:hardware/iehw:component" {
+    container vpd-data {
+      config false;
+      leaf product-name {
+	type string;
+      }
       leaf part-number {
 	type string;
       }
-    }
-    augment "/iehw:hardware/iehw:component" {
+      leaf serial-number {
+	type string;
+      }
+      leaf mac-address {
+	type yang:mac-address;
+      }
+      leaf manufacture-date {
+	type string;
+      }
+      leaf device-version {
+	type uint8;
+      }
+      leaf label-revision {
+	type string;
+      }
+      leaf label-version {
+	type string;
+      }
+      leaf platform-name {
+	type string;
+      }
+      leaf onie-version {
+	type string;
+      }
+      leaf num-macs {
+	type uint16;
+      }
+      leaf manufacturer {
+	type string;
+      }
+      leaf coutry-code {
+	type country-code;
+      }
       leaf vendor {
 	type string;
       }
+      leaf diag-version {
+	type string;
+      }
+      leaf service-tag {
+	type string;
+      }
+      list vendor-extension {
+	leaf iana-enterprise-number {
+	  type uint32;
+	}
+	leaf extension-data {
+	  type string;
+	}
+      }
     }
+  }
 }
