@@ -208,7 +208,7 @@ vpd_args()
 
 	cat <<EOF | "$onieprom" -e >"$vpd_file"
 {
-  "manufacture-date": "$(date +"%d/%m/%Y %H:%M:%S")",
+  "manufacture-date": "$(date +"%m/%d/%Y %H:%M:%S")",
   "vendor-extension": [
     [
       61046,
