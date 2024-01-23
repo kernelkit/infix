@@ -23,7 +23,7 @@ module infix-system {
     description "Change deviation for timezone-utc-offset from unsupported to Etc+/-HOUR
                 - Unit is set to hours (tzdata compatibility)
                 - Range is -12 .. 14";
-    
+
     reference "internal";
   }
   revision 2023-08-15 {
@@ -70,7 +70,7 @@ module infix-system {
     description "Augment of ietf-system to support setting login shell for users.";
     leaf shell {
       type identityref {
-	base infixsh:shell-type;
+        base infixsh:shell-type;
       }
       default infixsh:false;
       description "Set UNIX login shell for user, default: none (security)";

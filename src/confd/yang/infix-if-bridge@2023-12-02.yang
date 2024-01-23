@@ -51,25 +51,25 @@ submodule infix-if-bridge {
   typedef ieee-reserved-groups {
     type union {
       type uint8 {
-	range "0..15";
+        range "0..15";
       }
       type enumeration {
-	enum stp {
-	  value 0;
-	  description "Spanning Tree (STP/RSPT/MSTP).";
-	}
-	enum lacp {
-	  value 2;
-	  description "802.3 Slow Protocols, e.g., LACP.";
-	}
-	enum dot1x {
-	  value 3;
-	  description "802.1X Port-Based Network Access Control.";
-	}
-	enum lldp {
-	  value 14;
-	  description "802.1AB Link Layer Discovery Protocol (LLDP).";
-	}
+        enum stp {
+          value 0;
+          description "Spanning Tree (STP/RSPT/MSTP).";
+        }
+        enum lacp {
+          value 2;
+          description "802.3 Slow Protocols, e.g., LACP.";
+        }
+        enum dot1x {
+          value 3;
+          description "802.1X Port-Based Network Access Control.";
+        }
+        enum lldp {
+          value 14;
+          description "802.1AB Link Layer Discovery Protocol (LLDP).";
+        }
       }
     }
     description
@@ -92,20 +92,20 @@ submodule infix-if-bridge {
       description "IEEE 802.1Q style bridge.";
 
       leaf-list ieee-group-forward {
-	type ieee-reserved-groups;
-	description
-	  "List of IEEE link-local protocols to forward, e.g., STP, LLDP";
+        type ieee-reserved-groups;
+        description
+          "List of IEEE link-local protocols to forward, e.g., STP, LLDP";
       }
 
       container vlans {
         if-feature "vlan-filtering";
         description "A VLAN filtering bridge has at least one VLAN.";
 
-	leaf proto {
-	  type dot1q-types:dot1q-tag-type;
-	  default dot1q-types:c-vlan;
-	  description "Standard (1Q/c-vlan) or provider (1ad/s-vlan) bridge.";
-	}
+        leaf proto {
+          type dot1q-types:dot1q-tag-type;
+          default dot1q-types:c-vlan;
+          description "Standard (1Q/c-vlan) or provider (1ad/s-vlan) bridge.";
+        }
 
         list vlan {
           key "vid";
@@ -123,9 +123,9 @@ submodule infix-if-bridge {
 
           leaf-list tagged {
             type if:interface-ref;
-	    must "not(../untagged[contains(., current())])" {
-	      error-message "Cannot be an untagged port at the same time.";
-	    }
+            must "not(../untagged[contains(., current())])" {
+              error-message "Cannot be an untagged port at the same time.";
+            }
             description "The set of ports in the tagged set for VLAN.";
           }
         }
@@ -147,7 +147,7 @@ submodule infix-if-bridge {
       description "Extension of the IETF Interfaces model (RFC7223).";
 
       container bridge-port {
-	description "Bridge association and port specific setttngs.";
+        description "Bridge association and port specific setttngs.";
 
         leaf bridge {
           type if:interface-ref;
@@ -159,14 +159,14 @@ submodule infix-if-bridge {
         }
 
         leaf pvid {
-	  if-feature "vlan-filtering";
+          if-feature "vlan-filtering";
           type dot1q-types:vlanid;
           default "1";
           description "The primary VID assigned to this bridge port.";
         }
 
         leaf default-priority {
-	  if-feature "vlan-filtering";
+          if-feature "vlan-filtering";
           type dot1q-types:priority-type;
           default "0";
           description "The default priority assigned to this bridge port.";

@@ -26,7 +26,7 @@ submodule infix-if-veth {
 
   augment "/if:interfaces/if:interface" {
     when "derived-from-or-self(if:type, 'infixift:veth')" {
-        description "Only shown for if:type infixift:veth (ianaift:ilan)";
+      description "Only shown for if:type infixift:veth (ianaift:ilan)";
     }
 
     description "Augments the interface model with virtual Ethernet pairs.";

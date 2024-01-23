@@ -37,15 +37,15 @@ module infix-ip {
   augment "/if:interfaces/if:interface/ip:ipv4" {
     container autoconf {
       description
-	"Parameters to control the autoconfiguration of IPv4 address.";
+        "Parameters to control the autoconfiguration of IPv4 address.";
 
       leaf enabled {
-	type boolean;
-	default false;
-	description
-	  "Use a ZeroConf/IPv4LL agent to retrieve an 169.254/16 address.";
-	reference
-	  "RFC 3927: Dynamic Configuration of IPv4 Link-Local Addresses";
+        type boolean;
+        default false;
+        description
+          "Use a ZeroConf/IPv4LL agent to retrieve an 169.254/16 address.";
+        reference
+          "RFC 3927: Dynamic Configuration of IPv4 Link-Local Addresses";
       }
     }
   }
@@ -53,7 +53,7 @@ module infix-ip {
   deviation "/if:interfaces/if:interface/ip:ipv4/ip:address/ip:subnet/ip:netmask" {
     deviate not-supported;
   }
-  
+
   deviation "/if:interfaces/if:interface/ip:ipv4/ip:neighbor" {
     deviate not-supported;
   }
