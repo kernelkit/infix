@@ -712,5 +712,4 @@ UseTab: Always
 #
 ColumnLimit: 0
 ForEachMacros: ['LYX_LIST_FOR_EACH', 'TAILQ_FOREACH', 'LY_LIST_FOR', 'json_array_foreach']
-UseTab: AlignWithSpaces
 ...
