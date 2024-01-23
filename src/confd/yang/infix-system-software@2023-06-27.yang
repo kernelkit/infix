@@ -29,13 +29,13 @@ submodule infix-system-software {
     leaf datetime {
       type yang:date-and-time;
       description
-	"The time of the event.";
+        "The time of the event.";
     }
 
     leaf count {
       type uint32;
       description
-	"The total number of occurrences of the event.";
+        "The total number of occurrences of the event.";
     }
   }
 
@@ -43,159 +43,159 @@ submodule infix-system-software {
     leaf operation {
       type string;
       description
-	"The current operation of the installer service.";
+        "The current operation of the installer service.";
     }
 
     container progress {
       leaf percentage {
-	type uint8 {
-	  range "0 .. 100";
-	}
+        type uint8 {
+          range "0 .. 100";
+        }
       }
 
       leaf message {
-	type string;
+        type string;
       }
     }
 
     leaf last-error {
       type string;
       description
-	"The last error encountered by the installer service.";
+        "The last error encountered by the installer service.";
     }
   }
 
   augment "/sys:system-state" {
     container software {
       description
-	"Installed software information
+        "Installed software information
 
-	 Determined by RAUC, which manages all software upgrades.";
+        Determined by RAUC, which manages all software upgrades.";
       reference "https://rauc.io/";
 
       leaf compatible {
-	type string;
-	description
-	  "Platform identifier
+        type string;
+        description
+          "Platform identifier
 
-	   Software bundles' compatible attributes are matched against this
-	   one, to determine if they are compatible with one another.";
+          Software bundles' compatible attributes are matched against this
+          one, to determine if they are compatible with one another.";
       }
 
       leaf variant {
-	type string;
-	description
-	  "Hardware variant
+        type string;
+        description
+          "Hardware variant
 
-	   Identifies the exact system type.";
+          Identifies the exact system type.";
       }
 
       leaf booted {
-	type string;
-	description
-	  "Slot from which the system was booted.";
+        type string;
+        description
+          "Slot from which the system was booted.";
       }
 
       container installer {
-	description
-	  "The current state of the software installer service.";
+        description
+          "The current state of the software installer service.";
 
-	uses installer-state;
+        uses installer-state;
 
-	// TODO: Support sending notifications during bundle installation
-	// notification state-changed {
-	//   uses installer-state;
-	// }
+        // TODO: Support sending notifications during bundle installation
+        // notification state-changed {
+        //   uses installer-state;
+        // }
       }
 
       list slot {
-	key "name";
-	description
-	  "Details the installed software and current state of a particular
-	   storage slot (partition).";
+        key "name";
+        description
+          "Details the installed software and current state of a particular
+          storage slot (partition).";
 
-	leaf name {
-	  type string;
-	  description
-	    "RAUC's internal name for the slot, in <class>.<id> notation.";
-	}
+        leaf name {
+          type string;
+          description
+            "RAUC's internal name for the slot, in <class>.<id> notation.";
+        }
 
-	leaf bootname {
-	  type string;
-	  description
-	    "Short name of the slot.";
-	}
+        leaf bootname {
+          type string;
+          description
+            "Short name of the slot.";
+        }
 
-	leaf class {
-	  type string;
-	  description
-	    "Class of software compatible with the slot.";
-	}
+        leaf class {
+          type string;
+          description
+            "Class of software compatible with the slot.";
+        }
 
-	leaf state {
-	  type string;
-	  description
-	    "The slot's state.";
-	}
+        leaf state {
+          type string;
+          description
+            "The slot's state.";
+        }
 
-	container bundle {
-	  leaf compatible {
-	    type string;
-	    description
-	      "Platform identifier of the installed software image.";
-	  }
+        container bundle {
+          leaf compatible {
+            type string;
+            description
+              "Platform identifier of the installed software image.";
+          }
 
-	  leaf version {
-	    type string;
-	    description
-	      "Version of the installed software image.";
-	  }
-	}
+          leaf version {
+            type string;
+            description
+              "Version of the installed software image.";
+          }
+        }
 
-	leaf size {
-	  type uint64;
-	    description
-	      "Size, in bytes, of the installed software image.";
-	}
+        leaf size {
+          type uint64;
+          description
+            "Size, in bytes, of the installed software image.";
+        }
 
-	leaf sha256 {
-	  type string {
-	    pattern '[a-fA-F0-9]{64}';
-	  }
-	  description
-	    "Checksum of the installed software image.";
-	}
-	container installed {
-	  description
-	    "Logs the time of the last installation and the total number of
-	     updates to this slot.";
+        leaf sha256 {
+          type string {
+            pattern '[a-fA-F0-9]{64}';
+          }
+          description
+            "Checksum of the installed software image.";
+        }
+        container installed {
+          description
+            "Logs the time of the last installation and the total number of
+            updates to this slot.";
 
-	  uses rauc-stage-log;
-	}
+          uses rauc-stage-log;
+        }
 
-	container activated {
-	  description
-	    "Logs the first time the current slot was activated and the total
-	     number of activations.";
-	  uses rauc-stage-log;
-	}
+        container activated {
+          description
+            "Logs the first time the current slot was activated and the total
+            number of activations.";
+          uses rauc-stage-log;
+        }
       }
     }
   }
 
   rpc install-bundle {
-    nacm:default-deny-all;
-    description
-      "Upgrade the system's software by installing the specified bundle.";
-    input {
-      leaf url {
-	type string;
-	mandatory true;
-	description
-          "The location of the software bundle, specified as a Uniform
+nacm:default-deny-all;
+     description
+       "Upgrade the system's software by installing the specified bundle.";
+     input {
+       leaf url {
+         type string;
+         mandatory true;
+         description
+           "The location of the software bundle, specified as a Uniform
            Resource Locator (URL).  Currently supported protocols include
            FTP, HTTP(S) and SCP.";
-      }
-    }
+       }
+     }
   }
 }

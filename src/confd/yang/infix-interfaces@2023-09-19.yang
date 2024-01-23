@@ -47,7 +47,7 @@ module infix-interfaces {
   deviation "/if:interfaces/if:interface/if:type" {
     deviate replace {
       type identityref {
-	base infixift:infix-interface-type;
+        base infixift:infix-interface-type;
       }
     }
   }

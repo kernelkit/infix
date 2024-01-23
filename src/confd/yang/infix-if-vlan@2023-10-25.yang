@@ -30,19 +30,19 @@ submodule infix-if-vlan {
     container vlan {
       description "Configure 802.1q/802.1ad VLANs";
       leaf tag-type {
-	type dot1q-types:dot1q-tag-type;
-	default dot1q-types:c-vlan;
-	description "VLAN type";
+        type dot1q-types:dot1q-tag-type;
+        default dot1q-types:c-vlan;
+        description "VLAN type";
       }
       leaf id {
-	type dot1q-types:vlanid;
-	mandatory true;
-	description "VLAN Id";
+        type dot1q-types:vlanid;
+        mandatory true;
+        description "VLAN Id";
       }
       leaf lower-layer-if {
-	type if:interface-ref;
-	mandatory true;
-	description "Base interface for VLAN";
+        type if:interface-ref;
+        mandatory true;
+        description "Base interface for VLAN";
       }
     }
   }
