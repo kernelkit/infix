@@ -24,11 +24,22 @@ prognm=$(basename "$0")
 
 usage()
 {
-    echo "usage: $prognm [opts]"
+    echo "Usage:"
+    echo " $prognm [opts] [ARGS]"
     echo
-    echo " -c    Run menuconfig to change Qemu settings"
-    echo " -h    This help text"
+    echo "Options:"
+    echo "  -c     Run menuconfig to change Qemu settings"
+    echo "  -h     This help text"
     echo
+    echo "Arguments:"
+    echo "  ARGS1  Args before the '--' separator are for kernel space"
+    echo "  --     Separator"
+    echo "  ARGS2  Args after the '--' separator are for the init process"
+    echo "         Also, qemu.cfg has QEMU_APPEND which can affect this."
+    echo
+    echo "Example:"
+    echo "  qemu.sh -- finit.debug"
+    echo "___________________________________________________________________"
     echo "Note: 'kconfig-frontends' package (Debian/Ubuntu) must be installed"
     echo "      for -c to work: sudo apt install kconfig-frontents"
 
@@ -357,6 +368,10 @@ if [ -f .config ]; then
 else
     # Shipped defaults from release tarball
     load_qemucfg qemu.cfg
+fi
+
+if [ -z "$QEMU_EXTRA_APPEND" ]; then
+    QEMU_EXTRA_APPEND="$*"
 fi
 
 generate_dot
