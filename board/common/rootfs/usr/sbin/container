@@ -43,10 +43,10 @@ create()
     fi
 
     #  --syslog --log-level info
-    log "Calling \"podman create --name $name --conmon-pidfile=$pidfn $ro $hostname $entrypoint $env $network $port $args $image $*\""
+    log "Calling \"podman create --name $name --conmon-pidfile=$pidfn $ro $vol $hostname $entrypoint $env $network $port $args $image $*\""
     set -x
     # shellcheck disable=SC2048
-    if podman create --name "$name" --conmon-pidfile="$pidfn" $ro $hostname $entrypoint $env $network $port $args "$image" $*; then
+    if podman create --name "$name" --conmon-pidfile="$pidfn" $ro $vol $hostname $entrypoint $env $network $port $args "$image" $*; then
 	log "Successfully created container $name from $image"
 	rm -f "/run/containers/env/${name}.env"
 	initctl show "container:$name" |grep -q manual:yes || initctl -bq start "container:$name"
@@ -93,6 +93,7 @@ options:
                           Syntax: [[ip:][hostPort]:]containerPort[/protocol]
       --read-only         Do not create a writable layer
   -s, --simple            Show output in simplified format
+  -v, --volume NAME:PATH  Create named volume mounted inside container on PATH
 
 commands:
   create  NAME IMAGE NET  Create container NAME using IMAGE with networks NET
@@ -102,9 +103,10 @@ commands:
   remove  IMAGE           Remove an (unused) container image
   restart NAME            Restart a crashed container
   run     NAME CMD        Execute a command (interactively) in container
-  show   [image]          Show containers or container images
+  show   [image | volume] Show containers, images, or volumes
   start   NAME            Start a container
   stop    NAME            Stop a container
+  volume [prune]          Prune unused volumes
 EOF
 }
 
@@ -152,6 +154,10 @@ while [ "$1" != "" ]; do
 	    ;;
 	-s | --simple)
 	    simple=true
+	    ;;
+	-v | --volume)
+	    shift
+	    vol="$vol -v $1"
 	    ;;
 	*)
 	    break
@@ -214,6 +220,13 @@ case $cmd in
 		    podman images $all
 		fi
 		;;
+	    volume*)
+		printf "%-20s  CONTAINER\n" "VOLUME"
+		for v in $(podman volume ls --format "{{.Name}}"); do
+		    printf "%-20s" "$v"
+		    podman ps -a --filter volume="$v"  --format '{{.Names}}' | sed 's/^/  /'
+		done
+		;;
 	    *)
 		if [ -n "$simple" ]; then
 		    podman ps $all --format "{{.ID}}  {{.Names}}  {{.Image}}" \
@@ -232,6 +245,18 @@ case $cmd in
 	;;
     stop)
 	initctl -bq stop "container:$1" || podman kill "$1"
+	;;
+    volume)
+	cmd=$1
+	shift
+	case $cmd in
+	    prune)
+		podman $force volume prune
+		;;
+	    *)
+		false
+		;;
+	esac
 	;;
     *)
 	usage

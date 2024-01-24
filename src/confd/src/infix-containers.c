@@ -62,6 +62,9 @@ static int add(const char *name, struct lyd_node *cif)
 	if (lydx_is_enabled(cif, "read-only"))
 		fprintf(fp, " --read-only");
 
+	LYX_LIST_FOR_EACH(lyd_child(cif), node, "volume")
+		fprintf(fp, " -v %s-%s:%s", name, lydx_get_cattr(node, "name"), lydx_get_cattr(node, "dir"));
+
 	ap = NULL;
 	LYX_LIST_FOR_EACH(lyd_child(cif), node, "env") {
 		if (!ap) {
@@ -243,6 +246,8 @@ void infix_containers_launch(void)
 		if (movefile(next, JOB_QUEUE))
 			ERRNO("Failed moving %s to job queue %s", next, JOB_QUEUE);
 	}
+
+	systemf("container -f volume prune");
 }
 
 int infix_containers_init(struct confd *confd)
