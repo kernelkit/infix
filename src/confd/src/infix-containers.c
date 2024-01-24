@@ -32,12 +32,12 @@ static int add(const char *name, struct lyd_node *cif)
 	const char *image = lydx_get_cattr(cif, "image");
 	const char *restart_policy, *string;
 	struct lyd_node *node;
-	FILE *fp, *ep = NULL;
+	FILE *fp, *ap;
 	char *restart = "";	/* Default restart:10 */
 
 	fp = fopenf("w", "%s/%s.sh", INBOX_QUEUE, name);
 	if (!fp) {
-		ERROR("Failed adding job %s.sh to job queue" INBOX_QUEUE, name);
+		ERRNO("Failed adding job %s.sh to job queue" INBOX_QUEUE, name);
 		return SR_ERR_SYS;
 	}
 
@@ -62,14 +62,20 @@ static int add(const char *name, struct lyd_node *cif)
 	if (lydx_is_enabled(cif, "read-only"))
 		fprintf(fp, " --read-only");
 
+	ap = NULL;
 	LYX_LIST_FOR_EACH(lyd_child(cif), node, "env") {
-		if (!ep)
-			ep = fopenf("w", "/run/containers/env/%s.env", name);
-		fprintf(ep, "%s=%s\n", lydx_get_cattr(node, "key"), lydx_get_cattr(node, "value"));
+		if (!ap) {
+			ap = fopenf("w", "/run/containers/args/%s.env", name);
+			if (!ap) {
+				ERRNO("Failed creating env list for container %s", name);
+				break;
+			}
+		}
+		fprintf(ap, "%s=%s\n", lydx_get_cattr(node, "key"), lydx_get_cattr(node, "value"));
 	}
-	if (ep) {
-		fclose(ep);
-		fprintf(fp, " -e /run/containers/env/%s.env", name);
+	if (ap) {
+		fclose(ap);
+		fprintf(fp, " -e /run/containers/args/%s.env", name);
 	}
 
 	LYX_LIST_FOR_EACH(lyd_child(cif), node, "network") {
