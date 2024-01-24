@@ -163,8 +163,34 @@ module infix-containers {
       }
 
       leaf read-only {
-	description "Create a read-only container.";
+	description "Create a read-only container.  Use volumes for writable directories.";
 	type boolean;
+      }
+
+      list volume {
+	description "Create a writable volume that survive container upgrades.
+
+                     Volumes are retained over the lifetime of a container and survive
+                     both upgrading the image as well as configuration changes, which
+                     otherwise wipe the default writable layer a container is given.
+
+                     Volumes combine well with 'read-only' containers, when you know
+                     which files/directories you want to persist.";
+	key name;
+
+	leaf name {
+	  description "Single word, [A-Za-z_], to identify this volume.
+                       For example, a volume for /etc may be labled etc.
+
+                       Note: will be prefixed with container name globally.";
+	  type string;
+	}
+
+	leaf dir {
+	  description "Directory to mount the volume on inside the container, e.g., /etc";
+	  mandatory true;
+	  type string;
+	}
       }
 
       container statistics {
