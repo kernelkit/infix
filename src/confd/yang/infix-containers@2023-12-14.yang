@@ -161,7 +161,12 @@ module infix-containers {
 	  }
 	}
       }
-                        
+
+      leaf read-only {
+	description "Create a read-only container.";
+	type boolean;
+      }
+
       container statistics {
 	description "Statistics of the container";
 	config false;

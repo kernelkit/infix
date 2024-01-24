@@ -59,6 +59,9 @@ static int add(const char *name, struct lyd_node *cif)
 	LYX_LIST_FOR_EACH(lyd_child(cif), node, "publish")
 		fprintf(fp, " -p %s", lyd_get_value(node));
 
+	if (lydx_is_enabled(cif, "read-only"))
+		fprintf(fp, " --read-only");
+
 	LYX_LIST_FOR_EACH(lyd_child(cif), node, "env") {
 		if (!ep)
 			ep = fopenf("w", "/run/containers/env/%s.env", name);
