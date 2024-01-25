@@ -1,6 +1,9 @@
 ---
 - case: meta/wait.py
 
+- name: Misc tests
+  suite: misc/all.yaml
+
 - name:  ietf-system
   suite: ietf_system/all.yaml
 
