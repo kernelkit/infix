@@ -209,7 +209,7 @@ class Device(object):
         else:
             return self.get(xpath).print_dict()
 
-    def get_data(self, xpath, as_xml=False):
+    def get_data(self, xpath=None, as_xml=False):
         """RPC <get-data> to fetch operational data"""
         if(as_xml):
             return self._get_data(xpath,as_xml)
