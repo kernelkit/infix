@@ -19,7 +19,7 @@
 #define  CFG_XPATH    "/infix-containers:container"
 #define  INBOX_QUEUE  "/run/containers/inbox"
 #define  JOB_QUEUE    "/run/containers/queue"
-#define  DONE_QUEUE   "/var/lib/containers/done"
+#define  ACTIVE_QUEUE "/var/lib/containers/active"
 #define  LOGGER       "logger -t container -p local1.notice"
 
 static const struct srx_module_requirement reqs[] = {
@@ -231,13 +231,13 @@ void infix_containers_launch(void)
 	}
 
 	while ((d = readdir(dir))) {
+		char curr[strlen(ACTIVE_QUEUE) + strlen(d->d_name) + 2];
 		char next[strlen(INBOX_QUEUE) + strlen(d->d_name) + 2];
-		char curr[strlen(DONE_QUEUE) + strlen(d->d_name) + 2];
 
+		snprintf(curr, sizeof(curr), "%s/%s", ACTIVE_QUEUE, d->d_name);
 		snprintf(next, sizeof(next), "%s/%s", INBOX_QUEUE, d->d_name);
-		snprintf(curr, sizeof(curr), "%s/%s", DONE_QUEUE, d->d_name);
 		if (!systemf("cmp %s %s", curr, next)) {
-			ERRNO("New job %s is already done, no changes, skipping.", next);
+			ERRNO("New job %s is already active, no changes, skipping.", next);
 			systemf("initctl -nbq cond set container:$(basename %s .sh)", d->d_name);
 			remove(next);
 			continue;

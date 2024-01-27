@@ -246,6 +246,17 @@ case $cmd in
     stop)
 	initctl -bq stop "container:$1" || podman kill "$1"
 	;;
+    upgrade)
+	img=$(podman inspect "$1" | jq -r .[].ImageName)
+	if [ -z "$img" ]; then
+	    echo "No such container ($1), or invalid ImageName.  Cannot upgrade."
+	    exit 1;
+	fi
+	podman stop "$1"
+	podman pull "$img" || (echo "Failed fetching $img, check your network (settings)."; exit 1)
+	"/var/lib/containers/active/${1}.sh" || (echo "Failed recreating container $1"; exit 1)
+	echo "Container $1 recreated, restart with 'container start $1'"
+	;;
     volume)
 	cmd=$1
 	shift
