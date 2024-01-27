@@ -245,6 +245,13 @@
     <PARAM name="name" ptype="/CONTAINERS" help="Container name" />
     <ACTION sym="script" out="tty" interrupt="true">container stop $KLISH_PARAM_name</ACTION>
   </COMMAND>
+
+  <COMMAND name="upgrade" help="Upgrade image of a container (writable layer is lost!)">
+    <PARAM name="name" ptype="/CONTAINERS" help="Container name" />
+    <ACTION sym="script" out="tty" interrupt="true">
+      container upgrade $KLISH_PARAM_name
+    </ACTION>
+  </COMMAND>
 </COMMAND>
 
 <COMMAND name="copy" help="Copy configuration, e.g., copy running-config startup-config">
