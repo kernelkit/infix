@@ -43,10 +43,10 @@ create()
     fi
 
     #  --syslog --log-level info
-    log "Calling \"podman create --name $name --conmon-pidfile=$pidfn $ro $vol $hostname $entrypoint $env $network $port $args $image $*\""
+    log "Calling \"podman create --name $name --conmon-pidfile=$pidfn $ro $vol $mount $hostname $entrypoint $env $network $port $args $image $*\""
     set -x
     # shellcheck disable=SC2048
-    if podman create --name "$name" --conmon-pidfile="$pidfn" $ro $vol $hostname $entrypoint $env $network $port $args "$image" $*; then
+    if podman create --name "$name" --conmon-pidfile="$pidfn" $ro $vol $mount $hostname $entrypoint $env $network $port $args "$image" $*; then
 	log "Successfully created container $name from $image"
 	rm -f "/run/containers/env/${name}.env"
 	initctl show "container:$name" |grep -q manual:yes || initctl -bq start "container:$name"
@@ -89,6 +89,7 @@ options:
   -h, --help              Show this help text
       --hostname NAME     Set hostname when creating container
       --net NETWORK       Set network(s) when creating container
+  -m, --mount HOST:DEST   Bind mount a read-only file inside a container
   -p, --publish PORT      Publish ports when creating container
                           Syntax: [[ip:][hostPort]:]containerPort[/protocol]
       --read-only         Do not create a writable layer
@@ -140,6 +141,10 @@ while [ "$1" != "" ]; do
 	--hostname)
 	    shift
 	    hostname="--hostname $1"
+	    ;;
+	-m | --mount)
+	    shift
+	    mount="--mount=$1"
 	    ;;
 	--net)
 	    shift

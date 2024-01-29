@@ -65,6 +65,27 @@ static int add(const char *name, struct lyd_node *cif)
 	LYX_LIST_FOR_EACH(lyd_child(cif), node, "volume")
 		fprintf(fp, " -v %s-%s:%s", name, lydx_get_cattr(node, "name"), lydx_get_cattr(node, "dir"));
 
+	LYX_LIST_FOR_EACH(lyd_child(cif), node, "file") {
+		const char *filenm = lydx_get_cattr(node, "name");
+		const char *contdir = "/run/containers/files";
+		char nm[strlen(filenm) + strlen(name) + 32];
+		char buf[256];
+		FILE *pp;
+
+		snprintf(nm, sizeof(nm), "%s/%s-%s", contdir, name, filenm);
+		snprintf(buf, sizeof(buf), "base64 -d > %s", nm);
+		pp = popen(buf, "w");
+		if (pp) {
+			const char *data = lydx_get_cattr(node, "content");
+
+			fputs(data, pp);
+			pclose(pp);
+
+			fprintf(fp, " -m type=bind,source=%s,destination=%s,readonly=true",
+				nm, lydx_get_cattr(node, "path"));
+		}
+	}
+
 	ap = NULL;
 	LYX_LIST_FOR_EACH(lyd_child(cif), node, "env") {
 		if (!ap) {
