@@ -121,6 +121,13 @@ case "$ACTION" in
 	clr_dhcp_routes
 	set_dhcp_routes
 
+	# set hostname if given
+	if [ -n "$hostname" ]; then
+	    log "setting new hostname: $hostname"
+	    hostname "$hostname"
+	    augtool -s "set /files/etc/hosts/*[ipaddr='127.0.1.1']/canonical $hostname"
+	fi
+
 	# drop info from this interface
 	truncate -s 0 "$RESOLV_CONF"
 
