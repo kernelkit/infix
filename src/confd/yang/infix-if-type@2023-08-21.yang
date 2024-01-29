@@ -40,7 +40,13 @@ module infix-if-type {
   identity ethernet {
     base infix-interface-type;
     base ianaift:ethernetCsmacd;
-    description "Any Ethernet-like interfaces, regardless of speed, RFC 3635.";
+    description "Any Ethernet interfaces, regardless of speed, RFC 3635.";
+    reference   "RFC 3635";
+  }
+  identity etherlike {
+    base infix-interface-type;
+    base ianaift:ilan;
+    description "Interface with properties resembling Ethernet";
     reference   "RFC 3635";
   }
   identity lag {
