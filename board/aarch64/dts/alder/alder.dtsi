@@ -196,53 +196,6 @@
 };
 
 
-/* CP SDHCI (Micro-SD) */
-
-/ {
-	cp0_reg_sd_vccq: cp0_sd_vccq@0 {
-		compatible = "regulator-gpio";
-		regulator-name = "cp0_sd_vccq";
-		regulator-min-microvolt = <1800000>;
-		regulator-max-microvolt = <3300000>;
-		/* gpios = <&CP_SD_HST_18_EN>; */
-		states = <1800000 0x1
-			  3300000 0x0>;
-	};
-
-	cp0_reg_sd_vcc: cp0_sd_vcc@0 {
-		compatible = "regulator-fixed";
-		regulator-name = "cp0_sd_vcc";
-		regulator-min-microvolt = <3300000>;
-		regulator-max-microvolt = <3300000>;
-		/* gpio = <&CP_SD_CRD_PWR_OFF>; */
-		enable-active-high;
-		regulator-always-on;
-	};
-};
-
-&cp0_pinctrl {
-	cp0_sdhci_pins: cp0-sdhi-pins-0 {
-		marvell,pins = \
-			CP_SD_CRD_PWR_OFF(MPP_ID), CP_SD_HST_18_EN(MPP_ID),	\
-			CP_SD_CRD_DT(MPP_ID), CP_SD_LED(MPP_ID),		\
-			CP_SD_CLK(MPP_ID), CP_SD_CMD(MPP_ID),			\
-			CP_SD_D0(MPP_ID), CP_SD_D1(MPP_ID), 			\
-			CP_SD_D2(MPP_ID), CP_SD_D3(MPP_ID);
-		marvell,function = "sdio";
-	};
-};
-
-&cp0_sdhci0 {
-	status = "disabled";
-	pinctrl-names = "default";
-	pinctrl-0 = <&cp0_sdhci_pins>;
-	bus-width = <4>;
-	/* cd-gpios = <&CP_SD_CRD_DT>; */
-	vqmmc-supply = <&cp0_reg_sd_vccq>;
-	vmmc-supply = <&cp0_reg_sd_vcc>;
-};
-
-
 /* SPI1 (Boot FLASH) */
 
 &cp0_pinctrl {
