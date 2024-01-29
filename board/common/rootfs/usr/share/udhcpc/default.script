@@ -105,7 +105,13 @@ case "$ACTION" in
 	    /usr/sbin/avahi-autoipd -c $interface && /usr/sbin/avahi-autoipd -k $interface
 	fi
 
-	if /bin/ip addr add dev $interface $ip/$NETMASK $BROADCAST proto 5; then
+	if [ -n "$NETMASK" ]; then
+	    IP=$ip/$NETMASK
+	else
+	    IP=$ip
+	fi
+
+	if /bin/ip addr add dev $interface $IP $BROADCAST proto 5; then
 	    echo "$ip" > "$IP_CACHE"
 	fi
 	if [ -n "$ipv6" ] ; then
