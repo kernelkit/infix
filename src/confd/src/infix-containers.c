@@ -63,7 +63,7 @@ static int add(const char *name, struct lyd_node *cif)
 		fprintf(fp, " --read-only");
 
 	LYX_LIST_FOR_EACH(lyd_child(cif), node, "volume")
-		fprintf(fp, " -v %s-%s:%s", name, lydx_get_cattr(node, "name"), lydx_get_cattr(node, "dir"));
+		fprintf(fp, " -v %s-%s:%s", name, lydx_get_cattr(node, "name"), lydx_get_cattr(node, "path"));
 
 	LYX_LIST_FOR_EACH(lyd_child(cif), node, "file") {
 		const char *filenm = lydx_get_cattr(node, "name");

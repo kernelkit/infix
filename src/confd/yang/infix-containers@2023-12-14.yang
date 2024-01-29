@@ -94,7 +94,18 @@ module infix-containers {
       }
 
       leaf image {
-	description "Docker image used for the container";
+	description "Docker image for the container: [transport]name[:tag|@digest]
+
+                     quay.io/username/myimage     -- Pull myimage:latest
+                     docker://busybox             -- Pull busybox:latest from Docker Hub
+                     docker://ghcr.io/usr/img     -- Pull img:latest from GitHub packages
+                     dir:/media/usb/myimage:1.1   -- Use myimage v1.1 from USB media
+                     docker-archive:/tmp/myimage  -- Use myimage:latest from tarball
+                     oci-archive:/tmp/myimage     -- Use myimage:latest from OCI archive
+
+                     Note: if a remote repository cannot be reached, the creation of the
+                           container will be put on a queue that retries pull every time
+                           there is a route change in the host's system.";
 	mandatory true;
 	type string;
       }
@@ -186,10 +197,12 @@ module infix-containers {
 	  type string;
 	}
 
-	leaf dir {
-	  description "Directory to mount the volume on inside the container, e.g., /etc";
+	leaf path {
+	  description "Directory to mount the volume on inside the container, e.g., /var/lib";
 	  mandatory true;
-	  type string;
+          type string {
+            pattern '/.*';
+          }
 	}
       }
 
@@ -209,6 +222,7 @@ module infix-containers {
           type string {
             pattern '/.*';
           }
+	  mandatory true;
         }
 
         leaf content {
