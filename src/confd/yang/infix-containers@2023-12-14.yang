@@ -193,6 +193,30 @@ module infix-containers {
 	}
       }
 
+      list file {
+        description "Files to mount inside container.";
+        key name;
+
+        leaf name {
+          description "File to store in host's startup-config as binary.
+
+                       Note: will be prefixed with container name globally.";
+          type string;
+        }
+
+        leaf path {
+          description "Path to location inside container to mount file on, e.g., /etc/ntpd.conf";
+          type string {
+            pattern '/.*';
+          }
+        }
+
+        leaf content {
+          description "File contents, in base64 native format (XML/JSON).";
+          type binary;
+        }
+      }
+
       container statistics {
 	description "Statistics of the container";
 	config false;
