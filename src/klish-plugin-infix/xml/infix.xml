@@ -535,9 +535,19 @@
 
 <!-- Edit -->
 
+<COMMAND name="text-editor" help="Modify binary content in a text editor">
+  <PARAM name="path" ptype="/PLINE_SET" max="100"/>
+  <ACTION sym="srp_helper@sysrepo" in="tty" out="tty" interrupt="true"/>
+</COMMAND>
+
+<COMMAND name="change" help="Interactively change setting, e.g. password">
+  <PARAM name="path" ptype="/PLINE_SET" max="100"/>
+  <ACTION sym="srp_helper@sysrepo" in="tty" out="tty" interrupt="true"/>
+</COMMAND>
+
 <COMMAND name="set" help="Set configuration setting">
   <PARAM name="path" ptype="/PLINE_SET" max="100"/>
-  <ACTION sym="srp_set@sysrepo"/>
+  <ACTION sym="srp_set@sysrepo" in="tty" out="tty" interrupt="true"/>
 </COMMAND>
 
 <COMMAND name="delete" help="Delete configuration setting(s)">

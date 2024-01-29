@@ -1,0 +1,23 @@
+#!/bin/sh
+# shellcheck disable=SC3045
+
+OUTPUT=$1
+
+read -r -s -p "New password: " password
+>&2 echo
+read -r -s -p "Retype password: " password_again
+>&2 echo
+
+if [ "$password" != "$password_again" ]; then
+    echo "Passwords do not match, try again."
+    exit 1
+fi
+
+if [ -z "$OUTPUT" ]; then
+    echo "$password"
+    exit 0
+fi
+
+umask 0177
+echo "$password" | mkpasswd > "$OUTPUT"
+exit 0
