@@ -288,6 +288,8 @@
       <COMPL>
 	<ACTION sym="printl">neighbor</ACTION>
 	<ACTION sym="printl">interfaces</ACTION>
+	<ACTION sym="printl">routes</ACTION>
+	<ACTION sym="printl">database</ACTION>
 	<ACTION sym="printl">bfd</ACTION>
       </COMPL>
     </PARAM>
@@ -298,6 +300,10 @@
        vtysh -c "show ip ospf neighbor"
     elif [ "$KLISH_PARAM_name" == "interfaces" ];then
        vtysh -c "show ip ospf interface"
+    elif [ "$KLISH_PARAM_name" == "routes" ];then
+       vtysh -c "show ip ospf route"
+    elif [ "$KLISH_PARAM_name" == "database" ];then
+       vtysh -c "show ip ospf database"
     elif [ "$KLISH_PARAM_name" == "bfd" ];then
        vtysh -c "show bfd peers"
     fi
