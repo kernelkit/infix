@@ -69,16 +69,16 @@ gen_interface()
 EOF
 
     if [ -n "$br" ]; then
-	cat <<EOF
+        cat <<EOF
         "ietf-ip:ipv6": {
-	    "enabled": false
-	},
-	"infix-interfaces:bridge-port": {
-	    "bridge": "$br"
-	}
+            "enabled": false
+        },
+        "infix-interfaces:bridge-port": {
+            "bridge": "$br"
+        }
 EOF
     else
-	cat <<EOF
+        cat <<EOF
         "ietf-ip:ipv6": {}
 EOF
     fi
@@ -90,48 +90,48 @@ EOF
 
 while [ "$1" != "" ]; do
     case $1 in
-	-4)
-	    ipv4=true
-	    ;;
-	-b)
-	    bridge="$2"
-	    shift
-	    ;;
-	-d)
-	    dhcp=true
-	    ;;
-	-h)
-	    usage
-	    ;;
-	*)
-	    break
+        -4)
+            ipv4=true
+            ;;
+        -b)
+            bridge="$2"
+            shift
+            ;;
+        -d)
+            dhcp=true
+            ;;
+        -h)
+            usage
+            ;;
+        *)
+            break
     esac
     shift
 done
 
 phys_ifaces=$(ip -d -j link show | jq -r '
-	 .[] |
-	 select(.link_type == "ether") |
-	 select(.group != "internal")  |
-	 select(has("parentbus")) |
-	 .ifname' | sort -V)
+         .[] |
+         select(.link_type == "ether") |
+         select(.group != "internal")  |
+         select(has("parentbus")) |
+         .ifname' | sort -V)
 ports=$(ip -d -j link show group port | jq -r '
-	 .[] |
-	 select(.link_type == "ether") |
-	 select(.group != "internal")  |
-	 select(has("parentbus")) |
-	 .ifname' | sort -V)
+         .[] |
+         select(.link_type == "ether") |
+         select(.group != "internal")  |
+         select(has("parentbus")) |
+         .ifname' | sort -V)
 ifaces=""
 for phy in $phys_ifaces; do
     found=""
     for port in $ports; do
-	if [ "$port" = "$phy" ]; then
-	   found=true
-	   break
-	fi
+        if [ "$port" = "$phy" ]; then
+           found=true
+           break
+        fi
     done
     if [ -z "$found" ]; then
-	ifaces="$ifaces $phy"
+        ifaces="$ifaces $phy"
     fi
 done
 
@@ -156,12 +156,12 @@ if [ -n "$bridge" ]; then
         "name": "$bridge",
         "type": "infix-if-type:bridge",
         "ietf-ip:ipv4": {
-	    "infix-ip:autoconf": {
+            "infix-ip:autoconf": {
                 "enabled": $ipv4
             }
         },
-	"ietf-ip:ipv6": {
-	    "enabled": true
+        "ietf-ip:ipv6": {
+            "enabled": true
         }
 EOF
 fi
