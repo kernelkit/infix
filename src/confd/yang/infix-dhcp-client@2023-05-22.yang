@@ -133,9 +133,10 @@ module infix-dhcp-client {
         leaf value {
           type string;
           description "Optional value, only used for non-flag request options.
-            Example: option:hostname, value:xyzzy
-            option:clientid, value:01:02:03:04:05:06:07:08:09:0a
-            option:0x51,     value:xyzzy.example.com";
+                       Example: option:hostname, value:xyzzy
+                                option:clientid, value:01:02:03:04:05:06:07:08:09:0a
+                                option:0x51,     value:xyzzy.example.com";
+           must "../name != 'hostname' or re-match(., '[a-zA-Z0-9\\-_]{0,253}')";
         }
       }
       leaf route-preference {

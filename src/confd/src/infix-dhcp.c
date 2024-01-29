@@ -22,6 +22,7 @@ static const struct srx_module_requirement reqs[] = {
 	{ NULL }
 };
 
+
 static char *ip_cache(const char *ifname, char *str, size_t len)
 {
 	const char *fn = "/var/lib/misc/%s.cache";
@@ -148,6 +149,8 @@ static char *compose_option(const char *ifname, const char *name, const char *va
 		} else {
 			if (!strcmp(name, "fqdn"))
 				fqdn(value, option, len);
+			else if (!strcmp(name, "hostname"))
+				snprintf(option, len, "-x %s:%s ", name, value);
 			else
 				snprintf(option, len, "-x %s:'\"%s\"' ", name, value);
 		}
