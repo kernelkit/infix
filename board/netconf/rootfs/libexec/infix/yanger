@@ -584,8 +584,10 @@ if __name__ == "__main__":
 
         add_ip_link(ifname, iface_out, args.test)
         add_ip_addr(ifname, iface_out, args.test)
-        add_ethtool_groups(ifname, iface_out, args.test)
-        add_ethtool_std(ifname, iface_out, args.test)
+
+        if 'type' in iface_out and iface_out['type'] == "infix-if-type:ethernet":
+            add_ethtool_groups(ifname, iface_out, args.test)
+            add_ethtool_std(ifname, iface_out, args.test)
     elif (args.model == 'ietf-routing'):
         yang_data = {
             "ietf-routing:routing": {
