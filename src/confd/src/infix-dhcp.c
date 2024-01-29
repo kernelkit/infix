@@ -344,6 +344,76 @@ err_abandon:
 	return err;
 }
 
+/*
+ * Default DHCP options for udhcpc, from networking/udhcp/common.c OPTION_REQ
+ */
+static void infer_options(sr_session_ctx_t *session, const char *xpath)
+{
+	const char *opt[] = {
+		"subnet",
+		"router",
+		"dns",
+		"hostname", /* server may use this to register our current name */
+		"domain",
+		"broadcast",
+		"ntpsrv"    /* will not be activated unless ietf-system also is */
+	};
+	size_t i;
+
+	for (i = 0; i < NELEMS(opt); i++)
+		srx_set_item(session, NULL, 0, "%s/option[name='%s']", xpath, opt[i]);
+}
+
+static int cand(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
+		const char *xpath, sr_event_t event, unsigned request_id, void *priv)
+{
+	sr_change_iter_t *iter;
+	sr_change_oper_t op;
+	sr_val_t *old, *new;
+	sr_error_t err;
+
+	switch (event) {
+	case SR_EV_UPDATE:
+	case SR_EV_CHANGE:
+		break;
+	default:
+		return SR_ERR_OK;
+	}
+
+	err = sr_dup_changes_iter(session, XPATH "/client-if//*", &iter);
+	if (err)
+		return err;
+
+	while (sr_get_change_next(session, iter, &op, &old, &new) == SR_ERR_OK) {
+		char xpath[strlen(new->xpath) + 42];
+		size_t cnt = 0;
+		char *ptr;
+
+		switch (op) {
+		case SR_OP_CREATED:
+		case SR_OP_MODIFIED:
+			break;
+		default:
+			continue;
+		}
+
+		strlcpy(xpath, new->xpath, sizeof(xpath));
+		if ((ptr = strstr(xpath, "]/")) == NULL)
+			continue;
+		ptr[1] = 0;
+
+		err = srx_nitems(session, &cnt, "%s/option", xpath);
+		if (err || cnt) {
+			continue;
+		}
+
+		infer_options(session, xpath);
+	}
+
+	sr_free_change_iter(iter);
+	return SR_ERR_OK;
+}
+
 int infix_dhcp_init(struct confd *confd)
 {
 	int rc;
@@ -353,6 +423,8 @@ int infix_dhcp_init(struct confd *confd)
 		goto fail;
 
 	REGISTER_CHANGE(confd->session, MODULE, XPATH, 0, change, confd, &confd->sub);
+	REGISTER_CHANGE(confd->cand, MODULE, XPATH"//.", SR_SUBSCR_UPDATE, cand, confd, &confd->sub);
+
 	return SR_ERR_OK;
 fail:
 	ERROR("init failed: %s", sr_strerror(rc));
