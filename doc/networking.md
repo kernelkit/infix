@@ -417,19 +417,21 @@ Remember to enable [IPv4 forwarding](#IPv4-forwarding) for the interfaces.
 > *default*.  Meaning, you can only have one instance per routing protocol.
 
 ### OSPFv2 Routing
+Infix supports OSPF dynamic routing for IPv4, i.e., OSPFv2.
 Remember to enable [IPv4 forwarding](#IPv4-forwarding) for the
-interfaces you want to run OSPFv2.
+interfaces you want to run OSPFv2. 
 
     admin@example:/config/> edit routing control-plane-protocol ospfv2 name default
     admin@example:/config/routing/control-plane-protocol/ospfv2/name/default/> set ospf area 0.0.0.0 interface e0 enabled true
     admin@example:/config/routing/control-plane-protocol/ospfv2/name/default/> leave
     admin@example:/>
 
-> **Note:** The only name allowed for a control-plane-protocol is currently
-> *default*.  Meaning, you can only have one instance per routing protocol.
+> **Note:** The only instance name allowed for a
+> control-plane-protocol is currently *default*.  Meaning, you can
+> only have one instance per routing protocol.
 
-#### Stub area types
-NSSA and Stub areas are currently supported.
+#### OSPF area types
+In addition to *regular* OSPF areas, area types *NSSA* and *Stub* are supported.
 
 To configure a NSSA area with summary routes:
 
@@ -448,9 +450,48 @@ link loss.
     admin@example:/config/routing/control-plane-protocol/ospfv2/name/default/> leave
     admin@example:/>
 
+#### OSPF interface settings
+
+We have already seen how to enable OSPF per interface (*enabled true*)
+and BFD for OSPF per interface (*bfd enabled true*). These and other
+OSPF interface settings are done in context of an OSFP area, e.g.,
+*area 0.0.0.0*. Available commands can be listed using the `?` mark.
+
+    admin@example:/config/routing/control-plane-protocol/ospfv2/name/default/> edit ospf area 0.0.0.0
+    admin@example:/config/routing/control-plane-protocol/ospfv2/name/default/ospf/area/0.0.0.0/> edit interface e0 
+    admin@example:/config/routing/control-plane-protocol/ospfv2/name/default/ospf/area/0.0.0.0/interface/e0/> set ? 
+      bfd                  BFD interface configuration.
+      cost                 Interface's cost.
+      dead-interval        Interval after which a neighbor is declared down
+      enabled              Enables/disables the OSPF protocol on the interface.
+      hello-interval       Interval between Hello packets (seconds).  It must
+      interface-type       Interface type.
+      passive              Enables/disables a passive interface.  A passive
+      retransmit-interval  Interval between retransmitting unacknowledged Link
+      transmit-delay       Estimated time needed to transmit Link State Update
+    admin@example:/config/routing/control-plane-protocol/ospfv2/name/default/ospf/area/0.0.0.0/interface/e0/> set
+
+For example, setting the OSPF *interface type* to *point-to-point* for
+an Ethernet interface can be done as follows.
+
+    admin@example:/config/routing/control-plane-protocol/ospfv2/name/default/ospf/area/0.0.0.0/interface/e0/> set interface-type point-to-point 
+    admin@example:/config/routing/control-plane-protocol/ospfv2/name/default/ospf/area/0.0.0.0/interface/e0/>
+
+
 #### Debug OSPFv2
 Using NETCONF and the YANG model *ietf-routing* it is possible to read the OSPF routing table, neighbors
-and more, that may be useful for debugging the OSPFv2 setup.
+and more, that may be useful for debugging the OSPFv2 setup. The CLI
+has various OSPF status commands such as `show ospf neighbor`, `show
+ospf interface` and `show ospf routes`.
+
+    admin@example:/> show ospf neighbor 
+
+    Neighbor ID     Pri State           Up Time         Dead Time Address         Interface                        RXmtL RqstL DBsmL
+    10.1.1.2          1 Full/-          3h46m59s          30.177s 10.1.1.2        e0:10.1.1.1                          0     0     0
+    10.1.1.3          1 Full/-          3h46m55s          34.665s 10.1.1.3        e1:10.1.1.1                          0     0     0
+
+    admin@example:/>
+
 
 ### View routing table
 The routing table can be viewed from the operational datastore over
