@@ -240,6 +240,44 @@ err_abandon:
 	return err;
 }
 
+static int action(sr_session_ctx_t *session, uint32_t sub_id, const char *xpath,
+		  const sr_val_t *input, const size_t input_cnt,
+		  sr_event_t event, unsigned request_id,
+		  sr_val_t **output, size_t *output_cnt,
+		  void *priv)
+{
+	char buf[strlen(xpath) + 1];
+	char *cmd, *name, *ptr;
+	char quote;
+
+	/* /infix-containers:container/container[name='ntpd']/restart */
+	strlcpy(buf, xpath, sizeof(buf));
+
+	name = strstr(buf, "[name=");
+	if (!name)
+		return SR_ERR_INTERNAL;
+
+	ptr   = &name[6];
+	quote =  ptr[0];	/* Quote char to look for: ' or " */
+	name  = &ptr[1];
+
+	ptr = strchr(name, quote);
+	if (!ptr)
+		return SR_ERR_INTERNAL;
+	*ptr++  = 0;
+
+	cmd = strstr(ptr, "]/");
+	if (!cmd)
+		return SR_ERR_INTERNAL;
+	cmd += 2;
+
+	ERROR("CALLING 'container %s %s' (xpath %s)", cmd, name, xpath);
+	if (systemf("container %s %s", cmd, name))
+		return SR_ERR_INTERNAL;
+
+	return SR_ERR_OK;
+}
+
 void infix_containers_launch(void)
 {
 	struct dirent *d;
@@ -280,6 +318,10 @@ int infix_containers_init(struct confd *confd)
 		goto fail;
 
 	REGISTER_CHANGE(confd->session, MODULE, CFG_XPATH, 0, change, confd, &confd->sub);
+	REGISTER_RPC(confd->session, CFG_XPATH "/container/start",   action, NULL, &confd->sub);
+	REGISTER_RPC(confd->session, CFG_XPATH "/container/stop",    action, NULL, &confd->sub);
+	REGISTER_RPC(confd->session, CFG_XPATH "/container/restart", action, NULL, &confd->sub);
+
 	return SR_ERR_OK;
 fail:
 	ERROR("init failed: %s", sr_strerror(rc));
