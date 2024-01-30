@@ -18,7 +18,7 @@
 #define  XPATH        "/infix-dhcp-client:dhcp-client"
 
 static const struct srx_module_requirement reqs[] = {
-	{ .dir = YANG_PATH_, .name = MODULE, .rev = "2023-05-22" },
+	{ .dir = YANG_PATH_, .name = MODULE, .rev = "2024-01-30" },
 	{ NULL }
 };
 

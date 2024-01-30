@@ -10,6 +10,11 @@ module infix-dhcp-client {
   contact      "kernelkit@googlegroups.com";
   description  "This module implements an IPv4 DHCP client";
 
+  revision 2024-01-30 {
+    description   "Add DHCP client options, arping, and route preference.";
+    reference     "internal";
+  }
+
   revision 2023-05-22 {
     description   "Initial revision.";
     reference     "rfc2131 rfc7950";
@@ -123,9 +128,9 @@ module infix-dhcp-client {
         key "name";
         description
           "List of DHCP options to request (and accept).  The default is an
-          empty list, meaning all supported options.  To restrict the
-          client to only get IP address and default route, set this to:
-          'subnet router'";
+           empty list, meaning all supported options.  To restrict the
+           client to only get IP address and default route, set this to:
+           'subnet router'";
         leaf name {
           type dhcp-options;
           description "DHCP option to request from, or inform server of.";
