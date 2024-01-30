@@ -184,11 +184,25 @@
 </COMMAND>
 
 <COMMAND name="container" help="Manage containers, images, and volumes" mode="switch">
-  <COMMAND name="attach" help="Attach to a running container (exec sh)">
+  <COMMAND name="cleanup" help="Clean up all unused containers, images and volume data">
+    <ACTION sym="script" in="tty" out="tty" interrupt="true">
+      podman system prune
+    </ACTION>
+  </COMMAND>
+
+  <!-- alias for -container shell' -->
+  <COMMAND name="connect" help="Start a shell inside a container, if available">
+    <PARAM name="name" ptype="/CONTAINERSa" help="Container name" />
+    <ACTION sym="script" in="tty" out="tty" interrupt="true">
+      container shell $KLISH_PARAM_name
+    </ACTION>
+  </COMMAND>
+
+  <COMMAND name="exec" help="Execute command in a running container, default: sh">
     <PARAM name="name" ptype="/CONTAINERS" help="Container name" />
     <SWITCH name="optional" min="0">
       <COMMAND name="command" help="Command to run">
-        <PARAM name="command" ptype="/STRING" help="Command to run2"/>
+        <PARAM name="command" ptype="/STRING" help="Command to run"/>
       </COMMAND>
     </SWITCH>
     <ACTION sym="script" in="tty" out="tty" interrupt="true">
@@ -196,7 +210,7 @@
         echo "Missing container name."
       else
         cmd=${KLISH_PARAM_command:-sh}
-        container attach $KLISH_PARAM_name $cmd
+        container exec $KLISH_PARAM_name $cmd
       fi
     </ACTION>
   </COMMAND>
@@ -205,45 +219,71 @@
     <PARAM name="image" ptype="/STRING" help="Image url and tag, e.g. docker://hello-world:latest" />
     <SWITCH name="optional" min="0">
       <COMMAND name="creds" help="Credentials">
-        <PARAM name="creds" ptype="/STRING" help="[username[:password]]"/>
+        <PARAM name="creds" ptype="/STRING" help="username[:password]"/>
       </COMMAND>
     </SWITCH>
-    <ACTION sym="script" out="tty" interrupt="true">
-      creds==${KLISH_PARAM_creds:+--creds=$KLISH_PARAM_creds}
+    <ACTION sym="script" in="tty" out="tty" interrupt="true">
+      creds=${KLISH_PARAM_creds:+--creds=$KLISH_PARAM_creds}
       container pull $creds $KLISH_PARAM_image
     </ACTION>
   </COMMAND>
 
   <COMMAND name="remove" help="Remove a container image from local storage">
     <PARAM name="name" ptype="/IMAGES" help="Image name" />
-    <ACTION sym="script" out="tty" interrupt="true">container remove $KLISH_PARAM_name</ACTION>
+    <ACTION sym="script" in="tty" out="tty" interrupt="true">
+      container remove $KLISH_PARAM_name
+    </ACTION>
   </COMMAND>
 
   <COMMAND name="restart" help="Restart a crashed container">
     <PARAM name="name" ptype="/CONTAINERSa" help="Container name" />
-    <ACTION sym="script" out="tty" interrupt="true">container restart $KLISH_PARAM_name</ACTION>
+    <ACTION sym="script" out="tty" interrupt="true">
+      container restart $KLISH_PARAM_name
+    </ACTION>
   </COMMAND>
 
-  <COMMAND name="run" help="Run a container image, with optional command">
+  <COMMAND name="run" help="Interactivly run a container image, with optional command">
     <PARAM name="image" ptype="/IMAGES" help="Image name" />
     <SWITCH name="optional" min="0">
       <COMMAND name="command" help="Command to run">
-        <PARAM name="command" ptype="/STRING" help="Command to run2"/>
+        <PARAM name="command" ptype="/STRING" help="Command to run"/>
+      </COMMAND>
+      <COMMAND name="port" help="Port to publish, default all exposed">
+        <PARAM name="port" ptype="/STRING" help="HOST:CONTAINER[/udp]"/>
       </COMMAND>
     </SWITCH>
-    <ACTION sym="script" out="tty" interrupt="true">
-      container run $KLISH_PARAM_image ${KLISH_PARAM_command}
+    <ACTION sym="script" in="tty" out="tty" interrupt="true">
+      port=${KLISH_PARAM_port:+-p $KLISH_PARAM_port}
+      container $port run $KLISH_PARAM_image ${KLISH_PARAM_command}
+    </ACTION>
+    <SWITCH name="optional" min="0">
+      <COMMAND name="detach" help="Run container in background and print container ID">
+        <ACTION sym="script" out="tty">
+	  container -d $port run $KLISH_PARAM_image ${KLISH_PARAM_command}
+	</ACTION>
+      </COMMAND>
+    </SWITCH>
+  </COMMAND>
+
+  <COMMAND name="shell" help="Start a shell inside a container, if available">
+    <PARAM name="name" ptype="/CONTAINERSa" help="Container name" />
+    <ACTION sym="script" in="tty" out="tty" interrupt="true">
+      container shell $KLISH_PARAM_name
     </ACTION>
   </COMMAND>
 
   <COMMAND name="start" help="Start a container">
     <PARAM name="name" ptype="/CONTAINERSa" help="Container name" />
-    <ACTION sym="script" out="tty" interrupt="true">container start $KLISH_PARAM_name</ACTION>
+    <ACTION sym="script" out="tty" interrupt="true">
+      container start $KLISH_PARAM_name
+    </ACTION>
   </COMMAND>
 
   <COMMAND name="stop" help="Stop a container">
     <PARAM name="name" ptype="/CONTAINERS" help="Container name" />
-    <ACTION sym="script" out="tty" interrupt="true">container stop $KLISH_PARAM_name</ACTION>
+    <ACTION sym="script" out="tty" interrupt="true">
+      container stop $KLISH_PARAM_name
+    </ACTION>
   </COMMAND>
 
   <COMMAND name="upgrade" help="Upgrade image of a container (writable layer is lost!)">
@@ -350,6 +390,12 @@
             <ACTION sym="script">container -a show images</ACTION>
           </COMMAND>
         </SWITCH>
+      </COMMAND>
+      <COMMAND name="stat" help="Show continuous containers stats (Ctrl-C aborts)">
+	<ACTION sym="script">container stat</ACTION>
+      </COMMAND>
+      <COMMAND name="usage" help="Show container resource usage">
+        <ACTION sym="script">podman system df -v</ACTION>
       </COMMAND>
       <COMMAND name="volumes" help="Show container volumes">
         <ACTION sym="script">container show volumes</ACTION>
