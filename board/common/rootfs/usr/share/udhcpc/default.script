@@ -8,7 +8,7 @@ IP_CACHE="/var/lib/misc/${interface}.cache"
 RESOLV_CONF="/run/resolvconf/interfaces/${interface}.conf"
 NTPFILE="/run/chrony/dhcp-sources.d/${interface}.sources"
 [ -n "$broadcast" ] && BROADCAST="broadcast $broadcast"
-[ -n "$subnet" ] && NETMASK="$subnet"
+[ -n "$subnet" ] || subnet=32
 [ -n "$metric" ] || metric=100
 
 # Handle stateful DHCPv6 like DHCPv4
@@ -105,13 +105,7 @@ case "$ACTION" in
 	    /usr/sbin/avahi-autoipd -c $interface && /usr/sbin/avahi-autoipd -k $interface
 	fi
 
-	if [ -n "$NETMASK" ]; then
-	    IP=$ip/$NETMASK
-	else
-	    IP=$ip
-	fi
-
-	if /bin/ip addr add dev $interface $IP $BROADCAST proto 5; then
+	if /bin/ip addr add dev $interface $ip/$subnet $BROADCAST proto 5; then
 	    echo "$ip" > "$IP_CACHE"
 	fi
 	if [ -n "$ipv6" ] ; then
