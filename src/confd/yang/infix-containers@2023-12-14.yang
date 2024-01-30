@@ -248,38 +248,15 @@ module infix-containers {
 	  type yang:date-and-time;
 	}
       }
-    }
-  }
 
-  rpc container-pull {
-    description "Upgrade (fetch) a container image";
-
-    input {
-      leaf image {
-	description "Name of the container image to upgrade.";
-	type string;
+      action start {
+        description "Start a stopped container.";
       }
-    }
-  }
-
-  rpc container-stop {
-    description "Stop a container";
-
-    input {
-      leaf name {
-	description "Name of the container to stop";
-	type string;
+      action stop {
+        description "Stop a running container.";
       }
-    }
-  }
-
-  rpc container-start {
-    description "Start a container";
-
-    input {
-      leaf name {
-	description "Name of the container to start";
-	type string;
+      action restart {
+        description "Restart a running, or start, a stopped container.";
       }
     }
   }
