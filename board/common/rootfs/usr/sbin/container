@@ -43,8 +43,6 @@ create()
     fi
 
     #  --syslog --log-level info
-    log "Calling \"podman create --name $name --conmon-pidfile=$pidfn $ro $vol $mount $hostname $entrypoint $env $network $port $args $image $*\""
-    set -x
     # shellcheck disable=SC2048
     if podman create --name "$name" --conmon-pidfile="$pidfn" $ro $vol $mount $hostname $entrypoint $env $network $port $args "$image" $*; then
 	log "Successfully created container $name from $image"
@@ -83,6 +81,7 @@ options:
   -a, --all               Show all, of something
       --dns NAMESERVER    Set nameserver(s) when creating a container
       --dns-search LIST   Set host lookup search list when creating container
+  -d, --detach            Detach a container started with 'run IMG [CMD]'
   -e, --env FILE          Environment variables when creating container
       --entrypoint        Disable container image's ENTRYPOINT, run cmd + arg
   -f, --force             Force operation, e.g. remove
@@ -99,12 +98,15 @@ options:
 commands:
   create  NAME IMAGE NET  Create container NAME using IMAGE with networks NET
   delete  NAME            Kill and remove container NAME
+  exec    NAME CMD        Run a command inside a container
   help                    Show this help text
   list   [image]          List names (only) of containers or images
   remove  IMAGE           Remove an (unused) container image
   restart NAME            Restart a crashed container
-  run     NAME CMD        Execute a command (interactively) in container
+  run     NAME [CMD]      Run a container interactively, with an optional command
+  shell                   Start a shell inside a container
   show   [image | volume] Show containers, images, or volumes
+  stat                    Show continuous stats about containers (Ctrl-C aborts)
   start   NAME            Start a container
   stop    NAME            Stop a container
   volume [prune]          Prune unused volumes
@@ -115,6 +117,9 @@ while [ "$1" != "" ]; do
     case $1 in
 	-a | --all)
 	    all="-a"
+	    ;;
+	-d | --detach)
+	    detach="-d"
 	    ;;
 	--dns)
 	    shift
@@ -177,9 +182,11 @@ if [ -n "$cmd" ]; then
 fi
 
 case $cmd in
-    attach)
-	podman exec -it "$1" "$2"
-	;;
+    # Does not work atm., cannot attach to TTY because
+    # we monitor 'podman start -ai foo' with Finit.
+    # attach)
+    # 	podman attach "$1"
+    # 	;;
     create)
 	log "Got create args: $*"
 	create "$@"
@@ -187,12 +194,15 @@ case $cmd in
     delete)
 	delete "$@"
 	;;
+    exec)
+	podman exec -it "$@"
+	;;
     help)
 	usage
 	;;
     ls | list)
 	cmd=$1
-	shift
+	[ -n "$cmd" ] && shift
 	case $cmd in
 	    image*)
 		podman images $all --format "{{.Repository}}:{{.Tag}}"
@@ -209,12 +219,24 @@ case $cmd in
 	podman rmi $all $force -i "$1"
 	;;
     run)
-	echo "Starting container $1 :: use Ctrl-p Ctrl-q to exit"
-	podman run -it --rm "$@"
+	img=$1
+	cmd=$2
+	[ -n "$port" ] || port="-P"
+	if [ -n "$cmd" ]; then
+	    shift 2
+	    [ -n "$detach" ] || echo "Starting $img ENTRYPOINT $cmd :: use Ctrl-p Ctrl-q to detach"
+	    podman run -it --rm $detach $port --entrypoint="$cmd" "$img" "$@"
+	else
+	    [ -n "$detach" ] || echo "Starting $img :: use Ctrl-p Ctrl-q to detach"
+	    podman run -it --rm $detach $port "$img"
+	fi
+	;;
+    shell)
+	podman exec -it "$1" sh -l
 	;;
     show)
 	cmd=$1
-	shift
+	[ -n "$cmd" ] && shift
 	case $cmd in
 	    image*)
 		if [ -n "$simple" ]; then
@@ -251,6 +273,9 @@ case $cmd in
     stop)
 	initctl -bq stop "container:$1" || podman kill "$1"
 	;;
+    stat*)
+	podman stats -i 2
+	;;
     upgrade)
 	img=$(podman inspect "$1" | jq -r .[].ImageName)
 	if [ -z "$img" ]; then
@@ -260,14 +285,13 @@ case $cmd in
 	podman stop "$1"
 	podman pull "$img" || (echo "Failed fetching $img, check your network (settings)."; exit 1)
 	"/var/lib/containers/active/${1}.sh" || (echo "Failed recreating container $1"; exit 1)
-	echo "Container $1 recreated, restart with 'container start $1'"
 	;;
     volume)
 	cmd=$1
-	shift
+	[ -n "$cmd" ] && shift
 	case $cmd in
 	    prune)
-		podman $force volume prune
+		podman volume $force prune
 		;;
 	    *)
 		false

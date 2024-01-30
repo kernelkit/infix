@@ -293,6 +293,9 @@ void infix_containers_launch(void)
 		char curr[strlen(ACTIVE_QUEUE) + strlen(d->d_name) + 2];
 		char next[strlen(INBOX_QUEUE) + strlen(d->d_name) + 2];
 
+		if (d->d_name[0] == '.')
+			continue;
+
 		snprintf(curr, sizeof(curr), "%s/%s", ACTIVE_QUEUE, d->d_name);
 		snprintf(next, sizeof(next), "%s/%s", INBOX_QUEUE, d->d_name);
 		if (!systemf("cmp %s %s", curr, next)) {
