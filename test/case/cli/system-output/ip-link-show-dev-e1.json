@@ -67,8 +67,8 @@
     "tso_max_size": 65536,
     "tso_max_segs": 65535,
     "gro_max_size": 65536,
-    "parentbus": "virtio",
-    "parentdev": "virtio3",
+    "parentbus": "e1000",
+    "parentdev": "e1000-foobar",
     "stats64": {
       "rx": {
         "bytes": 1397,
