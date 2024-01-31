@@ -57,7 +57,7 @@ module infix-containers {
       key "name";
 
       leaf name {
-	description "Name of the Docker container";
+	description "Name of the container";
 	type string;
       }
 
@@ -231,24 +231,6 @@ module infix-containers {
         }
       }
 
-      container statistics {
-	description "Statistics of the container";
-	config false;
-
-	leaf status {
-	  description "Status of the Docker container";
-	  type enumeration {
-	    enum running;
-	    enum stopped;
-	  }
-	}
-
-	leaf created {
-	  description "Creation timestamp of the container";
-	  type yang:date-and-time;
-	}
-      }
-
       action start {
         description "Start a stopped container.";
       }
@@ -257,6 +239,63 @@ module infix-containers {
       }
       action restart {
         description "Restart a running, or start, a stopped container.";
+      }
+    }
+  }
+
+  /*
+   * Operational state data nodes
+   */
+
+  container container-state {
+    config false;
+
+    list container {
+      key "name";
+
+      leaf name {
+	description "Name of the container.";
+        type string;
+      }
+
+      leaf id {
+        description "Container ID, unique hash.";
+        type string;
+      }
+
+      leaf comand {
+	description "Command being run by container.";
+        type string;
+      }
+
+      leaf image {
+        description "Docker image used.";
+        type string;
+      }
+
+      leaf image_id {
+        description "Docker image ID, exact hash used.";
+        type string;
+      }
+
+      leaf-list networks {
+        description "CNI networks attached to container.";
+        type string;
+      }
+
+      leaf-list ports {
+        description "Exposed ports: [[ip:][hostPort]:]containerPort[/protocol]";
+        type string;
+      }
+
+      leaf running {
+        description "Status of container, running or not.";
+        type boolean;
+      }
+
+      leaf status {
+        description "Status of container, human friendly.";
+        type string;
       }
     }
   }

@@ -438,6 +438,39 @@ def get_bridge_port_stp_state(ifname, iface_out, test):
 
     return None
 
+def add_container(containers):
+    """In container-state we list *all* containers, not just ones managed in configuration."""
+    cmd = ['podman', 'ps', '-a', '--format=json']
+
+    raw = run_json_cmd(cmd)
+    for entry in raw:
+        container = {}
+        container["name"]     = entry["Names"][0]
+        container["id"]       = entry["Id"]
+        container["image"]    = entry["Image"]
+        container["image_id"] = entry["ImageID"]
+        container["running"]  = entry["State"] == "running"
+        container["status"]   = entry["Status"]
+
+        # Bonus information, may not be available
+        if entry["Command"]:
+            container["command"] = " ".join(entry["Command"])
+
+        if entry["Networks"]:
+            container["networks"] = entry["Networks"]
+
+        if entry["Ports"]:
+            container["ports"] = []
+            for port in entry["Ports"]:
+                addr = ""
+                if port["host_ip"]:
+                    addr = f"{port['host_ip']}:"
+
+                publish = f"{addr}{port['host_port']}:{port['container_port']}/{port['protocol']}"
+                container["ports"].append(publish)
+
+        containers.append(container)
+
 def add_ip_link(ifname, iface_out, test):
     """Fetch interface link information from kernel"""
     if test:
@@ -789,6 +822,15 @@ if __name__ == "__main__":
             }
         }
         add_hardware(yang_data["ietf-hardware:hardware"], args.test)
+
+    elif args.model == 'infix-containers':
+        yang_data = {
+            "infix-containers:container-state": {
+                "container": []
+            }
+        }
+        add_container(yang_data['infix-containers:container-state']['container'])
+
     else:
         print(f"Unsupported model {args.model}", file=sys.stderr)
         sys.exit(1)
