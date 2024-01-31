@@ -28,7 +28,7 @@ jobs:
         variant: [netconf, classic]
       fail-fast: false
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Set Release Variables
         id: build
         run: |
@@ -52,7 +52,7 @@ jobs:
           echo "dir=infix-$target"        >> $GITHUB_OUTPUT
           echo "tgz=infix-$target.tar.gz" >> $GITHUB_OUTPUT
       - name: Restore Cache of dl/
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: dl/
           key: dl-${{ matrix.platform }}-${{ matrix.variant }}-${{ hashFiles('.git/modules/buildroot/HEAD', 'configs/*', 'package/*/*.hash') }}
@@ -61,7 +61,7 @@ jobs:
             dl-${{ matrix.platform }}-
             dl-
       - name: Restore Cache of .ccache/
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: .ccache/
           key: ccache-${{ matrix.platform }}-${{ matrix.variant }}-${{ hashFiles('.git/modules/buildroot/HEAD', 'package/*/*.hash') }}
@@ -87,16 +87,19 @@ jobs:
           mv images ${{ steps.build.outputs.dir }}
           ln -s ${{ steps.build.outputs.dir }} images
           tar chfz ${{ steps.build.outputs.tgz }} ${{ steps.build.outputs.dir }}
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           path: output/${{ steps.build.outputs.tgz }}
+          name: artifact-${{ matrix.variant }}-{{ matrix.platform }}
   release:
     name: Release Infix ${{ github.ref_name }}
     needs: build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/download-artifact@v3
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        pattern: "artifact-*"
+        merge-multiple: true
       - name: Extract ChangeLog entry ...
         run: |
           awk '/^-----*$/{if (x == 1) exit; x=1;next}x' doc/ChangeLog.md \
