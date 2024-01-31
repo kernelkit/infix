@@ -39,7 +39,8 @@ def json_get_yang_type(iface_in):
     return "infix-if-type:ethernet";
 
 def json_get_yang_origin(addr):
-    map = {
+    """Translate kernel IP address origin to YANG"""
+    xlate = {
         "kernel_ll":        "link-layer",
         "kernel_ra":        "link-layer",
         "static":           "static",
@@ -48,13 +49,14 @@ def json_get_yang_origin(addr):
     }
     proto = addr['protocol']
 
-    if proto == "kernel_ll" or proto == "kernel_ra":
+    if proto in ("kernel_ll", "kernel_ra"):
         if "stable-privacy" in addr:
             return "random"
 
-    return map.get(proto, "other")
+    return xlate.get(proto, "other")
 
 def get_proc_value(procfile):
+    """Return contents of /proc file, or None"""
     try:
         with open(procfile, 'r') as file:
             data = file.read().strip()
@@ -65,9 +67,9 @@ def get_proc_value(procfile):
     except IOError:
         print(f"Error: reading from {procfile}", file=sys.stderr)
 
-# This function returns a value from a nested json dict
-def lookup(json, *keys):
-    curr = json
+def lookup(obj, *keys):
+    """This function returns a value from a nested json object"""
+    curr = obj
     for key in keys:
         if isinstance(curr, dict) and key in curr:
             curr = curr[key]
@@ -75,14 +77,14 @@ def lookup(json, *keys):
             return None
     return curr
 
-# This function inserts a value into a nested json dict
-def insert(json, *path_and_value):
+def insert(obj, *path_and_value):
+    """"This function inserts a value into a nested json object"""
     if len(path_and_value) < 2:
         raise ValueError("Error: insert() takes at least two args")
 
     *path, value = path_and_value
 
-    curr = json
+    curr = obj
     for key in path[:-1]:
         if key not in curr or not isinstance(curr[key], dict):
             curr[key] = {}
@@ -91,29 +93,32 @@ def insert(json, *path_and_value):
     curr[path[-1]] = value
 
 def run_cmd(cmd):
+    """Run a command (array of args) and return an array of lines"""
     try:
         output = subprocess.check_output(cmd, stderr=subprocess.DEVNULL, text=True)
         return output.splitlines()
     except subprocess.CalledProcessError:
-        print(f"Error: command returned error", file=sys.stderr)
+        print("Error: command returned error", file=sys.stderr)
         sys.exit(1)
 
 def run_json_cmd(cmd):
+    """Run a command (array of args) that returns JSON text output and return JSON"""
     try:
         result = subprocess.run(cmd, check=True, stdout=subprocess.PIPE,
                                 stderr=subprocess.PIPE, text=True)
         output = result.stdout
         data = json.loads(output)
-    except subprocess.CalledProcessError as e:
-        print(f"Error: unable to get data:", file=sys.stderr)
-        print(f"{e.stderr}", file=sys.stderr)
+    except subprocess.CalledProcessError as err:
+        print("Error: unable to get data:", file=sys.stderr)
+        print(f"{err.stderr}", file=sys.stderr)
         sys.exit(1)
-    except json.JSONDecodeError as e:
-        print(f"Error: parsing JSON output: {e.msg}", file=sys.stderr)
+    except json.JSONDecodeError as err:
+        print(f"Error: parsing JSON output: {err.msg}", file=sys.stderr)
         sys.exit(1)
     return data
 
 def iface_is_dsa(iface_in):
+    """Check if interface is a DSA/intra-switch port"""
     if not "linkinfo" in iface_in:
         return False
     if not "info_kind" in iface_in['linkinfo']:
@@ -198,55 +203,61 @@ def add_hardware(hw_out, test):
     insert(hw_out, "component", components)
 
 def get_routes(routes, proto, data):
+    """Populate routes"""
     out={}
     out["route"] = []
 
-    if(proto == "ipv4"):
+    if proto == "ipv4":
         default = "0.0.0.0/0"
         host_prefix_length="32"
     else:
         default = "::/0"
         host_prefix_length="128"
-    for d in data:
+
+    for entry in data:
         new = {}
-        if(d['dst'] == "default"):
-            d['dst'] = default
-        if(d['dst'].find('/') == -1):
-            d['dst'] = d['dst']+"/"+host_prefix_length
-        new[f'ietf-{proto}-unicast-routing:destination-prefix'] = d['dst']
-        new['source-protocol'] = "infix-routing:"+d['protocol']
-        if d.get("metric"):
-            new['route-preference'] = d['metric']
+        if entry['dst'] == "default":
+            entry['dst'] = default
+        if entry['dst'].find('/') == -1:
+            entry['dst'] = entry['dst'] + "/" + host_prefix_length
+        new[f'ietf-{proto}-unicast-routing:destination-prefix'] = entry['dst']
+        new['source-protocol'] = "infix-routing:" + entry['protocol']
+        if entry.get("metric"):
+            new['route-preference'] = entry['metric']
         else:
             new['route-preference'] = 0
 
-        if d.get('nexthops'):
+        if entry.get('nexthops'):
             next_hops = []
-            for n in d.get('nexthops'):
+            for hop in entry.get('nexthops'):
                 next_hop = {}
-                if(n.get("dev")):
-                    next_hop['outgoing-interface'] = n['dev']
-                if(n.get("gateway")):
-                    next_hop[f'ietf-{proto}-unicast-routing:address'] = n['gateway']
+                if hop.get("dev"):
+                    next_hop['outgoing-interface'] = hop['dev']
+                if hop.get("gateway"):
+                    next_hop[f'ietf-{proto}-unicast-routing:address'] = hop['gateway']
                 next_hops.append(next_hop)
-            insert(new,'next-hop','next-hop-list','next-hop',next_hops)
+
+            insert(new, 'next-hop', 'next-hop-list', 'next-hop', next_hops)
         else:
             next_hop = {}
-            if d['type'] == "blackhole":
+            if entry['type'] == "blackhole":
                 next_hop['special-next-hop'] = "blackhole"
-            if d['type'] == "unreachable":
+            if entry['type'] == "unreachable":
                 next_hop['special-next-hop'] = "unreachable"
-            if d['type'] == "unicast":
-                if(d.get("dev")):
-                    next_hop['outgoing-interface'] = d['dev']
-                if(d.get("gateway")):
-                    next_hop[f'ietf-{proto}-unicast-routing:next-hop-address'] = d['gateway']
+            if entry['type'] == "unicast":
+                if entry.get("dev"):
+                    next_hop['outgoing-interface'] = entry['dev']
+                if entry.get("gateway"):
+                    next_hop[f'ietf-{proto}-unicast-routing:next-hop-address'] = entry['gateway']
+
             new['next-hop'] = next_hop
 
         out['route'].append(new)
+
     insert(routes, 'routes', out)
 
 def add_ipv4_route(routes, test):
+    """Fetch IPv4 routes from kernel and populate tree"""
     if test:
         cmd = ['cat', f"{test}/ip-4-route.json"]
     else:
@@ -256,25 +267,30 @@ def add_ipv4_route(routes, test):
     get_routes(routes, "ipv4", data)
 
 def add_ipv6_route(routes, test):
+    """Fetch IPv6 routes from kernel and populate tree"""
     if test:
         cmd = ['cat', f"{test}/ip-6-route.json"]
     else:
         cmd = ['ip', '-6', '-s', '-d', '-j', 'route']
+
     data = run_json_cmd(cmd)
     get_routes(routes, "ipv6", data)
 
 def frr_to_ietf_neighbor_state(state):
-    state=state.split("/")[0]
-    if(state == "TwoWay"):
+    """Fetch OSPF neighbor state from Frr"""
+    state = state.split("/")[0]
+    if state == "TwoWay":
         return "2-way"
     return state.lower()
 
 def add_ospf_routes(ospf):
+    """Fetch OSPF routes from Frr"""
     cmd = ['vtysh', '-c', "show ip ospf rout json"]
     data = run_json_cmd(cmd)
     routes=[]
+
     for prefix,info in data.items():
-        if(prefix.find("/") == -1): # Ignore router IDs
+        if prefix.find("/") == -1: # Ignore router IDs
             continue
 
         route={}
@@ -282,30 +298,37 @@ def add_ospf_routes(ospf):
 
         nexthops=[]
         routetype=info["routeType"].split(" ")
-        if(len(routetype) > 1):
-            if(routetype[1]=="E1"):
+
+        if len(routetype) > 1:
+            if routetype[1] == "E1":
                 route["route-type"] = "external-1"
-            elif(routetype[1]=="E2"):
+            elif routetype[1] == "E2":
                 route["route-type"] = "external-2"
-            elif(routetype[1]=="IA"):
+            elif routetype[1] == "IA":
                 route["route-type"] = "inter-area"
-        elif(routetype[0] == "N"):
-             route["route-type"] = "intra-area"
+        elif routetype[0] == "N":
+            route["route-type"] = "intra-area"
+
         for hop in info["nexthops"]:
             nexthop={}
-            if(hop["ip"] != " "):
+            if hop["ip"] != " ":
                 nexthop["next-hop"] = hop["ip"]
             else:
                 nexthop["outgoing-interface"] = hop["directlyAttachedTo"]
             nexthops.append(nexthop)
+
         route["next-hops"] = {}
         route["next-hops"]["next-hop"] = nexthops
         routes.append(route)
+
     insert(ospf, "ietf-ospf:local-rib", "ietf-ospf:route", routes)
 
 def add_ospf(ospf):
+    """Populate OSPF status"""
+
     cmd = ['/libexec/infix/ospf-status']
     data = run_json_cmd(cmd)
+
     ospf["ietf-ospf:router-id"] = data["routerId"]
     ospf["ietf-ospf:address-family"] = "ipv4"
     areas=[]
@@ -320,28 +343,33 @@ def add_ospf(ospf):
         for iface in values.get("interfaces", {}):
             interface={}
             interface["ietf-ospf:neighbors"] = {}
-            interface["name"]=iface["name"]
-            if(iface.get("drId")):
-               interface["dr-router-id"]=iface["drId"]
-            if(iface.get("drAddress")):
-               interface["dr-ip-addr"]=iface["drAddress"]
-            if(iface.get("bdrId")):
-               interface["bdr-router-id"]=iface["bdrId"]
-            if(iface.get("bdrAddress")):
-               interface["bdr-ip-addr"]=iface["bdrAddress"]
-            if(iface.get("timerPassiveIface")):
+            interface["name"] = iface["name"]
+
+            if iface.get("drId"):
+                interface["dr-router-id"] = iface["drId"]
+            if iface.get("drAddress"):
+                interface["dr-ip-addr"] = iface["drAddress"]
+            if iface.get("bdrId"):
+                interface["bdr-router-id"] = iface["bdrId"]
+            if iface.get("bdrAddress"):
+                interface["bdr-ip-addr"] = iface["bdrAddress"]
+
+            if iface.get("timerPassiveIface"):
                 interface["passive"] = True
             else:
                 interface["passive"] = False
+
             interface["enabled"] = iface["ospfEnabled"]
-            if(iface["networkType"] == "POINTOPOINT"):
+            if iface["networkType"] == "POINTOPOINT":
                 interface["interface-type"] = "point-to-point"
-            if(iface["networkType"] == "BROADCAST"):
+            if iface["networkType"] == "BROADCAST":
                 interface["interface-type"] = "broadcast"
 
             if iface.get("state"):
-                map = {
-                    "DependUpon":     "down", # Do not know what this is, never seen it and no entry in yang, but it listed before down in list in frr
+                # Wev've never seen "DependUpon", and has no entry in
+                # the YANG model, but is listed before down in Frr
+                xlate = {
+                    "DependUpon":     "down",
                     "Down":           "down",
                     "Waiting":        "waiting",
                     "Loopback":       "loopback",
@@ -350,7 +378,7 @@ def add_ospf(ospf):
                     "Backup":         "bdr",
                     "DR":             "dr"
                 }
-                val = map.get(iface["state"], "unknown")
+                val = xlate.get(iface["state"], "unknown")
                 interface["state"] = val
 
             neighbors = []
@@ -363,11 +391,14 @@ def add_ospf(ospf):
                 neighbor["dead-timer"] = neigh["routerDeadIntervalTimerDueMsec"]
                 neighbor["state"]=frr_to_ietf_neighbor_state(neigh["nbrState"])
                 neighbors.append(neighbor)
+
             interface["ietf-ospf:neighbors"] = {}
             interface["ietf-ospf:neighbors"]["ietf-ospf:neighbor"] = neighbors
             interfaces.append(interface)
+
         area["ietf-ospf:interfaces"]["ietf-ospf:interface"] = interfaces
         areas.append(area)
+
     insert(ospf, "ietf-ospf:areas", "area", areas)
     add_ospf_routes(ospf)
 
@@ -408,6 +439,7 @@ def get_bridge_port_stp_state(ifname, iface_out, test):
     return None
 
 def add_ip_link(ifname, iface_out, test):
+    """Fetch interface link information from kernel"""
     if test:
         cmd = ['cat', f"{test}/ip-link-show-dev-{ifname}.json"]
     else:
@@ -415,7 +447,7 @@ def add_ip_link(ifname, iface_out, test):
 
     data = run_json_cmd(cmd)
     if len(data) != 1:
-        print(f"Error: expected ip link output to be array with length 1", file=sys.stderr)
+        print("Error: expected ip link output to be array with length 1", file=sys.stderr)
         sys.exit(1)
 
     iface_in = data[0]
@@ -444,7 +476,7 @@ def add_ip_link(ifname, iface_out, test):
         insert(iface_out, "infix-interfaces:vlan", "lower-layer-if", iface_in['link'])
 
     if 'operstate' in iface_in:
-        map = {
+        xlate = {
                 "DOWN":                "down",
                 "UP":                  "up",
                 "DORMANT":             "dormant",
@@ -452,7 +484,7 @@ def add_ip_link(ifname, iface_out, test):
                 "LOWERLAYERDOWN":      "lower-layer-down",
                 "NOTPRESENT":          "not-present"
                 }
-        val = map.get(iface_in['operstate'], "unknown")
+        val = xlate.get(iface_in['operstate'], "unknown")
         iface_out['oper-status'] =  val
 
     if 'link_type' in iface_in:
@@ -468,6 +500,7 @@ def add_ip_link(ifname, iface_out, test):
         insert(iface_out, "statistics", "in-octets", str(val))
 
 def add_ip_addr(ifname, iface_out, test):
+    """Fetch interface address information from kernel"""
     if test:
         cmd = ['cat', f"{test}/ip-addr-show-dev-{ifname}.json"]
     else:
@@ -475,8 +508,8 @@ def add_ip_addr(ifname, iface_out, test):
 
     data = run_json_cmd(cmd)
     if len(data) != 1:
-        print(f"Error: expected ip addr output to be array with length 1", file=sys.stderr)
-        sys,exit(1)
+        print("Error: expected ip addr output to be array with length 1", file=sys.stderr)
+        sys.exit(1)
 
     iface_in = data[0]
 
@@ -496,7 +529,7 @@ def add_ip_addr(ifname, iface_out, test):
             new = {}
 
             if not 'family' in addr:
-                print(f"Error: 'family' missing from 'addr_info'", file=sys.stderr)
+                print("Error: 'family' missing from 'addr_info'", file=sys.stderr)
                 continue
 
             if 'local' in addr:
@@ -511,13 +544,14 @@ def add_ip_addr(ifname, iface_out, test):
             elif addr['family'] == "inet6":
                 inet6.append(new)
             else:
-                print(f"Error: invalid 'family' in 'addr_info'", file=sys.stderr)
+                print("Error: invalid 'family' in 'addr_info'", file=sys.stderr)
                 sys.exit(1)
 
         insert(iface_out, "ietf-ip:ipv4", "address", inet)
         insert(iface_out, "ietf-ip:ipv6", "address", inet6)
 
 def add_ethtool_groups(ifname, iface_out, test):
+    """Fetch interface counters from kernel"""
     if test:
         cmd = ['cat', f"{test}/ethtool-groups-{ifname}.json"]
     else:
@@ -525,8 +559,8 @@ def add_ethtool_groups(ifname, iface_out, test):
 
     data = run_json_cmd(cmd)
     if len(data) != 1:
-        print(f"Error: expected ethtool groups output to be array with length 1", file=sys.stderr)
-        sys,exit(1)
+        print("Error: expected ethtool groups output to be array with length 1", file=sys.stderr)
+        sys.exit(1)
 
     iface_in = data[0]
 
@@ -596,6 +630,7 @@ def add_ethtool_groups(ifname, iface_out, test):
             frame['in-error-oversize-frames'] = str(tot)
 
 def add_ethtool_std(ifname, iface_out, test):
+    """Fetch interface speed/duplex/autoneg from kernel"""
     keys = ['Speed', 'Duplex', 'Auto-negotiation']
     result = {}
 
@@ -674,20 +709,19 @@ def add_vlans_to_bridge(brname, iface_out, test):
     insert(iface_out, "infix-interfaces:bridge", "vlans", "vlan", vlans)
 
 if __name__ == "__main__":
-
     parser = argparse.ArgumentParser(description="YANG data creator")
-    parser.add_argument("model", help="IETF Model")
+    parser.add_argument("model", help="YANG Model")
     parser.add_argument("-p", "--param", default=None, help="Model dependant parameter")
     parser.add_argument("-t", "--test", default=None, help="Test data base path")
     args = parser.parse_args()
 
-    if (args.model == 'ietf-interfaces'):
+    if args.model == 'ietf-interfaces':
         # For now, we handle each interface separately, as this is how it's
         # currently implemented in sysrepo. I.e sysrepo will subscribe to
         # each individual interface and query it for YANG data.
 
         if not args.param:
-            print(f"usage: yanger ietf-interfaces -p INTERFACE", file=sys.stderr)
+            print("usage: yanger ietf-interfaces -p INTERFACE", file=sys.stderr)
             sys.exit(1)
 
         yang_data = {
@@ -709,7 +743,7 @@ if __name__ == "__main__":
         if 'type' in iface_out and iface_out['type'] == "infix-if-type:bridge":
             add_vlans_to_bridge(ifname, iface_out, args.test)
 
-    elif (args.model == 'ietf-routing'):
+    elif args.model == 'ietf-routing':
         yang_data = {
             "ietf-routing:routing": {
                 "ribs":  {
@@ -729,7 +763,8 @@ if __name__ == "__main__":
         ipv6routes = yang_data['ietf-routing:routing']['ribs']['rib'][1]
         add_ipv4_route(ipv4routes, args.test)
         add_ipv6_route(ipv6routes, args.test)
-    elif (args.model == 'ietf-ospf'):
+
+    elif args.model == 'ietf-ospf':
         yang_data = {
             "ietf-routing:routing": {
                 "control-plane-protocols": {
@@ -747,7 +782,8 @@ if __name__ == "__main__":
             }
         }
         add_ospf(yang_data['ietf-routing:routing']['control-plane-protocols']['control-plane-protocol'][0]["ietf-ospf:ospf"])
-    elif (args.model == 'ietf-hardware'):
+
+    elif args.model == 'ietf-hardware':
         yang_data = {
             "ietf-hardware:hardware": {
             }
@@ -756,4 +792,5 @@ if __name__ == "__main__":
     else:
         print(f"Unsupported model {args.model}", file=sys.stderr)
         sys.exit(1)
+
     print(json.dumps(yang_data, indent=2))
