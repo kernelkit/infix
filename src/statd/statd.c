@@ -40,6 +40,7 @@
 #define XPATH_ROUTING_TABLE "/ietf-routing:routing/ribs"
 #define XPATH_HARDWARE_BASE "/ietf-hardware:hardware"
 #define XPATH_ROUTING_OSPF XPATH_ROUTING_BASE "/ospf"
+#define XPATH_CONTAIN_BASE  "/infix-containers:container-state"
 
 TAILQ_HEAD(sub_head, sub);
 
@@ -511,6 +512,12 @@ static int sub_to_ospf(struct statd *statd)
 {
 	return subscribe(statd, "ietf-routing", XPATH_ROUTING_OSPF, "ospf", sr_ospf_cb);
 }
+
+static int sub_to_container(struct statd *statd)
+{
+	return subscribe(statd, "infix-containers", XPATH_CONTAIN_BASE, "container", sr_generic_cb);
+}
+
 int main(int argc, char *argv[])
 {
 	struct ev_signal sigint_watcher, sigusr1_watcher;
@@ -573,12 +580,21 @@ int main(int argc, char *argv[])
 		sr_disconnect(sr_conn);
 		return EXIT_FAILURE;
 	}
+
 	err = sub_to_hardware(&statd);
 	if (err) {
 		ERROR("Error register for hardware status");
 		sr_disconnect(sr_conn);
 		return EXIT_FAILURE;
 	}
+
+	err = sub_to_container(&statd);
+	if (err) {
+		ERROR("Error registering infix-container status");
+		sr_disconnect(sr_conn);
+		return EXIT_FAILURE;
+	}
+
 	ev_signal_init(&sigint_watcher, sigint_cb, SIGINT);
 	sigint_watcher.data = &statd;
 	ev_signal_start(statd.ev_loop, &sigint_watcher);
