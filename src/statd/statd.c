@@ -325,6 +325,7 @@ static int subscribe(struct statd *statd, char *model, char *xpath, const char *
 
 	if (strlen(name) > sizeof(sub->name)) {
 		ERROR("Subscriber name is to long");
+		free(sub);
 		return SR_ERR_INTERNAL;
 	}
 	snprintf(sub->name, sizeof(sub->name), "%s", name);
