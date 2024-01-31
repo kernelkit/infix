@@ -229,8 +229,8 @@ static void add(const char *ifname, struct lyd_node *cfg)
 {
 	const char *metric = lydx_get_cattr(cfg, "route-preference");
 	const char *client_id = lydx_get_cattr(cfg, "client-id");
-	char *args = NULL, *ipcache = NULL, *options = NULL;
 	char vendor[128] = { 0 }, do_arp[20] = { 0 };
+	char *args = NULL, *options = NULL;
 	const char *action = "disable";
 	bool arping;
 	FILE *fp;
@@ -264,19 +264,17 @@ static void add(const char *ifname, struct lyd_node *cfg)
 	fprintf(fp, "service <!> name:dhcp :%s <net/%s/running> \\\n"
 		"	[2345] udhcpc -f -p /run/dhcp-%s.pid -t 10 -T 3 -A 10 %s -S -R \\\n"
 		"		-o %s \\\n"
-		"		-i %s %s %s %s \\\n"
+		"		-i %s %s %s \\\n"
 		"		-- DHCP client @%s\n",
 		ifname, ifname, ifname, do_arp,
 		options,
-		ifname, args ?: "", ipcache ?: "", vendor, ifname);
+		ifname, args ?: "", vendor, ifname);
 	fclose(fp);
 	action = "enable";
 err:
 	systemf("initctl -bfqn %s dhcp-%s", action, ifname);
 	if (options)
 		free(options);
-	if (ipcache)
-		free(ipcache);
 }
 
 static void del(const char *ifname)
