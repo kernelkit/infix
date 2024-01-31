@@ -18,7 +18,7 @@ jobs:
     name: Regression Testing
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           submodules: 'true'
       - name: Set Build Variables
@@ -28,7 +28,7 @@ jobs:
           echo "dir=infix-$target"        >> $GITHUB_OUTPUT
           echo "tgz=infix-$target.tar.gz" >> $GITHUB_OUTPUT
       - name: Restore Cache of dl/
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: dl/
           key: dl-x86_64-netconf-${{ hashFiles('.git/modules/buildroot/refs/heads/master', 'package/*/*.hash') }}
@@ -37,7 +37,7 @@ jobs:
             dl-x86_64-
             dl-
       - name: Restore Cache of .ccache/
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: .ccache/
           key: ccache-x86_64-netconf-${{ hashFiles('.git/modules/buildroot/refs/head/master', 'package/*/*.hash') }}
@@ -62,7 +62,7 @@ jobs:
           ln -s ${{ steps.vars.outputs.dir }} images
           tar cfz ${{ steps.vars.outputs.tgz }} ${{ steps.vars.outputs.dir }}
       - name: Upload Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           path: output/${{ steps.vars.outputs.tgz }}
 
