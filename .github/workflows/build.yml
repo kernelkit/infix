@@ -16,7 +16,7 @@ jobs:
         variant: [netconf, classic]
       fail-fast: false
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v3
       - name: Set Build Variables
         id: vars
         run: |
@@ -28,7 +28,7 @@ jobs:
           echo "dir=infix-$target"        >> $GITHUB_OUTPUT
           echo "tgz=infix-$target.tar.gz" >> $GITHUB_OUTPUT
       - name: Restore Cache of dl/
-        uses: actions/cache@v4
+        uses: actions/cache@v3
         with:
           path: dl/
           key: dl-${{ matrix.platform }}-${{ matrix.variant }}-${{ hashFiles('.git/modules/buildroot/HEAD', 'configs/*', 'package/*/*.hash') }}
@@ -37,7 +37,7 @@ jobs:
             dl-${{ matrix.platform }}-
             dl-
       - name: Restore Cache of .ccache/
-        uses: actions/cache@v4
+        uses: actions/cache@v3
         with:
           path: .ccache/
           key: ccache-${{ matrix.platform }}-${{ matrix.variant }}-${{ hashFiles('.git/modules/buildroot/HEAD', 'package/*/*.hash') }}
@@ -65,7 +65,7 @@ jobs:
         if: matrix.platform == 'x86_64' && matrix.variant == 'netconf'
         run: |
           make test-qeneth
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v3
         with:
           path: output/${{ steps.vars.outputs.tgz }}
   release:
