@@ -25,6 +25,8 @@
 
 		infix {
 			vpds = <&vpd_cpu &vpd_product &vpd_power>;
+			usb-ports = <&cp0_usb3_1>;
+			usb-port-names = "USB";
 		};
 	};
 
@@ -268,7 +270,7 @@
 };
 
 &cp0_usb3_1 {
-	status = "disabled";
+	status = "okay";
 	usb-phy = <&cp0_usb3_0_phy1>;
 	phys = <&cp0_utmi1>, <&cp0_comphy3 1>;
 	phy-names = "usb", "usb3";
