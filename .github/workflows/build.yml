@@ -68,7 +68,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           path: output/${{ steps.vars.outputs.tgz }}
-          name: artifact-${{ matrix.variant }}-{{ matrix.platform }}
+          name: artifact-${{ matrix.variant }}-${{ matrix.platform }}
   release:
     if: ${{github.repository_owner == 'kernelkit' && github.ref_name == 'main'}}
     name: Upload Latest Build
