@@ -55,6 +55,14 @@ def json_get_yang_origin(addr):
 
     return xlate.get(proto, "other")
 
+def getitem(data, key):
+    """Get sub-object from an object"""
+    while key:
+        data = data[key[0]]
+        key = key[1:]
+
+    return data
+
 def get_proc_value(procfile):
     """Return contents of /proc file, or None"""
     try:
@@ -438,36 +446,57 @@ def get_bridge_port_stp_state(ifname, iface_out, test):
 
     return None
 
+def container_inspect(name, key):
+    """Call podman inspect {name}, return object at {path} or None"""
+    cmd = ['podman', 'inspect', name]
+    raw = run_json_cmd(cmd)
+
+    return getitem(raw[0], key)
+
 def add_container(containers):
-    """In container-state we list *all* containers, not just ones managed in configuration."""
+    """In container-state we list *all* containers, not just ones manged in configuration."""
     cmd = ['podman', 'ps', '-a', '--format=json']
 
     raw = run_json_cmd(cmd)
     for entry in raw:
-        container = {}
-        container["name"]     = entry["Names"][0]
-        container["id"]       = entry["Id"]
-        container["image"]    = entry["Image"]
-        container["image_id"] = entry["ImageID"]
-        container["running"]  = entry["State"] == "running"
-        container["status"]   = entry["Status"]
+        running = entry["State"] == "running"
+
+        container = {
+            "name":     entry["Names"][0],
+            "id":       entry["Id"],
+            "image":    entry["Image"],
+            "image-id": entry["ImageID"],
+            "running":  running,
+            "status":   entry["Status"]
+        }
 
         # Bonus information, may not be available
         if entry["Command"]:
             container["command"] = " ".join(entry["Command"])
 
-        if entry["Networks"]:
-            container["networks"] = entry["Networks"]
+        # The 'podman ps' command lists ports even in host mode, but
+        # that's not applicable, so skip networks and port forwardings
+        networks = container_inspect(container["name"], ("NetworkSettings", "Networks"))
+        if "host" in networks:
+            container["network"] = { "host": True }
+        else:
+            container["network"] = {
+                "interface": [],
+                "publish": []
+            }
 
-        if entry["Ports"]:
-            container["ports"] = []
-            for port in entry["Ports"]:
-                addr = ""
-                if port["host_ip"]:
-                    addr = f"{port['host_ip']}:"
+            if entry["Networks"]:
+                for net in entry["Networks"]:
+                    container["network"]["interface"].append({ "name": net })
 
-                publish = f"{addr}{port['host_port']}:{port['container_port']}/{port['protocol']}"
-                container["ports"].append(publish)
+            if running and entry["Ports"]:
+                for port in entry["Ports"]:
+                    addr = ""
+                    if port["host_ip"]:
+                        addr = f"{port['host_ip']}:"
+
+                    pub = f"{addr}{port['host_port']}->{port['container_port']}/{port['protocol']}"
+                    container["network"]["publish"].append(pub)
 
         containers.append(container)
 
@@ -825,11 +854,11 @@ if __name__ == "__main__":
 
     elif args.model == 'infix-containers':
         yang_data = {
-            "infix-containers:container-state": {
+            "infix-containers:containers": {
                 "container": []
             }
         }
-        add_container(yang_data['infix-containers:container-state']['container'])
+        add_container(yang_data['infix-containers:containers']['container'])
 
     else:
         print(f"Unsupported model {args.model}", file=sys.stderr)

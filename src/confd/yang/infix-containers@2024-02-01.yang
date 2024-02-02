@@ -22,7 +22,7 @@ module infix-containers {
     prefix infix-if;
   }
 
-  revision 2023-12-14  {
+  revision 2024-02-01  {
     description "Initial revision";
     reference "internal";
   }
@@ -52,14 +52,9 @@ module infix-containers {
    * Data Nodes
    */
 
-  container container {
+  container containers {
     list container {
       key "name";
-
-      leaf name {
-	description "Name of the container";
-	type string;
-      }
 
       leaf enabled {
 	description "Enable or disable a container configuration.";
@@ -67,30 +62,15 @@ module infix-containers {
 	default true;
       }
 
-      list env {
-	description "Set environment variables, key=\"value\" pairs.";
-	key key;
-
-	leaf key {
-	  description "Single word, [A-Za-z_]";
-	  type string;
-	}
-
-	leaf value {
-	  description "Argument to key can be a single word or quoted multiple words.";
-	  mandatory true;
-	  type string;
-	}
-      }
-
-      leaf entrypoint {
-	description "Override the default ENTRYPOINT from the image.";
+      leaf name {
+	description "Name of the container";
 	type string;
       }
 
-      leaf hostname {
-	description "Sets the container host name that is available inside the container.";
-	type inet:domain-name;
+      leaf id {
+        description "Container ID, unique hash.";
+        config false;
+        type string;
       }
 
       leaf image {
@@ -110,6 +90,38 @@ module infix-containers {
 	type string;
       }
 
+      leaf image-id {
+        description "Docker image ID, exact hash used.";
+        config false;
+        type string;
+      }
+
+      list env {
+	description "Set environment variables, key=\"value\" pairs.";
+	key key;
+
+	leaf key {
+	  description "Single word, [A-Za-z_]";
+	  type string;
+	}
+
+	leaf value {
+	  description "Argument to key can be a single word or quoted multiple words.";
+	  mandatory true;
+	  type string;
+	}
+      }
+
+      leaf command {
+	description "Override ENTRYPOINT from image and run command + args.";
+	type string;
+      }
+
+      leaf hostname {
+	description "Sets the container host name that is available inside the container.";
+	type inet:domain-name;
+      }
+
       leaf restart-policy {
 	description "Restart policy to when containers exit/crash.";
 	type restart-policy;
@@ -121,56 +133,56 @@ module infix-containers {
 	type boolean;
       }
 
-      choice network {
+      container network {
 	description "Select network mode: none, host, or container network interfaces.";
 
-	case host-network {
-	  leaf host-network {
-	    description "Run in same network namespace as host.";
-	    type boolean;
-	  }
-	}
+        leaf host {
+          description "Run in same network namespace as host, share DNS and publish all ports.";
+          type boolean;
+        }
 
-	case network {
-	  list network {
-	    description "Container network interface to connect to the container.";
-	    key name;
+        list interface {
+          description "Container network interface(s) to connect to the container.";
+          key name;
 
-	    leaf name {
-	      description "CNI network to connect to the container.";
-	      type if:interface-ref;
-	      must "/if:interfaces/if:interface[if:name = current()]/infix-if:container-network" {
-		error-message "Container networks must be interfaces classified as container-network.";
-	      }
-	    }
+          leaf name {
+            description "CNI network (interface name) to connect to the container.";
+            type if:interface-ref;
+            must "/if:interfaces/if:interface[if:name = current()]/infix-if:container-network" {
+              error-message "Container networks must be interfaces classified as container-network.";
+            }
+          }
 
-	    leaf-list option {
-	      description "Options for CNI bridges.
+          leaf-list option {
+            description "Options for CNI bridges.
                            Example: ip=1.2.3.4 to request a specific IP, both IPv4 and IPv6.
                            interface_name=foo0 name to set interface name inside container.";
-	      type string;
-	    }
-	  }
+            type string;
+          }
+        }
 
-	  leaf-list publish {
-	    description "Publish container port, or a range of ports, to the host.
+        leaf-list publish {
+          description "Publish container port, or a range of ports, to the host.
                          Syntax: [[ip:][hostPort]:]containerPort[/protocol]
                          Sample: 8080:80           -- forward tcp port 8080 to container port 80
-                                 69:69/udp         -- forward udp port 69 to container port 69
-                                 127.0.0.1:8080:80 -- forward only from loopback interface";
-	    type string;
-	  }
+                                   69:69/udp         -- forward udp port 69 to container port 69
+                                   127.0.0.1:8080:80 -- forward only from loopback interface";
+          type string;
+        }
 
-	  leaf-list dns {
-	    description "Set custom DNS servers, or 'none' to use /etc/resolv.conf in image.";
-	    type string;
-	  }
+        leaf-list dns {
+          description "Set custom DNS servers, or 'none' to use /etc/resolv.conf in image.";
+          type string;
+        }
 
-	  leaf-list search {
-	    description "Set custom DNS search domains, or '.' to not set search domain.";
-	    type string;
-	  }
-	}
+        leaf-list search {
+          description "Set custom DNS search domains, or '.' to not set search domain.";
+          type string;
+        }
+
+        must "(host and not(interface)) or (not(host) and interface) or (not(host) and not(interface))" {
+          error-message "Host and interfaces are mutually exclusive";
+        }
       }
 
       leaf read-only {
@@ -231,71 +243,28 @@ module infix-containers {
         }
       }
 
-      action start {
-        description "Start a stopped container.";
-      }
-      action stop {
-        description "Stop a running container.";
-      }
-      action restart {
-        description "Restart a running, or start, a stopped container.";
-      }
-    }
-  }
-
-  /*
-   * Operational state data nodes
-   */
-
-  container container-state {
-    config false;
-
-    list container {
-      key "name";
-
-      leaf name {
-	description "Name of the container.";
-        type string;
-      }
-
-      leaf id {
-        description "Container ID, unique hash.";
-        type string;
-      }
-
-      leaf comand {
-	description "Command being run by container.";
-        type string;
-      }
-
-      leaf image {
-        description "Docker image used.";
-        type string;
-      }
-
-      leaf image_id {
-        description "Docker image ID, exact hash used.";
-        type string;
-      }
-
-      leaf-list networks {
-        description "CNI networks attached to container.";
-        type string;
-      }
-
-      leaf-list ports {
-        description "Exposed ports: [[ip:][hostPort]:]containerPort[/protocol]";
-        type string;
-      }
-
       leaf running {
         description "Status of container, running or not.";
+        config false;
         type boolean;
       }
 
       leaf status {
         description "Status of container, human friendly.";
+        config false;
         type string;
+      }
+
+      action start {
+        description "Start a stopped container.";
+      }
+
+      action stop {
+        description "Stop a running container.";
+      }
+
+      action restart {
+        description "Restart a running, or start, a stopped container.";
       }
     }
   }

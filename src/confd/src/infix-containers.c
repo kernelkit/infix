@@ -16,14 +16,14 @@
 #include "core.h"
 #define  ARPING_MSEC  1000
 #define  MODULE       "infix-containers"
-#define  CFG_XPATH    "/infix-containers:container"
+#define  CFG_XPATH    "/infix-containers:containers"
 #define  INBOX_QUEUE  "/run/containers/inbox"
 #define  JOB_QUEUE    "/run/containers/queue"
 #define  ACTIVE_QUEUE "/var/lib/containers/active"
 #define  LOGGER       "logger -t container -p local1.notice"
 
 static const struct srx_module_requirement reqs[] = {
-	{ .dir = YANG_PATH_, .name = MODULE, .rev = "2023-12-14" },
+	{ .dir = YANG_PATH_, .name = MODULE, .rev = "2024-02-01" },
 	{ NULL }
 };
 
@@ -31,7 +31,7 @@ static int add(const char *name, struct lyd_node *cif)
 {
 	const char *image = lydx_get_cattr(cif, "image");
 	const char *restart_policy, *string;
-	struct lyd_node *node;
+	struct lyd_node *node, *network;
 	FILE *fp, *ap;
 	char *restart = "";	/* Default restart:10 */
 
@@ -55,9 +55,6 @@ static int add(const char *name, struct lyd_node *cif)
 
 	if ((string = lydx_get_cattr(cif, "hostname")))
 		fprintf(fp, " --hostname %s", string);
-
-	LYX_LIST_FOR_EACH(lyd_child(cif), node, "publish")
-		fprintf(fp, " -p %s", lyd_get_value(node));
 
 	if (lydx_is_enabled(cif, "read-only"))
 		fprintf(fp, " --read-only");
@@ -102,30 +99,37 @@ static int add(const char *name, struct lyd_node *cif)
 		fprintf(fp, " -e /run/containers/args/%s.env", name);
 	}
 
-	LYX_LIST_FOR_EACH(lyd_child(cif), node, "network") {
-		struct lyd_node *opt;
-		const char *name;
-		int first = 1;
+	network = lydx_get_descendant(lyd_child(cif), "network", NULL);
+	if (network) {
+		if (lydx_is_enabled(network, "host")) {
+			fprintf(fp, " --net host");
+		} else {
+			LYX_LIST_FOR_EACH(lyd_child(network), node, "interface") {
+				struct lyd_node *opt;
+				const char *name;
+				int first = 1;
 
-		name = lydx_get_cattr(node, "name");
-		fprintf(fp, " --net %s", name);
-		LYX_LIST_FOR_EACH(lyd_child(node), opt, "option") {
-			const char *option = lyd_get_value(opt);
+				name = lydx_get_cattr(node, "name");
+				fprintf(fp, " --net %s", name);
+				LYX_LIST_FOR_EACH(lyd_child(node), opt, "option") {
+					const char *option = lyd_get_value(opt);
 
-			fprintf(fp, "%s%s", first ? ":" : ",", option);
-			first = 0;
+					fprintf(fp, "%s%s", first ? ":" : ",", option);
+					first = 0;
+				}
+			}
+
+			LYX_LIST_FOR_EACH(lyd_child(network), node, "publish")
+				fprintf(fp, " -p %s", lyd_get_value(node));
 		}
 	}
 
-	if (lydx_is_enabled(cif, "host-network"))
-		fprintf(fp, " --net host");
-
-	if ((string = lydx_get_cattr(cif, "entrypoint")))
+	if ((string = lydx_get_cattr(cif, "command")))
 		fprintf(fp, " --entrypoint");
 
 	fprintf(fp, " create %s %s", name, image);
 
- 	if ((string = lydx_get_cattr(cif, "entrypoint")))
+ 	if ((string = lydx_get_cattr(cif, "command")))
 		fprintf(fp, " %s", string);
 
 	fprintf(fp, "\n");
@@ -163,15 +167,26 @@ static int add(const char *name, struct lyd_node *cif)
 
 static int del(const char *name)
 {
-	char fn[strlen(JOB_QUEUE) + strlen(name) + 5];
+	const char *queue[] = {
+		JOB_QUEUE,
+		INBOX_QUEUE,
+		ACTIVE_QUEUE,
+	};
+	int rc;
 
 	/* Remove any pending download/create job first */
-	snprintf(fn, sizeof(fn), "%s/%s.sh", JOB_QUEUE, name);
-	erase(fn);
-	snprintf(fn, sizeof(fn), "%s/%s.sh", INBOX_QUEUE, name);
-	erase(fn);
+	for (size_t i = 0; i < NELEMS(queue); i++) {
+		char fn[strlen(queue[i]) + strlen(name) + 5];
 
-	return systemf("container delete %s", name);
+		snprintf(fn, sizeof(fn), "%s/%s.sh", queue[i], name);
+		erase(fn);
+	}
+
+	systemf("initctl -nbq disable container:%s", name);
+	rc = systemf("container delete %s", name);
+	erasef("/etc/finit.d/available/container:%s.conf", name);
+
+	return rc;
 }
 
 static int change(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
@@ -198,16 +213,14 @@ static int change(sr_session_ctx_t *session, uint32_t sub_id, const char *module
 	if (err)
 		goto err_release_data;
 
-	cifs = lydx_get_descendant(cfg->tree, "container", "container", NULL);
-	difs = lydx_get_descendant(diff, "container", "container", NULL);
+	cifs = lydx_get_descendant(cfg->tree, "containers", "container", NULL);
+	difs = lydx_get_descendant(diff, "containers", "container", NULL);
 
 	/* find the modified one, delete or recreate only that */
 	LYX_LIST_FOR_EACH(difs, dif, "container") {
 		const char *name = lydx_get_cattr(dif, "name");
 
-		ERROR("Change in container %s", name);
 		if (lydx_get_op(dif) == LYDX_OP_DELETE) {
-			ERROR("OP DELETE container %s", name);
 			del(name);
 			continue;
 		}
@@ -215,19 +228,13 @@ static int change(sr_session_ctx_t *session, uint32_t sub_id, const char *module
 		LYX_LIST_FOR_EACH(cifs, cif, "container") {
 			const char *nm = lydx_get_cattr(cif, "name");
 
-			ERROR("container %s vs %s", name, nm);
-			if (strcmp(name, nm)) {
-				ERROR("Skipping container %s", nm);
+			if (strcmp(name, nm))
 				continue;
-			}
 
-			if (!lydx_is_enabled(cif, "enabled")) {
-				ERROR("container %s not enabled", nm);
+			if (!lydx_is_enabled(cif, "enabled"))
 				del(name);
-			} else {
-				ERROR("container %s enabled", nm);
+			else
 				add(name, cif);
-			}
 			break;
 		}
 	}
@@ -250,7 +257,7 @@ static int action(sr_session_ctx_t *session, uint32_t sub_id, const char *xpath,
 	char *cmd, *name, *ptr;
 	char quote;
 
-	/* /infix-containers:container/container[name='ntpd']/restart */
+	/* /infix-containers:containers/container[name='ntpd']/restart */
 	strlcpy(buf, xpath, sizeof(buf));
 
 	name = strstr(buf, "[name=");
@@ -271,7 +278,7 @@ static int action(sr_session_ctx_t *session, uint32_t sub_id, const char *xpath,
 		return SR_ERR_INTERNAL;
 	cmd += 2;
 
-	ERROR("CALLING 'container %s %s' (xpath %s)", cmd, name, xpath);
+	DEBUG("CALLING 'container %s %s' (xpath %s)", cmd, name, xpath);
 	if (systemf("container %s %s", cmd, name))
 		return SR_ERR_INTERNAL;
 
@@ -309,7 +316,7 @@ void infix_containers_launch(void)
 			ERRNO("Failed moving %s to job queue %s", next, JOB_QUEUE);
 	}
 
-	systemf("container -f volume prune");
+	systemf("container volume prune -f");
 }
 
 int infix_containers_init(struct confd *confd)
