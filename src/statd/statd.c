@@ -40,7 +40,7 @@
 #define XPATH_ROUTING_TABLE "/ietf-routing:routing/ribs"
 #define XPATH_HARDWARE_BASE "/ietf-hardware:hardware"
 #define XPATH_ROUTING_OSPF XPATH_ROUTING_BASE "/ospf"
-#define XPATH_CONTAIN_BASE  "/infix-containers:container-state"
+#define XPATH_CONTAIN_BASE  "/infix-containers:containers"
 
 TAILQ_HEAD(sub_head, sub);
 
