@@ -79,6 +79,16 @@ class DTSystem:
             "data": parse(),
         }
 
+    def infix_usb_devices(self, out):
+        names=self.infix.str_array("usb-ports-names")
+        phs=self.__get_phandle_array("usb-ports")
+        data=dict(zip(names,phs))
+        if data != {}:
+            out["usb-ports"] = []
+        for name,ph in data.items():
+            [out["usb-ports"].append({"name": name, "path": dev.attrpath("authorized")}) for dev in self.devices_from_ph(ph)]
+
+
     def infix_devices(self, kind):
         phs = self.__get_phandle_array(kind)
         return [self.device_from_ph(ph) for ph in phs]
@@ -143,6 +153,9 @@ class Device:
         val = self.attr(attr)
         return val.decode("utf-8").strip("\0") if val else default
 
+    def str_array(self, attr, default=None):
+        val = self.attr(attr)
+        return val.decode("utf-8").strip("\0").split("\0") if val else default
 
     def dtattrpath(self, attr):
         return os.path.join(self.dtpath, attr)
@@ -221,7 +234,7 @@ def probe_qemusystem(out):
 def probe_dtsystem(out):
     dtsys = DTSystem()
     vpds = dtsys.infix_vpds()
-
+    dtsys.infix_usb_devices(out)
     model = dtsys.base.str("model")
     if model:
         out["product-name"] = model
