@@ -78,8 +78,9 @@ jobs:
       contents: write
     steps:
       - uses: actions/download-artifact@v4
-        pattern: "artifact-*"
-        merge-multiple: true
+        with:
+          pattern: "artifact-*"
+          merge-multiple: true
       - uses: ncipollo/release-action@v1
         with:
           allowUpdates: true

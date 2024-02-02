@@ -98,8 +98,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
-        pattern: "artifact-*"
-        merge-multiple: true
+        with:
+          pattern: "artifact-*"
+          merge-multiple: true
       - name: Extract ChangeLog entry ...
         run: |
           awk '/^-----*$/{if (x == 1) exit; x=1;next}x' doc/ChangeLog.md \
