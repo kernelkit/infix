@@ -1,0 +1,26 @@
+#!/bin/sh
+set -e
+
+usb_ports=$(cat /run/system.json | jq -r '.["usb-ports"] | map(.name) | unique | join(" ")')
+
+gen_port()
+{
+	local port="$1"
+	cat <<EOF
+    	{
+		"class": "infix-hardware:usb",
+		"name": "$port",
+		"state": {
+    			"admin-state": "unlocked"
+  			}
+    	}
+EOF
+}
+cat <<EOF
+{
+  "ietf-hardware:hardware": {
+    "component": [
+    $(for port in $usb_ports; do gen_port "$port"; done)
+    ]}
+}
+EOF
