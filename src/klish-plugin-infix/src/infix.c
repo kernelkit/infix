@@ -41,7 +41,7 @@ struct infix_ds infix_config[] = {
 	{ "running-config",     "running",     SR_DS_RUNNING,         1, NULL },
 	{ "candidate-config",   "candidate",   SR_DS_CANDIDATE,       1, NULL },
 	{ "operational-config", "operational", SR_DS_OPERATIONAL,     1, NULL },
-	{ "factory-config",     NULL,          SR_DS_FACTORY_DEFAULT, 0, "/cfg/factory-config.cfg" },
+	{ "factory-config",     NULL,          SR_DS_FACTORY_DEFAULT, 0, "/etc/factory-config.cfg" },
 };
 
 static int has_ext(const char *fn, const char *ext)
@@ -314,10 +314,14 @@ static const char *infix_ds(const char *text, const char *type, struct infix_ds 
 int infix_copy(kcontext_t *ctx)
 {
 	struct infix_ds *srcds = NULL, *dstds = NULL;
+	char temp_file[20] = "/tmp/copy.XXXXXX";
 	kpargv_t *pargv = kcontext_pargv(ctx);
+	const char *tmpfn = NULL;
 	sr_session_ctx_t *sess;
+	const char *fn = NULL;
 	const char *src, *dst;
 	sr_conn_ctx_t *conn;
+	char adjust[256];
 	int rc = 0;
 
 	src = kparg_value(kpargv_find(pargv, "src"));
@@ -341,15 +345,17 @@ int infix_copy(kcontext_t *ctx)
 	if (srcds && dstds) {
 		/* Ensure the dst ds is writable */
 		if (!dstds->rw) {
-		invalid:
-			fprintf(stderr, ERRMSG "\"%s\" is not a valid file or datastore\n", dst);
+			fprintf(stderr, ERRMSG "not possible to write to \"%s\", skipping.\n", dst);
+			rc = 1;
 			goto err;
 		}
 
 		if (sr_connect(SR_CONN_DEFAULT, &conn)) {
 			fprintf(stderr, ERRMSG "connection to datastore failed\n");
+			rc = 1;
 			goto err;
 		}
+
 		if (sr_session_start(conn, dstds->datastore, &sess)) {
 			fprintf(stderr, ERRMSG "unable to open transaction to %s\n", dst);
 		} else {
@@ -358,106 +364,130 @@ int infix_copy(kcontext_t *ctx)
 				emsg(sess, ERRMSG "unable to copy configuration (%d)\n", rc);
 		}
 		rc = sr_disconnect(conn);
-	} else {
-		char temp_file[20] = "/tmp/copy.XXXXXX";
-		const char *tmpfn = NULL;
-		const char *fn = NULL;
-		char adjust[256];
 
-		if (srcds) {
-			/* 2. Export from a datastore somewhere else */
-			if (strstr(dst, "://")) {
+		if (!srcds->path || !dstds->path)
+			goto err; /* done, not an error */
+
+		/* allow copy factory startup */
+	}
+
+	if (srcds) {
+		/* 2. Export from a datastore somewhere else */
+		if (strstr(dst, "://")) {
+			if (srcds->path)
+				fn = srcds->path;
+			else {
 				snprintf(adjust, sizeof(adjust), "/tmp/%s.cfg", srcds->name);
-				tmpfn = adjust;
-				fn = tmpfn;
-			} else {
-				fn = cfg_adjust(dst, adjust, sizeof(adjust));
-				if (!fn) {
-					fprintf(stderr, "2.3\n");
-					goto invalid;
-				}
+				fn = tmpfn = adjust;
+				rc = systemf("sysrepocfg -d %s -X%s -f json", srcds->sysrepocfg, fn);
+			}
 
-				if (!access(fn, F_OK) && !yorn("Overwrite existing file %s", fn)) {
+			if (rc)
+				fprintf(stderr, ERRMSG "failed exporting %s to %s\n", src, fn);
+			else {
+				rc = systemf("curl -T %s %s", fn, dst);
+				if (rc)
+					fprintf(stderr, ERRMSG "failed uploading %s to %s\n", src, dst);
+			}
+			goto err;
+		}
+
+		if (dstds && dstds->path)
+			fn = dstds->path;
+		else
+			fn = cfg_adjust(dst, adjust, sizeof(adjust));
+
+		if (!fn) {
+			fprintf(stderr, ERRMSG "invalid destination path.\n");
+			rc = -1;
+			goto err;
+		}
+
+		if (!access(fn, F_OK) && !yorn("Overwrite existing file %s", fn)) {
+			fprintf(stderr, "OK, aborting.\n");
+			return 0;
+		}
+
+		if (srcds->path)
+			rc = systemf("cp %s %s", srcds->path, fn);
+		else
+			rc = systemf("sysrepocfg -d %s -X%s -f json", srcds->sysrepocfg, fn);
+		if (rc)
+			fprintf(stderr, ERRMSG "failed copy %s to %s\n", src, fn);
+	} else if (dstds) {
+		if (!dstds->sysrepocfg) {
+			fprintf(stderr, ERRMSG "not possible to import to this datastore.\n");
+			rc = 1;
+			goto err;
+		}
+		if (!dstds->rw) {
+			fprintf(stderr, ERRMSG "not possible to write to %s", dst);
+			goto err;
+		}
+
+		/* 3. Import from somewhere to a datastore */
+		if (strstr(src, "://")) {
+			tmpfn = mktemp(temp_file);
+			fn = tmpfn;
+		} else {
+			fn = cfg_adjust(src, adjust, sizeof(adjust));
+			if (!fn) {
+				fprintf(stderr, ERRMSG "invalid source file location.\n");
+				rc = 1;
+				goto err;
+			}
+		}
+
+		if (tmpfn)
+			rc = systemf("curl -o %s %s", fn, src);
+		if (rc) {
+			fprintf(stderr, ERRMSG "failed downloading %s", src);
+		} else {
+			rc = systemf("sysrepocfg -d %s -I%s -f json", dstds->sysrepocfg, fn);
+			if (rc)
+				fprintf(stderr, ERRMSG "failed loading %s from %s", dst, src);
+		}
+	} else {
+		if (strstr(src, "://") && strstr(dst, "://")) {
+			fprintf(stderr, ERRMSG "copy from remote to remote is not supported.\n");
+			goto err;
+		}
+
+		if (strstr(src, "://")) {
+			fn = cfg_adjust(dst, adjust, sizeof(adjust));
+			if (!fn) {
+				fprintf(stderr, ERRMSG "invalid destination file location.\n");
+				rc = 1;
+				goto err;
+			}
+
+			if (!access(fn, F_OK)) {
+				if (!yorn("Overwrite existing file %s", fn)) {
 					fprintf(stderr, "OK, aborting.\n");
 					return 0;
 				}
 			}
 
-			if (srcds->path)
-				fn = srcds->path; /* user directly => correct name */
+			rc = systemf("curl -o %s %s", fn, src);
+		} else if (strstr(dst, "://")) {
+			fn = cfg_adjust(src, adjust, sizeof(adjust));
+			if (!fn) {
+				fprintf(stderr, ERRMSG "invalid source file location.\n");
+				rc = 1;
+				goto err;
+			}
+
+			if (access(fn, F_OK))
+				fprintf(stderr, ERRMSG "no such file %s, aborting.", fn);
 			else
-				rc = systemf("sysrepocfg -d %s -X%s -f json", srcds->sysrepocfg, fn);
-
-			if (rc)
-				fprintf(stderr, ERRMSG "failed exporting %s\n", src);
-			else if (tmpfn) {
 				rc = systemf("curl -T %s %s", fn, dst);
-				if (rc)
-					fprintf(stderr, ERRMSG "failed uploading %s to %s", src, dst);
-			}
-		} else if (dstds) {
-			if (!dstds->sysrepocfg)
-				goto invalid;
-			if (!dstds->rw) {
-				fprintf(stderr, ERRMSG "not possible to write to %s", dst);
-				goto err;
-			}
-
-			/* 3. Import from somewhere to a datastore */
-			if (strstr(src, "://")) {
-				tmpfn = mktemp(temp_file);
-				fn = tmpfn;
-			} else {
-				fn = cfg_adjust(src, adjust, sizeof(adjust));
-				if (!fn)
-					goto invalid;
-			}
-
-			if (tmpfn)
-				rc = systemf("curl -o %s %s", fn, src);
-			if (rc) {
-				fprintf(stderr, ERRMSG "failed downloading %s", src);
-			} else {
-				rc = systemf("sysrepocfg -d %s -I%s -f json", dstds->sysrepocfg, fn);
-				if (rc)
-					fprintf(stderr, ERRMSG "failed loading %s from %s", dst, src);
-			}
-		} else {
-			if (strstr(src, "://") && strstr(dst, "://")) {
-				fprintf(stderr, ERRMSG "copy from remote to remote is not supported.\n");
-				goto err;
-			}
-
-			if (strstr(src, "://")) {
-				fn = cfg_adjust(dst, adjust, sizeof(adjust));
-				if (!fn)
-					goto invalid;
-
-				if (!access(fn, F_OK)) {
-					if (!yorn("Overwrite existing file %s", fn)) {
-						fprintf(stderr, "OK, aborting.\n");
-						return 0;
-					}
-				}
-
-				rc = systemf("curl -o %s %s", fn, src);
-			} else if (strstr(dst, "://")) {
-				fn = cfg_adjust(src, adjust, sizeof(adjust));
-				if (!fn)
-					goto invalid;
-
-				if (access(fn, F_OK))
-					fprintf(stderr, ERRMSG "no such file %s, aborting.", fn);
-				else
-					rc = systemf("curl -T %s %s", fn, dst);
-			}
 		}
-
-		if (tmpfn)
-			rc = remove(tmpfn);
 	}
 
 err:
+	if (tmpfn)
+		rc = remove(tmpfn);
+
 	return rc;
 }
 
