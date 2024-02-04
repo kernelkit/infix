@@ -147,10 +147,6 @@
   <ACTION sym="rpc@infix" ptype="STRING">/ietf-system:system-restart</ACTION>
 </COMMAND>
 
-<COMMAND name="shell" help="Enter system shell">
-  <ACTION sym="script" in="tty" out="tty" interrupt="true">/usr/bin/env CLISH=yes bash -l</ACTION>
-</COMMAND>
-
 <COMMAND name="exit" help="Exit from CLI (log out)">
   <ACTION sym="nav">pop</ACTION>
 </COMMAND>

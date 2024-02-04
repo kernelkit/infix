@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<KLISH
+  xmlns="https://klish.libcode.org/klish3"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="https://src.libcode.org/pkun/klish/src/master/klish.xsd">
+
+  <VIEW name="main">
+
+    <COMMAND name="shell" help="Enter system shell">
+      <ACTION sym="script" in="tty" out="tty" interrupt="true">/usr/bin/env CLISH=yes bash -l</ACTION>
+    </COMMAND>
+
+  </VIEW>
+</KLISH>
