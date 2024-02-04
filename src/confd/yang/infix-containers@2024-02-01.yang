@@ -80,8 +80,9 @@ module infix-containers {
                      docker://busybox             -- Pull busybox:latest from Docker Hub
                      docker://ghcr.io/usr/img     -- Pull img:latest from GitHub packages
                      dir:/media/usb/myimage:1.1   -- Use myimage v1.1 from USB media
-                     docker-archive:/tmp/myimage  -- Use myimage:latest from tarball
-                     oci-archive:/tmp/myimage     -- Use myimage:latest from OCI archive
+                     docker-archive:/tmp/archive  -- Use archive:latest from tarball
+                     oci-archive:/lib/oci/archive -- Use archive:latest from OCI archive
+                                                     May be in .tar or .tar.gz format
 
                      Note: if a remote repository cannot be reached, the creation of the
                            container will be put on a queue that retries pull every time
@@ -265,6 +266,21 @@ module infix-containers {
 
       action restart {
         description "Restart a running, or start, a stopped container.";
+      }
+    }
+  }
+
+  rpc oci-load {
+    description "Load an OCI archive from file or URL to an image.";
+    input {
+      leaf uri {
+        description "The URL or local file path, e.g., /lib/oci/archive.tar.gz";
+        type string;
+        mandatory true;
+      }
+      leaf name {
+        description "Image name[:tag], default: basename of archive dir + :latest";
+        type string;
       }
     }
   }

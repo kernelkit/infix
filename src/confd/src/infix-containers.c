@@ -285,6 +285,22 @@ static int action(sr_session_ctx_t *session, uint32_t sub_id, const char *xpath,
 	return SR_ERR_OK;
 }
 
+static int oci_load(sr_session_ctx_t *session, uint32_t sub_id, const char *xpath,
+		    const sr_val_t *input, const size_t input_cnt, sr_event_t event,
+		    unsigned request_id, sr_val_t **output, size_t *output_cnt, void *priv)
+{
+	char *uri, *name = "";
+
+	uri = input[0].data.string_val; /* mandatory */
+	if (input_cnt > 1)
+		name = input[1].data.string_val;
+
+	if (systemf("container load %s %s 2>&1 | logger -t confd -p local1.err -I $PPID", uri, name))
+		return SR_ERR_SYS;
+
+	return SR_ERR_OK;
+}
+
 void infix_containers_launch(void)
 {
 	struct dirent *d;
@@ -331,6 +347,7 @@ int infix_containers_init(struct confd *confd)
 	REGISTER_RPC(confd->session, CFG_XPATH "/container/start",   action, NULL, &confd->sub);
 	REGISTER_RPC(confd->session, CFG_XPATH "/container/stop",    action, NULL, &confd->sub);
 	REGISTER_RPC(confd->session, CFG_XPATH "/container/restart", action, NULL, &confd->sub);
+	REGISTER_RPC(confd->session, "/infix-containers:oci-load", oci_load, NULL, &confd->sub);
 
 	return SR_ERR_OK;
 fail:
