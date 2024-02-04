@@ -1,0 +1,7 @@
+config BR2_PACKAGE_CURIOS_HTTPD
+	bool "curiOS-httpd"
+	help
+	  Bundle an OCI archive of curiOS-httpd in /lib/oci for
+	  the given target architecture.
+
+	  https://github.com/kernelkit/curiOS
