@@ -1,4 +1,5 @@
 source "$BR2_EXTERNAL_INFIX_PATH/package/confd/Config.in"
+source "$BR2_EXTERNAL_INFIX_PATH/package/curios-httpd/Config.in"
 source "$BR2_EXTERNAL_INFIX_PATH/package/execd/Config.in"
 source "$BR2_EXTERNAL_INFIX_PATH/package/statd/Config.in"
 source "$BR2_EXTERNAL_INFIX_PATH/package/conmon/Config.in"
