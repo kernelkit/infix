@@ -6,3 +6,13 @@ config BR2_PACKAGE_KLISH_PLUGIN_INFIX
 	help
 	  A plugin to klish with an opinionated config and some
 	  command extensions, suitable for systems running Infix.
+
+if BR2_PACKAGE_KLISH_PLUGIN_INFIX
+
+config BR2_PACKAGE_KLISH_PLUGIN_INFIX_SHELL
+	bool "shell command"
+	default y
+	help
+	  Include 'shell' command exit to Bash.
+
+endif

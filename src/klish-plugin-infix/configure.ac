@@ -22,6 +22,10 @@ AC_ARG_ENABLE(containers,
         AS_HELP_STRING([--enable-containers], [Enable support for containers]),,[
 	enable_containers=no])
 
+AC_ARG_ENABLE(shell,
+        AS_HELP_STRING([--enable-shell], [Enable shell access from CLI]),,[
+	enable_shell=no])
+
 # Check for pkg-config first, warn if it's not installed
 PKG_PROG_PKG_CONFIG
 
@@ -31,6 +35,7 @@ AC_CHECK_LIB([klish], [kplugin_new],, AC_MSG_ERROR([Klish not found]))
 
 # Control build with automake flags
 AM_CONDITIONAL(CONTAINERS,   [test "x$enable_containers" != "xno"])
+AM_CONDITIONAL(SHELL,        [test "x$enable_shell" != "xno"])
 
 test "x$prefix" = xNONE && prefix=$ac_default_prefix
 test "x$exec_prefix" = xNONE && exec_prefix='${prefix}'
