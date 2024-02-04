@@ -21,10 +21,19 @@ AC_CONFIG_LIBOBJ_DIR(lib)
 AC_REPLACE_FUNCS(vasprintf)
 AC_REPLACE_FUNCS(asprintf)
 
+#
 # Check feature flags
+#
+AC_ARG_ENABLE(containers,
+        AS_HELP_STRING([--enable-containers], [Enable support for containers]),,[
+	enable_containers=no])
+
 AC_ARG_WITH(login-shell,
         AS_HELP_STRING([--with-login-shell=shell], [Login shell for new users, default: /bin/false]),
 	[login_shell=$withval], [login_shell=yes])
+
+AS_IF([test "x$enable_containers" = "xyes"], [
+        AC_DEFINE(CONTAINERS, 1, [Built with container support])])
 
 AS_IF([test "x$with_login_shell" != "xno"], [
 	AS_IF([test "x$login_shell" = "xyes"], [login_shell=/bin/false])
@@ -40,6 +49,9 @@ PKG_CHECK_MODULES([jansson], [jansson >= 2.0.0])
 PKG_CHECK_MODULES([libite],  [libite >= 2.5.0])
 PKG_CHECK_MODULES([sysrepo], [sysrepo >= 2.2.36])
 PKG_CHECK_MODULES([libsrx],  [libsrx >= 1.0.0])
+
+# Control build with automake flags
+AM_CONDITIONAL(CONTAINERS,   [test "x$enable_containers" != "xno"])
 
 # Plugin installation path for sysrepo-plugind
 PKG_CHECK_VAR([srpdplugindir], [sysrepo], [SRPD_PLUGINS_PATH])
@@ -72,3 +84,31 @@ SYSCONFDIR=`eval echo $SYSCONFDIR`
 AC_SUBST(SYSCONFDIR)
 
 AC_OUTPUT
+
+cat <<EOF
+
+------------------ Summary ------------------
+ $PACKAGE_NAME version $PACKAGE_VERSION
+  Prefix................: $prefix
+  Exec prefix...........: $eprefix
+  Sysconfdir............: `eval echo $sysconfdir`
+  Localstatedir.........: `eval echo $localstatedir`
+  Default fstab.........: `eval echo $fstab`
+  System environment....: ${sysconfig_path:-${sysconfig}}
+  C Compiler............: $CC $CFLAGS $CPPFLAGS $LDFLAGS $LIBS
+  Linker................: $LD $LLDP_LDFLAGS $LLDP_BIN_LDFLAGS $LDFLAGS $LIBS
+
+Optional features:
+  Container support ....: $enable_containers
+  Login shell ..........: $login_shell
+
+------------- Compiler version --------------
+$($CC --version || true)
+-------------- Linker version ---------------
+$($LD --version || true)
+---------------------------------------------
+
+Check the above options and compile with:
+ ${MAKE-make}
+
+EOF
