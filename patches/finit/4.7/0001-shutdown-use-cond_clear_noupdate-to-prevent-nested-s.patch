@@ -1,0 +1,70 @@
+From c2218236546908ecab5eab4b32e698d7bb3d984a Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Sat, 3 Feb 2024 17:30:30 +0100
+Subject: [PATCH] shutdown: use cond_clear_noupdate() to prevent nested
+ service_stop()
+Organization: Addiva Elektronik
+
+When the system shuts down, or user changes runlevels, we don't have to
+call cond_clear_update(), because this can lead to nested service_stop()
+calls, which in turn lead to out of sync progress updates:
+
+[ .. ] Stopping Foo
+[ OK ] Stopping Bar
+[ OK ]
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ src/cond-w.c  | 6 +++++-
+ src/service.c | 4 +++-
+ 2 files changed, 8 insertions(+), 2 deletions(-)
+
+diff --git a/src/cond-w.c b/src/cond-w.c
+index 2502264..0546282 100644
+--- a/src/cond-w.c
++++ b/src/cond-w.c
+@@ -35,6 +35,7 @@
+ #include "cond.h"
+ #include "pid.h"
+ #include "service.h"
++#include "sm.h"
+ 
+ struct cond_boot {
+ 	TAILQ_ENTRY(cond_boot) link;
+@@ -214,7 +215,10 @@ static int do_delete(const char *fpath, const struct stat *sb, int tflag, struct
+ 		err(1, "Failed removing condition %s", fpath);
+ 
+ 	cond = ptr + strlen(COND_BASE) + 1;
+-	cond_update(cond);
++	if (sm_is_in_teardown(&sm))
++		cond_clear_noupdate(cond);
++	else
++		cond_update(cond);
+ 
+ 	return 0;
+ }
+diff --git a/src/service.c b/src/service.c
+index 8175757..eca9ed0 100644
+--- a/src/service.c
++++ b/src/service.c
+@@ -2261,7 +2261,7 @@ static void svc_set_state(svc_t *svc, svc_state_t new_state)
+ 	/* if PID isn't collected within SVC_TERM_TIMEOUT msec, kill it! */
+ 	if (new_state == SVC_STOPPING_STATE) {
+ 		dbg("%s is stopping, wait %d sec before sending SIGKILL ...",
+-		   svc_ident(svc, NULL, 0), svc->killdelay / 1000);
++		    svc_ident(svc, NULL, 0), svc->killdelay / 1000);
+ 		service_timeout_cancel(svc);
+ 		service_timeout_after(svc, svc->killdelay, service_kill);
+ 	}
+@@ -2299,6 +2299,8 @@ static void svc_set_state(svc_t *svc, svc_state_t new_state)
+ 		if ((old_state == SVC_RUNNING_STATE && new_state == SVC_PAUSED_STATE) ||
+ 		    (old_state == SVC_PAUSED_STATE  && new_state == SVC_RUNNING_STATE))
+ 			; 	/* only paused during reload, don't clear conds. */
++		else if (sm_is_in_teardown(&sm))
++			cond_clear_noupdate(cond);
+ 		else
+ 			cond_clear(cond);
+ 
+-- 
+2.34.1
+
