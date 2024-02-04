@@ -46,6 +46,23 @@ struct infix_ds infix_config[] = {
 	{ "factory-config",     NULL,          SR_DS_FACTORY_DEFAULT, 0, "/etc/factory-config.cfg" },
 };
 
+static void cd_home(kcontext_t *ctx)
+{
+	const char *user = "root";
+	ksession_t *session;
+	struct passwd *pw;
+
+	session = kcontext_session(ctx);
+	if (session) {
+		user = ksession_user(session);
+		if (!user)
+			user = "root";
+	}
+
+	pw = getpwnam(user);
+	chdir(pw->pw_dir);
+}
+
 static int has_ext(const char *fn, const char *ext)
 {
 	size_t pos = strlen(fn);
@@ -56,17 +73,47 @@ static int has_ext(const char *fn, const char *ext)
 	return 0;
 }
 
-static char *cfg_adjust(const char *fn, char *buf, size_t len)
+static const char *basenm(const char *fn)
 {
-	if (strncmp(fn, "/cfg/", 5)) {
-		if (fn[0] == '.' || fn[0] == '/')
-			return NULL;
+	const char *ptr;
 
-		snprintf(buf, len, "/cfg/%s", fn);
+	if (!fn)
+		return "";
+
+	ptr = strrchr(fn, '/');
+	if (!ptr)
+		ptr = fn;
+
+	return ptr;
+}
+
+static char *cfg_adjust(const char *fn, const char *tmpl, char *buf, size_t len)
+{
+	if (strstr(fn, "../"))
+		return NULL;	/* relative paths not allowed */
+
+	/* Files in /cfg must end in .cfg */
+	if (!strncmp(fn, "/cfg/", 5)) {
+		snprintf(buf, len, "%s", fn);
+		if (!has_ext(fn, ".cfg"))
+			strcat(buf, ".cfg");
+
+		return buf;
 	}
 
-	if (!has_ext(buf, ".cfg"))
-		strcat(buf, ".cfg");
+	/* Files ending with .cfg belong in /cfg */
+	if (has_ext(fn, ".cfg")) {
+		snprintf(buf, len, "/cfg/%s", fn);
+		return buf;
+	}
+
+	if (strlen(fn) > 0 && fn[0] == '.' && tmpl) {
+		if (fn[1] == '/' && fn[1] != 0)
+			strncpy(buf, fn, len);
+		else
+			snprintf(buf, len, "%s", basenm(tmpl));
+	} else
+		strncpy(buf, fn, len);
 
 	return buf;
 }
@@ -196,7 +243,8 @@ static int files(const char *path, const char *stripext)
 	while ((d = readdir(dir))) {
 		char name[sizeof(d->d_name) + 1];
 
-		if (d->d_type != DT_REG)
+		/* only list regular files, skip dirs and dotfiles */
+		if (d->d_type != DT_REG || d->d_name[0] == '.')
 			continue;
 
 		strncpy(name, d->d_name, sizeof(name));
@@ -235,7 +283,15 @@ done:
 
 int infix_dir(kcontext_t *ctx)
 {
-	return systemf("ls --color=always --group-directories-first -A /cfg");
+	cd_home(ctx);
+
+	fputs("\e[7mHome directory                                                          \e[0m\n", stderr);
+	system("ls --color=always -p >&2");
+
+	fputs("\n\e[7m/cfg directory                                                          \e[0m\n", stderr);
+	system("ls --color=always -p /cfg >&2");
+
+	return 0;
 }
 
 int infix_erase(kcontext_t *ctx)
@@ -250,6 +306,7 @@ int infix_erase(kcontext_t *ctx)
 		return -1;
 	}
 
+	cd_home(ctx);
 	if (access(path, F_OK)) {
 		size_t len = strlen(path) + 10;
 
@@ -259,7 +316,11 @@ int infix_erase(kcontext_t *ctx)
 			return -1;
 		}
 
-		cfg_adjust(path, fn, len);
+		cfg_adjust(path, NULL, fn, len);
+		if (access(fn, F_OK)) {
+			fprintf(stderr, "No such file: %s\n", fn);
+			return -1;
+		}
 	} else
 		fn = (char *)path;
 
@@ -278,6 +339,7 @@ int infix_files(kcontext_t *ctx)
 {
 	const char *path;
 
+	cd_home(ctx);
 	path = kcontext_script(ctx);
 	if (!path) {
 		fprintf(stderr, ERRMSG "missing path argument to file search.\n");
@@ -323,13 +385,19 @@ int infix_copy(kcontext_t *ctx)
 	const char *fn = NULL;
 	const char *src, *dst;
 	sr_conn_ctx_t *conn;
+	char user[256] = "";
 	char adjust[256];
+	kparg_t *parg;
 	int rc = 0;
 
 	src = kparg_value(kpargv_find(pargv, "src"));
 	dst = kparg_value(kpargv_find(pargv, "dst"));
 	if (!src || !dst)
 		goto err;
+
+	parg = kpargv_find(pargv, "user");
+	if (parg)
+		snprintf(user, sizeof(user), "-u %s", kparg_value(parg));
 
 	src = infix_ds(src, "source", &srcds);
 	if (!src)
@@ -342,6 +410,8 @@ int infix_copy(kcontext_t *ctx)
 		fprintf(stderr, ERRMSG "source and destination are the same, aborting.");
 		goto err;
 	}
+
+	cd_home(ctx);
 
 	/* 1. Regular ds copy */
 	if (srcds && dstds) {
@@ -387,7 +457,7 @@ int infix_copy(kcontext_t *ctx)
 			if (rc)
 				fprintf(stderr, ERRMSG "failed exporting %s to %s\n", src, fn);
 			else {
-				rc = systemf("curl -T %s %s", fn, dst);
+				rc = systemf("curl %s -LT %s %s", user, fn, dst);
 				if (rc)
 					fprintf(stderr, ERRMSG "failed uploading %s to %s\n", src, dst);
 			}
@@ -397,7 +467,7 @@ int infix_copy(kcontext_t *ctx)
 		if (dstds && dstds->path)
 			fn = dstds->path;
 		else
-			fn = cfg_adjust(dst, adjust, sizeof(adjust));
+			fn = cfg_adjust(dst, src, adjust, sizeof(adjust));
 
 		if (!fn) {
 			fprintf(stderr, ERRMSG "invalid destination path.\n");
@@ -432,7 +502,7 @@ int infix_copy(kcontext_t *ctx)
 			tmpfn = mktemp(temp_file);
 			fn = tmpfn;
 		} else {
-			fn = cfg_adjust(src, adjust, sizeof(adjust));
+			fn = cfg_adjust(src, NULL, adjust, sizeof(adjust));
 			if (!fn) {
 				fprintf(stderr, ERRMSG "invalid source file location.\n");
 				rc = 1;
@@ -441,7 +511,7 @@ int infix_copy(kcontext_t *ctx)
 		}
 
 		if (tmpfn)
-			rc = systemf("curl -o %s %s", fn, src);
+			rc = systemf("curl %s -Lo %s %s", user, fn, src);
 		if (rc) {
 			fprintf(stderr, ERRMSG "failed downloading %s", src);
 		} else {
@@ -456,7 +526,7 @@ int infix_copy(kcontext_t *ctx)
 		}
 
 		if (strstr(src, "://")) {
-			fn = cfg_adjust(dst, adjust, sizeof(adjust));
+			fn = cfg_adjust(dst, src, adjust, sizeof(adjust));
 			if (!fn) {
 				fprintf(stderr, ERRMSG "invalid destination file location.\n");
 				rc = 1;
@@ -470,9 +540,9 @@ int infix_copy(kcontext_t *ctx)
 				}
 			}
 
-			rc = systemf("curl -o %s %s", fn, src);
+			rc = systemf("curl %s -Lo %s %s", user, fn, src);
 		} else if (strstr(dst, "://")) {
-			fn = cfg_adjust(src, adjust, sizeof(adjust));
+			fn = cfg_adjust(src, NULL, adjust, sizeof(adjust));
 			if (!fn) {
 				fprintf(stderr, ERRMSG "invalid source file location.\n");
 				rc = 1;
@@ -482,7 +552,7 @@ int infix_copy(kcontext_t *ctx)
 			if (access(fn, F_OK))
 				fprintf(stderr, ERRMSG "no such file %s, aborting.", fn);
 			else
-				rc = systemf("curl -T %s %s", fn, dst);
+				rc = systemf("curl %s -LT %s %s", user, fn, dst);
 		}
 	}
 

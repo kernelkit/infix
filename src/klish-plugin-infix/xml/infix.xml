@@ -158,9 +158,12 @@
   <ACTION sym="nav">replace config</ACTION>
 </COMMAND>
 
-<COMMAND name="copy" help="Copy configuration, e.g., copy running-config startup-config">
-  <PARAM name="src" ptype="/DATASTORE"    help="Source datastore"/>
-  <PARAM name="dst" ptype="/RW_DATASTORE" help="Destination datastore"/>
+<COMMAND name="copy" help="Copy file or configuration, e.g., copy running-config startup-config">
+  <PARAM name="src" ptype="/DATASTORE"    help="Source datastore or file, e.g., tftp://ip/file"/>
+  <PARAM name="dst" ptype="/RW_DATASTORE" help="Destination datastore or file, e.g., scp://ip/file"/>
+  <SWITCH name="optional" min="0">
+    <PARAM name="user" ptype="/STRING"    help="Remote username (interactive password)"/>
+  </SWITCH>
   <ACTION sym="copy@infix" in="tty" out="tty" interrupt="true"/>
 </COMMAND>
 
@@ -475,8 +478,8 @@
     </ACTION>
   </COMMAND>
 
-  <COMMAND name="upgrade" help="Install a software update bundle">
-    <PARAM name="URI" ptype="/STRING" help="(ftp|tftp|http|https|sftp)://(dns.name | ip.address)/path/to/upgrade-bundle.pkg"/>
+  <COMMAND name="upgrade" help="Install a software update bundle from remote or local file">
+    <PARAM name="URI" ptype="/STRING" help="[(ftp|tftp|http|https|sftp)://(dns.name | ip.address)/path/to/]upgrade-bundle.pkg"/>
     <ACTION sym="script" in="tty" out="tty" interrupt="true">
       rauc install $KLISH_PARAM_URI
     </ACTION>
