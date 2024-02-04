@@ -25,10 +25,17 @@
   <ACTION sym="STRING"/>
 </PTYPE>
 
+<PTYPE name="ARCHIVES">
+  <COMPL>
+    <ACTION sym="script">container -a list oci</ACTION>
+  </COMPL>
+  <ACTION sym="STRING"/>
+</PTYPE>
+
 <VIEW name="main">
 
 <COMMAND name="container" help="Manage containers, images, and volumes" mode="switch">
-  <COMMAND name="cleanup" help="Clean up all unused containers, images and volume data">
+  <COMMAND name="prune" help="Clean up all unused containers, images and volume data">
     <ACTION sym="script" in="tty" out="tty" interrupt="true">
       podman system prune
     </ACTION>
@@ -56,6 +63,23 @@
         cmd=${KLISH_PARAM_command:-sh}
         container exec $KLISH_PARAM_name $cmd
       fi
+    </ACTION>
+  </COMMAND>
+
+  <COMMAND name="load" help="Load a container OCI tarball (.tar, .tar.gz) to image">
+    <PARAM name="url" ptype="/ARCHIVES" help="Filename or URL, e.g. https://addr/rootfs-oci.tar.gz" />
+    <SWITCH name="optional" min="0">
+      <COMMAND name="name" help="Image name, and tag (default: latest)">
+        <PARAM name="name" ptype="/STRING" help="name[:tag]"/>
+      </COMMAND>
+      <COMMAND name="creds" help="Credentials for remote access">
+        <PARAM name="creds" ptype="/STRING" help="username[:password]"/>
+      </COMMAND>
+    </SWITCH>
+    <ACTION sym="script" in="tty" out="tty" interrupt="true">
+      creds=${KLISH_PARAM_creds:+-c $KLISH_PARAM_creds}
+      cd /var/lib/containers/oci
+      container $creds load $KLISH_PARAM_url $KLISH_PARAM_name
     </ACTION>
   </COMMAND>
 
@@ -109,6 +133,19 @@
     </SWITCH>
   </COMMAND>
 
+  <COMMAND name="save" help="Save a container image as an OCI tarball (.tar, .tar.gz)">
+    <PARAM name="name" ptype="/IMAGES" help="Container image" />
+    <SWITCH name="optional" min="0">
+      <COMMAND name="file" help="Filename, default: 'container name'.tar">
+        <PARAM name="file" ptype="/ARCHIVES" help="Filename, calls gzip if .tar.gz"/>
+      </COMMAND>
+    </SWITCH>
+    <ACTION sym="script" in="tty" out="tty" interrupt="true">
+      cd /var/lib/containers/oci
+      container save $KLISH_PARAM_name $KLISH_PARAM_file
+    </ACTION>
+  </COMMAND>
+
   <COMMAND name="shell" help="Start a shell inside a container, if available">
     <PARAM name="name" ptype="/CONTAINERSa" help="Container name" />
     <ACTION sym="script" in="tty" out="tty" interrupt="true">
@@ -156,6 +193,9 @@
             <ACTION sym="script">container -a show images</ACTION>
           </COMMAND>
         </SWITCH>
+      </COMMAND>
+      <COMMAND name="oci" help="Show OCI archives (for loading as image)">
+        <ACTION sym="script">container list oci</ACTION>
       </COMMAND>
       <COMMAND name="stat" help="Show continuous containers stats (Ctrl-C aborts)">
 	<ACTION sym="script">container stat</ACTION>

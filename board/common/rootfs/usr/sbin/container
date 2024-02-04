@@ -9,6 +9,71 @@ log()
     logger -I $PPID -t container -p local1.notice -- "$*"
 }
 
+# Unpacks a given oci-archive.tar[.gz] in the current directory.  Sanity
+# checks, at least one index.json in the top-level dir of the archive.
+# If there are more index files, this function does not handle them.
+unpack_archive()
+{
+    image=$1
+    name=$2
+
+    # Supported transports for load and create
+    case "$image" in
+	oci:*)			# Unpacked OCI image
+	    file=${image#oci:}
+	    ;;
+	oci-archive:*)		# Packed OCI image, .tar or .tar.gz format
+	    file=${image#oci-archive:}
+	    ;;
+	*)			# docker://*, docker-archive:*, or URL
+	    echo "$image"
+	    return 0
+	    ;;
+    esac
+
+    if [ ! -e "$file" ]; then
+	if [ -e "/var/lib/conatainers/oci/$file" ]; then
+	    file="/var/lib/conatainers/oci/$file"
+	elif [ -e "/lib/oci/$file" ]; then
+	    file="/lib/oci/$file"
+	else
+	    log "Error: cannot find OCI archive $file in search path."
+	    exit 1
+	fi
+    fi
+
+    if [ -d "$file" ]; then
+	index=$(find "$file" -name index.json)
+	if [ -z "$index" ]; then
+	    log "Error: cannot find index.json in OCI image $file"
+	    exit 1
+	fi
+    else
+	index=$(tar tf "$file" |grep index.json)
+	if [ -z "$index" ]; then
+	    log "Error: invalid OCI archive, cannot find index.json in $file"
+	    exit 1
+	fi
+
+	log "Extracting OCI archive $file ..."
+        tar xf "$file" || (log "Error: failed unpacking $file in $(pwd)"; exit 1)
+    fi
+
+    dir=$(dirname "$index")
+    log "Loading OCI image $dir ..."
+    podman load -qi "$dir"        >/dev/null
+
+    # Rename image from podman default $dir:latest
+    if [ -n "$name" ]; then
+	podman tag "$dir" "$name" >/dev/null
+	podman rmi "$dir"         >/dev/null
+    else
+	name=$dir
+    fi
+
+    echo "$name"
+}
+
 # shellcheck disable=SC2086
 create()
 {
@@ -21,6 +86,10 @@ create()
 	echo "  container create NAME IMAGE"
 	exit 1
     fi
+
+    # Unpack and load docker-archive/oci/oci-archive, returning image
+    # name, or return docker:// URL for download.
+    image=$(unpack_archive "$image")
 
     args="$args --restart=no --systemd=false --tz=local --privileged --replace --quiet"
 #    args="$args --log-opt tag=$name"
@@ -51,6 +120,7 @@ create()
 	initctl -nbq cond set container:$name
 	exit 0
     fi
+
     log "Error: failed creating container $name, please check the configuration."
     exit 1
 }
@@ -81,6 +151,7 @@ options:
   -a, --all               Show all, of something
       --dns NAMESERVER    Set nameserver(s) when creating a container
       --dns-search LIST   Set host lookup search list when creating container
+  -c, --creds USR[:PWD]   Credentials to pass to curl -u for remote ops
   -d, --detach            Detach a container started with 'run IMG [CMD]'
   -e, --env FILE          Environment variables when creating container
       --entrypoint        Disable container image's ENTRYPOINT, run cmd + arg
@@ -100,10 +171,12 @@ commands:
   delete  NAME            Kill and remove container NAME
   exec    NAME CMD        Run a command inside a container
   help                    Show this help text
-  list   [image]          List names (only) of containers or images
+  list   [image | oci]    List names (only) of containers, images, or OCI archives
+  load   [NAME | URL] NM  Load OCI tarball fileNAME or URL to image NM
   remove  IMAGE           Remove an (unused) container image
   restart NAME            Restart a crashed container
   run     NAME [CMD]      Run a container interactively, with an optional command
+  save    IMAGE FILE      Save a container image to an OCI tarball FILE[.tar.gz]
   shell                   Start a shell inside a container
   show   [image | volume] Show containers, images, or volumes
   stat                    Show continuous stats about containers (Ctrl-C aborts)
@@ -117,6 +190,10 @@ while [ "$1" != "" ]; do
     case $1 in
 	-a | --all)
 	    all="-a"
+	    ;;
+	-c | --creds)
+	    shift
+	    creds="-u $1"
 	    ;;
 	-d | --detach)
 	    detach="-d"
@@ -200,12 +277,36 @@ case $cmd in
     help)
 	usage
 	;;
+    load)
+	url=$1
+	name=$2
+	# shellcheck disable=SC2086
+	if echo "$url" | grep -q "://"; then
+	    file=$(basename "$url")
+            curl -k $creds -Lo "$file" "$url"
+	else
+            file="$url"
+	fi
+
+	# shellcheck disable=SC2086
+	name=$(unpack_archive "$file" $name)
+
+	# Show resulting image(s) matching $name
+	if [ -n "$name" ]; then
+	    podman images -n "$name"
+	else
+	    exit 1
+	fi
+	;;
     ls | list)
 	cmd=$1
 	[ -n "$cmd" ] && shift
 	case $cmd in
 	    image*)
 		podman images $all --format "{{.Repository}}:{{.Tag}}"
+		;;
+	    oci)
+		find /lib/oci /var/lib/containers/oci -type f 2>/dev/null
 		;;
 	    *)		
 		podman ps $all --format "{{.Names}}"
@@ -229,6 +330,22 @@ case $cmd in
 	else
 	    [ -n "$detach" ] || echo "Starting $img :: use Ctrl-p Ctrl-q to detach"
 	    podman run -it --rm $detach $port "$img"
+	fi
+	;;
+    save)
+	name=$1
+	file=$2
+	if echo "$file" | grep -q ".gz"; then
+	    file=${file%%.gz}
+	    gzip=true
+	fi
+	if ! echo "$file" | grep -q ".tar"; then
+	    file=${file}.tar
+	    gzip=true
+	fi
+	podman save -o "$file" "$name"
+	if [ -s "$file" ] && [ -n "$gzip" ]; then
+	    gzip "$file"
 	fi
 	;;
     shell)
