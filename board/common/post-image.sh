@@ -22,7 +22,7 @@ diskimg=disk.img
 ver()
 {
     if [ -n "$INFIX_RELEASE" ]; then
-	printf -- "-%s" "$INFIX_RELEASE"
+	printf -- "-%s" "${INFIX_RELEASE#v}"
 	return
     fi
 }
@@ -42,7 +42,7 @@ fi
 load_cfg DISK_IMAGE
 if [ "$DISK_IMAGE" = "y" ]; then
     ixmsg "Creating Disk Image"
-    diskimg="${NAME}-disk.img"
+    diskimg="${NAME}-disk$(ver).img"
     bootcfg=
     if [ "$DISK_IMAGE_BOOT_DATA" ]; then
 	bootcfg="-b $DISK_IMAGE_BOOT_DATA -B $DISK_IMAGE_BOOT_OFFSET"
