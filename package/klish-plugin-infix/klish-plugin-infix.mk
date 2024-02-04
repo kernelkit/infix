@@ -17,6 +17,12 @@ define KLISH_PLUGIN_INFIX_CONF_ENV
 CFLAGS="$(INFIX_CFLAGS)"
 endef
 
+ifeq ($(BR2_PACKAGE_PODMAN),y)
+KLISH_PLUGIN_INFIX_CONF_OPTS += --enable-containers
+else
+KLISH_PLUGIN_INFIX_CONF_OPTS += --disable-containers
+endif
+
 define KLISH_PLUGIN_INFIX_INSTALL_DOC
 	$(INSTALL) -t $(TARGET_DIR)/usr/share/infix/cli -D -m 0644 \
 		$(wildcard $(BR2_EXTERNAL_INFIX_PATH)/doc/cli/*.md)

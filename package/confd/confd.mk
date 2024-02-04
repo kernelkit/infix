@@ -17,6 +17,12 @@ define CONFD_CONF_ENV
 CFLAGS="$(INFIX_CFLAGS)"
 endef
 
+ifeq ($(BR2_PACKAGE_PODMAN),y)
+CONFD_CONF_OPTS += --enable-containers
+else
+CONFD_CONF_OPTS += --disable-containers
+endif
+
 define CONFD_INSTALL_EXTRA
 	cp $(CONFD_PKGDIR)/confd.conf  $(FINIT_D)/available/
 	ln -sf ../available/confd.conf $(FINIT_D)/enabled/confd.conf

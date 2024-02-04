@@ -29,12 +29,15 @@ confd_plugin_la_SOURCES =			\
 	ietf-system.c				\
 	ietf-factory-default.c			\
 	ietf-routing.c				\
-	infix-containers.c			\
 	infix-dhcp.c				\
 	infix-services.c			\
 	infix-factory.c				\
 	infix-system-software.c 		\
 	ietf-hardware.c
+
+if CONTAINERS
+confd_plugin_la_SOURCES += infix-containers.c
+endif
 
 rauc_installer_sources = 			\
 	rauc-installer.c rauc-installer.h

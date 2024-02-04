@@ -1,2 +1,6 @@
-klishconfdir   = $(KLISHCONFDIR)
-klishconf_DATA = $(wildcard *.xml)
+klishconfdir    = $(KLISHCONFDIR)
+klishconf_DATA  = infix.xml
+
+if CONTAINERS
+klishconf_DATA += containers.xml
+endif

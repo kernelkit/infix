@@ -47,6 +47,14 @@ module infix-interfaces {
   }
 
   /*
+   * Features
+   */
+
+  feature containers {
+    description "Containers is an optional build-time feature in Infix.";
+  }
+
+  /*
    * Data Nodes
    */
 

@@ -49,6 +49,7 @@ submodule infix-if-container {
 
   augment "/if:interfaces/if:interface/infix-if:port" {
     description "Augments the interface model with CNI networks.";
+    if-feature containers;
 
     case container-network {
       container container-network {
