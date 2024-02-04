@@ -1,6 +1,7 @@
 #include <assert.h>
 #include <dirent.h>
 #include <errno.h>
+#include <pwd.h>
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
@@ -14,6 +15,7 @@
 #include <sysrepo/values.h>
 
 #include <klish/kplugin.h>
+#include <klish/ksession.h>
 #include <klish/kcontext.h>
 
 #include <libyang/libyang.h>
@@ -527,6 +529,53 @@ err:
 	return -1;
 }
 
+int infix_shell(kcontext_t *ctx)
+{
+	const char *user = "root";
+	ksession_t *session;
+	pid_t pid;
+	int rc;
+
+	session = kcontext_session(ctx);
+	if (session) {
+		user = ksession_user(session);
+		if (!user)
+			user = "root";
+	}
+
+	pid = fork();
+	if (pid == -1)
+		return -1;
+
+	if (!pid) {
+		struct passwd *pw;
+		char *args[] = {
+			"env", "CLISH=yes",
+			SHELL, "-il",
+			NULL
+		};
+
+		pw = getpwnam(user);
+		if (setgid(pw->pw_gid) || setuid(pw->pw_uid)) {
+			fprintf(stderr, "Aborting, failed dropping privileges to (UID:%d GID:%d): %s\n",
+				pw->pw_uid, pw->pw_gid, strerror(errno));
+			_exit(1);
+		}
+
+		_exit(execvp(args[0], args));
+	}
+
+	while (waitpid(pid, &rc, 0) != pid)
+		;
+
+	if (WIFEXITED(rc))
+		rc = WEXITSTATUS(rc);
+	else if (WIFSIGNALED(rc))
+		rc = -2;
+
+	return rc;
+}
+
 int infix_rpc(kcontext_t *ctx)
 {
 	kpargv_pargs_node_t *iter;
@@ -612,6 +661,7 @@ int kplugin_infix_init(kcontext_t *ctx)
 	kplugin_add_syms(plugin, ksym_new("erase", infix_erase));
 	kplugin_add_syms(plugin, ksym_new("files", infix_files));
 	kplugin_add_syms(plugin, ksym_new("ifaces", infix_ifaces));
+	kplugin_add_syms(plugin, ksym_new("shell", infix_shell));
 	kplugin_add_syms(plugin, ksym_new("rpc", infix_rpc));
 
 	return 0;

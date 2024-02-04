@@ -7,7 +7,7 @@
   <VIEW name="main">
 
     <COMMAND name="shell" help="Enter system shell">
-      <ACTION sym="script" in="tty" out="tty" interrupt="true">/usr/bin/env CLISH=yes bash -l</ACTION>
+      <ACTION sym="shell@infix" in="tty" out="tty" interrupt="true" />
     </COMMAND>
 
   </VIEW>

@@ -29,6 +29,12 @@ else
 KLISH_PLUGIN_INFIX_CONF_OPTS += --disable-shell
 endif
 
+ifeq ($(BR2_PACKAGE_BASH),y)
+KLISH_PLUGIN_INFIX_CONF_OPTS += --with-shell=/bin/bash
+else
+KLISH_PLUGIN_INFIX_CONF_OPTS += --with-shell=/bin/sh
+endif
+
 define KLISH_PLUGIN_INFIX_INSTALL_DOC
 	$(INSTALL) -t $(TARGET_DIR)/usr/share/infix/cli -D -m 0644 \
 		$(wildcard $(BR2_EXTERNAL_INFIX_PATH)/doc/cli/*.md)
