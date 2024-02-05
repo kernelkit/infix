@@ -1070,7 +1070,8 @@ static bool netdag_must_del(struct lyd_node *dif, struct lyd_node *cif)
 {
 	const char *iftype = lydx_get_cattr(cif, "type");
 
-	if (strcmp(iftype, "infix-if-type:ethernet")) {
+	if (strcmp(iftype, "infix-if-type:ethernet") &&
+	    strcmp(iftype, "infix-if-type:etherlike")) {
 		if (is_phys_addr_deleted(dif))
 			return true;
 	}
