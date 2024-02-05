@@ -57,7 +57,6 @@ with infamy.Test() as test:
                     },
                     {
                         "name": tport10,
-                        "type": "infix-if-type:ethernet",
                         "enabled": True,
                         "infix-interfaces:bridge-port": {
                             "pvid": 10,
@@ -66,7 +65,6 @@ with infamy.Test() as test:
                     },
                     {
                         "name": tport11,
-                        "type": "infix-if-type:ethernet",
                         "enabled": True,
                         "infix-interfaces:bridge-port": {
                             "pvid": 20,
@@ -75,7 +73,6 @@ with infamy.Test() as test:
                     },
                     {
                         "name": tport12,
-                        "type": "infix-if-type:ethernet",
                         "enabled": True,
                         "infix-interfaces:bridge-port": {
                             "bridge": "br0",
@@ -111,7 +108,6 @@ with infamy.Test() as test:
                     },
                     {
                         "name": tport20,
-                        "type": "infix-if-type:ethernet",
                         "enabled": True,
                         "infix-interfaces:bridge-port": {
                             "pvid": 10,
@@ -120,7 +116,6 @@ with infamy.Test() as test:
                     },
                     {
                         "name": tport21,
-                        "type": "infix-if-type:ethernet",
                         "enabled": True,
                         "infix-interfaces:bridge-port": {
                             "pvid": 20,
@@ -129,7 +124,6 @@ with infamy.Test() as test:
                     },
                     {
                         "name": tport22,
-                        "type": "infix-if-type:ethernet",
                         "enabled": True,
                         "infix-interfaces:bridge-port": {
                             "bridge": "br0",

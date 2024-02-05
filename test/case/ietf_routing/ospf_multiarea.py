@@ -35,7 +35,6 @@ def config_target1(target, ring1, ring2, cross, link):
                 "interface": [
                     {
                         "name": ring1,
-                        "type": "infix-if-type:ethernet",
                         "enabled": True,
                         "ipv4": {
                             "forwarding": True,
@@ -46,7 +45,6 @@ def config_target1(target, ring1, ring2, cross, link):
                     },
                     {
                         "name": ring2,
-                        "type": "infix-if-type:ethernet",
                         "enabled": True,
                         "ipv4": {
                             "forwarding": True,
@@ -57,7 +55,6 @@ def config_target1(target, ring1, ring2, cross, link):
                     },
                     {
                         "name": link,
-                        "type": "infix-if-type:ethernet",
                         "enabled": True,
                         "ipv4": {
                             "forwarding": True,
@@ -72,7 +69,6 @@ def config_target1(target, ring1, ring2, cross, link):
                     },
                     {
                         "name": cross,
-                        "type": "infix-if-type:ethernet",
                         "enabled": True,
                         "ipv4": {
                             "forwarding": True,
@@ -84,7 +80,6 @@ def config_target1(target, ring1, ring2, cross, link):
                     },
                     {
                         "name": "lo",
-                        "type": "infix-if-type:ethernet",
                         "enabled": True,
                         "ipv4": {
                             "address": [{
@@ -180,7 +175,6 @@ def config_target2(target, ring1, ring2, cross, link):
                 "interface": [
                     {
                         "name": ring1,
-                        "type": "infix-if-type:ethernet",
                         "enabled": True,
                         "ipv4": {
                             "forwarding": True,
@@ -191,7 +185,6 @@ def config_target2(target, ring1, ring2, cross, link):
                     },
                     {
                         "name": ring2,
-                        "type": "infix-if-type:ethernet",
                         "enabled": True,
                         "ipv4": {
                             "forwarding": True,
@@ -202,7 +195,6 @@ def config_target2(target, ring1, ring2, cross, link):
                     },
                     {
                         "name": cross,
-                        "type": "infix-if-type:ethernet",
                         "enabled": True,
                         "ipv4": {
                             "forwarding": True,
@@ -213,7 +205,6 @@ def config_target2(target, ring1, ring2, cross, link):
                     },
                     {
                         "name": link,
-                        "type": "infix-if-type:ethernet",
                         "enabled": True,
                         "ipv4": {
                             "forwarding": True,
@@ -247,7 +238,6 @@ def config_target2(target, ring1, ring2, cross, link):
                     },
                     {
                         "name": "lo",
-                        "type": "infix-if-type:ethernet",
                         "enabled": True,
                         "ipv4": {
                             "address": [{
@@ -341,7 +331,6 @@ def config_target3(target, ring1, ring2, cross, link):
             "interface": [
                 {
                     "name": ring2,
-                    "type": "infix-if-type:ethernet",
                     "enabled": True,
                     "ipv4": {
                         "forwarding": True,
@@ -353,7 +342,6 @@ def config_target3(target, ring1, ring2, cross, link):
                 },
                 {
                     "name": link,
-                    "type": "infix-if-type:ethernet",
                     "enabled": True,
                     "ipv4": {
                         "forwarding": True,
@@ -365,7 +353,6 @@ def config_target3(target, ring1, ring2, cross, link):
                 },
                 {
                     "name": cross,
-                    "type": "infix-if-type:ethernet",
                     "enabled": True,
                     "ipv4": {
                         "forwarding": True,
@@ -377,7 +364,6 @@ def config_target3(target, ring1, ring2, cross, link):
                 },
                 {
                     "name": "lo",
-                    "type": "infix-if-type:ethernet",
                     "enabled": True,
                     "ipv4": {
                         "address": [{
@@ -449,7 +435,6 @@ def config_target4(target, ring1, ring2, cross, link):
                 "interface": [
                     {
                         "name": ring1,
-                        "type": "infix-if-type:ethernet",
                         "enabled": True,
                         "ipv4": {
                             "forwarding": True,
@@ -460,7 +445,6 @@ def config_target4(target, ring1, ring2, cross, link):
                     },
                     {
                         "name": cross,
-                        "type": "infix-if-type:ethernet",
                         "enabled": True,
                         "ipv4": {
                             "forwarding": True,
@@ -471,7 +455,6 @@ def config_target4(target, ring1, ring2, cross, link):
                     },
                     {
                         "name": link,
-                        "type": "infix-if-type:ethernet",
                         "enabled": True,
                         "ipv4": {
                             "forwarding": True,
@@ -483,7 +466,6 @@ def config_target4(target, ring1, ring2, cross, link):
                     },
                     {
                         "name": "lo",
-                        "type": "infix-if-type:ethernet",
                         "enabled": True,
                         "ipv4": {
                             "address": [{
