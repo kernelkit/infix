@@ -13,7 +13,6 @@ def config_target1(target, data, link):
                 "interface": [
                     {
                         "name": data,
-                        "type": "infix-if-type:ethernet",
                         "enabled": True,
                         "ipv4": {
                             "forwarding": True,
@@ -24,7 +23,6 @@ def config_target1(target, data, link):
                     },
                     {
                         "name": link,
-                        "type": "infix-if-type:ethernet",
                         "enabled": True,
                         "ipv4": {
                             "forwarding": True,
@@ -36,7 +34,6 @@ def config_target1(target, data, link):
                     },
                     {
                         "name": "lo",
-                        "type": "infix-if-type:ethernet",
                         "enabled": True,
                         "ipv4": {
                             "address": [{
@@ -96,7 +93,6 @@ def config_target2(target, link):
                 "interface": [
                     {
                         "name": link,
-                        "type": "infix-if-type:ethernet",
                         "enabled": True,
                         "ipv4": {
                             "forwarding": True,
@@ -108,7 +104,6 @@ def config_target2(target, link):
                     },
                     {
                         "name": "lo",
-                        "type": "infix-if-type:ethernet",
                         "enabled": True,
                         "forwarding": True,
                         "ipv4": {

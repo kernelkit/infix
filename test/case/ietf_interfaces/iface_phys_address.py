@@ -20,7 +20,6 @@ with infamy.Test() as test:
             "interfaces": {
                 "interface": [{
                     "name": f"{tport}",
-                    "type": "infix-if-type:ethernet",
                     "phys-address": f"{cmac}"
                 }]
             }

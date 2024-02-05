@@ -36,7 +36,6 @@ with infamy.Test() as test:
                     },
                     {
                         "name": tport0,
-                        "type": "infix-if-type:ethernet",
                         "enabled": True,
                         "infix-interfaces:bridge-port": {
                             "bridge": "br0"
@@ -44,7 +43,6 @@ with infamy.Test() as test:
                     },
                     {
                         "name": tport1,
-                        "type": "infix-if-type:ethernet",
                         "enabled": True,
                         "infix-interfaces:bridge-port": {
                             "bridge": "br0"

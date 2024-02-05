@@ -33,7 +33,6 @@ with infamy.Test() as test:
                 "interface": [
                     {
                         "name": tport,
-                        "type": "infix-if-type:ethernet",
                         "enabled": True,
                     },
                     {
