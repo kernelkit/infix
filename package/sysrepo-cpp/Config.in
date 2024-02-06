@@ -1,0 +1,7 @@
+config BR2_PACKAGE_SYSREPO_CPP
+	bool "sysrepo-cpp"
+	depends on BR2_USE_MMU
+	select BR2_PACKAGE_LIBYANG_CPP
+	select BR2_PACKAGE_SYSREPO
+	help
+	   Sysrepo CPP bindings
