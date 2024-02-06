@@ -1,0 +1,20 @@
+#%PAM-1.0
+auth        requisite   pam_nologin.so
+auth	[success=1 default=ignore]	pam_unix.so nullok
+auth	requisite			pam_deny.so
+auth	required			pam_permit.so
+
+account    requisite   pam_nologin.so
+account	   [success=1 default=ignore]	pam_unix.so
+account	   requisite			pam_deny.so
+account	   required			pam_permit.so
+
+password	[success=1 default=ignore]	pam_unix.so
+password	requisite			pam_deny.so
+password	required			pam_permit.so
+
+session     required    pam_loginuid.so
+session     include     common-session
+session     optional    pam_keyinit.so   force revoke
+session     optional    pam_lastlog.so   showfailed
+session     optional    pam_motd.so

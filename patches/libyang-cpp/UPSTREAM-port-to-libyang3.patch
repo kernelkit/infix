@@ -1,0 +1,300 @@
+From 0a09b00dab204bb5890978a17bb23c4c25280580 Mon Sep 17 00:00:00 2001
+From: Jan Kundrát <jan.kundrat@cesnet.cz>
+Date: Sun, 24 Mar 2024 20:41:25 +0100
+Subject: [PATCH] Port to libyang v3
+
+Four parts, really:
+
+- some enum reshuffling when creating new nodes
+
+- a more capable XPath finding, but we have not been exporting any
+  "non-JSON XPaths", whatever that might be
+
+- system-ordered lists are now ordered alphabetically
+
+- a more capable error handling API
+
+Change-Id: Ic6de06f004c16e56cef93fae0136c07d903394c0
+---
+
+diff --git a/.zuul.yaml b/.zuul.yaml
+index d9d95e1..b41c490 100644
+--- a/.zuul.yaml
++++ b/.zuul.yaml
+@@ -4,13 +4,13 @@
+         - f38-gcc-cover:
+             required-projects:
+               - name: github/CESNET/libyang
+-                override-checkout: cesnet/2024-03--v2-latest
++                override-checkout: devel
+               - name: github/onqtam/doctest
+                 override-checkout: v2.3.6
+         - f38-clang-asan-ubsan:
+             required-projects: &projects
+               - name: github/CESNET/libyang
+-                override-checkout: cesnet/2024-03--v2-latest
++                override-checkout: devel
+               - name: github/onqtam/doctest
+                 override-checkout: v2.4.11
+         - f38-clang-tsan:
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 288b62a..6e54707 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -28,7 +28,7 @@
+ option(BUILD_SHARED_LIBS "By default, shared libs are enabled. Turn off for a static build." ON)
+ 
+ find_package(PkgConfig REQUIRED)
+-pkg_check_modules(LIBYANG REQUIRED libyang>=2.1.140 IMPORTED_TARGET)
++pkg_check_modules(LIBYANG REQUIRED libyang>=2.2.3 IMPORTED_TARGET)
+ set(LIBYANG_CPP_PKG_VERSION "1.1.0")
+ 
+ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
+diff --git a/README.md b/README.md
+index 5e79a23..9009a54 100644
+--- a/README.md
++++ b/README.md
+@@ -8,8 +8,7 @@
+ Object lifetimes are managed automatically via RAII.
+ 
+ ## Dependencies
+-- [libyang](https://github.com/CESNET/libyang) - ~~the `devel` branch (even for the `master` branch of *libyang-cpp*)~~
+-  - temporarily (March 2024) this requires the [pre-v3 API of libyang (commit `b3d079fc3`)](https://github.com/CESNET/libyang/tree/b3d079fc37ac119f5a2a4a120b86d1c7102c3a08)
++- [libyang v3](https://github.com/CESNET/libyang) - the `devel` branch (even for the `master` branch of *libyang-cpp*)
+ - C++20 compiler (e.g., GCC 10.x+, clang 10+)
+ - CMake 3.19+
+ 
+diff --git a/include/libyang-cpp/Context.hpp b/include/libyang-cpp/Context.hpp
+index 1dab9f3..6f6e233 100644
+--- a/include/libyang-cpp/Context.hpp
++++ b/include/libyang-cpp/Context.hpp
+@@ -69,7 +69,9 @@
+     LogLevel level;
+     std::string message;
+     ErrorCode code;
+-    std::optional<std::string> path;
++    std::optional<std::string> dataPath;
++    std::optional<std::string> schemaPath;
++    uint64_t line;
+     ValidationErrorCode validationCode;
+ };
+ 
+diff --git a/include/libyang-cpp/Enum.hpp b/include/libyang-cpp/Enum.hpp
+index 3ded4d2..85dcc83 100644
+--- a/include/libyang-cpp/Enum.hpp
++++ b/include/libyang-cpp/Enum.hpp
+@@ -115,11 +115,15 @@
+ };
+ 
+ enum class CreationOptions : uint32_t {
+-    Update = 0x01,
+-    Output = 0x02,
+-    Opaque = 0x04,
+-    // BinaryLyb = 0x08, TODO
+-    CanonicalValue = 0x10
++    Output = 0x01,
++    StoreOnly = 0x02,
++    // BinaryLyb = 0x04, TODO
++    CanonicalValue = 0x08,
++    ClearDefaultFromParents = 0x10,
++    Update = 0x20,
++    Opaque = 0x40,
++    PathWithOpaque = 0x80,
++    // LYD_NEW_ANY_USE_VALUE is not relevant
+ };
+ 
+ /**
+diff --git a/src/Context.cpp b/src/Context.cpp
+index 337070f..713c50f 100644
+--- a/src/Context.cpp
++++ b/src/Context.cpp
+@@ -579,8 +579,10 @@
+             .appTag = errIt->apptag ? std::optional{errIt->apptag} : std::nullopt,
+             .level = utils::toLogLevel(errIt->level),
+             .message = errIt->msg,
+-            .code = static_cast<ErrorCode>(errIt->no),
+-            .path = errIt->path ? std::optional{errIt->path} : std::nullopt,
++            .code = static_cast<ErrorCode>(errIt->err),
++            .dataPath = errIt->data_path ? std::optional{errIt->data_path} : std::nullopt,
++            .schemaPath = errIt->schema_path ? std::optional{errIt->schema_path} : std::nullopt,
++            .line = errIt->line,
+             .validationCode = utils::toValidationErrorCode(errIt->vecode)
+         });
+ 
+diff --git a/src/DataNode.cpp b/src/DataNode.cpp
+index ab8cb4a..0e609c4 100644
+--- a/src/DataNode.cpp
++++ b/src/DataNode.cpp
+@@ -1187,7 +1187,8 @@
+         const std::string& xpath)
+ {
+     ly_set* set;
+-    auto ret = lyd_find_xpath3(contextNode ? contextNode->m_node : nullptr, forest.m_node, xpath.c_str(), nullptr, &set);
++    auto ret = lyd_find_xpath3(contextNode ? contextNode->m_node : nullptr, forest.m_node, xpath.c_str(),
++            LY_VALUE_JSON, nullptr, nullptr, &set);
+ 
+     throwIfError(ret, "libyang::findXPathAt:");
+ 
+diff --git a/src/utils/enum.hpp b/src/utils/enum.hpp
+index 7674fc6..5e02d24 100644
+--- a/src/utils/enum.hpp
++++ b/src/utils/enum.hpp
+@@ -72,11 +72,14 @@
+ {
+     return static_cast<uint32_t>(flags);
+ }
+-static_assert(LYD_NEW_PATH_UPDATE == toCreationOptions(CreationOptions::Update));
+-static_assert(LYD_NEW_PATH_OUTPUT == toCreationOptions(CreationOptions::Output));
+-static_assert(LYD_NEW_PATH_OPAQ == toCreationOptions(CreationOptions::Opaque));
++static_assert(LYD_NEW_VAL_OUTPUT == toCreationOptions(CreationOptions::Output));
++static_assert(LYD_NEW_VAL_STORE_ONLY == toCreationOptions(CreationOptions::StoreOnly));
+ // static_assert(LYD_NEW_PATH_BIN_VALUE == toCreationOptions(CreationOptions::BinaryLyb));
+-static_assert(LYD_NEW_PATH_CANON_VALUE == toCreationOptions(CreationOptions::CanonicalValue));
++static_assert(LYD_NEW_VAL_CANON == toCreationOptions(CreationOptions::CanonicalValue));
++static_assert(LYD_NEW_META_CLEAR_DFLT == toCreationOptions(CreationOptions::ClearDefaultFromParents));
++static_assert(LYD_NEW_PATH_UPDATE == toCreationOptions(CreationOptions::Update));
++static_assert(LYD_NEW_PATH_OPAQ == toCreationOptions(CreationOptions::Opaque));
++static_assert(LYD_NEW_PATH_WITH_OPAQ == toCreationOptions(CreationOptions::PathWithOpaque));
+ 
+ constexpr uint32_t toDuplicationOptions(const DuplicationOptions options)
+ {
+diff --git a/tests/context.cpp b/tests/context.cpp
+index d19f78b..cb629ef 100644
+--- a/tests/context.cpp
++++ b/tests/context.cpp
+@@ -457,7 +457,9 @@
+                     .level = libyang::LogLevel::Error,
+                     .message = "Invalid character sequence \"invalid\", expected a keyword.",
+                     .code = libyang::ErrorCode::ValidationFailure,
+-                    .path = "Line number 1.",
++                    .dataPath = std::nullopt,
++                    .schemaPath = std::nullopt,
++                    .line = 1,
+                     .validationCode = libyang::ValidationErrorCode::Syntax,
+                 }
+             };
+@@ -476,7 +478,9 @@
+                         .level = libyang::LogLevel::Error,
+                         .message = "Value \"9001\" is out of type int8 min/max bounds.",
+                         .code = libyang::ErrorCode::ValidationFailure,
+-                        .path = "Schema location \"/example-schema:leafInt8\".",
++                        .dataPath = std::nullopt,
++                        .schemaPath = "/example-schema:leafInt8",
++                        .line = 0,
+                         .validationCode = libyang::ValidationErrorCode::Data,
+                     }
+                 };
+@@ -491,7 +495,9 @@
+                         .level = libyang::LogLevel::Error,
+                         .message = "Invalid type int8 empty value.",
+                         .code = libyang::ErrorCode::ValidationFailure,
+-                        .path = "Schema location \"/example-schema:leafInt8\".",
++                        .dataPath = std::nullopt,
++                        .schemaPath = "/example-schema:leafInt8",
++                        .line = 0,
+                         .validationCode = libyang::ValidationErrorCode::Data,
+                     },
+                     libyang::ErrorInfo {
+@@ -499,7 +505,9 @@
+                         .level = libyang::LogLevel::Error,
+                         .message = "Value \"9001\" is out of type int8 min/max bounds.",
+                         .code = libyang::ErrorCode::ValidationFailure,
+-                        .path = "Schema location \"/example-schema:leafInt8\".",
++                        .dataPath = std::nullopt,
++                        .schemaPath = "/example-schema:leafInt8",
++                        .line = 0,
+                         .validationCode = libyang::ValidationErrorCode::Data,
+                     }
+                 };
+diff --git a/tests/data_node.cpp b/tests/data_node.cpp
+index 15fb727..2d27979 100644
+--- a/tests/data_node.cpp
++++ b/tests/data_node.cpp
+@@ -1026,12 +1026,12 @@
+                 "/example-schema:bigTree/one",
+                 "/example-schema:bigTree/one/myLeaf",
+                 "/example-schema:bigTree/two",
+-                "/example-schema:bigTree/two/myList[thekey='43221']",
+-                "/example-schema:bigTree/two/myList[thekey='43221']/thekey",
++                "/example-schema:bigTree/two/myList[thekey='213']",
++                "/example-schema:bigTree/two/myList[thekey='213']/thekey",
+                 "/example-schema:bigTree/two/myList[thekey='432']",
+                 "/example-schema:bigTree/two/myList[thekey='432']/thekey",
+-                "/example-schema:bigTree/two/myList[thekey='213']",
+-                "/example-schema:bigTree/two/myList[thekey='213']/thekey"
++                "/example-schema:bigTree/two/myList[thekey='43221']",
++                "/example-schema:bigTree/two/myList[thekey='43221']/thekey",
+             };
+ 
+             REQUIRE(res == expected);
+@@ -1255,6 +1255,7 @@
+ 
+     DOCTEST_SUBCASE("DataNode::findXPath")
+     {
++        // libyang v3 sorts these alphabetically
+         const auto data3 = R"({
+             "example-schema:person": [
+                 {
+@@ -1308,13 +1309,13 @@
+             auto set = node->findXPath("/example-schema:person");
+             REQUIRE(set.size() == 3);
+ 
+-            REQUIRE(set.front().path() == "/example-schema:person[name='John']");
+-            REQUIRE(set.back().path() == "/example-schema:person[name='David']");
++            REQUIRE(set.front().path() == "/example-schema:person[name='Dan']");
++            REQUIRE(set.back().path() == "/example-schema:person[name='John']");
+ 
+             auto iter = set.begin();
+-            REQUIRE((iter++)->path() == "/example-schema:person[name='John']");
+             REQUIRE((iter++)->path() == "/example-schema:person[name='Dan']");
+             REQUIRE((iter++)->path() == "/example-schema:person[name='David']");
++            REQUIRE((iter++)->path() == "/example-schema:person[name='John']");
+             REQUIRE(iter == set.end());
+             REQUIRE_THROWS_WITH_AS(*iter, "Dereferenced an .end() iterator", std::out_of_range);
+         }
+@@ -1324,23 +1325,23 @@
+             auto set = node->findXPath("/example-schema:person");
+ 
+             REQUIRE((set.begin() + 0) == set.begin());
+-            REQUIRE((set.begin() + 0)->path() == "/example-schema:person[name='John']");
+-            REQUIRE((set.begin() + 1)->path() == "/example-schema:person[name='Dan']");
+-            REQUIRE((set.begin() + 2)->path() == "/example-schema:person[name='David']");
++            REQUIRE((set.begin() + 0)->path() == "/example-schema:person[name='Dan']");
++            REQUIRE((set.begin() + 1)->path() == "/example-schema:person[name='David']");
++            REQUIRE((set.begin() + 2)->path() == "/example-schema:person[name='John']");
+             REQUIRE((set.begin() + 3) == set.end());
+             REQUIRE_THROWS(set.begin() + 4);
+ 
+             REQUIRE((set.end() - 0) == set.end());
+-            REQUIRE((set.end() - 1)->path() == "/example-schema:person[name='David']");
+-            REQUIRE((set.end() - 2)->path() == "/example-schema:person[name='Dan']");
+-            REQUIRE((set.end() - 3)->path() == "/example-schema:person[name='John']");
++            REQUIRE((set.end() - 1)->path() == "/example-schema:person[name='John']");
++            REQUIRE((set.end() - 2)->path() == "/example-schema:person[name='David']");
++            REQUIRE((set.end() - 3)->path() == "/example-schema:person[name='Dan']");
+             REQUIRE((set.end() - 3) == set.begin());
+             REQUIRE_THROWS(set.end() - 4);
+ 
+             auto iter = set.end();
++            REQUIRE((--iter)->path() == "/example-schema:person[name='John']");
+             REQUIRE((--iter)->path() == "/example-schema:person[name='David']");
+             REQUIRE((--iter)->path() == "/example-schema:person[name='Dan']");
+-            REQUIRE((--iter)->path() == "/example-schema:person[name='John']");
+             REQUIRE_THROWS(--iter);
+         }
+ 
+diff --git a/tests/pretty_printers.hpp b/tests/pretty_printers.hpp
+index 6ae8934..6bbc16f 100644
+--- a/tests/pretty_printers.hpp
++++ b/tests/pretty_printers.hpp
+@@ -59,7 +59,9 @@
+         oss << "appTag: " << (err.appTag ? *err.appTag : "std::nullopt")  << "\n        ";
+         oss << "code: " << err.code << "\n        ";
+         oss << "message: " << err.message << "\n        ";
+-        oss << "path: " << (err.path ? *err.path : "std::nullopt") << "\n        ";
++        oss << "dataPath: " << (err.dataPath ? *err.dataPath : "std::nullopt") << "\n        ";
++        oss << "schemaPath: " << (err.schemaPath ? *err.schemaPath : "std::nullopt") << "\n        ";
++        oss << "line: " << err.line << "\n        ";
+         oss << "level: " << err.level << "\n        ";
+         oss << "validationCode: " << err.validationCode << "\n    }";
+         return oss.str();

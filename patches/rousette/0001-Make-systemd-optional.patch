@@ -1,0 +1,135 @@
+From 6277d5f51f3a66df027bdd1752ea0ad58beb26fa Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Mattias=20Walstr=C3=B6m?= <lazzer@gmail.com>
+Date: Mon, 27 May 2024 18:29:15 +0200
+Subject: [PATCH] Make systemd optional
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Addiva Elektronik
+
+If compile with systemd, set USE_SYSTEMD variable
+
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ CMakeLists.txt        | 13 ++++++++++---
+ src/restconf/main.cpp | 36 +++++++++++++++++++++++++++---------
+ 2 files changed, 37 insertions(+), 12 deletions(-)
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 7f82660..0f5bed9 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -72,10 +72,12 @@ find_package(spdlog REQUIRED)
+ find_package(PkgConfig)
+ pkg_check_modules(nghttp2 REQUIRED IMPORTED_TARGET libnghttp2_asio>=0.0.90 libnghttp2)
+ find_package(Boost REQUIRED COMPONENTS system thread)
+-
+ pkg_check_modules(SYSREPO-CPP REQUIRED IMPORTED_TARGET sysrepo-cpp>=1.1.0)
+ pkg_check_modules(LIBYANG-CPP REQUIRED IMPORTED_TARGET libyang-cpp>=1.1.0)
+-pkg_check_modules(SYSTEMD REQUIRED IMPORTED_TARGET libsystemd)
++if(USE_SYSTEMD)
++  add_definitions(-DUSE_SYSTEMD=1)
++  pkg_check_modules(SYSTEMD REQUIRED IMPORTED_TARGET libsystemd)
++endif()
+ pkg_check_modules(PAM REQUIRED IMPORTED_TARGET pam)
+ 
+ add_library(rousette-http STATIC
+@@ -116,7 +118,12 @@ add_executable(watch-operational-ds
+ target_link_libraries(watch-operational-ds PUBLIC rousette-sysrepo)
+ 
+ add_executable(rousette src/restconf/main.cpp)
+-target_link_libraries(rousette PUBLIC rousette-restconf PkgConfig::SYSTEMD)
++
++if(USE_SYSTEMD)
++  target_link_libraries(rousette PUBLIC rousette-restconf PkgConfig::SYSTEMD)
++else()
++  target_link_libraries(rousette PUBLIC rousette-restconf)
++endif()
+ 
+ install(TARGETS
+     # clock-demo
+diff --git a/src/restconf/main.cpp b/src/restconf/main.cpp
+index bba3cbf..3162dcd 100644
+--- a/src/restconf/main.cpp
++++ b/src/restconf/main.cpp
+@@ -3,13 +3,17 @@
+  *
+  * Written by Jan Kundrát <jan.kundrat@cesnet.cz>
+  *
+-*/
++ */
+ 
+ #include <csignal>
+ #include <cstdio>
+ #include <cstdlib>
+ #include <inttypes.h>
++#ifdef USE_SYSTEMD
+ #include <spdlog/sinks/systemd_sink.h>
++#else
++#include <spdlog/sinks/syslog_sink.h>
++#endif
+ #include <spdlog/sinks/ansicolor_sink.h>
+ #include <sys/types.h>
+ #include <sys/stat.h>
+@@ -19,6 +23,7 @@
+ #include "restconf/Server.h"
+ 
+ namespace {
++#ifdef USE_SYSTEMD
+ /** @short Is stderr connected to journald? Not thread safe. */
+ bool is_journald_active()
+ {
+@@ -39,29 +44,42 @@ bool is_journald_active()
+ }
+ 
+ /** @short Provide better levels, see https://github.com/gabime/spdlog/pull/1292#discussion_r340777258 */
+-template<typename Mutex>
++template <typename Mutex>
+ class journald_sink : public spdlog::sinks::systemd_sink<Mutex> {
+ public:
+     journald_sink()
+     {
+         this->syslog_levels_ = {/* spdlog::level::trace      */ LOG_DEBUG,
+-              /* spdlog::level::debug      */ LOG_INFO,
+-              /* spdlog::level::info       */ LOG_NOTICE,
+-              /* spdlog::level::warn       */ LOG_WARNING,
+-              /* spdlog::level::err        */ LOG_ERR,
+-              /* spdlog::level::critical   */ LOG_CRIT,
+-              /* spdlog::level::off        */ LOG_ALERT};
++                                /* spdlog::level::debug      */ LOG_INFO,
++                                /* spdlog::level::info       */ LOG_NOTICE,
++                                /* spdlog::level::warn       */ LOG_WARNING,
++                                /* spdlog::level::err        */ LOG_ERR,
++                                /* spdlog::level::critical   */ LOG_CRIT,
++                                /* spdlog::level::off        */ LOG_ALERT};
+     }
+ };
++#else
++void configure_syslog_logger()
++{
++    auto syslog_sink = std::make_shared<spdlog::sinks::syslog_sink_mt>("rousette", LOG_PID, LOG_USER, true);
++    auto logger = std::make_shared<spdlog::logger>("rousette", syslog_sink);
++    spdlog::set_default_logger(logger);
++    spdlog::set_level(spdlog::level::trace);
++}
++#endif
+ }
+ 
+-int main(int argc [[maybe_unused]], char* argv [[maybe_unused]] [])
++int main(int argc [[maybe_unused]], char* argv [[maybe_unused]][])
+ {
++#ifdef USE_SYSTEMD
+     if (is_journald_active()) {
+         auto sink = std::make_shared<journald_sink<std::mutex>>();
+         auto logger = std::make_shared<spdlog::logger>("rousette", sink);
+         spdlog::set_default_logger(logger);
+     }
++#else
++    configure_syslog_logger();
++#endif
+     spdlog::set_level(spdlog::level::trace);
+ 
+     /* We will parse URIs using boost::spirit's alnum/alpha/... matchers which are locale-dependent.
+-- 
+2.34.1
+

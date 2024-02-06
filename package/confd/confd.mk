@@ -34,7 +34,12 @@ define CONFD_INSTALL_EXTRA
 	cp $(CONFD_PKGDIR)/avahi.service $(TARGET_DIR)/etc/avahi/services/netconf.service
 endef
 define CONFD_INSTALL_YANG_MODULES
-	USE_CONTAINERS=$(BR2_PACKAGE_PODMAN) SYSREPO_SHM_PREFIX=$(CONFD_SYSREPO_SHM_PREFIX) SYSREPOCTL_EXECUTABLE="$(HOST_DIR)/bin/sysrepoctl" SYSREPOCFG_EXECUTABLE="$(HOST_DIR)/bin/sysrepocfg" SEARCH_PATH="$(TARGET_DIR)/usr/share/yang/modules/confd/" $(@D)/scripts/setup.sh
+	USE_CONTAINERS=$(BR2_PACKAGE_PODMAN) \
+	SYSREPO_SHM_PREFIX=$(CONFD_SYSREPO_SHM_PREFIX) \
+	SYSREPOCTL_EXECUTABLE="$(HOST_DIR)/bin/sysrepoctl" \
+	SYSREPOCFG_EXECUTABLE="$(HOST_DIR)/bin/sysrepocfg" \
+	SEARCH_PATH="$(TARGET_DIR)/usr/share/yang/modules/confd/" \
+	$(@D)/scripts/setup.sh
 endef
 define CONFD_PERMISSIONS
 /etc/sysrepo/data/ r 660 root wheel - - - - -

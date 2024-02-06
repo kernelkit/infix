@@ -68,12 +68,13 @@ MODULES=(
 	"ietf-keystore@2023-12-28.yang -e central-keystore-supported -e inline-definitions-supported -e asymmetric-keys -e symmetric-keys"
 	"ietf-ssh-server@2023-12-28.yang -e local-user-auth-password -e local-user-auth-publickey"
 	"ietf-tls-server@2023-12-28.yang -e server-ident-raw-public-key -e server-ident-x509-cert"
-
+	"ietf-restconf@2017-01-26.yang"
 )
 if [ -n "$USE_CONTAINERS" ]; then
 	CONTAINERS=" -e containers";
 	MODULES+=("infix-containers@2024-03-27.yang")
 fi
+
 MODULES+=("infix-interfaces@2024-01-15.yang $CONTAINERS -e vlan-filtering")
 
 CMD_INSTALL=

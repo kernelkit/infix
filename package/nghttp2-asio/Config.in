@@ -1,0 +1,7 @@
+config BR2_PACKAGE_LIBNGHTTP2_ASIO
+	bool "libnghttp2-asio"
+	depends on BR2_USE_MMU
+	select BR2_PACKAGE_NGHTTP2
+	select BR2_PACKAGE_BOOST
+	help
+	  C++ bindings for nghttp2
