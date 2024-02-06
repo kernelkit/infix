@@ -16,6 +16,9 @@
 - name:  ietf-routing
   suite: ietf_routing/all.yaml
 
+- name:  infix-containers
+  suite: infix_containers/all.yaml
+
 - name:  infix-dhcp
   suite: infix_dhcp/all.yaml
 
