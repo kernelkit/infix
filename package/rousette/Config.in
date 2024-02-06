@@ -1,0 +1,8 @@
+config BR2_PACKAGE_ROUSETTE
+	bool "rousette"
+	depends on BR2_USE_MMU
+	select BR2_PACKAGE_LIBYANG_CPP
+	select BR2_PACKAGE_SYSREPO_CPP
+	select BR2_PACKAGE_NGHTTP2
+	help
+	   RESTconf server
