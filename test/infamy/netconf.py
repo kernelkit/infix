@@ -246,10 +246,13 @@ class Device(object):
         data = NccGetDataReply(raw, ele)
         if(as_xml):
             return data
-        else:
-            # pylint: disable=c-extension-no-member
-            cfg = lxml.etree.tostring(data.data_ele[0])
-            return self.ly.parse_data_mem(cfg, "xml", parse_only=True)
+
+        if len(data.data_ele) == 0:
+            return None
+
+        # pylint: disable=c-extension-no-member
+        cfg = lxml.etree.tostring(data.data_ele[0])
+        return self.ly.parse_data_mem(cfg, "xml", parse_only=True)
 
     def get(self, xpath, as_xml=False):
         """RPC <get> (legacy NETCONF) fetches config:false data"""
@@ -259,15 +262,23 @@ class Device(object):
         """Return Python dictionary of <get> RPC data"""
         if(as_xml):
             return self.get(xpath, as_xml=True)
-        else:
-            return self.get(xpath).print_dict()
+
+        data = self.get(xpath)
+        if not data:
+            return None
+
+        return data.print_dict()
 
     def get_data(self, xpath=None, as_xml=False):
         """RPC <get-data> to fetch operational data"""
         if(as_xml):
             return self._get_data(xpath,as_xml)
-        else:
-            return self._get_data(xpath).print_dict()
+
+        data = self._get_data(xpath)
+        if not data:
+            return None
+
+        return data.print_dict()
 
     def get_config(self, xpath):
         return self._get(xpath, self.ncc.get_config)
