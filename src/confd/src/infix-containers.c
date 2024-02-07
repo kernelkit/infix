@@ -59,6 +59,9 @@ static int add(const char *name, struct lyd_node *cif)
 	if (lydx_is_enabled(cif, "read-only"))
 		fprintf(fp, " --read-only");
 
+	if (lydx_is_enabled(cif, "privileged"))
+		fprintf(fp, " --privileged");
+
 	LYX_LIST_FOR_EACH(lyd_child(cif), node, "volume")
 		fprintf(fp, " -v %s-%s:%s", name, lydx_get_cattr(node, "name"), lydx_get_cattr(node, "path"));
 

@@ -123,6 +123,11 @@ module infix-containers {
 	type inet:domain-name;
       }
 
+      leaf privileged {
+        description "Give container extended privileges, e.g., access to devices.";
+        type boolean;
+      }
+
       leaf restart-policy {
 	description "Restart policy to when containers exit/crash.";
 	type restart-policy;
