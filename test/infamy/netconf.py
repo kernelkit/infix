@@ -130,18 +130,18 @@ class Device(object):
                                                      password=location.password)
         self.ncc = Manager(session)
 
-    def _ly_bootstrap(self,yangdir):
-        ly = libyang.Context(yangdir)
+    def _ly_bootstrap(self, yangdir):
         self.modules["ietf-netconf-monitoring"] = { "name": "ietf-netconf-monitoring" }
 
-        for v in self.modules.values():
-            mod = self.ly.load_module(v["name"])
+        for val in self.modules.values():
+            mod = self.ly.load_module(val["name"])
             mod.feature_enable_all()
         schemas = self.get_schemas_list()
         for schema in schemas:
-            if(os.path.exists(yangdir + "/" + schema['filename']) == False):
+            if os.path.exists(yangdir + "/" + schema['filename']) is False:
                 self.get_schema(schema, yangdir)
-                print(f"Downloading missing model {schema['identifier']}")
+                sys.stdout.write(f"Downloading YANG model {schema['identifier']} ...\r\033[K")
+        print("YANG models downloaded.")
 
     def _ly_init(self, yangdir):
         self.ly = libyang.Context(yangdir)
@@ -177,7 +177,7 @@ class Device(object):
         # Find all referenced models
         for seg in xpath.split("/"):
             if ":" in seg:
-                modname, node = seg.split(":")
+                modname, _ = seg.split(":")
                 modnames.append(modname)
 
         return list(filter(lambda m: m["name"] in modnames,
@@ -232,12 +232,11 @@ class Device(object):
         xmlns = " ".join([f"xmlns:{m['name']}=\"{m['namespace']}\"" for m in mods])
         filt = f"<filter type=\"xpath\" select=\"{xpath}\" {xmlns} />"
         # pylint: disable=c-extension-no-member
-        data=getter(filter=filt).data_ele[0]
+        data = getter(filter=filt).data_ele[0]
         if as_xml:
-             return data
-        else:
-            cfg = lxml.etree.tostring(data)
-            return self.ly.parse_data_mem(cfg, "xml", parse_only=True)
+            return data
+        cfg = lxml.etree.tostring(data)
+        return self.ly.parse_data_mem(cfg, "xml", parse_only=True)
 
     def _get_data(self, xpath,as_xml=False):
         """Local member wrapper for netconf-client <get-data> RPC"""
@@ -260,7 +259,7 @@ class Device(object):
 
     def get_dict(self, xpath,as_xml=False):
         """Return Python dictionary of <get> RPC data"""
-        if(as_xml):
+        if as_xml:
             return self.get(xpath, as_xml=True)
 
         data = self.get(xpath)
@@ -271,7 +270,7 @@ class Device(object):
 
     def get_data(self, xpath=None, as_xml=False):
         """RPC <get-data> to fetch operational data"""
-        if(as_xml):
+        if as_xml:
             return self._get_data(xpath,as_xml)
 
         data = self._get_data(xpath)
@@ -281,12 +280,15 @@ class Device(object):
         return data.print_dict()
 
     def get_config(self, xpath):
+        """Get NETCONF XML configuration for a given XPath"""
         return self._get(xpath, self.ncc.get_config)
 
     def get_config_dict(self, xpath):
+        """Get Python dictionary version of XML configuration"""
         return self.get_config(xpath).print_dict()
 
     def put_config(self, edit):
+        """Send XML configuration over NETCONF"""
         yang2nc = {
             "none": None,
             "delete": "delete",
@@ -310,6 +312,7 @@ class Device(object):
             break
 
     def put_config_dict(self, modname, edit):
+        """Convert Python dictionary to XMl and send as configuration"""
         mod = self.ly.get_module(modname)
         lyd = mod.parse_data_dict(edit, no_state=True, validate=False)
         return self.put_config(lyd.print_mem("xml", with_siblings=True, pretty=False))
@@ -322,18 +325,22 @@ class Device(object):
         return self.put_config(lyd.print_mem("xml", with_siblings=True, pretty=False))
 
     def call(self, call):
+        """Call RPC, XML version"""
         return self.ncc.dispatch(call)
 
     def call_dict(self, modname, call):
+        """Call RPC, Python dictionary version"""
         mod = self.ly.get_module(modname)
         lyd = mod.parse_data_dict(call, rpc=True)
         return self.call(lyd.print_mem("xml", with_siblings=True, pretty=False))
 
     def call_action(self, action):
+        """Call NETCONF action (contextualized RPC), XML version"""
         xml = "<action xmlns=\"urn:ietf:params:xml:ns:yang:1\">" + action + "</action>"
         return self.ncc.dispatch(xml)
 
     def call_action_dict(self, modname, action):
+        """Call NETCONF action (contextualized RPC), Python dictionary version"""
         mod = self.ly.get_module(modname)
         lyd = mod.parse_data_dict(action, rpc=True)
         return self.call_action(lyd.print_mem("xml", with_siblings=True, pretty=False))
