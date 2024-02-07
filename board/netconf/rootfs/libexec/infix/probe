@@ -40,10 +40,13 @@ class DTSystem:
                 continue
 
             ph, = struct.unpack(">L", open(phandle, "rb").read())
-            sys[ph] = root
+            if ph not in sys:
+                sys[ph] = []
+            sys[ph].append(root)
 
         phs = set(list(dt.keys()) + list(sys.keys()))
-        self.devs = { ph: Device(ph, dt.get(ph), sys.get(ph)) for ph in phs }
+
+        self.devs = { ph: [Device(ph, dt.get(ph), s if s is not None else "") for s in (sys.get(ph) or []) if ph is not None]  for ph in phs }
         self.base = Device(0, None, DTSystem.BASE)
         self.infix = Device(0, None, DTSystem.INFIX)
 
@@ -56,7 +59,7 @@ class DTSystem:
         elems = len(data) // struct.calcsize(">L")
         return struct.unpack(">" + elems * "L", data)
 
-    def device_from_ph(self, ph):
+    def devices_from_ph(self, ph):
         return self.devs.get(ph)
 
     def into_vpd(self, dev):
@@ -91,10 +94,13 @@ class DTSystem:
 
     def infix_devices(self, kind):
         phs = self.__get_phandle_array(kind)
-        return [self.device_from_ph(ph) for ph in phs]
+        #for ph in phs:
+        #    for dev in self.devices_from_ph(ph):
+        return [[d for d in self.devices_from_ph(ph)] for ph in phs]
 
     def infix_vpds(self):
-        return [self.into_vpd(dev) for dev in self.infix_devices("vpds")]
+        flat_devices = [device for sublist in self.infix_devices("vpds") for device in sublist]
+        return [self.into_vpd(device) for device in flat_devices]
 
 class QEMUSystem:
     BASE = "/sys/firmware/qemu_fw_cfg"
