@@ -178,11 +178,13 @@ const char *lydx_get_attrf(struct lyd_node *sibling, const char *namefmt, ...)
 
 bool lydx_get_bool(struct lyd_node *parent, const char *name)
 {
-	const char *value = lydx_get_cattr(parent,name);
-	if(!value)
+	const char *value = lydx_get_cattr(parent, name);
+
+	if (!value)
 		return false;
-	if(!strcmp(value, "true"))
+	if (!strcmp(value, "true"))
 		return true;
+
 	return false;
 }
 
