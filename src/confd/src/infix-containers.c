@@ -63,27 +63,52 @@ static int add(const char *name, struct lyd_node *cif)
 		fprintf(fp, " --privileged");
 
 	LYX_LIST_FOR_EACH(lyd_child(cif), node, "volume")
-		fprintf(fp, " -v %s-%s:%s", name, lydx_get_cattr(node, "name"), lydx_get_cattr(node, "path"));
+		fprintf(fp, " -v %s-%s:%s", name, lydx_get_cattr(node, "name"),
+			lydx_get_cattr(node, "target"));
 
-	LYX_LIST_FOR_EACH(lyd_child(cif), node, "file") {
-		const char *filenm = lydx_get_cattr(node, "name");
-		const char *contdir = "/run/containers/files";
-		char nm[strlen(filenm) + strlen(name) + 32];
-		char buf[256];
-		FILE *pp;
+	LYX_LIST_FOR_EACH(lyd_child(cif), node, "mount") {
+		const char *dst = lydx_get_cattr(node, "target");
+		const char *data = lydx_get_cattr(node, "content");
+		const char *src = lydx_get_cattr(node, "source");
+		const char *type = lydx_get_cattr(node, "type");
+		const char *id = lydx_get_cattr(node, "name");
+		int ro = lydx_get_bool(node, "read-only");
+		char nm[strlen(id) + strlen(name) + 32];
 
-		snprintf(nm, sizeof(nm), "%s/%s-%s", contdir, name, filenm);
-		snprintf(buf, sizeof(buf), "base64 -d > %s", nm);
-		pp = popen(buf, "w");
-		if (pp) {
-			const char *data = lydx_get_cattr(node, "content");
+		/* Content mount: create a unique file with 'content' and bind mount */
+		if (data) {
+			const char *contdir = "/run/containers/files";
+			char cmd[256];
+			FILE *pp;
+			int pos;
 
-			fputs(data, pp);
+			/*
+			 * prefix file name with container name, shared namespace,
+			 * and replace any slashes with hyphens.
+			 */
+			pos = snprintf(nm, sizeof(nm), "%s/%s-", contdir, name);
+			strlcat(nm, id, sizeof(nm));
+			for (int i = pos; nm[i] && i < (int)sizeof(nm); i++) {
+				if (nm[i] == '/')
+					nm[i] = '-';
+			}
+
+			snprintf(cmd, sizeof(cmd), "base64 -d > %s", nm);
+			pp = popen(cmd, "w");
+			if (!pp || fputs(data, pp) < 0) {
+				ERRNO("%s: failed decoding %s base64 'content'", name, id);
+				if (pp)
+					pclose(pp);
+				continue;
+			}
+
 			pclose(pp);
-
-			fprintf(fp, " -m type=bind,source=%s,destination=%s,readonly=true",
-				nm, lydx_get_cattr(node, "path"));
+			type = "bind"; /* discard any configured setting */
+			src = nm;      /* discard any source, not used for content mounts */
 		}
+
+		fprintf(fp, " -m type=%s,src=%s,dst=%s,readonly=%s",
+			type, src, dst, ro ? "true" : "false");
 	}
 
 	ap = NULL;

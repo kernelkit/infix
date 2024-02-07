@@ -31,6 +31,19 @@ module infix-containers {
    * Typedefs
    */
 
+  typedef mount-type {
+    type enumeration {
+      enum bind {
+        description "Regular bind mount of host path to container.";
+        value 1;
+      }
+      enum glob {
+        description "Glob match and bind mount matching host paths to container.";
+        value 2;
+      }
+    }
+  }
+
   typedef restart-policy {
     type enumeration {
       enum no {
@@ -196,57 +209,115 @@ module infix-containers {
 	type boolean;
       }
 
+      list mount {
+        description "Files, content, and directories to mount inside container.";
+        key name;
+
+        leaf name {
+          description "Unique name to identify mount, e.g., 'ntpd.conf' or 'leds'.
+
+                       Set the source path or *content* to mount in the container,
+                       the latter means the file contents are stored in the host's
+                       startup-config, base64 encoded.
+
+                       Example source paths:
+                         1. /etc/ntpd.conf    File name to bind mount to 'path'
+                         2. /sys/class/leds/  Control LEDs from a container
+                         3. /dev/sda*         Share all matching files (type glob!)
+
+                       For persistent writable directories, *volumes* may be a
+                       better fit for your container and easier to set up.";
+          type string;
+        }
+
+        leaf type {
+          description "Mount type, strict bind mount or glob match.";
+          type mount-type;
+          default bind;
+        }
+
+        choice data {
+          case source {
+            leaf source {
+              description "Host path to mount in container, may be a glob.
+
+                       When mounting files, directories (and globs) from the host,
+                       the source must be an absolute path.";
+              type string {
+                pattern '/.*';
+              }
+            }
+          }
+          case content {
+            leaf content {
+              description "File contents, in base64 native format (XML/JSON).
+
+                       With this setting the source path is not used, instead
+                       a temporary read-only file is created on the host with
+                       this content and bind-mounted into the container at the
+                       target destination path.
+
+                       In the CLI, use 'set content' without and argument to
+                       open an editor for easy copy-paste.  On exit from the
+                       editor the contents are base64 encoded automatically.";
+              type binary;
+            }
+          }
+        }
+
+        leaf target {
+          description "Absolute path to target destination inside container.
+
+                       For example, to mount file on /etc/ntpd.conf set this path and
+                       then use either the 'source' path to a file on the host system,
+                       or import the text file using the 'content' node.";
+          mandatory true;
+          type string {
+            pattern '/.*';
+          }
+        }
+
+        leaf read-only {
+          description "All mounts are read-only by default.
+                       Use this option to allow containers to write to files
+                       and directories on the host system.
+
+                       NOTE: 'content' files can also be set read-write, but
+                             no changes are saved back to hosts's datastore.";
+          type boolean;
+          default true;
+        }
+      }
+
       list volume {
-	description "Create a writable volume that survive container upgrades.
-
-                     Volumes are retained over the lifetime of a container and survive
-                     both upgrading the image as well as configuration changes, which
-                     otherwise wipe the default writable layer a container is given.
-
-                     Volumes combine well with 'read-only' containers, when you know
-                     which files/directories you want to persist.";
+	description "Create a writable volume that survive container upgrades.";
 	key name;
 
 	leaf name {
 	  description "Single word, [A-Za-z_], to identify this volume.
-                       For example, a volume for /etc may be labled etc.
 
-                       Note: will be prefixed with container name globally.";
+                       Volumes are retained over the lifetime of a container and
+                       survive both upgrading the image and configuration changes,
+                       which otherwise wipe the default writable layer a container
+                       is given.
+
+                       Volumes combine well with 'read-only' containers, when you
+                       know which files/directories you want to persist.
+
+                       Compared to a bind mount, a volume is automatically 'synced'
+                       with the contents of the container's file system on first
+                       use.  Hence, upgrading the container image will not update
+                       the volume if the image has new/removed files at 'path'.";
 	  type string;
 	}
 
-	leaf path {
-	  description "Directory to mount the volume on inside the container, e.g., /var/lib";
+	leaf target {
+	  description "Absolute path to target destination directory inside the container.";
 	  mandatory true;
           type string {
             pattern '/.*';
           }
 	}
-      }
-
-      list file {
-        description "Files to mount inside container.";
-        key name;
-
-        leaf name {
-          description "File to store in host's startup-config as binary.
-
-                       Note: will be prefixed with container name globally.";
-          type string;
-        }
-
-        leaf path {
-          description "Path to location inside container to mount file on, e.g., /etc/ntpd.conf";
-          type string {
-            pattern '/.*';
-          }
-	  mandatory true;
-        }
-
-        leaf content {
-          description "File contents, in base64 native format (XML/JSON).";
-          type binary;
-        }
       }
 
       leaf running {
