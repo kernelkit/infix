@@ -47,8 +47,8 @@ const char *lydx_get_vattrf(struct lyd_node *sibling, const char *namefmt, va_li
 const char *lydx_get_attrf(struct lyd_node *sibling, const char *namefmt, ...)
 	__attribute__ ((format (printf, 2, 3)));
 
-int lydx_new_path(const struct ly_ctx *ctx, struct lyd_node **parent, char *xpath_base,
-		  char *node, const char *fmt, ...)
+int lydx_new_path(const struct ly_ctx *ctx, struct lyd_node **parent, const char *xpath_base,
+		  const char *node, const char *fmt, ...)
 	__attribute__ ((format (printf, 5, 6)));
 
 static inline int lydx_is_enabled(struct lyd_node *parent, const char *name)
