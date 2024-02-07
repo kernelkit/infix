@@ -35,11 +35,13 @@ the Container Network Interface ([CNI][]) that podman supports.
 Caution
 -------
 
-A word of warning.  Containers run on your system in privileged mode, as
-`root`.  Even though they are fenced with Linux namespaces, and resource
-limited using Linux cgroups, which scope container applications from
-seeing and accessing the complete system.  There is no guarantee that an
-application cannot ever break out of this confinement.
+A word of warning, containers can run on your system in privileged mode,
+as `root`.  This gives them full access to devices on your system.  But
+even when though unprivileged containers are fenced from the host with
+Linux namespaces, and resource limited using Linux cgroups, which scope
+container applications from seeing and accessing the complete system,
+there is no guarantee that an application cannot ever break out of this
+confinement.
 
  - If the system is compromised, containers can be used to easily
    install malicious software in your system and over the network
@@ -48,7 +50,7 @@ application cannot ever break out of this confinement.
  - Running 3rd party container images on your system could open a
    security hole/attack vector/attack surface
  - An expert with knowledge how to build exploits will be able to
-   jailbreak/elevate to root
+   jailbreak/elevate to root even if best practices are followed
 
 This being said, a system suspected of being compromised can always be
 restored to a safe state with a factory reset.  Provided, of course,

@@ -91,7 +91,7 @@ create()
     # name, or return docker:// URL for download.
     image=$(unpack_archive "$image")
 
-    args="$args --restart=no --systemd=false --tz=local --privileged --replace --quiet"
+    args="$args --restart=no --systemd=false --tz=local $privileged --replace --quiet"
 #    args="$args --log-opt tag=$name"
     pidfn=/run/container:${name}.pid
 
@@ -160,6 +160,7 @@ options:
       --hostname NAME     Set hostname when creating container
       --net NETWORK       Set network(s) when creating container
   -m, --mount HOST:DEST   Bind mount a read-only file inside a container
+      --privileged        Give container extended privileges
   -p, --publish PORT      Publish ports when creating container
                           Syntax: [[ip:][hostPort]:]containerPort[/protocol]
       --read-only         Do not create a writable layer
@@ -231,6 +232,9 @@ while [ "$1" != "" ]; do
 	--net)
 	    shift
 	    network="$network --net $1"
+	    ;;
+	--privileged)
+	    privileged="--privileged=true"
 	    ;;
 	-p | --publish)
 	    shift
