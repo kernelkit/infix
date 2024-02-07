@@ -16,11 +16,20 @@ gen_port()
     	}
 EOF
 }
+first=1
 cat <<EOF
 {
   "ietf-hardware:hardware": {
     "component": [
-    $(for port in $usb_ports; do gen_port "$port"; done)
-    ]}
+EOF
+for port in $usb_ports; do
+    if [ $first -eq 0 ]; then
+       echo -n ','
+    fi
+    first=0;
+    gen_port "$port"
+done
+cat <<EOF
+]}
 }
 EOF
