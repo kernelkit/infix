@@ -270,6 +270,29 @@ static int iface_gen_cni(const char *ifname, struct lyd_node *cif)
 	struct lyd_node *net = lydx_get_child(cif, "container-network");
 	const char *type = lydx_get_cattr(net, "type");
 
+	/*
+	 * klish/sysrepo does not seem to call update callbacks for
+	 * presence containers, so we have to be prepared for the
+	 * worst here and perform late type inference.  What works:
+	 *
+	 *     edit container-network               # callback called
+	 *
+	 * What doesn't work:
+	 *
+	 *     set container-network                # callback not called
+	 *
+	 * Funnily enough, "show running-config" shows the empty
+	 * "container-network": {}, so someone does their job.
+	 */
+	if (!type) {
+		const char *iftype = lydx_get_cattr(cif, "type");
+
+		if (iftype && !strcmp(iftype, "infix-if-type:bridge"))
+			type = "bridge";
+		else
+			type = "host";
+	}
+
 	if (!strcmp(type, "host"))
 		return cni_host(net, ifname);
 
@@ -470,6 +493,54 @@ out:
 	return err;
 }
 
+static int ifchange_cand_infer_cni_type(sr_session_ctx_t *session, const char *path)
+{
+	sr_val_t inferred = { .type = SR_STRING_T };
+	struct lyd_node *node, *net;
+	sr_error_t err = SR_ERR_OK;
+	char *xpath, *iftype;
+	sr_data_t *cfg;
+
+	xpath = iface_xpath(path);
+	if (!xpath)
+		return SR_ERR_SYS;
+
+	err = sr_get_data(session, path, 0, 0, 0, &cfg);
+	if (err)
+		goto err;
+
+	node = lydx_get_descendant(cfg->tree, "interfaces", "interface", NULL);
+	if (!node)
+		goto out;
+
+	net = lydx_get_child(node, "container-network");
+	if (!net)
+		goto out;
+
+	if (lydx_get_cattr(net, "type"))
+		goto out;	/* CNI type is already set */
+
+	/* Infer from ietf-interface type, reduces typing */
+	iftype = srx_get_str(session, "%s/type", xpath);
+	if (iftype && !strcmp(iftype, "infix-if-type:bridge"))
+		inferred.data.string_val = "bridge";
+	else
+		inferred.data.string_val = "host";
+
+	err = srx_set_item(session, &inferred, 0, "%s/type", path);
+	if (err)
+		ERROR("failed setting container-network type %s, err %d: %s",
+		      inferred.data.string_val, err, sr_strerror(err));
+	if (iftype)
+		free(iftype);
+out:
+	sr_release_data(cfg);
+err:
+	free(xpath);
+
+	return err;
+}
+
 static int ifchange_cand_infer_type(sr_session_ctx_t *session, const char *path)
 {
 	sr_val_t inferred = { .type = SR_STRING_T };
@@ -495,6 +566,10 @@ static int ifchange_cand_infer_type(sr_session_ctx_t *session, const char *path)
 	if (iface_is_phys(ifname))
 		inferred.data.string_val = "infix-if-type:ethernet";
 	else if (!fnmatch("br+([0-9])", ifname, FNM_EXTMATCH))
+		inferred.data.string_val = "infix-if-type:bridge";
+	else if (!fnmatch("docker+([0-9])", ifname, FNM_EXTMATCH))
+		inferred.data.string_val = "infix-if-type:bridge";
+	else if (!fnmatch("podman+([0-9])", ifname, FNM_EXTMATCH))
 		inferred.data.string_val = "infix-if-type:bridge";
 	else if (!fnmatch("lag+([0-9])", ifname, FNM_EXTMATCH))
 		inferred.data.string_val = "infix-if-type:lag";
@@ -553,6 +628,10 @@ static int ifchange_cand(sr_session_ctx_t *session, uint32_t sub_id, const char 
 			break;
 
 		err = ifchange_cand_infer_vlan(session, new->xpath);
+		if (err)
+			break;
+
+		err = ifchange_cand_infer_cni_type(session, new->xpath);
 		if (err)
 			break;
 	}
