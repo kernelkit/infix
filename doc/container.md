@@ -9,6 +9,8 @@ Containers in Infix
   * [CNI Bridge](#cni-bridge)
   * [CNI Host](#cni-host)
   * [Host Networking](#host-networking)
+* [Mounts and Volumes](#mounts-and-volumes)
+  * [Content Mounts](#content-mounts)
 * [Example Containers](#example-containers)
   * [System Container](#system-container)
   * [Application Container: nftables](#application-container--nftables)
@@ -74,7 +76,7 @@ survives container restarts and host system restarts.  However, if you
 change the container configuration or upgrade the image (see below), the
 container will be recreated and the writable layer is lost.  This is why
 it is recommended to set up a named volume for directories, or use file
-mounts, in your container you want truly persistent content.
+[Content Mounts][], in your container you want truly persistent content.
 
 In fact, in many cases the best way is to create a `read-only` container
 and use file mounts and volumes only for the critical parts.  Podman
@@ -231,6 +233,59 @@ The host networking setup cannot be combined with any other network.
 For an example, see below.
 
 
+Mounts and Volumes
+------------------
+
+It is possible to mount files, directories, and even files matching a
+glob, into a container.  This gives precise control over the container's
+file system:
+
+    admin@example-c0-ff-ee:/config/container/system/> edit mount leds
+    admin@example-c0-ff-ee:/config/container/system/mount/leds> set source /sys/class/leds
+    admin@example-c0-ff-ee:/config/container/system/mount/leds> set destination /sys/class/leds
+    admin@example-c0-ff-ee:/config/container/system/mount/leds> end
+    admin@example-c0-ff-ee:/config/container/system/>
+
+Sometimes *volumes* are a better fit.  A volume is an automatically
+created read-writable entity that follows the life of your container.
+
+    admin@example-c0-ff-ee:/config/container/ntpd/> set volume varlib destination /var/lib
+
+Volumes survive reboots and upgrading of the base image, unlike the
+persistent writable layer you get by default, which does not survive
+upgrades.  The volume is created by podman when the container first
+starts up, unlike a regular bind mount it synchronizes with the contents
+of the underlying container image's path on the first start.  I.e.,
+"bind-mount, if empty: then rsync".
+
+> Infix support named volumes (only), and it is not possible to share a
+> volume between containers.  All the tricks possible with volumes may
+> be added in a later release.
+
+### Content Mounts
+
+Content mount is a special type of where the file contents for the
+container is stored alongside the container configuration.  This can be
+very useful when deploying similar systems at multiple sites.  When the
+host loads its `startup-config` (or even `factory-config`) a temporary
+file is created using the decoded base64 data from the `content` node.
+
+    admin@example-c0-ff-ee:/config/container/ntpd/> edit mount ntpd.conf
+    admin@example-c0-ff-ee:/config/container/ntpd/mount/ntpd.conf> set content
+    ... interactive editor starts up ...
+    admin@example-c0-ff-ee:/config/container/ntpd/mount/ntpd.conf> set destination /etc/ntpd.conf
+    admin@example-c0-ff-ee:/config/container/ntpd/mount/ntpd.conf> end
+    admin@example-c0-ff-ee:/config/container/ntpd/>
+
+The editor is a small [Emacs clone called Mg][2], see the built-in help
+text, or press Ctrl-x Ctrl-c to exit and save.  When the editor exits
+the contents are base64 encoded and stored in the candidate datastore.
+
+> **Note:** since these files are always recreated when the host is
+> restarted, changes made by the container are not preserved, or saved
+> back to the host's startup-config even if the read-only option is off.
+
+
 Example Containers
 ------------------
 
@@ -315,18 +370,6 @@ file system and store in the host's `startup-config`.  However, `ntpd`
 also saves clock drift information in `/var/lib/ntpd`, so we will also
 use volumes in this example.
 
-> Infix support named volumes (only), and it is not possible to share a
-> volume between containers.  All the tricks possible with volumes may
-> be added in a later release.
-
-A volume is an automatically created read-writable area that follows the
-life of your container.  They survive reboots and upgrading of the base
-image, unlike the persistent writable layer you get by default, which
-does not survive upgrades.  The volume is created by podman when the
-container first starts up, unlike a regular bind mount it synchronizes
-with the contents of the underlying container image's path on the first
-start.  I.e., "bind-mount, if empty: then rsync".
-
     admin@example-c0-ff-ee:/> configure
     admin@example-c0-ff-ee:/config> edit container ntpd
     admin@example-c0-ff-ee:/config/container/ntpd/> set image ghcr.io/kernelkit/curios-ntpd:edge
@@ -337,7 +380,7 @@ start.  I.e., "bind-mount, if empty: then rsync".
     ... interactive editor starts up where you can paste your rules ...
     admin@example-c0-ff-ee:/config/container/ntpd/file/ntp.conf/> end
     admin@example-c0-ff-ee:/config/container/ntpd/> edit volume varlib
-    admin@example-c0-ff-ee:/config/container/ntpd/volume/varlib/> set path /var/lib
+    admin@example-c0-ff-ee:/config/container/ntpd/volume/varlib/> set destination /var/lib
     admin@example-c0-ff-ee:/config/container/ntpd/volume/varlib/> leave
     admin@example-c0-ff-ee:/> copy running-config startup-config
 
@@ -372,4 +415,5 @@ restarted.
 
 [1]:      https://github.com/kernelkit/infix/blob/main/src/confd/yang/infix-containers%402023-12-14.yang
 [CNI]:    https://www.cni.dev/
+[2]:      https://github.com/troglobit/mg
 [podman]: https://podman.io
