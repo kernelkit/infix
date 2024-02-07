@@ -6,8 +6,8 @@ Containers in Infix
 * [Getting Started](#getting-started)
   * [Examples](#examples)
 * [Networking and Containers](#networking-and-containers)
-  * [CNI Bridge](#cni-bridge)
-  * [CNI Host](#cni-host)
+  * [Container Bridge](#container-bridge)
+  * [Container Host Interface](#container-host-interface)
   * [Host Networking](#host-networking)
 * [Mounts and Volumes](#mounts-and-volumes)
   * [Content Mounts](#content-mounts)
@@ -31,7 +31,7 @@ is a rare and in many cases *unique* feature of Infix.
 
 All network specific settings are done using the IETF interfaces YANG
 model, with augments for containers to ensure smooth integration with
-the Container Network Interface ([CNI][]) that podman supports.
+container networking in podman.
 
 
 Caution
@@ -104,9 +104,9 @@ Persistent web server using nginx, sharing the host's network:
     admin@example-c0-ff-ee:/config> edit container web
     admin@example-c0-ff-ee:/config/container/web> set image docker://nginx:alpine
     admin@example-c0-ff-ee:/config/container/web> set publish 80:80
-    admin@example-c0-ff-ee:/config/container/web> set host-network
+    admin@example-c0-ff-ee:/config/container/web> set network host
     admin@example-c0-ff-ee:/config/container/web> leave
-	admin@example-c0-ff-ee:/> show container
+    admin@example-c0-ff-ee:/> show container
 
 Exit to the shell and verify the service with curl, or try to attach
 to your device's IP address using your browser:
@@ -123,7 +123,7 @@ Networking and Containers
 
 By default, unlike other systems, persistent[^1] containers have no
 networking enabled.  All network access has to be set up explicitly.
-Currently two types of of [CNI][] networks are supported:
+Currently two types of of container networks are supported:
 
  - `cni-host`: one end of a VETH pair, or a physical Ethernet port
  - `cni-bridge`: an IP masquerading bridge
@@ -175,7 +175,8 @@ the container.  The default, after each stop/start cycle, or reboot of
 the host, is to name the interfaces `eth0`, `eth1`, in the order they
 are given in the `network` list, and to give the container the next
 address in a `cni-bridge`.  Below an example of a system container calls
-`set network docker0`, here we show how to set options for that network:
+`set network interface docker0`, here we show how to set options for
+that network:
 
     admin@example-c0-ff-ee:/config/container/ntpd/> edit network docker0 
     admin@example-c0-ff-ee:/config/container/ntpd/network/docker0/> 
@@ -205,13 +206,12 @@ pair as an example along with a regular bridge (where other Ethernet
 interfaces may live as well).
 
     admin@example-c0-ff-ee:/config/> edit interface veth0
-    admin@example-c0-ff-ee:/config/interface/veth0a/> set veth peer ntpd
-    admin@example-c0-ff-ee:/config/interface/veth0a/> set ipv4 address 192.168.0.1 prefix-length 24
-    admin@example-c0-ff-ee:/config/interface/veth0a/> end
+    admin@example-c0-ff-ee:/config/interface/veth0/> set veth peer ntpd
+    admin@example-c0-ff-ee:/config/interface/veth0/> set ipv4 address 192.168.0.1 prefix-length 24
+    admin@example-c0-ff-ee:/config/interface/veth0/> end
     admin@example-c0-ff-ee:/config/> edit interface ntpd
     admin@example-c0-ff-ee:/config/interface/ntpd/> set ipv4 address 192.168.0.2 prefix-length 24
     admin@example-c0-ff-ee:/config/interface/ntpd/> set container-network
-    admin@example-c0-ff-ee:/config/interface/ntpd/container-network/> set 
 
 This is a routed setup, where we reserve 192.168.0.0/24 for the network
 between the host and the `ntpd` container.  A perhaps more common case
@@ -242,14 +242,14 @@ file system:
 
     admin@example-c0-ff-ee:/config/container/system/> edit mount leds
     admin@example-c0-ff-ee:/config/container/system/mount/leds> set source /sys/class/leds
-    admin@example-c0-ff-ee:/config/container/system/mount/leds> set destination /sys/class/leds
+    admin@example-c0-ff-ee:/config/container/system/mount/leds> set target /sys/class/leds
     admin@example-c0-ff-ee:/config/container/system/mount/leds> end
     admin@example-c0-ff-ee:/config/container/system/>
 
 Sometimes *volumes* are a better fit.  A volume is an automatically
 created read-writable entity that follows the life of your container.
 
-    admin@example-c0-ff-ee:/config/container/ntpd/> set volume varlib destination /var/lib
+    admin@example-c0-ff-ee:/config/container/ntpd/> set volume varlib target /var/lib
 
 Volumes survive reboots and upgrading of the base image, unlike the
 persistent writable layer you get by default, which does not survive
@@ -273,7 +273,7 @@ file is created using the decoded base64 data from the `content` node.
     admin@example-c0-ff-ee:/config/container/ntpd/> edit mount ntpd.conf
     admin@example-c0-ff-ee:/config/container/ntpd/mount/ntpd.conf> set content
     ... interactive editor starts up ...
-    admin@example-c0-ff-ee:/config/container/ntpd/mount/ntpd.conf> set destination /etc/ntpd.conf
+    admin@example-c0-ff-ee:/config/container/ntpd/mount/ntpd.conf> set target /etc/ntpd.conf
     admin@example-c0-ff-ee:/config/container/ntpd/mount/ntpd.conf> end
     admin@example-c0-ff-ee:/config/container/ntpd/>
 
@@ -298,7 +298,7 @@ we created previously:
     admin@example-c0-ff-ee:/> configure
     admin@example-c0-ff-ee:/config> edit container system
     admin@example-c0-ff-ee:/config/container/system/> set image ghcr.io/kernelkit/curios:edge
-    admin@example-c0-ff-ee:/config/container/system/> set network docker0
+    admin@example-c0-ff-ee:/config/container/system/> set network interface docker0
     admin@example-c0-ff-ee:/config/container/system/> set publish 222:22
     admin@example-c0-ff-ee:/config/container/system/> leave
 
@@ -314,7 +314,7 @@ container configuration context for the full syntax.)
 
 Available containers can be accessed from admin-exec:
 
-    admin@example-c0-ff-ee:/> show container 
+    admin@example-c0-ff-ee:/> show container
     CONTAINER ID  IMAGE                          COMMAND     CREATED       STATUS       PORTS                 NAMES
     439af2917b44  ghcr.io/kernelkit/curios:edge              41 hours ago  Up 16 hours  0.0.0.0:222->222/tcp  system
 
@@ -322,18 +322,18 @@ This is a system container, so you can "attach" to it by starting a
 shell (or logging in with SSH):
 
     admin@example-c0-ff-ee:/> container shell system
-	root@439af2917b44:/# 
+    root@439af2917b44:/#
 
 Notice how the hostname inside the container changes.  By default the
 container ID (hash) is used, but this can be easily changed:
 
     root@439af2917b44:/# exit
-	admin@infix-00-00-00:/> configure 
-	admin@infix-00-00-00:/config/> edit container system 
-	admin@infix-00-00-00:/config/container/system/> set hostname system1
-	admin@infix-00-00-00:/config/container/system/> leave
-	admin@infix-00-00-00:/> container shell system
-	root@system1:/# 
+    admin@infix-00-00-00:/> configure
+    admin@infix-00-00-00:/config/> edit container system
+    admin@infix-00-00-00:/config/container/system/> set hostname sys101
+    admin@infix-00-00-00:/config/container/system/> leave
+    admin@infix-00-00-00:/> container shell system
+    root@sys101:/#
 
 [^1]: this does not apply to the admin-exec command `container run`.
     This command is intended to be used for testing and evaluating
@@ -350,12 +350,12 @@ For really advanced setups, the following will be the only alternative:
     admin@example-c0-ff-ee:/> configure
     admin@example-c0-ff-ee:/config> edit container nftables
     admin@example-c0-ff-ee:/config/container/system/> set image ghcr.io/kernelkit/curios-nftables:edge
-    admin@example-c0-ff-ee:/config/container/system/> set host-network
-    admin@example-c0-ff-ee:/config/container/system/> edit file nftables.conf
-    admin@example-c0-ff-ee:/config/container/system/file/nftables.conf/> set path /etc/nftables.conf
-    admin@example-c0-ff-ee:/config/container/system/file/nftables.conf/> set content
+    admin@example-c0-ff-ee:/config/container/system/> set network host
+    admin@example-c0-ff-ee:/config/container/system/> edit mount nftables.conf
+    admin@example-c0-ff-ee:/config/container/system/mount/nftables.conf/> set target /etc/nftables.conf
+    admin@example-c0-ff-ee:/config/container/system/mount/nftables.conf/> set content
     ... interactive editor starts up where you can paste your rules ...
-    admin@example-c0-ff-ee:/config/container/system/file/nftables.conf/> leave
+    admin@example-c0-ff-ee:/config/container/system/mount/nftables.conf/> leave
 
 
 ### Application Container: ntpd
@@ -373,14 +373,14 @@ use volumes in this example.
     admin@example-c0-ff-ee:/> configure
     admin@example-c0-ff-ee:/config> edit container ntpd
     admin@example-c0-ff-ee:/config/container/ntpd/> set image ghcr.io/kernelkit/curios-ntpd:edge
-    admin@example-c0-ff-ee:/config/container/ntpd/> set network ntpd              # From veth0 above
-    admin@example-c0-ff-ee:/config/container/ntpd/> edit file ntp.conf
-    admin@example-c0-ff-ee:/config/container/ntpd/file/ntp.conf/> set path /etc/ntp.conf
-    admin@example-c0-ff-ee:/config/container/ntpd/file/ntp.conf/> set content
+    admin@example-c0-ff-ee:/config/container/ntpd/> set network interface ntpd    # From veth0 above
+    admin@example-c0-ff-ee:/config/container/ntpd/> edit mount ntp.conf
+    admin@example-c0-ff-ee:/config/container/ntpd/mount/ntp.conf/> set target /etc/ntp.conf
+    admin@example-c0-ff-ee:/config/container/ntpd/mount/ntp.conf/> set content
     ... interactive editor starts up where you can paste your rules ...
-    admin@example-c0-ff-ee:/config/container/ntpd/file/ntp.conf/> end
+    admin@example-c0-ff-ee:/config/container/ntpd/mount/ntp.conf/> end
     admin@example-c0-ff-ee:/config/container/ntpd/> edit volume varlib
-    admin@example-c0-ff-ee:/config/container/ntpd/volume/varlib/> set destination /var/lib
+    admin@example-c0-ff-ee:/config/container/ntpd/volume/varlib/> set target /var/lib
     admin@example-c0-ff-ee:/config/container/ntpd/volume/varlib/> leave
     admin@example-c0-ff-ee:/> copy running-config startup-config
 
@@ -414,6 +414,5 @@ restarted.
 
 
 [1]:      https://github.com/kernelkit/infix/blob/main/src/confd/yang/infix-containers%402023-12-14.yang
-[CNI]:    https://www.cni.dev/
 [2]:      https://github.com/troglobit/mg
 [podman]: https://podman.io

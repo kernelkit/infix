@@ -28,9 +28,9 @@
 
 static bool iface_is_cni(const char *ifname, struct lyd_node *cif)
 {
-	struct lyd_node *cni = lydx_get_child(cif, "container-network");
+	struct lyd_node *net = lydx_get_child(cif, "container-network");
 
-	if (cni)
+	if (net)
 		return true;
 
 	return false;
@@ -57,15 +57,14 @@ static void cni_gen_addrs(struct lyd_node *ip, FILE *fp, int *first)
 }
 
 #if 0 /* Unused for now, use container specific global dns and search settings instead. */
-static void cni_gen_dns(struct lyd_node *cni, FILE *fp, int *first)
+static void cni_gen_dns(struct lyd_node *net, FILE *fp, int *first)
 {
 	struct lyd_node *dns;
 
-	dns = lydx_get_child(cni, "dns");
+	dns = lydx_get_child(net, "dns");
 	if (dns) {
 		struct lyd_node *node;
 
-		puts("Adding DNS to CNI profile!");
 		fprintf(fp, ",\n        \"dns\":  {");
 
 		*first = 1;
@@ -75,7 +74,6 @@ static void cni_gen_dns(struct lyd_node *cni, FILE *fp, int *first)
 			else
 				fprintf(fp, ", ");
 
-			printf("Adding DNS nameserver %s to CNI profile!\n", lyd_get_value(node));
 			fprintf(fp, "\"%s\"", lyd_get_value(node));
 			(*first)++;
 		}
@@ -89,7 +87,7 @@ static void cni_gen_dns(struct lyd_node *cni, FILE *fp, int *first)
 			(*first)++;
 		}
 
-		LYX_LIST_FOR_EACH(lyd_child(cni), node, "search") {
+		LYX_LIST_FOR_EACH(lyd_child(net), node, "search") {
 			if (*first)
 				fprintf(fp, "%s\n          \"search\": [ ", *first > 1 ? "," : "");
 			else
@@ -108,9 +106,9 @@ static void cni_gen_dns(struct lyd_node *cni, FILE *fp, int *first)
  * Set up IP masquerading bridge which acts as a gateway for nodes behind it.
  * Default subnet, if one is missing in configuration, is: 10.88.0.0/16
  */
-static int cni_bridge(struct lyd_node *cni, const char *ifname)
+static int cni_bridge(struct lyd_node *net, const char *ifname)
 {
-	struct lyd_node *net;
+	struct lyd_node *node;
 	int first = 1;
 	FILE *fp;
 
@@ -132,9 +130,9 @@ static int cni_bridge(struct lyd_node *cni, const char *ifname)
 		"      \"ipam\": {\n"
 		"        \"type\":    \"host-local\"", ifname, ifname);
 
-	LYX_LIST_FOR_EACH(lyd_child(cni), net, "route") {
-		struct lyd_node *subnet = lydx_get_child(net, "subnet");
-		struct lyd_node *gateway = lydx_get_child(net, "gateway");
+	LYX_LIST_FOR_EACH(lyd_child(net), node, "route") {
+		struct lyd_node *subnet = lydx_get_child(node, "subnet");
+		struct lyd_node *gateway = lydx_get_child(node, "gateway");
 
 		if (first)
 			fprintf(fp, ",\n        \"routes\": [\n");
@@ -155,9 +153,9 @@ static int cni_bridge(struct lyd_node *cni, const char *ifname)
 		fprintf(fp, ",\n        \"routes\": [ { \"dst\": \"0.0.0.0/0\" } ]");
 
 	first = 1;
-	LYX_LIST_FOR_EACH(lyd_child(cni), net, "subnet") {
-		struct lyd_node *subnet = lydx_get_child(net, "subnet");
-		struct lyd_node *gateway = lydx_get_child(net, "gateway");
+	LYX_LIST_FOR_EACH(lyd_child(net), node, "subnet") {
+		struct lyd_node *subnet = lydx_get_child(node, "subnet");
+		struct lyd_node *gateway = lydx_get_child(node, "gateway");
 
 		if (first)
 			fprintf(fp, ",\n        \"ranges\": [\n");
@@ -202,9 +200,9 @@ static int cni_bridge(struct lyd_node *cni, const char *ifname)
 	return 0;
 }
 
-static int cni_host(struct lyd_node *cni, const char *ifname)
+static int cni_host(struct lyd_node *net, const char *ifname)
 {
-	struct lyd_node *net, *ip;
+	struct lyd_node *node, *ip;
 	int first = 1;
 	FILE *fp;
 
@@ -223,11 +221,11 @@ static int cni_host(struct lyd_node *cni, const char *ifname)
 		"        \"type\": \"static\"", ifname, ifname);
 
 
-	ip = lydx_get_child(lyd_parent(cni), "ipv4");
+	ip = lydx_get_child(lyd_parent(net), "ipv4");
 	if (ip)
 		cni_gen_addrs(ip, fp, &first);
 
-	ip = lydx_get_child(lyd_parent(cni), "ipv6");
+	ip = lydx_get_child(lyd_parent(net), "ipv6");
 	if (ip)
 		cni_gen_addrs(ip, fp, &first);
 
@@ -235,9 +233,9 @@ static int cni_host(struct lyd_node *cni, const char *ifname)
 		fprintf(fp, "\n        ]");
 
 	first = 1;
-	LYX_LIST_FOR_EACH(lyd_child(cni), net, "route") {
-		struct lyd_node *subnet = lydx_get_child(net, "subnet");
-		struct lyd_node *gateway = lydx_get_child(net, "gateway");
+	LYX_LIST_FOR_EACH(lyd_child(net), node, "route") {
+		struct lyd_node *subnet = lydx_get_child(node, "subnet");
+		struct lyd_node *gateway = lydx_get_child(node, "gateway");
 
 		if (first)
 			fprintf(fp, ",\n        \"routes\": [\n");
@@ -269,17 +267,16 @@ static int cni_host(struct lyd_node *cni, const char *ifname)
 
 static int iface_gen_cni(const char *ifname, struct lyd_node *cif)
 {
-	struct lyd_node *cni = lydx_get_child(cif, "container-network");
-	const char *type = lydx_get_cattr(cni, "type");
+	struct lyd_node *net = lydx_get_child(cif, "container-network");
+	const char *type = lydx_get_cattr(net, "type");
 
-	ERROR("Got CNI %s iface %s", type, ifname);
-	if (!strcmp(type, "cni-host"))
-		return cni_host(cni, ifname);
+	if (!strcmp(type, "host"))
+		return cni_host(net, ifname);
 
-	if (!strcmp(type, "cni-bridge"))
-		return cni_bridge(cni, ifname);
+	if (!strcmp(type, "bridge"))
+		return cni_bridge(net, ifname);
 
-	ERROR("Unknown CNI interface type %s, skipping.", type);
+	ERROR("Unknown container network type %s, skipping.", type);
 	return 0;
 }
 
