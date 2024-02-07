@@ -33,7 +33,8 @@ confd_plugin_la_SOURCES =			\
 	infix-dhcp.c				\
 	infix-services.c				\
 	infix-factory.c				\
-	infix-system-software.c
+	infix-system-software.c 		\
+	ietf-hardware.c
 
 rauc_installer_sources = 			\
 	rauc-installer.c rauc-installer.h

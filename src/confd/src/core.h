@@ -147,4 +147,7 @@ int infix_system_sw_init(struct confd *confd);
 /* infix-services.c */
 int infix_services_init(struct confd *confd);
 
+/* ietf-hardware.c */
+int ietf_hardware_init(struct confd *confd);
+
 #endif	/* CONFD_CORE_H_ */
