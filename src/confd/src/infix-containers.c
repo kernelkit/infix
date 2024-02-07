@@ -304,10 +304,76 @@ static int oci_load(sr_session_ctx_t *session, uint32_t sub_id, const char *xpat
 	return SR_ERR_OK;
 }
 
-void infix_containers_launch(void)
+static int is_active(struct confd *confd, const char *name)
+{
+	return srx_enabled(confd->session, CFG_XPATH "/container[name='%s']/enabled", name);
+}
+
+/*
+ * When container configurations are not saved to startup-config and the
+ * user reboot the system (or lose power) we will have lingering active
+ * containers cached on persistent storage.
+ *
+ * This function runs every time a configuration is applied to clean up
+ * any lingering active jobs to prevent false matches in the cmp magic
+ * in the below launch() function.
+ */
+static void cleanup(struct confd *confd)
 {
 	struct dirent *d;
 	DIR *dir;
+
+	dir = opendir(ACTIVE_QUEUE);
+	if (!dir) {
+		ERROR("Failed opening %s for cleanup, skipping.", ACTIVE_QUEUE);
+		return;
+	}
+
+	while ((d = readdir(dir))) {
+		char name[strlen(ACTIVE_QUEUE) + strlen(d->d_name) + 2];
+		char *ptr;
+
+		if (d->d_name[0] == '.')
+			continue;
+
+		strlcpy(name, d->d_name, sizeof(name));
+		ptr = strstr(name, ".sh");
+		if (!ptr)
+			continue; /* odd, non-script file? */
+		*ptr = 0;
+
+		if (is_active(confd, name))
+			continue;
+
+		/* Not found in running-config, remove stale cache. */
+		snprintf(name, sizeof(name), "%s/%s", ACTIVE_QUEUE, d->d_name);
+		if (erase(name))
+			ERRNO("Failed removing stale container job %s", name);
+	}
+
+	closedir(dir);
+}
+
+/*
+ * Containers depend on a lot of other system resources being properly
+ * set up, e.g., networking, which is run by dagger.  So we need to wait
+ * for all that before we can launch new, or modified, containers.  The
+ * latter is the tricky part.
+ *
+ * By default, containers get a writable layer which is preserved across
+ * restarts/reboots of container or host -- provided we don't recreate
+ * them on a reboot.  Hence the cmp magic below: we check if the command
+ * to create a container is the same as what is already activated, if it
+ * is already activated we know 'podman create' has done its thing and
+ * we can safely reassert the Finit condition and allo core_post_hook()
+ * to launch the container with 'initctl reload'.
+ */
+static void launch(struct confd *confd)
+{
+	struct dirent *d;
+	DIR *dir;
+
+	(void)confd;		/* unused atm. */
 
 	dir = opendir(INBOX_QUEUE);
 	if (!dir) {
@@ -335,7 +401,16 @@ void infix_containers_launch(void)
 			ERRNO("Failed moving %s to job queue %s", next, JOB_QUEUE);
 	}
 
-	systemf("container volume prune -f");
+	closedir(dir);
+	NOTE("Pruning unused container volumes from system.");
+	systemf("container volume prune -f >/dev/null");
+}
+
+/* Called by core_post_hook() for cleanup and launch of containers */
+void infix_containers_hook(struct confd *confd)
+{
+	cleanup(confd);
+	launch(confd);
 }
 
 int infix_containers_init(struct confd *confd)

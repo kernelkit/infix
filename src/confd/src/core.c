@@ -56,7 +56,7 @@ int core_post_hook(sr_session_ctx_t *session, uint32_t sub_id, const char *modul
 	}
 
 	/* Everything done, including interfaces, launch all container scripts */
-	infix_containers_launch();
+	infix_containers_hook(&confd);
 
 	/* skip reload in bootstrap, implicit reload in runlevel change */
 	if (systemf("runlevel >/dev/null 2>&1"))
