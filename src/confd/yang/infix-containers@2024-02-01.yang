@@ -165,7 +165,7 @@ module infix-containers {
           key name;
 
           leaf name {
-            description "CNI network (interface name) to connect to the container.";
+            description "Container network (interface name) to connect to the container.";
             type if:interface-ref;
             must "/if:interfaces/if:interface[if:name = current()]/infix-if:container-network" {
               error-message "Container networks must be interfaces classified as container-network.";
@@ -173,16 +173,20 @@ module infix-containers {
           }
 
           leaf-list option {
-            description "Options for CNI bridges.
-                           Example: ip=1.2.3.4 to request a specific IP, both IPv4 and IPv6.
-                           interface_name=foo0 name to set interface name inside container.";
+            description "Options for a masquerading container bridges.
+
+                         Example: ip=1.2.3.4            -- request a specific IP (IPv4 or IPv6)
+                                  mac=00:01:02:c0:ff:ee -- set fixed MAC address in container
+                                  interface_name=foo0   -- set interface name inside container";
             type string;
           }
         }
 
         leaf-list publish {
           description "Publish container port, or a range of ports, to the host.
+
                          Syntax: [[ip:][hostPort]:]containerPort[/protocol]
+
                          Sample: 8080:80           -- forward tcp port 8080 to container port 80
                                    69:69/udp         -- forward udp port 69 to container port 69
                                    127.0.0.1:8080:80 -- forward only from loopback interface";

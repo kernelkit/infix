@@ -16,9 +16,9 @@ submodule infix-if-container {
 
   organization "KernelKit";
   contact      "kernelkit@googlegroups.com";
-  description  "CNI network to interface mapper extension for ietf-interfaces.
-                This ensures a container interface can never be a bridge port,
-                or LAG member at the same time.";
+  description  "Container network to interface mapping for ietf-interfaces.
+                Ensures a container interface can never be a bridge port, or
+                LAG member, at the same time.";
 
   revision 2024-01-15 {
     description "Initial revision.";
@@ -29,18 +29,18 @@ submodule infix-if-container {
    * Identities
    */
 
-  identity cni-type {
-    description "CNI network type";
+  identity container-network {
+    description "Container network type";
   }
 
-  identity cni-bridge {
-    base cni-type;
-    description "CNI standard bridge with IP masquerading, portmappping, and firewalling.";
+  identity bridge {
+   base container-network;
+    description "Container bridge with IP masquerading, portmappping, and firewalling.";
   }
 
-  identity cni-host {
-    base cni-type;
-    description "CNI host-device, e.g., one end of a VETH pair or other host interface.";
+  identity host {
+    base container-network;
+    description "Host device, e.g., one end of a VETH pair or other host interface.";
   }
 
   /*
@@ -48,31 +48,32 @@ submodule infix-if-container {
    */
 
   augment "/if:interfaces/if:interface/infix-if:port" {
-    description "Augments the interface model with CNI networks.";
+    description "Augments the interface model with container networks.";
     if-feature containers;
 
     case container-network {
       container container-network {
-	presence "Container network (CNI) mapping.";
+	presence "Container network mapping.";
 
 	leaf type {
-	  description "Bridge or host interface";
+	  description "Masquerading container bridge or a host interface";
 	  type identityref {
-	    base cni-type;
+	    base container-network;
 	  }
-	  default cni-host;
 	}
 
 	list subnet {
 	  description "Static IP ranges to hand out addresses to containers from.
-                       A cni-bridge will forward DNS, NTP, and SSH by default to
+
+                       A container bridge forwards DNS, NTP, and SSH by default to
                        the host interfaces.";
-	  when "../type = 'infix-if:cni-bridge'";
+	  when "../type = 'infix-if:bridge'";
 	  key subnet;
 
 	  leaf subnet {
 	    type inet:ip-prefix;
 	    description "Subnet to assign addresses from, round-robin assignment.
+
                          The default is from a standard Docker setup.";
 	    default "172.17.0.0/16";
 	  }
@@ -80,16 +81,17 @@ submodule infix-if-container {
 	  leaf gateway {
 	    type inet:ip-address;
 	    description "Optional gateway address for the subnet, defaults to .1.
-	                 This will be used as the address of a cni-bridge.";
+
+	                 This will be used as the address of the container bridge.";
 	  }
 	}
 
 	list route {
 	  description "IPv4 or IPv6 routes to be added to container.
 
-                       For cni-bridge type interfaces the gateway can be omitted,
-                       the the IP address of the CNI bridge will then be used as
-                       the next-hop address.";
+                       For bridge type interfaces the gateway can be omitted, the
+                       IP address of the container bridge will then be used as the
+                       next-hop address.";
 	  key subnet;
 
 	  leaf subnet {
