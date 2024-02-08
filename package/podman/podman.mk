@@ -71,6 +71,13 @@ else
 PODMAN_TAGS += exclude_graphdriver_vfs
 endif
 
+ifeq ($(BR2_PACKAGE_BASH_COMPLETION),y)
+define PODMAN_BASH_COMPLETION
+	$(INSTALL) -D -m 644 $(@D)/completions/bash/podman \
+		$(TARGET_DIR)/usr/share/bash-completion/completions/
+endef
+endif
+
 define PODMAN_INSTALL_TARGET_CMDS
 	$(TARGET_MAKE_ENV) $(MAKE) -C $(@D) DESTDIR=$(TARGET_DIR) PREFIX=/usr \
 		install.bin
@@ -82,6 +89,7 @@ define PODMAN_INSTALL_TARGET_CMDS
 	$(INSTALL) -D -m 644 $(PODMAN_PKGDIR)/containers-policy.json \
 		$(TARGET_DIR)/etc/containers/policy.json
 	$(PODMAN_SECCOMP_PROFILE)
+	$(PODMAN_BASH_COMPLETION)
 endef
 
 define PODMAN_INSTALL_INIT_SYSTEMD
