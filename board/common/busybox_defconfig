@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
 # Busybox version: 1.36.0
-# Tue Oct  3 18:00:40 2023
+# Thu Feb  8 08:22:32 2024
 #
 CONFIG_HAVE_DOT_CONFIG=y
 
@@ -1132,9 +1132,9 @@ CONFIG_SV_DEFAULT_SERVICE_DIR=""
 CONFIG_SH_IS_ASH=y
 # CONFIG_SH_IS_HUSH is not set
 # CONFIG_SH_IS_NONE is not set
-CONFIG_BASH_IS_ASH=y
+# CONFIG_BASH_IS_ASH is not set
 # CONFIG_BASH_IS_HUSH is not set
-# CONFIG_BASH_IS_NONE is not set
+CONFIG_BASH_IS_NONE=y
 CONFIG_SHELL_ASH=y
 CONFIG_ASH=y
 CONFIG_ASH_OPTIMIZE_FOR_SIZE=y
