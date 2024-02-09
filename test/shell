@@ -1,0 +1,20 @@
+#!/bin/sh
+# Enter shell in container running Infamy
+
+testdir=$(dirname "$(readlink -f "$0")")
+. "$testdir/.env"
+
+usage()
+{
+    echo "Usage:"
+    echo "       shell [SYSTEM]"
+    echo "Example:"
+    echo "       shell              # Open shell in infamy0"
+    echo "       shell infamy2      # Open shell in infamy2"
+    exit 1
+}
+
+sys=$1
+[ -n "$sys" ] || sys=$(infamy)
+
+$(runner) exec -it --workdir "$ixdir/test" "$sys" ./env -C sh

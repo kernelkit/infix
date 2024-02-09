@@ -1,5 +1,5 @@
-Checklist for Updating Docker Image
-===================================
+Checklist for Updating Infamy Docker Image
+==========================================
 
 This directory holds the Dockerfile and any extras needed to build and
 update the infix-test container image used for the test system.
@@ -18,7 +18,7 @@ the image, e.g., with missing Alpine packages.
 
         docker build -t ghcr.io/kernelkit/infix-test:0.4 .
 
- 3. Update the `test/env` file to use the new version
+ 3. Update the `test/.env` file to use the new version
  4. Verify your new image works properly (remember to remove your `~/.infix-test-venv`)
  5. Send PR to co-maintainer for review
 

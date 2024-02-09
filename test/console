@@ -1,0 +1,86 @@
+#!/bin/sh
+# Attach to console of a Qemu device (DUT) running in Infamy
+#
+# You can override Ctrl-] in your ~/.telnetrc
+#
+#     DEFAULT
+#     	environ define USER root
+#     	set escape "^X"
+#
+# If you're unhappy with your telnet experience, Debian/Ubuntu
+# systems have two telnet packages, Netkit and GNU Inetutils.
+#
+testdir=$(dirname "$(readlink -f "$0")")
+. "$testdir/.env"
+
+usage()
+{
+    echo "Usage:"
+    echo "       console DUT [SYSTEM]"
+    echo "Example:"
+    echo "       console 1                  # attach to DUT1 on infamy0"
+    echo "       console dut3 infamy1       # attach to 'dut2' on infamy1"
+    echo "       console cisco2 infamy2     # attach to DUT 'cisco2' on infamy2"
+    exit 1
+}
+
+topo()
+{
+    dir=$(podman inspect "$1" 2>/dev/null | jq -re '.[].Args | index("-q") as $index | .[$index+1]')
+    dot="$dir/topology.dot.in"
+    [ -f "$dot" ] && echo "$dot"
+}
+
+list()
+{
+    dot=$(topo "$1")
+    if [ -z "$dot" ]; then
+	echo ", cannot even find $1"
+	return
+    fi
+
+    echo ", available DUTs:"
+    gvpr 'N [$.qn_console] { print($.name); }' "$dot"
+}
+
+find()
+{
+    dot=$(topo "$2")
+    [ -n "$dot" ] || return
+
+    gvpr '
+        N [$.name == "'"$1"'"] {
+            printf("%s\n", $.qn_console);
+        }
+	' "$dot"
+}
+
+dut=$1
+if [ -z "$dut" ]; then
+    usage
+    exit 1
+fi
+
+sys=$2
+[ -n "$sys" ] || sys=$(infamy)
+
+if test "$dut" -eq "$dut" 2>/dev/null; then
+    port=$((9000 + dut))
+else
+    port=$(find "$dut" "$sys")
+    if [ -z "$port" ]; then
+	printf "Cannot find port for %s on %s" "$dut" "$sys"
+	list "$sys"
+	exit 1
+    fi
+fi
+
+portmap=$($(runner) port "$sys" $port)
+port=${portmap#0.0.0.0:}
+
+if [ -z "$port" ]; then
+    echo "Cannot find DUT$dut telnet port $port on $sys (port map $portmap)"
+    exit 1
+fi
+
+telnet 127.0.0.1 "$port"

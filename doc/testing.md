@@ -11,11 +11,18 @@ traffic at various points.
 TL;DR
 -----
 
-    make x86_64_defconfig
-    make
-    make test-qeneth
+Build Infix and run the test suite on a set of virtual Infix nodes.
 
-Runs the test suite on a set of virtual Infix nodes.
+    $ make x86_64_defconfig
+    $ make
+    $ make test
+
+To run a subset of tests, e.g., only the DHCP client tests:
+
+    $ make test INFIX_TESTS=case/infix_dhcp/all.yaml
+
+> **Note:** see the below section [Quick Start Guide][] for how to
+> connect to the test system, debug and develop tests, and more.
 
 
 Tenets
@@ -121,15 +128,17 @@ against an Infix image started from `make run`. When the instance is
 running, you can open a separate terminal and run `make test-run`, to
 run the subset of the test suite that can be mapped to it.
 
-Both `test-qeneth` and `test-run` targets have a respective target
-with a `-sh` suffix.  These can be used to start an interactive
-session in the reproducible environment, which is usually much easier
-to work with during a debugging session.
+Both `make test` and `make test-run` targets have a respective target
+with a `-sh` suffix.  These can be used to start an interactive session
+in the reproducible environment, which is usually much easier to work
+with during a debugging session.
 
-Inside of the reproducible environment, a wrapper for Qeneth is
-automatically created that will run it from the running network's
-directory.  E.g., running a plain `qeneth status` inside a `make
-test-qeneth-sh` environment will show the expected status information.
+Inside the reproducible environment, a wrapper for Qeneth is created for
+the running network's directory.  E.g., calling `qeneth status` inside a
+`make test-sh` environment show the expected status information.
+
+> **Note:** for more information and help writing a test, see the below
+> [Quick Start Guide][].
 
 
 Physical and Logical Topologies
@@ -272,6 +281,133 @@ determine the DUTs to use for testing.  As an example, an STP test
 could accept an arbitrary physical topology, run the STP algorithm on
 it offline, enable STP on all DUTs, and then verify that the resulting
 spanning tree matches the expected one.
+
+
+Quick Start Guide
+-----------------
+
+When developing a test, instead of blindly coding in Python and running
+`make test` over and over, start a test shell:
+
+    $ make test-sh
+    Info: Generating topology
+    Info: Generating node YAML
+    Info: Generating executables
+    Info: Launching dut1
+    Info: Launching dut2
+    Info: Launching dut3
+    Info: Launching dut4
+    11:42:52 infamy0:test #
+
+It takes a little while to start up, but then we have a shell prompt
+inside the container running Infamy.  It's a very limited environment,
+but it has enough to easily run single tests, connect to the virtual
+devices, and *step* your code.  Let's run a test:
+
+    11:42:53 infamy0:test # ./case/infix_dhcp/dhcp_basic.py
+
+### Connecting to Infamy
+
+The test system runs in a Docker container, so to get a shell prompt in
+*another terminal* you need to connect to that container.  Infamy comes
+with a helper script for this:
+
+    $ ./test/shell
+
+By default it connect to the latest started Infamy instance.  If you for
+some reason run multiple instances of Infamy the `shell` script takes an
+optional argument "system", which is the hostname of the container you
+want to connect to:
+
+    $ ./test/shell infamy2
+
+### Connecting to a DUT
+
+All DUTs in a virtual Infamy topology are emulated in Qemu instances
+managed by qeneth.  If you want to watch what's happening on one of the
+target systems, e.g., tail a log file or run `tcpdump` during the test,
+there is another helper script in Infamy for this:
+
+    $ ./test/console 1
+    Trying 127.0.0.1...
+    Connected to 127.0.0.1.
+    
+    Infix — a Network Operating System v23.11.0-226-g0c144da-dirt (console)
+    infix-00-00-00 login: admin
+    Password:
+    .-------.
+    |  . .  | Infix -- a Network Operating System
+    |-. v .-| https://kernelkit.github.io
+    '-'---'-'
+    
+    Run the command 'cli' for interactive OAM
+    
+    admin@infix-00-00-00:~$
+
+From here we can observe `dut1` freely while running tests.
+
+> The `console` script uses `telnet` to connect to a port forwarded to
+> `localhost` by the Docker container.  To exit Telnet, use Ctrl-] and
+> then 'q' followed by enter.  This can be customized in `~/.telnetrc`
+
+Like the `shell` script, `console` takes an optional "system" argument
+in case you run multiple instances of Infamy:
+
+    $ ./test/console 1 infamy2
+
+You can also connect to the console of a DUT from within a `shell`:
+
+    $ ./test/shell
+    11:42:54 infamy0:test # qeneth status
+    11:42:54 infamy0:test # qeneth console dut1
+    login: admin
+    password: *****
+    admin@infix-00-00-00:~$
+
+> **Note:** disconnect from the qeneth console by using bringing up the
+> old Telnet "menu" using Ctrl-], compared to standard Telnet this is
+> the BusyBox version so you press 'e' + enter instead of 'q' to quit.
+
+
+### Debug a Test
+
+First, add a Python `breakpoint()` to your test and run it from your
+`make test-sh` Infamy instance:
+
+    11:42:58 infamy0:test # ./case/infix_dhcp/dhcp_basic.py
+    # Starting (2024-02-10 11:42:59)
+    # Probing dut1 on port d1a for IPv6LL mgmt address ...
+    # Connecting to mgmt IP fe80::ff:fe00:0%d1a:830 ...
+    ok 1 - Initialize
+    > /home/jocke/src/infix/test/case/infix_dhcp/dhcp_basic.py(44)<module>()
+    (Pdb)
+
+You are now in the Python debugger, Pdb.
+
+### Debug a Test in a MacVLAN
+
+Most tests use some sort of network connection to the DUTs.  From a test
+shell you cannot see or debug that connection by default.  So you need
+to employ a little trick.
+
+Open another terminal, and start a test shell in your Infamy instance:
+
+    $ ./test/shell
+    11:43:19 infamy0:test #
+
+MacVLAN interfaces created by Infamy run in another network namespace,
+to enter it we can look for a sleeper process:
+
+    11:43:20 infamy0:test # nsenter -n U -t $(pidof sleep infinity)
+
+You are now one step further down:
+
+    infamy0:/home/jocke/src/infix/test# ip -br a
+    lo               UNKNOWN        127.0.0.1/8 ::1/128
+    iface@if7        UP             10.0.0.1/24 fe80::38d0:88ff:fe77:b7cd/64
+
+You can now freely debug the network activity of your test and the
+responses from the DUT.
 
 
 [9PM]:    https://github.com/rical/9pm
