@@ -22,12 +22,14 @@ $(config):
 	@echo "'make <board>_defconfig' before building an image."
 	@exit 1
 
-
 %: | buildroot/Makefile
+	@+$(call bmake,$@)
+
+# Workaround, see board/x86_64/board.mk
+test:
 	@+$(call bmake,$@)
 
 buildroot/Makefile:
 	@git submodule update --init
 
-.PHONY: all check
-
+.PHONY: all check test

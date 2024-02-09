@@ -1,35 +1,8 @@
 #!/bin/sh
-
 set -e
 
-INFIX_TEST=ghcr.io/kernelkit/infix-test:1.2
-
-start_topology()
-{
-    local qenethdir="$1"
-    local imgfile="$2"
-
-    [ "$qenethdir" ] || { true && return; }
-
-    rm -rf $envdir/qeneth
-    cp -a "$qenethdir" $envdir/qeneth
-    if [ "$imgfile" ]; then
-	local imgname=$(basename "$imgfile")
-	imgfile=$(readlink -f "$imgfile")
-
-	ln -sf "$imgfile" $envdir/qeneth/"$imgname"
-    fi
-
-    (cd $envdir/qeneth/ && $qeneth generate && $qeneth start)
-    INFAMY_ARGS="$INFAMY_ARGS $envdir/qeneth/topology.dot"
-
-    cat <<EOF >"$envdir/bin/qeneth"
-#!/bin/sh
-set -x
-cd $envdir/qeneth && exec $testdir/qeneth/qeneth "\$@"
-EOF
-    chmod +x "$envdir/bin/qeneth"
-}
+testdir=$(dirname "$(readlink -f "$0")")
+. "$testdir/.env"
 
 usage()
 {
@@ -74,11 +47,58 @@ usage: test/env [<OPTS>]    -f <IMAGE> -q <QENETH-DIR> <COMMAND> [<ARGS>...]
 EOF
 }
 
-testdir=$(dirname $(readlink -f "$0"))
-ixdir=$(readlink -f "$testdir/..")
-logdir=$(readlink -f "$testdir/.log")
-envdir="$HOME/.infix-test-venv"
-qeneth="$testdir/qeneth/qeneth"
+start_topology()
+{
+    qenethdir="$1"
+    imgfile="$2"
+
+    [ "$qenethdir" ] || { true && return; }
+
+    rm -rf "$envdir/qeneth"
+    cp -a "$qenethdir" "$envdir/qeneth"
+    if [ "$imgfile" ]; then
+	imgname="$(basename "$imgfile")"
+	imgfile=$(readlink -f "$imgfile")
+
+	ln -sf "$imgfile" "$envdir/qeneth/$imgname"
+    fi
+
+    (cd "$envdir/qeneth/" && $qeneth generate && $qeneth start)
+    INFAMY_ARGS="$INFAMY_ARGS $envdir/qeneth/topology.dot"
+
+    cat <<EOF >"$envdir/bin/qeneth"
+#!/bin/sh
+set -x
+cd $envdir/qeneth && exec $testdir/qeneth/qeneth "\$@"
+EOF
+    chmod +x "$envdir/bin/qeneth"
+}
+
+name()
+{
+    nm=infamy
+    id=0
+
+    names=$(podman ps -f name='infamy.*' --format '{{.Names}}')
+    while true; do
+	name="$nm$id"
+	unset hit
+	for n in $names; do
+	    if [ "$name" = "$n" ]; then
+		hit=true
+		break;
+	    fi
+	done
+
+	if [ -n "$hit" ]; then
+	    id=$((id + 1))
+	    continue
+	fi
+	break;
+    done
+
+    echo "$name"
+}
 
 # Global options
 containerize=yes
@@ -107,31 +127,33 @@ while getopts "Cf:hKp:q:t:" opt; do
 	t)
 	    topology="$OPTARG"
 	    ;;
+	*)
+	    >&2 echo "Unknown option -$opt"
+	    usage
+	    exit 1
+	    ;;
     esac
 done
 
 if [ "$containerize" ]; then
-    if which podman >/dev/null; then
-	runner=podman
-    elif which docker >/dev/null; then
-	runner=docker
-    else
-	echo "Error: Neither podman nor docker is installed"
-	exit 1
-    fi
-
-    exec $runner run \
+    # shellcheck disable=SC2016
+        exec $(runner) run \
 	 --cap-add=NET_ADMIN \
 	 --device=/dev/net/tun \
-	 --expose 9000-9050 \
+	 --env VIRTUAL_ENV_DISABLE_PROMPT=yes \
+	 --env PROMPT_DIRTRIM="$ixdir" \
+	 --env PS1='\e[1m$(date "+%H:%M:%S") \h\e[0m:\W # ' \
+	 --expose 9001-9010 --publish-all \
+	 --hostname "$(name)" \
+	 --name "$(name)" \
 	 --interactive \
 	 --rm \
 	 --security-opt seccomp=unconfined \
 	 --sysctl net.ipv6.conf.all.disable_ipv6=0 \
 	 --tty \
 	 --volume "$ixdir":"$ixdir" \
-	 --workdir $(pwd) \
-	 $kvm \
+	 --workdir "$ixdir/test" \
+	 "$kvm" \
 	 $INFIX_TEST \
 	 "$0" -C "$@"
 else
@@ -150,6 +172,7 @@ if [ $# -lt 1 ]; then
     usage && exit 1
 fi
 
+# shellcheck disable=SC1091
 . "$envdir/bin/activate"
 export PYTHONPATH="$testdir"
 INFAMY_ARGS="$INFAMY_ARGS -y $envdir/yangdir"
