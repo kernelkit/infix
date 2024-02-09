@@ -1,4 +1,16 @@
+import ctypes
+import multiprocessing
 import subprocess
+import os
+
+__libc = ctypes.CDLL(None)
+CLONE_NEWUSER = 0x10000000
+CLONE_NEWNET  = 0x40000000
+
+# TODO: Replace me with os.setns once Python 3.12 is old news
+def setns(fd, nstype):
+    __NR_setns = 308
+    __libc.syscall(__NR_setns, fd, nstype)
 
 class IsolatedMacVlan:
     """Create an isolated interface on top of a PC interface."""
@@ -39,6 +51,30 @@ class IsolatedMacVlan:
     def __exit__(self, val, typ, tb):
         self.sleeper.kill()
         self.sleeper.wait()
+
+    def __ns_call(self, fn, tx):
+        pid = self.sleeper.pid
+
+        uns = os.open(f"/proc/{pid}/ns/user", os.O_RDONLY)
+        setns(uns, CLONE_NEWUSER)
+        os.close(uns)
+
+        nns = os.open(f"/proc/{pid}/ns/net", os.O_RDONLY)
+        setns(nns, CLONE_NEWNET)
+        os.close(nns)
+
+        tx.send(fn())
+        tx.close()
+
+    def call(self, fn):
+        rx, tx = multiprocessing.Pipe(duplex=False)
+
+        proc = multiprocessing.Process(target=self.__ns_call, args=(fn, tx))
+        proc.start()
+        ret = rx.recv()
+        rx.close()
+        proc.join()
+        return ret
 
     def _mangle_subprocess_args(self, args, kwargs):
         if args:
