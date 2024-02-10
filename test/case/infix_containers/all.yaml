@@ -2,4 +2,5 @@
 
 - case: container_basic.py
 - case: container_bridge.py
+- case: container_phys.py
 - case: container_veth.py
