@@ -1,3 +1,5 @@
 ---
 
 - case: container_basic.py
+- case: container_bridge.py
+
