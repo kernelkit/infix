@@ -36,7 +36,7 @@ static bool iface_is_cni(const char *ifname, struct lyd_node *cif)
 	return false;
 }
 
-static void cni_gen_addrs(struct lyd_node *ip, FILE *fp, int *first)
+static void cni_gen_addrs(struct lyd_node *ip, FILE *fp, int *ipam)
 {
 	struct lyd_node *addr;
 
@@ -47,12 +47,15 @@ static void cni_gen_addrs(struct lyd_node *ip, FILE *fp, int *first)
 		struct lyd_node *ip = lydx_get_child(addr, "ip");
 		struct lyd_node *len = lydx_get_child(addr, "prefix-length");
 
-		if (*first)
-			fprintf(fp, ",\n        \"addresses\": [\n");
+		if (*ipam == 0)
+			fprintf(fp,
+				",\n      \"ipam\": {\n"
+				"        \"type\": \"static\",\n"
+				"        \"addresses\": [\n");
 
 		fprintf(fp, "%s          { \"address\": \"%s/%s\" }",
-			*first ? "" : ",\n", lyd_get_value(ip), lyd_get_value(len));
-		*first = 0;
+			*ipam ? ",\n" : "", lyd_get_value(ip), lyd_get_value(len));
+		*ipam = 1;
 	}
 }
 
@@ -171,7 +174,7 @@ static int cni_bridge(struct lyd_node *net, const char *ifname)
 		first = 0;
 	}
 	if (!first)
-		fprintf(fp, "        ]");
+		fprintf(fp, "\n        ]");
 	else
 		/* Default is a customary docker0 local network */
 		fprintf(fp, ",\n        \"ranges\": [ [{ \"subnet\": \"172.17.0.0/16\" }] ]");
@@ -202,11 +205,12 @@ static int cni_bridge(struct lyd_node *net, const char *ifname)
 
 static int cni_host(struct lyd_node *net, const char *ifname)
 {
+	const char *fn = "/etc/cni/net.d/90-%s-host.conflist";
 	struct lyd_node *node, *ip;
-	int first = 1;
+	int addr = 0, route = 0;
 	FILE *fp;
 
-	fp = fopenf("w", "/etc/cni/net.d/90-%s-host.conflist", ifname);
+	fp = fopenf("w", fn, ifname);
 	if (!fp)
 		return -EIO;
 
@@ -216,28 +220,25 @@ static int cni_host(struct lyd_node *net, const char *ifname)
 		"  \"plugins\": [\n"
 		"    {\n"
 		"      \"type\": \"host-device\",\n"
-		"      \"device\": \"%s\",\n"
-		"      \"ipam\": {\n"
-		"        \"type\": \"static\"", ifname, ifname);
+		"      \"device\": \"%s\"", ifname, ifname);
 
 
 	ip = lydx_get_child(lyd_parent(net), "ipv4");
 	if (ip)
-		cni_gen_addrs(ip, fp, &first);
+		cni_gen_addrs(ip, fp, &addr);
 
 	ip = lydx_get_child(lyd_parent(net), "ipv6");
 	if (ip)
-		cni_gen_addrs(ip, fp, &first);
+		cni_gen_addrs(ip, fp, &addr);
 
-	if (!first)
+	if (addr)
 		fprintf(fp, "\n        ]");
 
-	first = 1;
 	LYX_LIST_FOR_EACH(lyd_child(net), node, "route") {
 		struct lyd_node *subnet = lydx_get_child(node, "subnet");
 		struct lyd_node *gateway = lydx_get_child(node, "gateway");
 
-		if (first)
+		if (route)
 			fprintf(fp, ",\n        \"routes\": [\n");
 		else
 			fprintf(fp, ",\n");
@@ -248,16 +249,16 @@ static int cni_host(struct lyd_node *net, const char *ifname)
 			fprintf(fp, "            \"gw\": \"%s\"\n", lyd_get_value(gateway));
 		fprintf(fp, "          }");
 
-		first = 0;
+		route = 0;
 	}
-	if (!first)
+	if (route)
 		fprintf(fp, "        ]");
 
 	fprintf(fp,
-		"\n      }\n"
+		"%s"
 		"    }\n"
 		"  ]\n"
-		"}\n");
+		"}\n", (addr || route) ? "\n      }\n" : "");
 
 	if (fclose(fp))
 		return -errno;
