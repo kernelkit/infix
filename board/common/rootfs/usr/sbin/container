@@ -56,12 +56,12 @@ unpack_archive()
 	    exit 1
 	fi
 
-	log "Extracting OCI archive $file ..."
+	[ -n "$quiet" ] || log "Extracting OCI archive $file ..."
         tar xf "$file" || (log "Error: failed unpacking $file in $(pwd)"; exit 1)
     fi
 
     dir=$(dirname "$index")
-    log "Loading OCI image $dir ..."
+    [ -n "$quiet" ] || log "Loading OCI image $dir ..."
     podman load -qi "$dir"        >/dev/null
 
     # Rename image from podman default $dir:latest
@@ -73,6 +73,13 @@ unpack_archive()
     fi
 
     echo "$name"
+}
+
+running()
+{
+    run=$(podman inspect "$1" 2>/dev/null |jq .[].State.Running)
+    [ "$run" = "true" ] && return 0
+    return 1
 }
 
 # shellcheck disable=SC2086
@@ -96,9 +103,9 @@ create()
 #    args="$args --log-opt tag=$name"
     pidfn=/run/container:${name}.pid
 
-    log "---------------------------------------"
-    log "Got name: $name image: $image"
-    log "Got networks: $network"
+    [ -n "$quiet" ] || log "---------------------------------------"
+    [ -n "$quiet" ] || log "Got name: $name image: $image"
+    [ -n "$quiet" ] || log "Got networks: $network"
 
     if [ -n "$network" ]; then
 	for net in $network; do
@@ -119,7 +126,7 @@ create()
     #  --syslog --log-level info
     # shellcheck disable=SC2048
     if podman create --name "$name" --conmon-pidfile="$pidfn" $ro $vol $mount $hostname $entrypoint $env $network $port $args "$image" $*; then
-	log "Successfully created container $name from $image"
+	[ -n "$quiet" ] || log "Successfully created container $name from $image"
 	rm -f "/run/containers/env/${name}.env"
 	initctl show "container:$name" |grep -q manual:yes || initctl -bq start "container:$name"
 	initctl -nbq cond set container:$name
@@ -141,9 +148,12 @@ delete()
 	exit 1
     fi
 
-    podman kill -s KILL "$name" >/dev/null 2>&1
-    podman rm -vif "$name" 2>&1
-    log "Container $name has been removed."
+    if running "$name"; then
+	initctl -bq stop "container:$name" || podman kill -s KILL "$name" >/dev/null 2>&1
+    fi
+
+    podman rm -vif "$name" >/dev/null 2>&1
+    [ -n "$quiet" ] || log "Container $name has been removed."
 }
 
 # Removes network $1 from all containers
@@ -182,6 +192,7 @@ options:
       --privileged        Give container extended privileges
   -p, --publish PORT      Publish ports when creating container
                           Syntax: [[ip:][hostPort]:]containerPort[/protocol]
+  -q, --quiet             Quiet operation, called from confd
       --read-only         Do not create a writable layer
   -s, --simple            Show output in simplified format
   -v, --volume NAME:PATH  Create named volume mounted inside container on PATH
@@ -263,6 +274,9 @@ while [ "$1" != "" ]; do
 	    shift
 	    port="$port -p $1"
 	    ;;
+	-q | --quiet)
+	    quiet="-q"
+	    ;;
 	--read-only)
 	    ro="--read-only=true"
 	    ;;
@@ -292,7 +306,7 @@ case $cmd in
     # 	podman attach "$1"
     # 	;;
     create)
-	log "Got create args: $*"
+	[ -n "$quiet" ] || log "Got create args: $*"
 	create "$@"
 	;;
     delete)
@@ -436,13 +450,21 @@ case $cmd in
 	esac
 	;;
     start)
+	if running "$1"; then
+	    [ -n "$quiet" ] || echo "$1: already running."
+	    exit 1
+	fi
 	initctl -bq start "container:$1"
 	;;
     restart)
 	initctl -bq restart "container:$1"
 	;;
     stop)
-	initctl -bq stop "container:$1" || podman kill "$1"
+	if ! running "$1"; then
+	    [ -n "$quiet" ] || echo "$1: not running."
+	    exit 1
+	fi
+	initctl -bq stop "container:$1" || podman kill "$1" >/dev/null 2>&1
 	;;
     stat*)
 	podman stats -i 2
