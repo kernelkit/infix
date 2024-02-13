@@ -14,6 +14,8 @@
 #include "core.h"
 #include "dagger.h"
 
+#define CNI_NAME "/etc/cni/net.d/%s.conflist"
+
 #define ERR_IFACE(_iface, _err, _fmt, ...)				\
 	({								\
 		ERROR("%s: " _fmt, lydx_get_cattr(_iface, "name"),	\
@@ -26,12 +28,15 @@
 
 #define IF_XPATH "/ietf-interfaces:interfaces/interface"
 
-static bool iface_is_cni(const char *ifname, struct lyd_node *cif)
+static bool iface_is_cni(const char *ifname, struct lyd_node *node, const char **type)
 {
-	struct lyd_node *net = lydx_get_child(cif, "container-network");
+	struct lyd_node *net = lydx_get_child(node, "container-network");
 
-	if (net)
+	if (net) {
+		if (type)
+			*type = lydx_get_cattr(net, "type");
 		return true;
+	}
 
 	return false;
 }
@@ -115,9 +120,11 @@ static int cni_bridge(struct lyd_node *net, const char *ifname)
 	int first = 1;
 	FILE *fp;
 
-	fp = fopenf("w", "/etc/cni/net.d/90-%s-bridge.conflist", ifname);
-	if (!fp)
+	fp = fopenf("w", CNI_NAME, ifname);
+	if (!fp) {
+		ERRNO("Failed creating container bridge " CNI_NAME, ifname);
 		return -EIO;
+	}
 
 	fprintf(fp, "{\n"
 		"  \"cniVersion\":    \"1.0.0\",\n"
@@ -205,14 +212,15 @@ static int cni_bridge(struct lyd_node *net, const char *ifname)
 
 static int cni_host(struct lyd_node *net, const char *ifname)
 {
-	const char *fn = "/etc/cni/net.d/90-%s-host.conflist";
 	struct lyd_node *node, *ip;
 	int addr = 0, route = 0;
 	FILE *fp;
 
-	fp = fopenf("w", fn, ifname);
-	if (!fp)
+	fp = fopenf("w", CNI_NAME, ifname);
+	if (!fp) {
+		ERRNO("Failed creating container interface " CNI_NAME, ifname);
 		return -EIO;
+	}
 
 	fprintf(fp, "{\n"
 		"  \"cniVersion\": \"1.0.0\",\n"
