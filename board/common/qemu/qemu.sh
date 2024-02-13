@@ -130,6 +130,18 @@ serial_args()
     echo -n "-device virtconsole,nr=1,name=gdbserver,chardev=gdbserver "
 }
 
+usb_args()
+{
+    USBSTICK="usb.vfat"
+    if ! [ -f $USBSTICK ]; then
+	dd if=/dev/zero of=${USBSTICK} bs=8M count=1 >/dev/null 2>&1
+	mkfs.vfat $USBSTICK >/dev/null 2>&1
+    fi
+    echo -n "-drive if=none,id=usbstick,format=raw,file=${USBSTICK} "
+    echo -n "-usb "
+    echo -n "-device usb-ehci,id=ehci "
+    echo -n "-device usb-storage,bus=ehci.0,drive=usbstick "
+}
 rw_args()
 {
     [ "$CONFIG_QEMU_RW" ] || return
@@ -235,6 +247,7 @@ run_qemu()
 	  $(rootfs_args) \
 	  $(serial_args) \
 	  $(rw_args) \
+	  $(usb_args) \
 	  $(host_args) \
 	  $(net_args) \
 	  $(wdt_args) \
@@ -353,4 +366,3 @@ line=$(stty -g)
 stty raw
 run_qemu $(dtb_args)
 stty "$line"
-
