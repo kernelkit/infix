@@ -710,7 +710,25 @@ out:
 static int netdag_gen_ethtool(struct dagger *net, struct lyd_node *cif, struct lyd_node *dif)
 {
 	struct lyd_node *eth = lydx_get_child(dif, "ethernet");
+	const char *type = lydx_get_cattr(cif, "type");
 	int err;
+
+	/*
+	 * Story time: when assigning a physical interface to a container, and then
+	 *             removing it, even though our type may be 'etherlike' we will
+	 *             get the following from sysrepo:
+	 *
+	 *               "ieee802-ethernet-interface:ethernet": {
+	 *                 "@": {
+	 *                   "yang:operation": "delete"
+	 *                 },
+	 *                 "duplex": "full"
+	 *               },
+	 *
+	 *             Hence this "redundant" check.
+	 */
+	if (strcmp(type, "infix-if-type:ethernet"))
+		return 0;
 
 	if (lydx_get_descendant(lyd_child(eth), "auto-negotiation", "enable", NULL) ||
 	    lydx_get_child(eth, "speed") ||
@@ -1040,6 +1058,7 @@ static int netdag_gen_afspec_add(struct dagger *net, struct lyd_node *dif,
 static int netdag_gen_afspec_set(struct dagger *net, struct lyd_node *dif,
 				 struct lyd_node *cif, FILE *ip)
 {
+	const char *ifname = lydx_get_cattr(cif, "name");
 	const char *iftype = lydx_get_cattr(cif, "type");
 
 	DEBUG_IFACE(dif, "");
@@ -1051,7 +1070,7 @@ static int netdag_gen_afspec_set(struct dagger *net, struct lyd_node *dif,
 	if (!strcmp(iftype, "infix-if-type:veth"))
 		return 0;
 
-	ERROR("unsupported interface type \"%s\"", iftype);
+	ERROR("unsupported interface type \"%s\" for %s", iftype, ifname);
 	return -ENOSYS;
 }
 
