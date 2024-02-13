@@ -133,7 +133,8 @@ int ietf_system_init(struct confd *confd);
 
 /* infix-containers.c */
 int  infix_containers_init(struct confd *confd);
-void infix_containers_hook(struct confd *confd);
+void infix_containers_pre_hook(sr_session_ctx_t *session, struct confd *confd);
+void infix_containers_post_hook(sr_session_ctx_t *session, struct confd *confd);
 
 /* infix-dhcp.c */
 int infix_dhcp_init(struct confd *confd);

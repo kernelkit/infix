@@ -23,6 +23,22 @@ int core_startup_save(sr_session_ctx_t *session, uint32_t sub_id, const char *mo
 	return SR_ERR_OK;
 }
 
+static const char *ev2str(sr_event_t ev)
+{
+	switch (ev) {
+	case SR_EV_UPDATE:  return "UPDATE";
+	case SR_EV_CHANGE:  return "CHANGE";
+	case SR_EV_DONE:    return "DONE";
+	case SR_EV_ABORT:   return "ABORT";
+	case SR_EV_ENABLED: return "ENABLED";
+	case SR_EV_RPC:     return "ABORT";
+	default:
+		break;
+	}
+
+	return "UNKNOWN";
+}
+
 int core_pre_hook(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
 		  const char *xpath, sr_event_t event, unsigned request_id, void *priv)
 {
@@ -51,12 +67,12 @@ int core_post_hook(sr_session_ctx_t *session, uint32_t sub_id, const char *modul
 			break;
 		return SR_ERR_OK;
 	default:
-		ERROR("core_commit_done() should not be called with event %d", event);
+		ERROR("core_post_hook() should not be called with event %s", ev2str(event));
 		return SR_ERR_SYS;
 	}
 
 	/* Everything done, including interfaces, launch all container scripts */
-	infix_containers_hook(&confd);
+	infix_containers_post_hook(session, priv);
 
 	/* skip reload in bootstrap, implicit reload in runlevel change */
 	if (systemf("runlevel >/dev/null 2>&1"))
