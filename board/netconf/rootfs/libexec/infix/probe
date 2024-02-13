@@ -125,6 +125,18 @@ class QEMUSystem:
     def vpds(self):
         return [self.product_vpd()]
 
+    def usb_ports(self):
+        ports = [{
+            "name": "USB",
+            "path": "/sys/bus/usb/devices/1-0:1.0/"
+
+        },
+        {
+            "name": "USB",
+            "path": "/sys/bus/usb/devices/usb1/"
+
+        }]
+        return ports
 class Device:
     def __init__(self, ph, dtpath, syspath):
         self.ph, self.dtpath, self.syspath = ph, dtpath, syspath
@@ -218,8 +230,9 @@ def probe_qemusystem(out):
 
     qsys = QEMUSystem()
     vpds = qsys.vpds()
+    usb_ports = qsys.usb_ports()
     vpd_inject(out, vpds)
-
+    out["usb-ports"] = usb_ports
     for (attr, default) in (
             ("vendor", "QEMU"),
             ("product-name", "VM"),
