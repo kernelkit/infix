@@ -28,6 +28,83 @@
 
 #define IF_XPATH "/ietf-interfaces:interfaces/interface"
 
+/*
+ * When an interface has been handed off to a container it is moved to
+ * another network namespace.  This function asks podman for the PID of
+ * the container that currently hosts the interface.
+ */
+static pid_t find_in_container(const char *ifname)
+{
+	char buf[32] = { 0 };
+	pid_t pid = 0;
+	FILE *pp;
+
+	if (fexistf("/sys/class/net/%s", ifname))
+		return 0;      /* it's right here, not in a container */
+
+	pp = popenf("r", "container --net %s find", ifname);
+	if (!pp)
+		return 0;
+
+	if (fgets(buf, sizeof(buf), pp)) {
+		chomp(buf);
+		pid = atoi(buf);
+	}
+
+	pclose(pp);
+
+	return pid;
+}
+
+/*
+ * This function takes the PID from find_in_container() and figures out
+ * the name of our ifname inside the container.  For CNI/podman they
+ * save the host's name as the interface's ifalias.
+ */
+static char *find_container_ifname(pid_t pid, const char *ifname)
+{
+	static char buf[IFNAMSIZ + 2];
+	char *ptr = NULL;
+	FILE *pp;
+
+	pp = popenf("r", "container --net %s find ifname %d", ifname, pid);
+	if (!pp)
+		return NULL;
+
+	buf[0] = 0;
+	if (fgets(buf, sizeof(buf), pp)) {
+		chomp(buf);
+		ptr = buf;
+	}
+	pclose(pp);
+
+	return ptr;
+}
+
+/*
+ * Sometimes we need to perform some kind of 'ip link dev IFNAME'
+ * command to find buried interface data.  This function handles
+ * the fact that interfaces sometimes are on vacation in another
+ * network namespace (container).
+ */
+static FILE *popen_ifcmd(const char *fmt, const char *ifname)
+{
+	char cmd[strlen(fmt) + 64];
+	static char *ifalias;
+	pid_t pid;
+
+	pid = find_in_container(ifname);
+	if (!pid)
+		return popenf("re", fmt, ifname);
+
+	ifalias = find_container_ifname(pid, ifname);
+	if (!ifalias)
+		return NULL;
+
+	snprintf(cmd, sizeof(cmd), fmt, ifalias);
+	return popenf("re", "nsenter -t %d -n %s", pid, cmd);
+}
+
 static bool iface_is_cni(const char *ifname, struct lyd_node *node, const char **type)
 {
 	struct lyd_node *net = lydx_get_child(node, "container-network");
@@ -320,7 +397,7 @@ static bool iface_is_phys(const char *ifname)
 	json_t *link;
 	FILE *proc;
 
-	proc = popenf("re", "ip -d -j link show dev %s 2>/dev/null", ifname);
+	proc = popen_ifcmd("ip -d -j link show dev %s 2>/dev/null", ifname);
 	if (!proc)
 		goto out;
 
@@ -787,7 +864,7 @@ static int netdag_gen_link_addr(FILE *ip, struct lyd_node *cif, struct lyd_node 
 		 * Only physical interfaces support this, virtual ones
 		 * we remove, see netdag_must_del() for details.
 		 */
-		fp = popenf("r", "ip -d -j link show dev %s |jq -rM .[].permaddr", ifname);
+		fp = popen_ifcmd("ip -d -j link show dev %s |jq -rM .[].permaddr", ifname);
 		if (fp) {
 			if (fgets(buf, sizeof(buf), fp))
 				mac = chomp(buf);
@@ -809,7 +886,7 @@ static int netdag_gen_link_addr(FILE *ip, struct lyd_node *cif, struct lyd_node 
 	return 0;
 }
 
-static int netdag_gen_ip_addrs(FILE *ip, const char *proto,
+static int netdag_gen_ip_addrs(struct dagger *net, FILE *ip, const char *proto,
 	struct lyd_node *cif, struct lyd_node *dif)
 {
 	struct lyd_node *ipconf = lydx_get_child(cif, proto);
@@ -817,8 +894,15 @@ static int netdag_gen_ip_addrs(FILE *ip, const char *proto,
 	const char *ifname = lydx_get_cattr(dif, "name");
 
 	if (!ipconf || !lydx_is_enabled(ipconf, "enabled")) {
-		if (if_nametoindex(ifname))
-			systemf("ip -%c addr flush dev %s\n", proto[3], ifname);
+		if (!find_in_container(ifname) && if_nametoindex(ifname)) {
+			FILE *fp;
+
+			fp = dagger_fopen_next(net, "init", ifname, 49, "flush.sh");
+			if (fp) {
+				fprintf(fp, "ip -%c addr flush dev %s\n", proto[3], ifname);
+				fclose(fp);
+			}
+		}
 		return 0;
 	}
 
@@ -1486,10 +1570,29 @@ static sr_error_t netdag_gen_iface(struct dagger *net,
 {
 	const char *ifname = lydx_get_cattr(dif, "name");
 	enum lydx_op op = lydx_get_op(dif);
-	const char *attr;
+	const char *attr, *cni_type = NULL;
 	int err = 0;
 	bool fixed;
 	FILE *ip;
+
+	if (iface_is_cni(ifname, cif, &cni_type)) {
+		err = iface_gen_cni(ifname, cif);
+		if (cni_type && !strcmp(cni_type, "bridge"))
+			goto err; /* CNI bridges are managed by podman */
+	} else if (iface_is_cni(ifname, dif, &cni_type)) {
+		FILE *fp;
+
+		/* No longer a container-network, clean up. */
+		fp = dagger_fopen_current(net, "exit", ifname, 30, "cni.sh");
+		if (!fp)
+			return -EIO;
+
+		fprintf(fp, "container -a -f delete network %s >/dev/null\n", ifname);
+		fclose(fp);
+
+		if (cni_type && !strcmp(cni_type, "bridge"))
+			goto err; /* CNI bridges are managed by podman */
+	}
 
 	fixed = iface_is_phys(ifname) || !strcmp(ifname, "lo");
 
@@ -1522,11 +1625,6 @@ static sr_error_t netdag_gen_iface(struct dagger *net,
 			     "yang:operation", "create", false, NULL);
 		dif = cif;
 		op = LYDX_OP_CREATE;
-	}
-
-	if (iface_is_cni(ifname, cif)) {
-		err = iface_gen_cni(ifname, cif);
-		goto err;
 	}
 
 	ip = dagger_fopen_next(net, "init", ifname, 50, "init.ip");
@@ -1565,8 +1663,8 @@ static sr_error_t netdag_gen_iface(struct dagger *net,
 	/* Set Addresses */
 	err = err ? : netdag_gen_link_mtu(ip, dif);
 	err = err ? : netdag_gen_link_addr(ip, cif, dif);
-	err = err ? : netdag_gen_ip_addrs(ip, "ipv4", cif, dif);
-	err = err ? : netdag_gen_ip_addrs(ip, "ipv6", cif, dif);
+	err = err ? : netdag_gen_ip_addrs(net, ip, "ipv4", cif, dif);
+	err = err ? : netdag_gen_ip_addrs(net, ip, "ipv6", cif, dif);
 	if (err)
 		goto err_close_ip;
 

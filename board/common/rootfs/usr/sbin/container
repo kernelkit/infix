@@ -3,6 +3,7 @@
 all=""
 env=""
 port=""
+force=
 
 log()
 {
@@ -100,6 +101,10 @@ create()
     log "Got networks: $network"
 
     if [ -n "$network" ]; then
+	for net in $network; do
+	    args="$args --net=$net"
+	done
+
 	for srv in $dns; do
 	    args="$args --dns=$srv"
 	done
@@ -141,6 +146,20 @@ delete()
     log "Container $name has been removed."
 }
 
+# Removes network $1 from all containers
+netwrm()
+{
+    net=$1
+
+    for c in $(podman ps $all --format "{{.Names}}"); do
+	for n in $(podman inspect "$c" |jq -r '.[].NetworkSettings.Networks | keys[]'); do
+	    if [ "$n" = "$net" ]; then
+		podman network disconnect $force "$n" "$c" >/dev/null
+	    fi
+	done
+    done
+}
+
 usage()
 {
 	cat <<EOF
@@ -169,7 +188,7 @@ options:
 
 commands:
   create  NAME IMAGE NET  Create container NAME using IMAGE with networks NET
-  delete  NAME            Kill and remove container NAME
+  delete [network] NAME   Remove container NAME or network NAME from all containers
   exec    NAME CMD        Run a command inside a container
   help                    Show this help text
   list   [image | oci]    List names (only) of containers, images, or OCI archives
@@ -231,7 +250,11 @@ while [ "$1" != "" ]; do
 	    ;;
 	--net)
 	    shift
-	    network="$network --net $1"
+	    if [ -n "$network" ]; then
+		network="$network $1"
+	    else
+		network=$1
+	    fi
 	    ;;
 	--privileged)
 	    privileged="--privileged=true"
@@ -273,10 +296,37 @@ case $cmd in
 	create "$@"
 	;;
     delete)
-	delete "$@"
+	cmd=$1
+	name=$2
+	if [ "$cmd" = "network" ] && [ -n "$name" ]; then
+	    netwrm "$name"
+	else
+	    delete "$@"
+	fi
 	;;
     exec)
 	podman exec -it "$@"
+	;;
+    find)
+	cmd=$1
+	pid=$2
+	if [ "$cmd" = "ifname" ] && [ -n "$pid" ]; then
+	    nsenter -t "$pid" -n ip -d -j link | \
+		jq --arg ifname "$network" -r '.[] | select(.ifalias==$ifname) | .ifname'
+	else
+	    containers=$(podman ps $all --format "{{.Names}}")
+	    for c in $containers; do
+		json=$(podman inspect "$c")
+		nets=$(echo "$json" |jq -r '.[].NetworkSettings.Networks | keys[]' 2>/dev/null)
+		for n in $nets; do
+		    if [ "$network" = "$n" ]; then
+			pid=$(echo "$json" | jq .[].State.Pid)
+			echo "$pid"
+			exit 0
+		    fi
+		done
+	    done
+	fi
 	;;
     help)
 	usage
