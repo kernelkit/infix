@@ -341,9 +341,9 @@ static int is_active(struct confd *confd, const char *name)
  *
  * This function runs every time a configuration is applied to clean up
  * any lingering active jobs to prevent false matches in the cmp magic
- * in the below launch() function.
+ * in the below post-hook.
  */
-static void cleanup(struct confd *confd)
+void infix_containers_pre_hook(sr_session_ctx_t *session, struct confd *confd)
 {
 	struct dirent *d;
 	DIR *dir;
@@ -393,7 +393,7 @@ static void cleanup(struct confd *confd)
  * we can safely reassert the Finit condition and allo core_post_hook()
  * to launch the container with 'initctl reload'.
  */
-static void launch(struct confd *confd)
+void infix_containers_post_hook(sr_session_ctx_t *session, struct confd *confd)
 {
 	struct dirent *d;
 	DIR *dir;
@@ -415,8 +415,8 @@ static void launch(struct confd *confd)
 
 		snprintf(curr, sizeof(curr), "%s/%s", ACTIVE_QUEUE, d->d_name);
 		snprintf(next, sizeof(next), "%s/%s", INBOX_QUEUE, d->d_name);
-		if (!systemf("cmp %s %s", curr, next)) {
-			ERRNO("New job %s is already active, no changes, skipping.", next);
+		if (!systemf("cmp %s %s >/dev/null 2>&1", curr, next)) {
+			/* New job is already active, no changes, skipping ... */
 			systemf("initctl -nbq cond set container:$(basename %s .sh)", d->d_name);
 			remove(next);
 			continue;
@@ -428,14 +428,7 @@ static void launch(struct confd *confd)
 
 	closedir(dir);
 	NOTE("Pruning unused container volumes from system.");
-	systemf("container volume prune -f >/dev/null");
-}
-
-/* Called by core_post_hook() for cleanup and launch of containers */
-void infix_containers_hook(struct confd *confd)
-{
-	cleanup(confd);
-	launch(confd);
+	systemf("container volume prune -f >/dev/null 2>&1");
 }
 
 int infix_containers_init(struct confd *confd)
