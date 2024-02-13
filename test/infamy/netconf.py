@@ -54,7 +54,9 @@ class Manager(netconf_client.ncclient.Manager):
         try:
             self._local_ip = self.session.sock.sock.getsockname()[0]
             self._peer_ip  = self.session.sock.sock.getpeername()[0]
-        except (AttributeError, socket_error):
+            print(f"Connection status\n\tLocal IP: {self._local_ip}\n\tPeer IP: {self._peer_ip}")
+        except (AttributeError, socket_error) as err:
+            print(f"Failed connecting, status: {err}")
             pass
 
     def _debug(self):
@@ -94,6 +96,9 @@ class Device(object):
         self.location = location
         self.ly = libyang.Context(yangdir)
         self._ncc_init(location)
+        #self.ncc._fetch_connection_ip()
+        #self.ncc._debug()
+
         self.modules = {}
         self._ly_bootstrap(yangdir)
 
@@ -101,7 +106,11 @@ class Device(object):
         self.ly = libyang.Context(yangdir)
         self._ly_init(yangdir)
         if factory_default:
-            self.ncc.dispatch('<factory-default xmlns="urn:infix:factory-default:ns:yang:1.0"/>')
+            try:
+                self.ncc.dispatch('<factory-default xmlns="urn:infix:factory-default:ns:yang:1.0"/>')
+            except RpcError as err:
+                print(f"Failed sending factory-default RPC: {err}")
+                raise err
 
     def get_mgmt_ip(self):
         return location.host
@@ -122,7 +131,14 @@ class Device(object):
         sock = socket.socket(ai[0][0], ai[0][1], 0)
         sock.settimeout(60)
         print(f"Connecting to mgmt IP {location.host}:{location.port} ...")
-        sock.connect(ai[0][4])
+        try:
+            sock.connect(ai[0][4])
+        except InterruptedError as err:
+            print(f"Connection interrupted: {err}")
+            raise err
+        except TimeoutError as err:
+            print(f"Connection timeout: {err}")
+            raise err
         sock.settimeout(None)
 
         session = netconf_client.connect.connect_ssh(sock=sock,
