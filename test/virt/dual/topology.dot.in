@@ -21,14 +21,16 @@ graph "dual" {
 	    pos="10,18!",
 	    kind="infix",
 	    qn_console=9001,
-	    qn_mem="384M"
-];
+	    qn_mem="384M",
+	    qn_usb="dut1.usb"
+	];
         dut2 [
 	    label="{ <eth0> eth0 | <eth1> eth1 | <eth2> eth2 } | dut2 | { <eth3> eth3 | <eth4> eth4 | <eth5> eth5 }",
 	    pos="10,12!",
 	    kind="infix",
 	    qn_console=9002,
-	    qn_mem="384M"
+	    qn_mem="384M",
+	    qn_usb="dut2.usb"
 	];
 
 	host:d1a -- dut1:eth0 [kind=mgmt]
