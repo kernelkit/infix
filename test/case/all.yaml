@@ -19,5 +19,7 @@
 - name:  infix-dhcp
   suite: infix_dhcp/all.yaml
 
+- name:  ietf-hardware
+  suite: ietf_hardware/all.yaml
 #- name:  infix-services
 #  suite: infix_services/all.yaml
