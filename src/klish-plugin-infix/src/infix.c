@@ -433,7 +433,8 @@ int infix_copy(kcontext_t *ctx)
 		} else {
 			rc = sr_copy_config(sess, NULL, srcds->datastore, 0);
 			if (rc)
-				emsg(sess, ERRMSG "unable to copy configuration (%d)\n", rc);
+				emsg(sess, ERRMSG "unable to copy configuration, err %d: %s\n",
+				     rc, sr_strerror(rc));
 		}
 		rc = sr_disconnect(conn);
 
