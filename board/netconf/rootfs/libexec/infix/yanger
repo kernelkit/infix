@@ -3,6 +3,7 @@
 import subprocess
 import json
 import sys # (built-in module)
+import os
 import argparse
 from datetime import datetime
 
@@ -155,13 +156,43 @@ def get_vpd_data(vpd):
                         component["infix-hardware:vpd-data"]["infix-hardware:vendor-extension"] = vendor_extensions
         return component
 
+def get_usb_ports(usb_ports):
+    ports=[]
+    names=[]
+    for usb_port in usb_ports:
+        port={}
+        if usb_port.get("path"):
+            if usb_port["name"] in names:
+                continue
+
+            path = usb_port["path"]
+            if os.path.exists(path):
+                names.append(usb_port["name"])
+                with open(path, "r") as f:
+                    data=int(f.readline().strip())
+                    enabled="unlocked" if data == 1 else "locked"
+                    port["state"] = {}
+                    port["state"]["admin-state"] = enabled
+                    port["name"] = usb_port["name"]
+                    port["class"] = "infix-hardware:usb"
+                    port["state"]["oper-state"] = "enabled"
+                    ports.append(port)
+
+    return ports
+
+
 def add_hardware(hw_out, test):
-    cmd = ['cat', "/run/system.json"]
+    if test:
+        cmd = ['cat', f"{test}/system.json"]
+    else:
+        cmd = ['cat', "/run/system.json"]
     data = run_json_cmd(cmd)
     components=[]
     for _,vpd in data.get("vpd").items():
         component=get_vpd_data(vpd)
         components.append(component)
+    if(data.get("usb-ports", None)):
+       components.extend(get_usb_ports(data["usb-ports"]))
     insert(hw_out, "component", components)
 
 def get_routes(routes, proto, data):
