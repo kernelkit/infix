@@ -326,6 +326,12 @@
       /libexec/infix/cli-pretty "ietf-routing"  -n "$KLISH_PARAM_name"
     </ACTION>
   </COMMAND>
+  <COMMAND name="hardware" help="Show hardware information">
+    <ACTION sym="script">
+      sysrepocfg -f json -X -d operational -x "/ietf-hardware:hardware" | \
+      /libexec/infix/cli-pretty "ietf-hardware"
+    </ACTION>
+  </COMMAND>
   <!-- https://www.cisco.com/c/en/us/td/docs/wireless/access_point/mob_exp/83/cmd-ref/me_cr_book/me_ports_and_interfaces_cli.html -->
   <COMMAND name="interfaces" help="Show interface info">
     <SWITCH name="optional" min="0" max="1">

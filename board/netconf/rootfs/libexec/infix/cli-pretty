@@ -27,6 +27,12 @@ class PadSoftware:
     state = 10
     version = 23
 
+
+class PadUsbPort:
+    title = 30
+    name = 20
+    state = 10
+
 class Decore():
     @staticmethod
     def decorate(sgr, txt, restore="0"):
@@ -130,6 +136,18 @@ class Software:
         print(f"Size      : {self.size}")
         print(f"SHA-256   : {self.hash}")
         print(f"Installed : {self.date}")
+
+class USBport:
+    def __init__(self, data):
+        self.data = data
+        self.name = data.get('name', '')
+        self.state = get_json_data('', self.data, 'state', 'admin-state')
+
+    def print(self):
+        #print(self.name)
+        row = f"{self.name:<{PadUsbPort.name}}"
+        row += f"{self.state:<{PadUsbPort.state}}"
+        print(row)
 
 class Iface:
     def __init__(self, data):
@@ -468,6 +486,24 @@ def infix_system(json, name):
             if slot.is_rootfs():
                 slot.print()
 
+def ietf_hardware(json):
+    if not json.get("ietf-hardware:hardware"):
+       print(f"Error, top level \"ietf-hardware:component\" missing")
+       sys.exit(1)
+
+    hdr = (f"{'USB PORTS':<{PadUsbPort.title}}")
+    print(Decore.invert(hdr))
+    hdr =  (f"{'NAME':<{PadUsbPort.name}}"
+            f"{'STATE':<{PadUsbPort.state}}")
+    print(Decore.invert(hdr))
+
+    components = get_json_data({}, json, "ietf-hardware:hardware", "component")
+
+    for component in components:
+        if component.get("class") == "infix-hardware:usb":
+            port = USBport(component)
+            port.print()
+
 def main():
     try:
         json_data = json.load(sys.stdin)
@@ -484,6 +520,8 @@ def main():
         sys.exit(ietf_routing(json_data, args.name))
     if args.module == "infix-system":
         sys.exit(infix_system(json_data, args.name))
+    if args.module == "ietf-hardware":
+        sys.exit(ietf_hardware(json_data))
     else:
         print(f"Error, unknown module {args.module}")
         sys.exit(1)
