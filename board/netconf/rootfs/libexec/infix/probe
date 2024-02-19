@@ -89,13 +89,11 @@ class DTSystem:
         if data != {}:
             out["usb-ports"] = []
         for name,ph in data.items():
-            [out["usb-ports"].append({"name": name, "path": dev.attrpath("authorized")}) for dev in self.devices_from_ph(ph)]
+            [out["usb-ports"].extend([{"name": name, "path": dev.attrpath("authorized")}, {"name": name, "path": dev.attrpath("authorized_default")}]) for dev in self.devices_from_ph(ph)]
 
 
     def infix_devices(self, kind):
         phs = self.__get_phandle_array(kind)
-        #for ph in phs:
-        #    for dev in self.devices_from_ph(ph):
         return [[d for d in self.devices_from_ph(ph)] for ph in phs]
 
     def infix_vpds(self):
@@ -126,14 +124,24 @@ class QEMUSystem:
         return [self.product_vpd()]
 
     def usb_ports(self):
-        ports = [{
+        ports = [
+            {
             "name": "USB",
-            "path": "/sys/bus/usb/devices/1-0:1.0/"
+            "path": "/sys/bus/usb/devices/usb1/authorized"
 
         },
         {
             "name": "USB",
-            "path": "/sys/bus/usb/devices/usb1/"
+            "path": "/sys/bus/usb/devices/usb1/authorized_default"
+
+        },
+        {
+            "name": "USB2",
+            "path": "/sys/bus/usb/devices/usb2/authorized"
+        },
+        {
+            "name": "USB2",
+            "path": "/sys/bus/usb/devices/usb2/authorized_default"
 
         }]
         return ports
