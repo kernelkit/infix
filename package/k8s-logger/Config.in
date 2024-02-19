@@ -1,0 +1,13 @@
+config BR2_PACKAGE_K8S_LOGGER
+	bool "k8s-logger"
+	depends on BR2_PACKAGE_PODMAN
+	depends on BR2_PACKAGE_SYSKLOGD
+	select BR2_PACKAGE_LIBITE
+	help
+	  Reads k8s-file style logs written to a fifo (mkfifo) by by podman
+	  and forwards them, line by assembled line, to syslog.
+
+	  Infix requires use of sysklogd to enable the syslogp() API so that
+	  k8s-logger also includes the container's main PID.
+
+	  https://github.com/kernelkit/k8s-logger
