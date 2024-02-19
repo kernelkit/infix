@@ -1,0 +1,17 @@
+[
+  {
+    "ifindex": 2,
+    "ifname": "e0",
+    "flags": [
+      "BROADCAST",
+      "MULTICAST",
+      "UP",
+      "LOWER_UP"
+    ],
+    "mtu": 1500,
+    "master": "br0",
+    "state": "disabled",
+    "priority": 32,
+    "cost": 100
+  }
+]

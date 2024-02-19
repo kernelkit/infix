@@ -1,0 +1,57 @@
+[
+  {
+    "ifname": "e0",
+    "vlans": [
+      {
+        "vlan": 10,
+        "flags": [
+          "PVID",
+          "Egress Untagged"
+        ]
+      },
+      {
+        "vlan": 20
+      }
+    ]
+  },
+  {
+    "ifname": "e1",
+    "vlans": [
+      {
+        "vlan": 10
+      },
+      {
+        "vlan": 20,
+        "flags": [
+          "PVID",
+          "Egress Untagged"
+        ]
+      }
+    ]
+  },
+  {
+    "ifname": "e2",
+    "vlans": [
+      {
+        "vlan": 30,
+        "flags": [
+          "Egress Untagged"
+        ]
+      }
+    ]
+  },
+  {
+    "ifname": "br0",
+    "vlans": [
+      {
+        "vlan": 40,
+        "flags": [
+          "Egress Untagged"
+                                                            ]
+      },
+      {
+        "vlan": 50
+      }
+    ]
+  }
+]
