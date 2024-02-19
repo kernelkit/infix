@@ -338,6 +338,42 @@ def add_ospf(ospf):
     insert(ospf, "ietf-ospf:areas", "area", areas)
     add_ospf_routes(ospf)
 
+def get_bridge_port_pvid(ifname, iface_out, test):
+    if test:
+        cmd = ['cat', f"{test}/bridge-vlan-show-dev-{ifname}.json"]
+    else:
+        cmd = ['bridge', '-j', 'vlan', 'show', 'dev', ifname]
+
+    data = run_json_cmd(cmd)
+    if len(data) != 1:
+        return None
+
+    iface = data[0]
+
+    for vlan in iface['vlans']:
+        if 'flags' in vlan and 'PVID' in vlan['flags']:
+            return vlan['vlan']
+
+    return None
+
+def get_bridge_port_stp_state(ifname, iface_out, test):
+    if test:
+        cmd = ['cat', f"{test}/bridge-link-show-dev-{ifname}.json"]
+    else:
+        cmd = ['bridge', '-j', 'link', 'show', 'dev', ifname]
+
+    data = run_json_cmd(cmd)
+    if len(data) != 1:
+        return None
+
+    iface = data[0]
+
+    states = [ 'disabled', 'listening', 'learning', 'forwarding', 'blocking' ]
+    if 'state' in iface and iface['state'] in states:
+        return iface['state']
+
+    return None
+
 def add_ip_link(ifname, iface_out, test):
     if test:
         cmd = ['cat', f"{test}/ip-link-show-dev-{ifname}.json"]
@@ -362,6 +398,14 @@ def add_ip_link(ifname, iface_out, test):
 
     if 'master' in iface_in:
         insert(iface_out, "infix-interfaces:bridge-port", "bridge", iface_in['master'])
+
+        pvid = get_bridge_port_pvid(ifname, iface_out, args.test)
+        if pvid is not None:
+            insert(iface_out, "infix-interfaces:bridge-port", "pvid", pvid)
+
+        stp_state = get_bridge_port_stp_state(ifname, iface_out, args.test)
+        if stp_state is not None:
+            insert(iface_out, "infix-interfaces:bridge-port", "stp-state", stp_state)
 
     if 'link' in iface_in and not iface_is_dsa(iface_in):
         insert(iface_out, "infix-interfaces:vlan", "lower-layer-if", iface_in['link'])
@@ -556,6 +600,46 @@ def add_ethtool_std(ifname, iface_out, test):
             num = round((int(num) / 1000), 3)
             insert(iface_out, "ieee802-ethernet-interface:ethernet", "speed", str(num))
 
+# Helper function to add tagged/untagged interfaces to a vlan dict in a list
+def _add_vlan_iface(vlans, vid, key, val):
+    for d in vlans:
+        if d['vid'] == vid:
+            if key in d:
+                d[key].append(val)
+            else:
+                d[key] = [val]
+            return
+    vlans.append({'vid': vid, key: [val]})
+
+def add_vlans_to_bridge(brname, iface_out, test):
+    if test:
+        cmd = ['cat', f"{test}/bridge-link.json"]
+    else:
+        cmd = ['bridge', '-j', 'link']
+
+    slaves = [] # Contains all interfaces that has this bridge as 'master'
+    for iface in run_json_cmd(cmd):
+        if "master" in iface and iface['master'] == brname:
+            slaves.append(iface['ifname'])
+
+    if test:
+        cmd = ['cat', f"{test}/bridge-vlan.json"]
+    else:
+        cmd = ['bridge', '-j', 'vlan']
+
+    vlans = [] # Contains all vlans and slaves belonging to this bridge
+    for iface in run_json_cmd(cmd):
+        if iface['ifname'] not in slaves and iface['ifname'] != brname:
+            continue
+
+        for vlan in iface['vlans']:
+            if 'flags' in vlan and 'Egress Untagged' in vlan['flags']:
+                _add_vlan_iface(vlans, vlan['vlan'], 'untagged', iface['ifname'])
+            else:
+                _add_vlan_iface(vlans, vlan['vlan'], 'tagged', iface['ifname'])
+
+    insert(iface_out, "infix-interfaces:bridge", "vlans", "vlan", vlans)
+
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="YANG data creator")
@@ -588,6 +672,10 @@ if __name__ == "__main__":
         if 'type' in iface_out and iface_out['type'] == "infix-if-type:ethernet":
             add_ethtool_groups(ifname, iface_out, args.test)
             add_ethtool_std(ifname, iface_out, args.test)
+
+        if 'type' in iface_out and iface_out['type'] == "infix-if-type:bridge":
+            add_vlans_to_bridge(ifname, iface_out, args.test)
+
     elif (args.model == 'ietf-routing'):
         yang_data = {
             "ietf-routing:routing": {
