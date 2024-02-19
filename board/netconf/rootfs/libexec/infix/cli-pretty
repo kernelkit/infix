@@ -44,6 +44,10 @@ class Decore():
     def green(txt):
         return Decore.decorate("32", txt, "39")
 
+    @staticmethod
+    def yellow(txt):
+        return Decore.decorate("33", txt, "39")
+
 def get_json_data(default, indata, *args):
     data = indata
     for arg in args:
@@ -140,6 +144,11 @@ class Iface:
         self.speed = get_json_data('', self.data, 'ieee802-ethernet-interface:ethernet', 'speed')
         self.phys_address = data.get('phys-address', '')
 
+        self.br_vlans = get_json_data({}, self.data, 'infix-interfaces:bridge', 'vlans', "vlan")
+        self.bridge = get_json_data('', self.data, 'infix-interfaces:bridge-port', 'bridge')
+        self.pvid = get_json_data('', self.data, 'infix-interfaces:bridge-port', 'pvid')
+        self.stp_state = get_json_data('', self.data, 'infix-interfaces:bridge-port', 'stp-state')
+
         if data.get('statistics'):
             self.in_octets = data.get('statistics').get('in-octets', '')
             self.out_octets = data.get('statistics').get('out-octets', '')
@@ -159,10 +168,6 @@ class Iface:
         else:
             self.ipv6_addr = []
 
-        if self.data.get('infix-interfaces:bridge-port'):
-            self.bridge = self.data.get('infix-interfaces:bridge-port').get('bridge', None)
-        else:
-            self.bridge = ''
 
         if self.data.get('infix-interfaces:vlan'):
             self.lower_if = self.data.get('infix-interfaces:vlan', None).get('lower-layer-if',None)
@@ -207,10 +212,43 @@ class Iface:
         row += f"{self.phys_address:<{Pad.data}}"
         print(row)
 
+    def pr_proto_br(self, br_vlans):
+        data_str = ""
+
+        row = f"{'bridge':<{Pad.proto}}"
+
+        if self.oper_status == "down":
+            row += Decore.red(f"{'DOWN':<{Pad.state}}")
+        else:
+            dec = Decore.green if self.stp_state == "forwarding" else Decore.yellow
+            row += dec(f"{self.stp_state.upper():<{Pad.state}}")
+
+        for vlan in br_vlans:
+            if 'tagged' in vlan:
+                for tagged in vlan['tagged']:
+                    if tagged == self.name:
+                        if data_str:
+                            data_str += f",{vlan['vid']}t"
+                        else:
+                            data_str += f"vlan:{vlan['vid']}t"
+            if 'untagged' in vlan:
+                for untagged in vlan['untagged']:
+                    if untagged == self.name:
+                        if data_str:
+                            data_str += f",{vlan['vid']}u"
+                        else:
+                            data_str += f"vlan:{vlan['vid']}u"
+        if self.pvid:
+            data_str += f" pvid:{self.pvid}"
+
+        if data_str:
+            row += f"{data_str:<{Pad.data}}"
+
+        print(row)
+
     def pr_bridge(self, _ifaces):
         self.pr_name(pipe="")
-        self.pr_proto_eth()
-
+        self.pr_proto_br(self.br_vlans)
 
         lowers = []
         for _iface in [Iface(data) for data in _ifaces]:
@@ -227,7 +265,7 @@ class Iface:
         for i, lower in enumerate(lowers):
             pipe = '└ ' if (i == len(lowers) -1)  else '├ '
             lower.pr_name(pipe)
-            lower.pr_proto_eth()
+            lower.pr_proto_br(self.br_vlans)
 
     def pr_veth(self, _ifaces):
         self.pr_name(pipe="")
