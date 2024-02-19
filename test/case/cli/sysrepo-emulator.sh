@@ -5,7 +5,7 @@ ROOT_PATH="$SCRIPT_PATH/../../../"
 
 YANGER_TOOL="$ROOT_PATH/board/netconf/rootfs/libexec/infix/yanger"
 
-INTERFACES="br0 e0 e1 e2 e3 e4"
+INTERFACES="br0 br1 e0 e1 e2 e3 e4"
 
 INTERFACE_OUTPUT_FILE="$(mktemp)"
 INTERFACES_OUTPUT_FILE="$(mktemp)"
