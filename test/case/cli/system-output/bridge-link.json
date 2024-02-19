@@ -1,0 +1,47 @@
+[
+  {
+    "ifindex": 2,
+    "ifname": "e0",
+    "flags": [
+      "BROADCAST",
+      "MULTICAST",
+      "UP",
+      "LOWER_UP"
+    ],
+    "mtu": 1500,
+    "master": "br0",
+    "state": "disabled",
+    "priority": 32,
+    "cost": 100
+  },
+  {
+    "ifindex": 3,
+    "ifname": "e1",
+    "flags": [
+      "BROADCAST",
+      "MULTICAST",
+      "UP",
+      "LOWER_UP"
+    ],
+    "mtu": 1500,
+    "master": "br0",
+    "state": "blocking",
+    "priority": 32,
+    "cost": 100
+  },
+  {
+    "ifindex": 4,
+    "ifname": "e2",
+    "flags": [
+      "BROADCAST",
+      "MULTICAST",
+      "UP",
+      "LOWER_UP"
+    ],
+    "mtu": 1500,
+    "master": "br1",
+    "state": "forwarding",
+    "priority": 32,
+    "cost": 100
+  }
+]

@@ -1,0 +1,17 @@
+[
+  {
+    "ifname": "e0",
+    "vlans": [
+      {
+        "vlan": 10,
+        "flags": [
+          "PVID",
+          "Egress Untagged"
+        ]
+      },
+      {
+        "vlan": 20
+      }
+    ]
+  }
+]
