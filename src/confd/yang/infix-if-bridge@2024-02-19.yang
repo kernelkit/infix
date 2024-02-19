@@ -18,6 +18,10 @@ submodule infix-if-bridge {
   contact      "kernelkit@googlegroups.com";
   description  "Linux bridge extension for ietf-interfaces.";
 
+  revision 2024-02-19 {
+    description "Add STP state to bridge port.";
+    reference "internal";
+  }
   revision 2023-12-02 {
     description "Extend bridge-port must expression to ensure a
                  bridge cannot be a bridge-port to itself.";
@@ -75,6 +79,33 @@ submodule infix-if-bridge {
     description
       "This is a user-friendly enumeration of the different reserved IEEE
        reserved link-local multicast groups, in 01:80:C2:00:00:0X.";
+  }
+
+  typedef stp-state {
+    type enumeration {
+      enum disabled {
+        value 0;
+        description "Port is in STP DISABLED state";
+      }
+      enum listening {
+        value 1;
+        description "Port is in STP LISTENING state";
+      }
+      enum learning {
+        value 2;
+        description "Port is in STP LEARNING state";
+      }
+      enum forwarding {
+        value 3;
+        description "Port is in STP FORWARDING state. This is the default vlan state.";
+      }
+      enum blocking {
+        value 4;
+        description "Port is in STP BLOCKING state.";
+      }
+    }
+    description
+      "User-friendly enumeration of different bridge port operational states.";
   }
 
   /*
@@ -156,6 +187,12 @@ submodule infix-if-bridge {
           }
           mandatory true;
           description "Bridge interface to which this interface is attached.";
+        }
+
+        leaf stp-state {
+          type stp-state;
+          config false;
+          description "The operation state of the bridge port.";
         }
 
         leaf pvid {
