@@ -13,10 +13,10 @@
 #define RESETME    "/mnt/cfg/infix/.reset"
 #define touch(f)   mknod((f), S_IFREG|0644, 0)
 
-char rawgetch(void)
+int rawgetch(void)
 {
 	struct termios saved, c;
-	char key;
+	int key;
 
 	if (tcgetattr(fileno(stdin), &saved) < 0)
 		return -1;
