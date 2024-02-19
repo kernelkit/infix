@@ -145,7 +145,7 @@ int parse_ospf(sr_session_ctx_t *session, struct lyd_node *ospf)
 		return 0;
 	}
 	if (bfd_enabled)
-		touch(BFDD_CONF);
+		(void)touch(BFDD_CONF);
 	return 0;
 }
 
