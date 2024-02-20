@@ -217,11 +217,11 @@ class Iface:
 
         row = f"{'bridge':<{Pad.proto}}"
 
-        if self.oper_status == "down":
-            row += Decore.red(f"{'DOWN':<{Pad.state}}")
-        else:
+        if self.oper_status == "up":
             dec = Decore.green if self.stp_state == "forwarding" else Decore.yellow
             row += dec(f"{self.stp_state.upper():<{Pad.state}}")
+        else:
+            row += Decore.red(f"{self.oper_status.upper():<{Pad.state}}")
 
         for vlan in br_vlans:
             if 'tagged' in vlan:
