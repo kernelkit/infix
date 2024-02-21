@@ -13,8 +13,21 @@ import libyang
 import lxml
 import netconf_client.connect
 import netconf_client.ncclient
+from infamy.neigh import ll6ping
 
 from netconf_client.error import RpcError
+
+def netconf_syn(addr):
+    try:
+        ai = socket.getaddrinfo(addr, 830, 0, 0, socket.SOL_TCP)
+        sock = socket.socket(ai[0][0], ai[0][1], 0)
+        sock.connect(ai[0][4])
+        sock.close()
+        print(f"{addr} answers to TCP connections on port 830 (NETCONF)")
+        return True
+    except:
+        return False
+
 
 modinfo_fields = ("identifier", "version", "format", "namespace")
 ModInfoTuple = namedtuple("ModInfoTuple", modinfo_fields)
@@ -63,6 +76,7 @@ class NccGetSchemaReply:
 
 @dataclass
 class Location:
+    interface: str
     host: str
     password: str
     username: str = "admin"
@@ -72,9 +86,11 @@ class Device(object):
     def __init__(self,
                  location: Location,
                  mapping: dict,
-                 yangdir: None | str = None):
+                 yangdir: None | str = None,
+                 factory_default = True):
 
         self.mapping = mapping
+        self.location = location
         self.ly = libyang.Context(yangdir)
         self._ncc_init(location)
         self.modules = {}
@@ -83,7 +99,21 @@ class Device(object):
         del self.ly
         self.ly = libyang.Context(yangdir)
         self._ly_init(yangdir)
-        self.ncc.dispatch('<factory-default xmlns="urn:infix:factory-default:ns:yang:1.0"/>')
+        if factory_default:
+            self.ncc.dispatch('<factory-default xmlns="urn:infix:factory-default:ns:yang:1.0"/>')
+
+    def get_mgmt_ip(self):
+        return location.host
+
+    def get_mgmt_iface(self):
+        return self.location.interface
+
+    def reachable(self):
+        neigh=ll6ping(self.location.interface, flags=["-w1", "-c1", "-L", "-n"])
+        if neigh:
+            return True
+
+        return False
 
     def _ncc_init(self, location):
         ai = socket.getaddrinfo(location.host, location.port,
@@ -170,6 +200,24 @@ class Device(object):
             pieces.append(f'<xpath-filter {xmlns}>{filter}</xpath-filter>')
         pieces.append("</get-data>")
         return self._ncc_make_rpc("".join(pieces), msg_id=msg_id)
+
+    def copy(self, source, target):
+        cmd=f'''<copy-config>
+        <target>
+            <{target}/>
+        </target>
+        <source>
+           <{source}/>
+        </source>
+        </copy-config>'''
+        self.ncc._send_rpc(self._ncc_make_rpc(cmd))
+
+    def reboot(self):
+        cmd='<system-restart xmlns="urn:ietf:params:xml:ns:yang:ietf-system"/>'
+        return self.call_dict("ietf-system",
+                              {
+                                  "system-restart" : {}
+                              })
 
     def _get(self, xpath, getter, as_xml=False):
         # Figure out which modules we are referencing
@@ -303,4 +351,3 @@ class Device(object):
 
         with open(outdir+"/"+schema["filename"], "w") as f:
             f.write(data.schema)
-
