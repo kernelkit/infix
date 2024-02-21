@@ -132,9 +132,15 @@ int ietf_interfaces_init(struct confd *confd);
 int ietf_system_init(struct confd *confd);
 
 /* infix-containers.c */
+#ifdef CONTAINERS
 int  infix_containers_init(struct confd *confd);
 void infix_containers_pre_hook(sr_session_ctx_t *session, struct confd *confd);
 void infix_containers_post_hook(sr_session_ctx_t *session, struct confd *confd);
+#else
+static inline int  infix_containers_init(struct confd *confd) { return 0; }
+static inline void infix_containers_pre_hook(sr_session_ctx_t *session, struct confd *confd) {}
+static inline void infix_containers_post_hook(sr_session_ctx_t *session, struct confd *confd) {}
+#endif
 
 /* infix-dhcp.c */
 int infix_dhcp_init(struct confd *confd);
