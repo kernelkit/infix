@@ -35,7 +35,7 @@ class Env(object):
             if not self.ltop.map_to(self.ptop):
                 raise tap.TestSkip()
 
-    def attach(self, node, port):
+    def attach(self, node, port, factory_default=True):
         if self.ltop:
             mapping = self.ltop.mapping[node]
             node, port = self.ltop.xlate(node, port)
@@ -55,7 +55,8 @@ class Env(object):
             raise Exception(f"Failed, cannot find mgmt IP for {node}")
 
         return netconf.Device(
-            location=netconf.Location(mgmtip, password),
+            location=netconf.Location(cport, mgmtip, password),
             mapping=mapping,
-            yangdir=self.args.yangdir
+            yangdir=self.args.yangdir,
+            factory_default=factory_default
         )
