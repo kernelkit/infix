@@ -89,6 +89,7 @@ class Device(object):
                  yangdir: None | str = None,
                  factory_default = True):
 
+        self.location = location
         self.mapping = mapping
         self.location = location
         self.ly = libyang.Context(yangdir)
@@ -181,6 +182,10 @@ class Device(object):
 
         return list(filter(lambda m: m["name"] in modnames,
                            self.modules.values()))
+
+    def address(self):
+        """Return managment IP address used for NETCONF"""
+        return self.location.host
 
     def _ncc_make_rpc(self, guts, msg_id=None):
         if not msg_id:
