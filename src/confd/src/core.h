@@ -21,6 +21,8 @@
 #include <sysrepo/values.h>
 #include <sysrepo/xpath.h>
 
+#include <jansson.h>
+
 #include <srx/common.h>
 #include <srx/helpers.h>
 #include <srx/systemv.h>
@@ -59,7 +61,7 @@ struct confd {
 	sr_conn_ctx_t          *conn;
 	sr_subscription_ctx_t  *sub;
 	sr_subscription_ctx_t  *fsub;    /* factory-default sub */
-
+	json_t                 *root;
 	augeas                 *aug;
 	struct dagger		netdag;
 };

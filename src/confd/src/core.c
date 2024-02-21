@@ -15,7 +15,7 @@ uint32_t core_hook_prio(void)
 }
 
 int core_startup_save(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
-	const char *xpath, sr_event_t event, unsigned request_id, void *priv)
+		      const char *xpath, sr_event_t event, unsigned request_id, void *priv)
 {
 	if (systemf("sysrepocfg -X/cfg/startup-config.cfg -d startup -f json"))
 		return SR_ERR_SYS;
@@ -24,7 +24,7 @@ int core_startup_save(sr_session_ctx_t *session, uint32_t sub_id, const char *mo
 }
 
 int core_pre_hook(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
-	const char *xpath, sr_event_t event, unsigned request_id, void *priv)
+		  const char *xpath, sr_event_t event, unsigned request_id, void *priv)
 {
 	return 0;
 }
@@ -35,7 +35,7 @@ int core_pre_hook(sr_session_ctx_t *session, uint32_t sub_id, const char *module
  * For details, see https://github.com/sysrepo/sysrepo/issues/2188
  */
 int core_post_hook(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
-	const char *xpath, sr_event_t event, unsigned request_id, void *priv)
+		   const char *xpath, sr_event_t event, unsigned request_id, void *priv)
 {
 	static int num_changes = 0;
 
@@ -83,9 +83,9 @@ int sr_plugin_init_cb(sr_session_ctx_t *session, void **priv)
 	/* Save context with default running config datastore for all our models */
 	*priv = (void *)&confd;
 	confd.session = session;
-	confd.conn    = sr_session_get_connection(session);
-	confd.sub     = NULL;
-	confd.fsub    = NULL;
+	confd.conn = sr_session_get_connection(session);
+	confd.sub = NULL;
+	confd.fsub = NULL;
 
 	if (!confd.conn)
 		goto err;
@@ -99,11 +99,13 @@ int sr_plugin_init_cb(sr_session_ctx_t *session, void **priv)
 	rc = sr_session_start(confd.conn, SR_DS_CANDIDATE, &confd.cand);
 	if (rc)
 		goto err;
-
 	confd.aug = aug_init(NULL, "", 0);
 	if (!confd.aug)
 		goto err;
 
+	confd.root = json_load_file("/run/system.json", 0, NULL);
+	if (!confd.root)
+		goto err;
 	rc = ietf_interfaces_init(&confd);
 	if (rc)
 		goto err;
@@ -117,10 +119,10 @@ int sr_plugin_init_cb(sr_session_ctx_t *session, void **priv)
 	if (rc)
 		goto err;
 	rc = ietf_factory_default_init(&confd);
-	if(rc)
+	if (rc)
 		goto err;
 	rc = ietf_routing_init(&confd);
-	if(rc)
+	if (rc)
 		goto err;
 	rc = infix_system_sw_init(&confd);
 	if (rc)
@@ -135,8 +137,11 @@ int sr_plugin_init_cb(sr_session_ctx_t *session, void **priv)
 	/* YOUR_INIT GOES HERE */
 
 	return SR_ERR_OK;
+
 err:
 	ERROR("init failed: %s", sr_strerror(rc));
+	if (confd.root)
+		json_decref(confd.root);
 	sr_unsubscribe(confd.sub);
 	sr_unsubscribe(confd.fsub);
 
@@ -147,7 +152,8 @@ void sr_plugin_cleanup_cb(sr_session_ctx_t *session, void *priv)
 {
 	struct confd *confd = (struct confd *)priv;
 
-        sr_unsubscribe(confd->sub);
-        sr_unsubscribe(confd->fsub);
+	sr_unsubscribe(confd->sub);
+	sr_unsubscribe(confd->fsub);
+	json_decref(confd->root);
 	closelog();
 }
