@@ -167,17 +167,18 @@ def get_usb_ports(usb_ports):
                 continue
 
             path = usb_port["path"]
-            if os.path.exists(path):
-                names.append(usb_port["name"])
-                with open(path, "r") as f:
-                    data=int(f.readline().strip())
-                    enabled="unlocked" if data == 1 else "locked"
-                    port["state"] = {}
-                    port["state"]["admin-state"] = enabled
-                    port["name"] = usb_port["name"]
-                    port["class"] = "infix-hardware:usb"
-                    port["state"]["oper-state"] = "enabled"
-                    ports.append(port)
+            if os.path.basename(path) == "authorized_default":
+                if os.path.exists(path):
+                    with open(path, "r") as f:
+                        names.append(usb_port["name"])
+                        data=int(f.readline().strip())
+                        enabled="unlocked" if data == 1 else "locked"
+                        port["state"] = {}
+                        port["state"]["admin-state"] = enabled
+                        port["name"] = usb_port["name"]
+                        port["class"] = "infix-hardware:usb"
+                        port["state"]["oper-state"] = "enabled"
+                        ports.append(port)
 
     return ports
 
