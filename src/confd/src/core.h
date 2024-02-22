@@ -42,6 +42,26 @@ static inline void print_val(sr_val_t *val)
 	free(str);
 }
 
+static inline char *xpath_base(const char *xpath)
+{
+	char *path, *ptr;
+
+	if (!xpath)
+		return NULL;
+
+	path = strdup(xpath);
+	if (!path)
+		return NULL;
+
+	if (!(ptr = strstr(path, "]/"))) {
+		free(path);
+		return NULL;
+	}
+	ptr[1] = 0;
+
+	return path;
+}
+
 #define REGISTER_CHANGE(s,m,x,f,c,a,u)				\
 	if ((rc = register_change(s, m, x, f, c, a, u)))	\
 		goto fail

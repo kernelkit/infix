@@ -36,7 +36,7 @@ confd_plugin_la_SOURCES =			\
 	ietf-hardware.c
 
 if CONTAINERS
-confd_plugin_la_SOURCES += infix-containers.c
+confd_plugin_la_SOURCES += infix-containers.c cni.c cni.h
 endif
 
 rauc_installer_sources = 			\

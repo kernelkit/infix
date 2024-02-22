@@ -12,9 +12,7 @@
 #include <srx/srx_val.h>
 
 #include "core.h"
-#include "dagger.h"
-
-#define CNI_NAME "/etc/cni/net.d/%s.conflist"
+#include "cni.h"
 
 #define ERR_IFACE(_iface, _err, _fmt, ...)				\
 	({								\
@@ -28,366 +26,6 @@
 
 #define IF_XPATH "/ietf-interfaces:interfaces/interface"
 
-/*
- * When an interface has been handed off to a container it is moved to
- * another network namespace.  This function asks podman for the PID of
- * the container that currently hosts the interface.
- */
-static pid_t find_in_container(const char *ifname)
-{
-	char buf[32] = { 0 };
-	pid_t pid = 0;
-	FILE *pp;
-
-	if (fexistf("/sys/class/net/%s", ifname))
-		return 0;      /* it's right here, not in a container */
-
-	pp = popenf("r", "container --net %s find", ifname);
-	if (!pp)
-		return 0;
-
-	if (fgets(buf, sizeof(buf), pp)) {
-		chomp(buf);
-		pid = atoi(buf);
-	}
-
-	pclose(pp);
-
-	return pid;
-}
-
-/*
- * This function takes the PID from find_in_container() and figures out
- * the name of our ifname inside the container.  For CNI/podman they
- * save the host's name as the interface's ifalias.
- */
-static char *find_container_ifname(pid_t pid, const char *ifname)
-{
-	static char buf[IFNAMSIZ + 2];
-	char *ptr = NULL;
-	FILE *pp;
-
-	pp = popenf("r", "container --net %s find ifname %d", ifname, pid);
-	if (!pp)
-		return NULL;
-
-	buf[0] = 0;
-	if (fgets(buf, sizeof(buf), pp)) {
-		chomp(buf);
-		ptr = buf;
-	}
-	pclose(pp);
-
-	return ptr;
-}
-
-/*
- * Sometimes we need to perform some kind of 'ip link dev IFNAME'
- * command to find buried interface data.  This function handles
- * the fact that interfaces sometimes are on vacation in another
- * network namespace (container).
- */
-static FILE *popen_ifcmd(const char *fmt, const char *ifname)
-{
-	char cmd[strlen(fmt) + 64];
-	static char *ifalias;
-	pid_t pid;
-
-	pid = find_in_container(ifname);
-	if (!pid)
-		return popenf("re", fmt, ifname);
-
-	ifalias = find_container_ifname(pid, ifname);
-	if (!ifalias)
-		return NULL;
-
-	snprintf(cmd, sizeof(cmd), fmt, ifalias);
-	return popenf("re", "nsenter -t %d -n %s", pid, cmd);
-}
-
-static bool iface_is_cni(const char *ifname, struct lyd_node *node, const char **type)
-{
-	struct lyd_node *net = lydx_get_child(node, "container-network");
-
-	if (net) {
-		if (type)
-			*type = lydx_get_cattr(net, "type");
-		return true;
-	}
-
-	return false;
-}
-
-static void cni_gen_addrs(struct lyd_node *ip, FILE *fp, int *ipam)
-{
-	struct lyd_node *addr;
-
-	if (!lydx_is_enabled(ip, "enabled"))
-		return;
-
-	LYX_LIST_FOR_EACH(lyd_child(ip), addr, "address") {
-		struct lyd_node *ip = lydx_get_child(addr, "ip");
-		struct lyd_node *len = lydx_get_child(addr, "prefix-length");
-
-		if (*ipam == 0)
-			fprintf(fp,
-				",\n      \"ipam\": {\n"
-				"        \"type\": \"static\",\n"
-				"        \"addresses\": [\n");
-
-		fprintf(fp, "%s          { \"address\": \"%s/%s\" }",
-			*ipam ? ",\n" : "", lyd_get_value(ip), lyd_get_value(len));
-		*ipam = 1;
-	}
-}
-
-#if 0 /* Unused for now, use container specific global dns and search settings instead. */
-static void cni_gen_dns(struct lyd_node *net, FILE *fp, int *first)
-{
-	struct lyd_node *dns;
-
-	dns = lydx_get_child(net, "dns");
-	if (dns) {
-		struct lyd_node *node;
-
-		fprintf(fp, ",\n        \"dns\":  {");
-
-		*first = 1;
-		LYX_LIST_FOR_EACH(lyd_child(dns), node, "nameservers") {
-			if (*first)
-				fprintf(fp, "\n          \"nameservers\": [ ");
-			else
-				fprintf(fp, ", ");
-
-			fprintf(fp, "\"%s\"", lyd_get_value(node));
-			(*first)++;
-		}
-		if (*first > 1)
-			fprintf(fp, " ]");
-
-		node = lydx_get_child(dns, "domain");
-		if (node) {
-			fprintf(fp, "%s\n          \"domain\": \"%s\"",
-				*first > 1 ? "," : "", lyd_get_value(node));
-			(*first)++;
-		}
-
-		LYX_LIST_FOR_EACH(lyd_child(net), node, "search") {
-			if (*first)
-				fprintf(fp, "%s\n          \"search\": [ ", *first > 1 ? "," : "");
-			else
-				fprintf(fp, ", ");
-
-			fprintf(fp, "\"%s\"", lyd_get_value(node));
-			*first = 0;
-		}
-
-		fprintf(fp, "%s\n        }", *first ? "" : "]");
-	}
-}
-#endif
-
-/*
- * Set up IP masquerading bridge which acts as a gateway for nodes behind it.
- * Default subnet, if one is missing in configuration, is: 10.88.0.0/16
- */
-static int cni_bridge(struct lyd_node *net, const char *ifname)
-{
-	struct lyd_node *node;
-	int first = 1;
-	FILE *fp;
-
-	fp = fopenf("w", CNI_NAME, ifname);
-	if (!fp) {
-		ERRNO("Failed creating container bridge " CNI_NAME, ifname);
-		return -EIO;
-	}
-
-	fprintf(fp, "{\n"
-		"  \"cniVersion\":    \"1.0.0\",\n"
-		"  \"name\":          \"%s\",\n"
-		"  \"plugins\": [\n"
-		"    {\n"
-		"      \"type\":      \"bridge\",\n"
-		"      \"bridge\":    \"%s\",\n"
-		"      \"isGateway\":   true,\n"
-		"      \"ipMasq\":      true,\n"
-      		"      \"hairpinMode\": true,\n"
-//		"      \"dataDir\":   \"/run/containers/networks\",\n"
-		"      \"ipam\": {\n"
-		"        \"type\":    \"host-local\"", ifname, ifname);
-
-	LYX_LIST_FOR_EACH(lyd_child(net), node, "route") {
-		struct lyd_node *subnet = lydx_get_child(node, "subnet");
-		struct lyd_node *gateway = lydx_get_child(node, "gateway");
-
-		if (first)
-			fprintf(fp, ",\n        \"routes\": [\n");
-		else
-			fprintf(fp, ",\n");
-
-		fprintf(fp, "          {\n"
-			"            \"dst\": \"%s\"%s\n", lyd_get_value(subnet), gateway ? "," : "");
-		if (gateway)
-			fprintf(fp, "            \"gw\": \"%s\"\n", lyd_get_value(gateway));
-		fprintf(fp, "          }");
-
-		first = 0;
-	}
-	if (!first)
-		fprintf(fp, "        ]");
-	else
-		fprintf(fp, ",\n        \"routes\": [ { \"dst\": \"0.0.0.0/0\" } ]");
-
-	first = 1;
-	LYX_LIST_FOR_EACH(lyd_child(net), node, "subnet") {
-		struct lyd_node *subnet = lydx_get_child(node, "subnet");
-		struct lyd_node *gateway = lydx_get_child(node, "gateway");
-
-		if (first)
-			fprintf(fp, ",\n        \"ranges\": [\n");
-		else
-			fprintf(fp, ",\n");
-
-		fprintf(fp, "          [{\n"
-			"            \"subnet\": \"%s\"%s\n", lyd_get_value(subnet), gateway ? "," : "");
-		if (gateway)
-			fprintf(fp, "            \"gateway\": \"%s\"\n", lyd_get_value(gateway));
-		fprintf(fp, "          }]");
-
-		first = 0;
-	}
-	if (!first)
-		fprintf(fp, "\n        ]");
-	else
-		/* Default is a customary docker0 local network */
-		fprintf(fp, ",\n        \"ranges\": [ [{ \"subnet\": \"172.17.0.0/16\" }] ]");
-
-	fprintf(fp,
-		"\n      }\n"	/* /ipam */
-		"    },\n"	/* /bridge */
-		"    {\n"
-		"      \"type\": \"portmap\",\n"
-		"      \"capabilities\": {\n"
-		"        \"portMappings\": true\n"
-		"      }\n"
-		"    },\n"	/* /portmap */
-		"    {\n"
-		"      \"type\": \"firewall\"\n"
-		"    },\n"	/* /firewall */
-		"    {\n"
-		"      \"type\": \"tuning\"\n"
-		"    }\n"	/* /tuning */
-		"  ]\n"
-		"}\n");
-
-	if (fclose(fp))
-		return -errno;
-
-	return 0;
-}
-
-static int cni_host(struct lyd_node *net, const char *ifname)
-{
-	struct lyd_node *node, *ip;
-	int addr = 0, route = 0;
-	FILE *fp;
-
-	fp = fopenf("w", CNI_NAME, ifname);
-	if (!fp) {
-		ERRNO("Failed creating container interface " CNI_NAME, ifname);
-		return -EIO;
-	}
-
-	fprintf(fp, "{\n"
-		"  \"cniVersion\": \"1.0.0\",\n"
-		"  \"name\": \"%s\",\n"
-		"  \"plugins\": [\n"
-		"    {\n"
-		"      \"type\": \"host-device\",\n"
-		"      \"device\": \"%s\"", ifname, ifname);
-
-
-	ip = lydx_get_child(lyd_parent(net), "ipv4");
-	if (ip)
-		cni_gen_addrs(ip, fp, &addr);
-
-	ip = lydx_get_child(lyd_parent(net), "ipv6");
-	if (ip)
-		cni_gen_addrs(ip, fp, &addr);
-
-	if (addr)
-		fprintf(fp, "\n        ]");
-
-	LYX_LIST_FOR_EACH(lyd_child(net), node, "route") {
-		struct lyd_node *subnet = lydx_get_child(node, "subnet");
-		struct lyd_node *gateway = lydx_get_child(node, "gateway");
-
-		if (route)
-			fprintf(fp, ",\n        \"routes\": [\n");
-		else
-			fprintf(fp, ",\n");
-
-		fprintf(fp, "          {\n"
-			"            \"dst\": \"%s\"%s\n", lyd_get_value(subnet), gateway ? "," : "");
-		if (gateway)
-			fprintf(fp, "            \"gw\": \"%s\"\n", lyd_get_value(gateway));
-		fprintf(fp, "          }");
-
-		route = 0;
-	}
-	if (route)
-		fprintf(fp, "        ]");
-
-	fprintf(fp,
-		"%s"
-		"    }\n"
-		"  ]\n"
-		"}\n", (addr || route) ? "\n      }\n" : "");
-
-	if (fclose(fp))
-		return -errno;
-
-	return 0;
-}
-
-static int iface_gen_cni(const char *ifname, struct lyd_node *cif)
-{
-	struct lyd_node *net = lydx_get_child(cif, "container-network");
-	const char *type = lydx_get_cattr(net, "type");
-
-	/*
-	 * klish/sysrepo does not seem to call update callbacks for
-	 * presence containers, so we have to be prepared for the
-	 * worst here and perform late type inference.  What works:
-	 *
-	 *     edit container-network               # callback called
-	 *
-	 * What doesn't work:
-	 *
-	 *     set container-network                # callback not called
-	 *
-	 * Funnily enough, "show running-config" shows the empty
-	 * "container-network": {}, so someone does their job.
-	 */
-	if (!type) {
-		const char *iftype = lydx_get_cattr(cif, "type");
-
-		if (iftype && !strcmp(iftype, "infix-if-type:bridge"))
-			type = "bridge";
-		else
-			type = "host";
-	}
-
-	if (!strcmp(type, "host"))
-		return cni_host(net, ifname);
-
-	if (!strcmp(type, "bridge"))
-		return cni_bridge(net, ifname);
-
-	ERROR("Unknown container network type %s, skipping.", type);
-	return 0;
-}
 
 static bool iface_is_phys(const char *ifname)
 {
@@ -397,7 +35,7 @@ static bool iface_is_phys(const char *ifname)
 	json_t *link;
 	FILE *proc;
 
-	proc = popen_ifcmd("ip -d -j link show dev %s 2>/dev/null", ifname);
+	proc = cni_popen("ip -d -j link show dev %s 2>/dev/null", ifname);
 	if (!proc)
 		goto out;
 
@@ -424,37 +62,13 @@ out:
 	return is_phys;
 }
 
-/*
- * Needed because we do deep searches for changes in interfaces,
- * e.g. changes in bridge port settings, veth peers, etc.
- */
-static char *iface_xpath(const char *xpath)
-{
-	char *path, *ptr;
-
-	if (!xpath)
-		return NULL;
-
-	path = strdup(xpath);
-	if (!path)
-		return NULL;
-
-	if (!(ptr = strstr(path, "]/"))) {
-		free(path);
-		return NULL;
-	}
-	ptr[1] = 0;
-
-	return path;
-}
-
 static int ifchange_cand_infer_veth(sr_session_ctx_t *session, const char *path)
 {
 	char *ifname, *type, *peer, *xpath, *val;
 	sr_error_t err = SR_ERR_OK;
 	size_t cnt = 0;
 
-	xpath = iface_xpath(path);
+	xpath = xpath_base(path);
 	if (!xpath)
 		return SR_ERR_SYS;
 
@@ -504,7 +118,7 @@ static int ifchange_cand_infer_vlan(sr_session_ctx_t *session, const char *path)
 	size_t cnt = 0;
 	long vid;
 
-	xpath = iface_xpath(path);
+	xpath = xpath_base(path);
 	if (!xpath)
 		return SR_ERR_SYS;;
 	type = srx_get_str(session, "%s/type", xpath);
@@ -579,61 +193,13 @@ out:
 	return err;
 }
 
-static int ifchange_cand_infer_cni_type(sr_session_ctx_t *session, const char *path)
-{
-	sr_val_t inferred = { .type = SR_STRING_T };
-	struct lyd_node *node, *net;
-	sr_error_t err = SR_ERR_OK;
-	char *xpath, *iftype;
-	sr_data_t *cfg;
-
-	xpath = iface_xpath(path);
-	if (!xpath)
-		return SR_ERR_SYS;
-
-	err = sr_get_data(session, path, 0, 0, 0, &cfg);
-	if (err)
-		goto err;
-
-	node = lydx_get_descendant(cfg->tree, "interfaces", "interface", NULL);
-	if (!node)
-		goto out;
-
-	net = lydx_get_child(node, "container-network");
-	if (!net)
-		goto out;
-
-	if (lydx_get_cattr(net, "type"))
-		goto out;	/* CNI type is already set */
-
-	/* Infer from ietf-interface type, reduces typing */
-	iftype = srx_get_str(session, "%s/type", xpath);
-	if (iftype && !strcmp(iftype, "infix-if-type:bridge"))
-		inferred.data.string_val = "bridge";
-	else
-		inferred.data.string_val = "host";
-
-	err = srx_set_item(session, &inferred, 0, "%s/type", path);
-	if (err)
-		ERROR("failed setting container-network type %s, err %d: %s",
-		      inferred.data.string_val, err, sr_strerror(err));
-	if (iftype)
-		free(iftype);
-out:
-	sr_release_data(cfg);
-err:
-	free(xpath);
-
-	return err;
-}
-
 static int ifchange_cand_infer_type(sr_session_ctx_t *session, const char *path)
 {
 	sr_val_t inferred = { .type = SR_STRING_T };
 	char *ifname, *type, *xpath;
 	sr_error_t err = SR_ERR_OK;
 
-	xpath = iface_xpath(path);
+	xpath = xpath_base(path);
 	if (!xpath)
 		return SR_ERR_SYS;
 
@@ -717,7 +283,7 @@ static int ifchange_cand(sr_session_ctx_t *session, uint32_t sub_id, const char 
 		if (err)
 			break;
 
-		err = ifchange_cand_infer_cni_type(session, new->xpath);
+		err = cni_ifchange_cand_infer_type(session, new->xpath);
 		if (err)
 			break;
 	}
@@ -864,7 +430,7 @@ static int netdag_gen_link_addr(FILE *ip, struct lyd_node *cif, struct lyd_node 
 		 * Only physical interfaces support this, virtual ones
 		 * we remove, see netdag_must_del() for details.
 		 */
-		fp = popen_ifcmd("ip -d -j link show dev %s |jq -rM .[].permaddr", ifname);
+		fp = cni_popen("ip -d -j link show dev %s |jq -rM .[].permaddr", ifname);
 		if (fp) {
 			if (fgets(buf, sizeof(buf), fp))
 				mac = chomp(buf);
@@ -894,7 +460,7 @@ static int netdag_gen_ip_addrs(struct dagger *net, FILE *ip, const char *proto,
 	const char *ifname = lydx_get_cattr(dif, "name");
 
 	if (!ipconf || !lydx_is_enabled(ipconf, "enabled")) {
-		if (!find_in_container(ifname) && if_nametoindex(ifname)) {
+		if (!cni_find(ifname) && if_nametoindex(ifname)) {
 			FILE *fp;
 
 			fp = dagger_fopen_next(net, "init", ifname, 49, "flush.sh");
@@ -1570,28 +1136,16 @@ static sr_error_t netdag_gen_iface(struct dagger *net,
 {
 	const char *ifname = lydx_get_cattr(dif, "name");
 	enum lydx_op op = lydx_get_op(dif);
-	const char *attr, *cni_type = NULL;
+	const char *attr;
 	int err = 0;
 	bool fixed;
 	FILE *ip;
 
-	if (iface_is_cni(ifname, cif, &cni_type)) {
-		err = iface_gen_cni(ifname, cif);
-		if (cni_type && !strcmp(cni_type, "bridge"))
-			goto err; /* CNI bridges are managed by podman */
-	} else if (iface_is_cni(ifname, dif, &cni_type)) {
-		FILE *fp;
-
-		/* No longer a container-network, clean up. */
-		fp = dagger_fopen_current(net, "exit", ifname, 30, "cni.sh");
-		if (!fp)
-			return -EIO;
-
-		fprintf(fp, "container -a -f delete network %s >/dev/null\n", ifname);
-		fclose(fp);
-
-		if (cni_type && !strcmp(cni_type, "bridge"))
-			goto err; /* CNI bridges are managed by podman */
+	if ((err = cni_netdag_gen_iface(net, ifname, dif, cif))) {
+		/* error or managed by CNI/podman */
+		if (err > 0)
+			err = 0; /* done, nothing more to do here */
+		goto err;
 	}
 
 	fixed = iface_is_phys(ifname) || !strcmp(ifname, "lo");
