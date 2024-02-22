@@ -33,6 +33,11 @@ All network specific settings are done using the IETF interfaces YANG
 model, with augments for containers to ensure smooth integration with
 container networking in podman.
 
+> **Note:** even though the `podman` command can be used directly from a
+> shell prompt, we strongly recommend using the CLI commands instead.
+> They employ the services of a wrapper `container` script which handles
+> the integration of containers in the system.
+
 
 Caution
 -------
