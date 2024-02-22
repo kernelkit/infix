@@ -115,8 +115,11 @@ module infix-containers {
 	key key;
 
 	leaf key {
-	  description "Single word, [A-Za-z_]";
-	  type string;
+	  description "Single word.";
+	  type string {
+            pattern '[a-zA-Z_][a-zA-Z0-9_]*';
+            length "1..253";
+          }
 	}
 
 	leaf value {
@@ -173,6 +176,7 @@ module infix-containers {
           }
 
           leaf-list option {
+            when "deref(../name)/../infix-if:container-network/infix-if:type = 'infix-if:bridge'";
             description "Options for a masquerading container bridges.
 
                          Example: ip=1.2.3.4            -- request a specific IP (IPv4 or IPv6)
@@ -188,19 +192,19 @@ module infix-containers {
                          Syntax: [[ip:][hostPort]:]containerPort[/protocol]
 
                          Sample: 8080:80           -- forward tcp port 8080 to container port 80
-                                   69:69/udp         -- forward udp port 69 to container port 69
-                                   127.0.0.1:8080:80 -- forward only from loopback interface";
+                                 69:69/udp         -- forward udp port 69 to container port 69
+                                 127.0.0.1:8080:80 -- forward only from loopback interface";
           type string;
         }
 
         leaf-list dns {
           description "Set custom DNS servers, or 'none' to use /etc/resolv.conf in image.";
-          type string;
+          type inet:ip-address;
         }
 
         leaf-list search {
           description "Set custom DNS search domains, or '.' to not set search domain.";
-          type string;
+          type inet:domain-name;
         }
 
         must "(host and not(interface)) or (not(host) and interface) or (not(host) and not(interface))" {
@@ -298,7 +302,7 @@ module infix-containers {
 	key name;
 
 	leaf name {
-	  description "Single word, [A-Za-z_], to identify this volume.
+	  description "Single word to identify this (named) volume.
 
                        Volumes are retained over the lifetime of a container and
                        survive both upgrading the image and configuration changes,
@@ -312,7 +316,10 @@ module infix-containers {
                        with the contents of the container's file system on first
                        use.  Hence, upgrading the container image will not update
                        the volume if the image has new/removed files at 'path'.";
-	  type string;
+	  type string {
+            pattern '[a-zA-Z_][a-zA-Z0-9_]*';
+            length "1..64";
+          }
 	}
 
 	leaf target {
