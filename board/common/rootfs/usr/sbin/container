@@ -99,9 +99,13 @@ create()
     # name, or return docker:// URL for download.
     image=$(unpack_archive "$image")
 
+    if [ -z "$logging" ]; then
+	logging="--log-driver k8s-file --log-opt path=/run/containers/$name.fifo"
+    fi
+
     args="$args --cgroup-parent=containers"
-    args="$args --restart=no --systemd=false --tz=local $privileged --replace --quiet"
-#    args="$args --log-opt tag=$name"
+    args="$args --restart=$restart --systemd=false --tz=local $privileged --replace --quiet"
+    args="$args $ro $vol $mount $hostname $entrypoint $env $port $logging"
     pidfn=/run/container:${name}.pid
 
     [ -n "$quiet" ] || log "---------------------------------------"
@@ -124,13 +128,11 @@ create()
 	network="--net none"
     fi
 
-    #  --syslog --log-level info
     # shellcheck disable=SC2048
-    if podman create --name "$name" --conmon-pidfile="$pidfn" $ro $vol $mount $hostname $entrypoint $env $network $port $args "$image" $*; then
+    if podman create --name "$name" --conmon-pidfile="$pidfn" $args "$image" $*; then
 	[ -n "$quiet" ] || log "Successfully created container $name from $image"
 	rm -f "/run/containers/env/${name}.env"
-	initctl show "container:$name" |grep -q manual:yes || initctl -bq start "container:$name"
-	initctl -nbq cond set container:$name
+	[ -n "$manual" ] || start "$name"
 	exit 0
     fi
 
@@ -149,12 +151,55 @@ delete()
 	exit 1
     fi
 
-    if running "$name"; then
-	initctl -bq stop "container:$name" || podman kill -s KILL "$name" >/dev/null 2>&1
-    fi
-
     podman rm -vif "$name" >/dev/null 2>&1
     [ -n "$quiet" ] || log "Container $name has been removed."
+}
+
+waitfor()
+{
+    timeout=$2
+    while [ ! -f "$1" ]; do
+	_=$((timeout -= 1))
+	if [ $timeout -le 0 ]; then
+	    log "Timeout waiting for $1, aborting!"
+	    exit 1
+	fi
+	sleep 1;
+    done
+}
+
+start()
+{
+    name=$1
+
+    if running "$name"; then
+	[ -n "$quiet" ] || echo "$name: already running."
+	return
+    fi
+
+    initctl -bq cond set "container:$name"
+    # Real work is done by wrap() courtesy of finit sysv emulation
+}
+
+stop()
+{
+    name=$1
+
+    if ! running "$name"; then
+	[ -n "$quiet" ] || echo "$name: not running."
+	return
+    fi
+
+    initctl -bq cond clr "container:$name"
+    # Real work is done by wrap() courtesy of finit sysv emulation
+}
+
+wrap()
+{
+    name=$1
+    cmd=$2
+
+    podman "$cmd" "$name"
 }
 
 # Removes network $1 from all containers
@@ -178,43 +223,51 @@ usage:
   container [opt] cmd [arg]
 
 options:
-  -a, --all               Show all, of something
-      --dns NAMESERVER    Set nameserver(s) when creating a container
-      --dns-search LIST   Set host lookup search list when creating container
-  -c, --creds USR[:PWD]   Credentials to pass to curl -u for remote ops
-  -d, --detach            Detach a container started with 'run IMG [CMD]'
-  -e, --env FILE          Environment variables when creating container
-      --entrypoint        Disable container image's ENTRYPOINT, run cmd + arg
-  -f, --force             Force operation, e.g. remove
-  -h, --help              Show this help text
-      --hostname NAME     Set hostname when creating container
-      --net NETWORK       Set network(s) when creating container
-  -m, --mount HOST:DEST   Bind mount a read-only file inside a container
-      --privileged        Give container extended privileges
-  -p, --publish PORT      Publish ports when creating container
-                          Syntax: [[ip:][hostPort]:]containerPort[/protocol]
-  -q, --quiet             Quiet operation, called from confd
-      --read-only         Do not create a writable layer
-  -s, --simple            Show output in simplified format
-  -v, --volume NAME:PATH  Create named volume mounted inside container on PATH
+  -a, --all                Show all, of something
+      --dns NAMESERVER     Set nameserver(s) when creating a container
+      --dns-search LIST    Set host lookup search list when creating container
+  -c, --creds USR[:PWD]    Credentials to pass to curl -u for remote ops
+  -d, --detach             Detach a container started with 'run IMG [CMD]'
+  -e, --env FILE           Environment variables when creating container
+      --entrypoint         Disable container image's ENTRYPOINT, run cmd + arg
+  -f, --force              Force operation, e.g. remove
+  -h, --help               Show this help text
+      --hostname NAME      Set hostname when creating container
+      --net NETWORK        Network interface(s) when creating or finding container
+  -l, --log-driver DRV     Log driver to use
+      --log-opt OPT        Logging options to log driver
+      --log-path PATH      Path for k8s-file log pipe
+  -m, --mount HOST:DEST    Bind mount a read-only file inside a container
+      --manual             Do not start container automatically after creation
+  -n, --name NAME          Alternative way of supplying name to start/stop/restart
+      --privileged         Give container extended privileges
+  -p, --publish PORT       Publish ports when creating container
+                           Syntax: [[ip:][hostPort]:]containerPort[/protocol]
+  -q, --quiet              Quiet operation, called from confd
+  -r, --restart POLICY     One of "no", "always", or "on-failure:NUM"
+      --read-only          Do not create a writable layer
+  -s, --simple             Show output in simplified format
+  -v, --volume NAME:PATH   Create named volume mounted inside container on PATH
 
 commands:
-  create  NAME IMAGE NET  Create container NAME using IMAGE with networks NET
-  delete [network] NAME   Remove container NAME or network NAME from all containers
-  exec    NAME CMD        Run a command inside a container
-  help                    Show this help text
-  list   [image | oci]    List names (only) of containers, images, or OCI archives
-  load   [NAME | URL] NM  Load OCI tarball fileNAME or URL to image NM
-  remove  IMAGE           Remove an (unused) container image
-  restart NAME            Restart a crashed container
-  run     NAME [CMD]      Run a container interactively, with an optional command
-  save    IMAGE FILE      Save a container image to an OCI tarball FILE[.tar.gz]
-  shell                   Start a shell inside a container
-  show   [image | volume] Show containers, images, or volumes
-  stat                    Show continuous stats about containers (Ctrl-C aborts)
-  start   NAME            Start a container
-  stop    NAME            Stop a container
-  volume [prune]          Prune unused volumes
+  create   NAME IMAGE NET  Create container NAME using IMAGE with networks NET
+  delete  [network] NAME   Remove container NAME or network NAME from all containers
+  exec     NAME CMD        Run a command inside a container
+  find    [ifname PID]     Find PID of container where '--net IFNAME' currently lives
+                           or, find the name of our IFNAME inside the container @PID
+  help                     Show this help text
+  list    [image | oci]    List names (only) of containers, images, or OCI archives
+  load    [NAME | URL] NM  Load OCI tarball fileNAME or URL to image NM
+  remove   IMAGE           Remove an (unused) container image
+  restart [NAME]           Restart a crashed container
+  run      NAME [CMD]      Run a container interactively, with an optional command
+  save     IMAGE FILE      Save a container image to an OCI tarball FILE[.tar.gz]
+  shell                    Start a shell inside a container
+  show    [image | volume] Show containers, images, or volumes
+  stat                     Show continuous stats about containers (Ctrl-C aborts)
+  start   [NAME]           Start a container, see -n
+  stop    [NAME]           Stop a container, see -n
+  volume  [prune]          Prune unused volumes
 EOF
 }
 
@@ -256,9 +309,29 @@ while [ "$1" != "" ]; do
 	    shift
 	    hostname="--hostname $1"
 	    ;;
+	-l | --log-driver)
+	    shift
+	    logging=" --log-driver=$1"
+	    ;;
+	--log-opt)
+	    shift
+	    logging="$logging --log-opt $1"
+	    ;;
+	--log-path)
+	    shift
+	    logging="$logging --log-opt path=$1"
+	    log_path="$1"
+	    ;;
 	-m | --mount)
 	    shift
 	    mount="--mount=$1"
+	    ;;
+	--manual)
+	    manual=true
+	    ;;
+	-n | --name)
+	    shift
+	    name="$1"
 	    ;;
 	--net)
 	    shift
@@ -277,6 +350,10 @@ while [ "$1" != "" ]; do
 	    ;;
 	-q | --quiet)
 	    quiet="-q"
+	    ;;
+	-r | --restart)
+	    shift
+	    restart=$1
 	    ;;
 	--read-only)
 	    ro="--read-only=true"
@@ -451,21 +528,35 @@ case $cmd in
 	esac
 	;;
     start)
-	if running "$1"; then
-	    [ -n "$quiet" ] || echo "$1: already running."
+	if [ -n "$name" ]; then
+	    wrap "$name" start
+	elif [ -n "$1" ]; then
+	    start "$1"
+	else
+	    usage
 	    exit 1
 	fi
-	initctl -bq start "container:$1"
 	;;
     restart)
-	initctl -bq restart "container:$1"
-	;;
-    stop)
-	if ! running "$1"; then
-	    [ -n "$quiet" ] || echo "$1: not running."
+	if [ -n "$name" ]; then
+	    wrap "$name" restart
+	elif [ -n "$1" ]; then
+	    stop  "$1"
+	    start "$1"
+	else
+	    usage
 	    exit 1
 	fi
-	initctl -bq stop "container:$1" || podman kill "$1" >/dev/null 2>&1
+	;;
+    stop)
+	if [ -n "$name" ]; then
+	    wrap "$name" stop
+	elif [ -n "$1" ]; then
+	    stop "$1"
+	else
+	    usage
+	    exit 1
+	fi
 	;;
     stat*)
 	podman stats -i 2

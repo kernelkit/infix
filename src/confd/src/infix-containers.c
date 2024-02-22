@@ -33,7 +33,6 @@ static int add(const char *name, struct lyd_node *cif)
 	const char *restart_policy, *string;
 	struct lyd_node *node, *network;
 	FILE *fp, *ap;
-	char *restart = "";	/* Default restart:10 */
 
 	fp = fopenf("w", "%s/%s.sh", INBOX_QUEUE, name);
 	if (!fp) {
@@ -152,6 +151,19 @@ static int add(const char *name, struct lyd_node *cif)
 		}
 	}
 
+	restart_policy = lydx_get_cattr(cif, "restart-policy");
+	if (restart_policy) {
+		if (!strcmp(restart_policy, "never"))
+			fprintf(fp, " -r no"); /* for docker compat */
+		else if (!strcmp(restart_policy, "always"))
+			fprintf(fp, " -r always");
+		else
+			fprintf(fp, " -r on-failure:10");
+	}
+
+	if (lydx_is_enabled(cif, "manual"))
+		fprintf(fp, " --manual");
+
 	if ((string = lydx_get_cattr(cif, "command")))
 		fprintf(fp, " --entrypoint");
 
@@ -164,31 +176,7 @@ static int add(const char *name, struct lyd_node *cif)
 	fchmod(fileno(fp), 0700);
 	fclose(fp);
 
-	fp = fopenf("w", "/etc/finit.d/available/container:%s.conf", name);
-	if (!fp) {
-		ERROR("Failed creating container %s monitor", name);
-		return SR_ERR_SYS;
-	}
-
-	restart_policy = lydx_get_cattr(cif, "restart-policy");
-	if (restart_policy) {
-		if (!strcmp(restart_policy, "no"))
-			restart = "norestart";
-		else if (!strcmp(restart_policy, "always"))
-			restart = "restart:always";
-		/* default is to restart up to 10 times */
-	}
-
-	fprintf(fp, "service name:container :%s log:prio:local1.err,tag:%s pid:!/run/container:%s.pid \\\n"
-		"	[2345] %s %s <usr/container:%s> podman start -a %s -- Container %s\n",
-		name, name, name, lydx_is_enabled(cif, "manual") ? "manual:yes" : "", restart,
-		name, name, name);
-	fclose(fp);
-
-	if (systemf("initctl -nbq enable container:%s", name)) {
-		ERROR("Failed enabling container %s monitor", name);
-		return SR_ERR_SYS;
-	}
+	systemf("initctl -bnq enable container@%s.conf", name);
 
 	return 0;
 }
@@ -200,7 +188,6 @@ static int del(const char *name)
 		INBOX_QUEUE,
 		ACTIVE_QUEUE,
 	};
-	int rc;
 
 	/* Remove any pending download/create job first */
 	for (size_t i = 0; i < NELEMS(queue); i++) {
@@ -210,11 +197,8 @@ static int del(const char *name)
 		erase(fn);
 	}
 
-	systemf("initctl -nbq disable container:%s", name);
-	rc = systemf("container delete %s", name);
-	erasef("/etc/finit.d/available/container:%s.conf", name);
-
-	return rc;
+	return  systemf("container delete %s", name) ||
+		systemf("initctl -bnq disable container@%s.conf", name);
 }
 
 static int change(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
@@ -329,9 +313,14 @@ static int oci_load(sr_session_ctx_t *session, uint32_t sub_id, const char *xpat
 	return SR_ERR_OK;
 }
 
-static int is_active(struct confd *confd, const char *name)
+static int is_active(sr_session_ctx_t *session, const char *name)
 {
-	return srx_enabled(confd->session, CFG_XPATH "/container[name='%s']/enabled", name);
+	return srx_enabled(session, CFG_XPATH "/container[name='%s']/enabled", name);
+}
+
+static int is_manual(sr_session_ctx_t *session, const char *name)
+{
+	return srx_enabled(session, CFG_XPATH "/container[name='%s']/manual", name);
 }
 
 /*
@@ -343,16 +332,14 @@ static int is_active(struct confd *confd, const char *name)
  * any lingering active jobs to prevent false matches in the cmp magic
  * in the below post-hook.
  */
-void infix_containers_pre_hook(sr_session_ctx_t *session, struct confd *confd)
+static void cleanup(sr_session_ctx_t *session, struct confd *confd)
 {
 	struct dirent *d;
 	DIR *dir;
 
 	dir = opendir(ACTIVE_QUEUE);
-	if (!dir) {
-		ERROR("Failed opening %s for cleanup, skipping.", ACTIVE_QUEUE);
+	if (!dir)
 		return;
-	}
 
 	while ((d = readdir(dir))) {
 		char name[strlen(ACTIVE_QUEUE) + strlen(d->d_name) + 2];
@@ -367,7 +354,7 @@ void infix_containers_pre_hook(sr_session_ctx_t *session, struct confd *confd)
 			continue; /* odd, non-script file? */
 		*ptr = 0;
 
-		if (is_active(confd, name))
+		if (is_active(session, name))
 			continue;
 
 		/* Not found in running-config, remove stale cache. */
@@ -390,15 +377,14 @@ void infix_containers_pre_hook(sr_session_ctx_t *session, struct confd *confd)
  * them on a reboot.  Hence the cmp magic below: we check if the command
  * to create a container is the same as what is already activated, if it
  * is already activated we know 'podman create' has done its thing and
- * we can safely reassert the Finit condition and allo core_post_hook()
- * to launch the container with 'initctl reload'.
+ * we can safely start the container.
  */
 void infix_containers_post_hook(sr_session_ctx_t *session, struct confd *confd)
 {
 	struct dirent *d;
 	DIR *dir;
 
-	(void)confd;		/* unused atm. */
+	cleanup(session, confd);
 
 	dir = opendir(INBOX_QUEUE);
 	if (!dir) {
@@ -416,8 +402,18 @@ void infix_containers_post_hook(sr_session_ctx_t *session, struct confd *confd)
 		snprintf(curr, sizeof(curr), "%s/%s", ACTIVE_QUEUE, d->d_name);
 		snprintf(next, sizeof(next), "%s/%s", INBOX_QUEUE, d->d_name);
 		if (!systemf("cmp %s %s >/dev/null 2>&1", curr, next)) {
-			/* New job is already active, no changes, skipping ... */
-			systemf("initctl -nbq cond set container:$(basename %s .sh)", d->d_name);
+			char name[strlen(d->d_name) + 1];
+			char *ptr;
+
+			strlcpy(name, d->d_name, sizeof(name));
+			ptr = strstr(name, ".sh");
+			if (ptr) {
+				*ptr = 0;
+
+				/* New job is already active, no changes, skipping ... */
+				if (!is_manual(session, name))
+					systemf("initctl -bnq cond set container:%s", name);
+			}
 			remove(next);
 			continue;
 		}
@@ -427,7 +423,6 @@ void infix_containers_post_hook(sr_session_ctx_t *session, struct confd *confd)
 	}
 
 	closedir(dir);
-	NOTE("Pruning unused container volumes from system.");
 	systemf("container volume prune -f >/dev/null 2>&1");
 }
 

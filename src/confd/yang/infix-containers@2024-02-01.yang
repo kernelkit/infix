@@ -46,7 +46,7 @@ module infix-containers {
 
   typedef restart-policy {
     type enumeration {
-      enum no {
+      enum never {
 	description "Do not restart containers that exit/crash.";
 	value 1;
       }
@@ -147,7 +147,7 @@ module infix-containers {
       leaf restart-policy {
 	description "Restart policy to when containers exit/crash.";
 	type restart-policy;
-	default retry;
+	default always;
       }
 
       leaf manual {
