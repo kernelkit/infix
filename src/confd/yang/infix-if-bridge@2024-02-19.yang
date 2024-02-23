@@ -82,6 +82,7 @@ submodule infix-if-bridge {
   }
 
   typedef stp-state {
+    description "User-friendly enumeration of different bridge port operational states.";
     type enumeration {
       enum disabled {
         value 0;
@@ -104,8 +105,97 @@ submodule infix-if-bridge {
         description "Port is in STP BLOCKING state.";
       }
     }
-    description
-      "User-friendly enumeration of different bridge port operational states.";
+  }
+
+  typedef querier-mode {
+    description "Type of IGMP/MLD querier, recommend using 'auto'.";
+    type enumeration {
+      enum off {
+        value 0;
+        description "Never initiate IGMP/MLD queries.";
+      }
+      enum proxy {
+        value 1;
+        description "Send proxy queries if no better querier IP exists.";
+      }
+      enum auto {
+        value 2;
+        description "Participate in querier elections using the interface's address.";
+      }
+    }
+  }
+
+  typedef mrouter-port {
+    description "Controls forwarding of known multicast on a port, recommend using 'auto'.";
+    type enumeration {
+      enum off {
+        value 0;
+        description "Very rarely needed, disables auto-detect, never forwards know multicast.";
+      }
+      enum auto {
+        value 1;
+        description "Auto detects any PIM- or MRDISC-capable multicast routers.";
+      }
+      enum permanent {
+        value 2;
+        description "Always forward known multicast, regardless of detected multicast routers.";
+      }
+    }
+  }
+
+  /*
+   * Shared settings
+   */
+
+  grouping multicast {
+    container multicast {
+      description "Control multicast filtering and querier options in bridge.";
+
+      leaf snooping {
+        description "Control multicast snooping in bridge.
+
+                   Enabled, IGMP and MLD snooping is used to automatically
+                   handle multicast filtering.  By default all multicast is
+                   forwarded, when an IGMP or MLD membership is received
+                   only those groups are filtered.
+
+                   Disabled, all multicast is treated as broadcast.  Not
+                   even static MDB filters can be used in this mode.";
+        type boolean;
+        default true;
+      }
+
+      leaf querier {
+        description "IGMP/MLD querier role.  Leave default as-is, or read on.
+
+                   The querier role is usually the multicast router(s) on the
+                   LAN.  In networks without a multicast router a switch can
+                   take on this responsibility.
+
+                   For a fully working multicast setup the LAN needs a querier.
+                   If multiple queriers exist, a simple election is made -- the
+                   device with the numerically lowest IP address is the winner,
+                   execpt for source address 0.0.0.0 (IPv4), which is reserved
+                   for 'proxy' queries and must never win an election.  Proxy
+                   queries are like a stand-in for the real thing and mostly
+                   work fine in all setups.
+
+                   Some embedded and industrial devices do not send multicast
+                   membership reports unless they receive a query, even worse,
+                   some do not understand or misbehave with proxy queriers.
+                   Hence the default 'auto' for this option.";
+        type querier-mode;
+        default auto;
+      }
+
+      leaf query-interval {
+        description "Query interval when sending multicast queries.";
+        type uint16 {
+          range "1..1024";
+        }
+        default 125;
+      }
+    }
   }
 
   /*
@@ -128,6 +218,8 @@ submodule infix-if-bridge {
           "List of IEEE link-local protocols to forward, e.g., STP, LLDP";
       }
 
+      uses multicast;
+
       container vlans {
         if-feature "vlan-filtering";
         description "A VLAN filtering bridge has at least one VLAN.";
@@ -146,6 +238,8 @@ submodule infix-if-bridge {
             type dot1q-types:vlanid;
             description "The VLAN identifier to which this entry applies.";
           }
+
+          uses multicast;
 
           leaf-list untagged {
             type if:interface-ref;
@@ -187,6 +281,61 @@ submodule infix-if-bridge {
           }
           mandatory true;
           description "Bridge interface to which this interface is attached.";
+        }
+
+        container flood {
+          description "Control flooding of unknown BUM traffic.";
+
+          leaf broadcast {
+            description "Flood unknown broadcast traffic on this port.";
+            type boolean;
+            default true;
+          }
+
+          leaf unicast {
+            description "Flood unknown unicast traffic on this port.";
+            type boolean;
+            default true;
+          }
+
+          leaf multicast {
+            description "Flood unknown multicast traffic on this port.
+
+                         By default this option is enabled to allow MAC multicast
+                         to coexist unregulated with filtering of IP multicast.
+
+                         Flooding of IP multicast is done as long as the groups
+                         remain 'unknown', i.e., while there are no MDB entries
+                         set manually or automatically by IGMP/MLD.";
+            type boolean;
+            default true;
+          }
+        }
+
+        container multicast {
+          leaf fast-leave {
+            description "Assume this port is attached to an end-device.
+
+                         When enabled the bridge immediately cuts multicast
+                         groups when receiving a membership leave report.
+                         When disabled, group subscriptions linger until the
+                         group specific queries time out.";
+            type boolean;
+          }
+
+          leaf router {
+            description "Forward all known multicast on this port.
+
+                         Enable this for ports connected to a multicast router
+                         that is not PIM or multicast router discovery (mrdisc)
+                         capable.
+
+                         This setting is also useful for legacy equipment that
+                         does not support IGMP/MLD.  However, it is recommended
+                         to instead set up static MDB entries for such ports.";
+            type mrouter-port;
+            default auto;
+          }
         }
 
         leaf stp-state {

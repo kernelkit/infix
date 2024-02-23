@@ -24,6 +24,8 @@
 #define DEBUG_IFACE(_iface, _fmt, ...)				\
 	DEBUG("%s: " _fmt, lydx_get_cattr(_iface, "name"), ##__VA_ARGS__)
 
+#define ONOFF(boolean) boolean ? "on" : "off"
+
 #define IF_XPATH "/ietf-interfaces:interfaces/interface"
 
 
@@ -804,6 +806,41 @@ static int bridge_vlan_settings(struct lyd_node *cif, const char **proto)
 	return 0;
 }
 
+static void bridge_port_settings(FILE *next, const char *ifname, struct lyd_node *cif)
+{
+	struct lyd_node *mcast, *bp = lydx_get_descendant(lyd_child(cif), "bridge-port", NULL);
+
+	mcast = lydx_get_child(bp, "multicast");
+	if (!bp)
+		return;
+
+	fprintf(next, "link set %s type bridge_slave", ifname);
+	fprintf(next, " mcast_flood %s", ONOFF(lydx_is_enabled(mcast, "flood")));
+
+	if (mcast) {
+		const char *router = lydx_get_cattr(mcast, "router");
+		struct { const char *str; int val; } xlate[] = {
+			{ "off",       0 },
+			{ "auto",      1 },
+			{ "permanent", 2 },
+		};
+		int mrouter = 1;
+
+		for (size_t i = 0; i < NELEMS(xlate); i++) {
+			if (strcmp(xlate[i].str, router))
+				continue;
+
+			mrouter = xlate[i].val;
+			break;
+		}
+
+		fprintf(next, " mcast_fast_leave %s mcast_router %d",
+			ONOFF(lydx_is_enabled(mcast, "fast-leave")),
+			mrouter);
+	}
+	fprintf(next, "\n");
+}
+
 static int bridge_gen_ports(struct dagger *net, struct lyd_node *dif, struct lyd_node *cif, FILE *ip)
 {
 	struct lyd_node *node, *bridge;
@@ -839,6 +876,7 @@ static int bridge_gen_ports(struct dagger *net, struct lyd_node *dif, struct lyd
 			goto fail;
 		}
 		fprintf(next, "link set %s master %s\n", ifname, brdiff.new);
+		bridge_port_settings(next, ifname, cif);
 		fclose(next);
 
 		err = dagger_add_dep(net, brdiff.new, ifname);
@@ -879,6 +917,81 @@ fail:
 	return fwd_mask;
 }
 
+static int vlan_mcast_settings(FILE *br, const char *brname, struct lyd_node *vlan, int vid)
+{
+	struct { const char *str; int val; } mode[] = {
+		{ "off",   0 },
+		{ "proxy", 1 },
+		{ "auto",  2 },
+	};
+	const char *querier, *interval;
+	struct lyd_node *mcast;
+	int snooping, period;
+	size_t i;
+
+	mcast = lydx_get_descendant(lyd_child(vlan), "multicast", NULL);
+	if (!mcast)
+		return 0;
+
+	snooping = lydx_is_enabled(mcast, "snooping");
+	querier = lydx_get_cattr(mcast, "querier");
+	for (i = 0; i < NELEMS(mode); i++) {
+		if (!strcmp(mode[i].str, querier))
+			break;
+	}
+
+	fprintf(br, "vlan global set vid %d dev %s mcast_snooping %d mcast_querier %d",
+		vid, brname, snooping, mode[i].val);
+
+	if (mode[i].val == 2) {
+		/* XXX: gen. querierd-br.vid.conf here, stop everywhere else */
+	}
+
+	interval = lydx_get_cattr(mcast, "query-interval");
+	period   = atoi(interval);
+	fprintf(br, " mcast_query_interval %d", period * 100);
+
+	/* XXX: make configurable later */
+	fprintf(br, " mcast_igmp_version 3 mcast_mld_version 2\n");
+
+	return 0;
+}
+
+static int bridge_mcast_settings(FILE *ip, struct lyd_node *cif, int vlan_filtering)
+{
+	struct { const char *mode; int querier; int ifaddr; } mode[] = {
+		{ "off",   0, 0 },
+		{ "proxy", 1, 0 },
+		{ "auto",  1, 1 },
+	};
+	const char *querier, *interval;
+	struct lyd_node *mcast;
+	int snooping, period;
+	size_t i;
+
+	mcast = lydx_get_descendant(lyd_child(cif), "bridge", "multicast", NULL);
+	if (!mcast)
+		return 0;
+
+	snooping = lydx_is_enabled(mcast, "snooping");
+	querier = lydx_get_cattr(mcast, "querier");
+	for (i = 0; i < NELEMS(mode); i++) {
+		if (!strcmp(mode[i].mode, querier))
+			break;
+	}
+
+	fprintf(ip, " mcast_vlan_snooping %d", vlan_filtering ? snooping : 0);
+
+	fprintf(ip, " mcast_snooping %d mcast_querier %d mcast_query_use_ifaddr %d",
+		snooping, mode[i].querier, mode[i].ifaddr);
+
+	interval = lydx_get_cattr(mcast, "query-interval");
+	period   = atoi(interval);
+	fprintf(ip, " mcast_query_interval %d", period * 100);
+
+	return 0;
+}
+
 static int netdag_gen_bridge(struct dagger *net, struct lyd_node *dif,
 			     struct lyd_node *cif, FILE *ip, int add)
 {
@@ -886,13 +999,11 @@ static int netdag_gen_bridge(struct dagger *net, struct lyd_node *dif,
 	const char *op = add ? "add" : "set";
 	struct lyd_node *vlans, *vlan;
 	int vlan_filtering, fwd_mask;
-	int mcast_snooping;
 	const char *proto;
 	FILE *br = NULL;
 	int err = 0;
 
 	vlan_filtering = bridge_vlan_settings(cif, &proto);
-	mcast_snooping = 0;	/* Not supported yet */
 	fwd_mask = bridge_fwd_mask(cif);
 
 	/*
@@ -901,9 +1012,12 @@ static int netdag_gen_bridge(struct dagger *net, struct lyd_node *dif,
 	 *             believe this is the only sane way of doing it.
 	 * Issue #310: malplaced 'vlan_default_pvid 0'
 	 */
-	fprintf(ip, "link %s dev %s type bridge group_fwd_mask %d vlan_filtering %d"
-			" vlan_default_pvid 0 mcast_snooping %d",
-		op, brname, fwd_mask, vlan_filtering ? 1 : 0, mcast_snooping ? 1 : 0);
+	fprintf(ip, "link %s dev %s type bridge group_fwd_mask %d vlan_filtering %d vlan_default_pvid 0",
+		op, brname, fwd_mask, vlan_filtering ? 1 : 0);
+
+	if ((err = bridge_mcast_settings(ip, cif, vlan_filtering)))
+		goto done;
+
 	if (!vlan_filtering) {
 		fputc('\n', ip);
 		goto done;
@@ -936,6 +1050,11 @@ static int netdag_gen_bridge(struct dagger *net, struct lyd_node *dif,
 
 		/* tagged ports */
 		err = bridge_diff_vlan_ports(net, br, brname, vid, vlan, 1);
+		if (err)
+			break;
+
+		/* need the vlans created before we can set features on them */
+		err = vlan_mcast_settings(br, brname, vlan, vid);
 		if (err)
 			break;
 	}
