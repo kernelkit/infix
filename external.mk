@@ -3,6 +3,7 @@ IXMSG = printf "\e[37;44m>>>   $(call qstrip,$(1))\e[0m\n"
 include $(sort $(wildcard $(BR2_EXTERNAL_INFIX_PATH)/package/*/*.mk))
 include $(BR2_EXTERNAL_INFIX_PATH)/board/common/common.mk
 -include $(BR2_EXTERNAL_INFIX_PATH)/board/$(patsubst "%",%,$(BR2_ARCH))/board.mk
+include $(BR2_EXTERNAL_INFIX_PATH)/infix.mk
 
 .PHONY: local.mk
 local.mk:
