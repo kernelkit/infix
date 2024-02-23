@@ -13,9 +13,10 @@
 #include <srx/srx_val.h>
 
 #include "core.h"
-#define  ARPING_MSEC  1000
-#define  MODULE       "infix-dhcp-client"
-#define  XPATH        "/infix-dhcp-client:dhcp-client"
+#define  ARPING_MSEC    1000
+#define  MODULE         "infix-dhcp-client"
+#define  XPATH          "/infix-dhcp-client:dhcp-client"
+#define  CACHE_TEMPLATE "/var/lib/misc/%s.cache"
 
 static const struct srx_module_requirement reqs[] = {
 	{ .dir = YANG_PATH_, .name = MODULE, .rev = "2024-01-30" },
@@ -25,15 +26,15 @@ static const struct srx_module_requirement reqs[] = {
 
 static char *ip_cache(const char *ifname, char *str, size_t len)
 {
-	const char *fn = "/var/lib/misc/%s.cache";
+
 	struct in_addr ina;
 	char buf[128];
 	FILE *fp;
 
-	if (!fexistf(fn, ifname))
+	if (!fexistf(CACHE_TEMPLATE, ifname))
 		return NULL;
 
-	fp = fopenf("r", fn, ifname);
+	fp = fopenf("r", CACHE_TEMPLATE, ifname);
 	if (!fp)
 		return NULL;
 
@@ -45,7 +46,7 @@ static char *ip_cache(const char *ifname, char *str, size_t len)
 	chomp(buf);
 
 	if (!inet_aton(buf, &ina)) {
-		erasef(fn, ifname);
+		erasef(CACHE_TEMPLATE, ifname);
 		return NULL;
 	}
 

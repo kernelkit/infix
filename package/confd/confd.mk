@@ -4,6 +4,7 @@
 #
 ################################################################################
 
+
 CONFD_VERSION = 1.0
 CONFD_SITE_METHOD = local
 CONFD_SITE = $(BR2_EXTERNAL_INFIX_PATH)/src/confd
@@ -12,6 +13,9 @@ CONFD_LICENSE_FILES = LICENSE
 CONFD_REDISTRIBUTE = NO
 CONFD_DEPENDENCIES = augeas jansson libite sysrepo libsrx
 CONFD_AUTORECONF = YES
+define CONFD_CONF_ENV
+CFLAGS="$(INFIX_CFLAGS)"
+endef
 
 define CONFD_INSTALL_EXTRA
 	cp $(CONFD_PKGDIR)/confd.conf  $(FINIT_D)/available/
