@@ -11,16 +11,13 @@ EXECD_LICENSE = ISC
 EXECD_LICENSE_FILES = LICENSE
 EXECD_REDISTRIBUTE = NO
 EXECD_DEPENDENCIES = libuev libite
+EXECD_AUTORECONF = YES
 
-define EXECD_BUILD_CMDS
-	$(TARGET_MAKE_ENV) $(TARGET_CONFIGURE_OPTS) $(MAKE) -C $(@D) \
-		LDFLAGS="$(TARGET_LDFLAGS)"
+define EXECD_CONF_ENV
+CFLAGS="$(INFIX_CFLAGS)"
 endef
 
-define EXECD_INSTALL_TARGET_CMDS
-	$(TARGET_MAKE_ENV) $(TARGET_CONFIGURE_OPTS) $(MAKE) -C $(@D) \
-		DESTDIR="$(TARGET_DIR)" install
-endef
+EXECD_CONF_OPTS = --prefix= --disable-silent-rules
 
 define EXECD_INSTALL_EXTRA
 	cp $(EXECD_PKGDIR)/execd.conf  $(FINIT_D)/available/
@@ -29,4 +26,4 @@ define EXECD_INSTALL_EXTRA
 endef
 EXECD_TARGET_FINALIZE_HOOKS += EXECD_INSTALL_EXTRA
 
-$(eval $(generic-package))
+$(eval $(autotools-package))
