@@ -895,7 +895,14 @@ static int netdag_gen_bridge(struct dagger *net, struct lyd_node *dif,
 	mcast_snooping = 0;	/* Not supported yet */
 	fwd_mask = bridge_fwd_mask(cif);
 
-	fprintf(ip, "link %s dev %s type bridge group_fwd_mask %d vlan_filtering %d mcast_snooping %d",
+	/*
+	 * Issue #198: we require explicit VLAN assignment for ports
+	 *             when VLAN filtering is enabled.  We strongly
+	 *             believe this is the only sane way of doing it.
+	 * Issue #310: malplaced 'vlan_default_pvid 0'
+	 */
+	fprintf(ip, "link %s dev %s type bridge group_fwd_mask %d vlan_filtering %d"
+			" vlan_default_pvid 0 mcast_snooping %d",
 		op, brname, fwd_mask, vlan_filtering ? 1 : 0, mcast_snooping ? 1 : 0);
 	if (!vlan_filtering) {
 		fputc('\n', ip);
@@ -907,12 +914,7 @@ static int netdag_gen_bridge(struct dagger *net, struct lyd_node *dif,
 		goto done;
 	}
 
-	/*
-	 * Issue #198: we require explicit VLAN assignment for ports
-	 *             when VLAN filtering is enabled.  We strongly
-	 *             believe this is the only sane way of doing it.
-	 */
-	fprintf(ip, " vlan_protocol %s vlan_default_pvid 0\n", proto);
+	fprintf(ip, " vlan_protocol %s\n", proto);
 
 	vlans = lydx_get_descendant(lyd_child(dif), "bridge", "vlans", NULL);
 	if (!vlans)
