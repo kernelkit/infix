@@ -1,0 +1,105 @@
+From 709063e8368aeed56fd5775c10d33ca4dc8990a5 Mon Sep 17 00:00:00 2001
+From: Stephen Hemminger <stephen@networkplumber.org>
+Date: Fri, 2 Jun 2023 08:51:53 -0700
+Subject: [PATCH] ipaddress: accept symbolic names
+Organization: Addiva Elektronik
+
+The function rtnl_addproto_a2n() was defined but never used.
+Use it to allow for symbolic names, and fix the function signatures
+so protocol value is consistently __u8.
+
+Fixes: bdb8d8549ed9 ("ip: Support IP address protocol")
+Cc: petrm@nvidia.com
+Signed-off-by: Stephen Hemminger <stephen@networkplumber.org>
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ include/rt_names.h |  4 ++--
+ ip/ipaddress.c     |  2 +-
+ lib/rt_names.c     | 18 +++++-------------
+ 3 files changed, 8 insertions(+), 16 deletions(-)
+
+diff --git a/include/rt_names.h b/include/rt_names.h
+index e96d80f3..02750307 100644
+--- a/include/rt_names.h
++++ b/include/rt_names.h
+@@ -5,7 +5,7 @@
+ #include <asm/types.h>
+ 
+ const char *rtnl_rtprot_n2a(int id, char *buf, int len);
+-const char *rtnl_addrprot_n2a(int id, char *buf, int len);
++const char *rtnl_addrprot_n2a(__u8 id, char *buf, int len);
+ const char *rtnl_rtscope_n2a(int id, char *buf, int len);
+ const char *rtnl_rttable_n2a(__u32 id, char *buf, int len);
+ const char *rtnl_rtrealm_n2a(int id, char *buf, int len);
+@@ -14,7 +14,7 @@ const char *rtnl_dsfield_get_name(int id);
+ const char *rtnl_group_n2a(int id, char *buf, int len);
+ 
+ int rtnl_rtprot_a2n(__u32 *id, const char *arg);
+-int rtnl_addrprot_a2n(__u32 *id, const char *arg);
++int rtnl_addrprot_a2n(__u8 *id, const char *arg);
+ int rtnl_rtscope_a2n(__u32 *id, const char *arg);
+ int rtnl_rttable_a2n(__u32 *id, const char *arg);
+ int rtnl_rtrealm_a2n(__u32 *id, const char *arg);
+diff --git a/ip/ipaddress.c b/ip/ipaddress.c
+index c428dd3d..7accbf7d 100644
+--- a/ip/ipaddress.c
++++ b/ip/ipaddress.c
+@@ -2547,7 +2547,7 @@ static int ipaddr_modify(int cmd, int flags, int argc, char **argv)
+ 			__u8 proto;
+ 
+ 			NEXT_ARG();
+-			if (get_u8(&proto, *argv, 0))
++			if (rtnl_addrprot_a2n(&proto, *argv))
+ 				invarg("\"proto\" value is invalid\n", *argv);
+ 			addattr8(&req.n, sizeof(req), IFA_PROTO, proto);
+ 		} else {
+diff --git a/lib/rt_names.c b/lib/rt_names.c
+index 51d11fd0..b441e98f 100644
+--- a/lib/rt_names.c
++++ b/lib/rt_names.c
+@@ -242,9 +242,9 @@ static void rtnl_addrprot_initialize(void)
+ 	rtnl_addrprot_tab_initialized = true;
+ }
+ 
+-const char *rtnl_addrprot_n2a(int id, char *buf, int len)
++const char *rtnl_addrprot_n2a(__u8 id, char *buf, int len)
+ {
+-	if (id < 0 || id >= 256 || numeric)
++	if (numeric)
+ 		goto numeric;
+ 	if (!rtnl_addrprot_tab_initialized)
+ 		rtnl_addrprot_initialize();
+@@ -255,27 +255,19 @@ numeric:
+ 	return buf;
+ }
+ 
+-int rtnl_addrprot_a2n(__u32 *id, const char *arg)
++int rtnl_addrprot_a2n(__u8 *id, const char *arg)
+ {
+-	static char *cache;
+-	static unsigned long res;
++	unsigned long res;
+ 	char *end;
+ 	int i;
+ 
+-	if (cache && strcmp(cache, arg) == 0) {
+-		*id = res;
+-		return 0;
+-	}
+-
+ 	if (!rtnl_addrprot_tab_initialized)
+ 		rtnl_addrprot_initialize();
+ 
+ 	for (i = 0; i < 256; i++) {
+ 		if (rtnl_addrprot_tab[i] &&
+ 		    strcmp(rtnl_addrprot_tab[i], arg) == 0) {
+-			cache = rtnl_addrprot_tab[i];
+-			res = i;
+-			*id = res;
++			*id = i;
+ 			return 0;
+ 		}
+ 	}
+-- 
+2.34.1
+
