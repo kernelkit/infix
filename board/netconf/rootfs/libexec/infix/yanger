@@ -212,7 +212,7 @@ def add_hardware(hw_out):
     for _,vpd in data.get("vpd").items():
         component=get_vpd_data(vpd)
         components.append(component)
-    if(data.get("usb-ports", None)):
+    if data.get("usb-ports", None):
         components.extend(get_usb_ports(data["usb-ports"]))
     insert(hw_out, "component", components)
 
@@ -406,7 +406,7 @@ def add_ospf(ospf):
     insert(ospf, "ietf-ospf:areas", "area", areas)
     add_ospf_routes(ospf)
 
-def get_bridge_port_pvid(ifname, iface_out):
+def get_bridge_port_pvid(ifname):
     data = run_json_cmd(['bridge', '-j', 'vlan', 'show', 'dev', ifname],
                         f"bridge-vlan-show-dev-{ifname}.json")
     if len(data) != 1:
@@ -420,7 +420,7 @@ def get_bridge_port_pvid(ifname, iface_out):
 
     return None
 
-def get_bridge_port_stp_state(ifname, iface_out):
+def get_bridge_port_stp_state(ifname):
     data = run_json_cmd(['bridge', '-j', 'link', 'show', 'dev', ifname],
             f"bridge-link-show-dev-{ifname}.json")
     if len(data) != 1:
@@ -510,11 +510,11 @@ def add_ip_link(ifname, iface_out):
     if 'master' in iface_in:
         insert(iface_out, "infix-interfaces:bridge-port", "bridge", iface_in['master'])
 
-        pvid = get_bridge_port_pvid(ifname, iface_out)
+        pvid = get_bridge_port_pvid(ifname)
         if pvid is not None:
             insert(iface_out, "infix-interfaces:bridge-port", "pvid", pvid)
 
-        stp_state = get_bridge_port_stp_state(ifname, iface_out)
+        stp_state = get_bridge_port_stp_state(ifname)
         if stp_state is not None:
             insert(iface_out, "infix-interfaces:bridge-port", "stp-state", stp_state)
 
