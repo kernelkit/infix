@@ -134,7 +134,7 @@ static int ly_add_yanger_data(const struct ly_ctx *ctx, struct lyd_node **parent
 			      const char *model, const char *arg)
 {
 	char *yanger_args[5] = {
-		"/libexec/infix/yanger",
+		"/usr/libexec/statd/yanger",
 		(char *)model,
 		NULL,
 		NULL,
