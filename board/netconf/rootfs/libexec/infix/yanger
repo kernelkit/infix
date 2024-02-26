@@ -14,31 +14,31 @@ def json_get_yang_type(iface_in):
         return "infix-if-type:loopback"
 
     if iface_in['link_type'] != "ether":
-        return "infix-if-type:other";
+        return "infix-if-type:other"
 
     if 'parentbus' in iface_in and iface_in['parentbus'] == "virtio":
-        return "infix-if-type:etherlike";
+        return "infix-if-type:etherlike"
 
     if not 'linkinfo' in iface_in:
         return "infix-if-type:ethernet"
 
     if not 'info_kind' in iface_in['linkinfo']:
-        return "infix-if-type:ethernet";
+        return "infix-if-type:ethernet"
 
     if iface_in['linkinfo']['info_kind'] == "veth":
-        return "infix-if-type:veth";
+        return "infix-if-type:veth"
 
     if iface_in['linkinfo']['info_kind'] == "vlan":
-        return "infix-if-type:vlan";
+        return "infix-if-type:vlan"
 
     if iface_in['linkinfo']['info_kind'] == "bridge":
-        return "infix-if-type:bridge";
+        return "infix-if-type:bridge"
 
     if iface_in['linkinfo']['info_kind'] == "dsa":
-        return "infix-if-type:ethernet";
+        return "infix-if-type:ethernet"
 
     # Fallback
-    return "infix-if-type:ethernet";
+    return "infix-if-type:ethernet"
 
 def json_get_yang_origin(addr):
     """Translate kernel IP address origin to YANG"""
