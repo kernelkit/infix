@@ -155,30 +155,30 @@ def get_vpd_vendor_extensions(data):
     return vendor_extensions
 
 def get_vpd_data(vpd):
-        component={}
-        component["name"]=vpd.get("board")
-        component["infix-hardware:vpd-data"] = {}
+    component={}
+    component["name"]=vpd.get("board")
+    component["infix-hardware:vpd-data"] = {}
 
-        if vpd.get("data"):
-            component["class"] = "infix-hardware:vpd"
-            if vpd["data"].get("manufacture-date"):
-                component["mfg-date"]=datetime.strptime(vpd["data"]["manufacture-date"],"%m/%d/%Y %H:%M:%S").strftime("%Y-%m-%-dT%H:%M:%SZ")
-            if vpd["data"].get("manufacter"):
-                component["mfg-name"]=vpd["data"]["manufacturer"]
-            if vpd["data"].get("product-name"):
-                component["model-name"]=vpd["data"]["product-name"]
-            if vpd["data"].get("serial-number"):
-                component["serial-num"]=vpd["data"]["serial-number"]
+    if vpd.get("data"):
+        component["class"] = "infix-hardware:vpd"
+        if vpd["data"].get("manufacture-date"):
+            component["mfg-date"]=datetime.strptime(vpd["data"]["manufacture-date"],"%m/%d/%Y %H:%M:%S").strftime("%Y-%m-%-dT%H:%M:%SZ")
+        if vpd["data"].get("manufacter"):
+            component["mfg-name"]=vpd["data"]["manufacturer"]
+        if vpd["data"].get("product-name"):
+            component["model-name"]=vpd["data"]["product-name"]
+        if vpd["data"].get("serial-number"):
+            component["serial-num"]=vpd["data"]["serial-number"]
 
-            # Set VPD-data entrys
-            for k,v in vpd["data"].items():
-                if vpd["data"].get(k):
-                    if k != "vendor-extension":
-                        component["infix-hardware:vpd-data"][k] = v
-                    else:
-                        vendor_extensions=get_vpd_vendor_extensions(v)
-                        component["infix-hardware:vpd-data"]["infix-hardware:vendor-extension"] = vendor_extensions
-        return component
+        # Set VPD-data entrys
+        for k,v in vpd["data"].items():
+            if vpd["data"].get(k):
+                if k != "vendor-extension":
+                    component["infix-hardware:vpd-data"][k] = v
+                else:
+                    vendor_extensions=get_vpd_vendor_extensions(v)
+                    component["infix-hardware:vpd-data"]["infix-hardware:vendor-extension"] = vendor_extensions
+    return component
 
 def get_usb_ports(usb_ports):
     ports=[]
@@ -213,7 +213,7 @@ def add_hardware(hw_out):
         component=get_vpd_data(vpd)
         components.append(component)
     if(data.get("usb-ports", None)):
-       components.extend(get_usb_ports(data["usb-ports"]))
+        components.extend(get_usb_ports(data["usb-ports"]))
     insert(hw_out, "component", components)
 
 def get_routes(routes, proto, data):
