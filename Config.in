@@ -54,7 +54,7 @@ config INFIX_IMAGE_ID
 
 config INFIX_TAGLINE
 	string "Operating system tagline"
-	default "Infix — a Network Operating System"
+	default "Infix -- a Network Operating System"
 	help
 	  Mandatory. Used for identifying the OS, e.g. as PRETTY_NAME in
 	  /etc/os-release and description in the GNS3 appliance.
