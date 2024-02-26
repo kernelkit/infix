@@ -7,6 +7,8 @@ import os
 import argparse
 from datetime import datetime
 
+TESTPATH = ""
+
 def json_get_yang_type(iface_in):
     if iface_in['link_type'] == "loopback":
         return "infix-if-type:loopback"
@@ -100,8 +102,12 @@ def insert(obj, *path_and_value):
 
     curr[path[-1]] = value
 
-def run_cmd(cmd):
+def run_cmd(cmd, testfile):
     """Run a command (array of args) and return an array of lines"""
+
+    if TESTPATH and testfile:
+        cmd = ['cat', os.path.join(TESTPATH, testfile)]
+
     try:
         output = subprocess.check_output(cmd, stderr=subprocess.DEVNULL, text=True)
         return output.splitlines()
@@ -109,8 +115,12 @@ def run_cmd(cmd):
         print("Error: command returned error", file=sys.stderr)
         sys.exit(1)
 
-def run_json_cmd(cmd):
+def run_json_cmd(cmd, testfile):
     """Run a command (array of args) that returns JSON text output and return JSON"""
+
+    if TESTPATH and testfile:
+        cmd = ['cat', os.path.join(TESTPATH, testfile)]
+
     try:
         result = subprocess.run(cmd, check=True, stdout=subprocess.PIPE,
                                 stderr=subprocess.PIPE, text=True)
@@ -196,12 +206,8 @@ def get_usb_ports(usb_ports):
     return ports
 
 
-def add_hardware(hw_out, test):
-    if test:
-        cmd = ['cat', f"{test}/system.json"]
-    else:
-        cmd = ['cat', "/run/system.json"]
-    data = run_json_cmd(cmd)
+def add_hardware(hw_out):
+    data = run_json_cmd(['cat', "/run/system.json"], "system.json")
     components=[]
     for _,vpd in data.get("vpd").items():
         component=get_vpd_data(vpd)
@@ -264,24 +270,14 @@ def get_routes(routes, proto, data):
 
     insert(routes, 'routes', out)
 
-def add_ipv4_route(routes, test):
+def add_ipv4_route(routes):
     """Fetch IPv4 routes from kernel and populate tree"""
-    if test:
-        cmd = ['cat', f"{test}/ip-4-route.json"]
-    else:
-        cmd = ['ip', '-4', '-s', '-d', '-j', 'route']
-
-    data = run_json_cmd(cmd)
+    data = run_json_cmd(['ip', '-4', '-s', '-d', '-j', 'route'], "ip-4-route.json")
     get_routes(routes, "ipv4", data)
 
-def add_ipv6_route(routes, test):
+def add_ipv6_route(routes):
     """Fetch IPv6 routes from kernel and populate tree"""
-    if test:
-        cmd = ['cat', f"{test}/ip-6-route.json"]
-    else:
-        cmd = ['ip', '-6', '-s', '-d', '-j', 'route']
-
-    data = run_json_cmd(cmd)
+    data = run_json_cmd(['ip', '-6', '-s', '-d', '-j', 'route'], "ip-6-route.json")
     get_routes(routes, "ipv6", data)
 
 def frr_to_ietf_neighbor_state(state):
@@ -294,7 +290,7 @@ def frr_to_ietf_neighbor_state(state):
 def add_ospf_routes(ospf):
     """Fetch OSPF routes from Frr"""
     cmd = ['vtysh', '-c', "show ip ospf rout json"]
-    data = run_json_cmd(cmd)
+    data = run_json_cmd(cmd, "")
     routes=[]
 
     for prefix,info in data.items():
@@ -335,7 +331,7 @@ def add_ospf(ospf):
     """Populate OSPF status"""
 
     cmd = ['/libexec/infix/ospf-status']
-    data = run_json_cmd(cmd)
+    data = run_json_cmd(cmd, "")
 
     ospf["ietf-ospf:router-id"] = data["routerId"]
     ospf["ietf-ospf:address-family"] = "ipv4"
@@ -410,13 +406,9 @@ def add_ospf(ospf):
     insert(ospf, "ietf-ospf:areas", "area", areas)
     add_ospf_routes(ospf)
 
-def get_bridge_port_pvid(ifname, iface_out, test):
-    if test:
-        cmd = ['cat', f"{test}/bridge-vlan-show-dev-{ifname}.json"]
-    else:
-        cmd = ['bridge', '-j', 'vlan', 'show', 'dev', ifname]
-
-    data = run_json_cmd(cmd)
+def get_bridge_port_pvid(ifname, iface_out):
+    data = run_json_cmd(['bridge', '-j', 'vlan', 'show', 'dev', ifname],
+                        f"bridge-vlan-show-dev-{ifname}.json")
     if len(data) != 1:
         return None
 
@@ -428,13 +420,9 @@ def get_bridge_port_pvid(ifname, iface_out, test):
 
     return None
 
-def get_bridge_port_stp_state(ifname, iface_out, test):
-    if test:
-        cmd = ['cat', f"{test}/bridge-link-show-dev-{ifname}.json"]
-    else:
-        cmd = ['bridge', '-j', 'link', 'show', 'dev', ifname]
-
-    data = run_json_cmd(cmd)
+def get_bridge_port_stp_state(ifname, iface_out):
+    data = run_json_cmd(['bridge', '-j', 'link', 'show', 'dev', ifname],
+            f"bridge-link-show-dev-{ifname}.json")
     if len(data) != 1:
         return None
 
@@ -449,7 +437,7 @@ def get_bridge_port_stp_state(ifname, iface_out, test):
 def container_inspect(name, key):
     """Call podman inspect {name}, return object at {path} or None"""
     cmd = ['podman', 'inspect', name]
-    raw = run_json_cmd(cmd)
+    raw = run_json_cmd(cmd, "")
 
     return getitem(raw[0], key)
 
@@ -457,7 +445,7 @@ def add_container(containers):
     """In container-state we list *all* containers, not just ones manged in configuration."""
     cmd = ['podman', 'ps', '-a', '--format=json']
 
-    raw = run_json_cmd(cmd)
+    raw = run_json_cmd(cmd, "")
     for entry in raw:
         running = entry["State"] == "running"
 
@@ -500,14 +488,10 @@ def add_container(containers):
 
         containers.append(container)
 
-def add_ip_link(ifname, iface_out, test):
+def add_ip_link(ifname, iface_out):
     """Fetch interface link information from kernel"""
-    if test:
-        cmd = ['cat', f"{test}/ip-link-show-dev-{ifname}.json"]
-    else:
-        cmd = ['ip', '-s', '-d', '-j', 'link', 'show', 'dev', ifname]
-
-    data = run_json_cmd(cmd)
+    data = run_json_cmd(['ip', '-s', '-d', '-j', 'link', 'show', 'dev', ifname],
+            f"ip-link-show-dev-{ifname}.json")
     if len(data) != 1:
         print("Error: expected ip link output to be array with length 1", file=sys.stderr)
         sys.exit(1)
@@ -526,11 +510,11 @@ def add_ip_link(ifname, iface_out, test):
     if 'master' in iface_in:
         insert(iface_out, "infix-interfaces:bridge-port", "bridge", iface_in['master'])
 
-        pvid = get_bridge_port_pvid(ifname, iface_out, test)
+        pvid = get_bridge_port_pvid(ifname, iface_out)
         if pvid is not None:
             insert(iface_out, "infix-interfaces:bridge-port", "pvid", pvid)
 
-        stp_state = get_bridge_port_stp_state(ifname, iface_out, test)
+        stp_state = get_bridge_port_stp_state(ifname, iface_out)
         if stp_state is not None:
             insert(iface_out, "infix-interfaces:bridge-port", "stp-state", stp_state)
 
@@ -561,14 +545,11 @@ def add_ip_link(ifname, iface_out, test):
     if val is not None:
         insert(iface_out, "statistics", "in-octets", str(val))
 
-def add_ip_addr(ifname, iface_out, test):
+def add_ip_addr(ifname, iface_out):
     """Fetch interface address information from kernel"""
-    if test:
-        cmd = ['cat', f"{test}/ip-addr-show-dev-{ifname}.json"]
-    else:
-        cmd = ['ip', '-j', 'addr', 'show', 'dev', ifname]
 
-    data = run_json_cmd(cmd)
+    data = run_json_cmd(['ip', '-j', 'addr', 'show', 'dev', ifname],
+            f"ip-addr-show-dev-{ifname}.json")
     if len(data) != 1:
         print("Error: expected ip addr output to be array with length 1", file=sys.stderr)
         sys.exit(1)
@@ -612,14 +593,11 @@ def add_ip_addr(ifname, iface_out, test):
         insert(iface_out, "ietf-ip:ipv4", "address", inet)
         insert(iface_out, "ietf-ip:ipv6", "address", inet6)
 
-def add_ethtool_groups(ifname, iface_out, test):
+def add_ethtool_groups(ifname, iface_out):
     """Fetch interface counters from kernel"""
-    if test:
-        cmd = ['cat', f"{test}/ethtool-groups-{ifname}.json"]
-    else:
-        cmd = ['ethtool', '--json', '-S', ifname, '--all-groups']
 
-    data = run_json_cmd(cmd)
+    data = run_json_cmd(['ethtool', '--json', '-S', ifname, '--all-groups'],
+            f"ethtool-groups-{ifname}.json")
     if len(data) != 1:
         print("Error: expected ethtool groups output to be array with length 1", file=sys.stderr)
         sys.exit(1)
@@ -691,17 +669,12 @@ def add_ethtool_groups(ifname, iface_out, test):
         if found:
             frame['in-error-oversize-frames'] = str(tot)
 
-def add_ethtool_std(ifname, iface_out, test):
+def add_ethtool_std(ifname, iface_out):
     """Fetch interface speed/duplex/autoneg from kernel"""
     keys = ['Speed', 'Duplex', 'Auto-negotiation']
     result = {}
 
-    if test:
-        cmd = ['cat', f"{test}/ethtool-{ifname}.txt"]
-    else:
-        cmd = ['ethtool', ifname]
-
-    lines = run_cmd(cmd)
+    lines = run_cmd(['ethtool', ifname], f"ethtool-{ifname}.txt")
     for line in lines:
         line = line.strip()
         key = line.split(':', 1)[0].strip()
@@ -741,24 +714,14 @@ def _add_vlan_iface(vlans, vid, key, val):
             return
     vlans.append({'vid': vid, key: [val]})
 
-def add_vlans_to_bridge(brname, iface_out, test):
-    if test:
-        cmd = ['cat', f"{test}/bridge-link.json"]
-    else:
-        cmd = ['bridge', '-j', 'link']
-
+def add_vlans_to_bridge(brname, iface_out):
     slaves = [] # Contains all interfaces that has this bridge as 'master'
-    for iface in run_json_cmd(cmd):
+    for iface in run_json_cmd(['bridge', '-j', 'link'], "bridge-link.json"):
         if "master" in iface and iface['master'] == brname:
             slaves.append(iface['ifname'])
 
-    if test:
-        cmd = ['cat', f"{test}/bridge-vlan.json"]
-    else:
-        cmd = ['bridge', '-j', 'vlan']
-
     vlans = [] # Contains all vlans and slaves belonging to this bridge
-    for iface in run_json_cmd(cmd):
+    for iface in run_json_cmd(['bridge', '-j', 'vlan'], "bridge-vlan.json"):
         if iface['ifname'] not in slaves and iface['ifname'] != brname:
             continue
 
@@ -771,11 +734,18 @@ def add_vlans_to_bridge(brname, iface_out, test):
     insert(iface_out, "infix-interfaces:bridge", "vlans", "vlan", vlans)
 
 def main():
+    global TESTPATH
+
     parser = argparse.ArgumentParser(description="YANG data creator")
     parser.add_argument("model", help="YANG Model")
     parser.add_argument("-p", "--param", default=None, help="Model dependant parameter")
     parser.add_argument("-t", "--test", default=None, help="Test data base path")
     args = parser.parse_args()
+
+    if args.test:
+        TESTPATH = args.test
+    else:
+        TESTPATH = ""
 
     if args.model == 'ietf-interfaces':
         # For now, we handle each interface separately, as this is how it's
@@ -795,15 +765,15 @@ def main():
         ifname = args.param
         iface_out = yang_data['ietf-interfaces:interfaces']['interface'][0]
 
-        add_ip_link(ifname, iface_out, args.test)
-        add_ip_addr(ifname, iface_out, args.test)
+        add_ip_link(ifname, iface_out, )
+        add_ip_addr(ifname, iface_out)
 
         if 'type' in iface_out and iface_out['type'] == "infix-if-type:ethernet":
-            add_ethtool_groups(ifname, iface_out, args.test)
-            add_ethtool_std(ifname, iface_out, args.test)
+            add_ethtool_groups(ifname, iface_out)
+            add_ethtool_std(ifname, iface_out)
 
         if 'type' in iface_out and iface_out['type'] == "infix-if-type:bridge":
-            add_vlans_to_bridge(ifname, iface_out, args.test)
+            add_vlans_to_bridge(ifname, iface_out)
 
     elif args.model == 'ietf-routing':
         yang_data = {
@@ -823,8 +793,8 @@ def main():
 
         ipv4routes = yang_data['ietf-routing:routing']['ribs']['rib'][0]
         ipv6routes = yang_data['ietf-routing:routing']['ribs']['rib'][1]
-        add_ipv4_route(ipv4routes, args.test)
-        add_ipv6_route(ipv6routes, args.test)
+        add_ipv4_route(ipv4routes)
+        add_ipv6_route(ipv6routes)
 
     elif args.model == 'ietf-ospf':
         yang_data = {
@@ -850,7 +820,7 @@ def main():
             "ietf-hardware:hardware": {
             }
         }
-        add_hardware(yang_data["ietf-hardware:hardware"], args.test)
+        add_hardware(yang_data["ietf-hardware:hardware"])
 
     elif args.model == 'infix-containers':
         yang_data = {
