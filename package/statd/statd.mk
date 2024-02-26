@@ -11,20 +11,13 @@ STATD_LICENSE = BSD-3-Clause
 STATD_LICENSE_FILES = LICENSE
 STATD_REDISTRIBUTE = NO
 STATD_DEPENDENCIES = sysrepo libev libsrx jansson
+STATD_AUTORECONF = YES
 
 define STATD_CONF_ENV
 CFLAGS="$(INFIX_CFLAGS)"
 endef
 
-define STATD_BUILD_CMDS
-	$(TARGET_MAKE_ENV) $(TARGET_CONFIGURE_OPTS) $(MAKE) -C $(@D) \
-		LDFLAGS="$(TARGET_LDFLAGS)"
-endef
-
-define STATD_INSTALL_TARGET_CMDS
-	$(TARGET_MAKE_ENV) $(TARGET_CONFIGURE_OPTS) $(MAKE) -C $(@D) \
-		DESTDIR="$(TARGET_DIR)" install
-endef
+STATD_CONF_OPTS = --prefix= --disable-silent-rules
 
 define STATD_INSTALL_EXTRA
 	cp $(STATD_PKGDIR)/statd.conf  $(FINIT_D)/available/
@@ -32,4 +25,4 @@ define STATD_INSTALL_EXTRA
 endef
 STATD_TARGET_FINALIZE_HOOKS += STATD_INSTALL_EXTRA
 
-$(eval $(generic-package))
+$(eval $(autotools-package))

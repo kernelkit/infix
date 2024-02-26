@@ -274,9 +274,9 @@
       sysrepocfg -d operational -X -f json -x /ietf-system:system-state/infix-system:software | \
               jq -r '.[][].slot |= sort_by(.name)' > "$tmp"
       if [ -n "$KLISH_PARAM_name" ]; then
-          cat "$tmp" | /libexec/infix/cli-pretty "infix-system" -n "$KLISH_PARAM_name"
+          cat "$tmp" | /usr/libexec/statd/cli-pretty "infix-system" -n "$KLISH_PARAM_name"
       else
-          cat "$tmp" | /libexec/infix/cli-pretty "infix-system"
+          cat "$tmp" | /usr/libexec/statd/cli-pretty "infix-system"
       fi
       rm "$tmp"
     </ACTION>
@@ -323,14 +323,14 @@
         fi
       fi
       sysrepocfg -f json -X -d operational -x "/ietf-routing:routing/ribs" | \
-      /libexec/infix/cli-pretty "ietf-routing"  -n "$KLISH_PARAM_name"
+      /usr/libexec/statd/cli-pretty "ietf-routing"  -n "$KLISH_PARAM_name"
     </ACTION>
   </COMMAND>
 
   <COMMAND name="hardware" help="Show hardware information">
     <ACTION sym="script">
       sysrepocfg -f json -X -d operational -x "/ietf-hardware:hardware" | \
-      /libexec/infix/cli-pretty "ietf-hardware"
+      /usr/libexec/statd/cli-pretty "ietf-hardware"
     </ACTION>
   </COMMAND>
 
@@ -346,10 +346,10 @@
       if [ -n "$KLISH_PARAM_name" ]; then
         sysrepocfg -f json -X -d operational -x \
           "/ietf-interfaces:interfaces/interface[name='$KLISH_PARAM_name']" | \
-          /libexec/infix/cli-pretty "ietf-interfaces" -n "$KLISH_PARAM_name"
+          /usr/libexec/statd/cli-pretty "ietf-interfaces" -n "$KLISH_PARAM_name"
       else
         sysrepocfg -f json -X -d operational -m ietf-interfaces | \
-          /libexec/infix/cli-pretty "ietf-interfaces"
+          /usr/libexec/statd/cli-pretty "ietf-interfaces"
       fi
     </ACTION>
   </COMMAND>

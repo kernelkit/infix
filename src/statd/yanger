@@ -330,7 +330,7 @@ def add_ospf_routes(ospf):
 def add_ospf(ospf):
     """Populate OSPF status"""
 
-    cmd = ['/libexec/infix/ospf-status']
+    cmd = ['/usr/libexec/statd/ospf-status']
     data = run_json_cmd(cmd, "")
 
     ospf["ietf-ospf:router-id"] = data["routerId"]
