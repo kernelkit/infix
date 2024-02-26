@@ -5,8 +5,8 @@ import copy
 import infamy.usb as usb
 import time
 import infamy.netconf as netconf
+from infamy.util import until,wait_boot
 
-from infamy.util import until
 def remove_config(target):
     running = target.get_config_dict("/ietf-hardware:hardware")
     new = copy.deepcopy(running)
@@ -121,15 +121,8 @@ with infamy.Test() as test:
         remove_config(target)
         target.copy("running", "startup")
         target.reboot()
-        until(lambda: target.reachable() == False, attempts = 100)
-        print("Device reboots..")
-        until(lambda: target.reachable() == True, attempts = 300)
-        print("Device has come online")
-        iface=target.get_mgmt_iface()
-        neigh=infamy.neigh.ll6ping(iface)
-        assert(neigh)
-        until(lambda: netconf.netconf_syn(neigh) == True, attempts = 300)
-        print("NETCONF reachable")
+        if wait_boot(target) == False:
+            test.fail()
         target = env.attach("target", "mgmt", factory_default = False)
 
     with test.step("Verify that all ports are locked"):
