@@ -1,0 +1,27 @@
+From 5998342b3e55638b0f7248383e939a64f53fa8ff Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Mon, 26 Feb 2024 08:41:14 +0100
+Subject: [PATCH] system: drop debug mode from udevd
+Organization: Addiva Elektronik
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ system/10-hotplug.conf.in | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/system/10-hotplug.conf.in b/system/10-hotplug.conf.in
+index 49ea081..a4f64b5 100644
+--- a/system/10-hotplug.conf.in
++++ b/system/10-hotplug.conf.in
+@@ -19,7 +19,7 @@
+ 
+ # Check for systemd-udevd and eudev, if we find both, we opt for the latter.
+ service nowarn [S12345789] cgroup.system name:udevd notify:none pid:udevd log /lib/systemd/systemd-udevd -- Device event daemon (udev)
+-service nowarn [S12345789] cgroup.system name:udevd notify:none pid:udevd log udevd -D -- Device event daemon (udev)
++service nowarn [S12345789] cgroup.system name:udevd notify:none pid:udevd log udevd -- Device event daemon (udev)
+ 
+ # Wait for udevd to start, then trigger coldplug events and module loading.
+ # The last 'settle' call waits for it to finalize processing all uevents.
+-- 
+2.34.1
+
