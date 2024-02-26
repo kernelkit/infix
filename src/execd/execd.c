@@ -51,7 +51,7 @@ static void run_job(char *path, char *file)
 	}
 
 	dbg("running job %s", cmd);
-	if ((rc = systemf(cmd))) {
+	if ((rc = systemf("%s", cmd))) {
 		errx("failed %s: rc %d", cmd, rc);
 		return;
 	}
