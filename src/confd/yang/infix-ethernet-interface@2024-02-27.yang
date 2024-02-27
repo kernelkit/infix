@@ -9,10 +9,19 @@ module infix-ethernet-interface {
   import ietf-interfaces {
     prefix if;
   }
+  import ietf-yang-types {
+    prefix yang;
+    reference "IETF RFC 6991";
+  }
 
   organization "KernelKit";
   contact      "kernelkit@googlegroups.com";
   description  "Extensions and deviations to ieee802-ethernet-interface.yang";
+
+  revision 2024-02-27 {
+    description "Add augment for in-good-octets and out-good-octets";
+    reference "internal";
+  }
 
   revision 2024-01-22 {
     description "Support ethernet but not negotiation-status";
@@ -27,6 +36,18 @@ module infix-ethernet-interface {
   /*
    * Data Nodes
    */
+  augment "/if:interfaces/if:interface/eth:ethernet/eth:statistics/eth:frame" {
+    leaf out-good-octets {
+      type yang:counter64;
+      units octets;
+      description "A count of data and padding octets of frames that are successfully transmitted.";
+    }
+    leaf in-good-octets {
+      type yang:counter64;
+      units octets;
+      description "A count of data and padding octets in frames that are successfully received.";
+    }
+  }
 
   /* Deviations for config and status */
 

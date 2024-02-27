@@ -629,6 +629,11 @@ def add_ethtool_groups(ifname, iface_out):
         if "FramesLostDueToIntMACRcvError" in mac_in:
             frame['in-error-mac-internal-frames'] = str(mac_in['FramesLostDueToIntMACRcvError'])
 
+        if "OctetsTransmittedOK" in mac_in:
+            frame['infix-ethernet-interface:out-good-octets'] = str(mac_in['OctetsTransmittedOK'])
+        if "OctetsReceivedOK" in mac_in:
+            frame['infix-ethernet-interface:in-good-octets'] = str(mac_in['OctetsReceivedOK'])
+
         tot = 0
         found = False
         if "FramesReceivedOK" in mac_in:
