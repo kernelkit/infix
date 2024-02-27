@@ -22,7 +22,8 @@ Infix is a free, Linux based, immutable Network Operating System (NOS)
 built on [Buildroot][1], and [sysrepo][2].  A powerful mix that ease
 porting to different platforms, simplify long-term maintenance, and
 provide made-easy management using NETCONF[^1] or the built-in [command
-line interface (CLI)][3] (click the foldout below for an example).
+line interface (CLI)][3] from a console or SSH login.  *Click the
+foldout (▶ Example CLI Session) below for an example.*
 
 Although primarily focused on switches and routers, the core values
 may be appealing for other use-cases as well:
