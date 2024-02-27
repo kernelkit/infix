@@ -64,6 +64,12 @@ def get_json_data(default, indata, *args):
 
     return data
 
+def remove_yang_prefix(key):
+    parts = key.split(":", 1)
+    if len(parts) > 1:
+        return parts[1]
+    return key
+
 class Route:
     def __init__(self,data,ip):
         self.data = data
@@ -376,8 +382,9 @@ class Iface:
         frame = get_json_data([], self.data,'ieee802-ethernet-interface:ethernet',
                               'statistics', 'frame')
         if frame:
-            print(f"")
+            print("")
             for key, val in frame.items():
+                key = remove_yang_prefix(key)
                 print(f"eth-{key:<{25}}: {val}")
 
 

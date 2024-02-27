@@ -18,5 +18,7 @@ eth-in-frames                : 418
 eth-in-multicast-frames      : 336
 eth-in-broadcast-frames      : 46
 eth-in-error-fcs-frames      : 0
+eth-out-good-octets          : 129130
+eth-in-good-octets           : 72571
 eth-in-total-frames          : 418
 eth-in-error-oversize-frames : 0
