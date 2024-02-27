@@ -104,7 +104,7 @@ name()
 containerize=yes
 [ -c /dev/kvm ] && kvm="--device=/dev/kvm"
 
-while getopts "Cf:hKp:q:t:" opt; do
+while getopts "Cf:hiKp:q:t:" opt; do
     case ${opt} in
 	C)
 	    containerize=
@@ -114,6 +114,9 @@ while getopts "Cf:hKp:q:t:" opt; do
 	    ;;
 	h)
 	    usage && exit 0
+	    ;;
+	i)
+	    interactive="--interactive"
 	    ;;
 	K)
 	    kvm=
@@ -146,7 +149,7 @@ if [ "$containerize" ]; then
 	 --expose 9001-9010 --publish-all \
 	 --hostname "$(name)" \
 	 --name "$(name)" \
-	 --interactive \
+	 $interactive \
 	 --rm \
 	 --security-opt seccomp=unconfined \
 	 --sysctl net.ipv6.conf.all.disable_ipv6=0 \

@@ -18,7 +18,7 @@ test test-qeneth:
 		$(BR2_EXTERNAL_INFIX_PATH)/test/9pm/9pm.py \
 			$(INFIX_TESTS))
 test-sh test-qeneth-sh:
-	$(call test-env-qeneth,/bin/sh)
+	$(call test-env-qeneth,-i /bin/sh)
 
 test-run: | ~/.infix-test-venv
 	$(call test-env-run,\
