@@ -1,11 +1,17 @@
-<!--- Please provide a general **summary** of your changes in the title above -->
+<!--- **Summarize** your changes in the title above -->
 
 ## Description
 
-<!-- A description of changes in the pull request: detailing *why* the changes are made. -->
+<!--
+  -- A description of changes, detailing *why* changes are made.
+  -- Remember: assign a reviewer, or use @mentions if org. member.
+  -->
 
 
-<!-- Remember to assign a reviewer, or use @mentions if you are not a member of the org. -->
+## Other information
+
+<!-- Other relevant info, e.g., before/after screenshots -->
+
 
 ## Checklist
 
@@ -15,18 +21,16 @@ Tick relevant boxes, this PR is-a or has-a:
   - [ ] Regression tests
   - [ ] ChangeLog updates (for next release)
 - [ ] Feature
-  - [ ] Regression tests
+  - [ ] YANG model change => revision updated?
+  - [ ] Regression tests added?
   - [ ] ChangeLog updates (for next release)
-  - [ ] Documentation
+  - [ ] Documentation added?
 - [ ] Code style update (formatting, renaming)
 - [ ] Refactoring (please detail in commit messages)
 - [ ] Build related changes
 - [ ] Documentation content changes
 - [ ] Other (please describe):
 
-## Other information
-
-<!-- Any other relevant information to the PR, e.g., screenshots of before and after the change. -->
 
 ## References
 
