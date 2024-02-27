@@ -815,15 +815,32 @@ static int bridge_vlan_settings(struct lyd_node *cif, const char **proto, int *v
 
 static void bridge_port_settings(FILE *next, const char *ifname, struct lyd_node *cif)
 {
-	struct lyd_node *mcast, *bp = lydx_get_descendant(lyd_child(cif), "bridge-port", NULL);
+	struct lyd_node *bp, *flood, *mcast;
+	int ucflood = 1;	/* default: flood unknown unicast */
 
-	mcast = lydx_get_child(bp, "multicast");
+	bp = lydx_get_descendant(lyd_child(cif), "bridge-port", NULL);
 	if (!bp)
 		return;
 
 	fprintf(next, "link set %s type bridge_slave", ifname);
-	fprintf(next, " mcast_flood %s", ONOFF(lydx_is_enabled(mcast, "flood")));
+	flood = lydx_get_child(bp, "flood");
+	if (flood) {
+		ucflood = lydx_is_enabled(flood, "unicast");
 
+		fprintf(next, " bcast_flood %s", ONOFF(lydx_is_enabled(flood, "broadcast")));
+		fprintf(next, " flood %s",       ONOFF(ucflood));
+		fprintf(next, " mcast_flood %s", ONOFF(lydx_is_enabled(flood, "multicast")));
+	}
+
+	if (ucflood) {
+		/* proxy arp must be disabled while flood on, see man page */
+		fprintf(next, " proxy_arp off");
+		fprintf(next, " proxy_arp_wifi off");
+	} else {
+		/* XXX: proxy arp/wifi settings here */
+	}
+
+	mcast = lydx_get_child(bp, "multicast");
 	if (mcast) {
 		const char *router = lydx_get_cattr(mcast, "router");
 		struct { const char *str; int val; } xlate[] = {
