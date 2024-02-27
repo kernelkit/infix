@@ -55,18 +55,16 @@ jobs:
         uses: actions/cache@v4
         with:
           path: dl/
-          key: dl-${{ matrix.platform }}-${{ matrix.variant }}-${{ hashFiles('.git/modules/buildroot/HEAD', 'configs/*', 'package/*/*.hash') }}
+          key: dl-${{ matrix.variant }}-${{ hashFiles('.git/modules/buildroot/HEAD', 'configs/*', 'package/*/*.hash') }}
           restore-keys: |
-            dl-${{ matrix.platform }}-${{ matrix.variant }}-
-            dl-${{ matrix.platform }}-
+            dl-${{ matrix.variant }}-
             dl-
       - name: Restore Cache of .ccache/
         uses: actions/cache@v4
         with:
           path: .ccache/
-          key: ccache-${{ matrix.platform }}-${{ matrix.variant }}-${{ hashFiles('.git/modules/buildroot/HEAD', 'package/*/*.hash') }}
+          key: ccache-${{ matrix.platform }}-${{ hashFiles('.git/modules/buildroot/HEAD', 'package/*/*.hash') }}
           restore-keys: |
-            ccache-${{ matrix.platform }}-${{ matrix.variant }}-
             ccache-${{ matrix.platform }}-
             ccache-
       - name: Configure & Build

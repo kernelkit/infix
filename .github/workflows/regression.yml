@@ -31,18 +31,16 @@ jobs:
         uses: actions/cache@v4
         with:
           path: dl/
-          key: dl-x86_64-netconf-${{ hashFiles('.git/modules/buildroot/refs/heads/master', 'package/*/*.hash') }}
+          key: dl-netconf-${{ hashFiles('.git/modules/buildroot/refs/heads/master', 'package/*/*.hash') }}
           restore-keys: |
-            dl-x86_64-netconf-
-            dl-x86_64-
+            dl-netconf-
             dl-
       - name: Restore Cache of .ccache/
         uses: actions/cache@v4
         with:
           path: .ccache/
-          key: ccache-x86_64-netconf-${{ hashFiles('.git/modules/buildroot/refs/head/master', 'package/*/*.hash') }}
+          key: ccache-x86_64-${{ hashFiles('.git/modules/buildroot/refs/head/master', 'package/*/*.hash') }}
           restore-keys: |
-            ccache-x86_64-netconf-
             ccache-x86_64-
             ccache-
       - name: Configure NETCONF
