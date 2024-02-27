@@ -79,7 +79,7 @@ name()
     nm=infamy
     id=0
 
-    names=$(podman ps -f name='infamy.*' --format '{{.Names}}')
+    names=$($(runner) ps -f name='infamy.*' --format '{{.Names}}')
     while true; do
 	name="$nm$id"
 	unset hit
