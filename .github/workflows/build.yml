@@ -9,7 +9,7 @@ on:
 jobs:
   build:
     name: Build ${{ matrix.platform }} ${{ matrix.variant }}
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     strategy:
       matrix:
         platform: [aarch64, x86_64]
