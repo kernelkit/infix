@@ -513,10 +513,12 @@ static int sub_to_ospf(struct statd *statd)
 	return subscribe(statd, "ietf-routing", XPATH_ROUTING_OSPF, "ospf", sr_ospf_cb);
 }
 
+#ifdef CONTAINERS
 static int sub_to_container(struct statd *statd)
 {
 	return subscribe(statd, "infix-containers", XPATH_CONTAIN_BASE, "container", sr_generic_cb);
 }
+#endif
 
 int main(int argc, char *argv[])
 {
@@ -588,12 +590,14 @@ int main(int argc, char *argv[])
 		return EXIT_FAILURE;
 	}
 
+#ifdef CONTAINERS
 	err = sub_to_container(&statd);
 	if (err) {
 		ERROR("Error registering infix-container status");
 		sr_disconnect(sr_conn);
 		return EXIT_FAILURE;
 	}
+#endif
 
 	ev_signal_init(&sigint_watcher, sigint_cb, SIGINT);
 	sigint_watcher.data = &statd;

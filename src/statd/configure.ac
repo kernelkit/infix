@@ -10,6 +10,20 @@ AC_CONFIG_FILES([
 AC_PROG_CC
 AC_PROG_INSTALL
 
+#
+# Check feature flags
+#
+AC_ARG_ENABLE(containers,
+        AS_HELP_STRING([--enable-containers], [Enable support for containers]),,[
+	enable_containers=no])
+
+# C defines
+AS_IF([test "x$enable_containers" = "xyes"], [
+        AC_DEFINE(CONTAINERS, 1, [Built with container support])])
+
+# Control build with automake flags
+AM_CONDITIONAL(CONTAINERS,   [test "x$enable_containers" != "xno"])
+
 # Check for pkg-config first, warn if it's not installed
 PKG_PROG_PKG_CONFIG
 

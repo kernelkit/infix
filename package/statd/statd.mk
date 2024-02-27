@@ -19,6 +19,12 @@ endef
 
 STATD_CONF_OPTS = --prefix= --disable-silent-rules
 
+ifeq ($(BR2_PACKAGE_PODMAN),y)
+STATD_CONF_OPTS += --enable-containers
+else
+STATD_CONF_OPTS += --disable-containers
+endif
+
 define STATD_INSTALL_EXTRA
 	cp $(STATD_PKGDIR)/statd.conf  $(FINIT_D)/available/
 	ln -sf ../available/statd.conf $(FINIT_D)/enabled/statd.conf
