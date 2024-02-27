@@ -787,7 +787,7 @@ static const char *bridge_tagtype2str(const char *type)
 	return proto;
 }
 
-static int bridge_vlan_settings(struct lyd_node *cif, const char **proto)
+static int bridge_vlan_settings(struct lyd_node *cif, const char **proto, int *vlan_mcast)
 {
 	struct lyd_node *vlans, *vlan;
 
@@ -797,8 +797,15 @@ static int bridge_vlan_settings(struct lyd_node *cif, const char **proto)
 		int num = 0;
 
 		*proto = bridge_tagtype2str(type);
-		LYX_LIST_FOR_EACH(lyd_child(vlans), vlan, "vlan")
+		LYX_LIST_FOR_EACH(lyd_child(vlans), vlan, "vlan") {
+			struct lyd_node *mcast;
+
+			mcast = lydx_get_descendant(lyd_child(vlan), "multicast", NULL);
+			if (mcast)
+				*vlan_mcast += lydx_is_enabled(mcast, "snooping");
+
 			num++;
+		}
 
 		return num;
 	}
@@ -981,9 +988,13 @@ static int bridge_mcast_settings(FILE *ip, struct lyd_node *cif, int vlan_filter
 	}
 
 	fprintf(ip, " mcast_vlan_snooping %d", vlan_filtering ? snooping : 0);
-
+	/*
+	 * When snooping is enabled per VLAN we need to use an external
+	 * querier, otherwise the bridge will go dumpster diving for an
+	 * IP address on the base bridge interface.
+	 */
 	fprintf(ip, " mcast_snooping %d mcast_querier %d mcast_query_use_ifaddr %d",
-		snooping, mode[i].querier, mode[i].ifaddr);
+		snooping, mode[i].querier, vlan_filtering ? 0 : mode[i].ifaddr);
 
 	interval = lydx_get_cattr(mcast, "query-interval");
 	period   = atoi(interval);
@@ -996,14 +1007,14 @@ static int netdag_gen_bridge(struct dagger *net, struct lyd_node *dif,
 			     struct lyd_node *cif, FILE *ip, int add)
 {
 	const char *brname = lydx_get_cattr(cif, "name");
+	int vlan_filtering, fwd_mask, vlan_mcast = 0;
 	const char *op = add ? "add" : "set";
 	struct lyd_node *vlans, *vlan;
-	int vlan_filtering, fwd_mask;
 	const char *proto;
 	FILE *br = NULL;
 	int err = 0;
 
-	vlan_filtering = bridge_vlan_settings(cif, &proto);
+	vlan_filtering = bridge_vlan_settings(cif, &proto, &vlan_mcast);
 	fwd_mask = bridge_fwd_mask(cif);
 
 	/*
@@ -1015,7 +1026,7 @@ static int netdag_gen_bridge(struct dagger *net, struct lyd_node *dif,
 	fprintf(ip, "link %s dev %s type bridge group_fwd_mask %d vlan_filtering %d vlan_default_pvid 0",
 		op, brname, fwd_mask, vlan_filtering ? 1 : 0);
 
-	if ((err = bridge_mcast_settings(ip, cif, vlan_filtering)))
+	if ((err = bridge_mcast_settings(ip, cif, vlan_mcast)))
 		goto done;
 
 	if (!vlan_filtering) {
