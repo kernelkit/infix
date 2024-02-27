@@ -1169,7 +1169,7 @@ static int netdag_gen_afspec_add(struct dagger *net, struct lyd_node *dif,
 					     " wrong type or name.", ifname);
 		return -ENOENT;
 	} else {
-		sr_session_set_error_message(net->session, "Unsupported interface type \"%s\"", iftype);
+		sr_session_set_error_message(net->session, "%s: unsupported interface type \"%s\"", ifname, iftype);
 		return -ENOSYS;
 	}
 
@@ -1194,7 +1194,7 @@ static int netdag_gen_afspec_set(struct dagger *net, struct lyd_node *dif,
 	if (!strcmp(iftype, "infix-if-type:veth"))
 		return 0;
 
-	ERROR("unsupported interface type \"%s\" for %s", iftype, ifname);
+	ERROR("%s: unsupported interface type \"%s\"", ifname, iftype);
 	return -ENOSYS;
 }
 
