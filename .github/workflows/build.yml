@@ -16,6 +16,11 @@ jobs:
         variant: [netconf]
       fail-fast: false
     steps:
+      - name: Maintenance
+        run: |
+          docker image prune -af
+          docker volume prune -f
+          docker container prune -f
       - uses: actions/checkout@v4
       - name: Set Build Variables
         id: vars
@@ -26,6 +31,7 @@ jobs:
               target=${{ matrix.platform }}-${{ matrix.variant }}
           fi
           echo "dir=infix-$target"        >> $GITHUB_OUTPUT
+          echo "out=/mnt/$dir"            >> $GITHUB_OUTPUT
           echo "tgz=infix-$target.tar.gz" >> $GITHUB_OUTPUT
       - name: Restore Cache of dl/
         uses: actions/cache@v4
@@ -51,21 +57,23 @@ jobs:
               target=${{ matrix.platform }}_${{ matrix.variant }}_defconfig
           fi
           echo "Buildring $target ..."
+          export O=${{ steps.vars.outputs.out }}
           make $target
           make
       - name: Prepare Artifact
         run: |
-          cd output
+          cd ${{ steps.vars.outputs.out }}
           mv images ${{ steps.vars.outputs.dir }}
           ln -s ${{ steps.vars.outputs.dir }} images
           tar chfz ${{ steps.vars.outputs.tgz }} ${{ steps.vars.outputs.dir }}
       - name: Test
         if: matrix.platform == 'x86_64' && matrix.variant == 'netconf'
         run: |
+          export O=${{ steps.vars.outputs.out }}
           make test-qeneth
       - uses: actions/upload-artifact@v4
         with:
-          path: output/${{ steps.vars.outputs.tgz }}
+          path: ${{ steps.vars.outputs.out }}/${{ steps.vars.outputs.tgz }}
           name: artifact-${{ matrix.variant }}-${{ matrix.platform }}
   release:
     if: ${{github.repository_owner == 'kernelkit' && github.ref_name == 'main'}}
