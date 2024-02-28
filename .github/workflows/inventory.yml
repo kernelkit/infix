@@ -11,13 +11,13 @@ jobs:
   inventory:
     runs-on: ubuntu-latest
     steps:
-      - name: Disk inventory ...
+      - name: Disk inventory (1/2) ...
         run: |
           echo "df -h ========================================================================="
           df -h
           echo "mounts ========================================================================"
           mount
-      - name: File inventory ...
+      - name: File inventory (1/2) ...
         run: |
           echo "Current directory: $(pwd)"
           echo "Files in $HOME ================================================================"
@@ -30,6 +30,36 @@ jobs:
           docker images
           echo "Available containers: ========================================================="
           docker ps -a
+      - uses: actions/checkout@v4
+      - name: Restore Cache of dl/
+        uses: actions/cache@v4
+        with:
+          path: dl/
+          key: dl-netconf-${{ hashFiles('.git/modules/buildroot/HEAD', 'configs/*', 'package/*/*.hash') }}
+          restore-keys: |
+            dl-netconf-
+            dl-
+      - name: Restore Cache of .ccache/
+        uses: actions/cache@v4
+        with:
+          path: .ccache/
+          key: ccache-x86_64-${{ hashFiles('.git/modules/buildroot/HEAD', 'package/*/*.hash') }}
+          restore-keys: |
+            ccache-x86_64-
+            ccache-
+      - name: Disk inventory (2/2) ...
+        run: |
+          echo "df -h ========================================================================="
+          df -h
+          echo "mounts ========================================================================"
+          mount
+      - name: File inventory (2/2) ...
+        run: |
+          echo "Current directory: $(pwd)"
+          echo "Files in $HOME ================================================================"
+          ls $HOME
+          echo "Find $HOME ===================================================================="
+          find $HOME
   cleanup:
     if: ${{ inputs.cleanup }}
     needs: inventory
