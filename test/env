@@ -149,7 +149,7 @@ if [ "$containerize" ]; then
 	 --expose 9001-9010 --publish-all \
 	 --hostname "$(name)" \
 	 --name "$(name)" \
-	 "$interactive" \
+	 $interactive \
 	 --rm \
 	 --tty \
 	 --security-opt seccomp=unconfined \
@@ -157,7 +157,7 @@ if [ "$containerize" ]; then
 	 --volume "$ixdir":"$ixdir" \
 	 --workdir "$ixdir/test" \
 	 "$kvm" \
-	 docker://ghcr.io/kernelkit/infix-test:1.2 \
+	 ghcr.io/kernelkit/infix-test:1.2 \
 	 "$0" -C "$@"
     set +x
 
