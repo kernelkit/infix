@@ -56,7 +56,9 @@ jobs:
           else
               target=${{ matrix.platform }}_${{ matrix.variant }}_defconfig
           fi
-          echo "Buildring $target ..."
+          echo "Building $target ..."
+          sudo mkdir ${{ steps.vars.outputs.out }}
+          sudo chown $(id -un):$(id -gn) ${{ steps.vars.outputs.out }}
           export O=${{ steps.vars.outputs.out }}
           make $target
           make
