@@ -3,7 +3,13 @@ name: Manny the Manager
 on:
   workflow_dispatch:
     inputs:
+      checkout:
+        required: true
+        type: boolean
       cleanup:
+        required: true
+        type: boolean
+      peek:
         required: true
         type: boolean
 
@@ -30,6 +36,10 @@ jobs:
           docker images
           echo "Available containers: ========================================================="
           docker ps -a
+
+  checkout:
+    runs-on: ubuntu-latest
+    steps:
       - uses: actions/checkout@v4
       - name: Restore Cache of dl/
         uses: actions/cache@v4
@@ -60,15 +70,23 @@ jobs:
           ls $HOME
           echo "Find $HOME ===================================================================="
           find $HOME
+
+  peeky:
+    if: ${{ inputs.peek }}
+    runs-on: ubuntu-latest
+    steps:
       - name: Peek & Poke ...
         run: |
           whoami
-          ls -l /mnt
-          touch /mnt/hej
-          ls -l /mnt
+          ls -l /mnt/
+          cat /mnt/DATALOSS_WARNING_README.txt
+          sudo mkdir /mnt/x-aarch64
+          sudo chown $(id -un):$(id -gn) /mnt/x-aarch64
+          ls -l /mnt/
+
   cleanup:
     if: ${{ inputs.cleanup }}
-    needs: inventory
+    needs: [inventory, peeky]
     runs-on: ubuntu-latest
     steps:
       - name: Cleaning up cruft ...
