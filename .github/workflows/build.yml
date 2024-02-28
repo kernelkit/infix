@@ -13,7 +13,7 @@ jobs:
     strategy:
       matrix:
         platform: [aarch64, x86_64]
-        variant: [netconf, classic]
+        variant: [netconf]
       fail-fast: false
     steps:
       - uses: actions/checkout@v4
