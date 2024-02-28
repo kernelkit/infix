@@ -4,6 +4,19 @@
 #
 
 import infamy
+import time
+import infamy.iface
+
+from infamy.util import until
+
+def has_linklocal(target, iface):
+    """Check if interface as a linklocal address"""
+    addrs = infamy.iface.get_ipv4_address(target, iface)
+    if not addrs:
+        return False
+    for addr in addrs:
+        if addr['origin'] == "random":
+            return True
 
 with infamy.Test() as test:
     with test.step("Initialize"):
@@ -29,23 +42,7 @@ with infamy.Test() as test:
             }
         })
 
-    with test.step("Wait for mDNS message from a 169.254 address ..."):
-        _, hport = env.ltop.xlate("host", "data")
-
-        with infamy.IsolatedMacVlan(hport) as ns:
-            vrfy = ns.runsh("""
-            set -ex
-
-            ip link set iface up
-            ip addr add 10.0.0.1/24 dev iface
-
-            fakeroot tcpdump -q -i iface -c 1 -n host 224.0.0.251 and port 5353 --print 2>/dev/null \
-		| awk 'match($0,/169\\.254\\.[0-9]+\\.[0-9]+/) {print substr($0,RSTART,RLENGTH)}'   \
-		| grep . || exit 1
-            """)
-
-        if vrfy.returncode:
-            print(vrfy.stdout)
-            test.fail()
+    with test.step("Wait for linklocal address on interface"):
+         until(lambda: has_linklocal(target, tport), attempts=10)
 
     test.succeed()
