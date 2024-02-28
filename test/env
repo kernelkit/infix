@@ -156,7 +156,7 @@ if [ "$containerize" ]; then
 	 --tty \
 	 --volume "$ixdir":"$ixdir" \
 	 --workdir "$ixdir/test" \
-	 "$kvm" \
+	 $kvm \
 	 $INFIX_TEST \
 	 "$0" -C "$@"
 else
