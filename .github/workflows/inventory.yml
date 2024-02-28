@@ -11,6 +11,12 @@ jobs:
   inventory:
     runs-on: ubuntu-latest
     steps:
+      - name: Disk inventory ...
+        run: |
+          echo "df -h ========================================================================="
+          df -h
+          echo "mounts ========================================================================"
+          mount
       - name: File inventory ...
         run: |
           echo "Current directory: $(pwd)"
