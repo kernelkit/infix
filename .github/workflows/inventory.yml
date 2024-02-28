@@ -1,0 +1,22 @@
+name: Manny the Manager
+
+on:
+  workflow_dispatch:
+
+jobs:
+  warehouse:
+    runs-on: ubuntu-latest
+    steps:
+      - name: File inventory ...
+        run: |
+          echo "Current directory: $(pwd)"
+          echo "Files in $HOME ================================================================"
+          ls $HOME
+          echo "Find $HOME ===================================================================="
+          find $HOME
+      - name: Container inventory ...
+        run: |
+          echo "Available container images: ==================================================="
+          docker images
+          echo "Available containers: ========================================================="
+          docker ps -a
