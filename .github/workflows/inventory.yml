@@ -2,9 +2,13 @@ name: Manny the Manager
 
 on:
   workflow_dispatch:
+    inputs:
+      cleanup:
+        required: true
+        type: boolean
 
 jobs:
-  warehouse:
+  inventory:
     runs-on: ubuntu-latest
     steps:
       - name: File inventory ...
@@ -20,3 +24,12 @@ jobs:
           docker images
           echo "Available containers: ========================================================="
           docker ps -a
+  cleanup:
+    runs-on: ubuntu-latest
+    if: ${{ inputs.cleanup }}
+    steps:
+      - name: Cleaning up cruft ...
+        run: |
+          docker image prune -af
+          docker volume prune -f
+          docker container prune -f
