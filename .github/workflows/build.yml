@@ -31,7 +31,7 @@ jobs:
               target=${{ matrix.platform }}-${{ matrix.variant }}
           fi
           echo "dir=infix-$target"        >> $GITHUB_OUTPUT
-          echo "out=/mnt/$dir"            >> $GITHUB_OUTPUT
+          echo "out=/mnt/x-$target"       >> $GITHUB_OUTPUT
           echo "tgz=infix-$target.tar.gz" >> $GITHUB_OUTPUT
       - name: Restore Cache of dl/
         uses: actions/cache@v4
