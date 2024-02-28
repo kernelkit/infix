@@ -9,7 +9,7 @@ on:
 jobs:
   build:
     name: Build ${{ matrix.platform }} ${{ matrix.variant }}
-    runs-on: self-hosted
+    runs-on: [self-hosted, ael-buildlnx]
     strategy:
       matrix:
         platform: [aarch64, x86_64]
