@@ -60,6 +60,12 @@ jobs:
           ls $HOME
           echo "Find $HOME ===================================================================="
           find $HOME
+      - name: Peek & Poke ...
+        run: |
+          whoami
+          ls -l /mnt
+          touch /mnt/hej
+          ls -l /mnt
   cleanup:
     if: ${{ inputs.cleanup }}
     needs: inventory
