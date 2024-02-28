@@ -40,7 +40,7 @@ def address_exist(target, iface, address, proto="dhcp"):
     if not addrs:
         return False
     for addr in addrs:
-        if addr['origin'] == "dhcp" and addr['ip'] == address:
+        if addr['origin'] == proto and addr['ip'] == address:
             return True
 
 def get_ipv4_address(target, iface):
