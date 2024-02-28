@@ -140,25 +140,8 @@ done
 
 if [ "$containerize" ]; then
     # shellcheck disable=SC2016
-    echo "exec $(runner) run \
-	 --cap-add=NET_ADMIN \
-	 --device=/dev/net/tun \
-	 --env VIRTUAL_ENV_DISABLE_PROMPT=yes \
-	 --env PROMPT_DIRTRIM="$ixdir" \
-	 --env PS1='\e[1m$(date "+%H:%M:%S") \h\e[0m:\W # ' \
-	 --expose 9001-9010 --publish-all \
-	 --hostname "$(name)" \
-	 --name "$(name)" \
-	 "$interactive" \
-	 --rm \
-	 --security-opt seccomp=unconfined \
-	 --sysctl net.ipv6.conf.all.disable_ipv6=0 \
-	 --volume "$ixdir":"$ixdir" \
-	 --workdir "$ixdir/test" \
-	 "$kvm" \
-	 ghcr.io/kernelkit/infix-test:1.2 \
-	 "$0" -C "$@""
-        $(runner) run \
+    set -x
+    exec $(runner) run \
 	 --cap-add=NET_ADMIN \
 	 --device=/dev/net/tun \
 	 --env VIRTUAL_ENV_DISABLE_PROMPT=yes \
@@ -176,7 +159,7 @@ if [ "$containerize" ]; then
 	 "$kvm" \
 	 docker://ghcr.io/kernelkit/infix-test:1.2 \
 	 "$0" -C "$@"
-
+    set +x
 
 else
     if [ ! -f ~/.9pm.rc ]; then
