@@ -47,7 +47,7 @@ Currently supported models:
     | `out-good-octets`           | `OctetsTransmittedOK`             |
 
  - [ietf-hardware][]:
-   - Populates standard hardware model from corresponding data in device EEPROMs.
+   - Populates standard hardware model from corresponding data in device EEPROMs
    - **augments:**
      - Initial support for USB ports
      - Vital Product Data (VPD) from device EEPROMs ([ONIE][] structure)
