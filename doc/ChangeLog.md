@@ -46,8 +46,12 @@ Currently supported models:
     | `in-good-octets`            | `OctetsReceivedOK`                |
     | `out-good-octets`           | `OctetsTransmittedOK`             |
 
- - [ietf-hardware][]: Initial support for USB ports
-   - [infix-hardware][]: Deviations and augments for USB ports (only)
+ - [ietf-hardware][]:
+   - Populates standard hardware model from corresponding data in device EEPROMs.
+   - **augments:**
+     - Initial support for USB ports.
+     - Vital Product Data (VPD) from device EEPROMs ([ONIE][onie] structure).
+   - [infix-hardware][]: Deviations and augments.
  - [ietf-system][]:
    - **augments:**
      - MotD (Message of the Day)
@@ -120,6 +124,7 @@ Currently supported models:
 [infix-routing]:   https://github.com/kernelkit/infix/blob/f0c23ca/src/confd/yang/infix-routing%402024-01-09.yang
 [infix-services]:  https://github.com/kernelkit/infix/blob/f0c23ca/src/confd/yang/infix-services%402023-10-16.yang
 [infix-system-software]: https://github.com/kernelkit/infix/tree/f0c23ca/src/confd/yang/infix-system-software%402023-06-27.yang
+[onie]: https://opencomputeproject.github.io/onie/design-spec/hw_requirements.html
 
 ### Changes
 
