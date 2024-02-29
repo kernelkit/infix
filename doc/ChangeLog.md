@@ -4,6 +4,199 @@ Change Log
 All notable changes to the project are documented in this file.
 
 
+[v24.02.0][] - 2024-03-01
+-------------------------
+
+> **Note:** the `root` account is disabled in official builds.  Only the
+> `admin` user can log in to the system.  This can be changed, but only
+> in developer builds: `make menuconfig` -> System configuration ->
+> `[*]Enable root login with password`
+
+### YANG Status
+
+Infix devices support downloading all YANG models over NETCONF, including
+models with submodules.  As a rule, standard models are used as long as
+they map to underlying Linux concepts and services.  All exceptions are
+listed in Infix specific models, detailing deviations and augmentations.
+
+Currently supported models:
+
+ - [ieee802-ethernet-interface][]:
+   - Toggle port speed & duplex auto-negotiation on/off
+   - Set port speed and duplex when auto-negotiation is off
+   - Query port speed/duplex and auto-negotiation status (operational)
+   - **Frame counters:**
+
+    | **YANG**                    | **Linux / Ethtool**               |
+    |-----------------------------|-----------------------------------|
+    | `out-frames`                | `FramesTransmittedOK`             |
+    | `out-multicast-frames`      | `MulticastFramesXmittedOK`        |
+    | `out-broadcast-frames`      | `BroadcastFramesXmittedOK`        |
+    | `in-total-octets`           | `FramesReceivedOK`                |
+    |                             | + `FrameCheckSequenceErrors`      |
+    |                             | + `FramesLostDueToIntMACRcvError` |
+    |                             | + `AlignmentErrors`               |
+    |                             | + `etherStatsOversizePkts`        |
+    |                             | + `etherStatsJabbers`             |
+    | `in-frames`                 | `FramesReceivedOK`                |
+    | `in-multicast-frames`       | `MulticastFramesReceivedOK`       |
+    | `in-broadcast-frames`       | `BroadcastFramesReceivedOK`       |
+    | `in-error-undersize-frames` | `undersize_pkts`                  |
+    | `in-error-fcs-frames`       | `FrameCheckSequenceErrors`        |
+    | `in-good-octets`            | `OctetsReceivedOK`                |
+    | `out-good-octets`           | `OctetsTransmittedOK`             |
+
+ - [ietf-hardware][]: Initial support for USB ports
+   - [infix-hardware][]: Deviations and augments for USB ports (only)
+ - [ietf-system][]:
+   - **augments:**
+     - MotD (Message of the Day)
+	 - User login shell, default: `/bin/false` (no SSH or console login)
+	 - State information for remotely querying firmware version information
+   - **deviations:**
+     - timezone-name, using IANA timezones instead of plain string
+	 - UTC offset, only support per-hour offsets with [tzdata][]
+	 - Usernames, clarifying Linux restrictions
+     - Unsupported features marked as deviations, e.g. RADIUS
+   - [infix-system-software][]: firmware upgrade with `install-bundle` RPC
+ - [ietf-interfaces][]:
+   - deviation to allow read-write `if:phys-address` for custom MAC address
+   - [ietf-ip][]: augments
+     - IPv4LL similar to standardized IPv6LL
+   - [ietf-ip][]: deviations (`not-supported`) added for IPv4 and IPv6:
+     - `/if:interfaces/if:interface/ip:ipv4/ip:address/ip:subnet/ip:netmask`
+	 - `/if:interfaces/if:interface/ip:ipv6/ip:address/ip:status`
+	 - `/if:interfaces/if:interface/ip:ipv4/ip:neighbor`
+     - `/if:interfaces/if:interface/ip:ipv6/ip:neighbor`
+   - [ietf-routing][]: Base model for routing
+   - [ietf-ipv4-unicast-routing][]: Static unicast routing, incl. operational
+     data, i.e., setting static IPv4 routes and reading IPv4 routing table
+   - [ietf-ipv6-unicast-routing][]: Static unicast routing, incl. operational
+     data, i.e., setting static IPv6 routes and reading IPv6 routing table
+   - [ietf-ospf][]: Limited support for OSPFv2, with additional support for
+     injecting default route, and route redistribution.  Underlying routing
+     engine in use is Frr.  Includes operational status + data (routes).
+	 See [infix-routing][] model for detailed list of deviations
+   - [infix-ethernet-interface][]: deviations for ieee802-ethernet-interface
+   - [infix-routing][]: Limit ietf-routing to one instance `default` per
+     routing protocol, also details unsupported features (deviations) to both
+     ietf-routing and ietf-ospf models, as well as augments made to support
+     injecting default route in OSPFv2
+   - [infix-if-bridge][]: Linux bridge interfaces with native VLAN support
+   - [infix-if-type][]: deviation for interface types, limiting number to
+     supported types only.  New identities are derived from default IANA
+     interface types, ensuring compatibility with other standard models, e.g.,
+     `ieee802-ethernet-interface.yang`
+   - [infix-if-veth][]: Linux VETH pairs
+   - [infix-if-vlan][]: Linux VLAN interfaces, e.g. `eth0.10`
+ - [infix-containers][]: Support for Docker containers, incl. operational data
+   to query status and remotely stop/start containers
+ - [infix-dhcp-client][]: DHCPv4 client, including supported options
+ - **Configurable services:**
+   - [ieee802-dot1ab-lldp][]: stripped down to an `enabled` setting
+   - [infix-services][]: support for enabling mDNS service/device discovery
+
+[tzdata]:          https://www.iana.org/time-zones
+[ietf-system]:     https://www.rfc-editor.org/rfc/rfc7317.html
+[ietf-interfaces]: https://www.rfc-editor.org/rfc/rfc7223.html
+[ietf-ip]:         https://www.rfc-editor.org/rfc/rfc8344.html
+[ietf-if-vlan-encapsulation]: https://www.ietf.org/id/draft-ietf-netmod-sub-intf-vlan-model-08.html
+[ietf-routing]:     https://www.rfc-editor.org/rfc/rfc8349
+[ietf-ipv4-unicast-routing]: https://www.rfc-editor.org/rfc/rfc8349#page-29
+[ietf-ipv6-unicast-routing]: https://www.rfc-editor.org/rfc/rfc8349#page-37
+[ietf-hardware]:    https://www.rfc-editor.org/rfc/rfc8348
+[ietf-ospf]:        https://www.rfc-editor.org/rfc/rfc9129
+[ieee802-dot1ab-lldp]: https://github.com/kernelkit/infix/blob/f0c23ca/src/confd/yang/ieee802-dot1ab-lldp%402022-03-15.yang
+[ieee802-ethernet-interface]: https://github.com/kernelkit/infix/blob/f0c23ca/src/confd/yang/ieee802-ethernet-interface%402019-06-21.yang
+[infix-ethernet-interface]: https://github.com/kernelkit/infix/blob/f0c23ca/src/confd/yang/infix-ethernet-interface%402024-02-27.yang
+[infix-containers]: https://github.com/kernelkit/infix/blob/f0c23ca/src/confd/yang/infix-containers%402024-02-01.yang
+[infix-dhcp-client]: https://github.com/kernelkit/infix/blob/f0c23ca/src/confd/yang/infix-dhcp-client%402024-01-30.yang
+[infix-hardware]:  https://github.com/kernelkit/infix/blob/f0c23ca/src/confd/yang/infix-hardware%402024-01-18.yang
+[infix-if-bridge]: https://github.com/kernelkit/infix/blob/f0c23ca/src/confd/yang/infix-if-bridge%402024-02-19.yang
+[infix-if-type]:   https://github.com/kernelkit/infix/blob/f0c23ca/src/confd/yang/infix-if-type%402024-01-29.yang
+[infix-if-veth]:   https://github.com/kernelkit/infix/blob/f0c23ca/src/confd/yang/infix-if-veth%402023-06-05.yang
+[infix-if-vlan]:   https://github.com/kernelkit/infix/blob/f0c23ca/src/confd/yang/infix-if-vlan%402023-10-25.yang
+[infix-ip]:        https://github.com/kernelkit/infix/tree/f0c23ca/src/confd/yang/infix-ip%402023-09-14.yang
+[infix-routing]:   https://github.com/kernelkit/infix/blob/f0c23ca/src/confd/yang/infix-routing%402024-01-09.yang
+[infix-services]:  https://github.com/kernelkit/infix/blob/f0c23ca/src/confd/yang/infix-services%402023-10-16.yang
+[infix-system-software]: https://github.com/kernelkit/infix/tree/f0c23ca/src/confd/yang/infix-system-software%402023-06-27.yang
+
+### Changes
+
+- New hardware support: NanoPi R2S from FriendlyELEC, a simple two-port router
+- Static routing support, now also for IPv6
+- Dynamic routing support with OSPFv2, limited (see `infix-routing.yang` for
+  deviations), but still usable in most relevant use-cases.  If you are using
+  this and are interested in more features, please let us know!
+  - Multiple area support, including different area types
+  - Route redistribution
+  - Default route injection
+  - Full integration with Bidirectional Forward Detection (BFD)
+  - Operational status, including but not limited to:
+    * OSPF Router ID
+    * Neighbor status
+    * OSPF routing table
+	* Interface type, incl. passive status
+  - For more information, see `doc/networking.md`
+- Support for disabling USB ports in `startup-config` (no auto-mount yet!)
+- Initial support for Docker containers, see documentation for details:
+  - Custom Infix model, see `infix-containers.yang` for details
+  - Add image URL/location and volumes/mounts/interfaces to configuration,
+    the system ensures the image is downloaded and container created in the
+	background before launching it.  If now networking is available the job
+	is queued and retried every time a new network route is learned
+  - Status and actions (stop/start/restart) available in operational datastore
+  - Possible to move physical switch ports inside container, see docs
+  - Possible to bundle OCI archives in Infix image, as well as storing any
+    file content in `factory-config` to override container image defaults
+- IEEE Ethernet interface: add support for setting port speed/duplex or
+  auto-negotiate support, new counters: `in-good-octets`, `out-good-octets`
+- Many updates to DHCPv4 client YANG model:
+  - new options, see `infix-dhcp-client.yang` for details:
+    - Default options: subnet, router, dns+domain, hostname, broadcast, ntpsrv
+    - Set NTP servers, require NTP client in ietf-system to be enabled, will
+	  be treated as non-preferred sources, configured `prefer` servers wins
+    - Learn DNS servers, statically configured servers always takes precedence
+    - Install routes, not only from option 3, but also options 121 and 249
+  - Support for ARP:ing for client lease (default enabled)
+  - Configurable route metrics, by default metric 100 to allow static routes
+    to win over DHCP routes, useful for backup DHCP connections
+- Many updates to the test system, *Infamy*, incl. new Quick Start Guide in
+  updated `doc/testing.md` to help new developers get started
+- Add `htop` to default builds, useful for observing and attaching (strace)
+- Change the default shell of the `admin` user from `clish` to `bash`.  Change
+  required for factory production and provisioning reasons.  Only affects the
+  built-in default, customer specific `factory-config`'s are not affected!
+- CLI: the `set` command on a boolean can now be used without an argument,
+  `set boolean` sets the boolean option to true
+- CLI: new command `change`, for use with ietf-system user passwords, starts
+  an interactive password dialog, including confirmation entry.  The resulting
+  password is by default salted and hashed using sha512crypt
+- CLI: new command `text-editor`, for use with binary fields, e.g., `content`
+  for file mounts in containers, or SSH authorized (public) keys (`key-data`)
+- CLI: new admin-exec command `show ntp [sources]`
+- CLI: new admin-exec command `show dns` to display DNS client status
+- CLI: new admin-exec command `show ospf [subcommand]`
+- CLI: new admin-exec command `show container [subcommand]`
+- CLI: new admin-exec command `show hardwar` only USB port status for now
+- CLI: updates to the `show interfaces` command to better list bridge VLANs
+
+### Fixes
+
+- Fix #177: ensure bridge is not bridge port to itself
+- Fix #259: failure to `copy factory-config startup-config` in CLI
+- Fix #278: allow DHCP client to set system hostname (be careful)
+- Fix #283: hostname in DHCP request adds quotation marks
+- Fix #294: drop stray `v` from version suffix in release artifacts
+- Fix #298: drop privileges properly before launching user `shell` in CLI
+- Fix #312: race condition in `ipv4_autoconf.py`, causes test to block forever
+- Backport upstream fix to netopeer2-server for fetching YANG models that
+  refer to submodules over NETCONF
+- CLI: drop developer debug in `set` command
+- Fix out-of-place `[OK]` messages at shutdown/reboot
+- Fix garbled syslog messages due to unicode in Infix tagline, drop unicode
+
+
 [v23.11.0][] - 2023-11-30
 -------------------------
 
@@ -478,7 +671,8 @@ Supported YANG models in addition to those used by sysrepo and netopeer:
  - N/A
 
 [buildroot]:  https://buildroot.org/
-[UNRELEASED]: https://github.com/kernelkit/infix/compare/v23.10.0...HEAD
+[UNRELEASED]: https://github.com/kernelkit/infix/compare/v24.02.0...HEAD
+[v24.02.0]:   https://github.com/kernelkit/infix/compare/v23.11.0...v24.02.0
 [v23.10.0]:   https://github.com/kernelkit/infix/compare/v23.09.0...v23.10.0
 [v23.09.0]:   https://github.com/kernelkit/infix/compare/v23.08.0...v23.09.0
 [v23.08.0]:   https://github.com/kernelkit/infix/compare/v23.06.0...v23.08.0
