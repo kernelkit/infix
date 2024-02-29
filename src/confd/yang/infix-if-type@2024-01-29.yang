@@ -18,6 +18,11 @@ module infix-if-type {
     reference "internal";
   }
 
+  revision 2024-01-29 {
+    description "Add new interface type etherlike";
+    reference "internal";
+  }
+
   revision 2023-06-09 {
     description "Initial revision.";
     reference "internal";
