@@ -102,7 +102,7 @@ jobs:
           prerelease: true
           tag: "latest"
           token: ${{ secrets.GITHUB_TOKEN }}
-          artifacts: "artifact/*"
+          artifacts: "*.tar.gz"
       - name: Summary
         run: |
           cat <<EOF >> $GITHUB_STEP_SUMMARY
