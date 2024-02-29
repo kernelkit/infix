@@ -17,6 +17,10 @@ jobs:
   inventory:
     runs-on: ubuntu-latest
     steps:
+      - name: Disk usage ...
+        run: |
+          cd
+          du -hs .[^.]*
       - name: Disk inventory (1/2) ...
         run: |
           echo "df -h ========================================================================="
