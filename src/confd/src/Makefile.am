@@ -23,6 +23,7 @@ confd_plugin_la_LIBADD  =			\
 	$(libsrx_LIBS)
 
 confd_plugin_la_SOURCES =			\
+	base64.c		base64.h	\
 	core.c			core.h		\
 	dagger.c		dagger.h	\
 	ietf-interfaces.c			\
