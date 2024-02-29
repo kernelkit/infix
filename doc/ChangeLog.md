@@ -168,6 +168,8 @@ Currently supported models:
   - Support for ARP:ing for client lease (default enabled)
   - Configurable route metrics, by default metric 100 to allow static routes
     to win over DHCP routes, useful for backup DHCP connections
+- IETF Hardware data: added YANG model for vital product data representation,
+  and augments for initial USB support    
 - Many updates to the test system, *Infamy*, incl. new Quick Start Guide in
   updated `doc/testing.md` to help new developers get started
 - Add `htop` to default builds, useful for observing and attaching (strace)
