@@ -49,9 +49,9 @@ Currently supported models:
  - [ietf-hardware][]:
    - Populates standard hardware model from corresponding data in device EEPROMs.
    - **augments:**
-     - Initial support for USB ports.
-     - Vital Product Data (VPD) from device EEPROMs ([ONIE][onie] structure).
-   - [infix-hardware][]: Deviations and augments.
+     - Initial support for USB ports
+     - Vital Product Data (VPD) from device EEPROMs ([ONIE][] structure)
+   - [infix-hardware][]: Deviations and augments
  - [ietf-system][]:
    - **augments:**
      - MotD (Message of the Day)
@@ -124,7 +124,7 @@ Currently supported models:
 [infix-routing]:   https://github.com/kernelkit/infix/blob/f0c23ca/src/confd/yang/infix-routing%402024-01-09.yang
 [infix-services]:  https://github.com/kernelkit/infix/blob/f0c23ca/src/confd/yang/infix-services%402023-10-16.yang
 [infix-system-software]: https://github.com/kernelkit/infix/tree/f0c23ca/src/confd/yang/infix-system-software%402023-06-27.yang
-[onie]: https://opencomputeproject.github.io/onie/design-spec/hw_requirements.html
+[ONIE]: https://opencomputeproject.github.io/onie/design-spec/hw_requirements.html
 
 ### Changes
 
@@ -154,8 +154,10 @@ Currently supported models:
   - Possible to move physical switch ports inside container, see docs
   - Possible to bundle OCI archives in Infix image, as well as storing any
     file content in `factory-config` to override container image defaults
-- IEEE Ethernet interface: add support for setting port speed/duplex or
-  auto-negotiate support, new counters: `in-good-octets`, `out-good-octets`
+- IEEE Ethernet interface:
+  - Support for setting port speed/duplex or auto-negotiating
+  - New per-port counters, augments to IEEE model added in infix-ethernet.yang:
+    `in-good-octets`, `out-good-octets`
 - Many updates to DHCPv4 client YANG model:
   - new options, see `infix-dhcp-client.yang` for details:
     - Default options: subnet, router, dns+domain, hostname, broadcast, ntpsrv
@@ -183,7 +185,7 @@ Currently supported models:
 - CLI: new admin-exec command `show dns` to display DNS client status
 - CLI: new admin-exec command `show ospf [subcommand]`
 - CLI: new admin-exec command `show container [subcommand]`
-- CLI: new admin-exec command `show hardwar` only USB port status for now
+- CLI: new admin-exec command `show hardware` only USB port status for now
 - CLI: updates to the `show interfaces` command to better list bridge VLANs
 
 ### Fixes
