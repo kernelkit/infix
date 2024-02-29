@@ -13,7 +13,7 @@ jobs:
     strategy:
       matrix:
         platform: [aarch64, x86_64]
-        variant: [netconf]
+        variant: [netconf, classic]
       fail-fast: false
     steps:
       - name: Maintenance
