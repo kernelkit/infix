@@ -673,6 +673,7 @@ Supported YANG models in addition to those used by sysrepo and netopeer:
 [buildroot]:  https://buildroot.org/
 [UNRELEASED]: https://github.com/kernelkit/infix/compare/v24.02.0...HEAD
 [v24.02.0]:   https://github.com/kernelkit/infix/compare/v23.11.0...v24.02.0
+[v23.11.0]:   https://github.com/kernelkit/infix/compare/v23.10.0...v23.11.0
 [v23.10.0]:   https://github.com/kernelkit/infix/compare/v23.09.0...v23.10.0
 [v23.09.0]:   https://github.com/kernelkit/infix/compare/v23.08.0...v23.09.0
 [v23.08.0]:   https://github.com/kernelkit/infix/compare/v23.06.0...v23.08.0
