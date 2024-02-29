@@ -479,8 +479,10 @@ static int change_ntp(sr_session_ctx_t *session, uint32_t sub_id, const char *mo
 	}
 	sr_free_values(val, cnt);
 
-	if (changes)
-		touch("/run/chrony/.changes");
+	if (changes) {
+		if (touch("/run/chrony/.changes"))
+			ERRNO("Failed recording changes to NTP client");
+	}
 
 	return err;
 }
