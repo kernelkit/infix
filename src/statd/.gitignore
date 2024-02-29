@@ -15,6 +15,7 @@ statd
 /config.sub
 /configure
 /depcomp
+/.deps/
 /install-sh
 /libtool
 /ltmain.sh

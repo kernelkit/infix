@@ -77,6 +77,8 @@ cat <<EOF
   System environment....: ${sysconfig_path:-${sysconfig}}
   C Compiler............: $CC $CFLAGS $CPPFLAGS $LDFLAGS $LIBS
   Linker................: $LD $LLDP_LDFLAGS $LLDP_BIN_LDFLAGS $LDFLAGS $LIBS
+  CFLAGS................: $jansson_CFLAGS $libyang_CFLAGS $sysrepo_CFLAGS $libsrx_CFLAGS $libite_CFLAGS
+  LIBS..................: $jansson_LIBS $libyang_LIBS $sysrepo_LIBS $libsrx_LIBS $libite_LIBS
 
 ------------- Compiler version --------------
 $($CC --version || true)
