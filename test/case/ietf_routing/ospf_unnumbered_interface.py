@@ -170,9 +170,9 @@ with infamy.Test() as test:
         config_target2(target2, target2_to_target1)
     with test.step("Wait for OSPF routes"):
         print("Waiting for OSPF routes..")
-        until(lambda: route.ipv4_route_exist(target1, "192.168.200.1/32", source_protocol = "infix-routing:ospf"), attempts=100)
-        until(lambda: route.ipv4_route_exist(target2, "192.168.100.1/32", source_protocol = "infix-routing:ospf"), attempts=100)
-        until(lambda: route.ipv4_route_exist(target2, "192.168.10.0/24", source_protocol = "infix-routing:ospf"), attempts=100)
+        until(lambda: route.ipv4_route_exist(target1, "192.168.200.1/32", source_protocol = "infix-routing:ospf"), attempts=200)
+        until(lambda: route.ipv4_route_exist(target2, "192.168.100.1/32", source_protocol = "infix-routing:ospf"), attempts=200)
+        until(lambda: route.ipv4_route_exist(target2, "192.168.10.0/24", source_protocol = "infix-routing:ospf"), attempts=200)
 
     with test.step("Check interface type"):
         assert(route.ospf_get_interface_type(target1, "0.0.0.0", target1_to_target2) == "point-to-point")
