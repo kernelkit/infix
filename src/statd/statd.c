@@ -324,7 +324,7 @@ static int subscribe(struct statd *statd, char *model, char *xpath, const char *
 	sub = malloc(sizeof(struct sub));
 	memset(sub, 0, sizeof(struct sub));
 
-	if (strlen(name) > sizeof(sub->name)) {
+	if (strlen(name) >= sizeof(sub->name)) {
 		ERROR("Subscriber name is to long");
 		free(sub);
 		return SR_ERR_INTERNAL;
