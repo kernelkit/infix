@@ -19,6 +19,11 @@ module infix-system {
   contact      "kernelkit@googlegroups.com";
   description  "Infix augments and deviations to ietf-system.";
 
+  revision 2024-02-29 {
+    description "Mark infix-sys:motd as deprecated, to be replaced with type binary.";
+    reference "internal";
+  }
+
   revision 2023-10-19 {
     description "Change deviation for timezone-utc-offset from unsupported to Etc+/-HOUR
                 - Unit is set to hours (tzdata compatibility)
@@ -26,6 +31,7 @@ module infix-system {
 
     reference "internal";
   }
+
   revision 2023-08-15 {
     description "Add support for user login shell.
 
@@ -60,9 +66,31 @@ module infix-system {
 
   augment "/sys:system" {
     description "Augment of ietf-system for modifying /etc/motd.";
+
     leaf motd {
+      description "Legacy MotD (Message of the Day), shown after login.
+
+                   Please note, this is obsolete!  When set it overrides the
+                   'motd-banner' setting for backwards compatibility.
+
+                   Instead, use 'motd-banner', which takes a base64 encoded
+                   text file as an argument.  For CLI users, edit with the
+                   'text-editor motd-banner' command.";
+      status obsolete;      // Replaced with motd-banner (binary)
       type string;
-      description "Set the MotD (Message of the Day), shown after login";
+    }
+
+    // From openconfig-system, which also has login-banner (TODO)
+    leaf motd-banner {
+      description "Message of the Day (MotD), shown after SSH/console login.
+
+                   Base64 encoded (binary) file contents for the system file
+                   /etc/motd, displayed after SSH/console login.
+
+                   They system may append additional standard information such
+                   as the current system date and time, uptime, last login
+                   timestamp, etc.";
+      type binary;
     }
   }
 

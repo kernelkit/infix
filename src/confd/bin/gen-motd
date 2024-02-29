@@ -6,7 +6,7 @@ if [ -f /etc/motd ]; then
     cat <<EOF
 {
   "ietf-system:system": {
-    "infix-system:motd": "$(sed ':a;N;$!ba;s/\n/\\n/g;s/\t/\\t/g' /etc/motd)"
+    "infix-system:motd-banner": "$(base64 -w0 /etc/motd)"
   }
 }
 EOF

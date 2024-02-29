@@ -13,6 +13,7 @@
 #include <srx/srx_module.h>
 #include <srx/srx_val.h>
 
+#include "base64.h"
 #include "core.h"
 
 #define XPATH_BASE_    "/ietf-system:system"
@@ -1028,12 +1029,63 @@ static int change_motd(sr_session_ctx_t *session, uint32_t sub_id, const char *m
 	if (message) {
 		rc = writesf(message, "w", "%s", fn);
 		free(message);
+	}
+
+	if (rc) {
+		ERRNO("failed saving %s", fn);
+		return SR_ERR_SYS;
+	}
+
+	return SR_ERR_OK;
+}
+
+static int change_motd_banner(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
+		       const char *xpath, sr_event_t event, unsigned request_id, void *priv)
+{
+	const char *fn = "/etc/motd";
+	unsigned char *raw, *txt;
+	size_t txt_len;
+	char *legacy;
+	int rc = 0;
+
+	/* Ignore all events except SR_EV_DONE */
+	if (event != SR_EV_DONE)
+		return SR_ERR_OK;
+
+	legacy = srx_get_str(session, "/ietf-system:system/infix-sys:motd");
+	if (legacy) {
+		NOTE("Legacy /system/motd exists, skipping %s", xpath);
+		free(legacy);
+		return SR_ERR_OK;
+	}
+
+	raw = (unsigned char *)srx_get_str(session, "%s", xpath);
+	if (raw) {
+		txt = base64_decode(raw, strlen((char *)raw), &txt_len);
+		if (!txt) {
+			ERRNO("failed base64 decoding of %s", xpath);
+			rc = -1;
+		} else {
+			FILE *fp = fopen(fn, "w");
+
+			if (!fp) {
+				rc = -1;
+			} else {
+				if (fwrite(txt, txt_len, sizeof(txt[0]), fp) != txt_len)
+					rc = -1;
+				fclose(fp);
+			}
+
+			free(txt);
+		}
+
+		free(raw);
 	} else {
 		(void)remove(fn);
 	}
 
 	if (rc) {
-		ERROR("failed writing /etc/motd: %s", strerror(errno));
+		ERRNO("failed saving %s", fn);
 		return SR_ERR_SYS;
 	}
 
@@ -1137,6 +1189,7 @@ int ietf_system_init(struct confd *confd)
 	REGISTER_CHANGE(confd->session, "ietf-system", XPATH_AUTH_, 0, change_auth, confd, &confd->sub);
 	REGISTER_CHANGE(confd->session, "ietf-system", XPATH_BASE_"/hostname", 0, change_hostname, confd, &confd->sub);
 	REGISTER_CHANGE(confd->session, "ietf-system", XPATH_BASE_"/infix-system:motd", 0, change_motd, confd, &confd->sub);
+	REGISTER_CHANGE(confd->session, "ietf-system", XPATH_BASE_"/infix-system:motd-banner", 0, change_motd_banner, confd, &confd->sub);
 	REGISTER_CHANGE(confd->session, "ietf-system", XPATH_BASE_"/clock", 0, change_clock, confd, &confd->sub);
 	REGISTER_CHANGE(confd->session, "ietf-system", XPATH_BASE_"/ntp", 0, change_ntp, confd, &confd->sub);
 	REGISTER_CHANGE(confd->session, "ietf-system", XPATH_BASE_"/dns-resolver", 0, change_dns, confd, &confd->sub);
