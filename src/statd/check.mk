@@ -1,8 +1,8 @@
 # Used by ../Makefile for 'make check' and Coverity Scan
-
-export CPPFLAGS = -I$(CURDIR)/../staging/include
-export LDLIBS   = -L$(CURDIR)/../staging/lib -L/usr/lib/x86_64-linux-gnu
+export PKG_CONFIG_PATH = $(CURDIR)/../staging/lib/pkgconfig
 
 all:
-	make all
-	make clean
+	./autogen.sh
+	./configure
+	make V=1 all
+	make distclean
