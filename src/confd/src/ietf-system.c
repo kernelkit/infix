@@ -1092,6 +1092,42 @@ static int change_motd_banner(sr_session_ctx_t *session, uint32_t sub_id, const 
 	return SR_ERR_OK;
 }
 
+static int change_editor(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
+			 const char *xpath, sr_event_t event, unsigned request_id, void *priv)
+{
+	const char *alt = "/etc/alternatives/editor";
+	struct { const char *editor, *path; } map[] = {
+		{ "emacs", "/usr/bin/mg" },
+		{ "nano",  "/usr/bin/nano" },
+		{ "vi",    "/bin/vi" },
+	};
+	char *editor;
+	int rc = 0;
+
+	/* Ignore all events except SR_EV_DONE */
+	if (event != SR_EV_DONE)
+		return SR_ERR_OK;
+
+	editor = srx_get_str(session, "%s", xpath);
+	if (editor) {
+		for (size_t i = 0; i < NELEMS(map); i++) {
+			if (strcmp(map[i].editor, editor))
+				continue;
+
+			erase(alt);
+			rc = systemf("ln -s %s %s", map[i].path, alt);
+			if (rc)
+				ERROR("Failed setting system editor '%s'", map[i].editor);
+		}
+		free(editor);
+	}
+
+	if (rc)
+		return SR_ERR_SYS;
+
+	return SR_ERR_OK;
+}
+
 static int change_hostname(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
 	const char *xpath, sr_event_t event, unsigned request_id, void *priv)
 {
@@ -1190,6 +1226,7 @@ int ietf_system_init(struct confd *confd)
 	REGISTER_CHANGE(confd->session, "ietf-system", XPATH_BASE_"/hostname", 0, change_hostname, confd, &confd->sub);
 	REGISTER_CHANGE(confd->session, "ietf-system", XPATH_BASE_"/infix-system:motd", 0, change_motd, confd, &confd->sub);
 	REGISTER_CHANGE(confd->session, "ietf-system", XPATH_BASE_"/infix-system:motd-banner", 0, change_motd_banner, confd, &confd->sub);
+	REGISTER_CHANGE(confd->session, "ietf-system", XPATH_BASE_"/infix-system:text-editor", 0, change_editor, confd, &confd->sub);
 	REGISTER_CHANGE(confd->session, "ietf-system", XPATH_BASE_"/clock", 0, change_clock, confd, &confd->sub);
 	REGISTER_CHANGE(confd->session, "ietf-system", XPATH_BASE_"/ntp", 0, change_ntp, confd, &confd->sub);
 	REGISTER_CHANGE(confd->session, "ietf-system", XPATH_BASE_"/dns-resolver", 0, change_dns, confd, &confd->sub);

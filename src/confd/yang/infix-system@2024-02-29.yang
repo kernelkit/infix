@@ -50,6 +50,27 @@ module infix-system {
   }
 
   /*
+   * Identities
+   */
+
+  identity editor-type {
+    description "Base identity from which specific editor types are derived.";
+  }
+
+  identity emacs {
+    description "Micro Emacs clone (mg).";
+    base editor-type;
+  }
+  identity nano {
+    description "GNU Nano.";
+    base editor-type;
+  }
+  identity vi {
+    description "The classic UNIX Visual editor.";
+    base editor-type;
+  }
+
+  /*
    * Typedefs
    */
 
@@ -91,6 +112,14 @@ module infix-system {
                    as the current system date and time, uptime, last login
                    timestamp, etc.";
       type binary;
+    }
+
+    leaf text-editor {
+      description "Text editor to use in CLI for text-editor command.";
+      type identityref {
+        base editor-type;
+      }
+      default emacs;
     }
   }
 
