@@ -44,6 +44,8 @@ In *configure context* the following commands are available:
 | `set foo bar val` | Set `bar` leaf node in `foo` subcontext to `val`       |
 | `no foo bar`      | Clear/delete configuration made to `bar` in `foo`      |
 | `edit foo baz`    | Enter `baz` sub-sub-context in `foo` subcontext        |
+| `change password` | Start password dialogue to change a user's password    |
+| `text-editor foo` | Open a text editor to edit binary setting `foo`        |
 | `abort`           | Abort changes in configuration, return to admin-exec   |
 | `exit`            | Exit one level sub-context, or abort from top-level    |
 | `leave`           | Save changes to `running-config`, return to admin-exec |

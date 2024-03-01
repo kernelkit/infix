@@ -1,12 +1,11 @@
 User Guide
 ==========
 
-The command line interface (CLI, see-ell-aye) is built on the open source
-component [klish][1], which implements a CISCO-like, or Juniper Networks
-JunOS-like, CLI for UNIX systems.
+The command line interface (CLI, see-ell-aye) implements a CISCO-like,
+or Juniper Networks JunOS-like, CLI for UNIX systems.
 
 New users always get the CLI as the default "shell" when logging in, but
-the default `admin` user logs in to the Bash.  To access the CLI, type:
+the default `admin` user logs in to `bash`.  To access the CLI, type:
 
     cli
 
@@ -104,6 +103,7 @@ the version we are currently running, intact in case of trouble.
     both partitions you must reboot to the new version (to verify it works)
     and then repeat the same command.
 
+
 Configure Context
 -----------------
 
@@ -113,21 +113,24 @@ followed by Enter.  Available commands, press `?` at the prompt:
 ```
 admin@host:/> configure
 admin@host:/config/>
-  abort     Abandon candidate
-  check     Validate candidate
-  commit    Commit current candidate to running-config
-  delete    Delete configuration setting(s)
-  diff      Summarize uncommitted changes
-  do        Execute operational mode command
-  edit      Descend to the specified configuration node
-  exit      Ascend to the parent configuration node, or abort (from top)
-  leave     Finalize candidate and apply to running-config
-  no        Alias for delete
-  rollback  Restore candidate to running-config
-  set       Set configuration setting
-  show      Show configuration
-  top       Ascend to the configuration root
-  up        Ascend to the parent configuration node
+  abort        Abandon candidate
+  change       Interactively change setting, e.g. password
+  check        Validate candidate
+  commit       Commit current candidate to running-config
+  delete       Delete configuration setting(s)
+  diff         Summarize uncommitted changes
+  do           Execute operational mode command
+  edit         Descend to the specified configuration node
+  end          Alias to up, leave this subsection/node
+  exit         Ascend to the parent configuration node, or abort (from top)
+  leave        Finalize candidate and apply to running-config
+  no           Alias for delete
+  rollback     Restore candidate to running-config
+  set          Set configuration setting
+  show         Show configuration
+  text-editor  Modify binary content in a text editor
+  top          Ascend to the configuration root
+  up           Ascend to the parent configuration node
 ```
 
 The `edit` command lets you change to a sub-configure context, e.g.:
@@ -235,22 +238,51 @@ is committed.
 User management, including passwords, is also a part of `ietf-system`.
 
 ```
-admin@host:/config/> edit system authentication
-admin@host:/config/system/authentication/> do password encrypt
-Password: ******
-$1$oVHGR0AP$6Pad1Pm8jPwPsan5WHULS1
-admin@host:/config/system/authentication/> set user admin password $1$oVHGR0AP$6Pad1Pm8jPwPsan5WHULS1
-admin@host:/config/system/> leave
+admin@host:/config/> edit system authentication user admin
+admin@host:/config/system/authentication/user/admin/> change password
+New password: 
+Retype password: 
+admin@host:/config/system/authentication/user/admin/> leave
 ```
 
-The call to `do password encrypt` brings up the helpful admin-exec
-command to hash, and optionally salt, your password.  This encrypted
-string is what goes into the system configuration.
+The `change password` command starts an interactive dialogue that asks
+for the new password, with a confirmation, and then salts and encrypts
+the password with sha512crypt. 
+
+It is also possible to use the `set password ...` command.  This allows
+setting an already hashed password.  To manually hash a password, use
+the `do password encrypt` command.  This launches the admin-exec command
+to hash, and optionally salt, your password.  This encrypted string can
+then be used with `set password ...`.
 
 > **Tip:** if you are having trouble thinking of a password, there is
 > also `do password generate`, which generates random but readable
 > strings using the UNIX command `pwgen`.
 
+
+### SSH Authorized Key
+
+Logging in remotely with SSH is possible by adding a *public key* to a
+user.  Here we add the authorized key to the admin user, multiple keys
+are supported.
+
+With SSH keys in place it is possible to disable password login, just
+remember to verify SSH login and network connectivity before doing so.
+
+```
+admin@host:/config/> edit system authentication user admin 
+admin@host:/config/system/authentication/user/admin/> edit authorized-key example@host
+admin@host:/config/system/authentication/user/admin/authorized-key/example@host/> set algorithm ssh-rsa
+admin@host:/config/system/authentication/user/admin/authorized-key/example@host/> set key-data AAAAB3NzaC1yc2EAAAADAQABAAABgQC8iBL42yeMBioFay7lty1C4ZDTHcHyo739gc91rTTH8SKvAE4g8Rr97KOz/8PFtOObBrE9G21K7d6UBuPqmd0RUF2CkXXN/eN2PBSHJ50YprRFt/z/304bsBYkDdflKlPDjuSmZ/+OMp4pTsq0R0eNFlX9wcwxEzooIb7VPEdvWE7AYoBRUdf41u3KBHuvjGd1M6QYJtbFLQMMTiVe5IUfyVSZ1RCxEyAB9fR9CBhtVheTVsY3iG0fZc9eCEo89ErDgtGUTJK4Hxt5yCNwI88YaVmkE85cNtw8YwubWQL3/tGZHfbbQ0fynfB4kWNloyRHFr7E1kDxuX5+pbv26EqRdcOVGucNn7hnGU6C1+ejLWdBD7vgsoilFrEaBWF41elJEPKDzpszEijQ9gTrrWeYOQ+x++lvmOdssDu4KvGmj2K/MQTL2jJYrMJ7GDzsUu3XikChRL7zNfS2jYYQLzovboUCgqfPUsVba9hqeX3U67GsJo+hy5MG9RSry4+ucHs=
+admin@host:/config/system/authentication/user/admin/authorized-key/example@host/> show
+algorithm ssh-rsa;
+key-data AAAAB3NzaC1yc2EAAAADAQABAAABgQC8iBL42yeMBioFay7lty1C4ZDTHcHyo739gc91rTTH8SKvAE4g8Rr97KOz/8PFtOObBrE9G21K7d6UBuPqmd0RUF2CkXXN/eN2PBSHJ50YprRFt/z/304bsBYkDdflKlPDjuSmZ/+OMp4pTsq0R0eNFlX9wcwxEzooIb7VPEdvWE7AYoBRUdf41u3KBHuvjGd1M6QYJtbFLQMMTiVe5IUfyVSZ1RCxEyAB9fR9CBhtVheTVsY3iG0fZc9eCEo89ErDgtGUTJK4Hxt5yCNwI88YaVmkE85cNtw8YwubWQL3/tGZHfbbQ0fynfB4kWNloyRHFr7E1kDxuX5+pbv26EqRdcOVGucNn7hnGU6C1+ejLWdBD7vgsoilFrEaBWF41elJEPKDzpszEijQ9gTrrWeYOQ+x++lvmOdssDu4KvGmj2K/MQTL2jJYrMJ7GDzsUu3XikChRL7zNfS2jYYQLzovboUCgqfPUsVba9hqeX3U67GsJo+hy5MG9RSry4+ucHs=;
+admin@host:/config/system/authentication/user/admin/authorized-key/example@host/> leave
+```
+
+> **Note:** the `ssh-keygen` program already base64 encodes the public
+> key data, so there is no need to use the `text-editor` command, `set`
+> does the job.
 
 ### Creating a VETH Pair
 
