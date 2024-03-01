@@ -123,18 +123,19 @@
 <COMMAND name="help" help="Help system (try also the '?' key)">
   <PARAM name="topic" ptype="/STRING" min="0" help="Help topic">
     <COMPL>
-      <ACTION sym="printl">keybindings</ACTION>
-      <ACTION sym="printl">tutorial</ACTION>
       <ACTION sym="printl">introduction</ACTION>
+      <ACTION sym="printl">keybindings</ACTION>
+      <ACTION sym="printl">text-editor</ACTION>
+      <ACTION sym="printl">tutorial</ACTION>
     </COMPL>
   </PARAM>
   <ACTION sym="script">
     topic=${KLISH_PARAM_topic:-quick}
     fn="/usr/share/infix/cli/${topic}.md"
     if [ -f "$fn" ]; then
-    lowdown -t term "$fn"
+      lowdown -t term --term-vmargin=1 "$fn"
     else
-    echo "Topic not available."
+      echo "Topic not available."
     fi
   </ACTION>
 </COMMAND>
