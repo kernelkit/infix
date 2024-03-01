@@ -54,7 +54,9 @@ Currently supported models:
    - [infix-hardware][]: Deviations and augments
  - [ietf-system][]:
    - **augments:**
-     - MotD (Message of the Day)
+     - Message of the Day (MotD) banner, shown after SSH or console login.
+	   Please note: the legacy `motd` has been replaced with `motd-banner` os
+	   of v24.02.  Use CLI `text-editor` to modify the latter
 	 - User login shell, default: `/bin/false` (no SSH or console login)
 	 - State information for remotely querying firmware version information
    - **deviations:**
@@ -169,7 +171,15 @@ Currently supported models:
   - Configurable route metrics, by default metric 100 to allow static routes
     to win over DHCP routes, useful for backup DHCP connections
 - IETF Hardware data: added YANG model for vital product data representation,
-  and augments for initial USB support    
+  and augments for initial USB support (enable/disable)
+- IETF System:
+  - the `motd` augment in `infix-system.yang` for *Message of the Day* has
+    been marked as obsolete and replaced with `motd-banner`.  The new setting
+    is of type *binary* and allows control codes and multi-line content to be
+    stored.  The legacy `motd` will remain for the foreseeable future and
+    takes precedence over the new `motd-banner` setting
+  - new `text-editor` augment in `infix-system.yang` to select the backend for
+    the new `text-editor` command: `emacs`, `nano`, or `vi`
 - Many updates to the test system, *Infamy*, incl. new Quick Start Guide in
   updated `doc/testing.md` to help new developers get started
 - Add `htop` to default builds, useful for observing and attaching (strace)
@@ -182,7 +192,13 @@ Currently supported models:
   an interactive password dialog, including confirmation entry.  The resulting
   password is by default salted and hashed using sha512crypt
 - CLI: new command `text-editor`, for use with binary fields, e.g., `content`
-  for file mounts in containers, or SSH authorized (public) keys (`key-data`)
+  for file mounts in containers, or the new `motd-banner`:
+
+        admin@infix-c0-ff-ee:/config/system/> text-editor motd-banner
+        ... exit with Ctrl-x Ctrl-c ...
+        admin@infix-c0-ff-ee:/config/system/> show
+        motd-banner VGhpcyByZWxlYXNlIHdhcyBzcG9uc29yZWQgYnkgQWRkaXZhIEVsZWt0cm9uaWsK;
+
 - CLI: new admin-exec command `show ntp [sources]`
 - CLI: new admin-exec command `show dns` to display DNS client status
 - CLI: new admin-exec command `show ospf [subcommand]`
