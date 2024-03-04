@@ -11,7 +11,7 @@ graph "quad" {
 	qn_append="quiet";
 
         host [
-	    label="host | { <d1a> d1a | <d1b> d1b | <d1c> d1c | <d2a> d2a | <d2b> d2b | <d2c> d2c | <d2a> d3a | <d3b> d3b | <d3c> d3c | <d4a> d4a | <d4b> d4b | <d4c> d4c }}",
+	    label="host | { <d1a> d1a | <d1b> d1b | <d1c> d1c | <d1c> d1d | <d2a> d2a | <d2b> d2b | <d2c> d2c | <d2d> d2d | <d2a> d3a | <d3b> d3b | <d3c> d3c | <d3c> d3d |  <d4a> d4a | <d4b> d4b | <d4c> d4c | <d4c> d4d }",
 	    color="grey",fontcolor="grey",pos="0,15!",
 	    kind="controller",
 	];
@@ -53,26 +53,30 @@ graph "quad" {
 	host:d1a -- dut1:eth0 [kind=mgmt]
 	host:d1b -- dut1:eth1
 	host:d1c -- dut1:eth2
+	host:d1d -- dut1:eth3
 
 	host:d2a -- dut2:eth0 [kind=mgmt]
 	host:d2b -- dut2:eth1
 	host:d2c -- dut2:eth2
+	host:d2d -- dut2:eth3
 
 	host:d3a -- dut3:eth0 [kind=mgmt]
 	host:d3b -- dut3:eth1
 	host:d3c -- dut3:eth2
+	host:d3d -- dut3:eth3
 
 	host:d4a -- dut4:eth0 [kind=mgmt]
 	host:d4b -- dut4:eth1
 	host:d4c -- dut4:eth2
+	host:d4d -- dut4:eth3
 
 	# Ring
-	dut1:eth4 -- dut2:eth3
-	dut2:eth4 -- dut3:eth3
-	dut3:eth4 -- dut4:eth3
-	dut4:eth4 -- dut1:eth3
+	dut1:eth4 -- dut2:eth5
+	dut2:eth4 -- dut3:eth5
+	dut3:eth4 -- dut4:eth5
+	dut4:eth4 -- dut1:eth5
 
 	# Cross-links
-	dut3:eth5 -- dut1:eth5
-	dut2:eth5 -- dut4:eth5
+	dut3:eth6 -- dut1:eth6
+	dut2:eth6 -- dut4:eth6
 }
