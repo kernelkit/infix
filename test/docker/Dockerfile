@@ -19,7 +19,13 @@ RUN apk add --no-cache \
     socat \
     squashfs-tools \
     tcpdump \
-    tshark
+    tshark \
+    make
+
+ARG MTOOL_VERSION="3.0"
+RUN wget https://github.com/troglobit/mtools/releases/download/v3.0/mtools-$MTOOL_VERSION.tar.gz -O /tmp/mtools-$MTOOL_VERSION.tar.gz
+RUN cd /tmp/ && tar zxvf mtools-$MTOOL_VERSION.tar.gz
+RUN cd /tmp/mtools-$MTOOL_VERSION && make && make install
 
 # Alpine's QEMU package does not bundle this for some reason, copied
 # from Ubuntu
