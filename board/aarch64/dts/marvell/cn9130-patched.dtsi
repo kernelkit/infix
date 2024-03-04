@@ -6,3 +6,7 @@
 		compatible = "marvell,cp115-standalone-pinctrl";
 	};
 };
+
+&cp0_xmdio {
+	clock-names = "gop_clk", "mg_clk", "mg_core_clk", "axi_clk";
+};
