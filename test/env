@@ -141,6 +141,7 @@ done
 if [ "$containerize" ]; then
     # shellcheck disable=SC2016
         exec $(runner) run \
+	 --cap-add=NET_RAW \
 	 --cap-add=NET_ADMIN \
 	 --device=/dev/net/tun \
 	 --env VIRTUAL_ENV_DISABLE_PROMPT=yes \
