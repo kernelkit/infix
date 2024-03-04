@@ -1,0 +1,566 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright (C) 2021 Marvell International Ltd.
+ * Copyright (C) 2023 Addiva Elektronik AB
+ *
+ * Device tree for Styx board
+ */
+
+#include <dt-bindings/input/input.h>
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/leds/common.h>
+
+#include "../marvell/cn9130-patched.dtsi"
+
+#include "styx-mpp.h"
+
+/ {
+	model = "Styx";
+	compatible = "styx,styx",
+		"marvell,armada-ap807-quad",
+		"marvell,armada-ap807";
+
+	chosen {
+		stdout-path = "serial0:115200n8";
+
+		infix {
+			/* "admin" */
+			factory-password-hash = "$5$mI/zpOAqZYKLC2WU$i7iPzZiIjOjrBF3NyftS9CCq8dfYwHwrmUK097Jca9A";
+			vpds = <&vpd>;
+		};
+	};
+
+	memory@0 {
+		device_type = "memory";
+		reg = <0x0 0x0 0x0 0x80000000>;
+	};
+};
+
+
+/* UART0 (Console) */
+
+&uart0 {
+	status = "okay";
+};
+
+
+/* UART1 (Auxiliary) */
+
+&cp0_pinctrl {
+	cp0_uart1_pins: cp0-uart1-pins {
+		marvell,pins = CP_UA1_RXD(MPP_ID), CP_UA1_TXD(MPP_ID);
+		marvell,function = "uart1";
+	};
+};
+
+&cp0_uart1 {
+	/* TODO: Figure out how to enable this without affecting
+         * /chosen/stdout-path
+	 */
+	status = "disabled";
+	pinctrl-names = "default";
+	pinctrl-0 = <&cp0_uart1_pins>;
+};
+
+
+/* GPIO */
+
+&cp0_gpio1 {
+	status = "okay";
+};
+
+&cp0_gpio2 {
+	status = "okay";
+};
+
+
+/* I2C0 (EEPROM) */
+
+&cp0_pinctrl {
+	cp0_i2c0_pins: cp0-i2c0-pins {
+		marvell,pins = CP_I2C0_SCK(MPP_ID), CP_I2C0_SDA(MPP_ID);
+		marvell,function = "i2c0";
+	};
+};
+
+&cp0_i2c0 {
+	status = "okay";
+	pinctrl-names = "default";
+	pinctrl-0 = <&cp0_i2c0_pins>;
+
+	vpd: eeprom@50 {
+		compatible = "atmel,24c256";
+                reg = <0x50>;
+
+		infix,board = "cpu";
+		infix,trusted;
+
+		nvmem-layout {
+			compatible = "onie,tlv-layout";
+
+			base_mac: mac-address {
+				#nvmem-cell-cells = <1>;
+			};
+		};
+	};
+
+	spd: eeprom@53 {
+		compatible = "spd";
+                reg = <0x53>;
+	};
+
+	eeprom@57 {
+		compatible = "atmel,24c256";
+                reg = <0x57>;
+	};
+};
+
+
+/* I2C1 (Mux) */
+
+&cp0_pinctrl {
+	cp0_i2c1_pins: cp0-i2c1-pins {
+		marvell,pins = CP_I2C1_SCK(MPP_ID), CP_I2C1_SDA(MPP_ID);
+		marvell,function = "i2c1";
+	};
+};
+
+&cp0_i2c1 {
+	status = "okay";
+	pinctrl-names = "default";
+	pinctrl-0 = <&cp0_i2c1_pins>;
+
+	i2cmux@77 {
+		compatible = "nxp,pca9548";
+		#address-cells = <1>;
+                #size-cells = <0>;
+                reg = <0x77>;
+
+		i2c_sfp0: i2c@0 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0>;
+		};
+
+		i2c_sfp1: i2c@1 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <1>;
+		};
+
+		i2c_sfp2: i2c@2 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <2>;
+		};
+
+		i2c_sfp3: i2c@3 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <3>;
+		};
+	};
+};
+
+
+/* SPI1 (Boot FLASH) */
+
+&cp0_pinctrl {
+	cp0_spi1_pins: cp0-spi-pins-0 {
+		marvell,pins = \
+			CP_SPI1_MISO(MPP_ID), CP_SPI1_CS0(MPP_ID), \
+			CP_SPI1_MOSI(MPP_ID), CP_SPI1_SCK(MPP_ID);
+		marvell,function = "spi1";
+	};
+};
+
+&cp0_spi1 {
+	status = "okay";
+	pinctrl-names = "default";
+	pinctrl-0 = <&cp0_spi1_pins>;
+
+	/* Boot flash */
+	spi-flash@0 {
+		#address-cells = <0x1>;
+		#size-cells = <0x1>;
+		compatible = "jedec,spi-nor", "spi-flash";
+		reg = <0x0>;
+		spi-max-frequency = <90000000>;
+
+		partitions {
+			compatible = "fixed-partitions";
+			#address-cells = <1>;
+			#size-cells = <1>;
+
+			boot0@0 {
+				label = "boot0";
+				reg = <0x0 0x200000>;
+			};
+
+			boot1@200000 {
+				label = "boot1";
+				reg = <0x200000 0x200000>;
+			};
+		};
+	};
+};
+
+
+/* AP SDHCI (eMMC) */
+
+&ap_sdhci0 {
+	status = "okay";
+	bus-width = <8>;
+	mmc-ddr-1_8v;
+	mmc-hs400-1_8v;
+};
+
+
+&cp0_crypto {
+	status = "okay";
+};
+
+&cp0_ethernet {
+	status = "okay";
+};
+
+
+/* ETH1 (Connection to BMC) */
+
+&cp0_eth1 {
+	status = "okay";
+	phy-mode = "sgmii";
+	phys = <&cp0_comphy5 0>;
+	managed = "in-band-status";
+
+	nvmem-cells = <&base_mac 0>;
+	nvmem-cell-names = "mac-address";
+};
+
+
+/* ETH0 (DSA connection to switch tree) */
+
+&cp0_eth0 {
+	status = "okay";
+	phy-mode = "10gbase-r";
+	phys = <&cp0_comphy2 0>;
+	managed = "in-band-status";
+
+	nvmem-cells = <&base_mac 0>;
+	nvmem-cell-names = "mac-address";
+};
+
+
+/* MDIO (Switch Tree) */
+
+&cp0_pinctrl {
+	cp0_mdio_pins: cp0-mdio-pins-0 {
+		marvell,pins = CP_SMI_MDIO(MPP_ID), CP_SMI_MDC(MPP_ID);
+		marvell,function = "ge";
+	};
+};
+
+#define SWP_LED(_func) \
+	leds { \
+		#address-cells = <1>; \
+		#size-cells = <0>; \
+		\
+		led@0 { \
+			reg = <0>; \
+			function = _func; \
+			color = <LED_COLOR_ID_GREEN>; \
+			default-state = "keep"; \
+		}; \
+		led@1 { \
+			reg = <1>; \
+			function = _func; \
+			color = <LED_COLOR_ID_YELLOW>; \
+			default-state = "off"; \
+		}; \
+	}
+
+#define XSWP(_n, _label, _mac_offs, _sfp) \
+	port@_n { \
+		reg = <0x ## _n>; \
+		label = _label; \
+		nvmem-cells = <&base_mac _mac_offs>; \
+		nvmem-cell-names = "mac-address"; \
+		phy-mode = "10gbase-r"; \
+		managed = "in-band-status"; \
+		sfp = <&_sfp>; \
+		SWP_LED("sfp"); \
+	}
+
+#define GSWP(_n, _label, _mac_offs, _phy) \
+	port@_n { \
+		reg = <0x ## _n>; \
+		label = _label; \
+		nvmem-cells = <&base_mac _mac_offs>; \
+		nvmem-cell-names = "mac-address"; \
+		phy-mode = "gmii"; \
+		phy-handle = <&_phy>; \
+		SWP_LED("tp"); \
+	}
+
+#define GPHY(_n) \
+	ethernet-phy@_n { \
+		compatible = "ethernet-phy-ieee802.3-c22"; \
+		reg = <_n>; \
+		eee-broken-100tx; \
+		eee-broken-1000t; \
+	}
+
+&cp0_mdio {
+	status = "okay";
+	pinctrl-names = "default";
+	pinctrl-0 = <&cp0_mdio_pins>;
+
+	sw3: switch@6 {
+		compatible = "marvell,mv88e6190";
+		#address-cells = <1>;
+		#size-cells = <0>;
+		reg = <6>;
+
+		reset-gpios = SW3_RESETn(MPP_GPIO_REF);
+
+		interrupts-extended = SW3_INTn(MPP_IRQ_REF);
+		interrupt-controller;
+
+		dsa,member = <0 0>;
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			port@9 {
+				reg = <0x9>;
+				label = "cpu";
+				ethernet = <&cp0_eth0>;
+				phy-mode = "10gbase-r";
+				fixed-link {
+					speed = <10000>;
+					full-duplex;
+				};
+			};
+
+			sw3p10: port@a {
+				reg = <0xa>;
+				link = <&sw2p10 &sw1p0>;
+				phy-mode = "10gbase-r";
+				fixed-link {
+					speed = <10000>;
+					full-duplex;
+				};
+			};
+
+			/* Can't use XSWP macro as port 0 does not have
+			 * any LEDs attached to it. LEDs for port 10 seem
+			 * to be wired to the corresponding SFP cage. Maybe
+			 * we can apply a static workaround by binding port
+			 * 10's green LED to "Special LED 1", so we can at
+			 * least see link/act.
+			 */
+			port@0 {
+				reg = <0>;
+				label = "e16";
+				nvmem-cells = <&base_mac 16>;
+				nvmem-cell-names = "mac-address";
+				phy-mode = "10gbase-r";
+				managed = "in-band-status";
+				sfp = <&sfp3>;
+			};
+
+			GSWP(1,  "e22", 22, sw3phy1);
+			GSWP(2,  "e21", 21, sw3phy2);
+			GSWP(3,  "e24", 24, sw3phy3);
+			GSWP(4,  "e23", 23, sw3phy4);
+			GSWP(5,  "e26", 26, sw3phy5);
+			GSWP(6,  "e25", 25, sw3phy6);
+			GSWP(7,  "e28", 28, sw3phy7);
+			GSWP(8,  "e27", 27, sw3phy8);
+		};
+
+		mdio {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			sw3phy1: GPHY(1);
+			sw3phy2: GPHY(2);
+			sw3phy3: GPHY(3);
+			sw3phy4: GPHY(4);
+			sw3phy5: GPHY(5);
+			sw3phy6: GPHY(6);
+			sw3phy7: GPHY(7);
+			sw3phy8: GPHY(8);
+		};
+	};
+
+	sw2: switch@4 {
+		compatible = "marvell,mv88e6190";
+		#address-cells = <1>;
+		#size-cells = <0>;
+		reg = <4>;
+
+		reset-gpios = SW2_RESETn(MPP_GPIO_REF);
+
+		interrupts-extended = SW2_INTn(MPP_IRQ_REF);
+		interrupt-controller;
+
+		dsa,member = <0 1>;
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			sw2p0: port@0 {
+				reg = <0x0>;
+				link = <&sw1p0>;
+				phy-mode = "10gbase-r";
+				fixed-link {
+					speed = <10000>;
+					full-duplex;
+				};
+			};
+
+			sw2p10: port@a {
+				reg = <0xa>;
+				link = <&sw3p10>;
+				phy-mode = "10gbase-r";
+				fixed-link {
+					speed = <10000>;
+					full-duplex;
+				};
+			};
+
+
+			GSWP(1, "e10", 10, sw2phy1);
+			GSWP(2,  "e9",  9, sw2phy2);
+			GSWP(3, "e12", 12, sw2phy3);
+			GSWP(4, "e11", 11, sw2phy4);
+			GSWP(5, "e18", 18, sw2phy5);
+			GSWP(6, "e17", 17, sw2phy6);
+			GSWP(7, "e20", 20, sw2phy7);
+			GSWP(8, "e19", 19, sw2phy8);
+			XSWP(9, "e15", 15, sfp2);
+		};
+
+		mdio {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			sw2phy1: GPHY(1);
+			sw2phy2: GPHY(2);
+			sw2phy3: GPHY(3);
+			sw2phy4: GPHY(4);
+			sw2phy5: GPHY(5);
+			sw2phy6: GPHY(6);
+			sw2phy7: GPHY(7);
+			sw2phy8: GPHY(8);
+		};
+	};
+
+	sw1: switch@2 {
+		compatible = "marvell,mv88e6190";
+		#address-cells = <1>;
+		#size-cells = <0>;
+		reg = <2>;
+
+		reset-gpios = SW1_RESETn(MPP_GPIO_REF);
+
+		interrupts-extended = SW1_INTn(MPP_IRQ_REF);
+		interrupt-controller;
+
+		dsa,member = <0 2>;
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			sw1p0: port@0 {
+				reg = <0x0>;
+				link = <&sw2p0 &sw3p10>;
+				phy-mode = "10gbase-r";
+				fixed-link {
+					speed = <10000>;
+					full-duplex;
+				};
+			};
+
+			GSWP(1,  "e2",  2, sw1phy1);
+			GSWP(2,  "e1",  1, sw1phy2);
+			GSWP(3,  "e4",  4, sw1phy3);
+			GSWP(4,  "e3",  3, sw1phy4);
+			GSWP(5,  "e6",  6, sw1phy5);
+			GSWP(6,  "e5",  5, sw1phy6);
+			GSWP(7,  "e8",  8, sw1phy7);
+			GSWP(8,  "e7",  7, sw1phy8);
+			XSWP(9, "e14", 14, sfp1);
+			XSWP(a, "e13", 13, sfp0);
+		};
+
+		mdio {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			sw1phy1: GPHY(1);
+			sw1phy2: GPHY(2);
+			sw1phy3: GPHY(3);
+			sw1phy4: GPHY(4);
+			sw1phy5: GPHY(5);
+			sw1phy6: GPHY(6);
+			sw1phy7: GPHY(7);
+			sw1phy8: GPHY(8);
+		};
+	};
+};
+
+/ {
+	sfp0: sfp@0 {
+		compatible = "sff,sfp";
+		i2c-bus = <&i2c_sfp0>;
+		mod-def0-gpios = SFP0_MOD_ABS(MPP_GPIO_REF);
+		los-gpios = SFP0_RX_LOS(MPP_GPIO_REF);
+		tx-disable-gpios = SFP0_TX_DISABLE(MPP_GPIO_REF);
+		tx-fault-gpios = SFP0_TX_FAULT(MPP_GPIO_REF);
+		rate-select0-gpios = SFP0_RS0(MPP_GPIO_REF);
+		rate-select1-gpios = SFP0_RS1(MPP_GPIO_REF);
+		maximum-power-milliwatt = <3000>;
+	};
+
+	sfp1: sfp@1 {
+		compatible = "sff,sfp";
+		i2c-bus = <&i2c_sfp1>;
+		mod-def0-gpios = SFP1_MOD_ABS(MPP_GPIO_REF);
+		los-gpios = SFP1_RX_LOS(MPP_GPIO_REF);
+		tx-disable-gpios = SFP1_TX_DISABLE(MPP_GPIO_REF);
+		tx-fault-gpios = SFP1_TX_FAULT(MPP_GPIO_REF);
+		rate-select0-gpios = SFP1_RS0(MPP_GPIO_REF);
+		rate-select1-gpios = SFP1_RS1(MPP_GPIO_REF);
+		maximum-power-milliwatt = <3000>;
+	};
+
+	sfp2: sfp@2 {
+		compatible = "sff,sfp";
+		i2c-bus = <&i2c_sfp2>;
+		mod-def0-gpios = SFP2_MOD_ABS(MPP_GPIO_REF);
+		los-gpios = SFP2_RX_LOS(MPP_GPIO_REF);
+		tx-disable-gpios = SFP2_TX_DISABLE(MPP_GPIO_REF);
+		tx-fault-gpios = SFP2_TX_FAULT(MPP_GPIO_REF);
+		rate-select0-gpios = SFP2_RS0(MPP_GPIO_REF);
+		rate-select1-gpios = SFP2_RS1(MPP_GPIO_REF);
+		maximum-power-milliwatt = <3000>;
+	};
+
+	sfp3: sfp@3 {
+		compatible = "sff,sfp";
+		i2c-bus = <&i2c_sfp3>;
+		mod-def0-gpios = SFP3_MOD_ABS(MPP_GPIO_REF);
+		los-gpios = SFP3_RX_LOS(MPP_GPIO_REF);
+		tx-disable-gpios = SFP3_TX_DISABLE(MPP_GPIO_REF);
+		tx-fault-gpios = SFP3_TX_FAULT(MPP_GPIO_REF);
+		rate-select0-gpios = SFP3_RS0(MPP_GPIO_REF);
+		rate-select1-gpios = SFP3_RS1(MPP_GPIO_REF);
+		maximum-power-milliwatt = <3000>;
+	};
+};
+
