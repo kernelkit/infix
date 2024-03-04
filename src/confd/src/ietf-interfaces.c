@@ -313,6 +313,16 @@ static int netdag_exit_reload(struct dagger *net)
 	return 0;
 }
 
+static bool is_bridge_port(struct lyd_node *cif)
+{
+	struct lyd_node *node = lydx_get_descendant(lyd_child(cif), "bridge-port", NULL);
+
+	if (!node || !lydx_get_child(node, "bridge"))
+		return false;
+
+	return true;
+}
+
 static bool is_std_lo_addr(const char *ifname, const char *ip, const char *pf)
 {
 	struct in6_addr in6, lo6;
@@ -490,7 +500,7 @@ static int netdag_gen_ipv6_autoconf(struct dagger *net, struct lyd_node *cif,
 	struct lyd_node *node;
 	FILE *fp;
 
-	if (!ipconf || !lydx_is_enabled(ipconf, "enabled")) {
+	if (!ipconf || !lydx_is_enabled(ipconf, "enabled") || is_bridge_port(cif)) {
 		fputs(" addrgenmode none", ip);
 		return 0;
 	}
@@ -533,7 +543,7 @@ static int netdag_gen_ipv4_autoconf(struct dagger *net, struct lyd_node *cif,
 	FILE *initctl;
 	int err = 0;
 
-	if (!ipconf || !lydx_is_enabled(ipconf, "enabled"))
+	if (!ipconf || !lydx_is_enabled(ipconf, "enabled") || is_bridge_port(cif))
 		goto disable;
 
 	if (lydx_get_op(lydx_get_child(ipdiff, "enabled")) == LYDX_OP_REPLACE) {
@@ -872,10 +882,13 @@ static int bridge_gen_ports(struct dagger *net, struct lyd_node *dif, struct lyd
 	const char *ifname;
 	int err = 0;
 
+	if (!is_bridge_port(cif))
+		return 0;
+
 	node = lydx_get_descendant(lyd_child(dif), "bridge-port", NULL);
 	bridge = lydx_get_child(node, "bridge");
 	if (!node || !bridge)
-		return 0;	/* not a bridge port, skip */
+		return 0;	/* bridge port but no diff, skip */
 
 	ifname = lydx_get_cattr(cif, "name");
 
