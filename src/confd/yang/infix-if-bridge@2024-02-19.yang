@@ -10,6 +10,9 @@ submodule infix-if-bridge {
   import ietf-interfaces {
     prefix if;
   }
+  import ietf-inet-types {
+    prefix inet;
+  }
   import ieee802-dot1q-types {
     prefix dot1q-types;
   }
@@ -143,6 +146,20 @@ submodule infix-if-bridge {
     }
   }
 
+  typedef mdb-state {
+    description "Origin of mdb entry for a given port.";
+    type enumeration {
+      enum temp {
+        value 0;
+        description "Learned from IGMP/MLD snooping.";
+      }
+      enum permanent {
+        value 1;
+        description "Static entry, from configuration.";
+      }
+    }
+  }
+
   /*
    * Shared settings
    */
@@ -198,6 +215,37 @@ submodule infix-if-bridge {
     }
   }
 
+  grouping mdb {
+    container mdb {
+      description "Bridge multicast database.";
+      config false;
+
+      list entry {
+        description "MDB entry.";
+        key "group";
+
+        leaf group {
+          description "IP multicast group.";
+          type inet:ip-address;
+        }
+
+        list ports {
+          description "Port members of group.";
+
+          leaf port {
+            description "Port with static or dynamic membership of group.";
+            type if:interface-ref;
+          }
+
+          leaf state {
+            description "State of membership, permanent or temporary.";
+            type mdb-state;
+          }
+        }
+      }
+    }
+  }
+
   /*
    * Data Nodes
    */
@@ -219,6 +267,7 @@ submodule infix-if-bridge {
       }
 
       uses multicast;
+      uses mdb;
 
       container vlans {
         if-feature "vlan-filtering";
@@ -240,6 +289,7 @@ submodule infix-if-bridge {
           }
 
           uses multicast;
+          uses mdb;
 
           leaf-list untagged {
             type if:interface-ref;
