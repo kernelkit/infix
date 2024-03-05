@@ -954,39 +954,97 @@ fail:
 	return fwd_mask;
 }
 
-static int vlan_mcast_settings(FILE *br, const char *brname, struct lyd_node *vlan, int vid)
+static int querier_mode(const char *mode)
 {
-	struct { const char *str; int val; } mode[] = {
+	struct { const char *mode; int val; } table[] = {
 		{ "off",   0 },
 		{ "proxy", 1 },
 		{ "auto",  2 },
 	};
-	const char *querier, *interval;
+
+	for (size_t i = 0; i < NELEMS(table); i++) {
+		if (strcmp(table[i].mode, mode))
+			continue;
+
+		return table[i].val;
+	}
+
+	return 0;		/* unknown: off */
+}
+
+static void mcast_querier(const char *ifname, int mode, int interval)
+{
+	FILE *fp;
+
+	DEBUG("mcast querier %s mode %d interval %d", ifname, mode, interval);
+	if (!mode) {
+		erasef("/etc/querierd/%s.conf", ifname);
+		systemf("initctl -bnq disable querierd@%s", ifname);
+		return;
+	}
+
+	fp = fopenf("w", "/etc/querierd/%s.conf", ifname);
+	if (!fp) {
+		ERRNO("Failed creating querier configuration for %s", ifname);
+		return;
+	}
+
+	fprintf(fp, "query-interval %d\n", interval);
+	fprintf(fp, "iface %s enable %sigmpv3\n", ifname, mode == 1 ? "proxy-queries " : "");
+	fclose(fp);
+
+	systemf("initctl -bnq enable querierd@%s", ifname);
+}
+
+static char *find_vlan_interface(sr_session_ctx_t *session, const char *brname, int vid)
+{
+	const char *fmt = "/interfaces/interface/vlan[id=%d and lower-layer-if='%s']";
+	static char xpath[128];
+       	struct lyd_node *iface;
+	sr_data_t *data;
+	int rc;
+
+	snprintf(xpath, sizeof(xpath), fmt, vid, brname);
+	rc = sr_get_data(session, xpath, 0, 0, 0, &data);
+	if (rc || !data) {
+		DEBUG("Skpping VLAN %d interface for %s", vid, brname);
+		return NULL;
+	}
+
+	/* On match we should not need the if(iface) checks */
+	iface = lydx_get_descendant(data->tree, "interfaces", "interface", NULL);
+	if (iface)
+		strlcpy(xpath, lydx_get_cattr(iface, "name"), sizeof(xpath));
+
+	sr_release_data(data);
+	if (iface)
+		return xpath;
+
+	return NULL;
+}
+
+static int vlan_mcast_settings(sr_session_ctx_t *session, FILE *br, const char *brname, struct lyd_node *vlan, int vid)
+{
+	int interval, querier, snooping;
 	struct lyd_node *mcast;
-	int snooping, period;
-	size_t i;
+	const char *ifname;
 
 	mcast = lydx_get_descendant(lyd_child(vlan), "multicast", NULL);
 	if (!mcast)
 		return 0;
 
 	snooping = lydx_is_enabled(mcast, "snooping");
-	querier = lydx_get_cattr(mcast, "querier");
-	for (i = 0; i < NELEMS(mode); i++) {
-		if (!strcmp(mode[i].str, querier))
-			break;
-	}
+	querier = querier_mode(lydx_get_cattr(mcast, "querier"));
 
-	fprintf(br, "vlan global set vid %d dev %s mcast_snooping %d mcast_querier %d",
-		vid, brname, snooping, mode[i].val);
+	fprintf(br, "vlan global set vid %d dev %s mcast_snooping %d",
+		vid, brname, snooping);
 
-	if (mode[i].val == 2) {
-		/* XXX: gen. querierd-br.vid.conf here, stop everywhere else */
-	}
+	interval = atoi(lydx_get_cattr(mcast, "query-interval"));
+	ifname = find_vlan_interface(session, brname, vid);
 
-	interval = lydx_get_cattr(mcast, "query-interval");
-	period   = atoi(interval);
-	fprintf(br, " mcast_query_interval %d", period * 100);
+	mcast_querier(ifname, querier, interval);
+	fprintf(br, " mcast_querier %d mcast_query_interval %d",
+		ifname ? 0 : querier, interval * 100);
 
 	/* XXX: make configurable later */
 	fprintf(br, " mcast_igmp_version 3 mcast_mld_version 2\n");
@@ -994,46 +1052,36 @@ static int vlan_mcast_settings(FILE *br, const char *brname, struct lyd_node *vl
 	return 0;
 }
 
-static int bridge_mcast_settings(FILE *ip, struct lyd_node *cif, int vlan_filtering)
+static int bridge_mcast_settings(FILE *ip, const char *brname, struct lyd_node *cif, int vlan_filtering)
 {
-	struct { const char *mode; int querier; int ifaddr; } mode[] = {
-		{ "off",   0, 0 },
-		{ "proxy", 1, 0 },
-		{ "auto",  1, 1 },
-	};
-	const char *querier, *interval;
+	int interval, querier, snooping;
 	struct lyd_node *mcast;
-	int snooping, period;
-	size_t i;
 
 	mcast = lydx_get_descendant(lyd_child(cif), "bridge", "multicast", NULL);
-	if (!mcast)
+	if (!mcast) {
+		mcast_querier(brname, 0, 0);
 		return 0;
-
-	snooping = lydx_is_enabled(mcast, "snooping");
-	querier = lydx_get_cattr(mcast, "querier");
-	for (i = 0; i < NELEMS(mode); i++) {
-		if (!strcmp(mode[i].mode, querier))
-			break;
 	}
 
-	fprintf(ip, " mcast_vlan_snooping %d", vlan_filtering ? snooping : 0);
-	/*
-	 * When snooping is enabled per VLAN we need to use an external
-	 * querier, otherwise the bridge will go dumpster diving for an
-	 * IP address on the base bridge interface.
-	 */
-	fprintf(ip, " mcast_snooping %d mcast_querier %d mcast_query_use_ifaddr %d",
-		snooping, mode[i].querier, vlan_filtering ? 0 : mode[i].ifaddr);
+	snooping = lydx_is_enabled(mcast, "snooping");
+	querier = querier_mode(lydx_get_cattr(mcast, "querier"));
 
-	interval = lydx_get_cattr(mcast, "query-interval");
-	period   = atoi(interval);
-	fprintf(ip, " mcast_query_interval %d", period * 100);
+	fprintf(ip, " mcast_vlan_snooping %d", vlan_filtering ? snooping : 0);
+	fprintf(ip, " mcast_snooping %d mcast_querier 0", snooping);
+
+	interval = atoi(lydx_get_cattr(mcast, "query-interval"));
+	fprintf(ip, " mcast_query_interval %d", interval * 100);
+
+	DEBUG("%s: querier %d", brname, vlan_filtering ? -1 : querier);
+	if (!vlan_filtering)
+		mcast_querier(brname, querier, interval);
+	else
+		mcast_querier(brname, 0, 0);
 
 	return 0;
 }
 
-static int netdag_gen_bridge(struct dagger *net, struct lyd_node *dif,
+static int netdag_gen_bridge(sr_session_ctx_t *session, struct dagger *net, struct lyd_node *dif,
 			     struct lyd_node *cif, FILE *ip, int add)
 {
 	const char *brname = lydx_get_cattr(cif, "name");
@@ -1057,7 +1105,7 @@ static int netdag_gen_bridge(struct dagger *net, struct lyd_node *dif,
 		" vlan_filtering %d vlan_default_pvid 0",
 		op, brname, fwd_mask, vlan_filtering ? 1 : 0);
 
-	if ((err = bridge_mcast_settings(ip, cif, vlan_mcast)))
+	if ((err = bridge_mcast_settings(ip, brname, cif, vlan_mcast)))
 		goto done;
 
 	if (!vlan_filtering) {
@@ -1096,7 +1144,7 @@ static int netdag_gen_bridge(struct dagger *net, struct lyd_node *dif,
 			break;
 
 		/* need the vlans created before we can set features on them */
-		err = vlan_mcast_settings(br, brname, vlan, vid);
+		err = vlan_mcast_settings(session, br, brname, vlan, vid);
 		if (err)
 			break;
 	}
@@ -1180,7 +1228,7 @@ static int netdag_gen_vlan(struct dagger *net, struct lyd_node *dif,
 	return 0;
 }
 
-static int netdag_gen_afspec_add(struct dagger *net, struct lyd_node *dif,
+static int netdag_gen_afspec_add(sr_session_ctx_t *session, struct dagger *net, struct lyd_node *dif,
 				 struct lyd_node *cif, FILE *ip)
 {
 	const char *ifname = lydx_get_cattr(cif, "name");
@@ -1190,7 +1238,7 @@ static int netdag_gen_afspec_add(struct dagger *net, struct lyd_node *dif,
 	DEBUG_IFACE(dif, "");
 
 	if (!strcmp(iftype, "infix-if-type:bridge")) {
-		err = netdag_gen_bridge(net, dif, cif, ip, 1);
+		err = netdag_gen_bridge(session, net, dif, cif, ip, 1);
 	} else if (!strcmp(iftype, "infix-if-type:veth")) {
 		err = netdag_gen_veth(net, NULL, cif, ip);
 	} else if (!strcmp(iftype, "infix-if-type:vlan")) {
@@ -1210,7 +1258,7 @@ static int netdag_gen_afspec_add(struct dagger *net, struct lyd_node *dif,
 	return 0;
 }
 
-static int netdag_gen_afspec_set(struct dagger *net, struct lyd_node *dif,
+static int netdag_gen_afspec_set(sr_session_ctx_t *session, struct dagger *net, struct lyd_node *dif,
 				 struct lyd_node *cif, FILE *ip)
 {
 	const char *ifname = lydx_get_cattr(cif, "name");
@@ -1219,7 +1267,7 @@ static int netdag_gen_afspec_set(struct dagger *net, struct lyd_node *dif,
 	DEBUG_IFACE(dif, "");
 
 	if (!strcmp(iftype, "infix-if-type:bridge"))
-		return netdag_gen_bridge(net, dif, cif, ip, 0);
+		return netdag_gen_bridge(session, net, dif, cif, ip, 0);
 	if (!strcmp(iftype, "infix-if-type:vlan"))
 		return netdag_gen_vlan(net, dif, cif, ip);
 	if (!strcmp(iftype, "infix-if-type:veth"))
@@ -1276,6 +1324,7 @@ static int netdag_gen_iface_del(struct dagger *net, struct lyd_node *dif,
 
 	DEBUG_IFACE(dif, "");
 
+	mcast_querier(ifname, 0, 0);
 	if (dagger_should_skip_current(net, ifname))
 		return 0;
 
@@ -1294,7 +1343,7 @@ static int netdag_gen_iface_del(struct dagger *net, struct lyd_node *dif,
 	return 0;
 }
 
-static sr_error_t netdag_gen_iface(struct dagger *net,
+static sr_error_t netdag_gen_iface(sr_session_ctx_t *session, struct dagger *net,
 				   struct lyd_node *dif, struct lyd_node *cif)
 {
 	const char *ifname = lydx_get_cattr(dif, "name");
@@ -1351,7 +1400,7 @@ static sr_error_t netdag_gen_iface(struct dagger *net,
 	}
 
 	if (!fixed && op == LYDX_OP_CREATE) {
-		err = netdag_gen_afspec_add(net, dif, cif, ip);
+		err = netdag_gen_afspec_add(session, net, dif, cif, ip);
 		if (err)
 			goto err_close_ip;
 	}
@@ -1372,7 +1421,7 @@ static sr_error_t netdag_gen_iface(struct dagger *net,
 
 	/* Set type specific attributes */
 	if (!fixed && op != LYDX_OP_CREATE) {
-		err = netdag_gen_afspec_set(net, dif, cif, ip);
+		err = netdag_gen_afspec_set(session, net, dif, cif, ip);
 		if (err)
 			goto err_close_ip;
 	}
@@ -1464,7 +1513,7 @@ static int ifchange(sr_session_ctx_t *session, uint32_t sub_id, const char *modu
 				    lydx_get_cattr(cif, "name")))
 				break;
 
-		err = netdag_gen_iface(&confd->netdag, dif, cif);
+		err = netdag_gen_iface(session, &confd->netdag, dif, cif);
 		if (err)
 			break;
 	}
