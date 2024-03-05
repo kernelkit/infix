@@ -1,0 +1,3 @@
+service <net/%i/exist> \
+	[2345] querierd -sn -f /etc/querierd/%i.conf -i %i \
+	-- IGMP querier daemon @%i
