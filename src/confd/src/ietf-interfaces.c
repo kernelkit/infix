@@ -1053,7 +1053,8 @@ static int netdag_gen_bridge(struct dagger *net, struct lyd_node *dif,
 	 *             believe this is the only sane way of doing it.
 	 * Issue #310: malplaced 'vlan_default_pvid 0'
 	 */
-	fprintf(ip, "link %s dev %s type bridge group_fwd_mask %d vlan_filtering %d vlan_default_pvid 0",
+	fprintf(ip, "link %s dev %s type bridge group_fwd_mask %d mcast_flood_always 1"
+		" vlan_filtering %d vlan_default_pvid 0",
 		op, brname, fwd_mask, vlan_filtering ? 1 : 0);
 
 	if ((err = bridge_mcast_settings(ip, cif, vlan_mcast)))
