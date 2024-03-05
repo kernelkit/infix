@@ -7,3 +7,5 @@
 - case: bridge_fwd_sgl_dut.py
 - case: bridge_fwd_dual_dut.py
 - case: bridge_vlan_separation.py
+- case: igmp_basic.py
+- case: igmp_vlan.py
