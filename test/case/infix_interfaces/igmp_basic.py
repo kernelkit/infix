@@ -4,13 +4,13 @@
 #                |    DUT       |
 #                |              |
 #                +----------+---\
-#                |          |    \-
-#               /           |      \
-#               |           |       \
-#              /            |        \-
-#    10.0.0.2 |     10.0.0.3|          \ 10.0.0.4
-#     +-------/       +---+------+      \-------------+
-#     | msend |       | mreceive |      | no join     |
+#                |          |    \
+#                |          |     \
+#                |          |      \
+#                |          |       \
+#    10.0.0.2    |  10.0.0.3|        \ 10.0.0.4
+#     +----------+    +---+------+    \ +-------------+
+#     | msend |       | mreceive |      + no join     |
 #     +-------+       +----------+      +-------------+
 
 import infamy
@@ -94,7 +94,7 @@ with infamy.Test() as test:
             snif_nojoin = infamy.Sniffer(ns2, "host 224.1.1.1")
             snif_receiver = infamy.Sniffer(ns1, "host 224.1.1.1")
             with sender:
-                time.sleep(20)
+                time.sleep(5)
                 with snif_nojoin:
                     time.sleep(5)
                 assert(snif_nojoin.output().stdout != "")
