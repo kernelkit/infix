@@ -1,0 +1,175 @@
+From 5a2ab621675d39dc9ecbd4d65d5c7a424248cd11 Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Tue, 5 Mar 2024 09:41:46 +0100
+Subject: [PATCH] iplink_bridge: add mcast_flood_always bridge option
+Organization: Addiva Elektronik
+
+ - Break out boolopt handling to simplify parsing and setting
+ - Add set/get support for mcast_flood_always
+ - Add get support for mst_enabled
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ include/uapi/linux/if_bridge.h |  1 +
+ ip/iplink_bridge.c             | 75 +++++++++++++++++++++++++---------
+ man/man8/ip-link.8.in          | 12 ++++++
+ 3 files changed, 68 insertions(+), 20 deletions(-)
+
+diff --git a/include/uapi/linux/if_bridge.h b/include/uapi/linux/if_bridge.h
+index f6d58238..aaab505d 100644
+--- a/include/uapi/linux/if_bridge.h
++++ b/include/uapi/linux/if_bridge.h
+@@ -777,6 +777,7 @@ enum br_boolopt_id {
+ 	BR_BOOLOPT_NO_LL_LEARN,
+ 	BR_BOOLOPT_MCAST_VLAN_SNOOPING,
+ 	BR_BOOLOPT_MST_ENABLE,
++	BR_BOOLOPT_MCAST_FLOOD_ALWAYS,
+ 	BR_BOOLOPT_MAX
+ };
+ 
+diff --git a/ip/iplink_bridge.c b/ip/iplink_bridge.c
+index 8b0c1422..8d4a6bb2 100644
+--- a/ip/iplink_bridge.c
++++ b/ip/iplink_bridge.c
+@@ -43,6 +43,7 @@ static void print_explain(FILE *f)
+ 		"		  [ vlan_default_pvid VLAN_DEFAULT_PVID ]\n"
+ 		"		  [ vlan_stats_enabled VLAN_STATS_ENABLED ]\n"
+ 		"		  [ vlan_stats_per_port VLAN_STATS_PER_PORT ]\n"
++		"		  [ mcast_flood_always ENABLED ]\n"
+ 		"		  [ mcast_snooping MULTICAST_SNOOPING ]\n"
+ 		"		  [ mcast_vlan_snooping MULTICAST_VLAN_SNOOPING ]\n"
+ 		"		  [ mcast_router MULTICAST_ROUTER ]\n"
+@@ -82,6 +83,18 @@ void br_dump_bridge_id(const struct ifla_bridge_id *id, char *buf, size_t len)
+ 	snprintf(buf, len, "%.2x%.2x.%s", id->prio[0], id->prio[1], eaddr);
+ }
+ 
++static void set_boolopt(struct br_boolopt_multi *bm, enum br_boolopt_id opt,
++			bool set)
++{
++	__u32 bit = 1 << opt;
++
++	bm->optmask |= 1 << opt;
++	if (set)
++		bm->optval |= bit;
++	else
++		bm->optval &= ~bit;
++}
++
+ static int bridge_parse_opt(struct link_util *lu, int argc, char **argv,
+ 			    struct nlmsghdr *n)
+ {
+@@ -216,17 +229,21 @@ static int bridge_parse_opt(struct link_util *lu, int argc, char **argv,
+ 
+ 			addattr8(n, 1024, IFLA_BR_MCAST_SNOOPING, mcast_snoop);
+ 		} else if (strcmp(*argv, "mcast_vlan_snooping") == 0) {
+-			__u32 mcvl_bit = 1 << BR_BOOLOPT_MCAST_VLAN_SNOOPING;
+-			__u8 mcast_vlan_snooping;
++			__u8 val;
+ 
+ 			NEXT_ARG();
+-			if (get_u8(&mcast_vlan_snooping, *argv, 0))
++			if (get_u8(&val, *argv, 0))
+ 				invarg("invalid mcast_vlan_snooping", *argv);
+-			bm.optmask |= 1 << BR_BOOLOPT_MCAST_VLAN_SNOOPING;
+-			if (mcast_vlan_snooping)
+-				bm.optval |= mcvl_bit;
+-			else
+-				bm.optval &= ~mcvl_bit;
++
++			set_boolopt(&bm, BR_BOOLOPT_MCAST_VLAN_SNOOPING, val);
++		} else if (strcmp(*argv, "mcast_flood_always") == 0) {
++			__u8 val;
++
++			NEXT_ARG();
++			if (get_u8(&val, *argv, 0))
++				invarg("invalid mcast_flood_always", *argv);
++
++			set_boolopt(&bm, BR_BOOLOPT_MCAST_FLOOD_ALWAYS, val);
+ 		} else if (matches(*argv, "mcast_query_use_ifaddr") == 0) {
+ 			__u8 mcast_qui;
+ 
+@@ -590,21 +607,39 @@ static void bridge_print_opt(struct link_util *lu, FILE *f, struct rtattr *tb[])
+ 			   rta_getattr_u8(tb[IFLA_BR_MCAST_SNOOPING]));
+ 
+ 	if (tb[IFLA_BR_MULTI_BOOLOPT]) {
+-		__u32 mcvl_bit = 1 << BR_BOOLOPT_MCAST_VLAN_SNOOPING;
+-		__u32 no_ll_learn_bit = 1 << BR_BOOLOPT_NO_LL_LEARN;
+ 		struct br_boolopt_multi *bm;
++		int opt;
+ 
+ 		bm = RTA_DATA(tb[IFLA_BR_MULTI_BOOLOPT]);
+-		if (bm->optmask & no_ll_learn_bit)
+-			print_uint(PRINT_ANY,
+-				   "no_linklocal_learn",
+-				   "no_linklocal_learn %u ",
+-				    !!(bm->optval & no_ll_learn_bit));
+-		if (bm->optmask & mcvl_bit)
+-			print_uint(PRINT_ANY,
+-				   "mcast_vlan_snooping",
+-				   "mcast_vlan_snooping %u ",
+-				    !!(bm->optval & mcvl_bit));
++		for (opt = 0; opt < BR_BOOLOPT_MAX; opt++) {
++			__u32 bit = 1 << opt;
++			__u32 val = !!(bm->optval & bit);
++
++			if (!(bm->optmask & bit))
++				continue;
++
++			switch (opt) {
++			case BR_BOOLOPT_NO_LL_LEARN:
++				print_uint(PRINT_ANY,
++					   "no_linklocal_learn",
++					   "no_linklocal_learn %u ", val);
++				break;
++			case BR_BOOLOPT_MCAST_VLAN_SNOOPING:
++				print_uint(PRINT_ANY,
++					   "mcast_vlan_snooping",
++					   "mcast_vlan_snooping %u ", val);
++				break;
++			case BR_BOOLOPT_MST_ENABLE:
++				print_uint(PRINT_ANY,
++					   "mst_enabled",
++					   "mst_enabled %u ", val);
++				break;
++			case BR_BOOLOPT_MCAST_FLOOD_ALWAYS:
++				print_uint(PRINT_ANY,
++					   "mcast_flood_always",
++					   "mcast_flood_always %u ", val);
++			}
++		}
+ 	}
+ 
+ 	if (tb[IFLA_BR_MCAST_ROUTER])
+diff --git a/man/man8/ip-link.8.in b/man/man8/ip-link.8.in
+index 6c72e122..4730e73a 100644
+--- a/man/man8/ip-link.8.in
++++ b/man/man8/ip-link.8.in
+@@ -1590,6 +1590,8 @@ the following additional arguments are supported:
+ ] [
+ .BI vlan_stats_per_port " VLAN_STATS_PER_PORT "
+ ] [
++.BI mcast_flood_always " ENABLED "
++] [
+ .BI mcast_snooping " MULTICAST_SNOOPING "
+ ] [
+ .BI mcast_vlan_snooping " MULTICAST_VLAN_SNOOPING "
+@@ -1718,6 +1720,16 @@ or disable
+ .RI ( VLAN_STATS_PER_PORT " == 0) "
+ per-VLAN per-port stats accounting. Can be changed only when there are no port VLANs configured.
+ 
++.BI mcast_flood_always " ENABLED "
++- always
++.RI ( ENABLED " > 0) "
++flood unknown multicast according to per-port
++.BI mcast_flood
++settings.  By default
++.RI ( ENABLED " == 0). "
++the bridge only floods until it has learned of a querier, or takes on
++the role itself.
++
+ .BI mcast_snooping " MULTICAST_SNOOPING "
+ - turn multicast snooping on
+ .RI ( MULTICAST_SNOOPING " > 0) "
+-- 
+2.34.1
+
