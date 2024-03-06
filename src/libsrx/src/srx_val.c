@@ -111,7 +111,7 @@ static int srx_vaget(sr_session_ctx_t *session, const char *fmt, va_list ap, sr_
 	return 0;
 }
 
-static int get_vabool(sr_session_ctx_t *session, int *result, const char *fmt, va_list ap)
+static int get_vabool(sr_session_ctx_t *session, int *value, const char *fmt, va_list ap)
 {
 	sr_val_t *val = NULL;
 	size_t cnt = 0;
@@ -125,19 +125,19 @@ static int get_vabool(sr_session_ctx_t *session, int *result, const char *fmt, v
 	if (rc)
 		return rc;
 
-	*result = val->data.bool_val;
+	*value = val->data.bool_val;
 	sr_free_values(val, cnt);
 
 	return 0;
 }
 
-int srx_get_bool(sr_session_ctx_t *session, int *result, const char *fmt, ...)
+int srx_get_bool(sr_session_ctx_t *session, int *value, const char *fmt, ...)
 {
 	va_list ap;
 	int rc;
 
 	va_start(ap, fmt);
-	rc = get_vabool(session, result, fmt, ap);
+	rc = get_vabool(session, value, fmt, ap);
 	va_end(ap);
 
 	return rc;
@@ -156,7 +156,7 @@ int srx_enabled(sr_session_ctx_t *session, const char *fmt, ...)
 	return rc ? 0 : v;
 }
 
-int srx_get_int(sr_session_ctx_t *session, int *result, sr_val_type_t type, const char *fmt, ...)
+int srx_get_int(sr_session_ctx_t *session, int *value, sr_val_type_t type, const char *fmt, ...)
 {
 	sr_val_t *val = NULL;
 	size_t cnt = 0;
@@ -173,28 +173,28 @@ int srx_get_int(sr_session_ctx_t *session, int *result, sr_val_type_t type, cons
 
 	switch (val->type) {
 	case SR_INT8_T:
-		*result = val->data.int8_val;
+		*value = val->data.int8_val;
 		break;
 	case SR_UINT8_T:
-		*result = val->data.uint8_val;
+		*value = val->data.uint8_val;
 		break;
 	case SR_INT16_T:
-		*result = val->data.int16_val;
+		*value = val->data.int16_val;
 		break;
 	case SR_UINT16_T:
-		*result = val->data.uint16_val;
+		*value = val->data.uint16_val;
 		break;
 	case SR_INT32_T:
-		*result = val->data.int32_val;
+		*value = val->data.int32_val;
 		break;
 	case SR_UINT32_T:
-		*result = val->data.uint32_val;
+		*value = val->data.uint32_val;
 		break;
 	case SR_INT64_T:
-		*result = val->data.int64_val;
+		*value = val->data.int64_val;
 		break;
 	case SR_UINT64_T:
-		*result = val->data.uint64_val;
+		*value = val->data.uint64_val;
 		break;
 	default:
 		goto fail;
