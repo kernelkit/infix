@@ -16,6 +16,9 @@ submodule infix-if-bridge {
   import ietf-inet-types {
     prefix inet;
   }
+  import ietf-ip {
+    prefix ip;
+  }
   import ieee802-dot1q-types {
     prefix dot1q-types;
   }
@@ -25,8 +28,17 @@ submodule infix-if-bridge {
   description  "Linux bridge extension for ietf-interfaces.";
 
   revision 2024-03-06 {
-    description "Drop default value for bridge-port PVID.
-                 Should be possible to drop untagged frames.";
+    description "Drop default value for bridge-port PVID.  Should be possible
+                 to drop untagged frames.
+
+                 Add must() expression for VLAN memberships.  Listed ports must
+                 belong to this bridge and cannot be untagged and tagged at the
+                 same time.
+
+                 Also, add must() expression to ensure VLAN filtering bridges
+                 do not have any IP address set since the bridge is always only
+                 a tagged member of VLANs.  Use a VLAN interfaces on top of the
+                 bridge for IP addressing.";
     reference "internal";
   }
   revision 2024-02-19 {
@@ -302,16 +314,39 @@ submodule infix-if-bridge {
           leaf-list untagged {
             type if:interface-ref;
             description "The set of ports in the untagged set for VLAN.";
-          }
+            must "current() = ../../../../if:name
+                  or (/if:interfaces/if:interface[if:name = current()]/bridge-port/bridge = ../../../../if:name
+                      and not(../tagged[contains(., current())]))" {
+              error-message "Port is not a member of this bridge or already set as tagged member in the same VLAN.";
+	    }
+	  }
 
           leaf-list tagged {
-            type if:interface-ref;
-            must "not(../untagged[contains(., current())])" {
-              error-message "Cannot be an untagged port at the same time.";
-            }
             description "The set of ports in the tagged set for VLAN.";
+            type if:interface-ref;
+            must "current() = ../../../../if:name
+                  or (/if:interfaces/if:interface[if:name = current()]/bridge-port/bridge = ../../../../if:name
+                      and not(../untagged[contains(., current())]))" {
+              error-message "Port is not a member of bridge or already untagged in the same VLAN.";
+            }
           }
         }
+      }
+    }
+  }
+
+  deviation "/if:interfaces/if:interface/ip:ipv4/ip:enabled" {
+    deviate add {
+      must "not(.) or count(../../infix-if:bridge/infix-if:vlans/infix-if:vlan) = 0" {
+	error-message "IPv4 address is not supported on VLAN filtering bridges.";
+      }
+    }
+  }
+
+  deviation "/if:interfaces/if:interface/ip:ipv6/ip:enabled" {
+    deviate add {
+      must "not(.) or count(../../infix-if:bridge/infix-if:vlans/infix-if:vlan) = 0" {
+	error-message "IPv6 address is not supported on VLAN filtering bridges.";
       }
     }
   }
