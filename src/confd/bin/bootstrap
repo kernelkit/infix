@@ -218,7 +218,7 @@ sysrepoctl -s $SEARCH							\
 	   -i ieee802-dot1q-types@2022-10-29.yang -g wheel -p 0660	\
 	   -i infix-ip@2023-09-14.yang		-g wheel -p 0660	\
 	   -i infix-if-type@2024-01-29.yang	-g wheel -p 0660	\
-	   -i infix-routing@2024-01-09.yang     -g wheel -p 0660        \
+	   -i infix-routing@2024-03-06.yang     -g wheel -p 0660        \
 	   -i infix-interfaces@2024-01-15.yang	-g wheel -p 0660	\
 		-e vlan-filtering					\
 	   -i ieee802-dot1ab-lldp@2022-03-15.yang -g wheel -p 0660	\

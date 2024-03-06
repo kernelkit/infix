@@ -24,6 +24,10 @@ module infix-routing {
   import ietf-routing-types {
     prefix rt-types;
   }
+  revision 2024-03-06 {
+    description "Obsolete leaf enable in favor for enabled in default-route-advertise";
+    reference "internal";
+  }
   revision 2024-01-09 {
     description "Add operational, area, bfd support
                  and other minor features";
