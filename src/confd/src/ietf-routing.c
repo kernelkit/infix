@@ -127,7 +127,8 @@ int parse_ospf(sr_session_ctx_t *session, struct lyd_node *ospf)
 	parse_ospf_redistribute(session, lydx_get_child(ospf, "redistribute"), fp);
 	default_route = lydx_get_child(ospf, "default-route-advertise");
 	if (default_route) {
-		if (lydx_get_bool(default_route, "enable")) {
+		/* enable is obsolete in favor for enabled. */
+		if ((lydx_get_child(default_route, "enable") && lydx_get_bool(default_route, "enable")) || lydx_get_bool(default_route, "enabled")) {
 			fputs("  default-information originate", fp);
 			if (lydx_get_bool(default_route, "always"))
 				fputs(" always", fp);

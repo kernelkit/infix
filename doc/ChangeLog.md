@@ -19,7 +19,8 @@ All notable changes to the project are documented in this file.
 - Reduced syslog errors for accesses no non-existing xpaths
 - Fix bogus warning about not properly updating `/etc/motd` in new
   `motd-banner` setting, introduced in v24.02.0
-
+- infix-routing model: For OSPF, the configuration setting in `default-route-advertise`, `enable`
+  has been obsoleted and replaced by `enabled`
 
 [v24.02.0][] - 2024-03-01
 -------------------------
