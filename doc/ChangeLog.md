@@ -4,6 +4,23 @@ Change Log
 All notable changes to the project are documented in this file.
 
 
+[v24.03.0][UNRELEASED]
+-------------------------
+
+> Development in progress, for daily updates see the team board:
+> <https://github.com/orgs/kernelkit/projects/3/views/2>
+
+
+### Fixes
+
+- CLI: fix VLAN inference for interfaces named `eth0.1`, i.e., VID 1 on
+  lower-layer-if `eth0`.  Only affects automatic inference in the CLI,
+  entering the values manually (CLI/NETCONF) not affected by this bug
+- Reduced syslog errors for accesses no non-existing xpaths
+- Fix bogus warning about not properly updating `/etc/motd` in new
+  `motd-banner` setting, introduced in v24.02.0
+
+
 [v24.02.0][] - 2024-03-01
 -------------------------
 
