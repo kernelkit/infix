@@ -24,6 +24,11 @@ submodule infix-if-bridge {
   contact      "kernelkit@googlegroups.com";
   description  "Linux bridge extension for ietf-interfaces.";
 
+  revision 2024-03-06 {
+    description "Drop default value for bridge-port PVID.
+                 Should be possible to drop untagged frames.";
+    reference "internal";
+  }
   revision 2024-02-19 {
     description "Add STP state to bridge port.";
     reference "internal";
@@ -400,7 +405,6 @@ submodule infix-if-bridge {
         leaf pvid {
           if-feature "vlan-filtering";
           type dot1q-types:vlanid;
-          default "1";
           description "The primary VID assigned to this bridge port.";
         }
 
