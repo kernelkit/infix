@@ -1071,8 +1071,13 @@ static int change_motd_banner(sr_session_ctx_t *session, uint32_t sub_id, const 
 			if (!fp) {
 				rc = -1;
 			} else {
-				if (fwrite(txt, txt_len, sizeof(txt[0]), fp) != txt_len)
+				size_t len = fwrite(txt, sizeof(txt[0]), txt_len, fp);
+
+				if (len != txt_len) {
+					ERROR("failed writing %s, wrote %zu bytes of total %zu",
+					      fn, len, txt_len);
 					rc = -1;
+				}
 				fclose(fp);
 			}
 
