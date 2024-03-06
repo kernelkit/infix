@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: BSD-3-Clause */
 #include <errno.h>
 #include <stdarg.h>
+#include <stdbool.h>
 #include <sysrepo/values.h>
 
 #include "common.h"
@@ -68,7 +69,8 @@ int srx_set_str(sr_session_ctx_t *session, const char *str, sr_edit_options_t op
 	return sr_set_item_str(session, xpath, str, NULL, opts);
 }
 
-static int srx_vaget(sr_session_ctx_t *session, const char *fmt, va_list ap, sr_val_type_t type, sr_val_t **val, size_t *cnt)
+static int srx_vaget(sr_session_ctx_t *session, const char *fmt, va_list ap, sr_val_type_t type,
+		     sr_val_t **val, size_t *cnt, bool logerr)
 {
 	va_list apdup;
 	char *xpath;
@@ -89,8 +91,9 @@ static int srx_vaget(sr_session_ctx_t *session, const char *fmt, va_list ap, sr_
 
 	rc = sr_get_items(session, xpath, 0, 0, val, cnt);
 	if (rc) {
-		ERROR("Failed reading xpath %s: %s", xpath, sr_strerror(rc));
-		return -1;
+		if (logerr)
+			ERROR("Failed reading xpath %s: %s", xpath, sr_strerror(rc));
+		return rc;
 	}
 
 	if (*cnt == 0) {
@@ -111,7 +114,7 @@ static int srx_vaget(sr_session_ctx_t *session, const char *fmt, va_list ap, sr_
 	return 0;
 }
 
-static int get_vabool(sr_session_ctx_t *session, int *value, const char *fmt, va_list ap)
+static int get_vabool(sr_session_ctx_t *session, int *value, const char *fmt, va_list ap, bool logerr)
 {
 	sr_val_t *val = NULL;
 	size_t cnt = 0;
@@ -119,7 +122,7 @@ static int get_vabool(sr_session_ctx_t *session, int *value, const char *fmt, va
 	int rc;
 
 	va_copy(apdup, ap);
-	rc = srx_vaget(session, fmt, apdup, SR_BOOL_T, &val, &cnt);
+	rc = srx_vaget(session, fmt, apdup, SR_BOOL_T, &val, &cnt, logerr);
 	va_end(apdup);
 
 	if (rc)
@@ -137,7 +140,7 @@ int srx_get_bool(sr_session_ctx_t *session, int *value, const char *fmt, ...)
 	int rc;
 
 	va_start(ap, fmt);
-	rc = get_vabool(session, value, fmt, ap);
+	rc = get_vabool(session, value, fmt, ap, false);
 	va_end(ap);
 
 	return rc;
@@ -150,7 +153,7 @@ int srx_enabled(sr_session_ctx_t *session, const char *fmt, ...)
 	int rc;
 
 	va_start(ap, fmt);
-	rc = get_vabool(session, &v, fmt, ap);
+	rc = get_vabool(session, &v, fmt, ap, true);
 	va_end(ap);
 
 	return rc ? 0 : v;
@@ -164,7 +167,7 @@ int srx_get_int(sr_session_ctx_t *session, int *value, sr_val_type_t type, const
 	int rc;
 
 	va_start(ap, fmt);
-	rc = srx_vaget(session, fmt, ap, type, &val, &cnt);
+	rc = srx_vaget(session, fmt, ap, type, &val, &cnt, false);
 	va_end(ap);
 
 	if (rc)
@@ -214,7 +217,7 @@ char *srx_get_str(sr_session_ctx_t *session, const char *fmt, ...)
 	va_list ap;
 
 	va_start(ap, fmt);
-	if (srx_vaget(session, fmt, ap, SR_UNKNOWN_T, &val, &cnt))
+	if (srx_vaget(session, fmt, ap, SR_UNKNOWN_T, &val, &cnt, false))
 		goto fail;
 
 	str = sr_val_to_str(val);
@@ -233,7 +236,7 @@ int srx_vnitems(sr_session_ctx_t *session, size_t *cntp, const char *fmt, va_lis
 	errno = 0;
 
 	va_copy(apdup, ap);
-	rc = srx_vaget(session, fmt, apdup, SR_UNKNOWN_T, &val, cntp);
+	rc = srx_vaget(session, fmt, apdup, SR_UNKNOWN_T, &val, cntp, false);
 	va_end(apdup);
 
 	if (rc)
