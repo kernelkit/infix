@@ -185,6 +185,11 @@ module infix-routing {
     container default-route-advertise {
       description "Distribute default route to network";
       leaf enable {
+        status obsolete;
+        description "Legacy, replaced by 'enabled'.";
+        type boolean;
+      }
+      leaf enabled {
         description "Distribute default route";
         type boolean;
       }
