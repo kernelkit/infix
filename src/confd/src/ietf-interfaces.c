@@ -736,9 +736,11 @@ static int netdag_gen_ethtool(struct dagger *net, struct lyd_node *cif, struct l
 static int bridge_diff_vlan_port(struct dagger *net, FILE *br, const char *brname, int vid,
 				       const char *brport, int tagged, enum lydx_op op)
 {
-	int pvid = 0;
+	int err, pvid = 0;
 
-	srx_get_int(net->session, &pvid, SR_UINT16_T, IF_XPATH "[name='%s']/bridge-port/pvid", brport);
+	err = srx_get_int(net->session, &pvid, SR_UINT16_T, IF_XPATH "[name='%s']/bridge-port/pvid", brport);
+	if (err)
+		return err;
 
 	if (op != LYDX_OP_CREATE) {
 		fprintf(br, "vlan del vid %d dev %s\n", vid, brport);
