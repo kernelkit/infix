@@ -16,7 +16,7 @@
 #                |              |                                       |        |
 #                |              |                                       |        |
 #     +-------+  |             +----------+                 +------------+       +--------+
-#     | msend +--+             | mreceive |                 | mreceive   |       | mesend |
+#     | msend +--+             | mreceive |                 | mreceive   |       | msend |
 #     +-------+                +----------+                 +------------+       +--------+
 #      10.0.1.11                 10.0.2.11                      10.0.1.22         10.0.2.22
 #
@@ -239,60 +239,50 @@ with infamy.Test() as test:
         })
 
     with test.step("Check multicast receieved on correct port and VLAN"):
-        _, hport10 = env.ltop.xlate("host", "data10")
-        _, hport11 = env.ltop.xlate("host", "data11")
-        _, hport20 = env.ltop.xlate("host", "data20")
-        _, hport21 = env.ltop.xlate("host", "data21")
-        with infamy.IsolatedMacVlan(hport10) as ns10, \
-             infamy.IsolatedMacVlan(hport11) as ns11, \
-             infamy.IsolatedMacVlan(hport20) as ns20, \
-             infamy.IsolatedMacVlan(hport21) as ns21:
-            ns10.addip("10.0.1.11")
-            ns11.addip("10.0.2.11")
-            ns20.addip("10.0.1.22")
-            ns21.addip("10.0.2.22")
+        _, d1send = env.ltop.xlate("host", "data10")
+        _, d1receive = env.ltop.xlate("host", "data11")
+        _, d2receive = env.ltop.xlate("host", "data20")
+        _, d2send = env.ltop.xlate("host", "data21")
+        with infamy.IsolatedMacVlan(d1send) as d1send_ns, \
+             infamy.IsolatedMacVlan(d1receive) as d1receive_ns, \
+             infamy.IsolatedMacVlan(d2receive) as d2receive_ns, \
+             infamy.IsolatedMacVlan(d2send) as d2send_ns:
+            d1send_ns.addip("10.0.1.11")
+            d1receive_ns.addip("10.0.2.11")
+            d2receive_ns.addip("10.0.1.22")
+            d2send_ns.addip("10.0.2.22")
 
-            ns10.must_reach("10.0.1.1")
-            ns11.must_reach("10.0.2.1")
+            d1send_ns.must_reach("10.0.1.2")
+            d1receive_ns.must_reach("10.0.2.2")
 
-            vlan55_sender = mcast.MCastSender(ns10, "224.1.1.1")
-            vlan77_sender= mcast.MCastSender(ns11, "224.2.2.2")
-            vlan55_receiver = mcast.MCastReceiver(ns20, "224.1.1.1")
+            vlan55_sender = mcast.MCastSender(d1send_ns, "224.1.1.1")
+            vlan77_sender= mcast.MCastSender(d2send_ns, "224.2.2.2")
+            vlan55_receiver = mcast.MCastReceiver(d2receive_ns, "224.1.1.1")
 
-            snif_vlan55_sender_incorrect = infamy.Sniffer(ns10, "host 224.2.2.2")
-            snif_vlan77_receiver_incorrect = infamy.Sniffer(ns11, "host 224.1.1.1")
-            snif_vlan55_receiver_incorrect = infamy.Sniffer(ns20, "host 224.2.2.2")
-            snif_vlan77_sender_incorrect = infamy.Sniffer(ns21, "host 224.1.1.1")
+            snif_vlan55_sender_incorrect = infamy.Sniffer(d1send_ns, "host 224.2.2.2")
+            snif_vlan77_receiver_incorrect = infamy.Sniffer(d1receive_ns, "host 224.1.1.1")
+            snif_vlan55_receiver_incorrect = infamy.Sniffer(d2receive_ns, "host 224.2.2.2")
+            snif_vlan77_sender_incorrect = infamy.Sniffer(d2send_ns, "host 224.1.1.1")
 
-            snif_vlan55_receiver_correct = infamy.Sniffer(ns20, "host 224.1.1.1")
-            snif_vlan77_receiver_correct = infamy.Sniffer(ns11, "host 224.2.2.2")
+            snif_vlan55_receiver_correct = infamy.Sniffer(d2receive_ns, "host 224.1.1.1")
+            snif_vlan77_receiver_correct = infamy.Sniffer(d1receive_ns, "host 224.2.2.2")
 
-            with vlan55_sender:
-                with vlan77_sender:
-                    with vlan55_receiver:
-                        # TODO: Here should we check for 224.1.1.1 in mdb, also
-                        # verify that 224.2.2.2 does not exist in mdb
+            with vlan55_sender, vlan77_sender, vlan55_receiver:
+                with snif_vlan77_sender_incorrect, \
+                     snif_vlan77_receiver_incorrect, snif_vlan55_receiver_incorrect, \
+                     snif_vlan55_sender_incorrect, snif_vlan55_receiver_correct, \
+                     snif_vlan77_receiver_correct:
+                        time.sleep(5)
+                # TODO: Here should we check for 224.1.1.1 in mdb, also
+                # verify that 224.2.2.2 does not exist in mdb
 
-                        with snif_vlan77_sender_incorrect:
-                            time.sleep(5)
-                            assert(snif_vlan77_sender_incorrect.output().stdout == "")
-                        with snif_vlan77_receiver_incorrect:
-                            time.sleep(5)
-                        assert(snif_vlan77_receiver_incorrect.output().stdout == "")
-                        with snif_vlan55_receiver_incorrect:
-                            time.sleep(5)
-                        assert(snif_vlan55_receiver_incorrect.output().stdout == "")
-                        with snif_vlan55_sender_incorrect:
-                            time.sleep(5)
-                        assert(snif_vlan55_sender_incorrect.output().stdout == "")
-                        print("Multicast does not exist on ports/VLANs where they should not be")
-
-                        with snif_vlan55_receiver_correct:
-                            time.sleep(5)
-                        assert(snif_vlan55_receiver_correct.output().stdout != "")
-                        with snif_vlan77_receiver_correct:
-                            time.sleep(5)
-                        assert(snif_vlan77_receiver_correct.output().stdout != "")
-            print("Multicast received on correct port and VLAN")
+                assert(snif_vlan77_sender_incorrect.output().stdout == "")
+                assert(snif_vlan77_receiver_incorrect.output().stdout == "")
+                assert(snif_vlan55_receiver_incorrect.output().stdout == "")
+                assert(snif_vlan55_sender_incorrect.output().stdout == "")
+                print("Multicast does not exist on ports/VLANs where they should not be")
+                assert(snif_vlan55_receiver_correct.output().stdout != "")
+                assert(snif_vlan77_receiver_correct.output().stdout != "")
+                print("Multicast received on correct port and VLAN")
 
         test.succeed()
