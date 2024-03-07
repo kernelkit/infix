@@ -7,6 +7,9 @@ submodule infix-if-bridge {
   import iana-if-type {
     prefix ianaift;
   }
+  import ietf-routing-types {
+    prefix rt-types;
+  }
   import ietf-interfaces {
     prefix if;
   }
@@ -226,7 +229,7 @@ submodule infix-if-bridge {
 
         leaf group {
           description "IP multicast group.";
-          type inet:ip-address;
+          type rt-types:ip-multicast-group-address;
         }
 
         list ports {
