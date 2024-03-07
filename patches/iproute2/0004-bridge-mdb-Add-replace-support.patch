@@ -1,0 +1,101 @@
+From 8557acdc7218cbaf2b9d70ecfa118c05f988ed77 Mon Sep 17 00:00:00 2001
+From: Ido Schimmel <idosch@nvidia.com>
+Date: Thu, 15 Dec 2022 19:52:30 +0200
+Subject: [PATCH] bridge: mdb: Add replace support
+Organization: Addiva Elektronik
+
+Allow user space to replace MDB port group entries by specifying the
+'NLM_F_REPLACE' flag in the netlink message header.
+
+Examples:
+
+ # bridge mdb replace dev br0 port dummy10 grp 239.1.1.1 permanent source_list 192.0.2.1,192.0.2.2 filter_mode include
+ # bridge -d -s mdb show
+ dev br0 port dummy10 grp 239.1.1.1 src 192.0.2.2 permanent filter_mode include proto static     0.00
+ dev br0 port dummy10 grp 239.1.1.1 src 192.0.2.1 permanent filter_mode include proto static     0.00
+ dev br0 port dummy10 grp 239.1.1.1 permanent filter_mode include source_list 192.0.2.2/0.00,192.0.2.1/0.00 proto static     0.00
+
+ # bridge mdb replace dev br0 port dummy10 grp 239.1.1.1 permanent source_list 192.0.2.1,192.0.2.3 filter_mode exclude proto zebra
+ # bridge -d -s mdb show
+ dev br0 port dummy10 grp 239.1.1.1 src 192.0.2.3 permanent filter_mode include proto zebra  blocked    0.00
+ dev br0 port dummy10 grp 239.1.1.1 src 192.0.2.1 permanent filter_mode include proto zebra  blocked    0.00
+ dev br0 port dummy10 grp 239.1.1.1 permanent filter_mode exclude source_list 192.0.2.3/0.00,192.0.2.1/0.00 proto zebra     0.00
+
+ # bridge mdb replace dev br0 port dummy10 grp 239.1.1.1 temp source_list 192.0.2.4,192.0.2.3 filter_mode include proto bgp
+ # bridge -d -s mdb show
+ dev br0 port dummy10 grp 239.1.1.1 src 192.0.2.4 temp filter_mode include proto bgp     0.00
+ dev br0 port dummy10 grp 239.1.1.1 src 192.0.2.3 temp filter_mode include proto bgp     0.00
+ dev br0 port dummy10 grp 239.1.1.1 temp filter_mode include source_list 192.0.2.4/259.44,192.0.2.3/259.44 proto bgp     0.00
+
+Signed-off-by: Ido Schimmel <idosch@nvidia.com>
+Reviewed-by: Nikolay Aleksandrov <razor@blackwall.org>
+Signed-off-by: David Ahern <dsahern@kernel.org>
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ bridge/mdb.c      |  4 +++-
+ man/man8/bridge.8 | 13 ++++++++++---
+ 2 files changed, 13 insertions(+), 4 deletions(-)
+
+diff --git a/bridge/mdb.c b/bridge/mdb.c
+index d3afc900..60cf0066 100644
+--- a/bridge/mdb.c
++++ b/bridge/mdb.c
+@@ -31,7 +31,7 @@ static unsigned int filter_index, filter_vlan;
+ static void usage(void)
+ {
+ 	fprintf(stderr,
+-		"Usage: bridge mdb { add | del } dev DEV port PORT grp GROUP [src SOURCE] [permanent | temp] [vid VID]\n"
++		"Usage: bridge mdb { add | del | replace } dev DEV port PORT grp GROUP [src SOURCE] [permanent | temp] [vid VID]\n"
+ 		"       bridge mdb {show} [ dev DEV ] [ vid VID ]\n");
+ 	exit(-1);
+ }
+@@ -571,6 +571,8 @@ int do_mdb(int argc, char **argv)
+ 	if (argc > 0) {
+ 		if (matches(*argv, "add") == 0)
+ 			return mdb_modify(RTM_NEWMDB, NLM_F_CREATE|NLM_F_EXCL, argc-1, argv+1);
++		if (strcmp(*argv, "replace") == 0)
++			return mdb_modify(RTM_NEWMDB, NLM_F_CREATE|NLM_F_REPLACE, argc-1, argv+1);
+ 		if (matches(*argv, "delete") == 0)
+ 			return mdb_modify(RTM_DELMDB, 0, argc-1, argv+1);
+ 
+diff --git a/man/man8/bridge.8 b/man/man8/bridge.8
+index d4df772e..5bf15deb 100644
+--- a/man/man8/bridge.8
++++ b/man/man8/bridge.8
+@@ -126,7 +126,7 @@ bridge \- show / manipulate bridge addresses and devices
+ .BR [no]sticky " ] [ " [no]offloaded " ]"
+ 
+ .ti -8
+-.BR "bridge mdb" " { " add " | " del " } "
++.BR "bridge mdb" " { " add " | " del " | " replace " } "
+ .B dev
+ .I DEV
+ .B port
+@@ -873,8 +873,8 @@ if "no" is prepended then only entries without offloaded flag will be deleted.
+ objects contain known IP or L2 multicast group addresses on a link.
+ 
+ .P
+-The corresponding commands display mdb entries, add new entries,
+-and delete old ones.
++The corresponding commands display mdb entries, add new entries, replace
++entries and delete old ones.
+ 
+ .SS bridge mdb add - add a new multicast group database entry
+ 
+@@ -919,6 +919,13 @@ This command removes an existing mdb entry.
+ The arguments are the same as with
+ .BR "bridge mdb add" .
+ 
++.SS bridge mdb replace - replace a multicast group database entry
++If no matching entry is found, a new one will be created instead.
++
++.PP
++The arguments are the same as with
++.BR "bridge mdb add" .
++
+ .SS bridge mdb show - list multicast group database entries
+ 
+ This command displays the current multicast group membership table. The table
+-- 
+2.34.1
+
