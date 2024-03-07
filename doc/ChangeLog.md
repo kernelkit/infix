@@ -10,6 +10,14 @@ All notable changes to the project are documented in this file.
 > Development in progress, for daily updates see the team board:
 > <https://github.com/orgs/kernelkit/projects/3/views/2>
 
+### Changes
+- The bridge model now has built-in validation of port memberships,
+  i.e., a port must be a bridge member to be used in VLAN filtering
+- The bridge model only permits the bridge itself to be a tagged
+  member of VLANs -- meaning, the only way to set an IP address on
+  such bridges is to use a VLAN interface on top
+- A VLAN filtering bridge now validates that no IP address has been
+  set.  Use a VLAN interface on top for that (see above)
 
 ### Fixes
 
@@ -19,8 +27,12 @@ All notable changes to the project are documented in this file.
 - Reduced syslog errors for accesses no non-existing xpaths
 - Fix bogus warning about not properly updating `/etc/motd` in new
   `motd-banner` setting, introduced in v24.02.0
-- infix-routing model: For OSPF, the configuration setting in `default-route-advertise`, `enable`
-  has been obsoleted and replaced by `enabled`
+- infix-routing model: the `enable` configuration setting for OSPF, in
+  `default-route-advertise` has been obsoleted and replaced by `enabled`
+- Fix #328: when setting up a VLAN filtering bridge, the PVID for bridge
+  ports defaulted to 1, making it impossible to set up "tagged-only"
+  ports which drop ingressing untagged traffic
+
 
 [v24.02.0][] - 2024-03-01
 -------------------------
