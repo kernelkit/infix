@@ -1,0 +1,3 @@
+service <net/%i/exist> \
+	[2345] mcd -sn -f /etc/mcd/%i.conf -i %i \
+	-- Multicast querier daemon @%i

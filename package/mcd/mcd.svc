@@ -1,0 +1,1 @@
+service [2345789] env:-/etc/default/mcd /usr/sbin/mcd -sn $MCD_ARGS -- Multicast querier daemon

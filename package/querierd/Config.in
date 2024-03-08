@@ -1,6 +1,0 @@
-config BR2_PACKAGE_QUERIERD
-	bool "querierd"
-	help
-	  A bridge helper daemon for sending multicast queries.
-
-	  https://github.com/westermo/querierd
