@@ -1,0 +1,6 @@
+config BR2_PACKAGE_MCD
+	bool "mcd"
+	help
+	  A bridge helper daemon for sending multicast queries.
+
+	  https://github.com/kernelkit/mcd

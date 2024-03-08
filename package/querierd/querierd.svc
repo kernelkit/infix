@@ -1,2 +1,0 @@
-# Launch IGMP querier daemon
-service [2345789] env:-/etc/default/querierd /usr/sbin/querierd -sn $QUERIERD_ARGS -- IGMP querier daemon

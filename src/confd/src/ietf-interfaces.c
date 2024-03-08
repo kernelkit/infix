@@ -978,12 +978,12 @@ static void mcast_querier(const char *ifname, int mode, int interval)
 
 	DEBUG("mcast querier %s mode %d interval %d", ifname, mode, interval);
 	if (!mode) {
-		erasef("/etc/querierd/%s.conf", ifname);
-		systemf("initctl -bnq disable querierd@%s", ifname);
+		erasef("/etc/mcd/%s.conf", ifname);
+		systemf("initctl -bnq disable mcd@%s", ifname);
 		return;
 	}
 
-	fp = fopenf("w", "/etc/querierd/%s.conf", ifname);
+	fp = fopenf("w", "/etc/mcd/%s.conf", ifname);
 	if (!fp) {
 		ERRNO("Failed creating querier configuration for %s", ifname);
 		return;
@@ -993,7 +993,7 @@ static void mcast_querier(const char *ifname, int mode, int interval)
 	fprintf(fp, "iface %s enable %sigmpv3\n", ifname, mode == 1 ? "proxy-queries " : "");
 	fclose(fp);
 
-	systemf("initctl -bnq enable querierd@%s", ifname);
+	systemf("initctl -bnq enable mcd@%s", ifname);
 }
 
 static char *find_vlan_interface(sr_session_ctx_t *session, const char *brname, int vid)
