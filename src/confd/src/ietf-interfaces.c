@@ -1041,8 +1041,8 @@ static int vlan_mcast_settings(sr_session_ctx_t *session, FILE *br, const char *
 
 	interval = atoi(lydx_get_cattr(mcast, "query-interval"));
 	ifname = find_vlan_interface(session, brname, vid);
-
-	mcast_querier(ifname, querier, interval);
+	if (ifname)
+		mcast_querier(ifname, querier, interval);
 	fprintf(br, " mcast_querier %d mcast_query_interval %d",
 		ifname ? 0 : querier, interval * 100);
 
