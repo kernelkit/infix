@@ -130,40 +130,60 @@ By default, unlike other systems, persistent[^1] containers have no
 networking enabled.  All network access has to be set up explicitly.
 Currently two types of of container networks are supported:
 
- - `cni-host`: one end of a VETH pair, or a physical Ethernet port
- - `cni-bridge`: an IP masquerading bridge
+ - `host`: one end of a VETH pair, or a physical Ethernet port
+ - `bridge`: an IP masquerading bridge
 
+> For more information on VETH pairs, see the [Networking Guide][0].
 
-### CNI Bridge
+### Container Bridge
 
-All interface configuration is done in configure context.  Let's start
-by creating an IP masquerading bridge, a common default for containers:
+A container bridge is what most container setups use and users want.
+The difference from a regular bridge is that the container runtime fully
+manages them -- connecting containers automatically with VETH pairs and
+setting up firewall rules between the host and other containers, as well
+as managing port forwarding.  This transparent background management is
+what makes container use seem to be so simple.
+
+All interface configuration is done in configure context.
 
     admin@example-c0-ff-ee:/> configure
     admin@example-c0-ff-ee:/config> edit interface docker0
-    admin@example-c0-ff-ee:/config/interface/docker0/> set type bridge
-    admin@example-c0-ff-ee:/config/interface/docker0/> set container-network type cni-bridge
+    admin@example-c0-ff-ee:/config/interface/docker0/> set container-network
     admin@example-c0-ff-ee:/config/interface/docker0/> leave
 
-We have to declare the interface type, and then also declare it as a
-container network, ensuring the interface cannot be used by the system
-for any other purpose.  E.g., a `cni-host` interface is supposed to be
-used by a container, by declaring it as such we can guarantee that it
-would never accidentally be added as a bridge or lag port.  Hence, to
-move an interface currently set as a `bridge-port` it must be removed
-from the bridge before being given to a container.
+There is more to this story.  When using the CLI, and sticking to common
+interface nomenclature, Infix helps you with some of the boring stuff.
+E.g., creating a new interface with a name like `brN` or `dockerN`
+automatically *infers* the interface types, which you would otherwise
+have to set manually:
 
-The default subnet for a `cni-bridge` is 172.17.0.0/16, the bridge will
-take the `.1` address and hand out the rest of the range to containers
+    admin@example-c0-ff-ee:/config/interface/docker0/> set type bridge
+    admin@example-c0-ff-ee:/config/interface/docker0/> set container-network type bridge
+
+> **Note:** when doing the same operation over NETCONF there is no
+> inference, so all the "magic" settings needs to be defined.  This
+> makes the CLI very useful for first setup and then extracting the
+> resulting XML from the shell using the `cfg -X` command.
+
+We have to declare the interface as a container network, ensuring the
+interface cannot be used by the system for any other purpose.  E.g., a
+container `host` interface is supposed to be used by a container, by
+declaring it as such we can guarantee that it would never accidentally
+be added as a bridge or lag port.  Hence, to move an interface currently
+set as a `bridge-port` it must be removed from the bridge before being
+given to a container.
+
+The default subnet for a container `bridge` is 172.17.0.0/16, the bridge
+takes the `.1` address and hand out the rest of the range to containers
 in a round-robin like fashion.  A container with this `network` get an
 automatically created VETH pair connection to the bridge and a lot of
 other networking parameters (DNS, default route) are set up.
 
-Some of the defaults of a `cni-bridge` can be changed, e.g., instead of
-`set container-network type cni-bridge`, above, do:
+Some of the defaults of a container `bridge` can be changed, e.g.,
+instead of `set container-network type bridge`, above, do:
 
     admin@example-c0-ff-ee:/config/interface/docker0/> edit container-network
-    admin@example-c0-ff-ee:/config/interface/docker0/container-network/> set type cni-bridge
+    admin@example-c0-ff-ee:/config/interface/docker0/container-network/> set type bridge
     admin@example-c0-ff-ee:/config/interface/docker0/container-network/> edit subnet 192.168.0.0/16
     admin@example-c0-ff-ee:/config/interface/docker0/container-network/subnet/192.168.0.0/16/> set gateway 192.168.255.254
     admin@example-c0-ff-ee:/config/interface/docker0/container-network/subnet/192.168.0.0/16/> end
@@ -173,42 +193,44 @@ Some of the defaults of a `cni-bridge` can be changed, e.g., instead of
 	admin@example-c0-ff-ee:/config/interface/docker0/container-network/> end
     admin@example-c0-ff-ee:/config/interface/docker0/> leave
 
-Other network settings, like DNS and domain, use built-in defaults in
-CNI, but can be overridden from each container.  Other common settings
-per container is the IP address and name of the network interface inside
-the container.  The default, after each stop/start cycle, or reboot of
-the host, is to name the interfaces `eth0`, `eth1`, in the order they
-are given in the `network` list, and to give the container the next
-address in a `cni-bridge`.  Below an example of a system container calls
-`set network interface docker0`, here we show how to set options for
-that network:
+Other network settings, like DNS and domain, use built-in defaults, but
+can be overridden from each container.  Other common settings per
+container is the IP address and name of the network interface inside the
+container.  The default, after each stop/start cycle, or reboot of the
+host, is to name the interfaces `eth0`, `eth1`, in the order they are
+given in the `network` list, and to give the container the next address
+in a `bridge`.  Below an example of a system container calls `set
+network interface docker0`, here we show how to set options for that
+network:
 
     admin@example-c0-ff-ee:/config/container/ntpd/> edit network docker0 
     admin@example-c0-ff-ee:/config/container/ntpd/network/docker0/> 
     admin@example-c0-ff-ee:/config/container/ntpd/network/docker0/> set option 
-    <string>  Options for CNI bridges.
+    <string>  Options for masquerading container bridges.
     admin@example-c0-ff-ee:/config/container/ntpd/network/docker0/> help option 
     NAME
             option <string>
     
     DESCRIPTION
-            Options for CNI bridges.
-            Example: ip=1.2.3.4 to request a specific IP, both IPv4 and IPv6.
-            interface_name=foo0 name to set interface name inside container.
+            Options for masquerading container bridges.
+
+            Example: ip=1.2.3.4            -- request a specific IP (IPv4 or IPv6)
+                     mac=00:01:02:c0:ff:ee -- set fixed MAC address in container
+                     interface_name=foo0   -- set interface name inside container
     
     admin@example-c0-ff-ee:/config/container/ntpd/network/docker0/> set option ip=172.17.0.2
     admin@example-c0-ff-ee:/config/container/ntpd/network/docker0/> set option interface_name=wan
     admin@example-c0-ff-ee:/config/container/ntpd/network/docker0/> leave
 
 
-### CNI Host
+### Container Host Interface
 
 Another common use-case is to move a network interface into the network
-namespace of a container.  Which the CNI bridge network does behind the
-scenes with one end of the automatically created VETH pair.  This works
-with regular Ethernet interfaces as well, but here we will use a VETH
-pair as an example along with a regular bridge (where other Ethernet
-interfaces may live as well).
+namespace of a container.  Which the container bridge network type does
+behind the scenes with one end of the automatically created VETH pair.
+This works with regular Ethernet interfaces as well, but here we will
+use a VETH pair as an example along with a regular bridge (where other
+Ethernet interfaces may live as well).
 
     admin@example-c0-ff-ee:/config/> edit interface veth0
     admin@example-c0-ff-ee:/config/interface/veth0/> set veth peer ntpd
@@ -223,7 +245,7 @@ between the host and the `ntpd` container.  A perhaps more common case
 is to put `veth0` as a port in a bridge with other physical ports.  The
 point of the routed case is that port forwarding from the container in
 this case is limited to a single interface, not *all interfaces* as is
-the default in the CNI Bridge setup.
+the default in the masquerading container bridge setup.
 
 
 ### Host Networking
@@ -418,6 +440,7 @@ restarted.
 > keep over an upgrade.
 
 
+[0]:      networking.md
 [1]:      https://github.com/kernelkit/infix/blob/main/src/confd/yang/infix-containers%402023-12-14.yang
 [2]:      https://github.com/troglobit/mg
 [podman]: https://podman.io
