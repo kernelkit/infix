@@ -1,5 +1,13 @@
 # Linux Networking
 
+Infix aims to support all Linux Networking constructs.  The YANG models
+used to describe the system are chosen to fit well and leverage the
+underlying Linux kernel's capabilities.  The `ietf-interfaces.yang`
+model forms the base, extended with `ietf-ip.yang` and other layer-3
+IETF models.  The layer-2 bridge and aggregate models are defined by
+Infix to exploit the unique features not available in IEEE models.
+
+
 ## Interface LEGO®
 
 ![Linux Networking Blocks](img/lego.svg)
@@ -16,7 +24,7 @@
 
 ## Data Plane
 
-The blocks you ctose, and how you connect them, defines your data plane.
+The blocks you choose, and how you connect them, defines your data plane.
 Here we see an example of how to bridge a virtual port with a physical
 LAN.
 
