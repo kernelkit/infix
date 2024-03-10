@@ -60,10 +60,11 @@ admin@example:/config/> leave
 
 Here we add two ports to bridge `br0`: `eth0` and `eth1`. 
 
-> **Note:** Infix has many built-in helpers controlled by
-> convention. E.g., if you name your bridge `brN`, where `N` is a
-> number, Infix will set the interface type automatically for you, and
-> unlock all bridge features for you.
+> **Note:** Infix has many built-in helpers controlled by convention.
+> E.g., if you name your bridge `brN`, where `N` is a number, Infix sets
+> the interface type automatically and unlocks all bridge features.
+> Other "magic" names are `ethN.M` for VLAN M on top of `ethN`, or
+> `dockerN` to create an IP masquerading container bridge.
 
 #### VLAN Filtering Bridge
 
@@ -96,7 +97,11 @@ or for routing, the bridge must become a (tagged) member of the VLAN.
 admin@example:/config/interface/br0/> set bridge vlans vlan 10 tagged br0
 admin@example:/config/interface/br0/> set bridge vlans vlan 20 tagged br0
 ```
-> To route or to manage via a VLAN, a VLAN interface also needs to be created on top of the bridge, see section [VLAN Interfaces](#vlan-interfaces) below.
+
+> To route or to manage via a VLAN, a VLAN interface needs to be created
+> on top of the bridge, see section [VLAN Interfaces](#vlan-interfaces)
+> below for more on this topic.
+
 
 ### VLAN Interfaces
 
@@ -136,6 +141,45 @@ interface *eth0* is named *eth0.20*, and a VLAN interface for VID 10 on
 top of a bridge interface *br0* is named *vlan10*.
 
 > **Note:** If you name your VLAN interface `foo0.N` or `vlanN`, where `N` is a number, Infix will set the interface type automatically for you.
+
+
+### VETH Pairs
+
+A Virtual Ethernet (VETH) pair is basically a virtual Ethernet cable.  A
+cable can be "plugged in" to a bridge and the other end can be given to
+a [container](container.md), or plugged into another bridge.
+
+The latter example is useful if you have multiple bridges in the system
+with different properties (VLAN filtering, IEEE group forwarding, etc.),
+but still want some way of communicating between these domains.
+
+```
+admin@example:/> configure
+admin@example:/config/> edit interface veth0a
+admin@example:/config/interface/veth0a/> set veth peer veth0b
+admin@example:/config/interface/veth0a/> end
+admin@example:/config/> diff
+interfaces {
++  interface veth0a {
++    type veth;
++    veth {
++      peer veth0b;
++    }
++  }
++  interface veth0b {
++    type veth;
++    veth {
++      peer veth0a;
++    }
++  }
+}
+admin@example:/config/>
+```
+
+> **Note:** this is another example of the automatic inference of the
+> interface type from the name.  Any name can be used, but then you have
+> to set the interface type to `veth` manually.
+
 
 ## Management Plane
 
@@ -577,5 +621,3 @@ currently supported, namely `ipv4` and `ipv6`.
 [^2]: Link-local IPv6 addresses are implicitly enabled when enabling IPv6.
     IPv6 can be enabled/disabled per interface in the [ietf-ip][ietf-ip-yang]
     YANG model.
-
-
