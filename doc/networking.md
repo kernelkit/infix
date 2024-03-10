@@ -16,21 +16,38 @@
 
 ## Data Plane
 
-The blocks you ctose, and how you connect them, defines your data plane.  Here we see an example of how to bridge a virtual port with a physical LAN.
+The blocks you ctose, and how you connect them, defines your data plane.
+Here we see an example of how to bridge a virtual port with a physical
+LAN.
 
 ![Example of a 4-port switch with a link aggregate and a VETH pair to a container](img/dataplane.svg)
 
-Depending on the (optional) VLAN filtering of the bridge, the container may have full or limited connectivity with outside ports, as well as the internal CPU.
+Depending on the (optional) VLAN filtering of the bridge, the container
+may have full or limited connectivity with outside ports, as well as the
+internal CPU.
 
-In fact the virtual port connected to the bridge can be member of several VLANs, with each VLAN being an interface with an IP address inside the container.
+In fact the virtual port connected to the bridge can be member of
+several VLANs, with each VLAN being an interface with an IP address
+inside the container.
 
-Thanks to Linux, and technologies like switchdev, that allow you to split a switching fabric into unique (isolated) ports, the full separation and virtualization of all Ethernet layer properties are possible to share with a container.  Meaning, all the building blocks used on the left hand side can also be used freely on the right hand side as well.
+Thanks to Linux, and technologies like switchdev, that allow you to
+split a switching fabric into unique (isolated) ports, the full
+separation and virtualization of all Ethernet layer properties are
+possible to share with a container.  Meaning, all the building blocks
+used on the left hand side can also be used freely on the right hand
+side as well.
 
 ### Bridging
 
-This is the most central part of the system.  A bridge is a switch, and a switch is a bridge.  In Linux, setting up a bridge with ports connected to physical switch fabric, means you manage the actual switch fabric!
+This is the most central part of the system.  A bridge is a switch, and
+a switch is a bridge.  In Linux, setting up a bridge with ports
+connected to physical switch fabric, means you manage the actual switch
+fabric!
 
-In Infix ports are by default not switch ports, unless the customer specific factory config sets it up this way.  To enable switching between ports you create a bridge and then add ports to that bridge. That's it.
+In Infix ports are by default not switch ports, unless the customer
+specific factory config sets it up this way.  To enable switching
+between ports you create a bridge and then add ports to that
+bridge. That's it.
 
 ```
 admin@example:/> configure
@@ -43,12 +60,18 @@ admin@example:/config/> leave
 
 Here we add two ports to bridge `br0`: `eth0` and `eth1`. 
 
-> **Note:** Infix has many built-in helpers controlled by convention. E.g., if you name your bridge `brN`, where `N` is a number, Infix will set the interface type automatically for you, and unlock all bridge features for you.
+> **Note:** Infix has many built-in helpers controlled by
+> convention. E.g., if you name your bridge `brN`, where `N` is a
+> number, Infix will set the interface type automatically for you, and
+> unlock all bridge features for you.
 
 #### VLAN Filtering Bridge
 
-By default bridges in Linux do not filter based on VLAN tags.   It can be enabled in Infix when creating a bridge by adding a port to a VLAN as a tagged or untagged member. 
-Use the port default VID (PVID) setting to control VLAN association for traffic ingressing a port untagged (default PVID: 1). 
+By default bridges in Linux do not filter based on VLAN tags.  It can be
+enabled in Infix when creating a bridge by adding a port to a VLAN as a
+tagged or untagged member.  Use the port default VID (PVID) setting to
+control VLAN association for traffic ingressing a port untagged (default
+PVID: 1).
 
 ```
 admin@example:/config/> edit interface br0
@@ -66,7 +89,8 @@ This sets `eth0` as an untagged member of VLAN 10 and `eth1` as an
 untagged member of VLAN 20.  Switching between these ports is thus
 prohibited.
 
-To terminate a VLAN in the switch itself, either for switch management or for routing, the bridge must become a (tagged) member of the VLAN. 
+To terminate a VLAN in the switch itself, either for switch management
+or for routing, the bridge must become a (tagged) member of the VLAN.
 
 ```
 admin@example:/config/interface/br0/> set bridge vlans vlan 10 tagged br0
@@ -76,11 +100,17 @@ admin@example:/config/interface/br0/> set bridge vlans vlan 20 tagged br0
 
 ### VLAN Interfaces
 
-Creating a VLAN can be done in many ways. This section assumes VLAN interfaces created atop another Linux interface.  E.g., the VLAN interfaces created on top of the Ethernet interface or bridge in the picture below.
+Creating a VLAN can be done in many ways. This section assumes VLAN
+interfaces created atop another Linux interface.  E.g., the VLAN
+interfaces created on top of the Ethernet interface or bridge in the
+picture below.
 
 ![VLAN interface on top of Ethernet or Bridge interfaces](img/interface-vlan-variants.svg)
 
-A VLAN interface is basically a filtering abstraction. When you run `tcpdump` on a VLAN interface you will only see the frames matching the VLAN ID of the interface, compared to *all* the VLAN IDs if you run `tcpdump` on the lower-layer interface.
+A VLAN interface is basically a filtering abstraction. When you run
+`tcpdump` on a VLAN interface you will only see the frames matching the
+VLAN ID of the interface, compared to *all* the VLAN IDs if you run
+`tcpdump` on the lower-layer interface.
 
 ```
 admin@example:/> configure 
@@ -90,7 +120,8 @@ admin@example:/config/interface/eth0.20/> set vlan lower-layer-if eth0
 admin@example:/config/interface/eth0.20/> leave
 ```
 
-The example below assumes bridge br0 is already created, see [VLAN Filtering Bridge](#vlan-filtering-bridge).
+The example below assumes bridge br0 is already created, see [VLAN
+Filtering Bridge](#vlan-filtering-bridge).
 
 ```
 admin@example:/> configure 
@@ -100,7 +131,9 @@ admin@example:/config/interface/vlan10/> set vlan lower-layer-if br0
 admin@example:/config/interface/vlan10/> leave
 ```
 
-As conventions, a VLAN interface for VID 20 on top of an Ethernet interface *eth0* is named *eth0.20*, and a VLAN interface for VID 10 on top of a bridge interface *br0* is named *vlan10*. 
+As conventions, a VLAN interface for VID 20 on top of an Ethernet
+interface *eth0* is named *eth0.20*, and a VLAN interface for VID 10 on
+top of a bridge interface *br0* is named *vlan10*.
 
 > **Note:** If you name your VLAN interface `foo0.N` or `vlanN`, where `N` is a number, Infix will set the interface type automatically for you.
 
@@ -108,7 +141,8 @@ As conventions, a VLAN interface for VID 20 on top of an Ethernet interface *eth
 
 This section details IP Addresses And Other Per-Interface IP settings.
 
-Infix support several network interface types, each can be assigned one or more IP addresses, both IPv4 and IPv6 are supported.
+Infix support several network interface types, each can be assigned one
+or more IP addresses, both IPv4 and IPv6 are supported.
 
 ![IP on top of network interface examples](img/ip-iface-examples.svg)
 
@@ -245,7 +279,8 @@ The resulting address (10.1.2.100/24) is of type *dhcp*.
 
 #### Disabling IPv6 link-local address(es)
 
-The (only) way to disable IPv6 link-local addresses is by disabling IPv6 on the interface.
+The (only) way to disable IPv6 link-local addresses is by disabling IPv6
+on the interface.
 
 ```(disabling
 admin@example:/> configure
@@ -479,10 +514,12 @@ an Ethernet interface can be done as follows.
 
 
 #### Debug OSPFv2
-Using NETCONF and the YANG model *ietf-routing* it is possible to read the OSPF routing table, neighbors
-and more, that may be useful for debugging the OSPFv2 setup. The CLI
-has various OSPF status commands such as `show ospf neighbor`, `show
-ospf interface` and `show ospf routes`.
+
+Using NETCONF and the YANG model *ietf-routing* it is possible to read
+the OSPF routing table, neighbors and more, that may be useful for
+debugging the OSPFv2 setup. The CLI has various OSPF status commands
+such as `show ospf neighbor`, `show ospf interface` and `show ospf
+routes`.
 
     admin@example:/> show ospf neighbor 
 
@@ -494,6 +531,7 @@ ospf interface` and `show ospf routes`.
 
 
 ### View routing table
+
 The routing table can be viewed from the operational datastore over
 NETCONF or using the CLI:
 
