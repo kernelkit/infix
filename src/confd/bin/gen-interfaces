@@ -56,17 +56,26 @@ EOF
     exit 0
 }
 
+iftype()
+{
+    iftype=$(ip -d -j link show "$1" |jq -r .[].parentbus)
+    if [ "$iftype" = "virtio" ]; then
+	echo "infix-if-type:etherlike"
+    else
+	echo "infix-if-type:ethernet"
+    fi
+}
+
 # shellcheck disable=SC3043
 gen_iface_json()
 {
-    local iftype="$1"
-    local ifname="$2"
-    local br="$3"
+    local ifname="$1"
+    local br="$2"
 
     cat <<EOF
       ,{
         "name": "$ifname",
-        "type": "$iftype",
+        "type": "$(iftype "$ifname")",
 EOF
 
     if [ -n "$br" ]; then
@@ -131,20 +140,14 @@ while [ "$1" != "" ]; do
     shift
 done
 
+# All exeternal interfaces
 phys_ifaces=$(ip -d -j link show | jq -r '
          .[] |
          select(.link_type == "ether") |
          select(.group != "internal")  |
          select(has("parentbus")) |
-         select(.parentbus != "virtio") |
          .ifname' | sort -V)
-virtio_ifaces=$(ip -d -j link show | jq -r '
-         .[] |
-         select(.link_type == "ether") |
-         select(.group != "internal")  |
-         select(has("parentbus")) |
-         select(.parentbus == "virtio") |
-         .ifname' | sort -V)
+# All interfaces classified as switch ports
 ports=$(ip -d -j link show group port | jq -r '
          .[] |
          select(.link_type == "ether") |
@@ -152,8 +155,8 @@ ports=$(ip -d -j link show group port | jq -r '
          select(has("parentbus")) |
          .ifname' | sort -V)
 
-eth_ifaces="$(filter_iface_ports "$phys_ifaces" "$ports")"
-ethlike_ifaces="$(filter_iface_ports "$virtio_ifaces" "$ports")"
+# Remaining external interfaces not classified as switch ports
+ifaces="$(filter_iface_ports "$phys_ifaces" "$ports")"
 
 cat <<EOF
 {
@@ -188,9 +191,8 @@ fi
 
 cat <<EOF
       }
-$(for iface in $eth_ifaces; do gen_iface_json "infix-if-type:ethernet" "$iface"; done)
-$(for iface in $ethlike_ifaces; do gen_iface_json "infix-if-type:etherlike" "$iface"; done)
-$(for iface in $ports; do gen_iface_json "infix-if-type:ethernet" "$iface" "$bridge"; done)
+$(for iface in $ifaces; do gen_iface_json "$iface"; done)
+$(for iface in $ports;  do gen_iface_json "$iface" "$bridge"; done)
     ]
 EOF
 if [ "$dhcp" = "true" ] && [ -n "$bridge" ]; then
