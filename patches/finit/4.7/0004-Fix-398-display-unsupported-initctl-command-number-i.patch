@@ -1,0 +1,30 @@
+From 146bf5512208cb906edddb3f0108cf6f7c525044 Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Mon, 11 Mar 2024 15:55:39 +0100
+Subject: [PATCH 4/4] Fix #398: display unsupported initctl command (number) in
+ log
+Organization: Addiva Elektronik
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ src/api.c | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/src/api.c b/src/api.c
+index c19c0d8..8d29a23 100644
+--- a/src/api.c
++++ b/src/api.c
+@@ -377,7 +377,9 @@ static void api_cb(uev_t *w, void *arg, int events)
+ 		case INIT_CMD_POWEROFF:
+ 		case INIT_CMD_SUSPEND:
+ 			if (IS_RESERVED_RUNLEVEL(runlevel)) {
+-				warnx("Unsupported command in runlevel S and 6/0.");
++				strterm(rq.data, sizeof(rq.data));
++				warnx("Unsupported command (cmd: %d, data: %s) in runlevel S and 6/0.",
++				      rq.cmd, rq.data);
+ 				goto leave;
+ 			}
+ 		default:
+-- 
+2.34.1
+
