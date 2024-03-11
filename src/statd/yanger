@@ -708,8 +708,39 @@ def add_ethtool_std(ifname, iface_out):
             num = round((int(num) / 1000), 3)
             insert(iface_out, "ieee802-ethernet-interface:ethernet", "speed", str(num))
 
+def get_mdb_data(ifname):
+    #data=run_json_cmd(['mctl', '-i' 'br0', 'show', 'groups', 'json'], "bridge-mdb.json")
+    data=run_json_cmd(['cat', '/home/lazzer/Documents/addiva/infix/brout-vlan'], "bridge-groups.json")
+    mdb={}
+
+    for group in data:
+        entry={}
+
+        entry["ports"]=[]
+        entry["group"] = group.get("group") or group.get("mac")
+
+        for port in group.get("ports"):
+            entry["ports"].append({"port": port})
+        if group.get('vid'):
+            entry['vid'] = group['vid']
+            if mdb.get(entry['vid']) == None:
+                mdb[entry['vid']] = []
+            mdb[entry['vid']].append(entry)
+        else:
+            if mdb.get("global") == None:
+                mdb["global"] = []
+            mdb["global"].append(entry)
+    return mdb
+
+def add_mdb_to_bridge(brname, iface_out):
+    mdb = get_mdb_data(brname)
+    #data=run_json_cmd(['mctl', '-i' 'br0', 'show', 'groups', 'json'], "bridge-groups.json")
+    #data=run_json_cmd(['cat', '/home/lazzer/Documents/addiva/infix/brout'], "bridge-groups.json")
+
+    insert(iface_out, "infix-interfaces:bridge", "mdb", "entry", mdb.get("global", []))
+
 # Helper function to add tagged/untagged interfaces to a vlan dict in a list
-def _add_vlan_iface(vlans, vid, key, val):
+def _add_vlan_iface(vlans, mdb, vid, key, val):
     for d in vlans:
         if d['vid'] == vid:
             if key in d:
@@ -717,7 +748,8 @@ def _add_vlan_iface(vlans, vid, key, val):
             else:
                 d[key] = [val]
             return
-    vlans.append({'vid': vid, key: [val]})
+
+    vlans.append({'vid': vid, "mdb": {"entry": mdb}, key: [val]})
 
 def add_vlans_to_bridge(brname, iface_out):
     slaves = [] # Contains all interfaces that has this bridge as 'master'
@@ -729,12 +761,15 @@ def add_vlans_to_bridge(brname, iface_out):
     for iface in run_json_cmd(['bridge', '-j', 'vlan'], "bridge-vlan.json"):
         if iface['ifname'] not in slaves and iface['ifname'] != brname:
             continue
+        mdb_data = get_mdb_data(brname)
 
         for vlan in iface['vlans']:
+            mdb=get_mdb_data(brname)
+            mdb_entry=mdb.get(vlan['vlan'], {})
             if 'flags' in vlan and 'Egress Untagged' in vlan['flags']:
-                _add_vlan_iface(vlans, vlan['vlan'], 'untagged', iface['ifname'])
+                _add_vlan_iface(vlans, mdb_entry, vlan['vlan'], 'untagged', iface['ifname'])
             else:
-                _add_vlan_iface(vlans, vlan['vlan'], 'tagged', iface['ifname'])
+                _add_vlan_iface(vlans, mdb_entry, vlan['vlan'], 'tagged', iface['ifname'])
 
     insert(iface_out, "infix-interfaces:bridge", "vlans", "vlan", vlans)
 
@@ -779,6 +814,7 @@ def main():
 
         if 'type' in iface_out and iface_out['type'] == "infix-if-type:bridge":
             add_vlans_to_bridge(ifname, iface_out)
+            add_mdb_to_bridge(ifname, iface_out)
 
     elif args.model == 'ietf-routing':
         yang_data = {

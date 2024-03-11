@@ -3,7 +3,9 @@ submodule infix-if-bridge {
   belongs-to infix-interfaces {
     prefix infix-if;
   }
-
+  import ietf-yang-types {
+    prefix yang;
+  }
   import iana-if-type {
     prefix ianaift;
   }
@@ -246,9 +248,11 @@ submodule infix-if-bridge {
 
         leaf group {
           description "IP multicast group.";
-          type rt-types:ip-multicast-group-address;
+          type union {
+            type rt-types:ip-multicast-group-address;
+            type yang:phys-address;
+          }
         }
-
         list ports {
           description "Port members of group.";
 
