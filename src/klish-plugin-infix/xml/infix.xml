@@ -223,12 +223,14 @@
         <ACTION sym="script">bridge -color fdb</ACTION>
       </COMMAND>
       <COMMAND name="mdb" help="Show mulficast forwarding database">
-        <ACTION sym="script">bridge -color mdb</ACTION>
-        <SWITCH name="optional" min="0">
-          <COMMAND name="detailed" help="Detailed (full) output">
+	<SWITCH name="optional" min="0">
+	  <COMMAND name="detailed" help="Detailed (full) output">
             <ACTION sym="script">bridge -color -d mdb</ACTION>
-          </COMMAND>
-        </SWITCH>
+	  </COMMAND>
+	</SWITCH>
+        <ACTION sym="script"> sysrepocfg -d operational -X -f json -x /ietf-interfaces:interfaces | \
+	/usr/libexec/statd/cli-pretty show-bridge-mdb
+	</ACTION>
       </COMMAND>
       <COMMAND name="vlan" help="Show VLAN table">
         <ACTION sym="script">bridge -color vlan</ACTION>

@@ -10,6 +10,11 @@ class Pad:
     state = 12
     data = 41
 
+class PadMdb:
+    vlan = 6
+    group = 20
+    ports = 20
+
 class PadRoute:
     prefix = 30
     protocol = 10
@@ -164,6 +169,7 @@ class Iface:
         self.speed = get_json_data('', self.data, 'ieee802-ethernet-interface:ethernet', 'speed')
         self.phys_address = data.get('phys-address', '')
 
+        self.br_mdb = get_json_data({}, self.data, 'infix-interfaces:bridge', 'multicast-filters')
         self.br_vlans = get_json_data({}, self.data, 'infix-interfaces:bridge', 'vlans', "vlan")
         self.bridge = get_json_data('', self.data, 'infix-interfaces:bridge-port', 'bridge')
         self.pvid = get_json_data('', self.data, 'infix-interfaces:bridge-port', 'pvid')
@@ -394,6 +400,35 @@ class Iface:
                 key = remove_yang_prefix(key)
                 print(f"eth-{key:<{25}}: {val}")
 
+    def pr_mdb(self):
+        header_printed=False
+        for group in self.br_mdb.get("multicast-filter", {}):
+            if header_printed == 0:
+                hdr = (f"{'GROUP':<{PadMdb.group+PadMdb.vlan}}"
+                       f"{'PORTS':<{PadMdb.ports}}")
+                print(Decore.invert(hdr))
+                header_printed=True
+            row = f"{group['group']:<{PadMdb.group+PadMdb.vlan}}"
+            ports= ", ".join(port_dict["port"] for port_dict in group["ports"])
+            row += f"{ports}"
+            print(row)
+
+    def pr_vlans_mdb(self):
+        for vlan in self.br_vlans:
+            header_printed = False
+            filters=vlan.get("multicast-filters", {})
+            for group in filters.get("multicast-filter", []):
+                if not header_printed:
+                    hdr = (f"{'VID':<{PadMdb.vlan}}"
+                           f"{'GROUP':<{PadMdb.group}}"
+                           f"{'PORTS':<{PadMdb.ports}}")
+                    print(Decore.invert(hdr))
+                    header_printed = False
+                row = f"{vlan['vid']:<{PadMdb.vlan}}"
+                row += f"{group['group']:<{PadMdb.group}}"
+                ports= ", ".join(port_dict["port"] for port_dict in group["ports"])
+                row += f"{ports}"
+                print(row)
 
 def find_iface(_ifaces, name):
     for _iface in [Iface(data) for data in _ifaces]:
@@ -403,6 +438,9 @@ def find_iface(_ifaces, name):
     return False
 
 
+def version_sort(iface):
+    return [int(x) if x.isdigit() else x for x in re.split(r'(\d+)', iface['name'])]
+
 def pr_interface_list(json):
     hdr = (f"{'INTERFACE':<{Pad.iface}}"
            f"{'PROTOCOL':<{Pad.proto}}"
@@ -410,9 +448,6 @@ def pr_interface_list(json):
            f"{'DATA':<{Pad.data}}")
 
     print(Decore.invert(hdr))
-
-    def version_sort(iface):
-        return [int(x) if x.isdigit() else x for x in re.split(r'(\d+)', iface['name'])]
 
     ifaces = sorted(json["ietf-interfaces:interfaces"]["interface"], key=version_sort)
 
@@ -449,12 +484,26 @@ def show_interfaces(json, name):
         if not iface:
             print(f"Interface \"{name}\" not found")
             sys.exit(1)
-        iface.pr_iface()
+        else:
+            iface.pr_iface()
     else:
         if not json.get("ietf-interfaces:interfaces"):
             print(f"Error, top level \"ietf-interfaces:interfaces\" missing")
             sys.exit(1)
         pr_interface_list(json)
+
+def show_bridge_mdb(json):
+    bridges=[]
+    if not json.get("ietf-interfaces:interfaces"):
+        print(f"Error, top level \"ietf-interfaces:interface\" missing")
+        sys.exit(1)
+    ifaces = sorted(json["ietf-interfaces:interfaces"]["interface"], key=version_sort)
+    for iface in [Iface(data) for data in ifaces]:
+        if iface.type != "infix-if-type:bridge":
+            continue
+
+        iface.pr_mdb()
+        iface.pr_vlans_mdb()
 
 def show_routing_table(json, ip):
     if not json.get("ietf-routing:routing"):
@@ -531,7 +580,6 @@ def main():
         print("Error, unexpected error parsing JSON")
         sys.exit(1)
 
-
     parser = argparse.ArgumentParser(description="JSON CLI Pretty Printer")
     subparsers = parser.add_subparsers(dest='command', help='Commands')
 
@@ -540,6 +588,8 @@ def main():
 
     parser_show_interfaces = subparsers.add_parser('show-interfaces', help='Show interfaces')
     parser_show_interfaces.add_argument('-n', '--name', help='Interface name')
+
+    parser_show_bridge_mdb = subparsers.add_parser('show-bridge-mdb', help='Show bridge MDB')
 
     parser_show_software = subparsers.add_parser('show-software', help='Show software versions')
     parser_show_software.add_argument('-n', '--name', help='Slotname')
@@ -554,6 +604,8 @@ def main():
         show_routing_table(json_data, args.ip)
     elif args.command == "show-software":
         show_software(json_data, args.name)
+    elif args.command == "show-bridge-mdb":
+        show_bridge_mdb(json_data)
     elif args.command == "show-hardware":
         show_hardware(json_data)
     else:

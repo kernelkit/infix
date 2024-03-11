@@ -33,7 +33,7 @@ print_update_txt() {
     echo "# the template file."
     echo
     echo "# Here's how you update the CLI output templates:"
-    echo "# $SCRIPT_PATH/run.sh update <model>"
+    echo "# $SCRIPT_PATH/run.sh update <cli-pretty command>"
     echo
     echo "# Check the result"
     echo "# git diff"
@@ -57,15 +57,17 @@ if [ $# -eq 2 ] && [ $1 = "update" ]; then
     elif [ $2 = "show-routing-table" ]; then
       "$SR_EMULATOR_TOOL" | "$CLI_PRETTY_TOOL" "show-routing-table" -i "ipv4" > "$CLI_OUTPUT_PATH/show-routes-ipv4.txt"
       "$SR_EMULATOR_TOOL" | "$CLI_PRETTY_TOOL" "show-routing-table" -i "ipv6" > "$CLI_OUTPUT_PATH/show-routes-ipv6.txt"
+    elif [ $2  = "show-bridge-mdb" ]; then
+      "$SR_EMULATOR_TOOL" | "$CLI_PRETTY_TOOL" "show-bridge-mdb" > "$CLI_OUTPUT_PATH/show-bridge-mdb.txt"
     else
-      echo "Unsupported model $2"
+      echo "Unsupported cli-pretty command $2"
       exit 1
     fi
    echo "All files updated. Check git diff and commit if they look OK"
     exit 0
 fi
 
-echo "1..9"
+echo "1..10"
 echo "# Running:"
 
 # Show interfaces
@@ -77,6 +79,15 @@ if ! diff -u "$CLI_OUTPUT_PATH/show-interfaces.txt" "$CLI_OUTPUT_FILE"; then
     fail "\"show interfaces\" output has changed"
 fi
 ok "\"show interfaces\" output looks intact"
+
+echo "# $SR_EMULATOR_TOOL | $CLI_PRETTY_TOOL show-bridge-mdb"
+"$SR_EMULATOR_TOOL" | "$CLI_PRETTY_TOOL" "show-bridge-mdb" > "$CLI_OUTPUT_FILE"
+
+if ! diff -u "$CLI_OUTPUT_PATH/show-bridge-mdb.txt" "$CLI_OUTPUT_FILE"; then
+    print_update_txt
+    fail "\"show bridge mdb\" output has changed"
+fi
+ok "\"show bridge mdb\" output looks intact"
 
 # Show ipv4 routes
 echo "# $SR_EMULATOR_TOOL | $CLI_PRETTY_TOOL show-routing-table -i ipv4"
