@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <jansson.h>
+#include <net/if.h>
 
 #include <srx/common.h>
 #include <srx/helpers.h>
@@ -35,6 +36,15 @@ int ip_link_check_group(const char *ifname, const char *group)
 	json_t *j_iface;
 	json_t *j_root;
 	json_t *j_val;
+
+	/* Check if it's a container interface */
+	if (fexistf("/etc/cni/net.d/%s.conflist", ifname)) {
+		/* Has it been handed over to another network namespace already? */
+		if (!if_nametoindex(ifname)) {
+			DEBUG("Interface %s currently in use by a container, skipping.", ifname);
+			return 0;
+		}
+	}
 
 	snprintf(cmd, sizeof(cmd), "ip -s -d -j link show dev %s 2>/dev/null", ifname);
 
