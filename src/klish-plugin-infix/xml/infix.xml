@@ -360,7 +360,7 @@
 
     <SWITCH name="optional" min="0">
       <COMMAND name="brief" help="Simplified (human-readable) output" mode="switch">
-        <ACTION sym="script">ip -color -br addr</ACTION>
+        <ACTION sym="script">ip -color -br addr | sort -V | sed 's/@dsa[0-9]/     /'</ACTION>
       </COMMAND>
 
       <COMMAND name="detailed" help="Detailed (full) output" mode="switch">
