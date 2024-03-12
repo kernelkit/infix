@@ -298,7 +298,7 @@ host loads its `startup-config` (or even `factory-config`) a temporary
 file is created using the decoded base64 data from the `content` node.
 
     admin@example-c0-ff-ee:/config/container/ntpd/> edit mount ntpd.conf
-    admin@example-c0-ff-ee:/config/container/ntpd/mount/ntpd.conf> set content
+    admin@example-c0-ff-ee:/config/container/ntpd/mount/ntpd.conf> text-editor content
     ... interactive editor starts up ...
     admin@example-c0-ff-ee:/config/container/ntpd/mount/ntpd.conf> set target /etc/ntpd.conf
     admin@example-c0-ff-ee:/config/container/ntpd/mount/ntpd.conf> end
@@ -311,6 +311,9 @@ the contents are base64 encoded and stored in the candidate datastore.
 > **Note:** since these files are always recreated when the host is
 > restarted, changes made by the container are not preserved, or saved
 > back to the host's startup-config even if the read-only option is off.
+
+Infix has three different text editors available.  For more information,
+see [CLI Text Editor](cli/text-editor.md).
 
 
 Example Containers
@@ -380,7 +383,7 @@ For really advanced setups, the following will be the only alternative:
     admin@example-c0-ff-ee:/config/container/system/> set network host
     admin@example-c0-ff-ee:/config/container/system/> edit mount nftables.conf
     admin@example-c0-ff-ee:/config/container/system/mount/nftables.conf/> set target /etc/nftables.conf
-    admin@example-c0-ff-ee:/config/container/system/mount/nftables.conf/> set content
+    admin@example-c0-ff-ee:/config/container/system/mount/nftables.conf/> text-editor content
     ... interactive editor starts up where you can paste your rules ...
     admin@example-c0-ff-ee:/config/container/system/mount/nftables.conf/> leave
 
@@ -403,7 +406,7 @@ use volumes in this example.
     admin@example-c0-ff-ee:/config/container/ntpd/> set network interface ntpd    # From veth0 above
     admin@example-c0-ff-ee:/config/container/ntpd/> edit mount ntp.conf
     admin@example-c0-ff-ee:/config/container/ntpd/mount/ntp.conf/> set target /etc/ntp.conf
-    admin@example-c0-ff-ee:/config/container/ntpd/mount/ntp.conf/> set content
+    admin@example-c0-ff-ee:/config/container/ntpd/mount/ntp.conf/> text-editor content
     ... interactive editor starts up where you can paste your rules ...
     admin@example-c0-ff-ee:/config/container/ntpd/mount/ntp.conf/> end
     admin@example-c0-ff-ee:/config/container/ntpd/> edit volume varlib
