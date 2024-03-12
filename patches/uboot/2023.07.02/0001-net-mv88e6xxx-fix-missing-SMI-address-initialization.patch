@@ -1,0 +1,51 @@
+From e4213fc62d3d6a6733e3026b63dd6314a6f09ee2 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Marek=20Moj=C3=ADk?= <marek.mojik@nic.cz>
+Date: Wed, 6 Dec 2023 15:35:56 +0100
+Subject: [PATCH 1/6] net: mv88e6xxx: fix missing SMI address initialization
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Addiva Elektronik
+
+The mv88e6xxx driver does not currently initialize the smi_addr field, but
+instead keeps the default zero value. This leads to driver being unusable
+on devices where the switch is not on address zero of the mdio bus. Fix
+this problem by reading the SMI address from device tree.
+
+Signed-off-by: Marek Mojík <marek.mojik@nic.cz>
+Reviewed-by: Marek Behún <kabel@kernel.org>
+Reviewed-by: Stefan Roese <sr@denx.de>
+Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
+---
+ drivers/net/mv88e6xxx.c | 8 ++++++++
+ 1 file changed, 8 insertions(+)
+
+diff --git a/drivers/net/mv88e6xxx.c b/drivers/net/mv88e6xxx.c
+index 64e860e324..9be8e3273c 100644
+--- a/drivers/net/mv88e6xxx.c
++++ b/drivers/net/mv88e6xxx.c
+@@ -679,6 +679,7 @@ static int mv88e6xxx_probe(struct udevice *dev)
+ {
+ 	struct dsa_pdata *dsa_pdata = dev_get_uclass_plat(dev);
+ 	struct mv88e6xxx_priv *priv = dev_get_priv(dev);
++	fdt_addr_t smi_addr;
+ 	int val, ret;
+ 
+ 	if (ofnode_valid(dev_ofnode(dev)) &&
+@@ -687,6 +688,13 @@ static int mv88e6xxx_probe(struct udevice *dev)
+ 		return -ENODEV;
+ 	}
+ 
++	smi_addr = dev_read_addr(dev);
++	if (smi_addr == FDT_ADDR_T_NONE) {
++		dev_err(dev, "Missing SMI address\n");
++		return -EINVAL;
++	}
++	priv->smi_addr = smi_addr;
++
+ 	/* probe internal mdio bus */
+ 	ret = mv88e6xxx_probe_mdio(dev);
+ 	if (ret)
+-- 
+2.34.1
+
