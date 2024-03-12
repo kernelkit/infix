@@ -361,10 +361,10 @@ static int iface_gen_cni(const char *ifname, struct lyd_node *cif)
 	}
 
 	if (!strcmp(type, "host"))
-		return cni_host(net, ifname);
+		return cni_host(net, ifname) ?: 1;
 
 	if (!strcmp(type, "bridge"))
-		return cni_bridge(net, ifname);
+		return cni_bridge(net, ifname) ?: 1;
 
 	ERROR("Unknown container network type %s, skipping.", type);
 	return 0;
