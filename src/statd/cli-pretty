@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-import json
-import sys
 import argparse
+import json
+import re
+import sys
 
 parser = argparse.ArgumentParser(description="JSON CLI Pretty Printer")
 parser.add_argument("module", help="IETF Module")
@@ -404,7 +405,10 @@ def pr_interface_list(json):
 
     print(Decore.invert(hdr))
 
-    ifaces = sorted(json["ietf-interfaces:interfaces"]["interface"], key=lambda x: x['name'])
+    def version_sort(iface):
+        return [int(x) if x.isdigit() else x for x in re.split(r'(\d+)', iface['name'])]
+
+    ifaces = sorted(json["ietf-interfaces:interfaces"]["interface"], key=version_sort)
 
     for iface in [Iface(data) for data in ifaces]:
         if iface.is_bridge():
