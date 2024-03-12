@@ -1,0 +1,29 @@
+From 90a4df8d1281fd64d048ec1bc91e8cec5f96df06 Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Mon, 11 Mar 2024 18:53:22 +0100
+Subject: [PATCH 5/6] plugins: on error-retry, don't print "Restoring RTC"
+ twice
+Organization: Addiva Elektronik
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ plugins/rtc.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/plugins/rtc.c b/plugins/rtc.c
+index 31c99e0..238791f 100644
+--- a/plugins/rtc.c
++++ b/plugins/rtc.c
+@@ -180,7 +180,8 @@ static void rtc_restore(void *arg)
+ 		rc = 2;
+ 	}
+ 
+-	print_desc(NULL, "Restoring system clock (UTC) from RTC");
++	if (!rc)
++		print_desc(NULL, "Restoring system clock (UTC) from RTC");
+ 	tm.tm_isdst = -1; /* Use tzdata to figure it out, please. */
+ 	tv.tv_sec = mktime(&tm);
+ 	if (tv.tv_sec == (time_t)-1 || tv.tv_sec < rtc_date_fallback) {
+-- 
+2.34.1
+
