@@ -83,7 +83,7 @@ class DTSystem:
         }
 
     def infix_usb_devices(self, out):
-        names=self.infix.str_array("usb-port-names")
+        names=self.infix.str_array("usb-port-names", ())
         phs=self.__get_phandle_array("usb-ports")
         data=dict(zip(names,phs))
         if data != {}:
