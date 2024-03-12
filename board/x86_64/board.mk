@@ -1,5 +1,4 @@
 test-dir := $(BR2_EXTERNAL_INFIX_PATH)/test
-UNIT_TESTS ?= $(test-dir)/case/all-repo.yaml $(test-dir)/case/all-unit.yaml
 INFIX_TESTS ?= $(test-dir)/case/all.yaml
 
 test-env = $(test-dir)/env \
@@ -9,9 +8,6 @@ test-env = $(test-dir)/env \
 
 test-env-qeneth = $(call test-env,-q $(test-dir)/virt/quad,$(1))
 test-env-run    = $(call test-env,-C -t $(BINARIES_DIR)/qemu.dot,$(1))
-
-test-unit:
-	$(test-dir)/env $(test-dir)/9pm/9pm.py $(UNIT_TESTS)
 
 test test-qeneth:
 	$(call test-env-qeneth,\
