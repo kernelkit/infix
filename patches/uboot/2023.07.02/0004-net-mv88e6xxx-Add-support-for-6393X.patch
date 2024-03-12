@@ -1,7 +1,8 @@
-From c801299f06f0e5c95bd597fe0ce4ad6c3df9a444 Mon Sep 17 00:00:00 2001
+From c94723526672f1e5555b7545c13256edb7bd7557 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Tue, 17 Oct 2023 13:22:00 +0200
-Subject: [PATCH 3/5] net: mv88e6xxx: Add support for 6393X
+Subject: [PATCH 4/6] net: mv88e6xxx: Add support for 6393X
+Organization: Addiva Elektronik
 
 Only built-in copper PHYs are supported as access ports. Support
 10GBASE-R SERDES connection to CPU.
@@ -12,7 +13,7 @@ Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
  1 file changed, 130 insertions(+), 4 deletions(-)
 
 diff --git a/drivers/net/mv88e6xxx.c b/drivers/net/mv88e6xxx.c
-index eddac332e0..4a4a3ae0b1 100644
+index 99f234ae87..6f5cfe0155 100644
 --- a/drivers/net/mv88e6xxx.c
 +++ b/drivers/net/mv88e6xxx.c
 @@ -74,6 +74,7 @@
@@ -170,7 +171,7 @@ index eddac332e0..4a4a3ae0b1 100644
  	 */
  	priv->port_reg_base = 0x10;
  	priv->id = mv88e6xxx_get_switch_id(dev);
-+	if (priv->id == 0xfff0) {
++	if (priv->id == 0xfff0 || priv->id == PORT_SWITCH_ID_6393) {
 +		/*
 +		 * Look for a newer device in which ports start at
 +		 * offset 0 (6390/6393 and compatible switches).
@@ -182,7 +183,7 @@ index eddac332e0..4a4a3ae0b1 100644
  	if (priv->id != 0xfff0) {
  		priv->global1 = 0x1B;
  		priv->global2 = 0x1C;
-@@ -844,6 +967,7 @@ static int mv88e6xxx_probe(struct udevice *dev)
+@@ -852,6 +975,7 @@ static int mv88e6xxx_probe(struct udevice *dev)
  	case PORT_SWITCH_ID_6176:
  	case PORT_SWITCH_ID_6240:
  	case PORT_SWITCH_ID_6352:
@@ -190,7 +191,7 @@ index eddac332e0..4a4a3ae0b1 100644
  		priv->port_count = 11;
  		break;
  	case PORT_SWITCH_ID_6020:
-@@ -863,15 +987,17 @@ static int mv88e6xxx_probe(struct udevice *dev)
+@@ -871,15 +995,17 @@ static int mv88e6xxx_probe(struct udevice *dev)
  	if (ret < 0)
  		goto err_remove_reset;
  

@@ -1,8 +1,9 @@
-From d87aea2f0d0acfa0d54adb20a980256c0ba95023 Mon Sep 17 00:00:00 2001
+From c31794d78337da82cf41ffbcb9e696e42759aa12 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Tue, 17 Oct 2023 13:20:19 +0200
-Subject: [PATCH 2/5] net: mv88e6xxx: Support clause 45 addressing on internal
+Subject: [PATCH 3/6] net: mv88e6xxx: Support clause 45 addressing on internal
  MDIO bus
+Organization: Addiva Elektronik
 
 This is needed to access SERDES registers on newer chips, like the
 6393X.
@@ -13,7 +14,7 @@ Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
  1 file changed, 106 insertions(+), 7 deletions(-)
 
 diff --git a/drivers/net/mv88e6xxx.c b/drivers/net/mv88e6xxx.c
-index 1bf7cfd6a6..eddac332e0 100644
+index e70e45ae92..99f234ae87 100644
 --- a/drivers/net/mv88e6xxx.c
 +++ b/drivers/net/mv88e6xxx.c
 @@ -114,6 +114,9 @@

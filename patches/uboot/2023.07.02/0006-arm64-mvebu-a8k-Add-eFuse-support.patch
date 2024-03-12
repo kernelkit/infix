@@ -1,7 +1,8 @@
-From c0495a607652aef38a4d4480ebdb6dd45e3dd9b9 Mon Sep 17 00:00:00 2001
+From 967f7f88c88e1a72d7cf389b5b3b6f184788006f Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Tue, 24 Oct 2023 22:23:44 +0200
-Subject: [PATCH 5/5] arm64: mvebu: a8k: Add eFuse support
+Subject: [PATCH 6/6] arm64: mvebu: a8k: Add eFuse support
+Organization: Addiva Elektronik
 
 Add support for reading and burning LD and HD fuses. Use a specialized
 commandline implementation over the standard "fuse" command because:
