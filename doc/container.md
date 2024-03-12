@@ -375,18 +375,22 @@ container ID (hash) is used, but this can be easily changed:
 
 Infix currently does not have a native firewall configuration, and even
 when it does it will never expose the full capabilities of `nftables`.
-For really advanced setups, the following will be the only alternative:
+For advanced setups, the following is an interesting alternative.
 
     admin@example-c0-ff-ee:/> configure
     admin@example-c0-ff-ee:/config> edit container nftables
-    admin@example-c0-ff-ee:/config/container/system/> set image ghcr.io/kernelkit/curios-nftables:edge
-    admin@example-c0-ff-ee:/config/container/system/> set network host
-    admin@example-c0-ff-ee:/config/container/system/> edit mount nftables.conf
-    admin@example-c0-ff-ee:/config/container/system/mount/nftables.conf/> set target /etc/nftables.conf
-    admin@example-c0-ff-ee:/config/container/system/mount/nftables.conf/> text-editor content
+    admin@example-c0-ff-ee:/config/container/nftables/> set image ghcr.io/kernelkit/curios-nftables:edge
+    admin@example-c0-ff-ee:/config/container/nftables/> set network host
+    admin@example-c0-ff-ee:/config/container/nftables/> set privileged true
+    admin@example-c0-ff-ee:/config/container/nftables/> edit mount nftables.conf
+    admin@example-c0-ff-ee:/config/container/nftables/mount/nftables.conf/> set target /etc/nftables.conf
+    admin@example-c0-ff-ee:/config/container/nftables/mount/nftables.conf/> text-editor content
     ... interactive editor starts up where you can paste your rules ...
-    admin@example-c0-ff-ee:/config/container/system/mount/nftables.conf/> leave
+    admin@example-c0-ff-ee:/config/container/nftables/mount/nftables.conf/> leave
 
+Notice how we `set network host`, so the container can see and act on
+all the host's interfaces, and that we also have to run the container
+in *privileged* mode.
 
 ### Application Container: ntpd
 
