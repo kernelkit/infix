@@ -1,8 +1,9 @@
 From 83322015e7960ba0f1f3698e36333cfb6aecb931 Mon Sep 17 00:00:00 2001
 From: Andrew Lunn <andrew@lunn.ch>
 Date: Tue, 8 Aug 2023 23:04:36 +0200
-Subject: [PATCH 11/17] leds: trig-netdev: Disable offload on deactivation of
+Subject: [PATCH 11/20] leds: trig-netdev: Disable offload on deactivation of
  trigger
+Organization: Addiva Elektronik
 
 Ensure that the offloading of blinking is stopped when the trigger is
 deactivated. Calling led_set_brightness() is documented as stopping

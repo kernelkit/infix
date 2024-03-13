@@ -1,8 +1,9 @@
 From 6f684b1b9eb8a307b77aa4baa8531e2c423112af Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Thu, 21 Sep 2023 11:10:26 +0200
-Subject: [PATCH 06/17] arm64: dts: marvell: cp11x: Provide clock names for
+Subject: [PATCH 06/20] arm64: dts: marvell: cp11x: Provide clock names for
  MDIO controllers
+Organization: Addiva Elektronik
 
 This will let the driver figure out the rate of the core clk, such
 that custom MDC frequencies can be supported.

@@ -1,8 +1,9 @@
 From 1d6f30fce9f4516730439f72ee2134301d37654d Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Tue, 5 Sep 2023 13:08:29 +0200
-Subject: [PATCH 02/17] net: dsa: mv88e6xxx: Create API to read a single stat
+Subject: [PATCH 02/20] net: dsa: mv88e6xxx: Create API to read a single stat
  counter
+Organization: Addiva Elektronik
 
 This change contains no functional change. We simply push the hardware
 specific stats logic to a function reading a single counter, rather
