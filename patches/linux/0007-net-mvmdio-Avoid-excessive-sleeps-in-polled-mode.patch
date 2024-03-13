@@ -1,7 +1,8 @@
 From d5e03e7b44c8ac414927751097d8d65caffc33b4 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Tue, 19 Sep 2023 18:19:40 +0200
-Subject: [PATCH 07/17] net: mvmdio: Avoid excessive sleeps in polled mode
+Subject: [PATCH 07/20] net: mvmdio: Avoid excessive sleeps in polled mode
+Organization: Addiva Elektronik
 
 Before this change, when operating in polled mode, i.e. no IRQ is
 available, every individual C45 access would be hit with a 150us sleep
