@@ -1,7 +1,7 @@
-From 49218a66e8eae8db1e285bbf8b55ac7109fa7c6c Mon Sep 17 00:00:00 2001
+From bf4a584e2ebfa512a2d6cfe5e43a81ee741e3296 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Tue, 12 Mar 2024 05:18:35 +0100
-Subject: [PATCH 6/6] plugins: add support for hwrng and check if seed file is
+Subject: [PATCH 6/7] plugins: add support for hwrng and check if seed file is
  empty
 Organization: Addiva Elektronik
 
@@ -11,7 +11,7 @@ Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
  1 file changed, 30 insertions(+), 11 deletions(-)
 
 diff --git a/plugins/urandom.c b/plugins/urandom.c
-index 64a3fa7..0f4ec0c 100644
+index 64a3fa7..2da8035 100644
 --- a/plugins/urandom.c
 +++ b/plugins/urandom.c
 @@ -47,6 +47,7 @@ static void setup(void *arg)
@@ -27,7 +27,7 @@ index 64a3fa7..0f4ec0c 100644
  	}
  
 -	if (!fexist(RANDOMSEED)) {
-+	if (!stat(RANDOMSEED, &st) || st.st_size < 512) {
++	if (stat(RANDOMSEED, &st) || st.st_size < 512) {
  		int ret = 1;
  		mode_t prev;
  		FILE *fp;

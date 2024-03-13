@@ -1,0 +1,40 @@
+From b49f55ab3d1aec48bbfdf2106fd8f500406a5348 Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Wed, 13 Mar 2024 11:48:47 +0100
+Subject: [PATCH 7/7] tmpfiles.d: ignore x/X command, no cleanup at runtime
+ with Finit
+Organization: Addiva Elektronik
+
+Silence log warnings for command x/X (ignore clean for path), because
+Finit does not do tmpfiles cleaning at runtime.
+
+x /tmp/podman-run-*
+x /tmp/containers-user-*
+x /tmp/run-*/libpod
+D! /var/lib/containers/storage/tmp 0700 root root
+D! /run/podman 0700 root root
+D! /var/lib/cni/networks
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ src/tmpfiles.c | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/src/tmpfiles.c b/src/tmpfiles.c
+index d62b09f..15b463c 100644
+--- a/src/tmpfiles.c
++++ b/src/tmpfiles.c
+@@ -434,6 +434,10 @@ static void tmpfiles(char *line)
+ 			}
+ 		}
+ 		break;
++	case 'X':
++	case 'x':
++		dbg("Unsupported x/X command, ignoring %s, no support for clean at runtime.", path);
++		break;
+ 	case 'Z':
+ 		opts = "-R";
+ 		/* fallthrough */
+-- 
+2.34.1
+
