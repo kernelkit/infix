@@ -227,10 +227,10 @@
 
 /* ETH1 (Connection to BMC) */
 
-&cp0_eth1 {
+&cp0_eth2 {
 	status = "okay";
 	phy-mode = "sgmii";
-	phys = <&cp0_comphy5 0>;
+	phys = <&cp0_comphy5 2>;
 	managed = "in-band-status";
 
 	nvmem-cells = <&base_mac 0>;
