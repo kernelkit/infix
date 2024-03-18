@@ -4,11 +4,6 @@ import json
 import re
 import sys
 
-parser = argparse.ArgumentParser(description="JSON CLI Pretty Printer")
-parser.add_argument("module", help="IETF Module")
-parser.add_argument("-n", "--name", help="Focus on specific name")
-args = parser.parse_args()
-
 class Pad:
     iface = 16
     proto = 11
@@ -434,7 +429,7 @@ def pr_interface_list(json):
         iface.pr_proto_ipv4()
         iface.pr_proto_ipv6()
 
-def ietf_interfaces(json, name):
+def show_interfaces(json, name):
     if name:
         if not json.get("ietf-interfaces:interfaces"):
             print(f"No interface data found for \"{name}\"")
@@ -450,7 +445,7 @@ def ietf_interfaces(json, name):
             sys.exit(1)
         pr_interface_list(json)
 
-def ietf_routing(json, ip="ipv4"):
+def show_routing_table(json, ip):
     if not json.get("ietf-routing:routing"):
         print(f"Error, top level \"ietf-routing:routing\" missing")
         sys.exit(1)
@@ -476,7 +471,7 @@ def find_slot(_slots, name):
 
     return False
 
-def infix_system(json, name):
+def show_software(json, name):
     if not json.get("ietf-system:system-state", "infix-system:software"):
         print("Error, cannot find infix-system:software")
         sys.exit(1)
@@ -497,7 +492,7 @@ def infix_system(json, name):
             if slot.is_rootfs():
                 slot.print()
 
-def ietf_hardware(json):
+def show_hardware(json):
     if not json.get("ietf-hardware:hardware"):
        print(f"Error, top level \"ietf-hardware:component\" missing")
        sys.exit(1)
@@ -525,16 +520,33 @@ def main():
         print("Error, unexpected error parsing JSON")
         sys.exit(1)
 
-    if args.module == "ietf-interfaces":
-        sys.exit(ietf_interfaces(json_data, args.name))
-    if args.module == "ietf-routing":
-        sys.exit(ietf_routing(json_data, args.name))
-    if args.module == "infix-system":
-        sys.exit(infix_system(json_data, args.name))
-    if args.module == "ietf-hardware":
-        sys.exit(ietf_hardware(json_data))
+
+    parser = argparse.ArgumentParser(description="JSON CLI Pretty Printer")
+    subparsers = parser.add_subparsers(dest='command', help='Commands')
+
+    parser_show_routing_table = subparsers.add_parser('show-routing-table', help='Show the routing table')
+    parser_show_routing_table.add_argument('-i', '--ip', required=True, help='IPv4 or IPv6 address')
+
+    parser_show_interfaces = subparsers.add_parser('show-interfaces', help='Show interfaces')
+    parser_show_interfaces.add_argument('-n', '--name', help='Interface name')
+
+    parser_show_software = subparsers.add_parser('show-software', help='Show software versions')
+    parser_show_software.add_argument('-n', '--name', help='Slotname')
+
+    parser_show_routing_table = subparsers.add_parser('show-hardware', help='Show USB ports')
+
+    args = parser.parse_args()
+
+    if args.command == "show-interfaces":
+        show_interfaces(json_data, args.name)
+    elif args.command == "show-routing-table":
+        show_routing_table(json_data, args.ip)
+    elif args.command == "show-software":
+        show_software(json_data, args.name)
+    elif args.command == "show-hardware":
+        show_hardware(json_data)
     else:
-        print(f"Error, unknown module {args.module}")
+        print(f"Error, unknown command {args.command}")
         sys.exit(1)
 
 if __name__ == "__main__":

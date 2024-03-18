@@ -3,37 +3,37 @@
   name: "interfaces-empty"
   opts:
     - "json/empty.json"
-    - "ietf-interfaces"
+    - "show-interfaces"
 
 - case: run.sh
   name: "interfaces-factory"
   opts:
     - "json/factory.json"
-    - "ietf-interfaces"
+    - "show-interfaces"
 
 - case: run.sh
   name: "interfaces-bloated"
   opts:
     - "json/bloated.json"
-    - "ietf-interfaces"
+    - "show-interfaces"
 
 - case: run.sh
   name: "interface-ethernet"
   opts:
     - "json/bloated.json"
-    - "ietf-interfaces"
+    - "show-interfaces"
     - "-n e0"
 
 - case: run.sh
   name: "interface-vlan"
   opts:
     - "json/bloated.json"
-    - "ietf-interfaces"
+    - "show-interfaces"
     - "-n vlan1"
 
 - case: run.sh
   name: "interface-bridge"
   opts:
     - "json/bloated.json"
-    - "ietf-interfaces"
+    - "show-interfaces"
     - "-n br0"

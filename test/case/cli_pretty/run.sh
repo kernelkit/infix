@@ -3,12 +3,12 @@
 SCRIPT_PATH="$(dirname "$(readlink -f "$0")")"
 
 if [ $# -lt 2 ]; then
-    echo "Usage: $0 JSON-FILE MODULE [ ARGS ]"
+    echo "Usage: $0 JSON-FILE COMMAND [ ARGS ]"
     exit 1
 fi
 
 json=$1; shift
-module=$1; shift
+command=$1; shift
 
 echo "1..1"
 
@@ -19,7 +19,7 @@ fi
 
 cat "$SCRIPT_PATH/$json" | \
     "$SCRIPT_PATH"/../../../src/statd/cli-pretty \
-    "$module" $*
+    "$command" $*
 if [ $? -eq 0 ]; then
     echo "ok 1 - $json printed without crashing"
     exit 0

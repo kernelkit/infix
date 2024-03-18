@@ -277,7 +277,7 @@
       if [ -n "$KLISH_PARAM_name" ]; then
           cat "$tmp" | /usr/libexec/statd/cli-pretty "infix-system" -n "$KLISH_PARAM_name"
       else
-          cat "$tmp" | /usr/libexec/statd/cli-pretty "infix-system"
+          cat "$tmp" | /usr/libexec/statd/cli-pretty "show-software"
       fi
       rm "$tmp"
     </ACTION>
@@ -311,27 +311,27 @@
   </COMMAND>
 
   <COMMAND name="routes" help="Show routing table">
-    <PARAM name="name" ptype="/STRING" help="ipv4 or ipv6" min="0" max="1">
+    <PARAM name="ip" ptype="/STRING" help="ipv4 or ipv6" min="0" max="1">
 	<COMPL>
 	  <ACTION sym="printl">ipv4</ACTION>
 	  <ACTION sym="printl">ipv6</ACTION>
 	</COMPL>
     </PARAM>
     <ACTION sym="script">
-      if [ "$KLISH_PARAM_name" != "ipv4" ]; then
-        if [ "$KLISH_PARAM_name" != "ipv6" ]; then
-          KLISH_PARAM_name=ipv4
+      if [ "$KLISH_PARAM_ip" != "ipv4" ]; then
+        if [ "$KLISH_PARAM_ip" != "ipv6" ]; then
+          KLISH_PARAM_ip=ipv4
         fi
       fi
       sysrepocfg -f json -X -d operational -x "/ietf-routing:routing/ribs" | \
-      /usr/libexec/statd/cli-pretty "ietf-routing"  -n "$KLISH_PARAM_name"
+      /usr/libexec/statd/cli-pretty "show-routing-table"  -i "$KLISH_PARAM_ip"
     </ACTION>
   </COMMAND>
 
   <COMMAND name="hardware" help="Show hardware information">
     <ACTION sym="script">
       sysrepocfg -f json -X -d operational -x "/ietf-hardware:hardware" | \
-      /usr/libexec/statd/cli-pretty "ietf-hardware"
+      /usr/libexec/statd/cli-pretty "show-hardware"
     </ACTION>
   </COMMAND>
 
@@ -347,10 +347,10 @@
       if [ -n "$KLISH_PARAM_name" ]; then
         sysrepocfg -f json -X -d operational -x \
           "/ietf-interfaces:interfaces/interface[name='$KLISH_PARAM_name']" | \
-          /usr/libexec/statd/cli-pretty "ietf-interfaces" -n "$KLISH_PARAM_name"
+          /usr/libexec/statd/cli-pretty "show-interfaces" -n "$KLISH_PARAM_name"
       else
         sysrepocfg -f json -X -d operational -m ietf-interfaces | \
-          /usr/libexec/statd/cli-pretty "ietf-interfaces"
+          /usr/libexec/statd/cli-pretty "show-interfaces"
       fi
     </ACTION>
   </COMMAND>
