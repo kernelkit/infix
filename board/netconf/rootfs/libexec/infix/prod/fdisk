@@ -8,7 +8,7 @@ bootoffs=$2
 bootsize=8M
 auxsize=8M
 
-total=$(awk -vdisk="$(basename $disk)" '$4 == disk { print($3 / 1024); }' /proc/partitions)
+total=$(awk -vdisk="$(basename $disk)" '$4 == disk { print(int($3 / 1024)); }' /proc/partitions)
 if [ "$total" -ge 4096 ]; then
     imgsize=1024M
     cfgsize=512M
