@@ -128,8 +128,13 @@ VLAN ID of the interface, compared to *all* the VLAN IDs if you run
 ```
 admin@example:/> configure 
 admin@example:/config/> edit interface eth0.20
-admin@example:/config/interface/eth0.20/> set vlan id 20
-admin@example:/config/interface/eth0.20/> set vlan lower-layer-if eth0
+admin@example:/config/interface/eth0.20/> show
+type vlan;
+vlan {
+  tag-type c-vlan;
+  id 20;
+  lower-layer-if eth0;
+}
 admin@example:/config/interface/eth0.20/> leave
 ```
 
