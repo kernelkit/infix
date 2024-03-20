@@ -1,7 +1,7 @@
-From 913a57a304e8024f4cea872fa904cee867c469a2 Mon Sep 17 00:00:00 2001
+From 7750d0a5bfae46ab783e8e7087b70175860f808c Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Thu, 16 Nov 2023 19:44:32 +0100
-Subject: [PATCH 14/20] net: dsa: mv88e6xxx: Add LED infrastructure
+Subject: [PATCH 09/19] net: dsa: mv88e6xxx: Add LED infrastructure
 Organization: Addiva Elektronik
 
 Parse DT for LEDs and register them for devices that support it,
@@ -10,16 +10,16 @@ though no actual implementations exist yet.
 Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
 ---
  drivers/net/dsa/mv88e6xxx/Makefile |   1 +
- drivers/net/dsa/mv88e6xxx/chip.c   |   8 +-
- drivers/net/dsa/mv88e6xxx/chip.h   |  17 +++
+ drivers/net/dsa/mv88e6xxx/chip.c   |   5 +-
+ drivers/net/dsa/mv88e6xxx/chip.h   |  16 +++
  drivers/net/dsa/mv88e6xxx/leds.c   | 184 +++++++++++++++++++++++++++++
  drivers/net/dsa/mv88e6xxx/leds.h   |  12 ++
- 5 files changed, 221 insertions(+), 1 deletion(-)
+ 5 files changed, 217 insertions(+), 1 deletion(-)
  create mode 100644 drivers/net/dsa/mv88e6xxx/leds.c
  create mode 100644 drivers/net/dsa/mv88e6xxx/leds.h
 
 diff --git a/drivers/net/dsa/mv88e6xxx/Makefile b/drivers/net/dsa/mv88e6xxx/Makefile
-index 1409e691ab77..ab07996aeb7f 100644
+index a9a9651187db..6720d9303914 100644
 --- a/drivers/net/dsa/mv88e6xxx/Makefile
 +++ b/drivers/net/dsa/mv88e6xxx/Makefile
 @@ -9,6 +9,7 @@ mv88e6xxx-objs += global2.o
@@ -27,11 +27,11 @@ index 1409e691ab77..ab07996aeb7f 100644
  mv88e6xxx-objs += global2_scratch.o
  mv88e6xxx-$(CONFIG_NET_DSA_MV88E6XXX_PTP) += hwtstamp.o
 +mv88e6xxx-objs += leds.o
- mv88e6xxx-objs += phy.o
- mv88e6xxx-objs += port.o
- mv88e6xxx-objs += port_hidden.o
+ mv88e6xxx-objs += pcs-6185.o
+ mv88e6xxx-objs += pcs-6352.o
+ mv88e6xxx-objs += pcs-639x.o
 diff --git a/drivers/net/dsa/mv88e6xxx/chip.c b/drivers/net/dsa/mv88e6xxx/chip.c
-index 90dcd6c3be31..d343ea5cc4a1 100644
+index f4b61fcd4541..a3016d5e005d 100644
 --- a/drivers/net/dsa/mv88e6xxx/chip.c
 +++ b/drivers/net/dsa/mv88e6xxx/chip.c
 @@ -37,6 +37,7 @@
@@ -42,32 +42,25 @@ index 90dcd6c3be31..d343ea5cc4a1 100644
  #include "phy.h"
  #include "port.h"
  #include "ptp.h"
-@@ -4259,11 +4260,16 @@ static int mv88e6xxx_setup(struct dsa_switch *ds)
+@@ -4012,7 +4013,9 @@ static int mv88e6xxx_port_setup(struct dsa_switch *ds, int port)
+ 			return err;
+ 	}
  
- static int mv88e6xxx_port_setup(struct dsa_switch *ds, int port)
- {
 -	return mv88e6xxx_setup_devlink_regions_port(ds, port);
-+	int err = 0;
-+
 +	err = err ? : mv88e6xxx_setup_devlink_regions_port(ds, port);
 +	err = err ? : mv88e6xxx_port_setup_leds(ds, port);
 +	return err;
  }
  
  static void mv88e6xxx_port_teardown(struct dsa_switch *ds, int port)
- {
-+	/* LED resources are devm_ managed */
- 	mv88e6xxx_teardown_devlink_regions_port(ds, port);
- }
- 
 diff --git a/drivers/net/dsa/mv88e6xxx/chip.h b/drivers/net/dsa/mv88e6xxx/chip.h
-index 268c97cde8d8..fb0d2584af1b 100644
+index 85eb293381a7..d0dca152e714 100644
 --- a/drivers/net/dsa/mv88e6xxx/chip.h
 +++ b/drivers/net/dsa/mv88e6xxx/chip.h
-@@ -205,6 +205,7 @@ struct mv88e6xxx_irq_ops;
- struct mv88e6xxx_gpio_ops;
+@@ -206,6 +206,7 @@ struct mv88e6xxx_gpio_ops;
  struct mv88e6xxx_avb_ops;
  struct mv88e6xxx_ptp_ops;
+ struct mv88e6xxx_pcs_ops;
 +struct mv88e6xxx_led_ops;
  
  struct mv88e6xxx_irq {
@@ -81,7 +74,7 @@ index 268c97cde8d8..fb0d2584af1b 100644
  struct mv88e6xxx_chip {
  	const struct mv88e6xxx_info *info;
  
-@@ -672,6 +675,9 @@ struct mv88e6xxx_ops {
+@@ -653,6 +656,9 @@ struct mv88e6xxx_ops {
  	/* Precision Time Protocol operations */
  	const struct mv88e6xxx_ptp_ops *ptp_ops;
  
@@ -91,9 +84,11 @@ index 268c97cde8d8..fb0d2584af1b 100644
  	/* Phylink */
  	void (*phylink_get_caps)(struct mv88e6xxx_chip *chip, int port,
  				 struct phylink_config *config);
-@@ -748,6 +754,17 @@ struct mv88e6xxx_ptp_ops {
- 	u32 cc_mult_dem;
- };
+@@ -736,7 +742,17 @@ struct mv88e6xxx_pcs_ops {
+ 	void (*pcs_teardown)(struct mv88e6xxx_chip *chip, int port);
+ 	struct phylink_pcs *(*pcs_select)(struct mv88e6xxx_chip *chip, int port,
+ 					  phy_interface_t mode);
++};
  
 +struct mv88e6xxx_led_ops {
 +	int (*brightness_set)(struct mv88e6xxx_led *led,
@@ -104,11 +99,9 @@ index 268c97cde8d8..fb0d2584af1b 100644
 +				       unsigned long flags);
 +	int (*hw_control_set)(struct mv88e6xxx_led *led, unsigned long flags);
 +	int (*hw_control_get)(struct mv88e6xxx_led *led, unsigned long *flags);
-+};
-+
+ };
+ 
  static inline bool mv88e6xxx_has_stu(struct mv88e6xxx_chip *chip)
- {
- 	return chip->info->max_sid > 0 &&
 diff --git a/drivers/net/dsa/mv88e6xxx/leds.c b/drivers/net/dsa/mv88e6xxx/leds.c
 new file mode 100644
 index 000000000000..42e1661e1f47

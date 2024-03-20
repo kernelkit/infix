@@ -1,0 +1,80 @@
+From 3113b64290b5b7b20c294535c12ea4c732a02f51 Mon Sep 17 00:00:00 2001
+From: Tobias Waldekranz <tobias@waldekranz.com>
+Date: Tue, 12 Dec 2023 09:51:05 +0100
+Subject: [PATCH 16/19] net: phy: marvell10g: Support LEDs tied to a single
+ media side
+Organization: Addiva Elektronik
+
+In a combo-port setup, i.e. where both the copper and fiber interface
+are available to the user, the LEDs may be physically located either
+by the RJ45 jack, or by an SFP cage.
+
+For those scenarios, allow the device tree to indicate that an LED is
+tied to a particular media side, and use that information to refine
+the offloading of the "netdev" trigger, such that LEDs attached to the
+RJ45 jack only lights up when a copper link is established, and vice
+versa for the SFP cage.
+
+Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
+---
+ drivers/net/phy/marvell10g.c | 23 ++++++++++++++++++++++-
+ 1 file changed, 22 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/net/phy/marvell10g.c b/drivers/net/phy/marvell10g.c
+index 745aeb367ef8..58c2f9626ba3 100644
+--- a/drivers/net/phy/marvell10g.c
++++ b/drivers/net/phy/marvell10g.c
+@@ -184,6 +184,9 @@ struct mv3310_chip {
+ struct mv3310_led {
+ 	u8 index;
+ 	u16 ctrl;
++
++	unsigned copper:1;
++	unsigned fiber:1;
+ };
+ 
+ struct mv3310_priv {
+@@ -308,7 +311,12 @@ static int mv3310_led_funcs_from_flags(struct mv3310_led *led,
+ 
+ 	if (solid) {
+ 		if (link) {
+-			*solid = MV3310_LED_FUNC_LINK;
++			if (led->copper)
++				*solid = MV3310_LED_FUNC_LINK_COPPER;
++			else if (led->fiber)
++				*solid = MV3310_LED_FUNC_LINK_FIBER;
++			else
++				*solid = MV3310_LED_FUNC_LINK;
+ 		} else if (duplex) {
+ 			switch (duplex) {
+ 			case BIT(TRIGGER_NETDEV_HALF_DUPLEX):
+@@ -538,6 +546,9 @@ static int mv3310_led_hw_control_get(struct phy_device *phydev, u8 index,
+ static int mv3310_led_probe_of(struct phy_device *phydev,
+ 			       struct device_node *np)
+ {
++	struct mv3310_priv *priv = dev_get_drvdata(&phydev->mdio.dev);
++	struct mv3310_led *led;
++	const char *media;
+ 	u32 index;
+ 	int err;
+ 
+@@ -548,6 +559,16 @@ static int mv3310_led_probe_of(struct phy_device *phydev,
+ 	if (index >= MV3310_N_LEDS)
+ 		return -EINVAL;
+ 
++	led = &priv->led[index];
++
++	err = of_property_read_string(np, "marvell,media", &media);
++	if (!err) {
++		if (!strcmp(media, "copper"))
++			led->copper = 1;
++		else if (!strcmp(media, "fiber"))
++			led->fiber = 1;
++	}
++
+ 	/* mv3310_led_polarity_set() will not be called unless the
+ 	 * device tree specifies a mode that of_phy_led() considers to
+ 	 * be a non-default configuration. I.e., something other than
+-- 
+2.34.1
+

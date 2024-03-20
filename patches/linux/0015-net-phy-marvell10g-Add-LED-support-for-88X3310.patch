@@ -1,7 +1,7 @@
-From 5adf394404d4c8ac25fb1e36d7d3f23b699b3104 Mon Sep 17 00:00:00 2001
+From e389ee690ce56ef20863aeabdf389bed842d7f42 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Wed, 15 Nov 2023 20:58:42 +0100
-Subject: [PATCH 13/20] net: phy: marvell10g: Add LED support for 88X3310
+Subject: [PATCH 15/19] net: phy: marvell10g: Add LED support for 88X3310
 Organization: Addiva Elektronik
 
 Pickup the LEDs from the state in which the hardware reset or
@@ -15,16 +15,16 @@ Trigger support:
 - "timer": Map 60-100 ms periods to the fast rate (81ms) and 1000-1600
   	   ms periods to the slow rate (1300ms). Defer everything else to
 	   software blinking
-- "netdev": Offload (per-medium) link or duplex information to the
-  	    solid behavior; tx and/or rx activity to blink behavior.
+- "netdev": Offload link or duplex information to the solid behavior;
+  	    tx and/or rx activity to blink behavior.
 
 Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
 ---
- drivers/net/phy/marvell10g.c | 455 +++++++++++++++++++++++++++++++++++
- 1 file changed, 455 insertions(+)
+ drivers/net/phy/marvell10g.c | 422 +++++++++++++++++++++++++++++++++++
+ 1 file changed, 422 insertions(+)
 
 diff --git a/drivers/net/phy/marvell10g.c b/drivers/net/phy/marvell10g.c
-index 155f439d9c1c..05ad7c769e24 100644
+index 5a1e89d3fbeb..745aeb367ef8 100644
 --- a/drivers/net/phy/marvell10g.c
 +++ b/drivers/net/phy/marvell10g.c
 @@ -28,6 +28,7 @@
@@ -35,13 +35,15 @@ index 155f439d9c1c..05ad7c769e24 100644
  #include <linux/phy.h>
  #include <linux/sfp.h>
  #include <linux/netdevice.h>
-@@ -136,6 +137,14 @@ enum {
+@@ -133,6 +134,16 @@ enum {
  	MV_V2_33X0_PORT_CTRL_MACTYPE_10GBASER_NO_SGMII_AN	= 0x5,
  	MV_V2_33X0_PORT_CTRL_MACTYPE_10GBASER_RATE_MATCH	= 0x6,
  	MV_V2_33X0_PORT_CTRL_MACTYPE_USXGMII			= 0x7,
 +	MV_V2_LED0_CONTROL	= 0xf020,
 +	MV_V2_LED_CONTROL_POLARITY_MASK		= 0x0003,
 +	MV_V2_LED_CONTROL_POLARITY_SHIFT	= 0,
++	MV_V2_LED_CONTROL_ACTIVE_HIGH		= BIT(0),
++	MV_V2_LED_CONTROL_TRISTATE		= BIT(1),
 +	MV_V2_LED_CONTROL_BLINK_RATE		= BIT(2),
 +	MV_V2_LED_CONTROL_SOLID_FUNC_MASK	= 0x00f8,
 +	MV_V2_LED_CONTROL_SOLID_FUNC_SHIFT	= 3,
@@ -50,7 +52,15 @@ index 155f439d9c1c..05ad7c769e24 100644
  	MV_V2_PORT_INTR_STS		= 0xf040,
  	MV_V2_PORT_INTR_MASK		= 0xf043,
  	MV_V2_PORT_INTR_STS_WOL_EN	= BIT(8),
-@@ -168,6 +177,16 @@ struct mv3310_chip {
+@@ -155,6 +166,7 @@ enum {
+ struct mv3310_chip {
+ 	bool (*has_downshift)(struct phy_device *phydev);
+ 	void (*init_supported_interfaces)(unsigned long *mask);
++	int (*leds_probe)(struct phy_device *phydev);
+ 	int (*get_mactype)(struct phy_device *phydev);
+ 	int (*set_mactype)(struct phy_device *phydev, int mactype);
+ 	int (*select_mactype)(unsigned long *interfaces);
+@@ -167,6 +179,13 @@ struct mv3310_chip {
  #endif
  };
  
@@ -58,16 +68,13 @@ index 155f439d9c1c..05ad7c769e24 100644
 +
 +struct mv3310_led {
 +	u8 index;
-+	u16 fw_ctrl;
-+
-+	unsigned copper:1;
-+	unsigned fiber:1;
++	u16 ctrl;
 +};
 +
  struct mv3310_priv {
  	DECLARE_BITMAP(supported_interfaces, PHY_INTERFACE_MODE_MAX);
  
-@@ -178,6 +197,8 @@ struct mv3310_priv {
+@@ -177,6 +196,8 @@ struct mv3310_priv {
  
  	struct device *hwmon_dev;
  	char *hwmon_name;
@@ -76,7 +83,7 @@ index 155f439d9c1c..05ad7c769e24 100644
  };
  
  static const struct mv3310_chip *to_mv3310_chip(struct phy_device *phydev)
-@@ -185,6 +206,431 @@ static const struct mv3310_chip *to_mv3310_chip(struct phy_device *phydev)
+@@ -184,6 +205,396 @@ static const struct mv3310_chip *to_mv3310_chip(struct phy_device *phydev)
  	return phydev->drv->driver_data;
  }
  
@@ -150,7 +157,6 @@ index 155f439d9c1c..05ad7c769e24 100644
 +		break;
 +	default:
 +		return -EINVAL;
-+
 +	}
 +
 +	*flagsp = flags;
@@ -184,12 +190,7 @@ index 155f439d9c1c..05ad7c769e24 100644
 +
 +	if (solid) {
 +		if (link) {
-+			if (led->copper)
-+				*solid = MV3310_LED_FUNC_LINK_COPPER;
-+			else if (led->fiber)
-+				*solid = MV3310_LED_FUNC_LINK_FIBER;
-+			else
-+				*solid = MV3310_LED_FUNC_LINK;
++			*solid = MV3310_LED_FUNC_LINK;
 +		} else if (duplex) {
 +			switch (duplex) {
 +			case BIT(TRIGGER_NETDEV_HALF_DUPLEX):
@@ -254,7 +255,7 @@ index 155f439d9c1c..05ad7c769e24 100644
 +			  enum mv3310_led_func blink,
 +			  bool slow_blink)
 +{
-+	u16 ctrl = led->fw_ctrl;
++	u16 ctrl = led->ctrl;
 +
 +	ctrl &= ~MV_V2_LED_CONTROL_SOLID_FUNC_MASK;
 +	ctrl &= ~MV_V2_LED_CONTROL_BLINK_FUNC_MASK;
@@ -270,124 +271,36 @@ index 155f439d9c1c..05ad7c769e24 100644
 +			     MV_V2_LED0_CONTROL + led->index, ctrl);
 +}
 +
-+
-+enum mv3310_led_polarity {
-+	MV3310_LED_POLARITY_ACTIVE_LOW = 0x0,
-+	MV3310_LED_POLARITY_ACTIVE_HIGH = 0x1,
-+	MV3310_LED_POLARITY_ACTIVE_LOW_TRISTATE = 0x2,
-+	MV3310_LED_POLARITY_ACTIVE_HIGH_TRISTATE = 0x3,
-+};
-+
-+static const char *mv3310_led_polarity_name[] = {
-+	[MV3310_LED_POLARITY_ACTIVE_LOW]	   = "active-low",
-+	[MV3310_LED_POLARITY_ACTIVE_HIGH]	   = "active-high",
-+	[MV3310_LED_POLARITY_ACTIVE_LOW_TRISTATE]  = "active-low-tristate",
-+	[MV3310_LED_POLARITY_ACTIVE_HIGH_TRISTATE] = "active-high-tristate",
-+};
-+
-+static int mv3310_led_polarity_from_str(const char *str,
-+					enum mv3310_led_polarity *polarity)
-+{
-+	int i;
-+
-+	for (i = 0; i < ARRAY_SIZE(mv3310_led_polarity_name); i++) {
-+		if (!mv3310_led_polarity_name[i])
-+			continue;
-+
-+		if (!strcmp(mv3310_led_polarity_name[i], str)) {
-+			*polarity = i;
-+			return 0;
-+		}
-+	}
-+
-+	return -ENOENT;
-+}
-+
-+static int mv3310_led_probe_of(struct phy_device *phydev,
-+			       struct device_node *np)
++static int mv3310_led_polarity_set(struct phy_device *phydev,
++				   int index, unsigned long modes)
 +{
 +	struct mv3310_priv *priv = dev_get_drvdata(&phydev->mdio.dev);
-+	enum mv3310_led_polarity polarity;
 +	struct mv3310_led *led;
-+	const char *str;
-+	u32 index;
 +	u16 ctrl;
 +	int err;
 +
-+	err = of_property_read_u32(np, "reg", &index);
++	if (index < 0 || index >= MV3310_N_LEDS)
++		return -ENODEV;
++
++	led = &priv->led[index];
++	ctrl = led->ctrl;
++
++	if (test_bit(PHY_LED_ACTIVE_LOW, &modes))
++		ctrl &= ~MV_V2_LED_CONTROL_ACTIVE_HIGH;
++	else
++		ctrl |= MV_V2_LED_CONTROL_ACTIVE_HIGH;
++
++	if (test_bit(PHY_LED_INACTIVE_HIGH_IMPEDANCE, &modes))
++		ctrl |= MV_V2_LED_CONTROL_TRISTATE;
++	else
++		ctrl &= ~MV_V2_LED_CONTROL_TRISTATE;
++
++	err = phy_write_mmd(phydev, MDIO_MMD_VEND2,
++			    MV_V2_LED0_CONTROL + index, ctrl);
 +	if (err)
 +		return err;
 +
-+	if (index >= MV3310_N_LEDS)
-+		return -EINVAL;
-+
-+	led = &priv->led[index];
-+	ctrl = led->fw_ctrl;
-+
-+	err = of_property_read_string(np, "marvell,media", &str);
-+	if (!err) {
-+		if (!strcmp(str, "copper"))
-+			led->copper = 1;
-+		else if (!strcmp(str, "fiber"))
-+			led->fiber = 1;
-+	}
-+
-+	err = of_property_read_string(np, "marvell,polarity", &str);
-+	err = err ? : mv3310_led_polarity_from_str(str, &polarity);
-+	if (!err) {
-+		ctrl &= ~MV_V2_LED_CONTROL_POLARITY_MASK;
-+		ctrl |= polarity << MV_V2_LED_CONTROL_POLARITY_SHIFT;
-+	}
-+
-+	if (ctrl != led->fw_ctrl) {
-+		led->fw_ctrl = ctrl;
-+
-+		return phy_write_mmd(phydev, MDIO_MMD_VEND2,
-+				     MV_V2_LED0_CONTROL + index, ctrl);
-+	}
-+
-+	return 0;
-+}
-+
-+static int mv3310_leds_probe(struct phy_device *phydev)
-+{
-+	struct mv3310_priv *priv = dev_get_drvdata(&phydev->mdio.dev);
-+	struct device_node *node = phydev->mdio.dev.of_node;
-+	struct device_node *pnp, *np;
-+	int err, val, index;
-+
-+	/* Save the state config left by HW reset or bootloader, this
-+	 * may be further refined by configuration from DT, if
-+	 * available.
-+	 *
-+	 * The resulting state is used as the fallback when no trigger
-+	 * is active.
-+	 */
-+	for (index = 0; index < MV3310_N_LEDS; index++) {
-+		val = phy_read_mmd(phydev, MDIO_MMD_VEND2,
-+				   MV_V2_LED0_CONTROL + index);
-+		if (val < 0)
-+			return val;
-+
-+		priv->led[index] = (struct mv3310_led) {
-+			.index = index,
-+			.fw_ctrl = val,
-+		};
-+	}
-+
-+	if (!node)
-+		return 0;
-+
-+	pnp = of_get_child_by_name(node, "leds");
-+	if (!pnp)
-+		return 0;
-+
-+	for_each_available_child_of_node(pnp, np) {
-+		err = mv3310_led_probe_of(phydev, np);
-+		if (err)
-+			return err;
-+	}
-+
++	led->ctrl = ctrl;
 +	return 0;
 +}
 +
@@ -504,25 +417,93 @@ index 155f439d9c1c..05ad7c769e24 100644
 +	return  mv3310_led_flags_from_funcs(led, solid, blink, flags);
 +}
 +
++static int mv3310_led_probe_of(struct phy_device *phydev,
++			       struct device_node *np)
++{
++	u32 index;
++	int err;
++
++	err = of_property_read_u32(np, "reg", &index);
++	if (err)
++		return err;
++
++	if (index >= MV3310_N_LEDS)
++		return -EINVAL;
++
++	/* mv3310_led_polarity_set() will not be called unless the
++	 * device tree specifies a mode that of_phy_led() considers to
++	 * be a non-default configuration. I.e., something other than
++	 * (active-high, drive low on inactive). But the 3310's HW
++	 * default is (active-low, drive low on inactive). Therefore,
++	 * configure all LEDs defined in the DT with the kernel
++	 * defaults, and then let of_phy_led() set the final value if
++	 * the config deviates from that.
++	 */
++	return mv3310_led_polarity_set(phydev, index, 0);
++}
++
++static int mv3310_leds_probe(struct phy_device *phydev)
++{
++	struct mv3310_priv *priv = dev_get_drvdata(&phydev->mdio.dev);
++	struct device_node *node = phydev->mdio.dev.of_node;
++	struct device_node *pnp, *np;
++	int err, val, index;
++
++	for (index = 0; index < MV3310_N_LEDS; index++) {
++		val = phy_read_mmd(phydev, MDIO_MMD_VEND2,
++				   MV_V2_LED0_CONTROL + index);
++		if (val < 0)
++			return val;
++
++		priv->led[index] = (struct mv3310_led) {
++			.index = index,
++			.ctrl = val,
++		};
++	}
++
++	if (!node)
++		return 0;
++
++	pnp = of_get_child_by_name(node, "leds");
++	if (!pnp)
++		return 0;
++
++	for_each_available_child_of_node(pnp, np) {
++		err = mv3310_led_probe_of(phydev, np);
++		if (err)
++			return err;
++	}
++
++	return 0;
++}
 +
  #ifdef CONFIG_HWMON
  static umode_t mv3310_hwmon_is_visible(const void *data,
  				       enum hwmon_sensor_types type,
-@@ -697,6 +1143,10 @@ static int mv3310_probe(struct phy_device *phydev)
+@@ -724,6 +1135,10 @@ static int mv3310_probe(struct phy_device *phydev)
  	if (ret)
  		return ret;
  
-+	ret = mv3310_leds_probe(phydev);
++	ret = chip->leds_probe ? chip->leds_probe(phydev) : 0;
 +	if (ret)
 +		return ret;
 +
  	chip->init_supported_interfaces(priv->supported_interfaces);
  
  	return phy_sfp_probe(phydev, &mv3310_sfp_ops);
-@@ -1502,6 +1952,11 @@ static struct phy_driver mv3310_drivers[] = {
+@@ -1330,6 +1745,7 @@ static void mv2111_init_supported_interfaces(unsigned long *mask)
+ static const struct mv3310_chip mv3310_type = {
+ 	.has_downshift = mv3310_has_downshift,
+ 	.init_supported_interfaces = mv3310_init_supported_interfaces,
++	.leds_probe = mv3310_leds_probe,
+ 	.get_mactype = mv3310_get_mactype,
+ 	.set_mactype = mv3310_set_mactype,
+ 	.select_mactype = mv3310_select_mactype,
+@@ -1531,6 +1947,12 @@ static struct phy_driver mv3310_drivers[] = {
  		.set_loopback	= genphy_c45_loopback,
  		.get_wol	= mv3110_get_wol,
  		.set_wol	= mv3110_set_wol,
++		.led_polarity_set = mv3310_led_polarity_set,
 +		.led_brightness_set = mv3310_led_brightness_set,
 +		.led_blink_set	= mv3310_led_blink_set,
 +		.led_hw_is_supported = mv3310_led_hw_is_supported,
