@@ -1,7 +1,7 @@
-From f65e3c7e250d2a3775041bf894e5b8d051b5da98 Mon Sep 17 00:00:00 2001
+From 0bc6f19d18d7c0e374c824bcc86433b04210a378 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Tue, 12 Mar 2024 10:27:24 +0100
-Subject: [PATCH 20/20] net: dsa: mv88e6xxx: Fix timeout on waiting for PPU on
+Subject: [PATCH 11/19] net: dsa: mv88e6xxx: Fix timeout on waiting for PPU on
  6393X
 Organization: Addiva Elektronik
 
@@ -15,7 +15,7 @@ Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/drivers/net/dsa/mv88e6xxx/chip.c b/drivers/net/dsa/mv88e6xxx/chip.c
-index 7d6b2b85fc31..109456d74691 100644
+index ed4dec48a6f8..f9e78610a55e 100644
 --- a/drivers/net/dsa/mv88e6xxx/chip.c
 +++ b/drivers/net/dsa/mv88e6xxx/chip.c
 @@ -87,7 +87,7 @@ int mv88e6xxx_write(struct mv88e6xxx_chip *chip, int addr, int reg, u16 val)

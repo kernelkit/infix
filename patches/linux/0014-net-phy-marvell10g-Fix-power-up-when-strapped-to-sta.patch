@@ -1,7 +1,7 @@
-From b70f0aa3eb77567a057c2f42f5012a3e009a95c8 Mon Sep 17 00:00:00 2001
+From 27d5241d3ddf70d65af5f4dd029f99f0fea866a5 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Tue, 21 Nov 2023 20:15:24 +0100
-Subject: [PATCH 16/20] net: phy: marvell10g: Fix power-up when strapped to
+Subject: [PATCH 14/19] net: phy: marvell10g: Fix power-up when strapped to
  start powered down
 Organization: Addiva Elektronik
 
@@ -15,33 +15,33 @@ Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
  1 file changed, 15 insertions(+), 3 deletions(-)
 
 diff --git a/drivers/net/phy/marvell10g.c b/drivers/net/phy/marvell10g.c
-index 05ad7c769e24..1d86ee10650e 100644
+index ec9ea5e947f9..5a1e89d3fbeb 100644
 --- a/drivers/net/phy/marvell10g.c
 +++ b/drivers/net/phy/marvell10g.c
-@@ -782,11 +782,23 @@ static int mv3310_power_down(struct phy_device *phydev)
+@@ -335,11 +335,23 @@ static int mv3310_power_down(struct phy_device *phydev)
  
  static int mv3310_power_up(struct phy_device *phydev)
  {
 +	static const u16 resets[][2] = {
-+		{ MDIO_MMD_PCS,    MV_PCS_BASE_R    + MDIO_CTRL1 },
-+		{ MDIO_MMD_PCS,    MV_PCS_1000BASEX + MDIO_CTRL1 },
-+		{ MDIO_MMD_PCS,    MV_PCS_BASE_T    + MDIO_CTRL1 },
++		{ MDIO_MMD_PCS,    MV_PCS_BASE_R + MDIO_CTRL1 },
++		{ MDIO_MMD_PCS,    MV_PCS_BASE_T + MDIO_CTRL1 },
 +		{ MDIO_MMD_PMAPMD, MDIO_CTRL1 },
-+		{ MDIO_MMD_VEND2,  MV_V2_PORT_CTRL },
 +	};
  	struct mv3310_priv *priv = dev_get_drvdata(&phydev->mdio.dev);
 -	int ret;
 +	int i, ret;
++
++	for (i = 0; i < ARRAY_SIZE(resets); i++) {
++		ret = phy_clear_bits_mmd(phydev, resets[i][0], resets[i][1],
++					 MDIO_CTRL1_LPOWER);
++		if (ret)
++			break;
++	}
  
 -	ret = phy_clear_bits_mmd(phydev, MDIO_MMD_VEND2, MV_V2_PORT_CTRL,
 -				 MV_V2_PORT_CTRL_PWRDOWN);
-+	for (i = 0; i < ARRAY_SIZE(resets); i++) {
-+		ret = phy_clear_bits_mmd(phydev, resets[i][0], resets[i][1],
++	ret = ret ? : phy_clear_bits_mmd(phydev, MDIO_MMD_VEND2, MV_V2_PORT_CTRL,
 +					 MV_V2_PORT_CTRL_PWRDOWN);
-+		if (ret)
-+			break;
-+
-+	}
  
  	/* Sometimes, the power down bit doesn't clear immediately, and
  	 * a read of this register causes the bit not to clear. Delay

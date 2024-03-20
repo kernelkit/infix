@@ -1,7 +1,7 @@
-From 8510028fa738493a46b235057ed166f9bbbf0ed4 Mon Sep 17 00:00:00 2001
+From 63fcd626fdb108d2ac07cb0aa16b91fc43894bff Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Thu, 16 Nov 2023 21:59:35 +0100
-Subject: [PATCH 15/20] net: dsa: mv88e6xxx: Add LED support for 6393X
+Subject: [PATCH 10/19] net: dsa: mv88e6xxx: Add LED support for 6393X
 Organization: Addiva Elektronik
 
 Trigger support:
@@ -19,17 +19,17 @@ Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
  5 files changed, 269 insertions(+)
 
 diff --git a/drivers/net/dsa/mv88e6xxx/chip.c b/drivers/net/dsa/mv88e6xxx/chip.c
-index d343ea5cc4a1..7d6b2b85fc31 100644
+index a3016d5e005d..ed4dec48a6f8 100644
 --- a/drivers/net/dsa/mv88e6xxx/chip.c
 +++ b/drivers/net/dsa/mv88e6xxx/chip.c
-@@ -5833,6 +5833,7 @@ static const struct mv88e6xxx_ops mv88e6393x_ops = {
+@@ -5492,6 +5492,7 @@ static const struct mv88e6xxx_ops mv88e6393x_ops = {
  	.gpio_ops = &mv88e6352_gpio_ops,
  	.avb_ops = &mv88e6390_avb_ops,
  	.ptp_ops = &mv88e6352_ptp_ops,
 +	.led_ops = &mv88e6393x_led_ops,
  	.phylink_get_caps = mv88e6393x_phylink_get_caps,
+ 	.pcs_ops = &mv88e6393x_pcs_ops,
  };
- 
 diff --git a/drivers/net/dsa/mv88e6xxx/leds.c b/drivers/net/dsa/mv88e6xxx/leds.c
 index 42e1661e1f47..b2a55d96b506 100644
 --- a/drivers/net/dsa/mv88e6xxx/leds.c
@@ -288,10 +288,10 @@ index 8afa2a0c0527..542345d23dc5 100644
  
  #endif /* _MV88E6XXX_LEDS_H */
 diff --git a/drivers/net/dsa/mv88e6xxx/port.c b/drivers/net/dsa/mv88e6xxx/port.c
-index dd66ec902d4c..e6733a3ab19f 100644
+index 5394a8cf7bf1..66073a1ef260 100644
 --- a/drivers/net/dsa/mv88e6xxx/port.c
 +++ b/drivers/net/dsa/mv88e6xxx/port.c
-@@ -1569,6 +1569,39 @@ int mv88e6351_port_set_ether_type(struct mv88e6xxx_chip *chip, int port,
+@@ -1539,6 +1539,39 @@ int mv88e6351_port_set_ether_type(struct mv88e6xxx_chip *chip, int port,
  	return mv88e6xxx_port_write(chip, port, MV88E6XXX_PORT_ETH_TYPE, etype);
  }
  

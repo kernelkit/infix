@@ -1,7 +1,7 @@
-From 1d6f30fce9f4516730439f72ee2134301d37654d Mon Sep 17 00:00:00 2001
+From 337cf21833cef6ab456a8562338de88ab1a84ead Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
-Date: Tue, 5 Sep 2023 13:08:29 +0200
-Subject: [PATCH 02/20] net: dsa: mv88e6xxx: Create API to read a single stat
+Date: Thu, 14 Dec 2023 14:50:23 +0100
+Subject: [PATCH 03/19] net: dsa: mv88e6xxx: Create API to read a single stat
  counter
 Organization: Addiva Elektronik
 
@@ -12,17 +12,20 @@ than the whole set.
 This is a preparatory change for the upcoming standard ethtool
 statistics support (i.e. "eth-mac", "eth-ctrl" etc.).
 
+Reviewed-by: Vladimir Oltean <vladimir.oltean@nxp.com>
+Reviewed-by: Florian Fainelli <florian.fainelli@broadcom.com>
 Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
+Signed-off-by: David S. Miller <davem@davemloft.net>
 ---
- drivers/net/dsa/mv88e6xxx/chip.c | 160 ++++++++++++++++++-------------
+ drivers/net/dsa/mv88e6xxx/chip.c | 162 ++++++++++++++++++-------------
  drivers/net/dsa/mv88e6xxx/chip.h |  27 +++---
- 2 files changed, 105 insertions(+), 82 deletions(-)
+ 2 files changed, 106 insertions(+), 83 deletions(-)
 
 diff --git a/drivers/net/dsa/mv88e6xxx/chip.c b/drivers/net/dsa/mv88e6xxx/chip.c
-index 0d4b236d1e34..139f4d55a284 100644
+index 5ad51271a534..db6aa08c66cc 100644
 --- a/drivers/net/dsa/mv88e6xxx/chip.c
 +++ b/drivers/net/dsa/mv88e6xxx/chip.c
-@@ -1082,7 +1082,7 @@ static struct mv88e6xxx_hw_stat mv88e6xxx_hw_stats[] = {
+@@ -1012,7 +1012,7 @@ static struct mv88e6xxx_hw_stat mv88e6xxx_hw_stats[] = {
  };
  
  static uint64_t _mv88e6xxx_get_ethtool_stat(struct mv88e6xxx_chip *chip,
@@ -31,16 +34,16 @@ index 0d4b236d1e34..139f4d55a284 100644
  					    int port, u16 bank1_select,
  					    u16 histogram)
  {
-@@ -1265,59 +1265,82 @@ static int mv88e6xxx_get_sset_count(struct dsa_switch *ds, int port, int sset)
+@@ -1195,59 +1195,82 @@ static int mv88e6xxx_get_sset_count(struct dsa_switch *ds, int port, int sset)
  	return count;
  }
  
 -static int mv88e6xxx_stats_get_stats(struct mv88e6xxx_chip *chip, int port,
 -				     uint64_t *data, int types,
 -				     u16 bank1_select, u16 histogram)
-+static int mv88e6095_stats_get_stat(struct mv88e6xxx_chip *chip, int port,
-+				    const struct mv88e6xxx_hw_stat *stat,
-+				    uint64_t *data)
++static size_t mv88e6095_stats_get_stat(struct mv88e6xxx_chip *chip, int port,
++				       const struct mv88e6xxx_hw_stat *stat,
++				       uint64_t *data)
  {
 -	struct mv88e6xxx_hw_stat *stat;
 -	int i, j;
@@ -64,9 +67,9 @@ index 0d4b236d1e34..139f4d55a284 100644
 -		}
 -	}
 -	return j;
-+static int mv88e6250_stats_get_stat(struct mv88e6xxx_chip *chip, int port,
-+				    const struct mv88e6xxx_hw_stat *stat,
-+				    uint64_t *data)
++static size_t mv88e6250_stats_get_stat(struct mv88e6xxx_chip *chip, int port,
++				       const struct mv88e6xxx_hw_stat *stat,
++				       uint64_t *data)
 +{
 +	if (!(stat->type & STATS_TYPE_BANK0))
 +		return 0;
@@ -78,9 +81,9 @@ index 0d4b236d1e34..139f4d55a284 100644
  
 -static int mv88e6095_stats_get_stats(struct mv88e6xxx_chip *chip, int port,
 -				     uint64_t *data)
-+static int mv88e6320_stats_get_stat(struct mv88e6xxx_chip *chip, int port,
-+				    const struct mv88e6xxx_hw_stat *stat,
-+				    uint64_t *data)
++static size_t mv88e6320_stats_get_stat(struct mv88e6xxx_chip *chip, int port,
++				       const struct mv88e6xxx_hw_stat *stat,
++				       uint64_t *data)
  {
 -	return mv88e6xxx_stats_get_stats(chip, port, data,
 -					 STATS_TYPE_BANK0 | STATS_TYPE_PORT,
@@ -96,9 +99,9 @@ index 0d4b236d1e34..139f4d55a284 100644
  
 -static int mv88e6250_stats_get_stats(struct mv88e6xxx_chip *chip, int port,
 -				     uint64_t *data)
-+static int mv88e6390_stats_get_stat(struct mv88e6xxx_chip *chip, int port,
-+				    const struct mv88e6xxx_hw_stat *stat,
-+				    uint64_t *data)
++static size_t mv88e6390_stats_get_stat(struct mv88e6xxx_chip *chip, int port,
++				       const struct mv88e6xxx_hw_stat *stat,
++				       uint64_t *data)
  {
 -	return mv88e6xxx_stats_get_stats(chip, port, data, STATS_TYPE_BANK0,
 -					 0, MV88E6XXX_G1_STATS_OP_HIST_RX_TX);
@@ -113,9 +116,9 @@ index 0d4b236d1e34..139f4d55a284 100644
  
 -static int mv88e6320_stats_get_stats(struct mv88e6xxx_chip *chip, int port,
 -				     uint64_t *data)
-+static int mv88e6xxx_stats_get_stat(struct mv88e6xxx_chip *chip, int port,
-+				    const struct mv88e6xxx_hw_stat *stat,
-+				    uint64_t *data)
++static size_t mv88e6xxx_stats_get_stat(struct mv88e6xxx_chip *chip, int port,
++				       const struct mv88e6xxx_hw_stat *stat,
++				       uint64_t *data)
  {
 -	return mv88e6xxx_stats_get_stats(chip, port, data,
 -					 STATS_TYPE_BANK0 | STATS_TYPE_BANK1,
@@ -133,15 +136,16 @@ index 0d4b236d1e34..139f4d55a284 100644
  }
  
 -static int mv88e6390_stats_get_stats(struct mv88e6xxx_chip *chip, int port,
-+static int mv88e6xxx_stats_get_stats(struct mv88e6xxx_chip *chip, int port,
- 				     uint64_t *data)
+-				     uint64_t *data)
++static size_t mv88e6xxx_stats_get_stats(struct mv88e6xxx_chip *chip, int port,
++					uint64_t *data)
  {
 -	return mv88e6xxx_stats_get_stats(chip, port, data,
 -					 STATS_TYPE_BANK0 | STATS_TYPE_BANK1,
 -					 MV88E6XXX_G1_STATS_OP_BANK_1_BIT_10,
 -					 0);
 +	struct mv88e6xxx_hw_stat *stat;
-+	int i, j;
++	size_t i, j;
 +
 +	for (i = 0, j = 0; i < ARRAY_SIZE(mv88e6xxx_hw_stats); i++) {
 +		stat = &mv88e6xxx_hw_stats[i];
@@ -151,12 +155,12 @@ index 0d4b236d1e34..139f4d55a284 100644
  }
  
  static void mv88e6xxx_atu_vtu_get_stats(struct mv88e6xxx_chip *chip, int port,
-@@ -1333,10 +1356,9 @@ static void mv88e6xxx_atu_vtu_get_stats(struct mv88e6xxx_chip *chip, int port,
+@@ -1263,10 +1286,9 @@ static void mv88e6xxx_atu_vtu_get_stats(struct mv88e6xxx_chip *chip, int port,
  static void mv88e6xxx_get_stats(struct mv88e6xxx_chip *chip, int port,
  				uint64_t *data)
  {
 -	int count = 0;
-+	int count;
++	size_t count;
  
 -	if (chip->info->ops->stats_get_stats)
 -		count = chip->info->ops->stats_get_stats(chip, port, data);
@@ -164,7 +168,7 @@ index 0d4b236d1e34..139f4d55a284 100644
  
  	mv88e6xxx_reg_lock(chip);
  	if (chip->info->ops->serdes_get_stats) {
-@@ -4198,7 +4220,7 @@ static const struct mv88e6xxx_ops mv88e6085_ops = {
+@@ -3987,7 +4009,7 @@ static const struct mv88e6xxx_ops mv88e6085_ops = {
  	.stats_set_histogram = mv88e6095_g1_stats_set_histogram,
  	.stats_get_sset_count = mv88e6095_stats_get_sset_count,
  	.stats_get_strings = mv88e6095_stats_get_strings,
@@ -173,16 +177,16 @@ index 0d4b236d1e34..139f4d55a284 100644
  	.set_cpu_port = mv88e6095_g1_set_cpu_port,
  	.set_egress_port = mv88e6095_g1_set_egress_port,
  	.watchdog_ops = &mv88e6097_watchdog_ops,
-@@ -4236,7 +4258,7 @@ static const struct mv88e6xxx_ops mv88e6095_ops = {
+@@ -4025,7 +4047,7 @@ static const struct mv88e6xxx_ops mv88e6095_ops = {
  	.stats_set_histogram = mv88e6095_g1_stats_set_histogram,
  	.stats_get_sset_count = mv88e6095_stats_get_sset_count,
  	.stats_get_strings = mv88e6095_stats_get_strings,
 -	.stats_get_stats = mv88e6095_stats_get_stats,
 +	.stats_get_stat = mv88e6095_stats_get_stat,
  	.mgmt_rsvd2cpu = mv88e6185_g2_mgmt_rsvd2cpu,
- 	.serdes_power = mv88e6185_serdes_power,
- 	.serdes_get_lane = mv88e6185_serdes_get_lane,
-@@ -4279,7 +4301,7 @@ static const struct mv88e6xxx_ops mv88e6097_ops = {
+ 	.ppu_enable = mv88e6185_g1_ppu_enable,
+ 	.ppu_disable = mv88e6185_g1_ppu_disable,
+@@ -4066,7 +4088,7 @@ static const struct mv88e6xxx_ops mv88e6097_ops = {
  	.stats_set_histogram = mv88e6095_g1_stats_set_histogram,
  	.stats_get_sset_count = mv88e6095_stats_get_sset_count,
  	.stats_get_strings = mv88e6095_stats_get_strings,
@@ -191,7 +195,7 @@ index 0d4b236d1e34..139f4d55a284 100644
  	.set_cpu_port = mv88e6095_g1_set_cpu_port,
  	.set_egress_port = mv88e6095_g1_set_egress_port,
  	.watchdog_ops = &mv88e6097_watchdog_ops,
-@@ -4325,7 +4347,7 @@ static const struct mv88e6xxx_ops mv88e6123_ops = {
+@@ -4108,7 +4130,7 @@ static const struct mv88e6xxx_ops mv88e6123_ops = {
  	.stats_set_histogram = mv88e6095_g1_stats_set_histogram,
  	.stats_get_sset_count = mv88e6095_stats_get_sset_count,
  	.stats_get_strings = mv88e6095_stats_get_strings,
@@ -200,7 +204,7 @@ index 0d4b236d1e34..139f4d55a284 100644
  	.set_cpu_port = mv88e6095_g1_set_cpu_port,
  	.set_egress_port = mv88e6095_g1_set_egress_port,
  	.watchdog_ops = &mv88e6097_watchdog_ops,
-@@ -4368,7 +4390,7 @@ static const struct mv88e6xxx_ops mv88e6131_ops = {
+@@ -4151,7 +4173,7 @@ static const struct mv88e6xxx_ops mv88e6131_ops = {
  	.stats_set_histogram = mv88e6095_g1_stats_set_histogram,
  	.stats_get_sset_count = mv88e6095_stats_get_sset_count,
  	.stats_get_strings = mv88e6095_stats_get_strings,
@@ -209,7 +213,7 @@ index 0d4b236d1e34..139f4d55a284 100644
  	.set_cpu_port = mv88e6095_g1_set_cpu_port,
  	.set_egress_port = mv88e6095_g1_set_egress_port,
  	.watchdog_ops = &mv88e6097_watchdog_ops,
-@@ -4417,7 +4439,7 @@ static const struct mv88e6xxx_ops mv88e6141_ops = {
+@@ -4200,7 +4222,7 @@ static const struct mv88e6xxx_ops mv88e6141_ops = {
  	.stats_set_histogram = mv88e6390_g1_stats_set_histogram,
  	.stats_get_sset_count = mv88e6320_stats_get_sset_count,
  	.stats_get_strings = mv88e6320_stats_get_strings,
@@ -218,7 +222,7 @@ index 0d4b236d1e34..139f4d55a284 100644
  	.set_cpu_port = mv88e6390_g1_set_cpu_port,
  	.set_egress_port = mv88e6390_g1_set_egress_port,
  	.watchdog_ops = &mv88e6390_watchdog_ops,
-@@ -4479,7 +4501,7 @@ static const struct mv88e6xxx_ops mv88e6161_ops = {
+@@ -4255,7 +4277,7 @@ static const struct mv88e6xxx_ops mv88e6161_ops = {
  	.stats_set_histogram = mv88e6095_g1_stats_set_histogram,
  	.stats_get_sset_count = mv88e6095_stats_get_sset_count,
  	.stats_get_strings = mv88e6095_stats_get_strings,
@@ -227,7 +231,7 @@ index 0d4b236d1e34..139f4d55a284 100644
  	.set_cpu_port = mv88e6095_g1_set_cpu_port,
  	.set_egress_port = mv88e6095_g1_set_egress_port,
  	.watchdog_ops = &mv88e6097_watchdog_ops,
-@@ -4517,7 +4539,7 @@ static const struct mv88e6xxx_ops mv88e6165_ops = {
+@@ -4293,7 +4315,7 @@ static const struct mv88e6xxx_ops mv88e6165_ops = {
  	.stats_set_histogram = mv88e6095_g1_stats_set_histogram,
  	.stats_get_sset_count = mv88e6095_stats_get_sset_count,
  	.stats_get_strings = mv88e6095_stats_get_strings,
@@ -236,7 +240,7 @@ index 0d4b236d1e34..139f4d55a284 100644
  	.set_cpu_port = mv88e6095_g1_set_cpu_port,
  	.set_egress_port = mv88e6095_g1_set_egress_port,
  	.watchdog_ops = &mv88e6097_watchdog_ops,
-@@ -4565,7 +4587,7 @@ static const struct mv88e6xxx_ops mv88e6171_ops = {
+@@ -4341,7 +4363,7 @@ static const struct mv88e6xxx_ops mv88e6171_ops = {
  	.stats_set_histogram = mv88e6095_g1_stats_set_histogram,
  	.stats_get_sset_count = mv88e6095_stats_get_sset_count,
  	.stats_get_strings = mv88e6095_stats_get_strings,
@@ -245,7 +249,7 @@ index 0d4b236d1e34..139f4d55a284 100644
  	.set_cpu_port = mv88e6095_g1_set_cpu_port,
  	.set_egress_port = mv88e6095_g1_set_egress_port,
  	.watchdog_ops = &mv88e6097_watchdog_ops,
-@@ -4614,7 +4636,7 @@ static const struct mv88e6xxx_ops mv88e6172_ops = {
+@@ -4390,7 +4412,7 @@ static const struct mv88e6xxx_ops mv88e6172_ops = {
  	.stats_set_histogram = mv88e6095_g1_stats_set_histogram,
  	.stats_get_sset_count = mv88e6095_stats_get_sset_count,
  	.stats_get_strings = mv88e6095_stats_get_strings,
@@ -254,7 +258,7 @@ index 0d4b236d1e34..139f4d55a284 100644
  	.set_cpu_port = mv88e6095_g1_set_cpu_port,
  	.set_egress_port = mv88e6095_g1_set_egress_port,
  	.watchdog_ops = &mv88e6097_watchdog_ops,
-@@ -4670,7 +4692,7 @@ static const struct mv88e6xxx_ops mv88e6175_ops = {
+@@ -4441,7 +4463,7 @@ static const struct mv88e6xxx_ops mv88e6175_ops = {
  	.stats_set_histogram = mv88e6095_g1_stats_set_histogram,
  	.stats_get_sset_count = mv88e6095_stats_get_sset_count,
  	.stats_get_strings = mv88e6095_stats_get_strings,
@@ -263,7 +267,7 @@ index 0d4b236d1e34..139f4d55a284 100644
  	.set_cpu_port = mv88e6095_g1_set_cpu_port,
  	.set_egress_port = mv88e6095_g1_set_egress_port,
  	.watchdog_ops = &mv88e6097_watchdog_ops,
-@@ -4719,7 +4741,7 @@ static const struct mv88e6xxx_ops mv88e6176_ops = {
+@@ -4490,7 +4512,7 @@ static const struct mv88e6xxx_ops mv88e6176_ops = {
  	.stats_set_histogram = mv88e6095_g1_stats_set_histogram,
  	.stats_get_sset_count = mv88e6095_stats_get_sset_count,
  	.stats_get_strings = mv88e6095_stats_get_strings,
@@ -272,7 +276,7 @@ index 0d4b236d1e34..139f4d55a284 100644
  	.set_cpu_port = mv88e6095_g1_set_cpu_port,
  	.set_egress_port = mv88e6095_g1_set_egress_port,
  	.watchdog_ops = &mv88e6097_watchdog_ops,
-@@ -4771,7 +4793,7 @@ static const struct mv88e6xxx_ops mv88e6185_ops = {
+@@ -4535,7 +4557,7 @@ static const struct mv88e6xxx_ops mv88e6185_ops = {
  	.stats_set_histogram = mv88e6095_g1_stats_set_histogram,
  	.stats_get_sset_count = mv88e6095_stats_get_sset_count,
  	.stats_get_strings = mv88e6095_stats_get_strings,
@@ -281,7 +285,7 @@ index 0d4b236d1e34..139f4d55a284 100644
  	.set_cpu_port = mv88e6095_g1_set_cpu_port,
  	.set_egress_port = mv88e6095_g1_set_egress_port,
  	.watchdog_ops = &mv88e6097_watchdog_ops,
-@@ -4822,7 +4844,7 @@ static const struct mv88e6xxx_ops mv88e6190_ops = {
+@@ -4584,7 +4606,7 @@ static const struct mv88e6xxx_ops mv88e6190_ops = {
  	.stats_set_histogram = mv88e6390_g1_stats_set_histogram,
  	.stats_get_sset_count = mv88e6320_stats_get_sset_count,
  	.stats_get_strings = mv88e6320_stats_get_strings,
@@ -290,7 +294,7 @@ index 0d4b236d1e34..139f4d55a284 100644
  	.set_cpu_port = mv88e6390_g1_set_cpu_port,
  	.set_egress_port = mv88e6390_g1_set_egress_port,
  	.watchdog_ops = &mv88e6390_watchdog_ops,
-@@ -4887,7 +4909,7 @@ static const struct mv88e6xxx_ops mv88e6190x_ops = {
+@@ -4642,7 +4664,7 @@ static const struct mv88e6xxx_ops mv88e6190x_ops = {
  	.stats_set_histogram = mv88e6390_g1_stats_set_histogram,
  	.stats_get_sset_count = mv88e6320_stats_get_sset_count,
  	.stats_get_strings = mv88e6320_stats_get_strings,
@@ -299,7 +303,7 @@ index 0d4b236d1e34..139f4d55a284 100644
  	.set_cpu_port = mv88e6390_g1_set_cpu_port,
  	.set_egress_port = mv88e6390_g1_set_egress_port,
  	.watchdog_ops = &mv88e6390_watchdog_ops,
-@@ -4950,7 +4972,7 @@ static const struct mv88e6xxx_ops mv88e6191_ops = {
+@@ -4698,7 +4720,7 @@ static const struct mv88e6xxx_ops mv88e6191_ops = {
  	.stats_set_histogram = mv88e6390_g1_stats_set_histogram,
  	.stats_get_sset_count = mv88e6320_stats_get_sset_count,
  	.stats_get_strings = mv88e6320_stats_get_strings,
@@ -308,7 +312,7 @@ index 0d4b236d1e34..139f4d55a284 100644
  	.set_cpu_port = mv88e6390_g1_set_cpu_port,
  	.set_egress_port = mv88e6390_g1_set_egress_port,
  	.watchdog_ops = &mv88e6390_watchdog_ops,
-@@ -5016,7 +5038,7 @@ static const struct mv88e6xxx_ops mv88e6240_ops = {
+@@ -4757,7 +4779,7 @@ static const struct mv88e6xxx_ops mv88e6240_ops = {
  	.stats_set_histogram = mv88e6095_g1_stats_set_histogram,
  	.stats_get_sset_count = mv88e6095_stats_get_sset_count,
  	.stats_get_strings = mv88e6095_stats_get_strings,
@@ -317,7 +321,7 @@ index 0d4b236d1e34..139f4d55a284 100644
  	.set_cpu_port = mv88e6095_g1_set_cpu_port,
  	.set_egress_port = mv88e6095_g1_set_egress_port,
  	.watchdog_ops = &mv88e6097_watchdog_ops,
-@@ -5076,7 +5098,7 @@ static const struct mv88e6xxx_ops mv88e6250_ops = {
+@@ -4810,7 +4832,7 @@ static const struct mv88e6xxx_ops mv88e6250_ops = {
  	.stats_set_histogram = mv88e6095_g1_stats_set_histogram,
  	.stats_get_sset_count = mv88e6250_stats_get_sset_count,
  	.stats_get_strings = mv88e6250_stats_get_strings,
@@ -326,7 +330,7 @@ index 0d4b236d1e34..139f4d55a284 100644
  	.set_cpu_port = mv88e6095_g1_set_cpu_port,
  	.set_egress_port = mv88e6095_g1_set_egress_port,
  	.watchdog_ops = &mv88e6250_watchdog_ops,
-@@ -5123,7 +5145,7 @@ static const struct mv88e6xxx_ops mv88e6290_ops = {
+@@ -4857,7 +4879,7 @@ static const struct mv88e6xxx_ops mv88e6290_ops = {
  	.stats_set_histogram = mv88e6390_g1_stats_set_histogram,
  	.stats_get_sset_count = mv88e6320_stats_get_sset_count,
  	.stats_get_strings = mv88e6320_stats_get_strings,
@@ -335,7 +339,7 @@ index 0d4b236d1e34..139f4d55a284 100644
  	.set_cpu_port = mv88e6390_g1_set_cpu_port,
  	.set_egress_port = mv88e6390_g1_set_egress_port,
  	.watchdog_ops = &mv88e6390_watchdog_ops,
-@@ -5189,7 +5211,7 @@ static const struct mv88e6xxx_ops mv88e6320_ops = {
+@@ -4916,7 +4938,7 @@ static const struct mv88e6xxx_ops mv88e6320_ops = {
  	.stats_set_histogram = mv88e6095_g1_stats_set_histogram,
  	.stats_get_sset_count = mv88e6320_stats_get_sset_count,
  	.stats_get_strings = mv88e6320_stats_get_strings,
@@ -344,7 +348,7 @@ index 0d4b236d1e34..139f4d55a284 100644
  	.set_cpu_port = mv88e6095_g1_set_cpu_port,
  	.set_egress_port = mv88e6095_g1_set_egress_port,
  	.watchdog_ops = &mv88e6390_watchdog_ops,
-@@ -5236,7 +5258,7 @@ static const struct mv88e6xxx_ops mv88e6321_ops = {
+@@ -4963,7 +4985,7 @@ static const struct mv88e6xxx_ops mv88e6321_ops = {
  	.stats_set_histogram = mv88e6095_g1_stats_set_histogram,
  	.stats_get_sset_count = mv88e6320_stats_get_sset_count,
  	.stats_get_strings = mv88e6320_stats_get_strings,
@@ -353,7 +357,7 @@ index 0d4b236d1e34..139f4d55a284 100644
  	.set_cpu_port = mv88e6095_g1_set_cpu_port,
  	.set_egress_port = mv88e6095_g1_set_egress_port,
  	.watchdog_ops = &mv88e6390_watchdog_ops,
-@@ -5285,7 +5307,7 @@ static const struct mv88e6xxx_ops mv88e6341_ops = {
+@@ -5012,7 +5034,7 @@ static const struct mv88e6xxx_ops mv88e6341_ops = {
  	.stats_set_histogram = mv88e6390_g1_stats_set_histogram,
  	.stats_get_sset_count = mv88e6320_stats_get_sset_count,
  	.stats_get_strings = mv88e6320_stats_get_strings,
@@ -362,7 +366,7 @@ index 0d4b236d1e34..139f4d55a284 100644
  	.set_cpu_port = mv88e6390_g1_set_cpu_port,
  	.set_egress_port = mv88e6390_g1_set_egress_port,
  	.watchdog_ops = &mv88e6390_watchdog_ops,
-@@ -5350,7 +5372,7 @@ static const struct mv88e6xxx_ops mv88e6350_ops = {
+@@ -5070,7 +5092,7 @@ static const struct mv88e6xxx_ops mv88e6350_ops = {
  	.stats_set_histogram = mv88e6095_g1_stats_set_histogram,
  	.stats_get_sset_count = mv88e6095_stats_get_sset_count,
  	.stats_get_strings = mv88e6095_stats_get_strings,
@@ -371,7 +375,7 @@ index 0d4b236d1e34..139f4d55a284 100644
  	.set_cpu_port = mv88e6095_g1_set_cpu_port,
  	.set_egress_port = mv88e6095_g1_set_egress_port,
  	.watchdog_ops = &mv88e6097_watchdog_ops,
-@@ -5396,7 +5418,7 @@ static const struct mv88e6xxx_ops mv88e6351_ops = {
+@@ -5116,7 +5138,7 @@ static const struct mv88e6xxx_ops mv88e6351_ops = {
  	.stats_set_histogram = mv88e6095_g1_stats_set_histogram,
  	.stats_get_sset_count = mv88e6095_stats_get_sset_count,
  	.stats_get_strings = mv88e6095_stats_get_strings,
@@ -380,7 +384,7 @@ index 0d4b236d1e34..139f4d55a284 100644
  	.set_cpu_port = mv88e6095_g1_set_cpu_port,
  	.set_egress_port = mv88e6095_g1_set_egress_port,
  	.watchdog_ops = &mv88e6097_watchdog_ops,
-@@ -5447,7 +5469,7 @@ static const struct mv88e6xxx_ops mv88e6352_ops = {
+@@ -5167,7 +5189,7 @@ static const struct mv88e6xxx_ops mv88e6352_ops = {
  	.stats_set_histogram = mv88e6095_g1_stats_set_histogram,
  	.stats_get_sset_count = mv88e6095_stats_get_sset_count,
  	.stats_get_strings = mv88e6095_stats_get_strings,
@@ -389,7 +393,7 @@ index 0d4b236d1e34..139f4d55a284 100644
  	.set_cpu_port = mv88e6095_g1_set_cpu_port,
  	.set_egress_port = mv88e6095_g1_set_egress_port,
  	.watchdog_ops = &mv88e6097_watchdog_ops,
-@@ -5516,7 +5538,7 @@ static const struct mv88e6xxx_ops mv88e6390_ops = {
+@@ -5229,7 +5251,7 @@ static const struct mv88e6xxx_ops mv88e6390_ops = {
  	.stats_set_histogram = mv88e6390_g1_stats_set_histogram,
  	.stats_get_sset_count = mv88e6320_stats_get_sset_count,
  	.stats_get_strings = mv88e6320_stats_get_strings,
@@ -398,7 +402,7 @@ index 0d4b236d1e34..139f4d55a284 100644
  	.set_cpu_port = mv88e6390_g1_set_cpu_port,
  	.set_egress_port = mv88e6390_g1_set_egress_port,
  	.watchdog_ops = &mv88e6390_watchdog_ops,
-@@ -5585,7 +5607,7 @@ static const struct mv88e6xxx_ops mv88e6390x_ops = {
+@@ -5291,7 +5313,7 @@ static const struct mv88e6xxx_ops mv88e6390x_ops = {
  	.stats_set_histogram = mv88e6390_g1_stats_set_histogram,
  	.stats_get_sset_count = mv88e6320_stats_get_sset_count,
  	.stats_get_strings = mv88e6320_stats_get_strings,
@@ -407,7 +411,7 @@ index 0d4b236d1e34..139f4d55a284 100644
  	.set_cpu_port = mv88e6390_g1_set_cpu_port,
  	.set_egress_port = mv88e6390_g1_set_egress_port,
  	.watchdog_ops = &mv88e6390_watchdog_ops,
-@@ -5654,7 +5676,7 @@ static const struct mv88e6xxx_ops mv88e6393x_ops = {
+@@ -5353,7 +5375,7 @@ static const struct mv88e6xxx_ops mv88e6393x_ops = {
  	.stats_set_histogram = mv88e6390_g1_stats_set_histogram,
  	.stats_get_sset_count = mv88e6320_stats_get_sset_count,
  	.stats_get_strings = mv88e6320_stats_get_strings,
@@ -417,7 +421,7 @@ index 0d4b236d1e34..139f4d55a284 100644
  	 * CPU port, only per port CPU port which is set via
  	 * .port_set_upstream_port method.
 diff --git a/drivers/net/dsa/mv88e6xxx/chip.h b/drivers/net/dsa/mv88e6xxx/chip.h
-index 0ad34b2d8913..268c97cde8d8 100644
+index c54d305a1d83..85eb293381a7 100644
 --- a/drivers/net/dsa/mv88e6xxx/chip.h
 +++ b/drivers/net/dsa/mv88e6xxx/chip.h
 @@ -318,6 +318,17 @@ struct mv88e6xxx_mst {
@@ -444,14 +448,14 @@ index 0ad34b2d8913..268c97cde8d8 100644
  	int (*stats_get_strings)(struct mv88e6xxx_chip *chip,  uint8_t *data);
 -	int (*stats_get_stats)(struct mv88e6xxx_chip *chip,  int port,
 -			       uint64_t *data);
-+	int (*stats_get_stat)(struct mv88e6xxx_chip *chip,  int port,
-+			      const struct mv88e6xxx_hw_stat *stat,
-+			      uint64_t *data);
++	size_t (*stats_get_stat)(struct mv88e6xxx_chip *chip, int port,
++				 const struct mv88e6xxx_hw_stat *stat,
++				 uint64_t *data);
  	int (*set_cpu_port)(struct mv88e6xxx_chip *chip, int port);
  	int (*set_egress_port)(struct mv88e6xxx_chip *chip,
  			       enum mv88e6xxx_egress_direction direction,
-@@ -736,17 +748,6 @@ struct mv88e6xxx_ptp_ops {
- 	u32 cc_mult_dem;
+@@ -727,17 +739,6 @@ struct mv88e6xxx_pcs_ops {
+ 
  };
  
 -#define STATS_TYPE_PORT		BIT(0)
