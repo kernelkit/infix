@@ -2,10 +2,14 @@
 
 Infix aims to support all Linux Networking constructs.  The YANG models
 used to describe the system are chosen to fit well and leverage the
-underlying Linux kernel's capabilities.  The `ietf-interfaces.yang`
-model forms the base, extended with `ietf-ip.yang` and other layer-3
+underlying Linux kernel's capabilities.  The [ietf-interfaces.yang][1]
+model forms the base, extended with [ietf-ip.yang][2] and other layer-3
 IETF models.  The layer-2 bridge and aggregate models are defined by
 Infix to exploit the unique features not available in IEEE models.
+
+> **Note:** when issuing `leave` to activate your changes, remember to
+> also save your settings, `copy running-config startup-config`.  See
+> the [CLI Introduction](cli/introduction.md) for a background.
 
 
 ## Interface LEGO®
@@ -305,7 +309,7 @@ default.
 
 As shown, the link-local IPv4 address is configured with `set autconf
 enabled true`.  The resulting address (169.254.1.3/16) is of type
-*random* ([IETF ip-yang][ietf-ip-yang]).
+*random* ([ietf-ip.yang][2]).
 
 #### Use of DHCP for IPv4 address assignment
 
@@ -373,9 +377,8 @@ admin@example:/>
 Stateless address auto-configuration of global addresses is enabled by
 default. The address is formed by concatenating the network prefix
 advertised by the router (here 2001:db8:0:1::0/64) and the interface
-identifier. The resulting address is of type *link-layer*, as it
-is formed based on the interface identifier ([IETF
-ip-yang][ietf-ip-yang]). 
+identifier.  The resulting address is of type *link-layer*, as it is
+formed based on the interface identifier ([ietf-ip.yang][2]).
 
     admin@example:/> show interfaces
     INTERFACE       PROTOCOL   STATE       DATA                                     
@@ -421,7 +424,8 @@ are formed from a link-identifier based on the MAC address.
     admin@example:/>
 
 To avoid revealing identity information in the IPv6 address, it is
-possible to specify use of a random identifier ([ietf-ip][ietf-ip-yang] YANG and [RFC8981][ietf-ipv6-privacy]).
+possible to specify use of a random identifier ([ietf-ip.yang][2] and
+[RFC8981][3]).
 
     admin@example:/> configure
     admin@example:/config/> edit interface eth0 ipv6
@@ -622,10 +626,11 @@ The source protocol describes the origin of the route.
 The YANG model *ietf-routing* support multiple ribs but only two are
 currently supported, namely `ipv4` and `ipv6`.
 
-[ietf-ip-yang]:         https://www.rfc-editor.org/rfc/rfc8344.html
-[ietf-ipv6-privacy]:    https://www.rfc-editor.org/rfc/rfc8981.html
+[1]: https://www.rfc-editor.org/rfc/rfc8343
+[2]: https://www.rfc-editor.org/rfc/rfc8344
+[3]: https://www.rfc-editor.org/rfc/rfc8981
 
 [^1]: Please note, link aggregates are not yet supported in Infix.
-[^2]: Link-local IPv6 addresses are implicitly enabled when enabling IPv6.
-    IPv6 can be enabled/disabled per interface in the [ietf-ip][ietf-ip-yang]
-    YANG model.
+[^2]: Link-local IPv6 addresses are implicitly enabled when enabling
+    IPv6.  IPv6 can be enabled/disabled per interface in the
+    [ietf-ip][2] YANG model.

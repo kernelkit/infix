@@ -66,5 +66,5 @@ admin@host:/config/system/> set text-editor <TAB>
 emacs	nano	vi
 admin@host:/config/system/> set text-editor nano
 admin@host:/config/system/> leave
-admin@example:/> 
+admin@host:/>
 ```
