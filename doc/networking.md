@@ -1,4 +1,4 @@
-# Linux Networking
+# Network Configuration
 
 Infix aims to support all Linux Networking constructs.  The YANG models
 used to describe the system are chosen to fit well and leverage the

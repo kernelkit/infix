@@ -1,5 +1,5 @@
-Testing
-=======
+Regression Testing with Infamy
+==============================
 
 Infix comes with a test suite that is intended to provide end-to-end
 verification of supported features.  Generally speaking, this means
