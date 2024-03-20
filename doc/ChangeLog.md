@@ -11,6 +11,7 @@ All notable changes to the project are documented in this file.
 > <https://github.com/orgs/kernelkit/projects/3/views/2>
 
 ### Changes
+- Bump the base Linux kernel version to 6.6
 - The bridge model now has built-in validation of port memberships,
   i.e., a port must be a bridge member to be used in VLAN filtering
 - The bridge model only permits the bridge itself to be a tagged
