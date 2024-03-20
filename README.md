@@ -1,29 +1,16 @@
 [![License Badge][]][License] [![Coverity Status][]][Coverity Scan] [![Discord][discord-badge]][discord-url]
 
 <img align="right" src="doc/logo.png" alt="Infix - Linux <3 NETCONF" width=480 border=10>
-<details><summary><b>Documentation</b></summary>
-
- - **Infix In-Depth**
-   - [Infix Variants](doc/variant.md)
-   - [Boot Procedure](doc/boot.md)
-   - [Containers in Infix](doc/container.md)
-   - [Developer's Guide](doc/developers-guide.md)
-   - [Discover Your Device](doc/discovery.md)
-   - [Virtual Environments](doc/virtual.md)
-   - [Origin & Licensing](doc/license.md)
-- **CLI Topics**
-   - [Introduction to the CLI](doc/cli/introduction.md)
-   - [CLI User's Guide](doc/cli/tutorial.md)
-   - [Quick Overview](doc/cli/quick.md)
-
-</details>
 
 Infix is a free, Linux based, immutable Network Operating System (NOS)
 built on [Buildroot][1], and [sysrepo][2].  A powerful mix that ease
 porting to different platforms, simplify long-term maintenance, and
-provide made-easy management using NETCONF[^1] or the built-in [command
-line interface (CLI)][3] from a console or SSH login.  *Click the
-foldout (▶ Example CLI Session) below for an example.*
+provide made-easy management using NETCONF[^1] or the built-in command
+line interface (CLI) from a console or SSH login.
+
+> Click the **▶ Example CLI Session** foldout below for an example, or
+> head on over to the [Infix Documentation](doc/README.md) for more
+> information on how to set up the system.
 
 Although primarily focused on switches and routers, the core values
 may be appealing for other use-cases as well:
