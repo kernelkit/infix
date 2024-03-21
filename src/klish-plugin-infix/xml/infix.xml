@@ -230,7 +230,7 @@
           </COMMAND>
         </SWITCH>
       </COMMAND>
-      <COMMAND name="detailed" help="Show VLAN table">
+      <COMMAND name="vlan" help="Show VLAN table">
         <ACTION sym="script">bridge -color vlan</ACTION>
         <SWITCH name="optional" min="0">
           <COMMAND name="detailed" help="Detailed (full) output">
