@@ -120,6 +120,24 @@ struct lyd_node *lydx_get_descendant(struct lyd_node *from, ...)
 	return node;
 }
 
+/*
+ * Similar to lydx_get_decsendant() but for, e.g., finding a named
+ * interface in ietf-interfaces from the top node.
+ */
+struct lyd_node *lydx_find_by_name(struct lyd_node *from, const char *by, const char *name)
+{
+	struct lyd_node *node;
+
+	LY_LIST_FOR(lydx_get_sibling(lyd_child(from), by), node) {
+		if (strcmp(lydx_get_cattr(node, "name"), name))
+			continue;
+
+		return node;
+	}
+
+	return NULL;
+}
+
 const char *lydx_get_mattr(struct lyd_node *node, const char *name)
 {
 	struct lyd_meta *meta;
