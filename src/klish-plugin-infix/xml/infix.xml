@@ -366,6 +366,10 @@
       <COMMAND name="detailed" help="Detailed (full) output" mode="switch">
         <ACTION sym="script">ip -color -d addr</ACTION>
       </COMMAND>
+
+      <COMMAND name="multicast" help="Show IGMP/MLD status" mode="switch">
+        <ACTION sym="script">mctl</ACTION>
+      </COMMAND>
     </SWITCH>
   </COMMAND>
 
