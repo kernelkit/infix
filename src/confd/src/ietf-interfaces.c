@@ -1055,28 +1055,31 @@ static int querier_mode(const char *mode)
 	return 0;		/* unknown: off */
 }
 
-static void mcast_querier(const char *ifname, int mode, int interval)
+static void mcast_querier(const char *ifname, int vid, int mode, int interval)
 {
 	FILE *fp;
 
 	DEBUG("mcast querier %s mode %d interval %d", ifname, mode, interval);
 	if (!mode) {
-		erasef("/etc/mcd/%s.conf", ifname);
-		systemf("initctl -bnq disable mcd@%s", ifname);
+		systemf("rm -f /etc/mc.d/%s-*.conf", ifname);
+		systemf("initctl -bnq disable mcd");
 		return;
 	}
 
-	fp = fopenf("w", "/etc/mcd/%s.conf", ifname);
+	fp = fopenf("w", "/etc/mc.d/%s-%d.conf", ifname, vid);
 	if (!fp) {
 		ERRNO("Failed creating querier configuration for %s", ifname);
 		return;
 	}
 
-	fprintf(fp, "query-interval %d\n", interval);
-	fprintf(fp, "iface %s enable %sigmpv3\n", ifname, mode == 1 ? "proxy-queries " : "");
+	fprintf(fp, "iface %s", ifname);
+	if (vid > 0)
+		fprintf(fp, " vlan %d", vid);
+	fprintf(fp, " enable %sigmpv3 query-interval %d\n",
+		mode == 1 ? "proxy-queries " : "", interval);
 	fclose(fp);
 
-	systemf("initctl -bnq enable mcd@%s", ifname);
+	systemf("initctl -bnq enable mcd");
 }
 
 static char *find_vlan_interface(sr_session_ctx_t *session, const char *brname, int vid)
@@ -1106,7 +1109,8 @@ static char *find_vlan_interface(sr_session_ctx_t *session, const char *brname, 
 	return NULL;
 }
 
-static int vlan_mcast_settings(sr_session_ctx_t *session, FILE *br, const char *brname, struct lyd_node *vlan, int vid)
+static int vlan_mcast_settings(sr_session_ctx_t *session, FILE *br, const char *brname,
+			       struct lyd_node *vlan, int vid)
 {
 	int interval, querier, snooping;
 	struct lyd_node *mcast;
@@ -1119,18 +1123,15 @@ static int vlan_mcast_settings(sr_session_ctx_t *session, FILE *br, const char *
 	snooping = lydx_is_enabled(mcast, "snooping");
 	querier = querier_mode(lydx_get_cattr(mcast, "querier"));
 
-	fprintf(br, "vlan global set vid %d dev %s mcast_snooping %d",
+	fprintf(br, "vlan global set vid %d dev %s mcast_snooping %d\n",
 		vid, brname, snooping);
 
 	interval = atoi(lydx_get_cattr(mcast, "query-interval"));
 	ifname = find_vlan_interface(session, brname, vid);
 	if (ifname)
-		mcast_querier(ifname, querier, interval);
-	fprintf(br, " mcast_querier %d mcast_query_interval %d",
-		ifname ? 0 : querier, interval * 100);
-
-	/* XXX: make configurable later */
-	fprintf(br, " mcast_igmp_version 3 mcast_mld_version 2\n");
+		mcast_querier(ifname, 0, querier, interval);
+	else
+		mcast_querier(brname, vid, querier, interval);
 
 	return 0;
 }
@@ -1142,7 +1143,7 @@ static int bridge_mcast_settings(FILE *ip, const char *brname, struct lyd_node *
 
 	mcast = lydx_get_descendant(lyd_child(cif), "bridge", "multicast", NULL);
 	if (!mcast) {
-		mcast_querier(brname, 0, 0);
+		mcast_querier(brname, 0, 0, 0);
 		return 0;
 	}
 
@@ -1155,11 +1156,10 @@ static int bridge_mcast_settings(FILE *ip, const char *brname, struct lyd_node *
 	interval = atoi(lydx_get_cattr(mcast, "query-interval"));
 	fprintf(ip, " mcast_query_interval %d", interval * 100);
 
-	DEBUG("%s: querier %d", brname, vlan_filtering ? -1 : querier);
 	if (!vlan_filtering)
-		mcast_querier(brname, querier, interval);
+		mcast_querier(brname, 0, querier, interval);
 	else
-		mcast_querier(brname, 0, 0);
+		mcast_querier(brname, 0, 0, 0);
 
 	return 0;
 }
@@ -1225,8 +1225,16 @@ static int netdag_gen_bridge(sr_session_ctx_t *session, struct dagger *net, stru
 		err = bridge_diff_vlan_ports(net, br, brname, vid, vlan, 1);
 		if (err)
 			break;
+	}
 
-		/* need the vlans created before we can set features on them */
+	/* need the vlans created before we can set features on them */
+	vlans = lydx_get_descendant(lyd_child(cif), "bridge", "vlans", NULL);
+	if (!vlans)
+		goto done;
+
+	LYX_LIST_FOR_EACH(lyd_child(vlans), vlan, "vlan") {
+		int vid = atoi(lydx_get_cattr(vlan, "vid"));
+
 		err = vlan_mcast_settings(session, br, brname, vlan, vid);
 		if (err)
 			break;
@@ -1407,7 +1415,7 @@ static int netdag_gen_iface_del(struct dagger *net, struct lyd_node *dif,
 
 	DEBUG_IFACE(dif, "");
 
-	mcast_querier(ifname, 0, 0);
+	mcast_querier(ifname, 0, 0, 0);
 	if (dagger_should_skip_current(net, ifname))
 		return 0;
 
