@@ -63,6 +63,20 @@ static void cd_home(kcontext_t *ctx)
 	chdir(pw->pw_dir);
 }
 
+static void set_owner(const char *fn, const char *user)
+{
+	struct passwd *pw;
+
+	pw = getpwnam(user);
+	if (!pw) {
+		fprintf(stderr, ERRMSG "setting owner %s on %s: %s\n", fn, user, strerror(errno));
+		return;
+	}
+
+	chmod(fn, 0660);
+	chown(fn, pw->pw_uid, pw->pw_gid);
+}
+
 static int has_ext(const char *fn, const char *ext)
 {
 	size_t pos = strlen(fn);
@@ -384,6 +398,7 @@ int infix_copy(kcontext_t *ctx)
 	sr_session_ctx_t *sess;
 	const char *fn = NULL;
 	const char *src, *dst;
+	const char *username;
 	sr_conn_ctx_t *conn;
 	char user[256] = "";
 	char adjust[256];
@@ -412,6 +427,8 @@ int infix_copy(kcontext_t *ctx)
 	}
 
 	cd_home(ctx);
+	username = ksession_user(kcontext_session(ctx));
+	umask(0660);
 
 	/* 1. Regular ds copy */
 	if (srcds && dstds) {
@@ -435,6 +452,8 @@ int infix_copy(kcontext_t *ctx)
 			if (rc)
 				emsg(sess, ERRMSG "unable to copy configuration, err %d: %s\n",
 				     rc, sr_strerror(rc));
+			else
+				set_owner(dstds->path, username);
 		}
 		rc = sr_disconnect(conn);
 
@@ -461,6 +480,8 @@ int infix_copy(kcontext_t *ctx)
 				rc = systemf("curl %s -LT %s %s", user, fn, dst);
 				if (rc)
 					fprintf(stderr, ERRMSG "failed uploading %s to %s\n", src, dst);
+				else
+					set_owner(dst, username);
 			}
 			goto err;
 		}
@@ -487,6 +508,8 @@ int infix_copy(kcontext_t *ctx)
 			rc = systemf("sysrepocfg -d %s -X%s -f json", srcds->sysrepocfg, fn);
 		if (rc)
 			fprintf(stderr, ERRMSG "failed copy %s to %s\n", src, fn);
+		else
+			set_owner(fn, username);
 	} else if (dstds) {
 		if (!dstds->sysrepocfg) {
 			fprintf(stderr, ERRMSG "not possible to import to this datastore.\n");
