@@ -22,6 +22,7 @@ the `help` command.
    - [Containers in Infix](container.md)
    - [Find Your Device on the Network](discovery.md)
    - [Hardware Info & Status](hardware.md)
+   - [Scripting Infix](scripting.md)
    - [Infix Variants](variant.md)
    - [Virtual Environments](virtual.md)
    - [Vital Product Data (VPD)](vpd.md)
