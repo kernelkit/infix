@@ -13,9 +13,9 @@ Containers in Infix
   * [Content Mounts](#content-mounts)
 * [Example Containers](#example-containers)
   * [System Container](#system-container)
-  * [Application Container: nftables](#application-container--nftables)
-  * [Application Container: ntpd](#application-container--ntpd)
-* [Upgrading a Container Image](#upgradeing-a-container-image)
+  * [Application Container: nftables](#application-container-nftables)
+  * [Application Container: ntpd](#application-container-ntpd)
+* [Upgrading a Container Image](#upgrading-a-container-image)
 
 
 Introduction
