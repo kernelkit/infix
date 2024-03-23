@@ -971,7 +971,7 @@ static int bridge_gen_ports(struct dagger *net, struct lyd_node *dif, struct lyd
 
 		err = dagger_add_dep(net, brname, ifname);
 		if (err)
-			return ERR_IFACE(cif, err, "Unable to add dep \"%s\" to %s", ifname, brdiff);
+			return ERR_IFACE(cif, err, "Unable to add dep \"%s\" to %s", ifname, brname);
 		goto fail;
 	}
 
