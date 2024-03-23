@@ -1229,15 +1229,14 @@ static int netdag_gen_bridge(sr_session_ctx_t *session, struct dagger *net, stru
 
 	/* need the vlans created before we can set features on them */
 	vlans = lydx_get_descendant(lyd_child(cif), "bridge", "vlans", NULL);
-	if (!vlans)
-		goto done;
+	if (vlans) {
+		LYX_LIST_FOR_EACH(lyd_child(vlans), vlan, "vlan") {
+			int vid = atoi(lydx_get_cattr(vlan, "vid"));
 
-	LYX_LIST_FOR_EACH(lyd_child(vlans), vlan, "vlan") {
-		int vid = atoi(lydx_get_cattr(vlan, "vid"));
-
-		err = vlan_mcast_settings(session, br, brname, vlan, vid);
-		if (err)
-			break;
+			err = vlan_mcast_settings(session, br, brname, vlan, vid);
+			if (err)
+				break;
+		}
 	}
 
 	fclose(br);
