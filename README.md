@@ -1,4 +1,4 @@
-[![License Badge][]][License] [![Coverity Status][]][Coverity Scan] [![Discord][discord-badge]][discord-url]
+[![License Badge][]][License] [![GitHub Status][]][GitHub] [![Coverity Status][]][Coverity Scan] [![Discord][discord-badge]][discord-url]
 
 <img align="right" src="doc/logo.png" alt="Infix - Linux <3 NETCONF" width=480 border=10>
 
@@ -119,6 +119,8 @@ more information, see: [Infix in Virtual Environments](doc/virtual.md).
 [3]: doc/cli/introduction.md
 [License]:         https://en.wikipedia.org/wiki/GPL_license
 [License Badge]:   https://img.shields.io/badge/License-GPL%20v2-blue.svg
+[GitHub]:          https://github.com/kernelkit/infix/actions/workflows/build.yml/
+[GitHub Status]:   https://github.com/kernelkit/infix/actions/workflows/build.yml/badge.svg
 [Coverity Scan]:   https://scan.coverity.com/projects/29393
 [Coverity Status]: https://scan.coverity.com/projects/29393/badge.svg
 [discord-badge]:   https://img.shields.io/discord/1182652155618918411.svg?logo=discord
