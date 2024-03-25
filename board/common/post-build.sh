@@ -1,5 +1,6 @@
 #!/bin/sh
 # shellcheck disable=SC1090,SC1091
+common=$(dirname "$(readlink -f "$0")")
 . "$BR2_CONFIG" 2>/dev/null
 . "$TARGET_DIR/usr/lib/os-release"
 
@@ -79,6 +80,37 @@ grep -qsE '^/bin/true$$' "$TARGET_DIR/etc/shells" \
         || echo "/bin/true" >> "$TARGET_DIR/etc/shells"
 grep -qsE '^/bin/false$$' "$TARGET_DIR/etc/shells" \
         || echo "/bin/false" >> "$TARGET_DIR/etc/shells"
+
 # Allow clish (symlink to /usr/bin/klish) to be a login shell
 grep -qsE '^/bin/clish$$' "$TARGET_DIR/etc/shells" \
         || echo "/bin/clish" >> "$TARGET_DIR/etc/shells"
+
+if [ -n "$BR2_PACKAGE_NGINX" ]; then
+    cp "$common/nginx.conf" "$TARGET_DIR/etc/nginx/"
+    ln -sf ../available/nginx.conf "$TARGET_DIR/etc/finit.d/enabled/nginx.conf"
+
+    cat <<EOF > "$TARGET_DIR/etc/avahi/services/http.service"
+<?xml version="1.0" standalone='no'?>
+<!DOCTYPE service-group SYSTEM "avahi-service.dtd">
+<service-group>
+  <name replace-wildcards="yes">%h</name>
+  <service>
+    <type>_http._tcp</type>
+    <port>80</port>
+    <txt-record value-format="text">product=$INFIX_NAME</txt-record>
+  </service>
+</service-group>
+EOF
+    cat <<EOF > "$TARGET_DIR/etc/avahi/services/https.service"
+<?xml version="1.0" standalone='no'?>
+<!DOCTYPE service-group SYSTEM "avahi-service.dtd">
+<service-group>
+  <name replace-wildcards="yes">%h</name>
+  <service>
+    <type>_https._tcp</type>
+    <port>443</port>
+    <txt-record value-format="text">product=$INFIX_NAME</txt-record>
+  </service>
+</service-group>
+EOF
+fi
