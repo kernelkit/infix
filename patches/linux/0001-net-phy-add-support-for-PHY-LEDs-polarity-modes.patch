@@ -1,7 +1,7 @@
 From 79abf7872e35080ca5b519bb4ad2acc1fbd96e8c Mon Sep 17 00:00:00 2001
 From: Christian Marangi <ansuelsmth@gmail.com>
 Date: Thu, 25 Jan 2024 21:36:59 +0100
-Subject: [PATCH 01/19] net: phy: add support for PHY LEDs polarity modes
+Subject: [PATCH 01/21] net: phy: add support for PHY LEDs polarity modes
 Organization: Addiva Elektronik
 
 Add support for PHY LEDs polarity modes. Some PHY require LED to be set

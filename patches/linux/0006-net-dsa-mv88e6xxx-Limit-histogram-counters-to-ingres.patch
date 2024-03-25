@@ -1,7 +1,7 @@
 From cc5badac76e76692eb516a5c086fcf54a5a93080 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Thu, 14 Dec 2023 14:50:27 +0100
-Subject: [PATCH 06/19] net: dsa: mv88e6xxx: Limit histogram counters to
+Subject: [PATCH 06/21] net: dsa: mv88e6xxx: Limit histogram counters to
  ingress traffic
 Organization: Addiva Elektronik
 

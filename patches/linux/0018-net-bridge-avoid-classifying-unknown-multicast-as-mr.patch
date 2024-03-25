@@ -1,7 +1,7 @@
 From 681ce95c15bff94ac83eb26db3c718594f8dfa16 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Mon, 4 Mar 2024 16:47:28 +0100
-Subject: [PATCH 18/19] net: bridge: avoid classifying unknown multicast as
+Subject: [PATCH 18/21] net: bridge: avoid classifying unknown multicast as
  mrouters_only
 Organization: Addiva Elektronik
 
