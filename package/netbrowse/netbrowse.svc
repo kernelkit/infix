@@ -1,0 +1,3 @@
+service env:-/etc/default/netbrowse log:prio:daemon.debug,tag:mdns \
+	<!service/mdns/running> @www-data:www-data \
+	[2345] netbrowse $NETBROWSE_ARGS -- Network browser
