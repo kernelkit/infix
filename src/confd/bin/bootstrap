@@ -251,8 +251,11 @@ sysrepoctl -c ietf-netconf-acm -g wheel -p 0660
 # On first boot, install factory-config as startup-config.  Due to a
 # limitation in sysrepo we cannot initialize ietf-netconf-acm, so we
 # cheat, see sysrepo#3079
+chgrp wheel /cfg
+chmod g+w   /cfg
 if [ ! -f "$STARTUP_CFG" ]; then
     sysrepocfg -f json -X"$STARTUP_CFG"
+    chown admin:wheel "$STARTUP_CFG"
 fi
 
 # Clear running-config so we can load startup in the next step
