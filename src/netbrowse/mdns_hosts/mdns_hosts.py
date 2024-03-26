@@ -17,17 +17,11 @@ class MdnsHosts:
     def scan(self):
         """Perform mDNS scan and return list of hosts."""
         services = {
-            '_daap._tcp':        ('iTunes Server', None),
-            '_device-info._tcp': ('Device info', None),
             '_http._tcp':        ('HTTP', 'http://{address}'),
             '_https._tcp':       ('HTTPS', 'https://{address}'),
-            '_ipp._tcp':         ('Printer', None),
-            '_ipps._tcp':        ('Printer', None),
             '_netconf-ssh._tcp': ('NETCONF', None),
-            '_raop._tcp':        ('AirPlay ', None),
             '_ssh._tcp':         ('SSH', None),
             '_sftp-ssh._tcp':    ('SFTP', None),
-            '_workstation._tcp': ('Workstation', None),
         }
 
         result = subprocess.run(['avahi-browse', '-tarpk' if self.hask() else '-tarp'],
