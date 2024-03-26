@@ -2,46 +2,28 @@
 """
    Main server loop.
 """
-import os
-import signal
 import sys
-from flup.server.fcgi import WSGIServer
 
+from flask       import Flask#, render_template_string
 from avahi_alias import AvahiAlias
-from mdns_hosts import MdnsHosts
+from mdns_hosts  import MdnsHosts
 
-SOCK_FILE='/tmp/netbrowse.sock'
+app = Flask(__name__)
 
-def app(_, start_response):
+@app.route('/browse')
+def browse():
     """The /browse network.local application"""
     mdns_hosts = MdnsHosts()
     content = mdns_hosts.html().encode('utf-8')
-
-    start_response('200 OK', [('Content-Type', 'text/html'), ('Content-Length', str(len(content)))])
-    return [content]
-
-def cleanup():
-    """Clean up on server shutdown"""
-    try:
-        os.remove(SOCK_FILE)
-    except OSError:
-        pass
-    sys.exit(0)
-
-def __sigcb(_, __):
-    cleanup()
+    #return render_template_string(content)
+    return content
 
 if __name__ == '__main__':
     avahi_aliases = AvahiAlias()
     for each in sys.argv[1:]:
         avahi_aliases.publish_cname(str(each).encode("utf-8", "strict"))
 
-    signal.signal(signal.SIGINT,  __sigcb)
-    signal.signal(signal.SIGTERM, __sigcb)
-
     try:
-        # For testing on PC as $USER, add: , umask=0
-        WSGIServer(app, bindAddress=SOCK_FILE).run()
+        app.run(debug=True)
     except KeyboardInterrupt:
-        cleanup()
         print("Exiting")
