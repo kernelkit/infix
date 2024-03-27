@@ -102,22 +102,22 @@ application to run.
 
 Classic Hello World:
 
-    admin@example-c0-ff-ee:/> container run docker://hello-world
+    admin@example:/> container run docker://hello-world
 
 Persistent web server using nginx, sharing the host's network:
 
-    admin@example-c0-ff-ee:/> configure
-    admin@example-c0-ff-ee:/config> edit container web
-    admin@example-c0-ff-ee:/config/container/web> set image docker://nginx:alpine
-    admin@example-c0-ff-ee:/config/container/web> set publish 80:80
-    admin@example-c0-ff-ee:/config/container/web> set network host
-    admin@example-c0-ff-ee:/config/container/web> leave
-    admin@example-c0-ff-ee:/> show container
+    admin@example:/> configure
+    admin@example:/config> edit container web
+    admin@example:/config/container/web> set image docker://nginx:alpine
+    admin@example:/config/container/web> set publish 80:80
+    admin@example:/config/container/web> set network host
+    admin@example:/config/container/web> leave
+    admin@example:/> show container
 
 Exit to the shell and verify the service with curl, or try to attach
 to your device's IP address using your browser:
 
-    admin@example-c0-ff-ee:~$ curl http://localhost
+    admin@example:~$ curl http://localhost
 
 or connect to port 80 of your running Infix system with a browser.  See
 the following sections for how to add more interfaces and manage your
@@ -134,7 +134,7 @@ how to upgrade to a newer base image.
 
 The CLI help shows:
 
-    admin@example-c0-ff-ee:/config/container/system/> help image
+    admin@example:/config/container/system/> help image
     NAME
         image <string>
 
@@ -183,14 +183,14 @@ mind.
 
 **Shell OCI Example:**
 
-	admin@example-c0-ff-ee:~$ cd /var/tmp/
-	admin@example-c0-ff-ee:/var/tmp$ sudo wget https://github.com/kernelkit/curiOS/releases/download/edge/curios-oci-amd64.tar.gzConnecting to github.com (140.82.121.3:443)
+	admin@example:~$ cd /var/tmp/
+	admin@example:/var/tmp$ sudo wget https://github.com/kernelkit/curiOS/releases/download/edge/curios-oci-amd64.tar.gzConnecting to github.com (140.82.121.3:443)
 	wget: note: TLS certificate validation not implemented
 	Connecting to objects.githubusercontent.com (185.199.109.133:443)
 	saving to 'curios-oci-amd64.tar.gz'
 	curios-oci-amd64.tar 100% |*********************************| 7091k  0:00:00 ETA
 	'curios-oci-amd64.tar.gz' saved
-	admin@example-c0-ff-ee:/var/tmp$ ll
+	admin@example:/var/tmp$ ll
 	total 7104
 	drwxr-xr-x    3 root     root          4096 Mar 27 14:22 ./
 	drwxr-xr-x   14 root     root          4096 Mar 27 11:57 ../
@@ -200,8 +200,8 @@ mind.
 Importing the image into podman can be done either from the CLI
 admin-exec context ...
 
-    admin@example-c0-ff-ee:/var/tmp$ cli
-    admin@example-c0-ff-ee:/> container load /var/tmp/curios-oci-amd64.tar.gz name curios:edge
+    admin@example:/var/tmp$ cli
+    admin@example:/> container load /var/tmp/curios-oci-amd64.tar.gz name curios:edge
 
 > By assigning The `name curios:edge` is the tag you give the imported
 > (raw) archive which you can then reference in your container image
@@ -210,7 +210,7 @@ admin-exec context ...
 ... or by giving the container configuration the full path to the OCI
 archive, which helps greatly with container upgrades (see below):
 
-    admin@example-c0-ff-ee:/config/container/system/> set image oci-archive:/var/tmp/curios-oci-amd64.tar.gz
+    admin@example:/config/container/system/> set image oci-archive:/var/tmp/curios-oci-amd64.tar.gz
 
 
 Upgrading a Container Image
@@ -227,7 +227,7 @@ the configuration to use the new `image:tag` -- the latter is a bit
 trickier.  Either remove the configuration and recreate it (leave/apply
 the changes between), or use the admin-exec level command:
 
-    admin@example-c0-ff-ee:/> container upgrade NAME
+    admin@example:/> container upgrade NAME
 
 Where `NAME` is the name of your container.  This command stops the
 container, does `container pull IMAGE`, and then recreates it with the
@@ -235,7 +235,7 @@ new image.  Upgraded containers are automatically restarted.
 
 **Example using registry:**
 
-	admin@example-c0-ff-ee:/> container upgrade system
+	admin@example:/> container upgrade system
 	system
 	Trying to pull ghcr.io/kernelkit/curios:edge...
 	Getting image source signatures
@@ -252,7 +252,7 @@ is of course to get the new archive onto the system (see above), and
 then, provided the `oci-archive:/path/to/archive` format is used, call
 the upgrade command as
 
-	admin@example-c0-ff-ee:/> container upgrade system
+	admin@example:/> container upgrade system
 	Upgrading container system with local archive: oci-archive:/var/tmp/curios-oci-amd64.tar.gz ...
 	7ab4a07ee0c6039837419b7afda4da1527a70f0c60c0f0ac21cafee05ba24b52
 
@@ -280,10 +280,10 @@ what makes container use seem to be so simple.
 
 All interface configuration is done in configure context.
 
-    admin@example-c0-ff-ee:/> configure
-    admin@example-c0-ff-ee:/config> edit interface docker0
-    admin@example-c0-ff-ee:/config/interface/docker0/> set container-network
-    admin@example-c0-ff-ee:/config/interface/docker0/> leave
+    admin@example:/> configure
+    admin@example:/config> edit interface docker0
+    admin@example:/config/interface/docker0/> set container-network
+    admin@example:/config/interface/docker0/> leave
 
 There is more to this story.  When using the CLI, and sticking to common
 interface nomenclature, Infix helps you with some of the boring stuff.
@@ -291,8 +291,8 @@ E.g., creating a new interface with a name like `brN` or `dockerN`
 automatically *infers* the interface types, which you would otherwise
 have to set manually:
 
-    admin@example-c0-ff-ee:/config/interface/docker0/> set type bridge
-    admin@example-c0-ff-ee:/config/interface/docker0/> set container-network type bridge
+    admin@example:/config/interface/docker0/> set type bridge
+    admin@example:/config/interface/docker0/> set container-network type bridge
 
 > **Note:** when doing the same operation over NETCONF there is no
 > inference, so all the "magic" settings needs to be defined.  This
@@ -316,16 +316,16 @@ other networking parameters (DNS, default route) are set up.
 Some of the defaults of a container `bridge` can be changed, e.g.,
 instead of `set container-network type bridge`, above, do:
 
-    admin@example-c0-ff-ee:/config/interface/docker0/> edit container-network
-    admin@example-c0-ff-ee:/config/interface/docker0/container-network/> set type bridge
-    admin@example-c0-ff-ee:/config/interface/docker0/container-network/> edit subnet 192.168.0.0/16
-    admin@example-c0-ff-ee:/config/interface/docker0/container-network/subnet/192.168.0.0/16/> set gateway 192.168.255.254
-    admin@example-c0-ff-ee:/config/interface/docker0/container-network/subnet/192.168.0.0/16/> end
-    admin@example-c0-ff-ee:/config/interface/docker0/container-network/> edit route 10.0.10.0/24
-	admin@example-c0-ff-ee:/config/interface/docker0/container-network/route/10.0.10.0/24/> set gateway 192.168.10.254
-	admin@example-c0-ff-ee:/config/interface/docker0/container-network/route/10.0.10.0/24/> end
-	admin@example-c0-ff-ee:/config/interface/docker0/container-network/> end
-    admin@example-c0-ff-ee:/config/interface/docker0/> leave
+    admin@example:/config/interface/docker0/> edit container-network
+    admin@example:/config/interface/docker0/container-network/> set type bridge
+    admin@example:/config/interface/docker0/container-network/> edit subnet 192.168.0.0/16
+    admin@example:/config/interface/docker0/container-network/subnet/192.168.0.0/16/> set gateway 192.168.255.254
+    admin@example:/config/interface/docker0/container-network/subnet/192.168.0.0/16/> end
+    admin@example:/config/interface/docker0/container-network/> edit route 10.0.10.0/24
+	admin@example:/config/interface/docker0/container-network/route/10.0.10.0/24/> set gateway 192.168.10.254
+	admin@example:/config/interface/docker0/container-network/route/10.0.10.0/24/> end
+	admin@example:/config/interface/docker0/container-network/> end
+    admin@example:/config/interface/docker0/> leave
 
 Other network settings, like DNS and domain, use built-in defaults, but
 can be overridden from each container.  Other common settings per
@@ -337,11 +337,11 @@ in a `bridge`.  Below an example of a system container calls `set
 network interface docker0`, here we show how to set options for that
 network:
 
-    admin@example-c0-ff-ee:/config/container/ntpd/> edit network docker0 
-    admin@example-c0-ff-ee:/config/container/ntpd/network/docker0/> 
-    admin@example-c0-ff-ee:/config/container/ntpd/network/docker0/> set option 
+    admin@example:/config/container/ntpd/> edit network docker0 
+    admin@example:/config/container/ntpd/network/docker0/> 
+    admin@example:/config/container/ntpd/network/docker0/> set option 
     <string>  Options for masquerading container bridges.
-    admin@example-c0-ff-ee:/config/container/ntpd/network/docker0/> help option 
+    admin@example:/config/container/ntpd/network/docker0/> help option 
     NAME
             option <string>
     
@@ -352,9 +352,9 @@ network:
                      mac=00:01:02:c0:ff:ee -- set fixed MAC address in container
                      interface_name=foo0   -- set interface name inside container
     
-    admin@example-c0-ff-ee:/config/container/ntpd/network/docker0/> set option ip=172.17.0.2
-    admin@example-c0-ff-ee:/config/container/ntpd/network/docker0/> set option interface_name=wan
-    admin@example-c0-ff-ee:/config/container/ntpd/network/docker0/> leave
+    admin@example:/config/container/ntpd/network/docker0/> set option ip=172.17.0.2
+    admin@example:/config/container/ntpd/network/docker0/> set option interface_name=wan
+    admin@example:/config/container/ntpd/network/docker0/> leave
 
 
 ### Container Host Interface
@@ -366,13 +366,13 @@ This works with regular Ethernet interfaces as well, but here we will
 use a VETH pair as an example along with a regular bridge (where other
 Ethernet interfaces may live as well).
 
-    admin@example-c0-ff-ee:/config/> edit interface veth0
-    admin@example-c0-ff-ee:/config/interface/veth0/> set veth peer ntpd
-    admin@example-c0-ff-ee:/config/interface/veth0/> set ipv4 address 192.168.0.1 prefix-length 24
-    admin@example-c0-ff-ee:/config/interface/veth0/> end
-    admin@example-c0-ff-ee:/config/> edit interface ntpd
-    admin@example-c0-ff-ee:/config/interface/ntpd/> set ipv4 address 192.168.0.2 prefix-length 24
-    admin@example-c0-ff-ee:/config/interface/ntpd/> set container-network
+    admin@example:/config/> edit interface veth0
+    admin@example:/config/interface/veth0/> set veth peer ntpd
+    admin@example:/config/interface/veth0/> set ipv4 address 192.168.0.1 prefix-length 24
+    admin@example:/config/interface/veth0/> end
+    admin@example:/config/> edit interface ntpd
+    admin@example:/config/interface/ntpd/> set ipv4 address 192.168.0.2 prefix-length 24
+    admin@example:/config/interface/ntpd/> set container-network
 
 This is a routed setup, where we reserve 192.168.0.0/24 for the network
 between the host and the `ntpd` container.  A perhaps more common case
@@ -386,11 +386,11 @@ have a default route installed.  This can be added from the host with a
 `0.0.0.0/0` route on one of the interfaces.  The following is an example
 when adding a second VETH pair to the container:
 
-    admin@example-c0-ff-ee:/config/> edit interface veth1a
-    admin@example-c0-ff-ee:/config/interface/veth1a/> set veth peer veth1b
-    admin@example-c0-ff-ee:/config/interface/veth1a/> set ipv4 address 192.168.1.2 prefix-length 24
-    admin@example-c0-ff-ee:/config/interface/veth1a/> set container-network route 0.0.0.0/0 gateway 192.168.1.1
-    admin@example-c0-ff-ee:/config/interface/veth1a/> show
+    admin@example:/config/> edit interface veth1a
+    admin@example:/config/interface/veth1a/> set veth peer veth1b
+    admin@example:/config/interface/veth1a/> set ipv4 address 192.168.1.2 prefix-length 24
+    admin@example:/config/interface/veth1a/> set container-network route 0.0.0.0/0 gateway 192.168.1.1
+    admin@example:/config/interface/veth1a/> show
     type veth;
 	container-network {
 	  type host;
@@ -401,8 +401,8 @@ when adding a second VETH pair to the container:
 	veth {
 	  peer veth1b;
 	}
-    admin@example-c0-ff-ee:/config/interface/veth1a/> end
-    admin@example-c0-ff-ee:/config/> set interface veth1b bridge-port bridge br0
+    admin@example:/config/interface/veth1a/> end
+    admin@example:/config/> set interface veth1b bridge-port bridge br0
 
 Please note, container network routes require the base interface also
 have a static IP address set.  Setting only the route, but no address,
@@ -430,16 +430,16 @@ It is possible to mount files, directories, and even files matching a
 glob, into a container.  This gives precise control over the container's
 file system:
 
-    admin@example-c0-ff-ee:/config/container/system/> edit mount leds
-    admin@example-c0-ff-ee:/config/container/system/mount/leds> set source /sys/class/leds
-    admin@example-c0-ff-ee:/config/container/system/mount/leds> set target /sys/class/leds
-    admin@example-c0-ff-ee:/config/container/system/mount/leds> end
-    admin@example-c0-ff-ee:/config/container/system/>
+    admin@example:/config/container/system/> edit mount leds
+    admin@example:/config/container/system/mount/leds> set source /sys/class/leds
+    admin@example:/config/container/system/mount/leds> set target /sys/class/leds
+    admin@example:/config/container/system/mount/leds> end
+    admin@example:/config/container/system/>
 
 Sometimes *volumes* are a better fit.  A volume is an automatically
 created read-writable entity that follows the life of your container.
 
-    admin@example-c0-ff-ee:/config/container/ntpd/> set volume varlib target /var/lib
+    admin@example:/config/container/ntpd/> set volume varlib target /var/lib
 
 Volumes survive reboots and upgrading of the base image, unlike the
 persistent writable layer you get by default, which does not survive
@@ -460,12 +460,12 @@ very useful when deploying similar systems at multiple sites.  When the
 host loads its `startup-config` (or even `factory-config`) a temporary
 file is created using the decoded base64 data from the `content` node.
 
-    admin@example-c0-ff-ee:/config/container/ntpd/> edit mount ntpd.conf
-    admin@example-c0-ff-ee:/config/container/ntpd/mount/ntpd.conf> text-editor content
+    admin@example:/config/container/ntpd/> edit mount ntpd.conf
+    admin@example:/config/container/ntpd/mount/ntpd.conf> text-editor content
     ... interactive editor starts up ...
-    admin@example-c0-ff-ee:/config/container/ntpd/mount/ntpd.conf> set target /etc/ntpd.conf
-    admin@example-c0-ff-ee:/config/container/ntpd/mount/ntpd.conf> end
-    admin@example-c0-ff-ee:/config/container/ntpd/>
+    admin@example:/config/container/ntpd/mount/ntpd.conf> set target /etc/ntpd.conf
+    admin@example:/config/container/ntpd/mount/ntpd.conf> end
+    admin@example:/config/container/ntpd/>
 
 The editor is a small [Emacs clone called Mg][2], see the built-in help
 text, or press Ctrl-x Ctrl-c to exit and save.  When the editor exits
@@ -488,12 +488,12 @@ Let's try out what we've learned by setting up a system container, a
 container providing multiple services, using the `docker0` interface
 we created previously:
 
-    admin@example-c0-ff-ee:/> configure
-    admin@example-c0-ff-ee:/config> edit container system
-    admin@example-c0-ff-ee:/config/container/system/> set image ghcr.io/kernelkit/curios:edge
-    admin@example-c0-ff-ee:/config/container/system/> set network interface docker0
-    admin@example-c0-ff-ee:/config/container/system/> set publish 222:22
-    admin@example-c0-ff-ee:/config/container/system/> leave
+    admin@example:/> configure
+    admin@example:/config> edit container system
+    admin@example:/config/container/system/> set image ghcr.io/kernelkit/curios:edge
+    admin@example:/config/container/system/> set network interface docker0
+    admin@example:/config/container/system/> set publish 222:22
+    admin@example:/config/container/system/> leave
 
 > **Note:** ensure you have a network connection to the registry.
 > If the image cannot be pulled, creation of the container will be
@@ -507,25 +507,25 @@ container configuration context for the full syntax.)
 
 Available containers can be accessed from admin-exec:
 
-    admin@example-c0-ff-ee:/> show container
+    admin@example:/> show container
     CONTAINER ID  IMAGE                          COMMAND     CREATED       STATUS       PORTS                 NAMES
     439af2917b44  ghcr.io/kernelkit/curios:edge              41 hours ago  Up 16 hours  0.0.0.0:222->222/tcp  system
 
 This is a system container, so you can "attach" to it by starting a
 shell (or logging in with SSH):
 
-    admin@example-c0-ff-ee:/> container shell system
+    admin@example:/> container shell system
     root@439af2917b44:/#
 
 Notice how the hostname inside the container changes.  By default the
 container ID (hash) is used, but this can be easily changed:
 
     root@439af2917b44:/# exit
-    admin@example-c0-ff-ee:/> configure
-    admin@example-c0-ff-ee:/config/> edit container system
-    admin@example-c0-ff-ee:/config/container/system/> set hostname sys101
-    admin@example-c0-ff-ee:/config/container/system/> leave
-    admin@example-c0-ff-ee:/> container shell system
+    admin@example:/> configure
+    admin@example:/config/> edit container system
+    admin@example:/config/container/system/> set hostname sys101
+    admin@example:/config/container/system/> leave
+    admin@example:/> container shell system
     root@sys101:/#
 
 [^1]: this does not apply to the admin-exec command `container run`.
@@ -540,16 +540,16 @@ Infix currently does not have a native firewall configuration, and even
 when it does it will never expose the full capabilities of `nftables`.
 For advanced setups, the following is an interesting alternative.
 
-    admin@example-c0-ff-ee:/> configure
-    admin@example-c0-ff-ee:/config> edit container nftables
-    admin@example-c0-ff-ee:/config/container/nftables/> set image ghcr.io/kernelkit/curios-nftables:edge
-    admin@example-c0-ff-ee:/config/container/nftables/> set network host
-    admin@example-c0-ff-ee:/config/container/nftables/> set privileged true
-    admin@example-c0-ff-ee:/config/container/nftables/> edit mount nftables.conf
-    admin@example-c0-ff-ee:/config/container/nftables/mount/nftables.conf/> set target /etc/nftables.conf
-    admin@example-c0-ff-ee:/config/container/nftables/mount/nftables.conf/> text-editor content
+    admin@example:/> configure
+    admin@example:/config> edit container nftables
+    admin@example:/config/container/nftables/> set image ghcr.io/kernelkit/curios-nftables:edge
+    admin@example:/config/container/nftables/> set network host
+    admin@example:/config/container/nftables/> set privileged true
+    admin@example:/config/container/nftables/> edit mount nftables.conf
+    admin@example:/config/container/nftables/mount/nftables.conf/> set target /etc/nftables.conf
+    admin@example:/config/container/nftables/mount/nftables.conf/> text-editor content
     ... interactive editor starts up where you can paste your rules ...
-    admin@example-c0-ff-ee:/config/container/nftables/mount/nftables.conf/> leave
+    admin@example:/config/container/nftables/mount/nftables.conf/> leave
 
 Notice how we `set network host`, so the container can see and act on
 all the host's interfaces, and that we also have to run the container
@@ -567,19 +567,19 @@ file system and store in the host's `startup-config`.  However, `ntpd`
 also saves clock drift information in `/var/lib/ntpd`, so we will also
 use volumes in this example.
 
-    admin@example-c0-ff-ee:/> configure
-    admin@example-c0-ff-ee:/config> edit container ntpd
-    admin@example-c0-ff-ee:/config/container/ntpd/> set image ghcr.io/kernelkit/curios-ntpd:edge
-    admin@example-c0-ff-ee:/config/container/ntpd/> set network interface ntpd    # From veth0 above
-    admin@example-c0-ff-ee:/config/container/ntpd/> edit mount ntp.conf
-    admin@example-c0-ff-ee:/config/container/ntpd/mount/ntp.conf/> set target /etc/ntp.conf
-    admin@example-c0-ff-ee:/config/container/ntpd/mount/ntp.conf/> text-editor content
+    admin@example:/> configure
+    admin@example:/config> edit container ntpd
+    admin@example:/config/container/ntpd/> set image ghcr.io/kernelkit/curios-ntpd:edge
+    admin@example:/config/container/ntpd/> set network interface ntpd    # From veth0 above
+    admin@example:/config/container/ntpd/> edit mount ntp.conf
+    admin@example:/config/container/ntpd/mount/ntp.conf/> set target /etc/ntp.conf
+    admin@example:/config/container/ntpd/mount/ntp.conf/> text-editor content
     ... interactive editor starts up where you can paste your rules ...
-    admin@example-c0-ff-ee:/config/container/ntpd/mount/ntp.conf/> end
-    admin@example-c0-ff-ee:/config/container/ntpd/> edit volume varlib
-    admin@example-c0-ff-ee:/config/container/ntpd/volume/varlib/> set target /var/lib
-    admin@example-c0-ff-ee:/config/container/ntpd/volume/varlib/> leave
-    admin@example-c0-ff-ee:/> copy running-config startup-config
+    admin@example:/config/container/ntpd/mount/ntp.conf/> end
+    admin@example:/config/container/ntpd/> edit volume varlib
+    admin@example:/config/container/ntpd/volume/varlib/> set target /var/lib
+    admin@example:/config/container/ntpd/volume/varlib/> leave
+    admin@example:/> copy running-config startup-config
 
 The `ntp.conf` file is stored in the host's `startup-config` and any
 state data in the container's `/var/lib` is retained between reboots
