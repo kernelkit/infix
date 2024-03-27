@@ -125,10 +125,11 @@ create()
 	    args="$args --dns-search=$domain"
 	done
     else
-	network="--net none"
+	args="$args --network=none"
     fi
 
     # shellcheck disable=SC2048
+    log "Calling podman create --name $name --conmon-pidfile=$pidfn $args $image $*"
     if podman create --name "$name" --conmon-pidfile="$pidfn" $args "$image" $*; then
 	[ -n "$quiet" ] || log "Successfully created container $name from $image"
 	rm -f "/run/containers/env/${name}.env"
