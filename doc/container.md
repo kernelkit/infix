@@ -17,7 +17,8 @@ Containers in Infix
   * [System Container](#system-container)
   * [Application Container: nftables](#application-container-nftables)
   * [Application Container: ntpd](#application-container-ntpd)
-
+* [Advanced](#advanced)
+  * [Running Host Commands From Container](#running-host-commands-from-container)
 
 Introduction
 ------------
@@ -544,7 +545,7 @@ For advanced setups, the following is an interesting alternative.
     admin@example:/config> edit container nftables
     admin@example:/config/container/nftables/> set image ghcr.io/kernelkit/curios-nftables:edge
     admin@example:/config/container/nftables/> set network host
-    admin@example:/config/container/nftables/> set privileged true
+    admin@example:/config/container/nftables/> set privileged
     admin@example:/config/container/nftables/> edit mount nftables.conf
     admin@example:/config/container/nftables/mount/nftables.conf/> set target /etc/nftables.conf
     admin@example:/config/container/nftables/mount/nftables.conf/> text-editor content
@@ -586,9 +587,62 @@ state data in the container's `/var/lib` is retained between reboots
 and across image upgrades.
 
 
+Advanced
+--------
+
+This section covers advanced, and sometimes dangerous, topics.  Please
+read any warnings and always consider the security aspects.
+
+### Running Host Commands From Container
+
+SSH login with keys is very handy and both remote scripting friendly
+*and secure*, but it does require a few extra configuration steps.  The
+way to set it up is covered in part in [SSH Authorized Key][4].
+
+Another *insecure* approach is to access the host system directly,
+bypassing the namespaces that make up the boundary between host and
+container.
+
+> **Security:** Please use this only in trusted setups, and possibly
+> only during a limited time frame.
+
+First, enable *Privileged* mode, this unlocks the door and allows the
+container to manage resources on the host system.  An example is the
+`nftables` container mentioned previously.
+
+    admin@example:/config/container/system/> set privileged
+
+Second, mount the host's `/proc/1` directory to somewhere inside your
+container.  Here we pick `/1`:
+
+	admin@example:/config/container/system/> edit mount host
+	admin@example:/config/container/system/mount/host/> set source /proc/1
+	admin@example:/config/container/system/mount/host/> set target /1
+	admin@example:/config/container/system/mount/host/> leave
+
+Third, from inside the container, use the host's PID 1 namespaces with
+the `nsenter`[^2] command to slide through the container's walls.  Here
+we show two example calls to `hostname`, first the container's own name
+and then asking what the hostname is on the host:
+
+	root@sys101:/# hostname
+	sys101
+    root@sys101:/# nsenter -m/1/ns/mnt -u/1/ns/uts -i/1/ns/ipc -n/1/ns/net hostname
+	example
+
+One use-case for this method is when extending Infix with a management
+container that connects to other systems.  For some tips on how to
+control an Infix system this way, see [Scripting Infix](scriptiong.md).
+
+[^2]: The `nsenter` program is available from either the util-linux
+    package in Debian/Ubuntu/Mint, or in BusyBox.  Note, however,
+	it may not be enabled by default in BusyBox.
+
+
 [0]:      networking.md
 [1]:      https://github.com/kernelkit/infix/blob/main/src/confd/yang/infix-containers%402023-12-14.yang
 [2]:      https://github.com/troglobit/mg
 [3]:      https://github.com/opencontainers/image-spec/blob/main/image-layout.md
+[4]:      system.md#ssh-authorized-key
 [5]:      https://docs.docker.com/build/exporters/oci-docker/
 [podman]: https://podman.io
