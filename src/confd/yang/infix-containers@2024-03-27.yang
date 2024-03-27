@@ -22,6 +22,11 @@ module infix-containers {
     prefix infix-if;
   }
 
+  revision 2024-03-27  {
+    description "Add support for capabilities.";
+    reference "internal";
+  }
+
   revision 2024-02-01  {
     description "Initial revision";
     reference "internal";
@@ -58,6 +63,26 @@ module infix-containers {
 	description "Always restart containers when they exit.";
 	value 3;
       }
+    }
+  }
+
+  typedef capabilities {
+    type enumeration {
+      enum dac_override;
+      enum fsetid;
+      enum net_admin;
+      enum net_bind_service;
+      enum net_raw;
+      enum setgid;
+      enum setuid;
+      enum setpcap;
+      enum syslog;
+      enum sys_admin;
+      enum sys_chroot;
+      enum sys_module;
+      enum sys_ptrace;
+      enum sys_rawio;
+      enum sys_time;
     }
   }
 
@@ -215,6 +240,20 @@ module infix-containers {
       leaf read-only {
 	description "Create a read-only container.  Use volumes for writable directories.";
 	type boolean;
+      }
+
+      container capabilities {
+	description "Capabilities to add for unprivileged and drop for privileged containers.";
+
+	leaf-list add {
+	  type capabilities;
+	  description "List of capabilities to add to (an unprivileged) container.";
+	}
+
+	leaf-list drop {
+	  type capabilities;
+	  description "List of capabilities to drop from (a privileged) container.";
+	}
       }
 
       list mount {

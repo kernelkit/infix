@@ -23,7 +23,7 @@
 #define  LOGGER       "logger -t container -p local1.notice"
 
 static const struct srx_module_requirement reqs[] = {
-	{ .dir = YANG_PATH_, .name = MODULE, .rev = "2024-02-01" },
+	{ .dir = YANG_PATH_, .name = MODULE, .rev = "2024-03-27" },
 	{ NULL }
 };
 
@@ -31,7 +31,7 @@ static int add(const char *name, struct lyd_node *cif)
 {
 	const char *image = lydx_get_cattr(cif, "image");
 	const char *restart_policy, *string;
-	struct lyd_node *node, *network;
+	struct lyd_node *node, *nets, *caps;
 	FILE *fp, *ap;
 
 	fp = fopenf("w", "%s/%s.sh", INBOX_QUEUE, name);
@@ -60,6 +60,14 @@ static int add(const char *name, struct lyd_node *cif)
 
 	if (lydx_is_enabled(cif, "privileged"))
 		fprintf(fp, " --privileged");
+
+	caps = lydx_get_descendant(lyd_child(cif), "capabilities", NULL);
+	if (caps) {
+		LYX_LIST_FOR_EACH(lyd_child(caps), node, "add")
+			fprintf(fp, " --cap-add %s", lyd_get_value(node));
+		LYX_LIST_FOR_EACH(lyd_child(caps), node, "drop")
+			fprintf(fp, " --cap-drop %s", lyd_get_value(node));
+	}
 
 	LYX_LIST_FOR_EACH(lyd_child(cif), node, "volume")
 		fprintf(fp, " -v %s-%s:%s", name, lydx_get_cattr(node, "name"),
@@ -126,12 +134,12 @@ static int add(const char *name, struct lyd_node *cif)
 		fprintf(fp, " -e /run/containers/args/%s.env", name);
 	}
 
-	network = lydx_get_descendant(lyd_child(cif), "network", NULL);
-	if (network) {
-		if (lydx_is_enabled(network, "host")) {
+	nets = lydx_get_descendant(lyd_child(cif), "network", NULL);
+	if (nets) {
+		if (lydx_is_enabled(nets, "host")) {
 			fprintf(fp, " --net host");
 		} else {
-			LYX_LIST_FOR_EACH(lyd_child(network), node, "interface") {
+			LYX_LIST_FOR_EACH(lyd_child(nets), node, "interface") {
 				struct lyd_node *opt;
 				const char *name;
 				int first = 1;
@@ -146,7 +154,7 @@ static int add(const char *name, struct lyd_node *cif)
 				}
 			}
 
-			LYX_LIST_FOR_EACH(lyd_child(network), node, "publish")
+			LYX_LIST_FOR_EACH(lyd_child(nets), node, "publish")
 				fprintf(fp, " -p %s", lyd_get_value(node));
 		}
 	}
