@@ -44,20 +44,24 @@ container networking in podman.
 Caution
 -------
 
-A word of warning, containers can run on your system in privileged mode,
-as `root`.  This gives them full access to devices on your system.  But
-even when though unprivileged containers are fenced from the host with
-Linux namespaces, and resource limited using Linux cgroups, which scope
-container applications from seeing and accessing the complete system,
-there is no guarantee that an application cannot ever break out of this
-confinement.
+A word of warning.  Containers can run on your system in privileged
+mode, as `root`, giving them full access to devices on your system.
+Even though containers are fenced from the host with Linux namespaces,
+resource limited using cgroups, and normally run with capped privileges,
+a privileged container is relatively easy to break out of.  A trivial
+example is given in the [Advanced](#advanced) section of this document.
+
+We recommend avoiding privileged containers, if possible (they do have
+valid use-cases) and instead use [capabilities](#capabilities).
+
+Remember:
 
  - If the system is compromised, containers can be used to easily
    install malicious software in your system and over the network
  - Your system is as secure as anything you run in the container
  - If you run containers, there is no security guarantee of any kind
  - Running 3rd party container images on your system could open a
-   security hole/attack vector/attack surface
+   security hole/attack vector/surface
  - An expert with knowledge how to build exploits will be able to
    jailbreak/elevate to root even if best practices are followed
 
@@ -256,6 +260,31 @@ the upgrade command as
 	admin@example:/> container upgrade system
 	Upgrading container system with local archive: oci-archive:/var/tmp/curios-oci-amd64.tar.gz ...
 	7ab4a07ee0c6039837419b7afda4da1527a70f0c60c0f0ac21cafee05ba24b52
+
+
+Capabilities
+-------------
+
+An unprivileged container works for almost all use-cases, but there are
+occasions where they are too restricted and users being looking for the
+`privileged` flag.  Capabilities offers a middle ground.
+
+For example, a system container from which `ping` does not work:
+
+	admin@example:/config/container/system/> edit capabilities
+	admin@example:/config/container/system/capabilities/> set add net_raw
+	admin@example:/config/container/system/capabilities/> end
+	admin@infix-00-00-00:/config/container/system/> show
+	...
+	capabilities {
+	  add net_raw;
+	}
+	...
+
+Infix supports a subset of all [capabilities][6] that are relevant for
+containers.  Please note, that this is and advanced topic and will
+require time and analysis of your container application to figure out
+which capabilities you need.
 
 
 Networking and Containers
@@ -645,4 +674,5 @@ control an Infix system this way, see [Scripting Infix](scriptiong.md).
 [3]:      https://github.com/opencontainers/image-spec/blob/main/image-layout.md
 [4]:      system.md#ssh-authorized-key
 [5]:      https://docs.docker.com/build/exporters/oci-docker/
+[6]:      https://man7.org/linux/man-pages/man7/capabilities.7.html
 [podman]: https://podman.io
