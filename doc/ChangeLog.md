@@ -19,6 +19,15 @@ All notable changes to the project are documented in this file.
   such bridges is to use a VLAN interface on top
 - A VLAN filtering bridge now validates that no IP address has been
   set.  Use a VLAN interface on top for that (see above)
+- Container documentation: CLI prompts have been updated to match the
+  examples used in other parts of the User Guide
+- Issue #360: document factory-config, startup-config, and the various
+  failure modes in the system
+- Issue #361: document how a privileged container can break out of its
+  confinement and run host commands, e.g., call `sysrepocfg`
+- Issue #365: add limited support for container capabilities, e.g., to
+  enable `CAP_NET_RAW` to allow containers to use `ping`.  This allows
+  users to avoid enabling privileged mode
 
 ### Fixes
 
@@ -33,6 +42,15 @@ All notable changes to the project are documented in this file.
 - Fix #328: when setting up a VLAN filtering bridge, the PVID for bridge
   ports defaulted to 1, making it impossible to set up "tagged-only"
   ports which drop ingressing untagged traffic
+- Fix #366: static routes from container host interfaces do not work.
+  Documentation updated with an example
+- Fix #368: upgrading `oci-archive:/` images fail because system thinks
+  the image can be pulled from a localhost registry.  Documentation has
+  also been updated, describing various methods and how to upgrade them
+- Fix #370: despite the documentation stating containers must explicitly
+  declare `network` settings, Infix v23.02 had a late regression that
+  reverted back to the podman default: network behind a CNI bridge
+  (firewalled and NAT:ed, hidden from the rest of the network)
 
 
 [v24.02.0][] - 2024-03-01
