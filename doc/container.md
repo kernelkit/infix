@@ -247,6 +247,35 @@ point of the routed case is that port forwarding from the container in
 this case is limited to a single interface, not *all interfaces* as is
 the default in the masquerading container bridge setup.
 
+When a container has multiple host interfaces it can often be useful to
+have a default route installed.  This can be added from the host with a
+`0.0.0.0/0` route on one of the interfaces.  The following is an example
+when adding a second VETH pair to the container:
+
+    admin@example-c0-ff-ee:/config/> edit interface veth1a
+    admin@example-c0-ff-ee:/config/interface/veth1a/> set veth peer veth1b
+    admin@example-c0-ff-ee:/config/interface/veth1a/> set ipv4 address 192.168.1.2 prefix-length 24
+    admin@example-c0-ff-ee:/config/interface/veth1a/> set container-network route 0.0.0.0/0 gateway 192.168.1.1
+    admin@example-c0-ff-ee:/config/interface/veth1a/> show
+    type veth;
+	container-network {
+	  type host;
+	  route 0.0.0.0/0 {
+		gateway 192.168.1.1;
+	  }
+	}
+	veth {
+	  peer veth1b;
+	}
+    admin@example-c0-ff-ee:/config/interface/veth1a/> end
+    admin@example-c0-ff-ee:/config/> set interface veth1b bridge-port bridge br0
+
+Please note, container network routes require the base interface also
+have a static IP address set.  Setting only the route, but no address,
+means the route is skipped.
+
+> The LAN bridge (br0) in this example has IP address 192.168.1.1.
+
 
 ### Host Networking
 
