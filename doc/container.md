@@ -5,6 +5,8 @@ Containers in Infix
 * [Caution](#caution)
 * [Getting Started](#getting-started)
   * [Examples](#examples)
+* [Container Images](#container-images)
+* [Upgrading a Container Image](#upgrading-a-container-image)
 * [Networking and Containers](#networking-and-containers)
   * [Container Bridge](#container-bridge)
   * [Container Host Interface](#container-host-interface)
@@ -15,7 +17,6 @@ Containers in Infix
   * [System Container](#system-container)
   * [Application Container: nftables](#application-container-nftables)
   * [Application Container: ntpd](#application-container-ntpd)
-* [Upgrading a Container Image](#upgrading-a-container-image)
 
 
 Introduction
@@ -121,6 +122,139 @@ to your device's IP address using your browser:
 or connect to port 80 of your running Infix system with a browser.  See
 the following sections for how to add more interfaces and manage your
 container at runtime.
+
+
+Container Images
+----------------
+
+The underlying `podman` project support importing and fetching images in
+a variety of ways, the most common ones are also supported by Infix.  In
+this section we present how to use them and in the next section we show
+how to upgrade to a newer base image.
+
+The CLI help shows:
+
+    admin@example-c0-ff-ee:/config/container/system/> help image
+    NAME
+        image <string>
+
+    DESCRIPTION
+        Docker image for the container: [transport]name[:tag|@digest]
+
+        quay.io/username/myimage     -- Pull myimage:latest
+        docker://busybox             -- Pull busybox:latest from Docker Hub
+        docker://ghcr.io/usr/img     -- Pull img:latest from GitHub packages
+        dir:/media/usb/myimage:1.1   -- Use myimage v1.1 from USB media
+        docker-archive:/tmp/archive  -- Use archive:latest from tarball
+        oci-archive:/lib/oci/archive -- Use archive:latest from OCI archive
+                                        May be in .tar or .tar.gz format
+
+        Note: if a remote repository cannot be reached, the creation of the
+              container will be put on a queue that retries pull every time
+              there is a route change in the host's system.
+
+> **Note::** the built-in help system in the CLI is generated from the
+> YANG model, so the same information is also available for remote
+> NETCONF users.
+
+The two most common variants are `docker://` and `oci-archive:/`.
+
+The former requires a working Docker registry and the latter operates on
+a plain OCI archive.  Infix does not come with a built-in registry, so
+the `docker://` option is best used with external services, which in
+turn require [networking][0] to be up.  In a deployment phase the
+easiest may be to set up a single interface on your host system with
+DHCP client.
+
+The default method is `docker://`, so when setting the `image` for your
+container, you can omit the `docker://` prefix.  You can also use the
+admin-exec command `container pull docker://...`, and when configuring a
+container `podman` will check first if it has the image before trying to
+download anything.  (See also the upgrade section, below.)
+
+The `oci-archive:/` is interesting since many users may not have, or do
+not want to, publish their images in a registry.  Use the Docker [OCI
+exporter][5] or any other tool that supports generating [OCI Image][3]
+format.  Infix supports loading both `.tar` or `.tar.gz` formats.
+
+Here we show a simple example of fetching an OCI image to the system,
+but many others exist, tools like `wget`, `curl`, and `scp` come to
+mind.
+
+**Shell OCI Example:**
+
+	admin@example-c0-ff-ee:~$ cd /var/tmp/
+	admin@example-c0-ff-ee:/var/tmp$ sudo wget https://github.com/kernelkit/curiOS/releases/download/edge/curios-oci-amd64.tar.gzConnecting to github.com (140.82.121.3:443)
+	wget: note: TLS certificate validation not implemented
+	Connecting to objects.githubusercontent.com (185.199.109.133:443)
+	saving to 'curios-oci-amd64.tar.gz'
+	curios-oci-amd64.tar 100% |*********************************| 7091k  0:00:00 ETA
+	'curios-oci-amd64.tar.gz' saved
+	admin@example-c0-ff-ee:/var/tmp$ ll
+	total 7104
+	drwxr-xr-x    3 root     root          4096 Mar 27 14:22 ./
+	drwxr-xr-x   14 root     root          4096 Mar 27 11:57 ../
+	-rw-r--r--    1 root     root       7261785 Mar 27 14:22 curios-oci-amd64.tar.gz
+	drwx------    6 frr      frr           4096 Mar 27 11:57 frr/
+
+Importing the image into podman can be done either from the CLI
+admin-exec context ...
+
+    admin@example-c0-ff-ee:/var/tmp$ cli
+    admin@example-c0-ff-ee:/> container load /var/tmp/curios-oci-amd64.tar.gz name curios:edge
+
+> By assigning The `name curios:edge` is the tag you give the imported
+> (raw) archive which you can then reference in your container image
+> configuration: `set image curios:edge`.
+
+... or by giving the container configuration the full path to the OCI
+archive, which helps greatly with container upgrades (see below):
+
+    admin@example-c0-ff-ee:/config/container/system/> set image oci-archive:/var/tmp/curios-oci-amd64.tar.gz
+
+
+Upgrading a Container Image
+---------------------------
+
+> **Note:** the default writable layer is lost when upgrading the image
+> Use named volumes for directories with writable content you wish to
+> keep over an upgrade.
+
+All container configurations are locked to the image hash at the time of
+first download, not just ones that use an `:edge` or `:latest` tag.  An
+upgrade of containers using versioned images is more obvious -- update
+the configuration to use the new `image:tag` -- the latter is a bit
+trickier.  Either remove the configuration and recreate it (leave/apply
+the changes between), or use the admin-exec level command:
+
+    admin@example-c0-ff-ee:/> container upgrade NAME
+
+Where `NAME` is the name of your container.  This command stops the
+container, does `container pull IMAGE`, and then recreates it with the
+new image.  Upgraded containers are automatically restarted.
+
+**Example using registry:**
+
+	admin@example-c0-ff-ee:/> container upgrade system
+	system
+	Trying to pull ghcr.io/kernelkit/curios:edge...
+	Getting image source signatures
+	Copying blob 07bfba95fe93 done
+	Copying config 0cb6059c0f done
+	Writing manifest to image destination
+	Storing signatures
+	0cb6059c0f4111650ddbc7dbc4880c64ab8180d4bdbb7269c08034defc348f17
+	system: not running.
+	59618cc3c84bef341c1f5251a62be1592e459cc990f0b8864bc0f5be70e60719
+
+An OCI archive image can be upgraded in a similar manner, the first step
+is of course to get the new archive onto the system (see above), and
+then, provided the `oci-archive:/path/to/archive` format is used, call
+the upgrade command as
+
+	admin@example-c0-ff-ee:/> container upgrade system
+	Upgrading container system with local archive: oci-archive:/var/tmp/curios-oci-amd64.tar.gz ...
+	7ab4a07ee0c6039837419b7afda4da1527a70f0c60c0f0ac21cafee05ba24b52
 
 
 Networking and Containers
@@ -387,11 +521,11 @@ Notice how the hostname inside the container changes.  By default the
 container ID (hash) is used, but this can be easily changed:
 
     root@439af2917b44:/# exit
-    admin@infix-00-00-00:/> configure
-    admin@infix-00-00-00:/config/> edit container system
-    admin@infix-00-00-00:/config/container/system/> set hostname sys101
-    admin@infix-00-00-00:/config/container/system/> leave
-    admin@infix-00-00-00:/> container shell system
+    admin@example-c0-ff-ee:/> configure
+    admin@example-c0-ff-ee:/config/> edit container system
+    admin@example-c0-ff-ee:/config/container/system/> set hostname sys101
+    admin@example-c0-ff-ee:/config/container/system/> leave
+    admin@example-c0-ff-ee:/> container shell system
     root@sys101:/#
 
 [^1]: this does not apply to the admin-exec command `container run`.
@@ -452,31 +586,9 @@ state data in the container's `/var/lib` is retained between reboots
 and across image upgrades.
 
 
-Upgrading a Container Image
----------------------------
-
-All container configurations are locked to the image hash at the time of
-first download, not just ones that use an `:edge` or `:latest` tag.  An
-upgrade of containers using versioned images is more obvious -- update
-the configuration -- but the latter is a bit trickier.  Either remove
-the configuration and recreate it (leave/apply the changes between), or
-use the admin-exec level command:
-
-    admin@example-c0-ff-ee:/> container upgrade NAME
-
-Where `NAME` is the name of your container.  This command stops your
-container, does a `container pull IMAGE`, and then recreates the
-container with the new image.  Upgraded containers are not automatically
-restarted.
-
-    admin@example-c0-ff-ee:/> container start NAME
-
-> **Note:** the default writable layer is lost when upgrading the image
-> Use named volumes for directories with writable content you wish to
-> keep over an upgrade.
-
-
 [0]:      networking.md
 [1]:      https://github.com/kernelkit/infix/blob/main/src/confd/yang/infix-containers%402023-12-14.yang
 [2]:      https://github.com/troglobit/mg
+[3]:      https://github.com/opencontainers/image-spec/blob/main/image-layout.md
+[5]:      https://docs.docker.com/build/exporters/oci-docker/
 [podman]: https://podman.io
