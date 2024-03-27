@@ -268,6 +268,11 @@ static int cni_bridge(struct lyd_node *net, const char *ifname)
 	return 0;
 }
 
+/*
+ * A CNI host interface can be set up without an IP address, but to set
+ * a route the IPAM plugin requires setting one or more IP addresses on
+ * the ietf-ip level.
+ */
 static int cni_host(struct lyd_node *net, const char *ifname)
 {
 	struct lyd_node *node, *ip;
@@ -280,6 +285,14 @@ static int cni_host(struct lyd_node *net, const char *ifname)
 		return -EIO;
 	}
 
+	/*
+	 * XXX: currently only support static IP asssignment for
+	 *      host-devices.  There is also host-local (see the
+	 *      cni_bridge() setup) and dhcp.  The latter support
+	 *      running as a daemon (!) and can be useful when we
+	 *      add macvlan support.  For more information, see:
+	 *      https://www.cni.dev/plugins/current/ipam/
+	 */
 	fprintf(fp, "{\n"
 		"  \"cniVersion\": \"1.0.0\",\n"
 		"  \"name\": \"%s\",\n"
@@ -297,28 +310,28 @@ static int cni_host(struct lyd_node *net, const char *ifname)
 	if (ip)
 		cni_gen_addrs(ip, fp, &addr);
 
-	if (addr)
+	if (addr) {
 		fprintf(fp, "\n        ]");
 
-	LYX_LIST_FOR_EACH(lyd_child(net), node, "route") {
-		struct lyd_node *subnet = lydx_get_child(node, "subnet");
-		struct lyd_node *gateway = lydx_get_child(node, "gateway");
+		LYX_LIST_FOR_EACH(lyd_child(net), node, "route") {
+			struct lyd_node *subnet = lydx_get_child(node, "subnet");
+			struct lyd_node *gateway = lydx_get_child(node, "gateway");
 
+			if (!route) {
+				fprintf(fp, ",\n        \"routes\": [\n");
+				route++;
+			} else
+				fprintf(fp, ",\n");
+
+			fprintf(fp, "          {\n"
+				"            \"dst\": \"%s\"%s\n", lyd_get_value(subnet), gateway ? "," : "");
+			if (gateway)
+				fprintf(fp, "            \"gw\": \"%s\"\n", lyd_get_value(gateway));
+			fprintf(fp, "          }");
+		}
 		if (route)
-			fprintf(fp, ",\n        \"routes\": [\n");
-		else
-			fprintf(fp, ",\n");
-
-		fprintf(fp, "          {\n"
-			"            \"dst\": \"%s\"%s\n", lyd_get_value(subnet), gateway ? "," : "");
-		if (gateway)
-			fprintf(fp, "            \"gw\": \"%s\"\n", lyd_get_value(gateway));
-		fprintf(fp, "          }");
-
-		route = 0;
+			fprintf(fp, "\n        ]");
 	}
-	if (route)
-		fprintf(fp, "        ]");
 
 	fprintf(fp,
 		"%s"

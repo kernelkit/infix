@@ -10,6 +10,9 @@ submodule infix-if-container {
   import ietf-interfaces {
     prefix if;
   }
+  import ietf-ip {
+    prefix ip;
+  }
   import infix-if-type {
     prefix infixift;
   }
@@ -103,6 +106,10 @@ submodule infix-if-container {
 	    type inet:ip-address;
 	    description "Optional gateway (next-hop) IP address for the route.";
 	  }
+	}
+
+	must "count(route) = 0 or count(../ip:ipv4/ip:address) or count(../ip:ipv6/ip:address)" {
+	  error-message "Static routes only allowed if a static IP address is set.";
 	}
       }
     }
