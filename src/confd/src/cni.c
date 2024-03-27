@@ -297,28 +297,28 @@ static int cni_host(struct lyd_node *net, const char *ifname)
 	if (ip)
 		cni_gen_addrs(ip, fp, &addr);
 
-	if (addr)
+	if (addr) {
 		fprintf(fp, "\n        ]");
 
-	LYX_LIST_FOR_EACH(lyd_child(net), node, "route") {
-		struct lyd_node *subnet = lydx_get_child(node, "subnet");
-		struct lyd_node *gateway = lydx_get_child(node, "gateway");
+		LYX_LIST_FOR_EACH(lyd_child(net), node, "route") {
+			struct lyd_node *subnet = lydx_get_child(node, "subnet");
+			struct lyd_node *gateway = lydx_get_child(node, "gateway");
 
+			if (!route) {
+				fprintf(fp, ",\n        \"routes\": [\n");
+				route++;
+			} else
+				fprintf(fp, ",\n");
+
+			fprintf(fp, "          {\n"
+				"            \"dst\": \"%s\"%s\n", lyd_get_value(subnet), gateway ? "," : "");
+			if (gateway)
+				fprintf(fp, "            \"gw\": \"%s\"\n", lyd_get_value(gateway));
+			fprintf(fp, "          }");
+		}
 		if (route)
-			fprintf(fp, ",\n        \"routes\": [\n");
-		else
-			fprintf(fp, ",\n");
-
-		fprintf(fp, "          {\n"
-			"            \"dst\": \"%s\"%s\n", lyd_get_value(subnet), gateway ? "," : "");
-		if (gateway)
-			fprintf(fp, "            \"gw\": \"%s\"\n", lyd_get_value(gateway));
-		fprintf(fp, "          }");
-
-		route = 0;
+			fprintf(fp, "        ]");
 	}
-	if (route)
-		fprintf(fp, "        ]");
 
 	fprintf(fp,
 		"%s"
