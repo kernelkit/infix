@@ -103,8 +103,8 @@ create()
 	logging="--log-driver k8s-file --log-opt path=/run/containers/$name.fifo"
     fi
 
-    args="$args --cgroup-parent=containers"
-    args="$args --restart=$restart --systemd=false --tz=local $privileged --replace --quiet"
+    args="$args --replace --quiet --cgroup-parent=containers $caps"
+    args="$args --restart=$restart --systemd=false --tz=local $privileged"
     args="$args $ro $vol $mount $hostname $entrypoint $env $port $logging"
     pidfn=/run/container:${name}.pid
 
@@ -226,6 +226,8 @@ options:
   -a, --all                Show all, of something
       --dns NAMESERVER     Set nameserver(s) when creating a container
       --dns-search LIST    Set host lookup search list when creating container
+      --cap-add CAP        Add capability to unprivileged container
+      --cap-drop CAP       Drop capability, for privileged containter
   -c, --creds USR[:PWD]    Credentials to pass to curl -u for remote ops
   -d, --detach             Detach a container started with 'run IMG [CMD]'
   -e, --env FILE           Environment variables when creating container
@@ -275,6 +277,14 @@ while [ "$1" != "" ]; do
     case $1 in
 	-a | --all)
 	    all="-a"
+	    ;;
+	--cap-add)
+	    shift
+	    caps="$caps --cap-add=$1"
+	    ;;
+	--cap-drop)
+	    shift
+	    caps="$caps --cap-drop=$1"
 	    ;;
 	-c | --creds)
 	    shift
