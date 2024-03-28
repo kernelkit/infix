@@ -203,6 +203,12 @@ class Iface:
     def is_veth(self):
         return self.data['type'] == "infix-if-type:veth"
 
+    def oper(self, detail=False):
+        """Remap in brief overview to fit column widths."""
+        if not detail and self.oper_status == "lower-layer-down":
+            return "lower-down"
+        return self.oper_status
+
     def pr_name(self, pipe=""):
         print(f"{pipe}{self.name:<{Pad.iface - len(pipe)}}", end="")
 
@@ -230,8 +236,8 @@ class Iface:
             row =  f"{pipe:<{Pad.iface}}"
 
         row += f"{'ethernet':<{Pad.proto}}"
-        dec = Decore.green if self.oper_status == "up" else Decore.red
-        row += dec(f"{self.oper_status.upper():<{Pad.state}}")
+        dec = Decore.green if self.oper() == "up" else Decore.red
+        row += dec(f"{self.oper().upper():<{Pad.state}}")
         row += f"{self.phys_address:<{Pad.data}}"
         print(row)
 
@@ -240,11 +246,11 @@ class Iface:
 
         row = f"{'bridge':<{Pad.proto}}"
 
-        if self.oper_status == "up":
+        if self.oper() == "up":
             dec = Decore.green if self.stp_state == "forwarding" else Decore.yellow
             row += dec(f"{self.stp_state.upper():<{Pad.state}}")
         else:
-            row += Decore.red(f"{self.oper_status.upper():<{Pad.state}}")
+            row += Decore.red(f"{self.oper().upper():<{Pad.state}}")
 
         for vlan in br_vlans:
             if 'tagged' in vlan:
@@ -330,8 +336,8 @@ class Iface:
         print(f"{'index':<{20}}: {self.index}")
         if self.mtu:
             print(f"{'mtu':<{20}}: {self.mtu}")
-        if self.oper_status:
-            print(f"{'operational status':<{20}}: {self.oper_status}")
+        if self.oper():
+            print(f"{'operational status':<{20}}: {self.oper(detail=True)}")
 
         if self.lower_if:
             print(f"{'lower-layer-if':<{20}}: {self.lower_if}")
