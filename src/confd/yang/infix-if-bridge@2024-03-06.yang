@@ -3,7 +3,9 @@ submodule infix-if-bridge {
   belongs-to infix-interfaces {
     prefix infix-if;
   }
-
+  import ietf-yang-types {
+    prefix yang;
+  }
   import iana-if-type {
     prefix ianaift;
   }
@@ -21,6 +23,9 @@ submodule infix-if-bridge {
   }
   import ieee802-dot1q-types {
     prefix dot1q-types;
+  }
+  import  infix-if-type {
+    prefix infix-ift;
   }
 
   organization "KernelKit";
@@ -75,6 +80,12 @@ submodule infix-if-bridge {
   /*
    * Typedefs
    */
+  typedef mac-multicast-address {
+    description "Valid multicast address.";
+    type string {
+      pattern "[0-9A-Fa-f][13579BbDdFf](:[0-9A-Fa-f]{2}){5}";
+    }
+  }
   typedef ieee-reserved-groups {
     type union {
       type uint8 {
@@ -169,7 +180,7 @@ submodule infix-if-bridge {
   typedef mdb-state {
     description "Origin of mdb entry for a given port.";
     type enumeration {
-      enum temp {
+      enum temporary {
         value 0;
         description "Learned from IGMP/MLD snooping.";
       }
@@ -186,6 +197,7 @@ submodule infix-if-bridge {
 
   grouping multicast {
     container multicast {
+      presence multicast;
       description "Control multicast filtering and querier options in bridge.";
 
       leaf snooping {
@@ -235,24 +247,32 @@ submodule infix-if-bridge {
     }
   }
 
-  grouping mdb {
-    container mdb {
+  grouping multicast-filters {
+    container multicast-filters {
+      presence multicast;
       description "Bridge multicast database.";
-      config false;
 
-      list entry {
-        description "MDB entry.";
+      list multicast-filter {
+        description "Multicast filter entry.";
         key "group";
 
         leaf group {
-          description "IP multicast group.";
-          type rt-types:ip-multicast-group-address;
+          description "IP or MAC multicast group address.";
+          type union {
+            type rt-types:ip-multicast-group-address;
+            type mac-multicast-address;
+          }
         }
-
         list ports {
           description "Port members of group.";
-
+          must "state = 'permanent'" {
+            error-message "State must be permanent for static multicast filters";
+          }
+          key "port";
           leaf port {
+            must "not(deref(.)/../if:type = 'infix-ift:bridge') or re-match(../../group, '[0-9A-Fa-f][13579BbDdFf](:[0-9A-Fa-f]{2}){5}')" {
+              error-message "Only MAC multicast is possible to add to host.";
+            }
             description "Port with static or dynamic membership of group.";
             type if:interface-ref;
           }
@@ -260,6 +280,7 @@ submodule infix-if-bridge {
           leaf state {
             description "State of membership, permanent or temporary.";
             type mdb-state;
+            default permanent;
           }
         }
       }
@@ -285,52 +306,74 @@ submodule infix-if-bridge {
         description
           "List of IEEE link-local protocols to forward, e.g., STP, LLDP";
       }
-
-      uses multicast;
-      uses mdb;
-
-      container vlans {
-        if-feature "vlan-filtering";
-        description "A VLAN filtering bridge has at least one VLAN.";
-
-        leaf proto {
-          type dot1q-types:dot1q-tag-type;
-          default dot1q-types:c-vlan;
-          description "Standard (1Q/c-vlan) or provider (1ad/s-vlan) bridge.";
-        }
-
-        list vlan {
-          key "vid";
-          description "List of VLANs associated with the Bridge.";
-
-          leaf vid {
-            type dot1q-types:vlanid;
-            description "The VLAN identifier to which this entry applies.";
-          }
-
+      choice  type {
+        case ieee8021d {
           uses multicast;
-          uses mdb;
+          uses multicast-filters;
+        }
+        case ieee8021q {
+          container vlans {
+            presence vlans;
+            if-feature "vlan-filtering";
+            description "A VLAN filtering bridge has at least one VLAN.";
 
-          leaf-list untagged {
-            type if:interface-ref;
-            description "The set of ports in the untagged set for VLAN.";
-            must "current() = ../../../../if:name
+            leaf proto {
+              type dot1q-types:dot1q-tag-type;
+              default dot1q-types:c-vlan;
+              description "Standard (1Q/c-vlan) or provider (1ad/s-vlan) bridge.";
+            }
+
+            list vlan {
+              key "vid";
+              description "List of VLANs associated with the Bridge.";
+
+              leaf vid {
+                type dot1q-types:vlanid;
+                description "The VLAN identifier to which this entry applies.";
+              }
+
+              uses multicast;
+              uses multicast-filters;
+
+              leaf-list untagged {
+                type if:interface-ref;
+                description "The set of ports in the untagged set for VLAN.";
+                must "current() = ../../../../if:name
                   or (/if:interfaces/if:interface[if:name = current()]/bridge-port/bridge = ../../../../if:name
                       and not(../tagged[contains(., current())]))" {
-              error-message "Port is not a member of this bridge or already set as tagged member in the same VLAN.";
-	    }
-	  }
+                  error-message "Port is not a member of this bridge or already set as tagged member in the same VLAN.";
+                }
+              }
 
-          leaf-list tagged {
-            description "The set of ports in the tagged set for VLAN.";
-            type if:interface-ref;
-            must "current() = ../../../../if:name
+              leaf-list tagged {
+                description "The set of ports in the tagged set for VLAN.";
+                type if:interface-ref;
+                must "current() = ../../../../if:name
                   or (/if:interfaces/if:interface[if:name = current()]/bridge-port/bridge = ../../../../if:name
                       and not(../untagged[contains(., current())]))" {
-              error-message "Port is not a member of bridge or already untagged in the same VLAN.";
+                  error-message "Port is not a member of bridge or already untagged in the same VLAN.";
+                }
+              }
             }
           }
         }
+      }
+    }
+  }
+  deviation "/if:interfaces/if:interface/infix-if:bridge/type/ieee8021d/multicast-filters/multicast-filter/ports/port" {
+    deviate add {
+      must "current() = ../../../../../if:name
+        or /if:interfaces/if:interface[if:name = current()]/infix-if:bridge-port/bridge = ../../../../../if:name" {
+        error-message "Port is not member of bridge";
+      }
+    }
+  }
+
+  deviation "/if:interfaces/if:interface/infix-if:bridge/type/ieee8021q/vlans/vlan/multicast-filters/multicast-filter/ports/port" {
+    deviate add {
+      must "current() = ../../../../../../../if:name
+        or /if:interfaces/if:interface[if:name = current()]/infix-if:bridge-port/bridge = ../../../../../../../if:name" {
+        error-message "Port is not member of bridge";
       }
     }
   }
