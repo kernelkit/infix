@@ -111,20 +111,23 @@ with infamy.Test() as test:
                                              "type": "infix-if-type:bridge",
 
                                              "bridge": {
-                                                 "multicast": {
-                                                     "snooping": True
-                                                 },
                                                  "vlans": {
                                                      "vlan": [
                                                          {
                                                              "vid": 55,
                                                              "untagged": [ d1send ],
-                                                             "tagged": [ d1trunk, "br0" ]
+                                                             "tagged": [ d1trunk, "br0" ],
+                                                             "multicast": {
+                                                                 "snooping": True
+                                                             }
                                                          },
                                                          {
                                                              "vid": 77,
                                                              "untagged": [ d1receiver ],
-                                                             "tagged": [ d1trunk, "br0" ]
+                                                             "tagged": [ d1trunk, "br0" ],
+                                                             "multicast": {
+                                                                 "snooping": True
+                                                             }
                                                          }
                                                      ]
                                                  }
@@ -208,20 +211,23 @@ with infamy.Test() as test:
                                              "type": "infix-if-type:bridge",
 
                                              "bridge": {
-                                                 "multicast": {
-                                                     "snooping": True
-                                                 },
                                                  "vlans": {
                                                      "vlan": [
                                                          {
                                                              "vid": 55,
                                                              "untagged": [ d2receive ],
-                                                             "tagged": [ d2trunk, "br0" ]
+                                                             "tagged": [ d2trunk, "br0" ],
+                                                             "multicast": {
+                                                                 "snooping": True
+                                                             }
                                                          },
                                                          {
                                                              "vid": 77,
                                                              "untagged": [ d2sender ],
-                                                             "tagged": [ d2trunk, "br0" ]
+                                                             "tagged": [ d2trunk, "br0" ],
+                                                             "multicast": {
+                                                                 "snooping": True
+                                                             }
                                                          }
                                                      ]
                                                  }

@@ -1161,13 +1161,67 @@ static int bridge_mcast_settings(FILE *ip, const char *brname, struct lyd_node *
 	return 0;
 }
 
+static int netdag_gen_multicast_filter(FILE *current, FILE *prev, const char *brname,
+			  struct lyd_node *multicast_filter, int vid)
+{
+	const char *group = lydx_get_cattr(multicast_filter, "group");
+	enum lydx_op op = lydx_get_op(multicast_filter);
+	struct lyd_node * port;
+
+	LYX_LIST_FOR_EACH(lyd_child(multicast_filter), port, "ports") {
+		enum lydx_op port_op = lydx_get_op(port);
+		if (op == LYDX_OP_DELETE) {
+			fprintf(prev, "mdb del dev %s port %s ", brname, lydx_get_cattr(port, "port"));
+			fprintf(prev, " grp %s ", group);
+			if (vid)
+				fprintf(prev, " vid %d ", vid);
+			fputs("\n", prev);
+		} else {
+			fprintf(current, "mdb replace dev %s ", brname);
+			if (port_op != LYDX_OP_DELETE)
+				fprintf(current, " port %s ", lydx_get_cattr(port, "port"));
+			fprintf(current, " grp %s ", group);
+			if (vid)
+				fprintf(current, " vid %d ", vid);
+			fprintf(current, " %s\n", lydx_get_cattr(port, "state"));
+		}
+	}
+
+	return 0;
+}
+
+static int netdag_gen_multicast_filters(struct dagger *net, FILE *current, const char *brname,
+					struct lyd_node *multicast_filters, int vid) {
+	struct lyd_node *multicast_filter;
+	FILE *prev = NULL;
+	int err = 0;
+
+	prev = dagger_fopen_current(net, "exit", brname, 50, "exit.bridge");
+	if (!prev) {
+		/* check if in bootstrap (pre gen 0) */
+		if (errno != EUNATCH) {
+			err = -EIO;
+			goto err;
+		}
+	}
+
+	LYX_LIST_FOR_EACH(lyd_child(multicast_filters), multicast_filter, "multicast-filter") {
+		netdag_gen_multicast_filter(current, prev, brname, multicast_filter, vid);
+	}
+
+	if(prev)
+		fclose(prev);
+err:
+	return err;
+}
+
 static int netdag_gen_bridge(sr_session_ctx_t *session, struct dagger *net, struct lyd_node *dif,
 			     struct lyd_node *cif, FILE *ip, int add)
 {
+	struct lyd_node *vlans, *vlan, *multicast_filters;
 	const char *brname = lydx_get_cattr(cif, "name");
 	int vlan_filtering, fwd_mask, vlan_mcast = 0;
 	const char *op = add ? "add" : "set";
-	struct lyd_node *vlans, *vlan;
 	const char *proto;
 	FILE *br = NULL;
 	int err = 0;
@@ -1186,29 +1240,32 @@ static int netdag_gen_bridge(sr_session_ctx_t *session, struct dagger *net, stru
 		op, brname, fwd_mask, vlan_filtering ? 1 : 0);
 
 	if ((err = bridge_mcast_settings(ip, brname, cif, vlan_mcast)))
-		goto done;
-
-	if (!vlan_filtering) {
-		fputc('\n', ip);
-		goto done;
-	} else if (!proto) {
-		fputc('\n', ip);
-		ERROR("%s: unsupported bridge proto", brname);
-		err = -ENOSYS;
-		goto done;
-	}
-
-	fprintf(ip, " vlan_protocol %s\n", proto);
-
-	vlans = lydx_get_descendant(lyd_child(dif), "bridge", "vlans", NULL);
-	if (!vlans)
-		goto done;
+		goto out;
 
 	br = dagger_fopen_next(net, "init", brname, 60, "init.bridge");
 	if (!br) {
 		err = -EIO;
-		goto done;
+		goto out;
 	}
+
+	if (!vlan_filtering) {
+		fputc('\n', ip);
+
+		multicast_filters = lydx_get_descendant(lyd_child(dif), "bridge", "multicast-filters", NULL);
+		if (multicast_filters)
+			err = netdag_gen_multicast_filters(net, br, brname, multicast_filters, 0);
+		goto out_close_br;
+	} else if (!proto) {
+		fputc('\n', ip);
+		ERROR("%s: unsupported bridge proto", brname);
+		err = -ENOSYS;
+		goto out_close_br;
+	}
+	fprintf(ip, " vlan_protocol %s\n", proto);
+
+	vlans = lydx_get_descendant(lyd_child(dif), "bridge", "vlans", NULL);
+	if (!vlans)
+		goto out_close_br;
 
 	LYX_LIST_FOR_EACH(lyd_child(vlans), vlan, "vlan") {
 		int vid = atoi(lydx_get_cattr(vlan, "vid"));
@@ -1222,6 +1279,13 @@ static int netdag_gen_bridge(sr_session_ctx_t *session, struct dagger *net, stru
 		err = bridge_diff_vlan_ports(net, br, brname, vid, vlan, 1);
 		if (err)
 			break;
+
+		/* MDB static groups */
+		multicast_filters = lydx_get_child(vlan, "multicast-filters");
+		if (multicast_filters) {
+			if ((err = netdag_gen_multicast_filters(net, br, brname, multicast_filters, vid)))
+				break;
+		}
 	}
 
 	/* need the vlans created before we can set features on them */
@@ -1235,9 +1299,9 @@ static int netdag_gen_bridge(sr_session_ctx_t *session, struct dagger *net, stru
 				break;
 		}
 	}
-
+out_close_br:
 	fclose(br);
-done:
+out:
 	return err;
 }
 
@@ -1288,7 +1352,7 @@ static int netdag_gen_vlan(struct dagger *net, struct lyd_node *dif,
 			ERROR("%s: missing mandatory vlan", ifname);
 		return 0;
 	}
-	
+
 	lower_if = lydx_get_cattr(vlan, "lower-layer-if");
 	DEBUG("ifname %s lower if %s\n", ifname, lower_if);
 
