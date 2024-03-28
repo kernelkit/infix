@@ -206,7 +206,6 @@ class Iface:
     def pr_name(self, pipe=""):
         print(f"{pipe}{self.name:<{Pad.iface - len(pipe)}}", end="")
 
-
     def pr_proto_ipv4(self, pipe=''):
         for addr in self.ipv4_addr:
             origin = f"({addr['origin']})" if addr.get('origin') else ""
@@ -225,8 +224,12 @@ class Iface:
             row += f"{'':<{Pad.state}}{addr['ip']}/{addr['prefix-length']} {origin}"
             print(row)
 
-    def pr_proto_eth(self):
-        row = f"{'ethernet':<{Pad.proto}}"
+    def pr_proto_eth(self, pipe=''):
+        row = ""
+        if len(pipe) > 0:
+            row =  f"{pipe:<{Pad.iface}}"
+
+        row += f"{'ethernet':<{Pad.proto}}"
         dec = Decore.green if self.oper_status == "up" else Decore.red
         row += dec(f"{self.oper_status.upper():<{Pad.state}}")
         row += f"{self.phys_address:<{Pad.data}}"
@@ -276,9 +279,11 @@ class Iface:
                 lowers.append(_iface)
 
         if lowers:
+            self.pr_proto_eth(pipe='│')
             self.pr_proto_ipv4(pipe='│')
             self.pr_proto_ipv6(pipe='│')
         else:
+            self.pr_proto_eth(pipe=' ')
             self.pr_proto_ipv4()
             self.pr_proto_ipv6()
 
