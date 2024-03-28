@@ -15,6 +15,10 @@ usage: test/env [<OPTS>]    -f <IMAGE> -q <QENETH-DIR> <COMMAND> [<ARGS>...]
 
   Options:
 
+    -c
+     Clean up cruft, lingering images, old containers, unused volumes.
+     Used by GitHub action to prevent issues with runnign tests.
+
     -C
       Don't containerize the command, run it directly in the current
       namespaces
@@ -104,8 +108,14 @@ name()
 containerize=yes
 [ -c /dev/kvm ] && kvm="--device=/dev/kvm"
 
-while getopts "Cf:hiKp:q:t:" opt; do
+while getopts "cCf:hiKp:q:t:" opt; do
     case ${opt} in
+	c)
+	    $(runner) image prune -af
+            $(runner) volume prune -f
+            $(runner) container prune -f
+	    exit 0
+	    ;;
 	C)
 	    containerize=
 	    ;;

@@ -14,6 +14,7 @@ the `help` command.
    - [CLI User's Guide](cli/tutorial.md)
    - [Quick Overview](cli/quick.md)
  - **Infix User Guide**
+   - [Introduction](introduction.md)
    - [System Configuration](system.md)
    - [Network Configuration](networking.md)
  - **Infix In-Depth**
