@@ -29,4 +29,4 @@ test-run-play: | ~/.infix-test-venv
 ~/.infix-test-venv:
 	$(test-dir)/docker/init-venv.sh $(test-dir)/docker/pip-requirements.txt
 
-.PHONY: test-unit test test-sh test-qeneth test-qeneth-sh test-run test-run-sh test-run-play
+.PHONY: test test-sh test-qeneth test-qeneth-sh test-run test-run-sh test-run-play
