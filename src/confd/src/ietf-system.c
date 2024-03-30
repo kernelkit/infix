@@ -260,6 +260,10 @@ static int rpc_set_datetime(sr_session_ctx_t *session, uint32_t sub_id,
 		goto done;
 	}
 
+	/* Ensure the RTC is updated as well, in case of unclean shutdowns */
+	if (systemf("hwclock -uw"))
+		ERROR("failed saving new system date/time to RTC.");
+
 	rc = SR_ERR_OK;
 done:
 	unsetenv("TZ");
