@@ -1,7 +1,7 @@
 # Host build of critical components, for Coverity Scan mostly
 APPS = confd execd factory keyack statd
 
-.PHONY: alla
+.PHONY: all
 all:
 	@echo "*** all not supported, only check possible ***"
 	false
@@ -10,7 +10,7 @@ all:
 dep:
 	(cd libsrx && make -f check.mk dep)
 
-check: $(APPS)
+check: dep $(APPS)
 	rm -rf staging
 
 $(APPS): libsrx
