@@ -21,6 +21,8 @@ All notable changes to the project are documented in this file.
   set.  Use a VLAN interface on top for that (see above)
 - Container documentation: CLI prompts have been updated to match the
   examples used in other parts of the User Guide
+- Issue #358: translate YANG model's LOWER-LAYER-DOWN -> LINK-DOWN in
+  CLI `show interfaces` command
 - Issue #360: document factory-config, startup-config, and the various
   failure modes in the system
 - Issue #361: document how a privileged container can break out of its
@@ -28,6 +30,8 @@ All notable changes to the project are documented in this file.
 - Issue #365: add limited support for container capabilities, e.g., to
   enable `CAP_NET_RAW` to allow containers to use `ping`.  This allows
   users to avoid enabling privileged mode
+- Issue #367: setting date/time over NETCONF now saves system time also
+  to the RTC, which otherwise is only saved on reboot or power-down
 
 ### Fixes
 
@@ -42,6 +46,8 @@ All notable changes to the project are documented in this file.
 - Fix #328: when setting up a VLAN filtering bridge, the PVID for bridge
   ports defaulted to 1, making it impossible to set up "tagged-only"
   ports which drop ingressing untagged traffic
+- Fix #358: MAC address no longer shown for bridge interfaces in CLI
+  `show interfaces` command
 - Fix #366: static routes from container host interfaces do not work.
   Documentation updated with an example
 - Fix #368: upgrading `oci-archive:/` images fail because system thinks
