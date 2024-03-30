@@ -28,24 +28,32 @@ int parse_ospf_interfaces(sr_session_ctx_t *session, struct lyd_node *areas, FIL
 {
 	struct lyd_node *interface, *interfaces, *area;
 	int bfd_enabled = 0;
+
 	LY_LIST_FOR(lyd_child(areas), area) {
+		const char *area_id;
+
 		interfaces = lydx_get_child(area, "interfaces");
-		const char *area_id = lydx_get_cattr(area, "area-id");
+		area_id = lydx_get_cattr(area, "area-id");
+
 		LY_LIST_FOR(lyd_child(interfaces), interface) {
 			const char *hello, *dead, *retransmit, *transmit, *interface_type, *cost;
+
 			if (lydx_get_bool(interface, "enabled")) {
 				struct lyd_node *bfd;
 				int passive = 0;
+
 				bfd = lydx_get_child(interface, "bfd");
 				bfd_enabled += lydx_get_bool(bfd, "enabled");
 				passive = lydx_get_bool(interface, "passive");
 				fprintf(fp, "interface %s\n", lydx_get_cattr(interface, "name"));
+
 				hello = lydx_get_cattr(interface, "hello-interval");
 				dead = lydx_get_cattr(interface, "dead-interval");
 				retransmit = lydx_get_cattr(interface, "retransmit-interval");
 				transmit = lydx_get_cattr(interface, "transmit-delay");
 				interface_type = lydx_get_cattr(interface, "interface-type");
 				cost = lydx_get_cattr(interface, "cost");
+
 				fprintf(fp, "  ip ospf area %s\n", area_id);
 				if (dead)
 					fprintf(fp, "  ip ospf dead-interval %s\n", dead);
@@ -66,32 +74,39 @@ int parse_ospf_interfaces(sr_session_ctx_t *session, struct lyd_node *areas, FIL
 			}
 		}
 	}
+
 	return bfd_enabled;
 }
 
 int parse_ospf_redistribute(sr_session_ctx_t *session, struct lyd_node *redistributes, FILE *fp)
 {
 	struct lyd_node *tmp;
+
 	LY_LIST_FOR(lyd_child(redistributes), tmp) {
 		const char *protocol = lydx_get_cattr(tmp, "protocol");
+
 		fprintf(fp, "  redistribute %s\n", protocol);
 	}
+
 	return 0;
 }
 
 int parse_ospf_areas(sr_session_ctx_t *session, struct lyd_node *areas, FILE *fp)
 {
-	struct lyd_node *area;
 	int areas_configured = 0;
+	struct lyd_node *area;
+
 	LY_LIST_FOR(lyd_child(areas), area) {
 		const char *area_id, *area_type, *default_cost;
 		int summary;
+
 		area_id = lydx_get_cattr(area, "area-id");
 		area_type = lydx_get_cattr(area, "area-type");
 		default_cost = lydx_get_cattr(area, "default-cost");
 		summary = lydx_get_bool(area, "summary");
 		if (area_type) {
 			int stub_or_nssa = 0;
+
 			if (!strcmp(area_type, "nssa-area")) {
 				stub_or_nssa = 1;
 				fprintf(fp, "  area %s nssa %s\n", area_id, !summary ? "no-summary" : "");
@@ -104,20 +119,24 @@ int parse_ospf_areas(sr_session_ctx_t *session, struct lyd_node *areas, FILE *fp
 		}
 		areas_configured++;
 	}
+
 	return areas_configured;
 }
+
 int parse_ospf(sr_session_ctx_t *session, struct lyd_node *ospf)
 {
 	struct lyd_node *areas, *default_route;
-	int num_areas = 0;
-	int bfd_enabled = 0;
 	const char *router_id;
+	int bfd_enabled = 0;
+	int num_areas = 0;
 	FILE *fp;
+
 	fp = fopen(OSPFD_CONF_NEXT, "w");
 	if (!fp) {
 		ERROR("Failed to open %s", OSPFD_CONF_NEXT);
 		return SR_ERR_INTERNAL;
 	}
+
 	fputs(FRR_STATIC_CONFIG, fp);
 	areas = lydx_get_child(ospf, "areas");
 	router_id = lydx_get_cattr(ospf, "explicit-router-id");
@@ -128,25 +147,30 @@ int parse_ospf(sr_session_ctx_t *session, struct lyd_node *ospf)
 	default_route = lydx_get_child(ospf, "default-route-advertise");
 	if (default_route) {
 		/* enable is obsolete in favor for enabled. */
-		if ((lydx_get_child(default_route, "enable") && lydx_get_bool(default_route, "enable")) || lydx_get_bool(default_route, "enabled")) {
+		if ((lydx_get_child(default_route, "enable") && lydx_get_bool(default_route, "enable"))
+		    || lydx_get_bool(default_route, "enabled")) {
 			fputs("  default-information originate", fp);
 			if (lydx_get_bool(default_route, "always"))
 				fputs(" always", fp);
 			fputs("\n", fp);
 		}
 	}
+
 	if (router_id)
 		fprintf(fp, "  ospf router-id %s\n", router_id);
 	fclose(fp);
 
 	if (!bfd_enabled)
 		(void)remove(BFDD_CONF);
+
 	if (!num_areas) {
 		(void)remove(OSPFD_CONF_NEXT);
 		return 0;
 	}
+
 	if (bfd_enabled)
 		(void)touch(BFDD_CONF);
+
 	return 0;
 }
 
@@ -183,6 +207,7 @@ static int parse_static_routes(sr_session_ctx_t *session, struct lyd_node *paren
 {
 	struct lyd_node *ipv4, *v4routes, *ipv6, *v6routes, *route;
 	int num_routes = 0;
+
 	ipv4 = lydx_get_child(parent, "ipv4");
 	ipv6 = lydx_get_child(parent, "ipv6");
 
@@ -246,6 +271,7 @@ static int change_control_plane_protocols(sr_session_ctx_t *session, uint32_t su
 			/* Remove all generated files */
 			(void)remove(STATICD_CONF);
 		}
+
 		if (bfdd_running && !bfdd_enabled) {
 			if (systemf("initctl -bfq disable bfdd")) {
 				ERROR("Failed to disable BFD routing daemon");
@@ -255,6 +281,7 @@ static int change_control_plane_protocols(sr_session_ctx_t *session, uint32_t su
 			/* Remove all generated files */
 			(void)remove(BFDD_CONF);
 		}
+
 		if (ospfd_running && !ospfd_enabled) {
 			if (systemf("initctl -bfq disable ospfd")) {
 				ERROR("Failed to disable OSPF routing daemon");
@@ -264,6 +291,7 @@ static int change_control_plane_protocols(sr_session_ctx_t *session, uint32_t su
 			/* Remove all generated files */
 			(void)remove(OSPFD_CONF);
 		}
+
 		if (bfdd_enabled) {
 			if (!bfdd_running) {
 				if (systemf("initctl -bfq enable bfdd")) {
@@ -273,6 +301,7 @@ static int change_control_plane_protocols(sr_session_ctx_t *session, uint32_t su
 				}
 			}
 		}
+
 		if (ospfd_enabled) {
 			(void)remove(OSPFD_CONF_PREV);
 			(void)rename(OSPFD_CONF, OSPFD_CONF_PREV);
@@ -289,6 +318,7 @@ static int change_control_plane_protocols(sr_session_ctx_t *session, uint32_t su
 				restart_zebra = true;
 			}
 		}
+
 		if (staticd_enabled) {
 			(void)remove(STATICD_CONF_PREV);
 			(void)rename(STATICD_CONF, STATICD_CONF_PREV);
@@ -303,6 +333,7 @@ static int change_control_plane_protocols(sr_session_ctx_t *session, uint32_t su
 				restart_zebra = true;
 			}
 		}
+
 		if (restart_zebra) {
 			if (systemf("initctl -bfq restart zebra")) {
 				ERROR("Failed to restart zebra routing daemon");
@@ -342,7 +373,8 @@ int ietf_routing_init(struct confd *confd)
 {
 	int rc = 0;
 
-	REGISTER_CHANGE(confd->session, "ietf-routing", "/ietf-routing:routing/control-plane-protocols", 0, change_control_plane_protocols, confd, &confd->sub);
+	REGISTER_CHANGE(confd->session, "ietf-routing", "/ietf-routing:routing/control-plane-protocols",
+			0, change_control_plane_protocols, confd, &confd->sub);
 
 	return SR_ERR_OK;
 fail:
