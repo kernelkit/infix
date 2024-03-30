@@ -933,9 +933,6 @@ static int bridge_gen_ports(struct dagger *net, struct lyd_node *dif, struct lyd
 	struct lydx_diff brdiff;
 	int err = 0;
 
-	if (!is_bridge_port(cif))
-		return 0;
-
 	node = lydx_get_descendant(lyd_child(dif), "bridge-port", NULL);
 	if (!node)
 		goto fail;
