@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>mDNS Hosts - Services</title>
+    <style>
+      .container {
+          max-width: 1024px;
+          margin: auto;
+          padding: 0 0px;
+	  overflow: auto;
+      }
+      .container h1 {
+	  text-align: center;
+	  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+	  /* margin-top: 50px; */
+	  /* margin-bottom: 20px; */
+	  font-size: 32px;
+	  color: #333;
+	  padding: 20px; /* Add some padding around the text */
+      }
+      /* Container for the checkbox for better alignment */
+      .checkbox-container {
+	  margin-bottom: 20px; /* Spacing between the checkbox and the table */
+	  display: flex;
+	  align-items: center; /* Vertically center the checkbox and label */
+      }
+      /* Styles for the label text for better readability */
+      .checkbox-container label {
+	  margin-left: 5px;
+	  font-size: 16px;
+      }
+      /* Custom checkbox styles if needed */
+      input[type="checkbox"] {
+	  /* Custom styles here */
+      }
+      .container table {
+	  background-color: rgba(255, 255, 255, 0.75);
+	  /* background-color: white; */
+      }
+      .network-image {
+          display: block;
+          margin-left: auto;
+          margin-right: auto;
+	  text-align: center;
+          width: 50%;
+      }
+      .detail-row { display: none; }
+      .other { display: none; }
+      .toggle-button {
+	  cursor: pointer;
+	  /* font-size: 20px; */
+	  color: #333;
+	  line-height: 1;
+	  user-select: none;
+	  transition: transform 0.3s ease;
+      }
+      html, body {
+	  height: 100%;
+	  font-family: Arial, sans-serif;
+	  margin: 0; /* 20px */
+	  padding: 0;
+	  /* By kjpargeter https://www.freepik.com/free-vector/network-connections-background_2533758.htm */
+	  background-image: url('{{ url_for("static", filename="images/2533758_8245.svg") }}');
+          background-size: cover;
+          background-position: center;
+          background-repeat: no-repeat;
+      }
+      table {
+	  border-collapse: collapse;
+	  width: 100%;
+	  margin: 20px auto;
+	  border: 2px solid rgba(0, 0, 0, 0.1); /* Slight, semi-transparent border */
+	  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      }
+      table tr th:first-child, table tr td:first-child {
+	  width: 1%; /* Minimize the width */
+	  white-space: nowrap; /* Prevents content from wrapping */
+	  padding: 10px; /* Adjust padding as needed */
+      }
+      th, td {
+	  text-align: left;
+	  padding: 8px;
+	  border-bottom: 1px solid #ddd;
+      }
+      th {
+	  background-color: #e2e2e2;
+      }
+      tr:hover {
+	  background-color: #d8d8d8;
+      }
+    </style>
+  </head>
+<body>
+  <div class="container">
+    <!-- <input type="text" id="search" onkeyup="filter()" placeholder="Filter column ..."> -->
+    <div class="network-image">
+        <!-- Icon created by Ranah Pixel Studio -- https://www.flaticon.com/free-icons/computer -->
+	<!-- <img src="{{ url_for('static', filename='images/switch.png') }}" width="160px"> -->
+    </div>
+    <h1>mDNS Hosts and Services</h1>
+    <div class="checkbox-container">
+      <label for="showAll">
+	<input type="checkbox" id="showAll" name="showAll" onchange="toggleAll(this)">
+	Show all
+      </label>
+    </div>
+    <table id="main">
+      <thead>
+	<tr><th></th><th>Link</th><th>Name</th><th>Type</th></tr>
+      </thead>
+      <tbody>
+	{% for link, details in hosts_services.items() %}
+	{% for service in details.services %}
+	{% if loop.first %}
+	<tr class="device-row {{ 'other' if service.other else '' }}">
+	  <td><span class="toggle-button" onclick="toggleFoldout('{{ link }}', event)">&#x25B6;</span></td>
+	{% else %}
+	<tr class="device-row detail-row" data-name="{{ link }}">
+	  <td></td>
+        {% endif %}
+	  {% if service.url %}
+          <td><a href="{{ service.url }}">{{ link }}</a></td>
+	  {% else %}
+          <td>{{ link }}</td>
+	  {% endif %}
+	  <td>{{ service.name }}</td>
+          <td>{{ service.type }}</td>
+	</tr>
+	{% endfor %}
+	{% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <script>
+    document.addEventListener('DOMContentLoaded', (event) => {
+	document.getElementById('showAll').checked = false;
+    });
+
+    function filter() {
+        var input, filter, table, tr, tdaddr, tdserv, i, addr, serv;
+
+        input = document.getElementById("search");
+        filter = input.value.toUpperCase();
+        table = document.getElementById("main");
+        tr = table.getElementsByTagName("tr");
+
+        for (i = 1; i < tr.length; i++) {
+            tdaddr = tr[i].getElementsByTagName("td")[0];
+            tdserv = tr[i].getElementsByTagName("td")[1];
+            tdlink = tr[i].getElementsByTagName("td")[2];
+            tdtype = tr[i].getElementsByTagName("td")[3];
+            addr = tdaddr ? tdaddr.textContent || tdaddr.innerText : "";
+            serv = tdserv ? tdserv.textContent || tdserv.innerText : "";
+            link = tdlink ? tdlink.textContent || tdlink.innerText : "";
+            type = tdtype ? tdtype.textContent || tdtype.innerText : "";
+
+            if (addr.toUpperCase().indexOf(filter) > -1 ||
+                serv.toUpperCase().indexOf(filter) > -1 ||
+                link.toUpperCase().indexOf(filter) > -1 ||
+                type.toUpperCase().indexOf(filter) > -1) {
+                tr[i].style.display = "";
+            } else {
+                tr[i].style.display = "none";
+            }
+        }
+    }
+
+    function toggleFoldout(name, event) {
+        var isHidden = true;
+        var detailRows;
+
+	detailRows = document.querySelectorAll(`tr[data-name='${name}']`);
+        detailRows.forEach(row => {
+	    if (row.style.display === 'none' || row.style.display === '') {
+		row.style.display = 'table-row';
+		isHidden = false;
+	    } else {
+		row.style.display = 'none';
+		isHidden = true;
+	    }
+        });
+        event.target.innerHTML = isHidden ? '&#x25B6;' : '&#x25BC;';
+    }
+
+    function toggleAll(checkbox) {
+	const allRows = document.querySelectorAll('.device-row');
+	const otherRows = document.querySelectorAll('.other');
+
+	allRows.forEach(row => {
+	    if (row.classList.contains('other'))
+		row.style.display = checkbox.checked ? 'table-row' : 'none';
+        });
+    }
+  </script>
+</body>
+</html>

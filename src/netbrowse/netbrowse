@@ -4,7 +4,7 @@
 """
 import sys
 
-from flask       import Flask#, render_template_string
+from flask       import Flask, render_template
 from avahi_alias import AvahiAlias
 from mdns_hosts  import MdnsHosts
 
@@ -14,9 +14,13 @@ app = Flask(__name__)
 def browse():
     """The /browse network.local application"""
     mdns_hosts = MdnsHosts()
-    content = mdns_hosts.html().encode('utf-8')
-    #return render_template_string(content)
-    return content
+    hosts_services = mdns_hosts.scan()
+
+    order = { 'HTTPS': 1, 'HTTP': 2, 'SSH': 3, 'SFTP': 4 }
+    for _, details in hosts_services.items():
+        details['services'].sort(key=lambda x: order.get(x['type'], 999))
+
+    return render_template('browse.html', hosts_services=hosts_services)
 
 if __name__ == '__main__':
     avahi_aliases = AvahiAlias()

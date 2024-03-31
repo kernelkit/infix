@@ -17,8 +17,8 @@ class MdnsHosts:
     def scan(self):
         """Perform mDNS scan and return list of hosts."""
         services = {
-            '_http._tcp':        ('HTTP', 'http://{address}'),
-            '_https._tcp':       ('HTTPS', 'https://{address}'),
+            '_http._tcp':        ('HTTP', 'http://{address}:{port}{path}'),
+            '_https._tcp':       ('HTTPS', 'https://{address}:{port}{path}'),
             '_netconf-ssh._tcp': ('NETCONF', None),
             '_ssh._tcp':         ('SSH', None),
             '_sftp-ssh._tcp':    ('SFTP', None),
@@ -27,35 +27,58 @@ class MdnsHosts:
         result = subprocess.run(['avahi-browse', '-tarpk' if self.hask() else '-tarp'],
                                 stdout=subprocess.PIPE, text=True)
         lines = result.stdout.strip().split('\n')
-        hosts_services = {}  # Key: address, Value: list of dicts with service details
+        hosts_services = {}
 
         for line in lines:
             print(f"{line}")
+
             parts = line.split(';')
             if len(parts) <= 8 or parts[0] != '=':
                 continue
-            if (parts[2] != 'IPv4' and parts[2] != 'IPv6'):
-                continue
 
-            service_type = parts[4]
-            if service_type not in services:
-                continue
-
+            family = parts[2]
             service_name = parts[3]
+            service_type = parts[4]
+            link = parts[6]
             address = parts[7]
-            identifier, url_template = services[service_type]
-            url = url_template.format(address=address) if url_template else None
+            port = parts[8]
+            txt = parts[9]
+
+            if family not in ('IPv4', 'IPv6'):
+                continue
+
+            if service_type in services:
+                identifier, url_template = services[service_type]
+                other = False
+            else:
+                identifier = service_type
+                url_template = None
+                other = True
+
+            path = ""
+            records = txt.split(' ')
+            for record in records:
+                stripped = record.strip("\"")
+                if "path=" in stripped:
+                    path = stripped.split('path=')[-1]
+                    break
+
+            if url_template:
+                url = url_template.format(address=address, port=port, path=path)
+            else:
+                url = None
 
             service_details = {
-                'name': self.decode(service_name),
                 'type': identifier,
-                'link': parts[6],
-                'url': url
+                'name': self.decode(service_name),
+                'url': url,
+                'other': other
             }
-            if address not in hosts_services:
-                hosts_services[address] = {'services': [service_details], 'type': parts[2]}
-            else:
-                hosts_services[address]['services'].append(service_details)
+
+            if link not in hosts_services:
+                hosts_services[link] = {'services': [service_details]}
+            elif service_details not in hosts_services[link]['services']:
+                hosts_services[link]['services'].append(service_details)
 
         return hosts_services
 
@@ -65,82 +88,3 @@ class MdnsHosts:
         name = name.replace('\\040', '(')
         name = name.replace('\\041', ')')
         return bytes(name, "utf-8").decode("unicode_escape")
-
-    def html(self):
-        """Generate a HTML table of the mDNS scan results"""
-        hosts_services = self.scan()
-        html_content = """
-    <html>
-    <head>
-    <title>mDNS Hosts - Services</title>
-    <style>
-        .container {
-            max-width: 1024px;
-            margin: auto;
-            padding: 0 10px;
-        }
-        body { font-family: Arial, sans-serif; margin: 20px; }
-        table { border-collapse: collapse; width: 100%; }
-        th, td { text-align: left; padding: 8px; border-bottom: 1px solid #ddd; }
-        th { background-color: #f2f2f2; }
-        tr:hover {background-color: #e8e8e8;}
-    </style>
-    </head>
-    <body>
-    <div class="container">
-    <input type="text" id="search" onkeyup="filter()" placeholder="Filter column ...">
-    <table id="main">
-    <tr><th>IP Address</th><th>Service Name</th><th>Link</th><th>Service Type</th></tr>
-    """
-
-        for address, info in hosts_services.items():
-            for service in info['services']:
-                service_name = service['name']
-                service_type = service['type']
-                link = service['link']
-                url = service['url']
-                if url:
-                    url       = url.replace("127.0.0.1", link)
-                    link_html = f'<a href="{url}">{link}</a>'
-                else:
-                    link_html = f'{link}'
-
-                html_content += f"<tr><td>{address}</td><td>{service_name}</td>"
-                html_content += f"<td>{link_html}</td><td>{service_type}</td></tr>\n"
-
-        html_content += """
-    </table>
-    </div>
-    <script>
-        function filter() {
-            var input, filter, table, tr, tdaddr, tdserv, i, addr, serv;
-            input = document.getElementById("search");
-            filter = input.value.toUpperCase();
-            table = document.getElementById("main");
-            tr = table.getElementsByTagName("tr");
-
-            for (i = 1; i < tr.length; i++) {
-                tdaddr = tr[i].getElementsByTagName("td")[0];
-                tdserv = tr[i].getElementsByTagName("td")[1];
-                tdlink = tr[i].getElementsByTagName("td")[2];
-                tdtype = tr[i].getElementsByTagName("td")[3];
-                addr = tdaddr ? tdaddr.textContent || tdaddr.innerText : "";
-                serv = tdserv ? tdserv.textContent || tdserv.innerText : "";
-                link = tdlink ? tdlink.textContent || tdlink.innerText : "";
-                type = tdtype ? tdtype.textContent || tdtype.innerText : "";
-
-                if (addr.toUpperCase().indexOf(filter) > -1 ||
-                    serv.toUpperCase().indexOf(filter) > -1 ||
-                    link.toUpperCase().indexOf(filter) > -1 ||
-                    type.toUpperCase().indexOf(filter) > -1) {
-                    tr[i].style.display = "";
-                } else {
-                    tr[i].style.display = "none";
-                }
-            }
-        }
-    </script>
-    </body>
-    </html>
-    """
-        return html_content
