@@ -23,8 +23,7 @@ The system has several datastores (or files):
 
  - `factory-config` consists of a set of default configurations, some
    static and others generated per-device, e.g., a unique hostname and
-   number of ports/interfaces.   This file is generated at boot, if it
-   does not exist, i.e., only on first boot or after factory reset.
+   number of ports/interfaces.   This file is generated at boot.
  - `startup-config` is created from `factory-config` at boot if it does
    not exist.  It is loaded as the system configuration on each boot.
  - `running-config` is what is actively running on the system.  If no
