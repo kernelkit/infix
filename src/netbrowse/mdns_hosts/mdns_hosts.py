@@ -30,7 +30,7 @@ class MdnsHosts:
         hosts_services = {}
 
         for line in lines:
-            print(f"{line}")
+            # print(f"{line}")
 
             parts = line.split(';')
             if len(parts) <= 8 or parts[0] != '=':
