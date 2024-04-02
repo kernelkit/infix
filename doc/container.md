@@ -188,19 +188,20 @@ mind.
 
 **Shell OCI Example:**
 
-	admin@example:~$ cd /var/tmp/
-	admin@example:/var/tmp$ sudo wget https://github.com/kernelkit/curiOS/releases/download/edge/curios-oci-amd64.tar.gzConnecting to github.com (140.82.121.3:443)
-	wget: note: TLS certificate validation not implemented
-	Connecting to objects.githubusercontent.com (185.199.109.133:443)
-	saving to 'curios-oci-amd64.tar.gz'
-	curios-oci-amd64.tar 100% |*********************************| 7091k  0:00:00 ETA
-	'curios-oci-amd64.tar.gz' saved
-	admin@example:/var/tmp$ ll
-	total 7104
-	drwxr-xr-x    3 root     root          4096 Mar 27 14:22 ./
-	drwxr-xr-x   14 root     root          4096 Mar 27 11:57 ../
-	-rw-r--r--    1 root     root       7261785 Mar 27 14:22 curios-oci-amd64.tar.gz
-	drwx------    6 frr      frr           4096 Mar 27 11:57 frr/
+    admin@example:~$ cd /var/tmp/
+    admin@example:/var/tmp$ sudo wget https://github.com/kernelkit/curiOS/releases/download/edge/curios-oci-amd64.tar.gz
+    Connecting to github.com (140.82.121.3:443)
+    wget: note: TLS certificate validation not implemented
+    Connecting to objects.githubusercontent.com (185.199.109.133:443)
+    saving to 'curios-oci-amd64.tar.gz'
+    curios-oci-amd64.tar 100% |*********************************| 7091k  0:00:00 ETA
+    'curios-oci-amd64.tar.gz' saved
+    admin@example:/var/tmp$ ll
+    total 7104
+    drwxr-xr-x    3 root     root          4096 Mar 27 14:22 ./
+    drwxr-xr-x   14 root     root          4096 Mar 27 11:57 ../
+    -rw-r--r--    1 root     root       7261785 Mar 27 14:22 curios-oci-amd64.tar.gz
+    drwx------    6 frr      frr           4096 Mar 27 11:57 frr/
 
 Importing the image into podman can be done either from the CLI
 admin-exec context ...
