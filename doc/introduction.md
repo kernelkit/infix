@@ -118,14 +118,7 @@ the system's `confd` service, the *Fail Secure Mode* is triggered and
 `failure-config` is loaded (unless VPD Failure, see above).
 
 *Fail Secure Mode* is a fail-safe mode provided for debugging the
-system.  Depending on customer requirements this may be either the
-`factory-config` with the hostname set to `failure`, or a dedicated
-configuration that isolates interfaces, or even disables ports, to
-ensure that the device does not cause any security problems on the
-network.  E.g., start forwarding traffic between previously isolated
-VLANs.
-
-The generic default is isolated interfaces with communication only to
+system.  The default[^3] is isolated interfaces with communication only to
 the management CPU, SSH and console login using the device's factory
 reset password, IP connectivity only using IPv6 link-local, and device
 discovery protocols: LLDP, mDNS-SD.  The login and shell prompt are set
@@ -136,4 +129,10 @@ address.
     SNMP (MIB), used to describe the subsystems and properties of
 	the system.
 [^2]: Return Merchandise Authorization (RMA), i.e., broken beyond repair
-    by end-user and legible for return to manufacturer.
+    by end-user and eligible for return to manufacturer.
+[^3]: Customer specific builds can define their own `failure-config`.
+    It may be the same as `factory-config`, with the hostname set to
+    `failure`, or a dedicated configuration that isolates interfaces, or
+    even disables ports, to ensure that the device does not cause any
+    security problems on the network.  E.g., start forwarding traffic
+    between previously isolated VLANs.
