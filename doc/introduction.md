@@ -69,10 +69,10 @@ password in VPD, are detailed later in this section.
 
 ![System boot flowchart](img/fail-secure.svg)
 
- 1. Before mounting the `/cfg` and `/var` file systems, which host the
-    read-writable data like `startup-config` and container images, the
-	system checks if it's time for a factory reset.  If so it wipes the
-	contents of these partitions before proceeding
+ 1. Before mounting `/cfg` and `/var` partitions, hosting read-writable
+    data like `startup-config` and container images, the system first
+    checks if a factory reset has been requested by the user, if so it
+    wipes the contents of these partitions
  2. Linux boots with a device tree which is used for detecting generic
     make and model of the device, e.g., number of interfaces.  It may
     also reference an EEPROM with [Vital Product Data](vpd.md).  That is
@@ -84,7 +84,7 @@ password in VPD, are detailed later in this section.
     there is a working fail safe, or rather *fail secure*, mode
  4. On first power-on, and after a factory reset, the system does not
     have a `startup-config`, in which case `factory-config` is copied
-	to `startup-config`
+    to `startup-config`
  5. Provided the integrity of the `startup-config` is OK, a system
     service loads and activates the configuration
 
@@ -99,10 +99,10 @@ The per-device password cannot be read, or is corrupt, so the system
 
  1. First boot, or after factory reset: `startup-config` cannot be
     created or loaded, and `failure-config` cannot be loaded.  The
-	system ends up in an unrecoverable state, i.e., **RMA[^2] Mode**
+    system ends up in an unrecoverable state, i.e., **RMA[^2] Mode**
  2. The system has booted (at least) once with correct VPD and password
     and already has a `startup-config`.  Provided the `startup-config`
-	is OK (see below), it is loaded and system boots successfully
+    is OK (see below), it is loaded and system boots successfully
 
 In both cases, external factory reset modes/button will not help, and
 in the second case will cause the device to fail on the next boot.
