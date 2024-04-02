@@ -44,8 +44,7 @@ The system has several datastores (or files):
 
  - `factory-config` consists of a set of default configurations, some
    static and others generated per-device, e.g., a unique hostname and
-   number of ports/interfaces.   This file is generated at boot, if it
-   does not exist, i.e., only on first boot or after factory reset.
+   number of ports/interfaces.   This file is generated at boot.
  - `failure-config` is also generated at boot, from the same YANG models
    as `factory-config`, and holds the system *Fail Secure Mode*
  - `startup-config` is created from `factory-config` at boot if it does
