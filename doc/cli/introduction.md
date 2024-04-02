@@ -12,10 +12,12 @@ short guide intends to help you with that.
 ## Key Concepts
 
 The two modes in the CLI are the admin-exec and the configure context.
-When logging in to the system, be it from console or SSH, you land in
-admin-exec.  Here you can inspect the system status and do operations
-to debug networking issues, e.g. ping.  You can also enter configure
-context by typing: `configure`
+
+When logging in to the system, be it from console or SSH, you first have
+a stopover in a UNIX shell, usually Bash.  Type `cli` to enter the CLI
+and finally land in admin-exec.  Here you can inspect system status and
+do operations to debug networking issues, e.g. ping.  You can also enter
+configure context by typing: `configure`
 
 The system has several datastores (or files):
 
