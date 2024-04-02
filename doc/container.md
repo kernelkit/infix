@@ -625,16 +625,20 @@ read any warnings and always consider the security aspects.
 
 ### Running Host Commands From Container
 
-SSH login with keys is very handy and both remote scripting friendly
-*and secure*, but it does require a few extra configuration steps.  The
-way to set it up is covered in part in [SSH Authorized Key][4].
+SSH login with keys is very handy, both remote scripting friendly *and
+secure*, but it does require a few extra configuration steps.  The way
+to set it up is covered in part in [SSH Authorized Key][4].
 
 Another *insecure* approach is to access the host system directly,
 bypassing the namespaces that make up the boundary between host and
 container.
 
-> **Security:** Please use this only in trusted setups, and possibly
-> only during a limited time frame.
+> **Security:** Please note, this completely demolishes the isolation
+> barrier between container and host operating system.  It is only
+> suitable in situations where the container serves more as a unit of
+> distribution rather than as a separate component of the system.
+> *Strongly recommended* to use this only in trusted setups!  Consider
+> also limiting the time frame in which this is active!
 
 First, enable *Privileged* mode, this unlocks the door and allows the
 container to manage resources on the host system.  An example is the
