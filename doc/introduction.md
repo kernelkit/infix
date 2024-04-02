@@ -21,11 +21,21 @@ is very useful to know how to navigate and use the CLI.
 ## Key Concepts
 
 The two modes in the CLI are the admin-exec and the configure context.
-When logging in to the system, from the console port or SSH, you land in
-admin-exec.  Here you can inspect the system status and do operations to
-debug networking issues, e.g. ping.  You can also enter configure
-context by typing: `configure` followed by commands to `set`, `edit`,
-apply changes using `leave`, or `abort` and return to admin-exec.
+
+However, when logging in to the system, from the console port or SSH,
+you land in a standard UNIX shell, Bash.  This is for advanced users
+and remote scripting purposes (production equipment).  To enter the
+CLI type:
+
+    admin@example:~$ cli
+    admin@example:/>
+
+The prompt, constructed from your username and the device's hostname,
+changes slightly.  You are now in the admin-exec context of the CLI.
+Here you can inspect system status and do operations to debug networking
+issues, e.g. ping.  You can also enter configure context by typing:
+`configure` followed by commands to `set`, `edit`, apply changes using
+`leave`, or `abort` and return to admin-exec.
 
 > The [CLI Introduction](cli/introduction.md) can be useful to skim
 > through at this point.
