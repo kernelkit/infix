@@ -92,6 +92,11 @@ static char *cfg_adjust(const char *fn, const char *tmpl, char *buf, size_t len)
 	if (strstr(fn, "../"))
 		return NULL;	/* relative paths not allowed */
 
+	if (fn[0] == '/') {
+		strncpy(buf, fn, len);
+		return buf;	/* allow absolute paths */
+	}
+
 	/* Files in /cfg must end in .cfg */
 	if (!strncmp(fn, "/cfg/", 5)) {
 		snprintf(buf, len, "%s", fn);
@@ -367,11 +372,6 @@ static const char *infix_ds(const char *text, const char *type, struct infix_ds 
 		}
 	}
 
-	if (strchr(text, '/') && !strstr(text, "://")) {
-		fprintf(stderr, ERRMSG "invalid %s argument: %s\n", type, text);
-		return NULL;
-	}
-
 	return text;
 }
 
@@ -554,6 +554,14 @@ int infix_copy(kcontext_t *ctx)
 				fprintf(stderr, ERRMSG "no such file %s, aborting.", fn);
 			else
 				rc = systemf("curl %s -LT %s %s", user, fn, dst);
+		} else {
+			if (!access(dst, F_OK)) {
+				if (!yorn("Overwrite existing file %s", dst)) {
+					fprintf(stderr, "OK, aborting.\n");
+					return 0;
+				}
+			}
+			rc = systemf("cp %s %s", src, dst);
 		}
 	}
 
