@@ -217,6 +217,20 @@ netwrm()
     done
 }
 
+# Schedule restart of (any) container using network $1 to activate network changes
+netrestart()
+{
+    net=$1
+
+    for c in $(podman ps $all --format "{{.Names}}"); do
+	for n in $(podman inspect "$c" |jq -r '.[].NetworkSettings.Networks | keys[]'); do
+	    if [ "$n" = "$net" ]; then
+		initctl -nbq touch "container@$c"
+	    fi
+	done
+    done
+}
+
 usage()
 {
 	cat <<EOF
@@ -262,7 +276,7 @@ commands:
   list    [image | oci]    List names (only) of containers, images, or OCI archives
   load    [NAME | URL] NM  Load OCI tarball fileNAME or URL to image NM
   remove   IMAGE           Remove an (unused) container image
-  restart [NAME]           Restart a crashed container
+  restart [network] NAME   Restart a (crashed) container or container(s) using network
   run      NAME [CMD]      Run a container interactively, with an optional command
   save     IMAGE FILE      Save a container image to an OCI tarball FILE[.tar.gz]
   shell                    Start a shell inside a container
@@ -552,8 +566,24 @@ case $cmd in
 	if [ -n "$name" ]; then
 	    wrap "$name" restart
 	elif [ -n "$1" ]; then
-	    stop  "$1"
-	    start "$1"
+	    cmd=$1
+	    name=$2
+	    if [ "$cmd" = "network" ] && [ -n "$name" ]; then
+		netrestart "$name"
+	    else
+		name=$1
+		stop "$name"
+		timeout=20
+		while running "$name"; do
+		    _=$((timeoute -= 1))
+		    if [ $timeout -le 0 ]; then
+			log "Timeout waiting for container $1 to stop before restarting it."
+			exit 1
+		    fi
+		    sleep 1
+		done
+		start "$name"
+	    fi
 	else
 	    usage
 	    exit 1
