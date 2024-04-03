@@ -387,9 +387,18 @@ int cni_netdag_gen_iface(struct dagger *net, const char *ifname,
 			 struct lyd_node *dif, struct lyd_node *cif)
 {
 	const char *cni_type = NULL;
+	FILE *fp;
 
 	if (iface_is_cni(ifname, cif, &cni_type)) {
 		int err;
+
+		fp = dagger_fopen_next(net, "init", ifname, 30, "cni.sh");
+		if (!fp)
+			return -EIO;
+
+		/* Must restart container(s) using this modified network to bite. */
+		fprintf(fp, "container -a restart network %s\n", ifname);
+		fclose(fp);
 
 		err = iface_gen_cni(ifname, cif);
 		if (err)
@@ -397,8 +406,6 @@ int cni_netdag_gen_iface(struct dagger *net, const char *ifname,
 		if (cni_type && !strcmp(cni_type, "bridge"))
 			return 1; /* CNI bridges are managed by podman */
 	} else if (iface_is_cni(ifname, dif, &cni_type)) {
-		FILE *fp;
-
 		/* No longer a container-network, clean up. */
 		fp = dagger_fopen_current(net, "exit", ifname, 30, "cni.sh");
 		if (!fp)
