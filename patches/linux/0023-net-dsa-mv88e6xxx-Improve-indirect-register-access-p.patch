@@ -1,7 +1,7 @@
 From b53e5007cd5be42eb5d9a510d63f89c7c6edd9b6 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Wed, 27 Mar 2024 15:52:43 +0100
-Subject: [PATCH 23/23] net: dsa: mv88e6xxx: Improve indirect register access
+Subject: [PATCH 23/24] net: dsa: mv88e6xxx: Improve indirect register access
  perf on 6393
 Organization: Addiva Elektronik
 
