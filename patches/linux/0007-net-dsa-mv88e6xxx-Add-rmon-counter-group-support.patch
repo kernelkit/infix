@@ -1,7 +1,7 @@
 From 35ecc84237bfccbe5b93c0aef6c07cc506d43070 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Thu, 14 Dec 2023 14:50:28 +0100
-Subject: [PATCH 07/23] net: dsa: mv88e6xxx: Add "rmon" counter group support
+Subject: [PATCH 07/24] net: dsa: mv88e6xxx: Add "rmon" counter group support
 Organization: Addiva Elektronik
 
 Report the applicable subset of an mv88e6xxx port's counters using

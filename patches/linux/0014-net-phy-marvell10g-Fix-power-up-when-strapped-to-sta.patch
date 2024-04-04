@@ -1,7 +1,7 @@
 From 27d5241d3ddf70d65af5f4dd029f99f0fea866a5 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Tue, 21 Nov 2023 20:15:24 +0100
-Subject: [PATCH 14/23] net: phy: marvell10g: Fix power-up when strapped to
+Subject: [PATCH 14/24] net: phy: marvell10g: Fix power-up when strapped to
  start powered down
 Organization: Addiva Elektronik
 

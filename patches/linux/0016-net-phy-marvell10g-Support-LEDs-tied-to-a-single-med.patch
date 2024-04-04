@@ -1,7 +1,7 @@
 From 3113b64290b5b7b20c294535c12ea4c732a02f51 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Tue, 12 Dec 2023 09:51:05 +0100
-Subject: [PATCH 16/23] net: phy: marvell10g: Support LEDs tied to a single
+Subject: [PATCH 16/24] net: phy: marvell10g: Support LEDs tied to a single
  media side
 Organization: Addiva Elektronik
 

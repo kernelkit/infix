@@ -1,7 +1,7 @@
 From 25efcdb13ae720ee662f4b6091b270e48ac4d375 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Thu, 21 Mar 2024 19:12:15 +0100
-Subject: [PATCH 20/23] net: dsa: Support EtherType based priority overrides
+Subject: [PATCH 20/24] net: dsa: Support EtherType based priority overrides
 Organization: Addiva Elektronik
 
 Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
