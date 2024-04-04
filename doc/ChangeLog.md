@@ -32,6 +32,8 @@ All notable changes to the project are documented in this file.
   users to avoid enabling privileged mode
 - Issue #367: setting date/time over NETCONF now saves system time also
   to the RTC, which otherwise is only saved on reboot or power-down
+- Add support for static multicast filters, MAC, IPv4 and IPv6 groups
+  are supported.
 
 ### Fixes
 
@@ -493,11 +495,11 @@ Currently supported models:
 - Replace `ietf-if-vlan-encapsulation` YANG model with the native
   `infix-if-vlan` model.  This fits better with Linux VLAN interfaces and
   simplifies the syntax greatly.  For details, see PR #179
-  
+
         admin@example:/config/interfaces/interface/eth0.10/> set vlan id 10 lower-layer-if eth0
 
 - The following new NETCONF interface operational counters have been added:
-  
+
 | **YANG**                    | **Linux / Ethtool**               |
 |-----------------------------|-----------------------------------|
 | `out-frames`                | `FramesTransmittedOK`             |
@@ -535,7 +537,7 @@ Currently supported models:
 
 - Fix #106: confd: drop deviation `ietf-system:timezone-utc-offset`
 - Fix #151: Operational status broken in v23.09
-- Fix #159: Hacky generation of `/etc/resolv.conf` at boot 
+- Fix #159: Hacky generation of `/etc/resolv.conf` at boot
 - Fix #162: VLAN interface without encapsulation is accepted by YANG model
 
 
