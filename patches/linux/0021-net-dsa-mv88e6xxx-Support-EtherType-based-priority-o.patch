@@ -1,7 +1,7 @@
 From 213e9a1d9145723897fbba40fc4afc5b5f70c1de Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Fri, 22 Mar 2024 16:15:43 +0100
-Subject: [PATCH 21/21] net: dsa: mv88e6xxx: Support EtherType based priority
+Subject: [PATCH 21/23] net: dsa: mv88e6xxx: Support EtherType based priority
  overrides
 Organization: Addiva Elektronik
 

@@ -1,7 +1,7 @@
 From 5f5bf4a50e98c5aff05fe85994a981253ae85987 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Tue, 19 Sep 2023 18:38:10 +0200
-Subject: [PATCH 13/21] net: phy: marvell10g: Support firmware loading on
+Subject: [PATCH 13/23] net: phy: marvell10g: Support firmware loading on
  88X3310
 Organization: Addiva Elektronik
 
