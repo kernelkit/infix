@@ -22,7 +22,8 @@ def browse():
 
     return render_template('browse.html', hosts_services=hosts_services)
 
-if __name__ == '__main__':
+def main():
+    """Main entrypoint, advertises aliases from command line and starts browser."""
     avahi_aliases = AvahiAlias()
     for each in sys.argv[1:]:
         avahi_aliases.publish_cname(str(each).encode("utf-8", "strict"))
@@ -31,3 +32,6 @@ if __name__ == '__main__':
         app.run(debug=True)
     except KeyboardInterrupt:
         print("Exiting")
+
+if __name__ == '__main__':
+    main()
