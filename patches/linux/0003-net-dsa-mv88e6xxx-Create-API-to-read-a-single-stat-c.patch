@@ -1,7 +1,7 @@
 From 337cf21833cef6ab456a8562338de88ab1a84ead Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Thu, 14 Dec 2023 14:50:23 +0100
-Subject: [PATCH 03/21] net: dsa: mv88e6xxx: Create API to read a single stat
+Subject: [PATCH 03/23] net: dsa: mv88e6xxx: Create API to read a single stat
  counter
 Organization: Addiva Elektronik
 
