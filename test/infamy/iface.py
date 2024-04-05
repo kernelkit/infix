@@ -91,3 +91,13 @@ def print_all(target):
                 print('-'*36)
     except:
         print(f"Failed to get interfaces' status from target {target}")
+
+def exist_bridge_multicast_filter(target, group, iface, bridge):
+    bridge = _iface_get_param(target, bridge, "bridge")
+    for filter in bridge.get("multicast-filters", {}).get("multicast-filter", {}):
+        if filter.get("group") == group:
+            for p in filter.get("ports"):
+                if p["port"] == iface:
+                    return True
+
+    return False
