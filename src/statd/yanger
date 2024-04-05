@@ -160,7 +160,7 @@ def get_vpd_data(vpd):
     if vpd.get("data"):
         component["class"] = "infix-hardware:vpd"
         if vpd["data"].get("manufacture-date"):
-            component["mfg-date"]=datetime.strptime(vpd["data"]["manufacture-date"],"%m/%d/%Y %H:%M:%S").strftime("%Y-%m-%-dT%H:%M:%SZ")
+            component["mfg-date"]=datetime.strptime(vpd["data"]["manufacture-date"],"%m/%d/%Y %H:%M:%S").strftime("%Y-%m-%dT%H:%M:%SZ")
         if vpd["data"].get("manufacter"):
             component["mfg-name"]=vpd["data"]["manufacturer"]
         if vpd["data"].get("product-name"):
