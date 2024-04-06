@@ -1,12 +1,8 @@
 mDNS Network Browser
 ====================
 
-This Python program both advertises CNAMEs (using D-Bus to Avahi) and
-provides an mDNS browser over fastcgi for, e.g., Nginx.
-
-To start the program:
-
-    netbrowse $hostname.local network.local
+This program is a Python Flask app that provides an mDNS browser for,
+e.g., Nginx.  It is intended to answer calls to https://network.local
 
 A UNIX socket, for fastcgi, is created in `/tmp/netbrowse.sock` with
 permissions 0660 as the user and group the program is started as.

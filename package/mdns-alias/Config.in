@@ -1,0 +1,7 @@
+config BR2_PACKAGE_MDNS_ALIAS
+	bool mdns-alias
+	select BR2_PACKAGE_DBUS
+	select BR2_PACKAGE_DBUS_PYTHON
+	help
+	  Advertises the initial $(HOSTNAME).local and network.local to
+	  Avahi over D-Bus.

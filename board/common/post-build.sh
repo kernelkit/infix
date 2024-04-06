@@ -86,6 +86,7 @@ grep -qsE '^/bin/clish$$' "$TARGET_DIR/etc/shells" \
         || echo "/bin/clish" >> "$TARGET_DIR/etc/shells"
 
 if [ -n "$BR2_PACKAGE_NGINX" ]; then
+    cp "$common/netbrowse.conf" "$TARGET_DIR/etc/nginx/"
     cp "$common/nginx.conf" "$TARGET_DIR/etc/nginx/"
     ln -sf ../available/nginx.conf "$TARGET_DIR/etc/finit.d/enabled/nginx.conf"
 
