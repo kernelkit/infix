@@ -1,10 +1,6 @@
 config BR2_PACKAGE_NETBROWSE
 	bool netbrowse
-	select BR2_PACKAGE_DBUS
-	select BR2_PACKAGE_DBUS_PYTHON
 	select BR2_PACKAGE_PYTHON_FLASK
 	help
-	  Advertises the initial $(HOSTNAME).local and network.local to
-	  give your device a http://network.local mDNS/SD browser.
+	  Browse mDNS hosts on your network from http://network.local
 
-	  UNIX socket available for fastcgi at /tmp/netbrowse.sock

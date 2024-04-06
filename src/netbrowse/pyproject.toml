@@ -1,11 +1,11 @@
 [build-system]
 requires = ["setuptools>=42", "wheel"]
-build-backend = "setuptools.build_meta"
+# build-backend = "setuptools.build_meta"
 
 [project]
 name = "netbrowse"
 version = "1.0"
-description = "mDNS-SD browser"
+description = "mDNS Service Browser"
 authors = [{name = "Joachim Wiberg", email = "troglobit@gmail.com"}]
 license = {file = "LICENSE"}
 readme = "README.md"
@@ -19,11 +19,11 @@ dev = [
     "flake8>=3.8",
 ]
 
-[tool.setuptools.packages.find]
-where = ["netbrowse", "netbrowse.avahi_alias", "netbrowse.mdns_hosts"]
+# [tool.setuptools.packages.find]
+# where = ["netbrowse"]
 
-[tool.setuptools.package-data]
-netbrowse = ["templates/*.html", "static/*"]
+# [tool.setuptools.package-data]
+# netbrowse = ["templates/*.html", "static/*"]
 
 [project.scripts]
-netbrowse = "netbrowse.netbrowse:main"
+netbrowse = "netbrowse:main"

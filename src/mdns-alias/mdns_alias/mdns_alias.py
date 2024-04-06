@@ -1,9 +1,9 @@
-"""Avahi CNAME alias class"""
+"""Avahi CNAME publisher class"""
 
 from encodings.idna import ToASCII
 import dbus
 
-class AvahiAlias:
+class MdnsAlias:
     """Import to your project and use publish_cname() for each name."""
     DBUS_NAME = 'org.freedesktop.Avahi'
     CLASS_IN = 0x01
