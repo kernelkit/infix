@@ -21,6 +21,14 @@
 #define CLOCK_PATH_    "/ietf-system:system-state/clock"
 #define PLATFORM_PATH_ "/ietf-system:system-state/platform"
 
+struct mdns_svc {
+	char *name;
+	char *type;
+	int   port;
+	char *desc;
+	char *text;
+};
+
 struct sr_change {
 	sr_change_oper_t op;
 	sr_val_t *old;
@@ -1137,6 +1145,37 @@ static int change_editor(sr_session_ctx_t *session, uint32_t sub_id, const char 
 	return SR_ERR_OK;
 }
 
+/*
+ * On hostname changes we need to update the mDNS records, in particular
+ * the ones advertising an adminurl (standarized by Apple), because they
+ * include the fqdn in the URL.
+ *
+ * XXX: when the web managment interface is in place we can change the
+ *      adminurl to include 'admin@%s.local' to pre-populate the default
+ *      username in the login dialog.
+ */
+static void mdns_records(const char *hostname)
+{
+	struct mdns_svc svc[] = {
+		{ "https",   "_https._tcp",       443, "Web Management Interface", "adminurl=https://%s.local" },
+		{ "ttyd",    "_https._tcp",       443, "Web Console Interface", "adminurl=https://%s.local/console" },
+		{ "http",    "_http._tcp",         80, "Web Management Interface", "adminurl=http://%s.local" },
+		{ "netconf", "_netconf-ssh._tcp", 830, "NETCONF (XML/SSH)", NULL },
+		{ "sftp-ssh","_sftp-ssh._tcp",     22, "Secure file transfer (FTP/SSH)", NULL },
+		{ "ssh",     "_ssh._tcp",          22, "Secure shell command line interface (CLI)", NULL },
+	};
+
+	for (size_t i = 0; i < NELEMS(svc); i++) {
+		char buf[256] = "";
+
+		if (svc[i].text)
+			snprintf(buf, sizeof(buf), svc[i].text, hostname);
+
+		systemf("/usr/libexec/confd/gen-service %s %s %s %d \"%s\" %s",
+			hostname, svc[i].name, svc[i].type, svc[i].port, svc[i].desc, buf);
+	}
+}
+
 static int change_hostname(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
 	const char *xpath, sr_event_t event, unsigned request_id, void *priv)
 {
@@ -1193,6 +1232,9 @@ static int change_hostname(sr_session_ctx_t *session, uint32_t sub_id, const cha
 		err = SR_ERR_SYS;
 		goto err;
 	}
+
+	/* Generate/update mDNS service records for Avahi */
+	mdns_records(nm);
 
 	/* skip in bootstrap, lldpd and avahi have not started yet */
 	if (systemf("runlevel >/dev/null 2>&1"))

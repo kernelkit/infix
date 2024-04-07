@@ -1,0 +1,32 @@
+#!/bin/sh
+# Very basic avahi .service generator, works for tcp (http) services
+. /etc/os-release
+
+host=$1
+name=$2
+type=$3
+port=$4
+desc=$5
+shift 5
+file="/etc/avahi/services/$name.service"
+
+cat <<EOF >"$file"
+<?xml version="1.0" standalone='no'?>
+<!DOCTYPE service-group SYSTEM "avahi-service.dtd">
+<service-group>
+  <name replace-wildcards="yes">$desc</name>
+  <service>
+    <type>$type</type>
+    <port>$port</port>
+    <host-name>$host.local</host-name>
+    <txt-record>vv=1</txt-record>
+    <txt-record>vendor=$(jq -r .vendor /run/system.json)</txt-record>
+    <txt-record>product=$(jq -r '."product-name"' /run/system.json)</txt-record>
+    <txt-record>serial=$(jq -r '."serial-number"' /run/system.json)</txt-record>
+    <txt-record>deviceid=$(jq -r '."mac-address"' /run/system.json)</txt-record>
+    <txt-record>vn=$VENDOR_NAME</txt-record>
+    <txt-record>on=$NAME</txt-record>
+    <txt-record>ov=$VERSION_ID</txt-record>$(for txt in "$@"; do printf "\n    <txt-record>%s</txt-record>" "$txt"; done)
+  </service>
+</service-group>
+EOF
