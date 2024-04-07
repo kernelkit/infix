@@ -43,6 +43,7 @@ class MdnsHosts:
             address = parts[7]
             port = parts[8]
             txt = parts[9]
+            adminurl = None
 
             if family not in ('IPv4', 'IPv6'):
                 continue
@@ -62,8 +63,13 @@ class MdnsHosts:
                 if "path=" in stripped:
                     path = stripped.split('path=')[-1]
                     break
+                if "adminurl=" in stripped:
+                    adminurl = stripped.split('adminurl=')[-1]
+                    break
 
-            if url_template:
+            if adminurl:
+                url = adminurl
+            elif url_template:
                 url = url_template.format(address=address, port=port, path=path)
             else:
                 url = None
