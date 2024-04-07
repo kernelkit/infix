@@ -32,6 +32,7 @@ rm -f "$TARGET_DIR/etc/os-release"
     echo "ID=$INFIX_ID"
     echo "PRETTY_NAME=\"$INFIX_TAGLINE $VERSION\""
     echo "ID_LIKE=\"${ID}\""
+    echo "DEFAULT_HOSTNAME=$BR2_TARGET_GENERIC_HOSTNAME"
     echo "VERSION=\"${VERSION}\""
     echo "VERSION_ID=${VERSION}"
     echo "BUILD_ID=\"${GIT_VERSION}\""
@@ -89,29 +90,4 @@ if [ -n "$BR2_PACKAGE_NGINX" ]; then
     cp "$common/netbrowse.conf" "$TARGET_DIR/etc/nginx/"
     cp "$common/nginx.conf" "$TARGET_DIR/etc/nginx/"
     ln -sf ../available/nginx.conf "$TARGET_DIR/etc/finit.d/enabled/nginx.conf"
-
-    cat <<EOF > "$TARGET_DIR/etc/avahi/services/http.service"
-<?xml version="1.0" standalone='no'?>
-<!DOCTYPE service-group SYSTEM "avahi-service.dtd">
-<service-group>
-  <name replace-wildcards="yes">%h</name>
-  <service>
-    <type>_http._tcp</type>
-    <port>80</port>
-    <txt-record value-format="text">product=$INFIX_NAME</txt-record>
-  </service>
-</service-group>
-EOF
-    cat <<EOF > "$TARGET_DIR/etc/avahi/services/https.service"
-<?xml version="1.0" standalone='no'?>
-<!DOCTYPE service-group SYSTEM "avahi-service.dtd">
-<service-group>
-  <name replace-wildcards="yes">%h</name>
-  <service>
-    <type>_https._tcp</type>
-    <port>443</port>
-    <txt-record value-format="text">product=$INFIX_NAME</txt-record>
-  </service>
-</service-group>
-EOF
 fi
