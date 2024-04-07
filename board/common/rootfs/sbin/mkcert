@@ -1,0 +1,42 @@
+#!/bin/sh
+
+KEY=/cfg/ssl/private/self-signed.key
+CRT=/cfg/ssl/certs/self-signed.crt
+
+country=US
+state=California
+city=Berkeley
+org="Acme, Inc."
+unit=Second
+
+if [ -f /etc/mkcert.conf ]; then
+     . /etc/mkcert.conf
+fi
+
+if [ -z "$cn" ]; then
+    cn=$1
+    if [ -z "$cn" ]; then
+	cn=$(hostname).local
+    fi
+fi
+
+generate()
+{
+    mkdir -p  /cfg/ssl/private /cfg/ssl/certs
+    chmod 700 /cfg/ssl/private
+
+    gencert --country "$country" --state "$state" --city "$city" --organisation "$org" \
+	    --organisation-unit "$unit" --common-name "$cn" \
+	    --out-certificate $CRT --out-key $KEY
+}
+
+CN=$(openssl x509 -noout -subject -in "${CRT}" 2>/dev/null |sed 's/.*CN = //')
+if [ -z "$CN" ] || [ "$CN" != "$cn" ]; then
+    generate "$cn"
+fi
+
+cp "${KEY}" "/etc/ssl/private/"
+cp "${CRT}" "/etc/ssl/certs/"
+initctl cond set mkcert
+
+exit 0
