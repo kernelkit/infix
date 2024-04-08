@@ -1,0 +1,14 @@
+{
+    "ieee802-dot1ab-lldp:lldp": {
+	"infix-lldp:enabled": true
+    },
+    "infix-services:mdns": {
+	"enabled": true
+    },
+    "infix-services:web": {
+	"enabled": true,
+	"console": {
+	    "enabled": true
+	}
+    }
+}

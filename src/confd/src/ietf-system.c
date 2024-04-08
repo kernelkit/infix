@@ -1158,7 +1158,7 @@ static void mdns_records(const char *hostname)
 {
 	struct mdns_svc svc[] = {
 		{ "https",   "_https._tcp",       443, "Web Management Interface", "adminurl=https://%s.local" },
-		{ "ttyd",    "_https._tcp",       443, "Web Console Interface", "adminurl=https://%s.local/console" },
+		{ "ttyd",    "_https._tcp",       443, "Web Console Interface", "adminurl=https://%s.local:7681" },
 		{ "http",    "_http._tcp",         80, "Web Management Interface", "adminurl=http://%s.local" },
 		{ "netconf", "_netconf-ssh._tcp", 830, "NETCONF (XML/SSH)", NULL },
 		{ "sftp-ssh","_sftp-ssh._tcp",     22, "Secure file transfer (FTP/SSH)", NULL },
