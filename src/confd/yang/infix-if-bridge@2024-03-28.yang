@@ -32,6 +32,21 @@ submodule infix-if-bridge {
   contact      "kernelkit@googlegroups.com";
   description  "Linux bridge extension for ietf-interfaces.";
 
+  revision 2024-03-28 {
+    description "Rename mdb -> multicast-filters.
+
+		 Add support for L2 multicast groups (MAC multicast).  They
+                 are currently always in state 'permanent'.
+
+	         Change vlan, multicast and mulitcast-filters containers to
+                 presence containers.  This means multicast snooping is now
+                 disabled by default when creating a bridge or adding a VLAN.
+
+	         Global bridge multicast configuration must now be disabled
+                 when adding VLANs to a bridge.  I.e., global multicast is
+                 not inherited to VLANs in any way.";
+    reference "internal";
+  }
   revision 2024-03-06 {
     description "Drop default value for bridge-port PVID.  Should be possible
                  to drop untagged frames.
@@ -80,12 +95,14 @@ submodule infix-if-bridge {
   /*
    * Typedefs
    */
+
   typedef mac-multicast-address {
     description "Valid multicast address.";
     type string {
       pattern "[0-9A-Fa-f][13579BbDdFf](:[0-9A-Fa-f]{2}){5}";
     }
   }
+
   typedef ieee-reserved-groups {
     type union {
       type uint8 {
@@ -263,6 +280,7 @@ submodule infix-if-bridge {
             type mac-multicast-address;
           }
         }
+
         list ports {
           description "Port members of group.";
           must "state = 'permanent'" {
