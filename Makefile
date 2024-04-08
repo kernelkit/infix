@@ -25,6 +25,9 @@ $(config):
 %: | buildroot/Makefile
 	@+$(call bmake,$@)
 
+legal-info: | buildroot/Makefile
+	$(call bmake,legal-info LINUX_LICENSE_FILES=COPYING)
+
 # Workaround, see board/x86_64/board.mk
 test:
 	@+$(call bmake,$@)
