@@ -1,0 +1,36 @@
+diff --git a/src/daemon/lldpd.c b/src/daemon/lldpd.c
+index c7f1082..25a8319 100644
+--- a/src/daemon/lldpd.c
++++ b/src/daemon/lldpd.c
+@@ -1572,6 +1572,8 @@ lldpd_main(int argc, char *argv[], char *envp[])
+ 	struct group *group;
+ 	uid_t uid;
+ 	gid_t gid;
++#else
++	struct group *group;
+ #endif
+ 
+ 	saved_argv = argv;
+@@ -1777,6 +1779,8 @@ lldpd_main(int argc, char *argv[], char *envp[])
+ 		    "no " PRIVSEP_GROUP
+ 		    " group for privilege separation, please create it");
+ 	gid = group->gr_gid;
++#else
++	group = getgrnam("wheel");
+ #endif
+ 
+ 	/* Create and setup socket */
+@@ -1815,6 +1819,13 @@ lldpd_main(int argc, char *argv[], char *envp[])
+ 	if (chmod(ctlname, S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IWGRP | S_IXGRP) ==
+ 	    -1)
+ 		log_warn("main", "unable to chmod control socket");
++#else
++	if (group) {
++		if (chown(ctlname, -1, group->gr_gid))
++			log_warn("main", "unable to chown control socket");
++		else
++			chmod(ctlname, 0770);
++	}
+ #endif
+ 
+ 	/* Create associated advisory lock file */
