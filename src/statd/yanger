@@ -737,7 +737,7 @@ def get_multicast_filters(filters):
     multicast_filters=[]
     for f in filters:
         multicast_filter={}
-        multicast_filter["group"] = f["group"] if f["group"] else f["mac"]
+        multicast_filter["group"] = f["group"]
         multicast_filter["ports"] = []
         for p in f["ports"]:
             port={}
@@ -747,7 +747,7 @@ def get_multicast_filters(filters):
     return multicast_filters
 
 def add_mdb_to_bridge(brname, iface_out, mc_status):
-    filters = [entry for entry in mc_status.get("multicast-groups", [])  if entry.get('vid') == None]
+    filters = [entry for entry in mc_status.get("multicast-groups", [])  if entry.get('vid') == None and entry.get('bridge') == brname]
     querier = next((querier for querier in mc_status.get('multicast-queriers', []) if (querier.get("interface", "") == brname) and (querier.get("vid") is None)), None)
     multicast = get_querier_data(querier)
     multicast_filters = get_multicast_filters(filters)
