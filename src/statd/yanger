@@ -826,7 +826,7 @@ def main():
             add_ethtool_std(ifname, iface_out)
 
         if 'type' in iface_out and iface_out['type'] == "infix-if-type:bridge":
-            mc_status=run_json_cmd(['mctl', 'show', 'igmp', 'json'], "igmp-status.json")
+            mc_status = run_json_cmd(['mctl', '-p', 'show', 'igmp', 'json'], "igmp-status.json")
 
             add_vlans_to_bridge(ifname, iface_out, mc_status)
             add_mdb_to_bridge(ifname, iface_out, mc_status)
