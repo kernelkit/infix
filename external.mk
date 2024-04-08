@@ -29,3 +29,16 @@ define FRR_POST_BUILD_HOOK
 endef
 
 FRR_POST_BUILD_HOOKS += FRR_POST_BUILD_HOOK
+
+#
+# External pre-built toolchains do not carry their own license.
+#
+# The Bootlin toolchains used by Infix are built from Buildroot and
+# compose a .csv file of all components included in the toolchain.
+#
+define TOOLCHAIN_BOOTLIN_POST_HOOK
+	cp $(TOOLCHAIN_EXTERNAL_DOWNLOAD_INSTALL_DIR)/summary.csv \
+		$(LEGAL_INFO_DIR)/toolchain-external-bootlin.csv
+endef
+
+TOOLCHAIN_EXTERNAL_BOOTLIN_POST_LEGAL_INFO_HOOKS += TOOLCHAIN_BOOTLIN_POST_HOOK
