@@ -40,13 +40,6 @@ rm -f "$TARGET_DIR/etc/os-release"
     if [ -n "$INFIX_RELEASE" ]; then
 	echo "IMAGE_VERSION=\"$INFIX_RELEASE\""
     fi
-    if [ "$INFIX_VARIANT_NETCONF" = "y" ]; then
-	echo "VARIANT=\"Managed NETCONF\""
-	echo "VARIANT_ID=netconf"
-    else
-	echo "VARIANT=\"Classic, writable /etc\""
-	echo "VARIANT_ID=classic"
-    fi
     echo "ARCHITECTURE=\"${INFIX_ARCH}\""
     echo "HOME_URL=$INFIX_HOME"
     if [ -n "$INFIX_VENDOR" ]; then

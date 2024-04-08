@@ -126,11 +126,6 @@ if ! mount_rw cfg >/dev/null 2>&1; then
     # Even if /mnt/var isn't available, if /mnt/cfg isn't either, then
     # there's no point in overlaying one ramdisk on top of another.
     vlibsrc=
-else
-    # Classic Infix has read-write /etc across boots
-    if [ "$VARIANT_ID" != "netconf" ]; then
-	etcsrc=/mnt/cfg
-    fi
 fi
 
 if check_factory; then

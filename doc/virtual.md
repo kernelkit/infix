@@ -40,14 +40,13 @@ The Infix test suite is built around Qemu and [Qeneth][qeth], see:
 GNS3
 ----
 
-Download the [latest build][rels] of the `x86_64`, or `x86_64_classic`
-flavor.  Unpack the tarball in a dedicated directory and use ["Import
-Appliance"][APPL] to install the `.gns3a` file into [GNS3][].
+Download the [latest build][rels] of the `x86_64`, or `aarch64` if your
+host machine is Arm.  Unpack the tarball in a dedicated directory and
+use ["Import Appliance"][APPL] to install the `.gns3a` file into
+[GNS3][].
 
-Infix (`x86_64`) is in the "Router" category, it has with 10 interfaces
-available by default for use as switch ports or routing.  The *classic*
-build only has one interface by default, geared more towards acting as
-an end device.
+Infix is in the "Router" category, it comes with 10 interfaces available
+by default for use as switch ports or routing.
 
 [Qemu]: https://www.qemu.org/
 [GNS3]: https://gns3.com/

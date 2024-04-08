@@ -331,8 +331,6 @@ rollbacks when upgrading to a new version.
 
 Non-volatile storage of the system configuration and user data.
 Concretely, user data is everything stored under `/root` and `/home`.
-Depending on the operating mode, the configuration is either the NETCONF
-databases from `/cfg`, or the contents of `/etc` in classic mode.
 
 
 ### `var` - Variable Data

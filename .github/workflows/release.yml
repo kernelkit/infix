@@ -20,12 +20,11 @@ on:
 jobs:
   build:
     if: github.repository == 'kernelkit/infix' && startsWith(github.ref, 'refs/tags/')
-    name: Build Infix ${{ github.ref_name }} [${{ matrix.platform }}-${{ matrix.variant }}]
+    name: Build Infix ${{ github.ref_name }} [${{ matrix.platform }}]
     runs-on: ubuntu-latest
     strategy:
       matrix:
         platform: [aarch64, x86_64]
-        variant: [netconf, classic]
       fail-fast: false
     steps:
       - name: Maintenance
@@ -44,11 +43,7 @@ jobs:
           fi
           echo "ver=${ver}" >> $GITHUB_OUTPUT
           fver=${ver#v}
-          if [ "${{ matrix.variant }}" = "netconf" ]; then
-              target=${{ matrix.platform }}-${fver}
-          else
-              target=${{ matrix.platform }}-${{ matrix.variant }}-${fver}
-          fi
+          target=${{ matrix.platform }}-${fver}
           echo "dir=infix-$target"        >> $GITHUB_OUTPUT
           echo "tgz=infix-$target.tar.gz" >> $GITHUB_OUTPUT
           echo "out=/mnt/x-$target"       >> $GITHUB_OUTPUT
@@ -56,9 +51,8 @@ jobs:
         uses: actions/cache@v4
         with:
           path: dl/
-          key: dl-${{ matrix.variant }}-${{ hashFiles('.git/modules/buildroot/HEAD', 'configs/*', 'package/*/*.hash') }}
+          key: dl-${{ hashFiles('.git/modules/buildroot/HEAD', 'configs/*', 'package/*/*.hash') }}
           restore-keys: |
-            dl-${{ matrix.variant }}-
             dl-
       - name: Restore Cache of .ccache/
         uses: actions/cache@v4
@@ -72,11 +66,7 @@ jobs:
         env:
           INFIX_RELEASE: ${{ steps.vars.outputs.ver }}
         run: |
-          if [ "${{ matrix.variant }}" = "netconf" ]; then
-              target=${{ matrix.platform }}_defconfig
-          else
-              target=${{ matrix.platform }}_${{ matrix.variant }}_defconfig
-          fi
+          target=${{ matrix.platform }}_defconfig
           echo "Building $target ..."
           sudo mkdir ${{ steps.vars.outputs.out }}
           sudo chown $(id -un):$(id -gn) ${{ steps.vars.outputs.out }}
@@ -92,7 +82,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           path: ${{ steps.vars.outputs.out }}/${{ steps.vars.outputs.tgz }}
-          name: artifact-${{ matrix.variant }}-${{ matrix.platform }}
+          name: artifact-${{ matrix.platform }}
   release:
     name: Release Infix ${{ github.ref_name }}
     needs: build

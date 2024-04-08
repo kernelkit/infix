@@ -7,7 +7,7 @@ whitelist()
 {
     nm=$(basename "$1")
     case $nm in
-	aarch64_classic_defconfig | cn9130_crb_boot_defconfig | fireant_boot_defconfig | x86_64_classic_defconfig)
+	cn9130_crb_boot_defconfig | fireant_boot_defconfig)
 	    return 0
 	    ;;
 	*)

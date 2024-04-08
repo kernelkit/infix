@@ -77,9 +77,9 @@ config QEMU_MACHINE_RAM
 	string "RAM size (k/M/G)"
 	default "384M"
 	help
-	  The default, 384 MiB, works for most configurations, even less for
-	  the Infix Classic builds.  However, if you get kernel panic with:
-	  "System is deadlocked on memory", try increasing this one.
+	  The default, 384 MiB, works for most configurations.  However,
+	  if you get kernel panic with: "System is deadlocked on memory",
+	  try increasing this one.
 
 config QEMU_KERNEL
 	string
