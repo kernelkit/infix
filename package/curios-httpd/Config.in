@@ -1,7 +1,9 @@
 config BR2_PACKAGE_CURIOS_HTTPD
 	bool "curiOS-httpd"
 	help
-	  Bundle an OCI archive of curiOS-httpd in /lib/oci for
-	  the given target architecture.
+	  Example of how to bundle an OCI archive of curiOS-httpd in
+	  /lib/oci for the given target architecture.  OCI archives
+	  can also be bundled in post-build.sh, but with packaging
+	  the "source" is bundled in SDK builds.
 
 	  https://github.com/kernelkit/curiOS
