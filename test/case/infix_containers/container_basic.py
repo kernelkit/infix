@@ -23,6 +23,11 @@ with infamy.Test() as test:
         addr = target.address()
 
     with test.step(f"Create {NAME} container from bundled OCI image"):
+        target.put_config_dict("infix-services", {
+            "web": {
+                "enabled": False
+            }
+        })
         target.put_config_dict("infix-containers", {
             "containers": {
                 "container": [
