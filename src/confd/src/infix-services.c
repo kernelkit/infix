@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <ctype.h>
 #include <pwd.h>
+#include <stdarg.h>
 #include <sys/utsname.h>
 #include <sys/sysinfo.h>
 #include <sys/types.h>
@@ -16,19 +17,21 @@
 
 
 static const struct srx_module_requirement reqs[] = {
-	{ .dir = YANG_PATH_, .name = "infix-services",      .rev = "2023-10-16" },
+	{ .dir = YANG_PATH_, .name = "infix-services",      .rev = "2024-04-08" },
 	{ .dir = YANG_PATH_, .name = "ieee802-dot1ab-lldp", .rev = "2022-03-15" },
 	{ .dir = YANG_PATH_, .name = "infix-lldp",          .rev = "2023-08-23" },
 	{ NULL }
 };
 
 static int svc_change(sr_session_ctx_t *session, sr_event_t event, const char *xpath,
-		      const char *name, const char *svc)
+		      const char *name, const char *sub, ...)
 {
 	char path[strlen(xpath) + 10];
 	struct lyd_node *diff, *srv;
 	sr_error_t err = 0;
+	const char *svc;
 	sr_data_t *cfg;
+	va_list ap;
 	int ena;
 
 	switch (event) {
@@ -51,15 +54,19 @@ static int svc_change(sr_session_ctx_t *session, sr_event_t event, const char *x
 	if (err)
 		goto err_release_data;
 
-	srv = lydx_get_descendant(cfg->tree, name, NULL);
+	srv = lydx_get_descendant(cfg->tree, name, sub, NULL);
 	if (!srv) {
 		ERROR("Cannot find %s subtree", name);
 		return -1;
 	}
 
 	ena = lydx_is_enabled(srv, "enabled");
-	if (systemf("initctl -nbq %s %s", ena ? "enable" : "disable", svc))
-		ERROR("Failed %s %s", ena ? "enabling" : "disabling", name);
+	va_start(ap, sub);
+	while ((svc = va_arg(ap, const char *))) {
+		if (systemf("initctl -nbq %s %s", ena ? "enable" : "disable", svc))
+			ERROR("Failed %s %s", ena ? "enabling" : "disabling", name);
+	}
+	va_end(ap);
 
 	lyd_free_tree(diff);
 err_release_data:
@@ -72,13 +79,25 @@ err_abandon:
 static int mdns_change(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
 	const char *xpath, sr_event_t event, unsigned request_id, void *_confd)
 {
-	return svc_change(session, event, xpath, "mdns", "avahi");
+	return svc_change(session, event, xpath, "mdns", NULL, "avahi", NULL);
+}
+
+static int ttyd_change(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
+	const char *xpath, sr_event_t event, unsigned request_id, void *_confd)
+{
+	return svc_change(session, event, xpath, "web", "console", "ttyd", NULL);
 }
 
 static int lldp_change(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
 	const char *xpath, sr_event_t event, unsigned request_id, void *_confd)
 {
-	return svc_change(session, event, xpath, "lldp", "lldpd");
+	return svc_change(session, event, xpath, "lldp", NULL, "lldpd", NULL);
+}
+
+static int web_change(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
+	const char *xpath, sr_event_t event, unsigned request_id, void *_confd)
+{
+	return svc_change(session, event, xpath, "web", NULL, "nginx", "ttyd", "netbrowse", NULL);
 }
 
 int infix_services_init(struct confd *confd)
@@ -91,6 +110,10 @@ int infix_services_init(struct confd *confd)
 
 	REGISTER_CHANGE(confd->session, "infix-services", "/infix-services:mdns",
 			0, mdns_change, confd, &confd->sub);
+	REGISTER_CHANGE(confd->session, "infix-services", "/infix-services:web",
+			0, web_change, confd, &confd->sub);
+	REGISTER_CHANGE(confd->session, "infix-services", "/infix-services:web/infix-services:console",
+			0, ttyd_change, confd, &confd->sub);
 	REGISTER_CHANGE(confd->session, "ieee802-dot1ab-lldp", "/ieee802-dot1ab-lldp:lldp",
 			0, lldp_change, confd, &confd->sub);
 
