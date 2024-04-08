@@ -8,12 +8,11 @@ on:
 
 jobs:
   build:
-    name: Build ${{ matrix.platform }} ${{ matrix.variant }}
+    name: Build Infix ${{ matrix.platform }}
     runs-on: ubuntu-latest
     strategy:
       matrix:
         platform: [aarch64, x86_64]
-        variant: [netconf, classic]
       fail-fast: false
     steps:
       - name: Maintenance
@@ -25,11 +24,7 @@ jobs:
       - name: Set Build Variables
         id: vars
         run: |
-          if [ "${{ matrix.variant }}" = "netconf" ]; then
-              target=${{ matrix.platform }}
-          else
-              target=${{ matrix.platform }}-${{ matrix.variant }}
-          fi
+          target=${{ matrix.platform }}
           echo "dir=infix-$target"        >> $GITHUB_OUTPUT
           echo "tgz=infix-$target.tar.gz" >> $GITHUB_OUTPUT
           if [ "$target" = x86_64 ]; then
@@ -41,9 +36,8 @@ jobs:
         uses: actions/cache@v4
         with:
           path: dl/
-          key: dl-${{ matrix.variant }}-${{ hashFiles('.git/modules/buildroot/HEAD', 'configs/*', 'package/*/*.hash') }}
+          key: dl-${{ hashFiles('.git/modules/buildroot/HEAD', 'configs/*', 'package/*/*.hash') }}
           restore-keys: |
-            dl-${{ matrix.variant }}-
             dl-
       - name: Restore Cache of .ccache/
         uses: actions/cache@v4
@@ -55,11 +49,7 @@ jobs:
             ccache-
       - name: Configure & Build
         run: |
-          if [ "${{ matrix.variant }}" = "netconf" ]; then
-              target=${{ matrix.platform }}_defconfig
-          else
-              target=${{ matrix.platform }}_${{ matrix.variant }}_defconfig
-          fi
+          target=${{ matrix.platform }}_defconfig
           echo "Building $target ..."
           sudo mkdir ${{ steps.vars.outputs.out }}
           sudo chown $(id -un):$(id -gn) ${{ steps.vars.outputs.out }}
@@ -73,14 +63,14 @@ jobs:
           ln -s ${{ steps.vars.outputs.dir }} images
           tar chfz ${{ steps.vars.outputs.tgz }} ${{ steps.vars.outputs.dir }}
       - name: Test
-        if: matrix.platform == 'x86_64' && matrix.variant == 'netconf'
+        if: matrix.platform == 'x86_64'
         run: |
           export O=${{ steps.vars.outputs.out }}
           make test-qeneth
       - uses: actions/upload-artifact@v4
         with:
           path: ${{ steps.vars.outputs.out }}/${{ steps.vars.outputs.tgz }}
-          name: artifact-${{ matrix.variant }}-${{ matrix.platform }}
+          name: artifact-${{ matrix.platform }}
   release:
     if: ${{github.repository_owner == 'kernelkit' && github.ref_name == 'main'}}
     name: Upload Latest Build

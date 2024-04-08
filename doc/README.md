@@ -24,7 +24,6 @@ the `help` command.
    - [Find Your Device on the Network](discovery.md)
    - [Hardware Info & Status](hardware.md)
    - [Scripting Infix](scripting.md)
-   - [Infix Variants](variant.md)
    - [Virtual Environments](virtual.md)
    - [Vital Product Data (VPD)](vpd.md)
    - [YANG to Ethtool Mapping](eth-counters.md)

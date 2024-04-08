@@ -105,8 +105,7 @@ more information, see: [Infix in Virtual Environments](doc/virtual.md).
 >
 > For *customer specific builds* of Infix, see your product repository.
 
-[^1]: NETCONF or RESTCONF, <https://datatracker.ietf.org/doc/html/rfc8040>,
-    for more information, see [Infix Variants](doc/variant.md).
+[^1]: NETCONF or RESTCONF, <https://datatracker.ietf.org/doc/html/rfc8040>
 
 [^2]: An immutable operating system is one with read-only file systems,
     atomic updates, rollbacks, declarative configuration, and workload

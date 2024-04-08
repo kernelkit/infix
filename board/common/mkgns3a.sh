@@ -60,7 +60,7 @@ cat <<EOF >"$BINARIES_DIR/${NM}.gns3a"
     "status": "stable",
     "maintainer": "$VENDOR_NAME",
     "maintainer_email": "${SUPPORT_URL#mailto:}",
-    "usage": "Default login, user/pass: admin/admin\n\nType 'help' for an overview of commands and relevant configuration files.\n\nFor Classic builds the following applies: the /etc directory is writable, use the passwd tool after login as part of your set up.\nFor networking, classify interfaces as switchports with /etc/mactab, syntax: 'MAC-address  eN', where N is the port number (1-MAX).\nTo set up bridging and management interfaces, use /etc/network/interfaces, and /etc/network/interfaces.d/",
+    "usage": "Default login, user/pass: admin/admin\n\nType 'cli' (and Enter) followed by 'help' for an overview of commands and relevant configuration files.",
     "port_name_format": "eth{0}",
     "linked_clone": true,
     "qemu": {
