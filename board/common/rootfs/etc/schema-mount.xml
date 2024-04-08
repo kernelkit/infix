@@ -1,0 +1,14 @@
+<schema-mounts xmlns="urn:ietf:params:xml:ns:yang:ietf-yang-schema-mount">
+  <namespace>
+    <prefix>bbf-device-aggregation</prefix>
+    <uri>urn:bbf:yang:bbf-device-aggregation</uri>
+  </namespace>
+  <mount-point>
+    <module>bbf-device-aggregation</module>
+    <label>device-yang-library</label>
+    <config>true</config>
+    <shared-schema>
+      <parent-reference>/bbf-device-aggregation:devices/device</parent-reference>
+    </shared-schema>
+  </mount-point>
+</schema-mounts>

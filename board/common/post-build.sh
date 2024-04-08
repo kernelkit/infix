@@ -61,6 +61,12 @@ rm -f "$TARGET_DIR/etc/os-release"
 
 echo "$INFIX_TAGLINE $VERSION -- $(date +"%b %e %H:%M %Z %Y")" > "$TARGET_DIR/etc/version"
 
+# Drop Buildroot default symlink to /tmp
+if [ -L "$TARGET_DIR/var/lib/avahi-autoipd" ]; then
+	rm    "$TARGET_DIR/var/lib/avahi-autoipd"
+	mkdir "$TARGET_DIR/var/lib/avahi-autoipd"
+fi
+
 # Allow pdmenu (setup) and bash to be login shells, bash is added
 # automatically when selected in menuyconfig, but not when BusyBox
 # provides a symlink (for ash).  The /bin/{true,false} are old UNIX
@@ -73,3 +79,6 @@ grep -qsE '^/bin/true$$' "$TARGET_DIR/etc/shells" \
         || echo "/bin/true" >> "$TARGET_DIR/etc/shells"
 grep -qsE '^/bin/false$$' "$TARGET_DIR/etc/shells" \
         || echo "/bin/false" >> "$TARGET_DIR/etc/shells"
+# Allow clish (symlink to /usr/bin/klish) to be a login shell
+grep -qsE '^/bin/clish$$' "$TARGET_DIR/etc/shells" \
+        || echo "/bin/clish" >> "$TARGET_DIR/etc/shells"
