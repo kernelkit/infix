@@ -4,7 +4,7 @@
 #
 ################################################################################
 
-MCD_VERSION = 2.0
+MCD_VERSION = 2.1
 MCD_SITE    = https://github.com/kernelkit/mcd/releases/download/v$(MCD_VERSION)
 MCD_LICENSE = BSD-3-Clause
 MCD_LICENSE_FILES = LICENSE
