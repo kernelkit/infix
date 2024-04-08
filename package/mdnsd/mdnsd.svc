@@ -1,2 +1,0 @@
-# Launch mDNS-SD daemon
-service [2345789] /usr/sbin/mdnsd -sn -- mDNS-SD daemon
