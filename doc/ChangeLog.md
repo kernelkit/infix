@@ -7,11 +7,18 @@ All notable changes to the project are documented in this file.
 [v24.03.0][UNRELEASED]
 -------------------------
 
+Please note, as of this release the Infix Classic variant has been
+dropped.  This was the legacy, pre-NETCONF, Infix with manual config of
+the system using a persistent `/etc`.  It may be resurrected later as a
+separate project.  Going forward Infix' focus is entirely on NETCONF.
+
 > Development in progress, for daily updates see the team board:
 > <https://github.com/orgs/kernelkit/projects/3/views/2>
 
 ### Changes
 - Bump the base Linux kernel version to 6.6
+- Drop Classic variant to reduce overhead, simplify build & release
+  processes, and focus on NETCONF for Arm64 and Amd64 platforms
 - The bridge model now has built-in validation of port memberships,
   i.e., a port must be a bridge member to be used in VLAN filtering
 - The bridge model only permits the bridge itself to be a tagged
@@ -34,6 +41,8 @@ All notable changes to the project are documented in this file.
   to the RTC, which otherwise is only saved on reboot or power-down
 - Add support for static multicast filters, MAC, IPv4 and IPv6 groups
   are supported.
+- Include Buildroot `legal-info` in releases, i.e., licenses, sources
+  with patches, as well as csv files for packages and toolchain
 
 ### Fixes
 
@@ -59,6 +68,8 @@ All notable changes to the project are documented in this file.
   declare `network` settings, Infix v23.02 had a late regression that
   reverted back to the podman default: network behind a CNI bridge
   (firewalled and NAT:ed, hidden from the rest of the network)
+- Fix #385: segfault in helper function when disabling the DHCP client
+  using `no dhcp-client` from the CLI
 
 
 [v24.02.0][] - 2024-03-01
