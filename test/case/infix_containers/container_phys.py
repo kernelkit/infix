@@ -43,7 +43,7 @@ with infamy.Test() as test:
                 "container": [
                     {
                         "name": f"{NAME}",
-                        "image": f"oci-archive:{IMAGE}",
+                        "image": f"oci-archive:{infamy.Container.IMAGE}",
                         "network": {
                             "interface": [
                                 { "name": f"{ifname}" }

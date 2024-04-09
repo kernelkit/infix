@@ -16,7 +16,6 @@ def _verify(server):
 
 with infamy.Test() as test:
     NAME  = "web"
-    IMAGE = "curios-httpd-edge.tar.gz"
 
     with test.step("Set up topology and attach to target DUT"):
         env = infamy.Env(infamy.std_topology("1x2"))
@@ -29,7 +28,7 @@ with infamy.Test() as test:
                 "container": [
                     {
                         "name": f"{NAME}",
-                        "image": f"oci-archive:{IMAGE}",
+                        "image": f"oci-archive:{infamy.Container.IMAGE}",
                         "network": {
                             "host": True
                         }
