@@ -11,6 +11,7 @@ class Pad:
     data = 41
 
 class PadMdb:
+    bridge = 7
     vlan = 6
     group = 20
     ports = 20
@@ -54,6 +55,10 @@ class Decore():
     @staticmethod
     def yellow(txt):
         return Decore.decorate("33", txt, "39")
+
+    @staticmethod
+    def underline(txt):
+        return Decore.decorate("4", txt, "24")
 
 def get_json_data(default, indata, *args):
     data = indata
@@ -400,33 +405,29 @@ class Iface:
                 key = remove_yang_prefix(key)
                 print(f"eth-{key:<{25}}: {val}")
 
-    def pr_mdb(self):
-        header_printed=False
+    def pr_mdb(self, bridge):
         for group in self.br_mdb.get("multicast-filter", {}):
-            if header_printed == 0:
-                hdr = (f"{'GROUP':<{PadMdb.group+PadMdb.vlan}}"
-                       f"{'PORTS':<{PadMdb.ports}}")
-                print(Decore.invert(hdr))
-                header_printed=True
-            row = f"{group['group']:<{PadMdb.group+PadMdb.vlan}}"
-            ports= ", ".join(port_dict["port"] for port_dict in group["ports"])
+            row = f"{bridge:<{PadMdb.bridge}}"
+            row += f"{'':<{PadMdb.vlan}}"
+            row += f"{group['group']:<{PadMdb.group}}"
+            if (group.get("ports")):
+                ports = ", ".join(port_dict["port"] for port_dict in group["ports"])
+            else:
+                ports = ""
             row += f"{ports}"
             print(row)
 
-    def pr_vlans_mdb(self):
+    def pr_vlans_mdb(self, bridge):
         for vlan in self.br_vlans:
-            header_printed = False
             filters=vlan.get("multicast-filters", {})
             for group in filters.get("multicast-filter", []):
-                if not header_printed:
-                    hdr = (f"{'VID':<{PadMdb.vlan}}"
-                           f"{'GROUP':<{PadMdb.group}}"
-                           f"{'PORTS':<{PadMdb.ports}}")
-                    print(Decore.invert(hdr))
-                    header_printed = False
-                row = f"{vlan['vid']:<{PadMdb.vlan}}"
+                row = f"{bridge:<{PadMdb.bridge}}"
+                row += f"{vlan['vid']:<{PadMdb.vlan}}"
                 row += f"{group['group']:<{PadMdb.group}}"
-                ports= ", ".join(port_dict["port"] for port_dict in group["ports"])
+                if (group.get("ports")):
+                   ports = ", ".join(port_dict["port"] for port_dict in group["ports"])
+                else:
+                    ports = ""
                 row += f"{ports}"
                 print(row)
 
@@ -493,7 +494,7 @@ def show_interfaces(json, name):
         pr_interface_list(json)
 
 def show_bridge_mdb(json):
-    bridges=[]
+    header_printed = False
     if not json.get("ietf-interfaces:interfaces"):
         print(f"Error, top level \"ietf-interfaces:interface\" missing")
         sys.exit(1)
@@ -501,9 +502,15 @@ def show_bridge_mdb(json):
     for iface in [Iface(data) for data in ifaces]:
         if iface.type != "infix-if-type:bridge":
             continue
-
-        iface.pr_mdb()
-        iface.pr_vlans_mdb()
+        if not header_printed:
+            hdr = (f"{'BRIDGE':<{PadMdb.bridge}}"
+                   f"{'VID':<{PadMdb.vlan}}"
+                   f"{'GROUP':<{PadMdb.group}}"
+                   f"{'PORTS':<{PadMdb.ports}}")
+            print(Decore.invert(hdr))
+            header_printed = True
+        iface.pr_mdb(iface.name)
+        iface.pr_vlans_mdb(iface.name)
 
 def show_routing_table(json, ip):
     if not json.get("ietf-routing:routing"):
