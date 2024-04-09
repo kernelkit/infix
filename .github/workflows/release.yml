@@ -73,16 +73,22 @@ jobs:
           export O=${{ steps.vars.outputs.out }}
           make $target
           make
-      - name: Prepare Artifact
+      - name: Generate SBOM from Build
+        run: |
+          make legal-info
+      - name: Prepare Artifacts
         run: |
           cd ${{ steps.vars.outputs.out }}
           mv images ${{ steps.vars.outputs.dir }}
           ln -s ${{ steps.vars.outputs.dir }} images
           tar chfz ${{ steps.vars.outputs.tgz }} ${{ steps.vars.outputs.dir }}
+
+          mv legal-info legal-info-$target
+          tar chfz legal-info-$target.tar.gz legal-info-$target
       - uses: actions/upload-artifact@v4
         with:
-          path: ${{ steps.vars.outputs.out }}/${{ steps.vars.outputs.tgz }}
           name: artifact-${{ matrix.platform }}
+          path: ${{ steps.vars.outputs.out }}/*.tar.gz
   release:
     name: Release Infix ${{ github.ref_name }}
     needs: build
