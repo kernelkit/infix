@@ -384,9 +384,8 @@ static int cand(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
 		return err;
 
 	while (sr_get_change_next(session, iter, &op, &old, &new) == SR_ERR_OK) {
-		char xpath[strlen(new->xpath) + 42];
+		char *xpath, *ptr;
 		size_t cnt = 0;
-		char *ptr;
 
 		switch (op) {
 		case SR_OP_CREATED:
@@ -394,6 +393,12 @@ static int cand(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
 			break;
 		default:
 			continue;
+		}
+
+		xpath = strdupa(new->xpath);
+		if (!xpath) {
+			ERRNO("Failed strdupa()");
+			return SR_ERR_SYS;
 		}
 
 		strlcpy(xpath, new->xpath, sizeof(xpath));
