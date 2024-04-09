@@ -75,7 +75,10 @@ else
     fi
 fi
 
-portmap=$($(runner) port "$sys" $port)
+# On systems with good IPv6 support we'll get two hits:
+#    0.0.0.0:port
+#    [::]:port
+portmap=$($(runner) port "$sys" $port | grep 0.0.0.0)
 port=${portmap#0.0.0.0:}
 
 if [ -z "$port" ]; then
@@ -83,4 +86,4 @@ if [ -z "$port" ]; then
     exit 1
 fi
 
-telnet 127.0.0.1 "$port"
+exec telnet 127.0.0.1 $port
