@@ -26,7 +26,7 @@ usage()
 
 topo()
 {
-    dir=$(podman inspect "$1" 2>/dev/null | jq -re '.[].Args | index("-q") as $index | .[$index+1]')
+    dir=$($(runner) inspect "$1" 2>/dev/null | jq -re '.[].Args | index("-q") as $index | .[$index+1]')
     dot="$dir/topology.dot.in"
     [ -f "$dot" ] && echo "$dot"
 }
