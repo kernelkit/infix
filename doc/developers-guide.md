@@ -69,6 +69,13 @@ $ sudo apt install bc binutils build-essential bzip2 cpio \
                    python rsync sed tar unzip wget
 ```
 
+For testing, a few more tools and services are required on your system:
+
+```bash
+$ sudo apt install jq graphviz qemu-system-x86 qemu-system-arm \
+				   ethtool gdb-multiarch tcpdump tshark
+```
+
 > For details, see the Getting Started and System Requirements sections
 > of the [excellent manual][1].
 
