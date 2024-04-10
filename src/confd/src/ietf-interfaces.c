@@ -75,8 +75,11 @@ static int ifchange_cand_infer_veth(sr_session_ctx_t *session, const char *path)
 		return SR_ERR_SYS;
 
 	type = srx_get_str(session, "%s/type", xpath);
-	if (!type || strcmp(type, "infix-if-type:veth"))
+	if (!type)
 		goto out;
+
+	if (strcmp(type, "infix-if-type:veth"))
+		goto out_free_type;
 
 	ifname = srx_get_str(session, "%s/name", xpath);
 	if (!ifname)
