@@ -43,7 +43,7 @@ if [ -x /bin/ip -o -x /sbin/ip ] ; then
         BIND)
             ip addr flush dev "$2" label "$2:avahi"
             ip addr add "$3"/16 brd 169.254.255.255 label "$2:avahi" scope link dev "$2" proto 6
-            ip route add default dev "$2" metric "$METRIC" scope link proto 17 ||:
+            ip route add default dev "$2" metric "$METRIC" scope link proto zeroconf ||:
             ;;
 
         CONFLICT|UNBIND|STOP)
