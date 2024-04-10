@@ -63,8 +63,8 @@ endchoice
 
 config QEMU_MACHINE
 	string "Select emulated machine"
-	default "qemu-system-aarch64 -M virt -cpu cortex-a72"   if QEMU_aarch64
-	default "qemu-system-x86_64 -M q35,accel=kvm -cpu host" if QEMU_x86_64
+	default "qemu-system-aarch64 -M virt,accel=kvm:tcg -cpu max" if QEMU_aarch64
+	default "qemu-system-x86_64  -M pc,accel=kvm:tcg   -cpu max" if QEMU_x86_64
 	help
 	  You should not have to change this setting, although you may
 	  want to tweak it, or change the acceleration.
