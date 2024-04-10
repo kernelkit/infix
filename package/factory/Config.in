@@ -8,3 +8,5 @@ config BR2_PACKAGE_FACTORY
 	  system to reboot.  Sufficient care has been taken to make the
 	  factory program as secure as possible.  With the worst possible
 	  eftect to only be abused to reboot the system.
+
+	  https://github.com/kernelkit/infix

@@ -7,6 +7,8 @@ config BR2_PACKAGE_KLISH_PLUGIN_INFIX
 	  A plugin to klish with an opinionated config and some
 	  command extensions, suitable for systems running Infix.
 
+	  https://github.com/kernelkit/infix
+
 if BR2_PACKAGE_KLISH_PLUGIN_INFIX
 
 config BR2_PACKAGE_KLISH_PLUGIN_INFIX_SHELL

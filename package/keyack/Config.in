@@ -4,3 +4,5 @@ config BR2_PACKAGE_KEYACK
 	  Blocks until a specific key is pressed and released. Useful
 	  when you want a user to confirm some action by physically
 	  pressing a button.
+
+	  https://github.com/kernelkit/infix
