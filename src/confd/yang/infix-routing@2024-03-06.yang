@@ -58,14 +58,6 @@ module infix-routing {
     deviate not-supported;
   }
 
-  typedef infix-control-plane-name {
-    type enumeration {
-      enum default {
-        description "Only support one instance per routing type";
-      }
-    }
-  }
-
   identity infix-source-protocol {
     description "Infix naming of source protocols";
   }
@@ -108,12 +100,6 @@ module infix-routing {
     }
   }
 
-  deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ietf-r:name" {
-    description "Limitation: Only one routing instance per protocol.";
-    deviate replace {
-      type infix-control-plane-name;
-    }
-  }
   deviation "/ietf-r:routing/ietf-r:ribs/ietf-r:rib/ietf-r:routes/ietf-r:route/ietf-r:source-protocol" {
     description "Use type names from iproute2";
     deviate replace {
@@ -122,6 +108,7 @@ module infix-routing {
       }
     }
   }
+
   deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ietf-r:description" {
     deviate not-supported;
   }
@@ -171,6 +158,15 @@ module infix-routing {
       enum point-to-point {
         description
           "Specifies an OSPF point-to-point network.";
+      }
+    }
+  }
+
+
+  deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol" {
+    deviate add {
+      must "count(../control-plane-protocol[type = current()/type]) = 1" {
+        error-message "Only one instance per routing protocol is allowed.";
       }
     }
   }
