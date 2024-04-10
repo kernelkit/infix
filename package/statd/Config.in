@@ -10,3 +10,5 @@ config BR2_PACKAGE_STATD
 	  operational run-time info. Such as interface state and address.
 	  All data supplied should be fetched from the running system,
 	  which might differ from data configured through confd.
+
+	  https://github.com/kernelkit/infix

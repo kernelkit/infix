@@ -10,3 +10,5 @@ config BR2_PACKAGE_CONFD
 	  A plugin to sysrepo that provides the core YANG models used to
 	  manage an Infix based system.  Configuration can be done using
 	  either the on-system CLI or using NETCONF.
+
+	  https://github.com/kernelkit/infix

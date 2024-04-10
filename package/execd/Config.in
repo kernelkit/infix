@@ -5,3 +5,4 @@ config BR2_PACKAGE_EXECD
 	help
 	  Generic job queue executor with retry on route changes.
 
+	  https://github.com/kernelkit/infix
