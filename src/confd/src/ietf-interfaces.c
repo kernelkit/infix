@@ -121,11 +121,11 @@ static int ifchange_cand_infer_vlan(sr_session_ctx_t *session, const char *path)
 	char *ifname, *type, *vidstr, *xpath;
 	sr_error_t err = SR_ERR_OK;
 	size_t cnt = 0;
-	long vid;
+	int vid;
 
 	xpath = xpath_base(path);
 	if (!xpath)
-		return SR_ERR_SYS;;
+		return SR_ERR_SYS;
 	type = srx_get_str(session, "%s/type", xpath);
 	if (!type)
 		goto out;
@@ -135,16 +135,18 @@ static int ifchange_cand_infer_vlan(sr_session_ctx_t *session, const char *path)
 	ifname = srx_get_str(session, "%s/name", xpath);
 	if (!ifname)
 		goto out_free_type;
-
-	if (fnmatch("*.+([0-9])", ifname, FNM_EXTMATCH))
+	if (!fnmatch("*.+([0-9])", ifname, FNM_EXTMATCH)) {
+		vidstr = rindex(ifname, '.');
+		if (!vidstr)
+			goto out_free_ifname;
+		*vidstr++ = '\0';
+		vid = strtol(vidstr, NULL, 10);
+	} else if (!fnmatch("vlan+([0-9])", ifname, FNM_EXTMATCH)) {
+		if (sscanf(ifname, "vlan%d", &vid) != 1)
+		    goto out_free_ifname;
+	} else {
 		goto out_free_ifname;
-
-	vidstr = rindex(ifname, '.');
-	if (!vidstr)
-		goto out_free_ifname;
-
-	*vidstr++ = '\0';
-	vid = strtol(vidstr, NULL, 10);
+	}
 	if (vid < 1 || vid > 4095)
 		goto out_free_ifname;
 
@@ -181,7 +183,8 @@ static int ifchange_cand_infer_vlan(sr_session_ctx_t *session, const char *path)
 			 "%s/infix-interfaces:vlan"
 			 "/id", xpath);
 	if (!err && !cnt) {
-		inferred.data.string_val = vidstr;
+		inferred.type = SR_INT32_T;
+		inferred.data.int32_val = vid;
 		err = srx_set_item(session, &inferred, 0,
 				   "%s/infix-interfaces:vlan"
 				   "/id", xpath);
