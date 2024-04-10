@@ -70,7 +70,7 @@ admin@example:/config/> set interface eth1 bridge-port bridge br0
 admin@example:/config/> leave
 ```
 
-Here we add two ports to bridge `br0`: `eth0` and `eth1`. 
+Here we add two ports to bridge `br0`: `eth0` and `eth1`.
 
 > **Note:** Infix has many built-in helpers controlled by convention.
 > E.g., if you name your bridge `brN`, where `N` is a number, Infix sets
@@ -130,7 +130,7 @@ VLAN ID of the interface, compared to *all* the VLAN IDs if you run
 `tcpdump` on the lower-layer interface.
 
 ```
-admin@example:/> configure 
+admin@example:/> configure
 admin@example:/config/> edit interface eth0.20
 admin@example:/config/interface/eth0.20/> show
 type vlan;
@@ -146,7 +146,7 @@ The example below assumes bridge br0 is already created, see [VLAN
 Filtering Bridge](#vlan-filtering-bridge).
 
 ```
-admin@example:/> configure 
+admin@example:/> configure
 admin@example:/config/> edit interface vlan10
 admin@example:/config/interface/vlan10/> set vlan id 10
 admin@example:/config/interface/vlan10/> set vlan lower-layer-if br0
@@ -257,18 +257,18 @@ Multiple address assignment methods are available:
 
 Both for *link-local* and *global auto-configuration*, it is possible
 to auto-configure using a random suffix instead of the interface
-identifier. 
+identifier.
 
 
 ### Examples
 
 ![Switch example (eth0 and lo)](img/ip-address-example-switch.svg)
 
-    admin@example:/> show interfaces 
-    INTERFACE       PROTOCOL   STATE       DATA                                     
-    eth0            ethernet   UP          02:00:00:00:00:00                        
+    admin@example:/> show interfaces
+    INTERFACE       PROTOCOL   STATE       DATA
+    eth0            ethernet   UP          02:00:00:00:00:00
                     ipv6                   fe80::ff:fe00:0/64 (link-layer)
-    lo              ethernet   UP          00:00:00:00:00:00                        
+    lo              ethernet   UP          00:00:00:00:00:00
                     ipv4                   127.0.0.1/8 (static)
                     ipv6                   ::1/128 (static)
     admin@example:/>
@@ -301,13 +301,13 @@ default.
     +  }
     +}
     admin@example:/config/interface/eth0/ipv4/> leave
-    admin@example:/> show interfaces 
-    INTERFACE       PROTOCOL   STATE       DATA                                     
-    eth0            ethernet   UP          02:00:00:00:00:00                        
+    admin@example:/> show interfaces
+    INTERFACE       PROTOCOL   STATE       DATA
+    eth0            ethernet   UP          02:00:00:00:00:00
                     ipv4                   169.254.1.3/16 (random)
                     ipv4                   10.0.1.1/24 (static)
                     ipv6                   fe80::ff:fe00:0/64 (link-layer)
-    lo              ethernet   UP          00:00:00:00:00:00                        
+    lo              ethernet   UP          00:00:00:00:00:00
                     ipv4                   127.0.0.1/8 (static)
                     ipv6                   ::1/128 (static)
     admin@example:/>
@@ -320,17 +320,17 @@ enabled true`.  The resulting address (169.254.1.3/16) is of type
 
 ![Using DHCP for IPv4 address assignment](img/ip-address-example-ipv4-dhcp.svg)
 
-    admin@example:/> configure 
-    admin@example:/config/> edit dhcp-client 
+    admin@example:/> configure
+    admin@example:/config/> edit dhcp-client
     admin@example:/config/dhcp-client/> set client-if eth0
     admin@example:/config/dhcp-client/> set enabled true
     admin@example:/config/dhcp-client/> leave
-    admin@example:/> show interfaces 
-    INTERFACE       PROTOCOL   STATE       DATA                                     
-    eth0            ethernet   UP          02:00:00:00:00:00                        
+    admin@example:/> show interfaces
+    INTERFACE       PROTOCOL   STATE       DATA
+    eth0            ethernet   UP          02:00:00:00:00:00
                     ipv4                   10.1.2.100/24 (dhcp)
                     ipv6                   fe80::ff:fe00:0/64 (link-layer)
-    lo              ethernet   UP          00:00:00:00:00:00                        
+    lo              ethernet   UP          00:00:00:00:00:00
                     ipv4                   127.0.0.1/8 (static)
                     ipv6                   ::1/128 (static)
     admin@example:/>
@@ -349,9 +349,9 @@ admin@example:/config/> edit interface eth0 ipv6
 admin@example:/config/interface/eth0/ipv6/> set enabled false
 admin@example:/config/interface/eth0/ipv6/> leave
 admin@example:/> show interfaces
-INTERFACE       PROTOCOL   STATE       DATA                                     
-eth0            ethernet   UP          02:00:00:00:00:00                        
-lo              ethernet   UP          00:00:00:00:00:00                        
+INTERFACE       PROTOCOL   STATE       DATA
+eth0            ethernet   UP          02:00:00:00:00:00
+lo              ethernet   UP          00:00:00:00:00:00
                 ipv4                   127.0.0.1/8 (static)
                 ipv6                   ::1/128 (static)
 admin@example:/>
@@ -365,12 +365,12 @@ admin@example:/>
     admin@example:/config/> edit interface eth0 ipv6
     admin@example:/config/interface/eth0/ipv6/> set address 2001:db8::1 prefix-length 64
     admin@example:/config/interface/eth0/ipv6/> leave
-    admin@example:/> show interfaces 
-    INTERFACE       PROTOCOL   STATE       DATA                                     
-    eth0            ethernet   UP          02:00:00:00:00:00                        
+    admin@example:/> show interfaces
+    INTERFACE       PROTOCOL   STATE       DATA
+    eth0            ethernet   UP          02:00:00:00:00:00
                     ipv6                   2001:db8::1/64 (static)
                     ipv6                   fe80::ff:fe00:0/64 (link-layer)
-    lo              ethernet   UP          00:00:00:00:00:00                        
+    lo              ethernet   UP          00:00:00:00:00:00
                     ipv4                   127.0.0.1/8 (static)
                     ipv6                   ::1/128 (static)
     admin@example:/>
@@ -386,11 +386,11 @@ identifier.  The resulting address is of type *link-layer*, as it is
 formed based on the interface identifier ([ietf-ip.yang][2]).
 
     admin@example:/> show interfaces
-    INTERFACE       PROTOCOL   STATE       DATA                                     
-    eth0            ethernet   UP          02:00:00:00:00:00                        
+    INTERFACE       PROTOCOL   STATE       DATA
+    eth0            ethernet   UP          02:00:00:00:00:00
                     ipv6                   2001:db8:0:1:0:ff:fe00:0/64 (link-layer)
                     ipv6                   fe80::ff:fe00:0/64 (link-layer)
-    lo              ethernet   UP          00:00:00:00:00:00                        
+    lo              ethernet   UP          00:00:00:00:00:00
                     ipv4                   127.0.0.1/8 (static)
                     ipv6                   ::1/128 (static)
     admin@example:/>
@@ -402,11 +402,11 @@ below.
     admin@example:/config/> edit interface eth0 ipv6
     admin@example:/config/interface/eth0/ipv6/> set autoconf create-global-addresses false
     admin@example:/config/interface/eth0/ipv6/> leave
-    admin@example:/> show interfaces 
-    INTERFACE       PROTOCOL   STATE       DATA                                     
-    eth0            ethernet   UP          02:00:00:00:00:00                        
+    admin@example:/> show interfaces
+    INTERFACE       PROTOCOL   STATE       DATA
+    eth0            ethernet   UP          02:00:00:00:00:00
                     ipv6                   fe80::ff:fe00:0/64 (link-layer)
-    lo              ethernet   UP          00:00:00:00:00:00                        
+    lo              ethernet   UP          00:00:00:00:00:00
                     ipv4                   127.0.0.1/8 (static)
                     ipv6                   ::1/128 (static)
     admin@example:/>
@@ -419,11 +419,11 @@ By default, the auto-configured link-local and global IPv6 addresses
 are formed from a link-identifier based on the MAC address.
 
     admin@example:/> show interfaces
-    INTERFACE       PROTOCOL   STATE       DATA                                     
-    eth0            ethernet   UP          02:00:00:00:00:00                        
+    INTERFACE       PROTOCOL   STATE       DATA
+    eth0            ethernet   UP          02:00:00:00:00:00
                     ipv6                   2001:db8:0:1:0:ff:fe00:0/64 (link-layer)
                     ipv6                   fe80::ff:fe00:0/64 (link-layer)
-    lo              ethernet   UP          00:00:00:00:00:00                        
+    lo              ethernet   UP          00:00:00:00:00:00
                     ipv4                   127.0.0.1/8 (static)
                     ipv6                   ::1/128 (static)
     admin@example:/>
@@ -436,18 +436,18 @@ possible to specify use of a random identifier ([ietf-ip.yang][2] and
     admin@example:/config/> edit interface eth0 ipv6
     admin@example:/config/interface/eth0/ipv6/> set autoconf create-temporary-addresses true
     admin@example:/config/interface/eth0/ipv6/> leave
-    admin@example:/> show interfaces 
-    INTERFACE       PROTOCOL   STATE       DATA                                     
-    eth0            ethernet   UP          02:00:00:00:00:00                        
+    admin@example:/> show interfaces
+    INTERFACE       PROTOCOL   STATE       DATA
+    eth0            ethernet   UP          02:00:00:00:00:00
                     ipv6                   2001:db8:0:1:b705:8374:638e:74a8/64 (random)
                     ipv6                   fe80::ad3d:b274:885a:9ffb/64 (random)
-    lo              ethernet   UP          00:00:00:00:00:00                        
+    lo              ethernet   UP          00:00:00:00:00:00
                     ipv4                   127.0.0.1/8 (static)
                     ipv6                   ::1/128 (static)
     admin@example:/>
 
 Both the link-local address (fe80::) and the global address (2001:)
-have changed type to *random*. 
+have changed type to *random*.
 
 ### IPv4 forwarding
 To be able to route (static or dynamic) on the interface it is
@@ -497,9 +497,7 @@ Remember to enable [IPv4 forwarding](#IPv4-forwarding) for the interfaces.
     admin@example:/config/routing/control-plane-protocol/static/name/default/> leave
     admin@example:/>
 
-> **Note:** The only name allowed for a control-plane-protocol is currently
-> *default*.  Meaning, you can only have one instance per routing protocol.
-
+> **Note:** You can only have one instance per routing protocol.
 
 ### IPv6 Static routes
 
@@ -509,22 +507,19 @@ Remember to enable [IPv4 forwarding](#IPv4-forwarding) for the interfaces.
     admin@example:/config/routing/control-plane-protocol/static/name/default/> leave
     admin@example:/>
 
-> **Note:** The only name allowed for a control-plane-protocol is currently
-> *default*.  Meaning, you can only have one instance per routing protocol.
+> **Note:** You can only have one instance per routing protocol.
 
 ### OSPFv2 Routing
 Infix supports OSPF dynamic routing for IPv4, i.e., OSPFv2.
 Remember to enable [IPv4 forwarding](#IPv4-forwarding) for the
-interfaces you want to run OSPFv2. 
+interfaces you want to run OSPFv2.
 
     admin@example:/config/> edit routing control-plane-protocol ospfv2 name default
     admin@example:/config/routing/control-plane-protocol/ospfv2/name/default/> set ospf area 0.0.0.0 interface e0 enabled true
     admin@example:/config/routing/control-plane-protocol/ospfv2/name/default/> leave
     admin@example:/>
 
-> **Note:** The only instance name allowed for a
-> control-plane-protocol is currently *default*.  Meaning, you can
-> only have one instance per routing protocol.
+> **Note:** You can only have one instance per routing protocol.
 
 #### OSPF area types
 In addition to *regular* OSPF areas, area types *NSSA* and *Stub* are supported.
@@ -554,8 +549,8 @@ OSPF interface settings are done in context of an OSFP area, e.g.,
 *area 0.0.0.0*. Available commands can be listed using the `?` mark.
 
     admin@example:/config/routing/control-plane-protocol/ospfv2/name/default/> edit ospf area 0.0.0.0
-    admin@example:/config/routing/control-plane-protocol/ospfv2/name/default/ospf/area/0.0.0.0/> edit interface e0 
-    admin@example:/config/routing/control-plane-protocol/ospfv2/name/default/ospf/area/0.0.0.0/interface/e0/> set ? 
+    admin@example:/config/routing/control-plane-protocol/ospfv2/name/default/ospf/area/0.0.0.0/> edit interface e0
+    admin@example:/config/routing/control-plane-protocol/ospfv2/name/default/ospf/area/0.0.0.0/interface/e0/> set ?
       bfd                  BFD interface configuration.
       cost                 Interface's cost.
       dead-interval        Interval after which a neighbor is declared down
@@ -570,7 +565,7 @@ OSPF interface settings are done in context of an OSFP area, e.g.,
 For example, setting the OSPF *interface type* to *point-to-point* for
 an Ethernet interface can be done as follows.
 
-    admin@example:/config/routing/control-plane-protocol/ospfv2/name/default/ospf/area/0.0.0.0/interface/e0/> set interface-type point-to-point 
+    admin@example:/config/routing/control-plane-protocol/ospfv2/name/default/ospf/area/0.0.0.0/interface/e0/> set interface-type point-to-point
     admin@example:/config/routing/control-plane-protocol/ospfv2/name/default/ospf/area/0.0.0.0/interface/e0/>
 
 
@@ -582,7 +577,7 @@ debugging the OSPFv2 setup. The CLI has various OSPF status commands
 such as `show ospf neighbor`, `show ospf interface` and `show ospf
 routes`.
 
-    admin@example:/> show ospf neighbor 
+    admin@example:/> show ospf neighbor
 
     Neighbor ID     Pri State           Up Time         Dead Time Address         Interface                        RXmtL RqstL DBsmL
     10.1.1.2          1 Full/-          3h46m59s          30.177s 10.1.1.2        e0:10.1.1.1                          0     0     0
