@@ -65,6 +65,15 @@ static int svc_change(sr_session_ctx_t *session, sr_event_t event, const char *x
 	while ((svc = va_arg(ap, const char *))) {
 		if (systemf("initctl -nbq %s %s", ena ? "enable" : "disable", svc))
 			ERROR("Failed %s %s", ena ? "enabling" : "disabling", name);
+
+		if (!strcmp(name, "web")) {
+			if (ena && strcmp(svc, "nginx"))
+				systemf("ln -sf ../available/%s.conf /etc/nginx/enabled/%s.conf", svc, svc);
+			else
+				systemf("rm -f /etc/nginx/enabled/%s.conf", svc);
+
+			systemf("initctl -nbq touch nginx");
+		}
 	}
 	va_end(ap);
 

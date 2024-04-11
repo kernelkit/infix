@@ -85,9 +85,3 @@ grep -qsE '^/bin/false$$' "$TARGET_DIR/etc/shells" \
 # Allow clish (symlink to /usr/bin/klish) to be a login shell
 grep -qsE '^/bin/clish$$' "$TARGET_DIR/etc/shells" \
         || echo "/bin/clish" >> "$TARGET_DIR/etc/shells"
-
-if [ -n "$BR2_PACKAGE_NGINX" ]; then
-    cp "$common/netbrowse.conf" "$TARGET_DIR/etc/nginx/"
-    cp "$common/nginx.conf" "$TARGET_DIR/etc/nginx/"
-    cp "$common/ssl.conf" "$TARGET_DIR/etc/nginx/"
-fi
