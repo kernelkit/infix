@@ -18,7 +18,7 @@ if [ ! -e "$SCRIPT_PATH/$json" ]; then
 fi
 
 cat "$SCRIPT_PATH/$json" | \
-    "$SCRIPT_PATH"/../../../src/statd/cli-pretty \
+    "$SCRIPT_PATH"/../../../src/statd/python/cli_pretty/cli_pretty.py \
     "$command" $*
 if [ $? -eq 0 ]; then
     echo "ok 1 - $json printed without crashing"

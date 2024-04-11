@@ -4,7 +4,7 @@ SCRIPT_PATH="$(dirname "$(readlink -f "$0")")"
 ROOT_PATH="$SCRIPT_PATH/../../../"
 CLI_OUTPUT_PATH="$SCRIPT_PATH/cli-output/"
 
-CLI_PRETTY_TOOL="$ROOT_PATH/src/statd/cli-pretty"
+CLI_PRETTY_TOOL="$ROOT_PATH/src/statd/python/cli_pretty/cli_pretty.py"
 SR_EMULATOR_TOOL="$SCRIPT_PATH/sysrepo-emulator.sh"
 
 CLI_OUTPUT_FILE="$(mktemp)"

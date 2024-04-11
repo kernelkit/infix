@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-import argparse
 import json
-import re
+import argparse
 import sys
+import re
 
 class Pad:
     iface = 16
@@ -618,6 +618,7 @@ def main():
     else:
         print(f"Error, unknown command {args.command}")
         sys.exit(1)
+
 
 if __name__ == "__main__":
     main()
