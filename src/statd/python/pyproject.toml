@@ -1,0 +1,23 @@
+[tool.poetry]
+name = "infix-yang-tools"
+version = "1.0"
+description = "Linux to infix-YANG"
+license = "MIT"
+packages = [
+    { include = "yanger/*.py" },
+    { include = "cli_pretty/*.py" },
+    { include = "ospf_status/*.py" }
+]
+authors = [
+  "KernelKit developers"
+]
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+
+[tool.poetry.scripts]
+yanger = "yanger:main"
+cli-pretty = "cli_pretty:main"
+ospf-status = "ospf_status:main"

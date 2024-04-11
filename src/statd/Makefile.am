@@ -1,8 +1,6 @@
 DISTCLEANFILES      = *~ *.d
 ACLOCAL_AMFLAGS     = -I m4
 
-pkglibexec_SCRIPTS  = cli-pretty yanger ospf-status
-
 sbin_PROGRAMS       = statd
 statd_SOURCES       = statd.c shared.c shared.h
 statd_CPPFLAGS      = -D_DEFAULT_SOURCE -D_GNU_SOURCE
