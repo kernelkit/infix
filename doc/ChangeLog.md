@@ -45,9 +45,13 @@ separate project.  Going forward Infix' focus is entirely on NETCONF.
   are supported.
 - Include Buildroot `legal-info` in releases, i.e., licenses, sources
   with patches, as well as csv files for packages and toolchain
+- Issue #369: Remove limitation that the routing instance must be
+  named 'default'
 
 ### Fixes
-
+- Issue #391 Creating VLAN interface in the CLI with "edit interface vlanN"
+  does not set VLAN id to N.
+- confd: Fix memory leak when operating on candidate configuration.
 - CLI: fix VLAN inference for interfaces named `eth0.1`, i.e., VID 1 on
   lower-layer-if `eth0`.  Only affects automatic inference in the CLI,
   entering the values manually (CLI/NETCONF) not affected by this bug
