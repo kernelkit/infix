@@ -23,90 +23,151 @@ static const struct srx_module_requirement reqs[] = {
 	{ NULL }
 };
 
-static int svc_change(sr_session_ctx_t *session, sr_event_t event, const char *xpath,
-		      const char *name, const char *sub, ...)
+static sr_data_t *get(sr_session_ctx_t *session, sr_event_t event, const char *xpath,
+		      struct lyd_node **srv, ...)
 {
-	char path[strlen(xpath) + 10];
-	struct lyd_node *diff, *srv;
-	sr_error_t err = 0;
-	const char *svc;
-	sr_data_t *cfg;
+	char path[strlen(xpath) + 4];
+	sr_data_t *cfg = NULL;
 	va_list ap;
-	int ena;
 
-	switch (event) {
-	case SR_EV_DONE:
-		break;
-	case SR_EV_CHANGE:
-	case SR_EV_ABORT:
-	default:
-		return SR_ERR_OK;
-	}
+	if (event != SR_EV_DONE)
+		return NULL;  /* Don't care about CHANGE, ABORT, etc. */
 
 	snprintf(path, sizeof(path), "%s//.", xpath);
-	err = sr_get_data(session, path, 0, 0, 0, &cfg);
-	if (err) {
+	if (sr_get_data(session, path, 0, 0, 0, &cfg)) {
 		ERROR("no data for %s", path);
-		goto err_abandon;
+		return NULL;
 	}
 
-	err = srx_get_diff(session, &diff);
-	if (err)
-		goto err_release_data;
-
-	srv = lydx_get_descendant(cfg->tree, name, sub, NULL);
-	if (!srv) {
-		ERROR("Cannot find %s subtree", name);
-		return -1;
-	}
-
-	ena = lydx_is_enabled(srv, "enabled");
-	va_start(ap, sub);
-	while ((svc = va_arg(ap, const char *))) {
-		if (systemf("initctl -nbq %s %s", ena ? "enable" : "disable", svc))
-			ERROR("Failed %s %s", ena ? "enabling" : "disabling", name);
-
-		if (!strcmp(name, "web")) {
-			if (ena && strcmp(svc, "nginx"))
-				systemf("ln -sf ../available/%s.conf /etc/nginx/enabled/%s.conf", svc, svc);
-			else
-				systemf("rm -f /etc/nginx/enabled/%s.conf", svc);
-
-			systemf("initctl -nbq touch nginx");
-		}
-	}
+	va_start(ap, srv);
+	*srv = lydx_vdescend(cfg->tree, ap);
 	va_end(ap);
 
-	lyd_free_tree(diff);
-err_release_data:
-	sr_release_data(cfg);
-err_abandon:
+	if (!*srv) {
+		sr_release_data(cfg);
+		return NULL;
+	}
 
-	return err;
+	return cfg;
+}
+
+static int put(sr_data_t *cfg, struct lyd_node *srv)
+{
+	sr_release_data(cfg);
+	return SR_ERR_OK;
+}
+
+static int svc_change(sr_session_ctx_t *session, sr_event_t event, const char *xpath,
+		      const char *name, const char *svc)
+{
+	struct lyd_node *srv = NULL;
+	sr_data_t *cfg;
+	int ena;
+
+	cfg = get(session, event, xpath, &srv, name, NULL);
+	if (!cfg)
+		return SR_ERR_OK;
+
+	ena = lydx_is_enabled(srv, "enabled");
+	if (systemf("initctl -nbq %s %s", ena ? "enable" : "disable", svc))
+		ERROR("Failed %s %s", ena ? "enabling" : "disabling", name);
+
+	return put(cfg, srv);
+}
+
+static void svc_enadis(int ena, const char *svc)
+{
+	int isweb = fexistf("/etc/nginx/available/%s.conf", svc);
+
+	if (ena) {
+		if (isweb)
+			systemf("ln -sf ../available/%s.conf /etc/nginx/enabled/", svc);
+		systemf("initctl -nbq enable %s", svc);
+	} else {
+		if (isweb)
+			systemf("rm -f /etc/nginx/enabled/%s.conf", svc);
+		systemf("initctl -nbq disable %s", svc);
+	}
+	systemf("initctl -nbq touch avahi");
+	systemf("initctl -nbq touch nginx");
 }
 
 static int mdns_change(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
 	const char *xpath, sr_event_t event, unsigned request_id, void *_confd)
 {
-	return svc_change(session, event, xpath, "mdns", NULL, "avahi", NULL);
-}
+	struct lyd_node *srv = NULL;
+	sr_data_t *cfg;
+	int ena;
 
-static int ttyd_change(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
-	const char *xpath, sr_event_t event, unsigned request_id, void *_confd)
-{
-	return svc_change(session, event, xpath, "web", "console", "ttyd", NULL);
+	cfg = get(session, event, xpath, &srv, "mdns", NULL);
+	if (!cfg)
+		return SR_ERR_OK;
+
+	ena = lydx_is_enabled(srv, "enabled");
+	svc_enadis(ena, "mdns-alias");
+	svc_enadis(ena, "avahi");
+
+	return put(cfg, srv);
 }
 
 static int lldp_change(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
 	const char *xpath, sr_event_t event, unsigned request_id, void *_confd)
 {
-	return svc_change(session, event, xpath, "lldp", NULL, "lldpd", NULL);
+	return svc_change(session, event, xpath, "lldp", "lldpd");
+}
+
+static int ttyd_change(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
+	const char *xpath, sr_event_t event, unsigned request_id, void *_confd)
+{
+	struct lyd_node *srv = NULL;
+	sr_data_t *cfg;
+
+	cfg = get(session, event, xpath, &srv, "web", "console", NULL);
+	if (!cfg)
+		return SR_ERR_OK;
+
+	svc_enadis(lydx_is_enabled(srv, "enabled"), "ttyd");
+
+	return put(cfg, srv);
+}
+
+static int netbrowse_change(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
+	const char *xpath, sr_event_t event, unsigned request_id, void *_confd)
+{
+	struct lyd_node *srv = NULL;
+	sr_data_t *cfg;
+
+	cfg = get(session, event, xpath, &srv, "web", "netbrowse", NULL);
+	if (!cfg)
+		return SR_ERR_OK;
+
+	svc_enadis(lydx_is_enabled(srv, "enabled"), "netbrowse");
+
+	return put(cfg, srv);
 }
 
 static int web_change(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
-	const char *xpath, sr_event_t event, unsigned request_id, void *_confd)
+		      const char *xpath, sr_event_t event, unsigned request_id, void *_confd)
 {
-	return svc_change(session, event, xpath, "web", NULL, "nginx", "ttyd", "netbrowse", NULL);
+	struct lyd_node *srv = NULL;
+	sr_data_t *cfg;
+	int ena;
+
+	cfg = get(session, event, xpath, &srv, "web", NULL);
+	if (!cfg)
+		return SR_ERR_OK;
+
+	ena = lydx_is_enabled(srv, "enabled");
+	if (ena) {
+		svc_enadis(srx_enabled(session, "%s/console/enabled", xpath), "ttyd");
+		svc_enadis(srx_enabled(session, "%s/netbrowse/enabled", xpath), "netbrowse");
+	} else {
+		svc_enadis(0, "ttyd");
+		svc_enadis(0, "netbrowse");
+	}
+	svc_enadis(ena, "nginx"); /* fake it, not nginx .conf */
+
+	return put(cfg, srv);
 }
 
 int infix_services_init(struct confd *confd)
@@ -123,6 +184,8 @@ int infix_services_init(struct confd *confd)
 			0, web_change, confd, &confd->sub);
 	REGISTER_CHANGE(confd->session, "infix-services", "/infix-services:web/infix-services:console",
 			0, ttyd_change, confd, &confd->sub);
+	REGISTER_CHANGE(confd->session, "infix-services", "/infix-services:web/infix-services:netbrowse",
+			0, netbrowse_change, confd, &confd->sub);
 	REGISTER_CHANGE(confd->session, "ieee802-dot1ab-lldp", "/ieee802-dot1ab-lldp:lldp",
 			0, lldp_change, confd, &confd->sub);
 

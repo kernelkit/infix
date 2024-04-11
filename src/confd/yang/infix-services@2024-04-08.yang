@@ -56,5 +56,14 @@ module infix-services {
 	type boolean;
       }
     }
+
+    container netbrowse {
+      description "mDNS Network Browser.";
+
+      leaf enabled {
+	description "Enable or disable mDNS Network Browser at https://network.local.";
+	type boolean;
+      }
+    }
   }
 }
