@@ -101,13 +101,11 @@ struct lyd_node *lydx_get_child(struct lyd_node *parent, const char *name)
 	return lydx_get_sibling(lyd_child(parent), name);
 }
 
-struct lyd_node *lydx_get_descendant(struct lyd_node *from, ...)
+struct lyd_node *lydx_vdescend(struct lyd_node *from, va_list ap)
 {
 	struct lyd_node *node = NULL;
 	const char *name;
-	va_list ap;
 
-	va_start(ap, from);
 	while ((name = va_arg(ap, const char *))) {
 		node = lydx_get_sibling(from, name);
 		if (!node)
@@ -115,6 +113,17 @@ struct lyd_node *lydx_get_descendant(struct lyd_node *from, ...)
 
 		from = lyd_child(node);
 	}
+
+	return node;
+}
+
+struct lyd_node *lydx_get_descendant(struct lyd_node *from, ...)
+{
+	struct lyd_node *node;
+	va_list ap;
+
+	va_start(ap, from);
+	node = lydx_vdescend(from, ap);
 	va_end(ap);
 
 	return node;
