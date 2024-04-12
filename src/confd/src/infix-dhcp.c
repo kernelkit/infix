@@ -401,7 +401,6 @@ static int cand(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
 			return SR_ERR_SYS;
 		}
 
-		strlcpy(xpath, new->xpath, sizeof(xpath));
 		if ((ptr = strstr(xpath, "]/")) == NULL)
 			continue;
 		ptr[1] = 0;
