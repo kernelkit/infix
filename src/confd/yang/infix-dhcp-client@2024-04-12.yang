@@ -10,11 +10,14 @@ module infix-dhcp-client {
   contact      "kernelkit@googlegroups.com";
   description  "This module implements an IPv4 DHCP client";
 
+  revision 2024-04-12 {
+    description   "Adjust DHCP client hostname option, max 64 charachters.";
+    reference     "internal";
+  }
   revision 2024-01-30 {
     description   "Add DHCP client options, arping, and route preference.";
     reference     "internal";
   }
-
   revision 2023-05-22 {
     description   "Initial revision.";
     reference     "rfc2131 rfc7950";
@@ -141,7 +144,7 @@ module infix-dhcp-client {
                        Example: option:hostname, value:xyzzy
                                 option:clientid, value:01:02:03:04:05:06:07:08:09:0a
                                 option:0x51,     value:xyzzy.example.com";
-           must "../name != 'hostname' or re-match(., '[a-zA-Z0-9\\-_]{0,253}')";
+           must "../name != 'hostname' or re-match(., '[a-zA-Z0-9\\-_]{1,64}')";
         }
       }
       leaf route-preference {

@@ -19,6 +19,8 @@ separate project.  Going forward Infix' focus is entirely on NETCONF.
 - Bump the base Linux kernel version to 6.6
 - Drop Classic variant to reduce overhead, simplify build & release
   processes, and focus on NETCONF for Arm64 and Amd64 platforms
+- Add hostname restrictions to ietf-system, and infix-dhcp-client
+  models.  Max 64 characters on Linux systems
 - The bridge model now has built-in validation of port memberships,
   i.e., a port must be a bridge member to be used in VLAN filtering
 - The bridge model only permits the bridge itself to be a tagged
