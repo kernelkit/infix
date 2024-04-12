@@ -10,6 +10,7 @@
 #include <string.h>
 #include <time.h>
 #include <sys/time.h>
+#include <sys/param.h>
 #include <unistd.h>
 
 #include <augeas.h>
@@ -64,6 +65,10 @@ static inline char *xpath_base(const char *xpath)
 
 #define REGISTER_CHANGE(s,m,x,f,c,a,u)				\
 	if ((rc = register_change(s, m, x, f, c, a, u)))	\
+		goto fail
+
+#define REGISTER_MONITOR(s,m,x,f,c,a,u)				\
+	if ((rc = register_monitor(s, m, x, f, c, a, u)))	\
 		goto fail
 
 #define REGISTER_OPER(s,m,x,c,a,f,u)				\
@@ -121,6 +126,20 @@ static inline int register_change(sr_session_ctx_t *session, const char *module,
 				core_hook_prio(), SR_SUBSCR_PASSIVE, sub);
 		sr_module_change_subscribe(confd->startup, module, xpath, core_startup_save, NULL,
 				core_hook_prio(), SR_SUBSCR_PASSIVE, sub);
+	}
+
+	return 0;
+}
+
+/* Seconday callbacks, not responsible for the main property. */
+static inline int register_monitor(sr_session_ctx_t *session, const char *module, const char *xpath,
+	int flags, sr_module_change_cb cb, void *arg, sr_subscription_ctx_t **sub)
+{
+	int rc = sr_module_change_subscribe(session, module, xpath, cb, arg,
+					    0, flags | SR_SUBSCR_PASSIVE, sub);
+	if (rc) {
+		ERROR("failed subscribing to monitor %s: %s", xpath, sr_strerror(rc));
+		return rc;
 	}
 
 	return 0;
