@@ -223,9 +223,9 @@ sysrepoctl -s $SEARCH							\
 		-e vlan-filtering					\
 	   -i ieee802-dot1ab-lldp@2022-03-15.yang -g wheel -p 0660	\
 	   -i infix-lldp@2023-08-23.yang	-g wheel -p 0660	\
-	   -i infix-dhcp-client@2024-01-30.yang -g wheel -p 0660	\
+	   -i infix-dhcp-client@2024-04-12.yang -g wheel -p 0660	\
 	   -i infix-shell-type@2023-08-21.yang	-g wheel -p 0660	\
-	   -i infix-system@2024-02-29.yang	-g wheel -p 0660	\
+	   -i infix-system@2024-04-12.yang	-g wheel -p 0660	\
 	   -i infix-services@2024-04-08.yang	-g wheel -p 0660	\
 	   -i ieee802-ethernet-interface@2019-06-21.yang -g wheel -p 0660 \
 	   -i infix-ethernet-interface@2024-02-27.yang -g wheel -p 0660 \
