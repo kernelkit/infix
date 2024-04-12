@@ -1,0 +1,75 @@
+From 27358f3101254dd08d85fbac2c614ef4d28e9984 Mon Sep 17 00:00:00 2001
+From: Tobias Waldekranz <tobias@waldekranz.com>
+Date: Fri, 12 Apr 2024 15:55:52 +0200
+Subject: [PATCH 3/3] cn9130: Specify basic DDR topology via build variables
+Organization: Addiva Elektronik
+
+- The bit width of each individual die
+- The capacity of each individual die
+
+Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
+---
+ plat/marvell/marvell.mk                       |  8 ++++++
+ .../octeontx/otx2/t91/t9130/board/dram_port.c | 28 +++++++++++++++++++
+ 2 files changed, 36 insertions(+)
+
+diff --git a/plat/marvell/marvell.mk b/plat/marvell/marvell.mk
+index b6a2b9995..b8066aed2 100644
+--- a/plat/marvell/marvell.mk
++++ b/plat/marvell/marvell.mk
+@@ -19,3 +19,11 @@ $(eval $(call add_define,PALLADIUM))
+ # Set board to work with DDR 32bit
+ DDR32				:= 0
+ $(eval $(call add_define,DDR32))
++
++# Default to 16b device width
++DDR_DEV_WIDTH			:= 16
++$(eval $(call add_define,DDR_DEV_WIDTH))
++
++# Default to 1GB dies
++DDR_DIE_CAP_GBITS		:= 8
++$(eval $(call add_define,DDR_DIE_CAP_GBITS))
+diff --git a/plat/marvell/octeontx/otx2/t91/t9130/board/dram_port.c b/plat/marvell/octeontx/otx2/t91/t9130/board/dram_port.c
+index 07753ea97..78246d272 100644
+--- a/plat/marvell/octeontx/otx2/t91/t9130/board/dram_port.c
++++ b/plat/marvell/octeontx/otx2/t91/t9130/board/dram_port.c
+@@ -46,8 +46,36 @@ struct mv_ddr_iface dram_iface_ap0 = {
+ 		      {0x1, 0x0, 0, 0},
+ 		      {0x1, 0x0, 0, 0} },
+ 		   SPEED_BIN_DDR_2400R,		/* speed_bin */
++#if (DDR_DEV_WIDTH == 4)
++		   MV_DDR_DEV_WIDTH_4BIT,	/* sdram device width */
++#elif (DDR_DEV_WIDTH == 8)
++		   MV_DDR_DEV_WIDTH_8BIT,	/* sdram device width */
++#elif (DDR_DEV_WIDTH == 16)
+ 		   MV_DDR_DEV_WIDTH_16BIT,	/* sdram device width */
++#elif (DDR_DEV_WIDTH == 32)
++		   MV_DDR_DEV_WIDTH_32BIT,	/* sdram device width */
++#else
++#error "UNKNOWN DEVICE WIDTH"
++#endif
++#if (DDR_DIE_CAP_GBITS == 1)
++		   MV_DDR_DIE_CAP_1GBIT,	/* die capacity */
++#elif (DDR_DIE_CAP_GBITS == 2)
++		   MV_DDR_DIE_CAP_2GBIT,	/* die capacity */
++#elif (DDR_DIE_CAP_GBITS == 4)
++		   MV_DDR_DIE_CAP_4GBIT,	/* die capacity */
++#elif (DDR_DIE_CAP_GBITS == 8)
+ 		   MV_DDR_DIE_CAP_8GBIT,	/* die capacity */
++#elif (DDR_DIE_CAP_GBITS == 12)
++		   MV_DDR_DIE_CAP_12GBIT,	/* die capacity */
++#elif (DDR_DIE_CAP_GBITS == 16)
++		   MV_DDR_DIE_CAP_16GBIT,	/* die capacity */
++#elif (DDR_DIE_CAP_GBITS == 24)
++		   MV_DDR_DIE_CAP_24GBIT,	/* die capacity */
++#elif (DDR_DIE_CAP_GBITS == 32)
++		   MV_DDR_DIE_CAP_32GBIT,	/* die capacity */
++#else
++#error "UNKNOWN DIE CAPACITY"
++#endif
+ 		   MV_DDR_FREQ_SAR,		/* frequency */
+ 		   0, 0,			/* cas_l, cas_wl */
+ 		   MV_DDR_TEMP_HIGH} },		/* temperature */
+-- 
+2.34.1
+

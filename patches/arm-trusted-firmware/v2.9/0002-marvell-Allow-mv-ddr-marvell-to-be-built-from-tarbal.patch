@@ -1,7 +1,8 @@
 From da31240645cdf7ae424727ac330fdb6f6b118691 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Mon, 16 Oct 2023 10:52:19 +0200
-Subject: [PATCH 2/2] marvell: Allow mv-ddr-marvell to be built from tarball
+Subject: [PATCH 2/3] marvell: Allow mv-ddr-marvell to be built from tarball
+Organization: Addiva Elektronik
 
 Build system relies on the mv-ddr-marvell being a valid GIT working
 directory, which is not the case when building from a tarball.
