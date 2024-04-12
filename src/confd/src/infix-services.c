@@ -15,6 +15,13 @@
 
 #include "core.h"
 
+struct mdns_svc {
+	char *name;
+	char *type;
+	int   port;
+	char *desc;
+	char *text;
+};
 
 static const struct srx_module_requirement reqs[] = {
 	{ .dir = YANG_PATH_, .name = "infix-services",      .rev = "2024-04-08" },
@@ -92,6 +99,52 @@ static void svc_enadis(int ena, const char *svc)
 	systemf("initctl -nbq touch nginx");
 }
 
+/*
+ * On hostname changes we need to update the mDNS records, in particular
+ * the ones advertising an adminurl (standarized by Apple), because they
+ * include the fqdn in the URL.
+ *
+ * XXX: when the web managment interface is in place we can change the
+ *      adminurl to include 'admin@%s.local' to pre-populate the default
+ *      username in the login dialog.
+ */
+static int mdns_records(void)
+{
+	char hostname[MAXHOSTNAMELEN + 1];
+	struct mdns_svc svc[] = {
+		{ "https",   "_https._tcp",       443, "Web Management Interface", "adminurl=https://%s.local" },
+		{ "ttyd",    "_https._tcp",       443, "Web Console Interface", "adminurl=https://%s.local:7681" },
+		{ "http",    "_http._tcp",         80, "Web Management Interface", "adminurl=http://%s.local" },
+		{ "netconf", "_netconf-ssh._tcp", 830, "NETCONF (XML/SSH)", NULL },
+		{ "sftp-ssh","_sftp-ssh._tcp",     22, "Secure file transfer (FTP/SSH)", NULL },
+		{ "ssh",     "_ssh._tcp",          22, "Secure shell command line interface (CLI)", NULL },
+	};
+
+	if (gethostname(hostname, sizeof(hostname))) {
+		ERRNO("failed getting system hostname");
+		return SR_ERR_SYS;
+	}
+
+	for (size_t i = 0; i < NELEMS(svc); i++) {
+		char buf[256] = "";
+
+		if (svc[i].text)
+			snprintf(buf, sizeof(buf), svc[i].text, hostname);
+
+		systemf("/usr/libexec/confd/gen-service %s %s %s %d \"%s\" %s",
+			hostname, svc[i].name, svc[i].type, svc[i].port, svc[i].desc, buf);
+	}
+
+	return SR_ERR_OK;
+}
+
+static int hostname_change(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
+	const char *xpath, sr_event_t event, unsigned request_id, void *_confd)
+{
+
+	return mdns_records();
+}
+
 static int mdns_change(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
 	const char *xpath, sr_event_t event, unsigned request_id, void *_confd)
 {
@@ -104,6 +157,11 @@ static int mdns_change(sr_session_ctx_t *session, uint32_t sub_id, const char *m
 		return SR_ERR_OK;
 
 	ena = lydx_is_enabled(srv, "enabled");
+	if (ena) {
+		/* Generate/update basic mDNS service records */
+		mdns_records();
+	}
+
 	svc_enadis(ena, "mdns-alias");
 	svc_enadis(ena, "avahi");
 
@@ -180,6 +238,9 @@ int infix_services_init(struct confd *confd)
 
 	REGISTER_CHANGE(confd->session, "infix-services", "/infix-services:mdns",
 			0, mdns_change, confd, &confd->sub);
+	REGISTER_MONITOR(confd->session, "ietf-system", "/ietf-system:system/hostname",
+			 0, hostname_change, confd, &confd->sub);
+
 	REGISTER_CHANGE(confd->session, "infix-services", "/infix-services:web",
 			0, web_change, confd, &confd->sub);
 	REGISTER_CHANGE(confd->session, "infix-services", "/infix-services:web/infix-services:console",
