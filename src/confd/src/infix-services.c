@@ -15,12 +15,40 @@
 
 #include "core.h"
 
+#define GENERATE_ENUM(ENUM)      ENUM,
+#define GENERATE_STRING(STRING) #STRING,
+
+#define FOREACH_SVC(SVC)			\
+        SVC(none)				\
+        SVC(ssh)				\
+        SVC(netconf)				\
+        SVC(web)				\
+        SVC(ttyd)				\
+        SVC(netbrowse)				\
+        SVC(all)	/* must be last entry */
+
+typedef enum {
+    FOREACH_SVC(GENERATE_ENUM)
+} svc;
+
+static const char *name[] = {
+    FOREACH_SVC(GENERATE_STRING)
+};
+
 struct mdns_svc {
+	svc   svc;
 	char *name;
 	char *type;
 	int   port;
 	char *desc;
 	char *text;
+} services[] = {
+	{ web,     "https",    "_https._tcp",       443, "Web Management Interface", "adminurl=https://%s.local" },
+	{ ttyd,    "ttyd",     "_https._tcp",       443, "Web Console Interface",    "adminurl=https://%s.local:7681" },
+	{ web,     "http",     "_http._tcp",         80, "Web Management Interface", "adminurl=http://%s.local" },
+	{ netconf, "netconf",  "_netconf-ssh._tcp", 830, "NETCONF (XML/SSH)", NULL },
+	{ ssh,     "sftp-ssh", "_sftp-ssh._tcp",     22, "Secure file transfer (FTP/SSH)", NULL },
+	{ ssh,     "ssh",      "_ssh._tcp",          22, "Secure shell command line interface (CLI)", NULL },
 };
 
 static const struct srx_module_requirement reqs[] = {
@@ -29,6 +57,41 @@ static const struct srx_module_requirement reqs[] = {
 	{ .dir = YANG_PATH_, .name = "infix-lldp",          .rev = "2023-08-23" },
 	{ NULL }
 };
+
+/*
+ * On hostname changes we need to update the mDNS records, in particular
+ * the ones advertising an adminurl (standarized by Apple), because they
+ * include the fqdn in the URL.
+ *
+ * XXX: when the web managment interface is in place we can change the
+ *      adminurl to include 'admin@%s.local' to pre-populate the default
+ *      username in the login dialog.
+ */
+static int mdns_records(const char *cmd, svc type)
+{
+	char hostname[MAXHOSTNAMELEN + 1];
+
+	if (gethostname(hostname, sizeof(hostname))) {
+		ERRNO("failed getting system hostname");
+		return SR_ERR_SYS;
+	}
+
+	for (size_t i = 0; i < NELEMS(services); i++) {
+		struct mdns_svc *srv = &services[i];
+		char buf[256] = "";
+
+		if (type != all && srv->svc != type)
+			continue;
+
+		if (srv->text)
+			snprintf(buf, sizeof(buf), srv->text, hostname);
+
+		systemf("/usr/libexec/confd/gen-service %s %s %s %s %d \"%s\" %s", cmd,
+			hostname, srv->name, name[type], srv->port, srv->desc, buf);
+	}
+
+	return SR_ERR_OK;
+}
 
 static sr_data_t *get(sr_session_ctx_t *session, sr_event_t event, const char *xpath,
 		      struct lyd_node **srv, ...)
@@ -82,67 +145,64 @@ static int svc_change(sr_session_ctx_t *session, sr_event_t event, const char *x
 	return put(cfg, srv);
 }
 
-static void svc_enadis(int ena, const char *svc)
+static void svc_enadis(int ena, svc type, const char *svc)
 {
-	int isweb = fexistf("/etc/nginx/available/%s.conf", svc);
+	int isweb;
+
+	if (!svc)
+		svc = name[type];
+	isweb = fexistf("/etc/nginx/available/%s.conf", svc);
 
 	if (ena) {
 		if (isweb)
 			systemf("ln -sf ../available/%s.conf /etc/nginx/enabled/", svc);
 		systemf("initctl -nbq enable %s", svc);
+		systemf("initctl -nbq touch %s", svc); /* in case already enabled */
 	} else {
 		if (isweb)
 			systemf("rm -f /etc/nginx/enabled/%s.conf", svc);
 		systemf("initctl -nbq disable %s", svc);
 	}
+
+	if (type != none)
+		mdns_records(ena ? "" : "delete", type);
+
 	systemf("initctl -nbq touch avahi");
 	systemf("initctl -nbq touch nginx");
-}
-
-/*
- * On hostname changes we need to update the mDNS records, in particular
- * the ones advertising an adminurl (standarized by Apple), because they
- * include the fqdn in the URL.
- *
- * XXX: when the web managment interface is in place we can change the
- *      adminurl to include 'admin@%s.local' to pre-populate the default
- *      username in the login dialog.
- */
-static int mdns_records(void)
-{
-	char hostname[MAXHOSTNAMELEN + 1];
-	struct mdns_svc svc[] = {
-		{ "https",   "_https._tcp",       443, "Web Management Interface", "adminurl=https://%s.local" },
-		{ "ttyd",    "_https._tcp",       443, "Web Console Interface", "adminurl=https://%s.local:7681" },
-		{ "http",    "_http._tcp",         80, "Web Management Interface", "adminurl=http://%s.local" },
-		{ "netconf", "_netconf-ssh._tcp", 830, "NETCONF (XML/SSH)", NULL },
-		{ "sftp-ssh","_sftp-ssh._tcp",     22, "Secure file transfer (FTP/SSH)", NULL },
-		{ "ssh",     "_ssh._tcp",          22, "Secure shell command line interface (CLI)", NULL },
-	};
-
-	if (gethostname(hostname, sizeof(hostname))) {
-		ERRNO("failed getting system hostname");
-		return SR_ERR_SYS;
-	}
-
-	for (size_t i = 0; i < NELEMS(svc); i++) {
-		char buf[256] = "";
-
-		if (svc[i].text)
-			snprintf(buf, sizeof(buf), svc[i].text, hostname);
-
-		systemf("/usr/libexec/confd/gen-service %s %s %s %d \"%s\" %s",
-			hostname, svc[i].name, svc[i].type, svc[i].port, svc[i].desc, buf);
-	}
-
-	return SR_ERR_OK;
 }
 
 static int hostname_change(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
 	const char *xpath, sr_event_t event, unsigned request_id, void *_confd)
 {
+	return mdns_records("update", all);
+}
 
-	return mdns_records();
+static void mdns_cname(sr_session_ctx_t *session)
+{
+	int ena = srx_enabled(session, "/infix-services:mdns/enabled");
+
+	if (ena) {
+		int www = srx_enabled(session, "/infix-services:web/netbrowse/enabled");
+		char *name = fgetkey("/etc/os-release", "DEFAULT_HOSTNAME");
+
+		if (name || www) {
+			FILE *fp;
+
+			fp = fopen("/etc/default/mdns-alias", "w");
+			if (fp) {
+				fprintf(fp, "MDNS_ALIAS_ARGS=\"%s%s %s\"\n",
+					name ?: "", name ? ".local" : "",
+					www ? "network.local" : "");
+				fclose(fp);
+			} else {
+				ERRNO("failed updating mDNS aliases");
+				ena = 0;
+			}
+		} else
+			ena = 0; /* nothing to advertise */
+	}
+
+	svc_enadis(ena, none, "mdns-alias");
 }
 
 static int mdns_change(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
@@ -159,11 +219,11 @@ static int mdns_change(sr_session_ctx_t *session, uint32_t sub_id, const char *m
 	ena = lydx_is_enabled(srv, "enabled");
 	if (ena) {
 		/* Generate/update basic mDNS service records */
-		mdns_records();
+		mdns_records("update", all);
 	}
 
-	svc_enadis(ena, "mdns-alias");
-	svc_enadis(ena, "avahi");
+	svc_enadis(ena, none, "avahi");
+	mdns_cname(session);
 
 	return put(cfg, srv);
 }
@@ -184,7 +244,7 @@ static int ttyd_change(sr_session_ctx_t *session, uint32_t sub_id, const char *m
 	if (!cfg)
 		return SR_ERR_OK;
 
-	svc_enadis(lydx_is_enabled(srv, "enabled"), "ttyd");
+	svc_enadis(lydx_is_enabled(srv, "enabled"), ttyd, NULL);
 
 	return put(cfg, srv);
 }
@@ -199,7 +259,8 @@ static int netbrowse_change(sr_session_ctx_t *session, uint32_t sub_id, const ch
 	if (!cfg)
 		return SR_ERR_OK;
 
-	svc_enadis(lydx_is_enabled(srv, "enabled"), "netbrowse");
+	svc_enadis(lydx_is_enabled(srv, "enabled"), netbrowse, NULL);
+	mdns_cname(session);
 
 	return put(cfg, srv);
 }
@@ -217,13 +278,15 @@ static int web_change(sr_session_ctx_t *session, uint32_t sub_id, const char *mo
 
 	ena = lydx_is_enabled(srv, "enabled");
 	if (ena) {
-		svc_enadis(srx_enabled(session, "%s/console/enabled", xpath), "ttyd");
-		svc_enadis(srx_enabled(session, "%s/netbrowse/enabled", xpath), "netbrowse");
+		svc_enadis(srx_enabled(session, "%s/console/enabled", xpath), ttyd, "ttyd");
+		svc_enadis(srx_enabled(session, "%s/netbrowse/enabled", xpath), netbrowse, "netbrowse");
 	} else {
-		svc_enadis(0, "ttyd");
-		svc_enadis(0, "netbrowse");
+		svc_enadis(0, ttyd, NULL);
+		svc_enadis(0, netbrowse, NULL);
 	}
-	svc_enadis(ena, "nginx"); /* fake it, not nginx .conf */
+
+	svc_enadis(ena, none, "nginx"); /* fake it, not nginx .conf */
+	mdns_cname(session);
 
 	return put(cfg, srv);
 }
