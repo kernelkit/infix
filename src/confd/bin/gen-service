@@ -2,13 +2,28 @@
 # Very basic avahi .service generator, works for tcp (http) services
 . /etc/os-release
 
-host=$1
-name=$2
-type=$3
-port=$4
-desc=$5
-shift 5
+cmd=$1
+host=$2
+name=$3
+type=$4
+port=$5
+desc=$6
+shift 6
 file="/etc/avahi/services/$name.service"
+
+case $cmd in
+    delete)
+	rm -f "$file"
+	exit 0
+	;;
+    update)
+	if [ ! -f "$file" ]; then
+	    exit 0
+	fi
+	;;
+    *)
+	;;
+esac
 
 cat <<EOF >"$file"
 <?xml version="1.0" standalone='no'?>
