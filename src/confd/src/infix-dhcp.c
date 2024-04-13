@@ -82,47 +82,24 @@ static char *fqdn(const char *value, char *str, size_t len)
 	return str;
 }
 
-static char *unquote(char *buf)
-{
-	char q = buf[0];
-	char *ptr;
-
-	if (q != '"' && q != '\'')
-		return buf;
-
-	ptr = &buf[strlen(buf) - 1];
-	if (*ptr == q) {
-		*ptr = 0;
-		buf++;
-	}
-
-	return buf;
-}
-
 static char *os_name_version(char *str, size_t len)
 {
-	char buf[256];
-	FILE *fp;
+	char *val;
 
 	if (!str || !len)
 		return NULL;
 
-	fp = fopen("/etc/os-release", "r");
-	if (!fp)
-		return NULL;
-
 	str[0] = 0;
-	while (fgets(buf, sizeof(buf), fp)) {
-		chomp(buf);
-		if (!strncmp(buf, "NAME=", 5))
-			snprintf(str, len, "-V \"%.32s ", unquote(&buf[5]));
-		if (!strncmp(buf, "VERSION=", 8)) {
-			strlcat(str, unquote(&buf[8]), len);
-			strlcat(str, "\"", len);
-			break;
-		}
+
+	val = fgetkey("/etc/os-release", "NAME");
+	if (val)
+		snprintf(str, len, "-V \"%.32s ", val);
+
+	val = fgetkey("/etc/os-release", "VERSION");
+	if (val) {
+		strlcat(str, val, len);
+		strlcat(str, "\"", len);
 	}
-	fclose(fp);
 
 	if (strlen(str) > 0 && str[strlen(str) - 1] != '"') {
 		str[0] = 0;
