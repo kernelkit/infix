@@ -215,3 +215,49 @@ int writesf(const char *str, const char *mode, const char *fmt, ...)
 	return fclose(fp);
 }
 
+char *unquote(char *buf)
+{
+	char q = buf[0];
+	char *ptr;
+
+	if (q != '"' && q != '\'')
+		return buf;
+
+	ptr = &buf[strlen(buf) - 1];
+	if (*ptr == q) {
+		*ptr = 0;
+		buf++;
+	}
+
+	return buf;
+}
+
+/*
+ * Reads file, line by line, lookging for key="val".
+ * Returns val, or NULL.
+ */
+char *fgetkey(const char *file, const char *key)
+{
+	static char line[256];
+	int len = strlen(key);
+	char *ptr = NULL;
+	FILE *fp;
+
+	fp = fopen(file, "r");
+	if (!fp)
+		return NULL;
+
+	while (fgets(line, sizeof(line), fp)) {
+		chomp(line);
+		if (strncmp(line, key, len))
+			continue;
+		if (line[len] != '=')
+			continue;
+
+		ptr = unquote(line + len + 1); /* Skip 'key=' */
+		break;
+	}
+	fclose(fp);
+
+	return ptr;
+}

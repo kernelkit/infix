@@ -26,4 +26,7 @@ int writedf(int value, const char *mode, const char *fmt, ...)
 int writesf(const char *str, const char *mode, const char *fmt, ...)
 	__attribute__ ((format (printf, 3, 4)));
 
+char *unquote(char *buf);
+char *fgetkey(const char *file, const char *key);
+
 #endif /* CONFD_HELPERS_H_ */
