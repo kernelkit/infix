@@ -5,12 +5,12 @@
 ################################################################################
 
 MDNS_ALIAS_VERSION = 1.0
-MDNS_ALIAS_SITE_METHOD = local
-MDNS_ALIAS_SITE = $(BR2_EXTERNAL_INFIX_PATH)/src/mdns-alias
-MDNS_ALIAS_SETUP_TYPE = setuptools
-MDNS_ALIAS_LICENSE = MIT
+MDNS_ALIAS_SITE = https://github.com/troglobit/mdns-alias/releases/download/v$(MDNS_ALIAS_VERSION)
+MDNS_ALIAS_LICENSE = ISC
 MDNS_ALIAS_LICENSE_FILES = LICENSE
-MDNS_ALIAS_REDISTRIBUTE = NO
+MDNS_ALIAS_DEPENDENCIES = host-pkgconf avahi
+#MDNS_ALIAS_AUTORECONF = YES
+#MDNS_ALIAS_DEPENDENCIES += host-automake host-autoconf
 
 define MDNS_ALIAS_INSTALL_EXTRA
 	$(INSTALL) -D -m 0644 $(MDNS_ALIAS_PKGDIR)/mdns-alias.svc \
@@ -22,4 +22,4 @@ define MDNS_ALIAS_INSTALL_EXTRA
 endef
 MDNS_ALIAS_POST_INSTALL_TARGET_HOOKS += MDNS_ALIAS_INSTALL_EXTRA
 
-$(eval $(python-package))
+$(eval $(autotools-package))
