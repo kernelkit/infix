@@ -1,3 +1,3 @@
 # LICENSE hash locally calculated, .tar.gz hash from GitHub release
-sha256  92ea7f2ae6a627638613179e7d10f1b04d6493047a20f96ed033c277be17f808  k8s-logger-1.3.tar.gz
+sha256  b7f9d06b5358812cc99fb303ebe4fa9c02cb60fee89dbd42874abb543a3f3b37  k8s-logger-1.4.tar.gz
 sha256  c556e258d3293cb96277912daf43155d9d65194fb5651249d1fdc489265b9a69  LICENSE
