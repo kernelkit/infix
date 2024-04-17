@@ -331,6 +331,146 @@ admin@infix.local%eth0's password: *****
 ~$ 
 ```
 
+## Examples using SSH and sysrepocfg
+
+
+[sysrepocfg][4] can be used to interact with the YANG models when logged
+in to infix. Thus, *set config*, *read config*, *read status* and
+*RPC* can be conducted using sysrepocfg for supported YANG models. 
+
+See [sysrepocfg][4] for information. Examples below will utilize 
+
+- `sysrepocfg -E file.json -fjson -d database` to edit/merge the
+  configuration in *file.json* with the specificed database (typically
+  `-d running`). The trickiest thing here is to transfer file.json to
+  infix.
+-  `sysrepocfg -R file.json -fjson` to execute RPC defined in
+   *file.json*. 
+- `sysrepocfg -X -fjson -d database -x xpath` to read configuration
+  (e.g., `-d running`) or status (`-d operational`) 
+
+
+### Factory Reset Using sysrepocfg
+
+
+```
+admin@switch:~$ cat file.json 
+{
+   "ietf-factory-default:factory-reset": {
+   }
+}
+admin@switch:~$ sudo sysrepocfg -fjson -R file.json
+[ OK ] Saving system time (UTC) to 
+[ OK ] Stopping Status daemon
+...
+```
+
+
+### System Reboot Using sysrepocfg
+
+
+```
+admin@switch:~$ cat file.json 
+{
+   "ietf-system:system-restart": {
+   }
+}
+admin@switch:~$ sysrepocfg -fjson -R file.json
+[ OK ] Saving system time (UTC) to RTC
+[ OK ] Stopping OpenSSH daemon
+[ OK ] Stopping Status daemon
+...
+```
+
+If you only wish to copy factory config to running config.
+
+```
+admin@foo:~$ cat file.json 
+{
+   "infix-factory-default:factory-default": {
+   }
+}
+admin@foo:~$ sysrepocfg -R file.json -fjson
+admin@infix-c0-ff-ee:~$ 
+```
+
+
+
+### Set Date and Time Using sysrepocfg
+
+
+```
+admin@switch:~$ date
+Wed May 20 00:41:31 UTC 2015
+admin@switch:~$ cat file.json 
+{
+   "ietf-system:set-current-datetime": {
+	"current-datetime": "2024-04-17T13:48:02-01:00"
+   }
+}
+admin@switch:~$ sysrepocfg -R file.json -fjson
+admin@switch:~$ date
+Wed Apr 17 14:48:05 UTC 2024
+admin@switch:~$ 
+```
+
+
+### Remote Control of Ethernet Ports Using sysrepocfg
+
+
+Reading administrative status of interface *e1* of running configuration.
+
+```
+admin@switch:~$ sysrepocfg -X -fjson -d running -x "/ietf-interfaces:interfaces/interface[name='e1']/enabled"
+{
+  "ietf-interfaces:interfaces": {
+    "interface": [
+      {
+        "name": "e1",
+        "enabled": false
+      }
+    ]
+  }
+}
+```
+
+Setting the administrative status of interface *e1* of running configuration.
+
+```
+admin@switch:~$ cat file.json 
+{
+  "ietf-interfaces:interfaces": {
+    "interface": [
+      {
+        "name": "e1",
+        "enabled": true
+      }
+    ]
+  }
+}
+admin@switch:~$ sysrepocfg -E file.json -fjson -d running 
+admin@switch:~$
+```
+
+Verifying the change is applied.
+
+```
+admin@switch:~$ sysrepocfg -X -fjson -d running -x "/ietf-interfaces:interfaces/interface[name='e1']/enabled"
+{
+  "ietf-interfaces:interfaces": {
+    "interface": [
+      {
+        "name": "e1",
+        "enabled": true
+      }
+    ]
+  }
+}
+admin@switch:~$ 
+```
+
+
 [1]: discovery.md
 [2]: https://rauc.io/
 [3]: boot.md#system-upgrade
+[4]: https://netopeer.liberouter.org/doc/sysrepo/libyang1/html/sysrepocfg.html
