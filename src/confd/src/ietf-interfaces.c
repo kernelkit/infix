@@ -1126,8 +1126,9 @@ static int vlan_mcast_settings(sr_session_ctx_t *session, FILE *br, const char *
 	snooping = lydx_is_enabled(mcast, "snooping");
 	querier = querier_mode(lydx_get_cattr(mcast, "querier"));
 
-	fprintf(br, "vlan global set vid %d dev %s mcast_snooping %d\n",
+	fprintf(br, "vlan global set vid %d dev %s mcast_snooping %d",
 		vid, brname, snooping);
+	fprintf(br, " mcast_igmp_version 3 mcast_mld_version 2\n");
 
 	interval = atoi(lydx_get_cattr(mcast, "query-interval"));
 	ifname = find_vlan_interface(session, brname, vid);
@@ -1139,7 +1140,7 @@ static int vlan_mcast_settings(sr_session_ctx_t *session, FILE *br, const char *
 	return 0;
 }
 
-static int bridge_mcast_settings(FILE *ip, const char *brname, struct lyd_node *cif, int vlan_filtering)
+static int bridge_mcast_settings(FILE *ip, const char *brname, struct lyd_node *cif, int vlan_mcast)
 {
 	int interval, querier, snooping;
 	struct lyd_node *mcast;
@@ -1147,19 +1148,21 @@ static int bridge_mcast_settings(FILE *ip, const char *brname, struct lyd_node *
 	mcast = lydx_get_descendant(lyd_child(cif), "bridge", "multicast", NULL);
 	if (!mcast) {
 		mcast_querier(brname, 0, 0, 0);
-		return 0;
+		interval = snooping = querier = 0;
+	} else {
+		snooping = lydx_is_enabled(mcast, "snooping");
+		querier  = querier_mode(lydx_get_cattr(mcast, "querier"));
+		interval = atoi(lydx_get_cattr(mcast, "query-interval"));
 	}
 
-	snooping = lydx_is_enabled(mcast, "snooping");
-	querier = querier_mode(lydx_get_cattr(mcast, "querier"));
+	fprintf(ip, " mcast_vlan_snooping %d", vlan_mcast ? 1 : 0);
+	fprintf(ip, " mcast_snooping %d mcast_querier 0", vlan_mcast ? 1 : snooping);
+	if (snooping)
+		fprintf(ip, " mcast_igmp_version 3 mcast_mld_version 2");
+	if (interval)
+		fprintf(ip, " mcast_query_interval %d", interval * 100);
 
-	fprintf(ip, " mcast_vlan_snooping %d", vlan_filtering ? snooping : 0);
-	fprintf(ip, " mcast_snooping %d mcast_querier 0", snooping);
-
-	interval = atoi(lydx_get_cattr(mcast, "query-interval"));
-	fprintf(ip, " mcast_query_interval %d", interval * 100);
-
-	if (!vlan_filtering)
+	if (!vlan_mcast)
 		mcast_querier(brname, 0, querier, interval);
 	else
 		mcast_querier(brname, 0, 0, 0);
