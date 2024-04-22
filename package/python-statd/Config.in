@@ -1,6 +1,5 @@
 config BR2_PACKAGE_PYTHON_STATD
 	bool "python-statd"
 	select BR2_PACKAGE_HOST_PYTHON3
-	select BR2_PACKAGE_STATD
 	help
          Python helpers for statd.
