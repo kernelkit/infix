@@ -354,6 +354,7 @@
 #define XSWP(_n, _label, _mac_offs, _phy) \
 			port@_n { \
 				SWP_COMMON(_n, _label, _mac_offs, "usxgmii", _phy); \
+				managed = "in-band-status"; \
 			}
 
 #define GSWP(_n, _label, _mac_offs, _phy) \
