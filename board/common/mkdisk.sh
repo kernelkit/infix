@@ -1,6 +1,7 @@
 #!/bin/sh
-
 set -e
+
+. $BR2_EXTERNAL_INFIX_PATH/board/common/rootfs/etc/partition-uuid
 
 K=10
 M=20
@@ -157,6 +158,9 @@ genboot
 # Use awk over sed because replacement text may contain newlines,
 # which sed does not approve of.
 awk \
+   	  -vauxuuid=$AUX_UUID \
+	  -vprimaryuuid=$PRIMARY_UUID \
+          -vsecondaryuuid=$SECONDARY_UUID \
 	  -vtotal=$total \
 	  -vauxsize=$auxsize -vauxoffs=$auxoffs \
 	  -vimgsize=$imgsize \
@@ -174,6 +178,10 @@ awk \
 		sub(/@DISKIMG@/, diskimg);
 		sub(/@BOOTIMG@/, bootimg);
 		sub(/@BOOTPART@/, bootpart);
+		sub(/@AUXUUID@/, auxuuid);
+		sub(/@PRIMARYUUID@/, primaryuuid);
+		sub(/@SECONDARYUUID@/, secondaryuuid);
+
 	  }1' \
 	      < $common/genimage.cfg.in >$root/genimage.cfg
 

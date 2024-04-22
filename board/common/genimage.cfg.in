@@ -44,16 +44,19 @@ image @DISKIMG@ {
 	partition aux {
 		offset = @AUXOFFS@
 		image = "aux.ext4"
+		partition-uuid = @AUXUUID@
 	}
 
 	partition primary {
 		image = "rootfs.squashfs"
 		size = @IMGSIZE@
+		partition-uuid = @PRIMARYUUID@
 	}
 
 	partition secondary {
 		image = "rootfs.squashfs"
 		size = @IMGSIZE@
+		partition-uuid = @SECONDARYUUID@
 	}
 
 	partition cfg {
