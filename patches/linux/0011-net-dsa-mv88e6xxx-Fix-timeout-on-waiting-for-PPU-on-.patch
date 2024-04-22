@@ -1,7 +1,7 @@
 From 0bc6f19d18d7c0e374c824bcc86433b04210a378 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Tue, 12 Mar 2024 10:27:24 +0100
-Subject: [PATCH 11/24] net: dsa: mv88e6xxx: Fix timeout on waiting for PPU on
+Subject: [PATCH 11/25] net: dsa: mv88e6xxx: Fix timeout on waiting for PPU on
  6393X
 Organization: Addiva Elektronik
 
