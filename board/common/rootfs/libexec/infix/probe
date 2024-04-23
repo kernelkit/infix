@@ -234,7 +234,8 @@ def vpd_inject(out, vpds):
             break
 
 def probe_qemusystem(out):
-    ADMINHASH = "$5$mI/zpOAqZYKLC2WU$i7iPzZiIjOjrBF3NyftS9CCq8dfYwHwrmUK097Jca9A"
+    """Probe Qemu based test systems and 'make run'"""
+    admin_hash = "$5$mI/zpOAqZYKLC2WU$i7iPzZiIjOjrBF3NyftS9CCq8dfYwHwrmUK097Jca9A"
 
     qsys = QEMUSystem()
     vpds = qsys.vpds()
@@ -252,13 +253,14 @@ def probe_qemusystem(out):
        not out["vpd"]["product"]["available"]:
         # Virtual instance without VPD emulation, fallback to
         # admin/admin
-        out["factory-password-hash"] = ADMINHASH
+        out["factory-password-hash"] = admin_hash
 
     # Let others react to the fact that we are running in QEMU
-    subprocess.run("initctl -nbq cond set qemu".split())
+    subprocess.run("initctl -nbq cond set qemu".split(), check=False)
     return 0
 
 def probe_dtsystem(out):
+    """Probe DTS based system, expects a VPD in ONIE PROM format."""
     dtsys = DTSystem()
     vpds = dtsys.infix_vpds()
     dtsys.infix_usb_devices(out)
@@ -296,7 +298,8 @@ def main():
         return err
 
     if not out["factory-password-hash"]:
-        sys.stdout.write("\n\n\033[31mCRITICAL BOOTSTRAP ERROR\nNO FACTORY PASSWORD FOUND\033[0m\n\n")
+        sys.stdout.write("\n\n\033[31mCRITICAL BOOTSTRAP ERROR\n" +
+                         "NO FACTORY PASSWORD FOUND\033[0m\n\n")
         err = 1
 
     json.dump(out, open("/run/system.json", "w"))
