@@ -114,6 +114,169 @@ admin@example:/config/interface/br0/> set bridge vlans vlan 20 tagged br0
 > on top of the bridge, see section [VLAN Interfaces](#vlan-interfaces)
 > below for more on this topic.
 
+#### Multicast Filtering and Snooping
+
+Multicast filtering in the bridge is handled by the bridge itself.  It
+can filter both IP multicast and MAC multicast.  For IP multicast it
+also supports "snooping", i.e., IGMP and MLD, to automatically reduce
+the broadcast effects of multicast.  See the next section for a summary
+of the [terminology used](#terminology--abbreviations).
+
+> **Note:** currently there is no way to just enable multicast filtering
+> without also enabling snooping.  This may change in the future, in
+> which case a `filtering` enabled setting will be made available along
+> with the existing `snooping` setting.
+
+When creating your bridge you must decide if you need a VLAN filtering
+bridge or a plain bridge (see previous section).  Multicast filtering is
+supported for either, but take note that it must be enabled and set up
+per VLAN when VLAN filtering is enabled -- there are no global multicast
+settings in this operating mode.
+
+In the following example we have a regular 8-port bridge without VLAN
+filtering.  We focus on the multicast specific settings:
+
+```
+admin@example:/> configure
+admin@example:/config/> edit interface br0
+admin@example:/config/interface/br0/> set bridge multicast snooping
+admin@example:/config/interface/br0/> set ipv4 address 192.168.2.1 prefix-length 24
+admin@example:/config/interface/br0/> leave
+admin@example:/> copy running-config startup-config
+```
+
+Here we enable snooping and set a static IPv4 address so that the switch
+can take part in IGMP querier elections.  (MLD querier election
+currently not supported.)  We can inspect the current state:
+
+```
+admin@example:/> show ip multicast
+Multicast Overview
+Query Interval (default): 125 sec
+Router Timeout          : 255
+Fast Leave Ports        :
+Router Ports            :
+Flood Ports             : e0, e1, e2, e3, e4, e5, e6, e7
+
+Interface       VID  Querier                     State  Interval  Timeout  Ver
+br0                  192.168.2.1                    Up       125     None    3
+
+Bridge          VID  Multicast Group       Ports
+br0                  224.1.1.1             e3, e2
+br0                  ff02::6a              br0
+```
+
+It is a small LAN, so our bridge has already become the elected IGMP
+querier.  We see it is ours because the timeout is `None`, and we
+recognize our IP address.  We can also see two ports that have joined
+the same IPv4 multicast group, 224.1.1.1, and one join from Infix itself
+for the IPv6 group ff02::6a.
+
+Now, let's see what happens when we add another bridge, with VLAN
+filtering enabled.  We skip the boring parts about how to move ports
+e4-e7 to `br1` and assign them to VLANs, and again, focus on the
+multicast bits only:
+
+```
+admin@example:/> configure
+admin@example:/config/> edit interface br1
+admin@example:/config/interface/br1/> set bridge vlans vlan 1 multicast snooping
+admin@example:/config/interface/br1/> set bridge vlans vlan 2 multicast snooping
+admin@example:/config/interface/br1/> leave
+admin@example:/> copy running-config startup-config
+```
+
+Let's see what we get:
+
+```
+admin@example:/> show ip multicast
+Multicast Overview
+Query Interval (default): 125 sec
+Router Timeout          : 255
+Fast Leave Ports        : e5
+Router Ports            : e1, e2, e5, e6, e7
+Flood Ports             : e1, e2, e3, e4, e5, e6, e7, e8
+
+Interface       VID  Querier                     State  Interval  Timeout  Ver
+br0                  192.168.2.1                    Up       125     None    3
+br1               1  0.0.0.0                        Up       125     None    3
+br1               2  0.0.0.0                        Up       125     None    3
+
+Bridge          VID  Multicast Group       Ports
+br0                  224.1.1.1             e2
+br0                  ff02::fb              br0
+br0                  ff02::6a              br0
+br0                  ff02::1:ff00:0        br0
+br1               1  224.1.1.1             e5
+br1               2  224.1.1.1             e7
+br1               1  ff02::fb              br1
+br1               1  ff02::1:ff00:0        br1
+```
+
+In this setup we have a lot more going on.  Multiple multicast router
+ports have been detected, and behind the scenes someone has also added
+an IGMP/MLD fast-leave port.
+
+##### Terminology & Abbreviations
+
+ - **IGMP**: Internet Group Membership Protocol, multicast subscription
+   for IPv4, for details see [RFC3376][]
+ - **MLD**: Multicast Listener Discovery (Protocol), multicast
+   subscription for IPv6, for details see [RFC3810][]
+ - **Unknown/Unregistered multicast**: multicast groups that are *not*
+   in the multicast forwarding database (MDB)
+ - **Known/Registered multicast**: multicast groups that *are* in the
+   multicast forwarding database (MDB)
+ - **MDB**: the multicast forwarding database, consists of filters for
+   multicast groups, directing where multicast is allowed to egress.  A
+   filter entry consists of a group and a port list.  The bridge filters
+   with a unique database per VLAN, in the same was as the unicast FDB
+ - **Join/Leave**: the terminology used in earlier versions of the two
+   protocols to subscribe and unsubscribe to a multicast group.  For
+   more information, see *Membership Report*
+ - **Membership Report** A membership report is sent by end-devices and
+   forwarded by switches to the elected querier on the LAN.  They
+   consist of multiple "join" and "leave" operations on groups.  They
+   can also, per group, list which senders to allow or block.  Switches
+   usually only support the group subscription, and even more common
+   also only support filtering on the MAC level[^3]
+ - **Querier election**: the process of determining who is the elected
+   IGMP/MLD querier on a LAN.  Lowest numerical IP address wins, the
+   special address 0.0.0.0 (proxy querier) never wins
+ - **Proxy querier**: when no better querier exists on a LAN, one or
+   more devices can send proxy queries with source address 0.0.0.0 (or
+   :: for IPv6).  See **Query Interval**, below, why this is a good
+   thing
+ - **Query interval**: the time in seconds between two queries from an
+   IGMP/MLD querier.  It is not uncommon that end-devices do not send
+   their membership reports unless they first hear a query
+ - **Fast Leave**: set on a bridge port to ensure multicast is pruned as
+   quickly as possible when a "leave" membership report is received.  In
+   effect, this option marks the port as directly connected to an
+   end-device.  When not set (default), a query with timeout is first
+   sent to ensure no unintentional loss of multicast is incurred
+ - **Router port**: can be both configured statically and detected at
+   runtime based on connected devices, usually multicast routers.  On
+   a router port *all* multicast is forwarded, both known and unknown
+ - **Flood port**: set on a bridge port (default: enabled) to ensure
+   all *unknown* multicast is forwarded
+ - **Router timeout**: the time in seconds until a querier is deemed to
+   have been lost and another device (switch/router) takes over.  In the
+   tables shown above, a *None* timeout is declared when the current
+   device is the active querier
+
+> **Note:** the reason why multicast flooding is enabled by default is
+> to ensure safe co-existence with MAC multicast, which is very common
+> in industrial networks.  It also allows end devices that do not know
+> of IGMP/MLD to communicate over multicast as long as the group they
+> have chosen is not used by other IGMP/MLD aware devices on the LAN.
+>
+> As soon as an IGMP/MLD membership report to "join" a group is received
+> the group is added to the MDB and forwarding to other ports stop.  The
+> only exception to this rule is multicast router ports.
+
+[RFC3376]: https://www.rfc-editor.org/rfc/rfc3376.html
+[RFC3810]: https://www.rfc-editor.org/rfc/rfc3810.html
 
 ### VLAN Interfaces
 
@@ -634,3 +797,7 @@ currently supported, namely `ipv4` and `ipv6`.
 [^2]: Link-local IPv6 addresses are implicitly enabled when enabling
     IPv6.  IPv6 can be enabled/disabled per interface in the
     [ietf-ip][2] YANG model.
+[^3]: For example, IPv4 groups are mapped to MAC multicast addresses by
+    mapping the low-order 23-bits of the IP address in the low-order 23
+    bits of the Ethernet address 01:00:5E:00:00:00.  Meaning, more than
+	one IP multicast group maps to the same MAC multicast group.
