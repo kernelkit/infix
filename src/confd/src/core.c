@@ -4,7 +4,7 @@
 
 #include "core.h"
 
-static struct confd confd;
+struct confd confd;
 
 uint32_t core_hook_prio(void)
 {
