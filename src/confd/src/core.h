@@ -33,6 +33,9 @@
 #define CB_PRIO_PRIMARY   65535
 #define CB_PRIO_PASSIVE   65000
 
+extern struct confd confd;
+
+
 static inline void print_val(sr_val_t *val)
 {
 	char *str;

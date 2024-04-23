@@ -4,7 +4,7 @@ Change Log
 All notable changes to the project are documented in this file.
 
 
-[v24.03.0][UNRELEASED]
+[v24.04.0][UNRELEASED]
 -------------------------
 
 Please note, as of this release the Infix Classic variant has been
@@ -63,6 +63,10 @@ separate project.  Going forward Infix' focus is entirely on NETCONF.
 - Fix #328: when setting up a VLAN filtering bridge, the PVID for bridge
   ports defaulted to 1, making it impossible to set up "tagged-only"
   ports which drop ingressing untagged traffic
+- Fix #357: EUI-64 based IPv6 autoconf address on bridges seem to be
+  randomized.  Problem caused by kernel setting a random MAC before any
+  bridge port is added.  Fixed by using the device's base MAC address on
+  bridge interfaces.  Possible to override using `phys-address` option
 - Fix #358: MAC address no longer shown for bridge interfaces in CLI
   `show interfaces` command
 - Fix #366: static routes from container host interfaces do not work.
@@ -774,6 +778,7 @@ Supported YANG models in addition to those used by sysrepo and netopeer:
 
 [buildroot]:  https://buildroot.org/
 [UNRELEASED]: https://github.com/kernelkit/infix/compare/v24.02.0...HEAD
+[v24.04.0]:   https://github.com/kernelkit/infix/compare/v24.02.0...v24.04.0
 [v24.02.0]:   https://github.com/kernelkit/infix/compare/v23.11.0...v24.02.0
 [v23.11.0]:   https://github.com/kernelkit/infix/compare/v23.10.0...v23.11.0
 [v23.10.0]:   https://github.com/kernelkit/infix/compare/v23.09.0...v23.10.0

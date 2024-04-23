@@ -1235,15 +1235,37 @@ static int netdag_gen_bridge(sr_session_ctx_t *session, struct dagger *net, stru
 	vlan_filtering = bridge_vlan_settings(cif, &proto, &vlan_mcast);
 	fwd_mask = bridge_fwd_mask(cif);
 
+	fprintf(ip, "link %s dev %s", op, brname);
+	/*
+	 * Must set base mac on add to prevent kernel from seeding ipv6
+	 * addrgenmode eui64 with random mac, issue #357.
+	 */
+	if (add) {
+		const char *mac;
+
+		mac = lydx_get_cattr(cif, "phys-address");
+		if (!mac) {
+			struct json_t *j;
+
+			j = json_object_get(confd.root, "mac-address");
+			if (j)
+				mac = json_string_value(j);
+		}
+		if (mac)
+			fprintf(ip, " address %s", mac);
+
+		/* on failure, fall back to kernel's random mac */
+	}
+
 	/*
 	 * Issue #198: we require explicit VLAN assignment for ports
 	 *             when VLAN filtering is enabled.  We strongly
 	 *             believe this is the only sane way of doing it.
 	 * Issue #310: malplaced 'vlan_default_pvid 0'
 	 */
-	fprintf(ip, "link %s dev %s type bridge group_fwd_mask %d mcast_flood_always 1"
+	fprintf(ip, " type bridge group_fwd_mask %d mcast_flood_always 1"
 		" vlan_filtering %d vlan_default_pvid 0",
-		op, brname, fwd_mask, vlan_filtering ? 1 : 0);
+		fwd_mask, vlan_filtering ? 1 : 0);
 
 	if ((err = bridge_mcast_settings(ip, brname, cif, vlan_mcast)))
 		goto out;
