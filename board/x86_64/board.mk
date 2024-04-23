@@ -3,7 +3,9 @@ INFIX_TESTS ?= $(test-dir)/case/all.yaml
 
 test-env = $(test-dir)/env \
 	-f $(BINARIES_DIR)/infix-x86_64.img \
-	-p $(BINARIES_DIR)/infix-x86_64.pkg \
+	-f $(BINARIES_DIR)/infix-x86_64-disk.img \
+	-f $(BINARIES_DIR)/OVMF.fd \
+        -p $(BINARIES_DIR)/infix-x86_64.pkg \
 	$(1) $(2)
 
 test-env-qeneth = $(call test-env,-q $(test-dir)/virt/quad,$(1))
