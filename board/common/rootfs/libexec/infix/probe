@@ -234,6 +234,33 @@ def vpd_inject(out, vpds):
             out["factory-password-hash"] = pwhash
             break
 
+def qemu_base_mac():
+    """Find MAC address of first non-loopback interface, subtract with 1"""
+    base_path = '/sys/class/net'
+    interfaces = []
+
+    for iface in os.listdir(base_path):
+        if iface == 'lo':
+            continue
+        try:
+            # pylint: disable=invalid-name
+            with open(os.path.join(base_path, iface, 'address'), 'r', encoding='ascii') as f:
+                mac = f.read().strip()
+            interfaces.append((mac, iface))
+        except FileNotFoundError:
+            continue
+
+    if interfaces:
+        interfaces.sort()
+        mac  = interfaces[0][0]
+        mac  = int(mac.replace(':', ''), 16)
+        mac -= 1
+        mac %= 1 << 48
+        mac  = ':'.join(f"{(mac >> 8 * i) & 0xff:02x}" for i in range(5, -1, -1))
+        return mac
+
+    return None
+
 def probe_qemusystem(out):
     """Probe Qemu based test systems and 'make run'"""
     admin_hash = "$5$mI/zpOAqZYKLC2WU$i7iPzZiIjOjrBF3NyftS9CCq8dfYwHwrmUK097Jca9A"
@@ -246,6 +273,7 @@ def probe_qemusystem(out):
     for (attr, default) in (
             ("vendor", "QEMU"),
             ("product-name", "VM"),
+            ("mac-address", qemu_base_mac()),
     ):
         if not out[attr]:
             out[attr] = default

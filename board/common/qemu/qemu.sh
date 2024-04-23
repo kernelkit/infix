@@ -201,7 +201,7 @@ net_args()
 	echo -n "-netdev bridge,id=e0,br=$CONFIG_QEMU_NET_BRIDGE_DEV "
 	net_dev_args 0
     elif [ "$CONFIG_QEMU_NET_TAP" = "y" ]; then
-	for i in $(seq 0 $(($CONFIG_QEMU_NET_TAP_N - 1))); do
+	for i in $(seq 1 $(($CONFIG_QEMU_NET_TAP_N))); do
 	    echo -n "-netdev tap,id=e$i,ifname=qtap$i "
 	    net_dev_args $i
 	done
