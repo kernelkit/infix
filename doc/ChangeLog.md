@@ -357,6 +357,10 @@ future releases.
 - Fix #349: minor changes to `bridge-port` settings, like setting `pvid`
   when you forget it, did not take without a reboot
 - Fix #353: impossible to remove bridge port with `no bridge-port`
+- Fix #357: EUI-64 based IPv6 autoconf address on bridges seem to be
+  randomized.  Problem caused by kernel setting a random MAC before any
+  bridge port is added.  Fixed by using the device's base MAC address on
+  bridge interfaces.  Possible to override using `phys-address` option
 - Fix #358: MAC address no longer shown for bridge interfaces in CLI
   `show interfaces` command
 - Fix #365: not possible to run `ping` from container
