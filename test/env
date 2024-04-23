@@ -7,7 +7,7 @@ testdir=$(dirname "$(readlink -f "$0")")
 usage()
 {
     cat <<EOF
-usage: test/env [<OPTS>]    -f <IMAGE> -q <QENETH-DIR> <COMMAND> [<ARGS>...]
+usage: test/env [<OPTS>] -f <IMAGE> -q <QENETH-DIR> <COMMAND> [<ARGS>...]
        test/env [<OPTS>] -C -t <TOPOLOGY>   <COMMAND> [<ARGS>...]
 
   Run <COMMAND> in a pre-packaged container with all the packages
@@ -24,8 +24,9 @@ usage: test/env [<OPTS>]    -f <IMAGE> -q <QENETH-DIR> <COMMAND> [<ARGS>...]
       namespaces
 
     -f <IMAGE>
-      Infix image to test. When starting a qeneth network, this image is
-      used on all nodes.
+       Specify images required for test, squashfs image is required
+       if testing with kernel. bios and disk image is required if
+       testing with bios.
 
     -h
       Show this help message
@@ -54,18 +55,19 @@ EOF
 start_topology()
 {
     qenethdir="$1"
-    imgfile="$2"
+    files="$*"
 
+    [ "$files" ] || { true && return; }
     [ "$qenethdir" ] || { true && return; }
 
     rm -rf "$envdir/qeneth"
     cp -a "$qenethdir" "$envdir/qeneth"
-    if [ "$imgfile" ]; then
-	imgname="$(basename "$imgfile")"
-	imgfile=$(readlink -f "$imgfile")
-
-	ln -sf "$imgfile" "$envdir/qeneth/$imgname"
-    fi
+    # Map files in to qeneth
+    for f in $files; do
+	filename="$(basename "$f")"
+	file=$(readlink -f "$f")
+	ln -sf "$file" "$envdir/qeneth/$filename"
+    done
 
     (cd "$envdir/qeneth/" && $qeneth generate && $qeneth start)
     INFAMY_ARGS="$INFAMY_ARGS $envdir/qeneth/topology.dot"
@@ -107,6 +109,7 @@ name()
 # Global options
 containerize=yes
 [ -c /dev/kvm ] && kvm="--device=/dev/kvm"
+files=
 
 while getopts "cCf:hiKp:q:t:" opt; do
     case ${opt} in
@@ -120,7 +123,7 @@ while getopts "cCf:hiKp:q:t:" opt; do
 	    containerize=
 	    ;;
 	f)
-	    imgfile="$OPTARG"
+	    files="$files $OPTARG"
 	    ;;
 	h)
 	    usage && exit 0
@@ -190,7 +193,7 @@ fi
 . "$envdir/bin/activate"
 export PYTHONPATH="$testdir"
 INFAMY_ARGS="$INFAMY_ARGS -y $envdir/yangdir"
-start_topology "$qenethdir" "$imgfile"
+start_topology "$qenethdir" "$files"
 [ "$topology" ] && INFAMY_ARGS="$INFAMY_ARGS $topology"
 export INFAMY_ARGS
 
