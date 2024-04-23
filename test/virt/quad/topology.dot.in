@@ -17,7 +17,7 @@ graph "quad" {
 	];
 
         dut1 [
-	    label="{ <eth0> eth0 | <eth1> eth1 | <eth2> eth2 } | dut1 | { <eth3> eth3 | <eth4> eth4 | <eth5> eth5 | <eth6> eth6 | <eth7> eth7}",
+	    label="{ <e1> e1 | <e2> e2 | <e3> e3 } | dut1 | { <e4> e4 | <e5> e5 | <e6> e6 | <e7> e7 | <e8> e8}",
 	    pos="10,18!",
 	    kind="infix",
 	    qn_console=9001,
@@ -25,7 +25,7 @@ graph "quad" {
 	    qn_usb="dut1.usb"
 	    ];
         dut2 [
-	    label="{ <eth0> eth0 | <eth1> eth1 | <eth2> eth2 } | dut2 | { <eth3> eth3 | <eth4> eth4 | <eth5> eth5  | <eth6> eth6 | <eth7> eth7}",
+	    label="{ <e1> e1 | <e2> e2 | <e3> e3 } | dut2 | { <e4> e4 | <e5> e5 | <e6> e6  | <e7> e7 | <e8> e8}",
 	    pos="10,12!",
 	    kind="infix",
 	    qn_console=9002,
@@ -33,7 +33,7 @@ graph "quad" {
 	    qn_usb="dut2.usb"
 	];
 	dut3 [
-	    label="{ <eth0> eth0 | <eth1> eth1 | <eth2> eth2 } | dut2 | { <eth3> eth3 | <eth4> eth4 | <eth5> eth5  | <eth6> eth6 | <eth7> eth7}",
+	    label="{ <e1> e1 | <e2> e2 | <e3> e3 } | dut2 | { <e4> e4 | <e5> e5 | <e6> e6  | <e7> e7 | <e8> e8}",
 	    pos="10,12!",
 	    kind="infix",
 	    qn_console=9003,
@@ -42,7 +42,7 @@ graph "quad" {
 	];
 
 	dut4 [
-	    label="{ <eth0> eth0 | <eth1> eth1 | <eth2> eth2 } | dut2 | { <eth3> eth3 | <eth4> eth4 | <eth5> eth5  | <eth6> eth6 | <eth7> eth7}",
+	    label="{ <e1> e1 | <e2> e2 | <e3> e3 } | dut2 | { <e4> e4 | <e5> e5 | <e6> e6  | <e7> e7 | <e8> e8}",
 	    pos="10,12!",
 	    kind="infix",
 	    qn_console=9004,
@@ -50,33 +50,33 @@ graph "quad" {
 	    qn_usb="dut4.usb"
 	];
 
-	host:d1a -- dut1:eth0 [kind=mgmt]
-	host:d1b -- dut1:eth1
-	host:d1c -- dut1:eth2
-	host:d1d -- dut1:eth3
+	host:d1a -- dut1:e1 [kind=mgmt]
+	host:d1b -- dut1:e2
+	host:d1c -- dut1:e3
+	host:d1d -- dut1:e4
 
-	host:d2a -- dut2:eth0 [kind=mgmt]
-	host:d2b -- dut2:eth1
-	host:d2c -- dut2:eth2
-	host:d2d -- dut2:eth3
+	host:d2a -- dut2:e1 [kind=mgmt]
+	host:d2b -- dut2:e2
+	host:d2c -- dut2:e3
+	host:d2d -- dut2:e4
 
-	host:d3a -- dut3:eth0 [kind=mgmt]
-	host:d3b -- dut3:eth1
-	host:d3c -- dut3:eth2
-	host:d3d -- dut3:eth3
+	host:d3a -- dut3:e1 [kind=mgmt]
+	host:d3b -- dut3:e2
+	host:d3c -- dut3:e3
+	host:d3d -- dut3:e4
 
-	host:d4a -- dut4:eth0 [kind=mgmt]
-	host:d4b -- dut4:eth1
-	host:d4c -- dut4:eth2
-	host:d4d -- dut4:eth3
+	host:d4a -- dut4:e1 [kind=mgmt]
+	host:d4b -- dut4:e2
+	host:d4c -- dut4:e3
+	host:d4d -- dut4:e4
 
 	# Ring
-	dut1:eth4 -- dut2:eth5
-	dut2:eth4 -- dut3:eth5
-	dut3:eth4 -- dut4:eth5
-	dut4:eth4 -- dut1:eth5
+	dut1:e5 -- dut2:e6
+	dut2:e5 -- dut3:e6
+	dut3:e5 -- dut4:e6
+	dut4:e5 -- dut1:e6
 
 	# Cross-links
-	dut3:eth6 -- dut1:eth6
-	dut2:eth6 -- dut4:eth6
+	dut3:e7 -- dut1:e7
+	dut2:e7 -- dut4:e7
 }
