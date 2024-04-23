@@ -54,11 +54,10 @@ choice
 
 config QEMU_CONSOLE_VIRTIO
      bool "Virtio (hvc0)"
-     depends on QEMU_LOADER_KERNEL
 
 config QEMU_CONSOLE_SERIAL
      bool "Serial (ttyS0/ttyAMA0)"
-
+     depends on !QEMU_LOADER_OVMF
 endchoice
 
 config QEMU_MACHINE
