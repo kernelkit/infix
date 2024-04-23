@@ -3,12 +3,13 @@
 import importlib.machinery
 import json
 import os
+import shutil
 import struct
 import subprocess
 import sys
 
 onieprom = importlib.machinery.SourceFileLoader("onieprom","/bin/onieprom").load_module()
-
+SYSTEM_JSON   = "/run/system.json"
 KKIT_IANA_PEM = 61046
 
 class DTSystem:
@@ -302,8 +303,11 @@ def main():
                          "NO FACTORY PASSWORD FOUND\033[0m\n\n")
         err = 1
 
-    json.dump(out, open("/run/system.json", "w"))
-    os.chmod("/run/system.json", 0o444)
+    os.umask(0o337)
+    # pylint: disable=invalid-name
+    with open(SYSTEM_JSON, "w", encoding="ascii") as f:
+        json.dump(out, f)
+    shutil.chown(SYSTEM_JSON, user="root", group="wheel")
     return err
 
 if __name__ == "__main__":
