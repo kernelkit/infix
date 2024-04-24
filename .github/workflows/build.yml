@@ -15,11 +15,6 @@ jobs:
         platform: [aarch64, x86_64]
       fail-fast: false
     steps:
-      - name: Maintenance
-        run: |
-          docker image prune -af
-          docker volume prune -f
-          docker container prune -f
       - uses: actions/checkout@v4
       - name: Set Build Variables
         id: vars
