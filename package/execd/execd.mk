@@ -22,7 +22,7 @@ EXECD_CONF_OPTS = --prefix= --disable-silent-rules
 define EXECD_INSTALL_EXTRA
 	cp $(EXECD_PKGDIR)/execd.conf  $(FINIT_D)/available/
 	ln -sf ../available/execd.conf $(FINIT_D)/enabled/execd.conf
-	cp $(EXECD_PKGDIR)/tmpfiles.conf $(TARGET_DIR)/etc/tmpfiles.d/execd.conf
+	cp $(EXECD_PKGDIR)/tmpfiles.conf $(TARGET_DIR)/lib/tmpfiles.d/execd.conf
 endef
 EXECD_TARGET_FINALIZE_HOOKS += EXECD_INSTALL_EXTRA
 
