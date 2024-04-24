@@ -52,14 +52,16 @@ jobs:
           make x86_64_defconfig
 
       - name: Unit Test
-        run: make test-unit
+        run: |
+          make test-unit
 
       - name: Build
         run: |
           make -j
+
       - name: Prepare Artifact
         run: |
-          cd output
+          cd output/
           mv images ${{ steps.vars.outputs.dir }}
           ln -s ${{ steps.vars.outputs.dir }} images
           tar cfz ${{ steps.vars.outputs.tgz }} ${{ steps.vars.outputs.dir }}
@@ -69,7 +71,8 @@ jobs:
           path: output/${{ steps.vars.outputs.tgz }}
 
       - name: Regression Test
-        run: make test-qeneth
+        run: |
+          make test
 
       - name: Publish Test Result
         # Ensure this runs even if Regression Test fails
