@@ -337,6 +337,8 @@ admin@infix.local%eth0's password: *****
 [sysrepocfg][4] can be used to interact with the YANG models when logged
 in to infix. Thus, *set config*, *read config*, *read status* and
 *RPC* can be conducted using sysrepocfg for supported YANG models. 
+It is possible to make configuration changes by operating on the
+*startup* database.
 
 See [sysrepocfg][4] for information. Examples below will utilize 
 
@@ -452,16 +454,80 @@ admin@switch:~$ sysrepocfg -E file.json -fjson -d running
 admin@switch:~$
 ```
 
-Verifying the change is applied.
+### Enable/Disable DHCPv4 client
+
+
+Enabling DHCPv4 client on interface *e0*, with current default options.
 
 ```
-admin@switch:~$ sysrepocfg -X -fjson -d running -x "/ietf-interfaces:interfaces/interface[name='e1']/enabled"
+admin@switch:~$ cat file.json 
 {
-  "ietf-interfaces:interfaces": {
-    "interface": [
+  "infix-dhcp-client:dhcp-client": {
+    "enabled": true,
+    "client-if": [
       {
-        "name": "e1",
-        "enabled": true
+        "if-name": "e0",
+        "option": [
+          {
+            "name": "subnet"
+          },
+          {
+            "name": "router"
+          },
+          {
+            "name": "dns"
+          },
+          {
+            "name": "hostname"
+          },
+          {
+            "name": "domain"
+          },
+          {
+            "name": "broadcast"
+          },
+          {
+            "name": "ntpsrv"
+          }
+        ]
+      }
+    ]
+  }
+}
+admin@switch:~$ sysrepocfg -E file.json -fjson -d running
+admin@switch:~$ 
+```
+
+Disabling DHCPv4 client. 
+
+```
+admin@switch:~$ cat file.json 
+{
+  "infix-dhcp-client:dhcp-client": {
+    "enabled": false
+  }
+}
+admin@switch:~$ sysrepocfg -E file.json -fjson -d running
+admin@switch:~$ 
+```
+
+Configuration for client interface *e0* remains, but does not apply as
+DHCPv4 is disabled. 
+
+```
+admin@switch:~$ sysrepocfg -X -fjson -d running -x "/infix-dhcp-client:dhcp-client" 
+{
+  "infix-dhcp-client:dhcp-client": {
+    "enabled": false,
+    "client-if": [
+      {
+        "if-name": "e0",
+        "option": [
+          {
+            "name": "subnet"
+          },
+...
+        ]
       }
     ]
   }
@@ -469,6 +535,142 @@ admin@switch:~$ sysrepocfg -X -fjson -d running -x "/ietf-interfaces:interfaces/
 admin@switch:~$ 
 ```
 
+To fully remove the DHCPv4 client configuration or a specific
+*client-if* with sysrepocfg, one would need to read out the full
+configuration, remove relevant parts and read back.
+
+
+### Enable/Disable IPv6
+
+IPv6 is typically enabled on all interfaces by default. The example
+below shows IPv4 and IPv6 addresses assigned on *e0*.
+
+```
+admin@switch:~$ ip addr show dev e0
+2: e0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast state UP group default qlen 1000
+    link/ether 02:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff
+    inet 10.0.2.15/24 scope global proto dhcp e0
+       valid_lft forever preferred_lft forever
+    inet6 fec0::ff:fe00:0/64 scope site dynamic mngtmpaddr proto kernel_ra 
+       valid_lft 86380sec preferred_lft 14380sec
+    inet6 fe80::ff:fe00:0/64 scope link proto kernel_ll 
+       valid_lft forever preferred_lft forever
+admin@switch:~$
+```
+
+IPv6 is enabled/disabled per interface. The example below disables IPv6
+on interface *e0*.
+
+```
+admin@switch:~$ cat file.json 
+{
+  "ietf-interfaces:interfaces": {
+    "interface": [
+      {
+        "name": "e0",
+        "ietf-ip:ipv6": {
+          "enabled": false
+        }
+      }
+    ]
+  }
+}
+admin@switch:~$ sysrepocfg -E file.json -fjson -d running 
+admin@switch:~$ ip addr show dev e0
+2: e0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast state UP group default qlen 1000
+    link/ether 02:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff
+    inet 10.0.2.15/24 scope global proto dhcp e0
+       valid_lft forever preferred_lft forever
+admin@switch:~$ 
+```
+
+### Backup Configuration Using sysrepocfg And scp
+
+Displaying running or startup configuration is possible with
+`sysrepocfg -X`, as shown below.
+
+```
+admin@switch:~$ sysrepocfg -X -fjson -d running
+{
+  "ieee802-dot1ab-lldp:lldp": {
+    "infix-lldp:enabled": true
+...
+admin@switch:~$
+```
+
+An example for backing up startup configuration from a remote PC.
+
+```
+pc:-$> ssh admin@switch.local 'sysrepocfg -X -fjson -d startup > /tmp/backup.json'
+admin@switch.local's password: 
+pc:-$> scp admin@switch.local:/tmp/backup.json .
+admin@switch.local's password: 
+pc:-$>
+```
+
+Or possibly skip intermediate storage of file
+```
+pc:-$> ssh admin@switch.local 'sysrepocfg -X -fjson -d startup' > backup.json
+admin@switch.local's password: 
+pc:-$>
+```
+
+A final example is to only use `scp`, which works to backup the
+startup configuration.
+
+```
+pc:-$> scp admin@switch.local:/cfg/startup-config.cfg backup.json
+admin@switch.local's password: 
+pc:-$>
+```
+
+### Restore Configuration Using sysrepocfg and ssh/scp
+
+To restore a configuration from backup, we use `sysrepocfg -I FILE`
+(import) command. `sudo` privileges is required.
+
+The example below imports the backup configuration to startup, and
+reboots the unit.
+
+```
+pc:-$> scp backup.json admin@switch.local:/tmp/ 
+admin@switch.local's password:    
+pc:-$> ssh admin@switch.local 'sudo sysrepocfg -I /tmp/backup.json -fjson -d startup'
+admin@switch.local's password: 
+pc:-$ ssh admin@switch.local 'reboot'
+admin@switch.local's password: 
+Connection to switch.local closed by remote host.
+pc:-$ 
+```
+
+Things to note:
+
+- Writing to /cfg/startup-config.cfg requires `sudo` privileges, thus
+  `scp backup.json admin@switch.local/cfg/startup-config.cfg` would
+  not work. 
+- admin login credentials (hash) are stored as part of the
+  configuration file. When replacing a switch and applying the backed
+  up configuration from the former switch, the password on the
+  replacement unit will also change.
+
+### Copy Running to Startup Using sysrepocfg
+
+The following command reads out the running config via `sysrepocfg -X`
+and writes the result to the startup configuration.
+
+```
+admin@switch:~$ sudo sysrepocfg -X -fjson -d running > /cfg/startup-config.cfg
+admin@switch:~$
+```
+
+An alternative is to write it to a temporary file, and use `sysrepocfg
+-I` to import it to startup.
+
+```
+admin@switch:~$ sysrepocfg -X -fjson -d running > /tmp/running.json
+admin@switch:~$ sudo sysrepocfg -I /tmp/running.json -fjson -d startup
+admin@switch:~$
+```
 
 [1]: discovery.md
 [2]: https://rauc.io/
