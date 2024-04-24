@@ -11,7 +11,7 @@ CONFD_SITE = $(BR2_EXTERNAL_INFIX_PATH)/src/confd
 CONFD_LICENSE = BSD-3-Clause
 CONFD_LICENSE_FILES = LICENSE
 CONFD_REDISTRIBUTE = NO
-CONFD_DEPENDENCIES = augeas jansson libite sysrepo libsrx
+CONFD_DEPENDENCIES = augeas jansson libite sysrepo libsrx libglib2
 CONFD_AUTORECONF = YES
 define CONFD_CONF_ENV
 CFLAGS="$(INFIX_CFLAGS)"
