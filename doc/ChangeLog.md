@@ -76,6 +76,9 @@ separate project.  Going forward Infix' focus is entirely on NETCONF.
   (firewalled and NAT:ed, hidden from the rest of the network)
 - Fix #385: segfault in helper function when disabling the DHCP client
   using `no dhcp-client` from the CLI
+- Fix #406: an overly restrictive `when` expression in the bridge YANG
+  model prevented users from adding VLAN interfaces as bridge ports.
+  E.g., creating interface `eth0.10` and adding that to `br0`
 
 
 [v24.02.0][] - 2024-03-01

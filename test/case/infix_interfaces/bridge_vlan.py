@@ -1,23 +1,26 @@
 #!/usr/bin/env python3
+#           ¦                              ¦
+#           ¦       vlan10 IP:10.0.0.2     ¦        br0  IP:10.0.0.3
+#           ¦       /                      ¦       /
+#           ¦     br0  <-- VLAN filtering  ¦     e0.10
+#           ¦   u/  \t                     ¦    /
+#   PC ------- e0    e1 ---------------------- e0
+# PING -->  ¦             dut1             ¦            dut2
 #
-#                vlan10 IP:10.0.0.2
-#                /
-# PING -->     br0  <-- VLAN filtering enabled
-#             /
-#   PC ---- e0
-#
-
 import infamy
 
 with infamy.Test() as test:
     with test.step("Initialize"):
-        env = infamy.Env(infamy.std_topology("1x2"))
-        target = env.attach("target", "mgmt")
+        env  = infamy.Env(infamy.std_topology("2x2"))
+        dut1 = env.attach("target1", "mgmt")
+        dut2 = env.attach("target2", "mgmt")
 
-    with test.step("Configure single vlan-filtering bridge with vlan10 subinterface @ IP 10.0.0.2"):
-        _, tport = env.ltop.xlate("target", "data")
+    with test.step("Topology setup"):
+        _, dut1_e0 = env.ltop.xlate("target1", "data")
+        _, dut1_e1 = env.ltop.xlate("target1", "target2")
+        _, dut2_e0 = env.ltop.xlate("target2", "target1")
 
-        target.put_config_dict("ietf-interfaces", {
+        dut1.put_config_dict("ietf-interfaces", {
             "interfaces": {
                 "interface": [
                     {
@@ -30,8 +33,8 @@ with infamy.Test() as test:
                                 "vlan": [
                                     {
                                         "vid": 10,
-                                        "untagged": [ tport ],
-                                        "tagged":   [ "br0" ]
+                                        "untagged": [ dut1_e0 ],
+                                        "tagged":   [ "br0", dut1_e1 ]
                                     }
                                 ]
                             }
@@ -55,19 +58,63 @@ with infamy.Test() as test:
                         }
                     },
                     {
-                        "name": tport,
+                        "name": dut1_e0,
                         "enabled": True,
                         "infix-interfaces:bridge-port": {
                             "pvid": 10,
                             "bridge": "br0"
                         }
                     },
+                    {
+                        "name": dut1_e1,
+                        "enabled": True,
+                        "infix-interfaces:bridge-port": {
+                            "pvid": 10,
+                            "bridge": "br0"
+                        }
+                    }
                 ]
             }
         })
 
-    with test.step("Ping vlan10 subinterface 10.0.0.2 from host:data with IP 10.0.0.1"):
-        _, hport = env.ltop.xlate("host", "data")
+        dut2.put_config_dict("ietf-interfaces", {
+            "interfaces": {
+                "interface": [
+                    {
+                        "name": "br0",
+                        "type": "infix-if-type:bridge",
+                        "enabled": True,
+                        "ipv4": {
+                            "address": [
+                                {
+                                    "ip": "10.0.0.3",
+                                    "prefix-length": 24,
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        "name": dut2_e0,
+                        "enabled": True
+                    },
+                    {
+                        "name": "e0.10",
+                        "type": "infix-if-type:vlan",
+                        "enabled": True,
+                        "vlan": {
+                            "lower-layer-if": dut2_e0,
+                            "id": 10,
+                        },
+                        "infix-interfaces:bridge-port": {
+                            "bridge": "br0"
+                        }
+                    }
+                ]
+            }
+        })
+
+    with test.step("Connectivity check"):
+        _, hport = env.ltop.xlate("host", "data1")
 
         with infamy.IsolatedMacVlan(hport) as ns:
             pingtest = ns.runsh("""
@@ -77,6 +124,7 @@ with infamy.Test() as test:
             ip addr add 10.0.0.1/24 dev iface
 
             ping -c1 -w5 10.0.0.2 || exit 1
+            ping -c1 -w5 10.0.0.3 || exit 1
             """)
 
         if pingtest.returncode:
