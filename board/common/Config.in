@@ -18,7 +18,27 @@ endchoice
 config SIGN_KEY
 	string "Signing key"
 	depends on SIGN_ENABLED
-	default "${BR2_EXTERNAL_INFIX_PATH}/board/common/dev-key" if SIGN_SRC_DIR
+	default "${BR2_EXTERNAL_INFIX_PATH}/board/common/signing-keys/development"  if SIGN_SRC_DIR
+
+menuconfig TRUSTED_KEYS
+	bool "Trusted keys for image"
+	depends on SIGN_ENABLED
+	help
+	 Keys that will be accepted for this image
+
+
+config TRUSTED_KEYS_DEVELOPMENT
+	bool "Development key"
+	depends on TRUSTED_KEYS
+
+config TRUSTED_KEYS_DEVELOPMENT_PATH
+	string
+	depends on TRUSTED_KEYS_DEVELOPMENT
+	default "${BR2_EXTERNAL_INFIX_PATH}/board/common/signing-keys/development/infix.crt"
+
+config TRUSTED_KEYS_EXTRA_PATH
+	string "Path to extra keys to include in image"
+	depends on TRUSTED_KEYS
 
 menuconfig DISK_IMAGE
 	bool "Disk image"
@@ -140,4 +160,3 @@ config FIT_ARCH
 config FIT_KERNEL_LOAD_ADDR
 	string "Kernel load address"
 	depends on FIT_IMAGE
-
