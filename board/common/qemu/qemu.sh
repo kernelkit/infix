@@ -117,7 +117,7 @@ rootfs_args()
 	echo -n "-device sd-card,drive=mmc "
 	echo -n "-drive id=mmc,file=$CONFIG_QEMU_ROOTFS,if=none,format=raw "
     elif [ "$CONFIG_QEMU_ROOTFS_VSCSI" = "y" ]; then
-	echo -n "-drive file=$CONFIG_QEMU_ROOTFS,if=virtio,format=raw,bus=0,unit=0 "
+	echo -n "-drive file=$CONFIG_QEMU_ROOTFS.qcow2,if=virtio,format=qcow2,bus=0,unit=0 "
     fi
 }
 
@@ -148,14 +148,14 @@ usb_args()
 	dd if=/dev/zero of=${USBSTICK} bs=8M count=1 >/dev/null 2>&1
 	mkfs.vfat $USBSTICK >/dev/null 2>&1
     fi
-    echo -n "-drive if=none,id=usbstick,format=raw,file=${USBSTICK} "
+    echo -n "-drive if=none,id=usbstick,format=raw,file=$USBSTICK "
     echo -n "-usb "
     echo -n "-device usb-ehci,id=ehci "
     echo -n "-device usb-storage,bus=ehci.0,drive=usbstick "
 }
 rw_args()
 {
-    [ "$CONFIG_QEMU_RW" ] || return
+    [ "$CONFIG_QEMU_RW" ] ||  return
 
     if ! [ -f "$CONFIG_QEMU_RW" ]; then
 	dd if=/dev/zero of="$CONFIG_QEMU_RW" bs=16M count=1 >/dev/null 2>&1
@@ -251,6 +251,9 @@ wdt_args()
 
 run_qemu()
 {
+    if [ "$CONFIG_QEMU_ROOTFS_VSCSI" = "y" ]; then
+	 qemu-img create -f qcow2 -o backing_file=$CONFIG_QEMU_ROOTFS -F raw $CONFIG_QEMU_ROOTFS.qcow2 > /dev/null
+    fi
     local qemu
     read qemu <<EOF
 	$CONFIG_QEMU_MACHINE -m $CONFIG_QEMU_MACHINE_RAM \

@@ -1,7 +1,7 @@
 From 2482848726a5b8185a04d90891693a1713f894b5 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Tue, 5 Mar 2024 06:44:41 +0100
-Subject: [PATCH 19/24] net: bridge: Ignore router ports when forwarding L2
+Subject: [PATCH 19/25] net: bridge: Ignore router ports when forwarding L2
  multicast
 Organization: Addiva Elektronik
 

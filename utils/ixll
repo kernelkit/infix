@@ -1,0 +1,92 @@
+#!/bin/sh
+
+set -e
+
+. $(dirname $(readlink -f "$0"))/libll.sh
+
+usage()
+{
+    local me="$(basename $0)"
+
+    cat <<EOF
+usage: $me [-A] <command> [<args>]
+
+Wrap various existing network facilities such that an interface name
+may be supplied in places where a hostname is otherwise expected.
+
+  Options:
+
+    -A
+      For commands requiring authentication, use password
+      authentication with username "admin" and password "admin".
+
+  Commands:
+
+    peer <iface>
+      Return the address of the first IPv6 neighbor to respond on
+      <iface>'s local LAN.
+
+    ping <iface>
+      Send ping to all-hosts group, with link-local scope, on <iface>,
+      suppressing loopbacked packets.
+
+    ssh <iface> [<ssh-arguments>]
+      ssh(1) to the neighboring host on <iface>.
+
+    scp <src> <dst>
+      scp(1) from <src> to <dst>, but any host specified in either
+      <src> or <dst> is assumed to be an interface name, which is
+      expanded to a neighboring host on that interface.
+
+    ${0} help
+      Display this message.
+
+  Examples:
+
+    Start interactive ssh(1) session to the neighbor to eth0
+      $me ssh eth0
+
+    Copy /etc/hostname from the neighbor to eth0, using admin/admin
+      $me -A scp eth0:/etc/hostname /tmp/hostname
+
+EOF
+}
+
+while getopts "A" opt; do
+    case ${opt} in
+	A)
+	    LLSSH_USER=admin
+	    LLSSH_PASS=admin
+	    ;;
+    esac
+done
+shift $((OPTIND - 1))
+
+if [ $# -lt 1 ]; then
+    usage && exit 1
+fi
+
+cmd="$1"
+shift
+
+case "$cmd" in
+    help)
+	usage && exit 0
+	;;
+    peer)
+	llpeer "$@"
+	;;
+    ping)
+	llping "$@"
+	;;
+    scp)
+	llscp "$@"
+	;;
+    ssh)
+	llssh "$@"
+	;;
+    *)
+	echo "Unknown command \"$cmd\"" >2
+	exit 1
+	;;
+esac
