@@ -56,7 +56,7 @@ jobs:
 
       - name: Build
         run: |
-          make
+          make -j
       - name: Prepare Artifact
         run: |
           cd output
