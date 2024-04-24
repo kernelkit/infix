@@ -51,6 +51,17 @@ config BR2_PACKAGE_FINIT_INITCTL_GROUP
 	  to their shared UNIX group, usually "wheel", to allow
 	  them to start/stop services and reboot the system.
 
+config BR2_PACKAGE_FINIT_SILENCE_KERNEL
+	bool "Silence kernel logs to console"
+	default n
+	help
+	  By default, Finit >= 4.8 no longer disable kernel logging
+	  to console.  This option can be used to re-enable legacy
+	  klogctl() code to silence the kernel output.
+
+	  Please note, sysklogd has a similar command line option to
+	  keep kernel logging, which needs to be disabled as well.
+
 config BR2_PACKAGE_FINIT_KEVENTD
 	bool "finit-keventd"
 	default n
