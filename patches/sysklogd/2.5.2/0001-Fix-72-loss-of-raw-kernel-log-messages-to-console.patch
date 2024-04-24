@@ -1,0 +1,117 @@
+From 1727f7a5ea142ab923ca07f23b2457cf8db94d1d Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Wed, 24 Apr 2024 13:19:09 +0200
+Subject: [PATCH 1/1] Fix #72: loss of raw kernel log messages to console
+Organization: Addiva Elektronik
+
+This patch adds a command line flag `-l` to keep kernel logs to console.
+A feature requested by embedded Linux users which often navigate issues
+by console output.
+
+With properly configured kernel logging, e.g., `quiet`, only error and
+above in severity is logged by the kernel directly to the console.  So
+for most users this would be a useful behavior.
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ man/syslogd.8 | 18 +++++++++++++++++-
+ src/syslogd.c | 10 +++++++++-
+ src/syslogd.h |  4 ++--
+ 3 files changed, 28 insertions(+), 4 deletions(-)
+
+diff --git a/man/syslogd.8 b/man/syslogd.8
+index dcfb564..70f1b8b 100644
+--- a/man/syslogd.8
++++ b/man/syslogd.8
+@@ -38,7 +38,7 @@
+ .Nd log systems messages
+ .Sh SYNOPSIS
+ .Nm
+-.Op Fl ?468AcdFHKknsTtv
++.Op Fl ?468AcdFHKklnsTtv
+ .Op Fl a Ar addr[/len][:port]
+ .Op Fl a Ar name[:port]
+ .Op Fl b Ar addr[:port]
+@@ -292,6 +292,22 @@ Usually the
+ .Dq kern
+ facility is reserved for messages read directly from
+ .Pa /dev/kmsg .
++.It Fl l
++Keep kernel console logging.  By default
++.Nm
++call
++.Xr klogctl 2
++to disable the kernel's logging to console after having opened
++.Pa /dev/kmsg .
++With this option the kernel's log level can be adjusted using
++.Xr sysctl 8 ,
++or the kernel command line, to suit your logging needs to the console.
++.Pp
++Please note, this does not affect logging of kernel messages, see
++.Fl K ,
++only what the kernel logs to
++.Pa /dev/console .
++Also, this is only applicable to Linux.
+ .It Fl m Ar interval
+ Select the number of minutes between
+ .Dq mark
+diff --git a/src/syslogd.c b/src/syslogd.c
+index e7b05b0..68040fe 100644
+--- a/src/syslogd.c
++++ b/src/syslogd.c
+@@ -154,6 +154,7 @@ static int	  RemoteHostname;	  /* Log remote hostname from the message */
+ static int	  KernLog = 1;		  /* Track kernel logs by default */
+ static int	  KeepKernFac;		  /* Keep remotely logged kernel facility */
+ static int	  KeepKernTime;		  /* Keep kernel timestamp, evern after initial read */
++static int	  KeepKernConsole;	  /* Keep kernel logging to console */
+ 
+ static off_t	  RotateSz = 0;		  /* Max file size (bytes) before rotating, disabled by default */
+ static int	  RotateCnt = 5;	  /* Max number (count) of log files to keep, set with -c <NUM> */
+@@ -363,6 +364,9 @@ int usage(int code)
+ 	       "  -H        Use hostname from message instead of address for remote messages\n"
+ 	       "  -K        Disable kernel logging, useful in container use-cases\n"
+ 	       "  -k        Allow logging with facility 'kernel', otherwise remapped to 'user'\n"
++#ifdef __linux__
++	       "  -l        Keep kernel logging to console, use sysctl to adjust kernel.printk\n"
++#endif
+ 	       "  -m MINS   Interval between MARK messages, 0 to disable, default: 20 min\n"
+ 	       "  -n        Disable DNS query for every request\n"
+ 	       "  -P FILE   File to store the process ID, default: %s\n"
+@@ -397,7 +401,7 @@ int main(int argc, char *argv[])
+ 	char *ptr;
+ 	int ch;
+ 
+-	while ((ch = getopt(argc, argv, "468Aa:b:C:cdHFf:Kkm:nP:p:r:sTtv?")) != EOF) {
++	while ((ch = getopt(argc, argv, "468Aa:b:C:cdHFf:Kklm:nP:p:r:sTtv?")) != EOF) {
+ 		switch ((char)ch) {
+ 		case '4':
+ 			family = PF_INET;
+@@ -464,6 +468,10 @@ int main(int argc, char *argv[])
+ 			KeepKernFac = 1;
+ 			break;
+ 
++		case 'l':
++			KeepKernConsole = 1;
++			break;
++
+ 		case 'm': /* mark interval */
+ 			MarkInterval = atoi(optarg) * 60;
+ 			break;
+diff --git a/src/syslogd.h b/src/syslogd.h
+index 68ceafb..1703df2 100644
+--- a/src/syslogd.h
++++ b/src/syslogd.h
+@@ -169,8 +169,8 @@
+ #define SYSLOG_ACTION_CONSOLE_ON  7
+ 
+ #ifdef __linux__
+-#define kern_console_off() klogctl(SYSLOG_ACTION_CONSOLE_OFF, NULL, 0)
+-#define kern_console_on()  klogctl(SYSLOG_ACTION_CONSOLE_ON, NULL, 0)
++#define kern_console_off() if (!KeepKernConsole) klogctl(SYSLOG_ACTION_CONSOLE_OFF, NULL, 0)
++#define kern_console_on()  if (!KeepKernConsole) klogctl(SYSLOG_ACTION_CONSOLE_ON, NULL, 0)
+ #else
+ #define kern_console_off() do { } while (0)
+ #define kern_console_on()  do { } while (0)
+-- 
+2.34.1
+
