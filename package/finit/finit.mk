@@ -42,6 +42,12 @@ FINIT_CONF_OPTS += --without-fstab
 endif
 endif
 
+ifeq ($(BR2_PACKAGE_FINIT_SILENCE_KERNEL),y)
+FINIT_CONF_OPTS += --disable-kernel-logging
+else
+FINIT_CONF_OPTS += --enable-kernel-logging
+endif
+
 ifeq ($(BR2_PACKAGE_FINIT_KEVENTD),y)
 FINIT_CONF_OPTS += --with-keventd
 else
