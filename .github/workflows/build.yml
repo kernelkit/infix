@@ -9,7 +9,7 @@ on:
 jobs:
   build:
     name: Build Infix ${{ matrix.platform }}
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     strategy:
       matrix:
         platform: [aarch64, x86_64]
@@ -27,11 +27,6 @@ jobs:
           target=${{ matrix.platform }}
           echo "dir=infix-$target"        >> $GITHUB_OUTPUT
           echo "tgz=infix-$target.tar.gz" >> $GITHUB_OUTPUT
-          if [ "$target" = x86_64 ]; then
-              echo "out=$PWD/output"      >> $GITHUB_OUTPUT
-          else
-              echo "out=/mnt/x-$target"   >> $GITHUB_OUTPUT
-          fi
       - name: Restore Cache of dl/
         uses: actions/cache@v4
         with:
@@ -51,31 +46,27 @@ jobs:
         run: |
           target=${{ matrix.platform }}_defconfig
           echo "Building $target ..."
-          sudo mkdir ${{ steps.vars.outputs.out }}
-          sudo chown $(id -un):$(id -gn) ${{ steps.vars.outputs.out }}
-          export O=${{ steps.vars.outputs.out }}
           make $target
           make
       - name: Prepare Artifact
         run: |
-          cd ${{ steps.vars.outputs.out }}
+          cd output/
           mv images ${{ steps.vars.outputs.dir }}
           ln -s ${{ steps.vars.outputs.dir }} images
           tar chfz ${{ steps.vars.outputs.tgz }} ${{ steps.vars.outputs.dir }}
       - name: Test
         if: matrix.platform == 'x86_64'
         run: |
-          export O=${{ steps.vars.outputs.out }}
-          make test-qeneth
+          make test
       - uses: actions/upload-artifact@v4
         with:
-          path: ${{ steps.vars.outputs.out }}/${{ steps.vars.outputs.tgz }}
+          path: output/${{ steps.vars.outputs.tgz }}
           name: artifact-${{ matrix.platform }}
   release:
     if: ${{github.repository_owner == 'kernelkit' && github.ref_name == 'main'}}
     name: Upload Latest Build
     needs: build
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     permissions:
       contents: write
     steps:
