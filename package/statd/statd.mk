@@ -10,7 +10,7 @@ STATD_SITE = $(BR2_EXTERNAL_INFIX_PATH)/src/statd
 STATD_LICENSE = BSD-3-Clause
 STATD_LICENSE_FILES = LICENSE
 STATD_REDISTRIBUTE = NO
-STATD_DEPENDENCIES = sysrepo libev libsrx jansson python-statd
+STATD_DEPENDENCIES = sysrepo libev libsrx jansson python-statd libyang
 STATD_AUTORECONF = YES
 
 define STATD_CONF_ENV
