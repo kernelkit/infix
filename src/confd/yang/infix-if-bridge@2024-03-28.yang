@@ -416,6 +416,7 @@ submodule infix-if-bridge {
     when "derived-from-or-self(if:type,'ianaift:bridge') or "+
          "derived-from-or-self(if:type,'ianaift:ethernetCsmacd') or "+
          "derived-from-or-self(if:type,'ianaift:ieee8023adLag') or "+
+         "derived-from-or-self(if:type,'ianaift:l2vlan') or "+
          "derived-from-or-self(if:type,'ianaift:ilan')" {
       description "Applies when a Bridge interface exists.";
     }
