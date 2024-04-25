@@ -698,7 +698,7 @@ static int netdag_gen_ethtool_autoneg(struct dagger *net, struct lyd_node *cif)
 	if (!fp)
 		return -EIO;
 
-	fprintf(fp, "ethtool --change %s  autoneg ", ifname);
+	fprintf(fp, "ethtool --change %s autoneg ", ifname);
 
 	if (!aneg || lydx_is_enabled(aneg, "enable")) {
 		fputs("on\n", fp);
