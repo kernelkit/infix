@@ -214,7 +214,7 @@ sysrepoctl -s $SEARCH							\
 	   -i iana-hardware@2018-03-13.yang     -g wheel -p 0660        \
 	   -i ietf-hardware@2018-03-13.yang     -g wheel -p 0660        \
 	      -e hardware-state                                         \
-	   -i infix-hardware@2024-01-18.yang    -g wheel -p 0660        \
+	   -i infix-hardware@2024-04-25.yang    -g wheel -p 0660        \
 	   -i ieee802-dot1q-types@2022-10-29.yang -g wheel -p 0660	\
 	   -i infix-ip@2023-09-14.yang		-g wheel -p 0660	\
 	   -i infix-if-type@2024-01-29.yang	-g wheel -p 0660	\
