@@ -245,8 +245,10 @@ sysrepoctl -c ietf-netconf			-g wheel -p 0660	\
 		-e url							\
 		-e xpath						\
 		-e confirmed-commit
-# Allow wheel group users (admin) to modify NACM
-sysrepoctl -c ietf-netconf-acm -g wheel -p 0660
+# Allow wheel group users (admin) to modify NACM and do factory reset
+sysrepoctl -c ietf-netconf-acm     -g wheel -p 0660
+sysrepoctl -c ietf-factory-default -g wheel -p 0660
+sysrepoctl -c sysrepo-plugind      -g wheel -p 0660
 
 # On first boot, install factory-config as startup-config.  Due to a
 # limitation in sysrepo we cannot initialize ietf-netconf-acm, so we
