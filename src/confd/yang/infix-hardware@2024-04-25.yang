@@ -13,10 +13,19 @@ module infix-hardware {
     prefix yang;
   }
 
+  organization "KernelKit";
+  contact      "kernelkit@googlegroups.com";
+  description  "Vital Product Data augmentation of ieee-hardware and deviations.";
+
+  revision 2024-04-25 {
+    description "Spellcheck leaf: coutry-code -> country-code";
+    reference "internal";
+  }
   revision 2024-01-18 {
     description "Initial";
     reference "internal";
   }
+
   typedef country-code {
     type string {
       length 2;
@@ -114,7 +123,7 @@ module infix-hardware {
       leaf manufacturer {
 	type string;
       }
-      leaf coutry-code {
+      leaf country-code {
 	type country-code;
       }
       leaf vendor {
