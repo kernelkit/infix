@@ -30,6 +30,9 @@ separate project.  Going forward Infix' focus is entirely on NETCONF.
   set.  Use a VLAN interface on top for that (see above)
 - Container documentation: CLI prompts have been updated to match the
   examples used in other parts of the User Guide
+- As a follow-up to port speed/duplex/autoneg support added in v24.02,
+  this release ensures flow-control is always disabled on all Ethernet
+  ports, as described in the IEEE Ethernet interfaces YANG model
 - Issue #358: translate YANG model's LOWER-LAYER-DOWN -> LINK-DOWN in
   CLI `show interfaces` command
 - Issue #360: document factory-config, startup-config, and the various
@@ -76,9 +79,17 @@ separate project.  Going forward Infix' focus is entirely on NETCONF.
   (firewalled and NAT:ed, hidden from the rest of the network)
 - Fix #385: segfault in helper function when disabling the DHCP client
   using `no dhcp-client` from the CLI
+- Fix #404: `lldpd` should be disabled on internal interface `dsa0`
 - Fix #406: an overly restrictive `when` expression in the bridge YANG
   model prevented users from adding VLAN interfaces as bridge ports.
   E.g., creating interface `eth0.10` and adding that to `br0`
+- Fix #412: after starting up with DHCP client enabled on any interface
+  `set dhcp-client enabled false` does not bite at runtime
+- Fix #414: spelling error in `infix-hardware.yang`, leaf node `coutry`
+- Fix #415: `startup-config` owned by `root` user and group instead of
+  `admin`.  The file ownership is now adjusted on every boot
+- Fix #416: `admin` user cannot perform a factory reset with RPC using
+  `sysrepocfg` tool over SSH
 
 
 [v24.02.0][] - 2024-03-01
