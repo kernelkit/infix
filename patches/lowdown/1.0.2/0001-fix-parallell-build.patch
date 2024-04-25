@@ -1,0 +1,36 @@
+diff -urN lowdown-VERSION_1_0_2.orig/configure lowdown-VERSION_1_0_2/configure
+--- lowdown-VERSION_1_0_2.orig/configure	2024-04-25 15:51:02.559388836 +0200
++++ lowdown-VERSION_1_0_2/configure	2024-04-25 15:55:05.611953111 +0200
+@@ -2462,21 +2462,19 @@
+ # You MIGHT want to change this.
+ #----------------------------------------------------------------------
+ 
+-exec > Makefile.configure
++touch Makefile.configure
++[ -z "${BINDIR}"     ] && echo 'BINDIR="${PREFIX}/bin"' >> Makefile.configure
++[ -z "${SBINDIR}"    ] && echo 'SBINDIR="${PREFIX}/sbin"' >> Makefile.configure
++[ -z "${INCLUDEDIR}" ] && echo 'INCLUDEDIR="${PREFIX}/include"' >> Makefile.configure
++[ -z "${LIBDIR}"     ] && echo 'LIBDIR="${PREFIX}/lib"' >> Makefile.configure
++[ -z "${MANDIR}"     ] && echo 'MANDIR="${PREFIX}/man"' >> Makefile.configure
++[ -z "${SHAREDIR}"   ] && echo 'SHAREDIR="${PREFIX}/share"' >> Makefile.configure
+ 
+-[ -z "${BINDIR}"     ] && BINDIR="${PREFIX}/bin"
+-[ -z "${SBINDIR}"    ] && SBINDIR="${PREFIX}/sbin"
+-[ -z "${INCLUDEDIR}" ] && INCLUDEDIR="${PREFIX}/include"
+-[ -z "${LIBDIR}"     ] && LIBDIR="${PREFIX}/lib"
+-[ -z "${MANDIR}"     ] && MANDIR="${PREFIX}/man"
+-[ -z "${SHAREDIR}"   ] && SHAREDIR="${PREFIX}/share"
++[ -z "${INSTALL_PROGRAM}" ] && echo 'INSTALL_PROGRAM="${INSTALL} -m 0555"' >> Makefile.configure
++[ -z "${INSTALL_LIB}"     ] && echo 'INSTALL_LIB="${INSTALL} -m 0444"' >> Makefile.configure
++[ -z "${INSTALL_MAN}"     ] && echo 'INSTALL_MAN="${INSTALL} -m 0444"' >> Makefile.configure
++[ -z "${INSTALL_DATA}"    ] && echo 'INSTALL_DATA="${INSTALL} -m 0444"' >> Makefile.configure
+ 
+-[ -z "${INSTALL_PROGRAM}" ] && INSTALL_PROGRAM="${INSTALL} -m 0555"
+-[ -z "${INSTALL_LIB}"     ] && INSTALL_LIB="${INSTALL} -m 0444"
+-[ -z "${INSTALL_MAN}"     ] && INSTALL_MAN="${INSTALL} -m 0444"
+-[ -z "${INSTALL_DATA}"    ] && INSTALL_DATA="${INSTALL} -m 0444"
+-
+-cat << __HEREDOC__
+ AR		 = ${AR}
+ CC		 = ${CC}
+ CFLAGS		 = ${CFLAGS}
