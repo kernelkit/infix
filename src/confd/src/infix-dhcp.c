@@ -312,6 +312,15 @@ static int change(sr_session_ctx_t *session, uint32_t sub_id, const char *module
 		}
 	}
 
+	if (!ena) {
+		LYX_LIST_FOR_EACH(cifs, cif, "client-if") {
+			const char *ifname = lydx_get_cattr(cif, "if-name");
+
+			INFO("DHCP client globally disabled, stopping client on %s ...", ifname);
+			del(ifname);
+		}
+	}
+
 	lyd_free_tree(diff);
 err_release_data:
 	sr_release_data(cfg);
