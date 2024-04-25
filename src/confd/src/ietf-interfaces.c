@@ -663,6 +663,28 @@ skip_mtu:
 	return err;
 }
 
+/*
+ * XXX: always disable flow control, for now, until we've added
+ *      configurable support for flow-control/pause/direction and
+ *      flow-control/force-flow-control
+ */
+static int netdag_gen_ethtool_flow_control(struct dagger *net, struct lyd_node *cif)
+{
+	struct lyd_node *aneg = lydx_get_descendant(lyd_child(cif), "ethernet", "auto-negotiation", NULL);
+	const char *ifname = lydx_get_cattr(cif, "name");
+	int autoneg = lydx_get_bool(aneg, "enable");
+	FILE *fp;
+
+	fp = dagger_fopen_next(net, "init", ifname, 10, "ethtool-aneg.sh");
+	if (!fp)
+		return -EIO;
+
+	fprintf(fp, "ethtool --pause %s autoneg %s rx off tx off\n", ifname, autoneg ? "on" : "off");
+	fclose(fp);
+
+	return 0;
+}
+
 static int netdag_gen_ethtool_autoneg(struct dagger *net, struct lyd_node *cif)
 {
 	struct lyd_node *eth = lydx_get_child(cif, "ethernet");
@@ -676,7 +698,7 @@ static int netdag_gen_ethtool_autoneg(struct dagger *net, struct lyd_node *cif)
 	if (!fp)
 		return -EIO;
 
-	fprintf(fp, "ethtool --change %s autoneg ", ifname);
+	fprintf(fp, "ethtool --change %s  autoneg ", ifname);
 
 	if (!aneg || lydx_is_enabled(aneg, "enable")) {
 		fputs("on\n", fp);
@@ -739,6 +761,11 @@ static int netdag_gen_ethtool(struct dagger *net, struct lyd_node *cif, struct l
 	 */
 	if (strcmp(type, "infix-if-type:ethernet"))
 		return 0;
+
+	/* XXX: add configurable flow-control support <<here>> */
+	err = netdag_gen_ethtool_flow_control(net, cif);
+	if (err)
+		return err;
 
 	if (lydx_get_descendant(lyd_child(eth), "auto-negotiation", "enable", NULL) ||
 	    lydx_get_child(eth, "speed") ||
