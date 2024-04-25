@@ -21,18 +21,16 @@ jobs:
   build:
     if: github.repository == 'kernelkit/infix' && startsWith(github.ref, 'refs/tags/')
     name: Build Infix ${{ github.ref_name }} [${{ matrix.platform }}]
-    runs-on: self-hosted
+    runs-on: [ self-hosted, release ]
     strategy:
       matrix:
         platform: [aarch64, x86_64]
       fail-fast: false
     steps:
-      - name: Maintenance
-        run: |
-          docker image prune -af
-          docker volume prune -f
-          docker container prune -f
       - uses: actions/checkout@v4
+        with:
+          submodules: 'true'
+
       - name: Set Release Variables
         id: vars
         run: |
@@ -47,6 +45,7 @@ jobs:
           echo "dir=infix-$target"        >> $GITHUB_OUTPUT
           echo "tgz=infix-$target.tar.gz" >> $GITHUB_OUTPUT
           echo "out=/mnt/x-$target"       >> $GITHUB_OUTPUT
+
       - name: Restore Cache of dl/
         uses: actions/cache@v4
         with:
@@ -54,6 +53,7 @@ jobs:
           key: dl-${{ hashFiles('.git/modules/buildroot/HEAD', 'configs/*', 'package/*/*.hash') }}
           restore-keys: |
             dl-
+
       - name: Restore Cache of .ccache/
         uses: actions/cache@v4
         with:
@@ -62,6 +62,7 @@ jobs:
           restore-keys: |
             ccache-${{ matrix.platform }}-
             ccache-
+
       - name: Configure & Build
         env:
           INFIX_RELEASE: ${{ steps.vars.outputs.ver }}
@@ -73,9 +74,11 @@ jobs:
           export O=${{ steps.vars.outputs.out }}
           make $target
           make
+
       - name: Generate SBOM from Build
         run: |
           make legal-info
+
       - name: Prepare Artifacts
         run: |
           cd ${{ steps.vars.outputs.out }}
@@ -85,18 +88,23 @@ jobs:
 
           mv legal-info legal-info-$target
           tar chfz legal-info-$target.tar.gz legal-info-$target
+
       - uses: actions/upload-artifact@v4
         with:
           name: artifact-${{ matrix.platform }}
           path: ${{ steps.vars.outputs.out }}/*.tar.gz
+
   release:
     name: Release Infix ${{ github.ref_name }}
     needs: build
-    runs-on: self-hosted
+    runs-on: [ self-hosted, release ]
     permissions:
       contents: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: 'true'
+
       - name: Set Release Variables
         id: rel
         run: |
@@ -118,20 +126,24 @@ jobs:
           fi
           echo "pre=${{ steps.rel.outputs.pre }}"
           echo "latest=${{ steps.rel.outputs.latest }}"
+
       - uses: actions/download-artifact@v4
         with:
           pattern: "artifact-*"
           merge-multiple: true
+
       - name: Create checksums ...
         run: |
           for file in *.tar.gz; do
               sha256sum $file > $file.sha256
           done
+
       - name: Extract ChangeLog entry ...
         run: |
           awk '/^-----*$/{if (x == 1) exit; x=1;next}x' doc/ChangeLog.md \
               |head -n -1 > release.md
           cat release.md
+
       - uses: ncipollo/release-action@v1
         with:
           name: Infix ${{ github.ref_name }}
@@ -139,6 +151,7 @@ jobs:
           makeLatest: ${{ steps.rel.outputs.latest }}
           bodyFile:  release.md
           artifacts: "*.tar.gz*"
+
       - name: Summary
         run: |
           cat <<EOF >> $GITHUB_STEP_SUMMARY

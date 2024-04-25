@@ -47,12 +47,6 @@ jobs:
           fi
           mkdir coverity
           tar xzf coverity-latest.tar.gz --strip 1 -C coverity
-      - name: Install dependencies
-        run: |
-          sudo apt-get -y update
-          sudo apt-get -y install pkg-config libjansson-dev libev-dev \
-                       libaugeas-dev libglib2.0-dev libpcre2-dev      \
-                       libuev-dev libite-dev
       - name: Build dependencies
         run: |
           git clone https://github.com/CESNET/libyang.git

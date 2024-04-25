@@ -16,21 +16,24 @@ concurrency:
 jobs:
   build:
     name: Regression Testing
-    runs-on: self-hosted
+    runs-on: [ self-hosted, regression ]
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.event.pull_request.base.repo.full_name
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: 'true'
+
       - name: Clean up cruft ...
         run: |
           ./test/env -c
+
       - name: Set Build Variables
         id: vars
         run: |
           target=x86_64
           echo "dir=infix-$target"        >> $GITHUB_OUTPUT
           echo "tgz=infix-$target.tar.gz" >> $GITHUB_OUTPUT
+
       - name: Restore Cache of dl/
         uses: actions/cache@v4
         with:
@@ -39,6 +42,7 @@ jobs:
           restore-keys: |
             dl-netconf-
             dl-
+
       - name: Restore Cache of .ccache/
         uses: actions/cache@v4
         with:
@@ -47,6 +51,7 @@ jobs:
           restore-keys: |
             ccache-x86_64-
             ccache-
+
       - name: Configure NETCONF
         run: |
           make x86_64_defconfig
@@ -57,7 +62,7 @@ jobs:
 
       - name: Build
         run: |
-          make -j
+          make
 
       - name: Prepare Artifact
         run: |
