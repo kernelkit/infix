@@ -255,7 +255,6 @@ chgrp wheel /cfg
 chmod g+w   /cfg
 if [ ! -f "$STARTUP_CFG" ]; then
     sysrepocfg -f json -X"$STARTUP_CFG"
-    chown admin:wheel "$STARTUP_CFG"
 fi
 
 # Clear running-config so we can load startup in the next step
