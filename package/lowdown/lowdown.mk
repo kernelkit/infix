@@ -12,11 +12,11 @@ LOWDOWN_DEPENDENCIES = libbsd host-pkgconf
 LOWDOWN_MAKE=$(MAKE1)
 
 define LOWDOWN_CONFIGURE_CMDS
-        (cd $(@D); $(TARGET_CONFIGURE_OPTS) ./configure)
+        (cd $(@D); $(BR2_PATH) $(TARGET_CONFIGURE_OPTS) ./configure)
 endef
 
 define LOWDOWN_BUILD_CMDS
-        $(TARGET_MAKE_ENV) $(MAKE) -C $(@D)
+        $(TARGET_MAKE_ENV) $(BR2_PATH) $(MAKE) -C $(@D)
 endef
 
 define LOWDOWN_INSTALL_TARGET_CMDS
