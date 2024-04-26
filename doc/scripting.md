@@ -168,9 +168,9 @@ There are two ways to do it:
  1. Change the configuration without saving it to `startup-config`
  2. Change the operational state
 
-The first involves sending a NETCONF command/config in XML, the second
-we will cover here.  We start by querying available interfaces (ports)
-on the remote system:
+The first involves sending a NETCONF command/config in XML. The second
+we will cover here. We start by querying available interfaces (ports) on
+the remote system:
 
 ```
 ~$ ssh admin@infix.local%qtap0 ip -br a
@@ -224,6 +224,22 @@ e7               UP             fe80::ff:fe00:7/64
 e8               UP             fe80::ff:fe00:8/64 
 e9               UP             192.168.2.200/24 fe80::ff:fe00:9/64 
 br0              UP  
+```
+
+
+
+```
+admin@example:~$ sysrepocfg -X -fjson -d running -x "/ietf-interfaces:interfaces/interface[name='e1']/enabled"
+{
+  "ietf-interfaces:interfaces": {
+    "interface": [
+      {
+        "name": "e1",
+        "enabled": false
+      }
+    ]
+  }
+}
 ```
 
 ### Check Device's Network Connectivity
@@ -342,29 +358,64 @@ It is possible to make configuration changes by operating on the
 
 See [sysrepocfg][4] for information. Examples below will utilize 
 
-- `sysrepocfg -E file.json -fjson -d database` to edit/merge the
-  configuration in *file.json* with the specificed database (typically
-  `-d running`). The trickiest thing here is to transfer file.json to
-  infix.
--  `sysrepocfg -R file.json -fjson` to execute RPC defined in
-   *file.json*. 
-- `sysrepocfg -X -fjson -d database -x xpath` to read configuration
-  (e.g., `-d running`) or status (`-d operational`) 
 
+
+- `sysrepocfg -I FILE -fjson -d DATABASE` to import/write a JSON
+  formatted configuration file to the specificed database.
+- `sysrepocfg -E FILE -fjson -d DATABASE` to edit/merge JSON formatted
+  configuration in FILE with the specificed database.
+-  `sysrepocfg -R FILE -fjson` to execute remote procdure call (RPC) defined in
+   FILE (JSON formatted). 
+- `sysrepocfg -X -fjson -d DATABASE -x xpath` to read configuration or
+  status from specified database.
+  
+For importing (-I) and editing (-E), `-d running` is typically used in
+examples below. Specify `-d startup` to apply changes to startup
+configuration. Exporting (-X) could operate on configuration (e.g.,
+`-d running`) or status (`-d operational`).
+
+Some commands require a file as input. In examples below we assume 
+it been transfered to Infix in advance, e.g. using `scp` as shown below.
+
+```
+~$ cat file.json 
+{
+   "ietf-factory-default:factory-reset": {
+   }
+}
+~$ scp file.json admin@example.local:/tmp/file.json
+~$
+```
 
 ### Factory Reset Using sysrepocfg
 
 
 ```
-admin@switch:~$ cat file.json 
+~$ cat file.json 
 {
    "ietf-factory-default:factory-reset": {
    }
 }
-admin@switch:~$ sudo sysrepocfg -fjson -R file.json
-[ OK ] Saving system time (UTC) to 
-[ OK ] Stopping Status daemon
-...
+~$ scp file.json admin@example.local:/tmp/file.json
+~$ ssh admin@example.local 'sysrepocfg -fjson -R /tmp/file.json'
+^C
+~$ 
+```
+See [Factory Reset](#factory-reset) for another (simpler) alternative.
+
+If you only wish to copy factory config to running config the
+following RPC is available
+
+```
+~$ cat file.json 
+{
+   "infix-factory-default:factory-default": {
+   }
+}
+~$ scp file.json admin@example.local:/tmp/file.json
+~$ ssh admin@example.local 'sysrepocfg -fjson -R /tmp/file.json'
+^C
+~$ 
 ```
 
 
@@ -372,29 +423,16 @@ admin@switch:~$ sudo sysrepocfg -fjson -R file.json
 
 
 ```
-admin@switch:~$ cat file.json 
+~$ cat /tmp/file.json 
 {
    "ietf-system:system-restart": {
    }
 }
-admin@switch:~$ sysrepocfg -fjson -R file.json
-[ OK ] Saving system time (UTC) to RTC
-[ OK ] Stopping OpenSSH daemon
-[ OK ] Stopping Status daemon
-...
+~$ scp file.json admin@example.local:/tmp/file.json
+~$ ssh admin@example.local 'sysrepocfg -fjson -R /tmp/file.json'
+~$
 ```
-
-If you only wish to copy factory config to running config.
-
-```
-admin@foo:~$ cat file.json 
-{
-   "infix-factory-default:factory-default": {
-   }
-}
-admin@foo:~$ sysrepocfg -R file.json -fjson
-admin@infix-c0-ff-ee:~$ 
-```
+See [System Reboot](#system-reboot) for another (simpler) alternative.
 
 
 
@@ -402,56 +440,76 @@ admin@infix-c0-ff-ee:~$
 
 
 ```
-admin@switch:~$ date
-Wed May 20 00:41:31 UTC 2015
-admin@switch:~$ cat file.json 
+~$ ssh admin@example.local 'date'
+Sun Nov 20 10:20:23 UTC 2005
+~$ cat file.json
 {
    "ietf-system:set-current-datetime": {
 	"current-datetime": "2024-04-17T13:48:02-01:00"
    }
 }
-admin@switch:~$ sysrepocfg -R file.json -fjson
-admin@switch:~$ date
-Wed Apr 17 14:48:05 UTC 2024
-admin@switch:~$ 
+~$ scp file.json admin@example.local:/tmp/file.json
+~$ ssh admin@example.local 'sysrepocfg -fjson -R /tmp/file.json'
+~$ ssh admin@example.local 'date'
+Wed Apr 17 14:48:12 UTC 2024
+~$ 
 ```
-
+See [Set Date and Time](#set-date-and-time) for another (simpler) alternative.
 
 ### Remote Control of Ethernet Ports Using sysrepocfg
 
 
-Reading administrative status of interface *e1* of running configuration.
+Reading administrative status of interface *e0* of running configuration.
 
 ```
-admin@switch:~$ sysrepocfg -X -fjson -d running -x "/ietf-interfaces:interfaces/interface[name='e1']/enabled"
+~$ ssh admin@example.local 'sysrepocfg -X -fjson -d running -e report-all -x \"/ietf-interfaces:interfaces/interface[name='e0']/enabled\"'
 {
   "ietf-interfaces:interfaces": {
     "interface": [
       {
-        "name": "e1",
-        "enabled": false
-      }
-    ]
-  }
-}
-```
-
-Setting the administrative status of interface *e1* of running configuration.
-
-```
-admin@switch:~$ cat file.json 
-{
-  "ietf-interfaces:interfaces": {
-    "interface": [
-      {
-        "name": "e1",
+        "name": "e0",
         "enabled": true
       }
     ]
   }
 }
-admin@switch:~$ sysrepocfg -E file.json -fjson -d running 
-admin@switch:~$
+~$
+```
+> Note: Without `-e report-all` argument the line `"enabled: true`
+> would not be shown as `true` is default.
+
+```
+~$ ssh admin@example.local "sysrepocfg -X -fjson -d running -x \"/ietf-interfaces:interfaces/interface[name='e0']/enabled\""
+{
+  "ietf-interfaces:interfaces": {
+    "interface": [
+      {
+        "name": "e0"
+      }
+    ]
+  }
+}
+~$
+```
+
+
+Setting the administrative status of interface *e0* of running configuration.
+
+```
+$ cat file.json
+{
+  "ietf-interfaces:interfaces": {
+    "interface": [
+      {
+        "name": "e0",
+        "enabled": false
+      }
+    ]
+  }
+}
+~$ scp file.json admin@example.local:/tmp/file.json
+~$ ssh admin@example.local 'sysrepocfg -E /tmp/file.json -fjson -d running' 
+~$
 ```
 
 ### Enable/Disable DHCPv4 client
@@ -460,79 +518,52 @@ admin@switch:~$
 Enabling DHCPv4 client on interface *e0*, with current default options.
 
 ```
-admin@switch:~$ cat file.json 
+~$ cat /tmp/file.json 
 {
   "infix-dhcp-client:dhcp-client": {
     "enabled": true,
     "client-if": [
       {
-        "if-name": "e0",
-        "option": [
-          {
-            "name": "subnet"
-          },
-          {
-            "name": "router"
-          },
-          {
-            "name": "dns"
-          },
-          {
-            "name": "hostname"
-          },
-          {
-            "name": "domain"
-          },
-          {
-            "name": "broadcast"
-          },
-          {
-            "name": "ntpsrv"
-          }
-        ]
+        "if-name": "e0"
       }
     ]
   }
 }
-admin@switch:~$ sysrepocfg -E file.json -fjson -d running
-admin@switch:~$ 
+~$ scp file.json admin@example.local:/tmp/file.json
+~$ ssh admin@example.local 'sysrepocfg -E /tmp/file.json -fjson -d running' 
+~$
 ```
 
 Disabling DHCPv4 client. 
 
 ```
-admin@switch:~$ cat file.json 
+~$ cat /tmp/file.json 
 {
   "infix-dhcp-client:dhcp-client": {
     "enabled": false
   }
 }
-admin@switch:~$ sysrepocfg -E file.json -fjson -d running
-admin@switch:~$ 
+~$ scp file.json admin@example.local:/tmp/file.json
+~$ ssh admin@example.local 'sysrepocfg -E /tmp/file.json -fjson -d running' 
+~$
 ```
 
 Configuration for client interface *e0* remains, but does not apply as
 DHCPv4 is disabled. 
 
 ```
-admin@switch:~$ sysrepocfg -X -fjson -d running -x "/infix-dhcp-client:dhcp-client" 
+admin@example:~$ sysrepocfg -X -fjson -d running -x "/infix-dhcp-client:dhcp-client" 
 {
   "infix-dhcp-client:dhcp-client": {
     "enabled": false,
     "client-if": [
       {
-        "if-name": "e0",
-        "option": [
-          {
-            "name": "subnet"
-          },
-...
-        ]
+        "if-name": "e0"
       }
     ]
   }
 }
-admin@switch:~$ 
+admin@example:~$ 
 ```
 
 To fully remove the DHCPv4 client configuration or a specific
@@ -546,7 +577,7 @@ IPv6 is typically enabled on all interfaces by default. The example
 below shows IPv4 and IPv6 addresses assigned on *e0*.
 
 ```
-admin@switch:~$ ip addr show dev e0
+~$ ssh admin@example.local 'ip addr show dev e0'
 2: e0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast state UP group default qlen 1000
     link/ether 02:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff
     inet 10.0.2.15/24 scope global proto dhcp e0
@@ -555,14 +586,14 @@ admin@switch:~$ ip addr show dev e0
        valid_lft 86380sec preferred_lft 14380sec
     inet6 fe80::ff:fe00:0/64 scope link proto kernel_ll 
        valid_lft forever preferred_lft forever
-admin@switch:~$
+~$
 ```
 
 IPv6 is enabled/disabled per interface. The example below disables IPv6
 on interface *e0*.
 
 ```
-admin@switch:~$ cat file.json 
+~$ cat /tmp/file.json 
 {
   "ietf-interfaces:interfaces": {
     "interface": [
@@ -575,13 +606,14 @@ admin@switch:~$ cat file.json
     ]
   }
 }
-admin@switch:~$ sysrepocfg -E file.json -fjson -d running 
-admin@switch:~$ ip addr show dev e0
+~$ scp file.json admin@example.local:/tmp/file.json
+~$ ssh admin@example.local 'sysrepocfg -E /tmp/file.json -fjson -d running' 
+~$ ssh admin@example.local 'ip addr show dev e0'
 2: e0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast state UP group default qlen 1000
     link/ether 02:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff
     inet 10.0.2.15/24 scope global proto dhcp e0
        valid_lft forever preferred_lft forever
-admin@switch:~$ 
+~$ 
 ```
 
 ### Backup Configuration Using sysrepocfg And scp
@@ -590,68 +622,67 @@ Displaying running or startup configuration is possible with
 `sysrepocfg -X`, as shown below.
 
 ```
-admin@switch:~$ sysrepocfg -X -fjson -d running
+~$ ssh admin@example.local 'sysrepocfg -X -fjson -d running'
 {
   "ieee802-dot1ab-lldp:lldp": {
     "infix-lldp:enabled": true
 ...
-admin@switch:~$
+~$
 ```
 
-An example for backing up startup configuration from a remote PC.
+An example for backing up startup configuration from remote PC.
 
 ```
-pc:-$> ssh admin@switch.local 'sysrepocfg -X -fjson -d startup > /tmp/backup.json'
-admin@switch.local's password: 
-pc:-$> scp admin@switch.local:/tmp/backup.json .
-admin@switch.local's password: 
-pc:-$>
+~$ ssh admin@example.local 'sysrepocfg -X -fjson -d startup > /tmp/backup.json'
+~$ scp admin@example.local:/tmp/backup.json .
+~$
 ```
 
-Or possibly skip intermediate storage of file
+Or possibly skip intermediate storage of file 
 ```
-pc:-$> ssh admin@switch.local 'sysrepocfg -X -fjson -d startup' > backup.json
-admin@switch.local's password: 
-pc:-$>
+~$ ssh admin@example.local 'sysrepocfg -X -fjson -d startup' > backup.json
+~$
 ```
 
-A final example is to only use `scp`, which works to backup the
-startup configuration.
+A final example is to only use `scp`. This is simpler, but only works to backup the
+startup configuration (not running).
 
 ```
-pc:-$> scp admin@switch.local:/cfg/startup-config.cfg backup.json
-admin@switch.local's password: 
-pc:-$>
+~$ scp admin@example.local:/cfg/startup-config.cfg backup.json
+~$
 ```
 
 ### Restore Configuration Using sysrepocfg and ssh/scp
 
-To restore a configuration from backup, we use `sysrepocfg -I FILE`
-(import) command. `sudo` privileges is required.
+
+To restore a backup configuration to startup, the simplest way is to
+use `scp` and reboot as shown below
+
+```
+~$ scp admin@example.local:/cfg/startup-config.cfg backup.json
+~$ ssh admin@example.local 'reboot'
+Connection to switch.local closed by remote host.
+~$ 
+```
+
+An alternative method to restore a backup configuration is to use the
+`sysrepocfg -I FILE` (import) command.
 
 The example below imports the backup configuration to startup, and
 reboots the unit.
 
 ```
-pc:-$> scp backup.json admin@switch.local:/tmp/ 
-admin@switch.local's password:    
-pc:-$> ssh admin@switch.local 'sudo sysrepocfg -I /tmp/backup.json -fjson -d startup'
-admin@switch.local's password: 
-pc:-$ ssh admin@switch.local 'reboot'
-admin@switch.local's password: 
+~$ scp backup.json admin@example.local:/tmp/ 
+~$ ssh admin@example.local 'sudo sysrepocfg -I /tmp/backup.json -fjson -d startup'
+~$ ssh admin@example.local 'reboot'
 Connection to switch.local closed by remote host.
-pc:-$ 
+~$ 
 ```
 
-Things to note:
-
-- Writing to /cfg/startup-config.cfg requires `sudo` privileges, thus
-  `scp backup.json admin@switch.local/cfg/startup-config.cfg` would
-  not work. 
-- admin login credentials (hash) are stored as part of the
-  configuration file. When replacing a switch and applying the backed
-  up configuration from the former switch, the password on the
-  replacement unit will also change.
+> Note: admin login credentials (hash) are stored as part of the
+> configuration file. When replacing a switch and applying the backed 
+> up configuration from the former switch, the password on the
+> replacement unit will also change.
 
 ### Copy Running to Startup Using sysrepocfg
 
@@ -659,17 +690,17 @@ The following command reads out the running config via `sysrepocfg -X`
 and writes the result to the startup configuration.
 
 ```
-admin@switch:~$ sudo sysrepocfg -X -fjson -d running > /cfg/startup-config.cfg
-admin@switch:~$
+~$ ssh admin@example.local 'sysrepocfg -X -fjson -d running > /cfg/startup-config.cfg'
+~$
 ```
 
 An alternative is to write it to a temporary file, and use `sysrepocfg
 -I` to import it to startup.
 
 ```
-admin@switch:~$ sysrepocfg -X -fjson -d running > /tmp/running.json
-admin@switch:~$ sudo sysrepocfg -I /tmp/running.json -fjson -d startup
-admin@switch:~$
+~$ ssh admin@example.local 'sysrepocfg -X -fjson -d running > /tmp/running.json'
+~$ ssh admin@example.local 'sysrepocfg -I /tmp/running.json -fjson -d startup'
+~$
 ```
 
 [1]: discovery.md
