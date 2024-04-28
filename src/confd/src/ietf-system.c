@@ -675,7 +675,7 @@ static int sys_add_new_user(sr_session_ctx_t *sess, char *name)
 {
 	char *shell = sys_find_usable_shell(sess, name);
 	char *sargs[] = {
-		"adduser", "-d", "-s", shell, "-S", "-G", "wheel", name, NULL
+		"adduser", "-d", "-s", shell, "-G", "wheel", name, NULL
 	};
 	char *uargs[] = {
 		"adduser", "-d", "-s", shell, name, NULL
