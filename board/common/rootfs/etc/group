@@ -16,10 +16,9 @@ video:x:28:
 audio:x:29:
 tape:x:32:
 www-data:x:33:
-operator:x:37:
+backup:x:34:
 utmp:x:43:
 plugdev:x:46:
-staff:x:50:
 lock:x:54:
 netdev:x:82:
 users:x:100:
