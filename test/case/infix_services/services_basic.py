@@ -12,6 +12,21 @@
 import time
 import infamy
 
+def toggle(updown):
+    """Toggle port down/up to kick services"""
+    _, port = env.ltop.xlate("target", "data")
+
+    target.put_config_dict("ietf-interfaces", {
+        "interfaces": {
+            "interface": [
+                {
+                    "name": port,
+                    "enabled": updown
+                }
+            ]
+        }
+    })
+
 def verify(enabled, sec):
     """Verify service traffic, or no traffic in case service not enabled"""
     _, hport = env.ltop.xlate("host", "data")
@@ -36,8 +51,11 @@ def verify(enabled, sec):
             }
         })
 
+        toggle(False)
         with snif:
-            time.sleep(sec)
+            time.sleep(1)
+            toggle(True)
+            time.sleep(sec - 1)
 
         return snif.output()
 
@@ -79,8 +97,8 @@ with infamy.Test() as test:
         })
 
     with test.step("Start sniffer and enable services on target ..."):
-        rc = verify(True, 25)
-        print(rc.stdout)
+        rc = verify(True, 10)
+        #print(rc.stdout)
         # breakpoint()
         if "10.0.0.10.5353" not in rc.stdout:
             test.fail()
@@ -88,8 +106,8 @@ with infamy.Test() as test:
             test.fail()
 
     with test.step("Disable services on target, verify they're not running anymore ..."):
-        rc = verify(False, 20)
-        print(rc.stdout)
+        rc = verify(False, 10)
+        #print(rc.stdout)
         if "10.0.0.10.5353" in rc.stdout:
             test.fail()
         if "LLDP" in rc.stdout:
