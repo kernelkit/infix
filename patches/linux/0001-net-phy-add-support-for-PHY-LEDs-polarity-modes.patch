@@ -1,7 +1,7 @@
 From 79abf7872e35080ca5b519bb4ad2acc1fbd96e8c Mon Sep 17 00:00:00 2001
 From: Christian Marangi <ansuelsmth@gmail.com>
 Date: Thu, 25 Jan 2024 21:36:59 +0100
-Subject: [PATCH 01/27] net: phy: add support for PHY LEDs polarity modes
+Subject: [PATCH 01/28] net: phy: add support for PHY LEDs polarity modes
 Organization: Addiva Elektronik
 
 Add support for PHY LEDs polarity modes. Some PHY require LED to be set
@@ -22,7 +22,7 @@ Signed-off-by: Christian Marangi <ansuelsmth@gmail.com>
 Reviewed-by: Andrew Lunn <andrew@lunn.ch>
 Link: https://lore.kernel.org/r/20240125203702.4552-4-ansuelsmth@gmail.com
 Signed-off-by: Jakub Kicinski <kuba@kernel.org>
-Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
 ---
  drivers/net/phy/phy_device.c | 16 ++++++++++++++++
  include/linux/phy.h          | 22 ++++++++++++++++++++++

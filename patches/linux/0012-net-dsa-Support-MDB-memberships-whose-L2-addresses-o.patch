@@ -1,7 +1,7 @@
 From fe60e3ad1e3b43a924c311658b15a1106e813661 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Tue, 16 Jan 2024 16:00:55 +0100
-Subject: [PATCH 12/27] net: dsa: Support MDB memberships whose L2 addresses
+Subject: [PATCH 12/28] net: dsa: Support MDB memberships whose L2 addresses
  overlap
 Organization: Addiva Elektronik
 
@@ -30,7 +30,7 @@ needed to do this is already in place, since it is also needed on CPU
 and DSA ports. Thus, "implement" this by simply removing the guards
 which previously skipped reference countung on user ports.
 
-Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
 ---
  net/dsa/switch.c | 16 ----------------
  1 file changed, 16 deletions(-)
