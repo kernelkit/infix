@@ -663,6 +663,21 @@ skip_mtu:
 	return err;
 }
 
+static bool iface_uses_autoneg(struct lyd_node *cif)
+{
+	struct lyd_node *aneg = lydx_get_descendant(lyd_child(cif), "ethernet",
+						    "auto-negotiation", NULL);
+
+	/* Because `ieee802-ethernet-interface` declares
+	 * `auto-negotiation` as a presence container, the `enabled`
+	 * leaf, although `true` by default, is not set if the whole
+	 * container is absent. Since auto-negotiation is the expected
+	 * default behavior for most Ethernet links, we choose to
+	 * enable it in these situations.
+	 */
+	return !aneg || lydx_get_bool(aneg, "enable");
+}
+
 /*
  * XXX: always disable flow control, for now, until we've added
  *      configurable support for flow-control/pause/direction and
@@ -670,16 +685,15 @@ skip_mtu:
  */
 static int netdag_gen_ethtool_flow_control(struct dagger *net, struct lyd_node *cif)
 {
-	struct lyd_node *aneg = lydx_get_descendant(lyd_child(cif), "ethernet", "auto-negotiation", NULL);
 	const char *ifname = lydx_get_cattr(cif, "name");
-	int autoneg = lydx_get_bool(aneg, "enable");
 	FILE *fp;
 
 	fp = dagger_fopen_next(net, "init", ifname, 10, "ethtool-aneg.sh");
 	if (!fp)
 		return -EIO;
 
-	fprintf(fp, "ethtool --pause %s autoneg %s rx off tx off\n", ifname, autoneg ? "on" : "off");
+	fprintf(fp, "ethtool --pause %s autoneg %s rx off tx off\n",
+		ifname, iface_uses_autoneg(cif) ? "on" : "off");
 	fclose(fp);
 
 	return 0;
@@ -688,7 +702,6 @@ static int netdag_gen_ethtool_flow_control(struct dagger *net, struct lyd_node *
 static int netdag_gen_ethtool_autoneg(struct dagger *net, struct lyd_node *cif)
 {
 	struct lyd_node *eth = lydx_get_child(cif, "ethernet");
-	struct lyd_node *aneg = lydx_get_child(eth, "auto-negotiation");
 	const char *ifname = lydx_get_cattr(cif, "name");
 	const char *speed, *duplex;
 	int mbps, err = 0;
@@ -700,7 +713,7 @@ static int netdag_gen_ethtool_autoneg(struct dagger *net, struct lyd_node *cif)
 
 	fprintf(fp, "ethtool --change %s autoneg ", ifname);
 
-	if (!aneg || lydx_is_enabled(aneg, "enable")) {
+	if (iface_uses_autoneg(cif)) {
 		fputs("on\n", fp);
 	} else {
 		speed = lydx_get_cattr(eth, "speed");
