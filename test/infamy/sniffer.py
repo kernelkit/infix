@@ -37,4 +37,9 @@ class Sniffer:
 
     def output(self):
         """Return PCAP output"""
-        return self.netns.runsh(f"tshark -n -r {self.pcap.name}")
+        return self.netns.runsh(f"tcpdump -n -r {self.pcap.name}")
+
+    def packets(self):
+        """Filtered text output, skipping tcpdump "reading from file" initial line"""
+        lines = self.output().stdout.split('\n')
+        return '\n'.join(lines[1:])

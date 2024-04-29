@@ -282,13 +282,13 @@ with infamy.Test() as test:
                 # TODO: Here should we check for 224.1.1.1 in mdb, also
                 # verify that 224.2.2.2 does not exist in mdb
 
-                assert(snif_vlan77_sender_incorrect.output().stdout == "")
-                assert(snif_vlan77_receiver_incorrect.output().stdout == "")
-                assert(snif_vlan55_receiver_incorrect.output().stdout == "")
-                assert(snif_vlan55_sender_incorrect.output().stdout == "")
+                assert(snif_vlan77_sender_incorrect.packets() == "")
+                assert(snif_vlan77_receiver_incorrect.packets() == "")
+                assert(snif_vlan55_receiver_incorrect.packets() == "")
+                assert(snif_vlan55_sender_incorrect.packets() == "")
                 print("Multicast does not exist on ports/VLANs where they should not be")
-                assert(snif_vlan55_receiver_correct.output().stdout != "")
-                assert(snif_vlan77_receiver_correct.output().stdout != "")
+                assert(snif_vlan55_receiver_correct.packets() != "")
+                assert(snif_vlan77_receiver_correct.packets() != "")
                 print("Multicast received on correct port and VLAN")
 
         test.succeed()

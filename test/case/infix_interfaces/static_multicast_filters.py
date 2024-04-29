@@ -125,8 +125,8 @@ with infamy.Test() as test:
                     time.sleep(5)
                     with snif_nojoin:
                         time.sleep(5)
-                assert(snif_receiver.output().stdout != "")
-                assert(snif_nojoin.output().stdout != "")
+                assert(snif_receiver.packets() != "")
+                assert(snif_nojoin.packets() != "")
                 print("As expected, unregistered multicast is received on both ports")
 
                 set_static_multicast_filter(target, "224.1.1.1")
@@ -134,9 +134,9 @@ with infamy.Test() as test:
                 with snif_receiver,snif_nojoin:
                     time.sleep(5)
 
-                assert(snif_nojoin.output().stdout == "")
+                assert(snif_nojoin.packets() == "")
                 print("As expected, registered multicast is NOT forwarded to non-member port")
-                assert(snif_receiver.output().stdout != "")
+                assert(snif_receiver.packets() != "")
                 print("As expected, registered multicast is forwarded to the member port")
 
         test.succeed()
