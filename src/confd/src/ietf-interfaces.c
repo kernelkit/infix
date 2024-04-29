@@ -775,12 +775,18 @@ static int netdag_gen_ethtool(struct dagger *net, struct lyd_node *cif, struct l
 	if (strcmp(type, "infix-if-type:ethernet"))
 		return 0;
 
-	/* XXX: add configurable flow-control support <<here>> */
-	err = netdag_gen_ethtool_flow_control(net, cif);
-	if (err)
-		return err;
+	if (!eth)
+		return 0;
 
-	if (lydx_get_descendant(lyd_child(eth), "auto-negotiation", "enable", NULL) ||
+	if (dagger_is_bootstrap(net) ||
+	    lydx_get_descendant(lyd_child(eth), "auto-negotiation", "enable", NULL)) {
+		err = netdag_gen_ethtool_flow_control(net, cif);
+		if (err)
+			return err;
+	}
+
+	if (dagger_is_bootstrap(net) ||
+	    lydx_get_descendant(lyd_child(eth), "auto-negotiation", "enable", NULL) ||
 	    lydx_get_child(eth, "speed") ||
 	    lydx_get_child(eth, "duplex")) {
 		err = netdag_gen_ethtool_autoneg(net, cif);
