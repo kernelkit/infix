@@ -671,6 +671,35 @@ static char *sys_find_usable_shell(sr_session_ctx_t *sess, char *name)
 	return shell;
 }
 
+static uid_t sys_home_exists(char *user)
+{
+	char path[strlen(user) + 10];
+	struct stat st;
+
+	snprintf(path, sizeof(path), "/home/%s", user);
+	if (stat(path, &st))
+		return 0;
+
+	return st.st_uid;
+}
+
+static int sys_uid_busy(char *user, uid_t uid)
+{
+	struct passwd *pw;
+	int rc = 0;
+
+	setpwent();
+	while ((pw = getpwent())) {
+		if (pw->pw_uid != uid)
+			continue;
+		if (strcmp(pw->pw_name, user))
+			rc = -1;
+	}
+	endpwent();
+
+	return rc;
+}
+
 static int sys_del_user(char *user)
 {
 	char *args[] = {
@@ -692,10 +721,38 @@ static int sys_del_user(char *user)
 static int sys_add_new_user(sr_session_ctx_t *sess, char *name)
 {
 	char *shell = sys_find_usable_shell(sess, name);
-	char *args[] = {
+	char uid_str[10];
+	char *eargs[] = {
+		"adduser", "-d", "-s", shell, "-u", NULL, "-H", name, NULL
+	};
+	char *nargs[] = {
 		"adduser", "-d", "-s", shell, name, NULL
 	};
+	bool do_chown = false;
+	char **args;
+	uid_t uid;
 	int err;
+
+	uid = sys_home_exists(name);
+	if (uid) {
+		if (sys_uid_busy(name, uid)) {
+			/* Exists but owned by someone else. */
+			ERROR("Creating user %s, /home/%s existed but was owned by another uid (%d)",
+			      name, name, uid);
+			ERROR("Cleaning up stale /home/%s", name);
+			systemf("rm -rf /home/%s", name);
+			args = nargs;
+		} else {
+			/* Not in passwd or owned by us already */
+			do_chown = true;
+
+			NOTE("Reusing uid %d and /home/%s for new user %s", uid, name, name);
+			snprintf(uid_str, sizeof(uid_str), "%d", uid);
+			eargs[5] = uid_str;
+			args = eargs;
+		}
+	} else
+		args = nargs;
 
 	/**
 	 * The Busybox implementation of 'adduser -d' sets the password
@@ -708,7 +765,10 @@ static int sys_add_new_user(sr_session_ctx_t *sess, char *name)
 		ERROR("Failed creating new user \"%s\"\n", name);
 		return SR_ERR_SYS;
 	}
+
 	NOTE("New user \"%s\" created\n", name);
+	if (do_chown)
+		systemf("chown -R %s:%s /home/%s", name, name, name);
 
 	/*
 	 * OpenSSH in Infix has been set up to use /var/run/sshd/%s.keys
