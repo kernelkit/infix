@@ -187,7 +187,7 @@ with infamy.Test() as test:
             snif = infamy.Sniffer(ns0, "ip proto 89")
             with snif:
                 time.sleep(15) # default hello time 10s
-            assert(snif.output().stdout == "")
+            assert(snif.packets() == "")
 
     with test.step("Test connectivity"):
         _, hport0 = env.ltop.xlate("host", "data1")
