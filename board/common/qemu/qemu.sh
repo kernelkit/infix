@@ -157,6 +157,12 @@ rw_args()
 {
     [ "$CONFIG_QEMU_RW" ] ||  return
 
+    if ! [ -f "aux.ext4" ]; then
+	dd if=/dev/zero of="aux.ext4" bs=1M count=1 >/dev/null 2>&1
+	mkfs.ext4 -L aux "aux.ext4" >/dev/null 2>&1
+    fi
+    echo -n "-drive file=aux.ext4,if=virtio,format=raw,bus=0,unit=3 "
+
     if ! [ -f "$CONFIG_QEMU_RW" ]; then
 	dd if=/dev/zero of="$CONFIG_QEMU_RW" bs=16M count=1 >/dev/null 2>&1
 	mkfs.ext4 -L cfg "$CONFIG_QEMU_RW" >/dev/null 2>&1
