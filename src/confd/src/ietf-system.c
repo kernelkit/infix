@@ -16,6 +16,7 @@
 #include "base64.h"
 #include "core.h"
 
+#define NACM_BASE_     "/ietf-netconf-acm:nacm"
 #define XPATH_BASE_    "/ietf-system:system"
 #define XPATH_AUTH_    XPATH_BASE_"/authentication"
 #define CLOCK_PATH_    "/ietf-system:system-state/clock"
@@ -665,29 +666,13 @@ static int sys_del_user(char *user)
 	return SR_ERR_OK;
 }
 
-/*
- * XXX: drop superuser/wheel exception as soon as we have clish-ng in place.
- *      It is supposed to connect to the netopeer server via 127.0.0.1 so
- *      that the full NACM applies to the user instead of the file system
- *      permissions that apply to the current klish.
- */
 static int sys_add_new_user(sr_session_ctx_t *sess, char *name)
 {
 	char *shell = sys_find_usable_shell(sess, name);
-	char *sargs[] = {
-		"adduser", "-d", "-s", shell, "-G", "wheel", name, NULL
-	};
-	char *uargs[] = {
+	char *args[] = {
 		"adduser", "-d", "-s", shell, name, NULL
 	};
-	char **args;
 	int err;
-
-	/* XXX: group mapping to wheel should be done using nacm ACLs instead. */
-	if (!strcmp(name, "admin"))
-		args = sargs;	/* superuser */
-	else
-		args = uargs;	/* user */
 
 	/**
 	 * The Busybox implementation of 'adduser -d' sets the password
@@ -1018,6 +1003,67 @@ static int change_auth(sr_session_ctx_t *session, uint32_t sub_id, const char *m
 	return SR_ERR_OK;
 }
 
+static int change_nacm(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
+		       const char *_, sr_event_t event, unsigned request_id, void *priv)
+{
+	sr_val_t *users = NULL, *groups = NULL, *rules = NULL;
+	size_t user_count = 0, group_count = 0, rule_count = 0;
+	struct confd *confd = (struct confd *)priv;
+	int rc;
+
+	if (event != SR_EV_DONE)
+		return SR_ERR_OK;
+
+	/* Fetch all users from ietf-system */
+	rc = sr_get_items(session, XPATH_AUTH_"/user/name", 0, 0, &users, &user_count);
+	if (SR_ERR_OK != rc) {
+		ERROR("Failed fetching system users: %s", sr_strerror(rc));
+		goto cleanup;
+	}
+
+	aug_load(confd->aug);
+
+	for (size_t i = 0; i < user_count; i++) {
+		const char *user = users[i].data.string_val;
+		char xpath[256];
+		bool is_admin = false;
+
+		/* Fetch groups for each user */
+		snprintf(xpath, sizeof(xpath), NACM_BASE_"/groups/group[user-name='%s']/name", user);
+		rc = sr_get_items(session, xpath, 0, 0, &groups, &group_count);
+		if (!rc) {
+			for (size_t j = 0; j < group_count; j++) {
+				/* Fetch and check rules for each group */
+				snprintf(xpath, sizeof(xpath), NACM_BASE_"/rule-list[group='%s']/rule"
+					 "[module-name='*'][access-operations='*'][action='permit']",
+					 groups[j].data.string_val);
+				rc = sr_get_items(session, xpath, 0, 0, &rules, &rule_count);
+				if (rc)
+					continue; /* not found, this is OK */
+
+				/* At least one group grants full administrator permissions */
+				is_admin = true;
+
+				sr_free_values(rules, rule_count);
+			}
+
+			sr_free_values(groups, group_count);
+		}
+
+		if (is_admin)
+			systemf("adduser %s wheel", user);
+		else
+			systemf("delgroup %s wheel", user);
+	}
+
+	aug_save(confd->aug);
+cleanup:
+	if (users)
+		sr_free_values(users, user_count);
+
+	return 0;
+}
+
 static int change_motd(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
 		       const char *xpath, sr_event_t event, unsigned request_id, void *priv)
 {
@@ -1233,6 +1279,9 @@ int ietf_system_init(struct confd *confd)
 	}
 
 	REGISTER_CHANGE(confd->session, "ietf-system", XPATH_AUTH_, 0, change_auth, confd, &confd->sub);
+	REGISTER_MONITOR(confd->session, "ietf-netconf-acm", "/ietf-netconf-acm:nacm//.",
+			 0, change_nacm, confd, &confd->sub);
+
 	REGISTER_CHANGE(confd->session, "ietf-system", XPATH_BASE_"/hostname", 0, change_hostname, confd, &confd->sub);
 	REGISTER_CHANGE(confd->session, "ietf-system", XPATH_BASE_"/infix-system:motd", 0, change_motd, confd, &confd->sub);
 	REGISTER_CHANGE(confd->session, "ietf-system", XPATH_BASE_"/infix-system:motd-banner", 0, change_motd_banner, confd, &confd->sub);
