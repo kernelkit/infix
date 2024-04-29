@@ -226,22 +226,6 @@ e9               UP             192.168.2.200/24 fe80::ff:fe00:9/64
 br0              UP  
 ```
 
-
-
-```
-admin@example:~$ sysrepocfg -X -fjson -d running -x "/ietf-interfaces:interfaces/interface[name='e1']/enabled"
-{
-  "ietf-interfaces:interfaces": {
-    "interface": [
-      {
-        "name": "e1",
-        "enabled": false
-      }
-    ]
-  }
-}
-```
-
 ### Check Device's Network Connectivity
 
 Say you want to perform a [System Upgrade][#system-uprgade] and it just
@@ -346,6 +330,7 @@ persistent storage).
 admin@infix.local%eth0's password: *****
 ~$ 
 ```
+
 
 ## Examples using SSH and sysrepocfg
 
