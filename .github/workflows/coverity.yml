@@ -12,7 +12,7 @@ env:
 jobs:
   coverity:
     if: ${{github.repository_owner == 'kernelkit'}}
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - name: Fetch latest Coverity Scan MD5
@@ -24,6 +24,7 @@ jobs:
                --post-data "token=$TOKEN&project=${PROJECT_NAME}&md5=1" \
                -O coverity-latest.tar.gz.md5
           echo "md5=$(cat coverity-latest.tar.gz.md5)" | tee -a $GITHUB_OUTPUT
+
       - uses: actions/cache@v4
         id: cache
         with:
@@ -33,6 +34,7 @@ jobs:
             ${{ runner.os }}-coverity-${{ steps.var.outputs.md5 }}
             ${{ runner.os }}-coverity-
             ${{ runner.os }}-coverity
+
       - name: Download Coverity Scan
         env:
           TOKEN: ${{ secrets.COVERITY_SCAN_TOKEN }}
@@ -47,6 +49,14 @@ jobs:
           fi
           mkdir coverity
           tar xzf coverity-latest.tar.gz --strip 1 -C coverity
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get -y update
+          sudo apt-get -y install pkg-config libjansson-dev libev-dev \
+                       libaugeas-dev libglib2.0-dev libpcre2-dev      \
+                       libuev-dev libite-dev
+
       - name: Build dependencies
         run: |
           git clone https://github.com/CESNET/libyang.git
@@ -56,10 +66,12 @@ jobs:
           mkdir sysrepo/build
           (cd sysrepo/build && cmake .. && make all && sudo make install)
           make dep
+
       - name: Check applications
         run: |
           export PATH=`pwd`/coverity/bin:$PATH
           cov-build --dir cov-int make check
+
       - name: Submit results to Coverity Scan
         env:
           TOKEN: ${{ secrets.COVERITY_SCAN_TOKEN }}
@@ -72,6 +84,7 @@ jobs:
             --form version=$(git rev-parse HEAD) \
             --form description="${PROJECT_NAME} $(git rev-parse HEAD)" \
             https://scan.coverity.com/builds?project=${PROJECT_NAME}
+
       - name: Upload build.log
         uses: actions/upload-artifact@v4
         with:
