@@ -87,7 +87,7 @@ static int mdns_records(const char *cmd, svc type)
 			snprintf(buf, sizeof(buf), srv->text, hostname);
 
 		systemf("/usr/libexec/confd/gen-service %s %s %s %s %d \"%s\" %s", cmd,
-			hostname, srv->name, name[type], srv->port, srv->desc, buf);
+			hostname, srv->name, srv->type, srv->port, srv->desc, buf);
 	}
 
 	return SR_ERR_OK;
@@ -165,7 +165,7 @@ static void svc_enadis(int ena, svc type, const char *svc)
 	}
 
 	if (type != none)
-		mdns_records(ena ? "" : "delete", type);
+		mdns_records(ena ? "add" : "delete", type);
 
 	systemf("initctl -nbq touch avahi");
 	systemf("initctl -nbq touch nginx");
@@ -285,7 +285,7 @@ static int web_change(sr_session_ctx_t *session, uint32_t sub_id, const char *mo
 		svc_enadis(0, netbrowse, NULL);
 	}
 
-	svc_enadis(ena, none, "nginx"); /* fake it, not nginx .conf */
+	svc_enadis(ena, web, "nginx");
 	mdns_cname(session);
 
 	return put(cfg, srv);
