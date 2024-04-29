@@ -292,7 +292,30 @@ static int aug_set_dynpath(augeas *aug, const char *val, const char *fmt, ...)
 
 	res = aug_set(aug, path, val);
 	if (res != 0)
-		ERROR("Unable to set aug path \"%s\" to \"%s\"\n", path, val);
+		ERROR("Unable to set aug path \"%s\" to \"%s\"", path, val);
+
+	free(path);
+
+	return res;
+}
+
+static int aug_get_dynpath(augeas *aug, const char **val, const char *fmt, ...)
+{
+	va_list ap;
+	char *path;
+	int res;
+
+	va_start(ap, fmt);
+	res = vasprintf(&path, fmt, ap);
+	va_end(ap);
+	if (res == -1)
+		return res;
+
+	res = aug_get(aug, path, val);
+	if (res <= 0)
+		ERROR("Unable to get aug path \"%s\"", path);
+	else
+		res = 0;
 
 	free(path);
 
@@ -780,6 +803,19 @@ static sr_error_t handle_sr_passwd_update(augeas *aug, sr_session_ctx_t *, struc
 	return err;
 }
 
+/* Is user allowed to use a POSIX shell? */
+static void check_shell(augeas *aug, const char *user)
+{
+	const char *shell;
+
+	if (!aug_get_dynpath(aug, &shell, "/files/etc/passwd/%s/shell", user)) {
+		if (strcmp(shell, "/bin/false") && strcmp(shell, "/bin/clish")) {
+			WARN("Disabling ssh/console login for %s, only CLI shell allowed.", user);
+			aug_set_dynpath(aug, "/bin/false", "etc/passwd/%s/shell", user);
+		}
+	}
+}
+
 static sr_error_t handle_sr_shell_update(augeas *aug, sr_session_ctx_t *sess, struct sr_change *change)
 {
 	char *shell = NULL;
@@ -1050,10 +1086,12 @@ static int change_nacm(sr_session_ctx_t *session, uint32_t sub_id, const char *m
 			sr_free_values(groups, group_count);
 		}
 
-		if (is_admin)
+		if (is_admin) {
 			systemf("adduser %s wheel", user);
-		else
+		} else {
+			check_shell(confd->aug, user);
 			systemf("delgroup %s wheel", user);
+		}
 	}
 
 	aug_save(confd->aug);
