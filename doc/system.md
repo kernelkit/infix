@@ -70,6 +70,64 @@ admin@host:/config/system/authentication/user/admin/authorized-key/example@host/
 > does the job.
 
 
+## Multiple Users
+
+The system supports multiple users and has by default three user levels,
+or groups, that a user can be a member of.  Access control is handled by
+["NACM"][3], which provides granular access to configuration, data, and
+RPC commands over NETCONF.
+
+By default the system comes with three user groups: guest, operator, and
+admin.  The default user `admin` is by default part of the group `admin`
+and is granted full permissions to the system.  There is no restrictions
+on the number of users with administrator privileges, nor is the `admin`
+user reserved or protected in any way -- it is completely possible to
+remove it from the configuration.  However, it is recommended to keep at
+least one user with administrator privileges in the system, otherwise
+the only way to regain full access is to perform a *factory reset*.
+
+### Adding a User
+
+Similar to how to change password, adding a new user is done using the
+same set of commands:
+
+```
+admin@host:/config/> edit system authentication user jacky
+admin@host:/config/system/authentication/user/jacky/> change password
+New password:
+Retype password:
+admin@host:/config/system/authentication/user/jacky/> leave
+```
+
+An authorized SSH key is added the same way as presented previously.
+
+### Adding a User to the Admin Group
+
+The following commands add user `jacky` to the `admin` group.
+
+```
+admin@host:/config/> edit nacm group admin
+admin@host:/config/nacm/group/admin/> set user-name jacky
+admin@host:/config/nacm/group/admin/> leave
+```
+
+### Security Aspects
+
+The three default user levels apply primarily to NETCONF, with exception
+of the `admin` group which is granted full access to the underlying UNIX
+system with the following ACL rules:
+
+```json
+   ...
+   "module-name": "*",
+   "access-operations": "*",
+   "action": "permit",
+   ...
+```
+
+A user in the `admin` group is allowed to also use a POSIX login shell.
+
+
 ## Changing Hostname
 
 Notice how the hostname in the prompt does not change until the change
@@ -137,3 +195,4 @@ admin@host:/>
 
 [1]: https://www.rfc-editor.org/rfc/rfc7317
 [2]: https://github.com/kernelkit/infix/blob/main/src/confd/yang/infix-system%402024-02-29.yang
+[3]: https://www.rfc-editor.org/rfc/rfc8341
