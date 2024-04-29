@@ -24,6 +24,7 @@ int asprintf(char **strp, const char *fmt, ...);
 #define DEBUG(fmt, ...) do { if (debug) syslog(LOG_DEBUG, fmt, ##__VA_ARGS__); } while (0)
 #define INFO(fmt, ...)  syslog(LOG_INFO, fmt, ##__VA_ARGS__)
 #define NOTE(fmt, ...)  syslog(LOG_NOTICE, fmt, ##__VA_ARGS__)
+#define WARN(fmt, ...)  syslog(LOG_WARNING, "%s: " fmt, __func__, ##__VA_ARGS__)
 #define ERROR(fmt, ...) syslog(LOG_ERR, "%s: " fmt, __func__, ##__VA_ARGS__)
 #define ERRNO(fmt, ...) syslog(LOG_ERR, "%s: " fmt ": %s", __func__, ##__VA_ARGS__, strerror(errno))
 
