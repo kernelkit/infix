@@ -1063,6 +1063,9 @@ static int change_nacm(sr_session_ctx_t *session, uint32_t sub_id, const char *m
 		const char *user = users[i].data.string_val;
 		char xpath[256];
 		bool is_admin = false;
+		char *path = NULL;
+		char **match;
+		int num;
 
 		/* Fetch groups for each user */
 		snprintf(xpath, sizeof(xpath), NACM_BASE_"/groups/group[user-name='%s']/name", user);
@@ -1086,12 +1089,42 @@ static int change_nacm(sr_session_ctx_t *session, uint32_t sub_id, const char *m
 			sr_free_values(groups, group_count);
 		}
 
+		/* Check if user is already in group */
+		num = aug_match(confd->aug, "/files/etc/group/wheel/user", &match);
+		if (num) {
+			for (int j = 0; j < num; j++) {
+				const char *val = NULL;
+
+				aug_get(confd->aug, match[j], &val);
+				if (val && !strcmp(val, user))
+					path = match[j];
+				else
+					free(match[j]);
+			}
+			free(match);
+		}
+
 		if (is_admin) {
-			systemf("adduser %s wheel", user);
+			if (path)
+				goto done; /* already admin */
+
+			if (aug_set(confd->aug, "/files/etc/group/wheel/user[last() + 1]", user))
+				ERROR("Failed giving user %s UNIX sysadmin permissions.", user);
+			else
+				NOTE("User %s added to UNIX sysadmin group.", user);
 		} else {
 			check_shell(confd->aug, user);
-			systemf("delgroup %s wheel", user);
+			if (!path)
+				goto done; /* not member of wheel */
+
+			if (aug_rm(confd->aug, path) < 1)
+				ERROR("Failed removing user %s from UNIX sysadmin group.", user);
+			else
+				NOTE("User %s removed from UNIX sysadmin group.", user);
 		}
+	done:
+		if (path)
+			free(path);
 	}
 
 	aug_save(confd->aug);
