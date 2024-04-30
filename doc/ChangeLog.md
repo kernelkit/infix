@@ -4,23 +4,38 @@ Change Log
 All notable changes to the project are documented in this file.
 
 
-[v24.03.0][UNRELEASED]
+[v24.04.0][] - 2024-04-30
 -------------------------
 
-Please note, as of this release the Infix Classic variant has been
-dropped.  This was the legacy, pre-NETCONF, Infix with manual config of
-the system using a persistent `/etc`.  It may be resurrected later as a
+**News:** this release marks the first major upgrade of the underlying
+Buildroot to the latest LTS release, v2024.02.  This caused a few small
+regressions in the release cycle, all known issues have been addressed.
+
+Also worth highlighting, as of this release the Infix Classic variant
+has been dropped.  It was the legacy Infix with manual configuration of
+the system using a persistent `/etc`.  May be resurrected later as a
 separate project.  Going forward Infix' focus is entirely on NETCONF.
 
-> Development in progress, for daily updates see the team board:
-> <https://github.com/orgs/kernelkit/projects/3/views/2>
+Finally, the YANG Status section has been dropped for this release, the
+idea is to generate supported features from the models and include in
+future releases.
 
 ### Changes
-- Bump the base Linux kernel version to 6.6
+- Bump the base Buildroot version to v2024.02 LTS
+- Bump the base Linux kernel version to 6.6 LTS
 - Drop Classic variant to reduce overhead, simplify build & release
   processes, and focus on NETCONF for Arm64 and Amd64 platforms
 - Add hostname restrictions to ietf-system, and infix-dhcp-client
   models.  Max 64 characters on Linux systems
+- Add mDNS CNAME (alias) advertisement, e.g., infix.local in addition to
+  the default infix-c0-ff-ee.local.  Note: this is build-specific and
+  does not change if system hostname is changed
+- Add mDNS browser web application, https://network.local that shows all
+  mDNS devices on the LAN.  The network.local mDNS name is also a CNAME,
+  so with multiple Infix devices, only one will act as the mDNS browser
+- Add temporary landing page to web server for https://infix.local
+- Add web console using ttyd, https://infix.local:7681
+- Add support for disabling web services using CLI
 - The bridge model now has built-in validation of port memberships,
   i.e., a port must be a bridge member to be used in VLAN filtering
 - The bridge model only permits the bridge itself to be a tagged
@@ -28,11 +43,49 @@ separate project.  Going forward Infix' focus is entirely on NETCONF.
   such bridges is to use a VLAN interface on top
 - A VLAN filtering bridge now validates that no IP address has been
   set.  Use a VLAN interface on top for that (see above)
-- Container documentation: CLI prompts have been updated to match the
-  examples used in other parts of the User Guide
+- Restructure documentation, let first page in doc/ be table of contents
+- Scripting Infix, new document on how to script Infix from remote,
+  e.g., for production or from a container
+- Introduction, update documentation now that the `admin` user's default
+  login shell is `/bin/bash`
+- System documentation, first outline of how to change hostname, add
+  users, add system administrator users, changing login banner, change
+  the system default editor, and more
+- Network documentation, add section on VETH pairs
+- Container documentation:
+  - CLI prompts have been updated to match the examples used in other
+    parts of the User Guide
+  - Default route example for static container interfaces
+  - How to upgrade a container image
 - As a follow-up to port speed/duplex/autoneg support added in v24.02,
   this release ensures flow-control is always disabled on all Ethernet
   ports, as described in the IEEE Ethernet interfaces YANG model
+- Add support for core dumps, saving them in `/var/crash`, max one dump
+  per process, for use with future support tarballs
+- Add support for multicast snooping, both IPv4 (IGMP) and IPv6 (MLD) in
+  bridge setups, including offloading to switchdev
+- Add support for acting as passive (proxy) or active IGMP querier
+- Add support for static multicast filters, MAC, IPv4 and IPv6 groups
+  are supported -- multicast snooping must be enabled
+- Include Buildroot `legal-info` in releases, i.e., licenses, sources
+  with patches, as well as csv files for packages and toolchain
+- Drop `shell` command from CLI to allow confining users
+- The CLI `copy` command now allows absolute paths
+- Local resolver, `dnsmasq`, had port 53 visible from external `nmap`
+  scans, even though it dropped non-local requests, it now only binds to
+  the loopback interface reduce number of externally visible ports
+- Kernel log messages, of severity error or higher, now log directly to
+  the console.  This may cause some annoyance but has been enabled to
+  ease debugging, in particular issues where the system crashes before
+  the syslog daemon has flushed logs to disk.  (Logs are still saved to
+  log files as well.)
+- Issue #325: Add support for multiple administrator users by opening
+  up basic NETCONF ACM support.  See documentation for details
+  - Any user can be added to the `admin` NACM group
+  - Any user *not* in the `admin` group is not allowed to have a login
+    shell other than the CLI (or disabled).  POSIX shell, e.g., Bash is
+	reserved for system administrators
+- Issue #327: Remove IPv6LL from bridge port interfaces
 - Issue #358: translate YANG model's LOWER-LAYER-DOWN -> LINK-DOWN in
   CLI `show interfaces` command
 - Issue #360: document factory-config, startup-config, and the various
@@ -44,20 +97,12 @@ separate project.  Going forward Infix' focus is entirely on NETCONF.
   users to avoid enabling privileged mode
 - Issue #367: setting date/time over NETCONF now saves system time also
   to the RTC, which otherwise is only saved on reboot or power-down
-- Add support for static multicast filters, MAC, IPv4 and IPv6 groups
-  are supported.
-- Include Buildroot `legal-info` in releases, i.e., licenses, sources
-  with patches, as well as csv files for packages and toolchain
 - Issue #369: Remove limitation that the routing instance must be
   named 'default'
 
 ### Fixes
-- Issue #391 Creating VLAN interface in the CLI with "edit interface vlanN"
-  does not set VLAN id to N.
-- confd: Fix memory leak when operating on candidate configuration.
-- CLI: fix VLAN inference for interfaces named `eth0.1`, i.e., VID 1 on
-  lower-layer-if `eth0`.  Only affects automatic inference in the CLI,
-  entering the values manually (CLI/NETCONF) not affected by this bug
+- confd: Fix memory leak when operating on candidate configuration
+- probe: Fix crash on systems without USB
 - Reduced syslog errors for accesses no non-existing xpaths
 - Fix bogus warning about not properly updating `/etc/motd` in new
   `motd-banner` setting, introduced in v24.02.0
@@ -66,8 +111,16 @@ separate project.  Going forward Infix' focus is entirely on NETCONF.
 - Fix #328: when setting up a VLAN filtering bridge, the PVID for bridge
   ports defaulted to 1, making it impossible to set up "tagged-only"
   ports which drop ingressing untagged traffic
+- Fix #329: VLAN inference for interfaces named `eth0.1`, i.e., VID 1 on
+  lower-layer-if `eth0`.  Only affects automatic inference in the CLI,
+  entering the values manually (CLI/NETCONF) not affected by this bug
+- Fix #331: inconsistent naming of 'enabled' in infix-routing.yang
+- Fix #349: minor changes to `bridge-port` settings, like setting `pvid`
+  when you forget it, did not take without a reboot
+- Fix #353: impossible to remove bridge port with `no bridge-port`
 - Fix #358: MAC address no longer shown for bridge interfaces in CLI
   `show interfaces` command
+- Fix #365: not possible to run `ping` from container
 - Fix #366: static routes from container host interfaces do not work.
   Documentation updated with an example
 - Fix #368: upgrading `oci-archive:/` images fail because system thinks
@@ -77,8 +130,13 @@ separate project.  Going forward Infix' focus is entirely on NETCONF.
   declare `network` settings, Infix v23.02 had a late regression that
   reverted back to the podman default: network behind a CNI bridge
   (firewalled and NAT:ed, hidden from the rest of the network)
-- Fix #385: segfault in helper function when disabling the DHCP client
+- Fix #375: k8s-logger, used for containers, does not exit properly and
+  causes 100% CPU load when container stop or are restarted.  Also in
+  this issue: handle ip/route additions to container networks at runtime
+- Fix #384: segfault in helper function when disabling the DHCP client
   using `no dhcp-client` from the CLI
+- Fix #391 Creating VLAN interface in the CLI with "edit interface vlanN"
+  does not set VLAN id to N.
 - Fix #404: `lldpd` should be disabled on internal interface `dsa0`
 - Fix #406: an overly restrictive `when` expression in the bridge YANG
   model prevented users from adding VLAN interfaces as bridge ports.
@@ -90,6 +148,7 @@ separate project.  Going forward Infix' focus is entirely on NETCONF.
   `admin`.  The file ownership is now adjusted on every boot
 - Fix #416: `admin` user cannot perform a factory reset with RPC using
   `sysrepocfg` tool over SSH
+- Fix bogus syslog warning about not updating `/etc/motd` properly
 
 
 [v24.02.0][] - 2024-03-01
