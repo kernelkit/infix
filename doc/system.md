@@ -72,17 +72,18 @@ admin@host:/config/system/authentication/user/admin/authorized-key/example@host/
 
 ## Multiple Users
 
-The system supports multiple users and has by default three user levels,
-or groups, that a user can be a member of.  Access control is handled by
-["NACM"][3], which provides granular access to configuration, data, and
-RPC commands over NETCONF.
+The system supports multiple users and multiple user levels, or groups,
+that a user can be a member of.  Access control is entirely handled by
+the NETCONF ["NACM"][3] YANG model, which provides granular access to
+configuration, data, and RPC commands over NETCONF.
 
-By default the system comes with three user groups: guest, operator, and
-admin.  The default user `admin` is by default part of the group `admin`
-and is granted full permissions to the system.  There is no restrictions
-on the number of users with administrator privileges, nor is the `admin`
-user reserved or protected in any way -- it is completely possible to
-remove it from the configuration.  However, it is recommended to keep at
+By default the system ships with a single group, `admin`, which the
+default user `admin` is a member of.  The broad permissions granted by
+the `admin` group is what gives its users full system administrator
+privileges.  There are no restrictions on the number of users with
+administrator privileges, nor is the `admin` user reserved or protected
+in any way -- it is completely possible to remove the default `admin`
+user from the configuration.  However, it is recommended to keep at
 least one user with administrator privileges in the system, otherwise
 the only way to regain full access is to perform a *factory reset*.
 
@@ -113,9 +114,9 @@ admin@host:/config/nacm/group/admin/> leave
 
 ### Security Aspects
 
-The three default user levels apply primarily to NETCONF, with exception
-of the `admin` group which is granted full access to the underlying UNIX
-system with the following ACL rules:
+The NACM user levels apply primarily to NETCONF, with exception of the
+`admin` group which is granted full system administrator privileges to
+the underlying UNIX system with the following ACL rules:
 
 ```json
    ...
@@ -125,7 +126,14 @@ system with the following ACL rules:
    ...
 ```
 
-A user in the `admin` group is allowed to also use a POSIX login shell.
+A user in the `admin` group is allowed to also use a POSIX login shell
+and use the `sudo` command to perform system administrative commands.
+This makes it possible to use all the underlying UNIX tooling, which
+to many can be very useful, in particular when debugging a system, but
+please remember to use with care -- the system is not built to require
+managing from the shell.  The tools available in the CLI and automated
+services, started from the system's configuration, are the recommended
+way of using the system, in addition to NETCONF tooling.
 
 
 ## Changing Hostname
