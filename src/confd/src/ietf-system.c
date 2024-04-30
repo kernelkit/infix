@@ -713,7 +713,7 @@ static int sys_del_user(char *user)
 		ERROR("Error deleting user \"%s\"\n", user);
 		return SR_ERR_SYS;
 	}
-	DEBUG("User \"%s\" deleted\n", user);
+	NOTE("User \"%s\" deleted\n", user);
 
 	return SR_ERR_OK;
 }
@@ -914,7 +914,7 @@ static sr_error_t check_sr_user_update(augeas *aug, sr_session_ctx_t *, struct s
 		ERROR("Invalid username \"%s\"", name);
 		return SR_ERR_VALIDATION_FAILED;
 	}
-	ERROR("Username \"%s\" is valid", name);
+	NOTE("Username \"%s\" is valid", name);
 
 	return SR_ERR_OK;
 }
@@ -935,7 +935,6 @@ static sr_error_t handle_sr_user_update(augeas *aug, sr_session_ctx_t *sess, str
 			sr_xpath_recover(&state);
 			return err;
 		}
-		NOTE("User %s created", name);
 		sr_xpath_recover(&state);
 		break;
 	case SR_OP_DELETED:
@@ -947,7 +946,6 @@ static sr_error_t handle_sr_user_update(augeas *aug, sr_session_ctx_t *sess, str
 			sr_xpath_recover(&state);
 			return err;
 		}
-		NOTE("User %s deleted", name);
 		sr_xpath_recover(&state);
 		break;
 	case SR_OP_MOVED:
