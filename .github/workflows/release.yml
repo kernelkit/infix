@@ -44,7 +44,6 @@ jobs:
           target=${{ matrix.platform }}-${fver}
           echo "dir=infix-$target"        >> $GITHUB_OUTPUT
           echo "tgz=infix-$target.tar.gz" >> $GITHUB_OUTPUT
-          echo "out=/mnt/x-$target"       >> $GITHUB_OUTPUT
 
       - name: Restore Cache of dl/
         uses: actions/cache@v4
@@ -69,9 +68,6 @@ jobs:
         run: |
           target=${{ matrix.platform }}_defconfig
           echo "Building $target ..."
-          sudo mkdir ${{ steps.vars.outputs.out }}
-          sudo chown $(id -un):$(id -gn) ${{ steps.vars.outputs.out }}
-          export O=${{ steps.vars.outputs.out }}
           make $target
           make
 
@@ -81,7 +77,7 @@ jobs:
 
       - name: Prepare Artifacts
         run: |
-          cd ${{ steps.vars.outputs.out }}
+          cd output/
           mv images ${{ steps.vars.outputs.dir }}
           ln -s ${{ steps.vars.outputs.dir }} images
           tar chfz ${{ steps.vars.outputs.tgz }} ${{ steps.vars.outputs.dir }}
@@ -92,7 +88,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: artifact-${{ matrix.platform }}
-          path: ${{ steps.vars.outputs.out }}/*.tar.gz
+          path: output/*.tar.gz
 
   release:
     name: Release Infix ${{ github.ref_name }}
