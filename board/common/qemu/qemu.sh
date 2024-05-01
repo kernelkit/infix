@@ -204,8 +204,8 @@ net_args()
     echo -n "-fw_cfg name=opt/mactab,file=$mactab "
 
     if [ "$CONFIG_QEMU_NET_BRIDGE" = "y" ]; then
-	echo -n "-netdev bridge,id=e0,br=$CONFIG_QEMU_NET_BRIDGE_DEV "
-	net_dev_args 0
+	echo -n "-netdev bridge,id=e1,br=$CONFIG_QEMU_NET_BRIDGE_DEV "
+	net_dev_args 1
     elif [ "$CONFIG_QEMU_NET_TAP" = "y" ]; then
 	for i in $(seq 1 $(($CONFIG_QEMU_NET_TAP_N))); do
 	    echo -n "-netdev tap,id=e$i,ifname=qtap$i "
@@ -215,8 +215,8 @@ net_args()
 	local useropts=
 	[ "$CONFIG_QEMU_NET_USER_OPTS" ] && useropts=",$CONFIG_QEMU_NET_USER_OPTS"
 
-	echo -n "-netdev user,id=e0${useropts} "
-	net_dev_args 0
+	echo -n "-netdev user,id=e1${useropts} "
+	net_dev_args 1
     else
 	echo -n "-nic none"
     fi
