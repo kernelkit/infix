@@ -4,6 +4,19 @@ Change Log
 All notable changes to the project are documented in this file.
 
 
+[v24.04.1][] - 2024-05-03
+-------------------------
+
+### Changes
+- Default web landing page refactored into a Buildroot package to make
+  it possible to overload from customer repos.
+- Enable DCB support in aarch64 kernel (for EtherType prio override)
+- Issue #374: add timestamps to dagger .log files
+
+### Fixes
+- Fix #424: regression, root user can log in without password
+
+
 [v24.04.0][] - 2024-04-30
 -------------------------
 
@@ -844,6 +857,7 @@ Supported YANG models in addition to those used by sysrepo and netopeer:
 
 [buildroot]:  https://buildroot.org/
 [UNRELEASED]: https://github.com/kernelkit/infix/compare/v24.04.0...HEAD
+[v24.04.1]:   https://github.com/kernelkit/infix/compare/v24.04.0...v24.04.1
 [v24.04.0]:   https://github.com/kernelkit/infix/compare/v24.02.0...v24.04.0
 [v24.02.0]:   https://github.com/kernelkit/infix/compare/v23.11.0...v24.02.0
 [v23.11.0]:   https://github.com/kernelkit/infix/compare/v23.10.0...v23.11.0
