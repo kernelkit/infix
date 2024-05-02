@@ -1,0 +1,6 @@
+config BR2_PACKAGE_LANDING
+	bool "Landing page (temporary)"
+	help
+	  Temporary landing page before upcoming webui.
+
+	  https://github.com/kernelkit/infix
