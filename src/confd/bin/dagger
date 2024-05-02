@@ -50,8 +50,8 @@ action_exec()
 
     for node in $order; do
 	for work in $(find "$actdir/$node" -type f -executable 2>/dev/null | sort); do
-	    $work >>"$work.log" 2>&1 || code=$?
-	    echo "[exit:$code]" >>"$work.log"
+	    $work               | ts >>"$work.log" 2>&1 || code=$?
+	    echo "[exit:$code]" | ts >>"$work.log"
 
 	    [ $code -eq 0 ] || abort "$work failed with exitcode $code"
 	done
