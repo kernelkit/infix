@@ -11,9 +11,14 @@ All notable changes to the project are documented in this file.
 - Default web landing page refactored into a Buildroot package to make
   it possible to overload from customer repos.
 - Enable DCB support in aarch64 kernel (for EtherType prio override)
+- Topology mapper improvements, including option for deterministic
+  reproduction of logical to physical mappings
+- New version of `gencert` tool, for self signed HTTPS certificates.
+  This allows dropping dependency on building a host rust toolchain
 - Issue #374: add timestamps to dagger .log files
 
 ### Fixes
+- Add missing LICENSE hash for factory reset tool
 - Fix #424: regression, root user can log in without password
 
 
