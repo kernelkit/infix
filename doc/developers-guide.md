@@ -67,7 +67,7 @@ $ sudo apt install bc binutils build-essential bzip2 cpio \
                    diffutils file findutils git gzip      \
                    libncurses-dev libssl-dev perl patch   \
                    python3 rsync sed tar unzip wget       \
-                   autopoint
+                   autopoint bison flex
 ```
 
 For testing, a few more tools and services are required on your system:
