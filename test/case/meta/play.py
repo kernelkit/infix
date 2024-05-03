@@ -12,7 +12,7 @@ env = infamy.Env()
 ctrl = env.ptop.get_ctrl()
 infixen = env.ptop.get_infixen()
 for ix in infixen:
-    (_, cport), (_, ixport) = env.ptop.get_path(ctrl, ix)
+    cport, ixport = env.ptop.get_mgmt_link(ctrl, ix)
     print(f"Attaching to {ix}:{ixport} via {ctrl}:{cport}")
     exec(f"{ix} = env.attach(\"{ix}\", \"{ixport}\")")
 
