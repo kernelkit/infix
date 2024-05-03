@@ -49,7 +49,6 @@ cat <<EOF
   Exec prefix...........: $eprefix
   Sysconfdir............: `eval echo $sysconfdir`
   Localstatedir.........: `eval echo $localstatedir`
-  Default fstab.........: `eval echo $fstab`
   System environment....: ${sysconfig_path:-${sysconfig}}
   C Compiler............: $CC $CFLAGS $CPPFLAGS $LDFLAGS $LIBS
   Linker................: $LD $LLDP_LDFLAGS $LLDP_BIN_LDFLAGS $LDFLAGS $LIBS
