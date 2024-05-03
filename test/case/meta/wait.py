@@ -8,13 +8,13 @@ import infamy, infamy.neigh
 def ll6ping(node):
     neigh = None
 
-    for (_, cport), (_, nport) in env.ptop.get_paths(ctrl, node):
-        neigh = infamy.neigh.ll6ping(cport, flags=["-w1", "-c1", "-L", "-n"])
-        if neigh:
-            print(f"Found {neigh} on {cport} (connected to {node}:{nport})")
-            break
+    cport, nport = env.ptop.get_mgmt_link(ctrl, node)
+    neigh = infamy.neigh.ll6ping(cport, flags=["-w1", "-c1", "-L", "-n"])
+    if neigh:
+        print(f"Found {neigh} on {cport} (connected to {node}:{nport})")
+        return neigh
 
-    return neigh
+    return None
 
 def netconf_syn(neigh):
     try:

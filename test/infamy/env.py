@@ -47,7 +47,7 @@ class Env(object):
         if not password:
             password = "admin"
         ctrl = self.ptop.get_ctrl()
-        _, cport = self.ptop.get_path(ctrl, (node, port))[0]
+        cport, _ = self.ptop.get_mgmt_link(ctrl, node)
 
         print(f"Probing {node} on port {cport} for IPv6LL mgmt address ...")
         mgmtip = neigh.ll6ping(cport)

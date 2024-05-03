@@ -1,88 +1,79 @@
 import networkx as nx
 from networkx.algorithms import isomorphism
 
-def qstrip(text):
-    if text.startswith("\"") and text.endswith("\""):
-        return text[1:-1]
-    return text
+def map_edges(les, pes):
+    acc = []
+    les = sorted(list(les.values()), key=lambda x: x.get("kind", ""), reverse=True)
+    pes = sorted(list(pes.values()), key=lambda x: x.get("kind", ""), reverse=True)
 
-def match_node(n1attrs, n2attrs):
-    return n1attrs.get("kind") == n2attrs.get("kind")
+    for i in range(len(les)):
+        if pes[i].get("kind") != les[i].get("kind"):
+            return None
 
-def match_edge(e1attrs, e2attrs):
-    if "kind" in e1attrs or "kind" in e2attrs:
-        return e1attrs.get("kind") == e2attrs.get("kind")
+        acc.append((les[i], pes[i]))
 
-    return True
+    return acc
 
+def match_node(pn, ln):
+    return pn.get("kind") == ln.get("kind")
+
+def match_edge(pes, les):
+    return map_edges(les, pes) != None
 
 class Topology:
     def __init__(self, dotg):
+        def _qstrip(text):
+            if text == None:
+                return None
+
+            if text.startswith("\"") and text.endswith("\""):
+                return text[1:-1]
+            return text
+
         self.dotg = dotg
-        edges = {}
+        self.g = nx.MultiGraph()
+
+        for n in self.dotg.get_nodes():
+            name = n.get_name()
+            if name in ("node", "edge"):
+                continue
+
+            repr(n.get_attributes())
+            attrs = { _qstrip(k): _qstrip(v) for k, v in n.get_attributes().items() if k != "label" }
+            self.g.add_node(name, **attrs)
+
         for e in self.dotg.get_edges():
-            attrs = e.get_attributes()
-            if "weight" not in attrs:
-                attrs["weight"] = 1
-            
-            edges[tuple(e.get_source().split(":"))] = { tuple(e.get_destination().split(":")): attrs }
+            sn, sp = e.get_source().split(":")
+            dn, dp = e.get_destination().split(":")
 
-
-        self.g = nx.Graph(edges, weight=1)
-        for e in list(self.g.edges):
-            s, d = e
-            self.g.nodes[s]["kind"] = "port"
-            self.g.nodes[d]["kind"] = "port"
-
-            sn, sp = s
-            dn, dp = d
-
-            try:
-                sk = qstrip(self.dotg.get_node(sn)[0].get_attributes()["kind"])
-            except:
-                raise ValueError("\"{}\"'s kind is not known".format(sn))
-
-            try:
-                dk = qstrip(self.dotg.get_node(dn)[0].get_attributes()["kind"])
-            except:
-                raise ValueError("\"{}\"'s kind is not known".format(dn))
-
-            self.g.add_node(sn, kind=sk)
-            self.g.add_edge(sn, s, weight=0)
-            self.g.add_node(dn, kind=dk)
-            self.g.add_edge(dn, d, weight=0)
+            attrs = { _qstrip(k): _qstrip(v) for k, v in e.get_attributes().items() }
+            attrs[sn] = sp
+            attrs[dn] = dp
+            self.g.add_edge(sn, dn, **attrs)
 
     def map_to(self, phy):
-        def _map_node(lnode, pnode):
-            if lnode in self.mapping:
-                assert(self.mapping[lnode][None] == pnode)
-            else:
-                self.mapping[lnode] = { None: pnode }
-
-        def _map_port(log, phy):
-            (lnode, lport) = log
-            (pnode, pport) = phy
-
-            if lport in self.mapping[lnode]:
-                assert(self.mapping[lnode][lport] == pport)
-            else:
-                self.mapping[lnode][lport] = pport
-
-        nxmap = isomorphism.GraphMatcher(phy.g, self.g, edge_match=match_edge, node_match=match_node)
-        if not nxmap.subgraph_is_isomorphic():
+        mapper = isomorphism.MultiGraphMatcher(phy.g, self.g,
+                                               edge_match=match_edge,
+                                               node_match=match_node)
+        if not mapper.subgraph_is_monomorphic():
             return False
 
         self.phy = phy
         self.mapping = {}
-        for (phy, log) in nxmap.mapping.items():
-            if isinstance(log, tuple):
-                lnode, lport = log
-                pnode, pport = phy
 
-                _map_node(lnode, pnode)
-                _map_port((lnode, lport), (pnode, pport))
-            else:
-                _map_node(log, phy)
+        for pn, ln in mapper.mapping.items():
+            self.mapping.setdefault(ln, { None: pn })
+
+        for lsrc, ldst in set(self.g.edges()):
+            psrc = self.mapping[lsrc][None]
+            pdst = self.mapping[ldst][None]
+
+            les = self.g.get_edge_data(lsrc, ldst)
+            pes = self.phy.g.get_edge_data(psrc, pdst)
+
+            for le, pe in map_edges(les, pes):
+                self.mapping[lsrc][le[lsrc]] = pe[psrc]
+                self.mapping[ldst][le[ldst]] = pe[pdst]
 
         return True
 
@@ -116,20 +107,16 @@ class Topology:
         password=b.get("password")
         return qstrip(password) if password is not None else None
 
-    def get_ports(self, node):
-        ports = self.get_nodes(lambda name, _: name.startswith(f"{node}:"))
-        return { p.removeprefix(f"{node}:") for p in ports }
+    def get_link(self, src, dst, flt=lambda _: True):
+        es = self.g.get_edge_data(src, dst)
+        for e in es.values():
+            if flt(e):
+                return e[src], e[dst]
 
-    def get_path(self, src, dst):
-        path = nx.shortest_path(self.g, src, dst)
-        return path[1:-1] if path else None
+        return None
 
-    def get_paths(self, src, dst):
-        paths = nx.all_shortest_paths(self.g, src, dst)
-        if not paths:
-            return None
-
-        return map(lambda path: path[1:-1], paths)
+    def get_mgmt_link(self, src, dst):
+        return self.get_link(src, dst, lambda e: e.get("kind") == "mgmt")
 
     def get_ctrl(self):
         ns = self.get_nodes(lambda _, attrs: attrs.get("kind") == "controller")
@@ -138,7 +125,6 @@ class Topology:
 
     def get_infixen(self):
         return self.get_nodes(lambda _, attrs: attrs.get("kind") == "infix")
-
 
 # Support calling this script like so...
 #
