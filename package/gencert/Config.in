@@ -1,0 +1,8 @@
+config BR2_PACKAGE_GENCERT
+	bool "gencert"
+	select BR2_PACKAGE_OPENSSL
+	help
+	  Generate a self-signed certificate for embedded systems confused
+	  about the current time.  Start date: 2000-01-01, end: 9999-01-01
+
+	  https://github.com/kernelkit/infix
