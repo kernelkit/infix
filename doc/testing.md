@@ -410,6 +410,45 @@ You can now freely debug the network activity of your test and the
 responses from the DUT.
 
 
+### Deterministic Topology Mappings
+
+By default, mappings from logical to physical topologies are not
+stable across test case executions. This can be very frustrating when
+debugging a failing test, since logical nodes are suffled around
+between phyical nodes. In such cases, supplying a `PYTHONHASHSEED`
+variable (set to any 32-bit unsigned integer) when launching the test
+environment will make sure that topology mappings are deterministic:
+
+    $ make PYTHONHASHSEED=0 test-sh
+
+If a seed is not supplied, a random value is chosen. This seed is
+logged by the `meta/reproducible.py` test case when running a test
+suite:
+
+    $ make test
+    Info: Generating topology
+    Info: Generating node YAML
+    Info: Generating executables
+    Info: Launching dut1
+    Info: Launching dut2
+    Info: Launching dut3
+    Info: Launching dut4
+    9PM - Simplicity is the ultimate sophistication
+
+    Starting test 0002-reproducible.py
+    2024-05-03 10:40:30 # Starting (2024-05-03 10:40:30)
+    2024-05-03 10:40:30 # Specify PYTHONHASHSEED=3773822171 to reproduce this test environment
+    2024-05-03 10:40:30 ok 1 - $PYTHONHASHSEED is set
+    2024-05-03 10:40:30 # Exiting (2024-05-03 10:40:30)
+    2024-05-03 10:40:30 1..1
+    ...
+
+This is useful because this value can then be used to rerun a test (or
+the whole suite) with identical topology mappings:
+
+    $ make PYTHONHASHSEED=3773822171 INFIX_TESTS=case/ietf_system/hostname.py test
+
+
 [9PM]:    https://github.com/rical/9pm
 [Qeneth]: https://github.com/wkz/qeneth
 [TAP]:    https://testanything.org/
