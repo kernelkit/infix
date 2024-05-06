@@ -148,111 +148,23 @@ if [ -n "$TESTING" ]; then
 	exit 0
 fi
 
-# Drop all pre-initialized data from netopeer2 install, then re-create
-# with required netopeer2 models, sysrepo implicitly installs its own,
-# and then we initialize it all with our factory defaults.
-rm -rf /etc/sysrepo/* /dev/shm/sr_*
 mkdir -p /etc/sysrepo/
 if [ -f "$FACTORY_CFG" ]; then
     cp "$FACTORY_CFG" "$INIT_DATA"
 else
     cp "$FAILURE_CFG" "$INIT_DATA"
 fi
-
-sysrepoctl -s $SEARCH							\
-	   -i ietf-system@2014-08-06.yang      -g wheel -p 0660		\
-           	-e authentication					\
-		-e local-users						\
-		-e ntp							\
-		-e ntp-udp-port						\
-		-e timezone-name					\
-	   -i iana-timezones@2013-11-19.yang   -g wheel -p 0660		\
-	   -i nc-notifications@2008-07-14.yang -g wheel -p 0660		\
-	   -i notifications@2008-07-14.yang    -g wheel -p 0660		\
-	   -i ietf-keystore@2019-07-02.yang    -g wheel -p 0660		\
-	   	-e keystore-supported					\
-	   	-e local-definitions-supported				\
-	   	-e key-generation					\
-	   -i ietf-truststore@2019-07-02.yang	-g wheel -p 0660	\
-		-e truststore-supported					\
-		-e x509-certificates					\
-	   -i ietf-tcp-common@2019-07-02.yang	-g wheel -p 0660	\
-		-e keepalives-supported					\
-	   -i ietf-ssh-server@2019-07-02.yang	-g wheel -p 0660	\
-		-e local-client-auth-supported				\
-	   -i ietf-tls-server@2019-07-02.yang	-g wheel -p 0660	\
-		-e local-client-auth-supported				\
- 	   -i ietf-netconf-server@2019-07-02.yang -g wheel -p 0660	\
-	   	-e ssh-listen						\
-		-e tls-listen						\
-		-e ssh-call-home					\
-		-e tls-call-home					\
-	   -i ietf-interfaces@2018-02-20.yang   -g wheel -p 0660	\
-		-e if-mib						\
-	   -i ietf-ip@2018-02-22.yang		-g wheel -p 0660	\
-		-e ipv6-privacy-autoconf				\
-	   -i ietf-network-instance@2019-01-21.yang -g wheel -p 0660	\
-	   -i ietf-netconf-monitoring@2010-10-04.yang -g wheel -p 0660	\
-	   -i ietf-netconf-nmda@2019-01-07.yang -g wheel -p 0660	\
-		-e origin						\
-		-e with-defaults					\
-	   -i ietf-subscribed-notifications@2019-09-09.yang		\
-		-g wheel -p 0660 					\
-		-e encode-xml						\
-		-e replay						\
-		-e subtree						\
-		-e xpath						\
-	   -i ietf-yang-push@2019-09-09.yang    -g wheel -p 0660	\
-	        -e on-change						\
-	   -i ietf-routing@2018-03-13.yang      -g wheel -p 0660        \
-	   -i ietf-ipv6-unicast-routing@2018-03-13.yang -g wheel -p 0660 \
-	   -i ietf-ipv4-unicast-routing@2018-03-13.yang -g wheel -p 0660 \
-	   -i ietf-ospf@2022-10-19.yang -g wheel -p 0660                \
-	      -e bfd                                                    \
-              -e explicit-router-id                                     \
-	   -i iana-if-type@2023-01-26.yang	-g wheel -p 0660	\
-	   -i iana-hardware@2018-03-13.yang     -g wheel -p 0660        \
-	   -i ietf-hardware@2018-03-13.yang     -g wheel -p 0660        \
-	      -e hardware-state                                         \
-	   -i infix-hardware@2024-04-25.yang    -g wheel -p 0660        \
-	   -i ieee802-dot1q-types@2022-10-29.yang -g wheel -p 0660	\
-	   -i infix-ip@2023-09-14.yang		-g wheel -p 0660	\
-	   -i infix-if-type@2024-01-29.yang	-g wheel -p 0660	\
-	   -i infix-routing@2024-03-06.yang     -g wheel -p 0660        \
-	   -i infix-interfaces@2024-01-15.yang	-g wheel -p 0660	\
-		-e vlan-filtering					\
-	   -i ieee802-dot1ab-lldp@2022-03-15.yang -g wheel -p 0660	\
-	   -i infix-lldp@2023-08-23.yang	-g wheel -p 0660	\
-	   -i infix-dhcp-client@2024-04-12.yang -g wheel -p 0660	\
-	   -i infix-shell-type@2023-08-21.yang	-g wheel -p 0660	\
-	   -i infix-system@2024-04-12.yang	-g wheel -p 0660	\
-	   -i infix-services@2024-04-08.yang	-g wheel -p 0660	\
-	   -i ieee802-ethernet-interface@2019-06-21.yang -g wheel -p 0660 \
-	   -i infix-ethernet-interface@2024-02-27.yang -g wheel -p 0660 \
-	   -I "${INIT_DATA}"
 rc=$?
 
-# Unlike `sysrepoctl -i` the `-c` command requires separate invocations.
-# NOTE: we ignore any errors from these at bootstrap since sysrepo may
-#       already enable some of these feature, resulting in error here.
-# Enable features required by netopeer2
-sysrepoctl -c ietf-netconf			-g wheel -p 0660	\
-		-e writable-running					\
-		-e candidate						\
-		-e rollback-on-error					\
-		-e validate						\
-		-e startup						\
-		-e url							\
-		-e xpath						\
-		-e confirmed-commit
-# Allow wheel group users (admin) to modify NACM and do factory reset
-sysrepoctl -c ietf-netconf-acm     -g wheel -p 0660
-sysrepoctl -c ietf-factory-default -g wheel -p 0660
-sysrepoctl -c sysrepo-plugind      -g wheel -p 0660
+sysrepoctl -z $INIT_DATA
+rc=$?
+sudo -u root -g wheel sysrepocfg -f json -I"$INIT_DATA" -d running
+rc=$?
 
-# On first boot, install factory-config as startup-config.  Due to a
-# limitation in sysrepo we cannot initialize ietf-netconf-acm, so we
-# cheat, see sysrepo#3079
+
+#rm $INIT_DATA
+
+# On first boot, install factory-config as startup-config.
 chgrp wheel /cfg
 chmod g+w   /cfg
 if [ ! -f "$STARTUP_CFG" ]; then
@@ -260,7 +172,8 @@ if [ ! -f "$STARTUP_CFG" ]; then
 fi
 
 # Clear running-config so we can load startup in the next step
-echo "{}" > "$INIT_DATA"
-sysrepocfg -f json -I"$INIT_DATA" -d running
+temp=$(mktemp)
+echo "{}" > $temp
+sysrepocfg -f json -I$temp -d running
 
 exit $rc

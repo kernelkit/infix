@@ -1,34 +1,30 @@
 {
     "ietf-netconf-server:netconf-server": {
 	"listen": {
-	    "endpoint": [
-		{
-		    "name": "default-ssh",
-		    "ssh": {
-			"tcp-server-parameters": {
-			    "local-address": "::"
-			},
-			"ssh-server-parameters": {
-                            "server-identity": {
-				"host-key": [
-                                    {
-					"name": "default-key",
-					"public-key": {
-					    "keystore-reference": "genkey"
+	    "endpoints": {
+		"endpoint": [
+		    {
+			"name": "default-ssh",
+			"ssh": {
+			    "tcp-server-parameters": {
+				"local-address": "::"
+			    },
+			    "ssh-server-parameters": {
+				"server-identity": {
+				    "host-key": [
+					{
+					    "name": "default-key",
+					    "public-key": {
+						"central-keystore-reference": "genkey"
+					    }
 					}
-				    }
-				]
-                            },
-			    "client-authentication": {
-				"supported-authentication-methods": {
-				    "publickey": [null],
-				    "passsword": [null]
+				    ]
 				}
 			    }
 			}
 		    }
-		}
-	    ]
+		]
+	    }
 	}
     }
 }

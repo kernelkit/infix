@@ -15,11 +15,6 @@
 
 #include "core.h"
 
-static const struct srx_module_requirement reqs[] = {
-	{ .dir = YANG_PATH_, .name = "infix-factory-default", .rev = "2023-06-28" },
-	{ NULL }
-};
-
 static int rpc(sr_session_ctx_t *session, uint32_t sub_id, const char *xpath,
 	       const sr_val_t *input, const size_t input_cnt, sr_event_t event,
 	       unsigned request_id, sr_val_t **output, size_t *output_cnt, void *priv)
@@ -42,11 +37,6 @@ static int rpc(sr_session_ctx_t *session, uint32_t sub_id, const char *xpath,
 int infix_factory_init(struct confd *confd)
 {
 	int rc;
-
-	rc = srx_require_modules(confd->conn, reqs);
-	if (rc)
-		goto fail;
-
 	REGISTER_RPC(confd->session, "/infix-factory-default:factory-default", rpc, NULL, &confd->fsub);
 	return SR_ERR_OK;
 fail:
