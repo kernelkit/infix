@@ -43,7 +43,7 @@ struct infix_ds infix_config[] = {
 	{ "running-config",     "running",     SR_DS_RUNNING,         1, NULL },
 	{ "candidate-config",   "candidate",   SR_DS_CANDIDATE,       1, NULL },
 	{ "operational-config", "operational", SR_DS_OPERATIONAL,     1, NULL },
-	{ "factory-config",     NULL,          SR_DS_FACTORY_DEFAULT, 0, "/etc/factory-config.cfg" },
+	{ "factory-config",     "factory-default",          SR_DS_FACTORY_DEFAULT, 0, NULL }
 };
 
 static void cd_home(kcontext_t *ctx)

@@ -1749,11 +1749,6 @@ err_abandon:
 int ietf_interfaces_init(struct confd *confd)
 {
 	int rc = 0;
-
-#ifdef CONTAINERS
-	sr_enable_module_feature(confd->conn, "infix-interfaces", "containers");
-#endif
-
 	REGISTER_CHANGE(confd->session, "ietf-interfaces", "/ietf-interfaces:interfaces//.",
 			0, ifchange, confd, &confd->sub);
 	REGISTER_CHANGE(confd->cand, "ietf-interfaces", "/ietf-interfaces:interfaces//.",

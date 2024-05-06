@@ -22,11 +22,6 @@
 #define  ACTIVE_QUEUE "/var/lib/containers/active"
 #define  LOGGER       "logger -t container -p local1.notice"
 
-static const struct srx_module_requirement reqs[] = {
-	{ .dir = YANG_PATH_, .name = MODULE, .rev = "2024-03-27" },
-	{ NULL }
-};
-
 static int add(const char *name, struct lyd_node *cif)
 {
 	const char *image = lydx_get_cattr(cif, "image");
@@ -437,10 +432,6 @@ void infix_containers_post_hook(sr_session_ctx_t *session, struct confd *confd)
 int infix_containers_init(struct confd *confd)
 {
 	int rc;
-
-	rc = srx_require_modules(confd->conn, reqs);
-	if (rc)
-		goto fail;
 
 	REGISTER_CHANGE(confd->session, MODULE, CFG_XPATH, 0, change, confd, &confd->sub);
 	REGISTER_RPC(confd->session, CFG_XPATH "/container/start",   action, NULL, &confd->sub);
