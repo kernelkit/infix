@@ -16,36 +16,7 @@ run ixboot
 ";
 			boot_targets = "mmc1";
 			ethprime = "eth1";
-
-			/* Uncomment this if you're debugging U-Boot
-			 *
-			 * This will allow you to break out of the
-                         * normal boot flow and into the interactive
-                         * console.
-			 *
-			 * To upgrade U-Boot itself, simply set the
-                         * `bootfile` variable to the path of
-                         * `flash-image.bin` on your TFTP server, then
-                         * issue `run ixupgradeboot`.
-			 */
-/* 			bootdelay = "2"; */
-/* 			ixupgradeboot = " */
-/* dhcp */
-/* setexpr fileblks ${filesize} + 0x1ff */
-/* setexpr fileblks ${fileblks} / 0x200 */
-
-/* mmc dev 1 */
-/* part start mmc 1 boot bootstart */
-/* part size  mmc 1 boot bootsize */
-
-
-/* mmc erase ${bootstart} ${bootsize} */
-/* mmc write ${fileaddr} ${bootstart} ${fileblks} */
-/* "; */
+			bootdelay = "1";
 		};
 	};
 };
-
-/* &cp0_eth0 { */
-/* 	phy-mode = "10gbase-r"; */
-/* }; */
