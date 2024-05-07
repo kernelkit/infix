@@ -28,7 +28,7 @@ else
 fi
 
 sgdisk \
-    -o \
+    -Z \
     -n1:${bootoffs}:+${bootsize} -t1:8301 -c1:boot \
     -n2::+${auxsize} -t2:8301 -c2:aux -u2:${AUX_UUID} \
     -n3::+${imgsize} -t3:8300 -c3:primary -u3:${PRIMARY_UUID} \
