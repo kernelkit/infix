@@ -7,6 +7,15 @@
 
 / {
 	model = "Marvell Armada CN9130-CRB-A";
+
+	chosen {
+		infix {
+			/* "admin" */
+			factory-password-hash = "$5$mI/zpOAqZYKLC2WU$i7iPzZiIjOjrBF3NyftS9CCq8dfYwHwrmUK097Jca9A";
+			usb-ports = <&cp0_usb3_1>;
+			usb-port-names = "USB";
+		};
+	};
 };
 
 &cp0_pcie0 {
