@@ -1,7 +1,7 @@
 #!/bin/sh
 set -e
 
-. /etc/partion-uuid
+. /etc/partition-uuid
 
 disk=$1
 bootoffs=$2
@@ -30,9 +30,9 @@ fi
 sgdisk \
     -o \
     -n1:${bootoffs}:+${bootsize} -t1:8301 -c1:boot \
-    -n2::+${auxsize} -t2:8301 -c2:aux -u2:${AUX_UUID}\
+    -n2::+${auxsize} -t2:8301 -c2:aux -u2:${AUX_UUID} \
     -n3::+${imgsize} -t3:8300 -c3:primary -u3:${PRIMARY_UUID} \
-    -n4::+${imgsize} -t4:8300 -c4:secondary -u4:${SECONDARY_UUID}\
+    -n4::+${imgsize} -t4:8300 -c4:secondary -u4:${SECONDARY_UUID} \
     -n5::+${cfgsize} -t5:8302 -c5:cfg \
     -n6::            -t6:8310 -c6:var \
     -p \
