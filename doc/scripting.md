@@ -751,7 +751,7 @@ An alternative is to write it to a temporary file, and use `sysrepocfg
 
 Infix supports IETF Hardware YANG with augments for ONIE formatted
 production data stored in EEPROMs, if available. See Infix [VPD
-documenation][5], as well as *ietf-hardware* and *infix-hardware* YANG
+documentation][5], as well as *ietf-hardware* and *infix-hardware* YANG
 models for details.
 
 
@@ -852,7 +852,7 @@ admin@example:/>
 #### Creating Bridge and Adding Ports
 
 Example below use Infix documentation on [creating
-bridges](networking.md#bridging). 
+bridges][8]. 
 
 ``` shell
 admin@example:/> configure
@@ -907,7 +907,7 @@ Then we configure VLANs according to plan
 [above](#port-test-intro). We configure default VID for ingress
 (PVID), which is done per port, and egress mode (untagged), which is
 done at the bridge level. See Infix [documentation for VLAN
-bridges](networking.md#vlan-filtering-bridge) for more information.
+bridges][9] for more information.
 
 
 ``` shell
@@ -1147,4 +1147,5 @@ your created configuration.
 [5]: vpd.md
 [6]: https://docs.kernel.org/leds/leds-class.html
 [7]: https://docs.kernel.org/power/power_supply_class.html
-
+[8]: networking.md#bridging
+[9]: networking.md#vlan-filtering-bridge
