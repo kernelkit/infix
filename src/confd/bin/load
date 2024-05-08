@@ -19,6 +19,16 @@ banner_append()
     return 0
 }
 
+note()
+{
+    logger -s -I $$ -p user.notice -t load "$*"
+}
+
+err()
+{
+    logger -s -I $$ -p user.error -t load "$*"
+}
+
 
 # shellcheck disable=SC1091
 . /etc/confdrc
@@ -35,17 +45,31 @@ else
 fi
 
 if [ ! -f "$fn" ]; then
-    logger -sik -p user.error "No such file, $fn, aborting!"
+    err "No such file, $fn, aborting!"
     exit 1
 fi
 
+note "Loading $config ..."
 if ! sysrepocfg -v3 -I"$fn" -f json; then
     case "$config" in
 	startup-config)
-	    logger -sik -p user.error "Failed loading $fn, reverting to Fail Secure mode!"
+	    err "Failed loading $fn, reverting to Fail Secure mode!"
+	    # On failure to load startup-config the system is in an undefined state
+	    cat <<-EOF >/tmp/factory.json
+		{
+		   "infix-factory-default:factory-default": {}
+		}
+		EOF
+	    # Default timeout is 2 seconds, allow time to clean up shm
+	    if ! sysrepocfg -f json -t 10 -R /tmp/factory.json; then
+		rm -f /etc/sysrepo/data/*startup*
+		rm -f /etc/sysrepo/data/*running*
+		rm -f /dev/shm/sr_*
+		killall sysrepo-plugind
+	    fi
 	    ;;
 	failure-config)
-	    logger -sik -p user.error "Failed loading $fn, aborting!"
+	    err "Failed loading $fn, aborting!"
 	    banner_append "CRITICAL ERROR: Logins are disabled, no credentials available"
 	    initctl -nbq runlevel 9
 	    ;;
@@ -53,7 +77,8 @@ if ! sysrepocfg -v3 -I"$fn" -f json; then
 
     exit 1
 fi
-logger -sik -p user.notice "Loaded $fn successfully."
+
+note "Loaded $fn successfully."
 if [ "$config" = "failure-config" ]; then
     banner_append "ERROR: Corrupt startup-config, system has reverted to default login credentials"
 else
