@@ -818,7 +818,7 @@ The test PC is connected to e1 and e10 via different interfaces
 (alternatively, two different PCs are used).
 
 > Configuration here is done via console. If you intend to do it via
-> Ethernet and SSH, be careful so that you do not loose
+> Ethernet and SSH, be careful so that you do not lose
 > connectivity. Either stay in "configuration context" until done, or
 > make sure there is always an IP (IPv6 or IPv4) address available on
 > the switch which you can connect to. Section [Add IP on
@@ -1026,7 +1026,7 @@ PING ff02::1%eth1(ff02::1%eth1) 56 data bytes
 64 bytes from fe80::488a:a35f:9d41:ac9c%eth1: icmp_seq=5 ttl=64 time=0.521 ms
 64 bytes from fe80::488a:a35f:9d41:ac9c%eth1: icmp_seq=6 ttl=64 time=0.495 ms
 64 bytes from fe80::488a:a35f:9d41:ac9c%eth1: icmp_seq=7 ttl=64 time=0.743 ms
-... Disconnecting patch cable, thus loosing packets
+... Disconnecting patch cable, thus losing packets
 ... and reconnecting again. Connectivity resumes.
 64 bytes from fe80::488a:a35f:9d41:ac9c%eth1: icmp_seq=16 ttl=64 time=0.961 ms
 64 bytes from fe80::488a:a35f:9d41:ac9c%eth1: icmp_seq=17 ttl=64 time=0.513 ms
