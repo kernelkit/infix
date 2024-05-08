@@ -331,6 +331,65 @@ admin@infix.local%eth0's password: *****
 ~$ 
 ```
 
+### Controlling LEDs (For Production Tests)
+
+As part of production tests you wish to verify that LEDs work as
+expected. Infix uses standard [Linux support for LED
+management][6], where LEDs appear in the file system under
+/sys/class/leds and can be controlled using *echo* command. `sudo`
+privileges are required.
+
+When interacting with LEDs this way, first disable the Infix *iitod*
+daemon to avoid conflicting LED control.
+
+```
+~$ ssh admin@example.local 'initctl stop iitod'
+~$
+```
+
+Then run your test, e.g., visually controll that a red LED labeled
+'LAN' is working.
+
+```
+~$ ssh admin@example.local 'echo none | sudo tee /sys/class/leds/red\:lan/trigger'
+~$ ssh admin@example.local 'echo 1 | sudo tee /sys/class/leds/red\:lan/brightness'
+~$ 
+```
+
+To turn off the same LED, run the following commands.
+
+```
+~$ ssh admin@example.local 'echo none | sudo tee /sys/class/leds/red\:lan/trigger'
+~$ ssh admin@example.local 'echo 0 | sudo tee /sys/class/leds/red\:lan/brightness'
+~$ 
+```
+When done with LED testing, enable Infix *iitod* daemon again.
+
+```
+~$ ssh admin@example.local 'initctl start iitod'
+~$
+```
+
+### Reading Power Feed Status (For Production Tests)
+
+As part of production tests you wish to verify that Power Feed sensors work as
+expected. Infix uses standard [Linux support for Power
+management][7], where power sources appear in the file system under
+/sys/class/power_supply. The following example reads status of two
+power supplies named *pwr1* and *pwr2*. 
+
+```
+~$ ssh admin@example 'cat /sys/class/power_supply/pwr1/online' 
+1
+~$ ssh admin@example 'cat /sys/class/power_supply/pwr2/online' 
+0
+~$ 
+```
+Here, only *pwr1* happened to have power. 
+
+
+
+
 
 ## Examples using SSH and sysrepocfg
 
@@ -601,7 +660,7 @@ on interface *e0*.
 ~$ 
 ```
 
-### Backup Configuration Using sysrepocfg And scp
+### Backup Configuration Using sysrepocfg And scp {#backup}
 
 Displaying running or startup configuration is possible with
 `sysrepocfg -X`, as shown below.
@@ -637,7 +696,7 @@ startup configuration (not running).
 ~$
 ```
 
-### Restore Configuration Using sysrepocfg and ssh/scp
+### Restore Configuration Using sysrepocfg and ssh/scp {#restore}
 
 
 To restore a backup configuration to startup, the simplest way is to
@@ -688,7 +747,413 @@ An alternative is to write it to a temporary file, and use `sysrepocfg
 ~$
 ```
 
+### Read Out Hardware Information Using sysrepocfg
+
+Infix supports IETF Hardware YANG with augments for ONIE formatted
+production data stored in EEPROMs, if available. See Infix [VPD
+documenation][5], as well as *ietf-hardware* and *infix-hardware* YANG
+models for details.
+
+
+```
+~$ ssh admin@example.local 'sysrepocfg -X -fjson -d operational -x /ietf-hardware:hardware'
+{
+  "ietf-hardware:hardware": {
+    "component": [
+      {
+        "name": "product",
+        "class": "infix-hardware:vpd",
+        "serial-num": "12345",
+        "model-name": "Switch2010",
+        "mfg-date": "2024-01-30T16:42:37+00:00",
+        "infix-hardware:vpd-data": {
+          "product-name": "Switch2010",
+          "part-number": "ABC123-001",
+          "serial-number": "007",
+          "mac-address": "00:53:00:01:23:45",
+          "manufacture-date": "01/30/2024 16:42:37",
+          "num-macs": 11,
+          "manufacturer": "ACME Production",
+          "vendor": "SanFran Networks"
+        }
+      },
+      {
+        "name": "USB",
+        "class": "infix-hardware:usb",
+        "state": {
+          "admin-state": "unlocked",
+          "oper-state": "enabled"
+        }
+      }
+    ]
+  }
+}
+~$ 
+```
+
+## Miscellaneous
+
+### Port Test Configuration Example (For Production Tests) {#port-test-intro}
+
+In production you wish to test that all ports work. A common way is to
+connect a test PC to two ports and send a *ping* traversing all ports.
+This can be achieved by using VLANs on the switch as described in this
+section. The resulting configuration file can be applied to the
+running configuration of the produced unit, e.g, use config file
+restore as described [above](#restore).
+
+In this example we assume a 10 port switch, with ports e1-e10. 
+
+The following VLAN configuration will be used:
+
+| Ports   | VLAN    |
+|:--------|:--------|
+| e1, e2  | VLAN 10 |
+| e3, e4  | VLAN 20 |
+| e5, e6  | VLAN 30 |
+| e7, e8  | VLAN 40 |
+| e9, e10 | VLAN 50 |
+
+Connections will be as follows:
+
+| Connect | Connect |
+|:--------|:--------|
+| PC      | e1      |
+| e2      | e3      |
+| e4      | e5      |
+| e6      | e7      |
+| e8      | e9      |
+| e10     | PC      |
+
+
+> Configuration here is done via console. If you intend to do it via
+> Ethernet and SSH, be careful so that you do not loose
+> connectivity. Either stay in "configuration context" until done, or
+> make sure there is always an IP (IPv6 or IPv4) address available on
+> the switch which you can connect to. Section [Add IP on
+> Switch](#ip-on-switch) gives an example.
+
+
+#### Configuration at Start
+
+Starting out, we assume a configuration where all ports are network
+interfaces (possibly with IPv6 enabled).
+
+``` shell
+admin@example:/> show interfaces
+lo              ethernet   UP          00:00:00:00:00:00                        
+                ipv4                   127.0.0.1/8 (static)
+                ipv6                   ::1/128 (static)
+e1              ethernet   LOWER-DOWN  00:53:00:06:11:01                        
+e2              ethernet   LOWER-DOWN  00:53:00:06:11:02                        
+e3              ethernet   LOWER-DOWN  00:53:00:06:11:03                        
+e4              ethernet   LOWER-DOWN  00:53:00:06:11:04                        
+e5              ethernet   LOWER-DOWN  00:53:00:06:11:05                        
+e6              ethernet   LOWER-DOWN  00:53:00:06:11:06                        
+e7              ethernet   LOWER-DOWN  00:53:00:06:11:07                        
+e8              ethernet   LOWER-DOWN  00:53:00:06:11:08                        
+e9              ethernet   LOWER-DOWN  00:53:00:06:11:09                        
+e10             ethernet   UP          00:53:00:06:11:0a                        
+                ipv6                   fe80::0053:00ff:fe06:110a/64 (link-layer)
+admin@example:/> 
+```
+
+#### Creating Bridge and Adding Ports
+
+Example below use Infix documentation on [creating
+bridges](networking.md#bridging). 
+
+``` shell
+admin@example:/> configure
+admin@example:/config/> edit interface br0
+admin@example:/config/interface/br0/> end
+admin@example:/config/> set interface e1 bridge-port bridge br0
+admin@example:/config/> set interface e2 bridge-port bridge br0
+admin@example:/config/> set interface e3 bridge-port bridge br0
+admin@example:/config/> set interface e4 bridge-port bridge br0
+admin@example:/config/> set interface e5 bridge-port bridge br0
+admin@example:/config/> set interface e6 bridge-port bridge br0
+admin@example:/config/> set interface e7 bridge-port bridge br0
+admin@example:/config/> set interface e8 bridge-port bridge br0
+admin@example:/config/> set interface e9 bridge-port bridge br0
+admin@example:/config/> set interface e10 bridge-port bridge br0
+admin@example:/config/> 
+```
+
+If you wish, you can check interface status. But beware that you may
+loose connectivity when leaving *configuration context* if configuring
+via SSH. Then it is better to first assign an IPv6 address to br0
+(`set interface br0 ipv6 enabled`) before leaving. Or skip 'leave' and
+stay in configuration context until done with all sections, including
+the one on [Add IP on Switch](#ip-on-switch).
+
+``` shell
+admin@example:/config/> leave
+admin@example:/> 
+admin@example:/> show interfaces
+INTERFACE       PROTOCOL   STATE       DATA                                     
+br0             bridge                 
+│               ethernet   UP          00:53:00:06:11:01                        
+├ e1            bridge     LOWER-DOWN  
+├ e2            bridge     LOWER-DOWN  
+├ e3            bridge     LOWER-DOWN  
+├ e4            bridge     LOWER-DOWN  
+├ e5            bridge     LOWER-DOWN  
+├ e6            bridge     LOWER-DOWN  
+├ e7            bridge     LOWER-DOWN  
+├ e8            bridge     LOWER-DOWN  
+├ e9            bridge     LOWER-DOWN  
+└ e10           bridge     FORWARDING  
+lo              ethernet   UP          00:00:00:00:00:00                        
+                ipv4                   127.0.0.1/8 (static)
+                ipv6                   ::1/128 (static)
+admin@example:/> 
+```
+
+#### Assign VLANs to Ports
+
+Then we configure VLANs according to plan
+[above](#port-test-intro). We configure default VID for ingress
+(PVID), which is done per port, and egress mode (untagged), which is
+done at the bridge level. See Infix [documentation for VLAN
+bridges](networking.md#vlan-filtering-bridge) for more information.
+
+
+``` shell
+admin@example:/> 
+admin@example:/> configure
+admin@example:/config/> set interface e1 bridge-port pvid 10
+admin@example:/config/> set interface e2 bridge-port pvid 10
+admin@example:/config/> set interface e3 bridge-port pvid 20
+admin@example:/config/> set interface e4 bridge-port pvid 20
+admin@example:/config/> set interface e5 bridge-port pvid 30
+admin@example:/config/> set interface e6 bridge-port pvid 30
+admin@example:/config/> set interface e7 bridge-port pvid 40
+admin@example:/config/> set interface e8 bridge-port pvid 40
+admin@example:/config/> set interface e9 bridge-port pvid 50
+admin@example:/config/> set interface e10 bridge-port pvid 50
+admin@example:/config/> edit interface br0
+admin@example:/config/interface/br0/> edit bridge vlans
+admin@example:/config/interface/br0/bridge/vlans/> set vlan 10 untagged e1
+admin@example:/config/interface/br0/bridge/vlans/> set vlan 10 untagged e2
+admin@example:/config/interface/br0/bridge/vlans/> set vlan 20 untagged e3
+admin@example:/config/interface/br0/bridge/vlans/> set vlan 20 untagged e4
+admin@example:/config/interface/br0/bridge/vlans/> set vlan 30 untagged e5
+admin@example:/config/interface/br0/bridge/vlans/> set vlan 30 untagged e6
+admin@example:/config/interface/br0/bridge/vlans/> set vlan 40 untagged e7
+admin@example:/config/interface/br0/bridge/vlans/> set vlan 40 untagged e8
+admin@example:/config/interface/br0/bridge/vlans/> set vlan 50 untagged e9
+admin@example:/config/interface/br0/bridge/vlans/> set vlan 50 untagged e10
+admin@example:/config/interface/br0/bridge/vlans/> leave
+admin@example:/> 
+```
+
+Interface status would now should something like the following
+
+``` shell
+admin@example:/> show interfaces 
+INTERFACE       PROTOCOL   STATE       DATA                                     
+br0             bridge                 
+│               ethernet   UP          00:53:00:06:11:01                        
+├ e1            bridge     LOWER-DOWN  vlan:10u pvid:10                         
+├ e2            bridge     LOWER-DOWN  vlan:10u pvid:10                         
+├ e3            bridge     LOWER-DOWN  vlan:20u pvid:20                         
+├ e4            bridge     LOWER-DOWN  vlan:20u pvid:20                         
+├ e5            bridge     LOWER-DOWN  vlan:30u pvid:30                         
+├ e6            bridge     LOWER-DOWN  vlan:30u pvid:30                         
+├ e7            bridge     LOWER-DOWN  vlan:40u pvid:40                         
+├ e8            bridge     LOWER-DOWN  vlan:40u pvid:40                         
+├ e9            bridge     LOWER-DOWN  vlan:50u pvid:50                         
+└ e10           bridge     FORWARDING  vlan:50u pvid:50                         
+lo              ethernet   UP          00:00:00:00:00:00                        
+                ipv4                   127.0.0.1/8 (static)
+                ipv6                   ::1/128 (static)
+admin@example:/> 
+```
+
+#### Connect Cables and Test
+
+We can now connect the PC to e1 and e10, and the other ports are
+patched according to plan [above](#port-test-intro). We should get
+link up on all ports.
+
+``` shell
+admin@example:/> show interfaces 
+INTERFACE       PROTOCOL   STATE       DATA                                     
+br0             bridge                 
+│               ethernet   UP          00:53:00:06:11:01                        
+├ e1            bridge     FORWARDING  vlan:10u pvid:10                         
+├ e2            bridge     FORWARDING  vlan:10u pvid:10                         
+├ e3            bridge     FORWARDING  vlan:20u pvid:20                         
+├ e4            bridge     FORWARDING  vlan:20u pvid:20                         
+├ e5            bridge     FORWARDING  vlan:30u pvid:30                         
+├ e6            bridge     FORWARDING  vlan:30u pvid:30                         
+├ e7            bridge     FORWARDING  vlan:40u pvid:40                         
+├ e8            bridge     FORWARDING  vlan:40u pvid:40                         
+├ e9            bridge     FORWARDING  vlan:50u pvid:50                         
+└ e10           bridge     FORWARDING  vlan:50u pvid:50                         
+lo              ethernet   UP          00:00:00:00:00:00                        
+                ipv4                   127.0.0.1/8 (static)
+                ipv6                   ::1/128 (static)
+admin@example:/> 
+```
+
+Here we use IPv6 ping all hosts (ff02::1) on PC interface eth1 to
+check reachability to the other interface of the PC. 
+
+> A recommendation is to use network name spaces on PC to ensure
+> traffic really goes out to switch, instead of being looped
+> internally. Or use two PCs. 
+
+
+``` shell
+~ $ ping -L ff02::1%eth1
+PING ff02::1%eth1(ff02::1%eth1) 56 data bytes
+64 bytes from fe80::488a:a35f:9d41:ac9c%eth1: icmp_seq=1 ttl=64 time=0.496 ms
+64 bytes from fe80::488a:a35f:9d41:ac9c%eth1: icmp_seq=2 ttl=64 time=0.514 ms
+64 bytes from fe80::488a:a35f:9d41:ac9c%eth1: icmp_seq=3 ttl=64 time=0.473 ms
+64 bytes from fe80::488a:a35f:9d41:ac9c%eth1: icmp_seq=4 ttl=64 time=0.736 ms
+64 bytes from fe80::488a:a35f:9d41:ac9c%eth1: icmp_seq=5 ttl=64 time=0.563 ms
+64 bytes from fe80::488a:a35f:9d41:ac9c%eth1: icmp_seq=6 ttl=64 time=0.507 ms
+^C
+--- ff02::1%eth1 ping statistics ---
+6 packets transmitted, 6 received, 0% packet loss, time 5108ms
+rtt min/avg/max/mdev = 0.473/0.548/0.736/0.088 ms
+~ $
+```
+
+We can verify that traffic goes through the switch by disconnecting
+one of the patch cables, e.g., between e4 and e5
+
+``` shell
+~ $ ping -L ff02::1%eth1
+PING ff02::1%eth1(ff02::1%eth1) 56 data bytes
+64 bytes from fe80::488a:a35f:9d41:ac9c%eth1: icmp_seq=1 ttl=64 time=0.510 ms
+64 bytes from fe80::488a:a35f:9d41:ac9c%eth1: icmp_seq=2 ttl=64 time=0.448 ms
+64 bytes from fe80::488a:a35f:9d41:ac9c%eth1: icmp_seq=3 ttl=64 time=0.583 ms
+64 bytes from fe80::488a:a35f:9d41:ac9c%eth1: icmp_seq=4 ttl=64 time=0.515 ms
+64 bytes from fe80::488a:a35f:9d41:ac9c%eth1: icmp_seq=5 ttl=64 time=0.521 ms
+64 bytes from fe80::488a:a35f:9d41:ac9c%eth1: icmp_seq=6 ttl=64 time=0.495 ms
+64 bytes from fe80::488a:a35f:9d41:ac9c%eth1: icmp_seq=7 ttl=64 time=0.743 ms
+... Disconnecting patch cable, thus loosing packets
+... and reconnecting again. Connectivity resumes.
+64 bytes from fe80::488a:a35f:9d41:ac9c%eth1: icmp_seq=16 ttl=64 time=0.961 ms
+64 bytes from fe80::488a:a35f:9d41:ac9c%eth1: icmp_seq=17 ttl=64 time=0.513 ms
+64 bytes from fe80::488a:a35f:9d41:ac9c%eth1: icmp_seq=18 ttl=64 time=0.794 ms
+64 bytes from fe80::488a:a35f:9d41:ac9c%eth1: icmp_seq=19 ttl=64 time=0.755 ms
+64 bytes from fe80::488a:a35f:9d41:ac9c%eth1: icmp_seq=20 ttl=64 time=0.779 ms
+^C
+--- ff02::1%eth1 ping statistics ---
+20 packets transmitted, 12 received, 40% packet loss, time 19432ms
+rtt min/avg/max/mdev = 0.448/0.634/0.961/0.156 ms
+~ $ 
+```
+
+#### Add IP Address on Switch {#ip-on-switch}
+
+The configuration so far does not provide a means to connect to the
+switch management via SSH or NETCONF, as the switch has no IP
+address. The example below shows how to add the switch to VLAN 10 (as
+used for ports e1 and e2) and enables IPv6.
+
+
+``` shell
+admin@example:/config/> edit interface vlan10
+admin@example:/config/interface/vlan10/> set vlan lower-layer-if br0
+admin@example:/config/interface/vlan10/> set ipv6 enabled 
+admin@example:/config/interface/vlan10/> show
+type vlan;
+ipv6 {
+  enabled true;
+}
+vlan {
+  tag-type c-vlan;
+  id 10;
+  lower-layer-if br0;
+}
+admin@example:/config/interface/vlan10/> 
+admin@example:/config/interface/vlan10/> end
+admin@example:/config/> edit interface br0 bridge vlans 
+admin@example:/config/interface/br0/bridge/vlans/> set vlan 10 tagged br0
+admin@example:/config/interface/br0/bridge/vlans/> leave
+admin@example:/> 
+```
+
+Interface *vlan10* with an auto-configured IPv6 address should appear.
+
+``` shell
+admin@example:/> show interfaces
+INTERFACE       PROTOCOL   STATE       DATA                                     
+br0             bridge                 vlan:10t                                 
+│               ethernet   UP          00:53:00:06:11:01                        
+├ e1            bridge     FORWARDING  vlan:10u pvid:10                         
+├ e2            bridge     FORWARDING  vlan:10u pvid:10                         
+├ e3            bridge     FORWARDING  vlan:20u pvid:20                         
+├ e4            bridge     FORWARDING  vlan:20u pvid:20                         
+├ e5            bridge     FORWARDING  vlan:30u pvid:30                         
+├ e6            bridge     FORWARDING  vlan:30u pvid:30                         
+├ e7            bridge     FORWARDING  vlan:40u pvid:40                         
+├ e8            bridge     FORWARDING  vlan:40u pvid:40                         
+├ e9            bridge     FORWARDING  vlan:50u pvid:50                         
+└ e10           bridge     FORWARDING  vlan:50u pvid:50                         
+lo              ethernet   UP          00:00:00:00:00:00                        
+                ipv4                   127.0.0.1/8 (static)
+                ipv6                   ::1/128 (static)
+vlan10          ethernet   UP          00:53:00:06:11:01                        
+│               ipv6                   fe80::0053:00ff:fe06:1101/64 (link-layer)
+└ br0           ethernet   UP          00:53:00:06:11:01                        
+admin@example:/> 
+```
+
+If you now ping "IPv6 all hosts" from the PC, you should get two
+responses for every ping, one from the switch and one from the PC
+attached to e10.
+
+``` shell
+~ $ ping -L ff02::1%eth1
+PING ff02::1%eth1(ff02::1%eth1) 56 data bytes
+64 bytes from fe80::488a:a35f:9d41:ac9c%eth1: icmp_seq=1 ttl=64 time=0.508 ms
+64 bytes from fe80::0053:00ff:fe06:1101%eth1: icmp_seq=1 ttl=64 time=0.968 ms
+64 bytes from fe80::488a:a35f:9d41:ac9c%eth1: icmp_seq=2 ttl=64 time=0.866 ms
+64 bytes from fe80::0053:00ff:fe06:1101%eth1: icmp_seq=2 ttl=64 time=0.867 ms
+64 bytes from fe80::0053:00ff:fe06:1101%eth1: icmp_seq=3 ttl=64 time=0.467 ms
+64 bytes from fe80::488a:a35f:9d41:ac9c%eth1: icmp_seq=3 ttl=64 time=0.469 ms
+64 bytes from fe80::488a:a35f:9d41:ac9c%eth1: icmp_seq=4 ttl=64 time=0.452 ms
+64 bytes from fe80::0053:00ff:fe06:1101%eth1: icmp_seq=4 ttl=64 time=0.453 ms
+^C
+--- ff02::1%eth1 ping statistics ---
+4 packets transmitted, 4 received, +4 duplicates, 0% packet loss, time 3031ms
+rtt min/avg/max/mdev = 0.452/0.631/0.968/0.211 ms
+~ $ 
+```
+
+Now you can access the switch from the PC via SSH (or NETCONF).
+
+``` shell
+~ $ ssh admin@fe80::0053:00ff:fe06:1101%eth1
+admin@fe80::0053:00ff:fe06:1101%eth1's password: 
+.-------.
+|  . .  | Infix -- a Network Operating System
+|-. v .-| https://kernelkit.github.io
+'-'---'-'
+
+Run the command 'cli' for interactive OAM
+
+admin@example:~$ exit
+~ $
+```
+
+See previous sections on [backup](#backup) and [restore](#restore) of
+your created configuration.
+
+
+
+
 [1]: discovery.md
 [2]: https://rauc.io/
 [3]: boot.md#system-upgrade
 [4]: https://netopeer.liberouter.org/doc/sysrepo/libyang1/html/sysrepocfg.html
+[5]: vpd.md
+[6]: https://docs.kernel.org/leds/leds-class.html
+[7]: https://docs.kernel.org/power/power_supply_class.html
+
