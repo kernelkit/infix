@@ -660,7 +660,7 @@ on interface *e0*.
 ~$ 
 ```
 
-### Backup Configuration Using sysrepocfg And scp <a id="backup"></a>
+### <a id="backup"></a> Backup Configuration Using sysrepocfg And scp 
 
 Displaying running or startup configuration is possible with
 `sysrepocfg -X`, as shown below.
@@ -696,7 +696,7 @@ startup configuration (not running).
 ~$
 ```
 
-### Restore Configuration Using sysrepocfg and ssh/scp <a id="restore"></a>
+### <a id="restore"></a> Restore Configuration Using sysrepocfg and ssh/scp 
 
 
 To restore a backup configuration to startup, the simplest way is to
@@ -793,7 +793,7 @@ models for details.
 
 ## Miscellaneous
 
-### Port Test Configuration Example (For Production Tests) <a id="port-test-intro"></a>
+### <a id="port-test-intro"></a> Port Test Configuration Example (For Production Tests) 
 
 In production you wish to test that all ports work. A common way is to
 connect a test PC to two ports and send a *ping* traversing all ports.
@@ -1040,7 +1040,7 @@ rtt min/avg/max/mdev = 0.448/0.634/0.961/0.156 ms
 ~ $ 
 ```
 
-#### Add IP Address on Switch {#ip-on-switch}
+#### <a id="ip-on-switch"></a> Add IP Address on Switch 
 
 The configuration so far does not provide a means to connect to the
 switch management via SSH or NETCONF, as the switch has no IP
