@@ -1,7 +1,7 @@
 From 87224ddce4ed1a118b3efb24e0dc7167f8754c22 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Wed, 7 Jun 2023 15:19:13 +0200
-Subject: [PATCH 2/4] Refactor _sr_install_modules() to use
+Subject: [PATCH 2/5] Refactor _sr_install_modules() to use
  ly_ctx_load_module()
 Organization: Addiva Elektronik
 
