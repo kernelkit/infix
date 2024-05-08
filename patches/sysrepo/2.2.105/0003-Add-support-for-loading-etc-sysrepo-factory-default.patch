@@ -1,7 +1,7 @@
 From 2d3b9524b1448dd6a8ef83e4e101e509d2552dcc Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Fri, 16 Jun 2023 12:13:16 +0200
-Subject: [PATCH 3/4] Add support for loading /etc/sysrepo/factory-default
+Subject: [PATCH 3/5] Add support for loading /etc/sysrepo/factory-default
 Organization: Addiva Elektronik
 
 Follow-up to 3d07270 which adds support for compile-time defaults, this
