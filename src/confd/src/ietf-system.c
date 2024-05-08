@@ -1326,8 +1326,9 @@ static int change_hostname(sr_session_ctx_t *session, uint32_t sub_id, const cha
 
 	nm = srx_get_str(session, "%s", xpath);
 	if (!nm) {
-		/* XXX: derive from global "options.h" or /usr/share/factory/ */
-		nm = strdup("infix");
+		nm = fgetkey("/etc/os-release", "DEFAULT_HOSTNAME");
+		if (nm)
+			nm = strdup(nm);
 		if (!nm) {
 			err = SR_ERR_NO_MEMORY;
 			goto err;
