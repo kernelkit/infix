@@ -72,7 +72,7 @@ collate()
 # Report error on console, syslog, and set login banners for getty + ssh
 console_error()
 {
-    logger -p user.crit -t "BOOTSTRAP" "$1"
+    logger -p user.crit -t bootstrap "$1"
 
     # shellcheck disable=SC3037
     /bin/echo -e "\n\n\e[31mCRITICAL BOOTSTRAP ERROR\n$1\e[0m\n" > /dev/console
