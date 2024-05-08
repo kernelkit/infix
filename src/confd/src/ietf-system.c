@@ -4,6 +4,8 @@
 #include <ctype.h>
 #include <paths.h>
 #include <pwd.h>
+#include <grp.h>
+
 #include <sys/utsname.h>
 #include <sys/sysinfo.h>
 #include <sys/types.h>
@@ -670,36 +672,12 @@ static char *sys_find_usable_shell(sr_session_ctx_t *sess, char *name)
 	return shell;
 }
 
-static uid_t sys_home_exists(char *user)
-{
-	char path[strlen(user) + 10];
-	struct stat st;
-
-	snprintf(path, sizeof(path), "/home/%s", user);
-	if (stat(path, &st))
-		return 0;
-
-	return st.st_uid;
-}
-
-static int sys_uid_busy(char *user, uid_t uid)
-{
-	struct passwd *pw;
-	int rc = 0;
-
-	setpwent();
-	while ((pw = getpwent())) {
-		if (pw->pw_uid != uid)
-			continue;
-		if (strcmp(pw->pw_name, user))
-			rc = -1;
-	}
-	endpwent();
-
-	return rc;
-}
-
-static int sys_del_user(char *user)
+/*
+ * Used both when deleting a user from the system configuration, and
+ * when cleaning up stale users while adding a new user to the system.
+ * In the latter case we don't need to log failure/success.
+ */
+static int sys_del_user(char *user, bool silent)
 {
 	char *args[] = {
 		"deluser", "--remove-home", user, NULL
@@ -709,49 +687,71 @@ static int sys_del_user(char *user)
 	erasef("/var/run/sshd/%s.keys", user);
 	err = systemv_silent(args);
 	if (err) {
-		ERROR("Error deleting user \"%s\"", user);
+		if (!silent)
+			ERROR("Error deleting user \"%s\"", user);
+
+		/* Ensure $HOME is removed at least. */
+		systemf("rm -rf /home/%s", user);
+
 		return SR_ERR_SYS;
 	}
-	NOTE("User \"%s\" deleted", user);
+
+	if (!silent)
+		NOTE("User \"%s\" deleted", user);
 
 	return SR_ERR_OK;
 }
 
-static int sys_add_new_user(sr_session_ctx_t *sess, char *name)
+/*
+ * Helper for sys_add_user(), notice how uid:gid must never be 0:0, it
+ * is reserved for the system root user which is never created/deleted.
+ *
+ * This function balances both /etc/passwd and /etc/group, so to make
+ * things a little bit easier, we simplify the world and reserve the
+ * same group name as the username.  This means we can always remove
+ * any stale group entries first.
+ *
+ * When uid:gid is non-zero we create the user and re-attach them with
+ * their $HOME.  When uid:gid *is* zero, however, we must make sure to
+ * clean up any stale user + $HOME before calling adduser to allocate
+ * a new uid:gid pair for the new user.
+ *
+ * If this function fails, it is up to the callee to retry the operation
+ * with a zero uid:gid pair, which is the most iron clad form.
+ */
+static int sys_call_adduser(sr_session_ctx_t *sess, char *name, uid_t uid, gid_t gid)
 {
 	char *shell = sys_find_usable_shell(sess, name);
-	char uid_str[10];
 	char *eargs[] = {
-		"adduser", "-d", "-s", shell, "-u", NULL, "-H", name, NULL
+		"adduser", "-d", "-s", shell, "-u", NULL, "-G", NULL, "-H", name, NULL
 	};
 	char *nargs[] = {
 		"adduser", "-d", "-s", shell, name, NULL
 	};
-	bool do_chown = false;
+	char uid_str[10], grp_str[strlen(name) + 1];
 	char **args;
-	uid_t uid;
 	int err;
 
-	uid = sys_home_exists(name);
-	if (uid) {
-		if (sys_uid_busy(name, uid)) {
-			/* Exists but owned by someone else. */
-			ERROR("Creating user %s, /home/%s existed but was owned by another uid (%d)",
-			      name, name, uid);
-			ERROR("Cleaning up stale /home/%s", name);
-			systemf("rm -rf /home/%s", name);
-			args = nargs;
-		} else {
-			/* Not in passwd or owned by us already */
-			do_chown = true;
+	DEBUG("Adding new user %s, cleaning up any stale group.", name);
+	systemf("delgroup %s 2>/dev/null", name);
 
-			NOTE("Reusing uid %d and /home/%s for new user %s", uid, name, name);
-			snprintf(uid_str, sizeof(uid_str), "%d", uid);
-			eargs[5] = uid_str;
-			args = eargs;
-		}
-	} else
+	/* reusing existing uid:gid from $HOME */
+	if (uid && gid) {
+		/* recreate group first */
+		systemf("addgroup -g %d %s", gid, name);
+
+		snprintf(uid_str, sizeof(uid_str), "%d", uid);
+		snprintf(grp_str, sizeof(grp_str), "%s", name);
+		eargs[5] = uid_str;
+		eargs[7] = grp_str;
+
+		args = eargs;
+	} else {
+		DEBUG("Cleaning up any stale user %s and /home/%s", name, name);
+		sys_del_user(name, true);
+
 		args = nargs;
+	}
 
 	/**
 	 * The Busybox implementation of 'adduser -d' sets the password
@@ -760,14 +760,51 @@ static int sys_add_new_user(sr_session_ctx_t *sess, char *name)
 	 */
 	err = systemv_silent(args);
 	free(shell);
+
+	return err;
+}
+
+/*
+ * Create a new (locked) user, if they have a matching $HOME we use the
+ * uid:gid from that, if they are free.  In all cases of conflict with
+ * any (type of) user we remove the existing $HOME and start with a new
+ * uid:gid pair.
+ */
+static int sys_add_user(sr_session_ctx_t *sess, char *name)
+{
+	char home[strlen(name) + 10];
+	bool reused = false;
+	struct stat st;
+	int err;
+
+	/* Map users to their existing $HOME */
+	snprintf(home, sizeof(home), "/home/%s", name);
+	if (!stat(home, &st)) {
+		/* Verify IDs aren't already used, like BusyBox adduser */
+		if (getpwuid(st.st_uid) || getgrgid(st.st_uid) || getgrgid(st.st_gid)) {
+			/* Exists but owned by someone else. */
+			ERROR("Failed mapping user %s to /home/%s, uid:gid (%d:%d) already exists.",
+			      name, name, st.st_uid, st.st_gid);
+			err = sys_call_adduser(sess, name, 0, 0);
+		} else {
+			DEBUG("Reusing uid:gid %d:%d and /home/%s for new user %s",
+			      st.st_uid, st.st_gid, name, name);
+			err = sys_call_adduser(sess, name, st.st_uid, st.st_gid);
+			if (err) {
+				ERROR("Failed reusing uid:gid from /home/%s, retrying create user ...", name);
+				err = sys_call_adduser(sess, name, 0, 0);
+			} else
+				reused = true;
+		}
+	} else
+		err = sys_call_adduser(sess, name, 0, 0);
+
 	if (err) {
-		ERROR("Failed creating new user \"%s\"\n", name);
+		ERROR("Failed creating new user \"%s\"", name);
 		return SR_ERR_SYS;
 	}
 
-	NOTE("New user \"%s\" created\n", name);
-	if (do_chown)
-		systemf("chown -R %s:%s /home/%s", name, name, name);
+	NOTE("User \"%s\" created%s.", name, reused ? ", mapped to existing home directory" : "");
 
 	/*
 	 * OpenSSH in Infix has been set up to use /var/run/sshd/%s.keys
@@ -775,6 +812,7 @@ static int sys_add_new_user(sr_session_ctx_t *sess, char *name)
 	 * /home/%s/.ssh/authorized_keys file.  This creates a both the
 	 * directory and the symlink owned by root to prevent tampering.
 	 */
+	DEBUG("Adding secure /home/%s/.ssh directory.", name);
 	fmkpath(0750, "/home/%s/.ssh", name);
 	systemf("ln -sf /var/run/sshd/%s.keys /home/%s/.ssh/authorized_keys", name, name);
 
@@ -932,7 +970,7 @@ static sr_error_t handle_sr_user_update(augeas *aug, sr_session_ctx_t *sess, str
 		assert(change->new);
 
 		name = sr_xpath_key_value(change->new->xpath, "user", "name", &state);
-		err = sys_add_new_user(sess, name);
+		err = sys_add_user(sess, name);
 		if (err) {
 			sr_xpath_recover(&state);
 			return err;
@@ -943,7 +981,7 @@ static sr_error_t handle_sr_user_update(augeas *aug, sr_session_ctx_t *sess, str
 		assert(change->old);
 
 		name = sr_xpath_key_value(change->old->xpath, "user", "name", &state);
-		err = sys_del_user(name);
+		err = sys_del_user(name, false);
 		if (err) {
 			sr_xpath_recover(&state);
 			return err;
