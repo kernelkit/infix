@@ -872,7 +872,7 @@ admin@example:/config/>
 ```
 
 If you wish, you can check interface status. But beware that you may
-loose connectivity when leaving *configuration context* if configuring
+lose connectivity when leaving *configuration context* if configuring
 via SSH. Then it is better to first assign an IPv6 address to br0
 (`set interface br0 ipv6 enabled`) before leaving. Or skip 'leave' and
 stay in configuration context until done with all sections, including
