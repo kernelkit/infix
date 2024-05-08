@@ -660,7 +660,7 @@ on interface *e0*.
 ~$ 
 ```
 
-### Backup Configuration Using sysrepocfg And scp {#backup}
+### Backup Configuration Using sysrepocfg And scp <a id="backup"></a>
 
 Displaying running or startup configuration is possible with
 `sysrepocfg -X`, as shown below.
@@ -696,7 +696,7 @@ startup configuration (not running).
 ~$
 ```
 
-### Restore Configuration Using sysrepocfg and ssh/scp {#restore}
+### Restore Configuration Using sysrepocfg and ssh/scp <a id="restore"></a>
 
 
 To restore a backup configuration to startup, the simplest way is to
@@ -793,7 +793,7 @@ models for details.
 
 ## Miscellaneous
 
-### Port Test Configuration Example (For Production Tests) {#port-test-intro}
+### Port Test Configuration Example (For Production Tests) <a id="port-test-intro"></a>
 
 In production you wish to test that all ports work. A common way is to
 connect a test PC to two ports and send a *ping* traversing all ports.
@@ -804,27 +804,18 @@ restore as described [above](#restore).
 
 In this example we assume a 10 port switch, with ports e1-e10. 
 
-The following VLAN configuration will be used:
+The following VLAN configuration and cable connections will be used:
 
-| Ports   | VLAN    |
-|:--------|:--------|
-| e1, e2  | VLAN 10 |
-| e3, e4  | VLAN 20 |
-| e5, e6  | VLAN 30 |
-| e7, e8  | VLAN 40 |
-| e9, e10 | VLAN 50 |
+| VLAN & Ports      | Connect   |
+|:------------------|:----------|
+| VLAN 10: e1 & e2  | e2 <=> e3 |
+| VLAN 20: e3 & e4  | e4 <=> e5 |
+| VLAN 30: e5 & e6  | e6 <=> e7 |
+| VLAN 40: e7 & e8  | e8 <=> e9 |
+| VLAN 50: e9 & e10 |           |
 
-Connections will be as follows:
-
-| Connect | Connect |
-|:--------|:--------|
-| PC      | e1      |
-| e2      | e3      |
-| e4      | e5      |
-| e6      | e7      |
-| e8      | e9      |
-| e10     | PC      |
-
+The test PC is connected to e1 and e10 via different interfaces
+(alternatively, two different PCs are used).
 
 > Configuration here is done via console. If you intend to do it via
 > Ethernet and SSH, be careful so that you do not loose
