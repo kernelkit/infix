@@ -331,10 +331,10 @@ admin@infix.local%eth0's password: *****
 ~$ 
 ```
 
-### Controlling LEDs (For Production Tests)
+### Controlling LEDs for Production Tests
 
-As part of production tests you wish to verify that LEDs work as
-expected. Infix uses standard [Linux support for LED
+As part of production testing, LED verification is often expected to
+be performed. Infix uses standard [Linux support for LED
 management][6], where LEDs appear in the file system under
 /sys/class/leds and can be controlled using *echo* command. `sudo`
 privileges are required.
@@ -344,39 +344,35 @@ daemon to avoid conflicting LED control.
 
 ```
 ~$ ssh admin@example.local 'initctl stop iitod'
-~$
 ```
 
-Then run your test, e.g., visually controll that a red LED labeled
+Then run the test, e.g., visually control that a red LED labeled
 'LAN' is working.
 
 ```
 ~$ ssh admin@example.local 'echo none | sudo tee /sys/class/leds/red\:lan/trigger'
-~$ ssh admin@example.local 'echo 1 | sudo tee /sys/class/leds/red\:lan/brightness'
-~$ 
+~$ ssh admin@example.local 'echo 1    | sudo tee /sys/class/leds/red\:lan/brightness'
 ```
 
 To turn off the same LED, run the following commands.
 
 ```
 ~$ ssh admin@example.local 'echo none | sudo tee /sys/class/leds/red\:lan/trigger'
-~$ ssh admin@example.local 'echo 0 | sudo tee /sys/class/leds/red\:lan/brightness'
-~$ 
+~$ ssh admin@example.local 'echo 0    | sudo tee /sys/class/leds/red\:lan/brightness'
 ```
 When done with LED testing, enable Infix *iitod* daemon again.
 
 ```
 ~$ ssh admin@example.local 'initctl start iitod'
-~$
 ```
 
-### Reading Power Feed Status (For Production Tests)
+### Reading Power Feed Status for Production Tests
 
-As part of production tests you wish to verify that Power Feed sensors work as
-expected. Infix uses standard [Linux support for Power
-management][7], where power sources appear in the file system under
-/sys/class/power_supply. The following example reads status of two
-power supplies named *pwr1* and *pwr2*. 
+As part of production tests, verification of Power Feed sensors is
+often expected to be performed. Infix uses standard [Linux support for
+Power management][7], where power sources appear in the file system
+under /sys/class/power_supply. The following example reads status of
+two power supplies named *pwr1* and *pwr2*.
 
 ```
 ~$ ssh admin@example 'cat /sys/class/power_supply/pwr1/online' 
@@ -386,9 +382,6 @@ power supplies named *pwr1* and *pwr2*.
 ~$ 
 ```
 Here, only *pwr1* happened to have power. 
-
-
-
 
 
 ## Examples using SSH and sysrepocfg
@@ -405,10 +398,10 @@ See [sysrepocfg][4] for information. Examples below will utilize
 
 
 - `sysrepocfg -I FILE -fjson -d DATABASE` to import/write a JSON
-  formatted configuration file to the specificed database.
+  formatted configuration file to the specified database.
 - `sysrepocfg -E FILE -fjson -d DATABASE` to edit/merge JSON formatted
-  configuration in FILE with the specificed database.
--  `sysrepocfg -R FILE -fjson` to execute remote procdure call (RPC) defined in
+  configuration in FILE with the specified database.
+-  `sysrepocfg -R FILE -fjson` to execute remote procedure call (RPC) defined in
    FILE (JSON formatted). 
 - `sysrepocfg -X -fjson -d DATABASE -x xpath` to read configuration or
   status from specified database.
@@ -419,7 +412,7 @@ configuration. Exporting (-X) could operate on configuration (e.g.,
 `-d running`) or status (`-d operational`).
 
 Some commands require a file as input. In examples below we assume 
-it been transfered to Infix in advance, e.g. using `scp` as shown below.
+it been transferred to Infix in advance, e.g. using `scp` as shown below.
 
 ```
 ~$ cat file.json 
@@ -447,7 +440,7 @@ it been transfered to Infix in advance, e.g. using `scp` as shown below.
 ```
 See [Factory Reset](#factory-reset) for another (simpler) alternative.
 
-If you only wish to copy factory config to running config the
+If it is only wished to copy factory config to running config the
 following RPC is available
 
 ```
@@ -793,14 +786,15 @@ models for details.
 
 ## Miscellaneous
 
-### <a id="port-test-intro"></a> Port Test Configuration Example (For Production Tests) 
+### <a id="port-test-intro"></a> Port Configuration Example for Production Tests 
 
-In production you wish to test that all ports work. A common way is to
-connect a test PC to two ports and send a *ping* traversing all ports.
-This can be achieved by using VLANs on the switch as described in this
-section. The resulting configuration file can be applied to the
-running configuration of the produced unit, e.g, use config file
-restore as described [above](#restore).
+As part of production tests, verification Ethernet ports are expected
+to be performed. A common way is to connect a test PC to two ports and
+send a *ping* traversing all ports.  This can be achieved by using
+VLANs on the switch as described in this section. The resulting
+configuration file can be applied to the running configuration of the
+produced unit, e.g, use config file restore as described
+[above](#restore).
 
 In this example we assume a 10 port switch, with ports e1-e10. 
 
@@ -817,13 +811,10 @@ The following VLAN configuration and cable connections will be used:
 The test PC is connected to e1 and e10 via different interfaces
 (alternatively, two different PCs are used).
 
-> Configuration here is done via console. If you intend to do it via
-> Ethernet and SSH, be careful so that you do not lose
-> connectivity. Either stay in "configuration context" until done, or
-> make sure there is always an IP (IPv6 or IPv4) address available on
-> the switch which you can connect to. Section [Add IP on
-> Switch](#ip-on-switch) gives an example.
-
+> Configuration here is done via console. When configuring remotely
+> over SSH, remember to keep one IP address (the one used for the SSH
+> connection)! I.e., set a static IP address first, then perform the
+> VLAN configuration step."
 
 #### Configuration at Start
 
@@ -851,8 +842,7 @@ admin@example:/>
 
 #### Creating Bridge and Adding Ports
 
-Example below use Infix documentation on [creating
-bridges][8]. 
+The example below uses Infix documentation on [creating bridges][8]. 
 
 ``` shell
 admin@example:/> configure
@@ -871,12 +861,13 @@ admin@example:/config/> set interface e10 bridge-port bridge br0
 admin@example:/config/> 
 ```
 
-If you wish, you can check interface status. But beware that you may
-lose connectivity when leaving *configuration context* if configuring
-via SSH. Then it is better to first assign an IPv6 address to br0
-(`set interface br0 ipv6 enabled`) before leaving. Or skip 'leave' and
-stay in configuration context until done with all sections, including
-the one on [Add IP on Switch](#ip-on-switch).
+The interface status can be viewed using "show interface" after
+leaving configuration context. If configuration via SSH, first assign
+an IP address to br0 before *leaving* configuration context, e.g.,
+`set interface br0 ipv6 enabled` to get auto-configured IPv6
+address. Or skip 'leave' and stay in configuration context until done
+with all sections, including the one on [Add IP on
+Switch](#ip-on-switch).
 
 ``` shell
 admin@example:/config/> leave
@@ -903,11 +894,10 @@ admin@example:/>
 
 #### Assign VLANs to Ports
 
-Then we configure VLANs according to plan
-[above](#port-test-intro). We configure default VID for ingress
-(PVID), which is done per port, and egress mode (untagged), which is
-done at the bridge level. See Infix [documentation for VLAN
-bridges][9] for more information.
+Then configure VLANs as outlined [above](#port-test-intro):
+default VID for ingress (PVID), which is done per port, and egress
+mode (untagged), which is done at the bridge level. See Infix
+[documentation for VLAN bridges][9] for more information.
 
 
 ``` shell
@@ -1096,7 +1086,7 @@ vlan10          ethernet   UP          00:53:00:06:11:01
 admin@example:/> 
 ```
 
-If you now ping "IPv6 all hosts" from the PC, you should get two
+When pinging "IPv6 all hosts" from the PC, there should be two
 responses for every ping, one from the switch and one from the PC
 attached to e10.
 
@@ -1118,7 +1108,7 @@ rtt min/avg/max/mdev = 0.452/0.631/0.968/0.211 ms
 ~ $ 
 ```
 
-Now you can access the switch from the PC via SSH (or NETCONF).
+It should now be possible to access the switch from the PC via SSH (or NETCONF).
 
 ``` shell
 ~ $ ssh admin@fe80::0053:00ff:fe06:1101%eth1
@@ -1135,7 +1125,7 @@ admin@example:~$ exit
 ```
 
 See previous sections on [backup](#backup) and [restore](#restore) of
-your created configuration.
+the created configuration.
 
 
 
