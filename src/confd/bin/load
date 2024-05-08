@@ -56,4 +56,9 @@ fi
 logger -sik -p user.notice "Loaded $fn successfully."
 if [ "$config" = "failure-config" ]; then
     banner_append "ERROR: Corrupt startup-config, system has reverted to default login credentials"
+else
+    # Ensure correct ownership and permissions, in particular after factory reset
+    # Created by the system, writable by any user in the admin group.
+    chown root:wheel "$fn"
+    chmod 0660 "$fn"
 fi
