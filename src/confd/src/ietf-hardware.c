@@ -196,7 +196,7 @@ static int change_hardware(sr_session_ctx_t *session, uint32_t sub_id, const cha
 		return SR_ERR_OK;
 
 	rc = sr_get_data(session, XPATH_BASE_ "//.", 0, 0, 0, &cfg);
-	if (rc)
+	if (rc || !cfg)
 		goto err;
 
 	rc = srx_get_diff(session, &diff);

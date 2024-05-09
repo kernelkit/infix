@@ -278,7 +278,7 @@ static int change(sr_session_ctx_t *session, uint32_t sub_id, const char *module
 	}
 
 	err = sr_get_data(session, XPATH "//.", 0, 0, 0, &cfg);
-	if (err)
+	if (err || !cfg)
 		goto err_abandon;
 
 	err = srx_get_diff(session, &diff);

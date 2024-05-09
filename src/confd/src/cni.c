@@ -434,7 +434,7 @@ int cni_ifchange_cand_infer_type(sr_session_ctx_t *session, const char *path)
 		return SR_ERR_SYS;
 
 	err = sr_get_data(session, path, 0, 0, 0, &cfg);
-	if (err)
+	if (err || !cfg)
 		goto err;
 
 	node = lydx_get_descendant(cfg->tree, "interfaces", "interface", NULL);

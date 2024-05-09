@@ -348,6 +348,11 @@ static int change_control_plane_protocols(sr_session_ctx_t *session, uint32_t su
 	}
 
 	rc = sr_get_data(session, "/ietf-routing:routing/control-plane-protocols//.", 0, 0, 0, &cfg);
+	if (rc || !cfg) {
+		NOTE("No control-plane-protocols available.");
+		goto err_close;
+	}
+
 	LY_LIST_FOR(lyd_child(cfg->tree), tmp) {
 		LY_LIST_FOR(lyd_child(tmp), cplane) {
 			const char *type;
@@ -360,11 +365,13 @@ static int change_control_plane_protocols(sr_session_ctx_t *session, uint32_t su
 			}
 		}
 	}
-	fclose(fp);
+	sr_release_data(cfg);
 
+err_close:
+	fclose(fp);
 	if (!staticd_enabled)
 		(void)remove(STATICD_CONF_NEXT);
-	sr_release_data(cfg);
+
 err_abandon:
 	return rc;
 }
