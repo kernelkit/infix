@@ -882,6 +882,9 @@ static sr_error_t handle_sr_shell_update(augeas *aug, sr_session_ctx_t *sess, st
 	char *user;
 	int err;
 
+	if (change->op == SR_OP_DELETED)
+		return SR_ERR_OK;
+
 	user = change_get_user(change);
 	if (!user)
 		return SR_ERR_OK;
