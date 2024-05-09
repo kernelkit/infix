@@ -4,6 +4,25 @@ Change Log
 All notable changes to the project are documented in this file.
 
 
+[v24.04.2][] - 2024-05-10
+-------------------------
+
+### Changes
+- Add small delay in U-Boot to allow stopping boot on reference boards
+- Document how to provision the bootloader and Infix on a blank board
+- Use initial hostname from `/etc/os-release` as configuration fallback
+
+### Fixes
+- Fix build regressions in `cn9130_crb_boot_defconfig` caused by upgrade
+  to Buildroot v2024.02 and recent multi-key support in RAUC and U-Boot
+- Fix provisioning script after changes to make GRUB loading more robust
+- Fix missing `/etc/resolv.conf`, as noticed by `avahi-daemon`, when a
+  user calls `no system` from the CLI
+- Fix #428: loss of admin account after upgrade to v24.04
+- Fix #429: failing to load `startup-config` does not trigger the fail
+  secure mode, causing the system to end up in an undefined state
+
+
 [v24.04.1][] - 2024-05-03
 -------------------------
 
@@ -862,6 +881,7 @@ Supported YANG models in addition to those used by sysrepo and netopeer:
 
 [buildroot]:  https://buildroot.org/
 [UNRELEASED]: https://github.com/kernelkit/infix/compare/v24.04.0...HEAD
+[v24.04.2]:   https://github.com/kernelkit/infix/compare/v24.04.1...v24.04.2
 [v24.04.1]:   https://github.com/kernelkit/infix/compare/v24.04.0...v24.04.1
 [v24.04.0]:   https://github.com/kernelkit/infix/compare/v24.02.0...v24.04.0
 [v24.02.0]:   https://github.com/kernelkit/infix/compare/v23.11.0...v24.02.0
