@@ -442,7 +442,7 @@ static int change_ntp(sr_session_ctx_t *session, uint32_t sub_id, const char *mo
 				continue;
 
 			name = sr_val_to_str(old);
-			DEBUG("Removing NTP server %s\n", name);
+			DEBUG("Removing NTP server %s", name);
 			erasef("/etc/chrony/sources.d/%s.sources", name);
 			free(name);
 			changes++;
@@ -710,10 +710,10 @@ static int sys_del_user(char *user)
 	erasef("/var/run/sshd/%s.keys", user);
 	err = systemv_silent(args);
 	if (err) {
-		ERROR("Error deleting user \"%s\"\n", user);
+		ERROR("Error deleting user \"%s\"", user);
 		return SR_ERR_SYS;
 	}
-	NOTE("User \"%s\" deleted\n", user);
+	NOTE("User \"%s\" deleted", user);
 
 	return SR_ERR_OK;
 }
@@ -803,7 +803,7 @@ static char *change_get_user(struct sr_change *change)
 	if (user) {
 		pw = getpwnam(user);
 		if (!pw) {
-			ERROR("Skipping attribute for missing user (%s)", user);
+			/* Skipping, user probably deleted. */
 			free(user);
 			user = NULL;
 		}
@@ -828,7 +828,7 @@ static sr_error_t handle_sr_passwd_update(augeas *aug, sr_session_ctx_t *, struc
 		assert(change->new);
 
 		if (change->new->type != SR_STRING_T) {
-			ERROR("Internal error, expected pass to be string type\n");
+			ERROR("Internal error, expected pass to be string type.");
 			err = SR_ERR_INTERNAL;
 			break;
 		}
@@ -841,7 +841,7 @@ static sr_error_t handle_sr_passwd_update(augeas *aug, sr_session_ctx_t *, struc
 		 * it as "*", meaning the user can log in with SSH keys.
 		 */
 		if (!hash || !strlen(hash)) {
-			ERROR("Empty passwords are not allowed, disabling password login.\n");
+			ERROR("Empty passwords are not allowed, disabling password login.");
 			hash = "*";
 		}
 		if (aug_set_dynpath(aug, hash, "etc/shadow/%s/password", user))
@@ -1043,7 +1043,7 @@ static sr_error_t change_auth_done(augeas *aug, sr_session_ctx_t *session)
 	 */
 	err = aug_load(aug);
 	if (err) {
-		ERROR("Error loading files into aug tree\n");
+		ERROR("Error loading files into aug tree.");
 		return SR_ERR_INTERNAL;
 	}
 
@@ -1079,7 +1079,7 @@ static sr_error_t change_auth_done(augeas *aug, sr_session_ctx_t *session)
 		return err;
 	}
 
-	DEBUG("Changes to authentication saved\n");
+	DEBUG("Changes to authentication saved.");
 
 	return SR_ERR_OK;
 }
