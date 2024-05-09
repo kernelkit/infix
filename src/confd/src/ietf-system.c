@@ -638,7 +638,7 @@ static char *sys_find_usable_shell(sr_session_ctx_t *sess, char *name)
 	sr_data_t *cfg;
 
 	snprintf(xpath, sizeof(xpath), XPATH_AUTH_"/user[name='%s']/infix-system:shell", name);
-	if (!sr_get_data(sess, xpath, 0, 0, 0, &cfg)) {
+	if (!sr_get_data(sess, xpath, 0, 0, 0, &cfg) && cfg) {
 		struct lyd_node *node;
 
 		if (!lyd_find_path(cfg->tree, xpath, 0, &node))
@@ -667,7 +667,8 @@ static char *sys_find_usable_shell(sr_session_ctx_t *sess, char *name)
 		shell = LOGIN_SHELL;
 
 	shell = strdup(shell);
-	sr_release_data(cfg);
+	if (cfg)
+		sr_release_data(cfg);
 
 	return shell;
 }
@@ -1013,8 +1014,9 @@ static sr_error_t generate_auth_keys(sr_session_ctx_t *session, const char *xpat
 	sr_error_t err = 0;
 	sr_data_t *cfg;
 
+	/* err may be OK and cfg NULL if 'no system' */
 	err = sr_get_data(session, xpath, 0, 0, 0, &cfg);
-	if (err)
+	if (err || !cfg)
 		return err;
 
 	auth = lydx_get_descendant(cfg->tree, "system", "authentication", NULL);

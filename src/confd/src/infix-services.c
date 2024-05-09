@@ -104,7 +104,7 @@ static sr_data_t *get(sr_session_ctx_t *session, sr_event_t event, const char *x
 		return NULL;  /* Don't care about CHANGE, ABORT, etc. */
 
 	snprintf(path, sizeof(path), "%s//.", xpath);
-	if (sr_get_data(session, path, 0, 0, 0, &cfg)) {
+	if (sr_get_data(session, path, 0, 0, 0, &cfg) || !cfg) {
 		ERROR("no data for %s", path);
 		return NULL;
 	}

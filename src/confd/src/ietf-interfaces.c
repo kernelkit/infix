@@ -1699,7 +1699,7 @@ static int ifchange(sr_session_ctx_t *session, uint32_t sub_id, const char *modu
 		return err;
 
 	err = sr_get_data(session, "/interfaces/interface", 0, 0, 0, &cfg);
-	if (err)
+	if (err || !cfg)
 		goto err_abandon;
 
 	err = srx_get_diff(session, (struct lyd_node **)&diff);
