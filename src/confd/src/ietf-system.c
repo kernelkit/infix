@@ -594,11 +594,10 @@ static int change_dns(sr_session_ctx_t *session, uint32_t sub_id, const char *mo
 		goto fail;
 
 	for (size_t i = 0; i < cnt; i++) {
-		const char *xpath = val[i].xpath;
 		char *ptr;
 
 		/* Get /ietf-system:system/dns-resolver/server[name='foo'] */
-		ptr = srx_get_str(session, "%s/udp-and-tcp/address", xpath);
+		ptr = srx_get_str(session, "%s/udp-and-tcp/address", val[i].xpath);
 		if (ptr)
 			/* XXX: add support also for udp-and-tcp/port */
 			fprintf(fp, "nameserver %s\n", ptr);
