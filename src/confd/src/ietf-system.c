@@ -544,12 +544,11 @@ static int change_dns(sr_session_ctx_t *session, uint32_t sub_id, const char *mo
 
 	case SR_EV_DONE:
 		/* Check if passed validation in previous event */
-		if (access(RESOLV_NEXT, F_OK))
-			return SR_ERR_OK;
-
-		(void)remove(RESOLV_PREV);
-		(void)rename(RESOLV_CONF, RESOLV_PREV);
-		(void)rename(RESOLV_NEXT, RESOLV_CONF);
+		if (!access(RESOLV_NEXT, F_OK)) {
+			(void)remove(RESOLV_PREV);
+			(void)rename(RESOLV_CONF, RESOLV_PREV);
+			(void)rename(RESOLV_NEXT, RESOLV_CONF);
+		}
 
 		/* in bootstrap, another resolvconf will soon take your call */
 		if (systemf("initctl -bq cond get hook/sys/up"))
