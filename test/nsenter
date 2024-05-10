@@ -1,0 +1,24 @@
+#!/bin/sh
+
+set -e
+
+testdir=$(dirname "$(readlink -f "$0")")
+. "$testdir/.env"
+
+lower=$1
+shift
+[ $# -gt 0 ] || set sh
+
+for pid in $(pgrep -fx "sleep infinity"); do
+    ifidxs=$(nsenter -t $pid -U -n ip -j link show | \
+    		 jq '.[] | select(has("link_netnsid")) | .link_index')
+    for ifidx in $ifidxs; do
+	ifname=$(ip -j link show | jq -r ".[] | select(.ifindex == $ifidx) | .ifname")
+	if [ "$ifname" = "$lower" ]; then
+	    exec nsenter -t $pid -U -n env PS1="$(build_ps1 "(netns:$ifname)")" "$@"
+	fi
+    done
+done
+
+echo Found no namespace with interface stacked on $lower >&2
+exit 1
