@@ -117,18 +117,8 @@ with infamy.Test() as test:
         _, hport = env.ltop.xlate("host", "data1")
 
         with infamy.IsolatedMacVlan(hport) as ns:
-            pingtest = ns.runsh("""
-            set -ex
-
-            ip link set iface up
-            ip addr add 10.0.0.1/24 dev iface
-
-            ping -c1 -w5 10.0.0.2 || exit 1
-            ping -c1 -w5 10.0.0.3 || exit 1
-            """)
-
-        if pingtest.returncode:
-            print(pingtest.stdout)
-            test.fail()
+            ns.addip("10.0.0.1")
+            ns.must_reach("10.0.0.2")
+            ns.must_reach("10.0.0.3")
 
     test.succeed()
