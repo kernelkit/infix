@@ -51,6 +51,22 @@ class Topology:
             attrs[dn] = dp
             self.g.add_edge(sn, dn, **attrs)
 
+    def __repr__(self):
+        if not self.mapping:
+            return ""
+
+        out = ""
+
+        for n in self.mapping:
+            out += f"{n + ':':<8} {self.mapping[n][None]}\n"
+            for e in self.mapping[n]:
+                if not e:
+                    continue
+
+                out += f"    {e + ':':<8} {self.mapping[n][e]}\n"
+
+        return out
+
     def map_to(self, phy):
         mapper = isomorphism.MultiGraphMatcher(phy.g, self.g,
                                                edge_match=match_edge,
