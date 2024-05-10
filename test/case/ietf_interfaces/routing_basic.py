@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
-# ,------------------------------------------------,       
-# |                 [TARGET]                       | 
-# |                            br0                 |  
-# |                           /   \                | 
-# | target:mgmt   target:data0     targetgt:data1  | 
+# ,------------------------------------------------,
+# |                 [TARGET]                       |
+# |                            br0                 |
+# |                           /   \                |
+# | target:mgmt   target:data0     targetgt:data1  |
 # |              [192.168.0.1]     [10.0.0.1]      |
 # '------------------------------------------------'
-#         |                  |     |            
-#         |                  |     |           
+#         |                  |     |
+#         |                  |     |
 # ,----------------------------------------------,
 # |   host:mgmt    host:data0       host:data1   |
 # |             [192.168.0.10]     [10.0.0.10]   |
@@ -65,13 +65,13 @@ with infamy.Test() as test:
 
         with infamy.IsolatedMacVlan(hport0) as ns0, \
              infamy.IsolatedMacVlan(hport1) as ns1 :
-            
+
             ns0.addip("192.168.0.10")
             ns0.addroute("default", "192.168.0.1")
-                
+
             ns1.addip("10.0.0.10")
             ns1.addroute("default", "10.0.0.1")
-            
+
             ns0.must_reach("10.0.0.10")
             ns1.must_reach("192.168.0.10")
 
@@ -83,10 +83,10 @@ with infamy.Test() as test:
 
         with infamy.IsolatedMacVlan(hport0) as ns0, \
              infamy.IsolatedMacVlan(hport1) as ns1 :
-            
+
             ns0.addip("192.168.0.10")
             ns0.addroute("default", "192.168.0.1")
-                
+
             ns1.addip("10.0.0.10")
             ns1.addroute("default", "10.0.0.1")
 

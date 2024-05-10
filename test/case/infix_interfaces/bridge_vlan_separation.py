@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-#    ,-------------------------------------,       ,-------------------------------------,       
-#    |                          dut1:data2 |       | dut2:data2                          | 
-#    |                      br0  ----------|-------|---------  br0                       |  
-#    |                     /   \           |       |          /   \                      | 
-#    |dut1:mgmt  dut1:data0     dut1:data1 |       | dut2:data0    dut2:data1  dut2:mgmt | 
+#    ,-------------------------------------,       ,-------------------------------------,
+#    |                          dut1:data2 |       | dut2:data2                          |
+#    |                      br0  ----------|-------|---------  br0                       |
+#    |                     /   \           |       |          /   \                      |
+#    |dut1:mgmt  dut1:data0     dut1:data1 |       | dut2:data0    dut2:data1  dut2:mgmt |
 #    '-------------------------------------'       '-------------------------------------'
-#        |                |     |                            |     |                 | 
+#        |                |     |                            |     |                 |
 #        |                |     |                            |     |                 |
 # ,-----------------------------------------------------------------------------------------,
 # |  host:mgmt0  host:data0     host:data1          host:data2     host:data3   host:mgmt1  |
@@ -13,7 +13,7 @@
 # |                (ns10)         (ns11)              (ns20)         (ns21)                 |
 # |                                                                                         |
 # |                                        [ HOST ]                                         |
-# '-----------------------------------------------------------------------------------------'          
+# '-----------------------------------------------------------------------------------------'
 
 import infamy
 
@@ -135,7 +135,7 @@ with infamy.Test() as test:
 
     with test.step("Ping host:data20 [10.0.0.3] from host:data10 [10.0.0.1] through <bridge-vlan-10>" \
                    " and host:data21 [10.0.0.4] from host:data11 [10.0.0.2] through <bridge-vlan-20>"):
-        
+
         _, hport10 = env.ltop.xlate("host", "data10")
         _, hport11 = env.ltop.xlate("host", "data11")
         _, hport20 = env.ltop.xlate("host", "data20")
@@ -158,5 +158,5 @@ with infamy.Test() as test:
             ns11.must_not_reach("10.0.0.3")
             ns10.must_not_reach("10.0.0.2")
             ns11.must_not_reach("10.0.0.1")
-                    
+
     test.succeed()

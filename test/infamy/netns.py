@@ -119,7 +119,7 @@ class IsolatedMacVlan:
         p=proto[3]
 
         self.runsh(f"""
-            set -ex 
+            set -ex
             ip link set iface up
             ip -{p} addr add {addr}/{prefix_length} dev iface
             """, check=True)

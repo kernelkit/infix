@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-#    ,-------------------------------------,       ,-------------------------------------,       
-#    |                          dut1:data2 |       | dut2:data2                          | 
-#    |                      br0  ----------|-------|---------  br0                       |  
-#    |                     /   \           |       |          /   \                      | 
-#    |dut1:mgmt  dut1:data0     dut1:data1 |       | dut2:data0    dut2:data1  dut2:mgmt | 
+#    ,-------------------------------------,       ,-------------------------------------,
+#    |                          dut1:data2 |       | dut2:data2                          |
+#    |                      br0  ----------|-------|---------  br0                       |
+#    |                     /   \           |       |          /   \                      |
+#    |dut1:mgmt  dut1:data0     dut1:data1 |       | dut2:data0    dut2:data1  dut2:mgmt |
 #    '-------------------------------------'       '-------------------------------------'
-#        |                |     |                            |     |                 | 
+#        |                |     |                            |     |                 |
 #        |                |     |                            |     |                 |
 # ,-----------------------------------------------------------------------------------------,
 # |  host:mgmt0  host:data0     host:data1          host:data2     host:data3   host:mgmt1  |
@@ -125,7 +125,7 @@ with infamy.Test() as test:
 
     with test.step("Ping host:data20 [10.0.0.3] and host:data21 [10.0.0.4]"\
                    "from host:data11 [10.0.0.2]"):
-        
+
         _, hport11 = env.ltop.xlate("host", "data11")
         _, hport20 = env.ltop.xlate("host", "data20")
         _, hport21 = env.ltop.xlate("host", "data21")
@@ -140,5 +140,5 @@ with infamy.Test() as test:
 
             ns11.must_reach("10.0.0.3")
             ns11.must_reach("10.0.0.4")
-                    
+
     test.succeed()

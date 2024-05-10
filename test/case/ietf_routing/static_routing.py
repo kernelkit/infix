@@ -188,7 +188,7 @@ def config_remove_routes(target):
     new = copy.deepcopy(running)
     new["routing"]["control-plane-protocols"].clear()
     target.put_diff_dicts("ietf-routing",running,new)
-    
+
 with infamy.Test() as test:
     with test.step("Initialize"):
         env = infamy.Env(infamy.std_topology("2x2"))
