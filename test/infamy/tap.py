@@ -16,17 +16,20 @@ class Test:
     def __enter__(self):
         now = datetime.datetime.now().strftime("%F %T")
         self.out.write(f"# Starting ({now})\n")
+        self.out.flush()
         return self
 
     def __exit__(self, _, e, __):
         now = datetime.datetime.now().strftime("%F %T")
         self.out.write(f"# Exiting ({now})\n")
+        self.out.flush()
 
         if not e:
             self._not_ok("Missing explicit test result\n")
         else:
             if type(e) in (TestPass, TestSkip):
                 self.out.write(f"{self.steps}..{self.steps}\n")
+                self.out.flush()
                 raise SystemExit(0)
 
             traceback.print_exception(e, file=self.commenter)
@@ -59,6 +62,7 @@ class Test:
     def _report(self, tag, msg):
         self.steps += 1
         self.out.write(f"{tag} {self.steps}{msg}\n")
+        self.out.flush()
 
     def _ok(self, msg="", directive=None):
         if msg:
@@ -112,6 +116,7 @@ class CommentWriter:
             data = data + "\n"
 
         self.f.write(data)
+        self.flush()
 
     def flush(self):
         return self.f.flush()
