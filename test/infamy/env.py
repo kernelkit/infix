@@ -35,6 +35,8 @@ class Env(object):
             if not self.ltop.map_to(self.ptop):
                 raise tap.TestSkip()
 
+            print(repr(self.ltop))
+
     def attach(self, node, port, factory_default=True):
         if self.ltop:
             mapping = self.ltop.mapping[node]
