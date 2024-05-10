@@ -90,7 +90,7 @@ with infamy.Test() as test:
             ns1.addip("10.0.0.10")
             ns1.addroute("default", "10.0.0.1")
 
-            ns0.must_not_reach("10.0.0.10")
-            ns1.must_not_reach("192.168.0.10")
+            infamy.parallel(lambda: ns0.must_not_reach("10.0.0.10"),
+                            lambda: ns1.must_not_reach("192.168.0.10"))
 
     test.succeed()

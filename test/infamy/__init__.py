@@ -6,7 +6,7 @@ from .furl import Furl
 from .netns import IsolatedMacVlan
 from .sniffer import Sniffer
 from .tap import Test
-from .util import until
+from .util import parallel, until
 
 def std_topology(name):
     return os.path.realpath(

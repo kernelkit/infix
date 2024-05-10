@@ -237,8 +237,8 @@ with infamy.Test() as test:
             ns0.addip("192.168.10.2")
             ns0.addroute("192.168.200.1/32", "192.168.10.1")
 
-            ns0.must_not_reach("192.168.200.1")
-            ns0.must_not_reach("2001:db8:3c4d:200::1")
+            infamy.parallel(lambda: ns0.must_not_reach("192.168.200.1"),
+                            lambda: ns0.must_not_reach("2001:db8:3c4d:200::1"))
 
 
     test.succeed()

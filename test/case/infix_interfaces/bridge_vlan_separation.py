@@ -154,9 +154,9 @@ with infamy.Test() as test:
             ns10.must_reach("10.0.0.3")
             ns11.must_reach("10.0.0.4")
 
-            ns10.must_not_reach("10.0.0.4")
-            ns11.must_not_reach("10.0.0.3")
-            ns10.must_not_reach("10.0.0.2")
-            ns11.must_not_reach("10.0.0.1")
+            infamy.parallel(lambda: ns10.must_not_reach("10.0.0.4"),
+                            lambda: ns11.must_not_reach("10.0.0.3"),
+                            lambda: ns10.must_not_reach("10.0.0.2"),
+                            lambda: ns11.must_not_reach("10.0.0.1"))
 
     test.succeed()
