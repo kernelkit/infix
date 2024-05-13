@@ -4,7 +4,7 @@ Change Log
 All notable changes to the project are documented in this file.
 
 
-[v24.04.2][] - 2024-05-10
+[v24.04.2][] - 2024-05-15
 -------------------------
 
 ### Changes
