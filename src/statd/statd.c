@@ -526,9 +526,11 @@ int main(int argc, char *argv[])
 	struct statd statd = {};
 	int log_opts = LOG_USER;
 	sr_conn_ctx_t *sr_conn;
+	char *env;
 	int err;
 
-	if (argc > 1 && !strcmp(argv[1], "-d")) {
+	env = getenv("DEBUG");
+	if (env || (argc > 1 && !strcmp(argv[1], "-d"))) {
 		log_opts |= LOG_PERROR;
 		debug = 1;
 	}
