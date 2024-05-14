@@ -19,6 +19,7 @@ All notable changes to the project are documented in this file.
 - Add small delay in U-Boot to allow stopping boot on reference boards
 - Document how to provision the bootloader and Infix on a blank board
 - Use initial hostname from `/etc/os-release` as configuration fallback
+- Update documentation for use of VETH pairs in containers
 - Issue #454: create bridges in `factory-config` with IGMP/MLD snooping
   enabled by default
 
