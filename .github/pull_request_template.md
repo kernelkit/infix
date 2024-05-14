@@ -1,5 +1,3 @@
-<!--- **Summarize** your changes in the title above -->
-
 ## Description
 
 <!--
@@ -15,7 +13,7 @@
 
 ## Checklist
 
-Tick relevant boxes, this PR is-a or has-a:
+Tick *relevant* boxes, this PR is-a or has-a:
 
 - [ ] Bugfix
   - [ ] Regression tests
@@ -31,7 +29,3 @@ Tick relevant boxes, this PR is-a or has-a:
 - [ ] Documentation content changes
 - [ ] Other (please describe):
 
-
-## References
-
-<!-- Please list references to related issue(s) -->
