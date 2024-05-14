@@ -390,12 +390,30 @@ network:
 
 ### Container Host Interface
 
-Another common use-case is to move a network interface into the network
-namespace of a container.  Which the container bridge network type does
-behind the scenes with one end of the automatically created VETH pair.
-This works with regular Ethernet interfaces as well, but here we will
-use a VETH pair as an example along with a regular bridge (where other
-Ethernet interfaces may live as well).
+Another common use-case is to move network interfaces into the network
+namespace of a container[^3].  This of course works with plain Ethernet
+interfaces as well, but here we will use one end of a VETH pair as an
+example.
+
+[^3]: Something which the container bridge network type does behind the
+    scenes with one end of an automatically created VETH pair.
+
+#### Routed Setup
+
+In this routed setup we reserve 192.168.0.0/24 for the network between
+the host and the `ntpd` container.
+
+                                _____________
+                               |             |
+    veth0 .1                   |   .2 eth0   |
+           \   192.168.0.0/24  |  /          |
+            '--------------------'  [ntpd]   |
+                               |_____________|
+
+Configuration is a straight-forward VETH pair setup where we name the
+container-end of pair `ntpd`.  This is just a convenience for us when
+reading the configuration later.  The *real action* happens on the last
+line where we declare the `ntpd` end as a container network interface:
 
     admin@example:/config/> edit interface veth0
     admin@example:/config/interface/veth0/> set veth peer ntpd
@@ -403,23 +421,49 @@ Ethernet interfaces may live as well).
     admin@example:/config/interface/veth0/> end
     admin@example:/config/> edit interface ntpd
     admin@example:/config/interface/ntpd/> set ipv4 address 192.168.0.2 prefix-length 24
+    admin@example:/config/interface/ntpd/> set phys-address 00:c0:ff:ee:00:01
     admin@example:/config/interface/ntpd/> set container-network
 
-This is a routed setup, where we reserve 192.168.0.0/24 for the network
-between the host and the `ntpd` container.  A perhaps more common case
-is to put `veth0` as a port in a bridge with other physical ports.  The
-point of the routed case is that port forwarding from the container in
-this case is limited to a single interface, not *all interfaces* as is
-the default in the masquerading container bridge setup.
+> Notice how you can also set a custom MAC address at the same time.
 
-When a container has multiple host interfaces it can often be useful to
-have a default route installed.  This can be added from the host with a
-`0.0.0.0/0` route on one of the interfaces.  The following is an example
-when adding a second VETH pair to the container:
+Adding the interface to the container is the same as before, but since
+everything for host interfaces is set up in the interfaces context, we
+can take a bit of a shortcut.
+
+    admin@example:/config/container/ntpd/> set network ntpd
+    admin@example:/config/container/ntpd/> leave
+
+The point of the routed case is that port forwarding from the container
+in this case is limited to a single interface, not *all interfaces* as
+is the default in the masquerading container bridge setup.
+
+
+#### Bridged Setup
+
+A perhaps more common case is to bridge the other end of the VETH pair
+with other physical ports.  In this section we show how to add a new
+pair to give our container two interfaces:
+
+                              _______________
+                             |               |                     .1 br0
+    veth0 .1                 |   .2 eth0     |                       /   \
+           \  192.168.0.0/24 |  /   eth1 .2  |                 veth1b     e1
+            '------------------'          \  | 192.168.1.0/24  /
+                             |     [ntpd]  '------------------'
+                             |_______________|
+
+We start by adding the second VETH pair:
 
     admin@example:/config/> edit interface veth1a
     admin@example:/config/interface/veth1a/> set veth peer veth1b
     admin@example:/config/interface/veth1a/> set ipv4 address 192.168.1.2 prefix-length 24
+
+> The LAN bridge (br0) in this example has IP address 192.168.1.1.
+
+When a container has multiple host interfaces it can often be useful to
+have a default route installed.  This can be added from the host with a
+`0.0.0.0/0` route on one of the interfaces:
+
     admin@example:/config/interface/veth1a/> set container-network route 0.0.0.0/0 gateway 192.168.1.1
     admin@example:/config/interface/veth1a/> show
     type veth;
@@ -438,9 +482,6 @@ when adding a second VETH pair to the container:
 Please note, container network routes require the base interface also
 have a static IP address set.  Setting only the route, but no address,
 means the route is skipped.
-
-> The LAN bridge (br0) in this example has IP address 192.168.1.1.
-
 
 ### Host Networking
 
