@@ -1,5 +1,6 @@
 import contextlib
 import datetime
+import subprocess
 import sys
 import traceback
 
@@ -29,6 +30,11 @@ class Test:
                 raise SystemExit(0)
 
             traceback.print_exception(e, file=self.commenter)
+
+            if type(e) is subprocess.CalledProcessError:
+                print("Failing subprocess stdout:\n", e.stdout)
+            elif len(e.args) and type(e.args[0]) is subprocess.CompletedProcess:
+                print("Failing subprocess stdout:\n", e.args[0].stdout)
 
         raise SystemExit(1)
 
