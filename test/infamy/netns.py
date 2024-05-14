@@ -1,7 +1,9 @@
 import ctypes
 import multiprocessing
-import subprocess
 import os
+import random
+import subprocess
+import time
 
 __libc = ctypes.CDLL(None)
 CLONE_NEWUSER = 0x10000000
@@ -28,6 +30,7 @@ class IsolatedMacVlan:
             subprocess.run(["ip", "link", "add",
                             "dev", self.ifname,
                             "link", self.parent,
+                            "address", self._stable_mac(),
                             "netns", str(self.sleeper.pid),
                             "type", "macvlan"], check=True)
             self.runsh(f"""
@@ -51,8 +54,31 @@ class IsolatedMacVlan:
     def __exit__(self, val, typ, tb):
         self.sleeper.kill()
         self.sleeper.wait()
+        time.sleep(0.5)
 
-    def __ns_call(self, fn, tx):
+    def _stable_mac(self):
+        """Generate address for MACVLAN
+
+        By default, the kernel will assign a random address. This
+        causes issues when the parent interface is an Intel X710 NIC,
+        which will add those addresses to its FDB, but never remove
+        them when the interface is deleted.
+
+        Work around the issue by generating an address that is pseudo
+        random, to avoid address conflicts; yet stable across
+        instantiations for any given parent interface name, to avoid
+        the resource exhaustion issue.
+
+        """
+        random.seed(self.parent)
+        a = list(random.randbytes(6))
+        a[0] |= 0x02
+        a[0] &= ~0x01
+        return \
+            f"{a[0]:02x}:{a[1]:02x}:{a[2]:02x}:" + \
+            f"{a[3]:02x}:{a[4]:02x}:{a[5]:02x}"
+
+    def _ns_call(self, fn, tx):
         pid = self.sleeper.pid
 
         uns = os.open(f"/proc/{pid}/ns/user", os.O_RDONLY)
@@ -69,7 +95,7 @@ class IsolatedMacVlan:
     def call(self, fn):
         rx, tx = multiprocessing.Pipe(duplex=False)
 
-        proc = multiprocessing.Process(target=self.__ns_call, args=(fn, tx))
+        proc = multiprocessing.Process(target=self._ns_call, args=(fn, tx))
         proc.start()
         ret = rx.recv()
         rx.close()
