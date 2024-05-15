@@ -7,6 +7,12 @@ import sys
 
 from . import neigh, netconf, tap, topology
 
+class NullEnv:
+    def attr(self, _, default=None):
+        return default
+
+ENV = NullEnv()
+
 class ArgumentParser(argparse.ArgumentParser):
     def __init__(self, ltop):
         super().__init__()
@@ -36,6 +42,21 @@ class Env(object):
                 raise tap.TestSkip()
 
             print(repr(self.ltop))
+
+        global ENV
+        ENV = self
+
+    def attr(self, name, default=None):
+        val = self.ptop.get_attr("ix_" + name)
+        if val == None:
+            return default
+
+        try:
+            return int(val, 0)
+        except ValueError:
+            pass
+
+        return val
 
     def attach(self, node, port, factory_default=True):
         if self.ltop:
