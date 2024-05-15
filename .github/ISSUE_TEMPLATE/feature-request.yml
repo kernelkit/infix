@@ -1,0 +1,45 @@
+# https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/syntax-for-githubs-form-schema
+name: "\U0001F6E0️ Feature request"
+description: Suggest a new feature, idea or improvement of the OS
+labels:
+  - "feature"
+  - "triage"
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Thank :heart: you for taking the time to fill out this feature request!**
+
+        We kindly ask that you search to see if an issue [already exists](https://github.com/kernelkit/infix/issues?q=is%3Aissue+sort%3Acreated-desc+) for your feature.  We are also happy to accept contributions from our users. For details see [CONTRIBUTING](https://github.com/kernelkit/infix/blob/master/.github/CONTRIBUTING.md).
+
+  - type: textarea
+    attributes:
+      label: Description
+      description: |
+        A clear and concise description of the problem or missing feature.
+        **Example:** *I'm always frustrated when [...]*, or *I'd like to see support for [...]*
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: Additional Information
+      description: |
+        Any other related information, e.g. existing YANG model(s), or possibly screenshots about the feature request here.
+    validations:
+      required: false
+
+  - type: textarea
+    attributes:
+      label: General Information
+      description: |
+        Appended to all feature requests for future readers.
+      value: |
+        Anyone can help out by [sponsoring][1] development of new features or [contributing][2] pull requests.
+        Please use this issue for discussions related to the feature.
+      
+        [1]: https://github.com/kernelkit/infix/blob/main/.github/SUPPORT.md
+        [2]: https://github.com/kernelkit/infix/blob/main/.github/CONTRIBUTING.md
+    validations:
+      required: true
