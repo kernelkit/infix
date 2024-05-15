@@ -1,0 +1,69 @@
+# https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/syntax-for-githubs-form-schema
+name: "\U0001F41E Bug report"
+description: Create a bug report
+labels:
+  - "bug"
+  - "triage"
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Thank :heart: you for taking the time to fill out this bug report!**
+
+        We kindly ask that you search to see if an issue [already exists](https://github.com/kernelkit/infix/issues?q=is%3Aissue+sort%3Acreated-desc+) for the bug you encountered.
+
+  - type: textarea
+    attributes:
+      label: Current Behavior
+      description: |
+        A clear and concise description of the issue you're experiencing.
+      value: |
+        For code snippets, logs, commands, etc., please use triple backticks:
+        ```
+        admin@infix-c0-ff-ee:/> show log
+        May 15 07:21:02 infix-00-00-00 container[3192]: Failed creating container test from curios-httpd-v24.03.0
+        - (press h for help or q to quit)
+        ```
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: Expected Behavior
+      description: |
+        A clear and concise description of what you expected to happen.
+      value: |
+        ```
+        admin@infix-c0-ff-ee:/> show log
+        May 15 07:21:02 infix-c0-ff-ee container[3192]: Successfully created container test from curios-httpd-v24.03.0
+        - (press h for help or q to quit)
+        ```
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: Steps To Reproduce
+      description: |
+        Steps to reproduce the issue.  For example:
+
+        1. Built from source
+        2. Upgrade to latest release, vYY.MM.P
+        3. Factory reset
+        4. Enable feature
+        5. Check the logs/show command/operational status
+    validations:
+      required: false
+
+  - type: textarea
+    attributes:
+      label: Additional information
+      description: |
+        - Relevant parts of `startup-config`
+        - Output from `show interfaces`, if applicable
+        - Other observations, screenshots, log files ...
+
+        **Tip:** You can attach images or log files by clicking this area to highlight it and then dragging files in.
+    validations:
+      required: false
