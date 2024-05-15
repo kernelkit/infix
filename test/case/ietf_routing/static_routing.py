@@ -214,31 +214,27 @@ with infamy.Test() as test:
         until(lambda: route.ipv6_route_exist(target1, "2001:db8:3c4d:200::1/128"))
         until(lambda: route.ipv6_route_exist(target2, "::/0"))
 
-
-    with test.step("Ping from host to 192.168.200.1 and 2001:db8:3c4d:200::1 (dut2) through dut1"):
-        _, hport0 = env.ltop.xlate("host", "data1")
-        with infamy.IsolatedMacVlan(hport0) as ns0:
+    _, hport0 = env.ltop.xlate("host", "data1")
+    with infamy.IsolatedMacVlan(hport0) as ns0:
+        with test.step("Configure host addresses and routes"):
              ns0.addip("2001:db8:3c4d:10::2", prefix_length=64, proto="ipv6")
              ns0.addroute("2001:db8:3c4d:200::1/128", "2001:db8:3c4d:10::1", proto="ipv6")
              ns0.addip("192.168.10.2")
              ns0.addroute("192.168.200.1/32", "192.168.10.1")
+
+        with test.step("Verify that dut2 is reachable from host over IPv4"):
              ns0.must_reach("192.168.200.1")
 
-    with test.step("Remove static routes on dut1"):
-        config_remove_routes(target1);
-        until(lambda: route.ipv4_route_exist(target1, "192.168.200.1/32") == False)
-        until(lambda: route.ipv6_route_exist(target1, "2001:db8:3c4d:200::1/128") == False)
+        with test.step("Verify that dut2 is reachable from host over IPv6"):
+             ns0.must_reach("2001:db8:3c4d:200::1")
 
-    with test.step("Ping from host to 192.168.200.1 and 2001:db8:3c4d:200::1 (dut2) through dut1 (should not be possible)"):
-        _, hport0 = env.ltop.xlate("host", "data1")
-        with infamy.IsolatedMacVlan(hport0) as ns0:
-            ns0.addip("2001:db8:3c4d:10::2", prefix_length=64, proto="ipv6")
-            ns0.addroute("2001:db8:3c4d:200::1/128", "2001:db8:3c4d:10::1", proto="ipv6")
-            ns0.addip("192.168.10.2")
-            ns0.addroute("192.168.200.1/32", "192.168.10.1")
+        with test.step("Remove static routes on dut1"):
+            config_remove_routes(target1);
+            until(lambda: route.ipv4_route_exist(target1, "192.168.200.1/32") == False)
+            until(lambda: route.ipv6_route_exist(target1, "2001:db8:3c4d:200::1/128") == False)
 
+        with test.step("Verify that dut2 is no longer reachable"):
             infamy.parallel(lambda: ns0.must_not_reach("192.168.200.1"),
                             lambda: ns0.must_not_reach("2001:db8:3c4d:200::1"))
-
 
     test.succeed()
