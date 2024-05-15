@@ -1376,11 +1376,22 @@ static int netdag_gen_veth(struct dagger *net, struct lyd_node *dif,
 	if (dagger_should_skip(net, ifname)) {
 		err = dagger_add_dep(net, ifname, peer);
 		if (err)
-			return ERR_IFACE(cif, err, "Unable to add dep \"%s\" to %s",
-					 peer, ifname);
+			return ERR_IFACE(cif, err, "Unable to add dep \"%s\" to %s", peer, ifname);
 	} else {
+		char ifname_args[64] = "", peer_args[64] = "";
+
 		dagger_skip_iface(net, peer);
-		fprintf(ip, "link add dev %s down type veth peer %s\n", ifname, peer);
+
+		node = lydx_get_child(dif, "phys-address");
+		if (node)
+			snprintf(ifname_args, sizeof(ifname_args), "address %s", lyd_get_value(node));
+
+		node = lydx_find_by_name(lyd_parent(cif), "interface", peer);
+		if (node && (node = lydx_get_child(node, "phys-address")))
+			snprintf(peer_args, sizeof(peer_args), "address %s", lyd_get_value(node));
+
+		fprintf(ip, "link add dev %s %s type veth peer %s %s\n",
+			ifname, ifname_args, peer, peer_args);
 	}
 
 	return 0;

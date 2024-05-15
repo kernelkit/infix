@@ -33,6 +33,8 @@ All notable changes to the project are documented in this file.
 - Fix #428: loss of admin account after upgrade to v24.04
 - Fix #429: failing to load `startup-config` does not trigger the fail
   secure mode, causing the system to end up in an undefined state
+- Fix #453: fix inconsistent behavior of custom MAC address (interface
+  `phys-address` for VETH pairs.  Allows fixed MAC in containers
 
 
 [v24.04.2][] - 2024-05-15
