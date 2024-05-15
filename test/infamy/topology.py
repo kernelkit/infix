@@ -1,6 +1,15 @@
 import networkx as nx
 from networkx.algorithms import isomorphism
 
+def _qstrip(text):
+    if text == None:
+        return None
+
+    if text.startswith("\"") and text.endswith("\""):
+        return text[1:-1]
+
+    return text
+
 def map_edges(les, pes):
     acc = []
     les = sorted(list(les.values()), key=lambda x: x.get("kind", ""), reverse=True)
@@ -22,14 +31,6 @@ def match_edge(pes, les):
 
 class Topology:
     def __init__(self, dotg):
-        def _qstrip(text):
-            if text == None:
-                return None
-
-            if text.startswith("\"") and text.endswith("\""):
-                return text[1:-1]
-            return text
-
         self.dotg = dotg
         self.g = nx.MultiGraph()
 
@@ -141,6 +142,9 @@ class Topology:
 
     def get_infixen(self):
         return self.get_nodes(lambda _, attrs: attrs.get("kind") == "infix")
+
+    def get_attr(self, name, default=None):
+        return _qstrip(self.dotg.get_attributes().get(name, default))
 
 # Support calling this script like so...
 #
