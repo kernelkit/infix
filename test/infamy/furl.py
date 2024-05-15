@@ -9,10 +9,10 @@ class Furl:
         """Create new URL checker"""
         self.url = urllib.parse.quote(url, safe='/:')
 
-    def check(self, needle):
+    def check(self, needle, timeout=10):
         """Connect to web server URL, fetch body and check for needle"""
         try:
-            with urllib.request.urlopen(self.url) as response:
+            with urllib.request.urlopen(self.url, timeout=timeout) as response:
                 text = response.read().decode('utf-8')
                 #print(text)
                 return needle in text
