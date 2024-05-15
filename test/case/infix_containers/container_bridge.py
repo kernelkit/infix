@@ -89,15 +89,8 @@ with infamy.Test() as test:
         url = infamy.Furl(URL)
 
         with infamy.IsolatedMacVlan(hport) as ns:
-            connectivity = ns.runsh(f"""
-            ip link set iface up
-            ip addr add {OURIP}/24 dev iface
-
-            ping -c1 -w5 {DUTIP} || exit 1
-            """)
-            if connectivity.returncode:
-                print(connectivity.stdout)
-                test.fail()
+            ns.addip(OURIP)
+            ns.must_reach(DUTIP)
 
             until(lambda: url.nscheck(ns, "Kilroy was here"), attempts=10)
 
