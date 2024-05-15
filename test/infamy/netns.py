@@ -5,6 +5,8 @@ import random
 import subprocess
 import time
 
+from . import env
+
 __libc = ctypes.CDLL(None)
 CLONE_NEWUSER = 0x10000000
 CLONE_NEWNET  = 0x40000000
@@ -19,6 +21,7 @@ class IsolatedMacVlan:
     def __init__(self, parent, ifname="iface", lo=True):
         self.sleeper = None
         self.parent, self.ifname, self.lo = parent, ifname, lo
+        self.ping_timeout = env.ENV.attr("ping_timeout", 5)
 
     def __enter__(self):
         self.sleeper = subprocess.Popen(["unshare", "-r", "-n", "sh", "-c",
@@ -162,7 +165,9 @@ class IsolatedMacVlan:
             result.append(l)
         return result
 
-    def ping(self, daddr, timeout=5):
+    def ping(self, daddr, timeout=None):
+        timeout = timeout if timeout else self.ping_timeout
+
         return self.run(["timeout", str(timeout), "/bin/sh"], text=True, check=True,
                         stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                         input=f"while :; do ping -c1 -w1 {daddr} && break; done")
