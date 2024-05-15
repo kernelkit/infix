@@ -83,7 +83,7 @@ with infamy.Test() as test:
             }
         })
 
-    with test.step(f"Verify {NAME} continer has started"):
+    with test.step(f"Verify {NAME} container has started"):
         c = infamy.Container(target)
         until(lambda: c.running(NAME), attempts=10)
 

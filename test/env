@@ -17,7 +17,7 @@ usage: test/env [<OPTS>] -f <IMAGE> -q <QENETH-DIR> <COMMAND> [<ARGS>...]
 
     -c
      Clean up cruft, lingering images, old containers, unused volumes.
-     Used by GitHub action to prevent issues with runnign tests.
+     Used by GitHub action to prevent issues with running tests.
 
     -C
       Don't containerize the command, run it directly in the current
