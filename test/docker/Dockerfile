@@ -12,12 +12,14 @@ RUN apk add --no-cache \
     libc-dev \
     libyang-dev \
     linux-headers \
+    openssh-client \
     python3-dev \
     qemu-img \
     qemu-system-x86_64 \
     ruby-mustache \
     socat \
     squashfs-tools \
+    sshpass \
     tcpdump \
     tshark \
     make
