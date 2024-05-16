@@ -4,6 +4,35 @@ Change Log
 All notable changes to the project are documented in this file.
 
 
+[v24.05.0][UNRELEASED]
+----------------------
+
+### Changes
+- Default web landing page refactored into a Buildroot package to make
+  it possible to overload from customer repos.
+- Enable DCB support in aarch64 kernel (for EtherType prio override)
+- Topology mapper improvements, including option for deterministic
+  reproduction of logical to physical mappings
+- New version of `gencert` tool, for self signed HTTPS certificates.
+  This allows dropping dependency on building a host rust toolchain
+- Issue #374: add timestamps to dagger .log files
+- Add small delay in U-Boot to allow stopping boot on reference boards
+- Document how to provision the bootloader and Infix on a blank board
+- Use initial hostname from `/etc/os-release` as configuration fallback
+
+### Fixes
+- Add missing LICENSE hash for factory reset tool
+- Fix #424: regression, root user can log in without password
+- Fix build regressions in `cn9130_crb_boot_defconfig` caused by upgrade
+  to Buildroot v2024.02 and recent multi-key support in RAUC and U-Boot
+- Fix provisioning script after changes to make GRUB loading more robust
+- Fix missing `/etc/resolv.conf`, as noticed by `avahi-daemon`, when a
+  user calls `no system` from the CLI
+- Fix #428: loss of admin account after upgrade to v24.04
+- Fix #429: failing to load `startup-config` does not trigger the fail
+  secure mode, causing the system to end up in an undefined state
+
+
 [v24.04.2][] - 2024-05-15
 -------------------------
 
@@ -881,6 +910,7 @@ Supported YANG models in addition to those used by sysrepo and netopeer:
 
 [buildroot]:  https://buildroot.org/
 [UNRELEASED]: https://github.com/kernelkit/infix/compare/v24.04.0...HEAD
+[v24.05.0]:   https://github.com/kernelkit/infix/compare/v24.04.0...v24.05.0
 [v24.04.2]:   https://github.com/kernelkit/infix/compare/v24.04.1...v24.04.2
 [v24.04.1]:   https://github.com/kernelkit/infix/compare/v24.04.0...v24.04.1
 [v24.04.0]:   https://github.com/kernelkit/infix/compare/v24.02.0...v24.04.0
