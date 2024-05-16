@@ -5,7 +5,7 @@ import pydot
 import shlex
 import sys
 
-from . import neigh, netconf, tap, topology
+from . import neigh, netconf, ssh, tap, topology
 
 class NullEnv:
     def attr(self, _, default=None):
@@ -58,7 +58,7 @@ class Env(object):
 
         return val
 
-    def attach(self, node, port, factory_default=True):
+    def attach(self, node, port, protocol="netconf", factory_default=True):
         if self.ltop:
             mapping = self.ltop.mapping[node]
             node, port = self.ltop.xlate(node, port)
@@ -77,9 +77,14 @@ class Env(object):
         if not mgmtip:
             raise Exception(f"Failed, cannot find mgmt IP for {node}")
 
-        return netconf.Device(
-            location=netconf.Location(cport, mgmtip, password),
-            mapping=mapping,
-            yangdir=self.args.yangdir,
-            factory_default=factory_default
-        )
+        if protocol == "netconf":
+            return netconf.Device(
+                location=netconf.Location(cport, mgmtip, password),
+                mapping=mapping,
+                yangdir=self.args.yangdir,
+                factory_default=factory_default
+            )
+        elif protocol == "ssh":
+            return ssh.Device(ssh.Location(mgmtip, password))
+
+        raise Exception(f"Unsupported management procotol \"{protocol}\"")
