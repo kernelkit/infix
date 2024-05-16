@@ -185,6 +185,13 @@ if [ -n "$bridge" ]; then
         },
         "ietf-ip:ipv6": {
             "enabled": true
+        },
+        "infix-interfaces:bridge": {
+          "multicast": {
+            "snooping": true,
+            "querier": "auto",
+            "query-interval": 125
+          }
         }
 EOF
 fi
