@@ -52,44 +52,33 @@ with infamy.Test() as test:
     with test.step("Initialize"):
         env = infamy.Env(infamy.std_topology("1x3"))
         target = env.attach("target", "mgmt")
-
-    with test.step("Configure target physical ports [enable routing]"):
         _, tport0 = env.ltop.xlate("target", "data0")
         _, tport1 = env.ltop.xlate("target", "data1")
 
-        config_target(target, tport0, tport1, True)
-
-    with test.step("Test: Ip routing enabled"):
         _, hport0 = env.ltop.xlate("host", "data0")
         _, hport1 = env.ltop.xlate("host", "data1")
 
-        with infamy.IsolatedMacVlan(hport0) as ns0, \
-             infamy.IsolatedMacVlan(hport1) as ns1 :
+    with infamy.IsolatedMacVlan(hport0) as ns0, \
+         infamy.IsolatedMacVlan(hport1) as ns1 :
 
+        with test.step("Setup host"):
             ns0.addip("192.168.0.10")
             ns0.addroute("default", "192.168.0.1")
 
             ns1.addip("10.0.0.10")
             ns1.addroute("default", "10.0.0.1")
 
+        with test.step("Enable forwarding"):
+            config_target(target, tport0, tport1, True)
+
+        with test.step("Traffic is forwarded"):
             ns0.must_reach("10.0.0.10")
             ns1.must_reach("192.168.0.10")
 
-    with test.step("Configure target physical ports [disable routing]"):
+        with test.step("Disable forwarding"):
+            config_target(target, tport0, tport1, False)
 
-        config_target(target, tport0, tport1, False)
-
-    with test.step("Test: Ip routing disabled"):
-
-        with infamy.IsolatedMacVlan(hport0) as ns0, \
-             infamy.IsolatedMacVlan(hport1) as ns1 :
-
-            ns0.addip("192.168.0.10")
-            ns0.addroute("default", "192.168.0.1")
-
-            ns1.addip("10.0.0.10")
-            ns1.addroute("default", "10.0.0.1")
-
+        with test.step("Traffic is not forwarded"):
             infamy.parallel(lambda: ns0.must_not_reach("10.0.0.10"),
                             lambda: ns1.must_not_reach("192.168.0.10"))
 
