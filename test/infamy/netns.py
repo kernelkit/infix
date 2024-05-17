@@ -182,3 +182,22 @@ class IsolatedMacVlan:
             return
 
         raise Exception(res)
+
+    def must_receive(self, expr, timeout=None, ifname=None, must=True):
+        ifname = ifname if ifname else self.ifname
+        timeout = timeout if timeout else self.ping_timeout
+
+        tshark = self.run(["tshark", "-nl", f"-i{ifname}",
+                           f"-aduration:{timeout}", "-c1", expr],
+                          stdin=subprocess.DEVNULL,
+                          stdout=subprocess.PIPE,
+                          stderr=subprocess.STDOUT,
+                          text=True, check=True)
+
+        needle = "1 packet captured" if must else "0 packets captured"
+
+        if needle not in tshark.stdout:
+            raise Exception(tshark)
+
+    def must_not_receive(self, *args, **kwargs):
+        self.must_receive(*args, **kwargs, must=False)
