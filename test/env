@@ -47,7 +47,8 @@ usage: test/env [<OPTS>] -f <IMAGE> -q <QENETH-DIR> <COMMAND> [<ARGS>...]
 
     -t <TOPOLOGY>
       Rather than starting a qeneth network, attach to this existing
-      topology. Mostly useful together with -C
+      topology. If the command is containerized, it will be launched
+      in the host's network namespace
 
 EOF
 }
@@ -139,9 +140,11 @@ while getopts "cCf:hiKp:q:t:" opt; do
 	    ;;
 	q)
 	    qenethdir="$OPTARG"
+	    network="--sysctl net.ipv6.conf.all.disable_ipv6=0"
 	    ;;
 	t)
 	    topology="$OPTARG"
+	    network="--network host --volume $topology:$topology:ro"
 	    ;;
 	*)
 	    >&2 echo "Unknown option -$opt"
@@ -167,7 +170,7 @@ if [ "$containerize" ]; then
 	 $interactive \
 	 --rm \
 	 --security-opt seccomp=unconfined \
-	 --sysctl net.ipv6.conf.all.disable_ipv6=0 \
+	 $network \
 	 --tty \
 	 --volume "$ixdir":"$ixdir" \
 	 --workdir "$ixdir/test" \
