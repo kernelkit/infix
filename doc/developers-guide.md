@@ -119,6 +119,34 @@ This rebuilds (and installs) `foo` and `bar`, the `all` target calls
 on Buildroot to finalize the target filesystem and generate the images.
 The final `run` argument is explained below.
 
+### `confd`
+
+The Infix `src/confd/` is the engine of the system.  Currently it is a
+plugin for `systemd-plugind` and contains XPath subscriptions to all the
+supported YANG models.
+
+There are essentially two ways of adding support for a new YANG model:
+
+ - The [sysrepo way][3], or
+ - The Infix way, using libsrx (the `lydx_*()` functions)
+
+The former is well documented in sysrepo, and the latter is best taught
+by example, e.g., `src/confd/src/infix-dhcp.c`.  Essentially libsrx is a
+way of traversing the libyang tree instead of fetching changes by XPath.
+
+When working with `confd` you likely want to enable full debug mode,
+this is how you do it:
+
+ 1. Open the file `package/confd/confd.conf`
+ 2. Uncomment the first line `set DEBUG=1`
+ 3. Change the following line to add `-v3` at the end
+
+        [S12345] sysrepo-plugind -f -p /run/confd.pid -n -- Configuration daemon
+
+Now you can rebuild `confd`, just as described above, and restart Infix:
+
+    make confd-rebuild all run
+
 
 Testing
 -------
@@ -142,8 +170,8 @@ and then use GitHub to create a *Pull Reqeuest*.
 For this to work as painlessly as possible:
 
   1. Fork Infix to your own user or organization[^1]
-  2. Fork all the Infix submodules, e.g., `buildroot` to your own user
-     or organization as well
+  2. Fork all the Infix submodules, e.g., `kernelkit/buildroot` to your
+     own user or organization as well
   3. Clone your fork of Infix to your laptop/workstation
 
 If you use a GitHub organization you get the added benefit of having
@@ -170,3 +198,4 @@ $ git submodule update --init
 [0]: https://github.com/kernelkit/infix/releases
 [1]: https://buildroot.org/downloads/manual/manual.html
 [2]: https://github.com/wkz/qeneth
+[3]: https://netopeer.liberouter.org/doc/sysrepo/master/html/dev_guide.html
