@@ -34,13 +34,13 @@ def interface_exist(target, iface):
     """Verify that the target interface exists"""
     return _iface_get_param(target, iface, "name") is not None
 
-def address_exist(target, iface, address, proto="dhcp"):
+def address_exist(target, iface, address, prefix_length = 24, proto="dhcp"):
     """Check if 'address' is set on iface"""
     addrs = get_ipv4_address(target, iface)
     if not addrs:
         return False
     for addr in addrs:
-        if addr['origin'] == proto and addr['ip'] == address:
+        if addr['origin'] == proto and addr['ip'] == address and addr['prefix-length'] == prefix_length:
             return True
 
 def get_ipv4_address(target, iface):
