@@ -1,17 +1,20 @@
 #!/usr/bin/env python3
-#                    10.0.0.1
-#                +--------------+
-#                |    DUT       |
-#                |              |
-#                +----------+---\
-#                |          |    \
-#                |          |     \
-#                |          |      \
-#                |          |       \
-#    10.0.0.2    |  10.0.0.3|        \ 10.0.0.4
-#     +----------+    +---+------+    \ +-------------+
-#     | msend |       | mreceive |      + no join     |
-#     +-------+       +----------+      +-------------+
+#
+# Add join the group 224.1.1.1 from data1 on the host. Send to that
+# group from `msend`, verify that `mrecv` receives it and that `!memb`
+# does not.
+#
+#              .1
+# .---------------------------.
+# |            DUT            |
+# '-data0-----data1-----data2-'
+#     |         |         |
+#     |         |         |      10.0.0.0/24
+#     |         |         |
+# .-data0-. .-data1-. .-data2-.
+# | msend | | mrecv | | !memb |
+# '-------' '-------' '-------'
+#    .2         .3        .4
 
 import infamy
 import time
@@ -75,13 +78,15 @@ with infamy.Test() as test:
 
                             }
                         })
-    with test.step("Check multicast receieved on correct port"):
-        _, hsend = env.ltop.xlate("host", "data0")
-        _, hreceive = env.ltop.xlate("host", "data1")
-        _, hnojoin = env.ltop.xlate("host", "data2")
-        with infamy.IsolatedMacVlan(hsend) as send_ns, \
-             infamy.IsolatedMacVlan(hreceive) as receive_ns, \
-             infamy.IsolatedMacVlan(hnojoin) as nojoin_ns:
+
+    _, hsend = env.ltop.xlate("host", "data0")
+    _, hreceive = env.ltop.xlate("host", "data1")
+    _, hnojoin = env.ltop.xlate("host", "data2")
+    with infamy.IsolatedMacVlan(hsend) as send_ns, \
+         infamy.IsolatedMacVlan(hreceive) as receive_ns, \
+         infamy.IsolatedMacVlan(hnojoin) as nojoin_ns:
+
+        with test.step("Setup sender and receivers"):
             send_ns.addip("10.0.0.2")
             receive_ns.addip("10.0.0.3")
             nojoin_ns.addip("10.0.0.4")
@@ -89,25 +94,18 @@ with infamy.Test() as test:
             receive_ns.must_reach("10.0.0.1")
             nojoin_ns.must_reach("10.0.0.1")
 
-            sender = mcast.MCastSender(send_ns, "224.1.1.1")
-            receiver = mcast.MCastReceiver(receive_ns, "224.1.1.1")
-            snif_nojoin = infamy.Sniffer(nojoin_ns, "host 224.1.1.1")
-            snif_receiver = infamy.Sniffer(receive_ns, "host 224.1.1.1")
-            with sender:
-                with snif_receiver:
-                    time.sleep(5)
-                    with snif_nojoin:
-                        time.sleep(5)
-                assert(snif_receiver.packets() != "")
-                assert(snif_nojoin.packets() != "")
-                print("As expected, unregistered multicast is received on both ports")
+        print("Starting sender")
+        with mcast.MCastSender(send_ns, "224.1.1.1"):
+            with test.step("Verify that the group is flooded on all ports"):
+                infamy.parallel(lambda: receive_ns.must_receive("ip dst 224.1.1.1"),
+                                lambda: nojoin_ns.must_receive("ip dst 224.1.1.1"))
 
-                with receiver:
-                    with snif_receiver,snif_nojoin:
-                            time.sleep(5)
-                    assert(snif_nojoin.packets() == "")
-                    print("As expected, registered multicast is NOT forwarded to non-member port")
-                    assert(snif_receiver.packets() != "")
-                    print("As expected, registered multicast is forwarded to the member port")
+            print("Subscribe to the group")
+            with mcast.MCastReceiver(receive_ns, "224.1.1.1"):
+                with test.step("Verify that the group is still forwarded to the member"):
+                    receive_ns.must_receive("ip dst 224.1.1.1")
 
-        test.succeed()
+                with test.step("Verify that the group is no longer forwarded to the non-member"):
+                    nojoin_ns.must_not_receive("ip dst 224.1.1.1")
+
+    test.succeed()
