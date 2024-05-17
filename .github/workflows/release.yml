@@ -29,7 +29,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: 'true'
+          clean: true
+          submodules: recursive
 
       - name: Set Release Variables
         id: vars
