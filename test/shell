@@ -17,4 +17,4 @@ usage()
 sys=$1
 [ -n "$sys" ] || sys=$(infamy)
 
-$(runner) exec -it --workdir "$ixdir/test" "$sys" ./env -C sh
+docker exec -it --workdir "$ixdir/test" "$sys" ./env -C sh
