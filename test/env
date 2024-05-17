@@ -85,7 +85,7 @@ name()
     nm=infamy
     id=0
 
-    names=$($(runner) ps -f name='infamy.*' --format '{{.Names}}')
+    names=$(docker ps -f name='infamy.*' --format '{{.Names}}')
     while true; do
 	name="$nm$id"
 	unset hit
@@ -114,9 +114,9 @@ files=
 while getopts "cCf:hiKp:q:t:" opt; do
     case ${opt} in
 	c)
-	    $(runner) image prune -af
-            $(runner) volume prune -f
-            $(runner) container prune -f
+	    docker image prune -af
+            docker volume prune -f
+            docker container prune -f
 	    exit 0
 	    ;;
 	C)
@@ -153,7 +153,7 @@ done
 
 if [ "$containerize" ]; then
     # shellcheck disable=SC2016
-        exec $(runner) run \
+        exec docker run \
 	 --cap-add=NET_RAW \
 	 --cap-add=NET_ADMIN \
 	 --device=/dev/net/tun \

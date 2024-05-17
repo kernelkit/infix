@@ -103,10 +103,9 @@ executed.
 Several technologies are leveraged to accomplish this:
 
 - **Containers**: The entire execution is optionally done inside a
-  standardized container environment, using either `podman` or
-  `docker`.  This ensures that the software needed to run the test
-  suite is always available, no matter which distribution the user is
-  running on their machine.
+  standardized `docker` container environment.  This ensures that the
+  software needed to run the test suite is always available, no matter
+  which distribution the user is running on their machine.
 
 - **Python Virtual Environments**: To make sure that the expected
   versions of all Python packages are available, the execution is
@@ -119,6 +118,10 @@ Several technologies are leveraged to accomplish this:
   optionally be started with a virtual topology of DUTs to run the
   tests on.
 
+> `docker` is the only supported container environment when running
+> tests in the host's network namespace. When running on a virtual
+> Qeneth topology, `podman` may also be used by installing the
+> `podman-docker` package from your host system's distro.
 
 Interactive Usage
 -----------------
