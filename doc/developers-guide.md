@@ -143,6 +143,10 @@ this is how you do it:
 
         [S12345] sysrepo-plugind -f -p /run/confd.pid -n -- Configuration daemon
 
+to:
+
+    [S12345] sysrepo-plugind -f -p /run/confd.pid -n -v3 -- Configuration daemon
+
 Now you can rebuild `confd`, just as described above, and restart Infix:
 
     make confd-rebuild all run
