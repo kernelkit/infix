@@ -100,7 +100,7 @@ and testing, but can also be used for evaluation and demo purposes.  For
 more information, see: [Infix in Virtual Environments](doc/virtual.md).
 
 > See the [GitHub Releases](https://github.com/kernelkit/infix/releases)
-> page for our pre-built images.  The *Latest Build* has the bleeding
+> page for our pre-built images.  The *[Latest Build][]* has bleeding
 > edge images, if possible we recommend using a versioned release.
 >
 > For *customer specific builds* of Infix, see your product repository.
@@ -116,6 +116,7 @@ more information, see: [Infix in Virtual Environments](doc/virtual.md).
 [1]: https://buildroot.org/
 [2]: https://www.sysrepo.org/
 [3]: doc/cli/introduction.md
+[Latest Build]:    https://github.com/kernelkit/infix/releases/tag/latest
 [License]:         https://en.wikipedia.org/wiki/GPL_license
 [License Badge]:   https://img.shields.io/badge/License-GPL%20v2-blue.svg
 [GitHub]:          https://github.com/kernelkit/infix/actions/workflows/build.yml/
