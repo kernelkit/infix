@@ -13,9 +13,12 @@ def main():
     iface_out=subprocess.check_output("vtysh -c 'show ip ospf interface json'", shell=True)
     ospf_out=subprocess.check_output("vtysh -c 'show ip ospf json'", shell=True)
     neighbor_out=subprocess.check_output("vtysh -c 'show ip ospf neighbor detail json'", shell=True)
-    interfaces=json.loads(iface_out)
-    ospf=json.loads(ospf_out)
-    neighbors=json.loads(neighbor_out)
+    try:
+        interfaces=json.loads(iface_out)
+        ospf=json.loads(ospf_out)
+        neighbors=json.loads(neighbor_out)
+    except json.JSONDecodeError:
+        return {} # OSPFD is most likely not running
 
     for ifname,iface in interfaces["interfaces"].items():
         iface["name"] = ifname
