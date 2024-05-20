@@ -1,7 +1,7 @@
 From 56208d4cba23496c09f69961a32b1b9662f06aef Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Mon, 22 Apr 2024 23:18:01 +0200
-Subject: [PATCH 25/28] net: dsa: mv88e6xxx: Honor ports being managed via
+Subject: [PATCH 25/30] net: dsa: mv88e6xxx: Honor ports being managed via
  in-band-status
 Organization: Addiva Elektronik
 
@@ -14,7 +14,7 @@ This state is the default set up by mv88e6xxx_port_setup_mac(), so all
 we have to do is to make the phylink MAC callbacks no-ops in cases
 when in-band-status is being used.
 
-Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
 ---
  drivers/net/dsa/mv88e6xxx/chip.c | 6 ++++++
  1 file changed, 6 insertions(+)
