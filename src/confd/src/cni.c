@@ -368,15 +368,15 @@ static int iface_gen_cni(const char *ifname, struct lyd_node *cif)
 		const char *iftype = lydx_get_cattr(cif, "type");
 
 		if (iftype && !strcmp(iftype, "infix-if-type:bridge"))
-			type = "bridge";
+			type = "infix-interfaces:bridge";
 		else
-			type = "host";
+			type = "infix-interfaces:host";
 	}
 
-	if (!strcmp(type, "host"))
+	if (!strcmp(type, "infix-interfaces:host"))
 		return cni_host(net, ifname) ?: 1;
 
-	if (!strcmp(type, "bridge"))
+	if (!strcmp(type, "infix-interfaces:bridge"))
 		return cni_bridge(net, ifname) ?: 1;
 
 	ERROR("Unknown container network type %s, skipping.", type);
