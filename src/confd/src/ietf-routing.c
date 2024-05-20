@@ -104,13 +104,14 @@ int parse_ospf_areas(sr_session_ctx_t *session, struct lyd_node *areas, FILE *fp
 		area_type = lydx_get_cattr(area, "area-type");
 		default_cost = lydx_get_cattr(area, "default-cost");
 		summary = lydx_get_bool(area, "summary");
+
 		if (area_type) {
 			int stub_or_nssa = 0;
 
-			if (!strcmp(area_type, "nssa-area")) {
+			if (!strcmp(area_type, "ietf-ospf:nssa-area")) {
 				stub_or_nssa = 1;
 				fprintf(fp, "  area %s nssa %s\n", area_id, !summary ? "no-summary" : "");
-			} else if (!strcmp(area_type, "stub-area")) {
+			} else if (!strcmp(area_type, "ietf-ospf:stub-area")) {
 				stub_or_nssa = 1;
 				fprintf(fp, "  area %s stub %s\n", area_id, !summary ? "no-summary" : "");
 			}
@@ -358,7 +359,7 @@ static int change_control_plane_protocols(sr_session_ctx_t *session, uint32_t su
 			const char *type;
 
 			type = lydx_get_cattr(cplane, "type");
-			if (!strcmp(type, "static")) {
+			if (!strcmp(type, "ietf-routing:static")) {
 				staticd_enabled = parse_static_routes(session, lydx_get_child(cplane, "static-routes"), fp);
 			} else if (!strcmp(type, "ietf-ospf:ospfv2")) {
 				parse_ospf(session, lydx_get_child(cplane, "ospf"));
