@@ -1,3 +1,7 @@
+0 unspec
+1 kernel_lo
+2 kernel_ra
+3 kernel_ll
 4 static
 5 dhcp
 6 random
