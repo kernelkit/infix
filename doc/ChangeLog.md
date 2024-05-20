@@ -36,6 +36,9 @@ All notable changes to the project are documented in this file.
   secure mode, causing the system to end up in an undefined state
 - Fix #453: fix inconsistent behavior of custom MAC address (interface
   `phys-address` for VETH pairs.  Allows fixed MAC in containers
+- Fix locking issue with standard counter groups on `mv88e6xxx`
+- Fix MDB/ATU synchronization issue from IGMPv3/MLDv2 reports on
+  `mv88e6xxx` systems
 
 
 [v24.04.2][] - 2024-05-15

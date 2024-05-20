@@ -1,0 +1,52 @@
+From eeeab4de57f77712ca5f920e03a68aa5e426784c Mon Sep 17 00:00:00 2001
+From: Tobias Waldekranz <tobias@waldekranz.com>
+Date: Wed, 15 May 2024 13:50:58 +0200
+Subject: [PATCH 29/30] net: dsa: mv88e6xxx: Grab register lock during counter
+ snapshotting
+Organization: Addiva Elektronik
+
+This was missing for the standard counter groups. Since no caller
+already holds the lock, opt for pushing the locking down into
+mv88e6xxx_stats_snapshot() rather than having it duplicated at each
+call site.
+
+Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
+---
+ drivers/net/dsa/mv88e6xxx/chip.c | 10 ++++++----
+ 1 file changed, 6 insertions(+), 4 deletions(-)
+
+diff --git a/drivers/net/dsa/mv88e6xxx/chip.c b/drivers/net/dsa/mv88e6xxx/chip.c
+index 29691280cff4..4916d8344a5a 100644
+--- a/drivers/net/dsa/mv88e6xxx/chip.c
++++ b/drivers/net/dsa/mv88e6xxx/chip.c
+@@ -950,10 +950,15 @@ static void mv88e6xxx_mac_link_up(struct dsa_switch *ds, int port,
+ 
+ static int mv88e6xxx_stats_snapshot(struct mv88e6xxx_chip *chip, int port)
+ {
++	int err;
++
+ 	if (!chip->info->ops->stats_snapshot)
+ 		return -EOPNOTSUPP;
+ 
+-	return chip->info->ops->stats_snapshot(chip, port);
++	mv88e6xxx_reg_lock(chip);
++	err = chip->info->ops->stats_snapshot(chip, port);
++	mv88e6xxx_reg_unlock(chip);
++	return err;
+ }
+ 
+ #define MV88E6XXX_HW_STAT_MAPPER(_fn)				    \
+@@ -1325,10 +1330,7 @@ static void mv88e6xxx_get_ethtool_stats(struct dsa_switch *ds, int port,
+ 	struct mv88e6xxx_chip *chip = ds->priv;
+ 	int ret;
+ 
+-	mv88e6xxx_reg_lock(chip);
+-
+ 	ret = mv88e6xxx_stats_snapshot(chip, port);
+-	mv88e6xxx_reg_unlock(chip);
+ 
+ 	if (ret < 0)
+ 		return;
+-- 
+2.34.1
+

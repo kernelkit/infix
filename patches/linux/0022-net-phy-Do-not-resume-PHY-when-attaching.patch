@@ -1,7 +1,7 @@
 From 1c1c81864c9803831c2d5b7df0d7da28e566f3b2 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Wed, 27 Mar 2024 10:10:19 +0100
-Subject: [PATCH 22/28] net: phy: Do not resume PHY when attaching
+Subject: [PATCH 22/30] net: phy: Do not resume PHY when attaching
 Organization: Addiva Elektronik
 
 The PHY should not start negotiating with its link-partner until
@@ -16,7 +16,7 @@ probing (e.g. DSA) would end up with a physical link being
 established, even though the corresponding interface was still
 administratively down.
 
-Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
 ---
  drivers/net/phy/phy_device.c | 1 -
  1 file changed, 1 deletion(-)
