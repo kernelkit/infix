@@ -97,8 +97,10 @@ To see available defconfigs for supported targets, use:
 Development
 -----------
 
-When changing a package, locally kept sources, or when using [`local.mk`](override-package.md),
-you only want to rebuild the parts you have modified:
+Developing with Infix is the same as [developing with Buildroot][4].
+When working with a package, be it locally kept sources, or when using
+[`local.mk`](override-package.md), you only want to rebuild the parts
+you have modified:
 
     make foo-rebuild
 
@@ -106,7 +108,7 @@ or
 
     make foo-reconfigure
 
-or, when nothing seems to bite:
+or, as a last resort when nothing seems to bite:
 
     make foo-dirclean foo-rebuild
 
@@ -203,3 +205,4 @@ $ git submodule update --init
 [1]: https://buildroot.org/downloads/manual/manual.html
 [2]: https://github.com/wkz/qeneth
 [3]: https://netopeer.liberouter.org/doc/sysrepo/master/html/dev_guide.html
+[4]: https://buildroot.org/downloads/manual/manual.html#_developer_guide
