@@ -325,17 +325,27 @@ def add_ospf_routes(ospf):
 
     insert(ospf, "ietf-ospf:local-rib", "ietf-ospf:route", routes)
 
-def add_ospf(ospf):
+def add_ospf(control_protocols):
     """Populate OSPF status"""
 
     cmd = ['/usr/libexec/statd/ospf-status']
     data = run_json_cmd(cmd, "")
 
-    ospf["ietf-ospf:router-id"] = data["routerId"]
-    ospf["ietf-ospf:address-family"] = "ipv4"
+    if data == {}:
+        return # No OSPF data available
+
+    control_protocol={}
+    control_protocol["type"] = "ietf-ospf:ospfv2"
+    control_protocol["name"] = "default"
+    control_protocol["ietf-ospf:ospf"] = {}
+    control_protocol["ietf-ospf:ospf"]["ietf-ospf:areas"] = {}
+
+
+    control_protocol["ietf-ospf:ospf"]["ietf-ospf:router-id"] = data.get("routerId")
+    control_protocol["ietf-ospf:ospf"]["ietf-ospf:address-family"] = "ipv4"
     areas=[]
 
-    for area_id,values in data["areas"].items():
+    for area_id,values in data.get("areas", {}).items():
         area={}
         area["ietf-ospf:area-id"] = area_id
         area["ietf-ospf:interfaces"] = {}
@@ -401,8 +411,9 @@ def add_ospf(ospf):
         area["ietf-ospf:interfaces"]["ietf-ospf:interface"] = interfaces
         areas.append(area)
 
-    insert(ospf, "ietf-ospf:areas", "area", areas)
-    add_ospf_routes(ospf)
+    add_ospf_routes(control_protocol["ietf-ospf:ospf"]);
+    control_protocol["ietf-ospf:ospf"]["ietf-ospf:areas"]["ietf-ospf:area"] = areas
+    insert(control_protocols, "control-plane-protocol", [control_protocol])
 
 def get_bridge_port_pvid(ifname):
     data = run_json_cmd(['bridge', '-j', 'vlan', 'show', 'dev', ifname],
@@ -856,20 +867,10 @@ def main():
         yang_data = {
             "ietf-routing:routing": {
                 "control-plane-protocols": {
-                    "control-plane-protocol": [
-                    {
-                        "type": "ietf-ospf:ospfv2",
-                        "name": "default",
-                        "ietf-ospf:ospf": {
-                            "ietf-ospf:areas":
-                            {
-                            }
-                        }
-                    }]
                 }
             }
         }
-        add_ospf(yang_data['ietf-routing:routing']['control-plane-protocols']['control-plane-protocol'][0]["ietf-ospf:ospf"])
+        add_ospf(yang_data['ietf-routing:routing']['control-plane-protocols'])
 
     elif args.model == 'ietf-hardware':
         yang_data = {
