@@ -40,8 +40,8 @@ def ipv6_route_exist(target, prefix, nexthop=None,source_protocol=None):
 
 
 def _get_ospf_status(target):
-    xpath="/ietf-routing:routing/control-plane-protocols/control-plane-protocol/ietf-ospf:ospf"
-    rib = target.get_data(xpath)["routing"]["control-plane-protocols"]["control-plane-protocol"]
+    xpath="/ietf-routing:routing/control-plane-protocols"
+    rib = target.get_data(xpath)["routing"]["control-plane-protocols"].get("control-plane-protocol", {})
     for p in rib:
         if p["type"] == "ietf-ospf:ospfv2":
             return p["ospf"]
