@@ -23,6 +23,11 @@ usage: test/env [<OPTS>] -f <IMAGE> -q <QENETH-DIR> <COMMAND> [<ARGS>...]
       Don't containerize the command, run it directly in the current
       namespaces
 
+    -D
+      Prefer Docker over podman. This is implied when -t is specified,
+      as podman does not allow the necessary network permissions to be
+      granted to the container
+
     -f <IMAGE>
        Specify images required for test, squashfs image is required
        if testing with kernel. bios and disk image is required if
@@ -86,7 +91,7 @@ name()
     nm=infamy
     id=0
 
-    names=$(docker ps -f name='infamy.*' --format '{{.Names}}')
+    names=$($(runner) ps -f name='infamy.*' --format '{{.Names}}')
     while true; do
 	name="$nm$id"
 	unset hit
@@ -112,16 +117,19 @@ containerize=yes
 [ -c /dev/kvm ] && kvm="--device=/dev/kvm"
 files=
 
-while getopts "cCf:hiKp:q:t:" opt; do
+while getopts "cCDf:hiKp:q:t:" opt; do
     case ${opt} in
 	c)
-	    docker image prune -af
-            docker volume prune -f
-            docker container prune -f
+	    $(runner) image prune -af
+            $(runner) volume prune -f
+            $(runner) container prune -f
 	    exit 0
 	    ;;
 	C)
 	    containerize=
+	    ;;
+	D)
+	    runners="docker podman"
 	    ;;
 	f)
 	    files="$files $OPTARG"
@@ -145,6 +153,7 @@ while getopts "cCf:hiKp:q:t:" opt; do
 	t)
 	    topology="$OPTARG"
 	    network="--network host --volume $topology:$topology:ro"
+	    runners="docker podman"
 	    ;;
 	*)
 	    >&2 echo "Unknown option -$opt"
@@ -156,7 +165,7 @@ done
 
 if [ "$containerize" ]; then
     # shellcheck disable=SC2016
-        exec docker run \
+        exec $(runner) run \
 	 --cap-add=NET_RAW \
 	 --cap-add=NET_ADMIN \
 	 --device=/dev/net/tun \
