@@ -20,11 +20,11 @@ on:
 jobs:
   build:
     if: github.repository == 'kernelkit/infix' && startsWith(github.ref, 'refs/tags/')
-    name: Build Infix ${{ github.ref_name }} [${{ matrix.platform }}]
+    name: Build Infix ${{ github.ref_name }} [${{ matrix.target }}]
     runs-on: [ self-hosted, release ]
     strategy:
       matrix:
-        platform: [aarch64, x86_64]
+        target: [aarch64, x86_64]
       fail-fast: false
     steps:
       - uses: actions/checkout@v4
@@ -42,7 +42,7 @@ jobs:
           fi
           echo "ver=${ver}" >> $GITHUB_OUTPUT
           fver=${ver#v}
-          target=${{ matrix.platform }}-${fver}
+          target=${{ matrix.target }}-${fver}
           echo "dir=infix-$target"        >> $GITHUB_OUTPUT
           echo "tgz=infix-$target.tar.gz" >> $GITHUB_OUTPUT
 
@@ -58,16 +58,16 @@ jobs:
         uses: actions/cache@v4
         with:
           path: .ccache/
-          key: ccache-${{ matrix.platform }}-${{ hashFiles('.git/modules/buildroot/HEAD', 'package/*/*.hash') }}
+          key: ccache-${{ matrix.target }}-${{ hashFiles('.git/modules/buildroot/HEAD', 'package/*/*.hash') }}
           restore-keys: |
-            ccache-${{ matrix.platform }}-
+            ccache-${{ matrix.target }}-
             ccache-
 
       - name: Configure & Build
         env:
           INFIX_RELEASE: ${{ steps.vars.outputs.ver }}
         run: |
-          target=${{ matrix.platform }}_defconfig
+          target=${{ matrix.target }}_defconfig
           echo "Building $target ..."
           make $target
           make
@@ -88,7 +88,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: artifact-${{ matrix.platform }}
+          name: artifact-${{ matrix.target }}
           path: output/*.tar.gz
 
   release:

@@ -8,11 +8,11 @@ on:
 
 jobs:
   build:
-    name: Build Infix ${{ matrix.platform }}
+    name: Build Infix ${{ matrix.target }}
     runs-on: [ self-hosted, latest ]
     strategy:
       matrix:
-        platform: [aarch64, x86_64]
+        target: [aarch64, x86_64]
       fail-fast: false
     steps:
       - uses: actions/checkout@v4
@@ -23,7 +23,7 @@ jobs:
       - name: Set Build Variables
         id: vars
         run: |
-          target=${{ matrix.platform }}
+          target=${{ matrix.target }}
           echo "dir=infix-$target"        >> $GITHUB_OUTPUT
           echo "tgz=infix-$target.tar.gz" >> $GITHUB_OUTPUT
 
@@ -39,14 +39,14 @@ jobs:
         uses: actions/cache@v4
         with:
           path: .ccache/
-          key: ccache-${{ matrix.platform }}-${{ hashFiles('.git/modules/buildroot/HEAD', 'package/*/*.hash') }}
+          key: ccache-${{ matrix.target }}-${{ hashFiles('.git/modules/buildroot/HEAD', 'package/*/*.hash') }}
           restore-keys: |
-            ccache-${{ matrix.platform }}-
+            ccache-${{ matrix.target }}-
             ccache-
 
       - name: Configure & Build
         run: |
-          target=${{ matrix.platform }}_defconfig
+          target=${{ matrix.target }}_defconfig
           echo "Building $target ..."
           make $target
           make
@@ -59,13 +59,14 @@ jobs:
           tar chfz ${{ steps.vars.outputs.tgz }} ${{ steps.vars.outputs.dir }}
 
       - name: Test
-        if: matrix.platform == 'x86_64'
+        if: matrix.target == 'x86_64'
         run: |
           make test
+
       - uses: actions/upload-artifact@v4
         with:
           path: output/${{ steps.vars.outputs.tgz }}
-          name: artifact-${{ matrix.platform }}
+          name: artifact-${{ matrix.target }}
 
   release:
     if: ${{github.repository_owner == 'kernelkit' && github.ref_name == 'main'}}
