@@ -25,6 +25,7 @@
         SVC(web)				\
         SVC(ttyd)				\
         SVC(netbrowse)				\
+        SVC(userscripts)				\
         SVC(all)	/* must be last entry */
 
 typedef enum {
@@ -52,7 +53,7 @@ struct mdns_svc {
 };
 
 static const struct srx_module_requirement reqs[] = {
-	{ .dir = YANG_PATH_, .name = "infix-services",      .rev = "2024-04-08" },
+	{ .dir = YANG_PATH_, .name = "infix-services",      .rev = "2024-05-21" },
 	{ .dir = YANG_PATH_, .name = "ieee802-dot1ab-lldp", .rev = "2022-03-15" },
 	{ .dir = YANG_PATH_, .name = "infix-lldp",          .rev = "2023-08-23" },
 	{ NULL }
@@ -291,6 +292,21 @@ static int web_change(sr_session_ctx_t *session, uint32_t sub_id, const char *mo
 	return put(cfg, srv);
 }
 
+static int userscripts_change(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
+			   const char *xpath, sr_event_t event, unsigned request_id, void *_confd)
+{
+	struct lyd_node *srv = NULL;
+	sr_data_t *cfg;
+
+	cfg = get(session, event, xpath, &srv, "user-scripts", NULL);
+	if (!cfg)
+		return SR_ERR_OK;
+
+	svc_enadis(lydx_is_enabled(srv, "enabled"), none, "user-scripts");
+
+	return put(cfg, srv);
+}
+
 int infix_services_init(struct confd *confd)
 {
 	int rc;
@@ -312,6 +328,8 @@ int infix_services_init(struct confd *confd)
 			0, netbrowse_change, confd, &confd->sub);
 	REGISTER_CHANGE(confd->session, "ieee802-dot1ab-lldp", "/ieee802-dot1ab-lldp:lldp",
 			0, lldp_change, confd, &confd->sub);
+	REGISTER_CHANGE(confd->session, "infix-services", "/infix-services:user-scripts",
+			0, userscripts_change, confd, &confd->sub);
 
 	return SR_ERR_OK;
 fail:

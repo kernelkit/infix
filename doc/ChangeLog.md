@@ -22,6 +22,8 @@ All notable changes to the project are documented in this file.
 - Update documentation for use of VETH pairs in containers
 - Issue #454: create bridges in `factory-config` with IGMP/MLD snooping
   enabled by default
+- Add support for optionally running user scripts from
+  `/cfg/user-scripts.d`
 
 ### Fixes
 - Add missing LICENSE hash for factory reset tool

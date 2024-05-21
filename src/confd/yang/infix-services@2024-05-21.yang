@@ -7,6 +7,10 @@ module infix-services {
   contact      "kernelkit@googlegroups.com";
   description  "Infix services, generic.";
 
+  revision 2024-05-21 {
+    description "Add support for user-scripts.";
+    reference "internal";
+  }
   revision 2024-04-08 {
     description "Initial support for web services.";
     reference "internal";
@@ -29,6 +33,19 @@ module infix-services {
 
     leaf enabled {
       description "Globally enable or disable mDNS/SD on all interfaces.";
+      type boolean;
+    }
+  }
+
+  container user-scripts {
+    description "Run scripts in /cfg/user-scripts.d on system startup
+
+                 CAUTION! Anyone who can write to this directory will be able to
+                 install a permanent backdoor on the system. This could include
+                 a remote attacker with brief window of access.";
+
+    leaf enabled {
+      description "Enable or disable user script execution";
       type boolean;
     }
   }
