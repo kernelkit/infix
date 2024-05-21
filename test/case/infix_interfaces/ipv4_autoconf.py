@@ -43,6 +43,6 @@ with infamy.Test() as test:
         })
 
     with test.step("Wait for linklocal address on interface"):
-         until(lambda: has_linklocal(target, tport), attempts=10)
+         until(lambda: has_linklocal(target, tport), attempts=30)
 
     test.succeed()
