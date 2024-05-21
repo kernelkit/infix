@@ -1,0 +1,73 @@
+From 1544e0adb44a18d95e1bb23d2881a73a89fa5631 Mon Sep 17 00:00:00 2001
+From: Michal Vasko <mvasko@cesnet.cz>
+Date: Mon, 22 Apr 2024 14:12:24 +0200
+Subject: [PATCH] plugins BUGFIX safe retrieval of canonical value
+
+Fixes cesnet/netopeer2#1562
+---
+ src/plugins_types/binary.c     | 6 +++---
+ src/plugins_types/instanceid.c | 2 +-
+ src/plugins_types/string.c     | 6 +++---
+ 3 files changed, 7 insertions(+), 7 deletions(-)
+
+diff --git a/src/plugins_types/binary.c b/src/plugins_types/binary.c
+index c2655119d..c70b4a008 100644
+--- a/src/plugins_types/binary.c
++++ b/src/plugins_types/binary.c
+@@ -338,7 +338,7 @@ lyplg_type_store_binary(const struct ly_ctx *ctx, const struct lysc_type *type,
+  * @brief Implementation of ::lyplg_type_validate_clb for the binary type.
+  */
+ static LY_ERR
+-lyplg_type_validate_binary(const struct ly_ctx *UNUSED(ctx), const struct lysc_type *type, const struct lyd_node *UNUSED(ctx_node),
++lyplg_type_validate_binary(const struct ly_ctx *ctx, const struct lysc_type *type, const struct lyd_node *UNUSED(ctx_node),
+         const struct lyd_node *UNUSED(tree), struct lyd_value *storage, struct ly_err_item **err)
+ {
+     struct lysc_type_bin *type_bin = (struct lysc_type_bin *)type;
+@@ -349,8 +349,8 @@ lyplg_type_validate_binary(const struct ly_ctx *UNUSED(ctx), const struct lysc_t
+     LY_CHECK_ARG_RET(NULL, type, storage, err, LY_EINVAL);
+ 
+     val = LYPLG_TYPE_VAL_IS_DYN(val) ? (struct lyd_value_binary *)(storage->dyn_mem) : (struct lyd_value_binary *)(storage->fixed_mem);
+-    value = storage->_canonical;
+-    value_len = strlen(storage->_canonical);
++    value = lyd_value_get_canonical(ctx, storage);
++    value_len = strlen(value);
+     *err = NULL;
+ 
+     /* length restriction of the binary value */
+diff --git a/src/plugins_types/instanceid.c b/src/plugins_types/instanceid.c
+index 84e92b698..00ad45a98 100644
+--- a/src/plugins_types/instanceid.c
++++ b/src/plugins_types/instanceid.c
+@@ -244,7 +244,7 @@ lyplg_type_validate_instanceid(const struct ly_ctx *ctx, const struct lysc_type
+ 
+     /* find the target in data */
+     if ((ret = ly_path_eval(storage->target, tree, NULL, NULL))) {
+-        value = lyplg_type_print_instanceid(ctx, storage, LY_VALUE_CANON, NULL, NULL, NULL);
++        value = lyd_value_get_canonical(ctx, storage);
+         path = lyd_path(ctx_node, LYD_PATH_STD, NULL, 0);
+         return ly_err_new(err, ret, LYVE_DATA, path, strdup("instance-required"), LY_ERRMSG_NOINST, value);
+     }
+diff --git a/src/plugins_types/string.c b/src/plugins_types/string.c
+index e4c1cb986..2ad003551 100644
+--- a/src/plugins_types/string.c
++++ b/src/plugins_types/string.c
+@@ -112,7 +112,7 @@ lyplg_type_store_string(const struct ly_ctx *ctx, const struct lysc_type *type,
+  * @brief Implementation of ::lyplg_type_validate_clb for the string type.
+  */
+ static LY_ERR
+-lyplg_type_validate_string(const struct ly_ctx *UNUSED(ctx), const struct lysc_type *type, const struct lyd_node *UNUSED(ctx_node),
++lyplg_type_validate_string(const struct ly_ctx *ctx, const struct lysc_type *type, const struct lyd_node *UNUSED(ctx_node),
+         const struct lyd_node *UNUSED(tree), struct lyd_value *storage, struct ly_err_item **err)
+ {
+     LY_ERR ret;
+@@ -121,8 +121,8 @@ lyplg_type_validate_string(const struct ly_ctx *UNUSED(ctx), const struct lysc_t
+     size_t value_len;
+ 
+     LY_CHECK_ARG_RET(NULL, type, storage, err, LY_EINVAL);
+-    value = storage->_canonical;
+-    value_len = strlen(storage->_canonical);
++    value = lyd_value_get_canonical(ctx, storage);
++    value_len = strlen(value);
+     *err = NULL;
+ 
+     /* length restriction of the string */
