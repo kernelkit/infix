@@ -1,4 +1,4 @@
-From 7750d0a5bfae46ab783e8e7087b70175860f808c Mon Sep 17 00:00:00 2001
+From cf7504734945c7ab9897eff40f46421a4d2fe5da Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Thu, 16 Nov 2023 19:44:32 +0100
 Subject: [PATCH 09/30] net: dsa: mv88e6xxx: Add LED infrastructure
@@ -6,8 +6,6 @@ Organization: Addiva Elektronik
 
 Parse DT for LEDs and register them for devices that support it,
 though no actual implementations exist yet.
-
-Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
 ---
  drivers/net/dsa/mv88e6xxx/Makefile |   1 +
  drivers/net/dsa/mv88e6xxx/chip.c   |   5 +-
@@ -31,7 +29,7 @@ index a9a9651187db..6720d9303914 100644
  mv88e6xxx-objs += pcs-6352.o
  mv88e6xxx-objs += pcs-639x.o
 diff --git a/drivers/net/dsa/mv88e6xxx/chip.c b/drivers/net/dsa/mv88e6xxx/chip.c
-index f4b61fcd4541..a3016d5e005d 100644
+index c30add8ab3a9..c1908f32e664 100644
 --- a/drivers/net/dsa/mv88e6xxx/chip.c
 +++ b/drivers/net/dsa/mv88e6xxx/chip.c
 @@ -37,6 +37,7 @@
@@ -42,7 +40,7 @@ index f4b61fcd4541..a3016d5e005d 100644
  #include "phy.h"
  #include "port.h"
  #include "ptp.h"
-@@ -4012,7 +4013,9 @@ static int mv88e6xxx_port_setup(struct dsa_switch *ds, int port)
+@@ -4072,7 +4073,9 @@ static int mv88e6xxx_port_setup(struct dsa_switch *ds, int port)
  			return err;
  	}
  

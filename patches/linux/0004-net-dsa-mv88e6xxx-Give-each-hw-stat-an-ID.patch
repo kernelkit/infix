@@ -1,4 +1,4 @@
-From dbdbfd57998b4f8224146ac94cd5d0a577326087 Mon Sep 17 00:00:00 2001
+From f64a315d01b41c9162afb1f895e0a283f7f976fb Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Thu, 14 Dec 2023 14:50:25 +0100
 Subject: [PATCH 04/30] net: dsa: mv88e6xxx: Give each hw stat an ID
@@ -21,10 +21,10 @@ Signed-off-by: David S. Miller <davem@davemloft.net>
  1 file changed, 75 insertions(+), 63 deletions(-)
 
 diff --git a/drivers/net/dsa/mv88e6xxx/chip.c b/drivers/net/dsa/mv88e6xxx/chip.c
-index db6aa08c66cc..80787f1e205c 100644
+index bcca78bf4296..878afbb88575 100644
 --- a/drivers/net/dsa/mv88e6xxx/chip.c
 +++ b/drivers/net/dsa/mv88e6xxx/chip.c
-@@ -949,66 +949,78 @@ static int mv88e6xxx_stats_snapshot(struct mv88e6xxx_chip *chip, int port)
+@@ -1009,66 +1009,78 @@ static int mv88e6xxx_stats_snapshot(struct mv88e6xxx_chip *chip, int port)
  	return chip->info->ops->stats_snapshot(chip, port);
  }
  
@@ -163,7 +163,7 @@ index db6aa08c66cc..80787f1e205c 100644
  };
  
  static uint64_t _mv88e6xxx_get_ethtool_stat(struct mv88e6xxx_chip *chip,
-@@ -1055,7 +1067,7 @@ static uint64_t _mv88e6xxx_get_ethtool_stat(struct mv88e6xxx_chip *chip,
+@@ -1115,7 +1127,7 @@ static uint64_t _mv88e6xxx_get_ethtool_stat(struct mv88e6xxx_chip *chip,
  static int mv88e6xxx_stats_get_strings(struct mv88e6xxx_chip *chip,
  				       uint8_t *data, int types)
  {
@@ -172,7 +172,7 @@ index db6aa08c66cc..80787f1e205c 100644
  	int i, j;
  
  	for (i = 0, j = 0; i < ARRAY_SIZE(mv88e6xxx_hw_stats); i++) {
-@@ -1136,7 +1148,7 @@ static void mv88e6xxx_get_strings(struct dsa_switch *ds, int port,
+@@ -1196,7 +1208,7 @@ static void mv88e6xxx_get_strings(struct dsa_switch *ds, int port,
  static int mv88e6xxx_stats_get_sset_count(struct mv88e6xxx_chip *chip,
  					  int types)
  {
@@ -181,7 +181,7 @@ index db6aa08c66cc..80787f1e205c 100644
  	int i, j;
  
  	for (i = 0, j = 0; i < ARRAY_SIZE(mv88e6xxx_hw_stats); i++) {
-@@ -1263,7 +1275,7 @@ static size_t mv88e6xxx_stats_get_stat(struct mv88e6xxx_chip *chip, int port,
+@@ -1323,7 +1335,7 @@ static size_t mv88e6xxx_stats_get_stat(struct mv88e6xxx_chip *chip, int port,
  static size_t mv88e6xxx_stats_get_stats(struct mv88e6xxx_chip *chip, int port,
  					uint64_t *data)
  {

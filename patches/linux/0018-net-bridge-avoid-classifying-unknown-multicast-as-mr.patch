@@ -1,4 +1,4 @@
-From 681ce95c15bff94ac83eb26db3c718594f8dfa16 Mon Sep 17 00:00:00 2001
+From d77e67161d09857b45df1f76f3c28b9ea74a08f4 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Mon, 4 Mar 2024 16:47:28 +0100
 Subject: [PATCH 18/30] net: bridge: avoid classifying unknown multicast as
@@ -16,7 +16,6 @@ Because a multicast router should always receive both known and unknown
 multicast.
 
 Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
-Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
 ---
  include/uapi/linux/if_bridge.h |  1 +
  net/bridge/br.c                |  5 +++++
@@ -103,7 +102,7 @@ index 9a5ea06236bd..5f537dbd597a 100644
  	br_stp_timer_init(br);
  	br_multicast_init(br);
 diff --git a/net/bridge/br_forward.c b/net/bridge/br_forward.c
-index 7431f89e897b..5f574d60e7ee 100644
+index d97064d460dc..90bb1acbae57 100644
 --- a/net/bridge/br_forward.c
 +++ b/net/bridge/br_forward.c
 @@ -198,14 +198,19 @@ static struct net_bridge_port *maybe_deliver(
@@ -141,10 +140,10 @@ index 7431f89e897b..5f574d60e7ee 100644
  				continue;
  			break;
 diff --git a/net/bridge/br_input.c b/net/bridge/br_input.c
-index c729528b5e85..2817d0c785be 100644
+index e09000e38d07..b3247bd4f8de 100644
 --- a/net/bridge/br_input.c
 +++ b/net/bridge/br_input.c
-@@ -207,7 +207,7 @@ int br_handle_frame_finish(struct net *net, struct sock *sk, struct sk_buff *skb
+@@ -212,7 +212,7 @@ int br_handle_frame_finish(struct net *net, struct sock *sk, struct sk_buff *skb
  		br_forward(dst->dst, skb, local_rcv, false);
  	} else {
  		if (!mcast_hit)
@@ -190,7 +189,7 @@ index 38373b4fb7dd..994dacaaab7e 100644
  		    ipv6_addr_is_all_snoopers(&ipv6_hdr(skb)->daddr))
  			br_ip6_multicast_mrd_rcv(brmctx, pmctx, skb);
 diff --git a/net/bridge/br_private.h b/net/bridge/br_private.h
-index 82e63908dce8..a85771f9fdbf 100644
+index e4f1a08322da..8e12efdba2e6 100644
 --- a/net/bridge/br_private.h
 +++ b/net/bridge/br_private.h
 @@ -480,6 +480,7 @@ enum net_bridge_opts {
@@ -201,7 +200,7 @@ index 82e63908dce8..a85771f9fdbf 100644
  };
  
  struct net_bridge {
-@@ -880,8 +881,8 @@ void br_forward(const struct net_bridge_port *to, struct sk_buff *skb,
+@@ -881,8 +882,8 @@ void br_forward(const struct net_bridge_port *to, struct sk_buff *skb,
  		bool local_rcv, bool local_orig);
  int br_forward_finish(struct net *net, struct sock *sk, struct sk_buff *skb);
  void br_flood(struct net_bridge *br, struct sk_buff *skb,
@@ -212,7 +211,7 @@ index 82e63908dce8..a85771f9fdbf 100644
  
  /* return true if both source port and dest port are isolated */
  static inline bool br_skb_isolated(const struct net_bridge_port *to,
-@@ -1396,6 +1397,19 @@ static inline void br_multicast_flood(struct net_bridge_mdb_entry *mdst,
+@@ -1397,6 +1398,19 @@ static inline void br_multicast_flood(struct net_bridge_mdb_entry *mdst,
  {
  }
  

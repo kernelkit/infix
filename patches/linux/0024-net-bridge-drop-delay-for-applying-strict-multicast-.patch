@@ -1,4 +1,4 @@
-From f53652205b1c044fa00f896d6422c82ac808f16a Mon Sep 17 00:00:00 2001
+From 07690745616841a2948d6e5fc17f8f2bb7284805 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Thu, 4 Apr 2024 16:36:30 +0200
 Subject: [PATCH 24/30] net: bridge: drop delay for applying strict multicast
@@ -19,7 +19,6 @@ A proper fix for upstreaming could be to add a knob to disable the delay.
 [2]: https://lore.kernel.org/netdev/20240127175033.9640-1-linus.luessing@c0d3.blue/
 
 Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
-Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
 ---
  net/bridge/br_multicast.c | 42 +++++++--------------------------------
  net/bridge/br_private.h   |  4 +---
@@ -165,7 +164,7 @@ index 994dacaaab7e..8fcd8faf99f3 100644
  #endif
  
 diff --git a/net/bridge/br_private.h b/net/bridge/br_private.h
-index eb68fd5e0b86..e7c3c36f3cb9 100644
+index 5142decee8e7..db4f0705661a 100644
 --- a/net/bridge/br_private.h
 +++ b/net/bridge/br_private.h
 @@ -78,7 +78,6 @@ struct bridge_mcast_own_query {
@@ -176,7 +175,7 @@ index eb68fd5e0b86..e7c3c36f3cb9 100644
  };
  
  /* selected querier */
-@@ -1153,8 +1152,7 @@ __br_multicast_querier_exists(struct net_bridge_mcast *brmctx,
+@@ -1154,8 +1153,7 @@ __br_multicast_querier_exists(struct net_bridge_mcast *brmctx,
  		own_querier_enabled = false;
  	}
  

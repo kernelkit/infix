@@ -1,4 +1,4 @@
-From 04023a449a6894c0ec46e246c52e94566b3be4b3 Mon Sep 17 00:00:00 2001
+From f9e162da3fb52e4cb706a9d6fbf54d64441ecddc Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Wed, 24 Apr 2024 21:35:26 +0200
 Subject: [PATCH 26/30] net: dsa: mv88e6xxx: Fix port policy config on 6393X
@@ -16,7 +16,6 @@ never enabled on DSA ports, which broke standalone port isolation in
 multichip switch trees made up of 6393X decices.
 
 Fixes: 6584b26020fc ("net: dsa: mv88e6xxx: implement .port_set_policy for Amethyst")
-Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
 ---
  drivers/net/dsa/mv88e6xxx/port.c | 4 ++--
  1 file changed, 2 insertions(+), 2 deletions(-)

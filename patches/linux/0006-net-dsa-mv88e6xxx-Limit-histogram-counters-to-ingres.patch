@@ -1,4 +1,4 @@
-From cc5badac76e76692eb516a5c086fcf54a5a93080 Mon Sep 17 00:00:00 2001
+From 1efb238911ec25c91e0427b23dbff1d7e894d8c1 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Thu, 14 Dec 2023 14:50:27 +0100
 Subject: [PATCH 06/30] net: dsa: mv88e6xxx: Limit histogram counters to
@@ -33,10 +33,10 @@ Signed-off-by: David S. Miller <davem@davemloft.net>
  2 files changed, 6 insertions(+), 7 deletions(-)
 
 diff --git a/drivers/net/dsa/mv88e6xxx/chip.c b/drivers/net/dsa/mv88e6xxx/chip.c
-index 8daed568582f..1b3a5b0b2b25 100644
+index 1f5eda63a9ef..d61a79c65eb9 100644
 --- a/drivers/net/dsa/mv88e6xxx/chip.c
 +++ b/drivers/net/dsa/mv88e6xxx/chip.c
-@@ -1215,7 +1215,7 @@ static size_t mv88e6095_stats_get_stat(struct mv88e6xxx_chip *chip, int port,
+@@ -1275,7 +1275,7 @@ static size_t mv88e6095_stats_get_stat(struct mv88e6xxx_chip *chip, int port,
  		return 0;
  
  	*data = _mv88e6xxx_get_ethtool_stat(chip, stat, port, 0,
@@ -45,7 +45,7 @@ index 8daed568582f..1b3a5b0b2b25 100644
  	return 1;
  }
  
-@@ -1227,7 +1227,7 @@ static size_t mv88e6250_stats_get_stat(struct mv88e6xxx_chip *chip, int port,
+@@ -1287,7 +1287,7 @@ static size_t mv88e6250_stats_get_stat(struct mv88e6xxx_chip *chip, int port,
  		return 0;
  
  	*data = _mv88e6xxx_get_ethtool_stat(chip, stat, port, 0,
@@ -54,7 +54,7 @@ index 8daed568582f..1b3a5b0b2b25 100644
  	return 1;
  }
  
-@@ -1240,7 +1240,7 @@ static size_t mv88e6320_stats_get_stat(struct mv88e6xxx_chip *chip, int port,
+@@ -1300,7 +1300,7 @@ static size_t mv88e6320_stats_get_stat(struct mv88e6xxx_chip *chip, int port,
  
  	*data = _mv88e6xxx_get_ethtool_stat(chip, stat, port,
  					    MV88E6XXX_G1_STATS_OP_BANK_1_BIT_9,
