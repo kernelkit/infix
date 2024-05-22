@@ -2,7 +2,8 @@
 import infamy
 
 import infamy.route as route
-from infamy.util import until
+from infamy.util import until, parallel
+
 def config_target1(target, data, link):
     target.put_config_dict("ietf-interfaces", {
             "interfaces": {
@@ -161,8 +162,8 @@ with infamy.Test() as test:
         _, target2_to_target1 = env.ltop.xlate("target2", "target1")
         _, target1_to_target2 = env.ltop.xlate("target1", "target2")
 
-        config_target1(target1, target1data, target1_to_target2)
-        config_target2(target2, target2_to_target1)
+        parallel(config_target1(target1, target1data, target1_to_target2),
+                 config_target2(target2, target2_to_target1))
     with test.step("Wait for OSPF routes"):
         print("Waiting for OSPF routes..")
         until(lambda: route.ipv4_route_exist(target1, "192.168.200.1/32", source_protocol = "infix-routing:ospf"), attempts=200)
