@@ -1,4 +1,4 @@
-From 2482848726a5b8185a04d90891693a1713f894b5 Mon Sep 17 00:00:00 2001
+From 7eb21303180ac3e4f304f5ea369a5fc13c3712c6 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Tue, 5 Mar 2024 06:44:41 +0100
 Subject: [PATCH 19/30] net: bridge: Ignore router ports when forwarding L2
@@ -17,10 +17,10 @@ Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
  1 file changed, 4 insertions(+), 1 deletion(-)
 
 diff --git a/net/bridge/br_private.h b/net/bridge/br_private.h
-index a85771f9fdbf..eb68fd5e0b86 100644
+index 8e12efdba2e6..5142decee8e7 100644
 --- a/net/bridge/br_private.h
 +++ b/net/bridge/br_private.h
-@@ -1075,7 +1075,10 @@ br_multicast_get_first_rport_node(struct net_bridge_mcast *brmctx,
+@@ -1076,7 +1076,10 @@ br_multicast_get_first_rport_node(struct net_bridge_mcast *brmctx,
  	if (skb->protocol == htons(ETH_P_IPV6))
  		return rcu_dereference(hlist_first_rcu(&brmctx->ip6_mc_router_list));
  #endif

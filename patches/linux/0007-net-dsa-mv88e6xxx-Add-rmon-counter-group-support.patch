@@ -1,4 +1,4 @@
-From 35ecc84237bfccbe5b93c0aef6c07cc506d43070 Mon Sep 17 00:00:00 2001
+From fec9da092e50ff3e63caf1f9ce7e2d6e0a9aa911 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Thu, 14 Dec 2023 14:50:28 +0100
 Subject: [PATCH 07/30] net: dsa: mv88e6xxx: Add "rmon" counter group support
@@ -16,10 +16,10 @@ Signed-off-by: David S. Miller <davem@davemloft.net>
  1 file changed, 42 insertions(+)
 
 diff --git a/drivers/net/dsa/mv88e6xxx/chip.c b/drivers/net/dsa/mv88e6xxx/chip.c
-index 1b3a5b0b2b25..f4b61fcd4541 100644
+index d61a79c65eb9..c30add8ab3a9 100644
 --- a/drivers/net/dsa/mv88e6xxx/chip.c
 +++ b/drivers/net/dsa/mv88e6xxx/chip.c
-@@ -1368,6 +1368,47 @@ static void mv88e6xxx_get_eth_mac_stats(struct dsa_switch *ds, int port,
+@@ -1428,6 +1428,47 @@ static void mv88e6xxx_get_eth_mac_stats(struct dsa_switch *ds, int port,
  	mac_stats->stats.FramesReceivedOK += mac_stats->stats.BroadcastFramesReceivedOK;
  }
  
@@ -67,7 +67,7 @@ index 1b3a5b0b2b25..f4b61fcd4541 100644
  static int mv88e6xxx_get_regs_len(struct dsa_switch *ds, int port)
  {
  	struct mv88e6xxx_chip *chip = ds->priv;
-@@ -6890,6 +6931,7 @@ static const struct dsa_switch_ops mv88e6xxx_switch_ops = {
+@@ -6954,6 +6995,7 @@ static const struct dsa_switch_ops mv88e6xxx_switch_ops = {
  	.get_strings		= mv88e6xxx_get_strings,
  	.get_ethtool_stats	= mv88e6xxx_get_ethtool_stats,
  	.get_eth_mac_stats	= mv88e6xxx_get_eth_mac_stats,

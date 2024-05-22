@@ -1,11 +1,10 @@
-From 213e9a1d9145723897fbba40fc4afc5b5f70c1de Mon Sep 17 00:00:00 2001
+From 44350a05d341b6ecab12a3c96564ab890ec1e18a Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Fri, 22 Mar 2024 16:15:43 +0100
 Subject: [PATCH 21/30] net: dsa: mv88e6xxx: Support EtherType based priority
  overrides
 Organization: Addiva Elektronik
 
-Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
 ---
  drivers/net/dsa/mv88e6xxx/chip.c    | 64 +++++++++++++++++++++++++++++
  drivers/net/dsa/mv88e6xxx/chip.h    | 21 ++++++++++
@@ -16,10 +15,10 @@ Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
  6 files changed, 207 insertions(+), 4 deletions(-)
 
 diff --git a/drivers/net/dsa/mv88e6xxx/chip.c b/drivers/net/dsa/mv88e6xxx/chip.c
-index f9e78610a55e..5a422c9b533a 100644
+index ca55b428c7be..b78937d6e37b 100644
 --- a/drivers/net/dsa/mv88e6xxx/chip.c
 +++ b/drivers/net/dsa/mv88e6xxx/chip.c
-@@ -1626,6 +1626,11 @@ static int mv88e6xxx_rmu_setup(struct mv88e6xxx_chip *chip)
+@@ -1686,6 +1686,11 @@ static int mv88e6xxx_rmu_setup(struct mv88e6xxx_chip *chip)
  
  static int mv88e6xxx_pot_setup(struct mv88e6xxx_chip *chip)
  {
@@ -31,7 +30,7 @@ index f9e78610a55e..5a422c9b533a 100644
  	if (chip->info->ops->pot_clear)
  		return chip->info->ops->pot_clear(chip);
  
-@@ -3287,6 +3292,7 @@ static int mv88e6xxx_setup_port(struct mv88e6xxx_chip *chip, int port)
+@@ -3347,6 +3352,7 @@ static int mv88e6xxx_setup_port(struct mv88e6xxx_chip *chip, int port)
  
  	chip->ports[port].chip = chip;
  	chip->ports[port].port = port;
@@ -39,7 +38,7 @@ index f9e78610a55e..5a422c9b533a 100644
  
  	err = mv88e6xxx_port_setup_mac(chip, port, LINK_UNFORCED,
  				       SPEED_UNFORCED, DUPLEX_UNFORCED,
-@@ -6386,6 +6392,7 @@ static struct mv88e6xxx_chip *mv88e6xxx_alloc_chip(struct device *dev)
+@@ -6450,6 +6456,7 @@ static struct mv88e6xxx_chip *mv88e6xxx_alloc_chip(struct device *dev)
  	chip->dev = dev;
  
  	mutex_init(&chip->reg_lock);
@@ -47,7 +46,7 @@ index f9e78610a55e..5a422c9b533a 100644
  	INIT_LIST_HEAD(&chip->mdios);
  	idr_init(&chip->policies);
  	INIT_LIST_HEAD(&chip->msts);
-@@ -6918,6 +6925,61 @@ static int mv88e6xxx_crosschip_lag_leave(struct dsa_switch *ds, int sw_index,
+@@ -6982,6 +6989,61 @@ static int mv88e6xxx_crosschip_lag_leave(struct dsa_switch *ds, int sw_index,
  	return err_sync ? : err_pvt;
  }
  
@@ -109,7 +108,7 @@ index f9e78610a55e..5a422c9b533a 100644
  static const struct dsa_switch_ops mv88e6xxx_switch_ops = {
  	.get_tag_protocol	= mv88e6xxx_get_tag_protocol,
  	.change_tag_protocol	= mv88e6xxx_change_tag_protocol,
-@@ -6984,6 +7046,8 @@ static const struct dsa_switch_ops mv88e6xxx_switch_ops = {
+@@ -7048,6 +7110,8 @@ static const struct dsa_switch_ops mv88e6xxx_switch_ops = {
  	.crosschip_lag_change	= mv88e6xxx_crosschip_lag_change,
  	.crosschip_lag_join	= mv88e6xxx_crosschip_lag_join,
  	.crosschip_lag_leave	= mv88e6xxx_crosschip_lag_leave,
@@ -325,10 +324,10 @@ index 66073a1ef260..aba78838171b 100644
  
  int mv88e6393x_port_led_write(struct mv88e6xxx_chip *chip, int port,
 diff --git a/drivers/net/dsa/mv88e6xxx/port.h b/drivers/net/dsa/mv88e6xxx/port.h
-index 3605a59d1399..72b015a105cf 100644
+index 7157864dc20f..7edb04c41ac8 100644
 --- a/drivers/net/dsa/mv88e6xxx/port.h
 +++ b/drivers/net/dsa/mv88e6xxx/port.h
-@@ -271,7 +271,18 @@
+@@ -286,7 +286,18 @@
  
  /* Offset 0x0F: Port Special Ether Type */
  #define MV88E6XXX_PORT_ETH_TYPE		0x0f
@@ -348,7 +347,7 @@ index 3605a59d1399..72b015a105cf 100644
  
  /* Offset 0x10: InDiscards Low Counter */
  #define MV88E6XXX_PORT_IN_DISCARD_LO	0x10
-@@ -411,8 +422,13 @@ int mv88e6352_port_set_policy(struct mv88e6xxx_chip *chip, int port,
+@@ -426,8 +437,13 @@ int mv88e6352_port_set_policy(struct mv88e6xxx_chip *chip, int port,
  int mv88e6393x_port_set_policy(struct mv88e6xxx_chip *chip, int port,
  			       enum mv88e6xxx_policy_mapping mapping,
  			       enum mv88e6xxx_policy_action action);
@@ -362,7 +361,7 @@ index 3605a59d1399..72b015a105cf 100644
  int mv88e6393x_port_led_write(struct mv88e6xxx_chip *chip, int port,
  			      unsigned int pointer, u16 data);
  int mv88e6393x_port_led_read(struct mv88e6xxx_chip *chip, int port,
-@@ -423,8 +439,6 @@ int mv88e6393x_set_egress_port(struct mv88e6xxx_chip *chip,
+@@ -438,8 +454,6 @@ int mv88e6393x_set_egress_port(struct mv88e6xxx_chip *chip,
  int mv88e6393x_port_set_upstream_port(struct mv88e6xxx_chip *chip, int port,
  				      int upstream_port);
  int mv88e6393x_port_mgmt_rsvd2cpu(struct mv88e6xxx_chip *chip);

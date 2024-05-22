@@ -1,4 +1,4 @@
-From 27d5241d3ddf70d65af5f4dd029f99f0fea866a5 Mon Sep 17 00:00:00 2001
+From 667c016505293e4e4d9179039860c8c2ea053aee Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Tue, 21 Nov 2023 20:15:24 +0100
 Subject: [PATCH 14/30] net: phy: marvell10g: Fix power-up when strapped to
@@ -8,8 +8,6 @@ Organization: Addiva Elektronik
 On devices which are hardware strapped to start powered down (PDSTATE
 == 1), make sure that we clear the power-down bit on all units
 affected by this setting.
-
-Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
 ---
  drivers/net/phy/marvell10g.c | 18 +++++++++++++++---
  1 file changed, 15 insertions(+), 3 deletions(-)
