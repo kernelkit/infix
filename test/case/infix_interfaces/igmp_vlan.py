@@ -26,6 +26,7 @@
 import infamy
 import time
 import infamy.multicast as mcast
+from infamy.util import parallel
 
 with infamy.Test() as test:
     with test.step("Initialize"):
@@ -265,30 +266,14 @@ with infamy.Test() as test:
             vlan77_sender= mcast.MCastSender(d2send_ns, "224.2.2.2")
             vlan55_receiver = mcast.MCastReceiver(d2receive_ns, "224.1.1.1")
 
-            snif_vlan55_sender_incorrect = infamy.Sniffer(d1send_ns, "host 224.2.2.2")
-            snif_vlan77_receiver_incorrect = infamy.Sniffer(d1receive_ns, "host 224.1.1.1")
-            snif_vlan55_receiver_incorrect = infamy.Sniffer(d2receive_ns, "host 224.2.2.2")
-            snif_vlan77_sender_incorrect = infamy.Sniffer(d2send_ns, "host 224.1.1.1")
-
-            snif_vlan55_receiver_correct = infamy.Sniffer(d2receive_ns, "host 224.1.1.1")
-            snif_vlan77_receiver_correct = infamy.Sniffer(d1receive_ns, "host 224.2.2.2")
-
             with vlan55_sender, vlan77_sender, vlan55_receiver:
-                with snif_vlan77_sender_incorrect, \
-                     snif_vlan77_receiver_incorrect, snif_vlan55_receiver_incorrect, \
-                     snif_vlan55_sender_incorrect, snif_vlan55_receiver_correct, \
-                     snif_vlan77_receiver_correct:
-                        time.sleep(5)
-                # TODO: Here should we check for 224.1.1.1 in mdb, also
-                # verify that 224.2.2.2 does not exist in mdb
-
-                assert(snif_vlan77_sender_incorrect.packets() == "")
-                assert(snif_vlan77_receiver_incorrect.packets() == "")
-                assert(snif_vlan55_receiver_incorrect.packets() == "")
-                assert(snif_vlan55_sender_incorrect.packets() == "")
-                print("Multicast does not exist on ports/VLANs where they should not be")
-                assert(snif_vlan55_receiver_correct.packets() != "")
-                assert(snif_vlan77_receiver_correct.packets() != "")
-                print("Multicast received on correct port and VLAN")
+                with test.step("Multicast does not exist on ports/VLANs where they should not be"):
+                    parallel(d1send_ns.must_not_receive("host 224.2.2.2"),
+                             d1receive_ns.must_not_receive("host 224.1.1.1"),
+                             d2receive_ns.must_not_receive("host 224.2.2.2"),
+                             d2send_ns.must_not_receive("host 224.1.1.1"))
+                with test.step("Multicast received on correct port and VLAN"):
+                    parallel(d2receive_ns.must_receive("host 224.1.1.1"),
+                             d1receive_ns.must_receive("host 224.2.2.2"))
 
         test.succeed()
