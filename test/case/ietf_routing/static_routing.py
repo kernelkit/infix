@@ -21,7 +21,7 @@ import infamy
 import time
 import infamy.iface as iface
 import infamy.route as route
-from infamy.util import until
+from infamy.util import until, parallel
 
 def config_target1(target, data, link):
     target.put_config_dict("ietf-interfaces", {
@@ -200,14 +200,9 @@ with infamy.Test() as test:
         _, target2_to_target1 = env.ltop.xlate("target2", "target1")
         _, target1_to_target2 = env.ltop.xlate("target1", "target2")
 
-        config_target1(target1, target1data, target1_to_target2)
-        config_target2(target2, target2_to_target1)
+        parallel(config_target1(target1, target1data, target1_to_target2),
+                 config_target2(target2, target2_to_target1))
 
-    with test.step("Wait for links"):
-        until(lambda: iface.get_oper_up(target1, target1data))
-        until(lambda: iface.get_oper_up(target1, target1data))
-        until(lambda: iface.get_oper_up(target1, target1_to_target2))
-        until(lambda: iface.get_oper_up(target2, target2_to_target1))
     with test.step("Wait for routes"):
         until(lambda: route.ipv4_route_exist(target1, "192.168.200.1/32"))
         until(lambda: route.ipv4_route_exist(target2, "0.0.0.0/0"))
@@ -230,11 +225,11 @@ with infamy.Test() as test:
 
         with test.step("Remove static routes on dut1"):
             config_remove_routes(target1);
-            until(lambda: route.ipv4_route_exist(target1, "192.168.200.1/32") == False)
-            until(lambda: route.ipv6_route_exist(target1, "2001:db8:3c4d:200::1/128") == False)
+            parallel(until(lambda: route.ipv4_route_exist(target1, "192.168.200.1/32") == False),
+                     until(lambda: route.ipv6_route_exist(target1, "2001:db8:3c4d:200::1/128") == False))
 
         with test.step("Verify that dut2 is no longer reachable"):
-            infamy.parallel(lambda: ns0.must_not_reach("192.168.200.1"),
-                            lambda: ns0.must_not_reach("2001:db8:3c4d:200::1"))
+            infamy.parallel(ns0.must_not_reach("192.168.200.1"),
+                            ns0.must_not_reach("2001:db8:3c4d:200::1"))
 
     test.succeed()
