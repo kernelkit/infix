@@ -72,8 +72,29 @@ jobs:
           path: output/${{ steps.vars.outputs.tgz }}
           name: artifact-${{ matrix.target }}
 
+  test:
+    name: Regression Test of ${{ matrix.target }}
+    needs: build
+    runs-on: [ self-hosted, regression ]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          clean: true
+          submodules: recursive
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: "artifact-x86_64"
+
+      - name: Restore x86-64 output/
+        run: |
+          mkdir output
+          mv infix-x86_64.tar.gz output/
+          cd output/
+          tar xf infix-x86_64.tar.gz
+          ln -s infix-x86_64 images
+
       - name: Regression Test
-        if: matrix.target == 'x86_64'
         run: |
           make test
 
@@ -85,7 +106,7 @@ jobs:
   release:
     if: ${{github.repository_owner == 'kernelkit' && github.ref_name == 'main'}}
     name: Upload Latest Build
-    needs: build
+    needs: test
     runs-on: ubuntu-latest
     permissions:
       contents: write
