@@ -1,6 +1,5 @@
 /* SPDX-License-Identifier: BSD-3-Clause */
 
-#include <srx/srx_module.h>
 #include <srx/common.h>
 
 #include "core.h"

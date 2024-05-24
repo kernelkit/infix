@@ -12,7 +12,7 @@
 
 #include <srx/common.h>
 #include <srx/lyx.h>
-#include <srx/srx_module.h>
+
 #include <srx/srx_val.h>
 
 #include "base64.h"

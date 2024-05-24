@@ -10,7 +10,6 @@
 
 #include <srx/common.h>
 #include <srx/lyx.h>
-#include <srx/srx_module.h>
 #include <srx/srx_val.h>
 
 #include "core.h"
@@ -49,13 +48,6 @@ struct mdns_svc {
 	{ netconf, "netconf",  "_netconf-ssh._tcp", 830, "NETCONF (XML/SSH)", NULL },
 	{ ssh,     "sftp-ssh", "_sftp-ssh._tcp",     22, "Secure file transfer (FTP/SSH)", NULL },
 	{ ssh,     "ssh",      "_ssh._tcp",          22, "Secure shell command line interface (CLI)", NULL },
-};
-
-static const struct srx_module_requirement reqs[] = {
-	{ .dir = YANG_PATH_, .name = "infix-services",      .rev = "2024-04-08" },
-	{ .dir = YANG_PATH_, .name = "ieee802-dot1ab-lldp", .rev = "2022-03-15" },
-	{ .dir = YANG_PATH_, .name = "infix-lldp",          .rev = "2023-08-23" },
-	{ NULL }
 };
 
 /*
@@ -294,10 +286,6 @@ static int web_change(sr_session_ctx_t *session, uint32_t sub_id, const char *mo
 int infix_services_init(struct confd *confd)
 {
 	int rc;
-
-	rc = srx_require_modules(confd->conn, reqs);
-	if (rc)
-		goto fail;
 
 	REGISTER_CHANGE(confd->session, "infix-services", "/infix-services:mdns",
 			0, mdns_change, confd, &confd->sub);
