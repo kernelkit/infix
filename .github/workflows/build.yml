@@ -71,7 +71,7 @@ jobs:
           name: artifact-${{ matrix.target }}
 
   test:
-    name: Regression Test of ${{ matrix.target }}
+    name: Regression Test of Infix x86_64
     needs: build
     runs-on: [ self-hosted, regression ]
     steps:
@@ -92,7 +92,7 @@ jobs:
       - name: Restore x86-64 output/
         run: |
           ls -l
-          mkdir output
+          mkdir -p output
           mv infix-x86_64.tar.gz output/
           cd output/
           tar xf infix-x86_64.tar.gz
