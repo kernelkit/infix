@@ -11,7 +11,7 @@ CONFD_SITE = $(BR2_EXTERNAL_INFIX_PATH)/src/confd
 CONFD_LICENSE = BSD-3-Clause
 CONFD_LICENSE_FILES = LICENSE
 CONFD_REDISTRIBUTE = NO
-CONFD_DEPENDENCIES = host-sysrepo augeas jansson libite sysrepo libsrx libglib2
+CONFD_DEPENDENCIES = host-sysrepo sysrepo netopeer2 augeas jansson libite sysrepo libsrx libglib2
 CONFD_AUTORECONF = YES
 
 CONFD_SYSREPO_SHM_PREFIX = sr_buildroot$(subst /,_,$(CONFIG_DIR))_confd
@@ -25,11 +25,6 @@ CONFD_CONF_OPTS += --enable-containers
 else
 CONFD_CONF_OPTS += --disable-containers
 endif
-
-
-CONFD_MAKE_ENV = \
-	SYSREPOCTL_EXECUTABLE=$(HOST_DIR)/bin/sysrepoctl \
-	SYSREPO_SHM_PREFIX=$(CONFD_SYSREPO_SHM_PREFIX)
 
 define CONFD_INSTALL_EXTRA
 	cp $(CONFD_PKGDIR)/confd.conf  $(FINIT_D)/available/
