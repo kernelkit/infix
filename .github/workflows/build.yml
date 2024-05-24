@@ -1,6 +1,7 @@
 name: Bob the Builder
 
 on:
+  pull_request:
   push:
     branches:
       - main
@@ -44,35 +45,48 @@ jobs:
             ccache-${{ matrix.target }}-
             ccache-
 
-      - name: Configure & Build
+      - name: Configure ${{ matrix.target }}
         run: |
           target=${{ matrix.target }}_defconfig
           echo "Building $target ..."
           make $target
           make
 
-      - name: Prepare Artifact
+      - name: Unit Test ${{ matrix.target }}
+        run: |
+          make test-unit
+
+      - name: Build ${{ matrix.target }}
+        run: |
+          make
+
+      - name: Prepare ${{ matrix.target }} Artifact
         run: |
           cd output/
           mv images ${{ steps.vars.outputs.dir }}
           ln -s ${{ steps.vars.outputs.dir }} images
           tar chfz ${{ steps.vars.outputs.tgz }} ${{ steps.vars.outputs.dir }}
 
-      - name: Test
-        if: matrix.target == 'x86_64'
-        run: |
-          make test
-
       - uses: actions/upload-artifact@v4
         with:
           path: output/${{ steps.vars.outputs.tgz }}
           name: artifact-${{ matrix.target }}
 
+      - name: Regression Test
+        if: matrix.target == 'x86_64'
+        run: |
+          make test
+
+      - name: Publish Test Result
+        # Ensure this runs even if Regression Test fails
+        if: always()
+        run: cat test/.log/last/result-gh.md >> $GITHUB_STEP_SUMMARY
+
   release:
     if: ${{github.repository_owner == 'kernelkit' && github.ref_name == 'main'}}
     name: Upload Latest Build
     needs: build
-    runs-on: [ self-hosted, latest ]
+    runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
