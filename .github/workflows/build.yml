@@ -50,7 +50,6 @@ jobs:
           target=${{ matrix.target }}_defconfig
           echo "Building $target ..."
           make $target
-          make
 
       - name: Unit Test ${{ matrix.target }}
         run: |
@@ -84,10 +83,12 @@ jobs:
 
       - uses: actions/download-artifact@v4
         with:
-          pattern: "artifact-x86_64"
+          pattern: "artifact-*"
+          merge-multiple: true
 
       - name: Restore x86-64 output/
         run: |
+          ls -l
           mkdir output
           mv infix-x86_64.tar.gz output/
           cd output/
