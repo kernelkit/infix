@@ -44,3 +44,7 @@ COPY pip-requirements.txt /root
 ADD yang /root/yang
 
 RUN ~/init-venv.sh ~/pip-requirements.txt
+
+COPY entrypoint.sh /entrypoint.sh
+ENTRYPOINT ["/entrypoint.sh"]
+CMD ["/bin/sh"]
