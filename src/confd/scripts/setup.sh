@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-#set -x
+set -x
+# This is based on scripts/setup.sh from Netopeer2/libnetconf2
 # env variables NP2_MODULE_DIR, NP2_MODULE_PERMS must be defined and NP2_MODULE_OWNER, NP2_MODULE_GROUP will be used if
 # defined when executing this script!
 #if [ -z "$NP2_MODULE_DIR" -o -z "$NP2_MODULE_PERMS" ]; then
@@ -72,7 +73,6 @@ MODULES=(
 if [ -n "$USE_CONTAINERS" ]; then
 	CONTAINERS=" -e containers";
 	MODULES+=("infix-containers@2024-03-27.yang")
-
 fi
 MODULES+=("infix-interfaces@2024-01-15.yang $CONTAINERS -e vlan-filtering")
 
