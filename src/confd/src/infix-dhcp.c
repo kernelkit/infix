@@ -9,7 +9,6 @@
 
 #include <srx/common.h>
 #include <srx/lyx.h>
-#include <srx/srx_module.h>
 #include <srx/srx_val.h>
 
 #include "core.h"
@@ -17,12 +16,6 @@
 #define  MODULE         "infix-dhcp-client"
 #define  XPATH          "/infix-dhcp-client:dhcp-client"
 #define  CACHE_TEMPLATE "/var/lib/misc/%s.cache"
-
-static const struct srx_module_requirement reqs[] = {
-	{ .dir = YANG_PATH_, .name = MODULE, .rev = "2024-01-30" },
-	{ NULL }
-};
-
 
 static char *ip_cache(const char *ifname, char *str, size_t len)
 {
@@ -406,10 +399,6 @@ static int cand(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
 int infix_dhcp_init(struct confd *confd)
 {
 	int rc;
-
-	rc = srx_require_modules(confd->conn, reqs);
-	if (rc)
-		goto fail;
 
 	REGISTER_CHANGE(confd->session, MODULE, XPATH, 0, change, confd, &confd->sub);
 	REGISTER_CHANGE(confd->cand, MODULE, XPATH"//.", SR_SUBSCR_UPDATE, cand, confd, &confd->sub);

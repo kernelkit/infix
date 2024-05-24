@@ -6,7 +6,7 @@
 #include <syslog.h>
 #include <sysrepo.h>
 #include <sysrepo.h>
-#include "srx_module.h"
+
 #include "common.h"
 
 extern int debug;
