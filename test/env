@@ -164,6 +164,17 @@ while getopts "cCDf:hiKp:q:t:" opt; do
 done
 
 if [ "$containerize" ]; then
+    volumes="--volume $ixdir:$ixdir --workdir=$ixdir/test"
+    case "$(runner)" in
+	docker)
+	    volumes="$volumes --env HOST_CHOWN_PATH=$ixdir/test"
+	    volumes="$volumes --env HOST_CHOWN_UID=$(id -u)"
+	    volumes="$volumes --env HOST_CHOWN_GID=$(id -g)"
+	    ;;
+	podman)
+	    ;;
+    esac
+
     # shellcheck disable=SC2016
         exec $(runner) run \
 	 --cap-add=NET_RAW \
@@ -181,8 +192,7 @@ if [ "$containerize" ]; then
 	 --security-opt seccomp=unconfined \
 	 $network \
 	 --tty \
-	 --volume "$ixdir":"$ixdir" \
-	 --workdir "$ixdir/test" \
+	 $volumes \
 	 $kvm \
 	 $INFIX_TEST \
 	 "$0" -C "$@"
