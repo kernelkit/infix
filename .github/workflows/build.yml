@@ -47,9 +47,7 @@ jobs:
 
       - name: Configure ${{ matrix.target }}
         run: |
-          target=${{ matrix.target }}_defconfig
-          echo "Building $target ..."
-          make $target
+          make ${{ matrix.target }}_defconfig
 
       - name: Unit Test ${{ matrix.target }}
         run: |
@@ -57,6 +55,7 @@ jobs:
 
       - name: Build ${{ matrix.target }}
         run: |
+          echo "Building ${{ matrix.target }}_defconfig ..."
           make
 
       - name: Prepare ${{ matrix.target }} Artifact
@@ -80,6 +79,10 @@ jobs:
         with:
           clean: true
           submodules: recursive
+
+      - name: Configure x86_64
+        run: |
+          make x86_64_defconfig
 
       - uses: actions/download-artifact@v4
         with:
