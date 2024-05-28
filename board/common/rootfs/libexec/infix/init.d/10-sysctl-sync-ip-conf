@@ -10,8 +10,7 @@ sysctl net.ipv4.conf.default  >$tmp
 sysctl net.ipv6.conf.default >>$tmp
 
 for iface in $(ip -j link show | jq -r .[].ifname); do
-    sed -e "s/.default./.${iface}./g" $tmp | sysctl -p -
+    sed -e "s/.default./.${iface}./g" $tmp | sysctl -q -p -
 done
 
 rm $tmp
-
