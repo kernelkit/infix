@@ -1,0 +1,2 @@
+#!/bin/sh
+exec initctl -bq cond set ixinit-done
