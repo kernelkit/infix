@@ -1,0 +1,52 @@
+#!/bin/sh
+# Opportunistically look for interfaces with multiple transmit queues
+# and hardware support for the mqprio queuing discipline. For every
+# matching interface, set up mappings from kernel-internal packet
+# priorities, via traffic classes, to transmit queues such that as
+# many high priorities as possible are scheduled on separate queues.
+
+set -e
+
+map()
+{
+    case "$1" in
+	2)
+	    echo "map 0 0 0 0 0 0 1 1";;
+	3)
+	    echo "map 0 0 0 0 1 1 2 2";;
+	4)
+	    echo "map 0 0 1 1 2 2 3 3";;
+	5)
+	    echo "map 0 0 1 1 2 2 3 4";;
+	6)
+	    echo "map 0 0 1 1 2 3 4 5";;
+	7)
+	    echo "map 0 0 1 2 3 4 5 6";;
+	8)
+	    echo "map 0 1 2 3 4 5 6 7";;
+    esac
+}
+
+queues()
+{
+    out="queues "
+    for tc in $(seq 0 $(($1 - 1))); do
+	out="$out 1@$tc"
+    done
+
+    echo "$out"
+}
+
+set $(ip -j -d link show | jq -r '.[] | .ifname, .num_tx_queues')
+while [ "$1" ]; do
+    iface="$1"
+    txqs="$2"
+    shift 2
+
+    [ $txqs -lt 2 ] && continue
+    [ $txqs -gt 8 ] && txqs=8
+
+    tc qdisc add dev $iface root mqprio hw 1 \
+       num_tc $txqs $(map $txqs) $(queues $txqs) || true
+done
+
