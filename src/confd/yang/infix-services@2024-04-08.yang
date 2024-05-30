@@ -52,8 +52,8 @@ module infix-services {
       description "Web console interface.";
 
       leaf enabled {
-	description "Enable or disable web console interface on port 7681.";
-	type boolean;
+        description "Enable or disable web console interface on port 7681.";
+        type boolean;
       }
     }
 
@@ -61,8 +61,8 @@ module infix-services {
       description "mDNS Network Browser.";
 
       leaf enabled {
-	description "Enable or disable mDNS Network Browser at https://network.local.";
-	type boolean;
+        description "Enable or disable mDNS Network Browser at https://network.local.";
+        type boolean;
       }
     }
   }
