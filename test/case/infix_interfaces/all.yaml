@@ -10,3 +10,4 @@
 - case: igmp_basic.py
 - case: igmp_vlan.py
 - case: static_multicast_filters.py
+- case: vlan_qos.py
