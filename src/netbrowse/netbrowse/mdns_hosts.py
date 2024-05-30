@@ -17,11 +17,12 @@ class MdnsHosts:
     def scan(self):
         """Perform mDNS scan and return list of hosts."""
         services = {
-            '_http._tcp':        ('HTTP', 'http://{address}:{port}{path}'),
-            '_https._tcp':       ('HTTPS', 'https://{address}:{port}{path}'),
-            '_netconf-ssh._tcp': ('NETCONF', None),
-            '_ssh._tcp':         ('SSH', None),
-            '_sftp-ssh._tcp':    ('SFTP', None),
+            '_http._tcp':         ('HTTP', 'http://{address}:{port}{path}'),
+            '_https._tcp':        ('HTTPS', 'https://{address}:{port}{path}'),
+            '_netconf-ssh._tcp':  ('NETCONF', None),
+            '_restconf-tls._tcp': ('RESTCONF', None),
+            '_ssh._tcp':          ('SSH', None),
+            '_sftp-ssh._tcp':     ('SFTP', None),
         }
 
         result = subprocess.run(['avahi-browse', '-tarpk' if self.hask() else '-tarp'],
