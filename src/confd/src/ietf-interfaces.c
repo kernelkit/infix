@@ -1397,6 +1397,44 @@ static int netdag_gen_veth(struct dagger *net, struct lyd_node *dif,
 	return 0;
 }
 
+static int netdag_gen_vlan_ingress_qos(struct lyd_node *cif, FILE *ip)
+{
+	const char *prio;
+
+	prio = lyd_get_value(lydx_get_descendant(lyd_child(cif),
+						 "vlan", "ingress-qos", "priority", NULL));
+
+	if (prio[0] >= '0' && prio[0] <= '7' && prio[1] == '\0') {
+		fprintf(ip, " ingress-qos-map 0:%c 1:%c 2:%c 3:%c 4:%c 5:%c 6:%c 7:%c",
+			prio[0], prio[0], prio[0], prio[0], prio[0], prio[0], prio[0], prio[0]);
+		return 0;
+	} else if (!strcmp(prio, "from-pcp")) {
+		fputs(" ingress-qos-map 0:0 1:1 2:2 3:3 4:4 5:5 6:6 7:7", ip);
+		return 0;
+	}
+
+	return ERR_IFACE(cif, -EINVAL, "Unsupported ingress priority mode \"%s\"", prio);
+}
+
+static int netdag_gen_vlan_egress_qos(struct lyd_node *cif, FILE *ip)
+{
+	const char *pcp;
+
+	pcp = lyd_get_value(lydx_get_descendant(lyd_child(cif),
+						"vlan", "egress-qos", "pcp", NULL));
+
+	if (pcp[0] >= '0' && pcp[0] <= '7' && pcp[1] == '\0') {
+		fprintf(ip, " egress-qos-map 0:%c 1:%c 2:%c 3:%c 4:%c 5:%c 6:%c 7:%c",
+			pcp[0], pcp[0], pcp[0], pcp[0], pcp[0], pcp[0], pcp[0], pcp[0]);
+		return 0;
+	} else if (!strcmp(pcp, "from-priority")) {
+		fputs(" egress-qos-map 0:0 1:1 2:2 3:3 4:4 5:5 6:6 7:7", ip);
+		return 0;
+	}
+
+	return ERR_IFACE(cif, -EINVAL, "Unsupported egress priority mode \"%s\"", pcp);
+}
+
 static int netdag_gen_vlan(struct dagger *net, struct lyd_node *dif,
 			   struct lyd_node *cif, FILE *ip)
 {
@@ -1439,6 +1477,14 @@ static int netdag_gen_vlan(struct dagger *net, struct lyd_node *dif,
 
 	if (lydx_get_diff(lydx_get_child(vlan, "id"), &vidd))
 		fprintf(ip, " id %s", vidd.new);
+
+	err = netdag_gen_vlan_ingress_qos(cif, ip);
+	if (err)
+		return err;
+
+	err = netdag_gen_vlan_egress_qos(cif, ip);
+	if (err)
+		return err;
 
 	fputc('\n', ip);
 
