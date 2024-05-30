@@ -7,6 +7,10 @@ module infix-services {
   contact      "kernelkit@googlegroups.com";
   description  "Infix services, generic.";
 
+  revision 2024-05-30 {
+    description "Add support for RESTCONF enable/disable as a web service.";
+    reference "internal";
+  }
   revision 2024-04-08 {
     description "Initial support for web services.";
     reference "internal";
@@ -62,6 +66,15 @@ module infix-services {
 
       leaf enabled {
         description "Enable or disable mDNS Network Browser at https://network.local.";
+        type boolean;
+      }
+    }
+
+    container restconf {
+      description "IETF RESTCONF Server.";
+
+      leaf enabled {
+        description "Enable or disable https://device.local/resconf API endpoint.";
         type boolean;
       }
     }
