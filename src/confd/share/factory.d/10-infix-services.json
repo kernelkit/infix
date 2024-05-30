@@ -12,6 +12,9 @@
 	},
 	"netbrowse": {
 	    "enabled": true
+	},
+	"restconf": {
+	    "enabled": true
 	}
     }
 }

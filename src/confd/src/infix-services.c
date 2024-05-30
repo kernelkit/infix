@@ -21,6 +21,7 @@
         SVC(none)				\
         SVC(ssh)				\
         SVC(netconf)				\
+        SVC(restconf)				\
         SVC(web)				\
         SVC(ttyd)				\
         SVC(netbrowse)				\
@@ -42,12 +43,13 @@ struct mdns_svc {
 	char *desc;
 	char *text;
 } services[] = {
-	{ web,     "https",    "_https._tcp",       443, "Web Management Interface", "adminurl=https://%s.local" },
-	{ ttyd,    "ttyd",     "_https._tcp",       443, "Web Console Interface",    "adminurl=https://%s.local:7681" },
-	{ web,     "http",     "_http._tcp",         80, "Web Management Interface", "adminurl=http://%s.local" },
-	{ netconf, "netconf",  "_netconf-ssh._tcp", 830, "NETCONF (XML/SSH)", NULL },
-	{ ssh,     "sftp-ssh", "_sftp-ssh._tcp",     22, "Secure file transfer (FTP/SSH)", NULL },
-	{ ssh,     "ssh",      "_ssh._tcp",          22, "Secure shell command line interface (CLI)", NULL },
+	{ web,      "https",    "_https._tcp",        443, "Web Management Interface", "adminurl=https://%s.local" },
+	{ ttyd,     "ttyd",     "_https._tcp",        443, "Web Console Interface",    "adminurl=https://%s.local:7681" },
+	{ web,      "http",     "_http._tcp",          80, "Web Management Interface", "adminurl=http://%s.local" },
+	{ netconf,  "netconf",  "_netconf-ssh._tcp",  830, "NETCONF (XML/SSH)", NULL },
+	{ restconf, "restconf", "_restconf-tls._tcp", 443, "RESTCONF (JSON/HTTP)",  NULL },
+	{ ssh,      "sftp-ssh", "_sftp-ssh._tcp",      22, "Secure file transfer (FTP/SSH)", NULL },
+	{ ssh,      "ssh",      "_ssh._tcp",           22, "Secure shell command line interface (CLI)", NULL },
 };
 
 /*
@@ -139,20 +141,25 @@ static int svc_change(sr_session_ctx_t *session, sr_event_t event, const char *x
 
 static void svc_enadis(int ena, svc type, const char *svc)
 {
-	int isweb;
+	int isweb, isapp;
 
 	if (!svc)
 		svc = name[type];
 	isweb = fexistf("/etc/nginx/available/%s.conf", svc);
+	isapp = fexistf("/etc/nginx/%s.app", svc);
 
 	if (ena) {
 		if (isweb)
 			systemf("ln -sf ../available/%s.conf /etc/nginx/enabled/", svc);
+		if (isapp)
+			systemf("ln -sf ../%s.app /etc/nginx/app/%s.conf", svc, svc);
 		systemf("initctl -nbq enable %s", svc);
 		systemf("initctl -nbq touch %s", svc); /* in case already enabled */
 	} else {
 		if (isweb)
 			systemf("rm -f /etc/nginx/enabled/%s.conf", svc);
+		if (isapp)
+			systemf("rm -f /etc/nginx/app/%s.conf", svc);
 		systemf("initctl -nbq disable %s", svc);
 	}
 
@@ -257,6 +264,21 @@ static int netbrowse_change(sr_session_ctx_t *session, uint32_t sub_id, const ch
 	return put(cfg, srv);
 }
 
+static int restconf_change(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
+	const char *xpath, sr_event_t event, unsigned request_id, void *_confd)
+{
+	struct lyd_node *srv = NULL;
+	sr_data_t *cfg;
+
+	cfg = get(session, event, xpath, &srv, "web", "restconf", NULL);
+	if (!cfg)
+		return SR_ERR_OK;
+
+	svc_enadis(lydx_is_enabled(srv, "enabled"), netbrowse, NULL);
+
+	return put(cfg, srv);
+}
+
 static int web_change(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
 		      const char *xpath, sr_event_t event, unsigned request_id, void *_confd)
 {
@@ -272,9 +294,11 @@ static int web_change(sr_session_ctx_t *session, uint32_t sub_id, const char *mo
 	if (ena) {
 		svc_enadis(srx_enabled(session, "%s/console/enabled", xpath), ttyd, "ttyd");
 		svc_enadis(srx_enabled(session, "%s/netbrowse/enabled", xpath), netbrowse, "netbrowse");
+		svc_enadis(srx_enabled(session, "%s/restconf/enabled", xpath), restconf, "restconf");
 	} else {
 		svc_enadis(0, ttyd, NULL);
 		svc_enadis(0, netbrowse, NULL);
+		svc_enadis(0, restconf, NULL);
 	}
 
 	svc_enadis(ena, web, "nginx");
@@ -298,6 +322,8 @@ int infix_services_init(struct confd *confd)
 			0, ttyd_change, confd, &confd->sub);
 	REGISTER_CHANGE(confd->session, "infix-services", "/infix-services:web/infix-services:netbrowse",
 			0, netbrowse_change, confd, &confd->sub);
+	REGISTER_CHANGE(confd->session, "infix-services", "/infix-services:web/infix-services:restconf",
+			0, restconf_change, confd, &confd->sub);
 	REGISTER_CHANGE(confd->session, "ieee802-dot1ab-lldp", "/ieee802-dot1ab-lldp:lldp",
 			0, lldp_change, confd, &confd->sub);
 
