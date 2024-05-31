@@ -32,13 +32,13 @@ with infamy.Test() as test:
 
         target.put_config_dict("ietf-system", {
             "system": {
-                "authentication": { 
+                "authentication": {
                     "user": [
                         {
                             "name": username,
                             "password": hashed_password,
                         }
-                    ]                    
+                    ]
                 }
             }
         })
@@ -51,7 +51,7 @@ with infamy.Test() as test:
             if user["name"] == username:
                 user_found = True
                 assert user["password"] == hashed_password
-                break           
+                break
         assert user_found, f"User {username} not found"
 
     with test.step(f"Delete user ({username} / {hashed_password})"):
@@ -70,4 +70,3 @@ with infamy.Test() as test:
             assert user["name"] != username, f"User {username} not deleted"
 
     test.succeed()
-
