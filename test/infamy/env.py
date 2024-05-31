@@ -5,7 +5,7 @@ import pydot
 import shlex
 import sys
 
-from . import neigh, netconf, ssh, tap, topology
+from . import neigh, netconf, restconf, ssh, tap, topology
 
 class NullEnv:
     def attr(self, _, default=None):
@@ -86,5 +86,9 @@ class Env(object):
             )
         elif protocol == "ssh":
             return ssh.Device(ssh.Location(mgmtip, password))
+        elif protocol == "restconf":
+            return restconf.Device(location=restconf.Location(cport, mgmtip, password),
+                                   mapping=mapping,
+                                   factory_default=factory_default)
 
         raise Exception(f"Unsupported management procotol \"{protocol}\"")

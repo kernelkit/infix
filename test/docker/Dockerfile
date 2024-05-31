@@ -22,6 +22,8 @@ RUN apk add --no-cache \
     sshpass \
     tcpdump \
     tshark \
+    openssl \
+    curl \
     make
 
 ARG MTOOL_VERSION="3.0"
