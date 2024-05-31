@@ -1180,7 +1180,8 @@ static int change_nacm(sr_session_ctx_t *session, uint32_t sub_id, const char *m
 					continue; /* not found, this is OK */
 
 				/* At least one group grants full administrator permissions */
-				is_admin = true;
+				if (rule_count > 0)
+					is_admin = true;
 
 				sr_free_values(rules, rule_count);
 			}
