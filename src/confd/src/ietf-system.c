@@ -668,6 +668,7 @@ static int is_valid_username(const char *user)
 
 static char *sys_find_usable_shell(sr_session_ctx_t *sess, char *name)
 {
+	bool is_admin = is_admin_user(sess, name);
 	char *shell = NULL, *conf = NULL;
 	char xpath[256];
 	sr_data_t *cfg;
@@ -682,16 +683,21 @@ static char *sys_find_usable_shell(sr_session_ctx_t *sess, char *name)
 
 	/* Verify the configured shell exists (and is a login shell) */
 	if (conf) {
-		struct { char *name, *shell; } shells[] = {
-			{ "infix-shell-type:sh",    "/bin/sh"    },
-			{ "infix-shell-type:bash",  "/bin/bash"  },
-			{ "infix-shell-type:clish", "/bin/clish" },
-			{ "infix-shell-type:false", "/bin/false" },
+		struct { char *name, *shell; bool admin; } shells[] = {
+			{ "infix-shell-type:sh",    "/bin/sh",    true  },
+			{ "infix-shell-type:bash",  "/bin/bash",  true  },
+			{ "infix-shell-type:clish", "/bin/clish", false },
+			{ "infix-shell-type:false", "/bin/false", false },
 		};
 
 		for (size_t i = 0; i < NELEMS(shells); i++) {
 			if (strcmp(shells[i].name, conf))
 				continue;
+
+			if (!is_admin && shells[i].admin) {
+				WARN("Selected login shell for %s only allowed for administrators!", name);
+				break;
+			}
 
 			shell = shells[i].shell;
 			break;
