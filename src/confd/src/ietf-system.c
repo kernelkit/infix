@@ -35,6 +35,13 @@ static char   *rel = NULL;
 static char   *sys = NULL;
 static char   *os  = NULL;
 
+static struct { char *name, *shell; bool admin; } shells[] = {
+	{ "infix-shell-type:sh",    "/bin/sh",    true  },
+	{ "infix-shell-type:bash",  "/bin/bash",  true  },
+	{ "infix-shell-type:clish", "/bin/clish", false },
+	{ "infix-shell-type:false", "/bin/false", false },
+};
+
 static char *strip_quotes(char *str)
 {
 	char *ptr;
@@ -683,13 +690,6 @@ static char *sys_find_usable_shell(sr_session_ctx_t *sess, char *name)
 
 	/* Verify the configured shell exists (and is a login shell) */
 	if (conf) {
-		struct { char *name, *shell; bool admin; } shells[] = {
-			{ "infix-shell-type:sh",    "/bin/sh",    true  },
-			{ "infix-shell-type:bash",  "/bin/bash",  true  },
-			{ "infix-shell-type:clish", "/bin/clish", false },
-			{ "infix-shell-type:false", "/bin/false", false },
-		};
-
 		for (size_t i = 0; i < NELEMS(shells); i++) {
 			if (strcmp(shells[i].name, conf))
 				continue;
@@ -942,17 +942,26 @@ static sr_error_t handle_sr_passwd_update(augeas *aug, sr_session_ctx_t *, struc
 	return err;
 }
 
-/* Is user allowed to use a POSIX shell? */
+/* Is non-admin user allowed to use a POSIX shell? */
 static void check_shell(augeas *aug, const char *user)
 {
 	const char *shell;
 
-	if (!aug_get_dynpath(aug, &shell, "/files/etc/passwd/%s/shell", user)) {
-		if (strcmp(shell, "/bin/false") && strcmp(shell, "/bin/clish")) {
-			WARN("Disabling ssh/console login for %s, only CLI shell allowed.", user);
-			aug_set_dynpath(aug, "/bin/false", "etc/passwd/%s/shell", user);
+	if (aug_get_dynpath(aug, &shell, "/files/etc/passwd/%s/shell", user))
+		return;
+
+	for (size_t i = 0; i < NELEMS(shells); i++) {
+		if (!strcmp(shell, shells[i].shell)) {
+			if (shells[i].admin)
+				break;
+
+			/* valid shell for non-admin user */
+			return;
 		}
 	}
+
+	WARN("Disabling shell login for %s, %s shell only allowed for administrators!", user, shell);
+	aug_set_dynpath(aug, "/bin/false", "etc/passwd/%s/shell", user);
 }
 
 static sr_error_t handle_sr_shell_update(augeas *aug, sr_session_ctx_t *sess, struct sr_change *change)
