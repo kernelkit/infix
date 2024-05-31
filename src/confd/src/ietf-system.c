@@ -1272,7 +1272,7 @@ static int change_motd_banner(sr_session_ctx_t *session, uint32_t sub_id, const 
 	if (event != SR_EV_DONE)
 		return SR_ERR_OK;
 
-	legacy = srx_get_str(session, "/ietf-system:system/infix-sys:motd");
+	legacy = srx_get_str(session, "/ietf-system:system/infix-system:motd");
 	if (legacy) {
 		NOTE("Legacy /system/motd exists, skipping %s", xpath);
 		free(legacy);
