@@ -614,6 +614,42 @@ fail:
 	return rc;
 }
 
+/* XXX: Currently Infix only has admin and non-admins as a group */
+static bool is_admin_user(sr_session_ctx_t *session, const char *user)
+{
+	sr_val_t *groups = NULL, *rules = NULL;
+	size_t group_count = 0, rule_count = 0;
+	bool is_admin = false;
+	char xpath[256];
+	int rc;
+
+	/* Fetch groups for each user */
+	snprintf(xpath, sizeof(xpath), NACM_BASE_"/groups/group[user-name='%s']/name", user);
+	rc = sr_get_items(session, xpath, 0, 0, &groups, &group_count);
+	if (rc)
+		return false;	/* safe default */
+
+	for (size_t j = 0; j < group_count; j++) {
+		/* Fetch and check rules for each group */
+		snprintf(xpath, sizeof(xpath), NACM_BASE_"/rule-list[group='%s']/rule"
+			 "[module-name='*'][access-operations='*'][action='permit']",
+			 groups[j].data.string_val);
+		rc = sr_get_items(session, xpath, 0, 0, &rules, &rule_count);
+		if (rc)
+			continue; /* not found, this is OK */
+
+		/* At least one group grants full administrator permissions */
+		if (rule_count > 0)
+			is_admin = true;
+
+		sr_free_values(rules, rule_count);
+	}
+
+	sr_free_values(groups, group_count);
+
+	return is_admin;
+}
+
 static int is_valid_username(const char *user)
 {
 	size_t i;
@@ -1141,9 +1177,9 @@ static int change_auth(sr_session_ctx_t *session, uint32_t sub_id, const char *m
 static int change_nacm(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
 		       const char *_, sr_event_t event, unsigned request_id, void *priv)
 {
-	sr_val_t *users = NULL, *groups = NULL, *rules = NULL;
-	size_t user_count = 0, group_count = 0, rule_count = 0;
 	struct confd *confd = (struct confd *)priv;
+	sr_val_t *users = NULL;
+	size_t user_count = 0;
 	int rc;
 
 	if (event != SR_EV_DONE)
@@ -1160,34 +1196,10 @@ static int change_nacm(sr_session_ctx_t *session, uint32_t sub_id, const char *m
 
 	for (size_t i = 0; i < user_count; i++) {
 		const char *user = users[i].data.string_val;
-		char xpath[256];
-		bool is_admin = false;
+		bool is_admin = is_admin_user(session, user);
 		char *path = NULL;
 		char **match;
 		int num;
-
-		/* Fetch groups for each user */
-		snprintf(xpath, sizeof(xpath), NACM_BASE_"/groups/group[user-name='%s']/name", user);
-		rc = sr_get_items(session, xpath, 0, 0, &groups, &group_count);
-		if (!rc) {
-			for (size_t j = 0; j < group_count; j++) {
-				/* Fetch and check rules for each group */
-				snprintf(xpath, sizeof(xpath), NACM_BASE_"/rule-list[group='%s']/rule"
-					 "[module-name='*'][access-operations='*'][action='permit']",
-					 groups[j].data.string_val);
-				rc = sr_get_items(session, xpath, 0, 0, &rules, &rule_count);
-				if (rc)
-					continue; /* not found, this is OK */
-
-				/* At least one group grants full administrator permissions */
-				if (rule_count > 0)
-					is_admin = true;
-
-				sr_free_values(rules, rule_count);
-			}
-
-			sr_free_values(groups, group_count);
-		}
 
 		/* Check if user is already in group */
 		num = aug_match(confd->aug, "/files/etc/group/wheel/user", &match);
