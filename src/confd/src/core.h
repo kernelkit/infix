@@ -13,7 +13,6 @@
 #include <sys/param.h>
 #include <unistd.h>
 
-#include <augeas.h>
 #include <libite/lite.h>
 #include <libite/queue.h>
 #include <libyang/libyang.h>
@@ -87,7 +86,6 @@ struct confd {
 	sr_subscription_ctx_t  *sub;
 	sr_subscription_ctx_t  *fsub;    /* factory-default sub */
 	json_t                 *root;
-	augeas                 *aug;
 	struct dagger		netdag;
 };
 

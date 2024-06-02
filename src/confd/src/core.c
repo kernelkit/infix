@@ -117,9 +117,6 @@ int sr_plugin_init_cb(sr_session_ctx_t *session, void **priv)
 	rc = sr_session_start(confd.conn, SR_DS_CANDIDATE, &confd.cand);
 	if (rc)
 		goto err;
-	confd.aug = aug_init(NULL, "", 0);
-	if (!confd.aug)
-		goto err;
 
 	confd.root = json_load_file("/run/system.json", 0, NULL);
 	if (!confd.root)

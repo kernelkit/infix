@@ -6,7 +6,6 @@ plugin_LTLIBRARIES      = confd-plugin.la
 confd_plugin_la_LDFLAGS = -module -avoid-version -shared
 
 confd_plugin_la_CFLAGS  =			\
-	$(augeas_CFLAGS)			\
 	$(glib_CFLAGS)				\
 	$(jansson_CFLAGS)			\
 	$(libite_CFLAGS)			\
@@ -15,7 +14,6 @@ confd_plugin_la_CFLAGS  =			\
 	$(CFLAGS)
 
 confd_plugin_la_LIBADD  =			\
-	$(augeas_LIBS)				\
 	$(glib_LIBS)				\
 	$(jansson_LIBS)				\
 	$(libite_LIBS)				\
