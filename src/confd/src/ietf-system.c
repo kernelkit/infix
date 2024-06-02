@@ -5,6 +5,7 @@
 #include <paths.h>
 #include <pwd.h>
 #include <grp.h>
+#include <shadow.h>
 
 #include <sys/utsname.h>
 #include <sys/sysinfo.h>
@@ -23,6 +24,7 @@
 #define XPATH_AUTH_    XPATH_BASE_"/authentication"
 #define CLOCK_PATH_    "/ietf-system:system-state/clock"
 #define PLATFORM_PATH_ "/ietf-system:system-state/platform"
+#define _PATH_PASSWD   "/etc/passwd"
 
 struct sr_change {
 	sr_change_oper_t op;
@@ -287,49 +289,6 @@ static int sys_reload_services(void)
 	return systemf("initctl -nbq touch sysklogd");
 }
 
-static int aug_set_dynpath(augeas *aug, const char *val, const char *fmt, ...)
-{
-	va_list ap;
-	char *path;
-	int res;
-
-	va_start(ap, fmt);
-	res = vasprintf(&path, fmt, ap);
-	va_end(ap);
-	if (res == -1)
-		return res;
-
-	res = aug_set(aug, path, val);
-	if (res != 0)
-		ERROR("Unable to set aug path \"%s\" to \"%s\"", path, val);
-
-	free(path);
-
-	return res;
-}
-
-static int aug_get_dynpath(augeas *aug, const char **val, const char *fmt, ...)
-{
-	va_list ap;
-	char *path;
-	int res;
-
-	va_start(ap, fmt);
-	res = vasprintf(&path, fmt, ap);
-	va_end(ap);
-	if (res == -1)
-		return res;
-
-	res = aug_get(aug, path, val);
-	if (res <= 0)
-		ERROR("Unable to get aug path \"%s\"", path);
-	else
-		res = 0;
-
-	free(path);
-
-	return res;
-}
 
 #define TIMEZONE_CONF "/etc/timezone"
 #define TIMEZONE_PREV TIMEZONE_CONF "-"
@@ -673,9 +632,8 @@ static int is_valid_username(const char *user)
 	return 1;
 }
 
-static char *sys_find_usable_shell(sr_session_ctx_t *sess, char *name)
+static char *sys_find_usable_shell(sr_session_ctx_t *sess, char *name, bool is_admin)
 {
-	bool is_admin = is_admin_user(sess, name);
 	char *shell = NULL, *conf = NULL;
 	char xpath[256];
 	sr_data_t *cfg;
@@ -763,7 +721,7 @@ static int sys_del_user(char *user, bool silent)
  */
 static int sys_call_adduser(sr_session_ctx_t *sess, char *name, uid_t uid, gid_t gid)
 {
-	char *shell = sys_find_usable_shell(sess, name);
+	char *shell = sys_find_usable_shell(sess, name, is_admin_user(sess, name));
 	char *eargs[] = {
 		"adduser", "-d", "-s", shell, "-u", NULL, "-G", NULL, "-H", name, NULL
 	};
@@ -891,6 +849,109 @@ static char *change_get_user(struct sr_change *change)
 	return user;
 }
 
+static int set_shell(const char *user, const char *shell)
+{
+	struct passwd *pw;
+	FILE *fp = NULL;
+	int fd = -1;
+
+	setpwent();
+
+	fp = fopen(_PATH_PASSWD "+", "w");
+	if (!fp) {
+		ERRNO("Failed opening %s+ for %s", _PATH_PASSWD, user);
+		goto fail;
+	}
+	fd = fileno(fp);
+	if (fd == -1 || fchown(fd, 0, 0) || fchmod(fd, 0644))
+		goto fail;
+
+	while ((pw = getpwent())) {
+		struct passwd upw;
+
+		if (!strcmp(pw->pw_name, user)) {
+			if (strcmp(pw->pw_shell, shell))
+				NOTE("Updating login shell for user %s to %s", user, shell);
+
+			upw = *pw;
+			upw.pw_shell = (char *)shell;
+			pw = &upw;
+		}
+
+		if (putpwent(pw, fp))
+			goto fail;
+	}
+
+	/* Ensure all calls are made, if either fails we bail */
+	if (fclose(fp) || rename(_PATH_PASSWD "+", _PATH_PASSWD)) {
+		fp = NULL;
+		goto fail;
+	}
+	endpwent();
+
+	return 0;
+fail:
+	if (fp)
+		fclose(fp);
+	endpwent();
+	ERRNO("Failed setting user %s shell %s", user, shell);
+
+	return -1;
+}
+
+static int set_password(const char *user, const char *hash, bool lock)
+{
+	struct spwd *sp;
+	FILE *fp = NULL;
+	int fd = -1;
+
+	if (lckpwdf())
+		goto exit;
+
+	setspent();
+
+	fp = fopen(_PATH_SHADOW "+", "w");
+	if (!fp) {
+		ERRNO("Failed opening %s+ for %s", _PATH_SHADOW, user);
+		goto fail;
+	}
+	fd = fileno(fp);
+	if (fd == -1 || fchown(fd, 0, 0) || fchmod(fd, 0600))
+		goto fail;
+
+	while ((sp = getspent())) {
+		struct spwd usp;
+
+		if (!strcmp(sp->sp_namp, user)) {
+			usp = *sp;
+			usp.sp_pwdp = lock ? "!" : (char *)hash;
+			sp = &usp;
+		}
+
+		if (putspent(sp, fp))
+			goto fail;
+	}
+
+	/* Ensure all calls are made, if either fails we bail */
+	if (fclose(fp) || rename(_PATH_SHADOW "+", _PATH_SHADOW)) {
+		fp = NULL;
+		goto fail;
+	}
+	endspent();
+	ulckpwdf();
+
+	return 0;
+fail:
+	if (fp)
+		fclose(fp);
+	endspent();
+	ulckpwdf();
+exit:
+	ERRNO("Failed setting password for %s", user);
+
+	return -1;
+}
+
 static sr_error_t handle_sr_passwd_update(augeas *aug, sr_session_ctx_t *, struct sr_change *change)
 {
 	sr_error_t err = SR_ERR_OK;
@@ -923,13 +984,13 @@ static sr_error_t handle_sr_passwd_update(augeas *aug, sr_session_ctx_t *, struc
 			ERROR("Empty passwords are not allowed, disabling password login.");
 			hash = "*";
 		}
-		if (aug_set_dynpath(aug, hash, "etc/shadow/%s/password", user))
+		if (set_password(user, hash, false))
 			err = SR_ERR_SYS;
 		else
 			NOTE("Password updated for user %s", user);
 		break;
 	case SR_OP_DELETED:
-		if (aug_set_dynpath(aug, "!", "etc/shadow/%s/password", user))
+		if (set_password(user, "*", true))
 			err = SR_ERR_SYS;
 		else
 			NOTE("Password deleted for user %s", user);
@@ -940,28 +1001,6 @@ static sr_error_t handle_sr_passwd_update(augeas *aug, sr_session_ctx_t *, struc
 
 	free(user);
 	return err;
-}
-
-/* Is non-admin user allowed to use a POSIX shell? */
-static void check_shell(augeas *aug, const char *user)
-{
-	const char *shell;
-
-	if (aug_get_dynpath(aug, &shell, "/files/etc/passwd/%s/shell", user))
-		return;
-
-	for (size_t i = 0; i < NELEMS(shells); i++) {
-		if (!strcmp(shell, shells[i].shell)) {
-			if (shells[i].admin)
-				break;
-
-			/* valid shell for non-admin user */
-			return;
-		}
-	}
-
-	WARN("Disabling shell login for %s, %s shell only allowed for administrators!", user, shell);
-	aug_set_dynpath(aug, "/bin/false", "etc/passwd/%s/shell", user);
 }
 
 static sr_error_t handle_sr_shell_update(augeas *aug, sr_session_ctx_t *sess, struct sr_change *change)
@@ -977,8 +1016,8 @@ static sr_error_t handle_sr_shell_update(augeas *aug, sr_session_ctx_t *sess, st
 	if (!user)
 		return SR_ERR_OK;
 
-	shell = sys_find_usable_shell(sess, (char *)user);
-	if (aug_set_dynpath(aug, shell, "etc/passwd/%s/shell", user)) {
+	shell = sys_find_usable_shell(sess, (char *)user, is_admin_user(sess, user));
+	if (set_shell(user, shell)) {
 		ERROR("Failed updating shell to %s for user %s", shell, user);
 		err = SR_ERR_SYS;
 	} else {
@@ -1105,11 +1144,11 @@ err_release_data:
 	return err;
 }
 
-static sr_error_t change_auth_check(augeas *aug, sr_session_ctx_t *session)
+static sr_error_t change_auth_check(struct confd *confd, sr_session_ctx_t *session)
 {
 	sr_error_t err;
 
-	err = _sr_change_iter(aug, session, XPATH_AUTH_"/user",
+	err = _sr_change_iter(confd->aug, session, XPATH_AUTH_"/user",
 			      check_sr_user_update);
 	if (err)
 		return err;
@@ -1117,63 +1156,34 @@ static sr_error_t change_auth_check(augeas *aug, sr_session_ctx_t *session)
 	return SR_ERR_OK;
 }
 
-static sr_error_t change_auth_done(augeas *aug, sr_session_ctx_t *session)
+static sr_error_t change_auth_done(struct confd *confd, sr_session_ctx_t *session)
 {
 	sr_error_t err;
 
-	err = _sr_change_iter(aug, session, XPATH_AUTH_"/user",
+	err = _sr_change_iter(confd->aug, session, XPATH_AUTH_"/user",
 			      handle_sr_user_update);
 	if (err)
 		return err;
 
-	/**
-	 * Load any newly created user into aug.
-	 *
-	 * We want aug_load_file() here but it seems broken. The file doesn't appear
-	 * to be reloaded after calling it. It returns no error and it seems to find
-	 * the appropriate lens. Further investigation needed.
-	 */
-	err = aug_load(aug);
-	if (err) {
-		ERROR("Error loading files into aug tree.");
-		return SR_ERR_INTERNAL;
-	}
-
-	err = _sr_change_iter(aug, session, XPATH_AUTH_"/user[*]/password",
+	err = _sr_change_iter(confd->aug, session, XPATH_AUTH_"/user[*]/password",
 			      handle_sr_passwd_update);
 	if (err)
-		return err;
+		goto cleanup;
 
-	err = _sr_change_iter(aug, session, XPATH_AUTH_"/user[*]/shell",
+	err = _sr_change_iter(confd->aug, session, XPATH_AUTH_"/user[*]/shell",
 			      handle_sr_shell_update);
 	if (err)
-		return err;
-
-	err = aug_save(aug);
-	if (err) {
-		char **matches;
-
-		ERROR("Error saving auth changes:");
-		int num = aug_match(aug, "/augeas//error", &matches);
-		for (int i = 0; i < num; i++) {
-			ERROR("   %s", matches[i]);
-			free(matches[i]);
-		}
-		if (num)
-			free(matches);
-
-		return SR_ERR_SYS;
-	}
+		goto cleanup;
 
 	err = generate_auth_keys(session, XPATH_AUTH_"/user//.");
 	if (err) {
 		ERROR("failed saving authorized-key data.");
-		return err;
+		goto cleanup;
 	}
 
 	DEBUG("Changes to authentication saved.");
-
-	return SR_ERR_OK;
+cleanup:
+	return err;
 }
 
 static int change_auth(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
@@ -1182,9 +1192,9 @@ static int change_auth(sr_session_ctx_t *session, uint32_t sub_id, const char *m
 	struct confd *confd = (struct confd *)priv;
 
 	if (event == SR_EV_CHANGE)
-		return change_auth_check(confd->aug, session);
+		return change_auth_check(confd, session);
 	if (event == SR_EV_DONE)
-		return change_auth_done(confd->aug, session);
+		return change_auth_done(confd, session);
 
 	return SR_ERR_OK;
 }
@@ -1212,7 +1222,7 @@ static int change_nacm(sr_session_ctx_t *session, uint32_t sub_id, const char *m
 	for (size_t i = 0; i < user_count; i++) {
 		const char *user = users[i].data.string_val;
 		bool is_admin = is_admin_user(session, user);
-		char *path = NULL;
+		char *shell, *path = NULL;
 		char **match;
 		int num;
 
@@ -1240,7 +1250,6 @@ static int change_nacm(sr_session_ctx_t *session, uint32_t sub_id, const char *m
 			else
 				NOTE("User %s added to UNIX sysadmin group.", user);
 		} else {
-			check_shell(confd->aug, user);
 			if (!path)
 				goto done; /* not member of wheel */
 
@@ -1249,6 +1258,10 @@ static int change_nacm(sr_session_ctx_t *session, uint32_t sub_id, const char *m
 			else
 				NOTE("User %s removed from UNIX sysadmin group.", user);
 		}
+
+		shell = sys_find_usable_shell(session, (char *)user, is_admin);
+		if (set_shell(user, shell))
+			ERROR("Failed adjusting shell for user %s", user);
 	done:
 		if (path)
 			free(path);
