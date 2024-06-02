@@ -4,7 +4,7 @@ Change Log
 All notable changes to the project are documented in this file.
 
 
-[v24.05.0][UNRELEASED]
+[v24.06.0][UNRELEASED]
 ----------------------
 > **Note:** After upgrade a factory reset is needed
 
@@ -29,6 +29,7 @@ All notable changes to the project are documented in this file.
   `ietf-tcp-server`, `ietf-tcp-server`, `ietf-tcp-server`.
   In these there are a lot of breaking changes, most likely
   you will need to redo your configuration from `factory-config`.
+- The Augeas package has been dropped, so `augtool` is no longer available
 
 ### Fixes
 - Add missing LICENSE hash for factory reset tool
@@ -43,6 +44,10 @@ All notable changes to the project are documented in this file.
   secure mode, causing the system to end up in an undefined state
 - Fix #453: fix inconsistent behavior of custom MAC address (interface
   `phys-address` for VETH pairs.  Allows fixed MAC in containers
+- Fix #468: non-admin users can get a POSIX shell as login shell, root
+  cause was buggy Augeas library, replaced with plain C API.
+- Fix #469: non-admin users added to *any* group get administrator
+  privileges (added to UNIX `wheel` group)
 - Fix locking issue with standard counter groups on `mv88e6xxx`
 - Fix MDB/ATU synchronization issue from IGMPv3/MLDv2 reports on
   `mv88e6xxx` systems
@@ -925,7 +930,7 @@ Supported YANG models in addition to those used by sysrepo and netopeer:
 
 [buildroot]:  https://buildroot.org/
 [UNRELEASED]: https://github.com/kernelkit/infix/compare/v24.04.0...HEAD
-[v24.05.0]:   https://github.com/kernelkit/infix/compare/v24.04.0...v24.05.0
+[v24.06.0]:   https://github.com/kernelkit/infix/compare/v24.04.0...v24.06.0
 [v24.04.2]:   https://github.com/kernelkit/infix/compare/v24.04.1...v24.04.2
 [v24.04.1]:   https://github.com/kernelkit/infix/compare/v24.04.0...v24.04.1
 [v24.04.0]:   https://github.com/kernelkit/infix/compare/v24.02.0...v24.04.0
