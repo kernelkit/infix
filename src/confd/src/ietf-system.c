@@ -123,8 +123,8 @@ static char *fmtime(time_t t, char *buf, size_t len)
         return buf;
 }
 
-static sr_error_t _sr_change_iter(augeas *aug, sr_session_ctx_t *session, char *xpath,
-				  sr_error_t cb(augeas *, sr_session_ctx_t *, struct sr_change *))
+static sr_error_t _sr_change_iter(sr_session_ctx_t *session, char *xpath,
+				  sr_error_t cb(sr_session_ctx_t *, struct sr_change *))
 {
 	struct sr_change change = {};
 	sr_change_iter_t *iter;
@@ -135,7 +135,7 @@ static sr_error_t _sr_change_iter(augeas *aug, sr_session_ctx_t *session, char *
 		return err;
 
 	while (sr_get_change_next(session, iter, &change.op, &change.old, &change.new) == SR_ERR_OK) {
-		err = cb(aug, session, &change);
+		err = cb(session, &change);
 		sr_free_val(change.old);
 		sr_free_val(change.new);
 		if (err) {
@@ -755,8 +755,9 @@ static int sys_call_adduser(sr_session_ctx_t *sess, char *name, uid_t uid, gid_t
 
 	/**
 	 * The Busybox implementation of 'adduser -d' sets the password
-	 * to "*", which prevents new users from logging in until Augeas
-	 * has set a password or SSH public keys have been installed.
+	 * to "*", which prevents new users from logging in until we
+	 * conclude the session by setting their shadow password and/or
+	 * any SSH public keys have been installed.
 	 */
 	err = systemv_silent(args);
 	free(shell);
@@ -952,7 +953,7 @@ exit:
 	return -1;
 }
 
-static sr_error_t handle_sr_passwd_update(augeas *aug, sr_session_ctx_t *, struct sr_change *change)
+static sr_error_t handle_sr_passwd_update(sr_session_ctx_t *, struct sr_change *change)
 {
 	sr_error_t err = SR_ERR_OK;
 	const char *hash;
@@ -1003,7 +1004,7 @@ static sr_error_t handle_sr_passwd_update(augeas *aug, sr_session_ctx_t *, struc
 	return err;
 }
 
-static sr_error_t handle_sr_shell_update(augeas *aug, sr_session_ctx_t *sess, struct sr_change *change)
+static sr_error_t handle_sr_shell_update(sr_session_ctx_t *sess, struct sr_change *change)
 {
 	char *shell = NULL;
 	char *user;
@@ -1030,7 +1031,7 @@ static sr_error_t handle_sr_shell_update(augeas *aug, sr_session_ctx_t *sess, st
 	return err;
 }
 
-static sr_error_t check_sr_user_update(augeas *aug, sr_session_ctx_t *, struct sr_change *change)
+static sr_error_t check_sr_user_update(sr_session_ctx_t *, struct sr_change *change)
 {
 	sr_xpath_ctx_t state;
 	sr_val_t *val;
@@ -1049,7 +1050,7 @@ static sr_error_t check_sr_user_update(augeas *aug, sr_session_ctx_t *, struct s
 	return SR_ERR_OK;
 }
 
-static sr_error_t handle_sr_user_update(augeas *aug, sr_session_ctx_t *sess, struct sr_change *change)
+static sr_error_t handle_sr_user_update(sr_session_ctx_t *sess, struct sr_change *change)
 {
 	sr_xpath_ctx_t state;
 	char *name;
@@ -1148,8 +1149,7 @@ static sr_error_t change_auth_check(struct confd *confd, sr_session_ctx_t *sessi
 {
 	sr_error_t err;
 
-	err = _sr_change_iter(confd->aug, session, XPATH_AUTH_"/user",
-			      check_sr_user_update);
+	err = _sr_change_iter(session, XPATH_AUTH_"/user", check_sr_user_update);
 	if (err)
 		return err;
 
@@ -1160,18 +1160,15 @@ static sr_error_t change_auth_done(struct confd *confd, sr_session_ctx_t *sessio
 {
 	sr_error_t err;
 
-	err = _sr_change_iter(confd->aug, session, XPATH_AUTH_"/user",
-			      handle_sr_user_update);
+	err = _sr_change_iter(session, XPATH_AUTH_"/user", handle_sr_user_update);
 	if (err)
 		return err;
 
-	err = _sr_change_iter(confd->aug, session, XPATH_AUTH_"/user[*]/password",
-			      handle_sr_passwd_update);
+	err = _sr_change_iter(session, XPATH_AUTH_"/user[*]/password", handle_sr_passwd_update);
 	if (err)
 		goto cleanup;
 
-	err = _sr_change_iter(confd->aug, session, XPATH_AUTH_"/user[*]/shell",
-			      handle_sr_shell_update);
+	err = _sr_change_iter(session, XPATH_AUTH_"/user[*]/shell", handle_sr_shell_update);
 	if (err)
 		goto cleanup;
 
