@@ -1202,7 +1202,6 @@ static int change_auth(sr_session_ctx_t *session, uint32_t sub_id, const char *m
 static int change_nacm(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
 		       const char *_, sr_event_t event, unsigned request_id, void *priv)
 {
-	struct confd *confd = (struct confd *)priv;
 	sr_val_t *users = NULL;
 	size_t user_count = 0;
 	int rc;
@@ -1217,43 +1216,29 @@ static int change_nacm(sr_session_ctx_t *session, uint32_t sub_id, const char *m
 		goto cleanup;
 	}
 
-	aug_load(confd->aug);
-
 	for (size_t i = 0; i < user_count; i++) {
 		const char *user = users[i].data.string_val;
 		bool is_admin = is_admin_user(session, user);
-		char *shell, *path = NULL;
-		char **match;
-		int num;
+		bool is_already = false;
+		char *shell;
 
 		/* Check if user is already in group */
-		num = aug_match(confd->aug, "/files/etc/group/wheel/user", &match);
-		if (num) {
-			for (int j = 0; j < num; j++) {
-				const char *val = NULL;
-
-				aug_get(confd->aug, match[j], &val);
-				if (val && !strcmp(val, user))
-					path = match[j];
-				else
-					free(match[j]);
-			}
-			free(match);
-		}
+		if (!systemf("grep wheel /etc/group |grep %s", user))
+			is_already = true;
 
 		if (is_admin) {
-			if (path)
-				goto done; /* already admin */
+			if (is_already)
+				continue; /* already admin */
 
-			if (aug_set(confd->aug, "/files/etc/group/wheel/user[last() + 1]", user))
+			if (systemf("adduser %s wheel", user))
 				ERROR("Failed giving user %s UNIX sysadmin permissions.", user);
 			else
 				NOTE("User %s added to UNIX sysadmin group.", user);
 		} else {
-			if (!path)
-				goto done; /* not member of wheel */
+			if (!is_already)
+				continue; /* not member of wheel */
 
-			if (aug_rm(confd->aug, path) < 1)
+			if (systemf("delgroup %s wheel", user))
 				ERROR("Failed removing user %s from UNIX sysadmin group.", user);
 			else
 				NOTE("User %s removed from UNIX sysadmin group.", user);
@@ -1262,12 +1247,8 @@ static int change_nacm(sr_session_ctx_t *session, uint32_t sub_id, const char *m
 		shell = sys_find_usable_shell(session, (char *)user, is_admin);
 		if (set_shell(user, shell))
 			ERROR("Failed adjusting shell for user %s", user);
-	done:
-		if (path)
-			free(path);
 	}
 
-	aug_save(confd->aug);
 cleanup:
 	if (users)
 		sr_free_values(users, user_count);
