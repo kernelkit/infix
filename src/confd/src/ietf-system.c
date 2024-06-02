@@ -24,7 +24,10 @@
 #define XPATH_AUTH_    XPATH_BASE_"/authentication"
 #define CLOCK_PATH_    "/ietf-system:system-state/clock"
 #define PLATFORM_PATH_ "/ietf-system:system-state/platform"
+
 #define _PATH_PASSWD   "/etc/passwd"
+#define _PATH_HOSTNAME "/etc/hostname"
+#define _PATH_HOSTS    "/etc/hosts"
 
 struct sr_change {
 	sr_change_oper_t op;
@@ -1375,11 +1378,10 @@ static int change_editor(sr_session_ctx_t *session, uint32_t sub_id, const char 
 static int change_hostname(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
 	const char *xpath, sr_event_t event, unsigned request_id, void *priv)
 {
-	struct confd *confd = (struct confd *)priv;
-	const char *host, *tmp = NULL;
-	char **hosts, *current;
-	int err, i, nhosts;
-	char *nm;
+	const char *hostip = "127.0.1.1";
+	char *nm, buf[256];
+	FILE *nfp, *fp;
+	int err, fd;
 
 	if (event != SR_EV_DONE)
 		return SR_ERR_OK;
@@ -1395,40 +1397,50 @@ static int change_hostname(sr_session_ctx_t *session, uint32_t sub_id, const cha
 		}
 	}
 
-	if (aug_get(confd->aug, "etc/hostname/hostname", &tmp) <= 0) {
-		err = SR_ERR_INTERNAL;
-		goto err;
-	}
-
-	current = strdup(tmp);
-	if (!current) {
-		err = SR_ERR_NO_MEMORY;
-		goto err;
-	}
-
 	err = sethostname(nm, strlen(nm));
-	err = err ? : aug_set(confd->aug, "etc/hostname/hostname", nm);
-
-	nhosts = aug_match(confd->aug, "etc/hosts/*/canonical", &hosts);
-	for (i = 0; i < nhosts; i++) {
-		if (aug_get(confd->aug, hosts[i], &host) <= 0)
-			continue;
-
-		if (!strcmp(host, current))
-			err = err ? : aug_set(confd->aug, hosts[i], nm);
-
-		free(hosts[i]);
-	}
-
-	if (nhosts)
-		free(hosts);
-	free(current);
-
 	if (err) {
 		ERROR("failed setting hostname");
 		err = SR_ERR_SYS;
 		goto err;
 	}
+
+	fp = fopen(_PATH_HOSTNAME, "w");
+	if (!fp) {
+		err = SR_ERR_INTERNAL;
+		goto err;
+	}
+
+	fprintf(fp, "%s\n", nm);
+	fclose(fp);
+
+	nfp = fopen(_PATH_HOSTS "+", "w");
+	if (!nfp) {
+		err = SR_ERR_INTERNAL;
+		goto err;
+	}
+	fd = fileno(nfp);
+	if (fd == -1 || fchown(fd, 0, 0) || fchmod(fd, 0644)) {
+		fclose(nfp);
+		goto err;
+	}
+
+	fp = fopen(_PATH_HOSTS, "r");
+	if (!fp) {
+		err = SR_ERR_INTERNAL;
+		fclose(nfp);
+		goto err;
+	}
+
+	while (fgets(buf, sizeof(buf), fp)) {
+		if (!strncmp(buf, hostip, strlen(hostip)))
+			snprintf(buf, sizeof(buf), "%s\t%s\n", hostip, nm);
+		fputs(buf, nfp);
+	}
+
+	fclose(fp);
+	fclose(nfp);
+	if (rename(_PATH_HOSTS "+", _PATH_HOSTS))
+		ERRNO("Failed activating changes to "_PATH_HOSTS);
 
 	/* skip in bootstrap, lldpd and avahi have not started yet */
 	if (systemf("runlevel >/dev/null 2>&1"))
@@ -1447,7 +1459,6 @@ err:
 		return err;
 	}
 
-	err = err ? : aug_save(confd->aug);
 	if (sys_reload_services())
 		return SR_ERR_SYS;
 
@@ -1459,14 +1470,6 @@ int ietf_system_init(struct confd *confd)
 	int rc = 0;
 
 	os_init();
-
-	/* TODO: Every file and lens seems to be already loaded at aug_init() */
-	if (aug_load_file(confd->aug, "/etc/hostname") ||
-	    aug_load_file(confd->aug, "/etc/hosts")) {
-		ERROR("ietf-system: Augeas initialization failed");
-		rc = SR_ERR_INTERNAL;
-		goto fail;
-	}
 
 	REGISTER_CHANGE(confd->session, "ietf-system", XPATH_AUTH_, 0, change_auth, confd, &confd->sub);
 	REGISTER_MONITOR(confd->session, "ietf-netconf-acm", "/ietf-netconf-acm:nacm//.",
