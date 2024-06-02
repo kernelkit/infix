@@ -11,7 +11,7 @@ CONFD_SITE = $(BR2_EXTERNAL_INFIX_PATH)/src/confd
 CONFD_LICENSE = BSD-3-Clause
 CONFD_LICENSE_FILES = LICENSE
 CONFD_REDISTRIBUTE = NO
-CONFD_DEPENDENCIES = host-sysrepo sysrepo netopeer2 augeas jansson libite sysrepo libsrx libglib2
+CONFD_DEPENDENCIES = host-sysrepo sysrepo netopeer2 jansson libite sysrepo libsrx libglib2
 CONFD_AUTORECONF = YES
 
 CONFD_SYSREPO_SHM_PREFIX = sr_buildroot$(subst /,_,$(CONFIG_DIR))_confd

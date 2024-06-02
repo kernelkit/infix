@@ -119,7 +119,7 @@ case "$ACTION" in
 	if [ -n "$hostname" ]; then
 	    log "setting new hostname: $hostname"
 	    hostname "$hostname"
-	    augtool -s "set /files/etc/hosts/*[ipaddr='127.0.1.1']/canonical $hostname"
+	    sed -i -E "s/^(127\.0\.1\.1\s+).*/\1$hostname/" /etc/hosts
 	fi
 
 	# drop info from this interface
