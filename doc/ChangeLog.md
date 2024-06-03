@@ -48,6 +48,7 @@ All notable changes to the project are documented in this file.
   cause was buggy Augeas library, replaced with plain C API.
 - Fix #469: non-admin users added to *any* group get administrator
   privileges (added to UNIX `wheel` group)
+- Fix #473: bridge interface with IPv6 SLAAC never get global prefix
 - Fix locking issue with standard counter groups on `mv88e6xxx`
 - Fix MDB/ATU synchronization issue from IGMPv3/MLDv2 reports on
   `mv88e6xxx` systems
