@@ -519,7 +519,8 @@ static int netdag_gen_ipv6_autoconf(struct dagger *net, struct lyd_node *cif,
 		valid_lft     = lydx_get_cattr(node, "temporary-valid-lifetime");
 	}
 
-	fp = dagger_fopen_next(net, "init", ifname, 45, "init.sysctl");
+	/* 51: must run after interfaces have been created (think: bridge, veth) */
+	fp = dagger_fopen_next(net, "init", ifname, 51, "init.sysctl");
 	if (fp) {
 		/* Autoconfigure addresses using Prefix Information in Router Advertisements */
 		fprintf(fp, "net.ipv6.conf.%s.autoconf = %d\n", ifname, global);
