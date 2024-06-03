@@ -784,6 +784,38 @@ models for details.
 ~$ 
 ```
 
+## Examples using RESTCONF
+
+### Factory Reset
+
+```
+~$ curl -kX POST -H "Content-Type: application/yang-data+json" https://example.local/restconf/operations/ietf-factory-default:factory-reset -u admin:admin
+curl: (56) OpenSSL SSL_read: error:0A000126:SSL routines::unexpected eof while reading, errno 0
+```
+
+### System Reboot
+
+```
+~$ curl -kX POST -H "Content-Type: application/yang-data+json" https://example.local/restconf/operations/ietf-system:system-restart -u admin:admin
+```
+
+### Set Date and Time
+
+Here's an example of an RPC that takes input/argument:
+
+```
+~$ curl -kX POST -H "Content-Type: application/yang-data+json" https://example.local/restconf/operations/ietf-system:set-current-datetime -u admin:admin -d '{"ietf-system:input": {"current-datetime": "2024-04-17T13:48:02-01:00"}}'
+```
+
+You can verify that the changes took by a remote SSH command:
+
+```
+~$ ssh admin@example.local 'date'
+Wed Apr 17 14:48:12 UTC 2024
+~$
+```
+
+
 ## Miscellaneous
 
 ### <a id="port-test-intro"></a> Port Configuration Example for Production Tests 
