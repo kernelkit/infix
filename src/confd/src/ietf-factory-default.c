@@ -6,8 +6,14 @@ static int factory_reset(sr_session_ctx_t *session, uint32_t sub_id, const char 
 	       const sr_val_t *input, const size_t input_cnt, sr_event_t event,
 	       unsigned request_id, sr_val_t **output, size_t *output_cnt, void *priv)
 {
+	char *args[] = { "factory", "-y", NULL };
+
 	DEBUG("%s", xpath);
-	return systemf("factory -y");
+
+	if (runbg(args, 500) == -1)
+		return SR_ERR_INTERNAL;
+
+	return 0;
 }
 
 int ietf_factory_default_init(struct confd *confd)
