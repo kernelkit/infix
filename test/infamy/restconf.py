@@ -1,6 +1,8 @@
 import requests
 import json
 import warnings
+import os
+import sys
 
 from requests.auth import HTTPBasicAuth
 from urllib.parse import quote
@@ -22,25 +24,69 @@ class Device(object):
     def __init__(self,
                  location: Location,
                  mapping: dict,
+                 yangdir: None | str = None,
                  factory_default = True):
         self.location = location
         self.url = f"https://[{location.host}]:{location.port}/restconf"
+        self.yang_url = f"https://[{location.host}]:{location.port}/yang/"
         self.headers = {
             'Content-Type': 'application/yang-data+json',
             'Accept': 'application/yang-data+json'
         }
         self.auth = HTTPBasicAuth(location.username, location.password)
+        self.modules = {}
+
         if factory_default:
             self.factory_default()
+
+    def get_schemas_list(self):
+        data=self.get_datastore("operational", "/ietf-yang-library:modules-state")
+        self.modules = { m["name"] : m for m in data["ietf-yang-library:modules-state"]["module"] }
+        return data["ietf-yang-library:modules-state"]["module"]
+
+    def get_schema(self, schema_name, yangdir):
+        schema_url=f"{self.yang_url}/{schema_name}"
+        data=self.do_restconf(self.yang_url,schema_name)
+        # print(type(data))
+        sys.stdout.write(f"Downloading YANG model {schema_name} ...\r\033[K")
+        data=data.decode('utf-8')
+        with open(f"{yangdir}/{schema_name}", 'w') as json_file:
+            json_file.write(data)
+
+    def schema_exist(self, schema_name, yangdir):
+        schema_path=f"{yangdir}/{schema_name}"
+        return os.path.exists("{schema_path}")
+
     def get_mgmt_ip(self):
         return self.location.host
 
     def get_mgmt_iface(self):
         return self.location.interface
 
+
+    def address(self):
+        """Return managment IP address used for NETCONF"""
+        return self.location.host
+
     def reachable(self):
         neigh = ll6ping(self.location.interface, flags=["-w1", "-c1", "-L", "-n"])
         return bool(neigh)
+
+    def do_restconf(self, url, path):
+        path = quote(path, safe="/:")
+        url = f"{url}/{path}"
+        try:
+            response = requests.get(url, headers=self.headers, auth=self.auth, verify=False)
+            response.raise_for_status()  # Raise an exception for HTTP errors
+            return response.content
+        except requests.exceptions.HTTPError as errh:
+            print("HTTP Error:", errh)
+        except requests.exceptions.ConnectionError as errc:
+            print("Error Connecting:", errc)
+        except requests.exceptions.Timeout as errt:
+            print("Timeout Error:", errt)
+        except Exception as err:
+            print("Unknown error", err)
 
     def get_datastore(self, datastore, xpath="", as_xml=False):
         path = f"/ds/ietf-datastores:{datastore}/{xpath}"
