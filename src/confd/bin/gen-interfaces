@@ -184,7 +184,10 @@ if [ -n "$bridge" ]; then
             }
         },
         "ietf-ip:ipv6": {
-            "enabled": true
+            "enabled": true,
+            "autoconf": {
+                "create-global-addresses": true
+            }
         },
         "infix-interfaces:bridge": {
           "multicast": {
