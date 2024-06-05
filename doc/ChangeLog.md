@@ -30,6 +30,11 @@ All notable changes to the project are documented in this file.
   In these there are a lot of breaking changes, most likely
   you will need to redo your configuration from `factory-config`.
 - The Augeas package has been dropped, so `augtool` is no longer available
+- VLAN interfaces can now map the incoming PCP value to the
+  kernel-internal priority on ingress, and perform the reverse mapping
+  on egress.
+- `mv88e6xxx` ports can now use Linux's priority information to select
+  the appropriate egress queue, via the `mqprio` queuing discipline.
 
 ### Fixes
 - Add missing LICENSE hash for factory reset tool
