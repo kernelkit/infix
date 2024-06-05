@@ -1,8 +1,10 @@
-From ff0e3f4197fabaf3de5e013b065a6d9765dfdb07 Mon Sep 17 00:00:00 2001
+From 86674fd6a63f08cb4f3649fa5cb34605979a1d27 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Mattias=20Walstr=C3=B6m?= <lazzer@gmail.com>
 Date: Wed, 8 May 2024 17:00:50 +0200
-Subject: [PATCH 3/4] Allow to copy from factory default
+Subject: [PATCH 4/5] Allow to copy from factory default
+Organization: Addiva Elektronik
 
+Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
 ---
  src/sysrepo.c | 2 +-
  1 file changed, 1 insertion(+), 1 deletion(-)
