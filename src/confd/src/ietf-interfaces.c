@@ -1700,7 +1700,11 @@ static int ifchange(sr_session_ctx_t *session, uint32_t sub_id, const char *modu
 	case SR_EV_ABORT:
 		return dagger_abandon(&confd->netdag);
 	case SR_EV_DONE:
-		return dagger_evolve_or_abandon(&confd->netdag);
+		if (!dagger_evolve_or_abandon(&confd->netdag))
+			return SR_ERR_OK;
+
+		ERROR("Failed to apply interface configuration");
+		return SR_ERR_INTERNAL;
 	default:
 		return SR_ERR_OK;
 	}
