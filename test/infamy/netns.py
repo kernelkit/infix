@@ -2,7 +2,9 @@ import ctypes
 import multiprocessing
 import os
 import random
+import signal
 import subprocess
+import tempfile
 import time
 
 from . import env
@@ -204,3 +206,69 @@ class IsolatedMacVlan:
 
     def must_not_receive(self, *args, **kwargs):
         self.must_receive(*args, **kwargs, must=False)
+
+    def pcap(self, expr, ifname=None):
+        ifname = ifname if ifname else self.ifname
+        return Pcap(self, ifname, expr)
+
+class Pcap:
+    def __init__(self, netns, ifname, expr):
+        self.netns, self.ifname, self.expr = netns, ifname, expr
+        self.pcap = tempfile.NamedTemporaryFile(suffix=".pcap", delete=False)
+        self.proc = None
+
+    def __del__(self):
+        self.pcap.close()
+        os.unlink(self.pcap.name)
+
+    def __enter__(self):
+        self.start()
+        return self
+
+    def __exit__(self, _, __, ___):
+        self.stop()
+
+    def start(self):
+        assert self.proc == None, "Can't start an already running Pcap"
+
+        argv = f"tshark -ln -i {self.ifname} -w {self.pcap.name} {self.expr}".split()
+        self.proc = self.netns.popen(argv,
+                                     stdin=subprocess.DEVNULL,
+                                     stdout=subprocess.DEVNULL,
+                                     stderr=subprocess.PIPE,
+                                     text=True)
+
+        while " -- Capture started." not in self.proc.stderr.readline():
+            pass
+
+        print("Capture running")
+
+    def stop(self, sleep=3):
+        assert self.proc, "Can't stop an already stopped Pcap"
+
+        if sleep:
+            # In the common case, stop() will be called right after
+            # the final packet of whatever we're testing has just been
+            # sent. Therefore, allow for some time to pass before
+            # terminating the capture.
+            time.sleep(sleep)
+
+        self.proc.send_signal(signal.SIGUSR2)
+        self.proc.terminate()
+        try:
+            _, stderr = self.proc.communicate(5)
+            print(stderr)
+            return
+        except subprocess.TimeoutExpired:
+            try:
+                self.proc.kill()
+            except OSError:
+                pass
+
+        self.proc.wait()
+
+    def tcpdump(self, args=""):
+        tcpdump = subprocess.run((f"tcpdump -r {self.pcap.name} -n " + args).split(),
+                                 stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                                 text=True, check=True)
+        return tcpdump.stdout
