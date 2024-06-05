@@ -165,12 +165,15 @@ class IsolatedMacVlan:
             result.append(l)
         return result
 
-    def ping(self, daddr, timeout=None):
+    def ping(self, daddr, id=None, timeout=None):
         timeout = timeout if timeout else self.ping_timeout
+        id = f"-e {id}" if id else ""
+
+        ping = f"ping -c1 -w1 {id} {daddr}"
 
         return self.run(["timeout", str(timeout), "/bin/sh"], text=True, check=True,
                         stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                        input=f"while :; do ping -c1 -w1 {daddr} && break; done")
+                        input=f"while :; do {ping} && break; done")
 
     def must_reach(self, *args, **kwargs):
         self.ping(*args, **kwargs)
