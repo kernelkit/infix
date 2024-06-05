@@ -1,7 +1,7 @@
 From 92936f9c6034b2e8cd12e9d346fe661a9e40fe36 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Thu, 16 May 2024 14:51:54 +0200
-Subject: [PATCH 30/30] net: bridge: Differentiate MDB additions from
+Subject: [PATCH 30/33] net: bridge: Differentiate MDB additions from
  modifications
 Organization: Addiva Elektronik
 
@@ -21,6 +21,8 @@ generated.
 
 Therefore, discriminate new groups from changes to existing groups by
 introducing a RTM_SETMDB events to be used in the latter scenario.
+
+Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
 ---
  include/uapi/linux/rtnetlink.h | 2 ++
  net/bridge/br_mdb.c            | 4 ++--
