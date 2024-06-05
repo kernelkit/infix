@@ -188,11 +188,12 @@
         <PARAM name="pwsalt" ptype="/STRING" help="Must not use prefix like $1$"/>
       </COMMAND>
       <COMMAND name="type" help="Optional hash algorithm type.">
-        <PARAM name="pwhash" ptype="/STRING" help="Hash algorithm.">
+        <PARAM name="pwhash" ptype="/STRING" help="Hash crypt algorithm.">
           <COMPL>
-            <ACTION sym="printl">md5</ACTION>
-            <ACTION sym="printl">sha256</ACTION>
-            <ACTION sym="printl">sha512</ACTION>
+            <ACTION sym="printl">md5crypt</ACTION>
+            <ACTION sym="printl">sha256crypt</ACTION>
+            <ACTION sym="printl">sha512crypt</ACTION>
+            <ACTION sym="printl">yescrypt</ACTION>
           </COMPL>
         </PARAM>
       </COMMAND>

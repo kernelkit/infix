@@ -86,17 +86,18 @@ module infix-system {
       + '|$1$[a-zA-Z0-9./]{1,8}$[a-zA-Z0-9./]{22}'
       + '|$5$(rounds=\d+$)?[a-zA-Z0-9./]{1,16}$[a-zA-Z0-9./]{43}'
       + '|$6$(rounds=\d+$)?[a-zA-Z0-9./]{1,16}$[a-zA-Z0-9./]{86}'
+      + '|$y$[a-zA-Z0-9./]+$[a-zA-Z0-9./]{1,86}$[a-zA-Z0-9./]{43}'
       + '|$factory$.*';
     }
     description
         "The crypt-hash type is used to store passwords using a hash
          function. This type extends the existing crypt-hash type to
-         support the reserved string $factory$, which is used for
-         device-specific factory default hash.  It is up to the
-         underlying system to define this further, but one example
-         is to use Vital Product Data (VPD) information, e.g., an
-         onboard EEPROM where a device hash is stored for the initial
-         'admin' user.
+         support yescrypt as well as the reserved string $factory$,
+         which is used for device-specific factory default hash.  It
+         is up to the underlying system to define this further, but
+         one example is to use Vital Product Data (VPD) information,
+         e.g., an onboard EEPROM where a device hash is stored for
+         the initial 'admin' user.
 
          A value of this type matches one of the forms:
 
@@ -127,6 +128,7 @@ module infix-system {
             1 | MD5           | crypt-hash-md5
             5 | SHA-256       | crypt-hash-sha-256
             6 | SHA-512       | crypt-hash-sha-512
+            y | yescrypt      | crypt-hash-yescrypt
 
          The server indicates support for the different hash functions
          by advertising the corresponding feature.";
