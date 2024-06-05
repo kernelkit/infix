@@ -1,7 +1,7 @@
 From 98f58217785e7eb787cabe017078004e4e6568b1 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Thu, 14 Dec 2023 14:50:26 +0100
-Subject: [PATCH 05/30] net: dsa: mv88e6xxx: Add "eth-mac" counter group
+Subject: [PATCH 05/33] net: dsa: mv88e6xxx: Add "eth-mac" counter group
  support
 Organization: Addiva Elektronik
 

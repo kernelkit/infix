@@ -1,13 +1,15 @@
 From 23873d858362a28b2d15194b0a9732e50ceca779 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Thu, 16 Nov 2023 21:59:35 +0100
-Subject: [PATCH 10/30] net: dsa: mv88e6xxx: Add LED support for 6393X
+Subject: [PATCH 10/33] net: dsa: mv88e6xxx: Add LED support for 6393X
 Organization: Addiva Elektronik
 
 Trigger support:
 - "none"
 - "timer"
 - "netdev"
+
+Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
 ---
  drivers/net/dsa/mv88e6xxx/chip.c |   1 +
  drivers/net/dsa/mv88e6xxx/leds.c | 226 +++++++++++++++++++++++++++++++

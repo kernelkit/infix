@@ -1,7 +1,7 @@
 From d77e67161d09857b45df1f76f3c28b9ea74a08f4 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Mon, 4 Mar 2024 16:47:28 +0100
-Subject: [PATCH 18/30] net: bridge: avoid classifying unknown multicast as
+Subject: [PATCH 18/33] net: bridge: avoid classifying unknown multicast as
  mrouters_only
 Organization: Addiva Elektronik
 
@@ -16,6 +16,7 @@ Because a multicast router should always receive both known and unknown
 multicast.
 
 Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
 ---
  include/uapi/linux/if_bridge.h |  1 +
  net/bridge/br.c                |  5 +++++

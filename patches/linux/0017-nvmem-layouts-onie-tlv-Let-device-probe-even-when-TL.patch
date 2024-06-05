@@ -1,7 +1,7 @@
 From 48808e01bb98aeb44bb3315ebeebb8e392c61b9f Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Fri, 24 Nov 2023 23:29:55 +0100
-Subject: [PATCH 17/30] nvmem: layouts: onie-tlv: Let device probe even when
+Subject: [PATCH 17/33] nvmem: layouts: onie-tlv: Let device probe even when
  TLV is invalid
 Organization: Addiva Elektronik
 
@@ -13,6 +13,8 @@ be successfully probed.
 
 Therefore, settle for reporting data corruption issues in the log, and
 simply refrain from registering any cells in those cases.
+
+Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
 ---
  drivers/nvmem/layouts/onie-tlv.c | 6 +++---
  1 file changed, 3 insertions(+), 3 deletions(-)
