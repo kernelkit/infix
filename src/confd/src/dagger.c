@@ -88,27 +88,46 @@ int dagger_add_node(struct dagger *d, const char *node)
 
 int dagger_abandon(struct dagger *d)
 {
+	int exitcode;
+
 	fprintf(d->next_fp, "%d\n", d->next);
 	fclose(d->next_fp);
-	return systemf("dagger -C %s abandon", d->path);
+
+	exitcode = systemf("dagger -C %s abandon", d->path);
+	DEBUG("dagger(%d->%d): abandon: exitcode=%d\n",
+	      d->current, d->next, exitcode);
+
+	return exitcode;
 }
 
 int dagger_evolve(struct dagger *d)
 {
+	int exitcode;
+
 	fprintf(d->next_fp, "%d\n", d->next);
 	fclose(d->next_fp);
-	return systemf("dagger -C %s evolve", d->path);
+
+	exitcode = systemf("dagger -C %s evolve", d->path);
+	DEBUG("dagger(%d->%d): evolve: exitcode=%d\n",
+	      d->current, d->next, exitcode);
+
+	return exitcode;
 }
 
 int dagger_evolve_or_abandon(struct dagger *d)
 {
-	int err;
+	int exitcode, err;
 
-	err = dagger_evolve(d);
-	if (!err)
+	exitcode = dagger_evolve(d);
+	if (!exitcode)
 		return 0;
 
-	systemf("dagger -C %s abandon", d->path);
+	err = exitcode;
+
+	exitcode = systemf("dagger -C %s abandon", d->path);
+	DEBUG("dagger(%d->%d): Evolve failed, abandon: exitcode=%d\n",
+	      d->current, d->next, exitcode);
+
 	return err;
 }
 
