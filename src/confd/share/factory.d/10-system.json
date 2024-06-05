@@ -1,5 +1,14 @@
 {
     "ietf-system:system": {
-	"hostname": "infix"
+	"hostname": "infix",
+	"authentication": {
+	    "user": [
+		{
+		    "name": "admin",
+		    "password": "$factory$",
+		    "infix-system:shell": "infix-shell-type:bash"
+		}
+	    ]
+	}
     }
 }
