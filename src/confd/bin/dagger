@@ -2,6 +2,11 @@
 
 set -e
 
+# We can't use bash's time, as it prints the timing information of the
+# entire pipeline, meaning we can't redirect it to the log file.
+TIME=$(which time)
+TIMEFMT="\"time\": { \"real\": %e, \"user\": %U, \"sys\": %S },"
+
 inform()
 {
     local level="$1"
@@ -35,6 +40,7 @@ action_exec()
     local actdir="$2/action/$1"
     local orderfile="$actdir/order"
     local code=0
+    local meta=
 
     generate_order "$2"
 
@@ -50,9 +56,29 @@ action_exec()
 
     for node in $order; do
 	for work in $(find "$actdir/$node" -type f -executable 2>/dev/null | sort); do
-	    $work               | ts >>"$work.log" 2>&1 || code=$?
-	    echo "[exit:$code]" | ts >>"$work.log"
+	    meta=$work-meta.json
 
+	    cat >$meta <<EOF
+{
+	"generation": $(basename $2),
+	"action": "$1",
+	"node": "$node",
+	"work": "$(basename $work)",
+EOF
+	    $TIME -f "$TIMEFMT" -o $meta.time $work >>"$work.log" 2>&1 || code=$?
+
+	    echo -ne "\t" >>$meta
+	    # busybox's time(1) will happily write "Command exited
+	    # with non-zero status" and similar messages to the
+	    # output, even when -f is used. Work around that by only
+	    # grabbing the last line, which holds the requested
+	    # output.
+	    tail -n1 $meta.time >>$meta
+
+	    cat >>$meta <<EOF
+	"exitcode": $code
+}
+EOF
 	    [ $code -eq 0 ] || abort "$work failed with exitcode $code"
 	done
     done
