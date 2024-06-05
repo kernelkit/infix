@@ -6,6 +6,7 @@
 #include <pwd.h>
 #include <grp.h>
 #include <shadow.h>
+#include <jansson.h>
 
 #include <sys/utsname.h>
 #include <sys/sysinfo.h>
@@ -126,8 +127,8 @@ static char *fmtime(time_t t, char *buf, size_t len)
         return buf;
 }
 
-static sr_error_t _sr_change_iter(sr_session_ctx_t *session, char *xpath,
-				  sr_error_t cb(sr_session_ctx_t *, struct sr_change *))
+static sr_error_t _sr_change_iter(sr_session_ctx_t *session, struct confd *confd, char *xpath,
+				  sr_error_t cb(sr_session_ctx_t *, struct confd *, struct sr_change *))
 {
 	struct sr_change change = {};
 	sr_change_iter_t *iter;
@@ -138,7 +139,7 @@ static sr_error_t _sr_change_iter(sr_session_ctx_t *session, char *xpath,
 		return err;
 
 	while (sr_get_change_next(session, iter, &change.op, &change.old, &change.new) == SR_ERR_OK) {
-		err = cb(session, &change);
+		err = cb(session, confd, &change);
 		sr_free_val(change.old);
 		sr_free_val(change.new);
 		if (err) {
@@ -903,11 +904,28 @@ fail:
 	return -1;
 }
 
-static int set_password(const char *user, const char *hash, bool lock)
+static int set_password(struct confd *confd, const char *user, const char *hash, bool lock)
 {
+	const char *factory = "$factory$";
 	struct spwd *sp;
 	FILE *fp = NULL;
 	int fd = -1;
+
+	if (!strncmp(hash, factory, strlen(factory))) {
+		struct json_t *pwd;
+
+		pwd = json_object_get(confd->root, "factory-password-hash");
+		if (!pwd || !json_is_string(pwd)) {
+			/*
+			 * Do not fail, lock account instead.  This way developers can
+			 * enable root account login at build-time to diagnose the system.
+			 */
+			ERROR("%s: cannot find factory-default password hash!", user);
+			lock = true;
+		} else {
+			hash = json_string_value(pwd);
+		}
+	}
 
 	if (lckpwdf())
 		goto exit;
@@ -956,7 +974,7 @@ exit:
 	return -1;
 }
 
-static sr_error_t handle_sr_passwd_update(sr_session_ctx_t *, struct sr_change *change)
+static sr_error_t handle_sr_passwd_update(sr_session_ctx_t *, struct confd *confd, struct sr_change *change)
 {
 	sr_error_t err = SR_ERR_OK;
 	const char *hash;
@@ -988,13 +1006,13 @@ static sr_error_t handle_sr_passwd_update(sr_session_ctx_t *, struct sr_change *
 			ERROR("Empty passwords are not allowed, disabling password login.");
 			hash = "*";
 		}
-		if (set_password(user, hash, false))
+		if (set_password(confd, user, hash, false))
 			err = SR_ERR_SYS;
 		else
 			NOTE("Password updated for user %s", user);
 		break;
 	case SR_OP_DELETED:
-		if (set_password(user, "*", true))
+		if (set_password(confd, user, "*", true))
 			err = SR_ERR_SYS;
 		else
 			NOTE("Password deleted for user %s", user);
@@ -1007,7 +1025,7 @@ static sr_error_t handle_sr_passwd_update(sr_session_ctx_t *, struct sr_change *
 	return err;
 }
 
-static sr_error_t handle_sr_shell_update(sr_session_ctx_t *sess, struct sr_change *change)
+static sr_error_t handle_sr_shell_update(sr_session_ctx_t *sess, struct confd *confd, struct sr_change *change)
 {
 	char *shell = NULL;
 	char *user;
@@ -1034,7 +1052,7 @@ static sr_error_t handle_sr_shell_update(sr_session_ctx_t *sess, struct sr_chang
 	return err;
 }
 
-static sr_error_t check_sr_user_update(sr_session_ctx_t *, struct sr_change *change)
+static sr_error_t check_sr_user_update(sr_session_ctx_t *, struct confd *, struct sr_change *change)
 {
 	sr_xpath_ctx_t state;
 	sr_val_t *val;
@@ -1053,7 +1071,7 @@ static sr_error_t check_sr_user_update(sr_session_ctx_t *, struct sr_change *cha
 	return SR_ERR_OK;
 }
 
-static sr_error_t handle_sr_user_update(sr_session_ctx_t *sess, struct sr_change *change)
+static sr_error_t handle_sr_user_update(sr_session_ctx_t *sess, struct confd *, struct sr_change *change)
 {
 	sr_xpath_ctx_t state;
 	char *name;
@@ -1152,7 +1170,7 @@ static sr_error_t change_auth_check(struct confd *confd, sr_session_ctx_t *sessi
 {
 	sr_error_t err;
 
-	err = _sr_change_iter(session, XPATH_AUTH_"/user", check_sr_user_update);
+	err = _sr_change_iter(session, confd, XPATH_AUTH_"/user", check_sr_user_update);
 	if (err)
 		return err;
 
@@ -1163,15 +1181,15 @@ static sr_error_t change_auth_done(struct confd *confd, sr_session_ctx_t *sessio
 {
 	sr_error_t err;
 
-	err = _sr_change_iter(session, XPATH_AUTH_"/user", handle_sr_user_update);
+	err = _sr_change_iter(session, confd, XPATH_AUTH_"/user", handle_sr_user_update);
 	if (err)
 		return err;
 
-	err = _sr_change_iter(session, XPATH_AUTH_"/user[*]/password", handle_sr_passwd_update);
+	err = _sr_change_iter(session, confd, XPATH_AUTH_"/user[*]/password", handle_sr_passwd_update);
 	if (err)
 		goto cleanup;
 
-	err = _sr_change_iter(session, XPATH_AUTH_"/user[*]/shell", handle_sr_shell_update);
+	err = _sr_change_iter(session, confd, XPATH_AUTH_"/user[*]/shell", handle_sr_shell_update);
 	if (err)
 		goto cleanup;
 

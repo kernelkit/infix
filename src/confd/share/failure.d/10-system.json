@@ -1,11 +1,14 @@
 {
     "ietf-system:system": {
-	"hostname": "failure"
-    },
-    "ieee802-dot1ab-lldp:lldp": {
-	"infix-lldp:enabled": true
-    },
-    "infix-services:mdns": {
-	"enabled": true
+	"hostname": "failure",
+	"authentication": {
+	    "user": [
+		{
+		    "name": "admin",
+		    "password": "$factory$",
+		    "infix-system:shell": "infix-shell-type:bash"
+		}
+	    ]
+	}
     }
 }
