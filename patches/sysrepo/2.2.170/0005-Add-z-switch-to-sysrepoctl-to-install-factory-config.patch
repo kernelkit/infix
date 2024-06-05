@@ -1,15 +1,19 @@
-From a047f4b535f363cd97f02e80e2c5aec36f1cc081 Mon Sep 17 00:00:00 2001
+From 600c6904a0687f0d237ccec750ae937cd76b9e54 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Mattias=20Walstr=C3=B6m?= <lazzer@gmail.com>
 Date: Mon, 6 May 2024 14:49:32 +0200
-Subject: [PATCH 4/4] Add -z switch to sysrepoctl to install factory config
+Subject: [PATCH 5/5] Add -z switch to sysrepoctl to install factory config
  from a json file
+Organization: Addiva Elektronik
 
 This to be able to load the yang modules during build time instead on boot.
+
+Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
 ---
  src/executables/sysrepoctl.c | 20 +++++++++++++--
+ src/lyd_mods.h               |  7 ++++++
  src/sysrepo.c                | 49 ++++++++++++++++++++++++++++++++++++
  src/sysrepo.h                | 10 +++++++-
- 3 files changed, 76 insertions(+), 3 deletions(-)
+ 4 files changed, 83 insertions(+), 3 deletions(-)
 
 diff --git a/src/executables/sysrepoctl.c b/src/executables/sysrepoctl.c
 index b9680551..4cdba6a0 100644
@@ -65,6 +69,22 @@ index b9680551..4cdba6a0 100644
      case 'l':
          /* list */
          if ((r = srctl_list(conn))) {
+diff --git a/src/lyd_mods.h b/src/lyd_mods.h
+index 8f9cbac6..0a1ce2b4 100644
+--- a/src/lyd_mods.h
++++ b/src/lyd_mods.h
+@@ -102,4 +102,11 @@ sr_error_info_t *sr_lydmods_change_chng_feature(const struct ly_ctx *ly_ctx, con
+ sr_error_info_t *sr_lydmods_change_chng_replay_support(const struct lys_module *ly_mod, int enable,
+         struct ly_set *mod_set, sr_conn_ctx_t *conn, struct lyd_node **sr_mods);
+ 
++/**
++ * @brief Add factory default data to built-in modules
++ * @param[in] ly_ctx Context to use for parsing SR data.
++ * @return err_info, NULL on success.
++ */
++sr_error_info_t *sr_lydmods_create_data(const struct ly_ctx *ly_ctx);
++
+ #endif
 diff --git a/src/sysrepo.c b/src/sysrepo.c
 index 2eac2858..ce2fa822 100644
 --- a/src/sysrepo.c
