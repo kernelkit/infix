@@ -480,7 +480,7 @@ static int netdag_gen_ip_addrs(struct dagger *net, FILE *ip, const char *proto,
 		if (!cni_find(ifname) && if_nametoindex(ifname)) {
 			FILE *fp;
 
-			fp = dagger_fopen_next(net, "init", ifname, 49, "flush.sh");
+			fp = dagger_fopen_current(net, "exit", ifname, 49, "flush.sh");
 			if (fp) {
 				fprintf(fp, "ip -%c addr flush dev %s\n", proto[3], ifname);
 				fclose(fp);
