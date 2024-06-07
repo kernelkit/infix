@@ -2,7 +2,12 @@ export BR2_EXTERNAL := $(CURDIR)
 export PATH         := $(CURDIR)/bin:$(PATH)
 
 ARCH ?= $(shell uname -m)
-O    ?= $(CURDIR)/output
+O    ?= output
+
+# If a relative output path is specified, we have to translate it to
+# an absolute one before handing over control to Buildroot, which will
+# otherwise treat it as relative to ./buildroot.
+override O := $(if $(filter /%,$O),$O,$(CURDIR)/$O)
 
 config := $(O)/.config
 bmake   = $(MAKE) -C buildroot O=$(O) $1
