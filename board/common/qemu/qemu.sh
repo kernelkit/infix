@@ -255,6 +255,12 @@ wdt_args()
     echo -n "-device i6300esb -rtc clock=host"
 }
 
+gdb_args()
+{
+    echo -n "-chardev socket,id=gdbqemu,path=gdbqemu.sock,server=on,wait=off "
+    echo -n "-gdb chardev:gdbqemu"
+}
+
 run_qemu()
 {
     if [ "$CONFIG_QEMU_ROOTFS_VSCSI" = "y" ]; then
@@ -272,6 +278,7 @@ run_qemu()
 	  $(net_args) \
 	  $(wdt_args) \
 	  $(vpd_args) \
+	  $(gdb_args) \
 	  $CONFIG_QEMU_EXTRA
 EOF
 
