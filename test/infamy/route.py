@@ -11,7 +11,9 @@ def _exist_route(target, prefix, nexthop, version, source_protocol):
     routes = _get_routes(target, version)
     route_found = False
     for r in routes:
-        if r["destination-prefix"] != prefix:
+        # netconf presents destination-prefix, restconf prefix with model
+        p=r.get("destination-prefix") or (version == "ipv4" and r.get("ietf-ipv4-unicast-routing:destination-prefix")) or (version == "ipv6" and r.get("ietf-ipv6-unicast-routing:destination-prefix"))
+        if p != prefix:
             continue
 
         if source_protocol and r.get("source-protocol") != source_protocol:
@@ -27,7 +29,9 @@ def _exist_route(target, prefix, nexthop, version, source_protocol):
                     if address == nexthop:
                         return True
             else:
-                if nh["next-hop-address"] == nexthop:
+                # netconf presents next-hop-address, restconf prefix with model    ietf-ipv4-unicast-routing:next-hop-address
+                nh_addr=nh.get("next-hop-address", None) or (version == "ipv4" and nh.get("ietf-ipv4-unicast-routing:next-hop-address", None)) or (version == "ipv6" and nh.get("ietf-ipv6-unicast-routing:next-hop-address", None))
+                if nh_addr == nexthop:
                     return True
             return False
     return route_found
@@ -44,7 +48,7 @@ def _get_ospf_status(target):
     rib = target.get_data(xpath)["routing"]["control-plane-protocols"].get("control-plane-protocol", {})
     for p in rib:
         if p["type"] == "ietf-ospf:ospfv2":
-            return p["ospf"]
+            return p.get("ospf") or p.get("ietf-ospf:ospf")
 
 def _get_ospf_status_area(target, area_id):
     ospf=_get_ospf_status(target)
