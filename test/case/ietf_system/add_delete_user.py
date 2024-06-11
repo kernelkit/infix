@@ -55,13 +55,8 @@ with infamy.Test() as test:
         assert user_found, f"User {username} not found"
 
     with test.step(f"Delete user ({username} / {hashed_password})"):
-        running = target.get_config_dict("/ietf-system:system")
-        new = copy.deepcopy(running)
-        for userx in new["system"]["authentication"]["user"]:
-            if userx["name"] == username:
-                del new["system"]["authentication"]["user"][username]
-                break
-        target.put_diff_dicts("ietf-system", running, new)
+        xpath=target.get_xpath("/ietf-system:system/authentication/user", "name", username)
+        target.delete_xpath(xpath)
 
     with test.step(f"Verify erasure of user ({username} / {hashed_password})"):
         running = target.get_config_dict("/ietf-system:system")

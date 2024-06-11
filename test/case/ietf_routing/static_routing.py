@@ -183,12 +183,6 @@ def config_target2(target, link):
         }
     })
 
-def config_remove_routes(target):
-    running = target.get_config_dict("/ietf-routing:routing")
-    new = copy.deepcopy(running)
-    new["routing"]["control-plane-protocols"].clear()
-    target.put_diff_dicts("ietf-routing",running,new)
-
 with infamy.Test() as test:
     with test.step("Initialize"):
         env = infamy.Env(infamy.std_topology("2x2"))
@@ -224,7 +218,7 @@ with infamy.Test() as test:
              ns0.must_reach("2001:db8:3c4d:200::1")
 
         with test.step("Remove static routes on dut1"):
-            config_remove_routes(target1);
+            target1.delete_xpath("/ietf-routing:routing/control-plane-protocols")
             parallel(until(lambda: route.ipv4_route_exist(target1, "192.168.200.1/32") == False),
                      until(lambda: route.ipv6_route_exist(target1, "2001:db8:3c4d:200::1/128") == False))
 

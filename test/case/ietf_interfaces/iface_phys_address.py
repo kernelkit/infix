@@ -30,13 +30,9 @@ with infamy.Test() as test:
         assert mac == cmac
 
     with test.step(f"Remove custom MAC address"):
-        running = target.get_config_dict("/ietf-interfaces:interfaces")
-        new = copy.deepcopy(running)
-        for i in new["interfaces"]["interface"]:
-            if i["name"] == tport:
-                del i["phys-address"]
-                break
-        target.put_diff_dicts("ietf-interfaces", running, new)
+        xpath=target.get_iface_xpath(tport, "phys-address")
+        target.delete_xpath(xpath)
+
         until(lambda: iface.get_phys_address(target, tport) == pmac)
 
     test.succeed()
