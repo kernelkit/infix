@@ -8,6 +8,8 @@ import sys
 import time
 import uuid   # For _ncc_get_data() extension
 import os
+import copy
+import re
 
 import libyang
 import lxml
@@ -344,13 +346,6 @@ class Device(object):
         lyd = mod.parse_data_dict(edit, no_state=True, validate=False)
         return self.put_config(lyd.print_mem("xml", with_siblings=True, pretty=False))
 
-    def put_diff_dicts(self, modname, old, new):
-        mod = self.ly.get_module(modname)
-        oldd = mod.parse_data_dict(old, no_state=True)
-        newd = mod.parse_data_dict(new, no_state=True)
-        lyd = oldd.diff(newd)
-        return self.put_config(lyd.print_mem("xml", with_siblings=True, pretty=False))
-
     def call(self, call):
         """Call RPC, XML version"""
         return self.ncc.dispatch(call)
@@ -402,3 +397,32 @@ class Device(object):
 
         with open(outdir+"/"+schema["filename"], "w") as f:
             f.write(data.schema)
+
+    def get_xpath(self, xpath, key, value, path=None):
+        """Compose complete XPath to a YANG node in /ietf-interfaces"""
+        xpath = f"{xpath}[{key}='{value}']"
+        if not path is None:
+            xpath=f"{xpath}/{path}"
+        return xpath
+
+    def get_iface_xpath(self, iface, path=None):
+        """Compose complete XPath to a YANG node in /ietf-interfaces"""
+        xpath = f"/ietf-interfaces:interfaces/interface"
+        return self.get_xpath(xpath, "name", iface, path)
+
+    def delete_xpath(self, xpath):
+        # Split out the model and the container from xpath
+        pattern = r"^/(?P<module>[^:]+):(?P<path>[^/]+)"
+        match = re.search(pattern, xpath)
+        module = match.group('module')
+        modpath = f"/{match.group('module')}:{match.group('path')}"
+
+        old = self.get_config_dict(modpath)
+        new = copy.deepcopy(old)
+        libyang.xpath_del(new, xpath)
+        mod = self.ly.get_module(module)
+        oldd = mod.parse_data_dict(old, no_state=True)
+        newd = mod.parse_data_dict(new, no_state=True)
+        lyd = oldd.diff(newd)
+
+        return self.put_config(lyd.print_mem("xml", with_siblings=True, pretty=False))
