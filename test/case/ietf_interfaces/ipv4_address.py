@@ -40,17 +40,8 @@ with infamy.Test() as test:
         until(lambda: iface.address_exist(target, interface_name, new_ip_address, proto='static'))
 
     with test.step(f"Remove IPv4 addresses from {interface_name}"):
-        # Get current interface configuration
-        running = target.get_config_dict("/ietf-interfaces:interfaces")
-
-        new = copy.deepcopy(running)
-        for i in new["interfaces"]["interface"]:
-            if i["name"] == interface_name and "ipv4" in i:
-                del i["ipv4"]
-                break
-
-        target.put_diff_dicts("ietf-interfaces", running, new)
-
+        xpath=target.get_iface_xpath(interface_name, path="ietf-ip:ipv4")
+        target.delete_xpath(xpath)
     with test.step("Get updated IP addresses"):
         until(lambda: iface.address_exist(target, interface_name, new_ip_address) == False)
 

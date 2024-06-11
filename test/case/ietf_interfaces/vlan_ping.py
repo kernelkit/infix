@@ -64,10 +64,8 @@ with infamy.Test() as test:
         test_ping(hport,True)
 
     with test.step("Remove VLAN interface, and test again (should not be able to ping)"):
-        running = target.get_config_dict("/ietf-interfaces:interfaces")
-        new = copy.deepcopy(running)
-        new["interfaces"]["interface"] = [d for d in new["interfaces"]["interface"] if not (d["name"] == f"{tport}.10")]
-        target.put_diff_dicts("ietf-interfaces",running,new)
+        xpath=target.get_xpath("/ietf-interfaces:interfaces/interface", "name", f"{tport}.10")
+        target.delete_xpath(xpath)
         _, hport = env.ltop.xlate("host", "data")
         test_ping(hport,False)
 

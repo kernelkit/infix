@@ -24,12 +24,6 @@ with infamy.Test() as test:
     with test.step(f"Create {NAME} container from bundled OCI image"):
         _, ifname = env.ltop.xlate("target", "data")
         enc = base64.b64encode(BODY.encode('utf-8'))
-
-        target.put_config_dict("infix-services", {
-            "web": {
-                "enabled": False
-            }
-        })
         target.put_config_dict("ietf-interfaces", {
             "interfaces": {
                 "interface": [

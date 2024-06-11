@@ -7,12 +7,6 @@ import time
 import infamy.netconf as netconf
 from infamy.util import until,wait_boot
 
-def remove_config(target):
-    running = target.get_config_dict("/ietf-hardware:hardware")
-    new = copy.deepcopy(running)
-    new["hardware"].clear()
-    target.put_diff_dicts("ietf-hardware",running,new)
-
 with infamy.Test() as test:
     with test.step("Initialize"):
         env = infamy.Env(infamy.std_topology("1x1"))
@@ -88,7 +82,7 @@ with infamy.Test() as test:
             until(lambda: usb.get_usb_state(target, available[0]) == "unlocked")
 
     with test.step("Remove all hardware configuration"):
-        remove_config(target)
+        target.delete_xpath("/ietf-hardware:hardware/component")
 
     with test.step("Verify USB ports locked"):
         for port in available:
@@ -118,7 +112,7 @@ with infamy.Test() as test:
             until(lambda: usb.get_usb_state(target, port) == "unlocked")
 
     with test.step("Remove USB configuration, and reboot"):
-        remove_config(target)
+        target.delete_xpath("/ietf-hardware:hardware/component")
         target.copy("running", "startup")
         target.reboot()
         if wait_boot(target) == False:
