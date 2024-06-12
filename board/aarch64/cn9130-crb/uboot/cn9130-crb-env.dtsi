@@ -16,7 +16,12 @@ run ixboot
 ";
 			boot_targets = "mmc1";
 			ethprime = "eth1";
-			bootdelay = "1";
+
+			/* This is a development platform, keep
+			 * developer mode statically enabled.
+			 */
+			ixbtn-devmode = "setenv dev_mode yes; echo Enabled";
+			ixbtn-factory = "echo \"No button available, use bootmenu\"";
 		};
 	};
 };
