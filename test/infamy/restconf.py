@@ -3,11 +3,14 @@ import json
 import warnings
 import os
 import sys
+import libyang
 
 from requests.auth import HTTPBasicAuth
 from urllib.parse import quote
 from urllib3.exceptions import InsecureRequestWarning
 from dataclasses import dataclass
+from lxml import etree
+from infamy.transport import Transport
 
 # We know we have a self-signed certificate, silence warning about it
 warnings.simplefilter('ignore', InsecureRequestWarning)
@@ -20,15 +23,17 @@ class Location:
     username: str = "admin"
     port: int = 443
 
-class Device(object):
+class Device(Transport):
     def __init__(self,
                  location: Location,
                  mapping: dict,
                  yangdir: None | str = None,
                  factory_default = True):
         self.location = location
-        self.url = f"https://[{location.host}]:{location.port}/restconf"
-        self.yang_url = f"https://[{location.host}]:{location.port}/yang/"
+        self.url_base=f"https://[{location.host}]:{location.port}"
+        self.restconf_url = f"{self.url_base}/restconf"
+        self.yang_url = f"{self.url_base}/yang/"
+        self.rpc_url= f"{self.url_base}/restconf/operations"
         self.headers = {
             'Content-Type': 'application/yang-data+json',
             'Accept': 'application/yang-data+json'
@@ -36,132 +41,208 @@ class Device(object):
         self.auth = HTTPBasicAuth(location.username, location.password)
         self.modules = {}
 
+        self.lyctx = libyang.Context(yangdir)
+        self._ly_bootstrap(yangdir)
+        self._ly_init(yangdir)
+
         if factory_default:
             self.factory_default()
 
     def get_schemas_list(self):
-        data=self.get_datastore("operational", "/ietf-yang-library:modules-state")
-        self.modules = { m["name"] : m for m in data["ietf-yang-library:modules-state"]["module"] }
-        return data["ietf-yang-library:modules-state"]["module"]
+        data=self.get_operational("/ietf-yang-library:modules-state").print_dict()
+        return data["modules-state"]["module"]
 
-    def get_schema(self, schema_name, yangdir):
-        schema_url=f"{self.yang_url}/{schema_name}"
-        data=self.do_restconf(self.yang_url,schema_name)
-        # print(type(data))
+    def get_schema(self, name, revision, yangdir):
+        schema_name=f"{name}@{revision}.yang"
+        url=f"{self.yang_url}/{schema_name}"
+        data=self._get_raw(url=url, parse=False)
+
         sys.stdout.write(f"Downloading YANG model {schema_name} ...\r\033[K")
         data=data.decode('utf-8')
         with open(f"{yangdir}/{schema_name}", 'w') as json_file:
             json_file.write(data)
 
-    def schema_exist(self, schema_name, yangdir):
+    def schema_exist(self, name, revision, yangdir):
+        schema_name=f"{name}@{revision}.yang"
         schema_path=f"{yangdir}/{schema_name}"
         return os.path.exists("{schema_path}")
 
-    def get_mgmt_ip(self):
-        return self.location.host
+    def _ly_bootstrap(self, yangdir):
+        schemas = self.get_schemas_list()
+        for schema in schemas:
+            if not self.schema_exist(schema["name"], schema["revision"],yangdir):
+                self.get_schema(schema["name"], schema["revision"], yangdir)
+            if schema.get("submodule"):
+                for submodule in schema["submodule"]:
+                    if not self.schema_exist(submodule["name"], submodule["revision"],yangdir):
+                        self.get_schema(submodule["name"], submodule["revision"], yangdir)
 
-    def get_mgmt_iface(self):
-        return self.location.interface
+            if not any("submodule" in x and schema["name"] in x["submodule"] for x in schemas):
+                self.modules.update({schema["name"]: schema})
+            sys.stdout.write(f"Downloading YANG model {schema['name']} ...\r\033[K")
 
+        print("YANG models downloaded.")
 
-    def address(self):
-        """Return managment IP address used for NETCONF"""
-        return self.location.host
+    def _ly_init(self, yangdir):
+        lib = self.lyctx.load_module("ietf-yang-library")
+        ns = libyang.util.c2str(lib.cdata.ns)
 
-    def reachable(self):
-        neigh = ll6ping(self.location.interface, flags=["-w1", "-c1", "-L", "-n"])
-        return bool(neigh)
+        for ms in self.modules.values():
+            if ms["conformance-type"] != "implement":
+                continue
 
-    def do_restconf(self, url, path):
-        path = quote(path, safe="/:")
-        url = f"{url}/{path}"
-        try:
-            response = requests.get(url, headers=self.headers, auth=self.auth, verify=False)
-            response.raise_for_status()  # Raise an exception for HTTP errors
-            return response.content
-        except requests.exceptions.HTTPError as errh:
-            print("HTTP Error:", errh)
-        except requests.exceptions.ConnectionError as errc:
-            print("Error Connecting:", errc)
-        except requests.exceptions.Timeout as errt:
-            print("Timeout Error:", errt)
-        except Exception as err:
-            print("Unknown error", err)
+            mod = self.lyctx.load_module(ms["name"])
 
-    def get_datastore(self, datastore, xpath="", as_xml=False):
-        path = f"/ds/ietf-datastores:{datastore}/{xpath}"
-        path = quote(path, safe="/:")
-        url = f"{self.url}{path}"
-        try:
-            response = requests.get(url, headers=self.headers, auth=self.auth, verify=False)
-            response.raise_for_status()  # Raise an exception for HTTP errors
+            # TODO: ms["feature"] contains the list of enabled
+            # features, so ideally we should only enable the supported
+            # ones. However, features can depend on each other, so the
+            # naïve looping approach doesn't work.
+            mod.feature_enable_all()
+
+    def _get_raw(self, url, parse=True):
+        """Actually send a GET to RESTCONF server"""
+        response = requests.get(url, headers=self.headers, auth=self.auth, verify=False)
+        response.raise_for_status()  # Raise an exception for HTTP errors
+        if parse:
             data = response.json()
+            data=self.lyctx.parse_data_mem(json.dumps(data), "json", parse_only=True)
             return data
-        except requests.exceptions.HTTPError as errh:
-            print("HTTP Error:", errh)
-        except requests.exceptions.ConnectionError as errc:
-            print("Error Connecting:", errc)
-        except requests.exceptions.Timeout as errt:
-            print("Timeout Error:", errt)
-        except Exception as err:
-            print("Unknown error", err)
+        else:
+            return response.content
+
+    def get_datastore(self, datastore="operational" , xpath=""):
+        """Get a datastore"""
+        path = f"/ds/ietf-datastores:{datastore}"
+        if not xpath is None:
+            path=f"{path}/{xpath}"
+        path = quote(path, safe="/:")
+        url = f"{self.restconf_url}{path}"
+        return self._get_raw(url)
+
+    def get_running(self, xpath=None):
+        """Wrapper function to get running datastore"""
+        return self.get_datastore("running", xpath)
+
+    def get_operational(self, xpath=None):
+        """Wrapper function to get operational datastore"""
+        return self.get_datastore("operational", xpath)
+
+    def get_factory(self, xpath=None):
+        """Wrapper function to get factory defaults"""
+        return self.get_datastore("factory-default", xpath)
+
+    def post_datastore(self, datastore, data):
+        """Actually send a POST to RESTCONF server"""
+        response = requests.post(
+            f"{self.restconf_url}/ds/ietf-datastores:{datastore}/",
+            json=data,  # Directly pass the dictionary without using json.dumps
+            headers=self.headers,
+            auth=self.auth,
+            verify=False
+        )
+        response.raise_for_status()  # Raise an exception for HTTP errors
 
     def put_datastore(self, datastore, data):
-        try:
-            response = requests.put(
-                f"{self.url}/ds/ietf-datastores:{datastore}/",
-                json=data,  # Directly pass the dictionary without using json.dumps
-                headers=self.headers,
-                auth=self.auth,
-                verify=False
-            )
-            response.raise_for_status()  # Raise an exception for HTTP errors
-        except requests.exceptions.HTTPError as errh:
-            print("HTTP Error:", errh)
-        except requests.exceptions.ConnectionError as errc:
-            print("Error Connecting:", errc)
-        except requests.exceptions.Timeout as errt:
-            print("Timeout Error:", errt)
-        except requests.exceptions.RequestException as err:
-            print("Unknown error", err)
+        """Actually send a PUT to RESTCONF server"""
+        response = requests.put(
+            f"{self.restconf_url}/ds/ietf-datastores:{datastore}/",
+            json=data,  # Directly pass the dictionary without using json.dumps
+            headers=self.headers,
+            auth=self.auth,
+            verify=False
+        )
+        response.raise_for_status()  # Raise an exception for HTTP errors
 
     def get_config_dict(self, modname):
-        ds = self.get_datastore("running", modname)
+        """Get all configuration for module @modname as dictionary"""
+        ds=self.get_running(modname)
+        ds=json.loads(ds.print_mem("json", with_siblings=True, pretty=False))
         model, container = modname.split(":")
         for k, v in ds.items():
             return {container: v}
 
-    def merge_dicts(self, dict1, dict2):
-        merged = dict1.copy()  # Start with the first dictionary
-
-        for key, value in dict2.items():
-            if key in merged:
-                if isinstance(merged[key], dict) and isinstance(value, dict):
-                    # If both values are dictionaries, merge them recursively
-                    merged[key] = self.merge_dicts(merged[key], value)
-                else:
-                    # If they are not both dictionaries, overwrite the value from d2
-                    merged[key] = value
-
-        return merged
-
     def put_config_dict(self, modname, edit):
-        new = {}
-        for k, v in edit.items():
-            new[f"{modname}:{k}"] = v
+        """Add @edit to running config and put the whole configuration"""
+        running = self.get_running()
+        mod = self.lyctx.get_module(modname)
+        change = mod.parse_data_dict(edit, no_state=True, validate=False)
+        running.merge_module(change)
 
-        running = self.get_datastore("running")
-        running=self.merge_dicts(running, new)
+        return self.put_datastore("running", json.loads(running.print_mem("json", with_siblings=True, pretty=False)))
 
-        return self.put_datastore("running", running)
+    def call_rpc(self, rpc):
+        url=f"{self.rpc_url}/{rpc}"
+        """Actually send a POST to RESTCONF server"""
+        response = requests.post(
+            url,
+            headers=self.headers,
+            auth=self.auth,
+            verify=False
+        )
+        response.raise_for_status()  # Raise an exception for HTTP errors
+
+    def get_dict(self, xpath=None, as_xml=False):
+        """NETCONF compat function, just wraps get_data"""
+        return self.get_data(xpath, as_xml)
 
     def get_data(self, xpath=None, as_xml=False):
-        data=self.get_datastore("operational", xpath, as_xml)
+        """Get operational data"""
+        data=self.get_operational(xpath)
+        if as_xml:
+            data=data.print_mem("xml", with_siblings=True, pretty=False)
+            return etree.fromstring(data)
+        if xpath is None:
+            return data
+
+        data=json.loads(data.print_mem("json", with_siblings=True, pretty=False))
+
         for k,v in data.items():
             model, container = k.split(":")
-
+            break
         return {container: v}
 
+
+    def copy(self, source, target):
+        factory=self.get_datastore(source)
+        data = factory.print_mem("json", with_siblings=True, pretty=False)
+        self.put_datastore(target, json.loads(data))
+
+    def reboot(self):
+        self.call_rpc("ietf-system:system-restart")
+
     def factory_default(self):
-        factory=self.get_datastore("factory-default")
-        self.put_datastore("running", factory)
+        """Factory reset target"""
+        return self.copy("factory-default", "running")
+
+    def get_xpath(self,  xpath, key, value, path=None):
+        """Compose complete XPath to a YANG node"""
+        xpath=f"{xpath}={value}"
+
+        if not path is None:
+            xpath=f"{xpath}/{path}"
+
+        return xpath
+
+    def get_iface(self, iface):
+        """Fetch target dict for iface and extract param from JSON"""
+        content = self.get_data(self.get_iface_xpath(iface))
+        interface=content.get("interfaces", {}).get("interface", None)
+        if interface is None:
+            return None
+
+        # This is a bug in rousette, should be able to use the same code as NETCONF
+        return interface[0]
+
+    def get_iface_xpath(self, iface, path=None):
+        """Compose complete XPath to a YANG node in /ietf-interfaces"""
+        xpath = f"/ietf-interfaces:interfaces/interface"
+        return self.get_xpath(xpath, "", iface, path)
+
+    def delete_xpath(self, xpath):
+        """Delete XPath from running config"""
+        path = f"/ds/ietf-datastores:running/{xpath}"
+        path = quote(path, safe="/:")
+        url = f"{self.restconf_url}{path}"
+        response = requests.delete(url, headers=self.headers, auth=self.auth, verify=False)
+        response.raise_for_status()  # Raise an exception for HTTP errors
+        return True
