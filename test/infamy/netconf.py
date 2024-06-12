@@ -15,8 +15,7 @@ import libyang
 import lxml
 import netconf_client.connect
 import netconf_client.ncclient
-from infamy.neigh import ll6ping
-
+from infamy.transport import Transport
 from netconf_client.error import RpcError
 
 
@@ -92,7 +91,7 @@ class Location:
     username: str = "admin"
     port: int = 830
 
-class Device(object):
+class Device(Transport):
     def __init__(self,
                  location: Location,
                  mapping: dict,
@@ -119,19 +118,6 @@ class Device(object):
             except RpcError as err:
                 print(f"Failed sending factory-default RPC: {err}")
                 raise err
-
-    def get_mgmt_ip(self):
-        return location.host
-
-    def get_mgmt_iface(self):
-        return self.location.interface
-
-    def reachable(self):
-        neigh=ll6ping(self.location.interface, flags=["-w1", "-c1", "-L", "-n"])
-        if neigh:
-            return True
-
-        return False
 
     def _ncc_init(self, location):
         ai = socket.getaddrinfo(location.host, location.port,
@@ -209,10 +195,6 @@ class Device(object):
 
         return list(filter(lambda m: m["name"] in modnames,
                            self.modules.values()))
-
-    def address(self):
-        """Return managment IP address used for NETCONF"""
-        return self.location.host
 
     def _ncc_make_rpc(self, guts, msg_id=None):
         if not msg_id:
@@ -409,6 +391,17 @@ class Device(object):
         """Compose complete XPath to a YANG node in /ietf-interfaces"""
         xpath = f"/ietf-interfaces:interfaces/interface"
         return self.get_xpath(xpath, "name", iface, path)
+
+    def get_iface(self, iface):
+        """Fetch target dict for iface and extract param from JSON"""
+        content = self.get_data(self.get_iface_xpath(iface))
+        interface=content.get("interfaces", {}).get("interface", None)
+
+        if interface is None:
+            return None
+
+        # This really not required, it is due a bug in rousette.
+        return interface[iface]
 
     def delete_xpath(self, xpath):
         # Split out the model and the container from xpath

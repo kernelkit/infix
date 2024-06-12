@@ -94,6 +94,7 @@ class Env(object):
                                                               mgmtip,
                                                               password),
                                    mapping=mapping,
+                                   yangdir=self.args.yangdir,
                                    factory_default=factory_default)
 
         raise Exception(f"Unsupported management procotol \"{protocol}\"")
