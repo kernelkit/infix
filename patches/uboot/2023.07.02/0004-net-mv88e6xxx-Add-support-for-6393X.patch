@@ -1,7 +1,7 @@
 From c94723526672f1e5555b7545c13256edb7bd7557 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Tue, 17 Oct 2023 13:22:00 +0200
-Subject: [PATCH 4/6] net: mv88e6xxx: Add support for 6393X
+Subject: [PATCH 4/8] net: mv88e6xxx: Add support for 6393X
 Organization: Addiva Elektronik
 
 Only built-in copper PHYs are supported as access ports. Support

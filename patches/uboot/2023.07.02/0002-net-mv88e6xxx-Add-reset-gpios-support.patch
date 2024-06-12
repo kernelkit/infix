@@ -1,7 +1,7 @@
 From 80ddeb093f24cf1d8a99e92564e07a7180791f8c Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Tue, 17 Oct 2023 13:15:58 +0200
-Subject: [PATCH 2/6] net: mv88e6xxx: Add reset-gpios support
+Subject: [PATCH 2/8] net: mv88e6xxx: Add reset-gpios support
 Organization: Addiva Elektronik
 
 If the switch's RESETn signal is under the CPUs control, release it
