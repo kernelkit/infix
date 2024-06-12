@@ -1,0 +1,55 @@
+From ed733077b87b1f3da6ac956840c927406c268a3d Mon Sep 17 00:00:00 2001
+From: Tobias Waldekranz <tobias@waldekranz.com>
+Date: Mon, 10 Jun 2024 12:59:21 +0200
+Subject: [PATCH 7/8] cmd/sleep: Consume Ctrl-C when exiting early
+Organization: Addiva Elektronik
+
+When sleep aborts early due to Ctrl-C input from the user, that state
+is transferred to the exit status of the program and should therefore
+be cleared from the global state.
+
+Before this change, the lingering global state would lead to very
+unintuitive execution flows in scripts due to the U-Boot specific
+modification to the hush interpreter which checks for Ctrl-C in all
+loop constructs.
+
+This script, for example...
+
+   if sleep 3; then
+       echo "Had a good night's sleep"
+   else
+       echo "That was a rude awakening! I refuse to go on..."
+       while true; do
+           true
+       done
+
+       echo "...or maybe I will"
+   fi
+
+...would just skip over the infinite loop (indeed, all following
+loops) when prematurely interrupting the sleep.
+
+Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
+---
+ cmd/sleep.c | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/cmd/sleep.c b/cmd/sleep.c
+index c741b4aa02..b3511e13b8 100644
+--- a/cmd/sleep.c
++++ b/cmd/sleep.c
+@@ -39,8 +39,10 @@ static int do_sleep(struct cmd_tbl *cmdtp, int flag, int argc,
+ 	delay += mdelay;
+ 
+ 	while (get_timer(start) < delay) {
+-		if (ctrlc())
++		if (ctrlc()) {
++			clear_ctrlc();
+ 			return CMD_RET_FAILURE;
++		}
+ 
+ 		udelay(100);
+ 	}
+-- 
+2.34.1
+

@@ -1,7 +1,7 @@
 From c31794d78337da82cf41ffbcb9e696e42759aa12 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Tue, 17 Oct 2023 13:20:19 +0200
-Subject: [PATCH 3/6] net: mv88e6xxx: Support clause 45 addressing on internal
+Subject: [PATCH 3/8] net: mv88e6xxx: Support clause 45 addressing on internal
  MDIO bus
 Organization: Addiva Elektronik
 

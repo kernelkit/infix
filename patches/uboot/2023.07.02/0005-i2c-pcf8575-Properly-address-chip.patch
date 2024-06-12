@@ -1,7 +1,7 @@
 From c39245a2d92d6f851dfcb8f573af873a05d4a5b8 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Fri, 20 Oct 2023 13:19:41 +0200
-Subject: [PATCH 5/6] i2c: pcf8575: Properly address chip
+Subject: [PATCH 5/8] i2c: pcf8575: Properly address chip
 Organization: Addiva Elektronik
 
 These devices hold a simple shift register that is accessed without
