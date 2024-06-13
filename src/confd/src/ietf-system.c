@@ -584,6 +584,50 @@ fail:
 	return rc;
 }
 
+static bool is_group_member(const char *user, const char *group)
+{
+	/* Check if user is already in group */
+	if (!systemf("grep %s /etc/group |grep %s", group, user))
+		return true;
+
+	return false;
+}
+
+static void add_group(const char *user, const char *group)
+{
+	bool is_already = is_group_member(user, group);
+
+	if (is_already)
+		return; /* already group member */
+
+	if (systemf("adduser %s %s", user, group))
+		ERROR("Failed giving user %s UNIX %s permissions.", user, group);
+	else
+		NOTE("User %s added to UNIX %s group.", user, group);
+}
+
+static void del_group(const char *user, const char *group)
+{
+	bool is_already = is_group_member(user, group);
+
+	if (!is_already)
+		return; /* not member of group */
+
+	if (systemf("delgroup %s %s", user, group))
+		ERROR("Failed removing user %s from UNIX %s group.", user, group);
+	else
+		NOTE("User %s removed from UNIX %s group.", user, group);
+}
+
+/* Users with a valid shell are also allowed CLI access */
+static void adjust_access(const char *user, const char *shell)
+{
+	if (strcmp(shell, "/bin/false"))
+		add_group(user, "sys-cli");
+	else
+		del_group(user, "sys-cli");
+}
+
 /* XXX: Currently Infix only has admin and non-admins as a group */
 static bool is_admin_user(sr_session_ctx_t *session, const char *user)
 {
@@ -764,6 +808,8 @@ static int sys_call_adduser(sr_session_ctx_t *sess, char *name, uid_t uid, gid_t
 	 * any SSH public keys have been installed.
 	 */
 	err = systemv_silent(args);
+	if (!err)
+		adjust_access(name, shell);
 	free(shell);
 
 	return err;
@@ -859,6 +905,8 @@ static int set_shell(const char *user, const char *shell)
 	struct passwd *pw;
 	FILE *fp = NULL;
 	int fd = -1;
+
+	adjust_access(user, shell);
 
 	setpwent();
 
@@ -1237,34 +1285,16 @@ static int change_nacm(sr_session_ctx_t *session, uint32_t sub_id, const char *m
 	for (size_t i = 0; i < user_count; i++) {
 		const char *user = users[i].data.string_val;
 		bool is_admin = is_admin_user(session, user);
-		bool is_already = false;
 		char *shell;
-
-		/* Check if user is already in group */
-		if (!systemf("grep wheel /etc/group |grep %s", user))
-			is_already = true;
-
-		if (is_admin) {
-			if (is_already)
-				continue; /* already admin */
-
-			if (systemf("adduser %s wheel", user))
-				ERROR("Failed giving user %s UNIX sysadmin permissions.", user);
-			else
-				NOTE("User %s added to UNIX sysadmin group.", user);
-		} else {
-			if (!is_already)
-				continue; /* not member of wheel */
-
-			if (systemf("delgroup %s wheel", user))
-				ERROR("Failed removing user %s from UNIX sysadmin group.", user);
-			else
-				NOTE("User %s removed from UNIX sysadmin group.", user);
-		}
 
 		shell = sys_find_usable_shell(session, (char *)user, is_admin);
 		if (set_shell(user, shell))
 			ERROR("Failed adjusting shell for user %s", user);
+
+		if (is_admin)
+			add_group(user, "wheel");
+		else
+			del_group(user, "wheel");
 	}
 
 cleanup:
