@@ -591,6 +591,7 @@ int infix_copy(kcontext_t *ctx)
 err:
 	if (tmpfn)
 		rc = remove(tmpfn);
+	sync();			/* ensure command is flushed to disk */
 
 	return rc;
 }
