@@ -586,12 +586,12 @@
 </COMMAND>
 
 <COMMAND name="show" help="Show configuration">
-  <PARAM name="path" ptype="/PLINE_EDIT" min="0" max="100"/>
+  <PARAM name="path" ptype="/PLINE_SET" min="0" max="100"/>
   <ACTION sym="srp_show@sysrepo"/>
 </COMMAND>
 
 <COMMAND name="diff" help="Summarize uncommitted changes">
-  <PARAM name="path" ptype="/PLINE_EDIT" min="0" max="100"/>
+  <PARAM name="path" ptype="/PLINE_SET" min="0" max="100"/>
   <ACTION sym="srp_diff@sysrepo"/>
 </COMMAND>
 
