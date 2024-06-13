@@ -575,7 +575,7 @@ case $cmd in
 		stop "$name"
 		timeout=20
 		while running "$name"; do
-		    _=$((timeoute -= 1))
+		    _=$((timeout -= 1))
 		    if [ $timeout -le 0 ]; then
 			log "Timeout waiting for container $1 to stop before restarting it."
 			exit 1
