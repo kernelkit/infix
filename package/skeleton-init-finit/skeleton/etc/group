@@ -20,6 +20,7 @@ backup:x:34:
 utmp:x:43:
 plugdev:x:46:
 lock:x:54:
+sys-cli:x:60:
 netdev:x:82:
 users:x:100:
 nobody:x:65534:
