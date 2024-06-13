@@ -233,7 +233,7 @@ class Device(Transport):
             "system-restart": {}
         })
 
-    def _get(self, xpath, getter, as_xml=False):
+    def _get(self, xpath, getter, parse=True):
         # Figure out which modules we are referencing
         mods = self._modules_in_xpath(xpath)
 
@@ -243,17 +243,17 @@ class Device(Transport):
         filt = f"<filter type=\"xpath\" select=\"{xpath}\" {xmlns} />"
         # pylint: disable=c-extension-no-member
         data = getter(filter=filt).data_ele[0]
-        if as_xml:
+        if parse==False:
             return data
         cfg = lxml.etree.tostring(data)
         return self.ly.parse_data_mem(cfg, "xml", parse_only=True)
 
-    def _get_data(self, xpath, as_xml=False):
+    def _get_data(self, xpath, parse=True):
         """Local member wrapper for netconf-client <get-data> RPC"""
         # pylint: disable=protected-access
         (raw, ele) = self.ncc._send_rpc(self._ncc_get_data_rpc(filter=xpath))
         data = NccGetDataReply(raw, ele)
-        if(as_xml):
+        if(parse==False):
             return data
 
         if len(data.data_ele) == 0:
@@ -263,14 +263,12 @@ class Device(Transport):
         cfg = lxml.etree.tostring(data.data_ele[0])
         return self.ly.parse_data_mem(cfg, "xml", parse_only=True)
 
-    def get(self, xpath, as_xml=False):
+    def get(self, xpath, parse=True):
         """RPC <get> (legacy NETCONF) fetches config:false data"""
-        return self._get(xpath, self.ncc.get, as_xml)
+        return self._get(xpath, self.ncc.get, parse)
 
-    def get_dict(self, xpath, as_xml=False):
+    def get_dict(self, xpath):
         """Return Python dictionary of <get> RPC data"""
-        if as_xml:
-            return self.get(xpath, as_xml=True)
 
         data = self.get(xpath)
         if not data:
@@ -278,10 +276,11 @@ class Device(Transport):
 
         return data.print_dict()
 
-    def get_data(self, xpath=None, as_xml=False):
+    def get_data(self, xpath=None, parse=True):
         """RPC <get-data> to fetch operational data"""
-        if as_xml:
-            return self._get_data(xpath, as_xml)
+
+        if parse==False:
+            return self._get_data(xpath,parse)
 
         data = self._get_data(xpath)
         if not data:
@@ -419,3 +418,8 @@ class Device(Transport):
         lyd = oldd.diff(newd)
 
         return self.put_config(lyd.print_mem("xml", with_siblings=True, pretty=False))
+
+    def get_current_time_with_offset(self):
+        root = self.get_data("/ietf-system:system-state/clock", parse=False).data_ele
+        current_datetime = root.find('.//{urn:ietf:params:xml:ns:yang:ietf-system}current-datetime').text
+        return current_datetime
