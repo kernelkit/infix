@@ -11,6 +11,6 @@ with infamy.Test() as test:
         target = env.attach("target", "mgmt")
 
     with test.step("Get all Operational data"):
-        target.get_data(as_xml=True)
+        target.get_data(parse=False)
 
     test.succeed()

@@ -29,19 +29,19 @@ class Device(Transport):
                  mapping: dict,
                  yangdir: None | str = None,
                  factory_default = True):
-        self.location = location
+        self.location=location
         self.url_base=f"https://[{location.host}]:{location.port}"
-        self.restconf_url = f"{self.url_base}/restconf"
-        self.yang_url = f"{self.url_base}/yang/"
-        self.rpc_url= f"{self.url_base}/restconf/operations"
-        self.headers = {
+        self.restconf_url=f"{self.url_base}/restconf"
+        self.yang_url=f"{self.url_base}/yang/"
+        self.rpc_url=f"{self.url_base}/restconf/operations"
+        self.headers={
             'Content-Type': 'application/yang-data+json',
             'Accept': 'application/yang-data+json'
         }
-        self.auth = HTTPBasicAuth(location.username, location.password)
-        self.modules = {}
+        self.auth=HTTPBasicAuth(location.username, location.password)
+        self.modules={}
 
-        self.lyctx = libyang.Context(yangdir)
+        self.lyctx=libyang.Context(yangdir)
         self._ly_bootstrap(yangdir)
         self._ly_init(yangdir)
 
@@ -68,7 +68,7 @@ class Device(Transport):
         return os.path.exists("{schema_path}")
 
     def _ly_bootstrap(self, yangdir):
-        schemas = self.get_schemas_list()
+        schemas=self.get_schemas_list()
         for schema in schemas:
             if not self.schema_exist(schema["name"], schema["revision"],yangdir):
                 self.get_schema(schema["name"], schema["revision"], yangdir)
@@ -84,14 +84,14 @@ class Device(Transport):
         print("YANG models downloaded.")
 
     def _ly_init(self, yangdir):
-        lib = self.lyctx.load_module("ietf-yang-library")
-        ns = libyang.util.c2str(lib.cdata.ns)
+        lib=self.lyctx.load_module("ietf-yang-library")
+        ns=libyang.util.c2str(lib.cdata.ns)
 
         for ms in self.modules.values():
             if ms["conformance-type"] != "implement":
                 continue
 
-            mod = self.lyctx.load_module(ms["name"])
+            mod=self.lyctx.load_module(ms["name"])
 
             # TODO: ms["feature"] contains the list of enabled
             # features, so ideally we should only enable the supported
@@ -101,31 +101,31 @@ class Device(Transport):
 
     def _get_raw(self, url, parse=True):
         """Actually send a GET to RESTCONF server"""
-        response = requests.get(url, headers=self.headers, auth=self.auth, verify=False)
+        response=requests.get(url, headers=self.headers, auth=self.auth, verify=False)
         response.raise_for_status()  # Raise an exception for HTTP errors
         if parse:
-            data = response.json()
+            data=response.json()
             data=self.lyctx.parse_data_mem(json.dumps(data), "json", parse_only=True)
             return data
         else:
             return response.content
 
-    def get_datastore(self, datastore="operational" , xpath=""):
+    def get_datastore(self, datastore="operational" , xpath="", parse=True):
         """Get a datastore"""
-        path = f"/ds/ietf-datastores:{datastore}"
+        path=f"/ds/ietf-datastores:{datastore}"
         if not xpath is None:
             path=f"{path}/{xpath}"
-        path = quote(path, safe="/:")
-        url = f"{self.restconf_url}{path}"
-        return self._get_raw(url)
+        path=quote(path, safe="/:")
+        url=f"{self.restconf_url}{path}"
+        return self._get_raw(url, parse)
 
     def get_running(self, xpath=None):
         """Wrapper function to get running datastore"""
         return self.get_datastore("running", xpath)
 
-    def get_operational(self, xpath=None):
+    def get_operational(self, xpath=None, parse=True):
         """Wrapper function to get operational datastore"""
-        return self.get_datastore("operational", xpath)
+        return self.get_datastore("operational", xpath, parse)
 
     def get_factory(self, xpath=None):
         """Wrapper function to get factory defaults"""
@@ -133,7 +133,7 @@ class Device(Transport):
 
     def post_datastore(self, datastore, data):
         """Actually send a POST to RESTCONF server"""
-        response = requests.post(
+        response=requests.post(
             f"{self.restconf_url}/ds/ietf-datastores:{datastore}/",
             json=data,  # Directly pass the dictionary without using json.dumps
             headers=self.headers,
@@ -144,7 +144,7 @@ class Device(Transport):
 
     def put_datastore(self, datastore, data):
         """Actually send a PUT to RESTCONF server"""
-        response = requests.put(
+        response=requests.put(
             f"{self.restconf_url}/ds/ietf-datastores:{datastore}/",
             json=data,  # Directly pass the dictionary without using json.dumps
             headers=self.headers,
@@ -157,15 +157,15 @@ class Device(Transport):
         """Get all configuration for module @modname as dictionary"""
         ds=self.get_running(modname)
         ds=json.loads(ds.print_mem("json", with_siblings=True, pretty=False))
-        model, container = modname.split(":")
+        model, container=modname.split(":")
         for k, v in ds.items():
             return {container: v}
 
     def put_config_dict(self, modname, edit):
         """Add @edit to running config and put the whole configuration"""
-        running = self.get_running()
-        mod = self.lyctx.get_module(modname)
-        change = mod.parse_data_dict(edit, no_state=True, validate=False)
+        running=self.get_running()
+        mod=self.lyctx.get_module(modname)
+        change=mod.parse_data_dict(edit, no_state=True, validate=False)
         running.merge_module(change)
 
         return self.put_datastore("running", json.loads(running.print_mem("json", with_siblings=True, pretty=False)))
@@ -173,7 +173,7 @@ class Device(Transport):
     def call_rpc(self, rpc):
         url=f"{self.rpc_url}/{rpc}"
         """Actually send a POST to RESTCONF server"""
-        response = requests.post(
+        response=requests.post(
             url,
             headers=self.headers,
             auth=self.auth,
@@ -181,30 +181,27 @@ class Device(Transport):
         )
         response.raise_for_status()  # Raise an exception for HTTP errors
 
-    def get_dict(self, xpath=None, as_xml=False):
+    def get_dict(self, xpath=None, parse=True):
         """NETCONF compat function, just wraps get_data"""
-        return self.get_data(xpath, as_xml)
+        return self.get_data(xpath, parse)
 
-    def get_data(self, xpath=None, as_xml=False):
+    def get_data(self, xpath=None, parse=True):
         """Get operational data"""
-        data=self.get_operational(xpath)
-        if as_xml:
-            data=data.print_mem("xml", with_siblings=True, pretty=False)
-            return etree.fromstring(data)
-        if xpath is None:
+        data=self.get_operational(xpath, parse)
+        if parse==False:
             return data
 
         data=json.loads(data.print_mem("json", with_siblings=True, pretty=False))
 
         for k,v in data.items():
-            model, container = k.split(":")
+            model, container=k.split(":")
             break
         return {container: v}
 
 
     def copy(self, source, target):
         factory=self.get_datastore(source)
-        data = factory.print_mem("json", with_siblings=True, pretty=False)
+        data=factory.print_mem("json", with_siblings=True, pretty=False)
         self.put_datastore(target, json.loads(data))
 
     def reboot(self):
@@ -223,9 +220,15 @@ class Device(Transport):
 
         return xpath
 
+    def get_current_time_with_offset(self):
+        data=self.get_data("/ietf-system:system-state/clock", parse=False)
+        data=json.loads(data)
+        print(data)
+        return data["ietf-system:system-state"]["clock"]["current-datetime"]
+
     def get_iface(self, iface):
         """Fetch target dict for iface and extract param from JSON"""
-        content = self.get_data(self.get_iface_xpath(iface))
+        content=self.get_data(self.get_iface_xpath(iface))
         interface=content.get("interfaces", {}).get("interface", None)
         if interface is None:
             return None
@@ -233,16 +236,11 @@ class Device(Transport):
         # This is a bug in rousette, should be able to use the same code as NETCONF
         return interface[0]
 
-    def get_iface_xpath(self, iface, path=None):
-        """Compose complete XPath to a YANG node in /ietf-interfaces"""
-        xpath = f"/ietf-interfaces:interfaces/interface"
-        return self.get_xpath(xpath, "", iface, path)
-
     def delete_xpath(self, xpath):
         """Delete XPath from running config"""
-        path = f"/ds/ietf-datastores:running/{xpath}"
-        path = quote(path, safe="/:")
-        url = f"{self.restconf_url}{path}"
-        response = requests.delete(url, headers=self.headers, auth=self.auth, verify=False)
+        path=f"/ds/ietf-datastores:running/{xpath}"
+        path=quote(path, safe="/:")
+        url=f"{self.restconf_url}{path}"
+        response=requests.delete(url, headers=self.headers, auth=self.auth, verify=False)
         response.raise_for_status()  # Raise an exception for HTTP errors
         return True

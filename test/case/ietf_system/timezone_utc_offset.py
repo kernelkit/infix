@@ -18,8 +18,7 @@ with infamy.Test() as test:
           })
 
     with test.step("Verify current time."):
-        root = target.get_dict("/ietf-system:system-state/clock",as_xml=True)
-        current_datetime = root.find('.//{urn:ietf:params:xml:ns:yang:ietf-system}current-datetime').text
+        current_datetime=target.get_current_time_with_offset()
         offset=current_datetime[-6:]
 
         assert(offset == "+12:00")
