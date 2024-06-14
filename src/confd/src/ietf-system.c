@@ -25,6 +25,7 @@
 #define XPATH_AUTH_    XPATH_BASE_"/authentication"
 #define CLOCK_PATH_    "/ietf-system:system-state/clock"
 #define PLATFORM_PATH_ "/ietf-system:system-state/platform"
+#define PASSWORD_PATH  "/ietf-system:system/authentication/user/password"
 
 #define _PATH_PASSWD   "/etc/passwd"
 #define _PATH_HOSTNAME "/etc/hostname"
@@ -1269,6 +1270,29 @@ static int change_auth(sr_session_ctx_t *session, uint32_t sub_id, const char *m
 	return SR_ERR_OK;
 }
 
+static int auth_cb(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
+		    const char *path, const char *request_path, uint32_t request_id,
+		    struct lyd_node **parent, void *priv)
+{
+	struct spwd *spwd;
+
+	ERROR("%s() path %s reqeust_path %s", __func__, path, request_path);
+
+	setspent();
+	while ((spwd = getspent())) {
+		const char *fmt = "/ietf-system:system/authentication/user[name='%s']/password";
+		char xpath[256];
+
+		if (!spwd->sp_pwdp || spwd->sp_pwdp[0] == '*' || spwd->sp_pwdp[0] == '!')
+			continue;
+
+		snprintf(xpath, sizeof(xpath), fmt, spwd->sp_namp);
+		lyd_new_path(*parent, NULL, xpath, spwd->sp_pwdp, 0, 0);
+	}
+
+	return SR_ERR_OK;
+}
+
 static int change_nacm(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
 		       const char *_, sr_event_t event, unsigned request_id, void *priv)
 {
@@ -1623,6 +1647,23 @@ err:
 	return SR_ERR_OK;
 }
 
+static int hostname_cb(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
+		       const char *path, const char *request_path, uint32_t request_id,
+		       struct lyd_node **parent, void *priv)
+{
+	char hostname[128];
+	int rc;
+
+	gethostname(hostname, sizeof(hostname));
+	rc = lyd_new_path(*parent, NULL, path, hostname, 0, NULL);
+	if (rc) {
+		ERROR("Failed building data tree, libyang error %d", rc);
+		rc = SR_ERR_INTERNAL;
+	}
+
+	return rc;
+}
+
 int ietf_system_init(struct confd *confd)
 {
 	int rc = 0;
@@ -1630,10 +1671,12 @@ int ietf_system_init(struct confd *confd)
 	os_init();
 
 	REGISTER_CHANGE(confd->session, "ietf-system", XPATH_AUTH_, 0, change_auth, confd, &confd->sub);
+	REGISTER_OPER(confd->session, "ietf-system", PASSWORD_PATH, auth_cb, confd, 0, &confd->sub);
 	REGISTER_MONITOR(confd->session, "ietf-netconf-acm", "/ietf-netconf-acm:nacm//.",
 			 0, change_nacm, confd, &confd->sub);
 
 	REGISTER_CHANGE(confd->session, "ietf-system", XPATH_BASE_"/hostname", 0, change_hostname, confd, &confd->sub);
+	REGISTER_OPER(confd->session, "ietf-system", XPATH_BASE_"/hostname", hostname_cb, confd, 0, &confd->sub);
 	REGISTER_CHANGE(confd->session, "ietf-system", XPATH_BASE_"/infix-system:motd", 0, change_motd, confd, &confd->sub);
 	REGISTER_CHANGE(confd->session, "ietf-system", XPATH_BASE_"/infix-system:motd-banner", 0, change_motd_banner, confd, &confd->sub);
 	REGISTER_CHANGE(confd->session, "ietf-system", XPATH_BASE_"/infix-system:text-editor", 0, change_editor, confd, &confd->sub);
