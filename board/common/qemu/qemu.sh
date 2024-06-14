@@ -172,7 +172,7 @@ rw_args()
 
     if [ "$CONFIG_QEMU_RW_VAR_OPT" ]; then
 	if ! [ -f "$CONFIG_QEMU_RW_VAR" ]; then
-	    dd if=/dev/zero of="$CONFIG_QEMU_RW_VAR" bs=256M count=1 >/dev/null 2>&1
+	    dd if=/dev/zero of="$CONFIG_QEMU_RW_VAR" bs=$CONFIG_QEMU_RW_VAR_SIZE count=1 >/dev/null 2>&1
 	    mkfs.ext4 -L var "$CONFIG_QEMU_RW_VAR" >/dev/null 2>&1
 	fi
 

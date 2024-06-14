@@ -108,10 +108,12 @@ config QEMU_RW
 	default "cfg.ext4"
 
 config QEMU_RW_VAR_OPT
-	bool "Separate writable /var (256MB)"
+	bool "Separate writable /var"
 
 if QEMU_RW_VAR_OPT
-
+config QEMU_RW_VAR_SIZE
+	string "Size of /var"
+	default "256M"
 config QEMU_RW_VAR
 	string "Writable /var layer"
 	default "var.ext4"
