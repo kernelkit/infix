@@ -40,6 +40,8 @@ static char   *ver = NULL;
 static char   *rel = NULL;
 static char   *sys = NULL;
 static char   *os  = NULL;
+static char   *nm  = NULL;
+static char   *id  = NULL;
 
 static struct { char *name, *shell; bool admin; } shells[] = {
 	{ "infix-shell-type:sh",    "/bin/sh",    true  },
@@ -66,11 +68,11 @@ static char *strip_quotes(char *str)
 	return str;
 }
 
-static void setvar(char *line, const char *nm, char **var)
+static void setvar(char *line, const char *key, char **var)
 {
 	char *ptr;
 
-	if (!strncmp(line, nm, strlen(nm)) && (ptr = strchr(line, '='))) {
+	if (!strncmp(line, key, strlen(key)) && (ptr = strchr(line, '='))) {
 		if (*var)
 			free(*var);
 		*var = strdup(strip_quotes(++ptr));
@@ -103,6 +105,8 @@ static void os_init(void)
 		setvar(line, "VERSION_ID", &ver);
 		setvar(line, "BUILD_ID", &rel);
 		setvar(line, "ARCHITECTURE", &sys);
+		setvar(line, "DEFAULT_HOSTNAME", &nm);
+		setvar(line, "ID", &id);
 	}
 	fclose(fp);
 }
@@ -963,7 +967,7 @@ static int set_password(struct confd *confd, const char *user, const char *hash,
 		struct json_t *pwd;
 
 		pwd = json_object_get(confd->root, "factory-password-hash");
-		if (!pwd || !json_is_string(pwd)) {
+		if (!json_is_string(pwd)) {
 			/*
 			 * Do not fail, lock account instead.  This way developers can
 			 * enable root account login at build-time to diagnose the system.
@@ -1423,29 +1427,135 @@ static int change_editor(sr_session_ctx_t *session, uint32_t sub_id, const char 
 	return SR_ERR_OK;
 }
 
+static char *get_mac(struct confd *confd, char *mac, size_t len)
+{
+	struct json_t *obj;
+
+	obj = json_object_get(confd->root, "mac-address");
+	if (!json_is_string(obj)) {
+	fallback:
+		ERROR("Unknown or missing base MAC address.");
+		snprintf(mac, len, "UNKNOWN");
+	} else {
+		const char *ptr = json_string_value(obj);
+
+		if (strlen(ptr) < 17)
+			goto fallback;
+
+		strlcpy(mac, &ptr[9], len);
+		mac[2] = '-';
+		mac[5] = '-';
+	}
+
+	return mac;
+}
+
+#define REPLACE_SPECIFIER(replacement)				\
+	do {							\
+		size_t repl_len = strlen(replacement);		\
+		char *ptr;					\
+								\
+		hostlen += repl_len;				\
+		ptr = realloc(hostname, hostlen + 1);		\
+		if (!ptr) {					\
+			free(hostname);				\
+			free(*fmt);				\
+			return -1;				\
+		}						\
+		hostname = ptr;					\
+		strlcat(hostname, replacement, hostlen + 1);	\
+		j += repl_len;					\
+	} while (0)
+
+/*
+ * Decode hostname format specifiers (non-standard, Infix specifc)
+ *
+ * %i: OS ID (from /etc/os-release). infix on vanilla builds,
+ * %h: Default hostname (DEFAULT_HOSTNAME from /etc/os-release). infix on vanilla builds,
+ * %m: NIC specific part of base MAC, e.g., c0:ff:ee translated to c0-ff-ee
+ * %%: Literal %
+ *
+ * NOTE: to be forward compatible, any unknown % combination will be silently consumed.
+ *       E.g., "example-%z" will become "example-"
+ *
+ * XXX: PLEASE REFACTOR THIS INTO A PYTHON HELPER FOR FUTURE EXTENSIONS, OR BUGS!
+ */
+static int hostnamefmt(struct confd *confd, char **fmt)
+{
+	size_t hostlen, fmt_len;
+	char *hostname;
+	char mac[10];
+	size_t i, j;
+
+	if (!fmt || !*fmt || !strchr(*fmt, '%'))
+		return 0;
+
+	hostlen = fmt_len = strlen(*fmt);
+	hostname = calloc(hostlen + 1, sizeof(char));
+	if (!hostname)
+		return -1;
+
+	for (i = 0, j = 0; i < fmt_len; i++) {
+		if ((*fmt)[i] == '%') {
+			switch ((*fmt)[++i]) {
+			case 'i':
+				REPLACE_SPECIFIER(id);
+				break;
+			case 'h':
+				REPLACE_SPECIFIER(nm);
+				break;
+			case 'm':
+				REPLACE_SPECIFIER(get_mac(confd, mac, sizeof(mac)));
+				break;
+			case '%':
+				if (j < hostlen) {
+					hostname[j++] = '%';
+					hostname[j]   = 0;
+				}
+				break;
+			default:
+				break; /* Unknown, skip */
+			}
+		} else {
+			if (j < hostlen) {
+				hostname[j++] = (*fmt)[i];
+				hostname[j]   = 0;
+			}
+		}
+	}
+
+	free(*fmt);
+	*fmt = hostname;
+
+	return 0;
+}
+
+#undef REPLACE_SPECIFIER
+
 static int change_hostname(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
 	const char *xpath, sr_event_t event, unsigned request_id, void *priv)
 {
+	struct confd *confd = (struct confd *)priv;
 	const char *hostip = "127.0.1.1";
-	char *nm, buf[256];
+	char *hostnm, buf[256];
 	FILE *nfp, *fp;
 	int err, fd;
 
 	if (event != SR_EV_DONE)
 		return SR_ERR_OK;
 
-	nm = srx_get_str(session, "%s", xpath);
-	if (!nm) {
-		nm = fgetkey("/etc/os-release", "DEFAULT_HOSTNAME");
-		if (nm)
-			nm = strdup(nm);
-		if (!nm) {
+	hostnm = srx_get_str(session, "%s", xpath);
+	if (!hostnm) {
+	fallback:
+		hostnm = strdup(nm);
+		if (!hostnm) {
 			err = SR_ERR_NO_MEMORY;
 			goto err;
 		}
-	}
+	} else if (hostnamefmt(confd, &hostnm))
+		goto fallback;
 
-	err = sethostname(nm, strlen(nm));
+	err = sethostname(hostnm, strlen(hostnm));
 	if (err) {
 		ERROR("failed setting hostname");
 		err = SR_ERR_SYS;
@@ -1458,7 +1568,7 @@ static int change_hostname(sr_session_ctx_t *session, uint32_t sub_id, const cha
 		goto err;
 	}
 
-	fprintf(fp, "%s\n", nm);
+	fprintf(fp, "%s\n", hostnm);
 	fclose(fp);
 
 	nfp = fopen(_PATH_HOSTS "+", "w");
@@ -1481,7 +1591,7 @@ static int change_hostname(sr_session_ctx_t *session, uint32_t sub_id, const cha
 
 	while (fgets(buf, sizeof(buf), fp)) {
 		if (!strncmp(buf, hostip, strlen(hostip)))
-			snprintf(buf, sizeof(buf), "%s\t%s\n", hostip, nm);
+			snprintf(buf, sizeof(buf), "%s\t%s\n", hostip, hostnm);
 		fputs(buf, nfp);
 	}
 
@@ -1495,12 +1605,12 @@ static int change_hostname(sr_session_ctx_t *session, uint32_t sub_id, const cha
 		goto err;
 
 	/* Inform any running lldpd and avahi of the change ... */
-	systemf("lldpcli configure system hostname %s", nm);
-	systemf("avahi-set-host-name %s", nm);
+	systemf("lldpcli configure system hostname %s", hostnm);
+	systemf("avahi-set-host-name %s", hostnm);
 	system("initctl -nbq touch netbrowse");
 err:
-	if (nm)
-		free(nm);
+	if (hostnm)
+		free(hostnm);
 
 	if (err) {
 		ERROR("Failed activating changes.");

@@ -19,6 +19,18 @@ module infix-system {
   contact      "kernelkit@googlegroups.com";
   description  "Infix augments and deviations to ietf-system.";
 
+  revision 2024-06-14 {
+    description "Add support for format specifiers in hostname:
+                   - %h default hostname from /etc/os-release
+                   - %i value of ID from /etc/os-release
+                   - %m last three octets of base MAC, e.g., c0-ff-ee
+
+                 Add support for yescrypt and $factory$ in password.
+                 The latter is a reserved string which is interpreted
+                 as the device default password from the VPD EEPROM.";
+    reference "internal";
+  }
+
   revision 2024-04-12 {
     description "New type, infix:hostname, for /system/hostname (max 64 chars).";
     reference "internal";
@@ -148,12 +160,17 @@ module infix-system {
   typedef hostname {
     type string {
       pattern
-        '((([a-zA-Z0-9_]([a-zA-Z0-9\-_]){0,61})?[a-zA-Z0-9]\.)*'
-      + '([a-zA-Z0-9_]([a-zA-Z0-9\-_]){0,61})?[a-zA-Z0-9]\.?)'
-      + '|\.';
+          '('
+        + '(([a-zA-Z0-9_]([a-zA-Z0-9\-_]){0,61})?[a-zA-Z0-9]\.)*'
+        + '([a-zA-Z0-9_]([a-zA-Z0-9\-_]){0,61})?[a-zA-Z0-9]\.?'
+        + '|%[him]'
+        + ')'
+        + '([a-zA-Z0-9\-_\.]|%[him])*';
       length "1..64";
     }
-    description "Linux have the same restrictions as IETF, only shorter.";
+    description "Linux have the same restrictions as IETF, only shorter.
+                 Format specifiers are for, default hostname, ID, and the
+                 last three octets in base MAC, e.g., c0-ff-ee";
   }
 
   /*
