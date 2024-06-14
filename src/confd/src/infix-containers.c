@@ -166,9 +166,6 @@ static int add(const char *name, struct lyd_node *cif)
 	if (lydx_is_enabled(cif, "manual"))
 		fprintf(fp, " --manual");
 
-	if ((string = lydx_get_cattr(cif, "command")))
-		fprintf(fp, " --entrypoint");
-
 	fprintf(fp, " create %s %s", name, image);
 
  	if ((string = lydx_get_cattr(cif, "command")))
