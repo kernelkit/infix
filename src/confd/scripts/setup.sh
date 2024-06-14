@@ -1,8 +1,12 @@
 #!/usr/bin/env bash
-set -x
 # This is based on scripts/setup.sh from Netopeer2/libnetconf2
-# env variables NP2_MODULE_DIR, NP2_MODULE_PERMS must be defined and NP2_MODULE_OWNER, NP2_MODULE_GROUP will be used if
-# defined when executing this script!
+#
+# NOTE: env variables NP2_MODULE_DIR, NP2_MODULE_PERMS must be defined
+#       and NP2_MODULE_OWNER, NP2_MODULE_GROUP will be used if defined
+#       when executing this script!
+
+#set -x
+
 #if [ -z "$NP2_MODULE_DIR" -o -z "$NP2_MODULE_PERMS" ]; then
 #    echo "Required environment variables not defined!"
 #    exit 1
@@ -13,9 +17,9 @@ if [ -n "$SYSREPOCTL_EXECUTABLE" ]; then
     SYSREPOCTL="$SYSREPOCTL_EXECUTABLE"
 # avoid problems with sudo PATH
 elif [ `id -u` -eq 0 ] && [ -n "$USER" ] && [ `command -v su` ]; then
-    SYSREPOCTL=`command -v sysrepoctl -l $USER`
+    SYSREPOCTL=`command sysrepoctl -l $USER`
 else
-    SYSREPOCTL=`command -v sysrepoctl`
+    SYSREPOCTL=`command sysrepoctl`
 fi
 MODDIR=${SEARCH_PATH}
 PERMS="660"
@@ -94,8 +98,8 @@ INSTALL_MODULE_CMD() {
 }
 
 UPDATE_MODULE() {
-	CMD="'$SYSREPOCTL' -U $MODDIR/$1  -s '$MODDIR -v2"
-    eval $CMD
+    CMD="'$SYSREPOCTL' -U $MODDIR/$1  -s '$MODDIR' -v2"
+    eval "$CMD"
     local rc=$?
     if [ $rc -ne 0 ]; then
         exit $rc
@@ -133,6 +137,7 @@ for i in "${MODULES[@]}"; do
     SCTL_MODULE=`echo "$SCTL_MODULES" | grep "^$name \+|[^|]*| I"`
     if [ -z "$SCTL_MODULE" ]; then
         # prepare command to install module with all its features
+	echo "*** Installing YANG model $name ..."
         INSTALL_MODULE_CMD "$i"
 	continue
     fi
@@ -142,6 +147,7 @@ for i in "${MODULES[@]}"; do
     if [ "$sctl_revision" \< "$revision" ]; then
         # update module without any features
         file=`echo "$i" | cut -d' ' -f 1`
+	echo "*** Updating YANG model $name ($file) ..."
         UPDATE_MODULE "$file"
     fi
 
@@ -150,6 +156,7 @@ for i in "${MODULES[@]}"; do
     sctl_perms=`echo "$SCTL_MODULE" | sed 's/\([^|]*|\)\{4\} \([^ ]*\).*/\2/'`
     if [ "$sctl_perms" != "$PERMS" ]; then
         # change permissions/owner
+	echo "*** Changing YANG model $name permissions ..."
         CHANGE_PERMS "$name"
     fi
 
@@ -174,8 +181,10 @@ for i in "${MODULES[@]}"; do
         features=`echo "$features" | sed 's/[^[:space:]]* \(.*\)/\1/'`
     done
 done
+
 # install all the new modules
-if [ ! -z "${CMD_INSTALL}" ]; then
+if [ -n "${CMD_INSTALL}" ]; then
+    printf "*** Installing YANG models ...\n%s" "$CMD_INSTALL"
     eval $CMD_INSTALL
     rc=$?
     if [ $rc -ne 0 ]; then
