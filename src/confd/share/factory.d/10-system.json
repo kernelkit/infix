@@ -6,7 +6,7 @@
 		{
 		    "name": "admin",
 		    "password": "$factory$",
-		    "infix-system:shell": "infix-shell-type:bash"
+		    "infix-system:shell": "bash"
 		}
 	    ]
 	}

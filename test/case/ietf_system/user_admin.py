@@ -24,7 +24,7 @@ with infamy.Test() as test:
                         {
                             "name": USER,
                             "password": PASS,
-                            "shell": "infix-shell-type:bash"
+                            "shell": "infix-system:bash"
                         }
                     ]
                 }

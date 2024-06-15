@@ -9,15 +9,17 @@ module infix-system {
   import iana-timezones {
     prefix iana-tz;
   }
-  import infix-shell-type {
-    prefix infixsh;
-  }
 
   include infix-system-software;
 
   organization "KernelKit";
   contact      "kernelkit@googlegroups.com";
   description  "Infix augments and deviations to ietf-system.";
+
+  revision 2024-06-15 {
+    description "Merge infix-shell-types.yang to add shell-type identities.";
+    reference "internal";
+  }
 
   revision 2024-06-14 {
     description "Add support for format specifiers in hostname:
@@ -85,6 +87,27 @@ module infix-system {
   identity vi {
     description "The classic UNIX Visual editor.";
     base editor-type;
+  }
+
+  identity shell-type {
+    description "Base identity from which specific shell types are derived.";
+  }
+
+  identity bash {
+    description "Bourne again shell (BASH), standard UNIX shell.";
+    base shell-type;
+  }
+  identity clish {
+    description "Dedicated switch/router shell, similar to Cisco/JunOS.";
+    base shell-type;
+  }
+  identity sh {
+    description "POSIX shell, the original plain UNIX shell.";
+    base shell-type;
+  }
+  identity false {
+    description "Shell login disabled, both console and SSH.";
+    base shell-type;
   }
 
   /*
@@ -219,9 +242,9 @@ module infix-system {
     description "Augment of ietf-system to support setting login shell for users.";
     leaf shell {
       type identityref {
-        base infixsh:shell-type;
+        base shell-type;
       }
-      default infixsh:false;
+      default false;
       description "Set UNIX login shell for user, default: none (security)";
     }
   }
