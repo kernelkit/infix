@@ -8,7 +8,7 @@ class Container:
         self.system = target
 
     def _find(self, name):
-        oper = self.system.get_data("/infix-containers:containers/container")
+        oper = self.system.get_data("/infix-containers:containers")
         if not oper:
             return None
 
@@ -32,14 +32,5 @@ class Container:
         return False
 
     def action(self, name, act):
-        """Call NETCONF action 'type' on container 'name'"""
-        return self.system.call_action_dict("infix-containers", {
-            "containers": {
-                "container": [
-                    {
-                        "name": f"{name}",
-                        f"{act}": {}
-                    }
-                ]
-            }
-        })
+        xpath=self.system.get_xpath("/infix-containers:containers/container", "name", name, act)
+        return self.system.call_action(xpath)

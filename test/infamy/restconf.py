@@ -29,6 +29,7 @@ class Device(Transport):
                  mapping: dict,
                  yangdir: None | str = None,
                  factory_default = True):
+        print("Testing using RESTCONF")
         self.location=location
         self.url_base=f"https://[{location.host}]:{location.port}"
         self.restconf_url=f"{self.url_base}/restconf"
@@ -94,7 +95,7 @@ class Device(Transport):
             mod=self.lyctx.load_module(ms["name"])
 
             # TODO: ms["feature"] contains the list of enabled
-            # features, so ideally we should only enable the supported
+            # features, so ideally we should only enable the supported"
             # ones. However, features can depend on each other, so the
             # naïve looping approach doesn't work.
             mod.feature_enable_all()
@@ -115,7 +116,7 @@ class Device(Transport):
         path=f"/ds/ietf-datastores:{datastore}"
         if not xpath is None:
             path=f"{path}/{xpath}"
-        path=quote(path, safe="/:")
+        path=quote(path)
         url=f"{self.restconf_url}{path}"
         return self._get_raw(url, parse)
 
@@ -133,8 +134,9 @@ class Device(Transport):
 
     def post_datastore(self, datastore, data):
         """Actually send a POST to RESTCONF server"""
+        url=f"{self.restconf_url}/ds/ietf-datastores:{datastore}"
         response=requests.post(
-            f"{self.restconf_url}/ds/ietf-datastores:{datastore}/",
+            url,
             json=data,  # Directly pass the dictionary without using json.dumps
             headers=self.headers,
             auth=self.auth,
@@ -185,11 +187,16 @@ class Device(Transport):
         """NETCONF compat function, just wraps get_data"""
         return self.get_data(xpath, parse)
 
-    def get_data(self, xpath=None, parse=True):
+    def get_data(self, xpath=None, key=None, value=None, parse=True):
         """Get operational data"""
+        if key:
+            xpath=f"{xpath}={value}"
         data=self.get_operational(xpath, parse)
         if parse==False:
             return data
+
+        if data is None:
+            return None
 
         data=json.loads(data.print_mem("json", with_siblings=True, pretty=False))
 
@@ -209,7 +216,17 @@ class Device(Transport):
 
     def factory_default(self):
         """Factory reset target"""
-        return self.copy("factory-default", "running")
+        return self.call_rpc("infix-factory-default:factory-default")
+
+    def call_action(self, xpath):
+        url=f"{self.restconf_url}/data{xpath}"
+        response=requests.post(
+            url,
+            headers=self.headers,
+            auth=self.auth,
+            verify=False)
+        response.raise_for_status()  # Raise an exception for HTTP errors
+        return response.content
 
     def get_xpath(self,  xpath, key, value, path=None):
         """Compose complete XPath to a YANG node"""
@@ -221,9 +238,9 @@ class Device(Transport):
         return xpath
 
     def get_current_time_with_offset(self):
+        """Parse the time in the raw reply, before it has been passed through libyang, there all offset is lost"""
         data=self.get_data("/ietf-system:system-state/clock", parse=False)
         data=json.loads(data)
-        print(data)
         return data["ietf-system:system-state"]["clock"]["current-datetime"]
 
     def get_iface(self, iface):
@@ -239,7 +256,7 @@ class Device(Transport):
     def delete_xpath(self, xpath):
         """Delete XPath from running config"""
         path=f"/ds/ietf-datastores:running/{xpath}"
-        path=quote(path, safe="/:")
+        path=quote(path)
         url=f"{self.restconf_url}{path}"
         response=requests.delete(url, headers=self.headers, auth=self.auth, verify=False)
         response.raise_for_status()  # Raise an exception for HTTP errors
