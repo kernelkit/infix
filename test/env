@@ -181,6 +181,7 @@ if [ "$containerize" ]; then
 	 --cap-add=NET_ADMIN \
 	 --device=/dev/net/tun \
 	 --env PYTHONHASHSEED=${PYTHONHASHSEED:-$(shuf -i 0-$(((1 << 32) - 1)) -n 1)} \
+	 --env FORCE_PROTOCOL=${FORCE_PROTOCOL} \
 	 --env VIRTUAL_ENV_DISABLE_PROMPT=yes \
 	 --env PROMPT_DIRTRIM="$ixdir" \
 	 --env PS1="$(build_ps1)" \

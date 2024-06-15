@@ -4,6 +4,9 @@ import os
 import pydot
 import shlex
 import sys
+import random
+import hashlib
+import struct
 
 from . import neigh, netconf, restconf, ssh, tap, topology
 
@@ -59,18 +62,33 @@ class Env(object):
         return val
 
     def get_password(self, node):
-        password = self.ptop.get_password(node)
-        if not password:
-            password = "admin"
-        return password
+        return self.ptop.get_password(node)
 
-    def attach(self, node, port, protocol="netconf", factory_default=True):
+    def attach(self, node, port, protocol = None, factory_default=True):
         if self.ltop:
             mapping = self.ltop.mapping[node]
             node, port = self.ltop.xlate(node, port)
         else:
             mapping = None
 
+        if protocol is None:
+            if "FORCE_PROTOCOL" in os.environ and os.environ["FORCE_PROTOCOL"] != "":
+                protocol=os.environ["FORCE_PROTOCOL"]
+            elif "PYTHONHASHSEED" in os.environ:
+                file_name = f"{sys.argv[0]}-{os.environ['PYTHONHASHSEED']}"
+                hash_object = hashlib.md5(file_name.encode())
+                hash_digest = hash_object.digest()
+
+                seed = struct.unpack('i', hash_digest[:4])[0]
+                random.seed(seed)
+                protocols=["restconf", "netconf"]
+                random.shuffle(protocols)
+                protocol=protocols[0]
+            else:
+                protocols=["restconf", "netconf"]
+                random.shuffle(protocols)
+                protocol=protocols[0]
+        password=self.get_password(node)
         ctrl = self.ptop.get_ctrl()
         cport, _ = self.ptop.get_mgmt_link(ctrl, node)
 
