@@ -45,10 +45,10 @@ static char   *nm  = NULL;
 static char   *id  = NULL;
 
 static struct { char *name, *shell; bool admin; } shells[] = {
-	{ "infix-shell-type:sh",    "/bin/sh",    true  },
-	{ "infix-shell-type:bash",  "/bin/bash",  true  },
-	{ "infix-shell-type:clish", "/bin/clish", false },
-	{ "infix-shell-type:false", "/bin/false", false },
+	{ "infix-system:sh",    "/bin/sh",    true  },
+	{ "infix-system:bash",  "/bin/bash",  true  },
+	{ "infix-system:clish", "/bin/clish", false },
+	{ "infix-system:false", "/bin/false", false },
 };
 
 static char *strip_quotes(char *str)
