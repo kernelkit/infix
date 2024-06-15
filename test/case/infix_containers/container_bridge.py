@@ -56,6 +56,7 @@ with infamy.Test() as test:
                     {
                         "name": f"{NAME}",
                         "image": f"oci-archive:{infamy.Container.IMAGE}",
+                        "command": "/usr/sbin/httpd -f -v -p 91",
                         "mount": [
                             {
                                 "name": "index.html",
@@ -67,7 +68,7 @@ with infamy.Test() as test:
                             "interface": [
                                 { "name": "docker0" }
                             ],
-                            "publish": [ "8080:80" ]
+                            "publish": [ "8080:91" ]
                         }
                     }
                 ]
