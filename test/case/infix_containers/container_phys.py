@@ -13,7 +13,7 @@ with infamy.Test() as test:
     IMAGE = "curios-httpd-edge.tar.gz"
     DUTIP = "10.0.0.2"
     OURIP = "10.0.0.1"
-    URL   = f"http://{DUTIP}/index.html"
+    URL   = f"http://{DUTIP}:91/index.html"
 
     with test.step("Initialize"):
         env = infamy.Env(infamy.std_topology("1x2"))
@@ -44,6 +44,7 @@ with infamy.Test() as test:
                     {
                         "name": f"{NAME}",
                         "image": f"oci-archive:{infamy.Container.IMAGE}",
+                        "command": "/usr/sbin/httpd -f -v -p 91",
                         "network": {
                             "interface": [
                                 { "name": f"{ifname}" }
