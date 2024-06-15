@@ -97,6 +97,7 @@ class Device(Transport):
                  mapping: dict,
                  yangdir: None | str = None,
                  factory_default=True):
+        print("Testing using NETCONF")
 
         self.location = location
         self.mapping = mapping
@@ -337,17 +338,18 @@ class Device(Transport):
         lyd = mod.parse_data_dict(call, rpc=True)
         return self.call(lyd.print_mem("xml", with_siblings=True, pretty=False))
 
-    def call_action(self, action):
+    def call_action(self, xpath):
         """Call NETCONF action (contextualized RPC), XML version"""
-        xml = "<action xmlns=\"urn:ietf:params:xml:ns:yang:1\">" \
-            + action + "</action>"
-        return self.ncc.dispatch(xml)
-
-    def call_action_dict(self, modname, action):
-        """Call NETCONF action (contextualized RPC), Python dictionary version"""
-        mod = self.ly.get_module(modname)
+        action={}
+        pattern = r"^/(?P<module>[^:]+):(?P<path>[^/]+)"
+        match = re.search(pattern, xpath)
+        module = match.group('module')
+        modpath = f"/{match.group('module')}:{match.group('path')}"
+        libyang.xpath_set(action, xpath, {})
+        mod = self.ly.get_module(module)
         lyd = mod.parse_data_dict(action, rpc=True)
-        return self.call_action(lyd.print_mem("xml", with_siblings=True, pretty=False))
+        xml = "<action xmlns=\"urn:ietf:params:xml:ns:yang:1\">" + lyd.print_mem("xml", with_siblings=True, pretty=False) + "</action>"
+        return self.ncc.dispatch(xml)
 
     def get_schemas_list(self):
         schemas = []

@@ -33,6 +33,9 @@ class Transport(ABC):
         # This is needed since libyang is too nice and removes the original offset
         pass
     @abstractmethod
+    def call_action(self, xpath):
+        pass
+    @abstractmethod
     def get_iface_xpath(self, iface, path=None):
         pass
     @abstractmethod
