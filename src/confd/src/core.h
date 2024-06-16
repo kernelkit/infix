@@ -191,6 +191,9 @@ int ietf_routing_init(struct confd *confd);
 /* infix-factory.c */
 int infix_factory_init(struct confd *confd);
 
+/* infix-factory.c */
+int infix_meta_init(struct confd *confd);
+
 /* infix-system-software.c */
 int infix_system_sw_init(struct confd *confd);
 

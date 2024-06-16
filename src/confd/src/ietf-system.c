@@ -1666,7 +1666,7 @@ static int hostname_cb(sr_session_ctx_t *session, uint32_t sub_id, const char *m
 
 int ietf_system_init(struct confd *confd)
 {
-	int rc = 0;
+	int rc;
 
 	os_init();
 
