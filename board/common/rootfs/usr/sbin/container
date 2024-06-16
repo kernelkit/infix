@@ -58,6 +58,7 @@ unpack_archive()
 
 	[ -n "$quiet" ] || log "Extracting OCI archive $file ..."
         tar xf "$file" || (log "Error: failed unpacking $file in $(pwd)"; exit 1)
+	remove=true
     fi
 
     dir=$(dirname "$index")
@@ -70,6 +71,10 @@ unpack_archive()
 	podman rmi "$dir"         >/dev/null
     else
 	name=$dir
+    fi
+
+    if [ "$remove" = "true" ]; then
+	rm -rf "$file"
     fi
 
     echo "$name"
