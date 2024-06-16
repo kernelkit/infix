@@ -6,9 +6,14 @@ All notable changes to the project are documented in this file.
 
 [v24.06.0][UNRELEASED]
 ----------------------
-> **Note:** After upgrade a factory reset is needed
+
+> **Note:** this release contains **breaking changes** in YANG models
+> that are incompatible with existing configuration files.  So, after
+> upgrade, but before reboot, a factory reset is required!
 
 ### Changes
+- Upgrade Buildroot to 2024.02.3 (LTS)
+- Upgrade Linux kernel to 6.6.34 (LTS)
 - Default web landing page refactored into a Buildroot package to make
   it possible to overload from customer repos.
 - Enable DCB support in aarch64 kernel (for EtherType prio override)
@@ -35,10 +40,30 @@ All notable changes to the project are documented in this file.
   on egress.
 - `mv88e6xxx` ports can now use Linux's priority information to select
   the appropriate egress queue, via the `mqprio` queuing discipline.
-- Upgrade Buildroot to 2024.02.3 and Linux kernel to 6.6.34
+- Add logging of output from container start/stop action
+- Clean up stale directories after OCI container archive import
+- Add support for `show leaf-node` in CLI configure context
+- Allow non-admin users to use the CLI.  NACM rules still apply
+- Ensure filesystem is sync'ed properly after a CLI `copy` command
+- Issue #178: add early boot script to migrate configuration files of
+  older version to new syntax.  Initial, rudimentary support, for the
+  change in shell types
+- Issue #308: add `version` field to ietf-system.yang to be able to
+  detect the configuration file version.
+- Issue #435: add support for `$factory$` password hash.  This allows
+  backing up configuration files with device specific passwords.  Upon
+  restore to another device this ensures the replacement's password is
+  used instead of the originals'
+- Issue #435: add support for hostname format specifiers.  The default
+  hostname configuration is now `%h-%m` to encode, `infix-c0-ff-ee`
+- Issue #447: add support for [yescrypt][], `$y$` hashes
+- Issue #478: add operational support for ietf-system.yang, reading
+  actual hostname and passwords after issue #435
+- Merge infix-shell-types.yang with infix-system.yang
+
+[yescrypt]: https://en.wikipedia.org/wiki/Yescrypt)
 
 ### Fixes
-- Add missing LICENSE hash for factory reset tool
 - Fix #424: regression, root user can log in without password
 - Fix build regressions in `cn9130_crb_boot_defconfig` caused by upgrade
   to Buildroot v2024.02 and recent multi-key support in RAUC and U-Boot
@@ -56,6 +81,8 @@ All notable changes to the project are documented in this file.
   privileges (added to UNIX `wheel` group)
 - Fix #473: bridge interface with IPv6 SLAAC never get global prefix
 - Fix locking issue with standard counter groups on `mv88e6xxx`
+- Add missing LICENSE hash for factory reset tool
+- Fix timeout handling in container restart command
 - Fix MDB/ATU synchronization issue from IGMPv3/MLDv2 reports on
   `mv88e6xxx` systems
 - Fix #476: Custom command for containers not working
