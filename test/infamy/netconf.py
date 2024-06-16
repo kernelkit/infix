@@ -17,6 +17,7 @@ from infamy.neigh import ll6ping
 
 from netconf_client.error import RpcError
 
+
 def netconf_syn(addr):
     try:
         ai = socket.getaddrinfo(addr, 830, 0, 0, socket.SOL_TCP)
@@ -25,20 +26,24 @@ def netconf_syn(addr):
         sock.close()
         print(f"{addr} answers to TCP connections on port 830 (NETCONF)")
         return True
-    except:
+    except Exception:
         return False
 
 
 modinfo_fields = ("identifier", "version", "format", "namespace")
 ModInfoTuple = namedtuple("ModInfoTuple", modinfo_fields)
+
+
 class ModInfo(ModInfoTuple):
     def xmlns(self):
         return f"xmlns:{self.identifier}=\"{self.namespace}\""
+
 
 NS = {
     "ietf-netconf-monitoring": "urn:ietf:params:xml:ns:yang:ietf-netconf-monitoring",
     "nc": "urn:ietf:params:xml:ns:netconf:base:1.0",
 }
+
 
 class Manager(netconf_client.ncclient.Manager):
     """Wrapper for the real manager
@@ -53,9 +58,10 @@ class Manager(netconf_client.ncclient.Manager):
         self._peer_ip = None
         try:
             self._local_ip = self.session.sock.sock.getsockname()[0]
-            self._peer_ip  = self.session.sock.sock.getpeername()[0]
-            print(f"Connection status\n\tLocal IP: {self._local_ip}\n\tPeer IP: {self._peer_ip}")
-        except (AttributeError, socket_error) as err:
+            self._peer_ip = self.session.sock.sock.getpeername()[0]
+            print(f"Connection status\n\tLocal IP: {self._local_ip}\n"
+                  "\tPeer IP: {self._peer_ip}")
+        except (AttributeError, socket.error) as err:
             print(f"Failed connecting, status: {err}")
             pass
 
@@ -89,15 +95,15 @@ class Device(object):
                  location: Location,
                  mapping: dict,
                  yangdir: None | str = None,
-                 factory_default = True):
+                 factory_default=True):
 
         self.location = location
         self.mapping = mapping
         self.location = location
         self.ly = libyang.Context(yangdir)
         self._ncc_init(location)
-        #self.ncc._fetch_connection_ip()
-        #self.ncc._debug()
+        # self.ncc._fetch_connection_ip()
+        # self.ncc._debug()
 
         self.modules = {}
         self._ly_bootstrap(yangdir)
@@ -147,7 +153,9 @@ class Device(object):
         self.ncc = Manager(session)
 
     def _ly_bootstrap(self, yangdir):
-        self.modules["ietf-netconf-monitoring"] = { "name": "ietf-netconf-monitoring" }
+        self.modules["ietf-netconf-monitoring"] = {
+            "name": "ietf-netconf-monitoring"
+        }
 
         for val in self.modules.values():
             mod = self.ly.load_module(val["name"])
@@ -156,7 +164,8 @@ class Device(object):
         for schema in schemas:
             if os.path.exists(yangdir + "/" + schema['filename']) is False:
                 self.get_schema(schema, yangdir)
-                sys.stdout.write(f"Downloading YANG model {schema['identifier']} ...\r\033[K")
+                sys.stdout.write("Downloading YANG model "
+                                 f"{schema['identifier']} ...\r\033[K")
         print("YANG models downloaded.")
 
     def _ly_init(self, yangdir):
@@ -166,14 +175,14 @@ class Device(object):
         ns = libyang.util.c2str(lib.cdata.ns)
 
         xml = lxml.etree.tostring(self.ncc.get(filter=f"""
-        	<filter type="subtree">
-        		<modules-state xmlns="{ns}" />
-        	</filter>""").data_ele[0])
+        <filter type="subtree">
+          <modules-state xmlns="{ns}" />
+        </filter>""").data_ele[0])
 
         data = self.ly.parse_data("xml", libyang.IOType.MEMORY,
                                   xml, parse_only=True).print_dict()
 
-        self.modules = { m["name"] : m for m in data["modules-state"]["module"] }
+        self.modules = {m["name"]: m for m in data["modules-state"]["module"]}
 
         for ms in self.modules.values():
             if ms["conformance-type"] != "implement":
@@ -217,13 +226,14 @@ class Device(object):
                       f'ds:{datastore}'
                       f'</datastore>')
         if filter:
-            xmlns = " ".join([f"xmlns:{m['name']}=\"{m['namespace']}\"" for m in self._modules_in_xpath(filter)])
+            xmlns = " ".join([f"xmlns:{m['name']}=\"{m['namespace']}\""
+                              for m in self._modules_in_xpath(filter)])
             pieces.append(f'<xpath-filter {xmlns}>{filter}</xpath-filter>')
         pieces.append("</get-data>")
         return self._ncc_make_rpc("".join(pieces), msg_id=msg_id)
 
     def copy(self, source, target):
-        cmd=f'''<copy-config>
+        cmd = f'''<copy-config>
         <target>
             <{target}/>
         </target>
@@ -234,18 +244,18 @@ class Device(object):
         self.ncc._send_rpc(self._ncc_make_rpc(cmd))
 
     def reboot(self):
-        cmd='<system-restart xmlns="urn:ietf:params:xml:ns:yang:ietf-system"/>'
-        return self.call_dict("ietf-system",
-                              {
-                                  "system-restart" : {}
-                              })
+        """<system-restart xmlns="urn:ietf:params:xml:ns:yang:ietf-system"/>"""
+        return self.call_dict("ietf-system", {
+            "system-restart": {}
+        })
 
     def _get(self, xpath, getter, as_xml=False):
         # Figure out which modules we are referencing
         mods = self._modules_in_xpath(xpath)
 
         # Fetch the data
-        xmlns = " ".join([f"xmlns:{m['name']}=\"{m['namespace']}\"" for m in mods])
+        xmlns = " ".join([f"xmlns:{m['name']}=\"{m['namespace']}\""
+                          for m in mods])
         filt = f"<filter type=\"xpath\" select=\"{xpath}\" {xmlns} />"
         # pylint: disable=c-extension-no-member
         data = getter(filter=filt).data_ele[0]
@@ -254,7 +264,7 @@ class Device(object):
         cfg = lxml.etree.tostring(data)
         return self.ly.parse_data_mem(cfg, "xml", parse_only=True)
 
-    def _get_data(self, xpath,as_xml=False):
+    def _get_data(self, xpath, as_xml=False):
         """Local member wrapper for netconf-client <get-data> RPC"""
         # pylint: disable=protected-access
         (raw, ele) = self.ncc._send_rpc(self._ncc_get_data_rpc(filter=xpath))
@@ -273,7 +283,7 @@ class Device(object):
         """RPC <get> (legacy NETCONF) fetches config:false data"""
         return self._get(xpath, self.ncc.get, as_xml)
 
-    def get_dict(self, xpath,as_xml=False):
+    def get_dict(self, xpath, as_xml=False):
         """Return Python dictionary of <get> RPC data"""
         if as_xml:
             return self.get(xpath, as_xml=True)
@@ -287,7 +297,7 @@ class Device(object):
     def get_data(self, xpath=None, as_xml=False):
         """RPC <get-data> to fetch operational data"""
         if as_xml:
-            return self._get_data(xpath,as_xml)
+            return self._get_data(xpath, as_xml)
 
         data = self._get_data(xpath)
         if not data:
@@ -310,15 +320,16 @@ class Device(object):
             "delete": "delete",
         }
 
-        xml = f"<config xmlns=\"{NS['nc']}\" xmlns:nc=\"{NS['nc']}\">" + edit + "</config>"
+        xml = f"<config xmlns=\"{NS['nc']}\" xmlns:nc=\"{NS['nc']}\">" \
+            + edit + "</config>"
 
         # Translate any edit operations from the yang format generated
         # by diffing trees with libyang, to their NETCONF equivalents.
-        for src,dst in yang2nc.items():
+        for src, dst in yang2nc.items():
             xml = xml.replace(f"yang:operation=\"{src}\"",
                               f"nc:operation=\"{dst}\"" if dst else "")
 
-        for _ in range(0,3):
+        for _ in range(0, 3):
             try:
                 self.ncc.edit_config(xml, default_operation='merge')
             except RpcError as _e:
@@ -352,7 +363,8 @@ class Device(object):
 
     def call_action(self, action):
         """Call NETCONF action (contextualized RPC), XML version"""
-        xml = "<action xmlns=\"urn:ietf:params:xml:ns:yang:1\">" + action + "</action>"
+        xml = "<action xmlns=\"urn:ietf:params:xml:ns:yang:1\">" \
+            + action + "</action>"
         return self.ncc.dispatch(xml)
 
     def call_action_dict(self, modname, action):
@@ -362,16 +374,16 @@ class Device(object):
         return self.call_action(lyd.print_mem("xml", with_siblings=True, pretty=False))
 
     def get_schemas_list(self):
-        schemas=[]
+        schemas = []
 
-        data= self.get_dict("/netconf-state")
+        data = self.get_dict("/netconf-state")
         for d in data["netconf-state"]["schemas"]["schema"]:
-            schema={}
+            schema = {}
             schema["identifier"] = d['identifier']
             schema["format"] = d["format"]
             if d['version']:
                 schema["version"] = d['version']
-                schema["filename"]= f"{d['identifier']}@{d['version']}.yang"
+                schema["filename"] = f"{d['identifier']}@{d['version']}.yang"
             else:
                 schema["filename"] = f"{d['identifier']}.yang"
             schemas.append(schema)

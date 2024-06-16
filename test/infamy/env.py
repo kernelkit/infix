@@ -48,7 +48,7 @@ class Env(object):
 
     def attr(self, name, default=None):
         val = self.ptop.get_attr("ix_" + name)
-        if val == None:
+        if val is None:
             return default
 
         try:
@@ -84,10 +84,12 @@ class Env(object):
                 yangdir=self.args.yangdir,
                 factory_default=factory_default
             )
-        elif protocol == "ssh":
+        if protocol == "ssh":
             return ssh.Device(ssh.Location(mgmtip, password))
-        elif protocol == "restconf":
-            return restconf.Device(location=restconf.Location(cport, mgmtip, password),
+        if protocol == "restconf":
+            return restconf.Device(location=restconf.Location(cport,
+                                                              mgmtip,
+                                                              password),
                                    mapping=mapping,
                                    factory_default=factory_default)
 
