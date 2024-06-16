@@ -12,7 +12,7 @@ CONFD_LICENSE_FILES = LICENSE
 CONFD_REDISTRIBUTE = NO
 CONFD_DEPENDENCIES = host-sysrepo sysrepo netopeer2 jansson libite sysrepo libsrx libglib2
 CONFD_AUTORECONF = YES
-
+CONFD_CONF_OPTS += --disable-silent-rules
 CONFD_SYSREPO_SHM_PREFIX = sr_buildroot$(subst /,_,$(CONFIG_DIR))_confd
 
 define CONFD_CONF_ENV

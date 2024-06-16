@@ -1,0 +1,9 @@
+#!/bin/sh
+
+cat <<EOF
+{
+  "infix-meta:meta": {
+    "infix-meta:version": "@VERSION@"
+  }
+}
+EOF
