@@ -119,7 +119,7 @@ there is another helper script in Infamy for this:
     $ ./test/console 1
     Trying 127.0.0.1...
     Connected to 127.0.0.1.
-    
+
     Infix -- a Network Operating System v23.11.0-226-g0c144da (console)
     infix-00-00-00 login: admin
     Password:
@@ -127,9 +127,9 @@ there is another helper script in Infamy for this:
     |  . .  | Infix -- a Network Operating System
     |-. v .-| https://kernelkit.github.io
     '-'---'-'
-    
+
     Run the command 'cli' for interactive OAM
-    
+
     admin@infix-00-00-00:~$
 
 From here we can observe `dut1` freely while running tests.
@@ -256,6 +256,13 @@ the whole suite) with identical topology mappings:
 
     $ make PYTHONHASHSEED=3773822171 INFIX_TESTS=case/ietf_system/hostname.py test
 
+### Determinstic use of communication protocol (NETCONF/RESTCONF)
+
+By default the protocol will be chosen randomly. If you supply a
+`PYTHONHASHSEED` as described above, you will get the same protocol
+chosen. If you want to choose the communcation protocol:
+
+    $ make INFAMY_EXTRA_ARGS="--transport=restconf" INFIX_TESTS=case/ietf_system/hostname.py test
 
 [9PM]:    https://github.com/rical/9pm
 [Qeneth]: https://github.com/wkz/qeneth
