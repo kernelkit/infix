@@ -5,44 +5,39 @@ CONFIGS="$SCRIPT_PATH/../../../configs"
 
 whitelist()
 {
-    nm=$(basename "$1")
-    case $nm in
-	cn9130_crb_boot_defconfig | fireant_boot_defconfig)
+    case "$1" in
+	*_boot_defconfig)
 	    return 0
 	    ;;
-	*)
-	    return 1
-	    ;;
     esac
+
+    return 1
 }
 
 # Check for disabled root login
 disabled_root_login()
 {
-    txt="# BR2_TARGET_ENABLE_ROOT_LOGIN is not set"
-    fn=$(realpath "$1")
-
-    if ! grep -q "$txt" "$fn"; then
-	if ! whitelist "$fn"; then
-	    echo "Missing '$txt' in $fn!"
-	    return 1
-	fi
-    fi
+    grep -q "# BR2_TARGET_ENABLE_ROOT_LOGIN is not set" "$1"
 }
 
 # For all defconfigs
 check()
 {
-    total=$#
-    num=1
+    local total=$#
+    local num=1
+    local base=
 
     echo "1..$total"
     for defconfig in "$@"; do
-	fn=$(basename "$defconfig")
+	base=$(basename "$defconfig")
 	if disabled_root_login "$defconfig"; then
-	    echo "ok $num - $fn"
+	    echo "ok $num - $base disables root logins"
 	else
-	    echo "not ok $num - $fn has not disabled root login"
+	    if whitelist "$base"; then
+		echo "ok $num - $base is exempted # skip"
+	    else
+		echo "not ok $num - $base has not disabled root login"
+	    fi
 	fi
 	num=$((num + 1))
     done
