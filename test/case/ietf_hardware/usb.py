@@ -82,10 +82,9 @@ with infamy.Test() as test:
             until(lambda: usb.get_usb_state(target, available[0]) == "unlocked")
 
     with test.step("Remove all hardware configuration"):
-        xpath=target.get_xpath("/ietf-hardware:hardware/component", "name", "USB")
-        target.delete_xpath(xpath)
-        xpath=target.get_xpath("/ietf-hardware:hardware/component", "name", "USB2")
-        target.delete_xpath(xpath)
+        for port in available:
+            xpath=target.get_xpath("/ietf-hardware:hardware/component", "name", port)
+            target.delete_xpath(xpath)
 
     with test.step("Verify USB ports locked"):
         for port in available:
@@ -115,10 +114,9 @@ with infamy.Test() as test:
             until(lambda: usb.get_usb_state(target, port) == "unlocked")
 
     with test.step("Remove USB configuration, and reboot"):
-        xpath=target.get_xpath("/ietf-hardware:hardware/component", "name", "USB")
-        target.delete_xpath(xpath)
-        xpath=target.get_xpath("/ietf-hardware:hardware/component", "name", "USB2")
-        target.delete_xpath(xpath)
+        for port in available:
+            xpath=target.get_xpath("/ietf-hardware:hardware/component", "name", port)
+            target.delete_xpath(xpath)
         target.copy("running", "startup")
         target.reboot()
         if wait_boot(target) == False:
