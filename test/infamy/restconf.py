@@ -33,7 +33,7 @@ class Device(Transport):
         self.location=location
         self.url_base=f"https://[{location.host}]:{location.port}"
         self.restconf_url=f"{self.url_base}/restconf"
-        self.yang_url=f"{self.url_base}/yang/"
+        self.yang_url=f"{self.url_base}/yang"
         self.rpc_url=f"{self.url_base}/restconf/operations"
         self.headers={
             'Content-Type': 'application/yang-data+json',
@@ -66,7 +66,7 @@ class Device(Transport):
     def schema_exist(self, name, revision, yangdir):
         schema_name=f"{name}@{revision}.yang"
         schema_path=f"{yangdir}/{schema_name}"
-        return os.path.exists("{schema_path}")
+        return os.path.exists(schema_path)
 
     def _ly_bootstrap(self, yangdir):
         schemas=self.get_schemas_list()
@@ -80,7 +80,6 @@ class Device(Transport):
 
             if not any("submodule" in x and schema["name"] in x["submodule"] for x in schemas):
                 self.modules.update({schema["name"]: schema})
-            sys.stdout.write(f"Downloading YANG model {schema['name']} ...\r\033[K")
 
         print("YANG models downloaded.")
 
@@ -116,7 +115,6 @@ class Device(Transport):
         path=f"/ds/ietf-datastores:{datastore}"
         if not xpath is None:
             path=f"{path}/{xpath}"
-        path=quote(path)
         url=f"{self.restconf_url}{path}"
         return self._get_raw(url, parse)
 
@@ -256,7 +254,6 @@ class Device(Transport):
     def delete_xpath(self, xpath):
         """Delete XPath from running config"""
         path=f"/ds/ietf-datastores:running/{xpath}"
-        path=quote(path)
         url=f"{self.restconf_url}{path}"
         response=requests.delete(url, headers=self.headers, auth=self.auth, verify=False)
         response.raise_for_status()  # Raise an exception for HTTP errors
