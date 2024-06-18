@@ -1,0 +1,14 @@
+#!/bin/sh
+# Generate NETCONF SSH host key pair
+set -e
+
+BIT=2048
+KEY=$1
+PUB=$2
+
+mkdir -p "$(dirname "$KEY")" "$(dirname "$PUB")"
+
+openssl genpkey -quiet -algorithm RSA -pkeyopt rsa_keygen_bits:$BIT -outform PEM > "$KEY"
+openssl rsa -RSAPublicKey_out < "$KEY" > "$PUB"
+
+exit 0

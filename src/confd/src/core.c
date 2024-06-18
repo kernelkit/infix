@@ -124,6 +124,9 @@ int sr_plugin_init_cb(sr_session_ctx_t *session, void **priv)
 	rc = ietf_interfaces_init(&confd);
 	if (rc)
 		goto err;
+	rc = ietf_keystore_init(&confd);
+	if (rc)
+		goto err;
 	rc = ietf_system_init(&confd);
 	if (rc)
 		goto err;
