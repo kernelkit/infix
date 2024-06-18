@@ -1,6 +1,6 @@
 {
     "ietf-system:system": {
-	"hostname": "failure",
+	"hostname": "FAILURE",
 	"authentication": {
 	    "user": [
 		{
