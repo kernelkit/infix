@@ -2,8 +2,12 @@
 
 import socket
 import time
-
+import requests
 import infamy, infamy.neigh
+import infamy.restconf as restconf
+import infamy.netconf as  netconf
+
+from requests.auth import HTTPBasicAuth
 
 def ll6ping(node):
     neigh = None
@@ -44,7 +48,8 @@ with infamy.Test() as test:
             retry = []
             for node in infixen:
                 neigh = ll6ping(node)
-                if neigh and netconf_syn(neigh):
+                password = env.ptop.get_password(node)
+                if neigh and netconf.netconf_syn(neigh) and restconf.restconf_reachable(neigh, password):
                     continue
 
                 retry.append(node)
