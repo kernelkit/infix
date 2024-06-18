@@ -3,12 +3,14 @@
 #ifndef CONFD_SRX_VAL_H_
 #define CONFD_SRX_VAL_H_
 
+#include <stdbool.h>
 #include "common.h"
 
 #define SRX_GET_UINT8(s,v,fmt,...)  srx_get_int(s, &v, SR_UINT8_T, fmt, ##__VA_ARGS__)
 #define SRX_GET_UINT32(s,v,fmt,...) srx_get_int(s, &v, SR_UINT32_T, fmt, ##__VA_ARGS__)
 
 sr_error_t srx_get_diff(sr_session_ctx_t *session, struct lyd_node **treep);
+bool srx_isset(sr_session_ctx_t *session, const char *fmt, ...);
 
 int srx_set_item(sr_session_ctx_t *, const sr_val_t *, sr_edit_options_t, const char *, ...)
 	__attribute__ ((format (printf, 4, 5)));

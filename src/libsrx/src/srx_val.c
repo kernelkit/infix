@@ -25,6 +25,37 @@ sr_error_t srx_get_diff(sr_session_ctx_t *session, struct lyd_node **treep)
 	return err;
 }
 
+/* check if string at xpath (fmt) is set (non-zero length) */
+bool srx_isset(sr_session_ctx_t *session, const char *fmt, ...)
+{
+	sr_val_t *value = NULL;
+	bool isset = false;
+	char *xpath;
+	va_list ap;
+	size_t len;
+
+	va_start(ap, fmt);
+	len = vsnprintf(NULL, 0, fmt, ap) + 1;
+	va_end(ap);
+
+	xpath = alloca(len);
+	if (!xpath)
+		return false;
+
+	va_start(ap, fmt);
+	vsnprintf(xpath, len, fmt, ap);
+	va_end(ap);
+
+	if (sr_get_item(session, xpath, 0, &value))
+		return false;
+
+	if (value->data.string_val[0] != 0)
+		isset = true;
+	sr_free_val(value);
+
+	return isset;
+}
+
 int srx_set_item(sr_session_ctx_t *session, const sr_val_t *val, sr_edit_options_t opts,
 		 const char *fmt, ...)
 {
