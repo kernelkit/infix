@@ -58,6 +58,12 @@ class Env(object):
 
         return val
 
+    def get_password(self, node):
+        password = self.ptop.get_password(node)
+        if not password:
+            password = "admin"
+        return password
+
     def attach(self, node, port, protocol="netconf", factory_default=True):
         if self.ltop:
             mapping = self.ltop.mapping[node]
@@ -65,10 +71,6 @@ class Env(object):
         else:
             mapping = None
 
-        password=self.ptop.get_password(node)
-
-        if not password:
-            password = "admin"
         ctrl = self.ptop.get_ctrl()
         cport, _ = self.ptop.get_mgmt_link(ctrl, node)
 
@@ -77,6 +79,7 @@ class Env(object):
         if not mgmtip:
             raise Exception(f"Failed, cannot find mgmt IP for {node}")
 
+        password = self.get_password(node)
         if protocol == "netconf":
             return netconf.Device(
                 location=netconf.Location(cport, mgmtip, password),
