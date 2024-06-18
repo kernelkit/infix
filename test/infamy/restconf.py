@@ -23,6 +23,23 @@ class Location:
     username: str = "admin"
     port: int = 443
 
+
+def restconf_reachable(neigh, password):
+    try:
+        headers={
+            'Content-Type': 'application/yang-data+json',
+            'Accept': 'application/yang-data+json'
+        }
+        url=f"https://[{neigh}]/restconf/data/ietf-system:system/hostname"
+        auth=HTTPBasicAuth("admin", password)
+        response=requests.get(url, headers=headers, auth=auth, verify=False)
+        print(f"{neigh} answers to TCP connections on port 443 (RESTCONF)")
+        if response.status_code==200:
+            return True
+    except:
+        return False
+
+    return False
 class Device(Transport):
     def __init__(self,
                  location: Location,

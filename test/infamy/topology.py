@@ -122,7 +122,8 @@ class Topology:
         n = self.dotg.get_node(node)
         b = n[0] if n else {}
         password=b.get("password")
-        return qstrip(password) if password is not None else None
+
+        return qstrip(password) if password is not None else "admin"
 
     def get_link(self, src, dst, flt=lambda _: True):
         es = self.g.get_edge_data(src, dst)

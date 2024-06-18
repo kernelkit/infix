@@ -2,6 +2,7 @@ import time
 import threading
 import infamy.neigh
 import infamy.netconf as netconf
+import infamy.restconf as restconf
 
 class ParallelFn(threading.Thread):
     def __init__(self, group=None, target=None, name=None,
@@ -50,4 +51,6 @@ def wait_boot(target):
     if not neigh:
         return False
     until(lambda: netconf.netconf_syn(neigh) == True, attempts = 300)
+    until(lambda: restconf.restconf_reachable(neigh, target.location.password) == True, attempts = 300)
+
     return True
