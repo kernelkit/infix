@@ -25,6 +25,7 @@ confd_plugin_la_SOURCES =			\
 	core.c			core.h		\
 	dagger.c		dagger.h	\
 	ietf-interfaces.c			\
+	ietf-keystore.c				\
 	ietf-system.c				\
 	ietf-factory-default.c			\
 	ietf-routing.c				\

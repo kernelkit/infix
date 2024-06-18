@@ -103,8 +103,6 @@ factory()
     gen-interfaces $GEN_IFACE_OPTS                          >"$FACTORY_D/20-interfaces.json"
     gen-version                                             >"$FACTORY_D/20-version.json"
 
-    [ -s "$FACTORY_D/20-hostkey.json"   ] || gen-hostkeys   >"$FACTORY_D/20-hostkey.json"
-
     # Optional commands (from an overlay) to run for br2-externals
     [ -x "$(command -v gen-ifs-custom)" ] && gen-ifs-custom >"$FACTORY_D/20-interfaces.json"
     [ -x "$(command -v gen-cfg-custom)" ] && gen-cfg-custom >"$FACTORY_D/30-config.json"
@@ -122,8 +120,6 @@ failure()
     gen-hostname   "$FAIL_HOSTNAME"                         >"$FAILURE_D/20-hostname.json"
     gen-interfaces                                          >"$FAILURE_D/20-interfaces.json"
     gen-version                                             >"$FACTORY_D/20-version.json"
-
-    [ -s "$FAILURE_D/20-hostkey.json"   ] || gen-hostkeys   >"$FAILURE_D/20-hostkey.json"
 
     # Optional failure/error config to generate (or override) for br2-externals
     [ -x "$(command -v gen-err-custom)" ] && gen-err-custom >"$FAILURE_D/30-error.json"
