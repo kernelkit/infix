@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: BSD-3-Clause */
 
 #include <assert.h>
+#include <crypt.h>
 #include <ctype.h>
 #include <paths.h>
 #include <pwd.h>
@@ -1219,6 +1220,87 @@ err_release_data:
 	return err;
 }
 
+static const char *ctp_crypt(void)
+{
+	struct {
+		const char *crypt;
+		const char *prefix;
+	} list[] = {
+		{ "md5crypt",    "$1$" },
+		{ "sha256crypt", "$5$" },
+		{ "sha512crypt", "$6$" },
+		{ "yescrypt",    "$y$" },
+	};
+	size_t i;
+
+	for (i = 0; i < NELEMS(list); i++) {
+		if (strcmp(list[i].crypt, DEFAULT_CRYPT))
+			continue;
+
+		return list[i].prefix;
+	}
+
+	return "$y$";		/* fallback */
+}
+
+static int ctp_hash_is_cleartext(const char *hash)
+{
+    if (strlen(hash) < 3)
+        return 0;
+
+    if (hash[0] == '$' && hash[1] == '0' && hash[2] == '$')
+        return 1;
+
+    return 0;
+}
+
+static sr_error_t check_user_ctp(sr_session_ctx_t *session, struct confd *_, struct sr_change *change)
+{
+	const char *prefix = ctp_crypt();
+	char *hash, *salt;
+	sr_val_t *val;
+
+	val = change->new;
+	if (!val)
+		return SR_ERR_OK;
+
+	hash = val->data.string_val;
+	if (!ctp_hash_is_cleartext(hash))
+		return SR_ERR_OK;
+
+	if (strlen(hash) < 4) {
+		sr_session_set_error(session, NULL, SR_ERR_VALIDATION_FAILED, "Too short password.");
+		return SR_ERR_VALIDATION_FAILED;
+	}
+
+	salt = crypt_gensalt(prefix, 0, NULL, 0);
+	if (!salt) {
+		sr_session_set_error(session, NULL, SR_ERR_INTERNAL, "error %d generating salt, "
+				     "prefix '%s'.", errno, prefix);
+		return SR_ERR_INTERNAL;
+	}
+
+	hash = crypt(hash + 3, salt);
+	if (!hash) {
+		sr_session_set_error(session, NULL, SR_ERR_INTERNAL, "failed hashing password, "
+				     "error %d.", errno);
+		return SR_ERR_INTERNAL;
+	}
+
+	return sr_set_item_str(session, val->xpath, hash, NULL, 0);
+}
+
+static sr_error_t change_auth_ctp(struct confd *confd, sr_session_ctx_t *session)
+{
+	sr_error_t err;
+
+	err = _sr_change_iter(session, confd, XPATH_AUTH_"/user[*]/password", check_user_ctp);
+	if (err)
+		return err;
+
+	return SR_ERR_OK;
+}
+
 static sr_error_t change_auth_check(struct confd *confd, sr_session_ctx_t *session)
 {
 	sr_error_t err;
@@ -1262,10 +1344,16 @@ static int change_auth(sr_session_ctx_t *session, uint32_t sub_id, const char *m
 {
 	struct confd *confd = (struct confd *)priv;
 
-	if (event == SR_EV_CHANGE)
+	switch (event) {
+	case SR_EV_UPDATE:
+		return change_auth_ctp(confd, session);
+	case SR_EV_CHANGE:
 		return change_auth_check(confd, session);
-	if (event == SR_EV_DONE)
+	case SR_EV_DONE:
 		return change_auth_done(confd, session);
+	default:
+		break;
+	}
 
 	return SR_ERR_OK;
 }
@@ -1670,7 +1758,7 @@ int ietf_system_init(struct confd *confd)
 
 	os_init();
 
-	REGISTER_CHANGE(confd->session, "ietf-system", XPATH_AUTH_, 0, change_auth, confd, &confd->sub);
+	REGISTER_CHANGE(confd->session, "ietf-system", XPATH_AUTH_, SR_SUBSCR_UPDATE, change_auth, confd, &confd->sub);
 	REGISTER_OPER(confd->session, "ietf-system", PASSWORD_PATH, auth_cb, confd, 0, &confd->sub);
 	REGISTER_MONITOR(confd->session, "ietf-netconf-acm", "/ietf-netconf-acm:nacm//.",
 			 0, change_nacm, confd, &confd->sub);

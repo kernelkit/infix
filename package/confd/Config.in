@@ -11,3 +11,39 @@ config BR2_PACKAGE_CONFD
 	  either the on-system CLI or using NETCONF.
 
 	  https://github.com/kernelkit/infix
+
+if BR2_PACKAGE_CONFD
+
+choice
+	prompt "Default password crypt"
+	default BR2_PACKAGE_CONFD_YESCRYPT
+	help
+	  When users set $0$cleartext-password as their password confd
+	  salts and encrypts the "cleartext-password" with this selected
+	  hash algorithm.
+
+	  Infix defaults to yescrypt.
+
+config BR2_PACKAGE_CONFD_MD5CRYPT
+	bool "md5crypt"
+	help
+
+config BR2_PACKAGE_CONFD_SHA256CRYPT
+	bool "sha256crypt"
+
+config BR2_PACKAGE_CONFD_SHA512CRYPT
+	bool "sha512crypt"
+
+config BR2_PACKAGE_CONFD_YESCRYPT
+	bool "yescrypt"
+
+endchoice
+
+config BR2_PACKAGE_CONFD_DEFAULT_CRYPT
+	string
+	default "md5crypt"    if BR2_PACKAGE_CONFD_MD5CRYPT
+	default "sha256crypt" if BR2_PACKAGE_CONFD_SHA256CRYPT
+	default "sha512crypt" if BR2_PACKAGE_CONFD_SHA512CRYPT
+	default "yescrypt"    if BR2_PACKAGE_CONFD_YESCRYPT
+
+endif
