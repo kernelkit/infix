@@ -35,6 +35,7 @@ All notable changes to the project are documented in this file.
   on egress.
 - `mv88e6xxx` ports can now use Linux's priority information to select
   the appropriate egress queue, via the `mqprio` queuing discipline.
+- Upgrade Buildroot to 2024.02.3 and Linux kernel to 6.6.34
 
 ### Fixes
 - Add missing LICENSE hash for factory reset tool
@@ -57,7 +58,7 @@ All notable changes to the project are documented in this file.
 - Fix locking issue with standard counter groups on `mv88e6xxx`
 - Fix MDB/ATU synchronization issue from IGMPv3/MLDv2 reports on
   `mv88e6xxx` systems
-
+- Fix #476: Custom command for containers not working
 
 [v24.04.2][] - 2024-05-15
 -------------------------
