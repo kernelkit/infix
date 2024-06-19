@@ -1,4 +1,4 @@
-From a8e9b0c4f0e1a1168174722f7c5b3f002a55ce2f Mon Sep 17 00:00:00 2001
+From 884f5efcdc9925097fdc3148ade4a6b7442658f7 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Wed, 27 Mar 2024 10:10:19 +0100
 Subject: [PATCH 22/33] net: phy: Do not resume PHY when attaching
@@ -15,8 +15,6 @@ Otherwise, drivers that attached to their PHYs during
 probing (e.g. DSA) would end up with a physical link being
 established, even though the corresponding interface was still
 administratively down.
-
-Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
 ---
  drivers/net/phy/phy_device.c | 1 -
  1 file changed, 1 deletion(-)

@@ -1,4 +1,4 @@
-From 98f58217785e7eb787cabe017078004e4e6568b1 Mon Sep 17 00:00:00 2001
+From 85a07a02fdc95e514f9a277c378ca40952160c91 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Thu, 14 Dec 2023 14:50:26 +0100
 Subject: [PATCH 05/33] net: dsa: mv88e6xxx: Add "eth-mac" counter group
@@ -17,7 +17,7 @@ Signed-off-by: David S. Miller <davem@davemloft.net>
  1 file changed, 39 insertions(+)
 
 diff --git a/drivers/net/dsa/mv88e6xxx/chip.c b/drivers/net/dsa/mv88e6xxx/chip.c
-index 878afbb88575..1f5eda63a9ef 100644
+index b49db519dd58..c72962268c9b 100644
 --- a/drivers/net/dsa/mv88e6xxx/chip.c
 +++ b/drivers/net/dsa/mv88e6xxx/chip.c
 @@ -1390,6 +1390,44 @@ static void mv88e6xxx_get_ethtool_stats(struct dsa_switch *ds, int port,
@@ -65,7 +65,7 @@ index 878afbb88575..1f5eda63a9ef 100644
  static int mv88e6xxx_get_regs_len(struct dsa_switch *ds, int port)
  {
  	struct mv88e6xxx_chip *chip = ds->priv;
-@@ -6915,6 +6953,7 @@ static const struct dsa_switch_ops mv88e6xxx_switch_ops = {
+@@ -6957,6 +6995,7 @@ static const struct dsa_switch_ops mv88e6xxx_switch_ops = {
  	.phylink_mac_link_up	= mv88e6xxx_mac_link_up,
  	.get_strings		= mv88e6xxx_get_strings,
  	.get_ethtool_stats	= mv88e6xxx_get_ethtool_stats,

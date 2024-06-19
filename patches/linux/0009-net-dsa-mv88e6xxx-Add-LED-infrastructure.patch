@@ -1,4 +1,4 @@
-From cf7504734945c7ab9897eff40f46421a4d2fe5da Mon Sep 17 00:00:00 2001
+From 59413f2b736fb536c4986243014ce935034519b2 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Thu, 16 Nov 2023 19:44:32 +0100
 Subject: [PATCH 09/33] net: dsa: mv88e6xxx: Add LED infrastructure
@@ -6,8 +6,6 @@ Organization: Addiva Elektronik
 
 Parse DT for LEDs and register them for devices that support it,
 though no actual implementations exist yet.
-
-Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
 ---
  drivers/net/dsa/mv88e6xxx/Makefile |   1 +
  drivers/net/dsa/mv88e6xxx/chip.c   |   5 +-
@@ -31,7 +29,7 @@ index a9a9651187db..6720d9303914 100644
  mv88e6xxx-objs += pcs-6352.o
  mv88e6xxx-objs += pcs-639x.o
 diff --git a/drivers/net/dsa/mv88e6xxx/chip.c b/drivers/net/dsa/mv88e6xxx/chip.c
-index c30add8ab3a9..c1908f32e664 100644
+index f156bb2c75f4..cc44fb4c9017 100644
 --- a/drivers/net/dsa/mv88e6xxx/chip.c
 +++ b/drivers/net/dsa/mv88e6xxx/chip.c
 @@ -37,6 +37,7 @@
@@ -42,7 +40,7 @@ index c30add8ab3a9..c1908f32e664 100644
  #include "phy.h"
  #include "port.h"
  #include "ptp.h"
-@@ -4072,7 +4073,9 @@ static int mv88e6xxx_port_setup(struct dsa_switch *ds, int port)
+@@ -4082,7 +4083,9 @@ static int mv88e6xxx_port_setup(struct dsa_switch *ds, int port)
  			return err;
  	}
  
@@ -54,7 +52,7 @@ index c30add8ab3a9..c1908f32e664 100644
  
  static void mv88e6xxx_port_teardown(struct dsa_switch *ds, int port)
 diff --git a/drivers/net/dsa/mv88e6xxx/chip.h b/drivers/net/dsa/mv88e6xxx/chip.h
-index 85eb293381a7..d0dca152e714 100644
+index c34caf9815c5..f8796cbeefa5 100644
 --- a/drivers/net/dsa/mv88e6xxx/chip.h
 +++ b/drivers/net/dsa/mv88e6xxx/chip.h
 @@ -206,6 +206,7 @@ struct mv88e6xxx_gpio_ops;
@@ -74,7 +72,7 @@ index 85eb293381a7..d0dca152e714 100644
  struct mv88e6xxx_chip {
  	const struct mv88e6xxx_info *info;
  
-@@ -653,6 +656,9 @@ struct mv88e6xxx_ops {
+@@ -659,6 +662,9 @@ struct mv88e6xxx_ops {
  	/* Precision Time Protocol operations */
  	const struct mv88e6xxx_ptp_ops *ptp_ops;
  
@@ -84,7 +82,7 @@ index 85eb293381a7..d0dca152e714 100644
  	/* Phylink */
  	void (*phylink_get_caps)(struct mv88e6xxx_chip *chip, int port,
  				 struct phylink_config *config);
-@@ -736,7 +742,17 @@ struct mv88e6xxx_pcs_ops {
+@@ -742,7 +748,17 @@ struct mv88e6xxx_pcs_ops {
  	void (*pcs_teardown)(struct mv88e6xxx_chip *chip, int port);
  	struct phylink_pcs *(*pcs_select)(struct mv88e6xxx_chip *chip, int port,
  					  phy_interface_t mode);

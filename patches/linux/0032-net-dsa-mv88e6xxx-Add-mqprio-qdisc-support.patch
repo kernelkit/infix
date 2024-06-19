@@ -1,4 +1,4 @@
-From b962a9908ff8e7f7712499356428cad7a2ee28ba Mon Sep 17 00:00:00 2001
+From 53723010b587465f92fefeb4e5034aeb2d6d53ec Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Tue, 28 May 2024 11:04:22 +0200
 Subject: [PATCH 32/33] net: dsa: mv88e6xxx: Add mqprio qdisc support
@@ -24,15 +24,13 @@ are effectively only specifying the QPri.
 Since FPri is always a 3-bit field, even on older chips with only 4
 physical queues, always report 8 queues and let the chip's policy
 handle the mapping down to the "real" number.
-
-Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
 ---
  drivers/net/dsa/mv88e6xxx/chip.c | 70 ++++++++++++++++++++++++++++++++
  net/dsa/tag_dsa.c                |  4 +-
  2 files changed, 73 insertions(+), 1 deletion(-)
 
 diff --git a/drivers/net/dsa/mv88e6xxx/chip.c b/drivers/net/dsa/mv88e6xxx/chip.c
-index 5ee37ee6d6a5..f45e3cf45d76 100644
+index 44c67c8278c8..fbb0449a2176 100644
 --- a/drivers/net/dsa/mv88e6xxx/chip.c
 +++ b/drivers/net/dsa/mv88e6xxx/chip.c
 @@ -31,6 +31,7 @@
@@ -43,7 +41,7 @@ index 5ee37ee6d6a5..f45e3cf45d76 100644
  
  #include "chip.h"
  #include "devlink.h"
-@@ -7059,6 +7060,68 @@ int mv88e6xxx_port_del_etype_prio(struct dsa_switch *ds, int port, u16 etype,
+@@ -7101,6 +7102,68 @@ int mv88e6xxx_port_del_etype_prio(struct dsa_switch *ds, int port, u16 etype,
  	return err;
  }
  
@@ -112,7 +110,7 @@ index 5ee37ee6d6a5..f45e3cf45d76 100644
  static const struct dsa_switch_ops mv88e6xxx_switch_ops = {
  	.get_tag_protocol	= mv88e6xxx_get_tag_protocol,
  	.change_tag_protocol	= mv88e6xxx_change_tag_protocol,
-@@ -7127,6 +7190,7 @@ static const struct dsa_switch_ops mv88e6xxx_switch_ops = {
+@@ -7169,6 +7232,7 @@ static const struct dsa_switch_ops mv88e6xxx_switch_ops = {
  	.crosschip_lag_leave	= mv88e6xxx_crosschip_lag_leave,
  	.port_add_etype_prio	= mv88e6xxx_port_add_etype_prio,
  	.port_del_etype_prio	= mv88e6xxx_port_del_etype_prio,
@@ -120,7 +118,7 @@ index 5ee37ee6d6a5..f45e3cf45d76 100644
  };
  
  static int mv88e6xxx_register_switch(struct mv88e6xxx_chip *chip)
-@@ -7152,6 +7216,12 @@ static int mv88e6xxx_register_switch(struct mv88e6xxx_chip *chip)
+@@ -7194,6 +7258,12 @@ static int mv88e6xxx_register_switch(struct mv88e6xxx_chip *chip)
  	 */
  	ds->num_lag_ids = mv88e6xxx_has_lag(chip) ? 16 : 0;
  

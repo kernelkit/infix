@@ -1,4 +1,4 @@
-From dfb3ce17c0ff3933d33470cca3fe408926905400 Mon Sep 17 00:00:00 2001
+From f69ea5c9d1d50eda6b51d873df3979a834baaee0 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Wed, 24 Apr 2024 22:41:04 +0200
 Subject: [PATCH 27/33] net: dsa: mv88e6xxx: Limit rsvd2cpu policy to user
@@ -29,8 +29,6 @@ Before this change, due to rsvd2cpu being enabled on the CPU port, the
 switch would try to trap it back to the CPU. Given that the CPU is
 trusted, instead assume that it indeed meant for the packet to be
 forwarded like any other.
-
-Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
 ---
  drivers/net/dsa/mv88e6xxx/port.c | 31 +++++++++++++++++++++++++------
  1 file changed, 25 insertions(+), 6 deletions(-)

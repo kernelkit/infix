@@ -1,4 +1,4 @@
-From f810432c1c8f584f576fc3756354eeb893902079 Mon Sep 17 00:00:00 2001
+From 7790d2c0c156bd12eabcc714be82566a72601181 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Wed, 27 Mar 2024 15:52:43 +0100
 Subject: [PATCH 23/33] net: dsa: mv88e6xxx: Improve indirect register access
@@ -13,8 +13,6 @@ previous families).
 Therefore, add a new set of SMI operations which remaps accesses to
 such registers to the corresponding directly addressable register. All
 other accesses use the regular indirect interface.
-
-Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
 ---
  drivers/net/dsa/mv88e6xxx/chip.c    |  7 +++
  drivers/net/dsa/mv88e6xxx/global1.h |  3 ++
@@ -24,10 +22,10 @@ Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
  5 files changed, 119 insertions(+)
 
 diff --git a/drivers/net/dsa/mv88e6xxx/chip.c b/drivers/net/dsa/mv88e6xxx/chip.c
-index b78937d6e37b..97b3ec561c39 100644
+index 70bb59afbe89..1b4cea6f79a3 100644
 --- a/drivers/net/dsa/mv88e6xxx/chip.c
 +++ b/drivers/net/dsa/mv88e6xxx/chip.c
-@@ -6413,6 +6413,13 @@ static int mv88e6xxx_detect(struct mv88e6xxx_chip *chip)
+@@ -6455,6 +6455,13 @@ static int mv88e6xxx_detect(struct mv88e6xxx_chip *chip)
  	/* Update the compatible info with the probed one */
  	chip->info = info;
  
@@ -42,7 +40,7 @@ index b78937d6e37b..97b3ec561c39 100644
  		 chip->info->prod_num, chip->info->name, rev);
  
 diff --git a/drivers/net/dsa/mv88e6xxx/global1.h b/drivers/net/dsa/mv88e6xxx/global1.h
-index 1095261f5b49..c141cf70364b 100644
+index 3dbb7a1b8fe1..5ea956aadecc 100644
 --- a/drivers/net/dsa/mv88e6xxx/global1.h
 +++ b/drivers/net/dsa/mv88e6xxx/global1.h
 @@ -218,6 +218,9 @@

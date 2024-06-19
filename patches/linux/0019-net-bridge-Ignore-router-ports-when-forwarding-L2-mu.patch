@@ -1,4 +1,4 @@
-From 7eb21303180ac3e4f304f5ea369a5fc13c3712c6 Mon Sep 17 00:00:00 2001
+From 43b5457d147b68d40cf28c70f7c6adfe478cee11 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Tue, 5 Mar 2024 06:44:41 +0100
 Subject: [PATCH 19/33] net: bridge: Ignore router ports when forwarding L2

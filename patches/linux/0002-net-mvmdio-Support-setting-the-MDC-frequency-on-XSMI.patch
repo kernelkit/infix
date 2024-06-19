@@ -1,4 +1,4 @@
-From fff82d01333faa57cbe1e0d501716cbc90c81380 Mon Sep 17 00:00:00 2001
+From 9799ba12ae776794b2c4e48e5a6799aab8cf1370 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Mon, 4 Dec 2023 11:08:11 +0100
 Subject: [PATCH 02/33] net: mvmdio: Support setting the MDC frequency on XSMI
