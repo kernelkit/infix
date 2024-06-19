@@ -16,7 +16,7 @@ with infamy.Test() as test:
         target = env.attach("target", "mgmt")
         tgtssh = env.attach("target", "mgmt", "ssh")
         factory = env.get_password("target")
-        address = target.address()
+        address = target.get_mgmt_ip()
 
     with test.step("Add new user"):
         USER = "jacky"

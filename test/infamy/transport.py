@@ -43,16 +43,12 @@ class Transport(ABC):
         pass
 
     def get_mgmt_ip(self):
-        """Return managment IP address used for RESTCONF"""
+        """Return managment IP address used for RESTCONF/NETCONF"""
         return self.location.host
 
     def get_mgmt_iface(self):
-        """Return managment interface used for RESTCONF"""
+        """Return managment interface used for RESTCONF/NETCONF"""
         return self.location.interface
-
-    def address(self):
-        """Return managment IP address used for RESTCONF"""
-        return self.location.host
 
     def reachable(self):
         """Check if the device reachable on ll6"""

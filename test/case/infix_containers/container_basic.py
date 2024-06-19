@@ -20,7 +20,7 @@ with infamy.Test() as test:
     with test.step("Set up topology and attach to target DUT"):
         env = infamy.Env(infamy.std_topology("1x2"))
         target = env.attach("target", "mgmt")
-        addr = target.address()
+        addr = target.get_mgmt_ip()
 
     with test.step(f"Create {NAME} container from bundled OCI image"):
         target.put_config_dict("infix-containers", {
