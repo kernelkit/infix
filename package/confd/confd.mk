@@ -20,9 +20,9 @@ define CONFD_CONF_ENV
 endef
 
 ifeq ($(BR2_PACKAGE_PODMAN),y)
-	CONFD_CONF_OPTS += --enable-containers
+CONFD_CONF_OPTS += --enable-containers
 else
-	CONFD_CONF_OPTS += --disable-containers
+CONFD_CONF_OPTS += --disable-containers
 endif
 
 define CONFD_INSTALL_EXTRA
@@ -41,13 +41,13 @@ COMMON_SYSREPO_ENV = \
 
 define CONFD_INSTALL_YANG_MODULES
 	$(COMMON_SYSREPO_ENV) \
-	$(BR2_EXTERNAL_INFIX_PATH)/utils/yang_modules_setup.sh $(CONFD_PKGDIR)/yang_modules_confd.inc
+	$(BR2_EXTERNAL_INFIX_PATH)/utils/sysrepo-load-modules.sh $(@D)/yang-setup/yang-modules-confd.inc
 endef
 
 ifeq ($(BR2_PACKAGE_PODMAN),y)
 define CONFD_INSTALL_YANG_MODULES_CONTAINERS
 	$(COMMON_SYSREPO_ENV) \
-	$(BR2_EXTERNAL_INFIX_PATH)/utils/yang_modules_setup.sh $(CONFD_PKGDIR)/yang_modules_containers.inc
+	$(BR2_EXTERNAL_INFIX_PATH)/utils/sysrepo-load-modules.sh $(@D)/yang-setup/yang-modules-containers.inc
 endef
 endif
 
