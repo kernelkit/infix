@@ -4,8 +4,8 @@
 ########################################################################
 # The system factory-config and failure-config are derived from default
 # settings snippets, from /usr/share/confd/factory.d, and some generated
-# snippets, e.g., device unique password, hostname (based on base MAC
-# address), and number of interfaces.
+# snippets, e.g., hostname (based on base MAC address) and number of
+# interfaces.
 #
 # The resulting factory-config is used to create the syrepo db (below)
 # {factory} datastore.  Hence, the factory-config file must match the
@@ -127,6 +127,8 @@ failure()
     collate "$FAILURE_GEN" "$FAILURE_CFG" "$FAILURE_D"
 }
 
+# Both factory-config and failure-config are generated every boot
+# regardless if there is a static /etc/factory-config.cfg or not.
 factory "$FACTORY_GEN"
 failure "$FAILURE_GEN"
 
@@ -143,24 +145,18 @@ else
 fi
 rc=$?
 
-sysrepoctl -z $INIT_DATA
-rc=$?
-sudo -u root -g wheel sysrepocfg -f json -I"$INIT_DATA" -d running
-rc=$?
-
-
-#rm $INIT_DATA
-
-# On first boot, install factory-config as startup-config.
-chgrp wheel /cfg
-chmod g+w   /cfg
-if [ ! -f "$STARTUP_CFG" ]; then
-    sysrepocfg -f json -X"$STARTUP_CFG"
+chgrp wheel "$CFG_PATH_"
+chmod g+w   "$CFG_PATH_"
+if ! sysrepoctl -z "$INIT_DATA"; then
+    rc=$?
+    logger -sik -p user.error "Failed loading factory-default datastore"
+else
+    # Clear running-config so we can load/create startup in the next step
+    temp=$(mktemp)
+    echo "{}" > "$temp"
+    sysrepocfg -f json -I"$temp" -d running
+    rc=$?
+    rm "$temp"
 fi
-
-# Clear running-config so we can load startup in the next step
-temp=$(mktemp)
-echo "{}" > $temp
-sysrepocfg -f json -I$temp -d running
 
 exit $rc

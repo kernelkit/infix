@@ -7,7 +7,6 @@
 # sysrepocfg returns OK.  This to be able to detect and trigger the Infix
 # Fail Secure Mode at boot.
 #
-set -e
 
 banner_append()
 {
@@ -17,6 +16,14 @@ banner_append()
 			  /etc/issue.net \
 			  >/dev/null
     return 0
+}
+
+# Ensure correct ownership and permissions, in particular after factory reset
+# Created by the system, writable by any user in the admin group.
+perms()
+{
+    chown root:wheel "$1"
+    chmod 0660 "$1"
 }
 
 note()
@@ -45,8 +52,21 @@ else
 fi
 
 if [ ! -f "$fn" ]; then
-    err "No such file, $fn, aborting!"
-    exit 1
+    case "$config" in
+	startup-config)
+	    note "startup-config missing, initializing running datastore from factory-config"
+	    sysrepocfg -C factory-default
+	    rc=$?
+	    note "saving factory-config to $STARTUP_CFG ..."
+	    sysrepocfg -f json -X"$STARTUP_CFG"
+	    perms "$STARTUP_CFG"
+	    exit $rc
+	    ;;
+	*)
+	    err "No such file, $fn, aborting!"
+	    exit 1
+	    ;;
+    esac
 fi
 
 note "Loading $config ..."
@@ -82,8 +102,5 @@ note "Loaded $fn successfully."
 if [ "$config" = "failure-config" ]; then
     banner_append "ERROR: Corrupt startup-config, system has reverted to default login credentials"
 else
-    # Ensure correct ownership and permissions, in particular after factory reset
-    # Created by the system, writable by any user in the admin group.
-    chown root:wheel "$fn"
-    chmod 0660 "$fn"
+    perms "$fn"
 fi
