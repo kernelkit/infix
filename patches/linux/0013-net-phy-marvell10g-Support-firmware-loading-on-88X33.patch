@@ -1,4 +1,4 @@
-From 26cfbaa454882ae2d35fe50bb9e9cacdf442c27a Mon Sep 17 00:00:00 2001
+From 109ecf18f80367a341b5d4f43f986867b13dad7c Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Tue, 19 Sep 2023 18:38:10 +0200
 Subject: [PATCH 13/33] net: phy: marvell10g: Support firmware loading on
@@ -11,8 +11,6 @@ its RAM, ask userspace for the binary and load it over XMDIO.
 We have no choice but to bail out of the probe if firmware is not
 available, as the device does not have any built-in image on which to
 fall back.
-
-Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
 ---
  drivers/net/phy/marvell10g.c | 161 +++++++++++++++++++++++++++++++++++
  1 file changed, 161 insertions(+)

@@ -1,4 +1,4 @@
-From f64a315d01b41c9162afb1f895e0a283f7f976fb Mon Sep 17 00:00:00 2001
+From 60cf097c45e556e2007b6bb9599bdf4cffdc2def Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Thu, 14 Dec 2023 14:50:25 +0100
 Subject: [PATCH 04/33] net: dsa: mv88e6xxx: Give each hw stat an ID
@@ -21,7 +21,7 @@ Signed-off-by: David S. Miller <davem@davemloft.net>
  1 file changed, 75 insertions(+), 63 deletions(-)
 
 diff --git a/drivers/net/dsa/mv88e6xxx/chip.c b/drivers/net/dsa/mv88e6xxx/chip.c
-index bcca78bf4296..878afbb88575 100644
+index ddeff5357b98..b49db519dd58 100644
 --- a/drivers/net/dsa/mv88e6xxx/chip.c
 +++ b/drivers/net/dsa/mv88e6xxx/chip.c
 @@ -1009,66 +1009,78 @@ static int mv88e6xxx_stats_snapshot(struct mv88e6xxx_chip *chip, int port)

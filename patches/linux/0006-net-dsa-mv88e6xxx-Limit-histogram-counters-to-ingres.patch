@@ -1,4 +1,4 @@
-From 1efb238911ec25c91e0427b23dbff1d7e894d8c1 Mon Sep 17 00:00:00 2001
+From b9d52352af8d243463c18962fbf4dc7e4a48c367 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Thu, 14 Dec 2023 14:50:27 +0100
 Subject: [PATCH 06/33] net: dsa: mv88e6xxx: Limit histogram counters to
@@ -33,7 +33,7 @@ Signed-off-by: David S. Miller <davem@davemloft.net>
  2 files changed, 6 insertions(+), 7 deletions(-)
 
 diff --git a/drivers/net/dsa/mv88e6xxx/chip.c b/drivers/net/dsa/mv88e6xxx/chip.c
-index 1f5eda63a9ef..d61a79c65eb9 100644
+index c72962268c9b..bfa693fe28ae 100644
 --- a/drivers/net/dsa/mv88e6xxx/chip.c
 +++ b/drivers/net/dsa/mv88e6xxx/chip.c
 @@ -1275,7 +1275,7 @@ static size_t mv88e6095_stats_get_stat(struct mv88e6xxx_chip *chip, int port,
@@ -64,10 +64,10 @@ index 1f5eda63a9ef..d61a79c65eb9 100644
  }
  
 diff --git a/drivers/net/dsa/mv88e6xxx/global1.c b/drivers/net/dsa/mv88e6xxx/global1.c
-index 174c773b38c2..49444a72ff09 100644
+index 7ef0f4426ad7..9820cd596757 100644
 --- a/drivers/net/dsa/mv88e6xxx/global1.c
 +++ b/drivers/net/dsa/mv88e6xxx/global1.c
-@@ -462,8 +462,7 @@ int mv88e6390_g1_rmu_disable(struct mv88e6xxx_chip *chip)
+@@ -551,8 +551,7 @@ int mv88e6390_g1_rmu_disable(struct mv88e6xxx_chip *chip)
  int mv88e6390_g1_stats_set_histogram(struct mv88e6xxx_chip *chip)
  {
  	return mv88e6xxx_g1_ctl2_mask(chip, MV88E6390_G1_CTL2_HIST_MODE_MASK,
@@ -77,7 +77,7 @@ index 174c773b38c2..49444a72ff09 100644
  }
  
  int mv88e6xxx_g1_set_device_number(struct mv88e6xxx_chip *chip, int index)
-@@ -491,7 +490,7 @@ int mv88e6095_g1_stats_set_histogram(struct mv88e6xxx_chip *chip)
+@@ -580,7 +579,7 @@ int mv88e6095_g1_stats_set_histogram(struct mv88e6xxx_chip *chip)
  	if (err)
  		return err;
  
@@ -86,7 +86,7 @@ index 174c773b38c2..49444a72ff09 100644
  
  	err = mv88e6xxx_g1_write(chip, MV88E6XXX_G1_STATS_OP, val);
  
-@@ -506,7 +505,7 @@ int mv88e6xxx_g1_stats_snapshot(struct mv88e6xxx_chip *chip, int port)
+@@ -595,7 +594,7 @@ int mv88e6xxx_g1_stats_snapshot(struct mv88e6xxx_chip *chip, int port)
  	err = mv88e6xxx_g1_write(chip, MV88E6XXX_G1_STATS_OP,
  				 MV88E6XXX_G1_STATS_OP_BUSY |
  				 MV88E6XXX_G1_STATS_OP_CAPTURE_PORT |

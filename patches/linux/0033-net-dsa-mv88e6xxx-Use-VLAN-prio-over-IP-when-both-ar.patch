@@ -1,4 +1,4 @@
-From 2991ba0563ec6e5a0a2454340ba9557eaa1703a4 Mon Sep 17 00:00:00 2001
+From 0a256ae8eb81ce4464cf62a9e4eef0e5317062ac Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Wed, 29 May 2024 13:20:41 +0200
 Subject: [PATCH 33/33] net: dsa: mv88e6xxx: Use VLAN prio over IP when both
@@ -22,17 +22,15 @@ main reasons for choosing the new default:
    packet's priority. As the packet then moves through the network
    core over trusted VLAN trunks, the packet should keep its original
    priority, independent of what inner protocol fields may indicate.
-
-Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
 ---
  drivers/net/dsa/mv88e6xxx/chip.c | 11 ++++++++---
  1 file changed, 8 insertions(+), 3 deletions(-)
 
 diff --git a/drivers/net/dsa/mv88e6xxx/chip.c b/drivers/net/dsa/mv88e6xxx/chip.c
-index f45e3cf45d76..225894b3ea47 100644
+index fbb0449a2176..2e619fa102c4 100644
 --- a/drivers/net/dsa/mv88e6xxx/chip.c
 +++ b/drivers/net/dsa/mv88e6xxx/chip.c
-@@ -3371,9 +3371,13 @@ static int mv88e6xxx_setup_port(struct mv88e6xxx_chip *chip, int port)
+@@ -3381,9 +3381,13 @@ static int mv88e6xxx_setup_port(struct mv88e6xxx_chip *chip, int port)
  
  	/* Port Control: disable Drop-on-Unlock, disable Drop-on-Lock,
  	 * disable Header mode, enable IGMP/MLD snooping, disable VLAN
@@ -49,7 +47,7 @@ index f45e3cf45d76..225894b3ea47 100644
  	 *
  	 * If this is the CPU link, use DSA or EDSA tagging depending
  	 * on which tagging mode was configured.
-@@ -3384,6 +3388,7 @@ static int mv88e6xxx_setup_port(struct mv88e6xxx_chip *chip, int port)
+@@ -3394,6 +3398,7 @@ static int mv88e6xxx_setup_port(struct mv88e6xxx_chip *chip, int port)
  	 * forwarding of unknown unicasts and multicasts.
  	 */
  	reg = MV88E6185_PORT_CTL0_USE_TAG | MV88E6185_PORT_CTL0_USE_IP |

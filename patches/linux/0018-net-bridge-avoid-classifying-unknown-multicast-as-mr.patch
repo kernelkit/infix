@@ -1,4 +1,4 @@
-From d77e67161d09857b45df1f76f3c28b9ea74a08f4 Mon Sep 17 00:00:00 2001
+From 0bef041f49f0e65d5d74e99a72e16a23826ff43f Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Mon, 4 Mar 2024 16:47:28 +0100
 Subject: [PATCH 18/33] net: bridge: avoid classifying unknown multicast as
@@ -16,7 +16,6 @@ Because a multicast router should always receive both known and unknown
 multicast.
 
 Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
-Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
 ---
  include/uapi/linux/if_bridge.h |  1 +
  net/bridge/br.c                |  5 +++++
@@ -63,10 +62,10 @@ index a6e94ceb7c9a..44c12cb210b5 100644
  		/* shouldn't be called with unsupported options */
  		WARN_ON(1);
 diff --git a/net/bridge/br_device.c b/net/bridge/br_device.c
-index 9a5ea06236bd..5f537dbd597a 100644
+index 42d4c3727bf7..d4c2fc34051f 100644
 --- a/net/bridge/br_device.c
 +++ b/net/bridge/br_device.c
-@@ -81,10 +81,10 @@ netdev_tx_t br_dev_xmit(struct sk_buff *skb, struct net_device *dev)
+@@ -87,10 +87,10 @@ netdev_tx_t br_dev_xmit(struct sk_buff *skb, struct net_device *dev)
  
  	dest = eth_hdr(skb)->h_dest;
  	if (is_broadcast_ether_addr(dest)) {
@@ -79,7 +78,7 @@ index 9a5ea06236bd..5f537dbd597a 100644
  			goto out;
  		}
  		if (br_multicast_rcv(&brmctx, &pmctx_null, vlan, skb, vid)) {
-@@ -97,11 +97,11 @@ netdev_tx_t br_dev_xmit(struct sk_buff *skb, struct net_device *dev)
+@@ -103,11 +103,11 @@ netdev_tx_t br_dev_xmit(struct sk_buff *skb, struct net_device *dev)
  		    br_multicast_querier_exists(brmctx, eth_hdr(skb), mdst))
  			br_multicast_flood(mdst, skb, brmctx, false, true);
  		else
@@ -93,7 +92,7 @@ index 9a5ea06236bd..5f537dbd597a 100644
  	}
  out:
  	rcu_read_unlock();
-@@ -531,6 +531,8 @@ void br_dev_setup(struct net_device *dev)
+@@ -537,6 +537,8 @@ void br_dev_setup(struct net_device *dev)
  	br->bridge_ageing_time = br->ageing_time = BR_DEFAULT_AGEING_TIME;
  	dev->max_mtu = ETH_MAX_MTU;
  

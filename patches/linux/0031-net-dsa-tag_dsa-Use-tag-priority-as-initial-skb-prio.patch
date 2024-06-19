@@ -1,4 +1,4 @@
-From 115f37ec715fe80f022041bba25bc6a9c318a928 Mon Sep 17 00:00:00 2001
+From 61575ec470a7ffc03aed8f1050b01f010ca65ade Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Tue, 28 May 2024 10:38:42 +0200
 Subject: [PATCH 31/33] net: dsa: tag_dsa: Use tag priority as initial
@@ -19,8 +19,6 @@ Ideally we could then map this priority to an internal one, like we
 can do with an "ingress-qos-map" on VLAN interfaces. Until that is
 implemented, support the setup that is likely to be the most common; a
 1:1 mapping from FPri to skb->priority.
-
-Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
 ---
  net/dsa/tag_dsa.c | 7 +++++++
  1 file changed, 7 insertions(+)

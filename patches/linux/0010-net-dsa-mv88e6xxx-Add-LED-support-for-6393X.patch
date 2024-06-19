@@ -1,4 +1,4 @@
-From 23873d858362a28b2d15194b0a9732e50ceca779 Mon Sep 17 00:00:00 2001
+From dc78ddfa863eaa7fbd98b9b87a1f1e690d912154 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Thu, 16 Nov 2023 21:59:35 +0100
 Subject: [PATCH 10/33] net: dsa: mv88e6xxx: Add LED support for 6393X
@@ -8,8 +8,6 @@ Trigger support:
 - "none"
 - "timer"
 - "netdev"
-
-Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
 ---
  drivers/net/dsa/mv88e6xxx/chip.c |   1 +
  drivers/net/dsa/mv88e6xxx/leds.c | 226 +++++++++++++++++++++++++++++++
@@ -19,10 +17,10 @@ Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
  5 files changed, 269 insertions(+)
 
 diff --git a/drivers/net/dsa/mv88e6xxx/chip.c b/drivers/net/dsa/mv88e6xxx/chip.c
-index c1908f32e664..8465294a9ed7 100644
+index cc44fb4c9017..70c1abd0a167 100644
 --- a/drivers/net/dsa/mv88e6xxx/chip.c
 +++ b/drivers/net/dsa/mv88e6xxx/chip.c
-@@ -5552,6 +5552,7 @@ static const struct mv88e6xxx_ops mv88e6393x_ops = {
+@@ -5594,6 +5594,7 @@ static const struct mv88e6xxx_ops mv88e6393x_ops = {
  	.gpio_ops = &mv88e6352_gpio_ops,
  	.avb_ops = &mv88e6390_avb_ops,
  	.ptp_ops = &mv88e6352_ptp_ops,
