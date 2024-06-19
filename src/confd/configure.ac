@@ -36,6 +36,10 @@ AC_ARG_WITH(login-shell,
         AS_HELP_STRING([--with-login-shell=shell], [Login shell for new users, default: /bin/false]),
 	[login_shell=$withval], [login_shell=yes])
 
+AC_ARG_WITH(crypt,
+        AS_HELP_STRING([--with-crypt=crypt], [Default crypt for $0$cleartext, default: yescrypt]),
+	[crypt=$withval], [crypt="yescrypt"])
+
 AS_IF([test "x$enable_containers" = "xyes"], [
         AC_DEFINE(CONTAINERS, 1, [Built with container support])])
 
@@ -44,9 +48,15 @@ AS_IF([test "x$with_login_shell" != "xno"], [
 	AC_DEFINE_UNQUOTED(LOGIN_SHELL, "$login_shell", [Default: /bin/false])],[
 	AC_DEFINE_UNQUOTED(LOGIN_SHELL, "/bin/false")])
 
+AS_IF([test "x$with_crypt" != "xno"], [
+	AS_IF([test "x$crypt" = "xyes"], [crypt=yescrypt])
+	AC_DEFINE_UNQUOTED(DEFAULT_CRYPT, "$crypt", [Default: yescrypt])],[
+	AC_DEFINE_UNQUOTED(DEFAULT_CRYPT, "yescrypt")])
+
 # Check for pkg-config first, warn if it's not installed
 PKG_PROG_PKG_CONFIG
 
+PKG_CHECK_MODULES([crypt],   [libxcrypt >= 4.4.36])
 PKG_CHECK_MODULES([glib],    [glib-2.0 >= 2.50 gio-2.0 gio-unix-2.0])
 PKG_CHECK_MODULES([jansson], [jansson >= 2.0.0])
 PKG_CHECK_MODULES([libite],  [libite >= 2.5.0])
@@ -104,6 +114,7 @@ cat <<EOF
 Optional features:
   Container support ....: $enable_containers
   Login shell ..........: $login_shell
+  Default crypt algo ...: $crypt
 
 ------------- Compiler version --------------
 $($CC --version || true)
