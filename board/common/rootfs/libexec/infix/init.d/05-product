@@ -1,0 +1,22 @@
+#!/bin/sh
+# Find and install any product specific files in /etc before bootstrap
+ident=$(basename "$0")
+
+PREFIXD=/usr/share/product
+PRODUCT=$(jq -r '."product-name" | ascii_downcase' /run/system.json)
+
+note()
+{
+    logger -k -p user.notice -t "$ident" "$1"
+}
+
+DIR="$PREFIXD/$PRODUCT"
+if [ -z "$PRODUCT" ] || [ ! -d "$DIR" ]; then
+    note "No vendor/product specific directory found, using built-in defaults."
+    exit 0
+fi
+
+note "Using vendor/product specific defaults."
+for dir in "$DIR"/*; do
+    [ -d "$dir" ] && cp -a "$dir" /
+done
