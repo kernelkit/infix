@@ -2,7 +2,7 @@
 
 class Container:
     """Helper methods"""
-    IMAGE = "curios-httpd-v24.03.0.tar.gz"
+    IMAGE = "curios-httpd-v24.05.0.tar.gz"
 
     def __init__(self, target):
         self.system = target
