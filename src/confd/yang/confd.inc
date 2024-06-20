@@ -1,3 +1,5 @@
+# -*- sh -*-
+# REMEMBER TO UPDATE infix-interfaces ALSO IN containers.inc
 MODULES=(
 	"ietf-system@2014-08-06.yang -e authentication -e local-users -e ntp -e ntp-udp-port -e timezone-name"
 	"iana-timezones@2013-11-19.yang"

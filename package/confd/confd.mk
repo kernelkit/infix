@@ -41,13 +41,13 @@ COMMON_SYSREPO_ENV = \
 
 define CONFD_INSTALL_YANG_MODULES
 	$(COMMON_SYSREPO_ENV) \
-	$(BR2_EXTERNAL_INFIX_PATH)/utils/sysrepo-load-modules.sh $(@D)/yang-setup/yang-modules-confd.inc
+	$(BR2_EXTERNAL_INFIX_PATH)/utils/sysrepo-load-modules.sh $(@D)/yang/confd.inc
 endef
 
 ifeq ($(BR2_PACKAGE_PODMAN),y)
 define CONFD_INSTALL_YANG_MODULES_CONTAINERS
 	$(COMMON_SYSREPO_ENV) \
-	$(BR2_EXTERNAL_INFIX_PATH)/utils/sysrepo-load-modules.sh $(@D)/yang-setup/yang-modules-containers.inc
+	$(BR2_EXTERNAL_INFIX_PATH)/utils/sysrepo-load-modules.sh $(@D)/yang/containers.inc
 endef
 endif
 
