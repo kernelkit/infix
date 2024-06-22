@@ -1719,7 +1719,7 @@ static int change_hostname(sr_session_ctx_t *session, uint32_t sub_id, const cha
 	/* Inform any running lldpd and avahi of the change ... */
 	systemf("lldpcli configure system hostname %s", hostnm);
 	systemf("avahi-set-host-name %s", hostnm);
-	system("initctl -nbq touch netbrowse");
+	systemf("initctl -nbq touch netbrowse");
 err:
 	if (hostnm)
 		free(hostnm);
