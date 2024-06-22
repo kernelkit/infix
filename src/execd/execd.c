@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: ISC */
 
+#include <ctype.h>
 #include <dirent.h>
 #include <errno.h>
 #include <getopt.h>
@@ -31,7 +32,7 @@ static int   logmask = LOG_UPTO(LOG_NOTICE);
 static char  buffer[BUFSIZ];
 static char *done;
 
-static void run_job(char *path, char *file)
+static void run_job(const char *path, char *file, int archive)
 {
 	char cmd[strlen(path) + strlen(file) + 2];
 	int rc;
@@ -57,32 +58,67 @@ static void run_job(char *path, char *file)
 	}
 
 	dbg("job %s in %s done", file, path);
-	if (done)
+	if (done && archive)
 		movefile(cmd, done);
 	else
 		erase(cmd);
 }
 
-static void run_queue(char *path)
+/*
+ * Allow SNN and KNN style jobs, for inotyify_cb() we also allow
+ * a type '*' just to figure out if a job should be archived in
+ * the done directory.
+ */
+static int check(const char *name, int type, int *archive)
 {
-	struct dirent *d;
-	DIR *dir;
+	if (!name || strlen(name) < 3)
+		return -1;
 
-	dir = opendir(path);
-	if (!dir) {
-		err("opendir");
+	if (isdigit(name[1]) && isdigit(name[2])) {
+		if (type == '*')
+			type = name[0];
+
+		switch (type) {
+		case 'K':
+			*archive = 0;
+			return 0;
+		case 'S':
+			*archive = 1;
+			return 0;
+		default:
+			break;
+		}
+	}
+
+	return 1;
+}
+
+static void run_dir(const char *path, int type)
+{
+	struct dirent **namelist;
+	int archive = 0;
+	int n, i;
+
+	n = scandir(path, &namelist, NULL, alphasort);
+	if (n < 0) {
+		err("scandir %s", path);
 		return;
 	}
 
-	while ((d = readdir(dir))) {
-		dbg("Running queue %s entry %s", path, d->d_name);
-		if (d->d_name[0] == '.')
-			continue;
+	for (i = 0; i < n; i++) {
+		if (!check(namelist[i]->d_name, type, &archive))
+			run_job(path, namelist[i]->d_name, archive);
 
-		run_job(path, d->d_name);
+		free(namelist[i]);
 	}
 
-	closedir(dir);
+	free(namelist);
+}
+
+static void run_queue(char *path)
+{
+	run_dir(path, 'K');
+	run_dir(path, 'S');
 }
 
 static void signal_cb(uev_t *w, void *arg, int _)
@@ -113,10 +149,15 @@ static void inotify_cb(uev_t *w, void *arg, int _)
 
 	for (char *p = buffer; p < buffer + bytes;) {
 		struct inotify_event *event = (struct inotify_event *)p;
+		char *name = event->name;
+		int archive;
 
 		if (event->mask & (IN_CLOSE_WRITE | IN_ATTRIB | IN_MOVED_TO)) {
-			dbg("Got inotify event %s 0x%04x", event->name, event->mask);
-			run_job(arg, event->name);
+			dbg("Got inotify event %s 0x%04x", name, event->mask);
+			if (check(name, '*', &archive))
+				continue;
+
+			run_job(arg, name, archive);
 		}
 
 		p += sizeof(struct inotify_event) + event->len;
