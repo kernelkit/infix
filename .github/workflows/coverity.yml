@@ -54,7 +54,7 @@ jobs:
         run: |
           sudo apt-get -y update
           sudo apt-get -y install pkg-config libjansson-dev libev-dev \
-                       libaugeas-dev libglib2.0-dev libpcre2-dev      \
+                       libcrypt-dev libglib2.0-dev libpcre2-dev       \
                        libuev-dev libite-dev
 
       - name: Build dependencies
