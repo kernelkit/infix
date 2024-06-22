@@ -28,9 +28,9 @@ static int add(const char *name, struct lyd_node *cif)
 	struct lyd_node *node, *nets, *caps;
 	FILE *fp, *ap;
 
-	fp = fopenf("w", "%s/%s.sh", INBOX_QUEUE, name);
+	fp = fopenf("w", "%s/S01-%s.sh", INBOX_QUEUE, name);
 	if (!fp) {
-		ERRNO("Failed adding job %s.sh to job queue" INBOX_QUEUE, name);
+		ERRNO("Failed adding job S01-%s.sh to job queue" INBOX_QUEUE, name);
 		return SR_ERR_SYS;
 	}
 
@@ -187,6 +187,7 @@ static int del(const char *name)
 		INBOX_QUEUE,
 		ACTIVE_QUEUE,
 	};
+	FILE *fp;
 
 	/* Remove any pending download/create job first */
 	for (size_t i = 0; i < NELEMS(queue); i++) {
@@ -196,8 +197,21 @@ static int del(const char *name)
 		erase(fn);
 	}
 
-	return  systemf("container delete %s", name) ||
-		systemf("initctl -bnq disable container@%s.conf", name);
+	/* Disable service and schedule for deletion. */
+	systemf("initctl -bnq disable container@%s.conf", name);
+
+	fp = fopenf("w", "%s/K01-%s.sh", INBOX_QUEUE, name);
+	if (!fp) {
+		ERRNO("Failed adding job 00-delete-%s.sh to job queue" INBOX_QUEUE, name);
+		return SR_ERR_SYS;
+	}
+
+	fprintf(fp, "#!/bin/sh\n"
+		"container delete %s\n", name);
+	fchmod(fileno(fp), 0700);
+	fclose(fp);
+
+	return SR_ERR_OK;
 }
 
 static int change(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
