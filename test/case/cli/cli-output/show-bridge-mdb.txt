@@ -1,4 +1,4 @@
-[7mBRIDGE VID   GROUP               PORTS               [0m
+[7mBRIDGE VID   GROUP               PORTS                                        [0m
 br0          230.1.32.100        e0
 br0          230.1.2.100         e1
 br0          01:01:01:01:01:01   e1
