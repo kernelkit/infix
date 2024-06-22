@@ -14,7 +14,7 @@ class PadMdb:
     bridge = 7
     vlan = 6
     group = 20
-    ports = 20
+    ports = 45
 
 class PadRoute:
     prefix = 30
