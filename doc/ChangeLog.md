@@ -14,6 +14,7 @@ All notable changes to the project are documented in this file.
 ### Changes
 - Upgrade Buildroot to 2024.02.3 (LTS)
 - Upgrade Linux kernel to 6.6.34 (LTS)
+- Upgrade bundled curiOS httpd container to v24.05.0
 - Default web landing page refactored into a Buildroot package to make
   it possible to overload from customer repos.
 - Enable DCB support in aarch64 kernel (for EtherType prio override)
@@ -60,6 +61,7 @@ All notable changes to the project are documented in this file.
 - Issue #478: add operational support for ietf-system.yang, reading
   actual hostname and passwords after issue #435
 - Merge infix-shell-types.yang with infix-system.yang
+- cli: improved error/warning message on missing or incomplete command
 
 [yescrypt]: https://en.wikipedia.org/wiki/Yescrypt)
 
@@ -75,17 +77,21 @@ All notable changes to the project are documented in this file.
   secure mode, causing the system to end up in an undefined state
 - Fix #453: fix inconsistent behavior of custom MAC address (interface
   `phys-address` for VETH pairs.  Allows fixed MAC in containers
+- Fix #462: increase port column width for CLI `show bridge mdb`
 - Fix #468: non-admin users can get a POSIX shell as login shell, root
   cause was buggy Augeas library, replaced with plain C API.
 - Fix #469: non-admin users added to *any* group get administrator
   privileges (added to UNIX `wheel` group)
 - Fix #473: bridge interface with IPv6 SLAAC never get global prefix
+- Fix #476: Custom command for containers not working
+- Fix #479: timeout from underlying datastore when disabling containers
+  in configuration.  Only disabling (stopping) container now done in the
+  configuration change, removal of container done in the background
 - Fix locking issue with standard counter groups on `mv88e6xxx`
 - Add missing LICENSE hash for factory reset tool
 - Fix timeout handling in container restart command
 - Fix MDB/ATU synchronization issue from IGMPv3/MLDv2 reports on
   `mv88e6xxx` systems
-- Fix #476: Custom command for containers not working
 
 [v24.04.2][] - 2024-05-15
 -------------------------
