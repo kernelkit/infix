@@ -1,7 +1,7 @@
-From 561c28496691fc1ac17e755bcc0ff3ec8c3b1bf0 Mon Sep 17 00:00:00 2001
+From 02ff08f881c726b5b14eb489f4a906ec4b421a6f Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Mattias=20Walstr=C3=B6m?= <lazzer@gmail.com>
-Date: Tue, 28 May 2024 09:28:38 +0200
-Subject: [PATCH] Change systemd from a required dependency to an optional
+Date: Tue, 25 Jun 2024 11:17:03 +0200
+Subject: [PATCH 1/2] Change systemd from a required dependency to an optional
  dependency.
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
@@ -13,23 +13,20 @@ In addition to journal logging, enable logging to syslog and stdout.
 Signed-off-by: Mattias Walström <lazzer@gmail.com>
 Change-Id: I90cb9169e8fdf9103c31bc983a1ec8a5de3dd26c
 ---
- CMakeLists.txt           | 14 +++++++++++---
+ CMakeLists.txt           | 13 +++++++++++--
  README.md                |  3 ++-
  ci/pre.yaml              |  6 ++++++
  src/configure.cmake.h.in |  3 +++
  src/restconf/main.cpp    | 36 ++++++++++++++++++++++++++++++++----
- 5 files changed, 54 insertions(+), 8 deletions(-)
+ 5 files changed, 54 insertions(+), 7 deletions(-)
  create mode 100644 src/configure.cmake.h.in
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 7f82660..43313ba 100644
+index 7f82660..1cd27b2 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -72,11 +72,16 @@ find_package(spdlog REQUIRED)
- find_package(PkgConfig)
- pkg_check_modules(nghttp2 REQUIRED IMPORTED_TARGET libnghttp2_asio>=0.0.90 libnghttp2)
- find_package(Boost REQUIRED COMPONENTS system thread)
--
+@@ -75,8 +75,14 @@ find_package(Boost REQUIRED COMPONENTS system thread)
+ 
  pkg_check_modules(SYSREPO-CPP REQUIRED IMPORTED_TARGET sysrepo-cpp>=1.1.0)
  pkg_check_modules(LIBYANG-CPP REQUIRED IMPORTED_TARGET libyang-cpp>=1.1.0)
 -pkg_check_modules(SYSTEMD REQUIRED IMPORTED_TARGET libsystemd)
@@ -44,7 +41,7 @@ index 7f82660..43313ba 100644
  
  add_library(rousette-http STATIC
      src/http/EventStream.cpp
-@@ -116,7 +121,10 @@ add_executable(watch-operational-ds
+@@ -116,7 +122,10 @@ add_executable(watch-operational-ds
  target_link_libraries(watch-operational-ds PUBLIC rousette-sysrepo)
  
  add_executable(rousette src/restconf/main.cpp)
