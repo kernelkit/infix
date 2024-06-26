@@ -1,6 +1,7 @@
 # Introduction
 
-The command line interface (CLI, see-ell-i) is the traditional way of
+The command line interface (CLI, see-ell-aye) implements a CISCO-like,
+or Juniper Networks JunOS-like, CLI.  It is the traditional way of
 interacting with single network equipment like switches and routers.
 Today more advanced graphical NETCONF-based tools are available that
 allows for managing entire fleets of installed equipment.
@@ -9,34 +10,107 @@ Nevertheless, when it comes to initial deployment and debugging, it
 is very useful to know how to navigate and use the CLI.  This very
 short guide intends to help you with that.
 
+
+## About
+
+New users usually get the CLI as the default "shell" when logging in,
+but the default `admin` user logs in to `bash`.  To access the CLI,
+type:
+
+```
+admin@host-12-34-56:~$ cli
+
+See the 'help' command for an introduction to the system
+
+admin@host-12-34-56:/>
+```
+
+The prompt (beginning of the line) changes slightly.  Key commands
+available in any context are:
+
+```
+admin@host-12-34-56:/> help                   # Try: Tab or ?
+...
+admin@host-12-34-56:/> show                   # Try: Tab or ?
+admin@host-12-34-56:/>                        # Try: Tab or ?
+```
+
+> **Tip:** Even on an empty command line you can tap the Tab or ? keys.
+> See `help keybindings` for more tips!
+
+
 ## Key Concepts
 
 The two modes in the CLI are the admin-exec and the configure context.
 
-When logging in to the system, be it from console or SSH, you first have
-a stopover in a UNIX shell, usually Bash.  Type `cli` to enter the CLI
-and finally land in admin-exec.  Here you can inspect system status and
-do operations to debug networking issues, e.g. ping.  You can also enter
-configure context by typing: `configure`
+The top-level context after logging in and starting the CLI is the
+admin-exec or "main" context.  It is used for querying system status,
+managing configuration files/profiles and doing advanced debugging.
 
-The system has several datastores (or files):
+Available commands can be seen by pressing `?` at the prompt:
 
- - `factory-config` consists of a set of default configurations, some
-   static and others generated per-device, e.g., a unique hostname and
-   number of ports/interfaces.   This file is generated at boot.
- - `startup-config` is created from `factory-config` at boot if it does
-   not exist.  It is loaded as the system configuration on each boot.
- - `running-config` is what is actively running on the system.  If no
-   changes have been made since the system booted, it is the same as
-   `startup-config`.
+```
+admin@host:/>
+  configure      Create new candidate-config based on running-config
+  copy           Copy file or configuration, e.g., copy running-config startup-config
+  dir            List available configuration files
+  exit           Exit from CLI (log out)
+  factory-reset  Restore the system to factory default state
+  follow         Monitor a log file, use Ctrl-C to abort
+  help           Help system (try also the '?' key)
+  logout         Alias to exit
+  netcalc        IP subnet calculator, with subnetting
+  password       Password tools
+  ping           Ping a network host or multicast group
+  poweroff       Poweroff system (system policy may yield reboot)
+  reboot         Reboot system
+  remove         Remove a configuration file
+  set            Set operations, e.g., current date/time
+  show           Show system status and configuration files
+  tcpdump        Capture network traffic
+  upgrade        Install a software update bundle from remote or local file
+```
+
+The system has three *main datastores* (or files): *factory*, *startup*,
+and *running* that can be managed and inspected using the `copy`,
+`show`, and `configure` commands.  The traditional names used in the CLI
+for these are listed below:
+
+ - `factory-config` the default configuration from factory for the
+   device, i.e., what the system returns to after a `factory-reset`
+ - `startup-config` created from `factory-config` at first boot after
+   factory reset.  Loaded as the system configuration on each boot
+ - `running-config` what is actively running on the system.  If no
+   changes have been made since boot, it is the same as `startup-config`
  - `candidate-config` is created from `running-config` when entering the
    configure context.  Any changes made here can be discarded (`abort`,
-   `rollback`) or committed (`commit`, `leave`) to `running-config`.
+   `rollback`) or committed (`commit`, `leave`) to `running-config`
 
-To save configuration changes made to the `running-config` so the system
-will use them consecutive reboots, use the `copy` command:
+Edit the *running* configuration using the `configure` command.  This
+copies *running* to *candidate*, a temporary datastore, where changes
+are made:
 
-    admin@host-12-34-56:/> copy running-config startup-config
+```
+admin@host-12-34-56:/> configure
+admin@host-12-34-56:/config/> ...             # Try: Tab or ?
+admin@host-12-34-56:/config/> leave
+```
+
+The `leave` command activates the changes by issuing a transaction to,
+essentially, copy the *candidate* back to *running*.  Depending on the
+changes made, this can take a few seconds.  If the changes are invalid,
+i.e., not correct according to the underlying YANG models, a warning is
+shown and the session remains in configure context.  Use the `abort`
+command to cancel your changes, or investigate further with the `diff`
+command (see more below).
+
+To save configuration changes made to the `running-config` to persistent
+store, so the system will use them for consecutive reboots, use the
+`copy` command:
+
+```
+admin@host-12-34-56:/> copy running-config startup-config
+```
 
 In *configure context* the following commands are available:
 

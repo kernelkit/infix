@@ -19,9 +19,9 @@ keybindings are really useful to learn!
 | **Command**         | **Description**                            |
 |---------------------|--------------------------------------------|
 | `help introduction` | An introduction to the CLI                 |
-| `help keybindings`  | Lists keybindings and other helpful tricks |
-| `help tutorial`     | The CLI User Guide                         |
+| `help configure`    | How to use configure context               |
 | `help text-editor`  | Help with the built-in text-editor command |
+| `help keybindings`  | Lists keybindings and other helpful tricks |
 
 > In `configure` context the `help setting` command shows the YANG
 > description text for each node and container.  To reach the admin

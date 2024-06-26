@@ -123,10 +123,14 @@
 <COMMAND name="help" help="Help system (try also the '?' key)">
   <PARAM name="topic" ptype="/STRING" min="0" help="Help topic">
     <COMPL>
+      <ACTION sym="printl">configure</ACTION>
       <ACTION sym="printl">introduction</ACTION>
       <ACTION sym="printl">keybindings</ACTION>
+      <ACTION sym="printl">netcalc</ACTION>
+      <ACTION sym="printl">quick</ACTION>
+      <ACTION sym="printl">tcpdump</ACTION>
       <ACTION sym="printl">text-editor</ACTION>
-      <ACTION sym="printl">tutorial</ACTION>
+      <ACTION sym="printl">upgrade</ACTION>
     </COMPL>
   </PARAM>
   <ACTION sym="script">
@@ -135,7 +139,7 @@
     if [ -f "$fn" ]; then
       lowdown -t term --term-vmargin=1 "$fn"
     else
-      echo "Topic not available."
+      echo "Help topic not available, try help without an argument, or tap '?' for a list."
     fi
   </ACTION>
 </COMMAND>
@@ -431,10 +435,22 @@
     </ACTION>
   </COMMAND>
 
-  <COMMAND name="netcalc" help="IP subnet calculator">
+  <COMMAND name="netcalc" help="IP subnet calculator, with subnetting">
     <PARAM name="addrlen" ptype="/STRING" help="ADDRESS[/LEN]"/>
     <PARAM name="netmask" ptype="/STRING" min="0" help="Optional NETMASK"/>
-    <ACTION sym="script">netcalc $KLISH_PARAM_addrlen $KLISH_PARAM_netmask</ACTION>
+    <PARAM name="split"   ptype="/UINT" min="0" help="Split network: 1-32 (IPv4), 1-128 (IPv6)"/>
+    <ACTION sym="script">
+      if [ -n "$KLISH_PARAM_split" ]; then
+        if echo $KLISH_PARAM_addrlen |grep -q ':'; then
+          split="-S $KLISH_PARAM_split"
+	else
+          split="-s $KLISH_PARAM_split"
+	fi
+      else
+	split=""
+      fi
+      netcalc $split $KLISH_PARAM_addrlen $KLISH_PARAM_netmask
+    </ACTION>
   </COMMAND>
 
   <COMMAND name="ping" help="Ping a network host or multicast group">
