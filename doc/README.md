@@ -11,8 +11,9 @@ the `help` command.
 
 - **CLI Topics**
    - [Introduction to the CLI](cli/introduction.md)
-   - [CLI User's Guide](cli/tutorial.md)
+   - [Configuring using the CLI](cli/configure.md)
    - [Quick Overview](cli/quick.md)
+   - [Upgrading the Software](cli/upgrade.md)
  - **Infix User Guide**
    - [Introduction](introduction.md)
    - [System Configuration](system.md)
