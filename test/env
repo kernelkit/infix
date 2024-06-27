@@ -181,8 +181,8 @@ if [ "$containerize" ]; then
 	 --cap-add=NET_ADMIN \
 	 --device=/dev/net/tun \
 	 --env PYTHONHASHSEED=${PYTHONHASHSEED:-$(shuf -i 0-$(((1 << 32) - 1)) -n 1)} \
-	 --env FORCE_PROTOCOL=${FORCE_PROTOCOL} \
 	 --env VIRTUAL_ENV_DISABLE_PROMPT=yes \
+	 --env INFAMY_EXTRA_ARGS="$INFAMY_EXTRA_ARGS" \
 	 --env PROMPT_DIRTRIM="$ixdir" \
 	 --env PS1="$(build_ps1)" \
 	 --expose 9001-9010 --publish-all \
@@ -220,5 +220,8 @@ INFAMY_ARGS="$INFAMY_ARGS -y $envdir/yangdir"
 start_topology "$qenethdir" "$files"
 [ "$topology" ] && INFAMY_ARGS="$INFAMY_ARGS $topology"
 export INFAMY_ARGS
+if [ -n "$INFAMY_EXTRA_ARGS" ]; then
+	exec "$@" -o="$INFAMY_EXTRA_ARGS"
+fi
 
 exec "$@"
