@@ -24,6 +24,29 @@ class Location:
     port: int = 443
 
 
+# Workaround for bug in requests 2.32.x: https://github.com/psf/requests/issues/6735
+def requests_workaround(method, url, json, headers, auth, verify=False):
+    # Create a session
+    session=requests.Session()
+
+    # Prepare the request
+    request=requests.Request(method, url, json=json, headers=headers, auth=auth)
+    prepared_request=session.prepare_request(request)
+    prepared_request.url=prepared_request.url.replace('%25', '%')
+    return session.send(prepared_request, verify=verify)
+
+def requests_workaround_put(url, json, headers, auth, verify=False):
+    return requests_workaround('PUT', url, json, headers, auth, verify=False)
+
+def requests_workaround_delete(url, headers, auth, verify=False):
+    return requests_workaround('DELETE', url, None, headers, auth, verify=False)
+
+def requests_workaround_post(url, json, headers, auth, verify=False):
+    return requests_workaround('POST', url, json, headers, auth, verify=False)
+
+def requests_workaround_get(url, headers, auth, verify=False):
+    return requests_workaround('GET', url, None, headers, auth, verify=False)
+
 def restconf_reachable(neigh, password):
     try:
         headers={
@@ -32,9 +55,11 @@ def restconf_reachable(neigh, password):
         }
         url=f"https://[{neigh}]/restconf/data/ietf-system:system/hostname"
         auth=HTTPBasicAuth("admin", password)
-        response=requests.get(url, headers=headers, auth=auth, verify=False)
-        print(f"{neigh} answers to TCP connections on port 443 (RESTCONF)")
+
+
+        response=requests_workaround_get(url, headers=headers, auth=auth, verify=False)
         if response.status_code==200:
+            print(f"{neigh} answers to TCP connections on port 443 (RESTCONF)")
             return True
     except:
         return False
@@ -118,7 +143,7 @@ class Device(Transport):
 
     def _get_raw(self, url, parse=True):
         """Actually send a GET to RESTCONF server"""
-        response=requests.get(url, headers=self.headers, auth=self.auth, verify=False)
+        response=requests_workaround_get(url, headers=self.headers, auth=self.auth, verify=False)
         response.raise_for_status()  # Raise an exception for HTTP errors
         if parse:
             data=response.json()
@@ -150,8 +175,7 @@ class Device(Transport):
     def post_datastore(self, datastore, data):
         """Actually send a POST to RESTCONF server"""
         url=f"{self.restconf_url}/ds/ietf-datastores:{datastore}"
-        response=requests.post(
-            url,
+        response=requests_workaround_post(url,
             json=data,  # Directly pass the dictionary without using json.dumps
             headers=self.headers,
             auth=self.auth,
@@ -161,8 +185,7 @@ class Device(Transport):
 
     def put_datastore(self, datastore, data):
         """Actually send a PUT to RESTCONF server"""
-        response=requests.put(
-            f"{self.restconf_url}/ds/ietf-datastores:{datastore}/",
+        response=requests_workaround_put(f"{self.restconf_url}/ds/ietf-datastores:{datastore}/",
             json=data,  # Directly pass the dictionary without using json.dumps
             headers=self.headers,
             auth=self.auth,
@@ -190,8 +213,9 @@ class Device(Transport):
     def call_rpc(self, rpc):
         url=f"{self.rpc_url}/{rpc}"
         """Actually send a POST to RESTCONF server"""
-        response=requests.post(
+        response=requests_workaround_post(
             url,
+            json=None,
             headers=self.headers,
             auth=self.auth,
             verify=False
@@ -235,8 +259,9 @@ class Device(Transport):
 
     def call_action(self, xpath):
         url=f"{self.restconf_url}/data{xpath}"
-        response=requests.post(
+        response=requests_workaround_post(
             url,
+            json=None,
             headers=self.headers,
             auth=self.auth,
             verify=False)
@@ -272,6 +297,6 @@ class Device(Transport):
         """Delete XPath from running config"""
         path=f"/ds/ietf-datastores:running/{xpath}"
         url=f"{self.restconf_url}{path}"
-        response=requests.delete(url, headers=self.headers, auth=self.auth, verify=False)
+        response=requests_workaround_delete(url, headers=self.headers, auth=self.auth, verify=False)
         response.raise_for_status()  # Raise an exception for HTTP errors
         return True
