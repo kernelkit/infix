@@ -1,3 +1,4 @@
 menu "Host utilities"
 source "$BR2_EXTERNAL_INFIX_PATH/package/python-libyang/Config.in.host"
+source "$BR2_EXTERNAL_INFIX_PATH/package/python-yangdoc/Config.in.host"
 endmenu
