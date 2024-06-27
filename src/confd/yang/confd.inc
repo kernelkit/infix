@@ -4,7 +4,7 @@ MODULES=(
 	"ietf-system@2014-08-06.yang -e authentication -e local-users -e ntp -e ntp-udp-port -e timezone-name"
 	"iana-timezones@2013-11-19.yang"
 	"notifications@2008-07-14.yang"
-	"ietf-tcp-common@2019-07-02.yang -e keepalives-supported"
+	"ietf-tcp-common@2023-12-28.yang -e keepalives-supported"
 	"ietf-interfaces@2018-02-20.yang -e if-mib"
 	"ietf-ip@2018-02-22.yang -e ipv6-privacy-autoconf"
 	"ietf-network-instance@2019-01-21.yang"
