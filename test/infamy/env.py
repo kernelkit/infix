@@ -5,8 +5,6 @@ import pydot
 import shlex
 import sys
 import random
-import hashlib
-import struct
 
 from . import neigh, netconf, restconf, ssh, tap, topology
 
@@ -24,6 +22,7 @@ class ArgumentParser(argparse.ArgumentParser):
         self.add_argument("-l", "--logical-topology", dest="ltop", default=ltop)
         self.add_argument("-p", "--package", default=None)
         self.add_argument("-y", "--yangdir", default=None)
+        self.add_argument("-t", "--transport", default=None)
         self.add_argument("ptop", nargs=1, metavar="topology")
 
 
@@ -64,7 +63,7 @@ class Env(object):
     def get_password(self, node):
         return self.ptop.get_password(node)
 
-    def attach(self, node, port, protocol = None, factory_default=True):
+    def attach(self, node, port, protocol=None, factory_default=True):
         if self.ltop:
             mapping = self.ltop.mapping[node]
             node, port = self.ltop.xlate(node, port)
@@ -72,22 +71,12 @@ class Env(object):
             mapping = None
 
         if protocol is None:
-            if "FORCE_PROTOCOL" in os.environ and os.environ["FORCE_PROTOCOL"] != "":
-                protocol=os.environ["FORCE_PROTOCOL"]
-            elif "PYTHONHASHSEED" in os.environ:
-                file_name = f"{sys.argv[0]}-{os.environ['PYTHONHASHSEED']}"
-                hash_object = hashlib.md5(file_name.encode())
-                hash_digest = hash_object.digest()
-
-                seed = struct.unpack('i', hash_digest[:4])[0]
-                random.seed(seed)
-                protocols=["restconf", "netconf"]
-                random.shuffle(protocols)
-                protocol=protocols[0]
+            if not self.args.transport is None:
+                protocol=self.args.transport
             else:
-                protocols=["restconf", "netconf"]
-                random.shuffle(protocols)
-                protocol=protocols[0]
+                random.seed(f"{sys.argv[0]}-{os.environ.get('PYTHONHASHSEED',0)}")
+                protocol = random.choice(["netconf", "restconf"])
+
         password=self.get_password(node)
         ctrl = self.ptop.get_ctrl()
         cport, _ = self.ptop.get_mgmt_link(ctrl, node)

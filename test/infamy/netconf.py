@@ -401,7 +401,7 @@ class Device(Transport):
         if interface is None:
             return None
 
-        # This really not required, it is due a bug in rousette.
+        # Restconf (rousette) address by id and netconf (netopper2) address by name
         return interface[iface]
 
     def delete_xpath(self, xpath):
