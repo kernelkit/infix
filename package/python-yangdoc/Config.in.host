@@ -1,0 +1,9 @@
+config BR2_PACKAGE_HOST_PYTHON_YANGDOC
+	bool "host python-yangdoc"
+	select BR2_PACKAGE_HOST_PYTHON_LIBYANG #runtime
+	help
+	   YANG documentation viewer based on libyang, similar output to
+	   that of pyang -f jstree.  The default output is a standalone
+	   HTML file, called yangtree.html
+
+           https://pypi.org/project/yangdoc/

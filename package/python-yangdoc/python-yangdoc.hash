@@ -1,0 +1,5 @@
+# md5, sha256 from https://pypi.org/pypi/yangdoc/json
+md5  9fe18b73870676c7f7f6a9311b531f97  yangdoc-0.4.0.tar.gz
+sha256  f7a311c3c58859f33c85342b92947124bf4696015db0816f4324cf1663ebc007  yangdoc-0.4.0.tar.gz
+# Locally computed sha256 checksums
+sha256  0d642b9805375b12da79c64386bbae4221c7759c2c580ada01d5458ed9c8e37c  LICENSE
