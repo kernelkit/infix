@@ -4,6 +4,37 @@ common=$(dirname "$(readlink -f "$0")")
 . "$BR2_CONFIG" 2>/dev/null
 . "$TARGET_DIR/usr/lib/os-release"
 
+# Extract list of loaded YANG modules and their features for yangdoc.html
+mkyangdoc()
+{
+    cmd="yangdoc -o $1 -p $TARGET_DIR/usr/share/yang"
+
+    # shellcheck disable=SC2155
+    export SYSREPO_SHM_PREFIX="yangdoc"
+    while IFS= read -r line; do
+        if echo "$line" | grep -q '^[a-z]'; then
+            module=$(echo "$line" | awk '{print $1}')
+            cmd="$cmd -m $module"
+            feature=$(echo "$line" | awk -F'|' '{print $8}' | sed 's/^ *//;s/ *$//')
+            if [ -n "$feature" ]; then
+                feature_list=$(echo "$feature" | tr ' ' '\n')
+                for feat in $feature_list; do
+                    cmd="$cmd -e $feat"
+                done
+            fi
+        fi
+    done <<EOF
+$(sysrepoctl -l; rm -f /dev/shm/${SYSREPO_SHM_PREFIX}*)
+EOF
+
+    # Ignore a few top-level oddballs not used by core Infix
+    cmd="$cmd -x supported-algorithms"
+
+    # Execute the command
+    echo "Calling: $cmd"
+    $cmd
+}
+
 if [ -n "${ID_LIKE}" ]; then
     ID="${ID} ${ID_LIKE}"
 fi
@@ -85,3 +116,8 @@ grep -qsE '^/bin/false$$' "$TARGET_DIR/etc/shells" \
 # Allow clish (symlink to /usr/bin/klish) to be a login shell
 grep -qsE '^/bin/clish$$' "$TARGET_DIR/etc/shells" \
         || echo "/bin/clish" >> "$TARGET_DIR/etc/shells"
+
+# Create YANG documentation
+if [ "$BR2_PACKAGE_HOST_PYTHON_YANGDOC" = "y" ]; then
+   mkyangdoc "$BINARIES_DIR/yangdoc.html"
+fi
