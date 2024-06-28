@@ -10,6 +10,8 @@ PYTHON_LIBYANG_SITE = https://files.pythonhosted.org/packages/91/2e/ff13ee16c874
 PYTHON_LIBYANG_SETUP_TYPE = setuptools
 PYTHON_LIBYANG_LICENSE = MIT
 PYTHON_LIBYANG_LICENSE_FILES = LICENSE
+PYTHON_LIBYANG_DEPENDENCIES = python-cython python-cffi
 HOST_PYTHON_LIBYANG_DEPENDENCIES = host-python-cython host-python-cffi
 
+$(eval $(python-package))
 $(eval $(host-python-package))

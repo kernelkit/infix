@@ -1,6 +1,5 @@
 config BR2_PACKAGE_PYTHON_LIBYANG
 	bool "python-libyang"
-	select BR2_PACKAGE_PYTHON_PIP  # buildtime
 	select BR2_PACKAGE_PYTHON_CFFI # runtime
 	help
 	  CFFI bindings to libyang.
