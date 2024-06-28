@@ -112,10 +112,6 @@ config INFIX_ARCH
 	default "riscv64" if BR2_riscv
 	default "x86_64"  if BR2_x86_64
 
-menu "Packages"
-
 source "$BR2_EXTERNAL_INFIX_PATH/package/Config.in"
-
-endmenu
-
+source "$BR2_EXTERNAL_INFIX_PATH/package/Config.in.host"
 source "$BR2_EXTERNAL_INFIX_PATH/board/common/Config.in"
