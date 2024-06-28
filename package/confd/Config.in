@@ -26,7 +26,6 @@ choice
 
 config BR2_PACKAGE_CONFD_MD5CRYPT
 	bool "md5crypt"
-	help
 
 config BR2_PACKAGE_CONFD_SHA256CRYPT
 	bool "sha256crypt"
