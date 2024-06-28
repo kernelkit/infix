@@ -120,6 +120,12 @@ jobs:
           pattern: "artifact-*"
           merge-multiple: true
 
+      - name: Create checksums ...
+        run: |
+          for file in *.tar.gz; do
+              sha256sum $file > $file.sha256
+          done
+
       - uses: ncipollo/release-action@v1
         with:
           allowUpdates: true
@@ -129,7 +135,7 @@ jobs:
           prerelease: true
           tag: "latest"
           token: ${{ secrets.GITHUB_TOKEN }}
-          artifacts: "*.tar.gz"
+          artifacts: "*.tar.gz*"
 
       - name: Summary
         run: |
