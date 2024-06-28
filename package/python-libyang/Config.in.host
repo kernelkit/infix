@@ -1,0 +1,7 @@
+config BR2_PACKAGE_HOST_PYTHON_LIBYANG
+	bool "host python-libyang"
+	select BR2_PACKAGE_HOST_PYTHON_CFFI # runtime
+	help
+	  CFFI bindings to libyang.
+
+	  https://github.com/CESNET/libyang-python
