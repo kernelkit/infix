@@ -4,8 +4,8 @@ Change Log
 All notable changes to the project are documented in this file.
 
 
-[v24.06.0][UNRELEASED]
-----------------------
+[v24.06.0][] - 2024-06-28
+-------------------------
 
 > **Note:** this release contains **breaking changes** in YANG models
 > that are incompatible with existing configuration files.  So, after
@@ -49,15 +49,27 @@ All notable changes to the project are documented in this file.
 - Issue #178: add early boot script to migrate configuration files of
   older version to new syntax.  Initial, rudimentary support, for the
   change in shell types
-- Issue #308: add `version` field to ietf-system.yang to be able to
-  detect the configuration file version.
+- Issue #308: add `version` field to configuration file using a new
+  model, infix-meta.yang.  Used to trigger migration from older formats
+  to newer on future breaking changes
+- Issue #432: extract YANG documentation at build time.  Part of the
+  release tarballs is now `yangdoc.html` for the complete tree of all
+  YANG configuration, operational data, RPCs, and notification nodes
 - Issue #435: add support for `$factory$` password hash.  This allows
   backing up configuration files with device specific passwords.  Upon
   restore to another device this ensures the replacement's password is
   used instead of the originals'
 - Issue #435: add support for hostname format specifiers.  The default
   hostname configuration is now `%h-%m` to encode, `infix-c0-ff-ee`
-- Issue #447: add support for [yescrypt][], `$y$` hashes
+- Issue #435: support for "empty" NETCONF host keys.  Primarily used in
+  static factory-config setups.  When a configuration is detected with
+  this, the automatically generated, device specific 2048 bit RSA host
+  key pair is used.  With this, vendor/product specific factory-config
+  is now fully supported.  See `src/confd/README.md`
+- Issue #447: add support for [yescrypt][], `$y$` hashes.  This also
+  adds support for `$0$cleartext` password according to ietf-system.yang
+- Issue #455: split CLI tutorial into multiple files for easy access
+  from the CLI admin-exec context using the `help` command
 - Issue #478: add operational support for ietf-system.yang, reading
   actual hostname and passwords after issue #435
 - Merge infix-shell-types.yang with infix-system.yang
