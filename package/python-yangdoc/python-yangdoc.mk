@@ -10,6 +10,6 @@ PYTHON_YANGDOC_SITE = https://files.pythonhosted.org/packages/75/83/a426dcb6f9c5
 PYTHON_YANGDOC_SETUP_TYPE = setuptools
 PYTHON_YANGDOC_LICENSE = MIT
 PYTHON_YANGDOC_LICENSE_FILES = LICENSE
-HOST_PYTHON_LIBYANG_DEPENDENCIES = host-python-cython host-python-cffi host-python-libyang
+HOST_PYTHON_YANGDOC_DEPENDENCIES = host-python-cython host-python-cffi host-python-libyang
 
 $(eval $(host-python-package))
