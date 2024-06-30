@@ -39,6 +39,8 @@ fi
 if ! [ "$KTAG" ]; then
      ixkver=$(getconfig BR2_LINUX_KERNEL_VERSION)
     [ "$ixkver" ] && KTAG="v$ixkver"
+else
+    ixkver=${KTAG#v}
 fi
 
 if ! [ "$KTAG" ]; then
@@ -49,7 +51,7 @@ fi
 
 if ! [ "$PDIR" ]; then
     ixdir=$(getconfig BR2_EXTERNAL_INFIX_PATH)
-    [ "$ixdir" ] && PDIR="$ixdir/patches/linux"
+    [ "$ixdir" ] && PDIR="$ixdir/patches/linux/$ixkver"
 fi
 
 if ! [ "$PDIR" ]; then
