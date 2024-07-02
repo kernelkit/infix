@@ -1,0 +1,176 @@
+From c7cd85da2831a5c1476e6ebe60431b87382c74c8 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Mattias=20Walstr=C3=B6m?= <lazzer@gmail.com>
+Date: Mon, 6 May 2024 14:49:32 +0200
+Subject: [PATCH 4/6] Add -z switch to sysrepoctl to install factory config
+ from a json file
+Organization: Addiva Elektronik
+
+This to be able to load the yang modules during build time instead on boot.
+---
+ src/executables/sysrepoctl.c | 20 +++++++++++++--
+ src/lyd_mods.h               |  7 ++++++
+ src/sysrepo.c                | 49 ++++++++++++++++++++++++++++++++++++
+ src/sysrepo.h                | 10 +++++++-
+ 4 files changed, 83 insertions(+), 3 deletions(-)
+
+diff --git a/src/executables/sysrepoctl.c b/src/executables/sysrepoctl.c
+index b9680551..4cdba6a0 100644
+--- a/src/executables/sysrepoctl.c
++++ b/src/executables/sysrepoctl.c
+@@ -647,6 +647,7 @@ main(int argc, char **argv)
+         {"uninstall",       required_argument, NULL, 'u'},
+         {"change",          required_argument, NULL, 'c'},
+         {"update",          required_argument, NULL, 'U'},
++        {"factory-install", no_argument,       NULL, 'z'},
+         {"plugin-list",     no_argument,       NULL, 'L'},
+         {"plugin-install",  required_argument, NULL, 'P'},
+         {"search-dirs",     required_argument, NULL, 's'},
+@@ -671,7 +672,7 @@ main(int argc, char **argv)
+ 
+     /* process options */
+     opterr = 0;
+-    while ((opt = getopt_long(argc, argv, "hVli:u:c:U:LP:s:e:d:r:o:g:p:D:m:I:fv:", options, NULL)) != -1) {
++    while ((opt = getopt_long(argc, argv, "hVli:u:c:U:LP:s:e:d:r:o:g:p:D:m:I:fv:z:", options, NULL)) != -1) {
+         switch (opt) {
+         case 'h':
+             /* help */
+@@ -863,6 +864,15 @@ main(int argc, char **argv)
+                 goto cleanup;
+             }
+             break;
++        case 'z':
++		if (operation) {
++			error_print(0, "Operation already specified");
++			goto cleanup;
++		}
++		/* init-data */
++		operation = 'z';
++		data_path = optarg;
++		break;
+         case 'I':
+             /* init-data */
+             if (operation == 'i') {
+@@ -922,9 +932,15 @@ main(int argc, char **argv)
+             goto cleanup;
+         }
+     }
+-
+     /* perform the operation */
+     switch (operation) {
++    case 'z':
++        /* Install factory config for built-in modules */
++	if ((r = sr_install_factory_config(conn, data_path))) {
++            error_print(r, "Failed to install factory config");
++            goto cleanup;
++	}
++	break;
+     case 'l':
+         /* list */
+         if ((r = srctl_list(conn))) {
+diff --git a/src/lyd_mods.h b/src/lyd_mods.h
+index 1960bc06..a8ca5add 100644
+--- a/src/lyd_mods.h
++++ b/src/lyd_mods.h
+@@ -102,4 +102,11 @@ sr_error_info_t *sr_lydmods_change_chng_feature(const struct ly_ctx *ly_ctx, con
+ sr_error_info_t *sr_lydmods_change_chng_replay_support(const struct lys_module *ly_mod, int enable,
+         struct ly_set *mod_set, sr_conn_ctx_t *conn, struct lyd_node **sr_mods);
+ 
++/**
++ * @brief Add factory default data to built-in modules
++ * @param[in] ly_ctx Context to use for parsing SR data.
++ * @return err_info, NULL on success.
++ */
++sr_error_info_t *sr_lydmods_create_data(const struct ly_ctx *ly_ctx);
++
+ #endif
+diff --git a/src/sysrepo.c b/src/sysrepo.c
+index c15855e9..86d694e5 100644
+--- a/src/sysrepo.c
++++ b/src/sysrepo.c
+@@ -1631,6 +1631,55 @@ sr_free_int_install_mods(sr_int_install_mod_t *new_mods, uint32_t new_mod_count)
+     free(new_mods);
+ }
+ 
++API int
++sr_install_factory_config(sr_conn_ctx_t *conn, const char *factory_file) {
++    sr_error_info_t *err_info = NULL;
++    struct ly_ctx *new_ctx = NULL;
++    struct lyd_node *sr_mods = NULL;
++    int initialized = 0;
++    struct lyd_node *mod_data = NULL;
++    struct sr_data_update_s data_info = {0};
++
++    /* create new temporary context */
++    if ((err_info = sr_ly_ctx_init(conn, &new_ctx))) {
++        goto cleanup;
++    }
++
++    /* use temporary context to load current modules */
++    if ((err_info = sr_shmmod_ctx_load_modules(SR_CONN_MOD_SHM(conn), new_ctx, NULL))) {
++        goto cleanup;
++    }
++
++    if ((err_info = sr_lyd_parse_data(new_ctx, NULL, factory_file, LYD_JSON, LYD_PARSE_ONLY | LYD_PARSE_STRICT, 0, &mod_data))) {
++	    goto cleanup;
++    }
++    if ((err_info = sr_lyd_dup(mod_data, NULL, LYD_DUP_RECURSIVE, 1, &data_info.new.start))) {
++        goto cleanup;
++    }
++    if ((err_info = sr_lyd_dup(mod_data, NULL, LYD_DUP_RECURSIVE, 1, &data_info.new.run))) {
++        goto cleanup;
++    }
++     /* parse SR mods */
++    if ((err_info = sr_lydmods_parse(new_ctx, conn, &initialized, &sr_mods))) {
++            goto cleanup;
++    }
++    data_info.new.fdflt = mod_data;
++    mod_data = NULL;
++    if ((err_info = sr_lycc_store_data_if_differ(conn, new_ctx, sr_mods,  &data_info))) {
++	    goto cleanup;
++    }
++
++    /* update content ID and safely switch the context */
++    SR_CONN_MAIN_SHM(conn)->content_id = ly_ctx_get_modules_hash(new_ctx);
++    sr_conn_ctx_switch(conn, &new_ctx, NULL);
++cleanup:
++    ly_ctx_destroy(new_ctx);
++    sr_lycc_update_data_clear(&data_info);
++    lyd_free_siblings(sr_mods);
++    lyd_free_siblings(mod_data);
++    return sr_api_ret(NULL, err_info);
++}
++
+ API int
+ sr_install_module(sr_conn_ctx_t *conn, const char *schema_path, const char *search_dirs, const char **features)
+ {
+diff --git a/src/sysrepo.h b/src/sysrepo.h
+index 8a6a70b8..41c9e52b 100644
+--- a/src/sysrepo.h
++++ b/src/sysrepo.h
+@@ -34,7 +34,6 @@ extern "C" {
+ ////////////////////////////////////////////////////////////////////////////////
+ // Logging API
+ ////////////////////////////////////////////////////////////////////////////////
+-
+ /**
+  * @defgroup log_api Logging API
+  * @{
+@@ -708,6 +707,15 @@ int sr_get_module_info(sr_conn_ctx_t *conn, sr_data_t **sysrepo_data);
+  */
+ int sr_is_module_internal(const struct lys_module *ly_mod);
+ 
++/**
++ * @brief Install factory config for built-in modules from a JSON file
++ *
++ * @param[in] conn Connection to use.
++ * @param[in] conn File containing factory default data in JSON format
++ * @return Error code (::SR_ERR_OK on success).
++ */
++int sr_install_factory_config(sr_conn_ctx_t *conn, const char *factory_file);
++
+ /** @} schema */
+ 
+ ////////////////////////////////////////////////////////////////////////////////
+-- 
+2.34.1
+

@@ -43,7 +43,6 @@ MODULES=(
 	"ietf-netconf@2013-09-29.yang -e writable-running -e candidate -e rollback-on-error -e validate -e startup -e url -e xpath -e confirmed-commit"
 	"ietf-truststore@2023-12-28.yang -e central-truststore-supported -e certificates"
 	"ietf-keystore@2023-12-28.yang -e central-keystore-supported -e inline-definitions-supported -e asymmetric-keys -e symmetric-keys"
-	"ietf-ssh-server@2023-12-28.yang -e local-user-auth-password -e local-user-auth-publickey"
 	"ietf-tls-server@2023-12-28.yang -e server-ident-raw-public-key -e server-ident-x509-cert"
 	"ietf-restconf@2017-01-26.yang"
 	"infix-interfaces@2024-01-15.yang -e vlan-filtering"
