@@ -1,0 +1,20 @@
+commit 2a7478b93b9779b70e5565544c334381947c9e3f
+Author: Michal Vasko <mvasko@cesnet.cz>
+Date:   Mon Jul 1 13:01:35 2024 +0200
+
+    maain BUGFIX clear url protocolos
+    
+    Affects static reinitialization.
+
+diff --git a/src/main.c b/src/main.c
+index 92ab3de..a24f3bf 100644
+--- a/src/main.c
++++ b/src/main.c
+@@ -658,6 +658,7 @@ server_destroy(void)
+ 
+     /* free dynamic members */
+     free(np2srv.url_protocols);
++    np2srv.url_protocols = NULL;
+ }
+ 
+ /**
