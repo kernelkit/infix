@@ -329,17 +329,18 @@ top of a bridge interface *br0* is named *vlan10*.
 #### Ethernet Settings and Status
 
 Physical Ethernet interfaces provide low-level settings for speed/duplex as
-well as packet statistics.
+well as packet status and statistics (*ieee802-ethernet-interface.yang*).
 
-By default, Ethernet interfaces defaults to auto-negotiate
+By default, Ethernet interfaces defaults to auto-negotiating
 speed/duplex modes, advertising all speed and duplex modes available.
 In the example below, the switch would by default auto-negotiate speed
-1 Gbit/s on port eth1 and 100 Mbit/s on port eth4.
+1 Gbit/s on port eth1 and 100 Mbit/s on port eth4, as those are the
+highest speeds supported by H1 and H2 respectively.
 
-![4-port Gbit/s switch connected to Gbit and Fast Ethernet Hosts ](img/ethernet-autoneg.svg)
+![4-port Gbit/s switch connected to Gbit and Fast Ethernet Hosts](img/ethernet-autoneg.svg)
 
 The speed and duplex status for the links can be listed as shown
-below, assuming the operational status is 'up'. 
+below, assuming the link operational status is 'up'. 
 
 ```
 admin@example:/> show interfaces name eth1
@@ -377,11 +378,11 @@ admin@example:/>
 
 Auto-negotiation of speed/duplex mode is desired in almost all
 use-cases, but it is possible disable auto-negotiation and specify a
-fixed speed and duplex mode (ieee802-ethernet-interface.yang). 
+fixed speed and duplex mode. 
 
 > If setting a fixed speed and duplex mode, ensure both sides of the
-> link have matching configuration. If speed does not match, the link will
-> not come up. If duplex mode does not match, the result will be
+> link have matching configuration. If speed does not match, the link
+> will not come up. If duplex mode does not match, the result is
 > reported collisions and/or bad throughput.
 
 The example below configures port eth3 to fixed speed 100 Mbit/s
@@ -403,15 +404,14 @@ admin@example:/config/interface/eth3/ethernet/> leave
 admin@example:/> 
 ```
 
-Speed metric is in Gbit/s, e.g., use `0.1` for 100 Mbit/s. 
-Auto-negotiation needs to be disabled in order for fixed speed/duplex
-to apply. Only speeds `0.1`(100 Mbit/s) and `0.01` (10 Mbit/s) can be
-specified as fixed speeds. 1 Gbit/s and higher speeds require
-auto-negotiation to be enabled.
+Speed metric is in Gbit/s.  Auto-negotiation needs to be disabled in
+order for fixed speed/duplex to apply. Only speeds `0.1`(100 Mbit/s)
+and `0.01` (10 Mbit/s) can be specified. 1 Gbit/s and higher speeds
+require auto-negotiation to be enabled.
 
 #### Ethernet statistics
 
-Ethernet packet statistics can be listed as shown below (ieee802-ethernet-interface.yang).
+Ethernet packet statistics can be listed as shown below.
 
 ```
 admin@example:/> show interfaces name eth1
