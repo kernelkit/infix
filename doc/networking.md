@@ -336,7 +336,7 @@ speed/duplex modes, advertising all speed and duplex modes available.
 In the example below, the switch would by default auto-negotiate speed
 1 Gbit/s on port eth1 and 100 Mbit/s on port eth4.
 
-![4-port Gbit/s switch connected to Gbit and Fast Ethernet Hosts ](img/dataplane.svg)
+![4-port Gbit/s switch connected to Gbit and Fast Ethernet Hosts ](img/ethernet-autoneg.svg)
 
 The speed and duplex status for the links can be listed as shown
 below, assuming the operational status is 'up'. 
