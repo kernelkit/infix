@@ -377,8 +377,8 @@ admin@example:/>
 #### Configuring fixed speed and duplex
 
 Auto-negotiation of speed/duplex mode is desired in almost all
-use-cases, but it is possible disable auto-negotiation and specify a
-fixed speed and duplex mode. 
+use-cases, but it is possible to disable auto-negotiation and specify
+a fixed speed and duplex mode.
 
 > If setting a fixed speed and duplex mode, ensure both sides of the
 > link have matching configuration. If speed does not match, the link
