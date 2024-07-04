@@ -16,15 +16,16 @@ Infix to exploit the unique features not available in IEEE models.
 
 ![Linux Networking Blocks](img/lego.svg)
 
-| **Type** | **Yang Model**    | **Description**                                               |
-| -------- | ----------------- | ------------------------------------------------------------- |
-| bridge   | infix-if-bridge   | SW implementation of an IEEE 802.1Q bridge                    |
-| ip       | ietf-ip, infix-ip | IP address to the subordinate interface                       |
-| vlan     | infix-if-vlan     | Capture all traffic belonging to a specific 802.1Q VID        |
-| lag[^1]  | infix-if-lag      | Bonds multiple interfaces into one, creating a link aggregate |
-| lo       | ietf-interfaces   | Software loopback interface                                   |
-| eth      | ietf-interfaces   | Physical Ethernet device/port                                 |
-| veth     | infix-if-veth     | Virtual Ethernet pair, typically one end is in a container    |
+| **Type** | **Yang Model**             | **Description**                                               |
+| -------- | -----------------          | ------------------------------------------------------------- |
+| bridge   | infix-if-bridge            | SW implementation of an IEEE 802.1Q bridge                    |
+| ip       | ietf-ip, infix-ip          | IP address to the subordinate interface                       |
+| vlan     | infix-if-vlan              | Capture all traffic belonging to a specific 802.1Q VID        |
+| lag[^1]  | infix-if-lag               | Bonds multiple interfaces into one, creating a link aggregate |
+| lo       | ietf-interfaces            | Software loopback interface                                   |
+| eth      | ietf-interfaces,           | Physical Ethernet device/port                                 |
+|          | ieee802-ethernet-interface |                                                               |
+| veth     | infix-if-veth              | Virtual Ethernet pair, typically one end is in a container    |
 
 ## Data Plane
 
@@ -321,6 +322,124 @@ interface *eth0* is named *eth0.20*, and a VLAN interface for VID 10 on
 top of a bridge interface *br0* is named *vlan10*.
 
 > **Note:** If you name your VLAN interface `foo0.N` or `vlanN`, where `N` is a number, Infix will set the interface type automatically for you.
+
+
+### Physical Ethernet Interfaces
+
+#### Ethernet Settings and Status
+
+Physical Ethernet interfaces provide low-level settings for speed/duplex as
+well as packet statistics.
+
+By default, Ethernet interfaces defaults to auto-negotiate
+speed/duplex modes, advertising all speed and duplex modes available.
+In the example below, the switch would by default auto-negotiate speed
+1 Gbit/s on port eth1 and 100 Mbit/s on port eth4.
+
+![4-port Gbit/s switch connected to Gbit and Fast Ethernet Hosts ](img/dataplane.svg)
+
+The speed and duplex status for the links can be listed as shown
+below, assuming the operational status is 'up'. 
+
+```
+admin@example:/> show interfaces name eth1
+name                : eth1
+index               : 2
+mtu                 : 1500
+operational status  : up
+auto-negotiation    : on
+duplex              : full
+speed               : 1000
+physical address    : 00:53:00:06:11:01
+ipv4 addresses      :
+ipv6 addresses      : 
+in-octets           : 75581
+out-octets          : 43130
+...
+admin@example:/> show interfaces name eth4
+name                : eth4
+index               : 5
+mtu                 : 1500
+operational status  : up
+auto-negotiation    : on
+duplex              : full
+speed               : 100
+physical address    : 00:53:00:06:11:04
+ipv4 addresses      :
+ipv6 addresses      : 
+in-octets           : 75439
+out-octets          : 550704
+...
+admin@example:/>
+```
+
+#### Configuring fixed speed and duplex
+
+Auto-negotiation of speed/duplex mode is desired in almost all
+use-cases, but it is possible disable auto-negotiation and specify a
+fixed speed and duplex mode (ieee802-ethernet-interface.yang). 
+
+> If setting a fixed speed and duplex mode, ensure both sides of the
+> link have matching configuration. If speed does not match, the link will
+> not come up. If duplex mode does not match, the result will be
+> reported collisions and/or bad throughput.
+
+The example below configures port eth3 to fixed speed 100 Mbit/s
+half-duplex mode. 
+
+```
+admin@example:/> configure
+admin@example:/config/> edit interface eth3 ethernet
+admin@example:/config/interface/eth3/ethernet/> set speed 0.1
+admin@example:/config/interface/eth3/ethernet/> set duplex half
+admin@example:/config/interface/eth3/ethernet/> set auto-negotiation enable false
+admin@example:/config/interface/eth3/ethernet/> show
+auto-negotiation {
+  enable false;
+}
+duplex half;
+speed 0.1;
+admin@example:/config/interface/eth3/ethernet/> leave
+admin@example:/> 
+```
+
+Speed metric is in Gbit/s, e.g., use `0.1` for 100 Mbit/s. 
+Auto-negotiation needs to be disabled in order for fixed speed/duplex
+to apply. Only speeds `0.1`(100 Mbit/s) and `0.01` (10 Mbit/s) can be
+specified as fixed speeds. 1 Gbit/s and higher speeds require
+auto-negotiation to be enabled.
+
+#### Ethernet statistics
+
+Ethernet packet statistics can be listed as shown below (ieee802-ethernet-interface.yang).
+
+```
+admin@example:/> show interfaces name eth1
+name                : eth1
+index               : 2
+mtu                 : 1500
+operational status  : up
+auto-negotiation    : on
+duplex              : full
+speed               : 1000
+physical address    : 00:53:00:06:11:0a
+ipv4 addresses      :
+ipv6 addresses      : 
+in-octets           : 75581
+out-octets          : 43130
+
+eth-in-frames                : 434
+eth-in-multicast-frames      : 296
+eth-in-broadcast-frames      : 138
+eth-in-error-fcs-frames      : 0
+eth-in-error-oversize-frames : 0
+eth-out-frames               : 310
+eth-out-multicast-frames     : 310
+eth-out-broadcast-frames     : 0
+eth-out-good-octets          : 76821
+eth-in-good-octets           : 60598
+admin@example:/> 
+```
 
 
 ### VETH Pairs
