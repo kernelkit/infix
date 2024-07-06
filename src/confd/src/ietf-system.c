@@ -958,28 +958,11 @@ fail:
 	return -1;
 }
 
-static int set_password(struct confd *confd, const char *user, const char *hash, bool lock)
+static int set_password(const char *user, const char *hash, bool lock)
 {
-	const char *factory = "$factory$";
 	struct spwd *sp;
 	FILE *fp = NULL;
 	int fd = -1;
-
-	if (!strncmp(hash, factory, strlen(factory))) {
-		struct json_t *pwd;
-
-		pwd = json_object_get(confd->root, "factory-password-hash");
-		if (!json_is_string(pwd)) {
-			/*
-			 * Do not fail, lock account instead.  This way developers can
-			 * enable root account login at build-time to diagnose the system.
-			 */
-			ERROR("%s: cannot find factory-default password hash!", user);
-			lock = true;
-		} else {
-			hash = json_string_value(pwd);
-		}
-	}
 
 	if (lckpwdf())
 		goto exit;
@@ -1028,11 +1011,46 @@ exit:
 	return -1;
 }
 
+/*
+ * The iana-crypt-hash yang model is used to validate password hashes.
+ * This function traps empty passwords and the $factory$ keyword.
+ *
+ * Empty passwords are not allowed, but instead of locking ("!") the
+ * account, we disable password login with "*", allowing the user to
+ * log in with SSH keys.
+ *
+ * The $factory$ keyword hash is converted to device's default password
+ * hash, or NULL if it's not available, in which case the account will
+ * be locked.
+ */
+static const char *is_valid_hash(struct confd *confd, const char *user, const char *hash)
+{
+	const char *factory = "$factory$";
+
+	if (!hash || !strlen(hash))
+		return "*";
+
+	if (!strncmp(hash, factory, strlen(factory))) {
+		struct json_t *pwd;
+
+		pwd = json_object_get(confd->root, "factory-password-hash");
+		if (!json_is_string(pwd)) {
+			EMERG("Cannot find factory-default password hash for user %s!", user);
+			return NULL;
+		}
+
+		hash = json_string_value(pwd);
+	}
+
+	return hash;
+}
+
 static sr_error_t handle_sr_passwd_update(sr_session_ctx_t *, struct confd *confd, struct sr_change *change)
 {
 	sr_error_t err = SR_ERR_OK;
 	const char *hash;
 	char *user;
+	bool lock;
 
 	user = change_get_user(change);
 	if (!user)
@@ -1048,25 +1066,28 @@ static sr_error_t handle_sr_passwd_update(sr_session_ctx_t *, struct confd *conf
 			err = SR_ERR_INTERNAL;
 			break;
 		}
-		hash = change->new->data.string_val;
 
-		/*
-		 * The iana-crypt-hash yang model is used to validate password
-		 * hash sanity.  This check traps empty passwords, which we do
-		 * not allow.  But instead of disabling ("!") the user, we set
-		 * it as "*", meaning the user can log in with SSH keys.
-		 */
-		if (!hash || !strlen(hash)) {
-			ERROR("Empty passwords are not allowed, disabling password login.");
-			hash = "*";
-		}
-		if (set_password(confd, user, hash, false))
+		hash = is_valid_hash(confd, user, change->new->data.string_val);
+		if (!hash) {
+			/*
+			 * Do not fail, lock account instead.  This way developers can
+			 * enable root account login at build-time to diagnose the system.
+			 */
+			lock = true;
+		} else
+			lock = false;
+
+		if (set_password(user, hash, lock))
 			err = SR_ERR_SYS;
+		else if (lock)
+			NOTE("User account %s locked.", user);
+		else if (!strcmp(hash, "*"))
+			NOTE("Password login disabled for user %s", user);
 		else
 			NOTE("Password updated for user %s", user);
 		break;
 	case SR_OP_DELETED:
-		if (set_password(confd, user, "*", true))
+		if (set_password(user, "*", true))
 			err = SR_ERR_SYS;
 		else
 			NOTE("Password deleted for user %s", user);
