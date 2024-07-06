@@ -1087,10 +1087,10 @@ static sr_error_t handle_sr_passwd_update(sr_session_ctx_t *, struct confd *conf
 			NOTE("Password updated for user %s", user);
 		break;
 	case SR_OP_DELETED:
-		if (set_password(user, "*", true))
+		if (set_password(user, "*", false))
 			err = SR_ERR_SYS;
 		else
-			NOTE("Password deleted for user %s", user);
+			NOTE("Password login disabled for user %s", user);
 		break;
 	case SR_OP_MOVED:
 		break;
