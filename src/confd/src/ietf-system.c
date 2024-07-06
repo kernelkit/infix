@@ -593,7 +593,7 @@ fail:
 static bool is_group_member(const char *user, const char *group)
 {
 	/* Check if user is already in group */
-	if (!systemf("grep %s /etc/group |grep %s", group, user))
+	if (!systemf("grep %s /etc/group |grep -q %s", group, user))
 		return true;
 
 	return false;
