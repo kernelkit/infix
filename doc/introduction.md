@@ -24,8 +24,14 @@ The two modes in the CLI are the admin-exec and the configure context.
 
 However, when logging in to the system, from the console port or SSH,
 you land in a standard UNIX shell, Bash.  This is for advanced users
-and remote scripting purposes (production equipment).  To enter the
-CLI type:
+and remote scripting purposes (production equipment):
+
+    Run the command 'cli' for interactive OAM
+    
+    admin@example:~$
+
+To enter the CLI, follow the instructions, for interactive Operations,
+Administration, and Management (OAM), type:
 
     admin@example:~$ cli
     admin@example:/>
