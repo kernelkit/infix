@@ -8,12 +8,12 @@ BACKUP_DIR="/cfg/backup"
 
 note()
 {
-    logger -k -p user.notice -t "$ident" "$1"
+    logger -I $$ -k -p user.notice -t "$ident" "$1"
 }
 
 err()
 {
-    logger -k -p user.err -t "$ident" "$1"
+    logger -I $$ -k -p user.err -t "$ident" "$1"
 }
 
 file_version()

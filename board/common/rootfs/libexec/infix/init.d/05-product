@@ -7,7 +7,7 @@ PRODUCT=$(jq -r '."product-name" | ascii_downcase' /run/system.json)
 
 note()
 {
-    logger -k -p user.notice -t "$ident" "$1"
+    logger -I $$ -k -p user.notice -t "$ident" "$1"
 }
 
 DIR="$PREFIXD/$PRODUCT"
