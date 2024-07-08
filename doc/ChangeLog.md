@@ -4,6 +4,24 @@ Change Log
 All notable changes to the project are documented in this file.
 
 
+[v24.08.0][UNRELEASED]
+-------------------------
+
+### Changes
+- Initial RISC-V (riscv64) support: StarFive VisionFive2
+- Password login can now be disabled by removing the password.  Before
+  this change only empty password disabled password login (in favor of
+  SSH key login), removing the password locked the user completely out
+
+### Fixes
+- Fix #489: ensure all patches are versioned, including Linux kernel
+- Fix #531: creating a new VLAN interface named `vlanN` should not set
+  `lower-layer-if` to `vlanN`.  With the `vlanN` pattern, only C-VLAN
+  and VID can be inferred
+- Silence bogus `sysctl` warnings at boot (syslog)
+- Silence output from user group member check (sys-cli in syslog)
+
+
 [v24.06.0][] - 2024-06-28
 -------------------------
 
@@ -981,7 +999,8 @@ Supported YANG models in addition to those used by sysrepo and netopeer:
  - N/A
 
 [buildroot]:  https://buildroot.org/
-[UNRELEASED]: https://github.com/kernelkit/infix/compare/v24.04.0...HEAD
+[UNRELEASED]: https://github.com/kernelkit/infix/compare/v24.06.0...HEAD
+[v24.08.0]:   https://github.com/kernelkit/infix/compare/v24.06.0...v24.08.0
 [v24.06.0]:   https://github.com/kernelkit/infix/compare/v24.04.0...v24.06.0
 [v24.04.2]:   https://github.com/kernelkit/infix/compare/v24.04.1...v24.04.2
 [v24.04.1]:   https://github.com/kernelkit/infix/compare/v24.04.0...v24.04.1
