@@ -984,6 +984,16 @@ static int set_password(const char *user, const char *hash, bool lock)
 		if (!strcmp(sp->sp_namp, user)) {
 			usp = *sp;
 			usp.sp_pwdp = lock ? "!" : (char *)hash;
+			/*
+			 * Disable password aging & C:o, we cannot rely
+			 * on time being correct.
+			 */
+			usp.sp_lstchg = -1;
+			usp.sp_min    = -1;
+			usp.sp_max    = -1;
+			usp.sp_warn   = -1;
+			usp.sp_inact  = -1;
+			usp.sp_expire = -1;
 			sp = &usp;
 		}
 
