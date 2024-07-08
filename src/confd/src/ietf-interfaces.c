@@ -117,7 +117,7 @@ out:
 static int ifchange_cand_infer_vlan(sr_session_ctx_t *session, const char *path)
 {
 	sr_val_t inferred = { .type = SR_STRING_T };
-	char *ifname, *type, *xpath;
+	char *ifname, *type, *xpath, *lower;
 	sr_error_t err = SR_ERR_OK;
 	size_t cnt = 0;
 	int vid;
@@ -144,10 +144,14 @@ static int ifchange_cand_infer_vlan(sr_session_ctx_t *session, const char *path)
 			goto out_free_ifname;
 
 		*ptr++ = '\0';
-		vid = strtol(ptr, NULL, 10);
+		vid    = strtol(ptr, NULL, 10);
+		lower  = ifname;
 	} else if (!fnmatch("vlan+([0-9])", ifname, FNM_EXTMATCH)) {
 		if (sscanf(ifname, "vlan%d", &vid) != 1)
 		    goto out_free_ifname;
+
+		/* Avoid setting lower-layer-if to vlanN */
+		lower = NULL;
 	} else {
 		goto out_free_ifname;
 	}
@@ -155,16 +159,18 @@ static int ifchange_cand_infer_vlan(sr_session_ctx_t *session, const char *path)
 	if (vid < 1 || vid > 4094)
 		goto out_free_ifname;
 
-	err = srx_nitems(session, &cnt, "/interfaces/interface[name='%s']/name", ifname);
-	if (err || !cnt)
-		goto out_free_ifname;
-
-	err = srx_nitems(session, &cnt, IF_VLAN_XPATH "/lower-layer-if", xpath);
-	if (!err && !cnt) {
-		inferred.data.string_val = ifname;
-		err = srx_set_item(session, &inferred, 0, IF_VLAN_XPATH "/lower-layer-if", xpath);
-		if (err)
+	if (lower) {
+		err = srx_nitems(session, &cnt, "/interfaces/interface[name='%s']/name", lower);
+		if (err || !cnt)
 			goto out_free_ifname;
+
+		err = srx_nitems(session, &cnt, IF_VLAN_XPATH "/lower-layer-if", xpath);
+		if (!err && !cnt) {
+			inferred.data.string_val = lower;
+			err = srx_set_item(session, &inferred, 0, IF_VLAN_XPATH "/lower-layer-if", xpath);
+			if (err)
+				goto out_free_ifname;
+		}
 	}
 
 	err = srx_nitems(session, &cnt, IF_VLAN_XPATH "/tag-type", xpath);
