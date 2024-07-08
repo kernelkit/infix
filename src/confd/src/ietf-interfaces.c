@@ -152,7 +152,7 @@ static int ifchange_cand_infer_vlan(sr_session_ctx_t *session, const char *path)
 		goto out_free_ifname;
 	}
 
-	if (vid < 1 || vid > 4095)
+	if (vid < 1 || vid > 4094)
 		goto out_free_ifname;
 
 	err = srx_nitems(session, &cnt, "/interfaces/interface[name='%s']/name", ifname);
