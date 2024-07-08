@@ -25,8 +25,8 @@
 
 #define ONOFF(boolean) boolean ? "on" : "off"
 
-#define IF_XPATH "/ietf-interfaces:interfaces/interface"
-
+#define IF_XPATH      "/ietf-interfaces:interfaces/interface"
+#define IF_VLAN_XPATH "%s/infix-interfaces:vlan"
 
 static bool iface_is_phys(const char *ifname)
 {
@@ -117,7 +117,7 @@ out:
 static int ifchange_cand_infer_vlan(sr_session_ctx_t *session, const char *path)
 {
 	sr_val_t inferred = { .type = SR_STRING_T };
-	char *ifname, *type, *vidstr, *xpath;
+	char *ifname, *type, *xpath;
 	sr_error_t err = SR_ERR_OK;
 	size_t cnt = 0;
 	int vid;
@@ -125,68 +125,61 @@ static int ifchange_cand_infer_vlan(sr_session_ctx_t *session, const char *path)
 	xpath = xpath_base(path);
 	if (!xpath)
 		return SR_ERR_SYS;
+
 	type = srx_get_str(session, "%s/type", xpath);
 	if (!type)
 		goto out;
+
 	if (strcmp(type, "infix-if-type:vlan"))
 		goto out_free_type;
 
 	ifname = srx_get_str(session, "%s/name", xpath);
 	if (!ifname)
 		goto out_free_type;
+
 	if (!fnmatch("*.+([0-9])", ifname, FNM_EXTMATCH)) {
-		vidstr = rindex(ifname, '.');
-		if (!vidstr)
+		char *ptr = rindex(ifname, '.');
+
+		if (!ptr)
 			goto out_free_ifname;
-		*vidstr++ = '\0';
-		vid = strtol(vidstr, NULL, 10);
+
+		*ptr++ = '\0';
+		vid = strtol(ptr, NULL, 10);
 	} else if (!fnmatch("vlan+([0-9])", ifname, FNM_EXTMATCH)) {
 		if (sscanf(ifname, "vlan%d", &vid) != 1)
 		    goto out_free_ifname;
 	} else {
 		goto out_free_ifname;
 	}
+
 	if (vid < 1 || vid > 4095)
 		goto out_free_ifname;
 
-	err = srx_nitems(session, &cnt,
-			 "/interfaces/interface[name='%s']/name", ifname);
+	err = srx_nitems(session, &cnt, "/interfaces/interface[name='%s']/name", ifname);
 	if (err || !cnt)
 		goto out_free_ifname;
 
-	err = srx_nitems(session, &cnt,
-			 "%s/infix-interfaces:vlan"
-			 "/lower-layer-if", xpath);
+	err = srx_nitems(session, &cnt, IF_VLAN_XPATH "/lower-layer-if", xpath);
 	if (!err && !cnt) {
 		inferred.data.string_val = ifname;
-		err = srx_set_item(session, &inferred, 0,
-				   "%s/infix-interfaces:vlan"
-				   "/lower-layer-if", xpath);
+		err = srx_set_item(session, &inferred, 0, IF_VLAN_XPATH "/lower-layer-if", xpath);
 		if (err)
 			goto out_free_ifname;
 	}
 
-	err = srx_nitems(session, &cnt,
-			 "%s/infix-interfaces:vlan"
-			 "/tag-type", xpath);
+	err = srx_nitems(session, &cnt, IF_VLAN_XPATH "/tag-type", xpath);
 	if (!err && !cnt) {
 		inferred.data.string_val = "ieee802-dot1q-types:c-vlan";
-		err = srx_set_item(session, &inferred, 0,
-				   "%s/infix-interfaces:vlan"
-				   "/tag-type", xpath);
+		err = srx_set_item(session, &inferred, 0, IF_VLAN_XPATH "/tag-type", xpath);
 		if (err)
 			goto out_free_ifname;
 	}
 
-	err = srx_nitems(session, &cnt,
-			 "%s/infix-interfaces:vlan"
-			 "/id", xpath);
+	err = srx_nitems(session, &cnt, IF_VLAN_XPATH "/id", xpath);
 	if (!err && !cnt) {
 		inferred.type = SR_INT32_T;
 		inferred.data.int32_val = vid;
-		err = srx_set_item(session, &inferred, 0,
-				   "%s/infix-interfaces:vlan"
-				   "/id", xpath);
+		err = srx_set_item(session, &inferred, 0, IF_VLAN_XPATH "/id", xpath);
 		if (err)
 			goto out_free_ifname;
 	}
