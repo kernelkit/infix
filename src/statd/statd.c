@@ -130,8 +130,12 @@ static json_t *json_get_ip_link(void)
 	return json_get_output(cmd);
 }
 
+/*
+ * The 'fail' parameter is true for most calls to this function, except
+ * when reading ethtool data (below).
+ */
 static int ly_add_yanger_data(const struct ly_ctx *ctx, struct lyd_node **parent,
-			      const char *model, const char *arg)
+			      const char *model, const char *arg, bool fail)
 {
 	char *yanger_args[5] = {
 		"/usr/libexec/statd/yanger",
@@ -173,6 +177,8 @@ static int ly_add_yanger_data(const struct ly_ctx *ctx, struct lyd_node **parent
 		ERROR("Error, running yanger");
 		fclose(stream);
 		close(fd);
+		if (!fail)
+			return SR_ERR_OK;
 		return SR_ERR_SYS;
 	}
 
@@ -205,7 +211,8 @@ static int sr_ifaces_cb(sr_session_ctx_t *session, uint32_t, const char *path,
 	char *ifname;
 	int err;
 
-	DEBUG("Incoming query for xpath: %s", path);
+	ifname = &sub->name[3];
+	DEBUG("Incoming query for xpath: %s, ifname %s", path, ifname);
 
 	con = sr_session_get_connection(session);
 	if (!con) {
@@ -219,8 +226,13 @@ static int sr_ifaces_cb(sr_session_ctx_t *session, uint32_t, const char *path,
 		return SR_ERR_INTERNAL;
 	}
 
-	ifname = &sub->name[3];
-	err = ly_add_yanger_data(ctx, parent, "ietf-interfaces", ifname);
+	/*
+	 * If ethtool fails, it just means this interface doesn't have
+	 * counters (in JSON format).  Possibly because this board +
+	 * driver combo is not 100% supported yet.  This is fine, no
+	 * need to break the operational datastore though.
+	 */
+	err = ly_add_yanger_data(ctx, parent, "ietf-interfaces", ifname, false);
 	if (err)
 		ERROR("Error adding yanger data");
 
@@ -251,7 +263,7 @@ static int sr_ospf_cb(sr_session_ctx_t *session, uint32_t, const char *,
 		return SR_ERR_INTERNAL;
 	}
 
-	err = ly_add_yanger_data(ctx, parent, "ietf-ospf", NULL);
+	err = ly_add_yanger_data(ctx, parent, "ietf-ospf", NULL, true);
 	if (err)
 		ERROR("Error adding yanger data");
 
@@ -282,7 +294,7 @@ static int sr_generic_cb(sr_session_ctx_t *session, uint32_t, const char *model,
 		return SR_ERR_INTERNAL;
 	}
 
-	err = ly_add_yanger_data(ctx, parent, model, NULL);
+	err = ly_add_yanger_data(ctx, parent, model, NULL, true);
 	if (err)
 		ERROR("Error adding yanger data");
 

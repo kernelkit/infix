@@ -621,10 +621,10 @@ def add_ethtool_groups(ifname, iface_out):
     """Fetch interface counters from kernel"""
 
     data = run_json_cmd(['ethtool', '--json', '-S', ifname, '--all-groups'],
-            f"ethtool-groups-{ifname}.json")
+                        f"ethtool-groups-{ifname}.json")
     if len(data) != 1:
-        print("Error: expected ethtool groups output to be array with length 1", file=sys.stderr)
-        sys.exit(1)
+        print(f"Error: no counters available for {ifname}, skipping.")
+        return
 
     iface_in = data[0]
 
