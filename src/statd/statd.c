@@ -523,8 +523,8 @@ static int sub_to_container(struct statd *statd)
 int main(int argc, char *argv[])
 {
 	struct ev_signal sigint_watcher, sigusr1_watcher;
+	int log_opts = LOG_PID | LOG_DAEMON;
 	struct statd statd = {};
-	int log_opts = LOG_USER;
 	sr_conn_ctx_t *sr_conn;
 	char *env;
 	int err;
