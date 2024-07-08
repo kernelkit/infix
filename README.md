@@ -93,6 +93,7 @@ The [following boards](board/aarch64/README.md) are fully supported:
  - Marvell CN9130 CRB
  - Marvell EspressoBIN
  - Microchip SparX-5i PCB135 (eMMC)
+ - StarFive VisionFive2
  - NanoPi R2S
 
 An x86_64 build is also available, primarily intended for development
