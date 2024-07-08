@@ -1,0 +1,14 @@
+--- a/arch/riscv/boot/dts/starfive/jh7110-starfive-visionfive-2.dtsi
++++ b/arch/riscv/boot/dts/starfive/jh7110-starfive-visionfive-2.dtsi
+@@ -24,6 +24,11 @@ aliases {
+ 
+ 	chosen {
+ 		stdout-path = "serial0:115200n8";
++
++		infix {
++			/* Default admin user password: 'admin' */
++			factory-password-hash = "$5$mI/zpOAqZYKLC2WU$i7iPzZiIjOjrBF3NyftS9CCq8dfYwHwrmUK097Jca9A";
++		};
+ 	};
+ 
+ 	cpus {
