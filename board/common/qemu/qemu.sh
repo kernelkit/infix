@@ -146,13 +146,22 @@ usb_args()
     USBSTICK="usb.vfat"
     if ! [ -f $USBSTICK ]; then
 	dd if=/dev/zero of=${USBSTICK} bs=8M count=1 >/dev/null 2>&1
-	mkfs.vfat $USBSTICK >/dev/null 2>&1
+
+	if command -v mkfs.vfat >/dev/null; then
+	    mkfs.vfat -n "log" $USBSTICK >/dev/null 2>&1
+	else
+	    if command -v mkfs.exfat >/dev/null; then
+		mkfs.exfat -L "log" $USBSTICK >/dev/null 2>&1
+	    fi
+	fi
     fi
+
     echo -n "-drive if=none,id=usbstick,format=raw,file=$USBSTICK "
     echo -n "-usb "
     echo -n "-device usb-ehci,id=ehci "
     echo -n "-device usb-storage,bus=ehci.0,drive=usbstick "
 }
+
 rw_args()
 {
     [ "$CONFIG_QEMU_RW" ] ||  return
