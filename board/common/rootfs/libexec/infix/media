@@ -1,0 +1,107 @@
+#!/bin/sh
+# Mounts and unmounts external media
+
+ACTION=$1
+DEVBASE=$2
+DEVICE="/dev/${DEVBASE}"
+
+log()
+{
+    logger -sk -I $$ -p user.notice -t "media" "$1"
+}
+
+usage()
+{
+    echo "Usage: $0 {add|start|del|remove|stop} DEV (e.g. sdb1)"
+    exit 1
+}
+
+if [ $# -ne 2 ]; then
+    usage
+fi
+
+# See if this drive is already mounted, and if so where
+MOUNT_POINT=$(mount | grep "${DEVICE}" | awk '{ print $3 }')
+
+do_mount()
+{
+    if [ -n "${MOUNT_POINT}" ]; then
+        log "skipping ${DEVICE}, already mounted at ${MOUNT_POINT}"
+        exit 1
+    fi
+
+    # Get info for this drive: $ID_FS_LABEL, $ID_FS_UUID, and $ID_FS_TYPE
+    eval $(udevadm info --query=property --name="${DEVICE}")
+
+    # Figure out a mount point to use
+    LABEL=${ID_FS_LABEL}
+    if [ -z "${LABEL}" ]; then
+        LABEL=${DEVBASE}
+    elif grep -q " /media/${LABEL} " /etc/mtab; then
+        # Already in use, make a unique one
+        LABEL="${LABEL}-${DEVBASE}"
+    fi
+    MOUNT_POINT="/media/${LABEL}"
+
+    umask 007
+    mkdir -p "${MOUNT_POINT}"
+
+    OPTS="rw,relatime,noexec,nodev,uid=0,gid=10"
+    case ${ID_FS_TYPE} in
+	vfat)
+            OPTS="${OPTS},umask=007,shortname=mixed,utf8=1,flush"
+	    ;;
+	exfat)
+            OPTS="${OPTS},sync"
+	    ;;
+	*)
+	    log "unsupported filesystem ${ID_FS_TYPE}, skipping."
+            rmdir "${MOUNT_POINT}"
+            exit 1
+	    ;;
+    esac
+
+    log "mount -o ${OPTS} ${DEVICE} ${MOUNT_POINT}"
+    if ! mount -t "${ID_FS_TYPE}" -o ${OPTS} "${DEVICE}" "${MOUNT_POINT}"; then
+        log "failed mounting ${DEVICE}"
+        rmdir "${MOUNT_POINT}"
+        exit 1
+    fi
+
+    log "mounted ${DEVICE} at ${MOUNT_POINT} for root:wheel with 770 permissions"
+}
+
+do_unmount()
+{
+    if [ -z "${MOUNT_POINT}" ]; then
+        log "cannot unmount ${DEVICE}, is not mounted."
+    else
+        umount -l "${DEVICE}"
+        log "unmounted ${DEVICE}"
+    fi
+
+    # Delete all empty dirs in /media that aren't being used as mount
+    # points. This is kind of overkill, but if the drive was unmounted
+    # prior to removal we no longer know its mount point, and we don't
+    # want to leave it orphaned...
+    for f in /media/* ; do
+        if [ -n "$(find "$f" -maxdepth 0 -type d -empty)" ]; then
+            if ! grep -q " $f " /etc/mtab; then
+                log "removing mount point $f"
+                rmdir "$f"
+            fi
+        fi
+    done
+}
+
+case "${ACTION}" in
+    add|start)
+        do_mount
+        ;;
+    del|remove|stop)
+        do_unmount
+        ;;
+    *)
+        usage
+        ;;
+esac
