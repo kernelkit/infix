@@ -1,0 +1,5 @@
+KERNEL=="sd[a-z]",      SUBSYSTEMS=="usb", ACTION=="add|change", RUN+="/libexec/infix/media add %k"
+KERNEL=="sd[a-z]",      SUBSYSTEMS=="usb", ACTION=="remove",     RUN+="/libexec/infix/media del %k"
+
+KERNEL=="sd[a-z][0-9]", SUBSYSTEMS=="usb", ACTION=="add|change", RUN+="/libexec/infix/media add %k"
+KERNEL=="sd[a-z][0-9]", SUBSYSTEMS=="usb", ACTION=="remove",     RUN+="/libexec/infix/media del %k"
