@@ -26,20 +26,20 @@ bus, here is an example:
 
 ```
 # Enable the bus
- echo 1 > /sys/bus/usb/devices/usb1/authorized
+echo 1 > /sys/bus/usb/devices/usb1/authorized
 ```
 
 And then enable sub-devices (e.g. USB memory)
 
 ```
- # Enable a device plugged into usb1
- echo 1 >  /sys/bus/usb/devices/usb1/1-1/authorized
+# Enable a device plugged into usb1
+echo 1 >  /sys/bus/usb/devices/usb1/1-1/authorized
 ```
 
 ### Current status
 
 ```
- admin@example:/> show hardware
+admin@example:/> show hardware
  USB PORTS
  NAME                STATE
  USB                 unlocked
@@ -56,10 +56,10 @@ Linux to use.
 > context.)
 
 ```
- root@example:/> configure
- root@example:/config/> set hardware component USB state admin-state unlocked
- root@example:/config/> leave
- root@example:/>
+admin@example:/> configure
+admin@example:/config/> set hardware component USB state admin-state unlocked
+admin@example:/config/> leave
+admin@example:/>
 ```
 
 [1]:  https://www.rfc-editor.org/rfc/rfc8348.html
