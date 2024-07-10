@@ -62,4 +62,27 @@ admin@example:/config/> leave
 admin@example:/>
 ```
 
+### Using a USB Stick
+
+With the USB port unlocked, a memory stick can be used to expand the
+storage of the device.  Plug it in, either directly, or via a USB hub.
+All partitions of *VFAT* or *exFAT* type are automatically mounted to
+the `/media/<LABLEL>` directory, e.g., `/media/memorystick`, or if a
+partition does not have a label, using the kernel device name, e.g.,
+`/media/sda`.
+
+Depending on the partition type the the media is either mounted in
+`flush` or `sync` mode to ensure files are properly flushed to the
+backing store of the memory stick.  This to protect against users
+yanking out a device before file(s) have been written to it.
+
+The only way currently to safely "eject" a USB memory stick is to use
+`umount` command from a UNIX shell, which explicitly synchronizes any
+cached data to disk before returning the prompt:
+
+```
+admin@example:~$ sudo umount /media/log
+```
+
+
 [1]:  https://www.rfc-editor.org/rfc/rfc8348.html
