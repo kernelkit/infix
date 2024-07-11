@@ -172,8 +172,13 @@
   <ACTION sym="copy@infix" in="tty" out="tty" interrupt="true"/>
 </COMMAND>
 
-<COMMAND name="dir" help="List available configuration files">
-  <ACTION sym="dir@infix"/>
+<COMMAND name="dir" help="List available files">
+  <SWITCH name="optional" min="0">
+    <PARAM name="path" ptype="/STRING" help="Directory contents to list"/>
+  </SWITCH>
+  <ACTION sym="script" in="tty" out="tty" interrupt="true">
+    dir $KLISH_PARAM_path
+  </ACTION>
 </COMMAND>
 
 <COMMAND name="remove" help="Remove a configuration file">
@@ -388,11 +393,19 @@
       </COMMAND>
     </SWITCH>
     <ACTION sym="script">
-      file=${KLISH_PARAM_fn:-syslog}
+      file=/log/${KLISH_PARAM_fn:-syslog}
+      case "$file" in
+        *.gz)
+          cmd=zcat
+          ;;
+        *)
+          cmd=cat
+          ;;
+      esac
       if [ -n "$KLISH_PARAM_lines" ]; then
-        tail -n $KLISH_PARAM_lines /log/$file
+        $cmd "$file" | tail -n $KLISH_PARAM_lines
       else
-        cat /log/$file
+        $cmd "$file"
       fi
     </ACTION>
   </COMMAND>
