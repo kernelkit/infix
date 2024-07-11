@@ -300,19 +300,6 @@ done:
 	return files("/cfg", ".cfg");
 }
 
-int infix_dir(kcontext_t *ctx)
-{
-	cd_home(ctx);
-
-	fputs("\e[7mHome directory                                                          \e[0m\n", stderr);
-	system("ls --color=always -p >&2");
-
-	fputs("\n\e[7m/cfg directory                                                          \e[0m\n", stderr);
-	system("ls --color=always -p /cfg >&2");
-
-	return 0;
-}
-
 int infix_erase(kcontext_t *ctx)
 {
 	kpargv_t *pargv = kcontext_pargv(ctx);
@@ -760,7 +747,6 @@ int kplugin_infix_init(kcontext_t *ctx)
 	kplugin_add_syms(plugin, ksym_new("copy", infix_copy));
 	kplugin_add_syms(plugin, ksym_new("commit", infix_commit));
 	kplugin_add_syms(plugin, ksym_new("datastore", infix_datastore));
-	kplugin_add_syms(plugin, ksym_new("dir", infix_dir));
 	kplugin_add_syms(plugin, ksym_new("erase", infix_erase));
 	kplugin_add_syms(plugin, ksym_new("files", infix_files));
 	kplugin_add_syms(plugin, ksym_new("ifaces", infix_ifaces));

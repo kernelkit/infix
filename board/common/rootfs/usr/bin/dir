@@ -1,0 +1,27 @@
+#!/bin/sh
+
+dir()
+{
+    path=$1
+
+    if [ -z "$COLUMS" ]; then
+	TTY=$(resize)
+	eval "$TTY"
+    fi
+
+    printf "\033[7m%-*s\033[0m\n" "$COLUMNS" "$path directory"
+    if [ -d "$path" ]; then
+        ls -p "$path/"
+    else
+        echo "Directory $path does not exist."
+    fi
+    echo
+}
+
+if [ -d "$1" ]; then
+    dir "$1"
+else
+    dir "$HOME"
+    dir "/cfg"
+    dir "/log"
+fi
