@@ -8,7 +8,13 @@
 
 #define XPATH_BASE_    "/ietf-syslog:syslog/actions"
 #define XPATH_FILE_    XPATH_BASE_"/file/log-file/name"
+#define XPATH_REMOTE_  XPATH_BASE_"/remote/destination/name"
 #define SYSLOG_D_      "/etc/syslog.d"
+
+struct addr {
+	char *address;
+	int   port;
+};
 
 static char *basepath(char *xpath, char *path, size_t len)
 {
@@ -22,7 +28,7 @@ static char *basepath(char *xpath, char *path, size_t len)
 	return path;
 }
 
-static char *filename(char *name, char *path, size_t len)
+static char *filename(char *name, bool remote, char *path, size_t len)
 {
 	char *ptr, *n;
 
@@ -32,7 +38,7 @@ static char *filename(char *name, char *path, size_t len)
 	else
 		n = name;
 
-	snprintf(path, len, "/etc/syslog.d/confd-%s.conf", n);
+	snprintf(path, len, "/etc/syslog.d/confd-%s%s.conf", remote ? "remote-" : "", n);
 
 	return path;
 }
@@ -69,7 +75,7 @@ static const char *sxlate(const char *severity)
 	return severity;
 }
 
-static void handle_selector(sr_session_ctx_t *session, char *name, const char *xpath)
+static void selector(sr_session_ctx_t *session, char *name, struct addr *addr, const char *xpath)
 {
     sr_val_t *tuples = NULL;
     size_t count = 0;
@@ -84,7 +90,7 @@ static void handle_selector(sr_session_ctx_t *session, char *name, const char *x
 	    return;
     }
 
-    fp = fopen(filename(name, path, sizeof(path)), "w");
+    fp = fopen(filename(name, addr ? true : false, path, sizeof(path)), "w");
     if (!fp) {
 	    ERRNO("Failed opening %s", path);
 	    goto done;
@@ -102,9 +108,12 @@ static void handle_selector(sr_session_ctx_t *session, char *name, const char *x
 	free(facility);
 	free(severity);
     }
-    if (name[0] == '/')
+
+    if (addr)
+	    fprintf(fp, "\t@%s:%d\n", addr->address, addr->port);
+    else if (name[0] == '/')
 	    fprintf(fp, "\t-%s\n", name);
-    else
+    else /* fall back to use system default log directory */
 	    fprintf(fp, "\t-/var/log/%s\n", name);
 
     fclose(fp);
@@ -137,9 +146,51 @@ static int file_change(sr_session_ctx_t *session, uint32_t sub_id, const char *m
 		name = &val->data.string_val[5];
 
 		if (op == SR_OP_DELETED)
-			remove(filename(name, path, sizeof(path)));
+			remove(filename(name, false, path, sizeof(path)));
 		else
-			handle_selector(session, name, basepath(val->xpath, path, sizeof(path)));
+			selector(session, name, NULL, basepath(val->xpath, path, sizeof(path)));
+
+		sr_free_val(new);
+		sr_free_val(old);
+	}
+	sr_free_change_iter(iter);
+	systemf("initctl -nbq touch syslogd");
+
+	return SR_ERR_OK;
+}
+
+static int remote_change(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
+			 const char *xpath, sr_event_t event, unsigned request_id, void *priv)
+{
+	sr_change_iter_t *iter;
+	sr_change_oper_t op;
+	sr_val_t *old, *new;
+	sr_error_t err;
+
+	if (SR_EV_DONE != event)
+		return SR_ERR_OK;
+
+	err = sr_get_changes_iter(session, xpath, &iter);
+	if (err)
+		return SR_ERR_OK;
+
+	while (sr_get_change_next(session, iter, &op, &old, &new) == SR_ERR_OK) {
+		sr_val_t *val = new ? new : old;
+		char path[512];
+		char *name;
+
+		name = val->data.string_val;
+		if (op == SR_OP_DELETED) {
+			remove(filename(name, true, path, sizeof(path)));
+		} else {
+			struct addr addr;
+
+			xpath = basepath(val->xpath, path, sizeof(path));
+			addr.address = srx_get_str(session, "%s/udp/address", xpath);
+			srx_get_int(session, &addr.port, SR_UINT16_T, "%s/udp/port", xpath);
+
+			selector(session, name, &addr, xpath);
+		}
 
 		sr_free_val(new);
 		sr_free_val(old);
@@ -158,6 +209,7 @@ int ietf_syslog_init(struct confd *confd)
 		goto fail;
 
 	REGISTER_CHANGE(confd->session, "ietf-syslog", XPATH_FILE_, 0, file_change, confd, &confd->sub);
+	REGISTER_CHANGE(confd->session, "ietf-syslog", XPATH_REMOTE_, 0, remote_change, confd, &confd->sub);
 
 	return SR_ERR_OK;
 fail:

@@ -1,0 +1,25 @@
+module infix-syslog {
+  yang-version 1.1;
+  namespace "urn:infix:syslog:ns:yang:1.0";
+  prefix infix-log;
+
+  import ietf-syslog {
+    prefix log;
+  }
+
+  organization "KernelKit";
+  contact      "kernelkit@googlegroups.com";
+  description  "Infix augments and deviations to ietf-system.";
+
+  revision 2024-07-12 {
+    description "Initial revision, tls transport disabled.";
+    reference "internal";
+  }
+
+  deviation "/log:syslog/log:actions/log:remote/log:destination/log:transport/log:tls" {
+    deviate not-supported;
+  }
+  deviation "/log:syslog/log:actions/log:remote/log:destination/log:facility-override" {
+    deviate not-supported;
+  }
+}
