@@ -165,6 +165,9 @@ static inline int register_rpc(sr_session_ctx_t *session, const char *xpath,
 /* ietf-interfaces.c */
 int ietf_interfaces_init(struct confd *confd);
 
+/* ietf-syslog.c */
+int ietf_syslog_init(struct confd *confd);
+
 /* ietf-system.c */
 int ietf_system_init(struct confd *confd);
 
