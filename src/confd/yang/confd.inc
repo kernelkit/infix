@@ -20,7 +20,7 @@ MODULES=(
 	# NOTE: ietf-tls-client must be version matched with ietf-tls-server, used by netopeer2!
 	"ietf-tls-client@2023-12-28.yang" # used by ietf-syslog (remote)
 	"ietf-syslog@2024-03-21.yang -e file-action -e file-limit-size -e remote-action"
-	"infix-syslog@2024-07-12.yang"
+	"infix-syslog@2024-07-13.yang"
 	"iana-hardware@2018-03-13.yang"
 	"ietf-hardware@2018-03-13.yang -e hardware-state"
 	"infix-hardware@2024-04-25.yang"
