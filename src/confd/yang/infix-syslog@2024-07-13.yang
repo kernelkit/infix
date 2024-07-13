@@ -1,0 +1,70 @@
+module infix-syslog {
+  yang-version 1.1;
+  namespace "urn:infix:syslog:ns:yang:1.0";
+  prefix infix-syslog;
+
+
+  import ietf-inet-types {
+    prefix inet;
+    reference "RFC 6991: Common YANG Data Types";
+  }
+  import ietf-syslog {
+    prefix syslog;
+  }
+
+  organization "KernelKit";
+  contact      "kernelkit@googlegroups.com";
+  description  "Infix augments and deviations to ietf-system.";
+
+  revision 2024-07-13 {
+    description "Support for global log rotation and drop defaults + unit.";
+    reference "internal";
+  }
+  revision 2024-07-12 {
+    description "Initial revision, tls transport disabled.";
+    reference "internal";
+  }
+
+  augment "/syslog:syslog" {
+    container file-rotation {
+      description "Global configuration parameters for log file rotation.
+
+                   By default the last 10 rotated files are kept.  From
+                   the second rotation the files are gzipped.
+
+                   Example: syslog -> syslog.0 -> syslog.1.gz ...";
+
+      leaf number-of-files {
+        type uint32;
+        default 10;
+        description "Maximum number of log files retained.";
+      }
+
+      leaf max-file-size {
+        type uint32;
+        default 1024;
+        units "kilobytes";
+        description "Maximum log file size (kiB), before rotation.";
+      }
+    }
+  }
+
+  deviation "/syslog:syslog/syslog:actions/syslog:file/syslog:log-file/syslog:file-rotation/syslog:number-of-files" {
+    deviate delete {
+      default 1;
+    }
+  }
+  deviation "/syslog:syslog/syslog:actions/syslog:file/syslog:log-file/syslog:file-rotation/syslog:max-file-size" {
+    deviate replace {
+      type uint32;
+      units "kilobytes";
+    }
+  }
+
+  deviation "/syslog:syslog/syslog:actions/syslog:remote/syslog:destination/syslog:transport/syslog:tls" {
+    deviate not-supported;
+  }
+  deviation "/syslog:syslog/syslog:actions/syslog:remote/syslog:destination/syslog:facility-override" {
+    deviate not-supported;
+  }
+}

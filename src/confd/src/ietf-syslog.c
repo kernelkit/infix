@@ -6,9 +6,10 @@
 
 #include "core.h"
 
-#define XPATH_BASE_    "/ietf-syslog:syslog/actions"
-#define XPATH_FILE_    XPATH_BASE_"/file/log-file/name"
-#define XPATH_REMOTE_  XPATH_BASE_"/remote/destination/name"
+#define XPATH_BASE_    "/ietf-syslog:syslog"
+#define XPATH_FILE_    XPATH_BASE_"/actions/file/log-file/name"
+#define XPATH_REMOTE_  XPATH_BASE_"/actions/remote/destination/name"
+#define XPATH_ROTATE_  XPATH_BASE_"/infix-syslog:file-rotation"
 #define SYSLOG_D_      "/etc/syslog.d"
 
 struct addr {
@@ -123,6 +124,8 @@ static void action(sr_session_ctx_t *session, const char *name, const char *xpat
 		.xpath = xpath,
 		.addr  = addr,
 	};
+	char opts[80] = "";
+	char *sz, *cnt;
 
 	act.fp = fopen(filename(name, addr ? true : false, act.path, sizeof(act.path)), "w");
 	if (!act.fp) {
@@ -132,6 +135,22 @@ static void action(sr_session_ctx_t *session, const char *name, const char *xpat
 
 	selector(session, &act);
 
+	sz  = srx_get_str(session, "%s/file-rotation/max-file-size", xpath);
+	cnt = srx_get_str(session, "%s/file-rotation/number-of-files", xpath);
+	if (sz || cnt) {
+		strlcat(opts, ";rotate=", sizeof(opts));
+		if (sz) {
+			strlcat(opts, sz, sizeof(opts));
+			strlcat(opts, "k", sizeof(opts));
+			free(sz);
+		}
+		if (cnt) {
+			strlcat(opts, ":", sizeof(opts));
+			strlcat(opts, cnt, sizeof(opts));
+			free(cnt);
+		}
+	}
+
 	/*
 	 * The [] syntax is for IPv6, but the sysklogd parser handles
 	 * them separately from the address conversion, so this works.
@@ -139,9 +158,9 @@ static void action(sr_session_ctx_t *session, const char *name, const char *xpat
 	if (addr)
 		fprintf(act.fp, "\t@[%s]:%d\n", addr->address, addr->port);
 	else if (name[0] == '/')
-		fprintf(act.fp, "\t-%s\n", name);
+		fprintf(act.fp, "\t-%s\t%s\n", name, opts);
 	else /* fall back to use system default log directory */
-		fprintf(act.fp, "\t-/var/log/%s\n", name);
+		fprintf(act.fp, "\t-/var/log/%s\t%s\n", name, opts);
 
 	fclose(act.fp);
 }
@@ -170,16 +189,20 @@ static int file_change(sr_session_ctx_t *session, uint32_t sub_id, const char *m
 			continue;
 		name = &val->data.string_val[5];
 
-		if (op == SR_OP_DELETED)
+		if (op == SR_OP_DELETED) {
 			remove(filename(name, false, path, sizeof(path)));
-		else
-			action(session, name, basepath(val->xpath, path, sizeof(path)), NULL);
+		} else {
+			xpath = basepath(val->xpath, path, sizeof(path));
+
+
+			action(session, name, xpath, NULL);
+		}
 
 		sr_free_val(new);
 		sr_free_val(old);
 	}
 	sr_free_change_iter(iter);
-	systemf("initctl -nbq touch syslogd");
+	systemf("initctl -nbq touch sysklogd");
 
 	return SR_ERR_OK;
 }
@@ -221,7 +244,41 @@ static int remote_change(sr_session_ctx_t *session, uint32_t sub_id, const char 
 		sr_free_val(old);
 	}
 	sr_free_change_iter(iter);
-	systemf("initctl -nbq touch syslogd");
+	systemf("initctl -nbq touch sysklogd");
+
+	return SR_ERR_OK;
+}
+
+static int rotate_change(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
+			 const char *xpath, sr_event_t event, unsigned request_id, void *priv)
+{
+	const char *path = "/etc/syslog.d/confd-rotate.conf";
+	char *sz, *cnt;
+	FILE *fp;
+
+	if (SR_EV_DONE != event)
+		return SR_ERR_OK;
+
+	fp = fopen(path, "w");
+	if (!fp) {
+		ERRNO("Failed opening %s", path);
+		return SR_ERR_SYS;
+	}
+
+	sz  = srx_get_str(session, "%s/max-file-size", xpath);
+	if (sz) {
+		fprintf(fp, "rotate_size %sk\n", sz);
+		free(sz);
+	}
+
+	cnt = srx_get_str(session, "%s/number-of-files", xpath);
+	if (cnt) {
+		fprintf(fp, "rotate_count %s\n", cnt);
+		free(cnt);
+	}
+
+	fclose(fp);
+	systemf("initctl -nbq touch sysklogd");
 
 	return SR_ERR_OK;
 }
@@ -235,6 +292,7 @@ int ietf_syslog_init(struct confd *confd)
 
 	REGISTER_CHANGE(confd->session, "ietf-syslog", XPATH_FILE_, 0, file_change, confd, &confd->sub);
 	REGISTER_CHANGE(confd->session, "ietf-syslog", XPATH_REMOTE_, 0, remote_change, confd, &confd->sub);
+	REGISTER_CHANGE(confd->session, "ietf-syslog", XPATH_ROTATE_, 0, rotate_change, confd, &confd->sub);
 
 	return SR_ERR_OK;
 fail:
