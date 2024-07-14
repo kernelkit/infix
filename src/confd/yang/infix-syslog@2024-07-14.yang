@@ -16,6 +16,10 @@ module infix-syslog {
   contact      "kernelkit@googlegroups.com";
   description  "Infix augments and deviations to ietf-system.";
 
+  revision 2024-07-14 {
+    description "Add support for remote server.";
+    reference "internal";
+  }
   revision 2024-07-13 {
     description "Support for global log rotation and drop defaults + unit.";
     reference "internal";
@@ -45,6 +49,41 @@ module infix-syslog {
         default 1024;
         units "kilobytes";
         description "Maximum log file size (kiB), before rotation.";
+      }
+    }
+
+    container server {
+      description "Syslog server settings, acting as a remote server (sink)";
+
+      leaf enabled {
+        description "Control listen to incoming syslog messages, default: off.
+
+                     When enabled, the server listen on port 514 on all interfaces.
+                     Use the listen directive to limit this to one or more on any
+                     given port, if needed.";
+        type boolean;
+        default false;
+      }
+
+      container listen {
+        description "Limit listen to the given interfaces[:port].";
+        choice listen {
+          case udp {
+            list udp {
+              key "port";
+              leaf address {
+                description "Interface to listen on, default: any.";
+                type inet:ip-address;
+              }
+
+              leaf port {
+                description "The Internet port to listen on, default: 514.";
+                type inet:port-number;
+                default 514;
+              }
+            }
+          }
+        }
       }
     }
   }
