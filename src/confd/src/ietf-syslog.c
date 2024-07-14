@@ -16,6 +16,17 @@ struct addr {
 	int   port;
 };
 
+struct action {
+	const char  *name;
+	const char  *xpath;
+
+	char         path[512];
+	FILE        *fp;
+
+	struct addr *addr;
+};
+
+
 static char *basepath(char *xpath, char *path, size_t len)
 {
 	char *ptr;
@@ -28,9 +39,10 @@ static char *basepath(char *xpath, char *path, size_t len)
 	return path;
 }
 
-static char *filename(char *name, bool remote, char *path, size_t len)
+static char *filename(const char *name, bool remote, char *path, size_t len)
 {
-	char *ptr, *n;
+	const char *n;
+	char *ptr;
 
 	ptr = strrchr(name, '/');
 	if (ptr)
@@ -75,50 +87,63 @@ static const char *sxlate(const char *severity)
 	return severity;
 }
 
-static void selector(sr_session_ctx_t *session, char *name, struct addr *addr, const char *xpath)
+static void selector(sr_session_ctx_t *session, struct action *act)
 {
-    sr_val_t *tuples = NULL;
-    size_t count = 0;
-    char path[512];
-    FILE *fp;
-    int rc;
+	sr_val_t *list = NULL;
+	size_t count = 0;
+	int rc;
 
-    snprintf(path, sizeof(path), "%s/facility-filter/facility-list", xpath);
-    rc = sr_get_items(session, path, 0, 0, &tuples, &count);
-    if (rc != SR_ERR_OK) {
-	    ERROR("Cannot find facility-list for syslog file:%s: %s\n", name, sr_strerror(rc));
-	    return;
-    }
+	snprintf(act->path, sizeof(act->path), "%s/facility-filter/facility-list", act->xpath);
+	rc = sr_get_items(session, act->path, 0, 0, &list, &count);
+	if (rc != SR_ERR_OK) {
+		ERROR("Cannot find facility-list for syslog file:%s: %s\n", act->name, sr_strerror(rc));
+		return;
+	}
 
-    fp = fopen(filename(name, addr ? true : false, path, sizeof(path)), "w");
-    if (!fp) {
-	    ERRNO("Failed opening %s", path);
-	    goto done;
-    }
+	for (size_t i = 0; i < count; ++i) {
+		sr_val_t *entry = &list[i];
+		char *facility, *severity;
 
-    for (size_t i = 0; i < count; ++i) {
-        sr_val_t *tuple = &tuples[i];
-	char *facility, *severity;
+		facility = srx_get_str(session, "%s/facility", entry->xpath);
+		severity = srx_get_str(session, "%s/severity", entry->xpath);
 
-	facility = srx_get_str(session, "%s/facility", tuple->xpath);
-	severity = srx_get_str(session, "%s/severity", tuple->xpath);
+		fprintf(act->fp, "%s%s.%s", i ? ";" : "", fxlate(facility), sxlate(severity));
 
-	fprintf(fp, "%s%s.%s", i ? ";" : "", fxlate(facility), sxlate(severity));
+		free(facility);
+		free(severity);
+	}
 
-	free(facility);
-	free(severity);
-    }
+	sr_free_values(list, count);
+}
 
-    if (addr)
-	    fprintf(fp, "\t@%s:%d\n", addr->address, addr->port);
-    else if (name[0] == '/')
-	    fprintf(fp, "\t-%s\n", name);
-    else /* fall back to use system default log directory */
-	    fprintf(fp, "\t-/var/log/%s\n", name);
+static void action(sr_session_ctx_t *session, const char *name, const char *xpath, struct addr *addr)
+{
+	struct action act = {
+		.name  = name,
+		.xpath = xpath,
+		.addr  = addr,
+	};
 
-    fclose(fp);
-done:
-    sr_free_values(tuples, count);
+	act.fp = fopen(filename(name, addr ? true : false, act.path, sizeof(act.path)), "w");
+	if (!act.fp) {
+		ERRNO("Failed opening %s", act.path);
+		return;
+	}
+
+	selector(session, &act);
+
+	/*
+	 * The [] syntax is for IPv6, but the sysklogd parser handles
+	 * them separately from the address conversion, so this works.
+	 */
+	if (addr)
+		fprintf(act.fp, "\t@[%s]:%d\n", addr->address, addr->port);
+	else if (name[0] == '/')
+		fprintf(act.fp, "\t-%s\n", name);
+	else /* fall back to use system default log directory */
+		fprintf(act.fp, "\t-/var/log/%s\n", name);
+
+	fclose(act.fp);
 }
 
 static int file_change(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
@@ -148,7 +173,7 @@ static int file_change(sr_session_ctx_t *session, uint32_t sub_id, const char *m
 		if (op == SR_OP_DELETED)
 			remove(filename(name, false, path, sizeof(path)));
 		else
-			selector(session, name, NULL, basepath(val->xpath, path, sizeof(path)));
+			action(session, name, basepath(val->xpath, path, sizeof(path)), NULL);
 
 		sr_free_val(new);
 		sr_free_val(old);
@@ -189,7 +214,7 @@ static int remote_change(sr_session_ctx_t *session, uint32_t sub_id, const char 
 			addr.address = srx_get_str(session, "%s/udp/address", xpath);
 			srx_get_int(session, &addr.port, SR_UINT16_T, "%s/udp/port", xpath);
 
-			selector(session, name, &addr, xpath);
+			action(session, name, xpath, &addr);
 		}
 
 		sr_free_val(new);
