@@ -27,6 +27,7 @@ int   srx_get_bool (sr_session_ctx_t *session, const char *fmt, ...)
 int   srx_enabled  (sr_session_ctx_t *session, const char *fmt, ...)
 	__attribute__ ((format (printf, 2, 3)));
 
+int srx_get_items(sr_session_ctx_t *session, sr_val_t **val, size_t *cnt, const char *fmt, ...);
 int srx_nitems(sr_session_ctx_t *session, size_t *cntp, const char *fmt, ...)
 	__attribute__ ((format (printf, 3, 4)));
 

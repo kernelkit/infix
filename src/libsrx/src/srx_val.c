@@ -103,6 +103,7 @@ int srx_set_str(sr_session_ctx_t *session, const char *str, sr_edit_options_t op
 static int srx_vaget(sr_session_ctx_t *session, const char *fmt, va_list ap, sr_val_type_t type,
 		     sr_val_t **val, size_t *cnt, bool logerr)
 {
+	size_t expected = *cnt;
 	va_list apdup;
 	char *xpath;
 	int len;
@@ -120,6 +121,7 @@ static int srx_vaget(sr_session_ctx_t *session, const char *fmt, va_list ap, sr_
 	vsnprintf(xpath, len, fmt, apdup);
 	va_end(apdup);
 
+	*cnt = 0;
 	rc = sr_get_items(session, xpath, 0, 0, val, cnt);
 	if (rc) {
 		if (logerr)
@@ -130,7 +132,7 @@ static int srx_vaget(sr_session_ctx_t *session, const char *fmt, va_list ap, sr_
 	if (*cnt == 0) {
 		errno = ENODATA;
 		return -1;
-	} else if (*cnt > 1) {
+	} else if (expected && *cnt > expected) {
 		sr_free_values(*val, *cnt);
 		errno = EOVERFLOW;
 		return -1;
@@ -148,7 +150,7 @@ static int srx_vaget(sr_session_ctx_t *session, const char *fmt, va_list ap, sr_
 static int get_vabool(sr_session_ctx_t *session, int *value, const char *fmt, va_list ap, bool logerr)
 {
 	sr_val_t *val = NULL;
-	size_t cnt = 0;
+	size_t cnt = 1;
 	va_list apdup;
 	int rc;
 
@@ -193,7 +195,7 @@ int srx_enabled(sr_session_ctx_t *session, const char *fmt, ...)
 int srx_get_int(sr_session_ctx_t *session, int *value, sr_val_type_t type, const char *fmt, ...)
 {
 	sr_val_t *val = NULL;
-	size_t cnt = 0;
+	size_t cnt = 1;
 	va_list ap;
 	int rc;
 
@@ -244,7 +246,7 @@ char *srx_get_str(sr_session_ctx_t *session, const char *fmt, ...)
 {
 	sr_val_t *val = NULL;
 	char *str = NULL;
-	size_t cnt = 0;
+	size_t cnt = 1;
 	va_list ap;
 
 	va_start(ap, fmt);
@@ -258,6 +260,20 @@ fail:
 	return str;
 }
 
+int srx_get_items(sr_session_ctx_t *session, sr_val_t **val, size_t *cnt, const char *fmt, ...)
+{
+	va_list ap;
+	int rc;
+
+	*cnt = 0;		/* give us all */
+
+	va_start(ap, fmt);
+	rc = srx_vaget(session, fmt, ap, SR_UNKNOWN_T, val, cnt, false);
+	va_end(ap);
+
+	return rc;
+}
+
 int srx_vnitems(sr_session_ctx_t *session, size_t *cntp, const char *fmt, va_list ap)
 {
 	sr_val_t *val = NULL;
@@ -265,6 +281,7 @@ int srx_vnitems(sr_session_ctx_t *session, size_t *cntp, const char *fmt, va_lis
 	int rc;
 
 	errno = 0;
+	*cntp = 0;		/* give us all */
 
 	va_copy(apdup, ap);
 	rc = srx_vaget(session, fmt, apdup, SR_UNKNOWN_T, &val, cntp, false);
