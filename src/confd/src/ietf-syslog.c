@@ -130,8 +130,9 @@ static void action(sr_session_ctx_t *session, const char *name, const char *xpat
 		.xpath = xpath,
 		.addr  = addr,
 	};
-	char opts[80] = "";
-	char *sz, *cnt;
+	char *sz, *cnt, *fmt;
+	char opts[80] = "\t";
+	char *sep = ";";
 
 	act.fp = fopen(filename(name, addr ? true : false, act.path, sizeof(act.path)), "w");
 	if (!act.fp) {
@@ -155,6 +156,15 @@ static void action(sr_session_ctx_t *session, const char *name, const char *xpat
 			strlcat(opts, cnt, sizeof(opts));
 			free(cnt);
 		}
+
+		sep = ",";
+	}
+
+	fmt = srx_get_str(session, "%s/format", xpath);
+	if (fmt) {
+		strlcat(opts, sep, sizeof(opts));
+		strlcat(opts, fmt, sizeof(opts));
+		sep = ",";
 	}
 
 	/*
@@ -162,11 +172,11 @@ static void action(sr_session_ctx_t *session, const char *name, const char *xpat
 	 * them separately from the address conversion, so this works.
 	 */
 	if (addr)
-		fprintf(act.fp, "\t@[%s]:%d\n", addr->address, addr->port);
+		fprintf(act.fp, "\t@[%s]:%d%s\n", addr->address, addr->port, opts);
 	else if (name[0] == '/')
-		fprintf(act.fp, "\t-%s\t%s\n", name, opts);
+		fprintf(act.fp, "\t-%s%s\n", name, opts);
 	else /* fall back to use system default log directory */
-		fprintf(act.fp, "\t-/var/log/%s\t%s\n", name, opts);
+		fprintf(act.fp, "\t-/var/log/%s%s\n", name, opts);
 
 	fclose(act.fp);
 }
