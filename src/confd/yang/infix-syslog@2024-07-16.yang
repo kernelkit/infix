@@ -16,6 +16,10 @@ module infix-syslog {
   contact      "kernelkit@googlegroups.com";
   description  "Infix augments and deviations to ietf-system.";
 
+  revision 2024-07-16 {
+    description "Add support local facility names and log format selection.";
+    reference "internal";
+  }
   revision 2024-07-14 {
     description "Add support for remote server.";
     reference "internal";
@@ -28,6 +32,54 @@ module infix-syslog {
     description "Initial revision, tls transport disabled.";
     reference "internal";
   }
+
+  /*
+   * Identities
+   */
+
+  identity format-type {
+    description "This identity is used as a base for all log formats.";
+    reference "RFC 5424: The Syslog Protocol";
+  }
+
+  identity bsd {
+    base format-type;
+    description "Original BSD UNIX log format, default when sending remote.";
+  }
+
+  identity rfc3164 {
+    base format-type;
+    description "Default log format, except when sending remote.";
+  }
+
+  identity rfc5424 {
+    base format-type;
+    description "Latest format, better time granularity, structured data, etc.";
+  }
+
+  /*
+   * Shared settings
+   */
+
+  grouping format {
+    leaf format {
+      description "Log format, one of: BSD*, RFC3164, or RFC5424.
+
+                   BSD     : myproc[8710]: Kilroy was here.
+                   RFC3164 : Aug 24 05:14:15 192.0.2.1 myproc[8710]: Kilroy was here.
+                   RFC5424 : 2003-08-24T05:14:15.000003-07:00 192.0.2.1 myproc 8710 - - Kilroy was here.
+
+                   Please note, BSD format is only applicable to remote logging.
+                   Specifying BSD for log-file action will revert to RFC3164.";
+      type identityref {
+        base format-type;
+      }
+    }
+  }
+
+  /*
+   * Data Nodes
+   */
 
   augment "/syslog:syslog" {
     container file-rotation {
@@ -84,6 +136,22 @@ module infix-syslog {
             }
           }
         }
+      }
+    }
+  }
+
+  augment "/syslog:syslog/syslog:actions/syslog:file/syslog:log-file" {
+    uses format {
+      refine format {
+        default rfc3164;
+      }
+    }
+  }
+
+  augment "/syslog:syslog/syslog:actions/syslog:remote/syslog:destination" {
+    uses format {
+      refine format {
+        default bsd;
       }
     }
   }
