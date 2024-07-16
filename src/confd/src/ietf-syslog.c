@@ -11,7 +11,12 @@
 #define XPATH_REMOTE_  XPATH_BASE_"/actions/remote/destination/name"
 #define XPATH_ROTATE_  XPATH_BASE_"/infix-syslog:file-rotation"
 #define XPATH_SERVER_  XPATH_BASE_"/infix-syslog:server"
+
 #define SYSLOG_D_      "/etc/syslog.d"
+#define SYSLOG_FILE    SYSLOG_D_"/log-file-%s.conf"
+#define SYSLOG_REMOTE  SYSLOG_D_"/remote-%s.conf"
+#define SYSLOG_ROTATE  SYSLOG_D_"/rotate.conf"
+#define SYSLOG_SERVER  SYSLOG_D_"/server.conf"
 
 struct addr {
 	char *address;
@@ -52,7 +57,7 @@ static char *filename(const char *name, bool remote, char *path, size_t len)
 	else
 		n = name;
 
-	snprintf(path, len, "/etc/syslog.d/confd-%s%s.conf", remote ? "remote-" : "", n);
+	snprintf(path, len, remote ? SYSLOG_REMOTE : SYSLOG_FILE, n);
 
 	return path;
 }
@@ -249,16 +254,15 @@ static int remote_change(sr_session_ctx_t *session, uint32_t sub_id, const char 
 static int rotate_change(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
 			 const char *xpath, sr_event_t event, unsigned request_id, void *priv)
 {
-	const char *path = "/etc/syslog.d/confd-rotate.conf";
 	char *sz, *cnt;
 	FILE *fp;
 
 	if (SR_EV_DONE != event)
 		return SR_ERR_OK;
 
-	fp = fopen(path, "w");
+	fp = fopen(SYSLOG_ROTATE, "w");
 	if (!fp) {
-		ERRNO("Failed opening %s", path);
+		ERRNO("Failed opening %s", SYSLOG_ROTATE);
 		return SR_ERR_SYS;
 	}
 
@@ -283,7 +287,6 @@ static int rotate_change(sr_session_ctx_t *session, uint32_t sub_id, const char 
 static int server_change(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
 			 const char *xpath, sr_event_t event, unsigned request_id, void *priv)
 {
-	const char *path = "/etc/syslog.d/confd-server.conf";
 	sr_val_t *list = NULL;
 	size_t count;
 	FILE *fp;
@@ -292,13 +295,13 @@ static int server_change(sr_session_ctx_t *session, uint32_t sub_id, const char 
 		return SR_ERR_OK;
 
 	if (!srx_enabled(session, "%s/enabled", xpath)) {
-		remove(path);
+		remove(SYSLOG_SERVER);
 		goto done;
 	}
 
-	fp = fopen(path, "w");
+	fp = fopen(SYSLOG_SERVER, "w");
 	if (!fp) {
-		ERRNO("Failed opening %s", path);
+		ERRNO("Failed opening %s", SYSLOG_SERVER);
 		return SR_ERR_SYS;
 	}
 
