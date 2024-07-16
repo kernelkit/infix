@@ -10,6 +10,7 @@
 #define XPATH_FILE_    XPATH_BASE_"/actions/file/log-file/name"
 #define XPATH_REMOTE_  XPATH_BASE_"/actions/remote/destination/name"
 #define XPATH_ROTATE_  XPATH_BASE_"/infix-syslog:file-rotation"
+#define XPATH_SERVER_  XPATH_BASE_"/infix-syslog:server"
 #define SYSLOG_D_      "/etc/syslog.d"
 
 struct addr {
@@ -283,6 +284,51 @@ static int rotate_change(sr_session_ctx_t *session, uint32_t sub_id, const char 
 	return SR_ERR_OK;
 }
 
+static int server_change(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
+			 const char *xpath, sr_event_t event, unsigned request_id, void *priv)
+{
+	const char *path = "/etc/syslog.d/confd-server.conf";
+	sr_val_t *list = NULL;
+	size_t count;
+	FILE *fp;
+
+	if (SR_EV_DONE != event)
+		return SR_ERR_OK;
+
+	if (!srx_enabled(session, "%s/enabled", xpath)) {
+		remove(path);
+		goto done;
+	}
+
+	fp = fopen(path, "w");
+	if (!fp) {
+		ERRNO("Failed opening %s", path);
+		return SR_ERR_SYS;
+	}
+
+	/* Allow listening on port 514, or custom listen below */
+	fprintf(fp, "secure_mode 0\n");
+
+	if (!srx_get_items(session, &list, &count, "%s/listen/udp", xpath)) {
+		for (size_t i = 0; i < count; ++i) {
+			sr_val_t *entry = &list[i];
+			char *address, *port;
+
+			address = srx_get_str(session, "%s/address", entry->xpath);
+			port = srx_get_str(session, "%s/port", entry->xpath);
+
+			/* Accepted formats: address, :port, address:port */
+			fprintf(fp, "listen %s%s%s\n", address ?: "", port ? ":" : "", port ?: "");
+		}
+	}
+
+	fclose(fp);
+done:
+	systemf("initctl -nbq touch sysklogd");
+
+	return SR_ERR_OK;
+}
+
 int ietf_syslog_init(struct confd *confd)
 {
 	int rc = SR_ERR_SYS;
@@ -293,6 +339,7 @@ int ietf_syslog_init(struct confd *confd)
 	REGISTER_CHANGE(confd->session, "ietf-syslog", XPATH_FILE_, 0, file_change, confd, &confd->sub);
 	REGISTER_CHANGE(confd->session, "ietf-syslog", XPATH_REMOTE_, 0, remote_change, confd, &confd->sub);
 	REGISTER_CHANGE(confd->session, "ietf-syslog", XPATH_ROTATE_, 0, rotate_change, confd, &confd->sub);
+	REGISTER_CHANGE(confd->session, "ietf-syslog", XPATH_SERVER_, 0, server_change, confd, &confd->sub);
 
 	return SR_ERR_OK;
 fail:
