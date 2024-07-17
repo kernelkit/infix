@@ -7,8 +7,8 @@
 #include "core.h"
 
 #define XPATH_BASE_    "/ietf-syslog:syslog"
-#define XPATH_FILE_    XPATH_BASE_"/actions/file/log-file/name"
-#define XPATH_REMOTE_  XPATH_BASE_"/actions/remote/destination/name"
+#define XPATH_FILE_    XPATH_BASE_"/actions/file/log-file"
+#define XPATH_REMOTE_  XPATH_BASE_"/actions/remote/destination"
 #define XPATH_ROTATE_  XPATH_BASE_"/infix-syslog:file-rotation"
 #define XPATH_SERVER_  XPATH_BASE_"/infix-syslog:server"
 
@@ -33,18 +33,6 @@ struct action {
 	struct addr *addr;
 };
 
-
-static char *basepath(char *xpath, char *path, size_t len)
-{
-	char *ptr;
-
-	strlcpy(path, xpath, len);
-	ptr = strrchr(path, '/');
-	if (ptr)
-		*ptr = 0;
-
-	return path;
-}
 
 static char *filename(const char *name, bool remote, char *path, size_t len)
 {
@@ -162,6 +150,10 @@ static void action(sr_session_ctx_t *session, const char *name, const char *xpat
 
 	fmt = srx_get_str(session, "%s/format", xpath);
 	if (fmt) {
+		char *ptr = strchr(fmt, ':'); /* skip any prefix */
+
+		if (ptr)
+			fmt = &ptr[1];
 		strlcat(opts, sep, sizeof(opts));
 		strlcat(opts, fmt, sizeof(opts));
 		sep = ",";
@@ -181,43 +173,48 @@ static void action(sr_session_ctx_t *session, const char *name, const char *xpat
 	fclose(act.fp);
 }
 
+/* Read 'name' node, then construct XPath for next operation. */
+static const char *getnm(struct lyd_node *node, char *xpath, size_t len)
+{
+	const char *name = lyd_get_value(node);
+
+	strlcat(xpath, "[name='", len);
+	strlcat(xpath, name, len);
+	strlcat(xpath, "']", len);
+
+	if (!strncmp(name, "file:", 5))
+		name += 5;
+
+	return name;
+}
+
 static int file_change(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
 		       const char *xpath, sr_event_t event, unsigned request_id, void *priv)
 {
-	sr_change_iter_t *iter;
-	sr_change_oper_t op;
-	sr_val_t *old, *new;
-	sr_error_t err;
+	struct lyd_node *files, *file;
+	int err;
 
 	if (SR_EV_DONE != event)
 		return SR_ERR_OK;
 
-	err = sr_get_changes_iter(session, xpath, &iter);
+	err = srx_get_changes(session, XPATH_FILE_, &files);
 	if (err)
 		return SR_ERR_OK;
 
-	while (sr_get_change_next(session, iter, &op, &old, &new) == SR_ERR_OK) {
-		sr_val_t *val = new ? new : old;
-		char path[512];
-		char *name;
+	LYX_LIST_FOR_EACH(files, file, "log-file") {
+		struct lyd_node *node = lydx_get_child(file, "name");
+		enum lydx_op op = lydx_get_op(node);
+		char path[512] = XPATH_FILE_;
+		const char *name;
 
-		if (strncmp(val->data.string_val, "file:", 5))
-			continue;
-		name = &val->data.string_val[5];
-
-		if (op == SR_OP_DELETED) {
+		name = getnm(node, path, sizeof(path));
+		if (op == LYDX_OP_DELETE)
 			remove(filename(name, false, path, sizeof(path)));
-		} else {
-			xpath = basepath(val->xpath, path, sizeof(path));
-
-
-			action(session, name, xpath, NULL);
-		}
-
-		sr_free_val(new);
-		sr_free_val(old);
+		else
+			action(session, name, path, NULL);
 	}
-	sr_free_change_iter(iter);
+
+	srx_free_changes(files);
 	systemf("initctl -nbq touch sysklogd");
 
 	return SR_ERR_OK;
@@ -226,40 +223,36 @@ static int file_change(sr_session_ctx_t *session, uint32_t sub_id, const char *m
 static int remote_change(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
 			 const char *xpath, sr_event_t event, unsigned request_id, void *priv)
 {
-	sr_change_iter_t *iter;
-	sr_change_oper_t op;
-	sr_val_t *old, *new;
-	sr_error_t err;
+	struct lyd_node *remotes, *remote;
+	int err;
 
 	if (SR_EV_DONE != event)
 		return SR_ERR_OK;
 
-	err = sr_get_changes_iter(session, xpath, &iter);
+	err = srx_get_changes(session, XPATH_REMOTE_, &remotes);
 	if (err)
 		return SR_ERR_OK;
 
-	while (sr_get_change_next(session, iter, &op, &old, &new) == SR_ERR_OK) {
-		sr_val_t *val = new ? new : old;
-		char path[512];
-		char *name;
+	LYX_LIST_FOR_EACH(remotes, remote, "destination") {
+		struct lyd_node *node = lydx_get_child(remote, "name");
+		enum lydx_op op = lydx_get_op(node);
+		char path[512] = XPATH_REMOTE_;
+		const char *name;
 
-		name = val->data.string_val;
-		if (op == SR_OP_DELETED) {
+		name = getnm(node, path, sizeof(path));
+		if (op == LYDX_OP_DELETE) {
 			remove(filename(name, true, path, sizeof(path)));
 		} else {
 			struct addr addr;
 
-			xpath = basepath(val->xpath, path, sizeof(path));
-			addr.address = srx_get_str(session, "%s/udp/address", xpath);
-			srx_get_int(session, &addr.port, SR_UINT16_T, "%s/udp/port", xpath);
+			addr.address = srx_get_str(session, "%s/udp/address", path);
+			srx_get_int(session, &addr.port, SR_UINT16_T, "%s/udp/port", path);
 
 			action(session, name, xpath, &addr);
 		}
-
-		sr_free_val(new);
-		sr_free_val(old);
 	}
-	sr_free_change_iter(iter);
+
+	srx_free_changes(remotes);
 	systemf("initctl -nbq touch sysklogd");
 
 	return SR_ERR_OK;
@@ -349,10 +342,10 @@ int ietf_syslog_init(struct confd *confd)
 	if (!confd)
 		goto fail;
 
-	REGISTER_CHANGE(confd->session, "ietf-syslog", XPATH_FILE_, 0, file_change, confd, &confd->sub);
-	REGISTER_CHANGE(confd->session, "ietf-syslog", XPATH_REMOTE_, 0, remote_change, confd, &confd->sub);
-	REGISTER_CHANGE(confd->session, "ietf-syslog", XPATH_ROTATE_, 0, rotate_change, confd, &confd->sub);
-	REGISTER_CHANGE(confd->session, "ietf-syslog", XPATH_SERVER_, 0, server_change, confd, &confd->sub);
+	REGISTER_CHANGE(confd->session, "ietf-syslog", XPATH_FILE_"//.", 0, file_change, confd, &confd->sub);
+	REGISTER_CHANGE(confd->session, "ietf-syslog", XPATH_REMOTE_"//.", 0, remote_change, confd, &confd->sub);
+	REGISTER_CHANGE(confd->session, "ietf-syslog", XPATH_ROTATE_"//.", 0, rotate_change, confd, &confd->sub);
+	REGISTER_CHANGE(confd->session, "ietf-syslog", XPATH_SERVER_"//.", 0, server_change, confd, &confd->sub);
 
 	return SR_ERR_OK;
 fail:
