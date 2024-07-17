@@ -141,6 +141,7 @@ module infix-syslog {
   }
 
   augment "/syslog:syslog/syslog:actions/syslog:file/syslog:log-file" {
+    description "Configurable log format for file logging.";
     uses format {
       refine format {
         default rfc3164;
@@ -149,6 +150,7 @@ module infix-syslog {
   }
 
   augment "/syslog:syslog/syslog:actions/syslog:remote/syslog:destination" {
+    description "Configurable log format for remote logging.";
     uses format {
       refine format {
         default bsd;
@@ -157,11 +159,13 @@ module infix-syslog {
   }
 
   deviation "/syslog:syslog/syslog:actions/syslog:file/syslog:log-file/syslog:file-rotation/syslog:number-of-files" {
+    description "Drop default 1 log file, defaults are handled by global file-rotation settings.";
     deviate delete {
       default 1;
     }
   }
   deviation "/syslog:syslog/syslog:actions/syslog:file/syslog:log-file/syslog:file-rotation/syslog:max-file-size" {
+    description "Replace default 'megabytes' unit with 'kilobytes' to allow for better control.";
     deviate replace {
       type uint32;
       units "kilobytes";
@@ -169,9 +173,11 @@ module infix-syslog {
   }
 
   deviation "/syslog:syslog/syslog:actions/syslog:remote/syslog:destination/syslog:transport/syslog:tls" {
+    description "Not yet supported by underlying daemon.";
     deviate not-supported;
   }
   deviation "/syslog:syslog/syslog:actions/syslog:remote/syslog:destination/syslog:facility-override" {
+    description "Not yet supported by underlying daemon.";
     deviate not-supported;
   }
 }
