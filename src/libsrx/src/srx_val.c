@@ -2,9 +2,11 @@
 #include <errno.h>
 #include <stdarg.h>
 #include <stdbool.h>
+#include <string.h>
 #include <sysrepo/values.h>
 
 #include "common.h"
+#include "lyx.h"
 
 sr_error_t srx_get_diff(sr_session_ctx_t *session, struct lyd_node **treep)
 {
@@ -23,6 +25,104 @@ sr_error_t srx_get_diff(sr_session_ctx_t *session, struct lyd_node **treep)
 
 	sr_free_change_iter(iter);
 	return err;
+}
+
+/* Helper tokenizer to srx_get_changes() */
+static char *token(char *ptr)
+{
+	char *token;
+
+	if (ptr && *ptr == '/')
+		ptr++;
+
+	token = strtok(ptr, "/");
+	if (token && (ptr = strchr(token, ':')))
+		token = &ptr[1]; /* skip any module prefix */
+
+	return token;
+}
+
+/*
+ * This is a combination of srx_get_diff() + lydx_get_descendant() that
+ * gives you the subtree relevant to your change callback.
+ *
+ * Usage: 1) set up change callback with /module:xpath/to/array//.
+ *        2) call this function with the /module:xpath/to/array XPath
+ *        3) over all items in array with LYX_LIST_FOR_EACH()
+ *
+ * The XPath to the change callback has //. to ensure it is called for
+ * *any* change below that path.  Meaning: any depth and any augmented
+ * model inside that scope.
+ *
+ * Both the srx_*() and lyx?*() family APIs are supported after calling
+ * this function.  Either traverse further down using XPath, or using
+ * the lydx_*() APIs.  The latter have all the metadata for checking if
+ * a node/tree has been removed or added, which is sometimes preferable,
+ * sometimes data from the subtrees is regenerated every time anyway, so
+ * it depends.
+ *
+ * When done, call srx_free_changes(treep);
+ */
+int srx_get_changes(sr_session_ctx_t *session, const char *path, struct lyd_node **treep)
+{
+	struct lyd_node *node, *tree;
+	sr_change_iter_t *iter;
+	char *xpath = NULL;
+	char *name = NULL;
+	int err;
+
+	err = sr_dup_changes_iter(session, "/ietf-system:system//.", &iter);
+	if (err)
+		return err;
+
+	/*
+	 * WARNING: sr_change_iter_t is opaque, we rely on the diff
+	 *          tree being the first member.
+	 */
+	tree = node = *((struct lyd_node **)iter);
+
+	if (path) {
+		xpath = strdup(path);
+		if (!xpath) {
+			err = SR_ERR_NO_MEMORY;
+			goto fail;
+		}
+		name = token(xpath);
+	}
+
+	while (name) {
+		tree = lydx_get_sibling(node, name);
+		if (!tree)
+			break;
+
+		node = lyd_child(tree);
+		name = token(NULL);
+	}
+
+	if (tree) {
+		if (lyd_dup_siblings(tree, NULL, LYD_DUP_RECURSIVE, treep))
+			err = SR_ERR_LY;
+	} else
+		err = SR_ERR_NOT_FOUND;
+
+	if (xpath)
+		free(xpath);
+fail:
+	sr_free_change_iter(iter);
+	return err;
+}
+
+/*
+ * Free changes from srx_get_changes() or srx_get_diff().
+ */
+int srx_free_changes(struct lyd_node *tree)
+{
+	if (!tree)
+		return SR_ERR_INVAL_ARG;
+
+	lyd_free_tree(tree);
+
+	return 0;
 }
 
 /* check if string at xpath (fmt) is set (non-zero length) */
