@@ -8,25 +8,6 @@
 #include "common.h"
 #include "lyx.h"
 
-sr_error_t srx_get_diff(sr_session_ctx_t *session, struct lyd_node **treep)
-{
-	sr_error_t err = SR_ERR_OK;
-	sr_change_iter_t *iter;
-	struct lyd_node *tree;
-
-	err = sr_dup_changes_iter(session, "/ietf-system:system//.", &iter);
-
-	/* WARNING: sr_change_iter_t is opaque, we rely on the diff
-	 * tree being the first member. */
-	tree = *((struct lyd_node **)iter);
-
-	if (lyd_dup_siblings(tree, NULL, LYD_DUP_RECURSIVE, treep))
-		err = SR_ERR_LY;
-
-	sr_free_change_iter(iter);
-	return err;
-}
-
 /* Helper tokenizer to srx_get_changes() */
 static char *token(char *ptr)
 {
@@ -110,6 +91,12 @@ int srx_get_changes(sr_session_ctx_t *session, const char *path, struct lyd_node
 fail:
 	sr_free_change_iter(iter);
 	return err;
+}
+
+/* Returns top-level tree of changes, same as XPath = '/' */
+sr_error_t srx_get_diff(sr_session_ctx_t *session, struct lyd_node **treep)
+{
+	return srx_get_changes(session, NULL, treep);
 }
 
 /*
