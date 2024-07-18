@@ -14,28 +14,43 @@ module infix-syslog {
 
   organization "KernelKit";
   contact      "kernelkit@googlegroups.com";
-  description  "Infix augments and deviations to ietf-system.";
+  description  "Infix augments and deviations to ietf-syslog, draft 32.";
 
-  revision 2024-07-16 {
-    description "Add support local facility names and log format selection.";
-    reference "internal";
-  }
-  revision 2024-07-14 {
-    description "Add support for remote server.";
-    reference "internal";
-  }
-  revision 2024-07-13 {
-    description "Support for global log rotation and drop defaults + unit.";
-    reference "internal";
-  }
-  revision 2024-07-12 {
-    description "Initial revision, tls transport disabled.";
+  revision 2024-07-18 {
+    description "Initial revision, based on IETF syslog YANG draft 32.
+                 The following changes have been made in this model:
+
+                   - Add support for global file rotation settings
+                   - Add support for acting as a remote server
+                   - Add support for local facility names
+                   - Add support for log format selection per action
+                   - Disable TLS transport, not yet supported
+                   - Disable facility override, not yet supported
+                   - Removed 1 log file default
+                   - Replaced default 'megabytes' unit with 'kilobytes'";
     reference "internal";
   }
 
   /*
    * Identities
    */
+
+  identity rauc {
+    base syslog:syslog-facility;
+    description "Local facility for the RAUC firmware update subsystem, local0.";
+  }
+
+  identity container {
+    base syslog:syslog-facility;
+    description "Local facility reserved for Docker containers, local1.";
+  }
+
+  identity web {
+    base syslog:syslog-facility;
+    description "Local facility reserved for web server, local7.";
+  }
+
+  // Log format
 
   identity format-type {
     description "This identity is used as a base for all log formats.";

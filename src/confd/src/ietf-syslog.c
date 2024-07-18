@@ -57,6 +57,8 @@ static const char *fxlate(const char *facility)
 
 	if (!strncmp(facility, "ietf-syslog:", 12))
 		f = &facility[12];
+	if (!strncmp(facility, "infix-syslog:", 13))
+		f = &facility[13];
 
 	if (!strcmp(f, "all"))
 		return "*";
@@ -64,6 +66,12 @@ static const char *fxlate(const char *facility)
 		return "security";
 	if (!strcmp(f, "cron2"))
 		return "cron_sol";
+	if (!strcmp(f, "rauc"))
+		return "local0";
+	if (!strcmp(f, "container"))
+		return "local1";
+	if (!strcmp(f, "web"))
+		return "local7";
 
 	return f;
 }
