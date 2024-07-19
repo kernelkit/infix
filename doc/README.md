@@ -18,6 +18,7 @@ the `help` command.
    - [Introduction](introduction.md)
    - [System Configuration](system.md)
    - [Network Configuration](networking.md)
+   - [Syslog Support](syslog.md)
  - **Infix In-Depth**
    - [Boot Procedure](boot.md)
    - [Branding & Releases](branding.md)
