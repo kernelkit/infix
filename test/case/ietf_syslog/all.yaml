@@ -1,2 +1,3 @@
 ---
 - case: basic.py
+- case: remote.py
