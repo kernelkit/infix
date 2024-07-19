@@ -16,7 +16,7 @@ module infix-syslog {
   contact      "kernelkit@googlegroups.com";
   description  "Infix augments and deviations to ietf-syslog, draft 32.";
 
-  revision 2024-07-18 {
+  revision 2024-07-19 {
     description "Initial revision, based on IETF syslog YANG draft 32.
                  The following changes have been made in this model:
 
@@ -76,16 +76,15 @@ module infix-syslog {
    * Shared settings
    */
 
-  grouping format {
-    leaf format {
+  grouping log-format {
+    leaf log-format {
       description "Log format, one of: BSD*, RFC3164, or RFC5424.
 
                    BSD     : myproc[8710]: Kilroy was here.
                    RFC3164 : Aug 24 05:14:15 192.0.2.1 myproc[8710]: Kilroy was here.
                    RFC5424 : 2003-08-24T05:14:15.000003-07:00 192.0.2.1 myproc 8710 - - Kilroy was here.
 
-                   Please note, BSD format is only applicable to remote logging.
-                   Specifying BSD for log-file action will revert to RFC3164.";
+                   Please note, BSD format is only applicable to remote logging.";
       type identityref {
         base format-type;
       }
@@ -157,17 +156,20 @@ module infix-syslog {
 
   augment "/syslog:syslog/syslog:actions/syslog:file/syslog:log-file" {
     description "Configurable log format for file logging.";
-    uses format {
-      refine format {
+    uses log-format {
+      refine log-format {
         default rfc3164;
+        must "not(../log-format = 'infix-syslog:bsd')" {
+          error-message "BSD log format is not applicable to file logging, only remote.";
+        }
       }
     }
   }
 
   augment "/syslog:syslog/syslog:actions/syslog:remote/syslog:destination" {
     description "Configurable log format for remote logging.";
-    uses format {
-      refine format {
+    uses log-format {
+      refine log-format {
         default bsd;
       }
     }
