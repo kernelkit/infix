@@ -607,9 +607,9 @@ static void add_group(const char *user, const char *group)
 		return; /* already group member */
 
 	if (systemf("adduser %s %s", user, group))
-		ERROR("Failed giving user %s UNIX %s permissions.", user, group);
+		SECURITY("Failed giving user %s UNIX %s permissions.", user, group);
 	else
-		NOTE("User %s added to UNIX %s group.", user, group);
+		SECURITY("User %s added to UNIX %s group.", user, group);
 }
 
 static void del_group(const char *user, const char *group)
@@ -620,9 +620,9 @@ static void del_group(const char *user, const char *group)
 		return; /* not member of group */
 
 	if (systemf("delgroup %s %s", user, group))
-		ERROR("Failed removing user %s from UNIX %s group.", user, group);
+		SECURITY("Failed removing user %s from UNIX %s group.", user, group);
 	else
-		NOTE("User %s removed from UNIX %s group.", user, group);
+		SECURITY("User %s removed from UNIX %s group.", user, group);
 }
 
 /* Users with a valid shell are also allowed CLI access */
@@ -840,15 +840,15 @@ static int sys_add_user(sr_session_ctx_t *sess, char *name)
 		/* Verify IDs aren't already used, like BusyBox adduser */
 		if (getpwuid(st.st_uid) || getgrgid(st.st_uid) || getgrgid(st.st_gid)) {
 			/* Exists but owned by someone else. */
-			ERROR("Failed mapping user %s to /home/%s, uid:gid (%d:%d) already exists.",
+			SECURITY("Failed mapping user %s to /home/%s, uid:gid (%d:%d) already exists.",
 			      name, name, st.st_uid, st.st_gid);
 			err = sys_call_adduser(sess, name, 0, 0);
 		} else {
-			DEBUG("Reusing uid:gid %d:%d and /home/%s for new user %s",
-			      st.st_uid, st.st_gid, name, name);
+			SECURITY("Reusing uid:gid %d:%d and /home/%s for new user %s",
+				 st.st_uid, st.st_gid, name, name);
 			err = sys_call_adduser(sess, name, st.st_uid, st.st_gid);
 			if (err) {
-				ERROR("Failed reusing uid:gid from /home/%s, retrying create user ...", name);
+				SECURITY("Failed reusing uid:gid from /home/%s, retrying create user ...", name);
 				err = sys_call_adduser(sess, name, 0, 0);
 			} else
 				reused = true;
@@ -857,11 +857,11 @@ static int sys_add_user(sr_session_ctx_t *sess, char *name)
 		err = sys_call_adduser(sess, name, 0, 0);
 
 	if (err) {
-		ERROR("Failed creating new user \"%s\"", name);
+		SECURITY("Failed creating new user \"%s\"", name);
 		return SR_ERR_SYS;
 	}
 
-	NOTE("User \"%s\" created%s.", name, reused ? ", mapped to existing home directory" : "");
+	SECURITY("User \"%s\" created%s.", name, reused ? ", mapped to existing home directory" : "");
 
 	/*
 	 * OpenSSH in Infix has been set up to use /var/run/sshd/%s.keys
@@ -1016,7 +1016,7 @@ fail:
 	endspent();
 	ulckpwdf();
 exit:
-	ERRNO("Failed setting password for %s", user);
+	SECURITY("Failed setting password for %s", user);
 
 	return -1;
 }
@@ -1072,7 +1072,7 @@ static sr_error_t handle_sr_passwd_update(sr_session_ctx_t *, struct confd *conf
 		assert(change->new);
 
 		if (change->new->type != SR_STRING_T) {
-			ERROR("Internal error, expected pass to be string type.");
+			SECURITY("Internal error, expected user %s password to be string type.", user);
 			err = SR_ERR_INTERNAL;
 			break;
 		}
@@ -1094,7 +1094,7 @@ static sr_error_t handle_sr_passwd_update(sr_session_ctx_t *, struct confd *conf
 		else if (!strcmp(hash, "*"))
 			NOTE("Password login disabled for user %s", user);
 		else
-			NOTE("Password updated for user %s", user);
+			SECURITY("Password updated for user %s", user);
 		break;
 	case SR_OP_DELETED:
 		if (set_password(user, "*", false))
@@ -1125,10 +1125,10 @@ static sr_error_t handle_sr_shell_update(sr_session_ctx_t *sess, struct confd *c
 
 	shell = sys_find_usable_shell(sess, (char *)user, is_admin_user(sess, user));
 	if (set_shell(user, shell)) {
-		ERROR("Failed updating shell to %s for user %s", shell, user);
+		SECURITY("Failed updating shell to %s for user %s", shell, user);
 		err = SR_ERR_SYS;
 	} else {
-		DEBUG("Login shell updated for user %s", user);
+		SECURITY("Login shell updated for user %s", user);
 		err = SR_ERR_OK;
 	}
 	free(shell);
@@ -1148,7 +1148,7 @@ static sr_error_t check_sr_user_update(sr_session_ctx_t *, struct confd *, struc
 
 	name = sr_xpath_key_value(val->xpath, "user", "name", &state);
 	if (!is_valid_username(name)) {
-		ERROR("Invalid username \"%s\"", name);
+		SECURITY("Invalid username \"%s\"", name);
 		return SR_ERR_VALIDATION_FAILED;
 	}
 	NOTE("Username \"%s\" is valid", name);
@@ -1361,7 +1361,7 @@ static sr_error_t change_auth_done(struct confd *confd, sr_session_ctx_t *sessio
 
 	err = generate_auth_keys(session, XPATH_AUTH_"/user//.");
 	if (err) {
-		ERROR("failed saving authorized-key data.");
+		SECURITY("failed saving authorized-key data.");
 		goto cleanup;
 	}
 
@@ -1436,7 +1436,7 @@ static int change_nacm(sr_session_ctx_t *session, uint32_t sub_id, const char *m
 
 		shell = sys_find_usable_shell(session, (char *)user, is_admin);
 		if (set_shell(user, shell))
-			ERROR("Failed adjusting shell for user %s", user);
+			SECURITY("Failed adjusting shell for user %s", user);
 
 		if (is_admin)
 			add_group(user, "wheel");

@@ -1,0 +1,66 @@
+From 7e49f394e0afedc0259d4364f5a9a83296fe2b72 Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Wed, 21 Aug 2024 16:04:43 +0200
+Subject: [PATCH 8/8] Add audit trail for high priority system changes
+Organization: Addiva Elektronik
+
+Committing a change to running, copying to a datastore, or calling an
+RPC may be restricted by NACM.  In these cases a system administrator
+may want to know who made a change or sent an RPC.
+
+For commit, we are only interested in changes to the running ds, which
+is when the system actually activates the changes.  Copying to startup
+or other datastores is handled separately.
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ src/sysrepo.c | 12 ++++++++++++
+ 1 file changed, 12 insertions(+)
+
+diff --git a/src/sysrepo.c b/src/sysrepo.c
+index 86d694e5..c7b97e53 100644
+--- a/src/sysrepo.c
++++ b/src/sysrepo.c
+@@ -3946,6 +3946,9 @@ store:
+         goto cleanup;
+     }
+ 
++    if (session && session->nacm_user && mod_info->ds == SR_DS_RUNNING)
++        SR_LOG_SEC("user \"%s\" commiting changes to %s ...", session->nacm_user, sr_ds2str(mod_info->ds));
++
+     /* publish "done" event, all changes were applied */
+     if ((err_info = sr_shmsub_change_notify_change_done(mod_info, orig_name, orig_data, timeout_ms, cb_err_info))) {
+         goto cleanup;
+@@ -3957,6 +3960,9 @@ store:
+     }
+ 
+ cleanup:
++    if (session && session->nacm_user && mod_info->ds == SR_DS_RUNNING)
++        SR_LOG_SEC("user \"%s\" committed changes to %s.", session->nacm_user, sr_ds2str(mod_info->ds));
++
+     if (change_sub_lock) {
+         assert(change_sub_lock == SR_LOCK_READ);
+ 
+@@ -4285,6 +4291,9 @@ sr_copy_config(sr_session_ctx_t *session, const char *module_name, sr_datastore_
+         }
+     }
+ 
++    if (session->nacm_user)
++        SR_LOG_SEC("user \"%s\" copied %s to %s", session->nacm_user, sr_ds2str(src_datastore), sr_ds2str(session->ds));
++
+ cleanup:
+     /* MODULES UNLOCK */
+     sr_shmmod_modinfo_unlock(&mod_info);
+@@ -6552,6 +6561,9 @@ sr_rpc_send_tree(sr_session_ctx_t *session, struct lyd_node *input, uint32_t tim
+         }
+     }
+ 
++    if (session->nacm_user && path)
++        SR_LOG_SEC("user \"%s\" called RPC %s", session->nacm_user, path);
++
+     if (LYD_CTX(input_top) != LYD_CTX(input_op)) {
+         /* different contexts if these are data of an extension (schema-mount) */
+         for (ext_parent = input_op; ext_parent && !(ext_parent->flags & LYD_EXT); ext_parent = lyd_parent(ext_parent)) {}
+-- 
+2.43.0
+

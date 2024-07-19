@@ -5,11 +5,15 @@
 
 #include <syslog.h>
 #include <sysrepo.h>
-#include <sysrepo.h>
 
 #include "common.h"
 
 extern int debug;
+
+/* In IETF referred to LOG_AUDIT */
+#ifndef LOG_SECURITY
+#define LOG_SECURITY (1 << 13)
+#endif
 
 #ifndef HAVE_VASPRINTF
 int vasprintf(char **strp, const char *fmt, va_list ap);
@@ -29,5 +33,6 @@ int asprintf(char **strp, const char *fmt, ...);
 #define EMERG(fmt, ...) syslog(LOG_EMERG, fmt, ##__VA_ARGS__)
 #define ERROR(fmt, ...) syslog(LOG_ERR, fmt, ##__VA_ARGS__)
 #define ERRNO(fmt, ...) syslog(LOG_ERR, fmt ": %s", ##__VA_ARGS__, strerror(errno))
+#define SECURITY(fmt, ...) syslog(LOG_SECURITY | LOG_NOTICE, fmt, ##__VA_ARGS__)
 
 #endif	/* CONFD_COMMON_H_ */

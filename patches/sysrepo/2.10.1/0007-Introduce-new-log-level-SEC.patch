@@ -1,0 +1,82 @@
+From da765b90bca45b91f72fd6525e680040eebd2d4b Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Wed, 21 Aug 2024 16:00:35 +0200
+Subject: [PATCH 7/8] Introduce new log level [SEC]
+Organization: Addiva Elektronik
+
+This adds a new log level for security and audit trail related log
+messages.  E.g., nacm user applied a change, copied a ds, etc.
+
+The new log level is added last to not affect the advertised command
+line log levels.  A security notice has higher actual priorty than
+DBG, of course, so we remap it to WRN.  The construct allows us to
+have another [label] than [WRN], which might otherwise be read as
+a bug/problem rather than just a high-priority-notification.
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ src/log.c           | 5 +++++
+ src/log.h           | 1 +
+ src/sysrepo_types.h | 3 ++-
+ tests/tcommon.c     | 3 +++
+ 4 files changed, 11 insertions(+), 1 deletion(-)
+
+diff --git a/src/log.c b/src/log.c
+index e15055ac..b89ffacf 100644
+--- a/src/log.c
++++ b/src/log.c
+@@ -122,6 +122,11 @@ sr_log_msg(int plugin, sr_log_level_t ll, const char *msg)
+         priority = LOG_INFO;
+         severity = "INF";
+         break;
++    case SR_LL_SEC:
++        priority = LOG_WARNING;
++        severity = "SEC";
++        ll = SR_LL_WRN;         /* remap to higher level. */
++        break;
+     case SR_LL_DBG:
+         priority = LOG_DEBUG;
+         severity = "DBG";
+diff --git a/src/log.h b/src/log.h
+index d7e65b88..8722e51d 100644
+--- a/src/log.h
++++ b/src/log.h
+@@ -32,6 +32,7 @@
+ 
+ #define SR_LOG_WRN(...) sr_log(SR_LL_WRN, __VA_ARGS__)
+ #define SR_LOG_INF(...) sr_log(SR_LL_INF, __VA_ARGS__)
++#define SR_LOG_SEC(...) sr_log(SR_LL_SEC, __VA_ARGS__)
+ #define SR_LOG_DBG(...) sr_log(SR_LL_DBG, __VA_ARGS__)
+ 
+ #define SR_CHECK_MEM_GOTO(cond, err_info, go) if (cond) { SR_ERRINFO_MEM(&(err_info)); goto go; }
+diff --git a/src/sysrepo_types.h b/src/sysrepo_types.h
+index 9f820b84..9a0de2be 100644
+--- a/src/sysrepo_types.h
++++ b/src/sysrepo_types.h
+@@ -65,7 +65,8 @@ typedef enum {
+     SR_LL_ERR,       /**< Print only error messages. */
+     SR_LL_WRN,       /**< Print error and warning messages. */
+     SR_LL_INF,       /**< Besides errors and warnings, print some other informational messages. */
+-    SR_LL_DBG        /**< Print all messages including some development debug messages. */
++    SR_LL_DBG,       /**< Print all messages including some development debug messages. */
++    SR_LL_SEC,       /**< Security, e.g., audit trail, high priority remapped to SR_LL_WRN */
+ } sr_log_level_t;
+ 
+ /**
+diff --git a/tests/tcommon.c b/tests/tcommon.c
+index 0dcdd0b4..49de738d 100644
+--- a/tests/tcommon.c
++++ b/tests/tcommon.c
+@@ -35,6 +35,9 @@ _test_log_msg(sr_log_level_t level, const char *message, const char *prefix)
+     case SR_LL_WRN:
+         severity = "WRN";
+         break;
++    case SR_LL_SEC:
++        severity = "SEC";
++        break;
+     case SR_LL_INF:
+         severity = "INF";
+         break;
+-- 
+2.43.0
+
