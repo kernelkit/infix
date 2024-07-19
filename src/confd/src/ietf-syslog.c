@@ -156,7 +156,7 @@ static void action(sr_session_ctx_t *session, const char *name, const char *xpat
 		sep = ",";
 	}
 
-	fmt = srx_get_str(session, "%s/format", xpath);
+	fmt = srx_get_str(session, "%s/log-format", xpath);
 	if (fmt) {
 		char *ptr = strchr(fmt, ':'); /* skip any prefix */
 
