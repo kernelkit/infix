@@ -4,6 +4,10 @@ choice
 	prompt "Target Architecture"
 	default @ARCH@
 
+config QEMU_riscv64
+	bool "risv64"
+	select QEMU_ARCH_IS_64
+
 config QEMU_x86_64
 	bool "x86_64"
 	select QEMU_ARCH_IS_64
