@@ -44,7 +44,7 @@ build.  Its main responsibility is usually to set up the system's
 memory controller and perform DDR training, if required, before
 loading the _TPL_.
 
-Commonly referred to as the system's _bootloader_, the _TPL_ is is
+Commonly referred to as the system's _bootloader_, the _TPL_ is
 responsible for preparing the execution environment required by the
 Linux kernel.
 
@@ -113,7 +113,7 @@ the [Bootloader Interface](#bootloader-interface) section.
 ### GRUB
 
 Used on _x86_64_ based systems.  Neither the _integrity_ nor the
-_authenticity_ of the Infix image is verified.  It only intended to
+_authenticity_ of the Infix image is verified.  It is only intended to
 provide a way of booting a [Disk Image](#disk-image), such that a
 standard [System Upgrade](#system-upgrade) can be performed on
 virtualized instances.
@@ -200,7 +200,7 @@ one of the [Root Filesystem](#primarysecondary---root-filesystems)
 partitions.
 
 When the system boots, U-Boot will concatenate the two parts to
-validate the SquashFS's contents. This is path was chosen because:
+validate the SquashFS's contents. This path was chosen because:
 
 - Having a separate raw SquashFS means Linux can directly mount it as
   the root filesystem.
@@ -210,7 +210,7 @@ validate the SquashFS's contents. This is path was chosen because:
   Infix's boot process, as we can still use a regular SquashFS as the
   root filesystem.
 
-- It lets us use standard interfaces to boot linux, like SYSLINUX.  It
+- It lets us use standard interfaces to boot Linux, like SYSLINUX.  It
   also plays well with traditional bootloaders, like GRUB.
 
 In its full form, it can be used to netboot Infix, as it contains all
