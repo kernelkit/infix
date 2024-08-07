@@ -160,3 +160,9 @@ config FIT_ARCH
 config FIT_KERNEL_LOAD_ADDR
 	string "Kernel load address"
 	depends on FIT_IMAGE
+
+config SDCARD_AUX
+	bool "Create SD-card aux partition"
+	help
+	  Create and populate aux.ext4 with rootfs.itbh and rauc.status
+	  For use with a static genimage.cfg for, e.g., SD-cards.
