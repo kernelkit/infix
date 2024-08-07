@@ -8,6 +8,9 @@
 - name:  ietf-system
   suite: ietf_system/all.yaml
 
+- name:  ietf-syslog
+  suite: ietf_syslog/all.yaml
+
 - name:  ietf-interfaces
   suite: ietf_interfaces/all.yaml
 

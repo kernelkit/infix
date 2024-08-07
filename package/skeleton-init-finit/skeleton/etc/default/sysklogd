@@ -2,4 +2,4 @@
 # -m0     :: Disable periodic syslog MARK entries
 # -s      :: Enable secure mode, don't listen to remote logs
 # -r 1M:5 :: Log rotation every 1 MiB and keep 5 rotated ones
-SYSLOGD_ARGS="-l -m0 -s -r 1M:10"
+SYSLOGD_ARGS="-l -m0"

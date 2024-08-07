@@ -10,6 +10,10 @@
 #define SRX_GET_UINT32(s,v,fmt,...) srx_get_int(s, &v, SR_UINT32_T, fmt, ##__VA_ARGS__)
 
 sr_error_t srx_get_diff(sr_session_ctx_t *session, struct lyd_node **treep);
+
+int srx_get_changes(sr_session_ctx_t *session, const char *path, struct lyd_node **treep);
+int srx_free_changes(struct lyd_node *tree);
+
 bool srx_isset(sr_session_ctx_t *session, const char *fmt, ...);
 
 int srx_set_item(sr_session_ctx_t *, const sr_val_t *, sr_edit_options_t, const char *, ...)
@@ -27,6 +31,7 @@ int   srx_get_bool (sr_session_ctx_t *session, const char *fmt, ...)
 int   srx_enabled  (sr_session_ctx_t *session, const char *fmt, ...)
 	__attribute__ ((format (printf, 2, 3)));
 
+int srx_get_items(sr_session_ctx_t *session, sr_val_t **val, size_t *cnt, const char *fmt, ...);
 int srx_nitems(sr_session_ctx_t *session, size_t *cntp, const char *fmt, ...)
 	__attribute__ ((format (printf, 3, 4)));
 

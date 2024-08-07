@@ -19,6 +19,14 @@ int core_startup_save(sr_session_ctx_t *session, uint32_t sub_id, const char *mo
 	if (systemf("sysrepocfg -X/cfg/startup-config.cfg -d startup -f json"))
 		return SR_ERR_SYS;
 
+	SECURITY("User %s saved startup-config", sr_session_get_user(session));
+	return SR_ERR_OK;
+}
+
+int core_running_save(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
+		      const char *xpath, sr_event_t event, unsigned request_id, void *priv)
+{
+	SECURITY("User %s modified running-config", sr_session_get_user(session));
 	return SR_ERR_OK;
 }
 
@@ -125,6 +133,9 @@ int sr_plugin_init_cb(sr_session_ctx_t *session, void **priv)
 	if (rc)
 		goto err;
 	rc = ietf_keystore_init(&confd);
+	if (rc)
+		goto err;
+	rc = ietf_syslog_init(&confd);
 	if (rc)
 		goto err;
 	rc = ietf_system_init(&confd);
