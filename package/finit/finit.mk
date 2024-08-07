@@ -27,12 +27,17 @@ FINIT_D = $(TARGET_DIR)/etc/finit.d
 # no override necessary there.
 FINIT_CONF_OPTS =					\
 	--prefix=/usr					\
-	--exec-prefix=					\
 	--disable-doc					\
 	--disable-contrib				\
 	--disable-rescue				\
 	--disable-silent-rules				\
 	--with-group=$(BR2_PACKAGE_FINIT_INITCTL_GROUP)
+
+ifeq ($(BR2_ROOTFS_MERGED_USR),y)
+FINIT_CONF_OPTS += --exec-prefix=/usr
+else
+FINIT_CONF_OPTS += --exec-prefix=
+endif
 
 ifeq ($(BR2_PACKAGE_FINIT_ADVANCED),y)
 ifneq ($(BR2_PACKAGE_FINIT_CUSTOM_FSTAB),)
