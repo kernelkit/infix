@@ -60,6 +60,14 @@ if [ "$DISK_IMAGE" = "y" ]; then
     $common/mkdisk.sh -a $BR2_ARCH -n $diskimg -s $DISK_IMAGE_SIZE $bootcfg
 fi
 
+load_cfg SDCARD_AUX
+if [ "$SDCARD_AUX" = "y" ]; then
+    ixmsg "Creating initial rauc.status"
+    $common/mkrauc-status.sh "$BINARIES_DIR/${NAME}.pkg" >"$BINARIES_DIR/rauc.status"
+    ixmsg "Creating aux.ext4 for sdcard.img"
+    $common/mkaux.sh
+fi
+
 load_cfg GNS3_APPLIANCE
 if [ "$GNS3_APPLIANCE" = "y" ]; then
     ixmsg "Creating GNS3 Appliance, $GNS3_APPLIANCE_RAM MiB with $GNS3_APPLIANCE_IFNUM ports"
