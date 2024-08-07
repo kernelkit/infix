@@ -118,8 +118,8 @@ the device is reasonably correct, and run the provisioning script:
 
     admin@infix:~$ sudo -i
     root@infix:~$ udhcpc -i e28
-	root@infix:~$ date -us YYYY-MM-DD
-	root@infix:~$ /libexec/infix/prod/provision tftp://<PC-IP>/infix-aarch64.pkg /dev/mmcblk0
+    root@infix:~$ date -us YYYY-MM-DD
+    root@infix:~$ /usr/libexec/infix/prod/provision tftp://<PC-IP>/infix-aarch64.pkg /dev/mmcblk0
 
 After successful completion, the device is fully provisioned. On the
 next boot, the device will boot of its own accord from the primary

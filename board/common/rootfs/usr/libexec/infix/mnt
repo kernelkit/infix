@@ -33,11 +33,11 @@ check_factory()
     fi
 
     # Add to your br2-external to extend factory-reset check
-    if [ ! -x /libexec/infix/check-factory ]; then
+    if [ ! -x /usr/libexec/infix/check-factory ]; then
 	return 1;
     fi
 
-    /libexec/infix/check-factory
+    /usr/libexec/infix/check-factory
 }
 
 factory_reset()

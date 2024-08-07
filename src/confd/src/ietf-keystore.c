@@ -86,7 +86,7 @@ static int change_cb(sr_session_ctx_t *session, uint32_t sub_id, const char *mod
 
 	if (!fileok(priv_keyfile) || !fileok(pub_keyfile)) {
 		NOTE("Generating NETCONF SSH host keys ...");
-		if (systemf("/libexec/infix/mkkeys %s %s", priv_keyfile, pub_keyfile))
+		if (systemf("/usr/libexec/infix/mkkeys %s %s", priv_keyfile, pub_keyfile))
 			goto err;
 	} else {
 		NOTE("Using existing SSH host keys for NETCONF.");
