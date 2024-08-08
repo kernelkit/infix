@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-
+import logging
+import logging.handlers
 import subprocess
 import json
 import sys  # (built-in module)
@@ -8,6 +9,7 @@ import argparse
 from datetime import datetime
 
 TESTPATH = ""
+logger = None
 
 
 def json_get_yang_type(iface_in):
@@ -79,7 +81,7 @@ def get_proc_value(procfile):
         # This is considered OK
         return None
     except IOError:
-        print(f"Error: reading from {procfile}", file=sys.stderr)
+        logger.error(f"failed reading from {procfile}")
 
 
 def lookup(obj, *keys):
@@ -118,8 +120,8 @@ def run_cmd(cmd, testfile):
     try:
         output = subprocess.check_output(cmd, stderr=subprocess.DEVNULL, text=True)
         return output.splitlines()
-    except subprocess.CalledProcessError:
-        print("Error: command returned error", file=sys.stderr)
+    except subprocess.CalledProcessError as err:
+        logger.error(f"{err}")
         sys.exit(1)
 
 
@@ -135,9 +137,11 @@ def run_json_cmd(cmd, testfile):
         output = result.stdout
         data = json.loads(output)
     except subprocess.CalledProcessError as err:
+        logger.error(f"{err}")
         data = {}
     except json.JSONDecodeError as err:
-        print(f"Error: parsing JSON output: {err.msg}", file=sys.stderr)
+        logger.error(f"failed parsing JSON output of command: {' '.join(cmd)}"
+                     f", error: {err}")
         sys.exit(1)
     return data
 
@@ -540,7 +544,7 @@ def add_ip_link(ifname, iface_out):
     data = run_json_cmd(['ip', '-s', '-d', '-j', 'link', 'show', 'dev', ifname],
                         f"ip-link-show-dev-{ifname}.json")
     if len(data) != 1:
-        print("Error: expected ip link output to be array with length 1", file=sys.stderr)
+        logger.error("expected ip link output to be array with length 1")
         sys.exit(1)
 
     iface_in = data[0]
@@ -601,7 +605,7 @@ def add_ip_addr(ifname, iface_out):
     data = run_json_cmd(['ip', '-j', 'addr', 'show', 'dev', ifname],
                         f"ip-addr-show-dev-{ifname}.json")
     if len(data) != 1:
-        print("Error: expected ip addr output to be array with length 1", file=sys.stderr)
+        logger.error("expected ip addr output to be array with length 1")
         sys.exit(1)
 
     iface_in = data[0]
@@ -622,7 +626,7 @@ def add_ip_addr(ifname, iface_out):
             new = {}
 
             if 'family' not in addr:
-                print("Error: 'family' missing from 'addr_info'", file=sys.stderr)
+                logger.error("'family' missing from 'addr_info'")
                 continue
 
             if 'local' in addr:
@@ -637,7 +641,7 @@ def add_ip_addr(ifname, iface_out):
             elif addr['family'] == "inet6":
                 inet6.append(new)
             else:
-                print("Error: invalid 'family' in 'addr_info'", file=sys.stderr)
+                logger.error("invalid 'family' in 'addr_info'")
                 sys.exit(1)
 
         insert(iface_out, "ietf-ip:ipv4", "address", inet)
@@ -650,7 +654,7 @@ def add_ethtool_groups(ifname, iface_out):
     data = run_json_cmd(['ethtool', '--json', '-S', ifname, '--all-groups'],
                         f"ethtool-groups-{ifname}.json")
     if len(data) != 1:
-        print(f"Error: no counters available for {ifname}, skipping.")
+        logger.warning(f"{ifname}: no counters available, skipping.")
         return
 
     iface_in = data[0]
@@ -827,6 +831,7 @@ def add_vlans_to_bridge(brname, iface_out, mc_status):
 
 def main():
     global TESTPATH
+    global logger
 
     parser = argparse.ArgumentParser(description="YANG data creator")
     parser.add_argument("model", help="YANG Model")
@@ -838,6 +843,14 @@ def main():
         TESTPATH = args.test
     else:
         TESTPATH = ""
+
+    # Set up syslog output for critical errors to aid debugging
+    logger = logging.getLogger('yanger')
+    log = logging.handlers.SysLogHandler(address='/dev/log')
+    fmt = logging.Formatter('%(name)s[%(process)d]: %(message)s')
+    log.setFormatter(fmt)
+    logger.setLevel(logging.INFO)
+    logger.addHandler(log)
 
     if args.model == 'ietf-interfaces':
         # For now, we handle each interface separately, as this is how it's
@@ -916,7 +929,7 @@ def main():
         add_container(yang_data['infix-containers:containers']['container'])
 
     else:
-        print(f"Unsupported model {args.model}", file=sys.stderr)
+        logger.warning(f"Unsupported model {args.model}", file=sys.stderr)
         sys.exit(1)
 
     print(json.dumps(yang_data, indent=2))
