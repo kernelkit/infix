@@ -11,6 +11,7 @@ image aux.ext4 {
 	ext4 {
 		label = "aux"
 		use-mke2fs = true
+		features = "^metadata_csum,^metadata_csum_seed"
 	}
 }
 
