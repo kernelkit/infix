@@ -1,0 +1,12 @@
+/ {
+	config {
+		environment {
+			boot_targets = "mmc1";
+			ethprime = "eth0";
+
+			/* This is a development platform, hard code developer mode */
+			ixbtn-devmode = "setenv dev_mode yes; echo Enabled";
+			ixbtn-factory = "echo \"No button available, use bootmenu\"";
+		};
+	};
+};
