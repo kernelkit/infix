@@ -1,0 +1,91 @@
+{
+    "input": {
+	"path": {
+	    "locate":       { "path": "/run/led/locate" },
+
+	    "status-prime": { "path": "/run/led/status-prime" },
+	    "status-ok":    { "path": "/run/led/status-ok" },
+	    "status-err":   { "path": "/run/led/status-err" },
+	    "status-crit":  { "path": "/run/led/status-crit" },
+
+	    "fault-prime":  { "path": "/run/led/fault-prime" },
+	    "fault-ok":     { "path": "/run/led/fault-ok" },
+	    "fault-err":    { "path": "/run/led/fault-err" },
+	    "fault-crit":   { "path": "/run/led/fault-crit" },
+
+	    "wan-up":       { "path": "/run/led/wan-up" },
+
+	    "startup":   { "path": "/run/finit/cond/run/startup/success" },
+	    "fail-safe": { "path": "/run/finit/cond/run/failure/success" },
+	    "panic":     { "path": "/run/finit/cond/run/failure/failure" }
+	},
+	"udev": {
+	    "power-a": { "subsystem": "power_supply" },
+	    "power-b": { "subsystem": "power_supply" }
+	}
+    },
+
+    "output": {
+	"led-group": {
+	    "port-link-act": {
+		"match": ["*:green:tp", "*:green:sfp", "*:green:port" ],
+
+		"rules": [
+		    { "if": "true", "then": { "trigger": "netdev", "link": 1, "rx": 1, "tx": 1 } }
+		]
+	    },
+	    "port-alarm": {
+		"match": ["*:yellow:tp", "*:yellow:sfp", "*:yellow:port" ],
+
+		"rules": [
+		]
+	    }
+	},
+	"led": {
+	    "nanopi-r2s:red:sys": {
+		"rules": [
+		    { "if": "locate",    "then": "@blink-1hz" },
+		    { "if": "panic",     "then": "@blink-5hz" },
+		    { "if": "fail-safe", "then": "@blink-5hz" },
+		    { "if": "startup",   "then": "@off" },
+		    { "if": "true",      "then": "@blink-1hz" }
+		]
+	    },
+
+	    "nanopi-r2s:green:lan": {
+		"rules": [
+		    { "if": "locate",  "then": "@blink-1hz" },
+		    { "if": "panic",   "then": "@blink-5hz" },
+		    { "if": "startup", "then": "@on" }
+		]
+	    },
+
+	    "nanopi-r2s:green:wan": {
+		"rules": [
+		    { "if": "locate", "then": "@blink-1hz" },
+		    { "if": "panic",  "then": "@blink-5hz" },
+		    { "if": "wan-up", "then": "@on" }
+		]
+	    }
+	}
+    },
+
+    "aliases": {
+	"on": {
+	    "brightness": true
+	},
+	"off": {
+	    "brightness": false
+	},
+	"blink-1hz": {
+	    "trigger": "timer",
+	    "delay_on": 500,
+	    "delay_off": 500
+	},
+	"blink-5hz": {
+	    "trigger": "timer",
+	    "delay_on": 100,
+	    "delay_off": 100
+	}
+    }
+}

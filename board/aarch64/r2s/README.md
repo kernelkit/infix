@@ -8,6 +8,46 @@ The R2S does not have any onboard eMMC, so the only way to boot Infix on
 it is using and SD card.
 
 
+LEDs
+----
+
+The front system LEDs work as follows in Infix:
+
+| **Stage**      | **SYS** | **LAN** | **WAN** |
+|----------------|---------|---------|---------|
+| Power-on       | dimmed  | off     | off     |
+| Linux loading  | on      | off     | off     |
+| System loading | 1 Hz    | off     | off     |
+| System up      | off     | on      | off     |
+| WAN address    | off     | on      | on      |
+| Locate         | 1 Hz    | 1 Hz    | 1 Hz    |
+| Fail safe      | 5 Hz    | off     | off     |
+| Panic          | 5 Hz    | 5 Hz    | 5 Hz    |
+
+Powering on the device the SYS LED is turned on faintly (dimmed).  It
+remains dimmed while U-Boot loads the kernel, and turns bright red when
+the kernel starts.  It remains steady on until the system has started
+the LED daemon, `iitod`, which sets it blinking at 1 Hz while the rest
+of the system starts up.  When the system has come up successfully, the
+SYS LED is turned off and the green LAN LED turns on.  The WAN LED will
+turn on (green) when the WAN interface is up and has an IP address.
+
+> Compared to the `x86_64` Qemu target, it takes a while to parse all
+> YANG models and load `startup-config`, but the whole process should
+> not take more than 60 seconds, and usually a lot less.
+
+If a "find my device" function exists, it will blink all LEDs at 1 Hz.
+
+If `startup-config` fails to load Ínfix reverts to `failure-config`,
+putting the device in fail safe (or fail secure) mode.  Indicated by
+the SYS LED blinking at 5 Hz instead of turning off.
+
+If Infix for some reason also fails to load `failure-config`, then all
+LEDs will blink at 5 Hz to clearly indicate something is very wrong.
+
+In all error cases the console shows the problem.
+
+
 How to Build
 ------------
 
