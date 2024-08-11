@@ -9,15 +9,36 @@ All notable changes to the project are documented in this file.
 
 ### Changes
 - Initial RISC-V (riscv64) support: StarFive VisionFive2
+- Massive updates to the NanoPi R2S:
+  - Update Linux kernel to v6.10.3 and sync defconfig with aarch64
+  - Workaround `reboot` command "hang" on NanoPi R2S (failure to reboot)
+	by replacing the Rockchip watchdog driver with "softdog"
+  - Update U-Boot to v2024.07, enable secure boot loading of images
+  - Rename interfaces to LAN + WAN to match case and LEDs
+  - Rename images to `infix-r2s$ver.ext`, not same as other aarch64
+  - Change rootfs to squashfs for enhanced security
+  - Add RAUC support to simplify device maintenance/upgrade
+  - Add support for saving unique interface MAC addresses in U-Boot
+  - Add support for system LEDs, see product's README
+  - Add support for reset button from Linux, issues `reboot` atm.
+  - Add static `factory-config` as an example
 - Password login can now be disabled by removing the password.  Before
   this change only empty password disabled password login (in favor of
   SSH key login), removing the password locked the user completely out
+- Add LED indication on factory reset, *all* LEDs available in Linux
+  `/sys/class/leds` are turned on while clearing writable partitions
+- Issue #158: enhance security of factory reset.  All file content
+  is now overwritten x3, the last time with zeroes, then removed.  
+  Example, on the NanoPi R2S this process takes ~30 seconds, but may
+  take longer in setups with bigger configurations, e.g., containers
 
 ### Fixes
+- Fix #274: add missing link/traffic LEDs on NanoPi R2S LAN port
 - Fix #489: ensure all patches are versioned, including Linux kernel
 - Fix #531: creating a new VLAN interface named `vlanN` should not set
   `lower-layer-if` to `vlanN`.  With the `vlanN` pattern, only C-VLAN
   and VID can be inferred
+- Fix #542: warning message from `login`, cannot find `pam_lastlog.so`
 - Silence bogus `sysctl` warnings at boot (syslog)
 - Silence output from user group member check (sys-cli in syslog)
 
