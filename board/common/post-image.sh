@@ -12,6 +12,9 @@ load_cfg BR2_ARCH
 load_cfg BR2_DEFCONFIG
 load_cfg BR2_EXTERNAL_INFIX_PATH
 load_cfg BR2_TARGET_ROOTFS
+
+# The default IMAGE_ID is infix-$BR2_ARCH but can be overridden
+# for imaage names, and compat strings, like infix-r2s
 if [ -n "$IMAGE_ID" ]; then
     NAME="$IMAGE_ID"
 else
@@ -36,7 +39,7 @@ if [ "$SIGN_ENABLED" = "y" ]; then
     $common/sign.sh $BR2_ARCH $SIGN_KEY
 
     ixmsg "Creating RAUC Update Bundle"
-    $common/mkrauc.sh "$NAME$(ver)" $BR2_ARCH $SIGN_KEY
+    $common/mkrauc.sh "$NAME$(ver)" $NAME $SIGN_KEY
 fi
 
 load_cfg DISK_IMAGE

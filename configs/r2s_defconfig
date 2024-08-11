@@ -169,6 +169,7 @@ BR2_PACKAGE_HOST_UBOOT_TOOLS=y
 BR2_PACKAGE_HOST_UBOOT_TOOLS_FIT_SUPPORT=y
 BR2_PACKAGE_HOST_UBOOT_TOOLS_FIT_SIGNATURE_SUPPORT=y
 INFIX_VENDOR_HOME="https://github.com/kernelkit"
+INFIX_IMAGE_ID="${INFIX_ID}-r2s"
 INFIX_DESC="Infix is a Network Operating System based on Linux.  It can be set up both as a switch, with offloading using switchdev, and a router with firewalling."
 INFIX_HOME="https://github.com/kernelkit/infix/"
 INFIX_DOC="https://github.com/kernelkit/infix/tree/main/doc"

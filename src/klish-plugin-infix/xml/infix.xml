@@ -504,8 +504,12 @@
 
   <COMMAND name="upgrade" help="Install a software update bundle from remote or local file">
     <PARAM name="URI" ptype="/STRING" help="[(ftp|tftp|http|https|sftp)://(dns.name | ip.address)/path/to/]upgrade-bundle.pkg"/>
+    <SWITCH name="optional" min="0" max="1">
+      <COMMAND name="force" help="Force upgrade, ignoring compatibility check."/>
+    </SWITCH>
     <ACTION sym="script" in="tty" out="tty" interrupt="true">
-      rauc install $KLISH_PARAM_URI
+      force=${KLISH_PARAM_force:+--ignore-compatible}
+      rauc install $force $KLISH_PARAM_URI
     </ACTION>
   </COMMAND>
 

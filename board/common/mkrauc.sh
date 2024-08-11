@@ -5,7 +5,7 @@ set -e
 GIT_VERSION=$(git -C $BR2_EXTERNAL_INFIX_PATH describe --always --dirty --tags)
 
 name=$1
-arch=$2
+compat=$2
 sign=$3
 
 crt=$(ls $sign/*.crt)
@@ -25,7 +25,7 @@ cp -f $BINARIES_DIR/rootfs.itbh $work/rootfs.itbh
 
 cat >$work/manifest.raucm <<EOF
 [update]
-compatible=infix-${arch}
+compatible=${compat}
 version=${GIT_VERSION}
 
 [bundle]
