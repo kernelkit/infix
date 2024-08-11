@@ -55,6 +55,16 @@ else
     VERSION=$GIT_VERSION
 fi
 
+if [ -n "$INFIX_IMAGE_ID" ]; then
+    NAME="$INFIX_IMAGE_ID"
+else
+    NAME="$INFIX_ID"-$(echo "$BR2_ARCH" | tr _ - | sed 's/x86-64/x86_64/')
+fi
+
+if [ -f "$TARGET_DIR/etc/rauc/system.conf" ]; then
+    sed -i "s/compatible=.*/compatible=$NAME/" "$TARGET_DIR/etc/rauc/system.conf"
+fi
+
 # This is a symlink to /usr/lib/os-release, so we remove this to keep
 # original Buildroot information.
 rm -f "$TARGET_DIR/etc/os-release"
