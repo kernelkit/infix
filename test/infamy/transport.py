@@ -17,9 +17,6 @@ class Transport(ABC):
     def get_dict(self, xpath=None):
         pass
     @abstractmethod
-    def get_xpath(self,  xpath, key, value, path=None):
-        pass
-    @abstractmethod
     def delete_xpath(self, xpath):
         pass
     @abstractmethod
@@ -34,9 +31,6 @@ class Transport(ABC):
         pass
     @abstractmethod
     def call_action(self, xpath):
-        pass
-    @abstractmethod
-    def get_iface_xpath(self, iface, path=None):
         pass
     @abstractmethod
     def get_iface(self, iface): # Should be common, but is not due to bug in rousette
@@ -54,8 +48,3 @@ class Transport(ABC):
         """Check if the device reachable on ll6"""
         neigh = ll6ping(self.location.interface, flags=["-w1", "-c1", "-L", "-n"])
         return bool(neigh)
-
-    def get_iface_xpath(self, iface, path=None):
-        """Compose complete XPath to a YANG node in /ietf-interfaces"""
-        xpath = f"/ietf-interfaces:interfaces/interface"
-        return self.get_xpath(xpath, "name", iface, path)

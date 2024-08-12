@@ -83,8 +83,7 @@ with infamy.Test() as test:
 
     with test.step("Remove all hardware configuration"):
         for port in available:
-            xpath=target.get_xpath("/ietf-hardware:hardware/component", "name", port)
-            target.delete_xpath(xpath)
+            target.delete_xpath(f"/ietf-hardware:hardware/component[name='{port}']")
 
     with test.step("Verify USB ports locked"):
         for port in available:
@@ -115,8 +114,7 @@ with infamy.Test() as test:
 
     with test.step("Remove USB configuration, and reboot"):
         for port in available:
-            xpath=target.get_xpath("/ietf-hardware:hardware/component", "name", port)
-            target.delete_xpath(xpath)
+            target.delete_xpath(f"/ietf-hardware:hardware/component[name='{port}']")
         target.copy("running", "startup")
         target.reboot()
         if wait_boot(target) == False:

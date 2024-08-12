@@ -55,8 +55,7 @@ with infamy.Test() as test:
         assert user_found, f"User {username} not found"
 
     with test.step(f"Delete user ({username} / {hashed_password})"):
-        xpath=target.get_xpath("/ietf-system:system/authentication/user", "name", username)
-        target.delete_xpath(xpath)
+        target.delete_xpath(f"/ietf-system:system/authentication/user[name='{username}']")
 
     with test.step(f"Verify erasure of user ({username} / {hashed_password})"):
         running = target.get_config_dict("/ietf-system:system")
