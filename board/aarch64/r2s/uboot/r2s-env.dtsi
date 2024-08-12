@@ -6,7 +6,42 @@
 
 			/* This is a development platform, hard code developer mode */
 			ixbtn-devmode = "setenv dev_mode yes; echo Enabled";
-			ixbtn-factory = "echo \"No button available, use bootmenu\"";
+
+			/* Override default definitiion to add LED feedback */
+                        ixbtn-factory = "
+if button factory-reset; then
+    echo \"Keep button pressed for 10 seconds to engage factory reset ...\"
+
+    for tick in . . . . . . . . . .; do
+        led nanopi-r2s:red:sys   on
+        led nanopi-r2s:green:lan on
+        led nanopi-r2s:green:wan on
+        sleep 0.5
+        led nanopi-r2s:red:sys   off
+        led nanopi-r2s:green:lan off
+        led nanopi-r2s:green:wan off
+        sleep 0.5
+        echo -n \"Checking button: \"
+        button factory-reset || exit
+    done
+
+    echo -n \"Final button check: \"
+    if button factory-reset; then
+        setenv factory_reset yes
+        echo \"FACTORY RESET ENGAGED\"
+    fi
+fi
+";
+		};
+	};
+
+	keys {
+		compatible = "gpio-keys";
+
+		factory-reset {
+			gpios = <&gpio0 0 GPIO_ACTIVE_LOW>;
+			linux,code = <KEY_POWER>;
+			label = "factory-reset";
 		};
 	};
 };

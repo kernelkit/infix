@@ -16,6 +16,7 @@ The front system LEDs work as follows in Infix:
 | **Stage**      | **SYS** | **LAN** | **WAN** |
 |----------------|---------|---------|---------|
 | Power-on       | dimmed  | off     | off     |
+| Factory reset  | on      | on      | on      |
 | Linux loading  | on      | off     | off     |
 | System loading | 1 Hz    | off     | off     |
 | System up      | off     | on      | off     |
@@ -46,6 +47,28 @@ If Infix for some reason also fails to load `failure-config`, then all
 LEDs will blink at 5 Hz to clearly indicate something is very wrong.
 
 In all error cases the console shows the problem.
+
+
+Factory Reset
+-------------
+
+The reset button on the side can be used not only to safely reboot the
+device, but can also be used to trigger a factory reset at power on.
+
+At power-on, keep the reset button pressed for 10 seconds.  The system
+LEDs (SYS, WAN, LAN) will all blink at 1 Hz, to help you count down the
+seconds.  When the 10 seconds have passed all LEDs are turned off before
+loading Linux.
+
+When Linux boots up it confirms the factory reset by lighting up the
+LEDs again, no blinking this time.  The LEDs stay on until all files and
+directories on read/writable partitions (`/cfg` and `/var`) have been
+safely erased.
+
+The system then continues loading, turning off all LEDs except SYS,
+which blinks calmly at 1 Hz as usual until the system has completed
+loading, this time with a `startup-config` freshly restored from the
+device's `factory-config`.
 
 
 How to Build
