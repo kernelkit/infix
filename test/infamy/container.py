@@ -32,5 +32,4 @@ class Container:
         return False
 
     def action(self, name, act):
-        xpath=self.system.get_xpath("/infix-containers:containers/container", "name", name, act)
-        return self.system.call_action(xpath)
+        return self.system.call_action(f"/infix-containers:containers/container[name='{name}']/{act}")

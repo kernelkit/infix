@@ -64,8 +64,7 @@ with infamy.Test() as test:
         test_ping(hport,True)
 
     with test.step("Remove VLAN interface, and test again (should not be able to ping)"):
-        xpath=target.get_xpath("/ietf-interfaces:interfaces/interface", "name", f"{tport}.10")
-        target.delete_xpath(xpath)
+        target.delete_xpath(f"/ietf-interfaces:interfaces/interface[name='{tport}.10']")
         _, hport = env.ltop.xlate("host", "data")
         test_ping(hport,False)
 

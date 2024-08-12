@@ -30,7 +30,7 @@ with infamy.Test() as test:
         assert mac == cmac
 
     with test.step(f"Remove custom MAC address"):
-        xpath=target.get_iface_xpath(tport, "phys-address")
+        xpath=iface.get_iface_xpath(tport, "phys-address")
         target.delete_xpath(xpath)
 
         until(lambda: iface.get_phys_address(target, tport) == pmac)

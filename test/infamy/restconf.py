@@ -4,6 +4,8 @@ import warnings
 import os
 import sys
 import libyang
+import re
+import urllib.parse
 
 from requests.auth import HTTPBasicAuth
 from urllib.parse import quote
@@ -23,6 +25,24 @@ class Location:
     username: str = "admin"
     port: int = 443
 
+def xpath_to_uri(xpath, extra=None):
+    """Convert xpath to HTTP URI"""
+    # If the xpath has a
+    pattern = r'\[(.*?)=["\'](.*?)["\']\]'
+    matches = re.findall(pattern, xpath)
+
+    if matches:
+        for key, value in matches:
+            # replace [key=value] with =value
+            uri_path = re.sub(rf'\[{key}=["\']{value}["\']\]', f'={value}', xpath)
+    else:
+        uri_path = xpath
+
+    # Append extra if provided
+    if extra is not None:
+        uri_path = f"{uri_path}/{extra}"
+
+    return uri_path
 
 # Workaround for bug in requests 2.32.x: https://github.com/psf/requests/issues/6735
 def requests_workaround(method, url, json, headers, auth, verify=False):
@@ -152,25 +172,25 @@ class Device(Transport):
         else:
             return response.content
 
-    def get_datastore(self, datastore="operational" , xpath="", parse=True):
+    def get_datastore(self, datastore="operational" , path="", parse=True):
         """Get a datastore"""
-        path=f"/ds/ietf-datastores:{datastore}"
-        if not xpath is None:
-            path=f"{path}/{xpath}"
-        url=f"{self.restconf_url}{path}"
+        dspath=f"/ds/ietf-datastores:{datastore}"
+        if not path is None:
+            dspath=f"{dspath}/{path}"
+        url=f"{self.restconf_url}{dspath}"
         return self._get_raw(url, parse)
 
-    def get_running(self, xpath=None):
+    def get_running(self, path=None):
         """Wrapper function to get running datastore"""
-        return self.get_datastore("running", xpath)
+        return self.get_datastore("running", path)
 
-    def get_operational(self, xpath=None, parse=True):
+    def get_operational(self, path=None, parse=True):
         """Wrapper function to get operational datastore"""
-        return self.get_datastore("operational", xpath, parse)
+        return self.get_datastore("operational", path, parse)
 
-    def get_factory(self, xpath=None):
+    def get_factory(self, path=None):
         """Wrapper function to get factory defaults"""
-        return self.get_datastore("factory-default", xpath)
+        return self.get_datastore("factory-default", path)
 
     def post_datastore(self, datastore, data):
         """Actually send a POST to RESTCONF server"""
@@ -226,11 +246,10 @@ class Device(Transport):
         """NETCONF compat function, just wraps get_data"""
         return self.get_data(xpath, parse)
 
-    def get_data(self, xpath=None, key=None, value=None, parse=True):
+    def get_data(self, xpath=None, parse=True):
         """Get operational data"""
-        if key:
-            xpath=f"{xpath}={value}"
-        data=self.get_operational(xpath, parse)
+        uri=xpath_to_uri(xpath) if xpath is not None else None
+        data=self.get_operational(uri, parse)
         if parse==False:
             return data
 
@@ -258,7 +277,8 @@ class Device(Transport):
         return self.call_rpc("infix-factory-default:factory-default")
 
     def call_action(self, xpath):
-        url=f"{self.restconf_url}/data{xpath}"
+        path=xpath_to_uri(xpath)
+        url=f"{self.restconf_url}/data{path}"
         response=requests_workaround_post(
             url,
             json=None,
@@ -268,15 +288,6 @@ class Device(Transport):
         response.raise_for_status()  # Raise an exception for HTTP errors
         return response.content
 
-    def get_xpath(self,  xpath, key, value, path=None):
-        """Compose complete XPath to a YANG node"""
-        xpath=f"{xpath}={value}"
-
-        if not path is None:
-            xpath=f"{xpath}/{path}"
-
-        return xpath
-
     def get_current_time_with_offset(self):
         """Parse the time in the raw reply, before it has been passed through libyang, there all offset is lost"""
         data=self.get_data("/ietf-system:system-state/clock", parse=False)
@@ -285,7 +296,7 @@ class Device(Transport):
 
     def get_iface(self, iface):
         """Fetch target dict for iface and extract param from JSON"""
-        content=self.get_data(self.get_iface_xpath(iface))
+        content=self.get_data(f"/ietf-interfaces:interfaces/interface={iface}")
         interface=content.get("interfaces", {}).get("interface", None)
         if interface is None:
             return None
@@ -295,7 +306,7 @@ class Device(Transport):
 
     def delete_xpath(self, xpath):
         """Delete XPath from running config"""
-        path=f"/ds/ietf-datastores:running/{xpath}"
+        path=f"/ds/ietf-datastores:running/{xpath_to_uri(xpath)}"
         url=f"{self.restconf_url}{path}"
         response=requests_workaround_delete(url, headers=self.headers, auth=self.auth, verify=False)
         response.raise_for_status()  # Raise an exception for HTTP errors

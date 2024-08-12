@@ -2,6 +2,13 @@
 Fetch interface status from remote device.
 """
 
+def get_iface_xpath(iface, path=None):
+    """Compose complete XPath to a YANG node in /ietf-interfaces"""
+    xpath=f"/ietf-interfaces:interfaces/interface[name='{iface}']"
+    if not path is None:
+        xpath=f"{xpath}/{path}"
+    return xpath
+
 def _iface_extract_param(json_content, param):
     """Returns (extracted) value for parameter 'param'"""
     interfaces = json_content.get('interfaces')
@@ -17,7 +24,7 @@ def _iface_extract_param(json_content, param):
 
 def _iface_get_param(target, iface, param=None):
     """Fetch target dict for iface and extract param from JSON"""
-    content = target.get_data(target.get_iface_xpath(iface, param))
+    content = target.get_data(get_iface_xpath(iface, param))
     return _iface_extract_param(content, param)
 
 def interface_exist(target, iface):

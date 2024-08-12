@@ -15,6 +15,7 @@ import libyang
 import lxml
 import netconf_client.connect
 import netconf_client.ncclient
+import infamy.iface as iface
 from infamy.transport import Transport
 from netconf_client.error import RpcError
 
@@ -381,31 +382,19 @@ class Device(Transport):
         with open(outdir+"/"+schema["filename"], "w") as f:
             f.write(data.schema)
 
-    def get_xpath(self, xpath, key, value, path=None):
-        """Compose complete XPath to a YANG node in /ietf-interfaces"""
-        xpath = f"{xpath}[{key}='{value}']"
-        if not path is None:
-            xpath=f"{xpath}/{path}"
-        return xpath
-
-    def get_iface_xpath(self, iface, path=None):
-        """Compose complete XPath to a YANG node in /ietf-interfaces"""
-        xpath = f"/ietf-interfaces:interfaces/interface"
-        return self.get_xpath(xpath, "name", iface, path)
-
-    def get_iface(self, iface):
+    def get_iface(self, name):
         """Fetch target dict for iface and extract param from JSON"""
-        content = self.get_data(self.get_iface_xpath(iface))
+        content = self.get_data(iface.get_iface_xpath(name))
         interface=content.get("interfaces", {}).get("interface", None)
 
         if interface is None:
             return None
 
         # Restconf (rousette) address by id and netconf (netopper2) address by name
-        return interface[iface]
+        return interface[name]
 
     def delete_xpath(self, xpath):
-        # Split out the model and the container from xpath
+        # Split out the model and the container from xpath'
         pattern = r"^/(?P<module>[^:]+):(?P<path>[^/]+)"
         match = re.search(pattern, xpath)
         module = match.group('module')
