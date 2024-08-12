@@ -33,7 +33,7 @@ for tgt in "${boot_targets}"; do
 	setexpr ixmenu_n ${ixmenu_n} + 1
 
 	if load ${devtype} ${devnum}:${auxpart} ${loadaddr} /uboot.env; then
-	    env import -b ${loadaddr} ${filesize} BOOT_ORDER DEBUG
+	    env import -b ${loadaddr} ${filesize} BOOT_ORDER DEBUG ethact
 	fi
 
 	if test -n "${DEBUG}"; then
