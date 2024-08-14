@@ -438,9 +438,14 @@ def find_iface(_ifaces, name):
 
     return False
 
-
 def version_sort(iface):
     return [int(x) if x.isdigit() else x for x in re.split(r'(\d+)', iface['name'])]
+
+def print_interface(iface):
+    iface.pr_name()
+    iface.pr_proto_eth()
+    iface.pr_proto_ipv4()
+    iface.pr_proto_ipv6()
 
 def pr_interface_list(json):
     hdr = (f"{'INTERFACE':<{Pad.iface}}"
@@ -452,7 +457,14 @@ def pr_interface_list(json):
 
     ifaces = sorted(json["ietf-interfaces:interfaces"]["interface"], key=version_sort)
 
+    iface = find_iface(ifaces, "lo")
+    if iface:
+        print_interface(iface)
+
     for iface in [Iface(data) for data in ifaces]:
+        if iface.name == "lo":
+            continue
+
         if iface.is_bridge():
             iface.pr_bridge(ifaces)
             continue
@@ -470,11 +482,7 @@ def pr_interface_list(json):
             continue
         if iface.bridge:
             continue
-
-        iface.pr_name()
-        iface.pr_proto_eth()
-        iface.pr_proto_ipv4()
-        iface.pr_proto_ipv6()
+        print_interface(iface)
 
 def show_interfaces(json, name):
     if name:
