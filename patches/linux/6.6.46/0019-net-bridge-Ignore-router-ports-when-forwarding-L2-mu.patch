@@ -1,0 +1,37 @@
+From 6f1699021fcc0940f1632febe6769a5b08856153 Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Tue, 5 Mar 2024 06:44:41 +0100
+Subject: [PATCH 19/33] net: bridge: Ignore router ports when forwarding L2
+ multicast
+Organization: Addiva Elektronik
+
+Multicast router ports are either statically configured or learned from
+control protocol traffic (IGMP/MLD/PIM).  These protocols regulate IP
+multicast -- MAC multicast should always be forwarded through flooding
+of unknown multicast or using permanent MDB entries.
+
+Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ net/bridge/br_private.h | 5 ++++-
+ 1 file changed, 4 insertions(+), 1 deletion(-)
+
+diff --git a/net/bridge/br_private.h b/net/bridge/br_private.h
+index 8e12efdba2e6..5142decee8e7 100644
+--- a/net/bridge/br_private.h
++++ b/net/bridge/br_private.h
+@@ -1076,7 +1076,10 @@ br_multicast_get_first_rport_node(struct net_bridge_mcast *brmctx,
+ 	if (skb->protocol == htons(ETH_P_IPV6))
+ 		return rcu_dereference(hlist_first_rcu(&brmctx->ip6_mc_router_list));
+ #endif
+-	return rcu_dereference(hlist_first_rcu(&brmctx->ip4_mc_router_list));
++	if (skb->protocol == htons(ETH_P_IP))
++		return rcu_dereference(hlist_first_rcu(&brmctx->ip4_mc_router_list));
++
++	return NULL;
+ }
+ 
+ static inline struct net_bridge_port *
+-- 
+2.43.0
+

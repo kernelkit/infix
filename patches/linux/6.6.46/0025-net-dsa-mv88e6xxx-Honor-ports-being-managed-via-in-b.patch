@@ -1,0 +1,46 @@
+From 966ef6027b1b2797c069adfe0cc274f1c72b80cb Mon Sep 17 00:00:00 2001
+From: Tobias Waldekranz <tobias@waldekranz.com>
+Date: Mon, 22 Apr 2024 23:18:01 +0200
+Subject: [PATCH 25/33] net: dsa: mv88e6xxx: Honor ports being managed via
+ in-band-status
+Organization: Addiva Elektronik
+
+Keep all link parameters in their unforced states when the port is
+declared as being managed via in-band-status, and let the MAC
+configure itself, via whatever method is being used (e.g. SGMII or
+USXGMII autoneg)
+
+This state is the default set up by mv88e6xxx_port_setup_mac(), so all
+we have to do is to make the phylink MAC callbacks no-ops in cases
+when in-band-status is being used.
+---
+ drivers/net/dsa/mv88e6xxx/chip.c | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/drivers/net/dsa/mv88e6xxx/chip.c b/drivers/net/dsa/mv88e6xxx/chip.c
+index 62e0a4e5a9bb..58ba6af586a3 100644
+--- a/drivers/net/dsa/mv88e6xxx/chip.c
++++ b/drivers/net/dsa/mv88e6xxx/chip.c
+@@ -945,6 +945,9 @@ static void mv88e6xxx_mac_link_down(struct dsa_switch *ds, int port,
+ 	const struct mv88e6xxx_ops *ops;
+ 	int err = 0;
+ 
++	if (mode == MLO_AN_INBAND)
++		return;
++
+ 	ops = chip->info->ops;
+ 
+ 	mv88e6xxx_reg_lock(chip);
+@@ -975,6 +978,9 @@ static void mv88e6xxx_mac_link_up(struct dsa_switch *ds, int port,
+ 	const struct mv88e6xxx_ops *ops;
+ 	int err = 0;
+ 
++	if (mode == MLO_AN_INBAND)
++		return;
++
+ 	ops = chip->info->ops;
+ 
+ 	mv88e6xxx_reg_lock(chip);
+-- 
+2.43.0
+
