@@ -1,0 +1,30 @@
+From cd513e5fa94fe4e595248f10e2c819fa4a5faf5e Mon Sep 17 00:00:00 2001
+From: Tobias Waldekranz <tobias@waldekranz.com>
+Date: Tue, 12 Mar 2024 10:27:24 +0100
+Subject: [PATCH 11/33] net: dsa: mv88e6xxx: Fix timeout on waiting for PPU on
+ 6393X
+Organization: Addiva Elektronik
+
+In a multi-chip setup, delays of up to 750ms are observed before the
+device (6393X) signals completion of PPU initialization (Global 1,
+register 0, bit 15). Therefore, increase the timeout threshold to 1s.
+---
+ drivers/net/dsa/mv88e6xxx/chip.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/net/dsa/mv88e6xxx/chip.c b/drivers/net/dsa/mv88e6xxx/chip.c
+index 24c5663b5944..bd3ef8deb23d 100644
+--- a/drivers/net/dsa/mv88e6xxx/chip.c
++++ b/drivers/net/dsa/mv88e6xxx/chip.c
+@@ -87,7 +87,7 @@ int mv88e6xxx_write(struct mv88e6xxx_chip *chip, int addr, int reg, u16 val)
+ int mv88e6xxx_wait_mask(struct mv88e6xxx_chip *chip, int addr, int reg,
+ 			u16 mask, u16 val)
+ {
+-	const unsigned long timeout = jiffies + msecs_to_jiffies(50);
++	const unsigned long timeout = jiffies + msecs_to_jiffies(1000);
+ 	u16 data;
+ 	int err;
+ 	int i;
+-- 
+2.43.0
+

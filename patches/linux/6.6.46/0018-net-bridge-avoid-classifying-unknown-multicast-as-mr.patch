@@ -1,0 +1,236 @@
+From e597f57d5d9dc1c1b009b3a7d0659910f63e0c90 Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Mon, 4 Mar 2024 16:47:28 +0100
+Subject: [PATCH 18/33] net: bridge: avoid classifying unknown multicast as
+ mrouters_only
+Organization: Addiva Elektronik
+
+Unknown multicast, MAC/IPv4/IPv6, should always be flooded according to
+the per-port mcast_flood setting, as well as to detected and configured
+mcast_router ports.
+
+This patch drops the mrouters_only classifier of unknown IP multicast
+and moves the flow handling from br_multicast_flood() to br_flood().
+This in turn means br_flood() must know about multicast router ports.
+Because a multicast router should always receive both known and unknown
+multicast.
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ include/uapi/linux/if_bridge.h |  1 +
+ net/bridge/br.c                |  5 +++++
+ net/bridge/br_device.c         | 10 ++++++----
+ net/bridge/br_forward.c        | 14 ++++++++++++--
+ net/bridge/br_input.c          |  2 +-
+ net/bridge/br_multicast.c      | 11 +++++++++--
+ net/bridge/br_private.h        | 18 ++++++++++++++++--
+ 7 files changed, 50 insertions(+), 11 deletions(-)
+
+diff --git a/include/uapi/linux/if_bridge.h b/include/uapi/linux/if_bridge.h
+index f95326fce6bb..2b1320025ec2 100644
+--- a/include/uapi/linux/if_bridge.h
++++ b/include/uapi/linux/if_bridge.h
+@@ -811,6 +811,7 @@ enum br_boolopt_id {
+ 	BR_BOOLOPT_NO_LL_LEARN,
+ 	BR_BOOLOPT_MCAST_VLAN_SNOOPING,
+ 	BR_BOOLOPT_MST_ENABLE,
++	BR_BOOLOPT_MCAST_FLOOD_ALWAYS,
+ 	BR_BOOLOPT_MAX
+ };
+ 
+diff --git a/net/bridge/br.c b/net/bridge/br.c
+index a6e94ceb7c9a..44c12cb210b5 100644
+--- a/net/bridge/br.c
++++ b/net/bridge/br.c
+@@ -277,6 +277,9 @@ int br_boolopt_toggle(struct net_bridge *br, enum br_boolopt_id opt, bool on,
+ 	case BR_BOOLOPT_MST_ENABLE:
+ 		err = br_mst_set_enabled(br, on, extack);
+ 		break;
++	case BR_BOOLOPT_MCAST_FLOOD_ALWAYS:
++		br_opt_toggle(br, BROPT_MCAST_FLOOD_ALWAYS, on);
++		break;
+ 	default:
+ 		/* shouldn't be called with unsupported options */
+ 		WARN_ON(1);
+@@ -295,6 +298,8 @@ int br_boolopt_get(const struct net_bridge *br, enum br_boolopt_id opt)
+ 		return br_opt_get(br, BROPT_MCAST_VLAN_SNOOPING_ENABLED);
+ 	case BR_BOOLOPT_MST_ENABLE:
+ 		return br_opt_get(br, BROPT_MST_ENABLED);
++	case BR_BOOLOPT_MCAST_FLOOD_ALWAYS:
++		return br_opt_get(br, BROPT_MCAST_FLOOD_ALWAYS);
+ 	default:
+ 		/* shouldn't be called with unsupported options */
+ 		WARN_ON(1);
+diff --git a/net/bridge/br_device.c b/net/bridge/br_device.c
+index 42d4c3727bf7..d4c2fc34051f 100644
+--- a/net/bridge/br_device.c
++++ b/net/bridge/br_device.c
+@@ -87,10 +87,10 @@ netdev_tx_t br_dev_xmit(struct sk_buff *skb, struct net_device *dev)
+ 
+ 	dest = eth_hdr(skb)->h_dest;
+ 	if (is_broadcast_ether_addr(dest)) {
+-		br_flood(br, skb, BR_PKT_BROADCAST, false, true, vid);
++		br_flood(br, skb, NULL, BR_PKT_BROADCAST, false, true, vid);
+ 	} else if (is_multicast_ether_addr(dest)) {
+ 		if (unlikely(netpoll_tx_running(dev))) {
+-			br_flood(br, skb, BR_PKT_MULTICAST, false, true, vid);
++			br_flood(br, skb, brmctx, BR_PKT_MULTICAST, false, true, vid);
+ 			goto out;
+ 		}
+ 		if (br_multicast_rcv(&brmctx, &pmctx_null, vlan, skb, vid)) {
+@@ -103,11 +103,11 @@ netdev_tx_t br_dev_xmit(struct sk_buff *skb, struct net_device *dev)
+ 		    br_multicast_querier_exists(brmctx, eth_hdr(skb), mdst))
+ 			br_multicast_flood(mdst, skb, brmctx, false, true);
+ 		else
+-			br_flood(br, skb, BR_PKT_MULTICAST, false, true, vid);
++			br_flood(br, skb, brmctx, BR_PKT_MULTICAST, false, true, vid);
+ 	} else if ((dst = br_fdb_find_rcu(br, dest, vid)) != NULL) {
+ 		br_forward(dst->dst, skb, false, true);
+ 	} else {
+-		br_flood(br, skb, BR_PKT_UNICAST, false, true, vid);
++		br_flood(br, skb, NULL, BR_PKT_UNICAST, false, true, vid);
+ 	}
+ out:
+ 	rcu_read_unlock();
+@@ -537,6 +537,8 @@ void br_dev_setup(struct net_device *dev)
+ 	br->bridge_ageing_time = br->ageing_time = BR_DEFAULT_AGEING_TIME;
+ 	dev->max_mtu = ETH_MAX_MTU;
+ 
++	br_opt_toggle(br, BROPT_MCAST_FLOOD_ALWAYS, false);
++
+ 	br_netfilter_rtable_init(br);
+ 	br_stp_timer_init(br);
+ 	br_multicast_init(br);
+diff --git a/net/bridge/br_forward.c b/net/bridge/br_forward.c
+index e19b583ff2c6..1094364d96e0 100644
+--- a/net/bridge/br_forward.c
++++ b/net/bridge/br_forward.c
+@@ -198,14 +198,19 @@ static struct net_bridge_port *maybe_deliver(
+ 
+ /* called under rcu_read_lock */
+ void br_flood(struct net_bridge *br, struct sk_buff *skb,
+-	      enum br_pkt_type pkt_type, bool local_rcv, bool local_orig,
+-	      u16 vid)
++	      struct net_bridge_mcast *brmctx, enum br_pkt_type pkt_type,
++	      bool local_rcv, bool local_orig, u16 vid)
+ {
++	struct net_bridge_port *rport = NULL;
+ 	struct net_bridge_port *prev = NULL;
++	struct hlist_node *rp = NULL;
+ 	struct net_bridge_port *p;
+ 
+ 	br_tc_skb_miss_set(skb, pkt_type != BR_PKT_BROADCAST);
+ 
++	if (pkt_type == BR_PKT_MULTICAST)
++		rp = br_multicast_get_first_rport_node(brmctx, skb);
++
+ 	list_for_each_entry_rcu(p, &br->port_list, list) {
+ 		/* Do not flood unicast traffic to ports that turn it off, nor
+ 		 * other traffic if flood off, except for traffic we originate
+@@ -216,6 +221,11 @@ void br_flood(struct net_bridge *br, struct sk_buff *skb,
+ 				continue;
+ 			break;
+ 		case BR_PKT_MULTICAST:
++			rport = br_multicast_rport_from_node_skb(rp, skb);
++			if (rport == p) {
++				rp = rcu_dereference(hlist_next_rcu(rp));
++				break;
++			}
+ 			if (!(p->flags & BR_MCAST_FLOOD) && skb->dev != br->dev)
+ 				continue;
+ 			break;
+diff --git a/net/bridge/br_input.c b/net/bridge/br_input.c
+index e09000e38d07..b3247bd4f8de 100644
+--- a/net/bridge/br_input.c
++++ b/net/bridge/br_input.c
+@@ -212,7 +212,7 @@ int br_handle_frame_finish(struct net *net, struct sock *sk, struct sk_buff *skb
+ 		br_forward(dst->dst, skb, local_rcv, false);
+ 	} else {
+ 		if (!mcast_hit)
+-			br_flood(br, skb, pkt_type, local_rcv, false, vid);
++			br_flood(br, skb, brmctx, pkt_type, local_rcv, false, vid);
+ 		else
+ 			br_multicast_flood(mdst, skb, brmctx, local_rcv, false);
+ 	}
+diff --git a/net/bridge/br_multicast.c b/net/bridge/br_multicast.c
+index c38244d60ff8..8de12a235095 100644
+--- a/net/bridge/br_multicast.c
++++ b/net/bridge/br_multicast.c
+@@ -3773,6 +3773,11 @@ static void br_multicast_err_count(const struct net_bridge *br,
+ 	u64_stats_update_end(&pstats->syncp);
+ }
+ 
++static bool br_flood_mrouters(const struct net_bridge *br)
++{
++	return br_opt_get(br, BROPT_MCAST_FLOOD_ALWAYS) ? false : true;
++}
++
+ static void br_multicast_pim(struct net_bridge_mcast *brmctx,
+ 			     struct net_bridge_mcast_port *pmctx,
+ 			     const struct sk_buff *skb)
+@@ -3819,7 +3824,8 @@ static int br_multicast_ipv4_rcv(struct net_bridge_mcast *brmctx,
+ 
+ 	if (err == -ENOMSG) {
+ 		if (!ipv4_is_local_multicast(ip_hdr(skb)->daddr)) {
+-			BR_INPUT_SKB_CB(skb)->mrouters_only = 1;
++			BR_INPUT_SKB_CB(skb)->mrouters_only =
++				br_flood_mrouters(brmctx->br);
+ 		} else if (pim_ipv4_all_pim_routers(ip_hdr(skb)->daddr)) {
+ 			if (ip_hdr(skb)->protocol == IPPROTO_PIM)
+ 				br_multicast_pim(brmctx, pmctx, skb);
+@@ -3888,7 +3894,8 @@ static int br_multicast_ipv6_rcv(struct net_bridge_mcast *brmctx,
+ 
+ 	if (err == -ENOMSG || err == -ENODATA) {
+ 		if (!ipv6_addr_is_ll_all_nodes(&ipv6_hdr(skb)->daddr))
+-			BR_INPUT_SKB_CB(skb)->mrouters_only = 1;
++			BR_INPUT_SKB_CB(skb)->mrouters_only =
++				br_flood_mrouters(brmctx->br);
+ 		if (err == -ENODATA &&
+ 		    ipv6_addr_is_all_snoopers(&ipv6_hdr(skb)->daddr))
+ 			br_ip6_multicast_mrd_rcv(brmctx, pmctx, skb);
+diff --git a/net/bridge/br_private.h b/net/bridge/br_private.h
+index e4f1a08322da..8e12efdba2e6 100644
+--- a/net/bridge/br_private.h
++++ b/net/bridge/br_private.h
+@@ -480,6 +480,7 @@ enum net_bridge_opts {
+ 	BROPT_VLAN_BRIDGE_BINDING,
+ 	BROPT_MCAST_VLAN_SNOOPING_ENABLED,
+ 	BROPT_MST_ENABLED,
++	BROPT_MCAST_FLOOD_ALWAYS,
+ };
+ 
+ struct net_bridge {
+@@ -881,8 +882,8 @@ void br_forward(const struct net_bridge_port *to, struct sk_buff *skb,
+ 		bool local_rcv, bool local_orig);
+ int br_forward_finish(struct net *net, struct sock *sk, struct sk_buff *skb);
+ void br_flood(struct net_bridge *br, struct sk_buff *skb,
+-	      enum br_pkt_type pkt_type, bool local_rcv, bool local_orig,
+-	      u16 vid);
++	      struct net_bridge_mcast *brmctx, enum br_pkt_type pkt_type,
++	      bool local_rcv, bool local_orig, u16 vid);
+ 
+ /* return true if both source port and dest port are isolated */
+ static inline bool br_skb_isolated(const struct net_bridge_port *to,
+@@ -1397,6 +1398,19 @@ static inline void br_multicast_flood(struct net_bridge_mdb_entry *mdst,
+ {
+ }
+ 
++static inline struct hlist_node *
++br_multicast_get_first_rport_node(struct net_bridge_mcast *brmctx,
++				  struct sk_buff *skb)
++{
++	return NULL;
++}
++
++static inline struct net_bridge_port *
++br_multicast_rport_from_node_skb(struct hlist_node *rp, struct sk_buff *skb)
++{
++	return NULL;
++}
++
+ static inline bool br_multicast_is_router(struct net_bridge_mcast *brmctx,
+ 					  struct sk_buff *skb)
+ {
+-- 
+2.43.0
+

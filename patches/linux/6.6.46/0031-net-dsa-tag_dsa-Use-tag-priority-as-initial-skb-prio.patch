@@ -1,0 +1,46 @@
+From 1f574c5fedddd1e20c72617d619cc5c03c7ded51 Mon Sep 17 00:00:00 2001
+From: Tobias Waldekranz <tobias@waldekranz.com>
+Date: Tue, 28 May 2024 10:38:42 +0200
+Subject: [PATCH 31/33] net: dsa: tag_dsa: Use tag priority as initial
+ skb->priority
+Organization: Addiva Elektronik
+
+Use the 3-bit priority field from the DSA tag as the initial packet
+priority on ingress to the CPU.
+
+These bits contain the frame priority (FPri) of the packet. Barring
+any non-standard policy configuration, this corresponds to:
+
+1. The original PCP bits if the packet is received with a VLAN tag
+2. ...or the the 3 MSBs of the DSCP field, if it is an IP packet
+3. ...otherwise 0
+
+Ideally we could then map this priority to an internal one, like we
+can do with an "ingress-qos-map" on VLAN interfaces. Until that is
+implemented, support the setup that is likely to be the most common; a
+1:1 mapping from FPri to skb->priority.
+---
+ net/dsa/tag_dsa.c | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/net/dsa/tag_dsa.c b/net/dsa/tag_dsa.c
+index 1fd7fa26db64..284bc65d1f63 100644
+--- a/net/dsa/tag_dsa.c
++++ b/net/dsa/tag_dsa.c
+@@ -323,6 +323,13 @@ static struct sk_buff *dsa_rcv_ll(struct sk_buff *skb, struct net_device *dev,
+ 		dsa_strip_etype_header(skb, DSA_HLEN + extra);
+ 	}
+ 
++	/* Ideally we would have a way of configuring the mapping of PCP
++	 * bits to skb->priority on DSA ports (like ingress-qos-map for
++	 * vlan interfaces). For now, assume that a 1:1 mapping is more
++	 * useful than ignoring the priority altogether.
++	 */
++	skb->priority = dsa_header[2] >> 5;
++
+ 	return skb;
+ }
+ 
+-- 
+2.43.0
+
