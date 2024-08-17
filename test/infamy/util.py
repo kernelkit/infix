@@ -4,6 +4,7 @@ import infamy.neigh
 import infamy.netconf as netconf
 import infamy.restconf as restconf
 
+
 class ParallelFn(threading.Thread):
     def __init__(self, group=None, target=None, name=None,
                  args=(), kwargs={}, Verbose=None):
@@ -26,10 +27,12 @@ class ParallelFn(threading.Thread):
 
         return self._return
 
+
 def parallel(*fns):
     ths = [ParallelFn(target=fn) for fn in fns]
     [th.start() for th in ths]
     return [th.join() for th in ths]
+
 
 def until(fn, attempts=10, interval=1):
     for attempt in range(attempts):
@@ -39,6 +42,7 @@ def until(fn, attempts=10, interval=1):
         time.sleep(interval)
 
     raise Exception("Expected condition did not materialize")
+
 
 def wait_boot(target):
     until(lambda: target.reachable() == False, attempts = 100)
@@ -54,3 +58,10 @@ def wait_boot(target):
     until(lambda: restconf.restconf_reachable(neigh, target.location.password) == True, attempts = 300)
 
     return True
+
+
+def warn(msg):
+    """Print a warning message in yellow to stderr."""
+    YELLOW = "\033[93m"
+    RST = "\033[0m"
+    print(f"{YELLOW}warn - {msg}{RST}")
