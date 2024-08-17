@@ -62,15 +62,6 @@ def json_get_yang_origin(addr):
     return xlate.get(proto, "other")
 
 
-def getitem(data, key):
-    """Get sub-object from an object"""
-    while key:
-        data = data[key[0]]
-        key = key[1:]
-
-    return data
-
-
 def get_proc_value(procfile):
     """Return contents of /proc file, or None"""
     try:
@@ -111,7 +102,7 @@ def insert(obj, *path_and_value):
     curr[path[-1]] = value
 
 
-def run_cmd(cmd, testfile):
+def run_cmd(cmd, testfile, default=None):
     """Run a command (array of args) and return an array of lines"""
 
     if TESTPATH and testfile:
@@ -122,10 +113,12 @@ def run_cmd(cmd, testfile):
         return output.splitlines()
     except subprocess.CalledProcessError as err:
         logger.error(f"{err}")
-        sys.exit(1)
+        if default is not None:
+            return default
+        raise
 
 
-def run_json_cmd(cmd, testfile):
+def run_json_cmd(cmd, testfile, default=None):
     """Run a command (array of args) with JSON output and return the JSON"""
 
     if TESTPATH and testfile:
@@ -138,11 +131,15 @@ def run_json_cmd(cmd, testfile):
         data = json.loads(output)
     except subprocess.CalledProcessError as err:
         logger.error(f"{err}")
-        data = {}
+        if default is not None:
+            return default
+        raise
     except json.JSONDecodeError as err:
         logger.error(f"failed parsing JSON output of command: {' '.join(cmd)}"
                      f", error: {err}")
-        sys.exit(1)
+        if default is not None:
+            return default
+        raise
     return data
 
 
@@ -466,19 +463,21 @@ def get_bridge_port_stp_state(ifname):
     return None
 
 
-def container_inspect(name, key):
-    """Call podman inspect {name}, return object at {path} or None"""
+def container_inspect(name):
+    """Call podman inspect {name}, return object at {path} or None."""
     cmd = ['podman', 'inspect', name]
-    raw = run_json_cmd(cmd, "")
-
-    return getitem(raw[0], key)
+    try:
+        return run_json_cmd(cmd, "", default=[])
+    except Exception as e:
+        logging.error(f"Error running podman inspect: {e}")
+        return []
 
 
 def add_container(containers):
     """We list *all* containers, not just those in the configuraion."""
     cmd = ['podman', 'ps', '-a', '--format=json']
 
-    raw = run_json_cmd(cmd, "")
+    raw = run_json_cmd(cmd, "", default=[])
     for entry in raw:
         running = entry["State"] == "running"
 
@@ -497,8 +496,14 @@ def add_container(containers):
 
         # The 'podman ps' command lists ports even in host mode, but
         # that's not applicable, so skip networks and port forwardings
-        networks = container_inspect(container["name"], ("NetworkSettings", "Networks"))
-        if "host" in networks:
+        cont = container_inspect(container["name"])
+        if cont and isinstance(cont, list) and len(cont) > 0:
+            cont = cont[0]
+        else:
+            cont = {}
+
+        networks = cont.get("NetworkSettings", {}).get("Networks")
+        if networks and "host" in networks:
             container["network"] = {"host": True}
         else:
             container["network"] = {
