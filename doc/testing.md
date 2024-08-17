@@ -256,13 +256,20 @@ the whole suite) with identical topology mappings:
 
     $ make PYTHONHASHSEED=3773822171 INFIX_TESTS=case/ietf_system/hostname.py test
 
-### Determinstic use of communication protocol (NETCONF/RESTCONF)
+### Deterministic Transport Protocol
 
-By default the protocol will be chosen randomly. If you supply a
-`PYTHONHASHSEED` as described above, you will get the same protocol
-chosen. If you want to choose the communcation protocol:
+By default, the communication transport protocol (NETCONF/RESTCONF) is
+chosen randomly.  If you supply a `PYTHONHASHSEED` as described above,
+you get the same protocol used for that hash.  But if you want to choose
+the protocol, add extra arguments to Infamy:
 
     $ make INFAMY_EXTRA_ARGS="--transport=restconf" INFIX_TESTS=case/ietf_system/hostname.py test
+
+or, when running interactively:
+
+    $ make test-sh
+    09:08:17 infamy0:test # ./9pm/9pm.py -o "--transport=restconf" case/ietf_system/hostname.py
+
 
 [9PM]:    https://github.com/rical/9pm
 [Qeneth]: https://github.com/wkz/qeneth
