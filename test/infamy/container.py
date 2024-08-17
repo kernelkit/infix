@@ -1,4 +1,7 @@
 """Manage Infix containers"""
+import time
+from infamy.util import warn
+
 
 class Container:
     """Helper methods"""
@@ -32,4 +35,14 @@ class Container:
         return False
 
     def action(self, name, act):
-        return self.system.call_action(f"/infix-containers:containers/container[name='{name}']/{act}")
+        """Call container action (context RPC), retry three times."""
+        xpath = f"/infix-containers:containers/container[name='{name}']/{act}"
+
+        for attempt in range(3):
+            try:
+                return self.system.call_action(xpath)
+            except Exception as e:
+                warn(f"failed {act} {name} ({attempt + 1}/3): {e}")
+                time.sleep(1)
+                if attempt == 2:
+                    raise
