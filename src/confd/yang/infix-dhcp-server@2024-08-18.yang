@@ -1,0 +1,203 @@
+module infix-dhcp-server {
+  yang-version 1.1;
+  namespace "urn:infix:params:xml:ns:yang:infix-dhcp-server";
+  prefix dhc4-srv;
+
+  import ietf-inet-types {
+    prefix inet;
+  }
+  import ietf-interfaces {
+    prefix if;
+  }
+  import ietf-yang-types {
+    prefix yang;
+  }
+
+  organization "KernelKit";
+  contact      "kernelkit@googlegroups.com";
+  description  "YANG model for configuring a DHCPv4 server";
+
+  revision 2024-08-18 {
+    description "Initial revision adapted for Infix from DHCPv6 model.";
+    reference   "internal";
+  }
+
+  typedef dhcp-options {
+    type union {
+      type string;
+      type enumeration {
+        enum log-server {
+          value 7;
+          description "Name or IPv address of remote syslog server.";
+        }
+        enum router {
+          value 3;
+          description "Default route(s)";
+        }
+        enum dns {
+          value 6;
+          description "DNS server";
+        }
+        enum hostname {
+          value 12;
+          description "Hostname";
+        }
+        enum domain {
+          value 15;
+          description "Domain name";
+        }
+        enum ntpsrv {
+          value 42;
+          description "NTP server";
+        }
+        enum search {
+          value 119;
+          description "Domain search list";
+        }
+        enum staticroutes {
+          value 121;
+          description "Classless static routes";
+        }
+      }
+    }
+    description "Supported DHCP client request options";
+  }
+
+  typedef dhcp-lease-time {
+    type uint32 {
+      range "120..max";
+    }
+    units "seconds";
+    default "3600"; // 1 hour
+    description "The lease time in seconds, with a minimum of 2 minutes (120 seconds).";
+  }
+
+  typedef infinite-lease-time {
+    type union {
+      type dhcp-lease-time;
+      type enumeration {
+        enum infinite {
+          description "Indicates an infinite lease time.";
+        }
+      }
+    }
+    description "The lease time for a static binding, with an option for infinite lease time.";
+  }
+
+  container dhcp-server {
+    description "Top-level container for DHCP server configuration.";
+
+    leaf enable {
+      description "Enable or disable the DHCP server.";
+      type boolean;
+    }
+
+    list option {
+      key "name";
+      description "List of global DHCP options to be applied as defaults for all pools.";
+
+      leaf name {
+        description "DHCP option name.";
+        type dhcp-options;
+      }
+
+      leaf value {
+        description "Option value.";
+        type string;
+      }
+    }
+
+    list pool {
+      key "name";
+      description "List of address pools managed by the DHCP server.";
+
+      leaf name {
+        description "The name of the address pool.";
+        type string;
+      }
+
+      leaf start-address {
+        description "The start address of the DHCP address pool.";
+        type inet:ipv4-address;
+      }
+
+      leaf end-address {
+        description "The end address of the DHCP address pool.";
+        type inet:ipv4-address;
+      }
+
+      leaf subnet-mask {
+        description "Subnet mask provided to clients in this pool.";
+        type inet:ipv4-address;
+      }
+
+      leaf lease-time {
+        description "Lease time for DHCP addresses.";
+        type dhcp-lease-time;
+      }
+
+      leaf interface {
+        description "Optional interface to which this pool is bound.";
+        type if:interface-ref;
+      }
+
+      list option {
+        key "name";
+        description "List of DHCP options specific to this pool.";
+
+        leaf name {
+          description "DHCP option name.";
+          type dhcp-options;
+        }
+
+        leaf value {
+          description "Option value.";
+          type string;
+        }
+      }
+    }
+
+    list host {
+      key "identifier";
+      description "List of static bindings based on MAC address, client identifier, or other identifiers.";
+
+      leaf identifier {
+        description "The MAC address, clientid, or other identifier of the client.";
+        type union {
+          type yang:mac-address;
+          type string; // clientid or other identifiers
+        }
+      }
+
+      leaf ip-address {
+        description "The IPv4 address to assign to the client.";
+        type inet:ipv4-address;
+      }
+
+      leaf hostname {
+        description "Optional hostname to assign with the lease.";
+        type string;
+      }
+
+      leaf lease-time {
+        description "Specific lease time for this static binding, including the option for infinite lease time.";
+        type infinite-lease-time;
+      }
+
+      list option {
+        key "name";
+        description "List of DHCP options specific to this static host.";
+
+        leaf name {
+          description "DHCP option name.";
+          type dhcp-options;
+        }
+
+        leaf value {
+          description "Option value.";
+          type string;
+        }
+      }
+    }
+  }
+}
