@@ -1,3 +1,13 @@
+* TODO dhcp-server
+
+ - Refactor options again, need to specify each with their own unique
+   type.  Common is list of IP addresses, or list of string/names.
+ - DHCP relay considerations, i.e., Option 82.  Add relay at the same
+   time?  Remember to document that BOOTP is designed not to be relayed.
+ - What's up with no interface for subnets in WeOS/Kea?
+ - Should we have a global list of interfaces to act on?
+ - Should we add support for TFTP server and PXE too?
+
 * TODO doc: User Guide
 
 - Feature set and scope, e.g.
