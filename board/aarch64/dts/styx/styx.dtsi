@@ -92,7 +92,7 @@
 		compatible = "atmel,24c256";
                 reg = <0x50>;
 
-		infix,board = "cpu";
+		infix,board = "product";
 		infix,trusted;
 
 		nvmem-layout {
