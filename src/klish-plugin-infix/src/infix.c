@@ -291,9 +291,11 @@ int infix_datastore(kcontext_t *ctx)
 	if (!strcmp(ds, "src")) {
 		puts("factory-config");
 		puts("running-config");
+		puts("startup-config");
 	}
 	if (!strcmp(ds, "dst")) {
 		puts("running-config");
+		puts("startup-config");
 	}
 
 done:
