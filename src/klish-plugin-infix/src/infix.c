@@ -13,6 +13,7 @@
 #include <sysrepo.h>
 #include <sysrepo_types.h>
 #include <sysrepo/values.h>
+#include <sysrepo/netconf_acm.h>
 
 #include <klish/kplugin.h>
 #include <klish/ksession.h>
@@ -434,9 +435,12 @@ int infix_copy(kcontext_t *ctx)
 			goto err;
 		}
 
+		sr_log_syslog("klishd", SR_LL_WRN);
+
 		if (sr_session_start(conn, dstds->datastore, &sess)) {
 			fprintf(stderr, ERRMSG "unable to open transaction to %s\n", dst);
 		} else {
+			sr_nacm_set_user(sess, username);
 			rc = sr_copy_config(sess, NULL, srcds->datastore, 0);
 			if (rc)
 				emsg(sess, ERRMSG "unable to copy configuration, err %d: %s\n",
