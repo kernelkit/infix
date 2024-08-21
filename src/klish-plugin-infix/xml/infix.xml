@@ -145,11 +145,11 @@
 </COMMAND>
 
 <COMMAND name="poweroff" help="Poweroff system (system policy may yield reboot)">
-  <ACTION sym="rpc@infix" ptype="STRING">/ietf-system:system-shutdown</ACTION>
+  <ACTION sym="srp_rpc@sysrepo" ptype="STRING">/ietf-system:system-shutdown</ACTION>
 </COMMAND>
 
 <COMMAND name="reboot" help="Reboot system">
-  <ACTION sym="rpc@infix" ptype="STRING">/ietf-system:system-restart</ACTION>
+  <ACTION sym="srp_rpc@sysrepo" ptype="STRING">/ietf-system:system-restart</ACTION>
 </COMMAND>
 
 <COMMAND name="exit" help="Exit from CLI (log out)">
@@ -219,7 +219,7 @@
 <COMMAND name="set" help="Set operations, e.g., current date/time" mode="switch">
   <COMMAND name="datetime" help="Set current date and time, ISO-8601 format">
     <PARAM name="current-datetime" ptype="/STRING" help="yyyy-mm-ddThh:mm:ss(Z|+/-hh:mm)"/>
-    <ACTION sym="rpc@infix">/ietf-system:set-current-datetime</ACTION>
+    <ACTION sym="srp_rpc@sysrepo">/ietf-system:set-current-datetime</ACTION>
   </COMMAND>
 </COMMAND>
 
@@ -436,7 +436,7 @@
   </COMMAND>
   <COMMAND name="factory-reset" help="Restore the system to factory default state">
       <ACTION sym="script" in="tty" out="tty" interrupt="true">/bin/yorn "This will restore the device to factory defaults"</ACTION>
-      <ACTION sym="rpc@infix">/ietf-factory-default:factory-reset</ACTION>
+      <ACTION sym="srp_rpc@sysrepo">/ietf-factory-default:factory-reset</ACTION>
   </COMMAND>
 
   <COMMAND name="follow" help="Monitor a log file, use Ctrl-C to abort">
@@ -545,7 +545,7 @@
 </COMMAND>
 
 <COMMAND name="leave" help="Apply candidate to running-config and return to admin-exec">
-  <ACTION sym="commit@infix"/>
+  <ACTION sym="srp_commit@sysrepo"/>
   <ACTION sym="srp_top@sysrepo"/>
   <ACTION sym="nav" exec_on="success">replace main</ACTION>
 </COMMAND>
@@ -601,7 +601,7 @@
 </COMMAND>
 
 <COMMAND name="commit" help="Commit current candidate to running-config">
-  <ACTION sym="commit@infix"/>
+  <ACTION sym="srp_commit@sysrepo"/>
 </COMMAND>
 
 <COMMAND name="reset" help="Reset candidate to running-config">
