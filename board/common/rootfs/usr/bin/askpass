@@ -19,5 +19,5 @@ if [ -z "$OUTPUT" ]; then
 fi
 
 umask 0177
-echo "$password" | mkpasswd > "$OUTPUT"
+echo "$password" | mkpasswd -s > "$OUTPUT"
 exit 0
