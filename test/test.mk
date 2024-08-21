@@ -15,12 +15,14 @@ binaries-x86_64  += OVMF.fd
 binaries := $(foreach bin,$(binaries-$(ARCH)),-f $(BINARIES_DIR)/$(bin))
 
 test:
-	$(test-dir)/env $(mode) $(binaries) $(ninepm) $(INFIX_TESTS)
+	$(test-dir)/env -r $(mode) $(binaries) $(ninepm) $(INFIX_TESTS)
 
 test-sh:
 	$(test-dir)/env $(mode) $(binaries) -i /bin/sh
 
+# Unit tests run with random (-r) hostname and container name to
+# prevent race conditions when running in CI environments.
 test-unit:
-	$(test-dir)/env $(ninepm) $(UNIT_TESTS)
+	$(test-dir)/env -r $(ninepm) $(UNIT_TESTS)
 
 .PHONY: test test-sh test-unit
