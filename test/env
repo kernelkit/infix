@@ -50,6 +50,11 @@ usage: test/env [<OPTS>] -f <IMAGE> -q <QENETH-DIR> <COMMAND> [<ARGS>...]
       resulting topology is used as the default physical topology when
       running tests
 
+    -r
+      Use random container names instead of "infamyN".  Useful for the
+      unit tests running in CI environments which may see occasional
+      name clashes for "infamy0" due to race conditions.
+
     -t <TOPOLOGY>
       Rather than starting a qeneth network, attach to this existing
       topology. If the command is containerized, it will be launched
@@ -91,6 +96,11 @@ name()
     nm=infamy
     id=0
 
+    if [ -n "$random" ]; then
+	# Let podman/docker allocate random hostname and container name
+	return
+    fi
+
     names=$($(runner) ps -f name='infamy.*' --format '{{.Names}}')
     while true; do
 	name="$nm$id"
@@ -109,7 +119,7 @@ name()
 	break;
     done
 
-    echo "$name"
+    echo "--hostname $name --name $name"
 }
 
 # Global options
@@ -117,7 +127,7 @@ containerize=yes
 [ -c /dev/kvm ] && kvm="--device=/dev/kvm"
 files=
 
-while getopts "cCDf:hiKp:q:t:" opt; do
+while getopts "cCDf:hiKp:q:rt:" opt; do
     case ${opt} in
 	c)
 	    $(runner) image prune -af
@@ -149,6 +159,9 @@ while getopts "cCDf:hiKp:q:t:" opt; do
 	q)
 	    qenethdir="$OPTARG"
 	    network="--sysctl net.ipv6.conf.all.disable_ipv6=0"
+	    ;;
+	r)
+	    random=true
 	    ;;
 	t)
 	    topology="$OPTARG"
@@ -186,8 +199,7 @@ if [ "$containerize" ]; then
 	 --env PROMPT_DIRTRIM="$ixdir" \
 	 --env PS1="$(build_ps1)" \
 	 --expose 9001-9010 --publish-all \
-	 --hostname "$(name)" \
-	 --name "$(name)" \
+	 $(name) \
 	 $interactive \
 	 --rm \
 	 --security-opt seccomp=unconfined \
