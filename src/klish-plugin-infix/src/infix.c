@@ -589,42 +589,6 @@ err:
 	return rc;
 }
 
-int infix_commit(kcontext_t *ctx)
-{
-	sr_session_ctx_t *sess;
-	sr_conn_ctx_t *conn;
-	int err;
-
-	(void)ctx;
-
-	if (sr_connect(SR_CONN_DEFAULT, &conn)) {
-		fprintf(stderr, ERRMSG "connection to datastore failed\n");
-		goto err;
-	}
-
-	if (sr_session_start(conn, SR_DS_RUNNING, &sess)) {
-		fprintf(stderr, ERRMSG "unable to open transaction to running-config\n");
-		goto err_disconnect;
-	}
-
-	err = sr_copy_config(sess, NULL, SR_DS_CANDIDATE, 0);
-	if (err) {
-		if (err == SR_ERR_CALLBACK_FAILED)
-			emsg(sess, "Please check your changes, try 'diff' and 'do show interfaces'.\n");
-		else
-			emsg(sess, "Failed committing candidate to running: %s\n", sr_strerror(err));
-		goto err_disconnect;
-	}
-
-	sr_disconnect(conn);
-	return 0;
-
-err_disconnect:
-	sr_disconnect(conn);
-err:
-	return -1;
-}
-
 int infix_shell(kcontext_t *ctx)
 {
 	const char *user = "root";
@@ -672,73 +636,6 @@ int infix_shell(kcontext_t *ctx)
 	return rc;
 }
 
-int infix_rpc(kcontext_t *ctx)
-{
-	kpargv_pargs_node_t *iter;
-	size_t icnt = 0, ocnt = 0;
-	sr_val_t *input = NULL;
-	sr_session_ctx_t *sess;
-	sr_conn_ctx_t *conn;
-	const char *xpath;
-	sr_val_t *output;
-	kparg_t *parg;
-	int err;
-
-	xpath = kcontext_script(ctx);
-	if (!xpath) {
-		fprintf(stderr, ERRMSG "cannot find rpc xpath\n");
-		goto err;
-	}
-
-	iter = kpargv_pargs_iter(kcontext_pargv(ctx));
-	while ((parg = kpargv_pargs_each(&iter))) {
-		const char *key = kentry_name(kparg_entry(parg));
-		const char *val = kparg_value(parg);
-
-		/* skip leading part of command line: 'set datetime' */
-//		fprintf(stderr, "%s(): got key %s val %s\n", __func__, key, val ?: "<NIL>");
-		if (!val || !strcmp(key, val))
-			continue;
-
-		sr_realloc_values(icnt, icnt + 1, &input);
-		/* e.g. /ietf-system:set-current-datetime/current-datetime */
-		sr_val_build_xpath(&input[icnt], "%s/%s", xpath, key);
-		sr_val_set_str_data(&input[icnt++], SR_STRING_T, val);
-	}
-
-	if (sr_connect(SR_CONN_DEFAULT, &conn)) {
-		fprintf(stderr, ERRMSG "connection to datastore failed\n");
-		goto err;
-	}
-
-	if (sr_session_start(conn, SR_DS_OPERATIONAL, &sess)) {
-		emsg(sess, ERRMSG "unable to open transaction to running-config\n");
-		goto err_disconnect;
-	}
-
-//	fprintf(stderr, "%s(): sending RPC %s, icnt %zu\n", __func__, xpath, icnt);
-	if ((err = sr_rpc_send(sess, xpath, input, icnt, 0, &output, &ocnt))) {
-		emsg(sess, ERRMSG "failed sending RPC %s: %s\n", xpath, sr_strerror(err));
-		goto err_disconnect;
-	}
-
-	for (size_t i = 0; i < ocnt; i++) {
-		sr_print_val(&output[i]);
-		puts("");
-	}
-
-	sr_free_values(input, icnt);
-	sr_free_values(output, ocnt);
-	sr_disconnect(conn);
-	return 0;
-
-err_disconnect:
-	sr_disconnect(conn);
-err:
-	sr_free_values(input, icnt);
-	return -1;
-}
-
 int kplugin_infix_fini(kcontext_t *ctx)
 {
 	(void)ctx;
@@ -751,13 +648,11 @@ int kplugin_infix_init(kcontext_t *ctx)
 	kplugin_t *plugin = kcontext_plugin(ctx);
 
 	kplugin_add_syms(plugin, ksym_new("copy", infix_copy));
-	kplugin_add_syms(plugin, ksym_new("commit", infix_commit));
 	kplugin_add_syms(plugin, ksym_new("datastore", infix_datastore));
 	kplugin_add_syms(plugin, ksym_new("erase", infix_erase));
 	kplugin_add_syms(plugin, ksym_new("files", infix_files));
 	kplugin_add_syms(plugin, ksym_new("ifaces", infix_ifaces));
 	kplugin_add_syms(plugin, ksym_new("shell", infix_shell));
-	kplugin_add_syms(plugin, ksym_new("rpc", infix_rpc));
 
 	return 0;
 }
