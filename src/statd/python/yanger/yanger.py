@@ -851,7 +851,12 @@ def main():
 
     # Set up syslog output for critical errors to aid debugging
     logger = logging.getLogger('yanger')
-    log = logging.handlers.SysLogHandler(address='/dev/log')
+    if os.path.exists('/dev/log'):
+        log = logging.handlers.SysLogHandler(address='/dev/log')
+    else:
+        # Use /dev/null as a fallback for unit tests
+        log = logging.FileHandler('/dev/null')
+
     fmt = logging.Formatter('%(name)s[%(process)d]: %(message)s')
     log.setFormatter(fmt)
     logger.setLevel(logging.INFO)
