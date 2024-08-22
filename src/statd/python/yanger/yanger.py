@@ -528,7 +528,7 @@ def add_container(containers):
 
 
 def get_brport_multicast(ifname):
-    data = run_json_cmd(['mctl', 'show', 'igmp', 'json'], "bridge-mdb.json")
+    data = run_json_cmd(['mctl', 'show', 'igmp', 'json'], "igmp-status.json")
     multicast = {}
 
     if ifname in data.get('fast-leave-ports', []):
