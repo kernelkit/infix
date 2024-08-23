@@ -8,6 +8,19 @@ All notable changes to the project are documented in this file.
 -------------------------
 
 ### Changes
+- Issue #158: enhance security of factory reset.  All file content
+  is now overwritten x3, the last time with zeroes, then removed.  
+  Example, on the NanoPi R2S this process takes ~30 seconds, but may
+  take longer in setups with bigger configurations, e.g., containers
+- Issue #503: configurable syslog support, based on IETF Syslog config
+  [draft model][syslog.yang], includes file based logging (built-in or
+  external media) and remote logging, as well as acting as a log sink
+  (remote server) for syslog clients (Infix extension).  Documentation
+  available in [Syslog Support][syslog.md]
+- Issue #521: audit trail support.  Logs changes to configuration, both
+  `running-config` and `startup-config`, as well as RPCs, e.g., setting
+  system date-time.  Logs contain name of user and the action taken.
+  Supported for CLI, NETCONF, and RESTCONF
 - Initial RISC-V (riscv64) support: StarFive VisionFive2
 - Massive updates to the NanoPi R2S:
   - Update Linux kernel to v6.10.3 and sync defconfig with aarch64
@@ -27,10 +40,8 @@ All notable changes to the project are documented in this file.
   SSH key login), removing the password locked the user completely out
 - Add LED indication on factory reset, *all* LEDs available in Linux
   `/sys/class/leds` are turned on while clearing writable partitions
-- Issue #158: enhance security of factory reset.  All file content
-  is now overwritten x3, the last time with zeroes, then removed.  
-  Example, on the NanoPi R2S this process takes ~30 seconds, but may
-  take longer in setups with bigger configurations, e.g., containers
+- Lock down CLI admin-exec to prevent unprivileged users from managing
+  system configuration or state.
 
 ### Fixes
 - Fix #274: add missing link/traffic LEDs on NanoPi R2S LAN port
@@ -39,8 +50,16 @@ All notable changes to the project are documented in this file.
   `lower-layer-if` to `vlanN`.  With the `vlanN` pattern, only C-VLAN
   and VID can be inferred
 - Fix #542: warning message from `login`, cannot find `pam_lastlog.so`
+- Fix #570: the CLI `change password` command does not work
+- Fix #576: the CLI tab completion for `startup-config` does not work
 - Silence bogus `sysctl` warnings at boot (syslog)
 - Silence output from user group member check (sys-cli in syslog)
+- Reduced resolver timeout and retry attempts, fixes 10 second delays
+  before timing out on unknown domain names
+- Fix annoying CLI freeze if pressing any key before initial prompt
+
+[syslog.yang]: https://datatracker.ietf.org/doc/draft-ietf-netmod-syslog-model/
+[syslog.md]: https://github.com/kernelkit/infix/blob/main/doc/syslog.md
 
 
 [v24.06.0][] - 2024-06-28
