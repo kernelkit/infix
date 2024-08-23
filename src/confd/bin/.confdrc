@@ -12,15 +12,19 @@ RUN_PATH_=/tmp/confd/run
 
 FACTORY_DEFAULTS_D=../share/factory.d
 FAILURE_DEFAULTS_D=../share/failure.d
+TEST_DEFAULTS_D=../share/test.d
 
 FACTORY_D=$RUN_PATH_/factory.d
 FAILURE_D=$RUN_PATH_/failure.d
+TEST_D=$RUN_PATH_/test.d
 
 FACTORY_GEN=$RUN_PATH_/factory-config.gen
 FAILURE_GEN=$RUN_PATH_/failure-config.gen
+TEST_GEN=$RUN_PATH_/test-config.gen
 
 FACTORY_CFG=$RUN_PATH_/factory-config.cfg
 FAILURE_CFG=$RUN_PATH_/failure-config.cfg
+TEST_CFG=$RUN_PATH_/test-config.cfg
 STARTUP_CFG=$CFG_PATH_/startup-config.cfg
 
 # Uncomment this line in to create a bridge (br0) with all (classified
@@ -32,6 +36,7 @@ STARTUP_CFG=$CFG_PATH_/startup-config.cfg
 # Default hostname in Fail Secure mode, plus last three octets in the base
 # MAC address, e.g. "failed-c0-ff-ee".
 FAIL_HOSTNAME="failed"
+TEST_HOSTNAME="test"
 
 # Only needed for testing
 mkdir -p "$CFG_PATH_" "$RUN_PATH_" "$FACTORY_D" "$FAILURE_D"

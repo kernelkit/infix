@@ -1,0 +1,11 @@
+{
+    "infix-services:mdns": {
+		"enabled": true
+    },
+    "infix-services:web": {
+		"enabled": true,
+		"restconf": {
+			"enabled": true
+		}
+    }
+}
