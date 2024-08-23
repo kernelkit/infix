@@ -9,6 +9,9 @@ module infix-dhcp-server {
   import ietf-interfaces {
     prefix if;
   }
+  import ietf-ip {
+    prefix ip;
+  }
   import ietf-yang-types {
     prefix yang;
   }
@@ -18,185 +21,308 @@ module infix-dhcp-server {
   description  "YANG model for configuring a DHCPv4 server";
 
   revision 2024-08-18 {
-    description "Initial revision adapted for Infix from DHCPv6 model.";
-    reference   "internal";
+    description "Initial revision.";
+    reference   "rfc2131 rfc7950";
   }
 
-  typedef dhcp-options {
+  typedef dhcp-server-options {
     type union {
       type string;
       type enumeration {
-        enum log-server {
-          value 7;
-          description "Name or IPv address of remote syslog server.";
-        }
         enum router {
           value 3;
-          description "Default route(s)";
+          description "Default router.";
         }
-        enum dns {
+        enum dns-server {
           value 6;
-          description "DNS server";
+          description "DNS server.";
         }
-        enum hostname {
-          value 12;
-          description "Hostname";
-        }
-        enum domain {
+        enum domain-name {
           value 15;
-          description "Domain name";
+          description "Domain name.";
         }
-        enum ntpsrv {
+        enum mtu {
+          value 26;
+          description "Interface MTU.";
+        }
+        enum ntp-server {
           value 42;
-          description "NTP server";
+          description "NTP server.";
         }
-        enum search {
-          value 119;
-          description "Domain search list";
+        enum netbios-ns {
+          value 44;
+          description "NETBIOS name server.";
         }
-        enum staticroutes {
-          value 121;
-          description "Classless static routes";
+        enum netbios-nodetype {
+          value 46;
+          description "NETBIOS node type.";
         }
-      }
-    }
-    description "Supported DHCP client request options";
-  }
-
-  typedef dhcp-lease-time {
-    type uint32 {
-      range "120..max";
-    }
-    units "seconds";
-    default "3600"; // 1 hour
-    description "The lease time in seconds, with a minimum of 2 minutes (120 seconds).";
-  }
-
-  typedef infinite-lease-time {
-    type union {
-      type dhcp-lease-time;
-      type enumeration {
-        enum infinite {
-          description "Indicates an infinite lease time.";
+        enum netbios-scope {
+          value 47;
+          description "NETBIOS scope.";
         }
       }
     }
-    description "The lease time for a static binding, with an option for infinite lease time.";
+    description "Supported DHCP server options.";
   }
 
   container dhcp-server {
-    description "Top-level container for DHCP server configuration.";
+    description "DHCP server configuration.";
 
-    leaf enable {
-      description "Enable or disable the DHCP server.";
+    leaf enabled {
       type boolean;
+      default "true";
+      description "Globally enables the DHCP server function.";
     }
 
-    list option {
-      key "name";
-      description "List of global DHCP options to be applied as defaults for all pools.";
+    list server-if {
+      key "if-name";
+      description "List of interfaces configuring a DHCP server.";
 
-      leaf name {
-        description "DHCP option name.";
-        type dhcp-options;
-      }
-
-      leaf value {
-        description "Option value.";
-        type string;
-      }
-    }
-
-    list pool {
-      key "name";
-      description "List of address pools managed by the DHCP server.";
-
-      leaf name {
-        description "The name of the address pool.";
-        type string;
-      }
-
-      leaf start-address {
-        description "The start address of the DHCP address pool.";
-        type inet:ipv4-address;
-      }
-
-      leaf end-address {
-        description "The end address of the DHCP address pool.";
-        type inet:ipv4-address;
-      }
-
-      leaf subnet-mask {
-        description "Subnet mask provided to clients in this pool.";
-        type inet:ipv4-address;
-      }
-
-      leaf lease-time {
-        description "Lease time for DHCP addresses.";
-        type dhcp-lease-time;
-      }
-
-      leaf interface {
-        description "Optional interface to which this pool is bound.";
+      leaf if-name {
         type if:interface-ref;
+        mandatory true;
+        description "Name of the interface.";
+      }
+      leaf enabled {
+        type boolean;
+        default "true";
+        description "Enable DHCP server for this interface.";
+      }
+      leaf dns-enabled {
+        type boolean;
+        default "true";
+        description "Enable DNS service.";
+      }
+      leaf mode {
+        description "Operating mode of the DHCP server.";
+        default "server";
+
+        type enumeration {
+          enum server {
+            description "DHCP server operates as server.";
+          }
+          enum relay {
+            description "DHCP server operates as relay.";
+          }
+        }
       }
 
-      list option {
-        key "name";
-        description "List of DHCP options specific to this pool.";
+      container server {
+        leaf address {
+          type inet:ip-address;
+          description "IP address of the server to listen on (optional).
+                       If not set, the server will listen to all local
+                       addresses configured on the interface.";
+        }
+        leaf lease-time {
+          type uint32 {
+            range "180..31536000";
+          }
+          units "seconds";
+          default 3600;
+          description "Default network address lease time assigned to DHCP clients.";
+        }
+        list option {
+          key "name";
+          description "List of DHCP options to offer.";
 
-        leaf name {
-          description "DHCP option name.";
-          type dhcp-options;
+          leaf name {
+            type dhcp-server-options;
+            description "DHCP option to offer.";
+          }
+          leaf value {
+            type string;
+            description "Optional value, only used for non-flag options.
+                         Example: option:dns,      value:1.2.3.4
+                                  option:vendor,   value:01:02:03:04:05:06:07:08:09:0a
+                                  option:domain,   value:example.com";
+          }
         }
 
-        leaf value {
-          description "Option value.";
-          type string;
+        list ip-pool {
+          key "pool-name";
+          description "IP pool configuration.";
+
+          leaf pool-name {
+            type string {
+              length "1..64";
+            }
+            description "Name of the IP pool.";
+          }
+          leaf lease-time {
+            type uint32 {
+              range "180..31536000";
+            }
+            units "seconds";
+            default 3600;
+            description "Network address lease time assigned to DHCP clients.";
+          }
+          leaf first-ip-address {
+            type inet:ip-address;
+            mandatory "true";
+            description "First IP address of the pool.";
+          }
+          leaf last-ip-address {
+            type inet:ip-address;
+            mandatory "true";
+            description "Last IP address of the pool.";
+          }
+          list static-allocation {
+            key "ip-address";
+            description "List of host using static address allocation.";
+
+            leaf ip-address {
+              type inet:ip-address;
+              description "IP address of the host.";
+            }
+            choice identifier {
+              description "The identifier for the host.";
+
+              case mac-address {
+                leaf mac-address {
+                  type yang:mac-address;
+                  description "Client MAC address of the host.";
+                }
+              }
+              case hostname {
+                leaf hostname {
+                  type yang:mac-address;
+                  description "Client hostname (DHCP option 12) of the host.";
+                }
+              }
+              case client-identifier {
+                leaf client-identifier {
+                  type yang:mac-address;
+                  description "Client identifier (DHCP option 61) of the host.";
+                }
+              }
+            }
+          }
+        }
+        container lease {
+          description "Lease information.";
+          config "false";
+
+          leaf host-count {
+               type uint32;
+               description "Number of host leases.";
+          }
+          list host {
+            description "List of active host leases.";
+            key ip-address;
+
+            leaf ip-address {
+              type inet:ip-address;
+              description "IP address of the host.";
+            }
+            leaf hardware-address {
+              type string;
+              description "MAC address of the host.";
+            }
+            leaf hostname {
+              type string;
+              description "Name of the host.";
+            }
+            leaf expires {
+              type yang:date-and-time;
+              description "Time and date when the lease expires.";
+            }
+            leaf client-identifier {
+              type string;
+              description "Client identifier of the host.";
+            }
+          }
+        }
+      }
+
+      container relay {
+        leaf address {
+          type inet:ip-address;
+          description "IP address of the server to listen on.
+                       If not set, the server will listen to all local
+                       addresses configured on the interface.";
+        }
+        list server {
+          key "ip-address";
+          description "List of addresses to which the server will relay to.";
+
+          leaf ip-address {
+            type inet:ip-address;
+            description "IP address of the relay server.";
+          }
+        }
+        leaf circuit-id {
+          type yang:hex-string {
+              length "2..11";
+          }
+          description "Relay Agent Circuit Identifier
+                       to be inserted as DHCP option 82 when relaying requests to the DHCP server.
+                       If not set, the interface index will be used.";
+        }
+        leaf remote-id {
+          type yang:hex-string {
+              length "2..11";
+          }
+          description "Relay Agent Remote Identifier
+                       to be inserted as DHCP option 82 when relaying requests to the DHCP server.";
+        }
+      }
+
+      container packet-statistics {
+        description "DHCP packet statistics.";
+        config "false";
+
+        container sent {
+          description "The packets sent by the server.";
+
+          leaf offer-count {
+            type uint32;
+            description "Total number of DHCPOFFER packets.";
+          }
+          leaf ack-count {
+            type uint32;
+            description "Total number of DHCPACK packets.";
+          }
+          leaf nack-count {
+            type uint32;
+            description "Total number of DHCPNAK packets.";
+          }
+        }
+        container received {
+          description "The packets sent by the client.";
+
+          leaf decline-count {
+            type uint32;
+            description "Total number of DHCPDECLINE packets.";
+          }
+          leaf discover-count {
+            type uint32;
+            description "Total number of DHCPDISCOVER packets.";
+          }
+          leaf request-count {
+            type uint32;
+            description "Total number of DHCPREQUEST packets.";
+          }
+          leaf release-count {
+            type uint32;
+            description "Total number of DHCPRELEASE packets.";
+          }
+          leaf inform-count {
+            type uint32;
+            description "Total number of DHCPINFORM packets.";
+          }
         }
       }
     }
-
-    list host {
-      key "identifier";
-      description "List of static bindings based on MAC address, client identifier, or other identifiers.";
-
-      leaf identifier {
-        description "The MAC address, clientid, or other identifier of the client.";
-        type union {
-          type yang:mac-address;
-          type string; // clientid or other identifiers
-        }
-      }
-
-      leaf ip-address {
-        description "The IPv4 address to assign to the client.";
-        type inet:ipv4-address;
-      }
-
-      leaf hostname {
-        description "Optional hostname to assign with the lease.";
-        type string;
-      }
-
-      leaf lease-time {
-        description "Specific lease time for this static binding, including the option for infinite lease time.";
-        type infinite-lease-time;
-      }
-
-      list option {
-        key "name";
-        description "List of DHCP options specific to this static host.";
-
-        leaf name {
-          description "DHCP option name.";
-          type dhcp-options;
-        }
-
-        leaf value {
-          description "Option value.";
-          type string;
-        }
+  }
+  rpc clean-statistics {
+    description "Clear packet statistics.";
+    input {
+      leaf if-name {
+        type if:interface-ref;
+        mandatory true;
+        description "Name of the interface.";
       }
     }
   }

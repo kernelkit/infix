@@ -146,7 +146,10 @@ int sr_plugin_init_cb(sr_session_ctx_t *session, void **priv)
 	rc = infix_containers_init(&confd);
 	if (rc)
 		goto err;
-	rc = infix_dhcp_init(&confd);
+	rc = infix_dhcp_client_init(&confd);
+	if (rc)
+		goto err;
+	rc = infix_dhcp_server_init(&confd);
 	if (rc)
 		goto err;
 	rc = infix_factory_init(&confd);

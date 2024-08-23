@@ -223,6 +223,13 @@
   </COMMAND>
 </COMMAND>
 
+<COMMAND name="dhcp-server" help="DHCP server tools" mode="switch">
+  <COMMAND name="clean-statistics" help="Clean DHCP server packet statistics">
+    <PARAM name="if-name" ptype="/IFACES" help="DHCP server interface."/>
+    <ACTION sym="srp_rpc@sysrepo">/infix-dhcp-server:clean-statistics</ACTION>
+  </COMMAND>
+</COMMAND>
+
 <COMMAND name="show" help="Show system status and configuration files" mode="switch">
 
   <COMMAND name="bridge" help="Show bridge (ports/fdb/mdb/vlans)">
@@ -292,6 +299,21 @@
     <SWITCH name="optional" min="0">
       <COMMAND name="tracking" help="Show NTP tracking">
         <ACTION sym="script">doas ntp tracking</ACTION>
+      </COMMAND>
+    </SWITCH>
+  </COMMAND>
+
+  <COMMAND name="dhcp-server" help="Show DHCP server status">
+    <ACTION sym="script">
+      sysrepocfg -f json -X -d operational -m infix-dhcp-server | \
+        /usr/libexec/statd/cli-pretty "show-dhcp-server"
+    </ACTION>
+    <SWITCH name="optional" min="0">
+      <COMMAND name="detailed" help="Detailed (full) output">
+      <ACTION sym="script">
+      sysrepocfg -f json -X -d operational -m infix-dhcp-server | \
+        jq -C .
+      </ACTION>
       </COMMAND>
     </SWITCH>
   </COMMAND>

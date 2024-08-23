@@ -221,8 +221,11 @@ static inline void infix_containers_pre_hook(sr_session_ctx_t *session, struct c
 static inline void infix_containers_post_hook(sr_session_ctx_t *session, struct confd *confd) {}
 #endif
 
-/* infix-dhcp.c */
-int infix_dhcp_init(struct confd *confd);
+/* infix-dhcp-client.c */
+int infix_dhcp_client_init(struct confd *confd);
+
+/* infix-dhcp-server.c */
+int infix_dhcp_server_init(struct confd *confd);
 
 /* ietf-factory-default */
 int ietf_factory_default_init(struct confd *confd);

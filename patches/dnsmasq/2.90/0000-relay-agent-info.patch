@@ -1,0 +1,190 @@
+commit 9ae2b2a466871d936ab79b15c95ba85cbc7d5cd6
+Author: Stefan Schlosser <sgs@grmmbl.org>
+Date:   Fri Aug 23 10:52:17 2024 +0200
+
+    dnsmasq: add support for option 82
+    
+    This patch adds support to insert Option 82 Relay Agent Information (see RFC3046)
+    into relayed DHCP requests.
+    
+    When relay has been turned on with --dhcp-relay, the suboptions circuit-id and remote-id
+    can be configured using directives --dhcp-circuitid and --dhcp-remoteid with a maximum of
+    4 bytes denoted in hex format:
+    
+        dhcp-circuitid=set:enterprise,00:11:22:33
+        dhcp-remoteid=set:enterprise,cc:dd:ee:ff
+    
+    If circuit-id is not set, dnsmasq will use the interface index instead.
+    
+    These options usually provide a way to map requests to --dhcp-host and --dhcp-range directives
+    but dhcp-proxy function uses them already for similar purposes.
+    
+    The existing option space will be used (no re-negotiation). If it doesn't fit to a packet a warning
+    
+        "Not enough space to add relay agent information"
+    
+    will be dropped.
+    
+    Signed-off-by: Stefan Schlosser <sgs@grmmbl.org>
+
+diff --git dnsmasq-2.90/src/dhcp.c dnsmasq-2.90/src/dhcp.c
+index b65facd..4c399eb 100644
+--- dnsmasq-2.90/src/dhcp.c
++++ dnsmasq-2.90/src/dhcp.c
+@@ -1117,7 +1117,10 @@ static int relay_upstream4(int iface_index, struct dhcp_packet *mess, size_t sz)
+ 	    /* plug in our address */
+ 	    mess->giaddr.s_addr = relay->local.addr4.s_addr;
+ 	  }
+-	
++
++	/* add relay agent information */
++	add_relay_agent_info(relay, mess, sz);
++
+ 	to.sa.sa_family = AF_INET;
+ 	to.in.sin_addr = relay->server.addr4;
+ 	to.in.sin_port = htons(relay->port);
+diff --git dnsmasq-2.90/src/dnsmasq.h dnsmasq-2.90/src/dnsmasq.h
+index e455c3f..73cb94e 100644
+--- dnsmasq-2.90/src/dnsmasq.h
++++ dnsmasq-2.90/src/dnsmasq.h
+@@ -1902,3 +1902,6 @@ int add_update_server(int flags,
+ 		      const char *interface,
+ 		      const char *domain,
+ 		      union all_addr *local_addr); 
++
++
++int add_relay_agent_info(struct dhcp_relay *relay, struct dhcp_packet *mess, size_t sz);
+diff --git dnsmasq-2.90/src/rfc2131.c dnsmasq-2.90/src/rfc2131.c
+index 68834ea..05a4faa 100644
+--- dnsmasq-2.90/src/rfc2131.c
++++ dnsmasq-2.90/src/rfc2131.c
+@@ -2812,4 +2812,129 @@ static void apply_delay(u32 xid, time_t recvtime, struct dhcp_netid *netid)
+     }
+ }
+ 
++struct relay_info {
++  struct {
++    unsigned char *data;
++    int len;
++  } circuit;
++  struct {
++    unsigned char *data;
++    int len;
++  } remote;
++};
++
++static inline int subopt_add(unsigned char *ptr, size_t size,
++                             int subopt, unsigned char *buf, int len)
++{
++  if ((len + 2) > size)
++    {
++      my_syslog(MS_DHCP | LOG_WARNING, "No space for relay sub option %d", subopt);
++      return 0;
++    }
++
++  *(ptr++) = subopt;
++  *(ptr++) = len;
++  memcpy(ptr, buf, len);
++
++  return (len + 2);
++}
++
++static int option_add(struct dhcp_packet *mess, size_t sz,
++                      struct relay_info *info)
++{
++  unsigned char *start = &mess->options[0] + sizeof(u32);
++  unsigned char *end = (unsigned char *)mess + sz;
++  unsigned char *optend = NULL;
++  unsigned char opt[64], *sub, *p;
++  int size, len = 0;
++  int ret = -1;
++
++  sub = &opt[2];
++  size = sizeof(opt) - 2;
++
++  if (info->circuit.len > 0)
++      len += subopt_add(sub+len, size-len,
++                        SUBOPT_CIRCUIT_ID,
++                        info->circuit.data,
++                        info->circuit.len);
++
++  if (info->remote.len > 0)
++      len += subopt_add(sub+len, size-len,
++                        SUBOPT_REMOTE_ID,
++                        info->remote.data,
++                        info->remote.len);
++
++  if (len == 0)
++    return 0; /* Nothing to add */
++
++  opt[0] = OPTION_AGENT_ID;
++  opt[1] = len;
++  len += 2;
++
++  /* find option end */
++  optend = option_find1(start, end, OPTION_END, 1);
++  if (!optend)
++    return -1;
++
++  *optend = 0;
++
++  p = dhcp_skip_opts(start);
++  if ((p + len + 1) >= end)
++    {
++    my_syslog(MS_DHCP | LOG_WARNING, "Not enough space to add relay agent information");
++    goto out;
++    }
++
++  memcpy(p, opt, len);
++  optend = p + len;
++
++  ret = 0;
++out:
++  *optend = OPTION_END;
++  return ret;
++}
++
++int add_relay_agent_info(struct dhcp_relay *relay, struct dhcp_packet *mess, size_t sz)
++{
++  struct dhcp_vendor *vendor;
++  struct relay_info info;
++  int ifindex;
++
++  if (option_find(mess, sz, OPTION_AGENT_ID, 1))
++    return 0; /* don't alter any existing relay agent info */
++
++  /* lookup circuit-id and remote-id */
++  info.circuit.len = info.remote.len = 0;
++
++  for (vendor = daemon->dhcp_vendors; vendor; vendor = vendor->next)
++    {
++    if (vendor->match_type == MATCH_CIRCUIT)
++      {
++        if (info.circuit.len == 0)
++          {
++          info.circuit.data = vendor->data;
++          info.circuit.len = vendor->len;
++          }
++      }
++    else if (vendor->match_type == MATCH_REMOTE)
++      {
++        if (info.remote.len == 0)
++          {
++          info.remote.data = vendor->data;
++          info.remote.len = vendor->len;
++          }
++      }
++    }
++
++  /* use interface index as circuit-id if not specified */
++  if (info.circuit.len == 0)
++    {
++    ifindex = htonl(relay->iface_index);
++    info.circuit.data = &ifindex;
++    info.circuit.len = sizeof(ifindex);
++    }
++
++  return option_add(mess, sz, &info);
++}
++
+ #endif /* HAVE_DHCP */

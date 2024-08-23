@@ -40,6 +40,7 @@
 #define XPATH_SYSTEM_BASE "/ietf-system:system-state"
 #define XPATH_ROUTING_OSPF XPATH_ROUTING_BASE "/ospf"
 #define XPATH_CONTAIN_BASE  "/infix-containers:containers"
+#define XPATH_DHCP_SERVER_BASE  "/infix-dhcp-server:dhcp-server"
 
 TAILQ_HEAD(sub_head, sub);
 
@@ -347,8 +348,10 @@ static int subscribe_to_all(struct statd *statd)
 	if (subscribe(statd, "infix-containers", XPATH_CONTAIN_BASE, sr_generic_cb))
 		return SR_ERR_INTERNAL;
 #endif
-	INFO("Successfully subscribed to all models");
+	if (subscribe(statd, "infix-dhcp-server", XPATH_DHCP_SERVER_BASE, sr_generic_cb))
+		return SR_ERR_INTERNAL;
 
+	INFO("Successfully subscribed to all models");
 	return SR_ERR_OK;
 }
 

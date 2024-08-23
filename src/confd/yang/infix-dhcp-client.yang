@@ -37,7 +37,7 @@ module infix-dhcp-client {
     description "This type is used for selecting route preference (distance).";
   }
 
-  typedef dhcp-options {
+  typedef dhcp-client-options {
     type union {
       type string;
       type enumeration {
@@ -140,7 +140,7 @@ module infix-dhcp-client {
            client to only get IP address and default route, set this to:
            'subnet router'";
         leaf name {
-          type dhcp-options;
+          type dhcp-client-options;
           description "DHCP option to request from, or inform server of.";
         }
         leaf value {

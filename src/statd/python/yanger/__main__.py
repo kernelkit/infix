@@ -70,6 +70,9 @@ def main():
     elif args.model == 'infix-containers':
         from . import infix_containers
         yang_data = infix_containers.operational()
+    elif args.model == 'infix-dhcp-server':
+        from . import infix_dhcp_server
+        yang_data = infix_dhcp_server.operational()
     elif args.model == 'ietf-system':
         from . import ietf_system
         yang_data = ietf_system.operational()
