@@ -37,7 +37,7 @@
 <COMMAND name="container" help="Manage containers, images, and volumes" mode="switch">
   <COMMAND name="prune" help="Clean up all unused containers, images and volume data">
     <ACTION sym="script" in="tty" out="tty" interrupt="true">
-      podman system prune
+      doas podman system prune
     </ACTION>
   </COMMAND>
 
@@ -45,7 +45,7 @@
   <COMMAND name="connect" help="Start a shell inside a container, if available">
     <PARAM name="name" ptype="/CONTAINERSa" help="Container name" />
     <ACTION sym="script" in="tty" out="tty" interrupt="true">
-      container shell $KLISH_PARAM_name
+      doas container shell $KLISH_PARAM_name
     </ACTION>
   </COMMAND>
 
@@ -61,7 +61,7 @@
         echo "Missing container name."
       else
         cmd=${KLISH_PARAM_command:-sh}
-        container exec $KLISH_PARAM_name $cmd
+        doas container exec $KLISH_PARAM_name $cmd
       fi
     </ACTION>
   </COMMAND>
@@ -79,7 +79,7 @@
     <ACTION sym="script" in="tty" out="tty" interrupt="true">
       creds=${KLISH_PARAM_creds:+-c $KLISH_PARAM_creds}
       cd /var/lib/containers/oci
-      container $creds load $KLISH_PARAM_url $KLISH_PARAM_name
+      doas container $creds load $KLISH_PARAM_url $KLISH_PARAM_name
     </ACTION>
   </COMMAND>
 
@@ -92,21 +92,21 @@
     </SWITCH>
     <ACTION sym="script" in="tty" out="tty" interrupt="true">
       creds=${KLISH_PARAM_creds:+--creds=$KLISH_PARAM_creds}
-      container pull $creds $KLISH_PARAM_image
+      doas container pull $creds $KLISH_PARAM_image
     </ACTION>
   </COMMAND>
 
   <COMMAND name="remove" help="Remove a container image from local storage">
     <PARAM name="name" ptype="/IMAGES" help="Image name" />
     <ACTION sym="script" in="tty" out="tty" interrupt="true">
-      container remove $KLISH_PARAM_name
+      doas container remove $KLISH_PARAM_name
     </ACTION>
   </COMMAND>
 
   <COMMAND name="restart" help="Restart a crashed container">
     <PARAM name="name" ptype="/CONTAINERSa" help="Container name" />
     <ACTION sym="script" out="tty" interrupt="true">
-      container restart $KLISH_PARAM_name
+      doas container restart $KLISH_PARAM_name
     </ACTION>
   </COMMAND>
 
@@ -122,12 +122,12 @@
     </SWITCH>
     <ACTION sym="script" in="tty" out="tty" interrupt="true">
       port=${KLISH_PARAM_port:+-p $KLISH_PARAM_port}
-      container $port run $KLISH_PARAM_image ${KLISH_PARAM_command}
+      doas container $port run $KLISH_PARAM_image ${KLISH_PARAM_command}
     </ACTION>
     <SWITCH name="optional" min="0">
       <COMMAND name="detach" help="Run container in background and print container ID">
         <ACTION sym="script" out="tty">
-	  container -d $port run $KLISH_PARAM_image ${KLISH_PARAM_command}
+	  doas container -d $port run $KLISH_PARAM_image ${KLISH_PARAM_command}
 	</ACTION>
       </COMMAND>
     </SWITCH>
@@ -142,69 +142,69 @@
     </SWITCH>
     <ACTION sym="script" in="tty" out="tty" interrupt="true">
       cd /var/lib/containers/oci
-      container save $KLISH_PARAM_name $KLISH_PARAM_file
+      doas container save $KLISH_PARAM_name $KLISH_PARAM_file
     </ACTION>
   </COMMAND>
 
   <COMMAND name="shell" help="Start a shell inside a container, if available">
     <PARAM name="name" ptype="/CONTAINERSa" help="Container name" />
     <ACTION sym="script" in="tty" out="tty" interrupt="true">
-      container shell $KLISH_PARAM_name
+      doas container shell $KLISH_PARAM_name
     </ACTION>
   </COMMAND>
 
   <COMMAND name="start" help="Start a container">
     <PARAM name="name" ptype="/CONTAINERSa" help="Container name" />
     <ACTION sym="script" out="tty" interrupt="true">
-      container start $KLISH_PARAM_name
+      doas container start $KLISH_PARAM_name
     </ACTION>
   </COMMAND>
 
   <COMMAND name="stop" help="Stop a container">
     <PARAM name="name" ptype="/CONTAINERS" help="Container name" />
     <ACTION sym="script" out="tty" interrupt="true">
-      container stop $KLISH_PARAM_name
+      doas container stop $KLISH_PARAM_name
     </ACTION>
   </COMMAND>
 
   <COMMAND name="upgrade" help="Upgrade image of a container (writable layer is lost!)">
     <PARAM name="name" ptype="/CONTAINERS" help="Container name" />
     <ACTION sym="script" out="tty" interrupt="true">
-      container upgrade $KLISH_PARAM_name
+      doas container upgrade $KLISH_PARAM_name
     </ACTION>
   </COMMAND>
 </COMMAND>
 
 <COMMAND name="show" help="Show system status and configuration files" mode="switch">
   <COMMAND name="container" help="Show container status">
-    <ACTION sym="script">container show</ACTION>
+    <ACTION sym="script">doas container show</ACTION>
 
     <SWITCH name="optional" min="0">
       <COMMAND name="all" help="Show all containers (default only running)">
-        <ACTION sym="script">container -a show</ACTION>
+        <ACTION sym="script">doas container -a show</ACTION>
       </COMMAND>
       <COMMAND name="log" help="Show container log (alias for show log container)">
-	<ACTION sym="script">cat /log/container</ACTION>
+	<ACTION sym="script">doas -u $USER cat /log/container</ACTION>
       </COMMAND>
       <COMMAND name="images" help="Show container images">
-        <ACTION sym="script">container show images</ACTION>
+        <ACTION sym="script">doas container show images</ACTION>
         <SWITCH name="optional" min="0">
           <COMMAND name="all" help="All images (default hides intermediate imaages)">
-            <ACTION sym="script">container -a show images</ACTION>
+            <ACTION sym="script">doas container -a show images</ACTION>
           </COMMAND>
         </SWITCH>
       </COMMAND>
       <COMMAND name="oci" help="Show OCI archives (for loading as image)">
-        <ACTION sym="script">container list oci</ACTION>
+        <ACTION sym="script">doas container list oci</ACTION>
       </COMMAND>
       <COMMAND name="stat" help="Show continuous containers stats (Ctrl-C aborts)">
-	<ACTION sym="script">container stat</ACTION>
+	<ACTION sym="script">doas container stat</ACTION>
       </COMMAND>
       <COMMAND name="usage" help="Show container resource usage">
-        <ACTION sym="script">podman system df -v</ACTION>
+        <ACTION sym="script">doas podman system df -v</ACTION>
       </COMMAND>
       <COMMAND name="volumes" help="Show container volumes">
-        <ACTION sym="script">container show volumes</ACTION>
+        <ACTION sym="script">doas container show volumes</ACTION>
       </COMMAND>
     </SWITCH>
   </COMMAND>
