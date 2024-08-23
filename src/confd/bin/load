@@ -1,5 +1,5 @@
 #!/bin/sh
-# load [-b] <startup-config | failure-config>
+# load [-b] <startup-config | failure-config | test-config>
 #
 # Import a configuration to the sysrepo datastore using `sysrepocfg -Ifile`
 #
@@ -41,6 +41,17 @@ err()
 . /etc/confdrc
 
 config=$1
+
+if [ -f "/mnt/aux/test-mode" ] && [ "$config" = "startup-config" ]; then
+
+	if [ -f "/mnt/aux/test-override-startup" ]; then
+		rm -f "/mnt/aux/test-override-startup"
+	else
+    	note "Test mode detected, switching to test-config"
+    	config="test-config"
+	fi
+fi
+
 if [ -f "$config" ]; then
     fn="$config"
 else
