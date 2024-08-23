@@ -115,7 +115,7 @@ gen_failure_cfg()
 
     gen-hostname   "$FAIL_HOSTNAME"                         >"$FAILURE_D/20-hostname.json"
     gen-interfaces                                          >"$FAILURE_D/20-interfaces.json"
-    gen-version                                             >"$FACTORY_D/20-version.json"
+    gen-version                                             >"$FAILURE_D/20-version.json"
 
     # Optional failure/error config to generate (or override) for br2-externals
     [ -x "$(command -v gen-err-custom)" ] && gen-err-custom >"$FAILURE_D/30-error.json"
