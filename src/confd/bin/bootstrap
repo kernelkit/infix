@@ -1,11 +1,11 @@
 #!/bin/sh
-# Bootstrap system factory-config, failure-config and sysrepo db.
+# Bootstrap system factory-config, failure-config, test-config and sysrepo db.
 #
 ########################################################################
-# The system factory-config and failure-config are derived from default
-# settings snippets, from /usr/share/confd/factory.d, and some generated
-# snippets, e.g., hostname (based on base MAC address) and number of
-# interfaces.
+# The system factory-config, failure-config and test-config are derived
+# from default settings snippets, from /usr/share/confd/factory.d, and 
+# some generated snippets, e.g., hostname (based on base MAC address) 
+# and number of interfaces.
 #
 # The resulting factory-config is used to create the syrepo db (below)
 # {factory} datastore.  Hence, the factory-config file must match the
@@ -127,10 +127,26 @@ failure()
     collate "$FAILURE_GEN" "$FAILURE_CFG" "$FAILURE_D"
 }
 
+gen_test_cfg()
+{
+    # Fetch defaults, simplifies sort in collate()
+    cp "$TEST_DEFAULTS_D"/* "$TEST_D"
+
+    gen-hostname   "$TEST_HOSTNAME"                         >"$TEST_D/20-hostname.json"
+    gen-interfaces                                          >"$TEST_D/20-interfaces.json"
+    gen-version                                             >"$TEST_D/20-version.json"
+
+    collate "$TEST_GEN" "$TEST_CFG" "$TEST_D"
+}
+
 # Both factory-config and failure-config are generated every boot
 # regardless if there is a static /etc/factory-config.cfg or not.
 factory "$FACTORY_GEN"
 failure "$FAILURE_GEN"
+
+if [ -f "/mnt/aux/test-mode" ]; then
+    gen_test_cfg
+fi
 
 if [ -n "$TESTING" ]; then
 	echo "Done."

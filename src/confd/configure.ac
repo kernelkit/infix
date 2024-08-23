@@ -11,6 +11,7 @@ AC_CONFIG_FILES([
 	share/Makefile
 	share/factory.d/Makefile
 	share/failure.d/Makefile
+	share/test.d/Makefile
 	share/migrate/Makefile
 	share/migrate/1.0/Makefile
 	src/Makefile
