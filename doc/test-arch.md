@@ -241,6 +241,31 @@ could accept an arbitrary physical topology, run the STP algorithm on
 it offline, enable STP on all DUTs, and then verify that the resulting
 spanning tree matches the expected one.
 
+Integration to Infix
+--------------------
+To successfully run all Infix tests, the image must be built in 
+'test-mode'. This can be achieved by setting the DISK_IMAGE_TEST_MODE
+parameter to true. Although this is the default setting, it’s advisable
+to verify it by running:
+
+    $ make menuconfig
+    (External Options --> -*- Disk image --> [*] Enable Test Mode)
+
+Building an image in 'test-mode' results in the creation of a 'test-mode'
+file within the auxiliary (aux) partition of the Infix disk image 
+(/mnt/aux/test-mode).
+
+During the bootstrap phase, the system checks for the presence of this 
+test-mode flag (file). If the flag exists, a 'test-config.cfg' file is 
+generated. In the following step, the system loads the 'test-config' 
+instead of the standard startup-config (or factory-config). This 
+configuration is simple and safe, equivalent to the one used in 'Secure Mode'
+(also known as 'failure-config').
+
+Additionally, the configuration enables extra RPCs related to system 
+restart and configuration overrides, allowing tests to be run even on 
+systems where the factory configuration may potentially create L2 loops. 
+
 [9PM]:    https://github.com/rical/9pm
 [Qeneth]: https://github.com/wkz/qeneth
 [TAP]:    https://testanything.org/
