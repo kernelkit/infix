@@ -25,6 +25,17 @@ for `x86_64`:
     $ make
     $ make test
 
+It is important to mention that Infix build system by default creates
+an image in 'test-mode'. The mode is set by DISK_IMAGE_TEST_MODE
+parameter (default=true). To generate a standard image set the
+DISK_IMAGE_TEST_MODE to 'false'. However, only the test mode ensures
+that all Infix tests are executed properly. Prior to the set of commands
+above, it is always good to check that DISK_IMAGE_TEST_MODE is properly
+set by running:
+
+    $ make menuconfig
+    (External Options --> -*- Disk image --> [*] Enable Test Mode)
+
 ### Physical Devices
 
 To run the tests on a preexisting topology from the host's network
