@@ -88,10 +88,8 @@ console_error()
     return 0
 }
 
-factory()
+gen_factory_cfg()
 {
-    gen=$1
-
     # Fetch defaults, simplifies sort in collate()
     cp "$FACTORY_DEFAULTS_D"/* "$FACTORY_D/"
 
@@ -110,10 +108,8 @@ factory()
     collate "$FACTORY_GEN" "$FACTORY_CFG" "$FACTORY_D"
 }
 
-failure()
+gen_failure_cfg()
 {
-    gen=$1
-
     # Fetch defaults, simplifies sort in collate()
     cp "$FAILURE_DEFAULTS_D"/* "$FAILURE_D"
 
@@ -141,8 +137,8 @@ gen_test_cfg()
 
 # Both factory-config and failure-config are generated every boot
 # regardless if there is a static /etc/factory-config.cfg or not.
-factory "$FACTORY_GEN"
-failure "$FAILURE_GEN"
+gen_factory_cfg 
+gen_failure_cfg
 
 if [ -f "/mnt/aux/test-mode" ]; then
     gen_test_cfg
