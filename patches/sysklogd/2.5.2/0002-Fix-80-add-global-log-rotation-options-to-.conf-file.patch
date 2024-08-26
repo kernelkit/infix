@@ -1,0 +1,177 @@
+From 7e0882688b0ea459c850e6e0ace66cca7100fd0a Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Fri, 12 Jul 2024 22:54:51 +0200
+Subject: [PATCH 02/15] Fix #80: add global log rotation options to .conf file
+Organization: Addiva Elektronik
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ man/syslog.conf.5 | 20 ++++++++++++++++----
+ src/syslogd.c     | 36 ++++++++++++++++++++++++++++++++++--
+ syslog.conf       | 14 +++++++++++---
+ 3 files changed, 61 insertions(+), 9 deletions(-)
+
+diff --git a/man/syslog.conf.5 b/man/syslog.conf.5
+index 73c11e1..030c377 100644
+--- a/man/syslog.conf.5
++++ b/man/syslog.conf.5
+@@ -71,6 +71,9 @@ OPTION   := [OPTION,]
+ 
+ secure_mode [0,1,2]
+ 
++rotate_size  SIZE
++rotate_count NUMBER
++
+ include /etc/syslog.d/*.conf
+ notify  /path/to/script-on-rotate
+ .Ed
+@@ -107,6 +110,15 @@ a file can reach before it is rotated, and later compressed.  This
+ feature is mostly intended for embedded systems that do not want to have
+ cron or a separate log rotate daemon.
+ .Pp
++The
++.Ql rotate_size SIZE
++and
++.Ql rotate_count COUNT
++are the same as the
++.Nm syslogd Fl r Ar SIZE:COUNT
++command line option.  Remember, command line options take precedence
++over .conf file settings.
++.Pp
+ .Sy Note:
+ the permissions of the rotated files are kept.  Meaning the
+ administrator can create all log files, before starting
+@@ -120,13 +132,13 @@ permissions.
+ Comments, lines starting with a hash mark ('#'), and empty lines are
+ ignored.  If an error occurs during parsing the whole line is ignored.
+ .Pp
+-Additional options include
++The
+ .Ql secure_mode <0-2>
+-which is the same as the
++option is the same as the
+ .Nm syslogd Fl s
+-commandline option.
++command line option.
+ .Sy Note:
+-command line option always wins, so you need to drop
++again, command line option always wins, so you need to drop
+ .Fl s
+ from the command line to use this .conf file option instead.
+ .Pp
+diff --git a/src/syslogd.c b/src/syslogd.c
+index c9ea7fd..5061376 100644
+--- a/src/syslogd.c
++++ b/src/syslogd.c
+@@ -156,6 +156,7 @@ static int	  KeepKernFac;		  /* Keep remotely logged kernel facility */
+ static int	  KeepKernTime;		  /* Keep kernel timestamp, evern after initial read */
+ static int	  KeepKernConsole;	  /* Keep kernel logging to console */
+ 
++static int	  rotate_opt;	          /* Set if command line option has been given (wins) */
+ static off_t	  RotateSz = 0;		  /* Max file size (bytes) before rotating, disabled by default */
+ static int	  RotateCnt = 5;	  /* Max number (count) of log files to keep, set with -c <NUM> */
+ 
+@@ -180,13 +181,17 @@ static SIMPLEQ_HEAD(, allowedpeer) aphead = SIMPLEQ_HEAD_INITIALIZER(aphead);
+  * parser moves the argument to the beginning of the parsed line.
+  */
+ char *secure_str;			  /* string value of secure_mode */
++char *rotate_sz_str;			  /* string value of RotateSz    */
++char *rotate_cnt_str;			  /* string value of RotateCnt   */
+ 
+ const struct cfkey {
+ 	const char  *key;
+ 	char       **var;
+ } cfkey[] = {
+-	{ "notify",      NULL        },
+-	{ "secure_mode", &secure_str },
++	{ "notify",       NULL            },
++	{ "secure_mode",  &secure_str     },
++	{ "rotate_size",  &rotate_sz_str  },
++	{ "rotate_count", &rotate_cnt_str },
+ };
+ 
+ /* Function prototypes. */
+@@ -499,6 +504,7 @@ int main(int argc, char *argv[])
+ 
+ 		case 'r':
+ 			parse_rotation(optarg, &RotateSz, &RotateCnt);
++			rotate_opt++;
+ 			break;
+ 
+ 		case 's':
+@@ -3296,6 +3302,32 @@ static int cfparse(FILE *fp, struct files *newf, struct notifiers *newn)
+ 		secure_str = NULL;
+ 	}
+ 
++	if (rotate_sz_str) {
++		if (rotate_opt) {
++			logit("Skipping 'rotate_size', already set on command line.");
++		} else {
++			int val = strtobytes(rotate_sz_str);
++			if (val > 0)
++				RotateSz = val;
++		}
++
++		free(rotate_sz_str);
++		rotate_sz_str = NULL;
++	}
++
++	if (rotate_cnt_str) {
++		if (rotate_opt) {
++			logit("Skipping 'rotate_count', already set on command line.");
++		} else {
++			int val = atoi(rotate_cnt_str);
++			if (val > 0)
++				RotateCnt = val;
++		}
++
++		free(rotate_cnt_str);
++		rotate_cnt_str = NULL;
++	}
++
+ 	return 0;
+ }
+ 
+diff --git a/syslog.conf b/syslog.conf
+index c4c7525..52161a1 100644
+--- a/syslog.conf
++++ b/syslog.conf
+@@ -42,9 +42,11 @@ mail.err			 /var/log/mail.err
+ 	cron,daemon.none;\
+ 	mail,news.none		-/var/log/messages
+ 
+-# Store all critical eventes, except kernel logs in critical
+ #
+-#*.=crit;kern.none		/var/log/critical
++# Store all critical events, except kernel logs, in critical RFC5424 format.
++# Overide global log rotation settings, rotate every 10MiB, keep 5 old logs,
++#
++#*.=crit;kern.none		/var/log/critical	;rotate=10M:5,RFC5424
+ 
+ # Example of sending events to remote syslog server.
+ # All events from notice and above, except auth, authpriv
+@@ -60,7 +62,7 @@ mail.err			 /var/log/mail.err
+ 
+ # Priority alert and above are sent to the operator
+ #
+-#*.alert				root,joey
++#*.alert			root,joey
+ 
+ #
+ # Secure mode, same as -s, none(0), on(1), full(2).  When enabled
+@@ -70,6 +72,12 @@ mail.err			 /var/log/mail.err
+ #
+ secure_mode 1
+ 
++#
++# Global log rotation, same as -r SIZE:COUNT, command line wins.
++#
++#rotate_size  1M
++#rotate_count 5
++
+ #
+ # Include all config files in /etc/syslog.d/
+ #
+-- 
+2.43.0
+

@@ -1,0 +1,34 @@
+From d6e7d2c6ee36cfc67eeef643d4a6c69dfbbd36ab Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Mon, 26 Aug 2024 11:50:13 +0200
+Subject: [PATCH 15/15] Fix #88: initial delay for unresolvable remote target
+Organization: Addiva Elektronik
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ src/syslogd.c | 8 +++++++-
+ 1 file changed, 7 insertions(+), 1 deletion(-)
+
+diff --git a/src/syslogd.c b/src/syslogd.c
+index a2502c9..fecf281 100644
+--- a/src/syslogd.c
++++ b/src/syslogd.c
+@@ -871,8 +871,14 @@ static int nslookup(const char *host, const char *service, struct addrinfo **ai)
+ 	if (!node || !node[0])
+ 		node = NULL;
+ 
+-	/* Reset resolver cache and retry name lookup */
++	/*
++	 * Reset resolver cache and retry name lookup.  The use of
++	 * `_res` here seems to be the most portable way to adjust
++	 * the per-process timeout and retry.
++	 */
+ 	res_init();
++	_res.retrans = 1;
++	_res.retry = 1;
+ 
+ 	logit("nslookup '%s:%s'\n", node ?: "*", service);
+ 	memset(&hints, 0, sizeof(hints));
+-- 
+2.43.0
+

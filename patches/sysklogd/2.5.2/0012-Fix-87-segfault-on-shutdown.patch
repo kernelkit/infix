@@ -1,0 +1,44 @@
+From 035dccad53efcd4237f040dc702ab435212ecf03 Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Sun, 21 Jul 2024 19:15:48 +0200
+Subject: [PATCH 12/15] Fix #87: segfault on shutdown
+Organization: Addiva Elektronik
+
+Regression introduced in in 36295e3, for issue #82.
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ src/syslogd.c | 10 +++++-----
+ 1 file changed, 5 insertions(+), 5 deletions(-)
+
+diff --git a/src/syslogd.c b/src/syslogd.c
+index 87da475..64da821 100644
+--- a/src/syslogd.c
++++ b/src/syslogd.c
+@@ -2578,11 +2578,6 @@ void die(int signo)
+ 	 */
+ 	timer_exit();
+ 
+-	/*
+-	 * Close all open log files.
+-	 */
+-	close_open_log_files();
+-
+ 	/*
+ 	 * Close all UNIX and inet sockets
+ 	 */
+@@ -2592,6 +2587,11 @@ void die(int signo)
+ 		free(pe);
+ 	}
+ 
++	/*
++	 * Close all open log files.
++	 */
++	close_open_log_files();
++
+ 	kern_console_on();
+ 
+ 	exit(0);
+-- 
+2.43.0
+
