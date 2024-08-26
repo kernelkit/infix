@@ -32,6 +32,15 @@ submodule infix-if-bridge {
   contact      "kernelkit@googlegroups.com";
   description  "Linux bridge extension for ietf-interfaces.";
 
+  revision 2024-08-26 {
+    description "Improve must expressions for multicast.
+
+                 Add a must expression forcing a port in a dot1q multicast-filter
+                 to also belong to the VLAN. Also add must expression (for both
+                 8021d and 8021q) to force snooping to be anabled when enable
+                 multicast-filters";
+    reference "internal";
+  }
   revision 2024-03-28 {
     description "Rename mdb -> multicast-filters.
 
@@ -386,12 +395,33 @@ submodule infix-if-bridge {
       }
     }
   }
+  deviation "/if:interfaces/if:interface/infix-if:bridge/type/ieee8021d/multicast-filters/multicast-filter" {
+    deviate add {
+      must "../../multicast/snooping = 'true'" {
+        error-message "Multicast snooping is required when configure multicast-filters ";
+      }
+    }
+  }
 
   deviation "/if:interfaces/if:interface/infix-if:bridge/type/ieee8021q/vlans/vlan/multicast-filters/multicast-filter/ports/port" {
     deviate add {
       must "current() = ../../../../../../../if:name
         or /if:interfaces/if:interface[if:name = current()]/infix-if:bridge-port/bridge = ../../../../../../../if:name" {
         error-message "Port is not member of bridge";
+      }
+    }
+  }
+  deviation "/if:interfaces/if:interface/infix-if:bridge/type/ieee8021q/vlans/vlan/multicast-filters/multicast-filter/ports/port" {
+    deviate add {
+      must "(../../../../untagged[contains(., current())]) or (../../../../tagged[contains(., current())])" {
+        error-message "Port is not member of of VLAN";
+      }
+    }
+  }
+  deviation "/if:interfaces/if:interface/infix-if:bridge/type/ieee8021q/vlans/vlan/multicast-filters/multicast-filter" {
+    deviate add {
+      must "../../multicast/snooping = 'true'" {
+        error-message "Multicast snooping is required when configure multicast-filters ";
       }
     }
   }
