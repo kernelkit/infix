@@ -1,0 +1,67 @@
+From 0366909927cebecdf6c35b83a976a25c529043e1 Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Sun, 14 Jul 2024 09:26:50 +0200
+Subject: [PATCH 04/15] Allow per-file rotation settings to set only one value
+Organization: Addiva Elektronik
+
+This change makes it possible to set rotate=2M, or rotate=:5, and then
+rely on the global settings for the other.
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ man/syslog.conf.5 | 10 ++++++++--
+ src/syslogd.c     |  7 +++----
+ 2 files changed, 11 insertions(+), 6 deletions(-)
+
+diff --git a/man/syslog.conf.5 b/man/syslog.conf.5
+index 030c377..f436dc3 100644
+--- a/man/syslog.conf.5
++++ b/man/syslog.conf.5
+@@ -67,7 +67,10 @@ ACTION   := /path/to/file
+ OPTION   := [OPTION,]
+ 	 |= RFC3164
+ 	 |= RFC5424
+-         |= rotate=SIZE:COUNT
++         |= rotate=ROT
++ROT      := SIZE:COUNT
++         |= SIZE
++	 |= :COUNT
+ 
+ secure_mode [0,1,2]
+ 
+@@ -108,7 +111,10 @@ The log rotation, which is only relevant for files, details the max
+ .Ar SIZE:COUNT
+ a file can reach before it is rotated, and later compressed.  This
+ feature is mostly intended for embedded systems that do not want to have
+-cron or a separate log rotate daemon.
++cron or a separate log rotate daemon.  It is possible to specify only
++size or count, in which case the global setting covers the other.  E.g.,
++to set only the rotation count, use:
++.Ar rotate=:COUNT .
+ .Pp
+ The
+ .Ql rotate_size SIZE
+diff --git a/src/syslogd.c b/src/syslogd.c
+index fa8964b..2264a75 100644
+--- a/src/syslogd.c
++++ b/src/syslogd.c
+@@ -2876,13 +2876,12 @@ static void cfrot(char *ptr, struct filed *f)
+ 		*c++ = 0;
+ 		cnt = atoi(c);
+ 	}
++	if (cnt > 0)
++		f->f_rotatecount = cnt;
+ 
+ 	sz = strtobytes(ptr);
+-	if (sz > 0 && cnt > 0) {
+-		logit("Set rotate size %d bytes, %d rotations\n", sz, cnt);
+-		f->f_rotatecount = cnt;
++	if (sz > 0)
+ 		f->f_rotatesz = sz;
+-	}
+ }
+ 
+ static int cfopt(char **ptr, const char *opt)
+-- 
+2.43.0
+

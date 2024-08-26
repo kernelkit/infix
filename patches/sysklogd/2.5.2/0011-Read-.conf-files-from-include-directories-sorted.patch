@@ -1,0 +1,30 @@
+From 87ccd3eb37087ffb4b5f5b0322a558522a705215 Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Thu, 18 Jul 2024 11:42:36 +0200
+Subject: [PATCH 11/15] Read *.conf files from include/ directories sorted
+Organization: Addiva Elektronik
+
+No point in "saving time" on this operation.  It is more important to
+users that we read the files in a predefined order, alphabetically.
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ src/syslogd.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/syslogd.c b/src/syslogd.c
+index 402a85e..87da475 100644
+--- a/src/syslogd.c
++++ b/src/syslogd.c
+@@ -3400,7 +3400,7 @@ static int cfparse(FILE *fp, struct files *newf)
+ 				p++;
+ 
+ 			logit("Searching for %s ...\n", p);
+-			if (glob(p, GLOB_NOSORT, NULL, &gl))
++			if (glob(p, 0, NULL, &gl))
+ 				logit("No files match %s\n", p);
+ 
+ 			for (size_t i = 0; i < gl.gl_pathc; i++) {
+-- 
+2.43.0
+

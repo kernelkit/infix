@@ -1,0 +1,346 @@
+From ad8dedd04a979279d245b53a60311ad91acaaf14 Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Mon, 15 Jul 2024 15:02:32 +0200
+Subject: [PATCH 10/15] Fix #82: retry creating UNIX and network sockets on
+ failure
+Organization: Addiva Elektronik
+
+When starting up, or on SIGHUP, syslogd may fail to create a UNIX socket
+or (bind) an Internet socket.  The latter may be because the system is
+in bootstrap and the interface and/or address syslogd tries to bind() to
+does not yet exist.
+
+This commit adds a very basic retry loop every five seconds.
+
+Also, with the new retry logic it was deemed worth it to increase the
+logging from syslogd itself.  I.e., when failing to create a socket,
+or when retrying and succeeding, as well as when closing sockets.  In
+particular when opening and closing Internet facing ports.
+
+Since startup, or reconfiguration, is not failure to send() the we do
+not want to inadvertedly trigger F_FORW_SUSP for remote log actions.
+This is the reason for the ENONET error code from socket_ffs(), to
+ensure we retry sending to remote on the next log message instead of
+waiting 180 sec.  Ordering at boot, or reconf, is also the reason for
+setting Initialized earlier -- this prevents inadvertedly logging to the
+console instead of to a file that actually is open.  We can usually log
+to file but maybe not yet to a remote.
+
+To not terrify casual readers of the logs, messages for opening and
+closing Inet (Internet) sockets are tracked from what context they were
+opened in.  Context, in this context, is the secure_mode switch in which
+syslogd only opens UDP sockets for sending messages to other syslog
+servers, i.e., without binding to a server port.
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ src/socket.c  |   1 +
+ src/syslogd.c | 145 +++++++++++++++++++++++++++++++++++---------------
+ 2 files changed, 102 insertions(+), 44 deletions(-)
+
+diff --git a/src/socket.c b/src/socket.c
+index 4b64888..8c32dac 100644
+--- a/src/socket.c
++++ b/src/socket.c
+@@ -217,6 +217,7 @@ int socket_ffs(int family)
+ 			return entry->sd;
+ 	}
+ 
++	errno = ENONET;
+ 	return -1;
+ }
+ 
+diff --git a/src/syslogd.c b/src/syslogd.c
+index 8ad5109..402a85e 100644
+--- a/src/syslogd.c
++++ b/src/syslogd.c
+@@ -160,6 +160,9 @@ static int	  rotate_opt;	          /* Set if command line option has been given
+ static off_t	  RotateSz = 0;		  /* Max file size (bytes) before rotating, disabled by default */
+ static int	  RotateCnt = 5;	  /* Max number (count) of log files to keep, set with -c <NUM> */
+ 
++struct timeval   *retry = NULL;		  /* Set by init() to &init_tv whenever retry jobs exist */
++struct timeval    init_tv = { 5, 0 };	  /* Retry every 5 seconds. */
++
+ /*
+  * List of notifiers
+  */
+@@ -209,6 +212,7 @@ void        debug_switch();
+ void        die(int sig);
+ static void signal_init(void);
+ static void boot_time_init(void);
++static void retry_init(void);
+ static void init(void);
+ static int  strtobytes(char *arg);
+ static void cflisten(char *ptr, void *arg);
+@@ -642,7 +646,7 @@ no_klogd:
+ 	for (;;) {
+ 		int rc;
+ 
+-		rc = socket_poll(NULL);
++		rc = socket_poll(retry);
+ 		if (restart > 0) {
+ 			restart--;
+ 			logit("\nReceived SIGHUP, reloading syslogd.\n");
+@@ -660,8 +664,11 @@ no_klogd:
+ 			rotate_all_files();
+ 		}
+ 
+-		if (rc < 0 && errno != EINTR)
+-			ERR("select()");
++		if (rc < 0) {
++			if (errno != EINTR)
++				ERR("select()");
++		} else if (rc == 0)
++			retry_init();
+ 
+ 		if (KernLog)
+ 			sys_seqno_save();
+@@ -769,14 +776,14 @@ static void unix_cb(int sd, void *arg)
+ 	parsemsg(LocalHostName, msg);
+ }
+ 
+-static void create_unix_socket(struct peer *pe)
++static int create_unix_socket(struct peer *pe)
+ {
+ 	struct sockaddr_un sun;
+ 	struct addrinfo ai;
+ 	int sd = -1;
+ 
+ 	if (pe->pe_socknum)
+-		return;		/* Already set up */
++		return 0;	/* Already set up */
+ 
+ 	memset(&ai, 0, sizeof(ai));
+ 	ai.ai_addr = (struct sockaddr *)&sun;
+@@ -790,11 +797,12 @@ static void create_unix_socket(struct peer *pe)
+ 	if (sd < 0)
+ 		goto err;
+ 
+-	logit("Created UNIX socket %d ...\n", sd);
++	NOTE("Created UNIX socket %s", sun.sun_path);
+ 	pe->pe_sock[pe->pe_socknum++] = sd;
+-	return;
++	return 0;
+ err:
+ 	ERR("cannot create %s", pe->pe_name);
++	return 1;
+ }
+ 
+ static void unmapped(struct sockaddr *sa)
+@@ -866,7 +874,7 @@ static int nslookup(const char *host, const char *service, struct addrinfo **ai)
+ 	/* Reset resolver cache and retry name lookup */
+ 	res_init();
+ 
+-	logit("nslookup '%s:%s'\n", node ?: "none", service);
++	logit("nslookup '%s:%s'\n", node ?: "*", service);
+ 	memset(&hints, 0, sizeof(hints));
+ 	hints.ai_flags    = !node ? AI_PASSIVE : 0;
+ 	hints.ai_family   = family;
+@@ -875,22 +883,25 @@ static int nslookup(const char *host, const char *service, struct addrinfo **ai)
+ 	return getaddrinfo(node, service, &hints, ai);
+ }
+ 
+-static void create_inet_socket(struct peer *pe)
++static int create_inet_socket(struct peer *pe)
+ {
+ 	struct addrinfo *ai, *res;
+-	int sd, err;
++	int err, rc = 0;
++
++	if (pe->pe_socknum)
++		return 0;	/* Already set up */
+ 
+ 	err = nslookup(pe->pe_name, pe->pe_serv, &res);
+ 	if (err) {
+-		ERRX("%s/udp service unknown: %s", pe->pe_serv,
+-		     gai_strerror(err));
+-		return;
++		ERRX("%s:%s/udp service unknown: %s", pe->pe_name ?: "*", pe->pe_serv, gai_strerror(err));
++		return 1;
+ 	}
+ 
+ 	for (ai = res; ai; ai = ai->ai_next) {
++		int sd;
++
+ 		if (pe->pe_socknum + 1 >= NELEMS(pe->pe_sock)) {
+-			WARN("Only %zd IP addresses per socket supported.",
+-			     NELEMS(pe->pe_sock));
++			WARN("Only %zd IP addresses per socket supported.", NELEMS(pe->pe_sock));
+ 			break;
+ 		}
+ 
+@@ -900,15 +911,35 @@ static void create_inet_socket(struct peer *pe)
+ 			ai->ai_flags &= ~AI_SECURE;
+ 
+ 		sd = socket_create(ai, inet_cb, NULL);
+-		if (sd < 0)
++		if (sd < 0) {
++			WARN("Failed creating socket for %s:%s: %s", pe->pe_name ?: "*",
++			      pe->pe_serv, strerror(errno));
++			rc = 1;
+ 			continue;
++		}
+ 
+-		logit("Created inet socket %d for %s:%s ...\n", sd,
+-		      pe->pe_name, pe->pe_serv);
++		if (!SecureMode) {
++			pe->pe_mode |= 01000;
++			NOTE("Opened inet socket %s:%s", pe->pe_name ?: "*", pe->pe_serv);
++		}
+ 		pe->pe_sock[pe->pe_socknum++] = sd;
+ 	}
+ 
+ 	freeaddrinfo(res);
++	if (rc && pe->pe_socknum == 0)
++		return rc;
++
++	return 0;
++}
++
++static void close_socket(struct peer *pe)
++{
++	for (size_t i = 0; i < pe->pe_socknum; i++) {
++		if (pe->pe_mode & 01000)
++			NOTE("Closing inet socket %s:%s", pe->pe_name ?: "*", pe->pe_serv);
++		socket_close(pe->pe_sock[i]);
++	}
++	pe->pe_socknum = 0;
+ }
+ 
+ void untty(void)
+@@ -1947,6 +1978,7 @@ void fprintlog_write(struct filed *f, struct iovec *iov, int iovcnt, int flags)
+ 		if (lsent != len) {
+ 			switch (errno) {
+ 			case ENOBUFS:
++			case ENONET:		/* returned by socket_ffs() */
+ 			case ENETDOWN:
+ 			case ENETUNREACH:
+ 			case EHOSTUNREACH:
+@@ -2556,11 +2588,7 @@ void die(int signo)
+ 	 */
+ 	TAILQ_FOREACH_SAFE(pe, &pqueue, pe_link, next) {
+ 		TAILQ_REMOVE(&pqueue, pe, pe_link);
+-
+-		for (size_t i = 0; i < pe->pe_socknum; i++) {
+-			logit("Closing socket %d ...\n", pe->pe_sock[i]);
+-			socket_close(pe->pe_sock[i]);
+-		}
++		close_socket(pe);
+ 		free(pe);
+ 	}
+ 
+@@ -2718,6 +2746,31 @@ static void boot_time_init(void)
+ #endif
+ }
+ 
++/*
++ * Used by init() to trigger retries of, e.g., binding to interfaces.
++ */
++static void retry_init(void)
++{
++	struct peer *pe;
++	int fail = 0;
++
++	logit("Retrying socket init ...\n");
++	TAILQ_FOREACH(pe, &pqueue, pe_link) {
++		if (pe->pe_name && pe->pe_name[0] == '/') {
++			fail |= create_unix_socket(pe);
++		} else {
++			/* skip any marked for deletion */
++			if (SecureMode < 2)
++				fail |= create_inet_socket(pe);
++		}
++	}
++
++	if (!fail) {
++		logit("Socket re-init done.\n");
++		retry = NULL;
++	}
++}
++
+ /*
+  *  INIT -- Initialize syslogd from configuration table
+  */
+@@ -2725,8 +2778,8 @@ static void init(void)
+ {
+ 	struct files newf = SIMPLEQ_HEAD_INITIALIZER(newf);
+ 	struct peer *pe, *penext;
++	int bflag = 0, fail = 0;
+ 	struct filed *f;
+-	int bflag = 0;
+ 	FILE *fp;
+ 	char *p;
+ 
+@@ -2840,23 +2893,6 @@ static void init(void)
+ 			});
+ 	}
+ 
+-	/*
+-	 * Open or close sockets for local and remote communication
+-	 */
+-	TAILQ_FOREACH(pe, &pqueue, pe_link) {
+-		if (pe->pe_name && pe->pe_name[0] == '/') {
+-			create_unix_socket(pe);
+-		} else {
+-			for (size_t i = 0; i < pe->pe_socknum; i++)
+-				socket_close(pe->pe_sock[i]);
+-			pe->pe_socknum = 0;
+-
+-			/* skip any marked for deletion */
+-			if (SecureMode < 2 && pe->pe_mark <= 0)
+-				create_inet_socket(pe);
+-		}
+-	}
+-
+ 	/*
+ 	 * Sweep
+ 	 */
+@@ -2865,11 +2901,35 @@ static void init(void)
+ 			continue;
+ 
+ 		TAILQ_REMOVE(&pqueue, pe, pe_link);
++		close_socket(pe);
+ 		free(pe);
+ 	}
+ 
+ 	Initialized = 1;
+ 
++	flog(LOG_SYSLOG | LOG_INFO, "syslogd v" VERSION ": restart.");
++	logit("syslogd: restarted.\n");
++
++	/*
++	 * Open or close sockets for local and remote communication
++	 * These may be delayed, so start local logging first.
++	 */
++	TAILQ_FOREACH(pe, &pqueue, pe_link) {
++		if (pe->pe_name && pe->pe_name[0] == '/') {
++			fail |= create_unix_socket(pe);
++		} else {
++			close_socket(pe);
++
++			if (SecureMode < 2)
++				fail |= create_inet_socket(pe);
++		}
++	}
++
++	if (fail)
++		retry = &init_tv;
++	else
++		retry = NULL;
++
+ 	if (Debug) {
+ 		if (!TAILQ_EMPTY(&nothead)) {
+ 			struct notifier *np;
+@@ -2924,9 +2984,6 @@ static void init(void)
+ 			printf("\n");
+ 		}
+ 	}
+-
+-	flog(LOG_SYSLOG | LOG_INFO, "syslogd v" VERSION ": restart.");
+-	logit("syslogd: restarted.\n");
+ }
+ 
+ static void cflisten(char *ptr, void *arg)
+-- 
+2.43.0
+

@@ -1,0 +1,62 @@
+From c7267011224ebd28d8a9daccd589109288fbde11 Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Mon, 26 Aug 2024 11:47:10 +0200
+Subject: [PATCH 13/15] Fix #85: logging to remote IPv6 address does not work
+Organization: Addiva Elektronik
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ src/syslogd.c | 13 ++++++++++++-
+ test/fwd.sh   |  4 ++--
+ 2 files changed, 14 insertions(+), 3 deletions(-)
+
+diff --git a/src/syslogd.c b/src/syslogd.c
+index 64da821..a2502c9 100644
+--- a/src/syslogd.c
++++ b/src/syslogd.c
+@@ -3216,8 +3216,19 @@ static struct filed *cfline(char *line)
+ 	switch (*p) {
+ 	case '@':
+ 		cfopts(p, f);
++		p++;
++		if (*p == '[') {
++			p++;
+ 
+-		bp = strchr(++p, ':');
++			q = strchr(p, ']');
++			if (!q) {
++				ERR("Invalid IPv6 address in remote target, missing ']'");
++				break;
++			}
++			*q++ = 0;
++			bp = strchr(q, ':');
++		} else
++			bp = strchr(p, ':');
+ 		if (bp)
+ 			*bp++ = 0;
+ 		else
+diff --git a/test/fwd.sh b/test/fwd.sh
+index 70fba5b..e37dc1f 100755
+--- a/test/fwd.sh
++++ b/test/fwd.sh
+@@ -13,7 +13,7 @@ MSG="fwd and allow"
+ 
+ cat <<EOF >"${CONFD}/fwd.conf"
+ kern.*		/dev/null
+-ntp.*		@127.0.0.2:${PORT2}	;RFC5424
++ntp.*		@[::1]:${PORT2}	;RFC5424
+ EOF
+ 
+ reload
+@@ -23,7 +23,7 @@ kern.*		/dev/null
+ *.*;kern.none	${LOG2}			;RFC5424
+ EOF
+ 
+-setup2 -m0 -a 127.0.0.2:* -b ":${PORT2}"
++setup2 -m0 -a "[::1]:*" -b ":${PORT2}"
+ 
+ print "TEST: Starting"
+ 
+-- 
+2.43.0
+

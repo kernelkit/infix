@@ -1,0 +1,150 @@
+From a1dc835fd5d11ce0dd6d9983c1aa2ca188460ac9 Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Sun, 14 Jul 2024 17:46:41 +0200
+Subject: [PATCH 05/15] Fix #81: blocking delay for unreachable remote
+Organization: Addiva Elektronik
+
+This patch fixes a blocking delay when a named remote action is set up.
+On GLIBC systems, with the default resolver setup, this may be as long
+as 10 seconds, meaning syslogd retried nslookup() every log message,
+which in turn lead to snail speed on logging to other targets.
+
+Additionally it re-enables the warning for failure to resolve the DNS
+name -- a user is likely very interested in why they are not seeing any
+logs on their remote server.  Logs age out, so logging in to a device
+which may have logged this once is not very useful.
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ configure.ac  | 12 ++++++++++++
+ src/syslogd.c | 27 ++++++++++++++++-----------
+ src/syslogd.h |  5 ++++-
+ 3 files changed, 32 insertions(+), 12 deletions(-)
+
+diff --git a/configure.ac b/configure.ac
+index c370877..cf2488a 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -67,6 +67,10 @@ AC_CHECK_FUNCS([setsid])
+ AC_CHECK_FUNCS([getprogname strtobytes])
+ 
+ # Command line options
++AC_ARG_WITH(dns-delay,
++        AS_HELP_STRING([--with-dns-delay=SEC], [Retry delay resolving DNS names, default: 60]),
++	[dns_delay=$withval], [dns_delay='no'])
++
+ AC_ARG_WITH(suspend-time,
+         AS_HELP_STRING([--with-suspend-time=SEC], [Retry delay for sending to remote, default: 180]),
+ 	[suspend_time=$withval], [suspend_time='no'])
+@@ -82,6 +86,13 @@ AC_ARG_WITH(logger,
+ AS_IF([test "x$logger" != "xno"], with_logger="yes", with_logger="no")
+ AM_CONDITIONAL([ENABLE_LOGGER], [test "x$with_logger" != "xno"])
+ 
++AS_IF([test "x$dns_delay" != "xno"],[
++	AS_IF([test "x$dns_delay" = "xyes"],[
++		AC_MSG_ERROR([Must supply argument])])
++	]
++	AC_DEFINE_UNQUOTED(INET_DNS_DELAY, $dns_delay, [Retry delay for resolving DNS names, default: 60]),
++	dns_delay=60)
++
+ AS_IF([test "x$suspend_time" != "xno"],[
+ 	AS_IF([test "x$suspend_time" = "xyes"],[
+ 		AC_MSG_ERROR([Must supply argument])])
+@@ -134,6 +145,7 @@ cat <<EOF
+ 
+  Optional features:
+   logger.........: $with_logger
++  dns retry delay: $dns_delay sec
+   suspend time...: $suspend_time sec
+   systemd........: $with_systemd
+ 
+diff --git a/src/syslogd.c b/src/syslogd.c
+index 2264a75..c838c36 100644
+--- a/src/syslogd.c
++++ b/src/syslogd.c
+@@ -837,6 +837,11 @@ static void inet_cb(int sd, void *arg)
+ 	parsemsg(hname, msg);
+ }
+ 
++/*
++ * Depending on the setup of /etc/resolv.conf, and the system resolver,
++ * a call to this function may be blocked for 10 seconds, or even more,
++ * waiting for a response.  See https://serverfault.com/a/562108/122484
++ */
+ static int nslookup(const char *host, const char *service, struct addrinfo **ai)
+ {
+ 	struct addrinfo hints;
+@@ -2405,8 +2410,8 @@ static void forw_lookup(struct filed *f)
+ 	char *host = f->f_un.f_forw.f_hname;
+ 	char *serv = f->f_un.f_forw.f_serv;
+ 	struct addrinfo *ai;
++	time_t now, diff;
+ 	int err, first;
+-	time_t diff;
+ 
+ 	if (SecureMode > 1) {
+ 		if (f->f_un.f_forw.f_addr)
+@@ -2419,27 +2424,27 @@ static void forw_lookup(struct filed *f)
+ 	/* Called from cfline() for initial lookup? */
+ 	first = f->f_type == F_UNUSED ? 1 : 0;
+ 
++	now = timer_now();
++	diff = now - f->f_time;
++
+ 	/*
+-	 * Not INET_SUSPEND_TIME, but back off a few seconds at least
+-	 * to prevent syslogd from hammering the resolver for every
+-	 * little message that is logged.  E.g., at boot when we read
+-	 * the kernel ring buffer.
++	 * Back off a minute to prevent unnecessary delays on other log
++	 * targets due to being blockd in nslookup().  This means bootup
++	 * log messages may not be logged for named remote targets since
++	 * networking may not be available until later.
+ 	 */
+-	diff = timer_now() - f->f_time;
+-	if (!first && diff < 5)
++	if (!first && diff < INET_DNS_DELAY)
+ 		return;
+ 
+ 	err = nslookup(host, serv, &ai);
+ 	if (err) {
+ 		f->f_type = F_FORW_UNKN;
+-		f->f_time = timer_now();
+-		if (!first && !(f->f_flags & SUSP_RETR))
++		f->f_time = now;
++		if (!first)
+ 			WARN("Failed resolving '%s:%s': %s", host, serv, gai_strerror(err));
+-		f->f_flags |= SUSP_RETR; /* Retry silently */
+ 		return;
+ 	}
+ 
+-	f->f_flags &= ~SUSP_RETR;
+ 	f->f_type = F_FORW;
+ 	f->f_un.f_forw.f_addr = ai;
+ 	f->f_prevcount = 0;
+diff --git a/src/syslogd.h b/src/syslogd.h
+index 1703df2..a14b6a0 100644
+--- a/src/syslogd.h
++++ b/src/syslogd.h
+@@ -119,6 +119,10 @@
+ #define MAXUNAMES      20     /* maximum number of user names */
+ #define MAXFNAME       200    /* max file pathname length */
+ 
++#ifndef INET_DNS_DELAY
++#define INET_DNS_DELAY 60
++#endif
++
+ #ifndef INET_SUSPEND_TIME
+ #define INET_SUSPEND_TIME 180 /* equal to 3 minutes */
+ #endif
+@@ -185,7 +189,6 @@
+ #define MARK      0x008  /* this message is a mark */
+ #define RFC3164   0x010  /* format log message according to RFC 3164 */
+ #define RFC5424   0x020  /* format log message according to RFC 5424 */
+-#define SUSP_RETR 0x040  /* suspend/forw_unkn, retrying nslookup */
+ 
+ /* Syslog timestamp formats. */
+ #define	BSDFMT_DATELEN	0
+-- 
+2.43.0
+
