@@ -1,9 +1,10 @@
 From 8181ce6caf5ee49e30a02db9695647bd7bc73838 Mon Sep 17 00:00:00 2001
 From: Michal Vasko <mvasko@cesnet.cz>
 Date: Tue, 2 Jul 2024 12:11:30 +0200
-Subject: [PATCH 5/6] modinfo BUGFIX memory leak
+Subject: [PATCH 5/9] modinfo BUGFIX memory leak
 Organization: Addiva Elektronik
 
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
 ---
  src/modinfo.c | 4 ++++
  1 file changed, 4 insertions(+)
@@ -24,5 +25,5 @@ index 949c321b..9edb4498 100644
  }
  
 -- 
-2.34.1
+2.43.0
 

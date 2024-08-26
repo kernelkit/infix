@@ -1,7 +1,7 @@
 From da765b90bca45b91f72fd6525e680040eebd2d4b Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Wed, 21 Aug 2024 16:00:35 +0200
-Subject: [PATCH 7/8] Introduce new log level [SEC]
+Subject: [PATCH 7/9] Introduce new log level [SEC]
 Organization: Addiva Elektronik
 
 This adds a new log level for security and audit trail related log

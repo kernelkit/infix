@@ -1,7 +1,7 @@
 From dcd594e7c7e2b47b489243ce823e58e6b674bea3 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Tue, 28 Mar 2023 10:37:53 +0200
-Subject: [PATCH 1/6] sysrepo-plugind: add support for running in foreground
+Subject: [PATCH 1/9] sysrepo-plugind: add support for running in foreground
  with syslog
 Organization: Addiva Elektronik
 
@@ -67,5 +67,5 @@ index a6a817cc..5baebec3 100644
              /* plugin-install */
              if (get_plugins_dir(&plugins_dir)) {
 -- 
-2.34.1
+2.43.0
 
