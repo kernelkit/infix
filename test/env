@@ -188,8 +188,11 @@ if [ "$containerize" ]; then
 	    ;;
     esac
 
+    mkdir -p "$HOME/.infix"
+    touch "$HOME/.infix/.ash_history"
+
     # shellcheck disable=SC2016
-        exec $(runner) run \
+    exec $(runner) run \
 	 --cap-add=NET_RAW \
 	 --cap-add=NET_ADMIN \
 	 --device=/dev/net/tun \
@@ -199,6 +202,7 @@ if [ "$containerize" ]; then
 	 --env PROMPT_DIRTRIM="$ixdir" \
 	 --env PS1="$(build_ps1)" \
 	 --expose 9001-9010 --publish-all \
+	 -v "$HOME/.infix/.ash_history":/root/.ash_history \
 	 $(name) \
 	 $interactive \
 	 --rm \
