@@ -1,7 +1,7 @@
 From 7e49f394e0afedc0259d4364f5a9a83296fe2b72 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Wed, 21 Aug 2024 16:04:43 +0200
-Subject: [PATCH 8/8] Add audit trail for high priority system changes
+Subject: [PATCH 8/9] Add audit trail for high priority system changes
 Organization: Addiva Elektronik
 
 Committing a change to running, copying to a datastore, or calling an

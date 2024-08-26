@@ -1,7 +1,7 @@
 From 2a826d77d83930b32f2bdcf32ef9c57c616ec526 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Tue, 7 May 2024 15:41:53 +0200
-Subject: [PATCH 2/6] Allow SR_EV_DONE to return any error to sysrepocfg
+Subject: [PATCH 2/9] Allow SR_EV_DONE to return any error to sysrepocfg
 Organization: Addiva Elektronik
 
 Importing a system configuration with sysrepocfg the model callbacks do
@@ -148,5 +148,5 @@ index 8778956b..35a1fd8c 100644
      }
  
 -- 
-2.34.1
+2.43.0
 

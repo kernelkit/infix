@@ -1,11 +1,13 @@
 From c7cd85da2831a5c1476e6ebe60431b87382c74c8 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Mattias=20Walstr=C3=B6m?= <lazzer@gmail.com>
 Date: Mon, 6 May 2024 14:49:32 +0200
-Subject: [PATCH 4/6] Add -z switch to sysrepoctl to install factory config
+Subject: [PATCH 4/9] Add -z switch to sysrepoctl to install factory config
  from a json file
 Organization: Addiva Elektronik
 
 This to be able to load the yang modules during build time instead on boot.
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
 ---
  src/executables/sysrepoctl.c | 20 +++++++++++++--
  src/lyd_mods.h               |  7 ++++++
@@ -172,5 +174,5 @@ index 8a6a70b8..41c9e52b 100644
  
  ////////////////////////////////////////////////////////////////////////////////
 -- 
-2.34.1
+2.43.0
 

@@ -1,9 +1,10 @@
 From 3d297a0305e35007c4e16eb729025a0e58a0bcd2 Mon Sep 17 00:00:00 2001
 From: Michal Vasko <mvasko@cesnet.cz>
 Date: Fri, 28 Jun 2024 14:10:25 +0200
-Subject: [PATCH 6/6] sub ntf BUGFIX proper invalid FD check
+Subject: [PATCH 6/9] sub ntf BUGFIX proper invalid FD check
 Organization: Addiva Elektronik
 
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
 ---
  src/utils/subscribed_notifications.c | 2 +-
  1 file changed, 1 insertion(+), 1 deletion(-)
@@ -22,5 +23,5 @@ index 0055f10a..a0694d04 100644
      /* add into the pollfd structure */
      err_info = srsn_dispatch_add(fd, cb_data);
 -- 
-2.34.1
+2.43.0
 

@@ -1,9 +1,10 @@
 From 89fdf6691229f8f0978ca9bb13fa0143e0e79dbd Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Mattias=20Walstr=C3=B6m?= <lazzer@gmail.com>
 Date: Wed, 8 May 2024 17:00:50 +0200
-Subject: [PATCH 3/6] Allow to copy from factory default
+Subject: [PATCH 3/9] Allow to copy from factory default
 Organization: Addiva Elektronik
 
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
 ---
  src/sysrepo.c | 2 +-
  1 file changed, 1 insertion(+), 1 deletion(-)
@@ -22,5 +23,5 @@ index 35a1fd8c..c15855e9 100644
  
      if (src_datastore == session->ds) {
 -- 
-2.34.1
+2.43.0
 

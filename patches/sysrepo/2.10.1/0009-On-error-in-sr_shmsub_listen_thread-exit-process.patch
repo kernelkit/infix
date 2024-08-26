@@ -1,0 +1,38 @@
+From 5c4df9f535f6fbdc6dc0573a47c47be2d02f1774 Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Fri, 23 Aug 2024 12:22:06 +0200
+Subject: [PATCH 9/9] On error in sr_shmsub_listen_thread(), exit process
+Organization: Addiva Elektronik
+
+If processing callback events in, e.g., sysrepo-plugind, make sure to
+log the error and exit(1) the entire process so the system can decide
+to handle the problem.  For example, restart all dependent services.
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ src/shm_sub.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/src/shm_sub.c b/src/shm_sub.c
+index 363883ab..a1e68903 100644
+--- a/src/shm_sub.c
++++ b/src/shm_sub.c
+@@ -4918,6 +4918,7 @@ sr_shmsub_listen_thread(void *arg)
+              * another event is generated, our event pipe will not get notified */
+             continue;
+         } else if (ret) {
++            SR_LOG_WRN("failed sr_subscription_process_events(), ret:%d", ret);
+             goto error;
+         }
+ 
+@@ -4958,5 +4959,7 @@ error:
+     /* free our own resources */
+     ATOMIC_STORE_RELAXED(subscr->thread_running, 0);
+     pthread_detach(pthread_self());
++    exit(1);
++
+     return NULL;
+ }
+-- 
+2.43.0
+
