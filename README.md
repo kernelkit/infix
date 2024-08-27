@@ -5,8 +5,8 @@
 Infix is a free, Linux based, immutable Network Operating System (NOS)
 built on [Buildroot][1], and [sysrepo][2].  A powerful mix that ease
 porting to different platforms, simplify long-term maintenance, and
-provide made-easy management using NETCONF[^1] or the built-in command
-line interface (CLI) from a console or SSH login.
+provide made-easy management using NETCONF, RESTCONF, or the built-in
+command line interface (CLI) from a console or SSH login.
 
 > Click the **▶ Example CLI Session** foldout below for an example, or
 > head on over to the [Infix Documentation](doc/README.md) for more
@@ -22,7 +22,7 @@ may be appealing for other use-cases as well:
 - Atomic upgrades to secondary partition
 - Highly security focused
 
-An immutable[^2] operating system enhances security and inherently makes
+An immutable[^1] operating system enhances security and inherently makes
 it maintenance-free.  Configuration and data, e.g, containers, is stored
 on separate partitions to ensure complete separation from system files
 and allow for seamless backup, restore, and provisioning.
@@ -106,9 +106,7 @@ more information, see: [Infix in Virtual Environments](doc/virtual.md).
 >
 > For *customer specific builds* of Infix, see your product repository.
 
-[^1]: NETCONF or RESTCONF, <https://datatracker.ietf.org/doc/html/rfc8040>
-
-[^2]: An immutable operating system is one with read-only file systems,
+[^1]: An immutable operating system is one with read-only file systems,
     atomic updates, rollbacks, declarative configuration, and workload
     isolation.  All to improve reliability, scalability, and security.
     For more information, see <https://ceur-ws.org/Vol-3386/paper9.pdf>
