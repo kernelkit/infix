@@ -207,16 +207,17 @@ static const char *getnm(struct lyd_node *node, char *xpath, size_t len)
 static int file_change(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
 		       const char *xpath, sr_event_t event, unsigned request_id, void *priv)
 {
-	struct lyd_node *files, *file;
+	struct lyd_node *files, *file, *tree;
 	int err;
 
 	if (SR_EV_DONE != event)
 		return SR_ERR_OK;
 
-	err = srx_get_changes(session, XPATH_FILE_, &files);
+	err = srx_get_diff(session, &tree);
 	if (err)
 		return SR_ERR_OK;
 
+	files = lydx_get_descendant(tree, "syslog", "actions", "file", "log-file", NULL);
 	LYX_LIST_FOR_EACH(files, file, "log-file") {
 		struct lyd_node *node = lydx_get_child(file, "name");
 		enum lydx_op op = lydx_get_op(node);
@@ -230,7 +231,7 @@ static int file_change(sr_session_ctx_t *session, uint32_t sub_id, const char *m
 			action(session, name, path, NULL);
 	}
 
-	srx_free_changes(files);
+	srx_free_changes(tree);
 	systemf("initctl -nbq touch sysklogd");
 
 	return SR_ERR_OK;
@@ -239,16 +240,17 @@ static int file_change(sr_session_ctx_t *session, uint32_t sub_id, const char *m
 static int remote_change(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
 			 const char *xpath, sr_event_t event, unsigned request_id, void *priv)
 {
-	struct lyd_node *remotes, *remote;
+	struct lyd_node *remotes, *remote, *tree;
 	int err;
 
 	if (SR_EV_DONE != event)
 		return SR_ERR_OK;
 
-	err = srx_get_changes(session, XPATH_REMOTE_, &remotes);
+	err = srx_get_diff(session, &tree);
 	if (err)
 		return SR_ERR_OK;
 
+	remotes = lydx_get_descendant(tree, "syslog", "actions", "remote", "destination", NULL);
 	LYX_LIST_FOR_EACH(remotes, remote, "destination") {
 		struct lyd_node *node = lydx_get_child(remote, "name");
 		enum lydx_op op = lydx_get_op(node);
@@ -268,7 +270,7 @@ static int remote_change(sr_session_ctx_t *session, uint32_t sub_id, const char 
 		}
 	}
 
-	srx_free_changes(remotes);
+	srx_free_changes(tree);
 	systemf("initctl -nbq touch sysklogd");
 
 	return SR_ERR_OK;
