@@ -93,7 +93,7 @@ Warning: Permanently added 'fe80::ff:fe00:0%eth0' (ED25519) to the list of known
 admin@fe80::ff:fe00:0%eth0's password: *****
 .-------.
 |  . .  | Infix -- a Network Operating System
-|-. v .-| https://kernelkit.github.io
+|-. v .-| https://kernelkit.org
 '-'---'-'
 
 Run the command 'cli' for interactive OAM
@@ -1147,7 +1147,7 @@ It should now be possible to access the switch from the PC via SSH (or NETCONF).
 admin@fe80::0053:00ff:fe06:1101%eth1's password: 
 .-------.
 |  . .  | Infix -- a Network Operating System
-|-. v .-| https://kernelkit.github.io
+|-. v .-| https://kernelkit.org
 '-'---'-'
 
 Run the command 'cli' for interactive OAM
