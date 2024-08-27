@@ -136,7 +136,7 @@ there is another helper script in Infamy for this:
     Password:
     .-------.
     |  . .  | Infix -- a Network Operating System
-    |-. v .-| https://kernelkit.github.io
+    |-. v .-| https://kernelkit.org
     '-'---'-'
 
     Run the command 'cli' for interactive OAM
