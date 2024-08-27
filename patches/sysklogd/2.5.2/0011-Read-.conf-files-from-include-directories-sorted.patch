@@ -1,7 +1,7 @@
 From 87ccd3eb37087ffb4b5f5b0322a558522a705215 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Thu, 18 Jul 2024 11:42:36 +0200
-Subject: [PATCH 11/15] Read *.conf files from include/ directories sorted
+Subject: [PATCH 11/17] Read *.conf files from include/ directories sorted
 Organization: Addiva Elektronik
 
 No point in "saving time" on this operation.  It is more important to

@@ -1,7 +1,7 @@
 From a1dc835fd5d11ce0dd6d9983c1aa2ca188460ac9 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Sun, 14 Jul 2024 17:46:41 +0200
-Subject: [PATCH 05/15] Fix #81: blocking delay for unreachable remote
+Subject: [PATCH 05/17] Fix #81: blocking delay for unreachable remote
 Organization: Addiva Elektronik
 
 This patch fixes a blocking delay when a named remote action is set up.

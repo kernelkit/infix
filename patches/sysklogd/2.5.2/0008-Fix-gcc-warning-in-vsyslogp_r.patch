@@ -1,7 +1,7 @@
 From c15bb6208cdd0e0629a28c10cb448a11aa7a1624 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Mon, 15 Jul 2024 14:24:08 +0200
-Subject: [PATCH 08/15] Fix gcc warning in vsyslogp_r()
+Subject: [PATCH 08/17] Fix gcc warning in vsyslogp_r()
 Organization: Addiva Elektronik
 
 Signed-off-by: Joachim Wiberg <troglobit@gmail.com>

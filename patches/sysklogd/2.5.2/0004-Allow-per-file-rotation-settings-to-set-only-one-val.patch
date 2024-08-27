@@ -1,7 +1,7 @@
 From 0366909927cebecdf6c35b83a976a25c529043e1 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Sun, 14 Jul 2024 09:26:50 +0200
-Subject: [PATCH 04/15] Allow per-file rotation settings to set only one value
+Subject: [PATCH 04/17] Allow per-file rotation settings to set only one value
 Organization: Addiva Elektronik
 
 This change makes it possible to set rotate=2M, or rotate=:5, and then

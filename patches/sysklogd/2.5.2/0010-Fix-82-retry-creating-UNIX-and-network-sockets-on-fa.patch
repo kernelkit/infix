@@ -1,7 +1,7 @@
 From ad8dedd04a979279d245b53a60311ad91acaaf14 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Mon, 15 Jul 2024 15:02:32 +0200
-Subject: [PATCH 10/15] Fix #82: retry creating UNIX and network sockets on
+Subject: [PATCH 10/17] Fix #82: retry creating UNIX and network sockets on
  failure
 Organization: Addiva Elektronik
 

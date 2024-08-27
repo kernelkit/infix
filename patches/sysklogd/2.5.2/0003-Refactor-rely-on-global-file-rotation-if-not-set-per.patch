@@ -1,7 +1,7 @@
 From a2c47f81bf3d358dddb475cbaa8125f2cb776587 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Sun, 14 Jul 2024 09:19:01 +0200
-Subject: [PATCH 03/15] Refactor, rely on global file rotation if not set
+Subject: [PATCH 03/17] Refactor, rely on global file rotation if not set
  per-file
 Organization: Addiva Elektronik
 

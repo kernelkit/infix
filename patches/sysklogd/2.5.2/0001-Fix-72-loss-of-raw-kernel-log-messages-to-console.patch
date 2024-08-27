@@ -1,7 +1,7 @@
 From ad9a464806fe27fe65d403f56f1dc701f7d0a10a Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Wed, 24 Apr 2024 13:19:09 +0200
-Subject: [PATCH 01/15] Fix #72: loss of raw kernel log messages to console
+Subject: [PATCH 01/17] Fix #72: loss of raw kernel log messages to console
 Organization: Addiva Elektronik
 
 This patch adds a command line flag `-l` to keep kernel logs to console.

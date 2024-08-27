@@ -1,7 +1,7 @@
 From 7e0882688b0ea459c850e6e0ace66cca7100fd0a Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Fri, 12 Jul 2024 22:54:51 +0200
-Subject: [PATCH 02/15] Fix #80: add global log rotation options to .conf file
+Subject: [PATCH 02/17] Fix #80: add global log rotation options to .conf file
 Organization: Addiva Elektronik
 
 Signed-off-by: Joachim Wiberg <troglobit@gmail.com>

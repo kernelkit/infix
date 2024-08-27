@@ -1,7 +1,7 @@
 From 2d626af27e8f3115175749d183a8b7f91849bf10 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Sun, 14 Jul 2024 17:43:39 +0200
-Subject: [PATCH 06/15] Fix annoying gcc warning in rotate_file()
+Subject: [PATCH 06/17] Fix annoying gcc warning in rotate_file()
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit

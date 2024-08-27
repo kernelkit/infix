@@ -1,0 +1,47 @@
+From 691aea6cbe27134d4d4106bb0bca396aff2802f9 Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Tue, 27 Aug 2024 13:35:03 +0200
+Subject: [PATCH 17/17] Fix #90: add support for IPv6 addresses in listen
+ directive
+Organization: Addiva Elektronik
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ src/syslogd.c | 20 +++++++++++++++++++-
+ 1 file changed, 19 insertions(+), 1 deletion(-)
+
+diff --git a/src/syslogd.c b/src/syslogd.c
+index 9b8dc24..033be84 100644
+--- a/src/syslogd.c
++++ b/src/syslogd.c
+@@ -3014,8 +3014,26 @@ static void init(void)
+ static void cflisten(char *ptr, void *arg)
+ {
+ 	char *peer = ptr;
++	char *p;
++
++	while (*peer && isspace(*peer))
++		++peer;
++
++	logit("cflisten[%s]\n", peer);
++
++	p = peer;
++	if (*p == '[') {
++		p++;
++
++		p = strchr(p, ']');
++		if (!p) {
++			ERR("Invalid IPv6 address in listen '%s', missing ']'", peer);
++			return;
++		}
++		*p++ = 0;
++	}
+ 
+-	ptr = strchr(peer, ':');
++	ptr = strchr(p, ':');
+ 	if (ptr)
+ 		*ptr++ = 0;
+ 	addpeer(&(struct peer) {
+-- 
+2.43.0
+
