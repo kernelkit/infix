@@ -42,6 +42,8 @@ All notable changes to the project are documented in this file.
   `/sys/class/leds` are turned on while clearing writable partitions
 - Lock down CLI admin-exec to prevent unprivileged users from managing
   system configuration or state.
+- The local log file `/var/log/syslog` no longer contains debug level
+  log messages.  See `/var/log/debug` for *all* log messages
 
 ### Fixes
 - Fix #274: add missing link/traffic LEDs on NanoPi R2S LAN port
@@ -49,9 +51,14 @@ All notable changes to the project are documented in this file.
 - Fix #531: creating a new VLAN interface named `vlanN` should not set
   `lower-layer-if` to `vlanN`.  With the `vlanN` pattern, only C-VLAN
   and VID can be inferred
+- Fix #541: make sure Frr OSPF logs are sent to `syslogd` and filtered
+  to `/var/log/routing` for easy access from the CLI
 - Fix #542: warning message from `login`, cannot find `pam_lastlog.so`
 - Fix #570: the CLI `change password` command does not work
 - Fix #576: the CLI tab completion for `startup-config` does not work
+- Fix #585: on internal configuration database error, restart internal
+  service `sysrepo-plugind` to attempt to get remote access over NETCONF
+  and RESTCONF back to the user
 - Silence bogus `sysctl` warnings at boot (syslog)
 - Silence output from user group member check (sys-cli in syslog)
 - Reduced resolver timeout and retry attempts, fixes 10 second delays
