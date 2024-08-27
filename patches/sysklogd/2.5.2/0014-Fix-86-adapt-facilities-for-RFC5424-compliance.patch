@@ -1,7 +1,7 @@
 From 1a2e13cb3f3e4fb9f33a56cc87fb96ebc3bb45c7 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Mon, 26 Aug 2024 11:49:27 +0200
-Subject: [PATCH 14/15] Fix #86: adapt facilities for RFC5424 compliance
+Subject: [PATCH 14/17] Fix #86: adapt facilities for RFC5424 compliance
 Organization: Addiva Elektronik
 
 Signed-off-by: Joachim Wiberg <troglobit@gmail.com>

@@ -1,7 +1,7 @@
 From 2aa73f85580614b9162aaaa74b2a9e817c6396bd Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Mon, 15 Jul 2024 10:46:50 +0200
-Subject: [PATCH 07/15] Refactor cfparse() to add a per-keyword parser
+Subject: [PATCH 07/17] Refactor cfparse() to add a per-keyword parser
 Organization: Addiva Elektronik
 
 Signed-off-by: Joachim Wiberg <troglobit@gmail.com>

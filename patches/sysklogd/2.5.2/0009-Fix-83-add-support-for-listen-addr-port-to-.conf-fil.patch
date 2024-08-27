@@ -1,7 +1,7 @@
 From f5fae387b92e81cc1f1f9e8f6656b20bb9e2e929 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Mon, 15 Jul 2024 14:57:54 +0200
-Subject: [PATCH 09/15] Fix #83: add support for listen addr:port to .conf file
+Subject: [PATCH 09/17] Fix #83: add support for listen addr:port to .conf file
 Organization: Addiva Elektronik
 
 This complements the command line '-b addr:port' support with a 'listen'

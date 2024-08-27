@@ -1,7 +1,7 @@
 From d6e7d2c6ee36cfc67eeef643d4a6c69dfbbd36ab Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Mon, 26 Aug 2024 11:50:13 +0200
-Subject: [PATCH 15/15] Fix #88: initial delay for unresolvable remote target
+Subject: [PATCH 15/17] Fix #88: initial delay for unresolvable remote target
 Organization: Addiva Elektronik
 
 Signed-off-by: Joachim Wiberg <troglobit@gmail.com>

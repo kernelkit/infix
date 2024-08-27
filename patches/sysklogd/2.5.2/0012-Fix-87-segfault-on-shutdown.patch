@@ -1,7 +1,7 @@
 From 035dccad53efcd4237f040dc702ab435212ecf03 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Sun, 21 Jul 2024 19:15:48 +0200
-Subject: [PATCH 12/15] Fix #87: segfault on shutdown
+Subject: [PATCH 12/17] Fix #87: segfault on shutdown
 Organization: Addiva Elektronik
 
 Regression introduced in in 36295e3, for issue #82.

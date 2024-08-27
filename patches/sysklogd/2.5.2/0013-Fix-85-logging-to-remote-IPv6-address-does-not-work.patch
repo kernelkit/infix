@@ -1,7 +1,7 @@
 From c7267011224ebd28d8a9daccd589109288fbde11 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Mon, 26 Aug 2024 11:47:10 +0200
-Subject: [PATCH 13/15] Fix #85: logging to remote IPv6 address does not work
+Subject: [PATCH 13/17] Fix #85: logging to remote IPv6 address does not work
 Organization: Addiva Elektronik
 
 Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
