@@ -43,6 +43,10 @@ static char *token(char *ptr)
  * it depends.
  *
  * When done, call srx_free_changes(treep);
+ *
+ * WARNING: this tree does not return any yang:operation for a subtree
+ *          when deleting the entire yang tree (factory reset)!  For
+ *          that use-case, only srx_get_diff() works.
  */
 int srx_get_changes(sr_session_ctx_t *session, const char *path, struct lyd_node **treep)
 {
