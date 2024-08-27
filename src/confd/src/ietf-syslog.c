@@ -90,17 +90,18 @@ static const char *sxlate(const char *severity)
 	return severity;
 }
 
-static void selector(sr_session_ctx_t *session, struct action *act)
+static size_t selector(sr_session_ctx_t *session, struct action *act)
 {
+	char xpath[strlen(act->xpath) + 32];
 	sr_val_t *list = NULL;
 	size_t count = 0;
 	int rc;
 
-	snprintf(act->path, sizeof(act->path), "%s/facility-filter/facility-list", act->xpath);
-	rc = sr_get_items(session, act->path, 0, 0, &list, &count);
+	snprintf(xpath, sizeof(xpath), "%s/facility-filter/facility-list", act->xpath);
+	rc = sr_get_items(session, xpath, 0, 0, &list, &count);
 	if (rc != SR_ERR_OK) {
 		ERROR("Cannot find facility-list for syslog file:%s: %s\n", act->name, sr_strerror(rc));
-		return;
+		return 0;
 	}
 
 	for (size_t i = 0; i < count; ++i) {
@@ -117,6 +118,8 @@ static void selector(sr_session_ctx_t *session, struct action *act)
 	}
 
 	sr_free_values(list, count);
+
+	return count;
 }
 
 static void action(sr_session_ctx_t *session, const char *name, const char *xpath, struct addr *addr)
@@ -136,7 +139,12 @@ static void action(sr_session_ctx_t *session, const char *name, const char *xpat
 		return;
 	}
 
-	selector(session, &act);
+	if (!selector(session, &act)) {
+		/* No selectors, must've been a delete operation after all. */
+		fclose(act.fp);
+		remove(act.path);
+		return;
+	}
 
 	sz  = srx_get_str(session, "%s/file-rotation/max-file-size", xpath);
 	cnt = srx_get_str(session, "%s/file-rotation/number-of-files", xpath);
