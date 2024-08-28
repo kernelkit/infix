@@ -58,6 +58,10 @@ jobs:
           echo "Building ${{ matrix.target }}_defconfig ..."
           make
 
+      - name:  Check SBOM from Build
+        run: |
+          make legal-info
+
       - name: Prepare ${{ matrix.target }} Artifact
         run: |
           cd output/
