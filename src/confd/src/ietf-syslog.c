@@ -62,10 +62,6 @@ static const char *fxlate(const char *facility)
 
 	if (!strcmp(f, "all"))
 		return "*";
-	if (!strcmp(f, "audit"))
-		return "security";
-	if (!strcmp(f, "cron2"))
-		return "cron_sol";
 	if (!strcmp(f, "rauc"))
 		return "local0";
 	if (!strcmp(f, "container"))
