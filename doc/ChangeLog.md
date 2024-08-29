@@ -4,14 +4,30 @@ Change Log
 All notable changes to the project are documented in this file.
 
 
-[v24.08.0][UNRELEASED]
+[v24.08.0][] - 2024-08-30
 -------------------------
 
+**News:** this release adds full configuration support for syslog, with
+logging to local files, external media, remote log server, as well as
+support for acting as a log sink/server.  External media can now be
+mounted automatically, very useful, not only for logging, but also for
+upgrading and container images.
+
+Finally, the following consumer boards are now fully supported:
+
+ - NanoPi R2S (ARM)
+ - StarFive VisionFive2 (RISC-V)
+
 ### Changes
+- Upgrade Buildroot to 2024.02.5 (LTS)
+- Upgrade Linux kernel to 6.6.46 (LTS)
 - Issue #158: enhance security of factory reset.  All file content
   is now overwritten x3, the last time with zeroes, then removed.  
   Example, on the NanoPi R2S this process takes ~30 seconds, but may
   take longer in setups with bigger configurations, e.g., containers
+- Issue #497: support for auto-mounting USB media.  Useful for logging,
+  upgrade, and container images.  Mounted under `/media/<LABEL>`, where
+  `<LABEL>` is the partition label(s) available on the USB media
 - Issue #503: configurable syslog support, based on IETF Syslog config
   [draft model][syslog.yang], includes file based logging (built-in or
   external media) and remote logging, as well as acting as a log sink
@@ -21,6 +37,10 @@ All notable changes to the project are documented in this file.
   `running-config` and `startup-config`, as well as RPCs, e.g., setting
   system date-time.  Logs contain name of user and the action taken.
   Supported for CLI, NETCONF, and RESTCONF
+- Issue #545: sort loopback interface first in CLI `show interfaces`
+- New documentation for Ethernet interfaces: how to set speed, duplex,
+  query status and statistics
+- Issue #587: add YANG must expressions for bridge multicast filters
 - Initial RISC-V (riscv64) support: StarFive VisionFive2
 - Massive updates to the NanoPi R2S:
   - Update Linux kernel to v6.10.3 and sync defconfig with aarch64
@@ -33,13 +53,17 @@ All notable changes to the project are documented in this file.
   - Add RAUC support to simplify device maintenance/upgrade
   - Add support for saving unique interface MAC addresses in U-Boot
   - Add support for system LEDs, see product's README
-  - Add support for reset button from Linux, issues `reboot` atm.
+  - Add support for reset button from U-Boot, to trigger factory reset,
+    and from Linux, to trigger `reboot`
   - Add static `factory-config` as an example
+  - Full LED control, including WAN LED (link up and DHCP lease)
 - Password login can now be disabled by removing the password.  Before
   this change only empty password disabled password login (in favor of
   SSH key login), removing the password locked the user completely out
 - Add LED indication on factory reset, *all* LEDs available in Linux
   `/sys/class/leds` are turned on while clearing writable partitions
+- CLI: improve `dir` and `show log` command user experience.  List files
+  also in user's home directory and allow displaying gzipped log files
 - Lock down CLI admin-exec to prevent unprivileged users from managing
   system configuration or state.
 - The local log file `/var/log/syslog` no longer contains debug level
@@ -61,8 +85,6 @@ All notable changes to the project are documented in this file.
   and RESTCONF back to the user
 - Silence bogus `sysctl` warnings at boot (syslog)
 - Silence output from user group member check (sys-cli in syslog)
-- Reduced resolver timeout and retry attempts, fixes 10 second delays
-  before timing out on unknown domain names
 - Fix annoying CLI freeze if pressing any key before initial prompt
 
 [syslog.yang]: https://datatracker.ietf.org/doc/draft-ietf-netmod-syslog-model/
@@ -1046,7 +1068,7 @@ Supported YANG models in addition to those used by sysrepo and netopeer:
  - N/A
 
 [buildroot]:  https://buildroot.org/
-[UNRELEASED]: https://github.com/kernelkit/infix/compare/v24.06.0...HEAD
+[UNRELEASED]: https://github.com/kernelkit/infix/compare/v24.08.0...HEAD
 [v24.08.0]:   https://github.com/kernelkit/infix/compare/v24.06.0...v24.08.0
 [v24.06.0]:   https://github.com/kernelkit/infix/compare/v24.04.0...v24.06.0
 [v24.04.2]:   https://github.com/kernelkit/infix/compare/v24.04.1...v24.04.2
