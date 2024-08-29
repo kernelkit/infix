@@ -6,6 +6,7 @@ import sys
 import libyang
 import re
 import urllib.parse
+import time
 
 from requests.auth import HTTPBasicAuth
 from urllib.parse import quote
@@ -45,7 +46,7 @@ def xpath_to_uri(xpath, extra=None):
     return uri_path
 
 # Workaround for bug in requests 2.32.x: https://github.com/psf/requests/issues/6735
-def requests_workaround(method, url, json, headers, auth, verify=False):
+def requests_workaround(method, url, json, headers, auth, verify=False, retry=0):
     # Create a session
     session=requests.Session()
 
@@ -53,7 +54,19 @@ def requests_workaround(method, url, json, headers, auth, verify=False):
     request=requests.Request(method, url, json=json, headers=headers, auth=auth)
     prepared_request=session.prepare_request(request)
     prepared_request.url=prepared_request.url.replace('%25', '%')
-    return session.send(prepared_request, verify=verify)
+    response=session.send(prepared_request, verify=verify)
+    try:
+        response.raise_for_status()  # Raise an exception for HTTP errors
+    except Exception as e:
+        if e.response.status_code == 502 and retry < 10: # most likely caused by nginx up, but not yet rousette
+            retry=retry+1
+            print(f"{method} {url}: HTTP error 502, retrying({retry})")
+            time.sleep(1)
+            response=requests_workaround(method, url, json, headers, auth, verify, retry)
+        else:
+            raise e
+
+    return response
 
 def requests_workaround_put(url, json, headers, auth, verify=False):
     return requests_workaround('PUT', url, json, headers, auth, verify=False)
