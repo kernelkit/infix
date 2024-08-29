@@ -5,8 +5,8 @@
 Infix is a free, Linux based, immutable Network Operating System (NOS)
 built on [Buildroot][1], and [sysrepo][2].  A powerful mix that ease
 porting to different platforms, simplify long-term maintenance, and
-provide made-easy management using NETCONF, RESTCONF, or the built-in
-command line interface (CLI) from a console or SSH login.
+provide made-easy management using NETCONF, RESTCONF[^2], or the
+built-in command line interface (CLI) from a console or SSH login.
 
 > Click the **▶ Example CLI Session** foldout below for an example, or
 > head on over to the [Infix Documentation](doc/README.md) for more
@@ -111,6 +111,9 @@ more information, see: [Infix in Virtual Environments](doc/virtual.md).
     isolation.  All to improve reliability, scalability, and security.
     For more information, see <https://ceur-ws.org/Vol-3386/paper9.pdf>
     and <https://www.zdnet.com/article/what-is-immutable-linux-heres-why-youd-run-an-immutable-linux-distro/>.
+
+[^2]: Partial RESTCONF support, features like HTTP PATCH, OPTIONS, HEAD,
+    and copying between datastores are still missing.
 
 [1]: https://buildroot.org/
 [2]: https://www.sysrepo.org/
