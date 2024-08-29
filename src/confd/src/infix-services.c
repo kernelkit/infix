@@ -274,7 +274,7 @@ static int restconf_change(sr_session_ctx_t *session, uint32_t sub_id, const cha
 	if (!cfg)
 		return SR_ERR_OK;
 
-	svc_enadis(lydx_is_enabled(srv, "enabled"), netbrowse, NULL);
+	svc_enadis(lydx_is_enabled(srv, "enabled"), restconf, NULL);
 
 	return put(cfg, srv);
 }
