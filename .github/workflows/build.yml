@@ -16,6 +16,13 @@ jobs:
         target: [aarch64, x86_64]
       fail-fast: false
     steps:
+      - name: Cleanup Build Folder
+        run: |
+          ls -la ./
+          rm -rf ./* || true
+          rm -rf ./.??* || true
+          ls -la ./
+
       - uses: actions/checkout@v4
         with:
           clean: true
