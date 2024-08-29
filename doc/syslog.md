@@ -29,7 +29,7 @@ admin@example:/config/syslog/actions/log-file/file:/media/log/mylog/> set facili
       all    audit     auth authpriv  console     cron    cron2   daemon      ftp     kern
    local0   local1   local2   local3   local4   local5   local6   local7      lpr     mail
      news      ntp   syslog     user     uucp
-admin@example:/config/syslog/actions/log-file/file:hej/> set facility-list all severity
+admin@example:/config/syslog/actions/log-file/file:/media/log/mylog/> set facility-list all severity
      alert       all  critical     debug emergency     error      info      none    notice   warning
 admin@example:/config/syslog/actions/log-file/file:/media/log/mylog/> set facility-list all severity critical
 admin@example:/config/syslog/actions/log-file/file:/media/log/mylog/> set facility-list mail severity warning
@@ -174,6 +174,26 @@ admin@example:/>
 
 > **Note:** the alternatives shown below each prompt in the example
 > above can be found by tapping the Tab key.
+
+
+### Acting as a Log Server
+
+The syslog server can act as a log sink for other devices on a LAN.  For
+this to work you need a static IP address, here we use 10.0.0.1/24.
+
+```bash
+admin@example:/> configure
+admin@example:/config/> edit syslog server
+admin@example:/config/syslog/server/> set enabled true
+admin@example:/config/syslog/server/> set listen udp 514 address 10.0.0.1
+admin@example:/config/syslog/server/> leave
+admin@example:/>
+```
+
+See the above [Log to File](#log-to-file) section on how to set up
+filtering of received logs to local files.  Please note, filtering based
+on property, e.g., hostname, is not supported yet.
+
 
 ### Facilities
 
