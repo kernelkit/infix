@@ -76,7 +76,7 @@ with infamy.Test() as test:
                                         }
                                     ]
                                 },
-                                "log-format": "rfc5424"
+                                "infix-syslog:log-format": "rfc5424"
                             }
                         ]
                     },
@@ -99,7 +99,7 @@ with infamy.Test() as test:
                                         }
                                     ]
                                 },
-                                "log-format": "rfc5424"
+                                "infix-syslog:log-format": "rfc5424"
                             }
                         ]
                     }
@@ -126,12 +126,12 @@ with infamy.Test() as test:
                                         }
                                     ]
                                 },
-                                "log-format": "rfc5424"
+                                "infix-syslog:log-format": "rfc5424"
                             }
                         ]
                     }
                 },
-                "server": {
+                "infix-syslog:server": {
                     "enabled": True,
                     "listen": {
                         "udp": [
