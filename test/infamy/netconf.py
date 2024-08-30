@@ -96,8 +96,7 @@ class Device(Transport):
     def __init__(self,
                  location: Location,
                  mapping: dict,
-                 yangdir: None | str = None,
-                 factory_default=True):
+                 yangdir: None | str = None):
         print("Testing using NETCONF")
 
         self.location = location
@@ -114,12 +113,6 @@ class Device(Transport):
         del self.ly
         self.ly = libyang.Context(yangdir)
         self._ly_init(yangdir)
-        if factory_default:
-            try:
-                self.ncc.dispatch('<factory-default xmlns="urn:infix:factory-default:ns:yang:1.0"/>')
-            except RpcError as err:
-                print(f"Failed sending factory-default RPC: {err}")
-                raise err
 
     def _ncc_init(self, location):
         ai = socket.getaddrinfo(location.host, location.port,

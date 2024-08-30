@@ -18,11 +18,12 @@ with infamy.Test() as test:
         target.delete_xpath("/ietf-hardware:hardware/component")
         target.copy("running", "startup")
     with test.step("Reboot and wait for the unit to come back"):
+        target.startup_override()
         target.copy("running", "startup")
         target.reboot()
         if wait_boot(target) == False:
             test.fail()
-        target = env.attach("target", "mgmt", factory_default = False)
+        target = env.attach("target", "mgmt", test_default = False)
 
     with test.step("Verify hostname"):
         data = target.get_dict("/ietf-system:system/hostname")
