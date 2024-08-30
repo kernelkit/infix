@@ -15,6 +15,10 @@ usage: test/env [<OPTS>] -f <IMAGE> -q <QENETH-DIR> <COMMAND> [<ARGS>...]
 
   Options:
 
+    -b <BASE-DIR>
+     Use this directory as the top-level bind mount inside the container.
+	 If not specified, Infix's top directory is used.
+
     -c
      Clean up cruft, lingering images, old containers, unused volumes.
      Used by GitHub action to prevent issues with running tests.
@@ -126,9 +130,13 @@ name()
 containerize=yes
 [ -c /dev/kvm ] && kvm="--device=/dev/kvm"
 files=
+basedir="$ixdir"
 
-while getopts "cCDf:hiKp:q:rt:" opt; do
+while getopts "b:cCDf:hiKp:q:rt:" opt; do
     case ${opt} in
+	b)
+	    basedir="$OPTARG"
+	    ;;
 	c)
 	    $(runner) image prune -af
             $(runner) volume prune -f
@@ -177,7 +185,7 @@ while getopts "cCDf:hiKp:q:rt:" opt; do
 done
 
 if [ "$containerize" ]; then
-    volumes="--volume $ixdir:$ixdir --workdir=$ixdir/test"
+    volumes="--volume $basedir:$basedir --workdir=$ixdir/test"
     case "$(runner)" in
 	docker)
 	    volumes="$volumes --env HOST_CHOWN_PATH=$ixdir/test"
