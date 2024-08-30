@@ -85,9 +85,9 @@ int core_post_hook(sr_session_ctx_t *session, uint32_t sub_id, const char *modul
 
 int sr_plugin_init_cb(sr_session_ctx_t *session, void **priv)
 {
-	int log_opts = LOG_PID | LOG_DAEMON;
+	int log_opts = LOG_PID | LOG_NDELAY;
 	int rc = SR_ERR_SYS;
-	char *env;
+	const char *env;
 
 	/* Convert into command line option+SIGUSR1 when converting to standalone confd */
 	env = getenv("DEBUG");
@@ -96,7 +96,7 @@ int sr_plugin_init_cb(sr_session_ctx_t *session, void **priv)
 		debug = 1;
 	}
 
-	openlog("confd", log_opts, 0);
+	openlog("confd", log_opts, LOG_DAEMON);
 
 	/* Save context with default running config datastore for all our models */
 	*priv = (void *)&confd;
