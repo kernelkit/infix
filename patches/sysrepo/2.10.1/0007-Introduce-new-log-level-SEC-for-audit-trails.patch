@@ -1,11 +1,12 @@
-From da765b90bca45b91f72fd6525e680040eebd2d4b Mon Sep 17 00:00:00 2001
+From d128686fb15833e815ac3dd04bd87d3725c881ac Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Wed, 21 Aug 2024 16:00:35 +0200
-Subject: [PATCH 7/9] Introduce new log level [SEC]
+Subject: [PATCH 7/9] Introduce new log level [SEC] for audit trails
 Organization: Addiva Elektronik
 
 This adds a new log level for security and audit trail related log
-messages.  E.g., nacm user applied a change, copied a ds, etc.
+messages, see LOG_AUDIT defined in RFC5424.  E.g., nacm user applied
+a change, copied a datastore, etc.
 
 The new log level is added last to not affect the advertised command
 line log levels.  A security notice has higher actual priorty than
@@ -13,30 +14,61 @@ DBG, of course, so we remap it to WRN.  The construct allows us to
 have another [label] than [WRN], which might otherwise be read as
 a bug/problem rather than just a high-priority-notification.
 
+When logging to syslog() we let delegate labling and filtering to the
+system log daemon, dropping any [SEVERITY] prefix.  Also, \n is most
+often dropped by log daemons.
+
 Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
 ---
- src/log.c           | 5 +++++
- src/log.h           | 1 +
- src/sysrepo_types.h | 3 ++-
- tests/tcommon.c     | 3 +++
- 4 files changed, 11 insertions(+), 1 deletion(-)
+ src/log.c           | 18 +++++++++++++++++-
+ src/log.h           |  1 +
+ src/sysrepo_types.h |  3 ++-
+ tests/tcommon.c     |  3 +++
+ 4 files changed, 23 insertions(+), 2 deletions(-)
 
 diff --git a/src/log.c b/src/log.c
-index e15055ac..b89ffacf 100644
+index e15055ac..25eab8fa 100644
 --- a/src/log.c
 +++ b/src/log.c
-@@ -122,6 +122,11 @@ sr_log_msg(int plugin, sr_log_level_t ll, const char *msg)
+@@ -30,6 +30,10 @@
+ 
+ #include "config.h"
+ 
++#ifndef LOG_AUDIT
++#define LOG_AUDIT 	(13<<3)	/* Log audit, for audit trails */
++#endif
++
+ sr_log_level_t sr_stderr_ll = SR_LL_NONE;   /**< stderr log level */
+ sr_log_level_t sr_syslog_ll = SR_LL_NONE;   /**< syslog log level */
+ int syslog_open;                            /**< Whether syslog was opened */
+@@ -122,6 +126,11 @@ sr_log_msg(int plugin, sr_log_level_t ll, const char *msg)
          priority = LOG_INFO;
          severity = "INF";
          break;
 +    case SR_LL_SEC:
-+        priority = LOG_WARNING;
++        priority = LOG_AUDIT | LOG_NOTICE;
 +        severity = "SEC";
 +        ll = SR_LL_WRN;         /* remap to higher level. */
 +        break;
      case SR_LL_DBG:
          priority = LOG_DEBUG;
          severity = "DBG";
+@@ -138,7 +147,14 @@ sr_log_msg(int plugin, sr_log_level_t ll, const char *msg)
+ 
+     /* syslog logging */
+     if (ll <= sr_syslog_ll) {
+-        syslog(priority | (plugin ? LOG_DAEMON : 0), "[%s] %s\n", severity, msg);
++        int facility;
++
++        if (priority & ~LOG_PRIMASK)
++            facility = 0;       /* audit */
++        else
++            facility = plugin ? LOG_DAEMON : 0;
++
++        syslog(facility | priority, "%s", msg);
+     }
+ 
+     /* logging callback */
 diff --git a/src/log.h b/src/log.h
 index d7e65b88..8722e51d 100644
 --- a/src/log.h
