@@ -110,6 +110,9 @@ if [ -L "$TARGET_DIR/var/lib/avahi-autoipd" ]; then
 	mkdir "$TARGET_DIR/var/lib/avahi-autoipd"
 fi
 
+# Drop Buildroot default pam_lastlog.so from login chain
+sed -i '/^[^#]*pam_lastlog.so/s/^/# /' "$TARGET_DIR/etc/pam.d/login"
+
 # Allow pdmenu (setup) and bash to be login shells, bash is added
 # automatically when selected in menuyconfig, but not when BusyBox
 # provides a symlink (for ash).  The /bin/{true,false} are old UNIX
