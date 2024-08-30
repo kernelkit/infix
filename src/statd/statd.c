@@ -535,10 +535,10 @@ static int sub_to_container(struct statd *statd)
 int main(int argc, char *argv[])
 {
 	struct ev_signal sigint_watcher, sigusr1_watcher;
-	int log_opts = LOG_PID | LOG_DAEMON;
+	int log_opts = LOG_PID | LOG_NDELAY;
 	struct statd statd = {};
 	sr_conn_ctx_t *sr_conn;
-	char *env;
+	const char *env;
 	int err;
 
 	env = getenv("DEBUG");
@@ -547,7 +547,7 @@ int main(int argc, char *argv[])
 		debug = 1;
 	}
 
-	openlog("statd", log_opts, 0);
+	openlog("statd", log_opts, LOG_DAEMON);
 
 	TAILQ_INIT(&statd.subs);
 	statd.ev_loop = EV_DEFAULT;
