@@ -142,13 +142,13 @@ gen_failure_cfg
 
 if [ -f "/mnt/aux/test-mode" ]; then
     gen_test_cfg
+    sysrepoctl -c infix-test -e test-mode-enable
 fi
 
 if [ -n "$TESTING" ]; then
 	echo "Done."
 	exit 0
 fi
-
 mkdir -p /etc/sysrepo/
 if [ -f "$FACTORY_CFG" ]; then
     cp "$FACTORY_CFG" "$INIT_DATA"
