@@ -48,3 +48,9 @@ class Transport(ABC):
         """Check if the device reachable on ll6"""
         neigh = ll6ping(self.location.interface, flags=["-w1", "-c1", "-L", "-n"])
         return bool(neigh)
+
+    def test_reset(self):
+        self.call_action("/infix-test:test/reset")
+
+    def startup_override(self):
+        self.call_action("/infix-test:test/override-startup")

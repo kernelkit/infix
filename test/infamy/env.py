@@ -63,7 +63,7 @@ class Env(object):
     def get_password(self, node):
         return self.ptop.get_password(node)
 
-    def attach(self, node, port, protocol=None, factory_default=True):
+    def attach(self, node, port, protocol=None, test_reset=True):
         if self.ltop:
             mapping = self.ltop.mapping[node]
             node, port = self.ltop.xlate(node, port)
@@ -88,20 +88,24 @@ class Env(object):
 
         password = self.get_password(node)
         if protocol == "netconf":
-            return netconf.Device(
+            dev = netconf.Device(
                 location=netconf.Location(cport, mgmtip, password),
                 mapping=mapping,
-                yangdir=self.args.yangdir,
-                factory_default=factory_default
-            )
+                yangdir=self.args.yangdir)
+            if test_reset:
+                dev.test_reset()
+            return dev
+
         if protocol == "ssh":
             return ssh.Device(ssh.Location(mgmtip, password))
         if protocol == "restconf":
-            return restconf.Device(location=restconf.Location(cport,
+            dev = restconf.Device(location=restconf.Location(cport,
                                                               mgmtip,
                                                               password),
                                    mapping=mapping,
-                                   yangdir=self.args.yangdir,
-                                   factory_default=factory_default)
+                                   yangdir=self.args.yangdir)
+            if test_reset:
+                dev.test_reset()
+            return dev
 
         raise Exception(f"Unsupported management procotol \"{protocol}\"")

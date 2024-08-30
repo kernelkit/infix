@@ -102,8 +102,7 @@ class Device(Transport):
     def __init__(self,
                  location: Location,
                  mapping: dict,
-                 yangdir: None | str = None,
-                 factory_default = True):
+                 yangdir: None | str = None):
         print("Testing using RESTCONF")
         self.location=location
         self.url_base=f"https://[{location.host}]:{location.port}"
@@ -120,9 +119,6 @@ class Device(Transport):
         self.lyctx=libyang.Context(yangdir)
         self._ly_bootstrap(yangdir)
         self._ly_init(yangdir)
-
-        if factory_default:
-            self.factory_default()
 
     def get_schemas_list(self):
         data=self.get_operational("/ietf-yang-library:modules-state").print_dict()
@@ -236,11 +232,23 @@ class Device(Transport):
 
     def put_config_dict(self, modname, edit):
         """Add @edit to running config and put the whole configuration"""
+        # This is hacky, refactor when rousette have PATCH support.
         running=self.get_running()
         mod=self.lyctx.get_module(modname)
+
+        for k, v in edit.items():
+            module=modname+":"+k
+            data=v
+            break
+
+        # Ugly hack, but this function should be refactored when patch is avaible in rousette anyway.
+        rundict = json.loads(running.print_mem("json", with_siblings=True, pretty=False))
+        if rundict.get(module) is None:
+            rundict[module] = {}
+            running=self.lyctx.parse_data_mem(json.dumps(rundict), "json", parse_only=True)
+
         change=mod.parse_data_dict(edit, no_state=True, validate=False)
         running.merge_module(change)
-
         return self.put_datastore("running", json.loads(running.print_mem("json", with_siblings=True, pretty=False)))
 
     def call_rpc(self, rpc):
@@ -284,10 +292,6 @@ class Device(Transport):
 
     def reboot(self):
         self.call_rpc("ietf-system:system-restart")
-
-    def factory_default(self):
-        """Factory reset target"""
-        return self.call_rpc("infix-factory-default:factory-default")
 
     def call_action(self, xpath):
         path=xpath_to_uri(xpath)
