@@ -1,4 +1,4 @@
-From 7e49f394e0afedc0259d4364f5a9a83296fe2b72 Mon Sep 17 00:00:00 2001
+From b5db2b36c06d28918f0d00dda945f7e943b470af Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Wed, 21 Aug 2024 16:04:43 +0200
 Subject: [PATCH 8/9] Add audit trail for high priority system changes
@@ -18,7 +18,7 @@ Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
  1 file changed, 12 insertions(+)
 
 diff --git a/src/sysrepo.c b/src/sysrepo.c
-index 86d694e5..c7b97e53 100644
+index 86d694e5..dcea51e8 100644
 --- a/src/sysrepo.c
 +++ b/src/sysrepo.c
 @@ -3946,6 +3946,9 @@ store:
@@ -45,7 +45,7 @@ index 86d694e5..c7b97e53 100644
          }
      }
  
-+    if (session->nacm_user)
++    if (session->nacm_user && src_datastore != SR_DS_CANDIDATE)
 +        SR_LOG_SEC("user \"%s\" copied %s to %s", session->nacm_user, sr_ds2str(src_datastore), sr_ds2str(session->ds));
 +
  cleanup:

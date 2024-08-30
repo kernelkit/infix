@@ -1,4 +1,4 @@
-From 5c4df9f535f6fbdc6dc0573a47c47be2d02f1774 Mon Sep 17 00:00:00 2001
+From 13d54101eb2c3506237cebc5be99edef2ad669cd Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Fri, 23 Aug 2024 12:22:06 +0200
 Subject: [PATCH 9/9] On error in sr_shmsub_listen_thread(), exit process
