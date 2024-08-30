@@ -1,0 +1,33 @@
+module infix-test {
+  yang-version 1.1;
+  namespace "urn:infix:test:ns:yang:1.0";
+  prefix infix-test;
+
+  import ietf-netconf-acm {
+    prefix nacm;
+  }
+
+  organization "KernelKit";
+  contact      "kernelkit@googlegroups.com";
+  description  "Infix model for system testing.";
+
+  revision 2024-08-16 {
+    description "Initial revision.";
+    reference "internal";
+  }
+  feature test-mode-enable {
+    description
+      "Enable test mode for infix tests";
+  }
+  container test {
+    if-feature "test-mode-enable";
+    action reset {
+      nacm:default-deny-all;
+      description "Reset the running-config datastore to test configuration";
+    }
+    action override-startup {
+      nacm:default-deny-all;
+      description "Start from startup datastore once, instead of the default test configuration";
+    }
+  }
+}
