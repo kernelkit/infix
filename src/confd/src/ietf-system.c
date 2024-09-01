@@ -369,7 +369,7 @@ static int change_clock(sr_session_ctx_t *session, uint32_t sub_id, const char *
 }
 
 static int change_ntp(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
-	const char *xpath, sr_event_t event, unsigned request_id, void *priv)
+		      const char *_, sr_event_t event, unsigned request_id, void *priv)
 {
 	sr_change_iter_t *iter = NULL;
 	int rc, err = SR_ERR_OK;
