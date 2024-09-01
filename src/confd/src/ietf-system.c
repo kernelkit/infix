@@ -70,7 +70,7 @@ static char *strip_quotes(char *str)
 	return str;
 }
 
-static void setvar(char *line, const char *key, char **var)
+static void setvar(const char *line, const char *key, char **var)
 {
 	char *ptr;
 
@@ -307,9 +307,9 @@ static int sys_reload_services(void)
 static int change_clock(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
 	const char *xpath, sr_event_t event, unsigned request_id, void *priv)
 {
-	char *timezone;
-	char *tz_utc_offset;
+	const char *tz_utc_offset;
 	char tz_name[14];
+	char *timezone;
 
 	switch (event) {
 	case SR_EV_ENABLED:	/* first time, on register. */
@@ -688,7 +688,8 @@ static int is_valid_username(const char *user)
 
 static char *sys_find_usable_shell(sr_session_ctx_t *sess, char *name, bool is_admin)
 {
-	char *shell = NULL, *conf = NULL;
+	const char *conf = NULL;
+	char *shell = NULL;
 	char xpath[256];
 	sr_data_t *cfg;
 
@@ -879,7 +880,6 @@ static int sys_add_user(sr_session_ctx_t *sess, char *name)
 static char *change_get_user(struct sr_change *change)
 {
 	sr_xpath_ctx_t state;
-	struct passwd *pw;
 	sr_val_t *val;
 	char *user;
 
@@ -895,7 +895,8 @@ static char *change_get_user(struct sr_change *change)
 	user = strdup(user);
 	sr_xpath_recover(&state);
 	if (user) {
-		pw = getpwnam(user);
+		const struct passwd *pw = getpwnam(user);
+
 		if (!pw) {
 			/* Skipping, user probably deleted. */
 			free(user);
