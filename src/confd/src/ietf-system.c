@@ -439,7 +439,7 @@ static int change_ntp(sr_session_ctx_t *session, uint32_t sub_id, const char *mo
 
 	for (size_t i = 0; i < cnt; i++) {
 		const char *xpath = val[i].xpath;
-		char *type, *ptr, *name;
+		char *ptr, *name;
 		int server = 0;
 		FILE *fp;
 
@@ -460,7 +460,8 @@ static int change_ntp(sr_session_ctx_t *session, uint32_t sub_id, const char *mo
 		/* Get /ietf-system:system/ntp/server[name='foo'] */
 		ptr = srx_get_str(session, "%s/udp/address", xpath);
 		if (ptr) {
-			type = srx_get_str(session, "%s/association-type", xpath);
+			char *type = srx_get_str(session, "%s/association-type", xpath);
+
 			fprintf(fp, "%s %s", type ?: "server", ptr);
 			server++;
 			if (type)
@@ -1481,8 +1482,7 @@ static int change_motd_banner(sr_session_ctx_t *session, uint32_t sub_id, const 
 		       const char *xpath, sr_event_t event, unsigned request_id, void *priv)
 {
 	const char *fn = "/etc/motd";
-	unsigned char *raw, *txt;
-	size_t txt_len;
+	unsigned char *raw;
 	char *legacy;
 	int rc = 0;
 
@@ -1499,6 +1499,9 @@ static int change_motd_banner(sr_session_ctx_t *session, uint32_t sub_id, const 
 
 	raw = (unsigned char *)srx_get_str(session, "%s", xpath);
 	if (raw) {
+		unsigned char *txt;
+		size_t txt_len;
+
 		txt = base64_decode(raw, strlen((char *)raw), &txt_len);
 		if (!txt) {
 			ERRNO("failed base64 decoding of %s", xpath);
