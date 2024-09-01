@@ -1200,8 +1200,9 @@ static int lyx_list_is_empty(struct lyd_node *parent, const char *list)
 	struct lyd_node *elem;
 	int num = 0;
 
-	LYX_LIST_FOR_EACH(parent, elem, list)
+	LYX_LIST_FOR_EACH(parent, elem, list) {
 		num++;
+	}
 
 	return num == 0;
 }
@@ -1555,18 +1556,19 @@ static int change_editor(sr_session_ctx_t *session, uint32_t sub_id, const char 
 		return SR_ERR_OK;
 
 	editor = srx_get_str(session, "%s", xpath);
-	if (editor) {
-		for (size_t i = 0; i < NELEMS(map); i++) {
-			if (strcmp(map[i].editor, editor))
-				continue;
+	if (!editor)
+		return SR_ERR_OK;
 
-			erase(alt);
-			rc = systemf("ln -s %s %s", map[i].path, alt);
-			if (rc)
-				ERROR("Failed setting system editor '%s'", map[i].editor);
-		}
-		free(editor);
+	for (size_t i = 0; i < NELEMS(map); i++) {
+		if (strcmp(map[i].editor, editor))
+			continue;
+
+		erase(alt);
+		rc = systemf("ln -s %s %s", map[i].path, alt);
+		if (rc)
+			ERROR("Failed setting system editor '%s'", map[i].editor);
 	}
+	free(editor);
 
 	if (rc)
 		return SR_ERR_SYS;
