@@ -152,7 +152,8 @@ static void action(sr_session_ctx_t *session, const char *name, const char *xpat
 	if (!selector(session, &act)) {
 		/* No selectors, must've been a delete operation after all. */
 		fclose(act.fp);
-		remove(act.path);
+		if (remove(act.path))
+			ERRNO("failed removing %s", act.path);
 		return;
 	}
 
@@ -235,10 +236,12 @@ static int file_change(sr_session_ctx_t *session, uint32_t sub_id, const char *m
 		const char *name;
 
 		name = getnm(node, path, sizeof(path));
-		if (op == LYDX_OP_DELETE)
-			remove(filename(name, false, path, sizeof(path)));
-		else
+		if (op == LYDX_OP_DELETE) {
+			if (remove(filename(name, false, path, sizeof(path))))
+				ERRNO("failed removing %s", path);
+		} else {
 			action(session, name, path, NULL);
+		}
 	}
 
 	srx_free_changes(tree);
@@ -269,7 +272,8 @@ static int remote_change(sr_session_ctx_t *session, uint32_t sub_id, const char 
 
 		name = getnm(node, path, sizeof(path));
 		if (op == LYDX_OP_DELETE) {
-			remove(filename(name, true, path, sizeof(path)));
+			if (remove(filename(name, true, path, sizeof(path))))
+				ERRNO("failed removing %s", path);
 		} else {
 			struct addr addr;
 
@@ -330,7 +334,8 @@ static int server_change(sr_session_ctx_t *session, uint32_t sub_id, const char 
 		return SR_ERR_OK;
 
 	if (!srx_enabled(session, "%s/enabled", xpath)) {
-		remove(SYSLOG_SERVER);
+		if (remove(SYSLOG_SERVER))
+			ERRNO("failed disabling syslog server");
 		goto done;
 	}
 
