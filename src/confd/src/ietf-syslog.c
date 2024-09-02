@@ -55,6 +55,9 @@ static const char *fxlate(const char *facility)
 {
 	const char *f = facility;
 
+	if (!facility)
+		return "";
+
 	if (!strncmp(facility, "ietf-syslog:", 12))
 		f = &facility[12];
 	if (!strncmp(facility, "infix-syslog:", 13))
@@ -75,6 +78,9 @@ static const char *fxlate(const char *facility)
 /* handle general syslog excpetions */
 static const char *sxlate(const char *severity)
 {
+	if (!severity)
+		return "";
+
 	if (!strcmp(severity, "all"))
 		return "*";
 	if (!strcmp(severity, "emergency"))
@@ -91,6 +97,7 @@ static size_t selector(sr_session_ctx_t *session, struct action *act)
 	char xpath[strlen(act->xpath) + 32];
 	sr_val_t *list = NULL;
 	size_t count = 0;
+	size_t num = 0;
 	int rc;
 
 	snprintf(xpath, sizeof(xpath), "%s/facility-filter/facility-list", act->xpath);
@@ -105,9 +112,16 @@ static size_t selector(sr_session_ctx_t *session, struct action *act)
 		char *facility, *severity;
 
 		facility = srx_get_str(session, "%s/facility", entry->xpath);
+		if (!facility)
+			continue;
 		severity = srx_get_str(session, "%s/severity", entry->xpath);
+		if (!severity) {
+			free(facility);
+			continue;
+		}
 
 		fprintf(act->fp, "%s%s.%s", i ? ";" : "", fxlate(facility), sxlate(severity));
+		num++;
 
 		free(facility);
 		free(severity);
@@ -115,7 +129,7 @@ static size_t selector(sr_session_ctx_t *session, struct action *act)
 
 	sr_free_values(list, count);
 
-	return count;
+	return num;
 }
 
 static void action(sr_session_ctx_t *session, const char *name, const char *xpath, struct addr *addr)
