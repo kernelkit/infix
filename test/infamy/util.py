@@ -44,18 +44,40 @@ def until(fn, attempts=10, interval=1):
     raise Exception("Expected condition did not materialize")
 
 
-def wait_boot(target):
-    until(lambda: target.reachable() == False, attempts = 100)
-    print("Device is booting..")
-    until(lambda: target.reachable() == True, attempts = 300)
-    iface=target.get_mgmt_iface()
+def is_reachable(neigh, env, pwd):
+    if env.args.transport is not None:
+        if env.args.transport == "netconf":
+            return netconf.netconf_syn(neigh)
+        elif env.args.transport == "restconf":
+            return restconf.restconf_reachable(neigh, pwd)
+        else:
+            raise Exception(f"Unsupported transport {env.args.transport}!")
+    else:
+        # No transport specified, so check both netconf and restconf
+        netconf_reachable = netconf.netconf_syn(neigh)
+        restconf_reachable = restconf.restconf_reachable(neigh, pwd)
+        return netconf_reachable and restconf_reachable
+
+
+def wait_boot(target, env):
+    print(f"{target} is shutting down ...")
+    until(lambda: not target.reachable(), attempts=100)
+
+    print(f"{target} is booting up ...")
+    until(lambda: target.reachable(), attempts=300)
+
+    iface = target.get_mgmt_iface()
     if not iface:
         return False
-    neigh=infamy.neigh.ll6ping(iface)
+
+    neigh = infamy.neigh.ll6ping(iface)
     if not neigh:
         return False
-    until(lambda: netconf.netconf_syn(neigh) == True, attempts = 300)
-    until(lambda: restconf.restconf_reachable(neigh, target.location.password) == True, attempts = 300)
+
+    print(f"{target} is responding to IPv6 ping ...")
+
+    pwd = target.location.password
+    until(lambda: is_reachable(neigh, env, pwd), attempts=300)
 
     return True
 
