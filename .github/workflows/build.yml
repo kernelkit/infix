@@ -54,7 +54,7 @@ jobs:
 
       - name: Configure ${{ matrix.target }}
         run: |
-          make ${{ matrix.target }}_defconfig
+          make ${{ matrix.target }}_minimal_defconfig
 
       - name: Unit Test ${{ matrix.target }}
         run: |
@@ -62,7 +62,7 @@ jobs:
 
       - name: Build ${{ matrix.target }}
         run: |
-          echo "Building ${{ matrix.target }}_defconfig ..."
+          echo "Building ${{ matrix.target }}_minimal_defconfig ..."
           make
 
       - name:  Check SBOM from Build
@@ -93,7 +93,7 @@ jobs:
 
       - name: Configure x86_64
         run: |
-          make x86_64_defconfig
+          make x86_64_minimal_defconfig
 
       - uses: actions/download-artifact@v4
         with:
