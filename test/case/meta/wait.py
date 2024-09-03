@@ -3,13 +3,12 @@
 import time
 import infamy
 import infamy.neigh
-import infamy.restconf as restconf
-import infamy.netconf as netconf
+
+
+TIMEOUT = 300
 
 
 def ll6ping(node):
-    neigh = None
-
     cport, nport = env.ptop.get_mgmt_link(ctrl, node)
     neigh = infamy.neigh.ll6ping(cport, flags=["-w1", "-c1", "-L", "-n"])
     if neigh:
@@ -17,6 +16,14 @@ def ll6ping(node):
         return neigh
 
     return None
+
+
+def is_reachable(node, env):
+    neigh = ll6ping(node)
+    if not neigh:
+        return False
+
+    return infamy.util.is_reachable(neigh, env, env.ptop.get_password(node))
 
 
 with infamy.Test() as test:
@@ -28,22 +35,12 @@ with infamy.Test() as test:
         infixen = env.ptop.get_infixen()
 
     with test.step(f"Reach {infixen}"):
-        timeout = time.time() + 300
-
-        print(f"Waiting a maximum of 5min for {infixen} to come up")
+        print(f"Waiting for {infixen} to come up, timeout: {TIMEOUT / 60} min")
+        timeout = time.time() + TIMEOUT
 
         while infixen and time.time() < timeout:
             time.sleep(1)
-            retry = []
-            for node in infixen:
-                neigh = ll6ping(node)
-                password = env.ptop.get_password(node)
-                if neigh and netconf.netconf_syn(neigh) and restconf.restconf_reachable(neigh, password):
-                    continue
-
-                retry.append(node)
-
-            infixen = retry
+            infixen = [node for node in infixen if not is_reachable(node, env)]
 
         if infixen:
             print(f"Unable to reach {infixen}")
