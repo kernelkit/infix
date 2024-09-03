@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
-@name USB configuration with USB ports
-@description Test that the configuration is consistent
+USB configuration with two USB ports
+
+Test that the configuration is consistent
 when having two USB ports.
 """
 import infamy
