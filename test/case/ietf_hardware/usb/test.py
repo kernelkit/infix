@@ -1,5 +1,16 @@
 #!/usr/bin/env python3
+"""
+USB configuration
 
+This will test if the configuration is consistent with hardware state,
+if the USB ports are _locked_ (forbidden for use) and _unlocked_
+(Ready for use) when they should. Also test if it is the case during
+reboot. This does not the test actual use of the USB port, just check
+that the configured state is consistent with the hardware state.
+
+If this pass you can be certeain of that the configuration of the USB
+port is handled correctly.
+"""
 import infamy
 import copy
 import infamy.usb as usb
@@ -16,7 +27,7 @@ with infamy.Test() as test:
         if len(available) < 1:
             test.skip()
 
-    with test.step("Unlock USB ports"):
+    with test.step("Unlock all USB ports"):
         components = []
         for port in available:
             component = {
@@ -34,11 +45,11 @@ with infamy.Test() as test:
             }
         })
 
-    with test.step("Verify USB ports unlocked"):
+    with test.step("Verify that all USB ports are unlocked"):
         for port in available:
             until(lambda: usb.get_usb_state(target, port) == "unlocked")
 
-    with test.step("Lock USB ports"):
+    with test.step("Lock all USB ports"):
         components = []
         for port in available:
             component = {
@@ -56,7 +67,7 @@ with infamy.Test() as test:
             }
         })
 
-    with test.step("Verify USB ports locked"):
+    with test.step("Verify that all USB ports are locked"):
         for port in available:
             until(lambda: usb.get_usb_state(target, port) == "locked")
 
@@ -64,7 +75,7 @@ with infamy.Test() as test:
         for port in available:
             target.delete_xpath(f"/ietf-hardware:hardware/component[name='{port}']")
 
-    with test.step("Verify USB ports locked"):
+    with test.step("Verify that all USB ports are locked"):
         for port in available:
             until(lambda: usb.get_usb_state(target, port) == "locked")
 
@@ -86,7 +97,7 @@ with infamy.Test() as test:
             }
         })
 
-    with test.step("Verify USB ports are unlocked"):
+    with test.step("Verify that all USB ports are unlocked"):
         for port in available:
             until(lambda: usb.get_usb_state(target, port) == "unlocked")
 
