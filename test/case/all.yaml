@@ -3,30 +3,31 @@
 - case: meta/wait.py
 
 - name: Misc tests
-  suite: misc/all.yaml
+  suite: misc/misc.yaml
 
 - name:  ietf-system
-  suite: ietf_system/all.yaml
+  suite: ietf_system/ietf_system.yaml
 
 - name:  ietf-syslog
-  suite: ietf_syslog/all.yaml
+  suite: ietf_syslog/ietf_syslog.yaml
 
 - name:  ietf-interfaces
-  suite: ietf_interfaces/all.yaml
+  suite: ietf_interfaces/ietf_interfaces.yaml
 
 - name:  infix-interfaces
-  suite: infix_interfaces/all.yaml
+  suite: infix_interfaces/infix_interfaces.yaml
 
 - name:  ietf-routing
-  suite: ietf_routing/all.yaml
+  suite: ietf_routing/ietf_routing.yaml
 
 - name:  infix-containers
-  suite: infix_containers/all.yaml
+  suite: infix_containers/infix_containers.yaml
 
 - name:  infix-dhcp
-  suite: infix_dhcp/all.yaml
+  suite: infix_dhcp/infix_dhcp.yaml
 
 - name:  ietf-hardware
-  suite: ietf_hardware/all.yaml
-#- name:  infix-services
-#  suite: infix_services/all.yaml
+  suite: ietf_hardware/ietf_hardware.yaml
+  
+- name:  infix-services
+  suite: infix_services/infix_services.yaml

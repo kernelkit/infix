@@ -1,0 +1,13 @@
+---
+
+- name: container_basic
+  case: container_basic/test.py
+
+- name: container_bridge
+  case: container_bridge/test.py
+
+- name: container_phys
+  case: container_phys/test.py
+
+- name: container_veth
+  case: container_veth/test.py

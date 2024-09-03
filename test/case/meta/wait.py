@@ -33,7 +33,8 @@ def netconf_syn(neigh):
 
 with infamy.Test() as test:
     with test.step("Initialize"):
-        env = infamy.Env()
+        # The test is designed to be run on a physical topology.
+        env = infamy.Env(ltop=False)
 
         ctrl = env.ptop.get_ctrl()
         infixen = env.ptop.get_infixen()

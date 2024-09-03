@@ -1,6 +1,0 @@
----
-- case: hostname.py
-- case: add_delete_user.py
-- case: user_admin.py
-- case: timezone.py
-- case: timezone_utc_offset.py

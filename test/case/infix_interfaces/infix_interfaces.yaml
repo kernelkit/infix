@@ -1,0 +1,36 @@
+---
+- name: bridge_basic 
+  case: bridge_basic/test.py
+
+- name: bridge_veth
+  case: bridge_veth/test.py
+
+- name: dual_bridge
+  case: dual_bridge/test.py
+
+- name: bridge_vlan
+  case: bridge_vlan/test.py
+
+- name: ipv4_autoconf
+  case: ipv4_autoconf/test.py
+
+- name: bridge_fwd_sgl_dut
+  case: bridge_fwd_sgl_dut/test.py
+
+- name: bridge_fwd_dual_dut
+  case: bridge_fwd_dual_dut/test.py
+
+- name: bridge_vlan_separation
+  case: bridge_vlan_separation/test.py
+
+- name: igmp_basic
+  case: igmp_basic/test.py
+
+- name: igmp_vlan
+  case: igmp_vlan/test.py
+
+- name: static_multicast_filters
+  case: static_multicast_filters/test.py
+
+- name: vlan_qos
+  case: vlan_qos/test.py

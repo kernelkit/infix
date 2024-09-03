@@ -1,0 +1,4 @@
+---
+
+- name: services_basic
+  case: services_basic/test.py

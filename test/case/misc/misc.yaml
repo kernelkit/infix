@@ -1,0 +1,6 @@
+---
+- name: operational_all
+  case: operational_all/test.py
+
+#- name: start_from_startup
+#  case: start_from_startup.py

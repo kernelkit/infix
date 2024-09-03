@@ -1,0 +1,6 @@
+---
+- name: basic
+  case: basic/test.py
+  
+- name: remote
+  case: remote/test.py

@@ -1,0 +1,59 @@
+graph "ring-4-duts" {
+	layout="neato";
+	overlap="false";
+	esep="+20";
+
+        node [shape=record, fontname="monospace"];
+	edge [color="cornflowerblue", penwidth="2"];
+
+	host [
+	    label="host | { <mgmt1> mgmt1 | <data1> data1 | <mgmt2> mgmt2 | <data2> data20 | <data2>  data2  | <mgmt3> mgmt3 |  <data3>  data3 | <mgmt4> mgmt4 |  <data4>  data4 }",
+	    pos="0,15!",
+	    kind="controller",
+	];
+
+        dut1 [
+	    label="{ <mgmt> mgmt | <data> data | <ring1> ring1 } | dut1 | { <ring2> ring2 | <cross> cross }",
+	    pos="10,18!",
+	    kind="infix",
+	];
+
+        dut2 [
+	     label="{ <mgmt> mgmt | <data> data | <ring1> ring1 } | dut2 | { <ring2> ring2 | <cross> cross }",
+	      pos="10,12!",
+	      kind="infix",
+	];
+
+        dut3 [
+	     label="{ <mgmt> mgmt | <data> data | <ring1> ring1 } | dut2 | { <ring2> ring2 | <cross> cross}",
+	      pos="10,12!",
+	      kind="infix",
+	];
+
+        dut4 [
+	     label="{ <mgmt> mgmt | <data> data | <ring1> ring1 } | dut2 | { <ring2> ring2 | <cross> cross }",
+	     pos="10,12!",
+	     kind="infix",
+	];
+
+	host:mgmt1 -- dut1:mgmt [kind=mgmt]
+	host:mgmt2 -- dut2:mgmt [kind=mgmt]
+	host:mgmt3 -- dut3:mgmt [kind=mgmt]
+	host:mgmt4 -- dut4:mgmt [kind=mgmt]
+
+	# Host-Dut links
+	host:data1 -- dut1:data
+	host:data2 -- dut2:data
+	host:data3 -- dut3:data
+	host:data4 -- dut4:data
+
+	# Ring
+	dut1:ring1 -- dut2:ring2
+	dut2:ring1 -- dut3:ring2
+	dut3:ring1 -- dut4:ring2
+	dut4:ring1 -- dut1:ring2
+
+	# Cross
+	dut1:cross -- dut3:cross
+	dut2:cross -- dut4:cross
+}
