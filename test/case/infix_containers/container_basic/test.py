@@ -24,6 +24,9 @@ with infamy.Test() as test:
         target = env.attach("target", "mgmt")
         addr = target.get_mgmt_ip()
 
+        if not target.has_model("infix-containers"):
+            test.skip()
+
     with test.step(f"Create {NAME} container from bundled OCI image"):
         target.put_config_dict("infix-containers", {
             "containers": {
