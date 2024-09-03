@@ -265,7 +265,7 @@ suite:
 This is useful because this value can then be used to rerun a test (or
 the whole suite) with identical topology mappings:
 
-    $ make PYTHONHASHSEED=3773822171 INFIX_TESTS=case/ietf_system/hostname.py test
+    $ make PYTHONHASHSEED=3773822171 TESTS=case/ietf_system/hostname.py test
 
 ### Deterministic Transport Protocol
 
@@ -274,7 +274,7 @@ chosen randomly.  If you supply a `PYTHONHASHSEED` as described above,
 you get the same protocol used for that hash.  But if you want to choose
 the protocol, add extra arguments to Infamy:
 
-    $ make INFAMY_EXTRA_ARGS="--transport=restconf" INFIX_TESTS=case/ietf_system/hostname.py test
+    $ make INFAMY_EXTRA_ARGS="--transport=restconf" TESTS=case/ietf_system/hostname.py test
 
 or, when running interactively:
 
