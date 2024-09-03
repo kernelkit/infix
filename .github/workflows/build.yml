@@ -92,6 +92,17 @@ jobs:
         run: |
           make legal-info
 
+      - name: Resulting size of build
+        run: |
+          printf "Size of complete tree : "
+          du -sh .
+          printf "Size of output/       : "
+          du -sh output
+          printf "Size of dl/           : "
+          du -sh dl
+          printf "Size of output/images/: "
+          ls -l output/images/
+
       - name: Prepare ${{ matrix.target }} Artifact
         run: |
           cd output/
