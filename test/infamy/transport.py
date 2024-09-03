@@ -55,6 +55,10 @@ class Transport(ABC):
         """Return managment interface used for RESTCONF/NETCONF"""
         return self.location.interface
 
+    def has_model(self, model_name):
+        """Check if the device has the given YANG model loaded."""
+        return model_name in self.modules
+
     def reachable(self):
         """Check if the device reachable on ll6"""
         neigh = ll6ping(self.location.interface, flags=["-w1", "-c1", "-L", "-n"])

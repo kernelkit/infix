@@ -19,6 +19,9 @@ with infamy.Test() as test:
         env = infamy.Env()
         target = env.attach("target", "mgmt")
 
+        if not target.has_model("infix-containers"):
+            test.skip()
+
     with test.step(f"Create {NAME} container from bundled OCI image"):
         _, ifname = env.ltop.xlate("target", "data")
         target.put_config_dict("ietf-interfaces", {
