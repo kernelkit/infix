@@ -71,6 +71,7 @@ class Manager(netconf_client.ncclient.Manager):
         self.set_logger_level(logging.DEBUG)
         self.logger().addHandler(logging.StreamHandler(sys.stderr))
 
+
 class NccGetDataReply:
     """Fold in to DataReply class when upstreaming"""
     def __init__(self, raw, ele):
@@ -78,11 +79,13 @@ class NccGetDataReply:
         self.data_xml = lxml.etree.tostring(self.data_ele)
         self.raw_reply = raw
 
+
 class NccGetSchemaReply:
     def __init__(self, raw):
         self.ele = lxml.etree.fromstring(raw.xml.decode())
         self.ele = self.ele.find("{urn:ietf:params:xml:ns:yang:ietf-netconf-monitoring}data")
         self.schema = self.ele.text
+
 
 @dataclass
 class Location:
@@ -91,6 +94,7 @@ class Location:
     password: str
     username: str = "admin"
     port: int = 830
+
 
 class Device(Transport):
     def __init__(self,
@@ -401,9 +405,18 @@ class Device(Transport):
         newd = mod.parse_data_dict(new, no_state=True)
         lyd = oldd.diff(newd)
 
-        return self.put_config(lyd.print_mem("xml", with_siblings=True, pretty=False))
+        return self.put_config(lyd.print_mem("xml", with_siblings=True,
+                                             pretty=False))
 
     def get_current_time_with_offset(self):
-        root = self.get_data("/ietf-system:system-state/clock", parse=False).data_ele
-        current_datetime = root.find('.//{urn:ietf:params:xml:ns:yang:ietf-system}current-datetime').text
-        return current_datetime
+        """
+        Return current datetime with offset.
+
+        This method retrieves the current datetime from the raw data
+        before it is passed through libyang. This is necessary because
+        libyang "adjusts" the time for the offset, and we need the
+        unadjusted time.
+        """
+        data = self.get_data("/ietf-system:system-state/clock", parse=False)
+        xpath = './/{urn:ietf:params:xml:ns:yang:ietf-system}current-datetime'
+        return data.data_ele.find(xpath).text

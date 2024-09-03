@@ -5,19 +5,19 @@ import copy
 import infamy.usb as usb
 import time
 import infamy.netconf as netconf
-from infamy.util import until,wait_boot
+from infamy.util import until, wait_boot
 
 with infamy.Test() as test:
     with test.step("Initialize"):
         env = infamy.Env()
         target = env.attach("target", "mgmt")
-        available=usb.get_usb_ports(target)
+        available = usb.get_usb_ports(target)
 
         if len(available) < 1:
             test.skip()
 
     with test.step("Unlock USB ports"):
-        components=[]
+        components = []
         for port in available:
             component = {
                 "name": port,
@@ -40,7 +40,7 @@ with infamy.Test() as test:
 
     if len(available) > 1:
         with test.step("Lock one port"):
-            components=[]
+            components = []
             component = {
                 "name": available[1],
                 "class": "infix-hardware:usb",
@@ -60,7 +60,7 @@ with infamy.Test() as test:
             until(lambda: usb.get_usb_state(target, available[0]) == "unlocked")
 
     with test.step("Lock USB ports"):
-        components=[]
+        components = []
         for port in available:
             component = {
                 "class": "infix-hardware:usb",
@@ -80,6 +80,7 @@ with infamy.Test() as test:
     with test.step("Verify USB ports locked"):
         for port in available:
             until(lambda: usb.get_usb_state(target, port) == "locked")
+
     with test.step("Remove all hardware configuration"):
         for port in available:
             target.delete_xpath(f"/ietf-hardware:hardware/component[name='{port}']")
@@ -88,9 +89,8 @@ with infamy.Test() as test:
         for port in available:
             until(lambda: usb.get_usb_state(target, port) == "locked")
 
-
     with test.step("Unlock USB ports"):
-        components=[]
+        components = []
         for port in available:
             component = {
                 "name": port,
@@ -107,7 +107,7 @@ with infamy.Test() as test:
             }
         })
 
-    with test.step("Verify USB ports unlocked"):
+    with test.step("Verify USB ports are unlocked"):
         for port in available:
             until(lambda: usb.get_usb_state(target, port) == "unlocked")
 
@@ -115,11 +115,12 @@ with infamy.Test() as test:
         target.startup_override()
         target.copy("running", "startup")
         target.reboot()
-        if wait_boot(target) == False:
+        if not wait_boot(target, env):
             test.fail()
         target = env.attach("target", "mgmt", test_reset=False)
 
-    with test.step("Verify that all ports are unlocked"):
+    with test.step("Verify USB port remain unlocked after reboot"):
         for port in available:
             until(lambda: usb.get_usb_state(target, port) == "unlocked")
+
     test.succeed()

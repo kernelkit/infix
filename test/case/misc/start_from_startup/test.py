@@ -2,7 +2,6 @@
 
 import infamy
 from infamy.util import wait_boot
-import copy
 
 with infamy.Test() as test:
     with test.step("Initialize"):
@@ -17,16 +16,17 @@ with infamy.Test() as test:
         })
         target.delete_xpath("/ietf-hardware:hardware/component")
         target.copy("running", "startup")
+
     with test.step("Reboot and wait for the unit to come back"):
         target.startup_override()
         target.copy("running", "startup")
         target.reboot()
-        if wait_boot(target) == False:
+        if not wait_boot(target, env):
             test.fail()
-        target = env.attach("target", "mgmt", test_default = False)
+        target = env.attach("target", "mgmt", test_default=False)
 
     with test.step("Verify hostname"):
         data = target.get_dict("/ietf-system:system/hostname")
-        assert(data["system"]["hostname"] == "test")
+        assert data["system"]["hostname"] == "test"
 
     test.succeed()
