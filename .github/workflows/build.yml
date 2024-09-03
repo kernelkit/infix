@@ -7,6 +7,12 @@ on:
     branches:
       - main
   workflow_dispatch:
+    inputs:
+      minimal:
+        description: 'Build minimal defconfigs'
+        required: false
+        default: true
+        type: boolean
 
 jobs:
   build:
@@ -32,20 +38,26 @@ jobs:
       - name: Set Build Variables
         id: vars
         run: |
-          # Ensure 'release' job get the proper image when building main
-          if [ "$GITHUB_REF_NAME" != "main" ]; then
-              flavor="_minimal"
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+              if [ "${{ github.event.inputs.minimal }}" == "true" ]; then
+                  flavor="_minimal"
+              fi
           else
-              flavor=""
-          fi
-          if ${{ contains(github.event.pull_request.labels.*.name, 'ci:main') }}; then
-              flavor=""
+              # Ensure 'release' job get the proper image when building main
+              if [ "$GITHUB_REF_NAME" != "main" ]; then
+                  flavor="_minimal"
+              else
+                  flavor=""
+              fi
+              if ${{ contains(github.event.pull_request.labels.*.name, 'ci:main') }}; then
+                  flavor=""
+              fi
           fi
           target=${{ matrix.target }}
           echo "dir=infix-$target"        >> $GITHUB_OUTPUT
           echo "tgz=infix-$target.tar.gz" >> $GITHUB_OUTPUT
           echo "flv=$flavor"              >> $GITHUB_OUTPUT
-
+          echo "Building target ${target}${flavor}_defconfig"
       - name: Restore Cache of dl/
         uses: actions/cache@v4
         with:
