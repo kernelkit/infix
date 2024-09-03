@@ -75,12 +75,16 @@ class Env(object):
         return self.ptop.get_password(node)
 
     def attach(self, node, port, protocol=None, test_reset=True):
+        """Attach to node on port using protocol."""
+
         if self.ltop:
             mapping = self.ltop.mapping[node]
             node, port = self.ltop.xlate(node, port)
         else:
             mapping = None
 
+        # Test protocol always highest prio, followed by command line,
+        # then environment (detected from defconfig), lastly random.
         if protocol is None:
             if self.args.transport is not None:
                 protocol = self.args.transport

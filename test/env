@@ -7,8 +7,8 @@ testdir=$(dirname "$(readlink -f "$0")")
 usage()
 {
     cat <<EOF
-usage: test/env [<OPTS>] -f <IMAGE> -q <QENETH-DIR> <COMMAND> [<ARGS>...]
-       test/env [<OPTS>] -C -t <TOPOLOGY>   <COMMAND> [<ARGS>...]
+usage: test/env [-cDhiKr] -f <IMAGE> -q <QENETH-DIR> <COMMAND> [<ARGS>...]
+       test/env [-cDhiKr] -C -t <TOPOLOGY> <COMMAND> [<ARGS>...]
 
   Run <COMMAND> in a pre-packaged container with all the packages
   required for running the test suite installed.
@@ -39,6 +39,9 @@ usage: test/env [<OPTS>] -f <IMAGE> -q <QENETH-DIR> <COMMAND> [<ARGS>...]
 
     -h
       Show this help message
+
+    -i
+      Interactive mode, e.g., 'make test-sh'
 
     -K
       Even if /dev/kvm is usable, do not map it the container. This is
@@ -156,7 +159,7 @@ while getopts "b:cCDf:hiKp:q:rt:" opt; do
 	    usage && exit 0
 	    ;;
 	i)
-	    interactive="--interactive"
+	    interactive=--interactive
 	    ;;
 	K)
 	    kvm=
@@ -199,16 +202,18 @@ if [ "$containerize" ]; then
     mkdir -p "$HOME/.infix"
     touch "$HOME/.infix/.ash_history"
 
-    # shellcheck disable=SC2016
+    # shellcheck disable=SC2016,SC2046,SC2086,SC2119
     exec $(runner) run \
 	 --cap-add=NET_RAW \
 	 --cap-add=NET_ADMIN \
 	 --device=/dev/net/tun \
 	 --env PYTHONHASHSEED=${PYTHONHASHSEED:-$(shuf -i 0-$(((1 << 32) - 1)) -n 1)} \
 	 --env VIRTUAL_ENV_DISABLE_PROMPT=yes \
+	 --env INFAMY_ARGS="$INFAMY_ARGS" \
 	 --env INFAMY_EXTRA_ARGS="$INFAMY_EXTRA_ARGS" \
 	 --env PROMPT_DIRTRIM="$ixdir" \
 	 --env PS1="$(build_ps1)" \
+	 $extra_env \
 	 --expose 9001-9010 --publish-all \
 	 -v "$HOME/.infix/.ash_history":/root/.ash_history \
 	 $(name) \
