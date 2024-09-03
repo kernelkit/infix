@@ -1,0 +1,29 @@
+=== OSPF Basic
+==== Description
+Very basic OSPF test just test that OSPF sends HELLO packets between the DUTs
+and that they exchange routes, ending with a simple connectivity check.
+
+==== Topology
+ifdef::topdoc[]
+image::/home/lazzer/Documents/addiva/infix/test/case/ietf_routing/ospf_basic/topology.png[OSPF Basic topology]
+
+endif::topdoc[]
+ifndef::topdoc[]
+ifdef::testgroup[]
+image::lazzer/Documents/addiva/infix/test/case/ietf_routing/ospf_basic/topology.png[OSPF Basic topology]
+
+endif::testgroup[]
+ifndef::testgroup[]
+image::topology.png[OSPF Basic topology]
+
+endif::testgroup[]
+endif::topdoc[]
+==== Test sequence
+. Initialize
+. Configure targets
+. Wait for OSPF routes
+. Test connectivity
+
+
+<<<
+

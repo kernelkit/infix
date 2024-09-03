@@ -1,0 +1,42 @@
+=== USB configuration
+==== Description
+This will test if the configuration is consistent with hardware state,
+if the USB ports are _locked_ (forbidden for use) and _unlocked_
+(Ready for use) when they should. Also test if it is the case during
+reboot. This does not the test actual use of the USB port, just check
+that the configured state is consistent with the hardware state.
+
+If this pass you can be certeain of that the configuration of the USB
+port is handled correctly.
+
+==== Topology
+ifdef::topdoc[]
+image::/home/lazzer/Documents/addiva/infix/test/case/ietf_hardware/usb/topology.png[USB configuration topology]
+
+endif::topdoc[]
+ifndef::topdoc[]
+ifdef::testgroup[]
+image::lazzer/Documents/addiva/infix/test/case/ietf_hardware/usb/topology.png[USB configuration topology]
+
+endif::testgroup[]
+ifndef::testgroup[]
+image::topology.png[USB configuration topology]
+
+endif::testgroup[]
+endif::topdoc[]
+==== Test sequence
+. Initialize
+. Unlock all USB ports
+. Verify that all USB ports are unlocked
+. Lock all USB ports
+. Verify that all USB ports are locked
+. Remove all hardware configuration
+. Verify that all USB ports are locked
+. Unlock USB ports
+. Verify that all USB ports are unlocked
+. Save to startup and reboot
+. Verify USB port remain unlocked after reboot
+
+
+<<<
+

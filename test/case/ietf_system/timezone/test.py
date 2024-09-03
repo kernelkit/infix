@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
+"""
+Set timezone
 
+Verify that it is possible to set timezone
+"""
 import random, string
 import time
 import infamy

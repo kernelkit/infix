@@ -1,0 +1,47 @@
+:topdoc:
+
+= Test specification
+This is the test specification for {REPLACE}.
+:title-page:
+:toc:
+:toclevels: 2
+:sectnums:
+:sectnumlevels: 2
+
+<<<
+include::../case/misc/Readme.adoc[]
+
+<<<
+
+include::../case/ietf_system/Readme.adoc[]
+
+<<<
+
+include::../case/ietf_syslog/Readme.adoc[]
+
+<<<
+
+include::../case/ietf_interfaces/Readme.adoc[]
+
+<<<
+
+include::../case/infix_interfaces/Readme.adoc[]
+<<<
+
+include::../case/ietf_routing/Readme.adoc[]
+
+<<<
+
+include::../case/infix_containers/Readme.adoc[]
+
+<<<
+
+include::../case/infix_dhcp/Readme.adoc[]
+
+<<<
+
+include::../case/ietf_hardware/Readme.adoc[]
+
+<<<
+
+include::../case/infix_services/Readme.adoc[]

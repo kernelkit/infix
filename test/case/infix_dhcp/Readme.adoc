@@ -1,0 +1,10 @@
+:testgroup:
+== infix-dhcp
+
+<<<
+
+include::dhcp_basic/Readme.adoc[]
+
+include::dhcp_router/Readme.adoc[]
+
+include::dhcp_routes/Readme.adoc[]

@@ -1,0 +1,26 @@
+=== DHCP router
+==== Description
+Verify that the DHCP client receives default gatewa (DHCP option 3, router)
+and that exist in operational datastore
+
+==== Topology
+ifdef::topdoc[]
+image::/home/lazzer/Documents/addiva/infix/test/case/infix_dhcp/dhcp_router/topology.png[DHCP router topology]
+
+endif::topdoc[]
+ifndef::topdoc[]
+ifdef::testgroup[]
+image::lazzer/Documents/addiva/infix/test/case/infix_dhcp/dhcp_router/topology.png[DHCP router topology]
+
+endif::testgroup[]
+ifndef::testgroup[]
+image::topology.png[DHCP router topology]
+
+endif::testgroup[]
+endif::topdoc[]
+==== Test sequence
+. Initialize
+
+
+<<<
+

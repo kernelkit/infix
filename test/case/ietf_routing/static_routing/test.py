@@ -15,7 +15,12 @@
 #    |                                           |
 #    |                                           |
 #    +-------------------------------------------+
+"""
+Static routing
 
+Test that it is possible to use static routes (IPv4 and IPv6)
+works as expected
+"""
 import copy
 import infamy
 import time

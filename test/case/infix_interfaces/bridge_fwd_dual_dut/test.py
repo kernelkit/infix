@@ -14,7 +14,11 @@
 # |                                                                                         |
 # |                                        [ HOST ]                                         |
 # '-----------------------------------------------------------------------------------------'
+"""
+Bridge forwarding dual DUTs
 
+Ping through both DUTs using bridged ports.
+"""
 import infamy
 
 with infamy.Test() as test:

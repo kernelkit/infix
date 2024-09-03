@@ -1,0 +1,6 @@
+:testgroup:
+== infix-services
+
+<<<
+
+include::services_basic/Readme.adoc[]

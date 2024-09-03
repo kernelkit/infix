@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
+"""
+Interface status
 
+Check that interface status works
+"""
 import infamy
 import infamy.iface as iface
 import os
@@ -30,21 +34,21 @@ with infamy.Test() as test:
     with test.step("Initialize"):
         env = infamy.Env()
         target = env.attach("target", "mgmt")
-      
+
     iface.print_all(target)
 
     loopback_iface = "lo"
-    _, mgmt_iface = env.ltop.xlate("target", "mgmt") 
+    _, mgmt_iface = env.ltop.xlate("target", "mgmt")
     ifaces_under_test = [loopback_iface, mgmt_iface]
     print(f"Interfaces under test: {ifaces_under_test}")
-    
+
     for interface in ifaces_under_test:
         with test.step(f"Verifying <{interface}> interface"):
             asser_iface_exists(target, interface)
-    
+
         with test.step(f"Verifying <if-index> for <{interface}> interface"):
             assert_if_index(target, interface)
-        
+
         with test.step(f"Verifying <oper-status> for <{interface}> interface"):
             assert_oper_status(target, interface)
 

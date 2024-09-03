@@ -1,6 +1,11 @@
 #!/usr/bin/env python3
 # Verify DHCP option 3 (router)
+"""
+DHCP router
 
+Verify that the DHCP client receives default gatewa (DHCP option 3, router)
+and that exist in operational datastore
+"""
 import time
 import infamy, infamy.dhcp
 import infamy.iface as iface

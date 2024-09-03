@@ -7,6 +7,11 @@
 #   PC ------- e0    e1 ---------------------- e0
 # PING -->  ¦             dut1             ¦            dut2
 #
+"""
+Bridge VLAN
+
+Basic test of VLAN functionality in a bridge
+"""
 import infamy
 
 with infamy.Test() as test:

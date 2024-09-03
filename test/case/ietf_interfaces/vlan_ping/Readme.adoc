@@ -1,0 +1,29 @@
+=== VLAN ping connectivity
+==== Description
+Very basic test if the VLAN configuration works.
+
+==== Topology
+ifdef::topdoc[]
+image::/home/lazzer/Documents/addiva/infix/test/case/ietf_interfaces/vlan_ping/topology.png[VLAN ping connectivity topology]
+
+endif::topdoc[]
+ifndef::topdoc[]
+ifdef::testgroup[]
+image::lazzer/Documents/addiva/infix/test/case/ietf_interfaces/vlan_ping/topology.png[VLAN ping connectivity topology]
+
+endif::testgroup[]
+ifndef::testgroup[]
+image::topology.png[VLAN ping connectivity topology]
+
+endif::testgroup[]
+endif::topdoc[]
+==== Test sequence
+. Initialize
+. Configure VLAN 10 on target:data with IP 10.0.0.2
+. Waiting for links to come up
+. Ping 10.0.0.2 from VLAN 10 on host:data with IP 10.0.0.1
+. Remove VLAN interface, and test again (should not be able to ping)
+
+
+<<<
+

@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
-# Verify IPv6 autoconf on a bridge is properly set up for global prefix.
-# See issue #473 for details.
+"""
+Interface IPv6 autoconf for bridges
 
+Verify IPv6 autoconf on a bridge is properly set up for global prefix.
+See issue #473 for details.
+"""
 import infamy
 
 with infamy.Test() as test:

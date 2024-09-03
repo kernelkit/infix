@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
+"""
+Set timezone with UTC offset
 
+Verify that it is possible to set timezone using UTC offset
+"""
 import infamy
 import lxml
 

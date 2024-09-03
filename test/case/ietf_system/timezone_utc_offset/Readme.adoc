@@ -1,0 +1,27 @@
+=== Set timezone with UTC offset
+==== Description
+Verify that it is possible to set timezone using UTC offset
+
+==== Topology
+ifdef::topdoc[]
+image::/home/lazzer/Documents/addiva/infix/test/case/ietf_system/timezone_utc_offset/topology.png[Set timezone with UTC offset topology]
+
+endif::topdoc[]
+ifndef::topdoc[]
+ifdef::testgroup[]
+image::lazzer/Documents/addiva/infix/test/case/ietf_system/timezone_utc_offset/topology.png[Set timezone with UTC offset topology]
+
+endif::testgroup[]
+ifndef::testgroup[]
+image::topology.png[Set timezone with UTC offset topology]
+
+endif::testgroup[]
+endif::topdoc[]
+==== Test sequence
+. Initialize
+. Set timezone UTC offset
+. Verify current time.
+
+
+<<<
+

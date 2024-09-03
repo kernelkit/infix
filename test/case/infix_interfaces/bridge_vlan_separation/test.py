@@ -14,7 +14,11 @@
 # |                                                                                         |
 # |                                        [ HOST ]                                         |
 # '-----------------------------------------------------------------------------------------'
+"""
+Bridge VLAN separation
 
+Test that two VLAN is correctly separaretade in the bridge
+"""
 import infamy
 
 with infamy.Test() as test:

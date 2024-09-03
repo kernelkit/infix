@@ -1,0 +1,28 @@
+=== Remote syslog
+==== Description
+Verify logging to remote, acting as a remote, and RFC5424 log format.
+
+==== Topology
+ifdef::topdoc[]
+image::/home/lazzer/Documents/addiva/infix/test/case/ietf_syslog/remote/topology.png[Remote syslog topology]
+
+endif::topdoc[]
+ifndef::topdoc[]
+ifdef::testgroup[]
+image::lazzer/Documents/addiva/infix/test/case/ietf_syslog/remote/topology.png[Remote syslog topology]
+
+endif::testgroup[]
+ifndef::testgroup[]
+image::topology.png[Remote syslog topology]
+
+endif::testgroup[]
+endif::topdoc[]
+==== Test sequence
+. Initialize
+. Topology setup
+. Syslog setup
+. Verify logging from client to server
+
+
+<<<
+

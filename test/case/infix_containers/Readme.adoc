@@ -1,0 +1,12 @@
+:testgroup:
+== infix-containers
+
+<<<
+
+include::container_basic/Readme.adoc[]
+
+include::container_bridge/Readme.adoc[]
+
+include::container_phys/Readme.adoc[]
+
+include::container_veth/Readme.adoc[]

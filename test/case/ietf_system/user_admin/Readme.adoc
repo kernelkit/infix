@@ -1,0 +1,29 @@
+=== Add admin user
+==== Description
+- Add a non-admin user and verify they have no privs
+- Add user to admin group and recheck privileges
+- Test admin user, verify $factory$ password in running
+    and active password in operational datastore
+
+==== Topology
+ifdef::topdoc[]
+image::/home/lazzer/Documents/addiva/infix/test/case/ietf_system/user_admin/topology.png[Add admin user topology]
+
+endif::topdoc[]
+ifndef::topdoc[]
+ifdef::testgroup[]
+image::lazzer/Documents/addiva/infix/test/case/ietf_system/user_admin/topology.png[Add admin user topology]
+
+endif::testgroup[]
+ifndef::testgroup[]
+image::topology.png[Add admin user topology]
+
+endif::testgroup[]
+endif::topdoc[]
+==== Test sequence
+. Initializing ...
+. Add new user
+
+
+<<<
+

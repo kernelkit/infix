@@ -1,0 +1,26 @@
+=== DHCP router
+==== Description
+Verify DHCP option 121 (staticroutes) is used over option 3 and that the routes exist in
+the operational datastore
+
+==== Topology
+ifdef::topdoc[]
+image::/home/lazzer/Documents/addiva/infix/test/case/infix_dhcp/dhcp_routes/topology.png[DHCP router topology]
+
+endif::topdoc[]
+ifndef::topdoc[]
+ifdef::testgroup[]
+image::lazzer/Documents/addiva/infix/test/case/infix_dhcp/dhcp_routes/topology.png[DHCP router topology]
+
+endif::testgroup[]
+ifndef::testgroup[]
+image::topology.png[DHCP router topology]
+
+endif::testgroup[]
+endif::topdoc[]
+==== Test sequence
+. Initialize
+
+
+<<<
+

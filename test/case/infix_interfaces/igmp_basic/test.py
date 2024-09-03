@@ -16,6 +16,13 @@
 # '-------' '-------' '-------'
 #    .2         .3        .4
 
+"""
+IGMP basic
+
+Test that all multicast gets flooded when IGMP is disabled and
+the flooding stops as soon a join arrives
+"""
+
 import infamy
 import time
 import infamy.multicast as mcast

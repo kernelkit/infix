@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
+"""
+Set hostname
 
+Verify that it is possible to change hostname
+"""
 import random
 import string
 import re

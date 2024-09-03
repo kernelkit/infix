@@ -1,0 +1,34 @@
+=== OSPF with multiple areas
+==== Description
+This test test alot of features inside OSPF using 3 areas (one NSSA area)
+to test the distribution of routes is deterministic (using cost), also test
+link breaks using BFD (not implemented in infamy though)
+
+==== Topology
+ifdef::topdoc[]
+image::/home/lazzer/Documents/addiva/infix/test/case/ietf_routing/ospf_multiarea/topology.png[OSPF with multiple areas topology]
+
+endif::topdoc[]
+ifndef::topdoc[]
+ifdef::testgroup[]
+image::lazzer/Documents/addiva/infix/test/case/ietf_routing/ospf_multiarea/topology.png[OSPF with multiple areas topology]
+
+endif::testgroup[]
+ifndef::testgroup[]
+image::topology.png[OSPF with multiple areas topology]
+
+endif::testgroup[]
+endif::topdoc[]
+==== Test sequence
+. Initialize
+. Configure targets
+. Wait for neighbors
+. Wait for routes from OSPF
+. Verify NSSA area
+. Testing connectivitiy through NSSA area
+. Verify correct hops
+. Disable link between R1 and R4, and verify correct hops
+
+
+<<<
+

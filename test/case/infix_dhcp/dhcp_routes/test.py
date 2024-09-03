@@ -1,6 +1,11 @@
 #!/usr/bin/env python3
 # Verify DHCP option 121 (staticroutes) is used over option 3
+"""
+DHCP router
 
+Verify DHCP option 121 (staticroutes) is used over option 3 and that the routes exist in
+the operational datastore
+"""
 import time
 import infamy, infamy.dhcp
 import infamy.iface as iface

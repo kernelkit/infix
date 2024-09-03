@@ -1,6 +1,12 @@
 #!/usr/bin/env python3
-import infamy
+"""
+OSPF Basic
 
+Very basic OSPF test just test that OSPF sends HELLO packets between the DUTs
+and that they exchange routes, ending with a simple connectivity check.
+"""
+
+import infamy
 import infamy.route as route
 from infamy.util import until, parallel
 

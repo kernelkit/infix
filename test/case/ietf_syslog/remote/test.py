@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 """
+Remote syslog
+
 Verify logging to remote, acting as a remote, and RFC5424 log format.
 """
 import infamy

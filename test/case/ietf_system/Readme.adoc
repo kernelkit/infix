@@ -1,0 +1,14 @@
+:testgroup:
+== ietf-system
+
+<<<
+
+include::hostname/Readme.adoc[]
+
+include::add_delete_user/Readme.adoc[]
+
+include::user_admin/Readme.adoc[]
+
+include::timezone/Readme.adoc[]
+
+include::timezone_utc_offset/Readme.adoc[]

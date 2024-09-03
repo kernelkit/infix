@@ -1,0 +1,29 @@
+=== Interface with IPv4
+==== Description
+Test that it is possible to set and remove the IPv4 address on a interface
+
+==== Topology
+ifdef::topdoc[]
+image::/home/lazzer/Documents/addiva/infix/test/case/ietf_interfaces/ipv4_address/topology.png[Interface with IPv4 topology]
+
+endif::topdoc[]
+ifndef::topdoc[]
+ifdef::testgroup[]
+image::lazzer/Documents/addiva/infix/test/case/ietf_interfaces/ipv4_address/topology.png[Interface with IPv4 topology]
+
+endif::testgroup[]
+ifndef::testgroup[]
+image::topology.png[Interface with IPv4 topology]
+
+endif::testgroup[]
+endif::topdoc[]
+==== Test sequence
+. Setup
+. Get initial IP addresses
+. Configure IP address
+. Get updated IP addresses
+. Get updated IP addresses
+
+
+<<<
+

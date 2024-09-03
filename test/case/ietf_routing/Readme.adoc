@@ -1,0 +1,13 @@
+:testgroup:
+
+== ietf-routing
+
+<<<
+
+include::static_routing/Readme.adoc[]
+
+include::ospf_basic/Readme.adoc[]
+
+include::ospf_unnumbered_interface/Readme.adoc[]
+
+include::ospf_multiarea/Readme.adoc[]

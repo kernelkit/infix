@@ -1,0 +1,26 @@
+=== Custom MAC address on interface
+==== Description
+Test possibility to set mac address
+
+==== Topology
+ifdef::topdoc[]
+image::/home/lazzer/Documents/addiva/infix/test/case/ietf_interfaces/iface_phys_address/topology.png[Custom MAC address on interface topology]
+
+endif::topdoc[]
+ifndef::topdoc[]
+ifdef::testgroup[]
+image::lazzer/Documents/addiva/infix/test/case/ietf_interfaces/iface_phys_address/topology.png[Custom MAC address on interface topology]
+
+endif::testgroup[]
+ifndef::testgroup[]
+image::topology.png[Custom MAC address on interface topology]
+
+endif::testgroup[]
+endif::topdoc[]
+==== Test sequence
+. Initialize
+. Set custom MAC address
+
+
+<<<
+

@@ -1,0 +1,8 @@
+:testgroup:
+== ietf-hardware
+
+<<<
+
+include::usb/Readme.adoc[]
+
+include::usb_two_ports/Readme.adoc[]

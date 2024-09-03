@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 """
-  - Add a non-admin user and verify they have no privs
-  - Add user to admin group and recheck privileges
-  - Test admin user, verify $factory$ password in running
+Add admin user
+
+- Add a non-admin user and verify they have no privs
+- Add user to admin group and recheck privileges
+- Test admin user, verify $factory$ password in running
     and active password in operational datastore
 """
 

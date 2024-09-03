@@ -3,7 +3,12 @@
 # Verify connectivity with a simple web server container from behind a
 # regular bridge, a VETH pair connects the container to the bridge.
 #
+"""
+Container with VETH pair
 
+Verify connectivity with a simple web server container from behind a
+regular bridge, a VETH pair connects the container to the bridge.
+"""
 import base64
 import infamy
 from   infamy.util import until

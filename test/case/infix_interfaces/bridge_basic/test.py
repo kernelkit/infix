@@ -4,7 +4,11 @@
 #             /
 #   PC ---- e0
 #
+"""
+Bridge basic
 
+Test basic connectivity to a bridge
+"""
 import infamy
 
 with infamy.Test() as test:
