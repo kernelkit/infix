@@ -85,15 +85,22 @@ class Test:
     def fail(self):
         raise TestFail()
 
+
 class TestResult(Exception):
     pass
 
+
 class TestPass(TestResult):
     pass
+
+
 class TestFail(TestResult):
     pass
+
+
 class TestSkip(TestResult):
     pass
+
 
 class CommentWriter:
     def __init__(self, f):

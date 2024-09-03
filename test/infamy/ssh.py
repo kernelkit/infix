@@ -20,7 +20,7 @@ class Device(object):
             return None
 
         args = list(args)
-        if type(args[0]) == str:
+        if type(args[0]) is str:
             if kwargs.get("shell"):
                 args[0] = ["/bin/sh", "-c", args[0]]
                 kwargs["shell"] = False

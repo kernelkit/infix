@@ -1,14 +1,16 @@
 import networkx as nx
 from networkx.algorithms import isomorphism
 
+
 def _qstrip(text):
-    if text == None:
+    if text is None:
         return None
 
     if text.startswith("\"") and text.endswith("\""):
         return text[1:-1]
 
     return text
+
 
 def map_edges(les, pes):
     acc = []
@@ -23,11 +25,14 @@ def map_edges(les, pes):
 
     return acc
 
+
 def match_node(pn, ln):
     return pn.get("kind") == ln.get("kind")
 
+
 def match_edge(pes, les):
-    return map_edges(les, pes) != None
+    return map_edges(les, pes) is not None
+
 
 class Topology:
     def __init__(self, dotg):
@@ -47,7 +52,7 @@ class Topology:
             sn, sp = e.get_source().split(":")
             dn, dp = e.get_destination().split(":")
 
-            attrs = { _qstrip(k): _qstrip(v) for k, v in e.get_attributes().items() }
+            attrs = {_qstrip(k): _qstrip(v) for k, v in e.get_attributes().items()}
             attrs[sn] = sp
             attrs[dn] = dp
             self.g.add_edge(sn, dn, **attrs)
@@ -95,7 +100,7 @@ class Topology:
         return True
 
     def xlate(self, lnode, lport=None):
-        assert(self.mapping)
+        assert self.mapping
 
         if lnode not in self.mapping:
             return None
@@ -121,7 +126,7 @@ class Topology:
     def get_password(self, node):
         n = self.dotg.get_node(node)
         b = n[0] if n else {}
-        password=b.get("password")
+        password = b.get("password")
 
         return qstrip(password) if password is not None else "admin"
 
@@ -138,7 +143,7 @@ class Topology:
 
     def get_ctrl(self):
         ns = self.get_nodes(lambda _, attrs: attrs.get("kind") == "controller")
-        assert(len(ns) == 1)
+        assert len(ns) == 1
         return ns[0]
 
     def get_infixen(self):
@@ -146,6 +151,7 @@ class Topology:
 
     def get_attr(self, name, default=None):
         return _qstrip(self.dotg.get_attributes().get(name, default))
+
 
 # Support calling this script like so...
 #

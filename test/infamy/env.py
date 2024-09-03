@@ -1,5 +1,4 @@
 import argparse
-import networkx
 import os
 import pydot
 import shlex
@@ -9,18 +8,21 @@ import inspect
 
 from . import neigh, netconf, restconf, ssh, tap, topology
 
+
 class NullEnv:
     def attr(self, _, default=None):
         return default
 
+
 ENV = NullEnv()
 
+
 class ArgumentParser(argparse.ArgumentParser):
-    def __init__(self, ltop):
+    def __init__(self, top):
         super().__init__()
 
         self.add_argument("-d", "--debug", default=False, action="store_true")
-        self.add_argument("-l", "--logical-topology", dest="ltop", default=ltop)
+        self.add_argument("-l", "--logical-topology", dest="ltop", default=top)
         self.add_argument("-p", "--package", default=None)
         self.add_argument("-y", "--yangdir", default=None)
         self.add_argument("-t", "--transport", default=None)
@@ -80,13 +82,14 @@ class Env(object):
             mapping = None
 
         if protocol is None:
-            if not self.args.transport is None:
-                protocol=self.args.transport
+            if self.args.transport is not None:
+                protocol = self.args.transport
             else:
-                random.seed(f"{sys.argv[0]}-{os.environ.get('PYTHONHASHSEED',0)}")
+                hseed = os.environ.get('PYTHONHASHSEED', 0)
+                random.seed(f"{sys.argv[0]}-{hseed}")
                 protocol = random.choice(["netconf", "restconf"])
 
-        password=self.get_password(node)
+        password = self.get_password(node)
         ctrl = self.ptop.get_ctrl()
         cport, _ = self.ptop.get_mgmt_link(ctrl, node)
 
@@ -107,12 +110,13 @@ class Env(object):
 
         if protocol == "ssh":
             return ssh.Device(ssh.Location(mgmtip, password))
+
         if protocol == "restconf":
             dev = restconf.Device(location=restconf.Location(cport,
-                                                              mgmtip,
-                                                              password),
-                                   mapping=mapping,
-                                   yangdir=self.args.yangdir)
+                                                             mgmtip,
+                                                             password),
+                                  mapping=mapping,
+                                  yangdir=self.args.yangdir)
             if test_reset:
                 dev.test_reset()
             return dev

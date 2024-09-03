@@ -8,14 +8,16 @@
 #
 
 import infamy
-from   infamy.util import until
+from infamy.util import until
+
 
 def _verify(server):
     url = infamy.Furl(f"http://[{server}]:91/index.html")
     return url.check("It works")
 
+
 with infamy.Test() as test:
-    NAME  = "web"
+    NAME = "web"
 
     with test.step("Set up topology and attach to target DUT"):
         env = infamy.Env()
