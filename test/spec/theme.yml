@@ -1,0 +1,35 @@
+extends: default
+font:
+  catalog:
+    merge: false
+    SourceCodePro:
+      normal: SourceCodePro-Regular.ttf
+      bold: SourceCodePro-Bold.ttf
+      italic: SourceCodePro-Italic.ttf
+      bold_italic: SourceCodePro-BoldItalic.ttf
+
+base:
+  font_family: SourceCodePro
+  font_size: 11
+  line_height_length: 1.3
+
+heading:
+  font_family: SourceCodePro
+  font_style: bold
+role:
+  underline:
+    text_decoration: underline
+
+# Define custom sizes for each heading level
+heading_h1:
+  font_size: 24  # Size for H1 headings
+
+heading_h2: # Test class
+  font_size: 18  # Size for H2 headings
+heading_h3: # test case name
+  font_size: 12  # Size for H3 headings
+  text_decoration: underline
+  margin_top: 30
+
+heading_h4:
+  font_size: 11  # Size for H4 headings
