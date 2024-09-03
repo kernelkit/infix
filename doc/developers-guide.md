@@ -166,6 +166,33 @@ The Infix automated test suite is built around Qemu and [Qeneth][2], see:
  * [Docker Image](../test/docker/README.md)
 
 
+Reviewing
+---------
+
+While reviewing a pull request, you might find yourself wanting to
+play around with a VM running that _exact_ version.  For such
+occations, [gh-dl-artifact.sh](../utils/gh-dl-artifact.sh) is your
+friend in need!  It will use the [GitHub CLI
+(gh)](https://cli.github.com) to locate a prebuilt image from our CI
+workflow, download it, and prepare a local output directory from which
+you can launch both `make run` instances, and run regression tests
+with `make test` and friends.
+
+For example, if you are curious about how PR 666 behaves in some
+particular situation, you can use `gh` to switch to that branch, from
+which `gh-dl-artifact.sh` can then download and prepare the
+corresponding image for execution with our normal tooling:
+
+    gh pr checkout 666
+    ./utils/gh-dl-artifact.sh
+    cd x-artifact-a1b2c3d4-x86_64
+    make run
+
+> **Note:** CI artifacts are built from a merge commit of the source
+> and target branches.  Therefore, the version in the Infix banner
+> will not match the SHA of the commit you have checked out.
+
+
 Contributing
 ------------
 
