@@ -2,6 +2,7 @@ name: Bob the Builder
 
 on:
   pull_request:
+    types: [opened, synchronize, reopened, labeled]
   push:
     branches:
       - main
@@ -35,6 +36,9 @@ jobs:
           if [ "$GITHUB_REF_NAME" != "main" ]; then
               flavor="_minimal"
           else
+              flavor=""
+          fi
+          if ${{ contains(github.event.pull_request.labels.*.name, 'ci:main') }}; then
               flavor=""
           fi
           target=${{ matrix.target }}
