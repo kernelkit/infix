@@ -1,0 +1,12 @@
+---
+- name: static_routing
+  case: static_routing/test.py
+
+- name: ospf_basic
+  case: ospf_basic/test.py
+
+- name: ospf_unnumbered_interface
+  case: ospf_unnumbered_interface/test.py
+
+- name: ospf_multiarea
+  case: ospf_multiarea/test.py

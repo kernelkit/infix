@@ -5,6 +5,7 @@ import pydot
 import shlex
 import sys
 import random
+import inspect
 
 from . import neigh, netconf, restconf, ssh, tap, topology
 
@@ -37,8 +38,16 @@ class Env(object):
         self.ptop = topology.Topology(pdot)
 
         self.ltop = None
-        if self.args.ltop:
-            ldot = pydot.graph_from_dot_file(self.args.ltop)[0]
+        if self.args.ltop != False:
+            if self.args.ltop is None:
+                stack = inspect.stack()
+                caller_frame = stack[1]
+                top_path = caller_frame.filename
+                top_path = os.path.join(os.path.dirname(top_path), "topology.dot")
+            else:
+                top_path = self.args.ltop
+
+            ldot = pydot.graph_from_dot_file(top_path)[0]
             self.ltop = topology.Topology(ldot)
             if not self.ltop.map_to(self.ptop):
                 raise tap.TestSkip()

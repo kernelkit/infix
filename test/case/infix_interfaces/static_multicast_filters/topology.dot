@@ -1,0 +1,26 @@
+graph "1x4" {
+	layout="neato";
+	overlap="false";
+	esep="+20";
+
+        node [shape=record, fontname="monospace"];
+	edge [color="cornflowerblue", penwidth="2"];
+
+	host [
+	    label="host | { <tgt> tgt | <data0> data0 | <data1>  data1 | <data2>  data2 }",
+	    pos="0,12!",
+	    kind="controller",
+	];
+
+        target [
+	    label="{ <mgmt> mgmt | <data0> data0 | <data1> data1 | <data2> data2 } | target",
+	    pos="10,12!",
+
+	    kind="infix",
+	];
+
+	host:tgt -- target:mgmt [kind=mgmt]
+	host:data0 -- target:data0
+	host:data1 -- target:data1
+	host:data2 -- target:data2
+}

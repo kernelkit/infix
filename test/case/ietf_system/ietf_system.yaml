@@ -1,0 +1,15 @@
+---
+- name: hostname
+  case: hostname/test.py
+
+- name: add_delete_user
+  case: add_delete_user/test.py
+
+- name: user_admin
+  case: user_admin/test.py
+
+- name: timezone
+  case: timezone/test.py
+
+- name: timezone_utc_offset
+  case: timezone_utc_offset/test.py

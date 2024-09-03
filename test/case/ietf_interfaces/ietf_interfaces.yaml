@@ -1,0 +1,18 @@
+---
+- name: vlan_ping
+  case: vlan_ping/test.py
+
+- name: ipv4_address
+  case: ipv4_address/test.py
+
+- name: ipv6_address
+  case: ipv6_address/test.py
+
+- name: iface_phys_address
+  case: iface_phys_address/test.py
+
+- name: iface_status
+  case: iface_status/test.py
+
+- name: routing_basic
+  case: routing_basic/test.py
