@@ -16,10 +16,14 @@ mode-host   := -t $(or $(TOPOLOGY),/etc/infamy.dot)
 mode-run    := -t $(BINARIES_DIR)/qemu.dot
 mode        := $(mode-$(TEST_MODE))
 
-
 binaries-$(ARCH) := $(addprefix $(IMAGE)-$(ARCH),.img -disk.img .pkg)
 binaries-x86_64  += OVMF.fd
 binaries := $(foreach bin,$(binaries-$(ARCH)),-f $(BINARIES_DIR)/$(bin))
+
+# Common transport override for minimal defconfigs
+ifneq ($(BR2_PACKAGE_ROUSETTE),y)
+export INFAMY_ARGS := --transport=netconf
+endif
 
 test:
 	$(test-dir)/env -r $(base) $(mode) $(binaries) $(ninepm) $(TESTS)
