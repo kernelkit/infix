@@ -31,9 +31,16 @@ jobs:
       - name: Set Build Variables
         id: vars
         run: |
+          # Ensure 'release' job get the proper image when building main
+          if [ "$GITHUB_REF_NAME" != "main" ]; then
+              flavor="_minimal"
+          else
+              flavor=""
+          fi
           target=${{ matrix.target }}
           echo "dir=infix-$target"        >> $GITHUB_OUTPUT
           echo "tgz=infix-$target.tar.gz" >> $GITHUB_OUTPUT
+          echo "flv=$flavor"              >> $GITHUB_OUTPUT
 
       - name: Restore Cache of dl/
         uses: actions/cache@v4
@@ -52,17 +59,17 @@ jobs:
             ccache-${{ matrix.target }}-
             ccache-
 
-      - name: Configure ${{ matrix.target }}
+      - name: Configure ${{ matrix.target }}${{ steps.vars.outputs.flv }}
         run: |
-          make ${{ matrix.target }}_minimal_defconfig
+          make ${{ matrix.target }}${{ steps.vars.outputs.flv }}_defconfig
 
       - name: Unit Test ${{ matrix.target }}
         run: |
           make test-unit
 
-      - name: Build ${{ matrix.target }}
+      - name: Build ${{ matrix.target }}${{ steps.vars.outputs.flv }}
         run: |
-          echo "Building ${{ matrix.target }}_minimal_defconfig ..."
+          echo "Building ${{ matrix.target }}${{ steps.vars.outputs.flv }}_defconfig ..."
           make
 
       - name:  Check SBOM from Build
@@ -91,16 +98,26 @@ jobs:
           clean: true
           submodules: recursive
 
-      - name: Configure x86_64
+      - name: Set Build Variables
+        id: vars
         run: |
-          make x86_64_minimal_defconfig
+          if [ "$GITHUB_REF_NAME" != "main" ]; then
+              flavor="_minimal"
+          else
+              flavor=""
+          fi
+          echo "flv=$flavor"              >> $GITHUB_OUTPUT
+
+      - name: Configure x86_64${{ steps.vars.outputs.flv }}
+        run: |
+          make x86_64${{ steps.vars.outputs.flv }}_defconfig
 
       - uses: actions/download-artifact@v4
         with:
           pattern: "artifact-*"
           merge-multiple: true
 
-      - name: Restore x86-64 output/
+      - name: Restore x86-64${{ steps.vars.outputs.flv }} output/
         run: |
           ls -l
           mkdir -p output
@@ -109,11 +126,11 @@ jobs:
           tar xf infix-x86_64.tar.gz
           ln -s infix-x86_64 images
 
-      - name: Regression Test
+      - name: Regression Test x86_64${{ steps.vars.outputs.flv }}
         run: |
           make test
 
-      - name: Publish Test Result
+      - name: Publish Test Result for x86_64${{ steps.vars.outputs.flv }}
         # Ensure this runs even if Regression Test fails
         if: always()
         run: cat test/.log/last/result-gh.md >> $GITHUB_STEP_SUMMARY
