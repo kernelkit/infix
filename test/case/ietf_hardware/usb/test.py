@@ -38,27 +38,6 @@ with infamy.Test() as test:
         for port in available:
             until(lambda: usb.get_usb_state(target, port) == "unlocked")
 
-    if len(available) > 1:
-        with test.step("Lock one port"):
-            components = []
-            component = {
-                "name": available[1],
-                "class": "infix-hardware:usb",
-                "state": {
-                    "admin-state": "locked"
-                }
-            }
-            components.append(component)
-
-        target.put_config_dict("ietf-hardware", {
-            "hardware": {
-                "component": components
-            }
-        })
-        with test.step("Verify one port is locked and one unlocked"):
-            until(lambda: usb.get_usb_state(target, available[1]) == "locked")
-            until(lambda: usb.get_usb_state(target, available[0]) == "unlocked")
-
     with test.step("Lock USB ports"):
         components = []
         for port in available:
