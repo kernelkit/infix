@@ -104,6 +104,10 @@ rm -f "$TARGET_DIR/etc/os-release"
 
 echo "$INFIX_TAGLINE $VERSION -- $(date +"%b %e %H:%M %Z %Y")" > "$TARGET_DIR/etc/version"
 
+# In case of ambguities, this is what the image was built from
+cp "$BR2_CONFIG" "$TARGET_DIR/usr/share/infix/config"
+gzip -f "$TARGET_DIR/usr/share/infix/config"
+
 # Drop Buildroot default symlink to /tmp
 if [ -L "$TARGET_DIR/var/lib/avahi-autoipd" ]; then
 	rm    "$TARGET_DIR/var/lib/avahi-autoipd"
