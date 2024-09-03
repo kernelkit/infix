@@ -1,0 +1,28 @@
+=== Syslog Basic
+==== Description
+- Add syslog actions to log to local files
+- Verify new log files have been created
+
+==== Topology
+ifdef::topdoc[]
+image::/home/lazzer/Documents/addiva/infix/test/case/ietf_syslog/basic/topology.png[Syslog Basic topology]
+
+endif::topdoc[]
+ifndef::topdoc[]
+ifdef::testgroup[]
+image::lazzer/Documents/addiva/infix/test/case/ietf_syslog/basic/topology.png[Syslog Basic topology]
+
+endif::testgroup[]
+ifndef::testgroup[]
+image::topology.png[Syslog Basic topology]
+
+endif::testgroup[]
+endif::topdoc[]
+==== Test sequence
+. Initializing ...
+. Add new syslog file action
+. Verify log files have been created ...
+
+
+<<<
+

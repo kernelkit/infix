@@ -6,7 +6,15 @@
 #
 # The RPC actions: stop + start, and restart are also verified.
 #
+"""
+Container basic
 
+Verify that a simple web server container can be configured to run
+with host networking, on port 80.  Operation is verified using a
+simple GET request for index.html and checking for a key phrase.
+
+The RPC actions: stop + start, and restart are also verified.
+"""
 import infamy
 from infamy.util import until
 

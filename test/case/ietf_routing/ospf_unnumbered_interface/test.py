@@ -1,10 +1,20 @@
 #!/usr/bin/env python3
+"""
+OSPF unnumbered interfaces
+
+This test that a configuration expecting unnumbered interfaces
+get that also in OSPF. Also verify that passive interface in
+the configuration gets activated in OSPF.
+
+When this test pass, you can expect unnumbered interfaces, interface type
+configuration and passive to function
+"""
+
 import infamy
 import time
 
 import infamy.route as route
 from infamy.util import until, parallel
-
 # This test tests passive interfaces and unnumbered interfaces.
 
 def config_target1(target, data, link):

@@ -2,7 +2,13 @@
 # This is a very basic DHCP test that requests an IPv4 lease
 # from a DHCP server and checks that the lease is set on the
 # interface.
+"""
+DHCP Basic
 
+This is a very basic DHCP test that requests an IPv4 lease
+from a DHCP server and checks that the lease is set on the
+ interface.
+"""
 import time
 import infamy, infamy.dhcp
 import infamy.iface as iface

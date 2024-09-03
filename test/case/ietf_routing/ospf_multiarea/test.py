@@ -25,6 +25,13 @@
 #                            +-------+
 #
 #
+"""
+OSPF with multiple areas
+
+This test test alot of features inside OSPF using 3 areas (one NSSA area)
+to test the distribution of routes is deterministic (using cost), also test
+link breaks using BFD (not implemented in infamy though)
+"""
 import infamy
 
 import infamy.route as route

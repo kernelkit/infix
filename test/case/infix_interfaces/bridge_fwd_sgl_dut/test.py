@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-# ,-----------------------------------------,       
-# |                                         | 
-# |                          br0            |  
-# |                         /   \           | 
-# | target:mgmt    tgt:data0     tgt:data1  | 
+# ,-----------------------------------------,
+# |                                         |
+# |                          br0            |
+# |                         /   \           |
+# | target:mgmt    tgt:data0     tgt:data1  |
 # '-----------------------------------------'
-#         |                |     |            
-#         |                |     |           
+#         |                |     |
+#         |                |     |
 # ,------------------------------------------,
 # |   host:mgmt   host:data0     host:data1  |
 # |               [10.0.0.1]     [10.0.0.2]  |
@@ -14,7 +14,11 @@
 # |                                          |
 # |                 [ HOST ]                 |
 # '------------------------------------------'
+"""
+Bridge forwarding single DUTs
 
+Tests forwarding through a DUT with two bridged interfaces
+"""
 import infamy
 
 with infamy.Test() as test:
@@ -58,10 +62,10 @@ with infamy.Test() as test:
 
         with infamy.IsolatedMacVlan(hport0) as ns0, \
              infamy.IsolatedMacVlan(hport1) as ns1 :
-            
+
             ns1.addip("10.0.0.2")
             ns0.addip("10.0.0.1")
 
-            ns0.must_reach("10.0.0.2") 
-            
+            ns0.must_reach("10.0.0.2")
+
     test.succeed()

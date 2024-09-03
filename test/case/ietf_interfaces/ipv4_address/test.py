@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
+"""
+Interface with IPv4
 
+Test that it is possible to set and remove the IPv4 address on a interface
+"""
 import copy
 import infamy
 import infamy.iface as iface

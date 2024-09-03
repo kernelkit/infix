@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
+"""
+Add/delete user
 
+Verify that it is possible to add a user, and then remove it
+"""
 import infamy
 import copy
 from passlib.hash import sha256_crypt

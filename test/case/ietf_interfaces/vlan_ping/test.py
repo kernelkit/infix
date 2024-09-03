@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
+"""
+VLAN ping connectivity
 
+Very basic test if the VLAN configuration works.
+"""
 import infamy
 import infamy.iface as iface
 import copy

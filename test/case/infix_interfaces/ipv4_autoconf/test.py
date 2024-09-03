@@ -2,7 +2,11 @@
 #
 #   PC ---- e0: 10.0.0.2
 #
+"""
+IPv4 linklocal
 
+Verifies that linklocal (ZeroConf) work as expected
+"""
 import infamy
 import time
 import infamy.iface

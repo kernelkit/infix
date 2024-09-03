@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
+"""
+Custom MAC address on interface
 
+Test possibility to set mac address
+"""
 import copy
 import infamy
 import infamy.iface as iface

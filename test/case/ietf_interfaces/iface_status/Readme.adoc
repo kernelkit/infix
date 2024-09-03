@@ -1,0 +1,25 @@
+=== Interface status
+==== Description
+Check that interface status works
+
+==== Topology
+ifdef::topdoc[]
+image::/home/lazzer/Documents/addiva/infix/test/case/ietf_interfaces/iface_status/topology.png[Interface status topology]
+
+endif::topdoc[]
+ifndef::topdoc[]
+ifdef::testgroup[]
+image::lazzer/Documents/addiva/infix/test/case/ietf_interfaces/iface_status/topology.png[Interface status topology]
+
+endif::testgroup[]
+ifndef::testgroup[]
+image::topology.png[Interface status topology]
+
+endif::testgroup[]
+endif::topdoc[]
+==== Test sequence
+. Initialize
+
+
+<<<
+

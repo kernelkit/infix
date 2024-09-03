@@ -1,0 +1,27 @@
+=== Set timezone
+==== Description
+Verify that it is possible to set timezone
+
+==== Topology
+ifdef::topdoc[]
+image::/home/lazzer/Documents/addiva/infix/test/case/ietf_system/timezone/topology.png[Set timezone topology]
+
+endif::topdoc[]
+ifndef::topdoc[]
+ifdef::testgroup[]
+image::lazzer/Documents/addiva/infix/test/case/ietf_system/timezone/topology.png[Set timezone topology]
+
+endif::testgroup[]
+ifndef::testgroup[]
+image::topology.png[Set timezone topology]
+
+endif::testgroup[]
+endif::topdoc[]
+==== Test sequence
+. Initialize
+. Set timezone
+. Verify current time.
+
+
+<<<
+

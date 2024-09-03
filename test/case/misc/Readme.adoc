@@ -1,0 +1,6 @@
+:testgroup:
+== Misc tests
+
+<<<
+
+include::operational_all/Readme.adoc[]

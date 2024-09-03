@@ -1,0 +1,26 @@
+=== Upgrade
+==== Description
+Verify it is possible to upgrade
+
+==== Topology
+ifdef::topdoc[]
+image::/home/lazzer/Documents/addiva/infix/test/case/ietf_system/upgrade/topology.png[Upgrade topology]
+
+endif::topdoc[]
+ifndef::topdoc[]
+ifdef::testgroup[]
+image::lazzer/Documents/addiva/infix/test/case/ietf_system/upgrade/topology.png[Upgrade topology]
+
+endif::testgroup[]
+ifndef::testgroup[]
+image::topology.png[Upgrade topology]
+
+endif::testgroup[]
+endif::topdoc[]
+==== Test sequence
+. Initialize
+. Wait for upgrade to finish
+
+
+<<<
+

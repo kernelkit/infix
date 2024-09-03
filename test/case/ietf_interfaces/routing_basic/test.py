@@ -16,6 +16,11 @@
 # |                  [ HOST ]                    |
 # '----------------------------------------------'
 
+"""
+Routing basic
+
+Test that ipv4 forwarding setting in configuration is respected
+"""
 import infamy
 
 def config_target(target, tport0, tport1, enable_fwd):

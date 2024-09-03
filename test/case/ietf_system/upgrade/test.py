@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
+"""
+Upgrade
 
+Verify it is possible to upgrade
+"""
 import concurrent.futures
 import functools
 import http.server

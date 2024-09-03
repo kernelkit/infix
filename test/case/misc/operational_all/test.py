@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
 
 # Test that it is possible to get all operational data
+"""
+Get all operational
 
+Basic test just to get all operational.
+"""
 import infamy
 import infamy.iface as iface
 

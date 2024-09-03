@@ -4,7 +4,11 @@
 #             /   \    /
 #   PC ---- e0     veth
 #
+"""
+Dual bridges
 
+Test that it is possible to ping a bridge through a bridge to another bridge
+"""
 import infamy
 
 with infamy.Test() as test:

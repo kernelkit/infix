@@ -21,7 +21,11 @@
 #      10.0.1.11                 10.0.2.11                      10.0.1.22         10.0.2.22
 #
 
+"""
+IGMP VLAN
 
+Test tagged IGMP control traffic and that VLAN separation is respected for multicast
+"""
 
 import infamy
 import time

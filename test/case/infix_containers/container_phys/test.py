@@ -3,7 +3,12 @@
 # Verify connectivity with a simple web server container that's been
 # given a physical interface instead of an end of a VETH pair.
 #
+"""
+Container with physical interface
 
+Verify connectivity with a simple web server container that's been
+given a physical interface instead of an end of a VETH pair.
+"""
 import base64
 import infamy
 from   infamy.util import until

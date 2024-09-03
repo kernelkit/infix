@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """
-  - Add syslog actions to log to local files
-  - Verify new log files have been created
+Syslog Basic
+
+- Add syslog actions to log to local files
+- Verify new log files have been created
 """
 
 import infamy

@@ -4,7 +4,12 @@
 #             /   \
 #   PC ---- e0     veth 10.0.0.2
 #
+"""
+Bridge with a physical port and a veth
 
+This tests the possibility to add software added ports, in this case
+veth and bridge it with a physical port
+"""
 import infamy
 
 with infamy.Test() as test:

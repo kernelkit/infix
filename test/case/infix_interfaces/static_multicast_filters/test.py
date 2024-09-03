@@ -16,6 +16,12 @@
 # '-------' '-------' '-------'
 #    .2        .3        .4
 
+"""
+Static multicast filters
+
+Verify that static multicast filters work (remember that snooping needs to
+enabled when using static multicast filters)
+"""
 import infamy
 import time
 import infamy.multicast as mcast

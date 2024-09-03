@@ -14,7 +14,12 @@
 # Inject tagged packets on host/d1, let target route it over to d2
 # where the tag priority is snooped, with different combinations of
 # pcp<->priority mappings and verify the results.
+"""
+VLAN QoS
 
+Inject different packets from the host and verify that the VLAN priority
+is handled correctly
+"""
 import infamy
 
 # Each line represents an injected ICMP request with `id` (tagged with
