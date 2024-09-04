@@ -1,6 +1,7 @@
 import subprocess
 
 from dataclasses import dataclass
+from . import env
 
 
 @dataclass
@@ -12,8 +13,15 @@ class Location:
 
 
 class Device(object):
-    def __init__(self, location: Location):
+    def __init__(self, name: str, location: Location):
+        self.name = name
         self.location = location
+
+    def __str__(self):
+        nm = f"{self.name}"
+        if env.ENV.ltop:
+            nm += f"({env.ENV.ltop.xlate(self.name)})"
+        return nm + " [SSH]"
 
     def _mangle_subprocess_args(self, args, kwargs):
         if not args:

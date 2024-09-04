@@ -103,7 +103,7 @@ with infamy.Test() as test:
             test.fail()
 
     with test.step(f"Verify user {USER} can log in with SSH ..."):
-        conn = ssh.Device(ssh.Location(address, factory, USER))
+        conn = ssh.Device("target", ssh.Location(address, factory, USER))
         try:
             pwd = conn.runsh(f"cat /etc/passwd | grep {USER}").stdout
             print(f"Found {pwd.rstrip()}")

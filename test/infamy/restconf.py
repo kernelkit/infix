@@ -11,6 +11,7 @@ from requests.auth import HTTPBasicAuth
 from urllib3.exceptions import InsecureRequestWarning
 from dataclasses import dataclass
 from infamy.transport import Transport
+from . import env
 
 # We know we have a self-signed certificate, silence warning about it
 warnings.simplefilter('ignore', InsecureRequestWarning)
@@ -109,10 +110,13 @@ def restconf_reachable(neigh, password):
 
 class Device(Transport):
     def __init__(self,
+                 name: str,
                  location: Location,
                  mapping: dict,
                  yangdir: None | str = None):
         print("Testing using RESTCONF")
+
+        self.name = name
         self.location = location
         self.url_base = f"https://[{location.host}]:{location.port}"
         self.restconf_url = f"{self.url_base}/restconf"
@@ -128,6 +132,12 @@ class Device(Transport):
         self.lyctx = libyang.Context(yangdir)
         self._ly_bootstrap(yangdir)
         self._ly_init(yangdir)
+
+    def __str__(self):
+        nm = f"{self.name}"
+        if env.ENV.ltop:
+            nm += f"({env.ENV.ltop.xlate(self.name)})"
+        return nm + " [RESTCONF]"
 
     def get_schemas_list(self):
         modules = self.get_operational("/ietf-yang-library:modules-state")
