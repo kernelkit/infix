@@ -77,6 +77,7 @@ class Env(object):
     def attach(self, node, port, protocol=None, test_reset=True):
         """Attach to node on port using protocol."""
 
+        name = node
         if self.ltop:
             mapping = self.ltop.mapping[node]
             node, port = self.ltop.xlate(node, port)
@@ -104,19 +105,21 @@ class Env(object):
 
         password = self.get_password(node)
         if protocol == "netconf":
-            dev = netconf.Device(
-                location=netconf.Location(cport, mgmtip, password),
-                mapping=mapping,
-                yangdir=self.args.yangdir)
+            dev = netconf.Device(name,
+                                 location=netconf.Location(cport, mgmtip,
+                                                           password),
+                                 mapping=mapping,
+                                 yangdir=self.args.yangdir)
             if test_reset:
                 dev.test_reset()
             return dev
 
         if protocol == "ssh":
-            return ssh.Device(ssh.Location(mgmtip, password))
+            return ssh.Device(name, ssh.Location(mgmtip, password))
 
         if protocol == "restconf":
-            dev = restconf.Device(location=restconf.Location(cport,
+            dev = restconf.Device(name,
+                                  location=restconf.Location(cport,
                                                              mgmtip,
                                                              password),
                                   mapping=mapping,

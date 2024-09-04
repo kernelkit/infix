@@ -18,6 +18,7 @@ import netconf_client.ncclient
 import infamy.iface as iface
 from infamy.transport import Transport
 from netconf_client.error import RpcError
+from . import env
 
 
 def netconf_syn(addr):
@@ -98,11 +99,13 @@ class Location:
 
 class Device(Transport):
     def __init__(self,
+                 name: str,
                  location: Location,
                  mapping: dict,
                  yangdir: None | str = None):
         print("Testing using NETCONF")
 
+        self.name = name
         self.location = location
         self.mapping = mapping
         self.location = location
@@ -117,6 +120,12 @@ class Device(Transport):
         del self.ly
         self.ly = libyang.Context(yangdir)
         self._ly_init(yangdir)
+
+    def __str__(self):
+        nm = f"{self.name}"
+        if env.ENV.ltop:
+            nm += f"({env.ENV.ltop.xlate(self.name)})"
+        return nm + " [NETCONF]"
 
     def _ncc_init(self, location):
         ai = socket.getaddrinfo(location.host, location.port,
