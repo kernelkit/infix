@@ -4,6 +4,18 @@ Change Log
 All notable changes to the project are documented in this file.
 
 
+[v24.09.0][UNRELEASED]
+-------------------------
+
+### Changes
+
+### Fixes
+- Fix #601: CLI regression in 'show ospf' family of commands causing
+  authorized users, like `admin`, to not being able to query status
+  of OSPF or BFD.  Workaround by using the UNIX shell `sudo vtysh`.
+  Regression introduced in v24.08.0
+
+
 [v24.08.0][] - 2024-08-30
 -------------------------
 
@@ -162,7 +174,7 @@ Finally, the following consumer boards are now fully supported:
 - Merge infix-shell-types.yang with infix-system.yang
 - cli: improved error/warning message on missing or incomplete command
 
-[yescrypt]: https://en.wikipedia.org/wiki/Yescrypt)
+[yescrypt]: https://en.wikipedia.org/wiki/Yescrypt
 
 ### Fixes
 - Fix #424: regression, root user can log in without password
