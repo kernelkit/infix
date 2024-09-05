@@ -40,6 +40,22 @@ err()
 # shellcheck disable=SC1091
 . /etc/confdrc
 
+sysrepocfg=sysrepocfg
+while getopts "t:" opt; do
+    case ${opt} in
+	t)
+	    sysrepocfg="$sysrepocfg -t $OPTARG"
+	    ;;
+    esac
+done
+shift $((OPTIND - 1))
+
+if [ $# -lt 1 ]; then
+    err "No configuration file supplied"
+    exit 1
+fi
+
+
 config=$1
 
 if [ -f "/mnt/aux/test-mode" ] && [ "$config" = "startup-config" ]; then
@@ -69,10 +85,10 @@ if [ ! -f "$fn" ]; then
     case "$config" in
 	startup-config)
 	    note "startup-config missing, initializing running datastore from factory-config"
-	    sysrepocfg -C factory-default
+	    $sysrepocfg -C factory-default
 	    rc=$?
 	    note "saving factory-config to $STARTUP_CFG ..."
-	    sysrepocfg -f json -X"$STARTUP_CFG"
+	    $sysrepocfg -f json -X"$STARTUP_CFG"
 	    perms "$STARTUP_CFG"
 	    exit $rc
 	    ;;
@@ -84,7 +100,7 @@ if [ ! -f "$fn" ]; then
 fi
 
 note "Loading $config ..."
-if ! sysrepocfg -v3 -I"$fn" -f json; then
+if ! $sysrepocfg -v3 -I"$fn" -f json; then
     case "$config" in
 	startup-config)
 	    err "Failed loading $fn, reverting to Fail Secure mode!"
@@ -94,8 +110,8 @@ if ! sysrepocfg -v3 -I"$fn" -f json; then
 		   "infix-factory-default:factory-default": {}
 		}
 		EOF
-	    # Default timeout is 2 seconds, allow time to clean up shm
-	    if ! sysrepocfg -f json -t 10 -R /tmp/factory.json; then
+
+	    if ! $sysrepocfg -f json -R /tmp/factory.json; then
 		rm -f /etc/sysrepo/data/*startup*
 		rm -f /etc/sysrepo/data/*running*
 		rm -f /dev/shm/sr_*
