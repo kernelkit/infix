@@ -77,6 +77,10 @@ $ sudo apt install jq graphviz qemu-system-x86 qemu-system-arm \
 				   ethtool gdb-multiarch tcpdump tshark
 ```
 
+To be able to build the test specification you also need:
+```bash
+$ sudo apt-get install python3-graphviz ruby-asciidoctor-pdf
+```
 > For details, see the Getting Started and System Requirements sections
 > of the [excellent manual][1].
 
