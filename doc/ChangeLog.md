@@ -14,7 +14,9 @@ All notable changes to the project are documented in this file.
   authorized users, like `admin`, to not being able to query status
   of OSPF or BFD.  Workaround by using the UNIX shell `sudo vtysh`.
   Regression introduced in v24.08.0
-
+- The timeout before giving up on loading the `startup-config` at boot
+  is now 1 minute, just like operations via other front-ends (NETCONF
+  and RESTCONF). This was previously (incorrectly) set to 10 seconds.
 
 [v24.08.0][] - 2024-08-30
 -------------------------
