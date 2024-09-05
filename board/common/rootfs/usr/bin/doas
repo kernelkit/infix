@@ -2,4 +2,4 @@
 # Silly wrapper around sudo to prevent it from printing an error for
 # unprivileged users: sudo: a password is required
 
-id -nG $LOGNAME | grep -qw wheel && sudo -n $@
+id -nG "$LOGNAME" | grep -qw wheel && sudo -n "$@"
