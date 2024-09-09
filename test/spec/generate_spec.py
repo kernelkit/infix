@@ -41,8 +41,11 @@ class TestStepVisitor(ast.NodeVisitor):
         self.generic_visit(node)  # Continue visiting other nodes
 
 class TestCase:
-    def __init__(self, directory):
-        self.root=Path(directory)
+    def __init__(self, directory, rootdir=None):
+        self.test_dir=Path(directory)
+        if rootdir:
+            rootdir=Path(f"{rootdir}")
+            self.test_dir=self.test_dir.relative_to(rootdir)
         self.topology_dot=f"{directory}/topology.dot"
         self.topology_image=f"{directory}/topology"
         self.test_case=f"{directory}/test.py"
@@ -59,7 +62,6 @@ class TestCase:
     def generate_topology(self):
         with open(self.topology_dot, 'r') as dot_file:
             dot_graph = dot_file.read()
-            # Create a Graph object
             graph = graphviz.Source(dot_graph)
             graph.render(self.topology_image, format='png', cleanup=True)
 
@@ -71,19 +73,16 @@ class TestCase:
             spec.write(self.description + "\n\n")
             spec.write("==== Topology\n")
             spec.write("ifdef::topdoc[]\n")
-            spec.write(f"image::{self.root}/topology.png[{self.name} topology]\n\n")
+            spec.write(f"image::../../{self.test_dir}/topology.png[{self.name} topology]\n")
             spec.write("endif::topdoc[]\n")
-
             spec.write("ifndef::topdoc[]\n")
             spec.write("ifdef::testgroup[]\n")
-            spec.write(f"image::{Path(*self.root.parts[2:])}/topology.png[{self.name} topology]\n\n")
+            spec.write(f"image::{Path(*self.test_dir.parts[3:])}/topology.png[{self.name} topology]\n")
             spec.write("endif::testgroup[]\n")
-
             spec.write("ifndef::testgroup[]\n")
-            spec.write(f"image::topology.png[{self.name} topology]\n\n")
+            spec.write(f"image::topology.png[{self.name} topology]\n")
             spec.write("endif::testgroup[]\n")
             spec.write("endif::topdoc[]\n")
-            #spec.write(f"image::topology.png[{self.name}]\n\n")
             spec.write("==== Test sequence\n")
             spec.writelines([f". {step}\n" for step in self.test_steps])
             spec.write("\n\n<<<\n\n") # need empty lines to pagebreak
@@ -108,9 +107,10 @@ def parse_directory_tree(directory):
 
 parser = argparse.ArgumentParser(description="Generate a test specification for a subtree.")
 parser.add_argument("-d", "--directory", required=True, help="The directory to parse.")
+parser.add_argument("-r", "--root-dir", help="Path that all paths should be relative to")
 args=parser.parse_args()
 
 directories=parse_directory_tree(args.directory)
 for directory in directories:
-    test_case=TestCase(directory)
+    test_case=TestCase(directory, args.root_dir)
     test_case.generate_specification()

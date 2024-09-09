@@ -35,7 +35,7 @@ test-sh:
 
 test-spec:
 	@sed 's/{REPLACE}/$(subst ",,$(INFIX_NAME))/'  $(spec-dir)/Readme.adoc.in > $(spec-dir)/Readme.adoc
-	@$(spec-dir)/generate_spec.py -d $(test-dir)/case
+	@$(spec-dir)/generate_spec.py -d $(test-dir)/case -r $(BR2_EXTERNAL_INFIX_PATH)
 	@asciidoctor-pdf --theme $(spec-dir)/theme.yml -a pdf-fontsdir=$(spec-dir)/fonts -o $(test-specification) $(spec-dir)/Readme.adoc
 
 # Unit tests run with random (-r) hostname and container name to
