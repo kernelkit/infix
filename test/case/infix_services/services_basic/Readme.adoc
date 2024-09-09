@@ -10,17 +10,14 @@ echo -ne '\x01\x80\xc2\x00\x00\x0e\x01\x80\xc2\x00\x00\x0e\x88\xcc\x02\x07\x04\x
 
 ==== Topology
 ifdef::topdoc[]
-image::/home/lazzer/Documents/addiva/infix/test/case/infix_services/services_basic/topology.png[Services basic topology]
-
+image::../../test/case/infix_services/services_basic/topology.png[Services basic topology]
 endif::topdoc[]
 ifndef::topdoc[]
 ifdef::testgroup[]
-image::lazzer/Documents/addiva/infix/test/case/infix_services/services_basic/topology.png[Services basic topology]
-
+image::services_basic/topology.png[Services basic topology]
 endif::testgroup[]
 ifndef::testgroup[]
 image::topology.png[Services basic topology]
-
 endif::testgroup[]
 endif::topdoc[]
 ==== Test sequence

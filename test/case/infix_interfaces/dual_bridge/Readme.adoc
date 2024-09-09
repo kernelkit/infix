@@ -4,17 +4,14 @@ Test that it is possible to ping a bridge through a bridge to another bridge
 
 ==== Topology
 ifdef::topdoc[]
-image::/home/lazzer/Documents/addiva/infix/test/case/infix_interfaces/dual_bridge/topology.png[Dual bridges topology]
-
+image::../../test/case/infix_interfaces/dual_bridge/topology.png[Dual bridges topology]
 endif::topdoc[]
 ifndef::topdoc[]
 ifdef::testgroup[]
-image::lazzer/Documents/addiva/infix/test/case/infix_interfaces/dual_bridge/topology.png[Dual bridges topology]
-
+image::dual_bridge/topology.png[Dual bridges topology]
 endif::testgroup[]
 ifndef::testgroup[]
 image::topology.png[Dual bridges topology]
-
 endif::testgroup[]
 endif::topdoc[]
 ==== Test sequence

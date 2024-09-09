@@ -4,17 +4,14 @@ Verify that it is possible to add a user, and then remove it
 
 ==== Topology
 ifdef::topdoc[]
-image::/home/lazzer/Documents/addiva/infix/test/case/ietf_system/add_delete_user/topology.png[Add/delete user topology]
-
+image::../../test/case/ietf_system/add_delete_user/topology.png[Add/delete user topology]
 endif::topdoc[]
 ifndef::topdoc[]
 ifdef::testgroup[]
-image::lazzer/Documents/addiva/infix/test/case/ietf_system/add_delete_user/topology.png[Add/delete user topology]
-
+image::add_delete_user/topology.png[Add/delete user topology]
 endif::testgroup[]
 ifndef::testgroup[]
 image::topology.png[Add/delete user topology]
-
 endif::testgroup[]
 endif::topdoc[]
 ==== Test sequence

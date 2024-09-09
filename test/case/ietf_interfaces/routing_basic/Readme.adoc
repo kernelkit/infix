@@ -4,17 +4,14 @@ Test that ipv4 forwarding setting in configuration is respected
 
 ==== Topology
 ifdef::topdoc[]
-image::/home/lazzer/Documents/addiva/infix/test/case/ietf_interfaces/routing_basic/topology.png[Routing basic topology]
-
+image::../../test/case/ietf_interfaces/routing_basic/topology.png[Routing basic topology]
 endif::topdoc[]
 ifndef::topdoc[]
 ifdef::testgroup[]
-image::lazzer/Documents/addiva/infix/test/case/ietf_interfaces/routing_basic/topology.png[Routing basic topology]
-
+image::routing_basic/topology.png[Routing basic topology]
 endif::testgroup[]
 ifndef::testgroup[]
 image::topology.png[Routing basic topology]
-
 endif::testgroup[]
 endif::topdoc[]
 ==== Test sequence

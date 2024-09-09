@@ -11,17 +11,14 @@ port is handled correctly.
 
 ==== Topology
 ifdef::topdoc[]
-image::/home/lazzer/Documents/addiva/infix/test/case/ietf_hardware/usb/topology.png[USB configuration topology]
-
+image::../../test/case/ietf_hardware/usb/topology.png[USB configuration topology]
 endif::topdoc[]
 ifndef::topdoc[]
 ifdef::testgroup[]
-image::lazzer/Documents/addiva/infix/test/case/ietf_hardware/usb/topology.png[USB configuration topology]
-
+image::usb/topology.png[USB configuration topology]
 endif::testgroup[]
 ifndef::testgroup[]
 image::topology.png[USB configuration topology]
-
 endif::testgroup[]
 endif::topdoc[]
 ==== Test sequence

@@ -4,17 +4,14 @@ Verifies that linklocal (ZeroConf) work as expected
 
 ==== Topology
 ifdef::topdoc[]
-image::/home/lazzer/Documents/addiva/infix/test/case/infix_interfaces/ipv4_autoconf/topology.png[IPv4 linklocal topology]
-
+image::../../test/case/infix_interfaces/ipv4_autoconf/topology.png[IPv4 linklocal topology]
 endif::topdoc[]
 ifndef::topdoc[]
 ifdef::testgroup[]
-image::lazzer/Documents/addiva/infix/test/case/infix_interfaces/ipv4_autoconf/topology.png[IPv4 linklocal topology]
-
+image::ipv4_autoconf/topology.png[IPv4 linklocal topology]
 endif::testgroup[]
 ifndef::testgroup[]
 image::topology.png[IPv4 linklocal topology]
-
 endif::testgroup[]
 endif::topdoc[]
 ==== Test sequence

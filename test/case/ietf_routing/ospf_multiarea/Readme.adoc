@@ -6,17 +6,14 @@ link breaks using BFD (not implemented in infamy though)
 
 ==== Topology
 ifdef::topdoc[]
-image::/home/lazzer/Documents/addiva/infix/test/case/ietf_routing/ospf_multiarea/topology.png[OSPF with multiple areas topology]
-
+image::../../test/case/ietf_routing/ospf_multiarea/topology.png[OSPF with multiple areas topology]
 endif::topdoc[]
 ifndef::topdoc[]
 ifdef::testgroup[]
-image::lazzer/Documents/addiva/infix/test/case/ietf_routing/ospf_multiarea/topology.png[OSPF with multiple areas topology]
-
+image::ospf_multiarea/topology.png[OSPF with multiple areas topology]
 endif::testgroup[]
 ifndef::testgroup[]
 image::topology.png[OSPF with multiple areas topology]
-
 endif::testgroup[]
 endif::topdoc[]
 ==== Test sequence

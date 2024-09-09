@@ -8,17 +8,14 @@ The RPC actions: stop + start, and restart are also verified.
 
 ==== Topology
 ifdef::topdoc[]
-image::/home/lazzer/Documents/addiva/infix/test/case/infix_containers/container_basic/topology.png[Container basic topology]
-
+image::../../test/case/infix_containers/container_basic/topology.png[Container basic topology]
 endif::topdoc[]
 ifndef::topdoc[]
 ifdef::testgroup[]
-image::lazzer/Documents/addiva/infix/test/case/infix_containers/container_basic/topology.png[Container basic topology]
-
+image::container_basic/topology.png[Container basic topology]
 endif::testgroup[]
 ifndef::testgroup[]
 image::topology.png[Container basic topology]
-
 endif::testgroup[]
 endif::topdoc[]
 ==== Test sequence

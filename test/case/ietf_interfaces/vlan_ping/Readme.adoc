@@ -4,17 +4,14 @@ Very basic test if the VLAN configuration works.
 
 ==== Topology
 ifdef::topdoc[]
-image::/home/lazzer/Documents/addiva/infix/test/case/ietf_interfaces/vlan_ping/topology.png[VLAN ping connectivity topology]
-
+image::../../test/case/ietf_interfaces/vlan_ping/topology.png[VLAN ping connectivity topology]
 endif::topdoc[]
 ifndef::topdoc[]
 ifdef::testgroup[]
-image::lazzer/Documents/addiva/infix/test/case/ietf_interfaces/vlan_ping/topology.png[VLAN ping connectivity topology]
-
+image::vlan_ping/topology.png[VLAN ping connectivity topology]
 endif::testgroup[]
 ifndef::testgroup[]
 image::topology.png[VLAN ping connectivity topology]
-
 endif::testgroup[]
 endif::topdoc[]
 ==== Test sequence

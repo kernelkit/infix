@@ -5,17 +5,14 @@
 
 ==== Topology
 ifdef::topdoc[]
-image::/home/lazzer/Documents/addiva/infix/test/case/ietf_syslog/basic/topology.png[Syslog Basic topology]
-
+image::../../test/case/ietf_syslog/basic/topology.png[Syslog Basic topology]
 endif::topdoc[]
 ifndef::topdoc[]
 ifdef::testgroup[]
-image::lazzer/Documents/addiva/infix/test/case/ietf_syslog/basic/topology.png[Syslog Basic topology]
-
+image::basic/topology.png[Syslog Basic topology]
 endif::testgroup[]
 ifndef::testgroup[]
 image::topology.png[Syslog Basic topology]
-
 endif::testgroup[]
 endif::topdoc[]
 ==== Test sequence

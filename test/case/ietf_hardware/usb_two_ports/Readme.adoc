@@ -5,17 +5,14 @@ when having two USB ports.
 
 ==== Topology
 ifdef::topdoc[]
-image::/home/lazzer/Documents/addiva/infix/test/case/ietf_hardware/usb_two_ports/topology.png[USB configuration with two USB ports topology]
-
+image::../../test/case/ietf_hardware/usb_two_ports/topology.png[USB configuration with two USB ports topology]
 endif::topdoc[]
 ifndef::topdoc[]
 ifdef::testgroup[]
-image::lazzer/Documents/addiva/infix/test/case/ietf_hardware/usb_two_ports/topology.png[USB configuration with two USB ports topology]
-
+image::usb_two_ports/topology.png[USB configuration with two USB ports topology]
 endif::testgroup[]
 ifndef::testgroup[]
 image::topology.png[USB configuration with two USB ports topology]
-
 endif::testgroup[]
 endif::topdoc[]
 ==== Test sequence
