@@ -13,14 +13,14 @@ graph "2x4" {
 	];
 
         dut1 [
-	    label="{ <mgmt> mgmt | <data0> data0 | <data1> data1 } | dut1 | { <data2> data2 }",
+	    label="{ <mgmt> mgmt | <data0> data0 | <data1> data1 } | { \n dut1 \n\n |  <data2> data2 }",
 	    pos="10,18!",
 
 	    kind="infix",
 	];
 
         dut2 [
-		label="{ <mgmt> mgmt | <data0> data0 | <data1> data1 } | dut2 | { <data2> data2 }",
+		label="{ <mgmt> mgmt | <data0> data0 | <data1> data1 } | { <data2> data2 | \n dut2 \n\n }",
 	    pos="10,12!",
 
 	    kind="infix",
