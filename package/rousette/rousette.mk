@@ -4,12 +4,12 @@
 #
 ################################################################################
 
-ROUSETTE_VERSION = 226a2410376e5befd0bf6dc180618a108b11b256
+ROUSETTE_VERSION = cf7a1d6eafc29ea708f18833ceb2f297dc2b7f74
 ROUSETTE_SITE = https://github.com/kernelkit/rousette.git
 ROUSETTE_SITE_METHOD = git
 ROUSETTE_LICENSE = Apache-2.0
 ROUSETTE_LICENSE_FILES = LICENSE
-ROUSETTE_DEPENDENCIES = boost docopt-cpp nghttp2-asio spdlog sysrepo-cpp linux-pam
+ROUSETTE_DEPENDENCIES = boost docopt-cpp nghttp2-asio spdlog sysrepo-cpp linux-pam date-cpp
 
 ROUSETTE_CONF_OPTS = \
 	-DTESTAR=on \

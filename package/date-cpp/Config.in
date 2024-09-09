@@ -1,0 +1,6 @@
+config BR2_PACKAGE_DATE_CPP
+	bool "date-cpp"
+	help
+	  A date and time library based on the C++11/14/17 <chrono> header
+
+	  https://github.com/HowardHinnant/date
