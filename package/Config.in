@@ -32,4 +32,5 @@ source "$BR2_EXTERNAL_INFIX_PATH/package/libyang-cpp/Config.in"
 source "$BR2_EXTERNAL_INFIX_PATH/package/sysrepo-cpp/Config.in"
 source "$BR2_EXTERNAL_INFIX_PATH/package/rousette/Config.in"
 source "$BR2_EXTERNAL_INFIX_PATH/package/nghttp2-asio/Config.in"
+source "$BR2_EXTERNAL_INFIX_PATH/package/date-cpp/Config.in
 endmenu

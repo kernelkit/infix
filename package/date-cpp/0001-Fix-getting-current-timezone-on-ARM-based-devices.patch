@@ -1,0 +1,29 @@
+From c8ec120afa3a66674ef30b10490eeeb36d806eed Mon Sep 17 00:00:00 2001
+From: Tomas Pecka <peckato1@fit.cvut.cz>
+Date: Fri, 17 Feb 2023 13:50:17 +0100
+Subject: [PATCH] Fix getting current timezone on ARM-based devices
+Our software using date on buildroot ARM-based device terminates with an
+uncaught exception.
+  terminate called after throwing an instance of 'std::runtime_error'
+    what():  posix/Etc/UTC not found in timezone database
+I have applied workaround from [1].
+[1] https://github.com/HowardHinnant/date/issues/252
+Bug: https://github.com/HowardHinnant/date/issues/252
+---
+ src/tz.cpp | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+diff --git a/src/tz.cpp b/src/tz.cpp
+index bd9fad4..eea48ce 100644
+--- a/src/tz.cpp
++++ b/src/tz.cpp
+@@ -3925,7 +3925,7 @@ sniff_realpath(const char* timezone)
+     if (realpath(timezone, rp) == nullptr)
+         throw system_error(errno, system_category(), "realpath() failed");
+     auto result = extract_tz_name(rp);
+-    return result != "posixrules";
++    return result.find("posix") == decltype(result)::npos;
+ }
+ 
+ const time_zone*
+-- 
+2.39.2

@@ -37,17 +37,23 @@ MODULES=(
 	"ieee802-ethernet-interface@2019-06-21.yang"
 	"infix-ethernet-interface@2024-02-27.yang"
 	"infix-factory-default@2023-06-28.yang"
+	"infix-interfaces@2024-01-15.yang -e vlan-filtering"
+
+	# from rousette
+	"ietf-restconf@2017-01-26.yang"
+	"ietf-yang-patch@2017-02-22.yang"
+	"ietf-restconf-monitoring@2017-01-26.yang"
+
 	# from sysrepo
 	"sysrepo-plugind@2022-08-26.yang"
 	# from netopeer
 	"nc-notifications@2008-07-14.yang"
 	"ietf-crypto-types@2023-12-28.yang -e encrypted-private-keys"
- 	"ietf-netconf-server@2023-12-28.yang -e ssh-listen -e tls-listen -e ssh-call-home -e tls-call-home"
+	"ietf-netconf-server@2023-12-28.yang -e ssh-listen -e tls-listen -e ssh-call-home -e tls-call-home"
 	"ietf-netconf-acm@2018-02-14.yang"
 	"ietf-netconf@2013-09-29.yang -e writable-running -e candidate -e rollback-on-error -e validate -e startup -e url -e xpath -e confirmed-commit"
 	"ietf-truststore@2023-12-28.yang -e central-truststore-supported -e certificates"
 	"ietf-keystore@2023-12-28.yang -e central-keystore-supported -e inline-definitions-supported -e asymmetric-keys -e symmetric-keys"
 	"ietf-tls-server@2023-12-28.yang -e server-ident-raw-public-key -e server-ident-x509-cert"
-	"ietf-restconf@2017-01-26.yang"
-	"infix-interfaces@2024-01-15.yang -e vlan-filtering"
+
 )

@@ -4,7 +4,7 @@
 #
 ################################################################################
 
-SYSREPO_CPP_VERSION = 99747f74e57a09c664251ea1f4e059e3f4f8e66a
+SYSREPO_CPP_VERSION = e59193c772fa0e5963eff216b4fbb574383a64f2
 SYSREPO_CPP_SITE = https://github.com/kernelkit/sysrepo-cpp.git
 SYSREPO_CPP_SITE_METHOD = git
 SYSREPO_CPP_LICENSE = BSD-3-Clause
