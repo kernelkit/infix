@@ -1,59 +1,60 @@
 graph "ring-4-duts" {
 	layout="neato";
-	overlap="false";
+	overlap=false;
 	esep="+20";
-
+	splines=true;
+	size=10;
+	
         node [shape=record, fontname="monospace"];
 	edge [color="cornflowerblue", penwidth="2"];
 
-	host [
-	    label="host | { <mgmt1> mgmt1 | <data1> data1 | <mgmt2> mgmt2 | <data2> data20 | <data2>  data2  | <mgmt3> mgmt3 |  <data3>  data3 | <mgmt4> mgmt4 |  <data4>  data4 }",
-	    pos="0,15!",
-	    kind="controller",
+	PC [
+		label=" { PC | { <mgmt4> mgmt4 | <data4> data4 | <mgmt1> mgmt1 | <data1> data1 | <data2> data2 | <mgmt2> mgmt2 | <data3> data3 | <mgmt3> mgmt3 } }",
+		pos="150,200!"
+		kind="controller",
 	];
 
-        dut1 [
-	    label="{ <mgmt> mgmt | <data> data | <ring1> ring1 } | dut1 | { <ring2> ring2 | <cross> cross }",
-	    pos="10,18!",
-	    kind="infix",
+	R1 [
+		label="{ { <mgmt> mgmt | <data> data } | \n R1 \n 10.0.0.1/32 \n(lo) } | { <ring1> ring1 | <cross> cross | <ring2> ring2 }",
+		pos="50,150!",
+		kind="infix",
 	];
 
-        dut2 [
-	     label="{ <mgmt> mgmt | <data> data | <ring1> ring1 } | dut2 | { <ring2> ring2 | <cross> cross }",
-	      pos="10,12!",
-	      kind="infix",
+	R4 [
+		label="{ { <mgmt> mgmt | <data> data } | \n R4 \n 10.0.0.4/32 \n(lo) } | { <ring1> ring1 | <cross> cross | <ring2> ring2 }",
+		pos="50,50!"
+		kind="infix",
 	];
 
-        dut3 [
-	     label="{ <mgmt> mgmt | <data> data | <ring1> ring1 } | dut2 | { <ring2> ring2 | <cross> cross}",
-	      pos="10,12!",
-	      kind="infix",
+        R2 [
+		label="{ <ring2> ring2 | <cross> cross | <ring1> ring1 } | { { <data> data | <mgmt> mgmt } | \n R2 \n10.0.0.2/32 \n(lo) }",
+		pos="250,150!"
+		kind="infix",
 	];
 
-        dut4 [
-	     label="{ <mgmt> mgmt | <data> data | <ring1> ring1 } | dut2 | { <ring2> ring2 | <cross> cross }",
-	     pos="10,12!",
-	     kind="infix",
-	];
+        R3 [
+		label="{ <ring2> ring2 | <cross> cross | <ring1> ring1 } | { { <data> data | <mgmt> mgmt } | \n R3 \n10.0.0.3/32 \n(lo) }",
+		pos="250,50!"
+		kind="infix",
+	];   
 
-	host:mgmt1 -- dut1:mgmt [kind=mgmt]
-	host:mgmt2 -- dut2:mgmt [kind=mgmt]
-	host:mgmt3 -- dut3:mgmt [kind=mgmt]
-	host:mgmt4 -- dut4:mgmt [kind=mgmt]
+	PC:mgmt1 -- R1:mgmt [kind=mgmt, color="lightgray"]
+	PC:mgmt2 -- R2:mgmt [kind=mgmt, color="lightgray"]
+	PC:mgmt3 -- R3:mgmt [kind=mgmt, color="lightgray"]
+	PC:mgmt4 -- R4:mgmt [kind=mgmt, color="lightgray"]
 
-	# Host-Dut links
-	host:data1 -- dut1:data
-	host:data2 -- dut2:data
-	host:data3 -- dut3:data
-	host:data4 -- dut4:data
+	# PC-Dut links
+	PC:data1 -- R1:data [color="darkgreen"]
+	PC:data2 -- R2:data [color="darkgreen"]
+	PC:data3 -- R3:data [color="darkgreen"]
+	PC:data4 -- R4:data [color="darkgreen", headlabel=".1", label="192.168.4.0/24", taillabel=".2", labeldistance=2, fontcolor="darkgreen"]
 
 	# Ring
-	dut1:ring1 -- dut2:ring2
-	dut2:ring1 -- dut3:ring2
-	dut3:ring1 -- dut4:ring2
-	dut4:ring1 -- dut1:ring2
+	R1:ring1 -- R2:ring2 [color="blue", headlabel=".2", label="(Area 0)\n10.0.12.0/30", taillabel=".1", labeldistance=2, fontcolor="blue"]
+	R2:ring1 -- R3:ring2 [color="purple", headlabel=".2", label="10.0.23.0/30\n(Area 1)", taillabel=".1", labeljust=r, labeldistance=2, fontcolor="purple"] 
+	R4:ring1 -- R1:ring2 [color="brown", headlabel=".2", label="10.0.41.0/30\n(Area 2)", taillabel=".1", labeldistance=2, fontcolor="brown"]
 
 	# Cross
-	dut1:cross -- dut3:cross
-	dut2:cross -- dut4:cross
+	R1:cross -- R3:cross [color="purple", headlabel=".2", label="10.0.13.0/30\n(Area 1)", taillabel=".1", labeldistance=2, fontcolor="purple"]
+	R2:cross -- R4:cross [color="brown", headlabel=".2", label="\n\n10.0.24.0/30\n(Area 2)", taillabel=".1", labeldistance=2, fontcolor="brown"]
 }
