@@ -5,17 +5,14 @@ the flooding stops as soon a join arrives
 
 ==== Topology
 ifdef::topdoc[]
-image::/home/lazzer/Documents/addiva/infix/test/case/infix_interfaces/igmp_basic/topology.png[IGMP basic topology]
-
+image::../../test/case/infix_interfaces/igmp_basic/topology.png[IGMP basic topology]
 endif::topdoc[]
 ifndef::topdoc[]
 ifdef::testgroup[]
-image::lazzer/Documents/addiva/infix/test/case/infix_interfaces/igmp_basic/topology.png[IGMP basic topology]
-
+image::igmp_basic/topology.png[IGMP basic topology]
 endif::testgroup[]
 ifndef::testgroup[]
 image::topology.png[IGMP basic topology]
-
 endif::testgroup[]
 endif::topdoc[]
 ==== Test sequence

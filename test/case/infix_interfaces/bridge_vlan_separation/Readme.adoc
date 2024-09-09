@@ -4,17 +4,14 @@ Test that two VLAN is correctly separaretade in the bridge
 
 ==== Topology
 ifdef::topdoc[]
-image::/home/lazzer/Documents/addiva/infix/test/case/infix_interfaces/bridge_vlan_separation/topology.png[Bridge VLAN separation topology]
-
+image::../../test/case/infix_interfaces/bridge_vlan_separation/topology.png[Bridge VLAN separation topology]
 endif::topdoc[]
 ifndef::topdoc[]
 ifdef::testgroup[]
-image::lazzer/Documents/addiva/infix/test/case/infix_interfaces/bridge_vlan_separation/topology.png[Bridge VLAN separation topology]
-
+image::bridge_vlan_separation/topology.png[Bridge VLAN separation topology]
 endif::testgroup[]
 ifndef::testgroup[]
 image::topology.png[Bridge VLAN separation topology]
-
 endif::testgroup[]
 endif::topdoc[]
 ==== Test sequence

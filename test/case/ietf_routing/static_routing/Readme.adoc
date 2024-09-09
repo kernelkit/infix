@@ -5,17 +5,14 @@ works as expected
 
 ==== Topology
 ifdef::topdoc[]
-image::/home/lazzer/Documents/addiva/infix/test/case/ietf_routing/static_routing/topology.png[Static routing topology]
-
+image::../../test/case/ietf_routing/static_routing/topology.png[Static routing topology]
 endif::topdoc[]
 ifndef::topdoc[]
 ifdef::testgroup[]
-image::lazzer/Documents/addiva/infix/test/case/ietf_routing/static_routing/topology.png[Static routing topology]
-
+image::static_routing/topology.png[Static routing topology]
 endif::testgroup[]
 ifndef::testgroup[]
 image::topology.png[Static routing topology]
-
 endif::testgroup[]
 endif::topdoc[]
 ==== Test sequence

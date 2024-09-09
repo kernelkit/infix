@@ -5,17 +5,14 @@ is handled correctly
 
 ==== Topology
 ifdef::topdoc[]
-image::/home/lazzer/Documents/addiva/infix/test/case/infix_interfaces/vlan_qos/topology.png[VLAN QoS topology]
-
+image::../../test/case/infix_interfaces/vlan_qos/topology.png[VLAN QoS topology]
 endif::topdoc[]
 ifndef::topdoc[]
 ifdef::testgroup[]
-image::lazzer/Documents/addiva/infix/test/case/infix_interfaces/vlan_qos/topology.png[VLAN QoS topology]
-
+image::vlan_qos/topology.png[VLAN QoS topology]
 endif::testgroup[]
 ifndef::testgroup[]
 image::topology.png[VLAN QoS topology]
-
 endif::testgroup[]
 endif::topdoc[]
 ==== Test sequence

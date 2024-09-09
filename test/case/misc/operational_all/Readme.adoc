@@ -4,17 +4,14 @@ Basic test just to get all operational.
 
 ==== Topology
 ifdef::topdoc[]
-image::/home/lazzer/Documents/addiva/infix/test/case/misc/operational_all/topology.png[Get all operational topology]
-
+image::../../test/case/misc/operational_all/topology.png[Get all operational topology]
 endif::topdoc[]
 ifndef::topdoc[]
 ifdef::testgroup[]
-image::lazzer/Documents/addiva/infix/test/case/misc/operational_all/topology.png[Get all operational topology]
-
+image::operational_all/topology.png[Get all operational topology]
 endif::testgroup[]
 ifndef::testgroup[]
 image::topology.png[Get all operational topology]
-
 endif::testgroup[]
 endif::topdoc[]
 ==== Test sequence

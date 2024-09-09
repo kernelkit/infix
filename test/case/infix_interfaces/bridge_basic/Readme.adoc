@@ -4,17 +4,14 @@ Test basic connectivity to a bridge
 
 ==== Topology
 ifdef::topdoc[]
-image::/home/lazzer/Documents/addiva/infix/test/case/infix_interfaces/bridge_basic/topology.png[Bridge basic topology]
-
+image::../../test/case/infix_interfaces/bridge_basic/topology.png[Bridge basic topology]
 endif::topdoc[]
 ifndef::topdoc[]
 ifdef::testgroup[]
-image::lazzer/Documents/addiva/infix/test/case/infix_interfaces/bridge_basic/topology.png[Bridge basic topology]
-
+image::bridge_basic/topology.png[Bridge basic topology]
 endif::testgroup[]
 ifndef::testgroup[]
 image::topology.png[Bridge basic topology]
-
 endif::testgroup[]
 endif::topdoc[]
 ==== Test sequence

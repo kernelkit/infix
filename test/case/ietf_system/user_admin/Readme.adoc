@@ -7,17 +7,14 @@
 
 ==== Topology
 ifdef::topdoc[]
-image::/home/lazzer/Documents/addiva/infix/test/case/ietf_system/user_admin/topology.png[Add admin user topology]
-
+image::../../test/case/ietf_system/user_admin/topology.png[Add admin user topology]
 endif::topdoc[]
 ifndef::topdoc[]
 ifdef::testgroup[]
-image::lazzer/Documents/addiva/infix/test/case/ietf_system/user_admin/topology.png[Add admin user topology]
-
+image::user_admin/topology.png[Add admin user topology]
 endif::testgroup[]
 ifndef::testgroup[]
 image::topology.png[Add admin user topology]
-
 endif::testgroup[]
 endif::topdoc[]
 ==== Test sequence

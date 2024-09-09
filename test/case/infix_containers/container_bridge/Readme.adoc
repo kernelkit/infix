@@ -6,17 +6,14 @@ mounts, i.e., custom index.html from running-config.
 
 ==== Topology
 ifdef::topdoc[]
-image::/home/lazzer/Documents/addiva/infix/test/case/infix_containers/container_bridge/topology.png[Container with bridge network topology]
-
+image::../../test/case/infix_containers/container_bridge/topology.png[Container with bridge network topology]
 endif::topdoc[]
 ifndef::topdoc[]
 ifdef::testgroup[]
-image::lazzer/Documents/addiva/infix/test/case/infix_containers/container_bridge/topology.png[Container with bridge network topology]
-
+image::container_bridge/topology.png[Container with bridge network topology]
 endif::testgroup[]
 ifndef::testgroup[]
 image::topology.png[Container with bridge network topology]
-
 endif::testgroup[]
 endif::topdoc[]
 ==== Test sequence
