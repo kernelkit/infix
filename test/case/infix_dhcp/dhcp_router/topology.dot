@@ -1,24 +1,23 @@
 graph "1x2" {
 	layout="neato";
 	overlap="false";
-	esep="+20";
+	esep="+80";
 
         node [shape=record, fontname="monospace"];
 	edge [color="cornflowerblue", penwidth="2"];
 
 	host [
-	    label="host | { <tgt> tgt | <data> | data }",
-	    pos="0,12!",
+	    label="host \n(192.168.0.1) | { <tgt> tgt | <data> data }",
+	    pos="0,20!",
 	    kind="controller",
 	];
 
-        target [
-	    label="{ <mgmt> mgmt | <data> data } | target",
-	    pos="10,12!",
-
+        client [
+	    label="{ <mgmt> mgmt | <data> data } | client",
+	    pos="200,20!",
 	    kind="infix",
 	];
 
-	host:tgt -- target:mgmt [kind=mgmt]
-	host:data -- target:data
+	host:tgt -- client:mgmt [kind=mgmt, color=black, taillabel="192.168.0.254/24"]
+	host:data -- client:data
 }
