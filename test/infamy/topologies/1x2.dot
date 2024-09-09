@@ -7,7 +7,7 @@ graph "1x2" {
 	edge [color="cornflowerblue", penwidth="2"];
 
 	host [
-	    label="host | { <tgt> tgt | <data> | data }",
+	    label="host | { <tgt> tgt | <data> data }",
 	    pos="0,12!",
 	    kind="controller",
 	];
