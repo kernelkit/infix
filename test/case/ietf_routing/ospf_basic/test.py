@@ -160,23 +160,23 @@ def config_target2(target, link):
 with infamy.Test() as test:
     with test.step("Initialize"):
         env = infamy.Env()
-        target1 = env.attach("target1", "mgmt")
-        target2 = env.attach("target2", "mgmt")
+        R1 = env.attach("R1", "mgmt")
+        R2 = env.attach("R2", "mgmt")
 
     with test.step("Configure targets"):
-        _, target1data = env.ltop.xlate("target1", "data")
-        _, target2_to_target1 = env.ltop.xlate("target2", "target1")
-        _, target1_to_target2 = env.ltop.xlate("target1", "target2")
+        _, R1data = env.ltop.xlate("R1", "data")
+        _, R2_to_R1 = env.ltop.xlate("R2", "R1")
+        _, R1_to_R2 = env.ltop.xlate("R1", "R2")
 
-        parallel(config_target1(target1, target1data, target1_to_target2),
-                 config_target2(target2, target2_to_target1))
+        parallel(config_target1(R1, R1data, R1_to_R2),
+                 config_target2(R2, R2_to_R1))
     with test.step("Wait for OSPF routes"):
         print("Waiting for OSPF routes..")
-        until(lambda: route.ipv4_route_exist(target1, "192.168.200.1/32", source_protocol = "infix-routing:ospf"), attempts=200)
-        until(lambda: route.ipv4_route_exist(target2, "192.168.100.1/32", source_protocol = "infix-routing:ospf"), attempts=200)
+        until(lambda: route.ipv4_route_exist(R1, "192.168.200.1/32", source_protocol = "infix-routing:ospf"), attempts=200)
+        until(lambda: route.ipv4_route_exist(R2, "192.168.100.1/32", source_protocol = "infix-routing:ospf"), attempts=200)
 
     with test.step("Test connectivity"):
-        _, hport0 = env.ltop.xlate("host", "data1")
+        _, hport0 = env.ltop.xlate("PC", "data1")
         with infamy.IsolatedMacVlan(hport0) as ns0:
             ns0.addip("192.168.10.2")
             ns0.addroute("192.168.200.1/32", "192.168.10.1")
