@@ -27,6 +27,8 @@ import infamy
 import time
 import infamy.multicast as mcast
 
+query_interval = 4
+
 with infamy.Test() as test:
     with test.step("Initialize"):
         env = infamy.Env()
@@ -76,6 +78,7 @@ with infamy.Test() as test:
 
                                         "bridge": {
                                             "multicast": {
+                                                "query-interval": query_interval,
                                                 "snooping": True
                                             }
 
@@ -113,6 +116,21 @@ with infamy.Test() as test:
                     receive_ns.must_receive("ip dst 224.1.1.1")
 
                 with test.step("Verify that the group is no longer forwarded to the non-member"):
-                    nojoin_ns.must_not_receive("ip dst 224.1.1.1")
+                    attempt = 0
+
+                    # This retry loop exists to handle the case where the first query is lost due
+                    # to the network just starting up. In particular there's a case where a newly
+                    # created bridge uses the "NOOP" scheduler (noop_enqueue()) for a split second
+                    # while it's starting up, which might drop the first query msg.
+                    while attempt <= query_interval:
+                        try:
+                            nojoin_ns.must_not_receive("ip dst 224.1.1.1")
+                            break
+                        except Exception as e:
+                            attempt += 1
+                            if attempt > query_interval:
+                                test.fail()
+                            else:
+                                print(f"Got mcast flood, retrying ({attempt}/{query_interval})")
 
     test.succeed()
