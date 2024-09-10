@@ -1128,6 +1128,7 @@ static void mcast_querier(const char *ifname, int vid, int mode, int interval)
 	fclose(fp);
 
 	systemf("initctl -bnq enable mcd");
+	systemf("initctl -bnq touch mcd");
 }
 
 static char *find_vlan_interface(sr_session_ctx_t *session, const char *brname, int vid)
