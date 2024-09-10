@@ -9,15 +9,14 @@ import infamy
 with infamy.Test() as test:
     with test.step("Initialize"):
         env = infamy.Env()
-        client = env.attach("target1", "mgmt")
-        server = env.attach("target2", "mgmt")
-        clientssh = env.attach("target1", "mgmt", "ssh")
-        serverssh = env.attach("target2", "mgmt", "ssh")
+        client = env.attach("client", "mgmt")
+        server = env.attach("server", "mgmt")
+        clientssh = env.attach("client", "mgmt", "ssh")
+        serverssh = env.attach("server", "mgmt", "ssh")
 
     with test.step("Topology setup"):
-        _, client_e0 = env.ltop.xlate("target1", "data")
-        _, client_e1 = env.ltop.xlate("target1", "target2")
-        _, server_e0 = env.ltop.xlate("target2", "target1")
+        _, client_e1 = env.ltop.xlate("client", "to_server")
+        _, server_e0 = env.ltop.xlate("server", "to_client")
 
         client.put_config_dict("ietf-interfaces", {
             "interfaces": {

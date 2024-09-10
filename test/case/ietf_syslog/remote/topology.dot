@@ -1,32 +1,30 @@
 graph "2x2" {
 	layout="neato";
 	overlap="false";
-	esep="+20";
+	esep="+60";
 
         node [shape=record, fontname="monospace"];
 	edge [color="cornflowerblue", penwidth="2"];
 
 	host [
-	    label="host | { <mgmt1> mgmt1 | <data1> data1 | <mgmt2> mgmt2 | <data2> data2 }",
+	    label="host | { <cli_mgmt> cli_mgmt | <ser_mgmt> ser_mgmt }",
 	    pos="0,12!",
 	    kind="controller",
 	];
 
-        target1 [
-	    label="{ <mgmt> mgmt | <data> data | <target2> target2} | target1",
-	    pos="10,18!",
+        client [
+	    label="{ <mgmt> mgmt | <to_server> to_server} | client",
+	    pos="15,18!",
 
 	    kind="infix",
 	];
-	target2 [
-	    label="{ <target1> target1 |<mgmt> mgmt | <data> data  } | target2",
-	    pos="10,6!",
+	server [
+	    label="{ <to_client> to_client | <mgmt> mgmt  } | server",
+	    pos="15,6!",
 
 	    kind="infix",
 	];
-	host:mgmt1 -- target1:mgmt [kind=mgmt]
-        host:mgmt2 -- target2:mgmt [kind=mgmt]
-	host:data1 -- target1:data
-	host:data2 -- target2:data
-	target1:target2 -- target2:target1
+	host:cli_mgmt -- client:mgmt [kind=mgmt]
+        host:ser_mgmt -- server:mgmt [kind=mgmt]
+	client:to_server -- server:to_client [color=black, fontcolor=black, taillabel="10.0.0.2/24", headlabel="10.0.0.1/24"]
 }
