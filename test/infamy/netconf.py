@@ -92,8 +92,8 @@ class NccGetSchemaReply:
 class Location:
     interface: str
     host: str
+    username: str
     password: str
-    username: str = "admin"
     port: int = 830
 
 

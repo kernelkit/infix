@@ -74,7 +74,7 @@ class Env(object):
     def get_password(self, node):
         return self.ptop.get_password(node)
 
-    def attach(self, node, port, protocol=None, test_reset=True):
+    def attach(self, node, port, protocol=None, test_reset=True, username = None, password = None):
         """Attach to node on port using protocol."""
 
         name = node
@@ -94,7 +94,11 @@ class Env(object):
                 random.seed(f"{sys.argv[0]}-{hseed}")
                 protocol = random.choice(["netconf", "restconf"])
 
-        password = self.get_password(node)
+        if password is None:
+            password = self.get_password(node)
+        if username is None:
+            username = "admin"
+
         ctrl = self.ptop.get_ctrl()
         cport, _ = self.ptop.get_mgmt_link(ctrl, node)
 
@@ -103,11 +107,10 @@ class Env(object):
         if not mgmtip:
             raise Exception(f"Failed, cannot find mgmt IP for {node}")
 
-        password = self.get_password(node)
         if protocol == "netconf":
             dev = netconf.Device(name,
                                  location=netconf.Location(cport, mgmtip,
-                                                           password),
+                                                           username,password),
                                  mapping=mapping,
                                  yangdir=self.args.yangdir)
             if test_reset:
@@ -115,12 +118,13 @@ class Env(object):
             return dev
 
         if protocol == "ssh":
-            return ssh.Device(name, ssh.Location(mgmtip, password))
+            return ssh.Device(name, ssh.Location(mgmtip, username, password))
 
         if protocol == "restconf":
             dev = restconf.Device(name,
                                   location=restconf.Location(cport,
                                                              mgmtip,
+                                                             username,
                                                              password),
                                   mapping=mapping,
                                   yangdir=self.args.yangdir)

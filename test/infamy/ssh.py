@@ -7,8 +7,8 @@ from . import env
 @dataclass
 class Location:
     host: str
+    username: str
     password: str
-    username: str = "admin"
     port: int = 22
 
 
@@ -16,7 +16,6 @@ class Device(object):
     def __init__(self, name: str, location: Location):
         self.name = name
         self.location = location
-
     def __str__(self):
         nm = f"{self.name}"
         if env.ENV.ltop:
