@@ -2,7 +2,7 @@
 """
 Upgrade
 
-Verify it is possible to upgrade
+Verify it is possible to upgrade.
 """
 import concurrent.futures
 import functools
@@ -47,7 +47,7 @@ class FileServer(http.server.HTTPServer):
         self.__tp.shutdown()
 
 with infamy.Test() as test:
-    with test.step("Initialize"):
+    with test.step("Connect to device"):
         env = infamy.Env()
         if not env.args.package:
             print("No package supplied")
@@ -68,7 +68,8 @@ with infamy.Test() as test:
 
     with FileServer(("::", SRVPORT), BUNDLEDIR):
 
-        with test.step(f"Start installation of {os.path.basename(env.args.package)}"):
+        with test.step(f"Start installation of selected package"):
+            print(f"Installing {os.path.basename(env.args.package)}")
             target.call_dict("infix-system", {
                 "install-bundle": {
                     "url": f"http://[{hip}]:{SRVPORT}/package",

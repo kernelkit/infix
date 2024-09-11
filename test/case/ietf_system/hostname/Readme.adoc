@@ -1,6 +1,6 @@
 === Set hostname
 ==== Description
-Verify that it is possible to change hostname
+Verify that it is possible to change hostname.
 
 ==== Topology
 ifdef::topdoc[]
@@ -15,8 +15,8 @@ image::topology.png[Set hostname topology]
 endif::testgroup[]
 endif::topdoc[]
 ==== Test sequence
-. Initialize
-. Set new hostname
+. Connect to device
+. Set hostname to 'h0stn4m3'
 
 
 <<<

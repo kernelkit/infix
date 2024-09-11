@@ -1,6 +1,6 @@
 === Add/delete user
 ==== Description
-Verify that it is possible to add a user, and then remove it
+Verify that it is possible to add/delete a user.
 
 ==== Topology
 ifdef::topdoc[]
@@ -15,8 +15,9 @@ image::topology.png[Add/delete user topology]
 endif::testgroup[]
 endif::topdoc[]
 ==== Test sequence
-. Initialize
-. Add new user
+. Connect to device
+. Add new user 'newuser01' with password 'newuser01password'
+. Verify that 'newuser01' is removed from /etc/passwd
 
 
 <<<

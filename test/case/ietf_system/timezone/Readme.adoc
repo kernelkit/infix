@@ -1,6 +1,6 @@
 === Set timezone
 ==== Description
-Verify that it is possible to set timezone
+Verify that it is possible to set timezone using timezone names.
 
 ==== Topology
 ifdef::topdoc[]
@@ -15,9 +15,9 @@ image::topology.png[Set timezone topology]
 endif::testgroup[]
 endif::topdoc[]
 ==== Test sequence
-. Initialize
-. Set timezone
-. Verify current time.
+. Connect to device
+. Set timezone to Australia/Perth
+. Verify current time offset is +08:00
 
 
 <<<
