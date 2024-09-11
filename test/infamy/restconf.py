@@ -20,8 +20,8 @@ warnings.simplefilter('ignore', InsecureRequestWarning)
 class Location:
     interface: str
     host: str
+    username: str
     password: str
-    username: str = "admin"
     port: int = 443
 
 def xpath_to_uri(xpath, extra=None):
