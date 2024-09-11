@@ -15,9 +15,9 @@ image::topology.png[Set timezone with UTC offset topology]
 endif::testgroup[]
 endif::topdoc[]
 ==== Test sequence
-. Initialize
-. Set timezone UTC offset
-. Verify current time.
+. Connect to device
+. Set timezone UTC offset to +12
+. Verify current time offset is +12:00
 
 
 <<<
