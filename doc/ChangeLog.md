@@ -10,6 +10,10 @@ All notable changes to the project are documented in this file.
 ### Changes
 - Updated `infix-routing.yang` to declare deviations for unsupported
   OSPF RPCs and Notifications in `ietf-ospf.yang`
+- The CLI admin-exec command `show dns` now also shows any configured
+  name servers, not just ones acquired via DHCP.  Issue #510
+- Silence `yanger` log warnings for failing `mctl` command.  Caused
+  by `mctl` reporting no multicast filtering enabled on bridge
 
 ### Fixes
 - Fix #357: EUI-64 based IPv6 autoconf address on bridges seem to be
@@ -20,6 +24,15 @@ All notable changes to the project are documented in this file.
   authorized users, like `admin`, to not being able to query status
   of OSPF or BFD.  Workaround by using the UNIX shell `sudo vtysh`.
   Regression introduced in v24.08.0
+- Fix #613: CLI regression in tab completion of container commands,
+  e.g., `container shell <TAB>`.  Regression introduced in v24.08.0
+- Fix #618: CLI command `show interfaces` does not show bridges and
+  bridge ports, regression introduced in v24.08.0 -- only affects
+  bridges without multicast snooping
+- Fix #623: CLI command `container upgrade NAME` does not work,
+  regression introduced in v24.06.0
+- Spellcheck path to `/var/lib/containers` when unpacking OCI archives
+  on container upgrade
 - The timeout before giving up on loading the `startup-config` at boot
   is now 1 minute, just like operations via other front-ends (NETCONF
   and RESTCONF). This was previously (incorrectly) set to 10 seconds.
