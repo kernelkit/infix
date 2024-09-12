@@ -528,7 +528,9 @@ def add_container(containers):
 
 
 def get_brport_multicast(ifname):
-    data = run_json_cmd(['mctl', 'show', 'igmp', 'json'], "igmp-status.json")
+    data = run_json_cmd(['mctl', 'show', 'igmp', 'json'],
+                        "igmp-status.json",
+                        default={})
     multicast = {}
 
     if ifname in data.get('fast-leave-ports', []):
@@ -888,7 +890,9 @@ def main():
             add_ethtool_std(ifname, iface_out)
 
         if 'type' in iface_out and iface_out['type'] == "infix-if-type:bridge":
-            mc_status = run_json_cmd(['mctl', '-p', 'show', 'igmp', 'json'], "igmp-status.json")
+            mc_status = run_json_cmd(['mctl', '-p', 'show', 'igmp', 'json'],
+                                     "igmp-status.json",
+                                     default={})
 
             add_vlans_to_bridge(ifname, iface_out, mc_status)
             add_mdb_to_bridge(ifname, iface_out, mc_status)
@@ -900,8 +904,7 @@ def main():
                     "rib": [{
                         "name": "ipv4",
                         "address-family": "ipv4"
-                    },
-                    {
+                    }, {
                         "name": "ipv6",
                         "address-family": "ipv6"
                     }]
