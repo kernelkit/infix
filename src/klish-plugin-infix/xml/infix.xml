@@ -263,7 +263,8 @@
   </COMMAND>
 
   <COMMAND name="dns" help="Show DNS (client) status">
-    <ACTION sym="script">resolvconf -l</ACTION>
+    <!-- Show static/configured nameservers and then all learned ones from DHCP clients -->
+    <ACTION sym="script">cat /etc/resolv.conf.head 2>/dev/null; resolvconf -l | sed 's/#.*//; /^\s*$/d'</ACTION>
   </COMMAND>
 
   <COMMAND name="ntp" help="Show NTP (client) status">
