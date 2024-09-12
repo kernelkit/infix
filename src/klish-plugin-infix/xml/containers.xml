@@ -6,28 +6,28 @@
 
 <PTYPE name="CONTAINERS">
   <COMPL>
-    <ACTION sym="script">container list</ACTION>
+    <ACTION sym="script">doas container list</ACTION>
   </COMPL>
   <ACTION sym="STRING"/>
 </PTYPE>
 
 <PTYPE name="CONTAINERSa">
   <COMPL>
-    <ACTION sym="script">container -a list</ACTION>
+    <ACTION sym="script">doas container -a list</ACTION>
   </COMPL>
   <ACTION sym="STRING"/>
 </PTYPE>
 
 <PTYPE name="IMAGES">
   <COMPL>
-    <ACTION sym="script">container -a list images</ACTION>
+    <ACTION sym="script">doas container -a list images</ACTION>
   </COMPL>
   <ACTION sym="STRING"/>
 </PTYPE>
 
 <PTYPE name="ARCHIVES">
   <COMPL>
-    <ACTION sym="script">container -a list oci</ACTION>
+    <ACTION sym="script">doas container -a list oci</ACTION>
   </COMPL>
   <ACTION sym="STRING"/>
 </PTYPE>
