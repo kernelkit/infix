@@ -8,17 +8,22 @@ All notable changes to the project are documented in this file.
 -------------------------
 
 ### Changes
+- Updated `infix-routing.yang` to declare deviations for unsupported
+  OSPF RPCs and Notifications in `ietf-ospf.yang`
 
 ### Fixes
-- Updated `infix-routing.yang` to declare deviations for non-supported
-  OSPF RPCs and Notifications in `ietf-ospf.yang`.
-- Fix #601: CLI regression in 'show ospf' family of commands causing
+- Fix #357: EUI-64 based IPv6 autoconf address on bridges seem to be
+  randomized.  Problem caused by kernel setting a random MAC before any
+  bridge port is added.  Fixed by using the device's base MAC address on
+  bridge interfaces.  Possible to override using `phys-address` option
+- Fix #601: CLI regression in `show ospf` family of commands causing
   authorized users, like `admin`, to not being able to query status
   of OSPF or BFD.  Workaround by using the UNIX shell `sudo vtysh`.
   Regression introduced in v24.08.0
 - The timeout before giving up on loading the `startup-config` at boot
   is now 1 minute, just like operations via other front-ends (NETCONF
   and RESTCONF). This was previously (incorrectly) set to 10 seconds.
+
 
 [v24.08.0][] - 2024-08-30
 -------------------------
@@ -359,10 +364,6 @@ future releases.
 - Fix #349: minor changes to `bridge-port` settings, like setting `pvid`
   when you forget it, did not take without a reboot
 - Fix #353: impossible to remove bridge port with `no bridge-port`
-- Fix #357: EUI-64 based IPv6 autoconf address on bridges seem to be
-  randomized.  Problem caused by kernel setting a random MAC before any
-  bridge port is added.  Fixed by using the device's base MAC address on
-  bridge interfaces.  Possible to override using `phys-address` option
 - Fix #358: MAC address no longer shown for bridge interfaces in CLI
   `show interfaces` command
 - Fix #365: not possible to run `ping` from container
