@@ -222,9 +222,8 @@ archive, which helps greatly with container upgrades (see below):
 Upgrading a Container Image
 ---------------------------
 
-> **Note:** the default writable layer is lost when upgrading the image
-> Use named volumes for directories with writable content you wish to
-> keep over an upgrade.
+> **Note:** the default writable layer is lost when upgrading the image.
+> Use named volumes for content that you want to persist across upgrades.
 
 All container configurations are locked to the image hash at the time of
 first download, not just ones that use an `:edge` or `:latest` tag.  An
