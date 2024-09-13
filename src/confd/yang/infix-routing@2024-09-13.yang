@@ -24,6 +24,10 @@ module infix-routing {
   import ietf-routing-types {
     prefix rt-types;
   }
+  revision 2024-09-13 {
+    description "Declare deviations for non-supported OSPF RPCs and Notifications";
+    reference "internal";
+  }
   revision 2024-03-06 {
     description "Obsolete leaf enable in favor for enabled in default-route-advertise";
     reference "internal";
@@ -424,4 +428,51 @@ module infix-routing {
   deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf/ospf:database/ospf:as-scope-lsa-type/ospf:as-scope-lsas/ospf:as-scope-lsa/ospf:version/ospf:ospfv2/ospf:ospfv2/ospf:header" {
     deviate not-supported;
   }
+
+  /* OSPF RPCs */ 
+  deviation "/ospf:clear-neighbor" {
+    deviate not-supported;
+  }
+
+  deviation "/ospf:clear-database" {
+    deviate not-supported;
+  }
+
+  /* OSPF Notifications */
+  deviation "/ospf:if-state-change" {
+    deviate not-supported;
+  }
+
+  deviation "/ospf:if-config-error" {
+    deviate not-supported;
+  }
+
+  deviation "/ospf:nbr-state-change" {
+    deviate not-supported;
+  }
+
+  deviation "/ospf:nbr-restart-helper-status-change" {
+    deviate not-supported;
+  }
+
+  deviation "/ospf:if-rx-bad-packet" {
+    deviate not-supported;
+  }
+
+  deviation "/ospf:lsdb-approaching-overflow" {
+    deviate not-supported;
+  }
+
+  deviation "/ospf:lsdb-overflow" {
+    deviate not-supported;
+  }
+
+  deviation "/ospf:nssa-translator-status-change" {
+    deviate not-supported;
+  }
+
+  deviation "/ospf:restart-status-change" {
+    deviate not-supported;
+  }
+
 }
