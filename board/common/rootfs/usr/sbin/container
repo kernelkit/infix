@@ -280,6 +280,7 @@ commands:
   help                     Show this help text
   list    [image | oci]    List names (only) of containers, images, or OCI archives
   load    [NAME | URL] NM  Load OCI tarball fileNAME or URL to image NM
+  locate                   Find container that currently owns '--net IFNAME'
   remove   IMAGE           Remove an (unused) container image
   restart [network] NAME   Restart a (crashed) container or container(s) using network
   run      NAME [CMD]      Run a container interactively, with an optional command
@@ -473,6 +474,23 @@ case $cmd in
 	else
 	    exit 1
 	fi
+	;;
+    locate)			# Find where the host's ifname lives
+	if [ -z "$network" ]; then
+	    echo "Missing --net IFNAME option."
+	    exit 1
+	fi
+	containers=$(podman ps $all --format "{{.Names}}")
+	for c in $containers; do
+	    json=$(podman inspect "$c")
+	    nets=$(echo "$json" |jq -r '.[].NetworkSettings.Networks | keys[]' 2>/dev/null)
+	    for n in $nets; do
+		if [ "$network" = "$n" ]; then
+		    echo "$c"
+		    exit 0;
+		fi
+	    done
+	done
 	;;
     ls | list)
 	cmd=$1
