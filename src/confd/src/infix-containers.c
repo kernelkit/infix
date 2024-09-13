@@ -36,8 +36,8 @@ static int add(const char *name, struct lyd_node *cif)
 
 	/* Stop any running container gracefully so it releases its IP addresses. */
 	fprintf(fp, "#!/bin/sh\n"
-		"container stop %s\n"
-		"container delete %s\n"
+		"container stop %s   >/dev/null\n" /* Silence "not running" on upgrade */
+		"container delete %s >/dev/null\n" /* Silence any hashes when deleting */
 		"container", name, name);
 
 	LYX_LIST_FOR_EACH(lyd_child(cif), node, "dns")
@@ -367,7 +367,10 @@ static void cleanup(sr_session_ctx_t *session, struct confd *confd)
 			continue; /* odd, non-script file? */
 		*ptr = 0;
 
-		if (is_active(session, name))
+		if (strncmp(name, "S01-", 4))
+			continue; /* odd, not start script? */
+
+		if (is_active(session, &name[4]))
 			continue;
 
 		/* Not found in running-config, remove stale cache. */
@@ -421,11 +424,15 @@ void infix_containers_post_hook(sr_session_ctx_t *session, struct confd *confd)
 			strlcpy(name, d->d_name, sizeof(name));
 			ptr = strstr(name, ".sh");
 			if (ptr) {
+				char *nm = NULL;
+
 				*ptr = 0;
+				if (!strncmp(name, "S01-", 4))
+					nm = &name[4];
 
 				/* New job is already active, no changes, skipping ... */
-				if (!is_manual(session, name))
-					systemf("initctl -bnq cond set container:%s", name);
+				if (nm && !is_manual(session, nm))
+					systemf("initctl -bnq cond set container:%s", nm);
 			}
 			remove(next);
 			continue;
