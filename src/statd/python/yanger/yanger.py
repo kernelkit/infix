@@ -102,14 +102,16 @@ def insert(obj, *path_and_value):
     curr[path[-1]] = value
 
 
-def run_cmd(cmd, testfile, default=None):
+def run_cmd(cmd, testfile, default=None, check=True):
     """Run a command (array of args) and return an array of lines"""
 
     if TESTPATH and testfile:
         cmd = ['cat', os.path.join(TESTPATH, testfile)]
 
     try:
-        output = subprocess.check_output(cmd, stderr=subprocess.DEVNULL, text=True)
+        result = subprocess.run(cmd, check=check, stderr=subprocess.DEVNULL,
+                                stdout=subprocess.PIPE, text=True)
+        output = result.stdout
         return output.splitlines()
     except subprocess.CalledProcessError as err:
         logger.error(f"{err}")
@@ -118,14 +120,14 @@ def run_cmd(cmd, testfile, default=None):
         raise
 
 
-def run_json_cmd(cmd, testfile, default=None):
+def run_json_cmd(cmd, testfile, default=None, check=True):
     """Run a command (array of args) with JSON output and return the JSON"""
 
     if TESTPATH and testfile:
         cmd = ['cat', os.path.join(TESTPATH, testfile)]
 
     try:
-        result = subprocess.run(cmd, check=True, stdout=subprocess.PIPE,
+        result = subprocess.run(cmd, check=check, stdout=subprocess.PIPE,
                                 stderr=subprocess.PIPE, text=True)
         output = result.stdout
         data = json.loads(output)
@@ -528,9 +530,9 @@ def add_container(containers):
 
 
 def get_brport_multicast(ifname):
-    data = run_json_cmd(['mctl', 'show', 'igmp', 'json'],
-                        "igmp-status.json",
-                        default={})
+    """Check if multicast snooping is enabled on bridge, default: nope"""
+    data = run_json_cmd(['mctl', 'show', 'igmp', 'json'], "igmp-status.json",
+                        default={}, check=False)
     multicast = {}
 
     if ifname in data.get('fast-leave-ports', []):
@@ -890,9 +892,10 @@ def main():
             add_ethtool_std(ifname, iface_out)
 
         if 'type' in iface_out and iface_out['type'] == "infix-if-type:bridge":
+            # Fail silent, multicast snooping may not be enabled on bridge
             mc_status = run_json_cmd(['mctl', '-p', 'show', 'igmp', 'json'],
-                                     "igmp-status.json",
-                                     default={})
+                                     "igmp-status.json", default={},
+                                     check=False)
 
             add_vlans_to_bridge(ifname, iface_out, mc_status)
             add_mdb_to_bridge(ifname, iface_out, mc_status)
