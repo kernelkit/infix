@@ -626,20 +626,32 @@ case $cmd in
 	podman stats -i 2
 	;;
     upgrade)
+	# Start script used to initially create container
+	script=/var/lib/containers/active/S01-${1}.sh
+
+	# Find container image
 	img=$(podman inspect "$1" | jq -r .[].ImageName)
 	if [ -z "$img" ]; then
 	    echo "No such container ($1), or invalid ImageName.  Cannot upgrade."
 	    exit 1;
 	fi
+
+	# Likely an OCI archive, or local directory, assume user has updated image.
 	if echo "$img" | grep -Eq '^localhost/'; then
-	    # Likely an OCI archive, or local directory, assume user has updated image.
-	    file=$(awk '{s=$NF} END{print s}' "/var/lib/containers/active/${1}.sh")
+	    file=$(awk '{s=$NF} END{print s}' "$script")
 	    echo "Upgrading container ${1} with local archive: $file ..."
 	else
+	    printf ">> Stopping ... "
 	    podman stop "$1"
+	    printf ">> "
 	    podman pull "$img" || (echo "Failed fetching $img, check your network (settings)."; exit 1)
 	fi
-	"/var/lib/containers/active/${1}.sh" || (echo "Failed recreating container $1"; exit 1)
+	echo ">> Starting $1 ..."
+	if ! "$script"; then
+	    echo ">> Failed recreating container $1"
+	    exit 1
+	fi
+	echo ">> Done."
 	;;
     volume)
 	cmd=$1

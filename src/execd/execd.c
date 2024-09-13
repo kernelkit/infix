@@ -57,7 +57,7 @@ static void run_job(const char *path, char *file, int archive)
 		return;
 	}
 
-	dbg("job %s in %s done", file, path);
+	dbg("job %s in %s done %p, archive: %d", file, path, done, archive);
 	if (done && archive)
 		movefile(cmd, done);
 	else
@@ -69,28 +69,43 @@ static void run_job(const char *path, char *file, int archive)
  * a type '*' just to figure out if a job should be archived in
  * the done directory.
  */
-static int check(const char *name, int type, int *archive)
+static int should_run(const char *name, int type, int *archive)
 {
 	if (!name || strlen(name) < 3)
-		return -1;
+		return 0;
 
 	if (isdigit(name[1]) && isdigit(name[2])) {
-		if (type == '*')
-			type = name[0];
+		if (type == '*') {
+			switch (name[0]) {
+			case 'K':
+				*archive = 0;
+				return 1;
+			case 'S':
+				*archive = 1;
+				return 1;
+			default:
+				errx("unsupported '%s', scripts must start with S or K", name);
+				return 0;
+			}
+		}
 
 		switch (type) {
 		case 'K':
 			*archive = 0;
-			return 0;
+			break;
 		case 'S':
 			*archive = 1;
-			return 0;
-		default:
 			break;
+		default:
+			return 0;
 		}
+
+		dbg("name:%s type:'%c' archive:%d => run:%d", name, type, *archive, type == name[0]);
+		return type == name[0];
 	}
 
-	return 1;
+	errx("unsupported script %s, must follow pattern SNN/KNN", name);
+	return 0;
 }
 
 static void run_dir(const char *path, int type)
@@ -106,15 +121,24 @@ static void run_dir(const char *path, int type)
 	}
 
 	for (i = 0; i < n; i++) {
-		if (!check(namelist[i]->d_name, type, &archive))
-			run_job(path, namelist[i]->d_name, archive);
+		struct dirent *d = namelist[i];
 
-		free(namelist[i]);
+		if (d->d_type == DT_DIR)
+			continue;
+
+		if (should_run(d->d_name, type, &archive))
+			run_job(path, d->d_name, archive);
+
+		free(d);
 	}
 
 	free(namelist);
 }
 
+/*
+ * Call stop/cleanup jobs first, may use same container name or
+ * resources as replacement container start scripts use.
+ */
 static void run_queue(char *path)
 {
 	run_dir(path, 'K');
@@ -154,7 +178,7 @@ static void inotify_cb(uev_t *w, void *arg, int _)
 
 		if (event->mask & (IN_CLOSE_WRITE | IN_ATTRIB | IN_MOVED_TO)) {
 			dbg("Got inotify event %s 0x%04x", name, event->mask);
-			if (check(name, '*', &archive))
+			if (!should_run(name, '*', &archive))
 				continue;
 
 			run_job(arg, name, archive);
