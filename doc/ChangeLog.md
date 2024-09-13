@@ -10,6 +10,8 @@ All notable changes to the project are documented in this file.
 ### Changes
 
 ### Fixes
+- Updated `infix-routing.yang` to declare deviations for non-supported
+  OSPF RPCs and Notifications in `ietf-ospf.yang`.
 - Fix #601: CLI regression in 'show ospf' family of commands causing
   authorized users, like `admin`, to not being able to query status
   of OSPF or BFD.  Workaround by using the UNIX shell `sudo vtysh`.
