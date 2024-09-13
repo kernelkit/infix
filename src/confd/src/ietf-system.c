@@ -45,11 +45,11 @@ static char   *os  = NULL;
 static char   *nm  = NULL;
 static char   *id  = NULL;
 
-static struct { char *name, *shell; bool admin; } shells[] = {
-	{ "infix-system:sh",    "/bin/sh",    true  },
-	{ "infix-system:bash",  "/bin/bash",  true  },
-	{ "infix-system:clish", "/bin/clish", false },
-	{ "infix-system:false", "/bin/false", false },
+static struct { char *name, *shell; } shells[] = {
+	{ "infix-system:sh",    "/bin/sh"    },
+	{ "infix-system:bash",  "/bin/bash"  },
+	{ "infix-system:clish", "/bin/clish" },
+	{ "infix-system:false", "/bin/false" }
 };
 
 static char *strip_quotes(char *str)
@@ -687,7 +687,7 @@ static int is_valid_username(const char *user)
 	return 1;
 }
 
-static char *sys_find_usable_shell(sr_session_ctx_t *sess, char *name, bool is_admin)
+static char *sys_find_usable_shell(sr_session_ctx_t *sess, char *name)
 {
 	const char *conf = NULL;
 	char *shell = NULL;
@@ -707,11 +707,6 @@ static char *sys_find_usable_shell(sr_session_ctx_t *sess, char *name, bool is_a
 		for (size_t i = 0; i < NELEMS(shells); i++) {
 			if (strcmp(shells[i].name, conf))
 				continue;
-
-			if (!is_admin && shells[i].admin) {
-				WARN("Selected login shell for %s only allowed for administrators!", name);
-				break;
-			}
 
 			shell = shells[i].shell;
 			break;
@@ -777,7 +772,7 @@ static int sys_del_user(char *user, bool silent)
  */
 static int sys_call_adduser(sr_session_ctx_t *sess, char *name, uid_t uid, gid_t gid)
 {
-	char *shell = sys_find_usable_shell(sess, name, is_admin_user(sess, name));
+	char *shell = sys_find_usable_shell(sess, name);
 	char *eargs[] = {
 		"adduser", "-d", "-s", shell, "-u", NULL, "-G", NULL, "-H", name, NULL
 	};
@@ -1125,7 +1120,7 @@ static sr_error_t handle_sr_shell_update(sr_session_ctx_t *sess, struct confd *c
 	if (!user)
 		return SR_ERR_OK;
 
-	shell = sys_find_usable_shell(sess, (char *)user, is_admin_user(sess, user));
+	shell = sys_find_usable_shell(sess, (char *)user);
 	if (set_shell(user, shell)) {
 		AUDIT("Failed updating shell to %s for user \"%s\"", shell, user);
 		err = SR_ERR_SYS;
@@ -1437,7 +1432,7 @@ static int change_nacm(sr_session_ctx_t *session, uint32_t sub_id, const char *m
 		bool is_admin = is_admin_user(session, user);
 		const char *shell;
 
-		shell = sys_find_usable_shell(session, (char *)user, is_admin);
+		shell = sys_find_usable_shell(session, (char *)user);
 		if (set_shell(user, shell))
 			AUDIT("Failed adjusting shell for user \"%s\"", user);
 

@@ -33,10 +33,11 @@ All notable changes to the project are documented in this file.
   regression introduced in v24.06.0
 - Spellcheck path to `/var/lib/containers` when unpacking OCI archives
   on container upgrade
+- Fix #616: Silent failure when selecting bash as login shell for
+  non-admin user, this silent lock has been removed.
 - The timeout before giving up on loading the `startup-config` at boot
   is now 1 minute, just like operations via other front-ends (NETCONF
   and RESTCONF). This was previously (incorrectly) set to 10 seconds.
-
 
 [v24.08.0][] - 2024-08-30
 -------------------------
@@ -56,7 +57,7 @@ Finally, the following consumer boards are now fully supported:
 - Upgrade Buildroot to 2024.02.5 (LTS)
 - Upgrade Linux kernel to 6.6.46 (LTS)
 - Issue #158: enhance security of factory reset.  All file content
-  is now overwritten x3, the last time with zeroes, then removed.  
+  is now overwritten x3, the last time with zeroes, then removed.
   Example, on the NanoPi R2S this process takes ~30 seconds, but may
   take longer in setups with bigger configurations, e.g., containers
 - Issue #497: support for auto-mounting USB media.  Useful for logging,

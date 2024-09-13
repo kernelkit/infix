@@ -16,6 +16,11 @@ module infix-system {
   contact      "kernelkit@googlegroups.com";
   description  "Infix augments and deviations to ietf-system.";
 
+  revision 2024-09-13 {
+    description "Add some informative help about different shells and security.";
+    reference "internal";
+  }
+
   revision 2024-06-15 {
     description "Merge infix-shell-types.yang to add shell-type identities.";
     reference "internal";
@@ -242,7 +247,12 @@ module infix-system {
         base shell-type;
       }
       default false;
-      description "Set UNIX login shell for user, default: none (security)";
+      description "Set UNIX login shell for user.
+
+                   For security reasons avoid shells bash and sh for non-admin users.
+                   This since this may open the system for local security issues.
+
+                   default: none (security)";
     }
   }
 
