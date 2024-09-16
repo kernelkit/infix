@@ -128,7 +128,7 @@ diskimg=disk.img
 bootimg=
 bootpart=
 
-while getopts "a:b:B:n:s:t" opt; do
+while getopts "a:b:B:n:s:" opt; do
     case ${opt} in
 	a)
 	    arch=$OPTARG
@@ -145,9 +145,6 @@ while getopts "a:b:B:n:s:t" opt; do
 	s)
 	    total=$(size2int $OPTARG)
 	    ;;
-	t)
-		testmode=true
-		;;
     esac
 done
 shift $((OPTIND - 1))
@@ -192,12 +189,6 @@ mkdir -p $root/aux
 cp -f $BINARIES_DIR/rootfs.itbh $root/aux/primary.itbh
 cp -f $BINARIES_DIR/rootfs.itbh $root/aux/secondary.itbh
 cp -f $BINARIES_DIR/rauc.status $root/aux/rauc.status
-
-if [ "$testmode" = true ]; then
-    touch "$root/aux/test-mode"
-else 
-    rm -f "$root/aux/test-mode"
-fi
 
 case "$arch" in
     aarch64)

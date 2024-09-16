@@ -107,18 +107,6 @@ config DISK_IMAGE_BOOT_OFFSET
 	  to make sure that the GPT still fits at the start of the
 	  image.
 
-config DISK_IMAGE_TEST_MODE
-	bool "Enable Test Mode"
-	depends on DISK_IMAGE
-	default y
-	help
-	  Enable the test mode option by default. This setting creates a test-mode flag
-	  in the auxiliary partition of the disk image, initiating the system with the test-config
-	  instead of regular startup-config. The primary purpose of running an image in this mode
-	  is to ensure proper execution of all Infix tests. Additionally, it enables extra RPCs
-	  related to system restart and configuration overrides, allowing tests to be run even on
-	  systems where the factory configuration may potentially create L2 loops. 
-
 config DISK_IMAGE_RELEASE_URL
 	string "Infix URL"
 	depends on DISK_IMAGE
