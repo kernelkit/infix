@@ -25,9 +25,6 @@ include::../case/ietf_interfaces/Readme.adoc[]
 
 <<<
 
-include::../case/infix_interfaces/Readme.adoc[]
-<<<
-
 include::../case/ietf_routing/Readme.adoc[]
 
 <<<
