@@ -1,13 +1,13 @@
 graph "2x4" {
 	layout="neato";
 	overlap="false";
-	esep="+20";
+	esep="+40";
 
         node [shape=record, fontname="monospace"];
 	edge [color="cornflowerblue", penwidth="2"];
 
 	host [
-	    label="host | { <mgmt1> mgmt1 | <data10> data10 | <data11>  data11 | <mgmt2> mgmt2 | <data20> data20 | <data21>  data21 }",
+	    label="host | { <mgmt1> mgmt1 | <data10> data10 | <data11>  data11 | <> \n\n\n\n\n\n | <mgmt2> mgmt2 | <data20> data20 | <data21>  data21 }",
 	    pos="0,15!",
 	    kind="controller",
 	];
@@ -27,12 +27,12 @@ graph "2x4" {
 	];
 
 	host:mgmt1 -- dut1:mgmt [kind=mgmt]
-	host:data10 -- dut1:data0
-	host:data11 -- dut1:data1
+	host:data10 -- dut1:data0 [color=black]
+	host:data11 -- dut1:data1 [color=black]
 
 	host:mgmt2 -- dut2:mgmt [kind=mgmt]
-	host:data20 -- dut2:data0
-	host:data21 -- dut2:data1
+	host:data20 -- dut2:data0 [color=black]
+	host:data21 -- dut2:data1 [color=black]
 
-	dut1:data2 -- dut2:data2
+	dut1:data2 -- dut2:data2 [color=black]
 }
