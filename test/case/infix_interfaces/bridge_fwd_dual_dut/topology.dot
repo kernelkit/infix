@@ -1,38 +1,38 @@
 graph "2x4" {
 	layout="neato";
 	overlap="false";
-	esep="+20";
+	esep="+26";
 
         node [shape=record, fontname="monospace"];
 	edge [color="cornflowerblue", penwidth="2"];
 
 	host [
-	    label="host | { <mgmt1> mgmt1 | <data10> data10 | <data11>  data11 | <mgmt2> mgmt2 | <data20> data20 | <data21>  data21 }",
+	    label="host | { <mgmt1> mgmt1 | <data11>  data11 | <> \n\n\n| <mgmt2> mgmt2 | <data20> data20 | <data21>  data21 }",
 	    pos="0,15!",
+	    height=3,
+
 	    kind="controller",
 	];
 
         dut1 [
-	    label="{ <mgmt> mgmt | <data0> data0 | <data1> data1 } | dut1 | { <data2> data2 }",
-	    pos="10,18!",
-
-	    kind="infix",
+	    label="{ <mgmt> mgmt | <data1> data1 } | { dut1 \n\n| <data2> data2 }",
+	    pos="4,15.68!",
+	    kind="infix",    
 	];
 
         dut2 [
-		label="{ <mgmt> mgmt | <data0> data0 | <data1> data1 } | dut2 | { <data2> data2 }",
-	    pos="10,12!",
-
+		label="{ <mgmt> mgmt | <data0> data0 | <data1> data1 } | { <data2> data2 | \n dut2 }",
+	    pos="4,14.43!",
+	    height=1.2,
 	    kind="infix",
 	];
 
 	host:mgmt1 -- dut1:mgmt [kind=mgmt]
-	host:data10 -- dut1:data0
-	host:data11 -- dut1:data1
+	host:data11 -- dut1:data1 [color=black, fontcolor=black, taillabel="10.0.0.2"]
 
 	host:mgmt2 -- dut2:mgmt [kind=mgmt]
-	host:data20 -- dut2:data0
-	host:data21 -- dut2:data1
+	host:data20 -- dut2:data0 [color=black, fontcolor=black, taillabel="10.0.0.3"]
+	host:data21 -- dut2:data1 [color=black, fontcolor=black, taillabel="10.0.0.4"]
 
 	dut1:data2 -- dut2:data2
 }

@@ -1,7 +1,7 @@
 graph "1x4" {
 	layout="neato";
 	overlap="false";
-	esep="+20";
+	esep="+80";
 
         node [shape=record, fontname="monospace"];
 	edge [color="cornflowerblue", penwidth="2"];
@@ -13,14 +13,14 @@ graph "1x4" {
 	];
 
         target [
-	    label="{ <mgmt> mgmt | <data0> data0 | <data1> data1 | <data2> data2 } | target",
+	    label="{ <mgmt> mgmt | <data0> data0 | <data1> data1 | <data2> data2 } | target \n\n(br0)\n10.0.0.1/24",
 	    pos="10,12!",
 
 	    kind="infix",
 	];
 
 	host:tgt -- target:mgmt [kind=mgmt]
-	host:data0 -- target:data0
-	host:data1 -- target:data1
-	host:data2 -- target:data2
+	host:data0 -- target:data0 [color=black, fontcolor=black, taillabel="10.0.0.2/24"] 
+	host:data1 -- target:data1 [color=black, fontcolor=black, taillabel="10.0.0.3/24"]
+	host:data2 -- target:data2 [color=black, fontcolor=black, taillabel="10.0.0.4/24"]
 }

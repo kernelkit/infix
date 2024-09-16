@@ -8,7 +8,7 @@
 #        |                |     |                            |     |                 |
 #        |                |     |                            |     |                 |
 # ,-----------------------------------------------------------------------------------------,
-# |  host:mgmt0  host:data0     host:data1          host:data2     host:data3   host:mgmt1  |
+# |  host:mgmt0  host:data10    host:data11         host:data20    host:data21   host:mgmt1 |
 # |                             [10.0.0.2]          [10.0.0.3]     [10.0.0.4]               |
 # |                               (ns11)              (ns20)         (ns21)                 |
 # |                                                                                         |
@@ -28,7 +28,6 @@ with infamy.Test() as test:
         dut2 = env.attach("dut2", "mgmt")
 
     with test.step("Configure a bridge with triple physical port"):
-        _, tport10 = env.ltop.xlate("dut1", "data0")
         _, tport11 = env.ltop.xlate("dut1", "data1")
         _, tport12 = env.ltop.xlate("dut1", "data2")
         _, tport20 = env.ltop.xlate("dut2", "data0")
@@ -47,19 +46,11 @@ with infamy.Test() as test:
                                 "vlan": [
                                     {
                                         "vid": 10,
-                                        "untagged": [ tport10, tport11 ],
+                                        "untagged": [ tport11 ],
                                         "tagged":   [ "br0", tport12 ]
                                     }
                                 ]
                             }
-                        }
-                    },
-                    {
-                        "name": tport10,
-                        "enabled": True,
-                        "infix-interfaces:bridge-port": {
-                            "pvid": 10,
-                            "bridge": "br0"
                         }
                     },
                     {

@@ -1,38 +1,38 @@
 graph "2x4" {
 	layout="neato";
 	overlap="false";
-	esep="+20";
+	esep="+23";
 
         node [shape=record, fontname="monospace"];
 	edge [color="cornflowerblue", penwidth="2"];
 
 	host [
-	    label="host | { <mgmt1> mgmt1 | <data10> data10 | <data11>  data11 | <mgmt2> mgmt2 | <data20> data20 | <data21>  data21 }",
+	    label="host | { <mgmt1> mgmt1 | <data10> data10 | <data11>  data11 | <> \n\n\n | <mgmt2> mgmt2 | <data20> data20 | <data21>  data21 }",
 	    pos="0,15!",
 	    kind="controller",
 	];
 
         dut1 [
-	    label="{ <mgmt> mgmt | <data0> data0 | <data1> data1 } | dut1 | { <data2> data2 }",
-	    pos="10,18!",
-
+	    label="{ <mgmt> mgmt | <data0> data0 | <data1> data1 } | { dut1 \nVLAN55: 10.0.1.1 \nVLAN77: 10.0.2.1 |  <data2> data2 }",
+	    pos="3,15.4!",
+	    fontsize=12,
 	    kind="infix",
 	];
 
         dut2 [
-		label="{ <mgmt> mgmt | <data0> data0 | <data1> data1 } | dut2 | { <data2> data2 }",
-	    pos="10,12!",
-
+		label="{ <mgmt> mgmt | <data0> data0 | <data1> data1 } | { <data2> data2 | dut2 \nVLAN55: 10.0.1.2 \nVLAN77: 10.0.2.2\n }",
+	    pos="3,14.6!",
+	    fontsize=12,
 	    kind="infix",
 	];
 
 	host:mgmt1 -- dut1:mgmt [kind=mgmt]
-	host:data10 -- dut1:data0
-	host:data11 -- dut1:data1
+	host:data10 -- dut1:data0 [color=purple, fontcolor=purple, taillabel="10.0.1.11", headlabel="VLAN55 U"]
+	host:data11 -- dut1:data1 [color=darkgreen, fontcolor=darkgreen, taillabel="10.0.2.11", headlabel="VLAN77 U"]
 
 	host:mgmt2 -- dut2:mgmt [kind=mgmt]
-	host:data20 -- dut2:data0
-	host:data21 -- dut2:data1
+	host:data20 -- dut2:data0 [color=purple, fontcolor=purple, taillabel="10.0.1.22", headlabel="VLAN55 U"]
+	host:data21 -- dut2:data1 [color=darkgreen, fontcolor=darkgreen, taillabel="10.0.2.22", headlabel="VLAN77 U"]
 
-	dut1:data2 -- dut2:data2
+	dut1:data2 -- dut2:data2 [color=black, fontcolor=black, label="VLAN 1,2 T"]
 }
