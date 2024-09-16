@@ -1,7 +1,7 @@
 graph "1x2" {
 	layout="neato";
 	overlap="false";
-	esep="+20";
+	esep="+80";
 
         node [shape=record, fontname="monospace"];
 	edge [color="cornflowerblue", penwidth="2"];
@@ -20,5 +20,5 @@ graph "1x2" {
 	];
 
 	host:tgt -- target:mgmt [kind=mgmt]
-	host:data -- target:data
+	host:data -- target:data [color=black]
 }
