@@ -14,9 +14,6 @@
 - name:  ietf-interfaces
   suite: ietf_interfaces/ietf_interfaces.yaml
 
-- name:  infix-interfaces
-  suite: infix_interfaces/infix_interfaces.yaml
-
 - name:  ietf-routing
   suite: ietf_routing/ietf_routing.yaml
 
@@ -28,6 +25,6 @@
 
 - name:  ietf-hardware
   suite: ietf_hardware/ietf_hardware.yaml
-  
+
 - name:  infix-services
   suite: infix_services/infix_services.yaml

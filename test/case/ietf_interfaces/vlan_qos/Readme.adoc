@@ -1,0 +1,25 @@
+=== VLAN QoS
+==== Description
+Inject different packets from the host and verify that the VLAN priority
+is handled correctly
+
+==== Topology
+ifdef::topdoc[]
+image::../../test/case/ietf_interfaces/vlan_qos/topology.png[VLAN QoS topology]
+endif::topdoc[]
+ifndef::topdoc[]
+ifdef::testgroup[]
+image::vlan_qos/topology.png[VLAN QoS topology]
+endif::testgroup[]
+ifndef::testgroup[]
+image::topology.png[VLAN QoS topology]
+endif::testgroup[]
+endif::topdoc[]
+==== Test sequence
+. Initialize
+. Apply initial config without priority mapping
+. Setup host VLANs
+
+
+<<<
+
