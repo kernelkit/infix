@@ -17,13 +17,13 @@ import infamy
 with infamy.Test() as test:
     with test.step("Initialize"):
         env  = infamy.Env()
-        dut1 = env.attach("target1", "mgmt")
-        dut2 = env.attach("target2", "mgmt")
+        dut1 = env.attach("dut1", "mgmt")
+        dut2 = env.attach("dut2", "mgmt")
 
     with test.step("Topology setup"):
-        _, dut1_e0 = env.ltop.xlate("target1", "data")
-        _, dut1_e1 = env.ltop.xlate("target1", "target2")
-        _, dut2_e0 = env.ltop.xlate("target2", "target1")
+        _, dut1_e0 = env.ltop.xlate("dut1", "data")
+        _, dut1_e1 = env.ltop.xlate("dut1", "to_dut2")
+        _, dut2_e0 = env.ltop.xlate("dut2", "to_dut1")
 
         dut1.put_config_dict("ietf-interfaces", {
             "interfaces": {
