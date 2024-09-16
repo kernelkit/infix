@@ -598,6 +598,13 @@ As shown, the link-local IPv4 address is configured with `set autconf
 enabled true`.  The resulting address (169.254.1.3/16) is of type
 *random* ([ietf-ip.yang][2]).
 
+The IPv4LL client also supports a `request-address` setting which can be
+used to "seed" the client's starting address.  If the address is free it
+will be used, otherwise it falls back to the default algorithm.
+
+    admin@example:/config/interface/eth0/ipv4/> set autoconf request-address 169.254.1.2
+
+
 #### Use of DHCP for IPv4 address assignment
 
 ![Using DHCP for IPv4 address assignment](img/ip-address-example-ipv4-dhcp.svg)
