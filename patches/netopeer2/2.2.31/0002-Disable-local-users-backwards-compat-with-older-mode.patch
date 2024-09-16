@@ -1,5 +1,25 @@
+From 26e36c7db9ebf11bf057a53e0c16238bda14792c Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Mattias=20Walstr=C3=B6m?= <lazzer@gmail.com>
+Date: Tue, 2 Jul 2024 14:56:15 +0200
+Subject: [PATCH 2/3] Disable local users (backwards compat with older model)
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Addiva Elektronik
+
+Drop local-users, because if enabled netopeer require all users that
+should be allowed to use NETCONF to also be configured in the updated
+ietf-netconf-server model.
+
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ scripts/common.sh       | 2 +-
+ scripts/merge_config.sh | 3 ---
+ 2 files changed, 1 insertion(+), 4 deletions(-)
+
 diff --git a/scripts/common.sh b/scripts/common.sh
-index c3271de..86c4c44 100644
+index 25e531b..13234e1 100644
 --- a/scripts/common.sh
 +++ b/scripts/common.sh
 @@ -29,7 +29,7 @@ LN2_MODULES=(
@@ -25,3 +45,6 @@ index 4b476d6..e588369 100755
                      </ssh-server-parameters>
                  </ssh>
              </endpoint>
+-- 
+2.43.0
+

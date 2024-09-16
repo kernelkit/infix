@@ -1,7 +1,7 @@
-From 2a826d77d83930b32f2bdcf32ef9c57c616ec526 Mon Sep 17 00:00:00 2001
+From 936d4f34a12ef1a2fe3372df051b77ea19ce5d59 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Tue, 7 May 2024 15:41:53 +0200
-Subject: [PATCH 2/9] Allow SR_EV_DONE to return any error to sysrepocfg
+Subject: [PATCH 2/7] Allow SR_EV_DONE to return any error to sysrepocfg
 Organization: Addiva Elektronik
 
 Importing a system configuration with sysrepocfg the model callbacks do
@@ -24,10 +24,10 @@ Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
  3 files changed, 30 insertions(+), 10 deletions(-)
 
 diff --git a/src/shm_sub.c b/src/shm_sub.c
-index 0fbe0f0c..363883ab 100644
+index 000f5906..4c59cbbf 100644
 --- a/src/shm_sub.c
 +++ b/src/shm_sub.c
-@@ -1718,7 +1718,7 @@ cleanup:
+@@ -1659,7 +1659,7 @@ cleanup:
  
  sr_error_info_t *
  sr_shmsub_change_notify_change_done(struct sr_mod_info_s *mod_info, const char *orig_name, const void *orig_data,
@@ -36,14 +36,14 @@ index 0fbe0f0c..363883ab 100644
  {
      sr_error_info_t *err_info = NULL;
      struct sr_mod_info_mod_s *mod = NULL;
-@@ -1850,12 +1850,19 @@ sr_shmsub_change_notify_change_done(struct sr_mod_info_s *mod_info, const char *
+@@ -1791,12 +1791,19 @@ sr_shmsub_change_notify_change_done(struct sr_mod_info_s *mod_info, const char *
              sr_rwunlock(&nsub->sub_shm->lock, 0, SR_LOCK_WRITE, cid, __func__);
              nsub->lock = SR_LOCK_NONE;
  
 -            /* we do not care about an error */
 -            sr_errinfo_free(&nsub->cb_err_info);
 -
-             SR_LOG_INF("EV ORIGIN: \"%s\" \"%s\" ID %" PRIu32 " priority %" PRIu32 " succeeded.",
+             SR_LOG_DBG("EV ORIGIN: \"%s\" \"%s\" ID %" PRIu32 " priority %" PRIu32 " succeeded.",
                      nsub->mod->ly_mod->name, sr_ev2str(SR_SUB_EV_DONE), nsub->mod->request_id, nsub->cur_priority);
  
 +            /*
@@ -59,7 +59,7 @@ index 0fbe0f0c..363883ab 100644
              nsub->pending_event = 0;
          }
      } while (1);
-@@ -3330,7 +3337,7 @@ sr_shmsub_change_listen_relock(sr_multi_sub_shm_t *multi_sub_shm, sr_lock_mode_t
+@@ -3278,7 +3285,7 @@ sr_shmsub_change_listen_relock(sr_sub_shm_t *sub_shm, sr_lock_mode_t mode, struc
  sr_error_info_t *
  sr_shmsub_change_listen_process_module_events(struct modsub_change_s *change_subs, sr_conn_ctx_t *conn)
  {
@@ -68,7 +68,7 @@ index 0fbe0f0c..363883ab 100644
      uint32_t i, data_len = 0, valid_subscr_count;
      char *data = NULL, *shm_data_ptr;
      int ret = SR_ERR_OK, filter_valid;
-@@ -3458,6 +3465,11 @@ process_event:
+@@ -3406,6 +3413,11 @@ process_event:
                  }
                  break;
              }
@@ -80,7 +80,7 @@ index 0fbe0f0c..363883ab 100644
          }
  
          /* subscription processed this event */
-@@ -3490,6 +3502,11 @@ process_event:
+@@ -3438,6 +3450,11 @@ process_event:
          }
          break;
      case SR_SUB_EV_DONE:
@@ -92,10 +92,10 @@ index 0fbe0f0c..363883ab 100644
      case SR_SUB_EV_ABORT:
          /* nothing to do */
          break;
-@@ -3509,14 +3526,17 @@ process_event:
+@@ -3457,14 +3474,17 @@ process_event:
  
      /* SUB WRITE URGE LOCK */
-     if (sr_shmsub_change_listen_relock(multi_sub_shm, SR_LOCK_WRITE_URGE, &sub_info, change_sub, change_subs->module_name,
+     if (sr_shmsub_change_listen_relock(sub_shm, SR_LOCK_WRITE_URGE, &sub_info, change_sub, change_subs->module_name,
 -            ret, filter_valid, ev_sess, &err_info)) {
 +            ret,  filter_valid, ev_sess, &err_tmp)) {
 +        if (err_tmp)
@@ -105,14 +105,14 @@ index 0fbe0f0c..363883ab 100644
      sub_lock = SR_LOCK_WRITE_URGE;
  
      /* finish event */
--    if ((err_info = sr_shmsub_multi_listen_write_event(multi_sub_shm, valid_subscr_count, err_code, &shm_data_sub, data,
-+    if ((err_tmp = sr_shmsub_multi_listen_write_event(multi_sub_shm, valid_subscr_count, err_code, &shm_data_sub, data,
+-    if ((err_info = sr_shmsub_listen_write_event(sub_shm, valid_subscr_count, err_code, &shm_data_sub, data,
++    if ((err_tmp = sr_shmsub_listen_write_event(sub_shm, valid_subscr_count, err_code, &shm_data_sub, data,
              data_len, change_subs->module_name, err_code ? "fail" : "success"))) {
 +        err_info = err_tmp;
          goto cleanup;
      }
  
-@@ -4055,7 +4075,7 @@ finish_iter:
+@@ -3953,7 +3973,7 @@ finish_iter:
              sr_errinfo_free(&cb_err_info);
  
              /* publish "done" event */
@@ -122,7 +122,7 @@ index 0fbe0f0c..363883ab 100644
              }
  
 diff --git a/src/shm_sub.h b/src/shm_sub.h
-index 3056e4c5..460ad927 100644
+index 62050e98..04637223 100644
 --- a/src/shm_sub.h
 +++ b/src/shm_sub.h
 @@ -144,7 +144,7 @@ sr_error_info_t *sr_shmsub_change_notify_change(struct sr_mod_info_s *mod_info,
@@ -135,10 +135,10 @@ index 3056e4c5..460ad927 100644
  /**
   * @brief Notify about (generate) a change "abort" event.
 diff --git a/src/sysrepo.c b/src/sysrepo.c
-index 8778956b..35a1fd8c 100644
+index 06428bd8..3f08a627 100644
 --- a/src/sysrepo.c
 +++ b/src/sysrepo.c
-@@ -3898,7 +3898,7 @@ store:
+@@ -3913,7 +3913,7 @@ store:
      }
  
      /* publish "done" event, all changes were applied */
