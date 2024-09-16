@@ -1,13 +1,11 @@
-From 600c6904a0687f0d237ccec750ae937cd76b9e54 Mon Sep 17 00:00:00 2001
+From a7e91aac7d7669c6b82cb06a1b4e3c3e3d79275f Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Mattias=20Walstr=C3=B6m?= <lazzer@gmail.com>
 Date: Mon, 6 May 2024 14:49:32 +0200
-Subject: [PATCH 5/5] Add -z switch to sysrepoctl to install factory config
+Subject: [PATCH 4/7] Add -z switch to sysrepoctl to install factory config
  from a json file
 Organization: Addiva Elektronik
 
 This to be able to load the yang modules during build time instead on boot.
-
-Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
 ---
  src/executables/sysrepoctl.c | 20 +++++++++++++--
  src/lyd_mods.h               |  7 ++++++
@@ -70,7 +68,7 @@ index b9680551..4cdba6a0 100644
          /* list */
          if ((r = srctl_list(conn))) {
 diff --git a/src/lyd_mods.h b/src/lyd_mods.h
-index 8f9cbac6..0a1ce2b4 100644
+index 1960bc06..a8ca5add 100644
 --- a/src/lyd_mods.h
 +++ b/src/lyd_mods.h
 @@ -102,4 +102,11 @@ sr_error_info_t *sr_lydmods_change_chng_feature(const struct ly_ctx *ly_ctx, con
@@ -86,11 +84,11 @@ index 8f9cbac6..0a1ce2b4 100644
 +
  #endif
 diff --git a/src/sysrepo.c b/src/sysrepo.c
-index 2eac2858..ce2fa822 100644
+index 3b11c0b8..2e02de39 100644
 --- a/src/sysrepo.c
 +++ b/src/sysrepo.c
-@@ -1569,6 +1569,55 @@ cleanup:
-     return sr_api_ret(NULL, err_info);
+@@ -1646,6 +1646,55 @@ sr_free_int_install_mods(sr_int_install_mod_t *new_mods, uint32_t new_mod_count)
+     free(new_mods);
  }
  
 +API int
@@ -146,7 +144,7 @@ index 2eac2858..ce2fa822 100644
  sr_install_module(sr_conn_ctx_t *conn, const char *schema_path, const char *search_dirs, const char **features)
  {
 diff --git a/src/sysrepo.h b/src/sysrepo.h
-index 0dcaedc4..46c8317e 100644
+index 8a6a70b8..41c9e52b 100644
 --- a/src/sysrepo.h
 +++ b/src/sysrepo.h
 @@ -34,7 +34,6 @@ extern "C" {
@@ -157,7 +155,7 @@ index 0dcaedc4..46c8317e 100644
  /**
   * @defgroup log_api Logging API
   * @{
-@@ -706,6 +705,15 @@ int sr_get_module_info(sr_conn_ctx_t *conn, sr_data_t **sysrepo_data);
+@@ -708,6 +707,15 @@ int sr_get_module_info(sr_conn_ctx_t *conn, sr_data_t **sysrepo_data);
   */
  int sr_is_module_internal(const struct lys_module *ly_mod);
  
@@ -174,5 +172,5 @@ index 0dcaedc4..46c8317e 100644
  
  ////////////////////////////////////////////////////////////////////////////////
 -- 
-2.34.1
+2.43.0
 

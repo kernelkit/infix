@@ -1,19 +1,18 @@
-From 89fdf6691229f8f0978ca9bb13fa0143e0e79dbd Mon Sep 17 00:00:00 2001
+From e518c0ee5b4a328c5cbc7e7f25d329d094183798 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Mattias=20Walstr=C3=B6m?= <lazzer@gmail.com>
 Date: Wed, 8 May 2024 17:00:50 +0200
-Subject: [PATCH 3/9] Allow to copy from factory default
+Subject: [PATCH 3/7] Allow to copy from factory default
 Organization: Addiva Elektronik
 
-Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
 ---
  src/sysrepo.c | 2 +-
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/src/sysrepo.c b/src/sysrepo.c
-index 35a1fd8c..c15855e9 100644
+index 3f08a627..3b11c0b8 100644
 --- a/src/sysrepo.c
 +++ b/src/sysrepo.c
-@@ -4146,7 +4146,7 @@ sr_copy_config(sr_session_ctx_t *session, const char *module_name, sr_datastore_
+@@ -4161,7 +4161,7 @@ sr_copy_config(sr_session_ctx_t *session, const char *module_name, sr_datastore_
      struct sr_mod_info_s mod_info;
      const struct lys_module *ly_mod = NULL;
  

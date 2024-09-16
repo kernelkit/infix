@@ -1,7 +1,7 @@
-From 13d54101eb2c3506237cebc5be99edef2ad669cd Mon Sep 17 00:00:00 2001
+From be7579a3a787d7089acbda7536a21a2a9edc487d Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Fri, 23 Aug 2024 12:22:06 +0200
-Subject: [PATCH 9/9] On error in sr_shmsub_listen_thread(), exit process
+Subject: [PATCH 7/7] On error in sr_shmsub_listen_thread(), exit process
 Organization: Addiva Elektronik
 
 If processing callback events in, e.g., sysrepo-plugind, make sure to
@@ -14,10 +14,10 @@ Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
  1 file changed, 3 insertions(+)
 
 diff --git a/src/shm_sub.c b/src/shm_sub.c
-index 363883ab..a1e68903 100644
+index 4c59cbbf..3d703cac 100644
 --- a/src/shm_sub.c
 +++ b/src/shm_sub.c
-@@ -4918,6 +4918,7 @@ sr_shmsub_listen_thread(void *arg)
+@@ -4825,6 +4825,7 @@ sr_shmsub_listen_thread(void *arg)
               * another event is generated, our event pipe will not get notified */
              continue;
          } else if (ret) {
@@ -25,7 +25,7 @@ index 363883ab..a1e68903 100644
              goto error;
          }
  
-@@ -4958,5 +4959,7 @@ error:
+@@ -4865,5 +4866,7 @@ error:
      /* free our own resources */
      ATOMIC_STORE_RELAXED(subscr->thread_running, 0);
      pthread_detach(pthread_self());
