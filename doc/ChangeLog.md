@@ -48,6 +48,8 @@ All notable changes to the project are documented in this file.
   regression introduced in v24.06.0
 - Fix #635: OSPF: all router neighbors reported as neighbor on every
   interface
+- Fix #638: Disabling IPv4LL (autoconf) on an interface does not clean
+  up 169.254/16 addresses
 - Spellcheck path to `/var/lib/containers` when unpacking OCI archives
   on container upgrade
 - The timeout before giving up on loading the `startup-config` at boot
