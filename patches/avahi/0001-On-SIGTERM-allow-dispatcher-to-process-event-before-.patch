@@ -1,0 +1,46 @@
+From 74ec0f8335f811e4f5becc8bbea4a52af4d3e749 Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Tue, 17 Sep 2024 04:08:12 +0200
+Subject: [PATCH] On SIGTERM, allow dispatcher to process event before exiting
+Organization: Addiva Elektronik
+
+On non-systemd systems, like those managed by Finit, when the main PID
+used by avahi-autoipd call the dispatcher on reception of SIGTERM, it
+may not have time to complete the callout because the main PID exits
+almost immediately.
+
+Even though the dispatcher run as a separate process, when the main PID
+is collected by FInit it will unconditionally reap lingering processes
+in the same process group.
+
+Add a small enough sleep to allow the dispatcher to complete the call to
+/etc/avahi/avahi-autoipd.action before we exit the main PID.  A better
+patch would be to add support for the dispatcher to messages the main
+PID when it has run the script, but there does not seem to be any such
+bidirectional communication available today.
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ avahi-autoipd/main.c | 5 ++++-
+ 1 file changed, 4 insertions(+), 1 deletion(-)
+
+diff --git a/avahi-autoipd/main.c b/avahi-autoipd/main.c
+index 96c9188..8f7a7e5 100644
+--- a/avahi-autoipd/main.c
++++ b/avahi-autoipd/main.c
+@@ -1404,8 +1404,11 @@ static int loop(int iface, uint32_t addr) {
+ 
+ fail:
+ 
+-    if (state == STATE_RUNNING || state == STATE_ANNOUNCING)
++    if (state == STATE_RUNNING || state == STATE_ANNOUNCING) {
+         do_callout(dispatcher, CALLOUT_STOP, iface, addr);
++        /* Don't leave yet, allow dispatcher to process event */
++        sleep(2);
++    }
+ 
+     avahi_free(out_packet);
+     avahi_free(in_packet);
+-- 
+2.43.0
+
