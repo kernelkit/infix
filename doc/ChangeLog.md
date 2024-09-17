@@ -8,11 +8,21 @@ All notable changes to the project are documented in this file.
 -------------------------
 
 ### Changes
+- Upgrade Buildroot to 2024.02.6 (LTS)
 - Upgrade Linux kernel to 6.6.52 (LTS)
+- Upgrade libyang to 3.4.2
+- Upgrade sysrepo to 2.11.7
+- Upgrade netopeer2 (NETCONF) to 2.2.31
 - Updated `infix-routing.yang` to declare deviations for unsupported
   OSPF RPCs and Notifications in `ietf-ospf.yang`
 - The CLI admin-exec command `show dns` now also shows any configured
   name servers, not just ones acquired via DHCP.  Issue #510
+- Add support for IPv4 (autoconf) `request-address`.  This instructs the
+  ZeroConf client to start with the requested address.  If this is not
+  successful the client falls back to its default behavior.  Issue #628
+- Major speedup (10x) in operational data, in particular when querying
+  interface status.  Very noticeable in the CLI `show interfaces`
+  command on devices with large port counts.  Issue #651
 - Silence `yanger` log warnings for failing `mctl` command.  Caused
   by `mctl` reporting no multicast filtering enabled on bridge
 
