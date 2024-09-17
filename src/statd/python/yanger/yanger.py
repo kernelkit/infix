@@ -137,8 +137,9 @@ def run_json_cmd(cmd, testfile, default=None, check=True):
             return default
         raise
     except json.JSONDecodeError as err:
-        logger.error(f"failed parsing JSON output of command: {' '.join(cmd)}"
-                     f", error: {err}")
+        if check is True:
+            logger.error("failed parsing JSON output of command: "
+                         f"{' '.join(cmd)}, error: {err}")
         if default is not None:
             return default
         raise
