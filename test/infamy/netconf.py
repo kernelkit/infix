@@ -287,8 +287,8 @@ class Device(Transport):
     def get_data(self, xpath=None, parse=True):
         """RPC <get-data> to fetch operational data"""
 
-        if parse==False:
-            return self._get_data(xpath,parse)
+        if parse is False:
+            return self._get_data(xpath, parse)
 
         data = self._get_data(xpath)
         if not data:
@@ -391,28 +391,36 @@ class Device(Transport):
     def get_iface(self, name):
         """Fetch target dict for iface and extract param from JSON"""
         content = self.get_data(iface.get_iface_xpath(name))
-        interface=content.get("interfaces", {}).get("interface", None)
+        interface = content.get("interfaces", {}).get("interface", None)
 
         if interface is None:
             return None
 
-        # Restconf (rousette) address by id and netconf (netopper2) address by name
+        # Restconf (rousette) address by id, otherwise (netopper2) by name
         return interface[name]
 
     def delete_xpath(self, xpath):
         # Split out the model and the container from xpath'
         pattern = r"^/(?P<module>[^:]+):(?P<path>[^/]+)"
         match = re.search(pattern, xpath)
+        if not match:
+            raise ValueError(f"Failed parsing xpath:{xpath}")
+
         module = match.group('module')
         modpath = f"/{match.group('module')}:{match.group('path')}"
 
         old = self.get_config_dict(modpath)
         new = copy.deepcopy(old)
+
         libyang.xpath_del(new, xpath)
+
         mod = self.ly.get_module(module)
         oldd = mod.parse_data_dict(old, no_state=True)
         newd = mod.parse_data_dict(new, no_state=True)
+
         lyd = oldd.diff(newd)
+        if lyd is None:
+            raise ValueError(f"Failed generating diff for xpath:{xpath}")
 
         return self.put_config(lyd.print_mem("xml", with_siblings=True,
                                              pretty=False))
