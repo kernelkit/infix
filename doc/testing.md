@@ -281,17 +281,18 @@ or, when running interactively:
     $ make test-sh
     09:08:17 infamy0:test # ./9pm/9pm.py -o"--transport=restconf" case/ietf_system/hostname.py
 
+
 ### Test specification
 
 The test specification is automaticly generated from the test cases,
-this put some constaints on the test cases:
+this puts some constraints on the test cases:
 
 All test cases must be written so that it can be understandable with
-only the steps so the result can be reproduced
-manually. For example: Intead of `set ip address on
-the interface` it should be more human readable, for example:
+only the steps so the result can be reproduced manually.  E.g., instead
+of `set ip address on the interface` it should be more human readable,
+for example:
 
-```
+```python
 test.step("Set IPv4 address on the interface dut:cross")
 test.step("Verify the IP address is set on dut:cross")
 
@@ -303,9 +304,11 @@ Each test case must begin with the test name followed by a empty line and
 the description of the test. For example:
 
 ```
+"""
 Set hostname
 
 Verify that it it possible to change hostname
+"""
 ```
 
 The test specifaction can be genererated with:
