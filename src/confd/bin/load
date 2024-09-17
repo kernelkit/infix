@@ -28,12 +28,12 @@ perms()
 
 note()
 {
-    logger -s -I $$ -p user.notice -t load "$*"
+    logger -I $$ -p user.notice -t load "$*"
 }
 
 err()
 {
-    logger -s -I $$ -p user.error -t load "$*"
+    logger -I $$ -p user.error -t load "$*"
 }
 
 
@@ -60,12 +60,12 @@ config=$1
 
 if [ -f "/mnt/aux/test-mode" ] && [ "$config" = "startup-config" ]; then
 
-	if [ -f "/mnt/aux/test-override-startup" ]; then
-		rm -f "/mnt/aux/test-override-startup"
-	else
+    if [ -f "/mnt/aux/test-override-startup" ]; then
+	rm -f "/mnt/aux/test-override-startup"
+    else
     	note "Test mode detected, switching to test-config"
     	config="test-config"
-	fi
+    fi
 fi
 
 if [ -f "$config" ]; then
