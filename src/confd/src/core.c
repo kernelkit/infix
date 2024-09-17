@@ -16,6 +16,10 @@ uint32_t core_hook_prio(void)
 int core_startup_save(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
 		      const char *xpath, sr_event_t event, unsigned request_id, void *priv)
 {
+	/* skip in bootstrap, triggered by load script to initialize startup datastore */
+	if (systemf("runlevel >/dev/null 2>&1"))
+		return SR_ERR_OK;
+
 	if (systemf("sysrepocfg -X/cfg/startup-config.cfg -d startup -f json"))
 		return SR_ERR_SYS;
 

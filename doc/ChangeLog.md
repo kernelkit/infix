@@ -46,6 +46,8 @@ All notable changes to the project are documented in this file.
   bridges without multicast snooping
 - Fix #623: CLI command `container upgrade NAME` does not work,
   regression introduced in v24.06.0
+- Fix #625: initialize sysrepo startup datastore at boot.  Improves
+  usability when working directly against the sysrepo datastores
 - Fix #635: OSPF: all router neighbors reported as neighbor on every
   interface
 - Fix #638: Disabling IPv4LL (autoconf) on an interface does not clean
