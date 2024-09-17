@@ -1,10 +1,10 @@
 /* SPDX-License-Identifier: BSD-3-Clause */
 
 #include <srx/common.h>
-
 #include "core.h"
 
 struct confd confd;
+
 
 uint32_t core_hook_prio(void)
 {
@@ -177,10 +177,10 @@ err:
 
 void sr_plugin_cleanup_cb(sr_session_ctx_t *session, void *priv)
 {
-	struct confd *confd = (struct confd *)priv;
+	struct confd *ptr = (struct confd *)priv;
 
-	sr_unsubscribe(confd->sub);
-	sr_unsubscribe(confd->fsub);
-	json_decref(confd->root);
+	sr_unsubscribe(ptr->sub);
+	sr_unsubscribe(ptr->fsub);
+	json_decref(ptr->root);
 	closelog();
 }

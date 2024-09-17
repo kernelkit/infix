@@ -100,11 +100,11 @@ int      core_startup_save (sr_session_ctx_t *, uint32_t, const char *, const ch
 static inline int register_change(sr_session_ctx_t *session, const char *module, const char *xpath,
 	int flags, sr_module_change_cb cb, void *arg, sr_subscription_ctx_t **sub)
 {
-	struct confd *confd = (struct confd *)arg;
+	struct confd *ptr = (struct confd *)arg;
 	int rc;
 
 	if (!flags) {
-		sr_module_change_subscribe(confd->session, module, xpath, core_pre_hook, NULL,
+		sr_module_change_subscribe(ptr->session, module, xpath, core_pre_hook, NULL,
 				0, SR_SUBSCR_PASSIVE, sub);
 	}
 
@@ -123,9 +123,9 @@ static inline int register_change(sr_session_ctx_t *session, const char *module,
 	 * the startup-save hook for running -> startup copying.
 	 */
 	if (!flags) {
-		sr_module_change_subscribe(confd->session, module, xpath, core_post_hook, NULL,
+		sr_module_change_subscribe(ptr->session, module, xpath, core_post_hook, NULL,
 				core_hook_prio(), SR_SUBSCR_PASSIVE, sub);
-		sr_module_change_subscribe(confd->startup, module, xpath, core_startup_save, NULL,
+		sr_module_change_subscribe(ptr->startup, module, xpath, core_startup_save, NULL,
 				core_hook_prio(), SR_SUBSCR_PASSIVE, sub);
 	}
 
