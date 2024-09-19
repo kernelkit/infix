@@ -287,8 +287,31 @@
 		nvmem-cell-names = "mac-address"; \
 		phy-mode = "10gbase-r"; \
 		managed = "in-band-status"; \
-		sfp = <&_sfp>; \
+		sfp = <_sfp>; \
 		SWP_LED("sfp"); \
+	}
+
+#define XSWCPU(_n, _eth) \
+	port@_n { \
+		reg = <0x ## _n>; \
+		label = "cpu"; \
+		ethernet = <_eth>; \
+		phy-mode = "10gbase-r"; \
+		fixed-link { \
+			speed = <10000>; \
+			full-duplex; \
+		}; \
+	}
+
+#define XSWLINK(_n, _link) \
+	port@_n { \
+		reg = <0x ## _n>; \
+		link = <_link>; \
+		phy-mode = "10gbase-r"; \
+		fixed-link { \
+			speed = <10000>; \
+			full-duplex; \
+		}; \
 	}
 
 #define GSWP(_n, _label, _mac_offs, _phy) \
@@ -332,44 +355,6 @@
 			#address-cells = <1>;
 			#size-cells = <0>;
 
-			port@9 {
-				reg = <0x9>;
-				label = "cpu";
-				ethernet = <&cp0_eth0>;
-				phy-mode = "10gbase-r";
-				fixed-link {
-					speed = <10000>;
-					full-duplex;
-				};
-			};
-
-			sw3p10: port@a {
-				reg = <0xa>;
-				link = <&sw2p10 &sw1p0>;
-				phy-mode = "10gbase-r";
-				fixed-link {
-					speed = <10000>;
-					full-duplex;
-				};
-			};
-
-			/* Can't use XSWP macro as port 0 does not have
-			 * any LEDs attached to it. LEDs for port 10 seem
-			 * to be wired to the corresponding SFP cage. Maybe
-			 * we can apply a static workaround by binding port
-			 * 10's green LED to "Special LED 1", so we can at
-			 * least see link/act.
-			 */
-			port@0 {
-				reg = <0>;
-				label = "e16";
-				nvmem-cells = <&base_mac 16>;
-				nvmem-cell-names = "mac-address";
-				phy-mode = "10gbase-r";
-				managed = "in-band-status";
-				sfp = <&sfp3>;
-			};
-
 			GSWP(1,  "e22", 22, sw3phy1);
 			GSWP(2,  "e21", 21, sw3phy2);
 			GSWP(3,  "e24", 24, sw3phy3);
@@ -412,27 +397,6 @@
 			#address-cells = <1>;
 			#size-cells = <0>;
 
-			sw2p0: port@0 {
-				reg = <0x0>;
-				link = <&sw1p0>;
-				phy-mode = "10gbase-r";
-				fixed-link {
-					speed = <10000>;
-					full-duplex;
-				};
-			};
-
-			sw2p10: port@a {
-				reg = <0xa>;
-				link = <&sw3p10>;
-				phy-mode = "10gbase-r";
-				fixed-link {
-					speed = <10000>;
-					full-duplex;
-				};
-			};
-
-
 			GSWP(1, "e10", 10, sw2phy1);
 			GSWP(2,  "e9",  9, sw2phy2);
 			GSWP(3, "e12", 12, sw2phy3);
@@ -441,7 +405,6 @@
 			GSWP(6, "e17", 17, sw2phy6);
 			GSWP(7, "e20", 20, sw2phy7);
 			GSWP(8, "e19", 19, sw2phy8);
-			XSWP(9, "e15", 15, sfp2);
 		};
 
 		mdio {
@@ -476,16 +439,6 @@
 			#address-cells = <1>;
 			#size-cells = <0>;
 
-			sw1p0: port@0 {
-				reg = <0x0>;
-				link = <&sw2p0 &sw3p10>;
-				phy-mode = "10gbase-r";
-				fixed-link {
-					speed = <10000>;
-					full-duplex;
-				};
-			};
-
 			GSWP(1,  "e2",  2, sw1phy1);
 			GSWP(2,  "e1",  1, sw1phy2);
 			GSWP(3,  "e4",  4, sw1phy3);
@@ -494,8 +447,6 @@
 			GSWP(6,  "e5",  5, sw1phy6);
 			GSWP(7,  "e8",  8, sw1phy7);
 			GSWP(8,  "e7",  7, sw1phy8);
-			XSWP(9, "e14", 14, sfp1);
-			XSWP(a, "e13", 13, sfp0);
 		};
 
 		mdio {
