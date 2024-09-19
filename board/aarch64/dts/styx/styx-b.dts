@@ -1,0 +1,39 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright (C) 2021 Marvell International Ltd.
+ * Copyright (C) 2024 Addiva Elektronik AB
+ *
+ * Device tree for Styx board
+ */
+
+#include "styx.dtsi"
+/ {
+	model = "Styx";
+	compatible = "styx,styx-b",
+		"marvell,armada-ap807-quad",
+		"marvell,armada-ap807";
+};
+
+&sw3 {
+	ports {
+		XSWCPU(0, &cp0_eth0);
+		sw3p9: XSWLINK(9, &sw2p0 &sw1p0);
+		XSWP(a, "e16", 16, &sfp3);
+	};
+};
+
+&sw2 {
+	ports {
+		sw2p0:  XSWLINK(0, &sw3p9);
+		XSWP(9, "e15", 15, &sfp2);
+		sw2p10: XSWLINK(a, &sw1p0);
+	};
+};
+
+&sw1 {
+	ports {
+		sw1p0: XSWLINK(0, &sw2p10 &sw3p9);
+		XSWP(9, "e14", 14, &sfp1);
+		XSWP(a, "e13", 13, &sfp0);
+	};
+};
