@@ -80,7 +80,7 @@ class Route:
     def __init__(self,data,ip):
         self.data = data
         self.prefix = data.get(f'ietf-{ip}-unicast-routing:destination-prefix', '')
-        self.protocol = data.get('source-protocol','')[14:]
+        self.protocol = data.get('source-protocol', '').split(':')[-1]
         self.pref = data.get('route-preference','')
         self.next_hop = []
         next_hop_list=get_json_data(None, self.data, 'next-hop', 'next-hop-list')
@@ -105,10 +105,22 @@ class Route:
                 self.next_hop.append(special)
             else:
                 self.next_hop.append("unspecified")
+
+    def get_distance_and_metric(self):
+        if isinstance(self.pref, int):
+            distance = self.pref
+            metric = 0
+        else:
+            distance, metric = 0, 0
+
+        return distance, metric
+
     def print(self):
-        row  = f"{self.prefix:<{PadRoute.prefix}}"
+        distance, metric = self.get_distance_and_metric()
+        pref = f"{distance}/{metric}"
+        row = f"{self.prefix:<{PadRoute.prefix}}"
         row += f"{self.next_hop[0]:<{PadRoute.next_hop}}"
-        row += f"{self.pref:>{PadRoute.pref}}  "
+        row += f"{pref:>{PadRoute.pref}}  "
         row += f"{self.protocol:<{PadRoute.protocol}}"
         print(row)
         for nh in self.next_hop[1:]:
