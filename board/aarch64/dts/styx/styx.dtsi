@@ -321,7 +321,7 @@
 		nvmem-cells = <&base_mac _mac_offs>; \
 		nvmem-cell-names = "mac-address"; \
 		phy-mode = "gmii"; \
-		phy-handle = <&_phy>; \
+		phy-handle = <_phy>; \
 		SWP_LED("tp"); \
 	}
 
@@ -355,14 +355,14 @@
 			#address-cells = <1>;
 			#size-cells = <0>;
 
-			GSWP(1,  "e22", 22, sw3phy1);
-			GSWP(2,  "e21", 21, sw3phy2);
-			GSWP(3,  "e24", 24, sw3phy3);
-			GSWP(4,  "e23", 23, sw3phy4);
-			GSWP(5,  "e26", 26, sw3phy5);
-			GSWP(6,  "e25", 25, sw3phy6);
-			GSWP(7,  "e28", 28, sw3phy7);
-			GSWP(8,  "e27", 27, sw3phy8);
+			GSWP(1,  "e22", 22, &sw3phy1);
+			GSWP(2,  "e21", 21, &sw3phy2);
+			GSWP(3,  "e24", 24, &sw3phy3);
+			GSWP(4,  "e23", 23, &sw3phy4);
+			GSWP(5,  "e26", 26, &sw3phy5);
+			GSWP(6,  "e25", 25, &sw3phy6);
+			GSWP(7,  "e28", 28, &sw3phy7);
+			GSWP(8,  "e27", 27, &sw3phy8);
 		};
 
 		mdio {
@@ -397,14 +397,14 @@
 			#address-cells = <1>;
 			#size-cells = <0>;
 
-			GSWP(1, "e10", 10, sw2phy1);
-			GSWP(2,  "e9",  9, sw2phy2);
-			GSWP(3, "e12", 12, sw2phy3);
-			GSWP(4, "e11", 11, sw2phy4);
-			GSWP(5, "e18", 18, sw2phy5);
-			GSWP(6, "e17", 17, sw2phy6);
-			GSWP(7, "e20", 20, sw2phy7);
-			GSWP(8, "e19", 19, sw2phy8);
+			GSWP(1, "e10", 10, &sw2phy1);
+			GSWP(2,  "e9",  9, &sw2phy2);
+			GSWP(3, "e12", 12, &sw2phy3);
+			GSWP(4, "e11", 11, &sw2phy4);
+			GSWP(5, "e18", 18, &sw2phy5);
+			GSWP(6, "e17", 17, &sw2phy6);
+			GSWP(7, "e20", 20, &sw2phy7);
+			GSWP(8, "e19", 19, &sw2phy8);
 		};
 
 		mdio {
@@ -439,14 +439,14 @@
 			#address-cells = <1>;
 			#size-cells = <0>;
 
-			GSWP(1,  "e2",  2, sw1phy1);
-			GSWP(2,  "e1",  1, sw1phy2);
-			GSWP(3,  "e4",  4, sw1phy3);
-			GSWP(4,  "e3",  3, sw1phy4);
-			GSWP(5,  "e6",  6, sw1phy5);
-			GSWP(6,  "e5",  5, sw1phy6);
-			GSWP(7,  "e8",  8, sw1phy7);
-			GSWP(8,  "e7",  7, sw1phy8);
+			GSWP(1,  "e2",  2, &sw1phy1);
+			GSWP(2,  "e1",  1, &sw1phy2);
+			GSWP(3,  "e4",  4, &sw1phy3);
+			GSWP(4,  "e3",  3, &sw1phy4);
+			GSWP(5,  "e6",  6, &sw1phy5);
+			GSWP(6,  "e5",  5, &sw1phy6);
+			GSWP(7,  "e8",  8, &sw1phy7);
+			GSWP(8,  "e7",  7, &sw1phy8);
 		};
 
 		mdio {
