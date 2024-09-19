@@ -4,11 +4,13 @@ import argparse
 import sys
 import re
 
+
 class Pad:
     iface = 16
     proto = 11
     state = 12
     data = 41
+
 
 class PadMdb:
     bridge = 7
@@ -16,11 +18,13 @@ class PadMdb:
     group = 20
     ports = 45
 
+
 class PadRoute:
     prefix = 30
     protocol = 10
     next_hop = 30
     pref = 8
+
 
 class PadSoftware:
     name = 10
@@ -34,6 +38,7 @@ class PadUsbPort:
     title = 30
     name = 20
     state = 10
+
 
 class Decore():
     @staticmethod
@@ -60,6 +65,7 @@ class Decore():
     def underline(txt):
         return Decore.decorate("4", txt, "24")
 
+
 def get_json_data(default, indata, *args):
     data = indata
     for arg in args:
@@ -76,19 +82,20 @@ def remove_yang_prefix(key):
         return parts[1]
     return key
 
+
 class Route:
-    def __init__(self,data,ip):
+    def __init__(self, data, ip):
         self.data = data
         self.prefix = data.get(f'ietf-{ip}-unicast-routing:destination-prefix', '')
         self.protocol = data.get('source-protocol', '').split(':')[-1]
-        self.pref = data.get('route-preference','')
+        self.pref = data.get('route-preference', '')
         self.next_hop = []
-        next_hop_list=get_json_data(None, self.data, 'next-hop', 'next-hop-list')
+        next_hop_list = get_json_data(None, self.data, 'next-hop', 'next-hop-list')
         if next_hop_list:
             for nh in next_hop_list["next-hop"]:
-                if(nh.get(f"ietf-{ip}-unicast-routing:address")):
+                if nh.get(f"ietf-{ip}-unicast-routing:address"):
                     self.next_hop.append(nh[f"ietf-{ip}-unicast-routing:address"])
-                elif(nh.get("outgoing-interface")):
+                elif nh.get("outgoing-interface"):
                     self.next_hop.append(nh["outgoing-interface"])
                 else:
                     self.next_hop.append("unspecified")
@@ -124,9 +131,10 @@ class Route:
         row += f"{self.protocol:<{PadRoute.protocol}}"
         print(row)
         for nh in self.next_hop[1:]:
-            row  = f"{'':<{PadRoute.prefix}}"
+            row = f"{'':<{PadRoute.prefix}}"
             row += f"{nh:<{PadRoute.next_hop}}"
             print(row)
+
 
 class Software:
     """Software bundle class """
@@ -443,6 +451,7 @@ class Iface:
                 row += f"{ports}"
                 print(row)
 
+
 def find_iface(_ifaces, name):
     for _iface in [Iface(data) for data in _ifaces]:
         if _iface.name == name:
@@ -450,14 +459,18 @@ def find_iface(_ifaces, name):
 
     return False
 
+
 def version_sort(iface):
-    return [int(x) if x.isdigit() else x for x in re.split(r'(\d+)', iface['name'])]
+    return [int(x) if x.isdigit() else x for x in re.split(r'(\d+)',
+                                                           iface['name'])]
+
 
 def print_interface(iface):
     iface.pr_name()
     iface.pr_proto_eth()
     iface.pr_proto_ipv4()
     iface.pr_proto_ipv6()
+
 
 def pr_interface_list(json):
     hdr = (f"{'INTERFACE':<{Pad.iface}}"
@@ -467,8 +480,8 @@ def pr_interface_list(json):
 
     print(Decore.invert(hdr))
 
-    ifaces = sorted(json["ietf-interfaces:interfaces"]["interface"], key=version_sort)
-
+    ifaces = sorted(json["ietf-interfaces:interfaces"]["interface"],
+                    key=version_sort)
     iface = find_iface(ifaces, "lo")
     if iface:
         print_interface(iface)
@@ -496,6 +509,7 @@ def pr_interface_list(json):
             continue
         print_interface(iface)
 
+
 def show_interfaces(json, name):
     if name:
         if not json.get("ietf-interfaces:interfaces"):
@@ -509,16 +523,19 @@ def show_interfaces(json, name):
             iface.pr_iface()
     else:
         if not json.get("ietf-interfaces:interfaces"):
-            print(f"Error, top level \"ietf-interfaces:interfaces\" missing")
+            print("Error, top level \"ietf-interfaces:interfaces\" missing")
             sys.exit(1)
         pr_interface_list(json)
+
 
 def show_bridge_mdb(json):
     header_printed = False
     if not json.get("ietf-interfaces:interfaces"):
-        print(f"Error, top level \"ietf-interfaces:interface\" missing")
+        print("Error, top level \"ietf-interfaces:interface\" missing")
         sys.exit(1)
-    ifaces = sorted(json["ietf-interfaces:interfaces"]["interface"], key=version_sort)
+
+    ifaces = sorted(json["ietf-interfaces:interfaces"]["interface"],
+                    key=version_sort)
     for iface in [Iface(data) for data in ifaces]:
         if iface.type != "infix-if-type:bridge":
             continue
@@ -532,24 +549,28 @@ def show_bridge_mdb(json):
         iface.pr_mdb(iface.name)
         iface.pr_vlans_mdb(iface.name)
 
+
 def show_routing_table(json, ip):
     if not json.get("ietf-routing:routing"):
-        print(f"Error, top level \"ietf-routing:routing\" missing")
+        print("Error, top level \"ietf-routing:routing\" missing")
         sys.exit(1)
+
     hdr = (f"{'PREFIX':<{PadRoute.prefix}}"
            f"{'NEXT-HOP':<{PadRoute.next_hop}}"
            f"{'PREF':>{PadRoute.pref}}  "
            f"{'PROTOCOL':<{PadRoute.protocol}}")
 
     print(Decore.invert(hdr))
-    for rib in  get_json_data({}, json, 'ietf-routing:routing','ribs', 'rib'):
+    for rib in get_json_data({}, json, 'ietf-routing:routing', 'ribs', 'rib'):
         if rib["name"] != ip:
-            continue;
+            continue
+
         routes = get_json_data(None, rib, "routes", "route")
         if routes:
             for r in routes:
                 route = Route(r, ip)
                 route.print()
+
 
 def find_slot(_slots, name):
     for _slot in [Software(data) for data in _slots]:
@@ -557,6 +578,7 @@ def find_slot(_slots, name):
             return _slot
 
     return False
+
 
 def show_software(json, name):
     if not json.get("ietf-system:system-state", "infix-system:software"):
