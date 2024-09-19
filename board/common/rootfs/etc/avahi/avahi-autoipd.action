@@ -7,6 +7,10 @@
 #          STOP:     The daemon is terminating
 #   $2 interface name
 #   $3 IP adddress
+#
+# For details on the distance adjustment below, please see the following
+# section in the Frr documentation on distance + prefence => to metric.
+# https://docs.frrouting.org/en/stable-8.0/zebra.html#administrative-distance
 
 PATH="$PATH:/usr/bin:/usr/sbin:/bin:/sbin"
 
@@ -15,9 +19,14 @@ log()
     logger -I $$ -t zeroconf -p user.notice "$*"
 }
 
-# Use a different metric for each interface, so that we can set
-# identical routes to multiple interfaces.
-METRIC=$((1000 + `cat "/sys/class/net/$2/ifindex" 2>/dev/null || echo 0`))
+# Use a different metric for each interface as tie breaker, to ensure we
+# can set identical routes to multiple interfaces.
+IFINDEX=$(cat "/sys/class/net/$2/ifindex" 2>/dev/null || echo 0)
+
+# Distance adjustment to ensure that static routes set by Zebra and any
+# routes learned from DHCP take precedence over these interface routes.
+# A distance of 255 ensures these routes are never redistributed.
+METRIC=$(((255 << 24) + 1000 + IFINDEX))
 
 case "$1" in
     BIND)
