@@ -8,6 +8,7 @@ graph "quad" {
 	edge [color="cornflowerblue", penwidth="2"];
 
 	qn_template="infix-bios-x86_64";
+	qn_image="infix-x86_64-disk-test.img"
 	qn_oui="00:a0:85";
 	qn_append="quiet";
 

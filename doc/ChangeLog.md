@@ -24,8 +24,12 @@ All notable changes to the project are documented in this file.
   authorized users, like `admin`, to not being able to query status
   of OSPF or BFD.  Workaround by using the UNIX shell `sudo vtysh`.
   Regression introduced in v24.08.0
+- Fix #603: regression in GNS3 image, starts in test mode by default. 
+  Introduced in v24.08.
 - Fix #613: CLI regression in tab completion of container commands,
   e.g., `container shell <TAB>`.  Regression introduced in v24.08.0
+- Fix #616: Silent failure when selecting bash as login shell for
+  non-admin user, this silent lock has been removed.
 - Fix #618: CLI command `show interfaces` does not show bridges and
   bridge ports, regression introduced in v24.08.0 -- only affects
   bridges without multicast snooping
@@ -33,8 +37,6 @@ All notable changes to the project are documented in this file.
   regression introduced in v24.06.0
 - Spellcheck path to `/var/lib/containers` when unpacking OCI archives
   on container upgrade
-- Fix #616: Silent failure when selecting bash as login shell for
-  non-admin user, this silent lock has been removed.
 - The timeout before giving up on loading the `startup-config` at boot
   is now 1 minute, just like operations via other front-ends (NETCONF
   and RESTCONF). This was previously (incorrectly) set to 10 seconds.
