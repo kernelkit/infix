@@ -70,6 +70,14 @@ usage: test/env [-cDhiKr] -f <IMAGE> -q <QENETH-DIR> <COMMAND> [<ARGS>...]
 EOF
 }
 
+get_base_img()
+{
+    local files="$1"
+    local base_img_file
+    base_img_file=$(echo "$files" | tr ' ' '\n' | grep -- '-disk.img$')
+    echo "$envdir/qeneth/$(basename "$base_img_file")"
+}
+
 start_topology()
 {
     qenethdir="$1"
@@ -86,6 +94,9 @@ start_topology()
 	file=$(readlink -f "$f")
 	ln -sf "$file" "$envdir/qeneth/$filename"
     done
+
+    base_img=$(get_base_img "$files")
+    $testdir/inject-test-mode -b "$base_img" -o "${base_img%-disk.img}-disk-test.img"
 
     (cd "$envdir/qeneth/" && $qeneth generate && $qeneth start)
     INFAMY_ARGS="$INFAMY_ARGS $envdir/qeneth/topology.dot"
