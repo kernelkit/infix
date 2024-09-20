@@ -189,18 +189,17 @@ def config_target2(target, link):
     })
 
 with infamy.Test() as test:
-    with test.step("Initialize"):
+    with test.step("Configure targets"):
         env = infamy.Env()
         R1 = env.attach("R1", "mgmt")
         R2 = env.attach("R2", "mgmt")
 
-    with test.step("Configure targets"):
         _, R1data = env.ltop.xlate("R1", "data")
-        _, R2_to_R1 = env.ltop.xlate("R2", "R1")
-        _, R1_to_R2 = env.ltop.xlate("R1", "R2")
+        _, R2link = env.ltop.xlate("R2", "link")
+        _, R1link = env.ltop.xlate("R1", "link")
 
-        parallel(config_target1(R1, R1data, R1_to_R2),
-                 config_target2(R2, R2_to_R1))
+        parallel(config_target1(R1, R1data, R1link),
+                 config_target2(R2, R2link))
 
     with test.step("Wait for routes"):
         until(lambda: route.ipv4_route_exist(R1, "192.168.200.1/32"))
@@ -208,7 +207,7 @@ with infamy.Test() as test:
         until(lambda: route.ipv6_route_exist(R1, "2001:db8:3c4d:200::1/128"))
         until(lambda: route.ipv6_route_exist(R2, "::/0"))
 
-    _, hport0 = env.ltop.xlate("PC", "data1")
+    _, hport0 = env.ltop.xlate("PC", "data")
     with infamy.IsolatedMacVlan(hport0) as ns0:
         with test.step("Configure host addresses and routes"):
              ns0.addip("2001:db8:3c4d:10::2", prefix_length=64, proto="ipv6")
@@ -216,18 +215,18 @@ with infamy.Test() as test:
              ns0.addip("192.168.10.2")
              ns0.addroute("192.168.200.1/32", "192.168.10.1")
 
-        with test.step("Verify that dut2 is reachable from host over IPv4"):
+        with test.step("Verify that dut2 is reachable on 192.168.200.1 from PC:data"):
              ns0.must_reach("192.168.200.1")
 
-        with test.step("Verify that dut2 is reachable from host over IPv6"):
+        with test.step("Verify that R2 is reachable on 2001:db8:3c4d:200::1 from PC:data"):
              ns0.must_reach("2001:db8:3c4d:200::1")
 
-        with test.step("Remove static routes on dut1"):
+        with test.step("Remove all static routes from R1"):
             R1.delete_xpath("/ietf-routing:routing/control-plane-protocols")
             parallel(until(lambda: route.ipv4_route_exist(R1, "192.168.200.1/32") == False),
                      until(lambda: route.ipv6_route_exist(R1, "2001:db8:3c4d:200::1/128") == False))
 
-        with test.step("Verify that dut2 is no longer reachable"):
+        with test.step("Verify R2 is no longer reachable on either IPv4 or IPv6 from PC:data"):
             infamy.parallel(ns0.must_not_reach("192.168.200.1"),
                             ns0.must_not_reach("2001:db8:3c4d:200::1"))
 

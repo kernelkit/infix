@@ -20,12 +20,11 @@ image::topology.png[OSPF unnumbered interfaces topology]
 endif::testgroup[]
 endif::topdoc[]
 ==== Test sequence
-. Initialize
 . Configure targets
 . Wait for OSPF routes
 . Check interface type
-. Test passive interface
-. Test connectivity
+. Verify there are no OSPF HELLO packets on PC:data
+. Test connectivity from PC:data to 192.168.200.1
 
 
 <<<

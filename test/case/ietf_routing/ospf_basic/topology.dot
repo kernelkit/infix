@@ -8,25 +8,25 @@ graph "2x2" {
 	edge [color="cornflowerblue", penwidth="2"];
 
 	PC [
-	    label="PC | { <mgmt1> mgmt1 | <data1> data1 | <mgmt2> mgmt2 | <data2> data2 }",
+	    label="PC | { <mgmt1> mgmt1 | <data> data | <mgmt2> mgmt2 }",
 	    pos="20,80!",
 	    kind="controller",
 	];
 
         R1 [
-	    label="{ <mgmt> mgmt | <data> data | <R2> R2} | R1 \n 192.168.100.1/32 \n(lo)",
+	    label="{ <mgmt> mgmt | <data> data | <link> link} | R1 \n 192.168.100.1/32 \n(lo)",
 	    pos="250,80!",
 
 	    kind="infix",
 	];
 	R2 [
-	    label="{ <R1> R1 |<mgmt> mgmt | <data> data  } | R2 \n 192.168.200.1/32 \n(lo)",
+	    label="{ <link> link | <mgmt> mgmt | <data> data  } | R2 \n 192.168.200.1/32 \n(lo)",
 	    pos="250,30!",
 
 	    kind="infix",
 	];
 	PC:mgmt1 -- R1:mgmt [kind=mgmt]
         PC:mgmt2 -- R2:mgmt [kind=mgmt]
-	PC:data1 -- R1:data [color="black", headlabel="192.168.10.1/24", taillabel="192.168.10.2/24", fontcolor="black"]
-	R1:R2 -- R2:R1 [headlabel="192.168.50.2/24", taillabel="192.168.50.1/24", labeldistance=1, fontcolor="blue"]
+	PC:data -- R1:data [color="black", headlabel="192.168.10.1/24", taillabel="192.168.10.2/24", fontcolor="black"]
+	R1:link -- R2:link [headlabel="192.168.50.2/24", taillabel="192.168.50.1/24", labeldistance=1, fontcolor="black", color="black"]
 }

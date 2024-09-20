@@ -16,14 +16,13 @@ image::topology.png[Static routing topology]
 endif::testgroup[]
 endif::topdoc[]
 ==== Test sequence
-. Initialize
 . Configure targets
 . Wait for routes
 . Configure host addresses and routes
-. Verify that dut2 is reachable from host over IPv4
-. Verify that dut2 is reachable from host over IPv6
-. Remove static routes on dut1
-. Verify that dut2 is no longer reachable
+. Verify that dut2 is reachable on 192.168.200.1 from PC:data
+. Verify that R2 is reachable on 2001:db8:3c4d:200::1 from PC:data
+. Remove all static routes from R1
+. Verify R2 is no longer reachable on either IPv4 or IPv6 from PC:data
 
 
 <<<

@@ -36,7 +36,7 @@ import infamy
 
 import infamy.route as route
 from infamy.util import until, parallel
-def config_target1(target, ring1, ring2, cross, link):
+def config_target1(target, ring1, ring2, cross):
     target.put_config_dict("ietf-interfaces", {
             "interfaces": {
                 "interface": [
@@ -61,28 +61,18 @@ def config_target1(target, ring1, ring2, cross, link):
                             }]}
                     },
                     {
-                        "name": link,
-                        "enabled": True,
-                        "ipv4": {
-                            "forwarding": True,
-                            "address": [{
-                            "ip": "192.168.1.1",
-                            "prefix-length": 24
-                            }, {
-                            "ip": "11.0.8.1",
-                            "prefix-length": 24
-                            }]
-                        }
-                    },
-                    {
                         "name": cross,
                         "enabled": True,
                         "ipv4": {
                             "forwarding": True,
                             "address": [{
-                            "ip": "10.0.13.1",
-                            "prefix-length": 30
-                            }]
+                                "ip": "10.0.13.1",
+                                "prefix-length": 30
+                            },
+                            {
+                                "ip": "10.0.0.1",
+                                "prefix-length": 32
+                           }]
                         }
                     },
                     {
@@ -90,9 +80,9 @@ def config_target1(target, ring1, ring2, cross, link):
                         "enabled": True,
                         "ipv4": {
                             "address": [{
-                            "ip": "10.0.0.1",
-                            "prefix-length": 32
-                            }]
+                                    "ip": "11.0.8.1",
+                                    "prefix-length": 24
+                                }]
                         }
                     }
                 ]
@@ -119,10 +109,6 @@ def config_target1(target, ring1, ring2, cross, link):
                                         "name": ring1,
                                         "hello-interval": 1,
                                         "enabled": True
-                                    },{
-                                        "name": link,
-                                        "passive": True,
-                                        "enabled": True
                                     }]
                                 }
                             },{
@@ -139,9 +125,6 @@ def config_target1(target, ring1, ring2, cross, link):
                                         "hello-interval": 1,
                                         "enabled": True,
                                         "cost": 2000
-                                    },{
-                                        "name": "lo",
-                                        "enabled": True
                                     }]
                                 }
                             },{
@@ -175,7 +158,7 @@ def config_target1(target, ring1, ring2, cross, link):
             }
         })
 
-def config_target2(target, ring1, ring2, cross, link):
+def config_target2(target, ring1, ring2, cross):
     target.put_config_dict("ietf-interfaces", {
             "interfaces": {
                 "interface": [
@@ -210,13 +193,12 @@ def config_target2(target, ring1, ring2, cross, link):
                             }]}
                     },
                     {
-                        "name": link,
+                        "name": "lo",
                         "enabled": True,
                         "ipv4": {
-                            "forwarding": True,
                             "address": [{
-                            "ip": "192.168.2.1",
-                            "prefix-length": 24
+                            "ip": "10.0.0.2",
+                            "prefix-length": 32
                             },{
                             "ip": "11.0.9.1",
                             "prefix-length": 24
@@ -239,16 +221,6 @@ def config_target2(target, ring1, ring2, cross, link):
                             "ip": "11.0.15.1",
                             "prefix-length": 24
                                 }]
-                        }
-                    },
-                    {
-                        "name": "lo",
-                        "enabled": True,
-                        "ipv4": {
-                            "address": [{
-                            "ip": "10.0.0.2",
-                            "prefix-length": 32
-                            }]
                         }
                     }
                 ]
@@ -282,10 +254,6 @@ def config_target2(target, ring1, ring2, cross, link):
                                     },{
                                         "name": "lo",
                                         "enabled": True
-                                    },{
-                                        "name": link,
-                                        "enabled": True,
-                                        "passive": True
                                     }]
                                 }
                             },
@@ -545,22 +513,21 @@ def disable_link(target, link):
     })
 
 with infamy.Test() as test:
-    with test.step("Initialize"):
+    with test.step("Configure targets"):
         env = infamy.Env()
         R1 = env.attach("R1", "mgmt")
         R2 = env.attach("R2", "mgmt")
         R3 = env.attach("R3", "mgmt")
         R4 = env.attach("R4", "mgmt")
 
-    with test.step("Configure targets"):
+
         _, R1ring1 = env.ltop.xlate("R1", "ring1")
         _, R1ring2 = env.ltop.xlate("R1", "ring2")
         _, R2ring1 = env.ltop.xlate("R2", "ring1")
         _, R2ring2 = env.ltop.xlate("R2", "ring2")
         _, R3ring2 = env.ltop.xlate("R3", "ring2")
         _, R4ring1 = env.ltop.xlate("R4", "ring1")
-        _, R1data  = env.ltop.xlate("R1", "data")
-        _, R2data  = env.ltop.xlate("R2", "data")
+
         _, R3data  = env.ltop.xlate("R3", "data")
         _, R4data  = env.ltop.xlate("R4", "data")
 
@@ -568,11 +535,11 @@ with infamy.Test() as test:
         _, R2cross  = env.ltop.xlate("R2", "cross")
         _, R3cross  = env.ltop.xlate("R3", "cross")
         _, R4cross  = env.ltop.xlate("R4", "cross")
-        parallel(config_target1(R1, R1ring1, R1ring2, R1cross, R1data),
-                 config_target2(R2, R2ring1, R2ring2, R2cross, R2data),
+        parallel(config_target1(R1, R1ring1, R1ring2, R1cross),
+                 config_target2(R2, R2ring1, R2ring2, R2cross),
                  config_target3(R3, R3ring2, R3cross, R3data),
                  config_target4(R4, R4ring1, R4cross, R4data))
-    with test.step("Wait for neighbors"):
+    with test.step("Wait for all neighbor to peer"):
         print("Waiting for neighbors to peer")
         until(lambda: route.ospf_get_neighbor(R1, "0.0.0.0", R1ring1, "10.0.0.2"), attempts=200)
         until(lambda: route.ospf_get_neighbor(R1, "0.0.0.1", R1cross, "10.0.0.3"), attempts=200)
@@ -580,7 +547,7 @@ with infamy.Test() as test:
         until(lambda: route.ospf_get_neighbor(R2, "0.0.0.0", R2ring2, "10.0.0.1"), attempts=200)
         until(lambda: route.ospf_get_neighbor(R2, "0.0.0.2", R2cross, "10.0.0.4"), attempts=200)
 
-    with test.step("Wait for routes from OSPF"):
+    with test.step("Wait for routes from OSPF on all routers"):
         print("Waiting for routes from OSPF")
         until(lambda: route.ipv4_route_exist(R1, "10.0.0.2/32", nexthop="10.0.12.2", source_protocol = "infix-routing:ospf"), attempts=200)
         until(lambda: route.ipv4_route_exist(R1, "10.0.0.3/32", nexthop="10.0.13.2", source_protocol = "infix-routing:ospf"), attempts=200)
@@ -594,13 +561,11 @@ with infamy.Test() as test:
         until(lambda: route.ipv4_route_exist(R4, "10.0.0.3/32", nexthop="10.0.41.2", source_protocol = "infix-routing:ospf"), attempts=200)
         until(lambda: route.ipv4_route_exist(R2, "10.0.13.0/30", nexthop="10.0.23.2", source_protocol = "infix-routing:ospf"), attempts=200)
 
-    with test.step("Verify NSSA area"): # Should be only default route out of the area.
-       parallel(until(lambda: route.ipv4_route_exist(R4, "11.0.8.0/24"), attempts=200),
-                until(lambda: route.ipv4_route_exist(R4, "11.0.9.0/24"), attempts=200),
-                until(lambda: route.ipv4_route_exist(R4, "11.0.10.0/24"), attempts=200),
-                until(lambda: route.ipv4_route_exist(R4, "11.0.11.0/24"), attempts=200),
-                until(lambda: route.ipv4_route_exist(R4, "11.0.12.0/24"), attempts=200),
-                until(lambda: route.ipv4_route_exist(R3, "0.0.0.0/0"), attempts=200),
+    with test.step("Verify Area 0.0.0.1 on R3 is NSSA area"):
+        assert(route.ospf_is_area_nssa(R3, "0.0.0.1"))
+
+    with test.step("Verify on R3, there are no routes beyond 10.0.23.1, just a default route"): # Should be only default route out of the area.
+       parallel(until(lambda: route.ipv4_route_exist(R3, "0.0.0.0/0"), attempts=200),
                 until(lambda: route.ipv4_route_exist(R3, "10.0.12.0/30") == False, attempts=5),
                 until(lambda: route.ipv4_route_exist(R3, "10.0.12.0/30") == False, attempts=5),
                 until(lambda: route.ipv4_route_exist(R3, "11.0.8.0/24") == False, attempts=5),
@@ -611,26 +576,28 @@ with infamy.Test() as test:
                 until(lambda: route.ipv4_route_exist(R3, "11.0.13.0/24") == False, attempts=5),
                 until(lambda: route.ipv4_route_exist(R3, "11.0.14.0/24") == False, attempts=5),
                 until(lambda: route.ipv4_route_exist(R3, "11.0.15.0/24") == False, attempts=5))
-       assert(route.ospf_is_area_nssa(R3, "0.0.0.1"))
 
     _, hport0 = env.ltop.xlate("PC", "data3")
     with infamy.IsolatedMacVlan(hport0) as ns0:
-        with test.step("Testing connectivitiy through NSSA area"):
+        with test.step("Testing connectivitiy through NSSA area, from PC:data3 to 11.0.8.1"):
             ns0.addip("192.168.3.2")
             ns0.addroute("0.0.0.0/0", "192.168.3.1")
             ns0.must_reach("11.0.8.1")
+
     _, hport0 = env.ltop.xlate("PC", "data4")
     with infamy.IsolatedMacVlan(hport0) as ns0:
         ns0.addip("192.168.4.2")
         ns0.addroute("0.0.0.0/0", "192.168.4.1")
-        with test.step("Verify correct hops"):
+        with test.step("Verify that the route to 10.0.0.3 from PC:data4, go through 10.0.41.2"):
             trace=ns0.traceroute("10.0.0.3")
             assert(len(trace) == 3)
             assert(trace[1][1] == "10.0.41.2")
             assert(trace[2][1] == "10.0.0.3")
 
-        with test.step("Disable link between R1 and R4, and verify correct hops"):
+        with test.step("Break link R1:ring2 --- R4:ring1"):
             disable_link(R1, R1ring2) # Here we should test with link breakers, to test BFD recouppling, for now disable the link
+
+        with test.step("Verify that the route to 10.0.0.3 from PC:data4, go through 10.0.24.1"):
             until(lambda: route.ipv4_route_exist(R4, "10.0.0.3/32", nexthop="10.0.24.1", source_protocol = "infix-routing:ospf"), attempts=100)
             until(lambda: route.ipv4_route_exist(R4, "10.0.0.3/32", nexthop="10.0.41.2") == False, attempts = 10)
             trace=ns0.traceroute("10.0.0.3")
