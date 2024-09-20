@@ -91,7 +91,7 @@ def config_target1(target, data, link):
         "routing": {
             "control-plane-protocols": {
                 "control-plane-protocol": [{
-                    "type": "static",
+                    "type": "infix-routing:static",
                     "name": "default",
                     "static-routes": {
                         "ipv4": {
@@ -163,7 +163,7 @@ def config_target2(target, link):
         "routing": {
             "control-plane-protocols": {
                 "control-plane-protocol": [{
-                    "type": "static",
+                    "type": "infix-routing:static",
                     "name": "default",
                     "static-routes": {
                         "ipv4": {

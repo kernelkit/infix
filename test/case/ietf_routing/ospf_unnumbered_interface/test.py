@@ -60,7 +60,7 @@ def config_target1(target, data, link):
         "routing": {
             "control-plane-protocols": {
                 "control-plane-protocol": [{
-                    "type": "ietf-ospf:ospfv2",
+                    "type": "infix-routing:ospfv2",
                     "name": "default",
                     "ospf": {
                         "areas": {
@@ -121,18 +121,12 @@ def config_target2(target, link):
             }
         })
 
-    target.put_config_dict("ietf-system", {
-        "system": {
-            "hostname": "R2"
-        }
-    })
-
     target.put_config_dict("ietf-routing", {
         "routing": {
             "control-plane-protocols": {
                 "control-plane-protocol": [
                     {
-                    "type": "ietf-ospf:ospfv2",
+                    "type": "infix-routing:ospfv2",
                     "name": "default",
                     "ospf": {
                         "areas": {

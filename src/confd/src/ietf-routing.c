@@ -372,9 +372,9 @@ static int change_control_plane_protocols(sr_session_ctx_t *session, uint32_t su
 			const char *type;
 
 			type = lydx_get_cattr(cplane, "type");
-			if (!strcmp(type, "ietf-routing:static")) {
+			if (!strcmp(type, "infix-routing:static")) {
 				staticd_enabled = parse_static_routes(session, lydx_get_child(cplane, "static-routes"), fp);
-			} else if (!strcmp(type, "ietf-ospf:ospfv2")) {
+			} else if (!strcmp(type, "infix-routing:ospfv2")) {
 				parse_ospf(session, lydx_get_child(cplane, "ospf"));
 			}
 		}
