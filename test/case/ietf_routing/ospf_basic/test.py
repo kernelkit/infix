@@ -57,7 +57,7 @@ def config_target1(target, data, link):
         "routing": {
             "control-plane-protocols": {
                 "control-plane-protocol": [{
-                    "type": "ietf-ospf:ospfv2",
+                    "type": "infix-routing:ospfv2",
                     "name": "default",
                     "ospf": {
                         "redistribute": {
@@ -127,7 +127,7 @@ def config_target2(target, link):
             "control-plane-protocols": {
                 "control-plane-protocol": [
                     {
-                    "type": "ietf-ospf:ospfv2",
+                    "type": "infix-routing:ospfv2",
                     "name": "default",
                     "ospf": {
                         "redistribute": {

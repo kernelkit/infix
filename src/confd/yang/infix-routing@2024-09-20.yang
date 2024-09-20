@@ -24,6 +24,10 @@ module infix-routing {
   import ietf-routing-types {
     prefix rt-types;
   }
+  revision 2024-09-20 {
+    description "Deviate to only show supported routing types";
+    reference "internal";
+  }
   revision 2024-09-13 {
     description "Declare deviations for non-supported OSPF RPCs and Notifications";
     reference "internal";
@@ -69,10 +73,6 @@ module infix-routing {
     description "Kernel added route";
     base infix-source-protocol;
   }
-  identity static {
-    description "Static added route";
-    base infix-source-protocol;
-  }
   identity ospf {
     description "OSPF added route";
     base infix-source-protocol;
@@ -113,8 +113,26 @@ module infix-routing {
     }
   }
 
-  deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ietf-r:description" {
-    deviate not-supported;
+  identity infix-routing-type {
+    description "Infix routing type";
+  }
+  identity ospfv2 {
+    base ospf:ospfv2;
+    base infix-routing-type;
+    description "OSPv2 (IPv4) routing protocol";
+  }
+  identity static {
+    base ietf-r:static;
+    base infix-routing-type;
+    base infix-source-protocol;
+    description "Static route";
+  }
+  deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ietf-r:type" {
+    deviate replace {
+      type identityref {
+        base infix-routing-type;
+      }
+    }
   }
 
   /* Static routes */
@@ -174,7 +192,7 @@ module infix-routing {
       }
     }
   }
-
+/*
   deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ietf-r:type" {
     deviate add {
       must "derived-from-or-self(., 'ospf:ospfv2') or "+
@@ -183,7 +201,7 @@ module infix-routing {
         }
     }
   }
-
+*/
   augment "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ospf:ospf" {
     description "ietf-ospf lack the setting to generate a default route";
     container default-route-advertise {
@@ -429,7 +447,7 @@ module infix-routing {
     deviate not-supported;
   }
 
-  /* OSPF RPCs */ 
+  /* OSPF RPCs */
   deviation "/ospf:clear-neighbor" {
     deviate not-supported;
   }

@@ -93,7 +93,7 @@ def config_target1(target, ring1, ring2, cross):
         "routing": {
             "control-plane-protocols": {
                 "control-plane-protocol": [{
-                    "type": "ietf-ospf:ospfv2",
+                    "type": "infix-routing:ospfv2",
                     "name": "default",
                     "ospf": {
                         "explicit-router-id": "10.0.0.1",
@@ -236,7 +236,7 @@ def config_target2(target, ring1, ring2, cross):
         "routing": {
             "control-plane-protocols": {
                 "control-plane-protocol": [{
-                    "type": "ietf-ospf:ospfv2",
+                    "type": "infix-routing:ospfv2",
                     "name": "default",
                     "ospf": {
                         "explicit-router-id": "10.0.0.2",
@@ -358,7 +358,7 @@ def config_target3(target, ring2, cross, link):
         "routing": {
             "control-plane-protocols": {
                 "control-plane-protocol": [{
-                    "type": "ietf-ospf:ospfv2",
+                    "type": "infix-routing:ospfv2",
                     "name": "default",
                     "ospf": {
                         "areas": {
@@ -459,7 +459,7 @@ def config_target4(target, ring1, cross, link):
             "control-plane-protocols": {
                 "control-plane-protocol": [
                     {
-                    "type": "ietf-ospf:ospfv2",
+                    "type": "infix-routing:ospfv2",
                     "name": "default",
                     "ospf": {
                         "redistribute": {

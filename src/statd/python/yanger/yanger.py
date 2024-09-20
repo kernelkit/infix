@@ -354,7 +354,7 @@ def add_ospf(control_protocols):
         return  # No OSPF data available
 
     control_protocol = {}
-    control_protocol["type"] = "ietf-ospf:ospfv2"
+    control_protocol["type"] = "infix-routing:ospfv2"
     control_protocol["name"] = "default"
     control_protocol["ietf-ospf:ospf"] = {}
     control_protocol["ietf-ospf:ospf"]["ietf-ospf:areas"] = {}
