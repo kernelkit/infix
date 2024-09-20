@@ -93,7 +93,7 @@ for version_dir in $(find "$MIGRATIONS_DIR" -mindepth 1 -maxdepth 1 -type d | so
 done
 
 # Update the JSON file to the latest version
-if jq --arg version "$sys_version" '.["infix-meta:meta"]["infix-meta:version"] = $version' "$CONFIG_FILE" \
+if jq --arg version "$sys_version" '.["infix-meta:meta"] = {"infix-meta:version": $version}' "$CONFIG_FILE" \
    > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"; then
     note "Configuration updated to version $sys_version."
 else
