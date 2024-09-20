@@ -55,12 +55,6 @@ def config_target1(target, data, link):
                 ]
             }
     })
-    target.put_config_dict("ietf-system", {
-        "system": {
-            "hostname": "R1"
-        }
-    })
-
 
     target.put_config_dict("ietf-routing", {
         "routing": {
@@ -166,18 +160,17 @@ def config_target2(target, link):
     })
 
 with infamy.Test() as test:
-    with test.step("Initialize"):
+    with test.step("Configure targets"):
         env = infamy.Env()
         R1 = env.attach("R1", "mgmt")
         R2 = env.attach("R2", "mgmt")
 
-    with test.step("Configure targets"):
         _, R1data = env.ltop.xlate("R1", "data")
-        _, R2_to_R1 = env.ltop.xlate("R2", "R1")
-        _, R1_to_R2 = env.ltop.xlate("R1", "R2")
+        _, R2link = env.ltop.xlate("R2", "link")
+        _, R1link = env.ltop.xlate("R1", "link")
 
-        parallel(lambda: config_target1(R1, R1data, R1_to_R2),
-                 lambda: config_target2(R2, R2_to_R1))
+        parallel(lambda: config_target1(R1, R1data, R1link),
+                 lambda: config_target2(R2, R2link))
     with test.step("Wait for OSPF routes"):
         print("Waiting for OSPF routes..")
         until(lambda: route.ipv4_route_exist(R1, "192.168.200.1/32", source_protocol = "infix-routing:ospf"), attempts=200)
@@ -185,20 +178,20 @@ with infamy.Test() as test:
         until(lambda: route.ipv4_route_exist(R2, "192.168.10.0/24", source_protocol = "infix-routing:ospf"), attempts=200)
 
     with test.step("Check interface type"):
-        assert(route.ospf_get_interface_type(R1, "0.0.0.0", R1_to_R2) == "point-to-point")
-        assert(route.ospf_get_interface_type(R2, "0.0.0.0", R2_to_R1) == "point-to-point")
+        assert(route.ospf_get_interface_type(R1, "0.0.0.0", R1link) == "point-to-point")
+        assert(route.ospf_get_interface_type(R2, "0.0.0.0", R2link) == "point-to-point")
 
-        _, hport0 = env.ltop.xlate("PC", "data1")
+        _, hport0 = env.ltop.xlate("PC", "data")
     with infamy.IsolatedMacVlan(hport0) as ns0:
         ns0.addip("192.168.10.2")
         ns0.addroute("192.168.200.1/32", "192.168.10.1")
 
-        with test.step("Test passive interface"):
+        with test.step("Verify there are no OSPF HELLO packets on PC:data"):
             assert(route.ospf_get_interface_passive(R1, "0.0.0.0", R1data))
             print("Verify that no hello packets are recieved from passive interfaces")
             ns0.must_not_receive("ip proto 89", timeout=15) # Default hello time 10s
 
-        with test.step("Test connectivity"):
+        with test.step("Test connectivity from PC:data to 192.168.200.1"):
             ns0.must_reach("192.168.200.1")
 
     test.succeed()

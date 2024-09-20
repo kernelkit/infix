@@ -16,10 +16,9 @@ image::topology.png[OSPF Basic topology]
 endif::testgroup[]
 endif::topdoc[]
 ==== Test sequence
-. Initialize
 . Configure targets
 . Wait for OSPF routes
-. Test connectivity
+. Test connectivity from PC:data to 192.168.200.1
 
 
 <<<
