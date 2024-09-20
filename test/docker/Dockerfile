@@ -24,6 +24,7 @@ RUN apk add --no-cache \
     tshark \
     openssl \
     curl \
+    e2tools \
     make
 
 ARG MTOOL_VERSION="3.0"
