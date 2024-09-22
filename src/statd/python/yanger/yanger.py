@@ -308,9 +308,11 @@ def frr_to_ietf_neighbor_state(state):
 def add_ospf_routes(ospf):
     """Fetch OSPF routes from Frr"""
     cmd = ['vtysh', '-c', "show ip ospf rout json"]
-    data = run_json_cmd(cmd, "")
-    routes = []
+    data = run_json_cmd(cmd, "", check=False, default=[])
+    if data == []:
+        return  # No OSPF routes available
 
+    routes = []
     for prefix, info in data.items():
         if prefix.find("/") == -1:  # Ignore router IDs
             continue
@@ -349,8 +351,7 @@ def add_ospf_routes(ospf):
 def add_ospf(control_protocols):
     """Populate OSPF status"""
     cmd = ['/usr/libexec/statd/ospf-status']
-    data = run_json_cmd(cmd, "")
-
+    data = run_json_cmd(cmd, "", check=False, default={})
     if data == {}:
         return  # No OSPF data available
 

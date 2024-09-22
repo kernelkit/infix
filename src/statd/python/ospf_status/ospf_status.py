@@ -6,21 +6,38 @@
 # This makes the parsing for the operational parts of YANG model more easy
 #
 
+import sys
 import json
 import subprocess
 
-def main():
-    iface_out=subprocess.check_output("vtysh -c 'show ip ospf interface json'", shell=True)
-    ospf_out=subprocess.check_output("vtysh -c 'show ip ospf json'", shell=True)
-    neighbor_out=subprocess.check_output("vtysh -c 'show ip ospf neighbor detail json'", shell=True)
-    try:
-        interfaces=json.loads(iface_out)
-        ospf=json.loads(ospf_out)
-        neighbors=json.loads(neighbor_out)
-    except json.JSONDecodeError:
-        return {} # OSPFD is most likely not running
 
-    for ifname,iface in interfaces["interfaces"].items():
+def run_json_cmd(cmd, default=None, check=True):
+    """Run a command (array of args) with JSON output and return the JSON"""
+    try:
+        cmd.append("2>/dev/null")
+        result = subprocess.run(cmd, check=check, stdout=subprocess.PIPE,
+                                stderr=subprocess.PIPE, text=True)
+        output = result.stdout
+        data = json.loads(output)
+    except (subprocess.CalledProcessError, json.JSONDecodeError):
+        if default is not None:
+            return default
+        raise
+    return data
+
+
+def main():
+    ospf_interfaces = ['sudo', 'vtysh', '-c', "show ip ospf interface json"]
+    ip_ospf = ['sudo', 'vtysh', '-c', "show ip ospf json"]
+    ospf_neigh = ['sudo', 'vtysh', '-c', "show ip ospf neighbor detail json"]
+    try:
+        interfaces = run_json_cmd(ospf_interfaces)
+        ospf = run_json_cmd(ip_ospf)
+        neighbors = run_json_cmd(ospf_neigh)
+    except (subprocess.CalledProcessError, json.JSONDecodeError):
+        return {}
+
+    for ifname, iface in interfaces["interfaces"].items():
         iface["name"] = ifname
         iface["neighbors"] = []
         for area_id in ospf["areas"]:
@@ -62,5 +79,7 @@ def main():
 
     print(json.dumps(ospf))
 
+
 if __name__ == "__main__":
     main()
+    sys.exit(0)
