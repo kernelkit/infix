@@ -24,6 +24,10 @@ module infix-routing {
   import ietf-routing-types {
     prefix rt-types;
   }
+  revision 2024-09-21 {
+    description "Drop RIB source-protocol deviation for standard, add kernel proto.";
+    reference "internal";
+  }
   revision 2024-09-20 {
     description "Deviate to only show supported routing types";
     reference "internal";
@@ -51,6 +55,7 @@ module infix-routing {
     description "Initial revision.";
     reference "internal";
   }
+
   /* General routing */
   deviation "/ietf-r:routing/ietf-r:interfaces" {
     description "Initial limitation";
@@ -66,28 +71,10 @@ module infix-routing {
     deviate not-supported;
   }
 
-  identity infix-source-protocol {
-    description "Infix naming of source protocols";
-  }
   identity kernel {
-    description "Kernel added route";
-    base infix-source-protocol;
-  }
-  identity ospf {
-    description "OSPF added route";
-    base infix-source-protocol;
-  }
-  identity dhcp {
-    description "DHCP added route";
-    base infix-source-protocol;
-  }
-  identity zeroconf {
-    description "ZeroConf added route";
-    base infix-source-protocol;
-  }
-  identity ra {
-    description "RA IPv6 route";
-    base infix-source-protocol;
+    base ietf-r:routing-protocol;
+    description
+      "'Kernel' routing pseudo-protocol.";
   }
 
   typedef infix-distribute-protocol {
@@ -104,15 +91,6 @@ module infix-routing {
     }
   }
 
-  deviation "/ietf-r:routing/ietf-r:ribs/ietf-r:rib/ietf-r:routes/ietf-r:route/ietf-r:source-protocol" {
-    description "Use type names from iproute2";
-    deviate replace {
-      type identityref {
-        base infix-source-protocol;
-      }
-    }
-  }
-
   identity infix-routing-type {
     description "Infix routing type";
   }
@@ -124,7 +102,6 @@ module infix-routing {
   identity static {
     base ietf-r:static;
     base infix-routing-type;
-    base infix-source-protocol;
     description "Static route";
   }
   deviation "/ietf-r:routing/ietf-r:control-plane-protocols/ietf-r:control-plane-protocol/ietf-r:type" {
