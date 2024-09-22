@@ -129,11 +129,11 @@ int parse_ospf_areas(sr_session_ctx_t *session, struct lyd_node *areas, FILE *fp
 int parse_ospf(sr_session_ctx_t *session, struct lyd_node *ospf)
 {
 	const char *static_debug = "! OSPF default debug\
-debug ospf bfd\n				    \
-debug ospf packet all detail\n			    \
-debug ospf ism\n				    \
-debug ospf nsm\n				    \
-debug ospf default-information\n		    \
+debug ospf bfd\n\
+debug ospf packet all detail\n\
+debug ospf ism\n\
+debug ospf nsm\n\
+debug ospf default-information\n\
 debug ospf nssa\n\
 ! OSPF configuration\n";
 	struct lyd_node *areas, *default_route;
@@ -224,14 +224,13 @@ static int parse_static_routes(sr_session_ctx_t *session, struct lyd_node *paren
 	ipv4 = lydx_get_child(parent, "ipv4");
 	ipv6 = lydx_get_child(parent, "ipv6");
 
-	ipv4 = lydx_get_child(parent, "ipv4");
-	ipv6 = lydx_get_child(parent, "ipv6");
 	v4routes = lydx_get_child(ipv4, "route");
-	v6routes = lydx_get_child(ipv6, "route");
 	LY_LIST_FOR(v4routes, route) {
 		parse_route(route, fp, "ip");
 		num_routes++;
 	}
+
+	v6routes = lydx_get_child(ipv6, "route");
 	LY_LIST_FOR(v6routes, route) {
 		parse_route(route, fp, "ipv6");
 		num_routes++;
@@ -311,12 +310,10 @@ static int change_control_plane_protocols(sr_session_ctx_t *session, uint32_t su
 			(void)rename(OSPFD_CONF, OSPFD_CONF_PREV);
 			(void)rename(OSPFD_CONF_NEXT, OSPFD_CONF);
 			if (!ospfd_running) {
-				if (ospfd_enabled) {
-					if (systemf("initctl -bfq enable ospfd")) {
-						ERROR("Failed to enable OSPF routing daemon");
-						rc = SR_ERR_INTERNAL;
-						goto err_abandon;
-					}
+				if (systemf("initctl -bnq enable ospfd")) {
+					ERROR("Failed to enable OSPF routing daemon");
+					rc = SR_ERR_INTERNAL;
+					goto err_abandon;
 				}
 			} else {
 				restart_zebra = true;
@@ -334,6 +331,10 @@ static int change_control_plane_protocols(sr_session_ctx_t *session, uint32_t su
 		}
 
 		if (restart_zebra) {
+			/* skip in runlevel S, no routing daemons run here anyway */
+			if (systemf("runlevel >/dev/null 2>&1"))
+				return SR_ERR_OK;
+
 			if (systemf("initctl -bfq restart zebra")) {
 				ERROR("Failed to restart zebra routing daemon");
 				rc = SR_ERR_INTERNAL;
