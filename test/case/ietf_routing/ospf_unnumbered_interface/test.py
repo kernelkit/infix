@@ -37,8 +37,8 @@ def config_target1(target, data, link):
                         "ipv4": {
                             "forwarding": True,
                             "address": [{
-                            "ip": "10.0.0.1",
-                            "prefix-length": 32
+                                "ip": "10.0.0.1",
+                                "prefix-length": 32
                             }]
                         }
                     },
@@ -47,8 +47,8 @@ def config_target1(target, data, link):
                         "enabled": True,
                         "ipv4": {
                             "address": [{
-                            "ip": "192.168.100.1",
-                            "prefix-length": 32
+                                "ip": "192.168.100.1",
+                                "prefix-length": 32
                             }]
                         }
                     }
@@ -73,12 +73,10 @@ def config_target1(target, data, link):
                                         "hello-interval": 1,
                                         "dead-interval": 3,
                                         "interface-type": "point-to-point"
-                                    },
-                                    {
+                                    }, {
                                         "name": data,
                                         "passive": True
-                                    },
-                                    {
+                                    }, {
                                         "name": "lo",
                                         "passive": True
                                     }]
@@ -90,6 +88,7 @@ def config_target1(target, data, link):
             }
         }
     })
+
 
 def config_target2(target, link):
     target.put_config_dict("ietf-interfaces", {
@@ -112,8 +111,8 @@ def config_target2(target, link):
                         "forwarding": True,
                         "ipv4": {
                             "address": [{
-                            "ip": "192.168.200.1",
-                            "prefix-length": 32
+                                "ip": "192.168.200.1",
+                                "prefix-length": 32
                             }]
                         }
                     }
@@ -126,32 +125,32 @@ def config_target2(target, link):
             "control-plane-protocols": {
                 "control-plane-protocol": [
                     {
-                    "type": "infix-routing:ospfv2",
-                    "name": "default",
-                    "ospf": {
-                        "areas": {
-                            "area": [{
-                                "area-id": "0.0.0.0",
-                                "interfaces":{
-                                    "interface": [{
-                                        "name": link,
-                                        "hello-interval": 1,
-                                        "dead-interval": 3,
-                                        "interface-type": "point-to-point"
-                                    },
-                                    {
-                                        "name": "lo",
-                                        "passive": True
-                                    }]
-                                }
-                            }]
+                        "type": "infix-routing:ospfv2",
+                        "name": "default",
+                        "ospf": {
+                            "areas": {
+                                "area": [{
+                                    "area-id": "0.0.0.0",
+                                    "interfaces": {
+                                        "interface": [{
+                                            "name": link,
+                                            "hello-interval": 1,
+                                            "dead-interval": 3,
+                                            "interface-type": "point-to-point"
+                                        }, {
+                                            "name": "lo",
+                                            "passive": True
+                                        }]
+                                    }
+                                }]
+                            }
                         }
                     }
-                }
                 ]
             }
         }
     })
+
 
 with infamy.Test() as test:
     with test.step("Configure targets"):
