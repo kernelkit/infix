@@ -1,0 +1,15 @@
+#!/bin/sh
+# Sort and collate all /etc/frr/static.d/*.conf files managed by confd,
+# udhcpc, and avahi-autoipd before starting staticd.
+
+DIRD=/etc/frr/static.d
+NAME=/etc/frr/staticd.conf
+NEXT=${NAME}+
+
+rm -f "$NEXT"
+find "$DIRD" -type f -name '*.conf' ! -name '*~' | sort | while read -r file; do
+    cat "$file" >> "$NEXT"
+done
+
+cmp -s "$NAME" "$NEXT" && exit 0
+mv "$NEXT" "$NAME"

@@ -89,6 +89,7 @@ define SKELETON_INIT_FINIT_SET_FRR
 	for svc in babeld bfdd bgpd eigrpd isisd ldpd ospfd ospf6d pathd ripd ripng staticd vrrpd zebra; do	\
 		cp $(SKELETON_INIT_FINIT_AVAILABLE)/frr/$$svc.conf $(FINIT_D)/available/$$svc.conf;		\
 	done
+	ln -sf ../available/staticd.conf $(FINIT_D)/enabled/staticd.conf
 	ln -sf ../available/zebra.conf $(FINIT_D)/enabled/zebra.conf
 endef
 SKELETON_INIT_FINIT_POST_INSTALL_TARGET_HOOKS += SKELETON_INIT_FINIT_SET_FRR
