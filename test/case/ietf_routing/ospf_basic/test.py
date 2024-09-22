@@ -171,8 +171,8 @@ with infamy.Test() as test:
                  config_target2(R2, R2link))
     with test.step("Wait for OSPF routes"):
         print("Waiting for OSPF routes..")
-        until(lambda: route.ipv4_route_exist(R1, "192.168.200.1/32", source_protocol = "infix-routing:ospf"), attempts=200)
-        until(lambda: route.ipv4_route_exist(R2, "192.168.100.1/32", source_protocol = "infix-routing:ospf"), attempts=200)
+        until(lambda: route.ipv4_route_exist(R1, "192.168.200.1/32", source_protocol="ietf-ospf:ospfv2"), attempts=200)
+        until(lambda: route.ipv4_route_exist(R2, "192.168.100.1/32", source_protocol="ietf-ospf:ospfv2"), attempts=200)
 
     with test.step("Test connectivity from PC:data to 192.168.200.1"):
         _, hport0 = env.ltop.xlate("PC", "data")

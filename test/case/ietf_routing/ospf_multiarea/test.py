@@ -549,17 +549,17 @@ with infamy.Test() as test:
 
     with test.step("Wait for routes from OSPF on all routers"):
         print("Waiting for routes from OSPF")
-        until(lambda: route.ipv4_route_exist(R1, "10.0.0.2/32", nexthop="10.0.12.2", source_protocol = "infix-routing:ospf"), attempts=200)
-        until(lambda: route.ipv4_route_exist(R1, "10.0.0.3/32", nexthop="10.0.13.2", source_protocol = "infix-routing:ospf"), attempts=200)
-        until(lambda: route.ipv4_route_exist(R1, "10.0.0.4/32", nexthop="10.0.41.1", source_protocol = "infix-routing:ospf"), attempts=200)
-        until(lambda: route.ipv4_route_exist(R1, "192.168.4.0/24", nexthop="10.0.41.1", source_protocol = "infix-routing:ospf"), attempts=200)
-        until(lambda: route.ipv4_route_exist(R1, "10.0.24.0/30", nexthop="10.0.41.1", source_protocol = "infix-routing:ospf"), attempts=200)
-        until(lambda: route.ipv4_route_exist(R2, "10.0.0.1/32", nexthop="10.0.23.2", source_protocol = "infix-routing:ospf"), attempts=200)
-        until(lambda: route.ipv4_route_exist(R2, "10.0.0.3/32", nexthop="10.0.23.2", source_protocol = "infix-routing:ospf"), attempts=200)
-        until(lambda: route.ipv4_route_exist(R2, "10.0.0.4/32", nexthop="10.0.24.2", source_protocol = "infix-routing:ospf"), attempts=200)
-        until(lambda: route.ipv4_route_exist(R3, "0.0.0.0/0", nexthop="10.0.23.1", source_protocol = "infix-routing:ospf"), attempts=200)
-        until(lambda: route.ipv4_route_exist(R4, "10.0.0.3/32", nexthop="10.0.41.2", source_protocol = "infix-routing:ospf"), attempts=200)
-        until(lambda: route.ipv4_route_exist(R2, "10.0.13.0/30", nexthop="10.0.23.2", source_protocol = "infix-routing:ospf"), attempts=200)
+        until(lambda: route.ipv4_route_exist(R1, "10.0.0.2/32", nexthop="10.0.12.2", source_protocol="ietf-ospf:ospfv2"), attempts=200)
+        until(lambda: route.ipv4_route_exist(R1, "10.0.0.3/32", nexthop="10.0.13.2", source_protocol="ietf-ospf:ospfv2"), attempts=200)
+        until(lambda: route.ipv4_route_exist(R1, "10.0.0.4/32", nexthop="10.0.41.1", source_protocol="ietf-ospf:ospfv2"), attempts=200)
+        until(lambda: route.ipv4_route_exist(R1, "192.168.4.0/24", nexthop="10.0.41.1", source_protocol="ietf-ospf:ospfv2"), attempts=200)
+        until(lambda: route.ipv4_route_exist(R1, "10.0.24.0/30", nexthop="10.0.41.1", source_protocol="ietf-ospf:ospfv2"), attempts=200)
+        until(lambda: route.ipv4_route_exist(R2, "10.0.0.1/32", nexthop="10.0.23.2", source_protocol="ietf-ospf:ospfv2"), attempts=200)
+        until(lambda: route.ipv4_route_exist(R2, "10.0.0.3/32", nexthop="10.0.23.2", source_protocol="ietf-ospf:ospfv2"), attempts=200)
+        until(lambda: route.ipv4_route_exist(R2, "10.0.0.4/32", nexthop="10.0.24.2", source_protocol="ietf-ospf:ospfv2"), attempts=200)
+        until(lambda: route.ipv4_route_exist(R3, "0.0.0.0/0", nexthop="10.0.23.1", source_protocol="ietf-ospf:ospfv2"), attempts=200)
+        until(lambda: route.ipv4_route_exist(R4, "10.0.0.3/32", nexthop="10.0.41.2", source_protocol="ietf-ospf:ospfv2"), attempts=200)
+        until(lambda: route.ipv4_route_exist(R2, "10.0.13.0/30", nexthop="10.0.23.2", source_protocol="ietf-ospf:ospfv2"), attempts=200)
 
     with test.step("Verify Area 0.0.0.1 on R3 is NSSA area"):
         assert(route.ospf_is_area_nssa(R3, "0.0.0.1"))
@@ -598,7 +598,7 @@ with infamy.Test() as test:
             disable_link(R1, R1ring2) # Here we should test with link breakers, to test BFD recouppling, for now disable the link
 
         with test.step("Verify that the route to 10.0.0.3 from PC:data4, go through 10.0.24.1"):
-            until(lambda: route.ipv4_route_exist(R4, "10.0.0.3/32", nexthop="10.0.24.1", source_protocol = "infix-routing:ospf"), attempts=100)
+            until(lambda: route.ipv4_route_exist(R4, "10.0.0.3/32", nexthop="10.0.24.1", source_protocol="ietf-ospf:ospfv2"), attempts=100)
             until(lambda: route.ipv4_route_exist(R4, "10.0.0.3/32", nexthop="10.0.41.2") == False, attempts = 10)
             trace=ns0.traceroute("10.0.0.3")
             assert(len(trace) == 3)

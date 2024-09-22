@@ -7,34 +7,45 @@ def _get_routes(target, protocol):
         return r.get("routes", {}).get("route",{})
     return {}
 
-def _exist_route(target, prefix, nexthop, version, source_protocol):
-    routes = _get_routes(target, version)
-    route_found = False
+
+def _exist_route(target, prefix, nexthop, ip, source_protocol):
+    routes = _get_routes(target, ip)
     for r in routes:
         # netconf presents destination-prefix, restconf prefix with model
-        p=r.get("destination-prefix") or (version == "ipv4" and r.get("ietf-ipv4-unicast-routing:destination-prefix")) or (version == "ipv6" and r.get("ietf-ipv6-unicast-routing:destination-prefix"))
+        p = r.get("destination-prefix") or \
+            r.get(f"ietf-{ip}-unicast-routing:destination-prefix")
         if p != prefix:
             continue
 
         if source_protocol and r.get("source-protocol") != source_protocol:
             return False
 
-        route_found = True
-        nh = r["next-hop"]
-        next_hop_list = nh.get("next-hop-list")
         if nexthop:
+            nh = r["next-hop"]
+            if not nh:
+                return False
+
+            next_hop_list = nh.get("next-hop-list")
             if next_hop_list:
                 for nhl in next_hop_list["next-hop"]:
-                    address = nhl.get("address")
+                    # netconf presents address, restconf prefix with
+                    # model ietf-ipv4-unicast-routing:address
+                    address = nhl.get("address") or \
+                        nhl.get(f"ietf-{ip}-unicast-routing:address")
                     if address == nexthop:
                         return True
+                return False
             else:
-                # netconf presents next-hop-address, restconf prefix with model    ietf-ipv4-unicast-routing:next-hop-address
-                nh_addr=nh.get("next-hop-address", None) or (version == "ipv4" and nh.get("ietf-ipv4-unicast-routing:next-hop-address", None)) or (version == "ipv6" and nh.get("ietf-ipv6-unicast-routing:next-hop-address", None))
+                # netconf presents next-hop-address, restconf prefix
+                # with model ietf-ipv4-unicast-routing:next-hop-address
+                nh_addr = nh.get("next-hop-address") or \
+                    nh.get(f"ietf-{ip}-unicast-routing:next-hop-address")
                 if nh_addr == nexthop:
                     return True
-            return False
-    return route_found
+                return False
+        else:
+            return True
+    return False
 
 def ipv4_route_exist(target, prefix, nexthop=None,source_protocol=None):
     return _exist_route(target, prefix, nexthop, "ipv4",source_protocol)
