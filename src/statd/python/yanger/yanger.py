@@ -231,7 +231,17 @@ def add_hardware(hw_out):
 
 
 def get_routes(routes, proto, data):
-    """Populate routes"""
+    """Populate routes from vtysh JSON output"""
+
+    # Mapping of FRR protocol names to IETF routing-protocol
+    pmap = {
+        'kernel': 'infix-routing:kernel',
+        'connected': 'direct',
+        'static': 'static',
+        'ospf': 'ietf-ospf:ospfv2',
+        'ospf6': 'ietf-ospf:ospfv3',
+    }
+
     out = {}
     out["route"] = []
 
@@ -242,58 +252,60 @@ def get_routes(routes, proto, data):
         default = "::/0"
         host_prefix_length = "128"
 
-    for entry in data:
-        new = {}
-        if entry['dst'] == "default":
-            entry['dst'] = default
-        if entry['dst'].find('/') == -1:
-            entry['dst'] = entry['dst'] + "/" + host_prefix_length
-        new[f'ietf-{proto}-unicast-routing:destination-prefix'] = entry['dst']
-        new['source-protocol'] = "infix-routing:" + entry['protocol']
-        if entry.get("metric"):
-            new['route-preference'] = entry['metric']
-        else:
-            new['route-preference'] = 0
+    for prefix, entries in data.items():
+        for route in entries:
+            new = {}
+            dst = route.get('prefix', default)
+            if '/' not in dst:
+                dst = f"{dst}/{route.get('prefixLen', host_prefix_length)}"
 
-        if entry.get('nexthops'):
+            new[f'ietf-{proto}-unicast-routing:destination-prefix'] = dst
+            frr = route.get('protocol', 'infix-routing:kernel')
+            new['source-protocol'] = pmap.get(frr, 'infix-routing:kernel')
+            new['route-preference'] = route.get('distance', 0)
+
             next_hops = []
-            for hop in entry.get('nexthops'):
+            for hop in route.get('nexthops', []):
                 next_hop = {}
-                if hop.get("dev"):
-                    next_hop['outgoing-interface'] = hop['dev']
-                if hop.get("gateway"):
-                    next_hop[f'ietf-{proto}-unicast-routing:address'] = hop['gateway']
+                if hop.get('ip'):
+                    next_hop[f'ietf-{proto}-unicast-routing:address'] = hop['ip']
+                elif hop.get('interfaceName'):
+                    next_hop['outgoing-interface'] = hop['interfaceName']
                 next_hops.append(next_hop)
 
-            insert(new, 'next-hop', 'next-hop-list', 'next-hop', next_hops)
-        else:
-            next_hop = {}
-            if entry['type'] == "blackhole":
-                next_hop['special-next-hop'] = "blackhole"
-            if entry['type'] == "unreachable":
-                next_hop['special-next-hop'] = "unreachable"
-            if entry['type'] == "unicast":
-                if entry.get("dev"):
-                    next_hop['outgoing-interface'] = entry['dev']
-                if entry.get("gateway"):
-                    next_hop[f'ietf-{proto}-unicast-routing:next-hop-address'] = entry['gateway']
+            if next_hops:
+                new['next-hop'] = {'next-hop-list': {'next-hop': next_hops}}
+            else:
+                next_hop = {}
+                protocol = route.get('protocol', 'unicast')
+                if protocol == "blackhole":
+                    next_hop['special-next-hop'] = "blackhole"
+                elif protocol == "unreachable":
+                    next_hop['special-next-hop'] = "unreachable"
+                else:
+                    if route.get('interfaceName'):
+                        next_hop['outgoing-interface'] = route['interfaceName']
+                    if route.get('nexthop'):
+                        next_hop[f'ietf-{proto}-unicast-routing:next-hop-address'] = route['nexthop']
 
-            new['next-hop'] = next_hop
+                new['next-hop'] = next_hop
 
-        out['route'].append(new)
+            out['route'].append(new)
 
     insert(routes, 'routes', out)
 
 
 def add_ipv4_route(routes):
     """Fetch IPv4 routes from kernel and populate tree"""
-    data = run_json_cmd(['ip', '-4', '-s', '-d', '-j', 'route'], "ip-4-route.json")
+    data = run_json_cmd(['sudo', 'vtysh', '-c', "show ip route json"],
+                        "vtysh-ip4-route.json", check=False, default={})
     get_routes(routes, "ipv4", data)
 
 
 def add_ipv6_route(routes):
     """Fetch IPv6 routes from kernel and populate tree"""
-    data = run_json_cmd(['ip', '-6', '-s', '-d', '-j', 'route'], "ip-6-route.json")
+    data = run_json_cmd(['sudo', 'vtysh', '-c', "show ipv6 route json"],
+                        "vtysh-ip6-route.json", check=False, default={})
     get_routes(routes, "ipv6", data)
 
 
