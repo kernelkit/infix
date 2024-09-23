@@ -187,12 +187,14 @@ debug ospf nssa\n\
 	return 0;
 }
 
-static int parse_route(struct lyd_node *parent, FILE *fp, char *ip)
+static int parse_route(struct lyd_node *parent, FILE *fp, const char *ip)
 {
-	const char *outgoing_interface, *next_hop_address, *special_next_hop, *destination_prefix;
+	const char *outgoing_interface, *next_hop_address, *special_next_hop,
+		*destination_prefix, *route_preference;
 	struct lyd_node *next_hop;
 
 	destination_prefix = lydx_get_cattr(parent, "destination-prefix");
+	route_preference = lydx_get_cattr(parent, "route-preference");
 	next_hop = lydx_get_child(parent, "next-hop");
 	outgoing_interface = lydx_get_cattr(next_hop, "outgoing-interface");
 	next_hop_address = lydx_get_cattr(next_hop, "next-hop-address");
@@ -211,7 +213,7 @@ static int parse_route(struct lyd_node *parent, FILE *fp, char *ip)
 		fputs("reject", fp);
 	else if (strcmp(special_next_hop, "receive") == 0)
 		fputs("Null0", fp);
-	fputs("\n", fp);
+	fprintf(fp, " %s\n", route_preference);
 
 	return SR_ERR_OK;
 }

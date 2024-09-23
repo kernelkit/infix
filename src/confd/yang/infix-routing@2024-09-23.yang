@@ -22,6 +22,14 @@ module infix-routing {
     prefix rt-types;
   }
 
+  organization "KernelKit";
+  contact      "kernelkit@googlegroups.com";
+  description  "Deviations and augments for ietf-routing and ietf-ospf.";
+
+  revision 2024-09-23 {
+    description "Augment static routes with optional route-preference (distance).";
+    reference "internal";
+  }
   revision 2024-09-22 {
     description "- Enable OSPF route metrics in RIB
                  - Enable 'active' route flag for RIB
@@ -119,12 +127,46 @@ module infix-routing {
   }
 
   /* Static routes */
+  typedef distance {
+     description "Capped IETF route-preference, 0-255, for distance.";
+     type rt:route-preference {
+       range "0..255";
+     }
+  }
+
+  grouping route-pref {
+     leaf route-preference {
+       description "Adjust preference between routes of same destination prefix.
+
+                    This attribute, also known as 'administrative distance', allows
+                    for selecting the preferred route among routes with the same
+                    destination prefix.  A smaller value indicates a route that is
+                    more preferred.";
+       type distance;
+     }
+  }
+
   deviation "/rt:routing/rt:control-plane-protocols/rt:control-plane-protocol/rt:static-routes/v4ur:ipv4/v4ur:route/v4ur:next-hop/v4ur:next-hop-options/v4ur:next-hop-list" {
     deviate not-supported;
   }
   deviation "/rt:routing/rt:control-plane-protocols/rt:control-plane-protocol/rt:static-routes/v6ur:ipv6/v6ur:route/v6ur:next-hop/v6ur:next-hop-options/v6ur:next-hop-list" {
     deviate not-supported;
   }
+  augment "/rt:routing/rt:control-plane-protocols/rt:control-plane-protocol/rt:static-routes/v4ur:ipv4/v4ur:route" {
+    uses route-pref {
+      refine route-preference {
+        default "1";
+      }
+    }
+  }
+  augment "/rt:routing/rt:control-plane-protocols/rt:control-plane-protocol/rt:static-routes/v6ur:ipv6/v6ur:route" {
+    uses route-pref {
+      refine route-preference {
+        default "1";
+      }
+    }
+  }
+
   /* show routes */
   deviation "/rt:routing/rt:ribs/rt:rib/rt:default-rib" {
     deviate not-supported;
