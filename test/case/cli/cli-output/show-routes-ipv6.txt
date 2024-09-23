@@ -1,10 +1,11 @@
-[7mPREFIX                        NEXT-HOP                          PREF  PROTOCOL  [0m
-2001:db8:3c4d:50::/64         eth4                               256  kernel    
-2001:db8:3c4d:200::1/128      lo                                 256  kernel    
-fe80::/64                     eth5                               256  kernel    
-fe80::/64                     eth3                               256  kernel    
-fe80::/64                     eth2                               256  kernel    
-fe80::/64                     eth1                               256  kernel    
-fe80::/64                     eth0                               256  kernel    
-fe80::/64                     eth4                               256  kernel    
-::/0                          2001:db8:3c4d:50::1                 20  static    
+[7m   DESTINATION                                     PREF NEXT-HOP                                 PROTO     UPTIME[0m
+>* ::/0                                             1/0 2001:db8:3c4d:50::1                      static    0h0m0s
+>* 2001:db8:3c4d:50::/64                            0/0 e6                                       direct    0h0m0s
+>* 2001:db8:3c4d:200::1/128                         0/0 lo                                       direct    0h0m0s
+ * fe80::/64                                        0/0 e7                                       direct    0h0m0s
+ * fe80::/64                                        0/0 e6                                       direct    0h0m0s
+ * fe80::/64                                        0/0 e5                                       direct    0h0m0s
+ * fe80::/64                                        0/0 e4                                       direct    0h0m0s
+ * fe80::/64                                        0/0 e3                                       direct    0h0m0s
+ * fe80::/64                                        0/0 e2                                       direct    0h0m0s
+>* fe80::/64                                        0/0 e1                                       direct    0h0m0s
