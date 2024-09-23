@@ -1,0 +1,49 @@
+From f0d4beabe769fec594b309c3f1ebb79cfdbede8b Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Mon, 29 Apr 2024 15:14:51 +0200
+Subject: [PATCH 28/33] usb: core: adjust log level for unauthorized devices
+Organization: Addiva Elektronik
+
+The fact that a USB device currently is not authorized is not an error,
+so let's adjust the log level so these messages slip below radar for the
+commonly used 'quiet' log level.
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ drivers/usb/core/driver.c  | 4 ++--
+ drivers/usb/core/generic.c | 2 +-
+ 2 files changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/usb/core/driver.c b/drivers/usb/core/driver.c
+index f58a0299fb3b..46450d806373 100644
+--- a/drivers/usb/core/driver.c
++++ b/drivers/usb/core/driver.c
+@@ -332,10 +332,10 @@ static int usb_probe_interface(struct device *dev)
+ 		return error;
+ 
+ 	if (udev->authorized == 0) {
+-		dev_err(&intf->dev, "Device is not authorized for usage\n");
++		dev_warn(&intf->dev, "Device is not authorized for usage\n");
+ 		return error;
+ 	} else if (intf->authorized == 0) {
+-		dev_err(&intf->dev, "Interface %d is not authorized for usage\n",
++		dev_warn(&intf->dev, "Interface %d is not authorized for usage\n",
+ 				intf->altsetting->desc.bInterfaceNumber);
+ 		return error;
+ 	}
+diff --git a/drivers/usb/core/generic.c b/drivers/usb/core/generic.c
+index 740342a2812a..2682bcf3e79f 100644
+--- a/drivers/usb/core/generic.c
++++ b/drivers/usb/core/generic.c
+@@ -231,7 +231,7 @@ int usb_generic_driver_probe(struct usb_device *udev)
+ 	 * with the driver core and lets interface drivers bind to them.
+ 	 */
+ 	if (udev->authorized == 0)
+-		dev_err(&udev->dev, "Device is not authorized for usage\n");
++		dev_warn(&udev->dev, "Device is not authorized for usage\n");
+ 	else {
+ 		c = usb_choose_configuration(udev);
+ 		if (c >= 0) {
+-- 
+2.43.0
+
