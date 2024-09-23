@@ -21,11 +21,23 @@ class PadMdb:
 
 
 class PadRoute:
-    prefix = 30
+    dest = 30
     pref = 8
     next_hop = 30
-    protocol = 10
-    uptime = 10
+    protocol = 6
+    uptime = 9
+
+    @staticmethod
+    def set(ipv):
+        """Set default padding based on the IP version ('ipv4' or 'ipv6')."""
+        if ipv == 'ipv4':
+            PadRoute.dest = 18
+            PadRoute.next_hop = 15
+        elif ipv == 'ipv6':
+            PadRoute.dest = 43
+            PadRoute.next_hop = 39
+        else:
+            raise ValueError(f"unknown IP version: {ipv}")
 
 
 class PadSoftware:
@@ -88,6 +100,7 @@ def remove_yang_prefix(key):
 class Route:
     def __init__(self, data, ip):
         self.data = data
+        self.ip = ip
         self.prefix = data.get(f'ietf-{ip}-unicast-routing:destination-prefix', '')
         self.protocol = data.get('source-protocol', '').split(':')[-1]
         self.last_updated = data.get('last-updated', '')
@@ -152,6 +165,7 @@ class Route:
         return f"{hours}h{minutes}m{seconds}s"
 
     def print(self):
+        PadRoute.set(self.ip)
         distance, metric = self.get_distance_and_metric()
         uptime = self.datetime2uptime()
         pref = f"{distance}/{metric}"
@@ -160,10 +174,10 @@ class Route:
         row = ">" if self.active else " "
         row += "*" if fib else " "
         row += " "
-        row += f"{self.prefix:<{PadRoute.prefix}}"
-        row += f"{pref:>{PadRoute.pref}}  "
-        row += f"{hop:<{PadRoute.next_hop}}"
-        row += f"{self.protocol:<{PadRoute.protocol}}"
+        row += f"{self.prefix:<{PadRoute.dest}} "
+        row += f"{pref:>{PadRoute.pref}} "
+        row += f"{hop:<{PadRoute.next_hop}}  "
+        row += f"{self.protocol:<{PadRoute.protocol}} "
         row += f"{uptime:>{PadRoute.uptime}}"
         print(row)
         for nh in self.next_hop[1:]:
@@ -171,9 +185,9 @@ class Route:
             row = " "
             row += "*" if fib else " "
             row += " "
-            row += f"{'':<{PadRoute.prefix}}"
-            row += f"{'':>{PadRoute.pref}}  "
-            row += f"{hop:<{PadRoute.next_hop}}"
+            row += f"{'':<{PadRoute.dest}} "
+            row += f"{'':>{PadRoute.pref}} "
+            row += f"{hop:<{PadRoute.next_hop}}  "
             print(row)
 
 
@@ -596,10 +610,11 @@ def show_routing_table(json, ip):
         print("Error, top level \"ietf-routing:routing\" missing")
         sys.exit(1)
 
-    hdr = (f"   {'PREFIX':<{PadRoute.prefix}}"
-           f"{'PREF':>{PadRoute.pref}}  "
-           f"{'NEXT-HOP':<{PadRoute.next_hop}}"
-           f"{'PROTOCOL':<{PadRoute.protocol}}"
+    PadRoute.set(ip)
+    hdr = (f"   {'DESTINATION':<{PadRoute.dest}} "
+           f"{'PREF':>{PadRoute.pref}} "
+           f"{'NEXT-HOP':<{PadRoute.next_hop}}  "
+           f"{'PROTO':<{PadRoute.protocol}} "
            f"{'UPTIME':>{PadRoute.uptime}}")
 
     print(Decore.invert(hdr))
