@@ -3,7 +3,7 @@
 #        |
 #   +--------------+                +-------------+
 #   |              |192.168.50.0/24 |             |
-#   |  DUT1     .1 +----------------+ .2  DUT2    |-192.168.200.1/32 (lo)
+#   |    R1     .1 +----------------+ .2    R2    |-192.168.200.1/32 (lo)
 #   |        .1    |                |  .1         |
 #   +--+------+----+                +---+-----+---+
 #      |      |                               |
@@ -18,8 +18,8 @@
 """
 Static routing
 
-Test that it is possible to use static routes (IPv4 and IPv6)
-works as expected
+Verify that it is possible to add static routes, both IPv4 and IPv6, and
+that data forwarding works as expected via an intermediate device.
 """
 import infamy
 import infamy.route as route
@@ -216,7 +216,7 @@ with infamy.Test() as test:
             ns0.addip("192.168.10.2")
             ns0.addroute("192.168.200.1/32", "192.168.10.1")
 
-        with test.step("Verify that dut2 is reachable on 192.168.200.1 from PC:data"):
+        with test.step("Verify that R2 is reachable on 192.168.200.1 from PC:data"):
             ns0.must_reach("192.168.200.1")
 
         with test.step("Verify that R2 is reachable on 2001:db8:3c4d:200::1 from PC:data"):

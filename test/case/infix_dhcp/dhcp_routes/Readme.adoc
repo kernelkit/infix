@@ -1,22 +1,30 @@
-=== DHCP router
+=== DHCP option 121 vs option 3
 ==== Description
-Verify DHCP option 121 (staticroutes) is used over option 3 and that the routes exist in
-the operational datastore
+Verify DHCP option 121 (staticroutes) is used over option 3 and that the
+routes exist in the operational datastore.
+
+Installing unrelated routes from a DHCP server should not affect already
+existing routes.  To verify this a canary route is set up in the client
+before initiating DHCP.  This canary route does not need to be reachable
+before a DHCP lease has been acquired.
 
 ==== Topology
 ifdef::topdoc[]
-image::../../test/case/infix_dhcp/dhcp_routes/topology.png[DHCP router topology]
+image::../../test/case/infix_dhcp/dhcp_routes/topology.png[DHCP option 121 vs option 3 topology]
 endif::topdoc[]
 ifndef::topdoc[]
 ifdef::testgroup[]
-image::dhcp_routes/topology.png[DHCP router topology]
+image::dhcp_routes/topology.png[DHCP option 121 vs option 3 topology]
 endif::testgroup[]
 ifndef::testgroup[]
-image::topology.png[DHCP router topology]
+image::topology.png[DHCP option 121 vs option 3 topology]
 endif::testgroup[]
 endif::topdoc[]
 ==== Test sequence
-. Initialize
+. Setting up client
+. Verify client use classless routes, option 121
+. Verify client did *not* use option 3
+. Verify client has canary route, 20.0.0.0/24
 
 
 <<<
