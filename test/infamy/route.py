@@ -13,19 +13,22 @@ def _get_routes(target, protocol):
     return {}
 
 
-def _exist_route(target, prefix, nexthop, ip, source_protocol):
+def _exist_route(target, dest, nexthop=None, ip=None, proto=None, pref=None):
     routes = _get_routes(target, ip)
     for r in routes:
         # netconf presents destination-prefix, restconf prefix with model
-        p = r.get("destination-prefix") or \
+        dst = r.get("destination-prefix") or \
             r.get(f"ietf-{ip}-unicast-routing:destination-prefix")
-        if p != prefix:
+        if dst != dest:
             continue
 
-        if source_protocol and r.get("source-protocol") != source_protocol:
+        if proto is not None and r.get("source-protocol") != proto:
             return False
 
-        if nexthop:
+        if pref is not None and r.get("route-preference") != pref:
+            return False
+
+        if nexthop is not None:
             nh = r["next-hop"]
             if not nh:
                 return False
@@ -53,12 +56,12 @@ def _exist_route(target, prefix, nexthop, ip, source_protocol):
     return False
 
 
-def ipv4_route_exist(target, prefix, nexthop=None, source_protocol=None):
-    return _exist_route(target, prefix, nexthop, "ipv4", source_protocol)
+def ipv4_route_exist(target, dest, nexthop=None, proto=None, pref=None):
+    return _exist_route(target, dest, nexthop=nexthop, ip="ipv4", proto=proto, pref=pref)
 
 
-def ipv6_route_exist(target, prefix, nexthop=None, source_protocol=None):
-    return _exist_route(target, prefix, nexthop, "ipv6", source_protocol)
+def ipv6_route_exist(target, dest, nexthop=None, proto=None, pref=None):
+    return _exist_route(target, dest, nexthop=nexthop, ip="ipv6", proto=proto, pref=pref)
 
 
 def _get_ospf_status(target):
