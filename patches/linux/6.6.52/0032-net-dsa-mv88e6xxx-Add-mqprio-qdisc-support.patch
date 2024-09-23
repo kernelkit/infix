@@ -1,0 +1,160 @@
+From 18c025745fd8b8c9b3e688e9d78668a56cf71217 Mon Sep 17 00:00:00 2001
+From: Tobias Waldekranz <tobias@waldekranz.com>
+Date: Tue, 28 May 2024 11:04:22 +0200
+Subject: [PATCH 32/33] net: dsa: mv88e6xxx: Add mqprio qdisc support
+Organization: Addiva Elektronik
+
+Add support for attaching mqprio qdisc's to mv88e6xxx ports and use
+the packet's traffic class as the outgoing priority when no PCP bits
+are available.
+
+We cannot directly target a particular transmit queue on mv88e6xxx
+chips, we can only specify the frame priority (FPri), which will
+typically cause the switch to set the packet's queue priority (QPri)
+to the same value.
+
+For symmetry, we give precedence to an explicit PCP value available in
+the packet, since that maps directly to the chip's FPri.
+
+In cases where no PCP bits are available, use the packet's queue
+mapping to derive its traffic class and use that as the FPri. Since
+the packet will always be egressing without a tag in these cases, we
+are effectively only specifying the QPri.
+
+Since FPri is always a 3-bit field, even on older chips with only 4
+physical queues, always report 8 queues and let the chip's policy
+handle the mapping down to the "real" number.
+---
+ drivers/net/dsa/mv88e6xxx/chip.c | 70 ++++++++++++++++++++++++++++++++
+ net/dsa/tag_dsa.c                |  4 +-
+ 2 files changed, 73 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/net/dsa/mv88e6xxx/chip.c b/drivers/net/dsa/mv88e6xxx/chip.c
+index 7f289ecda847..0c6ab36a6905 100644
+--- a/drivers/net/dsa/mv88e6xxx/chip.c
++++ b/drivers/net/dsa/mv88e6xxx/chip.c
+@@ -31,6 +31,7 @@
+ #include <linux/gpio/consumer.h>
+ #include <linux/phylink.h>
+ #include <net/dsa.h>
++#include <net/pkt_sched.h>
+ 
+ #include "chip.h"
+ #include "devlink.h"
+@@ -7102,6 +7103,68 @@ int mv88e6xxx_port_del_etype_prio(struct dsa_switch *ds, int port, u16 etype,
+ 	return err;
+ }
+ 
++static int mv88e6xxx_qos_port_mqprio(struct mv88e6xxx_chip *chip, int port,
++				     struct tc_mqprio_qopt_offload *mqprio)
++{
++	struct net_device *dev = dsa_to_port(chip->ds, port)->slave;
++	struct tc_mqprio_qopt *qopt = &mqprio->qopt;
++	int tc, err = 0, num_txq = 0;
++
++	if (!qopt->num_tc)
++		goto out_reset;
++
++	err = netdev_set_num_tc(dev, qopt->num_tc);
++	if (err)
++		return err;
++
++	for (tc = 0; tc < qopt->num_tc; tc++) {
++		num_txq += qopt->count[tc];
++
++		err = netdev_set_tc_queue(dev, tc, qopt->count[tc], qopt->offset[tc]);
++		if (err)
++			goto out_reset;
++	}
++
++	err = netif_set_real_num_tx_queues(dev, num_txq);
++	if (err)
++		goto out_reset;
++
++	return 0;
++
++out_reset:
++	netdev_reset_tc(dev);
++	return err;
++
++}
++
++static int mv88e6xxx_qos_query_caps(struct tc_query_caps_base *base)
++{
++	switch (base->type) {
++	case TC_SETUP_QDISC_MQPRIO:
++		struct tc_mqprio_caps *caps = base->caps;
++
++		caps->validate_queue_counts = true;
++		return 0;
++	default:
++		return -EOPNOTSUPP;
++	}
++}
++static int mv88e6xxx_port_setup_tc(struct dsa_switch *ds, int port,
++				   enum tc_setup_type type,
++				   void *type_data)
++{
++	struct mv88e6xxx_chip *chip = ds->priv;
++
++	switch (type) {
++	case TC_QUERY_CAPS:
++		return mv88e6xxx_qos_query_caps(type_data);
++	case TC_SETUP_QDISC_MQPRIO:
++		return mv88e6xxx_qos_port_mqprio(chip, port, type_data);
++	default:
++		return -EOPNOTSUPP;
++	}
++}
++
+ static const struct dsa_switch_ops mv88e6xxx_switch_ops = {
+ 	.get_tag_protocol	= mv88e6xxx_get_tag_protocol,
+ 	.change_tag_protocol	= mv88e6xxx_change_tag_protocol,
+@@ -7170,6 +7233,7 @@ static const struct dsa_switch_ops mv88e6xxx_switch_ops = {
+ 	.crosschip_lag_leave	= mv88e6xxx_crosschip_lag_leave,
+ 	.port_add_etype_prio	= mv88e6xxx_port_add_etype_prio,
+ 	.port_del_etype_prio	= mv88e6xxx_port_del_etype_prio,
++	.port_setup_tc		= mv88e6xxx_port_setup_tc,
+ };
+ 
+ static int mv88e6xxx_register_switch(struct mv88e6xxx_chip *chip)
+@@ -7195,6 +7259,12 @@ static int mv88e6xxx_register_switch(struct mv88e6xxx_chip *chip)
+ 	 */
+ 	ds->num_lag_ids = mv88e6xxx_has_lag(chip) ? 16 : 0;
+ 
++	/* Even though older chips only have 4 queues, we always have
++	 * 3 bits of priority information in the DSA tag, which is how
++	 * we indirectly address the queues.
++	 */
++	ds->num_tx_queues = 8;
++
+ 	dev_set_drvdata(dev, ds);
+ 
+ 	return dsa_register_switch(ds);
+diff --git a/net/dsa/tag_dsa.c b/net/dsa/tag_dsa.c
+index 284bc65d1f63..782cad614573 100644
+--- a/net/dsa/tag_dsa.c
++++ b/net/dsa/tag_dsa.c
+@@ -180,8 +180,10 @@ static struct sk_buff *dsa_xmit_ll(struct sk_buff *skb, struct net_device *dev,
+ 		}
+ 	} else {
+ 		u16 vid;
++		u8 tc;
+ 
+ 		vid = br_dev ? MV88E6XXX_VID_BRIDGED : MV88E6XXX_VID_STANDALONE;
++		tc = netdev_txq_to_tc(dev, skb_get_queue_mapping(skb));
+ 
+ 		skb_push(skb, DSA_HLEN + extra);
+ 		dsa_alloc_etype_header(skb, DSA_HLEN + extra);
+@@ -191,7 +193,7 @@ static struct sk_buff *dsa_xmit_ll(struct sk_buff *skb, struct net_device *dev,
+ 
+ 		dsa_header[0] = (cmd << 6) | tag_dev;
+ 		dsa_header[1] = tag_port << 3;
+-		dsa_header[2] = vid >> 8;
++		dsa_header[2] = (tc << 5) | (vid >> 8);
+ 		dsa_header[3] = vid & 0xff;
+ 	}
+ 
+-- 
+2.43.0
+
