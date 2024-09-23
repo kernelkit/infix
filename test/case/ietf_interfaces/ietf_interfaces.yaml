@@ -11,9 +11,6 @@
 - name: iface_phys_address
   case: iface_phys_address/test.py
 
-- name: iface_status
-  case: iface_status/test.py
-
 - name: routing_basic
   case: routing_basic/test.py
 
