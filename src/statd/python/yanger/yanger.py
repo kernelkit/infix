@@ -6,7 +6,7 @@ import json
 import sys  # (built-in module)
 import os
 import argparse
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 
 TESTPATH = ""
 logger = None
@@ -230,6 +230,17 @@ def add_hardware(hw_out):
     insert(hw_out, "component", components)
 
 
+def uptime2datetime(uptime):
+    """Convert uptime (HH:MM:SS) to YANG format (YYYY-MM-DDTHH:MM:SS+00:00)"""
+    h, m, s = map(int, uptime.split(':'))
+    uptime_delta = timedelta(hours=h, minutes=m, seconds=s)
+    current_time = datetime.now(timezone.utc)
+    last_updated = current_time - uptime_delta
+    date_timestd = last_updated.strftime('%Y-%m-%dT%H:%M:%S%z')
+
+    return date_timestd[:-2] + ':' + date_timestd[-2:]
+
+
 def get_routes(routes, proto, data):
     """Populate routes from vtysh JSON output"""
 
@@ -264,6 +275,18 @@ def get_routes(routes, proto, data):
             new['source-protocol'] = pmap.get(frr, 'infix-routing:kernel')
             new['route-preference'] = route.get('distance', 0)
 
+            # Metric only available in the model for OSPF routes
+            if 'ospf' in frr:
+                new['ietf-ospf:metric'] = route.get('metric', 0)
+
+            # See https://datatracker.ietf.org/doc/html/rfc7951#section-6.9
+            # for details on how presence leaves are encoded in JSON: [null]
+            if route.get('selected', False):
+                new['active'] = [None]
+
+            new['last-updated'] = uptime2datetime(route.get('uptime', 0))
+            installed = route.get('installed', False)
+
             next_hops = []
             for hop in route.get('nexthops', []):
                 next_hop = {}
@@ -271,6 +294,9 @@ def get_routes(routes, proto, data):
                     next_hop[f'ietf-{proto}-unicast-routing:address'] = hop['ip']
                 elif hop.get('interfaceName'):
                     next_hop['outgoing-interface'] = hop['interfaceName']
+                # See zebra/zebra_vty.c:re_status_outpupt_char()
+                if installed and hop.get('fib', False):
+                    next_hop['infix-routing:installed'] = [None]
                 next_hops.append(next_hop)
 
             if next_hops:

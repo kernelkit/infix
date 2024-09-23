@@ -2,30 +2,32 @@ module infix-routing {
   yang-version 1.1;
   namespace "urn:infix:routing:ns:yang:1.0";
   prefix infix-rt;
+
   import ietf-routing {
     prefix rt;
   }
-
   import ietf-ipv4-unicast-routing {
     prefix v4ur;
   }
-
   import ietf-ipv6-unicast-routing {
     prefix v6ur;
   }
   import ietf-ospf {
     prefix ospf;
   }
-
   import ietf-interfaces {
     prefix if;
   }
-
   import ietf-routing-types {
     prefix rt-types;
   }
+
   revision 2024-09-22 {
-    description "Adjust YANG prefix for consistency: ietf-r: -> rt:";
+    description "- Enable OSPF route metrics in RIB
+                 - Enable 'active' route flag for RIB
+                 - Enable 'last-updated' route field for RIB
+                 - Augment route in RIB with 'installed' flag
+                 - Aadjust YANG prefix for consistency: ietf-r: -> rt:";
     reference "internal";
   }
   revision 2024-09-21 {
@@ -130,25 +132,26 @@ module infix-routing {
   deviation "/rt:routing/rt:ribs/rt:rib/rt:active-route" {
     deviate not-supported;
   }
-
-  deviation "/rt:routing/rt:ribs/rt:rib/rt:routes/rt:route/ospf:metric" {
-    deviate not-supported;
-  }
-
   deviation "/rt:routing/rt:ribs/rt:rib/rt:routes/rt:route/ospf:tag" {
     deviate not-supported;
   }
   deviation "/rt:routing/rt:ribs/rt:rib/rt:routes/rt:route/ospf:route-type" {
     deviate not-supported;
   }
-  deviation "/rt:routing/rt:ribs/rt:rib/rt:routes/rt:route/rt:active" {
-    deviate not-supported;
-  }
-  deviation "/rt:routing/rt:ribs/rt:rib/rt:routes/rt:route/rt:last-updated" {
-    deviate not-supported;
-  }
   deviation "/rt:routing/rt:ribs/rt:rib/rt:description" {
     deviate not-supported;
+  }
+  augment "/rt:routing/rt:ribs/rt:rib/rt:routes/rt:route/"
+        + "rt:next-hop/rt:next-hop-options/rt:next-hop-list/"
+        + "rt:next-hop-list/rt:next-hop" {
+    description "IETF use 'active' for selected routes within a protocol (RIB).
+                 This augment adds an 'installed' leaf for marking routes that
+                 are installed in the kernel FIB with the given next-hop.";
+    leaf installed {
+      description "The presence of this leaf indicates that the route is
+                   installed in the kernel FIB with the given next-hop.";
+      type empty;
+    }
   }
 
   /* OSPF */

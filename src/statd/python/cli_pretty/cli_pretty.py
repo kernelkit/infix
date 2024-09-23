@@ -3,6 +3,7 @@ import json
 import argparse
 import sys
 import re
+from datetime import datetime, timezone
 
 
 class Pad:
@@ -21,9 +22,10 @@ class PadMdb:
 
 class PadRoute:
     prefix = 30
-    protocol = 10
-    next_hop = 30
     pref = 8
+    next_hop = 30
+    protocol = 10
+    uptime = 10
 
 
 class PadSoftware:
@@ -88,17 +90,23 @@ class Route:
         self.data = data
         self.prefix = data.get(f'ietf-{ip}-unicast-routing:destination-prefix', '')
         self.protocol = data.get('source-protocol', '').split(':')[-1]
+        self.last_updated = data.get('last-updated', '')
+        self.active = data.get('active', False)
         self.pref = data.get('route-preference', '')
+        self.metric = data.get('ietf-ospf:metric', 0)
         self.next_hop = []
         next_hop_list = get_json_data(None, self.data, 'next-hop', 'next-hop-list')
         if next_hop_list:
             for nh in next_hop_list["next-hop"]:
                 if nh.get(f"ietf-{ip}-unicast-routing:address"):
-                    self.next_hop.append(nh[f"ietf-{ip}-unicast-routing:address"])
+                    hop = nh[f"ietf-{ip}-unicast-routing:address"]
                 elif nh.get("outgoing-interface"):
-                    self.next_hop.append(nh["outgoing-interface"])
+                    hop = nh["outgoing-interface"]
                 else:
-                    self.next_hop.append("unspecified")
+                    hop = "unspecified"
+
+                fib = nh.get('infix-routing:installed', False)
+                self.next_hop.append((hop, fib))
         else:
             interface = get_json_data(None, self.data, 'next-hop', 'outgoing-interface')
             address = get_json_data(None, self.data, 'next-hop', f'ietf-{ip}-unicast-routing:next-hop-address')
@@ -116,23 +124,56 @@ class Route:
     def get_distance_and_metric(self):
         if isinstance(self.pref, int):
             distance = self.pref
-            metric = 0
+            metric = self.metric
         else:
             distance, metric = 0, 0
 
         return distance, metric
 
+    def datetime2uptime(self):
+        """Convert 'last-updated' string to uptime in AAhBBmCCs format."""
+        if not self.last_updated:
+            return "0h0m0s"
+
+        # Replace the colon in the timezone offset (e.g., +00:00 -> +0000)
+        pos = self.last_updated.rfind('+')
+        if pos != -1:
+            adjusted = self.last_updated[:pos] + self.last_updated[pos:].replace(':', '')
+        else:
+            adjusted = self.last_updated
+
+        last_updated = datetime.strptime(adjusted, '%Y-%m-%dT%H:%M:%S%z')
+        current_time = datetime.now(timezone.utc)
+        uptime_delta = current_time - last_updated
+
+        hours, remainder = divmod(int(uptime_delta.total_seconds()), 3600)
+        minutes, seconds = divmod(remainder, 60)
+
+        return f"{hours}h{minutes}m{seconds}s"
+
     def print(self):
         distance, metric = self.get_distance_and_metric()
+        uptime = self.datetime2uptime()
         pref = f"{distance}/{metric}"
-        row = f"{self.prefix:<{PadRoute.prefix}}"
-        row += f"{self.next_hop[0]:<{PadRoute.next_hop}}"
+        hop, fib = self.next_hop[0]
+
+        row = ">" if self.active else " "
+        row += "*" if fib else " "
+        row += " "
+        row += f"{self.prefix:<{PadRoute.prefix}}"
         row += f"{pref:>{PadRoute.pref}}  "
+        row += f"{hop:<{PadRoute.next_hop}}"
         row += f"{self.protocol:<{PadRoute.protocol}}"
+        row += f"{uptime:>{PadRoute.uptime}}"
         print(row)
         for nh in self.next_hop[1:]:
-            row = f"{'':<{PadRoute.prefix}}"
-            row += f"{nh:<{PadRoute.next_hop}}"
+            hop, fib = nh
+            row = " "
+            row += "*" if fib else " "
+            row += " "
+            row += f"{'':<{PadRoute.prefix}}"
+            row += f"{'':>{PadRoute.pref}}  "
+            row += f"{hop:<{PadRoute.next_hop}}"
             print(row)
 
 
@@ -555,10 +596,11 @@ def show_routing_table(json, ip):
         print("Error, top level \"ietf-routing:routing\" missing")
         sys.exit(1)
 
-    hdr = (f"{'PREFIX':<{PadRoute.prefix}}"
-           f"{'NEXT-HOP':<{PadRoute.next_hop}}"
+    hdr = (f"   {'PREFIX':<{PadRoute.prefix}}"
            f"{'PREF':>{PadRoute.pref}}  "
-           f"{'PROTOCOL':<{PadRoute.protocol}}")
+           f"{'NEXT-HOP':<{PadRoute.next_hop}}"
+           f"{'PROTOCOL':<{PadRoute.protocol}}"
+           f"{'UPTIME':>{PadRoute.uptime}}")
 
     print(Decore.invert(hdr))
     for rib in get_json_data({}, json, 'ietf-routing:routing', 'ribs', 'rib'):
