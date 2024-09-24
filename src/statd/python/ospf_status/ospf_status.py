@@ -46,11 +46,11 @@ def main():
 
             for nbrAddress,nbrDatas in neighbors["neighbors"].items():
                 for nbrData in nbrDatas:
-                    nbrIfname=nbrData["ifaceName"].split(":")[0]
+                    nbrIfname=nbrData["ifaceName"]
                     if(("NSSA" in nbrData.get("areaId", {})) or ("Stub" in nbrData.get("areaId", {}))):
                         nbrData["areaId"] = nbrData["areaId"][:-7]
 
-                    if ((nbrIfname != ifname) and (area_id != nbrData.get("areaId"))):
+                    if ((nbrIfname != ifname) or (area_id != nbrData.get("areaId"))):
                         #print(f'Continute {ifname} {nbrData.get("areaId")}')
                         continue
                     nbrData["neighborIp"] = nbrAddress
