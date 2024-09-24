@@ -8,6 +8,7 @@ All notable changes to the project are documented in this file.
 -------------------------
 
 ### Changes
+- Upgrade Linux kernel to 6.6.52 (LTS)
 - Updated `infix-routing.yang` to declare deviations for unsupported
   OSPF RPCs and Notifications in `ietf-ospf.yang`
 - The CLI admin-exec command `show dns` now also shows any configured
@@ -24,7 +25,7 @@ All notable changes to the project are documented in this file.
   authorized users, like `admin`, to not being able to query status
   of OSPF or BFD.  Workaround by using the UNIX shell `sudo vtysh`.
   Regression introduced in v24.08.0
-- Fix #603: regression in GNS3 image, starts in test mode by default. 
+- Fix #603: regression in GNS3 image, starts in test mode by default.
   Introduced in v24.08.
 - Fix #613: CLI regression in tab completion of container commands,
   e.g., `container shell <TAB>`.  Regression introduced in v24.08.0
@@ -35,6 +36,8 @@ All notable changes to the project are documented in this file.
   bridges without multicast snooping
 - Fix #623: CLI command `container upgrade NAME` does not work,
   regression introduced in v24.06.0
+- Fix #635: OSPF: all router neighbors reported as neighbor on every
+  interface
 - Spellcheck path to `/var/lib/containers` when unpacking OCI archives
   on container upgrade
 - The timeout before giving up on loading the `startup-config` at boot
