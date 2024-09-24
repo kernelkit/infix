@@ -1,32 +1,20 @@
 #!/usr/bin/env python3
-#
-# Verify that basic services like mDNS and LLDP can be enabled and
-# disabled.  We verify operation and non-operation by using tcpdump.
-#
-# XXX: with socat in the Docker container we could speed up the LLDP
-#      detection considerably by sending a probe:
-#
-# echo -ne "\x01\x80\xc2\x00\x00\x0e\x01\x80\xc2\x00\x00\x0e\x88\xcc\x02\x07\x04\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00" | socat - UDP4-DATAGRAM:255.255.255.255:7010,broadcast
-#
 """
 Services basic
 
 Verify that basic services like mDNS and LLDP can be enabled and
 disabled.  We verify operation and non-operation by using tcpdump.
-
-XXX: with socat in the Docker container we could speed up the LLDP
-     detection considerably by sending a probe:
-
-echo -ne '\\x01\\x80\\xc2\\x00\\x00\\x0e\\x01\\x80\\xc2\\x00\\x00\\x0e\\x88\\xcc\\x02\\x07\\x04\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00' | socat - UDP4-DATAGRAM:255.255.255.255:7010,broadcast
-
 """
 import time
 import infamy
 
+
 def toggle(updown):
     """Toggle port down/up to kick services"""
     _, port = env.ltop.xlate("target", "data")
+    act = "UP" if updown else "DOWN"
 
+    print(f"target: taking interface {port} {act} ...")
     target.put_config_dict("ietf-interfaces", {
         "interfaces": {
             "interface": [
@@ -38,37 +26,45 @@ def toggle(updown):
         }
     })
 
+
 def verify(enabled, sec):
     """Verify service traffic, or no traffic in case service not enabled"""
     _, hport = env.ltop.xlate("host", "data")
 
     with infamy.IsolatedMacVlan(hport) as netns:
         snif = infamy.Sniffer(netns, "port 5353 or ether proto 0x88cc")
+        act = "enabling" if enabled else "disabling"
 
         netns.addip("10.0.0.1")
         netns.addroute("0.0.0.0/0", "10.0.0.1")
 
-        # Put service enable/disable before starting tcpdump, because
-        # LLDP lingers and will send a final shutdown message that
-        # otherwise would get in the capture for disable.
-        target.put_config_dict("infix-services", {
-            "mdns": {
-                "enabled": enabled
-            }
-        })
-        target.put_config_dict("ieee802-dot1ab-lldp", {
-            "lldp": {
-                "enabled": enabled
-            }
-        })
-
+        # Prevent old-state traffic from being captured before reconf
         toggle(False)
+
         with snif:
-            time.sleep(1)
+            print("host: collecting network traffic ...")
+
+            # Put service enable/disable before starting tcpdump,
+            # because LLDP lingers and will send a final shutdown
+            # message that otherwise would get in the capture for
+            # disable.
+            print(f"target: {act} LLDP and mDNS services ...")
+            target.put_config_dict("infix-services", {
+                "mdns": {
+                    "enabled": enabled
+                }
+            })
+            target.put_config_dict("ieee802-dot1ab-lldp", {
+                "lldp": {
+                    "enabled": enabled
+                }
+            })
+
             toggle(True)
-            time.sleep(sec - 1)
+            time.sleep(sec)
 
         return snif.output()
+
 
 with infamy.Test() as test:
     with test.step("Initialize"):
@@ -109,16 +105,16 @@ with infamy.Test() as test:
 
     with test.step("Start sniffer and enable services on target ..."):
         rc = verify(True, 10)
-        #print(rc.stdout)
+        print(rc.stdout)
         # breakpoint()
         if "10.0.0.10.5353" not in rc.stdout:
             test.fail()
         if "LLDP" not in rc.stdout:
             test.fail()
 
-    with test.step("Disable services on target, verify they're not running anymore ..."):
+    with test.step("Disable services on target, verify no longer running ..."):
         rc = verify(False, 10)
-        #print(rc.stdout)
+        print(rc.stdout)
         if "10.0.0.10.5353" in rc.stdout:
             test.fail()
         if "LLDP" in rc.stdout:
