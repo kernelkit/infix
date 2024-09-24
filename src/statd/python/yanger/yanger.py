@@ -837,6 +837,26 @@ def add_vlans_to_bridge(brname, iface_out, mc_status):
 
     insert(iface_out, "infix-interfaces:bridge", "vlans", "vlan", vlans)
 
+def get_iface_data(ifname):
+    iface_out = {}
+
+    add_ip_link(ifname, iface_out)
+    add_ip_addr(ifname, iface_out)
+
+    if 'type' in iface_out and iface_out['type'] == "infix-if-type:ethernet":
+        add_ethtool_groups(ifname, iface_out)
+        add_ethtool_std(ifname, iface_out)
+
+    if 'type' in iface_out and iface_out['type'] == "infix-if-type:bridge":
+        # Fail silent, multicast snooping may not be enabled on bridge
+        mc_status = run_json_cmd(['mctl', '-p', 'show', 'igmp', 'json'],
+                                 "igmp-status.json", default={},
+                                 check=False)
+
+        add_vlans_to_bridge(ifname, iface_out, mc_status)
+        add_mdb_to_bridge(ifname, iface_out, mc_status)
+
+    return iface_out
 
 def main():
     global TESTPATH
@@ -867,38 +887,20 @@ def main():
     logger.addHandler(log)
 
     if args.model == 'ietf-interfaces':
-        # For now, we handle each interface separately, as this is how it's
-        # currently implemented in sysrepo. I.e sysrepo will subscribe to
-        # each individual interface and query it for YANG data.
-
-        if not args.param:
-            print("usage: yanger ietf-interfaces -p INTERFACE", file=sys.stderr)
-            sys.exit(1)
-
         yang_data = {
             "ietf-interfaces:interfaces": {
-                "interface": [{}]
+                "interface": []
             }
         }
 
-        ifname = args.param
-        iface_out = yang_data['ietf-interfaces:interfaces']['interface'][0]
-
-        add_ip_link(ifname, iface_out)
-        add_ip_addr(ifname, iface_out)
-
-        if 'type' in iface_out and iface_out['type'] == "infix-if-type:ethernet":
-            add_ethtool_groups(ifname, iface_out)
-            add_ethtool_std(ifname, iface_out)
-
-        if 'type' in iface_out and iface_out['type'] == "infix-if-type:bridge":
-            # Fail silent, multicast snooping may not be enabled on bridge
-            mc_status = run_json_cmd(['mctl', '-p', 'show', 'igmp', 'json'],
-                                     "igmp-status.json", default={},
-                                     check=False)
-
-            add_vlans_to_bridge(ifname, iface_out, mc_status)
-            add_mdb_to_bridge(ifname, iface_out, mc_status)
+        if args.param:
+            iface_data = get_iface_data(args.param)
+            yang_data['ietf-interfaces:interfaces']['interface'].append(iface_data)
+        else:
+            ifnames = os.listdir('/sys/class/net/')
+            for ifname in ifnames:
+                iface_data = get_iface_data(ifname)
+                yang_data['ietf-interfaces:interfaces']['interface'].append(iface_data)
 
     elif args.model == 'ietf-routing':
         yang_data = {
