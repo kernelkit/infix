@@ -40,23 +40,31 @@ All notable changes to the project are documented in this file.
 - Fix #613: CLI regression in tab completion of container commands,
   e.g., `container shell <TAB>`.  Regression introduced in v24.08.0
 - Fix #616: Silent failure when selecting bash as login shell for
-  non-admin user, this silent lock has been removed.
+  non-admin user, this silent lock has been removed
 - Fix #618: CLI command `show interfaces` does not show bridges and
   bridge ports, regression introduced in v24.08.0 -- only affects
   bridges without multicast snooping
 - Fix #623: CLI command `container upgrade NAME` does not work,
   regression introduced in v24.06.0
 - Fix #625: initialize sysrepo startup datastore at boot.  Improves
-  usability when working directly against the sysrepo datastores
+  usability when working directly against the sysrepo datastores from
+  the shell with `sysrepocfg` and `sysrepoctl` tools
 - Fix #635: OSPF: all router neighbors reported as neighbor on every
   interface
 - Fix #638: Disabling IPv4LL (autoconf) on an interface does not clean
   up 169.254/16 addresses
+- Fix #640: unable to set static default route due to priority inversion
+  from DHCP or IPv4LL (ZeroConf) clients setting their routes directly
+  in the kernel.  This has resulted in a complete overhaul of route
+  management, using FRRouting for all routes, including DHCP and IPv4LL
+  routes, presentation in the CLI, and also support for custom route
+  preference for static routes.
 - Spellcheck path to `/var/lib/containers` when unpacking OCI archives
   on container upgrade
 - The timeout before giving up on loading the `startup-config` at boot
   is now 1 minute, just like operations via other front-ends (NETCONF
   and RESTCONF). This was previously (incorrectly) set to 10 seconds.
+
 
 [v24.08.0][] - 2024-08-30
 -------------------------
@@ -1123,6 +1131,7 @@ Supported YANG models in addition to those used by sysrepo and netopeer:
 
 [buildroot]:  https://buildroot.org/
 [UNRELEASED]: https://github.com/kernelkit/infix/compare/v24.08.0...HEAD
+[v24.09.0]:   https://github.com/kernelkit/infix/compare/v24.08.0...v24.09.0
 [v24.08.0]:   https://github.com/kernelkit/infix/compare/v24.06.0...v24.08.0
 [v24.06.0]:   https://github.com/kernelkit/infix/compare/v24.04.0...v24.06.0
 [v24.04.2]:   https://github.com/kernelkit/infix/compare/v24.04.1...v24.04.2
