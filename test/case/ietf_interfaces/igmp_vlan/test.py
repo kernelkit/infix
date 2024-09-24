@@ -44,6 +44,11 @@ with infamy.Test() as test:
         _, d2sender = env.ltop.xlate("dut2", "data1")
         _, d2trunk = env.ltop.xlate("dut2", "data2")
 
+        _, hsendd1 = env.ltop.xlate("host", "data10")
+        _, hreceived1 = env.ltop.xlate("host", "data11")
+        _, hreceived2 = env.ltop.xlate("host", "data20")
+        _, hsendd2 = env.ltop.xlate("host", "data21")
+
 
     with test.step("Configure device"):
         dut1.put_config_dict("ietf-interfaces",
@@ -249,35 +254,43 @@ with infamy.Test() as test:
             }
         })
 
-    with test.step("Check multicast receieved on correct port and VLAN"):
-        _, d1send = env.ltop.xlate("host", "data10")
-        _, d1receive = env.ltop.xlate("host", "data11")
-        _, d2receive = env.ltop.xlate("host", "data20")
-        _, d2send = env.ltop.xlate("host", "data21")
-        with infamy.IsolatedMacVlan(d1send) as d1send_ns, \
-             infamy.IsolatedMacVlan(d1receive) as d1receive_ns, \
-             infamy.IsolatedMacVlan(d2receive) as d2receive_ns, \
-             infamy.IsolatedMacVlan(d2send) as d2send_ns:
-            d1send_ns.addip("10.0.1.11")
-            d1receive_ns.addip("10.0.2.11")
-            d2receive_ns.addip("10.0.1.22")
-            d2send_ns.addip("10.0.2.22")
+    with infamy.IsolatedMacVlan(hsendd1) as d1send_ns, \
+         infamy.IsolatedMacVlan(hreceived1) as d1receive_ns, \
+         infamy.IsolatedMacVlan(hreceived2) as d2receive_ns, \
+         infamy.IsolatedMacVlan(hsendd2) as d2send_ns:
+        d1send_ns.addip("10.0.1.11")
+        d1receive_ns.addip("10.0.2.11")
+        d2receive_ns.addip("10.0.1.22")
+        d2send_ns.addip("10.0.2.22")
+        d1send_ns.must_reach("10.0.1.2")
+        d1receive_ns.must_reach("10.0.2.2")
+        with test.step("Start multicast sender on host:data10, group 224.2.2.2"):
+            vlan55_sender = mcast.MCastSender(d2send_ns, "224.2.2.2")
+        with test.step("Start multicast sender on host:data21, group 224.1.1.1"):
+            vlan77_sender= mcast.MCastSender(d1send_ns, "224.1.1.1")
 
-            d1send_ns.must_reach("10.0.1.2")
-            d1receive_ns.must_reach("10.0.2.2")
 
-            vlan55_sender = mcast.MCastSender(d1send_ns, "224.1.1.1")
-            vlan77_sender= mcast.MCastSender(d2send_ns, "224.2.2.2")
-            vlan55_receiver = mcast.MCastReceiver(d2receive_ns, "224.1.1.1")
-
-            with vlan55_sender, vlan77_sender, vlan55_receiver:
-                with test.step("Multicast does not exist on ports/VLANs where they should not be"):
+        with vlan55_sender, vlan77_sender:
+            with test.step("Verify group 224.2.2.2 is flooded to host:data20"):
+                d1receive_ns.must_receive("ip dst 224.2.2.2")
+            with test.step("Verify group 224.1.1.1 is flooded to host:data11"):
+                d2receive_ns.must_receive("ip dst 224.1.1.1")
+            with test.step("Verify group 224.2.2.2 on host:data10, 224.1.1.1 on host:data20, 224.2.2.2 on host:data11 and 224.1.1.1 on host:data21 is not received"):
+                parallel(d1send_ns.must_not_receive("host 224.2.2.2"),
+                         d1receive_ns.must_not_receive("host 224.1.1.1"),
+                         d2receive_ns.must_not_receive("host 224.2.2.2"),
+                         d2send_ns.must_not_receive("host 224.1.1.1"))
+            with test.step("Join multicast group 224.2.2.2 on host:data20"):
+                vlan55_receiver = mcast.MCastReceiver(d1receive_ns, "224.2.2.2")
+            with vlan55_receiver:
+                with test.step("Verify group 224.2.2.2 on host:data10, 224.1.1.1 on host:data20, 224.2.2.2 on host:data11 and 224.1.1.1 on host:data21 is not received"):
                     parallel(d1send_ns.must_not_receive("host 224.2.2.2"),
                              d1receive_ns.must_not_receive("host 224.1.1.1"),
-                             d2receive_ns.must_not_receive("host 224.2.2.2"),
+                             d1send_ns.must_not_receive("host 224.2.2.2"),
                              d2send_ns.must_not_receive("host 224.1.1.1"))
-                with test.step("Multicast received on correct port and VLAN"):
-                    parallel(d2receive_ns.must_receive("host 224.1.1.1"),
-                             d1receive_ns.must_receive("host 224.2.2.2"))
+                with test.step("Verify group 224.2.2.2 is forwarded to host:data20"):
+                    d1receive_ns.must_receive("host 224.2.2.2")
+                with test.step("Verify group 224.1.1.1 is forwarded to host:data11"):
+                    d2receive_ns.must_receive("ip dst 224.1.1.1")
 
         test.succeed()

@@ -16,9 +16,9 @@ image::topology.png[Interface IPv6 autoconf for bridges topology]
 endif::testgroup[]
 endif::topdoc[]
 ==== Test sequence
-. Initializing ...
-. Setting up bridge with IPv6 SLAAC for global prefix ...
-. Verifying sysctl autoconf setting ...
+. Connect to target
+. Setting up bridge with IPv6 SLAAC for global prefix on target:data
+. Verify using sysctl that 'net.ipv6.conf.br0.autoconf' is 1 on target
 
 
 <<<

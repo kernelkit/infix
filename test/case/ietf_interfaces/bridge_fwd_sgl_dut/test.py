@@ -17,7 +17,7 @@
 """
 Bridge forwarding single DUTs
 
-Tests forwarding through a DUT with two bridged interfaces
+Tests forwarding through a DUT with two bridged interfaces on one DUT.
 """
 import infamy
 
@@ -56,7 +56,7 @@ with infamy.Test() as test:
             }
         })
 
-    with test.step("Ping host:data1 [10.0.0.2] from host:data0 [10.0.0.1]"):
+    with test.step("Verify ping from host:data0 to 10.0.0.1"):
         _, hport0 = env.ltop.xlate("host", "data0")
         _, hport1 = env.ltop.xlate("host", "data1")
 

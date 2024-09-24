@@ -46,7 +46,7 @@ with infamy.Test() as test:
             }
         })
 
-    with test.step("Ping bridge 10.0.0.2 from host:data with IP 10.0.0.1"):
+    with test.step("Verify ping 10.0.0.2 is possible from host:data"):
         _, hport = env.ltop.xlate("host", "data")
 
         with infamy.IsolatedMacVlan(hport) as ns:

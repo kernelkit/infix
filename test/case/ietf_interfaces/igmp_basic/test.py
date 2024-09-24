@@ -96,7 +96,7 @@ with infamy.Test() as test:
          infamy.IsolatedMacVlan(hreceive) as receive_ns, \
          infamy.IsolatedMacVlan(hnojoin) as nojoin_ns:
 
-        with test.step("Setup sender and receivers"):
+        with test.step("Start multicast sender on host:data0, group 224.1.1.1"):
             send_ns.addip("10.0.0.2")
             receive_ns.addip("10.0.0.3")
             nojoin_ns.addip("10.0.0.4")
@@ -104,33 +104,32 @@ with infamy.Test() as test:
             receive_ns.must_reach("10.0.0.1")
             nojoin_ns.must_reach("10.0.0.1")
 
-        print("Starting sender")
-        with mcast.MCastSender(send_ns, "224.1.1.1"):
-            with test.step("Verify that the group is flooded on all ports"):
-                infamy.parallel(lambda: receive_ns.must_receive("ip dst 224.1.1.1"),
-                                lambda: nojoin_ns.must_receive("ip dst 224.1.1.1"))
+            with mcast.MCastSender(send_ns, "224.1.1.1"):
+                with test.step("Verify that the group 224.1.1.1 is flooded on host:data1 and host:data2"):
+                    infamy.parallel(lambda: receive_ns.must_receive("ip dst 224.1.1.1"),
+                                    lambda: nojoin_ns.must_receive("ip dst 224.1.1.1"))
 
-            print("Subscribe to the group")
-            with mcast.MCastReceiver(receive_ns, "224.1.1.1"):
-                with test.step("Verify that the group is still forwarded to the member"):
-                    receive_ns.must_receive("ip dst 224.1.1.1")
+                with test.step("Join multicast group 224.1.1.1 on host:data1"):
+                    with mcast.MCastReceiver(receive_ns, "224.1.1.1"):
+                        with test.step("Verify group 224.1.1.1 is received on host:data1"):
+                            receive_ns.must_receive("ip dst 224.1.1.1")
 
-                with test.step("Verify that the group is no longer forwarded to the non-member"):
-                    attempt = 0
+                        with test.step("Verify that the group 224.1.1.1 is no longer received to host:data2"):
+                            attempt = 0
 
-                    # This retry loop exists to handle the case where the first query is lost due
-                    # to the network just starting up. In particular there's a case where a newly
-                    # created bridge uses the "NOOP" scheduler (noop_enqueue()) for a split second
-                    # while it's starting up, which might drop the first query msg.
-                    while attempt <= query_interval:
-                        try:
-                            nojoin_ns.must_not_receive("ip dst 224.1.1.1")
-                            break
-                        except Exception as e:
-                            attempt += 1
-                            if attempt > query_interval:
-                                test.fail()
-                            else:
-                                print(f"Got mcast flood, retrying ({attempt}/{query_interval})")
+                            # This retry loop exists to handle the case where the first query is lost due
+                            # to the network just starting up. In particular there's a case where a newly
+                            # created bridge uses the "NOOP" scheduler (noop_enqueue()) for a split second
+                            # while it's starting up, which might drop the first query msg.
+                            while attempt <= query_interval:
+                                try:
+                                    nojoin_ns.must_not_receive("ip dst 224.1.1.1")
+                                    break
+                                except Exception as e:
+                                    attempt += 1
+                                    if attempt > query_interval:
+                                        test.fail()
+                                    else:
+                                        print(f"Got mcast flood, retrying ({attempt}/{query_interval})")
 
     test.succeed()

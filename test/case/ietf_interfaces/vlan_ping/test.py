@@ -25,11 +25,9 @@ def test_ping(hport, should_pass):
                 ns.must_not_reach("10.0.0.2")
 
 with infamy.Test() as test:
-    with test.step("Initialize"):
+    with test.step("Configure VLAN 10 on target:data with IP 10.0.0.2"):
         env = infamy.Env()
         target = env.attach("target", "mgmt")
-
-    with test.step("Configure VLAN 10 on target:data with IP 10.0.0.2"):
         _, tport = env.ltop.xlate("target", "data")
 
         target.put_config_dict("ietf-interfaces", {
@@ -67,7 +65,7 @@ with infamy.Test() as test:
         _, hport = env.ltop.xlate("host", "data")
         test_ping(hport,True)
 
-    with test.step("Remove VLAN interface, and test again (should not be able to ping)"):
+    with test.step("Remove VLAN interface from target:data, and test again (should not be able to ping)"):
         target.delete_xpath(f"/ietf-interfaces:interfaces/interface[name='{tport}.10']")
         _, hport = env.ltop.xlate("host", "data")
         test_ping(hport,False)

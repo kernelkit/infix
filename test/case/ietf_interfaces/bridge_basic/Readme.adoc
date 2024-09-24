@@ -17,7 +17,7 @@ endif::topdoc[]
 ==== Test sequence
 . Initialize
 . Configure single bridge with a single physical port, bridge @ IP 10.0.0.2
-. Ping bridge 10.0.0.2 from host:data with IP 10.0.0.1
+. Verify ping 10.0.0.2 is possible from host:data
 
 
 <<<

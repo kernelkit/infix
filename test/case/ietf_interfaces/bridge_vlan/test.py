@@ -15,12 +15,11 @@ Basic test of VLAN functionality in a bridge
 import infamy
 
 with infamy.Test() as test:
-    with test.step("Initialize"):
+    with test.step("Configure DUTs"):
         env  = infamy.Env()
         dut1 = env.attach("dut1", "mgmt")
         dut2 = env.attach("dut2", "mgmt")
 
-    with test.step("Topology setup"):
         _, dut1_e0 = env.ltop.xlate("dut1", "data")
         _, dut1_e1 = env.ltop.xlate("dut1", "to_dut2")
         _, dut2_e0 = env.ltop.xlate("dut2", "to_dut1")
@@ -118,7 +117,7 @@ with infamy.Test() as test:
             }
         })
 
-    with test.step("Connectivity check"):
+    with test.step("Verify ping from host:data1 to 10.0.0.2 and 10.0.0.3"):
         _, hport = env.ltop.xlate("host", "data1")
 
         with infamy.IsolatedMacVlan(hport) as ns:

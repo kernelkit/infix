@@ -1,6 +1,7 @@
 === Routing basic
 ==== Description
-Test that ipv4 forwarding setting in configuration is respected
+Verify routing between interfaces is possible. That enable/disable routing
+in configuration has the expected result.
 
 ==== Topology
 ifdef::topdoc[]
@@ -17,10 +18,11 @@ endif::topdoc[]
 ==== Test sequence
 . Initialize
 . Setup host
-. Enable forwarding
-. Traffic is forwarded
-. Disable forwarding
-. Traffic is not forwarded
+. Enable forwarding on target:data0 and target:data1
+. Verify ping from host:data0 to 10.0.0.1
+. Verify ping from host:data1 to 192.168.0.10
+. Disable forwarding on target:data0 and target:data1
+. Verfify ping does not work host:data0->10.0.0.10 and host:data1->192.168.0.10
 
 
 <<<

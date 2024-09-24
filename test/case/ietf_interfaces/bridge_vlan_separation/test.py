@@ -17,7 +17,7 @@
 """
 Bridge VLAN separation
 
-Test that two VLAN is correctly separaretade in the bridge
+Test that two VLAN is correctly separated in the bridge
 """
 import infamy
 
@@ -27,7 +27,7 @@ with infamy.Test() as test:
         dut1 = env.attach("dut1", "mgmt")
         dut2 = env.attach("dut2", "mgmt")
 
-    with test.step("Configure a bridge with triple physical port"):
+    with test.step("Configure DUTs"):
         _, tport10 = env.ltop.xlate("dut1", "data0")
         _, tport11 = env.ltop.xlate("dut1", "data1")
         _, tport12 = env.ltop.xlate("dut1", "data2")
@@ -137,27 +137,29 @@ with infamy.Test() as test:
             }
         })
 
-    with test.step("Ping host:data20 [10.0.0.3] from host:data10 [10.0.0.1] through <bridge-vlan-10>" \
-                   " and host:data21 [10.0.0.4] from host:data11 [10.0.0.2] through <bridge-vlan-20>"):
 
-        _, hport10 = env.ltop.xlate("host", "data10")
-        _, hport11 = env.ltop.xlate("host", "data11")
-        _, hport20 = env.ltop.xlate("host", "data20")
-        _, hport21 = env.ltop.xlate("host", "data21")
+    _, hport10 = env.ltop.xlate("host", "data10")
+    _, hport11 = env.ltop.xlate("host", "data11")
+    _, hport20 = env.ltop.xlate("host", "data20")
+    _, hport21 = env.ltop.xlate("host", "data21")
 
-        with infamy.IsolatedMacVlan(hport10) as ns10, \
-             infamy.IsolatedMacVlan(hport11) as ns11, \
-             infamy.IsolatedMacVlan(hport20) as ns20, \
-             infamy.IsolatedMacVlan(hport21) as ns21:
+    with infamy.IsolatedMacVlan(hport10) as ns10, \
+         infamy.IsolatedMacVlan(hport11) as ns11, \
+         infamy.IsolatedMacVlan(hport20) as ns20, \
+         infamy.IsolatedMacVlan(hport21) as ns21:
 
-            ns10.addip("10.0.0.1")
-            ns11.addip("10.0.0.2")
-            ns20.addip("10.0.0.3")
-            ns21.addip("10.0.0.4")
+        ns10.addip("10.0.0.1")
+        ns11.addip("10.0.0.2")
+        ns20.addip("10.0.0.3")
+        ns21.addip("10.0.0.4")
 
+        with test.step("Verify ing 10.0.0.3 from host:data10"):
             ns10.must_reach("10.0.0.3")
+
+        with test.step("Verify ing 10.0.0.4 from host:data11"):
             ns11.must_reach("10.0.0.4")
 
+        with test.step("Verify ping not possible host:data10->10.0.0.4, host:data11->10.0.0.3, host:data10->10.0.0.2, host:data11->10.0.0.1"):
             infamy.parallel(lambda: ns10.must_not_reach("10.0.0.4"),
                             lambda: ns11.must_not_reach("10.0.0.3"),
                             lambda: ns10.must_not_reach("10.0.0.2"),

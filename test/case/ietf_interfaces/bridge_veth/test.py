@@ -7,8 +7,8 @@
 """
 Bridge with a physical port and a veth
 
-This tests the possibility to add software added ports, in this case
-veth and bridge it with a physical port
+This tests the possibility to add software added interfaces, in this case
+VETH and bridge it with a physical interface
 """
 import infamy
 
@@ -66,7 +66,7 @@ with infamy.Test() as test:
             }
         })
 
-    with test.step("Ping other end of bridged veth pair on 10.0.0.2 from host:data with IP 10.0.0.1"):
+    with test.step("Verify ping from host:data to 10.0.0.2"):
         _, hport = env.ltop.xlate("host", "data")
 
         with infamy.IsolatedMacVlan(hport) as ns:

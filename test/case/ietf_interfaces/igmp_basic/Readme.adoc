@@ -18,10 +18,11 @@ endif::topdoc[]
 ==== Test sequence
 . Initialize
 . Configure device
-. Setup sender and receivers
-. Verify that the group is flooded on all ports
-. Verify that the group is still forwarded to the member
-. Verify that the group is no longer forwarded to the non-member
+. Start multicast sender on host:data0, group 224.1.1.1
+. Verify that the group 224.1.1.1 is flooded on host:data1 and host:data2
+. Join multicast group 224.1.1.1 on host:data1
+. Verify group 224.1.1.1 is received on host:data1
+. Verify that the group 224.1.1.1 is no longer received to host:data2
 
 
 <<<

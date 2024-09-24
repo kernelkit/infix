@@ -1,6 +1,6 @@
 === Dual bridges
 ==== Description
-Test that it is possible to ping a bridge through a bridge to another bridge
+Test that it is possible to ping a bridge through a bridge to another bridge with VETH interfaces.
 
 ==== Topology
 ifdef::topdoc[]
@@ -17,7 +17,7 @@ endif::topdoc[]
 ==== Test sequence
 . Initialize
 . Configure two bridges linked with a veth pair furthest bridge has IP 10.0.0.2
-. Ping furthest bridge 10.0.0.2 from host:data with IP 10.0.0.1
+. Verify ping from host:data to 10.0.0.2
 
 
 <<<

@@ -17,7 +17,7 @@
 """
 Bridge forwarding dual DUTs
 
-Ping through both DUTs using bridged ports.
+Ping through two bridges on two different DUTs,
 """
 import infamy
 
@@ -118,8 +118,7 @@ with infamy.Test() as test:
             }
         })
 
-    with test.step("Ping host:data20 [10.0.0.3] and host:data21 [10.0.0.4]"\
-                   "from host:data11 [10.0.0.2]"):
+    with test.step("Verify ping 10.0.0.3 and 10.0.0.4 from host:data11"):
 
         _, hport11 = env.ltop.xlate("host", "data11")
         _, hport20 = env.ltop.xlate("host", "data20")

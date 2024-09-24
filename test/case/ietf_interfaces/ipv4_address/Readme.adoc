@@ -15,11 +15,10 @@ image::topology.png[Interface with IPv4 topology]
 endif::testgroup[]
 endif::topdoc[]
 ==== Test sequence
-. Setup
-. Get initial IP addresses
-. Configure IP address
-. Get updated IP addresses
-. Get updated IP addresses
+. Connect to target
+. Configure IPv4 address 10.10.10.20/24 on target:mgmt
+. Verify '10.10.10.20/24' exist on target:mgmt
+. Verify target:mgmt no longer has the address 10.10.10.20
 
 
 <<<
