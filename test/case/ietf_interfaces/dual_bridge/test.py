@@ -7,7 +7,7 @@
 """
 Dual bridges
 
-Test that it is possible to ping a bridge through a bridge to another bridge
+Test that it is possible to ping a bridge through a bridge to another bridge with VETH interfaces.
 """
 import infamy
 
@@ -73,7 +73,7 @@ with infamy.Test() as test:
             }
         })
 
-    with test.step("Ping furthest bridge 10.0.0.2 from host:data with IP 10.0.0.1"):
+    with test.step("Verify ping from host:data to 10.0.0.2"):
         _, hport = env.ltop.xlate("host", "data")
 
         with infamy.IsolatedMacVlan(hport) as ns:

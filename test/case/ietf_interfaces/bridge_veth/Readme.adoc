@@ -1,7 +1,7 @@
 === Bridge with a physical port and a veth
 ==== Description
-This tests the possibility to add software added ports, in this case
-veth and bridge it with a physical port
+This tests the possibility to add software added interfaces, in this case
+VETH and bridge it with a physical interface
 
 ==== Topology
 ifdef::topdoc[]
@@ -18,7 +18,7 @@ endif::topdoc[]
 ==== Test sequence
 . Initialize
 . Configure bridged eth port and veth pair with IP 10.0.0.2
-. Ping other end of bridged veth pair on 10.0.0.2 from host:data with IP 10.0.0.1
+. Verify ping from host:data to 10.0.0.2
 
 
 <<<

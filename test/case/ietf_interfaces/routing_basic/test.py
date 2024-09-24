@@ -19,7 +19,8 @@
 """
 Routing basic
 
-Test that ipv4 forwarding setting in configuration is respected
+Verify routing between interfaces is possible. That enable/disable routing
+in configuration has the expected result.
 """
 import infamy
 
@@ -73,17 +74,19 @@ with infamy.Test() as test:
             ns1.addip("10.0.0.10")
             ns1.addroute("default", "10.0.0.1")
 
-        with test.step("Enable forwarding"):
+        with test.step("Enable forwarding on target:data0 and target:data1"):
             config_target(target, tport0, tport1, True)
 
-        with test.step("Traffic is forwarded"):
+        with test.step("Verify ping from host:data0 to 10.0.0.1"):
             ns0.must_reach("10.0.0.10")
+
+        with test.step("Verify ping from host:data1 to 192.168.0.10"):
             ns1.must_reach("192.168.0.10")
 
-        with test.step("Disable forwarding"):
+        with test.step("Disable forwarding on target:data0 and target:data1"):
             config_target(target, tport0, tport1, False)
 
-        with test.step("Traffic is not forwarded"):
+        with test.step("Verfify ping does not work host:data0->10.0.0.10 and host:data1->192.168.0.10"):
             infamy.parallel(lambda: ns0.must_not_reach("10.0.0.10"),
                             lambda: ns1.must_not_reach("192.168.0.10"))
 

@@ -17,9 +17,15 @@ endif::topdoc[]
 ==== Test sequence
 . Initialize
 . Configure device
-. Check multicast receieved on correct port and VLAN
-. Multicast does not exist on ports/VLANs where they should not be
-. Multicast received on correct port and VLAN
+. Start multicast sender on host:data10, group 224.2.2.2
+. Start multicast sender on host:data21, group 224.1.1.1
+. Verify group 224.2.2.2 is flooded to host:data20
+. Verify group 224.1.1.1 is flooded to host:data11
+. Verify group 224.2.2.2 on host:data10, 224.1.1.1 on host:data20, 224.2.2.2 on host:data11 and 224.1.1.1 on host:data21 is not received
+. Join multicast group 224.2.2.2 on host:data20
+. Verify group 224.2.2.2 on host:data10, 224.1.1.1 on host:data20, 224.2.2.2 on host:data11 and 224.1.1.1 on host:data21 is not received
+. Verify group 224.2.2.2 is forwarded to host:data20
+. Verify group 224.1.1.1 is forwarded to host:data11
 
 
 <<<

@@ -117,7 +117,7 @@ with infamy.Test() as test:
          infamy.IsolatedMacVlan(hreceive) as receive_ns, \
          infamy.IsolatedMacVlan(hnojoin) as nojoin_ns:
 
-        with test.step("Setup sender and receivers"):
+        with test.step("Start multicast sender on host:data0, group 224.1.1.1"):
             send_ns.addip("10.0.0.2")
             receive_ns.addip("10.0.0.3")
             nojoin_ns.addip("10.0.0.4")
@@ -125,20 +125,20 @@ with infamy.Test() as test:
             receive_ns.must_reach("10.0.0.1")
             nojoin_ns.must_reach("10.0.0.1")
 
-        print("Starting sender")
-        with mcast.MCastSender(send_ns, "224.1.1.1"):
-            with test.step("Verify that the group is flooded on all ports"):
-                infamy.parallel(lambda: receive_ns.must_receive("ip dst 224.1.1.1"),
-                                lambda: nojoin_ns.must_receive("ip dst 224.1.1.1"))
+            print("Starting sender")
+            with mcast.MCastSender(send_ns, "224.1.1.1"):
+                with test.step("Verify that 224.1.1.1 is flooded to host:data1 and host:data2"):
+                    infamy.parallel(lambda: receive_ns.must_receive("ip dst 224.1.1.1"),
+                                    lambda: nojoin_ns.must_receive("ip dst 224.1.1.1"))
 
-            with test.step("Install group filter"):
-                set_static_multicast_filter(target, "224.1.1.1", mreceive)
-                until(lambda: iface.exist_bridge_multicast_filter(target, "224.1.1.1", mreceive, "br0"))
+                with test.step("Enable multicast filter on host:data1, group 224.1.1.1"):
+                    set_static_multicast_filter(target, "224.1.1.1", mreceive)
+                    until(lambda: iface.exist_bridge_multicast_filter(target, "224.1.1.1", mreceive, "br0"))
 
-            with test.step("Verify that the group is still forwarded to the member"):
-                receive_ns.must_receive("ip dst 224.1.1.1")
+                    with test.step("Verify that the group is still forwarded host:data1"):
+                        receive_ns.must_receive("ip dst 224.1.1.1")
 
-            with test.step("Verify that the group is no longer forwarded to the non-member"):
-                nojoin_ns.must_not_receive("ip dst 224.1.1.1")
+                    with test.step("Verify that the group is no longer forwarded host:data2"):
+                        nojoin_ns.must_not_receive("ip dst 224.1.1.1")
 
         test.succeed()

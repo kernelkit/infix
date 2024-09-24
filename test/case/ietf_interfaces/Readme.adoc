@@ -11,6 +11,27 @@ include::ipv6_address/Readme.adoc[]
 
 include::iface_phys_address/Readme.adoc[]
 
-include::iface_status/Readme.adoc[]
-
 include::routing_basic/Readme.adoc[]
+
+include::bridge_basic/Readme.adoc[]
+
+include::bridge_fwd_dual_dut/Readme.adoc[]
+
+include::bridge_fwd_sgl_dut/Readme.adoc[]
+
+include::bridge_veth/Readme.adoc[]
+
+include::bridge_vlan/Readme.adoc[]
+
+include::bridge_vlan_separation/Readme.adoc[]
+
+include::dual_bridge/Readme.adoc[]
+
+include::igmp_basic/Readme.adoc[]
+
+include::igmp_vlan/Readme.adoc[]
+
+include::static_multicast_filters/Readme.adoc[]
+
+include::vlan_qos/Readme.adoc[]
+

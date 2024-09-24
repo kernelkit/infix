@@ -13,12 +13,12 @@ graph "1x2" {
 	];
 
         target [
-	    label="{ <mgmt> mgmt | <data> data } | target",
+	    label="{ <mgmt> mgmt | <data> data } | target\n10.0.0.2/24 (br0)",
 	    pos="10,12!",
 
 	    kind="infix",
 	];
 
 	host:tgt -- target:mgmt [kind=mgmt]
-	host:data -- target:data [color=black, fontcolor=black, taillabel="10.0.0.1/24", headlabel="10.0.0.2/24"]
+	host:data -- target:data [color=black, fontcolor=black, taillabel="10.0.0.1/24"]
 }

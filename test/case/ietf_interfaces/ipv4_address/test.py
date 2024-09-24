@@ -15,15 +15,14 @@ new_ip_address = "10.10.10.20"
 new_prefix_length = 24
 
 with infamy.Test() as test:
-    with test.step("Setup"):
+    with test.step("Connect to target"):
         env = infamy.Env()
         target = env.attach("target", "mgmt")
         _, interface_name = env.ltop.xlate("target", "mgmt")
 
-    with test.step("Get initial IP addresses"):
-        print(iface.get_ipv4_address(target, interface_name))
+    with test.step("Configure IPv4 address 10.10.10.20/24 on target:mgmt"):
+        print(f"Initial IPv4 address for target:mgmt {iface.get_ipv4_address(target, interface_name)}")
 
-    with test.step("Configure IP address"):
         config = {
             "interfaces": {
                 "interface": [{
@@ -40,12 +39,12 @@ with infamy.Test() as test:
 
         target.put_config_dict("ietf-interfaces", config)
 
-    with test.step("Get updated IP addresses"):
+    with test.step("Verify '10.10.10.20/24' exist on target:mgmt"):
         until(lambda: iface.address_exist(target, interface_name, new_ip_address, proto='static'))
 
-    with test.step(f"Remove IPv4 addresses from {interface_name}"):
+    with test.step(f"Remove all IPv4 addresses from target:mgmt"):
         target.delete_xpath(f"/ietf-interfaces:interfaces/interface[name='{interface_name}']/ietf-ip:ipv4")
-    with test.step("Get updated IP addresses"):
+    with test.step("Verify target:mgmt no longer has the address 10.10.10.20"):
         until(lambda: iface.address_exist(target, interface_name, new_ip_address) == False)
 
     test.succeed()

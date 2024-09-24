@@ -1,6 +1,6 @@
 === Bridge forwarding dual DUTs
 ==== Description
-Ping through both DUTs using bridged ports.
+Ping through two bridges on two different DUTs,
 
 ==== Topology
 ifdef::topdoc[]
@@ -17,7 +17,7 @@ endif::topdoc[]
 ==== Test sequence
 . Initialize
 . Configure a bridge with triple physical port
-. Ping host:data20 [10.0.0.3] and host:data21 [10.0.0.4]from host:data11 [10.0.0.2]
+. Verify ping 10.0.0.3 and 10.0.0.4 from host:data11
 
 
 <<<

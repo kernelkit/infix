@@ -8,12 +8,12 @@ See issue #473 for details.
 import infamy
 
 with infamy.Test() as test:
-    with test.step("Initializing ..."):
+    with test.step("Connect to target"):
         env = infamy.Env()
         target = env.attach("target", "mgmt")
         tgtssh = env.attach("target", "mgmt", "ssh")
 
-    with test.step("Setting up bridge with IPv6 SLAAC for global prefix ..."):
+    with test.step("Setting up bridge with IPv6 SLAAC for global prefix on target:data"):
         _, tport = env.ltop.xlate("target", "data")
 
         target.put_config_dict("ietf-interfaces", {
@@ -41,7 +41,7 @@ with infamy.Test() as test:
             }
         })
 
-    with test.step("Verifying sysctl autoconf setting ..."):
+    with test.step("Verify using sysctl that 'net.ipv6.conf.br0.autoconf' is 1 on target"):
         out = tgtssh.runsh("sysctl net.ipv6.conf.br0.autoconf").stdout
         print(out)
         if "autoconf = 1" not in out:
