@@ -31,6 +31,7 @@
 #define MFD_NOEXEC_SEAL 0x0008U
 #endif
 
+#define YANGER_BINPATH "/usr/libexec/statd/yanger"
 #define XPATH_MAX PATH_MAX
 #define XPATH_IFACE_BASE "/ietf-interfaces:interfaces"
 #define XPATH_ROUTING_BASE "/ietf-routing:routing/control-plane-protocols/control-plane-protocol"
@@ -60,28 +61,11 @@ struct statd {
  * when reading ethtool data (below).
  */
 static int ly_add_yanger_data(const struct ly_ctx *ctx, struct lyd_node **parent,
-			      const char *model, const char *arg, bool fail)
+			      char *yanger_args[], bool fail)
 {
-	char *yanger_args[5] = {
-		"/usr/libexec/statd/yanger",
-		(char *)model,
-		NULL,
-		NULL,
-		NULL
-	};
 	FILE *stream;
 	int err;
 	int fd;
-
-	if (!model) {
-		ERROR("Missing yang model to use");
-		return SR_ERR_SYS;
-	}
-
-	if ((strcmp(model, "ietf-interfaces") == 0) && arg) {
-		yanger_args[2] = "-p";
-		yanger_args[3] = (char *)arg;
-	}
 
 	fd = memfd_create("yanger_tmpfile", MFD_CLOEXEC | MFD_NOEXEC_SEAL);
 	if (fd == -1) {
@@ -164,6 +148,13 @@ static int sr_iface_cb(sr_session_ctx_t *session, uint32_t, const char *model,
 			 const char *, const char *xpath, uint32_t,
 			 struct lyd_node **parent, __attribute__((unused)) void *priv)
 {
+	char *yanger_args[5] = {
+		YANGER_BINPATH,
+		(char *)model,
+		NULL,
+		NULL,
+		NULL
+	};
 	char *ifname = NULL;
 	const struct ly_ctx *ctx;
 	sr_conn_ctx_t *con;
@@ -184,7 +175,11 @@ static int sr_iface_cb(sr_session_ctx_t *session, uint32_t, const char *model,
 	}
 
 	ifname = xpath_extract(xpath, "[name='");
-	err = ly_add_yanger_data(ctx, parent, model, ifname, true);
+	if (ifname) {
+		yanger_args[2] = "-p";
+		yanger_args[3] = ifname;
+	}
+	err = ly_add_yanger_data(ctx, parent, yanger_args, true);
 	if (err)
 		ERROR("Error adding interface yanger data");
 
@@ -197,6 +192,11 @@ static int sr_generic_cb(sr_session_ctx_t *session, uint32_t, const char *model,
 			 const char *path, const char *, uint32_t,
 			 struct lyd_node **parent, __attribute__((unused)) void *priv)
 {
+	char *yanger_args[5] = {
+		YANGER_BINPATH,
+		(char *)model,
+		NULL
+	};
 	const struct ly_ctx *ctx;
 	sr_conn_ctx_t *con;
 	sr_error_t err;
@@ -213,7 +213,7 @@ static int sr_generic_cb(sr_session_ctx_t *session, uint32_t, const char *model,
 		return SR_ERR_INTERNAL;
 	}
 
-	err = ly_add_yanger_data(ctx, parent, model, NULL, true);
+	err = ly_add_yanger_data(ctx, parent, yanger_args, true);
 	if (err)
 		ERROR("Error adding yanger data");
 
@@ -226,11 +226,16 @@ static int sr_ospf_cb(sr_session_ctx_t *session, uint32_t, const char *,
 		      const char *path, const char *, uint32_t,
 		      struct lyd_node **parent, __attribute__((unused)) void *priv)
 {
+	char *yanger_args[5] = {
+		YANGER_BINPATH,
+		"ietf-ospf",
+		NULL
+	};
 	const struct ly_ctx *ctx;
 	sr_conn_ctx_t *con;
 	sr_error_t err;
 
-	DEBUG("Incoming query for xpath: %s", path);
+	DEBUG("Incoming ospf query for xpath: %s", path);
 
 	con = sr_session_get_connection(session);
 	if (!con) {
@@ -244,7 +249,7 @@ static int sr_ospf_cb(sr_session_ctx_t *session, uint32_t, const char *,
 		return SR_ERR_INTERNAL;
 	}
 
-	err = ly_add_yanger_data(ctx, parent, "ietf-ospf", NULL, true);
+	err = ly_add_yanger_data(ctx, parent, yanger_args, true);
 	if (err)
 		ERROR("Error adding yanger data");
 
