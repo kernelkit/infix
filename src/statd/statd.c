@@ -189,7 +189,7 @@ static int sr_iface_cb(sr_session_ctx_t *session, uint32_t, const char *model,
 }
 
 static int sr_generic_cb(sr_session_ctx_t *session, uint32_t, const char *model,
-			 const char *path, const char *, uint32_t,
+			 const char *, const char *xpath, uint32_t,
 			 struct lyd_node **parent, __attribute__((unused)) void *priv)
 {
 	char *yanger_args[5] = {
@@ -200,6 +200,8 @@ static int sr_generic_cb(sr_session_ctx_t *session, uint32_t, const char *model,
 	const struct ly_ctx *ctx;
 	sr_conn_ctx_t *con;
 	sr_error_t err;
+
+	DEBUG("Incoming generic query for xpath: %s", xpath);
 
 	con = sr_session_get_connection(session);
 	if (!con) {
@@ -223,7 +225,7 @@ static int sr_generic_cb(sr_session_ctx_t *session, uint32_t, const char *model,
 }
 
 static int sr_ospf_cb(sr_session_ctx_t *session, uint32_t, const char *,
-		      const char *path, const char *, uint32_t,
+		      const char *, const char *xpath, uint32_t,
 		      struct lyd_node **parent, __attribute__((unused)) void *priv)
 {
 	char *yanger_args[5] = {
@@ -235,7 +237,7 @@ static int sr_ospf_cb(sr_session_ctx_t *session, uint32_t, const char *,
 	sr_conn_ctx_t *con;
 	sr_error_t err;
 
-	DEBUG("Incoming ospf query for xpath: %s", path);
+	DEBUG("Incoming ospf query for xpath: %s", xpath);
 
 	con = sr_session_get_connection(session);
 	if (!con) {
