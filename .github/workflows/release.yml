@@ -76,6 +76,10 @@ jobs:
         run: |
           make legal-info
 
+      - name: Build test specification
+        run: |
+          make test-spec
+
       - name: Prepare Artifacts
         run: |
           cd output/
@@ -153,7 +157,7 @@ jobs:
         run: |
           cat <<EOF >> $GITHUB_STEP_SUMMARY
           # Infix ${{ github.ref_name }} Released! :rocket:
-          
+
           For the public download links of this release, please see:
            <https://github.com/kernelkit/infix/releases/tag/${{ github.ref_name }}>
           EOF

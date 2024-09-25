@@ -92,6 +92,10 @@ jobs:
         run: |
           make legal-info
 
+      - name: Build test specification
+        run: |
+          make test-spec
+
       - name: Resulting size of build
         run: |
           printf "Size of complete tree : "
@@ -196,7 +200,7 @@ jobs:
         run: |
           cat <<EOF >> $GITHUB_STEP_SUMMARY
           # Latest Build Complete! :rocket:
-          
+
           For the public download links of these build artifacts, please see:
            <https://github.com/kernelkit/infix/releases/tag/latest>
           EOF
