@@ -56,12 +56,8 @@ struct statd {
 	struct ev_loop *ev_loop;
 };
 
-/*
- * The 'fail' parameter is true for most calls to this function, except
- * when reading ethtool data (below).
- */
 static int ly_add_yanger_data(const struct ly_ctx *ctx, struct lyd_node **parent,
-			      char *yanger_args[], bool fail)
+			      char *yanger_args[])
 {
 	FILE *stream;
 	int err;
@@ -86,8 +82,6 @@ static int ly_add_yanger_data(const struct ly_ctx *ctx, struct lyd_node **parent
 		ERROR("Error, running yanger");
 		fclose(stream);
 		close(fd);
-		if (!fail)
-			return SR_ERR_OK;
 		return SR_ERR_SYS;
 	}
 
@@ -179,7 +173,7 @@ static int sr_iface_cb(sr_session_ctx_t *session, uint32_t, const char *model,
 		yanger_args[2] = "-p";
 		yanger_args[3] = ifname;
 	}
-	err = ly_add_yanger_data(ctx, parent, yanger_args, true);
+	err = ly_add_yanger_data(ctx, parent, yanger_args);
 	if (err)
 		ERROR("Error adding interface yanger data");
 
@@ -215,7 +209,7 @@ static int sr_generic_cb(sr_session_ctx_t *session, uint32_t, const char *model,
 		return SR_ERR_INTERNAL;
 	}
 
-	err = ly_add_yanger_data(ctx, parent, yanger_args, true);
+	err = ly_add_yanger_data(ctx, parent, yanger_args);
 	if (err)
 		ERROR("Error adding yanger data");
 
@@ -251,7 +245,7 @@ static int sr_ospf_cb(sr_session_ctx_t *session, uint32_t, const char *,
 		return SR_ERR_INTERNAL;
 	}
 
-	err = ly_add_yanger_data(ctx, parent, yanger_args, true);
+	err = ly_add_yanger_data(ctx, parent, yanger_args);
 	if (err)
 		ERROR("Error adding yanger data");
 
