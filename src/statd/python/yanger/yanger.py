@@ -6,7 +6,7 @@ import json
 import sys  # (built-in module)
 import os
 import argparse
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 
 TESTPATH = ""
 logger = None
@@ -137,8 +137,9 @@ def run_json_cmd(cmd, testfile, default=None, check=True):
             return default
         raise
     except json.JSONDecodeError as err:
-        logger.error(f"failed parsing JSON output of command: {' '.join(cmd)}"
-                     f", error: {err}")
+        if check is True:
+            logger.error("failed parsing JSON output of command: "
+                         f"{' '.join(cmd)}, error: {err}")
         if default is not None:
             return default
         raise
@@ -229,8 +230,29 @@ def add_hardware(hw_out):
     insert(hw_out, "component", components)
 
 
+def uptime2datetime(uptime):
+    """Convert uptime (HH:MM:SS) to YANG format (YYYY-MM-DDTHH:MM:SS+00:00)"""
+    h, m, s = map(int, uptime.split(':'))
+    uptime_delta = timedelta(hours=h, minutes=m, seconds=s)
+    current_time = datetime.now(timezone.utc)
+    last_updated = current_time - uptime_delta
+    date_timestd = last_updated.strftime('%Y-%m-%dT%H:%M:%S%z')
+
+    return date_timestd[:-2] + ':' + date_timestd[-2:]
+
+
 def get_routes(routes, proto, data):
-    """Populate routes"""
+    """Populate routes from vtysh JSON output"""
+
+    # Mapping of FRR protocol names to IETF routing-protocol
+    pmap = {
+        'kernel': 'infix-routing:kernel',
+        'connected': 'direct',
+        'static': 'static',
+        'ospf': 'ietf-ospf:ospfv2',
+        'ospf6': 'ietf-ospf:ospfv3',
+    }
+
     out = {}
     out["route"] = []
 
@@ -241,58 +263,75 @@ def get_routes(routes, proto, data):
         default = "::/0"
         host_prefix_length = "128"
 
-    for entry in data:
-        new = {}
-        if entry['dst'] == "default":
-            entry['dst'] = default
-        if entry['dst'].find('/') == -1:
-            entry['dst'] = entry['dst'] + "/" + host_prefix_length
-        new[f'ietf-{proto}-unicast-routing:destination-prefix'] = entry['dst']
-        new['source-protocol'] = "infix-routing:" + entry['protocol']
-        if entry.get("metric"):
-            new['route-preference'] = entry['metric']
-        else:
-            new['route-preference'] = 0
+    for prefix, entries in data.items():
+        for route in entries:
+            new = {}
+            dst = route.get('prefix', default)
+            if '/' not in dst:
+                dst = f"{dst}/{route.get('prefixLen', host_prefix_length)}"
 
-        if entry.get('nexthops'):
+            new[f'ietf-{proto}-unicast-routing:destination-prefix'] = dst
+            frr = route.get('protocol', 'infix-routing:kernel')
+            new['source-protocol'] = pmap.get(frr, 'infix-routing:kernel')
+            new['route-preference'] = route.get('distance', 0)
+
+            # Metric only available in the model for OSPF routes
+            if 'ospf' in frr:
+                new['ietf-ospf:metric'] = route.get('metric', 0)
+
+            # See https://datatracker.ietf.org/doc/html/rfc7951#section-6.9
+            # for details on how presence leaves are encoded in JSON: [null]
+            if route.get('selected', False):
+                new['active'] = [None]
+
+            new['last-updated'] = uptime2datetime(route.get('uptime', 0))
+            installed = route.get('installed', False)
+
             next_hops = []
-            for hop in entry.get('nexthops'):
+            for hop in route.get('nexthops', []):
                 next_hop = {}
-                if hop.get("dev"):
-                    next_hop['outgoing-interface'] = hop['dev']
-                if hop.get("gateway"):
-                    next_hop[f'ietf-{proto}-unicast-routing:address'] = hop['gateway']
+                if hop.get('ip'):
+                    next_hop[f'ietf-{proto}-unicast-routing:address'] = hop['ip']
+                elif hop.get('interfaceName'):
+                    next_hop['outgoing-interface'] = hop['interfaceName']
+                # See zebra/zebra_vty.c:re_status_outpupt_char()
+                if installed and hop.get('fib', False):
+                    next_hop['infix-routing:installed'] = [None]
                 next_hops.append(next_hop)
 
-            insert(new, 'next-hop', 'next-hop-list', 'next-hop', next_hops)
-        else:
-            next_hop = {}
-            if entry['type'] == "blackhole":
-                next_hop['special-next-hop'] = "blackhole"
-            if entry['type'] == "unreachable":
-                next_hop['special-next-hop'] = "unreachable"
-            if entry['type'] == "unicast":
-                if entry.get("dev"):
-                    next_hop['outgoing-interface'] = entry['dev']
-                if entry.get("gateway"):
-                    next_hop[f'ietf-{proto}-unicast-routing:next-hop-address'] = entry['gateway']
+            if next_hops:
+                new['next-hop'] = {'next-hop-list': {'next-hop': next_hops}}
+            else:
+                next_hop = {}
+                protocol = route.get('protocol', 'unicast')
+                if protocol == "blackhole":
+                    next_hop['special-next-hop'] = "blackhole"
+                elif protocol == "unreachable":
+                    next_hop['special-next-hop'] = "unreachable"
+                else:
+                    if route.get('interfaceName'):
+                        next_hop['outgoing-interface'] = route['interfaceName']
+                    if route.get('nexthop'):
+                        next_hop[f'ietf-{proto}-unicast-routing:next-hop-address'] = route['nexthop']
 
-            new['next-hop'] = next_hop
+                new['next-hop'] = next_hop
 
-        out['route'].append(new)
+            out['route'].append(new)
 
     insert(routes, 'routes', out)
 
 
 def add_ipv4_route(routes):
     """Fetch IPv4 routes from kernel and populate tree"""
-    data = run_json_cmd(['ip', '-4', '-s', '-d', '-j', 'route'], "ip-4-route.json")
+    data = run_json_cmd(['sudo', 'vtysh', '-c', "show ip route json"],
+                        "vtysh-ip4-route.json", check=False, default={})
     get_routes(routes, "ipv4", data)
 
 
 def add_ipv6_route(routes):
     """Fetch IPv6 routes from kernel and populate tree"""
-    data = run_json_cmd(['ip', '-6', '-s', '-d', '-j', 'route'], "ip-6-route.json")
+    data = run_json_cmd(['sudo', 'vtysh', '-c', "show ipv6 route json"],
+                        "vtysh-ip6-route.json", check=False, default={})
     get_routes(routes, "ipv6", data)
 
 
@@ -307,9 +346,11 @@ def frr_to_ietf_neighbor_state(state):
 def add_ospf_routes(ospf):
     """Fetch OSPF routes from Frr"""
     cmd = ['vtysh', '-c', "show ip ospf rout json"]
-    data = run_json_cmd(cmd, "")
-    routes = []
+    data = run_json_cmd(cmd, "", check=False, default=[])
+    if data == []:
+        return  # No OSPF routes available
 
+    routes = []
     for prefix, info in data.items():
         if prefix.find("/") == -1:  # Ignore router IDs
             continue
@@ -348,8 +389,7 @@ def add_ospf_routes(ospf):
 def add_ospf(control_protocols):
     """Populate OSPF status"""
     cmd = ['/usr/libexec/statd/ospf-status']
-    data = run_json_cmd(cmd, "")
-
+    data = run_json_cmd(cmd, "", check=False, default={})
     if data == {}:
         return  # No OSPF data available
 

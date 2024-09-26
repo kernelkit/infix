@@ -45,8 +45,10 @@ endif
 
 ifeq ($(BR2_PACKAGE_AVAHI_AUTOIPD),y)
 define SKELETON_INIT_FINIT_SET_AVAHI_AUTOIPD
-	echo "service [2345789] name:zeroconf :%i avahi-autoipd --force-bind --syslog %i -- ZeroConf for %i" \
-		> $(FINIT_D)/available/zeroconf@.conf
+	echo 'service name:zeroconf :%i env:-/etc/default/zeroconf-%i \' >$(FINIT_D)/available/zeroconf@.conf
+	echo '        <!> kill:5 pid:!/run/avahi-autoipd.%i.pid       \'>>$(FINIT_D)/available/zeroconf@.conf
+	echo '        [2345789] log avahi-autoipd $$ZEROCONF_ARGS %i   \'>>$(FINIT_D)/available/zeroconf@.conf
+	echo '        -- ZeroConf for %i' >>$(FINIT_D)/available/zeroconf@.conf
 endef
 SKELETON_INIT_FINIT_POST_INSTALL_TARGET_HOOKS += SKELETON_INIT_FINIT_SET_AVAHI_AUTOIPD
 endif
@@ -87,6 +89,7 @@ define SKELETON_INIT_FINIT_SET_FRR
 	for svc in babeld bfdd bgpd eigrpd isisd ldpd ospfd ospf6d pathd ripd ripng staticd vrrpd zebra; do	\
 		cp $(SKELETON_INIT_FINIT_AVAILABLE)/frr/$$svc.conf $(FINIT_D)/available/$$svc.conf;		\
 	done
+	ln -sf ../available/staticd.conf $(FINIT_D)/enabled/staticd.conf
 	ln -sf ../available/zebra.conf $(FINIT_D)/enabled/zebra.conf
 endef
 SKELETON_INIT_FINIT_POST_INSTALL_TARGET_HOOKS += SKELETON_INIT_FINIT_SET_FRR

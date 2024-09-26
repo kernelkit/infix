@@ -1,23 +1,28 @@
-=== IPv4 linklocal
+=== IPv4 link-local
 ==== Description
-Verifies that linklocal (ZeroConf) work as expected
+Verifies that link-local (IPv4LL/ZeroConf) address assignment work as
+expected.  Checks random address, the request-address setting, and
+address removal on autoconf disable.
 
 ==== Topology
 ifdef::topdoc[]
-image::../../test/case/ietf_interfaces/ipv4_autoconf/topology.png[IPv4 linklocal topology]
+image::../../test/case/ietf_interfaces/ipv4_autoconf/topology.png[IPv4 link-local topology]
 endif::topdoc[]
 ifndef::topdoc[]
 ifdef::testgroup[]
-image::ipv4_autoconf/topology.png[IPv4 linklocal topology]
+image::ipv4_autoconf/topology.png[IPv4 link-local topology]
 endif::testgroup[]
 ifndef::testgroup[]
-image::topology.png[IPv4 linklocal topology]
+image::topology.png[IPv4 link-local topology]
 endif::testgroup[]
 endif::topdoc[]
 ==== Test sequence
 . Initialize
 . Configure an interface with IPv4 ZeroConf IP
-. Wait for linklocal address on interface
+. Verify link local address exist on target:mgmt
+. Configure target:mgmt with a specific IPv4 ZeroConf IP
+. Verify target:mgmt has link local address 169.254.42.42
+. Remove IPv4 link-local addresses from target:mgmt
 
 
 <<<

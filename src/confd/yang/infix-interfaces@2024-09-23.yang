@@ -20,6 +20,11 @@ module infix-interfaces {
   contact      "kernelkit@googlegroups.com";
   description  "Linux bridge and lag extensions for ietf-interfaces.";
 
+  revision 2024-09-23 {
+    description "Drop interfaces-state deviation, already marked deprecated.";
+    reference "internal";
+  }
+
   revision 2024-01-15 {
     description "Add support for container ports (CNI networks).";
     reference "internal";
@@ -70,10 +75,5 @@ module infix-interfaces {
     deviate replace {
       config true;
     }
-  }
-
-  deviation "/if:interfaces-state" {
-    deviate not-supported;
-    description "Deprecated";
   }
 }

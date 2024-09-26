@@ -537,45 +537,89 @@ static int netdag_gen_ipv6_autoconf(struct dagger *net, struct lyd_node *cif,
 	return 0;
 }
 
+/*
+ * Check if ipv4 is enabled, only then can autoconf be enabled, in all
+ * other cases it must be disabled.  Since we have multiple settings in
+ * autoconf, we check if either is modified (diff), in which case we not
+ * only enable, but also "touch" the Finit service for avahi-autoipd to
+ * ensure it is (re)started.
+ *
+ * Note: in Infix, regardless of the IPv4 configuration, any link-local
+ *       link-local address is disabled when the interface is being used
+ *       as a bridge port.
+ *
+ * Also, IPv4LL is not defined for loopback, so always skip there.
+ */
 static int netdag_gen_ipv4_autoconf(struct dagger *net, struct lyd_node *cif,
 				    struct lyd_node *dif)
 {
 	struct lyd_node *ipconf = lydx_get_child(cif, "ipv4");
 	struct lyd_node *ipdiff = lydx_get_child(dif, "ipv4");
 	const char *ifname = lydx_get_cattr(dif, "name");
-	struct lyd_node *node, *zcip;
-	struct lydx_diff nd;
+	struct lyd_node *zcip;
+	char defaults[64];
 	FILE *initctl;
 	int err = 0;
 
+	if (!strcmp(ifname, "lo"))
+		return 0;
+
+	/* client defults for this interface, needed in both cases */
+	snprintf(defaults, sizeof(defaults), "/etc/default/zeroconf-%s", ifname);
+
+	/* no ipv4 at all, ipv4 selectively disabled, or interface is a bridge port */
 	if (!ipconf || !lydx_is_enabled(ipconf, "enabled") || is_bridge_port(cif))
 		goto disable;
 
-	if (lydx_get_op(lydx_get_child(ipdiff, "enabled")) == LYDX_OP_REPLACE) {
-		node = lydx_get_child(ipconf, "autoconf");
-		if (node && lydx_is_enabled(node, "enabled"))
-			goto enable;
-		goto disable;
-	}
+	/*
+	 * when enabled, we may have been enabled before, but skipped
+	 * for various reasons: was bridge port, ipv4 was disabled...
+	 */
+	zcip = lydx_get_child(ipconf, "autoconf");
+	if (zcip && lydx_is_enabled(zcip, "enabled")) {
+		struct lyd_node *node;
+		const char *addr;
+		int diff = 0;
+		FILE *fp;
 
-	zcip = lydx_get_child(ipdiff, "autoconf");
-	if (!zcip || !(node = lydx_get_child(zcip, "enabled")))
-		return 0;
+		/* check for any changes in this container */
+		node = lydx_get_child(ipdiff, "autoconf");
+		if (node) {
+			const struct lyd_node *tmp;
 
-	lydx_get_diff(node, &nd);
-	if (nd.new && !strcmp(nd.val, "true")) {
-	enable:
-		initctl = dagger_fopen_next(net, "init", ifname,
-					    60, "zeroconf-up.sh");
+			tmp = lydx_get_child(node, "enabled");
+			if (tmp)
+				diff++;
+			tmp = lydx_get_child(node, "request-address");
+			if (tmp)
+				diff++;
+		}
+
+		fp = fopen(defaults, "w");
+		if (!fp) {
+			ERRNO("Failed creating %s, cannot enable IPv4LL on %s", defaults, ifname);
+			return -EIO;
+		}
+
+		fprintf(fp, "ZEROCONF_ARGS=\"--force-bind --syslog ");
+		addr = lydx_get_cattr(zcip, "request-address");
+		if (addr)
+			fprintf(fp, "--start=%s", addr);
+		fprintf(fp, "\"\n");
+		fclose(fp);
+
+		initctl = dagger_fopen_next(net, "init", ifname, 60, "zeroconf-up.sh");
 		if (!initctl)
 			return -EIO;
 
-		fprintf(initctl,
-			"initctl -bnq enable zeroconf@%s.conf\n", ifname);
+		/* on enable, or reactivation, it is enough to ensure the service is enabled */
+		fprintf(initctl, "initctl -bnq enable zeroconf@%s.conf\n", ifname);
+		/* on changes to autoconf we must ensure Finit restarts the service */
+		if (diff)
+			fprintf(initctl, "initctl -bnq touch zeroconf@%s.conf\n", ifname);
 	} else {
 	disable:
-		initctl = dagger_fopen_current(net, "exit", ifname,
-					       40, "zeroconf-down.sh");
+		initctl = dagger_fopen_current(net, "exit", ifname, 40, "zeroconf-down.sh");
 		if (!initctl) {
 			/* check if in bootstrap (pre gen 0) */
 			if (errno == EUNATCH)
@@ -583,9 +627,8 @@ static int netdag_gen_ipv4_autoconf(struct dagger *net, struct lyd_node *cif,
 			return -EIO;
 		}
 
-		fprintf(initctl,
-			"initctl -bnq disable zeroconf@%s.conf\n", ifname);
-
+		fprintf(initctl, "initctl -bnq disable zeroconf@%s.conf\n", ifname);
+		fprintf(initctl, "rm -f %s\n", defaults);
 		err = netdag_exit_reload(net);
 	}
 

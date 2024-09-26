@@ -331,13 +331,15 @@
 	</COMPL>
     </PARAM>
     <ACTION sym="script">
-      if [ "$KLISH_PARAM_ip" != "ipv4" ]; then
-        if [ "$KLISH_PARAM_ip" != "ipv6" ]; then
-          KLISH_PARAM_ip=ipv4
-        fi
-      fi
-      sysrepocfg -f json -X -d operational -x "/ietf-routing:routing/ribs" | \
-      /usr/libexec/statd/cli-pretty "show-routing-table"  -i "$KLISH_PARAM_ip"
+      case $KLISH_PARAM_ip in
+        ipv4)
+          KLISH_PARAM_ip=ip
+          ;;
+        ipv6)
+          KLISH_PARAM_ip=ipv6
+          ;;
+      esac
+      show -p $KLISH_PARAM_ip route
     </ACTION>
   </COMMAND>
 
@@ -382,6 +384,20 @@
 
       <COMMAND name="multicast" help="Show IGMP/MLD status" mode="switch">
         <ACTION sym="script">mctl</ACTION>
+      </COMMAND>
+
+      <COMMAND name="route" help="Show IPv4 routing table" mode="switch">
+        <ACTION sym="script">show -p ip route</ACTION>
+      </COMMAND>
+    </SWITCH>
+  </COMMAND>
+
+  <COMMAND name="ipv6" help="Show IPv6 level status (Layer-3)">
+    <ACTION sym="script">ip -color -6 addr</ACTION>
+
+    <SWITCH name="optional" min="0">
+      <COMMAND name="route" help="Show IPv6 routing table" mode="switch">
+        <ACTION sym="script">show -p ipv6 route</ACTION>
       </COMMAND>
     </SWITCH>
   </COMMAND>

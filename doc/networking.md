@@ -598,6 +598,13 @@ As shown, the link-local IPv4 address is configured with `set autconf
 enabled true`.  The resulting address (169.254.1.3/16) is of type
 *random* ([ietf-ip.yang][2]).
 
+The IPv4LL client also supports a `request-address` setting which can be
+used to "seed" the client's starting address.  If the address is free it
+will be used, otherwise it falls back to the default algorithm.
+
+    admin@example:/config/interface/eth0/ipv4/> set autoconf request-address 169.254.1.2
+
+
 #### Use of DHCP for IPv4 address assignment
 
 ![Using DHCP for IPv4 address assignment](img/ip-address-example-ipv4-dhcp.svg)
@@ -657,6 +664,7 @@ admin@example:/>
                     ipv6                   ::1/128 (static)
     admin@example:/>
 
+
 #### Stateless Auto-configuration of Global IPv6 Address
 
 ![Auto-configuration of global IPv6](img/ip-address-example-ipv6-auto-global.svg)
@@ -692,6 +700,7 @@ below.
                     ipv4                   127.0.0.1/8 (static)
                     ipv6                   ::1/128 (static)
     admin@example:/>
+
 
 #### Random Link Identifiers for IPv6 Stateless Autoconfiguration
 
@@ -731,7 +740,9 @@ possible to specify use of a random identifier ([ietf-ip.yang][2] and
 Both the link-local address (fe80::) and the global address (2001:)
 have changed type to *random*.
 
+
 ### IPv4 forwarding
+
 To be able to route (static or dynamic) on the interface it is
 required to enable forwarding. This setting controlls if packets
 received on this interface can be forwarded.
@@ -742,7 +753,9 @@ received on this interface can be forwarded.
    admin@example:/>
    ```
 
+
 ### IPv6 forwarding
+
 This flag behaves totally different than for IPv4. For IPv6 the
 ability to route between interfaces is always enabled, instead this
 flag controls if the interface will be in host/router mode.
@@ -760,18 +773,36 @@ flag controls if the interface will be in host/router mode.
    admin@example:/config/interface/eth0/> leave
    admin@example:/>
    ```
+
+
 ## Routing support
 
-| **Yang Model**            | **Description**                                                                       |
-|:--------------------------|:--------------------------------------------------------------------------------------|
-| ietf-routing              | Base model, used to set configuration and read operational status in the other models |
-| ietf-ipv4-unicast-routing | Static IPv4 unicast routing                                                           |
-| ietf-ipv6-unicast-routing | Static IPv6 unicast routing                                                           |
-| ietf-ospf                 | OSPF routing                                                                          |
-| infix-routing             | Infix deviations                                                                      |
+Currently supported YANG models:
+
+| **YANG Model**            | **Description**                 |
+|:--------------------------|:--------------------------------|
+| ietf-routing              | Base model for all other models |
+| ietf-ipv4-unicast-routing | Static IPv4 unicast routing     |
+| ietf-ipv6-unicast-routing | Static IPv6 unicast routing     |
+| ietf-ospf                 | OSPF routing                    |
+| infix-routing             | Infix deviations and extensions |
+
+The base model, ietf-routing, is where all the other models hook in.  It
+is used to set configuration and read operational status (RIB tables) in
+the other models.
+
+> **Note:** the standard IETF routing models allows multiple instances,
+> but Infix currently *only support one instance* per routing protocol!
+> In the examples presented here, the instance name `default` is used.
+
 
 ### IPv4 Static routes
-Remember to enable [IPv4 forwarding](#IPv4-forwarding) for the interfaces.
+
+The standard IETF model for static routes reside under the `static`
+control plane protocol.  For our examples we use the instance name
+`default`, you can use any name.
+
+For a route with destination 192.168.200.0/24 via 192.168.1.1:
 
     admin@example:/> configure
     admin@example:/config/> edit routing control-plane-protocol static name default
@@ -779,7 +810,18 @@ Remember to enable [IPv4 forwarding](#IPv4-forwarding) for the interfaces.
     admin@example:/config/routing/control-plane-protocol/static/name/default/> leave
     admin@example:/>
 
-> **Note:** You can only have one instance per routing protocol.
+For a "floating" static route with destination 10.0.0.0/16 via a backup
+router 192.168.1.1, using the highest possible distance:
+
+    admin@example:/> configure
+    admin@example:/config/> edit routing control-plane-protocol static name default
+    admin@example:/config/routing/control-plane-protocol/static/name/default/> set ipv4 route 10.0.0.0/16 next-hop next-hop-address 192.168.1.1 route-preference 254
+    admin@example:/config/routing/control-plane-protocol/static/name/default/> leave
+    admin@example:/>
+
+> Remember to enable [IPv4 forwarding](#IPv4-forwarding) for the
+> interfaces you want to route between.
+
 
 ### IPv6 Static routes
 
@@ -789,24 +831,25 @@ Remember to enable [IPv4 forwarding](#IPv4-forwarding) for the interfaces.
     admin@example:/config/routing/control-plane-protocol/static/name/default/> leave
     admin@example:/>
 
-> **Note:** You can only have one instance per routing protocol.
 
 ### OSPFv2 Routing
-Infix supports OSPF dynamic routing for IPv4, i.e., OSPFv2.
-Remember to enable [IPv4 forwarding](#IPv4-forwarding) for the
-interfaces you want to run OSPFv2.
+
+The system supports OSPF dynamic routing for IPv4, i.e., OSPFv2.  To
+enable OSPF and set one active interface in area 0:
 
     admin@example:/config/> edit routing control-plane-protocol ospfv2 name default
-    admin@example:/config/routing/control-plane-protocol/ospfv2/name/default/> set ospf area 0.0.0.0 interface e0 enabled true
+    admin@example:/config/routing/control-plane-protocol/ospfv2/name/default/> set ospf area 0.0.0.0 interface e0 enabled
     admin@example:/config/routing/control-plane-protocol/ospfv2/name/default/> leave
     admin@example:/>
 
-> **Note:** You can only have one instance per routing protocol.
+> Remember to enable [IPv4 forwarding](#IPv4-forwarding) for all the
+> interfaces you want to route between.
+
 
 #### OSPF area types
-In addition to *regular* OSPF areas, area types *NSSA* and *Stub* are supported.
 
-To configure a NSSA area with summary routes:
+In addition to *regular* OSPF areas, area types *NSSA* and *Stub* are
+also supported.  To configure an NSSA area with summary routes:
 
     admin@example:/config/> edit routing control-plane-protocol ospfv2 name default
     admin@example:/config/routing/control-plane-protocol/ospfv2/name/default/> set ospf area 0.0.0.1 area-type nssa-area
@@ -814,8 +857,10 @@ To configure a NSSA area with summary routes:
     admin@example:/config/routing/control-plane-protocol/ospfv2/name/default/> leave
     admin@example:/>
 
+
 #### Bidirectional Forwarding Detection (BFD)
-It is possible to enable BFD per interface to speed up detection of
+
+It is possible to enable BFD per OSPF interface to speed up detection of
 link loss.
 
     admin@example:/config/> edit routing control-plane-protocol ospfv2 name default
@@ -823,12 +868,13 @@ link loss.
     admin@example:/config/routing/control-plane-protocol/ospfv2/name/default/> leave
     admin@example:/>
 
+
 #### OSPF interface settings
 
 We have already seen how to enable OSPF per interface (*enabled true*)
-and BFD for OSPF per interface (*bfd enabled true*). These and other
-OSPF interface settings are done in context of an OSFP area, e.g.,
-*area 0.0.0.0*. Available commands can be listed using the `?` mark.
+and BFD for OSPF per interface (*bfd enabled true*).  These and other
+OSPF interface settings are done in context of an OSFP area, e.g., *area
+0.0.0.0*.  Available commands can be listed using the `?` mark.
 
     admin@example:/config/routing/control-plane-protocol/ospfv2/name/default/> edit ospf area 0.0.0.0
     admin@example:/config/routing/control-plane-protocol/ospfv2/name/default/ospf/area/0.0.0.0/> edit interface e0
@@ -870,47 +916,112 @@ routes`.
 
 ### View routing table
 
-The routing table can be viewed from the operational datastore over
-NETCONF or using the CLI:
+The routing table can be inspected from the operational datastore, XPath
+`/routing/ribs`, using sysrepocfg, NETCONF/RESTCONF, or using the CLI.
+
 
 #### IPv4 routing table
 
-    admin@example:/> show routes ipv4
-    PREFIX                        NEXT-HOP                      PREF  PROTOCOL
-    192.168.1.0/24                e0                                  kernel
-    192.168.200.0/24              192.168.1.1                     20  static
+This CLI example shows the IPv4 routing table with a few connected
+routes and some routes learned from OSPF.  See the next section for
+an explanation of route preferences (PREF).
+
+The `>` at the start of a line marks a selected route (in the IETF YANG
+model referred to as *active*), if there are more than one route with
+the same destination the `*` marks the next-hop used and installed in
+the kernel FIB (the YANG model refers to this as *installed*).
+
+    admin@example:/> show ip route
+       DESTINATION            PREF NEXT-HOP         PROTO     UPTIME
+    >* 0.0.0.0/0             110/2 10.0.23.1        ospfv2   4h2m43s
+    >* 10.0.0.1/32        110/4000 10.0.13.1        ospfv2   4h2m43s
+       10.0.0.3/32           110/0 lo               ospfv2   4h2m57s
+    >* 10.0.0.3/32             0/0 lo               direct   4h2m58s
+       10.0.13.0/30       110/2000 e5               ospfv2   4h2m57s
+    >* 10.0.13.0/30            0/0 e5               direct   4h2m58s
+       10.0.23.0/30          110/1 e6               ospfv2   4h2m57s
+    >* 10.0.23.0/30            0/0 e6               direct   4h2m58s
+       192.168.3.0/24        110/1 e2               ospfv2   4h2m57s
+    >* 192.168.3.0/24          0/0 e2               direct   4h2m58s
     admin@example:/>
+
 
 #### IPv6 routing table
 
-    admin@example:/> show routes ipv6
-    PREFIX                        NEXT-HOP                      PREF  PROTOCOL
-    2001:db8:3c4d:50::/64         eth4                           256  kernel
-    fe80::/64                     eth5                           256  kernel
-    fe80::/64                     eth3                           256  kernel
-    fe80::/64                     eth1                           256  kernel
-    fe80::/64                     eth0                           256  kernel
-    fe80::/64                     eth2                           256  kernel
-    fe80::/64                     eth4                           256  kernel
+This CLI example show the IPv6 routing table.
+
+    admin@example:/> show ipv6 route
+       DESTINATION                      PREF NEXT-HOP              PROTO     UPTIME
+    >* ::/0                              1/0 2001:db8:3c4d:50::1   static   0h1m20s
+    >* 2001:db8:3c4d:50::/64             0/0 e6                    direct   0h1m20s
+    >* 2001:db8:3c4d:200::1/128          0/0 lo                    direct   0h1m20s
+     * fe80::/64                         0/0 e7                    direct   0h1m20s
+     * fe80::/64                         0/0 e6                    direct   0h1m20s
+     * fe80::/64                         0/0 e5                    direct   0h1m20s
+     * fe80::/64                         0/0 e4                    direct   0h1m20s
+     * fe80::/64                         0/0 e3                    direct   0h1m20s
+     * fe80::/64                         0/0 e2                    direct   0h1m20s
+    >* fe80::/64                         0/0 e1                    direct   0h1m20s
     admin@example:/>
+
+
+#### Route Preference
+
+The operating system leverages FRRouting ([Frr][4]) as routing engine
+for both static and dynamic routing.  Even routes injected from a DHCP
+client, and IPv4 link-local (IPv4) routes, are injected into Frr to let
+it weigh all routes before installing them into the kernel routing table
+(sometimes referred to as FIB).
+
+Routes have different weights made up from a *distance* and a *metric*.
+The kernel routing table only talks about *metric*, which unfortunately
+is **not the same** -- this is one of the reasons why the term *route
+preference* is used instead.  It is recommended to use the CLI, or any
+of the other previously mentioned YANG based front-ends, to inspect the
+routing table.
+
+Default distances used (lower numeric value wins):
+
+| **Distance** | **Protocol**                            |
+|--------------|-----------------------------------------|
+| 0            | Kernel routes, i.e., connected routes   |
+| 1            | Static routes                           |
+| 5            | DHCP routes                             |
+| 110          | OSPF                                    |
+| 254          | IPv4LL (ZeroConf) device routes         |
+| 255          | Route will not be used or redistributed |
+
+Hence, a route learned from OSPF may be overridden by a static route set
+locally.  By default, even a route to the same destination, but with a
+different next-hop, learned from a DHCP server wins over an OSPF route.
+
+The distance used for static routes and DHCP routes can be changed by
+setting a different *routing preference* value.
+
+> **Note:** the kernel metric is an unsigned 32-bit value, which is read
+> by Frr as (upper) 8 bits distance and 24 bits metric.  But it does not
+> write it back to the kernel FIB this way, only selected routes are
+> candidates to be installed in the FIB by Frr.
+
 
 #### Source protocol
 
 The source protocol describes the origin of the route.
 
-| **Protocol** | **Description**                                                      |
-|:-------------|:---------------------------------------------------------------------|
-| kernel       | Added when setting a subnet address on an interface                  |
-| static       | User created static routes                                           |
-| dhcp         | Routes retrieved from DHCP                                           |
-| ospf         | Routes retreived from OSPFv2                                         |
+| **Protocol** | **Description**                                     |
+|:-------------|:----------------------------------------------------|
+| kernel       | Added when setting a subnet address on an interface |
+| static       | User created, learned from DHCP, or IPv4LL          |
+| ospfv2       | Routes learned from OSPFv2                          |
 
 The YANG model *ietf-routing* support multiple ribs but only two are
 currently supported, namely `ipv4` and `ipv6`.
 
+
 [1]: https://www.rfc-editor.org/rfc/rfc8343
 [2]: https://www.rfc-editor.org/rfc/rfc8344
 [3]: https://www.rfc-editor.org/rfc/rfc8981
+[4]: https://frrouting.org/
 
 [^1]: Please note, link aggregates are not yet supported in Infix.
 [^2]: Link-local IPv6 addresses are implicitly enabled when enabling

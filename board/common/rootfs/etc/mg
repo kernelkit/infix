@@ -1,1 +1,6 @@
+# Micro GNU Emacs default configuration file
+auto-indent-mode
+auto-fill-mode
 make-backup-files 0
+require-final-newline T
+set-fill-column 72

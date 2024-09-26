@@ -3,11 +3,6 @@
 Verify that basic services like mDNS and LLDP can be enabled and
 disabled.  We verify operation and non-operation by using tcpdump.
 
-XXX: with socat in the Docker container we could speed up the LLDP
-     detection considerably by sending a probe:
-
-echo -ne '\x01\x80\xc2\x00\x00\x0e\x01\x80\xc2\x00\x00\x0e\x88\xcc\x02\x07\x04\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00' | socat - UDP4-DATAGRAM:255.255.255.255:7010,broadcast
-
 ==== Topology
 ifdef::topdoc[]
 image::../../test/case/infix_services/services_basic/topology.png[Services basic topology]
@@ -24,7 +19,7 @@ endif::topdoc[]
 . Initialize
 . Set static IPv4 address and disable services
 . Start sniffer and enable services on target ...
-. Disable services on target, verify they're not running anymore ...
+. Disable services on target, verify no longer running ...
 
 
 <<<

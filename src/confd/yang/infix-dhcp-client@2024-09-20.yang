@@ -10,6 +10,11 @@ module infix-dhcp-client {
   contact      "kernelkit@googlegroups.com";
   description  "This module implements an IPv4 DHCP client";
 
+  revision 2024-09-20 {
+    description   "Routes are installed in Frr (staticd), clarify preference
+                   vs metric and adjust default preference 100 -> 5.";
+    reference     "internal";
+  }
   revision 2024-04-12 {
     description   "Adjust DHCP client hostname option, max 64 charachters.";
     reference     "internal";
@@ -29,7 +34,7 @@ module infix-dhcp-client {
 
   typedef route-preference {
     type uint32;
-    description "This type is used for route preferences (metric).";
+    description "This type is used for selecting route preference (distance).";
   }
 
   typedef dhcp-options {
@@ -149,12 +154,12 @@ module infix-dhcp-client {
       }
       leaf route-preference {
         type route-preference;
-        default 100;
+        default 5;
         description
-          "The metric any route is installed with, both option 33 and 121.
-          The default (100) is based on a plain Ethernet interface, the
-          interface type determines this, e.g. a WiFi interface would be
-          metric 500.";
+          "The preference (administrative distance) that all DHCP routes are
+           installed with, option 3, 33 and 121.  The default preferfence (5)
+           is higher (less worth) than static routes, but lower than those
+           learned via dynamic routing protocols, like OSPF.";
       }
     }
   }

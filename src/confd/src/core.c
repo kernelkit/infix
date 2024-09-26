@@ -1,10 +1,10 @@
 /* SPDX-License-Identifier: BSD-3-Clause */
 
 #include <srx/common.h>
-
 #include "core.h"
 
 struct confd confd;
+
 
 uint32_t core_hook_prio(void)
 {
@@ -16,6 +16,10 @@ uint32_t core_hook_prio(void)
 int core_startup_save(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
 		      const char *xpath, sr_event_t event, unsigned request_id, void *priv)
 {
+	/* skip in bootstrap, triggered by load script to initialize startup datastore */
+	if (systemf("runlevel >/dev/null 2>&1"))
+		return SR_ERR_OK;
+
 	if (systemf("sysrepocfg -X/cfg/startup-config.cfg -d startup -f json"))
 		return SR_ERR_SYS;
 
@@ -177,10 +181,10 @@ err:
 
 void sr_plugin_cleanup_cb(sr_session_ctx_t *session, void *priv)
 {
-	struct confd *confd = (struct confd *)priv;
+	struct confd *ptr = (struct confd *)priv;
 
-	sr_unsubscribe(confd->sub);
-	sr_unsubscribe(confd->fsub);
-	json_decref(confd->root);
+	sr_unsubscribe(ptr->sub);
+	sr_unsubscribe(ptr->fsub);
+	json_decref(ptr->root);
 	closelog();
 }

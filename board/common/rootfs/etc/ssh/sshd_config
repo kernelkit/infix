@@ -1,1 +1,4 @@
+# Allow client to pass locale environment
+AcceptEnv LANG LC_*
+
 Include /etc/ssh/sshd_config.d/*.conf

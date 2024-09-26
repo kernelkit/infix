@@ -70,17 +70,6 @@ $ sudo apt install bc binutils build-essential bzip2 cpio \
                    autopoint bison flex autoconf automake
 ```
 
-For testing, a few more tools and services are required on your system:
-
-```bash
-$ sudo apt install jq graphviz qemu-system-x86 qemu-system-arm \
-				   ethtool gdb-multiarch tcpdump tshark
-```
-
-To be able to build the test specification you also need:
-```bash
-$ sudo apt-get install python3-graphviz ruby-asciidoctor-pdf
-```
 > For details, see the Getting Started and System Requirements sections
 > of the [excellent manual][1].
 
@@ -96,6 +85,23 @@ Online help is available:
 To see available defconfigs for supported targets, use:
 
     make list-defconfigs
+
+
+### Test
+
+Working with the regression test framework, *Infamy*, a few more tools
+and services are required on your system:
+
+```bash
+$ sudo apt install jq graphviz qemu-system-x86 qemu-system-arm \
+				   ethtool gdb-multiarch tcpdump tshark
+```
+
+To be able to build the test specification you also need:
+
+```bash
+$ sudo apt-get install python3-graphviz ruby-asciidoctor-pdf
+```
 
 
 Development

@@ -28,12 +28,12 @@ perms()
 
 note()
 {
-    logger -s -I $$ -p user.notice -t load "$*"
+    logger -I $$ -p user.notice -t load "$*"
 }
 
 err()
 {
-    logger -s -I $$ -p user.error -t load "$*"
+    logger -I $$ -p user.error -t load "$*"
 }
 
 
@@ -60,12 +60,12 @@ config=$1
 
 if [ -f "/mnt/aux/test-mode" ] && [ "$config" = "startup-config" ]; then
 
-	if [ -f "/mnt/aux/test-override-startup" ]; then
-		rm -f "/mnt/aux/test-override-startup"
-	else
+    if [ -f "/mnt/aux/test-override-startup" ]; then
+	rm -f "/mnt/aux/test-override-startup"
+    else
     	note "Test mode detected, switching to test-config"
     	config="test-config"
-	fi
+    fi
 fi
 
 if [ -f "$config" ]; then
@@ -100,7 +100,7 @@ if [ ! -f "$fn" ]; then
 fi
 
 note "Loading $config ..."
-if ! $sysrepocfg -v3 -I"$fn" -f json; then
+if ! $sysrepocfg -v2 -I"$fn" -f json; then
     case "$config" in
 	startup-config)
 	    err "Failed loading $fn, reverting to Fail Secure mode!"
@@ -126,6 +126,9 @@ if ! $sysrepocfg -v3 -I"$fn" -f json; then
     esac
 
     exit 1
+else
+    note "Success, syncing with startup datastore."
+    $sysrepocfg -v2 -d startup -C running
 fi
 
 note "Loaded $fn successfully."
