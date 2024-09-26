@@ -16,9 +16,9 @@ endif::testgroup[]
 endif::topdoc[]
 ==== Test sequence
 . Initialize
-. Topology setup
-. Syslog setup
-. Verify logging from client to server
+. Configure DUTs
+. Send security:notice log message from client
+. Verify reception of client log message, incl. sorting to /log/security on server
 
 
 <<<

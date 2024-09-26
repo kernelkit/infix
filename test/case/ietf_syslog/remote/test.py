@@ -14,15 +14,15 @@ with infamy.Test() as test:
         clientssh = env.attach("client", "mgmt", "ssh")
         serverssh = env.attach("server", "mgmt", "ssh")
 
-    with test.step("Topology setup"):
-        _, client_e1 = env.ltop.xlate("client", "to_server")
-        _, server_e0 = env.ltop.xlate("server", "to_client")
+    with test.step("Configure DUTs"):
+        _, client_link = env.ltop.xlate("client", "link")
+        _, server_link = env.ltop.xlate("server", "link")
 
         client.put_config_dict("ietf-interfaces", {
             "interfaces": {
                 "interface": [
                     {
-                        "name": client_e1,
+                        "name": client_link,
                         "enabled": True,
                         "ipv4": {
                             "address": [
@@ -41,7 +41,7 @@ with infamy.Test() as test:
             "interfaces": {
                 "interface": [
                     {
-                        "name": server_e0,
+                        "name": server_link,
                         "type": "infix-if-type:bridge",
                         "enabled": True,
                         "ipv4": {
@@ -57,7 +57,6 @@ with infamy.Test() as test:
             }
         })
 
-    with test.step("Syslog setup"):
         client.put_config_dict("ietf-syslog", {
             "syslog": {
                 "actions": {
@@ -146,9 +145,11 @@ with infamy.Test() as test:
             }
         })
 
-    with test.step("Verify logging from client to server"):
-        clientssh.runsh("logger -t test -m client -p security.notice Hej")
+    with test.step("Send security:notice log message from client"):
+        clientssh.runsh("logger -t test -m client -p security.notice TestMessage")
+
+    with test.step("Verify reception of client log message, incl. sorting to /log/security on server"):
         infamy.until(lambda: serverssh.runsh(
-            "grep 'test - client - Hej' /log/security").returncode == 0)
+            "grep 'test - client - TestMessage' /log/security").returncode == 0)
 
     test.succeed()

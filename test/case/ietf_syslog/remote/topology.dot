@@ -7,24 +7,24 @@ graph "2x2" {
 	edge [color="cornflowerblue", penwidth="2"];
 
 	host [
-	    label="host | { <cli_mgmt> cli_mgmt | <ser_mgmt> ser_mgmt }",
+	    label="host | { <client_mgmt> client_mgmt | <server_mgmt> server_mgmt }",
 	    pos="0,12!",
 	    kind="controller",
 	];
 
         client [
-	    label="{ <mgmt> mgmt | <to_server> to_server} | client",
+	    label="{ <mgmt> mgmt | <link> ĺink} | client",
 	    pos="15,18!",
 
 	    kind="infix",
 	];
 	server [
-	    label="{ <to_client> to_client | <mgmt> mgmt  } | server",
+	    label="{ <link> link | <mgmt> mgmt  } | server",
 	    pos="15,6!",
 
 	    kind="infix",
 	];
 	host:cli_mgmt -- client:mgmt [kind=mgmt]
         host:ser_mgmt -- server:mgmt [kind=mgmt]
-	client:to_server -- server:to_client [color=black, fontcolor=black, taillabel="10.0.0.2/24", headlabel="10.0.0.1/24"]
+	client:link -- server:link [color=black, fontcolor=black, taillabel="10.0.0.2/24", headlabel="10.0.0.1/24"]
 }
