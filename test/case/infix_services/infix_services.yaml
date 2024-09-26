@@ -1,4 +1,9 @@
 ---
 
-- name: services_basic
-  case: services_basic/test.py
+# Disabled, see #654 for more information. Once that issue is fixed,
+# we should split this test into service_mdns and service_lldp, where
+# the LLDP test can be skipped if there are no links available that
+# are transparent with respect to IEEE link-local multicast.
+#- name: services_basic
+#  case: services_basic/test.py
+[]
