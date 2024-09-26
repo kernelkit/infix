@@ -4,8 +4,18 @@ Change Log
 All notable changes to the project are documented in this file.
 
 
-[v24.09.0][UNRELEASED]
+[v24.09.0][] - 2024-09-27
 -------------------------
+
+**News:** this release enhances the integration of all types of static
+routes with FRRouting ([Frr][]), including all routes that can be set by
+DHCP and IPvLL (ZeroConf) clients.  Due to this fundamental change, the
+system routing table is now primarily read from Frr, which increases the
+amount of relevant routing information available to the user.  E.g., in
+the CLI exec command `show ip route` and `show ipv6 route`.  Support for
+adjusting the administrative distance of all types of static routes has
+also been added to facilitate site specific adaptations.  Please see the
+documentation for details.
 
 ### Changes
 - Upgrade Buildroot to 2024.02.6 (LTS)
@@ -64,6 +74,8 @@ All notable changes to the project are documented in this file.
 - The timeout before giving up on loading the `startup-config` at boot
   is now 1 minute, just like operations via other front-ends (NETCONF
   and RESTCONF). This was previously (incorrectly) set to 10 seconds.
+
+[Frr]: https://frrouting.org/
 
 
 [v24.08.0][] - 2024-08-30
