@@ -17,6 +17,14 @@ adjusting the administrative distance of all types of static routes has
 also been added to facilitate site specific adaptations.  Please see the
 documentation for details.
 
+### Known Issues
+- The CLI command `show interfaces` may for some terminal resolutions
+  not display all interfaces (on systems with >20 interfaces).  This
+  problem is limited to the console port and only occurs for smaller
+  terminals (30-50 rows height).  Calling `show ifaces` from the shell,
+  dumping `/ietf-interfaces:interfaces` XPath using `sysrepocfg`, or
+  using the CLI from an SSH session, is not affected.  Issue #659
+
 ### Changes
 - Upgrade Buildroot to 2024.02.6 (LTS)
 - Upgrade Linux kernel to 6.6.52 (LTS)
@@ -68,12 +76,16 @@ documentation for details.
   in the kernel.  This has resulted in a complete overhaul of route
   management, using FRRouting for all routes, including DHCP and IPv4LL
   routes, presentation in the CLI, and also support for custom route
-  preference for static routes.
+  preference for static routes
+- Fix #658: deleting VETH pairs does not work unless rebooting first.
+  Creating a VETH pair, followed by at least one other reconfiguration
+  before removing the pair, causes `confd` to fail when applying the
+  interface changes (tries to delete both ends of the pair)
 - Spellcheck path to `/var/lib/containers` when unpacking OCI archives
   on container upgrade
 - The timeout before giving up on loading the `startup-config` at boot
   is now 1 minute, just like operations via other front-ends (NETCONF
-  and RESTCONF). This was previously (incorrectly) set to 10 seconds.
+  and RESTCONF). This was previously (incorrectly) set to 10 seconds
 
 [Frr]: https://frrouting.org/
 
