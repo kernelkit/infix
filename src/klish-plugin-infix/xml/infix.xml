@@ -528,7 +528,7 @@
       count=${KLISH_PARAM_cnt:+-c $KLISH_PARAM_cnt}
       size=${KLISH_PARAM_sz:+-s $KLISH_PARAM_sz}
       verbose=${KLISH_PARAM_verbose:+-vvv}
-      tcpdump -ln $count $size $verbose -i $KLISH_PARAM_iface $KLISH_PARAM_expr
+      doas tcpdump -ln $count $size $verbose -i $KLISH_PARAM_iface $KLISH_PARAM_expr
     </ACTION>
   </COMMAND>
 

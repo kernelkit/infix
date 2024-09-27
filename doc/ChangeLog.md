@@ -83,6 +83,8 @@ documentation for details.
   interface changes (tries to delete both ends of the pair)
 - Spellcheck path to `/var/lib/containers` when unpacking OCI archives
   on container upgrade
+- cli: restore `tcpdump` permissions for administrator level users,
+  regression introduced in v24.08.0
 - The timeout before giving up on loading the `startup-config` at boot
   is now 1 minute, just like operations via other front-ends (NETCONF
   and RESTCONF). This was previously (incorrectly) set to 10 seconds
