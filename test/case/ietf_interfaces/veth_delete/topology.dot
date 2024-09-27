@@ -1,0 +1,25 @@
+graph "1x3" {
+	layout="neato";
+	overlap="false";
+	esep="+80";
+
+        node [shape=record, fontname="monospace"];
+	edge [color="cornflowerblue", penwidth="2"];
+
+	host [
+	    label="host | { <tgt> tgt | <dummy0> dummy0 | <dummy1> dummy1 }",
+	    pos="0,12!",
+	    kind="controller",
+	];
+
+        target [
+	    label="{ <mgmt> mgmt | <eth0> eth0 | <eth1> eth1 } | target",
+	    pos="10,12!",
+
+	    kind="infix",
+	];
+
+	host:tgt -- target:mgmt [kind=mgmt]
+	host:dummy0 -- target:eth0 [color=black]
+	host:dummy1 -- target:eth1 [color=black]
+}

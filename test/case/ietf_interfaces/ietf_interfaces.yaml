@@ -26,6 +26,9 @@
 - name: bridge_vlan
   case: bridge_vlan/test.py
 
+- name: veth_delete
+  case: veth_delete/test.py
+
 - name: ipv4_autoconf
   case: ipv4_autoconf/test.py
 
