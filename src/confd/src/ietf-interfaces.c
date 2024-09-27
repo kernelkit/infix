@@ -1657,7 +1657,7 @@ static int netdag_gen_iface_del(struct dagger *net, struct lyd_node *dif,
 	if (dagger_should_skip_current(net, ifname))
 		return 0;
 
-	if (!strcmp(iftype, "infix-if-type:veth")) {
+	if (iftype && !strcmp(iftype, "infix-if-type:veth")) {
 		struct lyd_node *node;
 		const char *peer;
 
