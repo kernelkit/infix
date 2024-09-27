@@ -102,3 +102,6 @@ rm -f "$BINARIES_DIR/qemu.cfg"
 CONFIG_="CONFIG_" BR2_CONFIG="$BINARIES_DIR/qemu.cfg" \
        "$O/build/buildroot-config/conf" --olddefconfig "$BINARIES_DIR/Config.in"
 rm -f "$BINARIES_DIR/qemu.cfg.old" "$BINARIES_DIR/.config.old"
+
+# Quick intro for beginners, with links to more information
+cp "$BR2_EXTERNAL_INFIX_PATH/board/common/README.txt" "$BINARIES_DIR/"
