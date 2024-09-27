@@ -25,6 +25,8 @@ def _iface_extract_param(json_content, param):
 def _iface_get_param(target, iface, param=None):
     """Fetch target dict for iface and extract param from JSON"""
     content = target.get_data(get_iface_xpath(iface, param))
+    if content is None:
+        return None
     return _iface_extract_param(content, param)
 
 def interface_exist(target, iface):
