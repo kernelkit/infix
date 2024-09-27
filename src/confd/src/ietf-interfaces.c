@@ -1648,6 +1648,7 @@ static int netdag_gen_iface_del(struct dagger *net, struct lyd_node *dif,
 				       struct lyd_node *cif, bool fixed)
 {
 	const char *ifname = lydx_get_cattr(dif, "name");
+	const char *iftype = lydx_get_cattr(dif, "type");
 	FILE *ip;
 
 	DEBUG_IFACE(dif, "");
@@ -1655,6 +1656,21 @@ static int netdag_gen_iface_del(struct dagger *net, struct lyd_node *dif,
 	mcast_querier(ifname, 0, 0, 0);
 	if (dagger_should_skip_current(net, ifname))
 		return 0;
+
+	if (!strcmp(iftype, "infix-if-type:veth")) {
+		struct lyd_node *node;
+		const char *peer;
+
+		node = lydx_get_descendant(lyd_child(dif), "veth", NULL);
+		if (!node)
+			return -EINVAL;
+
+		peer = lydx_get_cattr(node, "peer");
+		if (!peer)
+			return -EINVAL;
+
+		dagger_skip_current_iface(net, peer);
+	}
 
 	ip = dagger_fopen_current(net, "exit", ifname, 50, "exit.ip");
 	if (!ip)
