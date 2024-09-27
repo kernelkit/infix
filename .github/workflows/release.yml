@@ -87,8 +87,8 @@ jobs:
           ln -s ${{ steps.vars.outputs.dir }} images
           tar chfz ${{ steps.vars.outputs.tgz }} ${{ steps.vars.outputs.dir }}
 
-          mv legal-info legal-info-$target
-          tar chfz legal-info-$target.tar.gz legal-info-$target
+          mv legal-info legal-info-${{ matrix.target }}-${{ steps.vars.outputs.ver }}
+          tar chfz legal-info-${{ matrix.target }}-${{ steps.vars.outputs.ver }}.tar.gz legal-info-${{ matrix.target }}-${{ steps.vars.outputs.ver }}
 
       - uses: actions/upload-artifact@v4
         with:
