@@ -207,7 +207,13 @@ class Device(Transport):
             dspath = f"{dspath}/{path}"
 
         url = f"{self.restconf_url}{dspath}"
-        return self._get_raw(url, parse)
+        try:
+            return self._get_raw(url, parse)
+        except requests.exceptions.HTTPError as e:
+            if e.response.status_code == 404:
+                return None
+            else:
+                raise e
 
     def get_running(self, path=None):
         """Wrapper function to get running datastore"""
