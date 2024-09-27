@@ -52,3 +52,6 @@
 
 - name: vlan_qos
   case: vlan_qos/test.py
+
+- name: verify_all_interface_types
+  case: verify_all_interface_types/test.py
