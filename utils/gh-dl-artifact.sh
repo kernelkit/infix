@@ -160,7 +160,7 @@ gh api $url >$zip
 
 ixmsg "Extracting artifact"
 mkdir -p $imgdir
-unzip -p $zip infix-$arch.tar.gz | gunzip | tar -C $imgdir -x --strip-components=1
+unzip -p $zip "infix-${arch}*.tar.gz" | gunzip | tar -C $imgdir -x --strip-components=1
 
 
 ixmsg "Done"
