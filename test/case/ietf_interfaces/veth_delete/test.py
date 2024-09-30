@@ -50,7 +50,7 @@ with infamy.Test() as test:
             }
         })
 
-    with test.step("Verify VETH pair exists"):
+    with test.step("Verify interfaces 'veth0a' and 'veth0b' exists"):
         assert iface.interface_exist(target, veth0a), \
             f"Interface <{veth0a}> does not exist."
         assert iface.interface_exist(target, veth0b), \
