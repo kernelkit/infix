@@ -1,5 +1,5 @@
-#ifndef _STYX_MPP_H
-#define _STYX_MPP_H
+#ifndef _DCP_SC_28P_MPP_H
+#define _DCP_SC_28P_MPP_H
 
 #define SFP0_TX_DISABLE(X) X( "mpp0", cp0_gpio1,  0, GPIO_ACTIVE_HIGH | GPIO_OPEN_DRAIN)
 #define SFP1_TX_DISABLE(X) X( "mpp1", cp0_gpio1,  1, GPIO_ACTIVE_HIGH | GPIO_OPEN_DRAIN)
@@ -73,4 +73,4 @@
 #define MPP_GPIO_REF_NO_CHIP(_mpp, _chip, _no, _flags) <_no (_flags)>
 #define MPP_IRQ_REF(_mpp, _chip, _no, _flags) <&_chip _no (_flags)>
 
-#endif	/* _STYX_MPP_H */
+#endif	/* _DCP_SC_28P_MPP_H */

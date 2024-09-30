@@ -3,13 +3,13 @@
  * Copyright (C) 2021 Marvell International Ltd.
  * Copyright (C) 2024 Addiva Elektronik AB
  *
- * Device tree for Styx board
+ * Device tree for revision B of DCP-SC-28P
  */
 
-#include "styx.dtsi"
+#include "dcp-sc-28p.dtsi"
 / {
-	model = "Styx";
-	compatible = "styx,styx-b",
+	compatible = "styx,dcp-sc-28p-b",
+		"styx,dcp-sc-28p",
 		"marvell,armada-ap807-quad",
 		"marvell,armada-ap807";
 };
