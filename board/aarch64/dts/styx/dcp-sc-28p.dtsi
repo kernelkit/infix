@@ -3,7 +3,7 @@
  * Copyright (C) 2021 Marvell International Ltd.
  * Copyright (C) 2023 Addiva Elektronik AB
  *
- * Device tree for Styx board
+ * Device tree base for DCP-SC-28P
  */
 
 #include <dt-bindings/input/input.h>
@@ -12,13 +12,10 @@
 
 #include "../marvell/cn9130-patched.dtsi"
 
-#include "styx-mpp.h"
+#include "dcp-sc-28p-mpp.h"
 
 / {
-	model = "Styx";
-	compatible = "styx,styx",
-		"marvell,armada-ap807-quad",
-		"marvell,armada-ap807";
+	model = "DCP-SC-28P";
 
 	chosen {
 		stdout-path = "serial0:115200n8";
