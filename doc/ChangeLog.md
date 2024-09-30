@@ -4,7 +4,7 @@ Change Log
 All notable changes to the project are documented in this file.
 
 
-[v24.09.0][] - 2024-09-27
+[v24.09.0][] - 2024-09-30
 -------------------------
 
 **News:** this release enhances the integration of all types of static
