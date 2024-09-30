@@ -105,15 +105,22 @@ ixmsg "Locating $arch build of $rev"
 sha=$(gh api "$apibase/commits/$rev" -q .sha || die "ERROR: Unknown revision \"$rev\"")
 echo "SHA: $sha"
 
-run=$(gh api "$apibase/actions/runs?head_sha=$sha" \
-	 -q '[.workflow_runs[] | select(.name == "Bob the Builder")][0].id' \
-	  || die "ERROR: Found no workflow runs associated with $rev")
-echo "Run: $run"
+runs=$(gh api "$apibase/actions/runs?head_sha=$sha" \
+	 -q '.workflow_runs[] | .id' | tr '\n' ' ' \
+	   || die "ERROR: Found no workflow runs associated with $rev")
 
-gh api "$apibase/actions/runs/$run/artifacts" \
-   -q ".artifacts[] | select(.name == \"artifact-$arch\")" >$workdir/artifact.json \
-    || die "ERROR: Found no $arch artifact associated with run $run"
-artifact="$(jq .id $workdir/artifact.json)"
+echo "Runs: $runs"
+
+for run in $runs; do
+    gh api "$apibase/actions/runs/$run/artifacts" \
+       -q ".artifacts[] | select(.name == \"artifact-$arch\")" >$workdir/artifact.json \
+	|| continue
+
+    artifact="$(jq .id $workdir/artifact.json)"
+    [ "$artifact" ] && break
+done
+
+[ "$artifact" ] || die "ERROR: Found no $arch artifact associated with any of the runs $runs"
 echo "Artifact: $artifact"
 
 url="$(jq -r .archive_download_url $workdir/artifact.json)"
@@ -153,7 +160,7 @@ gh api $url >$zip
 
 ixmsg "Extracting artifact"
 mkdir -p $imgdir
-unzip -p $zip infix-$arch.tar.gz | gunzip | tar -C $imgdir -x --strip-components=1
+unzip -p $zip "infix-${arch}*.tar.gz" | gunzip | tar -C $imgdir -x --strip-components=1
 
 
 ixmsg "Done"
