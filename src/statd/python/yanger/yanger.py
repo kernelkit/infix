@@ -156,6 +156,8 @@ def iface_is_dsa(iface_in):
         return False
     return True
 
+def iface_is_internal(iface_in):
+    return iface_in.get("group") == "internal"
 
 def get_vpd_vendor_extensions(data):
     vendor_extensions = []
@@ -587,7 +589,6 @@ def get_brport_multicast(ifname):
 
     return multicast
 
-
 def add_ip_link(ifname, iface_out):
     """Fetch interface link information from kernel"""
     data = run_json_cmd(['ip', '-s', '-d', '-j', 'link', 'show', 'dev', ifname],
@@ -937,9 +938,10 @@ def main():
             iface_data = get_iface_data(args.param)
             yang_data['ietf-interfaces:interfaces']['interface'].append(iface_data)
         else:
-            ifnames = os.listdir('/sys/class/net/')
-            for ifname in ifnames:
-                iface_data = get_iface_data(ifname)
+            ifaces = run_json_cmd(['ip', '-j', 'link', 'show'],
+                                  "ip-link-show.json")
+            for iface in  [x for x in ifaces if not iface_is_internal(x)]:
+                iface_data = get_iface_data(iface["ifname"])
                 yang_data['ietf-interfaces:interfaces']['interface'].append(iface_data)
 
     elif args.model == 'ietf-routing':

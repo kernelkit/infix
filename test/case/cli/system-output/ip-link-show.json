@@ -1,0 +1,618 @@
+[
+  {
+    "ifindex": 1,
+    "ifname": "lo",
+    "flags": [
+      "LOOPBACK",
+      "UP",
+      "LOWER_UP"
+    ],
+    "mtu": 65536,
+    "qdisc": "noqueue",
+    "operstate": "UP",
+    "linkmode": "DEFAULT",
+    "group": "iface",
+    "txqlen": 1000,
+    "link_type": "loopback",
+    "address": "00:00:00:00:00:00",
+    "broadcast": "00:00:00:00:00:00"
+  },
+  {
+    "ifindex": 2,
+    "ifname": "dsa0",
+    "flags": [
+      "BROADCAST",
+      "MULTICAST",
+      "UP",
+      "LOWER_UP"
+    ],
+    "mtu": 1504,
+    "qdisc": "mq",
+    "operstate": "UP",
+    "linkmode": "DEFAULT",
+    "group": "internal",
+    "txqlen": 2048,
+    "link_type": "ether",
+    "address": "02:00:de:ad:02:20",
+    "broadcast": "ff:ff:ff:ff:ff:ff"
+  },
+  {
+    "ifindex": 3,
+    "ifname": "eth1",
+    "flags": [
+      "NO-CARRIER",
+      "BROADCAST",
+      "MULTICAST",
+      "UP"
+    ],
+    "mtu": 1500,
+    "qdisc": "mq",
+    "operstate": "DOWN",
+    "linkmode": "DEFAULT",
+    "group": "default",
+    "txqlen": 2048,
+    "link_type": "ether",
+    "address": "02:00:de:ad:02:20",
+    "broadcast": "ff:ff:ff:ff:ff:ff"
+  },
+  {
+    "ifindex": 4,
+    "link": "dsa0",
+    "ifname": "e22",
+    "flags": [
+      "BROADCAST",
+      "MULTICAST",
+      "UP",
+      "LOWER_UP"
+    ],
+    "mtu": 1500,
+    "qdisc": "mqprio",
+    "operstate": "UP",
+    "linkmode": "DEFAULT",
+    "group": "port",
+    "txqlen": 1000,
+    "link_type": "ether",
+    "address": "02:00:de:ad:02:36",
+    "broadcast": "ff:ff:ff:ff:ff:ff"
+  },
+  {
+    "ifindex": 5,
+    "link": "dsa0",
+    "ifname": "e21",
+    "flags": [
+      "BROADCAST",
+      "MULTICAST",
+      "UP",
+      "LOWER_UP"
+    ],
+    "mtu": 1500,
+    "qdisc": "mqprio",
+    "operstate": "UP",
+    "linkmode": "DEFAULT",
+    "group": "port",
+    "txqlen": 1000,
+    "link_type": "ether",
+    "address": "02:00:de:ad:02:35",
+    "broadcast": "ff:ff:ff:ff:ff:ff"
+  },
+  {
+    "ifindex": 6,
+    "link": "dsa0",
+    "ifname": "e24",
+    "flags": [
+      "BROADCAST",
+      "MULTICAST",
+      "UP",
+      "LOWER_UP"
+    ],
+    "mtu": 1500,
+    "qdisc": "mqprio",
+    "operstate": "UP",
+    "linkmode": "DEFAULT",
+    "group": "port",
+    "txqlen": 1000,
+    "link_type": "ether",
+    "address": "02:00:de:ad:02:38",
+    "broadcast": "ff:ff:ff:ff:ff:ff"
+  },
+  {
+    "ifindex": 7,
+    "link": "dsa0",
+    "ifname": "e23",
+    "flags": [
+      "BROADCAST",
+      "MULTICAST",
+      "UP",
+      "LOWER_UP"
+    ],
+    "mtu": 1500,
+    "qdisc": "mqprio",
+    "operstate": "UP",
+    "linkmode": "DEFAULT",
+    "group": "port",
+    "txqlen": 1000,
+    "link_type": "ether",
+    "address": "02:00:de:ad:02:37",
+    "broadcast": "ff:ff:ff:ff:ff:ff"
+  },
+  {
+    "ifindex": 8,
+    "link": "dsa0",
+    "ifname": "e26",
+    "flags": [
+      "BROADCAST",
+      "MULTICAST",
+      "UP",
+      "LOWER_UP"
+    ],
+    "mtu": 1500,
+    "qdisc": "mqprio",
+    "operstate": "UP",
+    "linkmode": "DEFAULT",
+    "group": "port",
+    "txqlen": 1000,
+    "link_type": "ether",
+    "address": "02:00:de:ad:02:3a",
+    "broadcast": "ff:ff:ff:ff:ff:ff"
+  },
+  {
+    "ifindex": 9,
+    "link": "dsa0",
+    "ifname": "e25",
+    "flags": [
+      "BROADCAST",
+      "MULTICAST",
+      "UP",
+      "LOWER_UP"
+    ],
+    "mtu": 1500,
+    "qdisc": "mqprio",
+    "operstate": "UP",
+    "linkmode": "DEFAULT",
+    "group": "port",
+    "txqlen": 1000,
+    "link_type": "ether",
+    "address": "02:00:de:ad:02:39",
+    "broadcast": "ff:ff:ff:ff:ff:ff"
+  },
+  {
+    "ifindex": 10,
+    "link": "dsa0",
+    "ifname": "e28",
+    "flags": [
+      "BROADCAST",
+      "MULTICAST",
+      "UP",
+      "LOWER_UP"
+    ],
+    "mtu": 1500,
+    "qdisc": "mqprio",
+    "operstate": "UP",
+    "linkmode": "DEFAULT",
+    "group": "port",
+    "txqlen": 1000,
+    "link_type": "ether",
+    "address": "02:00:de:ad:02:3c",
+    "broadcast": "ff:ff:ff:ff:ff:ff"
+  },
+  {
+    "ifindex": 11,
+    "link": "dsa0",
+    "ifname": "e27",
+    "flags": [
+      "NO-CARRIER",
+      "BROADCAST",
+      "MULTICAST",
+      "UP"
+    ],
+    "mtu": 1500,
+    "qdisc": "mqprio",
+    "operstate": "LOWERLAYERDOWN",
+    "linkmode": "DEFAULT",
+    "group": "port",
+    "txqlen": 1000,
+    "link_type": "ether",
+    "address": "02:00:de:ad:02:3b",
+    "broadcast": "ff:ff:ff:ff:ff:ff"
+  },
+  {
+    "ifindex": 12,
+    "link": "dsa0",
+    "ifname": "e16",
+    "flags": [
+      "NO-CARRIER",
+      "BROADCAST",
+      "MULTICAST",
+      "UP"
+    ],
+    "mtu": 1500,
+    "qdisc": "mqprio",
+    "operstate": "LOWERLAYERDOWN",
+    "linkmode": "DEFAULT",
+    "group": "port",
+    "txqlen": 1000,
+    "link_type": "ether",
+    "address": "02:00:de:ad:02:30",
+    "broadcast": "ff:ff:ff:ff:ff:ff"
+  },
+  {
+    "ifindex": 13,
+    "link": "dsa0",
+    "ifname": "e10",
+    "flags": [
+      "BROADCAST",
+      "MULTICAST",
+      "UP",
+      "LOWER_UP"
+    ],
+    "mtu": 1500,
+    "qdisc": "mqprio",
+    "operstate": "UP",
+    "linkmode": "DEFAULT",
+    "group": "port",
+    "txqlen": 1000,
+    "link_type": "ether",
+    "address": "02:00:de:ad:02:2a",
+    "broadcast": "ff:ff:ff:ff:ff:ff"
+  },
+  {
+    "ifindex": 14,
+    "link": "dsa0",
+    "ifname": "e9",
+    "flags": [
+      "BROADCAST",
+      "MULTICAST",
+      "UP",
+      "LOWER_UP"
+    ],
+    "mtu": 1500,
+    "qdisc": "mqprio",
+    "operstate": "UP",
+    "linkmode": "DEFAULT",
+    "group": "port",
+    "txqlen": 1000,
+    "link_type": "ether",
+    "address": "02:00:de:ad:02:29",
+    "broadcast": "ff:ff:ff:ff:ff:ff"
+  },
+  {
+    "ifindex": 15,
+    "link": "dsa0",
+    "ifname": "e12",
+    "flags": [
+      "BROADCAST",
+      "MULTICAST",
+      "UP",
+      "LOWER_UP"
+    ],
+    "mtu": 1500,
+    "qdisc": "mqprio",
+    "operstate": "UP",
+    "linkmode": "DEFAULT",
+    "group": "port",
+    "txqlen": 1000,
+    "link_type": "ether",
+    "address": "02:00:de:ad:02:2c",
+    "broadcast": "ff:ff:ff:ff:ff:ff"
+  },
+  {
+    "ifindex": 16,
+    "link": "dsa0",
+    "ifname": "e11",
+    "flags": [
+      "BROADCAST",
+      "MULTICAST",
+      "UP",
+      "LOWER_UP"
+    ],
+    "mtu": 1500,
+    "qdisc": "mqprio",
+    "operstate": "UP",
+    "linkmode": "DEFAULT",
+    "group": "port",
+    "txqlen": 1000,
+    "link_type": "ether",
+    "address": "02:00:de:ad:02:2b",
+    "broadcast": "ff:ff:ff:ff:ff:ff"
+  },
+  {
+    "ifindex": 17,
+    "link": "dsa0",
+    "ifname": "e18",
+    "flags": [
+      "BROADCAST",
+      "MULTICAST",
+      "UP",
+      "LOWER_UP"
+    ],
+    "mtu": 1500,
+    "qdisc": "mqprio",
+    "operstate": "UP",
+    "linkmode": "DEFAULT",
+    "group": "port",
+    "txqlen": 1000,
+    "link_type": "ether",
+    "address": "02:00:de:ad:02:32",
+    "broadcast": "ff:ff:ff:ff:ff:ff"
+  },
+  {
+    "ifindex": 18,
+    "link": "dsa0",
+    "ifname": "e17",
+    "flags": [
+      "BROADCAST",
+      "MULTICAST",
+      "UP",
+      "LOWER_UP"
+    ],
+    "mtu": 1500,
+    "qdisc": "mqprio",
+    "operstate": "UP",
+    "linkmode": "DEFAULT",
+    "group": "port",
+    "txqlen": 1000,
+    "link_type": "ether",
+    "address": "02:00:de:ad:02:31",
+    "broadcast": "ff:ff:ff:ff:ff:ff"
+  },
+  {
+    "ifindex": 19,
+    "link": "dsa0",
+    "ifname": "e20",
+    "flags": [
+      "BROADCAST",
+      "MULTICAST",
+      "UP",
+      "LOWER_UP"
+    ],
+    "mtu": 1500,
+    "qdisc": "mqprio",
+    "operstate": "UP",
+    "linkmode": "DEFAULT",
+    "group": "port",
+    "txqlen": 1000,
+    "link_type": "ether",
+    "address": "02:00:de:ad:02:34",
+    "broadcast": "ff:ff:ff:ff:ff:ff"
+  },
+  {
+    "ifindex": 20,
+    "link": "dsa0",
+    "ifname": "e19",
+    "flags": [
+      "BROADCAST",
+      "MULTICAST",
+      "UP",
+      "LOWER_UP"
+    ],
+    "mtu": 1500,
+    "qdisc": "mqprio",
+    "operstate": "UP",
+    "linkmode": "DEFAULT",
+    "group": "port",
+    "txqlen": 1000,
+    "link_type": "ether",
+    "address": "02:00:de:ad:02:33",
+    "broadcast": "ff:ff:ff:ff:ff:ff"
+  },
+  {
+    "ifindex": 21,
+    "link": "dsa0",
+    "ifname": "e15",
+    "flags": [
+      "NO-CARRIER",
+      "BROADCAST",
+      "MULTICAST",
+      "UP"
+    ],
+    "mtu": 1500,
+    "qdisc": "mqprio",
+    "operstate": "LOWERLAYERDOWN",
+    "linkmode": "DEFAULT",
+    "group": "port",
+    "txqlen": 1000,
+    "link_type": "ether",
+    "address": "02:00:de:ad:02:2f",
+    "broadcast": "ff:ff:ff:ff:ff:ff"
+  },
+  {
+    "ifindex": 22,
+    "link": "dsa0",
+    "ifname": "e2",
+    "flags": [
+      "NO-CARRIER",
+      "BROADCAST",
+      "MULTICAST",
+      "UP"
+    ],
+    "mtu": 1500,
+    "qdisc": "mqprio",
+    "operstate": "LOWERLAYERDOWN",
+    "linkmode": "DEFAULT",
+    "group": "port",
+    "txqlen": 1000,
+    "link_type": "ether",
+    "address": "02:00:de:ad:02:22",
+    "broadcast": "ff:ff:ff:ff:ff:ff"
+  },
+  {
+    "ifindex": 23,
+    "link": "dsa0",
+    "ifname": "e1",
+    "flags": [
+      "NO-CARRIER",
+      "BROADCAST",
+      "MULTICAST",
+      "UP"
+    ],
+    "mtu": 1500,
+    "qdisc": "mqprio",
+    "operstate": "LOWERLAYERDOWN",
+    "linkmode": "DEFAULT",
+    "group": "port",
+    "txqlen": 1000,
+    "link_type": "ether",
+    "address": "02:00:de:ad:02:21",
+    "broadcast": "ff:ff:ff:ff:ff:ff"
+  },
+  {
+    "ifindex": 24,
+    "link": "dsa0",
+    "ifname": "e4",
+    "flags": [
+      "NO-CARRIER",
+      "BROADCAST",
+      "MULTICAST",
+      "UP"
+    ],
+    "mtu": 1500,
+    "qdisc": "mqprio",
+    "operstate": "LOWERLAYERDOWN",
+    "linkmode": "DEFAULT",
+    "group": "port",
+    "txqlen": 1000,
+    "link_type": "ether",
+    "address": "02:00:de:ad:02:24",
+    "broadcast": "ff:ff:ff:ff:ff:ff"
+  },
+  {
+    "ifindex": 25,
+    "link": "dsa0",
+    "ifname": "e3",
+    "flags": [
+      "NO-CARRIER",
+      "BROADCAST",
+      "MULTICAST",
+      "UP"
+    ],
+    "mtu": 1500,
+    "qdisc": "mqprio",
+    "operstate": "LOWERLAYERDOWN",
+    "linkmode": "DEFAULT",
+    "group": "port",
+    "txqlen": 1000,
+    "link_type": "ether",
+    "address": "02:00:de:ad:02:23",
+    "broadcast": "ff:ff:ff:ff:ff:ff"
+  },
+  {
+    "ifindex": 26,
+    "link": "dsa0",
+    "ifname": "e6",
+    "flags": [
+      "BROADCAST",
+      "MULTICAST",
+      "UP",
+      "LOWER_UP"
+    ],
+    "mtu": 1500,
+    "qdisc": "mqprio",
+    "operstate": "UP",
+    "linkmode": "DEFAULT",
+    "group": "port",
+    "txqlen": 1000,
+    "link_type": "ether",
+    "address": "02:00:de:ad:02:26",
+    "broadcast": "ff:ff:ff:ff:ff:ff"
+  },
+  {
+    "ifindex": 27,
+    "link": "dsa0",
+    "ifname": "e5",
+    "flags": [
+      "BROADCAST",
+      "MULTICAST",
+      "UP",
+      "LOWER_UP"
+    ],
+    "mtu": 1500,
+    "qdisc": "mqprio",
+    "operstate": "UP",
+    "linkmode": "DEFAULT",
+    "group": "port",
+    "txqlen": 1000,
+    "link_type": "ether",
+    "address": "02:00:de:ad:02:25",
+    "broadcast": "ff:ff:ff:ff:ff:ff"
+  },
+  {
+    "ifindex": 28,
+    "link": "dsa0",
+    "ifname": "e8",
+    "flags": [
+      "BROADCAST",
+      "MULTICAST",
+      "UP",
+      "LOWER_UP"
+    ],
+    "mtu": 1500,
+    "qdisc": "mqprio",
+    "operstate": "UP",
+    "linkmode": "DEFAULT",
+    "group": "port",
+    "txqlen": 1000,
+    "link_type": "ether",
+    "address": "02:00:de:ad:02:28",
+    "broadcast": "ff:ff:ff:ff:ff:ff"
+  },
+  {
+    "ifindex": 29,
+    "link": "dsa0",
+    "ifname": "e7",
+    "flags": [
+      "BROADCAST",
+      "MULTICAST",
+      "UP",
+      "LOWER_UP"
+    ],
+    "mtu": 1500,
+    "qdisc": "mqprio",
+    "operstate": "UP",
+    "linkmode": "DEFAULT",
+    "group": "port",
+    "txqlen": 1000,
+    "link_type": "ether",
+    "address": "02:00:de:ad:02:27",
+    "broadcast": "ff:ff:ff:ff:ff:ff"
+  },
+  {
+    "ifindex": 30,
+    "link": "dsa0",
+    "ifname": "e14",
+    "flags": [
+      "BROADCAST",
+      "MULTICAST",
+      "UP",
+      "LOWER_UP"
+    ],
+    "mtu": 1500,
+    "qdisc": "mqprio",
+    "operstate": "UP",
+    "linkmode": "DEFAULT",
+    "group": "port",
+    "txqlen": 1000,
+    "link_type": "ether",
+    "address": "02:00:de:ad:02:2e",
+    "broadcast": "ff:ff:ff:ff:ff:ff"
+  },
+  {
+    "ifindex": 31,
+    "link": "dsa0",
+    "ifname": "e13",
+    "flags": [
+      "BROADCAST",
+      "MULTICAST",
+      "UP",
+      "LOWER_UP"
+    ],
+    "mtu": 1500,
+    "qdisc": "mqprio",
+    "operstate": "UP",
+    "linkmode": "DEFAULT",
+    "group": "port",
+    "txqlen": 1000,
+    "link_type": "ether",
+    "address": "02:00:de:ad:02:2d",
+    "broadcast": "ff:ff:ff:ff:ff:ff"
+  }
+]
