@@ -1,6 +1,6 @@
 setenv autoload no
 
-if dhcp; then
+if test -n "${ipaddr}" -a -n "${netmask}" -a -n "${serverip}" -a -n "${bootfile}" || dhcp; then
     setenv proto tftp
     setenv dltool tftpboot
 
