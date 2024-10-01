@@ -3,6 +3,16 @@ Change Log
 
 All notable changes to the project are documented in this file.
 
+[v24.10.0][] - UNRELEASED
+-------------------------
+### Changes
+- OSPF: Add limitation to only allow one interface per area.
+
+### Fixes
+- Fix #499 by adding a NACM rule to factory config, which by default
+  deny everyone to read the user password hash.
+- Fix BFD in OSPF, previously you could not enable BFD on a single
+  interface without it was enabled on all interfaces.
 
 [v24.09.0][] - 2024-09-30
 -------------------------
