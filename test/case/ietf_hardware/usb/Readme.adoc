@@ -31,7 +31,7 @@ endif::topdoc[]
 . Verify that all USB ports are locked
 . Unlock USB ports
 . Verify that all USB ports are unlocked
-. Save to startup and reboot
+. Save the configuration to startup configuration and reboot
 . Verify USB port remain unlocked after reboot
 
 

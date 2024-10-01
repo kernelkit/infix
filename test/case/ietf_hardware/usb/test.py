@@ -101,7 +101,7 @@ with infamy.Test() as test:
         for port in available:
             until(lambda: usb.get_usb_state(target, port) == "unlocked")
 
-    with test.step("Save to startup and reboot"):
+    with test.step("Save the configuration to startup configuration and reboot"):
         target.startup_override()
         target.copy("running", "startup")
         target.reboot()
