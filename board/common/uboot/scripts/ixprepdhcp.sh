@@ -4,9 +4,12 @@ if test -n "${ipaddr}" -a -n "${netmask}" -a -n "${serverip}" -a -n "${bootfile}
     setenv proto tftp
     setenv dltool tftpboot
 
-    if setexpr proto sub "^(http|tftp)://.*" "\\1" "${bootfile}" && setexpr bootfile sub "^(http|tftp)://([^/]+?)/(.*)" "\2:\3"; then
+    if setexpr proto sub "^(http|tftp)://.*" "\\1" "${bootfile}"; then
 	if test "${proto}" = "http"; then
 	    setenv dltool wget
+	    setexpr bootfile sub "^http://([^/]+?)/(.*)" "\1:/\2"
+	else
+	    setexpr bootfile sub "^tftp://([^/]+?)/(.*)" "\1:\2"
 	fi
     fi
 
