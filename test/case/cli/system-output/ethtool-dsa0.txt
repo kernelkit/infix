@@ -1,0 +1,32 @@
+Settings for dsa0:
+        Supported ports: [ MII ]
+        Supported link modes:   10000baseT/Full
+                                10000baseKX4/Full
+                                10000baseKR/Full
+                                10000baseCR/Full
+                                10000baseSR/Full
+                                10000baseLR/Full
+                                10000baseLRM/Full
+                                10000baseER/Full
+        Supported pause frame use: Symmetric Receive-only
+        Supports auto-negotiation: Yes
+        Supported FEC modes: Not reported
+        Advertised link modes:  10000baseT/Full
+                                10000baseKX4/Full
+                                10000baseKR/Full
+                                10000baseCR/Full
+                                10000baseSR/Full
+                                10000baseLR/Full
+                                10000baseLRM/Full
+                                10000baseER/Full
+        Advertised pause frame use: Symmetric Receive-only
+        Advertised auto-negotiation: Yes
+        Advertised FEC modes: Not reported
+        Speed: 10000Mb/s
+        Duplex: Full
+        Auto-negotiation: on
+        Port: MII
+        PHYAD: 0
+        Transceiver: internal
+netlink error: Operation not permitted
+        Link detected: yes

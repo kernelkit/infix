@@ -899,6 +899,10 @@ def _add_interface(ifname, ip_link_data, ip_addr_data, yang_ifaces):
     if not ip_link_data or not ip_addr_data:
         return
 
+    # Skip internal interfaces.
+    if 'group' in ip_link_data and ip_link_data['group'] == "internal":
+        return
+
     yang_ifaces.append(get_iface_data(ifname, ip_link_data, ip_addr_data))
 
 def add_interface(ifname, yang_ifaces):

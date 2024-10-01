@@ -1,0 +1,7 @@
+[ {
+	"ifname": "dsa0",
+	"eth-phy": {},
+	"eth-mac": {},
+	"eth-ctrl": {},
+	"rmon": {}
+} ]
