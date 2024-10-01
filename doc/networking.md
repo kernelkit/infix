@@ -92,7 +92,7 @@ admin@example:/config/> edit interface br0
 admin@example:/config/interface/br0/> up
 admin@example:/config/> set interface eth0 bridge-port bridge br0
 admin@example:/config/> set interface eth0 bridge-port pvid 10
-admin@example:/config interface eth1 bridge-port bridge br0
+admin@example:/config/> set interface eth1 bridge-port bridge br0
 admin@example:/config/> set interface eth1 bridge-port pvid 20
 admin@example:/config/> edit interface br0
 admin@example:/config/interface/br0/> set bridge vlans vlan 10 untagged eth0
