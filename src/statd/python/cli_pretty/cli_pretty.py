@@ -5,6 +5,7 @@ import sys
 import re
 from datetime import datetime, timezone
 
+UNIT_TEST = False
 
 class Pad:
     iface = 16
@@ -79,6 +80,10 @@ class Decore():
     def underline(txt):
         return Decore.decorate("4", txt, "24")
 
+def datetime_now():
+    if UNIT_TEST:
+        return datetime(2023, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
+    return datetime.now(timezone.utc)
 
 def get_json_data(default, indata, *args):
     data = indata
@@ -156,7 +161,7 @@ class Route:
             adjusted = self.last_updated
 
         last_updated = datetime.strptime(adjusted, '%Y-%m-%dT%H:%M:%S%z')
-        current_time = datetime.now(timezone.utc)
+        current_time = datetime_now()
         uptime_delta = current_time - last_updated
 
         hours, remainder = divmod(int(uptime_delta.total_seconds()), 3600)
@@ -677,6 +682,8 @@ def show_hardware(json):
             port.print()
 
 def main():
+    global UNIT_TEST
+
     try:
         json_data = json.load(sys.stdin)
     except json.JSONDecodeError:
@@ -688,6 +695,8 @@ def main():
 
     parser = argparse.ArgumentParser(description="JSON CLI Pretty Printer")
     subparsers = parser.add_subparsers(dest='command', help='Commands')
+
+    parser.add_argument('-t', '--test', action='store_true', help='Enable unit test mode')
 
     parser_show_routing_table = subparsers.add_parser('show-routing-table', help='Show the routing table')
     parser_show_routing_table.add_argument('-i', '--ip', required=True, help='IPv4 or IPv6 address')
@@ -703,6 +712,7 @@ def main():
     parser_show_routing_table = subparsers.add_parser('show-hardware', help='Show USB ports')
 
     args = parser.parse_args()
+    UNIT_TEST = args.test
 
     if args.command == "show-interfaces":
         show_interfaces(json_data, args.name)
