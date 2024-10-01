@@ -29,7 +29,7 @@ log facility local2\n"
 int parse_ospf_interfaces(sr_session_ctx_t *session, struct lyd_node *areas, FILE *fp)
 {
 	struct lyd_node *interface, *interfaces, *area;
-	int bfd_enabled = 0;
+	int num_bfd_enabled = 0;
 
 	LY_LIST_FOR(lyd_child(areas), area) {
 		const char *area_id;
@@ -41,11 +41,13 @@ int parse_ospf_interfaces(sr_session_ctx_t *session, struct lyd_node *areas, FIL
 			const char *hello, *dead, *retransmit, *transmit, *interface_type, *cost;
 
 			if (lydx_get_bool(interface, "enabled")) {
+				int passive = 0, bfd_enabled = 0;
 				struct lyd_node *bfd;
-				int passive = 0;
 
 				bfd = lydx_get_child(interface, "bfd");
-				bfd_enabled += lydx_get_bool(bfd, "enabled");
+				bfd_enabled = lydx_get_bool(bfd, "enabled");
+				num_bfd_enabled += bfd_enabled;
+
 				passive = lydx_get_bool(interface, "passive");
 				fprintf(fp, "interface %s\n", lydx_get_cattr(interface, "name"));
 
@@ -77,7 +79,7 @@ int parse_ospf_interfaces(sr_session_ctx_t *session, struct lyd_node *areas, FIL
 		}
 	}
 
-	return bfd_enabled;
+	return num_bfd_enabled;
 }
 
 int parse_ospf_redistribute(sr_session_ctx_t *session, struct lyd_node *redistributes, FILE *fp)
