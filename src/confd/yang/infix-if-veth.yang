@@ -1,0 +1,48 @@
+submodule infix-if-veth {
+  yang-version 1.1;
+  belongs-to infix-interfaces {
+    prefix infix-if;
+  }
+
+  import ietf-interfaces {
+    prefix if;
+  }
+  import infix-if-type {
+    prefix infixift;
+  }
+
+  organization "KernelKit";
+  contact      "kernelkit@googlegroups.com";
+  description  "Linux virtual Ethernet pair extension for ietf-interfaces.";
+
+  revision 2023-06-05 {
+    description "Initial revision.";
+    reference "internal";
+  }
+
+  /*
+   * Data Nodes
+   */
+
+  augment "/if:interfaces/if:interface" {
+    when "derived-from-or-self(if:type, 'infixift:veth')" {
+      description "Only shown for if:type infixift:veth (ianaift:ilan)";
+    }
+
+    description "Augments the interface model with virtual Ethernet pairs.";
+
+    container veth {
+      description "Virtual Ethernet (veth) pair.";
+
+      leaf peer {
+        type if:interface-ref;
+        must '(deref(.)/../if:type = "infixift:veth") and
+               deref(deref(.)/../veth/peer) = ../../if:name' {
+          error-message "Must refer to the peer interface (other end of othe pair).";
+        }
+        mandatory true;
+        description "Peer veth interface to which this interface is connected.";
+      }
+    }
+  }
+}

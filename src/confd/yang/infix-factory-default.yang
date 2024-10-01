@@ -1,0 +1,23 @@
+module infix-factory-default {
+  yang-version 1.1;
+  namespace "urn:infix:factory-default:ns:yang:1.0";
+  prefix infix-fd;
+
+  import ietf-netconf-acm {
+    prefix nacm;
+  }
+
+  organization "KernelKit";
+  contact      "kernelkit@googlegroups.com";
+  description  "Infix factory default model.";
+
+  revision 2023-06-28 {
+    description "Initial revision.";
+    reference "internal";
+  }
+
+  rpc factory-default {
+    nacm:default-deny-all;
+    description "Reset the running-config datastore to factory defaults.";
+  }
+}
