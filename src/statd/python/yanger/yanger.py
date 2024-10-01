@@ -592,16 +592,22 @@ def get_brport_multicast(ifname):
     return multicast
 
 
-def add_ip_link(ifname, iface_out):
+# We always get all interfaces for two reasons.
+# 1) To increase speed on large iron with many ports.
+# 2) To simplify testing (single dummy file ip-link-show.json).
+def get_ip_link():
     """Fetch interface link information from kernel"""
-    data = run_json_cmd(['ip', '-s', '-d', '-j', 'link', 'show', 'dev', ifname],
-                        f"ip-link-show-dev-{ifname}.json")
-    if len(data) != 1:
-        logger.error("expected ip link output to be array with length 1")
-        sys.exit(1)
+    return run_json_cmd(['ip', '-s', '-d', '-j', 'link', 'show'],
+                        f"ip-link-show.json")
 
-    iface_in = data[0]
 
+def get_ip_addr():
+    """Fetch interface address information from kernel"""
+    return run_json_cmd(['ip', '-j', 'addr', 'show'],
+                        f"ip-addr-show.json")
+
+
+def add_ip_link(ifname, iface_in, iface_out):
     if 'ifname' in iface_in:
         iface_out['name'] = iface_in['ifname']
 
@@ -652,17 +658,7 @@ def add_ip_link(ifname, iface_out):
         insert(iface_out, "statistics", "in-octets", str(val))
 
 
-def add_ip_addr(ifname, iface_out):
-    """Fetch interface address information from kernel"""
-
-    data = run_json_cmd(['ip', '-j', 'addr', 'show', 'dev', ifname],
-                        f"ip-addr-show-dev-{ifname}.json")
-    if len(data) != 1:
-        logger.error("expected ip addr output to be array with length 1")
-        sys.exit(1)
-
-    iface_in = data[0]
-
+def add_ip_addr(ifname, iface_in, iface_out):
     if 'mtu' in iface_in and ifname != "lo":
         insert(iface_out, "ietf-ip:ipv4", "mtu", iface_in['mtu'])
 
@@ -881,11 +877,11 @@ def add_vlans_to_bridge(brname, iface_out, mc_status):
 
     insert(iface_out, "infix-interfaces:bridge", "vlans", "vlan", vlans)
 
-def get_iface_data(ifname):
+def get_iface_data(ifname, ip_link_data, ip_addr_data):
     iface_out = {}
 
-    add_ip_link(ifname, iface_out)
-    add_ip_addr(ifname, iface_out)
+    add_ip_link(ifname, ip_link_data, iface_out)
+    add_ip_addr(ifname, ip_addr_data, iface_out)
 
     if 'type' in iface_out and iface_out['type'] == "infix-if-type:ethernet":
         add_ethtool_groups(ifname, iface_out)
@@ -901,6 +897,30 @@ def get_iface_data(ifname):
         add_mdb_to_bridge(ifname, iface_out, mc_status)
 
     return iface_out
+
+def _add_interface(ifname, ip_link_data, ip_addr_data, yang_ifaces):
+    # We expect both ip addr and link data to exist.
+    if not ip_link_data or not ip_addr_data:
+        return
+
+    # Skip internal interfaces.
+    if 'group' in ip_link_data and ip_link_data['group'] == "internal":
+        return
+
+    yang_ifaces.append(get_iface_data(ifname, ip_link_data, ip_addr_data))
+
+def add_interface(ifname, yang_ifaces):
+    ip_link_data = get_ip_link()
+    ip_addr_data = get_ip_addr()
+
+    if ifname:
+        ip_link_data = next((d for d in ip_link_data if d.get('ifname') == ifname), None)
+        ip_addr_data = next((d for d in ip_addr_data if d.get('ifname') == ifname), None)
+        _add_interface(ifname, ip_link_data, ip_addr_data, yang_ifaces)
+    else:
+        for link in ip_link_data:
+            addr = next((d for d in ip_addr_data if d.get('ifname') == link["ifname"]), None)
+            _add_interface(link["ifname"], link, addr, yang_ifaces)
 
 def main():
     global TESTPATH
@@ -936,15 +956,7 @@ def main():
                 "interface": []
             }
         }
-
-        if args.param:
-            iface_data = get_iface_data(args.param)
-            yang_data['ietf-interfaces:interfaces']['interface'].append(iface_data)
-        else:
-            ifnames = os.listdir('/sys/class/net/')
-            for ifname in ifnames:
-                iface_data = get_iface_data(ifname)
-                yang_data['ietf-interfaces:interfaces']['interface'].append(iface_data)
+        add_interface(args.param, yang_data['ietf-interfaces:interfaces']['interface'])
 
     elif args.model == 'ietf-routing':
         yang_data = {
