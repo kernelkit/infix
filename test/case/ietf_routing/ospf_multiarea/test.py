@@ -267,9 +267,6 @@ def config_target2(target, ring1, ring2, cross):
                                         },
                                         "name": ring1,
                                         "hello-interval": 1,
-                                    }, {
-                                        "name": "lo",
-                                        "enabled": True
                                     }]
                                 }
                             }, {
@@ -282,9 +279,6 @@ def config_target2(target, ring1, ring2, cross):
                                         "name": cross,
                                         "hello-interval": 1,
                                         "cost": 2000
-                                    }, {
-                                        "name": "lo",
-                                        "enabled": True
                                     }]
                                 }
                             }]
