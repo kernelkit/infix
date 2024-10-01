@@ -11,6 +11,10 @@ from datetime import datetime, timedelta, timezone
 TESTPATH = ""
 logger = None
 
+def datetime_now():
+    if TESTPATH:
+        return datetime(2023, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
+    return datetime.now(timezone.utc)
 
 def json_get_yang_type(iface_in):
     if iface_in['link_type'] == "loopback":
@@ -234,7 +238,7 @@ def uptime2datetime(uptime):
     """Convert uptime (HH:MM:SS) to YANG format (YYYY-MM-DDTHH:MM:SS+00:00)"""
     h, m, s = map(int, uptime.split(':'))
     uptime_delta = timedelta(hours=h, minutes=m, seconds=s)
-    current_time = datetime.now(timezone.utc)
+    current_time = datetime_now()
     last_updated = current_time - uptime_delta
     date_timestd = last_updated.strftime('%Y-%m-%dT%H:%M:%S%z')
 

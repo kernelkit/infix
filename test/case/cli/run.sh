@@ -55,8 +55,8 @@ if [ $# -eq 2 ] && [ $1 = "update" ]; then
              > "$CLI_OUTPUT_PATH/show-interface-${iface}.txt"
       done
     elif [ $2 = "show-routing-table" ]; then
-      "$SR_EMULATOR_TOOL" | "$CLI_PRETTY_TOOL" "show-routing-table" -i "ipv4" > "$CLI_OUTPUT_PATH/show-routes-ipv4.txt"
-      "$SR_EMULATOR_TOOL" | "$CLI_PRETTY_TOOL" "show-routing-table" -i "ipv6" > "$CLI_OUTPUT_PATH/show-routes-ipv6.txt"
+      "$SR_EMULATOR_TOOL" | "$CLI_PRETTY_TOOL" "-t" "show-routing-table" -i "ipv4" > "$CLI_OUTPUT_PATH/show-routes-ipv4.txt"
+      "$SR_EMULATOR_TOOL" | "$CLI_PRETTY_TOOL" "-t" "show-routing-table" -i "ipv6" > "$CLI_OUTPUT_PATH/show-routes-ipv6.txt"
     elif [ $2  = "show-bridge-mdb" ]; then
       "$SR_EMULATOR_TOOL" | "$CLI_PRETTY_TOOL" "show-bridge-mdb" > "$CLI_OUTPUT_PATH/show-bridge-mdb.txt"
     else
@@ -90,8 +90,8 @@ fi
 ok "\"show bridge mdb\" output looks intact"
 
 # Show ipv4 routes
-echo "# $SR_EMULATOR_TOOL | $CLI_PRETTY_TOOL show-routing-table -i ipv4"
-"$SR_EMULATOR_TOOL" | "$CLI_PRETTY_TOOL" "show-routing-table" -i "ipv4" > "$CLI_OUTPUT_FILE"
+echo "# $SR_EMULATOR_TOOL | $CLI_PRETTY_TOOL -t show-routing-table -i ipv4"
+"$SR_EMULATOR_TOOL" | "$CLI_PRETTY_TOOL" "-t" "show-routing-table" -i "ipv4" > "$CLI_OUTPUT_FILE"
 
 if ! diff -u "$CLI_OUTPUT_PATH/show-routes-ipv4.txt" "$CLI_OUTPUT_FILE"; then
     print_update_txt
@@ -100,8 +100,8 @@ fi
 ok "\"show routes ipv4\" output looks intact"
 
 # Show ipv6 routes
-echo "# $SR_EMULATOR_TOOL | $CLI_PRETTY_TOOL show-routing-table -i ipv6"
-"$SR_EMULATOR_TOOL" | "$CLI_PRETTY_TOOL" "show-routing-table" -i "ipv6" > "$CLI_OUTPUT_FILE"
+echo "# $SR_EMULATOR_TOOL | $CLI_PRETTY_TOOL -t show-routing-table -i ipv6"
+"$SR_EMULATOR_TOOL" | "$CLI_PRETTY_TOOL" "-t" "show-routing-table" -i "ipv6" > "$CLI_OUTPUT_FILE"
 
 if ! diff -u "$CLI_OUTPUT_PATH/show-routes-ipv6.txt" "$CLI_OUTPUT_FILE"; then
     print_update_txt
