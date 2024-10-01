@@ -1,4 +1,4 @@
-echo "Press Ctrl-C NOW to enter boot menu"
+echo "Press Ctrl-C NOW to override the default boot sequence"
 if sleep "${ixbootdelay}"; then
     run ixbootorder
 
@@ -7,8 +7,12 @@ if sleep "${ixbootdelay}"; then
     reset
 fi
 
-bootmenu
 if test "${dev_mode}" != "yes"; then
+    bootmenu
     pause "Console shell access PROHIBITED. Press any key to reset..."
     reset
 fi
+
+echo
+echo 'Run "bootmenu" to interactively select a boot device'
+echo
