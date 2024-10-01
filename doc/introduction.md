@@ -62,9 +62,11 @@ The system has several datastores (or files):
    configure context.  Any changes made here can be discarded (`abort`,
    `rollback`) or committed (`commit`, `leave`) to `running-config`.
 
-> See the [Branding & Releases](branding.md) for information on how
-> `factory-config` and `failure-config` can be adapted to different
-> customer requirements.
+> Please see the [Branding & Releases](branding.md) document for more
+> in-depth information on how `factory-config` and `failure-config` can
+> be adapted to different customer requirements.  Including how you can
+> override the generated versions of these files with plain per-product
+> ones -- this may even protect against some of the failure modes below.
 
 
 ## System Boot
@@ -90,7 +92,8 @@ password in VPD, are detailed later in this section.
     there is a working fail safe, or rather *fail secure*, mode
  4. On first power-on, and after a factory reset, the system does not
     have a `startup-config`, in which case `factory-config` is copied
-    to `startup-config`
+    to `startup-config` -- if a per-product specific version exists it
+    is preferred over the generated one
  5. Provided the integrity of the `startup-config` is OK, a system
     service loads and activates the configuration
 
@@ -123,13 +126,17 @@ syntax, failed validation against the system's YANG model, or a bug in
 the system's `confd` service, the *Fail Secure Mode* is triggered and
 `failure-config` is loaded (unless VPD Failure, see above).
 
+> Again, please see the [Branding & Releases](branding.md) document for
+> how to provide a per-product hard-coded `failure-config` to suit your
+> products preferences.
+
 *Fail Secure Mode* is a fail-safe mode provided for debugging the
-system.  The default[^3] is isolated interfaces with communication only to
-the management CPU, SSH and console login using the device's factory
-reset password, IP connectivity only using IPv6 link-local, and device
-discovery protocols: LLDP, mDNS-SD.  The login and shell prompt are set
-to `failure-c0-ff-ee`, the last three octets of the device's base MAC
-address.
+system.  The default[^3] creates a setup of isolated interfaces with
+communication only to the management CPU, SSH and console login using
+the device's factory reset password, IP connectivity only using IPv6
+link-local, and device discovery protocols: LLDP, mDNS-SD.  The login
+and shell prompt are set to `failure-c0-ff-ee`, the last three octets of
+the device's base MAC address.
 
 [^1]: YANG is a modeling language from IETF, replacing that used for
     SNMP (MIB), used to describe the subsystems and properties of

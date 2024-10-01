@@ -41,13 +41,92 @@ Verify the result after a build by inspecting:
     printed on a label on the device.
 
 
-Factory Defaults
-----------------
+Factory & Failure Config
+------------------------
 
-The Infix default configuration, factory-config, is part static files
-and part per-device generated files, e.g., SSH hostkey and hostname.
-The latter is constructed from the file `/etc/hostname`, appended with
-the last three octets of the system's base MAC address.  To override the
+To support booting the same image (CPU architecture) on multiple boards,
+Infix by default generates the device's initial configuration every time
+at boot.  This also ensures the device can always be restored to a known
+state after a factory reset, since the `factory-config` is guaranteed to
+be compatible with the YANG models for the given software version. (For
+more information on how the system boots, please see the section [Key
+Concepts](introduction.md#key-concepts) in the Introduction document.)
+
+However, for custom builds of Infix it is possible to override this with
+a single static `/etc/factory-config.cfg` (and failure-config) in your
+rootfs overlay -- with a [VPD](vpd.md) you can even support several!
+
+
+### Variables & Format Specifiers
+
+Parts of the configuration you likely always want to generated, like the
+SSH hostkey used by NETCONF, a unique hostname, or the `admin` user's
+unique (per-device with a VPD) password hash.  This section lists the
+available keywords, see the next section for examples of how to use
+them:
+
+ - **Default password hash:** `$factory$` (from VPD, .dtb, or built-in)  
+   XPath: `/ietf-system:system/authentication/user/password`
+ - **Default NETCONF hostkey:** `genkey` (regenerated at factory reset)  
+   XPath: `/ietf-keystore:keystore/asymmetric-keys/asymmetric-key[name='genkey']`
+ - **Hostname format specifiers:**  
+   XPath: `/ietf-system:system/hostname`
+   - `%i`: OS ID, from `/etc/os-release`, from Menuconfig branding
+   - `%h`: Default hostname, from `/etc/os-release`, from branding
+   - `%m`: NIC specific part of base MAC, e.g., to `c0-ff-ee`
+   - `%%`: Literal %
+
+
+### Static Files
+
+> **Caveat:** maintaining static a factory-config and failure-config may
+> seem like an obvious choice, but as YANG models evolve (even the IETF
+> models get upgraded), you may need to upgrade your static files.
+
+First, for one-off builds (one image per product), the simplest way is
+to override the location where the system looks for the files, `/etc`
+already at build time.  This can be done using a Buildroot rootfs
+overlay providing, e.g., `/etc/factory-config.cfg`.  Example: [NanoPi
+R2S][] in `${INFIX}/board/aarch64/r2s/rootfs/etc/factory-config.cfg`.
+
+Second, to support multiple products in a single image, we can employ
+another method to install a `/etc/factory-config.cfg` override -- at
+runtime.  This relies on the very early system `probe` that detects the
+specific product from VPD data.
+
+The `probe` consists of several sequential steps that currently run from
+`${INFIX}/board/common/rootfs/usr/libexec/infix/init.d/`.  One of them
+check if `/usr/share/product/<PRODUCT>` exists, and if so attempts to
+copy the entire contents to `/`.  Here, `<PRODUCT>` is determined from
+the VPD, which is available in `/run/system.json` as `"product-name"`,
+after `00-probe` has run. The lower case version of the string is used.
+
+I.e., create a rootfs overlay that provides any combination of:
+
+ - `/usr/share/product/<PRODUCT>/etc/factory-config.cfg`
+ - `/usr/share/product/<PRODUCT>/etc/failure-config.cfg`
+
+
+### Dynamically Generated
+
+The generated `factory-config` and `failure-config` files consist of
+both static JSON files and part generated files at runtime for each
+device.  The resulting files are written to the RAM disk in `/run`:
+
+ - `/run/confd/factory-config.gen`
+ - `/run/confd/failure-config.gen`
+
+Provided no custom overrides (see above) have been installed already,
+these files are then copied to:
+
+ - `/etc/factory-config.cfg`
+ - `/etc/failure-config.cfg`
+
+... where the bootstrap process expects them to be in the next step.
+
+Examples of generated contents are the SSH hostkey and hostname.  The
+latter is constructed from the file `/etc/hostname`, appended with the
+last three octets of the system's base MAC address.  To override the
 base hostname, set `BR2_TARGET_GENERIC_HOSTNAME` in your defconfig.
 
 The static files are installed by Infix `confd` in `/usr/share/confd/`
@@ -95,6 +174,112 @@ bootstrap script for more help, and up-to-date information.
 > is also `confdrc.local`, which usually is enough to change arguments
 > to scripts like `gen-interfaces`, e.g., to create a bridge by default,
 > you may want to look into `GEN_IFACE_OPTS`.
+
+
+### Example Snippets
+
+**IETF System:**
+
+```hsib
+  "ietf-system:system": {
+    "hostname": "example-%m",
+    "ntp": {
+      "enabled": true,
+      "server": [
+        {
+          "name": "ntp.org",
+          "udp": {
+            "address": "pool.ntp.org"
+          }
+        }
+      ]
+    },
+    "authentication": {
+      "user": [
+        {
+          "name": "admin",
+          "password": "$factory$",
+          "infix-system:shell": "bash"
+        }
+      ]
+    },
+    "infix-system:motd-banner": "Li0tLS0tLS0uCnwgIC4gLiAgfCBJbmZpeCAtLSBhIE5ldHdvcmsgT3BlcmF0aW5nIFN5c3RlbQp8LS4gdiAuLXwgaHR0cHM6Ly9rZXJuZWxraXQuZ2l0aHViLmlvCictJy0tLSctJwo="
+  },            # <---- REMEMBER COMMA SEPARATORS IN SNIPPETS!
+                # <---- ... and no comments.
+```
+
+The `motd-banner` is a binary type, which is basically a Base64 encoded
+text file without line breaks (`-w0`):
+
+```bash
+$ echo "Li0tLS0tLS0uCnwgIC4gLiAgfCBJbmZpeCAtLSBhIE5ldHdvcmsgT3BlcmF0aW5nIFN5c3RlbQp8LS4gdiAuLXwgaHR0cHM6Ly9rZXJuZWxraXQuZ2l0aHViLmlvCictJy0tLSctJwo=" |base64 -d
+.-------.
+|  . .  | Infix -- a Network Operating System
+|-. v .-| https://kernelkit.github.io
+'-'---'-'
+```
+
+**IETF Keystore**
+
+Notice how both the public and private keys are left empty here.  The
+`genkey` is always automatically regenerated after each factory reset.
+Keeping the `factory-config` snippet like this means we can use the same
+file on multiple devices, without risking them sharing the same host
+keys.  Sometimes you may want the same host keys, but that is the easy
+use-case and not documented here.
+
+```json
+  "ietf-keystore:keystore": {
+    "asymmetric-keys": {
+      "asymmetric-key": [
+        {
+          "name": "genkey",
+          "public-key-format": "ietf-crypto-types:ssh-public-key-format",
+          "public-key": "",
+          "private-key-format": "ietf-crypto-types:rsa-private-key-format",
+          "cleartext-private-key": "",
+          "certificates": {}
+        }
+      ]
+    }
+  },
+```
+
+The `genkey` is currently only used by the NETCONF SSH backend.
+
+**IETF NETCONF Server**
+
+```json
+  "ietf-netconf-server:netconf-server": {
+    "listen": {
+      "endpoints": {
+        "endpoint": [
+          {
+            "name": "default-ssh",
+            "ssh": {
+              "tcp-server-parameters": {
+                "local-address": "::"
+              },
+              "ssh-server-parameters": {
+                "server-identity": {
+                  "host-key": [
+                    {
+                      "name": "default-key",
+                      "public-key": {
+                        "central-keystore-reference": "genkey"
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        ]
+      }
+    }
+  },
+```
+
 
 
 Integration
@@ -203,3 +388,4 @@ variable `INFIX_OEM_PATH` to that of the br2-external.  It is also
 possible to set the `GIT_VERSION` variable in your `post-build.sh`
 script to change how the VCS version is extracted.
 
+[NanoPi R2S]: https://github.com/kernelkit/infix/blob/main/board/aarch64/r2s/rootfs/etc/factory-config.cfg
