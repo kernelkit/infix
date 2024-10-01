@@ -3,6 +3,8 @@ import os
 import ast
 import graphviz
 import argparse
+import io
+import sys
 
 from pathlib import Path
 
@@ -90,17 +92,17 @@ class TestCase:
 def parse_directory_tree(directory):
     directories=[]
     for dirpath, dirnames, filenames in os.walk(directory):
-        testscript=False
-        topology=False
+        testscript = False
+        topology = False
         # Search for directories containing a test.py and a topology
         # and define the directory as a test directory
 
         if filenames:
             for filename in filenames:
                 if filename == "test.py":
-                    testscript=True
+                    testscript = True
                 if filename == "topology.dot":
-                    topology=True
+                    topology = True
             if testscript and topology:
                 directories.append(dirpath)
     return directories
@@ -110,7 +112,24 @@ parser.add_argument("-d", "--directory", required=True, help="The directory to p
 parser.add_argument("-r", "--root-dir", help="Path that all paths should be relative to")
 args=parser.parse_args()
 
-directories=parse_directory_tree(args.directory)
+output_capture = io.StringIO()
+sys.stderr = output_capture
+
+directories = parse_directory_tree(args.directory)
+error_string = ""
 for directory in directories:
-    test_case=TestCase(directory, args.root_dir)
+    output_capture.truncate(0)
+    output_capture.seek(0)
+    test_case = TestCase(directory, args.root_dir)
     test_case.generate_specification()
+    if len(output_capture.getvalue()) > 0:
+        error_string = output_capture.getvalue()
+        break
+
+sys.stdout = sys.__stdout__
+
+if len(error_string) > 0:
+    print(error_string)
+    exit(1)
+
+exit(0)
