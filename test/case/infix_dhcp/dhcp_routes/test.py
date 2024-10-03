@@ -66,14 +66,16 @@ with infamy.Test() as test:
     with infamy.IsolatedMacVlan(host) as netns:
         netns.addip("192.168.0.1")
         with infamy.dhcp.Server(netns, prefix=PREFIX, router=ROUTER):
-            with test.step("Verify client use classless routes, option 121"):
+            with test.step("Verify 'client' has a route to 10.0.0.0/24 via 192.168.0.254"):
+                print("Verify client use classless routes, option 121")
                 until(lambda: route.ipv4_route_exist(client, PREFIX, ROUTER))
 
-            with test.step("Verify client did *not* use option 3"):
+            with test.step("Verify 'client' has a default route via 192.168.0.254"):
+                print("Verify client did *not* use option 3")
                 if route.ipv4_route_exist(client, "0.0.0.0/0", ROUTER):
                     test.fail()
 
-            with test.step("Verify client has canary route, 20.0.0.0/24"):
+            with test.step("Verify 'client' has a route to 20.0.0.0/24 via 192.168.0.2"):
                 until(lambda: route.ipv4_route_exist(client, CANARY,
                                                      CANHOP, pref=250))
 

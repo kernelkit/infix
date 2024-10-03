@@ -22,9 +22,9 @@ endif::testgroup[]
 endif::topdoc[]
 ==== Test sequence
 . Setting up client
-. Verify client use classless routes, option 121
-. Verify client did *not* use option 3
-. Verify client has canary route, 20.0.0.0/24
+. Verify 'client' has a route to 10.0.0.0/24 via 192.168.0.254
+. Verify 'client' has a default route via 192.168.0.254
+. Verify 'client' has a route to 20.0.0.0/24 via 192.168.0.2
 
 
 <<<
