@@ -34,7 +34,7 @@ changing in this way.  Start with why.
    *Ideas*, or open a :pray: feature request issue
  - :white_check_mark: New features also need new regression tests, this
    can be basic tests or more complex use-case tests comprising multiple
-   subsystems, see [Testing Changes](#testing-changes), below
+   subsystems, see [Testing Changes](#test_tube-testing-changes), below
 
 Please take care to ensure you follow the project coding style and the
 commit message format.  If you follow these recommendations you help
