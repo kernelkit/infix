@@ -20,6 +20,7 @@ from infamy.util import until
 
 
 def _verify(server):
+    # Should really use mDNS here....
     url = infamy.Furl(f"http://[{server}]:91/index.html")
     return url.check("It works")
 
@@ -35,7 +36,14 @@ with infamy.Test() as test:
         if not target.has_model("infix-containers"):
             test.skip()
 
-    with test.step(f"Create {NAME} container from bundled OCI image"):
+    with test.step("Set hostname to 'container-host'"):
+        target.put_config_dict("ietf-system", {
+            "system": {
+                "hostname": "container-host"
+                }
+            })
+
+    with test.step("Create container 'web' from bundled OCI image"):
         target.put_config_dict("infix-containers", {
             "containers": {
                 "container": [
@@ -51,21 +59,24 @@ with infamy.Test() as test:
             }
         })
 
-    with test.step(f"Verify {NAME} container has started"):
+    with test.step("Verify container 'web' has started"):
         c = infamy.Container(target)
         until(lambda: c.running(NAME), attempts=10)
 
-    with test.step(f"Verify {NAME} container responds"):
+    with test.step("Verify container 'web' is reachable on http://container-host.local:91"):
         until(lambda: _verify(addr), attempts=10)
 
-    with test.step(f"Verify {NAME} container can be stopped and restarted"):
+    with test.step("Stop container 'web'"):
         c = infamy.Container(target)
         c.action(NAME, "stop")
+
+    with test.step("Verify container 'web' is stopped"):
         until(lambda: not c.running(NAME), attempts=10)
+
+    with test.step("Restart container 'web'"):
         c.action(NAME, "restart")
 
-    with test.step(f"Verify {NAME} container still responds"):
+    with test.step("Verify container 'web' is reachable on http://container-host.local:91"):
         # Wait for it to restart and respond, or fail
         until(lambda: _verify(addr), attempts=10)
-
     test.succeed()

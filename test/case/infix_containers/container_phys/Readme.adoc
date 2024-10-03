@@ -16,7 +16,11 @@ image::topology.png[Container with physical interface topology]
 endif::testgroup[]
 endif::topdoc[]
 ==== Test sequence
-. Initialize
+. Set up topology and attach to target DUT
+. Create container 'web-phys' from bundled OCI image
+. Verify container 'web-phys' has started
+. Verify host:data can ping 10.0.0.2
+. Verify container 'web-phys' is reachable on http://10.0.0.2:91
 
 
 <<<
