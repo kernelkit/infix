@@ -26,7 +26,6 @@ def toggle(updown):
         }
     })
 
-
 def verify(enabled, sec):
     """Verify service traffic, or no traffic in case service not enabled"""
     _, hport = env.ltop.xlate("host", "data")
@@ -54,11 +53,12 @@ def verify(enabled, sec):
                     "enabled": enabled
                 }
             })
+
             target.put_config_dict("ieee802-dot1ab-lldp", {
-                "lldp": {
-                    "enabled": enabled
-                }
-            })
+                    "lldp": {
+                        "enabled": enabled
+                    }
+                })
 
             toggle(True)
             time.sleep(sec)
@@ -67,11 +67,11 @@ def verify(enabled, sec):
 
 
 with infamy.Test() as test:
-    with test.step("Initialize"):
+    with test.step("Set up topology and attach to target DUT"):
         env = infamy.Env()
         target = env.attach("target", "mgmt")
 
-    with test.step("Set static IPv4 address and disable services"):
+    with test.step("Set IPv4 address 10.0.0.10/24 on target:data and disable MDNS and LLDP"):
         _, tport = env.ltop.xlate("target", "data")
 
         target.put_config_dict("ietf-interfaces", {
@@ -102,22 +102,24 @@ with infamy.Test() as test:
                 "enabled": False
             }
         })
-
-    with test.step("Start sniffer and enable services on target ..."):
+    with test.step("Enable mDNS and LLDP and toggle target:data DOWN and UP to trigger service"):
         rc = verify(True, 10)
         print(rc.stdout)
-        # breakpoint()
-        if "10.0.0.10.5353" not in rc.stdout:
-            test.fail()
-        if "LLDP" not in rc.stdout:
-            test.fail()
+        with test.step("Verify on host:data there are packets from 10.0.0.10:5354 (mDNS)"):
+            if "10.0.0.10.5353" not in rc.stdout:
+                test.fail()
+        with test.step("Verify on host:data there are LLDP packets sent from 10.0.0.10"):
+            if "LLDP" not in rc.stdout:
+                test.fail()
 
-    with test.step("Disable services on target, verify no longer running ..."):
+    with test.step("Disable mDNS and LLDP"):
         rc = verify(False, 10)
         print(rc.stdout)
-        if "10.0.0.10.5353" in rc.stdout:
-            test.fail()
-        if "LLDP" in rc.stdout:
-            test.fail()
+        with test.step("Verify on host:data there are no packets from 10.0.0.10:5354 (mDNS)"):
+            if "10.0.0.10.5353" in rc.stdout:
+                test.fail()
+        with test.step("Verify on host:data there are no LLDP packets sent from 10.0.0.10"):
+            if "LLDP" in rc.stdout:
+                test.fail()
 
     test.succeed()
