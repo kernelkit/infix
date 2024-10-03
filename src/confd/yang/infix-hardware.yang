@@ -1,0 +1,148 @@
+module infix-hardware {
+  yang-version 1.1;
+  namespace "urn:infix:hardware:ns:yang:1.0";
+  prefix ih;
+  import ietf-hardware {
+    prefix iehw;
+  }
+  import iana-hardware {
+    prefix iahw;
+  }
+
+  import ietf-yang-types {
+    prefix yang;
+  }
+
+  organization "KernelKit";
+  contact      "kernelkit@googlegroups.com";
+  description  "Vital Product Data augmentation of ieee-hardware and deviations.";
+
+  revision 2024-04-25 {
+    description "Spellcheck leaf: coutry-code -> country-code";
+    reference "internal";
+  }
+  revision 2024-01-18 {
+    description "Initial";
+    reference "internal";
+  }
+
+  typedef country-code {
+    type string {
+      length 2;
+      pattern "[A-Za-z]+";
+    }
+    description "A two-letter country code.";
+  }
+
+  identity hardware-class {
+    description "infix hardware base class";
+  }
+
+  identity usb {
+    base hardware-class;
+    description "This identity is used to describe a USB port";
+  }
+  identity vpd {
+    base hardware-class;
+    description "This identity is used to a VPD memory on the device.";
+  }
+
+  deviation "/iehw:hardware/iehw:component/iehw:class" {
+    deviate replace {
+      type identityref {
+        base hardware-class;
+      }
+    }
+  }
+
+  deviation "/iehw:hardware/iehw:component/iehw:state/iehw:admin-state" {
+    deviate add {
+      must ". = 'locked' or . = 'unlocked'" {
+        error-message "Only 'locked' and 'unlocked' states are allowed here.";
+      }
+    }
+  }
+
+  deviation "/iehw:hardware/iehw:component/iehw:state/iehw:standby-state" {
+    deviate not-supported;
+  }
+  deviation "/iehw:hardware/iehw:component/iehw:sensor-data" {
+    deviate not-supported;
+  }
+  deviation "/iehw:hardware/iehw:component/iehw:parent" {
+    deviate not-supported;
+  }
+  deviation "/iehw:hardware/iehw:component/iehw:parent-rel-pos" {
+    deviate not-supported;
+  }
+  deviation "/iehw:hardware/iehw:component/iehw:alias" {
+    deviate not-supported;
+  }
+  deviation "/iehw:hardware/iehw:component/iehw:uri" {
+    deviate not-supported;
+  }
+  deviation "/iehw:hardware/iehw:component/iehw:asset-id" {
+    deviate not-supported;
+  }
+  augment "/iehw:hardware/iehw:component" {
+    container vpd-data {
+      config false;
+      leaf product-name {
+	type string;
+      }
+      leaf part-number {
+	type string;
+      }
+      leaf serial-number {
+	type string;
+      }
+      leaf mac-address {
+	type yang:mac-address;
+      }
+      leaf manufacture-date {
+	type string;
+      }
+      leaf device-version {
+	type uint8;
+      }
+      leaf label-revision {
+	type string;
+      }
+      leaf label-version {
+	type string;
+      }
+      leaf platform-name {
+	type string;
+      }
+      leaf onie-version {
+	type string;
+      }
+      leaf num-macs {
+	type uint16;
+      }
+      leaf manufacturer {
+	type string;
+      }
+      leaf country-code {
+	type country-code;
+      }
+      leaf vendor {
+	type string;
+      }
+      leaf diag-version {
+	type string;
+      }
+      leaf service-tag {
+	type string;
+      }
+      list vendor-extension {
+	leaf iana-enterprise-number {
+	  type uint32;
+	}
+	leaf extension-data {
+	  type string;
+	}
+      }
+    }
+  }
+}

@@ -1,7 +1,6 @@
 === Syslog Basic
 ==== Description
-- Add syslog actions to log to local files
-- Verify new log files have been created
+Add syslog actions to log to local files, then verify new log files have been created.
 
 ==== Topology
 ifdef::topdoc[]
@@ -16,9 +15,9 @@ image::topology.png[Syslog Basic topology]
 endif::testgroup[]
 endif::topdoc[]
 ==== Test sequence
-. Initializing ...
-. Add new syslog file action
-. Verify log files have been created ...
+. Initializing
+. Configure DUT
+. Verify log files /var/log/bar.log and /var/log/bar.log have been created
 
 
 <<<

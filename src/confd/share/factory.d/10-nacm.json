@@ -1,5 +1,6 @@
 {
     "ietf-netconf-acm:nacm": {
+	"enable-nacm": true,
 	"groups": {
 	    "group": [
 		{
@@ -23,6 +24,19 @@
 			"access-operations": "*",
 			"action": "permit",
 			"comment": "Allow 'admin' group complete access to all operations and data."
+		    }
+		]
+	    },
+	    {
+		"name": "default-deny-all",
+		"group": ["*"],
+		"rule": [
+		    {
+			"name":  "deny-password-read",
+			"module-name": "ietf-system",
+			"path": "/ietf-system:system/authentication/user/password",
+			"access-operations": "*",
+			"action": "deny"
 		    }
 		]
 	    }

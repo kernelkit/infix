@@ -1,0 +1,166 @@
+module infix-dhcp-client {
+  yang-version 1.1;
+  namespace "urn:ietf:params:xml:ns:yang:infix-dhcp-client";
+  prefix dhc4-clnt;
+
+  import ietf-interfaces {
+    prefix "if";
+  }
+
+  contact      "kernelkit@googlegroups.com";
+  description  "This module implements an IPv4 DHCP client";
+
+  revision 2024-09-20 {
+    description   "Routes are installed in Frr (staticd), clarify preference
+                   vs metric and adjust default preference 100 -> 5.";
+    reference     "internal";
+  }
+  revision 2024-04-12 {
+    description   "Adjust DHCP client hostname option, max 64 charachters.";
+    reference     "internal";
+  }
+  revision 2024-01-30 {
+    description   "Add DHCP client options, arping, and route preference.";
+    reference     "internal";
+  }
+  revision 2023-05-22 {
+    description   "Initial revision.";
+    reference     "rfc2131 rfc7950";
+  }
+
+  /*
+   * Typedefs
+   */
+
+  typedef route-preference {
+    type uint32;
+    description "This type is used for selecting route preference (distance).";
+  }
+
+  typedef dhcp-options {
+    type union {
+      type string;
+      type enumeration {
+        enum subnet {
+          value 1;
+          description "Subnet (IP address and netmask)";
+        }
+        enum router {
+          value 3;
+          description "Default route(s)";
+        }
+        enum dns {
+          value 6;
+          description "DNS server";
+        }
+        enum hostname {
+          value 12;
+          description "Hostname";
+        }
+        enum domain {
+          value 15;
+          description "Domain name";
+        }
+        enum broadcast {
+          value 28;
+          description "Broadcast address";
+        }
+        enum ntpsrv {
+          value 42;
+          description "NTP server";
+        }
+        enum address {
+          value 50;
+          description "Requested (previously cached) address";
+        }
+        enum clientid {
+          value 61;
+          description "Client ID (default MAC, and option 12)";
+        }
+        enum fqdn {
+          value 81;
+          description "Request DNS update of client FQDN argument";
+        }
+        enum search {
+          value 119;
+          description "Domain search list";
+        }
+        enum staticroutes {
+          value 121;
+          description "Classless static routes";
+        }
+        enum msstaticroutes {
+          value 249;
+          description "Microsoft classless static routes";
+        }
+      }
+    }
+    description "Supported DHCP client request options";
+  }
+
+  /*
+   * Data Nodes
+   */
+
+  container dhcp-client {
+    description
+      "DHCPv4 client configuration";
+    leaf enabled {
+      type boolean;
+      default "true";
+      description "Globally enables the DHCP client function.";
+    }
+    list client-if {
+      key "if-name";
+      description "List of interfaces requesting DHCPv4 configuration.";
+      leaf if-name {
+        type if:interface-ref;
+        mandatory true;
+        description "Name of the interface.";
+      }
+      leaf enabled {
+        type boolean;
+        default "true";
+        description "Enable DHCP client for this interface.";
+      }
+      leaf client-id {
+        type string;
+        description "Optional Client ID, option 61, default: MAC address.";
+      }
+      leaf arping {
+        type boolean;
+        default "true";
+        description "ARP for lease to check for IP address collisions (slow).";
+      }
+      list option {
+        key "name";
+        description
+          "List of DHCP options to request (and accept).  The default is an
+           empty list, meaning all supported options.  To restrict the
+           client to only get IP address and default route, set this to:
+           'subnet router'";
+        leaf name {
+          type dhcp-options;
+          description "DHCP option to request from, or inform server of.";
+        }
+        leaf value {
+          type string;
+          description "Optional value, only used for non-flag request options.
+                       Example: option:hostname, value:xyzzy
+                                option:clientid, value:01:02:03:04:05:06:07:08:09:0a
+                                option:0x51,     value:xyzzy.example.com";
+           must "../name != 'hostname' or re-match(., '[a-zA-Z0-9\\-_]{1,64}')";
+        }
+      }
+      leaf route-preference {
+        type route-preference;
+        default 5;
+        description
+          "The preference (administrative distance) that all DHCP routes are
+           installed with, option 3, 33 and 121.  The default preferfence (5)
+           is higher (less worth) than static routes, but lower than those
+           learned via dynamic routing protocols, like OSPF.";
+      }
+    }
+  }
+}

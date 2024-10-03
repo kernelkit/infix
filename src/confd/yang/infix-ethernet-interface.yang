@@ -1,0 +1,86 @@
+module infix-ethernet-interface {
+  yang-version 1.1;
+  namespace "urn:infix:ethernet-interface:ns:yang:1.0";
+  prefix infix-eth;
+
+  import ieee802-ethernet-interface {
+    prefix eth;
+  }
+  import ietf-interfaces {
+    prefix if;
+  }
+  import ietf-yang-types {
+    prefix yang;
+    reference "IETF RFC 6991";
+  }
+
+  organization "KernelKit";
+  contact      "kernelkit@googlegroups.com";
+  description  "Extensions and deviations to ieee802-ethernet-interface.yang";
+
+  revision 2024-02-27 {
+    description "Add augment for in-good-octets and out-good-octets";
+    reference "internal";
+  }
+
+  revision 2024-01-22 {
+    description "Support ethernet but not negotiation-status";
+    reference "internal";
+  }
+
+  revision 2023-11-22 {
+    description "Initial revision.";
+    reference "internal";
+  }
+
+  /*
+   * Data Nodes
+   */
+  augment "/if:interfaces/if:interface/eth:ethernet/eth:statistics/eth:frame" {
+    leaf out-good-octets {
+      type yang:counter64;
+      units octets;
+      description "A count of data and padding octets of frames that are successfully transmitted.";
+    }
+    leaf in-good-octets {
+      type yang:counter64;
+      units octets;
+      description "A count of data and padding octets in frames that are successfully received.";
+    }
+  }
+
+  /* Deviations for config and status */
+
+  deviation "/if:interfaces/if:interface/eth:ethernet/eth:flow-control" {
+    deviate not-supported;
+  }
+  deviation "/if:interfaces/if:interface/eth:ethernet/eth:max-frame-length" {
+    deviate not-supported;
+  }
+  deviation "/if:interfaces/if:interface/eth:ethernet/eth:mac-control-extension-control" {
+    deviate not-supported;
+  }
+  deviation "/if:interfaces/if:interface/eth:ethernet/eth:frame-limit-slow-protocol" {
+    deviate not-supported;
+  }
+  deviation "/if:interfaces/if:interface/eth:ethernet/eth:capabilities" {
+    deviate not-supported;
+  }
+  deviation "/if:interfaces/if:interface/eth:ethernet/eth:auto-negotiation/eth:negotiation-status" {
+    deviate not-supported;
+  }
+
+  /* Deviations for statistics */
+  deviation "/if:interfaces/if:interface/eth:ethernet/eth:statistics/eth:frame/eth:in-total-frames" {
+    deviate not-supported;
+  }
+  deviation "/if:interfaces/if:interface/eth:ethernet/eth:statistics/eth:frame/eth:out-error-mac-internal-frames" {
+    deviate not-supported;
+  }
+  deviation "/if:interfaces/if:interface/eth:ethernet/eth:statistics/eth:phy" {
+    deviate not-supported;
+  }
+  deviation "/if:interfaces/if:interface/eth:ethernet/eth:statistics/eth:mac-control" {
+    deviate not-supported;
+  } 
+}

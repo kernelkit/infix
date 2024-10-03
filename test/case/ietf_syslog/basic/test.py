@@ -2,22 +2,21 @@
 """
 Syslog Basic
 
-- Add syslog actions to log to local files
-- Verify new log files have been created
+Add syslog actions to log to local files, then verify new log files have been created.
 """
 
 import infamy
 import infamy.ssh as ssh
 
 with infamy.Test() as test:
-    with test.step("Initializing ..."):
+    with test.step("Initializing"):
         env = infamy.Env()
         target = env.attach("target", "mgmt")
         tgtssh = env.attach("target", "mgmt", "ssh")
         factory = env.get_password("target")
         address = target.get_mgmt_ip()
 
-    with test.step("Add new syslog file action"):
+    with test.step("Configure DUT"):
         target.put_config_dict("ietf-syslog", {
             "syslog": {
                 "actions": {
@@ -59,7 +58,7 @@ with infamy.Test() as test:
             }
         })
 
-    with test.step("Verify log files have been created ..."):
+    with test.step("Verify log files /var/log/bar.log and /var/log/bar.log have been created"):
         user = tgtssh.runsh("ls /var/log/{foo,bar.log}").stdout
         if "/var/log/foo" not in user:
             test.fail()

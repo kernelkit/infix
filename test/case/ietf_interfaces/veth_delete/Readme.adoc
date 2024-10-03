@@ -23,7 +23,7 @@ endif::topdoc[]
 ==== Test sequence
 . Initialize
 . Create VETH pair
-. Verify VETH pair exists
+. Verify interfaces 'veth0a' and 'veth0b' exists
 . Set IP address on target:eth0 (dummy op)
 . Set IP address on target:eth1 (dummy op)
 . Reset configuration
