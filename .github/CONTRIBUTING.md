@@ -10,7 +10,7 @@ forms of collaboration as well.  [Let's talk!][support] :handshake:
 If you are unsure how to start implementing an idea or fix:
 
  - :bug: open an issue, there are human friendly templates for _bugs_
-   and _feature requests_
+   and _feature requests_ at <https://github.com/kernelkit/infix/issues>
  - :speech_balloon: use the [Q&A Forum][discuss]
 
 > _Talking about code and problems first is often the best way to get
