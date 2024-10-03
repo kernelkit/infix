@@ -15,8 +15,8 @@ image::topology.png[Get all operational topology]
 endif::testgroup[]
 endif::topdoc[]
 ==== Test sequence
-. Initialize
-. Get all Operational data
+. Set up topology and attach to target DUT
+. Get all Operational data from 'target'
 
 
 <<<

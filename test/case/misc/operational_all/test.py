@@ -10,11 +10,11 @@ import infamy
 import infamy.iface as iface
 
 with infamy.Test() as test:
-    with test.step("Initialize"):
+    with test.step("Set up topology and attach to target DUT"):
         env = infamy.Env()
         target = env.attach("target", "mgmt")
 
-    with test.step("Get all Operational data"):
+    with test.step("Get all Operational data from 'target'"):
         target.get_data(parse=False)
 
     test.succeed()
