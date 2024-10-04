@@ -34,7 +34,7 @@ with infamy.Test() as test:
             }
             client.put_config_dict("infix-dhcp-client", config)
 
-            with test.step(f"Waiting for client to set DHCP lease {ADDRESS}"):
+            with test.step("Verify client get DHCP lease for 10.0.0.42 on client:data"):
                 until(lambda: iface.address_exist(client, port, ADDRESS))
 
     test.succeed()

@@ -10,6 +10,9 @@ Container with bridge network
 Verify connectivity with a simple web server container from behind a
 docker0 bridge.  As an added twist, this test also verifies content
 mounts, i.e., custom index.html from running-config.
+
+This also verifies port forwarding from container internal port to a
+port accessed from the host.
 """
 import base64
 import infamy
@@ -23,14 +26,14 @@ with infamy.Test() as test:
     BODY  = "<html><body><p>Kilroy was here</p></body></html>"
     URL   = f"http://{DUTIP}:8080/index.html"
 
-    with test.step("Initialize"):
+    with test.step("Set up topology and attach to target DUT"):
         env = infamy.Env()
         target = env.attach("target", "mgmt")
 
         if not target.has_model("infix-containers"):
             test.skip()
 
-    with test.step(f"Create {NAME} container from bundled OCI image"):
+    with test.step("Create container 'web-docker0' from bundled OCI image"):
         _, ifname = env.ltop.xlate("target", "data")
         enc = base64.b64encode(BODY.encode('utf-8'))
         target.put_config_dict("ietf-interfaces", {
@@ -84,18 +87,18 @@ with infamy.Test() as test:
             }
         })
 
-    with test.step(f"Verify {NAME} container has started"):
+    with test.step("Verify container 'web-docker0' has started"):
         c = infamy.Container(target)
         until(lambda: c.running(NAME), attempts=10)
 
-    with test.step(f"Verify {NAME} container responds"):
-        _, hport = env.ltop.xlate("host", "data")
-        url = infamy.Furl(URL)
+    _, hport = env.ltop.xlate("host", "data")
+    url = infamy.Furl(URL)
 
-        with infamy.IsolatedMacVlan(hport) as ns:
-            ns.addip(OURIP)
+    with infamy.IsolatedMacVlan(hport) as ns:
+        ns.addip(OURIP)
+        with test.step("Verify basic DUT connectivity, host:data can ping DUT 10.0.0.2"):
             ns.must_reach(DUTIP)
-
+        with test.step("Verify container 'web-docker0' is reachable on http://10.0.0.2:8080"):
             until(lambda: url.nscheck(ns, "Kilroy was here"), attempts=10)
 
     test.succeed()

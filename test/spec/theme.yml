@@ -1,7 +1,7 @@
 extends: default
 font:
   catalog:
-    merge: false
+    merge: true
     SourceCodePro:
       normal: SourceCodePro-Regular.ttf
       bold: SourceCodePro-Bold.ttf
@@ -12,6 +12,10 @@ base:
   font_family: SourceCodePro
   font_size: 11
   line_height_length: 1.3
+
+code:
+  background-color: #ffffff
+  border-color: #ffffff
 
 heading:
   font_family: SourceCodePro

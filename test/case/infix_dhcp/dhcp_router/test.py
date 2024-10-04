@@ -35,7 +35,7 @@ with infamy.Test() as test:
             }
             client.put_config_dict("infix-dhcp-client", config)
 
-            with test.step(f"Wait for client to set up default route via {ROUTER}"):
+            with test.step("Verify client to set up default route via 192.168.0.254"):
                 until(lambda: route.ipv4_route_exist(client, "0.0.0.0/0", ROUTER))
 
     test.succeed()

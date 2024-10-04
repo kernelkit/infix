@@ -20,6 +20,14 @@ endif::testgroup[]
 endif::topdoc[]
 ==== Test sequence
 . Set up topology and attach to target DUT
+. Set hostname to 'container-host'
+. Create container 'web' from bundled OCI image
+. Verify container 'web' has started
+. Verify container 'web' is reachable on http://container-host.local:91
+. Stop container 'web'
+. Verify container 'web' is stopped
+. Restart container 'web'
+. Verify container 'web' is reachable on http://container-host.local:91
 
 
 <<<

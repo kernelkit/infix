@@ -16,10 +16,14 @@ image::topology.png[Services basic topology]
 endif::testgroup[]
 endif::topdoc[]
 ==== Test sequence
-. Initialize
-. Set static IPv4 address and disable services
-. Start sniffer and enable services on target ...
-. Disable services on target, verify no longer running ...
+. Set up topology and attach to target DUT
+. Set IPv4 address 10.0.0.10/24 on target:data and disable MDNS and LLDP
+. Enable mDNS and LLDP and toggle target:data DOWN and UP to trigger service
+. Verify on host:data there are packets from 10.0.0.10:5354 (mDNS)
+. Verify on host:data there are LLDP packets sent from 10.0.0.10
+. Disable mDNS and LLDP
+. Verify on host:data there are no packets from 10.0.0.10:5354 (mDNS)
+. Verify on host:data there are no LLDP packets sent from 10.0.0.10
 
 
 <<<

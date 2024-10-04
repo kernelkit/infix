@@ -20,14 +20,14 @@ with infamy.Test() as test:
     OURIP = "10.0.0.1"
     URL   = f"http://{DUTIP}:91/index.html"
 
-    with test.step("Initialize"):
+    with test.step("Set up topology and attach to target DUT"):
         env = infamy.Env()
         target = env.attach("target", "mgmt")
 
         if not target.has_model("infix-containers"):
             test.skip()
 
-    with test.step(f"Create {NAME} container from bundled OCI image"):
+    with test.step("Create container 'web-phys' from bundled OCI image"):
         _, ifname = env.ltop.xlate("target", "data")
 
         target.put_config_dict("ietf-interfaces", {
@@ -63,18 +63,19 @@ with infamy.Test() as test:
             }
         })
 
-    with test.step(f"Verify {NAME} container has started"):
+    with test.step("Verify container 'web-phys' has started"):
         c = infamy.Container(target)
         until(lambda: c.running(NAME), attempts=10)
 
-    with test.step(f"Verify {NAME} container responds"):
-        _, hport = env.ltop.xlate("host", "data")
-        url = infamy.Furl(URL)
+    _, hport = env.ltop.xlate("host", "data")
+    url = infamy.Furl(URL)
 
-        with infamy.IsolatedMacVlan(hport) as ns:
-            ns.addip(OURIP)
+    with infamy.IsolatedMacVlan(hport) as ns:
+        ns.addip(OURIP)
+        with test.step("Verify host:data can ping 10.0.0.2"):
             ns.must_reach(DUTIP)
 
+        with test.step("Verify container 'web-phys' is reachable on http://10.0.0.2:91"):
             until(lambda: url.nscheck(ns, "It works"), attempts=10)
 
     test.succeed()

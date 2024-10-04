@@ -1,19 +1,19 @@
 #!/usr/bin/env python3
-#
-# lo     br-0                    br-Q.40           br-D         br-X
-#  |       |                       |                |            |
-#  o       o      eth-Q.10       br-Q           veth0a.20     eth-X.30
-#                         \     /    \              |            |
-#                          eth-Q     veth0b       veth0a        eth-X
-#                                         `---------'
-
-"""
+r"""
 Verify that all interface types can be created
 
 This test verify that all interface types can be created
 and also, tesing setting the configuration in sequal (this
 takes a little longer time than send it once)
+....
 
+ lo     br-0                    br-Q.40            br-D         br-X
+  |       |                       |                  |            |
+  o       o        ethQ.10       br-Q            veth0a.20      ethX.30
+                          \     /    \               |            |
+                           ethQ       veth0b       veth0a        ethX
+                                          `---------'
+....
 """
 
 import infamy
