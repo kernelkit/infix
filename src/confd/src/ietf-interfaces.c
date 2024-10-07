@@ -890,42 +890,53 @@ done:
 	return err;
 }
 
-static int bridge_diff_vlan_port(struct dagger *net, FILE *br, const char *brname, int vid,
-				       const char *brport, int tagged, enum lydx_op op)
+static void bridge_remove_vlan_ports(struct dagger *net, FILE *br, const char *brname,
+				     int vid, struct lyd_node *ports, int tagged)
 {
-	int pvid = 0;
+	struct lyd_node *port;
 
-	srx_get_int(net->session, &pvid, SR_UINT16_T, IF_XPATH "[name='%s']/bridge-port/pvid", brport);
+	LYX_LIST_FOR_EACH(lyd_child(ports), port, tagged ? "tagged" : "untagged") {
+		enum lydx_op op = lydx_get_op(port);
+		const char *brport = lyd_get_value(port);
 
-	if (op != LYDX_OP_CREATE) {
-		fprintf(br, "vlan del vid %d dev %s\n", vid, brport);
-		if (op == LYDX_OP_DELETE)
-			return 0;
+		if (op != LYDX_OP_CREATE) {
+			fprintf(br, "vlan del vid %d dev %s\n", vid, brport);
+		}
+
 	}
+}
 
-	fprintf(br, "vlan add vid %d dev %s %s %s %s\n", vid, brport, vid == pvid ? "pvid" : "",
-		tagged ? "" : "untagged", strcmp(brname, brport) ? "" : "self");
+static void bridge_add_vlan_ports(struct dagger *net, FILE *br, const char *brname,
+				  int vid, struct lyd_node *ports, int tagged)
+{
+	struct lyd_node *port;
 
-	return 0;
+	LYX_LIST_FOR_EACH(lyd_child(ports), port, tagged ? "tagged" : "untagged") {
+		enum lydx_op op = lydx_get_op(port);
+		const char *brport = lyd_get_value(port);
+
+		if (op != LYDX_OP_DELETE) {
+			int pvid = 0;
+			srx_get_int(net->session, &pvid, SR_UINT16_T, IF_XPATH "[name='%s']/bridge-port/pvid", brport);
+
+			fprintf(br, "vlan add vid %d dev %s %s %s %s\n", vid, brport, vid == pvid ? "pvid" : "",
+				tagged ? "" : "untagged", strcmp(brname, brport) ? "" : "self");
+
+		}
+	}
 }
 
 static int bridge_diff_vlan_ports(struct dagger *net, FILE *br, const char *brname,
-				   int vid, struct lyd_node *ports, int tagged)
+				  int vid, struct lyd_node *ports)
 {
-	const char *type = tagged ? "tagged" : "untagged";
-	struct lyd_node *port;
-	int err = 0;
+	/* First remove all VLANs that should that should be removed, see #676 */
+	bridge_remove_vlan_ports(net, br, brname, vid, ports, 0);
+	bridge_remove_vlan_ports(net, br, brname, vid, ports, 1);
 
-	LYX_LIST_FOR_EACH(lyd_child(ports), port, type) {
-		const char *brport = lyd_get_value(port);
-		enum lydx_op op = lydx_get_op(port);
+	bridge_add_vlan_ports(net, br, brname, vid, ports, 0);
+	bridge_add_vlan_ports(net, br, brname, vid, ports, 1);
 
-		err = bridge_diff_vlan_port(net, br, brname, vid, brport, tagged, op);
-		if (err)
-			break;
-	}
-
-	return err;
+	return 0;
 }
 
 static const char *bridge_tagtype2str(const char *type)
@@ -1390,13 +1401,7 @@ static int netdag_gen_bridge(sr_session_ctx_t *session, struct dagger *net, stru
 	LYX_LIST_FOR_EACH(lyd_child(vlans), vlan, "vlan") {
 		int vid = atoi(lydx_get_cattr(vlan, "vid"));
 
-		/* untagged ports */
-		err = bridge_diff_vlan_ports(net, br, brname, vid, vlan, 0);
-		if (err)
-			break;
-
-		/* tagged ports */
-		err = bridge_diff_vlan_ports(net, br, brname, vid, vlan, 1);
+		err = bridge_diff_vlan_ports(net, br, brname, vid, vlan);
 		if (err)
 			break;
 
