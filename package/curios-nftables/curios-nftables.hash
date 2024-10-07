@@ -1,0 +1,4 @@
+# Locally computed
+sha256  ab15fd526bd8dd18a9e77ebc139656bf4d33e97fc7238cd11bf60e2b9b8666c6  COPYING
+sha256  f25651505bf4fc635dc8d391f377b1116837e99dee522ce0691c15b090cee818  curios-nftables-oci-arm64-v24.05.0.tar.gz
+sha256  025c2a5d6c71c62ebbe6f96d8b9ffa3235d6812e87b51645f6e89357d9762669  curios-nftables-oci-amd64-v24.05.0.tar.gz
