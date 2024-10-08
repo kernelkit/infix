@@ -28,9 +28,12 @@
 """
 OSPF with multiple areas
 
-This test test alot of features inside OSPF using 3 areas (one NSSA area)
+This test test alot of features inside OSPF using 3 areas (one NSSA area, with no summary)
 to test the distribution of routes is deterministic (using cost), also test
 link breaks using BFD (not implemented in infamy though)
+
+This test also verify broadcast and point-to-point interface type on /30 network and
+explicit router-id.
 """
 import infamy
 
@@ -137,7 +140,8 @@ def config_target1(target, ring1, ring2, cross):
                                         },
                                         "name": ring2,
                                         "hello-interval": 1,
-                                        "enabled": True
+                                        "enabled": True,
+                                        "interface-type": "point-to-point"
                                     },
                                     {
                                         "name": "lo",
@@ -239,7 +243,7 @@ def config_target2(target, ring1, ring2, cross):
                     "type": "infix-routing:ospfv2",
                     "name": "default",
                     "ospf": {
-                        "explicit-router-id": "10.0.0.2",
+                        "explicit-router-id": "1.1.1.1",
                         "areas": {
                             "area": [{
                                 "area-id": "0.0.0.0",
@@ -471,7 +475,8 @@ def config_target4(target, ring1, cross, link):
                                             },
                                             "name": ring1,
                                             "hello-interval": 1,
-                                            "enabled": True
+                                            "enabled": True,
+                                            "interface-type": "point-to-point"
                                         }, {
                                             "bfd": {
                                                 "enabled": True
@@ -536,7 +541,7 @@ with infamy.Test() as test:
 
     with test.step("Wait for all neighbor to peer"):
         print("Waiting for neighbors to peer")
-        until(lambda: route.ospf_get_neighbor(R1, "0.0.0.0", R1ring1, "10.0.0.2"), attempts=200)
+        until(lambda: route.ospf_get_neighbor(R1, "0.0.0.0", R1ring1, "1.1.1.1"), attempts=200)
         until(lambda: route.ospf_get_neighbor(R1, "0.0.0.1", R1cross, "10.0.0.3"), attempts=200)
         until(lambda: route.ospf_get_neighbor(R2, "0.0.0.1", R2ring1, "10.0.0.3"), attempts=200)
         until(lambda: route.ospf_get_neighbor(R2, "0.0.0.0", R2ring2, "10.0.0.1"), attempts=200)
@@ -558,6 +563,12 @@ with infamy.Test() as test:
 
     with test.step("Verify Area 0.0.0.1 on R3 is NSSA area"):
         assert(route.ospf_is_area_nssa(R3, "0.0.0.1"))
+
+    with test.step("Verify R1:ring2 is of type point-to-point"):
+        assert(route.ospf_get_interface_type(R1, "0.0.0.2", R1ring2) == "point-to-point")
+
+    with test.step("Verify R4:ring1 is of type point-to-point"):
+        assert(route.ospf_get_interface_type(R4, "0.0.0.2", R4ring1) == "point-to-point")
 
     with test.step("Verify on R3, there are no routes beyond 10.0.23.1, just a default route"):
         # Should be only default route out of the area.
