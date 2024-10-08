@@ -17,7 +17,7 @@ username = "newuser01"
 password = "newuser01password"
 
 with infamy.Test() as test:
-    with test.step("Connect to device"):
+    with test.step("Set up topology and attach to target DUT"):
         env = infamy.Env()
         target = env.attach("target", "mgmt")
         tgtssh = env.attach("target", "mgmt", "ssh")
@@ -39,7 +39,7 @@ with infamy.Test() as test:
             }
         })
 
-    with test.step(f"Verify user 'newuser01' exist in operational"):
+    with test.step("Verify user 'newuser01' exist in operational"):
         running = target.get_config_dict("/ietf-system:system")
         users = running["system"]["authentication"]["user"]
         user_found = False
@@ -50,10 +50,10 @@ with infamy.Test() as test:
                 break
         assert user_found, f"User 'newuser01' not found"
 
-    with test.step(f"Delete user 'newuser01'"):
+    with test.step("Delete user 'newuser01'"):
         target.delete_xpath(f"/ietf-system:system/authentication/user[name='{username}']")
 
-    with test.step(f"Verify erasure of user 'newuser01'"):
+    with test.step("Verify erasure of user 'newuser01'"):
         running = target.get_config_dict("/ietf-system:system")
         users = running["system"]["authentication"]["user"]
         for user in users:

@@ -47,7 +47,7 @@ class FileServer(http.server.HTTPServer):
         self.__tp.shutdown()
 
 with infamy.Test() as test:
-    with test.step("Connect to device"):
+    with test.step("Set up topology and attach to target DUT"):
         env = infamy.Env()
         if not env.args.package:
             print("No package supplied")
@@ -68,7 +68,7 @@ with infamy.Test() as test:
 
     with FileServer(("::", SRVPORT), BUNDLEDIR):
 
-        with test.step(f"Start installation of selected package"):
+        with test.step("Start installation of selected package"):
             print(f"Installing {os.path.basename(env.args.package)}")
             target.call_dict("infix-system", {
                 "install-bundle": {

@@ -1,6 +1,12 @@
 === Set hostname
 ==== Description
-Verify that it is possible to change hostname.
+Verify that it is possible to change hostname both normal
+and using format %h-%m.
+
+The format exapnds to <default hostname>-<MAC>,
+where MAC is the last three bytes of the base MAC address.
+
+e.g. ix-01-01-01.
 
 ==== Topology
 ifdef::topdoc[]
@@ -15,8 +21,12 @@ image::topology.png[Set hostname topology]
 endif::testgroup[]
 endif::topdoc[]
 ==== Test sequence
-. Connect to device
+. Set up topology and attach to target DUT
 . Set hostname to 'h0stn4m3'
+. Verify new hostname 'h0stn4m3'
+. Set hostname to to '%h-%m'
+. Verify hostname is  %h-%m in running configuration
+. Verify hostname format in operational, according to format
 
 
 <<<

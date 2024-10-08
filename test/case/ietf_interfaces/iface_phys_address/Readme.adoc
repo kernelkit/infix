@@ -18,7 +18,8 @@ endif::topdoc[]
 . Initialize
 . Set custom MAC address to '02:01:00:c0:ff:ee' on target:mgmt
 . Verify target:mgmt has MAC address '02:01:00:c0:ff:ee'
-. Verify that target:mgmt has its origil MAC address again
+. Remove custom MAC address '02:01:00:c0:ff:ee'
+. Verify that target:mgmt has the original MAC address again
 
 
 <<<

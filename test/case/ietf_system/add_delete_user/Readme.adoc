@@ -15,8 +15,11 @@ image::topology.png[Add/delete user topology]
 endif::testgroup[]
 endif::topdoc[]
 ==== Test sequence
-. Connect to device
+. Set up topology and attach to target DUT
 . Add new user 'newuser01' with password 'newuser01password'
+. Verify user 'newuser01' exist in operational
+. Delete user 'newuser01'
+. Verify erasure of user 'newuser01'
 . Verify that 'newuser01' is removed from /etc/passwd
 
 

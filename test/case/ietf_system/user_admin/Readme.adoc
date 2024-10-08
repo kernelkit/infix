@@ -16,8 +16,17 @@ image::topology.png[Add admin user topology]
 endif::testgroup[]
 endif::topdoc[]
 ==== Test sequence
-. Connect to device
-. Add new user
+. Set up topology and attach to target DUT
+. Add new user 'jacky' with no NACM access
+. Verify regular user jacky exists
+. Verify user jacky is not in wheel group
+. Verify user jacky password is set correctly
+. Add user jacky to admin group in NACM
+. Verify user jacky is now in wheel group
+. Verify user jacky shell now is Bash
+. Change user jacky to $factory$ password ...
+. Verify user jacky exists and has new password
+. Verify user jacky can log in with SSH
 
 
 <<<

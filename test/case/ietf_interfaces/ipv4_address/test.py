@@ -15,7 +15,7 @@ new_ip_address = "10.10.10.20"
 new_prefix_length = 24
 
 with infamy.Test() as test:
-    with test.step("Connect to target"):
+    with test.step("Set up topology and attach to target DUT"):
         env = infamy.Env()
         target = env.attach("target", "mgmt")
         _, interface_name = env.ltop.xlate("target", "mgmt")
@@ -42,8 +42,9 @@ with infamy.Test() as test:
     with test.step("Verify '10.10.10.20/24' exist on target:mgmt"):
         until(lambda: iface.address_exist(target, interface_name, new_ip_address, proto='static'))
 
-    with test.step(f"Remove all IPv4 addresses from target:mgmt"):
+    with test.step("Remove all IPv4 addresses from target:mgmt"):
         target.delete_xpath(f"/ietf-interfaces:interfaces/interface[name='{interface_name}']/ietf-ip:ipv4")
+
     with test.step("Verify target:mgmt no longer has the address 10.10.10.20"):
         until(lambda: iface.address_exist(target, interface_name, new_ip_address) == False)
 
