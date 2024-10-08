@@ -9,6 +9,9 @@ module infix-interfaces {
   import ietf-interfaces {
     prefix if;
   }
+  import ietf-yang-types {
+    prefix yang;
+  }
 
   include infix-if-base;
   include infix-if-bridge;
@@ -19,6 +22,11 @@ module infix-interfaces {
   organization "KernelKit";
   contact      "kernelkit@googlegroups.com";
   description  "Linux bridge and lag extensions for ietf-interfaces.";
+
+  revision 2024-10-08 {
+    description "Replace writable phy-address with custom-phys-address.";
+    reference "internal";
+  }
 
   revision 2024-09-23 {
     description "Drop interfaces-state deviation, already marked deprecated.";
@@ -71,9 +79,34 @@ module infix-interfaces {
     }
   }
 
-  deviation "/if:interfaces/if:interface/if:phys-address" {
-    deviate replace {
-      config true;
+  augment "/if:interfaces/if:interface" {
+    description "Custom phys-address management, static or derived from chassis MAC.";
+
+    container custom-phys-address {
+      description "Override the default physical address.";
+
+      choice type {
+        description "Choose between static MAC address or chassis-derived MAC.";
+
+        case static {
+          leaf static {
+            description "Statically configured interface address on protocol sub-layer, e.g., MAC.";
+            type yang:phys-address;
+          }
+        }
+
+        case chassis {
+          container chassis {
+            description "Derive physical address from chassis MAC address.";
+            presence "Enable chassis-derived address.";
+
+            leaf offset {
+              description "Static offset added to the chassis MAC address.";
+              type yang:phys-address;
+            }
+          }
+        }
+      }
     }
   }
 }
