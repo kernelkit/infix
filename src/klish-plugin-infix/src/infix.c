@@ -361,7 +361,7 @@ int infix_files(kcontext_t *ctx)
 int infix_ifaces(kcontext_t *ctx)
 {
 	(void)ctx;
-	system("ls /sys/class/net");
+	system("ip -j link | jq -r '.[] | select(.group != \"internal\") | .ifname'");
 	return 0;
 }
 
