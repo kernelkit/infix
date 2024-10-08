@@ -150,6 +150,9 @@ class Route:
 
     def datetime2uptime(self):
         """Convert 'last-updated' string to uptime in AAhBBmCCs format."""
+        ONE_DAY_SECOND = 60 * 60 * 24
+        ONE_WEEK_SECOND = ONE_DAY_SECOND * 7
+
         if not self.last_updated:
             return "0h0m0s"
 
@@ -164,10 +167,21 @@ class Route:
         current_time = datetime_now()
         uptime_delta = current_time - last_updated
 
-        hours, remainder = divmod(int(uptime_delta.total_seconds()), 3600)
-        minutes, seconds = divmod(remainder, 60)
+        total_seconds = int(uptime_delta.total_seconds())
+        total_days = total_seconds // ONE_DAY_SECOND
+        total_weeks = total_days // 7
 
-        return f"{hours}h{minutes}m{seconds}s"
+        hours = (total_seconds % ONE_DAY_SECOND) // 3600
+        minutes = (total_seconds % 3600) // 60
+        seconds = total_seconds % 60
+
+        if total_seconds < ONE_DAY_SECOND:
+            return f"{hours:02}:{minutes:02}:{seconds:02}"
+        elif total_seconds < ONE_WEEK_SECOND:
+            return f"{total_days}d{hours:02}h{minutes:02}m"
+        else:
+            days_remaining = total_days % 7
+            return f"{total_weeks:02}w{days_remaining}d{hours:02}h"
 
     def print(self):
         PadRoute.set(self.ip)
