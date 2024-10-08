@@ -1,11 +1,11 @@
 [7m   DESTINATION                                     PREF NEXT-HOP                                 PROTO     UPTIME[0m
->* ::/0                                             1/0 2001:db8:3c4d:50::1                      static    0h0m0s
->* 2001:db8:3c4d:50::/64                            0/0 e6                                       direct    0h0m0s
->* 2001:db8:3c4d:200::1/128                         0/0 lo                                       direct    0h0m0s
- * fe80::/64                                        0/0 e7                                       direct    0h0m0s
- * fe80::/64                                        0/0 e6                                       direct    0h0m0s
- * fe80::/64                                        0/0 e5                                       direct    0h0m0s
- * fe80::/64                                        0/0 e4                                       direct    0h0m0s
- * fe80::/64                                        0/0 e3                                       direct    0h0m0s
- * fe80::/64                                        0/0 e2                                       direct    0h0m0s
->* fe80::/64                                        0/0 e1                                       direct    0h0m0s
+>* ::/0                                             1/0 2001:db8:3c4d:50::1                      static  00:00:00
+>* 2001:db8:3c4d:50::/64                            0/0 e6                                       direct  00:00:00
+>* 2001:db8:3c4d:200::1/128                         0/0 lo                                       direct  00:00:00
+ * fe80::/64                                        0/0 e7                                       direct  00:00:00
+ * fe80::/64                                        0/0 e6                                       direct  00:00:00
+ * fe80::/64                                        0/0 e5                                       direct  00:00:00
+ * fe80::/64                                        0/0 e4                                       direct  00:00:00
+ * fe80::/64                                        0/0 e3                                       direct  00:00:00
+ * fe80::/64                                        0/0 e2                                       direct  00:00:00
+>* fe80::/64                                        0/0 e1                                       direct  00:00:00

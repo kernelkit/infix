@@ -228,7 +228,7 @@
       "internalNextHopActiveNum":1,
       "nexthopGroupId":23,
       "installedNexthopGroupId":23,
-      "uptime":"00:00:00",
+      "uptime":"20:10:05",
       "nexthops":[
         {
           "flags":3,
@@ -256,7 +256,7 @@
       "internalNextHopNum":1,
       "internalNextHopActiveNum":1,
       "nexthopGroupId":33,
-      "uptime":"00:00:00",
+      "uptime":"5d13h05m",
       "nexthops":[
         {
           "flags":1,
@@ -286,7 +286,7 @@
       "internalNextHopActiveNum":1,
       "nexthopGroupId":17,
       "installedNexthopGroupId":17,
-      "uptime":"00:00:00",
+      "uptime":"01w1d13h",
       "nexthops":[
         {
           "flags":3,
