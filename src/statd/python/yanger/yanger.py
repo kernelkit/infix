@@ -6,6 +6,7 @@ import json
 import sys  # (built-in module)
 import os
 import argparse
+from re import match
 from datetime import datetime, timedelta, timezone
 
 TESTPATH = ""
@@ -235,8 +236,35 @@ def add_hardware(hw_out):
 
 
 def uptime2datetime(uptime):
-    """Convert uptime (HH:MM:SS) to YANG format (YYYY-MM-DDTHH:MM:SS+00:00)"""
-    h, m, s = map(int, uptime.split(':'))
+    """
+    Convert uptime to YANG format (YYYY-MM-DDTHH:MM:SS+00:00)
+
+    Handles the following input formats (frrtime):
+    HH:MM:SS
+    XdXXhXXm
+    XXwXdXXh
+    """
+    h = m = s = 0
+
+    # Format HH:MM:SS
+    if match(r'^\d{2}:\d{2}:\d{2}$', uptime):
+        h, m, s = map(int, uptime.split(':'))
+
+    # Format XdXXhXXm (days, hours, minutes)
+    elif match(r'^\d+d\d{2}h\d{2}m$', uptime):
+        days = int(uptime.split('d')[0])
+        h = int(uptime.split('d')[1].split('h')[0])
+        m = int(uptime.split('h')[1].split('m')[0])
+        h += days * 24
+
+    # Format XwXdXXh (weeks, days, hours)
+    elif match(r'^\d{2}w\d{1}d\d{2}h$', uptime):
+        weeks = int(uptime.split('w')[0])
+        days = int(uptime.split('w')[1].split('d')[0])
+        h = int(uptime.split('d')[1].split('h')[0])
+        h += weeks * 7 * 24
+        h += days * 24
+
     uptime_delta = timedelta(hours=h, minutes=m, seconds=s)
     current_time = datetime_now()
     last_updated = current_time - uptime_delta
