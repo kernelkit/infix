@@ -420,7 +420,7 @@ line where we declare the `ntpd` end as a container network interface:
     admin@example:/config/interface/veth0/> end
     admin@example:/config/> edit interface ntpd
     admin@example:/config/interface/ntpd/> set ipv4 address 192.168.0.2 prefix-length 24
-    admin@example:/config/interface/ntpd/> set phys-address 00:c0:ff:ee:00:01
+    admin@example:/config/interface/ntpd/> set custom-phys-address static 00:c0:ff:ee:00:01
     admin@example:/config/interface/ntpd/> set container-network
 
 > Notice how you can also set a custom MAC address at the same time.

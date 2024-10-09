@@ -128,7 +128,7 @@ what provides a default, the same default MAC addresses to Linux:
 
 This is important in case you want to run multiple R2S devices on the
 same LAN.  Meaning you either have to change the MAC address in the
-U-Boot environment (below), or modify your `phys-address` setting in
+U-Boot environment (below), or use the `custom-phys-address` setting in
 Infix for the interface(s).
 
 Break into U-Boot using Ctrl-C at power-on, preferably when the text
