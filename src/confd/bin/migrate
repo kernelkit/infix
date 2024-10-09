@@ -1,0 +1,235 @@
+#!/bin/sh
+# Run .cfg migration jq scripts to backup and transform older syntax.
+scripts="/usr/share/confd/migrate"
+ident=$(basename "$0")
+
+usage()
+{
+    echo "usage: $0 [-chiq] [-b /path/backup/file.ext] [/path/to/config.cfg]"
+    echo
+    echo "options:"
+    echo "  -b FILE  Create backup FILE, appends detected version before .ext"
+    echo "  -c       Check only, returns false when migration is not needed"
+    echo "  -h       This help text"
+    echo "  -i       Edit file in-place instead of sending to stdout, like sed"
+    echo "  -q       Quiet, skip normal log messages, only errors are logged"
+    echo
+    echo "By default, this script reads a .cfg file on stdin, or as the first"
+    echo "non-option argument, then migrates it to a new syntax on stdout."
+}
+
+# shellcheck disable=SC2317
+cleanup()
+{
+    rm -f "$tmp"
+}
+
+note()
+{
+    if [ -n "$quiet" ]; then
+       return
+    fi
+    logger -I $$ -k -p user.notice -t "$ident" "$1"
+}
+
+err()
+{
+    logger -I $$ -k -p user.err -t "$ident" "$1"
+}
+
+# Convert human-readable version to integer level
+atoi()
+{
+    echo "$1" | awk -F. '{print $1 * 1000 + $2}'
+}
+
+file_version()
+{
+    jq -r '
+        if .["infix-meta:meta"] | has("infix-meta:version") then
+            .["infix-meta:meta"]["infix-meta:version"]
+        else
+            "0.0"
+        end
+    ' "$1"
+}
+
+# Find the latest version by examining the highest numbered directory
+confd_version()
+{
+    find "$scripts" -mindepth 1 -maxdepth 1 -type d \
+	| sort -V | tail -n1 | xargs -n1 basename
+}
+
+# Update meta data with the latest version
+meta_version()
+{
+    if jq --arg version "$sys_version" '.["infix-meta:meta"] = {"infix-meta:version": $version}' "$2" \
+       > "${2}.tmp" && mv "${2}.tmp" "$2"; then
+	note "$1: configuration updated to version $sys_version."
+	return 0
+    fi
+
+    err "$1: failed updating configuration to version $sys_version!"
+    return 1
+}
+
+# Apply the scripts for each version directory in sequence
+migrate()
+{
+    note "$1: migrating from version $cfg_version"
+
+    for version_dir in $(find "$scripts" -mindepth 1 -maxdepth 1 -type d | sort -V); do
+	dir=$(basename "$version_dir")
+	version=$(atoi "$dir")
+
+	# Step by step upgrade file to latest version
+	if [ "$cfg_level" -lt "$version" ]; then
+	    note "Applying migrations for version $dir ..."
+
+	    # Apply all scripts in the version directory in order
+	    for script in $(find "$version_dir" -type f -name '*.sh' | sort -V); do
+		note "$1: calling $script ..."
+		sh "$script" "$2"
+	    done
+
+	    # File now at $version ...
+	    cfg_level="$version"
+	fi
+    done
+}
+
+# Try migrating a copy, then diff the files, for factory-config check
+diff()
+{
+    CFG=$1
+    TMP=$(mktemp)
+
+    cp -p "$CFG" "$TMP"
+    quiet=1
+    migrate "(diff)" "$TMP"
+    cmp -s "$CFG" "$TMP"
+    rc=$?
+    rm -f "$TMP"
+
+    return $rc
+}
+
+
+tmp=$(mktemp)
+chmod 600 "$tmp"
+
+trap cleanup INT HUP TERM EXIT
+
+OPTS=$(getopt -o b:chiq -- "$@")
+eval set -- "$OPTS"
+
+while [ -n "$1" ]; do
+    case $1 in
+	-b)
+	    bak=$2
+	    shift
+	    ;;
+	-c)
+	    check=1
+	    ;;
+	-h)
+	    usage
+	    exit 0
+	    ;;
+	-i)
+	    inplace=1
+	    ;;
+	-q)
+	    quiet=1
+	    ;;
+	--)
+	    shift
+	    break
+	    ;;
+	*)
+	    # Likely file argument
+	    break
+	    ;;
+    esac
+    shift
+done
+
+if [ -n "$1" ] && [ -f "$1" ]; then
+    # Copy to tempfile to allow user to > same file
+    orig="$1"
+    cp -p "$1" "$tmp"
+    shift
+elif [ -t 0 ]; then
+    orig="(stdin)"
+    cat > "$tmp"
+else
+    usage
+    exit 1
+fi
+
+if ! jq empty "$tmp" 2>/dev/null; then
+    err "$tmp invalid JSON format!"
+    exit 1
+fi
+
+cfg_version=$(file_version "$tmp")
+sys_version=$(confd_version)
+
+cfg_level=$(atoi "$cfg_version")
+sys_level=$(atoi "$sys_version")
+
+# Check for downgrade
+if [ "$cfg_level" -gt "$sys_level" ]; then
+    err "$orig: version is newer ($cfg_version) than supported ($sys_version). Exiting."
+    exit 1
+fi
+
+# If the current version is already the latest, exit the script
+if [ "$cfg_level" -eq "$sys_level" ]; then
+    exit 0
+else
+    if [ -n "$check" ]; then
+	# We may be called to check a file without meta:version (factory)
+	if [ "$cfg_version" = "0.0" ]; then
+	    if diff "$tmp"; then
+		# File is OK, despite lacking meta:version
+		exit 0
+	    fi
+	    msg="$orig: has syntax error, requires migrating."
+	else
+	    msg="$orig: version $cfg_version, requires migrating."
+	fi
+	if [ -t 0 ]; then
+	    echo "$msg"
+	else
+	    note "$msg"
+	fi
+	exit 1
+    fi
+fi
+
+if [ -n "$bak" ]; then
+    fil="${bak%.*}"
+    ext="${bak##*.}"
+    bak="${fil}-${cfg_version}.${ext}"
+    if cp -p "$tmp" "$bak" 2>/dev/null; then
+	note "$orig: backup created: $bak"
+    else
+	err "$orig: failed creating backup: $bak"
+	exit 1
+    fi
+fi
+
+if ! migrate "$orig" "$tmp"; then
+    exit 1
+fi
+meta_version "$orig" "$tmp"
+
+if [ -n "$inplace" ] && [ "$orig" != "(stdin)" ]; then
+    cp -p "$tmp" "$orig"
+else
+    cat "$tmp"
+fi
+
+exit 0
