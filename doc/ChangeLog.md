@@ -5,14 +5,41 @@ All notable changes to the project are documented in this file.
 
 [v24.10.0][] - UNRELEASED
 -------------------------
+
+**News:** this release contains *breaking YANG changes* in custom MAC
+addresses for interfaces!  For details, see below issue #680.
+
 ### Changes
-- OSPF: Add limitation to only allow one interface per area.
+- Update CONTRIBUTING.md for scaling core team and helping external
+  contributors understand the development process, issue #672
+- OSPF: Add limitation to only allow one interface per area
+- The default builds now include the curiOS nftables container image,
+  which can be used for advanced firewall setups.  For an introduction
+  see <https://kernelkit.org/posts/firewall-container/>
 
 ### Fixes
-- Fix #499 by adding a NACM rule to factory config, which by default
-  deny everyone to read the user password hash.
+- Fix #499: add an NACM rule to factory config, which by default
+  deny everyone to read user password hash(es)
+- Fix #663: internal Ethernet interfaces shown in CLI tab completion
+- Fix #674: CLI `show interfaces` display internal Ethernet interfaces,
+  regression introduced late in v24.09 release cycle
+- Fix #676: port dropped from bridge when changing its VLAN membership
+  from tagged to untagged
+- Fix #680: replace deviation for `phys-address` in ietf-interfaces.yang
+  with `custom-phys-address` to allow for constructing more free-form
+  MAC addresses based on the chassis MAC (a.k.a., base MAC) address.
+  For more information, see the YANG model, a few examples are listed in
+  the updated documentation.  
+  The syntax will be automatically updated in the `startup-config` and
+  `factory-config` -- make sure to verify the changes and update any
+  static `factory-config` used for your products
+- Fix #690: CLI `show ip route` command stops working after 24 hours,
+  this includes all operational data in ietf-routing:/routing/ribs.
+- Fix #697: password is not always set for new users, bug introduced
+  in v24.06.0 when replacing Augeas with native user handling
 - Fix BFD in OSPF, previously you could not enable BFD on a single
-  interface without it was enabled on all interfaces.
+  interface without it was enabled on all interfaces
+
 
 [v24.09.0][] - 2024-09-30
 -------------------------
