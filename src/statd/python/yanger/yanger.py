@@ -726,12 +726,15 @@ def add_ip_addr(ifname, iface_in, iface_out):
 
 
 def add_ethtool_groups(ifname, iface_out):
-    """Fetch interface counters from kernel"""
-
-    data = run_json_cmd(['ethtool', '--json', '-S', ifname, '--all-groups'],
-                        f"ethtool-groups-{ifname}.json")
-    if len(data) != 1:
-        logger.warning(f"{ifname}: no counters available, skipping.")
+    """Fetch interface counters from kernel (need new JSON format!)"""
+    cmd = ['ethtool', '--json', '-S', ifname, '--all-groups']
+    try:
+        data = run_json_cmd(cmd, f"ethtool-groups-{ifname}.json")
+        if len(data) != 1:
+            logger.warning("%s: no counters available, skipping.", ifname)
+            return
+    except subprocess.CalledProcessError:
+        # Allow comand to fail, not all NICs support --json yet
         return
 
     iface_in = data[0]
