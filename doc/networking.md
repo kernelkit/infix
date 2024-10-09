@@ -77,6 +77,65 @@ possible to share with a container.  Meaning, all the building blocks
 used on the left hand side can also be used freely on the right hand
 side as well.
 
+
+### General
+
+General interface settings include `type`, `enable`, custom MAC address,
+and text `description`.  Other settings have their own sections, below.
+
+The `type` is important to set when configuring devices remotely because
+unlike the CLI, a NETCONF or RESTCONF session cannot guess the interface
+type for you.  The operating system provides an override of the
+available interface types.
+
+An `enabled` interface can be inspected using the operational datastore,
+nodes `admin-state` and `oper-state` show the status, .  Possible values
+are listed in the YANG model.
+
+The `custom-phys-address` can be used to set an interface's MAC address.
+This is an extension to the ietf-interfaces YANG model, which defines
+`phys-address` as read-only[^4].  The following shows the different
+configuration options.
+
+> **Note:** there is no validation or safety checks performed by the
+> system when using `custom-phys-address`.  In particular the `offset`
+> variant can be dangerous to use -- pay attention to the meaning of
+> bits in the upper-most octet: local bit, multicast/group, etc.
+
+#### Fixed custom MAC
+
+```
+admin@example:/config/> edit interface veth0a
+admin@example:/config/interface/veth0a/> set custom-phys-address static 00:ab:00:11:22:33
+
+=> 00:ab:00:11:22:33
+```
+
+#### Chassis MAC
+
+Chassis MAC, sometimes also referred to as base MAC.  In these two
+examples it is `00:53:00:c0:ff:ee`.
+
+```
+admin@example:/config/> edit interface veth0a
+admin@example:/config/interface/veth0a/> set custom-phys-address chassis
+
+=> 00:53:00:c0:ff:ee
+```
+
+#### Chassis MAC, with offset
+
+When constructing a derived address it is recommended to set the locally
+administered bit.  Same chassis MAC as before.
+
+```
+admin@example:/config/> edit interface veth0a
+admin@example:/config/interface/veth0a/> set custom-phys-address chassis offset 02:00:00:00:00:02
+
+=> 02:53:00:c0:ff:f0
+```
+
+
 ### Bridging
 
 This is the most central part of the system.  A bridge is a switch, and
@@ -1058,3 +1117,6 @@ currently supported, namely `ipv4` and `ipv6`.
     mapping the low-order 23-bits of the IP address in the low-order 23
     bits of the Ethernet address 01:00:5E:00:00:00.  Meaning, more than
 	one IP multicast group maps to the same MAC multicast group.
+[^4]: A YANG deviation was previously used to make it possible to set
+    `phys-address`, but this has been replaced with the more flexible
+	`custom-phys-address`.
