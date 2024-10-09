@@ -1,6 +1,7 @@
 === Add/delete user
 ==== Description
-Verify that it is possible to add/delete a user.
+Verify that it is possible to add/delete a user. The user password is hashed
+with yescrypt.
 
 ==== Topology
 ifdef::topdoc[]
@@ -18,6 +19,7 @@ endif::topdoc[]
 . Set up topology and attach to target DUT
 . Add new user 'newuser01' with password 'newuser01password'
 . Verify user 'newuser01' exist in operational
+. Verify user 'newuser01' can login with SSH
 . Delete user 'newuser01'
 . Verify erasure of user 'newuser01'
 . Verify that 'newuser01' is removed from /etc/passwd
