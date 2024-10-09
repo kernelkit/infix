@@ -12,6 +12,55 @@ class Location:
     port: int = 22
 
 
+import subprocess
+import os
+
+def fetch_file(remote_user, remote_address, remote_file, local_file, key_file, check=False, remove=False):
+    """
+    Fetches a file over SSH using scp and the provided private key.
+    
+    :param remote_user: The user on the remote machine.
+    :param remote_address: The address of the remote machine.
+    :param remote_file: The file to fetch from the remote machine.
+    :param local_file: The local path where the file will be stored.
+    :param key_file: The path to the private SSH key.
+    :param check: check the return code of the command.
+    :param remove: remove the fetched local file after copying.
+    """
+    try:
+        result = subprocess.run(
+            f"scp -q -o StrictHostKeyChecking=no -i {key_file} {remote_user}@[{remote_address}]:{remote_file} {local_file}",
+            shell=True
+        )
+
+        if check:
+            if result.returncode != 0:
+                raise RuntimeError("Failed to copy file from remote host")
+            
+            if not os.path.exists(local_file):
+                raise RuntimeError(f"File {local_file} does not exist after copy")
+            
+            if os.path.getsize(local_file) == 0:
+                raise RuntimeError(f"File {local_file} is empty after copy")
+            
+    except Exception as e:
+        print(f"Error during file transfer: {e}")
+        raise
+
+    finally:
+        if os.path.exists(key_file):
+            try:
+                os.remove(key_file)
+            except OSError as e:
+                print(f"Error removing key file {key_file}: {e}")
+
+    if remove:
+        try:
+            if os.path.exists(local_file):
+                os.remove(local_file)
+        except OSError as e:
+            print(f"Error removing fetched file {local_file}: {e}")
+
 class Device(object):
     def __init__(self, name: str, location: Location):
         self.name = name
