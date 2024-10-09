@@ -1,102 +1,16 @@
 #!/bin/sh
-# Run .cfg migration jq scripts to backup and transform older .cfg files
-ident=$(basename "$0")
-
-MIGRATIONS_DIR="/usr/share/confd/migrate"
+# Check if /cfg/startup-config.cfg needs to be migrated to new syntax.
+# Backup of the original is created in /cfg/backup/ for old versions,
+# the migrate tool inserts old version in name before .cfg extension.
 CONFIG_FILE="/cfg/startup-config.cfg"
-BACKUP_DIR="/cfg/backup"
-
-note()
-{
-    logger -I $$ -k -p user.notice -t "$ident" "$1"
-}
-
-err()
-{
-    logger -I $$ -k -p user.err -t "$ident" "$1"
-}
-
-file_version()
-{
-    jq -r '
-        if .["infix-meta:meta"] | has("version") then
-            .["infix-meta:meta"]["version"]
-        else
-            "0.0"
-        end
-    ' "$1"
-}
-
-atoi()
-{
-    echo "$1" | awk -F. '{print $1 * 1000 + $2}'
-}
+BACKUP_FILE="/cfg/backup/startup-config.cfg"
+mkdir -p "$(dirname "$BACKUP_FILE")"
 
 if [ ! -f "$CONFIG_FILE" ]; then
-    # Nothing to migrate
     note "No $(basename "$CONFIG_FILE" .cfg) yet, likely factory reset."
     exit 0
-fi
-
-cfg_version=$(file_version "$CONFIG_FILE")
-current_version=$(atoi "$cfg_version")
-
-# Find the latest version by examining the highest numbered directory
-sys_version=$(find "$MIGRATIONS_DIR" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n1 | xargs -n1 basename)
-latest_version=$(atoi "$sys_version")
-
-# Check for downgrade
-if [ "$current_version" -gt "$latest_version" ]; then
-    err "Configuration file $CONFIG_FILE version ($cfg_version) is newer than the latest supported version ($sys_version). Exiting."
-    exit 1
-fi
-
-# If the current version is already the latest, exit the script
-if [ "$current_version" -eq "$latest_version" ]; then
-    note "Configuration is already at the latest version ($sys_version). No migration needed."
+elif migrate -cq "$CONFIG_FILE"; then
     exit 0
 fi
 
-note "Configuration file $CONFIG_FILE is of version $cfg_version, migrating ..."
-
-# Create the backup directory if it doesn't exist
-mkdir -p "$BACKUP_DIR"
-
-# Create a backup of the current configuration file
-nm=$(basename "$CONFIG_FILE" .cfg)
-BACKUP_FILE="$BACKUP_DIR/${nm}-${cfg_version}.cfg"
-if cp "$CONFIG_FILE" "$BACKUP_FILE"; then
-    note "Backup created: $BACKUP_FILE"
-else
-    err "Failed creating backup: $BACKUP_FILE"
-    exit 1
-fi
-
-# Apply the scripts for each version directory in sequence
-for version_dir in $(find "$MIGRATIONS_DIR" -mindepth 1 -maxdepth 1 -type d | sort -V); do
-    dir=$(basename "$version_dir")
-    version=$(atoi "$dir")
-
-    # Step by step upgrade file to latest version
-    if [ "$current_version" -lt "$version" ]; then
-        note "Applying migrations for version $dir ..."
-
-        # Apply all scripts in the version directory in order
-        for script in $(find "$version_dir" -type f -name '*.sh' | sort -V); do
-	    note "Calling $script for $CONFIG_FILE ..."
-            sh "$script" "$CONFIG_FILE"
-        done
-
-	# File now at $version ...
-        current_version="$version"
-    fi
-done
-
-# Update the JSON file to the latest version
-if jq --arg version "$sys_version" '.["infix-meta:meta"] = {"infix-meta:version": $version}' "$CONFIG_FILE" \
-   > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"; then
-    note "Configuration updated to version $sys_version."
-else
-    err "Failed updating configuration to version $sys_version!"
-    exit 1
-fi
+migrate -i -b "$BACKUP_FILE" "$CONFIG_FILE"
