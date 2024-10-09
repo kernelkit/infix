@@ -14,7 +14,33 @@ Infix to exploit the unique features not available in IEEE models.
 
 ## Interface LEGO®
 
+The network building blocks available in Linux are akin to the popular
+LEGO® bricks.
+
 ![Linux Networking Blocks](img/lego.svg)
+
+There are two types of relationships that can link two blocks together:
+
+  1. **Lower-to-upper**: Visually represented by an extruding square
+     connected upwards to a square socket.  An interface _can only have
+     a single_ lower-to-upper relationship, i.e., it can be attached to
+     a single upper interface like a bridge or a LAG.  In `iproute2`
+     parlance, this corresponds to the interface's `master` setting
+  2. **Upper-to-lower**: Visually represented by an extruding semicircle
+     connected downwards to a semicircle socket.  The lower interface in
+     these relationships _accepts multiple_ upper-to-lower relationships
+     from different upper blocks.  E.g., multiple VLANs and IP address
+     blocks can be connected to the same lower interface
+
+![Stacking order dependencies](img/lego-relations.svg)
+
+An interface may simultaneously have a _lower-to-upper_ relation to some
+other interface, and be the target of one or more _upper-to-lower_
+relationships.  It is valid, for example, for a physical port to be
+attached to a bridge, but also have a VLAN interface stacked on top of
+it.  In this example, traffic assigned to the VLAN in question would be
+diverted to the VLAN interface before entering the bridge, while all
+other traffic would be bridged as usual.
 
 | **Type** | **Yang Model**             | **Description**                                               |
 | -------- | -----------------          | ------------------------------------------------------------- |
@@ -26,6 +52,7 @@ Infix to exploit the unique features not available in IEEE models.
 | eth      | ietf-interfaces,           | Physical Ethernet device/port                                 |
 |          | ieee802-ethernet-interface |                                                               |
 | veth     | infix-if-veth              | Virtual Ethernet pair, typically one end is in a container    |
+
 
 ## Data Plane
 
