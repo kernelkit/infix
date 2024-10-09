@@ -22,6 +22,17 @@
 ########################################################################
 STATUS=""
 
+# Log functions
+critical()
+{
+    logger -i -p user.crit -t bootstrap "$1" 2>/dev/null || echo "$1"
+}
+
+err()
+{
+    logger -i -p user.err -t bootstrap "$1" 2>/dev/null || echo "$1"
+}
+
 # When logging errors, generating /etc/issue* or /etc/banner (SSH)
 . /etc/os-release
 
@@ -33,8 +44,7 @@ if [ "$1" = "-f" ] && [ -f "$2" ]; then
 fi
 
 if [ ! -f "$RC" ]; then
-    logger -sik -p user.error -t bootstrap "Missing rc file $RC" 2>/dev/null \
-        || echo "Missing rc file $RC"
+    err "Missing rc file $RC"
     exit 99
 fi
 
@@ -72,7 +82,7 @@ collate()
 # Report error on console, syslog, and set login banners for getty + ssh
 console_error()
 {
-    logger -p user.crit -t bootstrap "$1"
+    critical "$1"
 
     # shellcheck disable=SC3037
     /bin/echo -e "\n\n\e[31mCRITICAL BOOTSTRAP ERROR\n$1\e[0m\n" > /dev/console
@@ -157,11 +167,20 @@ else
 fi
 rc=$?
 
+# Ensure 'admin' group users always have access
 chgrp wheel "$CFG_PATH_"
 chmod g+w   "$CFG_PATH_"
+
+# Ensure factory-config has correct syntax
+if ! migrate -cq "$INIT_DATA"; then
+    if migrate -iq -b "${INIT_DATA%.*}.bak" "$INIT_DATA"; then
+	err "${INIT_DATA}: found and fixed old syntax!"
+    fi
+fi
+
 if ! sysrepoctl -z "$INIT_DATA"; then
     rc=$?
-    logger -sik -p user.error "Failed loading factory-default datastore"
+    err "Failed loading factory-default datastore"
 else
     # Clear running-config so we can load/create startup in the next step
     temp=$(mktemp)
