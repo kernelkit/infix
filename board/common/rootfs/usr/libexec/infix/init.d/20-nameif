@@ -30,12 +30,16 @@ for netif in /sys/class/net/*; do
 done
 
 # Find and mark all switch ports
-ports=$(devlink -j port | jq -r '.port[]
-				 | select(.flavour == "physical")
-				 | .netdev')
-for iface in $ports; do
+if command -v devlink > /dev/null 2>&1; then
+    ports=$(devlink -j port | jq -r '.port[]
+				     | select(.flavour == "physical")
+				     | .netdev')
+    for iface in $ports; do
 	ip link set "$iface" group port
-done
+    done
+else
+    echo "Skipping switch port check, no devlink support."
+fi
 
 # At least loopback in iface group
 ip link set lo group iface
