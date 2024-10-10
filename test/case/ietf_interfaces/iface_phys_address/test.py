@@ -36,11 +36,11 @@ with infamy.Test() as test:
         print(f"Target iface {tport} current mac: {mac}")
         assert mac == cmac
 
-    with test.step(f"Remove custom MAC address '02:01:00:c0:ff:ee'"):
+    with test.step("Remove custom MAC address '02:01:00:c0:ff:ee'"):
         xpath=iface.get_iface_xpath(tport, "phys-address")
         target.delete_xpath(xpath)
 
-    with test.step("Verify that target:mgmt has its origil MAC address again"):
+    with test.step("Verify that target:mgmt has the original MAC address again"):
         until(lambda: iface.get_phys_address(target, tport) == pmac)
 
     test.succeed()

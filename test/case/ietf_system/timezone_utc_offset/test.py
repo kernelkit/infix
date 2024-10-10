@@ -8,7 +8,7 @@ import infamy
 import lxml
 
 with infamy.Test() as test:
-    with test.step("Connect to device"):
+    with test.step("Set up topology and attach to target DUT"):
         env = infamy.Env()
         target = env.attach("target", "mgmt")
 

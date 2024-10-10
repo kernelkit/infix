@@ -1407,6 +1407,7 @@ static int auth_cb(sr_session_ctx_t *session, uint32_t sub_id, const char *modul
 		lyd_new_path(*parent, NULL, xpath, spwd->sp_pwdp, 0, 0);
 	}
 
+	endspent();
 	return SR_ERR_OK;
 }
 

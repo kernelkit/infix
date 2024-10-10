@@ -2,11 +2,11 @@
 """
 Add/delete user
 
-Verify that it is possible to add/delete a user.
+Verify that it is possible to add/delete a user. The user password is hashed
+with yescrypt.
 """
 import infamy
 import copy
-from passlib.hash import sha256_crypt
 import random
 import string
 import re
@@ -15,16 +15,14 @@ import infamy.util as util
 
 username = "newuser01"
 password = "newuser01password"
-
+hashed_password = "$y$j9T$SALT$gx4K1wugXsm3JDLwYZtnbr37FGGvljotXwIBGOxaGf2"
 with infamy.Test() as test:
-    with test.step("Connect to device"):
+    with test.step("Set up topology and attach to target DUT"):
         env = infamy.Env()
         target = env.attach("target", "mgmt")
         tgtssh = env.attach("target", "mgmt", "ssh")
 
     with test.step("Add new user 'newuser01' with password 'newuser01password'"):
-        hashed_password = sha256_crypt.using(rounds=5000).hash(password)
-
         target.put_config_dict("ietf-system", {
             "system": {
                 "authentication": {
@@ -39,7 +37,7 @@ with infamy.Test() as test:
             }
         })
 
-    with test.step(f"Verify user 'newuser01' exist in operational"):
+    with test.step("Verify user 'newuser01' exist in operational"):
         running = target.get_config_dict("/ietf-system:system")
         users = running["system"]["authentication"]["user"]
         user_found = False
@@ -50,10 +48,14 @@ with infamy.Test() as test:
                 break
         assert user_found, f"User 'newuser01' not found"
 
-    with test.step(f"Delete user 'newuser01'"):
+    with test.step("Verify user 'newuser01' can login with SSH"):
+        newssh = env.attach("target", "mgmt", "ssh", None, username, password)
+        util.until(lambda: newssh.run("ls").returncode == 0, attempts=200)
+
+    with test.step("Delete user 'newuser01'"):
         target.delete_xpath(f"/ietf-system:system/authentication/user[name='{username}']")
 
-    with test.step(f"Verify erasure of user 'newuser01'"):
+    with test.step("Verify erasure of user 'newuser01'"):
         running = target.get_config_dict("/ietf-system:system")
         users = running["system"]["authentication"]["user"]
         for user in users:

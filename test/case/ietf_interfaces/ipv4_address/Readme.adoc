@@ -15,9 +15,10 @@ image::topology.png[Interface with IPv4 topology]
 endif::testgroup[]
 endif::topdoc[]
 ==== Test sequence
-. Connect to target
+. Set up topology and attach to target DUT
 . Configure IPv4 address 10.10.10.20/24 on target:mgmt
 . Verify '10.10.10.20/24' exist on target:mgmt
+. Remove all IPv4 addresses from target:mgmt
 . Verify target:mgmt no longer has the address 10.10.10.20
 
 

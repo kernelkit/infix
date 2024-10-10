@@ -9,6 +9,8 @@ include::ipv4_address/Readme.adoc[]
 
 include::ipv6_address/Readme.adoc[]
 
+include::ipv4_autoconf/Readme.adoc[]
+
 include::iface_phys_address/Readme.adoc[]
 
 include::routing_basic/Readme.adoc[]
