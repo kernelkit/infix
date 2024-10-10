@@ -13,3 +13,6 @@
 
 - name: timezone_utc_offset
   case: timezone_utc_offset/test.py
+
+- name: ssh_key_authentication
+  case: ssh_key_authentication/test.py
