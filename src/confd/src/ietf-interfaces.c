@@ -431,15 +431,110 @@ static int netdag_gen_link_mtu(FILE *ip, struct lyd_node *dif)
 	return 0;
 }
 
+static void calc_mac(const char *base_mac, const char *mac_offset, char *buf, size_t len)
+{
+	uint8_t base[6], offset[6], result[6];
+	int carry = 0, i;
+
+	sscanf(base_mac, "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx",
+	       &base[0], &base[1], &base[2], &base[3], &base[4], &base[5]);
+
+	sscanf(mac_offset, "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx",
+	       &offset[0], &offset[1], &offset[2], &offset[3], &offset[4], &offset[5]);
+
+	for (i = 5; i >= 0; i--) {
+		int sum = base[i] + offset[i] + carry;
+
+		result[i] = sum & 0xFF;
+		carry = (sum > 0xFF) ? 1 : 0;
+	}
+
+	snprintf(buf, len, "%02x:%02x:%02x:%02x:%02x:%02x",
+		 result[0], result[1], result[2], result[3], result[4], result[5]);
+}
+
+/*
+ * Get child value from a diff parent, only returns value if not
+ * deleted.  In which case the deleted flag may be set.
+ */
+static const char *get_val(struct lyd_node *parent, char *name, int *deleted)
+{
+	const char *value = NULL;
+	struct lyd_node *node;
+
+	node = lydx_get_child(parent, name);
+	if (node) {
+		if (lydx_get_op(node) == LYDX_OP_DELETE) {
+			if (deleted)
+				*deleted = 1;
+			return NULL;
+		}
+
+		value = lyd_get_value(node);
+	}
+
+	return value;
+}
+
+/*
+ * Locate custom-phys-address, adjust for any offset, and return pointer
+ * to a static string.  (Which will be overwritten on subsequent calls.)
+ *
+ * The 'deleted' flag will be set if any of the nodes in the subtree are
+ * deleted.  Used when restoring permaddr and similar.
+ */
+static char *get_phys_addr(struct lyd_node *parent, int *deleted)
+{
+	struct lyd_node *node, *cpa;
+	static char mac[18];
+	struct json_t *j;
+	const char *ptr;
+
+	cpa = lydx_get_descendant(lyd_child(parent), "custom-phys-address", NULL);
+	if (!cpa || lydx_get_op(cpa) == LYDX_OP_DELETE) {
+		if (cpa && deleted)
+			*deleted = 1;
+		return NULL;
+	}
+
+	ptr = get_val(cpa, "static", deleted);
+	if (ptr) {
+		strlcpy(mac, ptr, sizeof(mac));
+		return mac;
+	}
+
+	node = lydx_get_child(cpa, "chassis");
+	if (!node || lydx_get_op(node) == LYDX_OP_DELETE) {
+		if (node && deleted)
+			*deleted = 1;
+		return NULL;
+	}
+
+	j = json_object_get(confd.root, "mac-address");
+	if (!j) {
+		WARN("cannot set chassis based MAC, not found.");
+		return NULL;
+	}
+
+	ptr = json_string_value(j);
+	strlcpy(mac, ptr, sizeof(mac));
+
+	ptr = get_val(node, "offset", deleted);
+	if (ptr)
+		calc_mac(mac, ptr, mac, sizeof(mac));
+
+	return mac;
+}
+
 static int netdag_gen_link_addr(FILE *ip, struct lyd_node *cif, struct lyd_node *dif)
 {
 	const char *ifname = lydx_get_cattr(dif, "name");
-	const char *mac = NULL;
-	struct lyd_node *node;
+	const char *mac;
+	int deleted = 0;
 	char buf[32];
 
-	node = lydx_get_child(dif, "phys-address");
-	if (lydx_get_op(node) == LYDX_OP_DELETE) {
+	mac = get_phys_addr(dif, &deleted);
+	if (!mac && deleted) {
 		FILE *fp;
 
 		/*
@@ -455,8 +550,6 @@ static int netdag_gen_link_addr(FILE *ip, struct lyd_node *cif, struct lyd_node 
 			if (mac && !strcmp(mac, "null"))
 				return 0;
 		}
-	} else {
-		mac = lyd_get_value(node);
 	}
 
 	if (!mac || !strlen(mac)) {
@@ -1344,9 +1437,8 @@ static int netdag_gen_bridge(sr_session_ctx_t *session, struct dagger *net, stru
 	 * addrgenmode eui64 with random mac, issue #357.
 	 */
 	if (add) {
-		const char *mac;
+		const char *mac = get_phys_addr(cif, NULL);
 
-		mac = lydx_get_cattr(cif, "phys-address");
 		if (!mac) {
 			struct json_t *j;
 
@@ -1449,16 +1541,17 @@ static int netdag_gen_veth(struct dagger *net, struct lyd_node *dif,
 			return ERR_IFACE(cif, err, "Unable to add dep \"%s\" to %s", peer, ifname);
 	} else {
 		char ifname_args[64] = "", peer_args[64] = "";
+		const char *mac;
 
 		dagger_skip_iface(net, peer);
 
-		node = lydx_get_child(dif, "phys-address");
-		if (node)
-			snprintf(ifname_args, sizeof(ifname_args), "address %s", lyd_get_value(node));
+		mac = get_phys_addr(dif, NULL);
+		if (mac)
+			snprintf(ifname_args, sizeof(ifname_args), "address %s", mac);
 
 		node = lydx_find_by_name(lyd_parent(cif), "interface", peer);
-		if (node && (node = lydx_get_child(node, "phys-address")))
-			snprintf(peer_args, sizeof(peer_args), "address %s", lyd_get_value(node));
+		if (node && (mac = get_phys_addr(node, NULL)))
+			snprintf(peer_args, sizeof(peer_args), "address %s", mac);
 
 		fprintf(ip, "link add dev %s %s type veth peer %s %s\n",
 			ifname, ifname_args, peer, peer_args);
@@ -1612,10 +1705,9 @@ static int netdag_gen_afspec_set(sr_session_ctx_t *session, struct dagger *net, 
 
 static bool is_phys_addr_deleted(struct lyd_node *dif)
 {
-	struct lyd_node *node;
+	int deleted = 0;
 
-	node = lydx_get_child(dif, "phys-address");
-	if (node && lydx_get_op(node) == LYDX_OP_DELETE)
+	if (!get_phys_addr(dif, &deleted) && deleted)
 		return true;
 
 	return false;
