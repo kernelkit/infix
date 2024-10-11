@@ -1,6 +1,6 @@
 menu "Packages"
 source "$BR2_EXTERNAL_INFIX_PATH/package/confd/Config.in"
-source "$BR2_EXTERNAL_INFIX_PATH/package/test-mode/Config.in"
+source "$BR2_EXTERNAL_INFIX_PATH/package/confd-test-mode/Config.in"
 source "$BR2_EXTERNAL_INFIX_PATH/package/curios-httpd/Config.in"
 source "$BR2_EXTERNAL_INFIX_PATH/package/curios-nftables/Config.in"
 source "$BR2_EXTERNAL_INFIX_PATH/package/execd/Config.in"

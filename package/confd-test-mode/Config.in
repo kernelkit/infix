@@ -1,0 +1,10 @@
+config BR2_PACKAGE_CONFD_TEST_MODE
+	bool "confd test mode"
+	depends on BR2_PACKAGE_CONFD
+	select BR2_PACKAGE_LIBITE
+	select BR2_PACKAGE_LIBYANG
+	select BR2_PACKAGE_SYSREPO
+	select BR2_PACKAGE_LIBSRX
+	help
+	  A companion plugin to confd providing functionality required to
+	  run tests with Infamy, i.e., enable Infix test mode.
