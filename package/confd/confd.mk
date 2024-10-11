@@ -4,7 +4,7 @@
 #
 ################################################################################
 
-CONFD_VERSION = 1.1
+CONFD_VERSION = 1.2
 CONFD_SITE_METHOD = local
 CONFD_SITE = $(BR2_EXTERNAL_INFIX_PATH)/src/confd
 CONFD_LICENSE = BSD-3-Clause

@@ -14,7 +14,33 @@ Infix to exploit the unique features not available in IEEE models.
 
 ## Interface LEGO®
 
+The network building blocks available in Linux are akin to the popular
+LEGO® bricks.
+
 ![Linux Networking Blocks](img/lego.svg)
+
+There are two types of relationships that can link two blocks together:
+
+  1. **Lower-to-upper**: Visually represented by an extruding square
+     connected upwards to a square socket.  An interface _can only have
+     a single_ lower-to-upper relationship, i.e., it can be attached to
+     a single upper interface like a bridge or a LAG.  In `iproute2`
+     parlance, this corresponds to the interface's `master` setting
+  2. **Upper-to-lower**: Visually represented by an extruding semicircle
+     connected downwards to a semicircle socket.  The lower interface in
+     these relationships _accepts multiple_ upper-to-lower relationships
+     from different upper blocks.  E.g., multiple VLANs and IP address
+     blocks can be connected to the same lower interface
+
+![Stacking order dependencies](img/lego-relations.svg)
+
+An interface may simultaneously have a _lower-to-upper_ relation to some
+other interface, and be the target of one or more _upper-to-lower_
+relationships.  It is valid, for example, for a physical port to be
+attached to a bridge, but also have a VLAN interface stacked on top of
+it.  In this example, traffic assigned to the VLAN in question would be
+diverted to the VLAN interface before entering the bridge, while all
+other traffic would be bridged as usual.
 
 | **Type** | **Yang Model**             | **Description**                                               |
 | -------- | -----------------          | ------------------------------------------------------------- |
@@ -26,6 +52,7 @@ Infix to exploit the unique features not available in IEEE models.
 | eth      | ietf-interfaces,           | Physical Ethernet device/port                                 |
 |          | ieee802-ethernet-interface |                                                               |
 | veth     | infix-if-veth              | Virtual Ethernet pair, typically one end is in a container    |
+
 
 ## Data Plane
 
@@ -49,6 +76,65 @@ separation and virtualization of all Ethernet layer properties are
 possible to share with a container.  Meaning, all the building blocks
 used on the left hand side can also be used freely on the right hand
 side as well.
+
+
+### General
+
+General interface settings include `type`, `enable`, custom MAC address,
+and text `description`.  Other settings have their own sections, below.
+
+The `type` is important to set when configuring devices remotely because
+unlike the CLI, a NETCONF or RESTCONF session cannot guess the interface
+type for you.  The operating system provides an override of the
+available interface types.
+
+An `enabled` interface can be inspected using the operational datastore,
+nodes `admin-state` and `oper-state` show the status, .  Possible values
+are listed in the YANG model.
+
+The `custom-phys-address` can be used to set an interface's MAC address.
+This is an extension to the ietf-interfaces YANG model, which defines
+`phys-address` as read-only[^4].  The following shows the different
+configuration options.
+
+> **Note:** there is no validation or safety checks performed by the
+> system when using `custom-phys-address`.  In particular the `offset`
+> variant can be dangerous to use -- pay attention to the meaning of
+> bits in the upper-most octet: local bit, multicast/group, etc.
+
+#### Fixed custom MAC
+
+```
+admin@example:/config/> edit interface veth0a
+admin@example:/config/interface/veth0a/> set custom-phys-address static 00:ab:00:11:22:33
+
+=> 00:ab:00:11:22:33
+```
+
+#### Chassis MAC
+
+Chassis MAC, sometimes also referred to as base MAC.  In these two
+examples it is `00:53:00:c0:ff:ee`.
+
+```
+admin@example:/config/> edit interface veth0a
+admin@example:/config/interface/veth0a/> set custom-phys-address chassis
+
+=> 00:53:00:c0:ff:ee
+```
+
+#### Chassis MAC, with offset
+
+When constructing a derived address it is recommended to set the locally
+administered bit.  Same chassis MAC as before.
+
+```
+admin@example:/config/> edit interface veth0a
+admin@example:/config/interface/veth0a/> set custom-phys-address chassis offset 02:00:00:00:00:02
+
+=> 02:53:00:c0:ff:f0
+```
+
 
 ### Bridging
 
@@ -1031,3 +1117,6 @@ currently supported, namely `ipv4` and `ipv6`.
     mapping the low-order 23-bits of the IP address in the low-order 23
     bits of the Ethernet address 01:00:5E:00:00:00.  Meaning, more than
 	one IP multicast group maps to the same MAC multicast group.
+[^4]: A YANG deviation was previously used to make it possible to set
+    `phys-address`, but this has been replaced with the more flexible
+	`custom-phys-address`.
