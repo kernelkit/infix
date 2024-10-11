@@ -1,0 +1,25 @@
+=== Generate ssh key pair
+==== Description
+Verify that 'guest' user can fetch data using only the 'public' key
+
+==== Topology
+ifdef::topdoc[]
+image::../../test/case/ietf_system/ssh_key_authentication/topology.png[Generate ssh key pair topology]
+endif::topdoc[]
+ifndef::topdoc[]
+ifdef::testgroup[]
+image::ssh_key_authentication/topology.png[Generate ssh key pair topology]
+endif::testgroup[]
+ifndef::testgroup[]
+image::topology.png[Generate ssh key pair topology]
+endif::testgroup[]
+endif::topdoc[]
+==== Test sequence
+. Connect to the target device
+. Create a guest user on the target device
+. Write private key to a temporary file
+. Verify it is possible to fetch syslog data using public key
+
+
+<<<
+
