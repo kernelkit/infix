@@ -2,13 +2,13 @@
 """
 USB configuration
 
-This will test if the configuration is consistent with hardware state,
-if the USB ports are _locked_ (forbidden for use) and _unlocked_
-(Ready for use) when they should. Also test if it is the case during
-reboot. This does not the test actual use of the USB port, just check
+This tests if the configuration is consistent with hardware state,
+and if the USB ports are _locked_ (forbidden for use) and _unlocked_
+(Ready for use) when they should. Also tests if this is the case during
+reboot. This does not the test actual use of the USB port, it just checks
 that the configured state is consistent with the hardware state.
 
-If this pass you can be certeain of that the configuration of the USB
+If this pass you can be certain of that the configuration of the USB
 port is handled correctly.
 """
 import infamy

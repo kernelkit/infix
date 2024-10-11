@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Set timezone
+Set timezone using timezone name
 
 Verify that it is possible to set timezone using timezone names.
 """

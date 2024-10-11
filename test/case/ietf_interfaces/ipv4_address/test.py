@@ -2,7 +2,7 @@
 """
 Interface with IPv4
 
-Test that it is possible to set and remove the IPv4 address on a interface
+Test that it is possible to set and remove the IPv4 address on an interface
 """
 import copy
 import infamy
@@ -39,7 +39,7 @@ with infamy.Test() as test:
 
         target.put_config_dict("ietf-interfaces", config)
 
-    with test.step("Verify '10.10.10.20/24' exist on target:mgmt"):
+    with test.step("Verify '10.10.10.20/24' exists on target:mgmt"):
         until(lambda: iface.address_exist(target, interface_name, new_ip_address, proto='static'))
 
     with test.step("Remove all IPv4 addresses from target:mgmt"):

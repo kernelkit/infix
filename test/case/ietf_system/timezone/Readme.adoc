@@ -1,17 +1,17 @@
-=== Set timezone
+=== Set timezone using timezone name
 ==== Description
 Verify that it is possible to set timezone using timezone names.
 
 ==== Topology
 ifdef::topdoc[]
-image::../../test/case/ietf_system/timezone/topology.png[Set timezone topology]
+image::../../test/case/ietf_system/timezone/topology.png[Set timezone using timezone name topology]
 endif::topdoc[]
 ifndef::topdoc[]
 ifdef::testgroup[]
-image::timezone/topology.png[Set timezone topology]
+image::timezone/topology.png[Set timezone using timezone name topology]
 endif::testgroup[]
 ifndef::testgroup[]
-image::topology.png[Set timezone topology]
+image::topology.png[Set timezone using timezone name topology]
 endif::testgroup[]
 endif::topdoc[]
 ==== Test sequence

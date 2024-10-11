@@ -1,6 +1,6 @@
 === USB configuration with two USB ports
 ==== Description
-Test that the configuration is consistent
+Test that the USB locked/unlocked configuration is consistent
 when having two USB ports.
 
 ==== Topology

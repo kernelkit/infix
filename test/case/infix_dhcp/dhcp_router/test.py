@@ -3,8 +3,8 @@
 """
 DHCP router
 
-Verify that the DHCP client receives default gatewa (DHCP option 3, router)
-and that exist in operational datastore
+Verify that the DHCP client receives default gateway (DHCP option 3, router)
+and that route exists in operational datastore.
 """
 import time
 import infamy, infamy.dhcp

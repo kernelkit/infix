@@ -3,7 +3,7 @@
 Services basic
 
 Verify that basic services like mDNS and LLDP can be enabled and
-disabled.  We verify operation and non-operation by using tcpdump.
+disabled. Tcpdump is used to verify operation and non-operation.
 """
 import time
 import infamy

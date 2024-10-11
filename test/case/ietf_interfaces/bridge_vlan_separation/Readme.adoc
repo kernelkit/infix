@@ -1,6 +1,6 @@
 === Bridge VLAN separation
 ==== Description
-Test that two VLAN is correctly separated in the bridge
+Test that two VLANs are correctly separated in the bridge
 
 ==== Topology
 ifdef::topdoc[]
@@ -17,8 +17,8 @@ endif::topdoc[]
 ==== Test sequence
 . Initialize
 . Configure DUTs
-. Verify ing 10.0.0.3 from host:data10
-. Verify ing 10.0.0.4 from host:data11
+. Verify ping 10.0.0.3 from host:data10
+. Verify ping 10.0.0.4 from host:data11
 . Verify ping not possible host:data10->10.0.0.4, host:data11->10.0.0.3, host:data10->10.0.0.2, host:data11->10.0.0.1
 
 

@@ -5,7 +5,7 @@ Set hostname
 Verify that it is possible to change hostname both normal
 and using format %h-%m.
 
-The format exapnds to <default hostname>-<MAC>,
+The %h-%m format expands to <default hostname>-<MAC>,
 where MAC is the last three bytes of the base MAC address.
 
 e.g. ix-01-01-01.
@@ -34,7 +34,7 @@ with infamy.Test() as test:
         running = target.get_config_dict("/ietf-system:system")
         assert running["system"]["hostname"] == new
 
-    with test.step("Set hostname to to '%h-%m'"):
+    with test.step("Set hostname to '%h-%m'"):
         target.put_config_dict("ietf-system", {
             "system": {
                 "hostname": fmt,

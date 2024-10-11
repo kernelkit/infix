@@ -7,7 +7,7 @@
 """
 Dual bridges
 
-Test that it is possible to ping a bridge through a bridge to another bridge with VETH interfaces.
+Test that it is possible to ping through a bridge to another bridge via VETH interfaces.
 """
 import infamy
 

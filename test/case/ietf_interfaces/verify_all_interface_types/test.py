@@ -2,8 +2,8 @@
 r"""
 Verify that all interface types can be created
 
-This test verify that all interface types can be created
-and also, tesing setting the configuration in sequal (this
+This test verifies that all interface types can be created
+and also, testing setting the configuration in sequal (this
 takes a little longer time than send it once)
 ....
 
@@ -56,7 +56,7 @@ with infamy.Test() as test:
 
         loopback = "lo"
 
-    with test.step("Configure an empty bridge"):
+    with test.step("Configure an empty bridge br-0"):
         target.put_config_dict("ietf-interfaces", {
         "interfaces": {
             "interface": [
@@ -69,7 +69,7 @@ with infamy.Test() as test:
         }
     })
 
-    with test.step("Configure bridge brX and associated interfaces"):
+    with test.step("Configure bridge br-X and associated interfaces"):
         target.put_config_dict("ietf-interfaces", {
         "interfaces": {
             "interface": [
@@ -118,7 +118,7 @@ with infamy.Test() as test:
             }
         })
 
-    with test.step("Configure bridge brD and associated interfaces"):
+    with test.step("Configure bridge br-D and associated interfaces"):
         target.put_config_dict("ietf-interfaces", {
         "interfaces": {
             "interface": [
@@ -192,21 +192,21 @@ with infamy.Test() as test:
     with test.step("Verify interface 'lo' is of type loopback"):
         verify_interface(target, "lo", "loopback")
 
-    with test.step("Verify interfaces 'ethX' and 'ethQ' is of type 'ethernet' (or etherlike if running Qemu)"):
+    with test.step("Verify interfaces 'ethX' and 'ethQ' are of type 'ethernet' (or etherlike if running Qemu)"):
          verify_interface(target, eth_X, "etherlike")
          verify_interface(target, eth_Q, "etherlike")
 
-    with test.step("Verify interfaces 'br-0', 'br-X', 'br-D' and 'br-Q' is of type 'bridge'"):
+    with test.step("Verify interfaces 'br-0', 'br-X', 'br-D' and 'br-Q' are of type 'bridge'"):
         verify_interface(target, "br-0", "bridge")
         verify_interface(target, "br-X", "bridge")
         verify_interface(target, "br-Q", "bridge")
         verify_interface(target, "br-D", "bridge")
 
-    with test.step("Verify interfaces 'veth0a' and 'veth0b' is of type 'veth'"):
+    with test.step("Verify interfaces 'veth0a' and 'veth0b' are of type 'veth'"):
         verify_interface(target, "veth0a", "veth")
         verify_interface(target, "veth0b", "veth")
 
-    with test.step("Verify interfaces 'veth0a.20', 'ethQ.10', 'ethX.30', 'ethQ.10' and 'br-Q.40' is of type 'vlan'"):
+    with test.step("Verify interfaces 'veth0a.20', 'ethQ.10', 'ethX.30', 'ethQ.10' and 'br-Q.40' are of type 'vlan'"):
         verify_interface(target, "veth0a.20", "vlan")
         verify_interface(target, f"{eth_X}.30", "vlan")
         verify_interface(target, f"{eth_Q}.10", "vlan")

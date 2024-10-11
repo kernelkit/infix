@@ -28,11 +28,11 @@
 """
 OSPF with multiple areas
 
-This test test alot of features inside OSPF using 3 areas (one NSSA area, with no summary)
+This test tests a lot of features inside OSPF using 3 areas (one NSSA area, with no summary)
 to test the distribution of routes is deterministic (using cost), also test
 link breaks using BFD (not implemented in infamy though)
 
-This test also verify broadcast and point-to-point interface type on /30 network and
+This test also verifies broadcast and point-to-point interface types on /30 network and
 explicit router-id.
 """
 import infamy
@@ -539,7 +539,7 @@ with infamy.Test() as test:
                  config_target3(R3, R3ring2, R3cross, R3data),
                  config_target4(R4, R4ring1, R4cross, R4data))
 
-    with test.step("Wait for all neighbor to peer"):
+    with test.step("Wait for all neighbors to peer"):
         print("Waiting for neighbors to peer")
         until(lambda: route.ospf_get_neighbor(R1, "0.0.0.0", R1ring1, "1.1.1.1"), attempts=200)
         until(lambda: route.ospf_get_neighbor(R1, "0.0.0.1", R1cross, "10.0.0.3"), attempts=200)
@@ -586,7 +586,7 @@ with infamy.Test() as test:
 
     _, hport0 = env.ltop.xlate("PC", "data3")
     with infamy.IsolatedMacVlan(hport0) as ns0:
-        with test.step("Testing connectivitiy through NSSA area, from PC:data3 to 11.0.8.1"):
+        with test.step("Testing connectivity through NSSA area, from PC:data3 to 11.0.8.1"):
             ns0.addip("192.168.3.2")
             ns0.addroute("0.0.0.0/0", "192.168.3.1")
             ns0.must_reach("11.0.8.1")
