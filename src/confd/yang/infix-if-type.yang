@@ -11,15 +11,20 @@ module infix-if-type {
   contact      "kernelkit@googlegroups.com";
   description  "Infix extensions to IANA interfaces types";
 
-  revision 2023-08-21 {
-    description "Add infix-inteface-type to reduce number of supported
-                 interfaces.  The derived identities are based on both
-                 this new identity and their parent iana-if-type.";
+  revision 2024-10-13 {
+    description "Add new interface type dummy.";
     reference "internal";
   }
 
   revision 2024-01-29 {
-    description "Add new interface type etherlike";
+    description "Add new interface type etherlike.";
+    reference "internal";
+  }
+
+  revision 2023-08-21 {
+    description "Add infix-inteface-type to reduce number of supported
+                 interfaces.  The derived identities are based on both
+                 this new identity and their parent iana-if-type.";
     reference "internal";
   }
 
@@ -41,6 +46,11 @@ module infix-if-type {
     base infix-interface-type;
     base ianaift:bridge;
     description "IEEE bridge interface.";
+  }
+  identity dummy {
+    base infix-interface-type;
+    base ianaift:other;
+    description "Linux dummy interface.  Useful mostly for testing.";
   }
   identity ethernet {
     base infix-interface-type;

@@ -45,6 +45,9 @@ def json_get_yang_type(iface_in):
     if iface_in['linkinfo']['info_kind'] == "dsa":
         return "infix-if-type:ethernet"
 
+    if iface_in['linkinfo']['info_kind'] == "dummy":
+        return "infix-if-type:dummy"
+
     # Fallback
     return "infix-if-type:ethernet"
 
