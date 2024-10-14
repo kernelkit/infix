@@ -23,6 +23,11 @@ module infix-interfaces {
   contact      "kernelkit@googlegroups.com";
   description  "Linux bridge and lag extensions for ietf-interfaces.";
 
+  revision 2024-10-14 {
+    description "Deviate link-up-down-trap-enable not-supported.";
+    reference "internal";
+  }
+
   revision 2024-10-08 {
     description "Replace writable phy-address with custom-phys-address.";
     reference "internal";
@@ -108,5 +113,8 @@ module infix-interfaces {
         }
       }
     }
+  }
+  deviation "/if:interfaces/if:interface/if:link-up-down-trap-enable" {
+    deviate not-supported;
   }
 }
