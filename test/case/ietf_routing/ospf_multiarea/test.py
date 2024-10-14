@@ -25,15 +25,15 @@
 #                            +-------+
 #
 #
-"""
-OSPF with multiple areas
+"""OSPF with multiple areas
 
-This test tests a lot of features inside OSPF using 3 areas (one NSSA area, with no summary)
-to test the distribution of routes is deterministic (using cost), also test
-link breaks using BFD (not implemented in infamy though)
+This test evaluates various OSPF features across three areas (one NSSA area, with no summary)
+to ensure that route distribution is deterministic (based on cost). It also tests link
+failures using BFD, though BFD is not yet implemented in test framework (Infamy).
 
-This test also verifies broadcast and point-to-point interface types on /30 network and
+This test also verifies broadcast and point-to-point interface types on /30 network, and
 explicit router-id.
+
 """
 import infamy
 

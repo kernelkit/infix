@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-r"""
-Verify that all interface types can be created
+r"""Verify that all interface types can be created
 
-This test verifies that all interface types can be created
-and also, testing setting the configuration in sequal (this
-takes a little longer time than send it once)
+This test verifies that all interface types can be created and also
+checks the configuration when applied sequentially. This method takes
+slightly longer than sending the entire configuration at once.
+
 ....
 
  lo     br-0                    br-Q.40            br-D         br-X
@@ -14,6 +14,7 @@ takes a little longer time than send it once)
                            ethQ       veth0b       veth0a        ethX
                                           `---------'
 ....
+
 """
 
 import infamy

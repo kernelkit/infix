@@ -86,7 +86,7 @@ with infamy.Test() as test:
         with test.step("Disable forwarding on target:data0 and target:data1"):
             config_target(target, tport0, tport1, False)
 
-        with test.step("Verify ping does not work host:data0->10.0.0.10 and host:data1->192.168.0.10"):
+        with test.step("Verify ping does not work host:data0 to 10.0.0.10 and host:data1 to 192.168.0.10"):
             infamy.parallel(lambda: ns0.must_not_reach("10.0.0.10"),
                             lambda: ns1.must_not_reach("192.168.0.10"))
 

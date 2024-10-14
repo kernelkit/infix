@@ -1,12 +1,13 @@
 === USB configuration
 ==== Description
-This tests if the configuration is consistent with hardware state,
-and if the USB ports are _locked_ (forbidden for use) and _unlocked_
-(Ready for use) when they should. Also tests if this is the case during
-reboot. This does not the test actual use of the USB port, it just checks
-that the configured state is consistent with the hardware state.
+This test checks if the configuration is consistent with hardware state,
+and verifies whether the USB ports are correctly _locked_ (restricted from
+use) and _unlocked_ (available for use) when they should. It also verifies
+this behavior during reboot. This test does not involve the actual use of
+the USB port; it only ensures the configured state is consistent with the
+hardware state.
 
-If this pass you can be certain of that the configuration of the USB
+If this pass you can be certain that the configuration of the USB
 port is handled correctly.
 
 ==== Topology

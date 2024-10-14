@@ -1,8 +1,9 @@
 === Verify that all interface types can be created
 ==== Description
-This test verifies that all interface types can be created
-and also, testing setting the configuration in sequal (this
-takes a little longer time than send it once)
+This test verifies that all interface types can be created and also
+checks the configuration when applied sequentially. This method takes
+slightly longer than sending the entire configuration at once.
+
 ....
 
  lo     br-0                    br-Q.40            br-D         br-X
