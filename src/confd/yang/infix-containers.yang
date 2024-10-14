@@ -201,12 +201,16 @@ module infix-containers {
           }
 
           leaf-list option {
-            when "deref(../name)/../infix-if:container-network/infix-if:type = 'infix-if:bridge'";
-            description "Options for masquerading container bridges.
+            description "Options for interface inside container, e.g., interface_name=foo0
 
-                         Example: ip=1.2.3.4            -- request a specific IP (IPv4 or IPv6)
-                                  mac=00:01:02:c0:ff:ee -- set fixed MAC address in container
-                                  interface_name=foo0   -- set interface name inside container";
+                         Options: ip=1.2.3.4                      -- Set static IPv4 address*
+                                  ip6=2001:0:130f::9c0:876a:130b  -- Set static IPv6 address*
+                                  mac=00:01:02:c0:ff:ee           -- Set fixed MAC address
+                                  interface_name=foo0             -- Set interface name
+
+                         NOTE: Some (*) options only work with masquerading container bridges,
+                               which automatically create VETH pairs with one end in the host
+                               bridge and the other in the container.";
             type string;
           }
         }

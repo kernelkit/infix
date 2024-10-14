@@ -299,6 +299,7 @@ Currently two types of of container networks are supported:
 
 > For more information on VETH pairs, see the [Networking Guide][0].
 
+
 ### Container Bridge
 
 A container bridge is what most container setups use and users want.
@@ -394,8 +395,14 @@ namespace of a container[^3].  This of course works with plain Ethernet
 interfaces as well, but here we will use one end of a VETH pair as an
 example.
 
+The network `option` setting is available also for this case, but only
+the `interface_name=foo0` option works.  Which is still very useful.  To
+change the MAC address, you need to use the `custom-phys-adderss` in the
+general network settings.
+
 [^3]: Something which the container bridge network type does behind the
     scenes with one end of an automatically created VETH pair.
+
 
 #### Routed Setup
 
@@ -429,8 +436,11 @@ Adding the interface to the container is the same as before, but since
 everything for host interfaces is set up in the interfaces context, we
 can take a bit of a shortcut.
 
-    admin@example:/config/container/ntpd/> set network ntpd
+    admin@example:/config/container/ntpd/> set network interface ntpd
     admin@example:/config/container/ntpd/> leave
+
+> Use the `set network inteface ntpd option interface_name=foo0` to set
+> the name of the interface inside the container to `foo0`.
 
 The point of the routed case is that port forwarding from the container
 in this case is limited to a single interface, not *all interfaces* as
