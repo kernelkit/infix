@@ -16,6 +16,7 @@ image::topology.png[Static routing topology]
 endif::testgroup[]
 endif::topdoc[]
 ==== Test sequence
+. Set up topology and attach to target DUTs
 . Configure targets
 . Wait for routes
 . Configure host addresses and routes

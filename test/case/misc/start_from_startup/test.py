@@ -9,12 +9,6 @@ with infamy.Test() as test:
         target = env.attach("target", "mgmt")
 
     with test.step("Configure"):
-        target.put_config_dict("ietf-system", {
-            "system": {
-                "hostname": "test"
-            }
-        })
-        target.delete_xpath("/ietf-hardware:hardware/component")
         target.copy("running", "startup")
 
     with test.step("Reboot and wait for the unit to come back"):
@@ -23,10 +17,15 @@ with infamy.Test() as test:
         target.reboot()
         if not wait_boot(target, env):
             test.fail()
-        target = env.attach("target", "mgmt", test_default=False)
+        target = env.attach("target", "mgmt", test_reset=False)
+        tgtssh = env.attach("target", "mgmt", "ssh")
 
-    with test.step("Verify hostname"):
-        data = target.get_dict("/ietf-system:system/hostname")
-        assert data["system"]["hostname"] == "test"
+    with test.step("Verify user admin is now in wheel group"):
+        if not tgtssh.runsh("grep wheel /etc/group | grep 'admin'"):
+            test.fail()
+
+    with test.step("Verify user admin is now in sys-cli group"):
+        if not tgtssh.runsh("grep sys-cli /etc/group | grep 'admin'"):
+            test.fail()
 
     test.succeed()

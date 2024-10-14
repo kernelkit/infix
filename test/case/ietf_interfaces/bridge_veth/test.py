@@ -1,19 +1,25 @@
 #!/usr/bin/env python3
-#
-# PING -->     br0
-#             /   \
-#   PC ---- e0     veth 10.0.0.2
-#
 """
 Bridge with a physical port and a veth
 
 This tests the possibility to add software added interfaces, in this case
 VETH and bridge it with a physical interface
+
+....
+
+PING -->      br0
+             /   \\
+ PC- target:data  veth0a -- veth0b
+     10.0.0.1               10.0.0.2
+
+....
+
+
 """
 import infamy
 
 with infamy.Test() as test:
-    with test.step("Initialize"):
+    with test.step("Set up topology and attach to target DUT"):
         env = infamy.Env()
         target = env.attach("target", "mgmt")
 

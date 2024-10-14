@@ -15,6 +15,7 @@ image::topology.png[VLAN ping connectivity topology]
 endif::testgroup[]
 endif::topdoc[]
 ==== Test sequence
+. Set up topology and attach to target DUT
 . Configure VLAN 10 interface on target:data with IP 10.0.0.2
 . Waiting for links to come up
 . Ping 10.0.0.2 from VLAN 10 on host:data with IP 10.0.0.1

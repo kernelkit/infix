@@ -18,7 +18,8 @@ endif::topdoc[]
 . Initialize
 . Configure
 . Reboot and wait for the unit to come back
-. Verify hostname
+. Verify user admin is now in wheel group
+. Verify user admin is now in sys-cli group
 
 
 <<<

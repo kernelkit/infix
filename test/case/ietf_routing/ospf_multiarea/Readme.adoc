@@ -7,6 +7,21 @@ failures using BFD, though BFD is not yet implemented in test framework (Infamy)
 This test also verifies broadcast and point-to-point interface types on /30 network, and
 explicit router-id.
 
+....
+  +-------------+  +---------------+  +-------------+  +---------------+
+  |     R1      |  |      R2       |  |     R3      |  |      R4       |
+  | 10.0.0.1/32 |  |  10.0.0.2/32  |  | 10.0.0.3/32 |  |  10.0.0.4/32  |
+  |   (lo)      |  |  11.0.9.1/24  |  |   (lo)      |  |      (lo)     |
+  +-------------+  |  11.0.10.1/24 |  +-------------+   +---------------+
+                   |  11.0.11.1/24 |
+                   |  11.0.12.1/24 |
+                   |  11.0.13.1/24 |
+                   |  11.0.14.1/24 |
+                   |  11.0.15.1/24 |
+                   |      (lo)     |
+                   +---------------+
+....
+
 ==== Topology
 ifdef::topdoc[]
 image::../../test/case/ietf_routing/ospf_multiarea/topology.png[OSPF with multiple areas topology]
@@ -20,6 +35,7 @@ image::topology.png[OSPF with multiple areas topology]
 endif::testgroup[]
 endif::topdoc[]
 ==== Test sequence
+. Set up topology and attach to target DUTs
 . Configure targets
 . Wait for all neighbors to peer
 . Wait for routes from OSPF on all routers

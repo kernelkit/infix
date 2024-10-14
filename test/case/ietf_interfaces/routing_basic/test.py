@@ -55,14 +55,14 @@ def config_target(target, tport0, tport1, enable_fwd):
         })
 
 with infamy.Test() as test:
-    with test.step("Initialize"):
+    with test.step("Set up topology and attach to target DUTs"):
         env = infamy.Env()
         target = env.attach("target", "mgmt")
-        _, tport0 = env.ltop.xlate("target", "data0")
-        _, tport1 = env.ltop.xlate("target", "data1")
+        _, tport0 = env.ltop.xlate("target", "data1")
+        _, tport1 = env.ltop.xlate("target", "data2")
 
-        _, hport0 = env.ltop.xlate("host", "data0")
-        _, hport1 = env.ltop.xlate("host", "data1")
+        _, hport0 = env.ltop.xlate("host", "data1")
+        _, hport1 = env.ltop.xlate("host", "data2")
 
     with infamy.IsolatedMacVlan(hport0) as ns0, \
          infamy.IsolatedMacVlan(hport1) as ns1 :
@@ -74,19 +74,19 @@ with infamy.Test() as test:
             ns1.addip("10.0.0.10")
             ns1.addroute("default", "10.0.0.1")
 
-        with test.step("Enable forwarding on target:data0 and target:data1"):
+        with test.step("Enable forwarding on target:data1 and target:data2"):
             config_target(target, tport0, tport1, True)
 
-        with test.step("Verify ping from host:data0 to 10.0.0.10"):
+        with test.step("Verify ping from host:data1 to 10.0.0.10"):
             ns0.must_reach("10.0.0.10")
 
-        with test.step("Verify ping from host:data1 to 192.168.0.10"):
+        with test.step("Verify ping from host:data2 to 192.168.0.10"):
             ns1.must_reach("192.168.0.10")
 
-        with test.step("Disable forwarding on target:data0 and target:data1"):
+        with test.step("Disable forwarding on target:data1 and target:data2"):
             config_target(target, tport0, tport1, False)
 
-        with test.step("Verify ping does not work host:data0 to 10.0.0.10 and host:data1 to 192.168.0.10"):
+        with test.step("Verify ping does not work host:data1 to 10.0.0.10 and host:data2 to 192.168.0.10"):
             infamy.parallel(lambda: ns0.must_not_reach("10.0.0.10"),
                             lambda: ns1.must_not_reach("192.168.0.10"))
 

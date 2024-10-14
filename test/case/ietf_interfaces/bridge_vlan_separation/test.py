@@ -1,39 +1,43 @@
 #!/usr/bin/env python3
-#    ,-------------------------------------,       ,-------------------------------------,
-#    |                          dut1:data2 |       | dut2:data2                          |
-#    |                      br0  ----------|-------|---------  br0                       |
-#    |                     /   \           |       |          /   \                      |
-#    |dut1:mgmt  dut1:data0     dut1:data1 |       | dut2:data0    dut2:data1  dut2:mgmt |
-#    '-------------------------------------'       '-------------------------------------'
-#        |                |     |                            |     |                 |
-#        |                |     |                            |     |                 |
-# ,-----------------------------------------------------------------------------------------,
-# |  host:mgmt0  host:data0     host:data1          host:data2     host:data3   host:mgmt1  |
-# |              [10.0.0.1]     [10.0.0.2]          [10.0.0.3]     [10.0.0.4]               |
-# |                (ns10)         (ns11)              (ns20)         (ns21)                 |
-# |                                                                                         |
-# |                                        [ HOST ]                                         |
-# '-----------------------------------------------------------------------------------------'
-"""
+r"""
 Bridge VLAN separation
 
 Test that two VLANs are correctly separated in the bridge
+
+....
+    ,-----------------------------------,   ,----------------------------------,
+    |                         dut1:link |   | dut2:link                        |
+    |                      br0  --------|---|---------  br0                    |
+    |                     / \           |   |          / \                     |
+    |dut1:mgmt  dut1:data1   dut1:data2 |   | dut2:data1  dut2:data2 dut2:mgmt |
+    '-----------------------------------'   '----------------------------------'
+        |             |        |                  |            |         |
+        |             |        |                  |            |         |
+ ,------------------------------------------------------------------------------,
+ |  host:mgmt0 host:data10 host:data11    host:data20  host:data21  host:mgmt1  |
+ |             [10.0.0.1]   [10.0.0.2]     [10.0.0.3]     [10.0.0.4]            |
+ |              (ns10)         (ns11)          (s20)         (ns21)             |
+ |                                                                              |
+ |                                        [ HOST ]                              |
+ '------------------------------------------------------------------------------'
+
+....
 """
 import infamy
 
 with infamy.Test() as test:
-    with test.step("Initialize"):
+    with test.step("Set up topology and attach to target DUT"):
         env = infamy.Env()
         dut1 = env.attach("dut1", "mgmt")
         dut2 = env.attach("dut2", "mgmt")
 
     with test.step("Configure DUTs"):
-        _, tport10 = env.ltop.xlate("dut1", "data0")
-        _, tport11 = env.ltop.xlate("dut1", "data1")
-        _, tport12 = env.ltop.xlate("dut1", "data2")
-        _, tport20 = env.ltop.xlate("dut2", "data0")
-        _, tport21 = env.ltop.xlate("dut2", "data1")
-        _, tport22 = env.ltop.xlate("dut2", "data2")
+        _, tport10 = env.ltop.xlate("dut1", "data1")
+        _, tport11 = env.ltop.xlate("dut1", "data2")
+        _, tport12 = env.ltop.xlate("dut1", "link")
+        _, tport20 = env.ltop.xlate("dut2", "data1")
+        _, tport21 = env.ltop.xlate("dut2", "data2")
+        _, tport22 = env.ltop.xlate("dut2", "link")
 
         dut1.put_config_dict("ietf-interfaces", {
             "interfaces": {

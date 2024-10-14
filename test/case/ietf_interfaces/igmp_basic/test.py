@@ -4,23 +4,26 @@
 # group from `msend`, verify that `mrecv` receives it and that `!memb`
 # does not.
 #
-#              .1
-# .---------------------------.
-# |            DUT            |
-# '-data0-----data1-----data2-'
-#     |         |         |
-#     |         |         |      10.0.0.0/24
-#     |         |         |
-# .-data0-. .-data1-. .-data2-.
-# | msend | | mrecv | | !memb |
-# '-------' '-------' '-------'
-#    .2         .3        .4
 
 """
 IGMP basic
 
-Test that all multicast gets flooded when IGMP is disabled and
+Verify that all multicast get flooded when no IGMP join exists in the system and
 the flooding stops as soon a join arrives
+
+              .1
+ .---------------------------.
+ |            DUT            |
+ '-data1-----data2-----data3-'
+     |         |         |
+     |         |         |      10.0.0.0/24
+     |         |         |
+ .-data1-. .-data2-. .-data3-.
+ | msend | | mrecv | | !memb |
+ '-------' '-------' '-------'
+    .2         .3        .4
+             HOST
+
 """
 
 import infamy
@@ -30,12 +33,12 @@ import infamy.multicast as mcast
 query_interval = 4
 
 with infamy.Test() as test:
-    with test.step("Initialize"):
+    with test.step("Set up topology and attach to target DUTs"):
         env = infamy.Env()
         target = env.attach("target", "mgmt")
-        _, msend = env.ltop.xlate("target", "data0")
-        _, mreceive = env.ltop.xlate("target", "data1")
-        _, nojoin = env.ltop.xlate("target", "data2")
+        _, msend = env.ltop.xlate("target", "data1")
+        _, mreceive = env.ltop.xlate("target", "data2")
+        _, nojoin = env.ltop.xlate("target", "data3")
 
     with test.step("Configure device"):
         target.put_config_dict("ietf-interfaces",
@@ -89,9 +92,9 @@ with infamy.Test() as test:
                             }
                         })
 
-    _, hsend = env.ltop.xlate("host", "data0")
-    _, hreceive = env.ltop.xlate("host", "data1")
-    _, hnojoin = env.ltop.xlate("host", "data2")
+    _, hsend = env.ltop.xlate("host", "data1")
+    _, hreceive = env.ltop.xlate("host", "data2")
+    _, hnojoin = env.ltop.xlate("host", "data3")
     with infamy.IsolatedMacVlan(hsend) as send_ns, \
          infamy.IsolatedMacVlan(hreceive) as receive_ns, \
          infamy.IsolatedMacVlan(hnojoin) as nojoin_ns:
@@ -105,16 +108,16 @@ with infamy.Test() as test:
             nojoin_ns.must_reach("10.0.0.1")
 
             with mcast.MCastSender(send_ns, "224.1.1.1"):
-                with test.step("Verify that the group 224.1.1.1 is flooded on host:data1 and host:data2"):
+                with test.step("Verify that the group 224.1.1.1 is flooded on host:data2 and host:data3"):
                     infamy.parallel(lambda: receive_ns.must_receive("ip dst 224.1.1.1"),
                                     lambda: nojoin_ns.must_receive("ip dst 224.1.1.1"))
 
-                with test.step("Join multicast group 224.1.1.1 on host:data1"):
+                with test.step("Join multicast group 224.1.1.1 on host:data2"):
                     with mcast.MCastReceiver(receive_ns, "224.1.1.1"):
-                        with test.step("Verify group 224.1.1.1 is received on host:data1"):
+                        with test.step("Verify group 224.1.1.1 is received on host:data2"):
                             receive_ns.must_receive("ip dst 224.1.1.1")
 
-                        with test.step("Verify that the group 224.1.1.1 is no longer received to host:data2"):
+                        with test.step("Verify that the group 224.1.1.1 is no longer received on host:data3"):
                             attempt = 0
 
                             # This retry loop exists to handle the case where the first query is lost due

@@ -20,9 +20,10 @@ image::topology.png[OSPF unnumbered interfaces topology]
 endif::testgroup[]
 endif::topdoc[]
 ==== Test sequence
+. Set up topology and attach to target DUTs
 . Configure targets
 . Wait for OSPF routes
-. Check interface type
+. Verify interface type on R1:link and R2:link is point-to-point
 . Verify there are no OSPF HELLO packets on PC:data
 . Test connectivity from PC:data to 192.168.200.1
 

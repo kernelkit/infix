@@ -7,7 +7,7 @@ graph "1x2" {
 	edge [color="cornflowerblue", penwidth="2"];
 
 	host [
-	    label="host | { <tgt> tgt | <data> data\n(vlan10) }",
+	    label="host | { <mgmt> mgmt | <data> data\n(vlan10) }",
 	    pos="0,12!",
 	    kind="controller",
 	];
@@ -19,6 +19,6 @@ graph "1x2" {
 	    kind="infix",
 	];
 
-	host:tgt -- target:mgmt [kind=mgmt]
+	host:mgmt  -- target:mgmt  [kind=mgmt, color="lightgray"]
 	host:data -- target:data [color=black, fontcolor=black, fontsize=12, taillabel="10.0.0.1/24", headlabel="10.0.0.2/24"]
 }
