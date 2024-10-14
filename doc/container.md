@@ -609,6 +609,17 @@ container ID (hash) is used, but this can be easily changed:
     admin@example:/> container shell system
     root@sys101:/#
 
+In fact, the container `hostname` setting supports the same format
+specifiers as the host's `hostname` setting:
+
+ - `%i`: OS ID, from `/etc/os-release`, from Menuconfig branding
+ - `%h`: Default hostname, from `/etc/os-release`, from branding
+ - `%m`: NIC specific part of base MAC, e.g., to `c0-ff-ee`
+ - `%%`: Literal %
+
+The most useful combination is probably `"container-name-%m"`, which in
+this example give the container hostname `container-name-c0-ff-ee`.
+
 [^1]: this does not apply to the admin-exec command `container run`.
     This command is intended to be used for testing and evaluating
 	container images.  Such containers are given a private network

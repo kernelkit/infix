@@ -22,6 +22,17 @@ module infix-containers {
     prefix infix-if;
   }
 
+  import infix-system {
+    prefix infix-sys;
+  }
+
+  revision 2024-10-14  {
+    description "Two major changes:
+                  - Allow changing name of host interfaces inside container
+                  - Support hostname format specifiers, like ietf-system";
+    reference "internal";
+  }
+
   revision 2024-03-27  {
     description "Add support for capabilities.";
     reference "internal";
@@ -160,8 +171,11 @@ module infix-containers {
       }
 
       leaf hostname {
-	description "Sets the container host name that is available inside the container.";
-	type inet:domain-name;
+	description "Sets the container host name, available inside the container.
+
+                     Format specifiers are for, default hostname, ID, and the
+                     last three octets in base MAC, e.g., c0-ff-ee";
+	type infix-sys:hostname;
       }
 
       leaf privileged {
