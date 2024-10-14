@@ -13,6 +13,13 @@ addresses for interfaces!  For details, see below issue #680.
 - Update CONTRIBUTING.md for scaling core team and helping external
   contributors understand the development process, issue #672
 - OSPF: Add limitation to only allow one interface per area
+- Add support for "dummy" interfaces, mostly useful for testing
+- Add support for container hostname format specifiers, just like it
+  already works for the host's hostname setting
+- Updated container documentation, improved images, detail how to set
+  interface name inside the container, and some syntax fixes
+- Greatly reduced size of bundled curiOS httpd OCI container image,
+  reduced from 1.8 MiB to 281 KiB
 - The default builds now include the curiOS nftables container image,
   which can be used for advanced firewall setups.  For an introduction
   see <https://kernelkit.org/posts/firewall-container/>
@@ -37,6 +44,8 @@ addresses for interfaces!  For details, see below issue #680.
   this includes all operational data in ietf-routing:/routing/ribs.
 - Fix #697: password is not always set for new users, bug introduced
   in v24.06.0 when replacing Augeas with native user handling
+- Fix #708: allow all container networks to set interface name inside
+  container, not just auto-generated veth-pair ends for `docker0` bridge
 - Fix BFD in OSPF, previously you could not enable BFD on a single
   interface without it was enabled on all interfaces
 

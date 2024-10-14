@@ -1,5 +1,6 @@
 Containers in Infix
 ===================
+<img align="right" src="img/docker.webp" alt="Docker whale" width=360>
 
 * [Introduction](#introduction)
 * [Caution](#caution)
@@ -78,16 +79,17 @@ In the CLI, containers can be run in one of two ways:
  1. `container run IMAGE [COMMAND]`, and
  2. enter `configure` context, then `edit container NAME`
 
-The first is useful mostly for testing, or running single commands in an
-image.  It is a wrapper for `podman run -it --rm ...`, while the latter
-is a wrapper and adaptation of `podman create ...`.
+The former is useful mostly for testing, or running single commands in
+an image.  It is a wrapper for `podman run -it --rm ...`, while the
+latter is a wrapper and adaptation of `podman create ...`.
 
 The second create a container with a semi-persistent writable layer that
 survives container restarts and host system restarts.  However, if you
 change the container configuration or upgrade the image (see below), the
 container will be recreated and the writable layer is lost.  This is why
 it is recommended to set up a named volume for directories, or use file
-[Content Mounts][], in your container you want truly persistent content.
+[Content Mounts](#content-mounts), in your container if you want truly
+persistent content.
 
 In fact, in many cases the best way is to create a `read-only` container
 and use file mounts and volumes only for the critical parts.  Podman
@@ -299,14 +301,19 @@ Currently two types of of container networks are supported:
 
 > For more information on VETH pairs, see the [Networking Guide][0].
 
+
 ### Container Bridge
 
 A container bridge is what most container setups use and users want.
+
+![IP Masquerading Container Bridge](img/cni-bridge-firewall.svg)
+
 The difference from a regular bridge is that the container runtime fully
-manages them -- connecting containers automatically with VETH pairs and
-setting up firewall rules between the host and other containers, as well
-as managing port forwarding.  This transparent background management is
-what makes container use seem to be so simple.
+manages them -- connecting containers with automatically created VETH
+pairs (look at the bridge port names) and setting up firewall rules
+between the host and other containers, as well as managing port
+forwarding.  This transparent background management is what makes
+container use seem to be so simple.
 
 All interface configuration is done in configure context.
 
@@ -394,20 +401,21 @@ namespace of a container[^3].  This of course works with plain Ethernet
 interfaces as well, but here we will use one end of a VETH pair as an
 example.
 
+The network `option` setting is available also for this case, but only
+the `interface_name=foo0` option works.  Which is still very useful.  To
+change the MAC address, you need to use the `custom-phys-adderss` in the
+general network settings.
+
 [^3]: Something which the container bridge network type does behind the
     scenes with one end of an automatically created VETH pair.
+
 
 #### Routed Setup
 
 In this routed setup we reserve 192.168.0.0/24 for the network between
 the host and the `ntpd` container.
 
-                                _____________
-                               |             |
-    veth0 .1                   |   .2 eth0   |
-           \   192.168.0.0/24  |  /          |
-            '--------------------'  [ntpd]   |
-                               |_____________|
+![Basic VETH pair connecting ntpd container.](img/cni-ntpd-routed.svg)
 
 Configuration is a straight-forward VETH pair setup where we name the
 container-end of pair `ntpd`.  This is just a convenience for us when
@@ -429,8 +437,11 @@ Adding the interface to the container is the same as before, but since
 everything for host interfaces is set up in the interfaces context, we
 can take a bit of a shortcut.
 
-    admin@example:/config/container/ntpd/> set network ntpd
+    admin@example:/config/container/ntpd/> set network interface ntpd
     admin@example:/config/container/ntpd/> leave
+
+> Use the `set network inteface ntpd option interface_name=foo0` to set
+> the name of the interface inside the container to `foo0`.
 
 The point of the routed case is that port forwarding from the container
 in this case is limited to a single interface, not *all interfaces* as
@@ -443,21 +454,15 @@ A perhaps more common case is to bridge the other end of the VETH pair
 with other physical ports.  In this section we show how to add a new
 pair to give our container two interfaces:
 
-                              _______________
-                             |               |                     .1 br0
-    veth0 .1                 |   .2 eth0     |                       /   \
-           \  192.168.0.0/24 |  /   eth1 .2  |                 veth1b     e1
-            '------------------'          \  | 192.168.1.0/24  /
-                             |     [ntpd]  '------------------'
-                             |_______________|
+![Bridged setup with ntpd container.](img/cni-ntpd-bridged.svg)
 
 We start by adding the second VETH pair:
 
     admin@example:/config/> edit interface veth1a
-    admin@example:/config/interface/veth1a/> set veth peer veth1b
+    admin@example:/config/interface/veth1a/> set veth peer veth1
     admin@example:/config/interface/veth1a/> set ipv4 address 192.168.1.2 prefix-length 24
 
-> The LAN bridge (br0) in this example has IP address 192.168.1.1.
+> The LAN bridge (br1) in this example has IP address 192.168.1.1.
 
 When a container has multiple host interfaces it can often be useful to
 have a default route installed.  This can be added from the host with a
@@ -473,14 +478,15 @@ have a default route installed.  This can be added from the host with a
 	  }
 	}
 	veth {
-	  peer veth1b;
+	  peer veth1;
 	}
     admin@example:/config/interface/veth1a/> end
-    admin@example:/config/> set interface veth1b bridge-port bridge br0
+    admin@example:/config/> set interface veth1 bridge-port bridge br1
 
 Please note, container network routes require the base interface also
 have a static IP address set.  Setting only the route, but no address,
 means the route is skipped.
+
 
 ### Host Networking
 
@@ -491,7 +497,7 @@ the host operating system.
 
 The host networking setup cannot be combined with any other network.
 
-For an example, see below.
+For an example, [see below](#application-container-nftables).
 
 
 Mounts and Volumes
@@ -599,6 +605,17 @@ container ID (hash) is used, but this can be easily changed:
     admin@example:/> container shell system
     root@sys101:/#
 
+In fact, the container `hostname` setting supports the same format
+specifiers as the host's `hostname` setting:
+
+ - `%i`: OS ID, from `/etc/os-release`, from Menuconfig branding
+ - `%h`: Default hostname, from `/etc/os-release`, from branding
+ - `%m`: NIC specific part of base MAC, e.g., to `c0-ff-ee`
+ - `%%`: Literal %
+
+The most useful combination is probably `"container-name-%m"`, which in
+this example give the container hostname `container-name-c0-ff-ee`.
+
 [^1]: this does not apply to the admin-exec command `container run`.
     This command is intended to be used for testing and evaluating
 	container images.  Such containers are given a private network
@@ -625,6 +642,7 @@ For advanced setups, the following is an interesting alternative.
 Notice how we `set network host`, so the container can see and act on
 all the host's interfaces, and that we also have to run the container
 in *privileged* mode.
+
 
 ### Application Container: ntpd
 

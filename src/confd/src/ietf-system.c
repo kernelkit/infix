@@ -1625,7 +1625,7 @@ static char *get_mac(struct confd *confd, char *mac, size_t len)
  *
  * XXX: PLEASE REFACTOR THIS INTO A PYTHON HELPER FOR FUTURE EXTENSIONS, OR BUGS!
  */
-static int hostnamefmt(struct confd *confd, char **fmt)
+int hostnamefmt(struct confd *confd, char **fmt)
 {
 	size_t hostlen, fmt_len;
 	char *hostname;
