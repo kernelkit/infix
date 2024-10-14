@@ -17,7 +17,7 @@
 """
 Bridge VLAN separation
 
-Test that two VLAN is correctly separated in the bridge
+Test that two VLANs are correctly separated in the bridge
 """
 import infamy
 
@@ -153,10 +153,10 @@ with infamy.Test() as test:
         ns20.addip("10.0.0.3")
         ns21.addip("10.0.0.4")
 
-        with test.step("Verify ing 10.0.0.3 from host:data10"):
+        with test.step("Verify ping 10.0.0.3 from host:data10"):
             ns10.must_reach("10.0.0.3")
 
-        with test.step("Verify ing 10.0.0.4 from host:data11"):
+        with test.step("Verify ping 10.0.0.4 from host:data11"):
             ns11.must_reach("10.0.0.4")
 
         with test.step("Verify ping not possible host:data10->10.0.0.4, host:data11->10.0.0.3, host:data10->10.0.0.2, host:data11->10.0.0.1"):

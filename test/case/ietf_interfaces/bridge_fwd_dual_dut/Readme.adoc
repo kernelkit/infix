@@ -1,6 +1,6 @@
 === Bridge forwarding dual DUTs
 ==== Description
-Ping through two bridges on two different DUTs,
+Ping through two bridges on two different DUTs.
 
 ==== Topology
 ifdef::topdoc[]

@@ -2,7 +2,7 @@
 """
 DHCP option 121 vs option 3
 
-Verify DHCP option 121 (staticroutes) is used over option 3 and that the
+Verify DHCP option 121 (static routes) is used over option 3 and that the
 routes exist in the operational datastore.
 
 Installing unrelated routes from a DHCP server should not affect already

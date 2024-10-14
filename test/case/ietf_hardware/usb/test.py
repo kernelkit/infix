@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
-"""
-USB configuration
+"""USB configuration
 
-This will test if the configuration is consistent with hardware state,
-if the USB ports are _locked_ (forbidden for use) and _unlocked_
-(Ready for use) when they should. Also test if it is the case during
-reboot. This does not the test actual use of the USB port, just check
-that the configured state is consistent with the hardware state.
+This test checks if the configuration is consistent with hardware state,
+and verifies whether the USB ports are correctly _locked_ (restricted from
+use) and _unlocked_ (available for use) when they should. It also verifies
+this behavior during reboot. This test does not involve the actual use of
+the USB port; it only ensures the configured state is consistent with the
+hardware state.
 
-If this pass you can be certeain of that the configuration of the USB
+If this pass you can be certain that the configuration of the USB
 port is handled correctly.
+
 """
 import infamy
 import copy

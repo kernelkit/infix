@@ -2,7 +2,7 @@
 """
 VLAN ping connectivity
 
-Very basic test if the VLAN configuration works.
+Very basic test if the VLAN interface configuration works.
 """
 import infamy
 import infamy.iface as iface
@@ -25,7 +25,7 @@ def test_ping(hport, should_pass):
                 ns.must_not_reach("10.0.0.2")
 
 with infamy.Test() as test:
-    with test.step("Configure VLAN 10 on target:data with IP 10.0.0.2"):
+    with test.step("Configure VLAN 10 interface on target:data with IP 10.0.0.2"):
         env = infamy.Env()
         target = env.attach("target", "mgmt")
         _, tport = env.ltop.xlate("target", "data")

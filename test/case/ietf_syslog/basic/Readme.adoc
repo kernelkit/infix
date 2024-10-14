@@ -17,7 +17,7 @@ endif::topdoc[]
 ==== Test sequence
 . Initializing
 . Configure DUT
-. Verify log files /var/log/bar.log and /var/log/bar.log have been created
+. Verify log files /var/log/foo and /var/log/bar.log have been created
 
 
 <<<

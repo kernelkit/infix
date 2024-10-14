@@ -2,7 +2,7 @@
 """
 USB configuration with two USB ports
 
-Test that the configuration is consistent
+Test that the USB locked/unlocked configuration is consistent
 when having two USB ports.
 """
 import infamy

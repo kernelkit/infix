@@ -44,7 +44,7 @@ with infamy.Test() as test:
         if not any(user['name'] == USER for user in users):
             test.fail()
 
-    with test.step("Verify user jacky is not in wheel group"):
+    with test.step("Verify user jacky is not in wheel group (in Linux)"):
         wheel = tgtssh.runsh("grep wheel /etc/group").stdout
         if USER in wheel:
             test.fail()
@@ -62,7 +62,7 @@ with infamy.Test() as test:
                     group["user-name"].append(USER)
         target.put_config_dict("ietf-netconf-acm", nacm)
 
-    with test.step("Verify user jacky is now in wheel group"):
+    with test.step("Verify user jacky is now in wheel group (in Linux)"):
         if not tgtssh.runsh(f"grep wheel /etc/group | grep '{USER}'"):
             test.fail()
 
@@ -71,7 +71,7 @@ with infamy.Test() as test:
         if "bash" not in user:
             test.fail()
 
-    with test.step("Change user jacky to $factory$ password ..."):
+    with test.step("Change user jacky to $factory$ password"):
         running = target.get_config_dict("/ietf-system:system")
         users = running["system"]["authentication"]["user"]
 

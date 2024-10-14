@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""
-Services basic
+"""Services basic
 
-Verify that basic services like mDNS and LLDP can be enabled and
-disabled.  We verify operation and non-operation by using tcpdump.
+Verify that basic services, such as mDNS and LLDP, can be enabled and
+disabled. Operation and non-operation are confirmed using tcpdump.
+
 """
 import time
 import infamy

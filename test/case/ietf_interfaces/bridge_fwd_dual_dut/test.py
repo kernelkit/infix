@@ -17,7 +17,7 @@
 """
 Bridge forwarding dual DUTs
 
-Ping through two bridges on two different DUTs,
+Ping through two bridges on two different DUTs.
 """
 import infamy
 
