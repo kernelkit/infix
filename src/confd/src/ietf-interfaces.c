@@ -227,6 +227,8 @@ static int ifchange_cand_infer_type(sr_session_ctx_t *session, const char *path)
 		inferred.data.string_val = "infix-if-type:bridge";
 	else if (!fnmatch("docker+([0-9])", ifname, FNM_EXTMATCH))
 		inferred.data.string_val = "infix-if-type:bridge";
+	else if (!fnmatch("dummy+([0-9])", ifname, FNM_EXTMATCH))
+		inferred.data.string_val = "infix-if-type:dummy";
 	else if (!fnmatch("podman+([0-9])", ifname, FNM_EXTMATCH))
 		inferred.data.string_val = "infix-if-type:bridge";
 	else if (!fnmatch("lag+([0-9])", ifname, FNM_EXTMATCH))
@@ -1522,6 +1524,16 @@ out:
 	return err;
 }
 
+static int netdag_gen_dummy(struct dagger *net, struct lyd_node *dif,
+			    struct lyd_node *cif, FILE *ip)
+{
+	const char *ifname = lydx_get_cattr(cif, "name");
+
+	fprintf(ip, "link add dev %s type dummy\n", ifname);
+
+	return 0;
+}
+
 static int netdag_gen_veth(struct dagger *net, struct lyd_node *dif,
 			   struct lyd_node *cif, FILE *ip)
 {
@@ -1665,6 +1677,8 @@ static int netdag_gen_afspec_add(sr_session_ctx_t *session, struct dagger *net, 
 
 	if (!strcmp(iftype, "infix-if-type:bridge")) {
 		err = netdag_gen_bridge(session, net, dif, cif, ip, 1);
+	} else if (!strcmp(iftype, "infix-if-type:dummy")) {
+		err = netdag_gen_dummy(net, NULL, cif, ip);
 	} else if (!strcmp(iftype, "infix-if-type:veth")) {
 		err = netdag_gen_veth(net, NULL, cif, ip);
 	} else if (!strcmp(iftype, "infix-if-type:vlan")) {
