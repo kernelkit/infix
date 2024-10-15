@@ -5,12 +5,6 @@
   -- Remember: assign a reviewer, or use @mentions if org. member.
   -->
 
-
-## Other information
-
-<!-- Other relevant info, e.g., before/after screenshots -->
-
-
 ## Checklist
 
 Tick *relevant* boxes, this PR is-a or has-a:
@@ -23,9 +17,11 @@ Tick *relevant* boxes, this PR is-a or has-a:
   - [ ] Regression tests added?
   - [ ] ChangeLog updates (for next release)
   - [ ] Documentation added?
+- [ ] Test changes
+  - [ ] Checked in changed Readme.adoc (make test-spec)
+  - [ ] Added new test to group Readme.adoc and yaml file
 - [ ] Code style update (formatting, renaming)
 - [ ] Refactoring (please detail in commit messages)
 - [ ] Build related changes
 - [ ] Documentation content changes
 - [ ] Other (please describe):
-
