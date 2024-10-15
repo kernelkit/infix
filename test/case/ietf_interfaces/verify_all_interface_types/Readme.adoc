@@ -27,7 +27,7 @@ image::topology.png[Verify that all interface types can be created topology]
 endif::testgroup[]
 endif::topdoc[]
 ==== Test sequence
-. Initialize
+. Set up topology and attach to target DUT
 . Configure an empty bridge br-0
 . Configure bridge br-X and associated interfaces
 . Configure VETH pair

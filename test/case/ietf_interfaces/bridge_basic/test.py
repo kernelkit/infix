@@ -1,18 +1,22 @@
 #!/usr/bin/env python3
-#
-# PING -->     br0 10.0.0.2
-#             /
-#   PC ---- e0
-#
-"""
+r"""
 Bridge basic
 
 Test basic connectivity to a bridge
+
+....
+
+    PING -->                br0 (10.0.0.2)
+                            /
+    PC -------- target:data
+
+....
+
 """
 import infamy
 
 with infamy.Test() as test:
-    with test.step("Initialize"):
+    with test.step("Set up topology and attach to target DUT"):
         env = infamy.Env()
         target = env.attach("target", "mgmt")
 

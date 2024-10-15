@@ -1,6 +1,8 @@
 === Custom MAC address on interface
 ==== Description
-Test possibility to set and remove custom mac address on interfaces
+Verify support for setting and removing a custom MAC address on interfaces.
+Both static MAC address and derived from the chassis MAC with, or without,
+an offset applied.
 
 ==== Topology
 ifdef::topdoc[]
@@ -15,11 +17,16 @@ image::topology.png[Custom MAC address on interface topology]
 endif::testgroup[]
 endif::topdoc[]
 ==== Test sequence
+. Verify target:data MAC address is reset to default
 . Initialize
-. Set custom MAC address to '02:01:00:c0:ff:ee' on target:mgmt
+. Set target:data static MAC address '02:01:00:c0:ff:ee'
 . Verify target:mgmt has MAC address '02:01:00:c0:ff:ee'
-. Remove custom MAC address '02:01:00:c0:ff:ee'
-. Verify that target:mgmt has the original MAC address again
+. Reset target:mgmt MAC address to default
+. Set target:data to chassis MAC
+. Verify target:data has chassis MAC
+. Set target:data to chassis MAC + offset
+. Verify target:data has chassis MAC + offset
+. Reset target:mgmt MAC address to default
 
 
 <<<
