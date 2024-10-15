@@ -34,7 +34,7 @@ def verify_interface(target, interface, expected_type):
 
 
 with infamy.Test() as test:
-    with test.step("Initialize"):
+    with test.step("Set up topology and attach to target DUT"):
         env  = infamy.Env()
         target = env.attach("target", "mgmt")
 

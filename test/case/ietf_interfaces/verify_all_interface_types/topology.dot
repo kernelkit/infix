@@ -7,7 +7,7 @@ graph "1x3" {
 	edge [color="cornflowerblue", penwidth="2"];
 
 	host [
-	    label="host | { <tgt> tgt  | <dummy0> dummy0 | <dummy1> dummy1 }",
+	    label="host | { <mgmt> mgmt  | <data1> data1 | <data2> data2 }",
 	    pos="0,12!",
 	    kind="controller",
 	];
@@ -19,7 +19,7 @@ graph "1x3" {
 	    kind="infix",
 	];
 
-	host:tgt -- target:mgmt [kind=mgmt]
-	host:dummy0 -- target:ethX [color=black]
-	host:dummy1 -- target:ethQ [color=black]
+	host:mgmt -- target:mgmt [kind=mgmt, color=lightgrey]
+	host:data1 -- target:ethX [color=black]
+	host:data2 -- target:ethQ [color=black]
 }

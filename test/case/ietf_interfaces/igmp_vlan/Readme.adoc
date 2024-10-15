@@ -2,6 +2,29 @@
 ==== Description
 Test tagged IGMP control traffic and that VLAN separation is respected for multicast
 
+....
+
+       VLAN55             VLAN77                          VLAN55              VLAN77
+      10.0.1.1           10.0.2.1                       10.0.1.2            10.0.2.2
+        \                    /                           \                     /
+         \                  /                             \                   /
+          \                /                               \                 /
+           \--------------/        VLAN 1,2 T               \---------------/
+           |    DUT1      +---------------------------------+      DUT2     |
+           |              |dut1:link               dut2:link|               |
+           +--------------+                                 +-----+---------+
+           |              |                                       |        | 
+ dut1:data1|              |dut1:data2                   dut2:data1|        |dut2:data2
+  VLAN55 U |              | VLAN77 U                     VLAN55 U |        | VLAN77 U
+           |              |                                       |        |
+           |              |                                       |        |
++-------+  |             +----------+                 +------------+       +--------+
+| msend +--+             | mreceive |                 | mreceive   |       | msend  |
++-------+                +----------+                 +------------+       +--------+
+ 10.0.1.11                 10.0.2.11                      10.0.1.22         10.0.2.22
+
+....
+
 ==== Topology
 ifdef::topdoc[]
 image::../../test/case/ietf_interfaces/igmp_vlan/topology.png[IGMP VLAN topology]
@@ -15,17 +38,17 @@ image::topology.png[IGMP VLAN topology]
 endif::testgroup[]
 endif::topdoc[]
 ==== Test sequence
-. Initialize
+. Set up topology and attach to target DUT
 . Configure device
-. Start multicast sender on host:data10, group 224.2.2.2
-. Start multicast sender on host:data21, group 224.1.1.1
-. Verify group 224.2.2.2 is flooded to host:data20
-. Verify group 224.1.1.1 is flooded to host:data11
-. Verify group 224.2.2.2 on host:data10, 224.1.1.1 on host:data20, 224.2.2.2 on host:data11 and 224.1.1.1 on host:data21 is not received
-. Join multicast group 224.2.2.2 on host:data20
-. Verify group 224.2.2.2 on host:data10, 224.1.1.1 on host:data20, 224.2.2.2 on host:data11 and 224.1.1.1 on host:data21 is not received
-. Verify group 224.2.2.2 is forwarded to host:data20
-. Verify group 224.1.1.1 is forwarded to host:data11
+. Start multicast sender on host:data11, group 224.2.2.2
+. Start multicast sender on host:data22, group 224.1.1.1
+. Verify group 224.2.2.2 is flooded to host:data21
+. Verify group 224.1.1.1 is flooded to host:data12
+. Verify group 224.2.2.2 on host:data11, 224.1.1.1 on host:data21, 224.2.2.2 on host:data12 and 224.1.1.1 on host:data22 is not received
+. Join multicast group 224.2.2.2 on host:data21
+. Verify group 224.2.2.2 on host:data11, 224.1.1.1 on host:data21, 224.2.2.2 on host:data12 and 224.1.1.1 on host:data22 is not received
+. Verify group 224.2.2.2 is forwarded to host:data21
+. Verify group 224.1.1.1 is forwarded to host:data12
 
 
 <<<

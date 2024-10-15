@@ -1,7 +1,4 @@
 #!/usr/bin/env python3
-#
-#   PC ---- e0: 10.0.0.2
-#
 """
 IPv4 link-local
 
@@ -9,6 +6,7 @@ Verifies that link-local (IPv4LL/ZeroConf) address assignment work as
 expected.  Checks random address, the request-address setting, and
 address removal on autoconf disable.
 """
+
 import ipaddress
 import infamy
 import infamy.iface

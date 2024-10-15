@@ -7,18 +7,18 @@ graph "1x2" {
 	edge [color="cornflowerblue", penwidth="2"];
 
 	host [
-	    label="host | { <tgt> tgt | <data> data }",
+	    label="host | { <mgmt> mgmt | <data> data }",
 	    pos="0,12!",
 	    kind="controller",
 	];
 
         target [
-	    label="{ <mgmt> mgmt | <data> data } | target\n10.0.0.2/24 (br0)",
+	    label="{ <mgmt> mgmt | <data> data } | target",
 	    pos="10,12!",
 
 	    kind="infix",
 	];
 
-	host:tgt -- target:mgmt [kind=mgmt]
+	host:mgmt -- target:mgmt [kind=mgmt, color=lightgrey]
 	host:data -- target:data [color=black, fontcolor=black, taillabel="10.0.0.1/24"]
 }

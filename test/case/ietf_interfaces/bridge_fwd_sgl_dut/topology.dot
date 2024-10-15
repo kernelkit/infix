@@ -7,19 +7,19 @@ graph "1x3" {
 	edge [color="cornflowerblue", penwidth="2"];
 
 	host [
-	    label="host | { <tgt> tgt | <data0> data0 | <data1>  data1 }",
+	    label="host | { <mgmt> mgmt | <data1> data1 | <data2>  data2 }",
 	    pos="0,12!",
 	    kind="controller",
 	];
 
         target [
-	    label="{ <mgmt> mgmt | <data0> data0 | <data1> data1 } | target",
+	    label="{ <mgmt> mgmt | <data1> data1 | <data2> data2 } | target",
 	    pos="10,12!",
 
 	    kind="infix",
 	];
 
-	host:tgt -- target:mgmt [kind=mgmt]
-	host:data0 -- target:data0 [color=black, fontcolor=black, taillabel="10.0.0.1"]
-	host:data1 -- target:data1 [color=black, fontcolor=black, taillabel="10.0.0.2"]
+	host:mgmt -- target:mgmt [kind=mgmt, color=lightgrey]
+	host:data1 -- target:data1 [color=black, fontcolor=black, taillabel="10.0.0.1"]
+	host:data2 -- target:data2 [color=black, fontcolor=black, taillabel="10.0.0.2"]
 }

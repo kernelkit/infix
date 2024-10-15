@@ -8,7 +8,7 @@ See issue #473 for details.
 import infamy
 
 with infamy.Test() as test:
-    with test.step("Connect to target"):
+    with test.step("Set up topology and attach to target DUT"):
         env = infamy.Env()
         target = env.attach("target", "mgmt")
         tgtssh = env.attach("target", "mgmt", "ssh")

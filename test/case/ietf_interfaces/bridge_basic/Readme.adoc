@@ -2,6 +2,14 @@
 ==== Description
 Test basic connectivity to a bridge
 
+....
+
+    PING -->                br0 (10.0.0.2)
+                            /
+    PC -------- target:data
+
+....
+
 ==== Topology
 ifdef::topdoc[]
 image::../../test/case/ietf_interfaces/bridge_basic/topology.png[Bridge basic topology]
@@ -15,7 +23,7 @@ image::topology.png[Bridge basic topology]
 endif::testgroup[]
 endif::topdoc[]
 ==== Test sequence
-. Initialize
+. Set up topology and attach to target DUT
 . Configure single bridge with a single physical port, bridge @ IP 10.0.0.2
 . Verify ping 10.0.0.2 is possible from host:data
 
