@@ -76,7 +76,7 @@ Getting Started
 
 In the CLI, containers can be run in one of two ways:
 
- 1. `container run IMAGE [COMMAND]`, and
+ 1. `container run IMAGE [COMMAND]`, or
  2. enter `configure` context, then `edit container NAME`
 
 The former is useful mostly for testing, or running single commands in
@@ -134,7 +134,7 @@ container at runtime.
 Container Images
 ----------------
 
-The underlying `podman` project support importing and fetching images in
+The underlying `podman` project supports importing and fetching images in
 a variety of ways, the most common ones are also supported by Infix.  In
 this section we present how to use them and in the next section we show
 how to upgrade to a newer base image.
@@ -211,7 +211,7 @@ admin-exec context ...
     admin@example:/var/tmp$ cli
     admin@example:/> container load /var/tmp/curios-oci-amd64.tar.gz name curios:edge
 
-> By assigning The `name curios:edge` is the tag you give the imported
+> The `name curios:edge` is the tag you give the imported
 > (raw) archive which you can then reference in your container image
 > configuration: `set image curios:edge`.
 
@@ -332,7 +332,7 @@ have to set manually:
     admin@example:/config/interface/docker0/> set container-network type bridge
 
 > **Note:** when doing the same operation over NETCONF there is no
-> inference, so all the "magic" settings needs to be defined.  This
+> inference, so all the "magic" settings need to be defined.  This
 > makes the CLI very useful for first setup and then extracting the
 > resulting XML from the shell using the `cfg -X` command.
 
@@ -403,7 +403,7 @@ example.
 
 The network `option` setting is available also for this case, but only
 the `interface_name=foo0` option works.  Which is still very useful.  To
-change the MAC address, you need to use the `custom-phys-adderss` in the
+change the MAC address, you need to use the `custom-phys-address` in the
 general network settings.
 
 [^3]: Something which the container bridge network type does behind the
@@ -440,7 +440,7 @@ can take a bit of a shortcut.
     admin@example:/config/container/ntpd/> set network interface ntpd
     admin@example:/config/container/ntpd/> leave
 
-> Use the `set network inteface ntpd option interface_name=foo0` to set
+> Use the `set network interface ntpd option interface_name=foo0` to set
 > the name of the interface inside the container to `foo0`.
 
 The point of the routed case is that port forwarding from the container
@@ -724,7 +724,7 @@ and then asking what the hostname is on the host:
 
 One use-case for this method is when extending Infix with a management
 container that connects to other systems.  For some tips on how to
-control an Infix system this way, see [Scripting Infix](scriptiong.md).
+control an Infix system this way, see [Scripting Infix](scripting.md).
 
 [^2]: The `nsenter` program is available from either the util-linux
     package in Debian/Ubuntu/Mint, or in BusyBox.  Note, however,
@@ -732,7 +732,7 @@ control an Infix system this way, see [Scripting Infix](scriptiong.md).
 
 
 [0]:      networking.md
-[1]:      https://github.com/kernelkit/infix/blob/main/src/confd/yang/infix-containers%402023-12-14.yang
+[1]:      https://github.com/kernelkit/infix/blob/main/src/confd/yang/infix-containers.yang
 [2]:      https://github.com/troglobit/mg
 [3]:      https://github.com/opencontainers/image-spec/blob/main/image-layout.md
 [4]:      system.md#ssh-authorized-key
