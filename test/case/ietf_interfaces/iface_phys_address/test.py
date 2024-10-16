@@ -32,14 +32,12 @@ def reset_mac(tgt, port, mac):
     node = "infix-interfaces:custom-phys-address"
     xpath = iface.get_xpath(port, node)
     tgt.delete_xpath(xpath)
-    with test.step("Verify target:data MAC address is reset to default"):
-        until(lambda: iface.get_phys_address(tgt, tport) == mac)
 
 
 with infamy.Test() as test:
     CMD = "jq -r '.[\"mac-address\"]' /run/system.json"
 
-    with test.step("Initialize"):
+    with test.step("Set up topology and attach to target DUT"):
         env = infamy.Env()
         target = env.attach("target", "mgmt")
         tgtssh = env.attach("target", "mgmt", "ssh")
@@ -65,14 +63,17 @@ with infamy.Test() as test:
         }
         target.put_config_dict("ietf-interfaces", config)
 
-    with test.step("Verify target:mgmt has MAC address '02:01:00:c0:ff:ee'"):
+    with test.step("Verify target:data has MAC address '02:01:00:c0:ff:ee'"):
         mac = iface.get_phys_address(target, tport)
         print(f"Current MAC: {mac}, should be: {STATIC}")
         assert mac == STATIC
 
-    with test.step("Reset target:mgmt MAC address to default"):
+    with test.step("Reset target:data MAC address to default"):
         reset_mac(target, tport, pmac)
 
+    with test.step("Verify target:data MAC address is reset to default"):
+        until(lambda: iface.get_phys_address(tgt, tport) == mac)
+        
     with test.step("Set target:data to chassis MAC"):
         config = {
             "interfaces": {
@@ -113,7 +114,11 @@ with infamy.Test() as test:
         print(f"Current MAC: {mac}, should be: {BMAC} (calculated)")
         assert mac == BMAC
 
-    with test.step("Reset target:mgmt MAC address to default"):
+    with test.step("Reset target:data MAC address to default"):
         reset_mac(target, tport, pmac)
 
+    with test.step("Verify target:data MAC address is reset to default"):
+        until(lambda: iface.get_phys_address(tgt, tport) == mac)
+
+        
     test.succeed()

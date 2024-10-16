@@ -24,7 +24,7 @@ graph "2x2" {
 
 	    kind="infix",
 	];
-	host:cli_mgmt -- client:mgmt [kind=mgmt]
-        host:ser_mgmt -- server:mgmt [kind=mgmt]
+	host:cli_mgmt -- client:mgmt [kind=mgmt, color=lightgrey]
+        host:ser_mgmt -- server:mgmt [kind=mgmt, color=lightgrey]
 	client:link -- server:link [color=black, fontcolor=black, taillabel="10.0.0.2/24", headlabel="10.0.0.1/24"]
 }

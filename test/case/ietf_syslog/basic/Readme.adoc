@@ -15,8 +15,8 @@ image::topology.png[Syslog Basic topology]
 endif::testgroup[]
 endif::topdoc[]
 ==== Test sequence
-. Initializing
-. Configure DUT
+. Set up topology and attach to target DUT
+. Configure syslog on DUT to log to files '/log/bar.log' (absolute path) and 'foo' (non-absolute).
 . Verify log files /var/log/foo and /var/log/bar.log have been created
 
 

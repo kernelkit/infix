@@ -62,7 +62,7 @@ with infamy.Test() as test:
             }
         })
 
-    with test.step("Verify ping from host:data0 to 10.0.0.1"):
+    with test.step("Verify ping from host:data1 to 10.0.0.2"):
         _, hport1 = env.ltop.xlate("host", "data1")
         _, hport2 = env.ltop.xlate("host", "data2")
 

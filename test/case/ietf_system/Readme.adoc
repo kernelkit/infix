@@ -12,3 +12,7 @@ include::user_admin/Readme.adoc[]
 include::timezone/Readme.adoc[]
 
 include::timezone_utc_offset/Readme.adoc[]
+
+include::ssh_key_authentication/Readme.adoc[]
+
+include::upgrade/Readme.adoc[]

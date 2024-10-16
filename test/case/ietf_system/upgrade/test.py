@@ -61,7 +61,7 @@ with infamy.Test() as test:
 
         target = env.attach("target", "mgmt")
 
-        _, hport = env.ltop.xlate("host", "tgt")
+        _, hport = env.ltop.xlate("host", "mgmt")
         _, tport = env.ltop.xlate("target", "mgmt")
         hip = netifaces.ifaddresses(hport)[netifaces.AF_INET6][0]["addr"]
         hip = hip.replace(f"%{hport}", f"%{tport}")

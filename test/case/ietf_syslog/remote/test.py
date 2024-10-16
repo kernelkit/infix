@@ -7,7 +7,7 @@ Verify logging to remote, acting as a remote, and RFC5424 log format.
 import infamy
 
 with infamy.Test() as test:
-    with test.step("Initialize"):
+    with test.step("Set up topology and attach to client and server DUTs"):
         env = infamy.Env()
         client = env.attach("client", "mgmt")
         server = env.attach("server", "mgmt")

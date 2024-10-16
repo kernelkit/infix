@@ -15,7 +15,7 @@ image::topology.png[Remote syslog topology]
 endif::testgroup[]
 endif::topdoc[]
 ==== Test sequence
-. Initialize
+. Set up topology and attach to client and server DUTs
 . Configure DUTs
 . Send security:notice log message from client
 . Verify reception of client log message, incl. sorting to /log/security on server

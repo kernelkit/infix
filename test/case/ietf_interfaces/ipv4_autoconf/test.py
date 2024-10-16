@@ -47,7 +47,7 @@ with infamy.Test() as test:
         env = infamy.Env()
         target = env.attach("target", "mgmt")
 
-    with test.step("Configure interface target:mgmt with IPv4 ZeroConf IP"):
+    with test.step("Configure interface target:data with IPv4 ZeroConf IP"):
         _, tport = env.ltop.xlate("target", "data")
 
         target.put_config_dict("ietf-interfaces", {
@@ -66,10 +66,10 @@ with infamy.Test() as test:
             }
         })
 
-    with test.step("Verify link-local address exist on target:mgmt"):
+    with test.step("Verify link-local address exist on target:data"):
         until(lambda: has_linklocal(target, tport), attempts=30)
 
-    with test.step("Configure target:mgmt with a specific IPv4 ZeroConf IP"):
+    with test.step("Configure target:data with a specific IPv4 ZeroConf IP"):
         _, tport = env.ltop.xlate("target", "data")
 
         target.put_config_dict("ietf-interfaces", {
@@ -89,16 +89,16 @@ with infamy.Test() as test:
             }
         })
 
-    with test.step("Verify target:mgmt has link-local address 169.254.42.42"):
+    with test.step("Verify target:data has link-local address 169.254.42.42"):
         until(lambda: has_linklocal(target, tport, request="169.254.42.42"),
               attempts=30)
 
-    with test.step("Remove IPv4 link-local addresses from target:mgmt"):
+    with test.step("Remove IPv4 link-local addresses from target:data"):
         xpath = f"/ietf-interfaces:interfaces/interface[name='{tport}']" \
             "/ietf-ip:ipv4/infix-ip:autoconf"
         target.delete_xpath(xpath)
 
-    with test.step("Verify link-local addresses has been removed from target:mgmt"):
+    with test.step("Verify link-local addresses has been removed from target:data"):
         until(lambda: no_linklocal(target, tport), attempts=30)
 
     test.succeed()
