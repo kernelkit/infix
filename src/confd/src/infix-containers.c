@@ -21,8 +21,6 @@
 #define  ACTIVE_QUEUE "/var/lib/containers/active"
 #define  LOGGER       "logger -t container -p local1.notice"
 
-int hostnamefmt(struct confd *confd, char **fmt);
-
 
 static int add(const char *name, struct lyd_node *cif)
 {
@@ -50,12 +48,12 @@ static int add(const char *name, struct lyd_node *cif)
 		fprintf(fp, " --dns-search %s", lyd_get_value(node));
 
 	if ((string = lydx_get_cattr(cif, "hostname"))) {
-		char *fmt = (char *)string;
+		char buf[65];
 
-		if (hostnamefmt(&confd, &fmt))
+		if (hostnamefmt(&confd, string, buf, sizeof(buf)))
 			ERRNO("%s: failed setting custom hostname", name);
 		else
-			fprintf(fp, " --hostname %s", fmt);
+			fprintf(fp, " --hostname %s", buf);
 	}
 
 	if (lydx_is_enabled(cif, "read-only"))

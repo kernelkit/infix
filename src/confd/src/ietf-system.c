@@ -1595,23 +1595,6 @@ static char *get_mac(struct confd *confd, char *mac, size_t len)
 	return mac;
 }
 
-#define REPLACE_SPECIFIER(replacement)				\
-	do {							\
-		size_t repl_len = strlen(replacement);		\
-		char *ptr;					\
-								\
-		hostlen += repl_len;				\
-		ptr = realloc(hostname, hostlen + 1);		\
-		if (!ptr) {					\
-			free(hostname);				\
-			free(*fmt);				\
-			return -1;				\
-		}						\
-		hostname = ptr;					\
-		strlcat(hostname, replacement, hostlen + 1);	\
-		j += repl_len;					\
-	} while (0)
-
 /*
  * Decode hostname format specifiers (non-standard, Infix specifc)
  *
@@ -1622,82 +1605,62 @@ static char *get_mac(struct confd *confd, char *mac, size_t len)
  *
  * NOTE: to be forward compatible, any unknown % combination will be silently consumed.
  *       E.g., "example-%z" will become "example-"
- *
- * XXX: PLEASE REFACTOR THIS INTO A PYTHON HELPER FOR FUTURE EXTENSIONS, OR BUGS!
  */
-int hostnamefmt(struct confd *confd, char **fmt)
+int hostnamefmt(struct confd *confd, const char *fmt, char *buf, size_t len)
 {
-	size_t hostlen, fmt_len;
-	char *hostname;
 	char mac[10];
-	size_t i, j;
+	size_t i;
 
-	if (!fmt || !*fmt || !strchr(*fmt, '%'))
-		return 0;
-
-	hostlen = fmt_len = strlen(*fmt);
-	hostname = calloc(hostlen + 1, sizeof(char));
-	if (!hostname)
+	if (!fmt || !*fmt)
 		return -1;
 
-	for (i = 0, j = 0; i < fmt_len; i++) {
-		if ((*fmt)[i] == '%') {
-			switch ((*fmt)[++i]) {
+	memset(buf, 0, len);
+
+	for (i = 0; i < strlen(fmt); i++) {
+		if (fmt[i] == '%') {
+			switch (fmt[++i]) {
 			case 'i':
-				REPLACE_SPECIFIER(id);
+				strlcat(buf, id, len);
 				break;
 			case 'h':
-				REPLACE_SPECIFIER(nm);
+				strlcat(buf, nm, len);
 				break;
 			case 'm':
-				REPLACE_SPECIFIER(get_mac(confd, mac, sizeof(mac)));
+				strlcat(buf, get_mac(confd, mac, sizeof(mac)), len);
 				break;
 			case '%':
-				if (j < hostlen) {
-					hostname[j++] = '%';
-					hostname[j]   = 0;
-				}
+				strlcat(buf, "%", len);
 				break;
 			default:
 				break; /* Unknown, skip */
 			}
 		} else {
-			if (j < hostlen) {
-				hostname[j++] = (*fmt)[i];
-				hostname[j]   = 0;
-			}
+			char ch[2] = { fmt[i], 0 };
+			strlcat(buf, ch, len);
 		}
 	}
 
-	free(*fmt);
-	*fmt = hostname;
-
 	return 0;
 }
-
-#undef REPLACE_SPECIFIER
 
 static int change_hostname(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
 	const char *xpath, sr_event_t event, unsigned request_id, void *priv)
 {
 	struct confd *confd = (struct confd *)priv;
 	const char *hostip = "127.0.1.1";
-	char *hostnm, buf[256];
+	char  hostnm[65], buf[256];
+	const char *fmt;
 	FILE *nfp, *fp;
 	int err, fd;
 
 	if (event != SR_EV_DONE)
 		return SR_ERR_OK;
 
-	hostnm = srx_get_str(session, "%s", xpath);
-	if (!hostnm) {
+	fmt = srx_get_str(session, "%s", xpath);
+	if (!fmt) {
 	fallback:
-		hostnm = strdup(nm);
-		if (!hostnm) {
-			err = SR_ERR_NO_MEMORY;
-			goto err;
-		}
-	} else if (hostnamefmt(confd, &hostnm))
+		strlcpy(hostnm, nm, sizeof(hostnm));
+	} else if (hostnamefmt(confd, fmt, hostnm, sizeof(hostnm)))
 		goto fallback;
 
 	err = sethostname(hostnm, strlen(hostnm));
@@ -1754,9 +1717,6 @@ static int change_hostname(sr_session_ctx_t *session, uint32_t sub_id, const cha
 	systemf("avahi-set-host-name %s", hostnm);
 	systemf("initctl -nbq touch netbrowse");
 err:
-	if (hostnm)
-		free(hostnm);
-
 	if (err) {
 		ERROR("Failed activating changes.");
 		return err;
