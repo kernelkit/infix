@@ -52,12 +52,10 @@ static int add(const char *name, struct lyd_node *cif)
 	if ((string = lydx_get_cattr(cif, "hostname"))) {
 		char *fmt = (char *)string;
 
-		if (hostnamefmt(&confd, &fmt)) {
+		if (hostnamefmt(&confd, &fmt))
 			ERRNO("%s: failed setting custom hostname", name);
-		} else {
+		else
 			fprintf(fp, " --hostname %s", fmt);
-			free(fmt);
-		}
 	}
 
 	if (lydx_is_enabled(cif, "read-only"))
