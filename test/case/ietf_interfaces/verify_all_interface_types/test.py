@@ -22,10 +22,10 @@ import infamy.iface as iface
 
 
 def verify_interface(target, interface, expected_type):
-    assert iface.interface_exist(target, interface), f"Interface <{interface}> does not exist."
+    assert iface.exist(target, interface), f"Interface <{interface}> does not exist."
 
     expected_type = f"infix-if-type:{expected_type}"
-    actual_type = iface._iface_get_param(target, interface, "type")
+    actual_type = iface.get_param(target, interface, "type")
 
     if expected_type == "infix-if-type:etherlike"  and actual_type == "infix-if-type:ethernet":
         return  # Allow 'etherlike' to match 'ethernet'

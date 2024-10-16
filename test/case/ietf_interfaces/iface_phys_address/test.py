@@ -30,7 +30,7 @@ def calc_mac(base_mac, mac_offset):
 def reset_mac(tgt, port, mac):
     """Reset DUT interface MAC address to default."""
     node = "infix-interfaces:custom-phys-address"
-    xpath = iface.get_iface_xpath(port, node)
+    xpath = iface.get_xpath(port, node)
     tgt.delete_xpath(xpath)
     with test.step("Verify target:data MAC address is reset to default"):
         until(lambda: iface.get_phys_address(tgt, tport) == mac)

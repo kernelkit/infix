@@ -51,9 +51,9 @@ with infamy.Test() as test:
         })
 
     with test.step("Verify interfaces 'veth0a' and 'veth0b' exists"):
-        assert iface.interface_exist(target, veth0a), \
+        assert iface.exist(target, veth0a), \
             f"Interface <{veth0a}> does not exist."
-        assert iface.interface_exist(target, veth0b), \
+        assert iface.exist(target, veth0b), \
             f"Interface <{veth0b}> does not exist."
 
     with test.step("Set IP address on target:eth0 (dummy op)"):
@@ -97,15 +97,15 @@ with infamy.Test() as test:
         target = env.attach("target", "mgmt")
 
     with test.step("Verify target:eth0 and target:eth1 still exist"):
-        assert iface.interface_exist(target, eth0), \
+        assert iface.exist(target, eth0), \
             f"Interface {eth0} missing!"
-        assert iface.interface_exist(target, eth1), \
+        assert iface.exist(target, eth1), \
             f"Interface {eth1} missing!"
 
     with test.step("Verify VETH pair have been removed"):
-        assert not iface.interface_exist(target, veth0a), \
+        assert not iface.exist(target, veth0a), \
             f"Interface <{veth0a}> still exists!"
-        assert not iface.interface_exist(target, veth0b), \
+        assert not iface.exist(target, veth0b), \
             f"Interface <{veth0b}> still exists!"
 
     test.succeed()
