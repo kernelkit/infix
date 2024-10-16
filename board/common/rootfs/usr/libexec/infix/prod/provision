@@ -17,6 +17,13 @@ device
   - Initializes auxiliary and configuration filesystems and metadata
   - Installs Infix to both primary and secondary partitions
 
+To run this script again (on an already provisioned system), erase the
+partition table, reboot and netboot Infix again.
+
+Example:
+
+  sudo sgdisk --zap-all /dev/mmcblk0
+
 EOF
 }
 
