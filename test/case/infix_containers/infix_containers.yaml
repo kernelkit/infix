@@ -11,3 +11,7 @@
 
 - name: container_veth
   case: container_veth/test.py
+
+- name: container_firewall_basic
+  case: container_firewall_basic/test.py
+
