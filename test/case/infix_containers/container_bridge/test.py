@@ -20,7 +20,6 @@ from   infamy.util import until
 
 with infamy.Test() as test:
     NAME  = "web-docker0"
-    IMAGE = "curios-httpd-edge.tar.gz"
     DUTIP = "10.0.0.2"
     OURIP = "10.0.0.1"
     BODY  = "<html><body><p>Kilroy was here</p></body></html>"
@@ -67,7 +66,7 @@ with infamy.Test() as test:
                 "container": [
                     {
                         "name": f"{NAME}",
-                        "image": f"oci-archive:{infamy.Container.IMAGE}",
+                        "image": f"oci-archive:{infamy.Container.HTTPD_IMAGE}",
                         "command": "/usr/sbin/httpd -f -v -p 91",
                         "mount": [
                             {
