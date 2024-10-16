@@ -105,11 +105,23 @@ application to run.
 > unlike virtualization, containers reuse the host's CPU and kernel.
 
 
+<img align="right" src="img/docker-hello-world.svg" alt="Hello World" width=360>
+
 ### Examples
 
 Classic Hello World:
 
     admin@example:/> container run docker://hello-world
+    Starting docker://hello-world :: use Ctrl-p Ctrl-q to detach
+    Trying to pull docker.io/library/hello-world:latest...
+    Getting image source signatures
+    Copying blob c1ec31eb5944 done
+    Copying config d2c94e258d done
+    Writing manifest to image destination
+    Storing signatures
+
+    Hello from Docker!
+    This message shows that your installation appears to be working correctly.
 
 Persistent web server using nginx, sharing the host's network:
 
@@ -223,6 +235,10 @@ archive, which helps greatly with container upgrades (see below):
 
 Upgrading a Container Image
 ---------------------------
+<img align="right" src="img/shield-checkmark.svg" alt="Hello World" width=100>
+
+The applications in your container are an active part of the system as a
+whole, so make it a routine to keep your container images up-to-date!
 
 > **Note:** the default writable layer is lost when upgrading the image.
 > Use named volumes for content that you want to persist across upgrades.
