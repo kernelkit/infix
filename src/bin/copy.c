@@ -31,6 +31,7 @@ struct infix_ds infix_config[] = {
 };
 
 static const char *prognm = "copy";
+static int timeout;
 
 
 /*
@@ -157,7 +158,7 @@ static int copy(const char *src, const char *dst, const char *user)
 			fprintf(stderr, ERRMSG "unable to open transaction to %s\n", dst);
 		} else {
 			sr_nacm_set_user(sess, username);
-			rc = sr_copy_config(sess, NULL, srcds->datastore, 0);
+			rc = sr_copy_config(sess, NULL, srcds->datastore, timeout * 1000);
 			if (rc)
 				emsg(sess, ERRMSG "unable to copy configuration, err %d: %s\n",
 				     rc, sr_strerror(rc));
@@ -314,7 +315,8 @@ static int usage(int rc)
 	       "Options:\n"
 	       "  -h         This help text\n"
 	       "  -u USER    Username for remote commands, like scp\n"
-	       "  -v         Show version\n", prognm);
+	       "  -t SEEC    Timeout for the operation, or default %d sec\n"
+	       "  -v         Show version\n", prognm, timeout);
 
 	return rc;
 }
@@ -324,10 +326,15 @@ int main(int argc, char *argv[])
 	const char *user = NULL, *src = NULL, *dst = NULL;
 	int c;
 
-	while ((c = getopt(argc, argv, "hu:v")) != EOF) {
+	timeout = fgetint("/etc/default/confd", "=", "CONFD_TIMEOUT");
+
+	while ((c = getopt(argc, argv, "ht:u:v")) != EOF) {
 		switch(c) {
 		case 'h':
 			return usage(0);
+		case 't':
+			timeout = atoi(optarg);
+			break;
 		case 'u':
 			user = optarg;
 			break;
@@ -336,6 +343,9 @@ int main(int argc, char *argv[])
 			return 0;
 		}
 	}
+
+	if (timeout < 0)
+		timeout = 120;
 
 	if (optind >= argc)
 		return usage(1);
