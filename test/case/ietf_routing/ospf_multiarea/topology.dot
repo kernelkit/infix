@@ -45,8 +45,8 @@ graph "ring-4-duts" {
     PC:mgmt4 -- R4:mgmt [kind=mgmt, color="lightgray", overlap=false, weight=0.1]
 
     # PC-Dut links
-    PC:data3 -- R3:data [color="darkgreen", headlabel=".1", label="192.168.3.0/24", taillabel=".2", labeldistance=2, fontcolor="darkgreen"]
-    PC:data4 -- R4:data [color="darkgreen", headlabel=".1", label="192.168.4.0/24&#160;", taillabel=".2", labeldistance=2, fontcolor="darkgreen"]
+    PC:data3 -- R3:data [color="purple", headlabel=".1", label="192.168.3.0/24\n(Area 1)", taillabel=".2", labeldistance=2, fontcolor="purple"]
+    PC:data4 -- R4:data [color="black", headlabel=".1", label="192.168.4.0/24&#160;", taillabel=".2", labeldistance=2, fontcolor="black"]
 
     # Ring
     R1:ring1 -- R2:ring2 [color="blue", headlabel=".2", label="(Area 0)\n10.0.12.0/30", taillabel=".1", labeldistance=2, fontcolor="blue"]

@@ -16,8 +16,8 @@ image::topology.png[USB configuration with two USB ports topology]
 endif::testgroup[]
 endif::topdoc[]
 ==== Test sequence
-. Initialize
-. Lock the first  USB port, and unlock the second USB port
+. Set up topology and attach to target DUTs
+. Lock the first USB port and unlock the second USB port
 . Verify that the correct port is locked and the correct one is unlocked
 . Unlock the first USB port, and lock the second USB port
 . Verify that the correct port is locked and the correct one is unlocked

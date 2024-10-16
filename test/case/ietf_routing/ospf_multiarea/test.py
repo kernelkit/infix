@@ -34,6 +34,20 @@ failures using BFD, though BFD is not yet implemented in test framework (Infamy)
 This test also verifies broadcast and point-to-point interface types on /30 network, and
 explicit router-id.
 
+....
+  +-------------+  +---------------+  +-------------+  +---------------+
+  |     R1      |  |      R2       |  |     R3      |  |      R4       |
+  | 10.0.0.1/32 |  |  10.0.0.2/32  |  | 10.0.0.3/32 |  |  10.0.0.4/32  |
+  |   (lo)      |  |  11.0.9.1/24  |  |   (lo)      |  |      (lo)     |
+  +-------------+  |  11.0.10.1/24 |  +-------------+   +---------------+
+                   |  11.0.11.1/24 |
+                   |  11.0.12.1/24 |
+                   |  11.0.13.1/24 |
+                   |  11.0.14.1/24 |
+                   |  11.0.15.1/24 |
+                   |      (lo)     |
+                   +---------------+
+....
 """
 import infamy
 
@@ -71,11 +85,7 @@ def config_target1(target, ring1, ring2, cross):
                             "address": [{
                                 "ip": "10.0.13.1",
                                 "prefix-length": 30
-                            },
-                            {
-                                "ip": "10.0.0.1",
-                                "prefix-length": 32
-                           }]
+                            }]
                         }
                     },
                     {
@@ -85,7 +95,11 @@ def config_target1(target, ring1, ring2, cross):
                             "address": [{
                                     "ip": "11.0.8.1",
                                     "prefix-length": 24
-                                }]
+                            },
+                            {
+                                "ip": "10.0.0.1",
+                                "prefix-length": 32
+                           }]
                         }
                     }
                 ]
@@ -128,7 +142,12 @@ def config_target1(target, ring1, ring2, cross):
                                         "hello-interval": 1,
                                         "enabled": True,
                                         "cost": 2000
+                                    },
+                                    {
+                                        "name": "lo",
+                                        "enabled": True
                                     }]
+
                                 }
                             },{
                                 "area-id": "0.0.0.2",
@@ -142,10 +161,6 @@ def config_target1(target, ring1, ring2, cross):
                                         "hello-interval": 1,
                                         "enabled": True,
                                         "interface-type": "point-to-point"
-                                    },
-                                    {
-                                        "name": "lo",
-                                        "enabled": True
                                     }]
                                 }
                             }]
@@ -513,7 +528,7 @@ def disable_link(target, link):
 
 
 with infamy.Test() as test:
-    with test.step("Configure targets"):
+    with test.step("Set up topology and attach to target DUTs"):
         env = infamy.Env()
         R1 = env.attach("R1", "mgmt")
         R2 = env.attach("R2", "mgmt")
@@ -534,6 +549,8 @@ with infamy.Test() as test:
         _, R2cross = env.ltop.xlate("R2", "cross")
         _, R3cross = env.ltop.xlate("R3", "cross")
         _, R4cross = env.ltop.xlate("R4", "cross")
+
+    with test.step("Configure targets"):
         parallel(config_target1(R1, R1ring1, R1ring2, R1cross),
                  config_target2(R2, R2ring1, R2ring2, R2cross),
                  config_target3(R3, R3ring2, R3cross, R3data),

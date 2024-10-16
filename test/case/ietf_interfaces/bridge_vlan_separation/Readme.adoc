@@ -2,6 +2,25 @@
 ==== Description
 Test that two VLANs are correctly separated in the bridge
 
+....
+    ,-----------------------------------,   ,----------------------------------,
+    |                         dut1:link |   | dut2:link                        |
+    |                      br0  --------|---|---------  br0                    |
+    |                     / \           |   |          / \                     |
+    |dut1:mgmt  dut1:data1   dut1:data2 |   | dut2:data1  dut2:data2 dut2:mgmt |
+    '-----------------------------------'   '----------------------------------'
+        |             |        |                  |            |         |
+        |             |        |                  |            |         |
+ ,------------------------------------------------------------------------------,
+ |  host:mgmt0 host:data10 host:data11    host:data20  host:data21  host:mgmt1  |
+ |             [10.0.0.1]   [10.0.0.2]     [10.0.0.3]     [10.0.0.4]            |
+ |              (ns10)         (ns11)          (s20)         (ns21)             |
+ |                                                                              |
+ |                                        [ HOST ]                              |
+ '------------------------------------------------------------------------------'
+
+....
+
 ==== Topology
 ifdef::topdoc[]
 image::../../test/case/ietf_interfaces/bridge_vlan_separation/topology.png[Bridge VLAN separation topology]
@@ -15,7 +34,7 @@ image::topology.png[Bridge VLAN separation topology]
 endif::testgroup[]
 endif::topdoc[]
 ==== Test sequence
-. Initialize
+. Set up topology and attach to target DUT
 . Configure DUTs
 . Verify ping 10.0.0.3 from host:data10
 . Verify ping 10.0.0.4 from host:data11

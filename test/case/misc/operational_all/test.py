@@ -2,9 +2,9 @@
 
 # Test that it is possible to get all operational data
 """
-Get all operational
+Get operational
 
-Basic test just to get all operational.
+Basic test just to get operational from test-config without errors.
 """
 import infamy
 import infamy.iface as iface
@@ -14,7 +14,10 @@ with infamy.Test() as test:
         env = infamy.Env()
         target = env.attach("target", "mgmt")
 
-    with test.step("Get all Operational data from 'target'"):
+    with test.step("Copy test-config to running configuration"):
+        pass
+
+    with test.step("Get all Operational data from 'target', verify there are no errors"):
         target.get_data(parse=False)
 
     test.succeed()

@@ -13,26 +13,26 @@ graph "2x4" {
 	];
 
         dut1 [
-	    label="{ <mgmt> mgmt | <data0> data0 | <data1> data1 } | { \n dut1 \n\n |  <data2> data2 }",
+	    label="{ <mgmt> mgmt | <data1> data1 | <data2> data2 } | { \n dut1 \n\n |  <link> link }",
 	    pos="2,15.25!",
 	    fontsize=12,
 	    kind="infix",
 	];
 
         dut2 [
-		label="{ <mgmt> mgmt | <data0> data0 | <data1> data1 } | { <data2> data2 | \n dut2 \n\n }",
+		label="{ <mgmt> mgmt | <data1> data1| <data2> data2 } | { <link> link | \n dut2 \n\n }",
 	    pos="2,14.75!",
 	    fontsize=12,
 	    kind="infix",
 	];
 
-	host:mgmt1 -- dut1:mgmt [kind=mgmt]
-	host:data10 -- dut1:data0 [color=purple, fontcolor=purple, taillabel="10.0.0.1", headlabel="VLAN10 U"]
-	host:data11 -- dut1:data1 [color=darkgreen, fontcolor=darkgreen, taillabel="10.0.0.2", headlabel="VLAN20 U"]
+	host:mgmt1 -- dut1:mgmt [kind=mgmt, color="lightgray"]
+	host:data10 -- dut1:data1 [color=purple, fontcolor=purple, taillabel="10.0.0.1", headlabel="VLAN10 U"]
+	host:data11 -- dut1:data2 [color=darkgreen, fontcolor=darkgreen, taillabel="10.0.0.2", headlabel="VLAN20 U"]
 
-	host:mgmt2 -- dut2:mgmt [kind=mgmt]
-	host:data20 -- dut2:data0 [color=purple, fontcolor=purple, taillabel="10.0.0.3", headlabel="VLAN10 U"]
-	host:data21 -- dut2:data1 [color=darkgreen, fontcolor=darkgreen, taillabel="10.0.0.4", headlabel="VLAN20 U"]
+	host:mgmt2 -- dut2:mgmt [kind=mgmt color="lightgrey"]
+	host:data20 -- dut2:data1 [color=purple, fontcolor=purple, taillabel="10.0.0.3", headlabel="VLAN10 U"]
+	host:data21 -- dut2:data2 [color=darkgreen, fontcolor=darkgreen, taillabel="10.0.0.4", headlabel="VLAN20 U"]
 
-	dut1:data2 -- dut2:data2 [color=black, fontcolor=black, fontsize=12, label="VLAN 10,20 T"]
+	dut1:link -- dut2:link [color=black, fontcolor=black, fontsize=12, label="VLAN 10,20 T"]
 }

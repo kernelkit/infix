@@ -16,6 +16,7 @@ image::topology.png[OSPF Basic topology]
 endif::testgroup[]
 endif::topdoc[]
 ==== Test sequence
+. Set up topology and attach to target DUTs
 . Configure targets
 . Wait for OSPF routes
 . Test connectivity from PC:data to 192.168.200.1

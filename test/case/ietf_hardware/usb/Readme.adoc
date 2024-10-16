@@ -23,7 +23,7 @@ image::topology.png[USB configuration topology]
 endif::testgroup[]
 endif::topdoc[]
 ==== Test sequence
-. Initialize
+. Set up topology and attach to target DUT
 . Unlock all USB ports
 . Verify that all USB ports are unlocked
 . Lock all USB ports

@@ -1,29 +1,33 @@
 #!/usr/bin/env python3
-#           ¦                              ¦
-#           ¦       vlan10 IP:10.0.0.2     ¦        br0  IP:10.0.0.3
-#           ¦       /                      ¦       /
-#           ¦     br0  <-- VLAN filtering  ¦     e0.10
-#           ¦   u/  \t                     ¦    /
-#   PC ------- e0    e1 ---------------------- e0
-# PING -->  ¦             dut1             ¦            dut2
-#
+
 """
 Bridge VLAN
 
-Basic test of VLAN functionality in a bridge
+Basic test of VLAN functionality in a bridge, tagged/untagged traffic and a VLAN interface in the bridge.
+....
+           ¦                              ¦
+           ¦       vlan10 IP:10.0.0.2     ¦        br0  IP:10.0.0.3
+           ¦       /                      ¦       /
+           ¦     br0  <-- VLAN filtering  ¦   link.10
+           ¦   u/  \\t                     ¦    /
+   PC ------data    link -----------------|-- link
+           ¦    dut1                      ¦   dut2
+....
+
 """
 import infamy
 
 with infamy.Test() as test:
-    with test.step("Configure DUTs"):
+    with test.step("Set up topology and attach to target DUT"):
         env  = infamy.Env()
         dut1 = env.attach("dut1", "mgmt")
         dut2 = env.attach("dut2", "mgmt")
 
         _, dut1_e0 = env.ltop.xlate("dut1", "data")
-        _, dut1_e1 = env.ltop.xlate("dut1", "to_dut2")
-        _, dut2_e0 = env.ltop.xlate("dut2", "to_dut1")
+        _, dut1_e1 = env.ltop.xlate("dut1", "link")
+        _, dut2_e0 = env.ltop.xlate("dut2", "link")
 
+    with test.step("Configure DUTs"):
         dut1.put_config_dict("ietf-interfaces", {
             "interfaces": {
                 "interface": [
@@ -117,8 +121,8 @@ with infamy.Test() as test:
             }
         })
 
-    with test.step("Verify ping from host:data1 to 10.0.0.2 and 10.0.0.3"):
-        _, hport = env.ltop.xlate("host", "data1")
+    with test.step("Verify ping from host:data to 10.0.0.2 and 10.0.0.3"):
+        _, hport = env.ltop.xlate("host", "data")
 
         with infamy.IsolatedMacVlan(hport) as ns:
             ns.addip("10.0.0.1")

@@ -153,7 +153,7 @@ def config_target2(target, link):
 
 
 with infamy.Test() as test:
-    with test.step("Configure targets"):
+    with test.step("Set up topology and attach to target DUTs"):
         env = infamy.Env()
         R1 = env.attach("R1", "mgmt")
         R2 = env.attach("R2", "mgmt")
@@ -162,15 +162,17 @@ with infamy.Test() as test:
         _, R2link = env.ltop.xlate("R2", "link")
         _, R1link = env.ltop.xlate("R1", "link")
 
+    with test.step("Configure targets"):
         parallel(lambda: config_target1(R1, R1data, R1link),
                  lambda: config_target2(R2, R2link))
+
     with test.step("Wait for OSPF routes"):
         print("Waiting for OSPF routes..")
         until(lambda: route.ipv4_route_exist(R1, "192.168.200.1/32", proto="ietf-ospf:ospfv2"), attempts=200)
         until(lambda: route.ipv4_route_exist(R2, "192.168.100.1/32", proto="ietf-ospf:ospfv2"), attempts=200)
         until(lambda: route.ipv4_route_exist(R2, "192.168.10.0/24", proto="ietf-ospf:ospfv2"), attempts=200)
 
-    with test.step("Check interface type"):
+    with test.step("Verify interface type on R1:link and R2:link is point-to-point"):
         assert(route.ospf_get_interface_type(R1, "0.0.0.0", R1link) == "point-to-point")
         assert(route.ospf_get_interface_type(R2, "0.0.0.0", R2link) == "point-to-point")
 

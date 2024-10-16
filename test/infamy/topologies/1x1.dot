@@ -7,7 +7,7 @@ graph "1x1" {
 	edge [color="cornflowerblue", penwidth="2"];
 
 	host [
-	    label="host | { <tgt> tgt }",
+	    label="host | { <mgmt> mgmt }",
 	    pos="0,12!",
 	    kind="controller",
 	];
@@ -19,5 +19,5 @@ graph "1x1" {
 	    kind="infix",
 	];
 
-	host:tgt -- target:mgmt [kind=mgmt]
+	host:mgmt -- target:mgmt  [kind=mgmt, color="lightgray"]
 }

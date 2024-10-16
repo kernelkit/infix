@@ -25,8 +25,8 @@ graph "2x2" {
 
 	    kind="infix",
 	];
-	PC:mgmt1 -- R1:mgmt [kind=mgmt]
-        PC:mgmt2 -- R2:mgmt [kind=mgmt]
-	PC:data  -- R1:data [headlabel=".2", taillabel=".1", label="192.168.10.0/24", fontcolor="black", color="black"]
+	PC:mgmt1 -- R1:mgmt [kind=mgmt, color="lightgray"]
+        PC:mgmt2 -- R2:mgmt [kind=mgmt, color="lightgray"]
+	PC:data  -- R1:data [headlabel=".1", taillabel=".2", label="192.168.10.0/24", fontcolor="black", color="black"]
 	R1:link  -- R2:link [headlabel=".2", taillabel=".1", label="192.168.50.0/24", labeldistance=1, fontcolor="black", color="black"]
 }

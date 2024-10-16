@@ -1,22 +1,25 @@
 #!/usr/bin/env python3
 #
-# PING -->     br0      br1 10.0.0.2
-#             /   \    /
-#   PC ---- e0     veth
-#
+
 """
-Dual bridges
+Dual bridges on one device
 
 Verify that it is possible to ping through a bridge to another bridge via VETH interfaces.
+
+....
+ PING -->     br0             br1 10.0.0.2
+             /   \\              /
+PC - target:data  veth0a - veth0b
+....
 """
 import infamy
 
 with infamy.Test() as test:
-    with test.step("Initialize"):
+    with test.step("Set up topology and attach to target DUTs"):
         env = infamy.Env()
         target = env.attach("target", "mgmt")
 
-    with test.step("Configure two bridges linked with a veth pair furthest bridge has IP 10.0.0.2"):
+    with test.step("Configure two bridges linked and a veth pair"):
         _, tport = env.ltop.xlate("target", "data")
 
         target.put_config_dict("ietf-interfaces", {

@@ -13,7 +13,7 @@ import infamy.netconf as netconf
 from infamy.util import until,wait_boot
 
 with infamy.Test() as test:
-    with test.step("Initialize"):
+    with test.step("Set up topology and attach to target DUTs"):
         env = infamy.Env()
         target = env.attach("target", "mgmt")
         available=usb.get_usb_ports(target)
@@ -21,7 +21,7 @@ with infamy.Test() as test:
         if len(available) < 2:
             test.skip()
 
-    with test.step("Lock the first  USB port, and unlock the second USB port"):
+    with test.step("Lock the first USB port and unlock the second USB port"):
         components = []
         component = {
             "name": available[0],
