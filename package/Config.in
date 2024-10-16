@@ -1,4 +1,6 @@
 menu "Packages"
+
+source "$BR2_EXTERNAL_INFIX_PATH/package/bin/Config.in"
 source "$BR2_EXTERNAL_INFIX_PATH/package/confd/Config.in"
 source "$BR2_EXTERNAL_INFIX_PATH/package/confd-test-mode/Config.in"
 source "$BR2_EXTERNAL_INFIX_PATH/package/curios-httpd/Config.in"
@@ -34,4 +36,5 @@ source "$BR2_EXTERNAL_INFIX_PATH/package/sysrepo-cpp/Config.in"
 source "$BR2_EXTERNAL_INFIX_PATH/package/rousette/Config.in"
 source "$BR2_EXTERNAL_INFIX_PATH/package/nghttp2-asio/Config.in"
 source "$BR2_EXTERNAL_INFIX_PATH/package/date-cpp/Config.in"
+
 endmenu

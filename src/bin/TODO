@@ -1,0 +1,2 @@
+* Add bash completion to 'copy' + 'erase', use 'files'
+* https://github.com/kernelkit/infix/issues/373
