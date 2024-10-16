@@ -10,6 +10,9 @@ All notable changes to the project are documented in this file.
 addresses for interfaces!  For details, see below issue #680.
 
 ### Changes
+- Correcting documentation on QoS. For packets containing both a VLAN
+  tag and an IP header, PCP priority takes precedence over DSCP
+  priority (not vice versa).
 - Update CONTRIBUTING.md for scaling core team and helping external
   contributors understand the development process, issue #672
 - OSPF: Add limitation to only allow one interface per area

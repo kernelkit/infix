@@ -54,8 +54,8 @@ significant bits of the DSCP is used to select the queue:
 |   6 | 48-55 | ⇒ |     6 |     25 |
 |   7 | 56-63 | ⇒ |     7 |     33 |
 
-For packets containing both a VLAN tag and an IP header, DSCP priority
-takes precedence over PCP priority. In cases where neither are
+For packets containing both a VLAN tag and an IP header, PCP priority
+takes precedence over DSCP priority. In cases where neither are
 available, packets are always assigned to queue 0.
 
 Each port's set of 8 egress queues operate on a Weighted Round Robin
