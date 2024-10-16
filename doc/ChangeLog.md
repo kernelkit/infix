@@ -15,7 +15,7 @@ addresses for interfaces!  For details, see below issue #680.
   priority (not vice versa).
 - Update CONTRIBUTING.md for scaling core team and helping external
   contributors understand the development process, issue #672
-- OSPF: Add limitation to only allow one interface per area
+- OSPF: Add limitation to allow an interface to be in one area only
 - Add support for "dummy" interfaces, mostly useful for testing
 - Add support for container hostname format specifiers, just like it
   already works for the host's hostname setting
@@ -50,7 +50,7 @@ addresses for interfaces!  For details, see below issue #680.
 - Fix #708: allow all container networks to set interface name inside
   container, not just auto-generated veth-pair ends for `docker0` bridge
 - Fix BFD in OSPF, previously you could not enable BFD on a single
-  interface without it was enabled on all interfaces
+  interface without enabling it on all interfaces
 
 
 [v24.09.0][] - 2024-09-30
