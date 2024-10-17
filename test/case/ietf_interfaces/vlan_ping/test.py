@@ -4,25 +4,30 @@ VLAN ping connectivity
 
 Very basic test if the VLAN interface configuration works.
 """
+
 import infamy
 import infamy.iface as iface
-import copy
 
 from infamy import until
 
 def test_ping(hport, should_pass):
-      with infamy.IsolatedMacVlan(hport) as ns:
-            pingtest = ns.runsh("""
-            set -ex
+    with infamy.IsolatedMacVlan(hport) as ns:
+        try:
+            ns.runsh("""
+                  set -ex
+                  ip link set iface up
+                  ip link add dev vlan10 link iface up type vlan id 10
+                  ip addr add 10.0.0.1/24 dev vlan10
+                  """)
 
-            ip link set iface up
-            ip link add dev vlan10 link iface up type vlan id 10
-            ip addr add 10.0.0.1/24 dev vlan10
-            """)
-            if(should_pass):
+            if should_pass:
                 ns.must_reach("10.0.0.2")
             else:
                 ns.must_not_reach("10.0.0.2")
+
+        except Exception as e:
+            print(f"An error occurred during the VLAN setup or ping test: {e}")
+            raise
 
 with infamy.Test() as test:
       with test.step("Set up topology and attach to target DUT"):
@@ -60,7 +65,7 @@ with infamy.Test() as test:
             })
 
       with test.step("Waiting for links to come up"):
-            until(lambda: iface.get_oper_up(target, tport))
+            until(lambda: iface.get_param(target, tport, "oper-status") == "up")
 
       with test.step("Ping 10.0.0.2 from VLAN 10 on host:data with IP 10.0.0.1"):
             _, hport = env.ltop.xlate("host", "data")

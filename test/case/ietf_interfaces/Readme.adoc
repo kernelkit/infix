@@ -38,3 +38,5 @@ include::static_multicast_filters/Readme.adoc[]
 include::vlan_qos/Readme.adoc[]
 
 include::verify_all_interface_types/Readme.adoc[]
+
+include::iface_enable_disable/Readme.adoc[]

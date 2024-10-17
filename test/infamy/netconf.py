@@ -374,7 +374,7 @@ class Device(Transport):
 
     def get_iface(self, name):
         """Fetch target dict for iface and extract param from JSON"""
-        content = self.get_data(iface.get_iface_xpath(name))
+        content = self.get_data(iface.get_xpath(name))
         interface = content.get("interfaces", {}).get("interface", None)
 
         if interface is None:

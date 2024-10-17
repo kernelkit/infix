@@ -55,3 +55,6 @@
 
 - name: verify_all_interface_types
   case: verify_all_interface_types/test.py
+
+- name: iface_enable_disable
+  case: iface_enable_disable/test.py
