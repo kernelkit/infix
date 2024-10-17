@@ -1,0 +1,35 @@
+graph "2x4" {
+	layout="neato";
+	overlap="false";
+	esep="+40";
+
+        node [shape=record, fontname="monospace"];
+	edge [color="cornflowerblue", penwidth="2"];
+
+	host [
+	    label="host | { <mgmt1> mgmt1 | <data> data | <mgmt2> mgmt2 }",
+	    pos="0,15!",
+	    kind="controller",
+	];
+
+        target1 [
+	    label="{ <mgmt> mgmt | <data> data | <link> link } | { \n dut1 \n\n }",
+	    pos="8,15!",
+
+	    kind="infix",
+	];
+
+        target2 [
+            label="{ <link> link | <mgmt> mgmt } | { \n dut2 \n\n }",
+	    pos="8,12!",
+
+	    kind="infix",
+	];
+
+	host:mgmt1 -- target1:mgmt [kind=mgmt, color="lightgrey"]
+	host:data -- target1:data [color=black, fontcolor=black, taillabel="10.10.10.1/24"]
+
+	host:mgmt2 -- target2:mgmt [kind=mgmt, color="lightgrey"]
+	
+	target1:link -- target2:link [color=black, fontcolor=black, headlabel="10.10.10.2/24"]
+}
