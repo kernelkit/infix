@@ -15,10 +15,23 @@
 # where the tag priority is snooped, with different combinations of
 # pcp<->priority mappings and verify the results.
 """
-VLAN QoS
+VLAN Interface Ingress/Egress QoS
 
 Inject different packets from the host and verify that the VLAN priority
-is handled correctly
+is handled correctly for traffic ingressing and egressing a VLAN interface.
+
+The test verifies that ingress PCP priority is mapped correctly to internal
+priority ('from pcp' or static '0..7'), and that internal priority is mapped
+correctly to PCP on egress ('from internal priority' or static '0..7').
+
+    { "id": 1, "pcp": 0, "ingress": 0,          "egress": 0,               "expect": 0 },
+    { "id": 2, "pcp": 0, "ingress": 0,          "egress": 1,               "expect": 1 },
+    { "id": 3, "pcp": 0, "ingress": 3,          "egress": 0,               "expect": 0 },
+    { "id": 4, "pcp": 0, "ingress": 4,          "egress": "from-priority", "expect": 4 },
+    { "id": 5, "pcp": 5, "ingress": "from-pcp", "egress": "from-priority", "expect": 5 },
+    { "id": 6, "pcp": 6, "ingress": "from-pcp", "egress": "from-priority", "expect": 6 },
+
+
 """
 import infamy
 
@@ -34,8 +47,14 @@ PACKETS = (
     { "id": 6, "pcp": 6, "ingress": "from-pcp", "egress": "from-priority", "expect": 6 },
 )
 
+def verify_priority_mapping(p):
+    expect = f"192.168.10.2 > 192.168.11.2: ICMP echo request, id {p['id']}"
+    assert expect in packets, f"Missing id={p['id']}"
+    expect = f"vlan 11, p {p['expect']}, ethertype IPv4 (0x0800), " + expect
+    assert expect in packets, f"PCP mismatch for id={p['id']}"
+
 with infamy.Test() as test:
-    with test.step("Initialize"):
+    with test.step("Set up topology and attach to target DUT"):
         env = infamy.Env()
         target = env.attach("target", "mgmt")
         _, td0 = env.ltop.xlate("target", "data0")
@@ -143,12 +162,28 @@ with infamy.Test() as test:
         packets = pcap.tcpdump("-e")
         print(packets)
 
-    for p in PACKETS:
-        with test.step(f"Verify that id={p['id']} was received with pcp={p['expect']}"):
-            expect = f"192.168.10.2 > 192.168.11.2: ICMP echo request, id {p['id']}"
-            assert expect in packets, f"Missing id={p['id']}"
+        pkt=PACKETS[0]
+        with test.step ("Verify that packet with id=1 egressed with pcp=0"):
+            verify_priority_mapping(pkt)
 
-            expect = f"vlan 11, p {p['expect']}, ethertype IPv4 (0x0800), " + expect
-            assert expect in packets, f"PCP mismatch for id={p['id']}"
+        pkt=PACKETS[1]
+        with test.step ("Verify that packet with id=2 egressed with pcp=1"):
+            verify_priority_mapping(pkt)
 
+        pkt=PACKETS[2]
+        with test.step ("Verify that packet with id=3 egressed with pcp=0"):
+            verify_priority_mapping(pkt)       
+
+        pkt=PACKETS[3]
+        with test.step ("Verify that packet with id=4 egressed with pcp=4"):
+            verify_priority_mapping(pkt)
+            
+        pkt=PACKETS[4]
+        with test.step ("Verify that packet with id=5 egressed with pcp=5"):
+            verify_priority_mapping(pkt)                  
+
+        pkt=PACKETS[5]
+        with test.step ("Verify that packet with id=6 egressed with pcp=6"):
+            verify_priority_mapping(pkt)       
+            
     test.succeed()

@@ -16,7 +16,7 @@ endif::testgroup[]
 endif::topdoc[]
 ==== Test sequence
 . Set up topology and attach to client and server DUTs
-. Configure DUTs
+. Configure client DUT as syslog client with server DUT as remote, and configure server DUT as syslog server
 . Send security:notice log message from client
 . Verify reception of client log message, incl. sorting to /log/security on server
 

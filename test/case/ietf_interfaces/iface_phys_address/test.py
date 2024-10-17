@@ -27,7 +27,7 @@ def calc_mac(base_mac, mac_offset):
     return ':'.join(f'{x:02x}' for x in result)
 
 
-def reset_mac(tgt, port, mac):
+def reset_mac(tgt, port):
     """Reset DUT interface MAC address to default."""
     node = "infix-interfaces:custom-phys-address"
     xpath = iface.get_xpath(port, node)
@@ -69,10 +69,10 @@ with infamy.Test() as test:
         assert mac == STATIC
 
     with test.step("Reset target:data MAC address to default"):
-        reset_mac(target, tport, pmac)
+        reset_mac(target, tport)
 
     with test.step("Verify target:data MAC address is reset to default"):
-        until(lambda: iface.get_phys_address(tgt, tport) == mac)
+        until(lambda: iface.get_phys_address(target, tport) == pmac)
         
     with test.step("Set target:data to chassis MAC"):
         config = {
@@ -115,10 +115,10 @@ with infamy.Test() as test:
         assert mac == BMAC
 
     with test.step("Reset target:data MAC address to default"):
-        reset_mac(target, tport, pmac)
+        reset_mac(target, tport)
 
     with test.step("Verify target:data MAC address is reset to default"):
-        until(lambda: iface.get_phys_address(tgt, tport) == mac)
+        until(lambda: iface.get_phys_address(target, tport) == pmac)
 
         
     test.succeed()
