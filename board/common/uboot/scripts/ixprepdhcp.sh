@@ -3,17 +3,18 @@ setenv autoload no
 if test -n "${ipaddr}" || dhcp; then
     setenv proto tftp
     setenv dltool tftpboot
+    setenv dlfile "${bootfile}"
 
     if setexpr proto sub "^(http|tftp)://.*" "\\1" "${bootfile}"; then
 	if test "${proto}" = "http"; then
 	    setenv dltool wget
-	    setexpr bootfile sub "^http://([^/]+?)/(.*)" "\1:/\2"
+	    setexpr dlfile sub "^http://([^/]+?)/(.*)" "\\1:/\\2" "${bootfile}"
 	else
-	    setexpr bootfile sub "^tftp://([^/]+?)/(.*)" "\1:\2"
+	    setexpr dlfile sub "^tftp://([^/]+?)/(.*)" "\\1:\\2" "${bootfile}"
 	fi
     fi
 
-    if ${dltool} ${ramdisk_addr_r} "${bootfile}"; then
+    if ${dltool} ${ramdisk_addr_r} "${dlfile}"; then
 	setenv old_fdt_addr ${fdt_addr}
 	if fdt addr ${ramdisk_addr_r}; then
 	    fdt get value sqoffs /images/rootfs data-position
