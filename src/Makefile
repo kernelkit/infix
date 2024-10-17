@@ -1,5 +1,5 @@
 # Host build of critical components, for Coverity Scan mostly
-APPS = confd execd factory keyack statd
+APPS = bin confd execd factory keyack statd
 
 .PHONY: all
 all:

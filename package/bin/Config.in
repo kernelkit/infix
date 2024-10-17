@@ -1,0 +1,8 @@
+config BR2_PACKAGE_BIN
+	bool "bin"
+	select BR2_PACKAGE_SYSREPO
+	select BR2_PACKAGE_LIBITE
+	help
+	  Misc. tools for CLI and shell users.
+
+	  https://github.com/kernelkit/infix
