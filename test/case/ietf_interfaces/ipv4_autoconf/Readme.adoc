@@ -18,12 +18,12 @@ endif::testgroup[]
 endif::topdoc[]
 ==== Test sequence
 . Set up topology and attach to target DUT
-. Configure interface target:mgmt with IPv4 ZeroConf IP
-. Verify link-local address exist on target:mgmt
-. Configure target:mgmt with a specific IPv4 ZeroConf IP
-. Verify target:mgmt has link-local address 169.254.42.42
-. Remove IPv4 link-local addresses from target:mgmt
-. Verify link-local addresses has been removed from target:mgmt
+. Configure interface target:data with IPv4 ZeroConf IP
+. Verify link-local address exist on target:data
+. Configure target:data with a specific IPv4 ZeroConf IP
+. Verify target:data has link-local address 169.254.42.42
+. Remove IPv4 link-local addresses from target:data
+. Verify link-local addresses has been removed from target:data
 
 
 <<<

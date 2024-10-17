@@ -40,3 +40,6 @@ include::vlan_qos/Readme.adoc[]
 include::verify_all_interface_types/Readme.adoc[]
 
 include::iface_enable_disable/Readme.adoc[]
+
+include::veth_delete/Readme.adoc[]
+

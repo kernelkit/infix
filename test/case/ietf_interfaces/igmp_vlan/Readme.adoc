@@ -3,26 +3,20 @@
 Test tagged IGMP control traffic and that VLAN separation is respected for multicast
 
 ....
-
        VLAN55             VLAN77                          VLAN55              VLAN77
       10.0.1.1           10.0.2.1                       10.0.1.2            10.0.2.2
-        \                    /                           \                     /
-         \                  /                             \                   /
           \                /                               \                 /
            \--------------/        VLAN 1,2 T               \---------------/
            |    DUT1      +---------------------------------+      DUT2     |
            |              |dut1:link               dut2:link|               |
            +--------------+                                 +-----+---------+
-           |              |                                       |        | 
  dut1:data1|              |dut1:data2                   dut2:data1|        |dut2:data2
   VLAN55 U |              | VLAN77 U                     VLAN55 U |        | VLAN77 U
-           |              |                                       |        |
            |              |                                       |        |
 +-------+  |             +----------+                 +------------+       +--------+
 | msend +--+             | mreceive |                 | mreceive   |       | msend  |
 +-------+                +----------+                 +------------+       +--------+
  10.0.1.11                 10.0.2.11                      10.0.1.22         10.0.2.22
-
 ....
 
 ==== Topology

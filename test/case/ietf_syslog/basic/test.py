@@ -9,14 +9,14 @@ import infamy
 import infamy.ssh as ssh
 
 with infamy.Test() as test:
-    with test.step("Initializing"):
+    with test.step("Set up topology and attach to target DUT"):
         env = infamy.Env()
         target = env.attach("target", "mgmt")
         tgtssh = env.attach("target", "mgmt", "ssh")
         factory = env.get_password("target")
         address = target.get_mgmt_ip()
 
-    with test.step("Configure DUT"):
+    with test.step("Configure syslog on DUT to log to files '/log/bar.log' (absolute path) and 'foo' (non-absolute)."):
         target.put_config_dict("ietf-syslog", {
             "syslog": {
                 "actions": {

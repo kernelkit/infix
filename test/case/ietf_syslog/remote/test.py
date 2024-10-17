@@ -7,14 +7,14 @@ Verify logging to remote, acting as a remote, and RFC5424 log format.
 import infamy
 
 with infamy.Test() as test:
-    with test.step("Initialize"):
+    with test.step("Set up topology and attach to client and server DUTs"):
         env = infamy.Env()
         client = env.attach("client", "mgmt")
         server = env.attach("server", "mgmt")
         clientssh = env.attach("client", "mgmt", "ssh")
         serverssh = env.attach("server", "mgmt", "ssh")
 
-    with test.step("Configure DUTs"):
+    with test.step("Configure client DUT as syslog client with server DUT as remote, and configure server DUT as syslog server"): 
         _, client_link = env.ltop.xlate("client", "link")
         _, server_link = env.ltop.xlate("server", "link")
 

@@ -17,16 +17,17 @@ image::topology.png[Custom MAC address on interface topology]
 endif::testgroup[]
 endif::topdoc[]
 ==== Test sequence
-. Verify target:data MAC address is reset to default
-. Initialize
+. Set up topology and attach to target DUT
 . Set target:data static MAC address '02:01:00:c0:ff:ee'
-. Verify target:mgmt has MAC address '02:01:00:c0:ff:ee'
-. Reset target:mgmt MAC address to default
+. Verify target:data has MAC address '02:01:00:c0:ff:ee'
+. Reset target:data MAC address to default
+. Verify target:data MAC address is reset to default
 . Set target:data to chassis MAC
 . Verify target:data has chassis MAC
 . Set target:data to chassis MAC + offset
 . Verify target:data has chassis MAC + offset
-. Reset target:mgmt MAC address to default
+. Reset target:data MAC address to default
+. Verify target:data MAC address is reset to default
 
 
 <<<
