@@ -1,0 +1,67 @@
+From 46ffa81f5c88ce95db011369d8bfb802313e4217 Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Thu, 17 Oct 2024 14:23:24 +0200
+Subject: [PATCH] Only mark rdeps dirty if main service is nohup
+Organization: Addiva Elektronik
+
+This patch changes a behavior that's been default since Finit 4.0,
+introduced in 4d05bf9 with 4.0-rc2.
+
+If service B depends on A and A needs to be reloaded, then B may be
+affected.  If A is declared as NOHUP <!>, then A will be stopped and
+restarted, during which time the condition it provides is removed,
+and B will also be stopped.
+
+However, and as of this patch, if A is declared supporting HUP, then the
+condition A provides will only go into flux, during which time B will be
+SIGSTOPed instead of needing to be reloaded.
+
+Fix #415
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ src/service.c | 8 ++++++++
+ src/svc.h     | 1 +
+ 2 files changed, 9 insertions(+)
+
+diff --git a/src/service.c b/src/service.c
+index 61be85c..b995ff4 100644
+--- a/src/service.c
++++ b/src/service.c
+@@ -2001,6 +2001,10 @@ static void svc_mark_affected(char *cond)
+  * Called on conf_reload() to update service reverse dependencies.
+  * E.g., if ospfd depends on zebra and the zebra Finit conf has
+  * changed, we need to mark the ospfd Finit conf as changed too.
++ *
++ * However, a daemon that depends on syslogd (sysklogd project), need
++ * not be reloeaded (SIGHUP'ed or stop/started) because syslogd support
++ * reloading its configuration file on SIGHUP.
+  */
+ void service_update_rdeps(void)
+ {
+@@ -2012,6 +2016,10 @@ void service_update_rdeps(void)
+ 		if (!svc_is_changed(svc))
+ 			continue;
+ 
++		/* Service supports reloading conf without stop/start  */
++		if (!svc_is_nohup(svc))
++			continue; /* Yup, no need to stop start rdeps */
++
+ 		svc_mark_affected(mkcond(svc, cond, sizeof(cond)));
+ 	}
+ }
+diff --git a/src/svc.h b/src/svc.h
+index d00ac14..e2f6bd8 100644
+--- a/src/svc.h
++++ b/src/svc.h
+@@ -259,6 +259,7 @@ static inline int svc_is_tty       (svc_t *svc) { return svc && SVC_TYPE_TTY
+ static inline int svc_is_runtask   (svc_t *svc) { return svc && (SVC_TYPE_RUNTASK & svc->type);}
+ static inline int svc_is_forking   (svc_t *svc) { return svc && svc->forking; }
+ static inline int svc_is_manual    (svc_t *svc) { return svc && svc->manual; }
++static inline int svc_is_nohup     (svc_t *svc) { return svc && (0 == svc->sighup); }
+ 
+ static inline int svc_in_runlevel  (svc_t *svc, int runlevel) { return svc && ISSET(svc->runlevels, runlevel); }
+ static inline int svc_nohup        (svc_t *svc) { return svc &&  (0 == svc->sighup || 0 != svc->args_dirty); }
+-- 
+2.43.0
+
