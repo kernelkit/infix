@@ -10,6 +10,9 @@ All notable changes to the project are documented in this file.
 addresses for interfaces!  For details, see below issue #680.
 
 ### Changes
+- Software control of port LEDs on the Styx platform has been disabled.
+  Default driver behavior, green link and green traffic blink, is kept
+  as-is, which should mitigate issues reported in #670
 - Correcting documentation on QoS. For packets containing both a VLAN
   tag and an IP header, PCP priority takes precedence over DSCP
   priority (not vice versa).
