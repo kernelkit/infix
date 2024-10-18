@@ -268,10 +268,10 @@
   </COMMAND>
 
   <COMMAND name="ntp" help="Show NTP (client) status">
-    <ACTION sym="script">ntp tracking</ACTION>
+    <ACTION sym="script">doas ntp tracking</ACTION>
     <SWITCH name="optional" min="0">
       <COMMAND name="sources" help="Show NTP sources">
-        <ACTION sym="script">ntp sources</ACTION>
+        <ACTION sym="script">doas ntp sources</ACTION>
       </COMMAND>
     </SWITCH>
   </COMMAND>
