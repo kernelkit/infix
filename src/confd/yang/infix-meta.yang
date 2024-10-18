@@ -7,12 +7,19 @@ module infix-meta {
   contact      "kernelkit@googlegroups.com";
   description  "Infix metadata.";
 
+  revision 2024-10-18 {
+    description "Mark entire meta container obsolete.";
+    reference "internal";
+  }
   revision 2024-06-19 {
     description "Initial revision.";
     reference "internal";
   }
 
   container meta {
+    description "Meta data";
+    status obsolete;
+
     leaf version {
       status obsolete; // Ensure frontends don't show this, used for migration.
       description "Configuration file format version, automatically generated.";
