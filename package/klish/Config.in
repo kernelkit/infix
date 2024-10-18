@@ -1,6 +1,7 @@
 config BR2_PACKAGE_KLISH
 	bool "klish"
 	depends on BR2_USE_MMU
+	select BR2_PACKAGE_BIN
 	select BR2_PACKAGE_FAUX
 	select BR2_PACKAGE_LIBXML2
 	help
