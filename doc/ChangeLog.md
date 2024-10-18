@@ -4,10 +4,8 @@ Change Log
 All notable changes to the project are documented in this file.
 
 
-[v24.10.1][UNRELEASED]
+[v24.10.1][] - 2024-10-18
 -------------------------
-
-### Changes
 
 ### Fixes
  - Fix #735: `copy` and `erase` commands missing from CLI, regression
@@ -1247,6 +1245,7 @@ Supported YANG models in addition to those used by sysrepo and netopeer:
 
 [buildroot]:  https://buildroot.org/
 [UNRELEASED]: https://github.com/kernelkit/infix/compare/v24.10.0...HEAD
+[v24.10.1]:   https://github.com/kernelkit/infix/compare/v24.10.0...v24.10.1
 [v24.10.0]:   https://github.com/kernelkit/infix/compare/v24.09.0...v24.10.0
 [v24.09.0]:   https://github.com/kernelkit/infix/compare/v24.08.0...v24.09.0
 [v24.08.0]:   https://github.com/kernelkit/infix/compare/v24.06.0...v24.08.0
