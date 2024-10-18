@@ -3,6 +3,17 @@ Change Log
 
 All notable changes to the project are documented in this file.
 
+
+[v24.10.1][UNRELEASED]
+-------------------------
+
+### Changes
+
+### Fixes
+ - Fix #735: `copy` and `erase` commands missing from CLI, regression
+   in Infix v24.10.0 defconfigs, now added as dep. in klish package
+
+
 [v24.10.0][] - 2024-10-18
 -------------------------
 
