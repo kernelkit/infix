@@ -3,11 +3,14 @@ Change Log
 
 All notable changes to the project are documented in this file.
 
-[v24.10.0][] - UNRELEASED
+[v24.10.0][] - 2024-10-18
 -------------------------
 
 **News:** this release contains *breaking YANG changes* in custom MAC
 addresses for interfaces!  For details, see below issue #680.
+
+Also, heads-up to all downstream users of Infix.  YANG models have been
+renamed to ease maintenance, more info below.
 
 ### Changes
 - Software control of port LEDs on the Styx platform has been disabled.
@@ -18,21 +21,36 @@ addresses for interfaces!  For details, see below issue #680.
   priority (not vice versa).
 - Update CONTRIBUTING.md for scaling core team and helping external
   contributors understand the development process, issue #672
+- Updated branding documentation with more information on how dynamic
+  and static factory-config work, including examples
+- Updated container documentation, improved images, detail how to set
+  interface name inside the container, and some syntax fixes
+- Updated networking documentation, new General settings section, and
+  more details added to initial section on network building blocks
+- As of this release, all Infix YANG models have dropped the `@DATE`
+  suffix from the name, this type of versioning is not handled using
+  symlinks instead.
+- Update Infix `provision` script, used to install Infix on eMMC, add
+  example of how to erase partition table to be able to re-run the
+  script on already provisioned devices, issue #671
 - OSPF: Add limitation to allow an interface to be in one area only
 - Add support for "dummy" interfaces, mostly useful for testing
 - Add support for container hostname format specifiers, just like it
   already works for the host's hostname setting
-- Updated container documentation, improved images, detail how to set
-  interface name inside the container, and some syntax fixes
+- Hide all `status obsolete` YANG nodes in CLI
+- Add YANG `units`, if available, to CLI help text (default value)
+- The CLI commands `copy` and `erase` are now available also from Bash
 - Greatly reduced size of bundled curiOS httpd OCI container image,
   reduced from 1.8 MiB to 281 KiB
+- Add deviation to ietf-interfaces.yang, `link-up-down-trap-enable` is
+  not supported (yet) in Infix, issue #709
 - The default builds now include the curiOS nftables container image,
   which can be used for advanced firewall setups.  For an introduction
   see <https://kernelkit.org/posts/firewall-container/>
 
 ### Fixes
-- Fix #499: add an NACM rule to factory config, which by default
-  deny everyone to read user password hash(es)
+- Fix #499: add an NACM rule to factory-config, which by default deny
+  everyone to read user password hash(es)
 - Fix #663: internal Ethernet interfaces shown in CLI tab completion
 - Fix #674: CLI `show interfaces` display internal Ethernet interfaces,
   regression introduced late in v24.09 release cycle
@@ -50,8 +68,17 @@ addresses for interfaces!  For details, see below issue #680.
   this includes all operational data in ietf-routing:/routing/ribs.
 - Fix #697: password is not always set for new users, bug introduced
   in v24.06.0 when replacing Augeas with native user handling
+- Fix #700: add missing `admin-status` to interface operational data
+- Fix #701: make sure CLI (and Bash) `copy` command use same sysrepo
+  timeout as other operations that load sysrepo.  Was 10 second timeout,
+  which caused some (really big) configurations not to apply from the
+  CLI, but worked at boot, for instance.  New timeout is 60 seconds
 - Fix #708: allow all container networks to set interface name inside
   container, not just auto-generated veth-pair ends for `docker0` bridge
+- Fix `show interfaces` on platforms like the NanoPi R2S, which does not
+  support reading RMON counters in JSON format using `ethtool`
+- Fix #730: CLI command `show ntp [sources]` stopped working in v24.08.
+  Missing access rights after massive CLI lock-down
 - Fix BFD in OSPF, previously you could not enable BFD on a single
   interface without enabling it on all interfaces
 
@@ -1208,7 +1235,8 @@ Supported YANG models in addition to those used by sysrepo and netopeer:
  - N/A
 
 [buildroot]:  https://buildroot.org/
-[UNRELEASED]: https://github.com/kernelkit/infix/compare/v24.08.0...HEAD
+[UNRELEASED]: https://github.com/kernelkit/infix/compare/v24.10.0...HEAD
+[v24.10.0]:   https://github.com/kernelkit/infix/compare/v24.09.0...v24.10.0
 [v24.09.0]:   https://github.com/kernelkit/infix/compare/v24.08.0...v24.09.0
 [v24.08.0]:   https://github.com/kernelkit/infix/compare/v24.06.0...v24.08.0
 [v24.06.0]:   https://github.com/kernelkit/infix/compare/v24.04.0...v24.06.0
