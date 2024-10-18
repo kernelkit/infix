@@ -43,7 +43,7 @@ bool wait_key_state(FILE *fp, int code, int val)
 
 int main(int argc, char **argv)
 {
-	char *dev = "/dev/input/event0";
+	const char *dev = "/dev/input/event0";
 	int opt, code = KEY_RESTART;
 	bool success;
 	FILE *fp;
@@ -59,7 +59,6 @@ int main(int argc, char **argv)
 		case 'k':
 			code = strtol(optarg, NULL, 0);
 			break;
-
 		default:
 			fprintf(stderr, "unknown option '%c'\n", opt);
 			usage(); exit(1);
