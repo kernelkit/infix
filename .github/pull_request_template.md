@@ -24,4 +24,5 @@ Tick *relevant* boxes, this PR is-a or has-a:
 - [ ] Refactoring (please detail in commit messages)
 - [ ] Build related changes
 - [ ] Documentation content changes
+  - [ ] ChangeLog updated (for major changes)
 - [ ] Other (please describe):
