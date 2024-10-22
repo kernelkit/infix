@@ -4,8 +4,14 @@ ninepm             := $(BR2_EXTERNAL_INFIX_PATH)/test/9pm/9pm.py
 spec-dir           := $(test-dir)/spec
 test-specification := $(O)/images/test-specification.pdf
 
-UNIT_TESTS  ?= $(test-dir)/case/all-repo.yaml $(test-dir)/case/all-unit.yaml
-TESTS ?= $(test-dir)/case/all.yaml
+UNIT_TESTS         ?= $(test-dir)/case/all-repo.yaml $(test-dir)/case/all-unit.yaml
+TESTS              ?= $(test-dir)/case/all.yaml
+ifeq ($INFIX_OEM_PATH), "")
+GIT_PATH            = $(INFIX_OEM_PATH)
+else
+GIT_PATH            = $(BR2_EXTERNAL_INFIX_PATH)
+endif
+GIT_VERSION         = $(shell git -C $(GIT_PATH) describe --dirty --always --tags)
 
 IMAGE ?= infix
 TOPOLOGY-DIR ?= $(test-dir)/virt/quad
@@ -34,7 +40,7 @@ test-sh:
 	$(test-dir)/env $(base) $(mode) $(binaries) -i /bin/sh
 
 test-spec:
-	@sed 's/{REPLACE}/$(subst ",,$(INFIX_NAME))/'  $(spec-dir)/Readme.adoc.in > $(spec-dir)/Readme.adoc
+	@sed 's/{REPLACE}/$(subst ",,$(INFIX_NAME)) $(GIT_VERSION)/'  $(spec-dir)/Readme.adoc.in > $(spec-dir)/Readme.adoc
 	@$(spec-dir)/generate_spec.py -d $(test-dir)/case -r $(BR2_EXTERNAL_INFIX_PATH)
 	@asciidoctor-pdf --failure-level INFO --theme $(spec-dir)/theme.yml -a pdf-fontsdir=$(spec-dir)/fonts -o $(test-specification) $(spec-dir)/Readme.adoc
 
