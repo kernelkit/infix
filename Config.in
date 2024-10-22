@@ -52,6 +52,17 @@ config INFIX_IMAGE_ID
 	  Mandatory.  When INFIX_RELEASE is set, this string is appended to
 	  the IMAGE_ID with a '-' separator.
 
+config INFIX_COMPATIBLE
+	string "Operating system compatible string"
+	default "${INFIX_IMAGE_ID}"
+	help
+	  A lower-case string (no spaces or other characters outside of 0–9,
+	  a–z, ".", "_" and "-"), used for image identification at upgrade.
+	  E.g., the RAUC [system] compatible string.
+
+	  Mandatory.  Defaults to $INFIX_IMAGE_ID, which in turn is composed
+	  of $INFIX_ID-$BR2_ARCH.
+
 config INFIX_TAGLINE
 	string "Operating system tagline"
 	default "Infix -- a Network Operating System"
