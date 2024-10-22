@@ -16,7 +16,7 @@ port accessed from the host.
 """
 import base64
 import infamy
-from   infamy.util import until
+from   infamy.util import until, to_binary
 
 with infamy.Test() as test:
     NAME  = "web-docker0"
@@ -34,7 +34,7 @@ with infamy.Test() as test:
 
     with test.step("Create container 'web-docker0' from bundled OCI image"):
         _, ifname = env.ltop.xlate("target", "data")
-        enc = base64.b64encode(BODY.encode('utf-8'))
+        data = to_binary(BODY)
         target.put_config_dict("ietf-interfaces", {
             "interfaces": {
                 "interface": [
@@ -71,7 +71,7 @@ with infamy.Test() as test:
                         "mount": [
                             {
                                 "name": "index.html",
-                                "content": f"{enc.decode('utf-8')}",
+                                "content": f"{data}",
                                 "target": "/var/www/index.html"
                             }
                         ],
