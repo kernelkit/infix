@@ -14,6 +14,24 @@ for file in /sys/firmware/qemu_fw_cfg/by_name/opt/mactab/raw /etc/mactab; do
 	fi
 done
 
+# Sometimes the sysfs is not populated when the switch driver is loaded, with the result
+# that the DSA interface was not found (no /dsa/tagging entry in sysfs. See issue #685.
+#
+# This mitigates that problem by waiting for sysfs to come up if a DSA switch is found
+if [ -n "$(devlink -j dev info | jq -r '.info.[].driver' | grep -q mv88e6085)" ]; then
+	timeout=50
+	while [ -z "$(ls /sys/class/net/*/dsa/tagging)" ]; do
+		timeout=$((timeout-1))
+		if [ $timeout -eq 0 ]; then
+			logger -k -p user.emerg -t "$ident" "Failed to find DSA interface"
+			exit 1
+		fi
+		sleep 0.1
+	done
+
+	logger -k -p user.notice -t "$ident" "Found DSA interface in $timeout seconds"
+fi
+
 # Find CPU interfaces used for connecting to a switch managed by DSA
 for netif in /sys/class/net/*; do
 	iface=$(basename "$netif")
