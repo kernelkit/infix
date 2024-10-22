@@ -145,7 +145,7 @@ is committed by issuing the `leave` command.
 admin@host:/config/> edit system
 admin@host:/config/system/> set hostname example
 admin@host:/config/system/> leave
-admin@example:/> 
+admin@host:/> 
 ```
 
 The hostname is advertised over mDNS-SD in the `.local` domain.  If
@@ -200,6 +200,82 @@ admin@host:/>
 > issuing the `leave` command.  I.e., you must change the editor first,
 > and then re-enter configure context to use your editor of choice.
 
+
+## NTP Client Configuration
+
+Below is an example configuration for enabling NTP 
+with a specific server and the `iburst` option for faster initial 
+synchronization.
+
+```
+admin@host:/> configure
+admin@host:/config/> set system ntp enabled
+admin@host:/config/> set system ntp server ntp-pool
+admin@host:/config/> set system ntp server ntp-pool udp address pool.ntp.org
+admin@host:/config/> set system ntp server ntp-pool iburst
+admin@host:/config/> set system ntp server ntp-pool prefer
+```
+
+This configuration enables the NTP client and sets the NTP server to 
+`pool.ntp.org` with the `iburst` and `prefer` options. The `iburst` 
+option ensures faster initial synchronization, and the `prefer` option 
+designates this server as preferred.
+
+* `prefer false`: The NTP client will choose the best available source
+based on several factors, such as network delay, stratum, and other 
+metrics (default config).
+* `prefer true`: The NTP client will try to use the preferred server 
+as the primary source unless it becomes unreachable or unusable.
+
+### Show NTP Status
+
+To check the status of NTP synchronization, use the following command:
+
+```
+admin@host:/> show ntp
+Reference ID    : C0248F86 (192.36.143.134)
+Stratum         : 2
+Ref time (UTC)  : Mon Oct 21 10:06:45 2024
+System time     : 0.000000001 seconds slow of NTP time
+Last offset     : -3845.151367188 seconds
+RMS offset      : 3845.151367188 seconds
+Frequency       : 4.599 ppm slow
+Residual freq   : +1293.526 ppm
+Skew            : 12.403 ppm
+Root delay      : 1.024467230 seconds
+Root dispersion : 0.273462683 seconds
+Update interval : 0.0 seconds
+Leap status     : Normal
+admin@host:/>
+```
+
+This output provides detailed information about the NTP status, including 
+reference ID, stratum, time offsets, frequency, and root delay.
+
+### Show NTP Sources
+
+To view the sources being used by the NTP client, run:
+
+```
+admin@host:/> show ntp sources 
+
+  .-- Source mode  '^' = server, '=' = peer, '#' = local clock.
+ / .- Source state '*' = current best, '+' = combined, '-' = not combined,
+| /             'x' = may be in error, '~' = too variable, '?' = unusable.
+||                                                 .- xxxx [ yyyy ] +/- zzzz
+||      Reachability register (octal) -.           |  xxxx = adjusted offset,
+||      Log2(Polling interval) --.      |          |  yyyy = measured offset,
+||                                \     |          |  zzzz = estimated error.
+||                                 |    |           \
+MS Name/IP address         Stratum Poll Reach LastRx Last sample               
+===============================================================================
+^* 192.36.143.134                1   6   177     9   +278ms[ -3845s] +/-  514ms
+admin@host:/>
+```
+
+> The system uses `chronyd` for Network Time Protocol (NTP)
+> synchronization. The output shown here is best explained in the
+> [Chrony documentation](https://chrony-project.org/doc/4.6.1/chronyc.html).
 
 [1]: https://www.rfc-editor.org/rfc/rfc7317
 [2]: https://github.com/kernelkit/infix/blob/main/src/confd/yang/infix-system%402024-02-29.yang
