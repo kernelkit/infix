@@ -62,7 +62,7 @@ else
 fi
 
 if [ -f "$TARGET_DIR/etc/rauc/system.conf" ]; then
-    sed -i "s/compatible=.*/compatible=$NAME/" "$TARGET_DIR/etc/rauc/system.conf"
+    sed -i "s/compatible=.*/compatible=$INFIX_COMPATIBLE/" "$TARGET_DIR/etc/rauc/system.conf"
 fi
 
 # This is a symlink to /usr/lib/os-release, so we remove this to keep
