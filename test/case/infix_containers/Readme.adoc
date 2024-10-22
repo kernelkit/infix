@@ -1,6 +1,14 @@
 :testgroup:
 == infix-containers
 
+Verifies Infix Docker container support:
+
+ - Basic web server container running in host network mode
+ - Common setup with a docker0 bridge, automatic VETH pairs to container(s)
+ - Connecting a container with a VETH pair to a standard Linux bridge
+ - Assigning a physical Ethernet interface to a container
+ - Basic firewall container running in host network mode and full privileges
+
 <<<
 
 include::container_basic/Readme.adoc[]
