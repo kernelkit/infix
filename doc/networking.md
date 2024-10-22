@@ -610,6 +610,12 @@ possible to set the value of as well.
 **Default:** `router`, `dns`, `domain`, `broadcast`, `ntpsrv`, `search`,
              `address`, `staticroutes`, `msstaticroutes`
 
+When configuring a DHCP client, ensure that the NTP client is enabled
+for the `ntpsrv` DHCP option to be processed correctly. If the NTP
+client is not enabled, any NTP servers provided by the DHCP server will
+be ignored. For details on how to enable the NTP client, see the 
+[NTP Client Configuration](system.md#ntp-client-configuration) section.
+
 > **Note:** DHCP address method is only available for *LAN* interfaces
 > (Ethernet, virtual Ethernet (veth), bridge, link aggregates, etc.)
 
