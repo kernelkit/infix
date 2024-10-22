@@ -668,13 +668,7 @@ def add_ip_link(ifname, iface_in, iface_out):
         insert(iface_out, "infix-interfaces:vlan", "lower-layer-if", iface_in['link'])
 
     if 'flags' in iface_in:
-        admin_xlate = { 
-            "UP": "up", 
-            "DOWN": "down" 
-            }
-
-        admin_status = admin_xlate.get("UP" if "UP" in iface_in['flags'] else "DOWN", "testing")
-        iface_out['admin-status'] = admin_status
+        iface_out['admin-status'] = "up" if "UP" in iface_in['flags'] else "down"
 
     if 'operstate' in iface_in:
         xlate = {
