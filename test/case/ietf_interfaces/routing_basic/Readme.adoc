@@ -5,14 +5,14 @@ in configuration has the expected result.
 
 ==== Topology
 ifdef::topdoc[]
-image::../../test/case/ietf_interfaces/routing_basic/topology.png[Routing basic topology]
+image::../../test/case/ietf_interfaces/routing_basic/topology.svg[Routing basic topology]
 endif::topdoc[]
 ifndef::topdoc[]
 ifdef::testgroup[]
-image::routing_basic/topology.png[Routing basic topology]
+image::routing_basic/topology.svg[Routing basic topology]
 endif::testgroup[]
 ifndef::testgroup[]
-image::topology.png[Routing basic topology]
+image::topology.svg[Routing basic topology]
 endif::testgroup[]
 endif::topdoc[]
 ==== Test sequence

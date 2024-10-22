@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
+ "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+
+<!-- Title: 1x4 Pages: 1 -->
+<svg width="481pt" height="101pt"
+ viewBox="0.00 0.00 481.03 101.00" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(4 97)">
+<title>1x4</title>
+<polygon fill="white" stroke="transparent" points="-4,4 -4,-97 477.03,-97 477.03,4 -4,4"/>
+<!-- host -->
+<g id="node1" class="node">
+<title>host</title>
+<polygon fill="none" stroke="black" points="0,-0.5 0,-92.5 108,-92.5 108,-0.5 0,-0.5"/>
+<text text-anchor="middle" x="25" y="-42.8" font-family="DejaVu Sans Mono, Book" font-size="14.00">host</text>
+<polyline fill="none" stroke="black" points="50,-0.5 50,-92.5 "/>
+<text text-anchor="middle" x="79" y="-77.3" font-family="DejaVu Sans Mono, Book" font-size="14.00">mgmt</text>
+<polyline fill="none" stroke="black" points="50,-69.5 108,-69.5 "/>
+<text text-anchor="middle" x="79" y="-54.3" font-family="DejaVu Sans Mono, Book" font-size="14.00">data1</text>
+<polyline fill="none" stroke="black" points="50,-46.5 108,-46.5 "/>
+<text text-anchor="middle" x="79" y="-31.3" font-family="DejaVu Sans Mono, Book" font-size="14.00">data2</text>
+<polyline fill="none" stroke="black" points="50,-23.5 108,-23.5 "/>
+<text text-anchor="middle" x="79" y="-8.3" font-family="DejaVu Sans Mono, Book" font-size="14.00">data3</text>
+</g>
+<!-- target -->
+<g id="node2" class="node">
+<title>target</title>
+<polygon fill="none" stroke="black" points="308.03,-0.5 308.03,-92.5 473.03,-92.5 473.03,-0.5 308.03,-0.5"/>
+<text text-anchor="middle" x="337.03" y="-77.3" font-family="DejaVu Sans Mono, Book" font-size="14.00">mgmt</text>
+<polyline fill="none" stroke="black" points="308.03,-69.5 366.03,-69.5 "/>
+<text text-anchor="middle" x="337.03" y="-54.3" font-family="DejaVu Sans Mono, Book" font-size="14.00">data1</text>
+<polyline fill="none" stroke="black" points="308.03,-46.5 366.03,-46.5 "/>
+<text text-anchor="middle" x="337.03" y="-31.3" font-family="DejaVu Sans Mono, Book" font-size="14.00">data2</text>
+<polyline fill="none" stroke="black" points="308.03,-23.5 366.03,-23.5 "/>
+<text text-anchor="middle" x="337.03" y="-8.3" font-family="DejaVu Sans Mono, Book" font-size="14.00">data3</text>
+<polyline fill="none" stroke="black" points="366.03,-0.5 366.03,-92.5 "/>
+<text text-anchor="middle" x="419.53" y="-65.8" font-family="DejaVu Sans Mono, Book" font-size="14.00">target </text>
+<text text-anchor="middle" x="419.53" y="-34.8" font-family="DejaVu Sans Mono, Book" font-size="14.00">(br0)</text>
+<text text-anchor="middle" x="419.53" y="-19.8" font-family="DejaVu Sans Mono, Book" font-size="14.00">10.0.0.1/24</text>
+</g>
+<!-- host&#45;&#45;target -->
+<g id="edge1" class="edge">
+<title>host:mgmt&#45;&#45;target:mgmt</title>
+<path fill="none" stroke="lightgray" stroke-width="2" d="M108,-81.5C108,-81.5 307.53,-81.5 307.53,-81.5"/>
+</g>
+<!-- host&#45;&#45;target -->
+<g id="edge2" class="edge">
+<title>host:data1&#45;&#45;target:data1</title>
+<path fill="none" stroke="black" stroke-width="2" d="M108,-58.5C108,-58.5 307.53,-58.5 307.53,-58.5"/>
+<text text-anchor="middle" x="149" y="-62.3" font-family="DejaVu Serif, Book" font-size="14.00">10.0.0.2/24</text>
+</g>
+<!-- host&#45;&#45;target -->
+<g id="edge3" class="edge">
+<title>host:data2&#45;&#45;target:data2</title>
+<path fill="none" stroke="black" stroke-width="2" d="M108,-34.5C108,-34.5 307.53,-34.5 307.53,-34.5"/>
+<text text-anchor="middle" x="149" y="-38.3" font-family="DejaVu Serif, Book" font-size="14.00">10.0.0.3/24</text>
+</g>
+<!-- host&#45;&#45;target -->
+<g id="edge4" class="edge">
+<title>host:data3&#45;&#45;target:data3</title>
+<path fill="none" stroke="black" stroke-width="2" d="M108,-11.5C108,-11.5 307.53,-11.5 307.53,-11.5"/>
+<text text-anchor="middle" x="149" y="-15.3" font-family="DejaVu Serif, Book" font-size="14.00">10.0.0.4/24</text>
+</g>
+</g>
+</svg>

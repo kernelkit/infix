@@ -24,14 +24,14 @@ Tests forwarding through a DUT with two bridged interfaces on one DUT.
 
 ==== Topology
 ifdef::topdoc[]
-image::../../test/case/ietf_interfaces/bridge_fwd_sgl_dut/topology.png[Bridge forwarding single DUTs topology]
+image::../../test/case/ietf_interfaces/bridge_fwd_sgl_dut/topology.svg[Bridge forwarding single DUTs topology]
 endif::topdoc[]
 ifndef::topdoc[]
 ifdef::testgroup[]
-image::bridge_fwd_sgl_dut/topology.png[Bridge forwarding single DUTs topology]
+image::bridge_fwd_sgl_dut/topology.svg[Bridge forwarding single DUTs topology]
 endif::testgroup[]
 ifndef::testgroup[]
-image::topology.png[Bridge forwarding single DUTs topology]
+image::topology.svg[Bridge forwarding single DUTs topology]
 endif::testgroup[]
 endif::topdoc[]
 ==== Test sequence

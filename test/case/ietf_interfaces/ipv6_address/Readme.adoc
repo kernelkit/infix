@@ -5,14 +5,14 @@ See issue #473 for details.
 
 ==== Topology
 ifdef::topdoc[]
-image::../../test/case/ietf_interfaces/ipv6_address/topology.png[Interface IPv6 autoconf for bridges topology]
+image::../../test/case/ietf_interfaces/ipv6_address/topology.svg[Interface IPv6 autoconf for bridges topology]
 endif::topdoc[]
 ifndef::topdoc[]
 ifdef::testgroup[]
-image::ipv6_address/topology.png[Interface IPv6 autoconf for bridges topology]
+image::ipv6_address/topology.svg[Interface IPv6 autoconf for bridges topology]
 endif::testgroup[]
 ifndef::testgroup[]
-image::topology.png[Interface IPv6 autoconf for bridges topology]
+image::topology.svg[Interface IPv6 autoconf for bridges topology]
 endif::testgroup[]
 endif::topdoc[]
 ==== Test sequence

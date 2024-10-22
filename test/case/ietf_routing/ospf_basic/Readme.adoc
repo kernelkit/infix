@@ -5,14 +5,14 @@ and that they exchange routes, ending with a simple connectivity check.
 
 ==== Topology
 ifdef::topdoc[]
-image::../../test/case/ietf_routing/ospf_basic/topology.png[OSPF Basic topology]
+image::../../test/case/ietf_routing/ospf_basic/topology.svg[OSPF Basic topology]
 endif::topdoc[]
 ifndef::topdoc[]
 ifdef::testgroup[]
-image::ospf_basic/topology.png[OSPF Basic topology]
+image::ospf_basic/topology.svg[OSPF Basic topology]
 endif::testgroup[]
 ifndef::testgroup[]
-image::topology.png[OSPF Basic topology]
+image::topology.svg[OSPF Basic topology]
 endif::testgroup[]
 endif::topdoc[]
 ==== Test sequence

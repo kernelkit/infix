@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
+ "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+
+<!-- Title: 1x2 Pages: 1 -->
+<svg width="507pt" height="55pt"
+ viewBox="0.00 0.00 507.03 55.00" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(4 51)">
+<title>1x2</title>
+<polygon fill="white" stroke="transparent" points="-4,4 -4,-51 503.03,-51 503.03,4 -4,4"/>
+<!-- host -->
+<g id="node1" class="node">
+<title>host</title>
+<polygon fill="none" stroke="black" points="0,-0.5 0,-46.5 100,-46.5 100,-0.5 0,-0.5"/>
+<text text-anchor="middle" x="25" y="-19.8" font-family="DejaVu Sans Mono, Book" font-size="14.00">host</text>
+<polyline fill="none" stroke="black" points="50,-0.5 50,-46.5 "/>
+<text text-anchor="middle" x="75" y="-31.3" font-family="DejaVu Sans Mono, Book" font-size="14.00">mgmt</text>
+<polyline fill="none" stroke="black" points="50,-23.5 100,-23.5 "/>
+<text text-anchor="middle" x="75" y="-8.3" font-family="DejaVu Sans Mono, Book" font-size="14.00">data</text>
+</g>
+<!-- target -->
+<g id="node2" class="node">
+<title>target</title>
+<polygon fill="none" stroke="black" points="300.03,-0.5 300.03,-46.5 499.03,-46.5 499.03,-0.5 300.03,-0.5"/>
+<text text-anchor="middle" x="325.03" y="-31.3" font-family="DejaVu Sans Mono, Book" font-size="14.00">mgmt</text>
+<polyline fill="none" stroke="black" points="300.03,-23.5 350.03,-23.5 "/>
+<text text-anchor="middle" x="325.03" y="-8.3" font-family="DejaVu Sans Mono, Book" font-size="14.00">data</text>
+<polyline fill="none" stroke="black" points="350.03,-0.5 350.03,-46.5 "/>
+<text text-anchor="middle" x="424.53" y="-27.3" font-family="DejaVu Sans Mono, Book" font-size="14.00">target(br0:veth)</text>
+<text text-anchor="middle" x="424.53" y="-12.3" font-family="DejaVu Sans Mono, Book" font-size="14.00">10.0.0.2/24</text>
+</g>
+<!-- host&#45;&#45;target -->
+<g id="edge1" class="edge">
+<title>host:mgmt&#45;&#45;target:mgmt</title>
+<path fill="none" stroke="lightgray" stroke-width="2" d="M100,-35.5C100,-35.5 299.53,-35.5 299.53,-35.5"/>
+</g>
+<!-- host&#45;&#45;target -->
+<g id="edge2" class="edge">
+<title>host:data&#45;&#45;target:data</title>
+<path fill="none" stroke="black" stroke-width="2" d="M100,-11.5C100,-11.5 299.53,-11.5 299.53,-11.5"/>
+<text text-anchor="middle" x="141" y="-15.3" font-family="DejaVu Serif, Book" font-size="14.00">10.0.0.1/24</text>
+</g>
+</g>
+</svg>

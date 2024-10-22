@@ -4,14 +4,14 @@ Verify that it is possible to set timezone using UTC offset
 
 ==== Topology
 ifdef::topdoc[]
-image::../../test/case/ietf_system/timezone_utc_offset/topology.png[Set timezone with UTC offset topology]
+image::../../test/case/ietf_system/timezone_utc_offset/topology.svg[Set timezone with UTC offset topology]
 endif::topdoc[]
 ifndef::topdoc[]
 ifdef::testgroup[]
-image::timezone_utc_offset/topology.png[Set timezone with UTC offset topology]
+image::timezone_utc_offset/topology.svg[Set timezone with UTC offset topology]
 endif::testgroup[]
 ifndef::testgroup[]
-image::topology.png[Set timezone with UTC offset topology]
+image::topology.svg[Set timezone with UTC offset topology]
 endif::testgroup[]
 endif::topdoc[]
 ==== Test sequence

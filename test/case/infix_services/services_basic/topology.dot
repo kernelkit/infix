@@ -3,8 +3,8 @@ graph "1x2" {
 	overlap="false";
 	esep="+80";
 
-        node [shape=record, fontname="monospace"];
-	edge [color="cornflowerblue", penwidth="2"];
+        node [shape=record, fontname="DejaVu Sans Mono, Book"];
+	edge [color="cornflowerblue", penwidth="2", fontname="DejaVu Serif, Book"];
 
 	host [
 	    label="host | { <mgmt> mgmt | <data> data }",
@@ -22,4 +22,3 @@ graph "1x2" {
 	host:mgmt -- target:mgmt [kind=mgmt, color=lightgrey]
 	host:data -- target:data [color=black, fontcolor=black, fontsize=12, taillabel="10.0.0.1/24", headlabel="10.0.0.10/24"]
 }
-

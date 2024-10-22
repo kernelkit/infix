@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
+ "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+
+<!-- Title: 1x2 Pages: 1 -->
+<svg width="548pt" height="59pt"
+ viewBox="0.00 0.00 548.04 58.50" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(4 54.5)">
+<title>1x2</title>
+<polygon fill="white" stroke="transparent" points="-4,4 -4,-54.5 544.04,-54.5 544.04,4 -4,4"/>
+<!-- host -->
+<g id="node1" class="node">
+<title>host</title>
+<polygon fill="none" stroke="black" points="0,-0.5 0,-46.5 174,-46.5 174,-0.5 0,-0.5"/>
+<text text-anchor="middle" x="62" y="-27.3" font-family="DejaVu Sans Mono, Book" font-size="14.00">host </text>
+<text text-anchor="middle" x="62" y="-12.3" font-family="DejaVu Sans Mono, Book" font-size="14.00">(10.0.0.0/24)</text>
+<polyline fill="none" stroke="black" points="124,-0.5 124,-46.5 "/>
+<text text-anchor="middle" x="149" y="-31.3" font-family="DejaVu Sans Mono, Book" font-size="14.00">tgt</text>
+<polyline fill="none" stroke="black" points="124,-23.5 174,-23.5 "/>
+<text text-anchor="middle" x="149" y="-8.3" font-family="DejaVu Sans Mono, Book" font-size="14.00">data</text>
+</g>
+<!-- client -->
+<g id="node2" class="node">
+<title>client</title>
+<polygon fill="none" stroke="black" points="424.04,-0.5 424.04,-46.5 540.04,-46.5 540.04,-0.5 424.04,-0.5"/>
+<text text-anchor="middle" x="449.04" y="-31.3" font-family="DejaVu Sans Mono, Book" font-size="14.00">mgmt</text>
+<polyline fill="none" stroke="black" points="424.04,-23.5 474.04,-23.5 "/>
+<text text-anchor="middle" x="449.04" y="-8.3" font-family="DejaVu Sans Mono, Book" font-size="14.00">data</text>
+<polyline fill="none" stroke="black" points="474.04,-0.5 474.04,-46.5 "/>
+<text text-anchor="middle" x="507.04" y="-19.8" font-family="DejaVu Sans Mono, Book" font-size="14.00">client</text>
+</g>
+<!-- host&#45;&#45;client -->
+<g id="edge1" class="edge">
+<title>host:tgt&#45;&#45;client:mgmt</title>
+<path fill="none" stroke="black" stroke-width="2" d="M174,-35.5C174,-35.5 424.04,-35.5 424.04,-35.5"/>
+<text text-anchor="middle" x="237.5" y="-39.3" font-family="DejaVu Serif, Book" font-size="14.00">192.168.0.254/24</text>
+</g>
+<!-- host&#45;&#45;client -->
+<g id="edge2" class="edge">
+<title>host:data&#45;&#45;client:data</title>
+<path fill="none" stroke="cornflowerblue" stroke-width="2" d="M174,-11.5C174,-11.5 424.04,-11.5 424.04,-11.5"/>
+</g>
+</g>
+</svg>

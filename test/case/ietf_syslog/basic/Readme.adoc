@@ -4,14 +4,14 @@ Add syslog actions to log to local files, then verify new log files have been cr
 
 ==== Topology
 ifdef::topdoc[]
-image::../../test/case/ietf_syslog/basic/topology.png[Syslog Basic topology]
+image::../../test/case/ietf_syslog/basic/topology.svg[Syslog Basic topology]
 endif::topdoc[]
 ifndef::topdoc[]
 ifdef::testgroup[]
-image::basic/topology.png[Syslog Basic topology]
+image::basic/topology.svg[Syslog Basic topology]
 endif::testgroup[]
 ifndef::testgroup[]
-image::topology.png[Syslog Basic topology]
+image::topology.svg[Syslog Basic topology]
 endif::testgroup[]
 endif::topdoc[]
 ==== Test sequence

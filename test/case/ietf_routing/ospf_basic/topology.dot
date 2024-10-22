@@ -4,8 +4,8 @@ graph "2x2" {
 	esep="+20";
 	size=10
 
-        node [shape=record, fontname="monospace"];
-	edge [color="cornflowerblue", penwidth="2"];
+        node [shape=record, fontname="DejaVu Sans Mono, Book"];
+	edge [color="cornflowerblue", penwidth="2", fontname="DejaVu Serif, Book"];
 
 	PC [
 	    label="PC | { <mgmt1> mgmt1 | <data> data | <mgmt2> mgmt2 }",

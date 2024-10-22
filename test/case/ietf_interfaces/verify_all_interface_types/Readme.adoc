@@ -16,14 +16,14 @@ slightly longer than sending the entire configuration at once.
 
 ==== Topology
 ifdef::topdoc[]
-image::../../test/case/ietf_interfaces/verify_all_interface_types/topology.png[Verify that all interface types can be created topology]
+image::../../test/case/ietf_interfaces/verify_all_interface_types/topology.svg[Verify that all interface types can be created topology]
 endif::topdoc[]
 ifndef::topdoc[]
 ifdef::testgroup[]
-image::verify_all_interface_types/topology.png[Verify that all interface types can be created topology]
+image::verify_all_interface_types/topology.svg[Verify that all interface types can be created topology]
 endif::testgroup[]
 ifndef::testgroup[]
-image::topology.png[Verify that all interface types can be created topology]
+image::topology.svg[Verify that all interface types can be created topology]
 endif::testgroup[]
 endif::topdoc[]
 ==== Test sequence
