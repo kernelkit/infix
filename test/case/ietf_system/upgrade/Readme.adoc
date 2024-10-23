@@ -4,14 +4,14 @@ Verify it is possible to upgrade.
 
 ==== Topology
 ifdef::topdoc[]
-image::../../test/case/ietf_system/upgrade/topology.png[Upgrade topology]
+image::../../test/case/ietf_system/upgrade/topology.svg[Upgrade topology]
 endif::topdoc[]
 ifndef::topdoc[]
 ifdef::testgroup[]
-image::upgrade/topology.png[Upgrade topology]
+image::upgrade/topology.svg[Upgrade topology]
 endif::testgroup[]
 ifndef::testgroup[]
-image::topology.png[Upgrade topology]
+image::topology.svg[Upgrade topology]
 endif::testgroup[]
 endif::topdoc[]
 ==== Test sequence

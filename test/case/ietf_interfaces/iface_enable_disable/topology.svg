@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
+ "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+
+<!-- Title: 2x4 Pages: 1 -->
+<svg width="555pt" height="234pt"
+ viewBox="0.00 0.00 554.71 234.02" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(4 230.02)">
+<title>2x4</title>
+<polygon fill="white" stroke="transparent" points="-4,4 -4,-230.02 550.71,-230.02 550.71,4 -4,4"/>
+<!-- host -->
+<g id="node1" class="node">
+<title>host</title>
+<polygon fill="none" stroke="black" points="0,-156.52 0,-225.52 108,-225.52 108,-156.52 0,-156.52"/>
+<text text-anchor="middle" x="25" y="-187.32" font-family="DejaVu Sans Mono, Book" font-size="14.00">host</text>
+<polyline fill="none" stroke="black" points="50,-156.52 50,-225.52 "/>
+<text text-anchor="middle" x="79" y="-210.32" font-family="DejaVu Sans Mono, Book" font-size="14.00">mgmt1</text>
+<polyline fill="none" stroke="black" points="50,-202.52 108,-202.52 "/>
+<text text-anchor="middle" x="79" y="-187.32" font-family="DejaVu Sans Mono, Book" font-size="14.00">data</text>
+<polyline fill="none" stroke="black" points="50,-179.52 108,-179.52 "/>
+<text text-anchor="middle" x="79" y="-164.32" font-family="DejaVu Sans Mono, Book" font-size="14.00">mgmt2</text>
+</g>
+<!-- target1 -->
+<g id="node2" class="node">
+<title>target1</title>
+<polygon fill="none" stroke="black" points="430.71,-156.52 430.71,-225.52 546.71,-225.52 546.71,-156.52 430.71,-156.52"/>
+<text text-anchor="middle" x="455.71" y="-210.32" font-family="DejaVu Sans Mono, Book" font-size="14.00">mgmt</text>
+<polyline fill="none" stroke="black" points="430.71,-202.52 480.71,-202.52 "/>
+<text text-anchor="middle" x="455.71" y="-187.32" font-family="DejaVu Sans Mono, Book" font-size="14.00">data</text>
+<polyline fill="none" stroke="black" points="430.71,-179.52 480.71,-179.52 "/>
+<text text-anchor="middle" x="455.71" y="-164.32" font-family="DejaVu Sans Mono, Book" font-size="14.00">link</text>
+<polyline fill="none" stroke="black" points="480.71,-156.52 480.71,-225.52 "/>
+<text text-anchor="middle" x="513.71" y="-187.32" font-family="DejaVu Sans Mono, Book" font-size="14.00"> dut1 </text>
+</g>
+<!-- host&#45;&#45;target1 -->
+<g id="edge1" class="edge">
+<title>host:mgmt1&#45;&#45;target1:mgmt</title>
+<path fill="none" stroke="lightgrey" stroke-width="2" d="M108,-214.02C108,-214.02 430.71,-214.02 430.71,-214.02"/>
+</g>
+<!-- host&#45;&#45;target1 -->
+<g id="edge2" class="edge">
+<title>host:data&#45;&#45;target1:data</title>
+<path fill="none" stroke="black" stroke-width="2" d="M108,-191.02C108,-191.02 430.71,-191.02 430.71,-191.02"/>
+<text text-anchor="middle" x="158" y="-194.82" font-family="DejaVu Serif, Book" font-size="14.00">10.10.10.1/24</text>
+</g>
+<!-- target2 -->
+<g id="node3" class="node">
+<title>target2</title>
+<polygon fill="none" stroke="black" points="430.71,-0.5 430.71,-55.5 546.71,-55.5 546.71,-0.5 430.71,-0.5"/>
+<text text-anchor="middle" x="455.71" y="-38.3" font-family="DejaVu Sans Mono, Book" font-size="14.00">link</text>
+<polyline fill="none" stroke="black" points="430.71,-28.5 480.71,-28.5 "/>
+<text text-anchor="middle" x="455.71" y="-10.8" font-family="DejaVu Sans Mono, Book" font-size="14.00">mgmt</text>
+<polyline fill="none" stroke="black" points="480.71,-0.5 480.71,-55.5 "/>
+<text text-anchor="middle" x="513.71" y="-24.3" font-family="DejaVu Sans Mono, Book" font-size="14.00"> dut2 </text>
+</g>
+<!-- host&#45;&#45;target2 -->
+<g id="edge3" class="edge">
+<title>host:mgmt2&#45;&#45;target2:mgmt</title>
+<path fill="none" stroke="lightgrey" stroke-width="2" d="M108,-168.02C108,-168.02 430.71,-14 430.71,-14"/>
+</g>
+<!-- target1&#45;&#45;target2 -->
+<g id="edge4" class="edge">
+<title>target1:link&#45;&#45;target2:link</title>
+<path fill="none" stroke="black" stroke-width="2" d="M455.71,-156.02C455.71,-156.02 455.71,-56 455.71,-56"/>
+<text text-anchor="middle" x="405.71" y="-59.8" font-family="DejaVu Serif, Book" font-size="14.00">10.10.10.2/24</text>
+</g>
+</g>
+</svg>

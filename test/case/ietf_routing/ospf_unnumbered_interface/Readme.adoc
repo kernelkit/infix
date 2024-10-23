@@ -9,14 +9,14 @@ configuration and passive to function
 
 ==== Topology
 ifdef::topdoc[]
-image::../../test/case/ietf_routing/ospf_unnumbered_interface/topology.png[OSPF unnumbered interfaces topology]
+image::../../test/case/ietf_routing/ospf_unnumbered_interface/topology.svg[OSPF unnumbered interfaces topology]
 endif::topdoc[]
 ifndef::topdoc[]
 ifdef::testgroup[]
-image::ospf_unnumbered_interface/topology.png[OSPF unnumbered interfaces topology]
+image::ospf_unnumbered_interface/topology.svg[OSPF unnumbered interfaces topology]
 endif::testgroup[]
 ifndef::testgroup[]
-image::topology.png[OSPF unnumbered interfaces topology]
+image::topology.svg[OSPF unnumbered interfaces topology]
 endif::testgroup[]
 endif::topdoc[]
 ==== Test sequence

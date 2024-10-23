@@ -20,14 +20,14 @@ enabled when using static multicast filters)
 
 ==== Topology
 ifdef::topdoc[]
-image::../../test/case/ietf_interfaces/static_multicast_filters/topology.png[Static multicast filters topology]
+image::../../test/case/ietf_interfaces/static_multicast_filters/topology.svg[Static multicast filters topology]
 endif::topdoc[]
 ifndef::topdoc[]
 ifdef::testgroup[]
-image::static_multicast_filters/topology.png[Static multicast filters topology]
+image::static_multicast_filters/topology.svg[Static multicast filters topology]
 endif::testgroup[]
 ifndef::testgroup[]
-image::topology.png[Static multicast filters topology]
+image::topology.svg[Static multicast filters topology]
 endif::testgroup[]
 endif::topdoc[]
 ==== Test sequence

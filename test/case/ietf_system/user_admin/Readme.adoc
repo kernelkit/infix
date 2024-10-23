@@ -5,14 +5,14 @@ check that it when added as admin it is also the case in Linux.
 
 ==== Topology
 ifdef::topdoc[]
-image::../../test/case/ietf_system/user_admin/topology.png[Add admin user topology]
+image::../../test/case/ietf_system/user_admin/topology.svg[Add admin user topology]
 endif::topdoc[]
 ifndef::topdoc[]
 ifdef::testgroup[]
-image::user_admin/topology.png[Add admin user topology]
+image::user_admin/topology.svg[Add admin user topology]
 endif::testgroup[]
 ifndef::testgroup[]
-image::topology.png[Add admin user topology]
+image::topology.svg[Add admin user topology]
 endif::testgroup[]
 endif::topdoc[]
 ==== Test sequence

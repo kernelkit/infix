@@ -10,14 +10,14 @@ e.g. ix-01-01-01.
 
 ==== Topology
 ifdef::topdoc[]
-image::../../test/case/ietf_system/hostname/topology.png[Set hostname topology]
+image::../../test/case/ietf_system/hostname/topology.svg[Set hostname topology]
 endif::topdoc[]
 ifndef::topdoc[]
 ifdef::testgroup[]
-image::hostname/topology.png[Set hostname topology]
+image::hostname/topology.svg[Set hostname topology]
 endif::testgroup[]
 ifndef::testgroup[]
-image::topology.png[Set hostname topology]
+image::topology.svg[Set hostname topology]
 endif::testgroup[]
 endif::topdoc[]
 ==== Test sequence

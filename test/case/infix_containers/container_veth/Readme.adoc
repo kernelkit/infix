@@ -15,14 +15,14 @@ regular bridge, a VETH pair connects the container to the bridge.
 
 ==== Topology
 ifdef::topdoc[]
-image::../../test/case/infix_containers/container_veth/topology.png[Container with VETH pair topology]
+image::../../test/case/infix_containers/container_veth/topology.svg[Container with VETH pair topology]
 endif::topdoc[]
 ifndef::topdoc[]
 ifdef::testgroup[]
-image::container_veth/topology.png[Container with VETH pair topology]
+image::container_veth/topology.svg[Container with VETH pair topology]
 endif::testgroup[]
 ifndef::testgroup[]
-image::topology.png[Container with VETH pair topology]
+image::topology.svg[Container with VETH pair topology]
 endif::testgroup[]
 endif::topdoc[]
 ==== Test sequence

@@ -5,14 +5,14 @@ with yescrypt.
 
 ==== Topology
 ifdef::topdoc[]
-image::../../test/case/ietf_system/add_delete_user/topology.png[Add/delete user topology]
+image::../../test/case/ietf_system/add_delete_user/topology.svg[Add/delete user topology]
 endif::topdoc[]
 ifndef::topdoc[]
 ifdef::testgroup[]
-image::add_delete_user/topology.png[Add/delete user topology]
+image::add_delete_user/topology.svg[Add/delete user topology]
 endif::testgroup[]
 ifndef::testgroup[]
-image::topology.png[Add/delete user topology]
+image::topology.svg[Add/delete user topology]
 endif::testgroup[]
 endif::topdoc[]
 ==== Test sequence

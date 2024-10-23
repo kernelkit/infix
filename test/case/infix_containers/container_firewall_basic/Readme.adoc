@@ -27,14 +27,14 @@ phrase, is only reachable from the public interface `ext0`, on
 
 ==== Topology
 ifdef::topdoc[]
-image::../../test/case/infix_containers/container_firewall_basic/topology.png[Basic Firewall Container topology]
+image::../../test/case/infix_containers/container_firewall_basic/topology.svg[Basic Firewall Container topology]
 endif::topdoc[]
 ifndef::topdoc[]
 ifdef::testgroup[]
-image::container_firewall_basic/topology.png[Basic Firewall Container topology]
+image::container_firewall_basic/topology.svg[Basic Firewall Container topology]
 endif::testgroup[]
 ifndef::testgroup[]
-image::topology.png[Basic Firewall Container topology]
+image::topology.svg[Basic Firewall Container topology]
 endif::testgroup[]
 endif::topdoc[]
 ==== Test sequence

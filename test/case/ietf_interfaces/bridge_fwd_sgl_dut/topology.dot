@@ -3,8 +3,8 @@ graph "1x3" {
 	overlap="false";
 	esep="+80";
 
-        node [shape=record, fontname="monospace"];
-	edge [color="cornflowerblue", penwidth="2"];
+        node [shape=record, fontname="DejaVu Sans Mono, Book"];
+	edge [color="cornflowerblue", penwidth="2", fontname="DejaVu Serif, Book"];
 
 	host [
 	    label="host | { <mgmt> mgmt | <data1> data1 | <data2>  data2 }",

@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
+ "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+
+<!-- Title: 2x4 Pages: 1 -->
+<svg width="628pt" height="205pt"
+ viewBox="0.00 0.00 628.05 205.01" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(4 201.01)">
+<title>2x4</title>
+<polygon fill="white" stroke="transparent" points="-4,4 -4,-201.01 624.05,-201.01 624.05,4 -4,4"/>
+<!-- host -->
+<g id="node1" class="node">
+<title>host</title>
+<polygon fill="none" stroke="black" points="0,-1.51 0,-195.51 116,-195.51 116,-1.51 0,-1.51"/>
+<text text-anchor="middle" x="25" y="-94.81" font-family="DejaVu Sans Mono, Book" font-size="14.00">host</text>
+<polyline fill="none" stroke="black" points="50,-1.51 50,-195.51 "/>
+<text text-anchor="middle" x="83" y="-180.31" font-family="DejaVu Sans Mono, Book" font-size="14.00">mgmt1</text>
+<polyline fill="none" stroke="black" points="50,-172.51 116,-172.51 "/>
+<text text-anchor="middle" x="83" y="-157.31" font-family="DejaVu Sans Mono, Book" font-size="14.00">data10</text>
+<polyline fill="none" stroke="black" points="50,-149.51 116,-149.51 "/>
+<text text-anchor="middle" x="83" y="-134.31" font-family="DejaVu Sans Mono, Book" font-size="14.00">data11</text>
+<polyline fill="none" stroke="black" points="50,-126.51 116,-126.51 "/>
+<polyline fill="none" stroke="black" points="50,-70.51 116,-70.51 "/>
+<text text-anchor="middle" x="83" y="-55.31" font-family="DejaVu Sans Mono, Book" font-size="14.00">mgmt2</text>
+<polyline fill="none" stroke="black" points="50,-47.51 116,-47.51 "/>
+<text text-anchor="middle" x="83" y="-32.31" font-family="DejaVu Sans Mono, Book" font-size="14.00">data20</text>
+<polyline fill="none" stroke="black" points="50,-24.51 116,-24.51 "/>
+<text text-anchor="middle" x="83" y="-9.31" font-family="DejaVu Sans Mono, Book" font-size="14.00">data21</text>
+</g>
+<!-- dut1 -->
+<g id="node2" class="node">
+<title>dut1</title>
+<polygon fill="none" stroke="black" points="504.05,-126.51 504.05,-196.51 620.05,-196.51 620.05,-126.51 504.05,-126.51"/>
+<text text-anchor="middle" x="531.05" y="-181.91" font-family="DejaVu Sans Mono, Book" font-size="12.00">mgmt</text>
+<polyline fill="none" stroke="black" points="504.05,-173.51 558.05,-173.51 "/>
+<text text-anchor="middle" x="531.05" y="-158.91" font-family="DejaVu Sans Mono, Book" font-size="12.00">data1</text>
+<polyline fill="none" stroke="black" points="504.05,-150.51 558.05,-150.51 "/>
+<text text-anchor="middle" x="531.05" y="-135.41" font-family="DejaVu Sans Mono, Book" font-size="12.00">data2</text>
+<polyline fill="none" stroke="black" points="558.05,-126.51 558.05,-196.51 "/>
+<text text-anchor="middle" x="589.05" y="-168.91" font-family="DejaVu Sans Mono, Book" font-size="12.00"> dut1 </text>
+<polyline fill="none" stroke="black" points="558.05,-147.51 620.05,-147.51 "/>
+<text text-anchor="middle" x="589.05" y="-133.91" font-family="DejaVu Sans Mono, Book" font-size="12.00">link</text>
+</g>
+<!-- host&#45;&#45;dut1 -->
+<g id="edge1" class="edge">
+<title>host:mgmt1&#45;&#45;dut1:mgmt</title>
+<path fill="none" stroke="lightgray" stroke-width="2" d="M116,-184.51C116,-184.51 504.05,-185.51 504.05,-185.51"/>
+</g>
+<!-- host&#45;&#45;dut1 -->
+<g id="edge2" class="edge">
+<title>host:data10&#45;&#45;dut1:data1</title>
+<path fill="none" stroke="purple" stroke-width="2" d="M116,-161.51C116,-161.51 504.05,-162.51 504.05,-162.51"/>
+<text text-anchor="middle" x="466.05" y="-166.31" font-family="DejaVu Serif, Book" font-size="14.00" fill="purple">VLAN10 U</text>
+<text text-anchor="middle" x="145.5" y="-165.31" font-family="DejaVu Serif, Book" font-size="14.00" fill="purple">10.0.0.1</text>
+</g>
+<!-- host&#45;&#45;dut1 -->
+<g id="edge3" class="edge">
+<title>host:data11&#45;&#45;dut1:data2</title>
+<path fill="none" stroke="darkgreen" stroke-width="2" d="M116,-138.51C116,-138.51 504.05,-138.51 504.05,-138.51"/>
+<text text-anchor="middle" x="466.05" y="-142.31" font-family="DejaVu Serif, Book" font-size="14.00" fill="darkgreen">VLAN20 U</text>
+<text text-anchor="middle" x="145.5" y="-142.31" font-family="DejaVu Serif, Book" font-size="14.00" fill="darkgreen">10.0.0.2</text>
+</g>
+<!-- dut2 -->
+<g id="node3" class="node">
+<title>dut2</title>
+<polygon fill="none" stroke="black" points="504.05,-0.5 504.05,-70.5 620.05,-70.5 620.05,-0.5 504.05,-0.5"/>
+<text text-anchor="middle" x="531.05" y="-55.9" font-family="DejaVu Sans Mono, Book" font-size="12.00">mgmt</text>
+<polyline fill="none" stroke="black" points="504.05,-47.5 558.05,-47.5 "/>
+<text text-anchor="middle" x="531.05" y="-32.9" font-family="DejaVu Sans Mono, Book" font-size="12.00">data1</text>
+<polyline fill="none" stroke="black" points="504.05,-24.5 558.05,-24.5 "/>
+<text text-anchor="middle" x="531.05" y="-9.4" font-family="DejaVu Sans Mono, Book" font-size="12.00">data2</text>
+<polyline fill="none" stroke="black" points="558.05,-0.5 558.05,-70.5 "/>
+<text text-anchor="middle" x="589.05" y="-56.9" font-family="DejaVu Sans Mono, Book" font-size="12.00">link</text>
+<polyline fill="none" stroke="black" points="558.05,-49.5 620.05,-49.5 "/>
+<text text-anchor="middle" x="589.05" y="-21.9" font-family="DejaVu Sans Mono, Book" font-size="12.00"> dut2 </text>
+</g>
+<!-- host&#45;&#45;dut2 -->
+<g id="edge4" class="edge">
+<title>host:mgmt2&#45;&#45;dut2:mgmt</title>
+<path fill="none" stroke="lightgrey" stroke-width="2" d="M116,-58.51C116,-58.51 504.05,-59.5 504.05,-59.5"/>
+</g>
+<!-- host&#45;&#45;dut2 -->
+<g id="edge5" class="edge">
+<title>host:data20&#45;&#45;dut2:data1</title>
+<path fill="none" stroke="purple" stroke-width="2" d="M116,-35.51C116,-35.51 504.05,-36.5 504.05,-36.5"/>
+<text text-anchor="middle" x="466.05" y="-40.3" font-family="DejaVu Serif, Book" font-size="14.00" fill="purple">VLAN10 U</text>
+<text text-anchor="middle" x="145.5" y="-39.31" font-family="DejaVu Serif, Book" font-size="14.00" fill="purple">10.0.0.3</text>
+</g>
+<!-- host&#45;&#45;dut2 -->
+<g id="edge6" class="edge">
+<title>host:data21&#45;&#45;dut2:data2</title>
+<path fill="none" stroke="darkgreen" stroke-width="2" d="M116,-12.51C116,-12.51 504.05,-12.5 504.05,-12.5"/>
+<text text-anchor="middle" x="466.05" y="-16.3" font-family="DejaVu Serif, Book" font-size="14.00" fill="darkgreen">VLAN20 U</text>
+<text text-anchor="middle" x="145.5" y="-16.31" font-family="DejaVu Serif, Book" font-size="14.00" fill="darkgreen">10.0.0.4</text>
+</g>
+<!-- dut1&#45;&#45;dut2 -->
+<g id="edge7" class="edge">
+<title>dut1:link&#45;&#45;dut2:link</title>
+<path fill="none" stroke="black" stroke-width="2" d="M589.05,-126.51C589.05,-126.51 589.05,-70.5 589.05,-70.5"/>
+<text text-anchor="middle" x="545.55" y="-101.91" font-family="DejaVu Serif, Book" font-size="12.00">VLAN 10,20 T</text>
+</g>
+</g>
+</svg>

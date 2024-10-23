@@ -6,14 +6,14 @@ from a DHCP server and checks that the lease is set on the
 
 ==== Topology
 ifdef::topdoc[]
-image::../../test/case/infix_dhcp/dhcp_basic/topology.png[DHCP Basic topology]
+image::../../test/case/infix_dhcp/dhcp_basic/topology.svg[DHCP Basic topology]
 endif::topdoc[]
 ifndef::topdoc[]
 ifdef::testgroup[]
-image::dhcp_basic/topology.png[DHCP Basic topology]
+image::dhcp_basic/topology.svg[DHCP Basic topology]
 endif::testgroup[]
 ifndef::testgroup[]
-image::topology.png[DHCP Basic topology]
+image::topology.svg[DHCP Basic topology]
 endif::testgroup[]
 endif::topdoc[]
 ==== Test sequence

@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
+ "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+
+<!-- Title: 2x2 Pages: 1 -->
+<svg width="533pt" height="225pt"
+ viewBox="0.00 0.00 532.79 225.02" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(4 221.02)">
+<title>2x2</title>
+<polygon fill="white" stroke="transparent" points="-4,4 -4,-221.02 528.79,-221.02 528.79,4 -4,4"/>
+<!-- host -->
+<g id="node1" class="node">
+<title>host</title>
+<polygon fill="none" stroke="black" points="0,-147.52 0,-216.52 108,-216.52 108,-147.52 0,-147.52"/>
+<text text-anchor="middle" x="25" y="-178.32" font-family="DejaVu Sans Mono, Book" font-size="14.00">host</text>
+<polyline fill="none" stroke="black" points="50,-147.52 50,-216.52 "/>
+<text text-anchor="middle" x="79" y="-201.32" font-family="DejaVu Sans Mono, Book" font-size="14.00">mgmt1</text>
+<polyline fill="none" stroke="black" points="50,-193.52 108,-193.52 "/>
+<text text-anchor="middle" x="79" y="-178.32" font-family="DejaVu Sans Mono, Book" font-size="14.00">data</text>
+<polyline fill="none" stroke="black" points="50,-170.52 108,-170.52 "/>
+<text text-anchor="middle" x="79" y="-155.32" font-family="DejaVu Sans Mono, Book" font-size="14.00">mgmt2</text>
+</g>
+<!-- dut1 -->
+<g id="node2" class="node">
+<title>dut1</title>
+<polygon fill="none" stroke="black" points="375.79,-147.52 375.79,-216.52 524.79,-216.52 524.79,-147.52 375.79,-147.52"/>
+<text text-anchor="middle" x="400.79" y="-201.32" font-family="DejaVu Sans Mono, Book" font-size="14.00">mgmt</text>
+<polyline fill="none" stroke="black" points="375.79,-193.52 425.79,-193.52 "/>
+<text text-anchor="middle" x="400.79" y="-178.32" font-family="DejaVu Sans Mono, Book" font-size="14.00">data</text>
+<polyline fill="none" stroke="black" points="375.79,-170.52 425.79,-170.52 "/>
+<text text-anchor="middle" x="400.79" y="-155.32" font-family="DejaVu Sans Mono, Book" font-size="14.00">link</text>
+<polyline fill="none" stroke="black" points="425.79,-147.52 425.79,-216.52 "/>
+<text text-anchor="middle" x="475.29" y="-185.82" font-family="DejaVu Sans Mono, Book" font-size="14.00">dut1</text>
+<text text-anchor="middle" x="475.29" y="-170.82" font-family="DejaVu Sans Mono, Book" font-size="14.00">(10.0.0.2)</text>
+</g>
+<!-- host&#45;&#45;dut1 -->
+<g id="edge1" class="edge">
+<title>host:mgmt1&#45;&#45;dut1:mgmt</title>
+<path fill="none" stroke="lightgray" stroke-width="2" d="M108,-205.02C108,-205.02 375.29,-205.02 375.29,-205.02"/>
+</g>
+<!-- host&#45;&#45;dut1 -->
+<g id="edge3" class="edge">
+<title>host:data&#45;&#45;dut1:data</title>
+<path fill="none" stroke="black" stroke-width="2" d="M108,-182.02C108,-182.02 375.29,-182.02 375.29,-182.02"/>
+</g>
+<!-- dut2 -->
+<g id="node3" class="node">
+<title>dut2</title>
+<polygon fill="none" stroke="black" points="375.79,-0.5 375.79,-46.5 524.79,-46.5 524.79,-0.5 375.79,-0.5"/>
+<text text-anchor="middle" x="400.79" y="-31.3" font-family="DejaVu Sans Mono, Book" font-size="14.00">link</text>
+<polyline fill="none" stroke="black" points="375.79,-23.5 425.79,-23.5 "/>
+<text text-anchor="middle" x="400.79" y="-8.3" font-family="DejaVu Sans Mono, Book" font-size="14.00">mgmt</text>
+<polyline fill="none" stroke="black" points="425.79,-0.5 425.79,-46.5 "/>
+<text text-anchor="middle" x="475.29" y="-27.3" font-family="DejaVu Sans Mono, Book" font-size="14.00">dut2</text>
+<text text-anchor="middle" x="475.29" y="-12.3" font-family="DejaVu Sans Mono, Book" font-size="14.00">(10.0.0.3)</text>
+</g>
+<!-- host&#45;&#45;dut2 -->
+<g id="edge2" class="edge">
+<title>host:mgmt2&#45;&#45;dut2:mgmt</title>
+<path fill="none" stroke="lightgray" stroke-width="2" d="M108,-159.02C108,-159.02 375.29,-11.5 375.29,-11.5"/>
+</g>
+<!-- dut1&#45;&#45;dut2 -->
+<g id="edge4" class="edge">
+<title>dut1:link&#45;&#45;dut2:link</title>
+<path fill="none" stroke="black" stroke-width="2" d="M400.29,-147.02C400.29,-147.02 400.29,-46.5 400.29,-46.5"/>
+</g>
+</g>
+</svg>

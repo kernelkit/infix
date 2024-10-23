@@ -10,14 +10,14 @@ before a DHCP lease has been acquired.
 
 ==== Topology
 ifdef::topdoc[]
-image::../../test/case/infix_dhcp/dhcp_routes/topology.png[DHCP option 121 vs option 3 topology]
+image::../../test/case/infix_dhcp/dhcp_routes/topology.svg[DHCP option 121 vs option 3 topology]
 endif::topdoc[]
 ifndef::topdoc[]
 ifdef::testgroup[]
-image::dhcp_routes/topology.png[DHCP option 121 vs option 3 topology]
+image::dhcp_routes/topology.svg[DHCP option 121 vs option 3 topology]
 endif::testgroup[]
 ifndef::testgroup[]
-image::topology.png[DHCP option 121 vs option 3 topology]
+image::topology.svg[DHCP option 121 vs option 3 topology]
 endif::testgroup[]
 endif::topdoc[]
 ==== Test sequence

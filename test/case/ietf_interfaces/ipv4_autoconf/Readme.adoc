@@ -6,14 +6,14 @@ address removal on autoconf disable.
 
 ==== Topology
 ifdef::topdoc[]
-image::../../test/case/ietf_interfaces/ipv4_autoconf/topology.png[IPv4 link-local topology]
+image::../../test/case/ietf_interfaces/ipv4_autoconf/topology.svg[IPv4 link-local topology]
 endif::topdoc[]
 ifndef::topdoc[]
 ifdef::testgroup[]
-image::ipv4_autoconf/topology.png[IPv4 link-local topology]
+image::ipv4_autoconf/topology.svg[IPv4 link-local topology]
 endif::testgroup[]
 ifndef::testgroup[]
-image::topology.png[IPv4 link-local topology]
+image::topology.svg[IPv4 link-local topology]
 endif::testgroup[]
 endif::topdoc[]
 ==== Test sequence

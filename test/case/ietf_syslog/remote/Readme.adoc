@@ -4,14 +4,14 @@ Verify logging to remote, acting as a remote, and RFC5424 log format.
 
 ==== Topology
 ifdef::topdoc[]
-image::../../test/case/ietf_syslog/remote/topology.png[Remote syslog topology]
+image::../../test/case/ietf_syslog/remote/topology.svg[Remote syslog topology]
 endif::topdoc[]
 ifndef::topdoc[]
 ifdef::testgroup[]
-image::remote/topology.png[Remote syslog topology]
+image::remote/topology.svg[Remote syslog topology]
 endif::testgroup[]
 ifndef::testgroup[]
-image::topology.png[Remote syslog topology]
+image::topology.svg[Remote syslog topology]
 endif::testgroup[]
 endif::topdoc[]
 ==== Test sequence

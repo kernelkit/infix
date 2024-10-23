@@ -24,14 +24,14 @@ explicit router-id.
 
 ==== Topology
 ifdef::topdoc[]
-image::../../test/case/ietf_routing/ospf_multiarea/topology.png[OSPF with multiple areas topology]
+image::../../test/case/ietf_routing/ospf_multiarea/topology.svg[OSPF with multiple areas topology]
 endif::topdoc[]
 ifndef::topdoc[]
 ifdef::testgroup[]
-image::ospf_multiarea/topology.png[OSPF with multiple areas topology]
+image::ospf_multiarea/topology.svg[OSPF with multiple areas topology]
 endif::testgroup[]
 ifndef::testgroup[]
-image::topology.png[OSPF with multiple areas topology]
+image::topology.svg[OSPF with multiple areas topology]
 endif::testgroup[]
 endif::topdoc[]
 ==== Test sequence

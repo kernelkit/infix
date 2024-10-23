@@ -4,14 +4,14 @@ Undefined
 
 ==== Topology
 ifdef::topdoc[]
-image::../../test/case/misc/start_from_startup/topology.png[Undefined topology]
+image::../../test/case/misc/start_from_startup/topology.svg[Undefined topology]
 endif::topdoc[]
 ifndef::topdoc[]
 ifdef::testgroup[]
-image::start_from_startup/topology.png[Undefined topology]
+image::start_from_startup/topology.svg[Undefined topology]
 endif::testgroup[]
 ifndef::testgroup[]
-image::topology.png[Undefined topology]
+image::topology.svg[Undefined topology]
 endif::testgroup[]
 endif::topdoc[]
 ==== Test sequence
