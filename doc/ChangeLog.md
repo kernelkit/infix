@@ -4,6 +4,15 @@ Change Log
 All notable changes to the project are documented in this file.
 
 
+[v24.10.2][UNRELEASED]
+-------------------------
+
+### Changes
+
+- Updated QoS documentation with pictures and more information on VLAN
+  interface ingress/egress priority handling.
+
+
 [v24.10.1][] - 2024-10-18
 -------------------------
 
@@ -1244,7 +1253,7 @@ Supported YANG models in addition to those used by sysrepo and netopeer:
  - N/A
 
 [buildroot]:  https://buildroot.org/
-[UNRELEASED]: https://github.com/kernelkit/infix/compare/v24.10.0...HEAD
+[UNRELEASED]: https://github.com/kernelkit/infix/compare/v24.10.1...HEAD
 [v24.10.1]:   https://github.com/kernelkit/infix/compare/v24.10.0...v24.10.1
 [v24.10.0]:   https://github.com/kernelkit/infix/compare/v24.09.0...v24.10.0
 [v24.09.0]:   https://github.com/kernelkit/infix/compare/v24.08.0...v24.09.0
