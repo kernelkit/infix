@@ -37,7 +37,7 @@ MODULES=(
 	"ieee802-ethernet-interface@2019-06-21.yang"
 	"infix-ethernet-interface@2024-02-27.yang"
 	"infix-factory-default@2023-06-28.yang"
-	"infix-interfaces@2024-10-14.yang -e vlan-filtering"
+	"infix-interfaces@2024-10-28.yang -e vlan-filtering"
 
 	# from rousette
 	"ietf-restconf@2017-01-26.yang"

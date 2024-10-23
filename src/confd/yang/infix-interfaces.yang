@@ -23,6 +23,11 @@ module infix-interfaces {
   contact      "kernelkit@googlegroups.com";
   description  "Linux bridge and lag extensions for ietf-interfaces.";
 
+  revision 2024-10-28 {
+    description "Limit description to 64 chars, matching IF-MIB max.";
+    reference "internal";
+  }
+
   revision 2024-10-14 {
     description "Deviate link-up-down-trap-enable not-supported.";
     reference "internal";
@@ -84,6 +89,18 @@ module infix-interfaces {
     }
   }
 
+  deviation "/if:interfaces/if:interface/if:description" {
+    deviate replace {
+      type string {
+        length "0..64";
+      }
+    }
+  }
+
+  deviation "/if:interfaces/if:interface/if:link-up-down-trap-enable" {
+    deviate not-supported;
+  }
+
   augment "/if:interfaces/if:interface" {
     description "Custom phys-address management, static or derived from chassis MAC.";
 
@@ -113,8 +130,5 @@ module infix-interfaces {
         }
       }
     }
-  }
-  deviation "/if:interfaces/if:interface/if:link-up-down-trap-enable" {
-    deviate not-supported;
   }
 }
