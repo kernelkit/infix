@@ -12,14 +12,6 @@ packets to drop and which ones to prioritize, such that critical
 services remain operational.
 
 
-## Software Forwarded Traffic
-
-For packets which are processed by a CPU, i.e. typically routed
-traffic, and bridged traffic between interfaces that do not belong to
-the same hardware switching domain, an [nftables container][1] can be
-used to define a QoS policy.
-
-
 ## Hardware Forwarded Traffic
 
 The default QoS policy for flows which are offloaded to a switching
@@ -33,6 +25,14 @@ managed by the `mv88e6xxx` driver in the Linux kernel. While older
 chips in this family where limited to 4 output queues per port, this
 documentation is _only_ valid for newer generations with 8 output
 queues per port.
+
+![Hardware offloading for Marvell Link Street](img/qos-hw-mvls.svg)
+
+The picture illustrates packets having their priority determined at
+ingress, here interface _e1_ and _e3_. In this example, both packets
+are forwarded to the same outgoing interface (_e2_), subject to output
+queueing. The sections below provides more information on these
+topics. 
 
 #### Default Policy
 
@@ -72,6 +72,41 @@ _without_ a VLAN tag, and is to egress _with_ a VLAN tag, its PCP is
 set to the 3 most significant bits of it. If no priority information
 is available in the frame on ingress (i.e. untagged non-IP), then
 packets will egress out of tagged ports with PCP set to 0.
+
+## Software Forwarded Traffic
+
+For packets which are processed by a CPU, i.e. typically routed
+traffic, and bridged traffic between interfaces that do not belong to
+the same hardware switching domain, an [nftables container][1] can be
+used to define a QoS policy.
+
+For VLAN interfaces, Infix provides support for mapping the Priority
+Code Point (PCP) to internal priority on ingress, and the reverse on
+egress. 
+
+![Ingress and Egress Priority mapping for VLAN interfaces](img/qos-vlan-iface.svg)
+
+
+These `ingress-qos` and `egress-qos` settings are done per VLAN, both
+defaulting to '0'. The example below shows how to keep the PCP priority 
+for packets being routed between two VLAN interfaces.
+
+```
+admin@example:/config/> edit interface e1.10
+admin@example:/config/interface/e1.10/> set vlan ingress-qos priority from-pcp 
+admin@example:/config/interface/e1.10/> up
+admin@example:/config/> edit interface e1.20
+admin@example:/config/interface/e1.20/> set vlan egress-qos pcp from-priority 
+admin@example:/config/interface/e1.20/> leave
+admin@example:/> 
+```
+
+## A complex example
+
+The picture below shows a packet flow being subject both to software
+forwarding and hardware offloading.
+
+![Hardware and Software QoS Handling](img/qos-complex.svg)
 
 
 [1]: container.md#application-container-nftables
