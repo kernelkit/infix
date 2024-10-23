@@ -1,8 +1,10 @@
+"""Helper functions for tests"""
+import base64
 import time
 import threading
 import infamy.neigh
-import infamy.netconf as netconf
-import infamy.restconf as restconf
+from infamy import netconf
+from infamy import restconf
 
 
 class ParallelFn(threading.Thread):
@@ -57,6 +59,14 @@ def is_reachable(neigh, env, pwd):
         netconf_reachable = netconf.netconf_syn(neigh)
         restconf_reachable = restconf.restconf_reachable(neigh, pwd)
         return netconf_reachable and restconf_reachable
+
+
+def to_binary(text):
+    """Base64 encode the text, removing newlines"""
+    enc = base64.b64encode(text.encode('utf-8'))
+
+    # Convert the encoded bytes to a string and remove any newlines
+    return enc.decode('utf-8').replace('\n', '')
 
 
 def wait_boot(target, env):

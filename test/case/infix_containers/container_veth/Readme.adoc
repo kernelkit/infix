@@ -5,7 +5,7 @@ regular bridge, a VETH pair connects the container to the bridge.
 
 ....
   .-------------.         .---------------.     .--------.
-  |      |  tgt |---------| mgmt |        |     |  web-  |
+  |      | mgmt |---------| mgmt |        |     |  web-  |
   | host | data |---------| data | target |     | server |
   '-------------'         '---------------'     '--------'
                              |                    /

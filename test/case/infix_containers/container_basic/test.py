@@ -20,7 +20,7 @@ from infamy.util import until
 
 
 def _verify(server):
-    # Should really use mDNS here....
+    # TODO: Should really use mDNS here....
     url = infamy.Furl(f"http://[{server}]:91/index.html")
     return url.check("It works")
 
@@ -49,7 +49,7 @@ with infamy.Test() as test:
                 "container": [
                     {
                         "name": f"{NAME}",
-                        "image": f"oci-archive:{infamy.Container.IMAGE}",
+                        "image": f"oci-archive:{infamy.Container.HTTPD_IMAGE}",
                         "command": "/usr/sbin/httpd -f -v -p 91",
                         "network": {
                             "host": True

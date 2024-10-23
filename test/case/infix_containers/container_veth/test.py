@@ -11,7 +11,7 @@ regular bridge, a VETH pair connects the container to the bridge.
 
 ....
   .-------------.         .---------------.     .--------.
-  |      |  tgt |---------| mgmt |        |     |  web-  |
+  |      | mgmt |---------| mgmt |        |     |  web-  |
   | host | data |---------| data | target |     | server |
   '-------------'         '---------------'     '--------'
                              |                    /
@@ -26,7 +26,6 @@ from   infamy.util import until
 
 with infamy.Test() as test:
     NAME  = "web-br0-veth"
-    IMAGE = "curios-httpd-edge.tar.gz"
     DUTIP = "10.0.0.2"
     OURIP = "10.0.0.1"
     URL   = f"http://{DUTIP}:91/index.html"
@@ -85,7 +84,7 @@ with infamy.Test() as test:
                 "container": [
                     {
                         "name": f"{NAME}",
-                        "image": f"oci-archive:{infamy.Container.IMAGE}",
+                        "image": f"oci-archive:{infamy.Container.HTTPD_IMAGE}",
                         "command": "/usr/sbin/httpd -f -v -p 91",
                         "network": {
                             "interface": [
