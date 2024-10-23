@@ -4,8 +4,8 @@ Verify DHCP option 121 (static routes) is used over option 3 and that the
 routes exist in the operational datastore.
 
 Installing unrelated routes from a DHCP server should not affect already
-existing routes.  To verify this a canary route is set up in the client
-before initiating DHCP.  This canary route does not need to be reachable
+existing routes. To verify this, a canary route is set up in the client
+before initiating DHCP. This canary route does not need to be reachable
 before a DHCP lease has been acquired.
 
 ==== Topology

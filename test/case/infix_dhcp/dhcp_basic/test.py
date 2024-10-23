@@ -1,15 +1,12 @@
 #!/usr/bin/env python3
-# This is a very basic DHCP test that requests an IPv4 lease
-# from a DHCP server and checks that the lease is set on the
-# interface.
 """
 DHCP Basic
 
 This is a very basic DHCP test that requests an IPv4 lease
 from a DHCP server and checks that the lease is set on the
- interface.
+interface.
 """
-import time
+
 import infamy, infamy.dhcp
 import infamy.iface as iface
 from infamy.util import until
