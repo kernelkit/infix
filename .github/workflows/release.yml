@@ -150,6 +150,7 @@ jobs:
           name: Infix ${{ github.ref_name }}
           prerelease: ${{ steps.rel.outputs.pre }}
           makeLatest: ${{ steps.rel.outputs.latest }}
+          discussionCategory: Releases
           bodyFile:  release.md
           artifacts: "*.tar.gz*"
 
