@@ -97,6 +97,10 @@ This is an extension to the ietf-interfaces YANG model, which defines
 `phys-address` as read-only[^4].  The following shows the different
 configuration options.
 
+The `description` is saved as Linux `ifalias` on an interface.  It is a
+free-form string, useful for describing purpose or just adding comments
+for remote debugging, e.g., using the operational datastore.
+
 > **Note:** there is no validation or safety checks performed by the
 > system when using `custom-phys-address`.  In particular the `offset`
 > variant can be dangerous to use -- pay attention to the meaning of
