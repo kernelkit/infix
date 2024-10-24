@@ -4,9 +4,9 @@ graph "ring-4-duts" {
 	esep="+20";
 	splines=true;
 	size=10;
-	
-        node [shape=record, fontname="monospace"];
-	edge [color="cornflowerblue", penwidth="2"];
+
+	node [shape=record, fontname="DejaVu Sans Mono, Book"];
+	edge [color="cornflowerblue", penwidth="2", fontname="DejaVu Serif, Book"];
 
 	host [
 		label=" { host | { <mgmt4> mgmt4 | <data4> data4 | <mgmt1> mgmt1 | <data1> data1 | <data2> data2 | <mgmt2> mgmt2 | <data3> data3 | <mgmt3> mgmt3 } }",
@@ -36,7 +36,7 @@ graph "ring-4-duts" {
 		label="{ <ring2> ring2 | <cross> cross | <ring1> ring1 } | { { <data> data | <mgmt> mgmt } | \n R3 \n10.0.0.3/32 \n(lo) }",
 		pos="250,50!"
 		kind="infix",
-	];   
+	];
 
 	host:mgmt1 -- R1:mgmt [kind=mgmt, color="lightgray"]
 	host:mgmt2 -- R2:mgmt [kind=mgmt, color="lightgray"]
@@ -51,7 +51,7 @@ graph "ring-4-duts" {
 
 	# Ring
 	R1:ring1 -- R2:ring2 [color="blue",headlabel=".2", label="10.0.12.1/30", taillabel=".1", labeldistance=1, fontcolor="blue"]
-	R2:ring1 -- R3:ring2 [color="blue",headlabel=".2", label="10.0.23.0/30", taillabel=".1", labeldistance=1, fontcolor="blue"] 
+	R2:ring1 -- R3:ring2 [color="blue",headlabel=".2", label="10.0.23.0/30", taillabel=".1", labeldistance=1, fontcolor="blue"]
 	R3:ring1 -- R4:ring2 [color="blue",headlabel=".2", label="192.168.4.0/24", taillabel=".1", labeldistance=1 fontcolor="blue"]
 	R4:ring1 -- R1:ring2 [color="blue",headlabel=".2", label="10.0.41.0/30", taillabel=".1", labeldistance=1, fontcolor="blue"]
 
