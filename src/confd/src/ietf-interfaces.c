@@ -1889,6 +1889,10 @@ static sr_error_t netdag_gen_iface(sr_session_ctx_t *session, struct dagger *net
 	if (err)
 		goto err_close_ip;
 
+	/* ifAlias, should skip for container-network types */
+	attr = lydx_get_cattr(cif, "description");
+	fprintf(ip, "link set alias \"%s\" dev %s\n", attr ?: "", ifname);
+
 	/* Bring interface back up, if enabled */
 	attr = lydx_get_cattr(cif, "enabled");
 	if (!attr || !strcmp(attr, "true"))

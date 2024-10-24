@@ -16,6 +16,11 @@ All notable changes to the project are documented in this file.
 [v24.10.1][] - 2024-10-18
 -------------------------
 
+### Changes
+ - Add support for interface description, sometimes referred to as
+   "ifAlias".  Saved as an Linux interface alias (not `altname`), e.g.,
+   `/sys/class/interfaces/veth0a/ifalias`, includes operational support
+
 ### Fixes
  - Fix #735: `copy` and `erase` commands missing from CLI, regression
    in Infix v24.10.0 defconfigs, now added as dep. in klish package

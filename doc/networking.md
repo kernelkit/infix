@@ -97,6 +97,10 @@ This is an extension to the ietf-interfaces YANG model, which defines
 `phys-address` as read-only[^4].  The following shows the different
 configuration options.
 
+The `description` is saved as Linux `ifalias` on an interface.  It is a
+free-form string, useful for describing purpose or just adding comments
+for remote debugging, e.g., using the operational datastore.
+
 > **Note:** there is no validation or safety checks performed by the
 > system when using `custom-phys-address`.  In particular the `offset`
 > variant can be dangerous to use -- pay attention to the meaning of
@@ -585,6 +589,9 @@ Multiple address assignment methods are available:
 | link-local | infix-ip          | Auto-assignment of IPv4 address in 169.254.x.x/16 range        |
 | dhcp       | infix-dhcp-client | Assignment of IPv4 address by DHCP server, e.g., *10.0.1.1/24* |
 
+> **Note:** DHCP address method is only available for *LAN* interfaces
+> (Ethernet, virtual Ethernet (veth), bridge, link aggregates, etc.)
+
 Supported DHCP (request) options, configurability (Cfg) and defaults,
 are listed below.  Configurable options can be disabled on a per client
 interface basis, some options, like `clientid` and option 81, are
@@ -616,8 +623,10 @@ client is not enabled, any NTP servers provided by the DHCP server will
 be ignored. For details on how to enable the NTP client, see the 
 [NTP Client Configuration](system.md#ntp-client-configuration) section.
 
-> **Note:** DHCP address method is only available for *LAN* interfaces
-> (Ethernet, virtual Ethernet (veth), bridge, link aggregates, etc.)
+> **Note:** as per [RFC3442][4], if the DHCP server returns both a
+> Classless Static Routes option (121) and Router option (3), the
+> DHCP client *must* ignore the latter.
+
 
 ### IPv6 Address Assignment
 
@@ -1059,7 +1068,7 @@ This CLI example show the IPv6 routing table.
 
 #### Route Preference
 
-The operating system leverages FRRouting ([Frr][4]) as routing engine
+The operating system leverages FRRouting ([Frr][0]) as routing engine
 for both static and dynamic routing.  Even routes injected from a DHCP
 client, and IPv4 link-local (IPv4) routes, are injected into Frr to let
 it weigh all routes before installing them into the kernel routing table
@@ -1113,7 +1122,8 @@ currently supported, namely `ipv4` and `ipv6`.
 [1]: https://www.rfc-editor.org/rfc/rfc8343
 [2]: https://www.rfc-editor.org/rfc/rfc8344
 [3]: https://www.rfc-editor.org/rfc/rfc8981
-[4]: https://frrouting.org/
+[4]: https://www.rfc-editor.org/rfc/rfc3442
+[0]: https://frrouting.org/
 
 [^1]: Please note, link aggregates are not yet supported in Infix.
 [^2]: Link-local IPv6 addresses are implicitly enabled when enabling

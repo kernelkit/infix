@@ -645,6 +645,9 @@ def add_ip_link(ifname, iface_in, iface_out):
     if 'ifindex' in iface_in:
         iface_out['if-index'] = iface_in['ifindex']
 
+    if 'ifalias' in iface_in:
+        iface_out['description'] = iface_in['ifalias']
+
     if 'address' in iface_in:
         iface_out['phys-address'] = iface_in['address']
 
