@@ -2,7 +2,7 @@
 ==== Description
 This is a very basic DHCP test that requests an IPv4 lease
 from a DHCP server and checks that the lease is set on the
- interface.
+interface.
 
 ==== Topology
 ifdef::topdoc[]

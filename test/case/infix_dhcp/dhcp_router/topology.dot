@@ -1,13 +1,13 @@
 graph "1x2" {
 	layout="neato";
 	overlap="false";
-	esep="+80";
+	esep="+100";
 
         node [shape=record, fontname="DejaVu Sans Mono, Book"];
 	edge [color="cornflowerblue", penwidth="2", fontname="DejaVu Serif, Book"];
 
 	host [
-	    label="host \n(192.168.0.1) | { <tgt> tgt | <data> data }",
+	    label="host | { <mgmt> mgmt | <data> data }",
 	    pos="0,20!",
 	    kind="controller",
 	];
@@ -18,6 +18,6 @@ graph "1x2" {
 	    kind="infix",
 	];
 
-	host:tgt -- client:mgmt [kind=mgmt, color=black, taillabel="192.168.0.254/24"]
-	host:data -- client:data
+	host:mgmt -- client:mgmt [kind=mgmt, color=lightgrey]
+	host:data -- client:data [color=black, taillabel="192.168.0.1/24"]
 }

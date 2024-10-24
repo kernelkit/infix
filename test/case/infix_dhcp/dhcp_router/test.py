@@ -1,14 +1,12 @@
 #!/usr/bin/env python3
-# Verify DHCP option 3 (router)
 """
 DHCP router
 
 Verify that the DHCP client receives default gateway (DHCP option 3, router)
 and that route exists in operational datastore.
 """
-import time
+
 import infamy, infamy.dhcp
-import infamy.iface as iface
 import infamy.route as route
 from infamy.util import until
 
