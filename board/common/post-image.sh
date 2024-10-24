@@ -7,11 +7,14 @@ common=$(dirname "$(readlink -f "$0")")
 # shellcheck disable=SC1091
 . "$TARGET_DIR/etc/os-release"
 
-load_cfg INFIX_ID
+# The INFIX_* variables may be composed from BR2_* variables,
+# so we source them last.
 load_cfg BR2_ARCH
 load_cfg BR2_DEFCONFIG
 load_cfg BR2_EXTERNAL_INFIX_PATH
 load_cfg BR2_TARGET_ROOTFS
+load_cfg INFIX_ID
+load_cfg INFIX_COMPATIBLE
 
 # The default IMAGE_ID is infix-$BR2_ARCH but can be overridden
 # for imaage names, and compat strings, like infix-r2s
@@ -39,7 +42,7 @@ if [ "$SIGN_ENABLED" = "y" ]; then
     $common/sign.sh $BR2_ARCH $SIGN_KEY
 
     ixmsg "Creating RAUC Update Bundle"
-    $common/mkrauc.sh "$NAME$(ver)" $NAME $SIGN_KEY
+    $common/mkrauc.sh "$NAME$(ver)" $INFIX_COMPATIBLE $SIGN_KEY
 fi
 
 load_cfg DISK_IMAGE
