@@ -8,6 +8,9 @@
 - name: ipv6_address
   case: ipv6_address/test.py
 
+- name: ifalias
+  case: ifalias/test.py
+
 - name: iface_phys_address
   case: iface_phys_address/test.py
 
