@@ -96,14 +96,18 @@ start_topology()
     done
 
     base_img=$(get_base_img "$files")
-    $testdir/inject-test-mode -b "$base_img" -o "${base_img%-disk.img}-disk-test.img"
+    test_img="${base_img%-disk.img}-disk-test.img"
+    
+    $testdir/inject-test-mode -b "$base_img" -o "$test_img"
+
+    img_name=$(basename "$test_img")
+    sed -i "s/qn_image=\".*\"/qn_image=\"$img_name\"/" "$envdir/qeneth/topology.dot.in"
 
     (cd "$envdir/qeneth/" && $qeneth generate && $qeneth start)
     INFAMY_ARGS="$INFAMY_ARGS $envdir/qeneth/topology.dot"
 
     cat <<EOF >"$envdir/bin/qeneth"
 #!/bin/sh
-set -x
 cd $envdir/qeneth && exec $testdir/qeneth/qeneth "\$@"
 EOF
     chmod +x "$envdir/bin/qeneth"

@@ -13,9 +13,7 @@ GIT_PATH            = $(BR2_EXTERNAL_INFIX_PATH)
 endif
 GIT_VERSION         = $(shell git -C $(GIT_PATH) describe --dirty --always --tags)
 
-IMAGE ?= infix
-TOPOLOGY-DIR ?= $(test-dir)/virt/quad
-
+TOPOLOGY-DIR := $(test-dir)/virt/quad
 base := -b $(base-dir)
 
 TEST_MODE ?= qeneth
@@ -24,7 +22,8 @@ mode-host   := -t $(or $(TOPOLOGY),/etc/infamy.dot)
 mode-run    := -t $(BINARIES_DIR)/qemu.dot
 mode        := $(mode-$(TEST_MODE))
 
-binaries-$(ARCH) := $(addprefix $(IMAGE)-$(ARCH),.img -disk.img .pkg)
+INFIX_IMAGE_ID := $(subst ",,$(INFIX_IMAGE_ID))
+binaries-$(ARCH) := $(addprefix $(INFIX_IMAGE_ID),.img -disk.img .pkg)
 binaries-x86_64  += OVMF.fd
 binaries := $(foreach bin,$(binaries-$(ARCH)),-f $(BINARIES_DIR)/$(bin))
 
