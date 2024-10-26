@@ -1,0 +1,18 @@
+diff --git a/lib/asio_server.cc b/lib/asio_server.cc
+index 74c9227..c3d42aa 100644
+--- a/lib/asio_server.cc
++++ b/lib/asio_server.cc
+@@ -82,8 +82,13 @@ boost::system::error_code server::bind_and_listen(boost::system::error_code &ec,
+   // Open the acceptor with the option to reuse the address (i.e.
+   // SO_REUSEADDR).
+   tcp::resolver resolver(io_service_pool_.get_io_service());
++
+   tcp::resolver::query query(address, port);
+   auto it = resolver.resolve(query, ec);
++  if (ec) {
++    tcp::resolver::query query(address, port, boost::asio::ip::resolver_query_base::numeric_host);
++    auto it = resolver.resolve(query, ec);
++  }
+   if (ec) {
+     return ec;
+   }
