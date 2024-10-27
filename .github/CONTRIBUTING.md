@@ -1,5 +1,5 @@
-Contributing to Infix
-=====================
+Contributing Guidelines
+=======================
 
 Thank :heart: you for taking the time to read this!
 
@@ -12,6 +12,7 @@ If you are unsure how to start implementing an idea or fix:
  - :bug: open an issue, there are human friendly templates for _bugs_
    and _feature requests_ at <https://github.com/kernelkit/infix/issues>
  - :speech_balloon: use the [Q&A Forum][discuss]
+ - :technologist: The [Developer's Guide][devguide] is also a useful start
 
 > _Talking about code and problems first is often the best way to get
 > started before submitting a pull request.  We have found it always

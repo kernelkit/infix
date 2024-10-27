@@ -206,20 +206,18 @@ corresponding image for execution with our normal tooling:
 Contributing
 ------------
 
-Infix is built from many parts, when contributing you need to set up
-your own fork, create a local branch for your change, push to your fork,
-and then use GitHub to create a *Pull Reqeuest*.
+Infix is built from many components, when contributing you need to set
+up your own fork, create a local branch for your change, push to your
+fork, and then use GitHub to create a *Pull Reqeuest*.
 
-For this to work as painlessly as possible:
+For this to work as *painlessly as possible* for everyone involved:
 
-  1. Fork Infix to your own user or organization[^1]
-  2. Fork all the Infix submodules, e.g., `kernelkit/buildroot` to your
-     own user or organization as well
-  3. Clone your fork of Infix to your laptop/workstation
-
-If you use a GitHub organization you get the added benefit of having
-local peer reviews of changes before making a pull request to the
-upstream Infix repository.
+ 1. Fork Infix to your own user or organization[^1]
+ 2. Fork all the Infix submodules, e.g., `kernelkit/buildroot` to your
+    own user or organization as well
+ 3. Clone your fork of Infix to your laptop/workstation
+ 4. [Deactivate the Actions][6] you don't want in your fork
+ 5. Please read the [Contributing Guidelines][5] as well!
 
 ```bash
 $ cd ~/Projects
@@ -227,10 +225,10 @@ $ git clone https://github.com/YOUR_USER_NAME/infix.git
 $ cd infix/
 $ git submodule update --init
 ```
-
 > **Note:** when updating/synchronizing with upstream Infix changes you
 > may have to synchronize your forks as well.  GitHub have a `Sync fork`
-> button in the GUI for your fork for this purpose.
+> button in the GUI for your fork for this purpose.  A cronjob on your
+> server of choice can do this for you with the [GitHub CLI tool][7].
 
 [^1]: Organizations should make sure to lock the `main` (or `master`)
     branch of their clones to ensure members do not accidentally merge
@@ -243,3 +241,6 @@ $ git submodule update --init
 [2]: https://github.com/wkz/qeneth
 [3]: https://netopeer.liberouter.org/doc/sysrepo/master/html/dev_guide.html
 [4]: https://buildroot.org/downloads/manual/manual.html#_developer_guide
+[5]: https://github.com/kernelkit/infix/blob/main/.github/CONTRIBUTING.md
+[6]: https://docs.github.com/en/actions/managing-workflow-runs-and-deployments/managing-workflow-runs/disabling-and-enabling-a-workflow
+[7]: https://cli.github.com/
