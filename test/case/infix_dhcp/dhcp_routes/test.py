@@ -1,14 +1,19 @@
 #!/usr/bin/env python3
-"""
-DHCP option 121 vs option 3
+"""DHCP option 121 vs option 3
 
-Verify DHCP option 121 (static routes) is used over option 3 and that the
-routes exist in the operational datastore.
+Verify that DHCP option 121 (classless static routes) is used over the
+older option 3 (default gateway) in the DHCP client, when both are sent
+by the server, see RFC3442.  Use the routing RIB in the operational
+datastore to verify.
 
-Installing unrelated routes from a DHCP server should not affect already
-existing routes.  To verify this, a canary route is set up in the client
-before initiating DHCP.  This canary route does not need to be reachable
-before a DHCP lease has been acquired.
+Installing routes from a DHCP server should not affect already existing
+(static) routes.  To verify this, a static canary route (20.0.0.0/24 via
+192.168.0.2) is installed before starting the DHCP client.  As a twist,
+this canary route has a next-hop (192.168.0.2) which is not reachable
+until a DHCP lease has been acquired.
+
+The DHCP server is set up to hand out both a default router (option 3)
+via 192.168.0.1 and a default route (option 121) via 192.168.0.254.
 """
 
 import infamy
@@ -22,11 +27,10 @@ with infamy.Test() as test:
     CANARY = '20.0.0.0/24'
     CANHOP = '192.168.0.2'
 
-    with test.step("Setting up client"):
+    with test.step("Setting up canary route, 20.0.0.0/24 via 192.168.0.2"):
         env = infamy.Env()
         client = env.attach("client", "mgmt")
         _, host = env.ltop.xlate("host", "data")
-        _, port = env.ltop.xlate("client", "data")
 
         # Install canary route to smoke out any regressions in
         # how the DHCP client installs routes in the kernel FIB
@@ -52,6 +56,9 @@ with infamy.Test() as test:
             }
         })
 
+    with test.step("Enabling DHCP client, allow option 3 and 121"):
+        _, port = env.ltop.xlate("client", "data")
+
         client.put_config_dict("infix-dhcp-client", {
             "dhcp-client": {
                 "client-if": [{
@@ -66,17 +73,18 @@ with infamy.Test() as test:
 
     with infamy.IsolatedMacVlan(host) as netns:
         netns.addip("192.168.0.1")
+        print(f"Start DHCP server {ROUTER} with option 3 and 121")
         with infamy.dhcp.Server(netns, prefix=PREFIX, router=ROUTER):
-            with test.step("Verify 'client' has a route to 10.0.0.0/24 via 192.168.0.254"):
+            with test.step("Verify 'client' has a route 10.0.0.0/24 via 192.168.0.254 (option 121)"):
                 print("Verify client use classless routes, option 121")
                 until(lambda: route.ipv4_route_exist(client, PREFIX, ROUTER))
 
-            with test.step("Verify 'client' has a default route via 192.168.0.254"):
+            with test.step("Verify 'client' has default route via 192.168.0.254 (not use option 3)"):
                 print("Verify client did *not* use option 3")
                 if route.ipv4_route_exist(client, "0.0.0.0/0", ROUTER):
                     test.fail()
 
-            with test.step("Verify 'client' has a route to 20.0.0.0/24 via 192.168.0.2"):
+            with test.step("Verify 'client' still has canary route to 20.0.0.0/24 via 192.168.0.2"):
                 until(lambda: route.ipv4_route_exist(client, CANARY,
                                                      CANHOP, pref=250))
 

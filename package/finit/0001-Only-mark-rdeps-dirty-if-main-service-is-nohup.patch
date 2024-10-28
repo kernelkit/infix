@@ -1,7 +1,7 @@
 From 46ffa81f5c88ce95db011369d8bfb802313e4217 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Thu, 17 Oct 2024 14:23:24 +0200
-Subject: [PATCH] Only mark rdeps dirty if main service is nohup
+Subject: [PATCH 1/2] Only mark rdeps dirty if main service is nohup
 Organization: Addiva Elektronik
 
 This patch changes a behavior that's been default since Finit 4.0,

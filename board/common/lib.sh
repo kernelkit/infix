@@ -16,13 +16,22 @@ die()
 #      DISK_IMAGE_SIZE="512"
 #      etc.
 #
+# Nested variables, like INFIX_COMPATIBLE="${INFIX_IMAGE_ID}"
+# are handled by sourcing the file in a subshell.
+#
 # shellcheck disable=SC1090
 load_cfg()
 {
     tmp=$(mktemp -p /tmp)
+    (
+	. "$BR2_CONFIG" 2>/dev/null
 
-    grep -E "${1}.*=" "$BR2_CONFIG" >"$tmp"
+	# Set *all* matching variables
+	set | grep -E "^${1}[^=]*=" | while IFS= read -r line; do
+            echo "$line"
+	done
+    ) > "$tmp"
+
     .  "$tmp"
-
     rm "$tmp"
 }

@@ -1,0 +1,33 @@
+From 119e66a7e9c95283918639b51dd03a3d666955f8 Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Mon, 28 Oct 2024 10:58:04 +0100
+Subject: [PATCH 2/2] Reset color attributes and clear screen when starting up
+Organization: Addiva Elektronik
+
+Some boot loaders, like GRUB, leave background color artifacts from
+their boot menu.  This patch resets the foreground and background
+color attributes, and then clears the screen, without clearing the
+scrollback buffer.
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ src/helpers.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/src/helpers.c b/src/helpers.c
+index 8768de8..99c4557 100644
+--- a/src/helpers.c
++++ b/src/helpers.c
+@@ -87,6 +87,9 @@ void console_init(void)
+ 	/* Enable line wrap, if disabled previously, e.g., qemu */
+ 	dprint(STDOUT_FILENO, "\033[?7h", 5);
+ 
++	/* Reset atttributes, background and foreground color  */
++	dprint(STDOUT_FILENO, "\033[49m\033[39m\e[2J", 14);
++
+ 	log_init();
+ }
+ 
+-- 
+2.43.0
+
