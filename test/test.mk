@@ -38,7 +38,8 @@ test-sh:
 	$(test-dir)/env $(base) $(mode) $(binaries) -i /bin/sh
 
 test-spec:
-	@sed 's/{REPLACE}/$(subst ",,$(INFIX_NAME)) $(GIT_VERSION)/'  $(spec-dir)/Readme.adoc.in > $(spec-dir)/Readme.adoc
+	@esc_infix_name="$(echo $(INFIX_NAME) | sed 's/\//\\\//g')"; \
+	sed 's/{REPLACE}/$(subst ",,$(esc_infix_name)) $(GIT_VERSION)/'  $(spec-dir)/Readme.adoc.in > $(spec-dir)/Readme.adoc
 	@$(spec-dir)/generate_spec.py -d $(test-dir)/case -r $(BR2_EXTERNAL_INFIX_PATH)
 	@asciidoctor-pdf --failure-level INFO --theme $(spec-dir)/theme.yml -a pdf-fontsdir=$(spec-dir)/fonts -o $(test-specification) $(spec-dir)/Readme.adoc
 
