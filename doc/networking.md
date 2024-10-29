@@ -147,6 +147,8 @@ a switch is a bridge.  In Linux, setting up a bridge with ports
 connected to physical switch fabric, means you manage the actual switch
 fabric!
 
+#### MAC Bridge
+
 In Infix ports are by default not switch ports, unless the customer
 specific factory config sets it up this way.  To enable switching
 between ports you create a bridge and then add ports to that
@@ -168,6 +170,13 @@ Here we add two ports to bridge `br0`: `eth0` and `eth1`.
 > the interface type automatically and unlocks all bridge features.
 > Other "magic" names are `ethN.M` for VLAN M on top of `ethN`, or
 > `dockerN` to create an IP masquerading container bridge.
+
+![A MAC bridge with two ports](img/mac-bridge.svg)
+
+It is possible to create multiple MAC bridges, however, it is
+currently[^5] _not recommended_ to use more than one MAC bridge on
+products with Marvell LinkStreet switching ASICs. A VLAN filtering
+bridge should be used instead.
 
 #### VLAN Filtering Bridge
 
@@ -200,10 +209,12 @@ or for routing, the bridge must become a (tagged) member of the VLAN.
 admin@example:/config/interface/br0/> set bridge vlans vlan 10 tagged br0
 admin@example:/config/interface/br0/> set bridge vlans vlan 20 tagged br0
 ```
+![A VLAN bridge with two VLANs](img/vlan-bridge.svg)
 
 > To route or to manage via a VLAN, a VLAN interface needs to be created
 > on top of the bridge, see section [VLAN Interfaces](#vlan-interfaces)
 > below for more on this topic.
+
 
 #### Multicast Filtering and Snooping
 
@@ -1136,3 +1147,6 @@ currently supported, namely `ipv4` and `ipv6`.
 [^4]: A YANG deviation was previously used to make it possible to set
     `phys-address`, but this has been replaced with the more flexible
 	`custom-phys-address`.
+[^5]: Infix MAC bridges on Marvell Linkstreet devices are currently
+    limited to use a single MAC database, causing issues if the same
+    MAC address appears on different MAC bridges.
