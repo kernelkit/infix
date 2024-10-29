@@ -629,18 +629,52 @@ def get_brport_multicast(ifname):
 def get_ip_link():
     """Fetch interface link information from kernel"""
     return run_json_cmd(['ip', '-s', '-d', '-j', 'link', 'show'],
-                        f"ip-link-show.json")
+                        "ip-link-show.json")
 
+def netns_get_ip_link(netns):
+    """Fetch interface link information from within a network namespace"""
+    return run_json_cmd(['ip', 'netns', 'exec', netns, 'ip', '-s', '-d', '-j', 'link', 'show'],
+                        f"netns-{netns}-ip-link-show.json")
 
 def get_ip_addr():
     """Fetch interface address information from kernel"""
     return run_json_cmd(['ip', '-j', 'addr', 'show'],
-                        f"ip-addr-show.json")
+                        "ip-addr-show.json")
 
+def netns_get_ip_addr(netns):
+    """Fetch interface address information from within a network namespace"""
+    return run_json_cmd(['ip', 'netns', 'exec', netns, 'ip', '-j', 'addr', 'show'],
+                        f"netns-{netns}-ip-addr-show.json")
+
+def get_netns_list():
+    """Fetch a list of network namespaces"""
+    return run_json_cmd(['ip', '-j', 'netns', 'list'],
+                        "netns-list.json")
+
+def netns_find_ifname(ifname):
+    """Find which network namespace owns ifname (if any)"""
+    for netns in get_netns_list():
+        for iface in netns_get_ip_link(netns['name']):
+            if 'ifalias' in iface and iface['ifalias'] == ifname:
+                    return netns['name']
+    return None
+
+def netns_ifindex_to_ifname(ifindex):
+    """Look through all network namespaces for an interface index and return its name"""
+    for netns in get_netns_list():
+        for iface in netns_get_ip_link(netns['name']):
+            if iface['ifindex'] == ifindex:
+                if 'ifalias' in iface:
+                    return iface['ifalias']
+                if 'ifname' in iface:
+                    return iface['ifname']
+                return None
+
+    return None
 
 def add_ip_link(ifname, iface_in, iface_out):
     if 'ifname' in iface_in:
-        iface_out['name'] = iface_in['ifname']
+        iface_out['name'] = ifname
 
     if 'ifindex' in iface_in:
         iface_out['if-index'] = iface_in['ifindex']
@@ -664,8 +698,14 @@ def add_ip_link(ifname, iface_in, iface_out):
 
         multicast = get_brport_multicast(ifname)
         insert(iface_out, "infix-interfaces:bridge-port", "multicast", multicast)
-    if 'link' in iface_in and not iface_is_dsa(iface_in):
-        insert(iface_out, "infix-interfaces:vlan", "lower-layer-if", iface_in['link'])
+    if not iface_is_dsa(iface_in):
+        if 'link' in iface_in:
+            insert(iface_out, "infix-interfaces:vlan", "lower-layer-if", iface_in['link'])
+        elif 'link_index' in iface_in:
+            # 'link_index' is the only reference we have if the link iface is in a namespace
+            lower = netns_ifindex_to_ifname(iface_in['link_index'])
+            if lower:
+                insert(iface_out, "infix-interfaces:vlan", "lower-layer-if", lower)
 
     if 'flags' in iface_in:
         iface_out['admin-status'] = "up" if "UP" in iface_in['flags'] else "down"
@@ -885,6 +925,39 @@ def add_mdb_to_bridge(brname, iface_out, mc_status):
     insert(iface_out, "infix-interfaces:bridge", "multicast", multicast)
     insert(iface_out, "infix-interfaces:bridge", "multicast-filters", "multicast-filter", multicast_filters)
 
+def add_container_ifaces(yang_ifaces):
+    """Add all podman interfaces with limited data"""
+    interfaces={}
+    try:
+         containers = run_json_cmd(['podman', 'ps', '--format', 'json'], "podman-ps.json", default=[])
+    except Exception as e:
+        logging.error(f"Error, unable to run podman: {e}")
+        return
+
+    for container in containers:
+        name = container.get('Names', ['Unknown'])[0]
+        networks = container.get('Networks', [])
+
+        for network in networks:
+            if not network in interfaces:
+                interfaces[network] = []
+            if name not in interfaces[network]:
+                interfaces[network].append(name)
+
+    for ifname, containers in interfaces.items():
+        iface_out = {}
+        iface_out['name'] = ifname
+        iface_out['type'] = "infix-if-type:other" # Fallback
+        insert(iface_out, "infix-interfaces:container-network", "containers", containers)
+
+        netns = netns_find_ifname(ifname)
+        if netns is not None:
+            ip_link_data = netns_get_ip_link(netns)
+            ip_link_data = next((d for d in ip_link_data if d.get('ifalias') == ifname), None)
+            add_ip_link(ifname, ip_link_data, iface_out)
+
+        yang_ifaces.append(iface_out)
+
 # Helper function to add tagged/untagged interfaces to a vlan dict in a list
 def _add_vlan_iface(vlans, multicast_filter, multicast, vid, key, val):
     for d in vlans:
@@ -961,6 +1034,8 @@ def add_interface(ifname, yang_ifaces):
         for link in ip_link_data:
             addr = next((d for d in ip_addr_data if d.get('ifname') == link["ifname"]), None)
             _add_interface(link["ifname"], link, addr, yang_ifaces)
+
+        add_container_ifaces(yang_ifaces)
 
 def main():
     global TESTPATH

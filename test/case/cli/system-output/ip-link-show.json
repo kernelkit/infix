@@ -618,5 +618,61 @@
         "collisions": 0
       }
     }
+  },
+  {
+    "ifindex": 9,
+    "link_index": 8,
+    "ifname": "veth0j",
+    "flags": [
+      "BROADCAST",
+      "MULTICAST",
+      "UP",
+      "LOWER_UP"
+    ],
+    "mtu": 1500,
+    "qdisc": "noqueue",
+    "operstate": "UP",
+    "linkmode": "DEFAULT",
+    "group": "default",
+    "txqlen": 1000,
+    "link_type": "ether",
+    "address": "b2:82:e3:ce:d5:9e",
+    "broadcast": "ff:ff:ff:ff:ff:ff",
+    "link_netnsid": 1,
+    "promiscuity": 0,
+    "allmulti": 0,
+    "min_mtu": 68,
+    "max_mtu": 65535,
+    "linkinfo": {
+      "info_kind": "veth"
+    },
+    "inet6_addr_gen_mode": "none",
+    "num_tx_queues": 1,
+    "num_rx_queues": 1,
+    "gso_max_size": 65536,
+    "gso_max_segs": 65535,
+    "tso_max_size": 524280,
+    "tso_max_segs": 65535,
+    "gro_max_size": 65536,
+    "gso_ipv4_max_size": 65536,
+    "gro_ipv4_max_size": 65536,
+    "stats64": {
+      "rx": {
+        "bytes": 1006,
+        "packets": 13,
+        "errors": 0,
+        "dropped": 0,
+        "over_errors": 0,
+        "multicast": 0
+      },
+      "tx": {
+        "bytes": 18668,
+        "packets": 50,
+        "errors": 0,
+        "dropped": 0,
+        "carrier_errors": 0,
+        "collisions": 0
+      }
+    }
   }
 ]
