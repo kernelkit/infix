@@ -1,0 +1,199 @@
+From 9622a68eba4aeaa60619b4c33d050ce91b27653d Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Tom=C3=A1=C5=A1=20Pecka?= <tomas.pecka@cesnet.cz>
+Date: Tue, 8 Oct 2024 12:22:49 +0200
+Subject: [PATCH 1/6] restconf: report the list key values when they differ
+ between URI and data
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Addiva Elektronik
+
+For creating (leaf-)list instances with PUT and PATCH methods one has
+to specify the list key values in the URI and in the data as well.
+Those values must be the same. In case they are not, it is an error.
+We reported that the values mismatch in case this happens, but the error
+message did not report what the values were.
+Knowing that might be beneficial when one is about to insert key values
+that can be namespace qualified (like identityrefs) and that are
+sometimes manipulated by libyang (e.g., when the identity belongs to the
+same namespace as the list node, it is not necessary for it to be
+namespace qualified by the client, but libyang adds the namespace
+internally).
+
+Change-Id: Ie0d42511bde01ab4c39d61370b6601f8808e40c5
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ src/restconf/Server.cpp        | 29 +++++++++++++++++++++--------
+ tests/restconf-plain-patch.cpp |  2 +-
+ tests/restconf-writing.cpp     | 14 +++++++-------
+ tests/restconf-yang-patch.cpp  |  2 +-
+ 4 files changed, 30 insertions(+), 17 deletions(-)
+
+diff --git a/src/restconf/Server.cpp b/src/restconf/Server.cpp
+index 53d6625..5f560ed 100644
+--- a/src/restconf/Server.cpp
++++ b/src/restconf/Server.cpp
+@@ -154,9 +154,22 @@ auto rejectYangPatch(const std::string& patchId, const std::string& editId)
+     };
+ }
+ 
++struct KeyMismatch {
++    libyang::DataNode offendingNode;
++    std::optional<std::string> uriKeyValue;
++
++    std::string message() const {
++        if (uriKeyValue) {
++            return "List key mismatch between URI path ('"s + *uriKeyValue + "') and data ('" + offendingNode.asTerm().valueStr() + "').";
++        } else {
++            return "List key mismatch (key missing in the data).";
++        }
++    }
++};
++
+ /** @brief In case node is a (leaf-)list check if the key values are the same as the keys specified in the lastPathSegment.
+  * @return The node where the mismatch occurs */
+-std::optional<libyang::DataNode> checkKeysMismatch(const libyang::DataNode& node, const PathSegment& lastPathSegment)
++std::optional<KeyMismatch> checkKeysMismatch(const libyang::DataNode& node, const PathSegment& lastPathSegment)
+ {
+     if (node.schema().nodeType() == libyang::NodeType::List) {
+         const auto& listKeys = node.schema().asList().keys();
+@@ -164,18 +177,18 @@ std::optional<libyang::DataNode> checkKeysMismatch(const libyang::DataNode& node
+             const auto& keyValueURI = lastPathSegment.keys[i];
+             auto keyNodeData = node.findPath(listKeys[i].module().name() + ':' + listKeys[i].name());
+             if (!keyNodeData) {
+-                return node;
++                return KeyMismatch{node, std::nullopt};
+             }
+ 
+             const auto& keyValueData = keyNodeData->asTerm().valueStr();
+ 
+             if (keyValueURI != keyValueData) {
+-                return keyNodeData;
++                return KeyMismatch{*keyNodeData, keyValueURI};
+             }
+         }
+     } else if (node.schema().nodeType() == libyang::NodeType::Leaflist) {
+         if (lastPathSegment.keys[0] != node.asTerm().valueStr()) {
+-            return node;
++            return KeyMismatch{node, lastPathSegment.keys[0]};
+         }
+     }
+     return std::nullopt;
+@@ -350,8 +363,8 @@ libyang::CreatedNodes createEditForPutAndPatch(libyang::Context& ctx, const std:
+             if (isSameNode(child, lastPathSegment)) {
+                 // 1) a single child that is created by parseSubtree(), its name is the same as `lastPathSegment`.
+                 // It could be a list; then we need to check if the keys in provided data match the keys in URI.
+-                if (auto offendingNode = checkKeysMismatch(child, lastPathSegment)) {
+-                    throw ErrorResponse(400, "protocol", "invalid-value", "List key mismatch between URI path and data.", offendingNode->path());
++                if (auto keyMismatch = checkKeysMismatch(child, lastPathSegment)) {
++                    throw ErrorResponse(400, "protocol", "invalid-value", keyMismatch->message(), keyMismatch->offendingNode.path());
+                 }
+                 replacementNode = child;
+             } else if (isKeyNode(*node, child)) {
+@@ -373,8 +386,8 @@ libyang::CreatedNodes createEditForPutAndPatch(libyang::Context& ctx, const std:
+             if (!isSameNode(*replacementNode, lastPathSegment)) {
+                 throw ErrorResponse(400, "protocol", "invalid-value", "Data contains invalid node.", replacementNode->path());
+             }
+-            if (auto offendingNode = checkKeysMismatch(*parent, lastPathSegment)) {
+-                throw ErrorResponse(400, "protocol", "invalid-value", "List key mismatch between URI path and data.", offendingNode->path());
++            if (auto keyMismatch = checkKeysMismatch(*parent, lastPathSegment)) {
++                throw ErrorResponse(400, "protocol", "invalid-value", keyMismatch->message(), keyMismatch->offendingNode.path());
+             }
+         }
+     }
+diff --git a/tests/restconf-plain-patch.cpp b/tests/restconf-plain-patch.cpp
+index 10d653a..d4f3952 100644
+--- a/tests/restconf-plain-patch.cpp
++++ b/tests/restconf-plain-patch.cpp
+@@ -72,7 +72,7 @@ TEST_CASE("Plain patch")
+         "error-type": "protocol",
+         "error-tag": "invalid-value",
+         "error-path": "/example:tlc/list[name='blabla']/name",
+-        "error-message": "List key mismatch between URI path and data."
++        "error-message": "List key mismatch between URI path ('libyang') and data ('blabla')."
+       }
+     ]
+   }
+diff --git a/tests/restconf-writing.cpp b/tests/restconf-writing.cpp
+index d46952f..96dbb25 100644
+--- a/tests/restconf-writing.cpp
++++ b/tests/restconf-writing.cpp
+@@ -432,7 +432,7 @@ TEST_CASE("writing data")
+         "error-type": "protocol",
+         "error-tag": "invalid-value",
+         "error-path": "/example:tlc/list[name='ahoj']/name",
+-        "error-message": "List key mismatch between URI path and data."
++        "error-message": "List key mismatch between URI path ('netconf') and data ('ahoj')."
+       }
+     ]
+   }
+@@ -447,7 +447,7 @@ TEST_CASE("writing data")
+         "error-type": "protocol",
+         "error-tag": "invalid-value",
+         "error-path": "/example:top-level-list[name='ahoj']/name",
+-        "error-message": "List key mismatch between URI path and data."
++        "error-message": "List key mismatch between URI path ('netconf') and data ('ahoj')."
+       }
+     ]
+   }
+@@ -505,7 +505,7 @@ TEST_CASE("writing data")
+         "error-type": "protocol",
+         "error-tag": "invalid-value",
+         "error-path": "/example:tlc/list[name='netconf']/collection[.='666']",
+-        "error-message": "List key mismatch between URI path and data."
++        "error-message": "List key mismatch between URI path ('667') and data ('666')."
+       }
+     ]
+   }
+@@ -520,7 +520,7 @@ TEST_CASE("writing data")
+         "error-type": "protocol",
+         "error-tag": "invalid-value",
+         "error-path": "/example:top-level-leaf-list[.='666']",
+-        "error-message": "List key mismatch between URI path and data."
++        "error-message": "List key mismatch between URI path ('667') and data ('666')."
+       }
+     ]
+   }
+@@ -535,7 +535,7 @@ TEST_CASE("writing data")
+         "error-type": "protocol",
+         "error-tag": "invalid-value",
+         "error-path": "/example:tlc/list[name='sysrepo']/name",
+-        "error-message": "List key mismatch between URI path and data."
++        "error-message": "List key mismatch between URI path ('netconf') and data ('sysrepo')."
+       }
+     ]
+   }
+@@ -550,7 +550,7 @@ TEST_CASE("writing data")
+         "error-type": "protocol",
+         "error-tag": "invalid-value",
+         "error-path": "/example:tlc/list[name='sysrepo']/name",
+-        "error-message": "List key mismatch between URI path and data."
++        "error-message": "List key mismatch between URI path ('netconf') and data ('sysrepo')."
+       }
+     ]
+   }
+@@ -565,7 +565,7 @@ TEST_CASE("writing data")
+         "error-type": "protocol",
+         "error-tag": "invalid-value",
+         "error-path": "/example:tlc/list[name='libyang']/collection[.='42']",
+-        "error-message": "List key mismatch between URI path and data."
++        "error-message": "List key mismatch between URI path ('5') and data ('42')."
+       }
+     ]
+   }
+diff --git a/tests/restconf-yang-patch.cpp b/tests/restconf-yang-patch.cpp
+index 9d70912..7cc8946 100644
+--- a/tests/restconf-yang-patch.cpp
++++ b/tests/restconf-yang-patch.cpp
+@@ -436,7 +436,7 @@ TEST_CASE("YANG patch")
+                 "error-type": "protocol",
+                 "error-tag": "invalid-value",
+                 "error-path": "/example:tlc/list[name='asdasdauisbdhaijbsdad']/name",
+-                "error-message": "List key mismatch between URI path and data."
++                "error-message": "List key mismatch between URI path ('libyang') and data ('asdasdauisbdhaijbsdad')."
+               }
+             ]
+           }
+-- 
+2.43.0
+
