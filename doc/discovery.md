@@ -171,6 +171,110 @@ linux-pc:# avahi-browse -ar
 ^C
 linux-pc:#
 ```
+
+Additionally, *avahi-resolve-host-name* can be used to verify domain
+name mappings for IP addresses. By default, it translates from IPv4
+addresses. This function allows users to confirm that addresses are
+mapped correctly.
+
+```
+linux-pc:# avahi-resolve-host-name infix-00-00-00.local
+infix-00-00-00.local	10.0.1.1
+linux-pc:#
+```
+
+Resolved addresses can also be used for tasks like pinging or
+establishing an SSH connection to the device, as demonstrated below:
+
+```
+linux-pc:# ping infix-00-00-00.local -c 3
+PING infix-00-00-00.local (10.0.1.1) 56(84) bytes of data.
+64 bytes from 10.0.1.1: icmp_seq=1 ttl=64 time=0.852 ms
+64 bytes from 10.0.1.1: icmp_seq=2 ttl=64 time=1.12 ms
+64 bytes from 10.0.1.1: icmp_seq=3 ttl=64 time=1.35 ms
+
+--- infix-00-00-00.local ping statistics ---
+3 packets transmitted, 3 received, 0% packet loss, time 2003ms
+rtt min/avg/max/mdev = 0.852/1.105/1.348/0.202 ms
+
+linux-pc:# ssh admin@infix-00-00-00.local
+(admin@infix-00-00-00.local) Password: 
+.-------.
+|  . .  | Infix -- a Network Operating System
+|-. v .-| https://kernelkit.org
+'-'---'-
+
+Run the command 'cli' for interactive OAM
+
+linux-pc:#
+```
+
+To disable mDNS/mDNS-SD, type the commands:
+```
+admin@infix-00-00-00:/> configure 
+admin@infix-00-00-00:/config/> set mdns enabled false 
+admin@infix-00-00-00:/config/> leave
+```
+
+#### Short Hostname 
+
+With the help of the mdns-alias, mDNS functionality allows the device
+to be accessible as *infix.local* rather than its full hostname 
+(e.g., infix-00-00-00.local). This alias works seamlessly on a network
+with a single Infix device. However, if multiple Infix devices are
+present (e.g., infix-00-00-00.local, infix-01-01-01.local), each device
+requires a unique hostname to avoid conflicts, as infix.local would not
+uniquely identify multiple devices. The shortened names can also be
+used for actions like pinging or establishing an SSH connection:
+
+```
+linux-pc:# ping infix.local -c 3
+PING infix.local (10.0.1.1) 56(84) bytes of data.
+64 bytes from 10.0.1.1: icmp_seq=1 ttl=64 time=0.751 ms
+64 bytes from 10.0.1.1: icmp_seq=2 ttl=64 time=2.28 ms
+64 bytes from 10.0.1.1: icmp_seq=3 ttl=64 time=1.42 ms
+
+--- infix.local ping statistics ---
+3 packets transmitted, 3 received, 0% packet loss, time 2003ms
+rtt min/avg/max/mdev = 0.751/1.482/2.281/0.626 ms
+
+linux-pc:# ssh admin@infix.local
+(admin@infix-00-00-00.local) Password: 
+.-------.
+|  . .  | Infix -- a Network Operating System
+|-. v .-| https://kernelkit.org
+'-'---'-
+
+Run the command 'cli' for interactive OAM
+
+linux-pc:#
+```
+
+#### Web Service Availability
+
+The web service on the Infix device is primarily served by the nginx
+daemon, which acts as a frontend. It routes incoming requests to the
+netbrowse service, a network browser responsible for providing the web
+management and console interfaces. This layered approach allows nginx
+to handle HTTP/HTTPS requests and forward them to netbrowse, accessible
+via the https://network.local portal.
+
+Type https://network.local in the browser and the following should be
+shown:
+
+![Web Service - network.local](img/network-local.svg)
+
+The web interface shows all mDNS hosts and their services advertised
+on the network. At this point it is possible to further navigate to
+web management interface or remote (web) console.
+
+To disable the web server, use the following:
+```
+admin@infix-00-00-00:/> configure 
+admin@infix-00-00-00:/config/> set web netbrowse enabled false
+admin@infix-00-00-00:/> leave
+```
+
 [^2]: [mdns-scan](http://0pointer.de/lennart/projects/mdns-scan/): a
     tool for scanning for mDNS/DNS-SD published services on the local
     network
