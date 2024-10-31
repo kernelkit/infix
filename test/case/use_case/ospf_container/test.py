@@ -1,8 +1,51 @@
 #!/usr/bin/env python3
+r"""OSPF Container
 
-r"""OSPF container
+This use-case test verifies connectivity in an OSPF network to services
+running as hosted containers inside each router.
 
-Good test
+NOTE: The _Controller_, _ABR_, and `data` connections are simulated by
+the test PC. The `ringN` ports are connected to other DUTs via the test
+PC, which can act as a link breaker.
+
+.Use-case overview.
+[#img-overview]
+image::overview.svg[]
+
+The DUTs are connected in a routed topology inside their own OSPF area.
+A single area border router (ABR) is used to access the controller
+network in OSPF area 0.  Each router also has "test point" connections
+where the controller can attach other than its connection in area 0.
+
+ - The ringN ports are intended to be connected to neighboring DUTs, but
+   may at each end of the bus be used as test points
+ - The data ports are intended to be test points for verifying
+   connectivity with container B via br1
+ - The uplink ports are for connecting to the ABR, at least one of the
+   DUTs should not have a connection to the ABR, this to verify routing
+   via another DUT
+ - Area 1 is 10.1.Rn.0/16, and each router is assigned a /24
+
+Each DUT hosts one application container and one system container, all
+have the same setup, with only different subnets assigned.  A third
+container is used to manipulate the firewall of each DUT, providing port
+forwarding and masquerading.
+
+.Internal network setup, here router R1 on subnet 10.1.1.1/24.
+[#img-setup]
+image::internal-network.svg[]
+
+ - Container A runs a very basic web server, it runs on port 80 inside
+   the container, and `br0`, but is accessible outside on port 8080.
+   The controller connects to each of these servers from OSPF area 0.
+   For the controller to be able to distinguish between the servers,
+   they all serve slightly different content
+ - Container B runs a system container with an SSH server.  During the
+   test, the controller connects to this container using the `data` port
+   to ensure the container can access all other parts of the network.
+   To distinguish between the different container B's, each container
+   will have a unique hostname derived from the chassis MAC address
+
 """
 import infamy
 import infamy.util as util
