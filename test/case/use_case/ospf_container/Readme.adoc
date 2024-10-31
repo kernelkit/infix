@@ -42,12 +42,12 @@ second bridge, `br1`, only use IPv6 link-local addresses.
 [#img-setup]
 image::internal-network.svg[]
 
- - Container A runs a very basic web server, it runs on port 80 inside
+ - *Container A* runs a very basic web server, it runs on port 80 inside
    the container, and `br0`, but is accessible outside on port 8080.
    The controller connects to each of these servers from OSPF area 0.
    For the controller to be able to distinguish between the servers,
    they all serve slightly different content
- - Container B runs a system container with an SSH server.  During the
+ - *Container B* runs a complete system with an SSH server.  During the
    test, the controller connects to this container using the `data` port
    to ensure the container can access all other parts of the network.
    To distinguish between the different container B's, each container
