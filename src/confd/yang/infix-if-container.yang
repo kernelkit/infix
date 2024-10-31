@@ -23,6 +23,10 @@ submodule infix-if-container {
                 Ensures a container interface can never be a bridge port, or
                 LAG member, at the same time.";
 
+  revision 2024-10-29 {
+    description "Add read only container list to container-network";
+    reference "internal";
+  }
   revision 2024-01-15 {
     description "Initial revision.";
     reference "internal";
@@ -64,7 +68,11 @@ submodule infix-if-container {
 	    base container-network;
 	  }
 	}
-
+         leaf-list containers {
+                 type string;
+                 config false;
+                 description "List of containers using this interface";
+         }
 	list subnet {
 	  description "Static IP ranges to hand out addresses to containers from.
 

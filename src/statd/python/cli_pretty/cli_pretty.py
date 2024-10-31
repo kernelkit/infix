@@ -80,6 +80,10 @@ class Decore():
     def underline(txt):
         return Decore.decorate("4", txt, "24")
 
+    @staticmethod
+    def gray_bg(txt):
+        return Decore.decorate("100", txt)
+
 def datetime_now():
     if UNIT_TEST:
         return datetime(2023, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
@@ -273,6 +277,7 @@ class Iface:
         self.bridge = get_json_data('', self.data, 'infix-interfaces:bridge-port', 'bridge')
         self.pvid = get_json_data('', self.data, 'infix-interfaces:bridge-port', 'pvid')
         self.stp_state = get_json_data('', self.data, 'infix-interfaces:bridge-port', 'stp-state')
+        self.containers = get_json_data('', self.data, 'infix-interfaces:container-network', 'containers')
 
         if data.get('statistics'):
             self.in_octets = data.get('statistics').get('in-octets', '')
@@ -301,6 +306,10 @@ class Iface:
 
     def is_vlan(self):
         return self.type == "infix-if-type:vlan"
+
+    def is_in_container(self):
+        # Return negative if cointainer isn't set or is an empty list
+        return getattr(self, 'containers', None)
 
     def is_bridge(self):
         return self.type == "infix-if-type:bridge"
@@ -436,7 +445,18 @@ class Iface:
         parent.pr_name(pipe='└ ')
         parent.pr_proto_eth()
 
+    def pr_container(self):
+        row = f"{self.name:<{Pad.iface}}"
+        row += f"{'container':<{Pad.proto}}"
+        row += f"{'':<{Pad.state}}"
+        row += f"{', ' . join(self.containers):<{Pad.data}}"
+
+        print(Decore.gray_bg(row))
+
     def pr_iface(self):
+        if self.is_in_container():
+            print(Decore.gray_bg(f"{'owned by container':<{20}}: {', ' . join(self.containers)}"))
+
         print(f"{'name':<{20}}: {self.name}")
         print(f"{'index':<{20}}: {self.index}")
         if self.mtu:
@@ -562,6 +582,10 @@ def pr_interface_list(json):
 
     for iface in [Iface(data) for data in ifaces]:
         if iface.name == "lo":
+            continue
+
+        if iface.is_in_container():
+            iface.pr_container()
             continue
 
         if iface.is_bridge():

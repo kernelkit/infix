@@ -625,5 +625,37 @@
         "collisions": 0
       }
     }
+  },
+  {
+    "ifindex": 9,
+    "link_index": 8,
+    "ifname": "veth0j",
+    "flags": [
+      "BROADCAST",
+      "MULTICAST",
+      "UP",
+      "LOWER_UP"
+    ],
+    "mtu": 1500,
+    "qdisc": "noqueue",
+    "operstate": "UP",
+    "group": "default",
+    "txqlen": 1000,
+    "link_type": "ether",
+    "address": "b2:82:e3:ce:d5:9e",
+    "broadcast": "ff:ff:ff:ff:ff:ff",
+    "link_netnsid": 1,
+    "addr_info": [
+      {
+        "family": "inet",
+        "local": "192.168.1.1",
+        "prefixlen": 24,
+        "scope": "global",
+        "protocol": "static",
+        "label": "veth0j",
+        "valid_life_time": 4294967295,
+        "preferred_life_time": 4294967295
+      }
+    ]
   }
 ]
