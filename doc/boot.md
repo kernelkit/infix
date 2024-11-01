@@ -143,7 +143,7 @@ which offers lots of benefits out-of-the-box:
   media like USB sticks or SD-cards) and from remote servers using FTP
   or HTTP(S).
 
-To initiate a system upgrade from shell[^1], run:
+To initiate a system upgrade from the shell[^1], run:
 
     rauc install <file|url>
 
@@ -157,6 +157,7 @@ from which you were originally running is now inactive, running the
 same upgrade command again will bring both partitions into sync.
 
 [RAUC]: https://rauc.io
+
 
 Image Formats
 =============
