@@ -59,7 +59,7 @@ class IsolatedMacVlans:
                                 "link", parent,
                                 "address", self._stable_mac(parent),
                                 "netns", str(self.sleeper.pid),
-                                "type", "macvlan"], check=True)
+                                "type", "macvlan", "mode", "passthru"], check=True)
                 self.runsh(f"""
                 while ! ip link show dev {ifname}; do
                     sleep 0.1
