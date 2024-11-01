@@ -15,7 +15,8 @@ managing entire fleets of installed equipment.
 Nevertheless, when it comes to initial deployment and debugging, it
 is very useful to know how to navigate and use the CLI.
 
-> Proceed to the [CLI User Guide](cli/tutorial.md).
+> Proceed to the [CLI Introduction](cli/introduction.md) or [CLI
+> Configuration Tutorial](cli/configure.md).
 
 
 ## Key Concepts
