@@ -143,7 +143,7 @@ which offers lots of benefits out-of-the-box:
   media like USB sticks or SD-cards) and from remote servers using FTP
   or HTTP(S).
 
-To initiate a system upgrade, run:
+To initiate a system upgrade from the shell[^1], run:
 
     rauc install <file|url>
 
@@ -349,3 +349,5 @@ can funtion reasonably well without a persistent `/var`, loosing
 If `var` is not available, Infix will still persist `/var/lib` using
 `cfg` as the backing storage.
 
+[^1]: See [CLI Upgrade](cli/upgrade.md) for information on upgrading
+    via CLI.

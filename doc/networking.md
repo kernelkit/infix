@@ -43,15 +43,17 @@ diverted to the VLAN interface before entering the bridge, while all
 other traffic would be bridged as usual.
 
 | **Type** | **Yang Model**             | **Description**                                               |
-| -------- | -----------------          | ------------------------------------------------------------- |
+|----------|----------------------------|---------------------------------------------------------------|
 | bridge   | infix-if-bridge            | SW implementation of an IEEE 802.1Q bridge                    |
 | ip       | ietf-ip, infix-ip          | IP address to the subordinate interface                       |
 | vlan     | infix-if-vlan              | Capture all traffic belonging to a specific 802.1Q VID        |
 | lag[^1]  | infix-if-lag               | Bonds multiple interfaces into one, creating a link aggregate |
 | lo       | ietf-interfaces            | Software loopback interface                                   |
-| eth      | ietf-interfaces,           | Physical Ethernet device/port                                 |
-|          | ieee802-ethernet-interface |                                                               |
+| eth      | ieee802-ethernet-interface | Physical Ethernet device/port.                                |
+|          | infix-ethernet-interface   |                                                               |
 | veth     | infix-if-veth              | Virtual Ethernet pair, typically one end is in a container    |
+| *common* | ietf-interfaces,           | Properties common to all interface types                      |
+|          | infix-interfaces           |                                                               |
 
 
 ## Data Plane
@@ -202,6 +204,8 @@ This sets `eth0` as an untagged member of VLAN 10 and `eth1` as an
 untagged member of VLAN 20.  Switching between these ports is thus
 prohibited.
 
+![A VLAN bridge with two VLANs](img/vlan-bridge.svg)
+
 To terminate a VLAN in the switch itself, either for switch management
 or for routing, the bridge must become a (tagged) member of the VLAN.
 
@@ -209,7 +213,6 @@ or for routing, the bridge must become a (tagged) member of the VLAN.
 admin@example:/config/interface/br0/> set bridge vlans vlan 10 tagged br0
 admin@example:/config/interface/br0/> set bridge vlans vlan 20 tagged br0
 ```
-![A VLAN bridge with two VLANs](img/vlan-bridge.svg)
 
 > To route or to manage via a VLAN, a VLAN interface needs to be created
 > on top of the bridge, see section [VLAN Interfaces](#vlan-interfaces)
@@ -430,7 +433,7 @@ top of a bridge interface *br0* is named *vlan10*.
 #### Ethernet Settings and Status
 
 Physical Ethernet interfaces provide low-level settings for speed/duplex as
-well as packet status and statistics (*ieee802-ethernet-interface.yang*).
+well as packet status and [statistics](#ethernet-statistics).
 
 By default, Ethernet interfaces defaults to auto-negotiating
 speed/duplex modes, advertising all speed and duplex modes available.
@@ -512,7 +515,7 @@ require auto-negotiation to be enabled.
 
 #### Ethernet statistics
 
-Ethernet packet statistics can be listed as shown below.
+Ethernet packet statistics[^6] can be listed as shown below.
 
 ```
 admin@example:/> show interfaces name eth1
@@ -856,7 +859,7 @@ have changed type to *random*.
 ### IPv4 forwarding
 
 To be able to route (static or dynamic) on the interface it is
-required to enable forwarding. This setting controlls if packets
+required to enable forwarding. This setting controls if packets
 received on this interface can be forwarded.
    ```
    admin@example:/config/> edit interface eth0
@@ -872,12 +875,12 @@ This flag behaves totally different than for IPv4. For IPv6 the
 ability to route between interfaces is always enabled, instead this
 flag controls if the interface will be in host/router mode.
 
-| **Feature**                               | **Forward enabled** | **Forward disabled** |
-|:------------------------------------------|:--------------------|:---------------------|
-| IsRouter set in Neighbour Advertisements. | Yes                 | No                   |
-| Transmit Router Solicitations.            | No                  | Yes                  |
-| Router Advertisements are ignored         | No                  | Yes                  |
-| Accept Redirects                          | No                  | Yes                  |
+| **Feature**                              | **Forward enabled** | **Forward disabled** |
+|:-----------------------------------------|:--------------------|:---------------------|
+| IsRouter set in Neighbour Advertisements | Yes                 | No                   |
+| Transmit Router Solicitations            | No                  | Yes                  |
+| Router Advertisements are ignored        | No                  | Yes                  |
+| Accept Redirects                         | No                  | Yes                  |
 
    ```
    admin@example:/config/> edit interface eth0
@@ -1150,3 +1153,8 @@ currently supported, namely `ipv4` and `ipv6`.
 [^5]: Infix MAC bridges on Marvell Linkstreet devices are currently
     limited to use a single MAC database, causing issues if the same
     MAC address appears on different MAC bridges.
+[^6]: Ethernet counters are described in
+    *ieee802-ethernet-interface.yang* and
+    *infix-ethernet-interface.yang*. [Ethernet
+    Counters](eth-counters.md) page provides additional details on
+    statistics support.
