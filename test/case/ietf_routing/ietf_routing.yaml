@@ -10,3 +10,6 @@
 
 - name: ospf_multiarea
   case: ospf_multiarea/test.py
+
+- name: ospf_bfd
+  case: ospf_bfd/test.py

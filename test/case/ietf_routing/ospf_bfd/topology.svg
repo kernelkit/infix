@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
+ "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+
+<!-- Title: ospf&#45;bfd Pages: 1 -->
+<svg width="432pt" height="156pt"
+ viewBox="0.00 0.00 432.03 155.51" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(4 151.51)">
+<title>ospf&#45;bfd</title>
+<polygon fill="white" stroke="transparent" points="-4,4 -4,-151.51 428.03,-151.51 428.03,4 -4,4"/>
+<!-- R1 -->
+<g id="node1" class="node">
+<title>R1</title>
+<polygon fill="none" stroke="black" points="0,-97.51 0,-143.51 133,-143.51 133,-97.51 0,-97.51"/>
+<text text-anchor="middle" x="29" y="-128.31" font-family="DejaVu Sans Mono, Book" font-size="14.00">R1</text>
+<polyline fill="none" stroke="black" points="58,-120.51 58,-143.51 "/>
+<text text-anchor="middle" x="95.5" y="-128.31" font-family="DejaVu Sans Mono, Book" font-size="14.00">slow</text>
+<polyline fill="none" stroke="black" points="0,-120.51 133,-120.51 "/>
+<text text-anchor="middle" x="25" y="-105.31" font-family="DejaVu Sans Mono, Book" font-size="14.00">mgmt</text>
+<polyline fill="none" stroke="black" points="50,-97.51 50,-120.51 "/>
+<text text-anchor="middle" x="66.5" y="-105.31" font-family="DejaVu Sans Mono, Book" font-size="14.00">h1</text>
+<polyline fill="none" stroke="black" points="83,-97.51 83,-120.51 "/>
+<text text-anchor="middle" x="108" y="-105.31" font-family="DejaVu Sans Mono, Book" font-size="14.00">fast</text>
+</g>
+<!-- R2 -->
+<g id="node2" class="node">
+<title>R2</title>
+<polygon fill="none" stroke="black" points="291.03,-97.51 291.03,-143.51 424.03,-143.51 424.03,-97.51 291.03,-97.51"/>
+<text text-anchor="middle" x="328.53" y="-128.31" font-family="DejaVu Sans Mono, Book" font-size="14.00">slow</text>
+<polyline fill="none" stroke="black" points="366.03,-120.51 366.03,-143.51 "/>
+<text text-anchor="middle" x="395.03" y="-128.31" font-family="DejaVu Sans Mono, Book" font-size="14.00">R2</text>
+<polyline fill="none" stroke="black" points="291.03,-120.51 424.03,-120.51 "/>
+<text text-anchor="middle" x="316.03" y="-105.31" font-family="DejaVu Sans Mono, Book" font-size="14.00">fast</text>
+<polyline fill="none" stroke="black" points="341.03,-97.51 341.03,-120.51 "/>
+<text text-anchor="middle" x="357.53" y="-105.31" font-family="DejaVu Sans Mono, Book" font-size="14.00">h2</text>
+<polyline fill="none" stroke="black" points="374.03,-97.51 374.03,-120.51 "/>
+<text text-anchor="middle" x="399.03" y="-105.31" font-family="DejaVu Sans Mono, Book" font-size="14.00">mgmt</text>
+</g>
+<!-- R1&#45;&#45;R2 -->
+<g id="edge7" class="edge">
+<title>R1:slow&#45;&#45;R2:slow</title>
+<path fill="none" stroke="crimson" stroke-width="2" d="M133.5,-132.51C133.5,-132.51 290.53,-132.51 290.53,-132.51"/>
+<text text-anchor="middle" x="168" y="-136.31" font-family="DejaVu Serif, Book" font-size="14.00">Cost: 200</text>
+</g>
+<!-- PC -->
+<g id="node3" class="node">
+<title>PC</title>
+<polygon fill="none" stroke="black" points="47.01,-0.5 47.01,-46.5 377.01,-46.5 377.01,-0.5 47.01,-0.5"/>
+<text text-anchor="middle" x="80.01" y="-31.3" font-family="DejaVu Sans Mono, Book" font-size="14.00">R1mgmt</text>
+<polyline fill="none" stroke="black" points="113.01,-23.5 113.01,-46.5 "/>
+<text text-anchor="middle" x="129.51" y="-31.3" font-family="DejaVu Sans Mono, Book" font-size="14.00">h1</text>
+<polyline fill="none" stroke="black" points="146.01,-23.5 146.01,-46.5 "/>
+<text text-anchor="middle" x="179.01" y="-31.3" font-family="DejaVu Sans Mono, Book" font-size="14.00">R1fast</text>
+<polyline fill="none" stroke="black" points="212.01,-23.5 212.01,-46.5 "/>
+<text text-anchor="middle" x="245.01" y="-31.3" font-family="DejaVu Sans Mono, Book" font-size="14.00">R2fast</text>
+<polyline fill="none" stroke="black" points="278.01,-23.5 278.01,-46.5 "/>
+<text text-anchor="middle" x="294.51" y="-31.3" font-family="DejaVu Sans Mono, Book" font-size="14.00">h2</text>
+<polyline fill="none" stroke="black" points="311.01,-23.5 311.01,-46.5 "/>
+<text text-anchor="middle" x="344.01" y="-31.3" font-family="DejaVu Sans Mono, Book" font-size="14.00">R2mgmt</text>
+<polyline fill="none" stroke="black" points="47.01,-23.5 377.01,-23.5 "/>
+<text text-anchor="middle" x="212.01" y="-8.3" font-family="DejaVu Sans Mono, Book" font-size="14.00">PC</text>
+</g>
+<!-- R1&#45;&#45;PC -->
+<g id="edge5" class="edge">
+<title>R1:fast&#45;&#45;PC:R1fast</title>
+<path fill="none" stroke="lightgreen" stroke-width="2" d="M133.5,-108.51C133.5,-108.51 179.01,-46.5 179.01,-46.5"/>
+<text text-anchor="middle" x="168" y="-112.31" font-family="DejaVu Serif, Book" font-size="14.00">Cost: 100</text>
+</g>
+<!-- R2&#45;&#45;PC -->
+<g id="edge6" class="edge">
+<title>R2:fast&#45;&#45;PC:R2fast</title>
+<path fill="none" stroke="lightgreen" stroke-width="2" d="M290.53,-108.51C290.53,-108.51 245.01,-46.5 245.01,-46.5"/>
+</g>
+<!-- PC&#45;&#45;R1 -->
+<g id="edge1" class="edge">
+<title>PC:R1mgmt&#45;&#45;R1:mgmt</title>
+<path fill="none" stroke="lightgray" stroke-width="2" d="M80.01,-46.5C80.01,-46.5 24.5,-97.51 24.5,-97.51"/>
+</g>
+<!-- PC&#45;&#45;R1 -->
+<g id="edge3" class="edge">
+<title>PC:h1&#45;&#45;R1:h1</title>
+<path fill="none" stroke="cornflowerblue" stroke-width="2" d="M129.01,-46.5C129.01,-46.5 66.5,-97.51 66.5,-97.51"/>
+</g>
+<!-- PC&#45;&#45;R2 -->
+<g id="edge2" class="edge">
+<title>PC:R2mgmt&#45;&#45;R2:mgmt</title>
+<path fill="none" stroke="lightgray" stroke-width="2" d="M344.01,-46.5C344.01,-46.5 399.53,-97.51 399.53,-97.51"/>
+</g>
+<!-- PC&#45;&#45;R2 -->
+<g id="edge4" class="edge">
+<title>PC:h2&#45;&#45;R2:h2</title>
+<path fill="none" stroke="cornflowerblue" stroke-width="2" d="M295.01,-46.5C295.01,-46.5 357.53,-97.51 357.53,-97.51"/>
+</g>
+</g>
+</svg>
