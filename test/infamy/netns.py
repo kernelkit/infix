@@ -360,3 +360,39 @@ class Pcap:
                                  stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                                  text=True, check=True)
         return tcpdump.stdout
+
+class TPMR(IsolatedMacVlans):
+    def __init__(self, a, b):
+        super().__init__(ifmap={ a: "a", b: "b" }, lo=False)
+
+    def start(self, forward=True):
+        ret = super().start()
+
+        for dev in ("a", "b"):
+            self.run(f"ip link set dev {dev} promisc on up".split())
+            self.run(f"tc qdisc add dev {dev} clsact".split())
+
+        if forward:
+            self.forward()
+
+        return ret
+
+    def _clear_ingress(self, iface):
+        return self.run(f"tc filter del dev {iface} ingress".split())
+
+    def _add_redir(self, frm, to):
+        cmd = \
+            "tc filter add dev".split() \
+            + [frm] \
+            + "ingress matchall action mirred egress redirect dev".split() \
+            + [to]
+        return self.run(cmd)
+
+    def forward(self):
+        for iface in ("a", "b"):
+            self._clear_ingress(iface)
+            self._add_redir(iface, "a" if iface == "b" else "b")
+
+    def block(self):
+        for iface in ("a", "b"):
+            self._clear_ingress(iface)
