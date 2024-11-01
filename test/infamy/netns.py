@@ -41,6 +41,11 @@ class IsolatedMacVlans:
 
     """
 
+    Instances = []
+    def Cleanup():
+        for ns in list(IsolatedMacVlans.Instances):
+            ns.stop()
+
     def __init__(self, ifmap, lo=True):
         self.sleeper = None
         self.ifmap, self.lo = ifmap, lo
@@ -76,11 +81,13 @@ class IsolatedMacVlans:
                 self.__exit__(None, None, None)
                 raise e
 
+        self.Instances.append(self)
         return self
 
     def stop(self):
         self.sleeper.kill()
         self.sleeper.wait()
+        self.Instances.remove(self)
         time.sleep(0.5)
 
     def __enter__(self):
