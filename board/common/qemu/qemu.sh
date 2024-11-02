@@ -285,7 +285,7 @@ run_qemu()
 
     local qemu
     read qemu <<EOF
-	$CONFIG_QEMU_MACHINE -m $CONFIG_QEMU_MACHINE_RAM \
+	$CONFIG_QEMU_MACHINE -nodefaults -m $CONFIG_QEMU_MACHINE_RAM \
 	  $(loader_args) \
 	  $(rootfs_args) \
 	  $(serial_args) \
