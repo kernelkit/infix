@@ -299,11 +299,17 @@ run_qemu()
 	  $CONFIG_QEMU_EXTRA
 EOF
 
+    echo "Starting Qemu  ::  Ctrl-a x -- exit | Ctrl-a c -- toggle console/monitor"
+    line=$(stty -g)
+    stty raw
+
     if [ "$CONFIG_QEMU_KERNEL" ]; then
 	$qemu -append "$(append_args)" "$@"
     else
 	$qemu "$@"
     fi
+
+    stty "$line"
 }
 
 dtb_args()
@@ -409,8 +415,4 @@ fi
 
 generate_dot
 
-echo "Starting Qemu  ::  Ctrl-a x -- exit | Ctrl-a c -- toggle console/monitor"
-line=$(stty -g)
-stty raw
 run_qemu $(dtb_args)
-stty "$line"
