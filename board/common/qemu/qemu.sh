@@ -273,8 +273,16 @@ gdb_args()
 run_qemu()
 {
     if [ "$CONFIG_QEMU_ROOTFS_VSCSI" = "y" ]; then
-	 qemu-img create -f qcow2 -o backing_file=$CONFIG_QEMU_ROOTFS -F raw $CONFIG_QEMU_ROOTFS.qcow2 > /dev/null
+	if ! qemu-img check "${CONFIG_QEMU_ROOTFS}.qcow2"; then
+	    rm -f "${CONFIG_QEMU_ROOTFS}.qcow2"
+	fi
+	if [ ! -f "${CONFIG_QEMU_ROOTFS}.qcow2" ]; then
+	    echo "Creating qcow2 disk image for Qemu ..."
+	    qemu-img create -f qcow2 -o backing_file="$CONFIG_QEMU_ROOTFS" \
+		     -F raw "${CONFIG_QEMU_ROOTFS}.qcow2" > /dev/null
+	fi
     fi
+
     local qemu
     read qemu <<EOF
 	$CONFIG_QEMU_MACHINE -m $CONFIG_QEMU_MACHINE_RAM \
