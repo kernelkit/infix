@@ -261,7 +261,25 @@ EOF
 
 wdt_args()
 {
-    echo -n "-device i6300esb -rtc clock=host"
+    echo -n "-device i6300esb "
+}
+
+random_date()
+{
+    rand=$(($(date +%_s) * $$ + $(date +%N | sed 's/^0*//')))
+    when=$((rand % 7258118400)) # 1970 - 2200
+    date -d "@$when" +"%Y-%m-%dT%H:%M:%S"
+}
+
+rtc_args()
+{
+    rtc="${CONFIG_QEMU_RTC:-utc}"
+    clock="${CONFIG_QEMU_CLOCK:-host}"
+    if [ "$rtc" = "random" ]; then
+	rtc=$(random_date)
+    fi
+
+    echo -n "-rtc base=$rtc,clock=$clock"
 }
 
 gdb_args()
@@ -294,6 +312,7 @@ run_qemu()
 	  $(host_args) \
 	  $(net_args) \
 	  $(wdt_args) \
+	  $(rtc_args) \
 	  $(vpd_args) \
 	  $(gdb_args) \
 	  $CONFIG_QEMU_EXTRA

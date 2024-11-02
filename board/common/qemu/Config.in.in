@@ -141,6 +141,51 @@ config QEMU_APPEND
 config QEMU_EXTRA
 	string "Extra QEMU options"
 
+
+comment "RTC"
+
+choice
+	prompt "Mode"
+	default QEMU_RTC_UTC
+
+config QEMU_RTC_UTC
+	bool "UTC"
+
+config QEMU_RTC_LOCAL
+	bool "Local time"
+
+config QEMU_RTC_RANDOM
+	bool "Random"
+
+endchoice
+
+choice
+	prompt "Clock"
+	default QEMU_CLOCK_HOST
+
+config QEMU_CLOCK_HOST
+	bool "Host clock"
+
+config QEMU_CLOCK_RT
+	bool "Independent (monotonic)"
+
+config QEMU_CLOCK_VM
+	bool "Virtual"
+
+endchoice
+
+config QEMU_RTC
+	string
+	default "utc"       if QEMU_RTC_UTC
+	default "localtime" if QEMU_RTC_LOCAL
+	default "random"    if QEMU_RTC_RANDOM
+
+config QEMU_CLOCK
+	string
+	default "host"      if QEMU_CLOCK_HOST
+	default "rt"        if QEMU_CLOCK_RT
+	default "vm"        if QEMU_CLOCK_VM
+
 comment "Networking"
 
 choice
