@@ -13,17 +13,19 @@ FINIT_DEPENDENCIES = host-pkgconf libite libuev
 FINIT_INSTALL_STAGING = YES
 FINIT_D = $(TARGET_DIR)/etc/finit.d
 
-# Create configure script using autoreconf when building from git
+# Create configure script using autoreconf when building from git,
+# or when patching any of the GNU build files (*.ac, *.am, etc.)
 #FINIT_VERSION = 438d6b4e638418a2a22024a3cead2f47909d72b9
 #FINIT_SITE = $(call github,troglobit,finit,$(FINIT_VERSION))
-#FINIT_AUTORECONF = YES
-#FINIT_DEPENDENCIES += host-automake host-autoconf host-libtool
+FINIT_AUTORECONF = YES
+FINIT_DEPENDENCIES += host-automake host-autoconf host-libtool
 
 # Strip "" from variables
 FINIT_HOSTNAME = $(call qstrip,$(BR2_TARGET_GENERIC_HOSTNAME))
 FINIT_GROUP    = $(call qstrip,$(BR2_PACKAGE_FINIT_INITCTL_GROUP))
 FINIT_FSTAB    = $(call qstrip,$(BR2_PACKAGE_FINIT_CUSTOM_FSTAB))
 FINIT_RTC_DATE = $(call qstrip,$(BR2_PACKAGE_FINIT_RTC_DATE))
+FINIT_RTC_FILE = $(call qstrip,$(BR2_PACKAGE_FINIT_RTC_FILE))
 
 # Buildroot defaults to /usr for both prefix and exec-prefix, this we
 # must override because we want to install into /sbin and /bin for the
@@ -111,6 +113,12 @@ ifneq ($(FINIT_RTC_DATE),)
 FINIT_CONF_OPTS += --with-rtc-date="$(FINIT_RTC_DATE)"
 else
 FINIT_CONF_OPTS += --without-rtc-date
+endif
+
+ifneq ($(FINIT_RTC_FILE),)
+FINIT_CONF_OPTS += --with-rtc-file="$(FINIT_RTC_FILE)"
+else
+FINIT_CONF_OPTS += --without-rtc-file
 endif
 
 ifeq ($(BR2_PACKAGE_FINIT_PLUGIN_TTY),y)

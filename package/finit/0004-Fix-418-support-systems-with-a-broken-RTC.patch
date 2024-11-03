@@ -1,0 +1,239 @@
+From bc8118d515839dc598f437aa01f07a771646968d Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Sun, 3 Nov 2024 09:47:16 +0100
+Subject: [PATCH 4/6] Fix #418: support systems with a broken RTC
+Organization: Addiva Elektronik
+
+This patch introduces a new configure option --with-rtc-file=FILE.  When
+enabled the RTC plugin detects missing RTC device and falls back to save
+and restore system time from a file instead.  When --with-rtc-file is
+used without an argument the default file is /var/lib/misc/rtc, but the
+feature itself is disabled by default.
+
+The usefulness of this feature may not be obvious at first, but some
+systems are equipped with an RTC that resets to a random date at power
+on.  This can be really bad in the case the date is far in the future,
+because an NTP sync would then cause time skips backwards, which shows
+up in logs and causes a whole lot of pain in alarm systems.
+
+The solution is to disable the RTC driver or device tree node, and when
+Finit starts up, the RTC plugin detects a the device node and instead
+restores time from the last save game.  Meaning time will always only
+move forwards.
+
+NOTE: when Finit is built --with-rtc-file we always save to disk, but
+      only restore from the "save game" if restoring from RTC fails.
+      If the system has no RTC we always restore from disk.
+
+      As an added bonus, this change also makes sure to periodically
+      sync also the RTC with the system clock.  Useful for systems
+      that do not run an NTP client.
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ configure.ac  |  12 ++++++
+ plugins/rtc.c | 105 ++++++++++++++++++++++++++++++++++++++++++++++----
+ 2 files changed, 110 insertions(+), 7 deletions(-)
+
+diff --git a/configure.ac b/configure.ac
+index 483457f..ae7cd23 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -180,6 +180,10 @@ AC_ARG_WITH(rtc-date,
+ 	AS_HELP_STRING([--with-rtc-date=DATE], [If RTC date/time is too old, restore to DATE, format "YYYY-MM-DD HH:MM", default "2000-01-01 00:00"]),
+ 	[rtc_date=$withval], [rtc_date=no])
+ 
++AC_ARG_WITH(rtc-file,
++        AS_HELP_STRING([--with-rtc-file=FILE], [If RTC is missing, save and restore system clock from this file, default: no]),
++	[rtc_file=$withval], [rtc_file=no])
++
+ ### Enable features ###########################################################################
+ 
+ # Create config.h from selected features and fallback defaults
+@@ -281,6 +285,13 @@ AS_IF([test "x$rtc_date" != "xno"], [
+ 	AC_DEFINE(RTC_TIMESTAMP_CUSTOM, "$rtc_date", [Custom RTC restore date, default: 2000-01-01 00:00])], [
+ 	rtc_date=""])
+ 
++AS_IF([test "x$rtc_file" != "xno"], [
++	AS_IF([test "x$rtc_file" = "xyes"], [
++		rtc_file=/var/lib/misc/rtc])
++	AC_EXPAND_DIR(rtcfile_path, "$rtc_file")
++	AC_DEFINE_UNQUOTED(RTC_FILE, "$rtcfile_path", [Save and restore system time from this file if /dev/rtc is missing.])],[
++	AC_DEFINE_UNQUOTED(RTC_FILE, NULL)])
++
+ AS_IF([test "x$with_keventd" != "xno"], [with_keventd=yes])
+ 
+ AS_IF([test "x$with_sulogin" != "xno"], [
+@@ -387,6 +398,7 @@ Behavior:
+   Boot heading..........: $heading
+   Plugins...............: $plugins
+   RTC restore date......: $RTC_DATE
++  RTC fallback file.....: $rtc_file
+ 
+ Optional features:
+   Install doc/..........: $enable_doc
+diff --git a/plugins/rtc.c b/plugins/rtc.c
+index 9520c7d..9b4eeae 100644
+--- a/plugins/rtc.c
++++ b/plugins/rtc.c
+@@ -36,8 +36,15 @@
+ #include "helpers.h"
+ #include "plugin.h"
+ 
+-/* Kernel RTC driver validates against this date for sanity check */
++/*
++ * Kernel RTC driver validates against this date for sanity check.  The
++ * on NTP sync the driver can also update the RTC every 11 mins.  We use
++ * the same update interval to handle manual time set and file save.
++ */
+ #define RTC_TIMESTAMP_BEGIN_2000 "2000-01-01 00:00:00"
++#define RTC_FMT                  "%Y-%m-%d %H:%M:%S"
++#define RTC_PERIOD               (11 * 60 * 1000)
++
+ #ifdef  RTC_TIMESTAMP_CUSTOM
+ static char  *rtc_timestamp     = RTC_TIMESTAMP_CUSTOM;
+ #else
+@@ -45,6 +52,10 @@ static char  *rtc_timestamp     = RTC_TIMESTAMP_BEGIN_2000;
+ #endif
+ static time_t rtc_date_fallback = 946684800LL;
+ 
++static char  *rtc_file          = RTC_FILE;
++static uev_t  rtc_timer;
++
++
+ static void tz_set(char *tz, size_t len)
+ {
+ 	char *ptr;
+@@ -122,6 +133,68 @@ static int time_get(struct tm *tm)
+ 	return rc;
+ }
+ 
++static void file_save(void *arg)
++{
++	struct tm tm = { 0 };
++	int rc = 0;
++	FILE *fp;
++
++	fp = fopen(rtc_file, "w");
++	if (!fp) {
++		logit(LOG_WARNING, "Failed saving system clock to %s, code %d: %s",
++		      rtc_file, errno, strerror(errno));
++		return;
++	}
++
++	if ((rc = time_get(&tm))) {
++		logit(LOG_ERR, "System clock invalid, before %s, not saving", rtc_timestamp);
++		print_desc(NULL, "System clock invalid, skipping");
++	} else {
++		char buf[32] = { 0 };
++
++		print_desc(NULL, "Saving system clock to file");
++		strftime(buf, sizeof(buf), RTC_FMT, &tm);
++		fprintf(fp, "%s\n", buf);
++	}
++
++	print(rc, NULL);
++	fclose(fp);
++}
++
++static void file_restore(void *arg)
++{
++	struct tm tm = { 0 };
++	int rc = 1;
++	FILE *fp;
++
++	if (!rtc_file) {
++		logit(LOG_NOTICE, "System has no RTC (missing driver?), skipping restore.");
++		return;
++	}
++
++	print_desc(NULL, "Restoring system clock from backup");
++
++	fp = fopen(rtc_file, "r");
++	if (fp) {
++		char buf[32];
++
++		if (fgets(buf, sizeof(buf), fp)) {
++			chomp(buf);
++			strptime(buf, RTC_FMT, &tm);
++			rc = time_set(&tm);
++		}
++		fclose(fp);
++	} else
++		logit(LOG_WARNING, "Missing %s", rtc_file);
++
++	if (rc) {
++		time_set(NULL);
++		rc = 2;
++	}
++
++	print(rc, NULL);
++}
++
+ static int rtc_open(void)
+ {
+ 	char *alt[] = {
+@@ -185,7 +258,7 @@ static void rtc_restore(void *arg)
+ 
+ 	fd = rtc_open();
+ 	if (fd < 0) {
+-		logit(LOG_NOTICE, "System has no RTC (missing driver?), skipping restore.");
++		file_restore(arg);
+ 		return;
+ 	}
+ 
+@@ -210,21 +283,37 @@ static void rtc_restore(void *arg)
+ 		else
+ 			logit(LOG_ERR, "RTC error code %d: %s", errno, strerror(errno));
+ 
+-		time_set(NULL);
+-		rc = 2;
+-	}
++		print(2, NULL);
++
++		/* Try restoring from last save game */
++		if (rtc_file)
++			file_restore(arg);
++	} else
++		print(0, NULL);
+ 
+-	print(rc, NULL);
+ 	close(fd);
+ }
+ 
++
++static void save(void *arg)
++{
++	rtc_save(arg);
++	file_save(arg);
++}
++
++static void update(uev_t *w, void *arg, int events)
++{
++	save(arg);
++}
++
++
+ static plugin_t plugin = {
+ 	.name = __FILE__,
+ 	.hook[HOOK_BASEFS_UP] = {
+ 		.cb  = rtc_restore
+ 	},
+ 	.hook[HOOK_SHUTDOWN] = {
+-		.cb  = rtc_save
++		.cb  = save
+ 	}
+ };
+ 
+@@ -237,6 +326,8 @@ PLUGIN_INIT(plugin_init)
+ 	else
+ 		rtc_timestamp = RTC_TIMESTAMP_BEGIN_2000;
+ 
++	uev_timer_init(ctx, &rtc_timer, update, NULL, RTC_PERIOD, RTC_PERIOD);
++
+ 	plugin_register(&plugin);
+ }
+ 
+-- 
+2.43.0
+

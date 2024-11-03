@@ -1,0 +1,85 @@
+From 49c0557cedd8d3c1a2f74d27fa7db83dd529914a Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Sun, 3 Nov 2024 20:49:04 +0100
+Subject: [PATCH 6/6] plugins: reduce log level LOG_ERR -> LOG_WARNING
+Organization: Addiva Elektronik
+
+These plugins signal success and failure directly to the console, the
+user should inspect syslog for more information.
+
+This change is a follow-up to 340cae4, where kernel logs of LOG_ERR and
+higher are allowed to log directly to the console.  Since syslogd has
+not been started before these plugins, the log messages would otherwise
+leak to the console.
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ plugins/rtc.c     | 14 +++++++-------
+ plugins/urandom.c |  2 +-
+ 2 files changed, 8 insertions(+), 8 deletions(-)
+
+diff --git a/plugins/rtc.c b/plugins/rtc.c
+index a733f75..96203a0 100644
+--- a/plugins/rtc.c
++++ b/plugins/rtc.c
+@@ -147,7 +147,7 @@ static void file_save(void *arg)
+ 	}
+ 
+ 	if ((rc = time_get(&tm))) {
+-		logit(LOG_ERR, "System clock invalid, before %s, not saving", rtc_timestamp);
++		logit(LOG_WARNING, "System clock invalid, before %s, not saving", rtc_timestamp);
+ 		print_desc(NULL, "System clock invalid, skipping");
+ 	} else {
+ 		char buf[32] = { 0 };
+@@ -238,7 +238,7 @@ static void rtc_save(void *arg)
+ 	}
+ 
+ 	if (rc && errno == EINVAL) {
+-		logit(LOG_ERR, "System clock invalid, before %s, not saving to RTC", rtc_timestamp);
++		logit(LOG_WARNING, "System clock invalid, before %s, not saving to RTC", rtc_timestamp);
+ 		rc = 2;
+ 	}
+ 
+@@ -275,13 +275,13 @@ static void rtc_restore(void *arg)
+ 	}
+ 
+ 	if (rc) {
+-		logit(LOG_ERR, "Failed restoring system clock from RTC.");
++		logit(LOG_WARNING, "Failed restoring system clock from RTC.");
+ 		if (EINVAL == errno)
+-			logit(LOG_ERR, "RTC time is too old (before %s)", rtc_timestamp);
++			logit(LOG_WARNING, "RTC time is too old (before %s)", rtc_timestamp);
+ 		else if (ENOENT == errno)
+-			logit(LOG_ERR, "RTC has no previously saved (valid) time.");
++			logit(LOG_WARNING, "RTC has no previously saved (valid) time.");
+ 		else
+-			logit(LOG_ERR, "RTC error code %d: %s", errno, strerror(errno));
++			logit(LOG_WARNING, "RTC error code %d: %s", errno, strerror(errno));
+ 
+ 		print(2, NULL);
+ 
+@@ -322,7 +322,7 @@ PLUGIN_INIT(plugin_init)
+ 	struct tm tm = { 0 };
+ 
+ 	if (!strptime(rtc_timestamp, RTC_FMT, &tm)) {
+-		logit(LOG_ERR, "Invalid restore date '%s', reverting to '%s'",
++		logit(LOG_WARNING, "Invalid restore date '%s', reverting to '%s'",
+ 		      rtc_timestamp, RTC_TIMESTAMP_BEGIN_2000);
+ 		rtc_timestamp = RTC_TIMESTAMP_BEGIN_2000;
+ 	} else
+diff --git a/plugins/urandom.c b/plugins/urandom.c
+index b9f6039..6f82779 100644
+--- a/plugins/urandom.c
++++ b/plugins/urandom.c
+@@ -154,7 +154,7 @@ static void setup(void *arg)
+ 	close(fd);
+ 	free(rpi);
+ 	if (rc < 0)
+-		logit(LOG_ERR, "Failed adding entropy to kernel random pool: %s", strerror(err));
++		logit(LOG_WARNING, "Failed adding entropy to kernel random pool: %s", strerror(err));
+ 	print_result(rc < 0);
+ 	return;
+ fallback:
+-- 
+2.43.0
+
