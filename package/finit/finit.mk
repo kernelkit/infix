@@ -19,6 +19,12 @@ FINIT_D = $(TARGET_DIR)/etc/finit.d
 #FINIT_AUTORECONF = YES
 #FINIT_DEPENDENCIES += host-automake host-autoconf host-libtool
 
+# Strip "" from variables
+FINIT_HOSTNAME = $(call qstrip,$(BR2_TARGET_GENERIC_HOSTNAME))
+FINIT_GROUP    = $(call qstrip,$(BR2_PACKAGE_FINIT_INITCTL_GROUP))
+FINIT_FSTAB    = $(call qstrip,$(BR2_PACKAGE_FINIT_CUSTOM_FSTAB))
+FINIT_RTC_DATE = $(call qstrip,$(BR2_PACKAGE_FINIT_RTC_DATE))
+
 # Buildroot defaults to /usr for both prefix and exec-prefix, this we
 # must override because we want to install into /sbin and /bin for the
 # finit and initctl programs, respectively.  The expected plugin path is
@@ -31,7 +37,7 @@ FINIT_CONF_OPTS =					\
 	--disable-contrib				\
 	--disable-rescue				\
 	--disable-silent-rules				\
-	--with-group=$(BR2_PACKAGE_FINIT_INITCTL_GROUP)
+	--with-group="$(FINIT_GROUP)"
 
 ifeq ($(BR2_ROOTFS_MERGED_USR),y)
 FINIT_CONF_OPTS += --exec-prefix=/usr
@@ -40,8 +46,8 @@ FINIT_CONF_OPTS += --exec-prefix=
 endif
 
 ifeq ($(BR2_PACKAGE_FINIT_ADVANCED),y)
-ifneq ($(BR2_PACKAGE_FINIT_CUSTOM_FSTAB),)
-FINIT_CONF_OPTS += --with-fstab=$(BR2_PACKAGE_FINIT_CUSTOM_FSTAB)
+ifneq ($(FINIT_FSTAB),)
+FINIT_CONF_OPTS += --with-fstab="$(FINIT_FSTAB)"
 else
 FINIT_CONF_OPTS += --without-fstab
 endif
@@ -101,8 +107,8 @@ else
 FINIT_CONF_OPTS += --disable-rtc-plugin
 endif
 
-ifeq ($(BR2_PACKAGE_FINIT_RTC_DATE),y)
-FINIT_CONF_OPTS += --with-rtc-date="$(BR2_PACKAGE_FINIT_RTC_DATE)"
+ifneq ($(FINIT_RTC_DATE),)
+FINIT_CONF_OPTS += --with-rtc-date="$(FINIT_RTC_DATE)"
 else
 FINIT_CONF_OPTS += --without-rtc-date
 endif
@@ -119,8 +125,11 @@ else
 FINIT_CONF_OPTS += --disable-urandom-plugin
 endif
 
-ifneq ($(SKELETON_INIT_COMMON_HOSTNAME),)
-FINIT_CONF_OPTS += --with-hostname="$(SKELETON_INIT_COMMON_HOSTNAME)"
+
+ifneq ($(FINIT_HOSTNAME),)
+FINIT_CONF_OPTS += --with-hostname="$(FINIT_HOSTNAME)"
+else
+FINIT_CONF_OPTS += --without-hostname
 endif
 
 # Disable/Enable features depending on other packages
