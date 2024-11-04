@@ -1,4 +1,5 @@
 import ctypes
+import json
 import multiprocessing
 import os
 import random
@@ -87,9 +88,29 @@ class IsolatedMacVlans:
     def stop(self):
         self.sleeper.kill()
         self.sleeper.wait()
+
+        for n in range(100):
+            promisc = False
+            for parent in self.ifmap.keys():
+                iplink = subprocess.run(f"ip -d -j link show dev {parent}".split(),
+                                        stdout=subprocess.PIPE, check=True)
+                link = json.loads(iplink.stdout)[0]
+                if link["promiscuity"]:
+                    # Use promisc as a substitute for an indicator
+                    # of whether the kernel has actually removed
+                    # the passthru MACVLAN yet or not
+                    promisc = True
+                    break
+
+            if not promisc:
+                break
+
+            time.sleep(.1)
+        else:
+            raise TimeoutError("Lingering MACVLAN")
+
         if self in self.Instances:
             self.Instances.remove(self)
-        time.sleep(0.5)
 
     def __enter__(self):
         return self.start()
