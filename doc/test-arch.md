@@ -17,7 +17,7 @@ Tenets
   It is also much more practical and economical to build large virtual
   networks than physical ones.
 
-- **Avoid CLI scipting & scraping**.  Reliably interacting with a DUT
+- **Avoid CLI scripting & scraping**.  Reliably interacting with a DUT
   over a serial line in a robust way is _very_ hard to get right.
   Given that we have a proper API (RESTCONF), we should leverage that
   when testing.  Front-ends can be tested by other means.
