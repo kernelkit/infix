@@ -87,7 +87,8 @@ class IsolatedMacVlans:
     def stop(self):
         self.sleeper.kill()
         self.sleeper.wait()
-        self.Instances.remove(self)
+        if self in self.Instances:
+            self.Instances.remove(self)
         time.sleep(0.5)
 
     def __enter__(self):
