@@ -9,8 +9,25 @@ All notable changes to the project are documented in this file.
 
 ### Changes
 
+- Support for showing interfaces owned by running containers in the CLI
+  command `show interfaces`.  This also adds support for showing the
+  peer interface of VETH pairs.  Issue #626
+- Reboot system on kernel "oops", on "oops" the kernel now panics and
+  reboots after 20 seconds.  Issue #740
+- Update static factory-config for NanoPi R2S: enable NACM, securing all
+  passwords, and enabling `iburst` for the NTP client.  Issue #750
 - Updated QoS documentation with pictures and more information on VLAN
-  interface ingress/egress priority handling.
+  interface ingress/egress priority handling, issue #759
+- Disable RTC device in Styx device tree, issue #794
+- Support for saving and restoring system clock from a disk file.  This
+  allows restoring the system clock to a sane date in case the RTC is
+  disabled or does not have a valid time, issue #794
+
+### Fixes
+- Fix #685: DSA conduit interface not always detected, randomly causing
+  major issues configuring systems with multiple switch cores
+- Fix #778: reactivate OpenSSL backend for libssh/libssh2 for NanoPI R2S.
+  This fixes a regression in v24.10.0 causing loss of NETCONF supprt
 
 
 [v24.10.1][] - 2024-10-18
