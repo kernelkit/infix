@@ -10,31 +10,21 @@ import infamy.iface as iface
 
 from infamy import until
 
-def test_ping(hport, should_pass):
-    with infamy.IsolatedMacVlan(hport) as ns:
-        try:
-            ns.runsh("""
-                  set -ex
-                  ip link set iface up
-                  ip link add dev vlan10 link iface up type vlan id 10
-                  ip addr add 10.0.0.1/24 dev vlan10
-                  """)
-
-            if should_pass:
-                ns.must_reach("10.0.0.2")
-            else:
-                ns.must_not_reach("10.0.0.2")
-
-        except Exception as e:
-            print(f"An error occurred during the VLAN setup or ping test: {e}")
-            raise
-
 with infamy.Test() as test:
       with test.step("Set up topology and attach to target DUT"):
             env = infamy.Env()
             target = env.attach("target", "mgmt")
             _, tport = env.ltop.xlate("target", "data")
 
+      with test.step("Set up VLAN interface on host:data with IP 10.0.0.1"):
+            _, hport = env.ltop.xlate("host", "data")
+            datanet = infamy.IsolatedMacVlan(hport).start()
+            datanet.runsh("""
+                  set -ex
+                  ip link set iface up
+                  ip link add dev vlan10 link iface up type vlan id 10
+                  ip addr add 10.0.0.1/24 dev vlan10
+                  """)
 
       with test.step("Configure VLAN 10 interface on target:data with IP 10.0.0.2"):
             target.put_config_dict("ietf-interfaces", {
@@ -64,16 +54,18 @@ with infamy.Test() as test:
                   }
             })
 
-      with test.step("Waiting for links to come up"):
+      with test.step("Wait for links to come up"):
             until(lambda: iface.get_param(target, tport, "oper-status") == "up")
 
-      with test.step("Ping 10.0.0.2 from VLAN 10 on host:data with IP 10.0.0.1"):
+      with test.step("Verify that host:data can reach 10.0.0.2"):
             _, hport = env.ltop.xlate("host", "data")
-            test_ping(hport,True)
+            datanet.must_reach("10.0.0.2")
 
-      with test.step("Remove VLAN interface from target:data, and test again (should not be able to ping)"):
+      with test.step("Remove VLAN interface from target:data"):
             target.delete_xpath(f"/ietf-interfaces:interfaces/interface[name='{tport}.10']")
+
+      with test.step("Verify that host:data can no longer reach 10.0.0.2"):
             _, hport = env.ltop.xlate("host", "data")
-            test_ping(hport,False)
+            datanet.must_not_reach("10.0.0.2")
 
       test.succeed()
