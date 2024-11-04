@@ -50,7 +50,11 @@ image::internal-network.svg[]
 import infamy
 import infamy.util as util
 
+BODY  = "<html><body><p>Router responding</p></body></html>"
+
 def config_generic(target, router, ring1, ring2, link):
+    router_ip=f"10.1.{router}.1"
+    link_ip=f"10.1.{router}.{100+router}"
     target.put_config_dict("ietf-interfaces", {
         "interfaces": {
             "interface": [
@@ -92,7 +96,7 @@ def config_generic(target, router, ring1, ring2, link):
                 },
                 "ipv4": {
                     "address": [{
-                        "ip": f"10.0.{router}.1",
+                        "ip": router_ip,
                         "prefix-length": 32
                     }]
                 }
@@ -115,14 +119,18 @@ def config_generic(target, router, ring1, ring2, link):
                 },
                 "ipv4": {
                     "address": [{
-                        "ip": f"10.0.{router}.1",
+                        "ip": router_ip,
                         "prefix-length": 32
                     }]
                 }
             },
             {
                 "name": link,
-                "ietf-ip:ipv4": {
+                "ipv4": {
+                    "address": [{
+                        "ip": link_ip,
+                        "prefix-length": 24
+                    }],
                     "forwarding": True
                 },
                 "ietf-ip:ipv6": {}
@@ -167,7 +175,15 @@ def config_generic(target, router, ring1, ring2, link):
                 "name": "veth0a",
                 "type": "infix-if-type:veth",
                 "infix-interfaces:container-network": {
-                    "type": "host"
+                    "type": "host",
+                },
+                "ipv4": {
+                    "address": [
+                        {
+                            "ip": "169.254.1.2", # This only for test, use zeroconf in real-life
+                            "prefix-length": 16
+                        }
+                    ]
                 },
                 "infix-interfaces:veth": {
                     "peer": "veth0b"
@@ -267,21 +283,52 @@ def config_generic(target, router, ring1, ring2, link):
             }
         ]
     }})
+    firewall_config = util.to_binary(f"""#!/usr/sbin/nft -f
+
+flush ruleset
+
+define UPLINK = "{link}"
+define WIP = 169.254.1.2
+                          """
+                          """
+table ip nat {
+    chain prerouting {
+        type nat hook prerouting priority filter; policy accept;
+        iif $UPLINK tcp dport 8080 dnat to 169.254.1.2:91
+        iif "br0" ip daddr 169.254.1.2 dnat to 169.254.1.1
+    }
+
+    chain postrouting {
+        type nat hook postrouting priority srcnat; policy accept;
+        oif $UPLINK masquerade
+        oif "br0" ip daddr $WIP snat to 169.254.1.1
+    }
+}
+
+""")
+    data = util.to_binary(BODY)
     target.put_config_dict("infix-containers", {
         "containers": {
             "container": [
-                {
+            {
                 "name": "container-A",
                 "image": f"oci-archive:{infamy.Container.HTTPD_IMAGE}",
+                "command": "/usr/sbin/httpd -f -v -p 91",
                 "hostname": "web-container-%m",
-                "privileged": True,
                 "restart-policy": "retry",
+                "mount": [
+                    {
+                        "name": "index.html",
+                        "content": f"{data}",
+                        "target": "/var/www/index.html"
+                    }
+                ],
                 "network": {
                     "interface": [
                     {
                         "name": "veth0a",
                         "option": [
-                            "interface_name=br0"
+                            "interface_name=br0",
                         ]
                     },
                     {
@@ -290,23 +337,11 @@ def config_generic(target, router, ring1, ring2, link):
                             "interface_name=br1"
                         ]
                     }
-                    ]
-                },
-                "mount": [
-                    {
-                        "name": "infix",
-                        "source": "/proc/1",
-                        "target": "/1"
-                    }
-                ],
-                "volume": [
-                    {
-                        "name": "persistent",
-                        "target": "/var/persistent"
-                    }
-                ]
-                },
-                       {
+                    ],
+                    "publish": [ "91" ]
+                }
+            },
+            {
                 "name": "container-B",
                 "image": f"oci-archive:{infamy.Container.HTTPD_IMAGE}",
                 "hostname": "web-container-%m",
@@ -315,15 +350,33 @@ def config_generic(target, router, ring1, ring2, link):
                 "network": {
                     "interface": [
                     {
-                        "name": "veth2a"
+                        "name": "veth2a",
+                        "option": ["ip=169.254.1.3"] # This only for test, use zeroconf in real-life
                     },
                     {
                         "name": "veth3a"
                     }
                     ]
+                    }
+                },
+                {
+                    "name": "firewall",
+                    "image": f"oci-archive:{infamy.Container.NFTABLES_IMAGE}",
+                    "network": {
+                            "host": True
+                        },
+                        "mount": [
+                          {
+                            "name": "nftables.conf",
+                            "content": firewall_config,
+                            "target": "/etc/nftables.conf"
+                          }
+                        ],
+                        "privileged": True
+
                 }
-            }
-        ]
+            ]
+
         }})
     target.put_config_dict("ietf-routing", {
         "routing": {
@@ -336,7 +389,7 @@ def config_generic(target, router, ring1, ring2, link):
                             "areas": {
                                 "area": [
                                 {
-                                    "area-id": "0.0.80.79",
+                                    "area-id": "0.0.0.1",
                                     "area-type": "nssa-area",
                                     "interfaces": {
                                         "interface": [
@@ -351,7 +404,7 @@ def config_generic(target, router, ring1, ring2, link):
                                                 "enabled": True
                                             },
                                             {
-                                                "name": "lo",
+                                                "name": link,
                                                 "enabled": True
                                             }
                                         ]
@@ -391,6 +444,7 @@ def config_abr(target, data, link1, link2, link3):
             {
                 "name": data,
                 "ipv4": {
+                    "forwarding": True,
                     "address": [{
                         "ip": "192.168.100.1",
                         "prefix-length": 24
@@ -398,31 +452,32 @@ def config_abr(target, data, link1, link2, link3):
                 }
             },
             {
-                "name": "br0",
-                "type": "infix-if-type:bridge",
+                "name": link1,
                 "ipv4": {
+                    "forwarding": True,
                     "address": [{
-                        "ip": "10.0.0.100",
+                        "ip": "10.1.1.100",
                         "prefix-length": 24
                     }]
                 }
             },
             {
-                "name": link1,
-                "bridge-port": {
-                    "bridge": "br0"
-                }
-            },
-            {
                 "name": link2,
-                "bridge-port": {
-                    "bridge": "br0"
+                "ipv4": {
+                    "forwarding": True,
+                    "address": [{
+                        "ip": "10.1.2.100",
+                        "prefix-length": 24
+                    }]
                 }
             },
             {
                 "name": link3,
-                "bridge-port": {
-                    "bridge": "br0"
+                "ipv4": {
+                    "address": [{
+                        "ip": "10.1.3.100",
+                        "prefix-length": 24
+                    }]
                 }
             }
             ]
@@ -450,13 +505,21 @@ def config_abr(target, data, link1, link2, link3):
                                     }
                                 },
                                 {
-                                    "area-id": "0.0.80.79",
+                                    "area-id": "0.0.0.1",
                                     "area-type": "nssa-area",
                                     "interfaces": {
                                         "interface":
                                         [
                                             {
-                                                "name": "br0",
+                                                "name": link1,
+                                                "enabled": True
+                                            },
+                                            {
+                                                "name": link2,
+                                                "enabled": True
+                                            },
+                                            {
+                                                "name": link3,
                                                 "enabled": True
                                             },
                                         ]
@@ -515,4 +578,12 @@ with infamy.Test() as test:
                       lambda: config_generic(R2, 2, R2ring1, R2ring2, R2link),
                       lambda: config_generic(R3, 3, R3ring1, R3ring2, R3link),
                       lambda: config_abr(ABR, ABRdata, ABRlink1, ABRlink2, ABRlink3))
+
+    with test.step("Verify ABR:data can access container A"):
+          _, hport0 = env.ltop.xlate("host", "data4")
+          with infamy.IsolatedMacVlan(hport0) as ns:
+              ns.addip("192.168.100.2")
+              ns.addroute("0.0.0.0/0", "192.168.100.1")
+              if not ns.must_reach_url("http://10.1.1.1:8080", BODY):
+                  test.fail()
     test.succeed()
