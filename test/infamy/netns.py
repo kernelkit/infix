@@ -253,7 +253,6 @@ class Pcap:
             # terminating the capture.
             time.sleep(sleep)
 
-        self.proc.send_signal(signal.SIGUSR2)
         self.proc.terminate()
         try:
             _, stderr = self.proc.communicate(5)
