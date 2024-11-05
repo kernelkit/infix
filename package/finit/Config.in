@@ -165,7 +165,6 @@ config BR2_PACKAGE_FINIT_PLUGIN_RTC
 	  For lxc/docker application builds you do not need this.
 
 if BR2_PACKAGE_FINIT_PLUGIN_RTC
-
 config BR2_PACKAGE_FINIT_RTC_DATE
 	string "Fallback RTC date"
 	help
@@ -184,7 +183,21 @@ config BR2_PACKAGE_FINIT_RTC_DATE
 	  Ensuring the default system time to be closer to actual time
 	  for a period after releasing a firmware image.
 
-endif
+config BR2_PACKAGE_FINIT_RTC_FILE
+	string "Fallback file if /dev/rtc is missing"
+	help
+	  For systems with broken RTC, where the default value can be
+	  completely random, e.g., a time far in the future, it might
+	  be better to disable the RTC driver or device tree node.
+
+          Enable this to allow the RTC plugin to save and restore the
+	  system clock from a file when the plugin does not find any
+	  usable device node.
+
+	  Since /var/lib/misc is usually persistent across reboots, we
+	  recommend using: /var/lib/misc/rtc
+
+endif # RTC_PLUGIN
 
 config BR2_PACKAGE_FINIT_PLUGIN_TTY
 	bool "TTY plugin"

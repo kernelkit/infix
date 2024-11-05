@@ -261,7 +261,25 @@ EOF
 
 wdt_args()
 {
-    echo -n "-device i6300esb -rtc clock=host"
+    echo -n "-device i6300esb "
+}
+
+random_date()
+{
+    rand=$(($(date +%_s) * $$ + $(date +%N | sed 's/^0*//')))
+    when=$((rand % 7258118400)) # 1970 - 2200
+    date -d "@$when" +"%Y-%m-%dT%H:%M:%S"
+}
+
+rtc_args()
+{
+    rtc="${CONFIG_QEMU_RTC:-utc}"
+    clock="${CONFIG_QEMU_CLOCK:-host}"
+    if [ "$rtc" = "random" ]; then
+	rtc=$(random_date)
+    fi
+
+    echo -n "-rtc base=$rtc,clock=$clock"
 }
 
 gdb_args()
@@ -273,11 +291,19 @@ gdb_args()
 run_qemu()
 {
     if [ "$CONFIG_QEMU_ROOTFS_VSCSI" = "y" ]; then
-	 qemu-img create -f qcow2 -o backing_file=$CONFIG_QEMU_ROOTFS -F raw $CONFIG_QEMU_ROOTFS.qcow2 > /dev/null
+	if ! qemu-img check "${CONFIG_QEMU_ROOTFS}.qcow2"; then
+	    rm -f "${CONFIG_QEMU_ROOTFS}.qcow2"
+	fi
+	if [ ! -f "${CONFIG_QEMU_ROOTFS}.qcow2" ]; then
+	    echo "Creating qcow2 disk image for Qemu ..."
+	    qemu-img create -f qcow2 -o backing_file="$CONFIG_QEMU_ROOTFS" \
+		     -F raw "${CONFIG_QEMU_ROOTFS}.qcow2" > /dev/null
+	fi
     fi
+
     local qemu
     read qemu <<EOF
-	$CONFIG_QEMU_MACHINE -m $CONFIG_QEMU_MACHINE_RAM \
+	$CONFIG_QEMU_MACHINE -nodefaults -m $CONFIG_QEMU_MACHINE_RAM \
 	  $(loader_args) \
 	  $(rootfs_args) \
 	  $(serial_args) \
@@ -286,16 +312,23 @@ run_qemu()
 	  $(host_args) \
 	  $(net_args) \
 	  $(wdt_args) \
+	  $(rtc_args) \
 	  $(vpd_args) \
 	  $(gdb_args) \
 	  $CONFIG_QEMU_EXTRA
 EOF
+
+    echo "Starting Qemu  ::  Ctrl-a x -- exit | Ctrl-a c -- toggle console/monitor"
+    line=$(stty -g)
+    stty raw
 
     if [ "$CONFIG_QEMU_KERNEL" ]; then
 	$qemu -append "$(append_args)" "$@"
     else
 	$qemu "$@"
     fi
+
+    stty "$line"
 }
 
 dtb_args()
@@ -401,8 +434,4 @@ fi
 
 generate_dot
 
-echo "Starting Qemu  ::  Ctrl-a x -- exit | Ctrl-a c -- toggle console/monitor"
-line=$(stty -g)
-stty raw
 run_qemu $(dtb_args)
-stty "$line"

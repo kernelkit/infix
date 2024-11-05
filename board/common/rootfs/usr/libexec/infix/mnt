@@ -146,7 +146,7 @@ mount_overlay home "$cfgsrc" /home
 mount_overlay root "$cfgsrc" /root
 mount_bind         "$varsrc" /var
 
-[ "$vlibsrc" ] && mount_bind "$vlibsrc" /var/lib
+[ -n "$vlibsrc" ] && mount_bind "$vlibsrc" /var/lib
 
 for tag in $(ls /sys/bus/virtio/devices/*/mount_tag 2>/dev/null); do
     if [ "$(cat $tag | tr -d '\0')" = hostfs ]; then

@@ -33,6 +33,14 @@
 	};
 };
 
+/*
+ * RTC has no valid bit, and this board does not connect any
+ * backup power (e.g. supercap) to it, so it returns garbage
+ * after every cold reset.
+ */
+&cp0_rtc {
+	status = "disabled";
+};
 
 /* UART0 (Console) */
 
