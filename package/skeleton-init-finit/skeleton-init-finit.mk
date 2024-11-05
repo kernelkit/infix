@@ -204,6 +204,14 @@ endif
 
 endif # BR2_PACKAGE_QUAGGA
 
+ifeq ($(BR2_PACKAGE_RNG_TOOLS),y)
+define SKELETON_INIT_FINIT_SET_RNGD
+	cp $(SKELETON_INIT_FINIT_AVAILABLE)/rngd.conf $(FINIT_D)/available/
+	ln -sf ../available/rngd.conf $(FINIT_D)/enabled/rngd.conf
+endef
+SKELETON_INIT_FINIT_POST_INSTALL_TARGET_HOOKS += SKELETON_INIT_FINIT_SET_RNGD
+endif
+
 ifeq ($(BR2_PACKAGE_SMCROUTE),y)
 define SKELETON_INIT_FINIT_SET_SMCROUTE
 	cp $(SKELETON_INIT_FINIT_AVAILABLE)/smcroute.conf $(FINIT_D)/available/
