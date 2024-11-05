@@ -244,7 +244,7 @@ class Device(Transport):
 
         # Directly pass the dictionary without using json.dumps
         response = requests_workaround_put(
-            f"{self.restconf_url}/ds/ietf-datastores:{datastore}/",
+            f"{self.restconf_url}/ds/ietf-datastores:{datastore}",
             json=data,
             headers=self.headers,
             auth=self.auth,
@@ -261,6 +261,17 @@ class Device(Transport):
         model, container = modname.split(":")
         for k, v in ds.items():
             return {container: v}
+
+    def put_config_dicts(self, models):
+        running = self.get_running()
+
+        for model in models.keys():
+            mod = self.lyctx.get_module(model)
+            lyd = mod.parse_data_dict(models[model], no_state=True, validate=False)
+            running.merge(lyd)
+
+        return self.put_datastore("running", json.loads(running.print_mem("json", with_siblings=True, pretty=False)))
+
 
     def put_config_dict(self, modname, edit):
         """Add @edit to running config and put the whole configuration"""

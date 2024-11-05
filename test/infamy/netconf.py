@@ -214,7 +214,7 @@ class Device(Transport):
             else:
                 return f"<filter type=\"xpath\" select=\"{xpath}\" {xmlns} />"
         return None
-    
+
     def _parse_response(self, response, parse):
         """Helper function to handle XML response parsing."""
         if not response:
@@ -273,10 +273,10 @@ class Device(Transport):
         xpath_filter = self._build_xpath_filter(xpath, get_data_xpath=True)
         response = self.ncc.get_data(datastore="ds:operational", filter=xpath_filter)
         parsed_data = self._parse_response(response, parse)
-        
+
         if parse and parsed_data:
             return parsed_data.print_dict()
-        
+
         return parsed_data
 
     def get_config(self, xpath):
@@ -313,6 +313,15 @@ class Device(Transport):
                 continue
             break
 
+    def put_config_dicts(self, models):
+        config = ""
+
+        for model in models.keys():
+            mod = self.ly.get_module(model)
+            lyd = mod.parse_data_dict(models[model], no_state=True, validate=False)
+            config+=lyd.print_mem("xml", with_siblings=True, pretty=False)+"\n"
+        return self.put_config(config)
+
     def put_config_dict(self, modname, edit):
         """Convert Python dictionary to XMl and send as configuration"""
         mod = self.ly.get_module(modname)
@@ -344,8 +353,8 @@ class Device(Transport):
 
     def get_schemas_list(self):
         schemas = []
-
         data = self.get_dict("/netconf-state")
+
         for d in data["netconf-state"]["schemas"]["schema"]:
             schema = {}
             schema["identifier"] = d['identifier']
@@ -428,4 +437,3 @@ class Device(Transport):
             return current_datetime.text
         else:
             raise ValueError("current-datetime element not found in the response")
-        
