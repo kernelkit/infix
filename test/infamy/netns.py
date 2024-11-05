@@ -362,6 +362,19 @@ class Pcap:
         return tcpdump.stdout
 
 class TPMR(IsolatedMacVlans):
+    """Two-Port MAC Relay
+
+    Creates a network namespace containing two controller interfaces
+    (`a` and `b`). By default, tc rules are setup to copy all frames
+    ingressing on `a` to egress on `b`, and vice versa.
+
+    These rules can be removed and reinserted dynamically using the
+    `block()` and `forward()` methods, respectively.
+
+    This is useful to verify the correctness of fail-over behavior in
+    various protocols. See ospf_bfd for a usage example.
+    """
+
     def __init__(self, a, b):
         super().__init__(ifmap={ a: "a", b: "b" }, lo=False)
 
