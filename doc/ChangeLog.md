@@ -4,7 +4,7 @@ Change Log
 All notable changes to the project are documented in this file.
 
 
-[v24.10.2][UNRELEASED]
+[v24.10.2][] - 2024-11-08
 -------------------------
 
 ### Changes
@@ -22,19 +22,30 @@ All notable changes to the project are documented in this file.
 - Support for saving and restoring system clock from a disk file.  This
   allows restoring the system clock to a sane date in case the RTC is
   disabled or does not have a valid time, issue #794
-- Updated Discovery documentation with information on `infix.local`
-  mDNS alias, `netbrowse` support to discover *all* local units, and
-  command examples for disabling LLDP and mDNS services, issue #786
+- Update device discovery chapter with information on `infix.local` mDNS
+  alias, `netbrowse` support to discover *all* local units, and command
+  examples for disabling LLDP and mDNS services, issue #786
 - Updated OSPF documentation to include information on *global OSPF
   settings* (`redistribution`, `explicit-router-id`, etc.), issue #812
 - Added information on *forwarding of IEEE reserved group addresses*
   to bridge section of networking documentation, issue #788
+- Add support for bootstrap conditions and early init product overrides
+- Styx: enable second Ethernet port LED in device tree, again, rename
+  it: yellow -> aux, and make sure it is turned off at boot
+- Styx: disable second port LED for the 4xSFP slots, does not work
+- Styx: override iitod (LED daemon) with a product specific LED script
 
 ### Fixes
 - Fix #685: DSA conduit interface not always detected, randomly causing
   major issues configuring systems with multiple switch cores
 - Fix #778: reactivate OpenSSL backend for libssh/libssh2 for NanoPI R2S.
-  This fixes a regression in v24.10.0 causing loss of NETCONF supprt
+  This fixes a regression in v24.10.0 causing loss of NETCONF support
+- Fix #809: enable syslog logging for RAUC
+- Fix harmless bootstrap log error message on systems without USB ports:
+  `jq: error (at <stdin>:0): Cannot iterate over null (null)`
+- Change confusing `tc` log error message: `Error: does not support
+  hardware offload` to `Skipping $iface, hardware offload not supported.`
+
 
 
 [v24.10.1][] - 2024-10-18
@@ -1283,6 +1294,7 @@ Supported YANG models in addition to those used by sysrepo and netopeer:
 
 [buildroot]:  https://buildroot.org/
 [UNRELEASED]: https://github.com/kernelkit/infix/compare/v24.10.1...HEAD
+[v24.10.2]:   https://github.com/kernelkit/infix/compare/v24.10.1...v24.10.2
 [v24.10.1]:   https://github.com/kernelkit/infix/compare/v24.10.0...v24.10.1
 [v24.10.0]:   https://github.com/kernelkit/infix/compare/v24.09.0...v24.10.0
 [v24.09.0]:   https://github.com/kernelkit/infix/compare/v24.08.0...v24.09.0
