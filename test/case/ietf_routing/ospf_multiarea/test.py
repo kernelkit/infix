@@ -54,7 +54,8 @@ import infamy
 import infamy.route as route
 from infamy.util import until, parallel
 def config_target1(target, ring1, ring2, cross):
-    target.put_config_dict("ietf-interfaces", {
+    target.put_config_dicts({
+        "ietf-interfaces": {
             "interfaces": {
                 "interface": [
                     {
@@ -65,7 +66,8 @@ def config_target1(target, ring1, ring2, cross):
                             "address": [{
                                 "ip": "10.0.12.1",
                                 "prefix-length": 30
-                            }]}
+                            }]
+                        }
                     },
                     {
                         "name": ring2,
@@ -75,7 +77,8 @@ def config_target1(target, ring1, ring2, cross):
                             "address": [{
                                 "ip": "10.0.41.2",
                                 "prefix-length": 30
-                            }]}
+                            }]
+                        }
                     },
                     {
                         "name": cross,
@@ -92,93 +95,103 @@ def config_target1(target, ring1, ring2, cross):
                         "name": "lo",
                         "enabled": True,
                         "ipv4": {
-                            "address": [{
+                            "address": [
+                                {
                                     "ip": "11.0.8.1",
                                     "prefix-length": 24
-                            },
-                            {
-                                "ip": "10.0.0.1",
-                                "prefix-length": 32
-                           }]
+                                },
+                                {
+                                    "ip": "10.0.0.1",
+                                    "prefix-length": 32
+                                }
+                            ]
                         }
                     }
                 ]
             }
-    })
-
-    target.put_config_dict("ietf-routing", {
-        "routing": {
-            "control-plane-protocols": {
-                "control-plane-protocol": [{
-                    "type": "infix-routing:ospfv2",
-                    "name": "default",
-                    "ospf": {
-                        "explicit-router-id": "10.0.0.1",
-                        "areas": {
-                            "area": [{
-                                "area-id": "0.0.0.0",
-                                "interfaces":
-                                {
-                                    "interface": [{
-                                        "bfd": {
-                                            "enabled": True
+        },
+        "ietf-routing": {
+            "routing": {
+                "control-plane-protocols": {
+                    "control-plane-protocol": [
+                        {
+                            "type": "infix-routing:ospfv2",
+                            "name": "default",
+                            "ospf": {
+                                "explicit-router-id": "10.0.0.1",
+                                "areas": {
+                                    "area": [
+                                        {
+                                            "area-id": "0.0.0.0",
+                                            "interfaces": {
+                                                "interface": [
+                                                    {
+                                                        "bfd": {
+                                                            "enabled": True
+                                                        },
+                                                        "name": ring1,
+                                                        "hello-interval": 1,
+                                                        "enabled": True
+                                                    }
+                                                ]
+                                            }
                                         },
-                                        "name": ring1,
-                                        "hello-interval": 1,
-                                        "enabled": True
-                                    }]
-                                }
-                            },{
-                            "area-id": "0.0.0.1",
-                            "area-type": "nssa-area",
-                            "summary": False,
-                            "interfaces":
-                                {
-                                    "interface": [{
-                                        "bfd": {
-                                            "enabled": True
+                                        {
+                                            "area-id": "0.0.0.1",
+                                            "area-type": "nssa-area",
+                                            "summary": False,
+                                            "interfaces": {
+                                                "interface": [
+                                                    {
+                                                        "bfd": {
+                                                            "enabled": True
+                                                        },
+                                                        "name": cross,
+                                                        "hello-interval": 1,
+                                                        "enabled": True,
+                                                        "cost": 2000
+                                                    },
+                                                    {
+                                                        "name": "lo",
+                                                        "enabled": True
+                                                    }
+                                                ]
+                                            }
                                         },
-                                        "name": cross,
-                                        "hello-interval": 1,
-                                        "enabled": True,
-                                        "cost": 2000
-                                    },
-                                    {
-                                        "name": "lo",
-                                        "enabled": True
-                                    }]
-
+                                        {
+                                            "area-id": "0.0.0.2",
+                                            "interfaces": {
+                                                "interface": [
+                                                    {
+                                                        "bfd": {
+                                                            "enabled": True
+                                                        },
+                                                        "name": ring2,
+                                                        "hello-interval": 1,
+                                                        "enabled": True,
+                                                        "interface-type": "point-to-point"
+                                                    }
+                                                ]
+                                            }
+                                        }
+                                    ]
                                 }
-                            },{
-                                "area-id": "0.0.0.2",
-                                "interfaces":
-                                {
-                                    "interface": [{
-                                        "bfd": {
-                                            "enabled": True
-                                        },
-                                        "name": ring2,
-                                        "hello-interval": 1,
-                                        "enabled": True,
-                                        "interface-type": "point-to-point"
-                                    }]
-                                }
-                            }]
+                            }
                         }
-                    }
-
-                }]
+                    ]
+                }
             }
-        }
-    })
-    target.put_config_dict("ietf-system", {
+        },
+        "ietf-system": {
             "system": {
                 "hostname": "R1"
             }
-        })
+        }
+    })
 
 def config_target2(target, ring1, ring2, cross):
-    target.put_config_dict("ietf-interfaces", {
+    target.put_config_dicts({
+        "ietf-interfaces": {
             "interfaces": {
                 "interface": [
                     {
@@ -189,7 +202,8 @@ def config_target2(target, ring1, ring2, cross):
                             "address": [{
                                 "ip": "10.0.23.1",
                                 "prefix-length": 30
-                            }]}
+                            }]
+                        }
                     },
                     {
                         "name": ring2,
@@ -199,7 +213,8 @@ def config_target2(target, ring1, ring2, cross):
                             "address": [{
                                 "ip": "10.0.12.2",
                                 "prefix-length": 30
-                            }]}
+                            }]
+                        }
                     },
                     {
                         "name": cross,
@@ -209,212 +224,237 @@ def config_target2(target, ring1, ring2, cross):
                             "address": [{
                                 "ip": "10.0.24.1",
                                 "prefix-length": 30
-                            }]}
+                            }]
+                        }
+                    },
+                    {
+                        "name": "lo",
+                        "enabled": True,
+                        "ipv4": {
+                            "address": [
+                                {
+                                    "ip": "10.0.0.2",
+                                    "prefix-length": 32
+                                },
+                                {
+                                    "ip": "11.0.9.1",
+                                    "prefix-length": 24
+                                },
+                                {
+                                    "ip": "11.0.10.1",
+                                    "prefix-length": 24
+                                },
+                                {
+                                    "ip": "11.0.11.1",
+                                    "prefix-length": 24
+                                },
+                                {
+                                    "ip": "11.0.12.1",
+                                    "prefix-length": 24
+                                },
+                                {
+                                    "ip": "11.0.13.1",
+                                    "prefix-length": 24
+                                },
+                                {
+                                    "ip": "11.0.14.1",
+                                    "prefix-length": 24
+                                },
+                                {
+                                    "ip": "11.0.15.1",
+                                    "prefix-length": 24
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+        },
+        "ietf-system": {
+            "system": {
+                "hostname": "R2"
+            }
+        },
+        "ietf-routing": {
+            "routing": {
+                "control-plane-protocols": {
+                    "control-plane-protocol": [
+                        {
+                            "type": "infix-routing:ospfv2",
+                            "name": "default",
+                            "ospf": {
+                                "explicit-router-id": "1.1.1.1",
+                                "areas": {
+                                    "area": [
+                                        {
+                                            "area-id": "0.0.0.0",
+                                            "interfaces": {
+                                                "interface": [
+                                                    {
+                                                        "bfd": {
+                                                            "enabled": True
+                                                        },
+                                                        "name": ring2,
+                                                        "hello-interval": 1,
+                                                        "enabled": True
+                                                    },
+                                                    {
+                                                        "name": "lo",
+                                                        "enabled": True
+                                                    }
+                                                ]
+                                            }
+                                        },
+                                        {
+                                            "area-id": "0.0.0.1",
+                                            "area-type": "nssa-area",
+                                            "summary": False,
+                                            "interfaces": {
+                                                "interface": [
+                                                    {
+                                                        "bfd": {
+                                                            "enabled": True
+                                                        },
+                                                        "name": ring1,
+                                                        "hello-interval": 1,
+                                                        "enabled": True
+                                                    }
+                                                ]
+                                            }
+                                        },
+                                        {
+                                            "area-id": "0.0.0.2",
+                                            "interfaces": {
+                                                "interface": [
+                                                    {
+                                                        "bfd": {
+                                                            "enabled": True
+                                                        },
+                                                        "name": cross,
+                                                        "hello-interval": 1,
+                                                        "cost": 2000,
+                                                        "enabled": True
+                                                    }
+                                                ]
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    ]
+                }
+            }
+        }
+    })
+
+def config_target3(target, ring2, cross, link):
+    target.put_config_dicts({
+        "ietf-interfaces": {
+            "interfaces": {
+                "interface": [
+                    {
+                        "name": ring2,
+                        "enabled": True,
+                        "ipv4": {
+                            "forwarding": True,
+                            "address": [{
+                                "ip": "10.0.23.2",
+                                "prefix-length": 30
+                                }]
+                            }
+                    },
+                    {
+                        "name": link,
+                        "enabled": True,
+                        "ipv4": {
+                            "forwarding": True,
+                            "address": [{
+                                "ip": "192.168.3.1",
+                                "prefix-length": 24
+                            }]
+                        }
+                    },
+                    {
+                        "name": cross,
+                        "enabled": True,
+                        "ipv4": {
+                            "forwarding": True,
+                            "address": [{
+                                "ip": "10.0.13.2",
+                                "prefix-length": 30
+                            }]
+                        }
                     },
                     {
                         "name": "lo",
                         "enabled": True,
                         "ipv4": {
                             "address": [{
-                                "ip": "10.0.0.2",
+                                "ip": "10.0.0.3",
                                 "prefix-length": 32
-                            }, {
-                                "ip": "11.0.9.1",
-                                "prefix-length": 24
-                            }, {
-                                "ip": "11.0.10.1",
-                                "prefix-length": 24
-                            }, {
-                                "ip": "11.0.11.1",
-                                "prefix-length": 24
-                            }, {
-                                "ip": "11.0.12.1",
-                                "prefix-length": 24
-                            }, {
-                                "ip": "11.0.13.1",
-                                "prefix-length": 24
-                            }, {
-                                "ip": "11.0.14.1",
-                                "prefix-length": 24
-                            }, {
-                                "ip": "11.0.15.1",
-                                "prefix-length": 24
                             }]
                         }
-                    }
-                ]
-            }
-        })
-    target.put_config_dict("ietf-system", {
-            "system": {
-                "hostname": "R2"
-            }
-        })
-
-    target.put_config_dict("ietf-routing", {
-        "routing": {
-            "control-plane-protocols": {
-                "control-plane-protocol": [{
-                    "type": "infix-routing:ospfv2",
-                    "name": "default",
-                    "ospf": {
-                        "explicit-router-id": "1.1.1.1",
-                        "areas": {
-                            "area": [{
-                                "area-id": "0.0.0.0",
-                                "interfaces": {
-                                    "interface": [{
-                                        "bfd": {
-                                            "enabled": True
-                                        },
-                                        "name": ring2,
-                                        "hello-interval": 1,
-                                        "enabled": True
-                                    }, {
-                                        "name": "lo",
-                                        "enabled": True
-                                    }]
-                                }
-                            }, {
-                                "area-id": "0.0.0.1",
-                                "area-type": "nssa-area",
-                                "summary": False,
-                                "interfaces": {
-                                    "interface": [{
-                                        "bfd": {
-                                            "enabled": True
-                                        },
-                                        "name": ring1,
-                                        "hello-interval": 1,
-                                    }]
-                                }
-                            }, {
-                                "area-id": "0.0.0.2",
-                                "interfaces": {
-                                    "interface": [{
-                                        "bfd": {
-                                            "enabled": True
-                                        },
-                                        "name": cross,
-                                        "hello-interval": 1,
-                                        "cost": 2000
-                                    }]
-                                }
-                            }]
                         }
-                    }
-                }]
-            }
-        }
-    })
-
-
-def config_target3(target, ring2, cross, link):
-    target.put_config_dict("ietf-interfaces", {
-        "interfaces": {
-            "interface": [
-                {
-                    "name": ring2,
-                    "enabled": True,
-                    "ipv4": {
-                        "forwarding": True,
-                        "address": [{
-                            "ip": "10.0.23.2",
-                            "prefix-length": 30
-                            }]
-                        }
-                },
-                {
-                    "name": link,
-                    "enabled": True,
-                    "ipv4": {
-                        "forwarding": True,
-                        "address": [{
-                            "ip": "192.168.3.1",
-                            "prefix-length": 24
-                        }]
-                    }
-                },
-                {
-                    "name": cross,
-                    "enabled": True,
-                    "ipv4": {
-                        "forwarding": True,
-                        "address": [{
-                            "ip": "10.0.13.2",
-                            "prefix-length": 30
-                        }]
-                    }
-                },
-                {
-                    "name": "lo",
-                    "enabled": True,
-                    "ipv4": {
-                        "address": [{
-                            "ip": "10.0.0.3",
-                            "prefix-length": 32
-                        }]
-                    }
-                    }
-                ]
-            }
-    })
-
-    target.put_config_dict("ietf-system", {
-            "system": {
-                "hostname": "R3"
-            }
-        })
-
-    target.put_config_dict("ietf-routing", {
-        "routing": {
-            "control-plane-protocols": {
-                "control-plane-protocol": [{
-                    "type": "infix-routing:ospfv2",
-                    "name": "default",
-                    "ospf": {
-                        "areas": {
-                            "area": [{
-                                "area-id": "0.0.0.1",
-                                "area-type": "nssa-area",
-                                "summary": False,
-                                "interfaces": {
-                                    "interface": [{
-                                        "bfd": {
+                    ]
+                }
+        },
+        "ietf-system": {
+                "system": {
+                    "hostname": "R3"
+                }
+        },
+        "ietf-routing": {
+            "routing": {
+                "control-plane-protocols": {
+                    "control-plane-protocol": [{
+                        "type": "infix-routing:ospfv2",
+                        "name": "default",
+                        "ospf": {
+                            "areas": {
+                                "area": [{
+                                    "area-id": "0.0.0.1",
+                                    "area-type": "nssa-area",
+                                    "summary": False,
+                                    "interfaces": {
+                                        "interface": [{
+                                            "bfd": {
+                                                "enabled": True
+                                            },
+                                            "name": cross,
+                                            "hello-interval": 1,
+                                            "enabled": True,
+                                            "cost": 2000
+                                        }, {
+                                            "bfd": {
+                                                "enabled": True
+                                            },
+                                            "name": ring2,
+                                            "hello-interval": 1,
                                             "enabled": True
-                                        },
-                                        "name": cross,
-                                        "hello-interval": 1,
-                                        "enabled": True,
-                                        "cost": 2000
-                                    }, {
-                                        "bfd": {
+                                        }, {
+                                            "name": link,
+                                            "enabled": True,
+                                            "passive": True
+                                        }, {
+                                            "name": "lo",
                                             "enabled": True
-                                        },
-                                        "name": ring2,
-                                        "hello-interval": 1,
-                                        "enabled": True
-                                    }, {
-                                        "name": link,
-                                        "enabled": True,
-                                        "passive": True
-                                    }, {
-                                        "name": "lo",
-                                        "enabled": True
-                                    }]
-                                }
-                            }]
+                                        }]
+                                    }
+                                }]
+                            }
                         }
-                    }
-                }]
+                    }]
+                }
             }
         }
     })
 
 
 def config_target4(target, ring1, cross, link):
-    target.put_config_dict("ietf-interfaces", {
-        "interfaces": {
+    target.put_config_dicts({
+        "ietf-interfaces": {
+            "interfaces": {
                 "interface": [
                     {
                         "name": ring1,
@@ -459,57 +499,56 @@ def config_target4(target, ring1, cross, link):
                     }
                 ]
             }
-        })
-
-    target.put_config_dict("ietf-system", {
-        "system": {
-            "hostname": "R4"
-        }
-    })
-
-    target.put_config_dict("ietf-routing", {
-        "routing": {
-            "control-plane-protocols": {
-                "control-plane-protocol": [
-                    {
-                        "type": "infix-routing:ospfv2",
-                        "name": "default",
-                        "ospf": {
-                            "redistribute": {
-                                "redistribute": [{
-                                        "protocol": "connected"
-                                    }]
-                            },
-                            "areas": {
-                                "area": [{
-                                    "area-id": "0.0.0.2",
-                                    "interfaces": {
-                                        "interface": [{
-                                            "bfd": {
-                                                "enabled": True
-                                            },
-                                            "name": ring1,
-                                            "hello-interval": 1,
-                                            "enabled": True,
-                                            "interface-type": "point-to-point"
-                                        }, {
-                                            "bfd": {
-                                                "enabled": True
-                                            },
-                                            "name": cross,
-                                            "hello-interval": 1,
-                                            "enabled": True,
-                                            "cost": 5000
-                                        }, {
-                                            "name": "lo",
-                                            "enabled": True
+        },
+        "ietf-system": {
+            "system": {
+                "hostname": "R4"
+            }
+        },
+        "ietf-routing": {
+            "routing": {
+                "control-plane-protocols": {
+                    "control-plane-protocol": [
+                        {
+                            "type": "infix-routing:ospfv2",
+                            "name": "default",
+                            "ospf": {
+                                "redistribute": {
+                                    "redistribute": [{
+                                            "protocol": "connected"
                                         }]
-                                    }
-                                }]
+                                },
+                                "areas": {
+                                    "area": [{
+                                        "area-id": "0.0.0.2",
+                                        "interfaces": {
+                                            "interface": [{
+                                                "bfd": {
+                                                    "enabled": True
+                                                },
+                                                "name": ring1,
+                                                "hello-interval": 1,
+                                                "enabled": True,
+                                                "interface-type": "point-to-point"
+                                            }, {
+                                                "bfd": {
+                                                    "enabled": True
+                                                },
+                                                "name": cross,
+                                                "hello-interval": 1,
+                                                "enabled": True,
+                                                "cost": 5000
+                                            }, {
+                                                "name": "lo",
+                                                "enabled": True
+                                            }]
+                                        }
+                                    }]
+                                }
                             }
                         }
-                    }
-                ]
+                    ]
+                }
             }
         }
     })
