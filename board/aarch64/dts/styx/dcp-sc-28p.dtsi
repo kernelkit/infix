@@ -276,6 +276,12 @@
 			color = <LED_COLOR_ID_GREEN>; \
 			default-state = "keep"; \
 		}; \
+		led@1 { \
+			reg = <1>; \
+			function = _func; \
+			color = <LED_COLOR_ID_YELLOW>; \
+			default-state = "off"; \
+		}; \
 	}
 
 #define XSWP(_n, _label, _mac_offs, _sfp) \
