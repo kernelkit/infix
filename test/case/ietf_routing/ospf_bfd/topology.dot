@@ -1,0 +1,39 @@
+graph "ospf-bfd" {
+	layout="neato";
+	overlap="false";
+	esep="+20";
+	size=10
+
+        node [shape=record, fontname="DejaVu Sans Mono, Book"];
+	edge [color="cornflowerblue", penwidth="2", fontname="DejaVu Serif, Book"];
+
+        R1 [
+	    label=" { { R1 | <slow> slow } | { <mgmt> mgmt | <h1> h1 | <fast> fast } }",
+	    pos="0,6!",
+
+	    kind="infix",
+	];
+	R2 [
+	    label="{ { <slow> slow | R2 } | { <fast> fast | <h2> h2 | <mgmt> mgmt  } }",
+	    pos="18,6!",
+
+	    kind="infix",
+	];
+
+	PC [
+	    label="{ { <R1mgmt> R1mgmt | <h1> h1 | <R1fast> R1fast | <R2fast> R2fast | <h2> h2 | <R2mgmt> R2mgmt } | PC }",
+	    pos="9,0!",
+	    kind="controller",
+	];
+
+	PC:R1mgmt -- R1:mgmt [kind=mgmt, color="lightgray"]
+        PC:R2mgmt -- R2:mgmt [kind=mgmt, color="lightgray"]
+
+	PC:h1 -- R1:h1
+	PC:h2 -- R2:h2
+
+	R1:fast -- PC:R1fast [color="lightgreen", taillabel="Cost: 100"]
+	R2:fast -- PC:R2fast [color="lightgreen"]
+
+	R1:slow -- R2:slow [color="crimson", taillabel="Cost: 200"]
+}

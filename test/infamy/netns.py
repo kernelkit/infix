@@ -1,4 +1,5 @@
 import ctypes
+import json
 import multiprocessing
 import os
 import random
@@ -18,31 +19,58 @@ def setns(fd, nstype):
     __NR_setns = 308
     __libc.syscall(__NR_setns, fd, nstype)
 
-class IsolatedMacVlan:
-    """Create an isolated interface on top of a PC interface."""
-    def __init__(self, parent, ifname="iface", lo=True):
+class IsolatedMacVlans:
+    """A network namespace containing a multiple MACVLANs
+
+    Stacks a MACVLAN on top of each specificed controller interface,
+    and moves those interfaces to a separate namespace, isolating it
+    from all others.
+
+    NOTE: For the simple case when only one interface needs to be
+    mapped, see IsolatedMacVlan below.
+
+    Example:
+
+    netns = IsolatedMacVlans({ "eth2": "a", "eth3": "b" })
+
+             netns:
+             .--------.
+             | a    b | (MACVLANs)
+             '-+----+-'
+               |    |
+    eth0 eth1 eth2 eth3
+
+    """
+
+    Instances = []
+    def Cleanup():
+        for ns in list(IsolatedMacVlans.Instances):
+            ns.stop()
+
+    def __init__(self, ifmap, lo=True):
         self.sleeper = None
-        self.parent, self.ifname, self.lo = parent, ifname, lo
+        self.ifmap, self.lo = ifmap, lo
         self.ping_timeout = env.ENV.attr("ping_timeout", 5)
 
-    def __enter__(self):
+    def start(self):
         self.sleeper = subprocess.Popen(["unshare", "-r", "-n", "sh", "-c",
                                          "echo && exec sleep infinity"],
                                         stdout=subprocess.PIPE)
         self.sleeper.stdout.readline()
 
         try:
-            subprocess.run(["ip", "link", "add",
-                            "dev", self.ifname,
-                            "link", self.parent,
-                            "address", self._stable_mac(),
-                            "netns", str(self.sleeper.pid),
-                            "type", "macvlan"], check=True)
-            self.runsh(f"""
-            while ! ip link show dev {self.ifname}; do
-                sleep 0.1
-            done
-            """)
+            for parent, ifname in self.ifmap.items():
+                subprocess.run(["ip", "link", "add",
+                                "dev", ifname,
+                                "link", parent,
+                                "address", self._stable_mac(parent),
+                                "netns", str(self.sleeper.pid),
+                                "type", "macvlan", "mode", "passthru"], check=True)
+                self.runsh(f"""
+                while ! ip link show dev {ifname}; do
+                    sleep 0.1
+                done
+                """)
         except Exception as e:
             self.__exit__(None, None, None)
             raise e
@@ -54,14 +82,43 @@ class IsolatedMacVlan:
                 self.__exit__(None, None, None)
                 raise e
 
+        self.Instances.append(self)
         return self
 
-    def __exit__(self, val, typ, tb):
+    def stop(self):
         self.sleeper.kill()
         self.sleeper.wait()
-        time.sleep(0.5)
 
-    def _stable_mac(self):
+        for n in range(100):
+            promisc = False
+            for parent in self.ifmap.keys():
+                iplink = subprocess.run(f"ip -d -j link show dev {parent}".split(),
+                                        stdout=subprocess.PIPE, check=True)
+                link = json.loads(iplink.stdout)[0]
+                if link["promiscuity"]:
+                    # Use promisc as a substitute for an indicator
+                    # of whether the kernel has actually removed
+                    # the passthru MACVLAN yet or not
+                    promisc = True
+                    break
+
+            if not promisc:
+                break
+
+            time.sleep(.1)
+        else:
+            raise TimeoutError("Lingering MACVLAN")
+
+        if self in self.Instances:
+            self.Instances.remove(self)
+
+    def __enter__(self):
+        return self.start()
+
+    def __exit__(self, val, typ, tb):
+        return self.stop()
+
+    def _stable_mac(self, parent):
         """Generate address for MACVLAN
 
         By default, the kernel will assign a random address. This
@@ -75,7 +132,7 @@ class IsolatedMacVlan:
         the resource exhaustion issue.
 
         """
-        random.seed(self.parent)
+        random.seed(parent)
         a = list(random.randbytes(6))
         a[0] |= 0x02
         a[0] &= ~0x01
@@ -146,13 +203,13 @@ class IsolatedMacVlan:
             ip -{p} route add {subnet}{prefix_length} via {nexthop}
             """, check=True)
 
-    def addip(self, addr, prefix_length=24, proto="ipv4"):
+    def addip(self, ifname, addr, prefix_length=24, proto="ipv4"):
         p=proto[3]
 
         self.runsh(f"""
             set -ex
             ip link set iface up
-            ip -{p} addr add {addr}/{prefix_length} dev iface
+            ip -{p} addr add {addr}/{prefix_length} dev {ifname}
             """, check=True)
 
 
@@ -188,8 +245,7 @@ class IsolatedMacVlan:
 
         raise Exception(res)
 
-    def must_receive(self, expr, timeout=None, ifname=None, must=True):
-        ifname = ifname if ifname else self.ifname
+    def must_receive(self, expr, ifname, timeout=None, must=True):
         timeout = timeout if timeout else self.ping_timeout
 
         tshark = self.run(["tshark", "-nl", f"-i{ifname}",
@@ -207,9 +263,42 @@ class IsolatedMacVlan:
     def must_not_receive(self, *args, **kwargs):
         self.must_receive(*args, **kwargs, must=False)
 
-    def pcap(self, expr, ifname=None):
-        ifname = ifname if ifname else self.ifname
+    def pcap(self, expr, ifname):
         return Pcap(self, ifname, expr)
+
+class IsolatedMacVlan(IsolatedMacVlans):
+    """A network namespace containing a single MACVLAN
+
+    Stacks a MACVLAN on top of an interface on the controller, and
+    moves that interface to a separate namespace, isolating it from
+    all other interfaces.
+
+    Example:
+
+    netns = IsolatedMacVlan("eth3")
+
+                netns:
+                .-------.
+                | iface | (MACVLAN)
+                '---+---'
+                    |
+    eth0 eth1 eth2 eth3
+
+    """
+    def __init__(self, parent, ifname="iface", lo=True):
+        self._ifname = ifname
+        return super().__init__(ifmap={ parent: ifname }, lo=lo)
+
+    def addip(self, addr, prefix_length=24, proto="ipv4"):
+        return super().addip(ifname=self._ifname, addr=addr, prefix_length=prefix_length, proto=proto)
+
+    def must_receive(self, expr, timeout=None, ifname=None, must=True):
+        ifname = ifname if ifname else self._ifname
+        return super().must_receive(expr=expr, ifname=ifname, timeout=timeout, must=must)
+
+    def pcap(self, expr, ifname=None):
+        ifname = ifname if ifname else self._ifname
+        return super().pcap(expr=expr, ifname=ifname)
 
 class Pcap:
     def __init__(self, netns, ifname, expr):
@@ -253,7 +342,6 @@ class Pcap:
             # terminating the capture.
             time.sleep(sleep)
 
-        self.proc.send_signal(signal.SIGUSR2)
         self.proc.terminate()
         try:
             _, stderr = self.proc.communicate(5)
@@ -272,3 +360,52 @@ class Pcap:
                                  stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                                  text=True, check=True)
         return tcpdump.stdout
+
+class TPMR(IsolatedMacVlans):
+    """Two-Port MAC Relay
+
+    Creates a network namespace containing two controller interfaces
+    (`a` and `b`). By default, tc rules are setup to copy all frames
+    ingressing on `a` to egress on `b`, and vice versa.
+
+    These rules can be removed and reinserted dynamically using the
+    `block()` and `forward()` methods, respectively.
+
+    This is useful to verify the correctness of fail-over behavior in
+    various protocols. See ospf_bfd for a usage example.
+    """
+
+    def __init__(self, a, b):
+        super().__init__(ifmap={ a: "a", b: "b" }, lo=False)
+
+    def start(self, forward=True):
+        ret = super().start()
+
+        for dev in ("a", "b"):
+            self.run(f"ip link set dev {dev} promisc on up".split())
+            self.run(f"tc qdisc add dev {dev} clsact".split())
+
+        if forward:
+            self.forward()
+
+        return ret
+
+    def _clear_ingress(self, iface):
+        return self.run(f"tc filter del dev {iface} ingress".split())
+
+    def _add_redir(self, frm, to):
+        cmd = \
+            "tc filter add dev".split() \
+            + [frm] \
+            + "ingress matchall action mirred egress redirect dev".split() \
+            + [to]
+        return self.run(cmd)
+
+    def forward(self):
+        for iface in ("a", "b"):
+            self._clear_ingress(iface)
+            self._add_redir(iface, "a" if iface == "b" else "b")
+
+    def block(self):
+        for iface in ("a", "b"):
+            self._clear_ingress(iface)

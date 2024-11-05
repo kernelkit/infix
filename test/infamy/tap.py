@@ -4,6 +4,8 @@ import subprocess
 import sys
 import traceback
 
+import infamy.netns
+
 class Test:
     def __init__(self, output=sys.stdout):
         self.out = output
@@ -23,6 +25,8 @@ class Test:
         now = datetime.datetime.now().strftime("%F %T")
         self.out.write(f"# Exiting ({now})\n")
         self.out.flush()
+
+        infamy.netns.IsolatedMacVlans.Cleanup()
 
         if not e:
             self._not_ok("Missing explicit test result\n")

@@ -11,3 +11,5 @@ include::ospf_basic/Readme.adoc[]
 include::ospf_unnumbered_interface/Readme.adoc[]
 
 include::ospf_multiarea/Readme.adoc[]
+
+include::ospf_bfd/Readme.adoc[]

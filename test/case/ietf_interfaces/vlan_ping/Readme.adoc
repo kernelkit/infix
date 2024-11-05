@@ -16,10 +16,12 @@ endif::testgroup[]
 endif::topdoc[]
 ==== Test sequence
 . Set up topology and attach to target DUT
+. Set up VLAN interface on host:data with IP 10.0.0.1
 . Configure VLAN 10 interface on target:data with IP 10.0.0.2
-. Waiting for links to come up
-. Ping 10.0.0.2 from VLAN 10 on host:data with IP 10.0.0.1
-. Remove VLAN interface from target:data, and test again (should not be able to ping)
+. Wait for links to come up
+. Verify that host:data can reach 10.0.0.2
+. Remove VLAN interface from target:data
+. Verify that host:data can no longer reach 10.0.0.2
 
 
 <<<
