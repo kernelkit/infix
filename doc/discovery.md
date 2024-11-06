@@ -266,7 +266,7 @@ Infix devices, likely the one that first appeared.
 > infix.local to deterministically connect to a unit.
 
 
-#### Discovery via netbrowse service
+#### Netbrowse service to find all your devices
 
 Infix provides a *netbrowse* facility, where services advertised via mDNS
 are collected and presented via a web portal at *network.local*.
