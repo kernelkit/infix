@@ -268,13 +268,14 @@ Infix devices, likely the one that first appeared.
 
 #### Netbrowse service to find all your devices
 
-Infix provides a *netbrowse* facility, where services advertised via mDNS
-are collected and presented via a web portal at *network.local*.
+Another mDNS alias that all Infix devices can advertise is
+*network.local*. This is a web service which basically runs avahi-browse
+and displays a table of other Infix devices and their services. 
 
 ![Netbrowse Service - network.local](img/network-local.png)
 
-When multiple Infix units are present on the LAN, *network.local* will
-likely resolve to the first unit that appeared.
+With multiple Infix devices on the LAN, one will be your portal to
+access all others, if it goes down another will take its place.
 
 To disable the netbrowse service, the following commands can be used:
 ```
