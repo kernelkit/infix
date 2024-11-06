@@ -318,6 +318,8 @@ def probe_dtsystem(out):
     if model:
         out["product-name"] = model
 
+    out["compatible"] = dtsys.base.str_array("compatible")
+
     staticpw = dtsys.infix.str("factory-password-hash")
     if not out["factory-password-hash"]:
         out["factory-password-hash"] = staticpw
