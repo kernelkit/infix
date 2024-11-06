@@ -46,208 +46,211 @@ with infamy.Test() as test:
 
 
     with test.step("Configure device"):
-        dut1.put_config_dict("ietf-interfaces",
+        dut1.put_config_dicts(
+            {
+                "ietf-interfaces": {
+                    "interfaces": {
+                         "interface": [
                              {
-                                 "interfaces": {
-                                     "interface": [
-                                         {
-                                             "name": d1send,
-                                             "enabled": True,
-                                             "bridge-port": {
-                                                 "bridge": "br0",
-                                                 "pvid": 55
-
-                                             }
-                                         },
-                                         {
-                                             "name": d1receiver,
-                                             "enabled": True,
-                                             "bridge-port": {
-                                                 "bridge": "br0",
-                                                 "pvid": 77
-                                             }
-                                         },
-                                         {
-                                             "name": d1trunk,
-                                             "enabled": True,
-                                             "bridge-port": {
-                                                 "bridge": "br0"
-                                             }
-                                         },
-                                         {
-                                             "name": "vlan55",
-                                             "enabled": True,
-                                             "type": "infix-if-type:vlan",
-                                             "ipv4": {
-                                                 "address": [
-                                                     {
-                                                         "ip": "10.0.1.1",
-                                                         "prefix-length": 24
-                                                     }
-                                                 ]
-                                             },
-                                             "vlan": {
-                                                 "id": 55,
-                                                 "lower-layer-if": "br0"
-                                             }
-
-                                         },
-                                         {
-                                             "name": "vlan77",
-                                             "enabled": True,
-                                             "type": "infix-if-type:vlan",
-                                             "ipv4": {
-                                                 "address": [
-                                                     {
-                                                         "ip": "10.0.2.1",
-                                                         "prefix-length": 24
-                                                     }
-                                                 ]
-                                             },
-                                             "vlan": {
-                                                 "id": 77,
-                                                 "lower-layer-if": "br0"
-                                             }
-
-                                         },
-                                         {
-                                             "name": "br0",
-                                             "enabled": True,
-                                             "type": "infix-if-type:bridge",
-
-                                             "bridge": {
-                                                 "vlans": {
-                                                     "vlan": [
-                                                         {
-                                                             "vid": 55,
-                                                             "untagged": [ d1send ],
-                                                             "tagged": [ d1trunk, "br0" ],
-                                                             "multicast": {
-                                                                 "snooping": True
-                                                             }
-                                                         },
-                                                         {
-                                                             "vid": 77,
-                                                             "untagged": [ d1receiver ],
-                                                             "tagged": [ d1trunk, "br0" ],
-                                                             "multicast": {
-                                                                 "snooping": True
-                                                             }
-                                                         }
-                                                     ]
-                                                 }
-                                             }
-                                         }
-                                     ]
+                                 "name": d1send,
+                                 "enabled": True,
+                                 "bridge-port": {
+                                     "bridge": "br0",
+                                     "pvid": 55
 
                                  }
-                             })
-        dut1.put_config_dict("ietf-system", {
-            "system": {
-                "hostname": "dut1"
-            }
-        })
-        dut2.put_config_dict("ietf-interfaces",
+                             },
                              {
-                                 "interfaces": {
-                                    "interface": [
-                                        {
-                                             "name": d2receive,
-                                             "enabled": True,
-                                             "bridge-port": {
-                                                 "bridge": "br0",
-                                                 "pvid": 55
-                                             }
-                                         },
+                                 "name": d1receiver,
+                                 "enabled": True,
+                                 "bridge-port": {
+                                     "bridge": "br0",
+                                     "pvid": 77
+                                 }
+                             },
+                             {
+                                 "name": d1trunk,
+                                 "enabled": True,
+                                 "bridge-port": {
+                                     "bridge": "br0"
+                                 }
+                             },
+                             {
+                                 "name": "vlan55",
+                                 "enabled": True,
+                                 "type": "infix-if-type:vlan",
+                                 "ipv4": {
+                                     "address": [
                                          {
-                                             "name": d2sender,
-                                             "enabled": True,
-                                             "bridge-port": {
-                                                 "bridge": "br0",
-                                                 "pvid": 77
-                                             }
-                                         },
-                                         {
-                                             "name": d2trunk,
-                                             "enabled": True,
-                                             "bridge-port": {
-                                                 "bridge": "br0"
-                                             }
-                                         },
-                                         {
-                                             "name": "vlan55",
-                                             "enabled": True,
-                                             "type": "infix-if-type:vlan",
-                                             "ipv4": {
-                                                 "address": [
-                                                     {
-                                                         "ip": "10.0.1.2",
-                                                         "prefix-length": 24
-                                                     }
-                                                 ]
-                                             },
-                                             "vlan": {
-                                                 "id": 55,
-                                                 "lower-layer-if": "br0"
-                                             }
-
-                                         },
-                                         {
-                                             "name": "vlan77",
-                                             "enabled": True,
-                                             "type": "infix-if-type:vlan",
-                                             "ipv4": {
-                                                 "address": [
-                                                     {
-                                                         "ip": "10.0.2.2",
-                                                         "prefix-length": 24
-                                                     }
-                                                 ]
-                                             },
-                                             "vlan": {
-                                                 "id": 77,
-                                                 "lower-layer-if": "br0"
-                                             }
-
-                                         },
-                                         {
-                                             "name": "br0",
-                                             "enabled": True,
-                                             "type": "infix-if-type:bridge",
-
-                                             "bridge": {
-                                                 "vlans": {
-                                                     "vlan": [
-                                                         {
-                                                             "vid": 55,
-                                                             "untagged": [ d2receive ],
-                                                             "tagged": [ d2trunk, "br0" ],
-                                                             "multicast": {
-                                                                 "snooping": True
-                                                             }
-                                                         },
-                                                         {
-                                                             "vid": 77,
-                                                             "untagged": [ d2sender ],
-                                                             "tagged": [ d2trunk, "br0" ],
-                                                             "multicast": {
-                                                                 "snooping": True
-                                                             }
-                                                         }
-                                                     ]
-                                                 }
-                                             }
+                                             "ip": "10.0.1.1",
+                                             "prefix-length": 24
                                          }
                                      ]
-
+                                 },
+                                 "vlan": {
+                                     "id": 55,
+                                     "lower-layer-if": "br0"
                                  }
-                        })
 
-        dut2.put_config_dict("ietf-system", {
-            "system": {
-                "hostname": "dut2"
+                             },
+                             {
+                                 "name": "vlan77",
+                                 "enabled": True,
+                                 "type": "infix-if-type:vlan",
+                                 "ipv4": {
+                                     "address": [
+                                         {
+                                             "ip": "10.0.2.1",
+                                             "prefix-length": 24
+                                         }
+                                     ]
+                                 },
+                                 "vlan": {
+                                     "id": 77,
+                                     "lower-layer-if": "br0"
+                                 }
+
+                             },
+                             {
+                                 "name": "br0",
+                                 "enabled": True,
+                                 "type": "infix-if-type:bridge",
+
+                                 "bridge": {
+                                     "vlans": {
+                                         "vlan": [
+                                             {
+                                                 "vid": 55,
+                                                 "untagged": [ d1send ],
+                                                 "tagged": [ d1trunk, "br0" ],
+                                                 "multicast": {
+                                                     "snooping": True
+                                                 }
+                                             },
+                                             {
+                                                 "vid": 77,
+                                                 "untagged": [ d1receiver ],
+                                                 "tagged": [ d1trunk, "br0" ],
+                                                 "multicast": {
+                                                     "snooping": True
+                                                 }
+                                             }
+                                         ]
+                                     }
+                                 }
+                             }
+                         ]
+                     }
+                },
+                "ietf-system": {
+                    "system": {
+                        "hostname": "dut1"
+                    }
+                }
             }
-        })
+        )
+
+        dut2.put_config_dicts(
+            {
+                "ietf-interfaces": {
+                    "interfaces": {
+                        "interface": [
+                            {
+                                 "name": d2receive,
+                                 "enabled": True,
+                                 "bridge-port": {
+                                     "bridge": "br0",
+                                     "pvid": 55
+                                 }
+                             },
+                             {
+                                 "name": d2sender,
+                                 "enabled": True,
+                                 "bridge-port": {
+                                     "bridge": "br0",
+                                     "pvid": 77
+                                 }
+                             },
+                             {
+                                 "name": d2trunk,
+                                 "enabled": True,
+                                 "bridge-port": {
+                                     "bridge": "br0"
+                                 }
+                             },
+                             {
+                                 "name": "vlan55",
+                                 "enabled": True,
+                                 "type": "infix-if-type:vlan",
+                                 "ipv4": {
+                                     "address": [
+                                         {
+                                             "ip": "10.0.1.2",
+                                             "prefix-length": 24
+                                         }
+                                     ]
+                                 },
+                                 "vlan": {
+                                     "id": 55,
+                                     "lower-layer-if": "br0"
+                                 }
+
+                             },
+                             {
+                                 "name": "vlan77",
+                                 "enabled": True,
+                                 "type": "infix-if-type:vlan",
+                                 "ipv4": {
+                                     "address": [
+                                         {
+                                             "ip": "10.0.2.2",
+                                             "prefix-length": 24
+                                         }
+                                     ]
+                                 },
+                                 "vlan": {
+                                     "id": 77,
+                                     "lower-layer-if": "br0"
+                                 }
+
+                             },
+                             {
+                                 "name": "br0",
+                                 "enabled": True,
+                                 "type": "infix-if-type:bridge",
+
+                                 "bridge": {
+                                     "vlans": {
+                                         "vlan": [
+                                             {
+                                                 "vid": 55,
+                                                 "untagged": [ d2receive ],
+                                                 "tagged": [ d2trunk, "br0" ],
+                                                 "multicast": {
+                                                     "snooping": True
+                                                 }
+                                             },
+                                             {
+                                                 "vid": 77,
+                                                 "untagged": [ d2sender ],
+                                                 "tagged": [ d2trunk, "br0" ],
+                                                 "multicast": {
+                                                     "snooping": True
+                                                 }
+                                             }
+                                         ]
+                                     }
+                                 }
+                             }
+                        ]
+                    }
+                },
+                "ietf-system": {
+                    "system": {
+                        "hostname": "dut2"
+                    }
+                }
+            })
 
     with infamy.IsolatedMacVlan(hsendd1) as d1send_ns, \
          infamy.IsolatedMacVlan(hreceived1) as d1receive_ns, \
