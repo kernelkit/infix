@@ -1,22 +1,41 @@
 #!/bin/sh
-# Find and install any product specific files in /etc before bootstrap
+# Find, install, and run product specific files and script in /etc
+# before resuming bootstrap.
+#
+# Use /etc/product/init.d/S01-myscript for scripts, may be a symlink, it
+# will be called with `start` as its only argument.
+#
+# The compatible array is listed in the same order as the device tree,
+# most significant to least.  Hence the reverse.[], to ensure overrides
+# are applied in order of significance.
 ident=$(basename "$0")
 
+PRODUCT_INIT=/etc/product/init.d
 PREFIXD=/usr/share/product
-PRODUCT=$(jq -r '."product-name" | ascii_downcase' /run/system.json)
+COMPATIBLES=$(jq -r '.compatible | reverse.[] | ascii_downcase' /run/system.json)
 
 note()
 {
     logger -I $$ -k -p user.notice -t "$ident" "$1"
 }
 
-DIR="$PREFIXD/$PRODUCT"
-if [ -z "$PRODUCT" ] || [ ! -d "$DIR" ]; then
-    note "No vendor/product specific directory found, using built-in defaults."
-    exit 0
+found=false
+for PRODUCT in $COMPATIBLES; do
+    DIR="$PREFIXD/$PRODUCT"
+    if [ -d "$DIR" ]; then
+        note "Using vendor/product-specific defaults for $PRODUCT."
+        for dir in "$DIR"/*; do
+            [ -d "$dir" ] && cp -a "$dir" /
+        done
+        found=true
+    fi
+done
+
+if [ "$found" = false ]; then
+    note "No vendor/product-specific directory found, using built-in defaults."
 fi
 
-note "Using vendor/product specific defaults."
-for dir in "$DIR"/*; do
-    [ -d "$dir" ] && cp -a "$dir" /
-done
+note "Calling runparts $PRODUCT_INIT/S[0-9]+.* start"
+/usr/libexec/finit/runparts -bsp "$PRODUCT_INIT"
+
+exit 0
