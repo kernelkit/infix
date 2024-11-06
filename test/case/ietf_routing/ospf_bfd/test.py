@@ -161,8 +161,8 @@ with infamy.Test() as test:
 
     with test.step("Wait for R1 and R2 to peer"):
         print("Waiting for R1 and R2 to peer")
-        until(lambda: route.ipv4_route_exist(R1, "192.168.20.0/24", proto="ietf-ospf:ospfv2"), attempts=200)
-        until(lambda: route.ipv4_route_exist(R2, "192.168.10.0/24", proto="ietf-ospf:ospfv2"), attempts=200)
+        until(lambda: route.ipv4_route_exist(R1, "192.168.20.0/24", "192.168.100.2", proto="ietf-ospf:ospfv2"), attempts=200)
+        until(lambda: route.ipv4_route_exist(R2, "192.168.10.0/24", "192.168.100.1", proto="ietf-ospf:ospfv2"), attempts=200)
 
     with test.step("Verify connectivity from PC:src to PC:dst via fast link"):
         h1net.must_reach("192.168.20.2")
