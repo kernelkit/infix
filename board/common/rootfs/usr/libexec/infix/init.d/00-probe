@@ -8,9 +8,10 @@ import struct
 import subprocess
 import sys
 
-onieprom = importlib.machinery.SourceFileLoader("onieprom","/bin/onieprom").load_module()
-SYSTEM_JSON   = "/run/system.json"
+onieprom = importlib.machinery.SourceFileLoader("onieprom", "/bin/onieprom").load_module()
+SYSTEM_JSON = "/run/system.json"
 KKIT_IANA_PEM = 61046
+
 
 class DTSystem:
     BASE = "/sys/firmware/devicetree/base"
@@ -28,7 +29,9 @@ class DTSystem:
             if not os.path.exists(phandle):
                 continue
 
-            ph, = struct.unpack(">L", open(phandle, "rb").read())
+            with open(phandle, "rb") as f:
+                data = f.read()
+            ph, = struct.unpack(">L", data)
             dt[ph] = root
 
         sys = {}
@@ -40,14 +43,18 @@ class DTSystem:
             if not os.path.exists(phandle):
                 continue
 
-            ph, = struct.unpack(">L", open(phandle, "rb").read())
+            with open(phandle, "rb") as f:
+                data = f.read()
+            ph, = struct.unpack(">L", data)
             if ph not in sys:
                 sys[ph] = []
             sys[ph].append(root)
 
         phs = set(list(dt.keys()) + list(sys.keys()))
 
-        self.devs = { ph: [Device(ph, dt.get(ph), s if s is not None else "") for s in (sys.get(ph) or []) if ph is not None]  for ph in phs }
+        self.devs = {ph: [Device(ph, dt.get(ph), s if s is not None else "")
+                          for s in (sys.get(ph) or []) if ph is not None]
+                     for ph in phs}
         self.base = Device(0, None, DTSystem.BASE)
         self.infix = Device(0, None, DTSystem.INFIX)
 
@@ -56,7 +63,8 @@ class DTSystem:
         if not os.path.exists(path):
             return ()
 
-        data = open(path, "rb").read()
+        with open(path, "rb") as f:
+            data = f.read()
         elems = len(data) // struct.calcsize(">L")
         return struct.unpack(">" + elems * "L", data)
 
@@ -69,7 +77,8 @@ class DTSystem:
                 return {}
 
             try:
-                data = onieprom.from_tlv(open(dev.attrpath("nvmem"), "rb", 0))
+                with open(dev.attrpath("nvmem"), "rb", 0) as f:
+                    data = onieprom.from_tlv(f)
             except:
                 data = {}
 
@@ -84,14 +93,18 @@ class DTSystem:
         }
 
     def infix_usb_devices(self, out):
-        names=self.infix.str_array("usb-port-names", ())
-        phs=self.__get_phandle_array("usb-ports")
-        data=dict(zip(names,phs))
+        names = self.infix.str_array("usb-port-names", ())
+        phs = self.__get_phandle_array("usb-ports")
+        data = dict(zip(names, phs))
         if data != {}:
             out["usb-ports"] = []
-        for name,ph in data.items():
-            [out["usb-ports"].extend([{"name": name, "path": dev.attrpath("authorized")}, {"name": name, "path": dev.attrpath("authorized_default")}]) for dev in self.devices_from_ph(ph)]
-
+        for name, ph in data.items():
+            [out["usb-ports"].extend([{
+                "name": name,
+                "path": dev.attrpath("authorized")}, {
+                    "name": name,
+                    "path": dev.attrpath("authorized_default")
+                }]) for dev in self.devices_from_ph(ph)]
 
     def infix_devices(self, kind):
         phs = self.__get_phandle_array(kind)
@@ -100,6 +113,7 @@ class DTSystem:
     def infix_vpds(self):
         flat_devices = [device for sublist in self.infix_devices("vpds") for device in sublist]
         return [self.into_vpd(device) for device in flat_devices]
+
 
 class QEMUSystem:
     BASE = "/sys/firmware/qemu_fw_cfg"
@@ -110,7 +124,8 @@ class QEMUSystem:
         data = {}
         if os.path.exists(QEMUSystem.VPD):
             try:
-                data = onieprom.from_tlv(open(QEMUSystem.VPD, "rb", 0))
+                with open(QEMUSystem.VPD, "rb", 0) as f:
+                    data = onieprom.from_tlv(f)
             except:
                 pass
 
@@ -127,38 +142,33 @@ class QEMUSystem:
     def usb_ports(self):
         ports = [
             {
-            "name": "USB",
-            "path": "/sys/bus/usb/devices/usb1/authorized"
-
-        },
-        {
-            "name": "USB",
-            "path": "/sys/bus/usb/devices/usb1/authorized_default"
-
-        },
-        {
-            "name": "USB2",
-            "path": "/sys/bus/usb/devices/usb2/authorized"
-        },
-        {
-            "name": "USB2",
-            "path": "/sys/bus/usb/devices/usb2/authorized_default"
-
-        }]
+                "name": "USB",
+                "path": "/sys/bus/usb/devices/usb1/authorized"
+            }, {
+                "name": "USB",
+                "path": "/sys/bus/usb/devices/usb1/authorized_default"
+            }, {
+                "name": "USB2",
+                "path": "/sys/bus/usb/devices/usb2/authorized"
+            }, {
+                "name": "USB2",
+                "path": "/sys/bus/usb/devices/usb2/authorized_default"
+            }]
         return ports
+
+
 class Device:
     def __init__(self, ph, dtpath, syspath):
         self.ph, self.dtpath, self.syspath = ph, dtpath, syspath
 
     def available(self):
-        return self.syspath != None
+        return self.syspath is not None
 
     def __getitem__(self, attr):
         return self.attr(attr).decode("utf-8").strip("\0")
 
     def __setitem__(self, attr, value):
         return self.attr(attr, val=value.encode("utf-8"))
-
 
     def attrpath(self, attr):
         return os.path.join(self.syspath, attr)
@@ -168,13 +178,16 @@ class Device:
 
     def attr(self, attr, default=None, val=None):
         if not self.hasattr(attr):
-            return default if val == None else False
+            return default if val is None else False
 
         if val:
-            open(self.attrpath(attr), "wb").write(value)
+            with open(self.attrpath(attr), "wb") as f:
+                f.write(val)
             return True
 
-        return open(self.attrpath(attr), "rb").read()
+        with open(self.attrpath(attr), "rb") as f:
+            data = f.read()
+        return data
 
     def str(self, attr, default=None):
         val = self.attr(attr)
@@ -194,7 +207,9 @@ class Device:
         if not self.hasdtattr(attr):
             return default
 
-        return open(self.dtattrpath(attr), "rb").read()
+        with open(self.dtattrpath(attr), "rb") as f:
+            data = f.read()
+        return data
 
     def dtstr(self, attr, default=None):
         val = self.dtattr(attr)
@@ -212,6 +227,7 @@ def vpd_get_json_ve(vpd, pem):
 
     return out
 
+
 def vpd_get_pwhash(vpd):
     if not vpd.get("trusted"):
         return None
@@ -219,8 +235,9 @@ def vpd_get_pwhash(vpd):
     kkit = vpd_get_json_ve(vpd, KKIT_IANA_PEM)
     return kkit.get("pwhash")
 
+
 def vpd_inject(out, vpds):
-    out["vpd"] = { vpd["board"]: vpd for vpd in vpds }
+    out["vpd"] = {vpd["board"]: vpd for vpd in vpds}
 
     product = out["vpd"].get("product", {}).get("data", {})
     hoistattrs = ("vendor", "product-name", "part-number", "serial-number", "mac-address")
@@ -234,6 +251,7 @@ def vpd_inject(out, vpds):
             out["factory-password-hash"] = pwhash
             break
 
+
 def qemu_base_mac():
     """Find MAC address of first non-loopback interface, subtract with 1"""
     base_path = '/sys/class/net'
@@ -244,7 +262,8 @@ def qemu_base_mac():
             continue
         try:
             # pylint: disable=invalid-name
-            with open(os.path.join(base_path, iface, 'address'), 'r', encoding='ascii') as f:
+            fn = os.path.join(base_path, iface, 'address')
+            with open(fn, 'r', encoding='ascii') as f:
                 mac = f.read().strip()
             interfaces.append((mac, iface))
         except FileNotFoundError:
@@ -260,6 +279,7 @@ def qemu_base_mac():
         return mac
 
     return None
+
 
 def probe_qemusystem(out):
     """Probe Qemu based test systems and 'make run'"""
@@ -288,6 +308,7 @@ def probe_qemusystem(out):
     subprocess.run("initctl -nbq cond set qemu".split(), check=False)
     return 0
 
+
 def probe_dtsystem(out):
     """Probe DTS based system, expects a VPD in ONIE PROM format."""
     dtsys = DTSystem()
@@ -303,6 +324,7 @@ def probe_dtsystem(out):
 
     vpd_inject(out, vpds)
     return 0
+
 
 def main():
     out = {
@@ -337,6 +359,7 @@ def main():
         json.dump(out, f)
     shutil.chown(SYSTEM_JSON, user="root", group="wheel")
     return err
+
 
 if __name__ == "__main__":
     sys.exit(main())
