@@ -134,6 +134,15 @@ linux-pc:#
     (LLDP)](https://github.com/lldp/lldpd) includes *lldpcli*, which
     is handy to sniff and display LLDP packets.
 
+The LLDP service can be disabled using the following commands.
+
+```
+admin@infix-c0-ff-ee:/> configure
+admin@infix-c0-ff-ee:/config/> no lldp 
+admin@infix-c0-ff-ee:/config/> leave
+admin@infix-c0-ff-ee:/> 
+```
+
 ### mDNS
 
 DNS-SD/mDNS can be used to discover Infix units and services. Infix
@@ -260,7 +269,7 @@ Infix devices, likely the one that first appeared.
 #### Discovery via netbrowse service
 
 Infix provides a *netbrowse* facility, where services advertised via mDNS
-are collected and presented via a web portal (https://network.local).
+are collected and presented via a web portal at *network.local*.
 
 ![Netbrowse Service - network.local](img/network-local.png)
 
