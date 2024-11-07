@@ -34,6 +34,8 @@
 	iommu-map-mask = <0x031f>;
 };
 
+#include "lan969x-pcie.dtsi"
+
 &cp0_usb3_0 {
 	status = "okay";
 	usb-phy = <&cp0_usb3_0_phy0>;
