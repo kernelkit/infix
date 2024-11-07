@@ -22,6 +22,9 @@ All notable changes to the project are documented in this file.
 - Support for saving and restoring system clock from a disk file.  This
   allows restoring the system clock to a sane date in case the RTC is
   disabled or does not have a valid time, issue #794
+- Updated Discovery documentation with information on `infix.local`
+  mDNS alias, `netbrowse` support to discover *all* local units, and
+  command examples for disabling LLDP and mDNS services, issue #786
 
 ### Fixes
 - Fix #685: DSA conduit interface not always detected, randomly causing
