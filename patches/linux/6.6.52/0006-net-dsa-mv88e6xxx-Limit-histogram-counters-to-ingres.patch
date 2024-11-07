@@ -1,7 +1,7 @@
 From 36adbdd466ec550cab8b2ae54177f674c02cf631 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Thu, 14 Dec 2023 14:50:27 +0100
-Subject: [PATCH 06/33] net: dsa: mv88e6xxx: Limit histogram counters to
+Subject: [PATCH 06/34] net: dsa: mv88e6xxx: Limit histogram counters to
  ingress traffic
 Organization: Addiva Elektronik
 
@@ -27,6 +27,7 @@ Reviewed-by: Andrew Lunn <andrew@lunn.ch>
 Reviewed-by: Vladimir Oltean <vladimir.oltean@nxp.com>
 Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
 Signed-off-by: David S. Miller <davem@davemloft.net>
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
 ---
  drivers/net/dsa/mv88e6xxx/chip.c    | 6 +++---
  drivers/net/dsa/mv88e6xxx/global1.c | 7 +++----
