@@ -27,96 +27,99 @@ from infamy.util import until, parallel
 
 
 def config_target1(target, data, link):
-    target.put_config_dict("ietf-interfaces", {
-        "interfaces": {
-            "interface": [
-                {
-                    "name": data,
-                    "enabled": True,
-                    "ipv4": {
-                        "forwarding": True,
-                        "address": [{
-                            "ip": "192.168.10.1",
-                            "prefix-length": 24
-                        }]},
-                    "ipv6": {
-                        "forwarding": True,
-                        "address": [{
-                            "ip": "2001:db8:3c4d:10::1",
-                            "prefix-length": 64
-                        }]
-                    }
-                },
-                {
-                    "name": link,
-                    "enabled": True,
-                    "ipv4": {
-                        "forwarding": True,
-                        "address": [{
-                            "ip": "192.168.50.1",
-                            "prefix-length": 24
-                        }]
-                    },
-                    "ipv6": {
-                        "forwarding": True,
-                        "address": [{
-                            "ip": "2001:db8:3c4d:50::1",
-                            "prefix-length": 64
-                        }]
-                    }
-                },
-                {
-                    "name": "lo",
-                    "enabled": True,
-                    "ipv4": {
-                        "address": [{
-                            "ip": "192.168.100.1",
-                            "prefix-length": 32
-                        }]
-                    },
-                    "ipv6": {
-                        "address": [{
-                            "ip": "2001:db8:3c4d:100::1",
-                            "prefix-length": 128
-                        }]
-                    }
-
-                    }
-            ]
-        }
-    })
-    target.put_config_dict("ietf-routing", {
-        "routing": {
-            "control-plane-protocols": {
-                "control-plane-protocol": [{
-                    "type": "infix-routing:static",
-                    "name": "default",
-                    "static-routes": {
+    target.put_config_dicts({
+        "ietf-interfaces": {
+            "interfaces": {
+                "interface": [
+                    {
+                        "name": data,
+                        "enabled": True,
                         "ipv4": {
-                            "route": [{
-                                "destination-prefix": "192.168.200.1/32",
-                                "next-hop": {
-                                    "next-hop-address": "192.168.50.2"
-                                }
+                            "forwarding": True,
+                            "address": [{
+                                "ip": "192.168.10.1",
+                                "prefix-length": 24
+                            }]},
+                        "ipv6": {
+                            "forwarding": True,
+                            "address": [{
+                                "ip": "2001:db8:3c4d:10::1",
+                                "prefix-length": 64
+                            }]
+                        }
+                    },
+                    {
+                        "name": link,
+                        "enabled": True,
+                        "ipv4": {
+                            "forwarding": True,
+                            "address": [{
+                                "ip": "192.168.50.1",
+                                "prefix-length": 24
                             }]
                         },
                         "ipv6": {
-                            "route": [{
-                                "destination-prefix": "2001:db8:3c4d:200::1/128",
-                                "next-hop": {
-                                    "next-hop-address": "2001:db8:3c4d:50::2"
-                                }
+                            "forwarding": True,
+                            "address": [{
+                                "ip": "2001:db8:3c4d:50::1",
+                                "prefix-length": 64
                             }]
                         }
-                    }
-                }]
+                    },
+                    {
+                        "name": "lo",
+                        "enabled": True,
+                        "ipv4": {
+                            "address": [{
+                                "ip": "192.168.100.1",
+                                "prefix-length": 32
+                            }]
+                        },
+                        "ipv6": {
+                            "address": [{
+                                "ip": "2001:db8:3c4d:100::1",
+                                "prefix-length": 128
+                            }]
+                        }
+
+                        }
+                ]
+            }
+        },
+        "ietf-routing": {
+            "routing": {
+                "control-plane-protocols": {
+                    "control-plane-protocol": [{
+                        "type": "infix-routing:static",
+                        "name": "default",
+                        "static-routes": {
+                            "ipv4": {
+                                "route": [{
+                                    "destination-prefix": "192.168.200.1/32",
+                                    "next-hop": {
+                                        "next-hop-address": "192.168.50.2"
+                                    }
+                                }]
+                            },
+                            "ipv6": {
+                                "route": [{
+                                    "destination-prefix": "2001:db8:3c4d:200::1/128",
+                                    "next-hop": {
+                                        "next-hop-address": "2001:db8:3c4d:50::2"
+                                    }
+                                }]
+                            }
+                        }
+                    }]
+                }
             }
         }
     })
 
 
 def config_target2(target, link):
-    target.put_config_dict("ietf-interfaces", {
+    target.put_config_dicts({
+        "ietf-interfaces": {
             "interfaces": {
                 "interface": [
                     {
@@ -157,33 +160,33 @@ def config_target2(target, link):
                     }
                 ]
             }
-        })
-
-    target.put_config_dict("ietf-routing", {
-        "routing": {
-            "control-plane-protocols": {
-                "control-plane-protocol": [{
-                    "type": "infix-routing:static",
-                    "name": "default",
-                    "static-routes": {
-                        "ipv4": {
-                            "route": [{
-                                "destination-prefix": "0.0.0.0/0",
-                                "next-hop": {
-                                    "next-hop-address": "192.168.50.1"
-                                }
-                            }]
-                        },
-                        "ipv6": {
-                            "route": [{
-                                "destination-prefix": "::/0",
-                                "next-hop": {
-                                    "next-hop-address": "2001:db8:3c4d:50::1"
-                                }
-                            }]
+        },
+        "ietf-routing": {
+            "routing": {
+                "control-plane-protocols": {
+                    "control-plane-protocol": [{
+                        "type": "infix-routing:static",
+                        "name": "default",
+                        "static-routes": {
+                            "ipv4": {
+                                "route": [{
+                                    "destination-prefix": "0.0.0.0/0",
+                                    "next-hop": {
+                                        "next-hop-address": "192.168.50.1"
+                                    }
+                                }]
+                            },
+                            "ipv6": {
+                                "route": [{
+                                    "destination-prefix": "::/0",
+                                    "next-hop": {
+                                        "next-hop-address": "2001:db8:3c4d:50::1"
+                                    }
+                                }]
+                            }
                         }
-                    }
-                }]
+                    }]
+                }
             }
         }
     })
