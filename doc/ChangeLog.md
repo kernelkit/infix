@@ -27,6 +27,8 @@ All notable changes to the project are documented in this file.
   command examples for disabling LLDP and mDNS services, issue #786
 - Updated OSPF documentation to include information on *global OSPF
   settings* (`redistribution`, `explicit-router-id`, etc.), issue #812
+- Added information on *forwarding of IEEE reserved group addresses*
+  to bridge section of networking documentation, issue #788
 
 ### Fixes
 - Fix #685: DSA conduit interface not always detected, randomly causing

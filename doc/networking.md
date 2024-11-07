@@ -383,6 +383,33 @@ an IGMP/MLD fast-leave port.
 [RFC3376]: https://www.rfc-editor.org/rfc/rfc3376.html
 [RFC3810]: https://www.rfc-editor.org/rfc/rfc3810.html
 
+#### Forwarding of IEEE Reserved Group Addresses
+
+Addresses in range `01:80:C2:00:00:0X` are used by various bridge
+signaling protocols, and are not forwarded by default. Still, it can
+be useful to let the bridge forward such packets transparently in
+specific use cases. Infix supports enabling forwarding of individual
+reserved addresses (per bridge), by specifying the protocol name or
+the last address *nibble* as a value `0..15`.
+
+```
+admin@example:/config/> edit interface br0 bridge
+admin@example:/config/interface/br0/bridge/> set ieee-group-forward <?>
+  [0..15]  List of IEEE link-local protocols to forward, e.g., STP, LLDP
+  dot1x    802.1X Port-Based Network Access Control.
+  lacp     802.3 Slow Protocols, e.g., LACP.
+  lldp     802.1AB Link Layer Discovery Protocol (LLDP).
+  stp      Spanning Tree (STP/RSPT/MSTP).
+admin@example:/config/interface/br0/bridge/> set ieee-group-forward
+```
+
+The following example configures bridge *br0* to forward LLDP packets.
+
+```
+admin@example:/config/interface/br0/bridge/> set ieee-group-forward lldp
+admin@example:/config/interface/br0/bridge/>
+```
+
 ### VLAN Interfaces
 
 Creating a VLAN can be done in many ways. This section assumes VLAN
