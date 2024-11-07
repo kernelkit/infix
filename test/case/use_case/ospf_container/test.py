@@ -63,7 +63,33 @@ BODY  = "<html><body><p>Router responding</p></body></html>"
 def config_generic(target, router, ring1, ring2, link):
     router_ip=f"10.1.{router}.1"
     link_ip=f"10.1.{router}.{100+router}"
-    target.put_config_dict("ietf-interfaces", {
+    firewall_config = util.to_binary(f"""#!/usr/sbin/nft -f
+
+flush ruleset
+
+define UPLINK = "{link}"
+define WIP = 169.254.1.2
+                          """
+                          """
+table ip nat {
+    chain prerouting {
+        type nat hook prerouting priority filter; policy accept;
+        iif $UPLINK tcp dport 8080 dnat to 169.254.1.2:91
+        iif "br0" ip daddr 169.254.1.2 dnat to 169.254.1.1
+    }
+
+    chain postrouting {
+        type nat hook postrouting priority srcnat; policy accept;
+        oif $UPLINK masquerade
+        oif "br0" ip daddr $WIP snat to 169.254.1.1
+    }
+}
+
+""")
+    data = util.to_binary(BODY)
+
+    target.put_config_dicts({
+        "ietf-interfaces": {
         "interfaces": {
             "interface": [
                 {
@@ -289,119 +315,87 @@ def config_generic(target, router, ring1, ring2, link):
                     "peer": "veth3a"
                 }
             }
-        ]
-    }})
-    firewall_config = util.to_binary(f"""#!/usr/sbin/nft -f
-
-flush ruleset
-
-define UPLINK = "{link}"
-define WIP = 169.254.1.2
-                          """
-                          """
-table ip nat {
-    chain prerouting {
-        type nat hook prerouting priority filter; policy accept;
-        iif $UPLINK tcp dport 8080 dnat to 169.254.1.2:91
-        iif "br0" ip daddr 169.254.1.2 dnat to 169.254.1.1
-    }
-
-    chain postrouting {
-        type nat hook postrouting priority srcnat; policy accept;
-        oif $UPLINK masquerade
-        oif "br0" ip daddr $WIP snat to 169.254.1.1
-    }
-}
-
-""")
-    data = util.to_binary(BODY)
-    target.put_config_dict("infix-containers", {
-        "containers": {
-            "container": [
-            {
-                "name": "container-A",
-                "image": f"oci-archive:{infamy.Container.HTTPD_IMAGE}",
-                "command": "/usr/sbin/httpd -f -v -p 91",
-                "hostname": "web-container-%m",
-                "restart-policy": "retry",
-                "mount": [
-                    {
-                        "name": "index.html",
-                        "content": f"{data}",
-                        "target": "/var/www/index.html"
-                    }
-                ],
-                "network": {
-                    "interface": [
-                    {
-                        "name": "veth0a",
-                        "option": [
-                            "interface_name=br0",
-                        ]
-                    },
-                    {
-                        "name": "veth1a",
-                        "option": [
-                            "interface_name=br1"
-                        ]
-                    }
-                    ],
-                    "publish": [ "91" ]
-                }
-            },
-            {
-                "name": "container-B",
-                "image": f"oci-archive:{infamy.Container.HTTPD_IMAGE}",
-                "hostname": "web-container-%m",
-                "privileged": True,
-                "restart-policy": "retry",
-                "network": {
-                    "interface": [
-                    {
-                        "name": "veth2a",
-                        "option": ["ip=169.254.1.3"] # This only for test, use zeroconf in real-life
-                    },
-                    {
-                        "name": "veth3a"
-                    }
-                    ]
+        ]}
+        },
+        "infix-containers": {
+            "containers": {
+                "container": [
+                {
+                    "name": "container-A",
+                    "image": f"oci-archive:{infamy.Container.HTTPD_IMAGE}",
+                    "command": "/usr/sbin/httpd -f -v -p 91",
+                    "hostname": "web-container-%m",
+                    "restart-policy": "retry",
+                    "mount": [{
+                            "name": "index.html",
+                            "content": f"{data}",
+                            "target": "/var/www/index.html"
+                    }],
+                    "network": {
+                        "interface": [{
+                            "name": "veth0a",
+                            "option": [
+                                "interface_name=br0",
+                            ]},
+                            {
+                                "name": "veth1a",
+                                "option": [
+                                "interface_name=br1"
+                            ]}
+                        ],
+                        "publish": [ "91" ]
                     }
                 },
                 {
-                    "name": "firewall",
-                    "image": f"oci-archive:{infamy.Container.NFTABLES_IMAGE}",
+                    "name": "container-B",
+                    "image": f"oci-archive:{infamy.Container.HTTPD_IMAGE}",
+                    "hostname": "web-container-%m",
+                    "privileged": True,
+                    "restart-policy": "retry",
                     "network": {
-                            "host": True
+                        "interface": [
+                        {
+                            "name": "veth2a",
+                            "option": ["ip=169.254.1.3"] # This only for test, use zeroconf in real-life
                         },
-                        "mount": [
-                          {
-                            "name": "nftables.conf",
-                            "content": firewall_config,
-                            "target": "/etc/nftables.conf"
-                          }
-                        ],
-                        "privileged": True
-
-                }
-            ]
-
-        }})
-    target.put_config_dict("ietf-routing", {
-        "routing": {
-            "control-plane-protocols": {
-                "control-plane-protocol": [
+                        {
+                            "name": "veth3a"
+                        }
+                        ]
+                        }
+                    },
                     {
-                        "type": "infix-routing:ospfv2",
-                        "name": "default",
-                        "ietf-ospf:ospf": {
-                            "areas": {
-                                "area": [
-                                {
-                                    "area-id": "0.0.0.1",
-                                    "area-type": "nssa-area",
-                                    "interfaces": {
-                                        "interface": [
-                                            {
+                        "name": "firewall",
+                        "image": f"oci-archive:{infamy.Container.NFTABLES_IMAGE}",
+                        "network": {
+                                "host": True
+                            },
+                            "mount": [{
+                                "name": "nftables.conf",
+                                "content": firewall_config,
+                                "target": "/etc/nftables.conf"
+                              }
+                            ],
+                            "privileged": True
+
+                    }
+                ]
+
+            }
+        },
+        "ietf-routing": {
+            "routing": {
+                "control-plane-protocols": {
+                    "control-plane-protocol": [{
+                            "type": "infix-routing:ospfv2",
+                            "name": "default",
+                            "ietf-ospf:ospf": {
+                                "areas": {
+                                    "area": [{
+                                        "area-id": "0.0.0.1",
+                                        "area-type": "nssa-area",
+                                        "interfaces": {
+                                            "interface": [{
                                                 "name": f"{ring1}.8",
                                                 "interface-type": "point-to-point",
                                                 "enabled": True
@@ -414,131 +408,131 @@ table ip nat {
                                             {
                                                 "name": link,
                                                 "enabled": True
-                                            }
-                                        ]
-                                    }
+                                            }]
+                                        }
+                                    }]
                                 }
-                            ]
-                        }
-                    }
-                }
-            ]
-        }
-    }})
-def config_abr(target, data, link1, link2, link3):
-    target.put_config_dict("ietf-interfaces", {
-        "interfaces": {
-            "interface": [
-            {
-                "name": "lo",
-                "type": "infix-if-type:loopback",
-                "ietf-ip:ipv4": {
-                    "address": [
-                        {
-                            "ip": "127.0.0.1",
-                            "prefix-length": 8
-                        }
-                    ]
-                },
-                "ietf-ip:ipv6": {
-                    "address": [
-                        {
-                            "ip": "::1",
-                            "prefix-length": 128
-                        }
-                    ]
-                }
-            },
-            {
-                "name": data,
-                "ipv4": {
-                    "forwarding": True,
-                    "address": [{
-                        "ip": "192.168.100.1",
-                        "prefix-length": 24
-                    }]
-                }
-            },
-            {
-                "name": link1,
-                "ipv4": {
-                    "forwarding": True,
-                    "address": [{
-                        "ip": "10.1.1.100",
-                        "prefix-length": 24
-                    }]
-                }
-            },
-            {
-                "name": link2,
-                "ipv4": {
-                    "forwarding": True,
-                    "address": [{
-                        "ip": "10.1.2.100",
-                        "prefix-length": 24
-                    }]
-                }
-            },
-            {
-                "name": link3,
-                "ipv4": {
-                    "address": [{
-                        "ip": "10.1.3.100",
-                        "prefix-length": 24
+                            }
                     }]
                 }
             }
-            ]
         }
     })
-    target.put_config_dict("ietf-routing", {
-        "routing": {
-            "control-plane-protocols": {
-                "control-plane-protocol": [
-                    {
-                        "type": "infix-routing:ospfv2",
-                        "name": "default",
-                        "ietf-ospf:ospf": {
-                            "areas": {
-                                "area": [
-                                {
-                                    "area-id": "0.0.0.0",
-                                    "interfaces": {
-                                        "interface": [
-                                            {
-                                                "name": data,
-                                                "enabled": True
-                                            }
-                                        ]
-                                    }
-                                },
-                                {
-                                    "area-id": "0.0.0.1",
-                                    "area-type": "nssa-area",
-                                    "interfaces": {
-                                        "interface":
-                                        [
-                                            {
-                                                "name": link1,
-                                                "enabled": True
-                                            },
-                                            {
-                                                "name": link2,
-                                                "enabled": True
-                                            },
-                                            {
-                                                "name": link3,
-                                                "enabled": True
-                                            },
-                                        ]
-                                    }
-                                }
-                                ]
+def config_abr(target, data, link1, link2, link3):
+    target.put_config_dicts({
+        "ietf-interfaces": {
+        "interfaces": {
+                "interface": [
+                {
+                    "name": "lo",
+                    "type": "infix-if-type:loopback",
+                    "ietf-ip:ipv4": {
+                        "address": [
+                            {
+                                "ip": "127.0.0.1",
+                                "prefix-length": 8
                             }
-
-                        }
+                        ]
+                    },
+                    "ietf-ip:ipv6": {
+                        "address": [
+                            {
+                                "ip": "::1",
+                                "prefix-length": 128
+                            }
+                        ]
                     }
-                ]
+                },
+                {
+                    "name": data,
+                    "ipv4": {
+                        "forwarding": True,
+                        "address": [{
+                            "ip": "192.168.100.1",
+                            "prefix-length": 24
+                        }]
+                    }
+                },
+                {
+                    "name": link1,
+                    "ipv4": {
+                        "forwarding": True,
+                        "address": [{
+                            "ip": "10.1.1.100",
+                            "prefix-length": 24
+                        }]
+                    }
+                },
+                {
+                    "name": link2,
+                    "ipv4": {
+                        "forwarding": True,
+                        "address": [{
+                            "ip": "10.1.2.100",
+                            "prefix-length": 24
+                        }]
+                    }
+                },
+                {
+                    "name": link3,
+                    "ipv4": {
+                        "address": [{
+                            "ip": "10.1.3.100",
+                            "prefix-length": 24
+                        }]
+                    }
+                }]
+            }
+        },
+        "ietf-routing": {
+        "routing": {
+                "control-plane-protocols": {
+                    "control-plane-protocol": [
+                        {
+                            "type": "infix-routing:ospfv2",
+                            "name": "default",
+                            "ietf-ospf:ospf": {
+                                "areas": {
+                                    "area": [
+                                        {
+                                            "area-id": "0.0.0.0",
+                                            "interfaces": {
+                                                "interface": [
+                                                    {
+                                                        "name": data,
+                                                        "enabled": True
+                                                    }
+                                                ]
+                                            }
+                                        },
+                                        {
+                                            "area-id": "0.0.0.1",
+                                            "area-type": "nssa-area",
+                                            "interfaces": {
+                                                "interface":
+                                                [
+                                                    {
+                                                        "name": link1,
+                                                        "enabled": True
+                                                    },
+                                                    {
+                                                        "name": link2,
+                                                        "enabled": True
+                                                    },
+                                                    {
+                                                        "name": link3,
+                                                        "enabled": True
+                                                    },
+                                                ]
+                                            }
+                                        }
+                                    ]
+                                }
+
+                            }
+                        }
+                    ]
+                }
             }
         }
     })
