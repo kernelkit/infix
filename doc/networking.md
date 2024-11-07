@@ -386,11 +386,10 @@ an IGMP/MLD fast-leave port.
 #### Forwarding of IEEE Reserved Group Addresses
 
 Addresses in range `01:80:C2:00:00:0X` are used by various bridge
-signaling protocols, and are not forwarded by default. Still, it can
-be useful to let the bridge forward such packets transparently in
-specific use cases. Infix supports enabling forwarding of individual
-reserved addresses (per bridge), by specifying the protocol name or
-the last address *nibble* as a value `0..15`.
+signaling protocols, and are not forwarded by default. Still, it is
+sometimes useful to let the bridge forward such packets, and Infix
+supports this by specifying protocol names or the last address
+*nibble* as decimal value `0..15`.
 
 ```
 admin@example:/config/> edit interface br0 bridge
