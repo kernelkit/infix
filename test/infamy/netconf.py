@@ -16,7 +16,7 @@ import lxml
 import netconf_client.connect
 import netconf_client.ncclient
 import infamy.iface as iface
-from infamy.transport import Transport
+from infamy.transport import Transport,infer_put_dict
 from netconf_client.error import RpcError
 from . import env
 
@@ -315,6 +315,7 @@ class Device(Transport):
 
     def put_config_dicts(self, models):
         config = ""
+        infer_put_dict(self.name, models)
 
         for model in models.keys():
             mod = self.ly.get_module(model)

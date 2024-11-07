@@ -1,6 +1,14 @@
 from abc import ABC, abstractmethod
 from infamy.neigh import ll6ping
 
+def infer_put_dict(name, models):
+    if not models.get("ietf-system"):
+        models["ietf-system"] = { "system": { "hostname": name} }
+    else:
+        if not models["ietf-system"].get("system"):
+            models["ieft-system"]["system"] = {}
+        if not models["ietf-system"]["system"].get("hostname"):
+            models["ietf-system"]["system"]["hostname"] = name
 
 class Transport(ABC):
     """Common functions for NETCONF/RESTCONF"""
