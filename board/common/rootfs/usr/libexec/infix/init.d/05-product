@@ -35,7 +35,14 @@ if [ "$found" = false ]; then
     note "No vendor/product-specific directory found, using built-in defaults."
 fi
 
+# Conditions for bootstrap services, this enables product specific
+# init scripts to prevent select services from starting.
+initctl -nbq cond set led
+
 note "Calling runparts $PRODUCT_INIT/S[0-9]+.* start"
 /usr/libexec/finit/runparts -bsp "$PRODUCT_INIT"
+
+# Product specific init done.
+initctl -nbq cond set product
 
 exit 0

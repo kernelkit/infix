@@ -1,1 +1,1 @@
-service [S0123456789] <!pid/syslogd> iitod -- LED daemon
+service [S0123456789] <!usr/product,usr/led> iitod -- LED daemon
