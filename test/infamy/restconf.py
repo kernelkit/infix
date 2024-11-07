@@ -10,7 +10,7 @@ import time
 from requests.auth import HTTPBasicAuth
 from urllib3.exceptions import InsecureRequestWarning
 from dataclasses import dataclass
-from infamy.transport import Transport
+from infamy.transport import Transport, infer_put_dict
 from . import env
 
 # We know we have a self-signed certificate, silence warning about it
@@ -263,6 +263,7 @@ class Device(Transport):
             return {container: v}
 
     def put_config_dicts(self, models):
+        infer_put_dict(self.name, models)
         running = self.get_running()
 
         for model in models.keys():

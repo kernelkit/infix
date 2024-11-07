@@ -14,13 +14,13 @@ with infamy.Test() as test:
         target = env.attach("target", "mgmt")
 
     with test.step("Set timezone to Australia/Perth"):
-          target.put_config_dict("ietf-system", {
+          target.put_config_dicts({"ietf-system": {
             "system": {
                 "clock": {
                     "timezone-name": "Australia/Perth" # always +8:00, no DTS
                     }
             }
-          })
+          }})
 
     with test.step("Verify current time offset is +08:00"):
         current_datetime=target.get_current_time_with_offset()

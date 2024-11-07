@@ -13,13 +13,13 @@ with infamy.Test() as test:
         target = env.attach("target", "mgmt")
 
     with test.step("Set timezone UTC offset to +12"):
-          target.put_config_dict("ietf-system", {
+          target.put_config_dicts({"ietf-system": {
             "system": {
                 "clock": {
                     "timezone-utc-offset": "12"
                     }
             }
-          })
+          }})
 
     with test.step("Verify current time offset is +12:00"):
         current_datetime=target.get_current_time_with_offset()
