@@ -33,3 +33,4 @@ Releases
    - Easy to forget adaptations/hacks in customer repos -- may need Infix change/support
  - Ensure the markdown link for the release diff is updated
  - Ensure subrepos are tagged (can be automated, see kernelkit/infix#393)
+ - Sync tags for all repo. sync activities
