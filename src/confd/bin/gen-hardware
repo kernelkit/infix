@@ -1,19 +1,23 @@
 #!/bin/sh
 set -e
 
-usb_ports=$(cat /run/system.json | jq -r '.["usb-ports"] | map(.name) | unique | join(" ")')
+if jq -e '.["usb-ports"]' /run/system.json > /dev/null; then
+    usb_ports=$(jq -r '.["usb-ports"] | map(.name) | unique | join(" ")' /run/system.json)
+else
+    usb_ports=""
+fi
 
 gen_port()
 {
-	local port="$1"
-	cat <<EOF
-    	{
-		"class": "infix-hardware:usb",
-		"name": "$port",
-		"state": {
-    			"admin-state": "unlocked"
-  			}
-    	}
+    port="$1"
+    cat <<EOF
+{
+    "class": "infix-hardware:usb",
+    "name": "$port",
+    "state": {
+	"admin-state": "unlocked"
+    }
+}
 EOF
 }
 first=1
@@ -24,7 +28,7 @@ cat <<EOF
 EOF
 for port in $usb_ports; do
     if [ $first -eq 0 ]; then
-       echo -n ','
+	echo -n ','
     fi
     first=0;
     gen_port "$port"
