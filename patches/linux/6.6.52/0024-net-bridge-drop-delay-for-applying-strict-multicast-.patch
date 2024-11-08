@@ -1,7 +1,7 @@
 From 5d7be493dcaa75ee69d521043062389d7772f8dc Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Thu, 4 Apr 2024 16:36:30 +0200
-Subject: [PATCH 24/33] net: bridge: drop delay for applying strict multicast
+Subject: [PATCH 24/34] net: bridge: drop delay for applying strict multicast
  filtering
 Organization: Addiva Elektronik
 

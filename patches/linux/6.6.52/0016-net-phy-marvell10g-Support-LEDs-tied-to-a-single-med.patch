@@ -1,7 +1,7 @@
 From 1ad7f010e46133c725df5cab4d85f71f689ca191 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Tue, 12 Dec 2023 09:51:05 +0100
-Subject: [PATCH 16/33] net: phy: marvell10g: Support LEDs tied to a single
+Subject: [PATCH 16/34] net: phy: marvell10g: Support LEDs tied to a single
  media side
 Organization: Addiva Elektronik
 
@@ -14,6 +14,8 @@ tied to a particular media side, and use that information to refine
 the offloading of the "netdev" trigger, such that LEDs attached to the
 RJ45 jack only lights up when a copper link is established, and vice
 versa for the SFP cage.
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
 ---
  drivers/net/phy/marvell10g.c | 23 ++++++++++++++++++++++-
  1 file changed, 22 insertions(+), 1 deletion(-)

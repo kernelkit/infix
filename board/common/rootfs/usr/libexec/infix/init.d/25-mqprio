@@ -46,7 +46,11 @@ while [ "$1" ]; do
     [ $txqs -lt 2 ] && continue
     [ $txqs -gt 8 ] && txqs=8
 
-    tc qdisc add dev $iface root mqprio hw 1 \
-       num_tc $txqs $(map $txqs) $(queues $txqs) || true
+    output=$(tc qdisc add dev $iface root mqprio hw 1 \
+		num_tc $txqs $(map $txqs) $(queues $txqs) 2>&1) || true
+    if echo "$output" | grep -q "does not support hardware offload"; then
+        echo "Skipping $iface, hardware offload not supported."
+    elif [ -n "$output" ]; then
+	echo "$output"
+    fi
 done
-

@@ -1,7 +1,7 @@
 From abfa532c1149525b128b8c76d80965f55e208240 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Thu, 14 Dec 2023 14:50:28 +0100
-Subject: [PATCH 07/33] net: dsa: mv88e6xxx: Add "rmon" counter group support
+Subject: [PATCH 07/34] net: dsa: mv88e6xxx: Add "rmon" counter group support
 Organization: Addiva Elektronik
 
 Report the applicable subset of an mv88e6xxx port's counters using
@@ -11,6 +11,7 @@ Reviewed-by: Vladimir Oltean <vladimir.oltean@nxp.com>
 Reviewed-by: Florian Fainelli <florian.fainelli@broadcom.com>
 Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
 Signed-off-by: David S. Miller <davem@davemloft.net>
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
 ---
  drivers/net/dsa/mv88e6xxx/chip.c | 42 ++++++++++++++++++++++++++++++++
  1 file changed, 42 insertions(+)

@@ -1,7 +1,7 @@
 From 1ec21a3fc54fb447501fd7edbf692b00a31fe3ec Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Wed, 27 Mar 2024 15:52:43 +0100
-Subject: [PATCH 23/33] net: dsa: mv88e6xxx: Improve indirect register access
+Subject: [PATCH 23/34] net: dsa: mv88e6xxx: Improve indirect register access
  perf on 6393
 Organization: Addiva Elektronik
 
@@ -13,6 +13,8 @@ previous families).
 Therefore, add a new set of SMI operations which remaps accesses to
 such registers to the corresponding directly addressable register. All
 other accesses use the regular indirect interface.
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
 ---
  drivers/net/dsa/mv88e6xxx/chip.c    |  7 +++
  drivers/net/dsa/mv88e6xxx/global1.h |  3 ++

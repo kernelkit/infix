@@ -265,14 +265,38 @@
 	};
 };
 
-#define SWP_LED(_func) \
+#define SWP_LED \
 	leds { \
 		#address-cells = <1>; \
 		#size-cells = <0>; \
 		\
 		led@0 { \
 			reg = <0>; \
-			function = _func; \
+			function = "tp"; \
+			color = <LED_COLOR_ID_GREEN>; \
+			default-state = "keep"; \
+		}; \
+		led@1 { \
+			reg = <1>; \
+			function = "aux"; \
+			color = <LED_COLOR_ID_GREEN>; \
+			default-state = "off"; \
+		}; \
+	}
+
+/* SFP LEDs
+ * Rev A. LEDs do not work at all
+ * Rev B. only outer-most (green) LEDs work
+ */
+
+#define SFP_LED \
+	leds { \
+		#address-cells = <1>; \
+		#size-cells = <0>; \
+		\
+		led@0 { \
+			reg = <0>; \
+			function = "sfp"; \
 			color = <LED_COLOR_ID_GREEN>; \
 			default-state = "keep"; \
 		}; \
@@ -287,7 +311,7 @@
 		phy-mode = "10gbase-r"; \
 		managed = "in-band-status"; \
 		sfp = <_sfp>; \
-		SWP_LED("sfp"); \
+		SFP_LED; \
 	}
 
 #define XSWCPU(_n, _eth) \
@@ -321,7 +345,7 @@
 		nvmem-cell-names = "mac-address"; \
 		phy-mode = "gmii"; \
 		phy-handle = <_phy>; \
-		SWP_LED("tp"); \
+		SWP_LED; \
 	}
 
 #define GPHY(_n) \

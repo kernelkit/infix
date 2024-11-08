@@ -1,7 +1,7 @@
 From c9c9597a47b00b720f5223c83ab05bb89481eda8 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Wed, 24 Apr 2024 21:35:26 +0200
-Subject: [PATCH 26/33] net: dsa: mv88e6xxx: Fix port policy config on 6393X
+Subject: [PATCH 26/34] net: dsa: mv88e6xxx: Fix port policy config on 6393X
 Organization: Addiva Elektronik
 
 mv88e6393x_port_policy_{read,write} expect the `pointer` argument to
@@ -16,6 +16,7 @@ never enabled on DSA ports, which broke standalone port isolation in
 multichip switch trees made up of 6393X decices.
 
 Fixes: 6584b26020fc ("net: dsa: mv88e6xxx: implement .port_set_policy for Amethyst")
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
 ---
  drivers/net/dsa/mv88e6xxx/port.c | 4 ++--
  1 file changed, 2 insertions(+), 2 deletions(-)
