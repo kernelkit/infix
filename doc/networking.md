@@ -1011,6 +1011,38 @@ an Ethernet interface can be done as follows.
     admin@example:/config/routing/control-plane-protocol/ospfv2/name/default/ospf/area/0.0.0.0/interface/e0/> set interface-type point-to-point
     admin@example:/config/routing/control-plane-protocol/ospfv2/name/default/ospf/area/0.0.0.0/interface/e0/>
 
+#### OSPF global settings
+
+In addition to *area* and *interface* specific settings, OSPF provides
+global settings for route redistribution and OSPF router identifier.
+
+```
+admin@example:/config/> edit routing control-plane-protocol ospfv2 name default ospf
+admin@example:/config/routing/control-plane-protocol/ospfv2/name/default/ospf/> set ?
+  area                     List of OSPF areas.
+  default-route-advertise  Distribute default route to network
+  explicit-router-id       Defined in RFC 2328.  A 32-bit number
+  redistribute             Redistribute protocols into OSPF
+admin@example:/config/routing/control-plane-protocol/ospfv2/name/default/ospf/> set
+```
+
+- Explicit router ID: By default the router will pick an IP address
+  from one of its OSPF interfaces as OSPF router ID. An explicit ID is
+  used to get a deterministic behavior, e.g., `set explicit-router-id
+  1.1.1.1`.
+- Redistribution: `set redistribute static` and `set redistribute connected`
+  can be used to include static or connected routes into the OSPF routing
+  domain. These routes are redistributed as *external type-2* (E2)
+  routes.
+- Advertising default route: An OSPF router can be made to distribute
+  a default route into the OSPF domain by command `set
+  default-route-advertise enabled`. This route is distributed as long
+  as the router itself has an *active* default route in its routing
+  table. By adding command `set default-route-advertise always` the
+  router will distribute a default route even when it lacks a default
+  route. The default route will be distributed as an *external type-2*
+  (E2) route.
+
 
 #### Debug OSPFv2
 

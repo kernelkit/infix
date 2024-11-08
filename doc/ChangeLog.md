@@ -25,6 +25,8 @@ All notable changes to the project are documented in this file.
 - Updated Discovery documentation with information on `infix.local`
   mDNS alias, `netbrowse` support to discover *all* local units, and
   command examples for disabling LLDP and mDNS services, issue #786
+- Updated OSPF documentation to include information on *global OSPF
+  settings* (`redistribution`, `explicit-router-id`, etc.), issue #812
 
 ### Fixes
 - Fix #685: DSA conduit interface not always detected, randomly causing
