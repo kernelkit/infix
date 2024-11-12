@@ -41,7 +41,7 @@ second bridge, `br1`, only use IPv6 link-local addresses.
 
 .Internal network setup, here router R1 on subnet 10.1.1.1/24.
 [#img-setup]
-image::internal-network.svg[]
+image::internal-network.svg[Internal networks]
 
  - *Container A* runs a very basic web server, it runs on port 80 inside
    the container, and `br0`, but is accessible outside on port 8080.
@@ -57,12 +57,35 @@ image::internal-network.svg[]
 """
 import infamy
 import infamy.util as util
+import infamy.route as route
+from infamy.furl import Furl
 
 BODY  = "<html><body><p>Router responding</p></body></html>"
 
+def create_vlan_bridge(ns):
+    return ns.runsh("""
+    ip link add dev br0 type bridge
+    ip link set dev br0 up
+    ip link set dev iface1 up
+    ip link set dev iface2 up
+    ip link set dev iface1 master br0
+    ip link set dev iface2 master br0
+    ip link set dev br0 type bridge vlan_filtering 1
+    bridge vlan del dev br0 vid 1 self
+    bridge vlan del dev iface1 vid 1
+    bridge vlan del dev iface2 vid 1
+    bridge vlan add dev br0 vid 8 self
+    bridge vlan add dev iface1 vid 8
+    bridge vlan add dev iface2 vid 8
+    """)
+
+
+
+
+
 def config_generic(target, router, ring1, ring2, link):
     router_ip=f"10.1.{router}.1"
-    link_ip=f"10.1.{router}.{100+router}"
+    link_ip=f"10.1.{router}.{101}"
     firewall_config = util.to_binary(f"""#!/usr/sbin/nft -f
 
 flush ruleset
@@ -390,6 +413,7 @@ table ip nat {
                             "type": "infix-routing:ospfv2",
                             "name": "default",
                             "ietf-ospf:ospf": {
+                                "explicit-router-id": router_ip,
                                 "areas": {
                                     "area": [{
                                         "area-id": "0.0.0.1",
@@ -476,6 +500,7 @@ def config_abr(target, data, link1, link2, link3):
                 {
                     "name": link3,
                     "ipv4": {
+                        "forwarding": True,
                         "address": [{
                             "ip": "10.1.3.100",
                             "prefix-length": 24
@@ -536,6 +561,7 @@ def config_abr(target, data, link1, link2, link3):
             }
         }
     })
+
 with infamy.Test() as test:
     with test.step("Set up topology and attach to target DUTs"):
         env = infamy.Env()
@@ -581,11 +607,38 @@ with infamy.Test() as test:
                       lambda: config_generic(R3, 3, R3ring1, R3ring2, R3link),
                       lambda: config_abr(ABR, ABRdata, ABRlink1, ABRlink2, ABRlink3))
 
-    with test.step("Verify ABR:data can access container A"):
-          _, hport0 = env.ltop.xlate("host", "data4")
-          with infamy.IsolatedMacVlan(hport0) as ns:
-              ns.addip("192.168.100.2")
-              ns.addroute("0.0.0.0/0", "192.168.100.1")
-              if not ns.must_reach_url("http://10.1.1.1:8080", BODY):
-                  test.fail()
+    with infamy.IsolatedMacVlans({hostR1ring1: "iface1", hostR2ring2: "iface2"}) as sw1,\
+         infamy.IsolatedMacVlans({hostR2ring1: "iface1", hostR3ring2: "iface2"}) as sw2, \
+         infamy.IsolatedMacVlans({hostR3ring1: "iface1", hostR1ring2: "iface2"}) as sw3:
+        create_vlan_bridge(sw1)
+        create_vlan_bridge(sw2)
+        create_vlan_bridge(sw3)
+        #breakpoint()
+        _, hport0 = env.ltop.xlate("host", "data4")
+
+        with test.step("Wait for all routers to peer"):
+            util.until(lambda: route.ospf_get_neighbor(R1, "0.0.0.1", f"{R1ring1}.8", "10.1.2.1"), attempts=200)
+            util.until(lambda: route.ospf_get_neighbor(R1, "0.0.0.1", f"{R1ring2}.8", "10.1.3.1"), attempts=200)
+            util.until(lambda: route.ospf_get_neighbor(R2, "0.0.0.1", f"{R2ring1}.8", "10.1.3.1"), attempts=200)
+            util.until(lambda: route.ospf_get_neighbor(R2, "0.0.0.1", f"{R2ring2}.8", "10.1.1.1"), attempts=200)
+            util.until(lambda: route.ospf_get_neighbor(R3, "0.0.0.1", f"{R3ring1}.8", "10.1.1.1"), attempts=200)
+            util.until(lambda: route.ospf_get_neighbor(R3, "0.0.0.1", f"{R3ring2}.8", "10.1.2.1"), attempts=200)
+
+            util.until(lambda: route.ospf_get_neighbor(ABR, "0.0.0.1", ABRlink1, "10.1.1.1"), attempts=200)
+            util.until(lambda: route.ospf_get_neighbor(ABR, "0.0.0.1", ABRlink2, "10.1.2.1"), attempts=200)
+            util.until(lambda: route.ospf_get_neighbor(ABR, "0.0.0.1", ABRlink3, "10.1.3.1"), attempts=200)
+
+        with infamy.IsolatedMacVlan(hport0) as ns:
+            ns.addip("192.168.100.2")
+            ns.addroute("0.0.0.0/0", "192.168.100.1")
+            #breakpoint()
+            with test.step("Verify ABR:data can access container A on R1 (10.1.1.101)"):
+                furl=Furl("http://10.1.1.101:8080")
+                util.until(lambda: furl.nscheck(ns, BODY))
+            with test.step("Verify ABR:data can access container A on R2 (10.1.2.101)"):
+                furl=Furl("http://10.1.2.101:8080")
+                util.until(lambda: furl.nscheck(ns, BODY))
+            with test.step("Verify ABR:data can access container A on R3 (10.1.3.101)"):
+                furl=Furl("http://10.1.3.101:8080")
+                util.until(lambda: furl.nscheck(ns, BODY))
     test.succeed()

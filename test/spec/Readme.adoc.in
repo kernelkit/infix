@@ -42,3 +42,7 @@ include::../case/ietf_hardware/Readme.adoc[]
 <<<
 
 include::../case/infix_services/Readme.adoc[]
+
+<<<
+
+include::../case/use_case/Readme.adoc[]

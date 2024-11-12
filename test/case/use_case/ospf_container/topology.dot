@@ -52,6 +52,7 @@ graph "ospf_containers" {
 	host:R1ring1 -- R1:ring1
 	host:R2ring1 -- R2:ring1
 	host:R3ring1 -- R3:ring1
+
 	host:R1ring2 -- R1:ring2
 	host:R2ring2 -- R2:ring2
 	host:R3ring2 -- R3:ring2
