@@ -1,0 +1,24 @@
+Print "the standard" warning banner at start of installation.
+
+diff --git a/src/main.c b/src/main.c
+index 8e851b47..bba1d012 100644
+--- a/src/main.c
++++ b/src/main.c
+@@ -258,6 +258,14 @@ static gboolean install_start(int argc, char **argv)
+ 	if (access_args.http_headers)
+ 		args->access_args.http_headers = g_strdupv(access_args.http_headers);
+ 
++	g_print("+------------------------------------------------------------------------------+\n");
++	g_print("|                                                                              |\n");
++	g_print("|      [!] Installation might take a while. DO NOT power off the device.       |\n");
++	g_print("|                                                                              |\n");
++	g_print("|                   Please wait while the upgrade completes.                   |\n");
++	g_print("|                                                                              |\n");
++	g_print("+------------------------------------------------------------------------------+\n");
++
+ 	r_loop = g_main_loop_new(NULL, FALSE);
+ 	if (ENABLE_SERVICE) {
+ 		g_auto(GVariantDict) dict = G_VARIANT_DICT_INIT(NULL);
+-- 
+2.34.1
+
