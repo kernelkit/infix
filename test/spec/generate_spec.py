@@ -1,7 +1,6 @@
 #!/bin/env python3
 import os
 import ast
-import graphviz
 import argparse
 import io
 import sys
@@ -9,15 +8,47 @@ import re
 
 from pathlib import Path
 
-# Define a custom NodeVisitor to extract the arguments
+import graphviz
+
+def replace_image_tag(text, test_dir):
+    """
+    Convert images added in the description and replace with the required ifdefs to work
+    generating the test specifcation as well.
+    """
+
+    pattern = r"image::(?P<image_name>\S+)\[(?P<label>[^\]]*)\]"
+
+    def repl(match):
+        image_name = match.group("image_name")
+        label = match.group("label")
+
+        return f"""ifdef::topdoc[]
+image::../../{test_dir}/{image_name}[{label}]
+endif::topdoc[]
+ifndef::topdoc[]
+ifdef::testgroup[]
+image::{'/'.join(Path(test_dir).parts[3:])}/{image_name}[{label}]
+endif::testgroup[]
+ifndef::testgroup[]
+image::{image_name}[{label}]
+endif::testgroup[]
+endif::topdoc[]"""
+
+    return re.sub(pattern, repl, text)
+
 class TestStepVisitor(ast.NodeVisitor):
+    """
+    A custom test step visitor to grab the test description (docstring)
+    and the test steps test.step(.....) for the test case.
+
+    """
     def __init__(self):
         self.test_steps=[]
         self.name = ""
         self.description = ""
 
     def visit_Module(self, node):
-        """Extract docstring from a module."""
+        """Extract docstring from a test."""
         docstring = ast.get_docstring(node)
         if docstring:
             lines = docstring.splitlines()
@@ -27,7 +58,7 @@ class TestStepVisitor(ast.NodeVisitor):
             for line in lines:
                 if self.name == "":
                     self.name=line.strip()
-                elif newline_parsed == False and line == "":
+                elif newline_parsed is False and line == "":
                     newline_parsed = True
                     continue # Skip mandatory newline
                 else:
@@ -37,6 +68,7 @@ class TestStepVisitor(ast.NodeVisitor):
 
     # Check for test.step() for the actual test steps
     def visit_Call(self, node):
+        """Extract test.step from test"""
         if isinstance(node.func, ast.Attribute) and node.func.attr == 'step':
             if isinstance(node.func.value, ast.Name) and node.func.value.id == 'test':
                 if node.args and isinstance(node.args[0], ast.Constant):
@@ -44,6 +76,7 @@ class TestStepVisitor(ast.NodeVisitor):
         self.generic_visit(node)  # Continue visiting other nodes
 
 class TestCase:
+    """All test specifcation resources for a test case"""
     def __init__(self, directory, rootdir=None):
         self.test_dir=Path(directory)
         if rootdir:
@@ -63,6 +96,7 @@ class TestCase:
         self.test_steps=visitor.test_steps
 
     def generate_topology(self):
+        """Generate SVG file from the topology.dot file"""
         with open(self.topology_dot, 'r') as dot_file:
             dot_graph = dot_file.read()
             graph = graphviz.Source(dot_graph)
@@ -75,8 +109,11 @@ class TestCase:
             with open(f"{self.topology_image}.svg", 'w') as f:
                 f.write(mod_content)
 
+
     def generate_specification(self):
+        """Generate a Readme.adoc for the test case"""
         self.generate_topology()
+        self.description = replace_image_tag(self.description, self.test_dir)
         with open(self.specification, "w") as spec:
             spec.write(f"=== {self.name}\n")
             spec.write("==== Description\n")
@@ -98,6 +135,10 @@ class TestCase:
             spec.write("\n\n<<<\n\n") # need empty lines to pagebreak
 
 def parse_directory_tree(directory):
+    """P
+    arse a directory for subdirectories with a test.py
+    and a topology.dot files
+    """
     directories=[]
     for dirpath, dirnames, filenames in os.walk(directory):
         testscript = False
@@ -126,6 +167,8 @@ sys.stderr = output_capture
 directories = parse_directory_tree(args.directory)
 error_string = ""
 for directory in directories:
+    # This is hacky, graphviz output error only to stdout and return successful(always).
+    # If everything goes well, output shall be empty, fail on any output
     output_capture.truncate(0)
     output_capture.seek(0)
     test_case = TestCase(directory, args.root_dir)
