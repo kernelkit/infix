@@ -3,7 +3,7 @@ import os
 from .container import Container
 from .env import Env
 from .furl import Furl
-from .netns import IsolatedMacVlan
+from .netns import IsolatedMacVlan,IsolatedMacVlans
 from .sniffer import Sniffer
 from .tap import Test
 from .util import parallel, until
