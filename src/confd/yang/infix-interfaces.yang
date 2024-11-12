@@ -23,6 +23,11 @@ module infix-interfaces {
   contact      "kernelkit@googlegroups.com";
   description  "Linux bridge and lag extensions for ietf-interfaces.";
 
+  revision 2024-11-12 {
+    description "Limit name 1-15 chars, Linux limitation.";
+    reference "internal";
+  }
+
   revision 2024-10-28 {
     description "Limit description to 64 chars, matching IF-MIB max.";
     reference "internal";
@@ -85,6 +90,14 @@ module infix-interfaces {
     deviate replace {
       type identityref {
         base infixift:infix-interface-type;
+      }
+    }
+  }
+
+  deviation "/if:interfaces/if:interface/if:name" {
+    deviate replace {
+      type string {
+        length "1..15";
       }
     }
   }
