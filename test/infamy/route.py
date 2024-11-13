@@ -12,56 +12,49 @@ def _get_routes(target, protocol):
         return r.get("routes", {}).get("route", {})
     return {}
 
-
-def _exist_route(target, dest, nexthop=None, ip=None, proto=None, pref=None):
+def _exist_route(target, dest, nexthop=None, ip=None, proto=None, pref=None, active_check=False):
     routes = _get_routes(target, ip)
     for r in routes:
         # netconf presents destination-prefix, restconf prefix with model
-        dst = r.get("destination-prefix") or \
-            r.get(f"ietf-{ip}-unicast-routing:destination-prefix")
+        dst = r.get("destination-prefix") or r.get(f"ietf-{ip}-unicast-routing:destination-prefix")
         if dst != dest:
             continue
 
         if proto is not None and r.get("source-protocol") != proto:
-            return False
+            continue
 
         if pref is not None and r.get("route-preference") != pref:
-            return False
+            continue
 
         if nexthop is not None:
-            nh = r["next-hop"]
+            nh = r.get("next-hop")
             if not nh:
-                return False
+                continue
 
             next_hop_list = nh.get("next-hop-list")
             if next_hop_list:
-                for nhl in next_hop_list["next-hop"]:
-                    # netconf presents address, restconf prefix with
-                    # model ietf-ipv4-unicast-routing:address
-                    address = nhl.get("address") or \
-                        nhl.get(f"ietf-{ip}-unicast-routing:address")
-                    if address == nexthop:
-                        return True
-                return False
+                if not any(nhl.get("address") == nexthop or nhl.get(f"ietf-{ip}-unicast-routing:address") == nexthop
+                           for nhl in next_hop_list["next-hop"]):
+                    continue
             else:
-                # netconf presents next-hop-address, restconf prefix
-                # with model ietf-ipv4-unicast-routing:next-hop-address
-                nh_addr = nh.get("next-hop-address") or \
-                    nh.get(f"ietf-{ip}-unicast-routing:next-hop-address")
-                if nh_addr == nexthop:
-                    return True
-                return False
-        else:
-            return True
+                nh_addr = nh.get("next-hop-address") or nh.get(f"ietf-{ip}-unicast-routing:next-hop-address")
+                if nh_addr != nexthop:
+                    continue
+
+        if active_check and "active" not in r:
+            continue
+
+        return True
+
     return False
 
 
-def ipv4_route_exist(target, dest, nexthop=None, proto=None, pref=None):
-    return _exist_route(target, dest, nexthop=nexthop, ip="ipv4", proto=proto, pref=pref)
+def ipv4_route_exist(target, dest, nexthop=None, proto=None, pref=None, active_check=False):
+    return _exist_route(target, dest, nexthop=nexthop, ip="ipv4", proto=proto, pref=pref, active_check=active_check)
 
 
-def ipv6_route_exist(target, dest, nexthop=None, proto=None, pref=None):
-    return _exist_route(target, dest, nexthop=nexthop, ip="ipv6", proto=proto, pref=pref)
+def ipv6_route_exist(target, dest, nexthop=None, proto=None, pref=None, active_check=False):
+    return _exist_route(target, dest, nexthop=nexthop, ip="ipv6", proto=proto, pref=pref, active_check=active_check)
 
 
 def _get_ospf_status(target):
