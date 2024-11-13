@@ -33,7 +33,7 @@ MODULES=(
 	"infix-dhcp-client@2024-09-20.yang"
 	"infix-meta@2024-10-18.yang"
 	"infix-system@2024-11-27.yang"
-	"infix-services@2024-12-02.yang"
+	"infix-services@2024-12-03.yang"
 	"ieee802-ethernet-interface@2019-06-21.yang"
 	"infix-ethernet-interface@2024-02-27.yang"
 	"infix-factory-default@2023-06-28.yang"
@@ -53,7 +53,7 @@ MODULES=(
 	"ietf-netconf-acm@2018-02-14.yang"
 	"ietf-netconf@2013-09-29.yang -e writable-running -e candidate -e rollback-on-error -e validate -e startup -e url -e xpath -e confirmed-commit"
 	"ietf-truststore@2023-12-28.yang -e central-truststore-supported -e certificates"
-	"ietf-keystore@2023-12-28.yang -e central-keystore-supported -e inline-definitions-supported -e asymmetric-keys -e symmetric-keys"
+	"ietf-keystore@2023-12-28.yang -e central-keystore-supported -e asymmetric-keys -e symmetric-keys"
 	"ietf-tls-server@2023-12-28.yang -e server-ident-raw-public-key -e server-ident-x509-cert"
 
 )
