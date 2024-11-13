@@ -70,9 +70,9 @@ def _get_ospf_status(target):
     rib = protos.get("control-plane-protocol", {})
     for p in rib:
         if p["type"] == "infix-routing:ospfv2":
-            return p.get("ospf") or p.get("ietf-ospf:ospf")
+            return p.get("ospf") or p.get("ietf-ospf:ospf", {})
 
-    return []
+    return {}
 
 
 def _get_ospf_status_area(target, area_id):
