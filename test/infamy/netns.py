@@ -3,7 +3,6 @@ import json
 import multiprocessing
 import os
 import random
-import signal
 import subprocess
 import tempfile
 import time
@@ -208,7 +207,7 @@ class IsolatedMacVlans:
 
         self.runsh(f"""
             set -ex
-            ip link set iface up
+            ip link set dev {ifname} up
             ip -{p} addr add {addr}/{prefix_length} dev {ifname}
             """, check=True)
 
