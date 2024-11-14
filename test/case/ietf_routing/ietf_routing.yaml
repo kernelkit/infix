@@ -13,3 +13,6 @@
 
 - name: ospf_bfd
   case: ospf_bfd/test.py
+
+- name: route_pref_dhcp
+  case: route_pref_dhcp/test.py
