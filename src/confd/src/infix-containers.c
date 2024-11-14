@@ -18,7 +18,7 @@
 #define  CFG_XPATH    "/infix-containers:containers"
 #define  INBOX_QUEUE  "/run/containers/inbox"
 #define  JOB_QUEUE    "/run/containers/queue"
-#define  ACTIVE_QUEUE "/var/lib/containers/active"
+#define  ACTIVE_QUEUE "/run/containers/active"
 #define  LOGGER       "logger -t container -p local1.notice"
 
 
@@ -55,9 +55,6 @@ static int add(const char *name, struct lyd_node *cif)
 		else
 			fprintf(fp, " --hostname %s", buf);
 	}
-
-	if (lydx_is_enabled(cif, "read-only"))
-		fprintf(fp, " --read-only");
 
 	if (lydx_is_enabled(cif, "privileged"))
 		fprintf(fp, " --privileged");
@@ -392,15 +389,7 @@ static void cleanup(sr_session_ctx_t *session, struct confd *confd)
 /*
  * Containers depend on a lot of other system resources being properly
  * set up, e.g., networking, which is run by dagger.  So we need to wait
- * for all that before we can launch new, or modified, containers.  The
- * latter is the tricky part.
- *
- * By default, containers get a writable layer which is preserved across
- * restarts/reboots of container or host -- provided we don't recreate
- * them on a reboot.  Hence the cmp magic below: we check if the command
- * to create a container is the same as what is already activated, if it
- * is already activated we know 'podman create' has done its thing and
- * we can safely start the container.
+ * for all that before we can launch new, or modified, containers.
  */
 void infix_containers_post_hook(sr_session_ctx_t *session, struct confd *confd)
 {
@@ -416,33 +405,26 @@ void infix_containers_post_hook(sr_session_ctx_t *session, struct confd *confd)
 	}
 
 	while ((d = readdir(dir))) {
-		char curr[strlen(ACTIVE_QUEUE) + strlen(d->d_name) + 2];
 		char next[strlen(INBOX_QUEUE) + strlen(d->d_name) + 2];
+		char name[strlen(d->d_name) + 1];
+		char *ptr;
 
 		if (d->d_name[0] == '.')
 			continue;
 
-		snprintf(curr, sizeof(curr), "%s/%s", ACTIVE_QUEUE, d->d_name);
 		snprintf(next, sizeof(next), "%s/%s", INBOX_QUEUE, d->d_name);
-		if (!systemf("cmp %s %s >/dev/null 2>&1", curr, next)) {
-			char name[strlen(d->d_name) + 1];
-			char *ptr;
 
-			strlcpy(name, d->d_name, sizeof(name));
-			ptr = strstr(name, ".sh");
-			if (ptr) {
-				char *nm = NULL;
+		strlcpy(name, d->d_name, sizeof(name));
+		ptr = strstr(name, ".sh");
+		if (ptr) {
+			char *nm = NULL;
 
-				*ptr = 0;
-				if (!strncmp(name, "S01-", 4))
-					nm = &name[4];
+			*ptr = 0;
+			if (!strncmp(name, "S01-", 4))
+				nm = &name[4];
 
-				/* New job is already active, no changes, skipping ... */
-				if (nm && !is_manual(session, nm))
-					systemf("initctl -bnq cond set container:%s", nm);
-			}
-			remove(next);
-			continue;
+			if (nm && !is_manual(session, nm))
+				systemf("initctl -bnq cond set container:%s", nm);
 		}
 
 		if (movefile(next, JOB_QUEUE))

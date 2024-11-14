@@ -108,9 +108,9 @@ create()
 	logging="--log-driver k8s-file --log-opt path=/run/containers/$name.fifo"
     fi
 
-    args="$args --replace --quiet --cgroup-parent=containers $caps"
+    args="$args --read-only --replace --quiet --cgroup-parent=containers $caps"
     args="$args --restart=$restart --systemd=false --tz=local $privileged"
-    args="$args $ro $vol $mount $hostname $entrypoint $env $port $logging"
+    args="$args $vol $mount $hostname $entrypoint $env $port $logging"
     pidfn=/run/container:${name}.pid
 
     [ -n "$quiet" ] || log "---------------------------------------"
@@ -136,8 +136,7 @@ create()
     # shellcheck disable=SC2048
     log "Calling podman create --name $name --conmon-pidfile=$pidfn $args $image $*"
     if podman create --name "$name" --conmon-pidfile="$pidfn" $args "$image" $*; then
-	[ -n "$quiet" ] || log "Successfully created container $name from $image"
-	rm -f "/run/containers/env/${name}.env"
+	[ -n "$quiet"  ] || log "Successfully created container $name from $image"
 	[ -n "$manual" ] || start "$name"
 	exit 0
     fi
@@ -267,7 +266,6 @@ options:
                            Syntax: [[ip:][hostPort]:]containerPort[/protocol]
   -q, --quiet              Quiet operation, called from confd
   -r, --restart POLICY     One of "no", "always", or "on-failure:NUM"
-      --read-only          Do not create a writable layer
   -s, --simple             Show output in simplified format
   -v, --volume NAME:PATH   Create named volume mounted inside container on PATH
 
@@ -385,9 +383,6 @@ while [ "$1" != "" ]; do
 	-r | --restart)
 	    shift
 	    restart=$1
-	    ;;
-	--read-only)
-	    ro="--read-only=true"
 	    ;;
 	-s | --simple)
 	    simple=true
@@ -627,7 +622,7 @@ case $cmd in
 	;;
     upgrade)
 	# Start script used to initially create container
-	script=/var/lib/containers/active/S01-${1}.sh
+	script=/run/containers/active/S01-${1}.sh
 
 	# Find container image
 	img=$(podman inspect "$1" | jq -r .[].ImageName)

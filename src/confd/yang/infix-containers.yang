@@ -26,6 +26,11 @@ module infix-containers {
     prefix infix-sys;
   }
 
+  revision 2024-11-12  {
+    description "Deprecate read-only, it is now always true.";
+    reference "internal";
+  }
+
   revision 2024-10-14  {
     description "Two major changes:
                   - Allow changing name of host interfaces inside container
@@ -256,6 +261,7 @@ module infix-containers {
       }
 
       leaf read-only {
+        status deprecated; // This is now the default, setting kept only to not break configs
 	description "Create a read-only container.  Use volumes for writable directories.";
 	type boolean;
       }
