@@ -1,5 +1,7 @@
 #!/bin/sh
-
+DOWNLOADS=/var/lib/containers/oci
+BUILTIN=/lib/oci
+checksum=""
 all=""
 env=""
 port=""
@@ -8,6 +10,72 @@ force=
 log()
 {
     logger -I $PPID -t container -p local1.notice -- "$*"
+}
+
+check()
+{
+    file=$1
+
+    if [ -z "$checksum" ]; then
+	log "no checksum to verify $file against, continuing."
+	return 0
+    fi
+
+    if echo "${checksum}  ${file}" | "$cmdsum" -c -s; then
+        log "$file checksum verified OK."
+	return 0
+    fi
+
+    got=$("$cmdsum" "${file}" | awk '{print $1}')
+    log "$file checksum mismatch, got $got, expected $checksum, removing file."
+    rm -f "$file"
+
+    return 1
+}
+
+# Fetch an OCI image over ftp/http/https.  Use wget for FTP, which curl
+# empirically does not work well with.  Log progress+ & error to syslog.
+fetch()
+{
+    url=$1
+    file=$(basename "$url")
+    dst="$DOWNLOADS/$file"
+
+    cd "$DOWNLOADS" || return
+    if [ -e "$file" ]; then
+	log "$file already available."
+	if check "$file"; then
+	    echo "$dst"
+	    return 0
+	fi
+    fi
+
+    log "Fetching $url"
+
+    if echo "$url" | grep -qE "^ftp://"; then
+        cmd="wget -q $url"
+    elif echo "$url" | grep -qE "^https?://"; then
+        cmd="curl $creds -sSL --fail -o \"$file\" $url"
+    else
+        log "Unsupported URL scheme: $url"
+        return 1
+    fi
+
+    if out=$(eval "$cmd" 2>&1); then
+	log "$file downloaded successfully."
+	if check "$file"; then
+	    echo "$dst"
+	    return 0
+	fi
+    fi
+
+    # log error message from backend
+    while IFS= read -r line; do
+	log "$line"
+    done <<EOF
+$out
+EOF
+    return 1
 }
 
 # Unpacks a given oci-archive.tar[.gz] in the current directory.  Sanity
@@ -26,6 +94,11 @@ unpack_archive()
 	oci-archive:*)		# Packed OCI image, .tar or .tar.gz format
 	    file=${image#oci-archive:}
 	    ;;
+	ftp://* | http://* | https://*)
+            if ! file=$(fetch "$image"); then
+		return 1
+	    fi
+            ;;
 	*)			# docker://*, docker-archive:*, or URL
 	    echo "$image"
 	    return 0
@@ -33,10 +106,10 @@ unpack_archive()
     esac
 
     if [ ! -e "$file" ]; then
-	if [ -e "/var/lib/containers/oci/$file" ]; then
-	    file="/var/lib/containers/oci/$file"
-	elif [ -e "/lib/oci/$file" ]; then
-	    file="/lib/oci/$file"
+	if [ -e "$DOWNLOADS/$file" ]; then
+	    file="$DOWNLOADS/$file"
+	elif [ -e "$BUILTIN/$file" ]; then
+	    file="$BUILTIN/$file"
 	else
 	    log "Error: cannot find OCI archive $file in search path."
 	    exit 1
@@ -58,10 +131,18 @@ unpack_archive()
 
 	[ -n "$quiet" ] || log "Extracting OCI archive $file ..."
         tar xf "$file" || (log "Error: failed unpacking $file in $(pwd)"; exit 1)
-	remove=true
     fi
 
     dir=$(dirname "$index")
+    if echo "$dir" | grep -q ":"; then
+        if [ -z "$name" ]; then
+            name="$dir"
+        fi
+        sanitized_dir=$(echo "$dir" | cut -d':' -f1)
+        mv "$dir" "$sanitized_dir" || (log "Error: failed renaming $dir to $sanitized_dir"; exit 1)
+        dir="$sanitized_dir"
+    fi
+
     [ -n "$quiet" ] || log "Loading OCI image $dir ..."
     podman load -qi "$dir"        >/dev/null
 
@@ -71,10 +152,6 @@ unpack_archive()
 	podman rmi "$dir"         >/dev/null
     else
 	name=$dir
-    fi
-
-    if [ "$remove" = "true" ]; then
-	rm -rf "$file"
     fi
 
     echo "$name"
@@ -102,7 +179,9 @@ create()
 
     # Unpack and load docker-archive/oci/oci-archive, returning image
     # name, or return docker:// URL for download.
-    image=$(unpack_archive "$image")
+    if ! image=$(unpack_archive "$image"); then
+	exit 1
+    fi
 
     if [ -z "$logging" ]; then
 	logging="--log-driver k8s-file --log-opt path=/run/containers/$name.fifo"
@@ -247,6 +326,7 @@ options:
       --dns-search LIST    Set host lookup search list when creating container
       --cap-add CAP        Add capability to unprivileged container
       --cap-drop CAP       Drop capability, for privileged containter
+      --checksum TYPE:SUM  Use md5/sha256/sha512 to verify ftp/http/https archives
   -c, --creds USR[:PWD]    Credentials to pass to curl -u for remote ops
   -d, --detach             Detach a container started with 'run IMG [CMD]'
   -e, --env FILE           Environment variables when creating container
@@ -306,6 +386,25 @@ while [ "$1" != "" ]; do
 	    shift
 	    caps="$caps --cap-drop=$1"
 	    ;;
+	--checksum)
+	    shift
+	    type="${1%%:*}"
+	    checksum="${1#*:}"
+	    case "$type" in
+		md5)
+		    cmdsum=md5sum
+		    ;;
+		sha256)
+		    cmdsum=sha256sum
+		    ;;
+		sha512)
+		    cmdsum=sha512sum
+		    ;;
+		*)
+		    err 1 "Unsupported checksum type: $type"
+		    ;;
+	    esac
+	    ;;
 	-c | --creds)
 	    shift
 	    creds="-u $1"
@@ -350,7 +449,6 @@ while [ "$1" != "" ]; do
 	--log-path)
 	    shift
 	    logging="$logging --log-opt path=$1"
-	    log_path="$1"
 	    ;;
 	-m | --mount)
 	    shift
@@ -455,25 +553,12 @@ case $cmd in
 	usage
 	;;
     load)
-	url=$1
-	name=$2
 	# shellcheck disable=SC2086
-	if echo "$url" | grep -q "://"; then
-	    file=$(basename "$url")
-            curl -k $creds -Lo "$file" "$url"
-	else
-            file="$url"
-	fi
-
-	# shellcheck disable=SC2086
-	name=$(unpack_archive "$file" $name)
+	name=$(unpack_archive "$1" $2)
+	[ -n "$name" ] || exit 1
 
 	# Show resulting image(s) matching $name
-	if [ -n "$name" ]; then
-	    podman images -n "$name"
-	else
-	    exit 1
-	fi
+	podman images -n "$name"
 	;;
     locate)			# Find where the host's ifname lives
 	if [ -z "$network" ]; then
@@ -500,7 +585,7 @@ case $cmd in
 		podman images $all --format "{{.Repository}}:{{.Tag}}"
 		;;
 	    oci)
-		find /lib/oci /var/lib/containers/oci -type f 2>/dev/null
+		find $BUILTIN $DOWNLOADS -type f 2>/dev/null
 		;;
 	    *)		
 		podman ps $all --format "{{.Names}}"

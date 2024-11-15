@@ -175,6 +175,16 @@ static int add(const char *name, struct lyd_node *cif)
 	if (lydx_is_enabled(cif, "manual"))
 		fprintf(fp, " --manual");
 
+	node = lydx_get_descendant(lyd_child(cif), "checksum", NULL);
+	if (node) {
+		if ((string = lydx_get_cattr(node, "md5")))
+			fprintf(fp, " --checksum md5:%s", string);
+		if ((string = lydx_get_cattr(node, "sha256")))
+			fprintf(fp, " --checksum sha256:%s", string);
+		if ((string = lydx_get_cattr(node, "sha512")))
+			fprintf(fp, " --checksum sha512:%s", string);
+	}
+
 	fprintf(fp, " create %s %s", name, image);
 
  	if ((string = lydx_get_cattr(cif, "command")))

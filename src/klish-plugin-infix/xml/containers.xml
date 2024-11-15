@@ -75,11 +75,15 @@
       <COMMAND name="creds" help="Credentials for remote access">
         <PARAM name="creds" ptype="/STRING" help="username[:password]"/>
       </COMMAND>
+      <COMMAND name="checksum" help="Checksum to verify against (SHA56)">
+        <PARAM name="sha" ptype="/STRING" help="SHA256"/>
+      </COMMAND>
     </SWITCH>
     <ACTION sym="script" in="tty" out="tty" interrupt="true">
       creds=${KLISH_PARAM_creds:+-c $KLISH_PARAM_creds}
+      sha=${KLISH_PARAM_sha:+--checksum $KLISH_PARAM_sha}
       cd /var/lib/containers/oci
-      doas container $creds load $KLISH_PARAM_url $KLISH_PARAM_name
+      doas container $creds $sha load $KLISH_PARAM_url $KLISH_PARAM_name
     </ACTION>
   </COMMAND>
 
