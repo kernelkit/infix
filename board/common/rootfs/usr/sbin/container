@@ -627,7 +627,7 @@ case $cmd in
 	;;
     upgrade)
 	# Start script used to initially create container
-	script=/run/containers/active/S01-${1}.sh
+	script=/run/containers/${1}.sh
 
 	# Find container image
 	img=$(podman inspect "$1" | jq -r .[].ImageName)

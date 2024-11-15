@@ -13,13 +13,16 @@
 #include <srx/srx_val.h>
 
 #include "core.h"
+
 #define  ARPING_MSEC  1000
+#define  LOGGER       "logger -t container -p local1.notice"
+
 #define  MODULE       "infix-containers"
 #define  CFG_XPATH    "/infix-containers:containers"
-#define  INBOX_QUEUE  "/run/containers/inbox"
-#define  JOB_QUEUE    "/run/containers/queue"
-#define  ACTIVE_QUEUE "/run/containers/active"
-#define  LOGGER       "logger -t container -p local1.notice"
+
+#define  _PATH_CONT   "/run/containers"
+#define  _PATH_INBOX  _PATH_CONT "/INBOX"
+#define  _PATH_QUEUE  _PATH_CONT "/queue"
 
 
 static int add(const char *name, struct lyd_node *cif)
@@ -27,11 +30,13 @@ static int add(const char *name, struct lyd_node *cif)
 	const char *image = lydx_get_cattr(cif, "image");
 	const char *restart_policy, *string;
 	struct lyd_node *node, *nets, *caps;
+	char script[strlen(name) + 5];
 	FILE *fp, *ap;
 
-	fp = fopenf("w", "%s/S01-%s.sh", INBOX_QUEUE, name);
+	snprintf(script, sizeof(script), "%s.sh", name);
+	fp = fopenf("w", "%s/%s", _PATH_CONT, script);
 	if (!fp) {
-		ERRNO("Failed adding job S01-%s.sh to job queue" INBOX_QUEUE, name);
+		ERRNO("Failed creating container script %s/%s", _PATH_CONT, script);
 		return SR_ERR_SYS;
 	}
 
@@ -176,37 +181,45 @@ static int add(const char *name, struct lyd_node *cif)
 		fprintf(fp, " %s", string);
 
 	fprintf(fp, "\n");
+
+	if (lydx_is_enabled(cif, "manual"))
+		fprintf(fp, "initctl -bnq cond set container:%s\n", name);
+
 	fchmod(fileno(fp), 0700);
 	fclose(fp);
 
 	systemf("initctl -bnq enable container@%s.conf", name);
+
+	/*
+	 * All start scripts must wait for the rest of confd to complete
+	 * before being enqueued to execd, so we postpone it using this
+	 * "inbox" to the post hook.
+	 */
+	writesf(script, "a", "%s", _PATH_INBOX);
 
 	return 0;
 }
 
 static int del(const char *name)
 {
-	const char *queue[] = {
-		JOB_QUEUE,
-		INBOX_QUEUE,
-		ACTIVE_QUEUE,
-	};
+	char fn[strlen(_PATH_QUEUE) + strlen(name) + 10];
 	FILE *fp;
 
 	/* Remove any pending download/create job first */
-	for (size_t i = 0; i < NELEMS(queue); i++) {
-		char fn[strlen(queue[i]) + strlen(name) + 5];
+	snprintf(fn, sizeof(fn), "%s/S01-%s.sh", _PATH_QUEUE, name);
+	erase(fn);
 
-		snprintf(fn, sizeof(fn), "%s/%s.sh", queue[i], name);
-		erase(fn);
-	}
+	/* Remove container script itself */
+	snprintf(fn, sizeof(fn), "%s/%s.sh", _PATH_CONT, name);
+	erase(fn);
 
 	/* Disable service and schedule for deletion. */
 	systemf("initctl -bnq disable container@%s.conf", name);
 
-	fp = fopenf("w", "%s/K01-%s.sh", INBOX_QUEUE, name);
+	snprintf(fn, sizeof(fn), "%s/K01-%s.sh", _PATH_CONT, name);
+	fp = fopen(fn, "w");
 	if (!fp) {
-		ERRNO("Failed adding job 00-delete-%s.sh to job queue" INBOX_QUEUE, name);
+		ERRNO("Failed creating container stop script %s", fn);
 		return SR_ERR_SYS;
 	}
 
@@ -214,6 +227,9 @@ static int del(const char *name)
 		"container delete %s\n", name);
 	fchmod(fileno(fp), 0700);
 	fclose(fp);
+
+	/* Enqueue kill job immediately on execd */
+	movefile(fn, _PATH_QUEUE);
 
 	return SR_ERR_OK;
 }
@@ -330,109 +346,42 @@ static int oci_load(sr_session_ctx_t *session, uint32_t sub_id, const char *xpat
 	return SR_ERR_OK;
 }
 
-static int is_active(sr_session_ctx_t *session, const char *name)
-{
-	return srx_enabled(session, CFG_XPATH "/container[name='%s']/enabled", name);
-}
-
-static int is_manual(sr_session_ctx_t *session, const char *name)
-{
-	return srx_enabled(session, CFG_XPATH "/container[name='%s']/manual", name);
-}
-
-/*
- * When container configurations are not saved to startup-config and the
- * user reboot the system (or lose power) we will have lingering active
- * containers cached on persistent storage.
- *
- * This function runs every time a configuration is applied to clean up
- * any lingering active jobs to prevent false matches in the cmp magic
- * in the below post-hook.
- */
-static void cleanup(sr_session_ctx_t *session, struct confd *confd)
-{
-	struct dirent *d;
-	DIR *dir;
-
-	dir = opendir(ACTIVE_QUEUE);
-	if (!dir)
-		return;
-
-	while ((d = readdir(dir))) {
-		char name[strlen(ACTIVE_QUEUE) + strlen(d->d_name) + 2];
-		char *ptr;
-
-		if (d->d_name[0] == '.')
-			continue;
-
-		strlcpy(name, d->d_name, sizeof(name));
-		ptr = strstr(name, ".sh");
-		if (!ptr)
-			continue; /* odd, non-script file? */
-		*ptr = 0;
-
-		if (strncmp(name, "S01-", 4))
-			continue; /* odd, not start script? */
-
-		if (is_active(session, &name[4]))
-			continue;
-
-		/* Not found in running-config, remove stale cache. */
-		snprintf(name, sizeof(name), "%s/%s", ACTIVE_QUEUE, d->d_name);
-		if (erase(name))
-			ERRNO("Failed removing stale container job %s", name);
-	}
-
-	closedir(dir);
-}
-
 /*
  * Containers depend on a lot of other system resources being properly
  * set up, e.g., networking, which is run by dagger.  So we need to wait
- * for all that before we can launch new, or modified, containers.
+ * for all that before we can launch new, or modified, containers.  This
+ * post hook runs as (one of) the last actions on a config change/boot.
  */
 void infix_containers_post_hook(sr_session_ctx_t *session, struct confd *confd)
 {
-	struct dirent *d;
-	DIR *dir;
+	char script[256];
+	FILE *fp;
 
-	cleanup(session, confd);
+	fp = fopen(_PATH_INBOX, "r");
+	if (!fp)
+		return;		/* nothing to do today */
 
-	dir = opendir(INBOX_QUEUE);
-	if (!dir) {
-		ERROR("Cannot open %s to launch scripts.", INBOX_QUEUE);
-		return;
+	while (fgets(script, sizeof(script), fp)) {
+		char link[strlen(_PATH_QUEUE) + strlen(script) + 10];
+		char path[strlen(script) + 10];
+
+		chomp(script);
+
+		/*
+		 * Enqueue start job on execd, use a symlink since we
+		 * want to be able to reuse the script for manual image
+		 * uprgade (and debugging) purposes.
+		 */
+		snprintf(link, sizeof(link), "%s/S01-%s", _PATH_QUEUE, script);
+		snprintf(path, sizeof(path), "../%s", script);
+		if (symlink(path, link) && errno != EEXIST)
+			ERRNO("Creating symlink %s -> %s", link, path);
 	}
 
-	while ((d = readdir(dir))) {
-		char next[strlen(INBOX_QUEUE) + strlen(d->d_name) + 2];
-		char name[strlen(d->d_name) + 1];
-		char *ptr;
+	fclose(fp);
+	erase(_PATH_INBOX);
 
-		if (d->d_name[0] == '.')
-			continue;
-
-		snprintf(next, sizeof(next), "%s/%s", INBOX_QUEUE, d->d_name);
-
-		strlcpy(name, d->d_name, sizeof(name));
-		ptr = strstr(name, ".sh");
-		if (ptr) {
-			char *nm = NULL;
-
-			*ptr = 0;
-			if (!strncmp(name, "S01-", 4))
-				nm = &name[4];
-
-			if (nm && !is_manual(session, nm))
-				systemf("initctl -bnq cond set container:%s", nm);
-		}
-
-		if (movefile(next, JOB_QUEUE))
-			ERRNO("Failed moving %s to job queue %s", next, JOB_QUEUE);
-	}
-
-	closedir(dir);
-	systemf("container volume prune -f >/dev/null 2>&1");
+	systemf("initctl -bnq touch execd");
 }
 
 int infix_containers_init(struct confd *confd)

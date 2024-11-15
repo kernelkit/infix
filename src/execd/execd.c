@@ -30,9 +30,8 @@
 
 static int   logmask = LOG_UPTO(LOG_NOTICE);
 static char  buffer[BUFSIZ];
-static char *done;
 
-static void run_job(const char *path, char *file, int archive)
+static void run_job(const char *path, char *file)
 {
 	char cmd[strlen(path) + strlen(file) + 2];
 	int rc;
@@ -57,11 +56,7 @@ static void run_job(const char *path, char *file, int archive)
 		return;
 	}
 
-	dbg("job %s in %s done %p, archive: %d", file, path, done, archive);
-	if (done && archive)
-		movefile(cmd, done);
-	else
-		erase(cmd);
+	erase(cmd);
 }
 
 /*
@@ -69,7 +64,7 @@ static void run_job(const char *path, char *file, int archive)
  * a type '*' just to figure out if a job should be archived in
  * the done directory.
  */
-static int should_run(const char *name, int type, int *archive)
+static int should_run(const char *name, int type)
 {
 	if (!name || strlen(name) < 3)
 		return 0;
@@ -78,32 +73,25 @@ static int should_run(const char *name, int type, int *archive)
 		if (type == '*') {
 			switch (name[0]) {
 			case 'K':
-				*archive = 0;
-				return 1;
 			case 'S':
-				*archive = 1;
 				return 1;
 			default:
-				errx("unsupported '%s', scripts must start with S or K", name);
-				return 0;
+				goto done;
 			}
 		}
 
 		switch (type) {
 		case 'K':
-			*archive = 0;
-			break;
 		case 'S':
-			*archive = 1;
 			break;
 		default:
 			return 0;
 		}
 
-		dbg("name:%s type:'%c' archive:%d => run:%d", name, type, *archive, type == name[0]);
+		dbg("name:%s type:'%c' => run:%d", name, type, type == name[0]);
 		return type == name[0];
 	}
-
+done:
 	errx("unsupported script %s, must follow pattern SNN/KNN", name);
 	return 0;
 }
@@ -111,7 +99,6 @@ static int should_run(const char *name, int type, int *archive)
 static void run_dir(const char *path, int type)
 {
 	struct dirent **namelist;
-	int archive = 0;
 	int n, i;
 
 	n = scandir(path, &namelist, NULL, alphasort);
@@ -126,8 +113,8 @@ static void run_dir(const char *path, int type)
 		if (d->d_type == DT_DIR)
 			continue;
 
-		if (should_run(d->d_name, type, &archive))
-			run_job(path, d->d_name, archive);
+		if (should_run(d->d_name, type))
+			run_job(path, d->d_name);
 
 		free(d);
 	}
@@ -139,7 +126,7 @@ static void run_dir(const char *path, int type)
  * Call stop/cleanup jobs first, may use same container name or
  * resources as replacement container start scripts use.
  */
-static void run_queue(char *path)
+static void run_queue(const char *path)
 {
 	run_dir(path, 'K');
 	run_dir(path, 'S');
@@ -174,14 +161,13 @@ static void inotify_cb(uev_t *w, void *arg, int _)
 	for (char *p = buffer; p < buffer + bytes;) {
 		struct inotify_event *event = (struct inotify_event *)p;
 		char *name = event->name;
-		int archive;
 
 		if (event->mask & (IN_CLOSE_WRITE | IN_ATTRIB | IN_MOVED_TO)) {
 			dbg("Got inotify event %s 0x%04x", name, event->mask);
-			if (!should_run(name, '*', &archive))
+			if (!should_run(name, '*'))
 				continue;
 
-			run_job(arg, name, archive);
+			run_job(arg, name);
 		}
 
 		p += sizeof(struct inotify_event) + event->len;
@@ -225,13 +211,13 @@ int logmask_from_str(const char *str)
 static int usage(char *arg0, int rc)
 {
 	printf("Usage:\n"
-	       "  %s [-dh] [-l LVL] JOBDIR\n"
+	       "  %s [-dh] [-l LVL] QUEUE\n"
 	       "Options:\n"
 	       "  -d        Log to stderr as well\n"
 	       "  -h        This help text\n"
 	       "  -l LVL  Set log level: none, err, warn, notice*, info, debug\n"
 	       "\n"
-	       "Runs jobs from JOBDIR, re-runs failing jobs on route changes or SIGHUP.\n"
+	       "Runs jobs from QUEUE, re-runs failing jobs on route changes or SIGHUP.\n"
 	       "Use SIGUSR1 to toggle debug messages at runtime.\n", arg0);
 
 	return rc;
@@ -246,7 +232,7 @@ int main(int argc, char *argv[])
 	uev_t sighup_watcher;
 	int logopt = LOG_PID;
 	int wd, sd, fd, c;
-	char *jobdir;
+	char *queue;
 	uev_ctx_t ctx;
 	int rc = 0;
 
@@ -272,13 +258,11 @@ int main(int argc, char *argv[])
 	if (optind >= argc)
 		return usage(argv[0], 1);
 
-	jobdir = argv[optind++];
-	if (optind < argc)
-		done = argv[optind];
+	queue = argv[optind];
 
-	if (access(jobdir, X_OK)) {
+	if (access(queue, X_OK)) {
 		fprintf(stderr, "Cannot find job directory %s, errno %d: %s\n",
-			jobdir, errno, strerror(errno));
+			queue, errno, strerror(errno));
 		return 1;
 	}
 
@@ -299,7 +283,7 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-	wd = inotify_add_watch(fd, jobdir, IN_CLOSE_WRITE | IN_ATTRIB | IN_MOVED_TO);
+	wd = inotify_add_watch(fd, queue, IN_CLOSE_WRITE | IN_ATTRIB | IN_MOVED_TO);
 	if (wd == -1) {
 		err("inotify_add_watch");
 		close(fd);
@@ -323,7 +307,7 @@ int main(int argc, char *argv[])
 	}
 
 	uev_init(&ctx);
-	if (uev_signal_init(&ctx, &sighup_watcher, signal_cb, jobdir, SIGHUP) == -1) {
+	if (uev_signal_init(&ctx, &sighup_watcher, signal_cb, queue, SIGHUP) == -1) {
 		err("uev_signal_init (sighup)");
 		rc = 1;
 		goto done;
@@ -334,19 +318,19 @@ int main(int argc, char *argv[])
 		goto done;
 	}
 
-	if (uev_io_init(&ctx, &inotify_watcher, inotify_cb, jobdir, fd, UEV_READ) == -1) {
+	if (uev_io_init(&ctx, &inotify_watcher, inotify_cb, queue, fd, UEV_READ) == -1) {
 		err("uev_io_init (inotify)");
 		rc = 1;
 		goto done;
 	}
 
-	if (uev_io_init(&ctx, &netlink_watcher, netlink_cb, jobdir, sd, UEV_READ) == -1) {
+	if (uev_io_init(&ctx, &netlink_watcher, netlink_cb, queue, sd, UEV_READ) == -1) {
 		err("uev_io_init (netlink)");
 		rc = 1;
 		goto done;
 	}
 
-	run_queue(jobdir);
+	run_queue(queue);
 	if (uev_run(&ctx, 0) == -1) {
 		err("uev_run");
 		rc = 1;
