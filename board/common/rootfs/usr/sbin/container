@@ -273,6 +273,7 @@ commands:
   create   NAME IMAGE NET  Create container NAME using IMAGE with networks NET
   delete  [network] NAME   Remove container NAME or network NAME from all containers
   exec     NAME CMD        Run a command inside a container
+  flush                    Clean up lingering containers and associated anonymous volumes
   find    [ifname PID]     Find PID of container where '--net IFNAME' currently lives
                            or, find the name of our IFNAME inside the container @PID
   help                     Show this help text
@@ -424,6 +425,10 @@ case $cmd in
 	;;
     exec)
 	podman exec -it "$@"
+	;;
+    flush)
+	echo "Cleaning up any lingering containers";
+	podman rm -av
 	;;
     find)
 	cmd=$1
