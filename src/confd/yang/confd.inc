@@ -27,7 +27,7 @@ MODULES=(
 	"ieee802-dot1q-types@2022-10-29.yang"
 	"infix-ip@2024-09-16.yang"
 	"infix-if-type@2024-10-13.yang"
-	"infix-routing@2024-10-01.yang"
+	"infix-routing@2024-11-15.yang"
 	"ieee802-dot1ab-lldp@2022-03-15.yang"
 	"infix-lldp@2023-08-23.yang"
 	"infix-dhcp-client@2024-09-20.yang"
@@ -37,7 +37,7 @@ MODULES=(
 	"ieee802-ethernet-interface@2019-06-21.yang"
 	"infix-ethernet-interface@2024-02-27.yang"
 	"infix-factory-default@2023-06-28.yang"
-	"infix-interfaces@2024-11-12.yang -e vlan-filtering"
+	"infix-interfaces@2024-11-15.yang -e vlan-filtering"
 
 	# from rousette
 	"ietf-restconf@2017-01-26.yang"

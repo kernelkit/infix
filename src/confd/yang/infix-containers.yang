@@ -6,10 +6,6 @@ module infix-containers {
   namespace "urn:ietf:params:xml:ns:yang:infix-containers";
   prefix infix-cont;
 
-  import ietf-yang-types {
-    prefix yang;
-  }
-
   import ietf-interfaces {
     prefix if;
   }

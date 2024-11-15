@@ -3,9 +3,6 @@ submodule infix-if-bridge {
   belongs-to infix-interfaces {
     prefix infix-if;
   }
-  import ietf-yang-types {
-    prefix yang;
-  }
   import iana-if-type {
     prefix ianaift;
   }
@@ -14,9 +11,6 @@ submodule infix-if-bridge {
   }
   import ietf-interfaces {
     prefix if;
-  }
-  import ietf-inet-types {
-    prefix inet;
   }
   import ietf-ip {
     prefix ip;
@@ -32,6 +26,10 @@ submodule infix-if-bridge {
   contact      "kernelkit@googlegroups.com";
   description  "Linux bridge extension for ietf-interfaces.";
 
+  revision 2024-11-15 {
+    description "Fix pyang linter warnings, drop unused imports.";
+    reference "internal";
+  }
   revision 2024-08-26 {
     description "Improve must expressions for multicast.
 

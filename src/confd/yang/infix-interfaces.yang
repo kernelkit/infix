@@ -4,7 +4,7 @@ module infix-interfaces {
   prefix infix-if;
 
   import infix-if-type {
-    prefix infixift;
+    prefix infix-ift;
   }
   import ietf-interfaces {
     prefix if;
@@ -23,8 +23,10 @@ module infix-interfaces {
   contact      "kernelkit@googlegroups.com";
   description  "Linux bridge and lag extensions for ietf-interfaces.";
 
-  revision 2024-11-12 {
-    description "Limit name 1-15 chars, Linux limitation.";
+  revision 2024-11-15 {
+    description "Two changes:
+                  - Limit name 1-15 chars, Linux limitation
+                  - Relocate 'feature containers' to submodule";
     reference "internal";
   }
 
@@ -75,21 +77,13 @@ module infix-interfaces {
   }
 
   /*
-   * Features
-   */
-
-  feature containers {
-    description "Containers is an optional build-time feature in Infix.";
-  }
-
-  /*
    * Data Nodes
    */
 
   deviation "/if:interfaces/if:interface/if:type" {
     deviate replace {
       type identityref {
-        base infixift:infix-interface-type;
+        base infix-ift:infix-interface-type;
       }
     }
   }

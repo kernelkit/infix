@@ -13,9 +13,6 @@ submodule infix-if-container {
   import ietf-ip {
     prefix ip;
   }
-  import infix-if-type {
-    prefix infixift;
-  }
 
   organization "KernelKit";
   contact      "kernelkit@googlegroups.com";
@@ -23,6 +20,13 @@ submodule infix-if-container {
                 Ensures a container interface can never be a bridge port, or
                 LAG member, at the same time.";
 
+  revision 2024-11-15 {
+    description "Two changes:
+                   - Relocate 'feature containers' declaration to here
+                   - Fix pyang linter errors and warnings, dropping unused
+                     imports and dropping the default value for subnet";
+    reference "internal";
+  }
   revision 2024-10-29 {
     description "Add read only container list to container-network";
     reference "internal";
@@ -30,6 +34,14 @@ submodule infix-if-container {
   revision 2024-01-15 {
     description "Initial revision.";
     reference "internal";
+  }
+
+  /*
+   * Features
+   */
+
+  feature containers {
+    description "Containers is an optional build-time feature in Infix.";
   }
 
   /*
@@ -76,6 +88,9 @@ submodule infix-if-container {
 	list subnet {
 	  description "Static IP ranges to hand out addresses to containers from.
 
+                       If no subnet is provided, a default 172.17.0.0/16 one is
+                       set up.  This is the default in a standard Docker setup.
+
                        A container bridge forwards DNS, NTP, and SSH by default to
                        the host interfaces.";
 	  when "../type = 'infix-if:bridge'";
@@ -83,10 +98,7 @@ submodule infix-if-container {
 
 	  leaf subnet {
 	    type inet:ip-prefix;
-	    description "Subnet to assign addresses from, round-robin assignment.
-
-                         The default is from a standard Docker setup.";
-	    default "172.17.0.0/16";
+	    description "Subnet to assign addresses from, round-robin assignment.";
 	  }
 
 	  leaf gateway {
