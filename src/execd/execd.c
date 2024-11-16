@@ -1,37 +1,15 @@
 /* SPDX-License-Identifier: ISC */
 
-#include <ctype.h>
-#include <dirent.h>
-#include <errno.h>
-#include <getopt.h>
-#include <libgen.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#define SYSLOG_NAMES
-#include <syslog.h>
-#include <unistd.h>
+#include "execd.h"
+#define RETRY_TIMER 60
 
-#include <linux/netlink.h>
-#include <linux/rtnetlink.h>
-
-#include <sys/inotify.h>
-#include <sys/socket.h>
-
-#include <uev/uev.h>
-#include <libite/lite.h>
-
-#define err(fmt, args...)   syslog(LOG_ERR,     fmt ": %s", ##args, strerror(errno))
-#define errx(fmt, args...)  syslog(LOG_ERR,     fmt, ##args)
-#define warn(fmt, args...)  syslog(LOG_WARNING, fmt, ": %s", ##args, strerror(errno))
-#define warnx(fmt, args...) syslog(LOG_WARNING, fmt, ##args)
-#define log(fmt, args...)   syslog(LOG_NOTICE,  fmt, ##args)
-#define dbg(fmt, args...)   syslog(LOG_DEBUG,   fmt, ##args)
+static uev_t retry_watcher;
+static int   retry = RETRY_TIMER;
 
 static int   logmask = LOG_UPTO(LOG_NOTICE);
 static char  buffer[BUFSIZ];
 
-static void run_job(const char *path, char *file)
+static int run_job(const char *path, const char *file)
 {
 	char cmd[strlen(path) + strlen(file) + 2];
 	int rc;
@@ -46,65 +24,28 @@ static void run_job(const char *path, char *file)
 
 	snprintf(cmd, sizeof(cmd), "%s/%s", path, file);
 	if (access(cmd, X_OK)) {
-		errx("skipping %s, not executable", cmd);
-		return;
+		errx("%s skipping, not executable.", cmd);
+		return -1;
 	}
 
 	dbg("running job %s", cmd);
 	if ((rc = systemf("%s", cmd))) {
-		errx("failed %s: rc %d", cmd, rc);
-		return;
+		errx("%s failed, exit code: %d", cmd, rc);
+		return -1;
 	}
 
-	erase(cmd);
+	return erase(cmd);
 }
 
-/*
- * Allow SNN and KNN style jobs, for inotyify_cb() we also allow
- * a type '*' just to figure out if a job should be archived in
- * the done directory.
- */
-static int should_run(const char *name, int type)
-{
-	if (!name || strlen(name) < 3)
-		return 0;
-
-	if (isdigit(name[1]) && isdigit(name[2])) {
-		if (type == '*') {
-			switch (name[0]) {
-			case 'K':
-			case 'S':
-				return 1;
-			default:
-				goto done;
-			}
-		}
-
-		switch (type) {
-		case 'K':
-		case 'S':
-			break;
-		default:
-			return 0;
-		}
-
-		dbg("name:%s type:'%c' => run:%d", name, type, type == name[0]);
-		return type == name[0];
-	}
-done:
-	errx("unsupported script %s, must follow pattern SNN/KNN", name);
-	return 0;
-}
-
-static void run_dir(const char *path, int type)
+static int run_dir(const char *path, int type)
 {
 	struct dirent **namelist;
-	int n, i;
+	int n, i, num = 0;
 
 	n = scandir(path, &namelist, NULL, alphasort);
 	if (n < 0) {
 		err("scandir %s", path);
-		return;
+		return 0;
 	}
 
 	for (i = 0; i < n; i++) {
@@ -114,12 +55,14 @@ static void run_dir(const char *path, int type)
 			continue;
 
 		if (should_run(d->d_name, type))
-			run_job(path, d->d_name);
+			num += !!run_job(path, d->d_name);
 
 		free(d);
 	}
 
 	free(namelist);
+
+	return num;
 }
 
 /*
@@ -128,13 +71,24 @@ static void run_dir(const char *path, int type)
  */
 static void run_queue(const char *path)
 {
-	run_dir(path, 'K');
-	run_dir(path, 'S');
+	int num;
+
+	num  = run_dir(path, 'K');
+	num += run_dir(path, 'S');
+
+	if (num)
+		uev_timer_set(&retry_watcher, retry, 0);
 }
 
-static void signal_cb(uev_t *w, void *arg, int _)
+static void signal_cb(uev_t *w, void *arg, int signo)
 {
-	dbg("Got signal, calling job queue");
+	dbg("signal %d, calling job queue", signo);
+	run_queue(arg);
+}
+
+static void timer_cb(uev_t *w, void *arg, int _)
+{
+	dbg("timer, retry job queue");
 	run_queue(arg);
 }
 
@@ -151,6 +105,7 @@ static void toggle_debug(uev_t *w, void *arg, int _)
 static void inotify_cb(uev_t *w, void *arg, int _)
 {
 	ssize_t bytes;
+	int num = 0;
 
 	bytes = read(w->fd, buffer, sizeof(buffer));
 	if (bytes == -1) {
@@ -167,11 +122,14 @@ static void inotify_cb(uev_t *w, void *arg, int _)
 			if (!should_run(name, '*'))
 				continue;
 
-			run_job(arg, name);
+			num += !!run_job(arg, name);
 		}
 
 		p += sizeof(struct inotify_event) + event->len;
 	}
+
+	if (num)
+		uev_timer_set(&retry_watcher, retry, 0);
 }
 
 static void netlink_cb(uev_t *w, void *arg, int _)
@@ -197,28 +155,20 @@ static void netlink_cb(uev_t *w, void *arg, int _)
 	run_queue(arg);
 }
 
-int logmask_from_str(const char *str)
-{
-	const CODE *code;
-
-	for (code = prioritynames; code->c_name; code++)
-		if (!strcmp(str, code->c_name))
-			return LOG_UPTO(code->c_val);
-
-	return -1;
-}
-
-static int usage(char *arg0, int rc)
+static int usage(const char *arg0, int rc)
 {
 	printf("Usage:\n"
-	       "  %s [-dh] [-l LVL] QUEUE\n"
+	       "  %s [-dh] [-l LVL] [-t SEC] QUEUE\n"
 	       "Options:\n"
-	       "  -d        Log to stderr as well\n"
-	       "  -h        This help text\n"
+	       "  -d      Log to stderr as well\n"
+	       "  -h      This help text\n"
 	       "  -l LVL  Set log level: none, err, warn, notice*, info, debug\n"
+	       "  -t SEC  Retry timer in seconds [10, 604800], default: %d\n"
 	       "\n"
-	       "Runs jobs from QUEUE, re-runs failing jobs on route changes or SIGHUP.\n"
-	       "Use SIGUSR1 to toggle debug messages at runtime.\n", arg0);
+	       "Run jobs from QUEUE.  Triggers on inotify of new jobs, route changes, and\n"
+               "retries failing jobs every minute until the queue has been emtied.\n"
+	       "Use SIGHUP to trigger a manual retry.\n"
+	       "Use SIGUSR1 to toggle debug messages at runtime.\n", arg0, RETRY_TIMER);
 
 	return rc;
 }
@@ -236,7 +186,7 @@ int main(int argc, char *argv[])
 	uev_ctx_t ctx;
 	int rc = 0;
 
-	while ((c = getopt(argc, argv, "dhl:")) != EOF) {
+	while ((c = getopt(argc, argv, "dhl:t:")) != EOF) {
 		switch (c) {
 		case 'd':
 			logopt |= LOG_PERROR;
@@ -250,6 +200,13 @@ int main(int argc, char *argv[])
 				return usage(argv[0], 1);
 			}
 			break;
+		case 't':
+			retry = atoi(optarg);
+			if (retry < 10 || retry > 604800) {
+				fprintf(stderr, "Invalid value %d, accepted [10, 604800]", retry);
+				return 1;
+			}
+			break;
 		default:
 			return usage(argv[0], 1);
 		}
@@ -259,6 +216,7 @@ int main(int argc, char *argv[])
 		return usage(argv[0], 1);
 
 	queue = argv[optind];
+	retry *= 1000;
 
 	if (access(queue, X_OK)) {
 		fprintf(stderr, "Cannot find job directory %s, errno %d: %s\n",
@@ -312,6 +270,14 @@ int main(int argc, char *argv[])
 		rc = 1;
 		goto done;
 	}
+
+	/* Initial delay of 1 sec, lots of other events happening at boot. */
+	if (uev_timer_init(&ctx, &retry_watcher, timer_cb, queue, 1000, 0) == -1) {
+		err("uev_timer_init (1000, %d)", retry);
+		rc = 1;
+		goto done;
+	}
+
 	if (uev_signal_init(&ctx, &sigusr1_watcher, toggle_debug, NULL, SIGUSR1) == -1) {
 		err("uev_signal_init (sigusr1)");
 		rc = 1;
@@ -330,7 +296,6 @@ int main(int argc, char *argv[])
 		goto done;
 	}
 
-	run_queue(queue);
 	if (uev_run(&ctx, 0) == -1) {
 		err("uev_run");
 		rc = 1;
