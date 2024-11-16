@@ -187,6 +187,10 @@ create()
 	logging="--log-driver k8s-file --log-opt path=/run/containers/$name.fifo"
     fi
 
+    # Pull quietly and don't retry on failure, we use execd for this,
+    # or user retry manually when run interactively, we may have other
+    # containers waiting to start that have an image locally already.
+    # Use --retry=0 with Podman 5.0 or later.
     args="$args --read-only --replace --quiet --cgroup-parent=containers $caps"
     args="$args --restart=$restart --systemd=false --tz=local $privileged"
     args="$args $vol $mount $hostname $entrypoint $env $port $logging"
