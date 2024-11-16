@@ -42,9 +42,9 @@ static int add(const char *name, struct lyd_node *cif)
 
 	/* Stop any running container gracefully so it releases its IP addresses. */
 	fprintf(fp, "#!/bin/sh\n"
-		"container stop %s   >/dev/null\n" /* Silence "not running" on upgrade */
-		"container delete %s >/dev/null\n" /* Silence any hashes when deleting */
-		"container", name, name);
+		"container --quiet stop %s   >/dev/null\n" /* Silence "not running" on upgrade */
+		"container --quiet delete %s >/dev/null\n" /* Silence any hashes when deleting */
+		"container --quiet", name, name);
 
 	LYX_LIST_FOR_EACH(lyd_child(cif), node, "dns")
 		fprintf(fp, " --dns %s", lyd_get_value(node));

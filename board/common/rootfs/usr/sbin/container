@@ -213,7 +213,7 @@ create()
     fi
 
     # shellcheck disable=SC2048
-    log "Calling podman create --name $name --conmon-pidfile=$pidfn $args $image $*"
+    log "podman create --name $name --conmon-pidfile=$pidfn $args $image $*"
     if podman create --name "$name" --conmon-pidfile="$pidfn" $args "$image" $*; then
 	[ -n "$quiet"  ] || log "Successfully created container $name from $image"
 	[ -n "$manual" ] || start "$name"
