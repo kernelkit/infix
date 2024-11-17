@@ -1,1 +1,13 @@
-less
+#!/bin/sh
+# -d ;; suppress error message "the terminal is dumb"
+# -F :: exit if the entire file can be displayed on the first screen
+# -I :: Ignore case, even for patterns
+# -K :: exit immediately when an interrupt character (usually ^C) is typed
+# -R :: Almost raw control charachters, only ANSI color escape sequences and
+#       OSC 8 hyperlink sequences are output.  Allows veritcal scrolling
+# -S :: lines longer than the screen width are chopped (truncated), not wrapped
+# -X :: No termcap initialization and deinitialization set to the terminal.
+#       This is what leaves the contents of the output on screen.
+
+export LESS="-P %f (press h for help or q to quit)"
+less -RISKd -FX "$@"
