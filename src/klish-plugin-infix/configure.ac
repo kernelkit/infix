@@ -50,9 +50,6 @@ AS_IF([test "x$with_shell" != "xno"], [
 test "x$prefix" = xNONE && prefix=$ac_default_prefix
 test "x$exec_prefix" = xNONE && exec_prefix='${prefix}'
 
-KLISHLIBDIR=`eval echo $libdir/klish`
-AC_SUBST(KLISHLIBDIR)
-
 KLISHCONFDIR=`eval echo $sysconfdir/klish`
 AC_SUBST(KLISHCONFDIR)
 
