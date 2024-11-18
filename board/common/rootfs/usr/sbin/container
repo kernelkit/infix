@@ -1,6 +1,7 @@
 #!/bin/sh
 DOWNLOADS=/var/lib/containers/oci
 BUILTIN=/lib/oci
+TMPDIR=/var/tmp
 checksum=""
 all=""
 env=""
@@ -123,6 +124,8 @@ unpack_archive()
 	    exit 1
 	fi
     else
+	cd "$TMPDIR" || log "Error: failed cd $TMPDIR, wiill use $(pwd) for OCI archive extraction."
+
 	index=$(tar tf "$file" |grep index.json)
 	if [ -z "$index" ]; then
 	    log "Error: invalid OCI archive, cannot find index.json in $file"
@@ -131,6 +134,7 @@ unpack_archive()
 
 	[ -n "$quiet" ] || log "Extracting OCI archive $file ..."
         tar xf "$file" || (log "Error: failed unpacking $file in $(pwd)"; exit 1)
+	extracted=true
     fi
 
     dir=$(dirname "$index")
@@ -145,6 +149,12 @@ unpack_archive()
 
     [ -n "$quiet" ] || log "Loading OCI image $dir ..."
     podman load -qi "$dir"        >/dev/null
+
+    # Clean up after ourselves
+    if [ -n "$extracted" ]; then
+	log "Cleaning up extracted $dir"
+	rm -rf "$dir"
+    fi
 
     # Rename image from podman default $dir:latest
     if [ -n "$name" ]; then
