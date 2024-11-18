@@ -13,7 +13,9 @@ CURIOS_HTTPD_LICENSE_FILES = COPYING
 define CURIOS_HTTPD_INSTALL_TARGET_CMDS
 	mkdir -p $(TARGET_DIR)/lib/oci
 	cp $(CURIOS_HTTPD_DL_DIR)/$(CURIOS_HTTPD_SOURCE) \
-		$(TARGET_DIR)/lib/oci/$(notdir $(@D)).tar.gz
+		$(TARGET_DIR)/lib/oci/$(CURIOS_HTTPD_NAME)-$(CURIOS_HTTPD_VERSION).tar.gz
+	ln -sf $(CURIOS_HTTPD_NAME)-$(CURIOS_HTTPD_VERSION).tar.gz \
+		$(TARGET_DIR)/lib/oci/$(CURIOS_HTTPD_NAME)-latest.tar.gz
 endef
 
 $(eval $(generic-package))
