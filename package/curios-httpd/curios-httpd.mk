@@ -4,7 +4,7 @@
 #
 ################################################################################
 
-CURIOS_HTTPD_VERSION = v24.05.0
+CURIOS_HTTPD_VERSION = v24.11.0
 CURIOS_HTTPD_SOURCE = curios-httpd-oci-$(GO_GOARCH)-$(CURIOS_HTTPD_VERSION).tar.gz
 CURIOS_HTTPD_SITE = https://github.com/kernelkit/curiOS/releases/download/$(CURIOS_HTTPD_VERSION)
 CURIOS_HTTPD_LICENSE = GPL
