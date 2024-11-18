@@ -1,4 +1,12 @@
 #!/bin/sh
+# This script can be used to start, stop, create, and delete containers.
+# It is primarily used by confd to create jobs for execd to run from its
+# /run/containers/queue, but it can also be used manually.
+#
+# NOTE: when creating/deleting containers, remember 'initctl reload' to
+#       activate the changes!  When called by confd, via execd, this is
+#       already handled.
+#
 DOWNLOADS=/var/lib/containers/oci
 BUILTIN=/lib/oci
 TMPDIR=/var/tmp
@@ -231,6 +239,8 @@ create()
     if podman create --name "$name" --conmon-pidfile="$pidfn" $args "$image" $*; then
 	[ -n "$quiet"  ] || log "Successfully created container $name from $image"
 	[ -n "$manual" ] || start "$name"
+	# Should already be enabled by confd (this is for manual use)
+	initctl -bnq enable "container@${name}.conf"
 	exit 0
     fi
 
@@ -248,6 +258,9 @@ delete()
 	echo "  container delete NAME"
 	exit 1
     fi
+
+    # Should already be disabled (and stopped) by confd (this is for manual use)
+    initctl -bnq disable "container@${name}.conf"
 
     podman rm -vif "$name" >/dev/null 2>&1
     [ -n "$quiet" ] || log "Container $name has been removed."
