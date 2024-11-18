@@ -177,34 +177,48 @@
 
 <COMMAND name="show" help="Show system status and configuration files" mode="switch">
   <COMMAND name="container" help="Show container status">
-    <ACTION sym="script">doas container show</ACTION>
+    <ACTION sym="script" in="tty" out="tty" interrupt="true">
+      doas container show |pager
+    </ACTION>
 
     <SWITCH name="optional" min="0">
       <COMMAND name="all" help="Show all containers (default only running)">
         <ACTION sym="script">doas container -a show</ACTION>
       </COMMAND>
       <COMMAND name="log" help="Show container log (alias for show log container)">
-	<ACTION sym="script">doas -u $USER cat /log/container</ACTION>
+	<ACTION sym="script" in="tty" out="tty" interrupt="true">
+	  doas -u $USER cat /log/container |pager
+	</ACTION>
       </COMMAND>
       <COMMAND name="images" help="Show container images">
         <ACTION sym="script">doas container show images</ACTION>
         <SWITCH name="optional" min="0">
           <COMMAND name="all" help="All images (default hides intermediate imaages)">
-            <ACTION sym="script">doas container -a show images</ACTION>
+            <ACTION sym="script" in="tty" out="tty" interrupt="true">
+	      doas container -a show images |pager
+	    </ACTION>
           </COMMAND>
         </SWITCH>
       </COMMAND>
       <COMMAND name="oci" help="Show OCI archives (for loading as image)">
-        <ACTION sym="script">doas container list oci</ACTION>
+        <ACTION sym="script" in="tty" out="tty" interrupt="true">
+	  doas container list oci |pager
+	</ACTION>
       </COMMAND>
       <COMMAND name="stat" help="Show continuous containers stats (Ctrl-C aborts)">
-	<ACTION sym="script">doas container stat</ACTION>
+	<ACTION sym="script" in="tty" out="tty" interrupt="true">
+	  doas container stat
+	</ACTION>
       </COMMAND>
       <COMMAND name="usage" help="Show container resource usage">
-        <ACTION sym="script">doas podman system df -v</ACTION>
+        <ACTION sym="script" in="tty" out="tty" interrupt="true">
+	  doas podman system df -v
+	</ACTION>
       </COMMAND>
       <COMMAND name="volumes" help="Show container volumes">
-        <ACTION sym="script">doas container show volumes</ACTION>
+        <ACTION sym="script" in="tty" out="tty" interrupt="true">
+	  doas container show volumes |pager
+	</ACTION>
       </COMMAND>
     </SWITCH>
   </COMMAND>
