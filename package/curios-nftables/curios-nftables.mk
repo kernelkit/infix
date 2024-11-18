@@ -4,7 +4,7 @@
 #
 ################################################################################
 
-CURIOS_NFTABLES_VERSION = v24.05.0
+CURIOS_NFTABLES_VERSION = v24.11.0
 CURIOS_NFTABLES_SOURCE = curios-nftables-oci-$(GO_GOARCH)-$(CURIOS_NFTABLES_VERSION).tar.gz
 CURIOS_NFTABLES_SITE = https://github.com/kernelkit/curiOS/releases/download/$(CURIOS_NFTABLES_VERSION)
 CURIOS_NFTABLES_LICENSE = GPL
