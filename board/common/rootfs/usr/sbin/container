@@ -11,6 +11,8 @@ DOWNLOADS=/var/lib/containers/oci
 BUILTIN=/lib/oci
 TMPDIR=/var/tmp
 checksum=""
+extracted=
+dir=""
 all=""
 env=""
 port=""
@@ -19,6 +21,21 @@ force=
 log()
 {
     logger -I $PPID -t container -p local1.notice -- "$*"
+}
+
+err()
+{
+    rc=$1; shift
+    logger -I $PPID -t container -p local1.err -- "Error: $*"
+
+    if [ -n "$extracted" ]; then
+	if [ -d "$TMPDIR/$dir" ]; then
+	    log "Cleaning up extracted $dir"
+	    rm -rf "$dir"
+	fi
+    fi
+
+    [ "$rc" -eq 0 ] || exit "$rc"
 }
 
 check()
@@ -120,28 +137,25 @@ unpack_archive()
 	elif [ -e "$BUILTIN/$file" ]; then
 	    file="$BUILTIN/$file"
 	else
-	    log "Error: cannot find OCI archive $file in search path."
-	    exit 1
+	    err 1 "cannot find OCI archive $file in search path."
 	fi
     fi
 
     if [ -d "$file" ]; then
 	index=$(find "$file" -name index.json)
 	if [ -z "$index" ]; then
-	    log "Error: cannot find index.json in OCI image $file"
-	    exit 1
+	    err 1 "cannot find index.json in OCI image $file"
 	fi
     else
-	cd "$TMPDIR" || log "Error: failed cd $TMPDIR, wiill use $(pwd) for OCI archive extraction."
+	cd "$TMPDIR" || err 0 "failed cd $TMPDIR, wiill use $(pwd) for OCI archive extraction."
 
 	index=$(tar tf "$file" |grep index.json)
 	if [ -z "$index" ]; then
-	    log "Error: invalid OCI archive, cannot find index.json in $file"
-	    exit 1
+	    err 1 "invalid OCI archive, cannot find index.json in $file"
 	fi
 
 	[ -n "$quiet" ] || log "Extracting OCI archive $file ..."
-        tar xf "$file" || (log "Error: failed unpacking $file in $(pwd)"; exit 1)
+        tar xf "$file"  || err 1 "failed unpacking $file in $(pwd)"
 	extracted=true
     fi
 
@@ -151,7 +165,7 @@ unpack_archive()
             name="$dir"
         fi
         sanitized_dir=$(echo "$dir" | cut -d':' -f1)
-        mv "$dir" "$sanitized_dir" || (log "Error: failed renaming $dir to $sanitized_dir"; exit 1)
+        mv "$dir" "$sanitized_dir" || err 1 "failed renaming $dir to $sanitized_dir"
         dir="$sanitized_dir"
     fi
 
@@ -244,8 +258,7 @@ create()
 	exit 0
     fi
 
-    log "Error: failed creating container $name, please check the configuration."
-    exit 1
+    err 1 "failed creating container $name, please check the configuration."
 }
 
 delete()
@@ -272,8 +285,7 @@ waitfor()
     while [ ! -f "$1" ]; do
 	_=$((timeout -= 1))
 	if [ $timeout -le 0 ]; then
-	    log "Timeout waiting for $1, aborting!"
-	    exit 1
+	    err 1 "timed out waiting for $1, aborting!"
 	fi
 	sleep 1;
     done
@@ -712,8 +724,7 @@ case $cmd in
 		while running "$name"; do
 		    _=$((timeout -= 1))
 		    if [ $timeout -le 0 ]; then
-			log "Timeout waiting for container $1 to stop before restarting it."
-			exit 1
+			err 1 "timed out waiting for container $1 to stop before restarting it."
 		    fi
 		    sleep 1
 		done
