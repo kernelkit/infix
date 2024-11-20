@@ -492,10 +492,12 @@ def add_ospf(control_protocols):
                 neighbor = {}
                 neighbor["neighbor-router-id"] = neigh["neighborIp"]
                 neighbor["address"] = neigh["ifaceAddress"]
-                neighbor["dr-router-id"] = neigh["routerDesignatedId"]
-                neighbor["bdr-router-id"] = neigh["routerDesignatedBackupId"]
                 neighbor["dead-timer"] = neigh["routerDeadIntervalTimerDueMsec"]
                 neighbor["state"] = frr_to_ietf_neighbor_state(neigh["nbrState"])
+                if neigh.get("routerDesignatedId"):
+                    neighbor["dr-router-id"] = neigh["routerDesignatedId"]
+                if neigh.get("routerDesignatedBackupId"):
+                    neighbor["bdr-router-id"] = neigh["routerDesignatedBackupId"]
                 neighbors.append(neighbor)
 
             interface["ietf-ospf:neighbors"] = {}
