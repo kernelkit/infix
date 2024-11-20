@@ -1,0 +1,58 @@
+#!/bin/sh
+# User-friendly wrapper for sysrepocfg
+# TODO: add import/export, copy, ...
+
+# Edit YANG binary types using sysrepo, base64, and duct tape.
+edit()
+{
+    xpath=$1
+    if [ -z "$xpath" ]; then
+	echo "Usage: cfg edit \"/full/xpath/to/binary/leaf\""
+	exit 1
+    fi
+
+    if tmp=$(sysrepocfg -G "$xpath"); then
+	file=$(mktemp)
+
+	echo "$tmp" | base64 -d > "$file"
+	if /usr/bin/editor "$file"; then
+	    tmp=$(base64 -w0 < "$file")
+	    sysrepocfg -S "$xpath" -u "$tmp"
+	fi
+
+	rm -f "$file"
+    else
+	echo "Failed to retrieve value for $xpath"
+	exit 1
+    fi
+}
+
+usage()
+{
+    echo "Usage:"
+    echo "    cfg CMD [ARG]"
+    echo
+    echo "Command:"
+    echo "    edit XPATH   Edit YANG binary type"
+    echo "    help         This help text"
+    echo
+    echo "As a backwards compatible fallback, this script forwards"
+    echo "all other commands as options to sysrepocfg."
+    echo
+
+    exit 0
+}
+
+cmd=$1; shift
+case $cmd in
+    edit)
+	edit "$1"
+	;;
+    help)
+	usage
+	;;
+    *)
+	set -- "$cmd" "$@"
+	exec sysrepocfg -f json "$@"
+	;;
+esac

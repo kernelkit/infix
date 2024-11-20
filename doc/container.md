@@ -20,6 +20,9 @@ Containers in Infix
   * [Application Container: ntpd](#application-container-ntpd)
 * [Advanced](#advanced)
   * [Running Host Commands From Container](#running-host-commands-from-container)
+* [Container Requirements](#container-requirements)
+  * [Advanced Users](#advanced-users)
+
 
 Introduction
 ------------
@@ -36,10 +39,11 @@ All network specific settings are done using the IETF interfaces YANG
 model, with augments for containers to ensure smooth integration with
 container networking in podman.
 
-> **Note:** even though the `podman` command can be used directly from a
-> shell prompt, we strongly recommend using the CLI commands instead.
-> They employ the services of a wrapper `container` script which handles
-> the integration of containers in the system.
+> [!IMPORTANT]
+> Even though the `podman` command can be used directly from a shell
+> prompt, we strongly recommend using the CLI commands instead.  They
+> employ the services of a wrapper `container` script which handles the
+> integration of containers in the system.
 
 
 Caution
@@ -83,26 +87,26 @@ The former is useful mostly for testing, or running single commands in
 an image.  It is a wrapper for `podman run -it --rm ...`, while the
 latter is a wrapper and adaptation of `podman create ...`.
 
-The second create a container with a semi-persistent writable layer that
-survives container restarts and host system restarts.  However, if you
-change the container configuration or upgrade the image (see below), the
-container will be recreated and the writable layer is lost.  This is why
-it is recommended to set up a named volume for directories, or use file
-[Content Mounts](#content-mounts), in your container if you want truly
-persistent content.
+The second creates a read-only container that is automatically started
+at every boot.  When non-volatile storage is needed, data stored in a
+volume is persisted until explicitly removed from the configuration,
+i.e., across host and container reboots and upgrades.
 
-In fact, in many cases the best way is to create a `read-only` container
-and use file mounts and volumes only for the critical parts.  Podman
-ensures (using tmpfs) `read-only` containers still have writable
-directories for certain critical file system paths: `/dev`, `/dev/shm`,
-`/run`, `/tmp`, and `/var/tmp`.  Meaning, what you most often need is
-writable volumes for `/var/lib` and `/etc`, or only file mounts for a
-few files in `/etc`.  The actual needs depend on the container image and
-application to run.
+Another option is [Content Mounts](#content-mounts), where the content
+of a file mounted into the container is kept along with the container
+configuration in the device's `startup-config`.
 
-> **Note:** when running containers from public registries, double-check
-> that they support the CPU architecture of your host system.  Remember,
-> unlike virtualization, containers reuse the host's CPU and kernel.
+Podman ensures (using tmpfs) all containers have writable directories
+for certain critical file system paths: `/dev`, `/dev/shm`, `/run`,
+`/tmp`, and `/var/tmp`.  Meaning, what you most often need is writable
+volumes for `/var/lib` and `/etc`, or only file mounts for a few files
+in `/etc`.  The [actual requirements](#container-requirements) depend on
+your container image and application to run.
+
+> [!IMPORTANT]
+> When running containers from public registries, double-check that they
+> support the CPU architecture of your host system.  Remember, unlike
+> virtualization, containers reuse the host's CPU and kernel.
 
 
 <img align="right" src="img/docker-hello-world.svg" alt="Hello World" width=360>
@@ -168,13 +172,20 @@ The CLI help shows:
         oci-archive:/lib/oci/archive -- Use archive:latest from OCI archive
                                         May be in .tar or .tar.gz format
 
+        Additionally, the following URIs are also supported for setups
+        that do not use a HUB or similar.  Recommend using 'checksum'!
+
+        ftp://addr/path/to/archive   -- Downloaded using wget
+        http://addr/path/to/archive  -- Downloaded using curl
+        https://addr/path/to/archive -- Downloaded using curl
+
         Note: if a remote repository cannot be reached, the creation of the
               container will be put on a queue that retries pull every time
               there is a route change in the host's system.
 
-> **Note::** the built-in help system in the CLI is generated from the
-> YANG model, so the same information is also available for remote
-> NETCONF users.
+> [!TIP]
+> The built-in help system in the CLI is generated from the YANG model,
+> so the same information is also available for remote NETCONF users.
 
 The two most common variants are `docker://` and `oci-archive:/`.
 
@@ -217,20 +228,45 @@ mind.
     -rw-r--r--    1 root     root       7261785 Mar 27 14:22 curios-oci-amd64.tar.gz
     drwx------    6 frr      frr           4096 Mar 27 11:57 frr/
 
-Importing the image into podman can be done either from the CLI
+Importing the image into Podman can be done either from the CLI
 admin-exec context ...
 
     admin@example:/var/tmp$ cli
     admin@example:/> container load /var/tmp/curios-oci-amd64.tar.gz name curios:edge
 
-> The `name curios:edge` is the tag you give the imported
-> (raw) archive which you can then reference in your container image
-> configuration: `set image curios:edge`.
+> [!TIP]
+> The `name curios:edge` is the tag you give the imported (raw) archive
+> which you can then reference in your container image configuration:
+> `set image curios:edge`.
 
 ... or by giving the container configuration the full path to the OCI
 archive, which helps greatly with container upgrades (see below):
 
     admin@example:/config/container/system/> set image oci-archive:/var/tmp/curios-oci-amd64.tar.gz
+
+**Checksum Example:**
+
+    admin@example:/> configure
+    admin@example:/config/> edit container sys
+    admin@example:/config/container/sys/> set hostname sys
+    admin@example:/config/container/sys/> set image ftp://192.168.122.1/curios-oci-amd64-v24.05.0.tar.gz
+    admin@example:/config/container/sys/> set checksum
+        md5 sha256 sha512
+    admin@example:/config/container/sys/> set checksum sha256 4f01077036527498ed910f1a3e80645ae3eff629d10043cf80ebc6850c99c629
+    admin@example:/config/container/sys/> leave
+    admin@example:/> copy running-config startup-config
+    admin@example:/> show container
+    CONTAINER ID  IMAGE                                             COMMAND               CREATED         STATUS        PORTS       NAMES
+    b02e945c43c9  localhost/curios-oci-amd64-v24.05.0:latest                              5 seconds ago   Up 5 seconds              sys
+
+    admin@example:/> show log
+    ...
+    Nov 20 07:24:56 infix container[5040]: Fetching ftp://192.168.122.1/curios-oci-amd64-v24.05.0.tar.gz
+    Nov 20 07:24:56 infix container[5040]: curios-oci-amd64-v24.05.0.tar.gz downloaded successfully.
+    Nov 20 07:24:56 infix container[5040]: curios-oci-amd64-v24.05.0.tar.gz checksum verified OK.
+    Nov 20 07:24:57 infix container[5040]: Cleaning up extracted curios-oci-amd64-v24.05.0
+    Nov 20 07:24:57 infix container[5040]: podman create --name sys --conmon-pidfile=/run/container:sys.pid --read-only --replace --quiet --cgroup-parent=containers  --restart=always --systemd=false --tz=local --hostname sys --log-driver k8s-file --log-opt path=/run/containers/sys.fifo --network=none curios-oci-amd64-v24.05.0
+    Nov 20 07:24:57 infix container[3556]: b02e945c43c9bce2c4be88e31d6f63cfdb1a3c8bdd02179376eb059a49ae05e4
 
 
 Upgrading a Container Image
@@ -240,21 +276,24 @@ Upgrading a Container Image
 The applications in your container are an active part of the system as a
 whole, so make it a routine to keep your container images up-to-date!
 
-> **Note:** the default writable layer is lost when upgrading the image.
-> Use named volumes for content that you want to persist across upgrades.
+Containers are created at first setup and at every boot.  If the image
+exists in the file system it is reused -- i.e., an image pulled from a
+remote registry is not fetched again.
 
-All container configurations are locked to the image hash at the time of
-first download, not just ones that use an `:edge` or `:latest` tag.  An
-upgrade of containers using versioned images is more obvious -- update
-the configuration to use the new `image:tag` -- the latter is a bit
-trickier.  Either remove the configuration and recreate it (leave/apply
-the changes between), or use the admin-exec level command:
+To upgrade a versioned image:
+ - update your `running-config` to use the new `image:tag`
+ - `leave` to activate the change, if you are in the CLI
+ - Podman pulls the new image in the background
+ - Your container is recreated with the new image
+ - The container is started
+
+For "unversioned" images, e.g., images using a `:latest` or `:edge` tag,
+use the following CLI command (`NAME` is the name of your container):
 
     admin@example:/> container upgrade NAME
 
-Where `NAME` is the name of your container.  This command stops the
-container, does `container pull IMAGE`, and then recreates it with the
-new image.  Upgraded containers are automatically restarted.
+This stops the container, does `container pull IMAGE`, and recreates it
+with the new image.  Upgraded containers are automatically restarted.
 
 **Example using registry:**
 
@@ -279,12 +318,30 @@ the upgrade command as
 	Upgrading container system with local archive: oci-archive:/var/tmp/curios-oci-amd64.tar.gz ...
 	7ab4a07ee0c6039837419b7afda4da1527a70f0c60c0f0ac21cafee05ba24b52
 
+OCI archives can also be fetched from ftp/http/https URL, in that case
+the upgrade can be done the same way as a registry image (above).
+
+> [!TIP]
+> Containers running from OCI images embedded in the operating system,
+> e.g., `/lib/oci/mycontainer.tar.gz`, always run from the version in
+> the operating system.  To upgrade, install the new container image at
+> build time, after system upgrade the container is also upgraded.  The
+> system unpacks and loads the OCI images into Podman every boot, which
+> ensures the running container always has known starting state.
+>
+> **Example:** default builds of Infix include a couple of OCI images
+> for reference, one is `/lib/oci/curios-nftables-v24.11.0.tar.gz`, but
+> there is also a symlink called `curios-nftables-latest.tar.gz` in the
+> same directory, which is what the Infix regression tests use in the
+> image configuration of the container.  This is what enables easy
+> upgrades of the container along with the system itself.
+
 
 Capabilities
 -------------
 
 An unprivileged container works for almost all use-cases, but there are
-occasions where they are too restricted and users being looking for the
+occasions where they are too restricted and users start looking for the
 `privileged` flag.  Capabilities offers a middle ground.
 
 For example, a system container from which `ping` does not work:
@@ -300,9 +357,9 @@ For example, a system container from which `ping` does not work:
 	...
 
 Infix supports a subset of all [capabilities][6] that are relevant for
-containers.  Please note, that this is and advanced topic and will
-require time and analysis of your container application to figure out
-which capabilities you need.
+containers.  Please note, that this is an advanced topic that require
+time and analysis of your container application to figure out which
+capabilities you need.
 
 
 Networking and Containers
@@ -312,9 +369,16 @@ By default, unlike other systems, persistent[^1] containers have no
 networking enabled.  All network access has to be set up explicitly.
 Currently two types of of container networks are supported:
 
- - `host`: one end of a VETH pair, or a physical Ethernet port
+ - `host`: an managed host interface, e.g., one end of a VETH pair,
+   or even a physical interface
  - `bridge`: an IP masquerading bridge
 
+In the former the interface is delegated to (moved into) the container,
+while in the latter a VETH pair is automatically created by Podman and
+one end delegated to the container, while the other end is assigned to
+the bridge (see the next section).
+
+> [!TIP]
 > For more information on VETH pairs, see the [Networking Guide][0].
 
 
@@ -347,10 +411,12 @@ have to set manually:
     admin@example:/config/interface/docker0/> set type bridge
     admin@example:/config/interface/docker0/> set container-network type bridge
 
-> **Note:** when doing the same operation over NETCONF there is no
-> inference, so all the "magic" settings need to be defined.  This
-> makes the CLI very useful for first setup and then extracting the
-> resulting XML from the shell using the `cfg -X` command.
+> [!IMPORTANT]
+> When configuring the system via an API such as NETCONF or RESTCONF, no
+> settings are inferred.  Instead it is up to the caller to fully define
+> the desired setup.  This makes the CLI very useful for first setup and
+> then extracting the resulting XML from the shell using the `cfg -X`
+> command.
 
 We have to declare the interface as a container network, ensuring the
 interface cannot be used by the system for any other purpose.  E.g., a
@@ -419,8 +485,12 @@ example.
 
 The network `option` setting is available also for this case, but only
 the `interface_name=foo0` option works.  Which is still very useful.  To
-change the MAC address, you need to use the `custom-phys-address` in the
-general network settings.
+set:
+
+ - IP address, use IPv4/IPv6 settings in the interface settings
+ - MAC address, to use the `custom-phys-address` in the interface settings
+
+For an example of both, see the next section.
 
 [^3]: Something which the container bridge network type does behind the
     scenes with one end of an automatically created VETH pair.
@@ -447,6 +517,7 @@ line where we declare the `ntpd` end as a container network interface:
     admin@example:/config/interface/ntpd/> set custom-phys-address static 00:c0:ff:ee:00:01
     admin@example:/config/interface/ntpd/> set container-network
 
+> [!TIP]
 > Notice how you can also set a custom MAC address at the same time.
 
 Adding the interface to the container is the same as before, but since
@@ -456,6 +527,7 @@ can take a bit of a shortcut.
     admin@example:/config/container/ntpd/> set network interface ntpd
     admin@example:/config/container/ntpd/> leave
 
+> [!TIP]
 > Use the `set network interface ntpd option interface_name=foo0` to set
 > the name of the interface inside the container to `foo0`.
 
@@ -478,6 +550,7 @@ We start by adding the second VETH pair:
     admin@example:/config/interface/veth1a/> set veth peer veth1
     admin@example:/config/interface/veth1a/> set ipv4 address 192.168.1.2 prefix-length 24
 
+> [!NOTE]
 > The LAN bridge (br1) in this example has IP address 192.168.1.1.
 
 When a container has multiple host interfaces it can often be useful to
@@ -529,29 +602,40 @@ file system:
     admin@example:/config/container/system/mount/leds> end
     admin@example:/config/container/system/>
 
-Sometimes *volumes* are a better fit.  A volume is an automatically
+Any type of file can be *bind mounted* into the container, just watch
+out for permissions though.  In the example above, `/sys/class/leds` is
+not writable from a container unless it runs in *privileged* mode.  For
+plain configuration files you get more freedom, and your container can
+rely on, e.g., *inotify* events to trigger reloading its services when
+you change the file on the host.
+
+So it depends on the container, and indeed your overall setup, what to
+use.  An intriguing option is *Content Mounts*, which when changed also
+trigger a container restart.
+
+Other times *volumes* are a better fit.  A volume is an automatically
 created read-writable entity that follows the life of your container.
 
     admin@example:/config/container/ntpd/> set volume varlib target /var/lib
 
-Volumes survive reboots and upgrading of the base image, unlike the
-persistent writable layer you get by default, which does not survive
-upgrades.  The volume is created by podman when the container first
-starts up, unlike a regular bind mount it synchronizes with the contents
-of the underlying container image's path on the first start.  I.e.,
-"bind-mount, if empty: then rsync".
+Volumes are persistent across both reboots and upgrades of the base
+image.  They are created by Podman when the container first starts up,
+unlike a regular bind mount it synchronizes with the contents of the
+underlying container image's path at first use.  I.e., "bind-mount, if
+empty: then rsync".
 
+> [!NOTE]
 > Infix support named volumes (only), and it is not possible to share a
 > volume between containers.  All the tricks possible with volumes may
 > be added in a later release.
 
 ### Content Mounts
 
-Content mount is a special type of where the file contents for the
-container is stored alongside the container configuration.  This can be
-very useful when deploying similar systems at multiple sites.  When the
-host loads its `startup-config` (or even `factory-config`) a temporary
-file is created using the decoded base64 data from the `content` node.
+Content mounts are a special type of file mount where the file contents
+is stored with the container configuration.  This can be very useful
+when deploying similar systems at multiple sites.  When the host loads
+its `startup-config` (or even `factory-config`) a temporary file is
+created using the decoded base64 data from the `content` node.
 
     admin@example:/config/container/ntpd/> edit mount ntpd.conf
     admin@example:/config/container/ntpd/mount/ntpd.conf> text-editor content
@@ -564,9 +648,10 @@ The editor is a small [Emacs clone called Mg][2], see the built-in help
 text, or press Ctrl-x Ctrl-c to exit and save.  When the editor exits
 the contents are base64 encoded and stored in the candidate datastore.
 
-> **Note:** since these files are always recreated when the host is
-> restarted, changes made by the container are not preserved, or saved
-> back to the host's startup-config even if the read-only option is off.
+> [!NOTE]
+> Since these files are always recreated when the host is restarted,
+> changes made by the container are not preserved, or saved back to the
+> host's startup-config.
 
 Infix has three different text editors available.  For more information,
 see [CLI Text Editor](cli/text-editor.md).
@@ -588,10 +673,11 @@ we created previously:
     admin@example:/config/container/system/> set publish 222:22
     admin@example:/config/container/system/> leave
 
-> **Note:** ensure you have a network connection to the registry.
-> If the image cannot be pulled, creation of the container will be
-> put in a queue and be retried every time there is a change in the
-> routing table, e.g., default route is added.
+> [!NOTE]
+> Ensure you have a network connection to the registry.  If the image
+> cannot be pulled, creation of the container will be put in a queue and
+> be retried every time there is a change in the routing table, e.g.,
+> default route is added, and every 60 seconds.
 
 Provided the image is downloaded successfully, a new `system` container
 now runs behind the docker0 interface, forwarding container port 22 to
@@ -707,12 +793,13 @@ Another *insecure* approach is to access the host system directly,
 bypassing the namespaces that make up the boundary between host and
 container.
 
-> **Security:** Please note, this completely demolishes the isolation
-> barrier between container and host operating system.  It is only
-> suitable in situations where the container serves more as a unit of
-> distribution rather than as a separate component of the system.
-> *Strongly recommended* to use this only in trusted setups!  Consider
-> also limiting the time frame in which this is active!
+> [!CAUTION]
+> Please note, this completely demolishes the isolation barrier between
+> container and host operating system.  It is only suitable in
+> situations where the container serves more as a unit of distribution
+> rather than as a separate component of the system.  *Strongly
+> recommended* to use this only in trusted setups!  Consider also
+> limiting the time frame in which this is active!
 
 First, enable *Privileged* mode, this unlocks the door and allows the
 container to manage resources on the host system.  An example is the
@@ -747,6 +834,58 @@ control an Infix system this way, see [Scripting Infix](scripting.md).
 	it may not be enabled by default in BusyBox.
 
 
+Container Requirements
+----------------------
+
+In addition to general [*best practices*][7] for container images, there
+are a few more things to consider when targeting embedded systems:
+
+ - Ensure the image targets the CPU architecture of the target system,  
+   learn more about [Multi-platform Builds][8]
+ - Follow [best practices for naming and tagging][10], e.g., `:latest` vs `:1.0`
+ - Follow [OCI recommendations and layout][9],  
+   learn more about [OCI and Docker Exporters][6]
+
+If the [Docker documentation][11] is not enough, there are plenty of
+[guides online][12] with examples on how to create your own container
+image.  For the more advanced, please see the next section.
+
+
+### Advanced Users
+
+Most people prefer their system containers small, often based on Alpine
+Linux, or similar, with only a few small applications, including their
+own, and an SSH server perhaps.  For some developers, even this is too
+big, so they roll their own from source.  This section is for you.
+
+Depending on your needs, here is a checklist:
+
+ - you need something that can forward signals, e.g.,
+   - [tini][]
+   - [Bash only][13], or
+   - BusyBox init, a classic most embedded developers know, but read on ...
+ - a system container only need the bare necessities of a system bringup
+   - E.g., BusyBox's init, [but not everything][15]
+   - Some of the networking is set up by Podman and CNI for you, but
+     you may want to run a DHCP client?
+   - Do *not* rename interfaces inside the container, use the dedicated
+     `interface_name` option in the configuration instead
+   - Remember, Podman provides a `tmpfs` for all critical system paths:
+     `/dev`, `/dev/shm`, `/run`, `/tmp`, and `/var/tmp`, so you don't
+     need to clean or set up any of these mount points
+
+Examples using `tini` and BusyBox init are available from the KernelKit
+[curiOS project][14].  It is a small Buildroot based container image
+builder that generates OCI compatible image tarballs without any tools
+from Docker or Podman -- ready-made images exist for testing on both
+AMD64 and ARM64 targets, as well as `docker pull` images and and OCI
+tarballs with SHA256 checksums for integrity checking.
+
+Finally, if you build your own version of Infix, and embed OCI tarballs
+in the system image, then see the tip at the end of [Upgrading a
+Container Image](#upgrading-a-container-image) (above).
+
+
 [0]:      networking.md
 [1]:      https://github.com/kernelkit/infix/blob/main/src/confd/yang/infix-containers.yang
 [2]:      https://github.com/troglobit/mg
@@ -754,4 +893,14 @@ control an Infix system this way, see [Scripting Infix](scripting.md).
 [4]:      system.md#ssh-authorized-key
 [5]:      https://docs.docker.com/build/exporters/oci-docker/
 [6]:      https://man7.org/linux/man-pages/man7/capabilities.7.html
+[7]:      https://docs.docker.com/build/building/best-practices/
+[8]:      https://docs.docker.com/build/building/multi-platform/
+[9]:      https://github.com/opencontainers/image-spec/blob/main/image-layout.md
+[10]:     https://docs.docker.com/get-started/docker-concepts/building-images/build-tag-and-publish-an-image/#tagging-images
+[11]:     https://www.docker.com/blog/multi-arch-images/
+[12]:     https://lemariva.com/blog/2018/05/tutorial-docker-on-embedded-systems-raspberry-pi-beagleboard
+[13]:     https://sirikon.me/posts/0009-pid-1-bash-script-docker-container.html
+[14]:     https://github.com/kernelkit/curiOS/
+[15]:     https://github.com/kernelkit/curiOS/blob/2e4748f65e356b2c117f586cd9420d7ba66f79d5/board/system/rootfs/etc/inittab
+[tini]:   https://github.com/krallin/tini
 [podman]: https://podman.io

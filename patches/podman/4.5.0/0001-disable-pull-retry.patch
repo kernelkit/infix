@@ -1,0 +1,21 @@
+This patch disables the default "podman pull" retry value, which otherwise
+blocks execd from trying other jobs in its queue.
+
+As of podman v5.0.0 a --retry=NUM has been added to the podman create, run,
+and pull commands.  However, CNI is no longer supported, and a lot of other
+breaking changes have been made, e.g., output of podman inspect.  So there's
+a lot of work upgrading.
+
+   -- Joachim
+
+--- a/vendor/github.com/containers/common/libimage/copier.go	2023-04-14 15:28:20.000000000 +0200
++++ b/vendor/github.com/containers/common/libimage/copier.go	2024-11-16 13:05:42.207641898 +0100
+@@ -24,7 +24,7 @@
+ )
+ 
+ const (
+-	defaultMaxRetries = 3
++	defaultMaxRetries = 0
+ 	defaultRetryDelay = time.Second
+ )
+ 

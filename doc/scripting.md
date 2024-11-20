@@ -653,6 +653,70 @@ on interface *e0*.
 ~$ 
 ```
 
+### Change a Binary Setting
+
+A YANG `binary` type setting is Base64 encoded and requires a little bit
+more tricks.  We take the opportunity to showcase a shell script helper:
+`/usr/bin/text-editor`, which works just like the `text-editor` command
+in the CLI, but this one takes an XPath argument to the binary leaf to
+edit.
+
+Stripped down, it looks something like this:
+
+```bash
+if tmp=$(sysrepocfg -G "$xpath"); then
+    file=$(mktemp)
+
+	echo "$tmp" | base64 -d > "$file"
+	if edit "$file"; then
+		tmp=$(base64 -w0 < "$file")
+		sysrepocfg -S "$xpath" -u "$tmp"
+	fi
+
+	rm -f "$file"
+else
+	echo "Failed to retrieve value for $xpath"
+	exit 1
+fi
+```
+
+An example container configuration, with an embedded file that is
+mounted to `/var/www/index.html` can look like this:
+
+```json
+  "infix-containers:containers": {
+    "container": [
+      {
+        "name": "web",
+        "image": "oci-archive:/lib/oci/curios-httpd-latest.tar.gz",
+        "hostname": "web",
+        "network": {
+          "interface": [
+            {
+              "name": "veth-sys0"
+            }
+          ]
+        },
+        "mount": [
+          {
+            "name": "index.html",
+            "content": "PCFET0NUWVBFIGh0bWwjibberish.shortened.down==",
+            "target": "/var/www/index.html"
+          }
+        ]
+      }
+    ]
+  }
+``` 
+
+The command to edit this file, and restart the container with the new
+contents, look like this:
+
+```
+admin@infix:~$ cfg edit "/infix-containers:containers/container[name='web']/mount[name='index.html']/content"
+```
+
+
 ### <a id="backup"></a> Backup Configuration Using sysrepocfg And scp 
 
 Displaying running or startup configuration is possible with

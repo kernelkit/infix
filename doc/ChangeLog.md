@@ -4,6 +4,54 @@ Change Log
 All notable changes to the project are documented in this file.
 
 
+[v24.11.0][] - 2024-11-20
+-------------------------
+
+> [!CAUTION]
+> This release contains breaking changes for container users!  As of
+> v24.11.0, all persistent[^1] containers always run in `read-only` mode
+> and the setting itself is deprecated (kept only for compatibility
+> reasons).  The main reason for this change is to better serve users
+> with embedded container images in their builds of Infix.  I.e., they
+> can now upgrade the OCI image in their build and rely on the container
+> being automatically upgraded when Infix is upgraded, issue #823.  For
+> other users, the benefit is that *all* container configuration changes
+> take when activated, issue #822, without having to perform any tricks.
+
+### Changes
+
+ - Add validation of interface name lengths, (1..15), Linux limit
+ - Add support for ftp/http/https URI:s in container image, with a new
+   `checksum` setting for MD5/SHA256/SHA512 verification, issue #801
+ - Add a retry timer to the background container create service.  This
+   will ensure failing `docker pull` operations from remote images are
+   retrying after 60 seconds, or quicker
+ - CLI base component, `klish`, has been updated with better support for
+   raw terminal mode and alternate quotes (' in addition to ")
+ - Log silenced from container activation messages, only the very bare
+   necessities are now logged, e.g., `podman create` command + status
+ - Factory reset no longer calls `shred` to "securely erase" any files
+   from writable data partitions.  This will speed up the next boot
+   considerably
+
+### Fixes
+
+ - Fix #659: paged output in CLI accessed via console port sometimes
+   causes lost lines, e.g. missing interfaces.  With updated `klish`
+   and the terminal in raw mode, the pager (less) can now control both
+   the horizontal and vertical
+ - Fix #822: adding, or changing, an environment variable to a running
+   container does not take without the `container upgrade NAME` trick
+ - Fix #823: with an OCI image embedded in the Infix image, an existing
+   container in the configuration is not upgraded to the new OCI image
+   with the Infix upgrade.
+ - Frr leaves log files in `/var/tmp/frr` on unclean shutdowns.  This
+   has now been fixed with a "tmpfiles" cleanup of that path at boot
+
+[^1]: I.e., set up in the configuration, as opposed to temporary ones
+    started with `container run` from the CLI admin-exec context.
+
+
 [v24.10.2][] - 2024-11-08
 -------------------------
 
@@ -36,6 +84,7 @@ All notable changes to the project are documented in this file.
 - Styx: override iitod (LED daemon) with a product specific LED script
 
 ### Fixes
+
 - Fix #685: DSA conduit interface not always detected, randomly causing
   major issues configuring systems with multiple switch cores
 - Fix #778: reactivate OpenSSL backend for libssh/libssh2 for NanoPI R2S.
@@ -52,11 +101,13 @@ All notable changes to the project are documented in this file.
 -------------------------
 
 ### Changes
+
  - Add support for interface description, sometimes referred to as
    "ifAlias".  Saved as an Linux interface alias (not `altname`), e.g.,
    `/sys/class/interfaces/veth0a/ifalias`, includes operational support
 
 ### Fixes
+
  - Fix #735: `copy` and `erase` commands missing from CLI, regression
    in Infix v24.10.0 defconfigs, now added as dep. in klish package
 
@@ -71,7 +122,9 @@ Also, heads-up to all downstream users of Infix.  YANG models have been
 renamed to ease maintenance, more info below.
 
 ### Changes
+
 - Software control of port LEDs on the Styx platform has been disabled.
+
   Default driver behavior, green link and green traffic blink, is kept
   as-is, which should mitigate issues reported in #670
 - Correcting documentation on QoS. For packets containing both a VLAN
@@ -107,6 +160,7 @@ renamed to ease maintenance, more info below.
   see <https://kernelkit.org/posts/firewall-container/>
 
 ### Fixes
+
 - Fix #499: add an NACM rule to factory-config, which by default deny
   everyone to read user password hash(es)
 - Fix #663: internal Ethernet interfaces shown in CLI tab completion
@@ -155,6 +209,7 @@ also been added to facilitate site specific adaptations.  Please see the
 documentation for details.
 
 ### Known Issues
+
 - The CLI command `show interfaces` may for some terminal resolutions
   not display all interfaces (on systems with >20 interfaces).  This
   problem is limited to the console port and only occurs for smaller
@@ -163,6 +218,7 @@ documentation for details.
   using the CLI from an SSH session, is not affected.  Issue #659
 
 ### Changes
+
 - Upgrade Buildroot to 2024.02.6 (LTS)
 - Upgrade Linux kernel to 6.6.52 (LTS)
 - Upgrade libyang to 3.4.2
@@ -182,6 +238,7 @@ documentation for details.
   by `mctl` reporting no multicast filtering enabled on bridge
 
 ### Fixes
+
 - Fix #357: EUI-64 based IPv6 autoconf address on bridges seem to be
   randomized.  Problem caused by kernel setting a random MAC before any
   bridge port is added.  Fixed by using the device's base MAC address on
@@ -244,6 +301,7 @@ Finally, the following consumer boards are now fully supported:
  - StarFive VisionFive2 (RISC-V)
 
 ### Changes
+
 - Upgrade Buildroot to 2024.02.5 (LTS)
 - Upgrade Linux kernel to 6.6.46 (LTS)
 - Issue #158: enhance security of factory reset.  All file content
@@ -295,6 +353,7 @@ Finally, the following consumer boards are now fully supported:
   log messages.  See `/var/log/debug` for *all* log messages
 
 ### Fixes
+
 - Fix #274: add missing link/traffic LEDs on NanoPi R2S LAN port
 - Fix #489: ensure all patches are versioned, including Linux kernel
 - Fix #531: creating a new VLAN interface named `vlanN` should not set
@@ -324,6 +383,7 @@ Finally, the following consumer boards are now fully supported:
 > upgrade, but before reboot, a factory reset is required!
 
 ### Changes
+
 - Upgrade Buildroot to 2024.02.3 (LTS)
 - Upgrade Linux kernel to 6.6.34 (LTS)
 - Upgrade bundled curiOS httpd container to v24.05.0
@@ -390,6 +450,7 @@ Finally, the following consumer boards are now fully supported:
 [yescrypt]: https://en.wikipedia.org/wiki/Yescrypt
 
 ### Fixes
+
 - Fix #424: regression, root user can log in without password
 - Fix build regressions in `cn9130_crb_boot_defconfig` caused by upgrade
   to Buildroot v2024.02 and recent multi-key support in RAUC and U-Boot
@@ -421,11 +482,13 @@ Finally, the following consumer boards are now fully supported:
 -------------------------
 
 ### Changes
+
 - Add small delay in U-Boot to allow stopping boot on reference boards
 - Document how to provision the bootloader and Infix on a blank board
 - Use initial hostname from `/etc/os-release` as configuration fallback
 
 ### Fixes
+
 - Fix build regressions in `cn9130_crb_boot_defconfig` caused by upgrade
   to Buildroot v2024.02 and recent multi-key support in RAUC and U-Boot
 - Fix provisioning script after changes to make GRUB loading more robust
@@ -440,6 +503,7 @@ Finally, the following consumer boards are now fully supported:
 -------------------------
 
 ### Changes
+
 - Default web landing page refactored into a Buildroot package to make
   it possible to overload from customer repos.
 - Enable DCB support in aarch64 kernel (for EtherType prio override)
@@ -450,6 +514,7 @@ Finally, the following consumer boards are now fully supported:
 - Issue #374: add timestamps to dagger .log files
 
 ### Fixes
+
 - Add missing LICENSE hash for factory reset tool
 - Fix #424: regression, root user can log in without password
 
@@ -471,6 +536,7 @@ idea is to generate supported features from the models and include in
 future releases.
 
 ### Changes
+
 - Bump the base Buildroot version to v2024.02 LTS
 - Bump the base Linux kernel version to 6.6 LTS
 - Drop Classic variant to reduce overhead, simplify build & release
@@ -551,6 +617,7 @@ future releases.
   named 'default'
 
 ### Fixes
+
 - confd: Fix memory leak when operating on candidate configuration
 - probe: Fix crash on systems without USB
 - Reduced syslog errors for accesses no non-existing xpaths
@@ -1293,7 +1360,8 @@ Supported YANG models in addition to those used by sysrepo and netopeer:
  - N/A
 
 [buildroot]:  https://buildroot.org/
-[UNRELEASED]: https://github.com/kernelkit/infix/compare/v24.10.1...HEAD
+[UNRELEASED]: https://github.com/kernelkit/infix/compare/v24.11.0...HEAD
+[v24.11.0]:   https://github.com/kernelkit/infix/compare/v24.10.0...v24.11.0
 [v24.10.2]:   https://github.com/kernelkit/infix/compare/v24.10.1...v24.10.2
 [v24.10.1]:   https://github.com/kernelkit/infix/compare/v24.10.0...v24.10.1
 [v24.10.0]:   https://github.com/kernelkit/infix/compare/v24.09.0...v24.10.0

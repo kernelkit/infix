@@ -15,17 +15,17 @@ module infix-routing {
   import ietf-ospf {
     prefix ospf;
   }
-  import ietf-interfaces {
-    prefix if;
-  }
-  import ietf-routing-types {
-    prefix rt-types;
-  }
 
   organization "KernelKit";
   contact      "kernelkit@googlegroups.com";
   description  "Deviations and augments for ietf-routing and ietf-ospf.";
 
+  revision 2024-11-15 {
+    description "Fix pyang linter errors and warnings:
+                  - Drop OSPF database deviations, already deviated earlier
+                  - Drop unused imports";
+    reference "internal";
+  }
   revision 2024-10-01 {
     description "Remove possibility to have loopack in multiple areas.";
     reference "internal";
@@ -454,26 +454,6 @@ module infix-routing {
   }
   deviation "/rt:routing/rt:control-plane-protocols/rt:control-plane-protocol/ospf:ospf/ospf:areas/ospf:area/ospf:interfaces/ospf:interface/ospf:wait-timer"
   {
-    deviate not-supported;
-  }
-
-  /* OSPF database */
-  deviation "/rt:routing/rt:control-plane-protocols/rt:control-plane-protocol/ospf:ospf/ospf:database/ospf:as-scope-lsa-type/ospf:as-scope-lsas/ospf:as-scope-lsa/ospf:version/ospf:ospfv3" {
-    deviate not-supported;
-  }
-  deviation "/rt:routing/rt:control-plane-protocols/rt:control-plane-protocol/ospf:ospf/ospf:database/ospf:as-scope-lsa-type/ospf:as-scope-lsas/ospf:as-scope-lsa/ospf:version/ospf:ospfv2/ospf:ospfv2/ospf:body/ospf:opaque" {
-    deviate not-supported;
-  }
-  deviation "/rt:routing/rt:control-plane-protocols/rt:control-plane-protocol/ospf:ospf/ospf:database/ospf:as-scope-lsa-type/ospf:as-scope-lsas/ospf:as-scope-lsa/ospf:version/ospf:ospfv2/ospf:ospfv2/ospf:body/ospf:external" {
-    deviate not-supported;
-  }
-  deviation "/rt:routing/rt:control-plane-protocols/rt:control-plane-protocol/ospf:ospf/ospf:database/ospf:as-scope-lsa-type/ospf:as-scope-lsas/ospf:as-scope-lsa/ospf:version/ospf:ospfv2/ospf:ospfv2/ospf:body/ospf:summary" {
-    deviate not-supported;
-  }
-  deviation "/rt:routing/rt:control-plane-protocols/rt:control-plane-protocol/ospf:ospf/ospf:database/ospf:as-scope-lsa-type/ospf:as-scope-lsas/ospf:as-scope-lsa/ospf:version/ospf:ospfv2/ospf:ospfv2/ospf:body/ospf:router" {
-    deviate not-supported;
-  }
-  deviation "/rt:routing/rt:control-plane-protocols/rt:control-plane-protocol/ospf:ospf/ospf:database/ospf:as-scope-lsa-type/ospf:as-scope-lsas/ospf:as-scope-lsa/ospf:version/ospf:ospfv2/ospf:ospfv2/ospf:header" {
     deviate not-supported;
   }
 

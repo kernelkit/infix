@@ -7,9 +7,10 @@ model forms the base, extended with [ietf-ip.yang][2] and other layer-3
 IETF models.  The layer-2 bridge and aggregate models are defined by
 Infix to exploit the unique features not available in IEEE models.
 
-> **Note:** when issuing `leave` to activate your changes, remember to
-> also save your settings, `copy running-config startup-config`.  See
-> the [CLI Introduction](cli/introduction.md) for a background.
+> [!IMPORTANT]
+> When issuing `leave` to activate your changes, remember to also save
+> your settings, `copy running-config startup-config`.  See the [CLI
+> Introduction](cli/introduction.md) for a background.
 
 
 ## Interface LEGO®
@@ -103,10 +104,11 @@ The `description` is saved as Linux `ifalias` on an interface.  It is a
 free-form string, useful for describing purpose or just adding comments
 for remote debugging, e.g., using the operational datastore.
 
-> **Note:** there is no validation or safety checks performed by the
-> system when using `custom-phys-address`.  In particular the `offset`
-> variant can be dangerous to use -- pay attention to the meaning of
-> bits in the upper-most octet: local bit, multicast/group, etc.
+> [!CAUTION]
+> There is no validation or safety checks performed by the system when
+> using `custom-phys-address`.  In particular the `offset` variant can
+> be dangerous to use -- pay attention to the meaning of bits in the
+> upper-most octet: local bit, multicast/group, etc.
 
 #### Fixed custom MAC
 
@@ -167,11 +169,14 @@ admin@example:/config/> leave
 
 Here we add two ports to bridge `br0`: `eth0` and `eth1`.
 
-> **Note:** Infix has many built-in helpers controlled by convention.
-> E.g., if you name your bridge `brN`, where `N` is a number, Infix sets
-> the interface type automatically and unlocks all bridge features.
-> Other "magic" names are `ethN.M` for VLAN M on top of `ethN`, or
-> `dockerN` to create an IP masquerading container bridge.
+> [!TIP]
+> Infix has many built-in helpers controlled by convention.  Example,
+> naming your bridge `brN`, where `N` is a number, hints Infix to set
+> interface type automatically and unlocks all bridge features.  Other
+> "magic" names are `vethNA`, where `N` is a number and `A` is a letter
+> ('a' for access port and 'b' for bridge side is common), and `ethN.M`
+> for VLAN M on top of `ethN`, or `dockerN` to create an IP masquerading
+> container bridge.
 
 ![A MAC bridge with two ports](img/mac-bridge.svg)
 
@@ -214,6 +219,7 @@ admin@example:/config/interface/br0/> set bridge vlans vlan 10 tagged br0
 admin@example:/config/interface/br0/> set bridge vlans vlan 20 tagged br0
 ```
 
+> [!NOTE]
 > To route or to manage via a VLAN, a VLAN interface needs to be created
 > on top of the bridge, see section [VLAN Interfaces](#vlan-interfaces)
 > below for more on this topic.
@@ -227,10 +233,11 @@ also supports "snooping", i.e., IGMP and MLD, to automatically reduce
 the broadcast effects of multicast.  See the next section for a summary
 of the [terminology used](#terminology--abbreviations).
 
-> **Note:** currently there is no way to just enable multicast filtering
-> without also enabling snooping.  This may change in the future, in
-> which case a `filtering` enabled setting will be made available along
-> with the existing `snooping` setting.
+> [!IMPORTANT]
+> Currently there is no way to just enable multicast filtering without
+> also enabling snooping.  This may change in the future, in which case
+> a `filtering` enabled setting will be made available along with the
+> existing `snooping` setting.
 
 When creating your bridge you must decide if you need a VLAN filtering
 bridge or a plain bridge (see previous section).  Multicast filtering is
@@ -370,16 +377,23 @@ an IGMP/MLD fast-leave port.
    tables shown above, a *None* timeout is declared when the current
    device is the active querier
 
-> **Note:** the reason why multicast flooding is enabled by default is
-> to ensure safe co-existence with MAC multicast, which is very common
-> in industrial networks.  It also allows end devices that do not know
-> of IGMP/MLD to communicate over multicast as long as the group they
-> have chosen is not used by other IGMP/MLD aware devices on the LAN.
+> [!TIP]
+> The reason why multicast flooding is enabled by default is to ensure
+> safe co-existence with MAC multicast, which is common in industrial
+> networks.  It also allows end devices that do not know of IGMP/MLD to
+> communicate over multicast as long as the group they have chosen is
+> not used by other IGMP/MLD aware devices on the LAN.
 >
 > As soon as an IGMP/MLD membership report to "join" a group is received
-> the group is added to the MDB and forwarding to other ports stop.  The
-> only exception to this rule is multicast router ports.
+> the group is added to the kernel MDB and forwarding to other ports
+> stop.  The only exception to this rule is multicast router ports.
+>
+> If your MAC multicast forwarding is not working properly, it may be
+> because an IP multicast group maps to the same MAC address.  Please
+> see [RFC 1112][RFC1112] for details.  Use static multicast router
+> ports, or static multicast MAC filters, to mitigate.
 
+[RFC1112]: https://www.rfc-editor.org/rfc/rfc1112.html
 [RFC3376]: https://www.rfc-editor.org/rfc/rfc3376.html
 [RFC3810]: https://www.rfc-editor.org/rfc/rfc3810.html
 
@@ -510,9 +524,10 @@ Auto-negotiation of speed/duplex mode is desired in almost all
 use-cases, but it is possible to disable auto-negotiation and specify
 a fixed speed and duplex mode.
 
-> If setting a fixed speed and duplex mode, ensure both sides of the
-> link have matching configuration. If speed does not match, the link
-> will not come up. If duplex mode does not match, the result is
+> [!IMPORTANT]
+> When setting a fixed speed and duplex mode, ensure both sides of the
+> link have matching configuration.  If speed does not match, the link
+> will not come up.  If duplex mode does not match, the result is
 > reported collisions and/or bad throughput.
 
 The example below configures port eth3 to fixed speed 100 Mbit/s
@@ -605,9 +620,10 @@ interfaces {
 admin@example:/config/>
 ```
 
-> **Note:** this is another example of the automatic inference of the
-> interface type from the name.  Any name can be used, but then you have
-> to set the interface type to `veth` manually.
+> [!TIP]
+> This is another example of the automatic inference of the interface
+> type from the name.  Any name can be used, but then you have to set
+> the interface type to `veth` manually.
 
 
 ## Management Plane
@@ -629,7 +645,8 @@ Multiple address assignment methods are available:
 | link-local | infix-ip          | Auto-assignment of IPv4 address in 169.254.x.x/16 range        |
 | dhcp       | infix-dhcp-client | Assignment of IPv4 address by DHCP server, e.g., *10.0.1.1/24* |
 
-> **Note:** DHCP address method is only available for *LAN* interfaces
+> [!NOTE]
+> The DHCP address method is only available for *LAN* interfaces
 > (Ethernet, virtual Ethernet (veth), bridge, link aggregates, etc.)
 
 Supported DHCP (request) options, configurability (Cfg) and defaults,
@@ -663,9 +680,10 @@ client is not enabled, any NTP servers provided by the DHCP server will
 be ignored. For details on how to enable the NTP client, see the 
 [NTP Client Configuration](system.md#ntp-client-configuration) section.
 
-> **Note:** as per [RFC3442][4], if the DHCP server returns both a
-> Classless Static Routes option (121) and Router option (3), the
-> DHCP client *must* ignore the latter.
+> [!IMPORTANT]
+> Per [RFC3442][4], if the DHCP server returns both a Classless Static
+> Routes option (121) and Router option (3), the DHCP client *must*
+> ignore the latter.
 
 
 ### IPv6 Address Assignment
@@ -932,9 +950,10 @@ The base model, ietf-routing, is where all the other models hook in.  It
 is used to set configuration and read operational status (RIB tables) in
 the other models.
 
-> **Note:** the standard IETF routing models allows multiple instances,
-> but Infix currently *only support one instance* per routing protocol!
-> In the examples presented here, the instance name `default` is used.
+> [!NOTE]
+> The standard IETF routing models allows multiple instances, but Infix
+> currently *only support one instance* per routing protocol!  In the
+> examples presented here, the instance name `default` is used.
 
 
 ### IPv4 Static routes
@@ -960,6 +979,7 @@ router 192.168.1.1, using the highest possible distance:
     admin@example:/config/routing/control-plane-protocol/static/name/default/> leave
     admin@example:/>
 
+> [!TIP]
 > Remember to enable [IPv4 forwarding](#IPv4-forwarding) for the
 > interfaces you want to route between.
 
@@ -983,6 +1003,7 @@ enable OSPF and set one active interface in area 0:
     admin@example:/config/routing/control-plane-protocol/ospfv2/name/default/> leave
     admin@example:/>
 
+> [!TIP]
 > Remember to enable [IPv4 forwarding](#IPv4-forwarding) for all the
 > interfaces you want to route between.
 
@@ -1171,10 +1192,11 @@ different next-hop, learned from a DHCP server wins over an OSPF route.
 The distance used for static routes and DHCP routes can be changed by
 setting a different *routing preference* value.
 
-> **Note:** the kernel metric is an unsigned 32-bit value, which is read
-> by Frr as (upper) 8 bits distance and 24 bits metric.  But it does not
-> write it back to the kernel FIB this way, only selected routes are
-> candidates to be installed in the FIB by Frr.
+> [!NOTE]
+> The kernel metric is an unsigned 32-bit value, which is read by Frr as
+> (upper) 8 bits distance and 24 bits metric.  But it does not write it
+> back to the kernel FIB this way, only selected routes are candidates
+> to be installed in the FIB by Frr.
 
 
 #### Source protocol

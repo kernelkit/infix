@@ -1,5 +1,18 @@
 #!/bin/sh
-
+# This script can be used to start, stop, create, and delete containers.
+# It is primarily used by confd to create jobs for execd to run from its
+# /run/containers/queue, but it can also be used manually.
+#
+# NOTE: when creating/deleting containers, remember 'initctl reload' to
+#       activate the changes!  When called by confd, via execd, this is
+#       already handled.
+#
+DOWNLOADS=/var/lib/containers/oci
+BUILTIN=/lib/oci
+TMPDIR=/var/tmp
+checksum=""
+extracted=
+dir=""
 all=""
 env=""
 port=""
@@ -8,6 +21,87 @@ force=
 log()
 {
     logger -I $PPID -t container -p local1.notice -- "$*"
+}
+
+err()
+{
+    rc=$1; shift
+    logger -I $PPID -t container -p local1.err -- "Error: $*"
+
+    if [ -n "$extracted" ]; then
+	if [ -d "$TMPDIR/$dir" ]; then
+	    log "Cleaning up extracted $dir"
+	    rm -rf "$dir"
+	fi
+    fi
+
+    [ "$rc" -eq 0 ] || exit "$rc"
+}
+
+check()
+{
+    file=$1
+
+    if [ -z "$checksum" ]; then
+	log "no checksum to verify $file against, continuing."
+	return 0
+    fi
+
+    if echo "${checksum}  ${file}" | "$cmdsum" -c -s; then
+        log "$file checksum verified OK."
+	return 0
+    fi
+
+    got=$("$cmdsum" "${file}" | awk '{print $1}')
+    log "$file checksum mismatch, got $got, expected $checksum, removing file."
+    rm -f "$file"
+
+    return 1
+}
+
+# Fetch an OCI image over ftp/http/https.  Use wget for FTP, which curl
+# empirically does not work well with.  Log progress+ & error to syslog.
+fetch()
+{
+    url=$1
+    file=$(basename "$url")
+    dst="$DOWNLOADS/$file"
+
+    cd "$DOWNLOADS" || return
+    if [ -e "$file" ]; then
+	log "$file already available."
+	if check "$file"; then
+	    echo "$dst"
+	    return 0
+	fi
+    fi
+
+    log "Fetching $url"
+
+    if echo "$url" | grep -qE "^ftp://"; then
+        cmd="wget -q $url"
+    elif echo "$url" | grep -qE "^https?://"; then
+        cmd="curl $creds -sSL --fail -o \"$file\" $url"
+    else
+        log "Unsupported URL scheme: $url"
+        return 1
+    fi
+
+    if out=$(eval "$cmd" 2>&1); then
+	log "$file downloaded successfully."
+	if check "$file"; then
+	    echo "$dst"
+	    return 0
+	fi
+    fi
+
+    # log error message from backend
+    while IFS= read -r line; do
+	log "$line"
+    done <<EOF
+$out
+EOF
+    return 1
 }
 
 # Unpacks a given oci-archive.tar[.gz] in the current directory.  Sanity
@@ -26,6 +120,11 @@ unpack_archive()
 	oci-archive:*)		# Packed OCI image, .tar or .tar.gz format
 	    file=${image#oci-archive:}
 	    ;;
+	ftp://* | http://* | https://*)
+            if ! file=$(fetch "$image"); then
+		return 1
+	    fi
+            ;;
 	*)			# docker://*, docker-archive:*, or URL
 	    echo "$image"
 	    return 0
@@ -33,37 +132,51 @@ unpack_archive()
     esac
 
     if [ ! -e "$file" ]; then
-	if [ -e "/var/lib/containers/oci/$file" ]; then
-	    file="/var/lib/containers/oci/$file"
-	elif [ -e "/lib/oci/$file" ]; then
-	    file="/lib/oci/$file"
+	if [ -e "$DOWNLOADS/$file" ]; then
+	    file="$DOWNLOADS/$file"
+	elif [ -e "$BUILTIN/$file" ]; then
+	    file="$BUILTIN/$file"
 	else
-	    log "Error: cannot find OCI archive $file in search path."
-	    exit 1
+	    err 1 "cannot find OCI archive $file in search path."
 	fi
     fi
 
     if [ -d "$file" ]; then
 	index=$(find "$file" -name index.json)
 	if [ -z "$index" ]; then
-	    log "Error: cannot find index.json in OCI image $file"
-	    exit 1
+	    err 1 "cannot find index.json in OCI image $file"
 	fi
     else
+	cd "$TMPDIR" || err 0 "failed cd $TMPDIR, wiill use $(pwd) for OCI archive extraction."
+
 	index=$(tar tf "$file" |grep index.json)
 	if [ -z "$index" ]; then
-	    log "Error: invalid OCI archive, cannot find index.json in $file"
-	    exit 1
+	    err 1 "invalid OCI archive, cannot find index.json in $file"
 	fi
 
 	[ -n "$quiet" ] || log "Extracting OCI archive $file ..."
-        tar xf "$file" || (log "Error: failed unpacking $file in $(pwd)"; exit 1)
-	remove=true
+        tar xf "$file"  || err 1 "failed unpacking $file in $(pwd)"
+	extracted=true
     fi
 
     dir=$(dirname "$index")
+    if echo "$dir" | grep -q ":"; then
+        if [ -z "$name" ]; then
+            name="$dir"
+        fi
+        sanitized_dir=$(echo "$dir" | cut -d':' -f1)
+        mv "$dir" "$sanitized_dir" || err 1 "failed renaming $dir to $sanitized_dir"
+        dir="$sanitized_dir"
+    fi
+
     [ -n "$quiet" ] || log "Loading OCI image $dir ..."
     podman load -qi "$dir"        >/dev/null
+
+    # Clean up after ourselves
+    if [ -n "$extracted" ]; then
+	log "Cleaning up extracted $dir"
+	rm -rf "$dir"
+    fi
 
     # Rename image from podman default $dir:latest
     if [ -n "$name" ]; then
@@ -71,10 +184,6 @@ unpack_archive()
 	podman rmi "$dir"         >/dev/null
     else
 	name=$dir
-    fi
-
-    if [ "$remove" = "true" ]; then
-	rm -rf "$file"
     fi
 
     echo "$name"
@@ -102,15 +211,21 @@ create()
 
     # Unpack and load docker-archive/oci/oci-archive, returning image
     # name, or return docker:// URL for download.
-    image=$(unpack_archive "$image")
+    if ! image=$(unpack_archive "$image"); then
+	exit 1
+    fi
 
     if [ -z "$logging" ]; then
 	logging="--log-driver k8s-file --log-opt path=/run/containers/$name.fifo"
     fi
 
-    args="$args --replace --quiet --cgroup-parent=containers $caps"
+    # Pull quietly and don't retry on failure, we use execd for this,
+    # or user retry manually when run interactively, we may have other
+    # containers waiting to start that have an image locally already.
+    # Use --retry=0 with Podman 5.0 or later.
+    args="$args --read-only --replace --quiet --cgroup-parent=containers $caps"
     args="$args --restart=$restart --systemd=false --tz=local $privileged"
-    args="$args $ro $vol $mount $hostname $entrypoint $env $port $logging"
+    args="$args $vol $mount $hostname $entrypoint $env $port $logging"
     pidfn=/run/container:${name}.pid
 
     [ -n "$quiet" ] || log "---------------------------------------"
@@ -134,16 +249,16 @@ create()
     fi
 
     # shellcheck disable=SC2048
-    log "Calling podman create --name $name --conmon-pidfile=$pidfn $args $image $*"
+    log "podman create --name $name --conmon-pidfile=$pidfn $args $image $*"
     if podman create --name "$name" --conmon-pidfile="$pidfn" $args "$image" $*; then
-	[ -n "$quiet" ] || log "Successfully created container $name from $image"
-	rm -f "/run/containers/env/${name}.env"
+	[ -n "$quiet"  ] || log "Successfully created container $name from $image"
 	[ -n "$manual" ] || start "$name"
+	# Should already be enabled by confd (this is for manual use)
+	initctl -bnq enable "container@${name}.conf"
 	exit 0
     fi
 
-    log "Error: failed creating container $name, please check the configuration."
-    exit 1
+    err 1 "failed creating container $name, please check the configuration."
 }
 
 delete()
@@ -157,6 +272,9 @@ delete()
 	exit 1
     fi
 
+    # Should already be disabled (and stopped) by confd (this is for manual use)
+    initctl -bnq disable "container@${name}.conf"
+
     podman rm -vif "$name" >/dev/null 2>&1
     [ -n "$quiet" ] || log "Container $name has been removed."
 }
@@ -167,8 +285,7 @@ waitfor()
     while [ ! -f "$1" ]; do
 	_=$((timeout -= 1))
 	if [ $timeout -le 0 ]; then
-	    log "Timeout waiting for $1, aborting!"
-	    exit 1
+	    err 1 "timed out waiting for $1, aborting!"
 	fi
 	sleep 1;
     done
@@ -248,6 +365,7 @@ options:
       --dns-search LIST    Set host lookup search list when creating container
       --cap-add CAP        Add capability to unprivileged container
       --cap-drop CAP       Drop capability, for privileged containter
+      --checksum TYPE:SUM  Use md5/sha256/sha512 to verify ftp/http/https archives
   -c, --creds USR[:PWD]    Credentials to pass to curl -u for remote ops
   -d, --detach             Detach a container started with 'run IMG [CMD]'
   -e, --env FILE           Environment variables when creating container
@@ -267,7 +385,6 @@ options:
                            Syntax: [[ip:][hostPort]:]containerPort[/protocol]
   -q, --quiet              Quiet operation, called from confd
   -r, --restart POLICY     One of "no", "always", or "on-failure:NUM"
-      --read-only          Do not create a writable layer
   -s, --simple             Show output in simplified format
   -v, --volume NAME:PATH   Create named volume mounted inside container on PATH
 
@@ -275,6 +392,7 @@ commands:
   create   NAME IMAGE NET  Create container NAME using IMAGE with networks NET
   delete  [network] NAME   Remove container NAME or network NAME from all containers
   exec     NAME CMD        Run a command inside a container
+  flush                    Clean up lingering containers and associated anonymous volumes
   find    [ifname PID]     Find PID of container where '--net IFNAME' currently lives
                            or, find the name of our IFNAME inside the container @PID
   help                     Show this help text
@@ -306,6 +424,25 @@ while [ "$1" != "" ]; do
 	--cap-drop)
 	    shift
 	    caps="$caps --cap-drop=$1"
+	    ;;
+	--checksum)
+	    shift
+	    type="${1%%:*}"
+	    checksum="${1#*:}"
+	    case "$type" in
+		md5)
+		    cmdsum=md5sum
+		    ;;
+		sha256)
+		    cmdsum=sha256sum
+		    ;;
+		sha512)
+		    cmdsum=sha512sum
+		    ;;
+		*)
+		    err 1 "Unsupported checksum type: $type"
+		    ;;
+	    esac
 	    ;;
 	-c | --creds)
 	    shift
@@ -351,7 +488,6 @@ while [ "$1" != "" ]; do
 	--log-path)
 	    shift
 	    logging="$logging --log-opt path=$1"
-	    log_path="$1"
 	    ;;
 	-m | --mount)
 	    shift
@@ -385,9 +521,6 @@ while [ "$1" != "" ]; do
 	-r | --restart)
 	    shift
 	    restart=$1
-	    ;;
-	--read-only)
-	    ro="--read-only=true"
 	    ;;
 	-s | --simple)
 	    simple=true
@@ -430,6 +563,10 @@ case $cmd in
     exec)
 	podman exec -it "$@"
 	;;
+    flush)
+	echo "Cleaning up any lingering containers";
+	podman rm -av
+	;;
     find)
 	cmd=$1
 	pid=$2
@@ -455,25 +592,12 @@ case $cmd in
 	usage
 	;;
     load)
-	url=$1
-	name=$2
 	# shellcheck disable=SC2086
-	if echo "$url" | grep -q "://"; then
-	    file=$(basename "$url")
-            curl -k $creds -Lo "$file" "$url"
-	else
-            file="$url"
-	fi
-
-	# shellcheck disable=SC2086
-	name=$(unpack_archive "$file" $name)
+	name=$(unpack_archive "$1" $2)
+	[ -n "$name" ] || exit 1
 
 	# Show resulting image(s) matching $name
-	if [ -n "$name" ]; then
-	    podman images -n "$name"
-	else
-	    exit 1
-	fi
+	podman images -n "$name"
 	;;
     locate)			# Find where the host's ifname lives
 	if [ -z "$network" ]; then
@@ -500,7 +624,7 @@ case $cmd in
 		podman images $all --format "{{.Repository}}:{{.Tag}}"
 		;;
 	    oci)
-		find /lib/oci /var/lib/containers/oci -type f 2>/dev/null
+		find $BUILTIN $DOWNLOADS -type f 2>/dev/null
 		;;
 	    *)		
 		podman ps $all --format "{{.Names}}"
@@ -600,8 +724,7 @@ case $cmd in
 		while running "$name"; do
 		    _=$((timeout -= 1))
 		    if [ $timeout -le 0 ]; then
-			log "Timeout waiting for container $1 to stop before restarting it."
-			exit 1
+			err 1 "timed out waiting for container $1 to stop before restarting it."
 		    fi
 		    sleep 1
 		done
@@ -627,7 +750,7 @@ case $cmd in
 	;;
     upgrade)
 	# Start script used to initially create container
-	script=/var/lib/containers/active/S01-${1}.sh
+	script=/run/containers/${1}.sh
 
 	# Find container image
 	img=$(podman inspect "$1" | jq -r .[].ImageName)

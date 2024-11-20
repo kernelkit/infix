@@ -6,10 +6,6 @@ module infix-containers {
   namespace "urn:ietf:params:xml:ns:yang:infix-containers";
   prefix infix-cont;
 
-  import ietf-yang-types {
-    prefix yang;
-  }
-
   import ietf-interfaces {
     prefix if;
   }
@@ -26,19 +22,26 @@ module infix-containers {
     prefix infix-sys;
   }
 
-  revision 2024-10-14  {
+  revision 2024-11-15 {
+    description "Two major changes:
+                  - Add support for ftp/http/https images with checksum
+                  - Deprecate read-only, it is now always true";
+    reference "internal";
+  }
+
+  revision 2024-10-14 {
     description "Two major changes:
                   - Allow changing name of host interfaces inside container
                   - Support hostname format specifiers, like ietf-system";
     reference "internal";
   }
 
-  revision 2024-03-27  {
+  revision 2024-03-27 {
     description "Add support for capabilities.";
     reference "internal";
   }
 
-  revision 2024-02-01  {
+  revision 2024-02-01 {
     description "Initial revision";
     reference "internal";
   }
@@ -133,11 +136,47 @@ module infix-containers {
                      oci-archive:/lib/oci/archive -- Use archive:latest from OCI archive
                                                      May be in .tar or .tar.gz format
 
+                     Additionally, the following URIs are also supported for setups
+                     that do not use a HUB or similar.  Recommend using 'checksum'!
+
+                     ftp://addr/path/to/archive   -- Downloaded using wget
+                     http://addr/path/to/archive  -- Downloaded using curl
+                     https://addr/path/to/archive -- Downloaded using curl
+
                      Note: if a remote repository cannot be reached, the creation of the
                            container will be put on a queue that retries pull every time
                            there is a route change in the host's system.";
 	mandatory true;
 	type string;
+      }
+
+      container checksum {
+	description "Checksum for ftp/http/https OCI archives.";
+        choice checksum {
+          leaf md5 {
+            description "MD5 checksum for the archive.";
+            type string {
+              length "32";
+              pattern "[a-fA-F0-9]{32}";
+            }
+          }
+
+          leaf sha256 {
+            description "SHA256 checksum for the archive.";
+            type string {
+              length "64";
+              pattern "[a-fA-F0-9]{64}";
+            }
+          }
+
+          leaf sha512 {
+            description "SHA512 checksum for the archive.";
+            type string {
+              length "128";
+              pattern "[a-fA-F0-9]{128}";
+            }
+          }
+        }
       }
 
       leaf image-id {
@@ -256,6 +295,7 @@ module infix-containers {
       }
 
       leaf read-only {
+        status deprecated; // This is now the default, setting kept only to not break configs
 	description "Create a read-only container.  Use volumes for writable directories.";
 	type boolean;
       }
