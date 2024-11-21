@@ -43,18 +43,18 @@ it.  In this example, traffic assigned to the VLAN in question would be
 diverted to the VLAN interface before entering the bridge, while all
 other traffic would be bridged as usual.
 
-| **Type** | **Yang Model**             | **Description**                                               |
-|----------|----------------------------|---------------------------------------------------------------|
-| bridge   | infix-if-bridge            | SW implementation of an IEEE 802.1Q bridge                    |
-| ip       | ietf-ip, infix-ip          | IP address to the subordinate interface                       |
-| vlan     | infix-if-vlan              | Capture all traffic belonging to a specific 802.1Q VID        |
-| lag[^1]  | infix-if-lag               | Bonds multiple interfaces into one, creating a link aggregate |
-| lo       | ietf-interfaces            | Software loopback interface                                   |
-| eth      | ieee802-ethernet-interface | Physical Ethernet device/port.                                |
-|          | infix-ethernet-interface   |                                                               |
-| veth     | infix-if-veth              | Virtual Ethernet pair, typically one end is in a container    |
-| *common* | ietf-interfaces,           | Properties common to all interface types                      |
-|          | infix-interfaces           |                                                               |
+| **Type** | **Yang Model**             | **Description**                                              |
+|----------|----------------------------|--------------------------------------------------------------|
+| bridge   | infix-if-bridge            | SW implementation of an IEEE 802.1Q bridge                   |
+| ip       | ietf-ip, infix-ip          | IP address to the subordinate interface                      |
+| vlan     | infix-if-vlan              | Capture all traffic belonging to a specific 802.1Q VID       |
+| lag[^1]  | infix-if-lag               | Bond multiple interfaces into one, creating a link aggregate |
+| lo       | ietf-interfaces            | Software loopback interface                                  |
+| eth      | ieee802-ethernet-interface | Physical Ethernet device/port.                               |
+|          | infix-ethernet-interface   |                                                              |
+| veth     | infix-if-veth              | Virtual Ethernet pair, typically one end is in a container   |
+| *common* | ietf-interfaces,           | Properties common to all interface types                     |
+|          | infix-interfaces           |                                                              |
 
 
 ## Data Plane
@@ -154,9 +154,9 @@ fabric!
 #### MAC Bridge
 
 In Infix ports are by default not switch ports, unless the customer
-specific factory config sets it up this way.  To enable switching
-between ports you create a bridge and then add ports to that
-bridge. That's it.
+specific factory config sets it up this way.  To enable switching, with
+offloading if you have a switch chipset, between ports you create a
+bridge and then add ports to that bridge.  Like this:
 
 ```
 admin@example:/> configure
@@ -170,13 +170,15 @@ admin@example:/config/> leave
 Here we add two ports to bridge `br0`: `eth0` and `eth1`.
 
 > [!TIP]
-> Infix has many built-in helpers controlled by convention.  Example,
-> naming your bridge `brN`, where `N` is a number, hints Infix to set
-> interface type automatically and unlocks all bridge features.  Other
-> "magic" names are `vethNA`, where `N` is a number and `A` is a letter
-> ('a' for access port and 'b' for bridge side is common), and `ethN.M`
-> for VLAN M on top of `ethN`, or `dockerN` to create an IP masquerading
-> container bridge.
+> The CLI has several built-in helpers governed by convention.  E.g.,
+> naming bridges `brN`, where `N` is a number, the type is *inferred*
+> automatically and unlocks all bridge features.  Other conventions are
+> `vethNA`, where `N` is a number and `A` is a letter ('a' for access
+> port and 'b' for bridge side is common), and `ethN.M` for VLAN M on
+> top of `ethN`, or `dockerN` for a IP masquerading container bridge.
+>
+> Note, this inference only works with the CLI, configuring networking
+> over NETCONF or RESTCONF requires setting the type explicitly.
 
 ![A MAC bridge with two ports](img/mac-bridge.svg)
 
@@ -187,11 +189,11 @@ bridge should be used instead.
 
 #### VLAN Filtering Bridge
 
-By default bridges in Linux do not filter based on VLAN tags.  It can be
-enabled in Infix when creating a bridge by adding a port to a VLAN as a
-tagged or untagged member.  Use the port default VID (PVID) setting to
-control VLAN association for traffic ingressing a port untagged (default
-PVID: 1).
+By default bridges in Linux do not filter based on VLAN tags.  This can
+be enabled when creating a bridge by adding a port to a VLAN as a tagged
+or untagged member.  Use the port default VID (PVID) setting to control
+VLAN association for traffic ingressing a port untagged (default PVID:
+1).
 
 ```
 admin@example:/config/> edit interface br0
@@ -283,15 +285,15 @@ br0                  224.1.1.1             e3, e2
 br0                  ff02::6a              br0
 ```
 
-It is a small LAN, so our bridge has already become the elected IGMP
-querier.  We see it is ours because the timeout is `None`, and we
-recognize our IP address.  We can also see two ports that have joined
-the same IPv4 multicast group, 224.1.1.1, and one join from Infix itself
-for the IPv6 group ff02::6a.
+This is a rather small LAN, so our bridge has already become the elected
+IGMP querier.  We see it is ours because the timeout is `None`, and we
+recognize the IP address the system has detected, as ours.  We can also
+see two ports that have joined the same IPv4 multicast group, 224.1.1.1,
+and one join from the system itself for the IPv6 group ff02::6a.
 
-Now, let's see what happens when we add another bridge, with VLAN
-filtering enabled.  We skip the boring parts about how to move ports
-e4-e7 to `br1` and assign them to VLANs, and again, focus on the
+Now, let us see what happens when we add another bridge, this time with
+VLAN filtering enabled.  We skip the boring parts about how to move
+ports e4-e7 to `br1` and assign them to VLANs, and again, focus on the
 multicast bits only:
 
 ```
@@ -303,7 +305,7 @@ admin@example:/config/interface/br1/> leave
 admin@example:/> copy running-config startup-config
 ```
 
-Let's see what we get:
+Let us see what we get:
 
 ```
 admin@example:/> show ip multicast
@@ -404,15 +406,15 @@ an IGMP/MLD fast-leave port.
 
 #### Forwarding of IEEE Reserved Group Addresses
 
-Addresses in range `01:80:C2:00:00:0X` are used by various bridge
-signaling protocols, and are not forwarded by default. Still, it is
-sometimes useful to let the bridge forward such packets, and Infix
-supports this by specifying protocol names or the last address
-*nibble* as decimal value `0..15`.
+Addresses in the range `01:80:C2:00:00:0X` are used by various bridge
+signaling protocols, and are not forwarded by default.  Still, it is
+sometimes useful to let the bridge forward such packets, this can be
+done by specifying protocol names or the last address *nibble* as
+decimal value `0..15`:
 
 ```
 admin@example:/config/> edit interface br0 bridge
-admin@example:/config/interface/br0/bridge/> set ieee-group-forward <?>
+admin@example:/config/interface/br0/bridge/> set ieee-group-forward     # Tap the ? ley for alternatives
   [0..15]  List of IEEE link-local protocols to forward, e.g., STP, LLDP
   dot1x    802.1X Port-Based Network Access Control.
   lacp     802.3 Slow Protocols, e.g., LACP.
@@ -430,7 +432,7 @@ admin@example:/config/interface/br0/bridge/>
 
 ### VLAN Interfaces
 
-Creating a VLAN can be done in many ways. This section assumes VLAN
+Creating a VLAN can be done in many ways.  This section assumes VLAN
 interfaces created atop another Linux interface.  E.g., the VLAN
 interfaces created on top of the Ethernet interface or bridge in the
 picture below.
@@ -472,7 +474,7 @@ top of a bridge interface *br0* is named *vlan10*.
 
 > [!NOTE]
 > If you name your VLAN interface `foo0.N` or `vlanN`, where `N` is a
-> number, Infix will set the interface type automatically for you.
+> number, the CLI infers the interface type automatically.
 
 
 ### Physical Ethernet Interfaces
@@ -638,7 +640,8 @@ admin@example:/config/>
 This section details IP Addresses And Other Per-Interface IP settings.
 
 Infix support several network interface types, each can be assigned one
-or more IP addresses, both IPv4 and IPv6 are supported.
+or more IP addresses, both IPv4 and IPv6 are supported.  (There is no
+concept of a "primary" address.)
 
 ![IP on top of network interface examples](img/ip-iface-examples.svg)
 
@@ -1226,7 +1229,7 @@ currently supported, namely `ipv4` and `ipv6`.
 [4]: https://www.rfc-editor.org/rfc/rfc3442
 [0]: https://frrouting.org/
 
-[^1]: Please note, link aggregates are not yet supported in Infix.
+[^1]: Please note, link aggregates are not yet supported.
 [^2]: Link-local IPv6 addresses are implicitly enabled when enabling
     IPv6.  IPv6 can be enabled/disabled per interface in the
     [ietf-ip][2] YANG model.
@@ -1237,11 +1240,10 @@ currently supported, namely `ipv4` and `ipv6`.
 [^4]: A YANG deviation was previously used to make it possible to set
     `phys-address`, but this has been replaced with the more flexible
 	`custom-phys-address`.
-[^5]: Infix MAC bridges on Marvell Linkstreet devices are currently
-    limited to use a single MAC database, causing issues if the same
-    MAC address appears on different MAC bridges.
-[^6]: Ethernet counters are described in
-    *ieee802-ethernet-interface.yang* and
-    *infix-ethernet-interface.yang*. [Ethernet
-    Counters](eth-counters.md) page provides additional details on
-    statistics support.
+[^5]: MAC bridges on Marvell Linkstreet devices are currently limited to
+    a single MAC database, this may be a problem if the same MAC address
+    appears in different MAC bridges.
+[^6]: Ethernet counters are described in *ieee802-ethernet-interface.yang*
+    and *infix-ethernet-interface.yang*.  There is a dedicated document on
+    [Ethernet Counters](eth-counters.md) that provide additional details
+    on the statistics support.
