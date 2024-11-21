@@ -3,10 +3,21 @@ module infix-services {
   namespace "urn:ietf:params:xml:ns:yang:infix-services";
   prefix infix-svc;
 
+  import ietf-interfaces {
+    prefix if;
+  }
+  import ietf-inet-types {
+    prefix inet;
+  }
+
   organization "KernelKit";
   contact      "kernelkit@googlegroups.com";
   description  "Infix services, generic.";
 
+  revision 2024-12-02 {
+    description "Expand mdns options: domain, allow/deny interfaces, reflector.";
+    reference "internal";
+  }
   revision 2024-05-30 {
     description "Add support for RESTCONF enable/disable as a web service.";
     reference "internal";
@@ -34,6 +45,63 @@ module infix-services {
     leaf enabled {
       description "Globally enable or disable mDNS/SD on all interfaces.";
       type boolean;
+    }
+
+    leaf domain {
+      description "LAN domain name to register host name and services in.
+
+                   Most common is .local, but some also use .lan, or .office,
+                   usually this setting can be left as-is.";
+      default "local";
+      type inet:domain-name;
+    }
+
+    container interfaces {
+      description "Filter interfaces to act on.";
+
+      leaf-list allow {
+        description "Enabled on interfaces, can be combined with deny-interfaces.
+
+                     By default all, except loopback and point-to-point links.";
+        type if:interface-ref;
+      }
+
+      leaf-list deny {
+        description "Disabled on interfaces (always wins).
+
+                     Other not specified interfaces will be used, except loopback
+                     and point-to-point, unless combined with allow-interfaces.
+
+                     This option takes precedence over allow-interfaces.";
+        type if:interface-ref;
+      }
+    }
+
+    container reflector {
+      description "Reflect incoming mDNS requests to local interfaces.";
+
+      leaf enabled {
+        description "Enable mDNS reflector on local interfaces.";
+        type boolean;
+      }
+
+      leaf-list service-filter {
+        description "Filter mDNS service names to reflect.
+
+                     Example, for AirPlay and AirTunes, use:
+
+                       - _airplay._tcp.local
+                       - _raop._tcp.local
+
+                     For AirPrint use:
+
+                       - _printer._tcp.local
+                       - _ipp._tcp.local
+                       - _pdl-datastream._tcp.local
+
+                     By default all services are reflected.";
+        type string;
+      }
     }
   }
 
