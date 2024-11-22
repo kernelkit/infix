@@ -1,0 +1,41 @@
+#!/bin/sh
+# (Ab)use the kernel's device link subsystem to detect consumer side
+# devices that may be very slow to probe (looking at you, mv88e6xxx!).
+
+ident=$(basename "$0")
+
+report()
+{
+    if [ -r "/tmp/$ident" ]; then
+	logger -k -p "user.$1" -t "$ident" "Waited for slow devices:"
+	sort "/tmp/$ident" | uniq -c | logger -k -p "user.$1" -t "$ident"
+    fi
+
+    rm -f "/tmp/$ident"
+}
+
+for _ in $(seq 50); do
+    again=
+
+    for dl in /sys/class/devlink/*; do
+    	[ -r "$dl/status" ] || continue
+
+    	status=$(cat "$dl/status")
+	if [ "$status" = "consumer probing" ]; then
+	    basename "$(readlink "$dl/consumer")" >>"/tmp/$ident"
+	    again=yes
+	fi
+
+    done
+
+    if [ -z "$again" ]; then
+	report notice
+	exit 0
+    fi
+
+    sleep .2
+done
+
+logger -k -p user.error -t "$ident" "Timeout waiting for devices to come online"
+report error
+exit 1

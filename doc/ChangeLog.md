@@ -4,6 +4,16 @@ Change Log
 All notable changes to the project are documented in this file.
 
 
+[v24.11.1][UNRELEASED]
+-------------------------
+
+### Fixes
+
+ - Fix #685: DSA conduit interface not always detected.  Previous
+   attempt at a fix (v24.10.2) mitigated the issue, but did not
+   completely solve it.
+
+
 [v24.11.0][] - 2024-11-20
 -------------------------
 
