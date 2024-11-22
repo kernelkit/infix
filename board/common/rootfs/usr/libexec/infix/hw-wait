@@ -6,15 +6,15 @@ ident=$(basename "$0")
 
 report()
 {
-    if [ -r /tmp/$ident ]; then
-	logger -k -p user.$1 -t "$ident" "Waited for slow devices:"
-	sort /tmp/$ident | uniq -c | logger -k -p user.$1 -t "$ident"
+    if [ -r "/tmp/$ident" ]; then
+	logger -k -p "user.$1" -t "$ident" "Waited for slow devices:"
+	sort "/tmp/$ident" | uniq -c | logger -k -p "user.$1" -t "$ident"
     fi
 
-    rm -f /tmp/$ident
+    rm -f "/tmp/$ident"
 }
 
-for i in $(seq 50); do
+for _ in $(seq 50); do
     again=
 
     for dl in /sys/class/devlink/*; do
@@ -22,7 +22,7 @@ for i in $(seq 50); do
 
     	status=$(cat "$dl/status")
 	if [ "$status" = "consumer probing" ]; then
-	    basename $(readlink "$dl/consumer") >>/tmp/$ident
+	    basename "$(readlink "$dl/consumer")" >>"/tmp/$ident"
 	    again=yes
 	fi
 
