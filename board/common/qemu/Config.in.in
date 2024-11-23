@@ -189,7 +189,7 @@ config QEMU_CLOCK
 comment "Networking"
 
 choice
-     prompt "Mode"
+     prompt "Network Mode"
      default QEMU_NET_USER
 
 config QEMU_NET_NONE
@@ -203,6 +203,9 @@ config QEMU_NET_USER
 
 config QEMU_NET_TAP
      bool "TAP"
+
+config QEMU_NET_ROCKER
+     bool "Rocker"
 
 endchoice
 
@@ -229,3 +232,8 @@ config QEMU_NET_TAP_N
 	int "Number of TAPs"
 	depends on QEMU_NET_TAP
 	default 1
+
+config QEMU_NET_PORTS
+	int "Number of Rocker switch ports"
+	depends on QEMU_NET_ROCKER
+	default 10

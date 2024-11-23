@@ -207,6 +207,17 @@ net_dev_args()
     echo "$name	$mac" >>"$mactab"
 }
 
+rocker_port_args()
+{
+    sw=$1
+    port=$2
+    name="sw${sw}p${port}"
+    mac=$(printf "02:00:00:00:%02x:%02x" "$sw" "$port")
+
+    echo -n "-netdev tap,id=$name,ifname=$name,script=no,downscript=no "
+    echo "$name	$mac" >> "$mactab"
+}
+
 net_args()
 {
     # Infix will pick up this file via fwcfg and install it to /etc
@@ -221,6 +232,19 @@ net_args()
 	for i in $(seq 1 "$CONFIG_QEMU_NET_TAP_N"); do
 	    echo -n "-netdev tap,id=e$i,ifname=qtap$i "
 	    net_dev_args "$i"
+	done
+    elif [ "$CONFIG_QEMU_NET_ROCKER" = "y" ]; then
+	sw=sw0			# Only single switch support atm.
+	echo -n "-device '{\"driver\":\"rocker\", \"name\":\"${sw}\", "
+	echo -n "\"fp_start_macaddr\":\"02:00:00:00:00:01\", "
+	echo -n "\"ports\":["
+	for i in $(seq 1 "$CONFIG_QEMU_NET_PORTS"); do
+	    [ "$i" -gt 1 ] && echo -n ", "
+	    echo -n "\"${sw}p${i}\""
+	done
+	echo -n "]}' "
+	for i in $(seq 1 "$CONFIG_QEMU_NET_PORTS"); do
+	    rocker_port_args 0 "$i"
 	done
     elif [ "$CONFIG_QEMU_NET_USER" = "y" ]; then
 	[ "$CONFIG_QEMU_NET_USER_OPTS" ] && useropts=",$CONFIG_QEMU_NET_USER_OPTS"
@@ -316,18 +340,24 @@ run_qemu()
 	  $(gdb_args) \
 	  $CONFIG_QEMU_EXTRA
 EOF
+    # Save resulting command to a script, because I cannot for the life
+    # of me figure out how to embed the JSON snippet for Rocker and run
+    # it here without issues, spent way too much time on it -- Joachim
+    run=$(mktemp -t run.qemu.XXX)
+    echo "#!/bin/sh" > "$run"
+    if [ "$CONFIG_QEMU_KERNEL" ]; then
+	echo "$qemu -append \"$(append_args)\" $*" >> "$run"
+    else
+	echo "$qemu $*" >> "$run"
+    fi
+    chmod +x "$run"
 
     echo "Starting Qemu  ::  Ctrl-a x -- exit | Ctrl-a c -- toggle console/monitor"
     line=$(stty -g)
     stty raw
-
-    if [ "$CONFIG_QEMU_KERNEL" ]; then
-	$qemu -append "$(append_args)" "$@"
-    else
-	$qemu "$@"
-    fi
-
+    $run
     stty "$line"
+    rm "$run"
 }
 
 dtb_args()
