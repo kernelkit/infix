@@ -31,6 +31,7 @@ usage()
     echo "Options:"
     echo "  -c     Run menuconfig to change Qemu settings"
     echo "  -h     This help text"
+    echo "  -k     Keep generated qemu.run script (name shown at end)"
     echo
     echo "Arguments:"
     echo "  ARGS1  Args before the '--' separator are for kernel space"
@@ -357,7 +358,11 @@ EOF
     stty raw
     $run
     stty "$line"
-    rm "$run"
+    if [ -n "$keep" ]; then
+	echo "Keeping generated qemu.run script: $run"
+    else
+	rm "$run"
+    fi
 }
 
 dtb_args()
@@ -443,6 +448,9 @@ while [ "$1" != "" ]; do
 	    ;;
 	-h)
 	    usage
+	    ;;
+	-k)
+	    keep=true
 	    ;;
 	*)
 	    break
