@@ -50,7 +50,7 @@ set_dhcp_routes()
 	# format: dest1/mask gw1 ... destn/mask gwn
 	set -- $staticroutes
 	while [ -n "$1" -a -n "$2" ]; do
-	    log "adding route $1 via $2 dev $interface proto dhcp"
+	    log "adding route $1 via $2 metric $metric tag 100"
 	    echo "ip route $1 $2 $metric tag 100" >> "$NEXT"
 	    shift 2
 	done
@@ -115,7 +115,7 @@ case "$ACTION" in
 	    /usr/sbin/avahi-autoipd -c $interface && /usr/sbin/avahi-autoipd -k $interface
 	fi
 
-	if /bin/ip addr add dev $interface $ip/$subnet $BROADCAST proto 5; then
+	if /bin/ip addr add dev $interface $ip/$subnet $BROADCAST proto dhcp; then
 	    echo "$ip" > "$IP_CACHE"
 	fi
 	if [ -n "$ipv6" ] ; then
