@@ -1,0 +1,2 @@
+# --log-level debug
+ZEBRA_ARGS="-A 127.0.0.1 -u frr -g frr --log syslog "
