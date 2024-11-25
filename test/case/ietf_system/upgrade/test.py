@@ -4,16 +4,11 @@ Upgrade
 
 Verify it is possible to upgrade.
 """
-import concurrent.futures
-import functools
-import http.server
 import os
-import socket
 import time
-
 import netifaces
-
 import infamy
+import infamy.file_server as srv
 
 SRVPORT = 8008
 
@@ -26,25 +21,6 @@ PKGPATH = os.path.join(
     BUNDLEDIR,
     "package"
 )
-
-class FileServer(http.server.HTTPServer):
-    class RequestHandler(http.server.SimpleHTTPRequestHandler):
-        def log_message(*args, **kwargs):
-            pass
-
-    address_family = socket.AF_INET6
-
-    def __init__(self, server_address, directory):
-        rh = functools.partial(FileServer.RequestHandler, directory=directory)
-        self.__tp = concurrent.futures.ThreadPoolExecutor(max_workers=1)
-        super().__init__(server_address, rh)
-
-    def __enter__(self):
-        self.__tp.submit(self.serve_forever)
-
-    def __exit__(self, _, __, ___):
-        self.shutdown()
-        self.__tp.shutdown()
 
 with infamy.Test() as test:
     with test.step("Set up topology and attach to target DUT"):
@@ -66,7 +42,7 @@ with infamy.Test() as test:
         hip = netifaces.ifaddresses(hport)[netifaces.AF_INET6][0]["addr"]
         hip = hip.replace(f"%{hport}", f"%{tport}")
 
-    with FileServer(("::", SRVPORT), BUNDLEDIR):
+    with srv.FileServer(("::", SRVPORT), BUNDLEDIR):
 
         with test.step("Start installation of selected package"):
             print(f"Installing {os.path.basename(env.args.package)}")

@@ -1,0 +1,62 @@
+graph "ospf_containers" {
+	layout="neato";
+	overlap=false;
+	esep="+20";
+	splines=true;
+	size=10;
+
+	node [ shape=record, fontname="DejaVu Sans Mono, Book"];
+   	edge [color="black", penwidth="2", fontname="DejaVu Serif, Book"];
+
+	host [
+		label=" { {  <R1ring1> R1ring1 | <R1ring2> R1ring2 |  <data1> data1  | <mgmt1> mgmt1 |  <mgmt2> mgmt2 | <data2> data2 | <R2ring1> R2ring1 | <R2ring2> R2ring2 | <data3> data3  | <mgmt3> mgmt3 |  <R3ring1> R3ring1 | <R3ring2> R3ring2 |  <mgmt4> mgmt4 | <data4> data4 } | host } ",
+		pos="0,5!"
+		kind="controller",
+	];
+
+   	R1 [
+		label="{{ <link> link } | R1 | {<ring1> ring1 | <ring2> ring2 | <data> data | <mgmt> mgmt }}"
+		pos="-1,6!"
+		kind="infix",
+	];
+
+	R2 [
+		label="{{ <link> link } | R2 | { <mgmt> mgmt | <data> data | <ring1> ring1 |  <ring2> ring2 }}"
+		pos="0,6!",
+		kind="infix",
+	];
+	R3 [
+		label="{ <link> link | R3 | { <data> data | <mgmt> mgmt | <ring1> ring1 | <ring2> ring2 }}"
+		pos="1,6!"
+		kind="infix",
+	];
+
+
+	ABR [
+		label="{ ABR | {<link1> link1 |  <link2> link2 |<link3> link3 | <mgmt> mgmt | <data> data }}"
+		pos="2,6.5!"
+		kind="infix",
+	];
+
+	host:mgmt1 -- R1:mgmt [kind=mgmt, color="lightgray"]
+	host:mgmt2 -- R2:mgmt [kind=mgmt, color="lightgray"]
+	host:mgmt3 -- R3:mgmt  [kind=mgmt, color="lightgray"]
+	host:mgmt4 -- ABR:mgmt [kind=mgmt, color="lightgray"]
+
+	# host-Dut links
+	host:data1 -- R1:data
+	host:data2 -- R2:data
+	host:data3 -- R3:data
+	host:data4 -- ABR:data
+
+	host:R1ring1 -- R1:ring1
+	host:R2ring1 -- R2:ring1
+	host:R3ring1 -- R3:ring1
+
+	host:R1ring2 -- R1:ring2
+	host:R2ring2 -- R2:ring2
+	host:R3ring2 -- R3:ring2
+	R1:link  -- ABR:link1
+	R2:link  -- ABR:link2
+	R3:link  -- ABR:link3
+}

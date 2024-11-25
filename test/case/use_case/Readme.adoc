@@ -1,0 +1,8 @@
+:testgroup:
+
+== Use case tests
+Contains test of multiple parts of Infix together.
+
+<<<
+
+include::ospf_container/Readme.adoc[]
