@@ -1,7 +1,7 @@
 :topdoc:
 
 = Test specification
-Infix v24.10.1-23-g8fc0ab9b-dirty
+ v24.10.2-2-g032a51b9-dirty
 :title-page:
 :toc:
 :toclevels: 2

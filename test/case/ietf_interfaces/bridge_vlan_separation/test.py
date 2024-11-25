@@ -16,9 +16,9 @@ Test that two VLANs are correctly separated in the bridge
  ,------------------------------------------------------------------------------,
  |  host:mgmt0 host:data10 host:data11    host:data20  host:data21  host:mgmt1  |
  |             [10.0.0.1]   [10.0.0.2]     [10.0.0.3]     [10.0.0.4]            |
- |              (ns10)         (ns11)          (s20)         (ns21)             |
+ |               (ns10)       (ns11)         (ns20)         (ns21)              |
  |                                                                              |
- |                                        [ HOST ]                              |
+ |                                  [ HOST ]                                    |
  '------------------------------------------------------------------------------'
 
 ....
@@ -168,5 +168,21 @@ with infamy.Test() as test:
                             lambda: ns11.must_not_reach("10.0.0.3"),
                             lambda: ns10.must_not_reach("10.0.0.2"),
                             lambda: ns11.must_not_reach("10.0.0.1"))
+            
+        with test.step("Verify MAC broadcast isolation within VLANs"):
+            # Clear ARP entries/queued packets
+            ns10.runsh("ip neigh flush all")
+            ns11.runsh("ip neigh flush all")
+            ns20.runsh("ip neigh flush all")
+            ns21.runsh("ip neigh flush all")
+
+            lambda: ns10.runsh("ping -b -c 5 -i 0.5 10.0.0.255"),
+            
+            lambda: ns20.must_receive("broadcast or arp"),
+            
+            infamy.parallel(
+                lambda: ns11.must_not_receive("broadcast or arp"),
+                lambda: ns21.must_not_receive("broadcast or arp")
+            )
 
     test.succeed()

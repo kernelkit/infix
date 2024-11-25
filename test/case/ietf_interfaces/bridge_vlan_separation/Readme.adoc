@@ -14,9 +14,9 @@ Test that two VLANs are correctly separated in the bridge
  ,------------------------------------------------------------------------------,
  |  host:mgmt0 host:data10 host:data11    host:data20  host:data21  host:mgmt1  |
  |             [10.0.0.1]   [10.0.0.2]     [10.0.0.3]     [10.0.0.4]            |
- |              (ns10)         (ns11)          (s20)         (ns21)             |
+ |               (ns10)       (ns11)         (ns20)         (ns21)              |
  |                                                                              |
- |                                        [ HOST ]                              |
+ |                                  [ HOST ]                                    |
  '------------------------------------------------------------------------------'
 
 ....
@@ -39,6 +39,7 @@ endif::topdoc[]
 . Verify ping 10.0.0.3 from host:data10
 . Verify ping 10.0.0.4 from host:data11
 . Verify ping not possible host:data10->10.0.0.4, host:data11->10.0.0.3, host:data10->10.0.0.2, host:data11->10.0.0.1
+. Verify MAC broadcast isolation within VLANs
 
 
 <<<
