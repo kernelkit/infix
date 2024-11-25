@@ -8,3 +8,4 @@
 /test/.venv
 /test/.log
 /local.mk
+/test/spec/Readme.adoc
