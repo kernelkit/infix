@@ -1,7 +1,7 @@
 From 7c19df77212d0728874515e97cf297863a6ff2cd Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Tue, 19 Sep 2023 18:38:10 +0200
-Subject: [PATCH 13/34] net: phy: marvell10g: Support firmware loading on
+Subject: [PATCH 13/35] net: phy: marvell10g: Support firmware loading on
  88X3310
 Organization: Addiva Elektronik
 
@@ -12,7 +12,7 @@ We have no choice but to bail out of the probe if firmware is not
 available, as the device does not have any built-in image on which to
 fall back.
 
-Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
 ---
  drivers/net/phy/marvell10g.c | 161 +++++++++++++++++++++++++++++++++++
  1 file changed, 161 insertions(+)
