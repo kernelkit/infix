@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
+ "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+
+<!-- Title: vlan&#45;iface&#45;termination Pages: 1 -->
+<svg width="254pt" height="78pt"
+ viewBox="0.00 0.00 254.02 78.00" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(4 74)">
+<title>vlan&#45;iface&#45;termination</title>
+<polygon fill="white" stroke="transparent" points="-4,4 -4,-74 250.02,-74 250.02,4 -4,4"/>
+<!-- host -->
+<g id="node1" class="node">
+<title>host</title>
+<polygon fill="none" stroke="black" points="0,-0.5 0,-69.5 100,-69.5 100,-0.5 0,-0.5"/>
+<text text-anchor="middle" x="25" y="-31.3" font-family="DejaVu Sans Mono, Book" font-size="14.00">host</text>
+<polyline fill="none" stroke="black" points="50,-0.5 50,-69.5 "/>
+<text text-anchor="middle" x="75" y="-54.3" font-family="DejaVu Sans Mono, Book" font-size="14.00">mgmt</text>
+<polyline fill="none" stroke="black" points="50,-46.5 100,-46.5 "/>
+<text text-anchor="middle" x="75" y="-31.3" font-family="DejaVu Sans Mono, Book" font-size="14.00">a</text>
+<polyline fill="none" stroke="black" points="50,-23.5 100,-23.5 "/>
+<text text-anchor="middle" x="75" y="-8.3" font-family="DejaVu Sans Mono, Book" font-size="14.00">b</text>
+</g>
+<!-- dut -->
+<g id="node2" class="node">
+<title>dut</title>
+<polygon fill="none" stroke="black" points="155.02,-0.5 155.02,-69.5 246.02,-69.5 246.02,-0.5 155.02,-0.5"/>
+<text text-anchor="middle" x="180.02" y="-54.3" font-family="DejaVu Sans Mono, Book" font-size="14.00">mgmt</text>
+<polyline fill="none" stroke="black" points="155.02,-46.5 205.02,-46.5 "/>
+<text text-anchor="middle" x="180.02" y="-31.3" font-family="DejaVu Sans Mono, Book" font-size="14.00">a</text>
+<polyline fill="none" stroke="black" points="155.02,-23.5 205.02,-23.5 "/>
+<text text-anchor="middle" x="180.02" y="-8.3" font-family="DejaVu Sans Mono, Book" font-size="14.00">b</text>
+<polyline fill="none" stroke="black" points="205.02,-0.5 205.02,-69.5 "/>
+<text text-anchor="middle" x="225.52" y="-31.3" font-family="DejaVu Sans Mono, Book" font-size="14.00">dut</text>
+</g>
+<!-- host&#45;&#45;dut -->
+<g id="edge1" class="edge">
+<title>host:mgmt&#45;&#45;dut:mgmt</title>
+<path fill="none" stroke="lightgray" stroke-width="2" d="M100,-58C100,-58 154.52,-58 154.52,-58"/>
+</g>
+<!-- host&#45;&#45;dut -->
+<g id="edge2" class="edge">
+<title>host:a&#45;&#45;dut:a</title>
+<path fill="none" stroke="cornflowerblue" stroke-width="2" d="M100,-35C100,-35 154.52,-35 154.52,-35"/>
+</g>
+<!-- host&#45;&#45;dut -->
+<g id="edge3" class="edge">
+<title>host:b&#45;&#45;dut:b</title>
+<path fill="none" stroke="cornflowerblue" stroke-width="2" d="M100,-12C100,-12 154.52,-12 154.52,-12"/>
+</g>
+</g>
+</svg>

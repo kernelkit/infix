@@ -1,0 +1,49 @@
+=== VLAN Interface Termination
+==== Description
+Verify that VLANs stacked on top of an interfaces that are also
+attached to a VLAN filtering bridge are always locally terminated.
+
+....
+.-------------------.
+|        dut        |
+|                   |
+|  a.10  br0  b.10  |
+|     \ /   \ /     |
+'------a-----b------'
+       |     |
+       |     |
+.------a-----b------.
+|                   |
+|       host        |
+|                   |
+'-------------------'
+....
+
+In this setup, even though VLAN 10 is allowed to ingress and egress on
+both `a` and `b`, _bridging_ of packets from one to the other must
+_not_ be allowed.
+
+==== Topology
+ifdef::topdoc[]
+image::../../test/case/ietf_interfaces/vlan_iface_termination/topology.svg[VLAN Interface Termination topology]
+endif::topdoc[]
+ifndef::topdoc[]
+ifdef::testgroup[]
+image::vlan_iface_termination/topology.svg[VLAN Interface Termination topology]
+endif::testgroup[]
+ifndef::testgroup[]
+image::topology.svg[VLAN Interface Termination topology]
+endif::testgroup[]
+endif::topdoc[]
+==== Test sequence
+. Set up topology and attach to dut
+. Configure bridge and VLAN interfaces on dut
+. Configure IP addresses and VLAN interfaces on host
+. Verify that host:a reaches host:b with untagged packets
+. Verify that traffic on VLAN 10 from host:a does not reach host:b
+. Verify that host:a can reach dut on VLAN 10
+. Verify that host:b can reach dut on VLAN 10
+
+
+<<<
+

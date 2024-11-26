@@ -61,3 +61,6 @@
 
 - name: iface_enable_disable
   case: iface_enable_disable/test.py
+
+- name: vlan_iface_termination
+  case: vlan_iface_termination/test.py
