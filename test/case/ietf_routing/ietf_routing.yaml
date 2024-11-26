@@ -19,3 +19,6 @@
 
 - name: route_pref_dhcp
   case: route_pref_dhcp/test.py
+
+- name: route_pref_255
+  case: route_pref_255/test.py

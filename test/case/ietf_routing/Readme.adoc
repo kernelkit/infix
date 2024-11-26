@@ -17,3 +17,5 @@ include::ospf_bfd/Readme.adoc[]
 include::route_pref_ospf/Readme.adoc[]
 
 include::route_pref_dhcp/Readme.adoc[]
+
+include::route_pref_255/Readme.adoc[]
