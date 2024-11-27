@@ -226,7 +226,7 @@ create()
     fi
 
     if [ -z "$logging" ]; then
-	logging="--log-driver k8s-file --log-opt path=/run/containers/$name.fifo"
+	logging="--log-driver none"
     fi
 
     # When we get here we've already fetched, or pulled, the image
