@@ -20,6 +20,10 @@ module infix-routing {
   contact      "kernelkit@googlegroups.com";
   description  "Deviations and augments for ietf-routing and ietf-ospf.";
 
+  revision 2024-11-27 {
+    description "Deviate address-family in OSPF";
+    reference "internal";
+  }
   revision 2024-11-15 {
     description "Fix pyang linter errors and warnings:
                   - Drop OSPF database deviations, already deviated earlier
@@ -304,6 +308,11 @@ module infix-routing {
   deviation "/rt:routing/rt:control-plane-protocols/rt:control-plane-protocol/ospf:ospf/ospf:spf-control" {
     deviate not-supported;
   }
+
+  deviation "/rt:routing/rt:control-plane-protocols/rt:control-plane-protocol/ospf:ospf/ospf:address-family" {
+    deviate not-supported;
+  }
+
   deviation "/rt:routing/rt:control-plane-protocols/rt:control-plane-protocol/ospf:ospf/ospf:preference" {
     deviate not-supported;
   }
