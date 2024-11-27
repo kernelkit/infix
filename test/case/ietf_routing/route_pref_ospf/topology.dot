@@ -1,0 +1,41 @@
+graph "route-preference" {
+	layout="neato";
+	overlap="false";
+	esep="+20";
+	size=10
+
+        node [shape=record, fontname="DejaVu Sans Mono, Book"];
+	edge [color="cornflowerblue", penwidth="2", fontname="DejaVu Serif, Book"];
+
+	PC	
+	[
+		label="PC | { <mgmt1> mgmt1 | <data1> data1 | <> \n\n | <R1_ospf> R1_ospf | <R2_ospf> R2_ospf | <> \n\n |  <data2> data2 | <mgmt2> mgmt2 }",
+	    	pos="20,50!",
+	    	kind="controller",
+	];
+
+        R1 
+	[
+		label="{ <mgmt> mgmt | <data> data | <ospf> ospf | <link> link } | R1",
+		pos="70,58!",
+		kind="infix",
+	];
+	
+	R2 
+	[
+	    	label="{ <link> link | <ospf> ospf | <data> data | <mgmt> mgmt } | R2",
+	    	pos="70,42!",
+	    	kind="infix",
+	];
+	
+	PC:mgmt1 -- R1:mgmt [kind=mgmt, color="lightgray"]
+        PC:mgmt2 -- R2:mgmt [kind=mgmt, color="lightgray"]
+	
+	PC:data1 -- R1:data  [color="black", headlabel="192.168.10.1/24", taillabel="192.168.10.11/24", fontcolor="black"]
+	PC:data2 -- R2:data  [color="black", headlabel="192.168.20.2/24", taillabel="192.168.20.22/24", fontcolor="black"]
+
+	R1:link -- R2:link  [headlabel="192.168.50.2/24", taillabel="192.168.50.1/24", labeldistance=1, fontcolor="black", color="black"]
+
+	R1:ospf -- PC:R1_ospf [color="lightgreen", taillabel="192.168.60.1/24"]
+	R2:ospf -- PC:R2_ospf [color="lightgreen", taillabel="192.168.60.2/24"]
+}

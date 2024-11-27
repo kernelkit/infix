@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
+ "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+
+<!-- Title: route&#45;preference Pages: 1 -->
+<svg width="500pt" height="198pt"
+ viewBox="0.00 0.00 499.77 198.01" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(4 194.01)">
+<title>route&#45;preference</title>
+<polygon fill="white" stroke="transparent" points="-4,4 -4,-194.01 495.77,-194.01 495.77,4 -4,4"/>
+<!-- PC -->
+<g id="node1" class="node">
+<title>PC</title>
+<polygon fill="none" stroke="black" points="0,-95.68 0,-187.68 91,-187.68 91,-95.68 0,-95.68"/>
+<text text-anchor="middle" x="16.5" y="-137.98" font-family="DejaVu Sans Mono, Book" font-size="14.00">PC</text>
+<polyline fill="none" stroke="black" points="33,-95.68 33,-187.68 "/>
+<text text-anchor="middle" x="62" y="-172.48" font-family="DejaVu Sans Mono, Book" font-size="14.00">mgmt1</text>
+<polyline fill="none" stroke="black" points="33,-164.68 91,-164.68 "/>
+<text text-anchor="middle" x="62" y="-149.48" font-family="DejaVu Sans Mono, Book" font-size="14.00">data1</text>
+<polyline fill="none" stroke="black" points="33,-141.68 91,-141.68 "/>
+<text text-anchor="middle" x="62" y="-126.48" font-family="DejaVu Sans Mono, Book" font-size="14.00">data2</text>
+<polyline fill="none" stroke="black" points="33,-118.68 91,-118.68 "/>
+<text text-anchor="middle" x="62" y="-103.48" font-family="DejaVu Sans Mono, Book" font-size="14.00">mgmt2</text>
+</g>
+<!-- R1 -->
+<g id="node2" class="node">
+<title>R1</title>
+<polygon fill="none" stroke="black" points="404.04,-120.51 404.04,-189.51 487.04,-189.51 487.04,-120.51 404.04,-120.51"/>
+<text text-anchor="middle" x="429.04" y="-174.31" font-family="DejaVu Sans Mono, Book" font-size="14.00">mgmt</text>
+<polyline fill="none" stroke="black" points="404.04,-166.51 454.04,-166.51 "/>
+<text text-anchor="middle" x="429.04" y="-151.31" font-family="DejaVu Sans Mono, Book" font-size="14.00">data</text>
+<polyline fill="none" stroke="black" points="404.04,-143.51 454.04,-143.51 "/>
+<text text-anchor="middle" x="429.04" y="-128.31" font-family="DejaVu Sans Mono, Book" font-size="14.00">link</text>
+<polyline fill="none" stroke="black" points="454.04,-120.51 454.04,-189.51 "/>
+<text text-anchor="middle" x="470.54" y="-151.31" font-family="DejaVu Sans Mono, Book" font-size="14.00">R1</text>
+</g>
+<!-- PC&#45;&#45;R1 -->
+<g id="edge1" class="edge">
+<title>PC:mgmt1&#45;&#45;R1:mgmt</title>
+<path fill="none" stroke="lightgray" stroke-width="2" d="M91.5,-176.68C91.5,-176.68 403.54,-178.01 403.54,-178.01"/>
+</g>
+<!-- PC&#45;&#45;R1 -->
+<g id="edge3" class="edge">
+<title>PC:data1&#45;&#45;R1:data</title>
+<path fill="none" stroke="black" stroke-width="2" d="M91.5,-153.68C91.5,-153.68 403.54,-155.01 403.54,-155.01"/>
+<text text-anchor="middle" x="344.54" y="-158.81" font-family="DejaVu Serif, Book" font-size="14.00">192.168.10.1/24</text>
+<text text-anchor="middle" x="155" y="-157.48" font-family="DejaVu Serif, Book" font-size="14.00">192.168.10.11/24</text>
+</g>
+<!-- R2 -->
+<g id="node3" class="node">
+<title>R2</title>
+<polygon fill="none" stroke="black" points="404.04,-0.5 404.04,-69.5 487.04,-69.5 487.04,-0.5 404.04,-0.5"/>
+<text text-anchor="middle" x="429.04" y="-54.3" font-family="DejaVu Sans Mono, Book" font-size="14.00">link</text>
+<polyline fill="none" stroke="black" points="404.04,-46.5 454.04,-46.5 "/>
+<text text-anchor="middle" x="429.04" y="-31.3" font-family="DejaVu Sans Mono, Book" font-size="14.00">data</text>
+<polyline fill="none" stroke="black" points="404.04,-23.5 454.04,-23.5 "/>
+<text text-anchor="middle" x="429.04" y="-8.3" font-family="DejaVu Sans Mono, Book" font-size="14.00">mgmt</text>
+<polyline fill="none" stroke="black" points="454.04,-0.5 454.04,-69.5 "/>
+<text text-anchor="middle" x="470.54" y="-31.3" font-family="DejaVu Sans Mono, Book" font-size="14.00">R2</text>
+</g>
+<!-- PC&#45;&#45;R2 -->
+<g id="edge2" class="edge">
+<title>PC:mgmt2&#45;&#45;R2:mgmt</title>
+<path fill="none" stroke="lightgray" stroke-width="2" d="M91.5,-106.68C91.5,-106.68 403.54,-12 403.54,-12"/>
+</g>
+<!-- PC&#45;&#45;R2 -->
+<g id="edge4" class="edge">
+<title>PC:data2&#45;&#45;R2:data</title>
+<path fill="none" stroke="black" stroke-width="2" d="M91.5,-129.68C91.5,-129.68 403.54,-35 403.54,-35"/>
+<text text-anchor="middle" x="344.54" y="-38.8" font-family="DejaVu Serif, Book" font-size="14.00">192.168.20.2/24</text>
+<text text-anchor="middle" x="155" y="-133.48" font-family="DejaVu Serif, Book" font-size="14.00">192.168.20.22/24</text>
+</g>
+<!-- R1&#45;&#45;R2 -->
+<g id="edge5" class="edge">
+<title>R1:link&#45;&#45;R2:link</title>
+<path fill="none" stroke="black" stroke-width="2" d="M428.54,-120.01C428.54,-120.01 428.54,-70 428.54,-70"/>
+<text text-anchor="middle" x="432.77" y="-75.36" font-family="DejaVu Serif, Book" font-size="14.00">192.168.50.2/24</text>
+<text text-anchor="middle" x="424.31" y="-107.25" font-family="DejaVu Serif, Book" font-size="14.00">192.168.50.1/24</text>
+</g>
+</g>
+</svg>
