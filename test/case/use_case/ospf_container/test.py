@@ -64,19 +64,14 @@ BODY  = "<html><body><p>Router responding</p></body></html>"
 
 def create_vlan_bridge(ns):
     return ns.runsh("""
-    ip link add dev br0 type bridge
-    ip link set dev br0 up
-    ip link set dev iface1 up
-    ip link set dev iface2 up
+    ip link add dev br0 type bridge vlan_filtering 1 vlan_default_pvid 0
     ip link set dev iface1 master br0
     ip link set dev iface2 master br0
-    ip link set dev br0 type bridge vlan_filtering 1
-    bridge vlan del dev br0 vid 1 self
-    bridge vlan del dev iface1 vid 1
-    bridge vlan del dev iface2 vid 1
-    bridge vlan add dev br0 vid 8 self
     bridge vlan add dev iface1 vid 8
     bridge vlan add dev iface2 vid 8
+    ip link set dev iface1 up
+    ip link set dev iface2 up
+    ip link set dev br0 up
     """)
 
 
