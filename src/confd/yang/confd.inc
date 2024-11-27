@@ -32,7 +32,7 @@ MODULES=(
 	"infix-lldp@2023-08-23.yang"
 	"infix-dhcp-client@2024-09-20.yang"
 	"infix-meta@2024-10-18.yang"
-	"infix-system@2024-09-13.yang"
+	"infix-system@2024-11-27.yang"
 	"infix-services@2024-05-30.yang"
 	"ieee802-ethernet-interface@2019-06-21.yang"
 	"infix-ethernet-interface@2024-02-27.yang"

@@ -1053,6 +1053,36 @@ def add_interface(ifname, yang_ifaces):
 
         add_container_ifaces(yang_ifaces)
 
+def add_system_ntp(out):
+    data = run_cmd(["chronyc", "-c", "sources"], "chronyc-sources.txt", "")
+    source = []
+    state_mode_map = {
+        "^": "server",
+        "=": "peer",
+        "#": "local-clock"
+    }
+    source_state_map = {
+        "*": "selected",
+        "+": "candidate",
+        "-": "outlier",
+        "?": "unusable",
+        "x": "falseticker",
+        "~": "unstable"
+    }
+    for line in data:
+        src = {}
+        line = line.split(',')
+        src["address"] = line[2]
+        src["source-mode"] = state_mode_map[line[0]]
+        src["source-state"] = source_state_map[line[1]]
+        src["stratum"] = int(line[3])
+        src["poll"] = int(line[4])
+        source.append(src)
+
+    insert(out, "infix-system:ntp", "sources", "source", source)
+def add_system(yang_data):
+    add_system_ntp(yang_data)
+
 def main():
     global TESTPATH
     global logger
@@ -1133,6 +1163,12 @@ def main():
         }
         add_container(yang_data['infix-containers:containers']['container'])
 
+    elif args.model == 'ietf-system':
+        yang_data = {
+            "ietf-system:system-state": {
+            }
+        }
+        add_system(yang_data['ietf-system:system-state'])
     else:
         logger.warning(f"Unsupported model {args.model}", file=sys.stderr)
         sys.exit(1)
