@@ -26,6 +26,12 @@ submodule infix-if-bridge {
   contact      "kernelkit@googlegroups.com";
   description  "Linux bridge extension for ietf-interfaces.";
 
+  revision 2024-11-27 {
+    description "Drop must() expressions for IP addres on VLAN bridges.
+                 If a bridge is untagged member of a VLAN it should be
+                 possible to set an IP address on the bridge.";
+    reference "internal";
+  }
   revision 2024-11-15 {
     description "Fix pyang linter warnings, drop unused imports.";
     reference "internal";
@@ -420,22 +426,6 @@ submodule infix-if-bridge {
     deviate add {
       must "../../multicast/snooping = 'true'" {
         error-message "Multicast snooping is required when configure multicast-filters ";
-      }
-    }
-  }
-
-  deviation "/if:interfaces/if:interface/ip:ipv4/ip:enabled" {
-    deviate add {
-      must "not(.) or count(../../infix-if:bridge/infix-if:vlans/infix-if:vlan) = 0" {
-	error-message "IPv4 address is not supported on VLAN filtering bridges.";
-      }
-    }
-  }
-
-  deviation "/if:interfaces/if:interface/ip:ipv6/ip:enabled" {
-    deviate add {
-      must "not(.) or count(../../infix-if:bridge/infix-if:vlans/infix-if:vlan) = 0" {
-	error-message "IPv6 address is not supported on VLAN filtering bridges.";
       }
     }
   }

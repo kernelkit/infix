@@ -23,6 +23,10 @@ module infix-interfaces {
   contact      "kernelkit@googlegroups.com";
   description  "Linux bridge and lag extensions for ietf-interfaces.";
 
+  revision 2024-11-27 {
+    description "Allow IP addresses directly on VLAN filtering bridges.";
+    reference "internal";
+  }
   revision 2024-11-15 {
     description "Two changes:
                   - Limit name 1-15 chars, Linux limitation
