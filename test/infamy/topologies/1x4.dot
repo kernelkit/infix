@@ -7,20 +7,20 @@ graph "1x4" {
    	edge [color="cornflowerblue", penwidth="2", fontname="DejaVu Serif, Book"];
 
 	host [
-	    label="host | { <tgt> tgt | <data0> data0 | <data1>  data1 | <data2>  data2 }",
+	    label="host | { <mgmt> mgmt | <data1> data1 | <data2>  data2 | <data3>  data3 }",
 	    pos="0,12!",
 	    kind="controller",
 	];
 
         target [
-	    label="{ <mgmt> mgmt | <data0> data0 | <data1> data1 | <data2> data2 } | target",
+	    label="{ <mgmt> mgmt | <data1> data1 | <data2> data2 | <data3> data3 } | target",
 	    pos="10,12!",
 
 	    kind="infix",
 	];
 
-	host:tgt -- target:mgmt [kind=mgmt]
-	host:data0 -- target:data0 [color=black]
+	host:mgmt  -- target:mgmt [kind=mgmt]
 	host:data1 -- target:data1 [color=black]
 	host:data2 -- target:data2 [color=black]
+	host:data3 -- target:data3 [color=black]
 }

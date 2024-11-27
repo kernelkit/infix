@@ -16,3 +16,5 @@ include::timezone_utc_offset/Readme.adoc[]
 include::ssh_key_authentication/Readme.adoc[]
 
 include::upgrade/Readme.adoc[]
+
+include::ntp_client/Readme.adoc[]

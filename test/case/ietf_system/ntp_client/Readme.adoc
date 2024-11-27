@@ -1,0 +1,24 @@
+=== Simple NTP client test
+==== Description
+Verify NTP client to multiple NTP servers and verify that one get selected
+
+==== Topology
+ifdef::topdoc[]
+image::../../test/case/ietf_system/ntp_client/topology.svg[Simple NTP client test topology]
+endif::topdoc[]
+ifndef::topdoc[]
+ifdef::testgroup[]
+image::ntp_client/topology.svg[Simple NTP client test topology]
+endif::testgroup[]
+ifndef::testgroup[]
+image::topology.svg[Simple NTP client test topology]
+endif::testgroup[]
+endif::topdoc[]
+==== Test sequence
+. Set up topology and attach to target DUT
+. Configure NTP client on 'target'
+. Verify one source is in 'selected' state on 'target'
+
+
+<<<
+
