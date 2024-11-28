@@ -54,6 +54,12 @@ class PadUsbPort:
     name = 20
     state = 10
 
+class PadNtpSource:
+    address = 16
+    mode = 13
+    state = 13
+    stratum = 11
+    poll = 14
 
 class Decore():
     @staticmethod
@@ -719,6 +725,26 @@ def show_hardware(json):
             port = USBport(component)
             port.print()
 
+def show_ntp(json):
+    if not json.get("ietf-system:system-state"):
+        print(f"Error, top level \"ietf-system:system-state\" missing")
+        sys.exit(1)
+    hdr =  (f"{'ADDRESS':<{PadNtpSource.address}}"
+            f"{'MODE':<{PadNtpSource.mode}}"
+            f"{'STATE':<{PadNtpSource.state}}"
+            f"{'STRATUM':>{PadNtpSource.stratum}}"
+            f"{'POLL-INTERVAL':>{PadNtpSource.poll}}"
+            )
+    print(Decore.invert(hdr))
+    sources = get_json_data({}, json, 'ietf-system:system-state', 'infix-system:ntp', 'sources', 'source')
+    for source in sources:
+        row = f"{source['address']:<{PadNtpSource.address}}"
+        row += f"{source['mode']:<{PadNtpSource.mode}}"
+        row += f"{source['state'] if source['state'] != 'not-combined' else 'not combined':<{PadNtpSource.state}}"
+        row += f"{source['stratum']:>{PadNtpSource.stratum}}"
+        row += f"{source['poll']:>{PadNtpSource.poll}}"
+        print(row)
+
 def main():
     global UNIT_TEST
 
@@ -749,6 +775,8 @@ def main():
 
     parser_show_routing_table = subparsers.add_parser('show-hardware', help='Show USB ports')
 
+    parser_show_ntp_sources = subparsers.add_parser('show-ntp', help='Show NTP sources')
+
     args = parser.parse_args()
     UNIT_TEST = args.test
 
@@ -762,6 +790,8 @@ def main():
         show_bridge_mdb(json_data)
     elif args.command == "show-hardware":
         show_hardware(json_data)
+    elif args.command == "show-ntp":
+        show_ntp(json_data)
     else:
         print(f"Error, unknown command {args.command}")
         sys.exit(1)

@@ -1073,8 +1073,8 @@ def add_system_ntp(out):
         src = {}
         line = line.split(',')
         src["address"] = line[2]
-        src["source-mode"] = state_mode_map[line[0]]
-        src["source-state"] = source_state_map[line[1]]
+        src["mode"] = state_mode_map[line[0]]
+        src["state"] = source_state_map[line[1]]
         src["stratum"] = int(line[3])
         src["poll"] = int(line[4])
         source.append(src)
