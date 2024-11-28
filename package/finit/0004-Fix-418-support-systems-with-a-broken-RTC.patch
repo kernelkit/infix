@@ -1,7 +1,7 @@
 From bc8118d515839dc598f437aa01f07a771646968d Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Sun, 3 Nov 2024 09:47:16 +0100
-Subject: [PATCH 4/6] Fix #418: support systems with a broken RTC
+Subject: [PATCH 4/7] Fix #418: support systems with a broken RTC
 Organization: Addiva Elektronik
 
 This patch introduces a new configure option --with-rtc-file=FILE.  When

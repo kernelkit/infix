@@ -1,7 +1,7 @@
 From 6be16f2f6d093ef495d0fe4313f7b05b4ba3e08f Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Sun, 3 Nov 2024 10:38:38 +0100
-Subject: [PATCH 5/6] Fix buggy --with-rtc-date=DATE, introduced in Finit v4.4
+Subject: [PATCH 5/7] Fix buggy --with-rtc-date=DATE, introduced in Finit v4.4
 Organization: Addiva Elektronik
 
 In 42ef3d3c, for v4.4-rc1, support for setting a custom RTC restore date
