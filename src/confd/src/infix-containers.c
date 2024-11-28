@@ -26,11 +26,20 @@
 
 static int add(const char *name, struct lyd_node *cif)
 {
-	const char *image = lydx_get_cattr(cif, "image");
 	const char *restart_policy, *string;
 	struct lyd_node *node, *nets, *caps;
 	char script[strlen(name) + 5];
 	FILE *fp, *ap;
+
+	/*
+	 * If running already, disable the service, keeping the created
+	 * container and any volumes for later if the user re-enables
+	 * it again.
+	 */
+	if (!lydx_is_enabled(cif, "enabled")) {
+		systemf("initctl -bnq disable container@%s.conf", name);
+		return 0;
+	}
 
 	snprintf(script, sizeof(script), "%s.sh", name);
 	fp = fopenf("w", "%s/%s", _PATH_CONT, script);
@@ -188,7 +197,7 @@ static int add(const char *name, struct lyd_node *cif)
 			fprintf(fp, " --checksum sha512:%s", string);
 	}
 
-	fprintf(fp, " create %s %s", name, image);
+	fprintf(fp, " create %s %s", name, lydx_get_cattr(cif, "image"));
 
  	if ((string = lydx_get_cattr(cif, "command")))
 		fprintf(fp, " %s", string);
@@ -256,15 +265,10 @@ static int change(sr_session_ctx_t *session, uint32_t sub_id, const char *module
 		}
 
 		LYX_LIST_FOR_EACH(cifs, cif, "container") {
-			const char *nm = lydx_get_cattr(cif, "name");
-
-			if (strcmp(name, nm))
+			if (strcmp(name, lydx_get_cattr(cif, "name")))
 				continue;
 
-			if (!lydx_is_enabled(cif, "enabled"))
-				del(name);
-			else
-				add(name, cif);
+			add(name, cif);
 			break;
 		}
 	}
