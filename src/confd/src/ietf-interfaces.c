@@ -1821,7 +1821,8 @@ static sr_error_t netdag_gen_iface(sr_session_ctx_t *session, struct dagger *net
 	      (op == LYDX_OP_NONE) ? "mod" : ((op == LYDX_OP_CREATE) ? "add" : "del"));
 
 	if (op == LYDX_OP_DELETE) {
-		err = netdag_gen_iface_del(net, dif, cif, fixed);
+		err  = netdag_gen_iface_del(net, dif, cif, fixed);
+		err += netdag_gen_ipv4_autoconf(net, cif, dif);
 		goto err;
 	}
 
