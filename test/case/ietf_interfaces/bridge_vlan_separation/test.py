@@ -24,6 +24,7 @@ Test that two VLANs are correctly separated in the bridge
 ....
 """
 import infamy
+import subprocess
 
 with infamy.Test() as test:
     with test.step("Set up topology and attach to target DUT"):
@@ -168,7 +169,7 @@ with infamy.Test() as test:
                             lambda: ns11.must_not_reach("10.0.0.3"),
                             lambda: ns10.must_not_reach("10.0.0.2"),
                             lambda: ns11.must_not_reach("10.0.0.1"))
-            
+
         with test.step("Verify MAC broadcast isolation within VLANs"):
             # Clear ARP entries/queued packets
             ns10.runsh("ip neigh flush all")
@@ -176,13 +177,17 @@ with infamy.Test() as test:
             ns20.runsh("ip neigh flush all")
             ns21.runsh("ip neigh flush all")
 
-            lambda: ns10.runsh("ping -b -c 5 -i 0.5 10.0.0.255"),
-            
-            lambda: ns20.must_receive("broadcast or arp"),
-            
-            infamy.parallel(
-                lambda: ns11.must_not_receive("broadcast or arp"),
-                lambda: ns21.must_not_receive("broadcast or arp")
-            )
+            # Sending IP subnet broadcast, resulting in MAC broadcast
+            with test.step("Send ping to 10.0.0.255 from host:data10"):
+                process=ns10.popen("ping -b -c 5 -i 0.5 10.0.0.255".split(), stderr=subprocess.DEVNULL, stdout=subprocess.DEVNULL)
+
+            with test.step("Verify broadcast is received on host:data20"):
+                ns20.must_receive("ip dst 10.0.0.255")
+
+                with test.step("Verify broadcast is NOT received on host:data11 and host:data21"):
+                    infamy.parallel(
+                        lambda: ns11.must_not_receive("ip dst 10.0.0.255"),
+                        lambda: ns21.must_not_receive("ip dst 10.0.0.255")
+                    )
 
     test.succeed()
