@@ -40,6 +40,9 @@ endif::topdoc[]
 . Verify ping 10.0.0.4 from host:data11
 . Verify ping not possible host:data10->10.0.0.4, host:data11->10.0.0.3, host:data10->10.0.0.2, host:data11->10.0.0.1
 . Verify MAC broadcast isolation within VLANs
+. Send ping to 10.0.0.255 from host:data10
+. Verify broadcast is received on host:data20
+. Verify broadcast is NOT received on host:data11 and host:data21
 
 
 <<<
