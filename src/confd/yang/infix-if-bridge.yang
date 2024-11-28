@@ -26,10 +26,13 @@ submodule infix-if-bridge {
   contact      "kernelkit@googlegroups.com";
   description  "Linux bridge extension for ietf-interfaces.";
 
-  revision 2024-11-27 {
+  revision 2024-11-28 {
     description "Drop must() expressions for IP addres on VLAN bridges.
                  If a bridge is untagged member of a VLAN it should be
-                 possible to set an IP address on the bridge.";
+                 possible to set an IP address on the bridge.
+
+                 Allow bridge port settings that also apply to the
+                 bridge itself (e.g., PVID) to be configured.";
     reference "internal";
   }
   revision 2024-11-15 {
@@ -430,6 +433,93 @@ submodule infix-if-bridge {
     }
   }
 
+  grouping bridge-port-common {
+    leaf pvid {
+      if-feature "vlan-filtering";
+      type dot1q-types:vlanid;
+      description "The primary VID assigned to this bridge port.";
+    }
+  }
+
+  grouping bridge-port-lower {
+    leaf bridge {
+      type if:interface-ref;
+      must "deref(.)/../bridge and not(. = ../../if:name)" {
+        error-message "Must refer to a bridge interface (and not itself).";
+      }
+      mandatory true;
+      description "Bridge interface to which this interface is attached.";
+    }
+
+    container flood {
+      description "Control flooding of unknown BUM traffic.";
+
+      leaf broadcast {
+        description "Flood unknown broadcast traffic on this port.";
+        type boolean;
+        default true;
+      }
+
+      leaf unicast {
+        description "Flood unknown unicast traffic on this port.";
+        type boolean;
+        default true;
+      }
+
+      leaf multicast {
+        description "Flood unknown multicast traffic on this port.
+
+                         By default this option is enabled to allow MAC multicast
+                         to coexist unregulated with filtering of IP multicast.
+
+                         Flooding of IP multicast is done as long as the groups
+                         remain 'unknown', i.e., while there are no MDB entries
+                         set manually or automatically by IGMP/MLD.";
+        type boolean;
+        default true;
+      }
+    }
+
+    container multicast {
+      leaf fast-leave {
+        description "Assume this port is attached to an end-device.
+
+                         When enabled the bridge immediately cuts multicast
+                         groups when receiving a membership leave report.
+                         When disabled, group subscriptions linger until the
+                         group specific queries time out.";
+        type boolean;
+      }
+
+      leaf router {
+        description "Forward all known multicast on this port.
+
+                         Enable this for ports connected to a multicast router
+                         that is not PIM or multicast router discovery (mrdisc)
+                         capable.
+
+                         This setting is also useful for legacy equipment that
+                         does not support IGMP/MLD.  However, it is recommended
+                         to instead set up static MDB entries for such ports.";
+        type mrouter-port;
+        default auto;
+      }
+    }
+
+    leaf stp-state {
+      type stp-state;
+      config false;
+      description "The operation state of the bridge port.";
+    }
+
+    leaf default-priority {
+      if-feature "vlan-filtering";
+      type dot1q-types:priority-type;
+      default "0";
+      description "The default priority assigned to this bridge port.";
+    }
+  }
+
   augment "/if:interfaces/if:interface/infix-if:port" {
     when "derived-from-or-self(if:type,'ianaift:bridge') or "+
          "derived-from-or-self(if:type,'ianaift:ethernetCsmacd') or "+
@@ -445,89 +535,10 @@ submodule infix-if-bridge {
       description "Extension of the IETF Interfaces model (RFC7223).";
 
       container bridge-port {
-        description "Bridge association and port specific setttngs.";
-
-        leaf bridge {
-          type if:interface-ref;
-          must "deref(.)/../bridge and not(. = ../../if:name)" {
-            error-message "Must refer to a bridge interface (and not itself).";
-          }
-          mandatory true;
-          description "Bridge interface to which this interface is attached.";
-        }
-
-        container flood {
-          description "Control flooding of unknown BUM traffic.";
-
-          leaf broadcast {
-            description "Flood unknown broadcast traffic on this port.";
-            type boolean;
-            default true;
-          }
-
-          leaf unicast {
-            description "Flood unknown unicast traffic on this port.";
-            type boolean;
-            default true;
-          }
-
-          leaf multicast {
-            description "Flood unknown multicast traffic on this port.
-
-                         By default this option is enabled to allow MAC multicast
-                         to coexist unregulated with filtering of IP multicast.
-
-                         Flooding of IP multicast is done as long as the groups
-                         remain 'unknown', i.e., while there are no MDB entries
-                         set manually or automatically by IGMP/MLD.";
-            type boolean;
-            default true;
-          }
-        }
-
-        container multicast {
-          leaf fast-leave {
-            description "Assume this port is attached to an end-device.
-
-                         When enabled the bridge immediately cuts multicast
-                         groups when receiving a membership leave report.
-                         When disabled, group subscriptions linger until the
-                         group specific queries time out.";
-            type boolean;
-          }
-
-          leaf router {
-            description "Forward all known multicast on this port.
-
-                         Enable this for ports connected to a multicast router
-                         that is not PIM or multicast router discovery (mrdisc)
-                         capable.
-
-                         This setting is also useful for legacy equipment that
-                         does not support IGMP/MLD.  However, it is recommended
-                         to instead set up static MDB entries for such ports.";
-            type mrouter-port;
-            default auto;
-          }
-        }
-
-        leaf stp-state {
-          type stp-state;
-          config false;
-          description "The operation state of the bridge port.";
-        }
-
-        leaf pvid {
-          if-feature "vlan-filtering";
-          type dot1q-types:vlanid;
-          description "The primary VID assigned to this bridge port.";
-        }
-
-        leaf default-priority {
-          if-feature "vlan-filtering";
-          type dot1q-types:priority-type;
-          default "0";
-          description "The default priority assigned to this bridge port.";
+        description "Bridge association and port specific settings.";
+        uses bridge-port-common;
+        uses bridge-port-lower {
+          when "not(derived-from-or-self(../if:type, 'ianaift:bridge'))";
         }
       }
     }
