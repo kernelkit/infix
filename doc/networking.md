@@ -219,10 +219,15 @@ admin@example:/config/interface/br0/> set bridge vlans vlan 10 tagged br0
 admin@example:/config/interface/br0/> set bridge vlans vlan 20 tagged br0
 ```
 
+To route or to manage via a VLAN, a VLAN interface needs to be created
+on top of the bridge, see section [VLAN Interfaces](#vlan-interfaces)
+below for more on this topic.
+
 > [!NOTE]
-> To route or to manage via a VLAN, a VLAN interface needs to be created
-> on top of the bridge, see section [VLAN Interfaces](#vlan-interfaces)
-> below for more on this topic.
+> In some use-cases only a single management VLAN on the bridge is used.
+> For the example above, if the bridge itself is an untagged member only
+> in VLAN 10, IP addresses can be set directly on the bridge without the
+> need for dedicated VLAN interfaces on top of the bridge.
 
 
 #### Multicast Filtering and Snooping
@@ -465,7 +470,9 @@ As conventions, a VLAN interface for VID 20 on top of an Ethernet
 interface *eth0* is named *eth0.20*, and a VLAN interface for VID 10 on
 top of a bridge interface *br0* is named *vlan10*.
 
-> **Note:** If you name your VLAN interface `foo0.N` or `vlanN`, where `N` is a number, Infix will set the interface type automatically for you.
+> [!NOTE]
+> If you name your VLAN interface `foo0.N` or `vlanN`, where `N` is a
+> number, Infix will set the interface type automatically for you.
 
 
 ### Physical Ethernet Interfaces

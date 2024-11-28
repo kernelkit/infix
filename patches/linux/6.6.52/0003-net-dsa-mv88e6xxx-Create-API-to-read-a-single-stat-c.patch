@@ -1,7 +1,7 @@
 From 50a2973e8a520a82e9f9ec15a1f69e059ce7a334 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Thu, 14 Dec 2023 14:50:23 +0100
-Subject: [PATCH 03/34] net: dsa: mv88e6xxx: Create API to read a single stat
+Subject: [PATCH 03/35] net: dsa: mv88e6xxx: Create API to read a single stat
  counter
 Organization: Addiva Elektronik
 
@@ -16,7 +16,6 @@ Reviewed-by: Vladimir Oltean <vladimir.oltean@nxp.com>
 Reviewed-by: Florian Fainelli <florian.fainelli@broadcom.com>
 Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
 Signed-off-by: David S. Miller <davem@davemloft.net>
-Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
 ---
  drivers/net/dsa/mv88e6xxx/chip.c | 162 ++++++++++++++++++-------------
  drivers/net/dsa/mv88e6xxx/chip.h |  27 +++---

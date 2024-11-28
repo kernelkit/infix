@@ -7,11 +7,18 @@ All notable changes to the project are documented in this file.
 [v24.11.1][UNRELEASED]
 -------------------------
 
+### Changes
+ - Allow setting IP address directly on VLAN filtering bridges.  This
+   only works when the bridge is an untagged member of a (single) VLAN.
+
 ### Fixes
 
  - Fix #685: DSA conduit interface not always detected.  Previous
    attempt at a fix (v24.10.2) mitigated the issue, but did not
    completely solve it.
+ - Prevent traffic assigned to locally terminated VLANs from being
+   forwarded, when the underlying ports are simultaneously attached to a
+   VLAN filtering bridge.
 
 
 [v24.11.0][] - 2024-11-20

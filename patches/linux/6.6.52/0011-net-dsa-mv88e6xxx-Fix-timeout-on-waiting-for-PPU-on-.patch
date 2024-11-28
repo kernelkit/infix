@@ -1,7 +1,7 @@
 From be94ec851dbb8e55c3f5e82f197b2dc59566aea2 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Tue, 12 Mar 2024 10:27:24 +0100
-Subject: [PATCH 11/34] net: dsa: mv88e6xxx: Fix timeout on waiting for PPU on
+Subject: [PATCH 11/35] net: dsa: mv88e6xxx: Fix timeout on waiting for PPU on
  6393X
 Organization: Addiva Elektronik
 
@@ -9,7 +9,7 @@ In a multi-chip setup, delays of up to 750ms are observed before the
 device (6393X) signals completion of PPU initialization (Global 1,
 register 0, bit 15). Therefore, increase the timeout threshold to 1s.
 
-Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
 ---
  drivers/net/dsa/mv88e6xxx/chip.c | 2 +-
  1 file changed, 1 insertion(+), 1 deletion(-)

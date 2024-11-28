@@ -64,19 +64,14 @@ BODY  = "<html><body><p>Router responding</p></body></html>"
 
 def create_vlan_bridge(ns):
     return ns.runsh("""
-    ip link add dev br0 type bridge
-    ip link set dev br0 up
-    ip link set dev iface1 up
-    ip link set dev iface2 up
+    ip link add dev br0 type bridge vlan_filtering 1 vlan_default_pvid 0
     ip link set dev iface1 master br0
     ip link set dev iface2 master br0
-    ip link set dev br0 type bridge vlan_filtering 1
-    bridge vlan del dev br0 vid 1 self
-    bridge vlan del dev iface1 vid 1
-    bridge vlan del dev iface2 vid 1
-    bridge vlan add dev br0 vid 8 self
     bridge vlan add dev iface1 vid 8
     bridge vlan add dev iface2 vid 8
+    ip link set dev iface1 up
+    ip link set dev iface2 up
+    ip link set dev br0 up
     """)
 
 
@@ -140,7 +135,8 @@ table ip nat {
               "name": ring1,
               "ietf-ip:ipv6": {},
               "infix-interfaces:bridge-port": {
-                  "bridge": "br0"
+                  "bridge": "br0",
+                  "pvid": 1,
               }
           },
             {
@@ -163,7 +159,8 @@ table ip nat {
                 "name": ring2,
                 "ietf-ip:ipv6": {},
                 "infix-interfaces:bridge-port": {
-                    "bridge": "br0"
+                    "bridge": "br0",
+                    "pvid": 1,
                 }
             },
             {
@@ -195,6 +192,22 @@ table ip nat {
             {
                 "name": "br0",
                 "type": "infix-if-type:bridge",
+                "infix-interfaces:bridge": {
+                    "vlans": {
+                        "vlan": [
+                            {
+                                "vid": 1,
+                                "untagged": ["br0", ring1, ring2, "veth0b", "veth2b"],
+                            },
+                        ],
+                    },
+                    "ieee-group-forward": [
+                        "lldp"
+                    ]
+                },
+                "infix-interfaces:bridge-port": {
+                    "pvid": 1,
+                },
                 "ietf-ip:ipv4": {
                     "enabled": True,
                     "forwarding": True,
@@ -205,11 +218,6 @@ table ip nat {
                 },
                 "ietf-ip:ipv6": {
                     "enabled": True
-                },
-                "infix-interfaces:bridge": {
-                    "ieee-group-forward": [
-                        "lldp"
-                    ]
                 }
             },
             {
@@ -255,7 +263,8 @@ table ip nat {
                 "name": "veth0b",
                 "type": "infix-if-type:veth",
                 "infix-interfaces:bridge-port": {
-                    "bridge": "br0"
+                    "bridge": "br0",
+                    "pvid": 1,
                 },
                 "infix-interfaces:veth": {
                     "peer": "veth0a"
@@ -306,7 +315,8 @@ table ip nat {
                 "name": "veth2b",
                 "type": "infix-if-type:veth",
                 "infix-interfaces:bridge-port": {
-                    "bridge": "br0"
+                    "bridge": "br0",
+                    "pvid": 1,
                 },
                 "infix-interfaces:veth": {
                     "peer": "veth2a"

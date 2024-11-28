@@ -1,7 +1,7 @@
 From f2d4ff12c7a0e644cbeac6675b755fb4a87b362a Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Wed, 29 May 2024 13:20:41 +0200
-Subject: [PATCH 33/34] net: dsa: mv88e6xxx: Use VLAN prio over IP when both
+Subject: [PATCH 33/35] net: dsa: mv88e6xxx: Use VLAN prio over IP when both
  are available
 Organization: Addiva Elektronik
 
@@ -23,7 +23,7 @@ main reasons for choosing the new default:
    core over trusted VLAN trunks, the packet should keep its original
    priority, independent of what inner protocol fields may indicate.
 
-Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
 ---
  drivers/net/dsa/mv88e6xxx/chip.c | 11 ++++++++---
  1 file changed, 8 insertions(+), 3 deletions(-)

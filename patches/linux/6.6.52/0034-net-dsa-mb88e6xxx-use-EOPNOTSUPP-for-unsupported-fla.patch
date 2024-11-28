@@ -1,7 +1,7 @@
 From ceaaa4f44f9b3ec82c4e0a24c2322aae58fa3aa0 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Wed, 6 Nov 2024 15:39:33 +0100
-Subject: [PATCH 34/34] net: dsa: mb88e6xxx: use EOPNOTSUPP for unsupported
+Subject: [PATCH 34/35] net: dsa: mb88e6xxx: use EOPNOTSUPP for unsupported
  flags
 Organization: Addiva Elektronik
 
@@ -11,6 +11,7 @@ propagate any error.
 Follow-up to a5cf5c0
 
 Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
 ---
  drivers/net/dsa/mv88e6xxx/leds.c | 5 ++++-
  1 file changed, 4 insertions(+), 1 deletion(-)
