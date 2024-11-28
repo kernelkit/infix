@@ -1,0 +1,145 @@
+From bceb724d328f156efa4ad18f26f1760504bd093d Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Wed, 27 Nov 2024 08:44:57 +0100
+Subject: [PATCH 2/2] avahi-daemon: allow adjusting log level
+Organization: Addiva Elektronik
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ avahi-daemon/main.c | 50 ++++++++++++++++++++++++++++++++++++++++-----
+ 1 file changed, 45 insertions(+), 5 deletions(-)
+
+diff --git a/avahi-daemon/main.c b/avahi-daemon/main.c
+index 346338f..b7f0969 100644
+--- a/avahi-daemon/main.c
++++ b/avahi-daemon/main.c
+@@ -30,6 +30,7 @@
+ #include <unistd.h>
+ #include <grp.h>
+ #include <pwd.h>
++#include <sys/param.h>          /* MIN() */
+ #include <sys/stat.h>
+ #include <sys/ioctl.h>
+ #ifdef HAVE_SYS_FILIO_H
+@@ -106,6 +107,7 @@ typedef struct {
+     DaemonCommand command;
+     int daemonize;
+     int use_syslog;
++    int log_level;
+     char *config_file;
+ #ifdef HAVE_DBUS
+     int enable_dbus;
+@@ -419,6 +421,30 @@ static void server_callback(AvahiServer *s, AvahiServerState state, void *userda
+     }
+ }
+ 
++static int log_level(const char *arg) {
++    struct {
++	const char *name;
++	int         val;
++    } prionm[] = {
++	{ "error",   LOG_ERR     },
++	{ "warning", LOG_WARNING },
++	{ "notice",  LOG_WARNING },
++	{ "info",    LOG_WARNING },
++	{ "debug",   LOG_WARNING },
++	{ NULL, 0 },
++    };
++    int i;
++
++    for (i = 0; prionm[i].name; i++) {
++	size_t len = MIN(strlen(prionm[i].name), strlen(arg));
++
++	if (!strncasecmp(prionm[i].name, arg, len))
++	    return prionm[i].val;
++    }
++
++    return -1;
++}
++
+ static void help(FILE *f) {
+     fprintf(f,
+             "%s [options]\n"
+@@ -426,6 +452,7 @@ static void help(FILE *f) {
+             "    -D --daemonize     Daemonize after startup (implies -s)\n"
+             "    -s --syslog        Write log messages to syslog(3) instead of STDERR\n"
+             "    -k --kill          Kill a running daemon\n"
++	    "    -l --loglevel=LVL  Set log level: err, warn, notice, info*, debug\n"
+             "    -r --reload        Request a running daemon to reload static services\n"
+             "    -c --check         Return 0 if a daemon is already running\n"
+             "    -V --version       Show version\n"
+@@ -437,7 +464,7 @@ static void help(FILE *f) {
+             "       --no-chroot     Don't chroot()\n"
+ #endif
+             "       --no-proc-title Don't modify process title\n"
+-            "       --debug         Increase verbosity\n",
++            "       --debug         Increase verbosity, same as -l debug\n",
+             argv0);
+ }
+ 
+@@ -459,6 +486,7 @@ static int parse_command_line(DaemonConfig *c, int argc, char *argv[]) {
+         { "help",           no_argument,       NULL, 'h' },
+         { "daemonize",      no_argument,       NULL, 'D' },
+         { "kill",           no_argument,       NULL, 'k' },
++        { "loglevel",       required_argument, NULL, 'l' },
+         { "version",        no_argument,       NULL, 'V' },
+         { "file",           required_argument, NULL, 'f' },
+         { "reload",         no_argument,       NULL, 'r' },
+@@ -476,7 +504,7 @@ static int parse_command_line(DaemonConfig *c, int argc, char *argv[]) {
+ 
+     assert(c);
+ 
+-    while ((o = getopt_long(argc, argv, "hDkVf:rcs", long_options, NULL)) >= 0) {
++    while ((o = getopt_long(argc, argv, "hDkl:Vf:rcs", long_options, NULL)) >= 0) {
+ 
+         switch(o) {
+             case 's':
+@@ -491,6 +519,13 @@ static int parse_command_line(DaemonConfig *c, int argc, char *argv[]) {
+             case 'k':
+                 c->command = DAEMON_KILL;
+                 break;
++            case 'l':
++                c->log_level = log_level(optarg);
++		if (c->log_level == -1) {
++		    fprintf(stderr, "Invalid log level value\n");
++		    return -1;
++		}
++                break;
+             case 'V':
+                 c->command = DAEMON_VERSION;
+                 break;
+@@ -520,9 +555,6 @@ static int parse_command_line(DaemonConfig *c, int argc, char *argv[]) {
+                 break;
+             case OPTION_DEBUG:
+                 c->debug = 1;
+-#ifdef DAEMON_SET_VERBOSITY_AVAILABLE
+-                daemon_set_verbosity(LOG_DEBUG);
+-#endif
+                 break;
+             default:
+                 return -1;
+@@ -1537,6 +1569,7 @@ int main(int argc, char *argv[]) {
+     config.publish_dns_servers = NULL;
+     config.publish_resolv_conf = 0;
+     config.use_syslog = 0;
++    config.log_level = LOG_INFO;
+     config.debug = 0;
+     config.rlimit_as_set = 0;
+     config.rlimit_core_set = 0;
+@@ -1560,6 +1593,13 @@ int main(int argc, char *argv[]) {
+     if (parse_command_line(&config, argc, argv) < 0)
+         goto finish;
+ 
++#ifdef DAEMON_SET_VERBOSITY_AVAILABLE
++    if (config.debug)
++	daemon_set_verbosity(LOG_DEBUG);
++    else
++	daemon_set_verbosity(config.log_level);
++#endif
++
+     if (config.modify_proc_title)
+         avahi_init_proc_title(argc, argv);
+ 
+-- 
+2.43.0
+

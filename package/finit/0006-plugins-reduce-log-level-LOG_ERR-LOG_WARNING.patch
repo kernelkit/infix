@@ -1,7 +1,7 @@
 From 49c0557cedd8d3c1a2f74d27fa7db83dd529914a Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Sun, 3 Nov 2024 20:49:04 +0100
-Subject: [PATCH 6/6] plugins: reduce log level LOG_ERR -> LOG_WARNING
+Subject: [PATCH 6/7] plugins: reduce log level LOG_ERR -> LOG_WARNING
 Organization: Addiva Elektronik
 
 These plugins signal success and failure directly to the console, the

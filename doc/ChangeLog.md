@@ -10,15 +10,37 @@ All notable changes to the project are documented in this file.
 ### Changes
  - Allow setting IP address directly on VLAN filtering bridges.  This
    only works when the bridge is an untagged member of a (single) VLAN.
+ - cli: usability -- showing log files now automatically jump to the end
+   of the file, where the latest events are
+ - cli: usability -- showing container status, or other status that
+   overflows the terminal horizontally, now wrap the lines and exit the
+   pager immediately if the contents fit on the first screen
+ - The default log level of the mDNS responder, `avahi-daemon`, has been
+   adjusted to make it less verbose.  Now only `LOG_NOTICE` and higher
+   severity is logged -- making it very quiet
 
 ### Fixes
 
  - Fix #685: DSA conduit interface not always detected.  Previous
    attempt at a fix (v24.10.2) mitigated the issue, but did not
    completely solve it.
+ - Fix #835: redesign how the system creates/deletes containers from the
+   `running-config`.  Prior to this change, all removal and creation was
+   handled by a separate queue that ran asynchronously from the `confd`
+   process.  This could lead to situations where new configurations are
+   applied before the queue had been fully processed.  After this change
+   containers are deleted synchronously and new containers are created
+   in the same flow as during normal runtime operation (start/upgrade)
+ - Fix start of containers with `manual=True` option should now work
+   again, regression in v24.11.0
+ - Stop the zeroconf (IPv4LL) agent, `avahi-autoipd`, when removing an
+   interface, e.g., `br0`
+ - Creating more than one container trigger restarts of previously set
+   up containers.  Which in some cases may cause these earlier ones to
+   end up in an inconsistent state
  - Prevent traffic assigned to locally terminated VLANs from being
-   forwarded, when the underlying ports are simultaneously attached to a
-   VLAN filtering bridge.
+   forwarded, when the underlying ports are simultaneously attached to
+   a VLAN filtering bridge.
 
 
 [v24.11.0][] - 2024-11-20

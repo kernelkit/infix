@@ -22,16 +22,24 @@
 
 #define  _PATH_CONT   "/run/containers"
 #define  _PATH_INBOX  _PATH_CONT "/INBOX"
-#define  _PATH_QUEUE  _PATH_CONT "/queue"
 
 
 static int add(const char *name, struct lyd_node *cif)
 {
-	const char *image = lydx_get_cattr(cif, "image");
 	const char *restart_policy, *string;
 	struct lyd_node *node, *nets, *caps;
 	char script[strlen(name) + 5];
 	FILE *fp, *ap;
+
+	/*
+	 * If running already, disable the service, keeping the created
+	 * container and any volumes for later if the user re-enables
+	 * it again.
+	 */
+	if (!lydx_is_enabled(cif, "enabled")) {
+		systemf("initctl -bnq disable container@%s.conf", name);
+		return 0;
+	}
 
 	snprintf(script, sizeof(script), "%s.sh", name);
 	fp = fopenf("w", "%s/%s", _PATH_CONT, script);
@@ -40,11 +48,15 @@ static int add(const char *name, struct lyd_node *cif)
 		return SR_ERR_SYS;
 	}
 
-	/* Stop any running container gracefully so it releases its IP addresses. */
+	/*
+	 * Create /run/containers/<NAME>.sh it is used both for initial
+	 * setup at creation/boot and for manual upgrade.  The delete
+	 * command ensures any already running container is stopped and
+	 * deleted so that it releases all claimed resources.
+	 */
 	fprintf(fp, "#!/bin/sh\n"
-		"container --quiet stop %s   >/dev/null\n" /* Silence "not running" on upgrade */
-		"container --quiet delete %s >/dev/null\n" /* Silence any hashes when deleting */
-		"container --quiet", name, name);
+		"container --quiet delete %s >/dev/null\n"
+		"container --quiet", name);
 
 	LYX_LIST_FOR_EACH(lyd_child(cif), node, "dns")
 		fprintf(fp, " --dns %s", lyd_get_value(node));
@@ -185,61 +197,33 @@ static int add(const char *name, struct lyd_node *cif)
 			fprintf(fp, " --checksum sha512:%s", string);
 	}
 
-	fprintf(fp, " create %s %s", name, image);
+	fprintf(fp, " create %s %s", name, lydx_get_cattr(cif, "image"));
 
  	if ((string = lydx_get_cattr(cif, "command")))
 		fprintf(fp, " %s", string);
 
 	fprintf(fp, "\n");
-
-	if (lydx_is_enabled(cif, "manual"))
-		fprintf(fp, "initctl -bnq cond set container:%s\n", name);
-
 	fchmod(fileno(fp), 0700);
 	fclose(fp);
 
+	/* Enable, or update, container -- both trigger setup script. */
 	systemf("initctl -bnq enable container@%s.conf", name);
-
-	/*
-	 * All start scripts must wait for the rest of confd to complete
-	 * before being enqueued to execd, so we postpone it using this
-	 * "inbox" to the post hook.
-	 */
-	writesf(script, "a", "%s", _PATH_INBOX);
+	systemf("initctl -bnq touch container@%s.conf", name);
 
 	return 0;
 }
 
 static int del(const char *name)
 {
-	char fn[strlen(_PATH_QUEUE) + strlen(name) + 10];
-	FILE *fp;
+	char fn[strlen(_PATH_CONT) + strlen(name) + 10];
 
-	/* Remove any pending download/create job first */
-	snprintf(fn, sizeof(fn), "%s/S01-%s.sh", _PATH_QUEUE, name);
-	erase(fn);
-
-	/* Remove container script itself */
+	/* Remove container setup script */
 	snprintf(fn, sizeof(fn), "%s/%s.sh", _PATH_CONT, name);
 	erase(fn);
 
-	/* Disable service and schedule for deletion. */
-	systemf("initctl -bnq disable container@%s.conf", name);
-
-	snprintf(fn, sizeof(fn), "%s/K01-%s.sh", _PATH_CONT, name);
-	fp = fopen(fn, "w");
-	if (!fp) {
-		ERRNO("Failed creating container stop script %s", fn);
-		return SR_ERR_SYS;
-	}
-
-	fprintf(fp, "#!/bin/sh\n"
-		"container delete %s\n", name);
-	fchmod(fileno(fp), 0700);
-	fclose(fp);
-
-	/* Enqueue kill job immediately on execd */
-	movefile(fn, _PATH_QUEUE);
+	/* Stop and schedule for deletion */
+	systemf("initctl -bnq stop container:%s", name);
+	writesf(name, "a", "%s", _PATH_INBOX);
 
 	return SR_ERR_OK;
 }
@@ -281,15 +265,10 @@ static int change(sr_session_ctx_t *session, uint32_t sub_id, const char *module
 		}
 
 		LYX_LIST_FOR_EACH(cifs, cif, "container") {
-			const char *nm = lydx_get_cattr(cif, "name");
-
-			if (strcmp(name, nm))
+			if (strcmp(name, lydx_get_cattr(cif, "name")))
 				continue;
 
-			if (!lydx_is_enabled(cif, "enabled"))
-				del(name);
-			else
-				add(name, cif);
+			add(name, cif);
 			break;
 		}
 	}
@@ -364,34 +343,24 @@ static int oci_load(sr_session_ctx_t *session, uint32_t sub_id, const char *xpat
  */
 void infix_containers_post_hook(sr_session_ctx_t *session, struct confd *confd)
 {
-	char script[256];
+	char name[256];
 	FILE *fp;
 
 	fp = fopen(_PATH_INBOX, "r");
 	if (!fp)
-		return;		/* nothing to do today */
+		return;		/* nothing to delete */
 
-	while (fgets(script, sizeof(script), fp)) {
-		char link[strlen(_PATH_QUEUE) + strlen(script) + 10];
-		char path[strlen(script) + 10];
-
-		chomp(script);
-
-		/*
-		 * Enqueue start job on execd, use a symlink since we
-		 * want to be able to reuse the script for manual image
-		 * uprgade (and debugging) purposes.
-		 */
-		snprintf(link, sizeof(link), "%s/S01-%s", _PATH_QUEUE, script);
-		snprintf(path, sizeof(path), "../%s", script);
-		if (symlink(path, link) && errno != EEXIST)
-			ERRNO("Creating symlink %s -> %s", link, path);
+	while (fgets(name, sizeof(name), fp)) {
+		chomp(name);
+		systemf("initctl -bnq disable container@%s.conf", name);
+		systemf("container delete %s", name);
+		systemf("initctl -bnq cond clr container:%s", name);
 	}
 
 	fclose(fp);
 	erase(_PATH_INBOX);
 
-	systemf("initctl -bnq touch execd");
+	systemf("podman volume prune -f");
 }
 
 int infix_containers_init(struct confd *confd)

@@ -427,7 +427,7 @@
     </SWITCH>
   </COMMAND>
 
-  <COMMAND name="log" help="Show log file, default: syslog">
+  <COMMAND name="log" help="Show log file (jumps to end), default: syslog">
     <PARAM name="fn" ptype="/LOGFILES" min="0" help="Optional log file to show"/>
     <SWITCH name="optional" min="0">
       <COMMAND name="tail" help="Show log tail, last N lines only">
@@ -447,7 +447,7 @@
       if [ -n "$KLISH_PARAM_lines" ]; then
         $cmd "$file" | tail -n $KLISH_PARAM_lines
       else
-        $cmd "$file" | pager
+        $cmd "$file" | pager +G
       fi
     </ACTION>
   </COMMAND>

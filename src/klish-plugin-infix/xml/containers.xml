@@ -189,9 +189,9 @@
       <COMMAND name="all" help="Show all containers (default only running)">
         <ACTION sym="script">doas container -a show</ACTION>
       </COMMAND>
-      <COMMAND name="log" help="Show container log (alias for show log container)">
+      <COMMAND name="log" help="Show container log (jumps to end), alias to 'show log container'">
 	<ACTION sym="script" in="tty" out="tty" interrupt="true">
-	  doas -u $USER cat /log/container |pager
+	  doas -u $USER cat /log/container |pager +G
 	</ACTION>
       </COMMAND>
       <COMMAND name="images" help="Show container images">

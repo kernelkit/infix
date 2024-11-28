@@ -1,17 +1,17 @@
 #!/bin/sh
 # This script can be used to start, stop, create, and delete containers.
-# It is primarily used by confd to create jobs for execd to run from its
-# /run/containers/queue, but it can also be used manually.
+# It is what confd use, with the Finit container@.conf template, to set
+# up, run, and delete containers.
 #
 # NOTE: when creating/deleting containers, remember 'initctl reload' to
-#       activate the changes!  When called by confd, via execd, this is
-#       already handled.
+#       activate the changes!  In confd this is already handled.
 #
 DOWNLOADS=/var/lib/containers/oci
 BUILTIN=/lib/oci
 TMPDIR=/var/tmp
 checksum=""
 extracted=
+timeout=30
 dir=""
 all=""
 env=""
@@ -126,7 +126,17 @@ unpack_archive()
 	    fi
             ;;
 	*)			# docker://*, docker-archive:*, or URL
-	    echo "$image"
+	    if podman image exists "$image"; then
+		echo "$image"
+		return 0
+	    fi
+	    # XXX: use --retry=0 with Podman 5.0 or later.
+	    if ! id=$(podman pull --quiet "$image"); then
+		log "Failed pulling $image"
+		return 1
+	    fi
+	    # Echo image name to caller
+	    podman images --filter id="$id" --format "{{.Repository}}:{{.Tag}}"
 	    return 0
 	    ;;
     esac
@@ -216,13 +226,10 @@ create()
     fi
 
     if [ -z "$logging" ]; then
-	logging="--log-driver k8s-file --log-opt path=/run/containers/$name.fifo"
+	logging="--log-driver none"
     fi
 
-    # Pull quietly and don't retry on failure, we use execd for this,
-    # or user retry manually when run interactively, we may have other
-    # containers waiting to start that have an image locally already.
-    # Use --retry=0 with Podman 5.0 or later.
+    # When we get here we've already fetched, or pulled, the image
     args="$args --read-only --replace --quiet --cgroup-parent=containers $caps"
     args="$args --restart=$restart --systemd=false --tz=local $privileged"
     args="$args $vol $mount $hostname $entrypoint $env $port $logging"
@@ -253,6 +260,7 @@ create()
     if podman create --name "$name" --conmon-pidfile="$pidfn" $args "$image" $*; then
 	[ -n "$quiet"  ] || log "Successfully created container $name from $image"
 	[ -n "$manual" ] || start "$name"
+
 	# Should already be enabled by confd (this is for manual use)
 	initctl -bnq enable "container@${name}.conf"
 	exit 0
@@ -272,8 +280,16 @@ delete()
 	exit 1
     fi
 
-    # Should already be disabled (and stopped) by confd (this is for manual use)
-    initctl -bnq disable "container@${name}.conf"
+    # Should already be stopped, but if not ...
+    container stop "$name"
+
+    while running "$name"; do
+	_=$((timeout -= 1))
+	if [ $timeout -le 0 ]; then
+	    err 1 "timed out waiting for container $1 to stop before deleting it."
+	fi
+	sleep 1
+    done
 
     podman rm -vif "$name" >/dev/null 2>&1
     [ -n "$quiet" ] || log "Container $name has been removed."
@@ -281,7 +297,6 @@ delete()
 
 waitfor()
 {
-    timeout=$2
     while [ ! -f "$1" ]; do
 	_=$((timeout -= 1))
 	if [ $timeout -le 0 ]; then
@@ -353,6 +368,12 @@ netrestart()
     done
 }
 
+cleanup()
+{
+    log "Received signal, exiting."
+    exit 1
+}
+
 usage()
 {
 	cat <<EOF
@@ -386,6 +407,7 @@ options:
   -q, --quiet              Quiet operation, called from confd
   -r, --restart POLICY     One of "no", "always", or "on-failure:NUM"
   -s, --simple             Show output in simplified format
+  -t, --timeout SEC        Set timeout for delete/restart commands, default: 20
   -v, --volume NAME:PATH   Create named volume mounted inside container on PATH
 
 commands:
@@ -403,6 +425,7 @@ commands:
   restart [network] NAME   Restart a (crashed) container or container(s) using network
   run      NAME [CMD]      Run a container interactively, with an optional command
   save     IMAGE FILE      Save a container image to an OCI tarball FILE[.tar.gz]
+  setup    NAME            Create and set up container as a Finit task
   shell                    Start a shell inside a container
   show    [image | volume] Show containers, images, or volumes
   stat                     Show continuous stats about containers (Ctrl-C aborts)
@@ -525,6 +548,10 @@ while [ "$1" != "" ]; do
 	-s | --simple)
 	    simple=true
 	    ;;
+	-t | --timeout)
+	    shift
+	    timeout=$1
+	    ;;
 	-v | --volume)
 	    shift
 	    vol="$vol -v $1"
@@ -540,6 +567,8 @@ cmd=$1
 if [ -n "$cmd" ]; then
     shift
 fi
+
+trap cleanup INT TERM
 
 case $cmd in
     # Does not work atm., cannot attach to TTY because
@@ -666,6 +695,20 @@ case $cmd in
 	    gzip "$file"
 	fi
 	;;
+    setup)
+	[ -n "$name" ] || err 1 "setup: missing container name."
+	script=/run/containers/${name}.sh
+	[ -x "$script" ] || err 1 "setup: $script does not exist or is not executable."
+	while ! "$script"; do
+	    # Wait for address/route changes, or retry every 60 secods
+	    # shellcheck disable=2162,3045
+	    ip monitor address route | while read -t 60 _; do break; done
+
+	    # On IP address/route changes, wait a few seconds more to ensure
+	    # the system has ample time to react and set things up for us.
+	    sleep 2
+	done
+	;;
     shell)
 	podman exec -it "$1" sh -l
 	;;
@@ -720,7 +763,6 @@ case $cmd in
 	    else
 		name=$1
 		stop "$name"
-		timeout=20
 		while running "$name"; do
 		    _=$((timeout -= 1))
 		    if [ $timeout -le 0 ]; then
@@ -781,7 +823,7 @@ case $cmd in
 	[ -n "$cmd" ] && shift
 	case $cmd in
 	    prune)
-		podman volume $force prune
+		podman volume prune $force
 		;;
 	    *)
 		false

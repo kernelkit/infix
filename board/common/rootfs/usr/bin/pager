@@ -5,11 +5,10 @@
 # -K :: exit immediately when an interrupt character (usually ^C) is typed
 # -R :: Almost raw control charachters, only ANSI color escape sequences and
 #       OSC 8 hyperlink sequences are output.  Allows veritcal scrolling
-# -S :: lines longer than the screen width are chopped (truncated), not wrapped
 # -X :: No termcap initialization and deinitialization set to the terminal.
 #       This is what leaves the contents of the output on screen.
 
 export LESS="-P %f (press h for help or q to quit)"
 export LANG=en_US.UTF-8
 
-less -RISKd -FX "$@"
+less -RIKd -FX "$@"

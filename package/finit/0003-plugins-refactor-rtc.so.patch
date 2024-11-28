@@ -1,7 +1,7 @@
 From 0c0e880f3fdd38f7bbde618408378dc0a19ff005 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Sun, 3 Nov 2024 09:39:46 +0100
-Subject: [PATCH 3/6] plugins: refactor rtc.so
+Subject: [PATCH 3/7] plugins: refactor rtc.so
 Organization: Addiva Elektronik
 
 Factor out time_set() and time_get() for readability and reuse.
