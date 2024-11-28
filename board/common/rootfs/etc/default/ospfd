@@ -1,0 +1,2 @@
+# --log-level debug
+OSPFD_ARGS="-A 127.0.0.1 -u frr -g frr -f /etc/frr/ospfd.conf --log syslog"

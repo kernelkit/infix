@@ -10,4 +10,6 @@
 #       This is what leaves the contents of the output on screen.
 
 export LESS="-P %f (press h for help or q to quit)"
+export LANG=en_US.UTF-8
+
 less -RISKd -FX "$@"

@@ -17,9 +17,10 @@
 #
 #    ./qemu.sh -h
 #
+# shellcheck disable=SC3037
 
 # Local variables
-imgdir=$(readlink -f $(dirname "$0"))
+imgdir=$(readlink -f "$(dirname "$0")")
 prognm=$(basename "$0")
 
 usage()
@@ -30,6 +31,7 @@ usage()
     echo "Options:"
     echo "  -c     Run menuconfig to change Qemu settings"
     echo "  -h     This help text"
+    echo "  -k     Keep generated qemu.run script (name shown at end)"
     echo
     echo "Arguments:"
     echo "  ARGS1  Args before the '--' separator are for kernel space"
@@ -54,19 +56,20 @@ die()
 
 load_qemucfg()
 {
-    local tmp=$(mktemp -p /tmp)
+    tmp=$(mktemp -p /tmp)
 
-    grep ^CONFIG_QEMU_ $1 >$tmp
-    .  $tmp
-    rm $tmp
+    grep ^CONFIG_QEMU_ "$1" >"$tmp"
+    # shellcheck disable=SC1090
+    .  "$tmp"
+    rm "$tmp"
 
     [ "$CONFIG_QEMU_MACHINE" ] || die "Missing QEMU_MACHINE"
     [ "$CONFIG_QEMU_ROOTFS"  ] || die "Missing QEMU_ROOTFS"
 
-    [ "$CONFIG_QEMU_KERNEL" -a "$CONFIG_QEMU_BIOS" ] \
+    [ -n "$CONFIG_QEMU_KERNEL" ] && [ -n "$CONFIG_QEMU_BIOS" ] \
 	&& die "QEMU_KERNEL conflicts with QEMU_BIOS"
 
-    [ ! "$CONFIG_QEMU_KERNEL" -a ! "$CONFIG_QEMU_BIOS" ] \
+    [ -z "$CONFIG_QEMU_KERNEL" ] && [ -z "$CONFIG_QEMU_BIOS" ] \
 	&& die "QEMU_KERNEL or QEMU_BIOS must be set"
 }
 
@@ -93,7 +96,7 @@ append_args()
 
     if [ "$CONFIG_QEMU_ROOTFS_INITRD" = "y" ]; then
 	# Size of initrd, rounded up to nearest kb
-	local size=$((($(stat -c %s $CONFIG_QEMU_ROOTFS) + 1023) >> 10))
+	size=$((($(stat -c %s "$CONFIG_QEMU_ROOTFS") + 1023) >> 10))
 	echo -n "root=/dev/ram0 ramdisk_size=${size} "
     elif [ "$CONFIG_QEMU_ROOTFS_VSCSI" = "y" ]; then
 	echo -n "root=PARTLABEL=primary "
@@ -198,11 +201,22 @@ host_args()
 
 net_dev_args()
 {
-    local name="e$1"
-    local mac=$(printf "02:00:00:00:00:%02x" $1)
+    name="e$1"
+    mac=$(printf "02:00:00:00:00:%02x" "$1")
 
     echo -n "-device $CONFIG_QEMU_NET_MODEL,netdev=$name,mac=$mac "
     echo "$name	$mac" >>"$mactab"
+}
+
+rocker_port_args()
+{
+    sw=$1
+    port=$2
+    name="sw${sw}p${port}"
+    mac=$(printf "02:00:00:00:%02x:%02x" "$sw" "$port")
+
+    echo -n "-netdev tap,id=$name,ifname=$name,script=no,downscript=no "
+    echo "$name	$mac" >> "$mactab"
 }
 
 net_args()
@@ -216,14 +230,25 @@ net_args()
 	echo -n "-netdev bridge,id=e1,br=$CONFIG_QEMU_NET_BRIDGE_DEV "
 	net_dev_args 1
     elif [ "$CONFIG_QEMU_NET_TAP" = "y" ]; then
-	for i in $(seq 1 $(($CONFIG_QEMU_NET_TAP_N))); do
+	for i in $(seq 1 "$CONFIG_QEMU_NET_TAP_N"); do
 	    echo -n "-netdev tap,id=e$i,ifname=qtap$i "
-	    net_dev_args $i
+	    net_dev_args "$i"
+	done
+    elif [ "$CONFIG_QEMU_NET_ROCKER" = "y" ]; then
+	sw=sw0			# Only single switch support atm.
+	echo -n "-device '{\"driver\":\"rocker\", \"name\":\"${sw}\", "
+	echo -n "\"fp_start_macaddr\":\"02:00:00:00:00:01\", "
+	echo -n "\"ports\":["
+	for i in $(seq 1 "$CONFIG_QEMU_NET_PORTS"); do
+	    [ "$i" -gt 1 ] && echo -n ", "
+	    echo -n "\"${sw}p${i}\""
+	done
+	echo -n "]}' "
+	for i in $(seq 1 "$CONFIG_QEMU_NET_PORTS"); do
+	    rocker_port_args 0 "$i"
 	done
     elif [ "$CONFIG_QEMU_NET_USER" = "y" ]; then
-	local useropts=
 	[ "$CONFIG_QEMU_NET_USER_OPTS" ] && useropts=",$CONFIG_QEMU_NET_USER_OPTS"
-
 	echo -n "-netdev user,id=e1${useropts} "
 	net_dev_args 1
     else
@@ -301,8 +326,7 @@ run_qemu()
 	fi
     fi
 
-    local qemu
-    read qemu <<EOF
+    read -r qemu <<EOF
 	$CONFIG_QEMU_MACHINE -nodefaults -m $CONFIG_QEMU_MACHINE_RAM \
 	  $(loader_args) \
 	  $(rootfs_args) \
@@ -317,18 +341,28 @@ run_qemu()
 	  $(gdb_args) \
 	  $CONFIG_QEMU_EXTRA
 EOF
+    # Save resulting command to a script, because I cannot for the life
+    # of me figure out how to embed the JSON snippet for Rocker and run
+    # it here without issues, spent way too much time on it -- Joachim
+    run=$(mktemp -t run.qemu.XXX)
+    echo "#!/bin/sh" > "$run"
+    if [ "$CONFIG_QEMU_KERNEL" ]; then
+	echo "$qemu -append \"$(append_args)\" $*" >> "$run"
+    else
+	echo "$qemu $*" >> "$run"
+    fi
+    chmod +x "$run"
 
     echo "Starting Qemu  ::  Ctrl-a x -- exit | Ctrl-a c -- toggle console/monitor"
     line=$(stty -g)
     stty raw
-
-    if [ "$CONFIG_QEMU_KERNEL" ]; then
-	$qemu -append "$(append_args)" "$@"
-    else
-	$qemu "$@"
-    fi
-
+    $run
     stty "$line"
+    if [ -n "$keep" ]; then
+	echo "Keeping generated qemu.run script: $run"
+    else
+	rm "$run"
+    fi
 }
 
 dtb_args()
@@ -364,7 +398,7 @@ generate_dot()
     hostports="<qtap1> qtap1"
     targetports="<e1> e1"
     edges="host:qtap1 -- target:e1 [kind=mgmt];"
-    for tap in $(seq 2 $(($CONFIG_QEMU_NET_TAP_N - 1))); do
+    for tap in $(seq 2 $((CONFIG_QEMU_NET_TAP_N - 1))); do
 	hostports="$hostports | <qtap$tap> qtap$tap "
 	targetports="$targetports | <e$tap> e$tap "
 	edges="$edges host:qtap$tap -- target:e$tap;"
@@ -404,7 +438,8 @@ menuconfig()
     exec kconfig-mconf Config.in
 }
 
-cd $(dirname $(readlink -f "$0"))
+scriptdir=$(dirname "$(readlink -f "$0")")
+cd "$scriptdir" || (echo "Failed cd to $scriptdir"; exit 1)
 
 while [ "$1" != "" ]; do
     case $1 in
@@ -413,6 +448,9 @@ while [ "$1" != "" ]; do
 	    ;;
 	-h)
 	    usage
+	    ;;
+	-k)
+	    keep=true
 	    ;;
 	*)
 	    break
