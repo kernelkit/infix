@@ -1,7 +1,8 @@
 From 74ec0f8335f811e4f5becc8bbea4a52af4d3e749 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Tue, 17 Sep 2024 04:08:12 +0200
-Subject: [PATCH] On SIGTERM, allow dispatcher to process event before exiting
+Subject: [PATCH 1/2] On SIGTERM, allow dispatcher to process event before
+ exiting
 Organization: Addiva Elektronik
 
 On non-systemd systems, like those managed by Finit, when the main PID

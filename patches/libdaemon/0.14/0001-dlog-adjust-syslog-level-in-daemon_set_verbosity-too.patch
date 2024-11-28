@@ -1,0 +1,29 @@
+From 7e7cd106613975c6c4ba25acbb698f15aa4d85e8 Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Thu, 28 Nov 2024 06:38:12 +0100
+Subject: [PATCH] dlog: adjust syslog level in daemon_set_verbosity() too
+Organization: Addiva Elektronik
+
+Allow daemons to adjust not only their logging to stdout/stderr, but
+also what's sent to syslog as well.
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ libdaemon/dlog.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/libdaemon/dlog.c b/libdaemon/dlog.c
+index 3c759f4..d5c217a 100644
+--- a/libdaemon/dlog.c
++++ b/libdaemon/dlog.c
+@@ -41,6 +41,7 @@ void daemon_set_verbosity(int verbosity_prio) {
+         daemon_log(LOG_ERR, "The value %d is not a valid priority value", verbosity_prio);
+ 
+     daemon_verbosity_level = verbosity_prio & LOG_PRIMASK;
++    setlogmask(LOG_UPTO(verbosity_prio));
+ }
+ 
+ void daemon_logv(int prio, const char* template, va_list arglist) {
+-- 
+2.43.0
+
