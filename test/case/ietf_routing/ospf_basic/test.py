@@ -56,7 +56,22 @@ def config_target1(target, data, link):
     target.put_config_dict("ietf-routing", {
         "routing": {
             "control-plane-protocols": {
-                "control-plane-protocol": [{
+                "control-plane-protocol": [
+                    {
+                        "type": "infix-routing:static",
+                        "name": "default",
+                        "static-routes": {
+                            "ipv4": {
+                                "route": [{
+                                    "destination-prefix": "192.168.33.1/32",
+                                    "next-hop": {
+                                        "special-next-hop": "blackhole"
+                                    }
+                                }]
+                            }
+                        }
+                    },
+                    {
                     "type": "infix-routing:ospfv2",
                     "name": "default",
                     "ospf": {
@@ -74,6 +89,7 @@ def config_target1(target, data, link):
                                 "interfaces":
                                 {
                                     "interface": [{
+                                        "enabled": True,
                                         "name": link,
                                         "hello-interval": 1,
                                         "dead-interval": 3
@@ -132,9 +148,6 @@ def config_target2(target, link):
                     "ospf": {
                         "redistribute": {
                             "redistribute": [{
-                                "protocol": "static"
-                            },
-                            {
                                 "protocol": "connected"
                             }]
                         },
@@ -143,6 +156,7 @@ def config_target2(target, link):
                                 "area-id": "0.0.0.0",
                                 "interfaces":{
                                     "interface": [{
+                                        "enabled": True,
                                         "name": link,
                                         "hello-interval": 1,
                                         "dead-interval": 3
@@ -174,6 +188,7 @@ with infamy.Test() as test:
         print("Waiting for OSPF routes..")
         until(lambda: route.ipv4_route_exist(R1, "192.168.200.1/32", proto="ietf-ospf:ospfv2"), attempts=200)
         until(lambda: route.ipv4_route_exist(R2, "192.168.100.1/32", proto="ietf-ospf:ospfv2"), attempts=200)
+        until(lambda: route.ipv4_route_exist(R2, "192.168.33.1/32", proto="ietf-ospf:ospfv2"), attempts=200)
 
     with test.step("Test connectivity from PC:data to 192.168.200.1"):
         _, hport0 = env.ltop.xlate("PC", "data")

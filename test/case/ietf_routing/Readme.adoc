@@ -14,6 +14,8 @@ include::ospf_multiarea/Readme.adoc[]
 
 include::ospf_bfd/Readme.adoc[]
 
+include::ospf_default_route_advertise/Readme.adoc[]
+
 include::route_pref_ospf/Readme.adoc[]
 
 include::route_pref_dhcp/Readme.adoc[]

@@ -13,7 +13,7 @@
 
 - name: ospf_bfd
   case: ospf_bfd/test.py
-  
+
 - name: route_pref_ospf
   case: route_pref_ospf/test.py
 
@@ -22,3 +22,6 @@
 
 - name: route_pref_255
   case: route_pref_255/test.py
+
+- name: ospf_default_route_advertise
+  case: ospf_default_route_advertise/test.py
