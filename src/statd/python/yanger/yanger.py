@@ -674,6 +674,30 @@ def netns_ifindex_to_ifname(ifindex):
 
     return None
 
+def add_bridge_port_common(ifname, iface_in, iface_out):
+    li = iface_in.get("linkinfo", {})
+    if not (li.get("info_slave_kind") == "bridge" or \
+            li.get("info_kind") == "bridge"):
+        return
+
+    pvid = get_bridge_port_pvid(ifname)
+    if pvid is not None:
+        insert(iface_out, "infix-interfaces:bridge-port", "pvid", pvid)
+
+def add_bridge_port_lower(ifname, iface_in, iface_out):
+    li = iface_in.get("linkinfo", {})
+    if not li.get("info_slave_kind") == "bridge":
+        return
+
+    insert(iface_out, "infix-interfaces:bridge-port", "bridge", iface_in['master'])
+
+    stp_state = get_bridge_port_stp_state(ifname)
+    if stp_state is not None:
+        insert(iface_out, "infix-interfaces:bridge-port", "stp-state", stp_state)
+
+    multicast = get_brport_multicast(ifname)
+    insert(iface_out, "infix-interfaces:bridge-port", "multicast", multicast)
+
 def add_ip_link(ifname, iface_in, iface_out):
     if 'ifname' in iface_in:
         iface_out['name'] = ifname
@@ -687,19 +711,9 @@ def add_ip_link(ifname, iface_in, iface_out):
     if 'address' in iface_in:
         iface_out['phys-address'] = iface_in['address']
 
-    if 'master' in iface_in:
-        insert(iface_out, "infix-interfaces:bridge-port", "bridge", iface_in['master'])
+    add_bridge_port_common(ifname, iface_in, iface_out)
+    add_bridge_port_lower(ifname, iface_in, iface_out)
 
-        pvid = get_bridge_port_pvid(ifname)
-        if pvid is not None:
-            insert(iface_out, "infix-interfaces:bridge-port", "pvid", pvid)
-
-        stp_state = get_bridge_port_stp_state(ifname)
-        if stp_state is not None:
-            insert(iface_out, "infix-interfaces:bridge-port", "stp-state", stp_state)
-
-        multicast = get_brport_multicast(ifname)
-        insert(iface_out, "infix-interfaces:bridge-port", "multicast", multicast)
     if not iface_is_dsa(iface_in):
         if 'link' in iface_in:
             insert(iface_out, "infix-interfaces:vlan", "lower-layer-if", iface_in['link'])
