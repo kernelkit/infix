@@ -5,40 +5,42 @@ Verify that VLANs stacked on top of an interfaces that are also
 attached to a VLAN filtering bridge are always locally terminated.
 
 ....
-.-------------------.
-|        dut        |
-|                   |
-|  a.10  br0  b.10  |
-|     \ /   \ /     |
-'------a-----b------'
-       |     |
-       |     |
-.------a-----b------.
-|                   |
-|       host        |
-|                   |
-'-------------------'
+.---------------------------.
+|           target          |
+|                           |
+|  data0.10  br0  data1.10  |
+|      \    /   \    /      |
+'------data0-----data1------'
+         |         |
+         |         |
+.------data0-----data1------.
+|      /      :     \       |
+|  data0.10   :   data1.10  |
+|             :             |
+|           host            |
+|             :             |
+'---------------------------'
 ....
 
 In this setup, even though VLAN 10 is allowed to ingress and egress on
-both `a` and `b`, _bridging_ of packets from one to the other must
-_not_ be allowed.
+both `data0` and `data1`, _bridging_ of packets from one to the other
+must _not_ be allowed.
 
 """
 import infamy
 
 with infamy.Test() as test:
-    with test.step("Set up topology and attach to dut"):
+    with test.step("Set up topology and attach to target"):
         env = infamy.Env()
-        dut = env.attach("dut", "mgmt")
+        tgt = env.attach("target", "mgmt")
 
-    with test.step("Configure bridge and VLAN interfaces on dut"):
-        _, hporta = env.ltop.xlate("host", "a")
-        _, hportb = env.ltop.xlate("host", "b")
-        _, dporta = env.ltop.xlate( "dut", "a")
-        _, dportb = env.ltop.xlate( "dut", "b")
+    with test.step("Configure bridge and VLAN interfaces on target"):
+        _, hdata0 = env.ltop.xlate(  "host", "data0")
+        _, hdata1 = env.ltop.xlate(  "host", "data1")
+        _, ddata0 = env.ltop.xlate("target", "data0")
+        _, ddata1 = env.ltop.xlate("target", "data1")
 
-        dut.put_config_dicts({
+        tgt.put_config_dicts({
             "ietf-interfaces": {
                 "interfaces": {
                     "interface": [
@@ -51,25 +53,25 @@ with infamy.Test() as test:
                                     "vlan": [
                                         {
                                             "vid": 1,
-                                            "untagged": [dporta, dportb]
+                                            "untagged": [ddata0, ddata1]
                                         },
                                     ]
                                 }
                             }
                         },
                         {
-                            "name": dporta,
+                            "name": ddata0,
                             "infix-interfaces:bridge-port": {
                                 "pvid": 1,
                                 "bridge": "br0"
                             }
                         },
                         {
-                            "name": f"{dporta}.10",
+                            "name": f"{ddata0}.10",
                             "type": "infix-if-type:vlan",
                             "vlan": {
                                 "id": 10,
-                                "lower-layer-if": dporta,
+                                "lower-layer-if": ddata0,
                             },
                             "ipv4": {
                                 "address": [
@@ -81,18 +83,18 @@ with infamy.Test() as test:
                             }
                         },
                         {
-                            "name": dportb,
+                            "name": ddata1,
                             "infix-interfaces:bridge-port": {
                                 "pvid": 1,
                                 "bridge": "br0"
                             }
                         },
                         {
-                            "name": f"{dportb}.10",
+                            "name": f"{ddata1}.10",
                             "type": "infix-if-type:vlan",
                             "vlan": {
                                 "id": 10,
-                                "lower-layer-if": dportb,
+                                "lower-layer-if": ddata1,
                             },
                             "ipv4": {
                                 "address": [
@@ -108,35 +110,35 @@ with infamy.Test() as test:
             }
         })
 
-    with infamy.IsolatedMacVlan(hporta) as nsa, \
-         infamy.IsolatedMacVlan(hportb) as nsb:
+    with infamy.IsolatedMacVlan(hdata0) as ns0, \
+         infamy.IsolatedMacVlan(hdata1) as ns1:
 
         with test.step("Configure IP addresses and VLAN interfaces on host"):
-            nsa.addip("10.0.1.1")
-            nsa.runsh("""
+            ns0.addip("10.0.1.1")
+            ns0.runsh("""
                   set -ex
                   ip link add dev vlan10 link iface up type vlan id 10
                   ip addr add 10.10.1.1/24 dev vlan10
                   """)
 
-            nsb.addip("10.0.1.2")
-            nsb.runsh("""
+            ns1.addip("10.0.1.2")
+            ns1.runsh("""
                   set -ex
                   ip link add dev vlan10 link iface up type vlan id 10
                   ip addr add 10.10.2.1/24 dev vlan10
                   """)
 
-        with test.step("Verify that host:a reaches host:b with untagged packets"):
-            nsa.must_reach("10.0.1.2")
+        with test.step("Verify that host:data0 reaches host:data1 with untagged packets"):
+            ns0.must_reach("10.0.1.2")
 
-        with test.step("Verify that traffic on VLAN 10 from host:a does not reach host:b"):
-            infamy.parallel(lambda: nsa.runsh("timeout -s INT 5 ping -i 0.2 -b 10.10.1.255 || true"),
-                            lambda: nsb.must_not_receive("ip src 10.10.1.1"))
+        with test.step("Verify that traffic on VLAN 10 from host:data0 does not reach host:data1"):
+            infamy.parallel(lambda: ns0.runsh("timeout -s INT 5 ping -i 0.2 -b 10.10.1.255 || true"),
+                            lambda: ns1.must_not_receive("ip src 10.10.1.1"))
 
-        with test.step("Verify that host:a can reach dut on VLAN 10"):
-            nsa.must_reach("10.10.1.2")
+        with test.step("Verify that host:data0 can reach target on VLAN 10"):
+            ns0.must_reach("10.10.1.2")
 
-        with test.step("Verify that host:b can reach dut on VLAN 10"):
-            nsb.must_reach("10.10.2.2")
+        with test.step("Verify that host:data1 can reach target on VLAN 10"):
+            ns1.must_reach("10.10.2.2")
 
     test.succeed()

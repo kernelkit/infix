@@ -45,3 +45,5 @@ include::iface_enable_disable/Readme.adoc[]
 
 include::veth_delete/Readme.adoc[]
 
+include::vlan_iface_termination/Readme.adoc[]
+

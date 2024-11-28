@@ -4,24 +4,26 @@ Verify that VLANs stacked on top of an interfaces that are also
 attached to a VLAN filtering bridge are always locally terminated.
 
 ....
-.-------------------.
-|        dut        |
-|                   |
-|  a.10  br0  b.10  |
-|     \ /   \ /     |
-'------a-----b------'
-       |     |
-       |     |
-.------a-----b------.
-|                   |
-|       host        |
-|                   |
-'-------------------'
+.---------------------------.
+|           target          |
+|                           |
+|  data0.10  br0  data1.10  |
+|      \    /   \    /      |
+'------data0-----data1------'
+         |         |
+         |         |
+.------data0-----data1------.
+|      /      :     \       |
+|  data0.10   :   data1.10  |
+|             :             |
+|           host            |
+|             :             |
+'---------------------------'
 ....
 
 In this setup, even though VLAN 10 is allowed to ingress and egress on
-both `a` and `b`, _bridging_ of packets from one to the other must
-_not_ be allowed.
+both `data0` and `data1`, _bridging_ of packets from one to the other
+must _not_ be allowed.
 
 ==== Topology
 ifdef::topdoc[]
@@ -36,13 +38,13 @@ image::topology.svg[VLAN Interface Termination topology]
 endif::testgroup[]
 endif::topdoc[]
 ==== Test sequence
-. Set up topology and attach to dut
-. Configure bridge and VLAN interfaces on dut
+. Set up topology and attach to target
+. Configure bridge and VLAN interfaces on target
 . Configure IP addresses and VLAN interfaces on host
-. Verify that host:a reaches host:b with untagged packets
-. Verify that traffic on VLAN 10 from host:a does not reach host:b
-. Verify that host:a can reach dut on VLAN 10
-. Verify that host:b can reach dut on VLAN 10
+. Verify that host:data0 reaches host:data1 with untagged packets
+. Verify that traffic on VLAN 10 from host:data0 does not reach host:data1
+. Verify that host:data0 can reach target on VLAN 10
+. Verify that host:data1 can reach target on VLAN 10
 
 
 <<<
