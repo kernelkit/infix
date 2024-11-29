@@ -4,10 +4,14 @@ Change Log
 All notable changes to the project are documented in this file.
 
 
-[v24.11.1][UNRELEASED]
+[v24.11.1][] - 2024-11-29
 -------------------------
 
 ### Changes
+
+ - Upgrade Frr to 9.1.2, fixes an OSPF issue where *Zebra* lost netlink
+   messages and drifted out of sync with the kernel's view of addresses
+   and interfaces available in the system
  - Allow setting IP address directly on VLAN filtering bridges.  This
    only works when the bridge is an untagged member of a (single) VLAN.
  - cli: usability -- showing log files now automatically jump to the end
@@ -33,6 +37,12 @@ All notable changes to the project are documented in this file.
    in the same flow as during normal runtime operation (start/upgrade)
  - Fix start of containers with `manual=True` option should now work
    again, regression in v24.11.0
+ - Fix loss of writable volumes when temporarily disabling a container
+   in the configuration, now the container remains dormant with all its
+   volumes still available
+ - Fix presentation bug in CLI `show interfaces` where all line-drawing
+   characters showed up as hexadecimal values.  Regression in v24.11.0
+ - Fix missing log messages from Frr Zebra daemon
  - Stop the zeroconf (IPv4LL) agent, `avahi-autoipd`, when removing an
    interface, e.g., `br0`
  - Creating more than one container trigger restarts of previously set
@@ -1400,6 +1410,7 @@ Supported YANG models in addition to those used by sysrepo and netopeer:
 
 [buildroot]:  https://buildroot.org/
 [UNRELEASED]: https://github.com/kernelkit/infix/compare/v24.11.0...HEAD
+[v24.11.1]:   https://github.com/kernelkit/infix/compare/v24.11.0...v24.11.1
 [v24.11.0]:   https://github.com/kernelkit/infix/compare/v24.10.0...v24.11.0
 [v24.10.2]:   https://github.com/kernelkit/infix/compare/v24.10.1...v24.10.2
 [v24.10.1]:   https://github.com/kernelkit/infix/compare/v24.10.0...v24.10.1
