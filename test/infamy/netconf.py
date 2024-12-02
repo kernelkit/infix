@@ -15,7 +15,6 @@ import libyang
 import lxml
 import netconf_client.connect
 import netconf_client.ncclient
-import infamy.iface as iface
 from infamy.transport import Transport,infer_put_dict
 from netconf_client.error import RpcError
 from . import env
@@ -381,17 +380,6 @@ class Device(Transport):
 
         with open(outdir+"/"+schema["filename"], "w") as f:
             f.write(data.schema)
-
-    def get_iface(self, name):
-        """Fetch target dict for iface and extract param from JSON"""
-        content = self.get_data(iface.get_xpath(name))
-        interface = content.get("interfaces", {}).get("interface", None)
-
-        if interface is None:
-            return None
-
-        # Restconf (rousette) address by id, otherwise (netopper2) by name
-        return interface[name]
 
     def delete_xpath(self, xpath):
         # Split out the model and the container from xpath'
