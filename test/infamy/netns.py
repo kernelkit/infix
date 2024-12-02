@@ -88,7 +88,7 @@ class IsolatedMacVlans:
         self.sleeper.kill()
         self.sleeper.wait()
 
-        for n in range(100):
+        for _ in range(100):
             promisc = False
             for parent in self.ifmap.keys():
                 iplink = subprocess.run(f"ip -d -j link show dev {parent}".split(),
@@ -190,12 +190,13 @@ class IsolatedMacVlans:
 
     def runsh(self, script, *args, **kwargs):
         return self.run("/bin/sh", text=True, input=script,
-                        stdout=subprocess.PIPE, stderr=subprocess.STDOUT, *args, **kwargs)
+                        stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                        *args, **kwargs)
 
     def addroute(self, subnet, nexthop, proto="ipv4", prefix_length=""):
-        p=proto[3]
+        p = proto[3]
         if prefix_length:
-            prefix_length=f"/{prefix_length}"
+            prefix_length = f"/{prefix_length}"
 
         self.runsh(f"""
             set -ex
@@ -203,7 +204,7 @@ class IsolatedMacVlans:
             """, check=True)
 
     def addip(self, ifname, addr, prefix_length=24, proto="ipv4"):
-        p=proto[3]
+        p = proto[3]
 
         self.runsh(f"""
             set -ex
@@ -211,15 +212,14 @@ class IsolatedMacVlans:
             ip -{p} addr add {addr}/{prefix_length} dev {ifname}
             """, check=True)
 
-
     def traceroute(self, addr):
-        res=self.runsh(f"""
+        res = self.runsh(f"""
         set -ex
         traceroute -n {addr}
         """, check=True)
-        result=[]
+        result = []
         for line in res.stdout.splitlines()[2:]:
-            l=line.split()
+            l = line.split()
             result.append(l)
         return result
 
