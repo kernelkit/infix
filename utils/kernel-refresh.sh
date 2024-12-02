@@ -60,6 +60,9 @@ if ! [ "$PDIR" ]; then
     exit 1
 fi
 
-git -C $PDIR rm *.patch
+KDIR=$(readlink -f $KDIR)
+PDIR=$(readlink -f $PDIR)
+
+git ls-files --error-unmatch $PDIR 1>/dev/null 2>&1 && git -C $PDIR rm *.patch
 git -C $KDIR format-patch -o $PDIR $KTAG..HEAD
 git -C $PDIR add *.patch
