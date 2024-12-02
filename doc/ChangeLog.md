@@ -145,6 +145,10 @@ All notable changes to the project are documented in this file.
   hardware offload` to `Skipping $iface, hardware offload not supported.`
 
 
+### Fixes
+- Fix #751: R2S rousette crash on boot if LAN not connected.
+  Fixes resolution for numeric address ::1, regardless of being set in /etc/hosts.
+
 
 [v24.10.1][] - 2024-10-18
 -------------------------
