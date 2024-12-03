@@ -38,6 +38,14 @@ define $(2)_DTBS_INSTALL_TARGET
 endef
 $(2)_POST_INSTALL_TARGET_HOOKS += $(2)_DTBS_INSTALL_TARGET
 
+define $(2)_OVERLAY_INSTALL_TARGET
+	@test -d $$(@D)/rootfs && \
+	$$(call MESSAGE,"Copying overlay") && \
+	$$(call SYSTEM_RSYNC,$$(@D)/rootfs,$(TARGET_DIR)) || \
+	true
+endef
+$(2)_POST_INSTALL_TARGET_HOOKS += $(2)_OVERLAY_INSTALL_TARGET
+
 endef
 
 ix-board = $(call inner-ix-board,$(pkgname),$(call UPPERCASE,$(pkgname)))
