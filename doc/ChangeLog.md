@@ -3,6 +3,15 @@ Change Log
 
 All notable changes to the project are documented in this file.
 
+[v24.12.0][UNRELEASED]
+-------------------------
+
+### Changes
+
+- NTP client status is now availible in YANG.
+
+### Fixes
+
 
 [v24.11.1][] - 2024-11-29
 -------------------------
@@ -51,7 +60,6 @@ All notable changes to the project are documented in this file.
  - Prevent traffic assigned to locally terminated VLANs from being
    forwarded, when the underlying ports are simultaneously attached to
    a VLAN filtering bridge.
-
 
 [v24.11.0][] - 2024-11-20
 -------------------------
@@ -221,7 +229,7 @@ renamed to ease maintenance, more info below.
   with `custom-phys-address` to allow for constructing more free-form
   MAC addresses based on the chassis MAC (a.k.a., base MAC) address.
   For more information, see the YANG model, a few examples are listed in
-  the updated documentation.  
+  the updated documentation.
   The syntax will be automatically updated in the `startup-config` and
   `factory-config` -- make sure to verify the changes and update any
   static `factory-config` used for your products
