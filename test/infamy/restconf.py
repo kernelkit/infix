@@ -321,19 +321,11 @@ class Device(Transport):
         """Get operational data"""
         uri = xpath_to_uri(xpath) if xpath is not None else None
         data = self.get_operational(uri, parse)
-        if parse is False:
-            return data
 
-        if data is None:
-            return None
+        if parse and data:
+            return data.print_dict()
 
-        data = json.loads(data.print_mem("json", with_siblings=True,
-                                         pretty=False))
-        for k, v in data.items():
-            model, container = k.split(":")
-            break
-
-        return {container: v}
+        return data
 
     def copy(self, source, target):
         factory = self.get_datastore(source)
@@ -371,18 +363,6 @@ class Device(Transport):
         data = self.get_data("/ietf-system:system-state/clock", parse=False)
         data = json.loads(data)
         return data["ietf-system:system-state"]["clock"]["current-datetime"]
-
-    def get_iface(self, iface):
-        """Fetch target dict for iface and extract param from JSON"""
-        xpath = f"/ietf-interfaces:interfaces/interface={iface}"
-        content = self.get_data(xpath)
-        interface = content.get("interfaces", {}).get("interface", None)
-        if interface is None:
-            return None
-
-        # RESTCONF (at least rousette) addresses by id, but NETCONF (at
-        # least netopper2) addresses by name
-        return interface[0]
 
     def delete_xpath(self, xpath):
         """Delete XPath from running config"""

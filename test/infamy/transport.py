@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from infamy.neigh import ll6ping
+import infamy.iface
 
 def infer_put_dict(name, models):
     if not models.get("ietf-system"):
@@ -50,10 +51,13 @@ class Transport(ABC):
     def call_action(self, xpath):
         pass
 
-    @abstractmethod
-    def get_iface(self, iface):
-        """Should be common, but is not due to bug in rousette"""
-        pass
+    def get_iface(self, name):
+        """Fetch target dict for iface and extract param from JSON"""
+        content = self.get_data(infamy.iface.get_xpath(name))
+        interfaces = content.get("interfaces", {}).get("interface", {})
+
+        # KeyedList does not support `.get()`
+        return interfaces[name] if name in interfaces else None
 
     def get_mgmt_ip(self):
         """Return managment IP address used for RESTCONF/NETCONF"""

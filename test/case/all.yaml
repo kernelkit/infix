@@ -1,6 +1,6 @@
 ---
-- case: meta/reproducible.py
 - case: meta/wait.py
+- case: meta/reproducible.py
 
 - name: Misc tests
   suite: misc/misc.yaml
