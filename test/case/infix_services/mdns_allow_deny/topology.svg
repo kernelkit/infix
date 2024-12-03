@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
+ "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+
+<!-- Title: 1x4 Pages: 1 -->
+<svg width="465pt" height="101pt"
+ viewBox="0.00 0.00 465.03 101.00" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(4 97)">
+<title>1x4</title>
+<polygon fill="white" stroke="transparent" points="-4,4 -4,-97 461.03,-97 461.03,4 -4,4"/>
+<!-- host -->
+<g id="node1" class="node">
+<title>host</title>
+<polygon fill="none" stroke="black" points="0,-0.5 0,-92.5 100,-92.5 100,-0.5 0,-0.5"/>
+<text text-anchor="middle" x="25" y="-42.8" font-family="DejaVu Sans Mono, Book" font-size="14.00">host</text>
+<polyline fill="none" stroke="black" points="50,-0.5 50,-92.5 "/>
+<text text-anchor="middle" x="75" y="-77.3" font-family="DejaVu Sans Mono, Book" font-size="14.00">mgmt</text>
+<polyline fill="none" stroke="black" points="50,-69.5 100,-69.5 "/>
+<text text-anchor="middle" x="75" y="-54.3" font-family="DejaVu Sans Mono, Book" font-size="14.00">eth1</text>
+<polyline fill="none" stroke="black" points="50,-46.5 100,-46.5 "/>
+<text text-anchor="middle" x="75" y="-31.3" font-family="DejaVu Sans Mono, Book" font-size="14.00">eth2</text>
+<polyline fill="none" stroke="black" points="50,-23.5 100,-23.5 "/>
+<text text-anchor="middle" x="75" y="-8.3" font-family="DejaVu Sans Mono, Book" font-size="14.00">eth3</text>
+</g>
+<!-- dut -->
+<g id="node2" class="node">
+<title>dut</title>
+<polygon fill="none" stroke="black" points="300.03,-0.5 300.03,-92.5 457.03,-92.5 457.03,-0.5 300.03,-0.5"/>
+<text text-anchor="middle" x="325.03" y="-77.3" font-family="DejaVu Sans Mono, Book" font-size="14.00">mgmt</text>
+<polyline fill="none" stroke="black" points="300.03,-69.5 350.03,-69.5 "/>
+<text text-anchor="middle" x="325.03" y="-54.3" font-family="DejaVu Sans Mono, Book" font-size="14.00">p1</text>
+<polyline fill="none" stroke="black" points="300.03,-46.5 350.03,-46.5 "/>
+<text text-anchor="middle" x="325.03" y="-31.3" font-family="DejaVu Sans Mono, Book" font-size="14.00">p2</text>
+<polyline fill="none" stroke="black" points="300.03,-23.5 350.03,-23.5 "/>
+<text text-anchor="middle" x="325.03" y="-8.3" font-family="DejaVu Sans Mono, Book" font-size="14.00">p3</text>
+<polyline fill="none" stroke="black" points="350.03,-0.5 350.03,-92.5 "/>
+<text text-anchor="middle" x="403.53" y="-65.8" font-family="DejaVu Sans Mono, Book" font-size="14.00">dut </text>
+<text text-anchor="middle" x="403.53" y="-34.8" font-family="DejaVu Sans Mono, Book" font-size="14.00">(br0)</text>
+<text text-anchor="middle" x="403.53" y="-19.8" font-family="DejaVu Sans Mono, Book" font-size="14.00">10.0.p.1/24</text>
+</g>
+<!-- host&#45;&#45;dut -->
+<g id="edge1" class="edge">
+<title>host:mgmt&#45;&#45;dut:mgmt</title>
+<path fill="none" stroke="lightgray" stroke-width="2" d="M100,-81.5C100,-81.5 299.53,-81.5 299.53,-81.5"/>
+</g>
+<!-- host&#45;&#45;dut -->
+<g id="edge2" class="edge">
+<title>host:eth1&#45;&#45;dut:p1</title>
+<path fill="none" stroke="black" stroke-width="2" d="M100,-58.5C100,-58.5 299.53,-58.5 299.53,-58.5"/>
+<text text-anchor="middle" x="141" y="-62.3" font-family="DejaVu Serif, Book" font-size="14.00">10.0.1.2/24</text>
+</g>
+<!-- host&#45;&#45;dut -->
+<g id="edge3" class="edge">
+<title>host:eth2&#45;&#45;dut:p2</title>
+<path fill="none" stroke="black" stroke-width="2" d="M100,-34.5C100,-34.5 299.53,-34.5 299.53,-34.5"/>
+<text text-anchor="middle" x="141" y="-38.3" font-family="DejaVu Serif, Book" font-size="14.00">10.0.2.2/24</text>
+</g>
+<!-- host&#45;&#45;dut -->
+<g id="edge4" class="edge">
+<title>host:eth3&#45;&#45;dut:p3</title>
+<path fill="none" stroke="black" stroke-width="2" d="M100,-11.5C100,-11.5 299.53,-11.5 299.53,-11.5"/>
+<text text-anchor="middle" x="141" y="-15.3" font-family="DejaVu Serif, Book" font-size="14.00">10.0.3.2/24</text>
+</g>
+</g>
+</svg>
