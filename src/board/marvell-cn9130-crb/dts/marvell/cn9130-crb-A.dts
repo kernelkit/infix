@@ -3,7 +3,7 @@
  * Copyright (C) 2020 Marvell International Ltd.
  */
 
-#include "cn9130-crb.dtsi"
+#include "arm64/marvell/cn9130-crb.dtsi"
 
 / {
 	model = "Marvell Armada CN9130-CRB-A";

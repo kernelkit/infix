@@ -1,0 +1,5 @@
+config BR2_PACKAGE_MARVELL_ESPRESSOBIN
+	bool "Marvell ESPRESSObin"
+	depends on BR2_aarch64
+	help
+	  Marvell ESPRESSObin

@@ -1,0 +1,9 @@
+menu "Boards"
+
+source "$BR2_EXTERNAL_INFIX_PATH/package/board/alder-alder/Config.in"
+source "$BR2_EXTERNAL_INFIX_PATH/package/board/marvell-cn9130-crb/Config.in"
+source "$BR2_EXTERNAL_INFIX_PATH/package/board/marvell-espressobin/Config.in"
+source "$BR2_EXTERNAL_INFIX_PATH/package/board/microchip-sparx5-pcb135/Config.in"
+source "$BR2_EXTERNAL_INFIX_PATH/package/board/styx-dcp-sc-28p/Config.in"
+
+endmenu
