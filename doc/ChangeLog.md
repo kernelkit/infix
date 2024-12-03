@@ -8,9 +8,14 @@ All notable changes to the project are documented in this file.
 
 ### Changes
 
-- NTP client status is now availible in YANG.
+ - NTP client status is now availible in YANG
+ - Add support for more mDNS settings: allow/deny interfaces, acting
+   as "reflector" and filtering of reflected services.  Issue #678
+ - Review of default `sysctl` settings, issue #829
 
 ### Fixes
+
+ - Minor cleanup of Networking Guide
 
 
 [v24.11.1][] - 2024-11-29
@@ -1418,6 +1423,7 @@ Supported YANG models in addition to those used by sysrepo and netopeer:
 
 [buildroot]:  https://buildroot.org/
 [UNRELEASED]: https://github.com/kernelkit/infix/compare/v24.11.0...HEAD
+[v24.12.0]:   https://github.com/kernelkit/infix/compare/v24.11.0...v24.12.0
 [v24.11.1]:   https://github.com/kernelkit/infix/compare/v24.11.0...v24.11.1
 [v24.11.0]:   https://github.com/kernelkit/infix/compare/v24.10.0...v24.11.0
 [v24.10.2]:   https://github.com/kernelkit/infix/compare/v24.10.1...v24.10.2
