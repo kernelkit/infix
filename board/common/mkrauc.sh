@@ -2,8 +2,6 @@
 
 set -e
 
-GIT_VERSION=$(git -C "$BR2_EXTERNAL_INFIX_PATH" describe --always --dirty --tags)
-
 name=$1
 compat=$2
 sign=$3
@@ -26,7 +24,7 @@ cp -f "$BINARIES_DIR/rootfs.itbh"     "$work/rootfs.itbh"
 cat >"$work/manifest.raucm" <<EOF
 [update]
 compatible=${compat}
-version=${GIT_VERSION}
+version=${INFIX_VERSION}
 
 [bundle]
 format=verity
