@@ -7,3 +7,4 @@ include::mdns_allow_deny/Readme.adoc[]
 
 include::services_basic/Readme.adoc[]
 
+include::ssh_server_config/Readme.adoc[]
