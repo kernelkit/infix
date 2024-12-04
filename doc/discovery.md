@@ -1,21 +1,21 @@
-Discover Infix Units
-====================
+# Discover Devices
+
+Infix advertises itself via the [mDNS-SD](#mdns-sd) and [LLDP](#lldp)
+discovery protocols.  mDNS-SD has good client support in Windows, macOS
+and on Linux systems.  More on these protocols later.
+
+An even simpler method is available when directly attached to an Infix
+device:
 
 ```
- .----.      Ethernet       .-------.
- | PC +---------------------+ Infix |
- '----' if1            eth0 '-------'
+       .----.      Ethernet       .-------.
+       | PC +---------------------+ Infix |
+       '----' if1              e1 '-------'
 ```
-Figure 1: PC directly connected over Ethernet to Infix unit (here eth0).
 
-
-When you wish to discover the IP address of an Infix switch, the simplest
-way is probably to *ping the IPv6 all-hosts* address (ff02::1) over a
-directly connected Ethernet cable. The unit's link-local IPv6 address is
-seen in the response.
-
-In the example below, the PC is connected to Infix via interface *tap0*
-(*tap0* is *if1* in Figure 1) and Infix responds with address
+With IPv6 you can *ping the all-hosts* address (ff02::1), the device's
+link-local IPv6 address is then seen in the response.  In the following
+example, the PC here uses *tap0* as *if1*, Infix responds with address
 *fe80::ff:fec0:ffed*.
 
 ```
@@ -31,7 +31,11 @@ rtt min/avg/max/mdev = 0.389/0.455/0.558/0.073 ms
 linux-pc:# 
 ```
 
-The PC could connect then connect to Infix, e.g., using SSH.
+> [!TIP]
+> The `-L` option ignores local responses from the PC.
+
+This address can then be used to connect to the device, e.g., using SSH.
+Notice the syntax `username@address%interface`:
 
 ```
 linux-pc:# ssh admin@fe80::ff:fec0:ffed%tap0
@@ -39,17 +43,13 @@ admin@fe80::ff:fec0:ffed%tap0's password: admin
 admin@infix-c0-ff-ee:~$ 
 ```
 
-## Discovery mechanisms available in Infix
 
-Infix advertises its presence via the [mDNS](#mdns) and [LLDP](#lldp)
-discovery protocols.
+## LLDP
 
+Infix supports LLDP (IEEE 802.1AB).  For a device with factory default
+settings, the link-local IPv6 address can be read from the Management
+Address TLV using *tcpdump* or other sniffing tools[^1]:
 
-### LLDP
-
-Infix supports LLDP (IEEE 802.1AB). For a unit with factory default
-settings, the PC can readout the link-local IPv6 address from the
-Management Address TLV using *tcpdump* or other sniffing tools[^1].
 ```
 linux-pc:# tcpdump -i tap0 -Qin -v ether proto 0x88cc
 tcpdump: listening on tap0, link-type EN10MB (Ethernet), snapshot length 262144 bytes
@@ -83,11 +83,12 @@ tcpdump: listening on tap0, link-type EN10MB (Ethernet), snapshot length 262144 
 linux-pc:# 
 ```
 
-If the unit has an IPv4 address assigned, it is shown in an additional
+If the device has an IPv4 address assigned, it is shown in an additional
 Management Address TLV.
 
-> **Note** The Management Addresses shown by LLDP are not
-> necessarily associated with the port transmitting the LLDP message. 
+> [!NOTE]
+> The Management Addresses shown by LLDP are not necessarily associated
+> with the port transmitting the LLDP message.
 
 In the example below, the IPv4 address (10.0.1.1) happens to be
 assigned to *eth0*, while the IPv6 address (2001:db8::1) is not.
@@ -130,10 +131,6 @@ tcpdump: listening on tap0, link-type EN10MB (Ethernet), snapshot length 262144 
 linux-pc:#
 ```
 
-[^1]: [lldpd: implementation of IEEE 802.1ab
-    (LLDP)](https://github.com/lldp/lldpd) includes *lldpcli*, which
-    is handy to sniff and display LLDP packets.
-
 The LLDP service can be disabled using the following commands.
 
 ```
@@ -143,13 +140,38 @@ admin@infix-c0-ff-ee:/config/> leave
 admin@infix-c0-ff-ee:/> 
 ```
 
-### mDNS
 
-DNS-SD/mDNS can be used to discover Infix units and services. Infix
-units present their IP addresses, services and hostname within the
-.local domain. This method has good client support in Apple and Linux
-systems. On Linux, tools such as *avahi-browse* or *mdns-scan*[^2] can
-be used to search for devices advertising their services via mDNS.
+## mDNS-SD
+
+DNS-SD/mDNS-SD can be used to discover Infix devices and services.  By
+default, Infix use the `.local` domain for advertising services.  Some
+networks use `.lan` instead, so this configurable:
+
+```
+admin@infix-c0-ff-ee:/> configure
+admin@infix-c0-ff-ee:/config/> edit mdns
+admin@infix-c0-ff-ee:/config/mdns/> set domain lan
+```
+
+Other available settings include limiting the interfaces mDNS responder
+acts on:
+
+```
+admin@infix-c0-ff-ee:/config/> set interfaces allow e1
+```
+
+or
+
+```
+admin@infix-c0-ff-ee:/config/> set interfaces deny wan
+```
+
+The `allow` and `deny` settings are complementary, `deny` always wins.
+
+----
+
+In Linux, tools such as *avahi-browse* or *mdns-scan*[^2] can be used to
+search for devices advertising their services via mDNS.
 
 ```
 linux-pc:# avahi-browse -ar
@@ -181,9 +203,15 @@ linux-pc:# avahi-browse -ar
 linux-pc:#
 ```
 
+> [!TIP]
+> The `-t` option is also very useful, it stops browsing automatically
+> when a "more or less complete list" has been printed.  However, some
+> devices on the LAN may be in deep sleep so run the command again if
+> you cannot find the device you are looking for.
+
 Additionally, *avahi-resolve-host-name* can be used to verify domain
-name mappings for IP addresses. By default, it translates from IPv4
-addresses. This function allows users to confirm that addresses are
+name mappings for IP addresses.  By default, it translates from IPv4
+addresses.  This function allows users to confirm that addresses are
 mapped correctly.
 
 ```
@@ -219,20 +247,21 @@ linux-pc:#
 ```
 
 To disable mDNS/mDNS-SD, type the commands:
+
 ```
 admin@infix-c0-ff-ee:/> configure 
 admin@infix-c0-ff-ee:/config/> no mdns
 admin@infix-c0-ff-ee:/config/> leave
 ```
 
-#### Human-Friendly Hostname Alias
+### Human-Friendly Hostname Alias
 
-Each Infix unit will advertise itself as *infix.local*, in addition to
-its full hostname (e.g., *infix-c0-ff-ee.local* or *foo.local*).  This
-alias works seamlessly on a network with a single Infix device, and
-makes it easy to connect when the exact hostname is not known in
-advance. The examples below show how the alias can be used for
-actions such as pinging or establishing an SSH connection:
+Each Infix deviuce advertise itself as *infix.local*, in addition to its
+full hostname (e.g., *infix-c0-ff-ee.local* or *foo.local*).  This alias
+works seamlessly on a network with a single Infix device, and makes it
+easy to connect when the exact hostname is not known in advance.  The
+examples below show how the alias can be used for actions such as
+pinging or establishing an SSH connection:
 
 ```
 linux-pc:# ping infix.local -c 3
@@ -254,30 +283,33 @@ linux-pc:# ssh admin@infix.local
 
 Run the command 'cli' for interactive OAM
 
-linux-pc:#
+admin@infix-c0-ff-ee:~$
 ```
 
 When multiple Infix devices are present on the LAN the alias will not
 uniquely identify a device; *infix.local* will refer to any of the
 Infix devices, likely the one that first appeared.
 
-> When multiple Infix units are present, use the full hostname (e.g.,
-> *infix-c0-ff-ee.local* or *foo.local*) rather than the alias
-> infix.local to deterministically connect to a unit.
+> [!NOTE]
+> When multiple Infix devices are present on the LAN, use the full name,
+> e.g., *infix-c0-ff-ee.local* or *foo.local* rather than the alias
+> *infix.local* to deterministically connect to the device.
 
 
-#### Netbrowse service to find all your devices
+### Browse Network Using *network.local*
 
-Another mDNS alias that all Infix devices can advertise is
-*network.local*. This is a web service which basically runs avahi-browse
-and displays a table of other Infix devices and their services. 
+Another mDNS alias that all Infix devices advertise is *network.local*.
+This is a web service which basically runs `avahi-browse` and displays a
+table of other Infix devices and their services.
 
 ![Netbrowse Service - network.local](img/network-local.png)
 
-With multiple Infix devices on the LAN, one will be your portal to
-access all others, if it goes down another will take its place.
+With multiple Infix devices on the LAN, one will take the role of your
+portal to access all others, if it goes down another takes its place.
 
-To disable the netbrowse service, the following commands can be used:
+To disable the netbrowse service, and the *network.local* alias, the
+following commands can be used:
+
 ```
 admin@infix-c0-ff-ee:/> configure 
 admin@infix-c0-ff-ee:/config/> edit web
@@ -285,6 +317,8 @@ admin@infix-c0-ff-ee:/config/web/> no netbrowse
 admin@infix-c0-ff-ee:/config/web/> leave
 ```
 
+
+[^1]: E.g., [lldpd](https://github.com/lldp/lldpd) which includes the
+    *lldpcli* too, handy to sniff and display LLDP packets.
 [^2]: [mdns-scan](http://0pointer.de/lennart/projects/mdns-scan/): a
-    tool for scanning for mDNS/DNS-SD published services on the local
-    network
+    tool for scanning for mDNS/DNS-SD services on the local network.
