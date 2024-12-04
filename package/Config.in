@@ -1,5 +1,9 @@
 menu "Packages"
 
+comment "Hardware Support"
+source "$BR2_EXTERNAL_INFIX_PATH/package/board/Config.in"
+
+comment "Software Packages"
 source "$BR2_EXTERNAL_INFIX_PATH/package/bin/Config.in"
 source "$BR2_EXTERNAL_INFIX_PATH/package/confd/Config.in"
 source "$BR2_EXTERNAL_INFIX_PATH/package/confd-test-mode/Config.in"

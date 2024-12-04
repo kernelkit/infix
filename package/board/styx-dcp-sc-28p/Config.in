@@ -1,0 +1,5 @@
+config BR2_PACKAGE_STYX_DCP_SC_28P
+	bool "Styx DCP-SC-28P"
+	depends on BR2_aarch64
+	help
+	  Styx DCP-SC-28P

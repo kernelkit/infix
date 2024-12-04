@@ -1,0 +1,5 @@
+config BR2_PACKAGE_MARVELL_CN9130_CRB
+	bool "Marvell CN9130-CRB"
+	depends on BR2_aarch64
+	help
+	  Customer Reference Board for CN9130

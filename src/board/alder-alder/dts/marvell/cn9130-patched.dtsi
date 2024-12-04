@@ -1,4 +1,4 @@
-#include "cn9130.dtsi"
+#include <arm64/marvell/cn9130.dtsi>
 
 &cp0_syscon0 {
 	cp0_pinctrl: pinctrl {

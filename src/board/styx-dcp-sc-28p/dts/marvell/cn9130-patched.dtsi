@@ -1,0 +1,12 @@
+#include <arm64/marvell/cn9130.dtsi>
+
+&cp0_syscon0 {
+	cp0_pinctrl: pinctrl {
+		/* For some reason, this is missing from cn9130.dtsi */
+		compatible = "marvell,cp115-standalone-pinctrl";
+	};
+};
+
+&cp0_xmdio {
+	clock-names = "gop_clk", "mg_clk", "mg_core_clk", "axi_clk";
+};

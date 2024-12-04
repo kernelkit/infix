@@ -1,0 +1,5 @@
+config BR2_PACKAGE_MICROCHIP_SPARX5_PCB135
+	bool "Microchip SparX-5i PCB135"
+	depends on BR2_aarch64
+	help
+	  Microchip's evaluation board for SparX-5i
