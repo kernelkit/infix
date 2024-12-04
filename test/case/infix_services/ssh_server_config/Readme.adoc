@@ -1,0 +1,29 @@
+=== SSH server configuration
+==== Description
+Test SSH server functionality with pre-defined key pair:
+1. Enable/Disable SSH service.
+2. Configure listen address and port.
+3. Validate connectivity using static key pair.
+
+==== Topology
+ifdef::topdoc[]
+image::../../test/case/infix_services/ssh_server_config/topology.svg[SSH server configuration topology]
+endif::topdoc[]
+ifndef::topdoc[]
+ifdef::testgroup[]
+image::ssh_server_config/topology.svg[SSH server configuration topology]
+endif::testgroup[]
+ifndef::testgroup[]
+image::topology.svg[SSH server configuration topology]
+endif::testgroup[]
+endif::topdoc[]
+==== Test sequence
+. Setup topology and attach to the target
+. Configure SSH server
+. Verify SSH public keys
+. Verify it is not possible to access SSH on other IP address
+. Disable SSH server
+
+
+<<<
+
