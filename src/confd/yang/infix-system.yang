@@ -10,12 +10,22 @@ module infix-system {
     prefix iana-tz;
   }
 
+  import ietf-inet-types {
+    prefix inet;
+    reference
+      "RFC 6991: Common YANG Data Types";
+  }
+
   include infix-system-software;
 
   organization "KernelKit";
   contact      "kernelkit@googlegroups.com";
   description  "Infix augments and deviations to ietf-system.";
 
+  revision 2024-11-27 {
+    description "Add NTP status";
+    reference "internal";
+  }
   revision 2024-09-13 {
     description "Add some informative help about different shells and security.";
     reference "internal";
@@ -115,6 +125,42 @@ module infix-system {
     base shell-type;
   }
 
+  typedef source-state {
+    reference "rfc5905: Network Time Protocol Version 4: Protocol and Algorithms Specification";
+    type enumeration {
+      enum selected {
+        description "Selected NTP server for synchronization";
+      }
+      enum candidate {
+        description "Valid for synchronization, is used together with thes elected best server and also acting as backup";
+      }
+      enum outlier {
+        description "Valid timesource but discarded by the clustering algorithm";
+      }
+      enum unusable {
+        description "Unreachable or unresponsable";
+      }
+      enum falseticker {
+        description "suspected of providing incorrect time";
+      }
+      enum unstable {
+        description "Too variable or unstable source";
+      }
+    }
+  }
+  typedef source-mode {
+    type enumeration  {
+      enum server {
+        description "Normal NTP server";
+      }
+      enum peer {
+        description "Symmetric peer";
+      }
+      enum local-clock {
+        description "Reference clock";
+      }
+    }
+}
   /*
    * Typedefs
    */
@@ -256,6 +302,37 @@ module infix-system {
     }
   }
 
+  augment "/sys:system-state" {
+    container ntp {
+      description "NTP status";
+      container sources {
+        list source {
+          key address;
+          leaf address {
+            type inet:ip-address;
+            description "Address to NTP server";
+          }
+          leaf mode {
+            type source-mode;
+            description "Source mode";
+          }
+          leaf state {
+            type source-state;
+            description "Source state";
+          }
+          leaf stratum {
+            type uint8;
+            description "Stratum of NTP server";
+          }
+          leaf poll {
+            type uint8;
+            description "Interval between transmitted NTP messages, expressed as a power of two in seconds";
+          }
+
+        }
+      }
+    }
+  }
   deviation "/sys:system/sys:hostname" {
     deviate replace {
       type infix-sys:hostname;

@@ -279,10 +279,14 @@
   </COMMAND>
 
   <COMMAND name="ntp" help="Show NTP (client) status">
-    <ACTION sym="script">doas ntp tracking</ACTION>
+    <ACTION sym="script">
+      sysrepocfg -d operational -X -f json -x \
+      /ietf-system:system-state/infix-system:ntp  | \
+      /usr/libexec/statd/cli-pretty "show-ntp"
+    </ACTION>
     <SWITCH name="optional" min="0">
-      <COMMAND name="sources" help="Show NTP sources">
-        <ACTION sym="script">doas ntp sources</ACTION>
+      <COMMAND name="tracking" help="Show NTP tracking">
+        <ACTION sym="script">doas ntp tracking</ACTION>
       </COMMAND>
     </SWITCH>
   </COMMAND>

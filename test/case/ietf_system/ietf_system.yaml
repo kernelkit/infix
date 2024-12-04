@@ -16,3 +16,6 @@
 
 - name: ssh_key_authentication
   case: ssh_key_authentication/test.py
+
+- name: ntp_client
+  case: ntp_client/test.py

@@ -24,14 +24,14 @@ available in the system authentication configuration context.
 ```
 admin@host:/config/> edit system authentication user admin
 admin@host:/config/system/authentication/user/admin/> change password
-New password: 
-Retype password: 
+New password:
+Retype password:
 admin@host:/config/system/authentication/user/admin/> leave
 ```
 
 The `change password` command starts an interactive dialogue that asks
 for the new password, with a confirmation, and then salts and encrypts
-the password with sha512crypt. 
+the password with sha512crypt.
 
 It is also possible to use the `set password ...` command.  This allows
 setting an already hashed password.  To manually hash a password, use
@@ -55,7 +55,7 @@ With SSH keys in place it is possible to disable password login, just
 remember to verify SSH login and network connectivity before doing so.
 
 ```
-admin@host:/config/> edit system authentication user admin 
+admin@host:/config/> edit system authentication user admin
 admin@host:/config/system/authentication/user/admin/> edit authorized-key example@host
 admin@host:/config/system/authentication/user/admin/authorized-key/example@host/> set algorithm ssh-rsa
 admin@host:/config/system/authentication/user/admin/authorized-key/example@host/> set key-data AAAAB3NzaC1yc2EAAAADAQABAAABgQC8iBL42yeMBioFay7lty1C4ZDTHcHyo739gc91rTTH8SKvAE4g8Rr97KOz/8PFtOObBrE9G21K7d6UBuPqmd0RUF2CkXXN/eN2PBSHJ50YprRFt/z/304bsBYkDdflKlPDjuSmZ/+OMp4pTsq0R0eNFlX9wcwxEzooIb7VPEdvWE7AYoBRUdf41u3KBHuvjGd1M6QYJtbFLQMMTiVe5IUfyVSZ1RCxEyAB9fR9CBhtVheTVsY3iG0fZc9eCEo89ErDgtGUTJK4Hxt5yCNwI88YaVmkE85cNtw8YwubWQL3/tGZHfbbQ0fynfB4kWNloyRHFr7E1kDxuX5+pbv26EqRdcOVGucNn7hnGU6C1+ejLWdBD7vgsoilFrEaBWF41elJEPKDzpszEijQ9gTrrWeYOQ+x++lvmOdssDu4KvGmj2K/MQTL2jJYrMJ7GDzsUu3XikChRL7zNfS2jYYQLzovboUCgqfPUsVba9hqeX3U67GsJo+hy5MG9RSry4+ucHs=
@@ -145,7 +145,7 @@ is committed by issuing the `leave` command.
 admin@host:/config/> edit system
 admin@host:/config/system/> set hostname example
 admin@host:/config/system/> leave
-admin@host:/> 
+admin@host:/>
 ```
 
 The hostname is advertised over mDNS-SD in the `.local` domain.  If
@@ -203,8 +203,8 @@ admin@host:/>
 
 ## NTP Client Configuration
 
-Below is an example configuration for enabling NTP 
-with a specific server and the `iburst` option for faster initial 
+Below is an example configuration for enabling NTP
+with a specific server and the `iburst` option for faster initial
 synchronization.
 
 ```
@@ -216,23 +216,37 @@ admin@host:/config/> set system ntp server ntp-pool iburst
 admin@host:/config/> set system ntp server ntp-pool prefer
 ```
 
-This configuration enables the NTP client and sets the NTP server to 
-`pool.ntp.org` with the `iburst` and `prefer` options. The `iburst` 
-option ensures faster initial synchronization, and the `prefer` option 
+This configuration enables the NTP client and sets the NTP server to
+`pool.ntp.org` with the `iburst` and `prefer` options. The `iburst`
+option ensures faster initial synchronization, and the `prefer` option
 designates this server as preferred.
 
 * `prefer false`: The NTP client will choose the best available source
-based on several factors, such as network delay, stratum, and other 
+based on several factors, such as network delay, stratum, and other
 metrics (default config).
-* `prefer true`: The NTP client will try to use the preferred server 
+* `prefer true`: The NTP client will try to use the preferred server
 as the primary source unless it becomes unreachable or unusable.
 
-### Show NTP Status
+### Show NTP Sources
 
-To check the status of NTP synchronization, use the following command:
+The status for NTP sources is availble in YANG and accessable with
+CLI/NETCONF/RESTCONF.
+
+To view the sources being used by the NTP client, run:
+```
+admin@target:/> show ntp
+ADDRESS         MODE         STATE            STRATUM POLL-INTERVAL
+192.168.1.1     server       candidate              1             6
+192.168.2.1     server       candidate              1             6
+192.168.3.1     server       selected               1             6
+```
+
+### Show NTP Status
+To check the status of NTP synchronization (only availble in CLI), use the following command:
+
 
 ```
-admin@host:/> show ntp
+admin@host:/> show ntp tracking
 Reference ID    : C0248F86 (192.36.143.134)
 Stratum         : 2
 Ref time (UTC)  : Mon Oct 21 10:06:45 2024
@@ -249,29 +263,9 @@ Leap status     : Normal
 admin@host:/>
 ```
 
-This output provides detailed information about the NTP status, including 
+This output provides detailed information about the NTP status, including
 reference ID, stratum, time offsets, frequency, and root delay.
 
-### Show NTP Sources
-
-To view the sources being used by the NTP client, run:
-
-```
-admin@host:/> show ntp sources 
-
-  .-- Source mode  '^' = server, '=' = peer, '#' = local clock.
- / .- Source state '*' = current best, '+' = combined, '-' = not combined,
-| /             'x' = may be in error, '~' = too variable, '?' = unusable.
-||                                                 .- xxxx [ yyyy ] +/- zzzz
-||      Reachability register (octal) -.           |  xxxx = adjusted offset,
-||      Log2(Polling interval) --.      |          |  yyyy = measured offset,
-||                                \     |          |  zzzz = estimated error.
-||                                 |    |           \
-MS Name/IP address         Stratum Poll Reach LastRx Last sample               
-===============================================================================
-^* 192.36.143.134                1   6   177     9   +278ms[ -3845s] +/-  514ms
-admin@host:/>
-```
 
 > The system uses `chronyd` for Network Time Protocol (NTP)
 > synchronization. The output shown here is best explained in the
