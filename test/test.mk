@@ -6,11 +6,6 @@ test-specification := $(O)/images/test-specification.pdf
 
 UNIT_TESTS         ?= $(test-dir)/case/all-repo.yaml $(test-dir)/case/all-unit.yaml
 TESTS              ?= $(test-dir)/case/all.yaml
-ifeq ($INFIX_OEM_PATH), "")
-GIT_PATH            = $(INFIX_OEM_PATH)
-else
-GIT_PATH            = $(BR2_EXTERNAL_INFIX_PATH)
-endif
 GIT_VERSION         = $(shell git -C $(GIT_PATH) describe --dirty --always --tags)
 
 base := -b $(base-dir)
