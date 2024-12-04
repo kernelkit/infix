@@ -33,7 +33,7 @@ def xpath_to_uri(xpath, extra=None):
     if matches:
         for key, value in matches:
             # replace [key=value] with =value
-            uri_path = re.sub(rf'\[{key}=["\']{value}["\']\]', f'={value}', xpath)
+            uri_path = re.sub(rf'\[{re.escape(key)}=["\']{re.escape(value)}["\']\]', f'={value}', xpath)
     else:
         uri_path = xpath
 
