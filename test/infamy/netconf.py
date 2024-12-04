@@ -389,21 +389,27 @@ class Device(Transport):
             raise ValueError(f"Failed parsing xpath:{xpath}")
 
         module = match.group('module')
-        modpath = f"/{match.group('module')}:{match.group('path')}"
+        path = match.group('path')
+        modpath = f"/{module}:{path}"
 
+        # Fetch current config
         old = self.get_config_dict(modpath)
         new = copy.deepcopy(old)
 
-        libyang.xpath_del(new, xpath)
+        # Perform deletion
+        if not libyang.xpath_del(new, xpath):
+            raise ValueError(f"Failed to delete specified xpath: {xpath}")
 
+        # Parse old and new data to generate the diff
         mod = self.ly.get_module(module)
-        oldd = mod.parse_data_dict(old, no_state=True)
-        newd = mod.parse_data_dict(new, no_state=True)
+        oldd = mod.parse_data_dict(old, no_state=True, validate=False)
+        newd = mod.parse_data_dict(new, no_state=True, validate=False)
 
         lyd = oldd.diff(newd)
         if lyd is None:
             raise ValueError(f"Failed generating diff for xpath:{xpath}")
 
+        # Apply the configuration change
         return self.put_config(lyd.print_mem("xml", with_siblings=True,
                                              pretty=False))
 

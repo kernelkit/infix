@@ -71,7 +71,7 @@ with infamy.Test() as test:
         env = infamy.Env()
         target = env.attach("target", "mgmt")
 
-    with test.step("Set IPv4 address 10.0.0.10/24 on target:data and disable MDNS and LLDP"):
+    with test.step("Set IPv4 address 10.0.0.10/24 on target:data and disable mDNS and LLDP"):
         _, tport = env.ltop.xlate("target", "data")
 
         target.put_config_dict("ietf-interfaces", {

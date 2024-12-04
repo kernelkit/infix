@@ -6,4 +6,6 @@
 # are transparent with respect to IEEE link-local multicast.
 #- name: services_basic
 #  case: services_basic/test.py
-[]
+
+- name: mdns_allow_deny
+  case: mdns_allow_deny/test.py

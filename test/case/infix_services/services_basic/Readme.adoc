@@ -17,7 +17,7 @@ endif::testgroup[]
 endif::topdoc[]
 ==== Test sequence
 . Set up topology and attach to target DUT
-. Set IPv4 address 10.0.0.10/24 on target:data and disable MDNS and LLDP
+. Set IPv4 address 10.0.0.10/24 on target:data and disable mDNS and LLDP
 . Enable mDNS and LLDP and toggle target:data DOWN and UP to trigger service
 . Verify on host:data there are packets from 10.0.0.10:5354 (mDNS)
 . Verify on host:data there are LLDP packets sent from 10.0.0.10
