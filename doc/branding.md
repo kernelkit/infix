@@ -370,22 +370,30 @@ But you can of course use only two numbers, *major.minor*, as well.
 > with your own versioning scheme.
 
 
-### `INFIX_RELEASE`
+### Specifying Versioning Information
 
-This global variable **must be** a lower-case string (no spaces or
-other characters outside of 0–9, a–z, '.', '_' and '-') identifying
-the operating system version, excluding any OS name information or
-release code name, and suitable for processing by scripts or usage
-in generated filenames.
+Two optional environment variables control the version information
+recorded in images. Both of these **must be** a lower-case string (no
+spaces or other characters outside of 0–9, a–z, '.', '_' and '-')
+identifying the operating system version, excluding any OS name
+information or release code name, and suitable for processing by
+scripts or usage in generated filenames.
+
+#### `INFIX_BUILD_ID`
+
+Used for `BUILD_ID` in `/etc/os-release`.
+
+**Default:** `$(git describe --always --dirty --tags)`, from the _top
+directory_. By default, the top directory refers to the root of the
+Infix source tree, but this can be changed by setting the branding
+variable `INFIX_OEM_PATH`, e.g. in a `defconfig` file or via `make
+menuconfig`, to the path of an enclosing br2-external.
+
+#### `INFIX_RELEASE`
 
 Used for `VERSION` and `VERSION_ID` in `/etc/os-release` and
 generated file names like disk images, etc.
 
-**Default:** generated using `git describe --always --dirty --tags`,
-with an additional `-C $infix_path`.  This variable defaults to the
-Infix tree and can be changed by setting the menuconfig branding
-variable `INFIX_OEM_PATH` to that of the br2-external.  It is also
-possible to set the `GIT_VERSION` variable in your `post-build.sh`
-script to change how the VCS version is extracted.
+**Default:** `${INFIX_BUILD_ID}`
 
 [NanoPi R2S]: https://github.com/kernelkit/infix/blob/main/board/aarch64/r2s/rootfs/etc/factory-config.cfg
