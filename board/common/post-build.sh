@@ -39,22 +39,6 @@ if [ -n "${ID_LIKE}" ]; then
     ID="${ID} ${ID_LIKE}"
 fi
 
-if [ -z "$GIT_VERSION" ]; then
-    infix_path="$BR2_EXTERNAL_INFIX_PATH"
-    if [ -n "$INFIX_OEM_PATH" ]; then
-	# Use version from br2-external OEM:ing Infix
-	infix_path="$INFIX_OEM_PATH"
-    fi
-    GIT_VERSION=$(git -C "$infix_path" describe --always --dirty --tags)
-fi
-
-# Override VERSION in /etc/os-release and filenames for release builds
-if [ -n "$INFIX_RELEASE" ]; then
-    VERSION="$INFIX_RELEASE"
-else
-    VERSION=$GIT_VERSION
-fi
-
 if [ -n "$INFIX_IMAGE_ID" ]; then
     NAME="$INFIX_IMAGE_ID"
 else
@@ -71,12 +55,12 @@ rm -f "$TARGET_DIR/etc/os-release"
 {
     echo "NAME=\"$INFIX_NAME\""
     echo "ID=$INFIX_ID"
-    echo "PRETTY_NAME=\"$INFIX_TAGLINE $VERSION\""
+    echo "PRETTY_NAME=\"$INFIX_TAGLINE $INFIX_VERSION\""
     echo "ID_LIKE=\"${ID}\""
     echo "DEFAULT_HOSTNAME=$BR2_TARGET_GENERIC_HOSTNAME"
-    echo "VERSION=\"${VERSION}\""
-    echo "VERSION_ID=${VERSION}"
-    echo "BUILD_ID=\"${GIT_VERSION}\""
+    echo "VERSION=\"${INFIX_VERSION}\""
+    echo "VERSION_ID=${INFIX_VERSION}"
+    echo "BUILD_ID=\"${INFIX_BUILD_ID}\""
     if [ -n "$INFIX_IMAGE_ID" ]; then
 	echo "IMAGE_ID=\"$INFIX_IMAGE_ID\""
     fi
@@ -102,7 +86,7 @@ rm -f "$TARGET_DIR/etc/os-release"
     fi
 } > "$TARGET_DIR/etc/os-release"
 
-echo "$INFIX_TAGLINE $VERSION -- $(date +"%b %e %H:%M %Z %Y")" > "$TARGET_DIR/etc/version"
+echo "$INFIX_TAGLINE $INFIX_VERSION -- $(date +"%b %e %H:%M %Z %Y")" > "$TARGET_DIR/etc/version"
 
 # In case of ambguities, this is what the image was built from
 cp "$BR2_CONFIG" "$TARGET_DIR/usr/share/infix/config"

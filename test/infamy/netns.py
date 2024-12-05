@@ -139,6 +139,10 @@ class IsolatedMacVlans:
             f"{a[0]:02x}:{a[1]:02x}:{a[2]:02x}:" + \
             f"{a[3]:02x}:{a[4]:02x}:{a[5]:02x}"
 
+    class CallException:
+        def __init__(self, inner):
+            self.inner = inner
+
     def _ns_call(self, fn, tx):
         pid = self.sleeper.pid
 
@@ -150,7 +154,12 @@ class IsolatedMacVlans:
         setns(nns, CLONE_NEWNET)
         os.close(nns)
 
-        tx.send(fn())
+        try:
+            ret = fn()
+        except Exception as e:
+            ret = IsolatedMacVlans.CallException(e)
+
+        tx.send(ret)
         tx.close()
 
     def call(self, fn):
@@ -161,6 +170,9 @@ class IsolatedMacVlans:
         ret = rx.recv()
         rx.close()
         proc.join()
+
+        if type(ret) == IsolatedMacVlans.CallException:
+            raise ret.inner
         return ret
 
     def _mangle_subprocess_args(self, args, kwargs):

@@ -22,6 +22,8 @@ jobs:
       matrix:
         target: [aarch64, x86_64]
       fail-fast: false
+    outputs:
+      build_id: ${{ steps.vars.outputs.INFIX_BUILD_ID }}
     steps:
       - name: Cleanup Build Folder
         run: |
@@ -38,6 +40,16 @@ jobs:
       - name: Set Build Variables
         id: vars
         run: |
+          if [ -n "${{ github.event.pull_request.head.sha }}" ]; then
+              # Since PRs are built from an internally generated merge
+              # commit, reverse lookups of PRs and/or commits from
+              # image version information are cumbersome.  Therefore:
+              # explicitly set a build id that references both the PR
+              # and the commit.
+              printf "INFIX_BUILD_ID=pr%d.%.7s\n" \
+                  "${{ github.event.number }}" "${{ github.event.pull_request.head.sha }}" \
+                  | tee -a $GITHUB_OUTPUT $GITHUB_ENV
+          fi
           if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
               if [ "${{ github.event.inputs.minimal }}" == "true" ]; then
                   flavor="_minimal"
@@ -132,6 +144,11 @@ jobs:
       - name: Set Build Variables
         id: vars
         run: |
+          if [ -n "${{ needs.build.outputs.build_id }}" ]; then
+              echo "INFIX_BUILD_ID=${{ needs.build.outputs.build_id }}" \
+                   >>$GITHUB_ENV
+          fi
+
           if [ "$GITHUB_REF_NAME" != "main" ]; then
               flavor="_minimal"
           else
