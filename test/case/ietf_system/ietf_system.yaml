@@ -19,3 +19,6 @@
 
 - name: ntp_client
   case: ntp_client/test.py
+
+- name: upgrade
+  case: upgrade/test.py

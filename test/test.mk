@@ -16,7 +16,8 @@ mode-run    := -t $(BINARIES_DIR)/qemu.dot
 mode        := $(mode-$(TEST_MODE))
 
 INFIX_IMAGE_ID := $(call qstrip,$(INFIX_IMAGE_ID))
-binaries-$(ARCH) := $(addprefix $(INFIX_IMAGE_ID),.img -disk.img .pkg)
+binaries-$(ARCH) := $(addprefix $(INFIX_IMAGE_ID),.img -disk.img)
+pkg-$(ARCH)      := -p $(O)/images/$(addprefix $(INFIX_IMAGE_ID),.pkg)
 binaries-x86_64  += OVMF.fd
 binaries := $(foreach bin,$(binaries-$(ARCH)),-f $(BINARIES_DIR)/$(bin))
 
@@ -26,10 +27,10 @@ export INFAMY_ARGS := --transport=netconf
 endif
 
 test:
-	$(test-dir)/env -r $(base) $(mode) $(binaries) $(ninepm) $(TESTS)
+	$(test-dir)/env -r $(base) $(mode) $(binaries) $(pkg-$(ARCH)) $(ninepm) $(TESTS)
 
 test-sh:
-	$(test-dir)/env $(base) $(mode) $(binaries) -i /bin/sh
+	$(test-dir)/env $(base) $(mode) $(binaries) $(pkg-$(ARCH)) -i /bin/sh
 
 test-spec:
 	@esc_infix_name="$(echo $(INFIX_NAME) | sed 's/\//\\\//g')"; \

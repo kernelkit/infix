@@ -18,6 +18,10 @@ endif::topdoc[]
 . Set up topology and attach to target DUT
 . Start installation of selected package
 . Wait for upgrade to finish
+. Verify boot order has changed and reboot
+. Verify that the partition is the booted
+. Restore boot order to original configured
+. Verify the boot order is the orignal configured
 
 
 <<<
