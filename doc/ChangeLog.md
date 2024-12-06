@@ -12,7 +12,7 @@ All notable changes to the project are documented in this file.
  - Add support for more mDNS settings: allow/deny interfaces, acting
    as "reflector" and filtering of reflected services.  Issue #678
  - Review of default `sysctl` settings, issue #829
- - Upgrade Linux kernel to 6.12.1 (presumed LTS)
+ - Upgrade Linux kernel to 6.12.3 (LTS)
 
 ### Fixes
 

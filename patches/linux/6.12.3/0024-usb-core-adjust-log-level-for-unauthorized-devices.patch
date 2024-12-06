@@ -1,4 +1,4 @@
-From 867929d898d12c8322091352cc8b59da77032e3f Mon Sep 17 00:00:00 2001
+From 3166577344620658f8aae9b9af765401fecff87a Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Mon, 29 Apr 2024 15:14:51 +0200
 Subject: [PATCH 24/24] usb: core: adjust log level for unauthorized devices

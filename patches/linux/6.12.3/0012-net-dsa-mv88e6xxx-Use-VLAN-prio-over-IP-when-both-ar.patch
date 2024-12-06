@@ -1,4 +1,4 @@
-From b1f2d857a7457c8c965d281d8c8875ad491670a7 Mon Sep 17 00:00:00 2001
+From 0dea11bbeb08eab148807853626061591e5b8a7c Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Wed, 29 May 2024 13:20:41 +0200
 Subject: [PATCH 12/24] net: dsa: mv88e6xxx: Use VLAN prio over IP when both

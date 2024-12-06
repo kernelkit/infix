@@ -1,4 +1,4 @@
-From 17cfde24d88c30c303659f2d8f488c2717592422 Mon Sep 17 00:00:00 2001
+From 3d5cf4c863ab9bb4d72ac8e1f1f9fc48733e43c5 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Wed, 27 Mar 2024 10:10:19 +0100
 Subject: [PATCH 18/24] net: phy: Do not resume PHY when attaching
