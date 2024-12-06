@@ -9,3 +9,9 @@
 
 - name: mdns_allow_deny
   case: mdns_allow_deny/test.py
+
+- name: ssh_server_config
+  case: ssh_server_config/test.py
+
+- name: ssh_key_authentication
+  case: ssh_key_authentication/test.py
