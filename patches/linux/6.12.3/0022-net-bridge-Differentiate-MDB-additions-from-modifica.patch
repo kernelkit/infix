@@ -1,4 +1,4 @@
-From 65bf34b0195259808333b8fa7b53b8f588c58f32 Mon Sep 17 00:00:00 2001
+From b2976eada955720555702d3ec70d381acc415adf Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Thu, 16 May 2024 14:51:54 +0200
 Subject: [PATCH 22/24] net: bridge: Differentiate MDB additions from
@@ -30,7 +30,7 @@ Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
  3 files changed, 8 insertions(+), 6 deletions(-)
 
 diff --git a/include/uapi/linux/rtnetlink.h b/include/uapi/linux/rtnetlink.h
-index 3b687d20c9ed..c459cddb1e97 100644
+index db7254d52d93..63508279df47 100644
 --- a/include/uapi/linux/rtnetlink.h
 +++ b/include/uapi/linux/rtnetlink.h
 @@ -134,6 +134,8 @@ enum {

@@ -1,4 +1,4 @@
-From 48338a7ca5f0a7be3b16acd1762ec0b73088ac4c Mon Sep 17 00:00:00 2001
+From 98a469ebd1c7a90aa3ab7dffcd58515d0b18376a Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Fri, 22 Mar 2024 16:15:43 +0100
 Subject: [PATCH 10/24] net: dsa: mv88e6xxx: Support EtherType based priority
