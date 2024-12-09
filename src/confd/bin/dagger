@@ -104,7 +104,9 @@ do_abandon()
     [ "$next" ] && [ -d "$basedir/$next" ] \
 	|| abort "Next generation does not exist"
 
-    mv "$basedir/$next" "$basedir/$next-ABANDONED-$(date +%F-%T)"
+    tar caf "$basedir/$next-ABANDONED-$(date +%F-%t).tar.gz" "$basedir/$next"
+    rm -rf "$basedir/$next"
+
     rm "$basedir/next"
     inform info "Abandoned generation $next"
 }
@@ -128,6 +130,19 @@ do_evolve()
 
     mv "$basedir/next" "$basedir/current"
     inform info "Evolved to generation $next"
+
+    if [ "$current" ]; then
+       (cd "$basedir" && tar caf "$current.tar.gz" "$current")
+       rm -rf "$basedir/$current"
+    fi
+}
+
+do_prune()
+{
+    local keep=${1:-10}
+
+    cd "$basedir"
+    rm -f old=$(ls -rv *.tar.gz | tail "+$((keep + 1))")
 }
 
 usage()
@@ -157,6 +172,10 @@ Commands:
 
   exec <action>
     Run the specified action of the current generation.
+
+  prune [<num-generations>]
+    Remove all but the last <num-generations>, or 10 by default,
+    archived generations.
 
   help
     Show this message.
@@ -200,6 +219,9 @@ case $cmd in
 	;;
     "exec")
 	do_exec "$@"
+	;;
+    "prune")
+	do_prune "$@"
 	;;
 
     *)
