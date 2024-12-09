@@ -84,19 +84,25 @@ EOF
     done
 }
 
-do_exec()
+maybe_get_current()
 {
-    local action="$1"
+    echo $([ -f "$basedir/current" ] && cat "$basedir/current" || true)
+    [ ! "$current" ] || [ -d "$basedir/$current" ] \
+	|| abort "Current generation does not exist"
+}
+
+get_current()
+{
     local current=
 
-    current=$([ -f "$basedir/current" ] && cat "$basedir/current")
+    current=$(maybe_get_current)
     [ "$current" ] && [ -d "$basedir/$current" ] \
 	|| abort "Current generation does not exist"
 
-    action_exec "$1" "$basedir/$current"
+    echo "$current"
 }
 
-do_abandon()
+get_next()
 {
     local next=
 
@@ -104,7 +110,21 @@ do_abandon()
     [ "$next" ] && [ -d "$basedir/$next" ] \
 	|| abort "Next generation does not exist"
 
-    tar caf "$basedir/$next-ABANDONED-$(date +%F-%t).tar.gz" "$basedir/$next"
+    echo "$next"
+}
+
+do_exec()
+{
+    local action="$1"
+
+    action_exec "$1" "$basedir/$(get_current)"
+}
+
+do_abandon()
+{
+    local next=$(get_next)
+
+    (cd "$basedir" && tar caf "$next-ABANDONED-$(date +%F-%T.tar.gz)" "$next")
     rm -rf "$basedir/$next"
 
     rm "$basedir/next"
@@ -113,16 +133,8 @@ do_abandon()
 
 do_evolve()
 {
-    local current=
-    local next=
-
-    current=$([ -f "$basedir/current" ] && cat "$basedir/current" || true)
-    [ ! "$current" ] || [ -d "$basedir/$current" ] \
-	|| abort "Current generation does not exist"
-
-    next=$([ -f "$basedir/next" ] && cat "$basedir/next" || true)
-    [ "$next" ] && [ -d "$basedir/$next" ] \
-	|| abort "Next generation does not exist"
+    local current=$(maybe_get_current)
+    local next=$(get_next)
 
     [ "$current" ] && action_exec exit "$basedir/$current"
 
