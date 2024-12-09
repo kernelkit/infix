@@ -1,0 +1,232 @@
+submodule infix-if-lag {
+  yang-version 1.1;
+  belongs-to infix-interfaces {
+    prefix infix-if;
+  }
+
+  import ietf-interfaces {
+    prefix if;
+  }
+  import iana-if-type {
+    prefix ianaift;
+  }
+
+  organization "KernelKit";
+  contact      "kernelkit@googlegroups.com";
+  description  "Linux link aggregates (lag) for ietf-interfaces.";
+
+  revision 2025-01-09 {
+    description "Initial revision.";
+    reference "internal";
+  }
+
+  /*
+   * Typedefs
+   */
+
+  typedef lag-type {
+      description "Mode values for link aggregates.";
+
+      /* Temporarily limited to 802.1AX and Balanced XOR */
+      type enumeration {
+          enum static {
+              description "Static mode (Balanced XOR).";
+              value 2;
+          }
+          enum lacp {
+              description "IEEE 802.3ad LACP mode.";
+              value 4;
+          }
+      }
+  }
+
+  typedef lacp-mode {
+      description "LACP mode values.";
+
+      type enumeration {
+          enum passive {
+              description "LACP active mode";
+              value 0;
+          }
+          enum active {
+              description "LACP passive mode.";
+              value 1;
+          }
+      }
+  }
+
+  /*
+   * Shared settings
+   */
+
+  grouping hash {
+    leaf hash {
+      description "Transmit hash policy.";
+      config false;               // For now, staically set to layer2 only
+      type string;
+    }
+  }
+
+  grouping lacp-settings {
+    description "LACP mode settings.";
+
+    container lacp {
+      description "Settings specific for LACP mode.";
+
+      uses hash;
+
+      leaf mode {
+        description "Operational mode of LACP, default: active.
+
+                      - Active: initiates negotiation by sending LACPDUs.
+                      - Passive: waits for the peer to initiate.
+
+                     At least one end of the link must be in active mode. When both ends
+                     are active, there is slightly more traffic, but the default ensures
+                     fail-safe operation.
+
+                     Passive mode is typically used for troubleshooting, in dynamic
+                     setups (e.g., MLAG), or to minimize the risk of unintended
+                     aggregation.
+
+                     For most production scenarios, active mode is preferred to ensure
+                     faster and more predictable link aggregation.";
+        type lacp-mode;
+        default "active";
+      }
+
+      leaf rate {
+        description "Rate of LACP keep-alives, default: slow.
+
+                     Determines the frequency of LACPDU transmission and the associated
+                     timeout for link failure detection.
+
+                      - slow: Sends LACPDUs every 30 seconds. The associated timeout is 90
+                        seconds, meaning a link is considered failed after 3 consecutive
+                        missed LACPDUs.
+
+                      - fast: Sends LACPDUs every 1 second. The associated timeout is 3
+                        seconds, meaning a link is considered failed after 3 consecutive
+                        missed LACPDUs.
+
+                     The selected rate affects the responsiveness of link failure
+                     detection and the amount of control traffic.";
+        type enumeration {
+          enum slow {
+            description "Send LACPDUs every 30 seconds (90-second timeout).";
+          }
+          enum fast {
+            description "Send LACPDUs every 1 second (3-second timeout).";
+          }
+        }
+        default "slow";
+      }
+    }
+  }
+
+  grouping static-settings {
+    container static {
+      config false;               // For now, we need to read out mode and other status
+
+      uses hash;
+
+      leaf mode {
+        description "Active mode for static aggregates.";
+        type string;
+      }
+    }
+  }
+
+  /*
+   * Data Nodes
+   */
+
+  augment "/if:interfaces/if:interface" {
+    when "derived-from-or-self(if:type,'ianaift:ieee8023adLag')" {
+        description "Only shown for if:type bridge";
+    }
+
+    description "Augment generic interfaces with link aggregates.";
+
+    container lag {
+      description "Link aggregates are for load balancing and fault tolerance.";
+
+      leaf mode {
+        description "Link aggregation mode.";
+        type lag-type;
+        mandatory true;
+      }
+
+      uses lacp-settings;
+      uses static-settings;
+
+      container link-monitor {
+        description "Link monitor properties.";
+
+        container debounce {
+          description "Link flapping protection.";
+
+          leaf up {
+            description "Wait before enabling link after link up.";
+            type uint32 {
+              range "0 .. 30000";
+            }
+            units "milliseconds";
+          }
+
+          leaf down {
+            description "Wait before disabling link after link down.";
+            type uint32 {
+              range "0 .. 30000";
+            }
+            units "milliseconds";
+          }
+        }
+      }
+    }
+  }
+
+  augment "/if:interfaces/if:interface/infix-if:port" {
+    when "derived-from-or-self(if:type,'ianaift:ethernetCsmacd') or "+
+         "derived-from-or-self(if:type,'ianaift:ilan')" {
+      description "Applies when a LAG interface exists.";
+    }
+
+    description "Augments the interface model with the link aggregate member.";
+
+    case lag-port {
+      description "Extension of the IETF Interfaces model (RFC7223).";
+
+      container lag-port {
+        leaf lag {
+          description "LAG interface to which this interface is a member of.";
+          type if:interface-ref;
+          mandatory true;
+          must "deref(.)/../lag" {
+            error-message "Must refer to a valid LAG interface.";
+          }
+        }
+        leaf state {
+          description "Port state, active or backup member.";
+          config false;
+          type string;
+        }
+
+        container lacp {
+          description "LACP port state, ours and partner.";
+          config false;
+
+          leaf-list actor-state {
+            description "LACP state flags.";
+            type string;
+          }
+
+          leaf-list partner-state {
+            description "LACP state flags for link partner.";
+            type string;
+          }
+        }
+      }
+    }
+  }
+}

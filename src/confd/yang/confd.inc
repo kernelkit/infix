@@ -40,7 +40,7 @@ MODULES=(
 	"ieee802-ethernet-interface@2019-06-21.yang"
 	"infix-ethernet-interface@2024-02-27.yang"
 	"infix-factory-default@2023-06-28.yang"
-	"infix-interfaces@2025-01-08.yang -e vlan-filtering"
+	"infix-interfaces@2025-01-09.yang -e vlan-filtering"
 	"infix-crypto-types@2025-02-04.yang"
 	"infix-keystore@2025-02-04.yang"
 
