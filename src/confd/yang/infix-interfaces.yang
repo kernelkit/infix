@@ -15,6 +15,7 @@ module infix-interfaces {
 
   include infix-if-base;
   include infix-if-bridge;
+  include infix-if-lag;
   include infix-if-container;
   include infix-if-veth;
   include infix-if-vlan;
@@ -23,10 +24,16 @@ module infix-interfaces {
   contact      "kernelkit@googlegroups.com";
   description  "Linux bridge and lag extensions for ietf-interfaces.";
 
+  revision 2024-12-08 {
+    description "Add support for link aggregation, static or LACP.";
+    reference "internal";
+  }
+
   revision 2024-11-27 {
     description "Allow IP addresses directly on VLAN filtering bridges.";
     reference "internal";
   }
+
   revision 2024-11-15 {
     description "Two changes:
                   - Limit name 1-15 chars, Linux limitation
