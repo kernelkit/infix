@@ -1,0 +1,24 @@
+#!/bin/bash
+# Store and convert RSA PUBLIC/PRIVATE KEYs to be able to use them in
+# OpenSSHd.
+set -e
+
+NAME="$1"
+DIR="$2"
+PUBLIC="$3"
+PRIVATE="$4"
+TMP="$(mktemp)"
+
+echo -e '-----BEGIN RSA PRIVATE KEY-----' > "$DIR/$NAME"
+echo "$PRIVATE" >> "$DIR/$NAME"
+echo -e '-----END RSA PRIVATE KEY-----' >> "$DIR/$NAME"
+
+echo -e "-----BEGIN RSA PUBLIC KEY-----" > "$TMP"
+echo -e "$PUBLIC" >> "$TMP"
+echo -e "-----END RSA PUBLIC KEY-----" >> "$TMP"
+
+ssh-keygen -i -m PKCS8 -f "$TMP" > "$DIR/$NAME.pub"
+chmod 0600 "$DIR/$NAME.pub"
+chmod 0600 "$DIR/$NAME"
+chown sshd:sshd "$DIR/$NAME.pub"
+chown sshd:sshd "$DIR/$NAME"
