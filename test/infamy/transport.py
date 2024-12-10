@@ -55,6 +55,9 @@ class Transport(ABC):
     def call_action(self, xpath):
         pass
 
+    def __getitem__(self, key):
+        return self.mapping[key]
+
     def get_iface(self, name):
         """Fetch target dict for iface and extract param from JSON"""
         content = self.get_data(infamy.iface.get_xpath(name))
