@@ -74,7 +74,7 @@ class Env(object):
     def get_password(self, node):
         return self.ptop.get_password(node)
 
-    def attach(self, node, port, protocol=None, test_reset=True, username = None, password = None):
+    def attach(self, node, port="mgmt", protocol=None, test_reset=True, username = None, password = None):
         """Attach to node on port using protocol."""
 
         name = node
