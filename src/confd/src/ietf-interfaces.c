@@ -1424,6 +1424,20 @@ err:
 	return err;
 }
 
+static int bridge_stp_settings(FILE *ip, const char *brname, struct lyd_node *cif)
+{
+	struct lyd_node *stp;
+
+	stp = lydx_get_descendant(lyd_child(cif), "bridge", "stp", NULL);
+	if (!stp) {
+		fprintf(ip, " stp_state 0");
+		return 0;
+	}
+
+	fprintf(ip, " stp_state 1");
+	return 0;
+}
+
 static int netdag_gen_bridge(sr_session_ctx_t *session, struct dagger *net, struct lyd_node *dif,
 			     struct lyd_node *cif, FILE *ip, int add)
 {
@@ -1470,6 +1484,9 @@ static int netdag_gen_bridge(sr_session_ctx_t *session, struct dagger *net, stru
 		fwd_mask, vlan_filtering ? 1 : 0);
 
 	if ((err = bridge_mcast_settings(ip, brname, cif, vlan_mcast)))
+		goto out;
+
+	if ((err = bridge_stp_settings(ip, brname, cif)))
 		goto out;
 
 	br = dagger_fopen_next(net, "init", brname, 60, "init.bridge");
