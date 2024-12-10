@@ -114,11 +114,23 @@ int dagger_evolve(struct dagger *d)
 	return exitcode;
 }
 
+static int dagger_prune(struct dagger *d)
+{
+	int exitcode;
+
+	exitcode = systemf("dagger -C %s prune", d->path);
+	DEBUG("dagger(%d->%d): prune: exitcode=%d\n",
+	      d->current, d->next, exitcode);
+
+	return exitcode;
+}
+
 int dagger_evolve_or_abandon(struct dagger *d)
 {
 	int exitcode, err;
 
 	exitcode = dagger_evolve(d);
+	dagger_prune(d);
 	if (!exitcode)
 		return 0;
 

@@ -304,6 +304,11 @@ static int netdag_exit_reload(struct dagger *net)
 {
 	FILE *initctl;
 
+	if (systemf("runlevel >/dev/null 2>&1"))
+		/* If we are still bootstrapping, there is nothing to
+		 * reload. */
+		return 0;
+
 	/* We may end up writing this file multiple times, e.g. if
 	 * multiple services are disabled in the same config cycle,
 	 * but since the contents of the file are static it doesn't
