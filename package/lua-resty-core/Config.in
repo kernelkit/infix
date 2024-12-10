@@ -1,0 +1,5 @@
+config BR2_PACKAGE_LUA_RESTY_CORE
+       bool "lua-resty-core"
+       depends on BR2_PACKAGE_HAS_LUAINTERPRETER
+	help
+		Lua support in nginx

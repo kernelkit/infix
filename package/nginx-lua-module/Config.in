@@ -1,0 +1,8 @@
+config BR2_PACKAGE_NGINX_LUA_MODULE
+       bool "nginx-lua-module"
+       select    BR2_PACKAGE_LUA_RESTY_CORE
+       select    BR2_PACKAGE_LUA_RESTY_LRUCACHE
+       depends on BR2_PACKAGE_NGINX_HTTP
+       depends on BR2_PACKAGE_HAS_LUAINTERPRETER
+	help
+		Lua support in nginx
