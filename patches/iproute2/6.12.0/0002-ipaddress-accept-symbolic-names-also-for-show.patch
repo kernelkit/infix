@@ -1,4 +1,4 @@
-From 226a8b532fc074165ba76d71c4488629daed2625 Mon Sep 17 00:00:00 2001
+From a035696129b543952e8105c27689ed4f9312eb3b Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Mon, 20 May 2024 21:35:11 +0200
 Subject: [PATCH 2/2] ipaddress: accept symbolic names also for show
@@ -9,15 +9,16 @@ bdb8d85, to add support for 'ip addr show proto static', where
 'static' is defined in /etc/iproute2/rt_addrprotos.
 
 Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
 ---
  ip/ipaddress.c | 2 +-
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/ip/ipaddress.c b/ip/ipaddress.c
-index e536912f..19900157 100644
+index 4e1f934f..437072f9 100644
 --- a/ip/ipaddress.c
 +++ b/ip/ipaddress.c
-@@ -2217,7 +2217,7 @@ static int ipaddr_list_flush_or_save(int argc, char **argv, int action)
+@@ -2224,7 +2224,7 @@ static int ipaddr_list_flush_or_save(int argc, char **argv, int action)
  			__u8 proto;
  
  			NEXT_ARG();
@@ -27,5 +28,5 @@ index e536912f..19900157 100644
  			filter.have_proto = true;
  			filter.proto = proto;
 -- 
-2.34.1
+2.43.0
 

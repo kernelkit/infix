@@ -1,0 +1,114 @@
+From dfd52e38ab402822aa4011039efa00e9d183d6a6 Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Tue, 5 Mar 2024 09:41:46 +0100
+Subject: [PATCH 1/2] iplink_bridge: add mcast_flood_always bridge option
+Organization: Addiva Elektronik
+
+ - Break out boolopt handling to simplify parsing and setting
+ - Add set/get support for mcast_flood_always
+ - Add get support for mst_enabled
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
+---
+ include/uapi/linux/if_bridge.h |  1 +
+ ip/iplink_bridge.c             | 19 +++++++++++++++++++
+ man/man8/ip-link.8.in          | 12 ++++++++++++
+ 3 files changed, 32 insertions(+)
+
+diff --git a/include/uapi/linux/if_bridge.h b/include/uapi/linux/if_bridge.h
+index c206cf6d..84ef4233 100644
+--- a/include/uapi/linux/if_bridge.h
++++ b/include/uapi/linux/if_bridge.h
+@@ -830,6 +830,7 @@ enum br_boolopt_id {
+ 	BR_BOOLOPT_NO_LL_LEARN,
+ 	BR_BOOLOPT_MCAST_VLAN_SNOOPING,
+ 	BR_BOOLOPT_MST_ENABLE,
++	BR_BOOLOPT_MCAST_FLOOD_ALWAYS,
+ 	BR_BOOLOPT_MAX
+ };
+ 
+diff --git a/ip/iplink_bridge.c b/ip/iplink_bridge.c
+index f01ffe15..2a489b7b 100644
+--- a/ip/iplink_bridge.c
++++ b/ip/iplink_bridge.c
+@@ -41,6 +41,7 @@ static void print_explain(FILE *f)
+ 		"		  [ vlan_default_pvid VLAN_DEFAULT_PVID ]\n"
+ 		"		  [ vlan_stats_enabled VLAN_STATS_ENABLED ]\n"
+ 		"		  [ vlan_stats_per_port VLAN_STATS_PER_PORT ]\n"
++		"		  [ mcast_flood_always ENABLED ]\n"
+ 		"		  [ mcast_snooping MULTICAST_SNOOPING ]\n"
+ 		"		  [ mcast_vlan_snooping MULTICAST_VLAN_SNOOPING ]\n"
+ 		"		  [ mcast_router MULTICAST_ROUTER ]\n"
+@@ -245,6 +246,18 @@ static int bridge_parse_opt(struct link_util *lu, int argc, char **argv,
+ 				bm.optval |= mcvl_bit;
+ 			else
+ 				bm.optval &= ~mcvl_bit;
++		} else if (strcmp(*argv, "mcast_flood_always") == 0) {
++			__u32 mcfl_bit = 1 << BR_BOOLOPT_MCAST_FLOOD_ALWAYS;
++			__u8 mcast_flood_always;
++
++			NEXT_ARG();
++			if (get_u8(&mcast_flood_always, *argv, 0))
++				invarg("invalid mcast_flood_always", *argv);
++			bm.optmask |= mcfl_bit;
++			if (mcast_flood_always)
++				bm.optval |= mcfl_bit;
++			else
++				bm.optval &= ~mcfl_bit;
+ 		} else if (matches(*argv, "mcast_query_use_ifaddr") == 0) {
+ 			__u8 mcast_qui;
+ 
+@@ -623,6 +636,7 @@ static void bridge_print_opt(struct link_util *lu, FILE *f, struct rtattr *tb[])
+ 		__u32 mcvl_bit = 1 << BR_BOOLOPT_MCAST_VLAN_SNOOPING;
+ 		__u32 no_ll_learn_bit = 1 << BR_BOOLOPT_NO_LL_LEARN;
+ 		__u32 mst_bit = 1 << BR_BOOLOPT_MST_ENABLE;
++		__u32 mcfl_bit = 1 << BR_BOOLOPT_MCAST_FLOOD_ALWAYS;
+ 		struct br_boolopt_multi *bm;
+ 
+ 		bm = RTA_DATA(tb[IFLA_BR_MULTI_BOOLOPT]);
+@@ -641,6 +655,11 @@ static void bridge_print_opt(struct link_util *lu, FILE *f, struct rtattr *tb[])
+ 				   "mst_enabled",
+ 				   "mst_enabled %u ",
+ 				   !!(bm->optval & mst_bit));
++		if (bm->optmask & mcfl_bit)
++			print_uint(PRINT_ANY,
++				   "mcast_flood_always",
++				   "mcast_flood_always %u ",
++				   !!(bm->optval & mcfl_bit));
+ 	}
+ 
+ 	if (tb[IFLA_BR_MCAST_ROUTER])
+diff --git a/man/man8/ip-link.8.in b/man/man8/ip-link.8.in
+index eabca490..ba0a5304 100644
+--- a/man/man8/ip-link.8.in
++++ b/man/man8/ip-link.8.in
+@@ -1703,6 +1703,8 @@ the following additional arguments are supported:
+ ] [
+ .BI vlan_stats_per_port " VLAN_STATS_PER_PORT "
+ ] [
++.BI mcast_flood_always " ENABLED "
++] [
+ .BI mcast_snooping " MULTICAST_SNOOPING "
+ ] [
+ .BI mcast_vlan_snooping " MULTICAST_VLAN_SNOOPING "
+@@ -1851,6 +1853,16 @@ or disable
+ .RI ( VLAN_STATS_PER_PORT " == 0) "
+ per-VLAN per-port stats accounting. Can be changed only when there are no port VLANs configured.
+ 
++.BI mcast_flood_always " ENABLED "
++- always
++.RI ( ENABLED " > 0) "
++flood unknown multicast according to per-port
++.BI mcast_flood
++settings.  By default
++.RI ( ENABLED " == 0). "
++the bridge only floods until it has learned of a querier, or takes on
++the role itself.
++
+ .BI mcast_snooping " MULTICAST_SNOOPING "
+ - turn multicast snooping on
+ .RI ( MULTICAST_SNOOPING " > 0) "
+-- 
+2.43.0
+
