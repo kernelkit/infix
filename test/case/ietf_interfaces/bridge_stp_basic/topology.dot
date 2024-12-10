@@ -1,0 +1,55 @@
+graph "stp" {
+	layout="neato";
+	overlap="false";
+	esep="+80";
+
+        node [shape=record, fontname="DejaVu Sans Mono, Book"];
+	edge [penwidth="2", fontname="DejaVu Serif, Book"];
+
+        host [
+	    label="{ { <mgmtd> mgmtd | <d> d | <mgmta> mgmta | <a> a | <b> b | <mgmtb> mgmtb | <c> c | <mgmtc> mgmtc } | host }",
+	    color="grey",fontcolor="grey",pos="9,0!",
+	    kind="controller",
+	];
+
+        A [
+	    label="{ A | { <mgmt> mgmt | <h> h } } | { <b> b | <c> c | <d> d }",
+	    pos="6,6!",
+	    kind="infix",
+	];
+        B [
+	    label="{ <a> a | <d> d | <c> c } | { B | { <h> h | <mgmt> mgmt } }",
+	    pos="12,6!",
+	    kind="infix",
+	];
+        C [
+	    label="{ <b> b | <a> a | <d> d } | { C | { <h> h | <mgmt> mgmt } }",
+	    pos="12,3!",
+	    kind="infix",
+	];
+        D [
+	    label="{ D | { <mgmt> mgmt | <h> h } } | { <a> a | <b> b | <c> c }",
+	    pos="6,3!",
+	    kind="infix",
+	];
+
+	host:mgmta -- A:mgmt [kind=mgmt, color="lightgrey"]
+	host:mgmtb -- B:mgmt [kind=mgmt, color="lightgrey"]
+	host:mgmtc -- C:mgmt [kind=mgmt, color="lightgrey"]
+	host:mgmtd -- D:mgmt [kind=mgmt, color="lightgrey"]
+
+	host:a -- A:h [color="cornflowerblue"]
+	host:b -- B:h [color="cornflowerblue"]
+	host:c -- C:h [color="cornflowerblue"]
+	host:d -- D:h [color="cornflowerblue"]
+
+	# Ring
+	A:b -- B:a
+	B:c -- C:b
+	C:d -- D:c
+	D:a -- A:d
+
+	# Cross-links
+	A:c -- C:a
+	B:d -- D:b
+}
