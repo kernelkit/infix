@@ -87,6 +87,10 @@ static int ifchange_cand_infer_type(sr_session_ctx_t *session, const char *path)
 		inferred.data.string_val = "infix-if-type:vlan";
 	else if (!fnmatch("*.+([0-9])", ifname, FNM_EXTMATCH))
 		inferred.data.string_val = "infix-if-type:vlan";
+	else if (!fnmatch("gre+([0-9])", ifname, FNM_EXTMATCH))
+		inferred.data.string_val = "infix-if-type:gre";
+	else if (!fnmatch("gretap+([0-9])", ifname, FNM_EXTMATCH))
+		inferred.data.string_val = "infix-if-type:gretap";
 
 	free(ifname);
 
@@ -395,6 +399,8 @@ static int netdag_gen_afspec_add(sr_session_ctx_t *session, struct dagger *net, 
 		sr_session_set_error_message(net->session, "Cannot create fixed Ethernet interface %s,"
 					     " wrong type or name.", ifname);
 		return -ENOENT;
+	} else if (!strcmp(iftype, "infix-if-type:gre") || !strcmp(iftype, "infix-if-type:gretap")) {
+		err = gre_gen(net, NULL, cif, ip);
 	} else {
 		sr_session_set_error_message(net->session, "%s: unsupported interface type \"%s\"", ifname, iftype);
 		return -ENOSYS;
@@ -419,6 +425,8 @@ static int netdag_gen_afspec_set(sr_session_ctx_t *session, struct dagger *net, 
 	if (!strcmp(iftype, "infix-if-type:vlan"))
 		return netdag_gen_vlan(net, dif, cif, ip);
 	if (!strcmp(iftype, "infix-if-type:veth"))
+		return 0;
+	if (!strcmp(iftype, "infix-if-type:gretap"))
 		return 0;
 
 	ERROR("%s: unsupported interface type \"%s\"", ifname, iftype);
@@ -450,6 +458,9 @@ static bool netdag_must_del(struct lyd_node *dif, struct lyd_node *cif)
 			return true;
 	} else if (!strcmp(iftype, "infix-if-type:veth")) {
 		if (lydx_get_descendant(lyd_child(dif), "veth", NULL))
+			return true;
+	} else if (!strcmp(iftype, "infix-if-type:gre") || !strcmp(iftype, "infix-if-type:gretap")) {
+		if (lydx_get_descendant(lyd_child(dif), "gre", NULL))
 			return true;
 /*
 	} else if (!strcmp(iftype, "infix-if-type:lag")) {

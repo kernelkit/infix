@@ -64,3 +64,9 @@
 
 - name: vlan_iface_termination
   case: vlan_iface_termination/test.py
+
+- name: gre_basic
+  case: gre_basic/test.py
+
+- name: gretap_bridged
+  case: gretap_bridged/test.py

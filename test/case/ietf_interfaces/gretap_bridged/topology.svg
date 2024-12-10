@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
+ "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+
+<!-- Title: gre&#45;basic Pages: 1 -->
+<svg width="552pt" height="183pt"
+ viewBox="0.00 0.00 552.37 183.24" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(4 179.24)">
+<title>gre&#45;basic</title>
+<polygon fill="white" stroke="transparent" points="-4,4 -4,-179.24 548.37,-179.24 548.37,4 -4,4"/>
+<!-- host -->
+<g id="node1" class="node">
+<title>host</title>
+<polygon fill="none" stroke="black" points="129.01,-138.74 129.01,-174.74 345.01,-174.74 345.01,-138.74 129.01,-138.74"/>
+<text text-anchor="middle" x="154.01" y="-153.04" font-family="DejaVu Sans Mono, Book" font-size="14.00">host</text>
+<polyline fill="none" stroke="black" points="179.01,-138.74 179.01,-174.74 "/>
+<text text-anchor="middle" x="208.01" y="-153.04" font-family="DejaVu Sans Mono, Book" font-size="14.00">mgmt1</text>
+<polyline fill="none" stroke="black" points="237.01,-138.74 237.01,-174.74 "/>
+<text text-anchor="middle" x="262.01" y="-153.04" font-family="DejaVu Sans Mono, Book" font-size="14.00">data</text>
+<polyline fill="none" stroke="black" points="287.01,-138.74 287.01,-174.74 "/>
+<text text-anchor="middle" x="316.01" y="-153.04" font-family="DejaVu Sans Mono, Book" font-size="14.00">mgmt2</text>
+</g>
+<!-- left -->
+<g id="node2" class="node">
+<title>left</title>
+<polygon fill="none" stroke="black" points="0,-1.73 0,-37.73 200,-37.73 200,-1.73 0,-1.73"/>
+<text text-anchor="middle" x="25" y="-16.03" font-family="DejaVu Sans Mono, Book" font-size="14.00">left</text>
+<polyline fill="none" stroke="black" points="50,-1.73 50,-37.73 "/>
+<text text-anchor="middle" x="75" y="-16.03" font-family="DejaVu Sans Mono, Book" font-size="14.00">mgmt</text>
+<polyline fill="none" stroke="black" points="100,-1.73 100,-37.73 "/>
+<text text-anchor="middle" x="125" y="-16.03" font-family="DejaVu Sans Mono, Book" font-size="14.00">data</text>
+<polyline fill="none" stroke="black" points="150,-1.73 150,-37.73 "/>
+<text text-anchor="middle" x="175" y="-16.03" font-family="DejaVu Sans Mono, Book" font-size="14.00">link</text>
+</g>
+<!-- host&#45;&#45;left -->
+<g id="edge1" class="edge">
+<title>host:mgmt1&#45;&#45;left:mgmt</title>
+<path fill="none" stroke="lightgray" stroke-width="2" d="M208.01,-138.74C208.01,-138.74 75,-37.73 75,-37.73"/>
+</g>
+<!-- host&#45;&#45;left -->
+<g id="edge2" class="edge">
+<title>host:data&#45;&#45;left:data</title>
+<path fill="none" stroke="black" stroke-width="2" d="M262.01,-138.74C262.01,-138.74 125,-37.73 125,-37.73"/>
+<text text-anchor="middle" x="194.01" y="-127.54" font-family="DejaVu Serif, Book" font-size="14.00">192.168.10.2/24    </text>
+</g>
+<!-- right -->
+<g id="node3" class="node">
+<title>right</title>
+<polygon fill="none" stroke="black" points="386.37,-1.73 386.37,-37.73 544.37,-37.73 544.37,-1.73 386.37,-1.73"/>
+<text text-anchor="middle" x="411.37" y="-16.03" font-family="DejaVu Sans Mono, Book" font-size="14.00">link</text>
+<polyline fill="none" stroke="black" points="436.37,-1.73 436.37,-37.73 "/>
+<text text-anchor="middle" x="461.37" y="-16.03" font-family="DejaVu Sans Mono, Book" font-size="14.00">mgmt</text>
+<polyline fill="none" stroke="black" points="486.37,-1.73 486.37,-37.73 "/>
+<text text-anchor="middle" x="515.37" y="-16.03" font-family="DejaVu Sans Mono, Book" font-size="14.00">right</text>
+</g>
+<!-- host&#45;&#45;right -->
+<g id="edge3" class="edge">
+<title>host:mgmt2&#45;&#45;right:mgmt</title>
+<path fill="none" stroke="lightgray" stroke-width="2" d="M345.01,-156.74C345.01,-156.74 461.37,-37.73 461.37,-37.73"/>
+</g>
+<!-- left&#45;&#45;right -->
+<g id="edge4" class="edge">
+<title>left:link&#45;&#45;right:link</title>
+<path fill="none" stroke="black" stroke-width="2" d="M200,-19.73C200,-19.73 386.37,-19.73 386.37,-19.73"/>
+<text text-anchor="middle" x="293.18" y="-8.53" font-family="DejaVu Serif, Book" font-size="14.00">192.168.50.0/24</text>
+<text text-anchor="middle" x="377.31" y="-28.25" font-family="DejaVu Serif, Book" font-size="14.00">.1</text>
+<text text-anchor="middle" x="209.06" y="-3.8" font-family="DejaVu Serif, Book" font-size="14.00">.2</text>
+</g>
+</g>
+</svg>

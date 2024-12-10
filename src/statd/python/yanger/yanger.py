@@ -38,6 +38,9 @@ def json_get_yang_type(iface_in):
     if iface_in['link_type'] == "loopback":
         return "infix-if-type:loopback"
 
+    if iface_in['link_type'] in ("gre", "gre6"):
+        return "infix-if-type:gre"
+
     if iface_in['link_type'] != "ether":
         return "infix-if-type:other"
 
@@ -52,6 +55,9 @@ def json_get_yang_type(iface_in):
 
     if iface_in['linkinfo']['info_kind'] == "veth":
         return "infix-if-type:veth"
+
+    if iface_in['linkinfo']['info_kind'] in ("gretap", "ip6gretap"):
+        return "infix-if-type:gretap"
 
     if iface_in['linkinfo']['info_kind'] == "vlan":
         return "infix-if-type:vlan"
@@ -715,6 +721,19 @@ def add_bridge_port_lower(ifname, iface_in, iface_out):
     multicast = get_brport_multicast(ifname)
     insert(iface_out, "infix-interfaces:bridge-port", "multicast", multicast)
 
+
+def add_gre(iface_in, iface_out):
+     if 'link_type' in iface_in:
+        val = json_get_yang_type(iface_in)
+        if val != "infix-if-type:gre" and val != "infix-if-type:gretap":
+            return;
+        gre={}
+        info_data=iface_in.get("linkinfo", {}).get("info_data", {})
+        gre["local"] = info_data.get("local")
+        gre["remote"] = info_data.get("remote")
+        insert(iface_out, "infix-interfaces:gre", gre)
+
+
 def add_ip_link(ifname, iface_in, iface_out):
     if 'ifname' in iface_in:
         iface_out['name'] = ifname
@@ -725,14 +744,14 @@ def add_ip_link(ifname, iface_in, iface_out):
     if 'ifalias' in iface_in:
         iface_out['description'] = iface_in['ifalias']
 
-    if 'address' in iface_in:
+    if 'address' in iface_in and not "POINTOPOINT" in iface_in["flags"]:
         iface_out['phys-address'] = iface_in['address']
 
     add_bridge_port_common(ifname, iface_in, iface_out)
     add_bridge_port_lower(ifname, iface_in, iface_out)
 
     if not iface_is_dsa(iface_in):
-        if 'link' in iface_in:
+        if iface_in.get('link'):
             insert(iface_out, "infix-interfaces:vlan", "lower-layer-if", iface_in['link'])
         elif 'link_index' in iface_in:
             # 'link_index' is the only reference we have if the link iface is in a namespace
@@ -758,6 +777,7 @@ def add_ip_link(ifname, iface_in, iface_out):
     if 'link_type' in iface_in:
         val = json_get_yang_type(iface_in)
         iface_out['type'] = val
+    add_gre(iface_in, iface_out)
 
     val = lookup(iface_in, "stats64", "rx", "bytes")
     if val is not None:

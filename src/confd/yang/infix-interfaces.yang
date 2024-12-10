@@ -12,12 +12,16 @@ module infix-interfaces {
   import ietf-yang-types {
     prefix yang;
   }
+  import ietf-inet-types {
+    prefix inet;
+  }
 
   include infix-if-base;
   include infix-if-bridge;
   include infix-if-container;
   include infix-if-veth;
   include infix-if-vlan;
+  include infix-if-gre;
 
   organization "KernelKit";
   contact      "kernelkit@googlegroups.com";
@@ -80,6 +84,23 @@ module infix-interfaces {
     reference "internal";
   }
 
+  grouping local-remote {
+    description "Local address to use as source address";
+    leaf local {
+      type inet:ip-address;
+      mandatory true;
+    }
+    leaf remote {
+      description "Peer address";
+      type inet:ip-address;
+      must "(contains(../local, ':') and contains(., ':'))
+            or (not(contains(../local, ':')) and not(contains(., ':')))" {
+        error-message
+          "Local and remote must be both IPv4 or both IPv6 addresses.";
+      }
+      mandatory true;
+    }
+  }
   /*
    * Data Nodes
    */
