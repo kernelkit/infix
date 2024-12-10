@@ -1,0 +1,153 @@
+From 96cbf730010ee9539d05d0d72697dc960b3a938c Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Tom=C3=A1=C5=A1=20Pecka?= <tomas.pecka@cesnet.cz>
+Date: Mon, 7 Oct 2024 20:46:24 +0200
+Subject: [PATCH 04/20] restconf: parser should work on raw percent-encoded
+ paths
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Addiva Elektronik
+
+The difference between nghttp2's uri_ref::path and raw_path is that the
+raw_path keeps the percent encoding, while the path converts the percent
+encoded chars to their "normal" form.
+
+Our parser expects some parts of the URI to be percent encoded so we
+have to use raw_paths everywhere.
+
+I thought about rewriting the parser not to expect percent encoded
+characters but that would bring some complications. For instance when
+querying lists, the RESTCONF RFC specifies that every key value is
+percent encoded and individual key values are delimited by commas [1].
+So, when somebody sends a request like /restconf/data/list=a%2Cb,c the
+"normal" form is /restconf/data/list=a,b,c and in that case we obtain
+three keys, but the client sent only two, where the first one contained
+comma.
+
+I am adding few tests to check for percent encoded values.
+
+We realized this while working on one of the reported bugs [1]. The
+query sent by the client there is wrong, the ':' char should be
+percent-encoded.
+
+[1] https://github.com/CESNET/rousette/issues/12
+
+Bug: https://github.com/CESNET/rousette/issues/12
+Change-Id: I473501cef3c8eae9af0c5d0751393cdad647e23c
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ src/restconf/Server.cpp    |  8 ++++----
+ src/restconf/uri.cpp       |  4 ++--
+ tests/restconf-reading.cpp | 15 +++++++++++++++
+ tests/uri-parser.cpp       |  5 +++--
+ 4 files changed, 24 insertions(+), 8 deletions(-)
+
+diff --git a/src/restconf/Server.cpp b/src/restconf/Server.cpp
+index 5f560ed..79d8ff6 100644
+--- a/src/restconf/Server.cpp
++++ b/src/restconf/Server.cpp
+@@ -416,7 +416,7 @@ void processActionOrRPC(std::shared_ptr<RequestContext> requestCtx, const std::c
+          *  - The data node exists but might get deleted right after this check: Sysrepo throws an error when this happens.
+          *  - The data node does not exist but might get created right after this check: The node was not there when the request was issues so it should not be a problem
+          */
+-        auto [pathToParent, pathSegment] = asLibyangPathSplit(ctx, requestCtx->req.uri().path);
++        auto [pathToParent, pathSegment] = asLibyangPathSplit(ctx, requestCtx->req.uri().raw_path);
+         if (!requestCtx->sess.getData(pathToParent, 0, sysrepo::GetOptions::Default, timeout)) {
+             throw ErrorResponse(400, "application", "operation-failed", "Action data node '" + requestCtx->restconfRequest.path + "' does not exist.");
+         }
+@@ -539,7 +539,7 @@ void processYangPatchEdit(const std::shared_ptr<RequestContext>& requestCtx, con
+     auto target = childLeafValue(editContainer, "target");
+     auto operation = childLeafValue(editContainer, "operation");
+ 
+-    auto [singleEdit, replacementNode] = createEditForPutAndPatch(ctx, requestCtx->req.uri().path + target, yangPatchValueAsJSON(editContainer), libyang::DataFormat::JSON);
++    auto [singleEdit, replacementNode] = createEditForPutAndPatch(ctx, requestCtx->req.uri().raw_path + target, yangPatchValueAsJSON(editContainer), libyang::DataFormat::JSON);
+     validateInputMetaAttributes(ctx, *singleEdit);
+ 
+     // insert and move are not defined in RFC6241. sec 7.3 and sysrepo does not support them directly
+@@ -658,7 +658,7 @@ void processPutOrPlainPatch(std::shared_ptr<RequestContext> requestCtx, const st
+         throw ErrorResponse(400, "protocol", "invalid-value", "Target resource does not exist");
+     }
+ 
+-    auto [edit, replacementNode] = createEditForPutAndPatch(ctx, requestCtx->req.uri().path, requestCtx->payload, *requestCtx->dataFormat.request /* caller checks if the dataFormat.request is present */);
++    auto [edit, replacementNode] = createEditForPutAndPatch(ctx, requestCtx->req.uri().raw_path, requestCtx->payload, *requestCtx->dataFormat.request /* caller checks if the dataFormat.request is present */);
+     validateInputMetaAttributes(ctx, *edit);
+ 
+     if (requestCtx->req.method() == "PUT") {
+@@ -954,7 +954,7 @@ Server::Server(sysrepo::Connection conn, const std::string& address, const std::
+                 dataFormat = chooseDataEncoding(req.header());
+                 authorizeRequest(nacm, sess, req);
+ 
+-                auto restconfRequest = asRestconfRequest(sess.getContext(), req.method(), req.uri().path, req.uri().raw_query);
++                auto restconfRequest = asRestconfRequest(sess.getContext(), req.method(), req.uri().raw_path, req.uri().raw_query);
+ 
+                 switch (restconfRequest.type) {
+                 case RestconfRequest::Type::RestconfRoot:
+diff --git a/src/restconf/uri.cpp b/src/restconf/uri.cpp
+index 8e8dc23..ac399b7 100644
+--- a/src/restconf/uri.cpp
++++ b/src/restconf/uri.cpp
+@@ -34,9 +34,9 @@ const auto percentEncodedChar = x3::rule<class percentEncodedChar, unsigned>{"pe
+ /* reserved characters according to RFC 3986, sec. 2.2 with '%' added. The '%' character is not specified as reserved but it effectively is because
+  * "Percent sign serves as the indicator for percent-encoded octets, it must be percent-encoded (...)" [RFC 3986, sec. 2.4]. */
+ const auto reservedChars = x3::lit(':') | '/' | '?' | '#' | '[' | ']' | '@' | '!' | '$' | '&' | '\'' | '(' | ')' | '*' | '+' | ',' | ',' | ';' | '=' | '%';
+-const auto keyValue = x3::rule<class keyValue, std::string>{"keyValue"} = *(percentEncodedChar | (x3::char_ - reservedChars));
++const auto percentEncodedString = x3::rule<class percentEncodedString, std::string>{"percentEncodedString"} = *(percentEncodedChar | (x3::char_ - reservedChars));
+ 
+-const auto keyList = x3::rule<class keyList, std::vector<std::string>>{"keyList"} = keyValue % ',';
++const auto keyList = x3::rule<class keyList, std::vector<std::string>>{"keyList"} = percentEncodedString % ',';
+ const auto identifier = x3::rule<class identifier, std::string>{"identifier"} = (x3::alpha | x3::char_('_')) >> *(x3::alnum | x3::char_('_') | x3::char_('-') | x3::char_('.'));
+ const auto apiIdentifier = x3::rule<class apiIdentifier, ApiIdentifier>{"apiIdentifier"} = -(identifier >> ':') >> identifier;
+ const auto listInstance = x3::rule<class keyList, PathSegment>{"listInstance"} = apiIdentifier >> -('=' >> keyList);
+diff --git a/tests/restconf-reading.cpp b/tests/restconf-reading.cpp
+index fa1cbcc..2898839 100644
+--- a/tests/restconf-reading.cpp
++++ b/tests/restconf-reading.cpp
+@@ -261,6 +261,21 @@ TEST_CASE("reading data")
+ }
+ )"});
+ 
++        // percent-encoded comma is a part of the key value, it is not a delimiter
++        REQUIRE(get(RESTCONF_DATA_ROOT "/ietf-system:system/radius/server=a%2Cb", {AUTH_DWDM}) == Response{404, jsonHeaders, R"({
++  "ietf-restconf:errors": {
++    "error": [
++      {
++        "error-type": "application",
++        "error-tag": "invalid-value",
++        "error-message": "No data from sysrepo."
++      }
++    ]
++  }
++}
++)"});
++
++        // comma is a delimiter of list key values
+         REQUIRE(get(RESTCONF_DATA_ROOT "/ietf-system:system/radius/server=a,b", {AUTH_DWDM}) == Response{400, jsonHeaders, R"({
+   "ietf-restconf:errors": {
+     "error": [
+diff --git a/tests/uri-parser.cpp b/tests/uri-parser.cpp
+index a748e09..5977afc 100644
+--- a/tests/uri-parser.cpp
++++ b/tests/uri-parser.cpp
+@@ -158,9 +158,9 @@ TEST_CASE("URI path parser")
+                                                                             {{"prefix", "lst"}, {"key1"}},
+                                                                             {{"prefix", "leaf"}},
+                                                                         }}},
+-                 {"/restconf/data/foo:bar/lst=key1,,key3", {{
++                 {"/restconf/data/foo:bar/lst=module%3Akey1,,key3", {{
+                                                                {{"foo", "bar"}},
+-                                                               {{"lst"}, {"key1", "", "key3"}},
++                                                               {{"lst"}, {"module:key1", "", "key3"}},
+                                                            }}},
+                  {"/restconf/data/foo:bar/lst=key%2CWithCommas,,key2C", {{
+                                                                             {{"foo", "bar"}},
+@@ -240,6 +240,7 @@ TEST_CASE("URI path parser")
+                  "/restconf/data/foo:list=A%2",
+                  "/restconf/data/foo:list=A%2,",
+                  "/restconf/data/foo:bar/list1=%%",
++                 "/restconf/data/foo:bar/list1=module:smth",
+                  "/restconf/data/foo:bar/",
+                  "/restconf/data/ foo : bar",
+                  "/rest conf/data / foo:bar",
+-- 
+2.43.0
+

@@ -1,0 +1,45 @@
+From 64997543d48236cd2aae417568bc54d32c54df21 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan=20Kundr=C3=A1t?= <jan.kundrat@cesnet.cz>
+Date: Mon, 2 Dec 2024 14:43:36 +0100
+Subject: [PATCH 10/20] Fix compatibility with pam_wrapper 1.1.6+
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Addiva Elektronik
+
+An year ago I reported a bug that the pam_wrapper project says that they
+use a variable called `PAM_WRAPPER_DISABLE_DEEPBIND`, but in fact they
+check `UID_WRAPPER_DISABLE_DEEPBIND`. The upstream listened to me, and
+they fixed it [1]. Unfortunately, the old variable name is not read from
+as of pam_wrapper 1.1.6, so we require setting *both* variables for
+random version compatibility.
+
+[1] https://git.samba.org/?p=pam_wrapper.git;a=commitdiff;h=9f0cccf7432dd9be1de953f9b13a7f9b06c40442
+
+Change-Id: I2959f505f5325950606c68b0b324be7181dd6e4f
+Reported-by: Tomáš Pecka <tomas.pecka@cesnet.cz>
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ CMakeLists.txt | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 01dd2c2..731d7cb 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -179,10 +179,11 @@ if(BUILD_TESTING)
+         endif()
+ 
+         if(TEST_WRAP_PAM)
++            # FIXME: remove UID_WRAPPER_... (and keep PAM_WRAPPER_...) once we require pam_wrapper 1.1.6+
+             set(TEST_COMMAND
+                 ${UNSHARE_EXECUTABLE} -r -m sh -c "set -ex $<SEMICOLON>
+                     ${MOUNT_EXECUTABLE} -t tmpfs none /tmp $<SEMICOLON>
+-                    export LD_PRELOAD=${pam_wrapper_LDFLAGS} PAM_WRAPPER_SERVICE_DIR=${CMAKE_CURRENT_BINARY_DIR}/tests/pam PAM_WRAPPER=1 UID_WRAPPER_DISABLE_DEEPBIND=1 $<SEMICOLON>
++		    export LD_PRELOAD=${pam_wrapper_LDFLAGS} PAM_WRAPPER_SERVICE_DIR=${CMAKE_CURRENT_BINARY_DIR}/tests/pam PAM_WRAPPER=1 UID_WRAPPER_DISABLE_DEEPBIND=1 PAM_WRAPPER_DISABLE_DEEPBIND=1 $<SEMICOLON>
+                     $<TARGET_FILE:test-${TEST_NAME}>")
+         else()
+             set(TEST_COMMAND test-${TEST_NAME})
+-- 
+2.43.0
+

@@ -1,0 +1,32 @@
+From 27ef5bc87fdeb70a77609da6ec18ee5c28656bb6 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan=20Kundr=C3=A1t?= <jan.kundrat@cesnet.cz>
+Date: Tue, 29 Oct 2024 18:54:55 +0100
+Subject: [PATCH 07/20] error handling in sysrepo has changed
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Addiva Elektronik
+
+Depends-on: https://gerrit.cesnet.cz/c/CzechLight/dependencies/+/7969
+Change-Id: Id028806ed49114cba4c55e2874bcf3fc98308bdc
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ tests/restconf-rpc.cpp | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/tests/restconf-rpc.cpp b/tests/restconf-rpc.cpp
+index 4f66f10..9bc1dbc 100644
+--- a/tests/restconf-rpc.cpp
++++ b/tests/restconf-rpc.cpp
+@@ -301,7 +301,7 @@ TEST_CASE("invoking actions and rpcs")
+       {
+         "error-type": "application",
+         "error-tag": "operation-failed",
+-        "error-message": "Internal server error due to sysrepo exception: Couldn't send RPC: SR_ERR_CALLBACK_FAILED\u000A Operation failed (SR_ERR_OPERATION_FAILED)\u000A User callback failed. (SR_ERR_CALLBACK_FAILED)"
++        "error-message": "Internal server error due to sysrepo exception: Couldn't send RPC: SR_ERR_OPERATION_FAILED\u000A Operation failed (SR_ERR_OPERATION_FAILED)"
+       }
+     ]
+   }
+-- 
+2.43.0
+

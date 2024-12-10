@@ -1,0 +1,428 @@
+From 8b13c1e4ccaa61a241674c27063439e257fa88de Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Tom=C3=A1=C5=A1=20Pecka?= <tomas.pecka@cesnet.cz>
+Date: Wed, 2 Oct 2024 20:21:28 +0200
+Subject: [PATCH 05/20] restconf: list key values checking must respect
+ libyang's canonicalization
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Addiva Elektronik
+
+While dealing with the issue that was fixed in the previous commit we
+realized that the issue is deeper. Not only that our parser rejected
+the input when someone used identityref with module prefix in the URI,
+but also, our internal code for creating/modifying list entries was
+wrong.
+
+In PUT requests we have to check if user entered the same key value in
+URI and yang-data payload. However, some values are canonicalized by
+libyang (e.g. decimal64 type with fraction-digits=2 or even the
+identityrefs) and so if the client entered two different but
+canonically equivalent values, we would reject such request.
+
+Bug: https://github.com/CESNET/rousette/issues/12
+Change-Id: I44245d831e8de6d0e6f991fcd18319c095b49b1d
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ CMakeLists.txt                |  3 +-
+ src/restconf/Server.cpp       | 49 +++++++++++++++++----
+ src/restconf/utils/yang.cpp   |  5 +++
+ src/restconf/utils/yang.h     |  1 +
+ tests/restconf-reading.cpp    | 59 +++++++++++++++++++++++++
+ tests/restconf-writing.cpp    | 82 +++++++++++++++++++++++++++++++++++
+ tests/uri-parser.cpp          |  2 +
+ tests/yang/example-types.yang | 13 ++++++
+ tests/yang/example.yang       | 25 +++++++++++
+ 9 files changed, 229 insertions(+), 10 deletions(-)
+ create mode 100644 tests/yang/example-types.yang
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index c563dcf..465bef9 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -204,7 +204,8 @@ if(BUILD_TESTING)
+         --install ${CMAKE_CURRENT_SOURCE_DIR}/tests/yang/example.yang --enable-feature f1
+         --install ${CMAKE_CURRENT_SOURCE_DIR}/tests/yang/example-delete.yang
+         --install ${CMAKE_CURRENT_SOURCE_DIR}/tests/yang/example-augment.yang
+-        --install ${CMAKE_CURRENT_SOURCE_DIR}/tests/yang/example-notif.yang)
++        --install ${CMAKE_CURRENT_SOURCE_DIR}/tests/yang/example-notif.yang
++        --install ${CMAKE_CURRENT_SOURCE_DIR}/tests/yang/example-types.yang)
+     rousette_test(NAME restconf-reading LIBRARIES rousette-restconf FIXTURE common-models WRAP_PAM)
+     rousette_test(NAME restconf-writing LIBRARIES rousette-restconf FIXTURE common-models WRAP_PAM)
+     rousette_test(NAME restconf-delete LIBRARIES rousette-restconf FIXTURE common-models WRAP_PAM)
+diff --git a/src/restconf/Server.cpp b/src/restconf/Server.cpp
+index 79d8ff6..b515d66 100644
+--- a/src/restconf/Server.cpp
++++ b/src/restconf/Server.cpp
+@@ -154,6 +154,15 @@ auto rejectYangPatch(const std::string& patchId, const std::string& editId)
+     };
+ }
+ 
++/** @brief Check if these two paths compare the same after path canonicalization */
++bool compareKeyValue(const libyang::Context& ctx, const std::string& pathA, const std::string& pathB)
++{
++    auto [parentA, nodeA] = ctx.newPath2(pathA, std::nullopt);
++    auto [parentB, nodeB] = ctx.newPath2(pathB, std::nullopt);
++
++    return nodeA->asTerm().valueStr() == nodeB->asTerm().valueStr();
++}
++
+ struct KeyMismatch {
+     libyang::DataNode offendingNode;
+     std::optional<std::string> uriKeyValue;
+@@ -169,25 +178,46 @@ struct KeyMismatch {
+ 
+ /** @brief In case node is a (leaf-)list check if the key values are the same as the keys specified in the lastPathSegment.
+  * @return The node where the mismatch occurs */
+-std::optional<KeyMismatch> checkKeysMismatch(const libyang::DataNode& node, const PathSegment& lastPathSegment)
++std::optional<KeyMismatch> checkKeysMismatch(libyang::Context& ctx, const libyang::DataNode& node, const std::string& lyParentPath, const PathSegment& lastPathSegment)
+ {
++    const auto pathPrefix = (lyParentPath.empty() ? "" : lyParentPath) + "/" + lastPathSegment.apiIdent.name();
++
+     if (node.schema().nodeType() == libyang::NodeType::List) {
+         const auto& listKeys = node.schema().asList().keys();
+         for (size_t i = 0; i < listKeys.size(); ++i) {
+-            const auto& keyValueURI = lastPathSegment.keys[i];
+             auto keyNodeData = node.findPath(listKeys[i].module().name() + ':' + listKeys[i].name());
+             if (!keyNodeData) {
+                 return KeyMismatch{node, std::nullopt};
+             }
+ 
+-            const auto& keyValueData = keyNodeData->asTerm().valueStr();
+-
+-            if (keyValueURI != keyValueData) {
+-                return KeyMismatch{*keyNodeData, keyValueURI};
++            /*
++             * If the key's value has a canonical form then libyang makes the value canonical
++             * but there is no guarantee that the client provided the value in the canonical form.
++             *
++             * Let libyang do the work. Create two data nodes, one with the key value from the data and the other
++             * with the key value from the URI. Then compare the values from the two nodes. If they are different,
++             * they certainly mismatch.
++             *
++             * This can happen in cases like
++             *  * The key's type is identityref and the client provided the key value as a string without the module name. Libyang will canonicalize the value by adding the module name.
++             *  * The key's type is decimal64 with fractional-digits 2; then the client can provide the value as 1.0 or 1.00 and they should be the same. Libyang will canonicalize the value.
++             */
++
++            auto keysWithValueFromData = lastPathSegment.keys;
++            keysWithValueFromData[i] = keyNodeData->asTerm().valueStr();
++
++            const auto suffix = "/" + listKeys[i].name();
++            const auto pathFromData = pathPrefix + listKeyPredicate(listKeys, keysWithValueFromData) + suffix;
++            const auto pathFromURI = pathPrefix + listKeyPredicate(listKeys, lastPathSegment.keys) + suffix;
++
++            if (!compareKeyValue(ctx, pathFromData, pathFromURI)) {
++                return KeyMismatch{*keyNodeData, lastPathSegment.keys[i]};
+             }
+         }
+     } else if (node.schema().nodeType() == libyang::NodeType::Leaflist) {
+-        if (lastPathSegment.keys[0] != node.asTerm().valueStr()) {
++        const auto pathFromData = pathPrefix + leaflistKeyPredicate(node.asTerm().valueStr());
++        const auto pathFromURI = pathPrefix + leaflistKeyPredicate(lastPathSegment.keys[0]);
++        if (!compareKeyValue(ctx, pathFromData, pathFromURI)) {
+             return KeyMismatch{node, lastPathSegment.keys[0]};
+         }
+     }
+@@ -363,7 +393,7 @@ libyang::CreatedNodes createEditForPutAndPatch(libyang::Context& ctx, const std:
+             if (isSameNode(child, lastPathSegment)) {
+                 // 1) a single child that is created by parseSubtree(), its name is the same as `lastPathSegment`.
+                 // It could be a list; then we need to check if the keys in provided data match the keys in URI.
+-                if (auto keyMismatch = checkKeysMismatch(child, lastPathSegment)) {
++                if (auto keyMismatch = checkKeysMismatch(ctx, child, lyParentPath, lastPathSegment)) {
+                     throw ErrorResponse(400, "protocol", "invalid-value", keyMismatch->message(), keyMismatch->offendingNode.path());
+                 }
+                 replacementNode = child;
+@@ -386,7 +416,8 @@ libyang::CreatedNodes createEditForPutAndPatch(libyang::Context& ctx, const std:
+             if (!isSameNode(*replacementNode, lastPathSegment)) {
+                 throw ErrorResponse(400, "protocol", "invalid-value", "Data contains invalid node.", replacementNode->path());
+             }
+-            if (auto keyMismatch = checkKeysMismatch(*parent, lastPathSegment)) {
++
++            if (auto keyMismatch = checkKeysMismatch(ctx, *parent, lyParentPath, lastPathSegment)) {
+                 throw ErrorResponse(400, "protocol", "invalid-value", keyMismatch->message(), keyMismatch->offendingNode.path());
+             }
+         }
+diff --git a/src/restconf/utils/yang.cpp b/src/restconf/utils/yang.cpp
+index 15cceb6..4c4d619 100644
+--- a/src/restconf/utils/yang.cpp
++++ b/src/restconf/utils/yang.cpp
+@@ -50,6 +50,11 @@ std::string listKeyPredicate(const std::vector<libyang::Leaf>& listKeyLeafs, con
+     return res;
+ }
+ 
++std::string leaflistKeyPredicate(const std::string& keyValue)
++{
++    return "[.=" + escapeListKey(keyValue) + ']';
++}
++
+ bool isUserOrderedList(const libyang::DataNode& node)
+ {
+     if (node.schema().nodeType() == libyang::NodeType::List) {
+diff --git a/src/restconf/utils/yang.h b/src/restconf/utils/yang.h
+index 677d049..e91ba8a 100644
+--- a/src/restconf/utils/yang.h
++++ b/src/restconf/utils/yang.h
+@@ -16,6 +16,7 @@ namespace rousette::restconf {
+ 
+ std::string escapeListKey(const std::string& str);
+ std::string listKeyPredicate(const std::vector<libyang::Leaf>& listKeyLeafs, const std::vector<std::string>& keyValues);
++std::string leaflistKeyPredicate(const std::string& keyValue);
+ bool isUserOrderedList(const libyang::DataNode& node);
+ bool isKeyNode(const libyang::DataNode& maybeList, const libyang::DataNode& node);
+ }
+diff --git a/tests/restconf-reading.cpp b/tests/restconf-reading.cpp
+index 2898839..96c38ab 100644
+--- a/tests/restconf-reading.cpp
++++ b/tests/restconf-reading.cpp
+@@ -287,6 +287,65 @@ TEST_CASE("reading data")
+     ]
+   }
+ }
++)"});
++
++        srSess.setItem("/example:list-with-identity-key[type='example:derived-identity'][name='name']", std::nullopt);
++        srSess.setItem("/example:list-with-identity-key[type='example-types:another-derived-identity'][name='name']", std::nullopt);
++        srSess.setItem("/example:tlc/decimal-list[.='1.00']", std::nullopt);
++        srSess.applyChanges();
++
++        // dealing with keys which can have prefixes (YANG identities)
++        REQUIRE(get(RESTCONF_DATA_ROOT "/example:list-with-identity-key=derived-identity,name", {AUTH_ROOT}) == Response{200, jsonHeaders, R"({
++  "example:list-with-identity-key": [
++    {
++      "type": "derived-identity",
++      "name": "name"
++    }
++  ]
++}
++)"});
++        REQUIRE(get(RESTCONF_DATA_ROOT "/example:list-with-identity-key=example%3Aderived-identity,name", {AUTH_ROOT}) == Response{200, jsonHeaders, R"({
++  "example:list-with-identity-key": [
++    {
++      "type": "derived-identity",
++      "name": "name"
++    }
++  ]
++}
++)"});
++
++        // an identity from another module must be namespace-qualified
++        REQUIRE(get(RESTCONF_DATA_ROOT "/example:list-with-identity-key=another-derived-identity,name", {AUTH_ROOT}) == Response{404, jsonHeaders, R"({
++  "ietf-restconf:errors": {
++    "error": [
++      {
++        "error-type": "application",
++        "error-tag": "invalid-value",
++        "error-message": "No data from sysrepo."
++      }
++    ]
++  }
++}
++)"});
++
++        REQUIRE(get(RESTCONF_DATA_ROOT "/example:list-with-identity-key=example-types%3Aanother-derived-identity,name", {AUTH_ROOT}) == Response{200, jsonHeaders, R"({
++  "example:list-with-identity-key": [
++    {
++      "type": "example-types:another-derived-identity",
++      "name": "name"
++    }
++  ]
++}
++)"});
++
++        // test canonicalization of list key values; the key value was inserted as "1.00"
++        REQUIRE(get(RESTCONF_DATA_ROOT "/example:tlc/decimal-list=1", {AUTH_ROOT}) == Response{200, jsonHeaders, R"({
++  "example:tlc": {
++    "decimal-list": [
++      "1.0"
++    ]
++  }
++}
+ )"});
+     }
+ 
+diff --git a/tests/restconf-writing.cpp b/tests/restconf-writing.cpp
+index 96dbb25..8418554 100644
+--- a/tests/restconf-writing.cpp
++++ b/tests/restconf-writing.cpp
+@@ -389,6 +389,88 @@ TEST_CASE("writing data")
+                 REQUIRE(put(RESTCONF_DATA_ROOT "/example:tlc/list=libyang/nested=11,12,13", {AUTH_ROOT, CONTENT_TYPE_JSON}, R"({"example:nested": [{"first": "11", "second": 12, "third": "13"}]}]})") == Response{201, noContentTypeHeaders, ""});
+             }
+ 
++            SECTION("Test canonicalization of keys")
++            {
++                EXPECT_CHANGE(
++                    CREATED("/example:list-with-identity-key[type='example:derived-identity'][name='name']", std::nullopt),
++                    CREATED("/example:list-with-identity-key[type='example:derived-identity'][name='name']/type", "example:derived-identity"),
++                    CREATED("/example:list-with-identity-key[type='example:derived-identity'][name='name']/name", "name"),
++                    CREATED("/example:list-with-identity-key[type='example:derived-identity'][name='name']/text", "blabla"));
++                REQUIRE(put(RESTCONF_DATA_ROOT "/example:list-with-identity-key=derived-identity,name", {AUTH_ROOT, CONTENT_TYPE_JSON}, R"({"example:list-with-identity-key": [{"name": "name", "type": "derived-identity", "text": "blabla"}]}]})") == Response{201, noContentTypeHeaders, ""});
++
++                // prefixed in the URI, not prefixed in the data
++                EXPECT_CHANGE(
++                    MODIFIED("/example:list-with-identity-key[type='example:derived-identity'][name='name']/text", "hehe"));
++                REQUIRE(put(RESTCONF_DATA_ROOT "/example:list-with-identity-key=example%3Aderived-identity,name", {AUTH_ROOT, CONTENT_TYPE_JSON}, R"({"example:list-with-identity-key": [{"name": "name", "type": "derived-identity", "text": "hehe"}]}]})") == Response{204, noContentTypeHeaders, ""});
++
++
++                REQUIRE(put(RESTCONF_DATA_ROOT "/example:list-with-identity-key=another-derived-identity,name", {AUTH_ROOT, CONTENT_TYPE_JSON}, R"({"example:list-with-identity-key": [{"name": "name", "type": "another-derived-identity", "text": "blabla"}]}]})") == Response{400, jsonHeaders, R"({
++  "ietf-restconf:errors": {
++    "error": [
++      {
++        "error-type": "protocol",
++        "error-tag": "invalid-value",
++        "error-message": "Validation failure: Can't parse data: LY_EVALID"
++      }
++    ]
++  }
++}
++)"});
++
++                EXPECT_CHANGE(
++                    CREATED("/example:list-with-identity-key[type='example-types:another-derived-identity'][name='name']", std::nullopt),
++                    CREATED("/example:list-with-identity-key[type='example-types:another-derived-identity'][name='name']/type", "example-types:another-derived-identity"),
++                    CREATED("/example:list-with-identity-key[type='example-types:another-derived-identity'][name='name']/name", "name"),
++                    CREATED("/example:list-with-identity-key[type='example-types:another-derived-identity'][name='name']/text", "blabla"));
++                REQUIRE(put(RESTCONF_DATA_ROOT "/example:list-with-identity-key=example-types%3Aanother-derived-identity,name", {AUTH_ROOT, CONTENT_TYPE_JSON}, R"({"example:list-with-identity-key": [{"name": "name", "type": "example-types:another-derived-identity", "text": "blabla"}]}]})") == Response{201, noContentTypeHeaders, ""});
++
++                // missing namespace in the data
++                REQUIRE(put(RESTCONF_DATA_ROOT "/example:list-with-identity-key=example-types%3Aanother-derived-identity,name", {AUTH_ROOT, CONTENT_TYPE_JSON}, R"({"example:list-with-identity-key": [{"name": "name", "type": "another-derived-identity", "text": "blabla"}]}]})") == Response{400, jsonHeaders, R"({
++  "ietf-restconf:errors": {
++    "error": [
++      {
++        "error-type": "protocol",
++        "error-tag": "invalid-value",
++        "error-message": "Validation failure: Can't parse data: LY_EVALID"
++      }
++    ]
++  }
++}
++)"});
++
++                EXPECT_CHANGE(CREATED("/example:leaf-list-with-identity-key[.='example-types:another-derived-identity']", "example-types:another-derived-identity"));
++                REQUIRE(put(RESTCONF_DATA_ROOT "/example:leaf-list-with-identity-key=example-types%3Aanother-derived-identity", {AUTH_ROOT, CONTENT_TYPE_JSON}, R"({"example:leaf-list-with-identity-key": ["example-types:another-derived-identity"]})") == Response{201, noContentTypeHeaders, ""});
++
++                // missing namespace in the URI
++                EXPECT_CHANGE(CREATED("/example:leaf-list-with-identity-key[.='example:derived-identity']", "example:derived-identity"));
++                REQUIRE(put(RESTCONF_DATA_ROOT "/example:leaf-list-with-identity-key=derived-identity", {AUTH_ROOT, CONTENT_TYPE_JSON}, R"({"example:leaf-list-with-identity-key": ["example:derived-identity"]})") == Response{201, noContentTypeHeaders, ""});
++
++                REQUIRE(put(RESTCONF_DATA_ROOT "/example:leaf-list-with-identity-key=example-types%3Aanother-derived-identity", {AUTH_ROOT, CONTENT_TYPE_JSON}, R"({"example:leaf-list-with-identity-key": ["example:derived-identity"]})") == Response{400, jsonHeaders, R"({
++  "ietf-restconf:errors": {
++    "error": [
++      {
++        "error-type": "protocol",
++        "error-tag": "invalid-value",
++        "error-path": "/example:leaf-list-with-identity-key[.='example:derived-identity']",
++        "error-message": "List key mismatch between URI path ('example-types:another-derived-identity') and data ('example:derived-identity')."
++      }
++    ]
++  }
++}
++)"});
++
++                // value in the URI and in the data have the same canonical form
++                EXPECT_CHANGE(CREATED("/example:tlc/decimal-list[.='1.0']", "1.0"));
++                REQUIRE(put(RESTCONF_DATA_ROOT "/example:tlc/decimal-list=1.00", {AUTH_ROOT, CONTENT_TYPE_JSON}, R"({"example:decimal-list": ["1.0"]})") == Response{201, noContentTypeHeaders, ""});
++
++                // nothing is changed, still the same value
++                REQUIRE(put(RESTCONF_DATA_ROOT "/example:tlc/decimal-list=1.000", {AUTH_ROOT, CONTENT_TYPE_JSON}, R"({"example:decimal-list": ["1"]})") == Response{204, noContentTypeHeaders, ""});
++
++                // different value
++                EXPECT_CHANGE(CREATED("/example:tlc/decimal-list[.='1.01']", "1.01"));
++                REQUIRE(put(RESTCONF_DATA_ROOT "/example:tlc/decimal-list=1.010", {AUTH_ROOT, CONTENT_TYPE_JSON}, R"({"example:decimal-list": ["1.01"]})") == Response{201, noContentTypeHeaders, ""});
++            }
++
+             SECTION("Modify a leaf in a list entry")
+             {
+                 EXPECT_CHANGE(MODIFIED("/example:tlc/list[name='libyang']/choice1", "restconf"));
+diff --git a/tests/uri-parser.cpp b/tests/uri-parser.cpp
+index 5977afc..7320c3c 100644
+--- a/tests/uri-parser.cpp
++++ b/tests/uri-parser.cpp
+@@ -293,6 +293,7 @@ TEST_CASE("URI path parser")
+                              {"/restconf/data/example:tlc/list=eth0/choice1", "/example:tlc/list[name='eth0']/choice1", std::nullopt},
+                              {"/restconf/data/example:tlc/list=eth0/choice2", "/example:tlc/list[name='eth0']/choice2", std::nullopt},
+                              {"/restconf/data/example:tlc/list=eth0/collection=val", "/example:tlc/list[name='eth0']/collection[.='val']", std::nullopt},
++                             {"/restconf/data/example:list-with-identity-key=example-types%3Aanother-derived-identity,aaa", "/example:list-with-identity-key[type='example-types:another-derived-identity'][name='aaa']", std::nullopt},
+                              {"/restconf/data/example:tlc/status", "/example:tlc/status", std::nullopt},
+                              // container example:a has a container b inserted locally and also via an augment. Check that we return the correct one
+                              {"/restconf/data/example:a/b", "/example:a/b", std::nullopt},
+@@ -327,6 +328,7 @@ TEST_CASE("URI path parser")
+                              {"/restconf/data/example:tlc/status", "/example:tlc", {{"example", "status"}}},
+                              {"/restconf/data/example:a/example-augment:b/c", "/example:a/example-augment:b", {{"example-augment", "c"}}},
+                              {"/restconf/ds/ietf-datastores:startup/example:a/example-augment:b/c", "/example:a/example-augment:b", {{"example-augment", "c"}}},
++                             {"/restconf/data/example:list-with-identity-key=example-types%3Aanother-derived-identity,aaa", "", {{"example", "list-with-identity-key"}, {"example-types:another-derived-identity", "aaa"}}},
+                          }) {
+                         CAPTURE(httpMethod);
+                         CAPTURE(expectedRequestType);
+diff --git a/tests/yang/example-types.yang b/tests/yang/example-types.yang
+new file mode 100644
+index 0000000..5bc2fb0
+--- /dev/null
++++ b/tests/yang/example-types.yang
+@@ -0,0 +1,13 @@
++module example-types {
++  yang-version 1.1;
++  namespace "http://example.tld/example-types";
++  prefix ex-types;
++
++  import example {
++    prefix ex;
++  }
++
++  identity another-derived-identity {
++    base ex:base-identity;
++  }
++}
+diff --git a/tests/yang/example.yang b/tests/yang/example.yang
+index df1301f..c46273c 100644
+--- a/tests/yang/example.yang
++++ b/tests/yang/example.yang
+@@ -6,6 +6,13 @@ module example {
+   feature f1 { }
+   feature f2 { }
+ 
++  identity base-identity {
++  }
++
++  identity derived-identity {
++    base base-identity;
++  }
++
+   leaf top-level-leaf { type string; }
+   leaf top-level-leaf2 { type string; default "x"; }
+ 
+@@ -50,6 +57,11 @@ module example {
+       config false;
+       leaf name { type string; }
+     }
++    leaf-list decimal-list {
++        type decimal64 {
++            fraction-digits 2;
++        }
++    }
+     leaf status {
+       type enumeration {
+         enum on { }
+@@ -109,6 +121,19 @@ module example {
+     }
+   }
+ 
++  list list-with-identity-key {
++    key "type name";
++    leaf type {
++      type identityref { base base-identity; }
++    }
++    leaf name { type string; }
++    leaf text { type string; }
++  }
++
++  leaf-list leaf-list-with-identity-key {
++    type identityref { base base-identity; }
++  }
++
+   rpc test-rpc {
+     input {
+       leaf i {
+-- 
+2.43.0
+

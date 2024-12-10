@@ -1,0 +1,205 @@
+From 60eac2b2d60f8f1918a0914272975dd53f527c01 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Tom=C3=A1=C5=A1=20Pecka?= <tomas.pecka@cesnet.cz>
+Date: Mon, 2 Dec 2024 19:36:10 +0100
+Subject: [PATCH 12/20] tests: extend clientRequest wrappers interface and use
+ it
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Addiva Elektronik
+
+This is a preparation for refactoring in the next few commits.
+I will generalize the clientRequest interface to accept server
+address and port too.
+
+The head/get/put/post/... helper methods will not require those server
+port and address parameters.
+
+Change-Id: Iee54a3b3017ef9875fcd20640b74c7aa42813b9f
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ tests/aux-utils.h                | 34 +++++++++++++++++---------------
+ tests/restconf-nacm.cpp          | 14 +++++--------
+ tests/restconf-notifications.cpp | 12 +++++------
+ tests/restconf-yang-schema.cpp   | 19 ++++++++++--------
+ 4 files changed, 40 insertions(+), 39 deletions(-)
+
+diff --git a/tests/aux-utils.h b/tests/aux-utils.h
+index 7482945..9afd7bc 100644
+--- a/tests/aux-utils.h
++++ b/tests/aux-utils.h
+@@ -153,12 +153,14 @@ const ng::header_map eventStreamHeaders {
+ #define ACCESS_CONTROL_ALLOW_ORIGIN {"access-control-allow-origin", "*"}
+ #define ACCEPT_PATCH {"accept-patch", "application/yang-data+json, application/yang-data+xml, application/yang-patch+xml, application/yang-patch+json"}
+ 
++// this is a test, and the server is expected to reply "soon"
++static const boost::posix_time::time_duration CLIENT_TIMEOUT = boost::posix_time::seconds(3);
++
+ Response clientRequest(auto method,
+         auto uri,
+         const std::string& data,
+         const std::map<std::string, std::string>& headers,
+-        // this is a test, and the server is expected to reply "soon"
+-        const boost::posix_time::time_duration timeout=boost::posix_time::seconds(3))
++        const boost::posix_time::time_duration timeout = CLIENT_TIMEOUT)
+ {
+     boost::asio::io_service io_service;
+     auto client = std::make_shared<ng_client::session>(io_service, SERVER_ADDRESS, SERVER_PORT);
+@@ -199,39 +201,39 @@ Response clientRequest(auto method,
+     return {statusCode, resHeaders, oss.str()};
+ }
+ 
+-Response get(auto uri, const std::map<std::string, std::string>& headers)
++Response get(auto uri, const std::map<std::string, std::string>& headers, const boost::posix_time::time_duration timeout = CLIENT_TIMEOUT)
+ {
+-    return clientRequest("GET", uri, "", headers);
++    return clientRequest("GET", uri, "", headers, timeout);
+ }
+ 
+-Response options(auto uri, const std::map<std::string, std::string>& headers)
++Response options(auto uri, const std::map<std::string, std::string>& headers, const boost::posix_time::time_duration timeout = CLIENT_TIMEOUT)
+ {
+-    return clientRequest("OPTIONS", uri, "", headers);
++    return clientRequest("OPTIONS", uri, "", headers, timeout);
+ }
+ 
+-Response head(auto uri, const std::map<std::string, std::string>& headers)
++Response head(auto uri, const std::map<std::string, std::string>& headers, const boost::posix_time::time_duration timeout = CLIENT_TIMEOUT)
+ {
+-    return clientRequest("HEAD", uri, "", headers);
++    return clientRequest("HEAD", uri, "", headers, timeout);
+ }
+ 
+-Response put(auto xpath, const std::map<std::string, std::string>& headers, const std::string& data)
++Response put(auto xpath, const std::map<std::string, std::string>& headers, const std::string& data, const boost::posix_time::time_duration timeout = CLIENT_TIMEOUT)
+ {
+-    return clientRequest("PUT", xpath, data, headers);
++    return clientRequest("PUT", xpath, data, headers, timeout);
+ }
+ 
+-Response post(auto xpath, const std::map<std::string, std::string>& headers, const std::string& data)
++Response post(auto xpath, const std::map<std::string, std::string>& headers, const std::string& data, const boost::posix_time::time_duration timeout = CLIENT_TIMEOUT)
+ {
+-    return clientRequest("POST", xpath, data, headers);
++    return clientRequest("POST", xpath, data, headers, timeout);
+ }
+ 
+-Response patch(auto uri, const std::map<std::string, std::string>& headers, const std::string& data)
++Response patch(auto uri, const std::map<std::string, std::string>& headers, const std::string& data, const boost::posix_time::time_duration timeout = CLIENT_TIMEOUT)
+ {
+-    return clientRequest("PATCH", uri, data, headers);
++    return clientRequest("PATCH", uri, data, headers, timeout);
+ }
+ 
+-Response httpDelete(auto uri, const std::map<std::string, std::string>& headers)
++Response httpDelete(auto uri, const std::map<std::string, std::string>& headers, const boost::posix_time::time_duration timeout = CLIENT_TIMEOUT)
+ {
+-    return clientRequest("DELETE", uri, "", headers);
++    return clientRequest("DELETE", uri, "", headers, timeout);
+ }
+ 
+ auto manageNacm(sysrepo::Session session)
+diff --git a/tests/restconf-nacm.cpp b/tests/restconf-nacm.cpp
+index 68497c9..29d7723 100644
+--- a/tests/restconf-nacm.cpp
++++ b/tests/restconf-nacm.cpp
+@@ -225,9 +225,7 @@ TEST_CASE("NACM")
+         {
+             // wrong password: the server should delay its response, so let the client wait "long enough"
+             const auto start = std::chrono::steady_clock::now();
+-            REQUIRE(clientRequest("GET",
+-                        RESTCONF_DATA_ROOT "/ietf-system:system",
+-                        "",
++            REQUIRE(get(RESTCONF_DATA_ROOT "/ietf-system:system",
+                         {AUTH_WRONG_PASSWORD},
+                         boost::posix_time::seconds(5))
+                     == Response{401, jsonHeaders, R"({
+@@ -251,12 +249,10 @@ TEST_CASE("NACM")
+             // wrong password: the server should delay its response, in this case let the client terminate its
+             // request and check that the server doesn't crash
+             const auto start = std::chrono::steady_clock::now();
+-            REQUIRE_THROWS_WITH(clientRequest("GET",
+-                        RESTCONF_DATA_ROOT "/ietf-system:system",
+-                        "",
+-                        {AUTH_WRONG_PASSWORD},
+-                        boost::posix_time::milliseconds(100)),
+-                    "HTTP client error: Connection timed out");
++            REQUIRE_THROWS_WITH(get(RESTCONF_DATA_ROOT "/ietf-system:system",
++                                    {AUTH_WRONG_PASSWORD},
++                                    boost::posix_time::milliseconds(100)),
++                                "HTTP client error: Connection timed out");
+             auto processingMS = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start).count();
+             REQUIRE(processingMS <= 500);
+         }
+diff --git a/tests/restconf-notifications.cpp b/tests/restconf-notifications.cpp
+index 905ae01..d479f3c 100644
+--- a/tests/restconf-notifications.cpp
++++ b/tests/restconf-notifications.cpp
+@@ -277,18 +277,18 @@ TEST_CASE("NETCONF notification streams")
+ 
+     SECTION("Other methods")
+     {
+-        REQUIRE(clientRequest("HEAD", "/streams/NETCONF/XML", "", {AUTH_ROOT}) == Response{200, eventStreamHeaders, ""});
+-        REQUIRE(clientRequest("OPTIONS", "/streams/NETCONF/XML", "", {AUTH_ROOT}) == Response{200, Response::Headers{ACCESS_CONTROL_ALLOW_ORIGIN, {"allow", "GET, HEAD, OPTIONS"}}, ""});
++        REQUIRE(head("/streams/NETCONF/XML",  {AUTH_ROOT}) == Response{200, eventStreamHeaders, ""});
++        REQUIRE(options("/streams/NETCONF/XML", {AUTH_ROOT}) == Response{200, Response::Headers{ACCESS_CONTROL_ALLOW_ORIGIN, {"allow", "GET, HEAD, OPTIONS"}}, ""});
+ 
+         const std::multimap<std::string, std::string> headers = {
+             {"access-control-allow-origin", "*"},
+             {"allow", "GET, HEAD, OPTIONS"},
+             {"content-type", "text/plain"},
+         };
+-        REQUIRE(clientRequest("PUT", "/streams/NETCONF/XML", "", {AUTH_ROOT}) == Response{405, headers, "Method not allowed."});
+-        REQUIRE(clientRequest("POST", "/streams/NETCONF/XML", "", {AUTH_ROOT}) == Response{405, headers, "Method not allowed."});
+-        REQUIRE(clientRequest("PATCH", "/streams/NETCONF/XML", "", {AUTH_ROOT}) == Response{405, headers, "Method not allowed."});
+-        REQUIRE(clientRequest("DELETE", "/streams/NETCONF/XML", "", {AUTH_ROOT}) == Response{405, headers, "Method not allowed."});
++        REQUIRE(put("/streams/NETCONF/XML", {AUTH_ROOT}, "") == Response{405, headers, "Method not allowed."});
++        REQUIRE(post("/streams/NETCONF/XML", {AUTH_ROOT}, "") == Response{405, headers, "Method not allowed."});
++        REQUIRE(patch("/streams/NETCONF/XML", {AUTH_ROOT}, "") == Response{405, headers, "Method not allowed."});
++        REQUIRE(httpDelete("/streams/NETCONF/XML", {AUTH_ROOT}) == Response{405, headers, "Method not allowed."});
+     }
+ 
+     SECTION("Invalid URLs")
+diff --git a/tests/restconf-yang-schema.cpp b/tests/restconf-yang-schema.cpp
+index 73821e0..6e374b1 100644
+--- a/tests/restconf-yang-schema.cpp
++++ b/tests/restconf-yang-schema.cpp
+@@ -156,11 +156,14 @@ TEST_CASE("obtaining YANG schemas")
+     {
+         SECTION("unsupported methods")
+         {
+-            for (const std::string httpMethod : {"POST", "PUT", "PATCH", "DELETE"}) {
+-                CAPTURE(httpMethod);
+-                REQUIRE(clientRequest(httpMethod, YANG_ROOT "/ietf-yang-library@2019-01-04", "", {AUTH_ROOT})
+-                        == Response{405, Response::Headers{ACCESS_CONTROL_ALLOW_ORIGIN, {"allow", "GET, HEAD, OPTIONS"}}, ""});
+-            }
++            REQUIRE(post(YANG_ROOT "/ietf-yang-library@2019-01-04", {AUTH_ROOT}, "")
++                    == Response{405, Response::Headers{ACCESS_CONTROL_ALLOW_ORIGIN, {"allow", "GET, HEAD, OPTIONS"}}, ""});
++            REQUIRE(put(YANG_ROOT "/ietf-yang-library@2019-01-04", {AUTH_ROOT}, "")
++                    == Response{405, Response::Headers{ACCESS_CONTROL_ALLOW_ORIGIN, {"allow", "GET, HEAD, OPTIONS"}}, ""});
++            REQUIRE(patch(YANG_ROOT "/ietf-yang-library@2019-01-04", {AUTH_ROOT}, "")
++                    == Response{405, Response::Headers{ACCESS_CONTROL_ALLOW_ORIGIN, {"allow", "GET, HEAD, OPTIONS"}}, ""});
++            REQUIRE(httpDelete(YANG_ROOT "/ietf-yang-library@2019-01-04", {AUTH_ROOT})
++                    == Response{405, Response::Headers{ACCESS_CONTROL_ALLOW_ORIGIN, {"allow", "GET, HEAD, OPTIONS"}}, ""});
+         }
+ 
+         REQUIRE(options(YANG_ROOT "/ietf-yang-library@2019-01-04", {}) == Response{200, Response::Headers{ACCESS_CONTROL_ALLOW_ORIGIN, {"allow", "GET, HEAD, OPTIONS"}}, ""});
+@@ -190,12 +193,12 @@ TEST_CASE("obtaining YANG schemas")
+                 SECTION("auth failure")
+                 {
+                     // wrong password
+-                    REQUIRE(clientRequest("GET", YANG_ROOT "/ietf-system@2014-08-06", "", {AUTH_WRONG_PASSWORD}, boost::posix_time::seconds{5})
++                    REQUIRE(get(YANG_ROOT "/ietf-system@2014-08-06", {AUTH_WRONG_PASSWORD}, boost::posix_time::seconds{5})
+                             == Response{401, plaintextHeaders, "Access denied."});
+-                    REQUIRE(clientRequest("HEAD", YANG_ROOT "/ietf-system@2014-08-06", "", {AUTH_WRONG_PASSWORD}, boost::posix_time::seconds{5})
++                    REQUIRE(head(YANG_ROOT "/ietf-system@2014-08-06", {AUTH_WRONG_PASSWORD}, boost::posix_time::seconds{5})
+                             == Response{401, plaintextHeaders, ""});
+                     // anonymous request
+-                    REQUIRE(clientRequest("HEAD", YANG_ROOT "/ietf-system@2014-08-06", "", {FORWARDED}, boost::posix_time::seconds{5})
++                    REQUIRE(head(YANG_ROOT "/ietf-system@2014-08-06", {FORWARDED}, boost::posix_time::seconds{5})
+                             == Response{401, plaintextHeaders, ""});
+                 }
+             }
+-- 
+2.43.0
+

@@ -1,0 +1,34 @@
+From 8a233202647f24538f2bbb8fff1e38d52e3599a4 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Tom=C3=A1=C5=A1=20Pecka?= <tomas.pecka@cesnet.cz>
+Date: Wed, 16 Oct 2024 11:05:09 +0200
+Subject: [PATCH 03/20] uri: correct x3 rule class names
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Addiva Elektronik
+
+Fixes: e06d5bf ("server: parser for data resources in URI paths")
+Change-Id: Ic953e568d841032113ede1c0e896574361c0ebe2
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ src/restconf/uri.cpp | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/src/restconf/uri.cpp b/src/restconf/uri.cpp
+index b144d92..8e8dc23 100644
+--- a/src/restconf/uri.cpp
++++ b/src/restconf/uri.cpp
+@@ -37,8 +37,8 @@ const auto reservedChars = x3::lit(':') | '/' | '?' | '#' | '[' | ']' | '@' | '!
+ const auto keyValue = x3::rule<class keyValue, std::string>{"keyValue"} = *(percentEncodedChar | (x3::char_ - reservedChars));
+ 
+ const auto keyList = x3::rule<class keyList, std::vector<std::string>>{"keyList"} = keyValue % ',';
+-const auto identifier = x3::rule<class apiIdentifier, std::string>{"identifier"} = (x3::alpha | x3::char_('_')) >> *(x3::alnum | x3::char_('_') | x3::char_('-') | x3::char_('.'));
+-const auto apiIdentifier = x3::rule<class identifier, ApiIdentifier>{"apiIdentifier"} = -(identifier >> ':') >> identifier;
++const auto identifier = x3::rule<class identifier, std::string>{"identifier"} = (x3::alpha | x3::char_('_')) >> *(x3::alnum | x3::char_('_') | x3::char_('-') | x3::char_('.'));
++const auto apiIdentifier = x3::rule<class apiIdentifier, ApiIdentifier>{"apiIdentifier"} = -(identifier >> ':') >> identifier;
+ const auto listInstance = x3::rule<class keyList, PathSegment>{"listInstance"} = apiIdentifier >> -('=' >> keyList);
+ const auto fullyQualifiedApiIdentifier = x3::rule<class identifier, ApiIdentifier>{"apiIdentifier"} = identifier >> ':' >> identifier;
+ const auto fullyQualifiedListInstance = x3::rule<class keyList, PathSegment>{"listInstance"} = fullyQualifiedApiIdentifier >> -('=' >> keyList);
+-- 
+2.43.0
+

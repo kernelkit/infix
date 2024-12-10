@@ -1,0 +1,5 @@
+config BR2_PACKAGE_LUA_RESTY_LRUCACHE
+       bool "lua-resty-lrucache"
+       depends on BR2_PACKAGE_HAS_LUAINTERPRETER
+       help
+	Implements a simple LRU cache for OpenResty and the ngx_lua module.
