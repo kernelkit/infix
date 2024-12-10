@@ -10,6 +10,8 @@ int vasprintf(char **strp, const char *fmt, va_list ap);
 int runbg(char *const args[], int delay);
 int run_status(int pid);
 
+int rmrf(const char *path);
+
 int fexistf(const char *fmt, ...)
 	__attribute__ ((format (printf, 1, 2)));
 FILE *popenf(const char *type, const char *cmdf, ...)
