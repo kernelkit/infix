@@ -1,0 +1,169 @@
+From 53aa2e23ee8acc1881487f3969c2c58fb29437be Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Tom=C3=A1=C5=A1=20Pecka?= <tomas.pecka@cesnet.cz>
+Date: Mon, 2 Dec 2024 20:08:53 +0100
+Subject: [PATCH 14/20] tests: rename datastoreUtils to event_watchers
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Addiva Elektronik
+
+The next commit will move RESTCONF notification watchers there, I think
+the new name is more appropriate.
+
+Change-Id: Ia8e8cd5fe89bd827fcde4531fe801298bd6f71d2
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ CMakeLists.txt                                   | 2 +-
+ tests/{datastoreUtils.cpp => event_watchers.cpp} | 2 +-
+ tests/{datastoreUtils.h => event_watchers.h}     | 0
+ tests/pretty_printers.h                          | 2 +-
+ tests/restconf-defaults.cpp                      | 2 +-
+ tests/restconf-delete.cpp                        | 2 +-
+ tests/restconf-plain-patch.cpp                   | 2 +-
+ tests/restconf-reading.cpp                       | 2 +-
+ tests/restconf-rpc.cpp                           | 2 +-
+ tests/restconf-writing.cpp                       | 2 +-
+ tests/restconf-yang-patch.cpp                    | 2 +-
+ 11 files changed, 10 insertions(+), 10 deletions(-)
+ rename tests/{datastoreUtils.cpp => event_watchers.cpp} (98%)
+ rename tests/{datastoreUtils.h => event_watchers.h} (100%)
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index b8a41a7..22bce32 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -156,8 +156,8 @@ if(BUILD_TESTING)
+     include(cmake/SysrepoTest.cmake)
+ 
+     add_library(DoctestIntegration STATIC
+-        tests/datastoreUtils.cpp
+         tests/doctest_integration.cpp
++        tests/event_watchers.cpp
+         tests/restconf_utils.cpp
+         tests/trompeloeil_doctest.h
+         tests/wait-a-bit-longer.cpp
+diff --git a/tests/datastoreUtils.cpp b/tests/event_watchers.cpp
+similarity index 98%
+rename from tests/datastoreUtils.cpp
+rename to tests/event_watchers.cpp
+index 56d8090..c696bc5 100644
+--- a/tests/datastoreUtils.cpp
++++ b/tests/event_watchers.cpp
+@@ -1,5 +1,5 @@
+ #include "UniqueResource.h"
+-#include "datastoreUtils.h"
++#include "event_watchers.h"
+ 
+ namespace {
+ void datastoreChanges(auto session, auto& dsChangesMock, auto path)
+diff --git a/tests/datastoreUtils.h b/tests/event_watchers.h
+similarity index 100%
+rename from tests/datastoreUtils.h
+rename to tests/event_watchers.h
+diff --git a/tests/pretty_printers.h b/tests/pretty_printers.h
+index a2befeb..ce64e91 100644
+--- a/tests/pretty_printers.h
++++ b/tests/pretty_printers.h
+@@ -13,7 +13,7 @@
+ #include <optional>
+ #include <sstream>
+ #include <trompeloeil.hpp>
+-#include "datastoreUtils.h"
++#include "event_watchers.h"
+ #include "restconf/uri.h"
+ #include "restconf/uri_impl.h"
+ 
+diff --git a/tests/restconf-defaults.cpp b/tests/restconf-defaults.cpp
+index 129dae2..dd8b4da 100644
+--- a/tests/restconf-defaults.cpp
++++ b/tests/restconf-defaults.cpp
+@@ -11,7 +11,7 @@ static const auto SERVER_PORT = "10087";
+ #include <spdlog/spdlog.h>
+ #include "restconf/Server.h"
+ #include "tests/aux-utils.h"
+-#include "tests/datastoreUtils.h"
++#include "tests/event_watchers.h"
+ 
+ TEST_CASE("default handling")
+ {
+diff --git a/tests/restconf-delete.cpp b/tests/restconf-delete.cpp
+index 75a6916..4818ff3 100644
+--- a/tests/restconf-delete.cpp
++++ b/tests/restconf-delete.cpp
+@@ -10,7 +10,7 @@ static const auto SERVER_PORT = "10086";
+ #include <spdlog/spdlog.h>
+ #include "restconf/Server.h"
+ #include "tests/aux-utils.h"
+-#include "tests/datastoreUtils.h"
++#include "tests/event_watchers.h"
+ #include "tests/pretty_printers.h"
+ 
+ TEST_CASE("deleting data")
+diff --git a/tests/restconf-plain-patch.cpp b/tests/restconf-plain-patch.cpp
+index d4f3952..b550f54 100644
+--- a/tests/restconf-plain-patch.cpp
++++ b/tests/restconf-plain-patch.cpp
+@@ -10,7 +10,7 @@ static const auto SERVER_PORT = "10089";
+ #include <spdlog/spdlog.h>
+ #include "restconf/Server.h"
+ #include "tests/aux-utils.h"
+-#include "tests/datastoreUtils.h"
++#include "tests/event_watchers.h"
+ #include "tests/pretty_printers.h"
+ 
+ TEST_CASE("Plain patch")
+diff --git a/tests/restconf-reading.cpp b/tests/restconf-reading.cpp
+index d7d507b..e709486 100644
+--- a/tests/restconf-reading.cpp
++++ b/tests/restconf-reading.cpp
+@@ -11,7 +11,7 @@ static const auto SERVER_PORT = "10081";
+ #include <nghttp2/asio_http2.h>
+ #include <spdlog/spdlog.h>
+ #include "restconf/Server.h"
+-#include "tests/datastoreUtils.h"
++#include "tests/event_watchers.h"
+ 
+ TEST_CASE("reading data")
+ {
+diff --git a/tests/restconf-rpc.cpp b/tests/restconf-rpc.cpp
+index 9bc1dbc..c4229a0 100644
+--- a/tests/restconf-rpc.cpp
++++ b/tests/restconf-rpc.cpp
+@@ -10,7 +10,7 @@ static const auto SERVER_PORT = "10084";
+ #include <spdlog/spdlog.h>
+ #include "restconf/Server.h"
+ #include "tests/aux-utils.h"
+-#include "tests/datastoreUtils.h"
++#include "tests/event_watchers.h"
+ #include "tests/pretty_printers.h"
+ 
+ struct RpcCall {
+diff --git a/tests/restconf-writing.cpp b/tests/restconf-writing.cpp
+index 582a262..0932984 100644
+--- a/tests/restconf-writing.cpp
++++ b/tests/restconf-writing.cpp
+@@ -10,7 +10,7 @@ static const auto SERVER_PORT = "10083";
+ #include <spdlog/spdlog.h>
+ #include "restconf/Server.h"
+ #include "tests/aux-utils.h"
+-#include "tests/datastoreUtils.h"
++#include "tests/event_watchers.h"
+ #include "tests/pretty_printers.h"
+ 
+ TEST_CASE("writing data")
+diff --git a/tests/restconf-yang-patch.cpp b/tests/restconf-yang-patch.cpp
+index 7cc8946..2b35c59 100644
+--- a/tests/restconf-yang-patch.cpp
++++ b/tests/restconf-yang-patch.cpp
+@@ -10,7 +10,7 @@ static const auto SERVER_PORT = "10090";
+ #include <spdlog/spdlog.h>
+ #include "restconf/Server.h"
+ #include "tests/aux-utils.h"
+-#include "tests/datastoreUtils.h"
++#include "tests/event_watchers.h"
+ #include "tests/pretty_printers.h"
+ 
+ TEST_CASE("YANG patch")
+-- 
+2.43.0
+

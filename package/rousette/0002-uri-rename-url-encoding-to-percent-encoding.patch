@@ -1,0 +1,50 @@
+From 070cffb48fda789910581930265d4624a7213e1b Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Tom=C3=A1=C5=A1=20Pecka?= <tomas.pecka@cesnet.cz>
+Date: Wed, 16 Oct 2024 11:02:45 +0200
+Subject: [PATCH 02/20] uri: rename url-encoding to percent-encoding
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Addiva Elektronik
+
+RFC 3986 [1] calls it the percent-encoding, let's be consistent.
+
+[1] https://datatracker.ietf.org/doc/html/rfc3986
+
+Change-Id: Iee8b76c980b2694b6643e627b462f8bfc2c21c45
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ src/restconf/uri.cpp | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/src/restconf/uri.cpp b/src/restconf/uri.cpp
+index 6e27168..b144d92 100644
+--- a/src/restconf/uri.cpp
++++ b/src/restconf/uri.cpp
+@@ -29,12 +29,12 @@ auto add = [](auto& ctx) {
+     char c = std::tolower(_attr(ctx));
+     _val(ctx) = _val(ctx) * 16 + (c >= 'a' ? c - 'a' + 10 : c - '0');
+ };
+-const auto urlEncodedChar = x3::rule<class urlEncodedChar, unsigned>{"urlEncodedChar"} = x3::lit('%')[set_zero] >> x3::xdigit[add] >> x3::xdigit[add];
++const auto percentEncodedChar = x3::rule<class percentEncodedChar, unsigned>{"percentEncodedChar"} = x3::lit('%')[set_zero] >> x3::xdigit[add] >> x3::xdigit[add];
+ 
+ /* reserved characters according to RFC 3986, sec. 2.2 with '%' added. The '%' character is not specified as reserved but it effectively is because
+  * "Percent sign serves as the indicator for percent-encoded octets, it must be percent-encoded (...)" [RFC 3986, sec. 2.4]. */
+ const auto reservedChars = x3::lit(':') | '/' | '?' | '#' | '[' | ']' | '@' | '!' | '$' | '&' | '\'' | '(' | ')' | '*' | '+' | ',' | ',' | ';' | '=' | '%';
+-const auto keyValue = x3::rule<class keyValue, std::string>{"keyValue"} = *(urlEncodedChar | (x3::char_ - reservedChars));
++const auto keyValue = x3::rule<class keyValue, std::string>{"keyValue"} = *(percentEncodedChar | (x3::char_ - reservedChars));
+ 
+ const auto keyList = x3::rule<class keyList, std::vector<std::string>>{"keyList"} = keyValue % ',';
+ const auto identifier = x3::rule<class apiIdentifier, std::string>{"identifier"} = (x3::alpha | x3::char_('_')) >> *(x3::alnum | x3::char_('_') | x3::char_('-') | x3::char_('.'));
+@@ -117,7 +117,7 @@ const auto dateAndTime = x3::rule<class dateAndTime, std::string>{"dateAndTime"}
+     x3::repeat(4)[x3::digit] >> x3::char_('-') >> x3::repeat(2)[x3::digit] >> x3::char_('-') >> x3::repeat(2)[x3::digit] >> x3::char_('T') >>
+     x3::repeat(2)[x3::digit] >> x3::char_(':') >> x3::repeat(2)[x3::digit] >> x3::char_(':') >> x3::repeat(2)[x3::digit] >> -(x3::char_('.') >> +x3::digit) >>
+     (x3::char_('Z') | (-(x3::char_('+')|x3::char_('-')) >> x3::repeat(2)[x3::digit] >> x3::char_(':') >> x3::repeat(2)[x3::digit]));
+-const auto filter = x3::rule<class filter, std::string>{"filter"} = +(urlEncodedChar | (x3::char_ - '&'));
++const auto filter = x3::rule<class filter, std::string>{"filter"} = +(percentEncodedChar | (x3::char_ - '&'));
+ const auto depthParam = x3::rule<class depthParam, queryParams::QueryParamValue>{"depthParam"} = x3::uint_[validDepthValues] | (x3::string("unbounded") >> x3::attr(queryParams::UnboundedDepth{}));
+ const auto queryParamPair = x3::rule<class queryParamPair, std::pair<std::string, queryParams::QueryParamValue>>{"queryParamPair"} =
+         (x3::string("depth") >> "=" >> depthParam) |
+-- 
+2.43.0
+

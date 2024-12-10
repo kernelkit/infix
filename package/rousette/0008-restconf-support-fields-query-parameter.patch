@@ -1,0 +1,721 @@
+From 6819561d97e38569c319e36ca2e99768036b4032 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Tom=C3=A1=C5=A1=20Pecka?= <tomas.pecka@cesnet.cz>
+Date: Wed, 21 Aug 2024 19:18:08 +0200
+Subject: [PATCH 08/20] restconf: support fields query parameter
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Addiva Elektronik
+
+This patch adds support for fields query parameter [1].
+
+I had to modify the original grammar for fields parameter a bit to
+allow for the lowest precedence while parsing `;` expression. Also we
+allow for more strings than the original grammar specifies to make the
+syntax more user friendly.
+
+The fields expression is parsed into an AST which corresponds 1:1
+to the parse tree. The tree representing the expression could be
+simplified but I chose not to as it would complicate the code even
+more (although the translation to XPath would be simpler).
+The tree is then transformed into a valid XPath 1.0 expression.
+
+The XPath 1.0 expressions are limited and I could not find a way how to
+transform the fields string into a valid XPath. I realized that the
+easiest way will be to "unwrap" the expression into individual paths
+and join them via union operator.
+For example, input `a(b;c/d)` would result into `a/b | a/c/d` XPath.
+
+[1] https://datatracker.ietf.org/doc/html/rfc8040#section-4.8.3
+[2] https://www.w3.org/TR/1999/REC-xpath-19991116/#section-Expressions
+
+Change-Id: I3c96bbcf49b38ecf08f56912afd3a8f50c15cd44
+Signed-off-by: Jan Kundrát <jan.kundrat@cesnet.cz>
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ README.md                  |   1 -
+ src/restconf/Server.cpp    |   9 ++-
+ src/restconf/uri.cpp       |  95 +++++++++++++++++++++++-
+ src/restconf/uri.h         |  57 ++++++++++++++-
+ src/restconf/uri_impl.h    |   4 ++
+ tests/pretty_printers.h    |  23 ++++++
+ tests/restconf-reading.cpp | 144 ++++++++++++++++++++++++++++++++++++-
+ tests/restconf-writing.cpp |  12 +++-
+ tests/uri-parser.cpp       |  93 ++++++++++++++++++++++++
+ tests/yang/example.yang    |  10 +++
+ 10 files changed, 438 insertions(+), 10 deletions(-)
+
+diff --git a/README.md b/README.md
+index 1689584..3fbfd21 100644
+--- a/README.md
++++ b/README.md
+@@ -22,7 +22,6 @@ This is a [RESTCONF](https://datatracker.ietf.org/doc/html/rfc8040.html) server
+         - TLS certificate authentication (see [Access control model](#access-control-model) below)
+         - the [`Last-Modified`](https://datatracker.ietf.org/doc/html/rfc8040.html#section-3.4.1.1) and [`ETag`](https://datatracker.ietf.org/doc/html/rfc8040.html#section-3.4.1.2) headers for [edit collision prevention](https://datatracker.ietf.org/doc/html/rfc8040.html#section-3.4.1) in the datastore resource
+         - the [`Last-Modified`](https://datatracker.ietf.org/doc/html/rfc8040.html#section-3.5.1) and [`ETag`](https://datatracker.ietf.org/doc/html/rfc8040.html#section-3.5.2) headers in the data resource
+-        - The [`fields`](https://datatracker.ietf.org/doc/html/rfc8040.html#section-4.8.3) query parameter
+ - [NMDA](https://datatracker.ietf.org/doc/html/rfc8527.html) datastore access
+     - no [`with-operational-default`](https://datatracker.ietf.org/doc/html/rfc8527#section-3.2.1) capability
+     - no [`with-origin`](https://datatracker.ietf.org/doc/html/rfc8527#section-3.2.2) capability
+diff --git a/src/restconf/Server.cpp b/src/restconf/Server.cpp
+index b515d66..7c66ea4 100644
+--- a/src/restconf/Server.cpp
++++ b/src/restconf/Server.cpp
+@@ -834,6 +834,7 @@ Server::Server(sysrepo::Connection conn, const std::string& address, const std::
+     m_monitoringSession.setItem("/ietf-restconf-monitoring:restconf-state/capabilities/capability[2]", "urn:ietf:params:restconf:capability:depth:1.0");
+     m_monitoringSession.setItem("/ietf-restconf-monitoring:restconf-state/capabilities/capability[3]", "urn:ietf:params:restconf:capability:with-defaults:1.0");
+     m_monitoringSession.setItem("/ietf-restconf-monitoring:restconf-state/capabilities/capability[4]", "urn:ietf:params:restconf:capability:filter:1.0");
++    m_monitoringSession.setItem("/ietf-restconf-monitoring:restconf-state/capabilities/capability[5]", "urn:ietf:params:restconf:capability:fields:1.0");
+     m_monitoringSession.applyChanges();
+ 
+     m_monitoringOperSub = m_monitoringSession.onOperGet(
+@@ -1017,7 +1018,13 @@ Server::Server(sysrepo::Connection conn, const std::string& address, const std::
+                         }
+                     }
+ 
+-                    if (auto data = sess.getData(restconfRequest.path, maxDepth, getOptions, timeout); data) {
++                    auto xpath = restconfRequest.path;
++                    if (auto it = restconfRequest.queryParams.find("fields"); it != restconfRequest.queryParams.end()) {
++                        auto fields = std::get<queryParams::fields::Expr>(it->second);
++                        xpath = fieldsToXPath(sess.getContext(), xpath == "/*" ? "" : xpath, fields);
++                    }
++
++                    if (auto data = sess.getData(xpath, maxDepth, getOptions, timeout); data) {
+                         res.write_head(
+                             200,
+                             {
+diff --git a/src/restconf/uri.cpp b/src/restconf/uri.cpp
+index ac399b7..da1e3a5 100644
+--- a/src/restconf/uri.cpp
++++ b/src/restconf/uri.cpp
+@@ -4,7 +4,10 @@
+  * Written by Tomáš Pecka <tomas.pecka@cesnet.cz>
+  */
+ 
++#include <boost/algorithm/string/join.hpp>
++#include <boost/fusion/adapted/struct/adapt_struct.hpp>
+ #include <boost/fusion/include/std_pair.hpp>
++#include <boost/spirit/home/x3/support/ast/variant.hpp>
+ #include <experimental/iterator>
+ #include <libyang-cpp/Enum.hpp>
+ #include <map>
+@@ -112,6 +115,28 @@ struct insertTable: x3::symbols<queryParams::QueryParamValue> {
+     }
+ } const insertParam;
+ 
++/* This grammar is implemented a little bit differently than the RFC states. The ABNF from RFC is:
++ *
++ *     fields-expr = path "(" fields-expr ")" / path ";" fields-expr / path
++ *     path = api-identifier [ "/" path ]
++ *
++ * Firstly, the grammar from the RFC doesn't allow for expression like `a(b);c` but allows for `c;a(b)`.
++ * I think both should be valid (as user I would expect that the order of such expression does not matter).
++ * Hence our grammar allows for more strings than the grammar from RFC.
++ * This issue was already raised on IETF mailing list: https://mailarchive.ietf.org/arch/msg/netconf/TYBpTE_ELzzMOe6amrw6fQF07nE/
++ * but neither a formal errata was issued nor there was a resolution on the mailing list.
++ */
++const auto fieldsExpr = x3::rule<class fieldsExpr, queryParams::fields::Expr>{"fieldsExpr"};
++const auto fieldsSemi = x3::rule<class fieldsSemiExpr, queryParams::fields::SemiExpr>{"fieldsSemi"};
++const auto fieldsSlash = x3::rule<class fieldsSlashExpr, queryParams::fields::SlashExpr>{"fieldsSlash"};
++const auto fieldsParen = x3::rule<class fieldsParen, queryParams::fields::ParenExpr>{"fieldsParen"};
++
++const auto fieldsSemi_def = fieldsParen >> -(x3::lit(";") >> fieldsSemi);
++const auto fieldsParen_def = fieldsSlash >> -(x3::lit("(") >> fieldsExpr >> x3::lit(")"));
++const auto fieldsSlash_def = apiIdentifier >> -(x3::lit("/") >> fieldsSlash);
++const auto fieldsExpr_def = fieldsSemi;
++BOOST_SPIRIT_DEFINE(fieldsParen, fieldsExpr, fieldsSlash, fieldsSemi);
++
+ // early sanity check, this timestamp will be parsed by libyang::fromYangTimeFormat anyways
+ const auto dateAndTime = x3::rule<class dateAndTime, std::string>{"dateAndTime"} =
+     x3::repeat(4)[x3::digit] >> x3::char_('-') >> x3::repeat(2)[x3::digit] >> x3::char_('-') >> x3::repeat(2)[x3::digit] >> x3::char_('T') >>
+@@ -127,7 +152,8 @@ const auto queryParamPair = x3::rule<class queryParamPair, std::pair<std::string
+         (x3::string("point") >> "=" >> uriPath) |
+         (x3::string("filter") >> "=" >> filter) |
+         (x3::string("start-time") >> "=" >> dateAndTime) |
+-        (x3::string("stop-time") >> "=" >> dateAndTime);
++        (x3::string("stop-time") >> "=" >> dateAndTime) |
++        (x3::string("fields") >> "=" >> fieldsExpr);
+ 
+ const auto queryParamGrammar = x3::rule<class grammar, queryParams::QueryParams>{"queryParamGrammar"} = queryParamPair % "&" | x3::eps;
+ 
+@@ -384,7 +410,7 @@ void validateQueryParameters(const std::multimap<std::string, queryParams::Query
+         }
+     }
+ 
+-    for (const auto& param : {"depth", "with-defaults", "content"}) {
++    for (const auto& param : {"depth", "with-defaults", "content", "fields"}) {
+         if (auto it = params.find(param); it != params.end() && httpMethod != "GET" && httpMethod != "HEAD") {
+             throw ErrorResponse(400, "protocol", "invalid-value", "Query parameter '"s + param + "' can be used only with GET and HEAD methods");
+         }
+@@ -658,4 +684,69 @@ std::set<std::string> allowedHttpMethodsForUri(const libyang::Context& ctx, cons
+ 
+     return allowedHttpMethods;
+ }
++
++/** @brief Traverses the AST of the fields input expression and collects all the possible paths
++ *
++ * @param expr The fields expressions
++ * @param currentPath The current path in the AST, it serves as a stack for the DFS
++ * @param output The collection of all collected paths
++ * @param end If this is the terminal node, i.e., the last node in the expression. This is needed for the correct handling of the leafs under paren expression, which does not "split" the paths but rather concatenates.
++ * */
++void fieldsToXPath(const queryParams::fields::Expr& expr, std::vector<std::string>& currentPath, std::vector<std::string>& output, bool end = false)
++{
++    boost::apply_visitor([&](auto&& node) {
++        using T = std::decay_t<decltype(node)>;
++
++        if constexpr (std::is_same_v<T, queryParams::fields::ParenExpr>) {
++            // the paths from left and right subtree are concatenated, i.e., the nodes we collect in the left tree
++            // are joined together with the nodes from the right tree
++            fieldsToXPath(node.lhs, currentPath, output, !node.rhs.has_value());
++            if (node.rhs) {
++                fieldsToXPath(*node.rhs, currentPath, output, end);
++            }
++        } else if constexpr (std::is_same_v<T, queryParams::fields::SemiExpr>) {
++            // the two paths are now independent and nodes from left subtree do not affect the right subtree
++            // hence we need to copy the current path
++            auto pathCopy = currentPath;
++            fieldsToXPath(node.lhs, currentPath, output, !node.rhs.has_value());
++            if (node.rhs) {
++                fieldsToXPath(*node.rhs, pathCopy, output, false);
++            }
++        } else if constexpr (std::is_same_v<T, queryParams::fields::SlashExpr>) {
++            // the paths from left and right subtree are concatenated, i.e., the the nodes we collect in the left tree
++            // are joined together with the nodes from the right tree, but if this is the terminal node, we need to
++            // add it to the collection of all the gathered paths
++            currentPath.push_back(node.lhs.name());
++
++            if (node.rhs) {
++                fieldsToXPath(*node.rhs, currentPath, output, end);
++            } else if (end) {
++                output.emplace_back(boost::algorithm::join(currentPath, "/"));
++            }
++        }
++    }, expr);
++}
++
++/** @brief Translates the fields expression into a XPath expression and checks for schema validity of the resulting nodes
++ *
++ * The expressions are "unwrapped" into a linear structure and then a union of such paths is made.
++ * E.g., the expression "a(b;c)" is translated into "a/b | a/c".
++ * */
++std::string fieldsToXPath(const libyang::Context& ctx, const std::string& prefix, const queryParams::fields::Expr& expr)
++{
++    std::vector<std::string> currentPath{prefix};
++    std::vector<std::string> paths;
++
++    fieldsToXPath(expr, currentPath, paths);
++
++    for (auto& xpath : paths) {
++        try {
++            validateMethodForNode("GET", impl::URIPrefix{impl::URIPrefix::Type::BasicRestconfData}, ctx.findPath(xpath));
++        } catch (const libyang::Error& e) {
++            throw ErrorResponse(400, "application", "operation-failed", "Can't find schema node for '" + xpath + "'");
++        }
++    }
++
++    return boost::algorithm::join(paths, " | ");
++}
+ }
+diff --git a/src/restconf/uri.h b/src/restconf/uri.h
+index 5e079ef..f6df724 100644
+--- a/src/restconf/uri.h
++++ b/src/restconf/uri.h
+@@ -6,6 +6,7 @@
+ 
+ #pragma once
+ #include <boost/optional.hpp>
++#include <boost/variant.hpp>
+ #include <libyang-cpp/Module.hpp>
+ #include <libyang-cpp/SchemaNode.hpp>
+ #include <map>
+@@ -101,6 +102,57 @@ struct After {
+ using PointParsed = std::vector<PathSegment>;
+ }
+ 
++namespace fields {
++struct ParenExpr;
++struct SemiExpr;
++struct SlashExpr;
++
++using Expr = boost::variant<boost::recursive_wrapper<SlashExpr>, boost::recursive_wrapper<ParenExpr>, boost::recursive_wrapper<SemiExpr>>;
++
++struct ParenExpr {
++    Expr lhs;
++    boost::optional<Expr> rhs;
++
++    ParenExpr() = default;
++    ParenExpr(const Expr& lhs, const Expr& rhs) : ParenExpr(lhs, boost::optional<Expr>(rhs)) {}
++    ParenExpr(const Expr& lhs, const boost::optional<Expr>& rhs = boost::none)
++        : lhs(lhs)
++        , rhs(rhs)
++    {
++    }
++
++    bool operator==(const ParenExpr&) const = default;
++};
++struct SemiExpr {
++    Expr lhs;
++    boost::optional<Expr> rhs;
++
++    SemiExpr() = default;
++    SemiExpr(const Expr& lhs, const Expr& rhs) : SemiExpr(lhs, boost::optional<Expr>(rhs)) {}
++    SemiExpr(const Expr& lhs, const boost::optional<Expr>& rhs = boost::none)
++        : lhs(lhs)
++        , rhs(rhs)
++    {
++    }
++
++    bool operator==(const SemiExpr&) const = default;
++};
++struct SlashExpr {
++    ApiIdentifier lhs;
++    boost::optional<Expr> rhs;
++
++    SlashExpr() = default;
++    SlashExpr(const ApiIdentifier& lhs, const Expr& rhs) : SlashExpr(lhs, boost::optional<Expr>(rhs)) {}
++    SlashExpr(const ApiIdentifier& lhs, const boost::optional<Expr>& rhs = boost::none)
++        : lhs(lhs)
++        , rhs(rhs)
++    {
++    }
++
++    bool operator==(const SlashExpr&) const = default;
++};
++}
++
+ using QueryParamValue = std::variant<
+     UnboundedDepth,
+     unsigned int,
+@@ -116,7 +168,8 @@ using QueryParamValue = std::variant<
+     insert::Last,
+     insert::Before,
+     insert::After,
+-    insert::PointParsed>;
++    insert::PointParsed,
++    fields::Expr>;
+ using QueryParams = std::multimap<std::string, QueryParamValue>;
+ }
+ 
+@@ -159,4 +212,6 @@ std::vector<PathSegment> asPathSegments(const std::string& uriPath);
+ std::optional<std::variant<libyang::Module, libyang::SubmoduleParsed>> asYangModule(const libyang::Context& ctx, const std::string& uriPath);
+ RestconfStreamRequest asRestconfStreamRequest(const std::string& httpMethod, const std::string& uriPath, const std::string& uriQueryString);
+ std::set<std::string> allowedHttpMethodsForUri(const libyang::Context& ctx, const std::string& uriPath);
++
++std::string fieldsToXPath(const libyang::Context& ctx, const std::string& prefix, const queryParams::fields::Expr& expr);
+ }
+diff --git a/src/restconf/uri_impl.h b/src/restconf/uri_impl.h
+index 8a2e166..2bcdb3f 100644
+--- a/src/restconf/uri_impl.h
++++ b/src/restconf/uri_impl.h
+@@ -65,3 +65,7 @@ BOOST_FUSION_ADAPT_STRUCT(rousette::restconf::impl::URIPath, prefix, segments);
+ BOOST_FUSION_ADAPT_STRUCT(rousette::restconf::impl::YangModule, name, revision);
+ BOOST_FUSION_ADAPT_STRUCT(rousette::restconf::PathSegment, apiIdent, keys);
+ BOOST_FUSION_ADAPT_STRUCT(rousette::restconf::ApiIdentifier, prefix, identifier);
++
++BOOST_FUSION_ADAPT_STRUCT(rousette::restconf::queryParams::fields::ParenExpr, lhs, rhs);
++BOOST_FUSION_ADAPT_STRUCT(rousette::restconf::queryParams::fields::SlashExpr, lhs, rhs);
++BOOST_FUSION_ADAPT_STRUCT(rousette::restconf::queryParams::fields::SemiExpr, lhs, rhs);
+diff --git a/tests/pretty_printers.h b/tests/pretty_printers.h
+index ec87250..a2befeb 100644
+--- a/tests/pretty_printers.h
++++ b/tests/pretty_printers.h
+@@ -8,6 +8,7 @@
+ #pragma once
+ 
+ #include "trompeloeil_doctest.h"
++#include <boost/variant.hpp>
+ #include <experimental/iterator>
+ #include <optional>
+ #include <sstream>
+@@ -159,6 +160,28 @@ struct StringMaker<rousette::restconf::queryParams::QueryParamValue> {
+             [](const rousette::restconf::queryParams::insert::PointParsed& p) -> std::string {
+                 return ("PointParsed{" + StringMaker<decltype(p)>::convert(p) + "}").c_str();
+             },
++            [](const rousette::restconf::queryParams::fields::Expr& expr) -> std::string {
++                return boost::apply_visitor([&](auto&& next) {
++                    using T = std::decay_t<decltype(next)>;
++                    std::string res;
++
++                    if constexpr (std::is_same_v<T, rousette::restconf::queryParams::fields::ParenExpr> || std::is_same_v<T, rousette::restconf::queryParams::fields::SemiExpr>) {
++                        if constexpr (std::is_same_v<T, rousette::restconf::queryParams::fields::ParenExpr>) {
++                            res = "ParenExpr{";
++                        } else {
++                            res = "SemiExpr{";
++                        }
++                        res += StringMaker<rousette::restconf::queryParams::QueryParamValue>::convert(next.lhs).c_str();
++                    } else if constexpr (std::is_same_v<T, rousette::restconf::queryParams::fields::SlashExpr>) {
++                        res = "SlashExpr{" + next.lhs.name();
++                    }
++
++                    if (next.rhs) {
++                        res += std::string(", ") + StringMaker<rousette::restconf::queryParams::QueryParamValue>::convert(*next.rhs).c_str();
++                    }
++                    return res += "}";
++                }, expr);
++            },
+         }, obj).c_str();
+     }
+ };
+diff --git a/tests/restconf-reading.cpp b/tests/restconf-reading.cpp
+index 2ded3f0..d7d507b 100644
+--- a/tests/restconf-reading.cpp
++++ b/tests/restconf-reading.cpp
+@@ -72,7 +72,8 @@ TEST_CASE("reading data")
+         "urn:ietf:params:restconf:capability:defaults:1.0?basic-mode=explicit",
+         "urn:ietf:params:restconf:capability:depth:1.0",
+         "urn:ietf:params:restconf:capability:with-defaults:1.0",
+-        "urn:ietf:params:restconf:capability:filter:1.0"
++        "urn:ietf:params:restconf:capability:filter:1.0",
++        "urn:ietf:params:restconf:capability:fields:1.0"
+       ]
+     },
+     "streams": {
+@@ -116,7 +117,8 @@ TEST_CASE("reading data")
+         "urn:ietf:params:restconf:capability:defaults:1.0?basic-mode=explicit",
+         "urn:ietf:params:restconf:capability:depth:1.0",
+         "urn:ietf:params:restconf:capability:with-defaults:1.0",
+-        "urn:ietf:params:restconf:capability:filter:1.0"
++        "urn:ietf:params:restconf:capability:filter:1.0",
++        "urn:ietf:params:restconf:capability:fields:1.0"
+       ]
+     },
+     "streams": {
+@@ -672,7 +674,8 @@ TEST_CASE("reading data")
+         "urn:ietf:params:restconf:capability:defaults:1.0?basic-mode=explicit",
+         "urn:ietf:params:restconf:capability:depth:1.0",
+         "urn:ietf:params:restconf:capability:with-defaults:1.0",
+-        "urn:ietf:params:restconf:capability:filter:1.0"
++        "urn:ietf:params:restconf:capability:filter:1.0",
++        "urn:ietf:params:restconf:capability:fields:1.0"
+       ]
+     },
+     "streams": {
+@@ -894,6 +897,141 @@ TEST_CASE("reading data")
+ )"});
+     }
+ 
++    SECTION("fields filtering")
++    {
++        srSess.switchDatastore(sysrepo::Datastore::Running);
++        srSess.setItem("/example:tlc/list[name='blabla']/choice1", "c1");
++        srSess.setItem("/example:tlc/list[name='blabla']/collection[.='42']", std::nullopt);
++        srSess.setItem("/example:tlc/list[name='blabla']/nested[first='1'][second='2'][third='3']/fourth", "4");
++        srSess.setItem("/example:tlc/list[name='blabla']/nested[first='1'][second='2'][third='3']/data/a", "a");
++        srSess.setItem("/example:tlc/list[name='blabla']/nested[first='1'][second='2'][third='3']/data/other-data/b", "b");
++        srSess.setItem("/example:tlc/list[name='blabla']/nested[first='1'][second='2'][third='3']/data/other-data/c", "c");
++        srSess.applyChanges();
++
++        REQUIRE(get(RESTCONF_DATA_ROOT "/example:tlc/list=blabla?fields=choice1;collection", {}) == Response{200, jsonHeaders, R"({
++  "example:tlc": {
++    "list": [
++      {
++        "name": "blabla",
++        "collection": [
++          42
++        ],
++        "choice1": "c1"
++      }
++    ]
++  }
++}
++)"});
++        REQUIRE(get(RESTCONF_DATA_ROOT "/example:tlc/list=blabla?fields=choice1;choice2;nested/data(a;other-data/b)", {}) == Response{200, jsonHeaders, R"({
++  "example:tlc": {
++    "list": [
++      {
++        "name": "blabla",
++        "nested": [
++          {
++            "first": "1",
++            "second": 2,
++            "third": "3",
++            "data": {
++              "a": "a",
++              "other-data": {
++                "b": "b"
++              }
++            }
++          }
++        ],
++        "choice1": "c1"
++      }
++    ]
++  }
++}
++)"});
++        REQUIRE(get(RESTCONF_DATA_ROOT "/example:tlc/list=blabla?fields=hehe", {}) == Response{400, jsonHeaders, R"({
++  "ietf-restconf:errors": {
++    "error": [
++      {
++        "error-type": "application",
++        "error-tag": "operation-failed",
++        "error-message": "Can't find schema node for '/example:tlc/list[name='blabla']/hehe'"
++      }
++    ]
++  }
++}
++)"});
++        REQUIRE(get(RESTCONF_DATA_ROOT "/example:tlc/list=blabla?fields=nested/data&depth=1", {}) == Response{200, jsonHeaders, R"({
++  "example:tlc": {
++    "list": [
++      {
++        "name": "blabla",
++        "nested": [
++          {
++            "first": "1",
++            "second": 2,
++            "third": "3",
++            "data": {
++              "a": "a",
++              "other-data": {}
++            }
++          }
++        ]
++      }
++    ]
++  }
++}
++)"});
++
++        // whole datastore with fields filtering
++        REQUIRE(get(RESTCONF_DATA_ROOT "?fields=example:tlc/list/nested/data&depth=1", {}) == Response{200, jsonHeaders, R"({
++  "example:tlc": {
++    "list": [
++      {
++        "name": "blabla",
++        "nested": [
++          {
++            "first": "1",
++            "second": 2,
++            "third": "3",
++            "data": {
++              "a": "a",
++              "other-data": {}
++            }
++          }
++        ]
++      }
++    ]
++  }
++}
++)"});
++
++        // nonexistent schema node in fields: missing prefix in tlc because we query root node so libyang can't infer the prefix from the path
++        REQUIRE(get(RESTCONF_DATA_ROOT "?fields=tlc", {}) == Response{400, jsonHeaders, R"({
++  "ietf-restconf:errors": {
++    "error": [
++      {
++        "error-type": "application",
++        "error-tag": "operation-failed",
++        "error-message": "Can't find schema node for '/tlc'"
++      }
++    ]
++  }
++}
++)"});
++
++        // nonexistent schema node in fields
++        REQUIRE(get(RESTCONF_DATA_ROOT "?fields=example:tlc/ob-la-di-ob-la-da", {}) == Response{400, jsonHeaders, R"({
++  "ietf-restconf:errors": {
++    "error": [
++      {
++        "error-type": "application",
++        "error-tag": "operation-failed",
++        "error-message": "Can't find schema node for '/example:tlc/ob-la-di-ob-la-da'"
++      }
++    ]
++  }
++}
++)"});
++    }
++
+     SECTION("OPTIONS method")
+     {
+         // RPC node
+diff --git a/tests/restconf-writing.cpp b/tests/restconf-writing.cpp
+index c1a9515..582a262 100644
+--- a/tests/restconf-writing.cpp
++++ b/tests/restconf-writing.cpp
+@@ -375,6 +375,8 @@ TEST_CASE("writing data")
+                     CREATED("/example:tlc/list[name='large']/nested[first='1'][second='2'][third='3']/first", "1"),
+                     CREATED("/example:tlc/list[name='large']/nested[first='1'][second='2'][third='3']/second", "2"),
+                     CREATED("/example:tlc/list[name='large']/nested[first='1'][second='2'][third='3']/third", "3"),
++                    CREATED("/example:tlc/list[name='large']/nested[first='1'][second='2'][third='3']/data", std::nullopt),
++                    CREATED("/example:tlc/list[name='large']/nested[first='1'][second='2'][third='3']/data/other-data", std::nullopt),
+                     CREATED("/example:tlc/list[name='large']/choice2", "large"));
+                 REQUIRE(put(RESTCONF_DATA_ROOT "/example:tlc/list=large", {AUTH_ROOT, CONTENT_TYPE_JSON}, R"({"example:list":[{"name": "large", "choice2": "large", "example:nested": [{"first": "1", "second": 2, "third": "3"}]}]})") == Response{201, noContentTypeHeaders, ""});
+             }
+@@ -385,7 +387,9 @@ TEST_CASE("writing data")
+                     CREATED("/example:tlc/list[name='libyang']/nested[first='11'][second='12'][third='13']", std::nullopt),
+                     CREATED("/example:tlc/list[name='libyang']/nested[first='11'][second='12'][third='13']/first", "11"),
+                     CREATED("/example:tlc/list[name='libyang']/nested[first='11'][second='12'][third='13']/second", "12"),
+-                    CREATED("/example:tlc/list[name='libyang']/nested[first='11'][second='12'][third='13']/third", "13"));
++                    CREATED("/example:tlc/list[name='libyang']/nested[first='11'][second='12'][third='13']/third", "13"),
++                    CREATED("/example:tlc/list[name='libyang']/nested[first='11'][second='12'][third='13']/data", std::nullopt),
++                    CREATED("/example:tlc/list[name='libyang']/nested[first='11'][second='12'][third='13']/data/other-data", std::nullopt));
+                 REQUIRE(put(RESTCONF_DATA_ROOT "/example:tlc/list=libyang/nested=11,12,13", {AUTH_ROOT, CONTENT_TYPE_JSON}, R"({"example:nested": [{"first": "11", "second": 12, "third": "13"}]}]})") == Response{201, noContentTypeHeaders, ""});
+             }
+ 
+@@ -1339,6 +1343,8 @@ TEST_CASE("writing data")
+                     CREATED("/example:tlc/list[name='large']/nested[first='1'][second='2'][third='3']/first", "1"),
+                     CREATED("/example:tlc/list[name='large']/nested[first='1'][second='2'][third='3']/second", "2"),
+                     CREATED("/example:tlc/list[name='large']/nested[first='1'][second='2'][third='3']/third", "3"),
++                    CREATED("/example:tlc/list[name='large']/nested[first='1'][second='2'][third='3']/data", std::nullopt),
++                    CREATED("/example:tlc/list[name='large']/nested[first='1'][second='2'][third='3']/data/other-data", std::nullopt),
+                     CREATED("/example:tlc/list[name='large']/choice2", "large"));
+                 REQUIRE(post(RESTCONF_DATA_ROOT "/example:tlc", {AUTH_ROOT, CONTENT_TYPE_JSON}, R"({"example:list":[{"name": "large", "choice2": "large", "example:nested": [{"first": "1", "second": 2, "third": "3"}]}]})") == Response{201, jsonHeaders, ""});
+             }
+@@ -1349,7 +1355,9 @@ TEST_CASE("writing data")
+                     CREATED("/example:tlc/list[name='libyang']/nested[first='11'][second='12'][third='13']", std::nullopt),
+                     CREATED("/example:tlc/list[name='libyang']/nested[first='11'][second='12'][third='13']/first", "11"),
+                     CREATED("/example:tlc/list[name='libyang']/nested[first='11'][second='12'][third='13']/second", "12"),
+-                    CREATED("/example:tlc/list[name='libyang']/nested[first='11'][second='12'][third='13']/third", "13"));
++                    CREATED("/example:tlc/list[name='libyang']/nested[first='11'][second='12'][third='13']/third", "13"),
++                    CREATED("/example:tlc/list[name='libyang']/nested[first='11'][second='12'][third='13']/data", std::nullopt),
++                    CREATED("/example:tlc/list[name='libyang']/nested[first='11'][second='12'][third='13']/data/other-data", std::nullopt));
+                 REQUIRE(post(RESTCONF_DATA_ROOT "/example:tlc/list=libyang", {AUTH_ROOT, CONTENT_TYPE_JSON}, R"({"example:nested": [{"first": "11", "second": 12, "third": "13"}]}]})") == Response{201, jsonHeaders, ""});
+             }
+ 
+diff --git a/tests/uri-parser.cpp b/tests/uri-parser.cpp
+index 000fe5d..fd5dd8b 100644
+--- a/tests/uri-parser.cpp
++++ b/tests/uri-parser.cpp
+@@ -828,6 +828,65 @@ TEST_CASE("URI path parser")
+             REQUIRE(parseQueryParams("stop-time=2023-05-20T18:30:00") == std::nullopt);
+             REQUIRE(parseQueryParams("stop-time=20230520T18:30:00Z") == std::nullopt);
+             REQUIRE(parseQueryParams("stop-time=2023-05-a0T18:30:00+05:30") == std::nullopt);
++            REQUIRE(parseQueryParams("fields=mod:leaf") == QueryParams{{"fields", fields::SemiExpr{fields::ParenExpr{fields::SlashExpr{{"mod", "leaf"}}}}}});
++            REQUIRE(parseQueryParams("fields=b(c;d);e(f)") == QueryParams{{"fields",
++                    fields::SemiExpr{
++                        fields::ParenExpr{
++                            fields::SlashExpr{{"b"}},
++                            fields::SemiExpr{
++                                fields::ParenExpr{
++                                    fields::SlashExpr{{"c"}}
++                                },
++                                fields::SemiExpr{
++                                    fields::ParenExpr{
++                                        fields::SlashExpr{{"d"}}
++                                    }
++                                }
++                            }
++                        },
++                        fields::SemiExpr{
++                            fields::ParenExpr{
++                                fields::SlashExpr{{"e"}},
++                                fields::SemiExpr{
++                                    fields::ParenExpr{
++                                        fields::SlashExpr{{"f"}}
++                                    }
++                                }
++                            }
++                        }
++                    }
++            }});
++            REQUIRE(parseQueryParams("fields=(xyz)") == std::nullopt);
++            REQUIRE(parseQueryParams("fields=a;(xyz)") == std::nullopt);
++            REQUIRE(parseQueryParams("fields=") == std::nullopt);
++
++            for (const auto& [prefix, fields, xpath] : {
++                     std::tuple<std::string, std::string, std::string>{"/example:a", "b", "/example:a/b"},
++                     {"/example:a", "b/c", "/example:a/b/c"},
++                     {"/example:a/b", "c(enabled;blower)", "/example:a/b/c/enabled | /example:a/b/c/blower"},
++                     {"/example:a", "b(c(enabled;blower))", "/example:a/b/c/enabled | /example:a/b/c/blower"},
++                     {"/example:a", "b(c)", "/example:a/b/c"},
++                     {"/example:a", "example:b;something", "/example:a/example:b | /example:a/something"},
++                     {"/example:a", "something;b1;b(c/enabled;c/blower)", "/example:a/something | /example:a/b1 | /example:a/b/c/enabled | /example:a/b/c/blower"},
++                     {"/example:a", "b(c/enabled;c/blower);something;b1", "/example:a/b/c/enabled | /example:a/b/c/blower | /example:a/something | /example:a/b1"}, // not allowed by RFC 8040
++                     {"", "example:a(b;b1)", "/example:a/b | /example:a/b1"},
++                 }) {
++                CAPTURE(fields);
++                CAPTURE(xpath);
++                auto qp = parseQueryParams("fields=" + fields);
++                REQUIRE(qp);
++                REQUIRE(qp->count("fields") == 1);
++                auto fieldExpr = qp->find("fields")->second;
++                REQUIRE(std::holds_alternative<fields::Expr>(fieldExpr));
++                REQUIRE(rousette::restconf::fieldsToXPath(ctx, prefix, std::get<fields::Expr>(fieldExpr)) == xpath);
++            }
++
++            auto qp = parseQueryParams("fields=xxx/xyz(a;b)");
++            REQUIRE(qp);
++            REQUIRE_THROWS_WITH_AS(
++                    rousette::restconf::fieldsToXPath(ctx, "/example:a", std::get<fields::Expr>(qp->find("fields")->second)),
++                        serializeErrorResponse(400, "application", "operation-failed", "Can't find schema node for '/example:a/xxx/xyz/a'").c_str(),
++                        rousette::restconf::ErrorResponse);
+         }
+ 
+         SECTION("Full requests with validation")
+@@ -885,6 +944,40 @@ TEST_CASE("URI path parser")
+                                        rousette::restconf::ErrorResponse);
+             }
+ 
++            SECTION("fields")
++            {
++                auto resp = asRestconfRequest(ctx, "GET", "/restconf/data/example:a", "fields=b/c(enabled;blower)");
++                REQUIRE(resp.queryParams == QueryParams({{"fields",
++                            fields::SemiExpr{
++                                fields::ParenExpr{
++                                    fields::SlashExpr{
++                                        {"b"},
++                                        fields::SlashExpr{{"c"}}
++                                    },
++                                    fields::SemiExpr{
++                                        fields::ParenExpr{
++                                            fields::SlashExpr{{"enabled"}}
++                                        },
++                                        fields::SemiExpr{
++                                            fields::ParenExpr{
++                                                fields::SlashExpr{{"blower"}}
++                                            }
++                                        }
++                                    }
++                                }
++                            }
++                        }
++                    }));
++
++                REQUIRE_THROWS_WITH_AS(asRestconfRequest(ctx, "POST", "/restconf/data/example:a", "fields=b/c(enabled;blower)"),
++                                       serializeErrorResponse(400, "protocol", "invalid-value", "Query parameter 'fields' can be used only with GET and HEAD methods").c_str(),
++                                       rousette::restconf::ErrorResponse);
++
++                REQUIRE_THROWS_WITH_AS(asRestconfStreamRequest("GET", "/streams/NETCONF/XML", "fields=a"),
++                                       serializeErrorResponse(400, "protocol", "invalid-value", "Query parameter 'fields' can't be used with streams").c_str(),
++                                       rousette::restconf::ErrorResponse);
++            }
++
+             SECTION("insert first/last")
+             {
+                 auto resp = asRestconfRequest(ctx, "PUT", "/restconf/data/example:tlc", "insert=first");
+diff --git a/tests/yang/example.yang b/tests/yang/example.yang
+index 75cd7a6..5d586a0 100644
+--- a/tests/yang/example.yang
++++ b/tests/yang/example.yang
+@@ -38,6 +38,14 @@ module example {
+         leaf first { type string; }
+         leaf second { type int32; }
+         leaf third { type string; }
++        leaf fourth { type string; }
++        container data {
++          leaf a { type string; }
++          container other-data {
++            leaf b { type string; }
++            leaf c { type string; }
++          }
++        }
+       }
+       choice choose {
+         mandatory true;
+@@ -92,6 +100,8 @@ module example {
+         }
+       }
+     }
++    container b1 { }
++    leaf something { type string; }
+   }
+ 
+   container two-leafs {
+-- 
+2.43.0
+
