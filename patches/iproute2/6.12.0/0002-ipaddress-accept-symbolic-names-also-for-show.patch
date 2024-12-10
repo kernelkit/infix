@@ -1,0 +1,32 @@
+From a035696129b543952e8105c27689ed4f9312eb3b Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Mon, 20 May 2024 21:35:11 +0200
+Subject: [PATCH 2/2] ipaddress: accept symbolic names also for show
+Organization: Addiva Elektronik
+
+This is a follow-up to 709063e, which in turn was a follow-up to
+bdb8d85, to add support for 'ip addr show proto static', where
+'static' is defined in /etc/iproute2/rt_addrprotos.
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
+---
+ ip/ipaddress.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/ip/ipaddress.c b/ip/ipaddress.c
+index 4e1f934f..437072f9 100644
+--- a/ip/ipaddress.c
++++ b/ip/ipaddress.c
+@@ -2224,7 +2224,7 @@ static int ipaddr_list_flush_or_save(int argc, char **argv, int action)
+ 			__u8 proto;
+ 
+ 			NEXT_ARG();
+-			if (get_u8(&proto, *argv, 0))
++			if (rtnl_addrprot_a2n(&proto, *argv))
+ 				invarg("\"proto\" value is invalid\n", *argv);
+ 			filter.have_proto = true;
+ 			filter.proto = proto;
+-- 
+2.43.0
+
