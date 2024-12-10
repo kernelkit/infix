@@ -64,6 +64,12 @@ module infix-if-type {
     description "Interface with properties resembling Ethernet";
     reference   "RFC 3635";
   }
+  identity gre {
+    base infix-interface-type;
+  }
+  identity gretap {
+    base infix-interface-type;
+  }
   identity lag {
     base infix-interface-type;
     base ianaift:ieee8023adLag;

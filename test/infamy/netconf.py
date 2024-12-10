@@ -317,6 +317,7 @@ class Device(Transport):
         infer_put_dict(self.name, models)
 
         for model in models.keys():
+            print(model)
             mod = self.ly.get_module(model)
             lyd = mod.parse_data_dict(models[model], no_state=True, validate=False)
             config+=lyd.print_mem("xml", with_siblings=True, pretty=False)+"\n"

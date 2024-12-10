@@ -18,6 +18,7 @@ module infix-interfaces {
   include infix-if-container;
   include infix-if-veth;
   include infix-if-vlan;
+  include infix-if-gre;
 
   organization "KernelKit";
   contact      "kernelkit@googlegroups.com";

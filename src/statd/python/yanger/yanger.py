@@ -38,6 +38,9 @@ def json_get_yang_type(iface_in):
     if iface_in['link_type'] == "loopback":
         return "infix-if-type:loopback"
 
+    if iface_in['link_type'] == "gre":
+        return "infix-if-type:gre"
+
     if iface_in['link_type'] != "ether":
         return "infix-if-type:other"
 
@@ -52,6 +55,9 @@ def json_get_yang_type(iface_in):
 
     if iface_in['linkinfo']['info_kind'] == "veth":
         return "infix-if-type:veth"
+
+    if iface_in['linkinfo']['info_kind'] == "gretap":
+        return "infix-if-type:gretap"
 
     if iface_in['linkinfo']['info_kind'] == "vlan":
         return "infix-if-type:vlan"
@@ -725,14 +731,14 @@ def add_ip_link(ifname, iface_in, iface_out):
     if 'ifalias' in iface_in:
         iface_out['description'] = iface_in['ifalias']
 
-    if 'address' in iface_in:
+    if 'address' in iface_in and not "POINTOPOINT" in iface_in["flags"]:
         iface_out['phys-address'] = iface_in['address']
 
     add_bridge_port_common(ifname, iface_in, iface_out)
     add_bridge_port_lower(ifname, iface_in, iface_out)
 
     if not iface_is_dsa(iface_in):
-        if 'link' in iface_in:
+        if 'link' in iface_in and iface_in["link"] != None:
             insert(iface_out, "infix-interfaces:vlan", "lower-layer-if", iface_in['link'])
         elif 'link_index' in iface_in:
             # 'link_index' is the only reference we have if the link iface is in a namespace

@@ -1,0 +1,53 @@
+submodule infix-if-gre {
+  yang-version 1.1;
+  belongs-to infix-interfaces {
+    prefix infix-if;
+  }
+
+  import ietf-interfaces {
+    prefix if;
+  }
+  import ietf-inet-types {
+    prefix inet;
+  }
+  import infix-if-type {
+    prefix infixift;
+  }
+
+  organization "KernelKit";
+  contact      "kernelkit@googlegroups.com";
+  description  "GRE and GRETAP tunnel extension for ietf-interfaces";
+
+  revision 2024-12-20 {
+   description "Initial revision.";
+    reference "internal";
+  }
+  grouping local-remote {
+    description "Local address to use as source address";
+    leaf local {
+      type inet:ip-address;
+      mandatory true;
+    }
+    leaf remote {
+      description "Peer address";
+      type inet:ip-address;
+      must "(contains(../local, ':') and contains(., ':'))
+            or (not(contains(../local, ':')) and not(contains(., ':')))" {
+        error-message
+          "Local and remote must be both IPv4 or both IPv6 addresses.";
+      }
+      mandatory true;
+    }
+  }
+  augment "/if:interfaces/if:interface" {
+    when "derived-from-or-self(if:type, 'infixift:gre') or"+
+         "derived-from-or-self(if:type, 'infixift:gretap')" {
+      description "Only shown for if:type infixift:gre";
+    }
+
+    description "Augments the interface model with GRE tunnels.";
+    container gre {
+      uses local-remote;
+    }
+  }
+}

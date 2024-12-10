@@ -525,7 +525,8 @@ submodule infix-if-bridge {
          "derived-from-or-self(if:type,'ianaift:ethernetCsmacd') or "+
          "derived-from-or-self(if:type,'ianaift:ieee8023adLag') or "+
          "derived-from-or-self(if:type,'ianaift:l2vlan') or "+
-         "derived-from-or-self(if:type,'ianaift:ilan')" {
+         "derived-from-or-self(if:type,'ianaift:ilan') or "+
+         "derived-from-or-self(if:type,'infix-ift:gretap')" {
       description "Applies when a Bridge interface exists.";
     }
 
