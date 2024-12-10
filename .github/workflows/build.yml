@@ -183,6 +183,22 @@ jobs:
         if: always()
         run: cat test/.log/last/result-gh.md >> $GITHUB_STEP_SUMMARY
 
+      - name: Generate Test Report for x86_64${{ steps.vars.outputs.flv }}
+        # Ensure this runs even if Regression Test fails
+        if: always()
+        run: |
+          asciidoctor-pdf \
+          --theme test/9pm/report/theme.yml \
+          -a pdf-fontsdir=test/9pm/report/fonts \
+          test/.log/last/report.adoc \
+          -o test/.log/last/report.pdf
+
+      - name: Upload Test Report as Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-report
+          path: test/.log/last/report.pdf
+
   release:
     if: ${{github.repository_owner == 'kernelkit' && github.ref_name == 'main'}}
     name: Upload Latest Build
