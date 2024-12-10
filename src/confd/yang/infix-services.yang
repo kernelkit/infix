@@ -127,10 +127,10 @@ module infix-services {
   container ssh {
     description "Configuration for the SSH daemon";
     leaf enabled {
-      description "Disable or enable SSH daemon";
+      description "Enable or disable SSH daemon";
       type boolean;
       must ". = 'false' or (count(../listen) > 0 and count(../hostkey) > 0)" {
-        error-message "When SSH is enabled, there must be at least one listen address configured and a private key must be set.";
+        error-message "Must be at least one listen address and a private key.";
       }
     }
 
@@ -141,7 +141,7 @@ module infix-services {
       must "not(deref(.)/../ks:public-key-format) or "
         + "(derived-from-or-self(deref(.)/../ks:public-key-format,  'ct:ssh-public-key-format') and"
         + "derived-from-or-self(deref(.)/../ks:private-key-format,  'ct:rsa-private-key-format'))" {
-        error-message "Only RSA hostkeys are supported";
+        error-message "Only RSA hostkeys are supported.";
       }
       type ks:asymmetric-key-ref;
     }
@@ -161,7 +161,7 @@ module infix-services {
         type inet:ip-address;
       }
       leaf port {
-        description "Local port for SSH daemon to listen to.";
+        description "Local port for SSH daemon to listen on.";
         type inet:port-number;
       }
     }

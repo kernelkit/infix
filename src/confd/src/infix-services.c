@@ -10,6 +10,7 @@
 #include <sys/types.h>
 
 #include <srx/common.h>
+#include <srx/helpers.h>
 #include <dirent.h>
 #include <srx/lyx.h>
 #include <srx/srx_val.h>
@@ -451,64 +452,6 @@ static int web_change(sr_session_ctx_t *session, uint32_t sub_id, const char *mo
 	return put(cfg, srv);
 }
 
-/**
- * Recursive directory remove (rm -r)
- * @param file or directory to remove
- *
- * @returns 0 on success, else error
- */
-
-int rm(const char *path) {
-    struct dirent *entry;
-    struct stat statbuf;
-    DIR *dir;
-    if (!path) {
-	    errno = EINVAL;
-	    return 1;
-    }
-
-    if (stat(path, &statbuf)) {
-	    return 1;
-    }
-
-    if (!S_ISDIR(statbuf.st_mode))
-	    return remove(path);
-
-    dir = opendir(path);
-    if (!dir) {
-	    return 1;
-    }
-
-    while ((entry = readdir(dir)) != NULL) {
-	    char filepath[strlen(path) + strlen(entry->d_name) + 2];
-
-	    if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
-		continue;
-	    }
-
-	    snprintf(filepath, sizeof(filepath), "%s/%s", path, entry->d_name);
-
-	    if (stat(filepath, &statbuf)) {
-		    closedir(dir);
-		    return 1;
-	    }
-
-	    if (S_ISDIR(statbuf.st_mode)) {
-		    if (rm(filepath))
-			    return 1;
-	    } else {
-		    if (remove(filepath)) {
-			    closedir(dir);
-			    return 1;
-		    }
-	    }
-    }
-
-    closedir(dir);
-
-    return rmdir(path);
-}
-
 /* Store SSH public/private keys */
 static int change_keystore_cb(sr_session_ctx_t *session, uint32_t sub_id, const char *module_name,
 		     const char *xpath, sr_event_t event, uint32_t request_id, void *_)
@@ -524,12 +467,12 @@ static int change_keystore_cb(sr_session_ctx_t *session, uint32_t sub_id, const 
 	case SR_EV_ABORT:
 		/* Remove */
 		if(fexist(SSH_HOSTKEYS_NEXT))
-			rm(SSH_HOSTKEYS_NEXT);
+			rmrf(SSH_HOSTKEYS_NEXT);
 		return SR_ERR_OK;
 	case SR_EV_DONE:
 		if(fexist(SSH_HOSTKEYS_NEXT)) {
 			if(fexist(SSH_HOSTKEYS))
-				if(rm(SSH_HOSTKEYS)) {
+				if(rmrf(SSH_HOSTKEYS)) {
 					ERROR("Failed to remove old SSH hostkeys: %d", errno);
 				}
 			rename(SSH_HOSTKEYS_NEXT, SSH_HOSTKEYS);
