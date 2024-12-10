@@ -124,10 +124,9 @@ do_abandon()
 {
     local next=$(get_next)
 
-    (cd "$basedir" && tar caf "$next-ABANDONED-$(date +%F-%T.tar.gz)" "$next")
-    rm -rf "$basedir/$next"
+    date +%F-%T >"$basedir/$next/ABANDONED"
 
-    rm "$basedir/next"
+    mv "$basedir/next" "$basedir/current"
     inform info "Abandoned generation $next"
 }
 
@@ -135,6 +134,7 @@ do_evolve()
 {
     local current=$(maybe_get_current)
     local next=$(get_next)
+    local ar=
 
     [ "$current" ] && action_exec exit "$basedir/$current"
 
@@ -144,8 +144,11 @@ do_evolve()
     inform info "Evolved to generation $next"
 
     if [ "$current" ]; then
-       (cd "$basedir" && tar caf "$current.tar.gz" "$current")
-       rm -rf "$basedir/$current"
+	ar="$current.tar.gz"
+	[ -f "$basedir/$current/ABANDONED" ] && ar="$current-ABANDONED.tar.gz"
+
+	(cd "$basedir" && tar caf "$ar.tar.gz" "$current")
+	rm -rf "$basedir/$current"
     fi
 }
 
