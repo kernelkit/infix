@@ -392,6 +392,10 @@ submodule infix-if-bridge {
           }
         }
       }
+      container stp {
+        presence stp;
+        description "Spanning Tree";
+      }
     }
   }
   deviation "/if:interfaces/if:interface/infix-if:bridge/type/ieee8021d/multicast-filters/multicast-filter/ports/port" {
