@@ -204,7 +204,7 @@ class Device(Transport):
         """Get a datastore"""
         dspath = f"/ds/ietf-datastores:{datastore}"
         if path is not None:
-            dspath = f"{dspath}/{path}"
+            dspath = f"{dspath}{path}"
 
         url = f"{self.restconf_url}{dspath}"
         try:
