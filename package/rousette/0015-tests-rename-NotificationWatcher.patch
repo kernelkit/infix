@@ -1,0 +1,57 @@
+From f86df829979a26d5192a86c3b43c1393dcba7140 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Tom=C3=A1=C5=A1=20Pecka?= <tomas.pecka@cesnet.cz>
+Date: Tue, 3 Dec 2024 11:45:41 +0100
+Subject: [PATCH 15/20] tests: rename NotificationWatcher
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Addiva Elektronik
+
+This watches notifications going through RESTCONF, so I think
+RestconfNotificatonWatcher is better name for this.
+
+Change-Id: Ieb8d7ce489e683348f065e9e84aae06af7c8ccc4
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ tests/restconf-notifications.cpp | 8 ++++----
+ 1 file changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/tests/restconf-notifications.cpp b/tests/restconf-notifications.cpp
+index db9a3f5..d873512 100644
+--- a/tests/restconf-notifications.cpp
++++ b/tests/restconf-notifications.cpp
+@@ -21,11 +21,11 @@ static const auto SERVER_PORT = "10088";
+ 
+ using namespace std::chrono_literals;
+ 
+-struct NotificationWatcher {
++struct RestconfNotificationWatcher {
+     libyang::Context ctx;
+     libyang::DataFormat dataFormat;
+ 
+-    NotificationWatcher(const libyang::Context& ctx)
++    RestconfNotificationWatcher(const libyang::Context& ctx)
+         : ctx(ctx)
+         , dataFormat(libyang::DataFormat::JSON)
+     {
+@@ -62,7 +62,7 @@ struct SSEClient {
+     SSEClient(
+         boost::asio::io_service& io,
+         std::latch& requestSent,
+-        const NotificationWatcher& notification,
++        const RestconfNotificationWatcher& notification,
+         const std::string& uri,
+         const std::map<std::string, std::string>& headers,
+         const boost::posix_time::seconds silenceTimeout = boost::posix_time::seconds(1)) // test code; the server should respond "soon"
+@@ -186,7 +186,7 @@ TEST_CASE("NETCONF notification streams")
+         R"({"example:tlc":{"list":[{"name":"k1","notif":{"message":"nested"}}]}})",
+     };
+ 
+-    NotificationWatcher netconfWatcher(srConn.sessionStart().getContext());
++    RestconfNotificationWatcher netconfWatcher(srConn.sessionStart().getContext());
+ 
+     SECTION("NETCONF streams")
+     {
+-- 
+2.43.0
+

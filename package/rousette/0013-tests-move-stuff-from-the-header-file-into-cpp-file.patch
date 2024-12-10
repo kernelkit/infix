@@ -1,0 +1,586 @@
+From 0beaee041fd4fcfbebcbb2912eb6b26ec71f50c7 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Tom=C3=A1=C5=A1=20Pecka?= <tomas.pecka@cesnet.cz>
+Date: Mon, 2 Dec 2024 20:01:54 +0100
+Subject: [PATCH 13/20] tests: move stuff from the header file into cpp file
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Addiva Elektronik
+
+Allright, I have had enough. I am no longer waiting for a minute for a
+recompilation of one test.
+This patch splits the aux-utils.h file into a cpp file and two headers.
+One of the headers is only for declarations of the functions and
+datatypes in the cpp file, the second header implements all the helper
+functions that require SERVER_PORT and further helper constants for the
+restconf tests.
+
+Compile times are a little better. I have measured compilation times of
+two arbitrary restconf tests with asan+ubsan (and ccache disabled):
+
+ - restconf-reading: 17.05s -> 13.85s
+ - restconf-delete: 15.18s -> 11.87s
+
+Not ideal, but it is certainly better.
+
+Change-Id: If529cbc8954d50494711a408231ea4c2c4daf072
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ CMakeLists.txt                   |   1 +
+ tests/aux-utils.h                | 214 ++-----------------------------
+ tests/restconf-notifications.cpp |   3 +-
+ tests/restconf_utils.cpp         | 157 +++++++++++++++++++++++
+ tests/restconf_utils.h           |  83 ++++++++++++
+ 5 files changed, 256 insertions(+), 202 deletions(-)
+ create mode 100644 tests/restconf_utils.cpp
+ create mode 100644 tests/restconf_utils.h
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 731d7cb..b8a41a7 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -158,6 +158,7 @@ if(BUILD_TESTING)
+     add_library(DoctestIntegration STATIC
+         tests/datastoreUtils.cpp
+         tests/doctest_integration.cpp
++        tests/restconf_utils.cpp
+         tests/trompeloeil_doctest.h
+         tests/wait-a-bit-longer.cpp
+         )
+diff --git a/tests/aux-utils.h b/tests/aux-utils.h
+index 9afd7bc..d99b3f9 100644
+--- a/tests/aux-utils.h
++++ b/tests/aux-utils.h
+@@ -8,99 +8,16 @@
+ 
+ #pragma once
+ #include "trompeloeil_doctest.h"
+-#include <iostream>
+ #include <nghttp2/asio_http2_client.h>
+-#include <optional>
+-#include <sstream>
+-#include <sysrepo-cpp/Session.hpp>
+-#include "tests/UniqueResource.h"
++#include "restconf_utils.h"
+ 
+-using namespace std::string_literals;
+-namespace ng = nghttp2::asio_http2;
+-namespace ng_client = ng::client;
+-
+-struct Response {
+-    int statusCode;
+-    ng::header_map headers;
+-    std::string data;
+-
+-    using Headers = std::multimap<std::string, std::string>;
+-
+-    Response(int statusCode, const Headers& headers, const std::string& data)
+-        : Response(statusCode, transformHeaders(headers), data)
+-    {
+-    }
+-
+-    Response(int statusCode, const ng::header_map& headers, const std::string& data)
+-        : statusCode(statusCode)
+-        , headers(headers)
+-        , data(data)
+-    {
+-    }
+-
+-    bool equalStatusCodeAndHeaders(const Response& o) const
+-    {
+-        // Skipping 'date' header. Its value will not be reproducible in simple tests
+-        ng::header_map myHeaders(headers);
+-        ng::header_map otherHeaders(o.headers);
+-        myHeaders.erase("date");
+-        otherHeaders.erase("date");
+-
+-        return statusCode == o.statusCode && std::equal(myHeaders.begin(), myHeaders.end(), otherHeaders.begin(), otherHeaders.end(), [](const auto& a, const auto& b) {
+-                   return a.first == b.first && a.second.value == b.second.value; // Skipping 'sensitive' field from ng::header_value which does not seem important for us.
+-               });
+-    }
+-
+-    bool operator==(const Response& o) const
+-    {
+-        return equalStatusCodeAndHeaders(o) && data == o.data;
+-    }
+-
+-    static ng::header_map transformHeaders(const Headers& headers)
+-    {
+-        ng::header_map res;
+-        std::transform(headers.begin(), headers.end(), std::inserter(res, res.end()), [](const auto& h) -> std::pair<std::string, ng::header_value> { return {h.first, {h.second, false}}; });
+-        return res;
+-    }
+-};
+-
+-namespace doctest {
+-
+-template <>
+-struct StringMaker<ng::header_map> {
+-    static String convert(const ng::header_map& m)
+-    {
+-        std::ostringstream oss;
+-        oss << "{\n";
+-        for (const auto& [k, v] : m) {
+-            oss << "\t"
+-                << "{\"" << k << "\", "
+-                << "{\"" << v.value << "\", " << std::boolalpha << v.sensitive << "}},\n";
+-        }
+-        oss << "}";
+-        return oss.str().c_str();
+-    }
+-};
+-
+-template <>
+-struct StringMaker<Response> {
+-    static String convert(const Response& o)
+-    {
+-        std::ostringstream oss;
+-
+-        oss << "{"
+-            << std::to_string(o.statusCode) << ", "
+-            << StringMaker<decltype(o.headers)>::convert(o.headers) << ",\n"
+-            << "\"" << o.data << "\",\n"
+-            << "}";
+-
+-        return oss.str().c_str();
+-    }
+-};
++namespace sysrepo {
++class Session;
+ }
+ 
++namespace ng = nghttp2::asio_http2;
++
+ static const auto SERVER_ADDRESS = "::1";
+-static const auto SERVER_ADDRESS_AND_PORT = "http://["s + SERVER_ADDRESS + "]" + ":" + SERVER_PORT;
+ 
+ #define AUTH_DWDM {"authorization", "Basic ZHdkbTpEV0RN"}
+ #define AUTH_NORULES {"authorization", "Basic bm9ydWxlczplbXB0eQ=="}
+@@ -145,7 +62,7 @@ const ng::header_map plaintextHeaders{
+     {"content-type", {"text/plain", false}},
+ };
+ 
+-const ng::header_map eventStreamHeaders {
++const ng::header_map eventStreamHeaders{
+     {"access-control-allow-origin", {"*", false}},
+     {"content-type", {"text/event-stream", false}},
+ };
+@@ -153,142 +70,37 @@ const ng::header_map eventStreamHeaders {
+ #define ACCESS_CONTROL_ALLOW_ORIGIN {"access-control-allow-origin", "*"}
+ #define ACCEPT_PATCH {"accept-patch", "application/yang-data+json, application/yang-data+xml, application/yang-patch+xml, application/yang-patch+json"}
+ 
+-// this is a test, and the server is expected to reply "soon"
+-static const boost::posix_time::time_duration CLIENT_TIMEOUT = boost::posix_time::seconds(3);
+-
+-Response clientRequest(auto method,
+-        auto uri,
+-        const std::string& data,
+-        const std::map<std::string, std::string>& headers,
+-        const boost::posix_time::time_duration timeout = CLIENT_TIMEOUT)
+-{
+-    boost::asio::io_service io_service;
+-    auto client = std::make_shared<ng_client::session>(io_service, SERVER_ADDRESS, SERVER_PORT);
+-
+-    client->read_timeout(timeout);
+-
+-    std::ostringstream oss;
+-    ng::header_map resHeaders;
+-    int statusCode;
+-
+-    client->on_connect([&](auto) {
+-        boost::system::error_code ec;
+-
+-        ng::header_map reqHeaders;
+-        for (const auto& [name, value] : headers) {
+-            reqHeaders.insert({name, {value, false}});
+-        }
+-
+-        auto req = client->submit(ec, method, SERVER_ADDRESS_AND_PORT + uri, data, reqHeaders);
+-        req->on_response([&](const ng_client::response& res) {
+-            res.on_data([&oss](const uint8_t* data, std::size_t len) {
+-                oss.write(reinterpret_cast<const char*>(data), len);
+-            });
+-            statusCode = res.status_code();
+-            resHeaders = res.header();
+-        });
+-        req->on_close([maybeClient = std::weak_ptr<ng_client::session>{client}](auto) {
+-            if (auto client = maybeClient.lock()) {
+-                client->shutdown();
+-            }
+-        });
+-    });
+-    client->on_error([](const boost::system::error_code& ec) {
+-        throw std::runtime_error{"HTTP client error: " + ec.message()};
+-    });
+-    io_service.run();
+-
+-    return {statusCode, resHeaders, oss.str()};
+-}
+-
+ Response get(auto uri, const std::map<std::string, std::string>& headers, const boost::posix_time::time_duration timeout = CLIENT_TIMEOUT)
+ {
+-    return clientRequest("GET", uri, "", headers, timeout);
++    return clientRequest(SERVER_ADDRESS, SERVER_PORT, "GET", uri, "", headers, timeout);
+ }
+ 
+ Response options(auto uri, const std::map<std::string, std::string>& headers, const boost::posix_time::time_duration timeout = CLIENT_TIMEOUT)
+ {
+-    return clientRequest("OPTIONS", uri, "", headers, timeout);
++    return clientRequest(SERVER_ADDRESS, SERVER_PORT, "OPTIONS", uri, "", headers, timeout);
+ }
+ 
+ Response head(auto uri, const std::map<std::string, std::string>& headers, const boost::posix_time::time_duration timeout = CLIENT_TIMEOUT)
+ {
+-    return clientRequest("HEAD", uri, "", headers, timeout);
++    return clientRequest(SERVER_ADDRESS, SERVER_PORT, "HEAD", uri, "", headers, timeout);
+ }
+ 
+ Response put(auto xpath, const std::map<std::string, std::string>& headers, const std::string& data, const boost::posix_time::time_duration timeout = CLIENT_TIMEOUT)
+ {
+-    return clientRequest("PUT", xpath, data, headers, timeout);
++    return clientRequest(SERVER_ADDRESS, SERVER_PORT, "PUT", xpath, data, headers, timeout);
+ }
+ 
+ Response post(auto xpath, const std::map<std::string, std::string>& headers, const std::string& data, const boost::posix_time::time_duration timeout = CLIENT_TIMEOUT)
+ {
+-    return clientRequest("POST", xpath, data, headers, timeout);
++    return clientRequest(SERVER_ADDRESS, SERVER_PORT, "POST", xpath, data, headers, timeout);
+ }
+ 
+ Response patch(auto uri, const std::map<std::string, std::string>& headers, const std::string& data, const boost::posix_time::time_duration timeout = CLIENT_TIMEOUT)
+ {
+-    return clientRequest("PATCH", uri, data, headers, timeout);
++    return clientRequest(SERVER_ADDRESS, SERVER_PORT, "PATCH", uri, data, headers, timeout);
+ }
+ 
+ Response httpDelete(auto uri, const std::map<std::string, std::string>& headers, const boost::posix_time::time_duration timeout = CLIENT_TIMEOUT)
+ {
+-    return clientRequest("DELETE", uri, "", headers, timeout);
+-}
+-
+-auto manageNacm(sysrepo::Session session)
+-{
+-    return make_unique_resource(
+-            [session]() mutable {
+-                session.switchDatastore(sysrepo::Datastore::Running);
+-                session.copyConfig(sysrepo::Datastore::Startup, "ietf-netconf-acm");
+-            },
+-            [session]() mutable {
+-                session.switchDatastore(sysrepo::Datastore::Running);
+-
+-                /* cleanup running DS of ietf-netconf-acm module
+-                   because it contains XPaths to other modules that we
+-                   can't uninstall because the running DS content would be invalid
+-                 */
+-                session.copyConfig(sysrepo::Datastore::Startup, "ietf-netconf-acm");
+-            });
+-}
+-
+-void setupRealNacm(sysrepo::Session session)
+-{
+-    session.switchDatastore(sysrepo::Datastore::Running);
+-    session.setItem("/ietf-netconf-acm:nacm/enable-external-groups", "false");
+-    session.setItem("/ietf-netconf-acm:nacm/groups/group[name='optics']/user-name[.='dwdm']", "");
+-    session.setItem("/ietf-netconf-acm:nacm/groups/group[name='yangnobody']/user-name[.='yangnobody']", "");
+-    session.setItem("/ietf-netconf-acm:nacm/groups/group[name='norules']/user-name[.='norules']", "");
+-
+-    session.setItem("/ietf-netconf-acm:nacm/rule-list[name='anon rule']/group[.='yangnobody']", "");
+-    session.setItem("/ietf-netconf-acm:nacm/rule-list[name='anon rule']/rule[name='10']/module-name", "ietf-system");
+-    session.setItem("/ietf-netconf-acm:nacm/rule-list[name='anon rule']/rule[name='10']/action", "permit");
+-    session.setItem("/ietf-netconf-acm:nacm/rule-list[name='anon rule']/rule[name='10']/access-operations", "read");
+-    session.setItem("/ietf-netconf-acm:nacm/rule-list[name='anon rule']/rule[name='10']/path", "/ietf-system:system/contact");
+-    session.setItem("/ietf-netconf-acm:nacm/rule-list[name='anon rule']/rule[name='11']/module-name", "ietf-system");
+-    session.setItem("/ietf-netconf-acm:nacm/rule-list[name='anon rule']/rule[name='11']/action", "permit");
+-    session.setItem("/ietf-netconf-acm:nacm/rule-list[name='anon rule']/rule[name='11']/access-operations", "read");
+-    session.setItem("/ietf-netconf-acm:nacm/rule-list[name='anon rule']/rule[name='11']/path", "/ietf-system:system/hostname");
+-    session.setItem("/ietf-netconf-acm:nacm/rule-list[name='anon rule']/rule[name='12']/module-name", "ietf-system");
+-    session.setItem("/ietf-netconf-acm:nacm/rule-list[name='anon rule']/rule[name='12']/action", "permit");
+-    session.setItem("/ietf-netconf-acm:nacm/rule-list[name='anon rule']/rule[name='12']/access-operations", "read");
+-    session.setItem("/ietf-netconf-acm:nacm/rule-list[name='anon rule']/rule[name='12']/path", "/ietf-system:system/location");
+-    session.setItem("/ietf-netconf-acm:nacm/rule-list[name='anon rule']/rule[name='13']/module-name", "example");
+-    session.setItem("/ietf-netconf-acm:nacm/rule-list[name='anon rule']/rule[name='13']/action", "permit");
+-    session.setItem("/ietf-netconf-acm:nacm/rule-list[name='anon rule']/rule[name='13']/access-operations", "read");
+-    session.setItem("/ietf-netconf-acm:nacm/rule-list[name='anon rule']/rule[name='14']/module-name", "ietf-restconf-monitoring");
+-    session.setItem("/ietf-netconf-acm:nacm/rule-list[name='anon rule']/rule[name='14']/action", "permit");
+-    session.setItem("/ietf-netconf-acm:nacm/rule-list[name='anon rule']/rule[name='14']/access-operations", "read");
+-    session.setItem("/ietf-netconf-acm:nacm/rule-list[name='anon rule']/rule[name='15']/module-name", "example-delete");
+-    session.setItem("/ietf-netconf-acm:nacm/rule-list[name='anon rule']/rule[name='15']/action", "permit");
+-    session.setItem("/ietf-netconf-acm:nacm/rule-list[name='anon rule']/rule[name='15']/access-operations", "read");
+-    session.setItem("/ietf-netconf-acm:nacm/rule-list[name='anon rule']/rule[name='15']/path", "/example-delete:immutable");
+-    session.setItem("/ietf-netconf-acm:nacm/rule-list[name='anon rule']/rule[name='99']/module-name", "*");
+-    session.setItem("/ietf-netconf-acm:nacm/rule-list[name='anon rule']/rule[name='99']/action", "deny");
+-    session.setItem("/ietf-netconf-acm:nacm/rule-list[name='dwdm rule']/group[.='optics']", "");
+-    session.setItem("/ietf-netconf-acm:nacm/rule-list[name='dwdm rule']/rule[name='1']/module-name", "ietf-system");
+-    session.setItem("/ietf-netconf-acm:nacm/rule-list[name='dwdm rule']/rule[name='1']/action", "permit"); // overrides nacm:default-deny-* rules in ietf-system model
+-    session.applyChanges();
++    return clientRequest(SERVER_ADDRESS, SERVER_PORT, "DELETE", uri, "", headers, timeout);
+ }
+diff --git a/tests/restconf-notifications.cpp b/tests/restconf-notifications.cpp
+index d479f3c..db9a3f5 100644
+--- a/tests/restconf-notifications.cpp
++++ b/tests/restconf-notifications.cpp
+@@ -87,7 +87,8 @@ struct SSEClient {
+         client->on_connect([&, uri, reqHeaders, silenceTimeout](auto) {
+             boost::system::error_code ec;
+ 
+-            auto req = client->submit(ec, "GET", SERVER_ADDRESS_AND_PORT + uri, "", reqHeaders);
++            static const auto server_address_and_port = std::string("http://[") + SERVER_ADDRESS + "]" + ":" + SERVER_PORT;
++            auto req = client->submit(ec, "GET", server_address_and_port + uri, "", reqHeaders);
+             req->on_response([&, silenceTimeout](const ng_client::response& res) {
+                 requestSent.count_down();
+                 res.on_data([&, silenceTimeout](const uint8_t* data, std::size_t len) {
+diff --git a/tests/restconf_utils.cpp b/tests/restconf_utils.cpp
+new file mode 100644
+index 0000000..ea9a18d
+--- /dev/null
++++ b/tests/restconf_utils.cpp
+@@ -0,0 +1,157 @@
++/*
++ * Copyright (C) 2023 CESNET, https://photonics.cesnet.cz/
++ *
++ * Written by Tomáš Pecka <tomas.pecka@cesnet.cz>
++ * Written by Jan Kundrát <jan.kundrat@cesnet.cz>
++ *
++ */
++
++#include "restconf_utils.h"
++#include "sysrepo-cpp/Session.hpp"
++
++using namespace std::string_literals;
++namespace ng = nghttp2::asio_http2;
++namespace ng_client = ng::client;
++
++Response::Response(int statusCode, const Response::Headers& headers, const std::string& data)
++    : Response(statusCode, transformHeaders(headers), data)
++{
++}
++
++Response::Response(int statusCode, const ng::header_map& headers, const std::string& data)
++    : statusCode(statusCode)
++    , headers(headers)
++    , data(data)
++{
++}
++
++bool Response::equalStatusCodeAndHeaders(const Response& o) const
++{
++    // Skipping 'date' header. Its value will not be reproducible in simple tests
++    ng::header_map myHeaders(headers);
++    ng::header_map otherHeaders(o.headers);
++    myHeaders.erase("date");
++    otherHeaders.erase("date");
++
++    return statusCode == o.statusCode && std::equal(myHeaders.begin(), myHeaders.end(), otherHeaders.begin(), otherHeaders.end(), [](const auto& a, const auto& b) {
++               return a.first == b.first && a.second.value == b.second.value; // Skipping 'sensitive' field from ng::header_value which does not seem important for us.
++           });
++}
++
++bool Response::operator==(const Response& o) const
++{
++    return equalStatusCodeAndHeaders(o) && data == o.data;
++}
++
++ng::header_map Response::transformHeaders(const Response::Headers& headers)
++{
++    ng::header_map res;
++    std::transform(headers.begin(), headers.end(), std::inserter(res, res.end()), [](const auto& h) -> std::pair<std::string, ng::header_value> { return {h.first, {h.second, false}}; });
++    return res;
++}
++
++Response clientRequest(const std::string& server_address,
++                       const std::string& server_port,
++                       const std::string& method,
++                       const std::string& uri,
++                       const std::string& data,
++                       const std::map<std::string, std::string>& headers,
++                       const boost::posix_time::time_duration timeout)
++{
++    boost::asio::io_service io_service;
++    auto client = std::make_shared<ng_client::session>(io_service, server_address, server_port);
++
++    client->read_timeout(timeout);
++
++    std::ostringstream oss;
++    ng::header_map resHeaders;
++    int statusCode;
++
++    client->on_connect([&](auto) {
++        boost::system::error_code ec;
++
++        ng::header_map reqHeaders;
++        for (const auto& [name, value] : headers) {
++            reqHeaders.insert({name, {value, false}});
++        }
++
++        const auto server_address_and_port = std::string("http://[") + server_address + "]" + ":" + server_port;
++        auto req = client->submit(ec, method, server_address_and_port + uri, data, reqHeaders);
++        req->on_response([&](const ng_client::response& res) {
++            res.on_data([&oss](const uint8_t* data, std::size_t len) {
++                oss.write(reinterpret_cast<const char*>(data), len);
++            });
++            statusCode = res.status_code();
++            resHeaders = res.header();
++        });
++        req->on_close([maybeClient = std::weak_ptr<ng_client::session>{client}](auto) {
++            if (auto client = maybeClient.lock()) {
++                client->shutdown();
++            }
++        });
++    });
++    client->on_error([](const boost::system::error_code& ec) {
++        throw std::runtime_error{"HTTP client error: " + ec.message()};
++    });
++    io_service.run();
++
++    return {statusCode, resHeaders, oss.str()};
++}
++
++UniqueResource manageNacm(sysrepo::Session session)
++{
++    return make_unique_resource(
++        [session]() mutable {
++            session.switchDatastore(sysrepo::Datastore::Running);
++            session.copyConfig(sysrepo::Datastore::Startup, "ietf-netconf-acm");
++        },
++        [session]() mutable {
++            session.switchDatastore(sysrepo::Datastore::Running);
++
++            /* cleanup running DS of ietf-netconf-acm module
++               because it contains XPaths to other modules that we
++               can't uninstall because the running DS content would be invalid
++             */
++            session.copyConfig(sysrepo::Datastore::Startup, "ietf-netconf-acm");
++        });
++}
++
++void setupRealNacm(sysrepo::Session session)
++{
++    session.switchDatastore(sysrepo::Datastore::Running);
++    session.setItem("/ietf-netconf-acm:nacm/enable-external-groups", "false");
++    session.setItem("/ietf-netconf-acm:nacm/groups/group[name='optics']/user-name[.='dwdm']", "");
++    session.setItem("/ietf-netconf-acm:nacm/groups/group[name='yangnobody']/user-name[.='yangnobody']", "");
++    session.setItem("/ietf-netconf-acm:nacm/groups/group[name='norules']/user-name[.='norules']", "");
++
++    session.setItem("/ietf-netconf-acm:nacm/rule-list[name='anon rule']/group[.='yangnobody']", "");
++    session.setItem("/ietf-netconf-acm:nacm/rule-list[name='anon rule']/rule[name='10']/module-name", "ietf-system");
++    session.setItem("/ietf-netconf-acm:nacm/rule-list[name='anon rule']/rule[name='10']/action", "permit");
++    session.setItem("/ietf-netconf-acm:nacm/rule-list[name='anon rule']/rule[name='10']/access-operations", "read");
++    session.setItem("/ietf-netconf-acm:nacm/rule-list[name='anon rule']/rule[name='10']/path", "/ietf-system:system/contact");
++    session.setItem("/ietf-netconf-acm:nacm/rule-list[name='anon rule']/rule[name='11']/module-name", "ietf-system");
++    session.setItem("/ietf-netconf-acm:nacm/rule-list[name='anon rule']/rule[name='11']/action", "permit");
++    session.setItem("/ietf-netconf-acm:nacm/rule-list[name='anon rule']/rule[name='11']/access-operations", "read");
++    session.setItem("/ietf-netconf-acm:nacm/rule-list[name='anon rule']/rule[name='11']/path", "/ietf-system:system/hostname");
++    session.setItem("/ietf-netconf-acm:nacm/rule-list[name='anon rule']/rule[name='12']/module-name", "ietf-system");
++    session.setItem("/ietf-netconf-acm:nacm/rule-list[name='anon rule']/rule[name='12']/action", "permit");
++    session.setItem("/ietf-netconf-acm:nacm/rule-list[name='anon rule']/rule[name='12']/access-operations", "read");
++    session.setItem("/ietf-netconf-acm:nacm/rule-list[name='anon rule']/rule[name='12']/path", "/ietf-system:system/location");
++    session.setItem("/ietf-netconf-acm:nacm/rule-list[name='anon rule']/rule[name='13']/module-name", "example");
++    session.setItem("/ietf-netconf-acm:nacm/rule-list[name='anon rule']/rule[name='13']/action", "permit");
++    session.setItem("/ietf-netconf-acm:nacm/rule-list[name='anon rule']/rule[name='13']/access-operations", "read");
++    session.setItem("/ietf-netconf-acm:nacm/rule-list[name='anon rule']/rule[name='14']/module-name", "ietf-restconf-monitoring");
++    session.setItem("/ietf-netconf-acm:nacm/rule-list[name='anon rule']/rule[name='14']/action", "permit");
++    session.setItem("/ietf-netconf-acm:nacm/rule-list[name='anon rule']/rule[name='14']/access-operations", "read");
++    session.setItem("/ietf-netconf-acm:nacm/rule-list[name='anon rule']/rule[name='15']/module-name", "example-delete");
++    session.setItem("/ietf-netconf-acm:nacm/rule-list[name='anon rule']/rule[name='15']/action", "permit");
++    session.setItem("/ietf-netconf-acm:nacm/rule-list[name='anon rule']/rule[name='15']/access-operations", "read");
++    session.setItem("/ietf-netconf-acm:nacm/rule-list[name='anon rule']/rule[name='15']/path", "/example-delete:immutable");
++    session.setItem("/ietf-netconf-acm:nacm/rule-list[name='anon rule']/rule[name='99']/module-name", "*");
++    session.setItem("/ietf-netconf-acm:nacm/rule-list[name='anon rule']/rule[name='99']/action", "deny");
++    session.setItem("/ietf-netconf-acm:nacm/rule-list[name='dwdm rule']/group[.='optics']", "");
++    session.setItem("/ietf-netconf-acm:nacm/rule-list[name='dwdm rule']/rule[name='1']/module-name", "ietf-system");
++    session.setItem("/ietf-netconf-acm:nacm/rule-list[name='dwdm rule']/rule[name='1']/action", "permit"); // overrides nacm:default-deny-* rules in ietf-system model
++    session.applyChanges();
++}
++
+diff --git a/tests/restconf_utils.h b/tests/restconf_utils.h
+new file mode 100644
+index 0000000..26f0803
+--- /dev/null
++++ b/tests/restconf_utils.h
+@@ -0,0 +1,83 @@
++/*
++ * Copyright (C) 2023 CESNET, https://photonics.cesnet.cz/
++ *
++ * Written by Tomáš Pecka <tomas.pecka@cesnet.cz>
++ * Written by Jan Kundrát <jan.kundrat@cesnet.cz>
++ *
++ */
++
++#pragma once
++#include "trompeloeil_doctest.h"
++#include <nghttp2/asio_http2_client.h>
++#include "UniqueResource.h"
++
++namespace sysrepo {
++class Session;
++}
++
++namespace ng = nghttp2::asio_http2;
++namespace ng_client = ng::client;
++
++struct Response {
++    int statusCode;
++    ng::header_map headers;
++    std::string data;
++
++    using Headers = std::multimap<std::string, std::string>;
++
++    Response(int statusCode, const Headers& headers, const std::string& data);
++    Response(int statusCode, const ng::header_map& headers, const std::string& data);
++    bool equalStatusCodeAndHeaders(const Response& o) const;
++    bool operator==(const Response& o) const;
++    static ng::header_map transformHeaders(const Headers& headers);
++};
++
++namespace doctest {
++
++template <>
++struct StringMaker<ng::header_map> {
++    static String convert(const ng::header_map& m)
++    {
++        std::ostringstream oss;
++        oss << "{\n";
++        for (const auto& [k, v] : m) {
++            oss << "\t"
++                << "{\"" << k << "\", "
++                << "{\"" << v.value << "\", " << std::boolalpha << v.sensitive << "}},\n";
++        }
++        oss << "}";
++        return oss.str().c_str();
++    }
++};
++
++template <>
++struct StringMaker<Response> {
++    static String convert(const Response& o)
++    {
++        std::ostringstream oss;
++
++        oss << "{"
++            << std::to_string(o.statusCode) << ", "
++            << StringMaker<decltype(o.headers)>::convert(o.headers) << ",\n"
++            << "\"" << o.data << "\",\n"
++            << "}";
++
++        return oss.str().c_str();
++    }
++};
++}
++
++// this is a test, and the server is expected to reply "soon"
++static const boost::posix_time::time_duration CLIENT_TIMEOUT = boost::posix_time::seconds(3);
++
++Response clientRequest(
++    const std::string& server_address,
++    const std::string& server_port,
++    const std::string& method,
++    const std::string& uri,
++    const std::string& data,
++    const std::map<std::string, std::string>& headers,
++    const boost::posix_time::time_duration timeout = CLIENT_TIMEOUT);
++
++UniqueResource manageNacm(sysrepo::Session session);
++void setupRealNacm(sysrepo::Session session);
+-- 
+2.43.0
+

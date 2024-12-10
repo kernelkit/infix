@@ -1,0 +1,30 @@
+From 849aa35274d5e07726cb849fe724962754b3fa29 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Tom=C3=A1=C5=A1=20Pecka?= <tomas.pecka@cesnet.cz>
+Date: Mon, 2 Dec 2024 20:20:48 +0100
+Subject: [PATCH 11/20] tests: add missing pragma once
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Addiva Elektronik
+
+Change-Id: I269c20e5a914aa8c7bc9431147dd9785ea1aedda
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ tests/aux-utils.h | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/tests/aux-utils.h b/tests/aux-utils.h
+index a3923bb..7482945 100644
+--- a/tests/aux-utils.h
++++ b/tests/aux-utils.h
+@@ -6,6 +6,7 @@
+  *
+  */
+ 
++#pragma once
+ #include "trompeloeil_doctest.h"
+ #include <iostream>
+ #include <nghttp2/asio_http2_client.h>
+-- 
+2.43.0
+

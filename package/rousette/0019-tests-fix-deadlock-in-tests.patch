@@ -1,0 +1,139 @@
+From 3e3e492f4801df56226a5aff5d82bfa86c9d3812 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Tom=C3=A1=C5=A1=20Pecka?= <tomas.pecka@cesnet.cz>
+Date: Tue, 3 Dec 2024 13:59:52 +0100
+Subject: [PATCH 19/20] tests: fix deadlock in tests
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Addiva Elektronik
+
+In the case the client never requests (because of misconfiguration or
+something else) the test would still be waiting for somebody to
+decrement the latch.
+Unfortunately std::latch does not allow waiting for specified amount of
+time, so this patch replaces it with std::binary_semaphore in which it
+is possible to fail the acquiring operation after some time.
+
+Change-Id: I38c007555bb5ab543329d724a16f024a9d80903e
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ tests/restconf-notifications.cpp | 10 +++++-----
+ tests/restconf_utils.cpp         |  4 ++--
+ tests/restconf_utils.h           |  8 +++++---
+ 3 files changed, 12 insertions(+), 10 deletions(-)
+
+diff --git a/tests/restconf-notifications.cpp b/tests/restconf-notifications.cpp
+index 4496b63..04131d7 100644
+--- a/tests/restconf-notifications.cpp
++++ b/tests/restconf-notifications.cpp
+@@ -7,6 +7,7 @@
+ 
+ #include "trompeloeil_doctest.h"
+ static const auto SERVER_PORT = "10088";
++#include <latch>
+ #include <libyang-cpp/Time.hpp>
+ #include <nghttp2/asio_http2.h>
+ #include <spdlog/spdlog.h>
+@@ -119,8 +120,7 @@ TEST_CASE("NETCONF notification streams")
+             auto notifSession = sysrepo::Connection{}.sessionStart();
+             auto ctx = notifSession.getContext();
+ 
+-            // wait until the client sends its HTTP request
+-            requestSent.wait();
++            WAIT_UNTIL_SSE_CLIENT_REQUESTS;
+ 
+             SEND_NOTIFICATION(notificationsJSON[0]);
+             SEND_NOTIFICATION(notificationsJSON[1]);
+@@ -239,7 +239,7 @@ TEST_CASE("NETCONF notification streams")
+                     SEND_NOTIFICATION(notificationsJSON[3]);
+                     SEND_NOTIFICATION(notificationsJSON[4]);
+                     oldNotificationsDone.count_down();
+-                    requestSent.wait();
++                    WAIT_UNTIL_SSE_CLIENT_REQUESTS;
+ 
+                     waitForCompletionAndBitMore(seqMod1);
+                     waitForCompletionAndBitMore(seqMod2);
+@@ -256,7 +256,7 @@ TEST_CASE("NETCONF notification streams")
+                     SEND_NOTIFICATION(notificationsJSON[1]);
+ 
+                     oldNotificationsDone.count_down();
+-                    requestSent.wait();
++                    WAIT_UNTIL_SSE_CLIENT_REQUESTS;
+ 
+                     SEND_NOTIFICATION(notificationsJSON[2]);
+                     SEND_NOTIFICATION(notificationsJSON[3]);
+@@ -290,7 +290,7 @@ TEST_CASE("NETCONF notification streams")
+                 SEND_NOTIFICATION(notificationsJSON[4]);
+ 
+                 oldNotificationsDone.count_down();
+-                requestSent.wait();
++                WAIT_UNTIL_SSE_CLIENT_REQUESTS;
+                 waitForCompletionAndBitMore(seqMod1);
+                 waitForCompletionAndBitMore(seqMod2);
+             }));
+diff --git a/tests/restconf_utils.cpp b/tests/restconf_utils.cpp
+index 8252bba..c3ff1de 100644
+--- a/tests/restconf_utils.cpp
++++ b/tests/restconf_utils.cpp
+@@ -164,7 +164,7 @@ SSEClient::SSEClient(
+     boost::asio::io_service& io,
+     const std::string& server_address,
+     const std::string& server_port,
+-    std::latch& requestSent,
++    std::binary_semaphore& requestSent,
+     const RestconfNotificationWatcher& notification,
+     const std::string& uri,
+     const std::map<std::string, std::string>& headers,
+@@ -192,7 +192,7 @@ SSEClient::SSEClient(
+ 
+         auto req = client->submit(ec, "GET", serverAddressAndPort(server_address, server_port) + uri, "", reqHeaders);
+         req->on_response([&, silenceTimeout](const ng_client::response& res) {
+-            requestSent.count_down();
++            requestSent.release();
+             res.on_data([&, silenceTimeout](const uint8_t* data, std::size_t len) {
+                 // not a production-ready code. In real-life condition the data received in one callback might probably be incomplete
+                 for (const auto& event : parseEvents(std::string(reinterpret_cast<const char*>(data), len))) {
+diff --git a/tests/restconf_utils.h b/tests/restconf_utils.h
+index 8b7386e..9efe398 100644
+--- a/tests/restconf_utils.h
++++ b/tests/restconf_utils.h
+@@ -8,8 +8,8 @@
+ 
+ #pragma once
+ #include "trompeloeil_doctest.h"
+-#include <latch>
+ #include <nghttp2/asio_http2_client.h>
++#include <semaphore>
+ #include "event_watchers.h"
+ #include "UniqueResource.h"
+ 
+@@ -92,7 +92,7 @@ struct SSEClient {
+         boost::asio::io_service& io,
+         const std::string& server_address,
+         const std::string& server_port,
+-        std::latch& requestSent,
++        std::binary_semaphore& requestSent,
+         const RestconfNotificationWatcher& notification,
+         const std::string& uri,
+         const std::map<std::string, std::string>& headers,
+@@ -104,7 +104,7 @@ struct SSEClient {
+ #define PREPARE_LOOP_WITH_EXCEPTIONS \
+     boost::asio::io_service io; \
+     std::promise<void> bg; \
+-    std::latch requestSent(1);
++    std::binary_semaphore requestSent(0);
+ 
+ #define RUN_LOOP_WITH_EXCEPTIONS \
+     do { \
+@@ -114,6 +114,8 @@ struct SSEClient {
+         fut.get(); \
+     } while (false)
+ 
++#define WAIT_UNTIL_SSE_CLIENT_REQUESTS requestSent.try_acquire_for(std::chrono::seconds(3))
++
+ inline auto wrap_exceptions_and_asio(std::promise<void>& bg, boost::asio::io_service& io, std::function<void()> func)
+ {
+     return [&bg, &io, func]()
+-- 
+2.43.0
+
