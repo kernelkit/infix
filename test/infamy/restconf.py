@@ -54,6 +54,7 @@ def requests_workaround(method, url, json, headers, auth, verify=False, retry=0)
                                auth=auth)
     prepared_request = session.prepare_request(request)
     prepared_request.url = prepared_request.url.replace('%25', '%')
+    prepared_request.url = prepared_request.url.replace('%3A', ':')
     response = session.send(prepared_request, verify=verify)
     try:
         # Raise exceptions for HTTP errors
