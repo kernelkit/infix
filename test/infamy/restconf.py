@@ -367,7 +367,7 @@ class Device(Transport):
 
     def delete_xpath(self, xpath):
         """Delete XPath from running config"""
-        path = f"/ds/ietf-datastores:running/{xpath_to_uri(xpath)}"
+        path = f"/ds/ietf-datastores:running{xpath_to_uri(xpath)}"
         url = f"{self.restconf_url}{path}"
         response = requests_workaround_delete(url, headers=self.headers,
                                               auth=self.auth, verify=False)
