@@ -1,0 +1,159 @@
+From ed0ff23f7ad341d663484f0b2a617cd3bc4923c8 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Tom=C3=A1=C5=A1=20Pecka?= <tomas.pecka@cesnet.cz>
+Date: Tue, 3 Dec 2024 19:27:49 +0100
+Subject: [PATCH 20/20] restconf: make as_restconf_notification reusable
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Addiva Elektronik
+
+The YANG-PUSH notifications are supposed to be wrapped in this too, so
+this needs to be accessible from multiple places.
+
+Change-Id: Icf25caf5f3be3917c524bf6111b5d92db6e287b0
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ src/restconf/NotificationStream.cpp | 37 +--------------------------
+ src/restconf/utils/yang.cpp         | 39 +++++++++++++++++++++++++++++
+ src/restconf/utils/yang.h           |  4 +++
+ 3 files changed, 44 insertions(+), 36 deletions(-)
+
+diff --git a/src/restconf/NotificationStream.cpp b/src/restconf/NotificationStream.cpp
+index 001d19c..eeddc04 100644
+--- a/src/restconf/NotificationStream.cpp
++++ b/src/restconf/NotificationStream.cpp
+@@ -20,41 +20,6 @@ namespace {
+ 
+ const auto streamListXPath = "/ietf-restconf-monitoring:restconf-state/streams/stream"s;
+ 
+-/** @brief Wraps a notification data tree with RESTCONF notification envelope. */
+-std::string as_restconf_notification(const libyang::Context& ctx, libyang::DataFormat dataFormat, libyang::DataNode notification, const sysrepo::NotificationTimeStamp& time)
+-{
+-    static const auto jsonNamespace = "ietf-restconf";
+-    static const auto xmlNamespace = "urn:ietf:params:xml:ns:netconf:notification:1.0";
+-
+-    std::optional<libyang::DataNode> envelope;
+-    std::optional<libyang::DataNode> eventTime;
+-    std::string timeStr = libyang::yangTimeFormat(time, libyang::TimezoneInterpretation::Local);
+-
+-    /* The namespaces for XML and JSON envelopes are different. See https://datatracker.ietf.org/doc/html/rfc8040#section-6.4 */
+-    if (dataFormat == libyang::DataFormat::JSON) {
+-        envelope = ctx.newOpaqueJSON(jsonNamespace, "notification", std::nullopt);
+-        eventTime = ctx.newOpaqueJSON(jsonNamespace, "eventTime", libyang::JSON{timeStr});
+-    } else {
+-        envelope = ctx.newOpaqueXML(xmlNamespace, "notification", std::nullopt);
+-        eventTime = ctx.newOpaqueXML(xmlNamespace, "eventTime", libyang::XML{timeStr});
+-    }
+-
+-    // the notification data node holds only the notification data tree but for nested notification we should print the whole YANG data tree
+-    while (notification.parent()) {
+-        notification = *notification.parent();
+-    }
+-
+-    envelope->insertChild(*eventTime);
+-    envelope->insertChild(notification);
+-
+-    auto res = *envelope->printStr(dataFormat, libyang::PrintFlags::WithSiblings);
+-
+-    // notification node comes from sysrepo and sysrepo will free this; if not unlinked then envelope destructor would try to free this as well
+-    notification.unlink();
+-
+-    return res;
+-}
+-
+ void subscribe(
+     std::optional<sysrepo::Subscription>& sub,
+     sysrepo::Session& session,
+@@ -70,7 +35,7 @@ void subscribe(
+             return;
+         }
+ 
+-        signal(as_restconf_notification(session.getContext(), dataFormat, *notificationTree, time));
++        signal(rousette::restconf::as_restconf_notification(session.getContext(), dataFormat, *notificationTree, time));
+     };
+ 
+     if (!sub) {
+diff --git a/src/restconf/utils/yang.cpp b/src/restconf/utils/yang.cpp
+index 4c4d619..30661fc 100644
+--- a/src/restconf/utils/yang.cpp
++++ b/src/restconf/utils/yang.cpp
+@@ -6,8 +6,11 @@
+ */
+ 
+ #include <algorithm>
++#include <libyang-cpp/Context.hpp>
+ #include <libyang-cpp/DataNode.hpp>
+ #include <libyang-cpp/SchemaNode.hpp>
++#include <libyang-cpp/Time.hpp>
++#include <sysrepo-cpp/Subscription.hpp>
+ 
+ namespace rousette::restconf {
+ 
+@@ -79,4 +82,40 @@ bool isKeyNode(const libyang::DataNode& maybeList, const libyang::DataNode& node
+     }
+     return false;
+ }
++
++
++/** @brief Wraps a notification data tree with RESTCONF notification envelope. */
++std::string as_restconf_notification(const libyang::Context& ctx, libyang::DataFormat dataFormat, libyang::DataNode notification, const sysrepo::NotificationTimeStamp& time)
++{
++    static const auto jsonNamespace = "ietf-restconf";
++    static const auto xmlNamespace = "urn:ietf:params:xml:ns:netconf:notification:1.0";
++
++    std::optional<libyang::DataNode> envelope;
++    std::optional<libyang::DataNode> eventTime;
++    std::string timeStr = libyang::yangTimeFormat(time, libyang::TimezoneInterpretation::Local);
++
++    /* The namespaces for XML and JSON envelopes are different. See https://datatracker.ietf.org/doc/html/rfc8040#section-6.4 */
++    if (dataFormat == libyang::DataFormat::JSON) {
++        envelope = ctx.newOpaqueJSON(jsonNamespace, "notification", std::nullopt);
++        eventTime = ctx.newOpaqueJSON(jsonNamespace, "eventTime", libyang::JSON{timeStr});
++    } else {
++        envelope = ctx.newOpaqueXML(xmlNamespace, "notification", std::nullopt);
++        eventTime = ctx.newOpaqueXML(xmlNamespace, "eventTime", libyang::XML{timeStr});
++    }
++
++    // the notification data node holds only the notification data tree but for nested notification we should print the whole YANG data tree
++    while (notification.parent()) {
++        notification = *notification.parent();
++    }
++
++    envelope->insertChild(*eventTime);
++    envelope->insertChild(notification);
++
++    auto res = *envelope->printStr(dataFormat, libyang::PrintFlags::WithSiblings);
++
++    // notification node comes from sysrepo and sysrepo will free this; if not unlinked then envelope destructor would try to free this as well
++    notification.unlink();
++
++    return res;
++}
+ }
+diff --git a/src/restconf/utils/yang.h b/src/restconf/utils/yang.h
+index e91ba8a..a558eae 100644
+--- a/src/restconf/utils/yang.h
++++ b/src/restconf/utils/yang.h
+@@ -6,10 +6,13 @@
+ */
+ 
+ #include <chrono>
++#include <sysrepo-cpp/Subscription.hpp>
+ 
+ namespace libyang {
+ class Leaf;
+ class DataNode;
++class Context;
++enum class DataFormat;
+ }
+ 
+ namespace rousette::restconf {
+@@ -19,4 +22,5 @@ std::string listKeyPredicate(const std::vector<libyang::Leaf>& listKeyLeafs, con
+ std::string leaflistKeyPredicate(const std::string& keyValue);
+ bool isUserOrderedList(const libyang::DataNode& node);
+ bool isKeyNode(const libyang::DataNode& maybeList, const libyang::DataNode& node);
++std::string as_restconf_notification(const libyang::Context& ctx, libyang::DataFormat dataFormat, libyang::DataNode notification, const sysrepo::NotificationTimeStamp& time);
+ }
+-- 
+2.43.0
+

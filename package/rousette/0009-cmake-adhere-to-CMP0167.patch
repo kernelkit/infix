@@ -1,0 +1,36 @@
+From 48d9b6ba3f3f892b9060b76b505d2f9a3aeb9e02 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Tom=C3=A1=C5=A1=20Pecka?= <tomas.pecka@cesnet.cz>
+Date: Mon, 25 Nov 2024 09:15:55 +0100
+Subject: [PATCH 09/20] cmake: adhere to CMP0167
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Addiva Elektronik
+
+After locally updating to cmake 3.30 I have seen a warning that our way
+of finding boost library is deprecated [1].
+
+[1] https://cmake.org/cmake/help/latest/policy/CMP0167.html
+
+Change-Id: I0cfc6cd0077fac48723487a280daac5fe8218ebb
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ CMakeLists.txt | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 465bef9..01dd2c2 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -72,7 +72,7 @@ find_package(spdlog REQUIRED)
+ find_package(date REQUIRED) # FIXME: Remove when we have STL with __cpp_lib_chrono >= 201907 (gcc 14)
+ find_package(PkgConfig)
+ pkg_check_modules(nghttp2 REQUIRED IMPORTED_TARGET libnghttp2_asio>=0.0.90 libnghttp2)
+-find_package(Boost REQUIRED COMPONENTS system thread)
++find_package(Boost REQUIRED CONFIG COMPONENTS system thread)
+ 
+ pkg_check_modules(SYSREPO-CPP REQUIRED IMPORTED_TARGET sysrepo-cpp>=3)
+ pkg_check_modules(LIBYANG-CPP REQUIRED IMPORTED_TARGET libyang-cpp>=3)
+-- 
+2.43.0
+

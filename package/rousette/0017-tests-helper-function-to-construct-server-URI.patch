@@ -1,0 +1,45 @@
+From 36943051d8563bee0c9cf89eec28acf5d3617272 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Tom=C3=A1=C5=A1=20Pecka?= <tomas.pecka@cesnet.cz>
+Date: Tue, 3 Dec 2024 12:02:24 +0100
+Subject: [PATCH 17/20] tests: helper function to construct server URI
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Addiva Elektronik
+
+Change-Id: Ic7c03b32a29b07464291f99027530010a7902f77
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ tests/restconf_utils.cpp | 9 +++++++--
+ 1 file changed, 7 insertions(+), 2 deletions(-)
+
+diff --git a/tests/restconf_utils.cpp b/tests/restconf_utils.cpp
+index ea9a18d..83f568f 100644
+--- a/tests/restconf_utils.cpp
++++ b/tests/restconf_utils.cpp
+@@ -13,6 +13,12 @@ using namespace std::string_literals;
+ namespace ng = nghttp2::asio_http2;
+ namespace ng_client = ng::client;
+ 
++namespace {
++std::string serverAddressAndPort(const std::string& server_address, const std::string& server_port) {
++    return "http://["s + server_address + "]" + ":" + server_port;
++}
++}
++
+ Response::Response(int statusCode, const Response::Headers& headers, const std::string& data)
+     : Response(statusCode, transformHeaders(headers), data)
+ {
+@@ -75,8 +81,7 @@ Response clientRequest(const std::string& server_address,
+             reqHeaders.insert({name, {value, false}});
+         }
+ 
+-        const auto server_address_and_port = std::string("http://[") + server_address + "]" + ":" + server_port;
+-        auto req = client->submit(ec, method, server_address_and_port + uri, data, reqHeaders);
++        auto req = client->submit(ec, method, serverAddressAndPort(server_address, server_port) + uri, data, reqHeaders);
+         req->on_response([&](const ng_client::response& res) {
+             res.on_data([&oss](const uint8_t* data, std::size_t len) {
+                 oss.write(reinterpret_cast<const char*>(data), len);
+-- 
+2.43.0
+

@@ -1,0 +1,300 @@
+From fda47b6a6cfdaecc24e96c4d6138c6de3ef116e0 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Tom=C3=A1=C5=A1=20Pecka?= <tomas.pecka@cesnet.cz>
+Date: Mon, 7 Oct 2024 21:21:22 +0200
+Subject: [PATCH 06/20] tests: test querying lists with union keys
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Addiva Elektronik
+
+Test that we correctly work with keys that are unions of something
+that can have a module namespace and that must not have it.
+
+By the way, enum values are not supposed to have a namespace prefix,
+good to know [1].
+
+[1] https://www.rfc-editor.org/rfc/rfc7951#section-6.4
+
+Change-Id: I5a70f18117bb453330b4bb2ce0d2fb47d35b6ea6
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ tests/restconf-reading.cpp | 53 ++++++++++++++++++++++++-----
+ tests/restconf-writing.cpp | 68 ++++++++++++++++++++++++++++----------
+ tests/uri-parser.cpp       |  2 +-
+ tests/yang/example.yang    | 26 +++++++++++++--
+ 4 files changed, 120 insertions(+), 29 deletions(-)
+
+diff --git a/tests/restconf-reading.cpp b/tests/restconf-reading.cpp
+index 96c38ab..2ded3f0 100644
+--- a/tests/restconf-reading.cpp
++++ b/tests/restconf-reading.cpp
+@@ -289,14 +289,16 @@ TEST_CASE("reading data")
+ }
+ )"});
+ 
+-        srSess.setItem("/example:list-with-identity-key[type='example:derived-identity'][name='name']", std::nullopt);
+-        srSess.setItem("/example:list-with-identity-key[type='example-types:another-derived-identity'][name='name']", std::nullopt);
++        srSess.setItem("/example:list-with-union-keys[type='example:derived-identity'][name='name']", std::nullopt);
++        srSess.setItem("/example:list-with-union-keys[type='example-types:another-derived-identity'][name='name']", std::nullopt);
++        srSess.setItem("/example:list-with-union-keys[type='fiii'][name='name']", std::nullopt);
++        srSess.setItem("/example:list-with-union-keys[type='zero'][name='name']", std::nullopt); // enum value
+         srSess.setItem("/example:tlc/decimal-list[.='1.00']", std::nullopt);
+         srSess.applyChanges();
+ 
+         // dealing with keys which can have prefixes (YANG identities)
+-        REQUIRE(get(RESTCONF_DATA_ROOT "/example:list-with-identity-key=derived-identity,name", {AUTH_ROOT}) == Response{200, jsonHeaders, R"({
+-  "example:list-with-identity-key": [
++        REQUIRE(get(RESTCONF_DATA_ROOT "/example:list-with-union-keys=derived-identity,name", {AUTH_ROOT}) == Response{200, jsonHeaders, R"({
++  "example:list-with-union-keys": [
+     {
+       "type": "derived-identity",
+       "name": "name"
+@@ -304,8 +306,8 @@ TEST_CASE("reading data")
+   ]
+ }
+ )"});
+-        REQUIRE(get(RESTCONF_DATA_ROOT "/example:list-with-identity-key=example%3Aderived-identity,name", {AUTH_ROOT}) == Response{200, jsonHeaders, R"({
+-  "example:list-with-identity-key": [
++        REQUIRE(get(RESTCONF_DATA_ROOT "/example:list-with-union-keys=example%3Aderived-identity,name", {AUTH_ROOT}) == Response{200, jsonHeaders, R"({
++  "example:list-with-union-keys": [
+     {
+       "type": "derived-identity",
+       "name": "name"
+@@ -315,7 +317,7 @@ TEST_CASE("reading data")
+ )"});
+ 
+         // an identity from another module must be namespace-qualified
+-        REQUIRE(get(RESTCONF_DATA_ROOT "/example:list-with-identity-key=another-derived-identity,name", {AUTH_ROOT}) == Response{404, jsonHeaders, R"({
++        REQUIRE(get(RESTCONF_DATA_ROOT "/example:list-with-union-keys=another-derived-identity,name", {AUTH_ROOT}) == Response{404, jsonHeaders, R"({
+   "ietf-restconf:errors": {
+     "error": [
+       {
+@@ -328,8 +330,8 @@ TEST_CASE("reading data")
+ }
+ )"});
+ 
+-        REQUIRE(get(RESTCONF_DATA_ROOT "/example:list-with-identity-key=example-types%3Aanother-derived-identity,name", {AUTH_ROOT}) == Response{200, jsonHeaders, R"({
+-  "example:list-with-identity-key": [
++        REQUIRE(get(RESTCONF_DATA_ROOT "/example:list-with-union-keys=example-types%3Aanother-derived-identity,name", {AUTH_ROOT}) == Response{200, jsonHeaders, R"({
++  "example:list-with-union-keys": [
+     {
+       "type": "example-types:another-derived-identity",
+       "name": "name"
+@@ -346,6 +348,39 @@ TEST_CASE("reading data")
+     ]
+   }
+ }
++)"});
++
++        REQUIRE(get(RESTCONF_DATA_ROOT "/example:list-with-union-keys=zero,name", {AUTH_ROOT}) == Response{200, jsonHeaders, R"({
++  "example:list-with-union-keys": [
++    {
++      "type": "zero",
++      "name": "name"
++    }
++  ]
++}
++)"});
++
++        REQUIRE(get(RESTCONF_DATA_ROOT "/example:list-with-union-keys=example%3Azero,name", {AUTH_ROOT}) == Response{404, jsonHeaders, R"({
++  "ietf-restconf:errors": {
++    "error": [
++      {
++        "error-type": "application",
++        "error-tag": "invalid-value",
++        "error-message": "No data from sysrepo."
++      }
++    ]
++  }
++}
++)"});
++
++        REQUIRE(get(RESTCONF_DATA_ROOT "/example:list-with-union-keys=fiii,name", {AUTH_ROOT}) == Response{200, jsonHeaders, R"({
++  "example:list-with-union-keys": [
++    {
++      "type": "fiii",
++      "name": "name"
++    }
++  ]
++}
+ )"});
+     }
+ 
+diff --git a/tests/restconf-writing.cpp b/tests/restconf-writing.cpp
+index 8418554..c1a9515 100644
+--- a/tests/restconf-writing.cpp
++++ b/tests/restconf-writing.cpp
+@@ -392,46 +392,69 @@ TEST_CASE("writing data")
+             SECTION("Test canonicalization of keys")
+             {
+                 EXPECT_CHANGE(
+-                    CREATED("/example:list-with-identity-key[type='example:derived-identity'][name='name']", std::nullopt),
+-                    CREATED("/example:list-with-identity-key[type='example:derived-identity'][name='name']/type", "example:derived-identity"),
+-                    CREATED("/example:list-with-identity-key[type='example:derived-identity'][name='name']/name", "name"),
+-                    CREATED("/example:list-with-identity-key[type='example:derived-identity'][name='name']/text", "blabla"));
+-                REQUIRE(put(RESTCONF_DATA_ROOT "/example:list-with-identity-key=derived-identity,name", {AUTH_ROOT, CONTENT_TYPE_JSON}, R"({"example:list-with-identity-key": [{"name": "name", "type": "derived-identity", "text": "blabla"}]}]})") == Response{201, noContentTypeHeaders, ""});
++                    CREATED("/example:list-with-union-keys[type='example:derived-identity'][name='name']", std::nullopt),
++                    CREATED("/example:list-with-union-keys[type='example:derived-identity'][name='name']/type", "example:derived-identity"),
++                    CREATED("/example:list-with-union-keys[type='example:derived-identity'][name='name']/name", "name"),
++                    CREATED("/example:list-with-union-keys[type='example:derived-identity'][name='name']/text", "blabla"));
++                REQUIRE(put(RESTCONF_DATA_ROOT "/example:list-with-union-keys=derived-identity,name", {AUTH_ROOT, CONTENT_TYPE_JSON}, R"({"example:list-with-union-keys": [{"name": "name", "type": "derived-identity", "text": "blabla"}]}]})") == Response{201, noContentTypeHeaders, ""});
+ 
+                 // prefixed in the URI, not prefixed in the data
+                 EXPECT_CHANGE(
+-                    MODIFIED("/example:list-with-identity-key[type='example:derived-identity'][name='name']/text", "hehe"));
+-                REQUIRE(put(RESTCONF_DATA_ROOT "/example:list-with-identity-key=example%3Aderived-identity,name", {AUTH_ROOT, CONTENT_TYPE_JSON}, R"({"example:list-with-identity-key": [{"name": "name", "type": "derived-identity", "text": "hehe"}]}]})") == Response{204, noContentTypeHeaders, ""});
++                    MODIFIED("/example:list-with-union-keys[type='example:derived-identity'][name='name']/text", "hehe"));
++                REQUIRE(put(RESTCONF_DATA_ROOT "/example:list-with-union-keys=example%3Aderived-identity,name", {AUTH_ROOT, CONTENT_TYPE_JSON}, R"({"example:list-with-union-keys": [{"name": "name", "type": "derived-identity", "text": "hehe"}]}]})") == Response{204, noContentTypeHeaders, ""});
+ 
++                // 'another-derived-identity' comes from a different module than the list itself, so this parses as string
++                EXPECT_CHANGE(
++                    CREATED("/example:list-with-union-keys[type='another-derived-identity'][name='name']", std::nullopt),
++                    CREATED("/example:list-with-union-keys[type='another-derived-identity'][name='name']/type", "another-derived-identity"),
++                    CREATED("/example:list-with-union-keys[type='another-derived-identity'][name='name']/name", "name"),
++                    CREATED("/example:list-with-union-keys[type='another-derived-identity'][name='name']/text", "blabla"));
++                REQUIRE(put(RESTCONF_DATA_ROOT "/example:list-with-union-keys=another-derived-identity,name", {AUTH_ROOT, CONTENT_TYPE_JSON}, R"({"example:list-with-union-keys": [{"name": "name", "type": "another-derived-identity", "text": "blabla"}]}]})") == Response{201, noContentTypeHeaders, ""});
++
++                EXPECT_CHANGE(
++                    CREATED("/example:list-with-union-keys[type='example-types:another-derived-identity'][name='name']", std::nullopt),
++                    CREATED("/example:list-with-union-keys[type='example-types:another-derived-identity'][name='name']/type", "example-types:another-derived-identity"),
++                    CREATED("/example:list-with-union-keys[type='example-types:another-derived-identity'][name='name']/name", "name"),
++                    CREATED("/example:list-with-union-keys[type='example-types:another-derived-identity'][name='name']/text", "blabla"));
++                REQUIRE(put(RESTCONF_DATA_ROOT "/example:list-with-union-keys=example-types%3Aanother-derived-identity,name", {AUTH_ROOT, CONTENT_TYPE_JSON}, R"({"example:list-with-union-keys": [{"name": "name", "type": "example-types:another-derived-identity", "text": "blabla"}]}]})") == Response{201, noContentTypeHeaders, ""});
+ 
+-                REQUIRE(put(RESTCONF_DATA_ROOT "/example:list-with-identity-key=another-derived-identity,name", {AUTH_ROOT, CONTENT_TYPE_JSON}, R"({"example:list-with-identity-key": [{"name": "name", "type": "another-derived-identity", "text": "blabla"}]}]})") == Response{400, jsonHeaders, R"({
++                // missing namespace in the data
++                REQUIRE(put(RESTCONF_DATA_ROOT "/example:list-with-union-keys=example-types%3Aanother-derived-identity,name", {AUTH_ROOT, CONTENT_TYPE_JSON}, R"({"example:list-with-union-keys": [{"name": "name", "type": "another-derived-identity", "text": "blabla"}]}]})") == Response{400, jsonHeaders, R"({
+   "ietf-restconf:errors": {
+     "error": [
+       {
+         "error-type": "protocol",
+         "error-tag": "invalid-value",
+-        "error-message": "Validation failure: Can't parse data: LY_EVALID"
++        "error-path": "/example:list-with-union-keys[type='another-derived-identity'][name='name']/type",
++        "error-message": "List key mismatch between URI path ('example-types:another-derived-identity') and data ('another-derived-identity')."
+       }
+     ]
+   }
+ }
+ )"});
+ 
++                // zero is enum value
+                 EXPECT_CHANGE(
+-                    CREATED("/example:list-with-identity-key[type='example-types:another-derived-identity'][name='name']", std::nullopt),
+-                    CREATED("/example:list-with-identity-key[type='example-types:another-derived-identity'][name='name']/type", "example-types:another-derived-identity"),
+-                    CREATED("/example:list-with-identity-key[type='example-types:another-derived-identity'][name='name']/name", "name"),
+-                    CREATED("/example:list-with-identity-key[type='example-types:another-derived-identity'][name='name']/text", "blabla"));
+-                REQUIRE(put(RESTCONF_DATA_ROOT "/example:list-with-identity-key=example-types%3Aanother-derived-identity,name", {AUTH_ROOT, CONTENT_TYPE_JSON}, R"({"example:list-with-identity-key": [{"name": "name", "type": "example-types:another-derived-identity", "text": "blabla"}]}]})") == Response{201, noContentTypeHeaders, ""});
++                        CREATED("/example:list-with-union-keys[type='zero'][name='name']", std::nullopt),
++                        CREATED("/example:list-with-union-keys[type='zero'][name='name']/type", "zero"),
++                        CREATED("/example:list-with-union-keys[type='zero'][name='name']/name", "name"));
++                REQUIRE(put(RESTCONF_DATA_ROOT "/example:list-with-union-keys=zero,name", {AUTH_ROOT, CONTENT_TYPE_JSON}, R"({"example:list-with-union-keys": [{"name": "name", "type": "zero"}]}]})") == Response{201, noContentTypeHeaders, ""});
+ 
+-                // missing namespace in the data
+-                REQUIRE(put(RESTCONF_DATA_ROOT "/example:list-with-identity-key=example-types%3Aanother-derived-identity,name", {AUTH_ROOT, CONTENT_TYPE_JSON}, R"({"example:list-with-identity-key": [{"name": "name", "type": "another-derived-identity", "text": "blabla"}]}]})") == Response{400, jsonHeaders, R"({
++                // example:zero is string, enum values are not namespace-prefixed
++                EXPECT_CHANGE(
++                        CREATED("/example:list-with-union-keys[type='example:zero'][name='name']", std::nullopt),
++                        CREATED("/example:list-with-union-keys[type='example:zero'][name='name']/type", "example:zero"),
++                        CREATED("/example:list-with-union-keys[type='example:zero'][name='name']/name", "name"));
++                REQUIRE(put(RESTCONF_DATA_ROOT "/example:list-with-union-keys=example%3Azero,name", {AUTH_ROOT, CONTENT_TYPE_JSON}, R"({"example:list-with-union-keys": [{"name": "name", "type": "example:zero"}]}]})") == Response{201, noContentTypeHeaders, ""});
++
++                REQUIRE(put(RESTCONF_DATA_ROOT "/example:list-with-union-keys=zero,name", {AUTH_ROOT, CONTENT_TYPE_JSON}, R"({"example:list-with-union-keys": [{"name": "name", "type": "example:zero"}]}]})") == Response{400, jsonHeaders, R"({
+   "ietf-restconf:errors": {
+     "error": [
+       {
+         "error-type": "protocol",
+         "error-tag": "invalid-value",
+-        "error-message": "Validation failure: Can't parse data: LY_EVALID"
++        "error-path": "/example:list-with-union-keys[type='example:zero'][name='name']/type",
++        "error-message": "List key mismatch between URI path ('zero') and data ('example:zero')."
+       }
+     ]
+   }
+@@ -459,6 +482,17 @@ TEST_CASE("writing data")
+ }
+ )"});
+ 
++                EXPECT_CHANGE(CREATED("/example:fruit-list[.='example:apple']", "example:apple"));
++                REQUIRE(put(RESTCONF_DATA_ROOT "/example:fruit-list=example%3Aapple", {AUTH_ROOT, CONTENT_TYPE_JSON}, R"({"example:fruit-list": ["apple"]})") == Response{201, noContentTypeHeaders, ""});
++
++                // leafref
++                EXPECT_CHANGE(
++                    CREATED("/example:list-with-union-keys[type='example:apple'][name='name']", std::nullopt),
++                    CREATED("/example:list-with-union-keys[type='example:apple'][name='name']/type", "example:apple"),
++                    CREATED("/example:list-with-union-keys[type='example:apple'][name='name']/name", "name"));
++                REQUIRE(put(RESTCONF_DATA_ROOT "/example:list-with-union-keys=example%3Aapple,name", {AUTH_ROOT, CONTENT_TYPE_JSON},
++                            R"({"example:list-with-union-keys": [{"name": "name", "type": "apple"}]}]})") == Response{201, noContentTypeHeaders, ""});
++
+                 // value in the URI and in the data have the same canonical form
+                 EXPECT_CHANGE(CREATED("/example:tlc/decimal-list[.='1.0']", "1.0"));
+                 REQUIRE(put(RESTCONF_DATA_ROOT "/example:tlc/decimal-list=1.00", {AUTH_ROOT, CONTENT_TYPE_JSON}, R"({"example:decimal-list": ["1.0"]})") == Response{201, noContentTypeHeaders, ""});
+diff --git a/tests/uri-parser.cpp b/tests/uri-parser.cpp
+index 7320c3c..000fe5d 100644
+--- a/tests/uri-parser.cpp
++++ b/tests/uri-parser.cpp
+@@ -293,7 +293,7 @@ TEST_CASE("URI path parser")
+                              {"/restconf/data/example:tlc/list=eth0/choice1", "/example:tlc/list[name='eth0']/choice1", std::nullopt},
+                              {"/restconf/data/example:tlc/list=eth0/choice2", "/example:tlc/list[name='eth0']/choice2", std::nullopt},
+                              {"/restconf/data/example:tlc/list=eth0/collection=val", "/example:tlc/list[name='eth0']/collection[.='val']", std::nullopt},
+-                             {"/restconf/data/example:list-with-identity-key=example-types%3Aanother-derived-identity,aaa", "/example:list-with-identity-key[type='example-types:another-derived-identity'][name='aaa']", std::nullopt},
++                             {"/restconf/data/example:list-with-union-keys=example-types%3Aanother-derived-identity,aaa", "/example:list-with-union-keys[type='example-types:another-derived-identity'][name='aaa']", std::nullopt},
+                              {"/restconf/data/example:tlc/status", "/example:tlc/status", std::nullopt},
+                              // container example:a has a container b inserted locally and also via an augment. Check that we return the correct one
+                              {"/restconf/data/example:a/b", "/example:a/b", std::nullopt},
+diff --git a/tests/yang/example.yang b/tests/yang/example.yang
+index c46273c..75cd7a6 100644
+--- a/tests/yang/example.yang
++++ b/tests/yang/example.yang
+@@ -13,6 +13,11 @@ module example {
+     base base-identity;
+   }
+ 
++  identity fruit { }
++  identity apple {
++    base fruit;
++  }
++
+   leaf top-level-leaf { type string; }
+   leaf top-level-leaf2 { type string; default "x"; }
+ 
+@@ -121,10 +126,23 @@ module example {
+     }
+   }
+ 
+-  list list-with-identity-key {
++  list list-with-union-keys {
+     key "type name";
+     leaf type {
+-      type identityref { base base-identity; }
++      type union {
++        type identityref {
++          base base-identity;
++        }
++        type enumeration {
++          enum zero;
++          enum one;
++        }
++        type leafref {
++          require-instance true;
++          path "/fruit-list";
++        }
++        type string;
++      }
+     }
+     leaf name { type string; }
+     leaf text { type string; }
+@@ -134,6 +152,10 @@ module example {
+     type identityref { base base-identity; }
+   }
+ 
++  leaf-list fruit-list {
++    type identityref { base fruit; }
++  }
++
+   rpc test-rpc {
+     input {
+       leaf i {
+-- 
+2.43.0
+

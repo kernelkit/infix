@@ -54,6 +54,7 @@ def requests_workaround(method, url, json, headers, auth, verify=False, retry=0)
                                auth=auth)
     prepared_request = session.prepare_request(request)
     prepared_request.url = prepared_request.url.replace('%25', '%')
+    prepared_request.url = prepared_request.url.replace('%3A', ':')
     response = session.send(prepared_request, verify=verify)
     try:
         # Raise exceptions for HTTP errors
@@ -204,7 +205,7 @@ class Device(Transport):
         """Get a datastore"""
         dspath = f"/ds/ietf-datastores:{datastore}"
         if path is not None:
-            dspath = f"{dspath}/{path}"
+            dspath = f"{dspath}{path}"
 
         url = f"{self.restconf_url}{dspath}"
         try:
@@ -366,7 +367,7 @@ class Device(Transport):
 
     def delete_xpath(self, xpath):
         """Delete XPath from running config"""
-        path = f"/ds/ietf-datastores:running/{xpath_to_uri(xpath)}"
+        path = f"/ds/ietf-datastores:running{xpath_to_uri(xpath)}"
         url = f"{self.restconf_url}{path}"
         response = requests_workaround_delete(url, headers=self.headers,
                                               auth=self.auth, verify=False)
