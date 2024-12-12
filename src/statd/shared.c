@@ -4,9 +4,9 @@
 #include <stdlib.h>
 #include <jansson.h>
 #include <net/if.h>
+#include <libite/lite.h>
 
 #include <srx/common.h>
-#include <srx/helpers.h>
 
 json_t *json_get_output(const char *cmd)
 {
