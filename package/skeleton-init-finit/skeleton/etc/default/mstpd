@@ -1,0 +1,3 @@
+# -d: Do _not_ [sic] daemonize
+# -s: Log to syslog
+MSTPD_ARGS="-d -s"

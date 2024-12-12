@@ -111,7 +111,7 @@ endif
 
 ifeq ($(BR2_PACKAGE_MSTPD),y)
 define SKELETON_INIT_FINIT_SET_MSTPD
-	cp $(SKELETON_INIT_FINIT_AVAILABLE)/mstpd.conf $(FINIT_D)/available/
+	ln -sf ../available/mstpd.conf $(FINIT_D)/enabled/mstpd.conf
 endef
 SKELETON_INIT_FINIT_POST_INSTALL_TARGET_HOOKS += SKELETON_INIT_FINIT_SET_MSTPD
 endif
