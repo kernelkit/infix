@@ -1451,8 +1451,23 @@ static int bridge_stp_settings(struct dagger *net, FILE *ip, const char *brname,
 
 	fputs("#!/sbin/mstpctl -b\n", mstpctl);
 
+	fprintf(mstpctl, "setforcevers %s %s\n", brname,
+		lydx_get_cattr(stp, "force-protocol"));
+
+	fprintf(mstpctl, "setfdelay %s %s\n", brname,
+		lydx_get_cattr(stp, "forward-delay"));
+
+	fprintf(mstpctl, "setmaxage %s %s\n", brname,
+		lydx_get_cattr(stp, "max-age"));
+
+	fprintf(mstpctl, "settxholdcount %s %s\n", brname,
+		lydx_get_cattr(stp, "transmit-hold-count"));
+
+	fprintf(mstpctl, "setmaxhops %s %s\n", brname,
+		lydx_get_cattr(stp, "max-hops"));
+
 	fprintf(mstpctl, "settreeprio %s 0 %s\n", brname,
-		lydx_get_cattr(stp, "priority"));
+		lydx_get_cattr(lydx_get_child(stp, "cist"), "priority"));
 
 	fclose(mstpctl);
 	return 0;

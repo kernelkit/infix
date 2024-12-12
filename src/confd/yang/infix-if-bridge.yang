@@ -148,7 +148,7 @@ submodule infix-if-bridge {
        reserved link-local multicast groups, in 01:80:C2:00:00:0X.";
   }
 
-  typedef stp-version {
+  typedef stp-protocol {
     description "Spanning Tree Protocol version.";
     type enumeration {
       enum stp {
@@ -207,7 +207,7 @@ submodule infix-if-bridge {
       type enumeration {
         enum auto;
       }
-      type bool;
+      type boolean;
     }
     default auto;
   }
@@ -372,6 +372,27 @@ submodule infix-if-bridge {
     }
   }
 
+  grouping stp-tree {
+    leaf priority {
+      description "Priority.";
+      type stp-priority;
+      reference "IEEE 802.1Q-2018 13.18";
+    }
+  }
+
+  grouping stp-tree-port {
+    leaf priority {
+      description "Priority.";
+      type stp-priority;
+      reference "IEEE 802.1Q-2018 13.18";
+    }
+
+    leaf state {
+      description "Operational state.";
+      type stp-state;
+      config false;
+    }
+  }
 
   /*
    * Data Nodes
@@ -457,7 +478,7 @@ submodule infix-if-bridge {
         }
 
         leaf forward-delay {
-          description "Forward delay."
+          description "Forward delay.";
           type uint8 {
             range "4..30";
           }
@@ -466,7 +487,7 @@ submodule infix-if-bridge {
         }
 
         leaf max-age {
-          description "Max age."
+          description "Max age.";
           type uint8 {
             range "6..40";
           }
@@ -475,7 +496,7 @@ submodule infix-if-bridge {
         }
 
         leaf transmit-hold-count {
-          description "Transmit hold count."
+          description "Transmit hold count.";
           type uint8 {
             range "1..10";
           }
@@ -484,7 +505,7 @@ submodule infix-if-bridge {
         }
 
         leaf max-hops {
-          description "Max hops."
+          description "Max hops.";
           type uint8 {
             range "6..40";
           }
@@ -494,11 +515,7 @@ submodule infix-if-bridge {
 
         container cist {
           description "Common and Internal Spanning Tree.";
-          leaf priority {
-            description "Priority.";
-            type stp-priority;
-            reference "IEEE 802.1Q-2018 13.18";
-          }
+          uses stp-tree;
         }
 
         // list mst {
@@ -510,15 +527,12 @@ submodule infix-if-bridge {
         //     type dot1q-types:mstid-type;
         //   }
 
+        //   uses stp-tree;
+
         //   leaf-list vlan {
         //     type leafref {
         //       path "/if:interfaces/interface/bridge/vlans/vlan/vid";
         //     }
-        //   }
-
-        //   leaf priority {
-        //     description "Priority.";
-        //     type stp-priority;
         //   }
         // }
       }
@@ -661,11 +675,7 @@ submodule infix-if-bridge {
 
       container cist {
         description "Common and Internal Spanning Tree.";
-        leaf priority {
-          description "Priority.";
-          type stp-priority;
-          reference "IEEE 802.1Q-2018 13.18";
-        }
+        uses stp-tree-port;
       }
 
       // list mst {
@@ -677,10 +687,7 @@ submodule infix-if-bridge {
       //     type dot1q-types:mstid-type;
       //   }
 
-      //   leaf priority {
-      //     description "Priority.";
-      //     type stp-priority;
-      //   }
+      //   uses stp-tree-port;
       // }
     }
 
