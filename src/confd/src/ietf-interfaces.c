@@ -1053,7 +1053,7 @@ static const char *bridge_tagtype2str(const char *type)
 	return proto;
 }
 
-static int bridge_vlan_settings(struct lyd_node *cif, const char **proto, int *vlan_mcast)
+static bool bridge_vlan_settings(struct lyd_node *cif, const char **proto, int *vlan_mcast)
 {
 	struct lyd_node *vlans, *vlan;
 
@@ -1073,7 +1073,7 @@ static int bridge_vlan_settings(struct lyd_node *cif, const char **proto, int *v
 			num++;
 		}
 
-		return num;
+		return !!num;
 	}
 
 	return 0;
@@ -1424,17 +1424,37 @@ err:
 	return err;
 }
 
-static int bridge_stp_settings(FILE *ip, const char *brname, struct lyd_node *cif)
+static int bridge_stp_settings(struct dagger *net, FILE *ip, const char *brname,
+			       bool vlan_filtering, struct lyd_node *cif)
 {
 	struct lyd_node *stp;
+	FILE *mstpctl;
 
 	stp = lydx_get_descendant(lyd_child(cif), "bridge", "stp", NULL);
 	if (!stp) {
-		fprintf(ip, " stp_state 0");
+		fputs(" stp_state 0", ip);
 		return 0;
 	}
 
-	fprintf(ip, " stp_state 1");
+	fputs(" stp_state 1", ip);
+
+	if (vlan_filtering)
+		/* Use the MSTP compatible mode of managing port
+		 * states, rather then the legacy (and default)
+		 * per-VLAN mode. */
+		fputs(" mst_enabled 1", ip);
+
+
+	mstpctl = dagger_fopen_next(net, "init", brname, 70, "init.mstpctl");
+	if (!mstpctl)
+		return -EIO;
+
+	fputs("#!/sbin/mstpctl -b\n", mstpctl);
+
+	fprintf(mstpctl, "settreeprio %s 0 %s\n", brname,
+		lydx_get_cattr(stp, "priority"));
+
+	fclose(mstpctl);
 	return 0;
 }
 
@@ -1443,8 +1463,9 @@ static int netdag_gen_bridge(sr_session_ctx_t *session, struct dagger *net, stru
 {
 	struct lyd_node *vlans, *vlan, *multicast_filters;
 	const char *brname = lydx_get_cattr(cif, "name");
-	int vlan_filtering, fwd_mask, vlan_mcast = 0;
 	const char *op = add ? "add" : "set";
+	int fwd_mask, vlan_mcast = 0;
+	bool vlan_filtering;
 	const char *proto;
 	FILE *br = NULL;
 	int err = 0;
@@ -1486,7 +1507,7 @@ static int netdag_gen_bridge(sr_session_ctx_t *session, struct dagger *net, stru
 	if ((err = bridge_mcast_settings(ip, brname, cif, vlan_mcast)))
 		goto out;
 
-	if ((err = bridge_stp_settings(ip, brname, cif)))
+	if ((err = bridge_stp_settings(net, ip, brname, vlan_filtering, cif)))
 		goto out;
 
 	br = dagger_fopen_next(net, "init", brname, 60, "init.bridge");

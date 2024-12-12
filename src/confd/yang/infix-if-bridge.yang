@@ -148,6 +148,26 @@ submodule infix-if-bridge {
        reserved link-local multicast groups, in 01:80:C2:00:00:0X.";
   }
 
+  typedef stp-version {
+    description "Spanning Tree Protocol version.";
+    type enumeration {
+      enum stp {
+        value 0;
+        description "Spanning Tree Protocol.";
+      }
+      enum rstp {
+        value 2;
+        description "Rapid Spanning Tree Protocol.";
+      }
+      // enum mstp {
+      //   value 3;
+      //   description "Multiple Spanning Tree Protocol";
+      // }
+    }
+
+    reference "IEEE 802.1Q-2018 13.7.2";
+  }
+
   typedef stp-state {
     description "User-friendly enumeration of different bridge port operational states.";
     type enumeration {
@@ -165,13 +185,43 @@ submodule infix-if-bridge {
       }
       enum forwarding {
         value 3;
-        description "Port is in STP FORWARDING state. This is the default vlan state.";
+        description "Port is in STP FORWARDING state.";
       }
       enum blocking {
         value 4;
         description "Port is in STP BLOCKING state.";
       }
     }
+  }
+
+  typedef stp-priority {
+    type uint8 {
+      range "0..15";
+    }
+
+    default 8;
+  }
+
+  typedef stp-bool-or-auto {
+    type union {
+      type enumeration {
+        enum auto;
+      }
+      type bool;
+    }
+    default auto;
+  }
+
+  typedef stp-path-cost {
+    type union {
+      type enumeration {
+        enum auto;
+      }
+      type uint32 {
+        range "0..200000000";
+      }
+    }
+    default auto;
   }
 
   typedef querier-mode {
@@ -223,6 +273,7 @@ submodule infix-if-bridge {
       }
     }
   }
+
 
   /*
    * Shared settings
@@ -321,6 +372,7 @@ submodule infix-if-bridge {
     }
   }
 
+
   /*
    * Data Nodes
    */
@@ -392,9 +444,83 @@ submodule infix-if-bridge {
           }
         }
       }
+
       container stp {
         presence stp;
-        description "Spanning Tree";
+        description "Spanning Tree Protocol";
+
+        leaf force-protocol {
+          description "Protocol version.";
+          type stp-protocol;
+          default rstp;
+          reference "IEEE 802.1Q-2018 13.7.2";
+        }
+
+        leaf forward-delay {
+          description "Forward delay."
+          type uint8 {
+            range "4..30";
+          }
+          default 15;
+          reference "IEEE 802.1Q-2018 13.25";
+        }
+
+        leaf max-age {
+          description "Max age."
+          type uint8 {
+            range "6..40";
+          }
+          default 20;
+          reference "IEEE 802.1Q-2018 13.25";
+        }
+
+        leaf transmit-hold-count {
+          description "Transmit hold count."
+          type uint8 {
+            range "1..10";
+          }
+          default 6;
+          reference "IEEE 802.1Q-2018 13.25";
+        }
+
+        leaf max-hops {
+          description "Max hops."
+          type uint8 {
+            range "6..40";
+          }
+          default 20;
+          reference "IEEE 802.1Q-2018 13.25";
+        }
+
+        container cist {
+          description "Common and Internal Spanning Tree.";
+          leaf priority {
+            description "Priority.";
+            type stp-priority;
+            reference "IEEE 802.1Q-2018 13.18";
+          }
+        }
+
+        // list mst {
+        //   description "Multiple Spanning Tree Instance.";
+        //   key "mstid";
+
+        //   leaf mstid {
+        //     description "The MSTI identifier to which this entry applies.";
+        //     type dot1q-types:mstid-type;
+        //   }
+
+        //   leaf-list vlan {
+        //     type leafref {
+        //       path "/if:interfaces/interface/bridge/vlans/vlan/vid";
+        //     }
+        //   }
+
+        //   leaf priority {
+        //     description "Priority.";
+        //     type stp-priority;
+        //   }
+        // }
       }
     }
   }
@@ -508,6 +634,54 @@ submodule infix-if-bridge {
         type mrouter-port;
         default auto;
       }
+    }
+
+    container stp {
+      presence stp;
+      description "Spanning Tree Protocol";
+      reference "IEEE 802.1Q-2018 13.27";
+
+      container cost {
+        leaf external-path {
+          description "External path cost.";
+          type stp-path-cost;
+          reference "IEEE 802.1Q-2018 13.27.25";
+        }
+        leaf internal-path {
+          description "Internal path cost.";
+          type stp-path-cost;
+          reference "IEEE 802.1Q-2018 13.27.33";
+        }
+      }
+
+      leaf edge {
+        description "Edge.";
+        type stp-bool-or-auto;
+      }
+
+      container cist {
+        description "Common and Internal Spanning Tree.";
+        leaf priority {
+          description "Priority.";
+          type stp-priority;
+          reference "IEEE 802.1Q-2018 13.18";
+        }
+      }
+
+      // list mst {
+      //   description "Multiple Spanning Tree Instance.";
+      //   key "mstid";
+
+      //   leaf mstid {
+      //     description "The MSTI identifier to which this entry applies.";
+      //     type dot1q-types:mstid-type;
+      //   }
+
+      //   leaf priority {
+      //     description "Priority.";
+      //     type stp-priority;
+      //   }
+      // }
     }
 
     leaf stp-state {
