@@ -1,0 +1,108 @@
+<!DOCTYPE node PUBLIC "-//freedesktop//DTD D-BUS Object Introspection 1.0//EN" "https://specifications.freedesktop.org/dbus/introspect-latest.dtd">
+<!-- License note: This file is considered data and thus no license is needed for any usage. -->
+<node>
+  <interface name="de.pengutronix.rauc.Installer">
+    <!--
+         Install:
+         @source: Path to bundle to be installed
+
+         Triggers an installation.
+    -->
+    <method name="Install">
+      <arg name="source" type="s" direction="in"/>
+    </method>
+
+    <!--
+         InstallBundle:
+         @source: Path to bundle to be installed
+         @args: Additional arguments to pass
+
+         Triggers an installation.
+    -->
+    <method name="InstallBundle">
+      <arg name="source" type="s" direction="in"/>
+      <arg name="args" type="a{sv}" direction="in"/>
+      <annotation name="org.qtproject.QtDBus.QtTypeName.In1" value="QVariantMap"/>
+    </method>
+
+   <!--
+    Info: D-Bus variant of rauc info <bundle>
+    @bundle: full path to the queried bundle.
+    @compatible: the compatible string from the bundle
+    @version: the version string from the bundle
+   -->
+   <method name="Info">
+      <arg name="bundle" type="s" direction="in" />
+      <arg name="compatible" type="s" direction="out" />
+      <arg name="version" type="s" direction="out" />
+    </method>
+
+    <!--
+         Mark:
+         @state: operation to perform (one out of "good", "bad" or "active")
+         @slot_identifier: can be "booted", "other" or <SLOT_NAME> (e.g.
+             "rootfs.1")
+         @slot_name: name of the slot which has ultimately been marked
+         @message: message describing what has been done successfully (e.g.
+             "activated slot rootfs.0")
+
+         Keeps a slot bootable (state == "good"), makes it unbootable (state ==
+         "bad") or explicitly activates it for the next boot (state == "active").
+    -->
+    <method name="Mark">
+      <arg name="state" type="s" direction="in"/>
+      <arg name="slot_identifier" type="s" direction="in"/>
+      <arg name="slot_name" type="s" direction="out"/>
+      <arg name="message" type="s" direction="out"/>
+    </method>
+
+    <!--
+         GetSlotStatus:
+         @slot_status_array: array of (slotname, dict) tuples with each
+             dictionary representing the status of the corresponding slot
+
+         Access method to get all slots' status.
+    -->
+    <method name="GetSlotStatus">
+      <arg name="slot_status_array" type="a(sa{sv})" direction="out"/>
+      <annotation name="org.qtproject.QtDBus.QtTypeName.Out0" value="RaucSlotStatusArray"/>
+    </method>
+
+    <!-- Operation: Represents the current (global) operation rauc performs -->
+    <property name="Operation" type="s" access="read"/>
+    <!-- LastError: Holds a message describing the last error that occurred -->
+    <property name="LastError" type="s" access="read"/>
+    <!-- Progress: Provides installation progress information in the form
+         (percentage, message, nesting depth) -->
+    <property name="Progress" type="(isi)" access="read">
+      <annotation name="org.qtproject.QtDBus.QtTypeName" value="RaucProgress"/>
+    </property>
+    <!-- Compatible: Represents the system's compatible -->
+    <property name="Compatible" type="s" access="read"/>
+    <!-- Variant: Represents the system's variant -->
+    <property name="Variant" type="s" access="read"/>
+    <!-- BootSlot: Represents the slot booted from -->
+    <property name="BootSlot" type="s" access="read"/>
+    <!--
+         GetPrimary:
+         @slot_status_array: array of (slotname, dict) tuples with each
+             dictionary representing the status of the corresponding slot
+
+         Call the bootloader interface to get the primary boot slot
+    -->
+    <method name="GetPrimary">
+      <arg name="primary" type="s" direction="out"/>
+    </method>
+
+    <!--
+         Completed:
+         @result: return code (0 for success)
+
+         This signal is emitted when installation completed, either
+         successfully or with an error.
+    -->
+    <signal name="Completed">
+      <arg name="result" type="i"/>
+    </signal>
+  </interface>
+</node>
