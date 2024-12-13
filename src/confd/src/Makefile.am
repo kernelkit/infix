@@ -26,7 +26,12 @@ confd_plugin_la_SOURCES =			\
 	base64.c		base64.h	\
 	core.c			core.h		\
 	dagger.c		dagger.h	\
-	ietf-interfaces.c			\
+	ietf-interfaces.c ietf-interfaces.h	\
+	  ieee802-ethernet-interface.c		\
+	  ietf-ip.c				\
+	  infix-if-bridge.c			\
+	  infix-if-veth.c			\
+	  infix-if-vlan.c			\
 	ietf-keystore.c				\
 	ietf-system.c				\
 	ietf-syslog.c				\
