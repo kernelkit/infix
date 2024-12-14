@@ -2,7 +2,8 @@ graph "dual" {
 	layout="neato";
 	overlap="false";
 	splines="true";
-	esep="+20";
+	esep="+30";
+	sep="+30";
 
         node [shape=record, fontname="monospace"];
 	edge [color="cornflowerblue", penwidth="2"];
@@ -14,7 +15,9 @@ graph "dual" {
 
         host [
 	    label="host | { <d1a> d1a | <d1b> d1b | <d1c> d1c | <d2a> d2a | <d2b> d2b | <d2c> d2c }",
-	    color="grey",fontcolor="grey",pos="0,15!",
+	    color="grey",
+	    fontcolor="grey",
+	    pos="0,15!",
 	    kind="controller",
 	];
 
@@ -35,15 +38,15 @@ graph "dual" {
 	    qn_usb="dut2.usb"
 	];
 
-	host:d1a -- dut1:e1 [kind=mgmt]
+	host:d1a -- dut1:e1 [kind=mgmt, color="lightgray"]
 	host:d1b -- dut1:e2
 	host:d1c -- dut1:e3
 
-	host:d2a -- dut2:e1 [kind=mgmt]
+	host:d2a -- dut2:e1 [kind=mgmt, color="lightgray"]
 	host:d2b -- dut2:e2
 	host:d2c -- dut2:e3
 
-	dut1:e4 -- dut2:e6
-	dut1:e5 -- dut2:e5
-	dut1:e6 -- dut2:e4
+	dut1:e4 -- dut2:e6 [color="black"]
+	dut1:e5 -- dut2:e5 [color="red"]
+	dut1:e6 -- dut2:e4 [color="black"]
 }
