@@ -407,7 +407,7 @@ static int netdag_gen_afspec_add(sr_session_ctx_t *session, struct dagger *net, 
 	DEBUG_IFACE(dif, "");
 
 	if (!strcmp(iftype, "infix-if-type:bridge")) {
-		err = netdag_gen_bridge(session, net, dif, cif, ip, 1);
+		err = ixif_br_gen(net, dif, cif, ip, 1);
 	} else if (!strcmp(iftype, "infix-if-type:dummy")) {
 		err = netdag_gen_dummy(net, NULL, cif, ip);
 	} else if (!strcmp(iftype, "infix-if-type:veth")) {
@@ -438,7 +438,7 @@ static int netdag_gen_afspec_set(sr_session_ctx_t *session, struct dagger *net, 
 	DEBUG_IFACE(dif, "");
 
 	if (!strcmp(iftype, "infix-if-type:bridge"))
-		return netdag_gen_bridge(session, net, dif, cif, ip, 0);
+		return ixif_br_gen(net, dif, cif, ip, 0);
 	if (!strcmp(iftype, "infix-if-type:vlan"))
 		return netdag_gen_vlan(net, dif, cif, ip);
 	if (!strcmp(iftype, "infix-if-type:veth"))
@@ -495,7 +495,6 @@ static int netdag_gen_iface_del(struct dagger *net, struct lyd_node *dif,
 
 	DEBUG_IFACE(dif, "");
 
-	mcast_querier(ifname, 0, 0, 0);
 	if (dagger_should_skip_current(net, ifname))
 		return 0;
 
@@ -660,6 +659,24 @@ static sr_error_t netdag_init(sr_session_ctx_t *session, struct dagger *net,
 	return SR_ERR_OK;
 }
 
+static sr_error_t ifchange_post(sr_session_ctx_t *session, struct dagger *net,
+				struct lyd_node *cifs, struct lyd_node *difs)
+{
+	int err;
+
+	/* For each configured bridge, the corresponding multicast
+	 * querier settings depend on both the bridge config and on
+	 * the presence of matching VLAN uppers.  Since these can be
+	 * independently configured - the upper might exist in difs
+	 * but not the bridge, or vice versa - it is much easier to
+	 * regenerate the full config for mcd every time by walking
+	 * the full configuration.
+	 */
+	err = ixif_br_mcd_gen(cifs);
+
+	return err ? SR_ERR_INTERNAL : SR_ERR_OK;
+}
+
 static int ifchange(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
 		    const char *xpath, sr_event_t event, unsigned request_id, void *_confd)
 {
@@ -712,6 +729,8 @@ static int ifchange(sr_session_ctx_t *session, uint32_t sub_id, const char *modu
 		if (err)
 			break;
 	}
+
+	err = err ? : ifchange_post(session, &confd->netdag, cifs, difs);
 
 err_free_diff:
 	lyd_free_tree(diff);

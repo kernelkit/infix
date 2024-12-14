@@ -32,6 +32,41 @@
 #define CB_PRIO_PRIMARY   65535
 #define CB_PRIO_PASSIVE   65000
 
+struct snippet {
+	FILE *fp;
+	char *data;
+	size_t size;
+};
+
+static inline int snippet_close(struct snippet *s, FILE *out)
+{
+	int err = 0;
+
+	if (s->fp)
+		fclose(s->fp);
+
+	if (!s->size)
+		return 0;
+
+	if (out)
+		if (fwrite(s->data, s->size, 1, out) != 1)
+			err = -EIO;
+
+	free(s->data);
+	return err;
+}
+
+static inline int snippet_open(struct snippet *s)
+{
+	memset(s, 0, sizeof(*s));
+
+	s->fp = open_memstream(&s->data, &s->size);
+	if (!s->fp)
+		return -ENOMEM;
+
+	return 0;
+}
+
 extern struct confd confd;
 
 

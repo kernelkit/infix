@@ -12,270 +12,147 @@
 
 #include "ietf-interfaces.h"
 
-static void brport_pvid_adjust(FILE *br, struct lyd_node *vlan, int vid, const char *brport,
-			       struct lydx_diff *pvidiff, int tagged)
+struct ixif_br {
+	const char *name;
+	struct lyd_node *cif;
+	struct lyd_node *dif;
+
+	struct dagger *dagger;
+	FILE *ip;
+	struct snippet bropts;
+
+	struct {
+		struct snippet vlan;
+		struct snippet mcast;
+		struct snippet mdb;
+	} init;
+	struct {
+		struct snippet mdb;
+		struct snippet mcast;
+		struct snippet vlan;
+	} exit;
+};
+
+static bool ixif_br_vlan_has_mcast_snooping(struct ixif_br *br);
+
+
+/* MDB */
+
+static int ixif_br_mdb_gen_filter(struct ixif_br *br, struct lyd_node *filter,
+				  const char *vidstr)
 {
-	const char *type = tagged ? "tagged" : "untagged";
+	const char *group, *iface;
 	struct lyd_node *port;
+	enum lydx_op gop, pop;
 
-	LYX_LIST_FOR_EACH(lyd_child(vlan), port, type) {
-		if (strcmp(brport, lyd_get_value(port)))
-			continue;
+	group = lydx_get_cattr(filter, "group");
+	gop = lydx_get_op(filter);
 
-		if (pvidiff->old && atoi(pvidiff->old) == vid)
-			fprintf(br, "vlan add vid %d dev %s %s\n", vid, brport, type);
-		if (pvidiff->new && atoi(pvidiff->new) == vid)
-			fprintf(br, "vlan add vid %d dev %s pvid %s\n", vid, brport, type);
-	}
-}
+	LYX_LIST_FOR_EACH(lyd_child(filter), port, "ports") {
+		iface = lydx_get_cattr(port, "port");
+		pop = lydx_get_op(port);
 
-/*
- * Called when only pvid is changed for a bridge-port.  Then we use the
- * cif data to iterate over all known VLANS for the given port.
- */
-static int bridge_port_vlans(struct dagger *net, struct lyd_node *cif, const char *brname,
-			     const char *brport, struct lydx_diff *pvidiff)
-{
-	struct lyd_node *bridge = lydx_find_by_name(lyd_parent(cif), "interface", brname);
-	struct lyd_node *vlan, *vlans;
-	int err = 0;
-	FILE *br;
+		switch (gop) {
+		case LYDX_OP_NONE:
+		case LYDX_OP_CREATE:
+		case LYDX_OP_REPLACE:
+			if (pop == LYDX_OP_DELETE)
+				/* The group was modified, but this
+				 * particular port was removed.
+				 */
+				goto delete;
 
-	vlans  = lydx_get_descendant(lyd_child(bridge), "bridge", "vlans", NULL);
-	if (!vlans)
-		goto done;
-
-	br = dagger_fopen_next(net, "init", brname, 60, "init.bridge");
-	if (!br) {
-		err = -EIO;
-		goto done;
-	}
-
-	LYX_LIST_FOR_EACH(lyd_child(vlans), vlan, "vlan") {
-		int vid = atoi(lydx_get_cattr(vlan, "vid"));
-
-		brport_pvid_adjust(br, vlan, vid, brport, pvidiff, 0);
-		brport_pvid_adjust(br, vlan, vid, brport, pvidiff, 1);
-	}
-
-	fclose(br);
-done:
-	return err;
-}
-
-static void bridge_remove_vlan_ports(struct dagger *net, FILE *br, const char *brname,
-				     int vid, struct lyd_node *ports, int tagged)
-{
-	struct lyd_node *port;
-
-	LYX_LIST_FOR_EACH(lyd_child(ports), port, tagged ? "tagged" : "untagged") {
-		enum lydx_op op = lydx_get_op(port);
-		const char *brport = lyd_get_value(port);
-
-		if (op != LYDX_OP_CREATE) {
-			fprintf(br, "vlan del vid %d dev %s\n", vid, brport);
-		}
-
-	}
-}
-
-static void bridge_add_vlan_ports(struct dagger *net, FILE *br, const char *brname,
-				  int vid, struct lyd_node *ports, int tagged)
-{
-	struct lyd_node *port;
-
-	LYX_LIST_FOR_EACH(lyd_child(ports), port, tagged ? "tagged" : "untagged") {
-		enum lydx_op op = lydx_get_op(port);
-		const char *brport = lyd_get_value(port);
-
-		if (op != LYDX_OP_DELETE) {
-			int pvid = 0;
-			srx_get_int(net->session, &pvid, SR_UINT16_T, IF_XPATH "[name='%s']/bridge-port/pvid", brport);
-
-			fprintf(br, "vlan add vid %d dev %s %s %s %s\n", vid, brport, vid == pvid ? "pvid" : "",
-				tagged ? "" : "untagged", strcmp(brname, brport) ? "" : "self");
-
-		}
-	}
-}
-
-static int bridge_diff_vlan_ports(struct dagger *net, FILE *br, const char *brname,
-				  int vid, struct lyd_node *ports)
-{
-	/* First remove all VLANs that should that should be removed, see #676 */
-	bridge_remove_vlan_ports(net, br, brname, vid, ports, 0);
-	bridge_remove_vlan_ports(net, br, brname, vid, ports, 1);
-
-	bridge_add_vlan_ports(net, br, brname, vid, ports, 0);
-	bridge_add_vlan_ports(net, br, brname, vid, ports, 1);
-
-	return 0;
-}
-
-static int bridge_vlan_settings(struct lyd_node *cif, const char **proto, int *vlan_mcast)
-{
-	struct lyd_node *vlans, *vlan;
-
-	vlans = lydx_get_descendant(lyd_child(cif), "bridge", "vlans", NULL);
-	if (vlans) {
-		const char *type = lydx_get_cattr(vlans, "proto");
-		int num = 0;
-
-		*proto = bridge_tagtype2str(type);
-		LYX_LIST_FOR_EACH(lyd_child(vlans), vlan, "vlan") {
-			struct lyd_node *mcast;
-
-			mcast = lydx_get_descendant(lyd_child(vlan), "multicast", NULL);
-			if (mcast)
-				*vlan_mcast += lydx_is_enabled(mcast, "snooping");
-
-			num++;
-		}
-
-		return num;
-	}
-
-	return 0;
-}
-
-static void bridge_port_settings(FILE *next, const char *ifname, struct lyd_node *cif)
-{
-	struct lyd_node *bp, *flood, *mcast;
-	int ucflood = 1;	/* default: flood unknown unicast */
-
-	bp = lydx_get_descendant(lyd_child(cif), "bridge-port", NULL);
-	if (!bp)
-		return;
-
-	fprintf(next, "link set %s type bridge_slave", ifname);
-	flood = lydx_get_child(bp, "flood");
-	if (flood) {
-		ucflood = lydx_is_enabled(flood, "unicast");
-
-		fprintf(next, " bcast_flood %s", ONOFF(lydx_is_enabled(flood, "broadcast")));
-		fprintf(next, " flood %s",       ONOFF(ucflood));
-		fprintf(next, " mcast_flood %s", ONOFF(lydx_is_enabled(flood, "multicast")));
-	}
-
-	if (ucflood) {
-		/* proxy arp must be disabled while flood on, see man page */
-		fprintf(next, " proxy_arp off");
-		fprintf(next, " proxy_arp_wifi off");
-	} else {
-		/* XXX: proxy arp/wifi settings here */
-	}
-
-	mcast = lydx_get_child(bp, "multicast");
-	if (mcast) {
-		const char *router = lydx_get_cattr(mcast, "router");
-		struct { const char *str; int val; } xlate[] = {
-			{ "off",       0 },
-			{ "auto",      1 },
-			{ "permanent", 2 },
-		};
-		int mrouter = 1;
-
-		for (size_t i = 0; i < NELEMS(xlate); i++) {
-			if (strcmp(xlate[i].str, router))
-				continue;
-
-			mrouter = xlate[i].val;
+			fprintf(br->init.mdb.fp, "mdb replace dev %s port %s grp %s %s %s",
+				br->name, iface, group, vidstr ? : "",
+				lydx_get_cattr(port, "state"));
+			break;
+		case LYDX_OP_DELETE:
+		delete:
+			fprintf(br->exit.mdb.fp, "mdb del dev %s port %s grp %s %s",
+				br->name, iface, group, vidstr ? : "");
 			break;
 		}
-
-		fprintf(next, " mcast_fast_leave %s mcast_router %d",
-			ONOFF(lydx_is_enabled(mcast, "fast-leave")),
-			mrouter);
 	}
-	fprintf(next, "\n");
+
+	return 0;
 }
 
-int bridge_gen_ports(struct dagger *net, struct lyd_node *dif, struct lyd_node *cif, FILE *ip)
+static int ixif_br_mdb_gen(struct ixif_br *br, struct lyd_node *ctx)
 {
-	const char *ifname = lydx_get_cattr(cif, "name");
-	struct lyd_node *node, *bridge;
-	struct lydx_diff brdiff;
+	struct lyd_node *filters, *filter;
+	char *vidstr = NULL;
+	const char *vid;
 	int err = 0;
 
-	node = lydx_get_descendant(lyd_child(dif), "bridge-port", NULL);
-	if (!node)
-		goto fail;
+	filters = lydx_get_child(ctx, "multicast-filters");
+	if (!filters)
+		return 0;
 
-	/*
-	 * If bridge is not in dif, then we only have bridge-port
-	 * settings and can use cif instead for any new settings
-	 * since we always set *all* port settings anyway.
-	 */
-	bridge = lydx_get_child(node, "bridge");
-	if (!bridge) {
-		struct lyd_node *pvid = lydx_get_child(node, "pvid");
-		struct lydx_diff pvidiff;
-		const char *brname;
-		FILE *next;
+	vid = lydx_get_cattr(ctx, "vid");
+	if (vid)
+		asprintf(&vidstr, "vid %s", vid);
 
-		node = lydx_get_descendant(lyd_child(cif), "bridge-port", NULL);
-		brname = lydx_get_cattr(node, "bridge");
-		if (!node || !brname)
-			goto fail;
-
-		next = dagger_fopen_next(net, "init", ifname, 56, "init.ip");
-		if (!next) {
-			err = -EIO;
-			goto fail;
-		}
-		bridge_port_settings(next, ifname, cif);
-		fclose(next);
-
-		/* Change in bridge port's PVID => change in VLAN port memberships */
-		if (lydx_get_diff(pvid, &pvidiff))
-			bridge_port_vlans(net, cif, brname, ifname, &pvidiff);
-
-		err = dagger_add_dep(net, brname, ifname);
+	LYX_LIST_FOR_EACH(lyd_child(filters), filter, "multicast-filter") {
+		err = ixif_br_mdb_gen_filter(br, filter, vidstr);
 		if (err)
-			return ERR_IFACE(cif, err, "Unable to add dep \"%s\" to %s", ifname, brname);
-		goto fail;
+			break;
 	}
 
-	if (lydx_get_diff(bridge, &brdiff) && brdiff.old) {
-		FILE *prev;
+	free(vidstr);
 
-		prev = dagger_fopen_current(net, "exit", brdiff.old, 55, "exit.ip");
-		if (!prev) {
-			err = -EIO;
-			goto fail;
-		}
-		fprintf(prev, "link set %s nomaster\n", ifname);
-		fclose(prev);
-	}
-
-	if (brdiff.new) {
-		FILE *next;
-
-		next = dagger_fopen_next(net, "init", brdiff.new, 55, "init.ip");
-		if (!next) {
-			err = -EIO;
-			goto fail;
-		}
-		fprintf(next, "link set %s master %s\n", ifname, brdiff.new);
-		bridge_port_settings(next, ifname, cif);
-		fclose(next);
-
-		err = dagger_add_dep(net, brdiff.new, ifname);
-		if (err)
-			return ERR_IFACE(cif, err, "Unable to add dep \"%s\" to %s", ifname, brdiff.new);
-	}
-fail:
 	return err;
 }
 
-static int bridge_fwd_mask(struct lyd_node *cif)
+/* MDB */
+
+/* MCAST */
+
+static int ixif_br_mcast_gen_vlan(struct ixif_br *br, struct lyd_node *vlan)
+{
+	struct lyd_node *mcast;
+	bool snooping;
+	int vid;
+
+	mcast = lydx_get_descendant(lyd_child(vlan), "multicast", NULL);
+	if (!mcast)
+		return 0;
+
+	vid = atoi(lydx_get_cattr(vlan, "vid"));
+	snooping = lydx_is_enabled(mcast, "snooping");
+
+	fprintf(br->init.mcast.fp, "vlan global set vid %d dev %s mcast_snooping %d",
+		vid, br->name, snooping ? 1 : 0);
+	fprintf(br->init.mcast.fp, " mcast_igmp_version 3 mcast_mld_version 2\n");
+
+	return 0;
+}
+
+static int ixif_br_mcast_gen_vlans(struct ixif_br *br)
+{
+	struct lyd_node *vlans, *vlan;
+	int err;
+
+	vlans = lydx_get_descendant(lyd_child(br->cif), "bridge", "vlans", NULL);
+	if (!vlans)
+		return 0;
+
+	LYX_LIST_FOR_EACH(lyd_child(vlans), vlan, "vlan") {
+		err = ixif_br_mcast_gen_vlan(br, vlan);
+		if (err)
+			return err;
+	}
+
+	return 0;
+}
+
+static int ixif_br_mcast_gen_ieee_forward(struct ixif_br *br)
 {
 	struct lyd_node *node, *proto;
 	int fwd_mask = 0;
 
-	node = lydx_get_descendant(lyd_child(cif), "bridge", NULL);
+	node = lydx_get_descendant(lyd_child(br->cif), "bridge", NULL);
 	if (!node)
-		goto fail;
+		return 0;
 
 	LYX_LIST_FOR_EACH(lyd_child(node), proto, "ieee-group-forward") {
 		struct lyd_node_term  *leaf  = (struct lyd_node_term *)proto;
@@ -294,296 +171,283 @@ static int bridge_fwd_mask(struct lyd_node *cif)
 		}
 	}
 
-fail:
-	return fwd_mask;
-}
-
-static int querier_mode(const char *mode)
-{
-	struct { const char *mode; int val; } table[] = {
-		{ "off",   0 },
-		{ "proxy", 1 },
-		{ "auto",  2 },
-	};
-
-	for (size_t i = 0; i < NELEMS(table); i++) {
-		if (strcmp(table[i].mode, mode))
-			continue;
-
-		return table[i].val;
-	}
-
-	return 0;		/* unknown: off */
-}
-
-void mcast_querier(const char *ifname, int vid, int mode, int interval)
-{
-	FILE *fp;
-
-	DEBUG("mcast querier %s mode %d interval %d", ifname, mode, interval);
-	if (!mode) {
-		systemf("rm -f /etc/mc.d/%s-*.conf", ifname);
-		systemf("initctl -bnq disable mcd");
-		return;
-	}
-
-	fp = fopenf("w", "/etc/mc.d/%s-%d.conf", ifname, vid);
-	if (!fp) {
-		ERRNO("Failed creating querier configuration for %s", ifname);
-		return;
-	}
-
-	fprintf(fp, "iface %s", ifname);
-	if (vid > 0)
-		fprintf(fp, " vlan %d", vid);
-	fprintf(fp, " enable %sigmpv3 query-interval %d\n",
-		mode == 1 ? "proxy-queries " : "", interval);
-	fclose(fp);
-
-	systemf("initctl -bnq enable mcd");
-	systemf("initctl -bnq touch mcd");
-}
-
-static char *find_vlan_interface(sr_session_ctx_t *session, const char *brname, int vid)
-{
-	const char *fmt = "/interfaces/interface/vlan[id=%d and lower-layer-if='%s']";
-	static char xpath[128];
-       	struct lyd_node *iface;
-	sr_data_t *data;
-	int rc;
-
-	snprintf(xpath, sizeof(xpath), fmt, vid, brname);
-	rc = sr_get_data(session, xpath, 0, 0, 0, &data);
-	if (rc || !data) {
-		DEBUG("Skpping VLAN %d interface for %s", vid, brname);
-		return NULL;
-	}
-
-	/* On match we should not need the if(iface) checks */
-	iface = lydx_get_descendant(data->tree, "interfaces", "interface", NULL);
-	if (iface)
-		strlcpy(xpath, lydx_get_cattr(iface, "name"), sizeof(xpath));
-
-	sr_release_data(data);
-	if (iface)
-		return xpath;
-
-	return NULL;
-}
-
-static int vlan_mcast_settings(sr_session_ctx_t *session, FILE *br, const char *brname,
-			       struct lyd_node *vlan, int vid)
-{
-	int interval, querier, snooping;
-	struct lyd_node *mcast;
-	const char *ifname;
-
-	mcast = lydx_get_descendant(lyd_child(vlan), "multicast", NULL);
-	if (!mcast)
-		return 0;
-
-	snooping = lydx_is_enabled(mcast, "snooping");
-	querier = querier_mode(lydx_get_cattr(mcast, "querier"));
-
-	fprintf(br, "vlan global set vid %d dev %s mcast_snooping %d",
-		vid, brname, snooping);
-	fprintf(br, " mcast_igmp_version 3 mcast_mld_version 2\n");
-
-	interval = atoi(lydx_get_cattr(mcast, "query-interval"));
-	ifname = find_vlan_interface(session, brname, vid);
-	if (ifname)
-		mcast_querier(ifname, 0, querier, interval);
-	else
-		mcast_querier(brname, vid, querier, interval);
-
+	fprintf(br->bropts.fp, " group_fwd_mask %d", fwd_mask);
 	return 0;
 }
 
-static int bridge_mcast_settings(FILE *ip, const char *brname, struct lyd_node *cif, int vlan_mcast)
+static int ixif_br_mcast_gen(struct ixif_br *br)
 {
-	int interval, querier, snooping;
+	bool vlan_snooping = ixif_br_vlan_has_mcast_snooping(br);
 	struct lyd_node *mcast;
+	bool snooping = false;
+	int err, interval = 0;
 
-	mcast = lydx_get_descendant(lyd_child(cif), "bridge", "multicast", NULL);
-	if (!mcast) {
-		mcast_querier(brname, 0, 0, 0);
-		interval = snooping = querier = 0;
-	} else {
+	err = ixif_br_mcast_gen_ieee_forward(br);
+	if (err)
+		return err;
+
+	mcast = lydx_get_descendant(lyd_child(br->cif), "bridge", "multicast", NULL);
+	if (mcast) {
 		snooping = lydx_is_enabled(mcast, "snooping");
-		querier  = querier_mode(lydx_get_cattr(mcast, "querier"));
 		interval = atoi(lydx_get_cattr(mcast, "query-interval"));
 	}
 
-	fprintf(ip, " mcast_vlan_snooping %d", vlan_mcast ? 1 : 0);
-	fprintf(ip, " mcast_snooping %d mcast_querier 0", vlan_mcast ? 1 : snooping);
+	fprintf(br->bropts.fp, " mcast_snooping %d mcast_querier 0",
+		(snooping || vlan_snooping) ? 1 : 0);
+	fprintf(br->bropts.fp, " mcast_vlan_snooping %d", vlan_snooping ? 1 : 0);
+
 	if (snooping)
-		fprintf(ip, " mcast_igmp_version 3 mcast_mld_version 2");
+		fprintf(br->bropts.fp, " mcast_igmp_version 3 mcast_mld_version 2");
+
 	if (interval)
-		fprintf(ip, " mcast_query_interval %d", interval * 100);
+		fprintf(br->bropts.fp, " mcast_query_interval %d", interval * 100);
 
-	if (!vlan_mcast)
-		mcast_querier(brname, 0, querier, interval);
-	else
-		mcast_querier(brname, 0, 0, 0);
+	if (vlan_snooping)
+		err = ixif_br_mcast_gen_vlans(br);
 
-	return 0;
+	return err;
 }
 
-static int netdag_gen_multicast_filter(FILE *current, FILE *prev, const char *brname,
-			  struct lyd_node *multicast_filter, int vid)
-{
-	const char *group = lydx_get_cattr(multicast_filter, "group");
-	enum lydx_op op = lydx_get_op(multicast_filter);
-	struct lyd_node * port;
+/* MCAST */
 
-	LYX_LIST_FOR_EACH(lyd_child(multicast_filter), port, "ports") {
-		enum lydx_op port_op = lydx_get_op(port);
-		if (op == LYDX_OP_DELETE) {
-			fprintf(prev, "mdb del dev %s port %s ", brname, lydx_get_cattr(port, "port"));
-			fprintf(prev, " grp %s ", group);
-			if (vid)
-				fprintf(prev, " vid %d ", vid);
-			fputs("\n", prev);
-		} else {
-			fprintf(current, "mdb replace dev %s ", brname);
-			if (port_op != LYDX_OP_DELETE)
-				fprintf(current, " port %s ", lydx_get_cattr(port, "port"));
-			fprintf(current, " grp %s ", group);
-			if (vid)
-				fprintf(current, " vid %d ", vid);
-			fprintf(current, " %s\n", lydx_get_cattr(port, "state"));
+/* VLAN */
+
+static bool ixif_br_vlan_has_mcast_snooping(struct ixif_br *br)
+{
+	struct lyd_node *vlans, *vlan, *mcast;
+
+	vlans = lydx_get_descendant(lyd_child(br->cif), "bridge", "vlans", NULL);
+	if (!vlans)
+		return false;
+
+	LYX_LIST_FOR_EACH(lyd_child(vlans), vlan, "vlan") {
+		mcast = lydx_get_descendant(lyd_child(vlan), "multicast", NULL);
+
+		if (mcast && lydx_is_enabled(mcast, "snooping"))
+			return true;
+	}
+
+	return false;
+}
+
+static int ixif_br_vlan_gen_membership(struct ixif_br *br,
+				       struct lyd_node *vlan, const char *mode)
+{
+	struct lyd_node *portentry;
+	enum lydx_op pop, vop;
+	const char *iface;
+	int pvid, vid;
+
+	vid = atoi(lydx_get_cattr(vlan, "vid"));
+	vop = lydx_get_op(vlan);
+
+	LYX_LIST_FOR_EACH(lyd_child(vlan), portentry, mode) {
+		iface = lyd_get_value(portentry);
+		pop = lydx_get_op(portentry);
+
+		switch (vop) {
+		case LYDX_OP_NONE:
+		case LYDX_OP_CREATE:
+		case LYDX_OP_REPLACE:
+			if (pop == LYDX_OP_DELETE)
+				/* This VLAN was modified, but this
+				 * particular port was removed.
+				 */
+				goto delete;
+
+			pvid = 0;
+			srx_get_int(br->dagger->session, &pvid, SR_UINT16_T,
+				    IF_XPATH "[name='%s']/bridge-port/pvid", iface);
+
+			fprintf(br->init.vlan.fp, "vlan add vid %d dev %s %s %s %s\n",
+				vid, iface, vid == pvid ? "pvid" : "", mode,
+				!strcmp(br->name, iface) ? "self" : "");
+			break;
+		case LYDX_OP_DELETE:
+		delete:
+			fprintf(br->exit.vlan.fp, "vlan del vid %d dev %s %s\n",
+				vid, iface, !strcmp(br->name, iface) ? "self" : "");
+			break;
 		}
 	}
 
 	return 0;
 }
 
-static int netdag_gen_multicast_filters(struct dagger *net, FILE *current, const char *brname,
-					struct lyd_node *multicast_filters, int vid) {
-	struct lyd_node *multicast_filter;
-	FILE *prev = NULL;
+static int ixif_br_vlan_gen(struct ixif_br *br)
+{
+	static const char *modes[] = { "tagged", "untagged", NULL };
+	struct lyd_node *vlans, *vlan;
+	const char **mode;
+	int err;
+
+	vlans = lydx_get_descendant(lyd_child(br->cif), "bridge", "vlans", NULL);
+	if (!vlans) {
+		fputs(" vlan_filtering 0", br->bropts.fp);
+		return 0;
+	}
+
+	fputs(" vlan_filtering 1", br->bropts.fp);
+	fprintf(br->bropts.fp, " vlan_protocol %s",
+		bridge_tagtype2str(lydx_get_cattr(vlans, "proto")));
+
+	vlans = lydx_get_descendant(lyd_child(br->dif), "bridge", "vlans", NULL);
+	if (!vlans)
+		return 0;
+
+	LYX_LIST_FOR_EACH(lyd_child(vlans), vlan, "vlan") {
+		for (mode = modes; *mode; mode++) {
+			err = ixif_br_vlan_gen_membership(br, vlan, *mode);
+			if (err)
+				return err;
+		}
+
+		err = ixif_br_mdb_gen(br, vlan);
+		if (err)
+			return err;
+	}
+
+	return 0;
+}
+
+/* VLAN */
+
+/* BR */
+
+static void ixif_br_gen_phys_address(struct ixif_br *br)
+{
+	struct json_t *j;
+	const char *mac;
+
+	mac = get_phys_addr(br->cif, NULL);
+	if (!mac) {
+		j = json_object_get(confd.root, "mac-address");
+		if (j)
+			mac = json_string_value(j);
+	}
+
+	if (!mac)
+		/* Nothing configured, and no chassis mac available,
+		 * let the kernel generate a random one.
+		 */
+		return;
+
+	fprintf(br->ip, " address %s", mac);
+}
+
+static int ixif_br_init(struct ixif_br *br, struct dagger *dagger,
+			struct lyd_node *dif, struct lyd_node *cif, FILE *ip)
+{
 	int err = 0;
 
-	prev = dagger_fopen_current(net, "exit", brname, 50, "exit.bridge");
-	if (!prev) {
-		/* check if in bootstrap (pre gen 0) */
-		if (errno != EUNATCH) {
-			err = -EIO;
-			goto err;
-		}
+	memset(br, 0, sizeof(*br));
+
+	br->name = lydx_get_cattr(cif, "name");
+	br->dif = dif;
+	br->cif = cif;
+
+	br->dagger = dagger;
+	br->ip = ip;
+
+	err = snippet_open(&br->bropts);
+	if (err)
+		goto err;
+
+	err = err ? : snippet_open(&br->init.vlan);
+	err = err ? : snippet_open(&br->init.mcast);
+	err = err ? : snippet_open(&br->init.mdb);
+	err = err ? : snippet_open(&br->exit.mdb);
+	err = err ? : snippet_open(&br->exit.mcast);
+	err = err ? : snippet_open(&br->exit.vlan);
+	if (err) {
+		snippet_close(&br->exit.vlan, NULL);
+		snippet_close(&br->exit.mcast, NULL);
+		snippet_close(&br->exit.mdb, NULL);
+		snippet_close(&br->init.mdb, NULL);
+		snippet_close(&br->init.mcast, NULL);
+		snippet_close(&br->init.vlan, NULL);
+		goto err_close_bropts;
 	}
 
-	LYX_LIST_FOR_EACH(lyd_child(multicast_filters), multicast_filter, "multicast-filter") {
-		netdag_gen_multicast_filter(current, prev, brname, multicast_filter, vid);
-	}
+	return 0;
 
-	if(prev)
-		fclose(prev);
+err_close_bropts:
+	snippet_close(&br->bropts, NULL);
 err:
 	return err;
 }
 
-int netdag_gen_bridge(sr_session_ctx_t *session, struct dagger *net, struct lyd_node *dif,
-		      struct lyd_node *cif, FILE *ip, int add)
+static int ixif_br_fini(struct ixif_br *br)
 {
-	struct lyd_node *vlans, *vlan, *multicast_filters;
-	const char *brname = lydx_get_cattr(cif, "name");
-	int vlan_filtering, fwd_mask, vlan_mcast = 0;
-	const char *op = add ? "add" : "set";
-	const char *proto;
-	FILE *br = NULL;
-	int err = 0;
+	FILE *init, *exit = NULL;
+	int err;
 
-	vlan_filtering = bridge_vlan_settings(cif, &proto, &vlan_mcast);
-	fwd_mask = bridge_fwd_mask(cif);
+	err = snippet_close(&br->bropts, br->ip);
+	fputc('\n', br->ip);
 
-	fprintf(ip, "link %s dev %s", op, brname);
-	/*
-	 * Must set base mac on add to prevent kernel from seeding ipv6
-	 * addrgenmode eui64 with random mac, issue #357.
-	 */
-	if (add) {
-		const char *mac = get_phys_addr(cif, NULL);
+	init = dagger_fopen_next(br->dagger, "init", br->name,
+				 60, "init.bridge");
 
-		if (!mac) {
-			struct json_t *j;
+	if (!dagger_is_bootstrap(br->dagger))
+		exit = dagger_fopen_current(br->dagger, "exit", br->name,
+					    60, "exit.bridge");
 
-			j = json_object_get(confd.root, "mac-address");
-			if (j)
-				mac = json_string_value(j);
-		}
-		if (mac)
-			fprintf(ip, " address %s", mac);
+	err = err ? : snippet_close(&br->init.vlan, init);
+	err = err ? : snippet_close(&br->init.mcast, init);
+	err = err ? : snippet_close(&br->init.mdb, init);
 
-		/* on failure, fall back to kernel's random mac */
-	}
+	err = err ? : snippet_close(&br->exit.mdb, exit);
+	err = err ? : snippet_close(&br->exit.mcast, exit);
+	err = err ? : snippet_close(&br->exit.vlan, exit);
 
-	/*
-	 * Issue #198: we require explicit VLAN assignment for ports
-	 *             when VLAN filtering is enabled.  We strongly
-	 *             believe this is the only sane way of doing it.
-	 * Issue #310: malplaced 'vlan_default_pvid 0'
-	 */
-	fprintf(ip, " type bridge group_fwd_mask %d mcast_flood_always 1"
-		" vlan_filtering %d vlan_default_pvid 0",
-		fwd_mask, vlan_filtering ? 1 : 0);
+	if (exit)
+		fclose(exit);
+	else if (!dagger_is_bootstrap(br->dagger))
+		err = err ? : -EIO;
 
-	if ((err = bridge_mcast_settings(ip, brname, cif, vlan_mcast)))
-		goto out;
+	if (init)
+		fclose(init);
+	else
+		err = err ? : -EIO;
 
-	br = dagger_fopen_next(net, "init", brname, 60, "init.bridge");
-	if (!br) {
-		err = -EIO;
-		goto out;
-	}
-
-	if (!vlan_filtering) {
-		fputc('\n', ip);
-
-		multicast_filters = lydx_get_descendant(lyd_child(dif), "bridge", "multicast-filters", NULL);
-		if (multicast_filters)
-			err = netdag_gen_multicast_filters(net, br, brname, multicast_filters, 0);
-		goto out_close_br;
-	} else if (!proto) {
-		fputc('\n', ip);
-		ERROR("%s: unsupported bridge proto", brname);
-		err = -ENOSYS;
-		goto out_close_br;
-	}
-	fprintf(ip, " vlan_protocol %s\n", proto);
-
-	vlans = lydx_get_descendant(lyd_child(dif), "bridge", "vlans", NULL);
-	if (!vlans)
-		goto out_close_br;
-
-	LYX_LIST_FOR_EACH(lyd_child(vlans), vlan, "vlan") {
-		int vid = atoi(lydx_get_cattr(vlan, "vid"));
-
-		err = bridge_diff_vlan_ports(net, br, brname, vid, vlan);
-		if (err)
-			break;
-
-		/* MDB static groups */
-		multicast_filters = lydx_get_child(vlan, "multicast-filters");
-		if (multicast_filters) {
-			if ((err = netdag_gen_multicast_filters(net, br, brname, multicast_filters, vid)))
-				break;
-		}
-	}
-
-	/* need the vlans created before we can set features on them */
-	vlans = lydx_get_descendant(lyd_child(cif), "bridge", "vlans", NULL);
-	if (vlans) {
-		LYX_LIST_FOR_EACH(lyd_child(vlans), vlan, "vlan") {
-			int vid = atoi(lydx_get_cattr(vlan, "vid"));
-
-			err = vlan_mcast_settings(session, br, brname, vlan, vid);
-			if (err)
-				break;
-		}
-	}
-out_close_br:
-	fclose(br);
-out:
 	return err;
 }
+
+int ixif_br_gen(struct dagger *dagger, struct lyd_node *dif,
+		struct lyd_node *cif, FILE *ip, int add)
+{
+	const char *op = add ? "add" : "set";
+	struct ixif_br br;
+	int err;
+
+	err = ixif_br_init(&br, dagger, dif, cif, ip);
+	if (err)
+		return err;
+
+	fputs(" mcast_flood_always 1", br.bropts.fp);
+	fputs(" vlan_default_pvid 0", br.bropts.fp);
+
+	err = ixif_br_vlan_gen(&br);
+	if (err)
+		goto out;
+
+	err = ixif_br_mcast_gen(&br);
+	if (err)
+		goto out;
+
+	err = ixif_br_mdb_gen(&br, lydx_get_child(dif, "bridge"));
+	if (err)
+		goto out;
+
+	fprintf(br.ip, "link %s dev %s", op, br.name);
+	if (add)
+		ixif_br_gen_phys_address(&br);
+
+	fprintf(br.ip, " type bridge");
+
+out:
+	ixif_br_fini(&br);
+	return err;
+}
+
+/* BR */
