@@ -43,19 +43,19 @@ graph "ring-4-duts" {
 	host:mgmt3 -- R3:mgmt [kind=mgmt, color="lightgray"]
 	host:mgmt4 -- R4:mgmt [kind=mgmt, color="lightgray"]
 
-	# host-Dut links
+	// host-Dut links
 	host:data1 -- R1:data [color="darkgreen"]
 	host:data2 -- R2:data [color="darkgreen"]
 	host:data3 -- R3:data [color="darkgreen"]
 	host:data4 -- R4:data [color="darkgreen"]
 
-	# Ring
+	// Ring
 	R1:ring1 -- R2:ring2 [color="blue",headlabel=".2", label="10.0.12.1/30", taillabel=".1", labeldistance=1, fontcolor="blue"]
 	R2:ring1 -- R3:ring2 [color="blue",headlabel=".2", label="10.0.23.0/30", taillabel=".1", labeldistance=1, fontcolor="blue"]
 	R3:ring1 -- R4:ring2 [color="blue",headlabel=".2", label="192.168.4.0/24", taillabel=".1", labeldistance=1 fontcolor="blue"]
 	R4:ring1 -- R1:ring2 [color="blue",headlabel=".2", label="10.0.41.0/30", taillabel=".1", labeldistance=1, fontcolor="blue"]
 
-	# Cross
+	// Cross
 	R1:cross -- R3:cross [color="black", label="10.0.13.0/30\n\n"]
 	R2:cross -- R4:cross [color="brown", label="\n\n10.0.24.0/30", fontcolor="brown"]
 }
