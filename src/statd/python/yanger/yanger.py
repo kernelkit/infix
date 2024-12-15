@@ -59,6 +59,9 @@ def json_get_yang_type(iface_in):
     if iface_in['linkinfo']['info_kind'] == "bridge":
         return "infix-if-type:bridge"
 
+    if iface_in['linkinfo']['info_kind'] == "bond":
+        return "infix-if-type:lag"
+
     if iface_in['linkinfo']['info_kind'] == "dsa":
         return "infix-if-type:ethernet"
 
@@ -562,10 +565,11 @@ def get_bridge_port_stp_state(ifname):
 def container_inspect(name):
     """Call podman inspect {name}, return object at {path} or None."""
     cmd = ['podman', 'inspect', name]
+    # Catch errors here, because at this point we have already run 'podman ps'
     try:
         return run_json_cmd(cmd, "", default=[])
     except Exception as e:
-        logging.error(f"Error running podman inspect: {e}")
+        logging.error(f"failed podman inspect: {e}")
         return []
 
 
@@ -573,7 +577,7 @@ def add_container(containers):
     """We list *all* containers, not just those in the configuraion."""
     cmd = ['podman', 'ps', '-a', '--format=json']
 
-    raw = run_json_cmd(cmd, "", default=[])
+    raw = run_json_cmd(cmd, "", check=False, default=[])
     for entry in raw:
         running = entry["State"] == "running"
 
@@ -662,8 +666,8 @@ def get_ip_addr():
 
 def netns_get_ip_addr(netns):
     """Fetch interface address information from within a network namespace"""
-    return run_json_cmd(['ip', 'netns', 'exec', netns, 'ip', '-j', 'addr', 'show'],
-                        f"netns-{netns}-ip-addr-show.json")
+    cmd = ['ip', 'netns', 'exec', netns, 'ip', '-j', 'addr', 'show']
+    return run_json_cmd(cmd, f"netns-{netns}-ip-addr-show.json")
 
 def get_netns_list():
     """Fetch a list of network namespaces"""
@@ -675,7 +679,7 @@ def netns_find_ifname(ifname):
     for netns in get_netns_list():
         for iface in netns_get_ip_link(netns['name']):
             if 'ifalias' in iface and iface['ifalias'] == ifname:
-                    return netns['name']
+                return netns['name']
     return None
 
 def netns_ifindex_to_ifname(ifindex):
@@ -693,7 +697,7 @@ def netns_ifindex_to_ifname(ifindex):
 
 def add_bridge_port_common(ifname, iface_in, iface_out):
     li = iface_in.get("linkinfo", {})
-    if not (li.get("info_slave_kind") == "bridge" or \
+    if not (li.get("info_slave_kind") == "bridge" or
             li.get("info_kind") == "bridge"):
         return
 
@@ -706,14 +710,78 @@ def add_bridge_port_lower(ifname, iface_in, iface_out):
     if not li.get("info_slave_kind") == "bridge":
         return
 
-    insert(iface_out, "infix-interfaces:bridge-port", "bridge", iface_in['master'])
+    insert(iface_out, "infix-interfaces:bridge-port",
+           "bridge", iface_in['master'])
 
     stp_state = get_bridge_port_stp_state(ifname)
     if stp_state is not None:
-        insert(iface_out, "infix-interfaces:bridge-port", "stp-state", stp_state)
+        insert(iface_out, "infix-interfaces:bridge-port",
+               "stp-state", stp_state)
 
     multicast = get_brport_multicast(ifname)
     insert(iface_out, "infix-interfaces:bridge-port", "multicast", multicast)
+
+
+def add_lag_info(ifname, iface_in, iface_out):
+    """The lag/bond oper-status always follows the carrier"""
+    mode = {
+        "balance-xor":      "static",
+        "802.3ad":          "lacp",
+    }
+    li = iface_in.get("linkinfo", {})
+    if not li.get("info_kind") == "bond":
+        return
+
+    ld = li.get("info_data")
+    if ld:
+        mode = mode.get(ld['mode'], "static")
+        insert(iface_out, "infix-interfaces:lag", "mode", mode)
+        if mode == "lacp":
+            insert(iface_out, "infix-interfaces:lag", "lacp",
+                   "mode", 'active' if ld['ad_lacp_active'] == "on" else 'passive')
+            insert(iface_out, "infix-interfaces:lag", "lacp",
+                   "rate", ld['ad_lacp_rate'])
+            insert(iface_out, "infix-interfaces:lag", "lacp",
+                   "hash", ld['xmit_hash_policy'])
+        else:
+            insert(iface_out, "infix-interfaces:lag", "static",
+                   "mode", ld['mode'])
+            insert(iface_out, "infix-interfaces:lag", "static",
+                   "hash", ld['xmit_hash_policy'])
+
+        insert(iface_out, "infix-interfaces:lag", "link-monitor",
+               "debounce", "up", ld['updelay'])
+        insert(iface_out, "infix-interfaces:lag", "link-monitor",
+               "debounce", "down", ld['downdelay'])
+
+
+def add_lag_port_lower(ifname, iface_in, iface_out):
+    li = iface_in.get("linkinfo", {})
+    if not li.get("info_slave_kind") == "bond":
+        return
+
+    ld = li.get("info_slave_data")
+    if ld:
+        # active or backup link
+        state = ld['state'].lower()
+
+        # On etherlike interfaces and tap interfaces oper-status lies
+        if ld['mii_status'] == "DOWN":
+            iface_out['oper-status'] = "down"
+
+        # TODO: add more lacp (ad_*) stats
+        if 'ad_actor_oper_port_state_str' in ld:
+            insert(iface_out, "infix-interfaces:lag-port", "lacp",
+                   "actor-state", ld['ad_actor_oper_port_state_str'])
+        if 'ad_partner_oper_port_state_str' in ld:
+            insert(iface_out, "infix-interfaces:lag-port", "lacp",
+                   "partner-state", ld['ad_partner_oper_port_state_str'])
+    else:
+        state = 'backup'
+
+    insert(iface_out, "infix-interfaces:lag-port", "lag", iface_in['master'])
+    insert(iface_out, "infix-interfaces:lag-port", "state", state)
+
 
 def add_ip_link(ifname, iface_in, iface_out):
     if 'ifname' in iface_in:
@@ -733,15 +801,19 @@ def add_ip_link(ifname, iface_in, iface_out):
 
     if not iface_is_dsa(iface_in):
         if 'link' in iface_in:
-            insert(iface_out, "infix-interfaces:vlan", "lower-layer-if", iface_in['link'])
+            insert(iface_out, "infix-interfaces:vlan",
+                   "lower-layer-if", iface_in['link'])
         elif 'link_index' in iface_in:
-            # 'link_index' is the only reference we have if the link iface is in a namespace
+            # 'link_index' is the only reference we have if the link
+            # iface is in a namespace/container
             lower = netns_ifindex_to_ifname(iface_in['link_index'])
             if lower:
-                insert(iface_out, "infix-interfaces:vlan", "lower-layer-if", lower)
+                insert(iface_out, "infix-interfaces:vlan",
+                       "lower-layer-if", lower)
 
     if 'flags' in iface_in:
-        iface_out['admin-status'] = "up" if "UP" in iface_in['flags'] else "down"
+        iface_out['admin-status'] = "up" \
+            if "UP" in iface_in['flags'] else "down"
 
     if 'operstate' in iface_in:
         xlate = {
@@ -753,11 +825,15 @@ def add_ip_link(ifname, iface_in, iface_out):
                 "NOTPRESENT":          "not-present"
                 }
         val = xlate.get(iface_in['operstate'], "unknown")
-        iface_out['oper-status'] =  val
+        iface_out['oper-status'] = val
 
     if 'link_type' in iface_in:
         val = json_get_yang_type(iface_in)
         iface_out['type'] = val
+
+    # May override oper-status if mii_status == DOWN
+    add_lag_info(ifname, iface_in, iface_out)
+    add_lag_port_lower(ifname, iface_in, iface_out)
 
     val = lookup(iface_in, "stats64", "rx", "bytes")
     if val is not None:
@@ -960,11 +1036,17 @@ def add_mdb_to_bridge(brname, iface_out, mc_status):
 
 def add_container_ifaces(yang_ifaces):
     """Add all podman interfaces with limited data"""
-    interfaces={}
+    interfaces = {}
     try:
-         containers = run_json_cmd(['podman', 'ps', '--format', 'json'], "podman-ps.json", default=[])
+        containers = run_json_cmd(['podman', 'ps', '--format', 'json'],
+                                  "podman-ps.json", check=False, default=[])
+    except FileNotFoundError:
+        # podman command not found, fail silently
+        return
     except Exception as e:
-        logging.error(f"Error, unable to run podman: {e}")
+        logging.error("unable to run podman ps: %s", e)
+        return
+    if not containers:
         return
 
     for container in containers:
