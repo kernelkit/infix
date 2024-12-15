@@ -31,14 +31,26 @@ static inline const char *bridge_tagtype2str(const char *type)
 	return NULL;
 }
 
-static inline bool is_bridge_port(struct lyd_node *cif)
+static inline struct lyd_node *get_master(struct lyd_node *cif)
 {
-	struct lyd_node *node = lydx_get_descendant(lyd_child(cif), "bridge-port", NULL);
+	struct lyd_node *node;
 
-	if (!node || !lydx_get_child(node, "bridge"))
-		return false;
+	node = lydx_get_descendant(lyd_child(cif), "bridge-port", NULL);
+	if (node)
+		return lydx_get_child(node, "bridge");
 
-	return true;
+	node = lydx_get_descendant(lyd_child(cif), "lag-port", NULL);
+	if (node)
+		return lydx_get_child(node, "lag");
+
+	return NULL;
+}
+
+static inline bool is_member_port(struct lyd_node *cif)
+{
+	if (get_master(cif))
+		return true;
+	return false;
 }
 
 
@@ -62,6 +74,11 @@ int bridge_gen(struct lyd_node *dif, struct lyd_node *cif, FILE *ip, int add);
 int bridge_mcd_gen(struct lyd_node *cifs);
 /* infix-if-bridge-port.c */
 int bridge_port_gen(struct lyd_node *dif, struct lyd_node *cif, FILE *ip);
+
+/* infix-if-lag.c */
+int lag_gen_ports(struct dagger *net, struct lyd_node *dif, struct lyd_node *cif, FILE *ip);
+int netdag_gen_lag(sr_session_ctx_t *session, struct dagger *net, struct lyd_node *dif,
+		   struct lyd_node *cif, FILE *ip, int add);
 
 /* infix-if-veth.c */
 int ifchange_cand_infer_veth(sr_session_ctx_t *session, const char *path);
