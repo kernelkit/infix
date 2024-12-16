@@ -1,0 +1,33 @@
+graph "lag" {
+    layout="neato";
+    overlap="false";
+    esep="+23";
+
+    node [shape=record, fontsize=12, fontname="DejaVu Sans Mono, Book"];
+    edge [color="cornflowerblue", penwidth="2", fontname="DejaVu Serif, Book"];
+
+    host [
+	  label="host | { <mgmt1> mgmt1 | <mon> mon | \n\n\n\n | <mgmt2> mgmt2 }",
+	  pos="0,15!",
+	  requires="controller",
+	  ];
+
+    dut1 [
+	  label="{ <mgmt> mgmt | <mon> mon } | { dut1\r | { <link1> link1 | <link2> link2 } }",
+	  pos="2,15.25!",
+	  requires="infix",
+	  ];
+
+    dut2 [
+  	  label="<mgmt> mgmt | { { <link1> link1 | <link2> link2 } | dut2\r }",
+	  pos="2,14.75!",
+	  requires="infix",
+	  ];
+
+    host:mgmt1 -- dut1:mgmt [requires="mgmt", color=lightgray]
+    host:mon   -- dut1:mon  // Monitor connection to dut2 via dut1
+    host:mgmt2 -- dut2:mgmt [requires="mgmt", color=lightgrey]
+
+    dut1:link1 -- dut2:link1 [color=black, fontcolor=black, penwidth=3]
+    dut1:link2 -- dut2:link2 [color=black, fontcolor=black, penwidth=3]
+}

@@ -35,6 +35,9 @@
 - name: ipv4_autoconf
   case: ipv4_autoconf/test.py
 
+- name: lag_basic
+  case: lag_basic/test.py
+
 - name: bridge_fwd_sgl_dut
   case: bridge_fwd_sgl_dut/test.py
 
