@@ -407,7 +407,7 @@ static int netdag_gen_afspec_add(sr_session_ctx_t *session, struct dagger *net, 
 	DEBUG_IFACE(dif, "");
 
 	if (!strcmp(iftype, "infix-if-type:bridge")) {
-		err = ixif_br_gen(net, dif, cif, ip, 1);
+		err = ixif_br_gen(dif, cif, ip, 1);
 	} else if (!strcmp(iftype, "infix-if-type:dummy")) {
 		err = netdag_gen_dummy(net, NULL, cif, ip);
 	} else if (!strcmp(iftype, "infix-if-type:veth")) {
@@ -438,7 +438,7 @@ static int netdag_gen_afspec_set(sr_session_ctx_t *session, struct dagger *net, 
 	DEBUG_IFACE(dif, "");
 
 	if (!strcmp(iftype, "infix-if-type:bridge"))
-		return ixif_br_gen(net, dif, cif, ip, 0);
+		return ixif_br_gen(dif, cif, ip, 0);
 	if (!strcmp(iftype, "infix-if-type:vlan"))
 		return netdag_gen_vlan(net, dif, cif, ip);
 	if (!strcmp(iftype, "infix-if-type:veth"))

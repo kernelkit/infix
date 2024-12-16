@@ -17,7 +17,6 @@ struct ixif_br {
 	struct lyd_node *cif;
 	struct lyd_node *dif;
 
-	struct dagger *dagger;
 	FILE *ip;
 	struct snippet bropts;
 
@@ -256,7 +255,7 @@ static int ixif_br_vlan_gen_membership(struct ixif_br *br,
 				goto delete;
 
 			pvid = 0;
-			srx_get_int(br->dagger->session, &pvid, SR_UINT16_T,
+			srx_get_int(confd.netdag.session, &pvid, SR_UINT16_T,
 				    IF_XPATH "[name='%s']/bridge-port/pvid", iface);
 
 			fprintf(br->init.vlan.fp, "vlan add vid %d dev %s %s %s %s\n",
@@ -335,8 +334,8 @@ static void ixif_br_gen_phys_address(struct ixif_br *br)
 	fprintf(br->ip, " address %s", mac);
 }
 
-static int ixif_br_init(struct ixif_br *br, struct dagger *dagger,
-			struct lyd_node *dif, struct lyd_node *cif, FILE *ip)
+static int ixif_br_init(struct ixif_br *br, struct lyd_node *dif, struct lyd_node *cif,
+			FILE *ip)
 {
 	int err = 0;
 
@@ -346,9 +345,7 @@ static int ixif_br_init(struct ixif_br *br, struct dagger *dagger,
 	br->dif = dif;
 	br->cif = cif;
 
-	br->dagger = dagger;
 	br->ip = ip;
-
 	err = snippet_open(&br->bropts);
 	if (err)
 		goto err;
@@ -385,11 +382,11 @@ static int ixif_br_fini(struct ixif_br *br)
 	err = snippet_close(&br->bropts, br->ip);
 	fputc('\n', br->ip);
 
-	init = dagger_fopen_next(br->dagger, "init", br->name,
+	init = dagger_fopen_next(&confd.netdag, "init", br->name,
 				 60, "init.bridge");
 
-	if (!dagger_is_bootstrap(br->dagger))
-		exit = dagger_fopen_current(br->dagger, "exit", br->name,
+	if (!dagger_is_bootstrap(&confd.netdag))
+		exit = dagger_fopen_current(&confd.netdag, "exit", br->name,
 					    60, "exit.bridge");
 
 	err = err ? : snippet_close(&br->init.vlan, init);
@@ -402,7 +399,7 @@ static int ixif_br_fini(struct ixif_br *br)
 
 	if (exit)
 		fclose(exit);
-	else if (!dagger_is_bootstrap(br->dagger))
+	else if (!dagger_is_bootstrap(&confd.netdag))
 		err = err ? : -EIO;
 
 	if (init)
@@ -413,14 +410,13 @@ static int ixif_br_fini(struct ixif_br *br)
 	return err;
 }
 
-int ixif_br_gen(struct dagger *dagger, struct lyd_node *dif,
-		struct lyd_node *cif, FILE *ip, int add)
+int ixif_br_gen(struct lyd_node *dif, struct lyd_node *cif, FILE *ip, int add)
 {
 	const char *op = add ? "add" : "set";
 	struct ixif_br br;
 	int err;
 
-	err = ixif_br_init(&br, dagger, dif, cif, ip);
+	err = ixif_br_init(&br, dif, cif, ip);
 	if (err)
 		return err;
 

@@ -58,8 +58,7 @@ int netdag_gen_ip_addrs(struct dagger *net, FILE *ip, const char *proto,
 			struct lyd_node *cif, struct lyd_node *dif);
 
 /* infix-if-bridge.c */
-int ixif_br_gen(struct dagger *dagger, struct lyd_node *dif,
-		struct lyd_node *cif, FILE *ip, int add);
+int ixif_br_gen(struct lyd_node *dif, struct lyd_node *cif, FILE *ip, int add);
 
 /* infix-if-bridge-mcd.c */
 int ixif_br_mcd_gen(struct lyd_node *cifs);
