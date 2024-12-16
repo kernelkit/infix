@@ -147,7 +147,7 @@ do_evolve()
 	ar="$current.tar.gz"
 	[ -f "$basedir/$current/ABANDONED" ] && ar="$current-ABANDONED.tar.gz"
 
-	(cd "$basedir" && tar caf "$ar.tar.gz" "$current")
+	(cd "$basedir" && tar caf "$ar" "$current")
 	rm -rf "$basedir/$current"
     fi
 }
