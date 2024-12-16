@@ -1,0 +1,8 @@
+#!/bin/sh
+# Initialize speed/duplex of virtio interfaces
+# For virtual test systems (lacp tests)
+
+ifaces=$(ip -d -json link show | jq -r '.[] | select(.parentbus == "virtio") | .ifname')
+for iface in $ifaces; do
+    ethtool -s "$iface" speed 1000 duplex full
+done
