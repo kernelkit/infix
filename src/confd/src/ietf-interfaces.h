@@ -59,12 +59,10 @@ int netdag_gen_ip_addrs(struct dagger *net, FILE *ip, const char *proto,
 
 /* infix-if-bridge.c */
 int ixif_br_gen(struct lyd_node *dif, struct lyd_node *cif, FILE *ip, int add);
-
 /* infix-if-bridge-mcd.c */
 int ixif_br_mcd_gen(struct lyd_node *cifs);
-
 /* infix-if-bridge-port.c */
-int bridge_gen_ports(struct dagger *net, struct lyd_node *dif, struct lyd_node *cif, FILE *ip);
+int ixif_br_port_gen(struct lyd_node *dif, struct lyd_node *cif, FILE *ip);
 
 /* infix-if-veth.c */
 int ifchange_cand_infer_veth(sr_session_ctx_t *session, const char *path);

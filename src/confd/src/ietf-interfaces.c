@@ -601,7 +601,7 @@ static sr_error_t netdag_gen_iface(sr_session_ctx_t *session, struct dagger *net
 
 	fputc('\n', ip);
 
-	err = bridge_gen_ports(net, dif, cif, ip);
+	err = ixif_br_port_gen(dif, cif, ip);
 	if (err)
 		goto err_close_ip;
 
