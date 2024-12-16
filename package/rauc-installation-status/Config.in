@@ -1,0 +1,7 @@
+config BR2_PACKAGE_RAUC_INSTALLATION_STATUS
+       bool rauc-installation-status
+       help
+	Simple tool to read the installation status and errors
+	from rauc in a JSON format.
+
+	https://github.com/kernelkit/infix

@@ -118,6 +118,7 @@ with infamy.Test() as test:
                 oper = target.get_dict("/system-state/software")
                 installer = oper["system-state"]["software"]["installer"]
                 if installer["operation"] == "idle":
+                    print(installer)
                     if "last-error" in installer:
                         print("Install failed:", installer["last-error"])
                         test.fail()

@@ -1080,7 +1080,68 @@ def add_system_ntp(out):
         source.append(src)
 
     insert(out, "infix-system:ntp", "sources", "source", source)
+
+def add_system_software_slots(out, data):
+    slots = []
+    for slot in data["slots"]:
+        for key, value in slot.items():
+            new = {}
+            new["name"] = key
+            new["bootname"] = slot[key].get("bootname")
+            new["class"] = slot[key].get("class")
+            new["state"] = slot[key].get("state")
+            new["bundle"] = {}
+
+            if value.get("slot_status",{}).get("bundle", {}).get("compatible"):
+                new["bundle"]["compatible"] = value.get("slot_status",{}).get("bundle", {}).get("compatible")
+            if value.get("slot_status", {}).get("bundle", {}).get("version"):
+                new["bundle"]["version"] = value.get("slot_status", {}).get("bundle", {}).get("version")
+            if value.get("checksum", {}).get("size"):
+                new["size"] = value.get("checksum", {}).get("size")
+            if value.get("checksum", {}).get("sha256"):
+                new["sha256"] = value.get("checksum", {}).get("sha256")
+            new["installed"] = {}
+            if value.get("installed", {}).get("timestamp"):
+                new["installed"]["datetime"] = value.get("installed", {}).get("timestamp")
+            if value.get("installed", {}).get("count"):
+                new["installed"]["count"] = value.get("installed", {}).get("count")
+            new["activated"] = {}
+            if value.get("activated", {}).get("timestamp"):
+                new["activated"]["datetime"] = value.get("activated", {}).get("timestamp")
+            if value.get("activated", {}).get("count"):
+                new["activated"]["count"] = value.get("activated", {}).get("count")
+            slots.append(new)
+    out["slot"] = slots
+
+def add_system_software(out):
+    software = {}
+    try:
+        data = run_json_cmd(["rauc", "status", "--detailed", "--output-format=json"], "rauc-status.json")
+        software["compatible"] = data["compatible"]
+        software["variant"] = data["variant"]
+        software["booted"] = data["booted"]
+        add_system_software_slots(software, data)
+    except subprocess.CalledProcessError:
+        pass    # Maybe an upgrade i progress, then rauc does not respond
+
+    installer_status = run_json_cmd(["rauc-installation-status"], "rauc-installer-status.json")
+    installer = {}
+    if installer_status.get("operation"):
+        installer["operation"] = installer_status["operation"]
+    if "progress" in installer_status:
+        progress = {}
+
+        if installer_status["progress"].get("percentage"):
+            progress["percentage"] = int(installer_status["progress"]["percentage"])
+        if installer_status["progress"].get("message"):
+            progress["message"] = installer_status["progress"]["message"]
+        installer["progress"] = progress
+    software["installer"] = installer
+
+    insert(out, "infix-system:software", software)
+
 def add_system(yang_data):
+    add_system_software(yang_data)
     add_system_ntp(yang_data)
 
 def main():
