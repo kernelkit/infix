@@ -32,13 +32,11 @@ struct ixif_br {
 	} exit;
 };
 
-static bool ixif_br_vlan_has_mcast_snooping(struct ixif_br *br);
-
 
 /* MDB */
 
-static int ixif_br_mdb_gen_filter(struct ixif_br *br, struct lyd_node *filter,
-				  const char *vidstr)
+static int gen_mdb_filter(struct ixif_br *br, struct lyd_node *filter,
+			  const char *vidstr)
 {
 	const char *group, *iface;
 	struct lyd_node *port;
@@ -76,7 +74,7 @@ static int ixif_br_mdb_gen_filter(struct ixif_br *br, struct lyd_node *filter,
 	return 0;
 }
 
-static int ixif_br_mdb_gen(struct ixif_br *br, struct lyd_node *ctx)
+static int gen_mdb(struct ixif_br *br, struct lyd_node *ctx)
 {
 	struct lyd_node *filters, *filter;
 	char *vidstr = NULL;
@@ -92,7 +90,7 @@ static int ixif_br_mdb_gen(struct ixif_br *br, struct lyd_node *ctx)
 		asprintf(&vidstr, "vid %s", vid);
 
 	LYX_LIST_FOR_EACH(lyd_child(filters), filter, "multicast-filter") {
-		err = ixif_br_mdb_gen_filter(br, filter, vidstr);
+		err = gen_mdb_filter(br, filter, vidstr);
 		if (err)
 			break;
 	}
@@ -106,7 +104,25 @@ static int ixif_br_mdb_gen(struct ixif_br *br, struct lyd_node *ctx)
 
 /* MCAST */
 
-static int ixif_br_mcast_gen_vlan(struct ixif_br *br, struct lyd_node *vlan)
+static bool has_vlan_mcast_snooping(struct ixif_br *br)
+{
+	struct lyd_node *vlans, *vlan, *mcast;
+
+	vlans = lydx_get_descendant(lyd_child(br->cif), "bridge", "vlans", NULL);
+	if (!vlans)
+		return false;
+
+	LYX_LIST_FOR_EACH(lyd_child(vlans), vlan, "vlan") {
+		mcast = lydx_get_descendant(lyd_child(vlan), "multicast", NULL);
+
+		if (mcast && lydx_is_enabled(mcast, "snooping"))
+			return true;
+	}
+
+	return false;
+}
+
+static int gen_vlan_mcast(struct ixif_br *br, struct lyd_node *vlan)
 {
 	struct lyd_node *mcast;
 	bool snooping;
@@ -126,7 +142,7 @@ static int ixif_br_mcast_gen_vlan(struct ixif_br *br, struct lyd_node *vlan)
 	return 0;
 }
 
-static int ixif_br_mcast_gen_vlans(struct ixif_br *br)
+static int gen_vlans_mcast(struct ixif_br *br)
 {
 	struct lyd_node *vlans, *vlan;
 	int err;
@@ -136,7 +152,7 @@ static int ixif_br_mcast_gen_vlans(struct ixif_br *br)
 		return 0;
 
 	LYX_LIST_FOR_EACH(lyd_child(vlans), vlan, "vlan") {
-		err = ixif_br_mcast_gen_vlan(br, vlan);
+		err = gen_vlan_mcast(br, vlan);
 		if (err)
 			return err;
 	}
@@ -144,7 +160,7 @@ static int ixif_br_mcast_gen_vlans(struct ixif_br *br)
 	return 0;
 }
 
-static int ixif_br_mcast_gen_ieee_forward(struct ixif_br *br)
+static int gen_ieee_forward(struct ixif_br *br)
 {
 	struct lyd_node *node, *proto;
 	int fwd_mask = 0;
@@ -174,14 +190,14 @@ static int ixif_br_mcast_gen_ieee_forward(struct ixif_br *br)
 	return 0;
 }
 
-static int ixif_br_mcast_gen(struct ixif_br *br)
+static int gen_mcast(struct ixif_br *br)
 {
-	bool vlan_snooping = ixif_br_vlan_has_mcast_snooping(br);
+	bool vlan_snooping = has_vlan_mcast_snooping(br);
 	struct lyd_node *mcast;
 	bool snooping = false;
 	int err, interval = 0;
 
-	err = ixif_br_mcast_gen_ieee_forward(br);
+	err = gen_ieee_forward(br);
 	if (err)
 		return err;
 
@@ -202,7 +218,7 @@ static int ixif_br_mcast_gen(struct ixif_br *br)
 		fprintf(br->bropts.fp, " mcast_query_interval %d", interval * 100);
 
 	if (vlan_snooping)
-		err = ixif_br_mcast_gen_vlans(br);
+		err = gen_vlans_mcast(br);
 
 	return err;
 }
@@ -211,26 +227,7 @@ static int ixif_br_mcast_gen(struct ixif_br *br)
 
 /* VLAN */
 
-static bool ixif_br_vlan_has_mcast_snooping(struct ixif_br *br)
-{
-	struct lyd_node *vlans, *vlan, *mcast;
-
-	vlans = lydx_get_descendant(lyd_child(br->cif), "bridge", "vlans", NULL);
-	if (!vlans)
-		return false;
-
-	LYX_LIST_FOR_EACH(lyd_child(vlans), vlan, "vlan") {
-		mcast = lydx_get_descendant(lyd_child(vlan), "multicast", NULL);
-
-		if (mcast && lydx_is_enabled(mcast, "snooping"))
-			return true;
-	}
-
-	return false;
-}
-
-static int ixif_br_vlan_gen_membership(struct ixif_br *br,
-				       struct lyd_node *vlan, const char *mode)
+static int gen_vlan_membership(struct ixif_br *br, struct lyd_node *vlan, const char *mode)
 {
 	struct lyd_node *portentry;
 	enum lydx_op pop, vop;
@@ -273,7 +270,7 @@ static int ixif_br_vlan_gen_membership(struct ixif_br *br,
 	return 0;
 }
 
-static int ixif_br_vlan_gen(struct ixif_br *br)
+static int gen_vlan(struct ixif_br *br)
 {
 	static const char *modes[] = { "tagged", "untagged", NULL };
 	struct lyd_node *vlans, *vlan;
@@ -296,12 +293,12 @@ static int ixif_br_vlan_gen(struct ixif_br *br)
 
 	LYX_LIST_FOR_EACH(lyd_child(vlans), vlan, "vlan") {
 		for (mode = modes; *mode; mode++) {
-			err = ixif_br_vlan_gen_membership(br, vlan, *mode);
+			err = gen_vlan_membership(br, vlan, *mode);
 			if (err)
 				return err;
 		}
 
-		err = ixif_br_mdb_gen(br, vlan);
+		err = gen_mdb(br, vlan);
 		if (err)
 			return err;
 	}
@@ -313,7 +310,7 @@ static int ixif_br_vlan_gen(struct ixif_br *br)
 
 /* BR */
 
-static void ixif_br_gen_phys_address(struct ixif_br *br)
+static void gen_phys_address(struct ixif_br *br)
 {
 	struct json_t *j;
 	const char *mac;
@@ -334,8 +331,8 @@ static void ixif_br_gen_phys_address(struct ixif_br *br)
 	fprintf(br->ip, " address %s", mac);
 }
 
-static int ixif_br_init(struct ixif_br *br, struct lyd_node *dif, struct lyd_node *cif,
-			FILE *ip)
+static int init_snippets(struct ixif_br *br, struct lyd_node *dif, struct lyd_node *cif,
+			 FILE *ip)
 {
 	int err = 0;
 
@@ -374,7 +371,7 @@ err:
 	return err;
 }
 
-static int ixif_br_fini(struct ixif_br *br)
+static int collect_snippets(struct ixif_br *br)
 {
 	FILE *init, *exit = NULL;
 	int err;
@@ -410,39 +407,39 @@ static int ixif_br_fini(struct ixif_br *br)
 	return err;
 }
 
-int ixif_br_gen(struct lyd_node *dif, struct lyd_node *cif, FILE *ip, int add)
+int bridge_gen(struct lyd_node *dif, struct lyd_node *cif, FILE *ip, int add)
 {
 	const char *op = add ? "add" : "set";
 	struct ixif_br br;
 	int err;
 
-	err = ixif_br_init(&br, dif, cif, ip);
+	err = init_snippets(&br, dif, cif, ip);
 	if (err)
 		return err;
 
 	fputs(" mcast_flood_always 1", br.bropts.fp);
 	fputs(" vlan_default_pvid 0", br.bropts.fp);
 
-	err = ixif_br_vlan_gen(&br);
+	err = gen_vlan(&br);
 	if (err)
 		goto out;
 
-	err = ixif_br_mcast_gen(&br);
+	err = gen_mcast(&br);
 	if (err)
 		goto out;
 
-	err = ixif_br_mdb_gen(&br, lydx_get_child(dif, "bridge"));
+	err = gen_mdb(&br, lydx_get_child(dif, "bridge"));
 	if (err)
 		goto out;
 
 	fprintf(br.ip, "link %s dev %s", op, br.name);
 	if (add)
-		ixif_br_gen_phys_address(&br);
+		gen_phys_address(&br);
 
 	fprintf(br.ip, " type bridge");
 
 out:
-	ixif_br_fini(&br);
+	err = collect_snippets(&br);
 	return err;
 }
 

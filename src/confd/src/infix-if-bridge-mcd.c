@@ -12,7 +12,7 @@
 
 #include "ietf-interfaces.h"
 
-static int ixif_br_mcd_gen_br_vlan(struct lyd_node *cif, struct lyd_node *vlan, FILE *conf)
+static int gen_vlan(struct lyd_node *cif, struct lyd_node *vlan, FILE *conf)
 {
 	const char *iface, *querier, *upper;
 	struct lyd_node *mcast;
@@ -50,7 +50,7 @@ static int ixif_br_mcd_gen_br_vlan(struct lyd_node *cif, struct lyd_node *vlan, 
 	return 0;
 }
 
-static int ixif_br_mcd_gen_br(struct lyd_node *cif, FILE *conf)
+static int gen_bridge(struct lyd_node *cif, FILE *conf)
 {
 	struct lyd_node *vlans, *vlan, *mcast;
 	const char *iface, *querier;
@@ -77,7 +77,7 @@ static int ixif_br_mcd_gen_br(struct lyd_node *cif, FILE *conf)
 		return 0;
 
 	LYX_LIST_FOR_EACH(lyd_child(vlans), vlan, "vlan") {
-		err = ixif_br_mcd_gen_br_vlan(cif, vlan, conf);
+		err = gen_vlan(cif, vlan, conf);
 		if (err)
 			return err;
 	}
@@ -85,14 +85,14 @@ static int ixif_br_mcd_gen_br(struct lyd_node *cif, FILE *conf)
 	return 0;
 }
 
-int ixif_br_mcd_gen(struct lyd_node *cifs)
+int bridge_mcd_gen(struct lyd_node *cifs)
 {
 	FILE *conf, *stop, *start;
 	struct lyd_node *cif;
 	int err = 0;
 	bool empty;
 
-	conf = fopen("/etc/mc.d/interfaces.conf.next", "w");
+	conf = fopen("/etc/mc.d/bridges.conf.next", "w");
 	if (!conf)
 		return -EIO;
 
@@ -100,7 +100,7 @@ int ixif_br_mcd_gen(struct lyd_node *cifs)
 		if (strcmp(lydx_get_cattr(cif, "type"), "infix-if-type:bridge"))
 			continue;
 
-		err = ixif_br_mcd_gen_br(cif, conf);
+		err = gen_bridge(cif, conf);
 		if (err)
 			break;
 	}
@@ -118,7 +118,7 @@ int ixif_br_mcd_gen(struct lyd_node *cifs)
 			goto out_remove;
 		}
 
-		fputs("mv /etc/mc.d/interfaces.conf.next /etc/mc.d/interfaces.conf\n", start);
+		fputs("mv /etc/mc.d/bridges.conf.next /etc/mc.d/bridges.conf\n", start);
 		fputs("initctl -bnq enable mcd\n", start);
 		fputs("initctl -bnq touch mcd\n", start);
 		fclose(start);
@@ -136,6 +136,6 @@ int ixif_br_mcd_gen(struct lyd_node *cifs)
 	}
 
 out_remove:
-	remove("/etc/mc.d/interfaces.conf.next");
+	remove("/etc/mc.d/bridges.conf.next");
 	return err;
 }

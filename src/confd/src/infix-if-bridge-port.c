@@ -12,8 +12,7 @@
 
 #include "ietf-interfaces.h"
 
-static const char *ixif_br_port_get_egress_mode(const char *iface, int vid,
-						const char *brname)
+static const char *get_port_egress_mode(const char *iface, int vid, const char *brname)
 {
 	static const char *modes[] = { "tagged", "untagged", NULL };
 	const char **mode;
@@ -29,14 +28,14 @@ static const char *ixif_br_port_get_egress_mode(const char *iface, int vid,
 	return NULL;
 }
 
-static int ixif_br_port_gen_pvid_del(struct lyd_node *cif, const char *brname, int vid)
+static int gen_pvid_del(struct lyd_node *cif, const char *brname, int vid)
 {
 	const char *iface, *mode;
 	FILE *exit;
 
 	iface = lydx_get_cattr(cif, "name");
 
-	mode = ixif_br_port_get_egress_mode(iface, vid, brname);
+	mode = get_port_egress_mode(iface, vid, brname);
 	if (!mode)
 		/* Port is not a member of the VLAN anymore, so the
 		 * PVID is already removed.
@@ -58,14 +57,14 @@ static int ixif_br_port_gen_pvid_del(struct lyd_node *cif, const char *brname, i
 	return 0;
 }
 
-static int ixif_br_port_gen_pvid_add(struct lyd_node *cif, const char *brname, int vid)
+static int gen_pvid_add(struct lyd_node *cif, const char *brname, int vid)
 {
 	const char *iface, *mode;
 	FILE *init;
 
 	iface = lydx_get_cattr(cif, "name");
 
-	mode = ixif_br_port_get_egress_mode(iface, vid, brname);
+	mode = get_port_egress_mode(iface, vid, brname);
 	if (!mode) {
 		WARN("%s is not a member of VLAN %d: Ignoring PVID", iface, vid);
 		return 0;
@@ -83,7 +82,7 @@ static int ixif_br_port_gen_pvid_add(struct lyd_node *cif, const char *brname, i
 	return 0;
 }
 
-static int ixif_br_port_gen_pvid(struct lyd_node *dif, struct lyd_node *cif)
+static int gen_pvid(struct lyd_node *dif, struct lyd_node *cif)
 {
 	struct lyd_node *bridge, *pvid;
 	struct lydx_diff pvdiff;
@@ -107,13 +106,13 @@ static int ixif_br_port_gen_pvid(struct lyd_node *dif, struct lyd_node *cif)
 	 * old bridge.
 	 */
 	if (!bridge && pvdiff.old) {
-		err = ixif_br_port_gen_pvid_del(cif, brname, atoi(pvdiff.old));
+		err = gen_pvid_del(cif, brname, atoi(pvdiff.old));
 		if (err)
 			return err;
 	}
 
 	if (pvdiff.new) {
-		err = ixif_br_port_gen_pvid_add(cif, brname, atoi(pvdiff.new));
+		err = gen_pvid_add(cif, brname, atoi(pvdiff.new));
 		if (err)
 			return err;
 	}
@@ -121,7 +120,7 @@ static int ixif_br_port_gen_pvid(struct lyd_node *dif, struct lyd_node *cif)
 	return 0;
 }
 
-static int ixif_br_port_gen_link(struct lyd_node *dif, struct lyd_node *cif)
+static int gen_link(struct lyd_node *dif, struct lyd_node *cif)
 {
 	struct lyd_node *bp, *flood, *mcast;
 	const char *brname, *iface;
@@ -185,7 +184,7 @@ static int ixif_br_port_gen_link(struct lyd_node *dif, struct lyd_node *cif)
 	return 0;
 }
 
-int ixif_br_port_gen_join_leave(struct lyd_node *dif)
+static int gen_join_leave(struct lyd_node *dif)
 {
 	struct lyd_node *bridge;
 	struct lydx_diff brdiff;
@@ -222,19 +221,19 @@ int ixif_br_port_gen_join_leave(struct lyd_node *dif)
 	return err;
 }
 
-int ixif_br_port_gen(struct lyd_node *dif, struct lyd_node *cif, FILE *ip)
+int bridge_port_gen(struct lyd_node *dif, struct lyd_node *cif, FILE *ip)
 {
 	int err = 0;
 
-	err = ixif_br_port_gen_join_leave(dif);
+	err = gen_join_leave(dif);
 	if (err)
 		return err;
 
-	err = ixif_br_port_gen_link(dif, cif);
+	err = gen_link(dif, cif);
 	if (err)
 		return err;
 
-	err = ixif_br_port_gen_pvid(dif, cif);
+	err = gen_pvid(dif, cif);
 	if (err)
 		return err;
 

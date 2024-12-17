@@ -408,7 +408,7 @@ static int netdag_gen_afspec_add(sr_session_ctx_t *session, struct dagger *net, 
 	DEBUG_IFACE(dif, "");
 
 	if (!strcmp(iftype, "infix-if-type:bridge")) {
-		err = ixif_br_gen(dif, cif, ip, 1);
+		err = bridge_gen(dif, cif, ip, 1);
 	} else if (!strcmp(iftype, "infix-if-type:dummy")) {
 		err = netdag_gen_dummy(net, NULL, cif, ip);
 	} else if (!strcmp(iftype, "infix-if-type:veth")) {
@@ -439,7 +439,7 @@ static int netdag_gen_afspec_set(sr_session_ctx_t *session, struct dagger *net, 
 	DEBUG_IFACE(dif, "");
 
 	if (!strcmp(iftype, "infix-if-type:bridge"))
-		return ixif_br_gen(dif, cif, ip, 0);
+		return bridge_gen(dif, cif, ip, 0);
 	if (!strcmp(iftype, "infix-if-type:vlan"))
 		return netdag_gen_vlan(net, dif, cif, ip);
 	if (!strcmp(iftype, "infix-if-type:veth"))
@@ -602,7 +602,7 @@ static sr_error_t netdag_gen_iface(sr_session_ctx_t *session, struct dagger *net
 
 	fputc('\n', ip);
 
-	err = ixif_br_port_gen(dif, cif, ip);
+	err = bridge_port_gen(dif, cif, ip);
 	if (err)
 		goto err_close_ip;
 
@@ -673,7 +673,7 @@ static sr_error_t ifchange_post(sr_session_ctx_t *session, struct dagger *net,
 	 * regenerate the full config for mcd every time by walking
 	 * the full configuration.
 	 */
-	err = ixif_br_mcd_gen(cifs);
+	err = bridge_mcd_gen(cifs);
 
 	return err ? SR_ERR_INTERNAL : SR_ERR_OK;
 }
