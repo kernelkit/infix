@@ -382,12 +382,12 @@ static int ixif_br_fini(struct ixif_br *br)
 	err = snippet_close(&br->bropts, br->ip);
 	fputc('\n', br->ip);
 
-	init = dagger_fopen_next(&confd.netdag, "init", br->name,
-				 60, "init.bridge");
+	init = dagger_fopen_net_init(&confd.netdag, br->name,
+				 NETDAG_INIT_PROTO, "init.bridge");
 
 	if (!dagger_is_bootstrap(&confd.netdag))
-		exit = dagger_fopen_current(&confd.netdag, "exit", br->name,
-					    60, "exit.bridge");
+		exit = dagger_fopen_net_exit(&confd.netdag, br->name,
+					    NETDAG_EXIT_PROTO, "exit.bridge");
 
 	err = err ? : snippet_close(&br->init.vlan, init);
 	err = err ? : snippet_close(&br->init.mcast, init);

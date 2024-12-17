@@ -332,7 +332,8 @@ static int netdag_gen_sysctl_setting(struct dagger *net, const char *ifname, FIL
 	if (!lydx_get_diff(node, &nd))
 		return 0;
 
-	*fpp = *fpp ? : dagger_fopen_next(net, "init", ifname, 60, "init.sysctl");
+	*fpp = *fpp ? : dagger_fopen_net_init(net, ifname,
+					      NETDAG_INIT_POST, "init.sysctl");
 	if (!*fpp)
 		return -EIO;
 
@@ -513,7 +514,7 @@ static int netdag_gen_iface_del(struct dagger *net, struct lyd_node *dif,
 		dagger_skip_current_iface(net, peer);
 	}
 
-	ip = dagger_fopen_current(net, "exit", ifname, 50, "exit.ip");
+	ip = dagger_fopen_net_exit(net, ifname, NETDAG_EXIT, "exit.ip");
 	if (!ip)
 		return -EIO;
 
@@ -579,7 +580,7 @@ static sr_error_t netdag_gen_iface(sr_session_ctx_t *session, struct dagger *net
 		op = LYDX_OP_CREATE;
 	}
 
-	ip = dagger_fopen_next(net, "init", ifname, 50, "init.ip");
+	ip = dagger_fopen_net_init(net, ifname, NETDAG_INIT, "init.ip");
 	if (!ip) {
 		err = -EIO;
 		goto err;

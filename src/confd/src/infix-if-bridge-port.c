@@ -43,7 +43,8 @@ static int ixif_br_port_gen_pvid_del(struct lyd_node *cif, const char *brname, i
 		 */
 		return 0;
 
-	exit = dagger_fopen_current(&confd.netdag, "exit", brname, 61, "delete-pvids.bridge");
+	exit = dagger_fopen_net_exit(&confd.netdag, brname,
+				     NETDAG_EXIT_LOWERS_PROTO, "delete-pvids.bridge");
 	if (!exit)
 		return -EIO;
 
@@ -70,7 +71,8 @@ static int ixif_br_port_gen_pvid_add(struct lyd_node *cif, const char *brname, i
 		return 0;
 	}
 
-	init = dagger_fopen_next(&confd.netdag, "init", brname, 61, "add-pvids.bridge");
+	init = dagger_fopen_net_init(&confd.netdag, brname,
+				     NETDAG_INIT_LOWERS_PROTO, "add-pvids.bridge");
 	if (!init)
 		return -EIO;
 
@@ -145,7 +147,8 @@ static int ixif_br_port_gen_link(struct lyd_node *dif, struct lyd_node *cif)
 	if (err)
 		return ERR_IFACE(cif, err, "Unable to add dep \"%s\" to %s", iface, brname);
 
-	next = dagger_fopen_next(&confd.netdag, "init", brname, 55, "add-ports.ip");
+	next = dagger_fopen_net_init(&confd.netdag, brname,
+				     NETDAG_INIT_LOWERS, "add-ports.ip");
 	if (!next)
 		return -EIO;
 
@@ -197,7 +200,8 @@ int ixif_br_port_gen_join_leave(struct lyd_node *dif)
 	iface = lydx_get_cattr(dif, "name");
 
 	if (brdiff.old) {
-		prev = dagger_fopen_current(&confd.netdag, "exit", brdiff.old, 55, "delete-ports.ip");
+		prev = dagger_fopen_net_exit(&confd.netdag, brdiff.old,
+					     NETDAG_EXIT_LOWERS, "delete-ports.ip");
 		if (!prev)
 			return -EIO;
 
@@ -206,7 +210,8 @@ int ixif_br_port_gen_join_leave(struct lyd_node *dif)
 	}
 
 	if (brdiff.new) {
-		next = dagger_fopen_next(&confd.netdag, "init", brdiff.new, 55, "add-ports.ip");
+		next = dagger_fopen_net_init(&confd.netdag, brdiff.new,
+					     NETDAG_INIT_LOWERS, "add-ports.ip");
 		if (!next)
 			return -EIO;
 

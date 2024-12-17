@@ -37,7 +37,7 @@ static int netdag_gen_ethtool_flow_control(struct dagger *net, struct lyd_node *
 	const char *ifname = lydx_get_cattr(cif, "name");
 	FILE *fp;
 
-	fp = dagger_fopen_next(net, "init", ifname, 10, "ethtool-aneg.sh");
+	fp = dagger_fopen_net_init(net, ifname, NETDAG_INIT_PHYS, "ethtool-aneg.sh");
 	if (!fp)
 		return -EIO;
 
@@ -56,7 +56,7 @@ static int netdag_gen_ethtool_autoneg(struct dagger *net, struct lyd_node *cif)
 	int mbps, err = 0;
 	FILE *fp;
 
-	fp = dagger_fopen_next(net, "init", ifname, 10, "ethtool-aneg.sh");
+	fp = dagger_fopen_net_init(net, ifname, NETDAG_INIT_PHYS, "ethtool-aneg.sh");
 	if (!fp)
 		return -EIO;
 

@@ -392,7 +392,7 @@ int cni_netdag_gen_iface(struct dagger *net, const char *ifname,
 	if (iface_is_cni(ifname, cif, &cni_type)) {
 		int err;
 
-		fp = dagger_fopen_next(net, "init", ifname, 30, "cni.sh");
+		fp = dagger_fopen_net_init(net, ifname, NETDAG_INIT_PRE, "cni.sh");
 		if (!fp)
 			return -EIO;
 
@@ -407,7 +407,7 @@ int cni_netdag_gen_iface(struct dagger *net, const char *ifname,
 			return 1; /* CNI bridges are managed by podman */
 	} else if (iface_is_cni(ifname, dif, &cni_type)) {
 		/* No longer a container-network, clean up. */
-		fp = dagger_fopen_current(net, "exit", ifname, 30, "cni.sh");
+		fp = dagger_fopen_net_exit(net, ifname, NETDAG_EXIT_POST, "cni.sh");
 		if (!fp)
 			return -EIO;
 
