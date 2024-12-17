@@ -20,6 +20,10 @@ submodule infix-system-software {
   contact      "kernelkit@googlegroups.com";
   description  "Software status and upgrade.";
 
+  revision 2024-12-16 {
+    description "Add boot-order operational data";
+    reference "Internal";
+  }
   revision 2023-06-27 {
     description "Initial revision.";
     reference "internal";
@@ -39,6 +43,18 @@ submodule infix-system-software {
     }
   }
 
+  grouping boot-order {
+    leaf-list boot-order {
+        type enumeration {
+          enum "primary";
+          enum "secondary";
+          enum "net";
+        }
+        ordered-by user;
+        min-elements 1; // At least one value is required
+        max-elements 3; // Ensure reasonable maximum size if needed
+      }
+  }
   grouping installer-state {
     leaf operation {
       type string;
@@ -64,7 +80,6 @@ submodule infix-system-software {
         "The last error encountered by the installer service.";
     }
   }
-
   augment "/sys:system-state" {
     container software {
       description
@@ -95,6 +110,7 @@ submodule infix-system-software {
         description
           "Slot from which the system was booted.";
       }
+      uses boot-order;
 
       container installer {
         description
@@ -184,7 +200,7 @@ submodule infix-system-software {
   }
 
   rpc install-bundle {
-nacm:default-deny-all;
+    nacm:default-deny-all;
      description
        "Upgrade the system's software by installing the specified bundle.";
      input {
@@ -197,5 +213,18 @@ nacm:default-deny-all;
            FTP, HTTP(S) and SCP.";
        }
      }
+  }
+  rpc set-boot-order {
+    nacm:default-deny-all;
+    description
+      "Set order of boot partitions";
+    input {
+      uses boot-order;
+      must "count(boot-order[.='primary']) <= 1 and
+            count(boot-order[.='secondary']) <= 1 and
+            count(boot-order[.='net']) <= 1" {
+        error-message "Not possible to have duplicate targets in boot order.";
+      }
+    }
   }
 }
