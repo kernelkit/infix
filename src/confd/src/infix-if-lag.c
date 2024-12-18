@@ -75,6 +75,7 @@ int netdag_gen_lag(sr_session_ctx_t *session, struct dagger *net, struct lyd_nod
 	const char *op = add ? "add" : "set";
 	struct lyd_node *lag, *mon;
 	const char *mode;
+	int is_lacp = 0;
 	int err = 0;
 
 	lag = lydx_get_descendant(lyd_child(cif), "lag", NULL);
@@ -109,6 +110,7 @@ int netdag_gen_lag(sr_session_ctx_t *session, struct dagger *net, struct lyd_nod
 	if (!strcmp(mode, "lacp")) {
 		struct lyd_node *lacp = lydx_get_child(lag, "lacp");
 
+		is_lacp = 1;
 		if (add)
 			fprintf(ip, " mode 802.3ad");
 
@@ -126,26 +128,62 @@ int netdag_gen_lag(sr_session_ctx_t *session, struct dagger *net, struct lyd_nod
 			fprintf(ip, " mode balance-xor");
 	}
 
-	/*
-	 * No ARP Monitor support yet, and miimon is required for lacp mode.
-	 * The kernel default interval is 100, which is needlessly often for
-	 * us since we always follow the carrier.
-	 *
-	 * Note: debounce only supported by miimon, not the ARP Monitor.
-	 */
-	fprintf(ip, " miimon 1000 use_carrier 1");
+	mon = lydx_get_descendant(lyd_child(lag), "arp-monitor", NULL);
+	if (mon && !is_lacp) {
+		struct lyd_node *peer;
+		int first;
 
-	mon = lydx_get_descendant(lyd_child(cif), "link-monitor", "debounce", NULL);
+		fprintf(ip, " arp_interval %s", lydx_get_cattr(mon, "interval"));
+
+		first = 1;
+		LYX_LIST_FOR_EACH(lyd_child(mon), peer, "peer") {
+			const char *addr = lyd_get_value(peer);
+
+			if (strchr(addr, ':'))
+				continue;
+
+			if (first) {
+				fprintf(ip, " arp_ip_target");
+				fprintf(ip, " %s", addr);
+				first = 0;
+			} else
+				fprintf(ip, ",%s", addr);
+		}
+
+		first = 1;
+		LYX_LIST_FOR_EACH(lyd_child(mon), peer, "peer") {
+			const char *addr = lyd_get_value(peer);
+
+			if (!strchr(addr, ':'))
+				continue;
+
+			if (first) {
+				fprintf(ip, " ns_ip6_target");
+				fprintf(ip, " %s", addr);
+				first = 0;
+			} else
+				fprintf(ip, ",%s", addr);
+		}
+	}
+
+	mon = lydx_get_descendant(lyd_child(lag), "link-monitor", NULL);
 	if (mon) {
-		const char *msec;
+		const struct lyd_node *debounce;
 
-		msec = lydx_get_cattr(mon, "up");
-		if (msec)
-			fprintf(ip, " updelay %s", msec);
+		fprintf(ip, " miimon %s use_carrier 1", lydx_get_cattr(mon, "interval"));
 
-		msec = lydx_get_cattr(mon, "down");
-		if (msec)
-			fprintf(ip, " downdelay %s", msec);
+		/* Note: debounce only supported by miimon, not the ARP Monitor. */
+		debounce = lydx_get_descendant(lyd_child(mon), "debounce", NULL);
+		if (debounce) {
+			const char *msec;
+
+			msec = lydx_get_cattr(mon, "up");
+			if (msec)
+				fprintf(ip, " updelay %s", msec);
+			msec = lydx_get_cattr(mon, "down");
+			if (msec)
+				fprintf(ip, " downdelay %s", msec);
+		}
 	}
 
 	fputs("\n", ip);

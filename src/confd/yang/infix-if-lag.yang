@@ -10,6 +10,9 @@ submodule infix-if-lag {
   import iana-if-type {
     prefix ianaift;
   }
+  import ietf-inet-types {
+    prefix inet;
+  }
 
   organization "KernelKit";
   contact      "kernelkit@googlegroups.com";
@@ -163,11 +166,40 @@ submodule infix-if-lag {
       choice monitor {
         description "Monitor link members using carrier or ARP.";
 
-        // TODO: add ARP Monitor support here.
+        case arp-monitor {
+          container arp-monitor {
+            description "ARP and NS monitor properties, not available in LACP mode.";
+
+            leaf interval {
+              description "Poll interval, default: 0 (disabled).";
+              type uint32;
+              units "milliseconds";
+              default 0;
+            }
+
+            leaf-list peer {
+              description "IP address(es) to ARP or send Neighbor Solicitation to as keep-alive.";
+              type inet:ip-address;
+            }
+
+            // TODO: add num and any/all settings
+
+            must "(interval = 0) or (count(./peer) > 0)" {
+              description "At least peer is required when the ARP monitor is enabled.";
+            }
+          }
+	}
 
         case link-monitor {
           container link-monitor {
-            description "The link monitor properties.";
+            description "Link monitor properties, required in LACP mode.";
+
+            leaf interval {
+              description "Poll interval, default. 100 (enabled).";
+              type uint32;
+              units "milliseconds";
+              default 100;
+            }
 
             container debounce {
               description "Link flapping protection.";
@@ -190,6 +222,16 @@ submodule infix-if-lag {
             }
           }
         }
+      }
+
+      must "not(./mode = 'lacp' and ./arp-monitor/interval > 0)" {
+        error-message "ARP monitor is not supported in LACP mode.";
+        description "Driver does not support both monitors and require miimon in LACP mode.";
+      }
+
+      must "not(./mode = 'lacp' and ./link-monitor/interval = 0)" {
+        error-message "Link monitor must be enabled in LACP mode.";
+        description "Driver requires miimon in LACP mode.";
       }
     }
   }
