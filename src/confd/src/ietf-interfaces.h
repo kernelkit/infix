@@ -47,7 +47,6 @@ int netdag_gen_ethtool(struct dagger *net, struct lyd_node *cif, struct lyd_node
 
 /* ietf-interfaces.c */
 char *get_phys_addr(struct lyd_node *parent, int *deleted);
-int netdag_exit_reload(struct dagger *net);
 
 /* ietf-ip.c */
 int netdag_gen_ipv6_autoconf(struct dagger *net, struct lyd_node *cif,

@@ -145,9 +145,9 @@ int netdag_gen_ipv4_autoconf(struct dagger *net, struct lyd_node *cif,
 			return -EIO;
 		}
 
+		fprintf(initctl, "initctl -bnq stop zeroconf:%s\n", ifname);
 		fprintf(initctl, "initctl -bnq disable zeroconf@%s.conf\n", ifname);
 		fprintf(initctl, "rm -f %s\n", defaults);
-		err = netdag_exit_reload(net);
 	}
 
 	fclose(initctl);

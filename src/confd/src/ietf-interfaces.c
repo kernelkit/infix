@@ -148,30 +148,6 @@ static int ifchange_cand(sr_session_ctx_t *session, uint32_t sub_id, const char 
 	return SR_ERR_OK;
 }
 
-int netdag_exit_reload(struct dagger *net)
-{
-	FILE *initctl;
-
-	if (systemf("runlevel >/dev/null 2>&1"))
-		/* If we are still bootstrapping, there is nothing to
-		 * reload. */
-		return 0;
-
-	/* We may end up writing this file multiple times, e.g. if
-	 * multiple services are disabled in the same config cycle,
-	 * but since the contents of the file are static it doesn't
-	 * matter.
-	 */
-	initctl = dagger_fopen_current(net, "exit", "@post",
-				       90, "reload.sh");
-	if (!initctl)
-		return -EIO;
-
-	fputs("initctl -bnq reload\n", initctl);
-	fclose(initctl);
-	return 0;
-}
-
 static int netdag_gen_link_mtu(FILE *ip, struct lyd_node *dif)
 {
 	const char *ifname = lydx_get_cattr(dif, "name");
