@@ -35,9 +35,14 @@ endif::topdoc[]
 . Configure device without static filter
 . Start multicast sender on host:data1, group 224.1.1.1
 . Verify that 224.1.1.1 is flooded to host:data2 and host:data3
-. Enable multicast filter on host:data2, group 224.1.1.1
+. Enable IPv4 multicast filter on host:data2, group 224.1.1.1
 . Verify that the group is still forwarded to host:data2
 . Verify that the group is no longer forwarded to host:data3
+. Start MAC multicast sender on host:data1, group 01:00:00:01:02:03
+. Verify MAC multicast 01:00:00:01:02:03 is flooded to host:data2 and host:data3
+. Enable MAC multicast filter on host:data2, group 01:00:00:01:02:03
+. Verify that the MAC group is still forwarded to host:data2
+. Verify that the MAC group is no longer forwarded to host:data3
 
 
 <<<

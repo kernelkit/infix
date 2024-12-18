@@ -2,6 +2,7 @@ import time
 import subprocess
 import signal
 import sys
+from scapy.all import Ether, sendp
 
 class MCastSender:
     def __init__(self, netns,group):
@@ -54,3 +55,29 @@ class MCastReceiver:
                 print("ERR")
                 pass
         self.proc.wait()
+        
+class MacMCastSender:
+    def __init__(self, netns, group):
+        self.group = group
+        self.netns = netns
+
+    def __enter__(self):
+        send_cmd = (
+            "from scapy.all import sendp, Ether; "
+            f"pkt=Ether(src='aa:bb:cc:dd:ee:ff', dst='{self.group}', type=0xdead); "
+            "sendp(pkt, iface='iface', count=50, inter=1./10)"
+        )
+        self.proc = self.netns.popen(["python3", "-c", send_cmd], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        return self  
+
+    def __exit__(self, _, __, ___):
+        if self.proc:
+            sys.stdout.flush()
+            self.proc.send_signal(signal.SIGINT)
+            time.sleep(1)
+            if not self.proc.poll():
+                try:
+                    self.proc.kill()
+                except OSError:
+                    pass
+            self.proc.wait()
