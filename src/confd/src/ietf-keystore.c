@@ -10,6 +10,8 @@
 #include "core.h"
 
 #define XPATH_KEYSTORE_  "/ietf-keystore:keystore/asymmetric-keys"
+#define SSH_PRIVATE_KEY  "/tmp/ssh.key"
+#define SSH_PUBLIC_KEY   "/tmp/ssh.pub"
 
 /* return file size */
 static size_t filesz(const char *fn)
@@ -19,19 +21,6 @@ static size_t filesz(const char *fn)
 	if (stat(fn, &st))
 		st.st_size = BUFSIZ;
 	return st.st_size;
-}
-
-/* sanity check, must exist and be of non-zero size */
-static bool fileok(const char *fn)
-{
-	if (!fexist(fn))
-		return false;
-
-	/* Minimum size of BEGIN + END markers */
-	if (filesz(fn) < 60)
-		return false;
-
-	return true;
 }
 
 /* read file of max len bytes, return as malloc()'ed buffer */
@@ -65,63 +54,85 @@ static char *filerd(const char *fn, size_t len)
 static int change_cb(sr_session_ctx_t *session, uint32_t sub_id, const char *module_name,
 		     const char *xpath, sr_event_t event, uint32_t request_id, void *_)
 {
-	const char *priv_keyfile = "/cfg/ssl/private/netconf.key";
-	const char *pub_keyfile  = "/cfg/ssl/public/netconf.pub";
-	char *pub_key = NULL, *priv_key = NULL;
 	int rc = SR_ERR_INTERNAL;
+        sr_val_t *list = NULL;
+        size_t count = 0;
 
 	switch (event) {
 	case SR_EV_UPDATE:
-		/* Check NETCONF default hostkey pair */
+		/* Check SSH (and NETCONF) default hostkey pair */
 		break;
 	default:
 		return SR_ERR_OK;
 	}
 
-	if (srx_isset(session, XPATH_KEYSTORE_"/asymmetric-key[name='genkey']/cleartext-private-key") &&
-	    srx_isset(session, XPATH_KEYSTORE_"/asymmetric-key[name='genkey']/public-key")) {
-		return SR_ERR_OK; /* already set */
+	rc = sr_get_items(session, xpath, 0, 0, &list, &count);
+        if (rc != SR_ERR_OK) {
+                ERROR("Cannot find any asymmetric keys in configuration");
+                return 0;
+        }
+
+
+        for (size_t i = 0; i < count; ++i) {
+		sr_val_t *entry = &list[i];
+
+		if (!srx_isset(session, "%s/cleartext-private-key", entry->xpath) && !srx_isset(session, "%s/public-key", entry->xpath)) {
+			char *private_key_format, *public_key_format;
+
+			public_key_format = srx_get_str(session, "%s/public-key-format", entry->xpath);
+			if (!public_key_format)
+				continue;
+			private_key_format = srx_get_str(session, "%s/private-key-format", entry->xpath);
+			if (!private_key_format) {
+				free(public_key_format);
+				continue;
+			}
+
+			if (!strcmp(private_key_format, "ietf-crypto-types:rsa-private-key-format") &&
+			    !strcmp(public_key_format, "ietf-crypto-types:ssh-public-key-format")) {
+				char *pub_key = NULL, *priv_key = NULL, *name;
+
+				name = srx_get_str(session, "%s/name", entry->xpath);
+				NOTE("SSH key (%s) does not exist, generating...", name);
+				if (systemf("/usr/libexec/infix/mkkeys %s %s", SSH_PRIVATE_KEY, SSH_PUBLIC_KEY)) {
+					ERROR("Failed to generate SSH keys for %s", name);
+					goto next;
+				}
+
+				priv_key = filerd(SSH_PRIVATE_KEY, filesz(SSH_PRIVATE_KEY));
+				if (!priv_key)
+					goto next;
+
+				pub_key = filerd(SSH_PUBLIC_KEY, filesz(SSH_PUBLIC_KEY));
+				if (!pub_key)
+					goto next;
+
+				rc = srx_set_str(session, priv_key, 0, "%s/cleartext-private-key", entry->xpath);
+				if (rc) {
+					ERROR("Failed setting private key for %s... rc: %d", name, rc);
+					goto next;
+				}
+				rc = srx_set_str(session, pub_key, 0, "%s/public-key", entry->xpath);
+				if (rc != SR_ERR_OK) {
+					ERROR("Failed setting public key for %s... rc: %d", name, rc);
+					goto next;
+				}
+			next:
+				unlink(SSH_PRIVATE_KEY);
+				unlink(SSH_PUBLIC_KEY);
+
+				if (priv_key)
+					free(priv_key);
+
+				if (pub_key)
+					free(pub_key);
+
+				free(name);
+			}
+			free(public_key_format);
+			free(private_key_format);
+		}
 	}
-	WARN("NETCONF private and public host keys missing in confiugration.");
-
-	if (!fileok(priv_keyfile) || !fileok(pub_keyfile)) {
-		NOTE("Generating NETCONF SSH host keys ...");
-		if (systemf("/usr/libexec/infix/mkkeys %s %s", priv_keyfile, pub_keyfile))
-			goto err;
-	} else {
-		NOTE("Using existing SSH host keys for NETCONF.");
-	}
-
-	priv_key = filerd(priv_keyfile, filesz(priv_keyfile));
-	if (!priv_key)
-		goto err;
-
-	pub_key = filerd(pub_keyfile, filesz(pub_keyfile));
-	if (!pub_key)
-		goto err;
-
-	xpath = XPATH_KEYSTORE_"/asymmetric-key[name='genkey']/cleartext-private-key";
-	rc = sr_set_item_str(session, xpath, priv_key, NULL, SR_EDIT_NON_RECURSIVE);
-	if (rc) {
-		ERROR("Failed setting private key ... rc: %d", rc);
-		goto err;
-	}
-
-	xpath = XPATH_KEYSTORE_"/asymmetric-key[name='genkey']/public-key";
-	rc = sr_set_item_str(session, xpath, pub_key, NULL, SR_EDIT_NON_RECURSIVE);
-	if (rc != SR_ERR_OK) {
-		ERROR("Failed setting public key ... rc: %d", rc);
-		goto err;
-	}
-
-err:
-	if (pub_key)
-		free(pub_key);
-	if (priv_key)
-		free(priv_key);
-
-	if (rc != SR_ERR_OK)
-		return rc;
 
 	return SR_ERR_OK;
 }
@@ -130,9 +141,10 @@ int ietf_keystore_init(struct confd *confd)
 {
 	int rc;
 
-	rc = sr_module_change_subscribe(confd->session, "ietf-keystore", "/ietf-keystore:keystore//.",
-					change_cb, confd, 0, SR_SUBSCR_UPDATE, &confd->sub);
-	if (rc)
+	REGISTER_CHANGE(confd->session, "ietf-keystore", "/ietf-keystore:keystore//.",
+			SR_SUBSCR_UPDATE, change_cb, confd, &confd->sub);
+fail:
+	if(rc)
 		ERROR("%s failed: %s", __func__, sr_strerror(rc));
 	return rc;
 }

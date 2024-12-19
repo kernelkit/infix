@@ -60,14 +60,14 @@ rootfs overlay -- with a [VPD](vpd.md) you can even support several!
 ### Variables & Format Specifiers
 
 Parts of the configuration you likely always want to generated, like the
-SSH hostkey used by NETCONF, a unique hostname, or the `admin` user's
+SSH hostkey used by SSH server and NETCONF, a unique hostname, or the `admin` user's
 unique (per-device with a VPD) password hash.  This section lists the
 available keywords, see the next section for examples of how to use
 them:
 
  - **Default password hash:** `$factory$` (from VPD, .dtb, or built-in)  
    XPath: `/ietf-system:system/authentication/user/password`
- - **Default NETCONF hostkey:** `genkey` (regenerated at factory reset)  
+ - **Default SSH and NETCONF hostkey:** `genkey` (regenerated at factory reset)
    XPath: `/ietf-keystore:keystore/asymmetric-keys/asymmetric-key[name='genkey']`
  - **Hostname format specifiers:**  
    XPath: `/ietf-system:system/hostname`
@@ -221,8 +221,8 @@ $ echo "Li0tLS0tLS0uCnwgIC4gLiAgfCBJbmZpeCAtLSBhIE5ldHdvcmsgT3BlcmF0aW5nIFN5c3Rl
 
 **IETF Keystore**
 
-Notice how both the public and private keys are left empty here.  The
-`genkey` is always automatically regenerated after each factory reset.
+Notice how both the public and private keys are left empty here, this
+cause them to be always automatically regenerated after each factory reset.
 Keeping the `factory-config` snippet like this means we can use the same
 file on multiple devices, without risking them sharing the same host
 keys.  Sometimes you may want the same host keys, but that is the easy
@@ -244,8 +244,6 @@ use-case and not documented here.
     }
   },
 ```
-
-The `genkey` is currently only used by the NETCONF SSH backend.
 
 **IETF NETCONF Server**
 
@@ -278,6 +276,28 @@ The `genkey` is currently only used by the NETCONF SSH backend.
       }
     }
   },
+```
+
+**Infix Services**
+```json
+  "infix-services:ssh": {
+    "enabled": true,
+    "hostkey": [
+      "genkey"
+    ],
+    "listen": [
+      {
+        "name": "ipv4",
+        "address": "0.0.0.0",
+        "port": 22
+      },
+      {
+        "name": "ipv6",
+        "address": "::1",
+        "port": 22
+      }
+    ]
+  }
 ```
 
 

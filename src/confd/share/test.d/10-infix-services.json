@@ -7,5 +7,21 @@
 		"restconf": {
 			"enabled": true
 		}
+    },
+    "infix-services:ssh": {
+	"enabled": true,
+	"listen": [
+	    {
+		"name": "ipv4",
+		"address": "0.0.0.0",
+		"port": 22
+	    },
+	    {
+		"name": "ipv6",
+		"address": "::",
+		"port": 22
+	    }
+	],
+	"hostkey": [ "genkey" ]
     }
 }

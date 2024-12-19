@@ -9,13 +9,18 @@
 #include <sys/types.h>
 
 #include <srx/common.h>
+#include <srx/helpers.h>
 #include <srx/lyx.h>
 #include <srx/srx_val.h>
 
 #include "core.h"
+#include <sysrepo_types.h>
 
 #define GENERATE_ENUM(ENUM)      ENUM,
 #define GENERATE_STRING(STRING) #STRING,
+
+#define SSH_HOSTKEYS "/etc/ssh/hostkeys"
+#define SSH_HOSTKEYS_NEXT SSH_HOSTKEYS"+"
 
 #define FOREACH_SVC(SVC)			\
         SVC(none)				\
@@ -26,6 +31,11 @@
         SVC(ttyd)				\
         SVC(netbrowse)				\
         SVC(all)	/* must be last entry */
+
+#define SSH_BASE            "/etc/ssh"
+#define SSHD_CONFIG_BASE    SSH_BASE "/sshd_config.d"
+#define SSHD_CONFIG_LISTEN  SSHD_CONFIG_BASE "/listen.conf"
+#define SSHD_CONFIG_HOSTKEY SSHD_CONFIG_BASE "/host-keys.conf"
 
 typedef enum {
     FOREACH_SVC(GENERATE_ENUM)
@@ -135,6 +145,8 @@ static int svc_change(sr_session_ctx_t *session, sr_event_t event, const char *x
 	ena = lydx_is_enabled(srv, "enabled");
 	if (systemf("initctl -nbq %s %s", ena ? "enable" : "disable", svc))
 		ERROR("Failed %s %s", ena ? "enabling" : "disabling", name);
+	if (ena)
+		systemf("initctl -nbq touch %s", svc); /* in case already enabled */
 
 	return put(cfg, srv);
 }
@@ -342,6 +354,74 @@ static int restconf_change(sr_session_ctx_t *session, uint32_t sub_id, const cha
 	return put(cfg, srv);
 }
 
+static int ssh_change(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
+		      const char *xpath, sr_event_t event, unsigned request_id, void *_confd)
+{
+	struct lyd_node *ssh = NULL, *listen, *host_key;
+	sr_error_t rc = SR_ERR_OK;
+	sr_data_t *cfg;
+	FILE *fp;
+
+	switch (event) {
+	case SR_EV_DONE:
+		return svc_change(session, event, xpath, "ssh", "sshd");
+	case SR_EV_ENABLED:
+	case SR_EV_CHANGE:
+		break;
+
+	case SR_EV_ABORT:
+	default:
+		return SR_ERR_OK;
+	}
+
+	if (sr_get_data(session, xpath, 0, 0, 0, &cfg) || !cfg) {
+		return SR_ERR_OK;
+	}
+	ssh = cfg->tree;
+
+	if (!lydx_is_enabled(ssh, "enabled")) {
+		goto out;
+	}
+
+	fp = fopen(SSHD_CONFIG_HOSTKEY, "w");
+	if (!fp) {
+		rc = SR_ERR_INTERNAL;
+		goto out;
+	}
+
+	LY_LIST_FOR(lydx_get_child(ssh, "hostkey"), host_key) {
+		const char *keyname = lyd_get_value(host_key);
+		if (!keyname)
+			continue;
+		fprintf(fp, "HostKey %s/hostkeys/%s\n", SSH_BASE, keyname);
+	}
+
+	fclose(fp);
+
+	fp = fopen(SSHD_CONFIG_LISTEN, "w");
+	if (!fp) {
+		rc = SR_ERR_INTERNAL;
+		goto out;
+	}
+
+	LY_LIST_FOR(lydx_get_child(ssh, "listen"), listen) {
+		const char *address, *port;
+		int ipv6;
+
+		address = lydx_get_cattr(listen, "address");
+		ipv6 = !!strchr(address, ':');
+		port = lydx_get_cattr(listen, "port");
+
+		fprintf(fp, "ListenAddress %s%s%s:%s\n", ipv6 ? "[" : "", address, ipv6 ? "]" : "", port);
+	}
+	fclose(fp);
+
+out:
+	sr_release_data(cfg);
+
+	return rc;
+}
+
 static int web_change(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
 		      const char *xpath, sr_event_t event, unsigned request_id, void *_confd)
 {
@@ -370,6 +450,71 @@ static int web_change(sr_session_ctx_t *session, uint32_t sub_id, const char *mo
 	return put(cfg, srv);
 }
 
+/* Store SSH public/private keys */
+static int change_keystore_cb(sr_session_ctx_t *session, uint32_t sub_id, const char *module_name,
+		     const char *xpath, sr_event_t event, uint32_t request_id, void *_)
+{
+	int rc = SR_ERR_OK;
+	sr_data_t *cfg;
+	struct lyd_node *changes, *change;
+
+	switch (event) {
+	case SR_EV_CHANGE:
+	case SR_EV_ENABLED:
+		break;
+	case SR_EV_ABORT:
+		/* Remove */
+		if(fexist(SSH_HOSTKEYS_NEXT))
+			rmrf(SSH_HOSTKEYS_NEXT);
+		return SR_ERR_OK;
+	case SR_EV_DONE:
+		if(fexist(SSH_HOSTKEYS_NEXT)) {
+			if(fexist(SSH_HOSTKEYS))
+				if(rmrf(SSH_HOSTKEYS)) {
+					ERROR("Failed to remove old SSH hostkeys: %d", errno);
+				}
+			rename(SSH_HOSTKEYS_NEXT, SSH_HOSTKEYS);
+			svc_change(session, event, "/infix-services:ssh", "ssh", "sshd");
+		}
+		return SR_ERR_OK;
+
+	default:
+		return SR_ERR_OK;
+	}
+
+	if (sr_get_data(session, "/ietf-keystore:keystore/asymmetric-keys//.", 0, 0, 0, &cfg) || !cfg) {
+		return SR_ERR_OK;
+	}
+	changes = lydx_get_descendant(cfg->tree, "keystore", "asymmetric-keys", "asymmetric-key", NULL);
+
+	LYX_LIST_FOR_EACH(changes, change, "asymmetric-key") {
+		const char *name, *private_key_type, *public_key_type;
+		const char *private_key, *public_key;
+
+		name = lydx_get_cattr(change, "name");
+		private_key_type = lydx_get_cattr(change, "private-key-format");
+		public_key_type = lydx_get_cattr(change, "public-key-format");
+
+		if (strcmp(private_key_type, "ietf-crypto-types:rsa-private-key-format")) {
+			INFO("Private key %s is not of SSH type", name);
+			continue;
+		}
+
+		if (strcmp(public_key_type, "ietf-crypto-types:ssh-public-key-format")) {
+			INFO("Public key %s is not of SSH type", name);
+			continue;
+		}
+		private_key = lydx_get_cattr(change, "cleartext-private-key");
+		public_key = lydx_get_cattr(change, "public-key");
+		mkdir(SSH_HOSTKEYS_NEXT, 0600);
+		if(systemf("/usr/libexec/infix/mksshkey %s %s %s %s", name, SSH_HOSTKEYS_NEXT, public_key, private_key))
+			rc = SR_ERR_INTERNAL;
+       }
+
+	sr_release_data(cfg);
+
+	return rc;
+}
 int infix_services_init(struct confd *confd)
 {
 	int rc;
@@ -378,7 +523,8 @@ int infix_services_init(struct confd *confd)
 			0, mdns_change, confd, &confd->sub);
 	REGISTER_MONITOR(confd->session, "ietf-system", "/ietf-system:system/hostname",
 			 0, hostname_change, confd, &confd->sub);
-
+	REGISTER_CHANGE(confd->session, "infix-services", "/infix-services:ssh",
+			0, ssh_change, confd, &confd->sub);
 	REGISTER_CHANGE(confd->session, "infix-services", "/infix-services:web",
 			0, web_change, confd, &confd->sub);
 	REGISTER_CHANGE(confd->session, "infix-services", "/infix-services:web/infix-services:console",
@@ -389,6 +535,10 @@ int infix_services_init(struct confd *confd)
 			0, restconf_change, confd, &confd->sub);
 	REGISTER_CHANGE(confd->session, "ieee802-dot1ab-lldp", "/ieee802-dot1ab-lldp:lldp",
 			0, lldp_change, confd, &confd->sub);
+
+        /* Store SSH keys */
+	REGISTER_CHANGE(confd->session, "ietf-keystore", "/ietf-keystore:keystore//.",
+			0, change_keystore_cb, confd, &confd->sub);
 
 	return SR_ERR_OK;
 fail:

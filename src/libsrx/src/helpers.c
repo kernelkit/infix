@@ -5,6 +5,7 @@
  * XXX: removed.
  */
 
+#include <ftw.h>
 #include <errno.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -13,12 +14,36 @@
 #include <sys/wait.h>
 #include <libite/lite.h>
 
+#include "common.h"
 int debug;			/* Sets debug level (0:off) */
 
 /* TODO remove once confd / statd lib situation is resolved */
 #ifndef vasprintf
 int vasprintf(char **strp, const char *fmt, va_list ap);
 #endif
+
+static int do_delete(const char *fpath, const struct stat *sb, int tflag, struct FTW *ftw)
+{
+	if (ftw->level == 0)
+		return 1;
+
+	if (remove(fpath) && errno != EBUSY)
+		WARN("Failed removing %s", fpath);
+
+	return 0;
+}
+
+int rmrf(const char *path)
+{
+	if (!fisdir(path))
+		return 0;
+
+	nftw(path, do_delete, 64, FTW_DEPTH | FTW_PHYS);
+	if (remove(path) && errno != ENOENT)
+		WARN("Failed removing path %s", path);
+
+	return 0;
+}
 
 char *unquote(char *buf)
 {

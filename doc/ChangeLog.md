@@ -15,6 +15,8 @@ All notable changes to the project are documented in this file.
  - Upgrade Linux kernel to 6.12.3 (LTS)
  - Add the possibility to change the boot order for the system with a
    RPC and add boot order to operational datastore.
+ - SSH Server is now configurable, issue #441
+   SSH Server and NETCONF Server now uses the same SSH hostkey in factory-config
 
 ### Fixes
 

@@ -8,14 +8,34 @@ module infix-services {
   }
   import ietf-inet-types {
     prefix inet;
+    reference
+      "RFC 6991: Common YANG Data Types";
+  }
+  import ietf-crypto-types {
+    prefix ct;
+    reference
+      "RFC 9640: YANG Data Types and Groupings for Cryptography";
+  }
+
+  import ietf-keystore {
+    prefix ks;
   }
 
   organization "KernelKit";
   contact      "kernelkit@googlegroups.com";
   description  "Infix services, generic.";
 
+  revision 2024-12-03 {
+    description "Add support for SSH server configuration";
+    reference "internal";
+  }
   revision 2024-12-02 {
     description "Expand mdns options: domain, allow/deny interfaces, reflector.";
+    reference "internal";
+  }
+
+  revision 2024-06-08 {
+    description "Add support for RESTCONF enable/disable as a web service.";
     reference "internal";
   }
   revision 2024-05-30 {
@@ -101,6 +121,48 @@ module infix-services {
 
                      By default all services are reflected.";
         type string;
+      }
+    }
+  }
+  container ssh {
+    description "Configuration for the SSH daemon";
+    leaf enabled {
+      description "Enable or disable SSH daemon";
+      type boolean;
+      must ". = 'false' or (count(../listen) > 0 and count(../hostkey) > 0)" {
+        error-message "Must be at least one listen address and a private key.";
+      }
+    }
+
+    leaf-list hostkey {
+      description "Reference to asymmetric key in central keystore.
+
+             The hostkey can be shared with NETCONF, by default 'genkey' is used.";
+      must "not(deref(.)/../ks:public-key-format) or "
+        + "(derived-from-or-self(deref(.)/../ks:public-key-format,  'ct:ssh-public-key-format') and"
+        + "derived-from-or-self(deref(.)/../ks:private-key-format,  'ct:rsa-private-key-format'))" {
+        error-message "Only RSA hostkeys are supported.";
+      }
+      type ks:asymmetric-key-ref;
+    }
+
+    list listen {
+      key name;
+      leaf name {
+        type string;
+      }
+
+      leaf address {
+        description "Local IP address to listen on for inbound SSH connections.
+
+           INADDR_ANY (0.0.0.0) or INADDR6_ANY (0:0:0:0:0:0:0:0 a.k.a. ::) MUST be
+           used when the server is to listen on all IPv4 or
+           IPv6 addresses, respectively.";
+        type inet:ip-address;
+      }
+      leaf port {
+        description "Local port for SSH daemon to listen on.";
+        type inet:port-number;
       }
     }
   }
