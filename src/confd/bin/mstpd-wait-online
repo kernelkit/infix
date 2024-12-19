@@ -1,0 +1,16 @@
+#!/bin/sh
+#
+# Block until mstpd has opened its control socket
+
+set -e
+
+timeout=${1:-10}
+
+for _ in $(seq $((timeout * 10))); do
+    ss -Haxn src '@.mstp_server*' | grep -q mstp_server && exit 0
+    sleep .1
+done
+
+logger -I $$ -p user.error -t mstpd-wait-online \
+       "Timeout waiting for mstpd to start"
+exit 1
