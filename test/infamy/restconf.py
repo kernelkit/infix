@@ -302,6 +302,9 @@ class Device(Transport):
 
         return self.put_datastore("running", data)
 
+    def call_dict(self, model, call):
+        pass # Need implementation
+
     def call_rpc(self, rpc):
         """Actually send a POST to RESTCONF server"""
         url = f"{self.rpc_url}/{rpc}"

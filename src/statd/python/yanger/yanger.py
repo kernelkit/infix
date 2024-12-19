@@ -17,6 +17,23 @@ def datetime_now():
         return datetime(2023, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
     return datetime.now(timezone.utc)
 
+def uboot_get_boot_order():
+    data = run_cmd("fw_printenv BOOT_ORDER".split(), "boot-order.txt")
+    for line in data:
+        if "BOOT_ORDER" in line:
+            return line.strip().split("=")[1].split()
+
+    raise Exception
+
+def grub_get_boot_order():
+    data = run_cmd("grub-editenv /mnt/aux/grub/grubenv list".split(), None) # No need for testfile, will be returned from uboot
+
+    for line in data:
+        if "ORDER" in line:
+            return line.split("=")[1].strip().split()
+
+    raise Exception
+
 def json_get_yang_type(iface_in):
     if iface_in['link_type'] == "loopback":
         return "infix-if-type:loopback"
@@ -1091,27 +1108,45 @@ def add_system_software_slots(out, data):
             new["class"] = slot[key].get("class")
             new["state"] = slot[key].get("state")
             new["bundle"] = {}
+            slot_status=value.get("slot_status", {})
+            if slot_status.get("bundle", {}).get("compatible"):
+                new["bundle"]["compatible"] = slot_status.get("bundle", {}).get("compatible")
+            if slot_status.get("bundle", {}).get("version"):
+                new["bundle"]["version"] = slot_status.get("bundle", {}).get("version")
+            if slot_status.get("checksum", {}).get("size"):
+                new["size"] = str(slot_status.get("checksum", {}).get("size"))
+            if slot_status.get("checksum", {}).get("sha256"):
+                new["sha256"] = slot_status.get("checksum", {}).get("sha256")
 
-            if value.get("slot_status",{}).get("bundle", {}).get("compatible"):
-                new["bundle"]["compatible"] = value.get("slot_status",{}).get("bundle", {}).get("compatible")
-            if value.get("slot_status", {}).get("bundle", {}).get("version"):
-                new["bundle"]["version"] = value.get("slot_status", {}).get("bundle", {}).get("version")
-            if value.get("checksum", {}).get("size"):
-                new["size"] = value.get("checksum", {}).get("size")
-            if value.get("checksum", {}).get("sha256"):
-                new["sha256"] = value.get("checksum", {}).get("sha256")
             new["installed"] = {}
-            if value.get("installed", {}).get("timestamp"):
-                new["installed"]["datetime"] = value.get("installed", {}).get("timestamp")
-            if value.get("installed", {}).get("count"):
-                new["installed"]["count"] = value.get("installed", {}).get("count")
+            if slot_status.get("installed", {}).get("timestamp"):
+                new["installed"]["datetime"] = slot_status.get("installed", {}).get("timestamp")
+
+            if slot_status.get("installed", {}).get("count"):
+                new["installed"]["count"] = slot_status.get("installed", {}).get("count")
+
             new["activated"] = {}
-            if value.get("activated", {}).get("timestamp"):
-                new["activated"]["datetime"] = value.get("activated", {}).get("timestamp")
-            if value.get("activated", {}).get("count"):
-                new["activated"]["count"] = value.get("activated", {}).get("count")
+            if slot_status.get("activated", {}).get("timestamp"):
+                new["activated"]["datetime"] = slot_status.get("activated", {}).get("timestamp")
+
+            if slot_status.get("activated", {}).get("count"):
+                new["activated"]["count"] = slot_status.get("activated", {}).get("count")
             slots.append(new)
     out["slot"] = slots
+
+def get_system_software_boot_order():
+    order = None
+    try:
+        order = uboot_get_boot_order()
+    except:
+        pass
+    try:
+        if order is None:
+            order = grub_get_boot_order()
+    except:
+        pass
+
+    return order
 
 def add_system_software(out):
     software = {}
@@ -1120,6 +1155,9 @@ def add_system_software(out):
         software["compatible"] = data["compatible"]
         software["variant"] = data["variant"]
         software["booted"] = data["booted"]
+        boot_order = get_system_software_boot_order()
+        if not boot_order is None:
+            software["boot-order"] = boot_order
         add_system_software_slots(software, data)
     except subprocess.CalledProcessError:
         pass    # Maybe an upgrade i progress, then rauc does not respond

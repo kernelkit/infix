@@ -691,12 +691,21 @@ def show_software(json, name):
         print("Error, cannot find infix-system:software")
         sys.exit(1)
 
-    slots = get_json_data({}, json, 'ietf-system:system-state', 'infix-system:software', 'slot')
+    software = get_json_data({}, json, 'ietf-system:system-state', 'infix-system:software')
+    slots = software.get("slot")
+    boot_order = software.get("boot-order", ["Unknown"])
     if name:
         slot = find_slot(slots, name)
         if slot:
             slot.detail()
     else:
+        print(Decore.invert("BOOT ORDER"))
+        order=""
+        for boot in boot_order:
+            order+=f"{boot.strip()} "
+        print(order)
+        print("")
+
         hdr = (f"{'NAME':<{PadSoftware.name}}"
                f"{'STATE':<{PadSoftware.state}}"
                f"{'VERSION':<{PadSoftware.version}}"
@@ -773,9 +782,11 @@ def main():
     parser_show_software = subparsers.add_parser('show-software', help='Show software versions')
     parser_show_software.add_argument('-n', '--name', help='Slotname')
 
-    parser_show_routing_table = subparsers.add_parser('show-hardware', help='Show USB ports')
+    parser_show_hardware = subparsers.add_parser('show-hardware', help='Show USB ports')
 
     parser_show_ntp_sources = subparsers.add_parser('show-ntp', help='Show NTP sources')
+
+    parser_show_boot_order = subparsers.add_parser('show-boot-order', help='Show NTP sources')
 
     args = parser.parse_args()
     UNIT_TEST = args.test
@@ -793,7 +804,7 @@ def main():
     elif args.command == "show-ntp":
         show_ntp(json_data)
     else:
-        print(f"Error, unknown command {args.command}")
+        print(f"Error, unknown command '{args.command}'")
         sys.exit(1)
 
 

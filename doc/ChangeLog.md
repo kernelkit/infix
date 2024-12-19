@@ -13,6 +13,8 @@ All notable changes to the project are documented in this file.
    as "reflector" and filtering of reflected services.  Issue #678
  - Review of default `sysctl` settings, issue #829
  - Upgrade Linux kernel to 6.12.3 (LTS)
+ - Add the possibility to change the boot order for the system with a
+   RPC and add boot order to operational datastore.
 
 ### Fixes
 

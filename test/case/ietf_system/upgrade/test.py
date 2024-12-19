@@ -25,30 +25,30 @@ PKGPATH = os.path.join(
     BUNDLEDIR,
     "package"
 )
+def get_boot_order(target):
+    oper = target.get_dict("/system-state/software")
+    return " ".join(oper["system-state"]["software"]["boot-order"])
 
-class Uboot:
-    def __init__(self, ssh):
-        self.ssh=ssh
+def set_boot_order(target, order):
+    target.call_dict("infix-system", {
+        "set-boot-order": {
+            "boot-order": order.split(" ")
+        }
+    })
 
-    def get_boot_order(self):
-        order=self.ssh.runsh("sudo fw_printenv BOOT_ORDER").stdout.split("=")
-        return order[1].strip()
 
-    def set_boot_order(self, order):
-        return self.ssh.run(f"sudo fw_setenv BOOT_ORDER '{order}'".split()).returncode
+def cleanup(env, old_bootorder):
+    print(f"Restore boot order to {old_bootorder}")
+    target = env.attach("target", "mgmt", "netconf")
+    set_boot_order(target, old_bootorder)
+    target.reboot()
+    if not wait_boot(target, env):
+        test.fail()
+    target = env.attach("target", "mgmt", "netconf")
 
-class Grub:
-    def __init__(self, ssh):
-        self.ssh = ssh
-
-    def get_boot_order(self):
-        lines=self.ssh.runsh("grub-editenv /mnt/aux/grub/grubenv list").stdout.split("\n")
-        for line in lines:
-            if "ORDER" in line:
-                return line.split("=")[1].strip()
-
-    def set_boot_order(self, order):
-        return self.ssh.run(f"sudo grub-editenv /mnt/aux/grub/grubenv set ORDER='{order}'".split()).returncode
+    print("Verify the boot order is the orignal configured")
+    order = get_boot_order(target)
+    assert order == old_bootorder, f"Unexpected bootorder: {repr(order)}"
 
 with infamy.Test() as test:
     with test.step("Set up topology and attach to target DUT"):
@@ -65,20 +65,13 @@ with infamy.Test() as test:
         os.symlink(os.path.abspath(env.args.package), PKGPATH)
 
         target = env.attach("target", "mgmt", "netconf")
-        target_ssh = env.attach("target", "mgmt", "ssh")
-        if target_ssh.run("test -e /sys/firmware/devicetree/base/chosen/u-boot,version".split()).returncode == 0:
-            bootloader=Uboot(target_ssh)
-        elif target_ssh.run("test -e /mnt/aux/grub/grubenv".split()).returncode == 0:
-            bootloader=Grub(target_ssh)
-        else:
-            print("No supported bootloader found")
-            test.skip()
 
-        old_bootorder=bootloader.get_boot_order()
+        old_bootorder=get_boot_order(target)
         print(f"Initial bootorder: {repr(old_bootorder)}")
 
         _, hport = env.ltop.xlate("host", "data")
         _, tport = env.ltop.xlate("target", "data")
+        test.push_test_cleanup(lambda: cleanup(env, old_bootorder))
 
     netns = infamy.IsolatedMacVlan(hport).start()
     netns.addip("192.168.0.1")
@@ -130,7 +123,9 @@ with infamy.Test() as test:
                 test.fail()
 
         with test.step("Verify boot order has changed and reboot"):
-            assert(old_bootorder != bootloader.get_boot_order())
+            print(get_boot_order(target))
+            print(old_bootorder)
+            assert(old_bootorder != get_boot_order(target))
             target.reboot()
 
             if not wait_boot(target, env):
@@ -139,24 +134,10 @@ with infamy.Test() as test:
 
 
         with test.step("Verify that the partition is the booted"):
-            should_boot=bootloader.get_boot_order().split()[0]
+            should_boot=get_boot_order(target).split()[0]
             oper = target.get_dict("/system-state/software")
             booted = oper["system-state"]["software"]["booted"]
             print(f"Should boot: {should_boot}, booted: {booted}")
             assert(booted == should_boot)
-
-        with test.step("Restore boot order to original configured"):
-            print(f"Restore boot order to {old_bootorder}")
-            if bootloader.set_boot_order(old_bootorder) != 0:
-                test.fail()
-            target = env.attach("target", "mgmt", "netconf")
-            target.reboot()
-            if not wait_boot(target, env):
-                test.fail()
-            target = env.attach("target", "mgmt", "netconf")
-
-        with test.step("Verify the boot order is the orignal configured"):
-            order = bootloader.get_boot_order()
-            assert order == old_bootorder, f"Unexpected bootorder: {repr(order)}"
 
     test.succeed()

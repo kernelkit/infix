@@ -60,7 +60,9 @@ if [ $# -eq 2 ] && [ $1 = "update" ]; then
     elif [ $2  = "show-bridge-mdb" ]; then
       "$SR_EMULATOR_TOOL" | "$CLI_PRETTY_TOOL" "show-bridge-mdb" > "$CLI_OUTPUT_PATH/show-bridge-mdb.txt"
     elif [ $2  = "show-ntp" ]; then
-      "$SR_EMULATOR_TOOL" | "$CLI_PRETTY_TOOL" "show-ntp" > "$CLI_OUTPUT_PATH/show-ntp.txt"
+	    "$SR_EMULATOR_TOOL" | "$CLI_PRETTY_TOOL" "show-ntp" > "$CLI_OUTPUT_PATH/show-ntp.txt"
+    elif [ $2  = "show-software" ]; then
+	    "$SR_EMULATOR_TOOL" | "$CLI_PRETTY_TOOL" "show-software" > "$CLI_OUTPUT_PATH/show-software.txt"
     else
       echo "Unsupported cli-pretty command $2"
       exit 1
@@ -69,7 +71,7 @@ if [ $# -eq 2 ] && [ $1 = "update" ]; then
     exit 0
 fi
 
-echo "1..11"
+echo "1..12"
 echo "# Running:"
 
 # Show interfaces
@@ -100,6 +102,16 @@ if ! diff -u "$CLI_OUTPUT_PATH/show-ntp.txt" "$CLI_OUTPUT_FILE"; then
     fail "\"show ntp\" output has changed"
 fi
 ok "\"show ntp\" output looks intact"
+
+# Show software
+echo "# $SR_EMULATOR_TOOL | $CLI_PRETTY_TOOL show-software"
+"$SR_EMULATOR_TOOL" | "$CLI_PRETTY_TOOL" "show-software" > "$CLI_OUTPUT_FILE"
+
+if ! diff -u "$CLI_OUTPUT_PATH/show-software.txt" "$CLI_OUTPUT_FILE"; then
+    print_update_txt
+    fail "\"show software\" output has changed"
+fi
+ok "\"show software\" output looks intact"
 
 # Show ipv4 routes
 echo "# $SR_EMULATOR_TOOL | $CLI_PRETTY_TOOL -t show-routing-table -i ipv4"

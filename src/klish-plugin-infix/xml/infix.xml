@@ -303,7 +303,7 @@
       sysrepocfg -d operational -X -f json -x /ietf-system:system-state/infix-system:software | \
               jq -r '.[][].slot |= sort_by(.name)' > "$tmp"
       if [ -n "$KLISH_PARAM_name" ]; then
-          cat "$tmp" | /usr/libexec/statd/cli-pretty "infix-system" -n "$KLISH_PARAM_name"
+          cat "$tmp" | /usr/libexec/statd/cli-pretty "show-software" -n "$KLISH_PARAM_name"
       else
           cat "$tmp" | /usr/libexec/statd/cli-pretty "show-software"
       fi
