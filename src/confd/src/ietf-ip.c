@@ -37,7 +37,7 @@ int netdag_gen_ipv6_autoconf(struct dagger *net, struct lyd_node *cif,
 	}
 
 	/* 51: must run after interfaces have been created (think: bridge, veth) */
-	fp = dagger_fopen_next(net, "init", ifname, 51, "init.sysctl");
+	fp = dagger_fopen_net_init(net, ifname, NETDAG_INIT_POST, "init.sysctl");
 	if (fp) {
 		/* Autoconfigure addresses using Prefix Information in Router Advertisements */
 		fprintf(fp, "net.ipv6.conf.%s.autoconf = %d\n", ifname, global);
@@ -126,7 +126,7 @@ int netdag_gen_ipv4_autoconf(struct dagger *net, struct lyd_node *cif,
 		fprintf(fp, "\"\n");
 		fclose(fp);
 
-		initctl = dagger_fopen_next(net, "init", ifname, 60, "zeroconf-up.sh");
+		initctl = dagger_fopen_net_init(net, ifname, NETDAG_INIT_DAEMON, "zeroconf-up.sh");
 		if (!initctl)
 			return -EIO;
 
@@ -137,7 +137,7 @@ int netdag_gen_ipv4_autoconf(struct dagger *net, struct lyd_node *cif,
 			fprintf(initctl, "initctl -bnq touch zeroconf@%s.conf\n", ifname);
 	} else {
 	disable:
-		initctl = dagger_fopen_current(net, "exit", ifname, 40, "zeroconf-down.sh");
+		initctl = dagger_fopen_net_exit(net, ifname, NETDAG_EXIT_DAEMON, "zeroconf-down.sh");
 		if (!initctl) {
 			/* check if in bootstrap (pre gen 0) */
 			if (errno == EUNATCH)
@@ -145,9 +145,9 @@ int netdag_gen_ipv4_autoconf(struct dagger *net, struct lyd_node *cif,
 			return -EIO;
 		}
 
+		fprintf(initctl, "initctl -bnq stop zeroconf:%s\n", ifname);
 		fprintf(initctl, "initctl -bnq disable zeroconf@%s.conf\n", ifname);
 		fprintf(initctl, "rm -f %s\n", defaults);
-		err = netdag_exit_reload(net);
 	}
 
 	fclose(initctl);
@@ -254,7 +254,7 @@ int netdag_gen_ip_addrs(struct dagger *net, FILE *ip, const char *proto,
 		if (!cni_find(ifname) && if_nametoindex(ifname)) {
 			FILE *fp;
 
-			fp = dagger_fopen_current(net, "exit", ifname, 49, "flush.sh");
+			fp = dagger_fopen_net_exit(net, ifname, NETDAG_EXIT_PRE, "flush.sh");
 			if (fp) {
 				fprintf(fp, "ip -%c addr flush dev %s\n", proto[3], ifname);
 				fclose(fp);

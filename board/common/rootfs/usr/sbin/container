@@ -226,7 +226,7 @@ create()
     fi
 
     if [ -z "$logging" ]; then
-	logging="--log-driver none"
+	logging="--log-driver syslog"
     fi
 
     # When we get here we've already fetched, or pulled, the image

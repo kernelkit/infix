@@ -1,0 +1,196 @@
+From 075fcae6b463d67149fbf2adc36c6bb423364e24 Mon Sep 17 00:00:00 2001
+From: Tobias Waldekranz <tobias@waldekranz.com>
+Date: Wed, 18 Dec 2024 15:08:57 +0100
+Subject: [PATCH] logging: Add syslog support
+Organization: Addiva Elektronik
+
+Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
+---
+ src/ctr_logging.c | 125 ++++++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 125 insertions(+)
+
+diff --git a/src/ctr_logging.c b/src/ctr_logging.c
+index e5f03f3..3bf8fc2 100644
+--- a/src/ctr_logging.c
++++ b/src/ctr_logging.c
+@@ -26,10 +26,12 @@ static inline int sd_journal_sendv(G_GNUC_UNUSED const struct iovec *iov, G_GNUC
+ static gboolean use_journald_logging = FALSE;
+ static gboolean use_k8s_logging = FALSE;
+ static gboolean use_logging_passthrough = FALSE;
++static gboolean use_logging_syslog = FALSE;
+ 
+ /* Value the user must input for each log driver */
+ static const char *const K8S_FILE_STRING = "k8s-file";
+ static const char *const JOURNALD_FILE_STRING = "journald";
++static const char *const SYSLOG_FILE_STRING = "syslog";
+ 
+ /* Max log size for any log file types */
+ static int64_t log_size_max = -1;
+@@ -41,6 +43,9 @@ static int64_t log_global_size_max = -1;
+ static int k8s_log_fd = -1;
+ static char *k8s_log_path = NULL;
+ 
++/* syslog parameters */
++static int syslog_facility = LOG_LOCAL1;
++
+ /* journald log file parameters */
+ // short ID length
+ #define TRUNC_ID_LEN 12
+@@ -80,6 +85,7 @@ static void parse_log_path(char *log_config);
+ static const char *stdpipe_name(stdpipe_t pipe);
+ static int write_journald(int pipe, char *buf, ssize_t num_read);
+ static int write_k8s_log(stdpipe_t pipe, const char *buf, ssize_t buflen);
++static int write_syslog(int pipe, char *buf, ssize_t num_read);
+ static bool get_line_len(ptrdiff_t *line_len, const char *buf, ssize_t buflen);
+ static ssize_t writev_buffer_append_segment(int fd, writev_buffer_t *buf, const void *data, ssize_t len);
+ static ssize_t writev_buffer_append_segment_no_flush(writev_buffer_t *buf, const void *data, ssize_t len);
+@@ -158,6 +164,10 @@ void configure_log_drivers(gchar **log_drivers, int64_t log_size_max_, int64_t l
+ 			syslog_identifier_len = strlen(syslog_identifier);
+ 		}
+ 	}
++
++	if (use_logging_syslog) {
++		openlog(tag ? : (name_ ? : "conmon"), LOG_PID, syslog_facility);
++	}
+ }
+ 
+ /*
+@@ -213,6 +223,11 @@ static void parse_log_path(char *log_config)
+ 		return;
+ 	}
+ 
++	if (!strcmp(driver, SYSLOG_FILE_STRING)) {
++		use_logging_syslog = TRUE;
++		return;
++	}
++
+ 	// If no : was found, use the entire log-path as a filename to k8s-file.
+ 	if (path == NULL && delim == NULL) {
+ 		use_k8s_logging = TRUE;
+@@ -234,6 +249,10 @@ bool write_to_logs(stdpipe_t pipe, char *buf, ssize_t num_read)
+ 		nwarn("write_journald failed");
+ 		return G_SOURCE_CONTINUE;
+ 	}
++	if (use_logging_syslog && write_syslog(pipe, buf, num_read) < 0) {
++		nwarn("write_syslog failed");
++		return G_SOURCE_CONTINUE;
++	}
+ 	return true;
+ }
+ 
+@@ -436,6 +455,112 @@ static int write_k8s_log(stdpipe_t pipe, const char *buf, ssize_t buflen)
+ 	return 0;
+ }
+ 
++struct log_buf {
++	char data[STDIO_BUF_SIZE];
++
++	FILE *put;
++	char *get;
++};
++
++static int log_buf_reset(struct log_buf *buf)
++{
++	if (buf->put) {
++		rewind(buf->put);
++	} else {
++		buf->put = fmemopen(buf->data, sizeof(buf->data) - 1, "a");
++		if (!buf->put)
++			return -1;
++
++		setbuf(buf->put, NULL);
++	}
++
++	buf->data[0] = '\0';
++	buf->get = buf->data;
++	return 0;
++}
++
++static const char *log_buf_gets(struct log_buf *buf)
++{
++	char *line, *nl;
++
++	nl = strchr(buf->get, '\n');
++	if (!nl)
++		return NULL;
++
++	*nl = '\0';
++
++	line = buf->get;
++	buf->get = nl + 1;
++	return line;
++}
++
++static const char *log_buf_drain(struct log_buf *buf)
++{
++	char *text, *end;
++
++	end = buf->data + ftell(buf->put);
++	*end = '\0';
++
++	text = buf->get;
++	buf->get = end;
++	return text;
++}
++
++static int log_buf_push(struct log_buf *buf, const char *data, size_t len)
++{
++	/* If the last log_buf_gets() completely drained the buffer, we can safely reset. */
++	if (buf->get != buf->data
++	    && ftell(buf->put) == (buf->data - buf->get)
++	    && log_buf_reset(buf))
++		return -1;
++
++	return (fwrite(data, len, 1, buf->put) == 1) ? 0 : -1;
++}
++
++/* write to syslog(3). If the pipe is stdout, write with notice priority,
++ * otherwise, write with error priority. Partial lines (that don't end in a newline) are buffered
++ * between invocations. A 0 buflen argument forces a buffered partial line to be flushed.
++ */
++static int write_syslog(int pipe, char *buf, ssize_t buflen)
++{
++	static struct log_buf stdout = { 0 }, stderr = { 0 };
++	struct log_buf *b;
++	const char *line;
++	int prio;
++
++	switch (pipe) {
++	case STDOUT_PIPE:
++		b = &stdout;
++		prio = LOG_NOTICE;
++		break;
++	case STDERR_PIPE:
++		b = &stderr;
++		prio = LOG_ERR;
++		break;
++	default:
++		return -1;
++	}
++
++	if (!b->put && log_buf_reset(b))
++		return -1;
++
++	if (!buflen) {
++		line = log_buf_drain(b);
++		if (*line) {
++			syslog(prio, line);
++			return 0;
++		}
++	}
++
++	if (log_buf_push(b, buf, buflen))
++		return -1;
++
++	while ((line = log_buf_gets(b))) {
++		syslog(prio, line);
++	}
++	return 0;
++}
++
+ /* Find the end of the line, or alternatively the end of the buffer.
+  * Returns false in the former case (it's a whole line) or true in the latter (it's a partial)
+  */
+-- 
+2.43.0
+

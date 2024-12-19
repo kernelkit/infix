@@ -18,6 +18,8 @@ class Furl:
                 return needle in text
         except urllib.error.URLError as _:
             return False
+        except ConnectionResetError:
+            return False
 
     def nscheck(self, netns, needle):
         """"Call check() from netns"""

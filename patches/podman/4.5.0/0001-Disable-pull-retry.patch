@@ -1,0 +1,38 @@
+From 3c8de9439a5718018a97fb4369c02d69f88853f8 Mon Sep 17 00:00:00 2001
+From: Tobias Waldekranz <tobias@waldekranz.com>
+Date: Wed, 18 Dec 2024 16:33:38 +0100
+Subject: [PATCH 1/2] Disable pull retry
+Organization: Addiva Elektronik
+
+This patch disables the default "podman pull" retry value, which is
+not used by Infix.  Instead, the container wrapper script retries on
+network related changes, or every 60 seconds.
+
+As of podman v5.0.0 a '--retry=NUM' has been added to the podman
+create, run, and pull commands.  However, CNI is no longer supported,
+and a lot of other breaking changes have been made, eg., output of
+podman inspect.  So there's a lot of work to upgrade.
+
+   -- Joachim
+
+Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
+---
+ vendor/github.com/containers/common/libimage/copier.go | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/vendor/github.com/containers/common/libimage/copier.go b/vendor/github.com/containers/common/libimage/copier.go
+index 5f277a69e..af980af3b 100644
+--- a/vendor/github.com/containers/common/libimage/copier.go
++++ b/vendor/github.com/containers/common/libimage/copier.go
+@@ -24,7 +24,7 @@ import (
+ )
+ 
+ const (
+-	defaultMaxRetries = 3
++	defaultMaxRetries = 0
+ 	defaultRetryDelay = time.Second
+ )
+ 
+-- 
+2.43.0
+

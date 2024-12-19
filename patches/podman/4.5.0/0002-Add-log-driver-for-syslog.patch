@@ -1,0 +1,98 @@
+From 81b3c16e6f1a3aac7ab31157e3a199af52faeec8 Mon Sep 17 00:00:00 2001
+From: Tobias Waldekranz <tobias@waldekranz.com>
+Date: Wed, 18 Dec 2024 16:25:29 +0100
+Subject: [PATCH 2/2] Add log driver for syslog
+Organization: Addiva Elektronik
+
+Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
+---
+ cmd/podman/common/completion.go | 2 +-
+ libpod/container_log_linux.go   | 2 +-
+ libpod/define/config.go         | 3 +++
+ libpod/oci_conmon_common.go     | 2 ++
+ libpod/options.go               | 2 +-
+ libpod/runtime_ctr.go           | 2 +-
+ 6 files changed, 9 insertions(+), 4 deletions(-)
+
+diff --git a/cmd/podman/common/completion.go b/cmd/podman/common/completion.go
+index 6c7400228..69195558f 100644
+--- a/cmd/podman/common/completion.go
++++ b/cmd/podman/common/completion.go
+@@ -957,7 +957,7 @@ func AutocompleteImageVolume(cmd *cobra.Command, args []string, toComplete strin
+ // -> "journald", "none", "k8s-file", "passthrough"
+ func AutocompleteLogDriver(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+ 	// don't show json-file
+-	logDrivers := []string{define.JournaldLogging, define.NoLogging, define.KubernetesLogging}
++	logDrivers := []string{define.JournaldLogging, define.NoLogging, define.KubernetesLogging, define.SyslogLogging}
+ 	if !registry.IsRemote() {
+ 		logDrivers = append(logDrivers, define.PassthroughLogging)
+ 	}
+diff --git a/libpod/container_log_linux.go b/libpod/container_log_linux.go
+index a708ad46d..b675f2e8d 100644
+--- a/libpod/container_log_linux.go
++++ b/libpod/container_log_linux.go
+@@ -28,7 +28,7 @@ const (
+ )
+ 
+ func init() {
+-	logDrivers = append(logDrivers, define.JournaldLogging)
++	logDrivers = append(logDrivers, define.JournaldLogging, define.SyslogLogging)
+ }
+ 
+ func (c *Container) readFromJournal(ctx context.Context, options *logs.LogOptions,
+diff --git a/libpod/define/config.go b/libpod/define/config.go
+index 7295f1425..66abfd0d9 100644
+--- a/libpod/define/config.go
++++ b/libpod/define/config.go
+@@ -82,6 +82,9 @@ const NoLogging = "none"
+ // PassthroughLogging is the string conmon expects when specifying to use the passthrough driver
+ const PassthroughLogging = "passthrough"
+ 
++// SyslogLogging is the string conmon expects when specifying to use the syslog driver
++const SyslogLogging = "syslog"
++
+ // DefaultRlimitValue is the value set by default for nofile and nproc
+ const RLimitDefaultValue = uint64(1048576)
+ 
+diff --git a/libpod/oci_conmon_common.go b/libpod/oci_conmon_common.go
+index 6dd54a8bc..f3696d8af 100644
+--- a/libpod/oci_conmon_common.go
++++ b/libpod/oci_conmon_common.go
+@@ -1318,6 +1318,8 @@ func (r *ConmonOCIRuntime) sharedConmonArgs(ctr *Container, cuuid, bundlePath, p
+ 	switch logDriver {
+ 	case define.JournaldLogging:
+ 		logDriverArg = define.JournaldLogging
++	case define.SyslogLogging:
++		logDriverArg = define.SyslogLogging
+ 	case define.NoLogging:
+ 		logDriverArg = define.NoLogging
+ 	case define.PassthroughLogging:
+diff --git a/libpod/options.go b/libpod/options.go
+index bc70e4a32..35047bade 100644
+--- a/libpod/options.go
++++ b/libpod/options.go
+@@ -1137,7 +1137,7 @@ func WithLogDriver(driver string) CtrCreateOption {
+ 		switch driver {
+ 		case "":
+ 			return fmt.Errorf("log driver must be set: %w", define.ErrInvalidArg)
+-		case define.JournaldLogging, define.KubernetesLogging, define.JSONLogging, define.NoLogging, define.PassthroughLogging:
++		case define.JournaldLogging, define.KubernetesLogging, define.JSONLogging, define.NoLogging, define.PassthroughLogging, define.SyslogLogging:
+ 			break
+ 		default:
+ 			return fmt.Errorf("invalid log driver: %w", define.ErrInvalidArg)
+diff --git a/libpod/runtime_ctr.go b/libpod/runtime_ctr.go
+index 648118c37..70582635f 100644
+--- a/libpod/runtime_ctr.go
++++ b/libpod/runtime_ctr.go
+@@ -543,7 +543,7 @@ func (r *Runtime) setupContainer(ctx context.Context, ctr *Container) (_ *Contai
+ 	}
+ 
+ 	switch ctr.config.LogDriver {
+-	case define.NoLogging, define.PassthroughLogging, define.JournaldLogging:
++	case define.NoLogging, define.PassthroughLogging, define.JournaldLogging, define.SyslogLogging:
+ 		break
+ 	default:
+ 		if ctr.config.LogPath == "" {
+-- 
+2.43.0
+

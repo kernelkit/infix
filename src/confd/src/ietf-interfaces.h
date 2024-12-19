@@ -47,7 +47,6 @@ int netdag_gen_ethtool(struct dagger *net, struct lyd_node *cif, struct lyd_node
 
 /* ietf-interfaces.c */
 char *get_phys_addr(struct lyd_node *parent, int *deleted);
-int netdag_exit_reload(struct dagger *net);
 
 /* ietf-ip.c */
 int netdag_gen_ipv6_autoconf(struct dagger *net, struct lyd_node *cif,
@@ -58,10 +57,11 @@ int netdag_gen_ip_addrs(struct dagger *net, FILE *ip, const char *proto,
 			struct lyd_node *cif, struct lyd_node *dif);
 
 /* infix-if-bridge.c */
-void mcast_querier(const char *ifname, int vid, int mode, int interval);
-int bridge_gen_ports(struct dagger *net, struct lyd_node *dif, struct lyd_node *cif, FILE *ip);
-int netdag_gen_bridge(sr_session_ctx_t *session, struct dagger *net, struct lyd_node *dif,
-		      struct lyd_node *cif, FILE *ip, int add);
+int bridge_gen(struct lyd_node *dif, struct lyd_node *cif, FILE *ip, int add);
+/* infix-if-bridge-mcd.c */
+int bridge_mcd_gen(struct lyd_node *cifs);
+/* infix-if-bridge-port.c */
+int bridge_port_gen(struct lyd_node *dif, struct lyd_node *cif, FILE *ip);
 
 /* infix-if-veth.c */
 int ifchange_cand_infer_veth(sr_session_ctx_t *session, const char *path);

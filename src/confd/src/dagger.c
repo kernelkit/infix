@@ -75,6 +75,18 @@ FILE *dagger_fopen_current(struct dagger *d, const char *action, const char *nod
 	return dagger_fopen(d, d->current, action, node, prio, script);
 }
 
+FILE *dagger_fopen_net_init(struct dagger *d, const char *node, enum netdag_init order,
+			    const char *script)
+{
+	return dagger_fopen_next(d, "init", node, order, script);
+}
+
+FILE *dagger_fopen_net_exit(struct dagger *d, const char *node, enum netdag_exit order,
+			    const char *script)
+{
+	return dagger_fopen_current(d, "exit", node, order, script);
+}
+
 int dagger_add_dep(struct dagger *d, const char *depender, const char *dependee)
 {
 	return systemf("ln -s ../%s %s/%d/dag/%s", dependee,
