@@ -285,19 +285,34 @@ class Iface:
         self.stp_state = get_json_data('', self.data, 'infix-interfaces:bridge-port', 'stp-state')
 
         self.lag_mode = get_json_data('', self.data, 'infix-interfaces:lag', 'mode')
-        self.lag_type = get_json_data('', self.data, 'infix-interfaces:lag', 'static', 'mode')
-        if self.lag_mode == "lacp":
-            self.lag_hash = get_json_data('', self.data, 'infix-interfaces:lag', 'lacp', 'hash')
-        else:
-            self.lag_hash = get_json_data('', self.data, 'infix-interfaces:lag', 'static', 'hash')
-        self.lacp_mode = get_json_data('', self.data, 'infix-interfaces:lag', 'lacp', 'mode')
-        rate = get_json_data('', self.data, 'infix-interfaces:lag', 'lacp', 'rate')
-        self.lacp_rate = "fast (1s)" if rate == "fast" else "slow (30 sec)"
+        if self.lag_mode:
+            self.lag_type = get_json_data('', self.data, 'infix-interfaces:lag', 'static', 'mode')
+            if self.lag_mode == "lacp":
+                self.lag_hash = get_json_data('', self.data, 'infix-interfaces:lag', 'lacp', 'hash')
+                self.lacp_id = get_json_data('', self.data, 'infix-interfaces:lag', 'lacp', 'aggregator-id')
+                self.lacp_actor_key = get_json_data('', self.data, 'infix-interfaces:lag', 'lacp', 'actor-key')
+                self.lacp_partner_key = get_json_data('', self.data, 'infix-interfaces:lag', 'lacp', 'partner-key')
+                self.lacp_partner_mac = get_json_data('', self.data, 'infix-interfaces:lag', 'lacp', 'partner-mac')
+                self.lacp_sys_prio = get_json_data('', self.data, 'infix-interfaces:lag', 'lacp', 'system-priority')
+            else:
+                self.lag_hash = get_json_data('', self.data, 'infix-interfaces:lag', 'static', 'hash')
+            self.arp_monitor = get_json_data('', self.data, 'infix-interfaces:lag', 'arp-monitor', 'interval')
+            self.arp_peers = get_json_data('', self.data, 'infix-interfaces:lag', 'arp-monitor', 'peer')
+            self.link_monitor = get_json_data('', self.data, 'infix-interfaces:lag', 'link-monitor', 'interval')
+            self.link_updelay = get_json_data('', self.data, 'infix-interfaces:lag', 'link-monitor', 'debounce', 'up')
+            self.link_downdelay = get_json_data('', self.data, 'infix-interfaces:lag', 'link-monitor', 'debounce', 'down')
+
+            self.lacp_mode = get_json_data('', self.data, 'infix-interfaces:lag', 'lacp', 'mode')
+            rate = get_json_data('', self.data, 'infix-interfaces:lag', 'lacp', 'rate')
+            self.lacp_rate = "fast (1s)" if rate == "fast" else "slow (30 sec)"
 
         self.lag = get_json_data('', self.data, 'infix-interfaces:lag-port', 'lag')
-        self.lag_state = get_json_data('', self.data, 'infix-interfaces:lag-port', 'state')
-        self.lacp_state = get_json_data('', self.data, 'infix-interfaces:lag-port', 'lacp', 'actor-state')
-        self.lacp_pstate = get_json_data('', self.data, 'infix-interfaces:lag-port', 'lacp', 'partner-state')
+        if self.lag:
+            self.lag_state = get_json_data('', self.data, 'infix-interfaces:lag-port', 'state')
+            self.lacp_id = get_json_data('', self.data, 'infix-interfaces:lag-port', 'lacp', 'aggregator-id')
+            self.lacp_state = get_json_data('', self.data, 'infix-interfaces:lag-port', 'lacp', 'actor-state')
+            self.lacp_pstate = get_json_data('', self.data, 'infix-interfaces:lag-port', 'lacp', 'partner-state')
+            self.link_failures = get_json_data('', self.data, 'infix-interfaces:lag-port', 'link-failures')
 
         self.containers = get_json_data('', self.data, 'infix-interfaces:container-network', 'containers')
 
@@ -562,15 +577,33 @@ class Iface:
         if self.lag_mode:
             print(f"{'lag mode':<{20}}: {self.lag_mode}")
             if self.lag_mode == "lacp":
+                print(f"{'lag hash':<{20}}: {self.lag_hash}")
                 print(f"{'lacp mode':<{20}}: {self.lacp_mode}")
                 print(f"{'lacp rate':<{20}}: {self.lacp_rate}")
+                print(f"{'lacp aggregate id':<{20}}: {self.lacp_id}")
+                print(f"{'lacp system priority':<{20}}: {self.lacp_sys_prio}")
+                print(f"{'lacp actor key':<{20}}: {self.lacp_actor_key}")
+                print(f"{'lacp partner key':<{20}}: {self.lacp_partner_key}")
+                print(f"{'lacp partner mac':<{20}}: {self.lacp_partner_mac}")
+            else:
+                print(f"{'lag type':<{20}}: {self.lag_type}")
+                print(f"{'lag hash':<{20}}: {self.lag_hash}")
+            if self.arp_monitor and self.arp_monitor > 0:
+                print(f"{'arp monitor':<{20}}: {self.arp_monitor} msec")
+                print(f"{'arp peers':<{20}}: {', '.join(self.arp_peers)}")
+            else:
+                print(f"{'link monitor':<{20}}: {self.link_monitor} msec")
+                print(f"{'link debounce up':<{20}}: {self.link_updelay} msec")
+                print(f"{'link debounce down':<{20}}: {self.link_downdelay} msec")
 
         if self.lag:
             print(f"{'lag member':<{20}}: {self.lag}")
-            print(f"{'lag state':<{20}}: {self.lag_state}")
+            print(f"{'lag member state':<{20}}: {self.lag_state}")
             if self.lacp_state:
+                print(f"{'lacp aggregate id':<{20}}: {self.lacp_id}")
                 print(f"{'lacp actor state':<{20}}: {', '.join(self.lacp_state)}")
                 print(f"{'lacp partner state':<{20}}: {', '.join(self.lacp_pstate)}")
+            print(f"{'link failure count':<{20}}: {self.link_failures}")
 
         if self.ipv4_addr:
             first = True

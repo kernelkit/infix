@@ -728,6 +728,15 @@ def add_lag_info(ifname, iface_in, iface_out):
         "balance-xor":      "static",
         "802.3ad":          "lacp",
     }
+    hash_policy = {
+        "layer2": "layer2",
+        "layer3+4": "layer3-4",
+        "layer2+3": "layer2-3",
+        "encap2+3": "encap2-3",
+        "encap3+4": "encap3-4",
+        "vlan+srcmac": "vlan-srcmac",
+    }
+
     li = iface_in.get("linkinfo", {})
     if not li.get("info_kind") == "bond":
         return
@@ -742,17 +751,44 @@ def add_lag_info(ifname, iface_in, iface_out):
             insert(iface_out, "infix-interfaces:lag", "lacp",
                    "rate", ld['ad_lacp_rate'])
             insert(iface_out, "infix-interfaces:lag", "lacp",
-                   "hash", ld['xmit_hash_policy'])
+                   "hash", hash_policy.get(ld['xmit_hash_policy'], "layer2"))
+
+            if 'ad_info' in ld:
+                insert(iface_out, "infix-interfaces:lag", "lacp",
+                       "aggregator-id", ld['ad_info']['aggregator'])
+                insert(iface_out, "infix-interfaces:lag", "lacp",
+                       "actor-key", ld['ad_info']['actor_key'])
+                insert(iface_out, "infix-interfaces:lag", "lacp",
+                       "partner-key", ld['ad_info']['partner_key'])
+                insert(iface_out, "infix-interfaces:lag", "lacp",
+                       "partner-mac", ld['ad_info']['partner_mac'])
+            if 'ad_actor_sys_prio' in ld:
+                insert(iface_out, "infix-interfaces:lag", "lacp",
+                       "system-priority", ld['ad_actor_sys_prio'])
         else:
             insert(iface_out, "infix-interfaces:lag", "static",
                    "mode", ld['mode'])
             insert(iface_out, "infix-interfaces:lag", "static",
                    "hash", ld['xmit_hash_policy'])
 
-        insert(iface_out, "infix-interfaces:lag", "link-monitor",
-               "debounce", "up", ld['updelay'])
-        insert(iface_out, "infix-interfaces:lag", "link-monitor",
-               "debounce", "down", ld['downdelay'])
+        interval = ld['arp_interval']
+        if mode != "lacp" and interval > 0:
+            insert(iface_out, "infix-interfaces:lag", "arp-monitor",
+                   "interval", interval)
+            peers = []
+            if 'arp_ip_target' in ld:
+                peers.extend(ld['arp_ip_target'])
+            if 'ns_ip6_target' in ld:
+                peers.extend(ld['ns_ip6_target'])
+            insert(iface_out, "infix-interfaces:lag", "arp-monitor",
+                   "peer", peers)
+        else:
+            insert(iface_out, "infix-interfaces:lag", "link-monitor",
+                   "interval", ld['miimon'])
+            insert(iface_out, "infix-interfaces:lag", "link-monitor",
+                   "debounce", "up", ld['updelay'])
+            insert(iface_out, "infix-interfaces:lag", "link-monitor",
+                   "debounce", "down", ld['downdelay'])
 
 
 def add_lag_port_lower(ifname, iface_in, iface_out):
@@ -769,7 +805,12 @@ def add_lag_port_lower(ifname, iface_in, iface_out):
         if ld['mii_status'] == "DOWN":
             iface_out['oper-status'] = "down"
 
-        # TODO: add more lacp (ad_*) stats
+        insert(iface_out, "infix-interfaces:lag-port",
+               "link-failures", ld['link_failure_count'])
+
+        if 'ad_aggregator_id' in ld:
+            insert(iface_out, "infix-interfaces:lag-port", "lacp",
+                   "aggregator-id", ld['ad_aggregator_id'])
         if 'ad_actor_oper_port_state_str' in ld:
             insert(iface_out, "infix-interfaces:lag-port", "lacp",
                    "actor-state", ld['ad_actor_oper_port_state_str'])
