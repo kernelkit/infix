@@ -48,6 +48,10 @@ class Transport(ABC):
         pass
 
     @abstractmethod
+    def call_dict(self, module, call):
+        pass
+
+    @abstractmethod
     def call_action(self, xpath):
         pass
 
