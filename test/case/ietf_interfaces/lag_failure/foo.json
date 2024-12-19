@@ -1,0 +1,218 @@
+{
+ "ietf-interfaces:interfaces": {
+   "interface": [
+     {
+       "name": "br0",
+       "type": "infix-if-type:bridge",
+       "enabled": true,
+       "ietf-ip:ipv4": {
+         "address": [
+           {
+             "ip": "192.168.2.41",
+             "prefix-length": 24
+           }
+         ]
+       }
+     },
+     {
+       "name": "e1",
+       "type": "infix-if-type:etherlike",
+       "ietf-ip:ipv6": {}
+     },
+     {
+       "name": "e2",
+       "type": "infix-if-type:etherlike",
+       "ietf-ip:ipv6": {},
+       "infix-interfaces:bridge-port": {
+         "bridge": "br0"
+       }
+     },
+     {
+       "name": "e3",
+       "type": "infix-if-type:etherlike",
+       "enabled": true,
+       "ietf-ip:ipv6": {},
+       "infix-interfaces:lag-port": {
+         "lag": "lag0"
+       }
+     },
+     {
+       "name": "e4",
+       "type": "infix-if-type:etherlike",
+       "enabled": true,
+       "ietf-ip:ipv6": {},
+       "infix-interfaces:lag-port": {
+         "lag": "lag0"
+       }
+     },
+     {
+       "name": "e5",
+       "type": "infix-if-type:etherlike",
+       "ietf-ip:ipv6": {}
+     },
+     {
+       "name": "e7",
+       "type": "infix-if-type:etherlike",
+       "ietf-ip:ipv6": {}
+     },
+     {
+       "name": "e8",
+       "type": "infix-if-type:etherlike",
+       "ietf-ip:ipv6": {}
+     },
+     {
+       "name": "lag0",
+       "type": "infix-if-type:lag",
+       "enabled": true,
+       "infix-interfaces:lag": {
+         "mode": "lacp",
+         "lacp": {
+           "rate": "fast"
+         },
+         "arp-monitor": {
+           "interval": 100,
+           "peer": [
+             "192.168.2.42"
+           ]
+         },
+         "link-monitor": {
+           "interval": 100
+         }
+       },
+       "infix-interfaces:bridge-port": {
+         "bridge": "br0"
+       }
+     },
+     {
+       "name": "lo",
+       "type": "infix-if-type:loopback",
+       "ietf-ip:ipv4": {
+         "address": [
+           {
+             "ip": "127.0.0.1",
+             "prefix-length": 8
+           }
+         ]
+       },
+       "ietf-ip:ipv6": {
+         "address": [
+           {
+             "ip": "::1",
+             "prefix-length": 128
+           }
+         ]
+       }
+     }
+   ]
+ },
+ "ietf-keystore:keystore": {
+   "asymmetric-keys": {
+     "asymmetric-key": [
+       {
+         "name": "genkey",
+         "public-key-format": "ietf-crypto-types:ssh-public-key-format",
+         "public-key": "MIIBCgKCAQEAs7RX6r3flRmw6TiWpGclHrFxghsjZxhO1hjC3w0fkgprf08vXB4X+oXtqNx6wNInt1muVo6ALtZu+zBJZsL9wMJE3fbrMTKTWRY/P+1m5YgsTwihm7ucRh5LH6FPHQq3ezcS590/uOvigbkP6ofTiqvS4hrA8QB/EyBiKKPmiNOvKyBaMNGiXWy9EgQeYRyjthIBdh7zwgzpMk+P86n5dQQo1uXwimKGGkMNlUW9wilxkKFdN9gqTUoID+C1cQTNLoG4BtmZYOBvyJDn0SRGi72n2KkudAunIUUgUAjwPf9T/FjkxJBZJnFZNS2Fsxa7RBRk7Swy2RivUQPkQ6hdEQIDAQAB",
+         "private-key-format": "ietf-crypto-types:rsa-private-key-format",
+         "cleartext-private-key": "MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQCztFfqvd+VGbDpOJakZyUesXGCGyNnGE7WGMLfDR+SCmt/Ty9cHhf6he2o3HrA0ie3Wa5WjoAu1m77MElmwv3AwkTd9usxMpNZFj8/7WbliCxPCKGbu5xGHksfoU8dCrd7NxLn3T+46+KBuQ/qh9OKq9LiGsDxAH8TIGIoo+aI068rIFow0aJdbL0SBB5hHKO2EgF2HvPCDOkyT4/zqfl1BCjW5fCKYoYaQw2VRb3CKXGQoV032CpNSggP4LVxBM0ugbgG2Zlg4G/IkOfRJEaLvafYqS50C6chRSBQCPA9/1P8WOTEkFkmcVk1LYWzFrtEFGTtLDLZGK9RA+RDqF0RAgMBAAECggEAUVwzt8BaY0975MNtlKZsTG6rBOxThYAgZVdVlxYCdqTIEZ4gw5SOZ6rONHcKDpW3TJBKWb7vswT7vzcX7HIY3/Y0psf9qMsMojdr0H4j6YTTBr9SJ8dzk91wRrRKNMxe0ObY5OgrSwZlCTVnytfPA0gS1LKnKxX98oNlXaADJmvoRUrhF/C2hV8BhUfvAINNtsh/xllsRl7c5SmW44i9E1nvmtc6vxMBkKN5EwufVDfJfhea/tp9k12V6y+0cOzbfvvH3rjpsT6566Qun0LfpVhj03B26/c90NHKIgeyj7g/+h0qj+CozPs8yDcb1uCG1Ikeaej/uMMdzt0BzagtRwKBgQD5U/suoXyP6AQNhZZdNOQo76N95fuo8A4XtK8eCbMAeCcCRFTD18m3Q8VIT6Y5kOe+h81bzwJ0OMO8P/H3ewEw4qSWoDzrAnyoKPOEpiJB5YQjhoHcafh2J98m3dFtAInEtVccP1/9ocH/tsX7JmxKlBFgqJU+97m9xgAZrnkx4wKBgQC4g2geXX7V2Pk9xFDU7BibREZqag6sz/msgeXLe4GRmrE334qgFm+LVSfjNvDyW6KrdvGqyn467rHP9kcesMcWTs/mp3Bek8899HxT4UiGgSr9kI081k1p5C6Al/yNwhH8BOUotP5hHu/YMHCx4SRNR0rOBk+CSwLaoLPQfuYXewKBgCHOR0J9VtxUQyhqMocUwtLiGzLY2hR/6AlC0HOsMP8hS3i9NxkOyyT0JW22jv1DLojg9PE70kNb5v5BVVeO8AxmzpY1x8y9m5VZaBtWQ1LYAeCnPjhajfvHUDR+4wR6jDOFuvfzh9pl8l3vtExnW0uJZAnNEd9ly2N101GoHHqtAoGANBlep9xMeQOH9OnezRBRLl5L57ZEqIUdAZm4EgmwnzVnvtgO438SRexok96qkDRRrUqrmEcO94L4kDkBAeh2fpUIXR+AOiRQSzUieejNurT0N56+UqRMPY8hlkvUEw7uVxPmxOS+QxwiKxAacg+ZWXy84Ymkn6yghK0FuORsAcsCgYEAvimXpxeZDJeTKouofwTjNafgE/SE2BEnYPGjun6o1iWYS1ifrCXpQTXGbypXdefgrYg+qd6gu+opYstex3S11gONA/HewOZ6Tr3FKfByAH7zovUwqDfFYnphsj0njXjsHL+tqUz3ARls1K6zbHxzNUnyzSeB2byZwScXBv6s32o="
+       }
+     ]
+   }
+ },
+ "ietf-netconf-acm:nacm": {
+   "enable-nacm": true,
+   "groups": {
+     "group": [
+       {
+         "name": "admin",
+         "user-name": [
+           "admin"
+         ]
+       }
+     ]
+   },
+   "rule-list": [
+     {
+       "name": "admin-acl",
+       "group": [
+         "admin"
+       ],
+       "rule": [
+         {
+           "name": "permit-all",
+           "module-name": "*",
+           "access-operations": "*",
+           "action": "permit",
+           "comment": "Allow 'admin' group complete access to all operations and data."
+         }
+       ]
+     },
+     {
+       "name": "default-deny-all",
+       "group": [
+         "*"
+       ],
+       "rule": [
+         {
+           "name": "deny-password-read",
+           "module-name": "ietf-system",
+           "path": "/ietf-system:system/authentication/user/password",
+           "access-operations": "*",
+           "action": "deny"
+         }
+       ]
+     }
+   ]
+ },
+ "ietf-netconf-server:netconf-server": {
+   "listen": {
+     "endpoints": {
+       "endpoint": [
+         {
+           "name": "default-ssh",
+           "ssh": {
+             "tcp-server-parameters": {
+               "local-address": "::"
+             },
+             "ssh-server-parameters": {
+               "server-identity": {
+                 "host-key": [
+                   {
+                     "name": "default-key",
+                     "public-key": {
+                       "central-keystore-reference": "genkey"
+                     }
+                   }
+                 ]
+               }
+             }
+           }
+         }
+       ]
+     }
+   }
+ },
+ "ietf-system:system": {
+   "hostname": "dut1",
+   "authentication": {
+     "user": [
+       {
+         "name": "admin",
+         "password": "$factory$",
+         "infix-system:shell": "infix-system:bash"
+       }
+     ]
+   }
+ },
+ "infix-meta:meta": {
+   "version": "1.2"
+ },
+ "infix-services:mdns": {
+   "enabled": true
+ },
+ "infix-services:web": {
+   "enabled": true,
+   "restconf": {
+     "enabled": true
+   }
+ }
+}

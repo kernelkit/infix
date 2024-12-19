@@ -38,6 +38,9 @@
 - name: lag_basic
   case: lag_basic/test.py
 
+- name: lag_failure
+  case: lag_failure/test.py
+
 - name: bridge_fwd_sgl_dut
   case: bridge_fwd_sgl_dut/test.py
 
