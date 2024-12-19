@@ -662,6 +662,11 @@ static sr_error_t ifchange_post(sr_session_ctx_t *session, struct dagger *net,
 	 */
 	err = bridge_mcd_gen(cifs);
 
+	/* Whenever at least one bridge has spanning tree enabled,
+	 * start mstpd; otherwise, stop it.
+	 */
+	err = err ? : bridge_mstpd_gen(cifs);
+
 	return err ? SR_ERR_INTERNAL : SR_ERR_OK;
 }
 

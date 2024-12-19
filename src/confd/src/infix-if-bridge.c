@@ -308,6 +308,91 @@ static int gen_vlan(struct ixif_br *br)
 
 /* VLAN */
 
+/* STP */
+
+int bridge_mstpd_gen(struct lyd_node *cifs)
+{
+	struct ly_set *stp_brs;
+	int n, err = 0;
+	FILE *cond;
+
+	if (lyd_find_xpath(cifs, "../interface/bridge/stp", &stp_brs))
+		return -EINVAL;
+
+	n = stp_brs->count;
+	ly_set_free(stp_brs, NULL);
+
+	if (n) {
+		cond = dagger_fopen_next(&confd.netdag, "init", "@pre", 50, "enable-mstpd.sh");
+		if (!cond)
+			return -EIO;
+
+		fputs("initctl -bnq cond set mstpd\n"
+		      "/usr/libexec/confd/mstpd-wait-online || exit 1\n", cond);
+		fclose(cond);
+	} else if (!dagger_is_bootstrap(&confd.netdag)) {
+		cond = dagger_fopen_current(&confd.netdag, "exit", "@post", 50, "disable-mstpd.sh");
+		if (!cond)
+			return -EIO;
+
+		fputs("initctl -bnq cond clear mstpd\n", cond);
+		fclose(cond);
+	}
+
+	return err;
+}
+
+static int gen_stp(struct ixif_br *br)
+{
+	struct lyd_node *stp;
+	FILE *mstpctl;
+
+	stp = lydx_get_descendant(lyd_child(br->cif), "bridge", "stp", NULL);
+	if (!stp) {
+		fputs(" stp_state 0", br->bropts.fp);
+		return 0;
+	}
+
+	fputs(" stp_state 1", br->bropts.fp);
+
+	if (lydx_get_descendant(lyd_child(br->cif), "bridge", "vlans", NULL))
+		/* Use the MSTP compatible mode of managing port
+		 * states, rather then the legacy (and default)
+		 * per-VLAN mode. */
+		fputs(" mst_enabled 1", br->bropts.fp);
+
+	mstpctl = dagger_fopen_net_init(&confd.netdag, br->name,
+					NETDAG_INIT_DAEMON, "init-br.mstpctl");
+	if (!mstpctl)
+		return -EIO;
+
+	fputs("#!/sbin/mstpctl -b\n", mstpctl);
+
+	fprintf(mstpctl, "setforcevers %s %s\n", br->name,
+		lydx_get_cattr(stp, "force-protocol"));
+
+	fprintf(mstpctl, "setfdelay %s %s\n", br->name,
+		lydx_get_cattr(stp, "forward-delay"));
+
+	fprintf(mstpctl, "setmaxage %s %s\n", br->name,
+		lydx_get_cattr(stp, "max-age"));
+
+	fprintf(mstpctl, "settxholdcount %s %s\n", br->name,
+		lydx_get_cattr(stp, "transmit-hold-count"));
+
+	fprintf(mstpctl, "setmaxhops %s %s\n", br->name,
+		lydx_get_cattr(stp, "max-hops"));
+
+	fprintf(mstpctl, "settreeprio %s 0 %s\n", br->name,
+		lydx_get_cattr(lydx_get_child(stp, "cist"), "priority"));
+
+	fclose(mstpctl);
+	return 0;
+
+}
+
+/* STP */
+
 /* BR */
 
 static void gen_phys_address(struct ixif_br *br)
@@ -419,6 +504,10 @@ int bridge_gen(struct lyd_node *dif, struct lyd_node *cif, FILE *ip, int add)
 
 	fputs(" mcast_flood_always 1", br.bropts.fp);
 	fputs(" vlan_default_pvid 0", br.bropts.fp);
+
+	err = gen_stp(&br);
+	if (err)
+		goto out;
 
 	err = gen_vlan(&br);
 	if (err)

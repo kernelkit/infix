@@ -73,8 +73,11 @@ enum netdag_init {
 	/* Interface specific setup (bridge VLAN PVID) of lowers */
 	NETDAG_INIT_LOWERS_PROTO = 65,
 
-	/* Start daemons running on interface (zcip etc.) */
+	/* Start/configure daemons on interface (mstpd, zcip etc.) */
 	NETDAG_INIT_DAEMON = 70,
+
+	/* Inject lower-specific configuration to daemon (mstpd) */
+	NETDAG_INIT_DAEMON_LOWERS = 75,
 };
 
 FILE *dagger_fopen_net_init(struct dagger *d, const char *node, enum netdag_init order,

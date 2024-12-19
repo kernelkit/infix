@@ -18,6 +18,7 @@ All notable changes to the project are documented in this file.
  - SSH Server is now configurable, issue #441
    SSH Server and NETCONF Server now uses the same SSH hostkey in factory-config
  - Add support for GRE/GRETAP tunnels
+ - Support for STP/RSTP on bridges
 
 ### Fixes
 
