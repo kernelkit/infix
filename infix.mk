@@ -1,6 +1,7 @@
 IXMSG = printf "\e[37;44m>>>   $(call qstrip,$(1))\e[0m\n"
 
-INFIX_TOPDIR = $(if $(INFIX_OEM_PATH),$(INFIX_OEM_PATH),$(BR2_EXTERNAL_INFIX_PATH))
+oem-dir := $(call qstrip,$(INFIX_OEM_PATH))
+INFIX_TOPDIR = $(if $(oem-dir),$(oem-dir),$(BR2_EXTERNAL_INFIX_PATH))
 
 # Unless the user specifies an explicit build id, source it from git.
 # The build id also becomes the image version, unless an official
