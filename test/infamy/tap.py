@@ -13,7 +13,16 @@ class Test:
         if self.out == sys.stdout:
             sys.stdout = self.commenter
 
+        self.test_cleanup=[]
         self.steps = 0
+
+    def push_test_cleanup(self, fn):
+        self.test_cleanup.append(fn)
+
+    def cleanup(self):
+        infamy.netns.IsolatedMacVlans.Cleanup()
+        for test_cleanup in reversed(self.test_cleanup):
+            test_cleanup()
 
     def __enter__(self):
         now = datetime.datetime.now().strftime("%F %T")
@@ -26,7 +35,7 @@ class Test:
         self.out.write(f"# Exiting ({now})\n")
         self.out.flush()
 
-        infamy.netns.IsolatedMacVlans.Cleanup()
+        self.cleanup()
 
         if not e:
             self._not_ok("Missing explicit test result\n")
