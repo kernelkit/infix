@@ -22,7 +22,7 @@ int netdag_gen_ipv6_autoconf(struct dagger *net, struct lyd_node *cif,
 	struct lyd_node *node;
 	FILE *fp;
 
-	if (!ipconf || !lydx_is_enabled(ipconf, "enabled") || is_bridge_port(cif)) {
+	if (!ipconf || !lydx_is_enabled(ipconf, "enabled") || is_member_port(cif)) {
 		fputs(" addrgenmode none", ip);
 		return 0;
 	}
@@ -86,7 +86,7 @@ int netdag_gen_ipv4_autoconf(struct dagger *net, struct lyd_node *cif,
 	snprintf(defaults, sizeof(defaults), "/etc/default/zeroconf-%s", ifname);
 
 	/* no ipv4 at all, ipv4 selectively disabled, or interface is a bridge port */
-	if (!ipconf || !lydx_is_enabled(ipconf, "enabled") || is_bridge_port(cif))
+	if (!ipconf || !lydx_is_enabled(ipconf, "enabled") || is_member_port(cif))
 		goto disable;
 
 	/*
