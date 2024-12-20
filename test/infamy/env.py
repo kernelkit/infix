@@ -18,6 +18,20 @@ ENV = NullEnv()
 
 
 class ArgumentParser(argparse.ArgumentParser):
+    def DefaultTransport():
+        """Pick pseudo-random transport
+
+        If the user does not specify a particular transport, make sure
+        that any (test, $PYTHONHASHSEED) tuple will always map to the
+        same transport.
+
+        """
+        name = "/".join(os.path.realpath(sys.argv[0]).split(os.sep)[-2:])
+        seed = os.environ.get('PYTHONHASHSEED', 0)
+        random.seed(f"{name}-{seed}")
+
+        return random.choice(["netconf", "restconf"])
+
     def __init__(self, top):
         super().__init__()
 
@@ -25,7 +39,7 @@ class ArgumentParser(argparse.ArgumentParser):
         self.add_argument("-l", "--logical-topology", dest="ltop", default=top)
         self.add_argument("-p", "--package", default=None)
         self.add_argument("-y", "--yangdir", default=None)
-        self.add_argument("-t", "--transport", default=None)
+        self.add_argument("-t", "--transport", default=ArgumentParser.DefaultTransport())
         self.add_argument("ptop", nargs=1, metavar="topology")
 
 
@@ -84,15 +98,12 @@ class Env(object):
         else:
             mapping = None
 
-        # Test protocol always highest prio, followed by command line,
-        # then environment (detected from defconfig), lastly random.
+        # Precedence:
+        # 1. Caller specifies `protocol`
+        # 2. User specifies `-t` when executing test
+        # 3. One is pseudo-randomly picked based on $PYTHONHASHSEED
         if protocol is None:
-            if self.args.transport is not None:
-                protocol = self.args.transport
-            else:
-                hseed = os.environ.get('PYTHONHASHSEED', 0)
-                random.seed(f"{sys.argv[0]}-{hseed}")
-                protocol = random.choice(["netconf", "restconf"])
+            protocol = self.args.transport
 
         if password is None:
             password = self.get_password(node)
