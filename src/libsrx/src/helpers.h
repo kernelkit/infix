@@ -7,6 +7,7 @@
 
 int vasprintf(char **strp, const char *fmt, va_list ap);
 
+int rmrf(const char *path);
 char *unquote(char *buf);
 char *fgetkey(const char *file, const char *key);
 
