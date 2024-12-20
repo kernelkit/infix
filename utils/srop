@@ -1,0 +1,127 @@
+#!/bin/sh
+# Interact with sysrepo in a Buildroot setup
+
+usage()
+{
+	cat <<EOF
+usage:
+  srop [opt] cmd [arg]
+
+options:
+  -e FEATURE     Enable feature in module
+  -g GROUP       Module group for install/modify, e.g., wheel
+  -m MODE        Module permissions for install/modify, e.g., 0660
+  -o OWNER       Module owner for install/modify, e.g., root
+
+commands:
+  cat            Show default configuration
+  help           This help text
+  ls             List installed modules
+  modify MOD     Modify (change/update) module, may use :ALL
+  install MOD    Install module
+  uninstall MOD  Uninstall module (force)
+
+EOF
+}
+
+cleanup()
+{
+    rm -f /dev/shm/${SYSREPO_SHM_PREFIX}*
+    exit 1
+}
+
+# Figure out if we're called from output/ or top directory
+if [ -z "$O" ]; then
+    if [ -f ".config" ] && [ -d "output" ]; then
+	# Buildroot
+	O=./output
+    elif [ -f "output/.config" ]; then
+	# BR2_EXTERNAL
+	O=./output
+    elif [ -f ".config" ] && [ -d "host" ]; then
+	# Called from inside output/ directory
+	O=.
+    else
+	echo "*** Error: cannot find Buildroot output dir!" >&2
+	exit 1
+    fi
+fi
+
+if [ -d "$O/host" ]; then
+    HOST_DIR="$O/host"
+else
+    echo "*** Error: cannot find Buildroot host binaries dir!" >&2
+    exit 1
+fi
+
+MOD="$O/target/usr/share/yang/modules/confd/"
+CTL="$HOST_DIR/bin/sysrepoctl"
+CFG="$HOST_DIR/bin/sysrepocfg"
+
+while [ "$1" != "" ]; do
+    case $1 in
+	-e)
+	    shift
+	    features="$features -e $1"
+	    ;;
+	-g)
+	    shift
+	    group="-g $1"
+	    ;;
+	-o)
+	    shift
+	    owner="-o $1"
+	    ;;
+	-m)
+	    shift
+	    perms="-p $1"
+	    ;;
+	*)
+	    break
+	    ;;
+    esac
+    shift
+done
+
+cmd=$1
+if [ -n "$cmd" ]; then
+    shift
+fi
+
+trap cleanup INT TERM EXIT
+
+# Trigger separate namespace for sysrepoctl cmds
+export SYSREPO_SHM_PREFIX=sr_buildroot
+
+case $cmd in
+    cat)
+	$CFG -X -f json
+	;;
+    help)
+	usage
+	;;
+    dump)
+	$CTL -h
+	$CFG -h
+	;;
+    ls)
+	$CTL -l
+	;;
+    install)
+	if [ -f "$1" ]; then
+	    M="$1"
+	else
+	    M="$MOD/$1"
+	fi
+	$CTL -i "$M" -s "$MOD" $perms $owner $group $features -v3
+	;;
+    modify)
+	$CTL -c "$1" $perms $owner $group $features -v3
+	;;
+    uninstall)
+	$CTL -u "$1" -f -v3
+	;;
+    *)
+	echo "NOP"
+	;;
+esac

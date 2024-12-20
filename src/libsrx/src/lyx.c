@@ -147,6 +147,50 @@ struct lyd_node *lydx_find_by_name(struct lyd_node *from, const char *by, const 
 	return NULL;
 }
 
+struct ly_set *lydx_find_vxpathf(struct lyd_node *ctx, const char *xpfmt, va_list ap)
+{
+	struct ly_set *set;
+	char *xpath;
+	int err;
+
+	vasprintf(&xpath, xpfmt, ap);
+
+	err = lyd_find_xpath(ctx, xpath, &set);
+	free(xpath);
+
+	return err ? NULL : set;
+}
+
+struct ly_set *lydx_find_xpathf(struct lyd_node *ctx, const char *xpfmt, ...)
+{
+	struct ly_set *set;
+	va_list ap;
+
+	va_start(ap, xpfmt);
+	set = lydx_find_vxpathf(ctx, xpfmt, ap);
+	va_end(ap);
+	return set;
+}
+
+struct lyd_node *lydx_get_xpathf(struct lyd_node *ctx, const char *xpfmt, ...)
+{
+	struct lyd_node *node = NULL;
+	struct ly_set *set;
+	va_list ap;
+
+	va_start(ap, xpfmt);
+	set = lydx_find_vxpathf(ctx, xpfmt, ap);
+	va_end(ap);
+	if (!set)
+		return NULL;
+
+	if (set->count == 1)
+		node = *set->dnodes;
+
+	ly_set_free(set, NULL);
+	return node;
+}
+
 const char *lydx_get_mattr(struct lyd_node *node, const char *name)
 {
 	struct lyd_meta *meta;

@@ -119,6 +119,7 @@ class Device(Transport):
 
         self.name = name
         self.location = location
+        self.mapping = mapping
         self.url_base = f"https://[{location.host}]:{location.port}"
         self.restconf_url = f"{self.url_base}/restconf"
         self.yang_url = f"{self.url_base}/yang"
