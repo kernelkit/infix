@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
+ "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+
+<!-- Title: lag Pages: 1 -->
+<svg width="484pt" height="152pt"
+ viewBox="0.00 0.00 484.03 151.51" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(4 147.51)">
+<title>lag</title>
+<polygon fill="white" stroke="transparent" points="-4,4 -4,-147.51 480.03,-147.51 480.03,4 -4,4"/>
+<!-- host -->
+<g id="node1" class="node">
+<title>host</title>
+<polygon fill="none" stroke="black" points="80.27,-0.5 80.27,-42.5 415.27,-42.5 415.27,-0.5 80.27,-0.5"/>
+<text text-anchor="middle" x="107.27" y="-28.9" font-family="DejaVu Sans Mono, Book" font-size="12.00">mgmt1</text>
+<polyline fill="none" stroke="black" points="134.27,-21.5 134.27,-42.5 "/>
+<text text-anchor="middle" x="153.77" y="-28.9" font-family="DejaVu Sans Mono, Book" font-size="12.00">mon</text>
+<polyline fill="none" stroke="black" points="173.27,-21.5 173.27,-42.5 "/>
+<text text-anchor="middle" x="196.77" y="-28.9" font-family="DejaVu Sans Mono, Book" font-size="12.00">lb1a</text>
+<polyline fill="none" stroke="black" points="220.27,-21.5 220.27,-42.5 "/>
+<text text-anchor="middle" x="243.77" y="-28.9" font-family="DejaVu Sans Mono, Book" font-size="12.00">lb2a</text>
+<polyline fill="none" stroke="black" points="267.27,-21.5 267.27,-42.5 "/>
+<text text-anchor="middle" x="290.77" y="-28.9" font-family="DejaVu Sans Mono, Book" font-size="12.00">lb2b</text>
+<polyline fill="none" stroke="black" points="314.27,-21.5 314.27,-42.5 "/>
+<text text-anchor="middle" x="337.77" y="-28.9" font-family="DejaVu Sans Mono, Book" font-size="12.00">lb1b</text>
+<polyline fill="none" stroke="black" points="361.27,-21.5 361.27,-42.5 "/>
+<text text-anchor="middle" x="388.27" y="-28.9" font-family="DejaVu Sans Mono, Book" font-size="12.00">mgmt2</text>
+<polyline fill="none" stroke="black" points="80.27,-21.5 415.27,-21.5 "/>
+<text text-anchor="middle" x="247.77" y="-7.9" font-family="DejaVu Sans Mono, Book" font-size="12.00">host</text>
+</g>
+<!-- dut1 -->
+<g id="node2" class="node">
+<title>dut1</title>
+<polygon fill="none" stroke="black" points="0,-101.01 0,-143.01 194,-143.01 194,-101.01 0,-101.01"/>
+<text text-anchor="start" x="8" y="-129.41" font-family="DejaVu Sans Mono, Book" font-size="12.00">dut1</text>
+<polyline fill="none" stroke="black" points="0,-122.01 194,-122.01 "/>
+<text text-anchor="middle" x="23.5" y="-108.41" font-family="DejaVu Sans Mono, Book" font-size="12.00">mgmt</text>
+<polyline fill="none" stroke="black" points="47,-101.01 47,-122.01 "/>
+<text text-anchor="middle" x="66.5" y="-108.41" font-family="DejaVu Sans Mono, Book" font-size="12.00">mon</text>
+<polyline fill="none" stroke="black" points="86,-101.01 86,-122.01 "/>
+<text text-anchor="middle" x="113" y="-108.41" font-family="DejaVu Sans Mono, Book" font-size="12.00">link1</text>
+<polyline fill="none" stroke="black" points="140,-101.01 140,-122.01 "/>
+<text text-anchor="middle" x="167" y="-108.41" font-family="DejaVu Sans Mono, Book" font-size="12.00">link2</text>
+</g>
+<!-- host&#45;&#45;dut1 -->
+<g id="edge1" class="edge">
+<title>host:mgmt1&#45;&#45;dut1:mgmt</title>
+<path fill="none" stroke="lightgray" stroke-width="2" d="M106.77,-42.5C106.77,-42.5 23,-101.01 23,-101.01"/>
+</g>
+<!-- host&#45;&#45;dut1 -->
+<g id="edge2" class="edge">
+<title>host:mon&#45;&#45;dut1:mon</title>
+<path fill="none" stroke="cornflowerblue" stroke-width="2" d="M153.77,-42.5C153.77,-42.5 66,-101.01 66,-101.01"/>
+</g>
+<!-- dut2 -->
+<g id="node3" class="node">
+<title>dut2</title>
+<polygon fill="none" stroke="black" points="321.03,-101.01 321.03,-143.01 476.03,-143.01 476.03,-101.01 321.03,-101.01"/>
+<text text-anchor="end" x="468.03" y="-129.41" font-family="DejaVu Sans Mono, Book" font-size="12.00">dut2</text>
+<polyline fill="none" stroke="black" points="321.03,-122.01 476.03,-122.01 "/>
+<text text-anchor="middle" x="348.03" y="-108.41" font-family="DejaVu Sans Mono, Book" font-size="12.00">link2</text>
+<polyline fill="none" stroke="black" points="375.03,-101.01 375.03,-122.01 "/>
+<text text-anchor="middle" x="402.03" y="-108.41" font-family="DejaVu Sans Mono, Book" font-size="12.00">link1</text>
+<polyline fill="none" stroke="black" points="429.03,-101.01 429.03,-122.01 "/>
+<text text-anchor="middle" x="452.53" y="-108.41" font-family="DejaVu Sans Mono, Book" font-size="12.00">mgmt</text>
+</g>
+<!-- host&#45;&#45;dut2 -->
+<g id="edge3" class="edge">
+<title>host:mgmt2&#45;&#45;dut2:mgmt</title>
+<path fill="none" stroke="lightgrey" stroke-width="2" d="M388.77,-42.5C388.77,-42.5 452.53,-101.01 452.53,-101.01"/>
+</g>
+<!-- host&#45;&#45;dut2 -->
+<g id="edge5" class="edge">
+<title>host:lb1b&#45;&#45;dut2:link1</title>
+<path fill="none" stroke="black" stroke-width="2" d="M337.77,-42.5C337.77,-42.5 402.53,-101.01 402.53,-101.01"/>
+</g>
+<!-- host&#45;&#45;dut2 -->
+<g id="edge7" class="edge">
+<title>host:lb2b&#45;&#45;dut2:link2</title>
+<path fill="none" stroke="black" stroke-width="2" d="M290.77,-42.5C290.77,-42.5 320.53,-111.01 320.53,-111.01"/>
+</g>
+<!-- dut1&#45;&#45;host -->
+<g id="edge4" class="edge">
+<title>dut1:link1&#45;&#45;host:lb1a</title>
+<path fill="none" stroke="black" stroke-width="2" d="M113,-101.01C113,-101.01 196.77,-42.5 196.77,-42.5"/>
+</g>
+<!-- dut1&#45;&#45;host -->
+<g id="edge6" class="edge">
+<title>dut1:link2&#45;&#45;host:lb2a</title>
+<path fill="none" stroke="black" stroke-width="2" d="M194,-111.01C194,-111.01 243.77,-42.5 243.77,-42.5"/>
+</g>
+</g>
+</svg>

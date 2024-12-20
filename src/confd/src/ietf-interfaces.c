@@ -73,6 +73,10 @@ static int ifchange_cand_infer_type(sr_session_ctx_t *session, const char *path)
 		inferred.data.string_val = "infix-if-type:ethernet";
 	else if (!fnmatch("br+([0-9])", ifname, FNM_EXTMATCH))
 		inferred.data.string_val = "infix-if-type:bridge";
+	else if (!fnmatch("bond+([0-9])", ifname, FNM_EXTMATCH))
+		inferred.data.string_val = "infix-if-type:lag";
+	else if (!fnmatch("lag+([0-9])", ifname, FNM_EXTMATCH))
+		inferred.data.string_val = "infix-if-type:lag";
 	else if (!fnmatch("docker+([0-9])", ifname, FNM_EXTMATCH))
 		inferred.data.string_val = "infix-if-type:bridge";
 	else if (!fnmatch("dummy+([0-9])", ifname, FNM_EXTMATCH))
@@ -333,6 +337,7 @@ static int netdag_gen_sysctl_setting(struct dagger *net, const char *ifname, FIL
 
 	return 0;
 }
+
 static int netdag_gen_sysctl(struct dagger *net,
 			     struct lyd_node *cif,
 			     struct lyd_node *dif)
@@ -385,6 +390,8 @@ static int netdag_gen_afspec_add(sr_session_ctx_t *session, struct dagger *net, 
 
 	if (!strcmp(iftype, "infix-if-type:bridge")) {
 		err = bridge_gen(dif, cif, ip, 1);
+	} else if (!strcmp(iftype, "infix-if-type:lag")) {
+		err = netdag_gen_lag(session, net, dif, cif, ip, 1);
 	} else if (!strcmp(iftype, "infix-if-type:dummy")) {
 		err = netdag_gen_dummy(net, NULL, cif, ip);
 	} else if (!strcmp(iftype, "infix-if-type:veth")) {
@@ -416,6 +423,8 @@ static int netdag_gen_afspec_set(sr_session_ctx_t *session, struct dagger *net, 
 
 	if (!strcmp(iftype, "infix-if-type:bridge"))
 		return bridge_gen(dif, cif, ip, 0);
+	if (!strcmp(iftype, "infix-if-type:lag"))
+		return netdag_gen_lag(session, net, dif, cif, ip, 0);
 	if (!strcmp(iftype, "infix-if-type:vlan"))
 		return netdag_gen_vlan(net, dif, cif, ip);
 	if (!strcmp(iftype, "infix-if-type:veth"))
@@ -451,13 +460,11 @@ static bool netdag_must_del(struct lyd_node *dif, struct lyd_node *cif)
 	} else if (!strcmp(iftype, "infix-if-type:veth")) {
 		if (lydx_get_descendant(lyd_child(dif), "peer", NULL))
 			return true;
-/*
 	} else if (!strcmp(iftype, "infix-if-type:lag")) {
 		if (is_phys_addr_deleted(dif))
 			return true;
-
-		... REMEMBER WHEN ADDING BOND SUPPORT ...
-*/
+		if (lydx_get_descendant(lyd_child(dif), "lag", "mode", NULL))
+			return true;
 	}
 
 	return false;
@@ -579,6 +586,10 @@ static sr_error_t netdag_gen_iface(sr_session_ctx_t *session, struct dagger *net
 	fputc('\n', ip);
 
 	err = bridge_port_gen(dif, cif, ip);
+	if (err)
+		goto err_close_ip;
+
+	err = lag_gen_ports(net, dif, cif, ip);
 	if (err)
 		goto err_close_ip;
 
