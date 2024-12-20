@@ -449,7 +449,7 @@ static bool netdag_must_del(struct lyd_node *dif, struct lyd_node *cif)
 		if (lydx_get_descendant(lyd_child(dif), "vlan", NULL))
 			return true;
 	} else if (!strcmp(iftype, "infix-if-type:veth")) {
-		if (lydx_get_descendant(lyd_child(dif), "peer", NULL))
+		if (lydx_get_descendant(lyd_child(dif), "veth", NULL))
 			return true;
 /*
 	} else if (!strcmp(iftype, "infix-if-type:lag")) {
