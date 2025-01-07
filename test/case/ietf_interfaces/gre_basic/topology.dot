@@ -1,0 +1,35 @@
+graph "gre-basic" {
+	layout="neato";
+	overlap="false";
+	esep="+40";
+
+        node [shape=record, fontname="DejaVu Sans Mono, Book"];
+	edge [color="cornflowerblue", penwidth="2", fontname="DejaVu Serif, Book"];
+
+	host [
+	    label="host | { <mgmt1> mgmt1 } | { <data> data } | { <mgmt2> mgmt2 }"
+	    pos="3,0!",
+	    kind="controller",
+	];
+
+        left [
+	    label="{ left } | { <mgmt> mgmt } | { <data> data  } |  { <link> link }",
+	    pos="0, -3!",
+
+	    kind="infix",
+	];
+
+        right [
+	    label="{ <link> link } | { <mgmt> mgmt } |  { right }",
+	    pos="8,-3!",
+
+	    kind="infix",
+	];
+
+	host:mgmt1 -- left:mgmt [kind=mgmt, color="lightgray"]
+	host:data -- left:data [headlabel=".1", label="192.168.10.0/24" taillabel=".2&nbsp;", labeldistance=1, fontcolor="black", color="black"]
+	host:mgmt2 -- right:mgmt [kind=mgmt, color="lightgray"]
+
+
+	left:link -- right:link [headlabel=".1\n\n", label="192.168.50.0/24", taillabel="\n.2", labeldistance=1, fontcolor="black", color="black"]
+}

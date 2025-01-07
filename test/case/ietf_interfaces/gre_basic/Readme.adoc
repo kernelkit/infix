@@ -1,0 +1,26 @@
+=== Basic IP GRE test
+==== Description
+Test setting up IP GRE tunnels using IPv4 and IPv6,
+and then a connectivity test.
+
+==== Topology
+ifdef::topdoc[]
+image::../../test/case/ietf_interfaces/gre_basic/topology.svg[Basic IP GRE test topology]
+endif::topdoc[]
+ifndef::topdoc[]
+ifdef::testgroup[]
+image::gre_basic/topology.svg[Basic IP GRE test topology]
+endif::testgroup[]
+ifndef::testgroup[]
+image::topology.svg[Basic IP GRE test topology]
+endif::testgroup[]
+endif::topdoc[]
+==== Test sequence
+. Set up topology and attach to target DUTs
+. Configure DUTs
+. Test connectivity host:data to gre 10.0.0.2
+. Test connectivity host:data to gre on right 2001:db8::c0a8:0a02
+
+
+<<<
+

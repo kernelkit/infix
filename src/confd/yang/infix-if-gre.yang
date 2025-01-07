@@ -1,0 +1,35 @@
+submodule infix-if-gre {
+  yang-version 1.1;
+  belongs-to infix-interfaces {
+    prefix infix-if;
+  }
+
+  import ietf-interfaces {
+    prefix if;
+  }
+
+  import infix-if-type {
+    prefix infixift;
+  }
+
+  organization "KernelKit";
+  contact      "kernelkit@googlegroups.com";
+  description  "GRE and GRETAP tunnel extension for ietf-interfaces";
+
+  revision 2024-12-20 {
+   description "Initial revision.";
+    reference "internal";
+  }
+
+  augment "/if:interfaces/if:interface" {
+    when "derived-from-or-self(if:type, 'infixift:gre') or"+
+         "derived-from-or-self(if:type, 'infixift:gretap')" {
+      description "Only shown for if:type infixift:gre";
+    }
+
+    description "Augments the interface model with GRE tunnels.";
+    container gre {
+      uses local-remote;
+    }
+  }
+}

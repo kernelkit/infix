@@ -304,6 +304,8 @@ class Iface:
         else:
             self.ipv6_addr = []
 
+        if self.data.get('infix-interfaces:gre'):
+            self.gre = self.data['infix-interfaces:gre']
 
         if self.data.get('infix-interfaces:vlan'):
             self.lower_if = self.data.get('infix-interfaces:vlan', None).get('lower-layer-if',None)
@@ -322,6 +324,9 @@ class Iface:
 
     def is_veth(self):
         return self.data['type'] == "infix-if-type:veth"
+
+    def is_gre(self):
+        return self.data['type'] == "infix-if-type:gre" or self.data['type'] == "infix-if-type:gretap"
 
     def oper(self, detail=False):
         """Remap in brief overview to fit column widths."""

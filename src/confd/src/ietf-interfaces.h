@@ -73,6 +73,8 @@ int ifchange_cand_infer_vlan(sr_session_ctx_t *session, const char *path);
 int netdag_gen_vlan(struct dagger *net, struct lyd_node *dif,
 		    struct lyd_node *cif, FILE *ip);
 
+/* infix-if-gre.c */
+int gre_gen(struct dagger *net, struct lyd_node *dif,
+		    struct lyd_node *cif, FILE *ip);
+
 #endif /* CONFD_IETF_INTERFACES_H_ */
-
-
