@@ -1,6 +1,8 @@
 #!/bin/sh
 # Interact with sysrepo in a Buildroot setup
 
+. $(dirname $(readlink -f "$0"))/libix.sh
+
 usage()
 {
 	cat <<EOF
@@ -30,29 +32,7 @@ cleanup()
     exit 1
 }
 
-# Figure out if we're called from output/ or top directory
-if [ -z "$O" ]; then
-    if [ -f ".config" ] && [ -d "output" ]; then
-	# Buildroot
-	O=./output
-    elif [ -f "output/.config" ]; then
-	# BR2_EXTERNAL
-	O=./output
-    elif [ -f ".config" ] && [ -d "host" ]; then
-	# Called from inside output/ directory
-	O=.
-    else
-	echo "*** Error: cannot find Buildroot output dir!" >&2
-	exit 1
-    fi
-fi
-
-if [ -d "$O/host" ]; then
-    HOST_DIR="$O/host"
-else
-    echo "*** Error: cannot find Buildroot host binaries dir!" >&2
-    exit 1
-fi
+resolve_host_dir
 
 MOD="$O/target/usr/share/yang/modules/confd/"
 CTL="$HOST_DIR/bin/sysrepoctl"
