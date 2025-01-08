@@ -1,0 +1,2 @@
+# This gets symlinked to whichever bundle we're told to upgrade to
+/package

@@ -12,6 +12,78 @@
 
 #include "ietf-interfaces.h"
 
+static const char *mstpd_cost_str(struct lyd_node *cost)
+{
+	const char *val = lyd_get_value(cost);
+
+	if (!strcmp(val, "auto"))
+		return "0";
+
+	return val;
+}
+
+static int gen_stp_tree(FILE *mstpctl, const char *iface,
+			const char *brname, struct lyd_node *tree)
+{
+	int mstid = 0;
+
+	fprintf(mstpctl, "settreeportcost %s %s %d %s\n", brname, iface, mstid,
+		mstpd_cost_str(lydx_get_child(tree, "internal-path-cost")));
+
+	fprintf(mstpctl, "settreeportprio %s %s %d %s\n", brname, iface, mstid,
+		lydx_get_cattr(tree, "priority"));
+
+	return 0;
+}
+
+static int gen_stp(struct lyd_node *cif)
+{
+	const char *brname, *edge, *iface;
+	struct lyd_node *stp, *cist;
+	FILE *mstpctl;
+	int err;
+
+	brname = lydx_get_cattr(lydx_get_child(cif, "bridge-port"), "bridge");
+	if (!brname)
+		return 0;
+
+	if (!lydx_get_xpathf(cif, "../interface[name='%s']/bridge/stp", brname))
+		return 0;
+
+	iface = lydx_get_cattr(cif, "name");
+	stp = lydx_get_descendant(lyd_child(cif), "bridge-port", "stp", NULL);
+
+	mstpctl = dagger_fopen_net_init(&confd.netdag, brname,
+					NETDAG_INIT_DAEMON_LOWERS, "init-ports.mstpctl");
+	if (!mstpctl)
+		return -EIO;
+
+	fputs("#!/sbin/mstpctl -b\n", mstpctl);
+
+	edge = lydx_get_cattr(stp, "edge");
+	if (!strcmp(edge, "true")) {
+		fprintf(mstpctl, "setportautoedge %s %s no\n", brname, iface);
+		fprintf(mstpctl, "setportadminedge %s %s yes\n", brname, iface);
+	} else if (!strcmp(edge, "false")) {
+		fprintf(mstpctl, "setportautoedge %s %s no\n", brname, iface);
+		fprintf(mstpctl, "setportadminedge %s %s no\n", brname, iface);
+	} else if (!strcmp(edge, "auto")) {
+		fprintf(mstpctl, "setportautoedge %s %s yes\n", brname, iface);
+	}
+
+	cist = lydx_get_child(stp, "cist");
+	err = gen_stp_tree(mstpctl, iface, brname, cist);
+	if (err)
+		goto out_close;
+
+	fprintf(mstpctl, "setportpathcost %s %s %s\n", brname, iface,
+		mstpd_cost_str(lydx_get_child(cist, "external-path-cost")));
+
+out_close:
+	fclose(mstpctl);
+	return err;
+}
+
 static const char *get_port_egress_mode(const char *iface, int vid, const char *brname)
 {
 	static const char *modes[] = { "tagged", "untagged", NULL };
@@ -234,6 +306,10 @@ int bridge_port_gen(struct lyd_node *dif, struct lyd_node *cif, FILE *ip)
 		return err;
 
 	err = gen_pvid(dif, cif);
+	if (err)
+		return err;
+
+	err = gen_stp(cif);
 	if (err)
 		return err;
 

@@ -26,6 +26,11 @@ submodule infix-if-bridge {
   contact      "kernelkit@googlegroups.com";
   description  "Linux bridge extension for ietf-interfaces.";
 
+  revision 2025-01-08 {
+    description "Add Spanning Tree Protocol (STP) support.";
+    reference "internal";
+  }
+
   revision 2024-11-28 {
     description "Drop must() expressions for IP addres on VLAN bridges.
                  If a bridge is untagged member of a VLAN it should be
@@ -148,6 +153,26 @@ submodule infix-if-bridge {
        reserved link-local multicast groups, in 01:80:C2:00:00:0X.";
   }
 
+  typedef stp-protocol {
+    description "Spanning Tree Protocol version.";
+    type enumeration {
+      enum stp {
+        value 0;
+        description "Spanning Tree Protocol.";
+      }
+      enum rstp {
+        value 2;
+        description "Rapid Spanning Tree Protocol.";
+      }
+      // enum mstp {
+      //   value 3;
+      //   description "Multiple Spanning Tree Protocol";
+      // }
+    }
+
+    reference "IEEE 802.1Q-2018 13.7.2";
+  }
+
   typedef stp-state {
     description "User-friendly enumeration of different bridge port operational states.";
     type enumeration {
@@ -165,13 +190,43 @@ submodule infix-if-bridge {
       }
       enum forwarding {
         value 3;
-        description "Port is in STP FORWARDING state. This is the default vlan state.";
+        description "Port is in STP FORWARDING state.";
       }
       enum blocking {
         value 4;
         description "Port is in STP BLOCKING state.";
       }
     }
+  }
+
+  typedef stp-priority {
+    type uint8 {
+      range "0..15";
+    }
+
+    default 8;
+  }
+
+  typedef stp-bool-or-auto {
+    type union {
+      type enumeration {
+        enum auto;
+      }
+      type boolean;
+    }
+    default auto;
+  }
+
+  typedef stp-path-cost {
+    type union {
+      type enumeration {
+        enum auto;
+      }
+      type uint32 {
+        range "0..200000000";
+      }
+    }
+    default auto;
   }
 
   typedef querier-mode {
@@ -223,6 +278,7 @@ submodule infix-if-bridge {
       }
     }
   }
+
 
   /*
    * Shared settings
@@ -321,6 +377,34 @@ submodule infix-if-bridge {
     }
   }
 
+  grouping stp-tree {
+    leaf priority {
+      description "Priority.";
+      type stp-priority;
+      reference "IEEE 802.1Q-2018 13.18";
+    }
+  }
+
+  grouping stp-tree-port {
+    leaf internal-path-cost {
+      description "Internal path cost.";
+      type stp-path-cost;
+      reference "IEEE 802.1Q-2018 13.27.33";
+    }
+
+    leaf priority {
+      description "Priority.";
+      type stp-priority;
+      reference "IEEE 802.1Q-2018 13.18";
+    }
+
+    leaf state {
+      description "Operational state.";
+      type stp-state;
+      config false;
+    }
+  }
+
   /*
    * Data Nodes
    */
@@ -391,6 +475,77 @@ submodule infix-if-bridge {
             }
           }
         }
+      }
+
+      container stp {
+        presence stp;
+        description "Spanning Tree Protocol";
+
+        leaf force-protocol {
+          description "Protocol version.";
+          type stp-protocol;
+          default rstp;
+          reference "IEEE 802.1Q-2018 13.7.2";
+        }
+
+        leaf forward-delay {
+          description "Forward delay.";
+          type uint8 {
+            range "4..30";
+          }
+          default 15;
+          reference "IEEE 802.1Q-2018 13.25";
+        }
+
+        leaf max-age {
+          description "Max age.";
+          type uint8 {
+            range "6..40";
+          }
+          default 20;
+          reference "IEEE 802.1Q-2018 13.25";
+        }
+
+        leaf transmit-hold-count {
+          description "Transmit hold count.";
+          type uint8 {
+            range "1..10";
+          }
+          default 6;
+          reference "IEEE 802.1Q-2018 13.25";
+        }
+
+        leaf max-hops {
+          description "Max hops.";
+          type uint8 {
+            range "6..40";
+          }
+          default 20;
+          reference "IEEE 802.1Q-2018 13.25";
+        }
+
+        container cist {
+          description "Common and Internal Spanning Tree.";
+          uses stp-tree;
+        }
+
+        // list mst {
+        //   description "Multiple Spanning Tree Instance.";
+        //   key "mstid";
+
+        //   leaf mstid {
+        //     description "The MSTI identifier to which this entry applies.";
+        //     type dot1q-types:mstid-type;
+        //   }
+
+        //   uses stp-tree;
+
+        //   leaf-list vlan {
+        //     type leafref {
+        //       path "/if:interfaces/interface/bridge/vlans/vlan/vid";
+        //     }
+        //   }
+        // }
       }
     }
   }
@@ -504,6 +659,39 @@ submodule infix-if-bridge {
         type mrouter-port;
         default auto;
       }
+    }
+
+    container stp {
+      description "Spanning Tree Protocol";
+      reference "IEEE 802.1Q-2018 13.27";
+
+      leaf edge {
+        description "Edge.";
+        type stp-bool-or-auto;
+      }
+
+      container cist {
+        description "Common and Internal Spanning Tree.";
+        uses stp-tree-port;
+
+        leaf external-path-cost {
+          description "External path cost.";
+          type stp-path-cost;
+          reference "IEEE 802.1Q-2018 13.27.25";
+        }
+      }
+
+      // list mst {
+      //   description "Multiple Spanning Tree Instance.";
+      //   key "mstid";
+
+      //   leaf mstid {
+      //     description "The MSTI identifier to which this entry applies.";
+      //     type dot1q-types:mstid-type;
+      //   }
+
+      //   uses stp-tree-port;
+      // }
     }
 
     leaf stp-state {

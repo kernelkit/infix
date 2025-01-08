@@ -41,6 +41,9 @@
 - name: bridge_fwd_dual_dut
   case: bridge_fwd_dual_dut/test.py
 
+- name: bridge_stp_basic
+  case: bridge_stp_basic/test.py
+
 - name: bridge_vlan_separation
   case: bridge_vlan_separation/test.py
 
