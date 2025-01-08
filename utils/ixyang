@@ -1,0 +1,114 @@
+#!/bin/sh
+
+ixdir=$(readlink -f $(dirname "$0")/../)
+. "$ixdir/utils/libix.sh"
+
+resolve_host_dir
+
+YANGLINT="$HOST_DIR/bin/yanglint"
+[ -x "$YANGLINT" ] || {
+    echo "*** Error: yanglint is not installed" >&2
+    exit 1
+}
+
+yangdir="$ixdir/src/confd/yang"
+
+check()
+{
+    find "$yangdir" -type f -name '*infix*.yang' | while read file; do
+	head -n1 "$file" | grep -q "submodule" && continue
+
+	printf "%-40s  " $(basename "$file")
+
+	"$YANGLINT" -p "$yangdir" -i "$file" || {
+	    printf "%-40s  FAIL\n" $(basename "$file")
+	    continue
+	}
+
+	echo ok
+    done
+}
+
+resolve_model()
+{
+    local model="$1"
+
+    if [ -e "$model" ]; then
+	file="$model"
+    elif [ -e "$yangdir/$model" ]; then
+	file="$yangdir/$model"
+    elif [ -e "$yangdir/$model.yang" ]; then
+	file="$yangdir/$model.yang"
+    else
+	file=$(find "$yangdir" -name "$model*" -print -quit)
+    fi
+
+    if [ -z "$file" ]; then
+	echo "*** Error: Found no model matching \"$model\"" >&2
+	exit 1
+    fi
+
+    echo "$file"
+}
+
+lint()
+{
+    local files=
+    while [ $# -gt 0 ]; do
+	if [ "$1" = "--" ]; then
+	    shift
+	    break
+	fi
+
+	files="$files $(resolve_model $1)"
+	shift
+    done
+
+    "$YANGLINT" -p "$yangdir" -i "$@" $files
+}
+
+yanger()
+{
+    local model="$1"
+
+    "$ixdir/src/statd/python/yanger/yanger" \
+	-t "$ixdir/test/case/cli/system-output" \
+	"$model"
+}
+
+yangerlint()
+{
+    local model="$1"
+
+    yanger "$model" >/tmp/ixyang-yangerlint.json || {
+	echo "*** Error: Failed to dump \"$model\"" >&2
+	exit 1
+    }
+
+    case "$model" in
+	ietf-interfaces)
+	    lint \
+		ietf-interfaces \
+		ieee802-ethernet-interface \
+		infix-interfaces \
+		infix-ethernet-interface \
+		\
+		/tmp/ixyang-yangerlint.json \
+		-- -i -t data
+	    ;;
+	*)
+	    echo "*** Error: yangerlint not implemented for \"$model\"" >&2
+	    ;;
+    esac
+
+    rm /tmp/ixyang-yangerlint.json
+}
+
+case "$1" in
+    check|lint|yanger|yangerlint)
+	"$@"
+	;;
+    *)
+	echo "*** Error: Unknown command \"$1\"" >&2
+	return 1
+esac

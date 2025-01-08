@@ -5,13 +5,13 @@ resolve_o()
 
     if [ -f ".config" ] && [ -d "output" ]; then
 	# Buildroot
-	O=./output
+	O=$(readlink -f ./output)
     elif [ -f "output/.config" ]; then
 	# BR2_EXTERNAL
-	O=./output
+	O=$(readlink -f ./output)
     elif [ -f ".config" ] && [ -d "host" ]; then
 	# Called from inside output/ directory
-	O=.
+	O=$(readlink -f .)
     else
 	echo "*** Error: cannot find Buildroot output dir!" >&2
 	exit 1
@@ -22,7 +22,7 @@ resolve_host_dir()
 {
     [ -n "$HOST_DIR" ] && return
 
-    resolve_o || exit 1
+    resolve_o
 
     if ! [ -d "$O/host" ]; then
 	echo "*** Error: cannot find Buildroot host binaries dir!" >&2
