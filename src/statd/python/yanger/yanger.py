@@ -9,6 +9,9 @@ import argparse
 from re import match
 from datetime import datetime, timedelta, timezone
 
+from . import common
+from . import host
+
 TESTPATH = ""
 logger = None
 
@@ -16,82 +19,6 @@ def datetime_now():
     if TESTPATH:
         return datetime(2023, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
     return datetime.now(timezone.utc)
-
-def uboot_get_boot_order():
-    data = run_cmd("fw_printenv BOOT_ORDER".split(), "boot-order.txt")
-    for line in data:
-        if "BOOT_ORDER" in line:
-            return line.strip().split("=")[1].split()
-
-    raise Exception
-
-def grub_get_boot_order():
-    data = run_cmd("grub-editenv /mnt/aux/grub/grubenv list".split(), None) # No need for testfile, will be returned from uboot
-
-    for line in data:
-        if "ORDER" in line:
-            return line.split("=")[1].strip().split()
-
-    raise Exception
-
-def json_get_yang_type(iface_in):
-    if iface_in['link_type'] == "loopback":
-        return "infix-if-type:loopback"
-
-    if iface_in['link_type'] in ("gre", "gre6"):
-        return "infix-if-type:gre"
-
-    if iface_in['link_type'] != "ether":
-        return "infix-if-type:other"
-
-    if 'parentbus' in iface_in and iface_in['parentbus'] == "virtio":
-        return "infix-if-type:etherlike"
-
-    if 'linkinfo' not in iface_in:
-        return "infix-if-type:ethernet"
-
-    if 'info_kind' not in iface_in['linkinfo']:
-        return "infix-if-type:ethernet"
-
-    if iface_in['linkinfo']['info_kind'] == "veth":
-        return "infix-if-type:veth"
-
-    if iface_in['linkinfo']['info_kind'] in ("gretap", "ip6gretap"):
-        return "infix-if-type:gretap"
-
-    if iface_in['linkinfo']['info_kind'] == "vlan":
-        return "infix-if-type:vlan"
-
-    if iface_in['linkinfo']['info_kind'] == "bridge":
-        return "infix-if-type:bridge"
-
-    if iface_in['linkinfo']['info_kind'] == "dsa":
-        return "infix-if-type:ethernet"
-
-    if iface_in['linkinfo']['info_kind'] == "dummy":
-        return "infix-if-type:dummy"
-
-    # Fallback
-    return "infix-if-type:ethernet"
-
-
-def json_get_yang_origin(addr):
-    """Translate kernel IP address origin to YANG"""
-    xlate = {
-        "kernel_ll":        "link-layer",
-        "kernel_ra":        "link-layer",
-        "static":           "static",
-        "dhcp":             "dhcp",
-        "random":           "random",
-    }
-    proto = addr['protocol']
-
-    if proto in ("kernel_ll", "kernel_ra"):
-        if "stable-privacy" in addr:
-            return "random"
-
-    return xlate.get(proto, "other")
-
 
 def get_proc_value(procfile):
     """Return contents of /proc file, or None"""
@@ -175,6 +102,66 @@ def run_json_cmd(cmd, testfile, default=None, check=True):
             return default
         raise
     return data
+
+def json_get_yang_type(iface_in):
+    if iface_in['link_type'] == "loopback":
+        return "infix-if-type:loopback"
+
+    if iface_in['link_type'] in ("gre", "gre6"):
+        return "infix-if-type:gre"
+
+    if iface_in['link_type'] != "ether":
+        return "infix-if-type:other"
+
+    if 'parentbus' in iface_in and iface_in['parentbus'] == "virtio":
+        return "infix-if-type:etherlike"
+
+    if 'linkinfo' not in iface_in:
+        return "infix-if-type:ethernet"
+
+    if 'info_kind' not in iface_in['linkinfo']:
+        return "infix-if-type:ethernet"
+
+    if iface_in['linkinfo']['info_kind'] == "veth":
+        return "infix-if-type:veth"
+
+    if iface_in['linkinfo']['info_kind'] in ("gretap", "ip6gretap"):
+        return "infix-if-type:gretap"
+
+    if iface_in['linkinfo']['info_kind'] == "vlan":
+        return "infix-if-type:vlan"
+
+    if iface_in['linkinfo']['info_kind'] == "bridge":
+        return "infix-if-type:bridge"
+
+    if iface_in['linkinfo']['info_kind'] == "dsa":
+        return "infix-if-type:ethernet"
+
+    if iface_in['linkinfo']['info_kind'] == "dummy":
+        return "infix-if-type:dummy"
+
+    # Fallback
+    return "infix-if-type:ethernet"
+
+
+def json_get_yang_origin(addr):
+    """Translate kernel IP address origin to YANG"""
+    xlate = {
+        "kernel_ll":        "link-layer",
+        "kernel_ra":        "link-layer",
+        "static":           "static",
+        "dhcp":             "dhcp",
+        "random":           "random",
+    }
+    proto = addr['protocol']
+
+    if proto in ("kernel_ll", "kernel_ra"):
+        if "stable-privacy" in addr:
+            return "random"
+
+    return xlate.get(proto, "other")
+
+
 
 
 def iface_is_dsa(iface_in):
@@ -1090,118 +1077,6 @@ def add_interface(ifname, yang_ifaces):
 
         add_container_ifaces(yang_ifaces)
 
-def add_system_ntp(out):
-    data = run_cmd(["chronyc", "-c", "sources"], "chronyc-sources.txt", "")
-    source = []
-    state_mode_map = {
-        "^": "server",
-        "=": "peer",
-        "#": "local-clock"
-    }
-    source_state_map = {
-        "*": "selected",
-        "+": "candidate",
-        "-": "outlier",
-        "?": "unusable",
-        "x": "falseticker",
-        "~": "unstable"
-    }
-    for line in data:
-        src = {}
-        line = line.split(',')
-        src["address"] = line[2]
-        src["mode"] = state_mode_map[line[0]]
-        src["state"] = source_state_map[line[1]]
-        src["stratum"] = int(line[3])
-        src["poll"] = int(line[4])
-        source.append(src)
-
-    insert(out, "infix-system:ntp", "sources", "source", source)
-
-def add_system_software_slots(out, data):
-    slots = []
-    for slot in data["slots"]:
-        for key, value in slot.items():
-            new = {}
-            new["name"] = key
-            new["bootname"] = slot[key].get("bootname")
-            new["class"] = slot[key].get("class")
-            new["state"] = slot[key].get("state")
-            new["bundle"] = {}
-            slot_status=value.get("slot_status", {})
-            if slot_status.get("bundle", {}).get("compatible"):
-                new["bundle"]["compatible"] = slot_status.get("bundle", {}).get("compatible")
-            if slot_status.get("bundle", {}).get("version"):
-                new["bundle"]["version"] = slot_status.get("bundle", {}).get("version")
-            if slot_status.get("checksum", {}).get("size"):
-                new["size"] = str(slot_status.get("checksum", {}).get("size"))
-            if slot_status.get("checksum", {}).get("sha256"):
-                new["sha256"] = slot_status.get("checksum", {}).get("sha256")
-
-            new["installed"] = {}
-            if slot_status.get("installed", {}).get("timestamp"):
-                new["installed"]["datetime"] = slot_status.get("installed", {}).get("timestamp")
-
-            if slot_status.get("installed", {}).get("count"):
-                new["installed"]["count"] = slot_status.get("installed", {}).get("count")
-
-            new["activated"] = {}
-            if slot_status.get("activated", {}).get("timestamp"):
-                new["activated"]["datetime"] = slot_status.get("activated", {}).get("timestamp")
-
-            if slot_status.get("activated", {}).get("count"):
-                new["activated"]["count"] = slot_status.get("activated", {}).get("count")
-            slots.append(new)
-    out["slot"] = slots
-
-def get_system_software_boot_order():
-    order = None
-    try:
-        order = uboot_get_boot_order()
-    except:
-        pass
-    try:
-        if order is None:
-            order = grub_get_boot_order()
-    except:
-        pass
-
-    return order
-
-def add_system_software(out):
-    software = {}
-    try:
-        data = run_json_cmd(["rauc", "status", "--detailed", "--output-format=json"], "rauc-status.json")
-        software["compatible"] = data["compatible"]
-        software["variant"] = data["variant"]
-        software["booted"] = data["booted"]
-        boot_order = get_system_software_boot_order()
-        if not boot_order is None:
-            software["boot-order"] = boot_order
-        add_system_software_slots(software, data)
-    except subprocess.CalledProcessError:
-        pass    # Maybe an upgrade i progress, then rauc does not respond
-
-    installer_status = run_json_cmd(["rauc-installation-status"], "rauc-installer-status.json")
-    installer = {}
-    if installer_status.get("operation"):
-        installer["operation"] = installer_status["operation"]
-    if "progress" in installer_status:
-        progress = {}
-
-        if installer_status["progress"].get("percentage"):
-            progress["percentage"] = int(installer_status["progress"]["percentage"])
-        if installer_status["progress"].get("message"):
-            progress["message"] = installer_status["progress"]["message"]
-        installer["progress"] = progress
-    software["installer"] = installer
-
-    insert(out, "infix-system:software", software)
-
-def add_system(yang_data):
-    add_system_software(yang_data)
-    add_system_ntp(yang_data)
-
 def main():
     global TESTPATH
     global logger
@@ -1212,10 +1087,6 @@ def main():
     parser.add_argument("-t", "--test", default=None, help="Test data base path")
     args = parser.parse_args()
 
-    if args.test:
-        TESTPATH = args.test
-    else:
-        TESTPATH = ""
 
     # Set up syslog output for critical errors to aid debugging
     logger = logging.getLogger('yanger')
@@ -1229,6 +1100,14 @@ def main():
     log.setFormatter(fmt)
     logger.setLevel(logging.INFO)
     logger.addHandler(log)
+    common.LOG = logger
+
+    if args.test:
+        TESTPATH = args.test
+        host.HOST = host.Testhost(args.test)
+    else:
+        TESTPATH = ""
+        host.HOST = host.Localhost()
 
     if args.model == 'ietf-interfaces':
         yang_data = {
@@ -1283,11 +1162,8 @@ def main():
         add_container(yang_data['infix-containers:containers']['container'])
 
     elif args.model == 'ietf-system':
-        yang_data = {
-            "ietf-system:system-state": {
-            }
-        }
-        add_system(yang_data['ietf-system:system-state'])
+        from . import ietf_system
+        yang_data = ietf_system.operational()
     else:
         logger.warning(f"Unsupported model {args.model}", file=sys.stderr)
         sys.exit(1)

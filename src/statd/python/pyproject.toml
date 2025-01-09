@@ -18,6 +18,6 @@ build-backend = "poetry.core.masonry.api"
 
 
 [tool.poetry.scripts]
-yanger = "yanger:main"
+yanger = "yanger.__main__:main"
 cli-pretty = "cli_pretty:main"
 ospf-status = "ospf_status:main"
