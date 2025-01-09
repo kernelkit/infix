@@ -552,70 +552,6 @@ def get_bridge_port_stp_state(ifname):
     return None
 
 
-def container_inspect(name):
-    """Call podman inspect {name}, return object at {path} or None."""
-    cmd = ['podman', 'inspect', name]
-    try:
-        return run_json_cmd(cmd, "", default=[])
-    except Exception as e:
-        logging.error(f"Error running podman inspect: {e}")
-        return []
-
-
-def add_container(containers):
-    """We list *all* containers, not just those in the configuraion."""
-    cmd = ['podman', 'ps', '-a', '--format=json']
-
-    raw = run_json_cmd(cmd, "", default=[])
-    for entry in raw:
-        running = entry["State"] == "running"
-
-        container = {
-            "name":     entry["Names"][0],
-            "id":       entry["Id"],
-            "image":    entry["Image"],
-            "image-id": entry["ImageID"],
-            "running":  running,
-            "status":   entry["Status"]
-        }
-
-        # Bonus information, may not be available
-        if entry["Command"]:
-            container["command"] = " ".join(entry["Command"])
-
-        # The 'podman ps' command lists ports even in host mode, but
-        # that's not applicable, so skip networks and port forwardings
-        cont = container_inspect(container["name"])
-        if cont and isinstance(cont, list) and len(cont) > 0:
-            cont = cont[0]
-        else:
-            cont = {}
-
-        networks = cont.get("NetworkSettings", {}).get("Networks")
-        if networks and "host" in networks:
-            container["network"] = {"host": True}
-        else:
-            container["network"] = {
-                "interface": [],
-                "publish": []
-            }
-
-            if entry["Networks"]:
-                for net in entry["Networks"]:
-                    container["network"]["interface"].append({"name": net})
-
-            if running and entry["Ports"]:
-                for port in entry["Ports"]:
-                    addr = ""
-                    if port["host_ip"]:
-                        addr = f"{port['host_ip']}:"
-
-                    pub = f"{addr}{port['host_port']}->{port['container_port']}/{port['protocol']}"
-                    container["network"]["publish"].append(pub)
-
-        containers.append(container)
-
-
 def get_brport_multicast(ifname):
     """Check if multicast snooping is enabled on bridge, default: nope"""
     data = run_json_cmd(['mctl', 'show', 'igmp', 'json'], "igmp-status.json",
@@ -1154,13 +1090,8 @@ def main():
         add_hardware(yang_data["ietf-hardware:hardware"])
 
     elif args.model == 'infix-containers':
-        yang_data = {
-            "infix-containers:containers": {
-                "container": []
-            }
-        }
-        add_container(yang_data['infix-containers:containers']['container'])
-
+        from . import infix_containers
+        yang_data = infix_containers.operational()
     elif args.model == 'ietf-system':
         from . import ietf_system
         yang_data = ietf_system.operational()
