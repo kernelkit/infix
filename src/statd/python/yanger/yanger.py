@@ -175,79 +175,6 @@ def iface_is_dsa(iface_in):
     return True
 
 
-def get_vpd_vendor_extensions(data):
-    vendor_extensions = []
-    for ext in data:
-        vendor_extension = {}
-        vendor_extension["iana-enterprise-number"] = ext[0]
-        vendor_extension["extension-data"] = ext[1]
-        vendor_extensions.append(vendor_extension)
-    return vendor_extensions
-
-
-def get_vpd_data(vpd):
-    component = {}
-    component["name"] = vpd.get("board")
-    component["infix-hardware:vpd-data"] = {}
-
-    if vpd.get("data"):
-        component["class"] = "infix-hardware:vpd"
-        if vpd["data"].get("manufacture-date"):
-            component["mfg-date"] = datetime.strptime(vpd["data"]["manufacture-date"],"%m/%d/%Y %H:%M:%S").strftime("%Y-%m-%dT%H:%M:%SZ")
-        if vpd["data"].get("manufacter"):
-            component["mfg-name"] = vpd["data"]["manufacturer"]
-        if vpd["data"].get("product-name"):
-            component["model-name"] = vpd["data"]["product-name"]
-        if vpd["data"].get("serial-number"):
-            component["serial-num"] = vpd["data"]["serial-number"]
-
-        # Set VPD-data entrys
-        for k, v in vpd["data"].items():
-            if vpd["data"].get(k):
-                if k != "vendor-extension":
-                    component["infix-hardware:vpd-data"][k] = v
-                else:
-                    vendor_extensions=get_vpd_vendor_extensions(v)
-                    component["infix-hardware:vpd-data"]["infix-hardware:vendor-extension"] = vendor_extensions
-    return component
-
-def get_usb_ports(usb_ports):
-    ports=[]
-    names=[]
-    for usb_port in usb_ports:
-        port={}
-        if usb_port.get("path"):
-            if usb_port["name"] in names:
-                continue
-
-            path = usb_port["path"]
-            if os.path.basename(path) == "authorized_default":
-                if os.path.exists(path):
-                    with open(path, "r") as f:
-                        names.append(usb_port["name"])
-                        data = int(f.readline().strip())
-                        enabled = "unlocked" if data == 1 else "locked"
-                        port["state"] = {}
-                        port["state"]["admin-state"] = enabled
-                        port["name"] = usb_port["name"]
-                        port["class"] = "infix-hardware:usb"
-                        port["state"]["oper-state"] = "enabled"
-                        ports.append(port)
-
-    return ports
-
-
-def add_hardware(hw_out):
-    data = run_json_cmd(['cat', "/run/system.json"], "system.json")
-    components = []
-    for _, vpd in data.get("vpd").items():
-        component = get_vpd_data(vpd)
-        components.append(component)
-    if data.get("usb-ports", None):
-        components.extend(get_usb_ports(data["usb-ports"]))
-    insert(hw_out, "component", components)
-
-
 def uptime2datetime(uptime):
     """
     Convert uptime to YANG format (YYYY-MM-DDTHH:MM:SS+00:00)
@@ -1083,12 +1010,8 @@ def main():
         add_ospf(yang_data['ietf-routing:routing']['control-plane-protocols'])
 
     elif args.model == 'ietf-hardware':
-        yang_data = {
-            "ietf-hardware:hardware": {
-            }
-        }
-        add_hardware(yang_data["ietf-hardware:hardware"])
-
+        from . import ietf_hardware
+        yang_data = ietf_hardware.operational()
     elif args.model == 'infix-containers':
         from . import infix_containers
         yang_data = infix_containers.operational()
