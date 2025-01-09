@@ -4,9 +4,9 @@ version = "1.0"
 description = "Linux to infix-YANG"
 license = "MIT"
 packages = [
-    { include = "yanger/*.py" },
-    { include = "cli_pretty/*.py" },
-    { include = "ospf_status/*.py" }
+    { include = "yanger" },
+    { include = "cli_pretty" },
+    { include = "ospf_status" }
 ]
 authors = [
   "KernelKit developers"
