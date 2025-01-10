@@ -71,9 +71,6 @@ module infix-ethernet-interface {
   }
 
   /* Deviations for statistics */
-  deviation "/if:interfaces/if:interface/eth:ethernet/eth:statistics/eth:frame/eth:in-total-frames" {
-    deviate not-supported;
-  }
   deviation "/if:interfaces/if:interface/eth:ethernet/eth:statistics/eth:frame/eth:out-error-mac-internal-frames" {
     deviate not-supported;
   }
@@ -82,5 +79,5 @@ module infix-ethernet-interface {
   }
   deviation "/if:interfaces/if:interface/eth:ethernet/eth:statistics/eth:mac-control" {
     deviate not-supported;
-  } 
+  }
 }

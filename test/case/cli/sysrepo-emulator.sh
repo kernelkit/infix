@@ -3,7 +3,7 @@
 SCRIPT_PATH="$(dirname "$(readlink -f "$0")")"
 ROOT_PATH="$SCRIPT_PATH/../../../"
 
-YANGER_TOOL="$ROOT_PATH/src/statd/python/yanger/yanger.py"
+YANGER_TOOL="$ROOT_PATH/src/statd/python/yanger/yanger"
 
 INTERFACES_OUTPUT_FILE="$(mktemp)"
 ROUTES_OUTPUT_FILE="$(mktemp)"

@@ -1,0 +1,5 @@
+#!/bin/sh
+
+exec env PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=$(readlink -f $(dirname "$0")/../) \
+     python3 -m yanger "$@"
+
