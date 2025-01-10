@@ -1,13 +1,16 @@
+<img align="right" src="logo.png" alt="Infix - Linux <3 NETCONF" width=480 border=10>
 
 Welcome to Infix, your friendly Network Operating System!  On these
 pages you can find both user and developer documentation.
 
-> Topics on configuring the system include CLI examples, every setting
-> is also possible to perform using NETCONF.  In fact, the Infix test
-> system solely relies on NETCONF for configuring network topologies.
+Most topics on configuring the system include CLI examples, but every
+setting, as well as status read-back from the operational datastore, is
+also possible to perform using NETCONF or RESTCONF.  In fact, the Infix
+regression test system solely relies on NETCONF and RESTCONF.
 
-The CLI documentation is also available from inside the CLI itself using
-the `help` command.
+> [!TIP]
+> The CLI documentation is also available from inside the CLI itself
+> using the `help` command in admin-exec mode.
 
 - **CLI Topics**
    - [Introduction to the CLI](cli/introduction.md)
@@ -18,6 +21,7 @@ the `help` command.
    - [Introduction](introduction.md)
    - [System Configuration](system.md)
    - [Network Configuration](networking.md)
+   - [DHCP Server](dhcp.md)
    - [Syslog Support](syslog.md)
  - **Infix In-Depth**
    - [Boot Procedure](boot.md)
