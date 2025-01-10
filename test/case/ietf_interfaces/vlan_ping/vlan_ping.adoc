@@ -1,0 +1,28 @@
+=== VLAN ping connectivity
+==== Description
+Very basic test if the VLAN interface configuration works.
+
+==== Topology
+ifdef::topdoc[]
+image::../../test/case/ietf_interfaces/vlan_ping/topology.svg[VLAN ping connectivity topology]
+endif::topdoc[]
+ifndef::topdoc[]
+ifdef::testgroup[]
+image::vlan_ping/topology.svg[VLAN ping connectivity topology]
+endif::testgroup[]
+ifndef::testgroup[]
+image::topology.svg[VLAN ping connectivity topology]
+endif::testgroup[]
+endif::topdoc[]
+==== Test sequence
+. Set up topology and attach to target DUT
+. Set up VLAN interface on host:data with IP 10.0.0.1
+. Configure VLAN 10 interface on target:data with IP 10.0.0.2
+. Wait for links to come up
+. Verify that host:data can reach 10.0.0.2
+. Remove VLAN interface from target:data
+. Verify that host:data can no longer reach 10.0.0.2
+
+
+<<<
+

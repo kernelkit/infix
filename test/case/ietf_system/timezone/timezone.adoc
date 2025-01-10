@@ -1,0 +1,24 @@
+=== Set timezone using timezone name
+==== Description
+Verify that it is possible to set timezone using timezone names.
+
+==== Topology
+ifdef::topdoc[]
+image::../../test/case/ietf_system/timezone/topology.svg[Set timezone using timezone name topology]
+endif::topdoc[]
+ifndef::topdoc[]
+ifdef::testgroup[]
+image::timezone/topology.svg[Set timezone using timezone name topology]
+endif::testgroup[]
+ifndef::testgroup[]
+image::topology.svg[Set timezone using timezone name topology]
+endif::testgroup[]
+endif::topdoc[]
+==== Test sequence
+. Set up topology and attach to target DUT
+. Set timezone to Australia/Perth
+. Verify current time offset is +08:00
+
+
+<<<
+

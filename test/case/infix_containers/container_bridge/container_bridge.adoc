@@ -1,0 +1,31 @@
+=== Container with bridge network
+==== Description
+Verify connectivity with a simple web server container from behind a
+docker0 bridge.  As an added twist, this test also verifies content
+mounts, i.e., custom index.html from running-config.
+
+This also verifies port forwarding from container internal port to a
+port accessed from the host.
+
+==== Topology
+ifdef::topdoc[]
+image::../../test/case/infix_containers/container_bridge/topology.svg[Container with bridge network topology]
+endif::topdoc[]
+ifndef::topdoc[]
+ifdef::testgroup[]
+image::container_bridge/topology.svg[Container with bridge network topology]
+endif::testgroup[]
+ifndef::testgroup[]
+image::topology.svg[Container with bridge network topology]
+endif::testgroup[]
+endif::topdoc[]
+==== Test sequence
+. Set up topology and attach to target DUT
+. Create container 'web-docker0' from bundled OCI image
+. Verify container 'web-docker0' has started
+. Verify basic DUT connectivity, host:data can ping DUT 10.0.0.2
+. Verify container 'web-docker0' is reachable on http://10.0.0.2:8080
+
+
+<<<
+

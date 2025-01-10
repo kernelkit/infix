@@ -1,0 +1,12 @@
+---
+- name: gre_basic
+  case: test.py
+  opts: ["--type", "gre"]
+  infamy:
+    title: GRE point-to-point
+
+- name: gretap_basic
+  case: test.py
+  opts: ["--type", "gretap"]
+  infamy:
+    title: GRETAP point-to-point

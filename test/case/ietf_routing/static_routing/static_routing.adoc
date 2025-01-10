@@ -1,0 +1,30 @@
+=== Static routing
+==== Description
+Verify that it is possible to add static routes, both IPv4 and IPv6, and
+that data forwarding works as expected via an intermediate device.
+
+==== Topology
+ifdef::topdoc[]
+image::../../test/case/ietf_routing/static_routing/topology.svg[Static routing topology]
+endif::topdoc[]
+ifndef::topdoc[]
+ifdef::testgroup[]
+image::static_routing/topology.svg[Static routing topology]
+endif::testgroup[]
+ifndef::testgroup[]
+image::topology.svg[Static routing topology]
+endif::testgroup[]
+endif::topdoc[]
+==== Test sequence
+. Set up topology and attach to target DUTs
+. Configure targets
+. Wait for routes
+. Configure host addresses and routes
+. Verify that R2 is reachable on 192.168.200.1 from PC:data
+. Verify that R2 is reachable on 2001:db8:3c4d:200::1 from PC:data
+. Remove all static routes from R1
+. Verify R2 is no longer reachable on either IPv4 or IPv6 from PC:data
+
+
+<<<
+

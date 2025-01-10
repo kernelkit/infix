@@ -1,0 +1,25 @@
+=== GRE point-to-point
+==== Description
+Test setting up IP GRE tunnels using IPv4 and IPv6,
+and ends with a connectivity test.
+
+==== Topology
+ifdef::topdoc[]
+image::../../test/case/ietf_interfaces/gre_basic/topology.svg[GRE point-to-point topology]
+endif::topdoc[]
+ifndef::topdoc[]
+ifdef::testgroup[]
+image::gre_basic/topology.svg[GRE point-to-point topology]
+endif::testgroup[]
+ifndef::testgroup[]
+image::topology.svg[GRE point-to-point topology]
+endif::testgroup[]
+endif::topdoc[]
+==== Test sequence
+. Set up topology and attach to target DUTs
+. Configure DUTs
+. Verify connectivity host:data to 2001:db8::c0a8:0a02
+
+
+<<<
+
