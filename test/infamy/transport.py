@@ -56,7 +56,9 @@ class Transport(ABC):
         pass
 
     def __getitem__(self, key):
-        return self.mapping[key]
+        if key in self.mapping:
+            return self.mapping[key]
+        return None
 
     def get_iface(self, name):
         """Fetch target dict for iface and extract param from JSON"""
