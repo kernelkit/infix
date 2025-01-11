@@ -1,0 +1,49 @@
+=== Bridge VLAN separation
+==== Description
+Test that two VLANs are correctly separated in the bridge
+
+....
+    ,-----------------------------------,   ,----------------------------------,
+    |                         dut1:link |   | dut2:link                        |
+    |                      br0  --------|---|---------  br0                    |
+    |                     / \           |   |          / \                     |
+    |dut1:mgmt  dut1:data1   dut1:data2 |   | dut2:data1  dut2:data2 dut2:mgmt |
+    '-----------------------------------'   '----------------------------------'
+        |             |        |                  |            |         |
+        |             |        |                  |            |         |
+ ,------------------------------------------------------------------------------,
+ |  host:mgmt0 host:data10 host:data11    host:data20  host:data21  host:mgmt1  |
+ |             [10.0.0.1]   [10.0.0.2]     [10.0.0.3]     [10.0.0.4]            |
+ |               (ns10)       (ns11)         (ns20)         (ns21)              |
+ |                                                                              |
+ |                                  [ HOST ]                                    |
+ '------------------------------------------------------------------------------'
+
+....
+
+==== Topology
+ifdef::topdoc[]
+image::../../test/case/ietf_interfaces/bridge_vlan_separation/topology.svg[Bridge VLAN separation topology]
+endif::topdoc[]
+ifndef::topdoc[]
+ifdef::testgroup[]
+image::bridge_vlan_separation/topology.svg[Bridge VLAN separation topology]
+endif::testgroup[]
+ifndef::testgroup[]
+image::topology.svg[Bridge VLAN separation topology]
+endif::testgroup[]
+endif::topdoc[]
+==== Test sequence
+. Set up topology and attach to target DUT
+. Configure DUTs
+. Verify ping 10.0.0.3 from host:data10
+. Verify ping 10.0.0.4 from host:data11
+. Verify ping not possible host:data10->10.0.0.4, host:data11->10.0.0.3, host:data10->10.0.0.2, host:data11->10.0.0.1
+. Verify MAC broadcast isolation within VLANs
+. Send ping to 10.0.0.255 from host:data10
+. Verify broadcast is received on host:data20
+. Verify broadcast is NOT received on host:data11 and host:data21
+
+
+<<<
+

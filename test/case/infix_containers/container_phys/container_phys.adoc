@@ -1,0 +1,27 @@
+=== Container with physical interface
+==== Description
+Verify connectivity with a simple web server container that's been
+given a physical interface instead of an end of a VETH pair.
+
+==== Topology
+ifdef::topdoc[]
+image::../../test/case/infix_containers/container_phys/topology.svg[Container with physical interface topology]
+endif::topdoc[]
+ifndef::topdoc[]
+ifdef::testgroup[]
+image::container_phys/topology.svg[Container with physical interface topology]
+endif::testgroup[]
+ifndef::testgroup[]
+image::topology.svg[Container with physical interface topology]
+endif::testgroup[]
+endif::topdoc[]
+==== Test sequence
+. Set up topology and attach to target DUT
+. Create container 'web-phys' from bundled OCI image
+. Verify container 'web-phys' has started
+. Verify host:data can ping 10.0.0.2
+. Verify container 'web-phys' is reachable on http://10.0.0.2:91
+
+
+<<<
+

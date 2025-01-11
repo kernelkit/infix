@@ -1,0 +1,29 @@
+=== Routing basic
+==== Description
+Verify routing between interfaces is possible. That enable/disable routing
+in configuration has the expected result.
+
+==== Topology
+ifdef::topdoc[]
+image::../../test/case/ietf_interfaces/routing_basic/topology.svg[Routing basic topology]
+endif::topdoc[]
+ifndef::topdoc[]
+ifdef::testgroup[]
+image::routing_basic/topology.svg[Routing basic topology]
+endif::testgroup[]
+ifndef::testgroup[]
+image::topology.svg[Routing basic topology]
+endif::testgroup[]
+endif::topdoc[]
+==== Test sequence
+. Set up topology and attach to target DUTs
+. Setup host
+. Enable forwarding on target:data1 and target:data2
+. Verify ping from host:data1 to 10.0.0.10
+. Verify ping from host:data2 to 192.168.0.10
+. Disable forwarding on target:data1 and target:data2
+. Verify ping does not work host:data1 to 10.0.0.10 and host:data2 to 192.168.0.10
+
+
+<<<
+

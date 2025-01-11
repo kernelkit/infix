@@ -16,8 +16,7 @@ class NullEnv:
 
 ENV = NullEnv()
 
-
-class ArgumentParser(argparse.ArgumentParser):
+class ArgumentParser():
     def DefaultTransport():
         """Pick pseudo-random transport
 
@@ -32,24 +31,34 @@ class ArgumentParser(argparse.ArgumentParser):
 
         return random.choice(["netconf", "restconf"])
 
-    def __init__(self, top):
-        super().__init__()
+    def __init__(self, top = None):
+        self.args = argparse.ArgumentParser(top)
 
-        self.add_argument("-d", "--debug", default=False, action="store_true")
-        self.add_argument("-l", "--logical-topology", dest="ltop", default=top)
-        self.add_argument("-p", "--package", default=None)
-        self.add_argument("-y", "--yangdir", default=None)
-        self.add_argument("-t", "--transport", default=ArgumentParser.DefaultTransport())
-        self.add_argument("ptop", nargs=1, metavar="topology")
+        self.args.add_argument("-d", "--debug", default=False, action="store_true")
+        self.args.add_argument("-p", "--package", default=None)
+        self.args.add_argument("-y", "--yangdir", default=None)
+        self.args.add_argument("-t", "--transport", default=ArgumentParser.DefaultTransport())
+        self.args.add_argument("ptop", nargs=1, metavar="topology")
+        self.args.add_argument("-l", "--logical-topology", dest="ltop", default=top)
 
+
+    def add_argument(self, *args, **kwargs):
+        kwargs["required"] = True
+        self.args.add_argument(*args, **kwargs)
+
+    def parse_args(self, argv):
+        return self.args.parse_args(argv)
 
 class Env(object):
-    def __init__(self, ltop=None, argv=sys.argv[1::], environ=os.environ):
+    def __init__(self, ltop=None, args=None, argv=sys.argv[1::], environ=os.environ):
         if "INFAMY_ARGS" in environ:
             argv = shlex.split(environ["INFAMY_ARGS"]) + argv
 
-        self.args = ArgumentParser(ltop).parse_args(argv)
-
+        if args:
+            self.argp = args
+        else:
+            self.argp = ArgumentParser(ltop)
+        self.args = self.argp.parse_args(argv)
         pdot = pydot.graph_from_dot_file(self.args.ptop[0])[0]
         self.ptop = topology.Topology(pdot)
 

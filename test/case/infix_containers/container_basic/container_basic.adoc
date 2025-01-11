@@ -1,0 +1,34 @@
+=== Container basic
+==== Description
+Verify that a simple web server container can be configured to run
+with host networking, on port 80.  Operation is verified using a
+simple GET request for index.html and checking for a key phrase.
+
+The RPC actions: stop + start, and restart are also verified.
+
+==== Topology
+ifdef::topdoc[]
+image::../../test/case/infix_containers/container_basic/topology.svg[Container basic topology]
+endif::topdoc[]
+ifndef::topdoc[]
+ifdef::testgroup[]
+image::container_basic/topology.svg[Container basic topology]
+endif::testgroup[]
+ifndef::testgroup[]
+image::topology.svg[Container basic topology]
+endif::testgroup[]
+endif::topdoc[]
+==== Test sequence
+. Set up topology and attach to target DUT
+. Set hostname to 'container-host'
+. Create container 'web' from bundled OCI image
+. Verify container 'web' has started
+. Verify container 'web' is reachable on http://container-host.local:91
+. Stop container 'web'
+. Verify container 'web' is stopped
+. Restart container 'web'
+. Verify container 'web' is reachable on http://container-host.local:91
+
+
+<<<
+

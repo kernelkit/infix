@@ -5,6 +5,7 @@ import argparse
 import io
 import sys
 import re
+import yaml
 
 from pathlib import Path
 
@@ -86,14 +87,6 @@ class TestCase:
         self.topology_image=f"{directory}/topology"
         self.test_case=f"{directory}/test.py"
         self.specification=f"{directory}/Readme.adoc"
-        with open(self.test_case, 'r') as file:
-            script_content = file.read()
-        parsed_script = ast.parse(script_content)
-        visitor = TestStepVisitor()
-        visitor.visit(parsed_script)
-        self.name=visitor.name if visitor.name != "" else "Undefined"
-        self.description=visitor.description if visitor.description != "" else "Undefined"
-        self.test_steps=visitor.test_steps
 
     def generate_topology(self):
         """Generate SVG file from the topology.dot file"""
@@ -110,72 +103,91 @@ class TestCase:
                 f.write(mod_content)
 
 
-    def generate_specification(self):
-        """Generate a Readme.adoc for the test case"""
+    def generate_specification(self, name, case_path, spec_path):
+        """Generate a ASCIIDOC specification for the test case"""
+        with open(case_path, 'r') as file:
+            script_content = file.read()
+
+        parsed_script = ast.parse(script_content)
+        visitor = TestStepVisitor()
+        visitor.visit(parsed_script)
+        description=visitor.description if visitor.description != "" else "Undefined"
+        test_steps=visitor.test_steps
+        if name is None:
+            name = visitor.name
         self.generate_topology()
-        self.description = replace_image_tag(self.description, self.test_dir)
-        with open(self.specification, "w") as spec:
-            spec.write(f"=== {self.name}\n")
+        description = replace_image_tag(description, self.test_dir)
+        with open(spec_path, "w") as spec:
+            spec.write(f"=== {name}\n")
             spec.write("==== Description\n")
-            spec.write(self.description + "\n\n")
+            spec.write(description + "\n\n")
             spec.write("==== Topology\n")
             spec.write("ifdef::topdoc[]\n")
-            spec.write(f"image::../../{self.test_dir}/topology.svg[{self.name} topology]\n")
+            spec.write(f"image::../../{self.test_dir}/topology.svg[{name} topology]\n")
             spec.write("endif::topdoc[]\n")
             spec.write("ifndef::topdoc[]\n")
             spec.write("ifdef::testgroup[]\n")
-            spec.write(f"image::{Path(*self.test_dir.parts[3:])}/topology.svg[{self.name} topology]\n")
+            spec.write(f"image::{Path(*self.test_dir.parts[3:])}/topology.svg[{name} topology]\n")
             spec.write("endif::testgroup[]\n")
             spec.write("ifndef::testgroup[]\n")
-            spec.write(f"image::topology.svg[{self.name} topology]\n")
+            spec.write(f"image::topology.svg[{name} topology]\n")
             spec.write("endif::testgroup[]\n")
             spec.write("endif::topdoc[]\n")
             spec.write("==== Test sequence\n")
-            spec.writelines([f". {step}\n" for step in self.test_steps])
+            spec.writelines([f". {step}\n" for step in test_steps])
             spec.write("\n\n<<<\n\n") # need empty lines to pagebreak
 
-def parse_directory_tree(directory):
-    """P
-    arse a directory for subdirectories with a test.py
-    and a topology.dot files
-    """
-    directories=[]
-    for dirpath, dirnames, filenames in os.walk(directory):
-        testscript = False
-        topology = False
-        # Search for directories containing a test.py and a topology
-        # and define the directory as a test directory
+def parse_suite(directory, root, suitefile):
+    test_spec = None
+    readme = None
+    num_tests = 0
+    with open(suitefile, "r") as f:
+        data = yaml.safe_load(f)
 
-        if filenames:
-            for filename in filenames:
-                if filename == "test.py":
-                    testscript = True
-                if filename == "topology.dot":
-                    topology = True
-            if testscript and topology:
-                directories.append(dirpath)
-    return directories
+    for entry in data:
+        if entry.get("suite"):
+            path = os.path.dirname(entry["suite"])
+            parse_suite(f"{directory}/{path}", root, f"{directory}/{entry['suite']}")
+        elif entry.get("case"):
+            if not entry.get("infamy"):
+                test_title = None # Set from the docstring in the test case
+            else:
+                specification = entry["infamy"].get("specification", True);
+                if not specification:
+                    continue
+                test_title = entry["infamy"]["title"]
+            path = os.path.dirname(entry["case"])
+            if readme is None:
+                readme = open(f"{directory}/{path}/Readme.adoc.tmp", "w")
+            test_case_id = entry["name"]
+            test_file = f"{directory}/{entry['case']}"
+            test_spec = f"{directory}/{path}/{test_case_id}.adoc"
+            test_case = TestCase(f"{directory}/{path}", root)
+            test_case.generate_specification(test_title, test_file, test_spec)
+            readme.write(f"include::{path}{test_case_id}.adoc[]\n\n")
+            if path != "":
+                readme.close()
+                readme = None
+                os.unlink(f"{directory}/{path}/Readme.adoc")
+                os.symlink(f"{test_case_id}.adoc", f"{directory}/{path}/Readme.adoc")
+    if not readme is None:
+        readme.close()
+        os.rename(f"{directory}/Readme.adoc.tmp", f"{directory}/Readme.adoc")
 
 parser = argparse.ArgumentParser(description="Generate a test specification for a subtree.")
-parser.add_argument("-d", "--directory", required=True, help="The directory to parse.")
-parser.add_argument("-r", "--root-dir", help="Path that all paths should be relative to")
+parser.add_argument("-s", "--suite", required=True, help="The suite file to parse")
+parser.add_argument("-r", "--root-dir", required=True, help="Path that all paths should be relative to")
 args=parser.parse_args()
 
+error_string = ""
 output_capture = io.StringIO()
 sys.stderr = output_capture
 
-directories = parse_directory_tree(args.directory)
-error_string = ""
-for directory in directories:
-    # This is hacky, graphviz output error only to stdout and return successful(always).
-    # If everything goes well, output shall be empty, fail on any output
-    output_capture.truncate(0)
-    output_capture.seek(0)
-    test_case = TestCase(directory, args.root_dir)
-    test_case.generate_specification()
-    if len(output_capture.getvalue()) > 0:
-        error_string = output_capture.getvalue()
-        break
+# This is hacky, graphviz output error only to stdout and return successful(always).
+# If everything goes well, output shall be empty, fail on any output
+output_capture.truncate(0)
+output_capture.seek(0)
+parse_suite(os.path.dirname(args.suite), args.root_dir, args.suite)
 
 sys.stdout = sys.__stdout__
 

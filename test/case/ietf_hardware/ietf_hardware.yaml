@@ -2,5 +2,5 @@
 - name: usb
   case: usb/test.py
 
-- name: usb two ports
+- name: usb_two_ports
   case: usb_two_ports/test.py
