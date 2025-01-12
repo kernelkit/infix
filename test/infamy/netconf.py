@@ -155,8 +155,7 @@ class Device(Transport):
         for schema in schemas:
             if os.path.exists(yangdir + "/" + schema['filename']) is False:
                 self.get_schema(schema, yangdir)
-                sys.stdout.write("Downloading YANG model "
-                                 f"{schema['identifier']} ...\r\033[K")
+
         print("YANG models downloaded.")
 
     def _ly_init(self, yangdir):
