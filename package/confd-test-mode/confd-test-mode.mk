@@ -1,3 +1,9 @@
+################################################################################
+#
+# confd-test-mode
+#
+################################################################################
+
 CONFD_TEST_MODE_VERSION = 1.0
 CONFD_TEST_MODE_SITE_METHOD = local
 CONFD_TEST_MODE_SITE = $(BR2_EXTERNAL_INFIX_PATH)/src/test-mode
@@ -16,7 +22,8 @@ COMMON_SYSREPO_ENV = \
 
 define CONFD_TEST_MODE_INSTALL_YANG_MODULES
         $(COMMON_SYSREPO_ENV) \
-        SEARCH_PATH="$(TARGET_DIR)/usr/share/yang/modules/test-mode/" $(BR2_EXTERNAL_INFIX_PATH)/utils/sysrepo-load-modules.sh $(@D)/yang/test-mode.inc
+        SEARCH_PATH="$(TARGET_DIR)/usr/share/yang/modules/test-mode/" \
+	$(BR2_EXTERNAL_INFIX_PATH)/utils/srload $(@D)/yang/test-mode.inc
 endef
 define CONFD_TEST_MODE_PERMISSIONS
 	/etc/sysrepo/data/ r 660 root wheel - - - - -
