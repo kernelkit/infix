@@ -135,22 +135,23 @@ class TestCase:
             spec.write("endif::topdoc[]\n")
             spec.write("==== Test sequence\n")
             spec.writelines([f". {step}\n" for step in test_steps])
-            spec.write("\n\n<<<\n\n") # need empty lines to pagebreak
+            spec.write("\n\n<<<\n\n")  # need empty lines to pagebreak
+
 
 def parse_suite(directory, root, suitefile):
+    """Parse 9pm .yaml suite file"""
     test_spec = None
     readme = None
-    num_tests = 0
+
     with open(suitefile, "r") as f:
         data = yaml.safe_load(f)
-
     for entry in data:
         if entry.get("suite"):
             path = os.path.dirname(entry["suite"])
             parse_suite(f"{directory}/{path}", root, f"{directory}/{entry['suite']}")
         elif entry.get("case"):
             if not entry.get("infamy"):
-                test_title = None # Set from the docstring in the test case
+                test_title = None  # Set from the docstring in the test case
             else:
                 specification = entry["infamy"].get("specification", True);
                 if not specification:
@@ -167,12 +168,14 @@ def parse_suite(directory, root, suitefile):
             readme.write(f"include::{path}{test_case_id}.adoc[]\n\n")
             if path != "":
                 readme.close()
+                os.unlink(f"{directory}/{path}/Readme.adoc.tmp")
                 readme = None
                 os.unlink(f"{directory}/{path}/Readme.adoc")
                 os.symlink(f"{test_case_id}.adoc", f"{directory}/{path}/Readme.adoc")
-    if not readme is None:
+    if readme is not None:
         readme.close()
         os.rename(f"{directory}/Readme.adoc.tmp", f"{directory}/Readme.adoc")
+
 
 parser = argparse.ArgumentParser(description="Generate a test specification for a subtree.")
 parser.add_argument("-s", "--suite", required=True, help="The suite file to parse")
