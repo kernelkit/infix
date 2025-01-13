@@ -11,7 +11,6 @@ define PYTHON_STATD_MOVE_BINARIES
 	mv $(TARGET_DIR)/usr/bin/yanger $(TARGET_DIR)/usr/libexec/statd/
 	mv $(TARGET_DIR)/usr/bin/cli-pretty $(TARGET_DIR)/usr/libexec/statd/
 	mv $(TARGET_DIR)/usr/bin/ospf-status $(TARGET_DIR)/usr/libexec/statd/
-	mv $(TARGET_DIR)/usr/bin/dhcp-server-status $(TARGET_DIR)/usr/libexec/statd/
 endef
 PYTHON_STATD_POST_INSTALL_TARGET_HOOKS += PYTHON_STATD_MOVE_BINARIES
  $(eval $(python-package))

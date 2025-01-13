@@ -58,11 +58,11 @@ class PadSoftware:
     version = 23
 
 class PadDhcpServer:
-    iface = 7
     ip = 17
     mac = 19
     host = 21
-    exp = 7
+    cid = 19
+    exp = 10
 
 class PadUsbPort:
     title = 30
@@ -359,31 +359,77 @@ class STPPortID:
 class DhcpServer:
     def __init__(self, data):
         self.data = data
-        self.iface = get_json_data('', self.data, 'if-name')
         self.leases = []
         now = datetime.now(timezone.utc)
-        for lease in get_json_data([], self.data, 'server', 'lease', 'host'):
-            dt = datetime.strptime(lease["expires"], "%Y-%m-%dT%H:%M:%S%z")
-            exp =  (dt - now).total_seconds()
+        for lease in get_json_data([], self.data, 'leases', 'lease'):
+            if lease["expires"] == "never":
+                exp = " never"
+            else:
+                dt = datetime.strptime(lease['expires'], '%Y-%m-%dT%H:%M:%S%z')
+                seconds = int((dt - now).total_seconds())
+                exp = f" {self.format_duration(seconds)}"
             self.leases.append({
-               "ip": lease["ip-address"],
-               "mac": lease["hardware-address"],
+               "ip": lease["address"],
+               "mac": lease["phys-address"],
+               "cid": lease["client-id"],
                "host": lease["hostname"],
-               "exp": int(exp)
+               "exp": exp
             })
+        stats = get_json_data([], self.data, 'statistics')
+        self.offers    = stats["sent"]["offer-count"]
+        self.acks      = stats["sent"]["ack-count"]
+        self.naks      = stats["sent"]["nak-count"]
+        self.declines  = stats["received"]["decline-count"]
+        self.discovers = stats["received"]["discover-count"]
+        self.requests  = stats["received"]["request-count"]
+        self.releases  = stats["received"]["release-count"]
+        self.informs   = stats["received"]["inform-count"]
+
+    def format_duration(self, seconds):
+        """Convert seconds to DDdHHhMMmSSs format, omitting zero values"""
+        if seconds < 0:
+            return "expired"
+
+        days, remainder = divmod(seconds, 86400)
+        hours, remainder = divmod(remainder, 3600)
+        minutes, seconds = divmod(remainder, 60)
+
+        parts = []
+        if days:
+            parts.append(f"{days}d")
+        if hours:
+            parts.append(f"{hours}h")
+        if minutes:
+            parts.append(f"{minutes}m")
+        if seconds or not parts:
+            parts.append(f"{seconds}s")
+
+        return "".join(parts)
 
     def print(self):
         for lease in self.leases:
-            ip = lease["ip"]
-            mac = lease["mac"]
-            exp = "%ds" % lease["exp"]
+            ip   = lease["ip"]
+            mac  = lease["mac"]
+            cid  = lease["cid"]
+            exp  = lease['exp']
             host = lease["host"][:20]
-            row = f"{self.iface:<{PadDhcpServer.iface}}"
-            row += f"{ip:<{PadDhcpServer.ip}}"
+            row  = f"{ip:<{PadDhcpServer.ip}}"
             row += f"{mac:<{PadDhcpServer.mac}}"
             row += f"{host:<{PadDhcpServer.host}}"
-            row += f"{exp:<{PadDhcpServer.exp}}"
+            row += f"{cid:<{PadDhcpServer.cid}}"
+            row += f"{exp:>{PadDhcpServer.exp - 1}}"
             print(row)
+
+    def print_stats(self):
+        print(f"{'DHCP offers sent':<{32}}: {self.offers}")
+        print(f"{'DHCP ACK messages sent':<{32}}: {self.acks}")
+        print(f"{'DHCP NAK messages sent':<{32}}: {self.naks}")
+        print(f"{'DHCP decline messages received':<{32}}: {self.declines}")
+        print(f"{'DHCP discover messages received':<{32}}: {self.discovers}")
+        print(f"{'DHCP request messages received':<{32}}: {self.requests}")
+        print(f"{'DHCP release messages received':<{32}}: {self.discovers}")
+        print(f"{'DHCP inform messages received':<{32}}: {self.discovers}")
+
 
 class Iface:
     def __init__(self, data):
@@ -1072,21 +1118,23 @@ def show_ntp(json):
         row += f"{source['poll']:>{PadNtpSource.poll}}"
         print(row)
 
-def show_dhcp_server(json):
-    if not json.get("infix-dhcp-server:dhcp-server"):
+def show_dhcp_server(json, stats):
+    data = json.get("infix-dhcp-server:dhcp-server")
+    if not data:
         print("DHCP server not enabled.")
         return
 
-    hdr = (f"{'IFACE':<{PadDhcpServer.iface}}"
-           f"{'IP':<{PadDhcpServer.ip}}"
-           f"{'MAC':<{PadDhcpServer.mac}}"
-           f"{'HOSTNAME':<{PadDhcpServer.host}}"
-           f"{'EXPIRES':<{PadDhcpServer.exp}}")
-    print(Decore.invert(hdr))
+    server = DhcpServer(data)
 
-    servers = get_json_data({}, json, "infix-dhcp-server:dhcp-server", "server-if")
-    for s in servers:
-        server = DhcpServer(s)
+    if stats:
+        server.print_stats()
+    else:
+        hdr = (f"{'IP ADDRESS':<{PadDhcpServer.ip}}"
+               f"{'MAC':<{PadDhcpServer.mac}}"
+               f"{'HOSTNAME':<{PadDhcpServer.host}}"
+               f"{'CLIENT ID':<{PadDhcpServer.cid}}"
+               f"{'EXPIRES':>{PadDhcpServer.exp}}")
+        print(Decore.invert(hdr))
         server.print()
 
 def main():
@@ -1125,7 +1173,8 @@ def main():
 
     parser_show_boot_order = subparsers.add_parser('show-boot-order', help='Show NTP sources')
 
-    parser_show_routing_table = subparsers.add_parser('show-dhcp-server', help='Show DHCP server')
+    parser_dhcp_srv = subparsers.add_parser('show-dhcp-server', help='Show DHCP server')
+    parser_dhcp_srv.add_argument("-s", "--stats", action="store_true", help="Show server statistics")
 
     args = parser.parse_args()
     UNIT_TEST = args.test
@@ -1145,7 +1194,7 @@ def main():
     elif args.command == "show-ntp":
         show_ntp(json_data)
     elif args.command == "show-dhcp-server":
-        show_dhcp_server(json_data)
+        show_dhcp_server(json_data, args.stats)
     else:
         print(f"Error, unknown command '{args.command}'")
         sys.exit(1)

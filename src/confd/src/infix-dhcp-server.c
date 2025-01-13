@@ -10,28 +10,31 @@
 #include "core.h"
 #include <ifaddrs.h>
 
-#define MODULE				"infix-dhcp-server"
-#define ROOT_XPATH			"/infix-dhcp-server:"
-#define CFG_XPATH			ROOT_XPATH "dhcp-server"
+#define MODULE			"infix-dhcp-server"
+#define ROOT_XPATH		"/infix-dhcp-server:"
+#define CFG_XPATH		ROOT_XPATH "dhcp-server"
 
+#define DNSMASQ_GLOBAL_OPTS     "/etc/dnsmasq.d/global-opts.conf"
+#define DNSMASQ_SUBNET_FMT      "/etc/dnsmasq.d/%s.conf"
+#define DNSMASQ_LEASES          "/var/lib/misc/dnsmasq.leases"
 #define DBUS_NAME_DNSMASQ	"uk.org.thekelleys.dnsmasq"
 
-#define DEFAULT_LEASETIME	300		/* seconds */
-#define MAX_LEASE_COUNT		1024	/* max. number of leases */
-#define MAX_RELAY_SERVER	2 		/* max. number of relay servers */
+#define DEFAULT_LEASETIME	300  /* seconds */
+#define MAX_LEASE_COUNT		1024 /* max. number of leases */
+#define MAX_RELAY_SERVER	2    /* max. number of relay servers */
 
 
 struct option {
-	TAILQ_ENTRY(option) list;
-	int					num;
-	char 				name[32];
+	TAILQ_ENTRY(option)	list;
+	int			num;
+	char 			name[32];
 };
 TAILQ_HEAD(options, option);
 
 static struct options known_options;
 
 
-static char * strip(char *line)
+static char *strip(char *line)
 {
 	char *p;
 
@@ -49,49 +52,6 @@ static char * strip(char *line)
 	return line;
 }
 
-static int ip_address_is_valid (const char *ifname, const char *str)
-{
-	struct ifaddrs *ifaddr, *ifa;
-	struct sockaddr_in *sin;
-	struct sockaddr_in6 *sin6;
-	struct in_addr addr4;
-	struct in6_addr addr6;
-	int fam, ret = 0;
-
-	if (inet_pton(AF_INET, str, &addr4) == 1)
-		fam = AF_INET;
-	else if (inet_pton(AF_INET6, str, &addr6) == 1)
-		fam = AF_INET6;
-	else
-		return 0;
-
-	if (getifaddrs(&ifaddr) < 0)
-		return 0;
-	for (ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next) {
-		if (!ifa->ifa_addr ||
-			strcmp(ifa->ifa_name, ifname) != 0 ||
-			ifa->ifa_addr->sa_family != fam)
-			continue;
-
-		if (fam == AF_INET) {
-			sin = (struct sockaddr_in *) ifa->ifa_addr;
-			if (sin->sin_addr.s_addr == addr4.s_addr) {
-				ret = 1;
-				break;
-			}
-		} else if (fam == AF_INET6) {
-			sin6 = (struct sockaddr_in6 *) ifa->ifa_addr;
-			if (memcmp(sin6->sin6_addr.s6_addr,
-					   addr6.s6_addr, 16) == 0) {
-				ret = 1;
-				break;
-			}
-		}
-	}
-	freeifaddrs(ifaddr);
-
-	return ret;
-}
 
 static void add_known_option(char *line)
 {
@@ -117,34 +77,7 @@ static void add_known_option(char *line)
 	}
 }
 
-static int load_known_options(void)
-{
-	char line[256];
-	FILE *pp;
-
-	TAILQ_INIT(&known_options);
-
-	/*
-	 * From dnsmasq.8:
-	 *
-	 * --help dhcp will display known DHCPv4 configuration options
-	 * --help dhcp6 will display DHCPv6 options
-	 */
-	pp = popen("dnsmasq --help dhcp", "r");
-	if (!pp) {
-		ERROR("Unable to retrieve known options");
-		return -1;
-	}
-	while (!feof(pp)) {
-		if (fgets(line, sizeof(line), pp))
-			add_known_option(strip(line));
-	}
-	pclose(pp);
-
-	return 0;
-}
-
-static struct option * get_known_option(const char *name)
+static struct option *get_known_option(const char *name)
 {
 	struct option *opt;
 	int num = -1;
@@ -167,348 +100,302 @@ static struct option * get_known_option(const char *name)
 	return NULL;
 }
 
-/* configure dnsmasq options */
-static int configure_options(FILE *fp, struct lyd_node *cfg)
+static int load_known_options(void)
 {
-	struct lyd_node *option;
-	struct option *opt;
-	const char *value, *name;
+	char line[256];
+	FILE *pp;
 
-	LYX_LIST_FOR_EACH(lyd_child(cfg), option, "option") {
-		value = lydx_get_cattr(option, "value");
-		name  = lydx_get_cattr(option, "name");
+	TAILQ_INIT(&known_options);
 
-		if (!value || !name)
-			continue;
+	/*
+	 * From dnsmasq.8:
+	 *
+	 * --help dhcp will display known DHCPv4 configuration options
+	 * --help dhcp6 will display DHCPv6 options
+	 */
+	pp = popen("dnsmasq --help dhcp", "r");
+	if (!pp) {
+		ERROR("Unable to retrieve dnsmasq DHCP options");
+		return -1;
+	}
+	while (!feof(pp)) {
+		if (fgets(line, sizeof(line), pp))
+			add_known_option(strip(line));
+	}
+	pclose(pp);
 
-		opt = get_known_option(name);
-		if (!opt) {
-			ERROR("Unknown option %s", name);
-			return -1;
-		}
-
-		fprintf(fp, "dhcp-option=%d,%s\n", opt->num, value);
+	if (!get_known_option("hostname")) {
+		snprintf(line, sizeof(line), "12 hostname\n");
+		add_known_option(strip(line));
 	}
 
 	return 0;
 }
 
-static int configure_host(FILE *fp, struct lyd_node *host, int leasetime)
+static const char *subnet_tag(const char *subnet)
 {
-	struct lyd_node *node;
-	const char *ip, *str, *pfx;
-	size_t i;
+	unsigned int a, b, c, d, m;
+	static char tag[32];
+
+	sscanf(subnet, "%u.%u.%u.%u/%u", &a, &b, &c, &d, &m);
+
+	if (m == 8)	   /* Class A */
+		snprintf(tag, sizeof(tag), "net-%u", a);
+	else if (m == 16)  /* Class B */
+		snprintf(tag, sizeof(tag), "net-%u-%u", a, b);
+	else if (m == 24)  /* Class C */
+		snprintf(tag, sizeof(tag), "net-%u-%u-%u", a, b, c);
+	else {
+		/* Non-classful, use full format */
+		snprintf(tag, sizeof(tag), "net-%u-%u-%u-%u-%u",
+			a, b, c, d, m);
+	}
+
+	return tag;
+}
+
+static const char *host_tag(const char *subnet, const char *addr)
+{
+	unsigned int a, b, c, d;
+	static char tag[128];
+
+	sscanf(addr, "%u.%u.%u.%u", &a, &b, &c, &d);
+
+	if (!subnet)
+		snprintf(tag, sizeof(tag), "host-%u-%u-%u-%u", a, b, c, d);
+	else
+		snprintf(tag, sizeof(tag), "%s-host-%u-%u-%u-%u", subnet, a, b, c, d);
+
+	return tag;
+}
+
+/* configure dnsmasq options */
+static int configure_options(FILE *fp, struct lyd_node *cfg, const char *tag)
+{
+	struct lyd_node *option;
+
+	LYX_LIST_FOR_EACH(lyd_child(cfg), option, "option") {
+		const char *id = lydx_get_cattr(option, "id");
+		struct lyd_node *suboption;
+		const struct option *opt;
+		const char *val;
+
+		opt = get_known_option(id);
+		if (!opt) {
+			ERROR("Unknown option %s", id);
+			return -1;
+		}
+
+		/*
+		 * val is validated by the yang model for each of the various
+		 * attributes 'address', 'name', and 'string'.  in the future
+		 * we may add 'value' as well, for hexadecimal data
+		 */
+		val = lydx_get_cattr(option, "name")
+			?: lydx_get_cattr(option, "string")
+			?: NULL;
+		if (!val) {
+			val = lydx_get_cattr(option, "address");
+			if (val && !strcmp(val, "auto"))
+				val = "0.0.0.0";
+		}
+
+		if (val) {
+			fprintf(fp, "dhcp-option=%s%s%s%d,%s\n",
+				tag ? "tag:" : "", tag ?: "",
+				tag ? "," : "", opt->num, val);
+		} else if ((suboption = lydx_get_descendant(option, "option", "static-route", NULL))) {
+			struct lyd_node *net;
+
+			LYX_LIST_FOR_EACH(suboption, net, "static-route") {
+				fprintf(fp, "dhcp-option=%s%s%s%d,%s,%s\n",
+					tag ? "tag:" : "",
+					tag ?: "", tag ? "," : "", opt->num,
+					lydx_get_cattr(net, "destination"),
+					lydx_get_cattr(net, "next-hop"));
+			}
+		} else {
+			ERROR("Unknown value to option %s", id);
+			return -1;
+		}
+	}
+
+	return 0;
+}
+
+static const char *host_match(struct lyd_node *match, const char **id)
+{
 	struct {
-		const char *node;
+		const char *key;
 		const char *prefix;
-	}  entries[] = {
-		{ "mac-address", NULL },
-		{ "hostname", NULL },
-		{ "client-identifier", "id:" }
+	} choice[] = {
+		{ "mac-address", NULL  },
+		{ "hostname",    NULL  },
+		{ "client-id",   "id:" }
 	};
 
-	node = lydx_get_child(host, "ip-address");
-	if (!node)
-		return -1;
-	ip = lyd_get_value(node);
-	if (!ip || !*ip)
-		return -1;
+	if (!match)
+		return NULL;
 
-	for (i = 0; i < sizeof(entries)/sizeof(entries[0]); i++) {
-		node = lydx_get_child(host, entries[i].node);
+	for (size_t i = 0; i < NELEMS(choice); i++) {
+		struct lyd_node *node;
+
+		node = lydx_get_child(match, choice[i].key);
 		if (!node)
 			continue;
 
-		str = lyd_get_value(node);
-		if (str && *str) {
-			pfx = entries[i].prefix;
-
-			fprintf(fp, "dhcp-host=%s%s,%s,%d\n",
-					pfx ? pfx : "",
-					ip, str, leasetime);
-			return 0;
-		}
+		*id = choice[i].prefix;
+		return lyd_get_value(node);
 	}
 
-	return -1;
+	return NULL;
 }
 
-static int configure_pool(FILE *fp, struct lyd_node *pool, int leasetime)
+/* the address is a key in the host node, so is guaranteed to be set */
+static int configure_host(FILE *fp, struct lyd_node *host, const char *subnet)
 {
-	struct lyd_node *node, *host;
-	const char *str, *first, *last;
+	const char *ip = lydx_get_cattr(host, "address");
+	const char *tag = host_tag(NULL, ip);
+	const char *match, *id, *name;
 
-	if ((str = lydx_get_cattr(pool, "pool-name")))
-		fprintf(fp, "# pool %s\n", str);
-
-	if ((str = lydx_get_cattr(pool, "lease-time")))
-		leasetime = atoi(str);
-
-	if ((node = lydx_get_child(pool, "first-ip-address")))
-		first = lyd_get_value(node);
-	else
+	match = host_match(lydx_get_child(host, "match"), &id);
+	if (!match)
 		return -1;
 
-	if ((node = lydx_get_child(pool, "last-ip-address")))
-		last = lyd_get_value(node);
-	else
+	fprintf(fp, "\n# Host specific options\n");
+	if (configure_options(fp, host, tag))
 		return -1;
 
-	fprintf(fp, "dhcp-range=%s,%s,%d\n", first, last, leasetime);
-
-	LYX_LIST_FOR_EACH(lyd_child(pool), host, "static-allocation") {
-		if (configure_host(fp, host, leasetime))
-			return -1;
-	}
-
-	return 0;
-}
-
-static int configure_server(FILE *fp, const char *ifname, struct lyd_node *cfg)
-{
-	struct lyd_node *pool;
-	int leasetime = DEFAULT_LEASETIME;
-	const char *str;
-
-	if (configure_options(fp, cfg))
-		return -1;
-
-	if ((str = lydx_get_cattr(cfg, "lease-time")))
-		leasetime = atoi(str);
-
-	LYX_LIST_FOR_EACH(lyd_child(cfg), pool, "ip-pool") {
-		fprintf(fp, "\n");
-		if (configure_pool(fp, pool, leasetime))
-			return -1;
-	}
-
-	return 0;
-}
-
-static int configure_relay_info (FILE *fp, struct lyd_node *cfg, const char *id)
-{
-	struct lyd_node *node;
-	const char *str, *p;
-	int count = 0;
+	name = lydx_get_cattr(host, "hostname");
 
 	/*
-	 * Here we configure identifiers for DHCP option 82 (Relay Agent Information)
-	 * which get inserted into relayed DHCP requests (see RFC3046).
-	 * The DHCP option space is quite limited, thus we only allow 4 bytes for each
-	 * identifier.
-	 *
-	 * If circuit-id is not set, dnsmasq will use the interface index instead.
-	 *
-	 * (see patches/dnsmasq/2.90/0000-relay-agent-info.patch)
+	 * set host-specific tag, allow options from that tag,
+	 * also allow options from subnet
 	 */
-
-	node = lydx_get_child(cfg, id);
-	if (!node)
-		return 0;
-
-	str = lyd_get_value(node);
-	for (p = str; p && *p; p++)
-		if (*p == ':') count++;
-
-	if (count == 0)
-		return 0;
-
-	if (count > 3) {
-		ERROR("Overflow in %s (max. 4 bytes allowed)", id);
-		return -1;
-	}
-
-	fprintf(fp, "dhcp-%s=set:enterprise,%s\n",
-			(strcmp(id, "circuit-id") == 0) ? "circuitid" : "remoteid",
-			str);
+	fprintf(fp, "\n# Host %s specific options\n", ip);
+	fprintf(fp, "dhcp-host=%s%s,set:%s,set:%s,%s,%s%s%s\n",
+		id ? id : "", match, tag, subnet, ip,
+		name ?: "", name ? "," : "",
+		lydx_get_cattr(host, "lease-time"));
 
 	return 0;
 }
 
-static int configure_relay(FILE *fp, const char *ifname, struct lyd_node *cfg)
+static void add(const char *subnet, struct lyd_node *cfg)
 {
+	const char *tag = subnet_tag(subnet);
+	const char *val, *ifname;
 	struct lyd_node *node;
-	const char *addr, *str;
-	int count = 0;
-
-	if ((node = lydx_get_child(cfg, "address")))
-		addr = lyd_get_value(node);
-
-	if (!addr || !*addr) {
-		ERROR("Need relay address");
-		return -1;
-	}
-	if (!ip_address_is_valid(ifname, addr)) {
-		ERROR("Invalid relay address");
-		return -1;
-	}
-
-	LYX_LIST_FOR_EACH(lyd_child(cfg), node, "server") {
-		if (count >= MAX_RELAY_SERVER) {
-			ERROR("Too many relay servers configured");
-			return -1;
-		}
-		if ((str = lydx_get_cattr(node, "ip-address"))) {
-			fprintf(fp, "dhcp-relay=%s,%s\n", addr, str);
-			count++;
-		}
-	}
-
-	if (count == 0) {
-		ERROR("No relay server configured");
-		return -1;
-	}
-
-	if (configure_relay_info(fp, cfg, "circuit-id") < 0 ||
-		configure_relay_info(fp, cfg, "remote-id") < 0)
-		return -1;
-
-	return 0;
-}
-
-static int configure_dnsmasq(const char *ifname, struct lyd_node *cfg)
-{
-	struct lyd_node *node;
-	const char *mode = NULL;
-	const char *addr;
 	FILE *fp = NULL;
-	int ret;
+	int rc = 0;
 
-	fp = fopenf("w", "/var/run/dnsmasq-%s.conf", ifname);
+	fp = fopenf("w", DNSMASQ_SUBNET_FMT, tag);
 	if (!fp) {
-		ERROR("Failed to create dnsmasq conf for %s: %s", ifname, strerror(errno));
-		return -1;
+		ERROR("Failed creating dnsmasq conf for %s: %s", subnet, strerror(errno));
+		return;
 	}
 
-	fprintf(fp, "# Generated by Infix confd\n");
-	fprintf(fp, "pid-file=/var/run/dnsmasq-%s.pid\n", ifname);
-	fprintf(fp, "enable-dbus=%s.%s\n", DBUS_NAME_DNSMASQ, ifname);
-	fprintf(fp, "bind-interfaces\n");
-	fprintf(fp, "interface=%s\n", ifname);
-	fprintf(fp, "except-interface=lo\n");
-	fprintf(fp, "dhcp-leasefile=/var/run/dnsmasq-%s.leases\n", ifname);
-	fprintf(fp, "dhcp-lease-max=%d\n", MAX_LEASE_COUNT);
+	val = lydx_get_cattr(cfg, "description");
+	fprintf(fp, "# Subnet %s%s%s\n", subnet, val ? " - " : "", val ?: "");
 
 	if (debug)
 		fprintf(fp, "log-dhcp\n");
 
-	if ((node = lydx_get_child(cfg, "address"))) {
-		addr = lyd_get_value(node);
-		if (!ip_address_is_valid(ifname, addr)) {
-			ERROR("Invalid server address");
-			return -1;
-		}
-		fprintf(fp, "listen-address=%s\n", addr);
+	fprintf(fp, "\n# Common options for this subnet\n");
+	rc = configure_options(fp, cfg, tag);
+	if (rc)
+		goto err;
+
+	LYX_LIST_FOR_EACH(lyd_child(cfg), node, "host") {
+		if ((rc = configure_host(fp, node, tag)))
+			goto err;
 	}
 
-	if (!lydx_is_enabled(cfg, "dns-enabled")) {
-		fprintf(fp, "port=0\n");
-		fprintf(fp, "no-poll\n");
+	/* Optional, may be used to limit scope of subnet */
+	ifname = lydx_get_cattr(cfg, "if-name");
+
+	if ((node = lydx_get_child(cfg, "pool"))) {
+		const char *start, *end;
+
+		start = lydx_get_cattr(node, "start-address");
+		end   = lydx_get_cattr(node, "end-address");
+
+		fprintf(fp, "\n# Subnet pool %s - %s\n", start, end);
+		fprintf(fp, "dhcp-range=%s%sset:%s,%s,%s,%s\n",
+			ifname ?: "", ifname ? "," : "", tag,
+			start, end, lydx_get_cattr(node, "lease-time"));
 	}
-	fprintf(fp, "\n");
 
-	if ((node = lydx_get_child(cfg, "mode")))
-		mode = lyd_get_value(node);
+err:
+	fclose(fp);
+}
 
-	if (mode && strcmp(mode, "relay") == 0) {
-		INFO("Configuring DHCP relay on %s", ifname);
-		ret = configure_relay(fp, ifname,
-							  lydx_get_child(cfg, "relay"));
-	} else {
-		INFO("Configuring DHCP server on %s", ifname);
-		ret = configure_server(fp, ifname,
-							   lydx_get_child(cfg, "server"));
+static void del(const char *subnet, struct lyd_node *cfg)
+{
+	struct in_addr subnet_addr;
+	FILE *fp, *next;
+	int prefix_len;
+	char line[512];
+
+	systemf("initctl -nbq stop dnsmasq");
+	fremove(DNSMASQ_SUBNET_FMT, subnet_tag(subnet));
+
+	/* Parse subnet/prefix */
+	if (sscanf(subnet, "%15[^/]/%d", line, &prefix_len) != 2)
+		goto parse_err;
+	if (inet_pton(AF_INET, line, &subnet_addr) != 1) {
+	parse_err:
+		ERRNO("Failed parsing DHCP server subnet %s for deletion", subnet);
+		return;
+	}
+
+	fp = fopen(DNSMASQ_LEASES, "r");
+	if (!fp)
+		return;		/* Nothing to do here */
+
+	/* Create temp file for new leases */
+	next = fopen(DNSMASQ_LEASES"+", "w");
+	if (!next) {
+		ERRNO("Failed creating new leases file %s", DNSMASQ_LEASES"+");
+		fclose(fp);
+		return;
+	}
+
+	/* Copy non-matching leases */
+	while (fgets(line, sizeof(line), fp)) {
+		char mac[18], ip[16], name[64];
+		struct in_addr lease_addr;
+		unsigned int lease_time;
+		uint32_t subnet_mask;
+
+		if (sscanf(line, "%u %17s %15s %63s", &lease_time, mac, ip, name) < 3)
+			continue;
+
+		/* Check if IP is in subnet */
+		if (inet_pton(AF_INET, ip, &lease_addr) != 1)
+			continue;
+
+		subnet_mask = htonl(~((1UL << (32 - prefix_len)) - 1));
+		if ((lease_addr.s_addr & subnet_mask) == (subnet_addr.s_addr & subnet_mask))
+			continue;  /* Skip matching lease */
+
+		fputs(line, next);
 	}
 
 	fclose(fp);
+	fclose(next);
 
-	if (ret != 0)
-		fremove("/var/run/dnsmasq-%s.conf", ifname);
-
-	return ret;
-}
-
-static int configure_finit(const char *ifname)
-{
-	FILE *fp;
-
-	fp = fopenf("w", "/etc/finit.d/available/dhcp-server-%s.conf", ifname);
-	if (!fp) {
-		ERROR("Failed to create finit conf for %s: %s", ifname, strerror(errno));
-		return -1;
-	}
-
-	fprintf(fp, "# Generated by Infix confd\n");
-	fprintf(fp, "service <!> name:dhcp-server :%s <net/%s/running> \\\n"
-			"   [2345] dnsmasq -k -u root -C /var/run/dnsmasq-%s.conf \\\n"
-			"       -- DHCP server @%s\n",
-			ifname, ifname, ifname, ifname);
-	fclose(fp);
-
-	return 0;
-}
-
-static int configure_dbus(const char *ifname)
-{
-	FILE *fp;
-
-	if (fexistf("/etc/dbus-1/system.d/dnsmasq-%s.conf", ifname)) {
-		return 0;
-	}
-	fp = fopenf("w", "/etc/dbus-1/system.d/dnsmasq-%s.conf", ifname);
-	if (!fp) {
-		ERROR("Failed to create dbus conf for %s: %s", ifname, strerror(errno));
-		return -1;
-	}
-	fprintf(fp, "<!DOCTYPE busconfig PUBLIC\n");
-	fprintf(fp, " \"-//freedesktop//DTD D-BUS Bus Configuration 1.0//EN\"\n");
-	fprintf(fp, " \"http://www.freedesktop.org/standards/dbus/1.0/busconfig.dtd\">\n");
-	fprintf(fp, "<busconfig>\n");
-	fprintf(fp, "  <policy user=\"root\">\n");
-	fprintf(fp, "    <allow own=\"%s.%s\"/>\n", DBUS_NAME_DNSMASQ, ifname);
-	fprintf(fp, "    <allow send_destination=\"%s.%s\"/>\n", DBUS_NAME_DNSMASQ, ifname);
-	fprintf(fp, "  </policy>\n");
-	fprintf(fp, "  <policy context=\"default\">\n");
-	fprintf(fp, "    <deny own=\"%s.%s\"/>\n", DBUS_NAME_DNSMASQ, ifname);
-	fprintf(fp, "    <deny send_destination=\"%s.%s\"/>\n", DBUS_NAME_DNSMASQ, ifname);
-	fprintf(fp, "  </policy>\n");
-	fprintf(fp, "</busconfig>\n");
-	fclose(fp);
-
-	return 0;
-}
-
-static void add(const char *ifname, struct lyd_node *cfg)
-{
-	const char *action = "disable";
-
-	if (configure_dnsmasq(ifname, cfg))
-		goto out;
-
-	if (configure_finit(ifname))
-		goto out;
-
-	if (configure_dbus(ifname))
-		goto out;
-
-	action = "enable";
-out:
-	systemf("initctl -bfqn %s dhcp-server-%s", action, ifname);
-}
-
-static void del(const char *ifname)
-{
-	systemf("initctl -bfq delete dhcp-server-%s", ifname);
+	/* Replace old leases file */
+	rename(DNSMASQ_LEASES"+", DNSMASQ_LEASES);
 }
 
 static int change(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
 		  const char *xpath, sr_event_t event, unsigned request_id, void *_confd)
 {
 	struct lyd_node *global, *diff, *cifs, *difs, *cif, *dif;
-	const char *ifname, *cifname;
+	int enabled = 0, added = 0, deleted = 0;
 	sr_error_t err = 0;
 	sr_data_t *cfg;
-	int enabled = 0;
 
 	switch (event) {
 	case SR_EV_DONE:
@@ -519,7 +406,7 @@ static int change(sr_session_ctx_t *session, uint32_t sub_id, const char *module
 		return SR_ERR_OK;
 	}
 
-	err = sr_get_data(session, CFG_XPATH "//.", 0, 0, 0, &cfg);
+	err = sr_get_data(session, "//.", 0, 0, 0, &cfg);
 	if (err || !cfg)
 		goto err_abandon;
 
@@ -530,65 +417,114 @@ static int change(sr_session_ctx_t *session, uint32_t sub_id, const char *module
 	global = lydx_get_descendant(cfg->tree, "dhcp-server", NULL);
 	enabled = lydx_is_enabled(global, "enabled");
 
-	cifs = lydx_get_descendant(cfg->tree, "dhcp-server", "server-if", NULL);
-	difs = lydx_get_descendant(diff, "dhcp-server", "server-if", NULL);
+	cifs = lydx_get_descendant(cfg->tree, "dhcp-server", "subnet", NULL);
+	difs = lydx_get_descendant(diff, "dhcp-server", "subnet", NULL);
 
 	/* find the modified one, delete or recreate only that */
-	LYX_LIST_FOR_EACH(difs, dif, "server-if") {
-		ifname = lydx_get_cattr(dif, "if-name");
-		if (!ifname)
-			continue;
+	LYX_LIST_FOR_EACH(difs, dif, "subnet") {
+		const char *subnet = lydx_get_cattr(dif, "subnet");
 
 		if (lydx_get_op(dif) == LYDX_OP_DELETE) {
-			del(ifname);
+			del(subnet, dif), deleted++;
 			continue;
 		}
 
-		LYX_LIST_FOR_EACH(cifs, cif, "server-if") {
-			cifname = lydx_get_cattr(cif, "if-name");
-			if (!cifname || strcmp(ifname, cifname))
+		LYX_LIST_FOR_EACH(cifs, cif, "subnet") {
+			const char *cnet = lydx_get_cattr(cif, "subnet");
+
+			if (strcmp(subnet, cnet))
 				continue;
 
 			if (!enabled || !lydx_is_enabled(cif, "enabled"))
-				del(ifname);
+				del(subnet, cif), deleted++;
 			else
-				add(ifname, cif);
+				add(subnet, cif), added++;
 			break;
 		}
 	}
 
-	if (!enabled) {
-		LYX_LIST_FOR_EACH(cifs, cif, "server-if") {
-			ifname = lydx_get_cattr(cif, "if-name");
-			if (ifname) {
-				INFO("DHCP server globally disabled, stopping server on %s", ifname);
-				del(ifname);
-			}
+	if (enabled) {
+		struct lyd_node *node;
+		FILE *fp;
+
+		fp = fopen(DNSMASQ_GLOBAL_OPTS, "w");
+		if (!fp)
+			goto err_done;
+
+		node = lydx_get_xpathf(cfg->tree, "/ietf-system:system/hostname");
+		if (node) {
+			const char *hostname = lyd_get_value(node);
+			const char *ptr = hostname ? strchr(hostname, '.') : NULL;
+
+			if (ptr)
+				fprintf(fp, "domain = %s\n", ++ptr);
+		}
+
+		err = configure_options(fp, global, NULL);
+		fclose(fp);
+		if (err)
+			goto err_done;
+	} else {
+		system("initctl -nbq stop dnsmasq"), deleted++;
+		erase(DNSMASQ_LEASES);
+		erase(DNSMASQ_GLOBAL_OPTS);
+
+		LYX_LIST_FOR_EACH(cifs, cif, "subnet") {
+			const char *subnet = lydx_get_cattr(cif, "subnet");
+
+			INFO("DHCP server globally disabled, stopping server on %s", subnet);
+			del(subnet, cif);
 		}
 	}
+
+err_done:
+	if (deleted)
+		system("initctl -nbq restart dnsmasq");
+	else
+		system("initctl -nbq touch dnsmasq");
 
 	lyd_free_tree(diff);
 err_release_data:
 	sr_release_data(cfg);
 err_abandon:
+
 	return err;
 }
 
-static int cleanstats(sr_session_ctx_t *session, uint32_t sub_id, const char *xpath,
-					  const sr_val_t *input, const size_t input_cnt, sr_event_t event,
-					  unsigned request_id, sr_val_t **output, size_t *output_cnt, void *priv)
+static int cand(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
+		const char *path, sr_event_t event, unsigned request_id, void *priv)
 {
-	int rc;
+	const char *fmt = "/infix-dhcp-server:dhcp-server/option[id='%s']/address";
+	sr_val_t inferred = { .type = SR_STRING_T };
+	const char *opt[] = {
+		"router",
+		"dns-server",
+	};
+	size_t i, cnt = 0;
 
-	if (input_cnt < 1) {
-		ERROR("Not enough input parameters");
-		return SR_ERR_SYS;
+	if (event != SR_EV_UPDATE && event != SR_EV_CHANGE)
+		return 0;
+
+	if (srx_nitems(session, &cnt, "/infix-dhcp-server:dhcp-server/option") || cnt)
+		return 0;
+
+	for (i = 0; i < NELEMS(opt); i++) {
+		inferred.data.string_val = "auto";
+		srx_set_item(session, &inferred, 0, fmt, opt[i]);
 	}
 
-	rc = systemf("/usr/libexec/statd/dhcp-server-status --clean %s",
-				 input[0].data.string_val);
+	return 0;
+}
 
-	return (rc == 0) ? SR_ERR_OK : SR_ERR_SYS;
+static int clear_stats(sr_session_ctx_t *session, uint32_t sub_id, const char *xpath,
+		       const sr_val_t *input, const size_t input_cnt, sr_event_t event,
+		       unsigned request_id, sr_val_t **output, size_t *output_cnt, void *priv)
+{
+	if (systemf("dbus-send --system --dest=uk.org.thekelleys.dnsmasq "
+		    "/uk/org/thekelleys/dnsmasq uk.org.thekelleys.dnsmasq.ClearMetrics"))
+		return SR_ERR_SYS;
+
+	return SR_ERR_OK;
 }
 
 int infix_dhcp_server_init(struct confd *confd)
@@ -600,7 +536,8 @@ int infix_dhcp_server_init(struct confd *confd)
 		goto fail;
 
 	REGISTER_CHANGE(confd->session, MODULE, CFG_XPATH, 0, change, confd, &confd->sub);
-	REGISTER_RPC(confd->session, ROOT_XPATH "clean-statistics", cleanstats, NULL, &confd->sub);
+	REGISTER_CHANGE(confd->cand, MODULE, CFG_XPATH"//.", SR_SUBSCR_UPDATE, cand, confd, &confd->sub);
+	REGISTER_RPC(confd->session, CFG_XPATH "/statistics/clear", clear_stats, NULL, &confd->sub);
 
 	return SR_ERR_OK;
 fail:
