@@ -20,7 +20,7 @@ enabled when using static multicast filters)
 
 ==== Topology
 ifdef::topdoc[]
-image::../../test/case/ietf_interfaces/static_multicast_filters/topology.svg[Static multicast filters topology]
+image::{topdoc}../../test/case/ietf_interfaces/static_multicast_filters/topology.svg[Static multicast filters topology]
 endif::topdoc[]
 ifndef::topdoc[]
 ifdef::testgroup[]

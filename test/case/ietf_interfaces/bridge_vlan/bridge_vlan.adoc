@@ -13,7 +13,7 @@ Basic test of VLAN functionality in a bridge, tagged/untagged traffic and a VLAN
 
 ==== Topology
 ifdef::topdoc[]
-image::../../test/case/ietf_interfaces/bridge_vlan/topology.svg[Bridge VLAN topology]
+image::{topdoc}../../test/case/ietf_interfaces/bridge_vlan/topology.svg[Bridge VLAN topology]
 endif::topdoc[]
 ifndef::topdoc[]
 ifdef::testgroup[]

@@ -6,7 +6,7 @@ an offset applied.
 
 ==== Topology
 ifdef::topdoc[]
-image::../../test/case/ietf_interfaces/iface_phys_address/topology.svg[Custom MAC address on interface topology]
+image::{topdoc}../../test/case/ietf_interfaces/iface_phys_address/topology.svg[Custom MAC address on interface topology]
 endif::topdoc[]
 ifndef::topdoc[]
 ifdef::testgroup[]

@@ -29,7 +29,7 @@ unless _always_ is set for _default-route-advertising_.
 
 ==== Topology
 ifdef::topdoc[]
-image::../../test/case/ietf_routing/ospf_default_route_advertise/topology.svg[OSPF Default route advertise topology]
+image::{topdoc}../../test/case/ietf_routing/ospf_default_route_advertise/topology.svg[OSPF Default route advertise topology]
 endif::topdoc[]
 ifndef::topdoc[]
 ifdef::testgroup[]

@@ -16,7 +16,7 @@ via 192.168.0.1 and a default route (option 121) via 192.168.0.254.
 
 ==== Topology
 ifdef::topdoc[]
-image::../../test/case/infix_dhcp/dhcp_routes/topology.svg[DHCP option 121 vs option 3 topology]
+image::{topdoc}../../test/case/infix_dhcp/dhcp_routes/topology.svg[DHCP option 121 vs option 3 topology]
 endif::topdoc[]
 ifndef::topdoc[]
 ifdef::testgroup[]

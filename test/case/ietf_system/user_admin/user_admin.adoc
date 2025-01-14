@@ -5,7 +5,7 @@ check that it when added as admin it is also the case in Linux.
 
 ==== Topology
 ifdef::topdoc[]
-image::../../test/case/ietf_system/user_admin/topology.svg[Add admin user topology]
+image::{topdoc}../../test/case/ietf_system/user_admin/topology.svg[Add admin user topology]
 endif::topdoc[]
 ifndef::topdoc[]
 ifdef::testgroup[]

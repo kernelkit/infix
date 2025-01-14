@@ -6,7 +6,7 @@ interface.
 
 ==== Topology
 ifdef::topdoc[]
-image::../../test/case/infix_dhcp/dhcp_basic/topology.svg[DHCP Basic topology]
+image::{topdoc}../../test/case/infix_dhcp/dhcp_basic/topology.svg[DHCP Basic topology]
 endif::topdoc[]
 ifndef::topdoc[]
 ifdef::testgroup[]

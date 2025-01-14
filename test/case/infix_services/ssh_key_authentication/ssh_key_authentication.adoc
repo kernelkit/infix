@@ -4,7 +4,7 @@ Verify that 'guest' user can fetch data using only the 'public' key
 
 ==== Topology
 ifdef::topdoc[]
-image::../../test/case/infix_services/ssh_key_authentication/topology.svg[Generate ssh key pair topology]
+image::{topdoc}../../test/case/infix_services/ssh_key_authentication/topology.svg[Generate ssh key pair topology]
 endif::topdoc[]
 ifndef::topdoc[]
 ifdef::testgroup[]

@@ -10,7 +10,7 @@ e.g. ix-01-01-01.
 
 ==== Topology
 ifdef::topdoc[]
-image::../../test/case/ietf_system/hostname/topology.svg[Set hostname topology]
+image::{topdoc}../../test/case/ietf_system/hostname/topology.svg[Set hostname topology]
 endif::topdoc[]
 ifndef::topdoc[]
 ifdef::testgroup[]

@@ -16,7 +16,7 @@ correctly to PCP on egress ('from internal priority' or static '0..7').
 
 ==== Topology
 ifdef::topdoc[]
-image::../../test/case/ietf_interfaces/vlan_qos/topology.svg[VLAN Interface Ingress/Egress QoS topology]
+image::{topdoc}../../test/case/ietf_interfaces/vlan_qos/topology.svg[VLAN Interface Ingress/Egress QoS topology]
 endif::topdoc[]
 ifndef::topdoc[]
 ifdef::testgroup[]

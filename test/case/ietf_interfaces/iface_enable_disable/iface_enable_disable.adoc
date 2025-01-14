@@ -7,7 +7,7 @@ Both admin-status and oper-status are verified.
 
 ==== Topology
 ifdef::topdoc[]
-image::../../test/case/ietf_interfaces/iface_enable_disable/topology.svg[Interface status topology]
+image::{topdoc}../../test/case/ietf_interfaces/iface_enable_disable/topology.svg[Interface status topology]
 endif::topdoc[]
 ifndef::topdoc[]
 ifdef::testgroup[]

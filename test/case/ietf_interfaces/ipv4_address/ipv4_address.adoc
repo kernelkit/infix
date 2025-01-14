@@ -4,7 +4,7 @@ Test that it is possible to set and remove the IPv4 address on an interface
 
 ==== Topology
 ifdef::topdoc[]
-image::../../test/case/ietf_interfaces/ipv4_address/topology.svg[Interface with IPv4 topology]
+image::{topdoc}../../test/case/ietf_interfaces/ipv4_address/topology.svg[Interface with IPv4 topology]
 endif::topdoc[]
 ifndef::topdoc[]
 ifdef::testgroup[]

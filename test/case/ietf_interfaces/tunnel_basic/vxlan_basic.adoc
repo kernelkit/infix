@@ -5,7 +5,7 @@ and ends with a connectivity test.
 
 ==== Topology
 ifdef::topdoc[]
-image::../../test/case/ietf_interfaces/tunnel_basic/topology.svg[VXLAN point-to-point topology]
+image::{topdoc}../../test/case/ietf_interfaces/tunnel_basic/topology.svg[VXLAN point-to-point topology]
 endif::topdoc[]
 ifndef::topdoc[]
 ifdef::testgroup[]

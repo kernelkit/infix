@@ -9,7 +9,7 @@ while exactly three links are in the blocking state.
 
 ==== Topology
 ifdef::topdoc[]
-image::../../test/case/ietf_interfaces/bridge_stp_basic/topology.svg[Bridge STP Basic topology]
+image::{topdoc}../../test/case/ietf_interfaces/bridge_stp_basic/topology.svg[Bridge STP Basic topology]
 endif::topdoc[]
 ifndef::topdoc[]
 ifdef::testgroup[]

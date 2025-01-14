@@ -5,7 +5,7 @@ with yescrypt.
 
 ==== Topology
 ifdef::topdoc[]
-image::../../test/case/ietf_system/add_delete_user/topology.svg[Add/delete user topology]
+image::{topdoc}../../test/case/ietf_system/add_delete_user/topology.svg[Add/delete user topology]
 endif::topdoc[]
 ifndef::topdoc[]
 ifdef::testgroup[]

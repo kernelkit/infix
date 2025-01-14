@@ -4,7 +4,7 @@ Verify NTP client with multiple servers, ensure one get selected.
 
 ==== Topology
 ifdef::topdoc[]
-image::../../test/case/ietf_system/ntp_client/topology.svg[Basic NTP client test topology]
+image::{topdoc}../../test/case/ietf_system/ntp_client/topology.svg[Basic NTP client test topology]
 endif::topdoc[]
 ifndef::topdoc[]
 ifdef::testgroup[]

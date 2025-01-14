@@ -10,7 +10,7 @@ from any other step.  This to trigger a new configuration "generation".
 
 ==== Topology
 ifdef::topdoc[]
-image::../../test/case/ietf_interfaces/veth_delete/topology.svg[Verify that VETH pairs can be deleted topology]
+image::{topdoc}../../test/case/ietf_interfaces/veth_delete/topology.svg[Verify that VETH pairs can be deleted topology]
 endif::topdoc[]
 ifndef::topdoc[]
 ifdef::testgroup[]

@@ -18,7 +18,7 @@ the flooding stops as soon a join arrives
 
 ==== Topology
 ifdef::topdoc[]
-image::../../test/case/ietf_interfaces/igmp_basic/topology.svg[IGMP basic topology]
+image::{topdoc}../../test/case/ietf_interfaces/igmp_basic/topology.svg[IGMP basic topology]
 endif::topdoc[]
 ifndef::topdoc[]
 ifdef::testgroup[]

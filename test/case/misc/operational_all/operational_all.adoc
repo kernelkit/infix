@@ -4,7 +4,7 @@ Basic test just to get operational from test-config without errors.
 
 ==== Topology
 ifdef::topdoc[]
-image::../../test/case/misc/operational_all/topology.svg[Get operational topology]
+image::{topdoc}../../test/case/misc/operational_all/topology.svg[Get operational topology]
 endif::topdoc[]
 ifndef::topdoc[]
 ifdef::testgroup[]

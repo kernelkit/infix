@@ -10,7 +10,7 @@ converters without link fault forwarding.
 
 ==== Topology
 ifdef::topdoc[]
-image::../../test/case/ietf_routing/ospf_bfd/topology.svg[OSPF BFD topology]
+image::{topdoc}../../test/case/ietf_routing/ospf_bfd/topology.svg[OSPF BFD topology]
 endif::topdoc[]
 ifndef::topdoc[]
 ifdef::testgroup[]
