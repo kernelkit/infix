@@ -218,22 +218,25 @@ def parse_suite(directory, root, suitefile):
 parser = argparse.ArgumentParser(description="Generate a test specification for a subtree.")
 parser.add_argument("-s", "--suite", required=True, help="The suite file to parse")
 parser.add_argument("-r", "--root-dir", required=True, help="Path that all paths should be relative to")
+parser.add_argument("-d", "--debug", help="Show debug output", action="store_true")
 args=parser.parse_args()
 
 error_string = ""
-output_capture = io.StringIO()
-sys.stderr = output_capture
-
 # This is hacky, graphviz output error only to stdout and return successful(always).
 # If everything goes well, output shall be empty, fail on any output
-output_capture.truncate(0)
-output_capture.seek(0)
+
+if not args.debug:
+    output_capture = io.StringIO()
+    sys.stderr = output_capture
+    output_capture.truncate(0)
+    output_capture.seek(0)
 parse_suite(os.path.dirname(args.suite), args.root_dir, args.suite)
 
-sys.stdout = sys.__stdout__
+if not args.debug:
+    sys.stdout = sys.__stdout__
 
-if len(error_string) > 0:
-    print(error_string)
-    exit(1)
+    if len(error_string) > 0:
+        print(error_string)
+        exit(1)
 
 exit(0)
