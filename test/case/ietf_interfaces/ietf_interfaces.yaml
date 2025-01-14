@@ -68,8 +68,8 @@
 - name: vlan_iface_termination
   case: vlan_iface_termination/test.py
 
-- name: gre_basic
-  suite: gre_basic/test.yaml
+- name: tunnel_basic
+  suite: tunnel_basic/test.yaml
 
-- name: gretap_bridged
-  case: gretap_bridged/test.py
+- name: tunnel_bridged
+  suite: tunnel_bridged/test.yaml

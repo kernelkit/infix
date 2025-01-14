@@ -76,6 +76,10 @@ int netdag_gen_vlan(struct dagger *net, struct lyd_node *dif,
 
 /* infix-if-gre.c */
 int gre_gen(struct dagger *net, struct lyd_node *dif,
-		    struct lyd_node *cif, FILE *ip);
+	    struct lyd_node *cif, FILE *ip);
+
+/* infix-if-vxlan.c */
+int vxlan_gen(struct dagger *net, struct lyd_node *dif,
+	    struct lyd_node *cif, FILE *ip);
 
 #endif /* CONFD_IETF_INTERFACES_H_ */

@@ -10,3 +10,9 @@
   opts: ["--type", "gretap"]
   infamy:
     title: GRETAP point-to-point
+
+- name: vxlan_basic
+  case: test.py
+  opts: ["--type", "vxlan"]
+  infamy:
+    title: VXLAN point-to-point

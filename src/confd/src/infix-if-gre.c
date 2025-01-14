@@ -4,7 +4,7 @@
 #include "ietf-interfaces.h"
 
 int gre_gen(struct dagger *net, struct lyd_node *dif,
-		    struct lyd_node *cif, FILE *ip)
+	    struct lyd_node *cif, FILE *ip)
 {
 	const char *ifname, *iftype, *local, *remote, *mac = NULL;
 	struct lyd_node *node = NULL;

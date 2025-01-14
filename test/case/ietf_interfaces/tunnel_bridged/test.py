@@ -1,29 +1,51 @@
 #!/usr/bin/env python3
 """
-GRETAP interface bridged with physical
+Tunnel interface bridged with physical
 
-Test that GRETAP works as it should and that it possible to bridge it.
+Test that {type} works as it should and that it possible to bridge it.
 
 """
 
 import infamy
 
+class ArgumentParser(infamy.ArgumentParser):
+    def __init__(self):
+        super().__init__()
+        self.add_argument("--type")
+
 with infamy.Test() as test:
     with test.step("Set up topology and attach to target DUTs"):
-           env = infamy.Env()
-           left = env.attach("left", "mgmt")
-           right = env.attach("right", "mgmt")
-           _, leftlink = env.ltop.xlate("left", "link")
-           _, leftdata = env.ltop.xlate("left", "data")
-           _, rightlink = env.ltop.xlate("right", "link")
-
+        args=ArgumentParser()
+        env = infamy.Env(args=args)
+        left = env.attach("left", "mgmt")
+        right = env.attach("right", "mgmt")
+        type = env.args.type
 
     with test.step("Configure DUTs"):
+        if type == "gretap":
+            container_name = "gre"
+        else:
+            container_name = type
+
+        container_left =  {
+            "local": "192.168.50.1",
+            "remote": "192.168.50.2"
+        }
+        container_right =  {
+            "local": "192.168.50.2",
+            "remote": "192.168.50.1"
+        }
+        container_left.update({
+            "vni": 4
+        })
+        container_right.update({
+            "vni": 4
+        })
         left.put_config_dicts({ "ietf-interfaces": {
             "interfaces": {
                 "interface": [
                 {
-                    "name": leftlink,
+                    "name": left["link"],
                     "ipv4": {
                         "address": [{
                             "ip": "192.168.50.1",
@@ -33,7 +55,7 @@ with infamy.Test() as test:
                     }
                 },
                 {
-                    "name": leftdata,
+                    "name": left["data"],
                     "bridge-port": {
                         "bridge": "br0"
                     }
@@ -43,12 +65,9 @@ with infamy.Test() as test:
                     "type": "infix-if-type:bridge"
                 },
                 {
-                    "name": "gre0",
-                    "type": "infix-if-type:gretap",
-                    "gre": {
-                        "local": "192.168.50.1",
-                        "remote": "192.168.50.2"
-                    },
+                    "name": f"{type}0",
+                    "type": f"infix-if-type:{type}",
+                    container_name: container_left,
                     "bridge-port": {
                         "bridge": "br0"
                     }
@@ -64,7 +83,7 @@ with infamy.Test() as test:
                 "interfaces": {
                     "interface": [
                     {
-                        "name": rightlink,
+                        "name": right["link"],
                         "ipv4": {
                             "address": [{
                                 "ip": "192.168.50.2",
@@ -80,8 +99,8 @@ with infamy.Test() as test:
                         }
                     },
                     {
-                        "name": "gre0",
-                        "type": "infix-if-type:gretap",
+                        "name": f"{type}0",
+                        "type": f"infix-if-type:{type}",
                         "ipv4": {
                             "address": [{
                                 "ip": "192.168.10.2",
@@ -89,16 +108,13 @@ with infamy.Test() as test:
                             }],
                             "forwarding": True
                         },
-                        "gre": {
-                            "local": "192.168.50.2",
-                            "remote": "192.168.50.1"
-                        }
+                        container_name: container_right,
                     }]
                 }
             }
         })
     _, hport = env.ltop.xlate("host", "data")
-    with test.step("Test connectivity host:data to right:gre0 at 192.168.10.2"):
+    with test.step(f"Test connectivity host:data to right:{type}0 at 192.168.10.2"):
         with infamy.IsolatedMacVlan(hport) as ns0:
             ns0.addip("192.168.10.1")
             ns0.must_reach("192.168.10.2")
