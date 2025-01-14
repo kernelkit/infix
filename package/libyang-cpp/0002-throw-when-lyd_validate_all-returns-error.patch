@@ -1,0 +1,53 @@
+From 7e015f3486bdbb54f1dcc2e2ce51102b1d623081 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Tom=C3=A1=C5=A1=20Pecka?= <tomas.pecka@cesnet.cz>
+Date: Wed, 23 Oct 2024 12:52:24 +0200
+Subject: [PATCH 2/8] throw when lyd_validate_all returns error
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Addiva Elektronik
+
+Bug: https://github.com/CESNET/libyang-cpp/issues/20
+Change-Id: I005a2f1b057978573a4046e7b4cc31d77e36fde3
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ src/DataNode.cpp    | 4 +++-
+ tests/data_node.cpp | 7 +++++++
+ 2 files changed, 10 insertions(+), 1 deletion(-)
+
+diff --git a/src/DataNode.cpp b/src/DataNode.cpp
+index 51c86c8..2ef17f2 100644
+--- a/src/DataNode.cpp
++++ b/src/DataNode.cpp
+@@ -1170,7 +1170,9 @@ void validateAll(std::optional<libyang::DataNode>& node, const std::optional<Val
+     }
+ 
+     // TODO: support the `diff` argument
+-    lyd_validate_all(node ? &node->m_node : nullptr, nullptr, opts ? utils::toValidationOptions(*opts) : 0, nullptr);
++    auto ret = lyd_validate_all(node ? &node->m_node : nullptr, nullptr, opts ? utils::toValidationOptions(*opts) : 0, nullptr);
++    throwIfError(ret, "libyang:validateAll: lyd_validate_all failed");
++
+     if (!node->m_node) {
+         node = std::nullopt;
+     }
+diff --git a/tests/data_node.cpp b/tests/data_node.cpp
+index a23e4c2..8a2610e 100644
+--- a/tests/data_node.cpp
++++ b/tests/data_node.cpp
+@@ -489,6 +489,13 @@ TEST_CASE("Data Node manipulation")
+         REQUIRE_THROWS_WITH_AS(libyang::validateAll(node, libyang::ValidationOptions::NoState), "validateAll: Node is not a unique reference", libyang::Error);
+     }
+ 
++    DOCTEST_SUBCASE("validateAll throws on validation failure")
++    {
++        ctx.parseModule(type_module, libyang::SchemaFormat::YANG);
++        auto node = std::optional{ctx.newPath("/type_module:leafWithConfigFalse", "hi")};
++        REQUIRE_THROWS_WITH_AS(libyang::validateAll(node, libyang::ValidationOptions::NoState), "libyang:validateAll: lyd_validate_all failed: LY_EVALID", libyang::ErrorWithCode);
++    }
++
+     DOCTEST_SUBCASE("unlink")
+     {
+         auto root = ctx.parseData(data2, libyang::DataFormat::JSON);
+-- 
+2.43.0
+

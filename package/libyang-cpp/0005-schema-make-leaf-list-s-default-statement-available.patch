@@ -1,0 +1,124 @@
+From 1102ecdcafbc9206f59b383769687e418557838e Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Bed=C5=99ich=20Schindler?= <bedrich.schindler@gmail.com>
+Date: Mon, 25 Nov 2024 15:54:02 +0100
+Subject: [PATCH 5/8] schema: make leaf-list's `default` statement available
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Addiva Elektronik
+
+Make leaf-list's `default` statement available so that it can be
+accessed if end-user requires reading schema nodes.
+
+`LeafList::defaultValuesStr()` returns array of canonized string default
+values.
+
+Change-Id: Idc42cd877f1fd3d717d491d09c46b59492527bff
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ include/libyang-cpp/SchemaNode.hpp |  1 +
+ src/SchemaNode.cpp                 | 17 +++++++++++++++++
+ tests/context.cpp                  |  1 +
+ tests/example_schema.hpp           |  8 ++++++++
+ tests/schema_node.cpp              |  7 +++++++
+ 5 files changed, 34 insertions(+)
+
+diff --git a/include/libyang-cpp/SchemaNode.hpp b/include/libyang-cpp/SchemaNode.hpp
+index 83afc06..8ddf9be 100644
+--- a/include/libyang-cpp/SchemaNode.hpp
++++ b/include/libyang-cpp/SchemaNode.hpp
+@@ -169,6 +169,7 @@ class LIBYANG_CPP_EXPORT LeafList : public SchemaNode {
+ public:
+     bool isMandatory() const;
+     types::Type valueType() const;
++    std::vector<std::string> defaultValuesStr() const;
+     libyang::types::constraints::ListSize maxElements() const;
+     libyang::types::constraints::ListSize minElements() const;
+     std::optional<std::string> units() const;
+diff --git a/src/SchemaNode.cpp b/src/SchemaNode.cpp
+index 9934cea..95bc09b 100644
+--- a/src/SchemaNode.cpp
++++ b/src/SchemaNode.cpp
+@@ -472,6 +472,23 @@ types::Type LeafList::valueType() const
+     return types::Type{reinterpret_cast<const lysc_node_leaflist*>(m_node)->type, typeParsed, m_ctx};
+ }
+ 
++/**
++ * @brief Retrieves the default string values for this leaf-list.
++ *
++ * @return The default values, or an empty vector if the leaf-list does not have default values.
++ *
++ * Wraps `lysc_node_leaflist::dflts`.
++ */
++std::vector<std::string> LeafList::defaultValuesStr() const
++{
++    auto dflts = reinterpret_cast<const lysc_node_leaflist*>(m_node)->dflts;
++    std::vector<std::string> res;
++    for (const auto& it : std::span(dflts, LY_ARRAY_COUNT(dflts))) {
++        res.emplace_back(lyd_value_get_canonical(m_ctx.get(), it));
++    }
++    return res;
++}
++
+ /**
+  * @brief Retrieves the units for this leaf.
+  * @return The units, or std::nullopt if no units are available.
+diff --git a/tests/context.cpp b/tests/context.cpp
+index 11019eb..902faf6 100644
+--- a/tests/context.cpp
++++ b/tests/context.cpp
+@@ -733,6 +733,7 @@ TEST_CASE("context")
+   +--rw iid-valid?                     instance-identifier
+   +--rw iid-relaxed?                   instance-identifier
+   +--rw leafListBasic*                 string
++  +--rw leafListWithDefault*           int32
+   +--rw leafListWithMinMaxElements*    int32
+   +--rw leafListWithUnits*             int32
+   +--rw listBasic* [primary-key]
+diff --git a/tests/example_schema.hpp b/tests/example_schema.hpp
+index c093f50..2861b1a 100644
+--- a/tests/example_schema.hpp
++++ b/tests/example_schema.hpp
+@@ -525,6 +525,14 @@ module type_module {
+         ordered-by user;
+     }
+ 
++    leaf-list leafListWithDefault {
++        type int32;
++        default -1;
++        default +512;
++        default 0x400;
++        default 04000;
++    }
++
+     leaf-list leafListWithMinMaxElements {
+         type int32;
+         min-elements 1;
+diff --git a/tests/schema_node.cpp b/tests/schema_node.cpp
+index a86900d..80c7407 100644
+--- a/tests/schema_node.cpp
++++ b/tests/schema_node.cpp
+@@ -200,6 +200,7 @@ TEST_CASE("SchemaNode")
+                 "/type_module:iid-valid",
+                 "/type_module:iid-relaxed",
+                 "/type_module:leafListBasic",
++                "/type_module:leafListWithDefault",
+                 "/type_module:leafListWithMinMaxElements",
+                 "/type_module:leafListWithUnits",
+                 "/type_module:listBasic",
+@@ -606,6 +607,12 @@ TEST_CASE("SchemaNode")
+         REQUIRE(!ctx->findPath("/type_module:leafListBasic").asLeafList().isMandatory());
+     }
+ 
++    DOCTEST_SUBCASE("LeafList::defaultValuesStr")
++    {
++        REQUIRE(ctx->findPath("/type_module:leafListWithDefault").asLeafList().defaultValuesStr() == std::vector<std::string>{"-1", "512", "1024", "2048"});
++        REQUIRE(ctx->findPath("/type_module:leafListBasic").asLeafList().defaultValuesStr().size() == 0);
++    }
++
+     DOCTEST_SUBCASE("LeafList::maxElements")
+     {
+         REQUIRE(ctx->findPath("/type_module:leafListWithMinMaxElements").asLeafList().maxElements() == 5);
+-- 
+2.43.0
+

@@ -1,0 +1,434 @@
+From 01f2633cef60495d5cafc4b4b1f25273b03ab3cd Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Bed=C5=99ich=20Schindler?= <bedrich.schindler@gmail.com>
+Date: Tue, 22 Oct 2024 15:11:30 +0200
+Subject: [PATCH 6/8] schema: Make choice and case statements available
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Addiva Elektronik
+
+Make choice and case statements available so that they can be accessed
+if end-user requires reading schema nodes.
+
+By design, choice and case statements do not exist in data tree directly.
+Only children of one case can be present in the data tree at one time.
+That means that choice and case children are not instantiable, thus
+`SchemaNode::immediateChildren` must be used (instead of
+`SchemaNode::childInstantibles`) if end-user wants to access choice
+and case substatements.
+
+Change-Id: Ib089672ad21dda8a0344895835d92d3432fcccb8
+Co-authored-by: Jan Kundrát <jan.kundrat@cesnet.cz>
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ include/libyang-cpp/SchemaNode.hpp | 34 +++++++++++++
+ src/SchemaNode.cpp                 | 68 ++++++++++++++++++++++++++
+ tests/context.cpp                  | 77 +++++++++++++++++++-----------
+ tests/example_schema.hpp           | 60 +++++++++++++++++++++++
+ tests/schema_node.cpp              | 72 ++++++++++++++++++++++++++++
+ 5 files changed, 284 insertions(+), 27 deletions(-)
+
+diff --git a/include/libyang-cpp/SchemaNode.hpp b/include/libyang-cpp/SchemaNode.hpp
+index 8ddf9be..0f1a4c4 100644
+--- a/include/libyang-cpp/SchemaNode.hpp
++++ b/include/libyang-cpp/SchemaNode.hpp
+@@ -22,6 +22,8 @@ class AnyDataAnyXML;
+ class ActionRpc;
+ class ActionRpcInput;
+ class ActionRpcOutput;
++class Case;
++class Choice;
+ class Container;
+ class Leaf;
+ class LeafList;
+@@ -62,6 +64,8 @@ public:
+     // drectly by the user.
+     // TODO: turn these into a templated `as<>` method.
+     AnyDataAnyXML asAnyDataAnyXML() const;
++    Case asCase() const;
++    Choice asChoice() const;
+     Container asContainer() const;
+     Leaf asLeaf() const;
+     LeafList asLeafList() const;
+@@ -129,6 +133,36 @@ private:
+     using SchemaNode::SchemaNode;
+ };
+ 
++/**
++ * @brief Class representing a schema definition of a `case` node.
++ *
++ * Wraps `lysc_node_case`.
++ */
++class LIBYANG_CPP_EXPORT Case : public SchemaNode {
++public:
++    friend SchemaNode;
++    friend Choice;
++
++private:
++    using SchemaNode::SchemaNode;
++};
++
++/**
++ * @brief Class representing a schema definition of a `choice` node.
++ *
++ * Wraps `lysc_node_choice`.
++ */
++class LIBYANG_CPP_EXPORT Choice : public SchemaNode {
++public:
++    bool isMandatory() const;
++    std::vector<Case> cases() const;
++    std::optional<Case> defaultCase() const;
++    friend SchemaNode;
++
++private:
++    using SchemaNode::SchemaNode;
++};
++
+ /**
+  * @brief Class representing a schema definition of a `container` node.
+  */
+diff --git a/src/SchemaNode.cpp b/src/SchemaNode.cpp
+index bd20402..26b5099 100644
+--- a/src/SchemaNode.cpp
++++ b/src/SchemaNode.cpp
+@@ -191,6 +191,32 @@ NodeType SchemaNode::nodeType() const
+     return utils::toNodeType(m_node->nodetype);
+ }
+ 
++/**
++ * @brief Try to cast this SchemaNode to a Case node.
++ * @throws Error If this node is not a case.
++ */
++Case SchemaNode::asCase() const
++{
++    if (nodeType() != NodeType::Case) {
++        throw Error("Schema node is not a case: " + path());
++    }
++
++    return Case{m_node, m_ctx};
++}
++
++/**
++ * @brief Try to cast this SchemaNode to a Choice node.
++ * @throws Error If this node is not a choice.
++ */
++Choice SchemaNode::asChoice() const
++{
++    if (nodeType() != NodeType::Choice) {
++        throw Error("Schema node is not a choice: " + path());
++    }
++
++    return Choice{m_node, m_ctx};
++}
++
+ /**
+  * @brief Try to cast this SchemaNode to a Container node.
+  * @throws Error If this node is not a container.
+@@ -401,6 +427,48 @@ bool AnyDataAnyXML::isMandatory() const
+     return m_node->flags & LYS_MAND_TRUE;
+ }
+ 
++/**
++ * @brief Checks whether this choice is mandatory.
++ *
++ * Wraps flag `LYS_MAND_TRUE`.
++ */
++bool Choice::isMandatory() const
++{
++    return m_node->flags & LYS_MAND_TRUE;
++}
++
++/**
++ * @brief Retrieves the list of cases for this choice.
++ *
++ * Wraps `lysc_node_choice::cases`.
++ */
++std::vector<Case> Choice::cases() const
++{
++    auto choice = reinterpret_cast<const lysc_node_choice*>(m_node);
++    auto cases = reinterpret_cast<lysc_node*>(choice->cases);
++    std::vector<Case> res;
++    lysc_node* elem;
++    LY_LIST_FOR(cases, elem)
++    {
++        res.emplace_back(Case(elem, m_ctx));
++    }
++    return res;
++}
++
++/**
++ * @brief Retrieves the default case for this choice.
++ *
++ * Wraps `lysc_node_choice::dflt`.
++ */
++std::optional<Case> Choice::defaultCase() const
++{
++    auto choice = reinterpret_cast<const lysc_node_choice*>(m_node);
++    if (!choice->dflt) {
++        return std::nullopt;
++    }
++    return Case{reinterpret_cast<lysc_node*>(choice->dflt), m_ctx};
++}
++
+ /**
+  * @brief Checks whether this container is mandatory.
+  *
+diff --git a/tests/context.cpp b/tests/context.cpp
+index 902faf6..5929b75 100644
+--- a/tests/context.cpp
++++ b/tests/context.cpp
+@@ -709,33 +709,56 @@ TEST_CASE("context")
+         auto mod = ctx_pp->parseModule(type_module, libyang::SchemaFormat::YANG);
+ 
+         REQUIRE(mod.printStr(libyang::SchemaOutputFormat::Tree) == R"(module: type_module
+-  +--rw anydataBasic?                  anydata
+-  +--rw anydataWithMandatoryChild      anydata
+-  +--rw anyxmlBasic?                   anyxml
+-  +--rw anyxmlWithMandatoryChild       anyxml
+-  +--rw leafBinary?                    binary
+-  +--rw leafBits?                      bits
+-  +--rw leafEnum?                      enumeration
+-  +--rw leafEnum2?                     enumeration
+-  +--rw leafNumber?                    int32
+-  +--rw leafRef?                       -> /custom-prefix:listAdvancedWithOneKey/lol
+-  +--rw leafRefRelaxed?                -> /custom-prefix:listAdvancedWithOneKey/lol
+-  +--rw leafString?                    string
+-  +--rw leafUnion?                     union
+-  +--rw meal?                          identityref
+-  +--ro leafWithConfigFalse?           string
+-  +--rw leafWithDefaultValue?          string
+-  +--rw leafWithDescription?           string
+-  +--rw leafWithMandatoryTrue          string
+-  x--rw leafWithStatusDeprecated?      string
+-  o--rw leafWithStatusObsolete?        string
+-  +--rw leafWithUnits?                 int32
+-  +--rw iid-valid?                     instance-identifier
+-  +--rw iid-relaxed?                   instance-identifier
+-  +--rw leafListBasic*                 string
+-  +--rw leafListWithDefault*           int32
+-  +--rw leafListWithMinMaxElements*    int32
+-  +--rw leafListWithUnits*             int32
++  +--rw anydataBasic?                   anydata
++  +--rw anydataWithMandatoryChild       anydata
++  +--rw anyxmlBasic?                    anyxml
++  +--rw anyxmlWithMandatoryChild        anyxml
++  +--rw choiceBasicContainer
++  |  +--rw (choiceBasic)?
++  |     +--:(case1)
++  |     |  +--rw l?    string
++  |     |  +--rw ll*   string
++  |     +--:(case2)
++  |        +--rw l2?   string
++  +--rw choiceWithMandatoryContainer
++  |  +--rw (choiceWithMandatory)
++  |     +--:(case3)
++  |     |  +--rw l3?   string
++  |     +--:(case4)
++  |        +--rw l4?   string
++  +--rw choiceWithDefaultContainer
++  |  +--rw (choiceWithDefault)?
++  |     +--:(case5)
++  |     |  +--rw l5?   string
++  |     +--:(case6)
++  |        +--rw l6?   string
++  +--rw implicitCaseContainer
++  |  +--rw (implicitCase)?
++  |     +--:(implicitLeaf)
++  |        +--rw implicitLeaf?   string
++  +--rw leafBinary?                     binary
++  +--rw leafBits?                       bits
++  +--rw leafEnum?                       enumeration
++  +--rw leafEnum2?                      enumeration
++  +--rw leafNumber?                     int32
++  +--rw leafRef?                        -> /custom-prefix:listAdvancedWithOneKey/lol
++  +--rw leafRefRelaxed?                 -> /custom-prefix:listAdvancedWithOneKey/lol
++  +--rw leafString?                     string
++  +--rw leafUnion?                      union
++  +--rw meal?                           identityref
++  +--ro leafWithConfigFalse?            string
++  +--rw leafWithDefaultValue?           string
++  +--rw leafWithDescription?            string
++  +--rw leafWithMandatoryTrue           string
++  x--rw leafWithStatusDeprecated?       string
++  o--rw leafWithStatusObsolete?         string
++  +--rw leafWithUnits?                  int32
++  +--rw iid-valid?                      instance-identifier
++  +--rw iid-relaxed?                    instance-identifier
++  +--rw leafListBasic*                  string
++  +--rw leafListWithDefault*            int32
++  +--rw leafListWithMinMaxElements*     int32
++  +--rw leafListWithUnits*              int32
+   +--rw listBasic* [primary-key]
+   |  +--rw primary-key    string
+   +--rw listAdvancedWithOneKey* [lol]
+diff --git a/tests/example_schema.hpp b/tests/example_schema.hpp
+index 2861b1a..ae3b4de 100644
+--- a/tests/example_schema.hpp
++++ b/tests/example_schema.hpp
+@@ -390,6 +390,66 @@ module type_module {
+         mandatory true;
+     }
+ 
++    container choiceBasicContainer {
++        choice choiceBasic {
++            case case1 {
++                leaf l {
++                    type string;
++                }
++                leaf-list ll {
++                    type string;
++                    ordered-by user;
++                }
++            }
++            case case2 {
++                leaf l2 {
++                    type string;
++                }
++            }
++        }
++    }
++
++    container choiceWithMandatoryContainer {
++        choice choiceWithMandatory {
++            mandatory true;
++            case case3 {
++                leaf l3 {
++                    type string;
++                }
++            }
++            case case4 {
++                leaf l4 {
++                    type string;
++                }
++            }
++        }
++    }
++
++    container choiceWithDefaultContainer {
++        choice choiceWithDefault {
++            default case5;
++            case case5 {
++                leaf l5 {
++                    type string;
++                }
++            }
++            case case6 {
++                leaf l6 {
++                    type string;
++                }
++            }
++        }
++    }
++
++    container implicitCaseContainer {
++        choice implicitCase {
++            leaf implicitLeaf {
++                type string;
++            }
++        }
++    }
++
++
+     leaf leafBinary {
+         type binary;
+     }
+diff --git a/tests/schema_node.cpp b/tests/schema_node.cpp
+index 80c7407..8d74bd2 100644
+--- a/tests/schema_node.cpp
++++ b/tests/schema_node.cpp
+@@ -58,6 +58,9 @@ TEST_CASE("SchemaNode")
+             ],
+             "type_module:anydataWithMandatoryChild": {"content": "test-string"},
+             "type_module:anyxmlWithMandatoryChild": {"content": "test-string"},
++            "type_module:choiceWithMandatoryContainer": {
++                "l4": "test-string"
++            },
+             "type_module:containerWithMandatoryChild": {
+                 "leafWithMandatoryTrue": "test-string"
+             },
+@@ -180,6 +183,10 @@ TEST_CASE("SchemaNode")
+                 "/type_module:anydataWithMandatoryChild",
+                 "/type_module:anyxmlBasic",
+                 "/type_module:anyxmlWithMandatoryChild",
++                "/type_module:choiceBasicContainer",
++                "/type_module:choiceWithMandatoryContainer",
++                "/type_module:choiceWithDefaultContainer",
++                "/type_module:implicitCaseContainer",
+                 "/type_module:leafBinary",
+                 "/type_module:leafBits",
+                 "/type_module:leafEnum",
+@@ -417,6 +424,71 @@ TEST_CASE("SchemaNode")
+         REQUIRE(!ctx->findPath("/type_module:anyxmlBasic").asAnyDataAnyXML().isMandatory());
+     }
+ 
++    DOCTEST_SUBCASE("Choice and Case")
++    {
++        std::string xpath;
++        bool isMandatory = false;
++        std::optional<std::string> defaultCase;
++        std::vector<std::string> caseNames;
++        std::optional<libyang::SchemaNode> root;
++
++        DOCTEST_SUBCASE("two cases with nothing fancy")
++        {
++            root = ctx->findPath("/type_module:choiceBasicContainer");
++            caseNames = {"case1", "case2"};
++        }
++
++        DOCTEST_SUBCASE("mandatory choice") {
++            root = ctx->findPath("/type_module:choiceWithMandatoryContainer");
++            isMandatory = true;
++            caseNames = {"case3", "case4"};
++        }
++
++        DOCTEST_SUBCASE("default choice") {
++            root = ctx->findPath("/type_module:choiceWithDefaultContainer");
++            defaultCase = "case5";
++            caseNames = {"case5", "case6"};
++        }
++
++        DOCTEST_SUBCASE("implicit case") {
++            root = ctx->findPath("/type_module:implicitCaseContainer");
++            caseNames = {"implicitLeaf"};
++        }
++
++        // For testing purposes, we have each choice in its own container. As choice and case are not directly instantiable,
++        // we wrap them in a container to simplify the testing process. It allows us to simply address the choice by its
++        // container and then get the choice from it. It also prevents polluting the test schema with unnecessary nodes
++        // and isolates the choice from other nodes.
++        auto container = root->asContainer();
++        auto choice = container.immediateChildren().begin()->asChoice();
++        REQUIRE(choice.isMandatory() == isMandatory);
++        REQUIRE(!!choice.defaultCase() == !!defaultCase);
++        if (defaultCase) {
++            REQUIRE(choice.defaultCase()->name() == *defaultCase);
++        }
++        std::vector<std::string> actualCaseNames;
++        for (const auto& case_ : choice.cases()) {
++            actualCaseNames.push_back(case_.name());
++        }
++        REQUIRE(actualCaseNames == caseNames);
++
++        // Also test child node access for one arbitrary choice/case combination
++        if (root->path() == "/type_module:choiceBasicContainer") {
++            REQUIRE(choice.cases().size() == 2);
++            auto case1 = choice.cases()[0];
++            auto children = case1.immediateChildren();
++            auto it = children.begin();
++            REQUIRE(it->asLeaf().name() == "l");
++            ++it;
++            REQUIRE(it->asLeafList().name() == "ll");
++
++            auto case2 = choice.cases()[1];
++            children = case2.immediateChildren();
++            it = children.begin();
++            REQUIRE(it->asLeaf().name() == "l2");
++        }
++    }
++
+     DOCTEST_SUBCASE("Container::isMandatory")
+     {
+         REQUIRE(ctx->findPath("/type_module:containerWithMandatoryChild").asContainer().isMandatory());
+-- 
+2.43.0
+

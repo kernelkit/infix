@@ -1,11 +1,16 @@
-From a7e91aac7d7669c6b82cb06a1b4e3c3e3d79275f Mon Sep 17 00:00:00 2001
+From f833cf10647b0c76386fe0850011204a321bb0d9 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Mattias=20Walstr=C3=B6m?= <lazzer@gmail.com>
 Date: Mon, 6 May 2024 14:49:32 +0200
-Subject: [PATCH 4/7] Add -z switch to sysrepoctl to install factory config
+Subject: [PATCH 19/22] Add -z switch to sysrepoctl to install factory config
  from a json file
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
 Organization: Addiva Elektronik
 
 This to be able to load the yang modules during build time instead on boot.
+
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
 ---
  src/executables/sysrepoctl.c | 20 +++++++++++++--
  src/lyd_mods.h               |  7 ++++++
@@ -84,10 +89,10 @@ index 1960bc06..a8ca5add 100644
 +
  #endif
 diff --git a/src/sysrepo.c b/src/sysrepo.c
-index 3b11c0b8..2e02de39 100644
+index 22ee9fe4..518f34e6 100644
 --- a/src/sysrepo.c
 +++ b/src/sysrepo.c
-@@ -1646,6 +1646,55 @@ sr_free_int_install_mods(sr_int_install_mod_t *new_mods, uint32_t new_mod_count)
+@@ -1621,6 +1621,55 @@ sr_free_int_install_mods(sr_int_install_mod_t *new_mods, uint32_t new_mod_count)
      free(new_mods);
  }
  
@@ -144,7 +149,7 @@ index 3b11c0b8..2e02de39 100644
  sr_install_module(sr_conn_ctx_t *conn, const char *schema_path, const char *search_dirs, const char **features)
  {
 diff --git a/src/sysrepo.h b/src/sysrepo.h
-index 8a6a70b8..41c9e52b 100644
+index 6881830d..0280244a 100644
 --- a/src/sysrepo.h
 +++ b/src/sysrepo.h
 @@ -34,7 +34,6 @@ extern "C" {
@@ -155,7 +160,7 @@ index 8a6a70b8..41c9e52b 100644
  /**
   * @defgroup log_api Logging API
   * @{
-@@ -708,6 +707,15 @@ int sr_get_module_info(sr_conn_ctx_t *conn, sr_data_t **sysrepo_data);
+@@ -717,6 +716,15 @@ int sr_get_module_info(sr_conn_ctx_t *conn, sr_data_t **sysrepo_data);
   */
  int sr_is_module_internal(const struct lys_module *ly_mod);
  

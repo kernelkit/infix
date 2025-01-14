@@ -1,0 +1,30 @@
+From 526da167043615ab9a0a8d36d4dd4a92644a0f58 Mon Sep 17 00:00:00 2001
+From: Michal Vasko <mvasko@cesnet.cz>
+Date: Fri, 10 Jan 2025 08:56:54 +0100
+Subject: [PATCH 03/22] SOVERSION bump to version 7.29.11
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Addiva Elektronik
+
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ CMakeLists.txt | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 84990130..4ecfe4d9 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -62,7 +62,7 @@ set(SYSREPO_VERSION ${SYSREPO_MAJOR_VERSION}.${SYSREPO_MINOR_VERSION}.${SYSREPO_
+ # with backward compatible change and micro version is connected with any internal change of the library.
+ set(SYSREPO_MAJOR_SOVERSION 7)
+ set(SYSREPO_MINOR_SOVERSION 29)
+-set(SYSREPO_MICRO_SOVERSION 10)
++set(SYSREPO_MICRO_SOVERSION 11)
+ set(SYSREPO_SOVERSION_FULL ${SYSREPO_MAJOR_SOVERSION}.${SYSREPO_MINOR_SOVERSION}.${SYSREPO_MICRO_SOVERSION})
+ set(SYSREPO_SOVERSION ${SYSREPO_MAJOR_SOVERSION})
+ 
+-- 
+2.43.0
+

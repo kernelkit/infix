@@ -1,0 +1,42 @@
+From 80e9659b41ea1de2e20d62f94319fe5af26adcee Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan=20Kundr=C3=A1t?= <jan.kundrat@cesnet.cz>
+Date: Wed, 18 Dec 2024 17:57:36 +0100
+Subject: [PATCH 6/6] build: a single place to define package version
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Addiva Elektronik
+
+Don't ask me how I found out that I need this :).
+
+Change-Id: I2cd7397895ed4852f852e99b97543dde76eaff8f
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ CMakeLists.txt | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 119bdd7..68ade53 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -20,7 +20,8 @@ add_custom_target(sysrepo-cpp-version-cmake
+         cmake/ProjectGitVersionRunner.cmake
+         )
+ include(cmake/ProjectGitVersion.cmake)
+-prepare_git_version(SYSREPO_CPP_VERSION "3")
++set(SYSREPO_CPP_PKG_VERSION "3")
++prepare_git_version(SYSREPO_CPP_VERSION ${SYSREPO_CPP_PKG_VERSION})
+ 
+ find_package(Doxygen)
+ option(WITH_DOCS "Create and install internal documentation (needs Doxygen)" ${DOXYGEN_FOUND})
+@@ -29,7 +30,6 @@ option(WITH_EXAMPLES "Build examples" ON)
+ find_package(PkgConfig)
+ pkg_check_modules(LIBYANG_CPP REQUIRED libyang-cpp>=3 IMPORTED_TARGET)
+ pkg_check_modules(SYSREPO REQUIRED sysrepo>=2.12.0 sysrepo<3 IMPORTED_TARGET)
+-set(SYSREPO_CPP_PKG_VERSION "3")
+ 
+ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
+ 
+-- 
+2.43.0
+

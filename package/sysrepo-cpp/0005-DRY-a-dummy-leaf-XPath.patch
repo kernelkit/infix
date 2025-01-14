@@ -1,0 +1,253 @@
+From a923f490350dc61b9f3e6000c06c1d7950a78a61 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan=20Kundr=C3=A1t?= <jan.kundrat@cesnet.cz>
+Date: Wed, 18 Dec 2024 16:12:14 +0100
+Subject: [PATCH 5/6] DRY: a dummy leaf XPath
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Addiva Elektronik
+
+Change-Id: I47fca61d27380af07b2327f3ee5b984a8a8afb66
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ tests/session.cpp | 81 ++++++++++++++++++++++++-----------------------
+ 1 file changed, 41 insertions(+), 40 deletions(-)
+
+diff --git a/tests/session.cpp b/tests/session.cpp
+index 5b384bb..f762f10 100644
+--- a/tests/session.cpp
++++ b/tests/session.cpp
+@@ -20,6 +20,7 @@ TEST_CASE("session")
+     std::optional<sysrepo::Connection> conn{std::in_place};
+     auto sess = conn->sessionStart();
+     sess.copyConfig(sysrepo::Datastore::Startup);
++    const auto leaf = "/test_module:leafInt32"s;
+ 
+     DOCTEST_SUBCASE("Session should be still valid even after the Connection class gets freed")
+     {
+@@ -29,39 +30,39 @@ TEST_CASE("session")
+ 
+     DOCTEST_SUBCASE("Session lifetime is prolonged with data from getData")
+     {
+-        sess.setItem("/test_module:leafInt32", "123");
++        sess.setItem(leaf, "123");
+         sess.applyChanges();
+-        auto data = sysrepo::Connection{}.sessionStart().getData("/test_module:leafInt32");
++        auto data = sysrepo::Connection{}.sessionStart().getData(leaf);
+         REQUIRE(data->asTerm().valueStr() == "123");
+     }
+ 
+     DOCTEST_SUBCASE("basic data manipulation")
+     {
+-        auto data = sess.getData("/test_module:leafInt32");
++        auto data = sess.getData(leaf);
+         REQUIRE(!data);
+ 
+-        sess.setItem("/test_module:leafInt32", "123");
++        sess.setItem(leaf, "123");
+         sess.applyChanges();
+-        data = sess.getData("/test_module:leafInt32");
++        data = sess.getData(leaf);
+         REQUIRE(data->asTerm().valueStr() == "123");
+-        auto node = sess.getOneNode("/test_module:leafInt32");
++        auto node = sess.getOneNode(leaf);
+         REQUIRE(node.asTerm().valueStr() == "123");
+ 
+-        sess.setItem("/test_module:leafInt32", "420");
++        sess.setItem(leaf, "420");
+         sess.applyChanges();
+-        data = sess.getData("/test_module:leafInt32");
++        data = sess.getData(leaf);
+         REQUIRE(data->asTerm().valueStr() == "420");
+ 
+-        sess.deleteItem("/test_module:leafInt32");
++        sess.deleteItem(leaf);
+         sess.applyChanges();
+-        data = sess.getData("/test_module:leafInt32");
++        data = sess.getData(leaf);
+         REQUIRE(!data);
+ 
+-        sess.setItem("/test_module:leafInt32", "123");
++        sess.setItem(leaf, "123");
+         sess.discardChanges();
+-        data = sess.getData("/test_module:leafInt32");
++        data = sess.getData(leaf);
+         REQUIRE(!data);
+-        REQUIRE_THROWS_WITH_AS(sess.getOneNode("/test_module:leafInt32"),
++        REQUIRE_THROWS_WITH_AS(sess.getOneNode(leaf),
+                 "Session::getOneNode: Couldn't get '/test_module:leafInt32': SR_ERR_NOT_FOUND",
+                 sysrepo::ErrorWithCode);
+ 
+@@ -175,7 +176,7 @@ TEST_CASE("session")
+         {
+             sess.switchDatastore(sysrepo::Datastore::Operational);
+             sess.setItem("/test_module:stateLeaf", "42");
+-            sess.setItem("/test_module:leafInt32", "1");
++            sess.setItem(leaf, "1");
+             sess.applyChanges();
+ 
+             DOCTEST_SUBCASE("Default options")
+@@ -183,7 +184,7 @@ TEST_CASE("session")
+                 auto data = sess.getData("/test_module:*");
+                 REQUIRE(data);
+                 REQUIRE(data->findPath("/test_module:stateLeaf"));
+-                REQUIRE(data->findPath("/test_module:leafInt32"));
++                REQUIRE(data->findPath(leaf));
+             }
+ 
+             DOCTEST_SUBCASE("No state data")
+@@ -191,7 +192,7 @@ TEST_CASE("session")
+                 auto data = sess.getData("/test_module:*", 0, sysrepo::GetOptions::OperNoState);
+                 REQUIRE(data);
+                 REQUIRE(!data->findPath("/test_module:stateLeaf"));
+-                REQUIRE(data->findPath("/test_module:leafInt32"));
++                REQUIRE(data->findPath(leaf));
+             }
+         }
+ 
+@@ -213,42 +214,42 @@ TEST_CASE("session")
+     DOCTEST_SUBCASE("Session::deleteOperItem")
+     {
+         // Set some arbitrary leaf.
+-        sess.setItem("/test_module:leafInt32", "123");
++        sess.setItem(leaf, "123");
+         sess.applyChanges();
+ 
+         // The leaf is accesible from the running datastore.
+-        REQUIRE(sess.getData("/test_module:leafInt32")->asTerm().valueStr() == "123");
++        REQUIRE(sess.getData(leaf)->asTerm().valueStr() == "123");
+ 
+         // The leaf is NOT accesible from the operational datastore without a subscription.
+         sess.switchDatastore(sysrepo::Datastore::Operational);
+-        REQUIRE(!sess.getData("/test_module:leafInt32"));
++        REQUIRE(!sess.getData(leaf));
+ 
+         // When we create a subscription, the leaf is accesible from the operational datastore.
+         sess.switchDatastore(sysrepo::Datastore::Running);
+         auto sub = sess.onModuleChange("test_module", [] (auto, auto, auto, auto, auto, auto) { return sysrepo::ErrorCode::Ok; });
+         sess.switchDatastore(sysrepo::Datastore::Operational);
+-        REQUIRE(sess.getData("/test_module:leafInt32")->asTerm().valueStr() == "123");
++        REQUIRE(sess.getData(leaf)->asTerm().valueStr() == "123");
+ 
+         // After using deleteItem, the leaf is no longer accesible from the operational datastore.
+-        sess.deleteItem("/test_module:leafInt32");
++        sess.deleteItem(leaf);
+         sess.applyChanges();
+-        REQUIRE(!sess.getData("/test_module:leafInt32"));
++        REQUIRE(!sess.getData(leaf));
+ 
+         // Using discardItems makes the leaf visible again (in the operational datastore).
+-        sess.discardItems("/test_module:leafInt32");
++        sess.discardItems(leaf);
+         sess.applyChanges();
+-        REQUIRE(sess.getData("/test_module:leafInt32")->asTerm().valueStr() == "123");
++        REQUIRE(sess.getData(leaf)->asTerm().valueStr() == "123");
+     }
+ 
+     DOCTEST_SUBCASE("edit batch")
+     {
+-        auto data = sess.getData("/test_module:leafInt32");
++        auto data = sess.getData(leaf);
+         REQUIRE(!data);
+ 
+-        auto batch = sess.getContext().newPath("/test_module:leafInt32", "1230");
++        auto batch = sess.getContext().newPath(leaf, "1230");
+         sess.editBatch(batch, sysrepo::DefaultOperation::Merge);
+         sess.applyChanges();
+-        data = sess.getData("/test_module:leafInt32");
++        data = sess.getData(leaf);
+         REQUIRE(data->asTerm().valueStr() == "1230");
+     }
+ 
+@@ -307,8 +308,8 @@ TEST_CASE("session")
+     DOCTEST_SUBCASE("Session::getPendingChanges")
+     {
+         REQUIRE(sess.getPendingChanges() == std::nullopt);
+-        sess.setItem("/test_module:leafInt32", "123");
+-        REQUIRE(sess.getPendingChanges().value().findPath("/test_module:leafInt32")->asTerm().valueStr() == "123");
++        sess.setItem(leaf, "123");
++        REQUIRE(sess.getPendingChanges().value().findPath(leaf)->asTerm().valueStr() == "123");
+ 
+         DOCTEST_SUBCASE("apply")
+         {
+@@ -328,7 +329,7 @@ TEST_CASE("session")
+         sess.switchDatastore(sysrepo::Datastore::FactoryDefault);
+         auto data = sess.getData("/*");
+         REQUIRE(*data->printStr(libyang::DataFormat::JSON, libyang::PrintFlags::WithSiblings) == "{\n\n}\n");
+-        REQUIRE_THROWS_AS(sess.setItem("/test_module:leafInt32", "123"), sysrepo::ErrorWithCode);
++        REQUIRE_THROWS_AS(sess.setItem(leaf, "123"), sysrepo::ErrorWithCode);
+     }
+ 
+     DOCTEST_SUBCASE("session IDs")
+@@ -391,9 +392,9 @@ TEST_CASE("session")
+ 
+     DOCTEST_SUBCASE("replace config")
+     {
+-        REQUIRE(!sess.getData("/test_module:leafInt32"));
++        REQUIRE(!sess.getData(leaf));
+         // some "reasonable data" for two modules
+-        sess.setItem("/test_module:leafInt32", "666");
++        sess.setItem(leaf, "666");
+         sess.setItem("/ietf-netconf-acm:nacm/groups/group[name='ahoj']/user-name[.='foo']", "");
+         sess.applyChanges();
+ 
+@@ -401,16 +402,16 @@ TEST_CASE("session")
+         REQUIRE(!!conf);
+ 
+         // override a single leaf
+-        REQUIRE(sess.getOneNode("/test_module:leafInt32").asTerm().valueStr() == "666");
+-        sess.setItem("/test_module:leafInt32", "123");
++        REQUIRE(sess.getOneNode(leaf).asTerm().valueStr() == "666");
++        sess.setItem(leaf, "123");
+         sess.setItem("/ietf-netconf-acm:nacm/groups/group[name='ahoj']/user-name[.='bar']", "");
+         sess.applyChanges();
+-        REQUIRE(sess.getOneNode("/test_module:leafInt32").asTerm().valueStr() == "123");
++        REQUIRE(sess.getOneNode(leaf).asTerm().valueStr() == "123");
+ 
+         DOCTEST_SUBCASE("this module empty config")
+         {
+             sess.replaceConfig(std::nullopt, "test_module");
+-            REQUIRE(!sess.getData("/test_module:leafInt32"));
++            REQUIRE(!sess.getData(leaf));
+             REQUIRE(sess.getOneNode("/ietf-netconf-acm:nacm/groups/group[name='ahoj']/user-name[.='foo']").asTerm().valueStr() == "foo");
+             REQUIRE(sess.getOneNode("/ietf-netconf-acm:nacm/groups/group[name='ahoj']/user-name[.='bar']").asTerm().valueStr() == "bar");
+         }
+@@ -418,7 +419,7 @@ TEST_CASE("session")
+         DOCTEST_SUBCASE("this module")
+         {
+             sess.replaceConfig(conf, "test_module");
+-            REQUIRE(sess.getOneNode("/test_module:leafInt32").asTerm().valueStr() == "666");
++            REQUIRE(sess.getOneNode(leaf).asTerm().valueStr() == "666");
+             REQUIRE(sess.getOneNode("/ietf-netconf-acm:nacm/groups/group[name='ahoj']/user-name[.='foo']").asTerm().valueStr() == "foo");
+             REQUIRE(sess.getOneNode("/ietf-netconf-acm:nacm/groups/group[name='ahoj']/user-name[.='bar']").asTerm().valueStr() == "bar");
+         }
+@@ -426,7 +427,7 @@ TEST_CASE("session")
+         DOCTEST_SUBCASE("other module")
+         {
+             sess.replaceConfig(std::nullopt, "ietf-netconf-acm");
+-            REQUIRE(sess.getOneNode("/test_module:leafInt32").asTerm().valueStr() == "123");
++            REQUIRE(sess.getOneNode(leaf).asTerm().valueStr() == "123");
+             REQUIRE(!sess.getData("/ietf-netconf-acm:nacm/groups/group[name='ahoj']/user-name[.='foo']"));
+             REQUIRE(!sess.getData("/ietf-netconf-acm:nacm/groups/group[name='ahoj']/user-name[.='bar']"));
+         }
+@@ -434,7 +435,7 @@ TEST_CASE("session")
+         DOCTEST_SUBCASE("entire datastore empty config")
+         {
+             sess.replaceConfig(std::nullopt);
+-            REQUIRE(!sess.getData("/test_module:leafInt32"));
++            REQUIRE(!sess.getData(leaf));
+             REQUIRE(!sess.getData("/ietf-netconf-acm:nacm/groups/group[name='ahoj']/user-name[.='foo']"));
+             REQUIRE(!sess.getData("/ietf-netconf-acm:nacm/groups/group[name='ahoj']/user-name[.='bar']"));
+         }
+@@ -442,7 +443,7 @@ TEST_CASE("session")
+         DOCTEST_SUBCASE("entire datastore")
+         {
+             sess.replaceConfig(conf);
+-            REQUIRE(sess.getOneNode("/test_module:leafInt32").asTerm().valueStr() == "666");
++            REQUIRE(sess.getOneNode(leaf).asTerm().valueStr() == "666");
+             REQUIRE(sess.getOneNode("/ietf-netconf-acm:nacm/groups/group[name='ahoj']/user-name[.='foo']").asTerm().valueStr() == "foo");
+             REQUIRE(!sess.getData("/ietf-netconf-acm:nacm/groups/group[name='ahoj']/user-name[.='bar']"));
+         }
+-- 
+2.43.0
+

@@ -1,0 +1,36 @@
+From 2137bc0d614ad0aeabc37fd0041d05bc341a9007 Mon Sep 17 00:00:00 2001
+From: Michal Vasko <mvasko@cesnet.cz>
+Date: Fri, 10 Jan 2025 08:55:38 +0100
+Subject: [PATCH 01/22] modinfo BUGFIX add NP containers to push oper data
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Addiva Elektronik
+
+... so that oper get subscriptions for the
+containers are called.
+
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ src/modinfo.c | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/src/modinfo.c b/src/modinfo.c
+index a58717f8..14d0b2ae 100644
+--- a/src/modinfo.c
++++ b/src/modinfo.c
+@@ -1459,6 +1459,11 @@ sr_module_oper_data_update(struct sr_mod_info_mod_s *mod, const char *orig_name,
+         if ((err_info = sr_module_oper_data_load(mod, conn, 0, NULL, data))) {
+             return err_info;
+         }
++
++        /* add any missing NP containers in the data */
++        if ((err_info = sr_lyd_new_implicit_module(data, mod->ly_mod, LYD_IMPLICIT_NO_DEFAULTS, NULL))) {
++            return err_info;
++        }
+     }
+ 
+     if (get_oper_opts & SR_OPER_NO_SUBS) {
+-- 
+2.43.0
+

@@ -1,0 +1,73 @@
+From 552a366990fe1fe2cdd8d155fa5cecb3ff3fbc13 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan=20Kundr=C3=A1t?= <jan.kundrat@cesnet.cz>
+Date: Wed, 4 Dec 2024 15:51:41 +0100
+Subject: [PATCH 3/6] We don't support sysrepo v3 yet
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Addiva Elektronik
+
+That version introduced some backward-incompatible changes to the way
+how operational data are treated, especially in presence of "discards"
+of this data. It's a breaking behavior, and before we release a fix,
+let's pin the version to something which still works. The latest sysrepo
+semi-release is v 2.12.0, which is unfortunately not tagged.
+
+Change-Id: I3673de9893d6e806926767a72b1ef83ee62bd610
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ .zuul.yaml     | 4 ++--
+ CMakeLists.txt | 2 +-
+ README.md      | 1 +
+ 3 files changed, 4 insertions(+), 3 deletions(-)
+
+diff --git a/.zuul.yaml b/.zuul.yaml
+index dc87c6f..c3aea22 100644
+--- a/.zuul.yaml
++++ b/.zuul.yaml
+@@ -6,7 +6,7 @@
+               - name: github/CESNET/libyang
+                 override-checkout: devel
+               - name: github/sysrepo/sysrepo
+-                override-checkout: devel
++                override-checkout: cesnet/2024-10-before-oper-changes
+               - name: github/onqtam/doctest
+                 override-checkout: v2.4.8
+               - name: github/rollbear/trompeloeil
+@@ -17,7 +17,7 @@
+               - name: github/CESNET/libyang
+                 override-checkout: devel
+               - name: github/sysrepo/sysrepo
+-                override-checkout: devel
++                override-checkout: cesnet/2024-10-before-oper-changes
+               - name: github/onqtam/doctest
+                 override-checkout: v2.4.11
+               - name: github/rollbear/trompeloeil
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 1eb625f..119bdd7 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -28,7 +28,7 @@ option(WITH_EXAMPLES "Build examples" ON)
+ 
+ find_package(PkgConfig)
+ pkg_check_modules(LIBYANG_CPP REQUIRED libyang-cpp>=3 IMPORTED_TARGET)
+-pkg_check_modules(SYSREPO REQUIRED sysrepo>=2.12.0 IMPORTED_TARGET)
++pkg_check_modules(SYSREPO REQUIRED sysrepo>=2.12.0 sysrepo<3 IMPORTED_TARGET)
+ set(SYSREPO_CPP_PKG_VERSION "3")
+ 
+ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
+diff --git a/README.md b/README.md
+index 27dc748..e14b772 100644
+--- a/README.md
++++ b/README.md
+@@ -9,6 +9,7 @@ It uses RAII for automatic memory management.
+ 
+ ## Dependencies
+ - [sysrepo](https://github.com/sysrepo/sysrepo) - the `devel` branch (even for the `master` branch of *sysrepo-cpp*)
++  - we temporarily require pre-v3 sysrepo which introduced backward-incompatible changes to operational data handling
+ - [libyang-cpp](https://github.com/CESNET/libyang-cpp) - C++ bindings for *libyang*
+ - C++20 compiler (e.g., GCC 10.x+, clang 10+)
+ - CMake 3.19+
+-- 
+2.43.0
+

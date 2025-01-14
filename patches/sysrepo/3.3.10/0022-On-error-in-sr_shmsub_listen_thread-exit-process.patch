@@ -1,7 +1,10 @@
-From be7579a3a787d7089acbda7536a21a2a9edc487d Mon Sep 17 00:00:00 2001
+From 72be8d7e245fe8cd30bd1e2b5d308aacbf0f7b07 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Fri, 23 Aug 2024 12:22:06 +0200
-Subject: [PATCH 7/7] On error in sr_shmsub_listen_thread(), exit process
+Subject: [PATCH 22/22] On error in sr_shmsub_listen_thread(), exit process
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
 Organization: Addiva Elektronik
 
 If processing callback events in, e.g., sysrepo-plugind, make sure to
@@ -9,23 +12,16 @@ log the error and exit(1) the entire process so the system can decide
 to handle the problem.  For example, restart all dependent services.
 
 Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
 ---
- src/shm_sub.c | 3 +++
- 1 file changed, 3 insertions(+)
+ src/shm_sub.c | 2 ++
+ 1 file changed, 2 insertions(+)
 
 diff --git a/src/shm_sub.c b/src/shm_sub.c
-index 4c59cbbf..3d703cac 100644
+index 588cce09..07d8960f 100644
 --- a/src/shm_sub.c
 +++ b/src/shm_sub.c
-@@ -4825,6 +4825,7 @@ sr_shmsub_listen_thread(void *arg)
-              * another event is generated, our event pipe will not get notified */
-             continue;
-         } else if (ret) {
-+            SR_LOG_WRN("failed sr_subscription_process_events(), ret:%d", ret);
-             goto error;
-         }
- 
-@@ -4865,5 +4866,7 @@ error:
+@@ -4987,5 +4987,7 @@ error:
      /* free our own resources */
      ATOMIC_STORE_RELAXED(subscr->thread_running, 0);
      pthread_detach(pthread_self());

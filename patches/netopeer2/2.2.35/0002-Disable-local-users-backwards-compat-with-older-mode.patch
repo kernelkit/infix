@@ -1,4 +1,4 @@
-From 26e36c7db9ebf11bf057a53e0c16238bda14792c Mon Sep 17 00:00:00 2001
+From d2e4e60838761e2bdd02d651b8e0bea47cc2dcb5 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Mattias=20Walstr=C3=B6m?= <lazzer@gmail.com>
 Date: Tue, 2 Jul 2024 14:56:15 +0200
 Subject: [PATCH 2/3] Disable local users (backwards compat with older model)
@@ -32,10 +32,10 @@ index 25e531b..13234e1 100644
  "ietf-tls-server@2023-12-28.yang -e server-ident-x509-cert -e client-auth-supported -e client-auth-x509-cert"
  "ietf-netconf-server@2023-12-28.yang -e ssh-listen -e tls-listen -e ssh-call-home -e tls-call-home -e central-netconf-server-supported"
 diff --git a/scripts/merge_config.sh b/scripts/merge_config.sh
-index 4b476d6..e588369 100755
+index eddada7..61af617 100755
 --- a/scripts/merge_config.sh
 +++ b/scripts/merge_config.sh
-@@ -81,9 +81,6 @@ CONFIG="<netconf-server xmlns=\"urn:ietf:params:xml:ns:yang:ietf-netconf-server\
+@@ -89,9 +89,6 @@ CONFIG="<netconf-server xmlns=\"urn:ietf:params:xml:ns:yang:ietf-netconf-server\
                                  </public-key>
                              </host-key>
                          </server-identity>

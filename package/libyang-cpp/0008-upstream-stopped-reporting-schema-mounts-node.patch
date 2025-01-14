@@ -1,0 +1,46 @@
+From 39c7530caa510144c17521278b721ba1e6d8ff40 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Tom=C3=A1=C5=A1=20Pecka?= <tomas.pecka@cesnet.cz>
+Date: Thu, 9 Jan 2025 15:31:37 +0100
+Subject: [PATCH 8/8] upstream stopped reporting schema-mounts node
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Addiva Elektronik
+
+Change-Id: I940769d38d56fcfda3e1408c92331fdb00c161e9
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ CMakeLists.txt    | 2 +-
+ tests/context.cpp | 3 +--
+ 2 files changed, 2 insertions(+), 3 deletions(-)
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 3d86809..732f52b 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -28,7 +28,7 @@ option(WITH_DOCS "Create and install internal documentation (needs Doxygen)" ${D
+ option(BUILD_SHARED_LIBS "By default, shared libs are enabled. Turn off for a static build." ON)
+ 
+ find_package(PkgConfig REQUIRED)
+-pkg_check_modules(LIBYANG REQUIRED libyang>=3.4.2 IMPORTED_TARGET)
++pkg_check_modules(LIBYANG REQUIRED libyang>=3.7.8 IMPORTED_TARGET)
+ set(LIBYANG_CPP_PKG_VERSION "3")
+ 
+ # FIXME from gcc 14.1 on we should be able to use the calendar/time from libstdc++ and thus remove the date dependency
+diff --git a/tests/context.cpp b/tests/context.cpp
+index 5929b75..9d38fea 100644
+--- a/tests/context.cpp
++++ b/tests/context.cpp
+@@ -509,8 +509,7 @@ TEST_CASE("context")
+         "error-message": "hi"
+       }
+     ]
+-  },
+-  "ietf-yang-schema-mount:schema-mounts": {}
++  }
+ }
+ )");
+         }
+-- 
+2.43.0
+

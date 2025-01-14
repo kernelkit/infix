@@ -1,0 +1,35 @@
+From e1b17386cf61048d2fe27fffb3b763981a225f52 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Bed=C5=99ich=20Schindler?= <bedrich.schindler@gmail.com>
+Date: Wed, 27 Nov 2024 09:47:47 +0100
+Subject: [PATCH 4/8] schema: improve `List::keys()` not to use `std::move`
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Addiva Elektronik
+
+`List::keys()` used `std::move` while iterating over array of leafs.
+This was solved without using `std::move`.
+
+Change-Id: I8cbf8780ecd8848e46c1de5d4123a08624536bba
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ src/SchemaNode.cpp | 3 +--
+ 1 file changed, 1 insertion(+), 2 deletions(-)
+
+diff --git a/src/SchemaNode.cpp b/src/SchemaNode.cpp
+index 9934cea..20e2aff 100644
+--- a/src/SchemaNode.cpp
++++ b/src/SchemaNode.cpp
+@@ -593,8 +593,7 @@ std::vector<Leaf> List::keys() const
+     LY_LIST_FOR(list->child, elem)
+     {
+         if (lysc_is_key(elem)) {
+-            Leaf leaf(elem, m_ctx);
+-            res.emplace_back(std::move(leaf));
++            res.emplace_back(Leaf(elem, m_ctx));
+         }
+     }
+ 
+-- 
+2.43.0
+

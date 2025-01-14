@@ -1,20 +1,24 @@
-From e8daa7e3e6d24e66e1a74b00237af4c32438cb92 Mon Sep 17 00:00:00 2001
+From 401c5b8ccce07b84e3b364283a8c789908f62f01 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Tue, 28 Mar 2023 10:37:53 +0200
-Subject: [PATCH 1/7] sysrepo-plugind: add support for running in foreground
+Subject: [PATCH 16/22] sysrepo-plugind: add support for running in foreground
  with syslog
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
 Organization: Addiva Elektronik
 
 Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
 ---
  src/executables/sysrepo-plugind.c | 10 +++++++++-
  1 file changed, 9 insertions(+), 1 deletion(-)
 
 diff --git a/src/executables/sysrepo-plugind.c b/src/executables/sysrepo-plugind.c
-index a6a817cc..5baebec3 100644
+index 3b66cfa6..c531ca60 100644
 --- a/src/executables/sysrepo-plugind.c
 +++ b/src/executables/sysrepo-plugind.c
-@@ -98,6 +98,7 @@ help_print(void)
+@@ -100,6 +100,7 @@ help_print(void)
              "                       Change verbosity to a level (none, error, warning, info, debug) or\n"
              "                       number (0, 1, 2, 3, 4).\n"
              "  -d, --debug          Debug mode - is not daemonized and logs to stderr instead of syslog.\n"
@@ -22,7 +26,7 @@ index a6a817cc..5baebec3 100644
              "  -P, --plugin-install <path>\n"
              "                       Install a sysrepo-plugind plugin. The plugin is simply copied\n"
              "                       to the designated plugin directory.\n"
-@@ -201,6 +202,8 @@ daemon_init(int debug, sr_log_level_t log_level)
+@@ -214,6 +215,8 @@ daemon_init(int debug, sr_log_level_t log_level)
  
      if (debug) {
          handle_signals();
@@ -31,7 +35,7 @@ index a6a817cc..5baebec3 100644
          sr_log_stderr(log_level);
          return;
      }
-@@ -241,6 +244,7 @@ daemon_init(int debug, sr_log_level_t log_level)
+@@ -254,6 +257,7 @@ daemon_init(int debug, sr_log_level_t log_level)
          close(fd);
      }
  
@@ -39,7 +43,7 @@ index a6a817cc..5baebec3 100644
      /* set verbosity */
      sr_log_syslog("sysrepo-plugind", log_level);
  }
-@@ -466,6 +470,7 @@ main(int argc, char **argv)
+@@ -479,6 +483,7 @@ main(int argc, char **argv)
          {"version",           no_argument,       NULL, 'V'},
          {"verbosity",         required_argument, NULL, 'v'},
          {"debug",             no_argument,       NULL, 'd'},
@@ -47,7 +51,7 @@ index a6a817cc..5baebec3 100644
          {"plugin-install",    required_argument, NULL, 'P'},
          {"pid-file",          required_argument, NULL, 'p'},
          {"fatal-plugin-fail", no_argument,       NULL, 'f'},
-@@ -474,7 +479,7 @@ main(int argc, char **argv)
+@@ -487,7 +492,7 @@ main(int argc, char **argv)
  
      /* process options */
      opterr = 0;
@@ -56,7 +60,7 @@ index a6a817cc..5baebec3 100644
          switch (opt) {
          case 'h':
              version_print();
-@@ -506,6 +511,9 @@ main(int argc, char **argv)
+@@ -519,6 +524,9 @@ main(int argc, char **argv)
          case 'd':
              debug = 1;
              break;

@@ -1,0 +1,35 @@
+From a73ffe1a5bbab51a67cf56dd2864c71a29c6685b Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan=20Kundr=C3=A1t?= <jan.kundrat@cesnet.cz>
+Date: Thu, 21 Nov 2024 11:18:25 +0100
+Subject: [PATCH 2/6] Fix error message when sr_session_start fails
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Addiva Elektronik
+
+Thanks to Jason Patterson for sending a bugreport; its investigation led
+to discovering this bug.
+
+See-also: https://github.com/CESNET/rousette/issues/15
+Change-Id: I082987d60380f860e08f26b436d0f9db4a231bec
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ src/Connection.cpp | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/Connection.cpp b/src/Connection.cpp
+index de65d64..716fd1a 100644
+--- a/src/Connection.cpp
++++ b/src/Connection.cpp
+@@ -53,7 +53,7 @@ Session Connection::sessionStart(sysrepo::Datastore datastore)
+     sr_session_ctx_t* sess;
+     auto res = sr_session_start(ctx.get(), toDatastore(datastore), &sess);
+ 
+-    throwIfError(res, "Couldn't connect to sysrepo");
++    throwIfError(res, "Couldn't start sysrepo session");
+     return Session{sess, ctx};
+ }
+ 
+-- 
+2.43.0
+

@@ -1,0 +1,250 @@
+From e0f1e2480a3f69e291deed06a2626ed9b4df1662 Mon Sep 17 00:00:00 2001
+From: IrfanMohammad <irfan.haslanded@gmail.com>
+Date: Mon, 13 Jan 2025 13:46:28 +0000
+Subject: [PATCH 09/22] modinfo UPDATE sess push oper data module cache
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Addiva Elektronik
+
+Maintain a list of modules whose push oper data were modified
+by the session.
+
+Acquiring the global ext_lock is significantly more expensive.
+
+Previously this was implemented for connections in
+3b0165d656709b5f0cd3e8debc2e55c76c73663a
+
+But in sysrepo v3.x, oper push data is tied to the session and the logic
+needs to be re-introduced.
+
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ src/common_types.h |  7 +++-
+ src/modinfo.c      | 93 ++++++++++++++++++++++++++--------------------
+ src/sysrepo.c      | 14 ++++++-
+ 3 files changed, 71 insertions(+), 43 deletions(-)
+
+diff --git a/src/common_types.h b/src/common_types.h
+index 915d9196..3ce27ad4 100644
+--- a/src/common_types.h
++++ b/src/common_types.h
+@@ -180,7 +180,12 @@ struct sr_session_ctx_s {
+     char *user;                     /**< Session (system) user. */
+     char *nacm_user;                /**< Optional NACM user. If set, NACM is applied. */
+     sr_error_info_t *err_info;      /**< Session error information. */
+-    int push_oper_data;             /**< Whether the session has stored any push operational data. */
++
++    struct sr_oper_push_cache_s {
++        char *name;                 /**< Module name whose push oper data were ever modified by this session. */
++        int has_data;               /**< Flag if there are any actual data currently. */
++    } *oper_push_mods;
++    uint32_t oper_push_mod_count;   /**< Count of modules with modified push oper data by this session. */
+ 
+     char *orig_name;                /**< Originator name used for all events sent on this session. */
+     void *orig_data;                /**< Originator data used for all events sent on this session. */
+diff --git a/src/modinfo.c b/src/modinfo.c
+index 7414121e..d5c27672 100644
+--- a/src/modinfo.c
++++ b/src/modinfo.c
+@@ -322,42 +322,26 @@ sr_error_info_t *
+ sr_modinfo_collect_oper_sess(sr_session_ctx_t *sess, const struct lys_module *ly_mod, struct sr_mod_info_s *mod_info)
+ {
+     sr_error_info_t *err_info = NULL;
+-    sr_mod_shm_t *mod_shm;
+-    sr_mod_t *shm_mod;
+-    sr_mod_oper_push_t *oper_push;
+     const struct lys_module *ly_mod2;
+-    uint32_t i, j;
+-
+-    mod_shm = SR_CONN_MOD_SHM(sess->conn);
+-
+-    /* EXT READ LOCK */
+-    if ((err_info = sr_shmext_conn_remap_lock(sess->conn, SR_LOCK_READ, 1, __func__))) {
+-        return err_info;
+-    }
+-
+-    /* go through all the SHM modules */
+-    for (i = 0; i < mod_shm->mod_count; ++i) {
+-        shm_mod = SR_SHM_MOD_IDX(mod_shm, i);
++    uint32_t i;
+ 
+-        if (ly_mod && strcmp(ly_mod->name, ((char *)mod_shm) + shm_mod->name)) {
++    /* add only the cached modules */
++    for (i = 0; i < sess->oper_push_mod_count; ++i) {
++        if (ly_mod && strcmp(ly_mod->name, sess->oper_push_mods[i].name)) {
+             continue;
+         }
+ 
+-        /* go through the sessions with oper data */
+-        for (j = 0; j < shm_mod->oper_push_data_count; ++j) {
+-            oper_push = &((sr_mod_oper_push_t *)(sess->conn->ext_shm.addr + shm_mod->oper_push_data))[j];
+-            if ((oper_push->sid == sess->sid) && oper_push->has_data) {
+-                break;
+-            }
++        if (!sess->oper_push_mods[i].has_data) {
++            continue;
+         }
+ 
+-        if (j < shm_mod->oper_push_data_count) {
+-            /* remember the module */
+-            ly_mod2 = ly_ctx_get_module_implemented(sess->conn->ly_ctx, ((char *)mod_shm) + shm_mod->name);
+-            SR_CHECK_INT_GOTO(!ly_mod2, err_info, cleanup_unlock);
+-            if ((err_info = sr_modinfo_add(ly_mod2, NULL, 0, 0, mod_info))) {
+-                goto cleanup_unlock;
+-            }
++        ly_mod2 = ly_ctx_get_module_implemented(sess->conn->ly_ctx, sess->oper_push_mods[i].name);
++        if (!ly_mod2) {
++            /* could have been removed */
++            continue;
++        }
++        if ((err_info = sr_modinfo_add(ly_mod2, NULL, 0, 0, mod_info))) {
++            return err_info;
+         }
+ 
+         if (ly_mod) {
+@@ -365,11 +349,7 @@ sr_modinfo_collect_oper_sess(sr_session_ctx_t *sess, const struct lys_module *ly
+         }
+     }
+ 
+-cleanup_unlock:
+-    /* EXT READ UNLOCK */
+-    sr_shmext_conn_remap_unlock(sess->conn, SR_LOCK_READ, 1, __func__);
+-
+-    return err_info;
++    return NULL;
+ }
+ 
+ sr_error_info_t *
+@@ -2664,7 +2644,7 @@ sr_modinfo_module_data_load(struct sr_mod_info_s *mod_info, struct sr_mod_info_m
+     struct lyd_node *mod_data = NULL;
+     const char **xpaths;
+     uint32_t xpath_count;
+-    int modified, has_data;
++    int modified, has_data = 0;
+     char *orig_name = NULL;
+     void *orig_data = NULL;
+ 
+@@ -2674,8 +2654,8 @@ sr_modinfo_module_data_load(struct sr_mod_info_s *mod_info, struct sr_mod_info_m
+     if ((mod_info->ds == SR_DS_OPERATIONAL) && (mod_info->ds2 == SR_DS_OPERATIONAL)) {
+         assert(sess);
+ 
+-        /* check whether this session even has any push oper data for this module */
+-        if ((err_info = sr_shmext_oper_push_get(conn, mod->shm_mod, mod->ly_mod->name, sess->sid, NULL, &has_data,
++        /* check whether this session even has any push oper data and next push data for this module */
++        if (sess->oper_push_mod_count && (err_info = sr_shmext_oper_push_get(conn, mod->shm_mod, mod->ly_mod->name, sess->sid, NULL, &has_data,
+                 SR_LOCK_READ))) {
+             return err_info;
+         }
+@@ -2735,7 +2715,7 @@ sr_modinfo_module_data_load(struct sr_mod_info_s *mod_info, struct sr_mod_info_m
+         /* no cached data or unusable */
+ 
+         if ((mod_info->ds == SR_DS_OPERATIONAL) && (mod_info->ds2 == SR_DS_RUNNING)) {
+-            /* we need the whole runnign DS to avoid not getting parents of oper pull subscriptions and so considering
++            /* we need the whole running DS to avoid not getting parents of oper pull subscriptions and so considering
+              * them incorrectly as non-existent */
+             xpaths = NULL;
+             xpath_count = 0;
+@@ -3839,6 +3819,35 @@ cleanup:
+     return err_info;
+ }
+ 
++static
++sr_error_info_t *
++sr_modinfo_push_oper_mod_update_sess(sr_session_ctx_t *sess, const char *mod_name, int has_data)
++{
++    sr_error_info_t *err_info = NULL;
++    uint32_t i;
++    void *mem;
++
++    for (i = 0; i < sess->oper_push_mod_count; ++i) {
++        if (!strcmp(sess->oper_push_mods[i].name, mod_name)) {
++            /* already added, update has_data */
++            sess->oper_push_mods[i].has_data = has_data;
++            return NULL;
++        }
++    }
++
++    /* add new module */
++    mem = realloc(sess->oper_push_mods, (i + 1) * sizeof *(sess->oper_push_mods));
++    SR_CHECK_MEM_GOTO(!mem, err_info, cleanup);
++    sess->oper_push_mods = mem;
++
++    sess->oper_push_mods[i].name = strdup(mod_name);
++    SR_CHECK_MEM_GOTO(!sess->oper_push_mods[i].name, err_info, cleanup);
++    sess->oper_push_mods[i].has_data = has_data;
++    ++sess->oper_push_mod_count;
++cleanup:
++    return err_info;
++}
++
+ sr_error_info_t *
+ sr_modinfo_data_store(struct sr_mod_info_s *mod_info, sr_session_ctx_t *session, int shmmod_session_del)
+ {
+@@ -3911,12 +3920,14 @@ sr_modinfo_data_store(struct sr_mod_info_s *mod_info, sr_session_ctx_t *session,
+                 } else {
+                     /* stored oper data, update info in mod/ext SHM */
+                     if ((err_info = sr_shmext_oper_push_update(mod_info->conn, mod->shm_mod, mod->ly_mod->name,
+-                            sid, 0, mod_data ? 1 : 0, SR_LOCK_WRITE))) {
++                            sid, 0, !!mod_data, SR_LOCK_WRITE))) {
+                         goto cleanup;
+                     }
+ 
+-                    /* remember to discard the push oper data on session stop */
+-                    session->push_oper_data = 1;
++                    /* cache the modified module in the session */
++                    if ((err_info = sr_modinfo_push_oper_mod_update_sess(session, mod->ly_mod->name, !!mod_data))) {
++                        goto cleanup;
++                    }
+                 }
+             }
+         }
+diff --git a/src/sysrepo.c b/src/sysrepo.c
+index 614b5454..797de6aa 100644
+--- a/src/sysrepo.c
++++ b/src/sysrepo.c
+@@ -713,6 +713,7 @@ _sr_session_stop(sr_session_ctx_t *session)
+ {
+     sr_error_info_t *err_info = NULL, *tmp_err;
+     sr_datastore_t ds;
++    uint32_t i;
+ 
+     /* subscriptions need to be freed before, with a WRITE lock */
+     assert(!session->subscription_count && !session->subscriptions);
+@@ -721,7 +722,7 @@ _sr_session_stop(sr_session_ctx_t *session)
+     tmp_err = sr_session_notif_buf_stop(session);
+     sr_errinfo_merge(&err_info, tmp_err);
+ 
+-    if (session->push_oper_data) {
++    if (session->oper_push_mod_count) {
+         /* free any stored operational data and the SHM ext push oper data entries */
+         _sr_discard_oper_changes(session, NULL, 1, 0);
+     }
+@@ -755,6 +756,13 @@ _sr_session_stop(sr_session_ctx_t *session)
+         sr_release_data(session->dt[ds].edit);
+         lyd_free_all(session->dt[ds].diff);
+     }
++
++    /* free any push oper module names */
++    for (i = 0; i < session->oper_push_mod_count; ++i) {
++        free(session->oper_push_mods[i].name);
++    }
++    free(session->oper_push_mods);
++
+     sr_rwlock_destroy(&session->notif_buf.lock);
+     free(session);
+ 
+@@ -4708,6 +4716,10 @@ sr_get_oper_changes(sr_session_ctx_t *session, const char *module_name, sr_data_
+ 
+     *data = NULL;
+ 
++    if (!session->oper_push_mod_count) {
++        return sr_api_ret(session, err_info);
++    }
++
+     SR_MODINFO_INIT(mod_info, conn, SR_DS_OPERATIONAL, SR_DS_OPERATIONAL);
+ 
+     /* CONTEXT LOCK */
+-- 
+2.43.0
+
