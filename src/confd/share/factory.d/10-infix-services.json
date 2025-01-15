@@ -15,7 +15,7 @@
 	    },
 	    {
 		"name": "ipv6",
-		"address": "::1",
+		"address": "::",
 		"port": 22
 	    }
 	],
