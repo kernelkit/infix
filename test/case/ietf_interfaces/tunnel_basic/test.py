@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-Basic GRE connectivity test
+Basic tunnel connectivity test
 
-Test setting up IP GRE tunnels using IPv4 and IPv6,
+Test setting up {type} tunnels using IPv4 and IPv6,
 and ends with a connectivity test.
 """
 
@@ -21,8 +21,41 @@ with infamy.Test() as test:
         left = env.attach("left", "mgmt")
         right = env.attach("right", "mgmt")
 
-
     with test.step("Configure DUTs"):
+        container_left4 =  {
+            "local": "192.168.50.1",
+            "remote": "192.168.50.2"
+        }
+        container_left6 = {
+            "local": "2001:db8:3c4d:50::1",
+            "remote": "2001:db8:3c4d:50::2",
+        }
+        container_right4 =  {
+            "local": "192.168.50.2",
+            "remote": "192.168.50.1"
+        }
+        container_right6 = {
+            "local": "2001:db8:3c4d:50::2",
+            "remote": "2001:db8:3c4d:50::1",
+        }
+        if type == "gretap" or type == "gre":
+            container_name = "gre"
+        if type == "vxlan":
+            container_name = "vxlan"
+            container_left4.update({
+                "vni": 4
+            })
+            container_left6.update({
+                "vni": 6
+            })
+            container_right4.update({
+                "vni": 4
+            })
+            container_right6.update({
+                "vni": 6
+            })
+
+
         left.put_config_dicts({ "ietf-interfaces": {
             "interfaces": {
                 "interface": [
@@ -61,7 +94,7 @@ with infamy.Test() as test:
                     }
                 },
                 {
-                    "name": "gre0",
+                    "name": f"{type}4",
                     "type": f"infix-if-type:{type}",
                     "ipv4": {
                         "address": [{
@@ -70,14 +103,10 @@ with infamy.Test() as test:
                         }],
                         "forwarding": True
                     },
-                    "gre": {
-                        "local": "192.168.50.1",
-                        "remote": "192.168.50.2"
-                    }
-
+                    container_name: container_left4
                 },
                 {
-                    "name": "gre6",
+                    "name": f"{type}6",
                     "type": f"infix-if-type:{type}",
                     "ipv6": {
                         "address": [{
@@ -85,10 +114,7 @@ with infamy.Test() as test:
                             "prefix-length": 64
                         }]
                     },
-                    "gre": {
-                        "local": "2001:db8:3c4d:50::1",
-                        "remote": "2001:db8:3c4d:50::2",
-                    }
+                    container_name: container_left6
                 }]
             }
         }
@@ -115,7 +141,7 @@ with infamy.Test() as test:
                         }
                     },
                     {
-                        "name": "gre1",
+                        "name": f"{type}4",
                         "type": f"infix-if-type:{type}",
                         "ipv4": {
                             "address": [{
@@ -124,13 +150,10 @@ with infamy.Test() as test:
                             }],
                             "forwarding": True
                         },
-                        "gre": {
-                            "local": "192.168.50.2",
-                            "remote": "192.168.50.1"
-                        }
+                        container_name: container_right4
                     },
                     {
-                        "name": "gre6",
+                        "name": f"{type}",
                         "type": f"infix-if-type:{type}",
                         "ipv6": {
                             "address": [{
@@ -138,10 +161,7 @@ with infamy.Test() as test:
                                 "prefix-length": 64
                             }]
                         },
-                        "gre": {
-                            "local": "2001:db8:3c4d:50::2",
-                            "remote": "2001:db8:3c4d:50::1",
-                        }
+                        container_name: container_right6
                     }]
                 }
             },
@@ -175,7 +195,7 @@ with infamy.Test() as test:
             }
         })
     _, hport = env.ltop.xlate("host", "data")
-    with test.step(f"Verify connectivity host:data to 10.0.0.2"):
+    with test.step("Verify connectivity host:data to 10.0.0.2"):
         with infamy.IsolatedMacVlan(hport) as ns0:
             ns0.addip("192.168.10.2")
             ns0.addroute("192.168.30.0/24", "192.168.10.1")

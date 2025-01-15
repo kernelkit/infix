@@ -1,0 +1,54 @@
+submodule infix-if-vxlan {
+  yang-version 1.1;
+  belongs-to infix-interfaces {
+    prefix infix-if;
+  }
+
+  import ietf-interfaces {
+    prefix if;
+  }
+
+  import ietf-inet-types {
+    prefix inet-types;
+  }
+
+  import infix-if-type {
+    prefix infixift;
+  }
+
+  organization "KernelKit";
+  contact      "kernelkit@googlegroups.com";
+  description  "VXLAN tunnel extension for ietf-interfaces";
+
+  revision 2025-01-13 {
+   description "Initial revision.";
+    reference "internal";
+  }
+
+  typedef vni {
+    type uint32 {
+      range "0..16777215";
+    }
+  }
+  augment "/if:interfaces/if:interface" {
+    when "derived-from-or-self(if:type, 'infixift:vxlan')" {
+      description "Only shown for if:type infixift:vxlan";
+    }
+    description "Augments the interface model with VXLAN tunnels.";
+    container vxlan {
+      uses local-remote;
+      leaf remote-port {
+        type inet-types:port-number;
+        default 4789;
+        description
+          "VXLAN destination UDP port. Valid range: 0..65535. Default is 4789 (IANA-assigned VXLAN UDP port).";
+      }
+      leaf vni {
+        type vni;
+        mandatory true;
+        description
+          "VXLAN Network Identifier (VNI), valid values are 0 to 16777215.";
+      }
+    }
+  }
+}

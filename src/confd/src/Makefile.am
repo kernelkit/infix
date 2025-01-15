@@ -34,7 +34,8 @@ confd_plugin_la_SOURCES =			\
 	  infix-if-bridge-port.c		\
 	  infix-if-veth.c			\
 	  infix-if-vlan.c			\
-          infix-if-gre.c			\
+	  infix-if-gre.c			\
+	  infix-if-vxlan.c			\
 	ietf-keystore.c				\
 	ietf-system.c				\
 	ietf-syslog.c				\

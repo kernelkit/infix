@@ -67,14 +67,41 @@ class TestStepVisitor(ast.NodeVisitor):
             self.description=self.description.strip()
         self.generic_visit(node)
 
+    def _rebuild_fstring(self, node: ast.JoinedStr) -> str:
+        """
+        Rebuild an f-string (JoinedStr) by concatenating literal pieces and placeholders.
+        """
+        parts = []
+        for value in node.values:
+            if isinstance(value, ast.Constant):
+                parts.append(value.value)
+            elif isinstance(value, ast.FormattedValue):
+                expression = ast.unparse(value.value) if hasattr(ast, "unparse") else ast.dump(value.value)
+                parts.append(f"{{{expression}}}")
+        return "".join(parts)
+
     # Check for test.step() for the actual test steps
     def visit_Call(self, node):
         """Extract test.step from test"""
         if isinstance(node.func, ast.Attribute) and node.func.attr == 'step':
+            arg = node.args[0]
             if isinstance(node.func.value, ast.Name) and node.func.value.id == 'test':
-                if node.args and isinstance(node.args[0], ast.Constant):
-                    self.test_steps.append(node.args[0].value)
+                if node.args:
+                    if isinstance(arg, ast.Constant):
+                        self.test_steps.append(node.args[0].value)
+                    elif isinstance(arg, ast.JoinedStr):
+                        fstring_value = self._rebuild_fstring(arg)
+                        self.test_steps.append(fstring_value)
         self.generic_visit(node)  # Continue visiting other nodes
+
+def replace_in_steps(steps, variables):
+    result = []
+    for step in steps:
+        new_step = step
+        for k, v in variables.items():
+            new_step = new_step.replace("{" + k + "}", v)
+        result.append(new_step)
+    return result
 
 class TestCase:
     """All test specifcation resources for a test case"""
@@ -103,7 +130,7 @@ class TestCase:
                 f.write(mod_content)
 
 
-    def generate_specification(self, name, case_path, spec_path):
+    def generate_specification(self, name, case_path, spec_path, variables):
         """Generate a ASCIIDOC specification for the test case"""
         with open(case_path, 'r') as file:
             script_content = file.read()
@@ -113,6 +140,12 @@ class TestCase:
         visitor.visit(parsed_script)
         description=visitor.description if visitor.description != "" else "Undefined"
         test_steps=visitor.test_steps
+        if variables is not None:
+            for k,v in variables.items():
+                if "{" + k + "}" in description:
+                    description = description.replace("{" + k + "}", v)
+
+                test_steps=replace_in_steps(test_steps, variables)
         if name is None:
             name = visitor.name
         self.generate_topology()
@@ -135,22 +168,24 @@ class TestCase:
             spec.write("endif::topdoc[]\n")
             spec.write("==== Test sequence\n")
             spec.writelines([f". {step}\n" for step in test_steps])
-            spec.write("\n\n<<<\n\n") # need empty lines to pagebreak
+            spec.write("\n\n<<<\n\n")  # need empty lines to pagebreak
+
 
 def parse_suite(directory, root, suitefile):
+    """Parse 9pm .yaml suite file"""
     test_spec = None
     readme = None
-    num_tests = 0
+
     with open(suitefile, "r") as f:
         data = yaml.safe_load(f)
-
     for entry in data:
         if entry.get("suite"):
             path = os.path.dirname(entry["suite"])
             parse_suite(f"{directory}/{path}", root, f"{directory}/{entry['suite']}")
         elif entry.get("case"):
+            variables=None
             if not entry.get("infamy"):
-                test_title = None # Set from the docstring in the test case
+                test_title = None  # Set from the docstring in the test case
             else:
                 specification = entry["infamy"].get("specification", True);
                 if not specification:
@@ -160,39 +195,48 @@ def parse_suite(directory, root, suitefile):
             if readme is None:
                 readme = open(f"{directory}/{path}/Readme.adoc.tmp", "w")
             test_case_id = entry["name"]
+
+            if "opts" in entry:
+                variables = dict((k[2:], v) for k, v in zip(entry["opts"][::2], entry["opts"][1::2]))
+
             test_file = f"{directory}/{entry['case']}"
             test_spec = f"{directory}/{path}/{test_case_id}.adoc"
             test_case = TestCase(f"{directory}/{path}", root)
-            test_case.generate_specification(test_title, test_file, test_spec)
+            test_case.generate_specification(test_title, test_file, test_spec, variables)
             readme.write(f"include::{path}{test_case_id}.adoc[]\n\n")
             if path != "":
                 readme.close()
+                os.unlink(f"{directory}/{path}/Readme.adoc.tmp")
                 readme = None
                 os.unlink(f"{directory}/{path}/Readme.adoc")
                 os.symlink(f"{test_case_id}.adoc", f"{directory}/{path}/Readme.adoc")
-    if not readme is None:
+    if readme is not None:
         readme.close()
         os.rename(f"{directory}/Readme.adoc.tmp", f"{directory}/Readme.adoc")
+
 
 parser = argparse.ArgumentParser(description="Generate a test specification for a subtree.")
 parser.add_argument("-s", "--suite", required=True, help="The suite file to parse")
 parser.add_argument("-r", "--root-dir", required=True, help="Path that all paths should be relative to")
+parser.add_argument("-d", "--debug", help="Show debug output", action="store_true")
 args=parser.parse_args()
 
 error_string = ""
-output_capture = io.StringIO()
-sys.stderr = output_capture
-
 # This is hacky, graphviz output error only to stdout and return successful(always).
 # If everything goes well, output shall be empty, fail on any output
-output_capture.truncate(0)
-output_capture.seek(0)
+
+if not args.debug:
+    output_capture = io.StringIO()
+    sys.stderr = output_capture
+    output_capture.truncate(0)
+    output_capture.seek(0)
 parse_suite(os.path.dirname(args.suite), args.root_dir, args.suite)
 
-sys.stdout = sys.__stdout__
+if not args.debug:
+    sys.stdout = sys.__stdout__
 
-if len(error_string) > 0:
-    print(error_string)
-    exit(1)
+    if len(error_string) > 0:
+        print(error_string)
+        exit(1)
 
 exit(0)

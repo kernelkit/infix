@@ -49,6 +49,6 @@ include::veth_delete/Readme.adoc[]
 
 include::vlan_iface_termination/Readme.adoc[]
 
-include::gre_basic/Readme.adoc[]
+include::tunnel_basic/Readme.adoc[]
 
-include::gretap_bridged/Readme.adoc[]
+include::tunnel_bridged/Readme.adoc[]

@@ -91,7 +91,8 @@ static int ifchange_cand_infer_type(sr_session_ctx_t *session, const char *path)
 		inferred.data.string_val = "infix-if-type:gre";
 	else if (!fnmatch("gretap+([0-9])", ifname, FNM_EXTMATCH))
 		inferred.data.string_val = "infix-if-type:gretap";
-
+	else if (!fnmatch("vxlan+([0-9])", ifname, FNM_EXTMATCH))
+		inferred.data.string_val = "infix-if-type:vxlan";
 	free(ifname);
 
 	if (inferred.data.string_val)
@@ -401,6 +402,8 @@ static int netdag_gen_afspec_add(sr_session_ctx_t *session, struct dagger *net, 
 		return -ENOENT;
 	} else if (!strcmp(iftype, "infix-if-type:gre") || !strcmp(iftype, "infix-if-type:gretap")) {
 		err = gre_gen(net, NULL, cif, ip);
+	} else if (!strcmp(iftype, "infix-if-type:vxlan")) {
+		err = vxlan_gen(net, NULL, cif, ip);
 	} else {
 		sr_session_set_error_message(net->session, "%s: unsupported interface type \"%s\"", ifname, iftype);
 		return -ENOSYS;
@@ -428,7 +431,8 @@ static int netdag_gen_afspec_set(sr_session_ctx_t *session, struct dagger *net, 
 		return 0;
 	if (!strcmp(iftype, "infix-if-type:gretap"))
 		return 0;
-
+	if (!strcmp(iftype, "infix-if-type:vxlan"))
+		return 0;
 	ERROR("%s: unsupported interface type \"%s\"", ifname, iftype);
 	return -ENOSYS;
 }
@@ -461,6 +465,9 @@ static bool netdag_must_del(struct lyd_node *dif, struct lyd_node *cif)
 			return true;
 	} else if (!strcmp(iftype, "infix-if-type:gre") || !strcmp(iftype, "infix-if-type:gretap")) {
 		if (lydx_get_descendant(lyd_child(dif), "gre", NULL))
+			return true;
+	} else if (!strcmp(iftype, "infix-if-type:vxlan")) {
+		if (lydx_get_descendant(lyd_child(dif), "vxlan", NULL))
 			return true;
 /*
 	} else if (!strcmp(iftype, "infix-if-type:lag")) {

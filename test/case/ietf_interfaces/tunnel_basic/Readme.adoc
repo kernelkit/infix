@@ -2,3 +2,5 @@ include::gre_basic.adoc[]
 
 include::gretap_basic.adoc[]
 
+include::vxlan_basic.adoc[]
+

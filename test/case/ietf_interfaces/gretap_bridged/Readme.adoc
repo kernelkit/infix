@@ -1,1 +1,0 @@
-gretap_bridged.adoc
