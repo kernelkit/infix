@@ -127,6 +127,17 @@ with infamy.Test() as test:
                     "name": br_D,
                     "type": "infix-if-type:bridge",
                     "enabled": True,
+                    "ietf-ip:ipv4": {
+                        "address": [
+                            { "ip": "192.168.20.1", "prefix-length": 24 },
+                            { "ip": "10.0.0.1", "prefix-length": 8 },
+                        ],
+                    },
+                    "ietf-ip:ipv6": {
+                        "address": [
+                            { "ip": "2001:db8::1", "prefix-length": 64 },
+                        ],
+                    },
                 },
                 {
                     "name": veth_a_20,
