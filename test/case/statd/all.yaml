@@ -1,0 +1,3 @@
+---
+- case: interfaces-all/test
+  name: "interfaces-all"

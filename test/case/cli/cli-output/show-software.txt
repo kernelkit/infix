@@ -1,6 +1,0 @@
-[7mBOOT ORDER[0m
-net primary secondary 
-
-[7mNAME      STATE     VERSION                DATE                     [0m
-secondary inactive  pr873.2a39a38          2024-12-16T14:40:54Z     
-primary   inactive  pr871.a4ef38f          2024-12-13T20:00:42Z     

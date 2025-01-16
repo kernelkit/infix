@@ -1,9 +1,0 @@
-name                : e3
-index               : 5
-mtu                 : 1500
-operational status  : up
-physical address    : 02:00:00:00:00:03
-ipv4 addresses      :
-ipv6 addresses      :
-in-octets           : 15057
-out-octets          : 1327

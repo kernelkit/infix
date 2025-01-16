@@ -1,9 +1,15 @@
 ---
 # Tests in this suite can be run on localhost without a target environment
 
-- name:  cli-output
-  suite: cli/all.yaml
+- name:  statd-yanger
+  suite: statd/all.yaml
+  opts:
+    - yanger
+    - check
 
-- name:  cli-pretty
-  suite: cli_pretty/all.yaml
+- name:  statd-cli
+  suite: statd/all.yaml
+  opts:
+    - cli
+    - check
 

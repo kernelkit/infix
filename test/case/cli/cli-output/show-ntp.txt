@@ -1,9 +1,0 @@
-[7mADDRESS         MODE         STATE            STRATUM POLL-INTERVAL[0m
-185.125.190.56  peer         candidate              2             8
-185.125.190.58  server       unstable               2             7
-185.125.190.57  server       falseticker            2             8
-91.189.91.157   local-clock  outlier                2             6
-192.121.108.100 server       candidate              3             8
-85.24.237.72    server       selected               2             8
-162.159.200.1   server       unusable               3             7
-85.24.237.71    server       candidate              2             8
