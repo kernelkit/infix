@@ -1,12 +1,15 @@
 import abc
 import datetime
+import functools
 import json
 import os
 import subprocess
 
 from . import common
 
+
 HOST = None
+
 
 class Host(abc.ABC):
     """Host system API"""
@@ -66,10 +69,12 @@ class Host(abc.ABC):
                 return default
             raise
 
+
 class Localhost(Host):
     def now(self):
         return datetime.datetime.now(tz=datetime.timezone.utc)
 
+#    @functools.cache
     def run(self, cmd, default=None, log=True):
         try:
             result = subprocess.run(cmd, check=True, text=True,
@@ -98,16 +103,72 @@ class Localhost(Host):
 
         return None
 
+
+class Remotehost(Localhost):
+    def __init__(self, wrap, basedir):
+        super().__init__()
+        self.wrap = wrap.split()
+        self.basedir = basedir
+        if basedir:
+            for subdir in ("rootfs", "run"):
+                os.makedirs(os.path.join(basedir, subdir), exist_ok=True)
+
+    def now(self):
+        timestamp = self._run(["date", "-u", "+%s"], default=None, log=True)
+        if self.basedir:
+            with open(os.path.join(self.basedir, "timestamp"), "w") as f:
+                f.write(f"{timestamp}\n")
+            pass
+
+        return datetime.datetime.fromtimestamp(int(timestamp), datetime.timezone.utc)
+
+    def _run(self, cmd, default, log):
+        # Assume that the wrapper acts like ssh(1) and simply concats
+        # arguments to a single string. Therefore, we must quoute
+        # arguments containing spaces so that commands like `vtysh -c
+        # "show ip route json"` work as expected.
+        cmd = " ".join([ arg if " " not in arg else f"\"{arg}\"" for arg in cmd ])
+        return super().run(self.wrap + (cmd,), default, log)
+
+    def run(self, cmd, default=None, log=True):
+        if not self.basedir:
+            return self._run(cmd, default, log)
+
+        storedpath = os.path.join(self.basedir, "run", Testhost.SlugOf(cmd))
+        if os.path.exists(storedpath):
+            with open(storedpath) as f:
+                return f.read()
+
+        out = self._run(cmd, default, log)
+        with open(storedpath, "w") as f:
+                f.write(out)
+
+        return out
+
+    def read(self, path):
+        out = self._run(["cat", path], default="", log=False)
+
+        if self.basedir:
+            dirname = os.path.join(self.basedir, "rootfs", os.path.dirname(path[1:]))
+            os.makedirs(dirname, exist_ok=True)
+            with open(os.path.join(self.basedir, "rootfs", path[1:]), "w") as f:
+                f.write(out)
+
+
 class Testhost(Host):
+    def SlugOf(cmd):
+        return "_".join(cmd).replace("/", "+").replace(" ", "-")
+
     def __init__(self, basedir):
         self.basedir = basedir
 
     def now(self):
-        return datetime.datetime(2023, 1, 1, 12, 0, 0, tzinfo=datetime.timezone.utc)
+        with open(os.path.join(self.basedir, "timestamp")) as f:
+            timestamp = f.read().strip()
+            return datetime.datetime.fromtimestamp(int(timestamp), datetime.timezone.utc)
 
     def run(self, cmd, default=None, log=True):
-        slug = "_".join(cmd).replace("/", "+").replace(" ", "-")
-        path = os.path.join(self.basedir, "run", slug)
+        path = os.path.join(self.basedir, "run", Testhost.SlugOf(cmd))
 
         try:
             with open(path, 'r') as f:

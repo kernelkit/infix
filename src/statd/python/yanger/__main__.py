@@ -13,6 +13,7 @@ def main():
     parser = argparse.ArgumentParser(description="YANG data creator")
     parser.add_argument("model", help="YANG Model")
     parser.add_argument("-p", "--param", default=None, help="Model dependent parameter")
+    parser.add_argument("-w", "--wrap-commands", default=None, help="Command execution wrapper")
     parser.add_argument("-t", "--test", default=None, help="Test data base path")
     args = parser.parse_args()
 
@@ -30,7 +31,9 @@ def main():
     common.LOG.setLevel(logging.INFO)
     common.LOG.addHandler(log)
 
-    if args.test:
+    if args.wrap_commands:
+        host.HOST = host.Remotehost(args.wrap_commands, args.test)
+    elif args.test:
         host.HOST = host.Testhost(args.test)
     else:
         host.HOST = host.Localhost()
