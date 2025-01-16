@@ -213,6 +213,46 @@ with infamy.Test() as test:
         }
     })
 
+    with test.step("Configure GRE Tunnels"):
+        target.put_config_dict("ietf-interfaces", {
+            "interfaces": {
+                "interface": [
+                    {
+                        "name": "gre-v4",
+                        "type": "infix-if-type:gre",
+                        "infix-interfaces:gre": {
+                            "local": "192.168.20.1",
+                            "remote": "192.168.20.2",
+                        }
+                    },
+                    {
+                        "name": "gre-v6",
+                        "type": "infix-if-type:gre",
+                        "infix-interfaces:gre": {
+                            "local": "2001:db8::1",
+                            "remote": "2001:db8::2",
+                        }
+                    },
+                    {
+                        "name": "gretap-v4",
+                        "type": "infix-if-type:gretap",
+                        "infix-interfaces:gre": {
+                            "local": "192.168.20.1",
+                            "remote": "192.168.20.2",
+                        }
+                    },
+                    {
+                        "name": "gretap-v6",
+                        "type": "infix-if-type:gretap",
+                        "infix-interfaces:gre": {
+                            "local": "2001:db8::1",
+                            "remote": "2001:db8::2",
+                        }
+                    },
+                ]
+            }
+        })
+
     with test.step("Verify interface 'lo' is of type loopback"):
         verify_interface(target, "lo", "loopback")
 
@@ -235,5 +275,11 @@ with infamy.Test() as test:
         verify_interface(target, f"{eth_X}.30", "vlan")
         verify_interface(target, f"{eth_Q}.10", "vlan")
         verify_interface(target, "br-Q.40", "vlan")
+
+    with test.step("Verify GRE interfaces 'gre-v4', 'gre-v6', 'gretap-v4' and 'gretap-v6'"):
+        verify_interface(target, "gre-v4", "gre")
+        verify_interface(target, "gre-v6", "gre")
+        verify_interface(target, "gretap-v4", "gretap")
+        verify_interface(target, "gretap-v6", "gretap")
 
     test.succeed()
