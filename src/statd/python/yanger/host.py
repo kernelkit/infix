@@ -33,7 +33,7 @@ class Host(abc.ABC):
     def run_multiline(self, cmd, default=None):
         """Get lines of stdout of cmd"""
         try:
-            txt = self.run(cmd, log=(default is None))
+            txt = self.run(tuple(cmd), log=(default is None))
             return txt.splitlines()
         except:
             if default is not None:
@@ -43,7 +43,7 @@ class Host(abc.ABC):
     def run_json(self, cmd, default=None):
         """Get JSON object from stdout of cmd"""
         try:
-            txt = self.run(cmd, log=(default is None))
+            txt = self.run(tuple(cmd), log=(default is None))
             return json.loads(txt)
         except:
             if default is not None:
@@ -74,7 +74,7 @@ class Localhost(Host):
     def now(self):
         return datetime.datetime.now(tz=datetime.timezone.utc)
 
-#    @functools.cache
+    @functools.cache
     def run(self, cmd, default=None, log=True):
         try:
             result = subprocess.run(cmd, check=True, text=True,
@@ -107,7 +107,7 @@ class Localhost(Host):
 class Remotehost(Localhost):
     def __init__(self, wrap, basedir):
         super().__init__()
-        self.wrap = wrap.split()
+        self.wrap = tuple(wrap.split())
         self.basedir = basedir
         if basedir:
             for subdir in ("rootfs", "run"):
@@ -146,13 +146,15 @@ class Remotehost(Localhost):
         return out
 
     def read(self, path):
-        out = self._run(["cat", path], default="", log=False)
+        out = self._run(("cat", path), default="", log=False)
 
         if self.basedir:
             dirname = os.path.join(self.basedir, "rootfs", os.path.dirname(path[1:]))
             os.makedirs(dirname, exist_ok=True)
             with open(os.path.join(self.basedir, "rootfs", path[1:]), "w") as f:
                 f.write(out)
+
+        return out
 
 
 class Testhost(Host):
