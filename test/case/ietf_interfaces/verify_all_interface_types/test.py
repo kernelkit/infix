@@ -152,6 +152,18 @@ with infamy.Test() as test:
                     "name": br_Q,
                     "type": "infix-if-type:bridge",
                     "enabled": True,
+                    "infix-interfaces:bridge": {
+                        "vlans": {
+                            "vlan": [
+                                { "vid": 20, "untagged": [br_Q], "tagged": [eth_Q, veth_b] },
+                                { "vid": 30, "untagged": [br_Q], "tagged": [eth_Q, veth_b] },
+                                { "vid": 40, "untagged": [], "tagged": [br_Q, eth_Q, veth_b] },
+                            ],
+                        }
+                    },
+                    "infix-interfaces:bridge-port": {
+                        "pvid": 10,
+                    }
                 },
                 {
                     "name": eth_Q,
