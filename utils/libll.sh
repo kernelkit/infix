@@ -9,7 +9,7 @@ llping()
 {
     local iface="$1"
     shift
-    ping -L ff02::1%$iface "$@"
+    ping -L "$@" ff02::1%$iface
 }
 
 
