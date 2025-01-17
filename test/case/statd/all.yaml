@@ -1,3 +1,5 @@
 ---
+- case: containers/test
+  name: "containers"
 - case: interfaces-all/test
   name: "interfaces-all"

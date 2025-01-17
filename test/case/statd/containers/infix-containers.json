@@ -1,0 +1,60 @@
+{
+  "infix-containers:containers": {
+    "container": [
+      {
+        "name": "container-B",
+        "id": "0aed2ca36b5e9012d8d647a684047410444c0e3134987f0c020bf0234ef0e0f3",
+        "image": "localhost/curios-httpd-oci-amd64-v24.11.0:latest",
+        "image-id": "d6930d60a73be9980f8e19b4b4f63586a6d3492178e20bea962e4e9b8c654033",
+        "running": true,
+        "status": "Up About a minute",
+        "command": "/usr/sbin/httpd -f -v",
+        "network": {
+          "interface": [
+            {
+              "name": "veth2a"
+            },
+            {
+              "name": "veth3a"
+            }
+          ],
+          "publish": []
+        }
+      },
+      {
+        "name": "firewall",
+        "id": "3d9ac5c827ed9dba01401774283f00a1a79b19375fba1a3849cf64b5ed68dbb8",
+        "image": "localhost/curios-nftables-oci-amd64-v24.11.0:latest",
+        "image-id": "7a3cc502436250357a6664100a600f306334b4d7203890b85b7ea9b8da6b5665",
+        "running": true,
+        "status": "Up About a minute",
+        "command": "/usr/sbin/nft-helper /etc/nftables.conf",
+        "network": {
+          "host": true
+        }
+      },
+      {
+        "name": "container-A",
+        "id": "93753e99ceb3bc80c3a3002952f3d8f130deb77924e352d8e49f5c822c3af34e",
+        "image": "localhost/curios-httpd-oci-amd64-v24.11.0:latest",
+        "image-id": "d6930d60a73be9980f8e19b4b4f63586a6d3492178e20bea962e4e9b8c654033",
+        "running": true,
+        "status": "Up About a minute",
+        "command": "/usr/sbin/httpd -f -v -p 91",
+        "network": {
+          "interface": [
+            {
+              "name": "veth0a"
+            },
+            {
+              "name": "veth1a"
+            }
+          ],
+          "publish": [
+            "36971->91/tcp"
+          ]
+        }
+      }
+    ]
+  }
+}

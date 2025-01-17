@@ -1,0 +1,13 @@
+#!/bin/sh
+
+yang_models="ietf-interfaces ietf-routing ietf-ospf infix-containers"
+
+gen_test=use_case/ospf_container/test.py
+gen_iface=d3a
+
+cli_commands="show-interfaces"
+cli_commands="$cli_commands show-routing-table_--ip_ipv4"
+cli_commands="$cli_commands show-routing-table_--ip_ipv6"
+
+. $(readlink -f $(dirname $0)/../test.sh)
+main "$@"

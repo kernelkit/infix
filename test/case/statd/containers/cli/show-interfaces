@@ -1,0 +1,41 @@
+[7mINTERFACE       PROTOCOL   STATE       DATA                                     [0m
+lo              ethernet   [32mUP          [39m00:00:00:00:00:00                        
+                ipv4                   127.0.0.1/8 (static)
+                ipv6                   ::1/128 (static)
+br0             bridge     [33m            [39mvlan:1u pvid:1                           
+│               ethernet   [32mUP          [39m00:a0:85:00:03:00                        
+│               ipv4                   169.254.1.1/16 (random)
+│               ipv6                   fe80::2a0:85ff:fe00:300/64 (link-layer)
+├ e3            bridge     [32mFORWARDING  [39mvlan:1u pvid:1                           
+├ e4            bridge     [32mFORWARDING  [39mvlan:1u pvid:1                           
+├ veth0b        bridge     [32mFORWARDING  [39mvlan:1u pvid:1                           
+└ veth2b        bridge     [32mFORWARDING  [39mvlan:1u pvid:1                           
+br1             bridge     [33m            [39m
+│               ethernet   [32mUP          [39m00:a0:85:00:03:00                        
+├ veth1b        bridge     [32mFORWARDING  [39mvlan:6u pvid:6                           
+└ veth3b        bridge     [32mFORWARDING  [39m
+e1              ethernet   [32mUP          [39m00:a0:85:00:03:01                        
+                ipv6                   fe80::2a0:85ff:fe00:301/64 (link-layer)
+e2              ethernet   [32mUP          [39m00:a0:85:00:03:02                        
+                ipv6                   fe80::2a0:85ff:fe00:302/64 (link-layer)
+e3.8            ethernet   [32mUP          [39m00:a0:85:00:03:03                        
+│               ipv4                   10.1.1.1/32 (static)
+└ e3            ethernet   [32mUP          [39m00:a0:85:00:03:03                        
+e4.8            ethernet   [32mUP          [39m00:a0:85:00:03:04                        
+│               ipv4                   10.1.1.1/32 (static)
+└ e4            ethernet   [32mUP          [39m00:a0:85:00:03:04                        
+e5              ethernet   [32mUP          [39m00:a0:85:00:03:05                        
+                ipv6                   fe80::2a0:85ff:fe00:305/64 (link-layer)
+e6              ethernet   [32mUP          [39m00:a0:85:00:03:06                        
+                ipv4                   10.1.1.101/24 (static)
+                ipv6                   fe80::2a0:85ff:fe00:306/64 (link-layer)
+e7              ethernet   [32mUP          [39m00:a0:85:00:03:07                        
+                ipv6                   fe80::2a0:85ff:fe00:307/64 (link-layer)
+[100mveth0a          container              container-A                              [0m
+veth0b          ethernet   [32mUP          [39mc2:61:ae:82:0a:c1                        
+[100mveth1a          container              container-A                              [0m
+veth1b          ethernet   [32mUP          [39me6:c6:34:dc:b9:f4                        
+[100mveth2a          container              container-B                              [0m
+veth2b          ethernet   [32mUP          [39m96:8b:c6:17:74:d3                        
+[100mveth3a          container              container-B                              [0m
+veth3b          ethernet   [32mUP          [39m0e:c3:01:d6:e6:ea                        

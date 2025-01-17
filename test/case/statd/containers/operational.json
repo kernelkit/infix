@@ -1,0 +1,1158 @@
+{
+  "ietf-interfaces:interfaces": {
+    "interface": [
+      {
+        "admin-status": "up",
+        "ietf-ip:ipv4": {
+          "address": [
+            {
+              "ip": "127.0.0.1",
+              "origin": "static",
+              "prefix-length": 8
+            }
+          ]
+        },
+        "ietf-ip:ipv6": {
+          "address": [
+            {
+              "ip": "::1",
+              "origin": "static",
+              "prefix-length": 128
+            }
+          ],
+          "mtu": 65536
+        },
+        "if-index": 1,
+        "name": "lo",
+        "oper-status": "up",
+        "phys-address": "00:00:00:00:00:00",
+        "statistics": {
+          "in-octets": "72275",
+          "out-octets": "72275"
+        },
+        "type": "infix-if-type:loopback"
+      },
+      {
+        "admin-status": "up",
+        "ietf-ip:ipv4": {
+          "mtu": 1500
+        },
+        "ietf-ip:ipv6": {
+          "address": [
+            {
+              "ip": "fe80::2a0:85ff:fe00:301",
+              "origin": "link-layer",
+              "prefix-length": 64
+            }
+          ],
+          "mtu": 1500
+        },
+        "if-index": 2,
+        "name": "e1",
+        "oper-status": "up",
+        "phys-address": "00:a0:85:00:03:01",
+        "statistics": {
+          "in-octets": "5166282",
+          "out-octets": "7407399"
+        },
+        "type": "infix-if-type:etherlike"
+      },
+      {
+        "admin-status": "up",
+        "ietf-ip:ipv4": {
+          "mtu": 1500
+        },
+        "ietf-ip:ipv6": {
+          "address": [
+            {
+              "ip": "fe80::2a0:85ff:fe00:302",
+              "origin": "link-layer",
+              "prefix-length": 64
+            }
+          ],
+          "mtu": 1500
+        },
+        "if-index": 3,
+        "name": "e2",
+        "oper-status": "up",
+        "phys-address": "00:a0:85:00:03:02",
+        "statistics": {
+          "out-octets": "79382"
+        },
+        "type": "infix-if-type:etherlike"
+      },
+      {
+        "admin-status": "up",
+        "ietf-ip:ipv4": {
+          "mtu": 1500
+        },
+        "ietf-ip:ipv6": {
+          "mtu": 1500
+        },
+        "if-index": 4,
+        "infix-interfaces:bridge-port": {
+          "bridge": "br0",
+          "flood": {
+            "broadcast": true,
+            "multicast": true,
+            "unicast": true
+          },
+          "multicast": {
+            "fast-leave": false,
+            "router": "auto"
+          },
+          "pvid": 1,
+          "stp-state": "forwarding"
+        },
+        "name": "e3",
+        "oper-status": "up",
+        "phys-address": "00:a0:85:00:03:03",
+        "statistics": {
+          "in-octets": "23589",
+          "out-octets": "208789"
+        },
+        "type": "infix-if-type:etherlike"
+      },
+      {
+        "admin-status": "up",
+        "ietf-ip:ipv4": {
+          "mtu": 1500
+        },
+        "ietf-ip:ipv6": {
+          "mtu": 1500
+        },
+        "if-index": 5,
+        "infix-interfaces:bridge-port": {
+          "bridge": "br0",
+          "flood": {
+            "broadcast": true,
+            "multicast": true,
+            "unicast": true
+          },
+          "multicast": {
+            "fast-leave": false,
+            "router": "auto"
+          },
+          "pvid": 1,
+          "stp-state": "forwarding"
+        },
+        "name": "e4",
+        "oper-status": "up",
+        "phys-address": "00:a0:85:00:03:04",
+        "statistics": {
+          "in-octets": "30583",
+          "out-octets": "206341"
+        },
+        "type": "infix-if-type:etherlike"
+      },
+      {
+        "admin-status": "up",
+        "ietf-ip:ipv4": {
+          "mtu": 1500
+        },
+        "ietf-ip:ipv6": {
+          "address": [
+            {
+              "ip": "fe80::2a0:85ff:fe00:305",
+              "origin": "link-layer",
+              "prefix-length": 64
+            }
+          ],
+          "mtu": 1500
+        },
+        "if-index": 6,
+        "name": "e5",
+        "oper-status": "up",
+        "phys-address": "00:a0:85:00:03:05",
+        "statistics": {
+          "in-octets": "66626",
+          "out-octets": "83465"
+        },
+        "type": "infix-if-type:etherlike"
+      },
+      {
+        "admin-status": "up",
+        "ietf-ip:ipv4": {
+          "address": [
+            {
+              "ip": "10.1.1.101",
+              "origin": "static",
+              "prefix-length": 24
+            }
+          ],
+          "mtu": 1500
+        },
+        "ietf-ip:ipv6": {
+          "address": [
+            {
+              "ip": "fe80::2a0:85ff:fe00:306",
+              "origin": "link-layer",
+              "prefix-length": 64
+            }
+          ],
+          "mtu": 1500
+        },
+        "if-index": 7,
+        "name": "e6",
+        "oper-status": "up",
+        "phys-address": "00:a0:85:00:03:06",
+        "statistics": {
+          "in-octets": "134367",
+          "out-octets": "184122"
+        },
+        "type": "infix-if-type:etherlike"
+      },
+      {
+        "admin-status": "up",
+        "ietf-ip:ipv4": {
+          "mtu": 1500
+        },
+        "ietf-ip:ipv6": {
+          "address": [
+            {
+              "ip": "fe80::2a0:85ff:fe00:307",
+              "origin": "link-layer",
+              "prefix-length": 64
+            }
+          ],
+          "mtu": 1500
+        },
+        "if-index": 8,
+        "name": "e7",
+        "oper-status": "up",
+        "phys-address": "00:a0:85:00:03:07",
+        "statistics": {
+          "in-octets": "70368",
+          "out-octets": "86243"
+        },
+        "type": "infix-if-type:etherlike"
+      },
+      {
+        "admin-status": "up",
+        "ietf-ip:ipv4": {
+          "mtu": 1500
+        },
+        "ietf-ip:ipv6": {
+          "mtu": 1500
+        },
+        "if-index": 22,
+        "infix-interfaces:bridge-port": {
+          "bridge": "br0",
+          "flood": {
+            "broadcast": true,
+            "multicast": true,
+            "unicast": true
+          },
+          "multicast": {
+            "fast-leave": false,
+            "router": "auto"
+          },
+          "pvid": 1,
+          "stp-state": "forwarding"
+        },
+        "name": "veth0b",
+        "oper-status": "up",
+        "phys-address": "c2:61:ae:82:0a:c1",
+        "statistics": {
+          "in-octets": "1583",
+          "out-octets": "28383"
+        },
+        "type": "infix-if-type:veth"
+      },
+      {
+        "admin-status": "up",
+        "ietf-ip:ipv4": {
+          "mtu": 1500
+        },
+        "ietf-ip:ipv6": {
+          "mtu": 1500
+        },
+        "if-index": 24,
+        "infix-interfaces:bridge-port": {
+          "bridge": "br0",
+          "flood": {
+            "broadcast": true,
+            "multicast": true,
+            "unicast": true
+          },
+          "multicast": {
+            "fast-leave": false,
+            "router": "auto"
+          },
+          "pvid": 1,
+          "stp-state": "forwarding"
+        },
+        "name": "veth2b",
+        "oper-status": "up",
+        "phys-address": "96:8b:c6:17:74:d3",
+        "statistics": {
+          "in-octets": "796",
+          "out-octets": "28028"
+        },
+        "type": "infix-if-type:veth"
+      },
+      {
+        "admin-status": "up",
+        "ietf-ip:ipv4": {
+          "address": [
+            {
+              "ip": "169.254.1.1",
+              "origin": "random",
+              "prefix-length": 16
+            }
+          ],
+          "mtu": 1500
+        },
+        "ietf-ip:ipv6": {
+          "address": [
+            {
+              "ip": "fe80::2a0:85ff:fe00:300",
+              "origin": "link-layer",
+              "prefix-length": 64
+            }
+          ],
+          "mtu": 1500
+        },
+        "if-index": 25,
+        "infix-interfaces:bridge": {
+          "vlans": {
+            "proto": "ieee802-dot1q-types:c-vlan",
+            "vlan": [
+              {
+                "multicast": {
+                  "querier": "off",
+                  "snooping": true
+                },
+                "multicast-filters": {
+                  "multicast-filter": []
+                },
+                "tagged": [],
+                "untagged": [
+                  "br0",
+                  "e3",
+                  "e4",
+                  "veth0b",
+                  "veth2b"
+                ],
+                "vid": 1
+              }
+            ]
+          }
+        },
+        "infix-interfaces:bridge-port": {
+          "pvid": 1
+        },
+        "name": "br0",
+        "oper-status": "up",
+        "phys-address": "00:a0:85:00:03:00",
+        "statistics": {
+          "in-octets": "3285",
+          "out-octets": "28281"
+        },
+        "type": "infix-if-type:bridge"
+      },
+      {
+        "admin-status": "up",
+        "ietf-ip:ipv4": {
+          "mtu": 1500
+        },
+        "ietf-ip:ipv6": {
+          "mtu": 1500
+        },
+        "if-index": 27,
+        "infix-interfaces:bridge-port": {
+          "bridge": "br1",
+          "flood": {
+            "broadcast": true,
+            "multicast": true,
+            "unicast": true
+          },
+          "multicast": {
+            "fast-leave": false,
+            "router": "auto"
+          },
+          "pvid": 6,
+          "stp-state": "forwarding"
+        },
+        "name": "veth1b",
+        "oper-status": "up",
+        "phys-address": "e6:c6:34:dc:b9:f4",
+        "statistics": {
+          "in-octets": "796"
+        },
+        "type": "infix-if-type:veth"
+      },
+      {
+        "admin-status": "up",
+        "ietf-ip:ipv4": {
+          "mtu": 1500
+        },
+        "ietf-ip:ipv6": {
+          "mtu": 1500
+        },
+        "if-index": 29,
+        "infix-interfaces:bridge-port": {
+          "bridge": "br1",
+          "flood": {
+            "broadcast": true,
+            "multicast": true,
+            "unicast": true
+          },
+          "multicast": {
+            "fast-leave": false,
+            "router": "auto"
+          },
+          "stp-state": "forwarding"
+        },
+        "name": "veth3b",
+        "oper-status": "up",
+        "phys-address": "0e:c3:01:d6:e6:ea",
+        "statistics": {
+          "in-octets": "796"
+        },
+        "type": "infix-if-type:veth"
+      },
+      {
+        "admin-status": "up",
+        "ietf-ip:ipv4": {
+          "mtu": 1500
+        },
+        "ietf-ip:ipv6": {
+          "mtu": 1500
+        },
+        "if-index": 30,
+        "infix-interfaces:bridge": {
+          "vlans": {
+            "proto": "ieee802-dot1q-types:c-vlan",
+            "vlan": [
+              {
+                "multicast": {
+                  "querier": "off",
+                  "snooping": true
+                },
+                "multicast-filters": {
+                  "multicast-filter": []
+                },
+                "tagged": [],
+                "untagged": [
+                  "veth1b"
+                ],
+                "vid": 6
+              }
+            ]
+          }
+        },
+        "name": "br1",
+        "oper-status": "up",
+        "phys-address": "00:a0:85:00:03:00",
+        "statistics": {
+          "in-octets": "656"
+        },
+        "type": "infix-if-type:bridge"
+      },
+      {
+        "admin-status": "up",
+        "ietf-ip:ipv4": {
+          "address": [
+            {
+              "ip": "10.1.1.1",
+              "origin": "static",
+              "prefix-length": 32
+            }
+          ],
+          "mtu": 1500
+        },
+        "ietf-ip:ipv6": {
+          "mtu": 1500
+        },
+        "if-index": 31,
+        "infix-interfaces:vlan": {
+          "id": 8,
+          "lower-layer-if": "e3",
+          "tag-type": "ieee802-dot1q-types:c-vlan"
+        },
+        "name": "e3.8",
+        "oper-status": "up",
+        "phys-address": "00:a0:85:00:03:03",
+        "statistics": {
+          "in-octets": "5005",
+          "out-octets": "16009"
+        },
+        "type": "infix-if-type:vlan"
+      },
+      {
+        "admin-status": "up",
+        "ietf-ip:ipv4": {
+          "address": [
+            {
+              "ip": "10.1.1.1",
+              "origin": "static",
+              "prefix-length": 32
+            }
+          ],
+          "mtu": 1500
+        },
+        "ietf-ip:ipv6": {
+          "mtu": 1500
+        },
+        "if-index": 32,
+        "infix-interfaces:vlan": {
+          "id": 8,
+          "lower-layer-if": "e4",
+          "tag-type": "ieee802-dot1q-types:c-vlan"
+        },
+        "name": "e4.8",
+        "oper-status": "up",
+        "phys-address": "00:a0:85:00:03:04",
+        "statistics": {
+          "in-octets": "15080",
+          "out-octets": "15546"
+        },
+        "type": "infix-if-type:vlan"
+      },
+      {
+        "admin-status": "up",
+        "description": "eth0",
+        "ietf-ip:ipv4": {
+          "mtu": 1500
+        },
+        "ietf-ip:ipv6": {
+          "address": [
+            {
+              "ip": "fe80::4a0:85ff:fe00:300",
+              "origin": "link-layer",
+              "prefix-length": 64
+            }
+          ]
+        },
+        "if-index": 23,
+        "infix-interfaces:container-network": {
+          "containers": [
+            "container-B"
+          ]
+        },
+        "name": "veth2a",
+        "oper-status": "up",
+        "phys-address": "06:a0:85:00:03:00",
+        "statistics": {
+          "in-octets": "28028",
+          "out-octets": "796"
+        },
+        "type": "infix-if-type:veth"
+      },
+      {
+        "admin-status": "up",
+        "description": "eth1",
+        "ietf-ip:ipv4": {
+          "mtu": 1500
+        },
+        "ietf-ip:ipv6": {
+          "address": [
+            {
+              "ip": "fe80::4a0:85ff:fe00:300",
+              "origin": "link-layer",
+              "prefix-length": 64
+            }
+          ]
+        },
+        "if-index": 28,
+        "infix-interfaces:container-network": {
+          "containers": [
+            "container-B"
+          ]
+        },
+        "name": "veth3a",
+        "oper-status": "up",
+        "phys-address": "06:a0:85:00:03:00",
+        "statistics": {
+          "out-octets": "796"
+        },
+        "type": "infix-if-type:veth"
+      },
+      {
+        "admin-status": "up",
+        "description": "br0",
+        "ietf-ip:ipv4": {
+          "address": [
+            {
+              "ip": "169.254.1.2",
+              "origin": "other",
+              "prefix-length": 16
+            }
+          ],
+          "mtu": 1500
+        },
+        "ietf-ip:ipv6": {
+          "address": [
+            {
+              "ip": "fe80::4a0:85ff:fe00:300",
+              "origin": "link-layer",
+              "prefix-length": 64
+            }
+          ],
+          "mtu": 1500
+        },
+        "if-index": 21,
+        "infix-interfaces:container-network": {
+          "containers": [
+            "container-A"
+          ]
+        },
+        "name": "veth0a",
+        "oper-status": "up",
+        "phys-address": "06:a0:85:00:03:00",
+        "statistics": {
+          "in-octets": "28425",
+          "out-octets": "1625"
+        },
+        "type": "infix-if-type:veth"
+      },
+      {
+        "admin-status": "up",
+        "description": "br1",
+        "ietf-ip:ipv4": {
+          "mtu": 1500
+        },
+        "ietf-ip:ipv6": {
+          "address": [
+            {
+              "ip": "fe80::4a0:85ff:fe00:300",
+              "origin": "link-layer",
+              "prefix-length": 64
+            }
+          ],
+          "mtu": 1500
+        },
+        "if-index": 26,
+        "infix-interfaces:container-network": {
+          "containers": [
+            "container-A"
+          ]
+        },
+        "name": "veth1a",
+        "oper-status": "up",
+        "phys-address": "06:a0:85:00:03:00",
+        "statistics": {
+          "out-octets": "796"
+        },
+        "type": "infix-if-type:veth"
+      }
+    ]
+  },
+  "ietf-routing:routing": {
+    "control-plane-protocols": {
+      "control-plane-protocol": [
+        {
+          "ietf-ospf:ospf": {
+            "ietf-ospf:address-family": "ipv4",
+            "ietf-ospf:areas": {
+              "ietf-ospf:area": [
+                {
+                  "ietf-ospf:area-id": "0.0.0.1",
+                  "ietf-ospf:area-type": "nssa-area",
+                  "ietf-ospf:interfaces": {
+                    "ietf-ospf:interface": [
+                      {
+                        "enabled": true,
+                        "ietf-ospf:neighbors": {
+                          "ietf-ospf:neighbor": [
+                            {
+                              "address": "10.1.2.1",
+                              "dead-timer": 25130,
+                              "neighbor-router-id": "10.1.2.1",
+                              "state": "full"
+                            }
+                          ]
+                        },
+                        "interface-type": "point-to-point",
+                        "name": "e3.8",
+                        "passive": false,
+                        "state": "point-to-point"
+                      },
+                      {
+                        "enabled": true,
+                        "ietf-ospf:neighbors": {
+                          "ietf-ospf:neighbor": [
+                            {
+                              "address": "10.1.3.1",
+                              "dead-timer": 25210,
+                              "neighbor-router-id": "10.1.3.1",
+                              "state": "full"
+                            }
+                          ]
+                        },
+                        "interface-type": "point-to-point",
+                        "name": "e4.8",
+                        "passive": false,
+                        "state": "point-to-point"
+                      },
+                      {
+                        "bdr-ip-addr": "10.1.1.101",
+                        "bdr-router-id": "10.1.1.1",
+                        "dr-ip-addr": "10.1.1.100",
+                        "dr-router-id": "192.168.100.1",
+                        "enabled": true,
+                        "ietf-ospf:neighbors": {
+                          "ietf-ospf:neighbor": [
+                            {
+                              "address": "10.1.1.100",
+                              "bdr-router-id": "10.1.1.1",
+                              "dead-timer": 34600,
+                              "dr-router-id": "192.168.100.1",
+                              "neighbor-router-id": "192.168.100.1",
+                              "state": "full"
+                            }
+                          ]
+                        },
+                        "interface-type": "broadcast",
+                        "name": "e6",
+                        "passive": false,
+                        "state": "bdr"
+                      }
+                    ]
+                  }
+                }
+              ]
+            },
+            "ietf-ospf:local-rib": {
+              "ietf-ospf:route": [
+                {
+                  "next-hops": {
+                    "next-hop": [
+                      {
+                        "next-hop": "10.1.1.100"
+                      }
+                    ]
+                  },
+                  "prefix": "0.0.0.0/0",
+                  "route-type": "inter-area"
+                },
+                {
+                  "next-hops": {
+                    "next-hop": [
+                      {
+                        "outgoing-interface": "e6"
+                      }
+                    ]
+                  },
+                  "prefix": "10.1.1.0/24",
+                  "route-type": "intra-area"
+                },
+                {
+                  "next-hops": {
+                    "next-hop": [
+                      {
+                        "next-hop": "10.1.1.100"
+                      },
+                      {
+                        "next-hop": "10.1.2.1"
+                      }
+                    ]
+                  },
+                  "prefix": "10.1.2.0/24",
+                  "route-type": "intra-area"
+                },
+                {
+                  "next-hops": {
+                    "next-hop": [
+                      {
+                        "next-hop": "10.1.1.100"
+                      },
+                      {
+                        "next-hop": "10.1.3.1"
+                      }
+                    ]
+                  },
+                  "prefix": "10.1.3.0/24",
+                  "route-type": "intra-area"
+                }
+              ]
+            },
+            "ietf-ospf:router-id": "10.1.1.1"
+          },
+          "name": "default",
+          "type": "infix-routing:ospfv2"
+        }
+      ]
+    },
+    "ribs": {
+      "rib": [
+        {
+          "address-family": "ipv4",
+          "name": "ipv4",
+          "routes": {
+            "route": [
+              {
+                "active": [
+                  null
+                ],
+                "ietf-ipv4-unicast-routing:destination-prefix": "0.0.0.0/0",
+                "ietf-ospf:metric": 2,
+                "last-updated": "2025-01-20T10:00:03+00:00",
+                "next-hop": {
+                  "next-hop-list": {
+                    "next-hop": [
+                      {
+                        "ietf-ipv4-unicast-routing:address": "10.1.1.100",
+                        "infix-routing:installed": [
+                          null
+                        ]
+                      }
+                    ]
+                  }
+                },
+                "route-preference": 110,
+                "source-protocol": "ietf-ospf:ospfv2"
+              },
+              {
+                "ietf-ipv4-unicast-routing:destination-prefix": "0.0.0.0/0",
+                "last-updated": "2025-01-20T09:59:23+00:00",
+                "next-hop": {
+                  "next-hop-list": {
+                    "next-hop": [
+                      {
+                        "outgoing-interface": "br0"
+                      }
+                    ]
+                  }
+                },
+                "route-preference": 254,
+                "source-protocol": "static"
+              },
+              {
+                "ietf-ipv4-unicast-routing:destination-prefix": "10.1.1.0/24",
+                "ietf-ospf:metric": 1,
+                "last-updated": "2025-01-20T09:59:53+00:00",
+                "next-hop": {
+                  "next-hop-list": {
+                    "next-hop": [
+                      {
+                        "outgoing-interface": "e6"
+                      }
+                    ]
+                  }
+                },
+                "route-preference": 110,
+                "source-protocol": "ietf-ospf:ospfv2"
+              },
+              {
+                "active": [
+                  null
+                ],
+                "ietf-ipv4-unicast-routing:destination-prefix": "10.1.1.0/24",
+                "last-updated": "2025-01-20T09:59:09+00:00",
+                "next-hop": {
+                  "next-hop-list": {
+                    "next-hop": [
+                      {
+                        "infix-routing:installed": [
+                          null
+                        ],
+                        "outgoing-interface": "e6"
+                      }
+                    ]
+                  }
+                },
+                "route-preference": 0,
+                "source-protocol": "direct"
+              },
+              {
+                "ietf-ipv4-unicast-routing:destination-prefix": "10.1.1.1/32",
+                "last-updated": "2025-01-20T09:59:08+00:00",
+                "next-hop": {
+                  "next-hop-list": {
+                    "next-hop": [
+                      {
+                        "infix-routing:installed": [
+                          null
+                        ],
+                        "outgoing-interface": "e4.8"
+                      }
+                    ]
+                  }
+                },
+                "route-preference": 0,
+                "source-protocol": "direct"
+              },
+              {
+                "active": [
+                  null
+                ],
+                "ietf-ipv4-unicast-routing:destination-prefix": "10.1.1.1/32",
+                "last-updated": "2025-01-20T09:59:08+00:00",
+                "next-hop": {
+                  "next-hop-list": {
+                    "next-hop": [
+                      {
+                        "infix-routing:installed": [
+                          null
+                        ],
+                        "outgoing-interface": "e3.8"
+                      }
+                    ]
+                  }
+                },
+                "route-preference": 0,
+                "source-protocol": "direct"
+              },
+              {
+                "active": [
+                  null
+                ],
+                "ietf-ipv4-unicast-routing:destination-prefix": "10.1.2.0/24",
+                "ietf-ospf:metric": 2,
+                "last-updated": "2025-01-20T10:00:03+00:00",
+                "next-hop": {
+                  "next-hop-list": {
+                    "next-hop": [
+                      {
+                        "ietf-ipv4-unicast-routing:address": "10.1.1.100",
+                        "infix-routing:installed": [
+                          null
+                        ]
+                      },
+                      {
+                        "ietf-ipv4-unicast-routing:address": "10.1.2.1",
+                        "infix-routing:installed": [
+                          null
+                        ]
+                      }
+                    ]
+                  }
+                },
+                "route-preference": 110,
+                "source-protocol": "ietf-ospf:ospfv2"
+              },
+              {
+                "active": [
+                  null
+                ],
+                "ietf-ipv4-unicast-routing:destination-prefix": "10.1.3.0/24",
+                "ietf-ospf:metric": 2,
+                "last-updated": "2025-01-20T10:00:03+00:00",
+                "next-hop": {
+                  "next-hop-list": {
+                    "next-hop": [
+                      {
+                        "ietf-ipv4-unicast-routing:address": "10.1.1.100",
+                        "infix-routing:installed": [
+                          null
+                        ]
+                      },
+                      {
+                        "ietf-ipv4-unicast-routing:address": "10.1.3.1",
+                        "infix-routing:installed": [
+                          null
+                        ]
+                      }
+                    ]
+                  }
+                },
+                "route-preference": 110,
+                "source-protocol": "ietf-ospf:ospfv2"
+              },
+              {
+                "active": [
+                  null
+                ],
+                "ietf-ipv4-unicast-routing:destination-prefix": "169.254.0.0/16",
+                "last-updated": "2025-01-20T09:59:14+00:00",
+                "next-hop": {
+                  "next-hop-list": {
+                    "next-hop": [
+                      {
+                        "infix-routing:installed": [
+                          null
+                        ],
+                        "outgoing-interface": "br0"
+                      }
+                    ]
+                  }
+                },
+                "route-preference": 0,
+                "source-protocol": "direct"
+              }
+            ]
+          }
+        },
+        {
+          "address-family": "ipv6",
+          "name": "ipv6",
+          "routes": {
+            "route": [
+              {
+                "ietf-ipv6-unicast-routing:destination-prefix": "fe80::/64",
+                "last-updated": "2025-01-20T09:59:10+00:00",
+                "next-hop": {
+                  "next-hop-list": {
+                    "next-hop": [
+                      {
+                        "infix-routing:installed": [
+                          null
+                        ],
+                        "outgoing-interface": "e6"
+                      }
+                    ]
+                  }
+                },
+                "route-preference": 0,
+                "source-protocol": "direct"
+              },
+              {
+                "ietf-ipv6-unicast-routing:destination-prefix": "fe80::/64",
+                "last-updated": "2025-01-20T09:59:10+00:00",
+                "next-hop": {
+                  "next-hop-list": {
+                    "next-hop": [
+                      {
+                        "infix-routing:installed": [
+                          null
+                        ],
+                        "outgoing-interface": "br0"
+                      }
+                    ]
+                  }
+                },
+                "route-preference": 0,
+                "source-protocol": "direct"
+              },
+              {
+                "ietf-ipv6-unicast-routing:destination-prefix": "fe80::/64",
+                "last-updated": "2025-01-20T08:05:03+00:00",
+                "next-hop": {
+                  "next-hop-list": {
+                    "next-hop": [
+                      {
+                        "infix-routing:installed": [
+                          null
+                        ],
+                        "outgoing-interface": "e5"
+                      }
+                    ]
+                  }
+                },
+                "route-preference": 0,
+                "source-protocol": "direct"
+              },
+              {
+                "ietf-ipv6-unicast-routing:destination-prefix": "fe80::/64",
+                "last-updated": "2025-01-20T08:05:03+00:00",
+                "next-hop": {
+                  "next-hop-list": {
+                    "next-hop": [
+                      {
+                        "infix-routing:installed": [
+                          null
+                        ],
+                        "outgoing-interface": "e7"
+                      }
+                    ]
+                  }
+                },
+                "route-preference": 0,
+                "source-protocol": "direct"
+              },
+              {
+                "ietf-ipv6-unicast-routing:destination-prefix": "fe80::/64",
+                "last-updated": "2025-01-20T08:05:03+00:00",
+                "next-hop": {
+                  "next-hop-list": {
+                    "next-hop": [
+                      {
+                        "infix-routing:installed": [
+                          null
+                        ],
+                        "outgoing-interface": "e2"
+                      }
+                    ]
+                  }
+                },
+                "route-preference": 0,
+                "source-protocol": "direct"
+              },
+              {
+                "active": [
+                  null
+                ],
+                "ietf-ipv6-unicast-routing:destination-prefix": "fe80::/64",
+                "last-updated": "2025-01-20T08:05:03+00:00",
+                "next-hop": {
+                  "next-hop-list": {
+                    "next-hop": [
+                      {
+                        "infix-routing:installed": [
+                          null
+                        ],
+                        "outgoing-interface": "e1"
+                      }
+                    ]
+                  }
+                },
+                "route-preference": 0,
+                "source-protocol": "direct"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "infix-containers:containers": {
+    "container": [
+      {
+        "command": "/usr/sbin/httpd -f -v",
+        "id": "0aed2ca36b5e9012d8d647a684047410444c0e3134987f0c020bf0234ef0e0f3",
+        "image": "localhost/curios-httpd-oci-amd64-v24.11.0:latest",
+        "image-id": "d6930d60a73be9980f8e19b4b4f63586a6d3492178e20bea962e4e9b8c654033",
+        "name": "container-B",
+        "network": {
+          "interface": [
+            {
+              "name": "veth2a"
+            },
+            {
+              "name": "veth3a"
+            }
+          ],
+          "publish": []
+        },
+        "running": true,
+        "status": "Up About a minute"
+      },
+      {
+        "command": "/usr/sbin/nft-helper /etc/nftables.conf",
+        "id": "3d9ac5c827ed9dba01401774283f00a1a79b19375fba1a3849cf64b5ed68dbb8",
+        "image": "localhost/curios-nftables-oci-amd64-v24.11.0:latest",
+        "image-id": "7a3cc502436250357a6664100a600f306334b4d7203890b85b7ea9b8da6b5665",
+        "name": "firewall",
+        "network": {
+          "host": true
+        },
+        "running": true,
+        "status": "Up About a minute"
+      },
+      {
+        "command": "/usr/sbin/httpd -f -v -p 91",
+        "id": "93753e99ceb3bc80c3a3002952f3d8f130deb77924e352d8e49f5c822c3af34e",
+        "image": "localhost/curios-httpd-oci-amd64-v24.11.0:latest",
+        "image-id": "d6930d60a73be9980f8e19b4b4f63586a6d3492178e20bea962e4e9b8c654033",
+        "name": "container-A",
+        "network": {
+          "interface": [
+            {
+              "name": "veth0a"
+            },
+            {
+              "name": "veth1a"
+            }
+          ],
+          "publish": [
+            "36971->91/tcp"
+          ]
+        },
+        "running": true,
+        "status": "Up About a minute"
+      }
+    ]
+  }
+}
