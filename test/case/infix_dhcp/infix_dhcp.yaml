@@ -7,3 +7,6 @@
 
 - name: client_routes
   case: client_routes/test.py
+
+- name: server_basic
+  case: server_basic/test.py

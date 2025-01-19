@@ -1,0 +1,26 @@
+=== DHCP Server
+==== Description
+Verify basic DHCP server functionality.
+
+==== Topology
+ifdef::topdoc[]
+image::../../test/case/infix_dhcp/dhcp_server/topology.svg[DHCP Server topology]
+endif::topdoc[]
+ifndef::topdoc[]
+ifdef::testgroup[]
+image::dhcp_server/topology.svg[DHCP Server topology]
+endif::testgroup[]
+ifndef::testgroup[]
+image::topology.svg[DHCP Server topology]
+endif::testgroup[]
+endif::topdoc[]
+==== Test sequence
+. Set up topology and attach to client and server DUTs
+. Configure DHCP client and server DUTs
+. Verify DHCP client original hostname
+. Verify DHCP client lease
+. Verify DHCP client new hostname
+
+
+<<<
+

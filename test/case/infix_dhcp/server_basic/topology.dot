@@ -1,0 +1,33 @@
+graph "2x2" {
+	layout="neato";
+	overlap="false";
+	esep="+60";
+
+        node [shape=record, fontname="DejaVu Sans Mono, Book"];
+	edge [color="cornflowerblue", penwidth="2", fontname="DejaVu Serif, Book"];
+
+	host [
+	    label="host | { <mgmt1> mgmt1 | <mgmt2> mgmt2 }",
+	    pos="0,12!",
+	    requires="controller",
+	];
+
+	server [
+	    label="{ <link> link | <mgmt> mgmt  } | server",
+	    pos="15,6!",
+
+	    requires="infix",
+	];
+
+        client [
+	    label="{ <mgmt> mgmt | <link> link} | client",
+	    pos="15,18!",
+
+	    requires="infix",
+	];
+
+	host:mgmt1 -- client:mgmt [requires=mgmt, color=lightgrey]
+        host:mgmt2 -- server:mgmt [requires=mgmt, color=lightgrey]
+
+	server:link -- client:link [color=black, fontcolor=black, taillabel="192.168.2.1/24"]
+}
