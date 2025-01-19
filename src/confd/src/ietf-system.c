@@ -1399,23 +1399,23 @@ static int auth_cb(sr_session_ctx_t *session, uint32_t sub_id, const char *modul
 		    const char *path, const char *request_path, uint32_t request_id,
 		    struct lyd_node **parent, void *priv)
 {
+	const char *fmt = "/ietf-system:system/authentication/user[name='%s']/password";
 	struct spwd *spwd;
-
-	ERROR("%s() path %s reqeust_path %s", __func__, path, request_path);
 
 	setspent();
 	while ((spwd = getspent())) {
-		const char *fmt = "/ietf-system:system/authentication/user[name='%s']/password";
 		char xpath[256];
 
-		if (!spwd->sp_pwdp || spwd->sp_pwdp[0] == '*' || spwd->sp_pwdp[0] == '!')
+		/* Skip any records that do not pass YANG validation */
+		if (!spwd->sp_pwdp || spwd->sp_pwdp[0] == '0' ||
+		     spwd->sp_pwdp[0] == '*' || spwd->sp_pwdp[0] == '!')
 			continue;
 
 		snprintf(xpath, sizeof(xpath), fmt, spwd->sp_namp);
 		lyd_new_path(*parent, NULL, xpath, spwd->sp_pwdp, 0, 0);
 	}
-
 	endspent();
+
 	return SR_ERR_OK;
 }
 
