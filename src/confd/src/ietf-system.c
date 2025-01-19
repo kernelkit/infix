@@ -1721,8 +1721,8 @@ static int change_hostname(sr_session_ctx_t *session, uint32_t sub_id, const cha
 		goto err;
 
 	/* Inform any running lldpd and avahi of the change ... */
-	systemf("lldpcli configure system hostname %s", hostnm);
-	systemf("avahi-set-host-name %s", hostnm);
+	systemf("initctl -bq status lldpd && lldpcli configure system hostname %s", hostnm);
+	systemf("initctl -bq status mdns  && avahi-set-host-name %s", hostnm);
 	systemf("initctl -nbq touch netbrowse");
 err:
 	if (fmt)
