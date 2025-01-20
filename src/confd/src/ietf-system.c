@@ -307,9 +307,8 @@ static int sys_reload_services(void)
 static int change_clock(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
 	const char *xpath, sr_event_t event, unsigned request_id, void *priv)
 {
-	const char *tz_utc_offset;
-	char tz_name[14];
-	char *timezone;
+	char *tz_utc_offset, *timezone;
+	int rc = SR_ERR_OK;
 
 	switch (event) {
 	case SR_EV_ENABLED:	/* first time, on register. */
@@ -323,7 +322,7 @@ static int change_clock(sr_session_ctx_t *session, uint32_t sub_id, const char *
 
 	case SR_EV_DONE:
 		/* Check if passed validation in previous event */
-		if (access(TIMEZONE_NEXT, F_OK))
+		if (!fexist(TIMEZONE_NEXT))
 			return SR_ERR_OK;
 
 		(void)remove(TIMEZONE_PREV);
@@ -343,29 +342,36 @@ static int change_clock(sr_session_ctx_t *session, uint32_t sub_id, const char *
 	tz_utc_offset = srx_get_str(session, XPATH_BASE_"/clock/timezone-utc-offset");
 	timezone = srx_get_str(session, XPATH_BASE_"/clock/timezone-name");
 	if (!timezone && !tz_utc_offset) {
-		snprintf(tz_name,sizeof(tz_name),"Etc/UTC");
-		timezone = tz_name;
+		if (asprintf(&timezone, "Etc/UTC") < 0) {
+			rc = SR_ERR_NO_MEMORY;
+			goto err;
+		}
 	}
 
 	if (tz_utc_offset) {
 		int8_t offset = atol(tz_utc_offset);
+		free(tz_utc_offset);
 		/* When using Etc/GMT offsets, the +/- is inverted in tzdata. */
-		snprintf(tz_name,sizeof(tz_name), "Etc/GMT%s%.2d", offset>-1?"":"+", -offset);
-		timezone = tz_name;
+		if (asprintf(&timezone, "Etc/GMT%s%.2d", offset>-1?"":"+", -offset) < 0) {
+			rc = SR_ERR_NO_MEMORY;
+			goto err;
+		}
 	}
 
 	(void)remove("/etc/localtime+");
 	if (systemf("ln -sf /usr/share/zoneinfo/%s /etc/localtime+", timezone)) {
 		ERROR("No such timezone %s", timezone);
-		return SR_ERR_VALIDATION_FAILED;
+		rc = SR_ERR_VALIDATION_FAILED;
 	}
 
 	if (writesf(timezone, "w", TIMEZONE_NEXT)) {
-		ERRNO("Failed preparing %s", TIMEZONE_NEXT);
-		return SR_ERR_SYS;
+		ERROR("Failed preparing %s", TIMEZONE_NEXT);
+		rc = SR_ERR_SYS;
 	}
 
-	return SR_ERR_OK;
+	free(timezone);
+err:
+	return rc;
 }
 
 static int change_ntp(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
@@ -576,9 +582,11 @@ static int change_dns(sr_session_ctx_t *session, uint32_t sub_id, const char *mo
 
 		/* Get /ietf-system:system/dns-resolver/server[name='foo'] */
 		ptr = srx_get_str(session, "%s/udp-and-tcp/address", val[i].xpath);
-		if (ptr)
+		if (ptr) {
 			/* XXX: add support also for udp-and-tcp/port */
 			fprintf(fp, "nameserver %s\n", ptr);
+			free(ptr);
+		}
 	}
 	sr_free_values(val, cnt);
 
@@ -1649,7 +1657,7 @@ static int change_hostname(sr_session_ctx_t *session, uint32_t sub_id, const cha
 	struct confd *confd = (struct confd *)priv;
 	const char *hostip = "127.0.1.1";
 	char  hostnm[65], buf[256];
-	const char *fmt;
+	char *fmt;
 	FILE *nfp, *fp;
 	int err, fd;
 
@@ -1717,11 +1725,13 @@ static int change_hostname(sr_session_ctx_t *session, uint32_t sub_id, const cha
 	systemf("avahi-set-host-name %s", hostnm);
 	systemf("initctl -nbq touch netbrowse");
 err:
+	if (fmt)
+		free(fmt);
+
 	if (err) {
 		ERROR("Failed activating changes.");
 		return err;
 	}
-
 	if (sys_reload_services())
 		return SR_ERR_SYS;
 
