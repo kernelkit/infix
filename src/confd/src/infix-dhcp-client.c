@@ -199,12 +199,30 @@ static char *dhcp_options(const char *ifname, struct lyd_node *cfg)
 	return options ?: strdup("-O subnet -O router -O domain");
 }
 
+static bool is_hex(const char *s)
+{
+	while (s[0] && s[1]) {
+		if (!isxdigit(s[0]) || !isxdigit(s[1]))
+			return false;
+
+		s += 2;
+		if (*s == '\0')
+			return true;
+
+		if (*s != ':')
+			return false;
+		s++;
+        }
+
+	return false;
+}
+
 static void add(const char *ifname, struct lyd_node *cfg)
 {
 	const char *metric = lydx_get_cattr(cfg, "route-preference");
 	const char *client_id = lydx_get_cattr(cfg, "client-id");
 	char vendor[128] = { 0 }, do_arp[20] = { 0 };
-	char *args = NULL, *options = NULL;
+	char *cid = NULL, *options = NULL;
 	const char *action = "disable";
 	bool arping;
 	FILE *fp;
@@ -214,9 +232,24 @@ static void add(const char *ifname, struct lyd_node *cfg)
 		snprintf(do_arp, sizeof(do_arp), "-a%d", ARPING_MSEC);
 
 	if (client_id && client_id[0]) {
-		args = alloca(strlen(client_id) + 12);
-		if (args)
-			sprintf(args, "-C -x 61:'\"%s\"'", client_id);
+		size_t len = 3 * strlen(client_id) + 16;
+
+		cid = malloc(len);
+		if (!cid)
+			goto generr;
+
+		strlcpy(cid, "-C -x 61:00", len);
+		if (is_hex(client_id)) {
+			strlcat(cid, ":", len);
+			strlcat(cid, client_id, len);
+		} else {
+			for (size_t i = 0; client_id[i]; i++) {
+				char hex[5];
+
+				snprintf(hex, sizeof(hex), ":%02x", client_id[i]);
+				strlcat(cid, hex, len);
+			}
+		}
 	}
 
 	options = dhcp_options(ifname, cfg);
@@ -229,7 +262,8 @@ static void add(const char *ifname, struct lyd_node *cfg)
 
 	fp = fopenf("w", "/etc/finit.d/available/dhcp-client-%s.conf", ifname);
 	if (!fp) {
-		ERROR("failed creating DHCP client %s: %s", ifname, strerror(errno));
+	generr:
+		ERRNO("failed creating DHCP client %s: %s", ifname, strerror(errno));
 		goto err;
 	}
 
@@ -242,13 +276,15 @@ static void add(const char *ifname, struct lyd_node *cfg)
 		"		-- DHCP client @%s\n",
 		ifname, ifname, ifname, do_arp,
 		options,
-		ifname, args ?: "", vendor, ifname);
+		ifname, cid ?: "", vendor, ifname);
 	fclose(fp);
 	action = "enable";
 err:
 	systemf("initctl -bfqn %s dhcp-client-%s", action, ifname);
 	if (options)
 		free(options);
+	if (cid)
+		free(cid);
 }
 
 static void del(const char *ifname)
