@@ -1,0 +1,7 @@
+ORDER=primary secondary net
+primary_OK=1
+secondary_OK=1
+net_OK=1
+primary_TRY=0
+secondary_TRY=0
+net_TRY=0

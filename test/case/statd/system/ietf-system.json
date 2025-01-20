@@ -1,0 +1,98 @@
+{
+  "ietf-system:system-state": {
+    "infix-system:software": {
+      "compatible": "infix-x86_64",
+      "variant": "",
+      "booted": "primary",
+      "boot-order": [
+        "primary",
+        "secondary",
+        "net"
+      ],
+      "slot": [
+        {
+          "name": "rootfs.1",
+          "bootname": "secondary",
+          "class": "rootfs",
+          "state": "inactive",
+          "bundle": {
+            "compatible": "infix-x86_64",
+            "version": "94cd526"
+          },
+          "size": "126205952",
+          "sha256": "6cc0272f46b1a014f91693dc6218ce2f9a4b58bea727c492f6689c3ab102acca",
+          "installed": {
+            "datetime": "2025-01-15T10:00:56Z",
+            "count": 1
+          },
+          "activated": {
+            "datetime": "2025-01-15T10:00:56Z",
+            "count": 1
+          }
+        },
+        {
+          "name": "rootfs.0",
+          "bootname": "primary",
+          "class": "rootfs",
+          "state": "booted",
+          "bundle": {
+            "compatible": "infix-x86_64",
+            "version": "94cd526"
+          },
+          "size": "126205952",
+          "sha256": "6cc0272f46b1a014f91693dc6218ce2f9a4b58bea727c492f6689c3ab102acca",
+          "installed": {
+            "datetime": "2025-01-15T10:00:56Z",
+            "count": 1
+          },
+          "activated": {
+            "datetime": "2025-01-15T10:00:56Z",
+            "count": 1
+          }
+        },
+        {
+          "name": "net.0",
+          "bootname": "net",
+          "class": "net",
+          "state": "inactive",
+          "bundle": {},
+          "installed": {},
+          "activated": {}
+        }
+      ],
+      "installer": {
+        "operation": "idle",
+        "progress": {
+          "percentage": 0
+        }
+      }
+    },
+    "infix-system:ntp": {
+      "sources": {
+        "source": [
+          {
+            "address": "192.168.1.1",
+            "mode": "server",
+            "state": "candidate",
+            "stratum": 1,
+            "poll": 6
+          },
+          {
+            "address": "192.168.2.1",
+            "mode": "server",
+            "state": "candidate",
+            "stratum": 1,
+            "poll": 6
+          },
+          {
+            "address": "192.168.3.1",
+            "mode": "server",
+            "state": "selected",
+            "stratum": 1,
+            "poll": 6
+          }
+        ]
+      }
+    }
+  }
+}

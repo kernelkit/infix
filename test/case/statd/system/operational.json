@@ -1,0 +1,122 @@
+{
+  "ietf-hardware:hardware": {
+    "component": [
+      {
+        "infix-hardware:vpd-data": {},
+        "name": "product"
+      },
+      {
+        "class": "infix-hardware:usb",
+        "name": "USB",
+        "state": {
+          "admin-state": "unlocked",
+          "oper-state": "enabled"
+        }
+      },
+      {
+        "class": "infix-hardware:usb",
+        "name": "USB2",
+        "state": {
+          "admin-state": "unlocked",
+          "oper-state": "enabled"
+        }
+      }
+    ]
+  },
+  "ietf-system:system-state": {
+    "infix-system:ntp": {
+      "sources": {
+        "source": [
+          {
+            "address": "192.168.1.1",
+            "mode": "server",
+            "poll": 6,
+            "state": "candidate",
+            "stratum": 1
+          },
+          {
+            "address": "192.168.2.1",
+            "mode": "server",
+            "poll": 6,
+            "state": "candidate",
+            "stratum": 1
+          },
+          {
+            "address": "192.168.3.1",
+            "mode": "server",
+            "poll": 6,
+            "state": "selected",
+            "stratum": 1
+          }
+        ]
+      }
+    },
+    "infix-system:software": {
+      "boot-order": [
+        "primary",
+        "secondary",
+        "net"
+      ],
+      "booted": "primary",
+      "compatible": "infix-x86_64",
+      "installer": {
+        "operation": "idle",
+        "progress": {
+          "percentage": 0
+        }
+      },
+      "slot": [
+        {
+          "activated": {
+            "count": 1,
+            "datetime": "2025-01-15T10:00:56Z"
+          },
+          "bootname": "secondary",
+          "bundle": {
+            "compatible": "infix-x86_64",
+            "version": "94cd526"
+          },
+          "class": "rootfs",
+          "installed": {
+            "count": 1,
+            "datetime": "2025-01-15T10:00:56Z"
+          },
+          "name": "rootfs.1",
+          "sha256": "6cc0272f46b1a014f91693dc6218ce2f9a4b58bea727c492f6689c3ab102acca",
+          "size": "126205952",
+          "state": "inactive"
+        },
+        {
+          "activated": {
+            "count": 1,
+            "datetime": "2025-01-15T10:00:56Z"
+          },
+          "bootname": "primary",
+          "bundle": {
+            "compatible": "infix-x86_64",
+            "version": "94cd526"
+          },
+          "class": "rootfs",
+          "installed": {
+            "count": 1,
+            "datetime": "2025-01-15T10:00:56Z"
+          },
+          "name": "rootfs.0",
+          "sha256": "6cc0272f46b1a014f91693dc6218ce2f9a4b58bea727c492f6689c3ab102acca",
+          "size": "126205952",
+          "state": "booted"
+        },
+        {
+          "activated": {},
+          "bootname": "net",
+          "bundle": {},
+          "class": "net",
+          "installed": {},
+          "name": "net.0",
+          "state": "inactive"
+        }
+      ],
+      "variant": ""
+    }
+  }
+}

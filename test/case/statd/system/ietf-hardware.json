@@ -1,0 +1,26 @@
+{
+  "ietf-hardware:hardware": {
+    "component": [
+      {
+        "name": "product",
+        "infix-hardware:vpd-data": {}
+      },
+      {
+        "state": {
+          "admin-state": "unlocked",
+          "oper-state": "enabled"
+        },
+        "name": "USB",
+        "class": "infix-hardware:usb"
+      },
+      {
+        "state": {
+          "admin-state": "unlocked",
+          "oper-state": "enabled"
+        },
+        "name": "USB2",
+        "class": "infix-hardware:usb"
+      }
+    ]
+  }
+}
