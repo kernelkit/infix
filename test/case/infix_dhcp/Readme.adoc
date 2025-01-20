@@ -10,3 +10,5 @@ include::client_default_gw/Readme.adoc[]
 include::client_routes/Readme.adoc[]
 
 include::server_basic/Readme.adoc[]
+
+include::server_host/Readme.adoc[]
