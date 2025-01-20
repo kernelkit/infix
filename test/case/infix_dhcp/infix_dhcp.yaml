@@ -1,9 +1,9 @@
 ---
-- name: dhcp_basic
-  case: dhcp_basic/test.py
+- name: client_basic
+  case: client_basic/test.py
 
-- name: dhcp_router
-  case: dhcp_router/test.py
+- name: client_default_gw
+  case: client_default_gw/test.py
 
-- name: dhcp_routes
-  case: dhcp_routes/test.py
+- name: client_routes
+  case: client_routes/test.py

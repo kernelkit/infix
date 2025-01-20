@@ -2,7 +2,9 @@
 """DHCP router
 
 Verify that the DHCP client receives default gateway (DHCP option 3,
-router) and that route exists in operational datastore.
+router) and that route exists in operational datastore.  The DHCP
+server runs at 192.168.0.1 but should hand out option 3 to clients
+with address 192.168.0.254.
 """
 
 import infamy, infamy.dhcp
@@ -18,7 +20,9 @@ with infamy.Test() as test:
         _, host = env.ltop.xlate("host", "data")
 
     with infamy.IsolatedMacVlan(host) as netns:
-        netns.addip("192.168.0.1")
+        with test.step("Set up DHCP server as 192.168.0.1, option 3: 192.168.0.254"):
+            netns.addip("192.168.0.1")
+
         with infamy.dhcp.Server(netns, router=ROUTER):
             _, port = env.ltop.xlate("client", "data")
             config = {
@@ -33,7 +37,7 @@ with infamy.Test() as test:
             }
             client.put_config_dict("infix-dhcp-client", config)
 
-            with test.step("Verify client has default route via 192.168.0.254"):
+            with test.step("Verify DHCP client has default route via 192.168.0.254"):
                 until(lambda: route.ipv4_route_exist(client, "0.0.0.0/0", ROUTER))
 
     test.succeed()

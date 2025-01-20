@@ -3,8 +3,8 @@
 
 <<<
 
-include::dhcp_basic/Readme.adoc[]
+include::client_basic/Readme.adoc[]
 
-include::dhcp_router/Readme.adoc[]
+include::client_default_gw/Readme.adoc[]
 
-include::dhcp_routes/Readme.adoc[]
+include::client_routes/Readme.adoc[]

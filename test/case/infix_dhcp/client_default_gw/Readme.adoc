@@ -1,0 +1,1 @@
+client_default_gw.adoc

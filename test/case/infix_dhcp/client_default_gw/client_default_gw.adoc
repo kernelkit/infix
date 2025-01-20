@@ -1,0 +1,27 @@
+=== DHCP router
+==== Description
+Verify that the DHCP client receives default gateway (DHCP option 3,
+router) and that route exists in operational datastore.  The DHCP
+server runs at 192.168.0.1 but should hand out option 3 to clients
+with address 192.168.0.254.
+
+==== Topology
+ifdef::topdoc[]
+image::{topdoc}../../test/case/infix_dhcp/client_default_gw/topology.svg[DHCP router topology]
+endif::topdoc[]
+ifndef::topdoc[]
+ifdef::testgroup[]
+image::client_default_gw/topology.svg[DHCP router topology]
+endif::testgroup[]
+ifndef::testgroup[]
+image::topology.svg[DHCP router topology]
+endif::testgroup[]
+endif::topdoc[]
+==== Test sequence
+. Initialize
+. Set up DHCP server as 192.168.0.1, option 3: 192.168.0.254
+. Verify DHCP client has default route via 192.168.0.254
+
+
+<<<
+
