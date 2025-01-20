@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""
-DHCP Basic
+"""DHCP Basic
 
 This is a very basic DHCP test that requests an IPv4 lease
 from a DHCP server and checks that the lease is set on the
 interface.
+
 """
 
 import infamy, infamy.dhcp
@@ -13,6 +13,7 @@ from infamy.util import until
 
 with infamy.Test() as test:
     ADDRESS = '10.0.0.42'
+
     with test.step("Initialize"):
         env = infamy.Env()
         client = env.attach("client", "mgmt")
@@ -31,7 +32,7 @@ with infamy.Test() as test:
             }
             client.put_config_dict("infix-dhcp-client", config)
 
-            with test.step("Verify client get DHCP lease for 10.0.0.42 on client:data"):
+            with test.step("Verify client lease for 10.0.0.42"):
                 until(lambda: iface.address_exist(client, port, ADDRESS))
 
     test.succeed()

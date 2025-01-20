@@ -102,12 +102,12 @@ static char *os_name_version(char *str, size_t len)
 	return str;
 }
 
-static char *compose_option(const char *ifname, const char *name, const char *value,
+static char *compose_option(const char *ifname, const char *id, const char *value,
 			    char *option, size_t len)
 {
 	if (value) {
-		if (isdigit(name[0])) {
-			unsigned long opt = strtoul(name, NULL, 0);
+		if (isdigit(id[0])) {
+			unsigned long opt = strtoul(id, NULL, 0);
 
 			switch (opt) {
 			case 81:
@@ -116,25 +116,25 @@ static char *compose_option(const char *ifname, const char *name, const char *va
 				break;
 			}
 
-			snprintf(option, len, "-x %s:%s ", name, value);
+			snprintf(option, len, "-x %s:%s ", id, value);
 		} else {
-			if (!strcmp(name, "fqdn"))
+			if (!strcmp(id, "fqdn"))
 				fqdn(value, option, len);
-			else if (!strcmp(name, "hostname"))
-				snprintf(option, len, "-x %s:%s ", name, value);
+			else if (!strcmp(id, "hostname"))
+				snprintf(option, len, "-x %s:%s ", id, value);
 			else
-				snprintf(option, len, "-x %s:'\"%s\"' ", name, value);
+				snprintf(option, len, "-x %s:'\"%s\"' ", id, value);
 		}
 	} else {
-		struct { char *name; char *(*cb)(const char *, char *, size_t); } opt[] = {
+		struct { char *id; char *(*cb)(const char *, char *, size_t); } opt[] = {
 			{ "hostname", hostname },
 			{ "address",  ip_cache },
 			{ "fqdn",     NULL     },
 			{ NULL, NULL }
 		};
 
-		for (size_t i = 0; opt[i].name; i++) {
-			if (strcmp(name, opt[i].name))
+		for (size_t i = 0; opt[i].id; i++) {
+			if (strcmp(id, opt[i].id))
 				continue;
 
 			if (!opt[i].cb || !opt[i].cb(ifname, option, len))
@@ -143,17 +143,17 @@ static char *compose_option(const char *ifname, const char *name, const char *va
 			return option;
 		}
 
-		snprintf(option, len, "-O %s ", name);
+		snprintf(option, len, "-O %s ", id);
 	}
 
 	return option;
 }
 
-static char *compose_options(const char *ifname, char **options, const char *name, const char *value)
+static char *compose_options(const char *ifname, char **options, const char *id, const char *value)
 {
 	char opt[300];
 
-	compose_option(ifname, name, value, opt, sizeof(opt));
+	compose_option(ifname, id, value, opt, sizeof(opt));
 	if (*options) {
 		char *opts;
 
@@ -177,10 +177,10 @@ static char *dhcp_options(const char *ifname, struct lyd_node *cfg)
 	char *options = NULL;
 
 	LYX_LIST_FOR_EACH(lyd_child(cfg), option, "option") {
-		const char *value = lydx_get_cattr(option, "value");
-		const char *name  = lydx_get_cattr(option, "name");
+		const char *id = lydx_get_cattr(option, "id");
+		const char *val = lydx_get_cattr(option, "value");
 
-		options = compose_options(ifname, &options, name, value);
+		options = compose_options(ifname, &options, id, val);
 	}
 
 	if (!options) {
@@ -339,7 +339,7 @@ static void infer_options(sr_session_ctx_t *session, const char *xpath)
 	size_t i;
 
 	for (i = 0; i < NELEMS(opt); i++)
-		srx_set_item(session, NULL, 0, "%s/option[name='%s']", xpath, opt[i]);
+		srx_set_item(session, NULL, 0, "%s/option[id='%s']", xpath, opt[i]);
 }
 
 static int cand(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
