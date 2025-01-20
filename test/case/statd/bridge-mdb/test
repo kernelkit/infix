@@ -1,0 +1,11 @@
+#!/bin/sh
+
+yang_models="ietf-interfaces"
+
+gen_test=ietf_interfaces/static_multicast_filters/test.py
+gen_iface=d3a
+
+cli_commands="show-bridge-mdb"
+
+. $(readlink -f $(dirname $0)/../test.sh)
+main "$@"

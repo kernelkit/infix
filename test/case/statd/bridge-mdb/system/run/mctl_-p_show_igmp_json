@@ -1,0 +1,41 @@
+{
+  "pid": 4570,
+  "query-interval": 125,
+  "query-response-interval": 10,
+  "query-last-member-interval": 1,
+  "robustness": 2,
+  "router-timeout": 255,
+  "router-alert": true,
+  "fast-leave-ports": [ ],
+  "multicast-router-ports": [ ],
+  "multicast-flood-ports": [ "e2", "e3", "e4" ],
+  "multicast-queriers": [
+    {
+      "interface": "br0",
+      "state": "up",
+      "querier": "10.0.0.1",
+      "interval": 125,
+      "version": 3
+    }
+  ],
+  "multicast-groups": [
+    {
+      "bridge": "br0",
+      "group": "01:00:00:01:02:03",
+      "mac": "01:00:00:01:02:03",
+      "ports": [ "e3" ]
+    },
+    {
+      "bridge": "br0",
+      "group": "224.1.1.1",
+      "mac": "01:00:5e:01:01:01",
+      "ports": [ "e3" ]
+    },
+    {
+      "bridge": "br0",
+      "group": "ff02::6a",
+      "mac": "33:33:00:00:00:6a",
+      "ports": [ "br0" ]
+    }
+  ]
+}
