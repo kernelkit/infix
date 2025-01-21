@@ -24,7 +24,7 @@ explicit router-id.
 
 ==== Topology
 ifdef::topdoc[]
-image::../../test/case/ietf_routing/ospf_multiarea/topology.svg[OSPF with multiple areas topology]
+image::{topdoc}../../test/case/ietf_routing/ospf_multiarea/topology.svg[OSPF with multiple areas topology]
 endif::topdoc[]
 ifndef::topdoc[]
 ifdef::testgroup[]

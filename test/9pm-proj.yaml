@@ -1,0 +1,4 @@
+9pm:
+  PROJECT-NAME: "Infix"
+  PROJECT-ROOT: "../../"
+  PROJECT-TOPDOC: "../case/"

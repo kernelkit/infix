@@ -156,7 +156,7 @@ class TestCase:
             spec.write(description + "\n\n")
             spec.write("==== Topology\n")
             spec.write("ifdef::topdoc[]\n")
-            spec.write(f"image::../../{self.test_dir}/topology.svg[{name} topology]\n")
+            spec.write(f"image::{{topdoc}}../../{self.test_dir}/topology.svg[{name} topology]\n")
             spec.write("endif::topdoc[]\n")
             spec.write("ifndef::topdoc[]\n")
             spec.write("ifdef::testgroup[]\n")

@@ -12,7 +12,7 @@ port is handled correctly.
 
 ==== Topology
 ifdef::topdoc[]
-image::../../test/case/ietf_hardware/usb/topology.svg[USB configuration topology]
+image::{topdoc}../../test/case/ietf_hardware/usb/topology.svg[USB configuration topology]
 endif::topdoc[]
 ifndef::topdoc[]
 ifdef::testgroup[]

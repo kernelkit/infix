@@ -5,7 +5,7 @@ given a physical interface instead of an end of a VETH pair.
 
 ==== Topology
 ifdef::topdoc[]
-image::../../test/case/infix_containers/container_phys/topology.svg[Container with physical interface topology]
+image::{topdoc}../../test/case/infix_containers/container_phys/topology.svg[Container with physical interface topology]
 endif::topdoc[]
 ifndef::topdoc[]
 ifdef::testgroup[]

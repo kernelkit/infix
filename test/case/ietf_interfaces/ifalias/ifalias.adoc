@@ -5,7 +5,7 @@ then be read back from the operational datastore.
 
 ==== Topology
 ifdef::topdoc[]
-image::../../test/case/ietf_interfaces/ifalias/topology.svg[Interface Description (ifAlias) topology]
+image::{topdoc}../../test/case/ietf_interfaces/ifalias/topology.svg[Interface Description (ifAlias) topology]
 endif::topdoc[]
 ifndef::topdoc[]
 ifdef::testgroup[]

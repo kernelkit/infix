@@ -10,7 +10,7 @@ to the one lower than DHCP.
 
 ==== Topology
 ifdef::topdoc[]
-image::../../test/case/ietf_routing/route_pref_dhcp/topology.svg[Route preference: DHCP vs Static topology]
+image::{topdoc}../../test/case/ietf_routing/route_pref_dhcp/topology.svg[Route preference: DHCP vs Static topology]
 endif::topdoc[]
 ifndef::topdoc[]
 ifdef::testgroup[]

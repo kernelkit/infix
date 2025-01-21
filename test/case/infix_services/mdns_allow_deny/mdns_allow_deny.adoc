@@ -10,7 +10,7 @@ with three scenarios:
 
 ==== Topology
 ifdef::topdoc[]
-image::../../test/case/infix_services/mdns_allow_deny/topology.svg[mDNS allow/deny interfaces topology]
+image::{topdoc}../../test/case/infix_services/mdns_allow_deny/topology.svg[mDNS allow/deny interfaces topology]
 endif::topdoc[]
 ifndef::topdoc[]
 ifdef::testgroup[]

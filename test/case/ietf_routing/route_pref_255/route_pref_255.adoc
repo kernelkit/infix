@@ -7,7 +7,7 @@ which should prevent the route from becoming active.
 
 ==== Topology
 ifdef::topdoc[]
-image::../../test/case/ietf_routing/route_pref_255/topology.svg[Route preference: Static Route Activation and Maximum Distance topology]
+image::{topdoc}../../test/case/ietf_routing/route_pref_255/topology.svg[Route preference: Static Route Activation and Maximum Distance topology]
 endif::topdoc[]
 ifndef::topdoc[]
 ifdef::testgroup[]

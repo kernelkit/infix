@@ -4,7 +4,7 @@ Verify that it is possible to set timezone using timezone names.
 
 ==== Topology
 ifdef::topdoc[]
-image::../../test/case/ietf_system/timezone/topology.svg[Set timezone using timezone name topology]
+image::{topdoc}../../test/case/ietf_system/timezone/topology.svg[Set timezone using timezone name topology]
 endif::topdoc[]
 ifndef::topdoc[]
 ifdef::testgroup[]

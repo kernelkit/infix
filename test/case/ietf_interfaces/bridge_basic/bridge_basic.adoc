@@ -12,7 +12,7 @@ Test basic connectivity to a bridge
 
 ==== Topology
 ifdef::topdoc[]
-image::../../test/case/ietf_interfaces/bridge_basic/topology.svg[Bridge basic topology]
+image::{topdoc}../../test/case/ietf_interfaces/bridge_basic/topology.svg[Bridge basic topology]
 endif::topdoc[]
 ifndef::topdoc[]
 ifdef::testgroup[]

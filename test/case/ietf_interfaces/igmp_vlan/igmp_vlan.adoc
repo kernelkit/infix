@@ -21,7 +21,7 @@ Test tagged IGMP control traffic and that VLAN separation is respected for multi
 
 ==== Topology
 ifdef::topdoc[]
-image::../../test/case/ietf_interfaces/igmp_vlan/topology.svg[IGMP VLAN topology]
+image::{topdoc}../../test/case/ietf_interfaces/igmp_vlan/topology.svg[IGMP VLAN topology]
 endif::topdoc[]
 ifndef::topdoc[]
 ifdef::testgroup[]

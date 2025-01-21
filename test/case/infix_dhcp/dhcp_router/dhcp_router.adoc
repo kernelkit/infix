@@ -5,7 +5,7 @@ and that route exists in operational datastore.
 
 ==== Topology
 ifdef::topdoc[]
-image::../../test/case/infix_dhcp/dhcp_router/topology.svg[DHCP router topology]
+image::{topdoc}../../test/case/infix_dhcp/dhcp_router/topology.svg[DHCP router topology]
 endif::topdoc[]
 ifndef::topdoc[]
 ifdef::testgroup[]

@@ -8,7 +8,7 @@ The RPC actions: stop + start, and restart are also verified.
 
 ==== Topology
 ifdef::topdoc[]
-image::../../test/case/infix_containers/container_basic/topology.svg[Container basic topology]
+image::{topdoc}../../test/case/infix_containers/container_basic/topology.svg[Container basic topology]
 endif::topdoc[]
 ifndef::topdoc[]
 ifdef::testgroup[]

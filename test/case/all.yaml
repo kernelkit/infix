@@ -1,4 +1,7 @@
 ---
+- settings:
+    test-spec: Readme.adoc
+
 - case: meta/wait.py
   infamy:
     specification: False

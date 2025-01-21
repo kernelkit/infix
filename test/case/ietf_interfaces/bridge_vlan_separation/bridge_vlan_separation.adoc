@@ -23,7 +23,7 @@ Test that two VLANs are correctly separated in the bridge
 
 ==== Topology
 ifdef::topdoc[]
-image::../../test/case/ietf_interfaces/bridge_vlan_separation/topology.svg[Bridge VLAN separation topology]
+image::{topdoc}../../test/case/ietf_interfaces/bridge_vlan_separation/topology.svg[Bridge VLAN separation topology]
 endif::topdoc[]
 ifndef::topdoc[]
 ifdef::testgroup[]

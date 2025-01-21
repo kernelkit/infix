@@ -27,7 +27,7 @@ must _not_ be allowed.
 
 ==== Topology
 ifdef::topdoc[]
-image::../../test/case/ietf_interfaces/vlan_iface_termination/topology.svg[VLAN Interface Termination topology]
+image::{topdoc}../../test/case/ietf_interfaces/vlan_iface_termination/topology.svg[VLAN Interface Termination topology]
 endif::topdoc[]
 ifndef::topdoc[]
 ifdef::testgroup[]

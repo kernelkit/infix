@@ -10,7 +10,7 @@ PC, which can act as a link breaker.
 .Use-case overview.
 [#img-overview]
 ifdef::topdoc[]
-image::../../test/case/use_case/ospf_container/overview.svg[]
+image::{topdoc}../../test/case/use_case/ospf_container/overview.svg[]
 endif::topdoc[]
 ifndef::topdoc[]
 ifdef::testgroup[]
@@ -51,7 +51,7 @@ second bridge, `br1`, only use IPv6 link-local addresses.
 .Internal network setup, here router R1 on subnet 10.1.1.1/24.
 [#img-setup]
 ifdef::topdoc[]
-image::../../test/case/use_case/ospf_container/internal-network.svg[Internal networks]
+image::{topdoc}../../test/case/use_case/ospf_container/internal-network.svg[Internal networks]
 endif::topdoc[]
 ifndef::topdoc[]
 ifdef::testgroup[]
@@ -75,7 +75,7 @@ endif::topdoc[]
 
 ==== Topology
 ifdef::topdoc[]
-image::../../test/case/use_case/ospf_container/topology.svg[OSPF Container topology]
+image::{topdoc}../../test/case/use_case/ospf_container/topology.svg[OSPF Container topology]
 endif::topdoc[]
 ifndef::topdoc[]
 ifdef::testgroup[]

@@ -4,7 +4,7 @@ Undefined
 
 ==== Topology
 ifdef::topdoc[]
-image::../../test/case/ietf_interfaces/tunnel_bridged/topology.svg[GRETAP bridged with physical interface topology]
+image::{topdoc}../../test/case/ietf_interfaces/tunnel_bridged/topology.svg[GRETAP bridged with physical interface topology]
 endif::topdoc[]
 ifndef::topdoc[]
 ifdef::testgroup[]

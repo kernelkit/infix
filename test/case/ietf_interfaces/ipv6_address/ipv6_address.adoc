@@ -5,7 +5,7 @@ See issue #473 for details.
 
 ==== Topology
 ifdef::topdoc[]
-image::../../test/case/ietf_interfaces/ipv6_address/topology.svg[Interface IPv6 autoconf for bridges topology]
+image::{topdoc}../../test/case/ietf_interfaces/ipv6_address/topology.svg[Interface IPv6 autoconf for bridges topology]
 endif::topdoc[]
 ifndef::topdoc[]
 ifdef::testgroup[]

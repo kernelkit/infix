@@ -7,7 +7,7 @@ Test SSH server functionality with pre-defined key pair:
 
 ==== Topology
 ifdef::topdoc[]
-image::../../test/case/infix_services/ssh_server_config/topology.svg[SSH server configuration topology]
+image::{topdoc}../../test/case/infix_services/ssh_server_config/topology.svg[SSH server configuration topology]
 endif::topdoc[]
 ifndef::topdoc[]
 ifdef::testgroup[]

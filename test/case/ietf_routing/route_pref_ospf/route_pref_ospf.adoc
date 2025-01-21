@@ -10,7 +10,7 @@ becomes unavailable, the static route should take over.
 
 ==== Topology
 ifdef::topdoc[]
-image::../../test/case/ietf_routing/route_pref_ospf/topology.svg[Route preference: OSPF vs Static topology]
+image::{topdoc}../../test/case/ietf_routing/route_pref_ospf/topology.svg[Route preference: OSPF vs Static topology]
 endif::topdoc[]
 ifndef::topdoc[]
 ifdef::testgroup[]

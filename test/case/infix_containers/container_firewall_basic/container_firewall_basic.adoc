@@ -27,7 +27,7 @@ phrase, is only reachable from the public interface `ext0`, on
 
 ==== Topology
 ifdef::topdoc[]
-image::../../test/case/infix_containers/container_firewall_basic/topology.svg[Basic Firewall Container topology]
+image::{topdoc}../../test/case/infix_containers/container_firewall_basic/topology.svg[Basic Firewall Container topology]
 endif::topdoc[]
 ifndef::topdoc[]
 ifdef::testgroup[]

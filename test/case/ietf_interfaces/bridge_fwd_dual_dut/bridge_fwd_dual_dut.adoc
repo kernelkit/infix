@@ -24,7 +24,7 @@ Ping through two bridges on two different DUTs.
 
 ==== Topology
 ifdef::topdoc[]
-image::../../test/case/ietf_interfaces/bridge_fwd_dual_dut/topology.svg[Bridge forwarding dual DUTs topology]
+image::{topdoc}../../test/case/ietf_interfaces/bridge_fwd_dual_dut/topology.svg[Bridge forwarding dual DUTs topology]
 endif::topdoc[]
 ifndef::topdoc[]
 ifdef::testgroup[]

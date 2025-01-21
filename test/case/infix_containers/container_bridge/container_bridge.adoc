@@ -9,7 +9,7 @@ port accessed from the host.
 
 ==== Topology
 ifdef::topdoc[]
-image::../../test/case/infix_containers/container_bridge/topology.svg[Container with bridge network topology]
+image::{topdoc}../../test/case/infix_containers/container_bridge/topology.svg[Container with bridge network topology]
 endif::topdoc[]
 ifndef::topdoc[]
 ifdef::testgroup[]

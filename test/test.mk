@@ -27,7 +27,7 @@ export INFAMY_ARGS := --transport=netconf
 endif
 
 test:
-	$(test-dir)/env -r $(base) $(mode) $(binaries) $(pkg-$(ARCH)) $(ninepm) $(TESTS)
+	$(test-dir)/env -r $(base) $(mode) $(binaries) $(pkg-$(ARCH)) $(ninepm) -v $(TESTS)
 
 test-sh:
 	$(test-dir)/env $(base) $(mode) $(binaries) $(pkg-$(ARCH)) -i /bin/sh
@@ -41,6 +41,6 @@ test-spec:
 # Unit tests run with random (-r) hostname and container name to
 # prevent race conditions when running in CI environments.
 test-unit:
-	$(test-dir)/env -r $(base) $(ninepm) $(UNIT_TESTS)
+	$(test-dir)/env -r $(base) $(ninepm) -v $(UNIT_TESTS)
 
 .PHONY: test test-sh test-unit test-spec

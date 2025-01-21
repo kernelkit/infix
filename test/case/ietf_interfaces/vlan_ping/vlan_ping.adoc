@@ -4,7 +4,7 @@ Very basic test if the VLAN interface configuration works.
 
 ==== Topology
 ifdef::topdoc[]
-image::../../test/case/ietf_interfaces/vlan_ping/topology.svg[VLAN ping connectivity topology]
+image::{topdoc}../../test/case/ietf_interfaces/vlan_ping/topology.svg[VLAN ping connectivity topology]
 endif::topdoc[]
 ifndef::topdoc[]
 ifdef::testgroup[]

@@ -5,7 +5,7 @@ and that they exchange routes, ending with a simple connectivity check.
 
 ==== Topology
 ifdef::topdoc[]
-image::../../test/case/ietf_routing/ospf_basic/topology.svg[OSPF Basic topology]
+image::{topdoc}../../test/case/ietf_routing/ospf_basic/topology.svg[OSPF Basic topology]
 endif::topdoc[]
 ifndef::topdoc[]
 ifdef::testgroup[]

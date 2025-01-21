@@ -5,7 +5,7 @@ that data forwarding works as expected via an intermediate device.
 
 ==== Topology
 ifdef::topdoc[]
-image::../../test/case/ietf_routing/static_routing/topology.svg[Static routing topology]
+image::{topdoc}../../test/case/ietf_routing/static_routing/topology.svg[Static routing topology]
 endif::topdoc[]
 ifndef::topdoc[]
 ifdef::testgroup[]

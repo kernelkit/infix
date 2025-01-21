@@ -5,7 +5,7 @@ when having two USB ports.
 
 ==== Topology
 ifdef::topdoc[]
-image::../../test/case/ietf_hardware/usb_two_ports/topology.svg[USB configuration with two USB ports topology]
+image::{topdoc}../../test/case/ietf_hardware/usb_two_ports/topology.svg[USB configuration with two USB ports topology]
 endif::topdoc[]
 ifndef::topdoc[]
 ifdef::testgroup[]
