@@ -5,6 +5,7 @@ RUN apk add --no-cache \
     e2fsprogs \
     fakeroot \
     gcc \
+    git \
     graphviz \
     iproute2 \
     iputils \
