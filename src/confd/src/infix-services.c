@@ -21,6 +21,9 @@
 
 #define SSH_HOSTKEYS "/etc/ssh/hostkeys"
 #define SSH_HOSTKEYS_NEXT SSH_HOSTKEYS"+"
+ 
+#define LLDP_CONFIG "/etc/lldpd.d/confd.conf"
+#define LLDP_CONFIG_NEXT LLDP_CONFIG"+"
 
 #define FOREACH_SVC(SVC)			\
         SVC(none)				\
@@ -125,7 +128,7 @@ static sr_data_t *get(sr_session_ctx_t *session, sr_event_t event, const char *x
 	return cfg;
 }
 
-static int put(sr_data_t *cfg, struct lyd_node *srv)
+static int put(sr_data_t *cfg)
 {
 	sr_release_data(cfg);
 	return SR_ERR_OK;
@@ -148,7 +151,7 @@ static int svc_change(sr_session_ctx_t *session, sr_event_t event, const char *x
 	if (ena)
 		systemf("initctl -nbq touch %s", svc); /* in case already enabled */
 
-	return put(cfg, srv);
+	return put(cfg);
 }
 
 static void svc_enadis(int ena, svc type, const char *svc)
@@ -299,13 +302,58 @@ static int mdns_change(sr_session_ctx_t *session, uint32_t sub_id, const char *m
 	svc_enadis(ena, none, "avahi");
 	mdns_cname(session);
 
-	return put(cfg, srv);
+	return put(cfg);
 }
 
 static int lldp_change(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
 	const char *xpath, sr_event_t event, unsigned request_id, void *_confd)
 {
-	return svc_change(session, event, xpath, "lldp", "lldpd");
+	struct lyd_node *node = NULL;
+	sr_data_t *cfg;
+
+	switch (event) {
+	case SR_EV_ENABLED:
+	case SR_EV_CHANGE:
+		if (sr_get_data(session, xpath, 0, 0, 0, &cfg) || !cfg)
+			break;
+
+		node = cfg->tree;
+		if (lydx_is_enabled(node, "enabled")){
+			const char *tx_interval = lydx_get_cattr(node, "message-tx-interval");
+			FILE *fp = fopen(LLDP_CONFIG_NEXT, "w");
+			if (!fp) {
+				ERROR("Failed to open %s for writing", LLDP_CONFIG_NEXT);
+				break;
+			}
+			fprintf(fp, "configure lldp tx-interval %s\n", tx_interval);
+			fclose(fp);
+		}
+
+		return put(cfg);
+
+	case SR_EV_DONE:
+		if (fexist(LLDP_CONFIG_NEXT)){
+			if (erase(LLDP_CONFIG))
+				ERROR("Failed to remove old %s", LLDP_CONFIG);
+
+			rename(LLDP_CONFIG_NEXT, LLDP_CONFIG);
+		}
+		else
+			if (erase(LLDP_CONFIG))
+				ERROR("Failed to remove old %s", LLDP_CONFIG);
+		
+		svc_change(session, event, xpath, "lldp", "lldpd");
+		break;
+
+	case SR_EV_ABORT:
+		erase(LLDP_CONFIG_NEXT);
+		break;
+
+	default:
+		break;
+	}
+
+	return SR_ERR_OK;
 }
 
 static int ttyd_change(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
@@ -320,7 +368,7 @@ static int ttyd_change(sr_session_ctx_t *session, uint32_t sub_id, const char *m
 
 	svc_enadis(lydx_is_enabled(srv, "enabled"), ttyd, NULL);
 
-	return put(cfg, srv);
+	return put(cfg);
 }
 
 static int netbrowse_change(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
@@ -336,7 +384,7 @@ static int netbrowse_change(sr_session_ctx_t *session, uint32_t sub_id, const ch
 	svc_enadis(lydx_is_enabled(srv, "enabled"), netbrowse, NULL);
 	mdns_cname(session);
 
-	return put(cfg, srv);
+	return put(cfg);
 }
 
 static int restconf_change(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
@@ -351,7 +399,7 @@ static int restconf_change(sr_session_ctx_t *session, uint32_t sub_id, const cha
 
 	svc_enadis(lydx_is_enabled(srv, "enabled"), restconf, NULL);
 
-	return put(cfg, srv);
+	return put(cfg);
 }
 
 static int ssh_change(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
@@ -447,7 +495,7 @@ static int web_change(sr_session_ctx_t *session, uint32_t sub_id, const char *mo
 	svc_enadis(ena, web, "nginx");
 	mdns_cname(session);
 
-	return put(cfg, srv);
+	return put(cfg);
 }
 
 /* Store SSH public/private keys */
@@ -463,16 +511,13 @@ static int change_keystore_cb(sr_session_ctx_t *session, uint32_t sub_id, const 
 	case SR_EV_ENABLED:
 		break;
 	case SR_EV_ABORT:
-		/* Remove */
-		if(fexist(SSH_HOSTKEYS_NEXT))
-			rmrf(SSH_HOSTKEYS_NEXT);
+		rmrf(SSH_HOSTKEYS_NEXT);
 		return SR_ERR_OK;
 	case SR_EV_DONE:
 		if(fexist(SSH_HOSTKEYS_NEXT)) {
-			if(fexist(SSH_HOSTKEYS))
-				if(rmrf(SSH_HOSTKEYS)) {
-					ERROR("Failed to remove old SSH hostkeys: %d", errno);
-				}
+			if(rmrf(SSH_HOSTKEYS)) {
+				ERROR("Failed to remove old SSH hostkeys: %d", errno);
+			}
 			rename(SSH_HOSTKEYS_NEXT, SSH_HOSTKEYS);
 			svc_change(session, event, "/infix-services:ssh", "ssh", "sshd");
 		}
@@ -515,6 +560,7 @@ static int change_keystore_cb(sr_session_ctx_t *session, uint32_t sub_id, const 
 
 	return rc;
 }
+
 int infix_services_init(struct confd *confd)
 {
 	int rc;
