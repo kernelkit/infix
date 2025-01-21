@@ -1,0 +1,62 @@
+From f7307481fc4ca167592acf925136e5f8a51e2150 Mon Sep 17 00:00:00 2001
+From: Jan Kundrát <jan.kundrat@cesnet.cz>
+Date: Wed, 18 Dec 2024 17:26:15 +0100
+Subject: [PATCH] Update dependencies
+
+Depends-on: https://gerrit.cesnet.cz/c/CzechLight/dependencies/+/8134
+Change-Id: Ib170aa61600ffb9089460247f762ff5a947dd6c6
+---
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 22bce32..5ae8062 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -74,7 +74,7 @@
+ pkg_check_modules(nghttp2 REQUIRED IMPORTED_TARGET libnghttp2_asio>=0.0.90 libnghttp2)
+ find_package(Boost REQUIRED CONFIG COMPONENTS system thread)
+ 
+-pkg_check_modules(SYSREPO-CPP REQUIRED IMPORTED_TARGET sysrepo-cpp>=3)
++pkg_check_modules(SYSREPO-CPP REQUIRED IMPORTED_TARGET sysrepo-cpp>=4)
+ pkg_check_modules(LIBYANG-CPP REQUIRED IMPORTED_TARGET libyang-cpp>=3)
+ pkg_check_modules(SYSTEMD IMPORTED_TARGET libsystemd)
+ pkg_check_modules(PAM REQUIRED IMPORTED_TARGET pam)
+diff --git a/tests/restconf-writing.cpp b/tests/restconf-writing.cpp
+index 0932984..d37ab03 100644
+--- a/tests/restconf-writing.cpp
++++ b/tests/restconf-writing.cpp
+@@ -772,7 +772,7 @@
+       {
+         "error-type": "protocol",
+         "error-tag": "invalid-value",
+-        "error-message": "Session::applyChanges: Couldn't apply changes: SR_ERR_NOT_FOUND\u000A Node \"lst\" instance to insert next to not found. (SR_ERR_NOT_FOUND)\u000A Applying operation \"replace\" failed. (SR_ERR_NOT_FOUND)"
++        "error-message": "Session::applyChanges: Couldn't apply changes: SR_ERR_NOT_FOUND\u000A Node \"lst\" instance to insert next to not found. (SR_ERR_NOT_FOUND)"
+       }
+     ]
+   }
+@@ -855,7 +855,7 @@
+       {
+         "error-type": "protocol",
+         "error-tag": "invalid-value",
+-        "error-message": "Session::applyChanges: Couldn't apply changes: SR_ERR_NOT_FOUND\u000A Node \"ll\" instance to insert next to not found. (SR_ERR_NOT_FOUND)\u000A Applying operation \"replace\" failed. (SR_ERR_NOT_FOUND)"
++        "error-message": "Session::applyChanges: Couldn't apply changes: SR_ERR_NOT_FOUND\u000A Node \"ll\" instance to insert next to not found. (SR_ERR_NOT_FOUND)"
+       }
+     ]
+   }
+@@ -1560,7 +1560,7 @@
+       {
+         "error-type": "protocol",
+         "error-tag": "invalid-value",
+-        "error-message": "Session::applyChanges: Couldn't apply changes: SR_ERR_NOT_FOUND\u000A Node \"lst\" instance to insert next to not found. (SR_ERR_NOT_FOUND)\u000A Applying operation \"create\" failed. (SR_ERR_NOT_FOUND)"
++        "error-message": "Session::applyChanges: Couldn't apply changes: SR_ERR_NOT_FOUND\u000A Node \"lst\" instance to insert next to not found. (SR_ERR_NOT_FOUND)"
+       }
+     ]
+   }
+@@ -1626,7 +1626,7 @@
+       {
+         "error-type": "protocol",
+         "error-tag": "invalid-value",
+-        "error-message": "Session::applyChanges: Couldn't apply changes: SR_ERR_NOT_FOUND\u000A Node \"ll\" instance to insert next to not found. (SR_ERR_NOT_FOUND)\u000A Applying operation \"create\" failed. (SR_ERR_NOT_FOUND)"
++        "error-message": "Session::applyChanges: Couldn't apply changes: SR_ERR_NOT_FOUND\u000A Node \"ll\" instance to insert next to not found. (SR_ERR_NOT_FOUND)"
+       }
+     ]
+   }

@@ -1,7 +1,10 @@
-From a4060077214c573f34f2a82b18083ccd27600a38 Mon Sep 17 00:00:00 2001
+From fa14b6da3db9cf08d10108ce95fdfaecf7f76bf7 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Wed, 21 Aug 2024 16:00:35 +0200
-Subject: [PATCH 5/7] Introduce new log level [SEC] for audit trails
+Subject: [PATCH 20/22] Introduce new log level [SEC] for audit trails
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
 Organization: Addiva Elektronik
 
 This adds a new log level for security and audit trail related log
@@ -19,6 +22,7 @@ system log daemon, dropping any [SEVERITY] prefix.  Also, \n is most
 often dropped by log daemons.
 
 Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
 ---
  src/log.c           | 18 +++++++++++++++++-
  src/log.h           |  1 +
@@ -70,10 +74,10 @@ index e15055ac..25eab8fa 100644
  
      /* logging callback */
 diff --git a/src/log.h b/src/log.h
-index d7e65b88..8722e51d 100644
+index 9a60f1f6..acd7eead 100644
 --- a/src/log.h
 +++ b/src/log.h
-@@ -32,6 +32,7 @@
+@@ -31,6 +31,7 @@
  
  #define SR_LOG_WRN(...) sr_log(SR_LL_WRN, __VA_ARGS__)
  #define SR_LOG_INF(...) sr_log(SR_LL_INF, __VA_ARGS__)
@@ -82,7 +86,7 @@ index d7e65b88..8722e51d 100644
  
  #define SR_CHECK_MEM_GOTO(cond, err_info, go) if (cond) { SR_ERRINFO_MEM(&(err_info)); goto go; }
 diff --git a/src/sysrepo_types.h b/src/sysrepo_types.h
-index 9f820b84..9a0de2be 100644
+index 337ee51a..bec7317d 100644
 --- a/src/sysrepo_types.h
 +++ b/src/sysrepo_types.h
 @@ -65,7 +65,8 @@ typedef enum {

@@ -1,0 +1,39 @@
+From fef86228fcb8636d53faf43b36afd92b7161162b Mon Sep 17 00:00:00 2001
+From: Michal Vasko <mvasko@cesnet.cz>
+Date: Tue, 14 Jan 2025 08:53:59 +0100
+Subject: [PATCH 10/22] modinfo REFACTOR formatting and missing doxygen
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Addiva Elektronik
+
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ src/modinfo.c | 11 +++++++++--
+ 1 file changed, 9 insertions(+), 2 deletions(-)
+
+diff --git a/src/modinfo.c b/src/modinfo.c
+index d5c27672..ff6ffc40 100644
+--- a/src/modinfo.c
++++ b/src/modinfo.c
+@@ -3819,8 +3819,15 @@ cleanup:
+     return err_info;
+ }
+ 
+-static
+-sr_error_info_t *
++/**
++ * @brief Update push oper mod data in a session, add a new module if not yet present.
++ *
++ * @param[in] sess Session to update.
++ * @param[in] mod_name Module name.
++ * @param[in] has_data Flag to store.
++ * @return err_info, NULL on success.
++ */
++static sr_error_info_t *
+ sr_modinfo_push_oper_mod_update_sess(sr_session_ctx_t *sess, const char *mod_name, int has_data)
+ {
+     sr_error_info_t *err_info = NULL;
+-- 
+2.43.0
+

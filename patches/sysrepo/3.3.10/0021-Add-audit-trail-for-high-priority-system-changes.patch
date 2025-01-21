@@ -1,7 +1,10 @@
-From 3ee457861d98c62b2659b4fa49ec4571e78c83d4 Mon Sep 17 00:00:00 2001
+From 0c28a5f1c99d8fe200f23647cf06ba640e767166 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Wed, 21 Aug 2024 16:04:43 +0200
-Subject: [PATCH 6/7] Add audit trail for high priority system changes
+Subject: [PATCH 21/22] Add audit trail for high priority system changes
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
 Organization: Addiva Elektronik
 
 Committing a change to running, copying to a datastore, or calling an
@@ -13,15 +16,16 @@ is when the system actually activates the changes.  Copying to startup
 or other datastores is handled separately.
 
 Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
 ---
  src/sysrepo.c | 12 ++++++++++++
  1 file changed, 12 insertions(+)
 
 diff --git a/src/sysrepo.c b/src/sysrepo.c
-index 2e02de39..85a8e41c 100644
+index 518f34e6..a7e6563a 100644
 --- a/src/sysrepo.c
 +++ b/src/sysrepo.c
-@@ -3961,6 +3961,9 @@ store:
+@@ -4189,6 +4189,9 @@ store:
          goto cleanup;
      }
  
@@ -29,9 +33,9 @@ index 2e02de39..85a8e41c 100644
 +        SR_LOG_SEC("user \"%s\" commiting changes to %s ...", session->nacm_user, sr_ds2str(mod_info->ds));
 +
      /* publish "done" event, all changes were applied */
-     if ((err_info = sr_shmsub_change_notify_change_done(mod_info, orig_name, orig_data, timeout_ms, cb_err_info))) {
+     if ((err_info = sr_shmsub_change_notify_change_done(mod_info, orig_name, orig_data, timeout_ms, &cb_err_info))) {
          goto cleanup;
-@@ -3972,6 +3975,9 @@ store:
+@@ -4200,6 +4203,9 @@ store:
      }
  
  cleanup:
@@ -41,7 +45,7 @@ index 2e02de39..85a8e41c 100644
      if (change_sub_lock) {
          assert(change_sub_lock == SR_LOCK_READ);
  
-@@ -4300,6 +4306,9 @@ sr_copy_config(sr_session_ctx_t *session, const char *module_name, sr_datastore_
+@@ -4671,6 +4677,9 @@ sr_copy_config(sr_session_ctx_t *session, const char *module_name, sr_datastore_
          }
      }
  
@@ -51,7 +55,7 @@ index 2e02de39..85a8e41c 100644
  cleanup:
      /* MODULES UNLOCK */
      sr_shmmod_modinfo_unlock(&mod_info);
-@@ -6580,6 +6589,9 @@ sr_rpc_send_tree(sr_session_ctx_t *session, struct lyd_node *input, uint32_t tim
+@@ -7132,6 +7141,9 @@ sr_rpc_send_tree(sr_session_ctx_t *session, struct lyd_node *input, uint32_t tim
          }
      }
  

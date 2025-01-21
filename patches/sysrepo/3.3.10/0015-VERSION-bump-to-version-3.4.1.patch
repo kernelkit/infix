@@ -1,0 +1,30 @@
+From df88c15e014d75dbd6e48d4ff1291fb6068f296d Mon Sep 17 00:00:00 2001
+From: Michal Vasko <mvasko@cesnet.cz>
+Date: Tue, 14 Jan 2025 13:37:09 +0100
+Subject: [PATCH 15/22] VERSION bump to version 3.4.1
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Addiva Elektronik
+
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ CMakeLists.txt | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 040d2242..7b86c0f3 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -54,7 +54,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
+ # micro version is changed with a set of small changes or bugfixes anywhere in the project.
+ set(SYSREPO_MAJOR_VERSION 3)
+ set(SYSREPO_MINOR_VERSION 4)
+-set(SYSREPO_MICRO_VERSION 0)
++set(SYSREPO_MICRO_VERSION 1)
+ set(SYSREPO_VERSION ${SYSREPO_MAJOR_VERSION}.${SYSREPO_MINOR_VERSION}.${SYSREPO_MICRO_VERSION})
+ 
+ # Version of the library
+-- 
+2.43.0
+

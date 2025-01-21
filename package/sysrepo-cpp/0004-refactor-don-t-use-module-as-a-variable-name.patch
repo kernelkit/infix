@@ -1,0 +1,85 @@
+From f2db30721d909d127645721f4149de0cd36d2b1c Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan=20Kundr=C3=A1t?= <jan.kundrat@cesnet.cz>
+Date: Tue, 17 Dec 2024 11:41:10 +0100
+Subject: [PATCH 4/6] refactor: don't use `module` as a variable name
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Addiva Elektronik
+
+...to unify stuff with all other occurrences, and to not use that magic
+identifier.
+
+Change-Id: I8c38777a925271e7659560d0380a7f7968f4cfa7
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ include/sysrepo-cpp/Session.hpp |  4 ++--
+ src/Session.cpp                 | 12 ++++++------
+ 2 files changed, 8 insertions(+), 8 deletions(-)
+
+diff --git a/include/sysrepo-cpp/Session.hpp b/include/sysrepo-cpp/Session.hpp
+index 7da11cb..477e604 100644
+--- a/include/sysrepo-cpp/Session.hpp
++++ b/include/sysrepo-cpp/Session.hpp
+@@ -95,7 +95,7 @@ public:
+     void copyConfig(const Datastore source, const std::optional<std::string>& moduleName = std::nullopt, std::chrono::milliseconds timeout = std::chrono::milliseconds{0});
+     libyang::DataNode sendRPC(libyang::DataNode input, std::chrono::milliseconds timeout = std::chrono::milliseconds{0});
+     void sendNotification(libyang::DataNode notification, const Wait wait, std::chrono::milliseconds timeout = std::chrono::milliseconds{0});
+-    void replaceConfig(std::optional<libyang::DataNode> config, const std::optional<std::string>& module = std::nullopt, std::chrono::milliseconds timeout = std::chrono::milliseconds{0});
++    void replaceConfig(std::optional<libyang::DataNode> config, const std::optional<std::string>& moduleName = std::nullopt, std::chrono::milliseconds timeout = std::chrono::milliseconds{0});
+ 
+     void setNacmUser(const std::string& user);
+     [[nodiscard]] Subscription initNacm(
+@@ -172,7 +172,7 @@ public:
+      *
+      * Wraps `sr_lock`.
+      */
+-    explicit Lock(Session session, std::optional<std::string> module = std::nullopt, std::optional<std::chrono::milliseconds> timeout = std::nullopt);
++    explicit Lock(Session session, std::optional<std::string> moduleName = std::nullopt, std::optional<std::chrono::milliseconds> timeout = std::nullopt);
+     /** @brief Release the lock
+      *
+      * Wraps `sr_unlock`.
+diff --git a/src/Session.cpp b/src/Session.cpp
+index 2706e1c..94a0fad 100644
+--- a/src/Session.cpp
++++ b/src/Session.cpp
+@@ -331,17 +331,17 @@ void Session::sendNotification(libyang::DataNode notification, const Wait wait,
+  * Wraps `sr_replace_config`.
+  *
+  * @param config Libyang tree to use as a complete datastore content, or nullopt
+- * @param module If provided, a module name to limit the operation to
++ * @param moduleName If provided, a module name to limit the operation to
+  * @param timeout Optional timeout to wait for
+  */
+-void Session::replaceConfig(std::optional<libyang::DataNode> config, const std::optional<std::string>& module, std::chrono::milliseconds timeout)
++void Session::replaceConfig(std::optional<libyang::DataNode> config, const std::optional<std::string>& moduleName, std::chrono::milliseconds timeout)
+ {
+     std::optional<libyang::DataNode> thrashable;
+     if (config) {
+         thrashable = config->duplicateWithSiblings(libyang::DuplicationOptions::Recursive | libyang::DuplicationOptions::WithParents);
+     }
+     auto res = sr_replace_config(
+-        m_sess.get(), module ? module->c_str() : nullptr,
++        m_sess.get(), moduleName ? moduleName->c_str() : nullptr,
+         config ? libyang::releaseRawNode(*thrashable) : nullptr,
+         timeout.count());
+     throwIfError(res, "sr_replace_config failed", m_sess.get());
+@@ -723,12 +723,12 @@ uint32_t Session::getId() const
+     return sr_session_get_id(m_sess.get());
+ }
+ 
+-Lock::Lock(Session session, std::optional<std::string> module, std::optional<std::chrono::milliseconds> timeout)
++Lock::Lock(Session session, std::optional<std::string> moduleName, std::optional<std::chrono::milliseconds> timeout)
+     : m_session(session)
+     , m_lockedDs(m_session.activeDatastore())
+-    , m_module(module)
++    , m_module(moduleName)
+ {
+-    auto res = sr_lock(getRawSession(m_session), module ? module->c_str() : nullptr, timeout ? timeout->count() : 0);
++    auto res = sr_lock(getRawSession(m_session), moduleName ? moduleName->c_str() : nullptr, timeout ? timeout->count() : 0);
+     throwIfError(res, "Cannot lock session", getRawSession(m_session));
+ }
+ 
+-- 
+2.43.0
+

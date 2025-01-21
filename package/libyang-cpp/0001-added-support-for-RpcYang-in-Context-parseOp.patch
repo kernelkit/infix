@@ -1,0 +1,82 @@
+From d0f6422fee7a46fcb7445c88f499f61b3eb0ead0 Mon Sep 17 00:00:00 2001
+From: Adam Piecek <Adam.Piecek@cesnet.cz>
+Date: Wed, 23 Oct 2024 14:37:09 +0200
+Subject: [PATCH 1/8] added support for RpcYang in Context::parseOp
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Addiva Elektronik
+
+Change-Id: I25182ea2d042be1e6e4246e18aee260cc032e547
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ src/Context.cpp   |  6 ++++--
+ tests/context.cpp | 21 +++++++++++++++++++++
+ 2 files changed, 25 insertions(+), 2 deletions(-)
+
+diff --git a/src/Context.cpp b/src/Context.cpp
+index b844bd9..287f8c8 100644
+--- a/src/Context.cpp
++++ b/src/Context.cpp
+@@ -221,7 +221,8 @@ std::optional<DataNode> Context::parseExtData(
+  *   - a NETCONF RPC,
+  *   - a NETCONF notification,
+  *   - a RESTCONF notification,
+- *   - a YANG notification.
++ *   - a YANG notification,
++ *   - a YANG RPC.
+  *
+  * Parsing any of these requires just the schema (which is available through the Context), and the textual payload.
+  * All the other information are encoded in the textual payload as per the standard.
+@@ -243,6 +244,7 @@ ParsedOp Context::parseOp(const std::string& input, const DataFormat format, con
+     auto in = wrap_ly_in_new_memory(input);
+ 
+     switch (opType) {
++    case OperationType::RpcYang:
+     case OperationType::RpcNetconf:
+     case OperationType::NotificationNetconf:
+     case OperationType::NotificationRestconf:
+@@ -254,7 +256,7 @@ ParsedOp Context::parseOp(const std::string& input, const DataFormat format, con
+         ParsedOp res;
+         res.tree = tree ? std::optional{libyang::wrapRawNode(tree)} : std::nullopt;
+ 
+-        if (opType == OperationType::NotificationYang) {
++        if ((opType == OperationType::NotificationYang) || (opType == OperationType::RpcYang)) {
+             res.op = op && tree ? std::optional{DataNode(op, res.tree->m_refs)} : std::nullopt;
+         } else {
+             res.op = op ? std::optional{libyang::wrapRawNode(op)} : std::nullopt;
+diff --git a/tests/context.cpp b/tests/context.cpp
+index 71ae873..11019eb 100644
+--- a/tests/context.cpp
++++ b/tests/context.cpp
+@@ -464,6 +464,27 @@ TEST_CASE("context")
+         REQUIRE(data->findPath("/example-schema:leafInt8")->asTerm().valueStr() == "-43");
+     }
+ 
++    DOCTEST_SUBCASE("Context::parseOp")
++    {
++        DOCTEST_SUBCASE("RPC")
++        {
++            ctx->parseModule(example_schema, libyang::SchemaFormat::YANG);
++            std::string dataJson = R"({"example-schema:myRpc":{"inputLeaf":"str"}})";
++            auto pop = ctx->parseOp(dataJson, libyang::DataFormat::JSON, libyang::OperationType::RpcYang);
++            REQUIRE(pop.op->schema().name() == "myRpc");
++            REQUIRE(pop.tree->findPath("/example-schema:myRpc/inputLeaf")->asTerm().valueStr() == "str");
++        }
++        DOCTEST_SUBCASE("action")
++        {
++            ctx->parseModule(example_schema, libyang::SchemaFormat::YANG);
++            std::string datajson = R"({"example-schema:person":[{"name":"john", "poke":{}}]})";
++            auto pop = ctx->parseOp(datajson, libyang::DataFormat::JSON, libyang::OperationType::RpcYang);
++            REQUIRE(pop.op->schema().name() == "poke");
++            REQUIRE(pop.tree->findPath("/example-schema:person[name='john']/poke")->schema().nodeType() == libyang::NodeType::Action);
++        }
++    }
++
++
+     DOCTEST_SUBCASE("Context::parseExt")
+     {
+         ctx->setSearchDir(TESTS_DIR / "yang");
+-- 
+2.43.0
+

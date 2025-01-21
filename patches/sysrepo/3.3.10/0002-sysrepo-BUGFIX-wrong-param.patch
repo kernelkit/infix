@@ -1,0 +1,30 @@
+From d4cded05509b63083283ba3a9104b27663c7eb39 Mon Sep 17 00:00:00 2001
+From: Michal Vasko <mvasko@cesnet.cz>
+Date: Fri, 10 Jan 2025 08:56:29 +0100
+Subject: [PATCH 02/22] sysrepo BUGFIX wrong param
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Addiva Elektronik
+
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ src/sysrepo.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/sysrepo.c b/src/sysrepo.c
+index 844e11a5..7c96243c 100644
+--- a/src/sysrepo.c
++++ b/src/sysrepo.c
+@@ -3578,7 +3578,7 @@ sr_delete_item(sr_session_ctx_t *session, const char *path, const sr_edit_option
+             /* just delete the selected node */
+             node = NULL;
+             if (session->dt[session->ds].edit->tree &&
+-                    (err_info = sr_lyd_find_path(session->dt[session->ds].edit->tree, path, 1, &node))) {
++                    (err_info = sr_lyd_find_path(session->dt[session->ds].edit->tree, path, 0, &node))) {
+                 goto cleanup;
+             }
+             if (node) {
+-- 
+2.43.0
+

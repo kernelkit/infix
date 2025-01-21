@@ -1,0 +1,73 @@
+From 23fa270a747c35d65aeeba691599ed6b21b501f0 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan=20Kundr=C3=A1t?= <jan.kundrat@cesnet.cz>
+Date: Tue, 29 Oct 2024 15:15:52 +0100
+Subject: [PATCH 1/6] error handling changes in upstream sysrepo
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Addiva Elektronik
+
+Upstream commit 396e331e4634a417420a71ad723567b42d75c443 removed these
+extra error entries.
+
+Change-Id: Ifeda21194db7b7f7fdae8b6ae13c1e2d1f6b8d3d
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ CMakeLists.txt          |  2 +-
+ tests/subscriptions.cpp | 16 ++++++----------
+ 2 files changed, 7 insertions(+), 11 deletions(-)
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index eb5f900..1eb625f 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -28,7 +28,7 @@ option(WITH_EXAMPLES "Build examples" ON)
+ 
+ find_package(PkgConfig)
+ pkg_check_modules(LIBYANG_CPP REQUIRED libyang-cpp>=3 IMPORTED_TARGET)
+-pkg_check_modules(SYSREPO REQUIRED sysrepo>=2.11.7 IMPORTED_TARGET)
++pkg_check_modules(SYSREPO REQUIRED sysrepo>=2.12.0 IMPORTED_TARGET)
+ set(SYSREPO_CPP_PKG_VERSION "3")
+ 
+ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
+diff --git a/tests/subscriptions.cpp b/tests/subscriptions.cpp
+index 0e14fc0..36fd61c 100644
+--- a/tests/subscriptions.cpp
++++ b/tests/subscriptions.cpp
+@@ -494,11 +494,11 @@ TEST_CASE("subscriptions")
+             sess.applyChanges();
+         } catch (const sysrepo::ErrorWithCode&) {
+             auto errors = sess.getErrors();
+-            REQUIRE(errors.size() == 2);
+-            REQUIRE(errors.at(0).errorMessage == message);
+-            REQUIRE(errors.at(0).code == sysrepo::ErrorCode::OperationFailed);
+-            REQUIRE(errors.at(1).errorMessage == "User callback failed.");
+-            REQUIRE(errors.at(1).code == sysrepo::ErrorCode::CallbackFailed);
++            REQUIRE(errors.size() == 1);
++            REQUIRE(errors.at(0) == sysrepo::ErrorInfo{
++                .code = sysrepo::ErrorCode::OperationFailed,
++                .errorMessage = message
++            });
+         }
+ 
+         // The callback does not fail the second time.
+@@ -548,15 +548,11 @@ TEST_CASE("subscriptions")
+         sess.setItem("/test_module:leafInt32", "123");
+         REQUIRE_THROWS_AS(sess.applyChanges(), sysrepo::ErrorWithCode);
+         auto errors = sess.getErrors();
+-        REQUIRE(errors.size() == 2);
++        REQUIRE(errors.size() == 1);
+         REQUIRE(errors.at(0) == sysrepo::ErrorInfo{
+             .code = sysrepo::ErrorCode::OperationFailed,
+             .errorMessage = "Test callback failure.",
+         });
+-        REQUIRE(errors.at(1) == sysrepo::ErrorInfo{
+-            .code = sysrepo::ErrorCode::CallbackFailed,
+-            .errorMessage = "User callback failed."
+-        });
+         auto ncErrors = sess.getNetconfErrors();
+         REQUIRE(ncErrors.size() == 1);
+         REQUIRE(ncErrors.front() == errToSet);
+-- 
+2.43.0
+

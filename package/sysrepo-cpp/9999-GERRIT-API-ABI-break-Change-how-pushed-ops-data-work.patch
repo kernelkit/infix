@@ -1,0 +1,342 @@
+From b34fb200812f9e6bc72e80bf46bd006ebc06a9da Mon Sep 17 00:00:00 2001
+From: Jan Kundrát <jan.kundrat@cesnet.cz>
+Date: Wed, 18 Dec 2024 17:16:55 +0100
+Subject: [PATCH] API/ABI break: Change how pushed ops data work
+
+Upstream has changed the way how pushed operational data are stored and
+managed. From now on, each session has a separate edit, these edits are
+applied on top of each other using a given priority (priority setting is
+not implemented in the C++ wrapper at this time, patches welcome). Each
+session can retrieve and manipulate the stored edit.
+
+The key difference is that these edits are now per-session. This has a
+wide-ranging impact, and the way how previously set nodes are "undone"
+has changed. Unfortunately, upstream refused to rename the relevant
+functions due to "API stability concerns", so we're taking care of
+avoiding the possible confusion at the C++ layer:
+
+- `Session::dropForeignOperationalContent` (aka `sr_discard_items`),
+  which is now used to ensure that matching content from "previous
+  sources" is discarded. These "previous sources" are either content of
+  `running`, or stuff that was stored/pushed by other sessions with
+  lower priority. It *cannot* be used to remove stuff that was
+  previously pushed by the current session.
+
+- `Session::discardOperationalChanges` (aka `sr_discard_oper_changes`)
+  discards previously pushed content from *this session*.
+
+- It is now possible to fully manage the edit (which incrementally
+  builds the `operational` DS) of the current session. Use
+  `Session::operationalChanges()` to retrieve a full libyang::DataNode
+  forest, modify it in whichever ways are needed, and store it back via
+  `Session::editBatch(..., sysrepo::DefaultOperation::Replace)` followed
+  by `Session::applyChanges()`.
+
+Change-Id: Iba05a88411fd4c47c03d8c2b48cb7aadfd5dcd2a
+---
+
+diff --git a/.zuul.yaml b/.zuul.yaml
+index c3aea22..dc87c6f 100644
+--- a/.zuul.yaml
++++ b/.zuul.yaml
+@@ -6,7 +6,7 @@
+               - name: github/CESNET/libyang
+                 override-checkout: devel
+               - name: github/sysrepo/sysrepo
+-                override-checkout: cesnet/2024-10-before-oper-changes
++                override-checkout: devel
+               - name: github/onqtam/doctest
+                 override-checkout: v2.4.8
+               - name: github/rollbear/trompeloeil
+@@ -17,7 +17,7 @@
+               - name: github/CESNET/libyang
+                 override-checkout: devel
+               - name: github/sysrepo/sysrepo
+-                override-checkout: cesnet/2024-10-before-oper-changes
++                override-checkout: devel
+               - name: github/onqtam/doctest
+                 override-checkout: v2.4.11
+               - name: github/rollbear/trompeloeil
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 68ade53..cc4dba9 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -20,7 +20,7 @@
+         cmake/ProjectGitVersionRunner.cmake
+         )
+ include(cmake/ProjectGitVersion.cmake)
+-set(SYSREPO_CPP_PKG_VERSION "3")
++set(SYSREPO_CPP_PKG_VERSION "4")
+ prepare_git_version(SYSREPO_CPP_VERSION ${SYSREPO_CPP_PKG_VERSION})
+ 
+ find_package(Doxygen)
+@@ -29,7 +29,7 @@
+ 
+ find_package(PkgConfig)
+ pkg_check_modules(LIBYANG_CPP REQUIRED libyang-cpp>=3 IMPORTED_TARGET)
+-pkg_check_modules(SYSREPO REQUIRED sysrepo>=2.12.0 sysrepo<3 IMPORTED_TARGET)
++pkg_check_modules(SYSREPO REQUIRED sysrepo>=3.4.0 IMPORTED_TARGET)
+ 
+ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
+ 
+diff --git a/README.md b/README.md
+index e14b772..27dc748 100644
+--- a/README.md
++++ b/README.md
+@@ -9,7 +9,6 @@
+ 
+ ## Dependencies
+ - [sysrepo](https://github.com/sysrepo/sysrepo) - the `devel` branch (even for the `master` branch of *sysrepo-cpp*)
+-  - we temporarily require pre-v3 sysrepo which introduced backward-incompatible changes to operational data handling
+ - [libyang-cpp](https://github.com/CESNET/libyang-cpp) - C++ bindings for *libyang*
+ - C++20 compiler (e.g., GCC 10.x+, clang 10+)
+ - CMake 3.19+
+diff --git a/include/sysrepo-cpp/Session.hpp b/include/sysrepo-cpp/Session.hpp
+index 477e604..238f480 100644
+--- a/include/sysrepo-cpp/Session.hpp
++++ b/include/sysrepo-cpp/Session.hpp
+@@ -85,13 +85,15 @@
+     void setItem(const std::string& path, const std::optional<std::string>& value, const EditOptions opts = sysrepo::EditOptions::Default);
+     void editBatch(libyang::DataNode edit, const DefaultOperation op);
+     void deleteItem(const std::string& path, const EditOptions opts = sysrepo::EditOptions::Default);
+-    void discardItems(const std::optional<std::string>& xpath);
+     void moveItem(const std::string& path, const MovePosition move, const std::optional<std::string>& keys_or_value, const std::optional<std::string>& origin = std::nullopt, const EditOptions opts = sysrepo::EditOptions::Default);
+     std::optional<libyang::DataNode> getData(const std::string& path, int maxDepth = 0, const GetOptions opts = sysrepo::GetOptions::Default, std::chrono::milliseconds timeout = std::chrono::milliseconds{0}) const;
+     libyang::DataNode getOneNode(const std::string& path, std::chrono::milliseconds timeout = std::chrono::milliseconds{0}) const;
+     std::optional<const libyang::DataNode> getPendingChanges() const;
+     void applyChanges(std::chrono::milliseconds timeout = std::chrono::milliseconds{0});
+-    void discardChanges();
++    void discardChanges(const std::optional<std::string>& xpath = std::nullopt);
++    std::optional<libyang::DataNode> operationalChanges(const std::optional<std::string>& moduleName = std::nullopt) const;
++    void discardOperationalChanges(const std::optional<std::string>& moduleName = std::nullopt, std::chrono::milliseconds timeout = std::chrono::milliseconds{0});
++    void dropForeignOperationalContent(const std::optional<std::string>& xpath);
+     void copyConfig(const Datastore source, const std::optional<std::string>& moduleName = std::nullopt, std::chrono::milliseconds timeout = std::chrono::milliseconds{0});
+     libyang::DataNode sendRPC(libyang::DataNode input, std::chrono::milliseconds timeout = std::chrono::milliseconds{0});
+     void sendNotification(libyang::DataNode notification, const Wait wait, std::chrono::milliseconds timeout = std::chrono::milliseconds{0});
+diff --git a/src/Session.cpp b/src/Session.cpp
+index 94a0fad..634e450 100644
+--- a/src/Session.cpp
++++ b/src/Session.cpp
+@@ -23,6 +23,26 @@
+ 
+ using namespace std::string_literals;
+ namespace sysrepo {
++
++namespace {
++libyang::DataNode wrapSrData(std::shared_ptr<sr_session_ctx_s> sess, sr_data_t* data)
++{
++    // Since the lyd_node came from sysrepo and it is wrapped in a sr_data_t, we have to postpone calling the
++    // sr_release_data() until after we're "done" with the libyang::DataNode.
++    //
++    // Normally, sr_release_data() would free the lyd_data as well. However, it is possible that the user wants to
++    // manipulate the data tree (think unlink()) in a way which might have needed to overwrite the tree->data pointer.
++    // Just delegate all the freeing to the C++ wrapper around lyd_data. The sysrepo library doesn't care about this.
++    auto tree = std::exchange(data->tree, nullptr);
++
++    // Use wrapRawNode, not wrapUnmanagedRawNode because we want to let the C++ wrapper manage memory.
++    // Note: We're capturing the session inside the lambda.
++    return libyang::wrapRawNode(tree, std::shared_ptr<sr_data_t>(data, [extend_session_lifetime = sess] (sr_data_t* data) {
++        sr_release_data(data);
++    }));
++}
++}
++
+ /**
+  * Wraps a pointer to sr_session_ctx_s and manages the lifetime of it. Also extends the lifetime of the connection
+  * specified by the `conn` argument.
+@@ -119,20 +139,61 @@
+ }
+ 
+ /**
+- * Prepare to discard nodes matching the specified xpath (or all if not set) previously set by the session connection.
+- * Usable only for sysrepo::Datastore::Operational. The changes are applied only after calling Session::applyChanges.
++ * Prepare to drop "earlier content" from other sources in the operational DS for nodes matching the specified XPath
++ *
++ * The "earlier content" might come from the `running` datastore, or be pushed into the `operational` DS from
++ * another session, with a lower priority. This function prepares a special node into the current session's
++ * stored edit which effectively discards any matching content from previous, lower-priority sources.
++ *
++ * This function cannot be used to remove an edit which was pushed via the current session. To do that,
++ * use discardChanges(), or retrieve the stored edit and manipulate its libyang data tree.
++ *
++ * The changes are applied only after calling Session::applyChanges.
+  *
+  * Wraps `sr_discard_items`.
+  *
+  * @param xpath Expression filtering the nodes to discard, nullopt for all nodes.
+  */
+-void Session::discardItems(const std::optional<std::string>& xpath)
++void Session::dropForeignOperationalContent(const std::optional<std::string>& xpath)
+ {
+     auto res = sr_discard_items(m_sess.get(), xpath ? xpath->c_str() : nullptr);
+ 
+     throwIfError(res, "Session::discardItems: Can't discard "s + (xpath ? "'"s + *xpath + "'" : "all nodes"s), m_sess.get());
+ }
+ 
++/** @short Get a copy of the stored push-operational data for this session
++ *
++ * To modify the stored push operational data, modify this tree in-place and pass it to editBatch()
++ * with the "replace" operation.
++ *
++ * Wraps `sr_get_oper_changes`.
++ */
++std::optional<libyang::DataNode> Session::operationalChanges(const std::optional<std::string>& moduleName) const
++{
++    sr_data_t* data;
++    auto res = sr_get_oper_changes(m_sess.get(), moduleName ? moduleName->c_str() : nullptr, &data);
++
++    throwIfError(res, "Session::operationalChanges: Couldn't retrieve data'"s + (moduleName ? " for \"" + *moduleName + '"' : ""s), m_sess.get());
++
++    if (!data) {
++        return std::nullopt;
++    }
++
++    return wrapSrData(m_sess, data);
++
++}
++
++/** @short Discard push operational changes of a module for this session
++ *
++ * Wraps `sr_discard_oper_changes`.
++ *
++ * */
++void Session::discardOperationalChanges(const std::optional<std::string>& moduleName, std::chrono::milliseconds timeout)
++{
++    auto res = sr_discard_oper_changes(nullptr, m_sess.get(), moduleName ? nullptr : moduleName->c_str(), timeout.count());
++    throwIfError(res, "Session::discardOoperationalChanges: Couldn't discard "s + (moduleName ? "for module \"" + *moduleName + "\"" : "globally"s), m_sess.get());
++}
++
+ /**
+  * Moves item (a list or a leaf-list) specified by `path`.
+  * @param path Node to move.
+@@ -155,25 +216,6 @@
+     throwIfError(res, "Session::moveItem: Can't move '"s + path + "'", m_sess.get());
+ }
+ 
+-namespace {
+-libyang::DataNode wrapSrData(std::shared_ptr<sr_session_ctx_s> sess, sr_data_t* data)
+-{
+-    // Since the lyd_node came from sysrepo and it is wrapped in a sr_data_t, we have to postpone calling the
+-    // sr_release_data() until after we're "done" with the libyang::DataNode.
+-    //
+-    // Normally, sr_release_data() would free the lyd_data as well. However, it is possible that the user wants to
+-    // manipulate the data tree (think unlink()) in a way which might have needed to overwrite the tree->data pointer.
+-    // Just delegate all the freeing to the C++ wrapper around lyd_data. The sysrepo library doesn't care about this.
+-    auto tree = std::exchange(data->tree, nullptr);
+-
+-    // Use wrapRawNode, not wrapUnmanagedRawNode because we want to let the C++ wrapper manage memory.
+-    // Note: We're capturing the session inside the lambda.
+-    return libyang::wrapRawNode(tree, std::shared_ptr<sr_data_t>(data, [extend_session_lifetime = sess] (sr_data_t* data) {
+-        sr_release_data(data);
+-    }));
+-}
+-}
+-
+ /**
+  * @brief Returns a tree which contains all nodes that match the provided XPath.
+  *
+@@ -263,13 +305,15 @@
+ }
+ 
+ /**
+- * Discards changes made in this Session.
++ * Discards changes made earlier in this Session, optionally only below a given XPath
+  *
+- * Wraps `sr_discard_changes`.
++ * The changes are applied only after calling Session::applyChanges.
++ *
++ * Wraps `sr_discard_changes_xpath`.
+  */
+-void Session::discardChanges()
++void Session::discardChanges(const std::optional<std::string>& xpath)
+ {
+-    auto res = sr_discard_changes(m_sess.get());
++    auto res = sr_discard_changes_xpath(m_sess.get(), xpath ? xpath->c_str() : nullptr);
+ 
+     throwIfError(res, "Session::discardChanges: Couldn't discard changes", m_sess.get());
+ }
+diff --git a/tests/session.cpp b/tests/session.cpp
+index f762f10..2637f67 100644
+--- a/tests/session.cpp
++++ b/tests/session.cpp
+@@ -211,7 +211,7 @@
+         }
+     }
+ 
+-    DOCTEST_SUBCASE("Session::deleteOperItem")
++    DOCTEST_SUBCASE("push operational data and deleting stuff")
+     {
+         // Set some arbitrary leaf.
+         sess.setItem(leaf, "123");
+@@ -230,15 +230,51 @@
+         sess.switchDatastore(sysrepo::Datastore::Operational);
+         REQUIRE(sess.getData(leaf)->asTerm().valueStr() == "123");
+ 
+-        // After using deleteItem, the leaf is no longer accesible from the operational datastore.
+-        sess.deleteItem(leaf);
+-        sess.applyChanges();
+-        REQUIRE(!sess.getData(leaf));
++        DOCTEST_SUBCASE("discardOperationalChanges")
++        {
++            // apply a change which makes the leaf disappear
++            sess.dropForeignOperationalContent(leaf);
++            REQUIRE(!!sess.getData(leaf));
++            sess.applyChanges();
++            REQUIRE(!sess.getData(leaf));
+ 
+-        // Using discardItems makes the leaf visible again (in the operational datastore).
+-        sess.discardItems(leaf);
+-        sess.applyChanges();
+-        REQUIRE(sess.getData(leaf)->asTerm().valueStr() == "123");
++            // Using discardOperationalChanges makes the leaf visible again (in the operational datastore).
++            // Also, no need to applyChanges().
++            sess.discardOperationalChanges("test_module");
++            REQUIRE(sess.getData(leaf)->asTerm().valueStr() == "123");
++        }
++
++        DOCTEST_SUBCASE("direct edit of a libyang::DataNode")
++        {
++            // at first, set the leaf to some random value
++            sess.setItem(leaf, "456");
++            sess.applyChanges();
++            REQUIRE(sess.getData(leaf)->asTerm().valueStr() == "456");
++
++            // change the edit in-place
++            auto pushed = sess.operationalChanges();
++            REQUIRE(pushed->path() == leaf);
++            pushed->asTerm().changeValue("666");
++            sess.editBatch(*pushed, sysrepo::DefaultOperation::Replace);
++            sess.applyChanges();
++            REQUIRE(sess.getData(leaf)->asTerm().valueStr() == "666");
++
++            // Remove that previous edit in-place. Since the new edit cannot be empty, set some other leaf.
++            pushed = sess.operationalChanges();
++            auto another = "/test_module:popelnice/s"s;
++            pushed->newPath(another, "xxx");
++            pushed = *pushed->findPath(another);
++            pushed->findPath(leaf)->unlink();
++            // "the edit" for sysrepo must refer to a top-level node
++            while (pushed->parent()) {
++                pushed = *pushed->parent();
++            }
++            REQUIRE(!pushed->findPath(leaf));
++            REQUIRE(!!pushed->findPath(another));
++            sess.editBatch(*pushed, sysrepo::DefaultOperation::Replace);
++            sess.applyChanges();
++            REQUIRE(sess.getData(leaf)->asTerm().valueStr() == "123");
++        }
+     }
+ 
+     DOCTEST_SUBCASE("edit batch")
+@@ -321,6 +357,11 @@
+             sess.discardChanges();
+         }
+ 
++        DOCTEST_SUBCASE("discard XPath")
++        {
++            sess.discardChanges(leaf);
++        }
++
+         REQUIRE(sess.getPendingChanges() == std::nullopt);
+     }
+ 

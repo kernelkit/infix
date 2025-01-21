@@ -1,0 +1,129 @@
+From a1acdc794facf8cbf113f73274ecebd5898c81a1 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan=20Kundr=C3=A1t?= <jan.kundrat@cesnet.cz>
+Date: Tue, 17 Dec 2024 15:08:43 +0100
+Subject: [PATCH 7/8] Wrap lyd_change_term for changing the value for a
+ terminal node
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Addiva Elektronik
+
+Previously, the code would require a newPath(...,
+libyang::CreationOptions::Update), which is quite a mouthful.
+
+Change-Id: I8a908c0fdd3e48dda830819758522a511adedd3b
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ include/libyang-cpp/DataNode.hpp |  8 ++++++
+ src/DataNode.cpp                 | 21 ++++++++++++++++
+ tests/data_node.cpp              | 42 ++++++++++++++++++++++++++------
+ 3 files changed, 63 insertions(+), 8 deletions(-)
+
+diff --git a/include/libyang-cpp/DataNode.hpp b/include/libyang-cpp/DataNode.hpp
+index 2211415..851681b 100644
+--- a/include/libyang-cpp/DataNode.hpp
++++ b/include/libyang-cpp/DataNode.hpp
+@@ -212,6 +212,14 @@ public:
+     Value value() const;
+     types::Type valueType() const;
+ 
++    /** @brief Was the value changed? */
++    enum class ValueChange {
++        Changed, /**< Yes, this is an actual change of the stored value */
++        ExplicitNonDefault, /**< It still holds the default value, but it's been set explicitly now */
++        EqualValueNotChanged, /**< No change, the previous value is the same as the new one, and it isn't an implicit default */
++    };
++    ValueChange changeValue(const std::string value);
++
+ private:
+     using DataNode::DataNode;
+ };
+diff --git a/src/DataNode.cpp b/src/DataNode.cpp
+index 2ef17f2..84591e5 100644
+--- a/src/DataNode.cpp
++++ b/src/DataNode.cpp
+@@ -903,6 +903,27 @@ types::Type DataNodeTerm::valueType() const
+     return impl(reinterpret_cast<const lyd_node_term*>(m_node)->value);
+ }
+ 
++/** @short Change the term's value
++ *
++ * Wraps `lyd_change_term`.
++ * */
++DataNodeTerm::ValueChange DataNodeTerm::changeValue(const std::string value)
++{
++    auto ret = lyd_change_term(m_node, value.c_str());
++
++    switch (ret) {
++    case LY_SUCCESS:
++        return ValueChange::Changed;
++    case LY_EEXIST:
++        return ValueChange::ExplicitNonDefault;
++    case LY_ENOT:
++        return ValueChange::EqualValueNotChanged;
++    default:
++        throwIfError(ret, "DataNodeTerm::changeValue failed");
++        __builtin_unreachable();
++    }
++}
++
+ /**
+  * @brief Returns a collection for iterating depth-first over the subtree this instance points to.
+  *
+diff --git a/tests/data_node.cpp b/tests/data_node.cpp
+index 8a2610e..45fd6c1 100644
+--- a/tests/data_node.cpp
++++ b/tests/data_node.cpp
+@@ -456,15 +456,41 @@ TEST_CASE("Data Node manipulation")
+         REQUIRE(node.hasDefaultValue());
+         REQUIRE(node.isImplicitDefault());
+ 
+-        data->newPath("/example-schema3:leafWithDefault", "not-default-value", libyang::CreationOptions::Update);
+-        node = data->findPath("/example-schema3:leafWithDefault")->asTerm();
+-        REQUIRE(!node.hasDefaultValue());
+-        REQUIRE(!node.isImplicitDefault());
++        DOCTEST_SUBCASE("newPath")
++        {
++            data->newPath("/example-schema3:leafWithDefault", "not-default-value", libyang::CreationOptions::Update);
++            node = data->findPath("/example-schema3:leafWithDefault")->asTerm();
++            REQUIRE(!node.hasDefaultValue());
++            REQUIRE(!node.isImplicitDefault());
+ 
+-        data->newPath("/example-schema3:leafWithDefault", "AHOJ", libyang::CreationOptions::Update);
+-        node = data->findPath("/example-schema3:leafWithDefault")->asTerm();
+-        REQUIRE(node.hasDefaultValue());
+-        REQUIRE(!node.isImplicitDefault());
++            data->newPath("/example-schema3:leafWithDefault", "AHOJ", libyang::CreationOptions::Update);
++            node = data->findPath("/example-schema3:leafWithDefault")->asTerm();
++            REQUIRE(node.hasDefaultValue());
++            REQUIRE(!node.isImplicitDefault());
++        }
++
++        DOCTEST_SUBCASE("changing values")
++        {
++            auto node = data->findPath("/example-schema3:leafWithDefault");
++            REQUIRE(!!node);
++            auto term = node->asTerm();
++
++            DOCTEST_SUBCASE("to an arbitrary value") {
++                REQUIRE(term.changeValue("cau") == libyang::DataNodeTerm::ValueChange::Changed);
++            }
++
++            DOCTEST_SUBCASE("from an implicit default to an explicit default") {
++                REQUIRE(term.changeValue("AHOJ") == libyang::DataNodeTerm::ValueChange::ExplicitNonDefault);
++                REQUIRE(term.changeValue("AHOJ") == libyang::DataNodeTerm::ValueChange::EqualValueNotChanged);
++                REQUIRE(term.changeValue("cau") == libyang::DataNodeTerm::ValueChange::Changed);
++                REQUIRE(term.changeValue("cau") == libyang::DataNodeTerm::ValueChange::EqualValueNotChanged);
++            }
++
++            DOCTEST_SUBCASE("from an implicit default to something else") {
++                REQUIRE(term.changeValue("cau") == libyang::DataNodeTerm::ValueChange::Changed);
++                REQUIRE(term.changeValue("cau") == libyang::DataNodeTerm::ValueChange::EqualValueNotChanged);
++            }
++        }
+     }
+ 
+     DOCTEST_SUBCASE("isTerm")
+-- 
+2.43.0
+
