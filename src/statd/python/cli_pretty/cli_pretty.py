@@ -1020,8 +1020,8 @@ def show_hardware(json):
 
 def show_ntp(json):
     if not json.get("ietf-system:system-state"):
-        print(f"Error, top level \"ietf-system:system-state\" missing")
-        sys.exit(1)
+        print("NTP client not enabled.")
+        return
     hdr =  (f"{'ADDRESS':<{PadNtpSource.address}}"
             f"{'MODE':<{PadNtpSource.mode}}"
             f"{'STATE':<{PadNtpSource.state}}"

@@ -286,9 +286,8 @@
 
   <COMMAND name="ntp" help="Show NTP (client) status">
     <ACTION sym="script">
-      sysrepocfg -d operational -X -f json -x \
-      /ietf-system:system-state/infix-system:ntp  | \
-      /usr/libexec/statd/cli-pretty "show-ntp"
+      sysrepocfg -d operational -X -f json -x /system-state/ntp  | \
+         /usr/libexec/statd/cli-pretty "show-ntp"
     </ACTION>
     <SWITCH name="optional" min="0">
       <COMMAND name="tracking" help="Show NTP tracking">
