@@ -1,0 +1,9 @@
+---
+- case: bridge-mdb/test
+  name: "bridge-mdb"
+- case: containers/test
+  name: "containers"
+- case: interfaces-all/test
+  name: "interfaces-all"
+- case: system/test
+  name: "system"

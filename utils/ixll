@@ -57,6 +57,8 @@ while getopts "A" opt; do
 	A)
 	    LLSSH_USER=admin
 	    LLSSH_PASS=admin
+            LLSSH_OPTS="$LLSSH_OPTS -oStrictHostKeyChecking=no"
+            LLSSH_OPTS="$LLSSH_OPTS -oUserKnownHostsFile=/dev/null"
 	    ;;
     esac
 done

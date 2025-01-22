@@ -10,12 +10,30 @@ from . import common
 from . import host
 
 def main():
+    def dirpath(path):
+        if not os.path.isdir(path):
+            raise argparse.ArgumentTypeError(f"'{path}' is not a valid directory")
+        return path
+
     parser = argparse.ArgumentParser(description="YANG data creator")
     parser.add_argument("model", help="YANG Model")
-    parser.add_argument("-p", "--param", default=None, help="Model dependent parameter")
-    parser.add_argument("-t", "--test", default=None, help="Test data base path")
-    args = parser.parse_args()
+    parser.add_argument("-p", "--param",
+                        help="Model dependent parameter, e.g. interface name")
+    parser.add_argument("-x", "--cmd-prefix", metavar="PREFIX",
+                        help="Use this prefix for all system commands, e.g. " +
+                        "'ssh user@remotehost sudo'")
 
+    rrparser = parser.add_mutually_exclusive_group()
+    rrparser.add_argument("-r", "--replay", type=dirpath, metavar="DIR",
+                          help="Generate output based on recorded system commands from DIR, " +
+                          "rather than querying the local system")
+    rrparser.add_argument("-c", "--capture", type=dirpath, metavar="DIR",
+                          help="Capture system command output in DIR, such that the current system " +
+                          "state can be recreated offline (with --replay) for testing purposes")
+
+    args = parser.parse_args()
+    if args.replay and args.cmd_prefix:
+        parser.error("--cmd-prefix cannot be used with --replay")
 
     # Set up syslog output for critical errors to aid debugging
     common.LOG = logging.getLogger('yanger')
@@ -30,8 +48,10 @@ def main():
     common.LOG.setLevel(logging.INFO)
     common.LOG.addHandler(log)
 
-    if args.test:
-        host.HOST = host.Testhost(args.test)
+    if args.cmd_prefix or args.capture:
+        host.HOST = host.Remotehost(args.cmd_prefix, args.capture)
+    elif args.replay:
+        host.HOST = host.Replayhost(args.replay)
     else:
         host.HOST = host.Localhost()
 

@@ -1,0 +1,4 @@
+[7mBRIDGE VID   GROUP               PORTS                                        [0m
+br0          01:00:00:01:02:03   e3
+br0          224.1.1.1           e3
+br0          ff02::6a            br0

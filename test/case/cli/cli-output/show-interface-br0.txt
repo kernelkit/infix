@@ -1,9 +1,0 @@
-name                : br0
-index               : 7
-mtu                 : 1500
-operational status  : up
-physical address    : 02:00:00:00:00:00
-ipv4 addresses      :
-ipv6 addresses      :
-in-octets           : 0
-out-octets          : 3158

@@ -1,0 +1,13 @@
+#!/bin/sh
+
+yang_models="ietf-system ietf-hardware"
+
+gen_test=ietf_system/ntp_client/test.py
+gen_iface=d3a
+
+cli_commands="show-ntp"
+cli_commands="$cli_commands show-software"
+cli_commands="$cli_commands show-hardware"
+
+. $(readlink -f $(dirname $0)/../test.sh)
+main "$@"

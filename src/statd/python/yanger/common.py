@@ -1,15 +1,5 @@
 LOG = None
 
-def lookup(obj, *keys):
-    """This function returns a value from a nested json object"""
-    curr = obj
-    for key in keys:
-        if isinstance(curr, dict) and key in curr:
-            curr = curr[key]
-        else:
-            return None
-    return curr
-
 
 def insert(obj, *path_and_value):
     """"This function inserts a value into a nested json object"""

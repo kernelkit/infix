@@ -1,0 +1,7 @@
+[7m   DESTINATION                                     PREF NEXT-HOP                                 PROTO     UPTIME[0m
+ * fe80::/64                                        0/0 e6                                       direct  02:00:50
+ * fe80::/64                                        0/0 br0                                      direct  02:00:50
+ * fe80::/64                                        0/0 e5                                       direct  03:54:57
+ * fe80::/64                                        0/0 e7                                       direct  03:54:57
+ * fe80::/64                                        0/0 e2                                       direct  03:54:57
+>* fe80::/64                                        0/0 e1                                       direct  03:54:57

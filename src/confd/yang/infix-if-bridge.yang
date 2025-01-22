@@ -27,7 +27,11 @@ submodule infix-if-bridge {
   description  "Linux bridge extension for ietf-interfaces.";
 
   revision 2025-01-08 {
-    description "Add Spanning Tree Protocol (STP) support.";
+    description "Add Spanning Tree Protocol (STP) support.
+
+                 Drop the `default-priority` bridge port option, which
+                 has never been supported but was accidentally
+                 included in the model.";
     reference "internal";
   }
 
@@ -698,13 +702,6 @@ submodule infix-if-bridge {
       type stp-state;
       config false;
       description "The operation state of the bridge port.";
-    }
-
-    leaf default-priority {
-      if-feature "vlan-filtering";
-      type dot1q-types:priority-type;
-      default "0";
-      description "The default priority assigned to this bridge port.";
     }
   }
 

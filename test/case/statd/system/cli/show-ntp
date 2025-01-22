@@ -1,0 +1,4 @@
+[7mADDRESS         MODE         STATE            STRATUM POLL-INTERVAL[0m
+192.168.1.1     server       candidate              1             6
+192.168.2.1     server       candidate              1             6
+192.168.3.1     server       selected               1             6

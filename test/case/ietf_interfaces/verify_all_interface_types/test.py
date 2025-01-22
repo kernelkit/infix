@@ -127,6 +127,17 @@ with infamy.Test() as test:
                     "name": br_D,
                     "type": "infix-if-type:bridge",
                     "enabled": True,
+                    "ietf-ip:ipv4": {
+                        "address": [
+                            { "ip": "192.168.20.1", "prefix-length": 24 },
+                            { "ip": "10.0.0.1", "prefix-length": 8 },
+                        ],
+                    },
+                    "ietf-ip:ipv6": {
+                        "address": [
+                            { "ip": "2001:db8::1", "prefix-length": 64 },
+                        ],
+                    },
                 },
                 {
                     "name": veth_a_20,
@@ -152,6 +163,18 @@ with infamy.Test() as test:
                     "name": br_Q,
                     "type": "infix-if-type:bridge",
                     "enabled": True,
+                    "infix-interfaces:bridge": {
+                        "vlans": {
+                            "vlan": [
+                                { "vid": 20, "untagged": [br_Q], "tagged": [eth_Q, veth_b] },
+                                { "vid": 30, "untagged": [br_Q], "tagged": [eth_Q, veth_b] },
+                                { "vid": 40, "untagged": [], "tagged": [br_Q, eth_Q, veth_b] },
+                            ],
+                        }
+                    },
+                    "infix-interfaces:bridge-port": {
+                        "pvid": 10,
+                    }
                 },
                 {
                     "name": eth_Q,
@@ -190,6 +213,46 @@ with infamy.Test() as test:
         }
     })
 
+    with test.step("Configure GRE Tunnels"):
+        target.put_config_dict("ietf-interfaces", {
+            "interfaces": {
+                "interface": [
+                    {
+                        "name": "gre-v4",
+                        "type": "infix-if-type:gre",
+                        "infix-interfaces:gre": {
+                            "local": "192.168.20.1",
+                            "remote": "192.168.20.2",
+                        }
+                    },
+                    {
+                        "name": "gre-v6",
+                        "type": "infix-if-type:gre",
+                        "infix-interfaces:gre": {
+                            "local": "2001:db8::1",
+                            "remote": "2001:db8::2",
+                        }
+                    },
+                    {
+                        "name": "gretap-v4",
+                        "type": "infix-if-type:gretap",
+                        "infix-interfaces:gre": {
+                            "local": "192.168.20.1",
+                            "remote": "192.168.20.2",
+                        }
+                    },
+                    {
+                        "name": "gretap-v6",
+                        "type": "infix-if-type:gretap",
+                        "infix-interfaces:gre": {
+                            "local": "2001:db8::1",
+                            "remote": "2001:db8::2",
+                        }
+                    },
+                ]
+            }
+        })
+
     with test.step("Verify interface 'lo' is of type loopback"):
         verify_interface(target, "lo", "loopback")
 
@@ -212,5 +275,11 @@ with infamy.Test() as test:
         verify_interface(target, f"{eth_X}.30", "vlan")
         verify_interface(target, f"{eth_Q}.10", "vlan")
         verify_interface(target, "br-Q.40", "vlan")
+
+    with test.step("Verify GRE interfaces 'gre-v4', 'gre-v6', 'gretap-v4' and 'gretap-v6'"):
+        verify_interface(target, "gre-v4", "gre")
+        verify_interface(target, "gre-v6", "gre")
+        verify_interface(target, "gretap-v4", "gretap")
+        verify_interface(target, "gretap-v6", "gretap")
 
     test.succeed()

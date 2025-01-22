@@ -1,0 +1,132 @@
+[
+  {
+    "AutoRemove": false,
+    "Command": [
+      "/usr/sbin/httpd",
+      "-f",
+      "-v"
+    ],
+    "CreatedAt": "About a minute ago",
+    "Exited": false,
+    "ExitedAt": -62135596800,
+    "ExitCode": 0,
+    "Id": "0aed2ca36b5e9012d8d647a684047410444c0e3134987f0c020bf0234ef0e0f3",
+    "Image": "localhost/curios-httpd-oci-amd64-v24.11.0:latest",
+    "ImageID": "d6930d60a73be9980f8e19b4b4f63586a6d3492178e20bea962e4e9b8c654033",
+    "IsInfra": false,
+    "Labels": {
+      "org.opencontainers.image.title": "curiOS-httpd",
+      "org.opencontainers.image.url": "https://github.com/kernelkit/curiOS"
+    },
+    "Mounts": [],
+    "Names": [
+      "container-B"
+    ],
+    "Namespaces": {
+      
+    },
+    "Networks": [
+      "veth2a",
+      "veth3a"
+    ],
+    "Pid": 25086,
+    "Pod": "",
+    "PodName": "",
+    "Ports": null,
+    "Size": null,
+    "StartedAt": 1737367149,
+    "State": "running",
+    "Status": "Up About a minute",
+    "Created": 1737367149
+  },
+  {
+    "AutoRemove": false,
+    "Command": [
+      "/usr/sbin/nft-helper",
+      "/etc/nftables.conf"
+    ],
+    "CreatedAt": "About a minute ago",
+    "Exited": false,
+    "ExitedAt": -62135596800,
+    "ExitCode": 0,
+    "Id": "3d9ac5c827ed9dba01401774283f00a1a79b19375fba1a3849cf64b5ed68dbb8",
+    "Image": "localhost/curios-nftables-oci-amd64-v24.11.0:latest",
+    "ImageID": "7a3cc502436250357a6664100a600f306334b4d7203890b85b7ea9b8da6b5665",
+    "IsInfra": false,
+    "Labels": {
+      "org.opencontainers.image.title": "curiOS-nftables",
+      "org.opencontainers.image.url": "https://github.com/kernelkit/curiOS"
+    },
+    "Mounts": [
+      "/etc/nftables.conf"
+    ],
+    "Names": [
+      "firewall"
+    ],
+    "Namespaces": {
+      
+    },
+    "Networks": [],
+    "Pid": 25085,
+    "Pod": "",
+    "PodName": "",
+    "Ports": null,
+    "Size": null,
+    "StartedAt": 1737367149,
+    "State": "running",
+    "Status": "Up About a minute",
+    "Created": 1737367149
+  },
+  {
+    "AutoRemove": false,
+    "Command": [
+      "/usr/sbin/httpd",
+      "-f",
+      "-v",
+      "-p",
+      "91"
+    ],
+    "CreatedAt": "About a minute ago",
+    "Exited": false,
+    "ExitedAt": -62135596800,
+    "ExitCode": 0,
+    "Id": "93753e99ceb3bc80c3a3002952f3d8f130deb77924e352d8e49f5c822c3af34e",
+    "Image": "localhost/curios-httpd-oci-amd64-v24.11.0:latest",
+    "ImageID": "d6930d60a73be9980f8e19b4b4f63586a6d3492178e20bea962e4e9b8c654033",
+    "IsInfra": false,
+    "Labels": {
+      "org.opencontainers.image.title": "curiOS-httpd",
+      "org.opencontainers.image.url": "https://github.com/kernelkit/curiOS"
+    },
+    "Mounts": [
+      "/var/www/index.html"
+    ],
+    "Names": [
+      "container-A"
+    ],
+    "Namespaces": {
+      
+    },
+    "Networks": [
+      "veth0a",
+      "veth1a"
+    ],
+    "Pid": 25343,
+    "Pod": "",
+    "PodName": "",
+    "Ports": [
+      {
+        "host_ip": "",
+        "container_port": 91,
+        "host_port": 36971,
+        "range": 1,
+        "protocol": "tcp"
+      }
+    ],
+    "Size": null,
+    "StartedAt": 1737367150,
+    "State": "running",
+    "Status": "Up About a minute",
+    "Created": 1737367150
+  }
+]

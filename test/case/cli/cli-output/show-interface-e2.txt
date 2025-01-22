@@ -1,9 +1,0 @@
-name                : e2
-index               : 4
-mtu                 : 1500
-operational status  : up
-physical address    : 02:00:00:00:00:02
-ipv4 addresses      :
-ipv6 addresses      : fe80::ff:fe00:2/64 (link-layer)
-in-octets           : 19114
-out-octets          : 0
