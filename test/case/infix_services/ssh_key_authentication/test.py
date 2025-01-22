@@ -8,14 +8,11 @@ Verify that 'guest' user can fetch data using only the 'public' key
 import infamy
 import os
 import tempfile
-from infamy import ssh
+from infamy import ssh, until, netutil
 
-with infamy.Test() as test:
-    with test.step("Connect to the target device"):
-        env = infamy.Env()
-        target = env.attach("target", "mgmt")
-
-        private_key = """-----BEGIN OPENSSH PRIVATE KEY-----
+USER = "guest"
+KEY = {
+    "private": """-----BEGIN OPENSSH PRIVATE KEY-----
 b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAABFwAAAAdzc2gtcn
 NhAAAAAwEAAQAAAQEAn3zL3StVQZLsP9dnrXxK/PT4m2tjW0M+2GN6JdiIUZyKI9KKHWaf
 2uHNdXNUPo0JGwgyj1geOcN2TEdkPd113mO9qrS87wgSzs3gpF93MzACSy8c55dxF5g50w
@@ -42,14 +39,19 @@ eTVndLHpDiTZO+tCIP+OO45uYA/8O+IMc+wvIsHCpZC7e3bskg6z2gt5B0DwSnf2Q4zXxP
 OFXdOBTFO8XcgWKRo9BIPV6BNH9qrx0Z0m5G45rY6SE9c5Ypv0ExjXRZ/iPWLBSarsv1fF
 lrH5aNT6hzZKsc8AAAAMcm9vdEBpbmZhbXkwAQIDBAUGBw==
 -----END OPENSSH PRIVATE KEY-----
-"""       
-        
-        public_key_alg = "ssh-rsa"
-        public_key_data = "AAAAB3NzaC1yc2EAAAADAQABAAABAQCffMvdK1VBkuw/12etfEr89Piba2NbQz7YY3ol2IhRnIoj0oodZp/a4c11c1Q+jQkbCDKPWB45w3ZMR2Q93XXeY72qtLzvCBLOzeCkX3czMAJLLxznl3EXmDnTAWetE1nUmByLLOvKdw1CPFiS9tushwdfj6iOfex3HvQwltV5i/rQz0h7JeSwEQ0Xn6sBgDxWlD6TtwYl4ch0zHoxRHCjqdQig7NMonhaF53BMKRYaUSLET3w+zKfK8HYiHxry6Jf+dcts9PQyxpCiEW3RoU65nwnq1pG7XAdmT/DeGKSQqXkdnmXvgZkrQYZ+4HW2veQlHzwwEIAhMTscS+QiOX/"
+""",
+    "public": "AAAAB3NzaC1yc2EAAAADAQABAAABAQCffMvdK1VBkuw/12etfEr89Piba2NbQz7YY3ol2IhRnIoj0oodZp/a4c11c1Q+jQkbCDKPWB45w3ZMR2Q93XXeY72qtLzvCBLOzeCkX3czMAJLLxznl3EXmDnTAWetE1nUmByLLOvKdw1CPFiS9tushwdfj6iOfex3HvQwltV5i/rQz0h7JeSwEQ0Xn6sBgDxWlD6TtwYl4ch0zHoxRHCjqdQig7NMonhaF53BMKRYaUSLET3w+zKfK8HYiHxry6Jf+dcts9PQyxpCiEW3RoU65nwnq1pG7XAdmT/DeGKSQqXkdnmXvgZkrQYZ+4HW2veQlHzwwEIAhMTscS+QiOX/",
+}
+
+with infamy.Test() as test:
+    with test.step("Connect to the target device"):
+        env = infamy.Env()
+        target = env.attach("target", "mgmt")
 
     with test.step("Create a guest user on the target device"):
-        USER = "guest"
-
+        # Upon attachment, target reverts to `test-config`, in which
+        # the SSH service is enabled, hence we do not have to
+        # explicitly enable it here.
         target.put_config_dict("ietf-system", {
             "system": {
                 "authentication": {
@@ -59,8 +61,8 @@ lrH5aNT6hzZKsc8AAAAMcm9vdEBpbmZhbXkwAQIDBAUGBw==
                             "authorized-key": [
                                 {
                                     "name":"guest-ssh-key",
-                                    "algorithm":public_key_alg,
-                                    "key-data":public_key_data
+                                    "algorithm": "ssh-rsa",
+                                    "key-data": KEY["public"]
                                 }
                             ],
                             "infix-system:shell":"bash"
@@ -69,10 +71,13 @@ lrH5aNT6hzZKsc8AAAAMcm9vdEBpbmZhbXkwAQIDBAUGBw==
                 }
             }
         })
-    
+
+    with test.step("Wait until SSH server is ready to accept connections"):
+        until(lambda: netutil.tcp_port_is_open(target.get_mgmt_ip(), 22))
+
     with test.step("Write private key to a temporary file"):
         with tempfile.NamedTemporaryFile(delete=False, mode='w') as key_file:
-            key_file.write(private_key)
+            key_file.write(KEY["private"])
             key_file_name = key_file.name
 
         os.chmod(key_file_name, 0o600)
@@ -90,5 +95,5 @@ lrH5aNT6hzZKsc8AAAAMcm9vdEBpbmZhbXkwAQIDBAUGBw==
             check=True,
             remove=True
         )
-                
+
     test.succeed()

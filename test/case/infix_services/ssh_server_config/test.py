@@ -9,7 +9,9 @@ Test SSH server functionality with pre-defined key pair:
 """
 
 import subprocess
+
 import infamy
+from infamy import until, netutil
 
 PRIVATE_KEY = "MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQCtzyoT8/23hSyo7trLaqc6Auj5jvwhhCxUh8WIyfd5G/R9R+/wFEtGo6c6h75/GFCotFCQYvLlqHkrI0QiLYCPo0Rcxzfpy8TZGYjlyD8aYTYeXR2Oow6cjHE3ajQEEPbr5eiV/NBezg00SrCazDN4VHEXcjhl4egaKxDyG1yi98kQISY0+ehNjR/CKOBvOxHqB0N7gUnasbBiiN/iCCkCuDFKnBM6cYrUAvwP/aj+f9dq4lImJ6YpHaSjFKIa2ZFmOi20X0cb0AS1cshjSU2qf9eS2nysbmlC50X8HL9gaIeVInsWTLxEHTrd2gyBCTPO3X6oLJWW7HoB+yA9wp6xAgMBAAECggEACDNXrsaSrFmfFm7jmZikAHmR7LFlfb7W2RupUyeFUrxiDBWscVFBznjK+3jbYPOAnb8ZNIDIqVOKOQHyVWL8d3p6b56yKYik1mHtKrtIl+npg+P8kKXqmvII5vaOsvjqb42izE3X9nsmFhcmjz0uegFQ7yxjUxJGMVLiGyw1khZHFLxAcCzwN2qnxni7MjU2d+ZAtNd4ilSjXZ46Q/6+CyrhoTDUhc+5iqCgXU2wtYWrnvEhCBFd3AYh1vWZuh1TxMgnsfYePk5fHM1AG10XUvI5jOjSkSN+AlJxuXeUSeLyUV4hekem/j/UT3KwVPAiEsBil4KWyneiildXxU5MaQKBgQDm1667T06I/ty6/KZSdfm4EpDKylHohdN8Vr0MfgZSzZgc3bNNMQxAXhGdTIi2keIpitoF+/vLiMhxa9q692XY85eKSOC0Lvv5IRUC9/fUtoKrESOoxwX8SJ3bHj/Xel7Ye0WOXVJcO1/PXO0KFgs2YDRdmQKMFNKS/CdK+2TuCQKBgQDAwEzQ7B3cRYp4R2s230wpSSsPkiJXDQLno82S8K2/vLuWnlwIL3A1833l7PDfp5APABU3EVpQ7EYE6usnO1/HDSZ208uiprx6LIbX0gZVoRnPOKFwRVD7zrYo1n11Lydg8OgKtey5GsruPRbLtAw3/ugayUDCUExXmYlFQLRVaQKBgG+NTrzpiDQfpR8fNGio5jITlrDIsGhDM33klJrS089z1swsPpdQ2nDIhI6VC4PeX4JfvRgjOvySbvqQejTblPYQUOzcZunrwowTdonmtnauc9qi/65x7uyJUu8uYP+J/Qd0Gpq/citr7dLRPyMen/B48RVB+b8j2NZ6z6ombhGxAoGAY2OE+IGX0Bnnkae55/xyKCO7WXcPz/U8lzbGbMs/vEtUKxETAYF8icU5GNL5TUn4pVN0nQWMnYeHf0em437hHyFvwPvq177EFvdYvHZmn8bHKSvZSqvjW0Q2d45J+J/M3Va7P7KZEsV2+Ct10qnPVxxQkGdPxiJjixP3TUdU9WkCgYEAtHa4cwsbgy0HWtNT2smc80jLGFfsX8+/MtgTVdx6zaTybl50hJeVG4kW+7Fvstr78iVl31qPWx14MjoXKTEeVMo6ulrEijnbCx6DgkOwq+EOUvZn0W7ly4RhDDA9W8qdBIAzAGumkCx4456Un3z8wbIVgSZB52IELCBKpbyhSWE="
 
@@ -98,6 +100,9 @@ with infamy.Test() as test:
             }
         }
     })
+
+    with test.step("Wait until SSH server is ready to accept connections"):
+        until(lambda: netutil.tcp_port_is_open(target.get_mgmt_ip(), 22))
 
     with test.step("Verify SSH public keys"):
         _, hport1 = env.ltop.xlate("host", "data1")

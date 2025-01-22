@@ -17,18 +17,14 @@ import netconf_client.connect
 import netconf_client.ncclient
 from infamy.transport import Transport,infer_put_dict
 from netconf_client.error import RpcError
-from . import env
+from . import env, netutil
 
 
 def netconf_syn(addr):
-    try:
-        ai = socket.getaddrinfo(addr, 830, 0, 0, socket.SOL_TCP)
-        sock = socket.socket(ai[0][0], ai[0][1], 0)
-        sock.connect(ai[0][4])
-        sock.close()
+    if netutil.tcp_port_is_open(addr, 830):
         print(f"{addr} answers to TCP connections on port 830 (NETCONF)")
         return True
-    except Exception:
+    else:
         return False
 
 
