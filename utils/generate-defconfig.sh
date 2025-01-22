@@ -74,7 +74,7 @@ check_file "$base" "Base config"
 check_file "$changes" "Changes config"
 
 TMPDIR=`mktemp -d`
-$MERGE_CONFIG -O "$TMPDIR" -n "$base" "$changes"
+$MERGE_CONFIG -O "$TMPDIR" "$base" "$changes"
 O="$TMPDIR" make savedefconfig
 mv "$TMPDIR"/defconfig "$output"
 rm -r "$TMPDIR"
