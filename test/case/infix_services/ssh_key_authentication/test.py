@@ -8,7 +8,7 @@ Verify that 'guest' user can fetch data using only the 'public' key
 import infamy
 import os
 import tempfile
-from infamy import ssh
+from infamy import ssh, until, netutil
 
 USER = "guest"
 KEY = {
@@ -71,6 +71,9 @@ with infamy.Test() as test:
                 }
             }
         })
+
+    with test.step("Wait until SSH server is ready to accept connections"):
+        until(lambda: netutil.tcp_port_is_open(target.get_mgmt_ip(), 22))
 
     with test.step("Write private key to a temporary file"):
         with tempfile.NamedTemporaryFile(delete=False, mode='w') as key_file:
