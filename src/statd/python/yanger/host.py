@@ -105,18 +105,18 @@ class Localhost(Host):
 
 
 class Remotehost(Localhost):
-    def __init__(self, wrap, basedir):
+    def __init__(self, prefix, capdir):
         super().__init__()
-        self.wrap = tuple(wrap.split())
-        self.basedir = basedir
-        if basedir:
+        self.prefix = tuple(prefix.split()) if prefix else tuple()
+        self.capdir = capdir
+        if capdir:
             for subdir in ("rootfs", "run"):
-                os.makedirs(os.path.join(basedir, subdir), exist_ok=True)
+                os.makedirs(os.path.join(capdir, subdir), exist_ok=True)
 
     def now(self):
         timestamp = self._run(["date", "-u", "+%s"], default=None, log=True)
-        if self.basedir:
-            with open(os.path.join(self.basedir, "timestamp"), "w") as f:
+        if self.capdir:
+            with open(os.path.join(self.capdir, "timestamp"), "w") as f:
                 f.write(f"{timestamp}\n")
             pass
 
@@ -128,13 +128,13 @@ class Remotehost(Localhost):
         # arguments containing spaces so that commands like `vtysh -c
         # "show ip route json"` work as expected.
         cmd = " ".join([ arg if " " not in arg else f"\"{arg}\"" for arg in cmd ])
-        return super().run(self.wrap + (cmd,), default, log)
+        return super().run(self.prefix + (cmd,), default, log)
 
     def run(self, cmd, default=None, log=True):
-        if not self.basedir:
+        if not self.capdir:
             return self._run(cmd, default, log)
 
-        storedpath = os.path.join(self.basedir, "run", Testhost.SlugOf(cmd))
+        storedpath = os.path.join(self.capdir, "run", Replayhost.SlugOf(cmd))
         if os.path.exists(storedpath):
             with open(storedpath) as f:
                 return f.read()
@@ -148,29 +148,29 @@ class Remotehost(Localhost):
     def read(self, path):
         out = self._run(("cat", path), default="", log=False)
 
-        if self.basedir:
-            dirname = os.path.join(self.basedir, "rootfs", os.path.dirname(path[1:]))
+        if self.capdir:
+            dirname = os.path.join(self.capdir, "rootfs", os.path.dirname(path[1:]))
             os.makedirs(dirname, exist_ok=True)
-            with open(os.path.join(self.basedir, "rootfs", path[1:]), "w") as f:
+            with open(os.path.join(self.capdir, "rootfs", path[1:]), "w") as f:
                 f.write(out)
 
         return out
 
 
-class Testhost(Host):
+class Replayhost(Host):
     def SlugOf(cmd):
         return "_".join(cmd).replace("/", "+").replace(" ", "-")
 
-    def __init__(self, basedir):
-        self.basedir = basedir
+    def __init__(self, replaydir):
+        self.replaydir = replaydir
 
     def now(self):
-        with open(os.path.join(self.basedir, "timestamp")) as f:
+        with open(os.path.join(self.replaydir, "timestamp")) as f:
             timestamp = f.read().strip()
             return datetime.datetime.fromtimestamp(int(timestamp), datetime.timezone.utc)
 
     def run(self, cmd, default=None, log=True):
-        path = os.path.join(self.basedir, "run", Testhost.SlugOf(cmd))
+        path = os.path.join(self.replaydir, "run", Replayhost.SlugOf(cmd))
 
         try:
             with open(path, 'r') as f:
@@ -184,7 +184,7 @@ class Testhost(Host):
             raise
 
     def read(self, path):
-        path = os.path.join(self.basedir, "rootfs", path[1:])
+        path = os.path.join(self.replaydir, "rootfs", path[1:])
         try:
             with open(path, 'r') as f:
                 return f.read()

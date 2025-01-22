@@ -87,13 +87,10 @@ prepare_infamy_test()
 yanger_exec()
 {
     local opts=
-    while getopts "w:t:" opt; do
+    while getopts "c:r:x:" opt; do
 	case ${opt} in
-	    w)
-		opts="$opts -w \"$OPTARG\""
-		;;
-	    t)
-		opts="$opts -t \"$OPTARG\""
+	    c|r|x)
+		opts="$opts -$opt \"$OPTARG\""
 		;;
 	esac
     done
@@ -122,8 +119,8 @@ yanger_gen()
     while [ $# -gt 0 ]; do
 	echo ">>> CAPTURING $1 from $gen_iface" >&2
 	yanger_exec \
-	    -t "$casedir/system" \
-	    -w "$wrapper" \
+	    -c "$casedir/system" \
+	    -x "$wrapper" \
 	    $1 \
 	    >"$casedir/$1.json"
  	operfiles="$operfiles $casedir/$1.json"
@@ -148,7 +145,7 @@ yanger_check()
 	status="ok"
 	if ! diff -up \
 	     "$casedir/$1.json" \
-	     <(yanger_exec -t "$casedir/system" $1) \
+	     <(yanger_exec -r "$casedir/system" $1) \
 	     >"$diff"; then
 	    cat $diff | sed 's/^/# /'
 	    status="not ok"
@@ -168,7 +165,7 @@ yanger_cat()
     fi
 
     while [ $# -gt 0 ]; do
-	yanger_exec -t "$casedir/system" $1
+	yanger_exec -r "$casedir/system" $1
 	shift
     done
 }
@@ -180,7 +177,7 @@ yanger_live()
     fi
 
     while [ $# -gt 0 ]; do
-	yanger_exec -w "$wrapper" $1
+	yanger_exec -x "$wrapper" $1
 	shift
     done
 }
