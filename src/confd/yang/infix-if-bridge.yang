@@ -3,6 +3,9 @@ submodule infix-if-bridge {
   belongs-to infix-interfaces {
     prefix infix-if;
   }
+  import ietf-yang-types {
+    prefix yang;
+  }
   import iana-if-type {
     prefix ianaift;
   }
@@ -211,6 +214,12 @@ submodule infix-if-bridge {
     default 8;
   }
 
+  typedef stp-system-id {
+    type uint16 {
+      range "0..4095";
+    }
+  }
+
   typedef stp-bool-or-auto {
     type union {
       type enumeration {
@@ -381,12 +390,73 @@ submodule infix-if-bridge {
     }
   }
 
+  grouping stp-bridge-id {
+    leaf priority {
+      description "Priority.";
+      type stp-priority;
+    }
+
+    leaf system-id {
+      description "System ID.";
+      type stp-system-id;
+    }
+
+    leaf address {
+      description "MAC address.";
+      type yang:mac-address;
+    }
+  }
+
+  grouping stp-tree-state {
+    container bridge-id {
+      config false;
+      uses stp-bridge-id;
+    }
+
+    container root-id {
+      config false;
+      uses stp-bridge-id;
+    }
+
+    leaf root-port {
+      config false;
+      description "Root port.";
+      type if:interface-ref;
+    }
+
+    container topology-change {
+      config false;
+
+      leaf count {
+        description "Cumulative number of topology changes.";
+        type yang:counter32;
+      }
+
+      leaf in-progress {
+        description "Topology change is currently in progress.";
+        type boolean;
+      }
+
+      leaf port {
+        description "Source port of the most recent topology change.";
+        type if:interface-ref;
+      }
+
+      leaf time {
+        description "The time of the most recent topology change.";
+        type yang:date-and-time;
+      }
+    }
+  }
+
   grouping stp-tree {
     leaf priority {
       description "Priority.";
       type stp-priority;
       reference "IEEE 802.1Q-2018 13.18";
     }
+
+    uses stp-tree-state;
   }
 
   grouping stp-tree-port {
