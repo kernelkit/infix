@@ -16,6 +16,8 @@ def find_interface(cifname):
                 ipaddrs = common.ipaddrs(ifname=iplink["ifname"], netns=ns["name"])
                 return (iplink, next(iter(ipaddrs.values())))
 
+    return (None, None)
+
 
 def podman_interfaces():
     interfaces = {}
@@ -31,6 +33,7 @@ def podman_interfaces():
 
     return interfaces
 
+
 def interfaces(ifname):
     interfaces = []
 
@@ -39,6 +42,9 @@ def interfaces(ifname):
             continue
 
         iplink, ipaddr = find_interface(cifname)
+        if not (iplink and ipaddr):
+            continue
+
         interface = link.interface_common(iplink, ipaddr)
 
         # The original interface name is stored in ifalias by podman -
