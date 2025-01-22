@@ -1,9 +1,8 @@
 from datetime import timedelta
 from re import match
 
-from .common import insert
+from .common import insert, YangDate
 from .host import HOST
-
 
 def uptime2datetime(uptime):
     """
@@ -36,11 +35,7 @@ def uptime2datetime(uptime):
         h += days * 24
 
     uptime_delta = timedelta(hours=h, minutes=m, seconds=s)
-    current_time = HOST.now()
-    last_updated = current_time - uptime_delta
-    date_timestd = last_updated.strftime('%Y-%m-%dT%H:%M:%S%z')
-
-    return date_timestd[:-2] + ':' + date_timestd[-2:]
+    return str(YangDate.from_delta(uptime_delta))
 
 
 def add_protocol(routes, proto):
