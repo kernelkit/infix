@@ -118,8 +118,10 @@ static int change_cb(sr_session_ctx_t *session, uint32_t sub_id, const char *mod
 					goto next;
 				}
 			next:
-				unlink(SSH_PRIVATE_KEY);
-				unlink(SSH_PUBLIC_KEY);
+				if (erase(SSH_PRIVATE_KEY))
+					ERRNO("Failed removing SSH server private key");
+				if (erase(SSH_PUBLIC_KEY))
+					ERRNO("Failed removing SSH server public key");
 
 				if (priv_key)
 					free(priv_key);
@@ -133,6 +135,9 @@ static int change_cb(sr_session_ctx_t *session, uint32_t sub_id, const char *mod
 			free(private_key_format);
 		}
 	}
+	if (list)
+		sr_free_values(list, count);
+
 
 	return SR_ERR_OK;
 }
