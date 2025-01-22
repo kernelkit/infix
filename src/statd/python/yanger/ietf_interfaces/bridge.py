@@ -1,6 +1,6 @@
 from functools import cache
 
-from ..common import LOG
+from ..common import LOG, YangDate
 from ..host import HOST
 
 from .common import iplinks, iplinks_lower_of
@@ -11,7 +11,6 @@ from . import vlan
 @cache
 def bridge_vlan():
     return { v["ifname"]: v for v in HOST.run_json("bridge -j vlan show".split(), []) }
-
 
 def lower(iplink):
     lower = {}
@@ -45,6 +44,62 @@ def lower(iplink):
 
         "stp-state": info["state"],
     }
+
+
+def stp_bridge_id(idstr):
+    segs = idstr.split(".")
+    return {
+        "priority": int(segs[0], 16),
+        "system-id": int(segs[1], 16),
+        "address": segs[2].lower(),
+    }
+
+def stp_tree(brname, mst):
+    if not (state := HOST.run_json(["mstpctl", "-f", "json", "showtree", brname, str(mst)]), {}):
+        return {}
+
+    tree = {
+        "priority": int(state["bridge-id"][0], 16),
+        "bridge-id": stp_bridge_id(state["bridge-id"]),
+    }
+
+    if rport := state.get("root-port"):
+        tree["root-port"] = rport.split()[0]
+
+    if state.get("topology-change-count"):
+        tree["topology-change"] = {
+            "count": int(state["topology-change-count"]),
+            "in-progress": True if state["topology-change"] == "yes" else False,
+            "port": state["topology-change-port"],
+            "time": str(YangDate.from_seconds(int(state["time-since-topology-change"]))),
+        }
+
+    return tree
+
+
+def stp(iplink):
+    state = HOST.run_json(["mstpctl", "-f", "json", "showbridge", iplink["ifname"]],
+                          default=[{}])[0]
+    if not state:
+        return {}
+
+    stp = {
+        "force-protocol": state["force-protocol-version"],
+        "forward-delay": int(state["forward-delay"]),
+        "max-age": int(state["max-age"]),
+        "transmit-hold-count": int(state["tx-hold-count"]),
+        "max-hops": int(state["max-hops"]),
+
+        "cist": stp_tree(iplink["ifname"], 0),
+    }
+
+    # This information ought to be available in `showtree`, so it is
+    # still an open question how we should source the per-tree root id
+    # when adding MSTP support
+    if state.get("designated-root"):
+        stp["cist"]["root-id"] = stp_bridge_id(state["designated-root"])
+
+    return stp
 
 
 def mctlq2yang_mode(mctlq):
@@ -166,6 +221,11 @@ def bridge(iplink):
     info = iplink["linkinfo"]["info_data"]
 
     if info.get("vlan_filtering"):
-        return qbridge(iplink)
+        br = qbridge(iplink)
     else:
-        return dbridge(iplink)
+        br = dbridge(iplink)
+
+    if info.get("stp_state"):
+        br["stp"] = stp(iplink)
+
+    return br
