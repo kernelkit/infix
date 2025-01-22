@@ -180,10 +180,13 @@ static void action(sr_session_ctx_t *session, const char *name, const char *xpat
 		char *ptr = strchr(fmt, ':'); /* skip any prefix */
 
 		if (ptr)
-			fmt = &ptr[1];
+			ptr = &ptr[1];
+		else
+			ptr = fmt;
 		strlcat(opts, sep, sizeof(opts));
-		strlcat(opts, fmt, sizeof(opts));
+		strlcat(opts, ptr, sizeof(opts));
 		sep = ",";
+		free(fmt);
 	}
 
 	/*
@@ -358,9 +361,12 @@ static int server_change(sr_session_ctx_t *session, uint32_t sub_id, const char 
 
 			/* Accepted formats: address, :port, address:port */
 			fprintf(fp, "listen %s%s%s\n", address ?: "", port ? ":" : "", port ?: "");
+			free(address);
+			free(port);
 		}
 	}
-
+	if (list)
+		sr_free_values(list, count);
 	fclose(fp);
 done:
 	systemf("initctl -nbq touch sysklogd");

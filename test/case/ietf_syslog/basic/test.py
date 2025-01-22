@@ -17,11 +17,12 @@ with infamy.Test() as test:
         address = target.get_mgmt_ip()
 
     with test.step("Configure syslog on DUT to log to files '/log/bar.log' (absolute path) and 'foo' (non-absolute)."):
-        target.put_config_dict("ietf-syslog", {
-            "syslog": {
-                "actions": {
-                    "file": {
-                        "log-file": [
+        target.put_config_dicts({
+            "ietf-syslog": {
+                "syslog": {
+                    "actions": {
+                        "file": {
+                            "log-file": [
                             {
                                 "name": "file:foo",
                                 "facility-filter": {
@@ -52,7 +53,8 @@ with infamy.Test() as test:
                                     ]
                                 }
                             }
-                        ]
+                            ]
+                        }
                     }
                 }
             }
