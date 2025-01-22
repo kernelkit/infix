@@ -18,7 +18,7 @@ import os
 def fetch_file(remote_user, remote_address, remote_file, local_file, key_file, check=False, remove=False):
     """
     Fetches a file over SSH using scp and the provided private key.
-    
+
     :param remote_user: The user on the remote machine.
     :param remote_address: The address of the remote machine.
     :param remote_file: The file to fetch from the remote machine.
@@ -36,13 +36,13 @@ def fetch_file(remote_user, remote_address, remote_file, local_file, key_file, c
         if check:
             if result.returncode != 0:
                 raise RuntimeError("Failed to copy file from remote host")
-            
+
             if not os.path.exists(local_file):
                 raise RuntimeError(f"File {local_file} does not exist after copy")
-            
+
             if os.path.getsize(local_file) == 0:
                 raise RuntimeError(f"File {local_file} is empty after copy")
-            
+
     except Exception as e:
         print(f"Error during file transfer: {e}")
         raise

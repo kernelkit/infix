@@ -42,8 +42,8 @@ eTVndLHpDiTZO+tCIP+OO45uYA/8O+IMc+wvIsHCpZC7e3bskg6z2gt5B0DwSnf2Q4zXxP
 OFXdOBTFO8XcgWKRo9BIPV6BNH9qrx0Z0m5G45rY6SE9c5Ypv0ExjXRZ/iPWLBSarsv1fF
 lrH5aNT6hzZKsc8AAAAMcm9vdEBpbmZhbXkwAQIDBAUGBw==
 -----END OPENSSH PRIVATE KEY-----
-"""       
-        
+"""
+
         public_key_alg = "ssh-rsa"
         public_key_data = "AAAAB3NzaC1yc2EAAAADAQABAAABAQCffMvdK1VBkuw/12etfEr89Piba2NbQz7YY3ol2IhRnIoj0oodZp/a4c11c1Q+jQkbCDKPWB45w3ZMR2Q93XXeY72qtLzvCBLOzeCkX3czMAJLLxznl3EXmDnTAWetE1nUmByLLOvKdw1CPFiS9tushwdfj6iOfex3HvQwltV5i/rQz0h7JeSwEQ0Xn6sBgDxWlD6TtwYl4ch0zHoxRHCjqdQig7NMonhaF53BMKRYaUSLET3w+zKfK8HYiHxry6Jf+dcts9PQyxpCiEW3RoU65nwnq1pG7XAdmT/DeGKSQqXkdnmXvgZkrQYZ+4HW2veQlHzwwEIAhMTscS+QiOX/"
 
@@ -69,7 +69,7 @@ lrH5aNT6hzZKsc8AAAAMcm9vdEBpbmZhbXkwAQIDBAUGBw==
                 }
             }
         })
-    
+
     with test.step("Write private key to a temporary file"):
         with tempfile.NamedTemporaryFile(delete=False, mode='w') as key_file:
             key_file.write(private_key)
@@ -90,5 +90,5 @@ lrH5aNT6hzZKsc8AAAAMcm9vdEBpbmZhbXkwAQIDBAUGBw==
             check=True,
             remove=True
         )
-                
+
     test.succeed()
