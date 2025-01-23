@@ -1,0 +1,10 @@
+name                : br-D
+type                : bridge
+index               : 79
+mtu                 : 1500
+operational status  : up
+physical address    : 00:a0:85:00:03:00
+ipv4 addresses      : 10.0.0.1/8 (static)
+                      192.168.20.1/24 (static)
+ipv6 addresses      : 2001:db8::1/64 (static)
+                      fe80::2a0:85ff:fe00:300/64 (link-layer)

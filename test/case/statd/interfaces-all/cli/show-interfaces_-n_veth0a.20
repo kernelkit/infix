@@ -1,0 +1,9 @@
+name                : veth0a.20
+type                : vlan
+index               : 78
+mtu                 : 1500
+operational status  : up
+lower-layer-if      : veth0a
+physical address    : be:40:fd:0e:8d:c6
+ipv4 addresses      :
+ipv6 addresses      :

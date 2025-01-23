@@ -9,8 +9,8 @@
         "oper-status": "up",
         "phys-address": "00:00:00:00:00:00",
         "statistics": {
-          "in-octets": "420569",
-          "out-octets": "420569"
+          "in-octets": "3016668",
+          "out-octets": "3016668"
         },
         "ietf-ip:ipv4": {
           "address": [
@@ -40,8 +40,8 @@
         "oper-status": "up",
         "phys-address": "00:a0:85:00:03:01",
         "statistics": {
-          "in-octets": "5654369",
-          "out-octets": "8200041"
+          "in-octets": "2776431",
+          "out-octets": "5420321"
         },
         "ietf-ip:ipv4": {
           "mtu": 1500
@@ -65,7 +65,8 @@
         "oper-status": "up",
         "phys-address": "00:a0:85:00:03:02",
         "statistics": {
-          "out-octets": "101161"
+          "in-octets": "700",
+          "out-octets": "288796"
         },
         "ietf-ip:ipv4": {
           "mtu": 1500
@@ -89,8 +90,8 @@
         "oper-status": "up",
         "phys-address": "00:a0:85:00:03:03",
         "statistics": {
-          "in-octets": "23589",
-          "out-octets": "251584"
+          "in-octets": "770",
+          "out-octets": "892021"
         },
         "ietf-ip:ipv4": {
           "mtu": 1500
@@ -120,8 +121,8 @@
         "oper-status": "up",
         "phys-address": "00:a0:85:00:03:04",
         "statistics": {
-          "in-octets": "30583",
-          "out-octets": "231318"
+          "in-octets": "70",
+          "out-octets": "275470"
         },
         "ietf-ip:ipv4": {
           "mtu": 1500
@@ -145,8 +146,8 @@
         "oper-status": "up",
         "phys-address": "00:a0:85:00:03:05",
         "statistics": {
-          "in-octets": "67364",
-          "out-octets": "105244"
+          "in-octets": "182086",
+          "out-octets": "275083"
         },
         "ietf-ip:ipv4": {
           "mtu": 1500
@@ -170,8 +171,8 @@
         "oper-status": "up",
         "phys-address": "00:a0:85:00:03:06",
         "statistics": {
-          "in-octets": "136295",
-          "out-octets": "209032"
+          "in-octets": "185476",
+          "out-octets": "275412"
         },
         "ietf-ip:ipv4": {
           "mtu": 1500
@@ -195,8 +196,8 @@
         "oper-status": "up",
         "phys-address": "00:a0:85:00:03:07",
         "statistics": {
-          "in-octets": "70752",
-          "out-octets": "108022"
+          "in-octets": "183112",
+          "out-octets": "274994"
         },
         "ietf-ip:ipv4": {
           "mtu": 1500
@@ -215,7 +216,7 @@
       {
         "type": "infix-if-type:bridge",
         "name": "br-0",
-        "if-index": 47,
+        "if-index": 73,
         "admin-status": "up",
         "oper-status": "down",
         "phys-address": "00:a0:85:00:03:00",
@@ -238,7 +239,7 @@
       {
         "type": "infix-if-type:vlan",
         "name": "e2.30",
-        "if-index": 48,
+        "if-index": 74,
         "admin-status": "up",
         "oper-status": "up",
         "phys-address": "00:a0:85:00:03:02",
@@ -270,7 +271,7 @@
       {
         "type": "infix-if-type:bridge",
         "name": "br-X",
-        "if-index": 49,
+        "if-index": 75,
         "admin-status": "up",
         "oper-status": "up",
         "phys-address": "00:a0:85:00:03:00",
@@ -293,12 +294,13 @@
       {
         "type": "infix-if-type:veth",
         "name": "veth0b",
-        "if-index": 50,
+        "if-index": 76,
         "admin-status": "up",
         "oper-status": "up",
-        "phys-address": "e2:f0:55:1b:34:f3",
+        "phys-address": "86:e0:fb:54:94:e8",
         "statistics": {
-          "in-octets": "13501"
+          "in-octets": "37942",
+          "out-octets": "305"
         },
         "ietf-ip:ipv4": {
           "mtu": 1500
@@ -326,12 +328,13 @@
       {
         "type": "infix-if-type:veth",
         "name": "veth0a",
-        "if-index": 51,
+        "if-index": 77,
         "admin-status": "up",
         "oper-status": "up",
-        "phys-address": "86:2a:11:4e:5d:9f",
+        "phys-address": "be:40:fd:0e:8d:c6",
         "statistics": {
-          "out-octets": "13501"
+          "in-octets": "305",
+          "out-octets": "37942"
         },
         "ietf-ip:ipv4": {
           "mtu": 1500
@@ -346,12 +349,12 @@
       {
         "type": "infix-if-type:vlan",
         "name": "veth0a.20",
-        "if-index": 52,
+        "if-index": 78,
         "admin-status": "up",
         "oper-status": "up",
-        "phys-address": "86:2a:11:4e:5d:9f",
+        "phys-address": "be:40:fd:0e:8d:c6",
         "statistics": {
-          "out-octets": "13501"
+          "out-octets": "37682"
         },
         "ietf-ip:ipv4": {
           "mtu": 1500
@@ -381,12 +384,12 @@
       {
         "type": "infix-if-type:bridge",
         "name": "br-D",
-        "if-index": 53,
+        "if-index": 79,
         "admin-status": "up",
         "oper-status": "up",
         "phys-address": "00:a0:85:00:03:00",
         "statistics": {
-          "out-octets": "13501"
+          "out-octets": "37682"
         },
         "ietf-ip:ipv4": {
           "mtu": 1500,
@@ -431,12 +434,12 @@
       {
         "type": "infix-if-type:bridge",
         "name": "br-Q",
-        "if-index": 54,
+        "if-index": 80,
         "admin-status": "up",
         "oper-status": "up",
         "phys-address": "00:a0:85:00:03:00",
         "statistics": {
-          "in-octets": "9469"
+          "in-octets": "33728"
         },
         "ietf-ip:ipv4": {
           "mtu": 1500
@@ -448,22 +451,6 @@
           "vlans": {
             "proto": "ieee802-dot1q-types:c-vlan",
             "vlan": [
-              {
-                "vid": 10,
-                "untagged": [
-                  "br-Q"
-                ],
-                "tagged": [
-                  "veth0b"
-                ],
-                "multicast": {
-                  "snooping": true,
-                  "querier": "off"
-                },
-                "multicast-filters": {
-                  "multicast-filter": []
-                }
-              },
               {
                 "vid": 20,
                 "untagged": [
@@ -483,9 +470,10 @@
               },
               {
                 "vid": 30,
-                "untagged": [],
+                "untagged": [
+                  "br-Q"
+                ],
                 "tagged": [
-                  "br-Q",
                   "e3",
                   "veth0b"
                 ],
@@ -515,15 +503,12 @@
               }
             ]
           }
-        },
-        "infix-interfaces:bridge-port": {
-          "pvid": 10
         }
       },
       {
         "type": "infix-if-type:vlan",
         "name": "br-Q.40",
-        "if-index": 55,
+        "if-index": 81,
         "admin-status": "up",
         "oper-status": "up",
         "phys-address": "00:a0:85:00:03:00",
@@ -542,7 +527,7 @@
       {
         "type": "infix-if-type:vlan",
         "name": "e3.10",
-        "if-index": 56,
+        "if-index": 82,
         "admin-status": "up",
         "oper-status": "up",
         "phys-address": "00:a0:85:00:03:03",
@@ -561,7 +546,7 @@
       {
         "type": "infix-if-type:gre",
         "name": "gre-v4",
-        "if-index": 57,
+        "if-index": 83,
         "admin-status": "up",
         "oper-status": "up",
         "ietf-ip:ipv4": {
@@ -578,11 +563,18 @@
       {
         "type": "infix-if-type:gre",
         "name": "gre-v6",
-        "if-index": 58,
+        "if-index": 84,
         "admin-status": "up",
         "oper-status": "up",
         "ietf-ip:ipv4": {
-          "mtu": 1448
+          "mtu": 1448,
+          "address": [
+            {
+              "ip": "192.168.50.2",
+              "prefix-length": 16,
+              "origin": "static"
+            }
+          ]
         },
         "ietf-ip:ipv6": {
           "mtu": 1448
@@ -595,10 +587,13 @@
       {
         "type": "infix-if-type:gretap",
         "name": "gretap-v4",
-        "if-index": 59,
+        "if-index": 85,
         "admin-status": "up",
         "oper-status": "up",
-        "phys-address": "1e:9d:e1:46:5d:9e",
+        "phys-address": "ba:a0:f5:c1:68:83",
+        "statistics": {
+          "out-octets": "249"
+        },
         "ietf-ip:ipv4": {
           "mtu": 1462
         },
@@ -613,10 +608,13 @@
       {
         "type": "infix-if-type:gretap",
         "name": "gretap-v6",
-        "if-index": 60,
+        "if-index": 86,
         "admin-status": "up",
         "oper-status": "up",
-        "phys-address": "ae:c7:28:08:7c:ca",
+        "phys-address": "1a:1b:84:dd:ca:2c",
+        "statistics": {
+          "out-octets": "205"
+        },
         "ietf-ip:ipv4": {
           "mtu": 1434
         },
@@ -626,6 +624,61 @@
         "infix-interfaces:gre": {
           "local": "2001:db8::1",
           "remote": "2001:db8::2"
+        }
+      },
+      {
+        "type": "infix-if-type:vxlan",
+        "name": "vxlan-v4",
+        "if-index": 87,
+        "admin-status": "up",
+        "oper-status": "up",
+        "phys-address": "f6:56:cb:3e:55:0f",
+        "ietf-ip:ipv4": {
+          "mtu": 1500,
+          "address": [
+            {
+              "ip": "192.168.30.2",
+              "prefix-length": 24,
+              "origin": "static"
+            }
+          ]
+        },
+        "ietf-ip:ipv6": {
+          "mtu": 1500
+        },
+        "infix-interfaces:vxlan": {
+          "local": "192.168.20.100",
+          "remote": "192.168.20.200",
+          "vni": 4
+        }
+      },
+      {
+        "type": "infix-if-type:vxlan",
+        "name": "vxlan-v6",
+        "if-index": 88,
+        "admin-status": "up",
+        "oper-status": "up",
+        "phys-address": "fe:aa:b4:8a:33:1b",
+        "statistics": {
+          "out-octets": "18219"
+        },
+        "ietf-ip:ipv4": {
+          "mtu": 1500,
+          "address": [
+            {
+              "ip": "192.168.40.2",
+              "prefix-length": 24,
+              "origin": "static"
+            }
+          ]
+        },
+        "ietf-ip:ipv6": {
+          "mtu": 1500
+        },
+        "infix-interfaces:vxlan": {
+          "local": "2001:db8::100",
+          "remote": "2001:db8::200",
+          "vni": 6
         }
       }
     ]

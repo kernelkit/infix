@@ -15,7 +15,7 @@
                 "active": [
                   null
                 ],
-                "last-updated": "2025-01-20T10:00:03+00:00",
+                "last-updated": "2025-01-24T09:55:47+00:00",
                 "next-hop": {
                   "next-hop-list": {
                     "next-hop": [
@@ -33,7 +33,7 @@
                 "ietf-ipv4-unicast-routing:destination-prefix": "0.0.0.0/0",
                 "source-protocol": "static",
                 "route-preference": 254,
-                "last-updated": "2025-01-20T09:59:23+00:00",
+                "last-updated": "2025-01-24T09:55:08+00:00",
                 "next-hop": {
                   "next-hop-list": {
                     "next-hop": [
@@ -49,7 +49,7 @@
                 "source-protocol": "ietf-ospf:ospfv2",
                 "route-preference": 110,
                 "ietf-ospf:metric": 1,
-                "last-updated": "2025-01-20T09:59:53+00:00",
+                "last-updated": "2025-01-24T09:54:55+00:00",
                 "next-hop": {
                   "next-hop-list": {
                     "next-hop": [
@@ -67,7 +67,7 @@
                 "active": [
                   null
                 ],
-                "last-updated": "2025-01-20T09:59:09+00:00",
+                "last-updated": "2025-01-24T09:54:54+00:00",
                 "next-hop": {
                   "next-hop-list": {
                     "next-hop": [
@@ -85,7 +85,7 @@
                 "ietf-ipv4-unicast-routing:destination-prefix": "10.1.1.1/32",
                 "source-protocol": "direct",
                 "route-preference": 0,
-                "last-updated": "2025-01-20T09:59:08+00:00",
+                "last-updated": "2025-01-24T09:54:53+00:00",
                 "next-hop": {
                   "next-hop-list": {
                     "next-hop": [
@@ -106,7 +106,7 @@
                 "active": [
                   null
                 ],
-                "last-updated": "2025-01-20T09:59:08+00:00",
+                "last-updated": "2025-01-24T09:54:53+00:00",
                 "next-hop": {
                   "next-hop-list": {
                     "next-hop": [
@@ -128,7 +128,7 @@
                 "active": [
                   null
                 ],
-                "last-updated": "2025-01-20T10:00:03+00:00",
+                "last-updated": "2025-01-24T09:55:47+00:00",
                 "next-hop": {
                   "next-hop-list": {
                     "next-hop": [
@@ -156,7 +156,7 @@
                 "active": [
                   null
                 ],
-                "last-updated": "2025-01-20T10:00:03+00:00",
+                "last-updated": "2025-01-24T09:55:47+00:00",
                 "next-hop": {
                   "next-hop-list": {
                     "next-hop": [
@@ -183,7 +183,7 @@
                 "active": [
                   null
                 ],
-                "last-updated": "2025-01-20T09:59:14+00:00",
+                "last-updated": "2025-01-24T09:54:59+00:00",
                 "next-hop": {
                   "next-hop-list": {
                     "next-hop": [
@@ -209,7 +209,7 @@
                 "ietf-ipv6-unicast-routing:destination-prefix": "fe80::/64",
                 "source-protocol": "direct",
                 "route-preference": 0,
-                "last-updated": "2025-01-20T09:59:10+00:00",
+                "last-updated": "2025-01-24T09:54:55+00:00",
                 "next-hop": {
                   "next-hop-list": {
                     "next-hop": [
@@ -227,7 +227,7 @@
                 "ietf-ipv6-unicast-routing:destination-prefix": "fe80::/64",
                 "source-protocol": "direct",
                 "route-preference": 0,
-                "last-updated": "2025-01-20T09:59:10+00:00",
+                "last-updated": "2025-01-24T09:54:55+00:00",
                 "next-hop": {
                   "next-hop-list": {
                     "next-hop": [
@@ -245,25 +245,7 @@
                 "ietf-ipv6-unicast-routing:destination-prefix": "fe80::/64",
                 "source-protocol": "direct",
                 "route-preference": 0,
-                "last-updated": "2025-01-20T08:05:03+00:00",
-                "next-hop": {
-                  "next-hop-list": {
-                    "next-hop": [
-                      {
-                        "outgoing-interface": "e5",
-                        "infix-routing:installed": [
-                          null
-                        ]
-                      }
-                    ]
-                  }
-                }
-              },
-              {
-                "ietf-ipv6-unicast-routing:destination-prefix": "fe80::/64",
-                "source-protocol": "direct",
-                "route-preference": 0,
-                "last-updated": "2025-01-20T08:05:03+00:00",
+                "last-updated": "2025-01-24T09:54:35+00:00",
                 "next-hop": {
                   "next-hop-list": {
                     "next-hop": [
@@ -281,7 +263,25 @@
                 "ietf-ipv6-unicast-routing:destination-prefix": "fe80::/64",
                 "source-protocol": "direct",
                 "route-preference": 0,
-                "last-updated": "2025-01-20T08:05:03+00:00",
+                "last-updated": "2025-01-24T09:54:35+00:00",
+                "next-hop": {
+                  "next-hop-list": {
+                    "next-hop": [
+                      {
+                        "outgoing-interface": "e5",
+                        "infix-routing:installed": [
+                          null
+                        ]
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "ietf-ipv6-unicast-routing:destination-prefix": "fe80::/64",
+                "source-protocol": "direct",
+                "route-preference": 0,
+                "last-updated": "2025-01-24T09:54:35+00:00",
                 "next-hop": {
                   "next-hop-list": {
                     "next-hop": [
@@ -302,7 +302,7 @@
                 "active": [
                   null
                 ],
-                "last-updated": "2025-01-20T08:05:03+00:00",
+                "last-updated": "2025-01-24T09:54:35+00:00",
                 "next-hop": {
                   "next-hop-list": {
                     "next-hop": [

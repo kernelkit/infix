@@ -1,0 +1,9 @@
+name                : br-Q.40
+type                : vlan
+index               : 81
+mtu                 : 1500
+operational status  : up
+lower-layer-if      : br-Q
+physical address    : 00:a0:85:00:03:00
+ipv4 addresses      :
+ipv6 addresses      :

@@ -6,6 +6,19 @@ gen_test=ietf_interfaces/verify_all_interface_types/test.py
 gen_iface=d3a
 
 cli_commands="show-interfaces"
-
+cli_commands="$cli_commands show-interfaces_-n_br-0"
+cli_commands="$cli_commands show-interfaces_-n_br-X"
+cli_commands="$cli_commands show-interfaces_-n_br-D"
+cli_commands="$cli_commands show-interfaces_-n_br-Q"
+cli_commands="$cli_commands show-interfaces_-n_br-Q.40"
+cli_commands="$cli_commands show-interfaces_-n_veth0a"
+cli_commands="$cli_commands show-interfaces_-n_veth0b"
+cli_commands="$cli_commands show-interfaces_-n_veth0a.20"
+cli_commands="$cli_commands show-interfaces_-n_gretap-v4"
+cli_commands="$cli_commands show-interfaces_-n_gretap-v6"
+cli_commands="$cli_commands show-interfaces_-n_gre-v4"
+cli_commands="$cli_commands show-interfaces_-n_gre-v6"
+cli_commands="$cli_commands show-interfaces_-n_vxlan-v6"
+cli_commands="$cli_commands show-interfaces_-n_vxlan-v4"
 . $(readlink -f $(dirname $0)/../test.sh)
 main "$@"

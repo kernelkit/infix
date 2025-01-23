@@ -1,0 +1,8 @@
+name                : br-0
+type                : bridge
+index               : 73
+mtu                 : 1500
+operational status  : down
+physical address    : 00:a0:85:00:03:00
+ipv4 addresses      :
+ipv6 addresses      :
