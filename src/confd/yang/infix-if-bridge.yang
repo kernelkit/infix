@@ -206,6 +206,30 @@ submodule infix-if-bridge {
     }
   }
 
+  typedef stp-port-role {
+    description "Spanning Tree (STP) port role.";
+    type enumeration {
+      enum root {
+        description "Root port.";
+      }
+      enum designated {
+        description "Designated port.";
+      }
+      enum alternate {
+        description "Alternate port.";
+      }
+      enum backup {
+        description "Backup port.";
+      }
+      enum master {
+        description "Master port.";
+      }
+      enum disabled {
+        description "Disabled port.";
+      }
+    }
+  }
+
   typedef stp-priority {
     type uint8 {
       range "0..15";
@@ -215,6 +239,12 @@ submodule infix-if-bridge {
   }
 
   typedef stp-system-id {
+    type uint16 {
+      range "0..4095";
+    }
+  }
+
+  typedef stp-port-id {
     type uint16 {
       range "0..4095";
     }
@@ -407,6 +437,18 @@ submodule infix-if-bridge {
     }
   }
 
+  grouping stp-port-id {
+    leaf priority {
+      description "Priority.";
+      type stp-priority;
+    }
+
+    leaf port-id {
+      description "Port ID.";
+      type stp-system-id;
+    }
+  }
+
   grouping stp-tree-state {
     container bridge-id {
       config false;
@@ -459,6 +501,42 @@ submodule infix-if-bridge {
     uses stp-tree-state;
   }
 
+  grouping stp-tree-port-state {
+    container port-id {
+      config false;
+      uses stp-port-id;
+    }
+
+    leaf state {
+      config false;
+      description "Operational state.";
+      type stp-state;
+    }
+
+    leaf role {
+      config false;
+      description "Role.";
+      type stp-port-role;
+    }
+
+    leaf disputed {
+      config false;
+      description "Disputed.";
+      type boolean;
+    }
+
+    container designated {
+      config false;
+      description "Designated bridge.";
+      container bridge-id {
+        uses stp-bridge-id;
+      }
+      container port-id {
+        uses stp-port-id;
+      }
+    }
+  }
+
   grouping stp-tree-port {
     leaf internal-path-cost {
       description "Internal path cost.";
@@ -472,11 +550,7 @@ submodule infix-if-bridge {
       reference "IEEE 802.1Q-2018 13.18";
     }
 
-    leaf state {
-      description "Operational state.";
-      type stp-state;
-      config false;
-    }
+    uses stp-tree-port-state;
   }
 
   /*
@@ -766,6 +840,48 @@ submodule infix-if-bridge {
 
       //   uses stp-tree-port;
       // }
+
+      container statistics {
+        config false;
+
+        leaf in-bpdus {
+          type yang:counter64;
+          units frames;
+          description "Number of received BPDUs.";
+        }
+        leaf in-bpdus-filtered {
+          type yang:counter64;
+          units frames;
+          description "Number of received, but filtered, BPDUs.";
+        }
+        leaf in-tcns {
+          type yang:counter64;
+          units frames;
+          description "Number of received TCNs.";
+        }
+
+        leaf out-bpdus {
+          type yang:counter64;
+          units frames;
+          description "Number of transmitted BPDUs.";
+        }
+        leaf out-tcns {
+          type yang:counter64;
+          units frames;
+          description "Number of transmitted TCNs.";
+        }
+
+        leaf to-blocking {
+          type yang:counter64;
+          units transitions;
+          description "Number of transitions into the blocking state.";
+        }
+        leaf to-forwarding {
+          type yang:counter64;
+          units transitions;
+          description "Number of transitions into the forwarding state.";
+        }
+      }
     }
 
     leaf stp-state {
