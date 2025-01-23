@@ -12,6 +12,104 @@ from . import vlan
 def bridge_vlan():
     return { v["ifname"]: v for v in HOST.run_json("bridge -j vlan show".split(), []) }
 
+
+def stp_bridge_id(idstr):
+    segs = idstr.split(".")
+    return {
+        "priority": int(segs[0], 16),
+        "system-id": int(segs[1], 16),
+        "address": segs[2].lower(),
+    }
+
+
+def stp_port_id(idstr):
+    segs = idstr.split(".")
+    return {
+        "priority": int(segs[0], 16),
+        "port-id": int(segs[1], 16),
+    }
+
+
+def stp_port_statistics(port):
+    STATMAP = {
+        "in-bpdus": "num-rx-bpdu",
+        "in-bpdus-filtered": "num-rx-bpdu-filtered",
+        "in-tcns": "num-rx-tcn",
+
+        "out-bpdus": "num-tx-bpdu",
+        "out-tcns": "num-tx-tcn",
+
+        "to-blocking": "num-transition-blk",
+        "to-forwarding": "num-transition-fwd",
+    }
+
+    stats = {}
+    for yname , pname in STATMAP.items():
+        if pstat := port.get(pname):
+            # Do _not_ convert pstat to int, since the JSON encoding
+            # of >32bit YANG types are strings.
+            stats[yname] = pstat
+
+    return stats
+
+
+def lower_stp_tree(iplink, msti):
+    if not (tport := HOST.run_json(["mstpctl", "-f", "json",
+                                   "showtreeport",
+                                    iplink["master"], iplink["ifname"], str(msti)],
+                                   default={})):
+        return {}
+
+    port = {
+        "port-id": stp_port_id(tport["port-id"]),
+        # "state": None # Sourced from bridge
+        "role": tport["role"].lower(),
+        "disputed": tport["disputed"] == "yes",
+    }
+
+    designated = {}
+    if dbr := tport["designated-bridge"]:
+        designated["bridge-id"] = stp_bridge_id(dbr)
+
+    if dp := tport["designated-port"]:
+        designated["port-id"] = stp_port_id(dp)
+
+    if designated:
+        port["designated"] = designated
+
+    return port
+
+
+def lower_stp(iplink):
+    info = iplink["linkinfo"]["info_slave_data"]
+    ciststate = info.get("state", "disabled")
+
+    if not (port := HOST.run_json(["mstpctl", "-f", "json",
+                                   "showportdetail",
+                                   iplink["master"], iplink["ifname"]],
+                                  default=[{}])[0]):
+        return {
+            "cist": {
+                "state": ciststate,
+            }
+        }
+
+    stp = {
+        "edge": port.get("oper-edge-port") == "yes",
+        "cist": lower_stp_tree(iplink, 0),
+    }
+
+    stp["cist"]["state"] = ciststate
+
+    if ecost := port.get("external-path-cost"):
+        stp["cist"]["external-path-cost"] = ecost
+
+    if stats := stp_port_statistics(port):
+        stp["statistics"] = stats
+
+    return stp
+
+
 def lower(iplink):
     lower = {}
 
@@ -42,20 +140,18 @@ def lower(iplink):
             }.get(info["multicast_router"], "UNKNOWN"),
         },
 
+        "stp": lower_stp(iplink),
+
+        # TODO: REMOVE
         "stp-state": info["state"],
     }
 
 
-def stp_bridge_id(idstr):
-    segs = idstr.split(".")
-    return {
-        "priority": int(segs[0], 16),
-        "system-id": int(segs[1], 16),
-        "address": segs[2].lower(),
-    }
-
 def stp_tree(brname, mst):
-    if not (state := HOST.run_json(["mstpctl", "-f", "json", "showtree", brname, str(mst)]), {}):
+    if not (state := HOST.run_json(["mstpctl", "-f", "json",
+                                    "showtree",
+                                    brname, str(mst)],
+                                   default={})):
         return {}
 
     tree = {
@@ -78,8 +174,9 @@ def stp_tree(brname, mst):
 
 
 def stp(iplink):
-    state = HOST.run_json(["mstpctl", "-f", "json", "showbridge", iplink["ifname"]],
-                          default=[{}])[0]
+    state = HOST.run_json(["mstpctl", "-f", "json",
+                           "showbridge",
+                           iplink["ifname"]], default=[{}])[0]
     if not state:
         return {}
 
