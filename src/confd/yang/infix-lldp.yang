@@ -41,9 +41,6 @@ module infix-lldp {
   deviation "/lldp:lldp/lldp:notification-interval" {
     deviate not-supported;
   }
-  deviation "/lldp:lldp/lldp:port" {
-    deviate not-supported;
-  }
   deviation "/lldp:lldp/lldp:reinit-delay" {
     deviate not-supported;
   }
@@ -51,6 +48,58 @@ module infix-lldp {
     deviate not-supported;
   }
   deviation "/lldp:lldp/lldp:tx-fast-init" {
+    deviate not-supported;
+  }
+  
+  
+  deviation "/lldp:lldp/lldp:port/lldp:notification-enable" {
+    deviate not-supported;
+  }
+  deviation "/lldp:lldp/lldp:port/lldp:tlvs-tx-enable" {
+    deviate not-supported;
+  }
+  deviation "/lldp:lldp/lldp:port/lldp:management-address-tx-port" {
+    deviate not-supported;
+  }
+  deviation "/lldp:lldp/lldp:port/lldp:port-id-subtype" {
+    deviate not-supported;
+  }
+  deviation "/lldp:lldp/lldp:port/lldp:port-id" {
+    deviate not-supported;
+  }
+  deviation "/lldp:lldp/lldp:port/lldp:port-desc" {
+    deviate not-supported;
+  }
+  deviation "/lldp:lldp/lldp:port/lldp:tx-statistics" {
+    deviate not-supported;
+  }
+  deviation "/lldp:lldp/lldp:port/lldp:rx-statistics" {
+    deviate not-supported;
+  }
+  deviation "/lldp:lldp/lldp:port/lldp:remote-systems-data" {
+    deviate not-supported;
+  }
+
+  
+  deviation "/lldp:lldp/lldp:port/lldp:message-fast-tx" {
+    deviate not-supported;
+  }
+  deviation "/lldp:lldp/lldp:port/lldp:message-tx-hold-multiplier" {
+    deviate not-supported;
+  }
+  deviation "/lldp:lldp/lldp:port/lldp:message-tx-interval" {
+    deviate not-supported;
+  }
+  deviation "/lldp:lldp/lldp:port/lldp:notification-interval" {
+    deviate not-supported;
+  }
+  deviation "/lldp:lldp/lldp:port/lldp:reinit-delay" {
+    deviate not-supported;
+  }
+  deviation "/lldp:lldp/lldp:port/lldp:tx-credit-max" {
+    deviate not-supported;
+  }
+  deviation "/lldp:lldp/lldp:port/lldp:tx-fast-init" {
     deviate not-supported;
   }
 }

@@ -310,6 +310,7 @@ static int lldp_change(sr_session_ctx_t *session, uint32_t sub_id, const char *m
 {
 	struct lyd_node *node = NULL;
 	sr_data_t *cfg;
+	struct lyd_node *subnode;
 
 	switch (event) {
 	case SR_EV_ENABLED:
@@ -322,10 +323,22 @@ static int lldp_change(sr_session_ctx_t *session, uint32_t sub_id, const char *m
 			const char *tx_interval = lydx_get_cattr(node, "message-tx-interval");
 			FILE *fp = fopen(LLDP_CONFIG_NEXT, "w");
 			if (!fp) {
-				ERROR("Failed to open %s for writing", LLDP_CONFIG_NEXT);
+				ERRNO("Failed to open %s for writing", LLDP_CONFIG_NEXT);
 				break;
 			}
 			fprintf(fp, "configure lldp tx-interval %s\n", tx_interval);
+
+			LY_LIST_FOR(lyd_child(node), subnode) {
+    				if (!strcmp(subnode->schema->name, "port")) {
+					const char *port_name = lydx_get_cattr(subnode, "name");
+					const char *admin_status = lydx_get_cattr(subnode, "admin-status");
+
+					if (strcmp(admin_status, "tx-and-rx") == 0)
+						admin_status = "rx-and-tx";
+
+					fprintf(fp, "configure ports %s lldp status %s\n", port_name, admin_status);
+    				}
+			}
 			fclose(fp);
 		}
 
@@ -334,13 +347,13 @@ static int lldp_change(sr_session_ctx_t *session, uint32_t sub_id, const char *m
 	case SR_EV_DONE:
 		if (fexist(LLDP_CONFIG_NEXT)){
 			if (erase(LLDP_CONFIG))
-				ERROR("Failed to remove old %s", LLDP_CONFIG);
+				ERRNO("Failed to remove old %s", LLDP_CONFIG);
 
 			rename(LLDP_CONFIG_NEXT, LLDP_CONFIG);
 		}
 		else
 			if (erase(LLDP_CONFIG))
-				ERROR("Failed to remove old %s", LLDP_CONFIG);
+				ERRNO("Failed to remove old %s", LLDP_CONFIG);
 		
 		svc_change(session, event, xpath, "lldp", "lldpd");
 		break;
@@ -516,7 +529,7 @@ static int change_keystore_cb(sr_session_ctx_t *session, uint32_t sub_id, const 
 	case SR_EV_DONE:
 		if(fexist(SSH_HOSTKEYS_NEXT)) {
 			if(rmrf(SSH_HOSTKEYS)) {
-				ERROR("Failed to remove old SSH hostkeys: %d", errno);
+				ERRNO("Failed to remove old SSH hostkeys: %d", errno);
 			}
 			rename(SSH_HOSTKEYS_NEXT, SSH_HOSTKEYS);
 			svc_change(session, event, "/infix-services:ssh", "ssh", "sshd");
