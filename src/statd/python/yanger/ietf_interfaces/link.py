@@ -45,6 +45,8 @@ def iplink2yang_type(iplink):
             return "infix-if-type:dummy"
         case "gretap"|"ip6gretap":
             return "infix-if-type:gretap"
+        case "vxlan":
+            return "infix-if-type:vxlan"
         case "veth":
             return "infix-if-type:veth"
         case "vlan":
@@ -121,6 +123,9 @@ def interface(iplink, ipaddr):
         case "infix-if-type:ethernet":
             if eth := ethernet.ethernet(iplink):
                 interface["ieee802-ethernet-interface:ethernet"] = eth
+        case "infix-if-type:vxlan":
+            if vxlan := tun.vxlan(iplink):
+                interface["infix-interfaces:vxlan"] = vxlan
         case "infix-if-type:gre"|"infix-if-type:gretap":
             if gre := tun.gre(iplink):
                 interface["infix-interfaces:gre"] = gre
