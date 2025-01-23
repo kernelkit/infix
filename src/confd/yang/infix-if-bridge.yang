@@ -32,6 +32,9 @@ submodule infix-if-bridge {
   revision 2025-01-08 {
     description "Add Spanning Tree Protocol (STP) support.
 
+                 Move STP port state from the old `stp-state` to the
+                 new `stp/cist/state`.
+
                  Drop the `default-priority` bridge port option, which
                  has never been supported but was accidentally
                  included in the model.";
@@ -882,12 +885,6 @@ submodule infix-if-bridge {
           description "Number of transitions into the forwarding state.";
         }
       }
-    }
-
-    leaf stp-state {
-      type stp-state;
-      config false;
-      description "The operation state of the bridge port.";
     }
   }
 

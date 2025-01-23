@@ -282,7 +282,8 @@ class Iface:
         self.br_vlans = get_json_data({}, self.data, 'infix-interfaces:bridge', 'vlans', "vlan")
         self.bridge = get_json_data('', self.data, 'infix-interfaces:bridge-port', 'bridge')
         self.pvid = get_json_data('', self.data, 'infix-interfaces:bridge-port', 'pvid')
-        self.stp_state = get_json_data('', self.data, 'infix-interfaces:bridge-port', 'stp-state')
+        self.stp_state = get_json_data('', self.data, 'infix-interfaces:bridge-port',
+                                       'stp', 'cist', 'state')
         self.containers = get_json_data('', self.data, 'infix-interfaces:container-network', 'containers')
 
 

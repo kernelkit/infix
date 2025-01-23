@@ -57,7 +57,8 @@ def addbr(dut):
 def num_blocking(dut):
     num = 0
     for iface in dut.get_data("/ietf-interfaces:interfaces")["interfaces"]["interface"]:
-        if iface.get("bridge-port", {}).get("stp-state") == "blocking":
+        state = iface.get("bridge-port", {}).get("stp", {}).get("cist", {}).get("state")
+        if state == "blocking":
             num += 1
 
     return num

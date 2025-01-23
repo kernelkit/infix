@@ -141,9 +141,6 @@ def lower(iplink):
         },
 
         "stp": lower_stp(iplink),
-
-        # TODO: REMOVE
-        "stp-state": info["state"],
     }
 
 
