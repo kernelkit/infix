@@ -20,6 +20,15 @@ class PadMdb:
     group = 20
     ports = 45
 
+class PadStpPort:
+    port = 12
+    id = 7
+    state = 12
+    role = 12
+    edge = 6
+    designated = 31
+
+    total = 12 + 7 + 12 + 12 + 6 + 31
 
 class PadRoute:
     dest = 30
@@ -69,6 +78,10 @@ class Decore():
     @staticmethod
     def invert(txt):
         return Decore.decorate("7", txt)
+
+    @staticmethod
+    def bold(txt):
+        return Decore.decorate("1", txt)
 
     @staticmethod
     def red(txt):
@@ -325,6 +338,17 @@ class STPBridgeID:
             self.id["address"]
         )
         return f"{prio:1x}.{sysid:03x}.{addr}"
+
+class STPPortID:
+    def __init__(self, id):
+        self.id = id
+
+    def __str__(self):
+        prio, pid = (
+            self.id["priority"],
+            self.id["port-id"],
+        )
+        return f"{prio:1x}.{pid:03x}"
 
 
 class Iface:
@@ -722,9 +746,15 @@ def find_iface(_ifaces, name):
     return False
 
 
-def version_sort(iface):
-    return [int(x) if x.isdigit() else x for x in re.split(r'(\d+)',
-                                                           iface['name'])]
+def version_sort(s):
+    return [int(x) if x.isdigit() else x for x in re.split(r'(\d+)', s)]
+
+def ifname_sort(iface):
+    return version_sort(iface["name"])
+
+def brport_sort(iface):
+    brname = iface.get("infix-interfaces:bridge-port", {}).get("bridge", "")
+    return version_sort(brname) + version_sort(iface["name"])
 
 
 def print_interface(iface):
@@ -743,7 +773,7 @@ def pr_interface_list(json):
     print(Decore.invert(hdr))
 
     ifaces = sorted(json["ietf-interfaces:interfaces"]["interface"],
-                    key=version_sort)
+                    key=ifname_sort)
     iface = find_iface(ifaces, "lo")
     if iface:
         iface.pr_loopback()
@@ -813,7 +843,7 @@ def show_bridge_mdb(json):
         sys.exit(1)
 
     ifaces = sorted(json["ietf-interfaces:interfaces"]["interface"],
-                    key=version_sort)
+                    key=ifname_sort)
     for iface in [Iface(data) for data in ifaces]:
         if iface.type != "infix-if-type:bridge":
             continue
@@ -828,18 +858,83 @@ def show_bridge_mdb(json):
         iface.pr_vlans_mdb(iface.name)
 
 
+
+def show_bridge_stp_port(ifname, brport):
+    stp = brport["stp"]
+
+    state = stp["cist"]["state"]
+    if state == "forwarding":
+        state = Decore.green(f"{state.upper():<{PadStpPort.state}}")
+    else:
+        state = Decore.yellow(f"{state.upper():<{PadStpPort.state}}")
+
+    role = stp["cist"]["role"]
+    if role == "root":
+        role = Decore.bold(f"{role:<{PadStpPort.role}}")
+    else:
+        role = f"{role:<{PadStpPort.role}}"
+
+    designated = "unknown"
+    if cdesbr := stp["cist"].get("designated", {}).get("bridge-id"):
+        brid = str(STPBridgeID(cdesbr))
+
+        cdesport = stp["cist"]["designated"].get("port-id")
+        port = str(STPPortID(cdesport)) if cdesport else "UNKNOWN"
+        designated = f"{brid} ({port})"
+
+    row = (
+        f"{ifname:<{PadStpPort.port}}"
+        f"{str(STPPortID(stp['cist']['port-id'])):<{PadStpPort.id}}"
+        f"{state}"
+        f"{role}"
+        f"{'yes' if stp['edge'] else 'no':<{PadStpPort.edge}}"
+        f"{designated:<{PadStpPort.designated}}"
+    )
+    print(row)
+
 def show_bridge_stp(json):
     if not json.get("ietf-interfaces:interfaces"):
         print("Error, top level \"ietf-interfaces:interface\" missing")
         sys.exit(1)
 
     brs = sorted(filter(lambda i: i.get("type") == "infix-if-type:bridge",
-                        json["ietf-interfaces:interfaces"].get("interface",[])))
+                        json["ietf-interfaces:interfaces"].get("interface",[])),
+                 key=ifname_sort)
 
     for i, br in enumerate(brs):
         if i:
             print()
         Iface(br).pr_stp()
+
+    ports = sorted(filter(lambda i: i.get("infix-interfaces:bridge-port"),
+                          json["ietf-interfaces:interfaces"].get("interface",[])),
+                   key=brport_sort)
+    if not ports:
+        return
+
+    print()
+    hdr = (
+        f"{'PORT':<{PadStpPort.port}}"
+        f"{'ID':<{PadStpPort.id}}"
+        f"{'STATE':<{PadStpPort.state}}"
+        f"{'ROLE':<{PadStpPort.role}}"
+        f"{'EDGE':<{PadStpPort.edge}}"
+        f"{'DESIGNATED BRIDGE':<{PadStpPort.designated}}"
+    )
+    print(Decore.invert(hdr))
+
+    lastbr = None
+    for port in ports:
+        brport = port["infix-interfaces:bridge-port"]
+        if not brport.get("stp"):
+            continue
+
+        if brport["bridge"] != lastbr:
+            lastbr = brport["bridge"]
+            separator = f"{'bridge:'+lastbr:<{PadStpPort.total}}"
+            print(Decore.gray_bg(separator))
+
+        show_bridge_stp_port(port["name"], brport)
 
 
 def show_routing_table(json, ip):
