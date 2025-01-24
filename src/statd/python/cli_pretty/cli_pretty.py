@@ -111,6 +111,55 @@ def remove_yang_prefix(key):
         return parts[1]
     return key
 
+class Date(datetime):
+    def _pretty_delta(delta):
+        assert(delta.total_seconds() > 0)
+        days = delta.days
+        seconds = delta.seconds
+        hours, remainder = divmod(seconds, 3600)
+        minutes, seconds = divmod(remainder, 60)
+
+        segments = (
+            ("day", days),
+            ("hour", hours),
+            ("minute", minutes),
+            ("second", seconds),
+        )
+
+        for i, seg in enumerate(segments):
+            if not seg[1]:
+                continue
+
+            out = f"{seg[1]} {seg[0]}{'s' if seg[1] != 1 else ''}"
+            if seg[0] == "second":
+                return out
+
+            seg = segments[i+1]
+            out += f" and {seg[1]} {seg[0]}{'s' if seg[1] != 1 else ''}"
+            return out
+
+    def pretty(self):
+        now = datetime_now()
+        if self < now:
+            delta = Date._pretty_delta(now - self)
+            return f"{delta} ago"
+        elif self > now:
+            delta = Date._pretty_delta(self - now)
+            return f"in {delta}"
+
+        return "now"
+
+    @classmethod
+    def from_yang(cls, ydate):
+        """Conver a YANG formatted date string into a Python datetime"""
+        if not ydate:
+            return None
+
+        date, tz = ydate.split("+")
+        tz = tz.replace(":", "")
+        return cls.strptime(f"{date}+{tz}", "%Y-%m-%dT%H:%M:%S%z")
+
+
 
 class Route:
     def __init__(self, data, ip):
@@ -264,6 +313,19 @@ class USBport:
         row = f"{self.name:<{PadUsbPort.name}}"
         row += f"{self.state:<{PadUsbPort.state}}"
         print(row)
+
+class STPBridgeID:
+    def __init__(self, id):
+        self.id = id
+
+    def __str__(self):
+        prio, sysid, addr = (
+            self.id["priority"],
+            self.id["system-id"],
+            self.id["address"]
+        )
+        return f"{prio:1x}.{sysid:03x}.{addr}"
+
 
 class Iface:
     def __init__(self, data):
@@ -622,6 +684,35 @@ class Iface:
                 row += f"{ports}"
                 print(row)
 
+    def pr_stp(self):
+        if not (stp := get_json_data({}, self.data, 'infix-interfaces:bridge', 'stp')):
+            return
+
+        if bid := stp["cist"].get("bridge-id"):
+            bid = STPBridgeID(bid)
+        else:
+            bid = "UNKNOWN BRIDGE ID"
+
+        if rid := stp["cist"].get("root-id"):
+            rid = STPBridgeID(rid)
+        else:
+            rid = "none"
+
+        print(f"{'bridge-id':<{20}}: {bid} ({self.name})")
+        print(f"{'root-id':<{20}}: {rid}")
+        print(f"{'protocol':<{20}}: {stp.get('force-protocol', 'UNKNOWN')}")
+        print(f"{'forward delay':<{20}}: {stp.get('forward-delay', 'UNKNOWN')} seconds")
+        print(f"{'max age':<{20}}: {stp.get('max-age', 'UNKNOWN')} seconds")
+        print(f"{'transmit hold count':<{20}}: {stp.get('transmit-hold-count', 'UNKNOWN')}")
+        print(f"{'max hops':<{20}}: {stp.get('max-hops', 'UNKNOWN')}")
+
+        if tc := stp["cist"].get("topology-change"):
+            print(f"{'topology change':<{20}}:")
+            print(f"{'  count':<{20}}: {tc.get('count', 'UNKNOWN')}")
+            print(f"{'  in progress':<{20}}: {'YES' if tc.get('in-progress') else 'no'}")
+            print(f"{'  last change':<{20}}: {Date.from_yang(tc.get('time')).pretty()}")
+            print(f"{'  port':<{20}}: {tc.get('port', 'UNKNOWN')}")
+
 
 def find_iface(_ifaces, name):
     for _iface in [Iface(data) for data in _ifaces]:
@@ -735,6 +826,20 @@ def show_bridge_mdb(json):
             header_printed = True
         iface.pr_mdb(iface.name)
         iface.pr_vlans_mdb(iface.name)
+
+
+def show_bridge_stp(json):
+    if not json.get("ietf-interfaces:interfaces"):
+        print("Error, top level \"ietf-interfaces:interface\" missing")
+        sys.exit(1)
+
+    brs = sorted(filter(lambda i: i.get("type") == "infix-if-type:bridge",
+                        json["ietf-interfaces:interfaces"].get("interface",[])))
+
+    for i, br in enumerate(brs):
+        if i:
+            print()
+        Iface(br).pr_stp()
 
 
 def show_routing_table(json, ip):
@@ -861,6 +966,8 @@ def main():
     parser_show_interfaces.add_argument('-n', '--name', help='Interface name')
 
     parser_show_bridge_mdb = subparsers.add_parser('show-bridge-mdb', help='Show bridge MDB')
+    parser_show_bridge_stp = subparsers.add_parser('show-bridge-stp',
+                                                   help='Show spanning tree state')
 
     parser_show_software = subparsers.add_parser('show-software', help='Show software versions')
     parser_show_software.add_argument('-n', '--name', help='Slotname')
@@ -882,6 +989,8 @@ def main():
         show_software(json_data, args.name)
     elif args.command == "show-bridge-mdb":
         show_bridge_mdb(json_data)
+    elif args.command == "show-bridge-stp":
+        show_bridge_stp(json_data)
     elif args.command == "show-hardware":
         show_hardware(json_data)
     elif args.command == "show-ntp":
