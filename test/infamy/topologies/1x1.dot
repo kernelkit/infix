@@ -9,15 +9,15 @@ graph "1x1" {
 	host [
 	    label="host | { <mgmt> mgmt }",
 	    pos="0,12!",
-	    kind="controller",
+	    requires="controller",
 	];
 
         target [
 	    label="{ <mgmt> mgmt } | target",
 	    pos="10,12!",
 
-	    kind="infix",
+	    requires="infix",
 	];
 
-	host:mgmt -- target:mgmt [kind=mgmt, color="lightgray"]
+	host:mgmt -- target:mgmt [requires="mgmt", color="lightgray"]
 }

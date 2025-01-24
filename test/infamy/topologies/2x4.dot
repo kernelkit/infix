@@ -9,28 +9,28 @@ graph "2x4" {
 	host [
 	    label="host | { <mgmt1> mgmt1 | <data10> data10 | <data11>  data11 | <> \n\n\n\n\n\n | <mgmt2> mgmt2 | <data20> data20 | <data21>  data21 }",
 	    pos="0,15!",
-	    kind="controller",
+	    requires="controller",
 	];
 
         dut1 [
 	    label="{ <mgmt> mgmt | <data0> data0 | <data1> data1 } | { \n dut1 \n\n |  <data2> data2 }",
 	    pos="10,18!",
 
-	    kind="infix",
+	    requires="infix",
 	];
 
         dut2 [
 		label="{ <mgmt> mgmt | <data0> data0 | <data1> data1 } | { <data2> data2 | \n dut2 \n\n }",
 	    pos="10,12!",
 
-	    kind="infix",
+	    requires="infix",
 	];
 
-	host:mgmt1 -- dut1:mgmt [kind=mgmt]
+	host:mgmt1 -- dut1:mgmt [requires="mgmt"]
 	host:data10 -- dut1:data0 [color=black]
 	host:data11 -- dut1:data1 [color=black]
 
-	host:mgmt2 -- dut2:mgmt [kind=mgmt]
+	host:mgmt2 -- dut2:mgmt [requires="mgmt"]
 	host:data20 -- dut2:data0 [color=black]
 	host:data21 -- dut2:data1 [color=black]
 

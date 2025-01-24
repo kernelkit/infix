@@ -10,23 +10,24 @@ graph "2x2" {
 	PC [
 	    label="PC | { <mgmt1> mgmt1 | <data> data | <mgmt2> mgmt2 }",
 	    pos="20,80!",
-	    kind="controller",
+	    requires="controller",
 	];
 
         R1 [
 	    label="{ <mgmt> mgmt | <data> data | <link> link} | R1 \n 192.168.100.1/32 \n(lo)",
 	    pos="250,80!",
 
-	    kind="infix",
+	    requires="infix",
 	];
 	R2 [
 	    label="{ <link> link |<mgmt> mgmt | <data> data  } | R2 \n 192.168.200.1/32 \n(lo)",
 	    pos="250,30!",
 
-	    kind="infix",
+	    requires="infix",
 	];
-	PC:mgmt1 -- R1:mgmt [kind=mgmt, color="lightgray"]
-        PC:mgmt2 -- R2:mgmt [kind=mgmt, color="lightgray"]
+	
+	PC:mgmt1 -- R1:mgmt [requires="mgmt", color="lightgray"]
+	PC:mgmt2 -- R2:mgmt [requires="mgmt", color="lightgray"]
 	PC:data  -- R1:data [color="black", headlabel="192.168.10.1/24", taillabel="192.168.10.2/24", fontcolor="black"]
 	R1:link  -- R2:link [headlabel="10.0.0.2/32", taillabel="10.0.0.1/32", labeldistance=1, fontcolor="black", color="black"]
 }

@@ -9,22 +9,23 @@ graph "2x2" {
 	host [
 	    label="host | { <mgmt1> mgmt1 | <mgmt2> mgmt2 }",
 	    pos="0,12!",
-	    kind="controller",
+	    requires="controller",
 	];
 
         client [
 	    label="{ <mgmt> mgmt | <link> link} | client",
 	    pos="15,18!",
 
-	    kind="infix",
+	    requires="infix",
 	];
 	server [
 	    label="{ <link> link | <mgmt> mgmt  } | server",
 	    pos="15,6!",
 
-	    kind="infix",
+	    requires="infix",
 	];
-	host:mgmt1 -- client:mgmt [kind=mgmt, color=lightgrey]
-        host:mgmt2 -- server:mgmt [kind=mgmt, color=lightgrey]
+	
+	host:mgmt1 -- client:mgmt [requires="mgmt", color=lightgrey]
+	host:mgmt2 -- server:mgmt [requires="mgmt", color=lightgrey]
 	client:link -- server:link [color=black, fontcolor=black, taillabel="10.0.0.2/24", headlabel="10.0.0.1/24"]
 }

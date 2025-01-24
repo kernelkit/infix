@@ -11,23 +11,23 @@ graph "ospf-bfd" {
 	    label=" { { R1 | <slow> slow } | { <mgmt> mgmt | <h1> h1 | <fast> fast } }",
 	    pos="0,6!",
 
-	    kind="infix",
+	    requires="infix",
 	];
 	R2 [
 	    label="{ { <slow> slow | R2 } | { <fast> fast | <h2> h2 | <mgmt> mgmt  } }",
 	    pos="18,6!",
 
-	    kind="infix",
+	    requires="infix",
 	];
 
 	PC [
 	    label="{ { <R1mgmt> R1mgmt | <h1> h1 | <R1fast> R1fast | <R2fast> R2fast | <h2> h2 | <R2mgmt> R2mgmt } | PC }",
 	    pos="9,0!",
-	    kind="controller",
+	    requires="controller",
 	];
 
-	PC:R1mgmt -- R1:mgmt [kind=mgmt, color="lightgray"]
-        PC:R2mgmt -- R2:mgmt [kind=mgmt, color="lightgray"]
+	PC:R1mgmt -- R1:mgmt [requires="mgmt", color="lightgray"]
+	PC:R2mgmt -- R2:mgmt [requires="mgmt", color="lightgray"]
 
 	PC:h1 -- R1:h1
 	PC:h2 -- R2:h2

@@ -9,23 +9,24 @@ graph "2x2" {
 	host [
 	    label="host | { <mgmt1> mgmt1 | <data> data | <mgmt2> mgmt2 }",
 	    pos="0,16!",
-	    kind="controller",
+	    requires="controller",
 	];
 
         dut1 [
 	    label="{ <mgmt> mgmt | <data> data | <link> link} | dut1\n(10.0.0.2) ",
 	    pos="10,16!",
 
-	    kind="infix",
+	    requires="infix",
 	];
 	dut2 [
 	    label="{ <link> link | <mgmt> mgmt } | dut2\n(10.0.0.3)",
 	    pos="10,12!",
 
-	    kind="infix",
+	    requires="infix",
 	];
-	host:mgmt1 -- dut1:mgmt [kind=mgmt, color="lightgray"]
-        host:mgmt2 -- dut2:mgmt [kind=mgmt, color="lightgray"]
+	
+	host:mgmt1 -- dut1:mgmt [requires="mgmt", color="lightgray"]
+	host:mgmt2 -- dut2:mgmt [requires="mgmt", color="lightgray"]
 	host:data -- dut1:data [color=black]
 
 	dut1:link -- dut2:link [color=black]

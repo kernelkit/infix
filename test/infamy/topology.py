@@ -1,6 +1,8 @@
 import networkx as nx
 from networkx.algorithms import isomorphism
 
+from itertools import permutations
+import json
 
 def _qstrip(text):
     if text is None:
@@ -11,28 +13,26 @@ def _qstrip(text):
 
     return text
 
+def compatible(physical, logical):
+    provides_set = set(physical.get("provides", "").split())
+    requires_set = set(logical.get("requires", "").split())
+
+    return requires_set.issubset(provides_set)
 
 def map_edges(les, pes):
-    acc = []
-    les = sorted(list(les.values()), key=lambda x: x.get("kind", ""), reverse=True)
-    pes = sorted(list(pes.values()), key=lambda x: x.get("kind", ""), reverse=True)
+    les = les.values()
+    pes = pes.values()
 
-    for i in range(len(les)):
-        if pes[i].get("kind") != les[i].get("kind"):
-            return None
-
-        acc.append((les[i], pes[i]))
-
-    return acc
-
+    for perm in permutations(pes, len(les)):
+        candidate = tuple(zip(les, perm))
+        if all(map(lambda pair: compatible(pair[1], pair[0]), candidate)):
+            return candidate
 
 def match_node(pn, ln):
-    return pn.get("kind") == ln.get("kind")
-
+    return compatible(pn, ln)
 
 def match_edge(pes, les):
     return map_edges(les, pes) is not None
-
 
 class Topology:
     def __init__(self, dotg):
@@ -139,15 +139,16 @@ class Topology:
         return None
 
     def get_mgmt_link(self, src, dst):
-        return self.get_link(src, dst, lambda e: e.get("kind") == "mgmt")
+        return self.get_link(src, dst, lambda e: compatible(e, {"requires": "mgmt"}))
 
     def get_ctrl(self):
-        ns = self.get_nodes(lambda _, attrs: attrs.get("kind") == "controller")
+        ns = self.get_nodes(lambda _, attrs: compatible(attrs, {"requires": "controller"}))
         assert len(ns) == 1
         return ns[0]
 
     def get_infixen(self):
-        return self.get_nodes(lambda _, attrs: attrs.get("kind") == "infix")
+        return self.get_nodes(lambda _, attrs: compatible(attrs, {"requires": "infix"}))
+
 
     def get_attr(self, name, default=None):
         return _qstrip(self.dotg.get_attributes().get(name, default))

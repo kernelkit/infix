@@ -8,17 +8,17 @@ graph "routing_basic" {
 	host [
 	    label="host | { <mgmt> mgmt | <data1> data1 | <data2>  data2 }",
 	    pos="0,12!",
-	    kind="controller",
+	    requires="controller",
 	];
 
         target [
 	    label="{ <mgmt> mgmt | <data1> data1 | <data2> data2 } | target",
 	    pos="10,12!",
 
-	    kind="infix",
+	    requires="infix",
 	];
 
-	host:mgmt  -- target:mgmt  [kind=mgmt, color="lightgray"]
+	host:mgmt  -- target:mgmt  [requires="mgmt", color="lightgray"]
 	host:data1 -- target:data1 [color=black, fontcolor=black, fontsize=12, taillabel=".10", label="192.168.0.0/24", headlabel=".1"]
 	host:data2 -- target:data2 [color=black, fontcolor=black, fontsize=12,  taillabel=".10", label="10.0.0.0/24", headlabel=".1"]
 }
