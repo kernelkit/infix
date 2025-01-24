@@ -179,6 +179,7 @@ def stp(iplink):
 
     stp = {
         "force-protocol": state["force-protocol-version"],
+        "hello-time": int(state["hello-time"]),
         "forward-delay": int(state["forward-delay"]),
         "max-age": int(state["max-age"]),
         "transmit-hold-count": int(state["tx-hold-count"]),

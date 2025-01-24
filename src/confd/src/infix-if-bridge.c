@@ -371,6 +371,9 @@ static int gen_stp(struct ixif_br *br)
 	fprintf(mstpctl, "setforcevers %s %s\n", br->name,
 		lydx_get_cattr(stp, "force-protocol"));
 
+	fprintf(mstpctl, "sethello %s %s\n", br->name,
+		lydx_get_cattr(stp, "hello-time"));
+
 	fprintf(mstpctl, "setfdelay %s %s\n", br->name,
 		lydx_get_cattr(stp, "forward-delay"));
 

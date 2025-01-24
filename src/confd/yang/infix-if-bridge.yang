@@ -639,6 +639,15 @@ submodule infix-if-bridge {
           reference "IEEE 802.1Q-2018 13.7.2";
         }
 
+        leaf hello-time {
+          description "Hello time.";
+          type uint8 {
+            range "1..10";
+          }
+          default 2;
+          reference "IEEE 802.1Q-2018 13.25";
+        }
+
         leaf forward-delay {
           description "Forward delay.";
           type uint8 {

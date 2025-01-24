@@ -725,10 +725,11 @@ class Iface:
         print(f"{'bridge-id':<{20}}: {bid} ({self.name})")
         print(f"{'root-id':<{20}}: {rid}")
         print(f"{'protocol':<{20}}: {stp.get('force-protocol', 'UNKNOWN')}")
-        print(f"{'forward delay':<{20}}: {stp.get('forward-delay', 'UNKNOWN')} seconds")
-        print(f"{'max age':<{20}}: {stp.get('max-age', 'UNKNOWN')} seconds")
-        print(f"{'transmit hold count':<{20}}: {stp.get('transmit-hold-count', 'UNKNOWN')}")
-        print(f"{'max hops':<{20}}: {stp.get('max-hops', 'UNKNOWN')}")
+        print(f"{'hello time':<{20}}: {stp.get('hello-time', 'UNKNOWN'):2} seconds")
+        print(f"{'forward delay':<{20}}: {stp.get('forward-delay', 'UNKNOWN'):2} seconds")
+        print(f"{'max age':<{20}}: {stp.get('max-age', 'UNKNOWN'):2} seconds")
+        print(f"{'transmit hold count':<{20}}: {stp.get('transmit-hold-count', 'UNKNOWN'):2}")
+        print(f"{'max hops':<{20}}: {stp.get('max-hops', 'UNKNOWN'):2}")
 
         if tc := stp["cist"].get("topology-change"):
             print(f"{'topology change':<{20}}:")
