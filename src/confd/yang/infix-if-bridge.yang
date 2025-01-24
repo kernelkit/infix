@@ -3,6 +3,9 @@ submodule infix-if-bridge {
   belongs-to infix-interfaces {
     prefix infix-if;
   }
+  import ietf-yang-types {
+    prefix yang;
+  }
   import iana-if-type {
     prefix ianaift;
   }
@@ -28,6 +31,9 @@ submodule infix-if-bridge {
 
   revision 2025-01-08 {
     description "Add Spanning Tree Protocol (STP) support.
+
+                 Move STP port state from the old `stp-state` to the
+                 new `stp/cist/state`.
 
                  Drop the `default-priority` bridge port option, which
                  has never been supported but was accidentally
@@ -203,12 +209,48 @@ submodule infix-if-bridge {
     }
   }
 
+  typedef stp-port-role {
+    description "Spanning Tree (STP) port role.";
+    type enumeration {
+      enum root {
+        description "Root port.";
+      }
+      enum designated {
+        description "Designated port.";
+      }
+      enum alternate {
+        description "Alternate port.";
+      }
+      enum backup {
+        description "Backup port.";
+      }
+      enum master {
+        description "Master port.";
+      }
+      enum disabled {
+        description "Disabled port.";
+      }
+    }
+  }
+
   typedef stp-priority {
     type uint8 {
       range "0..15";
     }
 
     default 8;
+  }
+
+  typedef stp-system-id {
+    type uint16 {
+      range "0..4095";
+    }
+  }
+
+  typedef stp-port-id {
+    type uint16 {
+      range "0..4095";
+    }
   }
 
   typedef stp-bool-or-auto {
@@ -381,11 +423,120 @@ submodule infix-if-bridge {
     }
   }
 
+  grouping stp-bridge-id {
+    leaf priority {
+      description "Priority.";
+      type stp-priority;
+    }
+
+    leaf system-id {
+      description "System ID.";
+      type stp-system-id;
+    }
+
+    leaf address {
+      description "MAC address.";
+      type yang:mac-address;
+    }
+  }
+
+  grouping stp-port-id {
+    leaf priority {
+      description "Priority.";
+      type stp-priority;
+    }
+
+    leaf port-id {
+      description "Port ID.";
+      type stp-system-id;
+    }
+  }
+
+  grouping stp-tree-state {
+    container bridge-id {
+      config false;
+      uses stp-bridge-id;
+    }
+
+    container root-id {
+      config false;
+      uses stp-bridge-id;
+    }
+
+    leaf root-port {
+      config false;
+      description "Root port.";
+      type if:interface-ref;
+    }
+
+    container topology-change {
+      config false;
+
+      leaf count {
+        description "Cumulative number of topology changes.";
+        type yang:counter32;
+      }
+
+      leaf in-progress {
+        description "Topology change is currently in progress.";
+        type boolean;
+      }
+
+      leaf port {
+        description "Source port of the most recent topology change.";
+        type if:interface-ref;
+      }
+
+      leaf time {
+        description "The time of the most recent topology change.";
+        type yang:date-and-time;
+      }
+    }
+  }
+
   grouping stp-tree {
     leaf priority {
       description "Priority.";
       type stp-priority;
       reference "IEEE 802.1Q-2018 13.18";
+    }
+
+    uses stp-tree-state;
+  }
+
+  grouping stp-tree-port-state {
+    container port-id {
+      config false;
+      uses stp-port-id;
+    }
+
+    leaf state {
+      config false;
+      description "Operational state.";
+      type stp-state;
+    }
+
+    leaf role {
+      config false;
+      description "Role.";
+      type stp-port-role;
+    }
+
+    leaf disputed {
+      config false;
+      description "Disputed.";
+      type boolean;
+    }
+
+    container designated {
+      config false;
+      description "Designated bridge.";
+      container bridge-id {
+        uses stp-bridge-id;
+      }
+      container port-id {
+        uses stp-port-id;
+      }
     }
   }
 
@@ -402,11 +553,7 @@ submodule infix-if-bridge {
       reference "IEEE 802.1Q-2018 13.18";
     }
 
-    leaf state {
-      description "Operational state.";
-      type stp-state;
-      config false;
-    }
+    uses stp-tree-port-state;
   }
 
   /*
@@ -490,6 +637,15 @@ submodule infix-if-bridge {
           type stp-protocol;
           default rstp;
           reference "IEEE 802.1Q-2018 13.7.2";
+        }
+
+        leaf hello-time {
+          description "Hello time.";
+          type uint8 {
+            range "1..10";
+          }
+          default 2;
+          reference "IEEE 802.1Q-2018 13.25";
         }
 
         leaf forward-delay {
@@ -696,12 +852,48 @@ submodule infix-if-bridge {
 
       //   uses stp-tree-port;
       // }
-    }
 
-    leaf stp-state {
-      type stp-state;
-      config false;
-      description "The operation state of the bridge port.";
+      container statistics {
+        config false;
+
+        leaf in-bpdus {
+          type yang:counter64;
+          units frames;
+          description "Number of received BPDUs.";
+        }
+        leaf in-bpdus-filtered {
+          type yang:counter64;
+          units frames;
+          description "Number of received, but filtered, BPDUs.";
+        }
+        leaf in-tcns {
+          type yang:counter64;
+          units frames;
+          description "Number of received TCNs.";
+        }
+
+        leaf out-bpdus {
+          type yang:counter64;
+          units frames;
+          description "Number of transmitted BPDUs.";
+        }
+        leaf out-tcns {
+          type yang:counter64;
+          units frames;
+          description "Number of transmitted TCNs.";
+        }
+
+        leaf to-blocking {
+          type yang:counter64;
+          units transitions;
+          description "Number of transitions into the blocking state.";
+        }
+        leaf to-forwarding {
+          type yang:counter64;
+          units transitions;
+          description "Number of transitions into the forwarding state.";
+        }
+      }
     }
   }
 

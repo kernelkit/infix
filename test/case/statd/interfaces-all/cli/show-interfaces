@@ -39,13 +39,13 @@ e7              ethernet   [32mUP          [39m00:a0:85:00:03:07
 gre-v4          gre        [32mUP          [39m
 gre-v6          gre        [32mUP          [39m
                 ipv4                   192.168.50.2/16 (static)
-gretap-v4       gretap     [32mUP          [39mba:a0:f5:c1:68:83                        
-gretap-v6       gretap     [32mUP          [39m1a:1b:84:dd:ca:2c                        
-veth0a          veth       [32mUP          [39mbe:40:fd:0e:8d:c6                        
-veth0a.20       ethernet   [32mUP          [39mbe:40:fd:0e:8d:c6                        
-└ veth0a        ethernet   [32mUP          [39mbe:40:fd:0e:8d:c6                        
-veth0b          veth       [32mUP          [39m86:e0:fb:54:94:e8                        
-vxlan-v4        vxlan      [32mUP          [39mf6:56:cb:3e:55:0f                        
+gretap-v4       gretap     [32mUP          [39mf6:d4:96:d8:9f:96                        
+gretap-v6       gretap     [32mUP          [39m7a:46:13:bd:fa:e6                        
+veth0a          veth       [32mUP          [39m6e:d0:98:c4:e7:ef                        
+veth0a.20       ethernet   [32mUP          [39m6e:d0:98:c4:e7:ef                        
+└ veth0a        ethernet   [32mUP          [39m6e:d0:98:c4:e7:ef                        
+veth0b          veth       [32mUP          [39m36:da:80:06:7f:99                        
+vxlan-v4        vxlan      [32mUP          [39m8a:ea:59:32:df:70                        
                 ipv4                   192.168.30.2/24 (static)
-vxlan-v6        vxlan      [32mUP          [39mfe:aa:b4:8a:33:1b                        
+vxlan-v6        vxlan      [32mUP          [39m3e:30:c6:a1:71:64                        
                 ipv4                   192.168.40.2/24 (static)

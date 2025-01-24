@@ -327,7 +327,7 @@ int bridge_mstpd_gen(struct lyd_node *cifs)
 		if (!cond)
 			return -EIO;
 
-		fputs("initctl -bnq cond set mstpd\n"
+		fputs("initctl -bnq start mstpd\n"
 		      "/usr/libexec/confd/mstpd-wait-online || exit 1\n", cond);
 		fclose(cond);
 	} else if (!dagger_is_bootstrap(&confd.netdag)) {
@@ -335,7 +335,7 @@ int bridge_mstpd_gen(struct lyd_node *cifs)
 		if (!cond)
 			return -EIO;
 
-		fputs("initctl -bnq cond clear mstpd\n", cond);
+		fputs("initctl -bnq stop mstpd\n", cond);
 		fclose(cond);
 	}
 
@@ -370,6 +370,9 @@ static int gen_stp(struct ixif_br *br)
 
 	fprintf(mstpctl, "setforcevers %s %s\n", br->name,
 		lydx_get_cattr(stp, "force-protocol"));
+
+	fprintf(mstpctl, "sethello %s %s\n", br->name,
+		lydx_get_cattr(stp, "hello-time"));
 
 	fprintf(mstpctl, "setfdelay %s %s\n", br->name,
 		lydx_get_cattr(stp, "forward-delay"));

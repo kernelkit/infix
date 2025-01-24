@@ -18,7 +18,7 @@
                             {
                               "neighbor-router-id": "10.1.2.1",
                               "address": "10.1.2.1",
-                              "dead-timer": 23299,
+                              "dead-timer": 22506,
                               "state": "full"
                             }
                           ]
@@ -35,7 +35,7 @@
                             {
                               "neighbor-router-id": "10.1.3.1",
                               "address": "10.1.3.1",
-                              "dead-timer": 22827,
+                              "dead-timer": 22334,
                               "state": "full"
                             }
                           ]
@@ -52,7 +52,7 @@
                             {
                               "neighbor-router-id": "192.168.100.1",
                               "address": "10.1.1.100",
-                              "dead-timer": 39999,
+                              "dead-timer": 31385,
                               "state": "full",
                               "dr-router-id": "192.168.100.1",
                               "bdr-router-id": "10.1.1.1"

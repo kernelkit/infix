@@ -9,8 +9,8 @@
         "oper-status": "up",
         "phys-address": "00:00:00:00:00:00",
         "statistics": {
-          "in-octets": "568136",
-          "out-octets": "568136"
+          "in-octets": "15212",
+          "out-octets": "15212"
         },
         "ietf-ip:ipv4": {
           "address": [
@@ -40,8 +40,8 @@
         "oper-status": "up",
         "phys-address": "00:a0:85:00:03:01",
         "statistics": {
-          "in-octets": "6056801",
-          "out-octets": "8943399"
+          "in-octets": "143181",
+          "out-octets": "1975737"
         },
         "ietf-ip:ipv4": {
           "mtu": 1500
@@ -65,8 +65,8 @@
         "oper-status": "up",
         "phys-address": "00:a0:85:00:03:02",
         "statistics": {
-          "in-octets": "4388",
-          "out-octets": "223073"
+          "in-octets": "1980",
+          "out-octets": "46052"
         },
         "ietf-ip:ipv4": {
           "mtu": 1500
@@ -85,7 +85,11 @@
             "fast-leave": false,
             "router": "auto"
           },
-          "stp-state": "forwarding"
+          "stp": {
+            "cist": {
+              "state": "forwarding"
+            }
+          }
         }
       },
       {
@@ -96,8 +100,8 @@
         "oper-status": "up",
         "phys-address": "00:a0:85:00:03:03",
         "statistics": {
-          "in-octets": "25889",
-          "out-octets": "375562"
+          "in-octets": "866",
+          "out-octets": "47146"
         },
         "ietf-ip:ipv4": {
           "mtu": 1500
@@ -116,7 +120,11 @@
             "fast-leave": false,
             "router": "auto"
           },
-          "stp-state": "forwarding"
+          "stp": {
+            "cist": {
+              "state": "forwarding"
+            }
+          }
         }
       },
       {
@@ -127,8 +135,8 @@
         "oper-status": "up",
         "phys-address": "00:a0:85:00:03:04",
         "statistics": {
-          "in-octets": "32799",
-          "out-octets": "354844"
+          "in-octets": "936",
+          "out-octets": "46200"
         },
         "ietf-ip:ipv4": {
           "mtu": 1500
@@ -147,7 +155,11 @@
             "fast-leave": false,
             "router": "auto"
           },
-          "stp-state": "forwarding"
+          "stp": {
+            "cist": {
+              "state": "forwarding"
+            }
+          }
         }
       },
       {
@@ -158,8 +170,8 @@
         "oper-status": "up",
         "phys-address": "00:a0:85:00:03:05",
         "statistics": {
-          "in-octets": "68102",
-          "out-octets": "151156"
+          "in-octets": "14460",
+          "out-octets": "17169"
         },
         "ietf-ip:ipv4": {
           "mtu": 1500
@@ -183,8 +195,8 @@
         "oper-status": "up",
         "phys-address": "00:a0:85:00:03:06",
         "statistics": {
-          "in-octets": "137033",
-          "out-octets": "255084"
+          "in-octets": "15383",
+          "out-octets": "17129"
         },
         "ietf-ip:ipv4": {
           "mtu": 1500
@@ -208,8 +220,8 @@
         "oper-status": "up",
         "phys-address": "00:a0:85:00:03:07",
         "statistics": {
-          "in-octets": "71136",
-          "out-octets": "153864"
+          "in-octets": "12245",
+          "out-octets": "17169"
         },
         "ietf-ip:ipv4": {
           "mtu": 1500
@@ -228,13 +240,13 @@
       {
         "type": "infix-if-type:bridge",
         "name": "br0",
-        "if-index": 62,
+        "if-index": 9,
         "admin-status": "up",
         "oper-status": "up",
         "phys-address": "00:a0:85:00:03:00",
         "statistics": {
-          "in-octets": "2200",
-          "out-octets": "27797"
+          "in-octets": "2312",
+          "out-octets": "38953"
         },
         "ietf-ip:ipv4": {
           "mtu": 1500,

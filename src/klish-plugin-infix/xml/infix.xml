@@ -249,6 +249,12 @@
 	    /usr/libexec/statd/cli-pretty show-bridge-mdb |pager
 	</ACTION>
       </COMMAND>
+      <COMMAND name="stp" help="Show spanning tree status">
+        <ACTION sym="script" in="tty" out="tty" interrupt="true">
+	  sysrepocfg -d operational -X -f json -x /ietf-interfaces:interfaces | \
+	    /usr/libexec/statd/cli-pretty show-bridge-stp |pager
+	</ACTION>
+      </COMMAND>
       <COMMAND name="vlan" help="Show VLAN table">
         <ACTION sym="script">bridge -color vlan</ACTION>
         <SWITCH name="optional" min="0">

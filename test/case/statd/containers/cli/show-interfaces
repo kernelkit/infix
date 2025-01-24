@@ -32,10 +32,10 @@ e6              ethernet   [32mUP          [39m00:a0:85:00:03:06
 e7              ethernet   [32mUP          [39m00:a0:85:00:03:07                        
                 ipv6                   fe80::2a0:85ff:fe00:307/64 (link-layer)
 [100mveth0a          container              container-A                              [0m
-veth0b          veth       [32mUP          [39m46:85:68:aa:a0:d1                        
+veth0b          veth       [32mUP          [39me6:19:75:86:80:dd                        
 [100mveth1a          container              container-A                              [0m
-veth1b          veth       [32mUP          [39m62:f5:af:85:38:a5                        
+veth1b          veth       [32mUP          [39m3e:67:0f:15:24:14                        
 [100mveth2a          container              container-B                              [0m
-veth2b          veth       [32mUP          [39maa:08:99:ea:03:99                        
+veth2b          veth       [32mUP          [39mb2:fa:30:63:98:f0                        
 [100mveth3a          container              container-B                              [0m
-veth3b          veth       [32mUP          [39m1a:03:f7:20:d2:5b                        
+veth3b          veth       [32mUP          [39mb2:1c:fa:a7:45:eb                        
