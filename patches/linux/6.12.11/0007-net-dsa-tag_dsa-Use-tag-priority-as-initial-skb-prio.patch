@@ -1,8 +1,11 @@
-From 18e2a5f297ee800b2c51adbf9958bc2b96e2370d Mon Sep 17 00:00:00 2001
+From 2e42839d4edb250b298f7683975382e9ec97c9a9 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Tue, 28 May 2024 10:38:42 +0200
-Subject: [PATCH 07/24] net: dsa: tag_dsa: Use tag priority as initial
+Subject: [PATCH 07/25] net: dsa: tag_dsa: Use tag priority as initial
  skb->priority
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
 Organization: Addiva Elektronik
 
 Use the 3-bit priority field from the DSA tag as the initial packet
@@ -20,7 +23,7 @@ can do with an "ingress-qos-map" on VLAN interfaces. Until that is
 implemented, support the setup that is likely to be the most common; a
 1:1 mapping from FPri to skb->priority.
 
-Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
 ---
  net/dsa/tag_dsa.c | 7 +++++++
  1 file changed, 7 insertions(+)

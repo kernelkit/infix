@@ -1,8 +1,11 @@
-From f07acc439e8e803cb16528db21f0dfa11029caf4 Mon Sep 17 00:00:00 2001
+From 1e19f28f4f44973f349ad8bbb2fe0f4624e3c0f3 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Tue, 19 Sep 2023 18:38:10 +0200
-Subject: [PATCH 14/24] net: phy: marvell10g: Support firmware loading on
+Subject: [PATCH 14/25] net: phy: marvell10g: Support firmware loading on
  88X3310
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
 Organization: Addiva Elektronik
 
 When probing, if a device is waiting for firmware to be loaded into
@@ -12,7 +15,7 @@ We have no choice but to bail out of the probe if firmware is not
 available, as the device does not have any built-in image on which to
 fall back.
 
-Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
 ---
  drivers/net/phy/marvell10g.c | 161 +++++++++++++++++++++++++++++++++++
  1 file changed, 161 insertions(+)

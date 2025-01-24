@@ -1,7 +1,10 @@
-From 3166577344620658f8aae9b9af765401fecff87a Mon Sep 17 00:00:00 2001
+From 7135f0ab4f04b5cea7a0b67df0fe91f925ef19df Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Mon, 29 Apr 2024 15:14:51 +0200
-Subject: [PATCH 24/24] usb: core: adjust log level for unauthorized devices
+Subject: [PATCH 24/25] usb: core: adjust log level for unauthorized devices
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
 Organization: Addiva Elektronik
 
 The fact that a USB device currently is not authorized is not an error,
@@ -9,7 +12,7 @@ so let's adjust the log level so these messages slip below radar for the
 commonly used 'quiet' log level.
 
 Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
-Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
 ---
  drivers/usb/core/driver.c  | 4 ++--
  drivers/usb/core/generic.c | 2 +-

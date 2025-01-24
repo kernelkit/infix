@@ -1,8 +1,11 @@
-From 70f0a5d1576e4218af1f507c442f4317947ba992 Mon Sep 17 00:00:00 2001
+From cd73e20a5c51dc26ab6a768a813ab805ad8b0689 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Mon, 4 Mar 2024 16:47:28 +0100
-Subject: [PATCH 19/24] net: bridge: avoid classifying unknown multicast as
+Subject: [PATCH 19/25] net: bridge: avoid classifying unknown multicast as
  mrouters_only
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
 Organization: Addiva Elektronik
 
 Unknown multicast, MAC/IPv4/IPv6, should always be flooded according to
@@ -16,7 +19,7 @@ Because a multicast router should always receive both known and unknown
 multicast.
 
 Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
-Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
 ---
  include/uapi/linux/if_bridge.h |  1 +
  net/bridge/br.c                |  5 +++++

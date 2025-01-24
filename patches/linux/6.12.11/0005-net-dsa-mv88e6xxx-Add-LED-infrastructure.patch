@@ -1,13 +1,16 @@
-From a78a31711dcb661b1b0f4d2a6e692112b53ee1d3 Mon Sep 17 00:00:00 2001
+From cfc55d98057160753158b7c5357c94ac24d918fe Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Thu, 16 Nov 2023 19:44:32 +0100
-Subject: [PATCH 05/24] net: dsa: mv88e6xxx: Add LED infrastructure
+Subject: [PATCH 05/25] net: dsa: mv88e6xxx: Add LED infrastructure
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
 Organization: Addiva Elektronik
 
 Parse DT for LEDs and register them for devices that support it,
 though no actual implementations exist yet.
 
-Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
 ---
  drivers/net/dsa/mv88e6xxx/Makefile |   1 +
  drivers/net/dsa/mv88e6xxx/chip.c   |   5 +-

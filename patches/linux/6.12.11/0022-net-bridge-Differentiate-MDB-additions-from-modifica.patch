@@ -1,8 +1,11 @@
-From b2976eada955720555702d3ec70d381acc415adf Mon Sep 17 00:00:00 2001
+From a48795ef7dbcfd7f1921753ad943144b933020b0 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Thu, 16 May 2024 14:51:54 +0200
-Subject: [PATCH 22/24] net: bridge: Differentiate MDB additions from
+Subject: [PATCH 22/25] net: bridge: Differentiate MDB additions from
  modifications
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
 Organization: Addiva Elektronik
 
 Before this change, the reception of an IGMPv3 report (and analogously
@@ -22,7 +25,7 @@ generated.
 Therefore, discriminate new groups from changes to existing groups by
 introducing a RTM_SETMDB events to be used in the latter scenario.
 
-Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
 ---
  include/uapi/linux/rtnetlink.h | 2 ++
  net/bridge/br_mdb.c            | 4 ++--

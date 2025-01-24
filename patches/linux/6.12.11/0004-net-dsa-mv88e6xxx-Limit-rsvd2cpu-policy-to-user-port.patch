@@ -1,8 +1,11 @@
-From 41c8514d46aed546dae97817b582966aec19ac19 Mon Sep 17 00:00:00 2001
+From 980366a1f8709fdfe643edb666c86a916c681a6c Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Wed, 24 Apr 2024 22:41:04 +0200
-Subject: [PATCH 04/24] net: dsa: mv88e6xxx: Limit rsvd2cpu policy to user
+Subject: [PATCH 04/25] net: dsa: mv88e6xxx: Limit rsvd2cpu policy to user
  ports on 6393X
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
 Organization: Addiva Elektronik
 
 For packets with a DA in the IEEE reserved L2 group range, originating
@@ -30,7 +33,7 @@ switch would try to trap it back to the CPU. Given that the CPU is
 trusted, instead assume that it indeed meant for the packet to be
 forwarded like any other.
 
-Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
 ---
  drivers/net/dsa/mv88e6xxx/port.c | 31 +++++++++++++++++++++++++------
  1 file changed, 25 insertions(+), 6 deletions(-)
