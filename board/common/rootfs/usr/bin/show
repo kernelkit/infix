@@ -76,6 +76,7 @@ commands:
   ifaces        Show interfaces and their addresses
   fdb           Show forwarding database (unicast)
   mdb           Show multicast forwarding database
+  stp           Show spanning tree status
   ip   addr     Show IPv4 addresses
        route    Show routing table
   ipv6 addr     Show IPv6 addresses
@@ -186,6 +187,12 @@ rstp()
     mstpctl showbridge
     echo "br0 port info"
     mstpctl showport br0
+}
+
+stp()
+{
+    sysrepocfg -f json -X -d operational -m ietf-interfaces | \
+        /usr/libexec/statd/cli-pretty "show-bridge-stp"
 }
 
 fdb()
@@ -352,6 +359,9 @@ case $cmd in
 	;;
     span*)
 	rstp
+	;;
+    stp*)
+	stp
 	;;
     sys*)
 	system
