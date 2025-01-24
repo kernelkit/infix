@@ -9,17 +9,17 @@ graph "1x3" {
 	host [
 	    label="host | { <mgmt> mgmt  | <data1> data1 | <data2> data2 }",
 	    pos="0,12!",
-	    kind="controller",
+	    requires="controller",
 	];
 
         target [
 	    label="{ <mgmt> mgmt | <ethX> ethX | <ethQ> ethQ } | target",
 	    pos="10,12!",
 
-	    kind="infix",
+	    requires="infix",
 	];
 
-	host:mgmt -- target:mgmt [kind=mgmt, color=lightgrey]
+	host:mgmt -- target:mgmt [requires="mgmt", color=lightgrey]
 	host:data1 -- target:ethX [color=black]
 	host:data2 -- target:ethQ [color=black]
 }

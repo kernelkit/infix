@@ -11,38 +11,38 @@ graph "ring-4-duts" {
     PC [
         label=" { PC | { <mgmt4> mgmt4 | <data4> data4 | <mgmt1> mgmt1 | &#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; | <mgmt2> mgmt2 | <data3> data3 | <mgmt3> mgmt3 } }",
         pos="150,200!"
-        kind="controller",
+        requires="controller",
     ];
 
     R1 [
         label="{ { <mgmt> mgmt } | R1 \n 10.0.0.1/32 \n(lo) } | { <ring1> ring1 | <cross> cross | <ring2> ring2 }",
         pos="50,150!",
-        kind="infix",
+        requires="infix",
     ];
 
     R4 [
         label="{ { <mgmt> mgmt | <data> data } | R4 \n 10.0.0.4/32 \n(lo) } | { <ring1> ring1 | <cross> cross | <ring2> ring2 }",
         pos="50,50!"
-        kind="infix",
+        requires="infix",
     ];
 
     R2 [
         label="{ <ring2> ring2 | <cross> cross | <ring1> ring1 } | { { <mgmt> mgmt } | R2 \n10.0.0.2/32 \n(lo) }",
         pos="250,150!"
-        kind="infix",
+        requires="infix",
     ];
 
     R3 [
         label="{ <ring2> ring2 | <cross> cross | <ring1> ring1 } | { { <data> data | <mgmt> mgmt } | R3 \n10.0.0.3/32 \n(lo) }",
         pos="250,50!"
-        kind="infix",
+        requires="infix",
     ];
 
     # Management Connections
-    PC:mgmt1 -- R1:mgmt [kind=mgmt, color="lightgray"]
-    PC:mgmt2 -- R2:mgmt [kind=mgmt, color="lightgray"]
-    PC:mgmt3 -- R3:mgmt [kind=mgmt, color="lightgray", overlap=false, weight=0.1]
-    PC:mgmt4 -- R4:mgmt [kind=mgmt, color="lightgray", overlap=false, weight=0.1]
+    PC:mgmt1 -- R1:mgmt [requires="mgmt", color="lightgray"]
+    PC:mgmt2 -- R2:mgmt [requires="mgmt", color="lightgray"]
+    PC:mgmt3 -- R3:mgmt [requires="mgmt", color="lightgray", overlap=false, weight=0.1]
+    PC:mgmt4 -- R4:mgmt [requires="mgmt", color="lightgray", overlap=false, weight=0.1]
 
     # PC-Dut links
     PC:data3 -- R3:data [color="purple", headlabel=".1", label="192.168.3.0/24\n(Area 1)", taillabel=".2", labeldistance=2, fontcolor="purple"]

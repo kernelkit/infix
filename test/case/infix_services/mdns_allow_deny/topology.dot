@@ -9,17 +9,17 @@ graph "1x4" {
 	host [
 	    label="host | { <mgmt> mgmt | <eth1> eth1 | <eth2>  eth2 | <eth3>  eth3 }",
 	    pos="0,12!",
-	    kind="controller",
+	    requires="controller",
 	];
 
         dut [
 	    label="{ <mgmt> mgmt | <p1> p1 | <p2> p2 | <p3> p3 } | dut \n\n(br0)\n10.0.p.1/24",
 	    pos="10,12!",
 
-	    kind="infix",
+	    requires="infix",
 	];
 
-	host:mgmt -- dut:mgmt [kind=mgmt, color="lightgray"]
+	host:mgmt -- dut:mgmt [requires="mgmt", color="lightgray"]
 	host:eth1 -- dut:p1 [color=black, fontcolor=black, taillabel="10.0.1.2/24"]
 	host:eth2 -- dut:p2 [color=black, fontcolor=black, taillabel="10.0.2.2/24"]
 	host:eth3 -- dut:p3 [color=black, fontcolor=black, taillabel="10.0.3.2/24"]

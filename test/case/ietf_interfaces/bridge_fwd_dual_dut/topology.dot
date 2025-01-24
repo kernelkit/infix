@@ -11,26 +11,26 @@ graph "2x4" {
 	    	pos="0,15!",
 	    	height=3,
 
-	    	kind="controller",
+	    	requires="controller",
 	];
 
         dut1 [
 	    	label="{ <mgmt> mgmt | <data1> data1 } | { dut1 \n\n| <link> link }",
 	    	pos="4,15.68!",
-	    	kind="infix",    
+	    	requires="infix",    
 	];
 
         dut2 [
 		label="{ <mgmt> mgmt | <data1> data1 | <data2> data2 } | { <link> link | \n dut2 }",
 	    	pos="4,14.43!",
 	    	height=1.2,
-	    	kind="infix",
+	    	requires="infix",
 	];
 
-	host:mgmt1 -- dut1:mgmt [kind=mgmt, color=lightgrey]
+	host:mgmt1 -- dut1:mgmt [requires="mgmt", color=lightgrey]
 	host:data11 -- dut1:data1 [color=black, fontcolor=black, taillabel="10.0.0.2"]
 
-	host:mgmt2 -- dut2:mgmt [kind=mgmt, color=lightgrey]
+	host:mgmt2 -- dut2:mgmt [requires="mgmt", color=lightgrey]
 	host:data21 -- dut2:data1 [color=black, fontcolor=black, taillabel="10.0.0.3"]
 	host:data22 -- dut2:data2 [color=black, fontcolor=black, taillabel="10.0.0.4"]
 

@@ -15,13 +15,13 @@ graph "quad" {
         host [
 	    label="host | { <d1a> d1a | <d1b> d1b | <d1c> d1c | <d1c> d1d | <d2a> d2a | <d2b> d2b | <d2c> d2c | <d2d> d2d | <d2a> d3a | <d3b> d3b | <d3c> d3c | <d3c> d3d |  <d4a> d4a | <d4b> d4b | <d4c> d4c | <d4c> d4d }",
 	    color="grey",fontcolor="grey",pos="0,15!",
-	    kind="controller",
+	    provides="controller",
 	];
 
         dut1 [
 	    label="{ <e1> e1 | <e2> e2 | <e3> e3 } | dut1 | { <e4> e4 | <e5> e5 | <e6> e6 | <e7> e7 | <e8> e8}",
 	    pos="10,18!",
-	    kind="infix",
+	    provides="infix",
 	    qn_console=9001,
 	    qn_mem="384M",
 	    qn_usb="dut1.usb"
@@ -29,7 +29,7 @@ graph "quad" {
         dut2 [
 	    label="{ <e1> e1 | <e2> e2 | <e3> e3 } | dut2 | { <e4> e4 | <e5> e5 | <e6> e6  | <e7> e7 | <e8> e8}",
 	    pos="10,12!",
-	    kind="infix",
+	    provides="infix",
 	    qn_console=9002,
 	    qn_mem="384M",
 	    qn_usb="dut2.usb"
@@ -37,7 +37,7 @@ graph "quad" {
 	dut3 [
 	    label="{ <e1> e1 | <e2> e2 | <e3> e3 } | dut2 | { <e4> e4 | <e5> e5 | <e6> e6  | <e7> e7 | <e8> e8}",
 	    pos="10,12!",
-	    kind="infix",
+	    provides="infix",
 	    qn_console=9003,
 	    qn_mem="384M",
 	    qn_usb="dut3.usb"
@@ -46,31 +46,31 @@ graph "quad" {
 	dut4 [
 	    label="{ <e1> e1 | <e2> e2 | <e3> e3 } | dut2 | { <e4> e4 | <e5> e5 | <e6> e6  | <e7> e7 | <e8> e8}",
 	    pos="10,12!",
-	    kind="infix",
+	    provides="infix",
 	    qn_console=9004,
 	    qn_mem="384M",
 	    qn_usb="dut4.usb"
 	];
 
-	host:d1a -- dut1:e1 [kind=mgmt]
-	host:d1b -- dut1:e2
-	host:d1c -- dut1:e3
-	host:d1d -- dut1:e4
+	host:d1a -- dut1:e1 [provides="mgmt"]
+	host:d1b -- dut1:e2 [provides="ieee-mc"]
+	host:d1c -- dut1:e3 [provides="ieee-mc"]
+	host:d1d -- dut1:e4 [provides="ieee-mc"]
 
-	host:d2a -- dut2:e1 [kind=mgmt]
-	host:d2b -- dut2:e2
-	host:d2c -- dut2:e3
-	host:d2d -- dut2:e4
+	host:d2a -- dut2:e1 [provides="mgmt"]
+	host:d2b -- dut2:e2 [provides="ieee-mc"]
+	host:d2c -- dut2:e3 [provides="ieee-mc"]
+	host:d2d -- dut2:e4 [provides="ieee-mc"]
 
-	host:d3a -- dut3:e1 [kind=mgmt]
-	host:d3b -- dut3:e2
-	host:d3c -- dut3:e3
-	host:d3d -- dut3:e4
+	host:d3a -- dut3:e1 [provides="mgmt"]
+	host:d3b -- dut3:e2 [provides="ieee-mc"]
+	host:d3c -- dut3:e3 [provides="ieee-mc"]
+	host:d3d -- dut3:e4 [provides="ieee-mc"]
 
-	host:d4a -- dut4:e1 [kind=mgmt]
-	host:d4b -- dut4:e2
-	host:d4c -- dut4:e3
-	host:d4d -- dut4:e4
+	host:d4a -- dut4:e1 [provides="mgmt"]
+	host:d4b -- dut4:e2 [provides="ieee-mc"]
+	host:d4c -- dut4:e3 [provides="ieee-mc"]
+	host:d4d -- dut4:e4 [provides="ieee-mc"]
 
 	# Ring
 	dut1:e5 -- dut2:e6

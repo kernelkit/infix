@@ -9,15 +9,15 @@ graph "1x2" {
 	host [
 	    label="host | { <mgmt> mgmt | <data> data }",
 	    pos="0,20!",
-	    kind="controller",
+	    requires="controller",
 	];
 
         client [
 	    label="{ <mgmt> mgmt | <data> data } | client",
 	    pos="200,20!",
-	    kind="infix",
+	    requires="infix",
 	];
 
-	host:mgmt -- client:mgmt [kind=mgmt, color=lightgrey]
+	host:mgmt -- client:mgmt [requires="mgmt", color=lightgrey]
 	host:data -- client:data [color=black, taillabel="10.0.0.1/24", headlabel="10.0.0.42/24"]
 }

@@ -9,16 +9,16 @@ graph "1x2" {
 	host [
 	    label="host | { <mgmt> mgmt | <data> data }",
 	    pos="0,12!",
-	    kind="controller",
+	    requires="controller",
 	];
 
         target [
 	    label="{ <mgmt> mgmt | <data> data } | target(br0:veth)\n10.0.0.2/24",
 	    pos="10,12!",
 
-	    kind="infix",
+	    requires="infix",
 	];
 
-	host:mgmt -- target:mgmt [kind=mgmt, color="lightgray"]
+	host:mgmt -- target:mgmt [requires="mgmt", color="lightgray"]
 	host:data -- target:data [color=black, fontcolor=black, taillabel="10.0.0.1/24"]
 }

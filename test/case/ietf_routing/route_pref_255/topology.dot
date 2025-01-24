@@ -11,25 +11,25 @@ graph "route-preference" {
 	[
 		label="PC | { <mgmt1> mgmt1 | <data1> data1 |  <data2> data2 | <mgmt2> mgmt2 }",
 	    	pos="20,58!",
-	    	kind="controller",
+	    	requires="controller",
 	];
 
         R1 
 	[
 		label="{ <mgmt> mgmt | <data> data | <link> link } | R1",
 		pos="80,60!",
-		kind="infix",
+		requires="infix",
 	];
 	
 	R2 
 	[
 	    	label="{ <link> link | <data> data | <mgmt> mgmt } | R2",
 	    	pos="80,42!",
-	    	kind="infix",
+	    	requires="infix",
 	];
 	
-	PC:mgmt1 -- R1:mgmt [kind=mgmt, color="lightgray"]
-        PC:mgmt2 -- R2:mgmt [kind=mgmt, color="lightgray"]
+	PC:mgmt1 -- R1:mgmt [requires="mgmt", color="lightgray"]
+	PC:mgmt2 -- R2:mgmt [requires="mgmt", color="lightgray"]
 	
 	PC:data1 -- R1:data  [color="black", headlabel="192.168.10.1/24", taillabel="192.168.10.11/24", fontcolor="black"]
 	PC:data2 -- R2:data  [color="black", headlabel="192.168.20.2/24", taillabel="192.168.20.22/24", fontcolor="black"]
