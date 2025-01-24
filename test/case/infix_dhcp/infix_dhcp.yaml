@@ -13,3 +13,6 @@
 
 - name: server_host
   case: server_host/test.py
+
+- name: server_subnets
+  case: server_subnets/test.py

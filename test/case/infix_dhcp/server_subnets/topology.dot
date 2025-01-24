@@ -1,0 +1,51 @@
+graph "server subnets" {
+	layout="neato";
+	overlap="false";
+	esep="+40";
+
+        node [shape=record, fontname="DejaVu Sans Mono, Book"];
+	edge [color="cornflowerblue", penwidth="2", fontname="DejaVu Serif, Book"];
+
+	host [
+	    label="host | { <client1> client1 | <server> server | <client3> client3  | <client2> client2 }",
+	    pos="0,120!",
+	    requires="controller",
+	];
+
+        client1 [
+	    label="{ <mgmt> mgmt | <server> server} | client1",
+	    pos="20,130!",
+
+	    requires="infix",
+	];
+
+	server [
+	    label="{ <client1> client1 | <mgmt> mgmt | { <client2> client2 | <client3> client3 }  } | server&nbsp;",
+	    pos="20,120!",
+
+	    requires="infix",
+	];
+
+        client2 [
+	    label="{ <server> server | <mgmt> mgmt } | client2",
+	    pos="10,110!",
+
+	    requires="infix",
+	];
+
+        client3 [
+	    label="{ <server> server | <mgmt> mgmt } | client3",
+	    pos="30,110!",
+
+	    requires="infix",
+	];
+
+        host:server  -- server:mgmt  [requires="mgmt", color=lightgrey]
+	host:client1 -- client1:mgmt [requires="mgmt", color=lightgrey]
+	host:client2 -- client2:mgmt [requires="mgmt", color=lightgrey]
+	host:client3 -- client3:mgmt [requires="mgmt", color=lightgrey]
+
+	server:client1 -- client1:server [color=blue,  fontcolor=black, taillabel="192.168.1.1/24"]
+	server:client2 -- client2:server [color=green]
+	server:client3 -- client3:server [color=green, fontcolor=black, taillabel="192.168.2.1/24"]
+}
