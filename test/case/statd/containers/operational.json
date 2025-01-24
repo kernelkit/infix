@@ -27,8 +27,8 @@
         "oper-status": "up",
         "phys-address": "00:00:00:00:00:00",
         "statistics": {
-          "in-octets": "72275",
-          "out-octets": "72275"
+          "in-octets": "38742",
+          "out-octets": "38742"
         },
         "type": "infix-if-type:loopback"
       },
@@ -52,8 +52,8 @@
         "oper-status": "up",
         "phys-address": "00:a0:85:00:03:01",
         "statistics": {
-          "in-octets": "5166282",
-          "out-octets": "7407399"
+          "in-octets": "147241",
+          "out-octets": "2027800"
         },
         "type": "infix-if-type:etherlike"
       },
@@ -77,7 +77,8 @@
         "oper-status": "up",
         "phys-address": "00:a0:85:00:03:02",
         "statistics": {
-          "out-octets": "79382"
+          "in-octets": "70",
+          "out-octets": "43409"
         },
         "type": "infix-if-type:etherlike"
       },
@@ -108,8 +109,8 @@
         "oper-status": "up",
         "phys-address": "00:a0:85:00:03:03",
         "statistics": {
-          "in-octets": "23589",
-          "out-octets": "208789"
+          "in-octets": "9499",
+          "out-octets": "87012"
         },
         "type": "infix-if-type:etherlike"
       },
@@ -140,8 +141,8 @@
         "oper-status": "up",
         "phys-address": "00:a0:85:00:03:04",
         "statistics": {
-          "in-octets": "30583",
-          "out-octets": "206341"
+          "in-octets": "15551",
+          "out-octets": "87027"
         },
         "type": "infix-if-type:etherlike"
       },
@@ -165,8 +166,8 @@
         "oper-status": "up",
         "phys-address": "00:a0:85:00:03:05",
         "statistics": {
-          "in-octets": "66626",
-          "out-octets": "83465"
+          "in-octets": "43803",
+          "out-octets": "44713"
         },
         "type": "infix-if-type:etherlike"
       },
@@ -197,8 +198,8 @@
         "oper-status": "up",
         "phys-address": "00:a0:85:00:03:06",
         "statistics": {
-          "in-octets": "134367",
-          "out-octets": "184122"
+          "in-octets": "35346",
+          "out-octets": "67149"
         },
         "type": "infix-if-type:etherlike"
       },
@@ -222,8 +223,8 @@
         "oper-status": "up",
         "phys-address": "00:a0:85:00:03:07",
         "statistics": {
-          "in-octets": "70368",
-          "out-octets": "86243"
+          "in-octets": "27446",
+          "out-octets": "43597"
         },
         "type": "infix-if-type:etherlike"
       },
@@ -235,7 +236,7 @@
         "ietf-ip:ipv6": {
           "mtu": 1500
         },
-        "if-index": 22,
+        "if-index": 10,
         "infix-interfaces:bridge-port": {
           "bridge": "br0",
           "flood": {
@@ -252,10 +253,10 @@
         },
         "name": "veth0b",
         "oper-status": "up",
-        "phys-address": "c2:61:ae:82:0a:c1",
+        "phys-address": "46:85:68:aa:a0:d1",
         "statistics": {
-          "in-octets": "1583",
-          "out-octets": "28383"
+          "in-octets": "1541",
+          "out-octets": "25110"
         },
         "type": "infix-if-type:veth"
       },
@@ -267,7 +268,7 @@
         "ietf-ip:ipv6": {
           "mtu": 1500
         },
-        "if-index": 24,
+        "if-index": 12,
         "infix-interfaces:bridge-port": {
           "bridge": "br0",
           "flood": {
@@ -284,10 +285,10 @@
         },
         "name": "veth2b",
         "oper-status": "up",
-        "phys-address": "96:8b:c6:17:74:d3",
+        "phys-address": "aa:08:99:ea:03:99",
         "statistics": {
-          "in-octets": "796",
-          "out-octets": "28028"
+          "in-octets": "726",
+          "out-octets": "21517"
         },
         "type": "infix-if-type:veth"
       },
@@ -313,7 +314,7 @@
           ],
           "mtu": 1500
         },
-        "if-index": 25,
+        "if-index": 13,
         "infix-interfaces:bridge": {
           "vlans": {
             "proto": "ieee802-dot1q-types:c-vlan",
@@ -346,8 +347,8 @@
         "oper-status": "up",
         "phys-address": "00:a0:85:00:03:00",
         "statistics": {
-          "in-octets": "3285",
-          "out-octets": "28281"
+          "in-octets": "3201",
+          "out-octets": "37293"
         },
         "type": "infix-if-type:bridge"
       },
@@ -359,7 +360,7 @@
         "ietf-ip:ipv6": {
           "mtu": 1500
         },
-        "if-index": 27,
+        "if-index": 15,
         "infix-interfaces:bridge-port": {
           "bridge": "br1",
           "flood": {
@@ -376,9 +377,10 @@
         },
         "name": "veth1b",
         "oper-status": "up",
-        "phys-address": "e6:c6:34:dc:b9:f4",
+        "phys-address": "62:f5:af:85:38:a5",
         "statistics": {
-          "in-octets": "796"
+          "in-octets": "726",
+          "out-octets": "812"
         },
         "type": "infix-if-type:veth"
       },
@@ -390,7 +392,7 @@
         "ietf-ip:ipv6": {
           "mtu": 1500
         },
-        "if-index": 29,
+        "if-index": 17,
         "infix-interfaces:bridge-port": {
           "bridge": "br1",
           "flood": {
@@ -406,9 +408,10 @@
         },
         "name": "veth3b",
         "oper-status": "up",
-        "phys-address": "0e:c3:01:d6:e6:ea",
+        "phys-address": "1a:03:f7:20:d2:5b",
         "statistics": {
-          "in-octets": "796"
+          "in-octets": "726",
+          "out-octets": "512"
         },
         "type": "infix-if-type:veth"
       },
@@ -420,7 +423,7 @@
         "ietf-ip:ipv6": {
           "mtu": 1500
         },
-        "if-index": 30,
+        "if-index": 18,
         "infix-interfaces:bridge": {
           "vlans": {
             "proto": "ieee802-dot1q-types:c-vlan",
@@ -446,7 +449,7 @@
         "oper-status": "up",
         "phys-address": "00:a0:85:00:03:00",
         "statistics": {
-          "in-octets": "656"
+          "in-octets": "600"
         },
         "type": "infix-if-type:bridge"
       },
@@ -465,7 +468,7 @@
         "ietf-ip:ipv6": {
           "mtu": 1500
         },
-        "if-index": 31,
+        "if-index": 19,
         "infix-interfaces:vlan": {
           "id": 8,
           "lower-layer-if": "e3",
@@ -475,8 +478,8 @@
         "oper-status": "up",
         "phys-address": "00:a0:85:00:03:03",
         "statistics": {
-          "in-octets": "5005",
-          "out-octets": "16009"
+          "in-octets": "7733",
+          "out-octets": "25352"
         },
         "type": "infix-if-type:vlan"
       },
@@ -495,7 +498,7 @@
         "ietf-ip:ipv6": {
           "mtu": 1500
         },
-        "if-index": 32,
+        "if-index": 20,
         "infix-interfaces:vlan": {
           "id": 8,
           "lower-layer-if": "e4",
@@ -505,8 +508,8 @@
         "oper-status": "up",
         "phys-address": "00:a0:85:00:03:04",
         "statistics": {
-          "in-octets": "15080",
-          "out-octets": "15546"
+          "in-octets": "13695",
+          "out-octets": "25121"
         },
         "type": "infix-if-type:vlan"
       },
@@ -525,7 +528,7 @@
             }
           ]
         },
-        "if-index": 23,
+        "if-index": 11,
         "infix-interfaces:container-network": {
           "containers": [
             "container-B"
@@ -535,8 +538,8 @@
         "oper-status": "up",
         "phys-address": "06:a0:85:00:03:00",
         "statistics": {
-          "in-octets": "28028",
-          "out-octets": "796"
+          "in-octets": "21517",
+          "out-octets": "726"
         },
         "type": "infix-if-type:veth"
       },
@@ -555,7 +558,7 @@
             }
           ]
         },
-        "if-index": 28,
+        "if-index": 16,
         "infix-interfaces:container-network": {
           "containers": [
             "container-B"
@@ -565,6 +568,38 @@
         "oper-status": "up",
         "phys-address": "06:a0:85:00:03:00",
         "statistics": {
+          "in-octets": "512",
+          "out-octets": "726"
+        },
+        "type": "infix-if-type:veth"
+      },
+      {
+        "admin-status": "up",
+        "description": "br1",
+        "ietf-ip:ipv4": {
+          "mtu": 1500
+        },
+        "ietf-ip:ipv6": {
+          "address": [
+            {
+              "ip": "fe80::4a0:85ff:fe00:300",
+              "origin": "link-layer",
+              "prefix-length": 64
+            }
+          ],
+          "mtu": 1500
+        },
+        "if-index": 14,
+        "infix-interfaces:container-network": {
+          "containers": [
+            "container-A"
+          ]
+        },
+        "name": "veth1a",
+        "oper-status": "up",
+        "phys-address": "06:a0:85:00:03:00",
+        "statistics": {
+          "in-octets": "812",
           "out-octets": "796"
         },
         "type": "infix-if-type:veth"
@@ -592,7 +627,7 @@
           ],
           "mtu": 1500
         },
-        "if-index": 21,
+        "if-index": 9,
         "infix-interfaces:container-network": {
           "containers": [
             "container-A"
@@ -602,38 +637,8 @@
         "oper-status": "up",
         "phys-address": "06:a0:85:00:03:00",
         "statistics": {
-          "in-octets": "28425",
-          "out-octets": "1625"
-        },
-        "type": "infix-if-type:veth"
-      },
-      {
-        "admin-status": "up",
-        "description": "br1",
-        "ietf-ip:ipv4": {
-          "mtu": 1500
-        },
-        "ietf-ip:ipv6": {
-          "address": [
-            {
-              "ip": "fe80::4a0:85ff:fe00:300",
-              "origin": "link-layer",
-              "prefix-length": 64
-            }
-          ],
-          "mtu": 1500
-        },
-        "if-index": 26,
-        "infix-interfaces:container-network": {
-          "containers": [
-            "container-A"
-          ]
-        },
-        "name": "veth1a",
-        "oper-status": "up",
-        "phys-address": "06:a0:85:00:03:00",
-        "statistics": {
-          "out-octets": "796"
+          "in-octets": "25110",
+          "out-octets": "1541"
         },
         "type": "infix-if-type:veth"
       }
@@ -658,7 +663,7 @@
                           "ietf-ospf:neighbor": [
                             {
                               "address": "10.1.2.1",
-                              "dead-timer": 25130,
+                              "dead-timer": 23299,
                               "neighbor-router-id": "10.1.2.1",
                               "state": "full"
                             }
@@ -675,7 +680,7 @@
                           "ietf-ospf:neighbor": [
                             {
                               "address": "10.1.3.1",
-                              "dead-timer": 25210,
+                              "dead-timer": 22827,
                               "neighbor-router-id": "10.1.3.1",
                               "state": "full"
                             }
@@ -697,7 +702,7 @@
                             {
                               "address": "10.1.1.100",
                               "bdr-router-id": "10.1.1.1",
-                              "dead-timer": 34600,
+                              "dead-timer": 39999,
                               "dr-router-id": "192.168.100.1",
                               "neighbor-router-id": "192.168.100.1",
                               "state": "full"
@@ -788,7 +793,7 @@
                 ],
                 "ietf-ipv4-unicast-routing:destination-prefix": "0.0.0.0/0",
                 "ietf-ospf:metric": 2,
-                "last-updated": "2025-01-20T10:00:03+00:00",
+                "last-updated": "2025-01-24T09:55:47+00:00",
                 "next-hop": {
                   "next-hop-list": {
                     "next-hop": [
@@ -806,7 +811,7 @@
               },
               {
                 "ietf-ipv4-unicast-routing:destination-prefix": "0.0.0.0/0",
-                "last-updated": "2025-01-20T09:59:23+00:00",
+                "last-updated": "2025-01-24T09:55:08+00:00",
                 "next-hop": {
                   "next-hop-list": {
                     "next-hop": [
@@ -822,7 +827,7 @@
               {
                 "ietf-ipv4-unicast-routing:destination-prefix": "10.1.1.0/24",
                 "ietf-ospf:metric": 1,
-                "last-updated": "2025-01-20T09:59:53+00:00",
+                "last-updated": "2025-01-24T09:54:55+00:00",
                 "next-hop": {
                   "next-hop-list": {
                     "next-hop": [
@@ -840,7 +845,7 @@
                   null
                 ],
                 "ietf-ipv4-unicast-routing:destination-prefix": "10.1.1.0/24",
-                "last-updated": "2025-01-20T09:59:09+00:00",
+                "last-updated": "2025-01-24T09:54:54+00:00",
                 "next-hop": {
                   "next-hop-list": {
                     "next-hop": [
@@ -858,7 +863,7 @@
               },
               {
                 "ietf-ipv4-unicast-routing:destination-prefix": "10.1.1.1/32",
-                "last-updated": "2025-01-20T09:59:08+00:00",
+                "last-updated": "2025-01-24T09:54:53+00:00",
                 "next-hop": {
                   "next-hop-list": {
                     "next-hop": [
@@ -879,7 +884,7 @@
                   null
                 ],
                 "ietf-ipv4-unicast-routing:destination-prefix": "10.1.1.1/32",
-                "last-updated": "2025-01-20T09:59:08+00:00",
+                "last-updated": "2025-01-24T09:54:53+00:00",
                 "next-hop": {
                   "next-hop-list": {
                     "next-hop": [
@@ -901,7 +906,7 @@
                 ],
                 "ietf-ipv4-unicast-routing:destination-prefix": "10.1.2.0/24",
                 "ietf-ospf:metric": 2,
-                "last-updated": "2025-01-20T10:00:03+00:00",
+                "last-updated": "2025-01-24T09:55:47+00:00",
                 "next-hop": {
                   "next-hop-list": {
                     "next-hop": [
@@ -929,7 +934,7 @@
                 ],
                 "ietf-ipv4-unicast-routing:destination-prefix": "10.1.3.0/24",
                 "ietf-ospf:metric": 2,
-                "last-updated": "2025-01-20T10:00:03+00:00",
+                "last-updated": "2025-01-24T09:55:47+00:00",
                 "next-hop": {
                   "next-hop-list": {
                     "next-hop": [
@@ -956,7 +961,7 @@
                   null
                 ],
                 "ietf-ipv4-unicast-routing:destination-prefix": "169.254.0.0/16",
-                "last-updated": "2025-01-20T09:59:14+00:00",
+                "last-updated": "2025-01-24T09:54:59+00:00",
                 "next-hop": {
                   "next-hop-list": {
                     "next-hop": [
@@ -982,7 +987,7 @@
             "route": [
               {
                 "ietf-ipv6-unicast-routing:destination-prefix": "fe80::/64",
-                "last-updated": "2025-01-20T09:59:10+00:00",
+                "last-updated": "2025-01-24T09:54:55+00:00",
                 "next-hop": {
                   "next-hop-list": {
                     "next-hop": [
@@ -1000,7 +1005,7 @@
               },
               {
                 "ietf-ipv6-unicast-routing:destination-prefix": "fe80::/64",
-                "last-updated": "2025-01-20T09:59:10+00:00",
+                "last-updated": "2025-01-24T09:54:55+00:00",
                 "next-hop": {
                   "next-hop-list": {
                     "next-hop": [
@@ -1018,25 +1023,7 @@
               },
               {
                 "ietf-ipv6-unicast-routing:destination-prefix": "fe80::/64",
-                "last-updated": "2025-01-20T08:05:03+00:00",
-                "next-hop": {
-                  "next-hop-list": {
-                    "next-hop": [
-                      {
-                        "infix-routing:installed": [
-                          null
-                        ],
-                        "outgoing-interface": "e5"
-                      }
-                    ]
-                  }
-                },
-                "route-preference": 0,
-                "source-protocol": "direct"
-              },
-              {
-                "ietf-ipv6-unicast-routing:destination-prefix": "fe80::/64",
-                "last-updated": "2025-01-20T08:05:03+00:00",
+                "last-updated": "2025-01-24T09:54:35+00:00",
                 "next-hop": {
                   "next-hop-list": {
                     "next-hop": [
@@ -1054,7 +1041,25 @@
               },
               {
                 "ietf-ipv6-unicast-routing:destination-prefix": "fe80::/64",
-                "last-updated": "2025-01-20T08:05:03+00:00",
+                "last-updated": "2025-01-24T09:54:35+00:00",
+                "next-hop": {
+                  "next-hop-list": {
+                    "next-hop": [
+                      {
+                        "infix-routing:installed": [
+                          null
+                        ],
+                        "outgoing-interface": "e5"
+                      }
+                    ]
+                  }
+                },
+                "route-preference": 0,
+                "source-protocol": "direct"
+              },
+              {
+                "ietf-ipv6-unicast-routing:destination-prefix": "fe80::/64",
+                "last-updated": "2025-01-24T09:54:35+00:00",
                 "next-hop": {
                   "next-hop-list": {
                     "next-hop": [
@@ -1075,7 +1080,7 @@
                   null
                 ],
                 "ietf-ipv6-unicast-routing:destination-prefix": "fe80::/64",
-                "last-updated": "2025-01-20T08:05:03+00:00",
+                "last-updated": "2025-01-24T09:54:35+00:00",
                 "next-hop": {
                   "next-hop-list": {
                     "next-hop": [
@@ -1101,7 +1106,7 @@
     "container": [
       {
         "command": "/usr/sbin/httpd -f -v",
-        "id": "0aed2ca36b5e9012d8d647a684047410444c0e3134987f0c020bf0234ef0e0f3",
+        "id": "54f467f95bae15a0891acb1efbdf416232c49ea46bb60e796da187d320a746fc",
         "image": "localhost/curios-httpd-oci-amd64-v24.11.0:latest",
         "image-id": "d6930d60a73be9980f8e19b4b4f63586a6d3492178e20bea962e4e9b8c654033",
         "name": "container-B",
@@ -1117,11 +1122,33 @@
           "publish": []
         },
         "running": true,
-        "status": "Up About a minute"
+        "status": "Up 59 seconds"
+      },
+      {
+        "command": "/usr/sbin/httpd -f -v -p 91",
+        "id": "d3a542dc43f4d6ca7a9e2cff254126f337e41bb5f1e10f6613272d31ec8d5e79",
+        "image": "localhost/curios-httpd-oci-amd64-v24.11.0:latest",
+        "image-id": "d6930d60a73be9980f8e19b4b4f63586a6d3492178e20bea962e4e9b8c654033",
+        "name": "container-A",
+        "network": {
+          "interface": [
+            {
+              "name": "veth1a"
+            },
+            {
+              "name": "veth0a"
+            }
+          ],
+          "publish": [
+            "35121->91/tcp"
+          ]
+        },
+        "running": true,
+        "status": "Up 59 seconds"
       },
       {
         "command": "/usr/sbin/nft-helper /etc/nftables.conf",
-        "id": "3d9ac5c827ed9dba01401774283f00a1a79b19375fba1a3849cf64b5ed68dbb8",
+        "id": "7ae41768fb053a16b25ee3596a80bad0cf2422dada9ac862d24af744c8ad0e6e",
         "image": "localhost/curios-nftables-oci-amd64-v24.11.0:latest",
         "image-id": "7a3cc502436250357a6664100a600f306334b4d7203890b85b7ea9b8da6b5665",
         "name": "firewall",
@@ -1129,29 +1156,7 @@
           "host": true
         },
         "running": true,
-        "status": "Up About a minute"
-      },
-      {
-        "command": "/usr/sbin/httpd -f -v -p 91",
-        "id": "93753e99ceb3bc80c3a3002952f3d8f130deb77924e352d8e49f5c822c3af34e",
-        "image": "localhost/curios-httpd-oci-amd64-v24.11.0:latest",
-        "image-id": "d6930d60a73be9980f8e19b4b4f63586a6d3492178e20bea962e4e9b8c654033",
-        "name": "container-A",
-        "network": {
-          "interface": [
-            {
-              "name": "veth0a"
-            },
-            {
-              "name": "veth1a"
-            }
-          ],
-          "publish": [
-            "36971->91/tcp"
-          ]
-        },
-        "running": true,
-        "status": "Up About a minute"
+        "status": "Up 59 seconds"
       }
     ]
   }

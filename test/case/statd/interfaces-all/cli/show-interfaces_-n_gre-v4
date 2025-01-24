@@ -1,0 +1,9 @@
+name                : gre-v4
+type                : gre
+index               : 83
+mtu                 : 1476
+operational status  : up
+ipv4 addresses      :
+ipv6 addresses      :
+local address       : 192.168.20.1
+remote address      : 192.168.20.2

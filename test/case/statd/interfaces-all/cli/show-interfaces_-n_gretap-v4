@@ -1,0 +1,10 @@
+name                : gretap-v4
+type                : gretap
+index               : 85
+mtu                 : 1462
+operational status  : up
+physical address    : ba:a0:f5:c1:68:83
+ipv4 addresses      :
+ipv6 addresses      :
+local address       : 192.168.20.1
+remote address      : 192.168.20.2

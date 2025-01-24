@@ -27,7 +27,7 @@ def main():
     rrparser.add_argument("-r", "--replay", type=dirpath, metavar="DIR",
                           help="Generate output based on recorded system commands from DIR, " +
                           "rather than querying the local system")
-    rrparser.add_argument("-c", "--capture", type=dirpath, metavar="DIR",
+    rrparser.add_argument("-c", "--capture", metavar="DIR",
                           help="Capture system command output in DIR, such that the current system " +
                           "state can be recreated offline (with --replay) for testing purposes")
 

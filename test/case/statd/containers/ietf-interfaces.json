@@ -9,8 +9,8 @@
         "oper-status": "up",
         "phys-address": "00:00:00:00:00:00",
         "statistics": {
-          "in-octets": "72275",
-          "out-octets": "72275"
+          "in-octets": "38742",
+          "out-octets": "38742"
         },
         "ietf-ip:ipv4": {
           "address": [
@@ -40,8 +40,8 @@
         "oper-status": "up",
         "phys-address": "00:a0:85:00:03:01",
         "statistics": {
-          "in-octets": "5166282",
-          "out-octets": "7407399"
+          "in-octets": "147241",
+          "out-octets": "2027800"
         },
         "ietf-ip:ipv4": {
           "mtu": 1500
@@ -65,7 +65,8 @@
         "oper-status": "up",
         "phys-address": "00:a0:85:00:03:02",
         "statistics": {
-          "out-octets": "79382"
+          "in-octets": "70",
+          "out-octets": "43409"
         },
         "ietf-ip:ipv4": {
           "mtu": 1500
@@ -89,8 +90,8 @@
         "oper-status": "up",
         "phys-address": "00:a0:85:00:03:03",
         "statistics": {
-          "in-octets": "23589",
-          "out-octets": "208789"
+          "in-octets": "9499",
+          "out-octets": "87012"
         },
         "ietf-ip:ipv4": {
           "mtu": 1500
@@ -121,8 +122,8 @@
         "oper-status": "up",
         "phys-address": "00:a0:85:00:03:04",
         "statistics": {
-          "in-octets": "30583",
-          "out-octets": "206341"
+          "in-octets": "15551",
+          "out-octets": "87027"
         },
         "ietf-ip:ipv4": {
           "mtu": 1500
@@ -153,8 +154,8 @@
         "oper-status": "up",
         "phys-address": "00:a0:85:00:03:05",
         "statistics": {
-          "in-octets": "66626",
-          "out-octets": "83465"
+          "in-octets": "43803",
+          "out-octets": "44713"
         },
         "ietf-ip:ipv4": {
           "mtu": 1500
@@ -178,8 +179,8 @@
         "oper-status": "up",
         "phys-address": "00:a0:85:00:03:06",
         "statistics": {
-          "in-octets": "134367",
-          "out-octets": "184122"
+          "in-octets": "35346",
+          "out-octets": "67149"
         },
         "ietf-ip:ipv4": {
           "mtu": 1500,
@@ -210,8 +211,8 @@
         "oper-status": "up",
         "phys-address": "00:a0:85:00:03:07",
         "statistics": {
-          "in-octets": "70368",
-          "out-octets": "86243"
+          "in-octets": "27446",
+          "out-octets": "43597"
         },
         "ietf-ip:ipv4": {
           "mtu": 1500
@@ -230,13 +231,13 @@
       {
         "type": "infix-if-type:veth",
         "name": "veth0b",
-        "if-index": 22,
+        "if-index": 10,
         "admin-status": "up",
         "oper-status": "up",
-        "phys-address": "c2:61:ae:82:0a:c1",
+        "phys-address": "46:85:68:aa:a0:d1",
         "statistics": {
-          "in-octets": "1583",
-          "out-octets": "28383"
+          "in-octets": "1541",
+          "out-octets": "25110"
         },
         "ietf-ip:ipv4": {
           "mtu": 1500
@@ -262,13 +263,13 @@
       {
         "type": "infix-if-type:veth",
         "name": "veth2b",
-        "if-index": 24,
+        "if-index": 12,
         "admin-status": "up",
         "oper-status": "up",
-        "phys-address": "96:8b:c6:17:74:d3",
+        "phys-address": "aa:08:99:ea:03:99",
         "statistics": {
-          "in-octets": "796",
-          "out-octets": "28028"
+          "in-octets": "726",
+          "out-octets": "21517"
         },
         "ietf-ip:ipv4": {
           "mtu": 1500
@@ -294,13 +295,13 @@
       {
         "type": "infix-if-type:bridge",
         "name": "br0",
-        "if-index": 25,
+        "if-index": 13,
         "admin-status": "up",
         "oper-status": "up",
         "phys-address": "00:a0:85:00:03:00",
         "statistics": {
-          "in-octets": "3285",
-          "out-octets": "28281"
+          "in-octets": "3201",
+          "out-octets": "37293"
         },
         "ietf-ip:ipv4": {
           "mtu": 1500,
@@ -354,12 +355,13 @@
       {
         "type": "infix-if-type:veth",
         "name": "veth1b",
-        "if-index": 27,
+        "if-index": 15,
         "admin-status": "up",
         "oper-status": "up",
-        "phys-address": "e6:c6:34:dc:b9:f4",
+        "phys-address": "62:f5:af:85:38:a5",
         "statistics": {
-          "in-octets": "796"
+          "in-octets": "726",
+          "out-octets": "812"
         },
         "ietf-ip:ipv4": {
           "mtu": 1500
@@ -385,12 +387,13 @@
       {
         "type": "infix-if-type:veth",
         "name": "veth3b",
-        "if-index": 29,
+        "if-index": 17,
         "admin-status": "up",
         "oper-status": "up",
-        "phys-address": "0e:c3:01:d6:e6:ea",
+        "phys-address": "1a:03:f7:20:d2:5b",
         "statistics": {
-          "in-octets": "796"
+          "in-octets": "726",
+          "out-octets": "512"
         },
         "ietf-ip:ipv4": {
           "mtu": 1500
@@ -415,12 +418,12 @@
       {
         "type": "infix-if-type:bridge",
         "name": "br1",
-        "if-index": 30,
+        "if-index": 18,
         "admin-status": "up",
         "oper-status": "up",
         "phys-address": "00:a0:85:00:03:00",
         "statistics": {
-          "in-octets": "656"
+          "in-octets": "600"
         },
         "ietf-ip:ipv4": {
           "mtu": 1500
@@ -453,13 +456,13 @@
       {
         "type": "infix-if-type:vlan",
         "name": "e3.8",
-        "if-index": 31,
+        "if-index": 19,
         "admin-status": "up",
         "oper-status": "up",
         "phys-address": "00:a0:85:00:03:03",
         "statistics": {
-          "in-octets": "5005",
-          "out-octets": "16009"
+          "in-octets": "7733",
+          "out-octets": "25352"
         },
         "ietf-ip:ipv4": {
           "mtu": 1500,
@@ -483,13 +486,13 @@
       {
         "type": "infix-if-type:vlan",
         "name": "e4.8",
-        "if-index": 32,
+        "if-index": 20,
         "admin-status": "up",
         "oper-status": "up",
         "phys-address": "00:a0:85:00:03:04",
         "statistics": {
-          "in-octets": "15080",
-          "out-octets": "15546"
+          "in-octets": "13695",
+          "out-octets": "25121"
         },
         "ietf-ip:ipv4": {
           "mtu": 1500,
@@ -513,14 +516,14 @@
       {
         "type": "infix-if-type:veth",
         "name": "veth2a",
-        "if-index": 23,
+        "if-index": 11,
         "admin-status": "up",
         "oper-status": "up",
         "description": "eth0",
         "phys-address": "06:a0:85:00:03:00",
         "statistics": {
-          "in-octets": "28028",
-          "out-octets": "796"
+          "in-octets": "21517",
+          "out-octets": "726"
         },
         "ietf-ip:ipv4": {
           "mtu": 1500
@@ -543,13 +546,14 @@
       {
         "type": "infix-if-type:veth",
         "name": "veth3a",
-        "if-index": 28,
+        "if-index": 16,
         "admin-status": "up",
         "oper-status": "up",
         "description": "eth1",
         "phys-address": "06:a0:85:00:03:00",
         "statistics": {
-          "out-octets": "796"
+          "in-octets": "512",
+          "out-octets": "726"
         },
         "ietf-ip:ipv4": {
           "mtu": 1500
@@ -571,25 +575,18 @@
       },
       {
         "type": "infix-if-type:veth",
-        "name": "veth0a",
-        "if-index": 21,
+        "name": "veth1a",
+        "if-index": 14,
         "admin-status": "up",
         "oper-status": "up",
-        "description": "br0",
+        "description": "br1",
         "phys-address": "06:a0:85:00:03:00",
         "statistics": {
-          "in-octets": "28425",
-          "out-octets": "1625"
+          "in-octets": "812",
+          "out-octets": "796"
         },
         "ietf-ip:ipv4": {
-          "mtu": 1500,
-          "address": [
-            {
-              "ip": "169.254.1.2",
-              "prefix-length": 16,
-              "origin": "other"
-            }
-          ]
+          "mtu": 1500
         },
         "ietf-ip:ipv6": {
           "mtu": 1500,
@@ -609,17 +606,25 @@
       },
       {
         "type": "infix-if-type:veth",
-        "name": "veth1a",
-        "if-index": 26,
+        "name": "veth0a",
+        "if-index": 9,
         "admin-status": "up",
         "oper-status": "up",
-        "description": "br1",
+        "description": "br0",
         "phys-address": "06:a0:85:00:03:00",
         "statistics": {
-          "out-octets": "796"
+          "in-octets": "25110",
+          "out-octets": "1541"
         },
         "ietf-ip:ipv4": {
-          "mtu": 1500
+          "mtu": 1500,
+          "address": [
+            {
+              "ip": "169.254.1.2",
+              "prefix-length": 16,
+              "origin": "other"
+            }
+          ]
         },
         "ietf-ip:ipv6": {
           "mtu": 1500,

@@ -285,6 +285,7 @@ class Iface:
         self.stp_state = get_json_data('', self.data, 'infix-interfaces:bridge-port', 'stp-state')
         self.containers = get_json_data('', self.data, 'infix-interfaces:container-network', 'containers')
 
+
         if data.get('statistics'):
             self.in_octets = data.get('statistics').get('in-octets', '')
             self.out_octets = data.get('statistics').get('out-octets', '')
@@ -304,8 +305,8 @@ class Iface:
         else:
             self.ipv6_addr = []
 
-        if self.data.get('infix-interfaces:gre'):
-            self.gre = self.data['infix-interfaces:gre']
+        self.gre = self.data.get('infix-interfaces:gre')
+        self.vxlan = self.data.get('infix-interfaces:vxlan')
 
         if self.data.get('infix-interfaces:vlan'):
             self.lower_if = self.data.get('infix-interfaces:vlan', None).get('lower-layer-if',None)
@@ -325,9 +326,14 @@ class Iface:
     def is_veth(self):
         return self.data['type'] == "infix-if-type:veth"
 
-    def is_gre(self):
-        return self.data['type'] == "infix-if-type:gre" or self.data['type'] == "infix-if-type:gretap"
+    def is_vxlan(self):
+        return self.data['type'] == "infix-if-type:vxlan"
 
+    def is_gre(self):
+        return self.data['type'] == "infix-if-type:gre"
+
+    def is_gretap(self):
+        return self.data['type'] == "infix-if-type:gretap"
     def oper(self, detail=False):
         """Remap in brief overview to fit column widths."""
         if not detail and self.oper_status == "lower-layer-down":
@@ -355,15 +361,47 @@ class Iface:
             row += f"{'':<{Pad.state}}{addr['ip']}/{addr['prefix-length']} {origin}"
             print(row)
 
-    def pr_proto_eth(self, pipe=''):
+    def _pr_proto_common(self, name, phys_address, pipe=''):
         row = ""
         if len(pipe) > 0:
             row =  f"{pipe:<{Pad.iface}}"
 
-        row += f"{'ethernet':<{Pad.proto}}"
+        row += f"{name:<{Pad.proto}}"
         dec = Decore.green if self.oper() == "up" else Decore.red
         row += dec(f"{self.oper().upper():<{Pad.state}}")
-        row += f"{self.phys_address:<{Pad.data}}"
+        if phys_address:
+            row += f"{self.phys_address:<{Pad.data}}"
+        return row
+
+    def pr_proto_eth(self, pipe=''):
+        row = self._pr_proto_common("ethernet", True, pipe);
+        print(row)
+
+    def pr_proto_veth(self, pipe=''):
+        row = self._pr_proto_common("veth", True, pipe);
+
+        if self.lower_if:
+            row = f"{'':<{Pad.iface}}"
+            row += f"{'veth':<{Pad.proto}}"
+            row += f"{'':<{Pad.state}}"
+            row += f"peer:{self.lower_if}"
+
+        print(row)
+
+    def pr_proto_gretap(self, pipe=''):
+        row = self._pr_proto_common("gretap", True, pipe);
+        print(row)
+
+    def pr_proto_gre(self, pipe=''):
+        row = self._pr_proto_common("gre", False, pipe);
+        print(row)
+
+    def pr_proto_vxlan(self, pipe=''):
+        row = self._pr_proto_common("vxlan", True, pipe);
+        print(row)
+
+    def pr_proto_loopack(self, pipe=''):
+        row = self._pr_proto_common("loopback", False, pipe);
         print(row)
 
     def pr_proto_br(self, br_vlans):
@@ -423,17 +461,33 @@ class Iface:
             lower.pr_name(pipe)
             lower.pr_proto_br(self.br_vlans)
 
+    def pr_loopback(self):
+        self.pr_name(pipe="")
+        self.pr_proto_loopack()
+        self.pr_proto_ipv4()
+        self.pr_proto_ipv6()
+
     def pr_veth(self, _ifaces):
         self.pr_name(pipe="")
-        self.pr_proto_eth()
+        self.pr_proto_veth()
+        self.pr_proto_ipv4()
+        self.pr_proto_ipv6()
 
-        if self.lower_if:
-            row = f"{'':<{Pad.iface}}"
-            row += f"{'veth':<{Pad.proto}}"
-            row += f"{'':<{Pad.state}}"
-            row += f"peer:{self.lower_if}"
-            print(row)
+    def pr_gre(self):
+        self.pr_name(pipe="")
+        self.pr_proto_gre()
+        self.pr_proto_ipv4()
+        self.pr_proto_ipv6()
 
+    def pr_gretap(self):
+        self.pr_name(pipe="")
+        self.pr_proto_gretap()
+        self.pr_proto_ipv4()
+        self.pr_proto_ipv6()
+
+    def pr_vxlan(self):
+        self.pr_name(pipe="")
+        self.pr_proto_vxlan()
         self.pr_proto_ipv4()
         self.pr_proto_ipv6()
 
@@ -469,7 +523,9 @@ class Iface:
             print(Decore.gray_bg(f"{'owned by container':<{20}}: {', ' . join(self.containers)}"))
 
         print(f"{'name':<{20}}: {self.name}")
+        print(f"{'type':<{20}}: {self.type.split(':')[1]}")
         print(f"{'index':<{20}}: {self.index}")
+
         if self.mtu:
             print(f"{'mtu':<{20}}: {self.mtu}")
         if self.oper():
@@ -517,6 +573,15 @@ class Iface:
                 first = False
         else:
                 print(f"{'ipv6 addresses':<{20}}:")
+
+        if self.gre:
+            print(f"{'local address':<{20}}: {self.gre['local']}")
+            print(f"{'remote address':<{20}}: {self.gre['remote']}")
+
+        if self.vxlan:
+            print(f"{'local address':<{20}}: {self.vxlan['local']}")
+            print(f"{'remote address':<{20}}: {self.vxlan['remote']}")
+            print(f"{'VxLAN id':<{20}}: {self.vxlan['vni']}")
 
         if self.in_octets and self.out_octets:
             print(f"{'in-octets':<{20}}: {self.in_octets}")
@@ -589,7 +654,7 @@ def pr_interface_list(json):
                     key=version_sort)
     iface = find_iface(ifaces, "lo")
     if iface:
-        print_interface(iface)
+        iface.pr_loopback()
 
     for iface in [Iface(data) for data in ifaces]:
         if iface.name == "lo":
@@ -605,6 +670,18 @@ def pr_interface_list(json):
 
         if iface.is_veth():
             iface.pr_veth(ifaces)
+            continue
+
+        if iface.is_gre():
+            iface.pr_gre()
+            continue
+
+        if iface.is_gretap():
+            iface.pr_gretap()
+            continue
+
+        if iface.is_vxlan():
+            iface.pr_vxlan()
             continue
 
         if iface.is_vlan():

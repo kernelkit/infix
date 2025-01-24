@@ -1,0 +1,10 @@
+name                : veth0b
+type                : veth
+index               : 76
+mtu                 : 1500
+operational status  : up
+physical address    : 86:e0:fb:54:94:e8
+ipv4 addresses      :
+ipv6 addresses      :
+in-octets           : 37942
+out-octets          : 305

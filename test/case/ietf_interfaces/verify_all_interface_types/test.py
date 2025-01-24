@@ -58,200 +58,256 @@ with infamy.Test() as test:
         loopback = "lo"
 
     with test.step("Configure an empty bridge br-0"):
-        target.put_config_dict("ietf-interfaces", {
-        "interfaces": {
-            "interface": [
-                {
-                    "name": br_0,
-                    "type": "infix-if-type:bridge",
-                    "enabled": True,
+        target.put_config_dicts({
+            "ietf-interfaces": {
+                "interfaces": {
+                    "interface": [
+                    {
+                        "name": br_0,
+                        "type": "infix-if-type:bridge",
+                        "enabled": True,
+                    }
+                    ]
                 }
-            ]
-        }
-    })
+            }
+        })
 
     with test.step("Configure bridge br-X and associated interfaces"):
-        target.put_config_dict("ietf-interfaces", {
-        "interfaces": {
-            "interface": [
-                {
-                    "name": br_X,
-                    "type": "infix-if-type:bridge",
-                    "enabled": True
-                },
-                {
-                    "name": eth_X_30,
-                    "type": "infix-if-type:vlan",
-                    "enabled": True,
-                    "vlan": {
-                        "lower-layer-if": eth_X,
-                        "id": 30
-                    },
-                    "infix-interfaces:bridge-port": {
-                        "bridge": br_X
-                    }
+        target.put_config_dicts({
+            "ietf-interfaces": {
+                "interfaces": {
+                    "interface": [
+                        {
+                            "name": br_X,
+                            "type": "infix-if-type:bridge",
+                            "enabled": True
+                        },
+                        {
+                            "name": eth_X_30,
+                            "type": "infix-if-type:vlan",
+                            "enabled": True,
+                            "vlan": {
+                                "lower-layer-if": eth_X,
+                                "id": 30
+                            },
+                            "infix-interfaces:bridge-port": {
+                                "bridge": br_X
+                            }
+                        }
+                    ]
                 }
-            ]
-        }
+            }
     })
 
     with test.step("Configure VETH pair"):
-        target.put_config_dict("ietf-interfaces", {
+        target.put_config_dicts({
+            "ietf-interfaces": {
+                "interfaces": {
+                    "interface": [
+                        {
+                            "name": veth_a,
+                            "type": "infix-if-type:veth",
+                            "enabled": True,
+                            "infix-interfaces:veth": {
+                                "peer": veth_b
+                            }
+                        },
+                        {
+                            "name": veth_b,
+                            "type": "infix-if-type:veth",
+                            "enabled": True,
+                            "infix-interfaces:veth": {
+                                "peer": veth_a
+                            }
+                        }
+                    ]
+                }
+            }
+        })
+
+    with test.step("Configure bridge br-D and associated interfaces"):
+        target.put_config_dicts({
+        "ietf-interfaces": {
             "interfaces": {
                 "interface": [
                     {
-                        "name": veth_a,
-                        "type": "infix-if-type:veth",
+                        "name": br_D,
+                        "type": "infix-if-type:bridge",
                         "enabled": True,
-                        "infix-interfaces:veth": {
-                            "peer": veth_b
+                        "ietf-ip:ipv4": {
+                            "address": [
+                                { "ip": "192.168.20.1", "prefix-length": 24 },
+                                { "ip": "10.0.0.1", "prefix-length": 8 },
+                            ],
+                        },
+                        "ietf-ip:ipv6": {
+                            "address": [
+                                { "ip": "2001:db8::1", "prefix-length": 64 },
+                            ],
+                        },
+                    },
+                    {
+                        "name": veth_a_20,
+                        "type": "infix-if-type:vlan",
+                        "enabled": True,
+                        "vlan": {
+                            "lower-layer-if": "veth0a",
+                            "id": 20
+                        },
+                        "infix-interfaces:bridge-port": {
+                            "bridge": br_D
+                        }
+                    }
+                ]
+            }
+        }
+    })
+
+    with test.step("Configure br-Q and associated interfaces"):
+        target.put_config_dicts({
+            "ietf-interfaces": {
+            "interfaces": {
+                "interface": [
+                    {
+                        "name": br_Q,
+                        "type": "infix-if-type:bridge",
+                        "enabled": True,
+                        "infix-interfaces:bridge": {
+                            "vlans": {
+                                "vlan": [
+                                    { "vid": 20, "untagged": [br_Q], "tagged": [eth_Q, veth_b] },
+                                    { "vid": 30, "untagged": [br_Q], "tagged": [eth_Q, veth_b] },
+                                    { "vid": 40, "untagged": [], "tagged": [br_Q, eth_Q, veth_b] },
+                                ],
+                            }
+                        },
+                        "infix-interfaces:bridge-port": {
+                            "pvid": 10,
+                        }
+                    },
+                    {
+                        "name": eth_Q,
+                        "enabled": True,
+                        "infix-interfaces:bridge-port": {
+                            "bridge": br_Q
                         }
                     },
                     {
                         "name": veth_b,
                         "type": "infix-if-type:veth",
                         "enabled": True,
-                        "infix-interfaces:veth": {
-                            "peer": veth_a
+                        "infix-interfaces:bridge-port": {
+                            "bridge": br_Q
+                        }
+                    },
+                    {
+                        "name": eth_Q_10,
+                        "type": "infix-if-type:vlan",
+                        "enabled": True,
+                        "vlan": {
+                            "lower-layer-if": eth_Q,
+                            "id": 10
+                        }
+                    },
+                    {
+                        "name": br_Q_40,
+                        "type": "infix-if-type:vlan",
+                        "enabled": True,
+                        "vlan": {
+                            "lower-layer-if": br_Q,
+                            "id": 40
                         }
                     }
                 ]
             }
-        })
-
-    with test.step("Configure bridge br-D and associated interfaces"):
-        target.put_config_dict("ietf-interfaces", {
-        "interfaces": {
-            "interface": [
-                {
-                    "name": br_D,
-                    "type": "infix-if-type:bridge",
-                    "enabled": True,
-                    "ietf-ip:ipv4": {
-                        "address": [
-                            { "ip": "192.168.20.1", "prefix-length": 24 },
-                            { "ip": "10.0.0.1", "prefix-length": 8 },
-                        ],
-                    },
-                    "ietf-ip:ipv6": {
-                        "address": [
-                            { "ip": "2001:db8::1", "prefix-length": 64 },
-                        ],
-                    },
-                },
-                {
-                    "name": veth_a_20,
-                    "type": "infix-if-type:vlan",
-                    "enabled": True,
-                    "vlan": {
-                        "lower-layer-if": "veth0a",
-                        "id": 20
-                    },
-                    "infix-interfaces:bridge-port": {
-                        "bridge": br_D
-                    }
-                }
-            ]
-        }
-    })
-
-    with test.step("Configure br-Q and associated interfaces"):
-        target.put_config_dict("ietf-interfaces", {
-        "interfaces": {
-            "interface": [
-                {
-                    "name": br_Q,
-                    "type": "infix-if-type:bridge",
-                    "enabled": True,
-                    "infix-interfaces:bridge": {
-                        "vlans": {
-                            "vlan": [
-                                { "vid": 20, "untagged": [br_Q], "tagged": [eth_Q, veth_b] },
-                                { "vid": 30, "untagged": [br_Q], "tagged": [eth_Q, veth_b] },
-                                { "vid": 40, "untagged": [], "tagged": [br_Q, eth_Q, veth_b] },
-                            ],
-                        }
-                    },
-                    "infix-interfaces:bridge-port": {
-                        "pvid": 10,
-                    }
-                },
-                {
-                    "name": eth_Q,
-                    "enabled": True,
-                    "infix-interfaces:bridge-port": {
-                        "bridge": br_Q
-                    }
-                },
-                {
-                    "name": veth_b,
-                    "type": "infix-if-type:veth",
-                    "enabled": True,
-                    "infix-interfaces:bridge-port": {
-                        "bridge": br_Q
-                    }
-                },
-                {
-                    "name": eth_Q_10,
-                    "type": "infix-if-type:vlan",
-                    "enabled": True,
-                    "vlan": {
-                        "lower-layer-if": eth_Q,
-                        "id": 10
-                    }
-                },
-                {
-                    "name": br_Q_40,
-                    "type": "infix-if-type:vlan",
-                    "enabled": True,
-                    "vlan": {
-                        "lower-layer-if": br_Q,
-                        "id": 40
-                    }
-                }
-            ]
         }
     })
 
     with test.step("Configure GRE Tunnels"):
-        target.put_config_dict("ietf-interfaces", {
-            "interfaces": {
-                "interface": [
-                    {
-                        "name": "gre-v4",
-                        "type": "infix-if-type:gre",
-                        "infix-interfaces:gre": {
-                            "local": "192.168.20.1",
-                            "remote": "192.168.20.2",
-                        }
-                    },
-                    {
-                        "name": "gre-v6",
-                        "type": "infix-if-type:gre",
-                        "infix-interfaces:gre": {
-                            "local": "2001:db8::1",
-                            "remote": "2001:db8::2",
-                        }
-                    },
-                    {
-                        "name": "gretap-v4",
-                        "type": "infix-if-type:gretap",
-                        "infix-interfaces:gre": {
-                            "local": "192.168.20.1",
-                            "remote": "192.168.20.2",
-                        }
-                    },
-                    {
-                        "name": "gretap-v6",
-                        "type": "infix-if-type:gretap",
-                        "infix-interfaces:gre": {
-                            "local": "2001:db8::1",
-                            "remote": "2001:db8::2",
-                        }
-                    },
-                ]
+        target.put_config_dicts({
+            "ietf-interfaces": {
+                "interfaces": {
+                    "interface": [
+                        {
+                            "name": "gre-v4",
+                            "type": "infix-if-type:gre",
+
+                            "infix-interfaces:gre": {
+                                "local": "192.168.20.1",
+                                "remote": "192.168.20.2",
+                            }
+                        },
+                        {
+                            "name": "gre-v6",
+                            "type": "infix-if-type:gre",
+                            "ietf-ip:ipv4": {
+                                "address": [
+                                    { "ip": "192.168.50.2", "prefix-length": 16 },
+                                ]
+                        },
+                            "infix-interfaces:gre": {
+                                "local": "2001:db8::1",
+                                "remote": "2001:db8::2",
+                            }
+                        },
+                        {
+                            "name": "gretap-v4",
+                            "type": "infix-if-type:gretap",
+                            "infix-interfaces:gre": {
+                                "local": "192.168.20.1",
+                                "remote": "192.168.20.2",
+                            }
+                        },
+                        {
+                            "name": "gretap-v6",
+                            "type": "infix-if-type:gretap",
+                            "infix-interfaces:gre": {
+                                "local": "2001:db8::1",
+                                "remote": "2001:db8::2",
+                            }
+                        },
+                    ]
+                }
             }
         })
+
+    with test.step("Configure VxLAN Tunnels"):
+        target.put_config_dicts({
+            "ietf-interfaces": {
+                "interfaces": {
+                    "interface": [
+                    {
+                        "name": "vxlan-v4",
+                        "type": "infix-if-type:vxlan",
+                        "ietf-ip:ipv4": {
+                            "address": [
+                                { "ip": "192.168.30.2", "prefix-length": 24 },
+                            ]
+                        },
+                        "infix-interfaces:vxlan": {
+                            "local": "192.168.20.100",
+                            "remote": "192.168.20.200",
+                            "vni": "4"
+                        }
+                    },
+                    {
+                        "name": "vxlan-v6",
+                        "type": "infix-if-type:vxlan",
+                        "ietf-ip:ipv4": {
+                            "address": [
+                                { "ip": "192.168.40.2", "prefix-length": 24 },
+                            ]
+                        },
+                        "infix-interfaces:vxlan": {
+                            "local": "2001:db8::100",
+                            "remote": "2001:db8::200",
+                            "vni": "6"
+                        }
+                    }
+                ]
+            }
+        }
+    })
 
     with test.step("Verify interface 'lo' is of type loopback"):
         verify_interface(target, "lo", "loopback")
@@ -282,4 +338,7 @@ with infamy.Test() as test:
         verify_interface(target, "gretap-v4", "gretap")
         verify_interface(target, "gretap-v6", "gretap")
 
+    with test.step("Verify VxLAN interfaces 'vxlan-v4' and 'vxlan-v6'"):
+        verify_interface(target, "vxlan-v4", "vxlan")
+        verify_interface(target, "vxlan-v6", "vxlan")
     test.succeed()

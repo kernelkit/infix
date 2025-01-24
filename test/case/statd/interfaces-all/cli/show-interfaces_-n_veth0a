@@ -1,0 +1,10 @@
+name                : veth0a
+type                : veth
+index               : 77
+mtu                 : 1500
+operational status  : up
+physical address    : be:40:fd:0e:8d:c6
+ipv4 addresses      :
+ipv6 addresses      :
+in-octets           : 305
+out-octets          : 37942
