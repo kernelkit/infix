@@ -27,8 +27,8 @@
         "oper-status": "up",
         "phys-address": "00:00:00:00:00:00",
         "statistics": {
-          "in-octets": "3016668",
-          "out-octets": "3016668"
+          "in-octets": "1738370",
+          "out-octets": "1738370"
         },
         "type": "infix-if-type:loopback"
       },
@@ -52,8 +52,8 @@
         "oper-status": "up",
         "phys-address": "00:a0:85:00:03:01",
         "statistics": {
-          "in-octets": "2776431",
-          "out-octets": "5420321"
+          "in-octets": "320955",
+          "out-octets": "1984258"
         },
         "type": "infix-if-type:etherlike"
       },
@@ -77,8 +77,8 @@
         "oper-status": "up",
         "phys-address": "00:a0:85:00:03:02",
         "statistics": {
-          "in-octets": "700",
-          "out-octets": "288796"
+          "in-octets": "70",
+          "out-octets": "39889"
         },
         "type": "infix-if-type:etherlike"
       },
@@ -102,14 +102,17 @@
             "fast-leave": false,
             "router": "auto"
           },
-          "stp-state": "forwarding"
+          "stp": {
+            "cist": {
+              "state": "forwarding"
+            }
+          }
         },
         "name": "e3",
         "oper-status": "up",
         "phys-address": "00:a0:85:00:03:03",
         "statistics": {
-          "in-octets": "770",
-          "out-octets": "892021"
+          "out-octets": "45391"
         },
         "type": "infix-if-type:etherlike"
       },
@@ -134,7 +137,7 @@
         "phys-address": "00:a0:85:00:03:04",
         "statistics": {
           "in-octets": "70",
-          "out-octets": "275470"
+          "out-octets": "39570"
         },
         "type": "infix-if-type:etherlike"
       },
@@ -158,8 +161,8 @@
         "oper-status": "up",
         "phys-address": "00:a0:85:00:03:05",
         "statistics": {
-          "in-octets": "182086",
-          "out-octets": "275083"
+          "in-octets": "19910",
+          "out-octets": "39388"
         },
         "type": "infix-if-type:etherlike"
       },
@@ -183,8 +186,8 @@
         "oper-status": "up",
         "phys-address": "00:a0:85:00:03:06",
         "statistics": {
-          "in-octets": "185476",
-          "out-octets": "275412"
+          "in-octets": "26909",
+          "out-octets": "41285"
         },
         "type": "infix-if-type:etherlike"
       },
@@ -208,8 +211,8 @@
         "oper-status": "up",
         "phys-address": "00:a0:85:00:03:07",
         "statistics": {
-          "in-octets": "183112",
-          "out-octets": "274994"
+          "in-octets": "23322",
+          "out-octets": "39536"
         },
         "type": "infix-if-type:etherlike"
       },
@@ -221,7 +224,7 @@
         "ietf-ip:ipv6": {
           "mtu": 1500
         },
-        "if-index": 73,
+        "if-index": 9,
         "infix-interfaces:bridge": {
           "multicast": {
             "querier": "off",
@@ -244,7 +247,7 @@
         "ietf-ip:ipv6": {
           "mtu": 1500
         },
-        "if-index": 74,
+        "if-index": 10,
         "infix-interfaces:bridge-port": {
           "bridge": "br-X",
           "flood": {
@@ -256,7 +259,11 @@
             "fast-leave": false,
             "router": "auto"
           },
-          "stp-state": "forwarding"
+          "stp": {
+            "cist": {
+              "state": "forwarding"
+            }
+          }
         },
         "infix-interfaces:vlan": {
           "id": 30,
@@ -276,7 +283,7 @@
         "ietf-ip:ipv6": {
           "mtu": 1500
         },
-        "if-index": 75,
+        "if-index": 11,
         "infix-interfaces:bridge": {
           "multicast": {
             "querier": "off",
@@ -299,7 +306,7 @@
         "ietf-ip:ipv6": {
           "mtu": 1500
         },
-        "if-index": 76,
+        "if-index": 12,
         "infix-interfaces:bridge-port": {
           "bridge": "br-Q",
           "flood": {
@@ -311,17 +318,21 @@
             "fast-leave": false,
             "router": "auto"
           },
-          "stp-state": "forwarding"
+          "stp": {
+            "cist": {
+              "state": "forwarding"
+            }
+          }
         },
         "infix-interfaces:veth": {
           "peer": "veth0a"
         },
         "name": "veth0b",
         "oper-status": "up",
-        "phys-address": "86:e0:fb:54:94:e8",
+        "phys-address": "36:da:80:06:7f:99",
         "statistics": {
-          "in-octets": "37942",
-          "out-octets": "305"
+          "in-octets": "17190",
+          "out-octets": "299"
         },
         "type": "infix-if-type:veth"
       },
@@ -333,16 +344,16 @@
         "ietf-ip:ipv6": {
           "mtu": 1500
         },
-        "if-index": 77,
+        "if-index": 13,
         "infix-interfaces:veth": {
           "peer": "veth0b"
         },
         "name": "veth0a",
         "oper-status": "up",
-        "phys-address": "be:40:fd:0e:8d:c6",
+        "phys-address": "6e:d0:98:c4:e7:ef",
         "statistics": {
-          "in-octets": "305",
-          "out-octets": "37942"
+          "in-octets": "299",
+          "out-octets": "17190"
         },
         "type": "infix-if-type:veth"
       },
@@ -354,7 +365,7 @@
         "ietf-ip:ipv6": {
           "mtu": 1500
         },
-        "if-index": 78,
+        "if-index": 14,
         "infix-interfaces:bridge-port": {
           "bridge": "br-D",
           "flood": {
@@ -366,7 +377,11 @@
             "fast-leave": false,
             "router": "auto"
           },
-          "stp-state": "forwarding"
+          "stp": {
+            "cist": {
+              "state": "forwarding"
+            }
+          }
         },
         "infix-interfaces:vlan": {
           "id": 20,
@@ -375,9 +390,9 @@
         },
         "name": "veth0a.20",
         "oper-status": "up",
-        "phys-address": "be:40:fd:0e:8d:c6",
+        "phys-address": "6e:d0:98:c4:e7:ef",
         "statistics": {
-          "out-octets": "37682"
+          "out-octets": "16936"
         },
         "type": "infix-if-type:vlan"
       },
@@ -413,7 +428,7 @@
           ],
           "mtu": 1500
         },
-        "if-index": 79,
+        "if-index": 15,
         "infix-interfaces:bridge": {
           "multicast": {
             "querier": "off",
@@ -427,7 +442,7 @@
         "oper-status": "up",
         "phys-address": "00:a0:85:00:03:00",
         "statistics": {
-          "out-octets": "37682"
+          "out-octets": "16936"
         },
         "type": "infix-if-type:bridge"
       },
@@ -439,7 +454,7 @@
         "ietf-ip:ipv6": {
           "mtu": 1500
         },
-        "if-index": 80,
+        "if-index": 16,
         "infix-interfaces:bridge": {
           "vlans": {
             "proto": "ieee802-dot1q-types:c-vlan",
@@ -501,7 +516,7 @@
         "oper-status": "up",
         "phys-address": "00:a0:85:00:03:00",
         "statistics": {
-          "in-octets": "33728"
+          "in-octets": "13940"
         },
         "type": "infix-if-type:bridge"
       },
@@ -513,7 +528,7 @@
         "ietf-ip:ipv6": {
           "mtu": 1500
         },
-        "if-index": 81,
+        "if-index": 17,
         "infix-interfaces:vlan": {
           "id": 40,
           "lower-layer-if": "br-Q",
@@ -532,7 +547,7 @@
         "ietf-ip:ipv6": {
           "mtu": 1500
         },
-        "if-index": 82,
+        "if-index": 18,
         "infix-interfaces:vlan": {
           "id": 10,
           "lower-layer-if": "e3",
@@ -551,7 +566,7 @@
         "ietf-ip:ipv6": {
           "mtu": 1476
         },
-        "if-index": 83,
+        "if-index": 19,
         "infix-interfaces:gre": {
           "local": "192.168.20.1",
           "remote": "192.168.20.2"
@@ -575,7 +590,7 @@
         "ietf-ip:ipv6": {
           "mtu": 1448
         },
-        "if-index": 84,
+        "if-index": 20,
         "infix-interfaces:gre": {
           "local": "2001:db8::1",
           "remote": "2001:db8::2"
@@ -592,16 +607,16 @@
         "ietf-ip:ipv6": {
           "mtu": 1462
         },
-        "if-index": 85,
+        "if-index": 21,
         "infix-interfaces:gre": {
           "local": "192.168.20.1",
           "remote": "192.168.20.2"
         },
         "name": "gretap-v4",
         "oper-status": "up",
-        "phys-address": "ba:a0:f5:c1:68:83",
+        "phys-address": "f6:d4:96:d8:9f:96",
         "statistics": {
-          "out-octets": "249"
+          "out-octets": "243"
         },
         "type": "infix-if-type:gretap"
       },
@@ -613,16 +628,16 @@
         "ietf-ip:ipv6": {
           "mtu": 1434
         },
-        "if-index": 86,
+        "if-index": 22,
         "infix-interfaces:gre": {
           "local": "2001:db8::1",
           "remote": "2001:db8::2"
         },
         "name": "gretap-v6",
         "oper-status": "up",
-        "phys-address": "1a:1b:84:dd:ca:2c",
+        "phys-address": "7a:46:13:bd:fa:e6",
         "statistics": {
-          "out-octets": "205"
+          "out-octets": "199"
         },
         "type": "infix-if-type:gretap"
       },
@@ -641,7 +656,7 @@
         "ietf-ip:ipv6": {
           "mtu": 1500
         },
-        "if-index": 87,
+        "if-index": 23,
         "infix-interfaces:vxlan": {
           "local": "192.168.20.100",
           "remote": "192.168.20.200",
@@ -649,7 +664,7 @@
         },
         "name": "vxlan-v4",
         "oper-status": "up",
-        "phys-address": "f6:56:cb:3e:55:0f",
+        "phys-address": "8a:ea:59:32:df:70",
         "type": "infix-if-type:vxlan"
       },
       {
@@ -667,7 +682,7 @@
         "ietf-ip:ipv6": {
           "mtu": 1500
         },
-        "if-index": 88,
+        "if-index": 24,
         "infix-interfaces:vxlan": {
           "local": "2001:db8::100",
           "remote": "2001:db8::200",
@@ -675,9 +690,9 @@
         },
         "name": "vxlan-v6",
         "oper-status": "up",
-        "phys-address": "fe:aa:b4:8a:33:1b",
+        "phys-address": "3e:30:c6:a1:71:64",
         "statistics": {
-          "out-octets": "18219"
+          "out-octets": "7690"
         },
         "type": "infix-if-type:vxlan"
       }

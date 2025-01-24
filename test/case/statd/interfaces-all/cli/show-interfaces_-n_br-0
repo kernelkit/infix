@@ -1,6 +1,6 @@
 name                : br-0
 type                : bridge
-index               : 73
+index               : 9
 mtu                 : 1500
 operational status  : down
 physical address    : 00:a0:85:00:03:00

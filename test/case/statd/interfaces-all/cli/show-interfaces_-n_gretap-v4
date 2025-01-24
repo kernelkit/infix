@@ -1,9 +1,9 @@
 name                : gretap-v4
 type                : gretap
-index               : 85
+index               : 21
 mtu                 : 1462
 operational status  : up
-physical address    : ba:a0:f5:c1:68:83
+physical address    : f6:d4:96:d8:9f:96
 ipv4 addresses      :
 ipv6 addresses      :
 local address       : 192.168.20.1

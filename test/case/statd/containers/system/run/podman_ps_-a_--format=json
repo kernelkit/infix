@@ -10,7 +10,7 @@
     "Exited": false,
     "ExitedAt": -62135596800,
     "ExitCode": 0,
-    "Id": "54f467f95bae15a0891acb1efbdf416232c49ea46bb60e796da187d320a746fc",
+    "Id": "78d28082c2e5d494c82aa181c95118ce498e25930ad9e288ba010257ca336378",
     "Image": "localhost/curios-httpd-oci-amd64-v24.11.0:latest",
     "ImageID": "d6930d60a73be9980f8e19b4b4f63586a6d3492178e20bea962e4e9b8c654033",
     "IsInfra": false,
@@ -29,15 +29,15 @@
       "veth2a",
       "veth3a"
     ],
-    "Pid": 5582,
+    "Pid": 6667,
     "Pod": "",
     "PodName": "",
     "Ports": null,
     "Size": null,
-    "StartedAt": 1737712499,
+    "StartedAt": 1737726842,
     "State": "running",
-    "Status": "Up 59 seconds",
-    "Created": 1737712497
+    "Status": "Up About a minute",
+    "Created": 1737726842
   },
   {
     "AutoRemove": false,
@@ -52,7 +52,7 @@
     "Exited": false,
     "ExitedAt": -62135596800,
     "ExitCode": 0,
-    "Id": "d3a542dc43f4d6ca7a9e2cff254126f337e41bb5f1e10f6613272d31ec8d5e79",
+    "Id": "3451cfceca4eee1091c1dfedece2faee99bc8a729e781799d9c0b4368a31d86d",
     "Image": "localhost/curios-httpd-oci-amd64-v24.11.0:latest",
     "ImageID": "d6930d60a73be9980f8e19b4b4f63586a6d3492178e20bea962e4e9b8c654033",
     "IsInfra": false,
@@ -70,26 +70,26 @@
       
     },
     "Networks": [
-      "veth1a",
-      "veth0a"
+      "veth0a",
+      "veth1a"
     ],
-    "Pid": 5540,
+    "Pid": 6768,
     "Pod": "",
     "PodName": "",
     "Ports": [
       {
         "host_ip": "",
         "container_port": 91,
-        "host_port": 35121,
+        "host_port": 34515,
         "range": 1,
         "protocol": "tcp"
       }
     ],
     "Size": null,
-    "StartedAt": 1737712499,
+    "StartedAt": 1737726842,
     "State": "running",
-    "Status": "Up 59 seconds",
-    "Created": 1737712497
+    "Status": "Up About a minute",
+    "Created": 1737726842
   },
   {
     "AutoRemove": false,
@@ -101,7 +101,7 @@
     "Exited": false,
     "ExitedAt": -62135596800,
     "ExitCode": 0,
-    "Id": "7ae41768fb053a16b25ee3596a80bad0cf2422dada9ac862d24af744c8ad0e6e",
+    "Id": "4e7c3daeba15546e7640014b9ee46e389737ed36583e5cb2f8b75a07a82e8523",
     "Image": "localhost/curios-nftables-oci-amd64-v24.11.0:latest",
     "ImageID": "7a3cc502436250357a6664100a600f306334b4d7203890b85b7ea9b8da6b5665",
     "IsInfra": false,
@@ -119,14 +119,14 @@
       
     },
     "Networks": [],
-    "Pid": 5547,
+    "Pid": 6693,
     "Pod": "",
     "PodName": "",
     "Ports": null,
     "Size": null,
-    "StartedAt": 1737712499,
+    "StartedAt": 1737726842,
     "State": "running",
-    "Status": "Up 59 seconds",
-    "Created": 1737712498
+    "Status": "Up About a minute",
+    "Created": 1737726842
   }
 ]

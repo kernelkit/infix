@@ -1,7 +1,7 @@
 [
      {
-          "Id": "7ae41768fb053a16b25ee3596a80bad0cf2422dada9ac862d24af744c8ad0e6e",
-          "Created": "2025-01-24T09:54:58.202221241Z",
+          "Id": "4e7c3daeba15546e7640014b9ee46e389737ed36583e5cb2f8b75a07a82e8523",
+          "Created": "2025-01-24T13:54:02.258266254Z",
           "Path": "/usr/bin/tini",
           "Args": [
                "--",
@@ -16,18 +16,18 @@
                "Restarting": false,
                "OOMKilled": false,
                "Dead": false,
-               "Pid": 5547,
-               "ConmonPid": 5523,
+               "Pid": 6693,
+               "ConmonPid": 6688,
                "ExitCode": 0,
                "Error": "",
-               "StartedAt": "2025-01-24T09:54:59.401153678Z",
+               "StartedAt": "2025-01-24T13:54:02.738587091Z",
                "FinishedAt": "0001-01-01T00:00:00Z",
                "Health": {
                     "Status": "",
                     "FailingStreak": 0,
                     "Log": null
                },
-               "CgroupPath": "/containers/libpod-7ae41768fb053a16b25ee3596a80bad0cf2422dada9ac862d24af744c8ad0e6e",
+               "CgroupPath": "/containers/libpod-4e7c3daeba15546e7640014b9ee46e389737ed36583e5cb2f8b75a07a82e8523",
                "CheckpointedAt": "0001-01-01T00:00:00Z",
                "RestoredAt": "0001-01-01T00:00:00Z"
           },
@@ -36,14 +36,14 @@
           "ImageName": "localhost/curios-nftables-oci-amd64-v24.11.0:latest",
           "Rootfs": "",
           "Pod": "",
-          "ResolvConfPath": "/run/containers/storage/overlay-containers/7ae41768fb053a16b25ee3596a80bad0cf2422dada9ac862d24af744c8ad0e6e/userdata/resolv.conf",
-          "HostnamePath": "/run/containers/storage/overlay-containers/7ae41768fb053a16b25ee3596a80bad0cf2422dada9ac862d24af744c8ad0e6e/userdata/hostname",
-          "HostsPath": "/run/containers/storage/overlay-containers/7ae41768fb053a16b25ee3596a80bad0cf2422dada9ac862d24af744c8ad0e6e/userdata/hosts",
-          "StaticDir": "/var/lib/containers/storage/overlay-containers/7ae41768fb053a16b25ee3596a80bad0cf2422dada9ac862d24af744c8ad0e6e/userdata",
-          "OCIConfigPath": "/var/lib/containers/storage/overlay-containers/7ae41768fb053a16b25ee3596a80bad0cf2422dada9ac862d24af744c8ad0e6e/userdata/config.json",
+          "ResolvConfPath": "/run/containers/storage/overlay-containers/4e7c3daeba15546e7640014b9ee46e389737ed36583e5cb2f8b75a07a82e8523/userdata/resolv.conf",
+          "HostnamePath": "/run/containers/storage/overlay-containers/4e7c3daeba15546e7640014b9ee46e389737ed36583e5cb2f8b75a07a82e8523/userdata/hostname",
+          "HostsPath": "/run/containers/storage/overlay-containers/4e7c3daeba15546e7640014b9ee46e389737ed36583e5cb2f8b75a07a82e8523/userdata/hosts",
+          "StaticDir": "/var/lib/containers/storage/overlay-containers/4e7c3daeba15546e7640014b9ee46e389737ed36583e5cb2f8b75a07a82e8523/userdata",
+          "OCIConfigPath": "/var/lib/containers/storage/overlay-containers/4e7c3daeba15546e7640014b9ee46e389737ed36583e5cb2f8b75a07a82e8523/userdata/config.json",
           "OCIRuntime": "crun",
           "ConmonPidFile": "/run/container:firewall.pid",
-          "PidFile": "/run/containers/storage/overlay-containers/7ae41768fb053a16b25ee3596a80bad0cf2422dada9ac862d24af744c8ad0e6e/userdata/pidfile",
+          "PidFile": "/run/containers/storage/overlay-containers/4e7c3daeba15546e7640014b9ee46e389737ed36583e5cb2f8b75a07a82e8523/userdata/pidfile",
           "Name": "firewall",
           "RestartCount": 0,
           "Driver": "overlay",
@@ -141,9 +141,9 @@
                "Name": "overlay",
                "Data": {
                     "LowerDir": "/var/lib/containers/storage/overlay/5a47f694a11e7abd644d015c96ebe954f5d3099459c7c8dc847b2d8809895f0e/diff",
-                    "MergedDir": "/var/lib/containers/storage/overlay/cbbe39176a42ed0c4a76bf2ac0fa677cf5cbb313bd126497885cdfe6d6256f15/merged",
-                    "UpperDir": "/var/lib/containers/storage/overlay/cbbe39176a42ed0c4a76bf2ac0fa677cf5cbb313bd126497885cdfe6d6256f15/diff",
-                    "WorkDir": "/var/lib/containers/storage/overlay/cbbe39176a42ed0c4a76bf2ac0fa677cf5cbb313bd126497885cdfe6d6256f15/work"
+                    "MergedDir": "/var/lib/containers/storage/overlay/e875e4b43435a968254a293e67ba5ddce3d6a3a889cd8eefa8a5cbf9bf2b857d/merged",
+                    "UpperDir": "/var/lib/containers/storage/overlay/e875e4b43435a968254a293e67ba5ddce3d6a3a889cd8eefa8a5cbf9bf2b857d/diff",
+                    "WorkDir": "/var/lib/containers/storage/overlay/e875e4b43435a968254a293e67ba5ddce3d6a3a889cd8eefa8a5cbf9bf2b857d/work"
                }
           },
           "Mounts": [
@@ -210,9 +210,9 @@
                "OpenStdin": false,
                "StdinOnce": false,
                "Env": [
+                    "container=podman",
                     "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
                     "TERM=xterm",
-                    "container=podman",
                     "HOME=/root",
                     "HOSTNAME=R1"
                ],

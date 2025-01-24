@@ -1,9 +1,9 @@
 name                : gretap-v6
 type                : gretap
-index               : 86
+index               : 22
 mtu                 : 1434
 operational status  : up
-physical address    : 1a:1b:84:dd:ca:2c
+physical address    : 7a:46:13:bd:fa:e6
 ipv4 addresses      :
 ipv6 addresses      :
 local address       : 2001:db8::1

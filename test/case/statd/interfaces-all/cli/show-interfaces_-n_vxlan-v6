@@ -1,9 +1,9 @@
 name                : vxlan-v6
 type                : vxlan
-index               : 88
+index               : 24
 mtu                 : 1500
 operational status  : up
-physical address    : fe:aa:b4:8a:33:1b
+physical address    : 3e:30:c6:a1:71:64
 ipv4 addresses      : 192.168.40.2/24 (static)
 ipv6 addresses      :
 local address       : 2001:db8::100
