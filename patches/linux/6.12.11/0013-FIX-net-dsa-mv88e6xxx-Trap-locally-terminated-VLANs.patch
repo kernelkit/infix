@@ -1,0 +1,164 @@
+From b3b9b97cbe4eebd6cd3d68744e11a1bde5b98a47 Mon Sep 17 00:00:00 2001
+From: Tobias Waldekranz <tobias@waldekranz.com>
+Date: Tue, 26 Nov 2024 19:45:59 +0100
+Subject: [PATCH 13/25] [FIX] net: dsa: mv88e6xxx: Trap locally terminated
+ VLANs
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Addiva Elektronik
+
+Before this change, in a setup like the following, packets assigned to
+VLAN 10 were forwarded between the switch ports, even though the
+configuration dictates that they should only be locally terminated.
+
+ip link add dev br0 up type bridge vlan_filtering 1
+ip link set dev swp1 master br0
+ip link set dev swp2 master br0
+ip link add dev swp1.10 link swp1 up type vlan id 10
+ip link add dev swp2.10 link swp2 up type vlan id 10
+
+swp1.10  br0  swp2.10
+      \ /   \ /
+      swp1  swp2
+
+Therefore, make sure that VLANs that are added to the VTU to terminate
+a VLAN upper interface, rather than to offload bridge VLANs, are
+marked as policy entries. As the VTU policy of user ports is already
+set to TRAP (to ensure proper standalone port operation), this will
+cause all packets assigned to these VLANs to properly terminated.
+
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ drivers/net/dsa/mv88e6xxx/chip.c | 33 ++++++++++++++++++--------------
+ include/net/switchdev.h          |  4 ++++
+ net/dsa/user.c                   |  4 ++++
+ 3 files changed, 27 insertions(+), 14 deletions(-)
+
+diff --git a/drivers/net/dsa/mv88e6xxx/chip.c b/drivers/net/dsa/mv88e6xxx/chip.c
+index 2a46bf5f3da8..785cd3d0e2b1 100644
+--- a/drivers/net/dsa/mv88e6xxx/chip.c
++++ b/drivers/net/dsa/mv88e6xxx/chip.c
+@@ -2631,7 +2631,7 @@ static int mv88e6xxx_port_broadcast_sync(struct mv88e6xxx_chip *chip, int port,
+ }
+ 
+ static int mv88e6xxx_port_vlan_join(struct mv88e6xxx_chip *chip, int port,
+-				    u16 vid, u8 member, bool warn)
++				    u16 vid, u8 member, bool warn, bool policy)
+ {
+ 	const u8 non_member = MV88E6XXX_G1_VTU_DATA_MEMBER_TAG_NON_MEMBER;
+ 	struct mv88e6xxx_vtu_entry vlan;
+@@ -2643,9 +2643,7 @@ static int mv88e6xxx_port_vlan_join(struct mv88e6xxx_chip *chip, int port,
+ 
+ 	if (!vlan.valid) {
+ 		memset(&vlan, 0, sizeof(vlan));
+-
+-		if (vid == MV88E6XXX_VID_STANDALONE)
+-			vlan.policy = true;
++		vlan.policy = policy;
+ 
+ 		err = mv88e6xxx_atu_new(chip, &vlan.fid);
+ 		if (err)
+@@ -2668,6 +2666,9 @@ static int mv88e6xxx_port_vlan_join(struct mv88e6xxx_chip *chip, int port,
+ 		if (err)
+ 			return err;
+ 	} else if (vlan.member[port] != member) {
++		if (vlan.policy != policy)
++			return -EBUSY;
++
+ 		vlan.member[port] = member;
+ 
+ 		err = mv88e6xxx_vtu_loadpurge(chip, &vlan);
+@@ -2714,7 +2715,8 @@ static int mv88e6xxx_port_vlan_add(struct dsa_switch *ds, int port,
+ 
+ 	mv88e6xxx_reg_lock(chip);
+ 
+-	err = mv88e6xxx_port_vlan_join(chip, port, vlan->vid, member, warn);
++	err = mv88e6xxx_port_vlan_join(chip, port, vlan->vid, member, warn,
++				       vlan->from_upper);
+ 	if (err) {
+ 		dev_err(ds->dev, "p%d: failed to add VLAN %d%c\n", port,
+ 			vlan->vid, untagged ? 'u' : 't');
+@@ -3454,14 +3456,17 @@ static int mv88e6xxx_setup_port(struct mv88e6xxx_chip *chip, int port)
+ 	if (err)
+ 		return err;
+ 
+-	/* On chips that support it, set all downstream DSA ports'
+-	 * VLAN policy to TRAP. In combination with loading
+-	 * MV88E6XXX_VID_STANDALONE as a policy entry in the VTU, this
+-	 * provides a better isolation barrier between standalone
+-	 * ports, as the ATU is bypassed on any intermediate switches
+-	 * between the incoming port and the CPU.
++	/* On chips that support it, set all downstream DSA and user
++	 * ports' VLAN policy to TRAP. for downstream DSA ports, in
++	 * combination with loading MV88E6XXX_VID_STANDALONE as a
++	 * policy entry in the VTU, this provides a better isolation
++	 * barrier between standalone ports, as the ATU is bypassed on
++	 * any intermediate switches between the incoming port and the
++	 * CPU. On user ports we need it to support stacked VLAN
++	 * uppers on ports that are simultaneously attached to a VLAN
++	 * filtering bridge.
+ 	 */
+-	if (dsa_is_downstream_port(ds, port) &&
++	if ((dsa_is_downstream_port(ds, port) || dsa_is_user_port(ds, port)) &&
+ 	    chip->info->ops->port_set_policy) {
+ 		err = chip->info->ops->port_set_policy(chip, port,
+ 						MV88E6XXX_POLICY_MAPPING_VTU,
+@@ -3491,7 +3496,7 @@ static int mv88e6xxx_setup_port(struct mv88e6xxx_chip *chip, int port)
+ 	 */
+ 	err = mv88e6xxx_port_vlan_join(chip, port, MV88E6XXX_VID_STANDALONE,
+ 				       MV88E6XXX_G1_VTU_DATA_MEMBER_TAG_UNMODIFIED,
+-				       false);
++				       false, true);
+ 	if (err)
+ 		return err;
+ 
+@@ -3505,7 +3510,7 @@ static int mv88e6xxx_setup_port(struct mv88e6xxx_chip *chip, int port)
+ 	 */
+ 	err = mv88e6xxx_port_vlan_join(chip, port, MV88E6XXX_VID_BRIDGED,
+ 				       MV88E6XXX_G1_VTU_DATA_MEMBER_TAG_UNMODIFIED,
+-				       false);
++				       false, false);
+ 	if (err)
+ 		return err;
+ 
+diff --git a/include/net/switchdev.h b/include/net/switchdev.h
+index 8346b0d29542..764cd3dd4645 100644
+--- a/include/net/switchdev.h
++++ b/include/net/switchdev.h
+@@ -104,6 +104,10 @@ struct switchdev_obj_port_vlan {
+ 	 * Entries with BRIDGE_VLAN_INFO_BRENTRY unset are not notified at all.
+ 	 */
+ 	bool changed;
++
++	/* If set, this VLAN object stems from an upper interface
++	 * being stacked on/removed from the original device. */
++	bool from_upper;
+ };
+ 
+ #define SWITCHDEV_OBJ_PORT_VLAN(OBJ) \
+diff --git a/net/dsa/user.c b/net/dsa/user.c
+index e13fb22e2c2b..f45e313f1dd0 100644
+--- a/net/dsa/user.c
++++ b/net/dsa/user.c
+@@ -1754,6 +1754,8 @@ static int dsa_user_vlan_rx_add_vid(struct net_device *dev, __be16 proto,
+ 		.vid = vid,
+ 		/* This API only allows programming tagged, non-PVID VIDs */
+ 		.flags = 0,
++
++		.from_upper = true,
+ 	};
+ 	struct netlink_ext_ack extack = {0};
+ 	struct dsa_switch *ds = dp->ds;
+@@ -1828,6 +1830,8 @@ static int dsa_user_vlan_rx_kill_vid(struct net_device *dev, __be16 proto,
+ 		.vid = vid,
+ 		/* This API only allows programming tagged, non-PVID VIDs */
+ 		.flags = 0,
++
++		.from_upper = true,
+ 	};
+ 	struct dsa_switch *ds = dp->ds;
+ 	struct netdev_hw_addr *ha;
+-- 
+2.43.0
+

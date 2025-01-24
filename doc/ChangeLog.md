@@ -12,7 +12,8 @@ All notable changes to the project are documented in this file.
  - Add support for more mDNS settings: allow/deny interfaces, acting
    as "reflector" and filtering of reflected services.  Issue #678
  - Review of default `sysctl` settings, issue #829
- - Upgrade Linux kernel to 6.12.3 (LTS)
+ - Upgrade Linux kernel to 6.12.11 (LTS)
+ - Upgrade Buildroot to 2024.02.10 (LTS)
  - Add the possibility to change the boot order for the system with a
    RPC and add boot order to operational datastore.
  - SSH Server is now configurable, issue #441

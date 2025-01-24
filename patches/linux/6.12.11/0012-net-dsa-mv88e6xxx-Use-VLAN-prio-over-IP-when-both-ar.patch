@@ -1,0 +1,65 @@
+From 752cce791dfe31525e3974d6f6419e4be0535343 Mon Sep 17 00:00:00 2001
+From: Tobias Waldekranz <tobias@waldekranz.com>
+Date: Wed, 29 May 2024 13:20:41 +0200
+Subject: [PATCH 12/25] net: dsa: mv88e6xxx: Use VLAN prio over IP when both
+ are available
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Addiva Elektronik
+
+Switch the priority sourcing precdence to prefer VLAN PCP over IP
+DSCP, when both are available.
+
+Ever since the initial commit of this driver, IP priority (DSCP/TOS)
+has instead taken precedence over VLAN priority (PCP) when determining
+a packet's initial queue and frame priority (Qpri/Fpri). There are two
+main reasons for choosing the new default:
+
+1. It matches the chip's hardware default settings and thus follows
+   the principle of least astonishment.
+
+2. In the typical case where a packet initially ingresses a network on
+   a UNI port, the first switch will have the most context available
+   about that flow; and is therefore entrusted to determine the
+   packet's priority. As the packet then moves through the network
+   core over trusted VLAN trunks, the packet should keep its original
+   priority, independent of what inner protocol fields may indicate.
+
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ drivers/net/dsa/mv88e6xxx/chip.c | 11 ++++++++---
+ 1 file changed, 8 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/net/dsa/mv88e6xxx/chip.c b/drivers/net/dsa/mv88e6xxx/chip.c
+index f50ad71bb28b..2a46bf5f3da8 100644
+--- a/drivers/net/dsa/mv88e6xxx/chip.c
++++ b/drivers/net/dsa/mv88e6xxx/chip.c
+@@ -3402,9 +3402,13 @@ static int mv88e6xxx_setup_port(struct mv88e6xxx_chip *chip, int port)
+ 
+ 	/* Port Control: disable Drop-on-Unlock, disable Drop-on-Lock,
+ 	 * disable Header mode, enable IGMP/MLD snooping, disable VLAN
+-	 * tunneling, determine priority by looking at 802.1p and IP
+-	 * priority fields (IP prio has precedence), and set STP state
+-	 * to Forwarding.
++	 * tunneling, and set STP state to Forwarding.
++	 *
++	 * Use the following sources of information, in order of
++	 * precedence, to determine a packet's initial Qpri/Fpri:
++	 * 1. VLAN PCP field, if available
++	 * 2. IPv4/6 DSCP field, if available
++	 * 3. Ingress port defaults
+ 	 *
+ 	 * If this is the CPU link, use DSA or EDSA tagging depending
+ 	 * on which tagging mode was configured.
+@@ -3415,6 +3419,7 @@ static int mv88e6xxx_setup_port(struct mv88e6xxx_chip *chip, int port)
+ 	 * forwarding of unknown unicasts and multicasts.
+ 	 */
+ 	reg = MV88E6185_PORT_CTL0_USE_TAG | MV88E6185_PORT_CTL0_USE_IP |
++		MV88E6XXX_PORT_CTL0_TAG_IF_BOTH |
+ 		MV88E6XXX_PORT_CTL0_STATE_FORWARDING;
+ 	/* Forward any IPv4 IGMP or IPv6 MLD frames received
+ 	 * by a USER port to the CPU port to allow snooping.
+-- 
+2.43.0
+
