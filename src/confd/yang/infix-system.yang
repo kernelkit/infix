@@ -6,6 +6,12 @@ module infix-system {
   import ietf-system {
     prefix sys;
   }
+  import ietf-interfaces {
+    prefix if;
+  }
+  import ietf-yang-types {
+    prefix yang;
+  }
   import iana-timezones {
     prefix iana-tz;
   }
@@ -22,8 +28,12 @@ module infix-system {
   contact      "kernelkit@googlegroups.com";
   description  "Infix augments and deviations to ietf-system.";
 
+  revision 2025-01-25 {
+    description "Add DNS resolver status.";
+    reference "internal";
+  }
   revision 2024-11-27 {
-    description "Add NTP status";
+    description "Add NTP status.";
     reference "internal";
   }
   revision 2024-09-13 {
@@ -305,6 +315,8 @@ module infix-system {
   augment "/sys:system-state" {
     container ntp {
       description "NTP status";
+      config false;
+
       container sources {
         list source {
           key address;
@@ -328,11 +340,80 @@ module infix-system {
             type uint8;
             description "Interval between transmitted NTP messages, expressed as a power of two in seconds";
           }
+        }
+      }
+    }
 
+    container dns-resolver {
+      description "List of active DNS servers";
+      config false;
+
+      container options {
+        description "Resolver options.";
+
+        leaf timeout {
+          description "Number of seconds before resolves tries another server.";
+          type uint8;
+          units "seconds";
+        }
+        leaf attempts {
+          description "Number of times the resolver reties before giving up.";
+          type uint8;
+        }
+      }
+
+      leaf-list search {
+        type inet:domain-name;
+        description "Ordered list of domains to search when resolving a host name.";
+      }
+
+      list server {
+        key "address";
+
+        leaf address {
+          description "IP address of DNS server";
+          type inet:ip-address;
+        }
+
+        leaf origin {
+          description "How DNS server was acquired";
+          type enumeration {
+            enum static {
+              description "Statically configured";
+            }
+            enum dhcp {
+              description "Dynamically acquired via DHCP";
+            }
+          }
+        }
+
+        leaf interface {
+          type if:interface-ref;
+          description "Interface DNS server was learned from, if DHCP";
+        }
+      }
+
+      container statistics {
+        description "DNS resolver statistics";
+
+        leaf cache-size {
+          description "Current number of entries in DNS cache";
+          type yang:counter32;
+        }
+
+        leaf cache-hits {
+          description "Number of successful cache lookups";
+          type yang:counter64;
+        }
+
+        leaf cache-misses {
+          description "Number of failed cache lookups";
+          type yang:counter64;
         }
       }
     }
   }
+
   deviation "/sys:system/sys:hostname" {
     deviate replace {
       type infix-sys:hostname;
