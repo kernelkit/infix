@@ -74,10 +74,11 @@ def main():
         from . import ietf_system
         yang_data = ietf_system.operational()
     else:
-        common.LOG.warning(f"Unsupported model {args.model}", file=sys.stderr)
+        common.LOG.warning("Unsupported model %s", args.model)
         sys.exit(1)
 
     print(json.dumps(yang_data, indent=2))
+
 
 if __name__ == "__main__":
     main()
