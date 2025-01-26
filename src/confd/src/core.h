@@ -208,7 +208,7 @@ int ietf_syslog_init(struct confd *confd);
 
 /* ietf-system.c */
 int ietf_system_init (struct confd *confd);
-int hostnamefmt      (struct confd *confd, const char *fmt, char *buf, size_t len);
+int hostnamefmt      (struct confd *confd, const char *fmt, char *hostnm, size_t hostlen, char *domain, size_t domlen);
 
 /* infix-containers.c */
 #ifdef CONTAINERS

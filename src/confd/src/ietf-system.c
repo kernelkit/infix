@@ -1614,37 +1614,48 @@ static char *get_mac(struct confd *confd, char *mac, size_t len)
  * NOTE: to be forward compatible, any unknown % combination will be silently consumed.
  *       E.g., "example-%z" will become "example-"
  */
-int hostnamefmt(struct confd *confd, const char *fmt, char *buf, size_t len)
+int hostnamefmt(struct confd *confd, const char *fmt, char *hostnm, size_t hostlen,
+		char *domain, size_t domlen)
 {
 	char mac[10];
+	char *ptr;
 	size_t i;
 
 	if (!fmt || !*fmt)
 		return -1;
 
-	memset(buf, 0, len);
+	memset(hostnm, 0, hostlen);
+	if (domain)
+		memset(domain, 0, domlen);
+
+	ptr = strchr(fmt, '.');
+	if (ptr) {
+		*ptr++ = 0;
+		if (domain)
+			strlcpy(domain, ptr, domlen);
+	}
 
 	for (i = 0; i < strlen(fmt); i++) {
 		if (fmt[i] == '%') {
 			switch (fmt[++i]) {
 			case 'i':
-				strlcat(buf, id, len);
+				strlcat(hostnm, id, hostlen);
 				break;
 			case 'h':
-				strlcat(buf, nm, len);
+				strlcat(hostnm, nm, hostlen);
 				break;
 			case 'm':
-				strlcat(buf, get_mac(confd, mac, sizeof(mac)), len);
+				strlcat(hostnm, get_mac(confd, mac, sizeof(mac)), hostlen);
 				break;
 			case '%':
-				strlcat(buf, "%", len);
+				strlcat(hostnm, "%", hostlen);
 				break;
 			default:
 				break; /* Unknown, skip */
 			}
 		} else {
 			char ch[2] = { fmt[i], 0 };
-			strlcat(buf, ch, len);
+			strlcat(hostnm, ch, hostlen);
 		}
 	}
 
@@ -1656,8 +1667,8 @@ static int change_hostname(sr_session_ctx_t *session, uint32_t sub_id, const cha
 {
 	struct confd *confd = (struct confd *)priv;
 	const char *hostip = "127.0.1.1";
-	char  hostnm[65], buf[256];
-	char *fmt;
+	char  hostnm[65], domain[65];
+	char buf[256], *fmt;
 	FILE *nfp, *fp;
 	int err, fd;
 
@@ -1665,17 +1676,24 @@ static int change_hostname(sr_session_ctx_t *session, uint32_t sub_id, const cha
 		return SR_ERR_OK;
 
 	fmt = srx_get_str(session, "%s", xpath);
-	if (!fmt) {
-	fallback:
-		strlcpy(hostnm, nm, sizeof(hostnm));
-	} else if (hostnamefmt(confd, fmt, hostnm, sizeof(hostnm)))
-		goto fallback;
+	if (!fmt)
+		fmt = strdup(nm);
+
+	if (hostnamefmt(confd, fmt, hostnm, sizeof(hostnm), domain, sizeof(domain))) {
+		err = SR_ERR_SYS;
+		goto err;
+	}
 
 	err = sethostname(hostnm, strlen(hostnm));
 	if (err) {
 		ERROR("failed setting hostname");
 		err = SR_ERR_SYS;
 		goto err;
+	}
+
+	if (domain[0] && setdomainname(domain, strlen(domain))) {
+		ERROR("failed setting domain name");
+		/* Not cause for failing this function */
 	}
 
 	fp = fopen(_PATH_HOSTNAME, "w");
@@ -1706,8 +1724,12 @@ static int change_hostname(sr_session_ctx_t *session, uint32_t sub_id, const cha
 	}
 
 	while (fgets(buf, sizeof(buf), fp)) {
-		if (!strncmp(buf, hostip, strlen(hostip)))
-			snprintf(buf, sizeof(buf), "%s\t%s\n", hostip, hostnm);
+		if (!strncmp(buf, hostip, strlen(hostip))) {
+			if (domain[0])
+				snprintf(buf, sizeof(buf), "%s\t%s.%s %s\n", hostip, hostnm, domain, hostnm);
+			else
+				snprintf(buf, sizeof(buf), "%s\t%s\n", hostip, hostnm);
+		}
 		fputs(buf, nfp);
 	}
 

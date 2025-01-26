@@ -67,7 +67,7 @@ static int add(const char *name, struct lyd_node *cif)
 	if ((string = lydx_get_cattr(cif, "hostname"))) {
 		char buf[65];
 
-		if (hostnamefmt(&confd, string, buf, sizeof(buf)))
+		if (hostnamefmt(&confd, string, buf, sizeof(buf), NULL, 0))
 			ERRNO("%s: failed setting custom hostname", name);
 		else
 			fprintf(fp, " --hostname %s", buf);

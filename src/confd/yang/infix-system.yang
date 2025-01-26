@@ -237,7 +237,7 @@ module infix-system {
         + '|%[him]'
         + ')'
         + '([a-zA-Z0-9\-_\.]|%[him])*';
-      length "1..64";
+      length "1..128";
     }
     description "Linux have the same restrictions as IETF, only shorter.
                  Format specifiers are for, default hostname, ID, and the
