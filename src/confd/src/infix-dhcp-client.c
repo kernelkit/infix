@@ -48,25 +48,25 @@ static char *ip_cache(const char *ifname, char *str, size_t len)
 	return str;
 }
 
-static char *hostname(const char *ifname, char *str, size_t len)
+static void hostname(struct lyd_node *cfg, char *str, size_t len)
 {
-	FILE *fp;
-	int pos;
+	struct lyd_node *node;
+	const char *hostname;
+	char *ptr;
 
-	(void)ifname;
+	node = lydx_get_xpathf(cfg, "/ietf-system:system/hostname");
+	if (!node)
+		return;
 
-	fp = fopen("/etc/hostname", "r");
-	if (!fp)
-		return NULL;
+	hostname = lyd_get_value(node);
+	if (!hostname || hostname[0] == 0)
+		return;
 
-	pos = snprintf(str, len, "-x hostname:");
-	if (!fgets(&str[pos], len - pos, fp))
-		str[0] = 0;
-	fclose(fp);
-	chomp(str);
-	strlcat(str, " ", len);
+	ptr = strchr(hostname, '.');
+	if (ptr)
+		*ptr = 0;
 
-	return str;
+	snprintf(str, len, "-x hostname:%s ", hostname);
 }
 
 static char *fqdn(const char *value, char *str, size_t len)
@@ -102,8 +102,8 @@ static char *os_name_version(char *str, size_t len)
 	return str;
 }
 
-static char *compose_option(const char *ifname, const char *id, const char *value,
-			    char *option, size_t len)
+static char *compose_option(struct lyd_node *cfg, const char *ifname, const char *id,
+			    const char *value, char *option, size_t len)
 {
 	if (value) {
 		if (isdigit(id[0])) {
@@ -120,14 +120,16 @@ static char *compose_option(const char *ifname, const char *id, const char *valu
 		} else {
 			if (!strcmp(id, "fqdn"))
 				fqdn(value, option, len);
-			else if (!strcmp(id, "hostname"))
-				snprintf(option, len, "-x %s:%s ", id, value);
-			else
+			else if (!strcmp(id, "hostname")) {
+				if (!strcmp(value, "auto"))
+					hostname(cfg, option, len);
+				else
+					snprintf(option, len, "-x %s:%s ", id, value);
+			} else
 				snprintf(option, len, "-x %s:'\"%s\"' ", id, value);
 		}
 	} else {
 		struct { char *id; char *(*cb)(const char *, char *, size_t); } opt[] = {
-			{ "hostname", hostname },
 			{ "address",  ip_cache },
 			{ "fqdn",     NULL     },
 			{ NULL, NULL }
@@ -149,11 +151,12 @@ static char *compose_option(const char *ifname, const char *id, const char *valu
 	return option;
 }
 
-static char *compose_options(const char *ifname, char **options, const char *id, const char *value)
+static char *compose_options(struct lyd_node *cfg, const char *ifname, char **options,
+			     const char *id, const char *value)
 {
 	char opt[300];
 
-	compose_option(ifname, id, value, opt, sizeof(opt));
+	compose_option(cfg, ifname, id, value, opt, sizeof(opt));
 	if (*options) {
 		char *opts;
 
@@ -180,7 +183,7 @@ static char *dhcp_options(const char *ifname, struct lyd_node *cfg)
 		const char *id = lydx_get_cattr(option, "id");
 		const char *val = lydx_get_cattr(option, "value");
 
-		options = compose_options(ifname, &options, id, val);
+		options = compose_options(cfg, ifname, &options, id, val);
 	}
 
 	if (!options) {
@@ -190,7 +193,7 @@ static char *dhcp_options(const char *ifname, struct lyd_node *cfg)
 		};
 
 		for (size_t i = 0; i < NELEMS(defaults); i++)
-			options = compose_options(ifname, &options, defaults[i], NULL);
+			options = compose_options(cfg, ifname, &options, defaults[i], NULL);
 	}
 
 	return options ?: strdup("-O subnet -O router -O domain");
@@ -257,9 +260,9 @@ static int change(sr_session_ctx_t *session, uint32_t sub_id, const char *module
 		  const char *xpath, sr_event_t event, unsigned request_id, void *_confd)
 {
 	struct lyd_node *global, *diff, *cifs, *difs, *cif, *dif;
-	sr_error_t       err = 0;
-	sr_data_t       *cfg;
-	int              ena = 0;
+	sr_error_t err = 0;
+	sr_data_t *cfg;
+	int ena = 0;
 
 	switch (event) {
 	case SR_EV_DONE:
@@ -270,7 +273,7 @@ static int change(sr_session_ctx_t *session, uint32_t sub_id, const char *module
 		return SR_ERR_OK;
 	}
 
-	err = sr_get_data(session, XPATH "//.", 0, 0, 0, &cfg);
+	err = sr_get_data(session, "//.", 0, 0, 0, &cfg);
 	if (err || !cfg)
 		goto err_abandon;
 
