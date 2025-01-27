@@ -8,7 +8,7 @@ All notable changes to the project are documented in this file.
 
 ### Changes
 
- - NTP client status is now availible in YANG
+ - NTP client status is now available in YANG
  - Add support for more mDNS settings: allow/deny interfaces, acting
    as "reflector" and filtering of reflected services.  Issue #678
  - Review of default `sysctl` settings, issue #829
@@ -25,7 +25,7 @@ All notable changes to the project are documented in this file.
 ### Fixes
 
  - Minor cleanup of Networking Guide
-
+ - Fix memory leaks in confd
 
 [v24.11.1][] - 2024-11-29
 -------------------------

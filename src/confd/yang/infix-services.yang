@@ -148,7 +148,18 @@ module infix-services {
 
     list listen {
       key name;
+      description "List of IP addresses and ports the SSH daemon should listen on.
+
+         Each entry represents a unique listening socket configuration
+         that allows incoming SSH connections. Multiple entries can be
+         configured to listen on different addresses or ports.";
       leaf name {
+        description "A unique identifier for this listening configuration.
+
+           This name helps administrators distinguish between multiple
+           listening configurations. It can reflect the purpose or
+           network segment of the listener, e.g., 'management',
+           'internal', or 'public'.";
         type string;
       }
 
@@ -163,6 +174,9 @@ module infix-services {
       leaf port {
         description "Local port for SSH daemon to listen on.";
         type inet:port-number;
+      }
+      must "port and address" {
+        error-message "Both address and port must be configured";
       }
     }
   }
