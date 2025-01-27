@@ -93,6 +93,27 @@
           }
         ]
       }
+    },
+    "infix-system:dns-resolver": {
+      "options": {
+        "timeout": 3,
+        "attempts": 5
+      },
+      "server": [
+        {
+          "address": "1.2.3.4",
+          "origin": "static"
+        },
+        {
+          "address": "192.168.2.1",
+          "origin": "dhcp",
+          "interface": "e7"
+        }
+      ],
+      "search": [
+        "example.com",
+        "kernelkit.org"
+      ]
     }
   }
 }
