@@ -16,7 +16,7 @@
 #include <srx/common.h>
 #define SYSREPO_TIMEOUT 60000 /* 60s, this is the timeout we use in our frontends. */
 
-sr_subscription_ctx_t *sub;
+sr_subscription_ctx_t *sub = NULL;
 sr_conn_ctx_t *conn;
 
 #define TEST_CONFIG_PATH "/etc/test-config.cfg"
@@ -29,28 +29,35 @@ static int test_reset(sr_session_ctx_t *session, uint32_t sub_id, const char *pa
 {
 	int rc = SR_ERR_OK;
 	struct lyd_node *tree = NULL;
-	const struct ly_ctx *ly_ctx;
+	const struct ly_ctx *ctx;
 	sr_conn_ctx_t *conn = sr_session_get_connection(session);
 
-	ly_ctx = sr_acquire_context(conn);
-	rc = lyd_parse_data_path(ly_ctx, TEST_CONFIG_PATH, LYD_JSON, LYD_PARSE_STRICT, LYD_VALIDATE_NO_STATE, &tree);
+	if (!conn)
+		return SR_ERR_INTERNAL;
+
+	ctx = sr_acquire_context(conn);
+	if (!ctx)
+		return SR_ERR_INTERNAL;
+
+	rc = lyd_parse_data_path(ctx, TEST_CONFIG_PATH, LYD_JSON, LYD_PARSE_STRICT, LYD_VALIDATE_NO_STATE, &tree);
 	if (rc != LY_SUCCESS)
 	{
 		ERROR("Failed to parse new configuration data");
-		return SR_ERR_INTERNAL;
+		goto release_ctx;
 	}
 	rc = sr_session_switch_ds(session, SR_DS_RUNNING);
 	if(rc)
 	{
 		ERROR("Failed to switch datastore");
-		goto out;
+		goto release_ctx;
 	}
 	rc = sr_replace_config(session, NULL, tree, SYSREPO_TIMEOUT);
 	if (rc) {
 		ERROR("Failed to replace configuration: %s", sr_strerror(rc));
-		goto out;
+		goto release_ctx;
 	}
-out:
+release_ctx:
+	sr_release_context(conn);
 	return rc;
 }
 
@@ -88,6 +95,6 @@ out:
 
 void sr_plugin_cleanup_cb(sr_session_ctx_t *session, void *priv)
 {
-	if (fexist("/mnt/aux/test-mode"))
+	if (sub)
 		sr_unsubscribe(sub);
 }
