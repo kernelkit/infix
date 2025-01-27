@@ -59,6 +59,19 @@ class Host(abc.ABC):
         """
         pass
 
+    def read_multiline(self, path, default=None):
+        """Get lines of content from path
+
+        Returns a list of lines from the file, or default if not readable.
+        """
+        try:
+            txt = self.read(path)
+            return txt.splitlines() if txt is not None else default
+        except:
+            if default is not None:
+                return default
+            raise
+
     def read_json(self, path, default=None):
         """Get JSON object from path """
         try:
@@ -92,7 +105,7 @@ class Localhost(Host):
 
     def read(self, path):
         try:
-            with open(path, 'r') as f:
+            with open(path, 'r', encoding='utf-8') as f:
                 data = f.read().strip()
                 return data
         except FileNotFoundError:
@@ -116,7 +129,8 @@ class Remotehost(Localhost):
     def now(self):
         timestamp = self._run(["date", "-u", "+%s"], default=None, log=True)
         if self.capdir:
-            with open(os.path.join(self.capdir, "timestamp"), "w") as f:
+            path = os.path.join(self.capdir, "timestamp")
+            with open(path, "w", encoding='utf-8') as f:
                 f.write(f"{timestamp}\n")
             pass
 
@@ -127,7 +141,7 @@ class Remotehost(Localhost):
         # arguments to a single string. Therefore, we must quoute
         # arguments containing spaces so that commands like `vtysh -c
         # "show ip route json"` work as expected.
-        cmd = " ".join([ arg if " " not in arg else f"\"{arg}\"" for arg in cmd ])
+        cmd = " ".join([arg if " " not in arg else f"\"{arg}\"" for arg in cmd])
         return super().run(self.prefix + (cmd,), default, log)
 
     def run(self, cmd, default=None, log=True):
@@ -136,12 +150,12 @@ class Remotehost(Localhost):
 
         storedpath = os.path.join(self.capdir, "run", Replayhost.SlugOf(cmd))
         if os.path.exists(storedpath):
-            with open(storedpath) as f:
+            with open(storedpath, 'r', encoding='utf-8') as f:
                 return f.read()
 
         out = self._run(cmd, default, log)
-        with open(storedpath, "w") as f:
-                f.write(out)
+        with open(storedpath, "w", encoding='utf-8') as f:
+            f.write(out)
 
         return out
 
@@ -150,8 +164,9 @@ class Remotehost(Localhost):
 
         if self.capdir:
             dirname = os.path.join(self.capdir, "rootfs", os.path.dirname(path[1:]))
+            filname = os.path.join(self.capdir, "rootfs", path[1:])
             os.makedirs(dirname, exist_ok=True)
-            with open(os.path.join(self.capdir, "rootfs", path[1:]), "w") as f:
+            with open(filname, "w", encoding='utf-8') as f:
                 f.write(out)
 
         return out
@@ -165,7 +180,8 @@ class Replayhost(Host):
         self.replaydir = replaydir
 
     def now(self):
-        with open(os.path.join(self.replaydir, "timestamp")) as f:
+        path = os.path.join(self.replaydir, "timestamp")
+        with open(path, 'r', encoding='utf-8') as f:
             timestamp = f.read().strip()
             return datetime.datetime.fromtimestamp(int(timestamp), datetime.timezone.utc)
 
@@ -173,7 +189,7 @@ class Replayhost(Host):
         path = os.path.join(self.replaydir, "run", Replayhost.SlugOf(cmd))
 
         try:
-            with open(path, 'r') as f:
+            with open(path, 'r', encoding='utf-8') as f:
                 return f.read()
         except:
             if default is not None:
@@ -186,7 +202,7 @@ class Replayhost(Host):
     def read(self, path):
         path = os.path.join(self.replaydir, "rootfs", path[1:])
         try:
-            with open(path, 'r') as f:
+            with open(path, 'r', encoding='utf-8') as f:
                 return f.read()
         except FileNotFoundError:
             # This is considered OK
