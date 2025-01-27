@@ -11,9 +11,10 @@ specific string followed by the last three octets of the system base MAC
 address, e.g., `switch-12-34-56`.  An example of how to change the
 hostname is included below.
 
-> **Note:** when issuing `leave` to activate your changes, remember to
-> also save your settings, `copy running-config startup-config`.  See
-> the [CLI Introduction](cli/introduction.md) for a background.
+> [!NOTE]
+> When issuing `leave` to activate your changes, remember to also save
+> your settings, `copy running-config startup-config`.  See the [CLI
+> Introduction](cli/introduction.md) for a background.
 
 
 ## Changing Password
@@ -39,7 +40,8 @@ the `do password encrypt` command.  This launches the admin-exec command
 to hash, and optionally salt, your password.  This encrypted string can
 then be used with `set password ...`.
 
-> **Tip:** if you are having trouble thinking of a password, Infix has a
+> [!TIP]
+> If you are having trouble thinking of a password, there is a nifty
 > `password generate` command in admin-exec context which generates
 > random passwords using the UNIX command `pwgen`.  Use the `do` prefix
 > when inside any configuration context to access admin-exec commands.
@@ -65,9 +67,10 @@ key-data AAAAB3NzaC1yc2EAAAADAQABAAABgQC8iBL42yeMBioFay7lty1C4ZDTHcHyo739gc91rTT
 admin@host:/config/system/authentication/user/admin/authorized-key/example@host/> leave
 ```
 
-> **Note:** the `ssh-keygen` program already base64 encodes the public
-> key data, so there is no need to use the `text-editor` command, `set`
-> does the job.
+> [!NOTE]
+> The `ssh-keygen` program already base64 encodes the public key data,
+> so there is no need to use the `text-editor` command, `set` does the
+> job.
 
 
 ## Multiple Users
@@ -145,7 +148,7 @@ is committed by issuing the `leave` command.
 admin@host:/config/> edit system
 admin@host:/config/system/> set hostname example
 admin@host:/config/system/> leave
-admin@host:/>
+admin@example:/>
 ```
 
 The hostname is advertised over mDNS-SD in the `.local` domain.  If
@@ -154,8 +157,24 @@ case, mDNS will advertise a "uniqified" variant, usually suffixing with
 an index, e.g., `example-1.local`.  Use an mDNS browser to scan for
 available devices on your LAN.
 
-> **Note:** critical services like syslog, mDNS, LLDP, and similar that
-> advertise the hostname, are restarted when the hostname is changed.
+In some cases you may want to set the device's *domain name* as well.
+This is handled the same way:
+
+```
+admin@host:/config/> edit system
+admin@host:/config/system/> set hostname foo.example.com
+admin@host:/config/system/> leave
+admin@foo:/>
+```
+
+Both host and domain name are stored in the system files `/etc/hosts`
+and `/etc/hostname`.  The latter is exclusively for the host name.  The
+domain *may* be used by the system DHCP server when handing out leases
+to clients, it is up to the clients to request the domain name *option*.
+
+> [!NOTE]
+> Critical services like syslog, mDNS, LLDP, and similar that advertise
+> the hostname, are restarted when the hostname is changed.
 
 
 ## Changing Login Banner
@@ -164,8 +183,9 @@ The `motd-banner` setting is an Infix augment and an example of a
 `binary` type setting that can be changed interactively with the
 built-in [`text-editor` command](cli/text-editor.md).
 
-> **Tip:** see the next section for how to change the editor used
-> to something you may be more familiar with.
+> [!TIP]
+> See the next section for how to change the editor used to something
+> you may be more familiar with.
 
 ```
 admin@host:/config/> edit system
@@ -196,24 +216,55 @@ admin@host:/config/system/> leave
 admin@host:/>
 ```
 
-> **Note:** as usual, configuration changes only take effect after
-> issuing the `leave` command.  I.e., you must change the editor first,
-> and then re-enter configure context to use your editor of choice.
+> [!IMPORTANT]
+> Configuration changes only take effect after issuing the `leave`
+> command.  I.e., you must change the editor first, and then re-enter
+> configure context to use your editor of choice.
+
+
+## DNS Resolver Configuration
+
+The system supports both static and dynamic (DHCP) DNS setup.  The
+locally configured (static) server is preferred over any acquired
+from a DHCP client.
+
+```
+admin@host:/> configure
+admin@host:/config/> edit system dns-resolver
+admin@host:/config/system/dns-resolver/> set server google udp-and-tcp address 8.8.8.8
+admin@host:/config/system/dns-resolver/> show
+server google {
+  udp-and-tcp {
+    address 8.8.8.8;
+  }
+}
+admin@host:/config/system/dns-resolver/> leave
+```
+
+It is also possible to configure resolver options like timeout and
+retry attempts.  See the YANG model for details, or use the built-in
+help system in the CLI.
+
+> [!NOTE]
+> When acting as a DHCP server and DNS proxy for other devices, any
+> local DNS server configured here is automatically used as upstream DNS
+> server.
 
 
 ## NTP Client Configuration
 
-Below is an example configuration for enabling NTP
-with a specific server and the `iburst` option for faster initial
-synchronization.
+Below is an example configuration for enabling NTP with a specific
+server and the `iburst` option for faster initial synchronization.
 
 ```
 admin@host:/> configure
-admin@host:/config/> set system ntp enabled
-admin@host:/config/> set system ntp server ntp-pool
-admin@host:/config/> set system ntp server ntp-pool udp address pool.ntp.org
-admin@host:/config/> set system ntp server ntp-pool iburst
-admin@host:/config/> set system ntp server ntp-pool prefer
+admin@host:/config/> edit system ntp
+admin@host:/config/system/ntp/> set enabled
+admin@host:/config/system/ntp/> set server ntp-pool
+admin@host:/config/system/ntp/> set server ntp-pool udp address pool.ntp.org
+admin@host:/config/system/ntp/> set server ntp-pool iburst
+admin@host:/config/system/ntp/> set server ntp-pool prefer
+admin@host:/config/system/ntp/> leave
 ```
 
 This configuration enables the NTP client and sets the NTP server to
@@ -226,6 +277,7 @@ based on several factors, such as network delay, stratum, and other
 metrics (default config).
 * `prefer true`: The NTP client will try to use the preferred server
 as the primary source unless it becomes unreachable or unusable.
+
 
 ### Show NTP Sources
 
@@ -242,8 +294,9 @@ ADDRESS         MODE         STATE            STRATUM POLL-INTERVAL
 ```
 
 ### Show NTP Status
-To check the status of NTP synchronization (only availble in CLI), use the following command:
 
+To check the status of NTP synchronization (only availble in CLI), use
+the following command:
 
 ```
 admin@host:/> show ntp tracking
@@ -266,11 +319,11 @@ admin@host:/>
 This output provides detailed information about the NTP status, including
 reference ID, stratum, time offsets, frequency, and root delay.
 
-
-> The system uses `chronyd` for Network Time Protocol (NTP)
-> synchronization. The output shown here is best explained in the
-> [Chrony documentation](https://chrony-project.org/doc/4.6.1/chronyc.html).
+> [!TIP]
+> The system uses `chronyd` Network Time Protocol (NTP) daemon.  The
+> output shown here is best explained in the [Chrony documentation][4].
 
 [1]: https://www.rfc-editor.org/rfc/rfc7317
 [2]: https://github.com/kernelkit/infix/blob/main/src/confd/yang/infix-system%402024-02-29.yang
 [3]: https://www.rfc-editor.org/rfc/rfc8341
+[4]: https://chrony-project.org/doc/4.6.1/chronyc.html

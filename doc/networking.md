@@ -664,31 +664,31 @@ are listed below.  Configurable options can be disabled on a per client
 interface basis, some options, like `clientid` and option 81, are
 possible to set the value of as well.
 
-| **Opt** | **Name**         | **Cfg** | **Description**                                     |
-|---------|------------------|---------|-----------------------------------------------------|
-| 1       | `subnet`         | No      | Request IP address and netmask                      |
-| 3       | `router`         | Yes     | Default route(s), see also option 121 and 249       |
-| 6       | `dns`            | Yes     | DNS server(s), static ones take precedence          |
-| 12      | `hostname`       | Yes     | DHCP cannot set hostname, only for informing server |
-| 15      | `domain`         | Yes     | Default domain name, for name resolution            |
-| 28      | `broadcast`      | Yes     | Broadcast address, calculated if disabled           |
-| 42      | `ntpsrv`         | Yes     | NTP server(s), static ones take precedence          |
-| 50      | `address`        | Yes     | Request (previously cached) address                 |
-| 61      | `clientid`       | Yes     | Default MAC address (and option 12)                 |
-| 81      | `fqdn`           | Yes     | Similar to option 12, request FQDN update in DNS    |
-| 119     | `search`         | Yes     | Request domain search list                          |
-| 121     | `staticroutes`   | Yes     | Classless static routes                             |
-| 249     | `msstaticroutes` | Yes     | Microsoft static route                              |
-|         |                  |         |                                                     |
+| **Opt** | **Name**                    | **Cfg** | **Description**                                     |
+|---------|-----------------------------|---------|-----------------------------------------------------|
+| 1       | `netmask`                   | No      | Request IP address and netmask                      |
+| 3       | `router`                    | Yes     | Default route(s), see also option 121 and 249       |
+| 6       | `dns-server`                | Yes     | DNS server(s), static ones take precedence          |
+| 12      | `hostname`                  | Yes     | DHCP cannot set hostname, only for informing server |
+| 15      | `domain`                    | Yes     | Default domain name, for name resolution            |
+| 28      | `broadcast`                 | Yes     | Broadcast address, calculated if disabled           |
+| 42      | `ntp-server`                | Yes     | NTP server(s), static ones take precedence          |
+| 50      | `address`                   | Yes     | Request (previously cached) address                 |
+| 61      | `client-id`                 | Yes     | Default MAC address (and option 12)                 |
+| 81      | `fqdn`                      | Yes     | Similar to option 12, request FQDN update in DNS    |
+| 119     | `search`                    | Yes     | Request domain search list                          |
+| 121     | `classless-static-route`    | Yes     | Classless static routes                             |
+| 249     | `ms-classless-static-route` | Yes     | Microsoft static route, same as option 121          |
+|         |                             |         |                                                     |
 
-**Default:** `router`, `dns`, `domain`, `broadcast`, `ntpsrv`, `search`,
-             `address`, `staticroutes`, `msstaticroutes`
+**Default:** `router`, `dns-server`, `domain`, `broadcast`, `ntp-server`, `search`,
+             `address`, `classless-static-route`, `ms-classless-static-route`
 
 When configuring a DHCP client, ensure that the NTP client is enabled
-for the `ntpsrv` DHCP option to be processed correctly. If the NTP
+for the `ntp-server` DHCP option to be processed correctly.  If the NTP
 client is not enabled, any NTP servers provided by the DHCP server will
-be ignored. For details on how to enable the NTP client, see the 
-[NTP Client Configuration](system.md#ntp-client-configuration) section.
+be ignored. For details on how to enable the NTP client, see the [NTP
+Client Configuration](system.md#ntp-client-configuration) section.
 
 > [!IMPORTANT]
 > Per [RFC3442][4], if the DHCP server returns both a Classless Static
@@ -781,7 +781,6 @@ will be used, otherwise it falls back to the default algorithm.
     admin@example:/> configure
     admin@example:/config/> edit dhcp-client
     admin@example:/config/dhcp-client/> set client-if eth0
-    admin@example:/config/dhcp-client/> set enabled true
     admin@example:/config/dhcp-client/> leave
     admin@example:/> show interfaces
     INTERFACE       PROTOCOL   STATE       DATA
