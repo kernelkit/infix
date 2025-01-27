@@ -1,0 +1,28 @@
+=== LLDP enable disable
+==== Description
+Verify that LLDP can be enabled and disabled. 
+Operation and non-operation are confirmed using tcpdump.
+
+==== Topology
+ifdef::topdoc[]
+image::{topdoc}../../test/case/infix_services/lldp_enable_disable/topology.svg[LLDP enable disable topology]
+endif::topdoc[]
+ifndef::topdoc[]
+ifdef::testgroup[]
+image::lldp_enable_disable/topology.svg[LLDP enable disable topology]
+endif::testgroup[]
+ifndef::testgroup[]
+image::topology.svg[LLDP enable disable topology]
+endif::testgroup[]
+endif::topdoc[]
+==== Test sequence
+. Set up topology and attach to target DUT
+. Enable target interface and disable LLDP
+. Enable LLDP
+. Verify LLDP packets arrival on host:data
+. Disable LLDP
+. Verify no LLDP packets on host:data
+
+
+<<<
+

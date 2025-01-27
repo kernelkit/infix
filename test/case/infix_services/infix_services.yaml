@@ -1,11 +1,10 @@
 ---
+- name: lldp_enable_disable
+  case: lldp_enable_disable/test.py
 
-# Disabled, see #654 for more information. Once that issue is fixed,
-# we should split this test into service_mdns and service_lldp, where
-# the LLDP test can be skipped if there are no links available that
-# are transparent with respect to IEEE link-local multicast.
-#- name: services_basic
-#  case: services_basic/test.py
+
+- name: mdns_enable_disable
+  case: mdns_enable_disable/test.py
 
 - name: mdns_allow_deny
   case: mdns_allow_deny/test.py

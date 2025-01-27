@@ -18,6 +18,6 @@ graph "1x2" {
 	    requires="infix",
 	];
 
-	host:data -- target:data [color=black, fontcolor=black, fontsize=12, taillabel="10.0.0.1/24", headlabel="10.0.0.10/24"]
 	host:mgmt -- target:mgmt [requires="mgmt", color="lightgrey"]
+	host:data -- target:data [color=black, fontcolor=black, fontsize=12, taillabel="10.0.0.1/24", headlabel="10.0.0.10/24", requires="ieee-mc"]
 }

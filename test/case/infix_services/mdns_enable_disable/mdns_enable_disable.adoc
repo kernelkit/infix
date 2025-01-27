@@ -1,0 +1,28 @@
+=== mDNS enable disable
+==== Description
+Verify that mDNS can be enabled and disabled. 
+Operation and non-operation are confirmed using tcpdump.
+
+==== Topology
+ifdef::topdoc[]
+image::{topdoc}../../test/case/infix_services/mdns_enable_disable/topology.svg[mDNS enable disable topology]
+endif::topdoc[]
+ifndef::topdoc[]
+ifdef::testgroup[]
+image::mdns_enable_disable/topology.svg[mDNS enable disable topology]
+endif::testgroup[]
+ifndef::testgroup[]
+image::topology.svg[mDNS enable disable topology]
+endif::testgroup[]
+endif::topdoc[]
+==== Test sequence
+. Set up topology and attach to target DUT
+. Set IPv4 address 10.0.0.10/24 on target:data and disable mDNS
+. Enable mDNS
+. Verify on host:data there are packets from 10.0.0.10:5354 (mDNS)
+. Disable mDNS
+. Verify on host:data there are no packets from 10.0.0.10:5354 (mDNS)
+
+
+<<<
+
