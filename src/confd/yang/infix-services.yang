@@ -175,6 +175,9 @@ module infix-services {
         description "Local port for SSH daemon to listen on.";
         type inet:port-number;
       }
+      must "port and address" {
+        error-message "Both address and port must be configured";
+      }
     }
   }
 
