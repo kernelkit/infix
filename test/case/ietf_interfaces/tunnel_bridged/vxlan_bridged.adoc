@@ -1,6 +1,6 @@
 === VXLAN bridged with physical interface
 ==== Description
-Undefined
+Test that vxlan works as it should and that it possible to bridge it.
 
 ==== Topology
 ifdef::topdoc[]
