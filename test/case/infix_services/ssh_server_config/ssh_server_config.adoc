@@ -20,6 +20,7 @@ endif::topdoc[]
 ==== Test sequence
 . Setup topology and attach to the target
 . Configure SSH server
+. Wait until SSH server is ready to accept connections
 . Verify SSH public keys
 . Verify it is not possible to access SSH on other IP address
 . Disable SSH server

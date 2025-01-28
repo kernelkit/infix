@@ -33,11 +33,15 @@ endif::topdoc[]
 . Configure VETH pair
 . Configure bridge br-D and associated interfaces
 . Configure br-Q and associated interfaces
+. Configure GRE Tunnels
+. Configure VxLAN Tunnels
 . Verify interface 'lo' is of type loopback
 . Verify interfaces 'ethX' and 'ethQ' are of type 'ethernet' (or etherlike if running Qemu)
 . Verify interfaces 'br-0', 'br-X', 'br-D' and 'br-Q' are of type 'bridge'
 . Verify interfaces 'veth0a' and 'veth0b' are of type 'veth'
 . Verify interfaces 'veth0a.20', 'ethQ.10', 'ethX.30', 'ethQ.10' and 'br-Q.40' are of type 'vlan'
+. Verify GRE interfaces 'gre-v4', 'gre-v6', 'gretap-v4' and 'gretap-v6'
+. Verify VxLAN interfaces 'vxlan-v4' and 'vxlan-v6'
 
 
 <<<

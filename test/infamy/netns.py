@@ -46,9 +46,9 @@ class IsolatedMacVlans:
         for ns in list(IsolatedMacVlans.Instances):
             ns.stop()
 
-    def __init__(self, ifmap, lo=True):
+    def __init__(self, ifmap, lo=True, set_up=True):
         self.sleeper = None
-        self.ifmap, self.lo = ifmap, lo
+        self.ifmap, self.lo, self.set_up = ifmap, lo, set_up
         self.ping_timeout = env.ENV.attr("ping_timeout", 5)
 
     def start(self):
@@ -70,6 +70,10 @@ class IsolatedMacVlans:
                     sleep 0.1
                 done
                 """)
+
+                if self.set_up:
+                    self.run(["ip", "link", "set", "dev", ifname, "up"])
+                    
         except Exception as e:
             self.__exit__(None, None, None)
             raise e
@@ -220,7 +224,6 @@ class IsolatedMacVlans:
 
         self.runsh(f"""
             set -ex
-            ip link set dev {ifname} up
             ip -{p} addr add {addr}/{prefix_length} dev {ifname}
             """, check=True)
 
@@ -296,9 +299,9 @@ class IsolatedMacVlan(IsolatedMacVlans):
     eth0 eth1 eth2 eth3
 
     """
-    def __init__(self, parent, ifname="iface", lo=True):
+    def __init__(self, parent, ifname="iface", lo=True, set_up=True):
         self._ifname = ifname
-        return super().__init__(ifmap={ parent: ifname }, lo=lo)
+        return super().__init__(ifmap={ parent: ifname }, lo=lo, set_up=set_up)
 
     def addip(self, addr, prefix_length=24, proto="ipv4"):
         return super().addip(ifname=self._ifname, addr=addr, prefix_length=prefix_length, proto=proto)

@@ -17,6 +17,7 @@ endif::topdoc[]
 ==== Test sequence
 . Connect to the target device
 . Create a guest user on the target device
+. Wait until SSH server is ready to accept connections
 . Write private key to a temporary file
 . Verify it is possible to fetch syslog data using public key
 
