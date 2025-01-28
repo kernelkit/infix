@@ -218,7 +218,7 @@ module infix-services {
       description "IETF RESTCONF Server.";
 
       leaf enabled {
-        description "Enable or disable https://device.local/resconf API endpoint.";
+        description "Enable or disable RESTCONF server.";
         type boolean;
       }
     }
