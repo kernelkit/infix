@@ -70,6 +70,7 @@ options:
   -p            Show plain output, no bells or whistles
 
 commands:
+  dhcp          Show DHCP server
   port PORT     Show port configuration and link information
   ports         Show ports available for bridging
   vlans         Show port groups in bridge
@@ -86,6 +87,41 @@ commands:
   system        Show OS details
   version       Show OS verson
 EOF
+}
+
+is_dhcp_running()
+{
+    sysrepocfg -X -f json -m infix-dhcp-server | jq -r '
+        ."infix-dhcp-server:dhcp-server".enabled as $global |
+        if ."infix-dhcp-server:dhcp-server".subnet? then
+                (."infix-dhcp-server:dhcp-server".subnet[] |
+                select(.enabled != false)) |
+                if $global != false and . then "true" else "false" end
+        else "false" end
+    ' 2>/dev/null | grep -q true
+}
+
+dhcp()
+{
+    if ! is_dhcp_running; then
+	echo "DHCP server not enabled."
+	exit 0
+    fi
+
+    case $1 in
+	detail)
+	    sysrepocfg -f json -X -d operational -m infix-dhcp-server | \
+		jq -C .
+	    ;;
+	stat*)
+	    sysrepocfg -f json -X -d operational -m infix-dhcp-server | \
+		/usr/libexec/statd/cli-pretty "show-dhcp-server" -s
+	    ;;
+	*)
+	    sysrepocfg -f json -X -d operational -m infix-dhcp-server | \
+		/usr/libexec/statd/cli-pretty "show-dhcp-server"
+	    ;;
+    esac
 }
 
 # Usage 1: show port eth0
@@ -294,6 +330,9 @@ fi
 case $cmd in
     help)
 	usage
+	;;
+    dhcp | dhcp-server)
+	dhcp $*
 	;;
     port*)
 	ports $*

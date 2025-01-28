@@ -303,24 +303,15 @@
   </COMMAND>
 
   <COMMAND name="dhcp-server" help="Show DHCP server status">
-    <ACTION sym="script">
-      sysrepocfg -f json -X -d operational -m infix-dhcp-server | \
-        /usr/libexec/statd/cli-pretty "show-dhcp-server"
-    </ACTION>
+    <ACTION sym="script" in="tty" out="tty" interrupt="true">show dhcp</ACTION>
 
     <SWITCH name="optional" min="0">
       <COMMAND name="statistics" help="Show DHCP server statistics">
-	<ACTION sym="script">
-	  sysrepocfg -f json -X -d operational -m infix-dhcp-server | \
-	    /usr/libexec/statd/cli-pretty "show-dhcp-server" -s
-	</ACTION>
+	<ACTION sym="script" in="tty" out="tty" interrupt="true">show dhcp stat</ACTION>
       </COMMAND>
 
       <COMMAND name="detailed" help="Detailed (full operational) output">
-	<ACTION sym="script">
-	  sysrepocfg -f json -X -d operational -m infix-dhcp-server | \
-	    jq -C .
-	</ACTION>
+	<ACTION sym="script" in="tty" out="tty" interrupt="true">show dhcp detail</ACTION>
       </COMMAND>
 
     </SWITCH>
