@@ -1,5 +1,6 @@
 #!/bin/sh
-# Rename DHCP client option attribute 'name' -> 'id' to make DHCP server.
+# Rename DHCP client option attribute 'name' -> 'id'
+# to match the DHCP server nomenclature.
 
 file=$1
 temp=${file}.tmp
