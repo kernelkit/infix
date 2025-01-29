@@ -128,5 +128,9 @@ SD-card partition.
 > If possible, serve `infix-aarch64.pkg` over HTTP instead, as
 > libcurl's TFTP implementation is quite slow.
 
+## Console Port
+
+The console port runs at 115200 baud, 8N1.
+
 [release]: https://github.com/kernelkit/infix/releases
 [mvebu64boot]: https://github.com/addiva-elektronik/mvebu64boot

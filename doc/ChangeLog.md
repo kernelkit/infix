@@ -21,6 +21,8 @@ All notable changes to the project are documented in this file.
  - Support for GRE/GRETAP tunnels
  - Support for STP/RSTP on bridges
  - Support for VXLAN tunnels
+ - Add documentation on management via SSH, Web (RESTCONF, Web
+   Console), and Console Port, issue #787
 
 ### Fixes
 

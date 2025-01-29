@@ -6,7 +6,7 @@ project on GitHub, and Discord, see <https://github.com/kernelkit>:
 
 Support contracts, development of new features, fast-tracking of reviews
 and contributions, customer branding of Infix, and even customer specific
-features for dedicated products is provided by Addiva Elektronik.
+features for dedicated products is provided by _Wires_.
 
-&nbsp;&nbsp; :globe_with_meridians: <https://www.addiva.se/electronics/>  
-&nbsp;&nbsp; :e-mail: <mailto:ael@addiva.se>
+&nbsp;&nbsp; :globe_with_meridians: <https://www.wires.se>  
+&nbsp;&nbsp; :e-mail: <mailto:infix@wires.se>

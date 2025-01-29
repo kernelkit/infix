@@ -101,6 +101,13 @@ Worth noting, unlike many other boards, the Rockchip family of chipsets
 runs the UART at 1500000 bps (1.5 Mbps) 8N1.
 
 
+Console Port
+------------
+
+Unlike many other boards, the NanoPi R2S console, and in fact all
+Rockchip family chipsets, runs at 1500000 bps (1.5 Mbps) 8N1. 
+
+
 Secure Boot
 -----------
 
