@@ -24,114 +24,6 @@
 #define MAX_RELAY_SERVER	2    /* max. number of relay servers */
 
 
-struct option {
-	TAILQ_ENTRY(option)	list;
-	int			num;
-	char 			name[32];
-};
-TAILQ_HEAD(options, option);
-
-static struct options known_options;
-
-
-static char *strip(char *line)
-{
-	char *p;
-
-	while (isspace(*line))
-		line++;
-
-	p = line + strlen(line) - 1;
-	while (p >= line) {
-		if (isspace(*p))
-			*(p--) = '\0';
-		else
-			break;
-	}
-
-	return line;
-}
-
-
-static void add_known_option(char *line)
-{
-	char *p, *name, *num;
-	struct option *opt;
-
-	if (!isdigit(line[0]))
-		return;
-
-	p = strchr(line, ' ');
-	if (!p)
-		return;
-
-	*p = '\0';
-	num = line;
-	name = p + 1;
-
-	opt = malloc(sizeof(struct option));
-	if (opt) {
-		opt->num = atoi(strip(num));
-		strncpy(opt->name, strip(name), sizeof(opt->name));
-		TAILQ_INSERT_TAIL(&known_options, opt, list);
-	}
-}
-
-static struct option *get_known_option(const char *name)
-{
-	struct option *opt;
-	int num = -1;
-
-	if (isdigit(name[0]))
-		num = atoi(name);
-
-	opt = TAILQ_FIRST(&known_options);
-	while (opt) {
-		if (num > 0) {
-			if (opt->num == num)
-				return opt;
-		} else {
-			if (strcmp(opt->name, name) == 0)
-				return opt;
-		}
-		opt = TAILQ_NEXT(opt, list);
-	}
-
-	return NULL;
-}
-
-static int load_known_options(void)
-{
-	char line[256];
-	FILE *pp;
-
-	TAILQ_INIT(&known_options);
-
-	/*
-	 * From dnsmasq.8:
-	 *
-	 * --help dhcp will display known DHCPv4 configuration options
-	 * --help dhcp6 will display DHCPv6 options
-	 */
-	pp = popen("dnsmasq --help dhcp", "r");
-	if (!pp) {
-		ERROR("Unable to retrieve dnsmasq DHCP options");
-		return -1;
-	}
-	while (!feof(pp)) {
-		if (fgets(line, sizeof(line), pp))
-			add_known_option(strip(line));
-	}
-	pclose(pp);
-
-	if (!get_known_option("hostname")) {
-		snprintf(line, sizeof(line), "12 hostname\n");
-		add_known_option(strip(line));
-	}
-
-	return 0;
-}
-
 static const char *subnet_tag(const char *subnet)
 {
 	unsigned int a, b, c, d, m;
@@ -169,20 +61,19 @@ static const char *host_tag(const char *subnet, const char *addr)
 	return tag;
 }
 
-/* configure dnsmasq options */
 static int configure_options(FILE *fp, struct lyd_node *cfg, const char *tag)
 {
 	struct lyd_node *option;
 
 	LYX_LIST_FOR_EACH(lyd_child(cfg), option, "option") {
-		const char *id = lydx_get_cattr(option, "id");
+		struct lyd_node *id = lydx_get_child(option, "id");
 		struct lyd_node *suboption;
-		const struct option *opt;
 		const char *val;
+		int num;
 
-		opt = get_known_option(id);
-		if (!opt) {
-			ERROR("Unknown option %s", id);
+		num = dhcp_option_lookup(id);
+		if (num == -1) {
+			ERROR("Unknown option %s", lyd_get_value(id));
 			return -1;
 		}
 
@@ -203,19 +94,19 @@ static int configure_options(FILE *fp, struct lyd_node *cfg, const char *tag)
 		if (val) {
 			fprintf(fp, "dhcp-option=%s%s%s%d,%s\n",
 				tag ? "tag:" : "", tag ?: "",
-				tag ? "," : "", opt->num, val);
+				tag ? "," : "", num, val);
 		} else if ((suboption = lydx_get_descendant(option, "option", "static-route", NULL))) {
 			struct lyd_node *net;
 
 			LYX_LIST_FOR_EACH(suboption, net, "static-route") {
 				fprintf(fp, "dhcp-option=%s%s%s%d,%s,%s\n",
 					tag ? "tag:" : "",
-					tag ?: "", tag ? "," : "", opt->num,
+					tag ?: "", tag ? "," : "", num,
 					lydx_get_cattr(net, "destination"),
 					lydx_get_cattr(net, "next-hop"));
 			}
 		} else {
-			ERROR("Unknown value to option %s", id);
+			ERROR("Unknown value to option %s", lyd_get_value(id));
 			return -1;
 		}
 	}
@@ -530,10 +421,6 @@ static int clear_stats(sr_session_ctx_t *session, uint32_t sub_id, const char *x
 int infix_dhcp_server_init(struct confd *confd)
 {
 	int rc;
-
-	rc = load_known_options();
-	if (rc)
-		goto fail;
 
 	REGISTER_CHANGE(confd->session, MODULE, CFG_XPATH, 0, change, confd, &confd->sub);
 	REGISTER_CHANGE(confd->cand, MODULE, CFG_XPATH"//.", SR_SUBSCR_UPDATE, cand, confd, &confd->sub);

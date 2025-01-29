@@ -221,6 +221,9 @@ static inline void infix_containers_pre_hook(sr_session_ctx_t *session, struct c
 static inline void infix_containers_post_hook(sr_session_ctx_t *session, struct confd *confd) {}
 #endif
 
+/* infix-dhcp-common.c */
+int dhcp_option_lookup(const struct lyd_node *id);
+
 /* infix-dhcp-client.c */
 int infix_dhcp_client_init(struct confd *confd);
 

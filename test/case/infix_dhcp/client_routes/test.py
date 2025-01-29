@@ -65,7 +65,7 @@ with infamy.Test() as test:
                     "if-name": f"{port}",
                     "option": [
                         {"id": "router"},
-                        {"id": "staticroutes"}
+                        {"id": "classless-static-route"}
                     ]
                 }]
             }

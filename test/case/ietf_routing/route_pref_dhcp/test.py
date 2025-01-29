@@ -71,12 +71,12 @@ def config_target1(target, data1, data2, link):
                         "enabled": True,
                         "option": [
                             {"id": "broadcast"},
-                            {"id": "dns"},
+                            {"id": "dns-server"},
                             {"id": "domain"},
                             {"id": "hostname"},
-                            {"id": "ntpsrv"},
+                            {"id": "ntp-server"},
                             {"id": "router"},
-                            {"id": "subnet"}
+                            {"id": "netmask"}
                         ],
                         "route-preference": 5
                     }

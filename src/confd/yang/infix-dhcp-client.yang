@@ -1,17 +1,23 @@
 module infix-dhcp-client {
   yang-version 1.1;
-  namespace "urn:ietf:params:xml:ns:yang:infix-dhcp-client";
-  prefix dhc4-clnt;
+  namespace "urn:ietf:params:xml:ns:yang:dhcp-client";
+  prefix dhcp-client;
 
   import ietf-interfaces {
-    prefix "if";
+    prefix if;
+  }
+  import infix-dhcp-common {
+    prefix dhcp;
   }
 
   contact      "kernelkit@googlegroups.com";
-  description  "This module implements an IPv4 DHCP client";
+  description  "This module implements a DHCPv4 client";
 
-  revision 2025-01-20 {
-    description   "Rename option 'name' -> 'id' and rename internal type.";
+  revision 2025-01-29 {
+    description   "Consolidate DHCP options between client and server models.
+                      - Rename option attribute 'name' -> 'id'
+                      - Rename internal option type
+                      - Rename options, e.g. ntpsrv -> ntp-server";
     reference     "internal";
   }
   revision 2024-09-20 {
@@ -39,67 +45,6 @@ module infix-dhcp-client {
   typedef route-preference {
     type uint32;
     description "This type is used for selecting route preference (distance).";
-  }
-
-  typedef dhcp-client-options {
-    type union {
-      type string;
-      type enumeration {
-        enum subnet {
-          value 1;
-          description "Subnet (IP address and netmask)";
-        }
-        enum router {
-          value 3;
-          description "Default route(s)";
-        }
-        enum dns {
-          value 6;
-          description "DNS server";
-        }
-        enum hostname {
-          value 12;
-          description "Hostname";
-        }
-        enum domain {
-          value 15;
-          description "Domain name";
-        }
-        enum broadcast {
-          value 28;
-          description "Broadcast address";
-        }
-        enum ntpsrv {
-          value 42;
-          description "NTP server";
-        }
-        enum address {
-          value 50;
-          description "Requested (previously cached) address";
-        }
-        enum clientid {
-          value 61;
-          description "Client ID (default MAC, and option 12)";
-        }
-        enum fqdn {
-          value 81;
-          description "Request DNS update of client FQDN argument";
-        }
-        enum search {
-          value 119;
-          description "Domain search list";
-        }
-        enum staticroutes {
-          value 121;
-          description "Classless static routes";
-        }
-        enum msstaticroutes {
-          value 249;
-          description "Microsoft classless static routes";
-        }
-      }
-    }
-    description "Supported DHCP client request options";
   }
 
   /*
@@ -144,7 +89,7 @@ module infix-dhcp-client {
            client to only get IP address and default route, set this to:
            'subnet router'";
         leaf id {
-          type dhcp-client-options;
+          type dhcp:options;
           description "DHCP option to request from, or inform server of.";
         }
         leaf value {

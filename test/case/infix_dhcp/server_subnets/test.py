@@ -207,8 +207,8 @@ with infamy.Test() as test:
                         "option": [
                             {"id": "hostname", "value": "auto"},
                             {"id": "router"},
-                            {"id": "dns"},
-                            {"id": "ntpsrv"},
+                            {"id": "dns-server"},
+                            {"id": "ntp-server"},
                             {"id": 121}
                         ]
                     }]
@@ -229,8 +229,8 @@ with infamy.Test() as test:
                         "option": [
                             {"id": "hostname", "value": "auto"},
                             {"id": "router"},
-                            {"id": "dns"},
-                            {"id": "ntpsrv"},
+                            {"id": "dns-server"},
+                            {"id": "ntp-server"},
                             {"id": 121}
                         ]
                     }]
@@ -251,8 +251,8 @@ with infamy.Test() as test:
                         "option": [
                             {"id": "hostname", "value": "auto"},
                             {"id": "router"},
-                            {"id": "dns"},
-                            {"id": "ntpsrv"},
+                            {"id": "dns-server"},
+                            {"id": "ntp-server"},
                             {"id": 121}
                         ]
                     }]

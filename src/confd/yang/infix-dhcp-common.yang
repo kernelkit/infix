@@ -1,0 +1,109 @@
+module infix-dhcp-common {
+  yang-version 1.1;
+  namespace "urn:infix:params:xml:ns:yang:dhcp-common";
+  prefix dhcp;
+
+  organization "KernelKit";
+  contact      "kernelkit@googlegroups.com";
+  description  "Shared types between DHCP server and client.";
+
+  revision 2025-01-29 {
+    description "Initial revision.";
+    reference "internal";
+  }
+
+  /*
+   * Typedefs
+   */
+
+  typedef options {
+    description "DHCP options for client and server.";
+    type union {
+      type uint8 {
+          range "1..254";
+      }
+      type enumeration {
+        enum netmask {
+          value 1;
+          description "IP subnet mask as per RFC 950
+
+                       Note: this option is always sent using a netmask derived from an
+                       interface matching the given subnet, even if no configuration
+                       exists in global/subnet/host scope.  Except in the case when the
+                       server responds to a relayed request, in which case the subnet
+                       will not match any local interface.";
+        }
+        enum router {
+          value 3;
+          description "Default route, or gateway (single, see also option 121)";
+        }
+        enum dns-server {
+          value 6;
+          description "DNS server";
+        }
+        enum log-server {
+          value 7;
+          description "Name or IP address of remote syslog server";
+        }
+        enum hostname {
+          value 12;
+          description "Hostname";
+        }
+        enum domain {
+          value 15;
+          description "Domain name";
+        }
+        enum broadcast {
+          value 28;
+          description "IP broadcast address as per RFC 1122
+
+                       Note: this option is always sent using a broadcast address from
+                       an interface matching the given subnet, even if no configuration
+                       exists in global/subnet/host scope.  Except in the case when the
+                       server responds to a relayed request, in which case the subnet will
+                       not match any local interface.";
+        }
+        enum static-route {
+          value 33;
+          description "Classful (A/B/C network) route(s), use option 121 instead";
+        }
+        enum ntp-server {
+          value 42;
+          description "NTP server";
+        }
+        enum address {
+          value 50;
+          description "Request (previously cached) address";
+        }
+        enum client-id {
+          value 61;
+          description "Client ID (default MAC, and option 12)";
+        }
+        enum tftp-server {
+          value 66;
+          description "TFTP server";
+        }
+        enum bootfile {
+          value 67;
+          description "Boot filename from TFTP server (option 66)";
+        }
+        enum fqdn {
+          value 81;
+          description "Client request DNS update of FQDN argument, see RFC 4702";
+        }
+        enum search {
+          value 119;
+          description "Domain search list";
+        }
+        enum classless-static-route {
+          value 121;
+          description "Classless static route(s), tuple: subnet/len, next-hop";
+        }
+        enum ms-classless-static-route {
+          value 249;
+          description "Microsoft classless static route(s), same as option 121";
+        }
+      }
+    }
+  }
+}
