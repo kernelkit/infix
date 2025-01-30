@@ -1761,7 +1761,7 @@ int ietf_system_init(struct confd *confd)
 
 	os_init();
 
-	REGISTER_CHANGE(confd->session, "ietf-system", XPATH_AUTH_, SR_SUBSCR_UPDATE, change_auth, confd, &confd->sub);
+	REGISTER_CHANGE(confd->session, "ietf-system", XPATH_AUTH_, 0, change_auth, confd, &confd->sub);
 	REGISTER_OPER(confd->session, "ietf-system", PASSWORD_PATH, auth_cb, confd, 0, &confd->sub);
 	REGISTER_MONITOR(confd->session, "ietf-netconf-acm", "/ietf-netconf-acm:nacm//.",
 			 0, change_nacm, confd, &confd->sub);

@@ -27,6 +27,7 @@ All notable changes to the project are documented in this file.
 ### Fixes
 
  - Fix #861: Fix error when running 251+ reconfigurations in test-mode
+ - Fix #777: Authorized SSH key not applied to startup config
  - Minor cleanup of Networking Guide
  - Fix memory leaks in confd
  - Fix #869: Setup of bridges is now more robust
