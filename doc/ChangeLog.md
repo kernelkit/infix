@@ -23,6 +23,7 @@ All notable changes to the project are documented in this file.
  - Support for VXLAN tunnels
  - Add documentation on management via SSH, Web (RESTCONF, Web
    Console), and Console Port, issue #787
+ - Upgrade FRR from 9.1.2 to 9.1.3
 
 ### Fixes
 
