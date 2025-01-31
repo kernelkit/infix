@@ -70,14 +70,18 @@ def main():
     elif args.model == 'infix-containers':
         from . import infix_containers
         yang_data = infix_containers.operational()
+    elif args.model == 'infix-dhcp-server':
+        from . import infix_dhcp_server
+        yang_data = infix_dhcp_server.operational()
     elif args.model == 'ietf-system':
         from . import ietf_system
         yang_data = ietf_system.operational()
     else:
-        common.LOG.warning(f"Unsupported model {args.model}", file=sys.stderr)
+        common.LOG.warning("Unsupported model %s", args.model)
         sys.exit(1)
 
     print(json.dumps(yang_data, indent=2))
+
 
 if __name__ == "__main__":
     main()

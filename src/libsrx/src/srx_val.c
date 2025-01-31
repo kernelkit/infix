@@ -119,8 +119,9 @@ int srx_free_changes(struct lyd_node *tree)
 /* check if string at xpath (fmt) is set (non-zero length) */
 bool srx_isset(sr_session_ctx_t *session, const char *fmt, ...)
 {
-	sr_val_t *value = NULL;
 	bool isset = false;
+	sr_data_t *data;
+	const char *s;
 	char *xpath;
 	va_list ap;
 	size_t len;
@@ -137,12 +138,13 @@ bool srx_isset(sr_session_ctx_t *session, const char *fmt, ...)
 	vsnprintf(xpath, len, fmt, ap);
 	va_end(ap);
 
-	if (sr_get_item(session, xpath, 0, &value))
+	if (sr_get_node(session, xpath, 0, &data))
 		return false;
 
-	if (value->data.string_val[0] != 0)
+	s = lyd_get_value(data->tree);
+	if (s[0] != 0)
 		isset = true;
-	sr_free_val(value);
+	sr_release_data(data);
 
 	return isset;
 }

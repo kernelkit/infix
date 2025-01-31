@@ -1,0 +1,3 @@
+options timeout:3 attempts:5 
+search example.com kernelkit.org 
+nameserver 1.2.3.4

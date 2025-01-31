@@ -1,2 +1,2 @@
-SUBDIRS             = 1.0 1.1 1.2 1.3
+SUBDIRS             = 1.0 1.1 1.2 1.3 1.4
 migratedir          = $(pkgdatadir)/migrate

@@ -1,0 +1,351 @@
+module infix-dhcp-server {
+  yang-version 1.1;
+  namespace "urn:infix:params:xml:ns:yang:dhcp-server";
+  prefix dhcp-server;
+
+  import ietf-inet-types {
+    prefix inet;
+  }
+  import ietf-interfaces {
+    prefix if;
+  }
+  import ietf-yang-types {
+    prefix yang;
+  }
+  import infix-dhcp-common {
+    prefix dhcp;
+  }
+
+  organization "KernelKit";
+  contact      "kernelkit@googlegroups.com";
+  description  "This module implements a DHCPv4 server";
+
+  revision 2025-01-29 {
+    description "Initial revision adapted for Infix from DHCPv6 model.";
+    reference   "internal";
+  }
+
+  typedef dhcp-lease-time {
+    description "The lease time in seconds, with a minimum of 2 minutes (120 seconds).
+                 For static host entries, the value 'infinite' may be used.";
+    type union {
+        type uint32 {
+            range "120..max";
+        }
+        type enumeration {
+            enum infinite {
+                description "Infinite lease time for static host entries.";
+            }
+        }
+    }
+    units "seconds";
+    default "3600";
+  }
+
+  grouping dhcp-option-group {
+    description "Generic list structure for DHCP options.";
+
+    list option {
+      description "List of DHCP options.";
+      key "id";
+
+      leaf id {
+        description "DHCP option ID or number.";
+        type dhcp:options;
+      }
+
+      choice value {
+        case address-opt {
+           when "id = 'router' or id = 'dns-server' or id = 'log-server' or id = 'ntp-server' or id = 'netmask' or id = 'broadcast'";
+           leaf address {
+             description "IP address, or 'auto'.";
+             type union {
+               type inet:ipv4-address;
+               type enumeration {
+                 enum auto {
+                   description "Use IP address of the DHCP server.";
+                 }
+               }
+             }
+           }
+        }
+
+        case name-opt {
+           when "id = 'hostname' or id = 'domain' or id = 'search'";
+           leaf name {
+             description "Internet name or FQDN.";
+             type inet:domain-name;
+           }
+        }
+
+        case classless-route-opt {
+          /* Support Microsoft's Classless Static Route option as well */
+          when "id = 'classless-static-route' or id = 121 or id = 249";
+          list static-route {
+            key "destination";
+            leaf destination {
+              description "Destination network prefix.";
+              type inet:ipv4-prefix;
+            }
+            leaf next-hop {
+              description "Next-hop IP address.";
+              type inet:ipv4-address;
+            }
+          }
+        }
+
+        case hex-opt {
+          leaf hex {
+            description "Binary data as colon-separated pairs of hex digits.
+
+                         Example: c0:ff:ee";
+            type dhcp:octet-string;
+          }
+        }
+
+        case default-opt {
+          leaf string {
+            description "Generic string value.";
+            type string;
+          }
+        }
+      }
+    }
+  }
+
+  container dhcp-server {
+    description "DHCPv4 server configuration.";
+
+    leaf enabled {
+      description "Globally enable or disable the DHCP server.";
+      type boolean;
+      default true;
+    }
+
+    uses dhcp-option-group {
+      refine "option" {
+        description "Global DHCP options used as defaults for pools and static host leases.";
+      }
+    }
+
+    list subnet {
+      description "Subnet specific settings, including static host entries.";
+      key "subnet";
+
+      leaf subnet {
+        description "Subnet to serve DHCP leases from.";
+        type inet:ipv4-prefix;
+      }
+
+      leaf description {
+        description "Additional information about this subnet (e.g., purpose, location, or notes).";
+        type string;
+      }
+
+      leaf enabled {
+        description "Enable or disable DHCP server on this subnet.";
+        type boolean;
+        default true;
+      }
+
+      leaf if-name {
+        description "Optional interface to bind this subnet to.";
+        type if:interface-ref;
+      }
+
+      uses dhcp-option-group {
+        refine "option" {
+          description "List of DHCP options specific to this subnet.";
+        }
+      }
+
+      container pool {
+        description "IP address pool for this subnet.";
+
+        leaf start-address {
+          description "The start address of the DHCP address pool.";
+          type inet:ipv4-address;
+        }
+
+        leaf end-address {
+           description "The end address of the DHCP address pool.";
+           type inet:ipv4-address;
+        }
+
+        leaf lease-time {
+          description "Lease time for DHCP addresses.";
+          type dhcp-lease-time;
+        }
+      }
+
+      list host {
+        description "List of static host entries.";
+        key "address";
+
+        leaf address {
+          description "IPv4 address to assign to the client.";
+          type inet:ipv4-address;
+          mandatory true;
+        }
+
+        leaf description {
+          description "Additional information about this entry, e.g., owner's name, equipment details, or location.";
+          type string;
+        }
+
+        container match {
+          description "Match rule for this lease.";
+          choice match {
+            mandatory true;
+
+            case mac-address {
+              leaf mac-address {
+                description "Match on client MAC address";
+                type yang:mac-address;
+              }
+            }
+
+            case hostname {
+              leaf hostname {
+                description "Match on client hostname, DHCP option 12.";
+                type string;
+              }
+            }
+
+            case client-id {
+              container client-id {
+                description "Match on client-id, DHCP option 61.";
+                choice id {
+                  description "Format of the client-id value";
+                  default str;
+                  case str {
+                    leaf str {
+                      description "String value for text-based client-id.
+
+                                   Example: xyzzy";
+                      type string;
+                    }
+                  }
+                  case hex {
+                    leaf hex {
+                      description "Binary data as colon-separated pairs of hex digits.
+
+                                   Example: c0:ff:ee";
+                      type dhcp:octet-string;
+                    }
+                  }
+                }
+              }
+            }
+            /* case option82 here ... */
+          }
+          /* More advanced match rules, e.g., option82 + client-id are not supported. */
+        }
+
+        leaf hostname {
+          description "Optional hostname to assign with the lease.
+
+                       Please note, Linux systems only allow 64 character hostnames.";
+          type inet:domain-name;
+        }
+
+        leaf lease-time {
+          description "Lease time, or 'infinite'.";
+          type dhcp-lease-time;
+        }
+
+        uses dhcp-option-group {
+          refine "option" {
+            description "List of DHCP options specific to this static host.
+
+                         By default, global and subnet options are inherited.";
+          }
+        }
+      }
+    }
+
+    container leases {
+      description "Lease information.";
+      config false;
+
+      list lease {
+        description "List of active host leases.";
+        key address;
+
+        leaf address {
+          description "IP address of the host.";
+          type inet:ip-address;
+        }
+
+        leaf phys-address {
+          description "Physical (MAC) address of the host.";
+          type yang:mac-address;
+        }
+
+        leaf hostname {
+          description "Name of the host, if one was provided.";
+          type string;
+        }
+
+        leaf expires {
+          description "Time and date when the lease expires, or 'never'.
+
+             The value 'never' is used for infinite lease time, i.e., no expiration time.";
+          type union {
+            type yang:date-and-time;
+            type enumeration {
+              enum never;
+            }
+          }
+        }
+        leaf client-id {
+          description "Client identifier of the host, if one was provided.";
+          type string;
+        }
+      }
+    }
+
+    container statistics {
+      description "DHCP packet statistics.";
+      config false;
+
+      leaf out-offers {
+        type yang:counter32;
+        description "Total number of DHCPOFFER packets.";
+      }
+      leaf out-acks {
+        type yang:counter32;
+        description "Total number of DHCPACK packets.";
+      }
+      leaf out-naks {
+        type yang:counter32;
+        description "Total number of DHCPNAK packets.";
+      }
+
+      leaf in-declines {
+        type yang:counter32;
+        description "Total number of DHCPDECLINE packets.";
+      }
+      leaf in-discovers {
+        type yang:counter32;
+        description "Total number of DHCPDISCOVER packets.";
+      }
+      leaf in-requests {
+        type yang:counter32;
+        description "Total number of DHCPREQUEST packets.";
+      }
+      leaf in-releases {
+        type yang:counter32;
+        description "Total number of DHCPRELEASE packets.";
+      }
+      leaf in-informs {
+        type yang:counter32;
+        description "Total number of DHCPINFORM packets.";
+      }
+
+      action clear {
+        description "Clear packet statistics.";
+      }
+    }
+  }
+}

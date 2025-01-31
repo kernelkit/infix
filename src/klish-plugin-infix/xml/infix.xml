@@ -223,6 +223,12 @@
   </COMMAND>
 </COMMAND>
 
+<COMMAND name="dhcp-server" help="DHCP server tools" mode="switch">
+  <COMMAND name="clear-statistics" help="Clear DHCP server statistics">
+    <ACTION sym="srp_rpc@sysrepo">/infix-dhcp-server:dhcp-server/statistics/clear</ACTION>
+  </COMMAND>
+</COMMAND>
+
 <COMMAND name="show" help="Show system status and configuration files" mode="switch">
 
   <COMMAND name="bridge" help="Show bridge (ports/fdb/mdb/vlans)">
@@ -286,14 +292,28 @@
 
   <COMMAND name="ntp" help="Show NTP (client) status">
     <ACTION sym="script">
-      sysrepocfg -d operational -X -f json -x \
-      /ietf-system:system-state/infix-system:ntp  | \
-      /usr/libexec/statd/cli-pretty "show-ntp"
+      sysrepocfg -d operational -X -f json -x /system-state/ntp  | \
+         /usr/libexec/statd/cli-pretty "show-ntp"
     </ACTION>
     <SWITCH name="optional" min="0">
       <COMMAND name="tracking" help="Show NTP tracking">
         <ACTION sym="script">doas ntp tracking</ACTION>
       </COMMAND>
+    </SWITCH>
+  </COMMAND>
+
+  <COMMAND name="dhcp-server" help="Show DHCP server status">
+    <ACTION sym="script" in="tty" out="tty" interrupt="true">show dhcp</ACTION>
+
+    <SWITCH name="optional" min="0">
+      <COMMAND name="statistics" help="Show DHCP server statistics">
+	<ACTION sym="script" in="tty" out="tty" interrupt="true">show dhcp stat</ACTION>
+      </COMMAND>
+
+      <COMMAND name="detailed" help="Detailed (full operational) output">
+	<ACTION sym="script" in="tty" out="tty" interrupt="true">show dhcp detail</ACTION>
+      </COMMAND>
+
     </SWITCH>
   </COMMAND>
 

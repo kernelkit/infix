@@ -3,7 +3,7 @@ PYTHON_STATD_SITE_METHOD = local
 PYTHON_STATD_SITE = $(BR2_EXTERNAL_INFIX_PATH)/src/statd/python
 PYTHON_STATD_LICENSE = BSD-3-Clause
 PYTHON_STATD_LICENSE_FILES = LICENSE
-PYTHON_STATD_DEPENDENCIES = host-python3 python3 host-python-poetry-core
+PYTHON_STATD_DEPENDENCIES = host-python3 python3 host-python-poetry-core dbus-python
 PYTHON_STATD_SETUP_TYPE = pep517 # poetry
 
 define PYTHON_STATD_MOVE_BINARIES

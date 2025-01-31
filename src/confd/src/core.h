@@ -208,7 +208,7 @@ int ietf_syslog_init(struct confd *confd);
 
 /* ietf-system.c */
 int ietf_system_init (struct confd *confd);
-int hostnamefmt      (struct confd *confd, const char *fmt, char *buf, size_t len);
+int hostnamefmt      (struct confd *confd, const char *fmt, char *hostnm, size_t hostlen, char *domain, size_t domlen);
 
 /* infix-containers.c */
 #ifdef CONTAINERS
@@ -221,8 +221,14 @@ static inline void infix_containers_pre_hook(sr_session_ctx_t *session, struct c
 static inline void infix_containers_post_hook(sr_session_ctx_t *session, struct confd *confd) {}
 #endif
 
-/* infix-dhcp.c */
-int infix_dhcp_init(struct confd *confd);
+/* infix-dhcp-common.c */
+int dhcp_option_lookup(const struct lyd_node *id);
+
+/* infix-dhcp-client.c */
+int infix_dhcp_client_init(struct confd *confd);
+
+/* infix-dhcp-server.c */
+int infix_dhcp_server_init(struct confd *confd);
 
 /* ietf-factory-default */
 int ietf_factory_default_init(struct confd *confd);

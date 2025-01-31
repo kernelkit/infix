@@ -3,35 +3,68 @@ Change Log
 
 All notable changes to the project are documented in this file.
 
-[v24.12.0][UNRELEASED]
+
+[v25.01.0][] - 2025-01-31
 -------------------------
+
+> [!NOTE]
+> This release contains breaking changes in the configuration file
+> syntax for DHCP clients.  Specifically DHCP options *with value*,
+> i.e., the syntax for sending a hexadecimal value now require `hex`
+> prefix before a string of colon-separated pairs of hex values.
 
 ### Changes
 
- - NTP client status is now available in YANG
- - Add support for more mDNS settings: allow/deny interfaces, acting
-   as "reflector" and filtering of reflected services.  Issue #678
- - Review of default `sysctl` settings, issue #829
  - Upgrade Linux kernel to 6.12.11 (LTS)
  - Upgrade Buildroot to 2024.02.10 (LTS)
- - Add the possibility to change the boot order for the system with a
-   RPC and add boot order to operational datastore.
- - SSH Server is now configurable, issue #441
-   SSH Server and NETCONF Server now uses the same SSH hostkey in factory-config
- - Support for GRE/GRETAP tunnels
- - Support for STP/RSTP on bridges
- - Support for VXLAN tunnels
+ - Upgrade FRR from 9.1.2 to 9.1.3
+ - Add support for configuring SSH server, issue #441.  As a result,
+   both SSH and NETCONF now use the same host key in `factory-config`
+ - Add operational support for reading DNS resolver info, issue #510
+ - Add operational support for NTP client, issue #510
+ - Add support for more mDNS settings: allow/deny interfaces, acting
+   as "reflector" and filtering of reflected services.  Issue #678
+ - Add DHCPv4 server support, multiple subnets with static hosts and
+   DHCP options on global, subnet, or host level, issue #703.
+   Contributed by [MINEx Networks](https://minexn.com/)
+   - DHCP client options aligned with DHCP server, `startup-config`
+     files with old syntax are automatically migrated
+ - Breaking change in DHCP client options *with value*.  Hexadecimal
+   values must now be formatted as `{ "hex": "c0:ff:ee" }` (JSON)
  - Add documentation on management via SSH, Web (RESTCONF, Web
    Console), and Console Port, issue #787
- - Upgrade FRR from 9.1.2 to 9.1.3
+ - Add documentation of DNS client use and configuration, issue #798
+ - Add support for changing boot order for the system with an RPC,
+   including support for reading boot order from operational datastore
+ - Add support for GRE/GRETAP tunnels
+ - Add support for STP/RSTP on bridges
+ - Add support for VXLAN tunnels
 
 ### Fixes
 
+ - Fix #777: Authorized SSH key not applied to `startup-config`
+ - Fix #829: Avahi (mDNS responder) not starting properly on switches
+   with *many* ports (>10).  This led to a review of `sysctl`:
+   - New for IPv4:
+	 - Adjust IGMP max memberships: 20 -> 1000
+	 - Use neighbor information on nexthop selection
+	 - Use inbound interface address on ICMP errors
+	 - Ignore routes with link down
+	 - Disable `rp_filter`
+     - ARP settings have been changed to better fit routers, i.e.,
+       systems with multiple interfaces:
+	   - Always use best local address when sending ARP
+	   - Only reply to ARP if target IP is on the inbound interface
+	   - Generate ARP requests when device is brought up or HW address changes
+   - New for IPv6:
+	 - Keep static global addresses on link down
+	 - Ignore routes with link down
  - Fix #861: Fix error when running 251+ reconfigurations in test-mode
- - Fix #777: Authorized SSH key not applied to startup config
- - Minor cleanup of Networking Guide
- - Fix memory leaks in confd
  - Fix #869: Setup of bridges is now more robust
+ - Fix #899: DHCP client with client-id does not work
+ - Minor cleanup of Networking Guide
+ - Fix memory leaks in `confd`
+
 
 [v24.11.1][] - 2024-11-29
 -------------------------
@@ -80,6 +113,7 @@ All notable changes to the project are documented in this file.
  - Prevent traffic assigned to locally terminated VLANs from being
    forwarded, when the underlying ports are simultaneously attached to
    a VLAN filtering bridge.
+
 
 [v24.11.0][] - 2024-11-20
 -------------------------
@@ -1437,8 +1471,8 @@ Supported YANG models in addition to those used by sysrepo and netopeer:
  - N/A
 
 [buildroot]:  https://buildroot.org/
-[UNRELEASED]: https://github.com/kernelkit/infix/compare/v24.11.0...HEAD
-[v24.12.0]:   https://github.com/kernelkit/infix/compare/v24.11.0...v24.12.0
+[UNRELEASED]: https://github.com/kernelkit/infix/compare/v25.01.0...HEAD
+[v25.01.0]:   https://github.com/kernelkit/infix/compare/v24.11.0...v25.01.0
 [v24.11.1]:   https://github.com/kernelkit/infix/compare/v24.11.0...v24.11.1
 [v24.11.0]:   https://github.com/kernelkit/infix/compare/v24.10.0...v24.11.0
 [v24.10.2]:   https://github.com/kernelkit/infix/compare/v24.10.1...v24.10.2

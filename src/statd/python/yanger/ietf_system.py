@@ -1,4 +1,5 @@
 import subprocess
+import ipaddress
 
 from .common import insert
 from .host import HOST
@@ -60,6 +61,65 @@ def add_ntp(out):
         source.append(src)
 
     insert(out, "infix-system:ntp", "sources", "source", source)
+
+def add_dns(out):
+    options = {}
+    servers = []
+    search = []
+
+    content = HOST.read_multiline("/etc/resolv.conf.head", [])
+    for line in content:
+        line = line.strip()
+
+        if line.startswith('nameserver'):
+            ip = line.split()[1]
+            try:
+                ipaddress.ip_address(ip)
+                servers.append({
+                    "address": ip,
+                    "origin": "static"
+                })
+            except ValueError:
+                continue
+
+        elif line.startswith('search'):
+            search.extend(line.split()[1:])
+
+        elif line.startswith('options'):
+            opts = line.split()[1:]
+            for opt in opts:
+                if opt.startswith('timeout:'):
+                    options["timeout"] = int(opt.split(':')[1])
+                elif opt.startswith('attempts:'):
+                    options["attempts"] = int(opt.split(':')[1])
+
+    output = HOST.run_multiline(['/sbin/resolvconf', '-l'], [])
+    for line in output:
+        line = line.strip()
+        if line.startswith('nameserver'):
+            parts = line.split('#', 1)
+            ip = parts[0].split()[1]
+
+            iface = None
+            if len(parts) > 1:
+                iface = parts[1].strip()
+
+            try:
+                ipaddress.ip_address(ip)
+                servers.append({
+                    "address": ip,
+                    "origin": "dhcp",
+                    "interface": iface
+                })
+            except ValueError:
+                continue
+
+        elif line.startswith('search'):
+            search.extend(line.split()[1:])
+
+    insert(out, "infix-system:dns-resolver", "options", options)
+    insert(out, "infix-system:dns-resolver", "server", servers)
+    insert(out, "infix-system:dns-resolver", "search", search)
 
 def add_software_slots(out, data):
     slots = []
@@ -136,4 +196,6 @@ def operational():
 
     add_software(out_state)
     add_ntp(out_state)
+    add_dns(out_state)
+
     return out

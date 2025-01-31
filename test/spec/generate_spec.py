@@ -138,10 +138,10 @@ class TestCase:
         parsed_script = ast.parse(script_content)
         visitor = TestStepVisitor()
         visitor.visit(parsed_script)
-        description=visitor.description if visitor.description != "" else "Undefined"
-        test_steps=visitor.test_steps
+        description = visitor.description if visitor.description != "" else "Undefined"
+        test_steps = visitor.test_steps
         if variables is not None:
-            for k,v in variables.items():
+            for k, v in variables.items():
                 if "{" + k + "}" in description:
                     description = description.replace("{" + k + "}", v)
 
@@ -205,11 +205,13 @@ def parse_suite(directory, root, suitefile):
             test_case.generate_specification(test_title, test_file, test_spec, variables)
             readme.write(f"include::{path}{test_case_id}.adoc[]\n\n")
             if path != "":
+                lnk = f"{directory}/{path}/Readme.adoc"
                 readme.close()
                 os.unlink(f"{directory}/{path}/Readme.adoc.tmp")
                 readme = None
-                os.unlink(f"{directory}/{path}/Readme.adoc")
-                os.symlink(f"{test_case_id}.adoc", f"{directory}/{path}/Readme.adoc")
+                if os.path.exists(lnk):
+                    os.unlink(lnk)
+                os.symlink(f"{test_case_id}.adoc", lnk)
     if readme is not None:
         readme.close()
         os.rename(f"{directory}/Readme.adoc.tmp", f"{directory}/Readme.adoc")
@@ -219,7 +221,7 @@ parser = argparse.ArgumentParser(description="Generate a test specification for 
 parser.add_argument("-s", "--suite", required=True, help="The suite file to parse")
 parser.add_argument("-r", "--root-dir", required=True, help="Path that all paths should be relative to")
 parser.add_argument("-d", "--debug", help="Show debug output", action="store_true")
-args=parser.parse_args()
+args = parser.parse_args()
 
 error_string = ""
 # This is hacky, graphviz output error only to stdout and return successful(always).

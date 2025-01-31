@@ -48,30 +48,32 @@ static char *ip_cache(const char *ifname, char *str, size_t len)
 	return str;
 }
 
-static char *hostname(const char *ifname, char *str, size_t len)
+static char *hostname(struct lyd_node *cfg, char *str, size_t len)
 {
-	FILE *fp;
-	int pos;
+	struct lyd_node *node;
+	const char *hostname;
+	char *ptr;
 
-	(void)ifname;
-
-	fp = fopen("/etc/hostname", "r");
-	if (!fp)
+	node = lydx_get_xpathf(cfg, "/ietf-system:system/hostname");
+	if (!node)
 		return NULL;
 
-	pos = snprintf(str, len, "-x hostname:");
-	if (!fgets(&str[pos], len - pos, fp))
-		str[0] = 0;
-	fclose(fp);
-	chomp(str);
-	strlcat(str, " ", len);
+	hostname = lyd_get_value(node);
+	if (!hostname || hostname[0] == 0)
+		return NULL;
+
+	ptr = strchr(hostname, '.');
+	if (ptr)
+		*ptr = 0;
+
+	snprintf(str, len, "-x hostname:%s ", hostname);
 
 	return str;
 }
 
-static char *fqdn(const char *value, char *str, size_t len)
+static char *fqdn(const char *val, char *str, size_t len)
 {
-	snprintf(str, len, "-F \"%s\" ", value);
+	snprintf(str, len, "-F \"%s\" ", val);
 	return str;
 }
 
@@ -102,39 +104,46 @@ static char *os_name_version(char *str, size_t len)
 	return str;
 }
 
-static char *compose_option(const char *ifname, const char *name, const char *value,
-			    char *option, size_t len)
+static char *compose_option(struct lyd_node *cfg, const char *ifname, struct lyd_node *id,
+			    const char *val, const char *hex, char *option, size_t len)
 {
-	if (value) {
-		if (isdigit(name[0])) {
-			unsigned long opt = strtoul(name, NULL, 0);
+	const char *name = lyd_get_value(id);
+	int num = dhcp_option_lookup(id);
 
-			switch (opt) {
-			case 81:
-				return fqdn(value, option, len);
-			default:
-				break;
+	if (num == -1) {
+		ERROR("Failed looking up DHCP client %s option %s, skipping.", ifname, name);
+		return NULL;
+	}
+
+	if (val || hex) {
+		switch (num) {
+		case 81: /* fqdn */
+			if (!val)
+				return NULL;
+			return fqdn(val, option, len);
+		case 12: /* hostname */
+			if (val && !strcmp(val, "auto"))
+				return hostname(cfg, option, len);
+			/* fallthrough */
+		default:
+			if (hex) {
+				snprintf(option, len, "-x %d:", num);
+				strlcat(option, hex, len);
+				strlcat(option, " ", len);
+			} else {
+				/* string value */
+				snprintf(option, len, "-x %d:'\"%s\"' ", num, val);
 			}
-
-			snprintf(option, len, "-x %s:%s ", name, value);
-		} else {
-			if (!strcmp(name, "fqdn"))
-				fqdn(value, option, len);
-			else if (!strcmp(name, "hostname"))
-				snprintf(option, len, "-x %s:%s ", name, value);
-			else
-				snprintf(option, len, "-x %s:'\"%s\"' ", name, value);
+			break;
 		}
 	} else {
-		struct { char *name; char *(*cb)(const char *, char *, size_t); } opt[] = {
-			{ "hostname", hostname },
-			{ "address",  ip_cache },
-			{ "fqdn",     NULL     },
-			{ NULL, NULL }
+		struct { int num; char *(*cb)(const char *, char *, size_t); } opt[] = {
+			{ 50, ip_cache }, /* address */
+			{ 81, NULL     }, /* fqdn */
 		};
 
-		for (size_t i = 0; opt[i].name; i++) {
-			if (strcmp(name, opt[i].name))
+		for (size_t i = 0; i < NELEMS(opt); i++) {
+			if (num != opt[i].num)
 				continue;
 
 			if (!opt[i].cb || !opt[i].cb(ifname, option, len))
@@ -143,17 +152,20 @@ static char *compose_option(const char *ifname, const char *name, const char *va
 			return option;
 		}
 
-		snprintf(option, len, "-O %s ", name);
+		snprintf(option, len, "-O %d ", num);
 	}
 
 	return option;
 }
 
-static char *compose_options(const char *ifname, char **options, const char *name, const char *value)
+static char *compose_options(struct lyd_node *cfg, const char *ifname, char **options,
+			     struct lyd_node *id, const char *val, const char *hex)
 {
 	char opt[300];
 
-	compose_option(ifname, name, value, opt, sizeof(opt));
+	if (!compose_option(cfg, ifname, id, val, hex, opt, sizeof(opt)))
+		return *options;
+
 	if (*options) {
 		char *opts;
 
@@ -171,29 +183,33 @@ static char *compose_options(const char *ifname, char **options, const char *nam
 	return *options;
 }
 
+static char *fallback_options(const char *ifname)
+{
+	const char *defaults = "-O subnet -O broadcast -O router -O domain -O search "
+		"-O dns -O ntpsrv -O staticroutes -O msstaticroutes ";
+	char address[32] = { 0 };
+	char *options;
+
+	ip_cache(ifname, address, sizeof(address));
+	asprintf(&options, "%s %s", defaults, address);
+
+	return options;
+}
+
 static char *dhcp_options(const char *ifname, struct lyd_node *cfg)
 {
 	struct lyd_node *option;
 	char *options = NULL;
 
 	LYX_LIST_FOR_EACH(lyd_child(cfg), option, "option") {
-		const char *value = lydx_get_cattr(option, "value");
-		const char *name  = lydx_get_cattr(option, "name");
+		struct lyd_node *id = lydx_get_child(option, "id");
+		const char *val = lydx_get_cattr(option, "value");
+		const char *hex = lydx_get_cattr(option, "hex");
 
-		options = compose_options(ifname, &options, name, value);
+		options = compose_options(cfg, ifname, &options, id, val, hex);
 	}
 
-	if (!options) {
-		const char *defaults[] = {
-			"router", "dns", "domain", "broadcast", "ntpsrv", "search",
-			"address", "staticroutes", "msstaticroutes"
-		};
-
-		for (size_t i = 0; i < NELEMS(defaults); i++)
-			options = compose_options(ifname, &options, defaults[i], NULL);
-	}
-
-	return options ?: strdup("-O subnet -O router -O domain");
+	return options ?: fallback_options(ifname);
 }
 
 static void add(const char *ifname, struct lyd_node *cfg)
@@ -201,7 +217,7 @@ static void add(const char *ifname, struct lyd_node *cfg)
 	const char *metric = lydx_get_cattr(cfg, "route-preference");
 	const char *client_id = lydx_get_cattr(cfg, "client-id");
 	char vendor[128] = { 0 }, do_arp[20] = { 0 };
-	char *args = NULL, *options = NULL;
+	char *cid = NULL, *options = NULL;
 	const char *action = "disable";
 	bool arping;
 	FILE *fp;
@@ -211,55 +227,64 @@ static void add(const char *ifname, struct lyd_node *cfg)
 		snprintf(do_arp, sizeof(do_arp), "-a%d", ARPING_MSEC);
 
 	if (client_id && client_id[0]) {
-		args = alloca(strlen(client_id) + 12);
-		if (args)
-			sprintf(args, "-C -x 61:'\"%s\"'", client_id);
+		size_t len = 3 * strlen(client_id) + 16;
+
+		cid = malloc(len);
+		if (!cid)
+			goto generr;
+
+		strlcpy(cid, "-C -x 61:00", len);
+		for (size_t i = 0; client_id[i]; i++) {
+			char hex[5];
+
+			snprintf(hex, sizeof(hex), ":%02x", client_id[i]);
+			strlcat(cid, hex, len);
+		}
 	}
 
 	options = dhcp_options(ifname, cfg);
-	if (!options) {
-		ERROR("failed extracting DHCP options for client %s, aborting!", ifname);
-		goto err;
-	}
 
 	os_name_version(vendor, sizeof(vendor));
 
-	fp = fopenf("w", "/etc/finit.d/available/dhcp-%s.conf", ifname);
+	fp = fopenf("w", "/etc/finit.d/available/dhcp-client-%s.conf", ifname);
 	if (!fp) {
-		ERROR("failed creating DHCP client %s: %s", ifname, strerror(errno));
+	generr:
+		ERRNO("failed creating DHCP client %s: %s", ifname, strerror(errno));
 		goto err;
 	}
 
 	fprintf(fp, "# Generated by Infix confd\n");
 	fprintf(fp, "metric=%s\n", metric);
-	fprintf(fp, "service <!> name:dhcp :%s <net/%s/running> \\\n"
-		"	[2345] udhcpc -f -p /run/dhcp-%s.pid -t 10 -T 3 -A 10 %s -S -R \\\n"
-		"		-o %s \\\n"
+	fprintf(fp, "service <!> name:dhcp-client :%s <net/%s/running> \\\n"
+		"	[2345] udhcpc -f -p /run/dhcp-client-%s.pid -t 10 -T 3 -A 10 %s -S -R \\\n"
+		"		%s%s \\\n"
 		"		-i %s %s %s \\\n"
 		"		-- DHCP client @%s\n",
 		ifname, ifname, ifname, do_arp,
-		options,
-		ifname, args ?: "", vendor, ifname);
+		options ? "-o " : "", options,
+		ifname, cid ?: "", vendor, ifname);
 	fclose(fp);
 	action = "enable";
 err:
-	systemf("initctl -bfqn %s dhcp-%s", action, ifname);
+	systemf("initctl -bfqn %s dhcp-client-%s", action, ifname);
 	if (options)
 		free(options);
+	if (cid)
+		free(cid);
 }
 
 static void del(const char *ifname)
 {
-	systemf("initctl -bfq delete dhcp-%s", ifname);
+	systemf("initctl -bfq delete dhcp-client-%s", ifname);
 }
 
 static int change(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
 		  const char *xpath, sr_event_t event, unsigned request_id, void *_confd)
 {
 	struct lyd_node *global, *diff, *cifs, *difs, *cif, *dif;
-	sr_error_t       err = 0;
-	sr_data_t       *cfg;
-	int              ena = 0;
+	sr_error_t err = 0;
+	sr_data_t *cfg;
+	int ena = 0;
 
 	switch (event) {
 	case SR_EV_DONE:
@@ -270,7 +295,7 @@ static int change(sr_session_ctx_t *session, uint32_t sub_id, const char *module
 		return SR_ERR_OK;
 	}
 
-	err = sr_get_data(session, XPATH "//.", 0, 0, 0, &cfg);
+	err = sr_get_data(session, "//.", 0, 0, 0, &cfg);
 	if (err || !cfg)
 		goto err_abandon;
 
@@ -328,18 +353,18 @@ err_abandon:
 static void infer_options(sr_session_ctx_t *session, const char *xpath)
 {
 	const char *opt[] = {
-		"subnet",
-		"router",
-		"dns",
-		"hostname", /* server may use this to register our current name */
-		"domain",
+		"netmask",
 		"broadcast",
-		"ntpsrv"    /* will not be activated unless ietf-system also is */
+		"router",
+		"domain",
+		"hostname", /* server may use this to register our current name */
+		"dns-server",
+		"ntp-server" /* will not be activated unless ietf-system also is */
 	};
 	size_t i;
 
 	for (i = 0; i < NELEMS(opt); i++)
-		srx_set_item(session, NULL, 0, "%s/option[name='%s']", xpath, opt[i]);
+		srx_set_item(session, NULL, 0, "%s/option[id='%s']", xpath, opt[i]);
 }
 
 static int cand(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
@@ -396,7 +421,7 @@ static int cand(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
 	return SR_ERR_OK;
 }
 
-int infix_dhcp_init(struct confd *confd)
+int infix_dhcp_client_init(struct confd *confd)
 {
 	int rc;
 

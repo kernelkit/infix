@@ -64,8 +64,8 @@ with infamy.Test() as test:
                 "client-if": [{
                     "if-name": f"{port}",
                     "option": [
-                        {"name": "router"},
-                        {"name": "staticroutes"}
+                        {"id": "router"},
+                        {"id": "classless-static-route"}
                     ]
                 }]
             }
@@ -75,17 +75,17 @@ with infamy.Test() as test:
         netns.addip("192.168.0.1")
         print(f"Start DHCP server {ROUTER} with option 3 and 121")
         with infamy.dhcp.Server(netns, prefix=PREFIX, router=ROUTER):
-            with test.step("Verify 'client' has a route 10.0.0.0/24 via 192.168.0.254 (option 121)"):
+            with test.step("Verify client has route 10.0.0.0/24 via 192.168.0.254 (option 121)"):
                 print("Verify client use classless routes, option 121")
                 until(lambda: route.ipv4_route_exist(client, PREFIX, ROUTER))
 
-            with test.step("Verify 'client' has default route via 192.168.0.254 (not use option 3)"):
+            with test.step("Verify client has default route via 192.168.0.254 (not use option 3)"):
                 print("Verify client did *not* use option 3")
                 if route.ipv4_route_exist(client, "0.0.0.0/0", ROUTER):
                     test.fail()
 
-            with test.step("Verify 'client' still has canary route to 20.0.0.0/24 via 192.168.0.2"):
+            with test.step("Verify client still has canary route to 20.0.0.0/24 via 192.168.0.2"):
                 until(lambda: route.ipv4_route_exist(client, CANARY,
-                                                     CANHOP, pref=250))
+                                                CANHOP, pref=250))
 
     test.succeed()

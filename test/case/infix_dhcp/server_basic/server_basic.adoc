@@ -1,0 +1,31 @@
+=== DHCP Server Basic
+==== Description
+Verify basic DHCP server functionality.  The server is set up to only
+hand out leases from a pool of a single address.  A single DHCP option,
+hostname, is to be handed out with the lease to the client.  Ensure no
+other options are sent by checking, e.g., that the client has not set up
+a default route to the server.
+
+==== Topology
+ifdef::topdoc[]
+image::{topdoc}../../test/case/infix_dhcp/server_basic/topology.svg[DHCP Server Basic topology]
+endif::topdoc[]
+ifndef::topdoc[]
+ifdef::testgroup[]
+image::server_basic/topology.svg[DHCP Server Basic topology]
+endif::testgroup[]
+ifndef::testgroup[]
+image::topology.svg[DHCP Server Basic topology]
+endif::testgroup[]
+endif::topdoc[]
+==== Test sequence
+. Set up topology and attach to client and server DUTs
+. Configure DHCP server and client
+. Verify DHCP client's original hostname
+. Verify DHCP client lease from server's pool
+. Verify DHCP client's new hostname
+. Verify DHCP client has no default route
+
+
+<<<
+

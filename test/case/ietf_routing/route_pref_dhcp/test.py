@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Route preference: DHCP vs Static 
+Route preference: DHCP vs Static
 
 This test configures a device with both a DHCP-acquired route on a
 dedicated interface and a static route to the same destination on
@@ -70,13 +70,13 @@ def config_target1(target, data1, data2, link):
                         "if-name": data1,
                         "enabled": True,
                         "option": [
-                            {"name": "broadcast"},
-                            {"name": "dns"},
-                            {"name": "domain"},
-                            {"name": "hostname"},
-                            {"name": "ntpsrv"},
-                            {"name": "router"},
-                            {"name": "subnet"}
+                            {"id": "broadcast"},
+                            {"id": "dns-server"},
+                            {"id": "domain"},
+                            {"id": "hostname"},
+                            {"id": "ntp-server"},
+                            {"id": "router"},
+                            {"id": "netmask"}
                         ],
                         "route-preference": 5
                     }

@@ -22,7 +22,7 @@ commands:
   modify MOD     Modify (change/update) module, may use :ALL
   install MOD    Install module
   uninstall MOD  Uninstall module (force)
-
+  update PATH    Update module from PATH
 EOF
 }
 
@@ -99,7 +99,12 @@ case $cmd in
 	$CTL -c "$1" $perms $owner $group $features -v3
 	;;
     uninstall)
-	$CTL -u "$1" -f -v3
+	for mod in "$@"; do
+	    $CTL -u "$mod" -f -v3
+	done
+	;;
+    update)
+	$CTL -U "$1" -s "$MOD" $perms $owner $group $features -v3
 	;;
     *)
 	echo "NOP"
