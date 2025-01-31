@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """DHCP Server Static Host
 
-Verify DHCP server can hand out static host leases based on
-a very long client-id, ensuring no pool address is handed
-out instead.
+Verify DHCP server can hand out static host leases based on client-id,
+both hexadecimal and a very long string, ensuring no pool address is
+handed out instead.
+
 """
 import infamy
 import infamy.iface as iface
@@ -19,6 +20,7 @@ with infamy.Test() as test:
     ADDRESS2 = '192.168.2.22'
     GW2      = '192.168.2.1'
     HOSTNM1  = 'foo'
+    HOSTCID1 = '00:c0:ff:ee'    # Infix DHCP server is RFC compliant
     HOSTNM11 = 'client1'
     HOSTCID2 = 'xyzzydissiegillespiefoobarterrawinklesouponastick'
     HOSTNM2  = 'bar'
@@ -70,7 +72,7 @@ with infamy.Test() as test:
                             "host": [{
                                 "address": ADDRESS1,
                                 "match": {
-                                    "hostname": HOSTNM1
+                                    "client-id": {"hex": HOSTCID1}
                                 },
                                 "option": [
                                     {
@@ -94,7 +96,7 @@ with infamy.Test() as test:
                             "host": [{
                                 "address": ADDRESS2,
                                 "match": {
-                                    "client-id": HOSTCID2
+                                    "client-id": {"str": HOSTCID2}
                                 },
                                 "option": [
                                     {
@@ -120,7 +122,7 @@ with infamy.Test() as test:
                         "if-name": client1["link"],
                         "option": [
                             {"id": "router"},
-                            {"id": "hostname", "value": "auto"},
+                            {"id": "client-id", "hex": HOSTCID1},
                             {"id": 121}
                         ]
                     }]

@@ -1,8 +1,8 @@
 === DHCP Server Static Host
 ==== Description
-Verify DHCP server can hand out static host leases based on
-a very long client-id, ensuring no pool address is handed
-out instead.
+Verify DHCP server can hand out static host leases based on client-id,
+both hexadecimal and a very long string, ensuring no pool address is
+handed out instead.
 
 ==== Topology
 ifdef::topdoc[]

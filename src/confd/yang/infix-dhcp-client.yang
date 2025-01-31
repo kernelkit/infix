@@ -52,55 +52,120 @@ module infix-dhcp-client {
    */
 
   container dhcp-client {
-    description
-      "DHCPv4 client configuration";
+    description "DHCPv4 client configuration";
+
     leaf enabled {
       type boolean;
       default "true";
       description "Globally enables the DHCP client function.";
     }
+
     list client-if {
-      key "if-name";
       description "List of interfaces requesting DHCPv4 configuration.";
+      key "if-name";
+
       leaf if-name {
         type if:interface-ref;
         mandatory true;
         description "Name of the interface.";
       }
+
       leaf enabled {
         type boolean;
         default "true";
         description "Enable DHCP client for this interface.";
       }
+
       leaf client-id {
         type string;
-        description "Optional Client ID, option 61, default: MAC address.";
+        description "Optional Client ID, option 61, RFC 2132.
+
+                     When omitted the client sends its MAC address as client-id.
+
+                     RFC 2132 defines client-id as [ OPT | LEN | TYPE | DATA ],
+                     where TYPE is 0x01 for MAC address and 0x00 for anything
+                     else.  Servers usually just do a binary match of the data
+                     using the length field.  This particular setting encodes
+                     the value as an ASCII string without trailing zero.
+
+                     For full control of both type and data fields, use generic
+                     option list instead, which supports entering raw HEX data.";
       }
+
       leaf arping {
         type boolean;
         default "true";
         description "ARP for lease to check for IP address collisions (slow).";
       }
+
       list option {
         key "id";
-        description
-          "List of DHCP options to request (and accept).  The default is an
-           empty list, meaning all supported options.  To restrict the
-           client to only get IP address and default route, set this to:
-           'subnet router'";
+        description "List of DHCP options to request (and accept).
+
+           The default is an empty list, meaning all supported options.  To
+           restrict the client to only get IP address and default route, set
+           this to: 'subnet router'";
+
+        must "not(id = 'fqdn' and 'value/hex')" {
+          error-message "FQDN option must use string format";
+          error-app-tag "invalid-fqdn-format";
+        }
+
         leaf id {
           type dhcp:options;
           description "DHCP option to request from, or inform server of.";
         }
-        leaf value {
-          type string;
-          description "Optional value, only used for non-flag request options.
-                       Example: option:hostname, value:xyzzy
-                                option:clientid, value:01:02:03:04:05:06:07:08:09:0a
-                                option:0x51,     value:xyzzy.example.com";
-           must "../id != 'hostname' or re-match(., '[a-zA-Z0-9\\-_]{1,64}')";
+
+        choice value {
+          case value {
+            leaf value {
+              description "Optional value, to inform server, e.g., hostname.
+
+                           Example 1)
+
+                                option:12, value:xyzzy
+
+                           Example 2)
+
+                                option:hostname, value:xyzzy
+
+                           Will be sent as [12 | 05 | 78 | 79 | 80 | 80 | 79],
+                           which the server can use for static host matching.
+                           For the 'hostname' option the 'auto' keyword can be
+                           used to send the hostname part from IETF system.";
+              type string;
+              must "../id != 'hostname' or re-match(., '[a-zA-Z0-9\\-_]{1,64}')";
+            }
+          }
+          case hex {
+            leaf hex {
+              description "Optional binary value, to inform server, e.g., client-id.
+
+                           This is a raw payload option allowing full control of
+                           what is sent in an option.  Often used with options 61
+                           and option 43 (vendor-specific).
+
+                           Example 1)
+
+                                option:client-id, hex:00:c0:ff:ee
+
+                           Will be sent as : [61 | 03 | 00 | c0 | ff | ee], which
+                           is the RFC conformant formatting of option 61.
+
+                           Example 2)
+
+                                option:client-id, hex:c0:ff:ee
+
+                           Will be sent as : [61 | 03 | c0 | ff | ee] meaning the
+                           'htype' will be set to 'c0', while the RFC only defines
+                           '00' (string) and and '01' (mac) for this field, some
+                           users may want full control over this option.";
+              type dhcp:octet-string;
+            }
+          }
         }
       }
+
       leaf route-preference {
         type route-preference;
         default 5;

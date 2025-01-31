@@ -84,6 +84,7 @@ static int configure_options(FILE *fp, struct lyd_node *cfg, const char *tag)
 		 */
 		val = lydx_get_cattr(option, "name")
 			?: lydx_get_cattr(option, "string")
+			?: lydx_get_cattr(option, "hex")
 			?: NULL;
 		if (!val) {
 			val = lydx_get_cattr(option, "address");
@@ -118,7 +119,7 @@ static const char *host_match(struct lyd_node *match, const char **id)
 {
 	struct {
 		const char *key;
-		const char *prefix;
+		const char *prefix; /* dnsmasq prefix */
 	} choice[] = {
 		{ "mac-address", NULL  },
 		{ "hostname",    NULL  },
@@ -129,14 +130,25 @@ static const char *host_match(struct lyd_node *match, const char **id)
 		return NULL;
 
 	for (size_t i = 0; i < NELEMS(choice); i++) {
-		struct lyd_node *node;
+		struct lyd_node *node, *sub;
+		const char *value;
 
 		node = lydx_get_child(match, choice[i].key);
 		if (!node)
 			continue;
 
 		*id = choice[i].prefix;
-		return lyd_get_value(node);
+		value = lyd_get_value(node);
+		if (value)
+			return value;
+
+		/* The client-id setting is has a qualifier */
+		sub = lydx_get_child(node, "str");
+		if (sub)
+			return lyd_get_value(sub);
+		sub = lydx_get_child(node, "hex");
+		if (sub)
+			return lyd_get_value(sub);
 	}
 
 	return NULL;

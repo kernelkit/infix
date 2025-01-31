@@ -71,9 +71,9 @@ static char *hostname(struct lyd_node *cfg, char *str, size_t len)
 	return str;
 }
 
-static char *fqdn(const char *value, char *str, size_t len)
+static char *fqdn(const char *val, char *str, size_t len)
 {
-	snprintf(str, len, "-F \"%s\" ", value);
+	snprintf(str, len, "-F \"%s\" ", val);
 	return str;
 }
 
@@ -104,26 +104,8 @@ static char *os_name_version(char *str, size_t len)
 	return str;
 }
 
-static bool is_hex(const char *s)
-{
-	while (s[0] && s[1]) {
-		if (!isxdigit(s[0]) || !isxdigit(s[1]))
-			return false;
-
-		s += 2;
-		if (*s == '\0')
-			return true;
-
-		if (*s != ':')
-			return false;
-		s++;
-        }
-
-	return false;
-}
-
 static char *compose_option(struct lyd_node *cfg, const char *ifname, struct lyd_node *id,
-			    const char *value, char *option, size_t len)
+			    const char *val, const char *hex, char *option, size_t len)
 {
 	const char *name = lyd_get_value(id);
 	int num = dhcp_option_lookup(id);
@@ -133,22 +115,24 @@ static char *compose_option(struct lyd_node *cfg, const char *ifname, struct lyd
 		return NULL;
 	}
 
-	if (value) {
+	if (val || hex) {
 		switch (num) {
 		case 81: /* fqdn */
-			return fqdn(value, option, len);
+			if (!val)
+				return NULL;
+			return fqdn(val, option, len);
 		case 12: /* hostname */
-			if (!strcmp(value, "auto"))
+			if (val && !strcmp(val, "auto"))
 				return hostname(cfg, option, len);
 			/* fallthrough */
 		default:
-			if (is_hex(value)) {
+			if (hex) {
 				snprintf(option, len, "-x %d:", num);
-				strlcat(option, value, len);
+				strlcat(option, hex, len);
 				strlcat(option, " ", len);
 			} else {
 				/* string value */
-				snprintf(option, len, "-x %d:'\"%s\"' ", num, value);
+				snprintf(option, len, "-x %d:'\"%s\"' ", num, val);
 			}
 			break;
 		}
@@ -175,11 +159,11 @@ static char *compose_option(struct lyd_node *cfg, const char *ifname, struct lyd
 }
 
 static char *compose_options(struct lyd_node *cfg, const char *ifname, char **options,
-			     struct lyd_node *id, const char *value)
+			     struct lyd_node *id, const char *val, const char *hex)
 {
 	char opt[300];
 
-	if (!compose_option(cfg, ifname, id, value, opt, sizeof(opt)))
+	if (!compose_option(cfg, ifname, id, val, hex, opt, sizeof(opt)))
 		return *options;
 
 	if (*options) {
@@ -220,8 +204,9 @@ static char *dhcp_options(const char *ifname, struct lyd_node *cfg)
 	LYX_LIST_FOR_EACH(lyd_child(cfg), option, "option") {
 		struct lyd_node *id = lydx_get_child(option, "id");
 		const char *val = lydx_get_cattr(option, "value");
+		const char *hex = lydx_get_cattr(option, "hex");
 
-		options = compose_options(cfg, ifname, &options, id, val);
+		options = compose_options(cfg, ifname, &options, id, val, hex);
 	}
 
 	return options ?: fallback_options(ifname);
@@ -249,16 +234,11 @@ static void add(const char *ifname, struct lyd_node *cfg)
 			goto generr;
 
 		strlcpy(cid, "-C -x 61:00", len);
-		if (is_hex(client_id)) {
-			strlcat(cid, ":", len);
-			strlcat(cid, client_id, len);
-		} else {
-			for (size_t i = 0; client_id[i]; i++) {
-				char hex[5];
+		for (size_t i = 0; client_id[i]; i++) {
+			char hex[5];
 
-				snprintf(hex, sizeof(hex), ":%02x", client_id[i]);
-				strlcat(cid, hex, len);
-			}
+			snprintf(hex, sizeof(hex), ":%02x", client_id[i]);
+			strlcat(cid, hex, len);
 		}
 	}
 

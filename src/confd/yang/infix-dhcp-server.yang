@@ -25,16 +25,6 @@ module infix-dhcp-server {
     reference   "internal";
   }
 
-  typedef octet-string {
-    description "A generic string or a hex value if prefixed with 'id:'.";
-    type union {
-      type string {
-        pattern 'id:([0-9a-fA-F]{2}:)*[0-9a-fA-F]{2}';
-      }
-      type string;
-    }
-  }
-
   typedef dhcp-lease-time {
     description "The lease time in seconds, with a minimum of 2 minutes (120 seconds).
                  For static host entries, the value 'infinite' may be used.";
@@ -101,6 +91,15 @@ module infix-dhcp-server {
               description "Next-hop IP address.";
               type inet:ipv4-address;
             }
+          }
+        }
+
+        case hex-opt {
+          leaf hex {
+            description "Binary data as colon-separated pairs of hex digits.
+
+                         Example: c0:ff:ee";
+            type dhcp:octet-string;
           }
         }
 
@@ -214,15 +213,30 @@ module infix-dhcp-server {
             }
 
             case client-id {
-              leaf client-id {
-                description "Match on client-id (string 'abc' or hex 'id:c0:ff:ee', DHCP option 61.";
-                type union {
-                  type yang:mac-address;
-                  type octet-string;
+              container client-id {
+                description "Match on client-id, DHCP option 61.";
+                choice id {
+                  description "Format of the client-id value";
+                  default str;
+                  case str {
+                    leaf str {
+                      description "String value for text-based client-id.
+
+                                   Example: xyzzy";
+                      type string;
+                    }
+                  }
+                  case hex {
+                    leaf hex {
+                      description "Binary data as colon-separated pairs of hex digits.
+
+                                   Example: c0:ff:ee";
+                      type dhcp:octet-string;
+                    }
+                  }
                 }
               }
             }
-
             /* case option82 here ... */
           }
           /* More advanced match rules, e.g., option82 + client-id are not supported. */
