@@ -375,15 +375,16 @@ class DhcpServer:
                "host": lease["hostname"],
                "exp": exp
             })
+
         stats = get_json_data([], self.data, 'statistics')
-        self.offers    = stats["sent"]["offer-count"]
-        self.acks      = stats["sent"]["ack-count"]
-        self.naks      = stats["sent"]["nak-count"]
-        self.declines  = stats["received"]["decline-count"]
-        self.discovers = stats["received"]["discover-count"]
-        self.requests  = stats["received"]["request-count"]
-        self.releases  = stats["received"]["release-count"]
-        self.informs   = stats["received"]["inform-count"]
+        self.out_offers   = stats["out-offers"]
+        self.out_acks     = stats["out-acks"]
+        self.out_naks     = stats["out-naks"]
+        self.in_declines  = stats["in-declines"]
+        self.in_discovers = stats["in-discovers"]
+        self.in_requests  = stats["in-requests"]
+        self.in_releases  = stats["in-releases"]
+        self.in_informs   = stats["in-informs"]
 
     def format_duration(self, seconds):
         """Convert seconds to DDdHHhMMmSSs format, omitting zero values"""
@@ -421,14 +422,14 @@ class DhcpServer:
             print(row)
 
     def print_stats(self):
-        print(f"{'DHCP offers sent':<{32}}: {self.offers}")
-        print(f"{'DHCP ACK messages sent':<{32}}: {self.acks}")
-        print(f"{'DHCP NAK messages sent':<{32}}: {self.naks}")
-        print(f"{'DHCP decline messages received':<{32}}: {self.declines}")
-        print(f"{'DHCP discover messages received':<{32}}: {self.discovers}")
-        print(f"{'DHCP request messages received':<{32}}: {self.requests}")
-        print(f"{'DHCP release messages received':<{32}}: {self.discovers}")
-        print(f"{'DHCP inform messages received':<{32}}: {self.discovers}")
+        print(f"{'DHCP offers sent':<{32}}: {self.out_offers}")
+        print(f"{'DHCP ACK messages sent':<{32}}: {self.out_acks}")
+        print(f"{'DHCP NAK messages sent':<{32}}: {self.out_naks}")
+        print(f"{'DHCP decline messages received':<{32}}: {self.in_declines}")
+        print(f"{'DHCP discover messages received':<{32}}: {self.in_discovers}")
+        print(f"{'DHCP request messages received':<{32}}: {self.in_requests}")
+        print(f"{'DHCP release messages received':<{32}}: {self.in_discovers}")
+        print(f"{'DHCP inform messages received':<{32}}: {self.in_discovers}")
 
 
 class Iface:

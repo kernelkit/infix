@@ -70,18 +70,14 @@ def statistics():
         }
 
     return {
-        "sent": {
-            "offer-count": metrics["dhcp_offer"],
-            "ack-count":   metrics["dhcp_ack"],
-            "nak-count":   metrics["dhcp_nak"]
-        },
-        "received": {
-            "decline-count":  metrics["dhcp_decline"],
-            "discover-count": metrics["dhcp_discover"],
-            "request-count":  metrics["dhcp_request"],
-            "release-count":  metrics["dhcp_release"],
-            "inform-count":   metrics["dhcp_inform"]
-        }
+        "out-offers":   metrics["dhcp_offer"],
+        "out-acks":     metrics["dhcp_ack"],
+        "out-naks":     metrics["dhcp_nak"],
+        "in-declines":  metrics["dhcp_decline"],
+        "in-discovers": metrics["dhcp_discover"],
+        "in-requests":  metrics["dhcp_request"],
+        "in-releases":  metrics["dhcp_release"],
+        "in-informs":   metrics["dhcp_inform"]
     }
 
 

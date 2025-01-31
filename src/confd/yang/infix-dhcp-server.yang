@@ -309,46 +309,38 @@ module infix-dhcp-server {
       description "DHCP packet statistics.";
       config false;
 
-      container sent {
-        description "The packets sent by the server.";
-
-        leaf offer-count {
-          type yang:counter32;
-          description "Total number of DHCPOFFER packets.";
-        }
-        leaf ack-count {
-          type yang:counter32;
-          description "Total number of DHCPACK packets.";
-        }
-        leaf nak-count {
-          type yang:counter32;
-          description "Total number of DHCPNAK packets.";
-        }
+      leaf out-offers {
+        type yang:counter32;
+        description "Total number of DHCPOFFER packets.";
+      }
+      leaf out-acks {
+        type yang:counter32;
+        description "Total number of DHCPACK packets.";
+      }
+      leaf out-naks {
+        type yang:counter32;
+        description "Total number of DHCPNAK packets.";
       }
 
-      container received {
-        description "The packets sent by the client.";
-
-        leaf decline-count {
-          type yang:counter32;
-          description "Total number of DHCPDECLINE packets.";
-        }
-        leaf discover-count {
-          type yang:counter32;
-          description "Total number of DHCPDISCOVER packets.";
-        }
-        leaf request-count {
-          type yang:counter32;
-          description "Total number of DHCPREQUEST packets.";
-        }
-        leaf release-count {
-          type yang:counter32;
-          description "Total number of DHCPRELEASE packets.";
-        }
-        leaf inform-count {
-          type yang:counter32;
-          description "Total number of DHCPINFORM packets.";
-        }
+      leaf in-declines {
+        type yang:counter32;
+        description "Total number of DHCPDECLINE packets.";
+      }
+      leaf in-discovers {
+        type yang:counter32;
+        description "Total number of DHCPDISCOVER packets.";
+      }
+      leaf in-requests {
+        type yang:counter32;
+        description "Total number of DHCPREQUEST packets.";
+      }
+      leaf in-releases {
+        type yang:counter32;
+        description "Total number of DHCPRELEASE packets.";
+      }
+      leaf in-informs {
+        type yang:counter32;
+        description "Total number of DHCPINFORM packets.";
       }
 
       action clear {
