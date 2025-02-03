@@ -65,7 +65,9 @@ def test_argument(option, **kwargs):
 
 
 class Env(object):
-    def __init__(self, ltop=None, args=None, argv=sys.argv[1::], environ=os.environ):
+    def __init__(self, ltop=None, args=None, argv=sys.argv[1::], environ=os.environ,
+                 nodes_compatible=topology.compatible,
+                 edge_mappings=topology.edge_mappings):
         if "INFAMY_ARGS" in environ:
             argv = shlex.split(environ["INFAMY_ARGS"]) + argv
 
@@ -89,7 +91,9 @@ class Env(object):
 
             ldot = pydot.graph_from_dot_file(top_path)[0]
             self.ltop = topology.Topology(ldot)
-            if not self.ltop.map_to(self.ptop):
+            if not self.ltop.map_to(self.ptop,
+                                    nodes_compatible=nodes_compatible,
+                                    edge_mappings=edge_mappings):
                 raise tap.TestSkip()
 
             print(repr(self.ltop))
