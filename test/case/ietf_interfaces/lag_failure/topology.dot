@@ -28,9 +28,9 @@ graph "lag" {
     host:mon   -- dut1:mon  // Monitor connection to dut2 via dut1
     host:mgmt2 -- dut2:mgmt [requires="mgmt", color=lightgrey]
 
-    dut1:link1 -- host:lb1a  [requires="ieee-mc", color=black, fontcolor=black]
-    host:lb1b  -- dut2:link1 [requires="ieee-mc", color=black, fontcolor=black]
+    dut1:link1 -- host:lb1a  [requires="ieee-mc", lag=true, color=black, fontcolor=black]
+    host:lb1b  -- dut2:link1 [requires="ieee-mc", lag=true, color=black, fontcolor=black]
 
-    dut1:link2 -- host:lb2a  [requires="ieee-mc", color=black, fontcolor=black]
-    host:lb2b  -- dut2:link2 [requires="ieee-mc", color=black, fontcolor=black]
+    dut1:link2 -- host:lb2a  [requires="ieee-mc", lag=true, color=black, fontcolor=black]
+    host:lb2b  -- dut2:link2 [requires="ieee-mc", lag=true, color=black, fontcolor=black]
 }

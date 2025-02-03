@@ -14,8 +14,8 @@ each test step using the `mon` interface.
 from time import sleep, time
 from datetime import datetime
 import infamy
+import infamy.lag
 from infamy.util import parallel, until
-
 
 class DumbLinkBreaker:
     """Encapsulates basic, dumb link-breaking ops over SSH."""
@@ -135,7 +135,7 @@ def dut_init(dut, mode, addr):
 
 with infamy.Test() as test:
     with test.step("Set up topology and attach to target DUTs"):
-        env = infamy.Env()
+        env = infamy.Env(edge_mappings=infamy.lag.edge_mappings)
         dut1 = env.attach("dut1", "mgmt")
         dut2 = env.attach("dut2", "mgmt")
 

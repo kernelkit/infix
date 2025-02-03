@@ -13,6 +13,7 @@ each failure mode step using the `mon` interface.
 """
 from time import time
 import infamy
+import infamy.lag
 from infamy.netns import TPMR
 from infamy.util import parallel
 
@@ -120,7 +121,7 @@ def dut_init(dut, addr, peer):
 
 with infamy.Test() as test:
     with test.step("Set up topology and attach to target DUTs"):
-        env = infamy.Env()
+        env = infamy.Env(edge_mappings=infamy.lag.edge_mappings)
         dut1 = env.attach("dut1")
         dut2 = env.attach("dut2")
 

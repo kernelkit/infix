@@ -28,6 +28,6 @@ graph "lag" {
     host:mon   -- dut1:mon  // Monitor connection to dut2 via dut1
     host:mgmt2 -- dut2:mgmt [requires="mgmt", color=lightgrey]
 
-    dut1:link1 -- dut2:link1 [color=black, fontcolor=black, penwidth=3]
-    dut1:link2 -- dut2:link2 [color=black, fontcolor=black, penwidth=3]
+    dut1:link1 -- dut2:link1 [lag=true, color=black, fontcolor=black, penwidth=3]
+    dut1:link2 -- dut2:link2 [lag=true, color=black, fontcolor=black, penwidth=3]
 }
