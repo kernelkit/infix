@@ -11,37 +11,37 @@ graph "ring-4-duts" {
 	host [
 		label=" { host | { <mgmt4> mgmt4 | <data4> data4 | <mgmt1> mgmt1 | <data1> data1 | <data2> data2 | <mgmt2> mgmt2 | <data3> data3 | <mgmt3> mgmt3 } }",
 		pos="150,200!"
-		kind="controller",
+		requires="controller",
 	];
 
 	R1 [
 		label="{ { <mgmt> mgmt | <data> data } | \n R1 \n 10.0.0.1/32 \n(lo) } | { <ring1> ring1 | <cross> cross | <ring2> ring2 }",
 		pos="50,150!",
-		kind="infix",
+		requires="infix",
 	];
 
 	R4 [
 		label="{ { <mgmt> mgmt | <data> data } | \n R4 \n 10.0.0.4/32 \n(lo) } | { <ring1> ring1 | <cross> cross | <ring2> ring2 }",
 		pos="50,50!"
-		kind="infix",
+		requires="infix",
 	];
 
         R2 [
 		label="{ <ring2> ring2 | <cross> cross | <ring1> ring1 } | { { <data> data | <mgmt> mgmt } | \n R2 \n10.0.0.2/32 \n(lo) }",
 		pos="250,150!"
-		kind="infix",
+		requires="infix",
 	];
 
         R3 [
 		label="{ <ring2> ring2 | <cross> cross | <ring1> ring1 } | { { <data> data | <mgmt> mgmt } | \n R3 \n10.0.0.3/32 \n(lo) }",
 		pos="250,50!"
-		kind="infix",
+		requires="infix",
 	];
 
-	host:mgmt1 -- R1:mgmt [kind=mgmt, color="lightgray"]
-	host:mgmt2 -- R2:mgmt [kind=mgmt, color="lightgray"]
-	host:mgmt3 -- R3:mgmt [kind=mgmt, color="lightgray"]
-	host:mgmt4 -- R4:mgmt [kind=mgmt, color="lightgray"]
+	host:mgmt1 -- R1:mgmt [requires="mgmt", color="lightgray"]
+	host:mgmt2 -- R2:mgmt [requires="mgmt", color="lightgray"]
+	host:mgmt3 -- R3:mgmt [requires="mgmt", color="lightgray"]
+	host:mgmt4 -- R4:mgmt [requires="mgmt", color="lightgray"]
 
 	// host-Dut links
 	host:data1 -- R1:data [color="darkgreen"]
