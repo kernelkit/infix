@@ -47,9 +47,9 @@ with infamy.Test() as test:
                         "asymmetric-key": [
                             {
                                 "name": "test-host-key",
-                                "public-key-format": "ietf-crypto-types:ssh-public-key-format",
+                                "public-key-format": "infix-crypto-types:ssh-public-key-format",
                                 "public-key": PUBLIC_KEY,
-                                "private-key-format": "ietf-crypto-types:rsa-private-key-format",
+                                "private-key-format": "infix-crypto-types:rsa-private-key-format",
                                 "cleartext-private-key": PRIVATE_KEY
                             }
                         ]

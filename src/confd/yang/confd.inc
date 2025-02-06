@@ -40,6 +40,8 @@ MODULES=(
 	"infix-ethernet-interface@2024-02-27.yang"
 	"infix-factory-default@2023-06-28.yang"
 	"infix-interfaces@2025-01-08.yang -e vlan-filtering"
+	"infix-crypto-types@2025-02-04.yang"
+	"infix-keystore@2025-02-04.yang"
 
 	# from rousette
 	"ietf-restconf@2017-01-26.yang"
