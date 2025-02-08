@@ -4,6 +4,16 @@ Change Log
 All notable changes to the project are documented in this file.
 
 
+[v25.02.0][UNRELASED] -
+-------------------------
+
+### Changes
+ - YANG type for SSH private/public keys has changed, from
+   ietf-crypto-types to infix-crypto-types
+
+### Fixes
+
+
 [v25.01.0][] - 2025-01-31
 -------------------------
 

@@ -21,7 +21,7 @@
 
 #define SSH_HOSTKEYS "/etc/ssh/hostkeys"
 #define SSH_HOSTKEYS_NEXT SSH_HOSTKEYS"+"
- 
+
 #define LLDP_CONFIG "/etc/lldpd.d/confd.conf"
 #define LLDP_CONFIG_NEXT LLDP_CONFIG"+"
 
@@ -354,7 +354,7 @@ static int lldp_change(sr_session_ctx_t *session, uint32_t sub_id, const char *m
 		else
 			if (erase(LLDP_CONFIG))
 				ERRNO("Failed to remove old %s", LLDP_CONFIG);
-		
+
 		svc_change(session, event, xpath, "lldp", "lldpd");
 		break;
 
@@ -553,12 +553,12 @@ static int change_keystore_cb(sr_session_ctx_t *session, uint32_t sub_id, const 
 		private_key_type = lydx_get_cattr(change, "private-key-format");
 		public_key_type = lydx_get_cattr(change, "public-key-format");
 
-		if (strcmp(private_key_type, "ietf-crypto-types:rsa-private-key-format")) {
+		if (strcmp(private_key_type, "infix-crypto-types:rsa-private-key-format")) {
 			INFO("Private key %s is not of SSH type", name);
 			continue;
 		}
 
-		if (strcmp(public_key_type, "ietf-crypto-types:ssh-public-key-format")) {
+		if (strcmp(public_key_type, "infix-crypto-types:ssh-public-key-format")) {
 			INFO("Public key %s is not of SSH type", name);
 			continue;
 		}
