@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 # This script can be used to start, stop, create, and delete containers.
 # It is what confd use, with the Finit container@.conf template, to set
 # up, run, and delete containers.
@@ -109,33 +109,34 @@ EOF
 # If there are more index files, this function does not handle them.
 unpack_archive()
 {
-    image=$1
-    name=$2
+    uri=$1
+    tag=$2
+    img=$(basename "$uri")
 
     # Supported transports for load and create
-    case "$image" in
+    case "$uri" in
 	oci:*)			# Unpacked OCI image
-	    file=${image#oci:}
+	    file=${uri#oci:}
 	    ;;
 	oci-archive:*)		# Packed OCI image, .tar or .tar.gz format
-	    file=${image#oci-archive:}
+	    file=${uri#oci-archive:}
 	    ;;
 	ftp://* | http://* | https://*)
-            if ! file=$(fetch "$image"); then
+            if ! file=$(fetch "$uri"); then
 		return 1
 	    fi
             ;;
 	*)			# docker://*, docker-archive:*, or URL
-	    if podman image exists "$image"; then
-		echo "$image"
+	    if podman image exists "$img"; then
+		echo "$img"
 		return 0
 	    fi
 	    # XXX: use --retry=0 with Podman 5.0 or later.
-	    if ! id=$(podman pull --quiet "$image"); then
-		log "Failed pulling $image"
+	    if ! id=$(podman pull --quiet "$uri"); then
+		log "Failed pulling $uri"
 		return 1
 	    fi
-	    # Echo image name to caller
+	    # Echo image tag to caller
 	    podman images --filter id="$id" --format "{{.Repository}}:{{.Tag}}"
 	    return 0
 	    ;;
@@ -147,7 +148,7 @@ unpack_archive()
 	elif [ -e "$BUILTIN/$file" ]; then
 	    file="$BUILTIN/$file"
 	else
-	    err 1 "cannot find OCI archive $file in search path."
+	    err 1 "cannot find OCI archive $file in URI $uri"
 	fi
     fi
 
@@ -171,8 +172,8 @@ unpack_archive()
 
     dir=$(dirname "$index")
     if echo "$dir" | grep -q ":"; then
-        if [ -z "$name" ]; then
-            name="$dir"
+        if [ -z "$tag" ]; then
+            tag="$dir"
         fi
         sanitized_dir=$(echo "$dir" | cut -d':' -f1)
         mv "$dir" "$sanitized_dir" || err 1 "failed renaming $dir to $sanitized_dir"
@@ -188,15 +189,15 @@ unpack_archive()
 	rm -rf "$dir"
     fi
 
-    # Rename image from podman default $dir:latest
-    if [ -n "$name" ]; then
-	podman tag "$dir" "$name" >/dev/null
-	podman rmi "$dir"         >/dev/null
+    # Retag image from podman default $dir:latest
+    if [ -n "$tag" ]; then
+	podman tag "$dir" "$tag" >/dev/null
+	podman rmi "$dir"        >/dev/null
     else
-	name=$dir
+	tag=$dir
     fi
 
-    echo "$name"
+    echo "$tag"
 }
 
 running()
