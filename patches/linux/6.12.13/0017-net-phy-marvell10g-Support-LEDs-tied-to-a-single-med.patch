@@ -1,4 +1,4 @@
-From df3d8aede0c04a0ae93e0dc02ba6b471e3791500 Mon Sep 17 00:00:00 2001
+From 202a7fccb4d46e38ed6f82788a44cf7320377549 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Tue, 12 Dec 2023 09:51:05 +0100
 Subject: [PATCH 17/25] net: phy: marvell10g: Support LEDs tied to a single
@@ -6,7 +6,7 @@ Subject: [PATCH 17/25] net: phy: marvell10g: Support LEDs tied to a single
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
-Organization: Addiva Elektronik
+Organization: Wires
 
 In a combo-port setup, i.e. where both the copper and fiber interface
 are available to the user, the LEDs may be physically located either

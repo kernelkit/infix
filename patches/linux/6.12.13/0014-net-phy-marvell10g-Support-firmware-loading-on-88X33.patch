@@ -1,4 +1,4 @@
-From 1e19f28f4f44973f349ad8bbb2fe0f4624e3c0f3 Mon Sep 17 00:00:00 2001
+From 9ade37c2fa9f5a6faebeaa8894d9703624eae5ef Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Tue, 19 Sep 2023 18:38:10 +0200
 Subject: [PATCH 14/25] net: phy: marvell10g: Support firmware loading on
@@ -6,7 +6,7 @@ Subject: [PATCH 14/25] net: phy: marvell10g: Support firmware loading on
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
-Organization: Addiva Elektronik
+Organization: Wires
 
 When probing, if a device is waiting for firmware to be loaded into
 its RAM, ask userspace for the binary and load it over XMDIO.

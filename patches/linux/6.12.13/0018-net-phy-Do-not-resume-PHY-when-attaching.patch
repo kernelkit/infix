@@ -1,11 +1,11 @@
-From f76443118313f681a62cf34a6f8b38f743832dff Mon Sep 17 00:00:00 2001
+From 31f2aa0e957643cc51be65750c4f65be8c507a18 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Wed, 27 Mar 2024 10:10:19 +0100
 Subject: [PATCH 18/25] net: phy: Do not resume PHY when attaching
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
-Organization: Addiva Elektronik
+Organization: Wires
 
 The PHY should not start negotiating with its link-partner until
 explicitly instructed to do so.

@@ -1,4 +1,4 @@
-From 79d68d69f6cd6cf57ef5ed4bcba45134ff8ba174 Mon Sep 17 00:00:00 2001
+From d2802357f81b4995c92fdd6f2ab8ea923b69cef1 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Fri, 22 Mar 2024 16:15:43 +0100
 Subject: [PATCH 10/25] net: dsa: mv88e6xxx: Support EtherType based priority
@@ -6,7 +6,7 @@ Subject: [PATCH 10/25] net: dsa: mv88e6xxx: Support EtherType based priority
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
-Organization: Addiva Elektronik
+Organization: Wires
 
 Signed-off-by: Mattias Walström <lazzer@gmail.com>
 ---

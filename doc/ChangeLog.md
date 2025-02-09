@@ -8,6 +8,7 @@ All notable changes to the project are documented in this file.
 -------------------------
 
 ### Changes
+ - Upgrade Linux kernel to 6.12.13 (LTS)
  - YANG type for SSH private/public keys has changed, from
    ietf-crypto-types to infix-crypto-types
 

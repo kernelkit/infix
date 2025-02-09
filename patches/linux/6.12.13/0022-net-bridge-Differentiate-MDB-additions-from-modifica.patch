@@ -1,4 +1,4 @@
-From a48795ef7dbcfd7f1921753ad943144b933020b0 Mon Sep 17 00:00:00 2001
+From 12fe155cedae381d143a0b61b5375d1edb7c46e6 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Thu, 16 May 2024 14:51:54 +0200
 Subject: [PATCH 22/25] net: bridge: Differentiate MDB additions from
@@ -6,7 +6,7 @@ Subject: [PATCH 22/25] net: bridge: Differentiate MDB additions from
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
-Organization: Addiva Elektronik
+Organization: Wires
 
 Before this change, the reception of an IGMPv3 report (and analogously
 for MLDv2) that adds a new group, would trigger two MDB RTM_NEWMDB

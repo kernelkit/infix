@@ -1,4 +1,4 @@
-From 980366a1f8709fdfe643edb666c86a916c681a6c Mon Sep 17 00:00:00 2001
+From 8b3590e253746d5704650889c106cf5454e26cd3 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Wed, 24 Apr 2024 22:41:04 +0200
 Subject: [PATCH 04/25] net: dsa: mv88e6xxx: Limit rsvd2cpu policy to user
@@ -6,7 +6,7 @@ Subject: [PATCH 04/25] net: dsa: mv88e6xxx: Limit rsvd2cpu policy to user
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
-Organization: Addiva Elektronik
+Organization: Wires
 
 For packets with a DA in the IEEE reserved L2 group range, originating
 from a CPU, forward it as normal, rather than classifying it as

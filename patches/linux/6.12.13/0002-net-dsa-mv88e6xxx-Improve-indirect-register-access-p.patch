@@ -1,4 +1,4 @@
-From 3002b9e08272f3d740c2b582cf9b01fa1fde46b8 Mon Sep 17 00:00:00 2001
+From 765cc95de163acf8022b093ce227184e04b49d7b Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Wed, 27 Mar 2024 15:52:43 +0100
 Subject: [PATCH 02/25] net: dsa: mv88e6xxx: Improve indirect register access
@@ -6,7 +6,7 @@ Subject: [PATCH 02/25] net: dsa: mv88e6xxx: Improve indirect register access
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
-Organization: Addiva Elektronik
+Organization: Wires
 
 When operating in multi-chip mode, the 6393 family maps a subset of
 commonly used global registers to the outermost address space (in

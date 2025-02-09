@@ -1,11 +1,11 @@
-From 57eabbff1169a5641c59fc698d7b122d17733d49 Mon Sep 17 00:00:00 2001
+From 985f9b471326f65d2c29978b511181200c1b32dd Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Tue, 28 May 2024 11:04:22 +0200
 Subject: [PATCH 11/25] net: dsa: mv88e6xxx: Add mqprio qdisc support
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
-Organization: Addiva Elektronik
+Organization: Wires
 
 Add support for attaching mqprio qdisc's to mv88e6xxx ports and use
 the packet's traffic class as the outgoing priority when no PCP bits
