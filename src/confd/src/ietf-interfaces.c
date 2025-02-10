@@ -646,10 +646,6 @@ static sr_error_t netdag_init(sr_session_ctx_t *session, struct dagger *net,
 		if (dagger_add_node(net, lydx_get_cattr(iface, "name")))
 			return SR_ERR_INTERNAL;
 
-	LYX_LIST_FOR_EACH(difs, iface, "interface")
-		if (dagger_add_node(net, lydx_get_cattr(iface, "name")))
-			return SR_ERR_INTERNAL;
-
 	net->session = session;
 	return SR_ERR_OK;
 }
