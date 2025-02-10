@@ -482,40 +482,36 @@ static bool netdag_must_del(struct lyd_node *dif, struct lyd_node *cif)
 }
 
 static int netdag_gen_iface_del(struct dagger *net, struct lyd_node *dif,
-				       struct lyd_node *cif, bool fixed)
+				struct lyd_node *cif)
 {
 	const char *ifname = lydx_get_cattr(dif, "name");
 	FILE *ip;
 
 	DEBUG_IFACE(dif, "");
 
-	if (dagger_should_skip_current(net, ifname))
-		return 0;
-
-	if (iftype_from_iface(cif) == IFT_VETH) {
-		struct lyd_node *node;
-		const char *peer;
-
-		node = lydx_get_descendant(lyd_child(dif), "veth", NULL);
-		if (!node)
-			return -EINVAL;
-
-		peer = lydx_get_cattr(node, "peer");
-		if (!peer)
-			return -EINVAL;
-
-		dagger_skip_current_iface(net, peer);
-	}
-
 	ip = dagger_fopen_net_exit(net, ifname, NETDAG_EXIT, "exit.ip");
 	if (!ip)
 		return -EIO;
 
-	if (fixed) {
+	switch (iftype_from_iface(dif)) {
+	case IFT_ETH:
+	case IFT_ETHISH:
 		fprintf(ip, "link set dev %s down\n", ifname);
 		fprintf(ip, "addr flush dev %s\n", ifname);
-	} else {
+		break;
+	case IFT_VETH:
+		if (!veth_is_primary(dif))
+			break;
+		/* fallthrough */
+	case IFT_BRIDGE:
+	case IFT_DUMMY:
+	case IFT_GRE:
+	case IFT_GRETAP:
+	case IFT_VLAN:
+	case IFT_VXLAN:
+	case IFT_UNKNOWN:
 		fprintf(ip, "link del dev %s\n", ifname);
+		break;
 	}
 
 	fclose(ip);
@@ -545,7 +541,7 @@ static sr_error_t netdag_gen_iface(sr_session_ctx_t *session, struct dagger *net
 	      (op == LYDX_OP_NONE) ? "mod" : ((op == LYDX_OP_CREATE) ? "add" : "del"));
 
 	if (op == LYDX_OP_DELETE) {
-		err  = netdag_gen_iface_del(net, dif, cif, fixed);
+		err  = netdag_gen_iface_del(net, dif, cif);
 		err += netdag_gen_ipv4_autoconf(net, cif, dif);
 		goto err;
 	}
@@ -559,7 +555,7 @@ static sr_error_t netdag_gen_iface(sr_session_ctx_t *session, struct dagger *net
 	if (op != LYDX_OP_CREATE && netdag_must_del(dif, cif)) {
 		DEBUG_IFACE(dif, "Must delete");
 
-		err = netdag_gen_iface_del(net, dif, cif, fixed);
+		err = netdag_gen_iface_del(net, dif, cif);
 		if (err)
 			goto err;
 
@@ -636,14 +632,48 @@ err:
 	return err ? SR_ERR_INTERNAL : SR_ERR_OK;
 }
 
+static int netdag_init_iface(struct lyd_node *cif)
+{
+	int err;
+
+	err = dagger_add_node(&confd.netdag, lydx_get_cattr(cif, "name"));
+	if (err)
+		return err;
+
+	switch (iftype_from_iface(cif)) {
+	case IFT_BRIDGE:
+		return bridge_add_deps(cif);
+	/* case IFT_LAG: */
+	/* 	return lag_add_deps(cif); */
+	case IFT_VLAN:
+		return vlan_add_deps(cif);
+	case IFT_VETH:
+		return veth_add_deps(cif);
+
+	case IFT_DUMMY:
+	case IFT_ETH:
+	case IFT_ETHISH:
+	case IFT_GRE:
+	case IFT_GRETAP:
+	case IFT_VXLAN:
+	case IFT_UNKNOWN:
+		break;
+	}
+
+	return 0;
+}
+
 static sr_error_t netdag_init(sr_session_ctx_t *session, struct dagger *net,
 			      struct lyd_node *cifs, struct lyd_node *difs)
 {
-	struct lyd_node *iface;
+	struct lyd_node *cif;
+	int err;
 
-	LYX_LIST_FOR_EACH(cifs, iface, "interface")
-		if (dagger_add_node(net, lydx_get_cattr(iface, "name")))
+	LYX_LIST_FOR_EACH(cifs, cif, "interface") {
+		err = netdag_init_iface(cif);
+		if (err)
 			return SR_ERR_INTERNAL;
+	}
 
 	net->session = session;
 	return SR_ERR_OK;

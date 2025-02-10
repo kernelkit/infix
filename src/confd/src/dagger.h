@@ -27,10 +27,6 @@ int dagger_abandon(struct dagger *d);
 int dagger_evolve(struct dagger *d);
 int dagger_evolve_or_abandon(struct dagger *d);
 
-void dagger_skip_iface(struct dagger *d, const char *ifname);
-void dagger_skip_current_iface(struct dagger *d, const char *ifname);
-int dagger_should_skip(struct dagger *d, const char *ifname);
-int dagger_should_skip_current(struct dagger *d, const char *ifname);
 int dagger_is_bootstrap(struct dagger *d);
 
 int dagger_claim(struct dagger *d, const char *path);

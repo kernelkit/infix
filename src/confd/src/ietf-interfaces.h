@@ -97,20 +97,24 @@ int netdag_gen_ip_addrs(struct dagger *net, FILE *ip, const char *proto,
 /* infix-if-bridge.c */
 int bridge_mstpd_gen(struct lyd_node *cifs);
 int bridge_gen(struct lyd_node *dif, struct lyd_node *cif, FILE *ip, int add);
+int bridge_add_deps(struct lyd_node *cif);
 /* infix-if-bridge-mcd.c */
 int bridge_mcd_gen(struct lyd_node *cifs);
 /* infix-if-bridge-port.c */
 int bridge_port_gen(struct lyd_node *dif, struct lyd_node *cif, FILE *ip);
 
 /* infix-if-veth.c */
+bool veth_is_primary(struct lyd_node *cif);
 int ifchange_cand_infer_veth(sr_session_ctx_t *session, const char *path);
 int netdag_gen_veth(struct dagger *net, struct lyd_node *dif,
 		    struct lyd_node *cif, FILE *ip);
+int veth_add_deps(struct lyd_node *cif);
 
 /* infix-if-vlan.c */
 int ifchange_cand_infer_vlan(sr_session_ctx_t *session, const char *path);
 int netdag_gen_vlan(struct dagger *net, struct lyd_node *dif,
 		    struct lyd_node *cif, FILE *ip);
+int vlan_add_deps(struct lyd_node *cif);
 
 /* infix-if-gre.c */
 int gre_gen(struct dagger *net, struct lyd_node *dif,

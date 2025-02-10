@@ -12,6 +12,34 @@
 
 #include "ietf-interfaces.h"
 
+/*
+ * While the kernel atomically creates/destroys the pair, in `running`
+ * the two sides are distinct interfaces. So we need to figure out
+ * which one is going to create/delete the other - i.e. which side is
+ * the "primary"
+ */
+bool veth_is_primary(struct lyd_node *cif)
+{
+	struct lyd_node *peer, *veth;
+	const char *peername;
+
+	veth = lydx_get_child(cif, "veth");
+	peername = lydx_get_cattr(veth, "peer");
+	peer = lydx_find_by_name(lyd_parent(cif), "interface", peername);
+
+	/* At the moment, CNI code relies on one side of the pair
+	 * remaining in the host namespace, and that that interface
+	 * takes care of creating the pair.
+	 */
+	if (lydx_get_child(cif, "container-network"))
+		return false;
+	if (lydx_get_child(peer, "container-network"))
+		return true;
+
+	return strcmp(lydx_get_cattr(cif, "name"),
+		      lydx_get_cattr(veth, "peer")) < 0;
+}
+
 int ifchange_cand_infer_veth(sr_session_ctx_t *session, const char *path)
 {
 	char *ifname, *type, *peer, *xpath, *val;
@@ -67,36 +95,47 @@ int netdag_gen_veth(struct dagger *net, struct lyd_node *dif,
 		    struct lyd_node *cif, FILE *ip)
 {
 	const char *ifname = lydx_get_cattr(cif, "name");
+	char ifname_args[64] = "", peer_args[64] = "";
+	const char *mac, *peer;
 	struct lyd_node *node;
-	const char *peer;
-	int err;
+
+	if (!veth_is_primary(cif))
+		return 0;
 
 	node = lydx_get_descendant(lyd_child(cif), "veth", NULL);
 	if (!node)
 		return -EINVAL;
 
 	peer = lydx_get_cattr(node, "peer");
-	if (dagger_should_skip(net, ifname)) {
-		err = dagger_add_dep(net, ifname, peer);
-		if (err)
-			return ERR_IFACE(cif, err, "Unable to add dep \"%s\" to %s", peer, ifname);
-	} else {
-		char ifname_args[64] = "", peer_args[64] = "";
-		const char *mac;
 
-		dagger_skip_iface(net, peer);
+	mac = get_phys_addr(dif, NULL);
+	if (mac)
+		snprintf(ifname_args, sizeof(ifname_args), "address %s", mac);
 
-		mac = get_phys_addr(dif, NULL);
-		if (mac)
-			snprintf(ifname_args, sizeof(ifname_args), "address %s", mac);
+	node = lydx_find_by_name(lyd_parent(cif), "interface", peer);
+	if (node && (mac = get_phys_addr(node, NULL)))
+		snprintf(peer_args, sizeof(peer_args), "address %s", mac);
 
-		node = lydx_find_by_name(lyd_parent(cif), "interface", peer);
-		if (node && (mac = get_phys_addr(node, NULL)))
-			snprintf(peer_args, sizeof(peer_args), "address %s", mac);
+	fprintf(ip, "link add dev %s %s type veth peer %s %s\n",
+		ifname, ifname_args, peer, peer_args);
 
-		fprintf(ip, "link add dev %s %s type veth peer %s %s\n",
-			ifname, ifname_args, peer, peer_args);
-	}
+	return 0;
+}
+
+int veth_add_deps(struct lyd_node *cif)
+{
+	struct lyd_node *veth = lydx_get_child(cif, "veth");
+	const char *peer;
+	int err;
+
+	if (veth_is_primary(cif))
+		return 0;
+
+	peer = lydx_get_cattr(veth, "peer");
+
+	err = dagger_add_dep(&confd.netdag, lydx_get_cattr(cif, "name"), peer);
+	if (err)
+		return ERR_IFACE(cif, err, "Unable to depend on \"%s\"", peer);
 
 	return 0;
 }
