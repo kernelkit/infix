@@ -423,15 +423,16 @@ static int netdag_gen_afspec_set(sr_session_ctx_t *session, struct dagger *net, 
 		return bridge_gen(dif, cif, ip, 0);
 	case IFT_VLAN:
 		return netdag_gen_vlan(net, dif, cif, ip);
+
+	case IFT_DUMMY:
+	case IFT_GRE:
 	case IFT_GRETAP:
 	case IFT_VETH:
 	case IFT_VXLAN:
 		return 0;
 
-	case IFT_DUMMY:
 	case IFT_ETH:
 	case IFT_ETHISH:
-	case IFT_GRE:
 	case IFT_UNKNOWN:
 		return ERR_IFACE(cif, -ENOSYS, "unsupported interface type \"%s\"",
 				 lydx_get_cattr(cif, "type"));
