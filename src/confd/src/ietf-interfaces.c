@@ -383,58 +383,62 @@ static int netdag_gen_afspec_add(sr_session_ctx_t *session, struct dagger *net, 
 				 struct lyd_node *cif, FILE *ip)
 {
 	const char *ifname = lydx_get_cattr(cif, "name");
-	const char *iftype = lydx_get_cattr(cif, "type");
-	int err = 0;
 
 	DEBUG_IFACE(dif, "");
 
-	if (!strcmp(iftype, "infix-if-type:bridge")) {
-		err = bridge_gen(dif, cif, ip, 1);
-	} else if (!strcmp(iftype, "infix-if-type:dummy")) {
-		err = netdag_gen_dummy(net, NULL, cif, ip);
-	} else if (!strcmp(iftype, "infix-if-type:veth")) {
-		err = netdag_gen_veth(net, NULL, cif, ip);
-	} else if (!strcmp(iftype, "infix-if-type:vlan")) {
-		err = netdag_gen_vlan(net, NULL, cif, ip);
-	} else if (!strcmp(iftype, "infix-if-type:ethernet")) {
-		sr_session_set_error_message(net->session, "Cannot create fixed Ethernet interface %s,"
-					     " wrong type or name.", ifname);
-		return -ENOENT;
-	} else if (!strcmp(iftype, "infix-if-type:gre") || !strcmp(iftype, "infix-if-type:gretap")) {
-		err = gre_gen(net, NULL, cif, ip);
-	} else if (!strcmp(iftype, "infix-if-type:vxlan")) {
-		err = vxlan_gen(net, NULL, cif, ip);
-	} else {
-		sr_session_set_error_message(net->session, "%s: unsupported interface type \"%s\"", ifname, iftype);
+	switch (iftype_from_iface(cif)) {
+	case IFT_BRIDGE:
+		return bridge_gen(dif, cif, ip, 1);
+	case IFT_DUMMY:
+		return netdag_gen_dummy(net, NULL, cif, ip);
+	case IFT_GRE:
+	case IFT_GRETAP:
+		return gre_gen(net, NULL, cif, ip);
+	case IFT_VETH:
+		return netdag_gen_veth(net, NULL, cif, ip);
+	case IFT_VLAN:
+		return netdag_gen_vlan(net, NULL, cif, ip);
+	case IFT_VXLAN:
+		return vxlan_gen(net, NULL, cif, ip);
+
+	case IFT_ETH:
+	case IFT_ETHISH:
+	case IFT_UNKNOWN:
+		sr_session_set_error_message(net->session, "%s: unsupported interface type \"%s\"",
+					     ifname, lydx_get_cattr(cif, "type"));
 		return -ENOSYS;
 	}
 
-	if (err)
-		return err;
-
-	return 0;
+	__builtin_unreachable();
+	return -EINVAL;
 }
 
 static int netdag_gen_afspec_set(sr_session_ctx_t *session, struct dagger *net, struct lyd_node *dif,
 				 struct lyd_node *cif, FILE *ip)
 {
-	const char *ifname = lydx_get_cattr(cif, "name");
-	const char *iftype = lydx_get_cattr(cif, "type");
-
 	DEBUG_IFACE(dif, "");
 
-	if (!strcmp(iftype, "infix-if-type:bridge"))
+	switch (iftype_from_iface(cif)) {
+	case IFT_BRIDGE:
 		return bridge_gen(dif, cif, ip, 0);
-	if (!strcmp(iftype, "infix-if-type:vlan"))
+	case IFT_VLAN:
 		return netdag_gen_vlan(net, dif, cif, ip);
-	if (!strcmp(iftype, "infix-if-type:veth"))
+	case IFT_GRETAP:
+	case IFT_VETH:
+	case IFT_VXLAN:
 		return 0;
-	if (!strcmp(iftype, "infix-if-type:gretap"))
-		return 0;
-	if (!strcmp(iftype, "infix-if-type:vxlan"))
-		return 0;
-	ERROR("%s: unsupported interface type \"%s\"", ifname, iftype);
-	return -ENOSYS;
+
+	case IFT_DUMMY:
+	case IFT_ETH:
+	case IFT_ETHISH:
+	case IFT_GRE:
+	case IFT_UNKNOWN:
+		return ERR_IFACE(cif, -ENOSYS, "unsupported interface type \"%s\"",
+				 lydx_get_cattr(cif, "type"));
+	}
+
+	__builtin_unreachable();
+	return -EINVAL;
 }
 
 static bool is_phys_addr_deleted(struct lyd_node *dif)
@@ -449,33 +453,28 @@ static bool is_phys_addr_deleted(struct lyd_node *dif)
 
 static bool netdag_must_del(struct lyd_node *dif, struct lyd_node *cif)
 {
-	const char *iftype = lydx_get_cattr(cif, "type");
-
-	if (strcmp(iftype, "infix-if-type:ethernet") &&
-	    strcmp(iftype, "infix-if-type:etherlike")) {
-		if (is_phys_addr_deleted(dif))
-			return true;
-	}
-
-	if (!strcmp(iftype, "infix-if-type:vlan")) {
-		if (lydx_get_descendant(lyd_child(dif), "vlan", NULL))
-			return true;
-	} else if (!strcmp(iftype, "infix-if-type:veth")) {
-		if (lydx_get_descendant(lyd_child(dif), "veth", NULL))
-			return true;
-	} else if (!strcmp(iftype, "infix-if-type:gre") || !strcmp(iftype, "infix-if-type:gretap")) {
-		if (lydx_get_descendant(lyd_child(dif), "gre", NULL))
-			return true;
-	} else if (!strcmp(iftype, "infix-if-type:vxlan")) {
-		if (lydx_get_descendant(lyd_child(dif), "vxlan", NULL))
-			return true;
-/*
-	} else if (!strcmp(iftype, "infix-if-type:lag")) {
-		if (is_phys_addr_deleted(dif))
-			return true;
-
-		... REMEMBER WHEN ADDING BOND SUPPORT ...
-*/
+	switch (iftype_from_iface(cif)) {
+	case IFT_BRIDGE:
+	case IFT_DUMMY:
+		break;
+	case IFT_ETH:
+	case IFT_ETHISH:
+	/* case IFT_LAG: */
+	/* 	... REMEMBER WHEN ADDING BOND SUPPORT ... */
+		return is_phys_addr_deleted(dif);
+	case IFT_GRE:
+	case IFT_GRETAP:
+		return lydx_get_descendant(lyd_child(dif), "gre", NULL);
+	case IFT_VLAN:
+		return lydx_get_descendant(lyd_child(dif), "vlan", NULL);
+	case IFT_VETH:
+		return lydx_get_descendant(lyd_child(dif), "veth", NULL);
+	case IFT_VXLAN:
+		return lydx_get_descendant(lyd_child(dif), "vxlan", NULL);
+	case IFT_UNKNOWN:
+		ERR_IFACE(cif, -EINVAL, "unsupported interface type \"%s\"",
+			  lydx_get_cattr(cif, "type"));
+		return true;
 	}
 
 	return false;
@@ -485,7 +484,6 @@ static int netdag_gen_iface_del(struct dagger *net, struct lyd_node *dif,
 				       struct lyd_node *cif, bool fixed)
 {
 	const char *ifname = lydx_get_cattr(dif, "name");
-	const char *iftype = lydx_get_cattr(dif, "type");
 	FILE *ip;
 
 	DEBUG_IFACE(dif, "");
@@ -493,7 +491,7 @@ static int netdag_gen_iface_del(struct dagger *net, struct lyd_node *dif,
 	if (dagger_should_skip_current(net, ifname))
 		return 0;
 
-	if (iftype && !strcmp(iftype, "infix-if-type:veth")) {
+	if (iftype_from_iface(cif) == IFT_VETH) {
 		struct lyd_node *node;
 		const char *peer;
 

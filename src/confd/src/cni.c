@@ -6,6 +6,7 @@
 
 #include "core.h"
 #include "cni.h"
+#include "ietf-interfaces.h"
 
 #define CNI_NAME "/etc/cni/net.d/%s.conflist"
 
@@ -86,13 +87,13 @@ FILE *cni_popen(const char *fmt, const char *ifname)
 	return popenf("re", "nsenter -t %d -n %s", pid, cmd);
 }
 
-static bool iface_is_cni(const char *ifname, struct lyd_node *node, const char **type)
+static bool iface_is_cni(const char *ifname, struct lyd_node *node, enum iftype *type)
 {
 	struct lyd_node *net = lydx_get_child(node, "container-network");
 
 	if (net) {
 		if (type)
-			*type = lydx_get_cattr(net, "type");
+			*type = iftype_from_iface(net);
 		return true;
 	}
 
@@ -365,9 +366,7 @@ static int iface_gen_cni(const char *ifname, struct lyd_node *cif)
 	 * "container-network": {}, so someone does their job.
 	 */
 	if (!type) {
-		const char *iftype = lydx_get_cattr(cif, "type");
-
-		if (iftype && !strcmp(iftype, "infix-if-type:bridge"))
+		if (iftype_from_iface(cif) == IFT_BRIDGE)
 			type = "infix-interfaces:bridge";
 		else
 			type = "infix-interfaces:host";
@@ -386,7 +385,7 @@ static int iface_gen_cni(const char *ifname, struct lyd_node *cif)
 int cni_netdag_gen_iface(struct dagger *net, const char *ifname,
 			 struct lyd_node *dif, struct lyd_node *cif)
 {
-	const char *cni_type = NULL;
+	enum iftype cni_type;
 	FILE *fp;
 
 	if (iface_is_cni(ifname, cif, &cni_type)) {
@@ -403,7 +402,7 @@ int cni_netdag_gen_iface(struct dagger *net, const char *ifname,
 		err = iface_gen_cni(ifname, cif);
 		if (err)
 			return err;
-		if (cni_type && !strcmp(cni_type, "bridge"))
+		if (cni_type == IFT_BRIDGE)
 			return 1; /* CNI bridges are managed by podman */
 	} else if (iface_is_cni(ifname, dif, &cni_type)) {
 		/* No longer a container-network, clean up. */
@@ -414,7 +413,7 @@ int cni_netdag_gen_iface(struct dagger *net, const char *ifname,
 		fprintf(fp, "container -a -f delete network %s >/dev/null\n", ifname);
 		fclose(fp);
 
-		if (cni_type && !strcmp(cni_type, "bridge"))
+		if (cni_type == IFT_BRIDGE)
 			return 1; /* CNI bridges are managed by podman */
 	}
 

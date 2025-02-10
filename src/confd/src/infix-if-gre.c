@@ -6,13 +6,12 @@
 int gre_gen(struct dagger *net, struct lyd_node *dif,
 	    struct lyd_node *cif, FILE *ip)
 {
-	const char *ifname, *iftype, *local, *remote, *mac = NULL;
+	const char *ifname, *local, *remote, *mac = NULL;
 	struct lyd_node *node = NULL;
 	char gretype[10] = "";
 	int  ipv6;
 
 	ifname = lydx_get_cattr(cif, "name");
-	iftype = lydx_get_cattr(cif, "type");
 
 	node = lydx_get_descendant(lyd_child(cif), "gre", NULL);
 	if (!node)
@@ -22,13 +21,16 @@ int gre_gen(struct dagger *net, struct lyd_node *dif,
 	remote = lydx_get_cattr(node, "remote");
 	ipv6 = !!strstr(local, ":");
 
-	if (!strcmp(iftype, "infix-if-type:gre")) {
+	switch (iftype_from_iface(cif)) {
+	case IFT_GRE:
 		snprintf(gretype, sizeof(gretype), "%sgre", ipv6 ? "ip6" : "");
-
-	}
-	else if (!strcmp(iftype, "infix-if-type:gretap")) {
+		break;
+	case IFT_GRETAP:
 		snprintf(gretype, sizeof(gretype), "%sgretap", ipv6 ? "ip6" : "");
 		mac = get_phys_addr(cif, NULL);
+		break;
+	default:
+		return -EINVAL;
 	}
 
 	fprintf(ip, "link add name %s type %s local %s remote %s", ifname, gretype, local, remote);

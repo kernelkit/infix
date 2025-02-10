@@ -21,6 +21,44 @@
 
 #define ONOFF(boolean) boolean ? "on" : "off"
 
+#define IFTYPES(_map) \
+	_map(IFT_BRIDGE, "infix-if-type:bridge")	\
+	_map(IFT_DUMMY,  "infix-if-type:dummy")		\
+	_map(IFT_ETH,    "infix-if-type:ethernet")	\
+	_map(IFT_ETHISH, "infix-if-type:etherlike")	\
+	_map(IFT_GRE,    "infix-if-type:gre")		\
+	_map(IFT_GRETAP, "infix-if-type:gretap")	\
+	_map(IFT_VETH,   "infix-if-type:veth")		\
+	_map(IFT_VLAN,   "infix-if-type:vlan")		\
+	_map(IFT_VXLAN,  "infix-if-type:vxlan")		\
+	/*  */
+
+enum iftype {
+#define ift_enum(_enum, _str) _enum,
+	IFTYPES(ift_enum)
+#undef ift_enum
+
+	IFT_UNKNOWN
+};
+
+static inline enum iftype iftype_from_str(const char *typestr)
+{
+#define ift_cmp(_enum, _str) if (!strcmp(typestr, _str)) return _enum;
+	IFTYPES(ift_cmp)
+#undef ift_cmp
+	return IFT_UNKNOWN;
+}
+
+static inline enum iftype iftype_from_iface(struct lyd_node *ifn)
+{
+	const char *typestr = lydx_get_cattr(ifn, "type");
+
+	if (!typestr)
+		return IFT_UNKNOWN;
+
+	return iftype_from_str(typestr);
+}
+
 static inline const char *bridge_tagtype2str(const char *type)
 {
 	if (!strcmp(type, "ieee802-dot1q-types:c-vlan"))
