@@ -9,6 +9,7 @@
 DOWNLOADS=/var/lib/containers/oci
 BUILTIN=/lib/oci
 TMPDIR=/var/tmp
+container=$0
 checksum=""
 extracted=
 timeout=30
@@ -202,8 +203,8 @@ unpack_archive()
 
 running()
 {
-    run=$(podman inspect "$1" 2>/dev/null |jq .[].State.Running)
-    [ "$run" = "true" ] && return 0
+    status=$(podman inspect -f '{{.State.Status}}' "$1" 2>/dev/null)
+    [ "$status" = "running" ] && return 0
     return 1
 }
 
@@ -316,7 +317,7 @@ start()
 	return
     fi
 
-    initctl -bq cond set "container:$name"
+    initctl start container:$name
     # Real work is done by wrap() courtesy of finit sysv emulation
 }
 
@@ -329,7 +330,7 @@ stop()
 	return
     fi
 
-    initctl -bq cond clr "container:$name"
+    initctl stop container:$name
     # Real work is done by wrap() courtesy of finit sysv emulation
 }
 
@@ -338,7 +339,8 @@ wrap()
     name=$1
     cmd=$2
 
-    podman "$cmd" "$name"
+    # Skip "echo $name" from podman start in log
+    podman "$cmd" "$name" >/dev/null
 }
 
 # Removes network $1 from all containers
@@ -701,12 +703,12 @@ case $cmd in
 	script=/run/containers/${name}.sh
 	[ -x "$script" ] || err 1 "setup: $script does not exist or is not executable."
 	while ! "$script"; do
-	    # Wait for address/route changes, or retry every 60 secods
-	    # shellcheck disable=2162,3045
-	    ip monitor address route | while read -t 60 _; do break; done
+            log "${name}: setup failed, waiting for network changes ..."
+	    read -t 60 _ < <(ip monitor address route)
 
 	    # On IP address/route changes, wait a few seconds more to ensure
 	    # the system has ample time to react and set things up for us.
+	    log "${name}: retrying ..."
 	    sleep 2
 	done
 	;;
@@ -832,6 +834,10 @@ case $cmd in
 	esac
 	;;
     *)
+	if [ -n "$SERVICE_SCRIPT_TYPE" ] && [ -n "$SERVICE_ID" ]; then
+	    # Called as pre-script from Finit service
+	    exec $container -n "$SERVICE_ID" setup
+	fi
 	usage
 	exit 1
 	;;
