@@ -3,41 +3,32 @@
 
 #include "ietf-interfaces.h"
 
-int gre_gen(struct dagger *net, struct lyd_node *dif,
-	    struct lyd_node *cif, FILE *ip)
+int gre_gen(struct lyd_node *dif, struct lyd_node *cif, FILE *ip)
 {
-	const char *ifname, *local, *remote, *mac = NULL;
-	struct lyd_node *node = NULL;
-	char gretype[10] = "";
-	int  ipv6;
+	const char *ifname, *local, *remote;
+	struct lyd_node *gre;
+	int ipv6;
 
 	ifname = lydx_get_cattr(cif, "name");
-
-	node = lydx_get_descendant(lyd_child(cif), "gre", NULL);
-	if (!node)
-		return -EINVAL;
-
-	local = lydx_get_cattr(node, "local");
-	remote = lydx_get_cattr(node, "remote");
+	gre = lydx_get_child(cif, "gre");
+	local = lydx_get_cattr(gre, "local");
+	remote = lydx_get_cattr(gre, "remote");
 	ipv6 = !!strstr(local, ":");
+
+	fprintf(ip, "link add name %s", ifname);
 
 	switch (iftype_from_iface(cif)) {
 	case IFT_GRE:
-		snprintf(gretype, sizeof(gretype), "%sgre", ipv6 ? "ip6" : "");
+		fprintf(ip, " type %sgre", ipv6 ? "ip6": "");
 		break;
 	case IFT_GRETAP:
-		snprintf(gretype, sizeof(gretype), "%sgretap", ipv6 ? "ip6" : "");
-		mac = get_phys_addr(cif, NULL);
+		link_gen_address(cif, ip);
+		fprintf(ip, " type %sgretap", ipv6 ? "ip6": "");
 		break;
 	default:
 		return -EINVAL;
 	}
 
-	fprintf(ip, "link add name %s type %s local %s remote %s", ifname, gretype, local, remote);
-	if (mac)
-		fprintf(ip, "address %s\n", mac);
-	else
-		fprintf(ip, "\n");
-
+	fprintf(ip, " local %s remote %s\n", local, remote);
 	return 0;
 }

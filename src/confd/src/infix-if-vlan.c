@@ -135,8 +135,7 @@ static int netdag_gen_vlan_egress_qos(struct lyd_node *cif, FILE *ip)
 	return ERR_IFACE(cif, -EINVAL, "Unsupported egress priority mode \"%s\"", pcp);
 }
 
-int netdag_gen_vlan(struct dagger *net, struct lyd_node *dif,
-		    struct lyd_node *cif, FILE *ip)
+int vlan_gen(struct lyd_node *dif, struct lyd_node *cif, FILE *ip)
 {
 	const char *ifname = lydx_get_cattr(cif, "name");
 	struct lydx_diff typed, vidd;
@@ -160,7 +159,9 @@ int netdag_gen_vlan(struct dagger *net, struct lyd_node *dif,
 	lower_if = lydx_get_cattr(vlan, "lower-layer-if");
 	DEBUG("ifname %s lower if %s\n", ifname, lower_if);
 
-	fprintf(ip, "link add dev %s down link %s type vlan", ifname, lower_if);
+	fprintf(ip, "link add dev %s link %s", ifname, lower_if);
+	link_gen_address(cif, ip);
+	fputs(" type vlan", ip);
 
 	if (lydx_get_diff(lydx_get_child(vlan, "tag-type"), &typed)) {
 		proto = bridge_tagtype2str(typed.new);

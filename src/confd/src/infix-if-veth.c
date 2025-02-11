@@ -91,34 +91,29 @@ out:
 	return err;
 }
 
-int netdag_gen_veth(struct dagger *net, struct lyd_node *dif,
-		    struct lyd_node *cif, FILE *ip)
+int veth_gen(struct lyd_node *dif, struct lyd_node *cif, FILE *ip)
 {
 	const char *ifname = lydx_get_cattr(cif, "name");
-	char ifname_args[64] = "", peer_args[64] = "";
-	const char *mac, *peer;
-	struct lyd_node *node;
+	struct lyd_node *peer, *veth;
+	const char *peername;
 
 	if (!veth_is_primary(cif))
 		return 0;
 
-	node = lydx_get_descendant(lyd_child(cif), "veth", NULL);
-	if (!node)
+	veth = lydx_get_child(cif, "veth");
+	if (!veth)
 		return -EINVAL;
 
-	peer = lydx_get_cattr(node, "peer");
+	peername = lydx_get_cattr(veth, "peer");
+	peer = lydx_find_by_name(lyd_parent(cif), "interface", peername);
 
-	mac = get_phys_addr(dif, NULL);
-	if (mac)
-		snprintf(ifname_args, sizeof(ifname_args), "address %s", mac);
+	fprintf(ip, "link add dev %s", ifname);
+	link_gen_address(cif, ip);
 
-	node = lydx_find_by_name(lyd_parent(cif), "interface", peer);
-	if (node && (mac = get_phys_addr(node, NULL)))
-		snprintf(peer_args, sizeof(peer_args), "address %s", mac);
+	fprintf(ip, " type veth peer %s", peername);
+	link_gen_address(peer, ip);
 
-	fprintf(ip, "link add dev %s %s type veth peer %s %s\n",
-		ifname, ifname_args, peer, peer_args);
-
+	fputc('\n', ip);
 	return 0;
 }
 

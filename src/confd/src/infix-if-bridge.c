@@ -400,23 +400,18 @@ static int gen_stp(struct ixif_br *br)
 
 static void gen_phys_address(struct ixif_br *br)
 {
-	struct json_t *j;
-	const char *mac;
+	const char *chassis;
+	int err;
 
-	mac = get_phys_addr(br->cif, NULL);
-	if (!mac) {
-		j = json_object_get(confd.root, "mac-address");
-		if (j)
-			mac = json_string_value(j);
-	}
-
-	if (!mac)
-		/* Nothing configured, and no chassis mac available,
-		 * let the kernel generate a random one.
-		 */
+	err = link_gen_address(br->cif, br->ip);
+	if (!err)
 		return;
 
-	fprintf(br->ip, " address %s", mac);
+	chassis = get_chassis_addr();
+	if (!chassis)
+		return;
+
+	fprintf(br->ip, " address %s", chassis);
 }
 
 static int init_snippets(struct ixif_br *br, struct lyd_node *dif, struct lyd_node *cif,

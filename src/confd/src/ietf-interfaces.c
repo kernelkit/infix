@@ -169,7 +169,7 @@ static int netdag_gen_link_mtu(FILE *ip, struct lyd_node *dif)
 	return 0;
 }
 
-static void calc_mac(const char *base_mac, const char *mac_offset, char *buf, size_t len)
+static void calc_mac(const char *base_mac, const char *mac_offset, char *buf)
 {
 	uint8_t base[6], offset[6], result[6];
 	int carry = 0, i;
@@ -187,113 +187,74 @@ static void calc_mac(const char *base_mac, const char *mac_offset, char *buf, si
 		carry = (sum > 0xFF) ? 1 : 0;
 	}
 
-	snprintf(buf, len, "%02x:%02x:%02x:%02x:%02x:%02x",
-		 result[0], result[1], result[2], result[3], result[4], result[5]);
+	sprintf(buf, "%02x:%02x:%02x:%02x:%02x:%02x",
+		result[0], result[1], result[2], result[3], result[4], result[5]);
 }
 
-/*
- * Get child value from a diff parent, only returns value if not
- * deleted.  In which case the deleted flag may be set.
- */
-static const char *get_val(struct lyd_node *parent, char *name, int *deleted)
+const char *get_chassis_addr(void)
 {
-	const char *value = NULL;
-	struct lyd_node *node;
+	struct json_t *addr;
 
-	node = lydx_get_child(parent, name);
-	if (node) {
-		if (lydx_get_op(node) == LYDX_OP_DELETE) {
-			if (deleted)
-				*deleted = 1;
-			return NULL;
-		}
-
-		value = lyd_get_value(node);
+	addr = json_object_get(confd.root, "mac-address");
+	if (!addr) {
+		WARN("No chassis MAC found.");
+		return NULL;
 	}
 
-	return value;
+	return json_string_value(addr);
 }
 
-/*
- * Locate custom-phys-address, adjust for any offset, and return pointer
- * to a static string.  (Which will be overwritten on subsequent calls.)
- *
- * The 'deleted' flag will be set if any of the nodes in the subtree are
- * deleted.  Used when restoring permaddr and similar.
- */
-char *get_phys_addr(struct lyd_node *parent, int *deleted)
+static int get_phys_addr(struct lyd_node *cif, char *mac)
 {
-	struct lyd_node *node, *cpa;
-	static char mac[18];
-	struct json_t *j;
-	const char *ptr;
+	struct lyd_node *cpa, *chassis;
+	const char *base, *offs;
 
-	cpa = lydx_get_descendant(lyd_child(parent), "custom-phys-address", NULL);
-	if (!cpa || lydx_get_op(cpa) == LYDX_OP_DELETE) {
-		if (cpa && deleted)
-			*deleted = 1;
-		return NULL;
+	cpa = lydx_get_child(cif, "custom-phys-address");
+	if (!cpa)
+		return -ENODATA;
+
+	base = lydx_get_cattr(cpa, "static");
+	if (base) {
+		strcpy(mac, base);
+		return 0;
 	}
 
-	ptr = get_val(cpa, "static", deleted);
-	if (ptr) {
-		strlcpy(mac, ptr, sizeof(mac));
-		return mac;
+	chassis = lydx_get_child(cpa, "chassis");
+	if (chassis) {
+		base = get_chassis_addr() ? : "00:00:00:00:00:00";
+		offs = lydx_get_cattr(chassis, "offset") ? : "00:00:00:00:00:00";
+		calc_mac(base, offs, mac);
+		return 0;
 	}
 
-	node = lydx_get_child(cpa, "chassis");
-	if (!node || lydx_get_op(node) == LYDX_OP_DELETE) {
-		if (node && deleted)
-			*deleted = 1;
-		return NULL;
-	}
+	return -ENODATA;
+}
 
-	j = json_object_get(confd.root, "mac-address");
-	if (!j) {
-		WARN("cannot set chassis based MAC, not found.");
-		return NULL;
-	}
+int link_gen_address(struct lyd_node *cif, FILE *ip)
+{
+	char mac[18];
+	int err;
 
-	ptr = json_string_value(j);
-	strlcpy(mac, ptr, sizeof(mac));
+	err = get_phys_addr(cif, mac);
+	if (err)
+		return err;
 
-	ptr = get_val(node, "offset", deleted);
-	if (ptr)
-		calc_mac(mac, ptr, mac, sizeof(mac));
-
-	return mac;
+	fprintf(ip, " address %s", mac);
+	return 0;
 }
 
 static int netdag_gen_link_addr(FILE *ip, struct lyd_node *cif, struct lyd_node *dif)
 {
 	const char *ifname = lydx_get_cattr(dif, "name");
-	const char *mac;
-	int deleted = 0;
-	char buf[32];
+	char mac[18];
+	int err;
 
-	mac = get_phys_addr(dif, &deleted);
-	if (!mac && deleted) {
-		FILE *fp;
-
-		/*
-		 * Only physical interfaces support this, virtual ones
-		 * we remove, see netdag_must_del() for details.
-		 */
-		fp = cni_popen("ip -d -j link show dev %s |jq -rM .[].permaddr", ifname);
-		if (fp) {
-			if (fgets(buf, sizeof(buf), fp))
-				mac = chomp(buf);
-			pclose(fp);
-
-			if (mac && !strcmp(mac, "null"))
-				return 0;
-		}
-	}
-
-	if (!mac || !strlen(mac)) {
-		DEBUG("No change in %s phys-address, skipping ...", ifname);
+	if (!lydx_get_child(dif, "custom-phys-address"))
 		return 0;
-	}
+
+	err = get_phys_addr(cif, mac);
+	if (err)
+		return (err == -ENODATA) ? 0 : err;
 
 	fprintf(ip, "link set %s address %s\n", ifname, mac);
 	return 0;
@@ -369,13 +330,13 @@ skip_mtu:
 	return err;
 }
 
-static int netdag_gen_dummy(struct dagger *net, struct lyd_node *dif,
-			    struct lyd_node *cif, FILE *ip)
+static int dummy_gen(struct lyd_node *dif, struct lyd_node *cif, FILE *ip)
 {
 	const char *ifname = lydx_get_cattr(cif, "name");
 
-	fprintf(ip, "link add dev %s type dummy\n", ifname);
-
+	fprintf(ip, "link add dev %s", ifname);
+	link_gen_address(cif, ip);
+	fputs(" type dummy\n", ip);
 	return 0;
 }
 
@@ -390,16 +351,16 @@ static int netdag_gen_afspec_add(sr_session_ctx_t *session, struct dagger *net, 
 	case IFT_BRIDGE:
 		return bridge_gen(dif, cif, ip, 1);
 	case IFT_DUMMY:
-		return netdag_gen_dummy(net, NULL, cif, ip);
+		return dummy_gen(NULL, cif, ip);
 	case IFT_GRE:
 	case IFT_GRETAP:
-		return gre_gen(net, NULL, cif, ip);
+		return gre_gen(NULL, cif, ip);
 	case IFT_VETH:
-		return netdag_gen_veth(net, NULL, cif, ip);
+		return veth_gen(NULL, cif, ip);
 	case IFT_VLAN:
-		return netdag_gen_vlan(net, NULL, cif, ip);
+		return vlan_gen(NULL, cif, ip);
 	case IFT_VXLAN:
-		return vxlan_gen(net, NULL, cif, ip);
+		return vxlan_gen(NULL, cif, ip);
 
 	case IFT_ETH:
 	case IFT_ETHISH:
@@ -422,7 +383,7 @@ static int netdag_gen_afspec_set(sr_session_ctx_t *session, struct dagger *net, 
 	case IFT_BRIDGE:
 		return bridge_gen(dif, cif, ip, 0);
 	case IFT_VLAN:
-		return netdag_gen_vlan(net, dif, cif, ip);
+		return vlan_gen(dif, cif, ip);
 
 	case IFT_DUMMY:
 	case IFT_GRE:
@@ -442,16 +403,6 @@ static int netdag_gen_afspec_set(sr_session_ctx_t *session, struct dagger *net, 
 	return -EINVAL;
 }
 
-static bool is_phys_addr_deleted(struct lyd_node *dif)
-{
-	int deleted = 0;
-
-	if (!get_phys_addr(dif, &deleted) && deleted)
-		return true;
-
-	return false;
-}
-
 static bool netdag_must_del(struct lyd_node *dif, struct lyd_node *cif)
 {
 	switch (iftype_from_iface(cif)) {
@@ -462,7 +413,7 @@ static bool netdag_must_del(struct lyd_node *dif, struct lyd_node *cif)
 	case IFT_ETHISH:
 	/* case IFT_LAG: */
 	/* 	... REMEMBER WHEN ADDING BOND SUPPORT ... */
-		return is_phys_addr_deleted(dif);
+		return lydx_get_child(dif, "custom-phys-address");
 	case IFT_GRE:
 	case IFT_GRETAP:
 		return lydx_get_descendant(lyd_child(dif), "gre", NULL);
@@ -481,10 +432,46 @@ static bool netdag_must_del(struct lyd_node *dif, struct lyd_node *cif)
 	return false;
 }
 
+static int eth_gen_del(struct lyd_node *dif, FILE *ip)
+{
+	const char *ifname = lydx_get_cattr(dif, "name");
+	char mac[18];
+	FILE *pp;
+
+	fprintf(ip, "link set dev %s down", ifname);
+
+	pp = cni_popen("ip -d -j link show dev %s | jq -rM .[].permaddr", ifname);
+	if (pp) {
+		if (fgets(mac, sizeof(mac), pp) && !strstr(mac, "null"))
+			fprintf(ip, " address %s", mac);
+		pclose(pp);
+	}
+
+	fputc('\n', ip);
+
+	fprintf(ip, "addr flush dev %s\n", ifname);
+	return 0;
+}
+
+static int link_gen_del(struct lyd_node *dif, FILE *ip)
+{
+	fprintf(ip, "link del dev %s\n", lydx_get_cattr(dif, "name"));
+	return 0;
+}
+
+static int veth_gen_del(struct lyd_node *dif, FILE *ip)
+{
+	if (!veth_is_primary(dif))
+		return 0;
+
+	return link_gen_del(dif, ip);
+}
+
 static int netdag_gen_iface_del(struct dagger *net, struct lyd_node *dif,
 				struct lyd_node *cif)
 {
 	const char *ifname = lydx_get_cattr(dif, "name");
+	enum iftype type;
 	FILE *ip;
 
 	DEBUG_IFACE(dif, "");
@@ -493,16 +480,23 @@ static int netdag_gen_iface_del(struct dagger *net, struct lyd_node *dif,
 	if (!ip)
 		return -EIO;
 
-	switch (iftype_from_iface(dif)) {
+	type = iftype_from_iface(dif);
+	if (type == IFT_UNKNOWN)
+		/* The interface is still in running, so we need to
+		 * get the type from there. This can happen when an
+		 * attribute is changed that require us to delete and
+		 * recreate the interface, e.g. changing the VID of a
+		 * VLAN interface. */
+		type = iftype_from_iface(cif);
+
+	switch (type) {
 	case IFT_ETH:
 	case IFT_ETHISH:
-		fprintf(ip, "link set dev %s down\n", ifname);
-		fprintf(ip, "addr flush dev %s\n", ifname);
+		eth_gen_del(dif, ip);
 		break;
 	case IFT_VETH:
-		if (!veth_is_primary(dif))
-			break;
-		/* fallthrough */
+		veth_gen_del(dif, ip);
+		break;
 	case IFT_BRIDGE:
 	case IFT_DUMMY:
 	case IFT_GRE:
@@ -510,7 +504,7 @@ static int netdag_gen_iface_del(struct dagger *net, struct lyd_node *dif,
 	case IFT_VLAN:
 	case IFT_VXLAN:
 	case IFT_UNKNOWN:
-		fprintf(ip, "link del dev %s\n", ifname);
+		link_gen_del(dif, ip);
 		break;
 	}
 
