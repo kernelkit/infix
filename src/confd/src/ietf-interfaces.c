@@ -364,6 +364,7 @@ static int netdag_gen_afspec_add(sr_session_ctx_t *session, struct dagger *net, 
 
 	case IFT_ETH:
 	case IFT_ETHISH:
+	case IFT_LO:
 	case IFT_UNKNOWN:
 		sr_session_set_error_message(net->session, "%s: unsupported interface type \"%s\"",
 					     ifname, lydx_get_cattr(cif, "type"));
@@ -394,6 +395,7 @@ static int netdag_gen_afspec_set(sr_session_ctx_t *session, struct dagger *net, 
 
 	case IFT_ETH:
 	case IFT_ETHISH:
+	case IFT_LO:
 	case IFT_UNKNOWN:
 		return ERR_IFACE(cif, -ENOSYS, "unsupported interface type \"%s\"",
 				 lydx_get_cattr(cif, "type"));
@@ -408,6 +410,7 @@ static bool netdag_must_del(struct lyd_node *dif, struct lyd_node *cif)
 	switch (iftype_from_iface(cif)) {
 	case IFT_BRIDGE:
 	case IFT_DUMMY:
+	case IFT_LO:
 		break;
 	case IFT_ETH:
 	case IFT_ETHISH:
@@ -492,6 +495,7 @@ static int netdag_gen_iface_del(struct dagger *net, struct lyd_node *dif,
 	switch (type) {
 	case IFT_ETH:
 	case IFT_ETHISH:
+	case IFT_LO:
 		eth_gen_del(dif, ip);
 		break;
 	case IFT_VETH:
@@ -649,6 +653,7 @@ static int netdag_init_iface(struct lyd_node *cif)
 	case IFT_ETHISH:
 	case IFT_GRE:
 	case IFT_GRETAP:
+	case IFT_LO:
 	case IFT_VXLAN:
 	case IFT_UNKNOWN:
 		break;

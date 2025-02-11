@@ -28,6 +28,7 @@
 	_map(IFT_ETHISH, "infix-if-type:etherlike")	\
 	_map(IFT_GRE,    "infix-if-type:gre")		\
 	_map(IFT_GRETAP, "infix-if-type:gretap")	\
+	_map(IFT_LO,     "infix-if-type:loopback")	\
 	_map(IFT_VETH,   "infix-if-type:veth")		\
 	_map(IFT_VLAN,   "infix-if-type:vlan")		\
 	_map(IFT_VXLAN,  "infix-if-type:vxlan")		\
