@@ -1,4 +1,4 @@
-From f0bbef0a94ed2e00475036b25dac8746e061c114 Mon Sep 17 00:00:00 2001
+From d8d81ca2a348095d87110d3d6a65134f1b7ce212 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Fri, 24 Nov 2023 23:29:55 +0100
 Subject: [PATCH 23/25] nvmem: layouts: onie-tlv: Let device probe even when
@@ -6,7 +6,7 @@ Subject: [PATCH 23/25] nvmem: layouts: onie-tlv: Let device probe even when
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
-Organization: Addiva Elektronik
+Organization: Wires
 
 Before this change, probing an NVMEM device, expected to contain a
 valid TLV, would fail if it had not been provisioned yet. But an

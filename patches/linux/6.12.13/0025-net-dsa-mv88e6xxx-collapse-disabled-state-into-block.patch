@@ -1,4 +1,4 @@
-From 733067c41391c3b9f10d0bf62b1097dce9996df1 Mon Sep 17 00:00:00 2001
+From a86053426ab5a0e9155e0b4c7c20495964fa4b59 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Thu, 16 Jan 2025 12:35:12 +0100
 Subject: [PATCH 25/25] net: dsa: mv88e6xxx: collapse disabled state into
@@ -6,7 +6,7 @@ Subject: [PATCH 25/25] net: dsa: mv88e6xxx: collapse disabled state into
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
-Organization: Addiva Elektronik
+Organization: Wires
 
 This patch changes the behavior of switchcore ports wrt. the port state.
 Instead of disabling the port, the driver now treats the disabled state

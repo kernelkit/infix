@@ -1,11 +1,11 @@
-From 180f2b90c73bc9fdfb27335327571daf8507f9c8 Mon Sep 17 00:00:00 2001
+From eb8d96aab3ee81c40252f8c5e1628b3709e23cab Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Thu, 16 Nov 2023 21:59:35 +0100
 Subject: [PATCH 06/25] net: dsa: mv88e6xxx: Add LED support for 6393X
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
-Organization: Addiva Elektronik
+Organization: Wires
 
 Trigger support:
 - "none"

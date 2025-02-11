@@ -1,11 +1,11 @@
-From d1c7aeac75ffe6e1350d8a08ee9ba99209636df5 Mon Sep 17 00:00:00 2001
+From 45716feb5762311a384f38d8b6449fc652a73764 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Thu, 21 Mar 2024 19:12:15 +0100
 Subject: [PATCH 09/25] net: dsa: Support EtherType based priority overrides
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
-Organization: Addiva Elektronik
+Organization: Wires
 
 Signed-off-by: Mattias Walström <lazzer@gmail.com>
 ---

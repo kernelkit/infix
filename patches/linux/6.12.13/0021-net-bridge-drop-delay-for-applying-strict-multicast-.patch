@@ -1,4 +1,4 @@
-From 73702e1c0331ef8644f326f2dc155a73749cb1c5 Mon Sep 17 00:00:00 2001
+From 4a88856e21984b9292361ad77d7dfc13fad239a5 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Thu, 4 Apr 2024 16:36:30 +0200
 Subject: [PATCH 21/25] net: bridge: drop delay for applying strict multicast
@@ -6,7 +6,7 @@ Subject: [PATCH 21/25] net: bridge: drop delay for applying strict multicast
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
-Organization: Addiva Elektronik
+Organization: Wires
 
 This *local* patch drops the initial delay before applying strict multicast
 filtering, introduced in [1] and recently updated in [2].

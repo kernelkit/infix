@@ -1,11 +1,11 @@
-From 7135f0ab4f04b5cea7a0b67df0fe91f925ef19df Mon Sep 17 00:00:00 2001
+From 49592053a901870104c3ea6f6d4a4c18711c955d Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Mon, 29 Apr 2024 15:14:51 +0200
 Subject: [PATCH 24/25] usb: core: adjust log level for unauthorized devices
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
-Organization: Addiva Elektronik
+Organization: Wires
 
 The fact that a USB device currently is not authorized is not an error,
 so let's adjust the log level so these messages slip below radar for the

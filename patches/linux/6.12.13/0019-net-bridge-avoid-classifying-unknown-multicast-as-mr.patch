@@ -1,4 +1,4 @@
-From cd73e20a5c51dc26ab6a768a813ab805ad8b0689 Mon Sep 17 00:00:00 2001
+From 83c259d997fa40f0b9b9a3250746531df9c730c3 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Mon, 4 Mar 2024 16:47:28 +0100
 Subject: [PATCH 19/25] net: bridge: avoid classifying unknown multicast as
@@ -6,7 +6,7 @@ Subject: [PATCH 19/25] net: bridge: avoid classifying unknown multicast as
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
-Organization: Addiva Elektronik
+Organization: Wires
 
 Unknown multicast, MAC/IPv4/IPv6, should always be flooded according to
 the per-port mcast_flood setting, as well as to detected and configured

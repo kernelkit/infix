@@ -1,4 +1,4 @@
-From b3b9b97cbe4eebd6cd3d68744e11a1bde5b98a47 Mon Sep 17 00:00:00 2001
+From e4a71c66724ba89a37dee71db5ae9e555676547e Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Tue, 26 Nov 2024 19:45:59 +0100
 Subject: [PATCH 13/25] [FIX] net: dsa: mv88e6xxx: Trap locally terminated
@@ -6,7 +6,7 @@ Subject: [PATCH 13/25] [FIX] net: dsa: mv88e6xxx: Trap locally terminated
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
-Organization: Addiva Elektronik
+Organization: Wires
 
 Before this change, in a setup like the following, packets assigned to
 VLAN 10 were forwarded between the switch ports, even though the

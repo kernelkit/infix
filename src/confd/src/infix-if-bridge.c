@@ -400,23 +400,18 @@ static int gen_stp(struct ixif_br *br)
 
 static void gen_phys_address(struct ixif_br *br)
 {
-	struct json_t *j;
-	const char *mac;
+	const char *chassis;
+	int err;
 
-	mac = get_phys_addr(br->cif, NULL);
-	if (!mac) {
-		j = json_object_get(confd.root, "mac-address");
-		if (j)
-			mac = json_string_value(j);
-	}
-
-	if (!mac)
-		/* Nothing configured, and no chassis mac available,
-		 * let the kernel generate a random one.
-		 */
+	err = link_gen_address(br->cif, br->ip);
+	if (!err)
 		return;
 
-	fprintf(br->ip, " address %s", mac);
+	chassis = get_chassis_addr();
+	if (!chassis)
+		return;
+
+	fprintf(br->ip, " address %s", chassis);
 }
 
 static int init_snippets(struct ixif_br *br, struct lyd_node *dif, struct lyd_node *cif,
@@ -532,6 +527,33 @@ int bridge_gen(struct lyd_node *dif, struct lyd_node *cif, FILE *ip, int add)
 
 out:
 	err = collect_snippets(&br);
+	return err;
+}
+
+int bridge_add_deps(struct lyd_node *cif)
+{
+	const char *brname = lydx_get_cattr(cif, "name");
+	struct ly_set *brports;
+	const char *portname;
+	int err = 0;
+	uint32_t i;
+
+	brports = lydx_find_xpathf(cif, "../interface[bridge-port/bridge='%s']", brname);
+	if (!brports)
+		return ERR_IFACE(cif, -ENOENT, "Unable to fetch bridge ports");
+
+
+	for (i = 0; i < brports->count; i++) {
+		portname = lydx_get_cattr(brports->dnodes[i], "name");
+
+		err = dagger_add_dep(&confd.netdag, brname, portname);
+		if (err) {
+			ERR_IFACE(cif, err, "Unable to depend on \"%s\"", portname);
+			break;
+		}
+	}
+
+	ly_set_free(brports, NULL);
 	return err;
 }
 

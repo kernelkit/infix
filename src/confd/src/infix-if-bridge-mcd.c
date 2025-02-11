@@ -97,7 +97,7 @@ int bridge_mcd_gen(struct lyd_node *cifs)
 		return -EIO;
 
 	LYX_LIST_FOR_EACH(cifs, cif, "interface") {
-		if (strcmp(lydx_get_cattr(cif, "type"), "infix-if-type:bridge"))
+		if (iftype_from_iface(cif) != IFT_BRIDGE)
 			continue;
 
 		err = gen_bridge(cif, conf);

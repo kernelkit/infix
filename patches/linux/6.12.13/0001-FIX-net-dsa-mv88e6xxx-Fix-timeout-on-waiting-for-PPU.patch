@@ -1,4 +1,4 @@
-From 998f0e99f2bd7ab54e1d25acac4227335c8caaec Mon Sep 17 00:00:00 2001
+From 773a0e32210336d682148e2e4c87add5e69105ec Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Tue, 12 Mar 2024 10:27:24 +0100
 Subject: [PATCH 01/25] [FIX] net: dsa: mv88e6xxx: Fix timeout on waiting for
@@ -6,7 +6,7 @@ Subject: [PATCH 01/25] [FIX] net: dsa: mv88e6xxx: Fix timeout on waiting for
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
-Organization: Addiva Elektronik
+Organization: Wires
 
 In a multi-chip setup, delays of up to 750ms are observed before the
 device (6393X) signals completion of PPU initialization (Global 1,

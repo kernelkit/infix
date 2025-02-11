@@ -104,7 +104,6 @@ out:
 int netdag_gen_ethtool(struct dagger *net, struct lyd_node *cif, struct lyd_node *dif)
 {
 	struct lyd_node *eth = lydx_get_child(dif, "ethernet");
-	const char *type = lydx_get_cattr(cif, "type");
 	int err;
 
 	/*
@@ -121,7 +120,7 @@ int netdag_gen_ethtool(struct dagger *net, struct lyd_node *cif, struct lyd_node
 	 *
 	 *             Hence this "redundant" check.
 	 */
-	if (strcmp(type, "infix-if-type:ethernet"))
+	if (iftype_from_iface(cif) != IFT_ETH)
 		return 0;
 
 	if (!eth)

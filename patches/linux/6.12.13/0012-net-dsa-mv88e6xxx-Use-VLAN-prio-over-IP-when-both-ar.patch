@@ -1,4 +1,4 @@
-From 752cce791dfe31525e3974d6f6419e4be0535343 Mon Sep 17 00:00:00 2001
+From da95446b056b1efc27353d2549298580978a079f Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Wed, 29 May 2024 13:20:41 +0200
 Subject: [PATCH 12/25] net: dsa: mv88e6xxx: Use VLAN prio over IP when both
@@ -6,7 +6,7 @@ Subject: [PATCH 12/25] net: dsa: mv88e6xxx: Use VLAN prio over IP when both
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
-Organization: Addiva Elektronik
+Organization: Wires
 
 Switch the priority sourcing precdence to prefer VLAN PCP over IP
 DSCP, when both are available.

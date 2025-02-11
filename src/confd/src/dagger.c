@@ -155,26 +155,6 @@ int dagger_evolve_or_abandon(struct dagger *d)
 	return err;
 }
 
-void dagger_skip_iface(struct dagger *d, const char *ifname)
-{
-	touchf("%s/%d/skip/%s", d->path, d->next, ifname);
-}
-
-void dagger_skip_current_iface(struct dagger *d, const char *ifname)
-{
-	touchf("%s/%d/skip/%s", d->path, d->current, ifname);
-}
-
-int dagger_should_skip(struct dagger *d, const char *ifname)
-{
-	return fexistf("%s/%d/skip/%s", d->path, d->next, ifname);
-}
-
-int dagger_should_skip_current(struct dagger *d, const char *ifname)
-{
-	return fexistf("%s/%d/skip/%s", d->path, d->current, ifname);
-}
-
 int dagger_is_bootstrap(struct dagger *d)
 {
 	return d->next == 0;
