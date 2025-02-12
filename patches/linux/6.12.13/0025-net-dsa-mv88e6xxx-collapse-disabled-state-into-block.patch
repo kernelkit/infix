@@ -1,11 +1,8 @@
 From a86053426ab5a0e9155e0b4c7c20495964fa4b59 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Thu, 16 Jan 2025 12:35:12 +0100
-Subject: [PATCH 25/25] net: dsa: mv88e6xxx: collapse disabled state into
+Subject: [PATCH 25/26] net: dsa: mv88e6xxx: collapse disabled state into
  blocking
-MIME-Version: 1.0
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: 8bit
 Organization: Wires
 
 This patch changes the behavior of switchcore ports wrt. the port state.
@@ -21,7 +18,7 @@ each member port, preventing LACPDUs from passing through to qualify the
 link and become active.
 
 Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
-Signed-off-by: Mattias Walström <lazzer@gmail.com>
+Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
 ---
  drivers/net/dsa/mv88e6xxx/port.c | 2 --
  1 file changed, 2 deletions(-)

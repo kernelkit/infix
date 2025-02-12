@@ -1,11 +1,8 @@
 From e4a71c66724ba89a37dee71db5ae9e555676547e Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Tue, 26 Nov 2024 19:45:59 +0100
-Subject: [PATCH 13/25] [FIX] net: dsa: mv88e6xxx: Trap locally terminated
+Subject: [PATCH 13/26] [FIX] net: dsa: mv88e6xxx: Trap locally terminated
  VLANs
-MIME-Version: 1.0
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: 8bit
 Organization: Wires
 
 Before this change, in a setup like the following, packets assigned to
@@ -28,7 +25,7 @@ marked as policy entries. As the VTU policy of user ports is already
 set to TRAP (to ensure proper standalone port operation), this will
 cause all packets assigned to these VLANs to properly terminated.
 
-Signed-off-by: Mattias Walström <lazzer@gmail.com>
+Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
 ---
  drivers/net/dsa/mv88e6xxx/chip.c | 33 ++++++++++++++++++--------------
  include/net/switchdev.h          |  4 ++++

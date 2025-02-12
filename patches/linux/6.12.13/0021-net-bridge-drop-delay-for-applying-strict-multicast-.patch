@@ -1,11 +1,8 @@
 From 4a88856e21984b9292361ad77d7dfc13fad239a5 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Thu, 4 Apr 2024 16:36:30 +0200
-Subject: [PATCH 21/25] net: bridge: drop delay for applying strict multicast
+Subject: [PATCH 21/26] net: bridge: drop delay for applying strict multicast
  filtering
-MIME-Version: 1.0
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: 8bit
 Organization: Wires
 
 This *local* patch drops the initial delay before applying strict multicast
@@ -22,7 +19,7 @@ A proper fix for upstreaming could be to add a knob to disable the delay.
 [2]: https://lore.kernel.org/netdev/20240127175033.9640-1-linus.luessing@c0d3.blue/
 
 Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
-Signed-off-by: Mattias Walström <lazzer@gmail.com>
+Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
 ---
  net/bridge/br_multicast.c | 42 +++++++--------------------------------
  net/bridge/br_private.h   |  4 +---

@@ -1,18 +1,15 @@
 From 9571b0e79717fbcef4540b9a20a4fb2fe4c57f26 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Tue, 21 Nov 2023 20:15:24 +0100
-Subject: [PATCH 15/25] net: phy: marvell10g: Fix power-up when strapped to
+Subject: [PATCH 15/26] net: phy: marvell10g: Fix power-up when strapped to
  start powered down
-MIME-Version: 1.0
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: 8bit
 Organization: Wires
 
 On devices which are hardware strapped to start powered down (PDSTATE
 == 1), make sure that we clear the power-down bit on all units
 affected by this setting.
 
-Signed-off-by: Mattias Walström <lazzer@gmail.com>
+Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
 ---
  drivers/net/phy/marvell10g.c | 18 +++++++++++++++---
  1 file changed, 15 insertions(+), 3 deletions(-)

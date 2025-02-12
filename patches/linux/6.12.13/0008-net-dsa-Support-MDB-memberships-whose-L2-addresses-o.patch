@@ -1,11 +1,8 @@
 From 0312ac7f2a3d956ff9aec3f84b3b64302e59d36c Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Tue, 16 Jan 2024 16:00:55 +0100
-Subject: [PATCH 08/25] net: dsa: Support MDB memberships whose L2 addresses
+Subject: [PATCH 08/26] net: dsa: Support MDB memberships whose L2 addresses
  overlap
-MIME-Version: 1.0
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: 8bit
 Organization: Wires
 
 Multiple IP multicast groups (32 for v4, 2^80 for v6) map to the same
@@ -33,7 +30,7 @@ needed to do this is already in place, since it is also needed on CPU
 and DSA ports. Thus, "implement" this by simply removing the guards
 which previously skipped reference countung on user ports.
 
-Signed-off-by: Mattias Walström <lazzer@gmail.com>
+Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
 ---
  net/dsa/switch.c | 16 ----------------
  1 file changed, 16 deletions(-)

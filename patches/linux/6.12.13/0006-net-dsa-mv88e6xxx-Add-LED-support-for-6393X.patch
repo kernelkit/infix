@@ -1,10 +1,7 @@
 From eb8d96aab3ee81c40252f8c5e1628b3709e23cab Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Thu, 16 Nov 2023 21:59:35 +0100
-Subject: [PATCH 06/25] net: dsa: mv88e6xxx: Add LED support for 6393X
-MIME-Version: 1.0
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: 8bit
+Subject: [PATCH 06/26] net: dsa: mv88e6xxx: Add LED support for 6393X
 Organization: Wires
 
 Trigger support:
@@ -12,7 +9,7 @@ Trigger support:
 - "timer"
 - "netdev"
 
-Signed-off-by: Mattias Walström <lazzer@gmail.com>
+Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
 ---
  drivers/net/dsa/mv88e6xxx/chip.c |   1 +
  drivers/net/dsa/mv88e6xxx/leds.c | 229 +++++++++++++++++++++++++++++++
