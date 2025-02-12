@@ -9,6 +9,7 @@ include::mdns_allow_deny/Readme.adoc[]
 
 include::lldp_enable_disable/Readme.adoc[]
 
+include::lldp_admin_status/Readme.adoc[]
 
 include::ssh_server_config/Readme.adoc[]
 
