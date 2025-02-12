@@ -370,7 +370,6 @@ static int netdag_gen_afspec_add(sr_session_ctx_t *session, struct dagger *net, 
 		return vxlan_gen(NULL, cif, ip);
 
 	case IFT_ETH:
-	case IFT_ETHISH:
 	case IFT_LO:
 	case IFT_UNKNOWN:
 		sr_session_set_error_message(net->session, "%s: unsupported interface type \"%s\"",
@@ -402,7 +401,6 @@ static int netdag_gen_afspec_set(sr_session_ctx_t *session, struct dagger *net, 
 		return 0;
 
 	case IFT_ETH:
-	case IFT_ETHISH:
 	case IFT_LO:
 	case IFT_UNKNOWN:
 		return ERR_IFACE(cif, -ENOSYS, "unsupported interface type \"%s\"",
@@ -421,7 +419,6 @@ static bool netdag_must_del(struct lyd_node *dif, struct lyd_node *cif)
 	case IFT_LO:
 		break;
 	case IFT_ETH:
-	case IFT_ETHISH:
 	/* case IFT_LAG: */
 	/* 	... REMEMBER WHEN ADDING BOND SUPPORT ... */
 		return lydx_get_child(dif, "custom-phys-address");
@@ -441,6 +438,7 @@ static bool netdag_must_del(struct lyd_node *dif, struct lyd_node *cif)
 		ERR_IFACE(cif, -EINVAL, "unsupported interface type \"%s\"",
 			  lydx_get_cattr(cif, "type"));
 		return true;
+
 	}
 
 	return false;
@@ -505,7 +503,6 @@ static int netdag_gen_iface_del(struct dagger *net, struct lyd_node *dif,
 
 	switch (type) {
 	case IFT_ETH:
-	case IFT_ETHISH:
 	case IFT_LO:
 		eth_gen_del(dif, ip);
 		break;
@@ -665,7 +662,6 @@ static int netdag_init_iface(struct lyd_node *cif)
 
 	case IFT_DUMMY:
 	case IFT_ETH:
-	case IFT_ETHISH:
 	case IFT_GRE:
 	case IFT_GRETAP:
 	case IFT_LO:

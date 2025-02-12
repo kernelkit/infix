@@ -25,7 +25,6 @@
 	_map(IFT_BRIDGE, "infix-if-type:bridge")	\
 	_map(IFT_DUMMY,  "infix-if-type:dummy")		\
 	_map(IFT_ETH,    "infix-if-type:ethernet")	\
-	_map(IFT_ETHISH, "infix-if-type:etherlike")	\
 	_map(IFT_GRE,    "infix-if-type:gre")		\
 	_map(IFT_GRETAP, "infix-if-type:gretap")	\
 	_map(IFT_LAG,    "infix-if-type:lag")	\
