@@ -2,6 +2,8 @@
 - name: lldp_enable_disable
   case: lldp_enable_disable/test.py
 
+- name: lldp_admin_status
+  case: lldp_admin_status/test.py
 
 - name: mdns_enable_disable
   case: mdns_enable_disable/test.py

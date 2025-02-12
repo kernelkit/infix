@@ -41,6 +41,7 @@
 #define XPATH_ROUTING_OSPF XPATH_ROUTING_BASE "/ospf"
 #define XPATH_CONTAIN_BASE  "/infix-containers:containers"
 #define XPATH_DHCP_SERVER_BASE  "/infix-dhcp-server:dhcp-server"
+#define XPATH_LLDP_BASE "/ieee802-dot1ab-lldp:lldp"
 
 TAILQ_HEAD(sub_head, sub);
 
@@ -343,6 +344,8 @@ static int subscribe_to_all(struct statd *statd)
 	if (subscribe(statd, "ietf-hardware", XPATH_HARDWARE_BASE, sr_generic_cb))
 		return SR_ERR_INTERNAL;
 	if (subscribe(statd, "ietf-system", XPATH_SYSTEM_BASE, sr_generic_cb))
+		return SR_ERR_INTERNAL;
+	if (subscribe(statd, "ieee802-dot1ab-lldp", XPATH_LLDP_BASE, sr_generic_cb))
 		return SR_ERR_INTERNAL;
 #ifdef CONTAINERS
 	if (subscribe(statd, "infix-containers", XPATH_CONTAIN_BASE, sr_generic_cb))
