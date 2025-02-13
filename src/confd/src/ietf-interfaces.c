@@ -73,6 +73,10 @@ static int ifchange_cand_infer_type(sr_session_ctx_t *session, const char *path)
 		inferred.data.string_val = "infix-if-type:ethernet";
 	else if (!fnmatch("br+([0-9])", ifname, FNM_EXTMATCH))
 		inferred.data.string_val = "infix-if-type:bridge";
+	else if (!fnmatch("bond+([0-9])", ifname, FNM_EXTMATCH))
+		inferred.data.string_val = "infix-if-type:lag";
+	else if (!fnmatch("lag+([0-9])", ifname, FNM_EXTMATCH))
+		inferred.data.string_val = "infix-if-type:lag";
 	else if (!fnmatch("docker+([0-9])", ifname, FNM_EXTMATCH))
 		inferred.data.string_val = "infix-if-type:bridge";
 	else if (!fnmatch("dummy+([0-9])", ifname, FNM_EXTMATCH))
@@ -299,6 +303,7 @@ static int netdag_gen_sysctl_setting(struct dagger *net, const char *ifname, FIL
 
 	return 0;
 }
+
 static int netdag_gen_sysctl(struct dagger *net,
 			     struct lyd_node *cif,
 			     struct lyd_node *dif)
@@ -355,6 +360,8 @@ static int netdag_gen_afspec_add(sr_session_ctx_t *session, struct dagger *net, 
 	case IFT_GRE:
 	case IFT_GRETAP:
 		return gre_gen(NULL, cif, ip);
+	case IFT_LAG:
+		return lag_gen(dif, cif, ip, 1);
 	case IFT_VETH:
 		return veth_gen(NULL, cif, ip);
 	case IFT_VLAN:
@@ -368,7 +375,6 @@ static int netdag_gen_afspec_add(sr_session_ctx_t *session, struct dagger *net, 
 	case IFT_UNKNOWN:
 		sr_session_set_error_message(net->session, "%s: unsupported interface type \"%s\"",
 					     ifname, lydx_get_cattr(cif, "type"));
-		return -ENOSYS;
 	}
 
 	__builtin_unreachable();
@@ -383,6 +389,8 @@ static int netdag_gen_afspec_set(sr_session_ctx_t *session, struct dagger *net, 
 	switch (iftype_from_iface(cif)) {
 	case IFT_BRIDGE:
 		return bridge_gen(dif, cif, ip, 0);
+	case IFT_LAG:
+		return lag_gen(dif, cif, ip, 0);
 	case IFT_VLAN:
 		return vlan_gen(dif, cif, ip);
 
@@ -420,6 +428,9 @@ static bool netdag_must_del(struct lyd_node *dif, struct lyd_node *cif)
 	case IFT_GRE:
 	case IFT_GRETAP:
 		return lydx_get_descendant(lyd_child(dif), "gre", NULL);
+	case IFT_LAG:
+		return lydx_get_child(dif, "custom-phys-address") ||
+			lydx_get_descendant(lyd_child(dif), "lag", "mode", NULL);
 	case IFT_VLAN:
 		return lydx_get_descendant(lyd_child(dif), "vlan", NULL);
 	case IFT_VETH:
@@ -505,6 +516,7 @@ static int netdag_gen_iface_del(struct dagger *net, struct lyd_node *dif,
 	case IFT_DUMMY:
 	case IFT_GRE:
 	case IFT_GRETAP:
+	case IFT_LAG:
 	case IFT_VLAN:
 	case IFT_VXLAN:
 	case IFT_UNKNOWN:
@@ -593,6 +605,10 @@ static sr_error_t netdag_gen_iface(sr_session_ctx_t *session, struct dagger *net
 	if (err)
 		goto err_close_ip;
 
+	err = lag_port_gen(dif, cif);
+	if (err)
+		goto err_close_ip;
+
 	/* Set type specific attributes */
 	if (!fixed && op != LYDX_OP_CREATE) {
 		err = netdag_gen_afspec_set(session, net, dif, cif, ip);
@@ -613,8 +629,7 @@ static sr_error_t netdag_gen_iface(sr_session_ctx_t *session, struct dagger *net
 	fprintf(ip, "link set alias \"%s\" dev %s\n", attr ?: "", ifname);
 
 	/* Bring interface back up, if enabled */
-	attr = lydx_get_cattr(cif, "enabled");
-	if (!attr || !strcmp(attr, "true"))
+	if (lydx_is_enabled(cif, "enabled"))
 		fprintf(ip, "link set dev %s up state up\n", ifname);
 
 	err = err ? : netdag_gen_sysctl(net, cif, dif);
@@ -641,8 +656,8 @@ static int netdag_init_iface(struct lyd_node *cif)
 	switch (iftype_from_iface(cif)) {
 	case IFT_BRIDGE:
 		return bridge_add_deps(cif);
-	/* case IFT_LAG: */
-	/* 	return lag_add_deps(cif); */
+	case IFT_LAG:
+		return lag_add_deps(cif);
 	case IFT_VLAN:
 		return vlan_add_deps(cif);
 	case IFT_VETH:

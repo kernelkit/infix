@@ -2,7 +2,8 @@ graph "quad" {
 	layout="neato";
 	overlap="false";
 	splines="true";
-	esep="+20";
+	esep="+30";
+	sep="+30";
 
         node [shape=record, fontname="monospace"];
 	edge [color="cornflowerblue", penwidth="2"];
@@ -13,30 +14,31 @@ graph "quad" {
 	qn_append="quiet";
 
         host [
-	    label="host | { <d1a> d1a | <d1b> d1b | <d1c> d1c | <d1c> d1d | <d2a> d2a | <d2b> d2b | <d2c> d2c | <d2d> d2d | <d2a> d3a | <d3b> d3b | <d3c> d3c | <d3c> d3d |  <d4a> d4a | <d4b> d4b | <d4c> d4c | <d4c> d4d }",
-	    color="grey",fontcolor="grey",pos="0,15!",
+	    label="host | { <d1a> d1a | <d1b> d1b | <d1c> d1c | <d1d> d1d | <d2a> d2a | <d2b> d2b | <d2c> d2c | <d2d> d2d | <d3a> d3a | <d3b> d3b | <d3c> d3c | <d3d> d3d |  <d4a> d4a | <d4b> d4b | <d4c> d4c | <d4d> d4d }",
+	    color="grey", fontcolor="grey",
+	    pos="-15,15!",
 	    provides="controller",
 	];
 
         dut1 [
-	    label="{ <e1> e1 | <e2> e2 | <e3> e3 } | dut1 | { <e4> e4 | <e5> e5 | <e6> e6 | <e7> e7 | <e8> e8}",
-	    pos="10,18!",
+	    label="{ <e1> e1 | <e2> e2 | <e3> e3 | <e4> e4 } | dut1 | { <e5> e5 | <e6> e6 | <e7> e7 | <e8> e8}",
+	    pos="10,30!",
 	    provides="infix",
 	    qn_console=9001,
 	    qn_mem="384M",
 	    qn_usb="dut1.usb"
 	    ];
         dut2 [
-	    label="{ <e1> e1 | <e2> e2 | <e3> e3 } | dut2 | { <e4> e4 | <e5> e5 | <e6> e6  | <e7> e7 | <e8> e8}",
-	    pos="10,12!",
+	    label="{ <e1> e1 | <e2> e2 | <e3> e3 | <e4> e4 } | dut2 | { <e5> e5 | <e6> e6  | <e7> e7 | <e8> e8}",
+	    pos="0,20!",
 	    provides="infix",
 	    qn_console=9002,
 	    qn_mem="384M",
 	    qn_usb="dut2.usb"
 	];
 	dut3 [
-	    label="{ <e1> e1 | <e2> e2 | <e3> e3 } | dut2 | { <e4> e4 | <e5> e5 | <e6> e6  | <e7> e7 | <e8> e8}",
-	    pos="10,12!",
+	    label="{ <e1> e1 | <e2> e2 | <e3> e3 | <e4> e4 } | dut3 | { <e5> e5 | <e6> e6  | <e7> e7 | <e8> e8}",
+	    pos="0,10!",
 	    provides="infix",
 	    qn_console=9003,
 	    qn_mem="384M",
@@ -44,41 +46,44 @@ graph "quad" {
 	];
 
 	dut4 [
-	    label="{ <e1> e1 | <e2> e2 | <e3> e3 } | dut2 | { <e4> e4 | <e5> e5 | <e6> e6  | <e7> e7 | <e8> e8}",
-	    pos="10,12!",
+	    label="{ <e1> e1 | <e2> e2 | <e3> e3 | <e4> e4 } | dut4 | { <e5> e5 | <e6> e6  | <e7> e7 | <e8> e8}",
+	    pos="10,0!",
 	    provides="infix",
 	    qn_console=9004,
 	    qn_mem="384M",
 	    qn_usb="dut4.usb"
 	];
 
-	host:d1a -- dut1:e1 [provides="mgmt"]
+	host:d1a -- dut1:e1 [provides="mgmt", color="lightgray"]
 	host:d1b -- dut1:e2 [provides="ieee-mc"]
 	host:d1c -- dut1:e3 [provides="ieee-mc"]
 	host:d1d -- dut1:e4 [provides="ieee-mc"]
 
-	host:d2a -- dut2:e1 [provides="mgmt"]
+	host:d2a -- dut2:e1 [provides="mgmt", color="lightgray"]
 	host:d2b -- dut2:e2 [provides="ieee-mc"]
 	host:d2c -- dut2:e3 [provides="ieee-mc"]
 	host:d2d -- dut2:e4 [provides="ieee-mc"]
 
-	host:d3a -- dut3:e1 [provides="mgmt"]
+	host:d3a -- dut3:e1 [provides="mgmt", color="lightgray"]
 	host:d3b -- dut3:e2 [provides="ieee-mc"]
 	host:d3c -- dut3:e3 [provides="ieee-mc"]
 	host:d3d -- dut3:e4 [provides="ieee-mc"]
 
-	host:d4a -- dut4:e1 [provides="mgmt"]
+	host:d4a -- dut4:e1 [provides="mgmt", color="lightgray"]
 	host:d4b -- dut4:e2 [provides="ieee-mc"]
 	host:d4c -- dut4:e3 [provides="ieee-mc"]
 	host:d4d -- dut4:e4 [provides="ieee-mc"]
 
-	# Ring
-	dut1:e5 -- dut2:e6
-	dut2:e5 -- dut3:e6
-	dut3:e5 -- dut4:e6
-	dut4:e5 -- dut1:e6
+        // Lag
+	dut2:e7 -- dut3:e6 [color="black", penwidth="3"]
+	dut2:e8 -- dut3:e5 [color="black", penwidth="3"]
 
-	# Cross-links
-	dut3:e7 -- dut1:e7
-	dut2:e7 -- dut4:e7
+	// Ring
+	dut1:e8 -- dut2:e5 [color="black"]
+	dut3:e8 -- dut4:e5 [color="black"]
+	dut4:e8 -- dut1:e5 [color="black"]
+
+	// Cross-links
+	dut1:e6 -- dut3:e7 [color="red"]
+	dut2:e6 -- dut4:e7 [color="red"]
 }

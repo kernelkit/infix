@@ -1,0 +1,147 @@
+From a98487405e1a7b8b69569a3e5f7765f395c36f55 Mon Sep 17 00:00:00 2001
+From: Tobias Waldekranz <tobias@waldekranz.com>
+Date: Wed, 12 Feb 2025 22:03:14 +0100
+Subject: [PATCH 26/26] net: dsa: mv88e6xxx: Only activate LAG offloading when
+ bridged
+Organization: Wires
+
+The current port isolation scheme for mv88e6xxx is detailed here:
+https://lore.kernel.org/netdev/20220203101657.990241-1-tobias@waldekranz.com/
+
+As it turns out, this is not compatible with LAGs. Consider the
+following setup:
+
+    .-----.
+    | CPU |
+    '--+--'
+       |
+    .--0--.   .-----.
+    | sw1 9---0 sw2 |
+    '-----'   '-4-5-'
+
+A LAG is created from sw2p{4,5}, using ID 0, but it is not attached
+to any bridge - so port isolation is active. Let's walk through a
+packet's journey to the CPU:
+
+1. Packet ingresses sw2p4, the MapDA bit is not set, so it is flooded
+   according to the PVT, which only contains sw2p0
+2. Packet egresses sw2p0 with FORWARD vid:0 dev:2 port:0(lag)
+3. Packet ingresses sw1p9, the VTU policy bit is set for VLAN 0, thus
+   the packet is classified as MGMT and trapped to the CPU
+4. Packet egresses sw1p0 with TO_CPU vid:0 dev:2 port:0
+5. Packet ingresses CPU, since no user port is mapped to sw2p0 the
+   packet is dropped
+
+The problem is that in step 2, the original source port information is
+lost (replaced with "lag 0"), and then sw1 rewrites the ingressing
+FORWARD to a TO_CPU, which does not have a LAG bit. As a result, after
+the translation between steps 3 and 4, it now looks as if the packet
+originally ingressed on sw2p0.
+
+Therefore, defer enabling the LAG offload until it joins a bridge. In
+the example above, it means that the original source port (sw2p4)
+information will be in the FORWARD sent in step 2, which allows the
+existing port isolation to work as intended.
+
+Before joining a bridge, the offload does not offer any performance
+benefit anyway. All ingressing packet will always have to go to the
+CPU; egress traffic always relies on software hashing.
+
+Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
+---
+ drivers/net/dsa/mv88e6xxx/chip.c | 42 +++++++++++++++-----------------
+ 1 file changed, 20 insertions(+), 22 deletions(-)
+
+diff --git a/drivers/net/dsa/mv88e6xxx/chip.c b/drivers/net/dsa/mv88e6xxx/chip.c
+index 785cd3d0e2b1..37e79d52c175 100644
+--- a/drivers/net/dsa/mv88e6xxx/chip.c
++++ b/drivers/net/dsa/mv88e6xxx/chip.c
+@@ -3065,6 +3065,7 @@ static int mv88e6xxx_port_bridge_join(struct dsa_switch *ds, int port,
+ 				      struct netlink_ext_ack *extack)
+ {
+ 	struct mv88e6xxx_chip *chip = ds->priv;
++	unsigned int lagid;
+ 	int err;
+ 
+ 	mv88e6xxx_reg_lock(chip);
+@@ -3073,6 +3074,13 @@ static int mv88e6xxx_port_bridge_join(struct dsa_switch *ds, int port,
+ 	if (err)
+ 		goto unlock;
+ 
++	if ((lagid = dsa_port_lag_id_get(dsa_to_port(ds, port)))) {
++		/* DSA LAG IDs are one-based */
++		err = mv88e6xxx_port_set_trunk(chip, port, true, lagid - 1);
++		if (err)
++			goto unlock;
++	}
++
+ 	err = mv88e6xxx_port_set_map_da(chip, port, true);
+ 	if (err)
+ 		goto unlock;
+@@ -3117,6 +3125,14 @@ static void mv88e6xxx_port_bridge_leave(struct dsa_switch *ds, int port,
+ 			"port %d failed to restore map-DA: %pe\n",
+ 			port, ERR_PTR(err));
+ 
++	if (dsa_port_lag_id_get(dsa_to_port(ds, port))) {
++		err = mv88e6xxx_port_set_trunk(chip, port, false, 0);
++		if (err)
++			dev_err(ds->dev,
++				"port %d failed to disable trunking: %pe\n",
++				port, ERR_PTR(err));
++	}
++
+ 	err = mv88e6xxx_port_commit_pvid(chip, port);
+ 	if (err)
+ 		dev_err(ds->dev,
+@@ -6992,30 +7008,13 @@ static int mv88e6xxx_port_lag_join(struct dsa_switch *ds, int port,
+ 				   struct netlink_ext_ack *extack)
+ {
+ 	struct mv88e6xxx_chip *chip = ds->priv;
+-	int err, id;
++	int err;
+ 
+ 	if (!mv88e6xxx_lag_can_offload(ds, lag, info, extack))
+ 		return -EOPNOTSUPP;
+ 
+-	/* DSA LAG IDs are one-based */
+-	id = lag.id - 1;
+-
+ 	mv88e6xxx_reg_lock(chip);
+-
+-	err = mv88e6xxx_port_set_trunk(chip, port, true, id);
+-	if (err)
+-		goto err_unlock;
+-
+ 	err = mv88e6xxx_lag_sync_masks_map(ds, lag);
+-	if (err)
+-		goto err_clear_trunk;
+-
+-	mv88e6xxx_reg_unlock(chip);
+-	return 0;
+-
+-err_clear_trunk:
+-	mv88e6xxx_port_set_trunk(chip, port, false, 0);
+-err_unlock:
+ 	mv88e6xxx_reg_unlock(chip);
+ 	return err;
+ }
+@@ -7024,13 +7023,12 @@ static int mv88e6xxx_port_lag_leave(struct dsa_switch *ds, int port,
+ 				    struct dsa_lag lag)
+ {
+ 	struct mv88e6xxx_chip *chip = ds->priv;
+-	int err_sync, err_trunk;
++	int err;
+ 
+ 	mv88e6xxx_reg_lock(chip);
+-	err_sync = mv88e6xxx_lag_sync_masks_map(ds, lag);
+-	err_trunk = mv88e6xxx_port_set_trunk(chip, port, false, 0);
++	err = mv88e6xxx_lag_sync_masks_map(ds, lag);
+ 	mv88e6xxx_reg_unlock(chip);
+-	return err_sync ? : err_trunk;
++	return err;
+ }
+ 
+ static int mv88e6xxx_crosschip_lag_change(struct dsa_switch *ds, int sw_index,
+-- 
+2.43.0
+

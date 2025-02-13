@@ -30,6 +30,7 @@ confd_plugin_la_SOURCES =			\
 	  ieee802-ethernet-interface.c		\
 	  ietf-ip.c				\
 	  infix-if-bridge.c			\
+	  infix-if-lag.c			\
 	  infix-if-bridge-mcd.c			\
 	  infix-if-bridge-port.c		\
 	  infix-if-veth.c			\

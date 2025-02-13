@@ -1,13 +1,10 @@
 From 45716feb5762311a384f38d8b6449fc652a73764 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Thu, 21 Mar 2024 19:12:15 +0100
-Subject: [PATCH 09/25] net: dsa: Support EtherType based priority overrides
-MIME-Version: 1.0
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: 8bit
+Subject: [PATCH 09/26] net: dsa: Support EtherType based priority overrides
 Organization: Wires
 
-Signed-off-by: Mattias Walström <lazzer@gmail.com>
+Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
 ---
  include/net/dsa.h |  4 ++++
  net/dsa/user.c    | 56 +++++++++++++++++++++++++++++++++++++++++++++--

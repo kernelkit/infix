@@ -3,6 +3,7 @@ from . import common
 from . import bridge
 from . import ethernet
 from . import ip
+from . import lag
 from . import tun
 from . import veth
 from . import vlan
@@ -117,16 +118,16 @@ def interface(iplink, ipaddr):
                 interface["infix-interfaces:bridge"] = br
             if brport := bridge.lower(iplink):
                 interface["infix-interfaces:bridge-port"] = brport
-        # case "infix-if-type:lag":
-        #     if l := lag.lag(iplink):
-        #         interface["infix-interfaces:lag"] = l
+        case "infix-if-type:lag":
+            if lg := lag.lag(iplink):
+                interface["infix-interfaces:lag"] = lg
         case "infix-if-type:ethernet":
             if eth := ethernet.ethernet(iplink):
                 interface["ieee802-ethernet-interface:ethernet"] = eth
         case "infix-if-type:vxlan":
             if vxlan := tun.vxlan(iplink):
                 interface["infix-interfaces:vxlan"] = vxlan
-        case "infix-if-type:gre"|"infix-if-type:gretap":
+        case "infix-if-type:gre" | "infix-if-type:gretap":
             if gre := tun.gre(iplink):
                 interface["infix-interfaces:gre"] = gre
         case "infix-if-type:veth":
@@ -140,9 +141,9 @@ def interface(iplink, ipaddr):
         case "infix-interfaces:bridge-port":
             if brport := bridge.lower(iplink):
                 interface["infix-interfaces:bridge-port"] = brport
-        # case "infix-interfaces:lag-port":
-        #     if lagport := lag.lower(iplink):
-        #         interface["infix-interfaces:lag-port"] = lagport
+        case "infix-interfaces:lag-port":
+            if lagport := lag.lower(iplink):
+                interface["infix-interfaces:lag-port"] = lagport
 
     return interface
 

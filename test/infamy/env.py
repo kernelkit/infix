@@ -16,6 +16,7 @@ class NullEnv:
 
 ENV = NullEnv()
 
+
 class ArgumentParser():
     def DefaultTransport():
         """Pick pseudo-random transport
@@ -41,7 +42,6 @@ class ArgumentParser():
         self.args.add_argument("ptop", nargs=1, metavar="topology")
         self.args.add_argument("-l", "--logical-topology", dest="ltop", default=top)
 
-
     def add_argument(self, *args, **kwargs):
         kwargs["required"] = True
         self.args.add_argument(*args, **kwargs)
@@ -49,8 +49,25 @@ class ArgumentParser():
     def parse_args(self, argv):
         return self.args.parse_args(argv)
 
+
+def test_argument(option, **kwargs):
+    """See lag_failure/test.py for an example @infamy.test_argumet()"""
+    def decorator(cls):
+        super_init = cls.__init__
+
+        def new_init(self, *args, **kw):
+            super_init(self, *args, **kw)
+            self.add_argument(option, **kwargs)
+
+        cls.__init__ = new_init
+        return cls
+    return decorator
+
+
 class Env(object):
-    def __init__(self, ltop=None, args=None, argv=sys.argv[1::], environ=os.environ):
+    def __init__(self, ltop=None, args=None, argv=sys.argv[1::], environ=os.environ,
+                 nodes_compatible=topology.compatible,
+                 edge_mappings=topology.edge_mappings):
         if "INFAMY_ARGS" in environ:
             argv = shlex.split(environ["INFAMY_ARGS"]) + argv
 
@@ -74,7 +91,9 @@ class Env(object):
 
             ldot = pydot.graph_from_dot_file(top_path)[0]
             self.ltop = topology.Topology(ldot)
-            if not self.ltop.map_to(self.ptop):
+            if not self.ltop.map_to(self.ptop,
+                                    nodes_compatible=nodes_compatible,
+                                    edge_mappings=edge_mappings):
                 raise tap.TestSkip()
 
             print(repr(self.ltop))

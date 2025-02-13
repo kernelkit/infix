@@ -1,18 +1,23 @@
 from .common import LOG
 from .host import HOST
 
+
+# Catch errors (check=True), at this point we've run 'podman ps' (below)
 def podman_inspect(name):
     """Call podman inspect {name}, return object at {path} or None."""
     cmd = ['podman', 'inspect', name]
     try:
         return HOST.run_json(cmd, default=[])
     except Exception as e:
-        LOG(f"Error running podman inspect: {e}")
+        LOG.error(f"failed podman inspect: {e}")
         return []
 
+
+# Ignore any errors here, may be called on a build without containers
 def podman_ps():
     """We list *all* containers, not just those in the configuraion."""
-    return HOST.run_json("podman ps -a --format=json".split(), default=[])
+    cmd = ['podman', 'ps', '-a', '--format=json']
+    return HOST.run_json(cmd, default=[])
 
 
 def network(ps, inspect):

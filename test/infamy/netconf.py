@@ -155,8 +155,7 @@ class Device(Transport):
         for schema in schemas:
             if os.path.exists(yangdir + "/" + schema['filename']) is False:
                 self.get_schema(schema, yangdir)
-                sys.stdout.write("Downloading YANG model "
-                                 f"{schema['identifier']} ...\r\033[K")
+
         print("YANG models downloaded.")
 
     def _ly_init(self, yangdir):
@@ -309,20 +308,24 @@ class Device(Transport):
             break
 
     def put_config_dicts(self, models):
+        """PUT full configuration of all models to running-config"""
         config = ""
         infer_put_dict(self.name, models)
 
         for model in models.keys():
             mod = self.ly.get_module(model)
             lyd = mod.parse_data_dict(models[model], no_state=True, validate=False)
-            config+=lyd.print_mem("xml", with_siblings=True, pretty=False)+"\n"
+            config += lyd.print_mem("xml", with_siblings=True, pretty=False) + "\n"
+        # print(f"Send new XML config: {config}")
         return self.put_config(config)
 
     def put_config_dict(self, modname, edit):
         """Convert Python dictionary to XMl and send as configuration"""
         mod = self.ly.get_module(modname)
         lyd = mod.parse_data_dict(edit, no_state=True, validate=False)
-        return self.put_config(lyd.print_mem("xml", with_siblings=True, pretty=False))
+        config = lyd.print_mem("xml", with_siblings=True, pretty=False)
+        # print(f"Send new XML config: {config}")
+        return self.put_config(config)
 
     def call(self, call):
         """Call RPC, XML version"""

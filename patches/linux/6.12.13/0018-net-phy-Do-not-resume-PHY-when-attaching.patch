@@ -1,10 +1,7 @@
 From 31f2aa0e957643cc51be65750c4f65be8c507a18 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Wed, 27 Mar 2024 10:10:19 +0100
-Subject: [PATCH 18/25] net: phy: Do not resume PHY when attaching
-MIME-Version: 1.0
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: 8bit
+Subject: [PATCH 18/26] net: phy: Do not resume PHY when attaching
 Organization: Wires
 
 The PHY should not start negotiating with its link-partner until
@@ -19,7 +16,7 @@ probing (e.g. DSA) would end up with a physical link being
 established, even though the corresponding interface was still
 administratively down.
 
-Signed-off-by: Mattias Walström <lazzer@gmail.com>
+Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
 ---
  drivers/net/phy/phy_device.c | 1 -
  1 file changed, 1 deletion(-)

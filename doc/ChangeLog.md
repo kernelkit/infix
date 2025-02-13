@@ -11,8 +11,10 @@ All notable changes to the project are documented in this file.
  - Upgrade Linux kernel to 6.12.13 (LTS)
  - YANG type for SSH private/public keys has changed, from
    ietf-crypto-types to infix-crypto-types
+ - Add support for link aggregation (lag), static (balance-xor) and LACP
 
 ### Fixes
+ - N/A
 
 
 [v25.01.0][] - 2025-01-31
@@ -1483,6 +1485,7 @@ Supported YANG models in addition to those used by sysrepo and netopeer:
 
 [buildroot]:  https://buildroot.org/
 [UNRELEASED]: https://github.com/kernelkit/infix/compare/v25.01.0...HEAD
+[v25.02.0]:   https://github.com/kernelkit/infix/compare/v25.01.0...v25.02.0
 [v25.01.0]:   https://github.com/kernelkit/infix/compare/v24.11.0...v25.01.0
 [v24.11.1]:   https://github.com/kernelkit/infix/compare/v24.11.0...v24.11.1
 [v24.11.0]:   https://github.com/kernelkit/infix/compare/v24.10.0...v24.11.0

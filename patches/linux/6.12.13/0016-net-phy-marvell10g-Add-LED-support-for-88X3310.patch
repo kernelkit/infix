@@ -1,10 +1,7 @@
 From 05a6f49a221e797fdbd21501902bd969b9c64640 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Wed, 15 Nov 2023 20:58:42 +0100
-Subject: [PATCH 16/25] net: phy: marvell10g: Add LED support for 88X3310
-MIME-Version: 1.0
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: 8bit
+Subject: [PATCH 16/26] net: phy: marvell10g: Add LED support for 88X3310
 Organization: Wires
 
 Pickup the LEDs from the state in which the hardware reset or
@@ -21,7 +18,7 @@ Trigger support:
 - "netdev": Offload link or duplex information to the solid behavior;
   	    tx and/or rx activity to blink behavior.
 
-Signed-off-by: Mattias Walström <lazzer@gmail.com>
+Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
 ---
  drivers/net/phy/marvell10g.c | 422 +++++++++++++++++++++++++++++++++++
  1 file changed, 422 insertions(+)

@@ -28,6 +28,7 @@
 	_map(IFT_ETHISH, "infix-if-type:etherlike")	\
 	_map(IFT_GRE,    "infix-if-type:gre")		\
 	_map(IFT_GRETAP, "infix-if-type:gretap")	\
+	_map(IFT_LAG,    "infix-if-type:lag")	\
 	_map(IFT_LO,     "infix-if-type:loopback")	\
 	_map(IFT_VETH,   "infix-if-type:veth")		\
 	_map(IFT_VLAN,   "infix-if-type:vlan")		\
@@ -70,14 +71,26 @@ static inline const char *bridge_tagtype2str(const char *type)
 	return NULL;
 }
 
-static inline bool is_bridge_port(struct lyd_node *cif)
+static inline struct lyd_node *get_master(struct lyd_node *cif)
 {
-	struct lyd_node *node = lydx_get_descendant(lyd_child(cif), "bridge-port", NULL);
+	struct lyd_node *node;
 
-	if (!node || !lydx_get_child(node, "bridge"))
-		return false;
+	node = lydx_get_descendant(lyd_child(cif), "bridge-port", NULL);
+	if (node)
+		return lydx_get_child(node, "bridge");
 
-	return true;
+	node = lydx_get_descendant(lyd_child(cif), "lag-port", NULL);
+	if (node)
+		return lydx_get_child(node, "lag");
+
+	return NULL;
+}
+
+static inline bool is_member_port(struct lyd_node *cif)
+{
+	if (get_master(cif))
+		return true;
+	return false;
 }
 
 
@@ -107,6 +120,11 @@ int bridge_port_gen(struct lyd_node *dif, struct lyd_node *cif, FILE *ip);
 
 /* infix-if-gre.c */
 int gre_gen(struct lyd_node *dif, struct lyd_node *cif, FILE *ip);
+
+/* infix-if-lag.c */
+int lag_port_gen(struct lyd_node *dif, struct lyd_node *cif);
+int lag_gen(struct lyd_node *dif, struct lyd_node *cif, FILE *ip, int add);
+int lag_add_deps(struct lyd_node *cif);
 
 /* infix-if-veth.c */
 bool veth_is_primary(struct lyd_node *cif);

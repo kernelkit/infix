@@ -1,31 +1,21 @@
 #!/usr/bin/env python3
 
-"""
-Bridge VLAN
+"""Bridge VLAN
 
-Basic test of VLAN functionality in a bridge, tagged/untagged traffic and a VLAN interface in the bridge.
-....
-           ¦                              ¦
-           ¦       vlan10 IP:10.0.0.2     ¦        br0  IP:10.0.0.3
-           ¦       /                      ¦       /
-           ¦     br0  <-- VLAN filtering  ¦   link.10
-           ¦   u/  \\t                     ¦    /
-   PC ------data    link -----------------|-- link
-           ¦    dut1                      ¦   dut2
-....
+Verify VLAN filtering bridge, with a VLAN trunk to a neighboring device,
+which in turn untags one VLAN outisde a non-VLAN filtering bridge.
+
+.Logical network setup
+image::bridge-vlan.svg[]
 
 """
 import infamy
 
 with infamy.Test() as test:
     with test.step("Set up topology and attach to target DUT"):
-        env  = infamy.Env()
+        env = infamy.Env()
         dut1 = env.attach("dut1", "mgmt")
         dut2 = env.attach("dut2", "mgmt")
-
-        _, dut1_e0 = env.ltop.xlate("dut1", "data")
-        _, dut1_e1 = env.ltop.xlate("dut1", "link")
-        _, dut2_e0 = env.ltop.xlate("dut2", "link")
 
     with test.step("Configure DUTs"):
         dut1.put_config_dict("ietf-interfaces", {
@@ -34,24 +24,20 @@ with infamy.Test() as test:
                     {
                         "name": "br0",
                         "type": "infix-if-type:bridge",
-                        "enabled": True,
                         "bridge": {
                             "vlans": {
-                                "pvid": 4094,
                                 "vlan": [
                                     {
                                         "vid": 10,
-                                        "untagged": [ dut1_e0 ],
-                                        "tagged":   [ "br0", dut1_e1 ]
+                                        "untagged": [dut1["data"]],
+                                        "tagged":   [dut1["link"], "br0"]
                                     }
                                 ]
                             }
                         }
-                    },
-                    {
+                    }, {
                         "name": "vlan10",
                         "type": "infix-if-type:vlan",
-                        "enabled": True,
                         "vlan": {
                             "lower-layer-if": "br0",
                             "id": 10,
@@ -64,18 +50,14 @@ with infamy.Test() as test:
                                 }
                             ]
                         }
-                    },
-                    {
-                        "name": dut1_e0,
-                        "enabled": True,
+                    }, {
+                        "name": dut1["data"],
                         "infix-interfaces:bridge-port": {
                             "pvid": 10,
                             "bridge": "br0"
                         }
-                    },
-                    {
-                        "name": dut1_e1,
-                        "enabled": True,
+                    }, {
+                        "name": dut1["link"],
                         "infix-interfaces:bridge-port": {
                             "pvid": 10,
                             "bridge": "br0"
@@ -91,7 +73,6 @@ with infamy.Test() as test:
                     {
                         "name": "br0",
                         "type": "infix-if-type:bridge",
-                        "enabled": True,
                         "ipv4": {
                             "address": [
                                 {
@@ -100,17 +81,13 @@ with infamy.Test() as test:
                                 }
                             ]
                         }
-                    },
-                    {
-                        "name": dut2_e0,
-                        "enabled": True
-                    },
-                    {
+                    }, {
+                        "name": dut2["link"],
+                    }, {
                         "name": "e0.10",
                         "type": "infix-if-type:vlan",
-                        "enabled": True,
                         "vlan": {
-                            "lower-layer-if": dut2_e0,
+                            "lower-layer-if": dut2["link"],
                             "id": 10,
                         },
                         "infix-interfaces:bridge-port": {
