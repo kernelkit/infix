@@ -27,7 +27,7 @@ MODULES=(
 	"infix-hardware@2024-04-25.yang"
 	"ieee802-dot1q-types@2022-10-29.yang"
 	"infix-ip@2024-09-16.yang"
-	"infix-if-type@2024-10-13.yang"
+	"infix-if-type@2025-02-12.yang"
 	"infix-routing@2024-11-27.yang"
 	"ieee802-dot1ab-lldp@2022-03-15.yang"
 	"infix-lldp@2025-01-08.yang"

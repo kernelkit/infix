@@ -11,6 +11,11 @@ module infix-if-type {
   contact      "kernelkit@googlegroups.com";
   description  "Infix extensions to IANA interfaces types";
 
+  revision 2025-02-12 {
+    description "Remove interface type etherlike.";
+    reference "internal";
+  }
+
   revision 2024-10-13 {
     description "Add new interface type dummy.";
     reference "internal";
@@ -58,12 +63,7 @@ module infix-if-type {
     description "Any Ethernet interfaces, regardless of speed, RFC 3635.";
     reference   "RFC 3635";
   }
-  identity etherlike {
-    base infix-interface-type;
-    base ianaift:ilan;
-    description "Interface with properties resembling Ethernet";
-    reference   "RFC 3635";
-  }
+
   identity gre {
     base infix-interface-type;
   }

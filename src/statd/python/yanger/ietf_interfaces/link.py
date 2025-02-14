@@ -34,9 +34,6 @@ def iplink2yang_type(iplink):
         case _:
             return "infix-if-type:other"
 
-    if iplink.get("parentbus") == "virtio":
-        return "infix-if-type:etherlike"
-
     match iplink.get("linkinfo", {}).get("info_kind"):
         case "bond":
             return "infix-if-type:lag"
