@@ -84,13 +84,10 @@ static void set_owner(const char *fn, const char *user)
 	struct passwd *pw;
 
 	pw = getpwnam(user);
-	if (!pw) {
-		fprintf(stderr, ERRMSG "setting owner %s on %s: %s\n", fn, user, strerror(errno));
+	if (pw && !chmod(fn, 0660) && !chown(fn, pw->pw_uid, pw->pw_gid))
 		return;
-	}
 
-	chmod(fn, 0660);
-	chown(fn, pw->pw_uid, pw->pw_gid);
+	fprintf(stderr, ERRMSG "setting owner %s on %s: %s\n", fn, user, strerror(errno));
 }
 
 static const char *infix_ds(const char *text, struct infix_ds **ds)
