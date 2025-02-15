@@ -16,6 +16,13 @@ directly connected to A.
 import infamy
 from infamy.util import parallel, until
 
+
+def stp_compatible(physical, logical):
+    # Multi-chip mv88e6xxx systems do not flush their ATU's correctly
+    # (tracked by kernelkit/linux#2)
+    return "broken-stp" not in physical["provides"]
+
+
 def addbr(dut):
     ip = {
         "A": "10.0.0.101",
@@ -133,7 +140,7 @@ def port_role(dut, port):
 
 with infamy.Test() as test:
     with test.step("Set up topology and attach to target DUT"):
-        env = infamy.Env()
+        env = infamy.Env(nodes_compatible=stp_compatible)
         a, b, c, d = parallel(lambda: env.attach("A"), lambda: env.attach("B"),
                               lambda: env.attach("C"), lambda: env.attach("D"))
 
