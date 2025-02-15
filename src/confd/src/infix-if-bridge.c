@@ -426,10 +426,8 @@ static int init_snippets(struct ixif_br *br, struct lyd_node *dif, struct lyd_no
 	br->cif = cif;
 
 	br->ip = ip;
-	err = snippet_open(&br->bropts);
-	if (err)
-		goto err;
 
+	err = snippet_open(&br->bropts);
 	err = err ? : snippet_open(&br->init.vlan);
 	err = err ? : snippet_open(&br->init.mcast);
 	err = err ? : snippet_open(&br->init.mdb);
@@ -443,15 +441,11 @@ static int init_snippets(struct ixif_br *br, struct lyd_node *dif, struct lyd_no
 		snippet_close(&br->init.mdb, NULL);
 		snippet_close(&br->init.mcast, NULL);
 		snippet_close(&br->init.vlan, NULL);
-		goto err_close_bropts;
+		snippet_close(&br->bropts, NULL);
+		return err;
 	}
 
 	return 0;
-
-err_close_bropts:
-	snippet_close(&br->bropts, NULL);
-err:
-	return err;
 }
 
 static int collect_snippets(struct ixif_br *br)
