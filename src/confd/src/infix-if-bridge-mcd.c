@@ -136,6 +136,8 @@ int bridge_mcd_gen(struct lyd_node *cifs)
 	}
 
 out_remove:
-	remove("/etc/mc.d/bridges.conf.next");
+	if (remove("/etc/mc.d/bridges.conf.next"))
+		ERRNO("Failed removing /etc/mc.d/bridges.conf.next");
+
 	return err;
 }
