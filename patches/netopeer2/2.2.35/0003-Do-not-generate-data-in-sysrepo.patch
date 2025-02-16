@@ -1,0 +1,72 @@
+From 2f09813c91def7672c036c7f713302cb3a12cf18 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Mattias=20Walstr=C3=B6m?= <lazzer@gmail.com>
+Date: Tue, 4 Feb 2025 20:14:50 +0100
+Subject: [PATCH 4/4] Do not generate data in sysrepo
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
+
+We generate the host keys and configuration for netconf on boot, do not generate anything when
+building/installing netopeer2
+
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ CMakeLists.txt | 40 ----------------------------------------
+ 1 file changed, 40 deletions(-)
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 4341be1..f1c4ae8 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -383,47 +383,7 @@ if(SYSREPO_SETUP)
+             message(FATAL_ERROR \" OUTPUT:\\n \${CMD_OUT_F}\\n ERROR:\\n \${CMD_ERR_F}\")
+         endif()
+     ")
+-
+-    # generate hostkey
+-    install(CODE "
+-        message(STATUS \"Generating a new RSA host key \\\"genkey\\\" if not already added (merge_hostkey.sh)...\")
+-        set(ENV{SYSREPOCTL_EXECUTABLE} \"${SYSREPOCTL_EXECUTABLE}\")
+-        set(ENV{SYSREPOCFG_EXECUTABLE} \"${SYSREPOCFG_EXECUTABLE}\")
+-        execute_process(COMMAND \"\$ENV{DESTDIR}${DATA_DIR}/scripts/merge_hostkey.sh\"
+-                RESULT_VARIABLE CMD_RES
+-                OUTPUT_VARIABLE CMD_OUT
+-                ERROR_VARIABLE CMD_ERR
+-                OUTPUT_STRIP_TRAILING_WHITESPACE
+-                ERROR_STRIP_TRAILING_WHITESPACE)
+-        if(NOT CMD_RES EQUAL 0)
+-            string(REPLACE \"\\n\" \"\\n \" CMD_OUT_F \"\${CMD_OUT}\")
+-            string(REPLACE \"\\n\" \"\\n \" CMD_ERR_F \"\${CMD_ERR}\")
+-            message(FATAL_ERROR \" OUTPUT:\\n \${CMD_OUT_F}\\n ERROR:\\n \${CMD_ERR_F}\")
+-        endif()
+-    ")
+-
+-    # merge listen config
+-    install(CODE "
+-        message(STATUS \"Merging default server listen configuration if there is none (merge_config.sh)...\")
+-        set(ENV{SYSREPOCTL_EXECUTABLE} \"${SYSREPOCTL_EXECUTABLE}\")
+-        set(ENV{SYSREPOCFG_EXECUTABLE} \"${SYSREPOCFG_EXECUTABLE}\")
+-        set(ENV{NP2_VERSION} \"${NP2SRV_VERSION}\")
+-        execute_process(COMMAND \"\$ENV{DESTDIR}${DATA_DIR}/scripts/merge_config.sh\"
+-                RESULT_VARIABLE CMD_RES
+-                OUTPUT_VARIABLE CMD_OUT
+-                ERROR_VARIABLE CMD_ERR
+-                OUTPUT_STRIP_TRAILING_WHITESPACE
+-                ERROR_STRIP_TRAILING_WHITESPACE)
+-        if(NOT CMD_RES EQUAL 0)
+-            string(REPLACE \"\\n\" \"\\n \" CMD_OUT_F \"\${CMD_OUT}\")
+-            string(REPLACE \"\\n\" \"\\n \" CMD_ERR_F \"\${CMD_ERR}\")
+-            message(FATAL_ERROR \" OUTPUT:\\n \${CMD_OUT_F}\\n ERROR:\\n \${CMD_ERR_F}\")
+-        endif()
+-    ")
+-else()
+-    message(WARNING "Server will refuse to start if the modules are not installed!")
+ endif()
+-
+ # tests
+ if(ENABLE_TESTS OR (BUILD_NETOPEER2_LIB AND NETOPEER2_LIB_TESTS))
+     if(ENABLE_TESTS)
+-- 
+2.43.0
+

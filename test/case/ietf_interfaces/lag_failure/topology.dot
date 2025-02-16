@@ -1,0 +1,36 @@
+graph "lag" {
+    layout="neato";
+    overlap="false";
+    esep="+23";
+
+    node [shape=record, fontsize=12, fontname="DejaVu Sans Mono, Book"];
+    edge [color="cornflowerblue", penwidth="2", fontname="DejaVu Serif, Book"];
+
+    host [
+	  label="{{ <mgmt1> mgmt1 | <mon> mon | <lb1a> lb1a | <lb2a> lb2a | <lb2b> lb2b | <lb1b> lb1b | <mgmt2> mgmt2 } | host}",
+	  pos="9,0!",
+	  requires="controller",
+	  ];
+
+    dut1 [
+	  label="{ dut1\l | { <mgmt> mgmt | <mon> mon | <link1> link1 | <link2> link2 } }",
+	  pos="0,6!",
+	  requires="infix",
+	  ];
+
+    dut2 [
+  	  label="{ dut2\r | { <link2> link2 |  <link1> link1 | <mgmt> mgmt } }",
+	  pos="18,6!",
+	  requires="infix",
+	  ];
+
+    host:mgmt1 -- dut1:mgmt [requires="mgmt", color=lightgray]
+    host:mon   -- dut1:mon  // Monitor connection to dut2 via dut1
+    host:mgmt2 -- dut2:mgmt [requires="mgmt", color=lightgrey]
+
+    dut1:link1 -- host:lb1a  [requires="ieee-mc", lag=true, color=black, fontcolor=black]
+    host:lb1b  -- dut2:link1 [requires="ieee-mc", lag=true, color=black, fontcolor=black]
+
+    dut1:link2 -- host:lb2a  [requires="ieee-mc", lag=true, color=black, fontcolor=black]
+    host:lb2b  -- dut2:link2 [requires="ieee-mc", lag=true, color=black, fontcolor=black]
+}

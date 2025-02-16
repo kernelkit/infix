@@ -48,7 +48,7 @@ other traffic would be bridged as usual.
 | bridge   | infix-if-bridge            | SW implementation of an IEEE 802.1Q bridge                   |
 | ip       | ietf-ip, infix-ip          | IP address to the subordinate interface                      |
 | vlan     | infix-if-vlan              | Capture all traffic belonging to a specific 802.1Q VID       |
-| lag[^1]  | infix-if-lag               | Bond multiple interfaces into one, creating a link aggregate |
+| lag      | infix-if-lag               | Link aggregation, static and IEEE 802.3ad (LACP)             |
 | lo       | ietf-interfaces            | Software loopback interface                                  |
 | eth      | ieee802-ethernet-interface | Physical Ethernet device/port.                               |
 |          | infix-ethernet-interface   |                                                              |
@@ -429,6 +429,265 @@ The following example configures bridge *br0* to forward LLDP packets.
 admin@example:/config/interface/br0/bridge/> set ieee-group-forward lldp
 admin@example:/config/interface/br0/bridge/>
 ```
+
+
+### Link Aggregation
+
+A link aggregate, or *lag*, allows multiple physical interfaces to be
+combined into a single logical interface, providing increased bandwidth
+(in some cases) and redundancy (primarily).  Two modes of qualifying lag
+member ports are available:
+
+ 1. **static**: Active members selected based on link status (carrier)
+ 2. **lacp:** IEEE 802.3ad Link Aggregation Control Protocol
+
+In LACP mode, LACPDUs are exchanged by the link partners to qualify each
+lag member, while in static mode only carrier is used.  This additional
+exchange in LACP ensures traffic can be forwarded in both directions.
+
+Traffic distribution, for both modes, across the active lag member ports
+is determined by the hash policy[^1].  It uses an XOR of the source,
+destination MAC addresses and the EtherType field.  This, IEEE
+802.3ad-compliant, algorithm will place all traffic to a particular
+network peer on the same link.  Meaning there is no increased bandwidth
+for communication between two specific devices.
+
+> [!TIP]
+> Similar to other interface types, naming your interface `lagN`, where
+> `N` is a number, allows the CLI to automatically infer the interface
+> type as LAG.
+
+
+#### Basic Configuration
+
+Creating a link aggregate interface and adding member ports:
+
+```
+admin@example:/> configure
+admin@example:/config/> edit interface lag0
+admin@example:/config/interface/lag0/> set lag mode static
+admin@example:/config/interface/lag0/> end
+admin@example:/config/> set interface eth7 lag-port lag lag0
+admin@example:/config/> set interface eth8 lag-port lag lag0
+admin@example:/config/> leave
+```
+
+A static lag responds only to link (carrier) changes of member ports.
+E.g., in this example egressing traffic is continuously distributed over
+the two links until link down on one link is detected, triggering all
+traffic to be steered to the sole remaining link.
+
+
+#### LACP Configuration
+
+LACP mode provides dynamic negotiation of the link aggregate.  Key
+settings include:
+
+```
+admin@example:/> configure
+admin@example:/config/> edit interface lag0
+admin@example:/config/interface/lag0/> set lag mode lacp
+admin@example:/config/interface/lag0/> set lag lacp mode passive
+admin@example:/config/interface/lag0/> set lag lacp rate fast
+admin@example:/config/interface/lag0/> set lag lacp system-priority 100
+```
+
+LACP mode supports two operational modes:
+
+ - **active:** Initiates negotiation by sending LACPDUs (default)
+ - **passive:** Waits for peer to initiate negotiation
+
+> [!NOTE]
+> At least one end of the link must be in active mode for negotiation to occur.
+
+The LACP rate setting controls protocol timing:
+
+ - **slow:** LACPDUs sent every 30 seconds, with 90 second timeout (default)
+ - **fast:** LACPDUs sent every second, with 3 second timeout
+
+
+#### Link Flapping
+
+To protect against link flapping, debounce timers can be configured to
+delay link qualification.  Usually only the `up` delay is needed:
+
+```
+admin@example:/config/interface/lag0/lag/link-monitor/> edit debounce
+admin@example:/config/interface/lag0/lag/link-monitor/debounce/> set up 500
+admin@example:/config/interface/lag0/lag/link-monitor/debounce/> set down 200
+```
+
+#### Operational Status, Overview
+
+Like other interfaces, link aggregates are also available in the general
+interfaces overview in the CLI admin-exec context.  Here is the above
+static mode aggregate:
+
+```
+admin@example:/> show interfaces
+INTERFACE       PROTOCOL   STATE       DATA
+lo              ethernet   UP          00:00:00:00:00:00
+                ipv4                   127.0.0.1/8 (static)
+                ipv6                   ::1/128 (static)
+.
+.
+.
+lag0            lag        UP          static: balance-xor, hash: layer2
+│               ethernet   UP          00:a0:85:00:02:00
+├ eth7          lag        ACTIVE
+└ eth8          lag        ACTIVE
+```
+
+Same aggregate, but in LACP mode:
+
+```
+admin@example:/> show interfaces
+INTERFACE       PROTOCOL   STATE       DATA
+lo              ethernet   UP          00:00:00:00:00:00
+                ipv4                   127.0.0.1/8 (static)
+                ipv6                   ::1/128 (static)
+.
+.
+.
+lag0            lag        UP          lacp: active, rate: fast (1s), hash: layer2
+│               ethernet   UP          00:a0:85:00:02:00
+├ eth7          lag        ACTIVE      active, short_timeout, aggregating, in_sync, collecting, distributing
+└ eth8          lag        ACTIVE      active, short_timeout, aggregating, in_sync, collecting, distributing
+```
+
+
+#### Operational Status, Detail
+
+In addition to basic status shown in the interface overview, detailed
+LAG status can be inspected:
+
+```
+admin@example:/> show interfaces name lag0
+name                : lag0
+index               : 25
+mtu                 : 1500
+operational status  : up
+physical address    : 00:a0:85:00:02:00
+lag mode            : static
+lag type            : balance-xor
+lag hash            : layer2
+link debounce up    : 0 msec
+link debounce down  : 0 msec
+ipv4 addresses      :
+ipv6 addresses      :
+in-octets           : 0
+out-octets          : 2142
+```
+
+Same aggregate, but in LACP mode:
+
+```
+admin@example:/> show interfaces name lag0
+name                : lag0
+index               : 24
+mtu                 : 1500
+operational status  : up
+physical address    : 00:a0:85:00:02:00
+lag mode            : lacp
+lag hash            : layer2
+lacp mode           : active
+lacp rate           : fast (1s)
+lacp aggregate id   : 1
+lacp system priority: 65535
+lacp actor key      : 9
+lacp partner key    : 9
+lacp partner mac    : 00:a0:85:00:03:00
+link debounce up    : 0 msec
+link debounce down  : 0 msec
+ipv4 addresses      :
+ipv6 addresses      :
+in-octets           : 100892
+out-octets          : 111776
+```
+
+Member ports provide additional status information:
+
+ - Link failure counter: number of detected link failures
+ - LACP state flags: various states of LACP negotiation:
+   - `active`: port is actively sending LACPDUs
+   - `short_timeout`: using fast rate (1s) vs. slow rate (30s)
+   - `aggregating`: port is allowed to aggregate in this LAG
+   - `in_sync`: port is synchronized with partner
+   - `collecting`: port is allowed to receive traffic
+   - `distributing`: port is allowed to send traffic
+   - `defaulted`: using default partner info (partner not responding)
+   - `expired`: partner info has expired (no LACPDUs received)
+ - Aggregator ID: unique identifier for this LAG group
+ - Actor state: LACP state flags for this port (local)
+ - Partner state: LACP state flags from the remote port
+
+Example member port status:
+
+```
+admin@example:/> show interfaces name eth7
+name                : eth7
+index               : 8
+mtu                 : 1500
+operational status  : up
+physical address    : 00:a0:85:00:02:00
+lag member          : lag0
+lag member state    : active
+lacp aggregate id   : 1
+lacp actor state    : active, short_timeout, aggregating, in_sync, collecting, distributing
+lacp partner state  : active, short_timeout, aggregating, in_sync, collecting, distributing
+link failure count  : 0
+ipv4 addresses      :
+ipv6 addresses      :
+in-octets           : 473244
+out-octets          : 499037
+```
+
+
+#### Example: Switch Uplink with LACP
+
+LACP mode provides the most robust operation, automatically negotiating
+the link aggregate and detecting configuration mismatches.
+
+A common use case is connecting a switch to an upstream device:
+
+```
+admin@example:/> configure
+admin@example:/config/> edit interface lag0
+admin@example:/config/interface/lag0/> set lag mode lacp
+```
+
+Enable fast LACP for quicker fail-over:
+
+```
+admin@example:/config/interface/lag0/> set lag lacp rate fast
+```
+
+Add uplink ports
+
+```
+admin@example:/config/interface/lag0/> end
+admin@example:/config/> set interface eth7 lag-port lag lag0
+admin@example:/config/> set interface eth8 lag-port lag lag0
+```
+
+Enable protection against "link flapping".
+
+```
+admin@example:/config/interface/lag0/> edit lag link-monitor
+admin@example:/config/interface/lag0/lag/link-monitor/> edit debounce
+admin@example:/config/interface/lag0/lag/link-monitor/debounce/> set up 500
+admin@example:/config/interface/lag0/lag/link-monitor/debounce/> set down 200
+admin@example:/config/interface/lag0/lag/link-monitor/debounce/> top
+```
+
+Add to bridge for switching
+
+```
+admin@example:/config/interface/lag0/lag/link-monitor/debounce/> end
+admin@example:/config/> set interface lag0 bridge-port bridge br0
+admin@example:/config/> leave
+```
+
 
 ### VLAN Interfaces
 
@@ -1228,7 +1487,7 @@ currently supported, namely `ipv4` and `ipv6`.
 [4]: https://www.rfc-editor.org/rfc/rfc3442
 [0]: https://frrouting.org/
 
-[^1]: Please note, link aggregates are not yet supported.
+[^1]: `(source MAC XOR destination MAC XOR EtherType) MODULO num_links`
 [^2]: Link-local IPv6 addresses are implicitly enabled when enabling
     IPv6.  IPv6 can be enabled/disabled per interface in the
     [ietf-ip][2] YANG model.

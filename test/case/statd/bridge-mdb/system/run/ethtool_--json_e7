@@ -1,0 +1,17 @@
+[ {
+        "ifname": "e7",
+        "supported-ports": [ ],
+        "supported-link-modes": [ ],
+        "supported-pause-frame-use": "No",
+        "supports-auto-negotiation": false,
+        "supported-fec-modes": [ ],
+        "advertised-link-modes": [ ],
+        "advertised-pause-frame-use": "No",
+        "advertised-auto-negotiation": false,
+        "advertised-fec-modes": [ ],
+        "auto-negotiation": false,
+        "port": "Other",
+        "phyad": 0,
+        "transceiver": "internal",
+        "link-detected": true
+    } ]

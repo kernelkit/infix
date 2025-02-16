@@ -33,7 +33,7 @@
         }
       },
       {
-        "type": "infix-if-type:etherlike",
+        "type": "infix-if-type:ethernet",
         "name": "e1",
         "if-index": 2,
         "admin-status": "up",
@@ -55,10 +55,15 @@
               "origin": "link-layer"
             }
           ]
+        },
+        "ieee802-ethernet-interface:ethernet": {
+          "auto-negotation": {
+            "enable": false
+          }
         }
       },
       {
-        "type": "infix-if-type:etherlike",
+        "type": "infix-if-type:ethernet",
         "name": "e2",
         "if-index": 3,
         "admin-status": "up",
@@ -80,10 +85,15 @@
               "origin": "link-layer"
             }
           ]
+        },
+        "ieee802-ethernet-interface:ethernet": {
+          "auto-negotation": {
+            "enable": false
+          }
         }
       },
       {
-        "type": "infix-if-type:etherlike",
+        "type": "infix-if-type:ethernet",
         "name": "e3",
         "if-index": 4,
         "admin-status": "up",
@@ -97,6 +107,11 @@
         },
         "ietf-ip:ipv6": {
           "mtu": 1500
+        },
+        "ieee802-ethernet-interface:ethernet": {
+          "auto-negotation": {
+            "enable": false
+          }
         },
         "infix-interfaces:bridge-port": {
           "bridge": "br-Q",
@@ -117,7 +132,7 @@
         }
       },
       {
-        "type": "infix-if-type:etherlike",
+        "type": "infix-if-type:ethernet",
         "name": "e4",
         "if-index": 5,
         "admin-status": "up",
@@ -139,10 +154,15 @@
               "origin": "link-layer"
             }
           ]
+        },
+        "ieee802-ethernet-interface:ethernet": {
+          "auto-negotation": {
+            "enable": false
+          }
         }
       },
       {
-        "type": "infix-if-type:etherlike",
+        "type": "infix-if-type:ethernet",
         "name": "e5",
         "if-index": 6,
         "admin-status": "up",
@@ -164,10 +184,15 @@
               "origin": "link-layer"
             }
           ]
+        },
+        "ieee802-ethernet-interface:ethernet": {
+          "auto-negotation": {
+            "enable": false
+          }
         }
       },
       {
-        "type": "infix-if-type:etherlike",
+        "type": "infix-if-type:ethernet",
         "name": "e6",
         "if-index": 7,
         "admin-status": "up",
@@ -189,10 +214,15 @@
               "origin": "link-layer"
             }
           ]
+        },
+        "ieee802-ethernet-interface:ethernet": {
+          "auto-negotation": {
+            "enable": false
+          }
         }
       },
       {
-        "type": "infix-if-type:etherlike",
+        "type": "infix-if-type:ethernet",
         "name": "e7",
         "if-index": 8,
         "admin-status": "up",
@@ -214,6 +244,11 @@
               "origin": "link-layer"
             }
           ]
+        },
+        "ieee802-ethernet-interface:ethernet": {
+          "auto-negotation": {
+            "enable": false
+          }
         }
       },
       {

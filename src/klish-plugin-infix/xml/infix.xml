@@ -401,11 +401,11 @@
     </SWITCH>
     <ACTION sym="script" in="tty" out="tty" interrupt="true">
       if [ -n "$KLISH_PARAM_name" ]; then
-        sysrepocfg -f json -X -d operational -x \
+        doas sysrepocfg -f json -X -d operational -x \
           "/ietf-interfaces:interfaces/interface[name=\"$KLISH_PARAM_name\"]" | \
           /usr/libexec/statd/cli-pretty "show-interfaces" -n "$KLISH_PARAM_name" |pager
       else
-        sysrepocfg -f json -X -d operational -m ietf-interfaces | \
+        doas sysrepocfg -f json -X -d operational -m ietf-interfaces | \
           /usr/libexec/statd/cli-pretty "show-interfaces" |pager
       fi
     </ACTION>

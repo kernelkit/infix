@@ -88,8 +88,8 @@ static int change_cb(sr_session_ctx_t *session, uint32_t sub_id, const char *mod
 				continue;
 			}
 
-			if (!strcmp(private_key_format, "ietf-crypto-types:rsa-private-key-format") &&
-			    !strcmp(public_key_format, "ietf-crypto-types:ssh-public-key-format")) {
+			if (!strcmp(private_key_format, "infix-crypto-types:rsa-private-key-format") &&
+			    !strcmp(public_key_format, "infix-crypto-types:ssh-public-key-format")) {
 				char *pub_key = NULL, *priv_key = NULL, *name;
 
 				name = srx_get_str(session, "%s/name", entry->xpath);

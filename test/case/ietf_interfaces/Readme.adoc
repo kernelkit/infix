@@ -33,6 +33,10 @@ include::bridge_vlan_separation/Readme.adoc[]
 
 include::dual_bridge/Readme.adoc[]
 
+include::lag_basic/Readme.adoc[]
+
+include::lag_failure/Readme.adoc[]
+
 include::igmp_basic/Readme.adoc[]
 
 include::igmp_vlan/Readme.adoc[]

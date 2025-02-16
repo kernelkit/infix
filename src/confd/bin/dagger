@@ -157,7 +157,7 @@ do_prune()
     local keep=${1:-10}
 
     cd "$basedir"
-    rm -f old=$(ls -rv *.tar.gz | tail "+$((keep + 1))")
+    rm -f old=$(ls -rv *.tar.gz 2>/dev/null | tail "+$((keep + 1))")
 }
 
 usage()

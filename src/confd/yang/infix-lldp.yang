@@ -76,10 +76,6 @@ module infix-lldp {
   deviation "/lldp:lldp/lldp:port/lldp:rx-statistics" {
     deviate not-supported;
   }
-  deviation "/lldp:lldp/lldp:port/lldp:remote-systems-data" {
-    deviate not-supported;
-  }
-
   
   deviation "/lldp:lldp/lldp:port/lldp:message-fast-tx" {
     deviate not-supported;

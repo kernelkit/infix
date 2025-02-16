@@ -1,15 +1,20 @@
 === Bridge VLAN
 ==== Description
-Basic test of VLAN functionality in a bridge, tagged/untagged traffic and a VLAN interface in the bridge.
-....
-           ¦                              ¦
-           ¦       vlan10 IP:10.0.0.2     ¦        br0  IP:10.0.0.3
-           ¦       /                      ¦       /
-           ¦     br0  <-- VLAN filtering  ¦   link.10
-           ¦   u/  \t                     ¦    /
-   PC ------data    link -----------------|-- link
-           ¦    dut1                      ¦   dut2
-....
+Verify VLAN filtering bridge, with a VLAN trunk to a neighboring device,
+which in turn untags one VLAN outisde a non-VLAN filtering bridge.
+
+.Logical network setup
+ifdef::topdoc[]
+image::../../test/case/ietf_interfaces/bridge_vlan/bridge-vlan.svg[]
+endif::topdoc[]
+ifndef::topdoc[]
+ifdef::testgroup[]
+image::bridge_vlan/bridge-vlan.svg[]
+endif::testgroup[]
+ifndef::testgroup[]
+image::bridge-vlan.svg[]
+endif::testgroup[]
+endif::topdoc[]
 
 ==== Topology
 ifdef::topdoc[]

@@ -1,0 +1,29 @@
+From 9b2f6b94132d14b1d2d2a7d3b65bac4f3a056aac Mon Sep 17 00:00:00 2001
+From: Mohan Prasad J <mohan.prasad@microchip.com>
+Date: Mon, 4 Nov 2024 04:04:07 +0530
+Subject: netlink: settings: Fix for wrong auto-negotiation state
+
+Auto-negotiation state in json format showed the
+opposite state due to wrong comparison.
+Fix for returning the correct auto-neg state implemented.
+
+Signed-off-by: Mohan Prasad J <mohan.prasad@microchip.com>
+---
+ netlink/settings.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/netlink/settings.c b/netlink/settings.c
+index dbfb520..b9b3ba9 100644
+--- a/netlink/settings.c
++++ b/netlink/settings.c
+@@ -546,7 +546,7 @@ int linkmodes_reply_cb(const struct nlmsghdr *nlhdr, void *data)
+ 						(autoneg == AUTONEG_DISABLE) ? "off" : "on");
+ 		else
+ 			print_bool(PRINT_JSON, "auto-negotiation", NULL,
+-				   autoneg == AUTONEG_DISABLE);
++				   autoneg != AUTONEG_DISABLE);
+ 	}
+ 	if (tb[ETHTOOL_A_LINKMODES_MASTER_SLAVE_CFG]) {
+ 		uint8_t val;
+-- 
+cgit 1.2.3-korg

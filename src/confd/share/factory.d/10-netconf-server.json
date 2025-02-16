@@ -4,9 +4,9 @@
 	    "asymmetric-key": [
 		{
 		    "name": "genkey",
-		    "public-key-format": "ietf-crypto-types:ssh-public-key-format",
+		    "public-key-format": "infix-crypto-types:ssh-public-key-format",
 		    "public-key": "",
-		    "private-key-format": "ietf-crypto-types:rsa-private-key-format",
+		    "private-key-format": "infix-crypto-types:rsa-private-key-format",
 		    "cleartext-private-key": "",
 		    "certificates": {}
 		}

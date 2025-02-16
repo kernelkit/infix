@@ -1,0 +1,27 @@
+module infix-crypto-types {
+  yang-version 1.1;
+  namespace "urn:infix:crypto-types:ns:yang:1.0";
+  prefix infix-ct;
+  import ietf-crypto-types {
+    prefix ct;
+  }
+  revision 2025-02-04 {
+    description "Initial";
+  }
+  identity private-key-format {
+    description
+      "Base key-format identity for private keys.";
+  }
+  identity public-key-format {
+    description
+      "Base key-format identity for public keys.";
+  }
+  identity rsa-private-key-format {
+    base private-key-format;
+    base ct:rsa-private-key-format;
+  }
+  identity ssh-public-key-format {
+    base public-key-format;
+    base ct:ssh-public-key-format;
+  }
+}

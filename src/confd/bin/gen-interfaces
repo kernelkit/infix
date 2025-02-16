@@ -56,16 +56,6 @@ EOF
     exit 0
 }
 
-iftype()
-{
-    iftype=$(ip -d -j link show "$1" |jq -r .[].parentbus)
-    if [ "$iftype" = "virtio" ]; then
-	echo "infix-if-type:etherlike"
-    else
-	echo "infix-if-type:ethernet"
-    fi
-}
-
 # shellcheck disable=SC3043
 gen_iface_json()
 {
@@ -75,7 +65,7 @@ gen_iface_json()
     cat <<EOF
       ,{
         "name": "$ifname",
-        "type": "$(iftype "$ifname")",
+        "type": "infix-if-type:ethernet",
 EOF
 
     if [ -n "$br" ]; then

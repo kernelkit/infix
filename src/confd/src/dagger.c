@@ -87,10 +87,32 @@ FILE *dagger_fopen_net_exit(struct dagger *d, const char *node, enum netdag_exit
 	return dagger_fopen_current(d, "exit", node, order, script);
 }
 
-int dagger_add_dep(struct dagger *d, const char *depender, const char *dependee)
+int dagger_add_dep(const struct dagger *d, const char *depender, const char *dependee)
 {
-	return systemf("ln -s ../%s %s/%d/dag/%s", dependee,
-		       d->path, d->next, depender);
+	char link[strlen(d->path) + strlen(depender) + strlen(dependee) + 16];
+	char target[strlen(dependee) + 16];
+	char path[strlen(dependee) + 16];
+	ssize_t len;
+
+	/*
+	 * Some callbacks may run twice, double check symlink, if it
+	 * exists already and points to the same target, we're OK.
+	 */
+	snprintf(target, sizeof(target), "../%s", dependee);
+	snprintf(link, sizeof(link), "%s/%d/dag/%s/%s", d->path, d->next, depender, dependee);
+
+	len = readlink(link, path, sizeof(path));
+	if (len > 0) {
+		path[len] = 0;
+		if (strcmp(target, path)) {
+			ERROR("Dagger dependency already exists %s -> %s", target, path);
+			return errno = EEXIST;
+		}
+
+		return 0;	/* same, ignore */
+	}
+
+	return symlink(target, link);
 }
 
 int dagger_add_node(struct dagger *d, const char *node)
@@ -153,26 +175,6 @@ int dagger_evolve_or_abandon(struct dagger *d)
 	      d->current, d->next, exitcode);
 
 	return err;
-}
-
-void dagger_skip_iface(struct dagger *d, const char *ifname)
-{
-	touchf("%s/%d/skip/%s", d->path, d->next, ifname);
-}
-
-void dagger_skip_current_iface(struct dagger *d, const char *ifname)
-{
-	touchf("%s/%d/skip/%s", d->path, d->current, ifname);
-}
-
-int dagger_should_skip(struct dagger *d, const char *ifname)
-{
-	return fexistf("%s/%d/skip/%s", d->path, d->next, ifname);
-}
-
-int dagger_should_skip_current(struct dagger *d, const char *ifname)
-{
-	return fexistf("%s/%d/skip/%s", d->path, d->current, ifname);
 }
 
 int dagger_is_bootstrap(struct dagger *d)

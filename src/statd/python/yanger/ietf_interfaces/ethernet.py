@@ -68,41 +68,26 @@ def statistics(ifname):
 
     return statistics
 
-
-def link(ethtool):
+def link(ifname):
     """Parse speed/duplex/autoneg from ethtool output"""
+    if data := HOST.run_json(["ethtool", "--json", ifname], {}):
+        data = data[0]
+    else:
+        return None
+
     eth = {}
+    eth["auto-negotation"] = { "enable": data.get("auto-negotation", False) }
 
-    for line in ethtool:
-        kv = [s.strip() for s in line.split(":")]
-        if len(kv) != 2:
-            continue
-
-        key, val = kv
-        match key:
-            case "Auto-negotiation":
-                eth["auto-negotiation"] = { "enable": val == "on" }
-            case "Duplex":
-                match val:
-                    case "Half":
-                        eth["duplex"] = "half"
-                    case "Full":
-                        eth["duplex"] = "full"
-                    case _:
-                        eth["duplex"] = "unknown"
-            case "Speed":
-                mbps = "".join(filter(str.isdigit, val))
-                if mbps:
-                    gbps = round((int(mbps) / 1000), 3)
-                    eth["speed"] = str(gbps)
-
+    if data.get("speed"):
+        gbps = round((int(data["speed"]) / 1000), 3)
+        eth["speed"] = str(gbps)
+    if data.get("duplex"):
+        eth["duplex"] = data["duplex"].lower()
     return eth
 
 
 def ethernet(iplink):
-    ethtool = HOST.run_multiline(["ethtool", iplink["ifname"]])
-
-    eth = link(ethtool)
+    eth = link(iplink["ifname"])
 
     if stats := statistics(iplink["ifname"]):
         eth["statistics"] = stats

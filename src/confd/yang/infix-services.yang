@@ -11,8 +11,8 @@ module infix-services {
     reference
       "RFC 6991: Common YANG Data Types";
   }
-  import ietf-crypto-types {
-    prefix ct;
+  import infix-crypto-types {
+    prefix infix-ct;
     reference
       "RFC 9640: YANG Data Types and Groupings for Cryptography";
   }
@@ -139,8 +139,8 @@ module infix-services {
 
              The hostkey can be shared with NETCONF, by default 'genkey' is used.";
       must "not(deref(.)/../ks:public-key-format) or "
-        + "(derived-from-or-self(deref(.)/../ks:public-key-format,  'ct:ssh-public-key-format') and"
-        + "derived-from-or-self(deref(.)/../ks:private-key-format,  'ct:rsa-private-key-format'))" {
+        + "(derived-from-or-self(deref(.)/../ks:public-key-format,  'infix-ct:ssh-public-key-format') and"
+        + "derived-from-or-self(deref(.)/../ks:private-key-format,  'infix-ct:rsa-private-key-format'))" {
         error-message "Only RSA hostkeys are supported.";
       }
       type ks:asymmetric-key-ref;

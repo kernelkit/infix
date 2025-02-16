@@ -56,7 +56,7 @@ int core_pre_hook(sr_session_ctx_t *session, uint32_t sub_id, const char *module
 int core_post_hook(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
 		   const char *xpath, sr_event_t event, unsigned request_id, void *priv)
 {
-	static int num_changes = 0;
+	static size_t num_changes = 0;
 
 	switch (event) {
 	case SR_EV_CHANGE:
@@ -66,15 +66,10 @@ int core_post_hook(sr_session_ctx_t *session, uint32_t sub_id, const char *modul
 		num_changes = 0;
 		return SR_ERR_OK;
 	case SR_EV_DONE:
-		if (num_changes <= 0) {
-			ERROR("BUG in core_post_hook(): callback tracking out of sync");
-			abort();
-		}
-
-		if (--num_changes == 0)
-			break;
-
-		return SR_ERR_OK;
+		num_changes--;
+		if (num_changes > 0)
+			return SR_ERR_OK;
+		break;
 	default:
 		ERROR("core_post_hook() should not be called with event %s", ev2str(event));
 		return SR_ERR_SYS;
@@ -87,7 +82,7 @@ int core_post_hook(sr_session_ctx_t *session, uint32_t sub_id, const char *modul
 	if (systemf("runlevel >/dev/null 2>&1"))
 		return SR_ERR_OK;
 
-	if (systemf("initctl -nbq reload"))
+	if (systemf("initctl -b reload"))
 		return SR_ERR_SYS;
 
 	return SR_ERR_OK;

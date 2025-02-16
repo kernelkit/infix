@@ -198,7 +198,6 @@ static int gen_link(struct lyd_node *dif, struct lyd_node *cif)
 	const char *brname, *iface;
 	int mrouter;
 	FILE *next;
-	int err;
 
 	if (!lydx_get_child(dif, "bridge-port"))
 		return 0;
@@ -213,10 +212,6 @@ static int gen_link(struct lyd_node *dif, struct lyd_node *cif)
 		return 0;
 
 	iface = lydx_get_cattr(cif, "name");
-
-	err = dagger_add_dep(&confd.netdag, brname, iface);
-	if (err)
-		return ERR_IFACE(cif, err, "Unable to add dep \"%s\" to %s", iface, brname);
 
 	next = dagger_fopen_net_init(&confd.netdag, brname,
 				     NETDAG_INIT_LOWERS, "add-ports.ip");

@@ -3,8 +3,7 @@
 
 #include "ietf-interfaces.h"
 
-int vxlan_gen(struct dagger *net, struct lyd_node *dif,
-	      struct lyd_node *cif, FILE *ip)
+int vxlan_gen(struct lyd_node *dif, struct lyd_node *cif, FILE *ip)
 {
 	const char *ifname, *local, *remote, *mac = NULL;
 	const char *vni, *remote_port;

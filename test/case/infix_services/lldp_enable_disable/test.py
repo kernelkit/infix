@@ -12,14 +12,7 @@ with infamy.Test() as test:
     with test.step("Set up topology and attach to target DUT"):
         env = infamy.Env()
         target = env.attach("target", "mgmt")
-
-        lldp_link = env.ltop.get_link("host", "target", flt=lambda e: "ieee-mc" in e.get("requires", "").split())
-        if not lldp_link:
-            print("Skipping test: No link providing ieee-mc found in the topology.")
-            test.skip()
-
-        log_hport, _ = lldp_link
-        _, phy_hport = env.ltop.xlate("host", log_hport)
+        _, hdata = env.ltop.xlate("host", "data")
 
     with test.step("Enable target interface and disable LLDP"):
         target.put_config_dicts({
@@ -48,7 +41,7 @@ with infamy.Test() as test:
     def verify(enabled, sec):
         """Verify lldp traffic, or no traffic if lldp is disabled."""
 
-        with infamy.IsolatedMacVlan(phy_hport) as netns:
+        with infamy.IsolatedMacVlan(hdata) as netns:
             snif = infamy.Sniffer(netns, "ether proto 0x88cc")
             act = "enabling" if enabled else "disabling"
 

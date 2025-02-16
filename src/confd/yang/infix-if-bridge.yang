@@ -15,9 +15,6 @@ submodule infix-if-bridge {
   import ietf-interfaces {
     prefix if;
   }
-  import ietf-ip {
-    prefix ip;
-  }
   import ieee802-dot1q-types {
     prefix dot1q-types;
   }

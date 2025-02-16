@@ -14,25 +14,17 @@ def _qstrip(text):
     return text
 
 def compatible(physical, logical):
-    provides_set = set(physical.get("provides", "").split())
-    requires_set = set(logical.get("requires", "").split())
+    return logical["requires"].issubset(physical["provides"])
 
-    return requires_set.issubset(provides_set)
-
-def map_edges(les, pes):
+def edge_mappings(les, pes):
     les = les.values()
     pes = pes.values()
 
     for perm in permutations(pes, len(les)):
         candidate = tuple(zip(les, perm))
         if all(map(lambda pair: compatible(pair[1], pair[0]), candidate)):
-            return candidate
+            yield candidate
 
-def match_node(pn, ln):
-    return compatible(pn, ln)
-
-def match_edge(pes, les):
-    return map_edges(les, pes) is not None
 
 class Topology:
     def __init__(self, dotg):
@@ -46,6 +38,9 @@ class Topology:
 
             repr(n.get_attributes())
             attrs = { _qstrip(k): _qstrip(v) for k, v in n.get_attributes().items() if k != "label" }
+            for attr in ("requires", "provides"):
+                attrs[attr] = set(attrs.get(attr, "").split())
+
             self.g.add_node(name, **attrs)
 
         for e in self.dotg.get_edges():
@@ -55,6 +50,10 @@ class Topology:
             attrs = {_qstrip(k): _qstrip(v) for k, v in e.get_attributes().items()}
             attrs[sn] = sp
             attrs[dn] = dp
+
+            for attr in ("requires", "provides"):
+                attrs[attr] = set(attrs.get(attr, "").split())
+
             self.g.add_edge(sn, dn, **attrs)
 
     def __repr__(self):
@@ -73,13 +72,15 @@ class Topology:
 
         return out
 
-    def map_to(self, phy):
+    def map_to(self, phy,
+               nodes_compatible=compatible, edge_mappings=edge_mappings):
         mapper = isomorphism.MultiGraphMatcher(phy.g, self.g,
-                                               edge_match=match_edge,
-                                               node_match=match_node)
+                                               edge_match=lambda pes, les: any(edge_mappings(les, pes)),
+                                               node_match=nodes_compatible)
         if not mapper.subgraph_is_monomorphic():
             return False
 
+#        breakpoint()
         self.phy = phy
         self.mapping = {}
 
@@ -93,7 +94,7 @@ class Topology:
             les = self.g.get_edge_data(lsrc, ldst)
             pes = self.phy.g.get_edge_data(psrc, pdst)
 
-            for le, pe in map_edges(les, pes):
+            for le, pe in next(edge_mappings(les, pes)):
                 self.mapping[lsrc][le[lsrc]] = pe[psrc]
                 self.mapping[ldst][le[ldst]] = pe[pdst]
 
@@ -139,15 +140,15 @@ class Topology:
         return None
 
     def get_mgmt_link(self, src, dst):
-        return self.get_link(src, dst, lambda e: compatible(e, {"requires": "mgmt"}))
+        return self.get_link(src, dst, lambda e: compatible(e, {"requires": {"mgmt"}}))
 
     def get_ctrl(self):
-        ns = self.get_nodes(lambda _, attrs: compatible(attrs, {"requires": "controller"}))
+        ns = self.get_nodes(lambda _, attrs: compatible(attrs, {"requires": {"controller"}}))
         assert len(ns) == 1
         return ns[0]
 
     def get_infixen(self):
-        return self.get_nodes(lambda _, attrs: compatible(attrs, {"requires": "infix"}))
+        return self.get_nodes(lambda _, attrs: compatible(attrs, {"requires": {"infix"}}))
 
 
     def get_attr(self, name, default=None):

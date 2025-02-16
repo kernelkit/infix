@@ -37,10 +37,10 @@ static int netdag_gen_ethtool_flow_control(struct dagger *net, struct lyd_node *
 	const char *ifname = lydx_get_cattr(cif, "name");
 	FILE *fp;
 
-	fp = dagger_fopen_net_init(net, ifname, NETDAG_INIT_PHYS, "ethtool-aneg.sh");
+	fp = dagger_fopen_net_init(net, ifname, NETDAG_INIT_PHYS, "ethtool-flow-control.sh");
 	if (!fp)
 		return -EIO;
-
+	fprintf(fp, "[[ -n $(ethtool --json %s | jq '.[] | select(.\"supported-pause-frame-use\" == \"No\")') ]] && exit 0\n", ifname);
 	fprintf(fp, "ethtool --pause %s autoneg %s rx off tx off\n",
 		ifname, iface_uses_autoneg(cif) ? "on" : "off");
 	fclose(fp);
@@ -60,10 +60,10 @@ static int netdag_gen_ethtool_autoneg(struct dagger *net, struct lyd_node *cif)
 	if (!fp)
 		return -EIO;
 
-	fprintf(fp, "ethtool --change %s autoneg ", ifname);
 
 	if (iface_uses_autoneg(cif)) {
-		fputs("on\n", fp);
+		fprintf(fp, "[[ -n $(ethtool --json %s | jq '.[] | select(.\"supports-auto-negotiation\" == false)') ]] && exit 0\n", ifname);
+		fprintf(fp, "ethtool --change %s autoneg on", ifname);
 	} else {
 		speed = lydx_get_cattr(eth, "speed");
 		if (!speed) {
@@ -93,7 +93,7 @@ static int netdag_gen_ethtool_autoneg(struct dagger *net, struct lyd_node *cif)
 			goto out;
 		}
 
-		fprintf(fp,"off speed %d duplex %s\n", mbps, duplex);
+		fprintf(fp,"ethtool --change %s autoneg off speed %d duplex %s\n", ifname, mbps, duplex);
 	}
 out:
 	fclose(fp);
@@ -104,7 +104,6 @@ out:
 int netdag_gen_ethtool(struct dagger *net, struct lyd_node *cif, struct lyd_node *dif)
 {
 	struct lyd_node *eth = lydx_get_child(dif, "ethernet");
-	const char *type = lydx_get_cattr(cif, "type");
 	int err;
 
 	/*
@@ -121,7 +120,7 @@ int netdag_gen_ethtool(struct dagger *net, struct lyd_node *cif, struct lyd_node
 	 *
 	 *             Hence this "redundant" check.
 	 */
-	if (strcmp(type, "infix-if-type:ethernet"))
+	if (iftype_from_iface(cif) != IFT_ETH)
 		return 0;
 
 	if (!eth)

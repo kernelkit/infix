@@ -1,0 +1,42 @@
+=== LACP Aggregate w/ Degraded Link
+==== Description
+Verify communication over an LACP link aggregate when individual member
+links stop forwarding traffic, without carrier loss.
+
+.Logical network setup, link breakers (lb1 & lb2) here managed by host PC
+ifdef::topdoc[]
+image::../../test/case/ietf_interfaces/lag_failure/lag-failure.svg[]
+endif::topdoc[]
+ifndef::topdoc[]
+ifdef::testgroup[]
+image::lag_failure/lag-failure.svg[]
+endif::testgroup[]
+ifndef::testgroup[]
+image::lag-failure.svg[]
+endif::testgroup[]
+endif::topdoc[]
+
+The host verifies connectivity with dut2 via dut1 over the aggregate for
+each failure mode step using the `mon` interface.
+
+==== Topology
+ifdef::topdoc[]
+image::{topdoc}../../test/case/ietf_interfaces/lag_failure/topology.svg[LACP Aggregate w/ Degraded Link topology]
+endif::topdoc[]
+ifndef::topdoc[]
+ifdef::testgroup[]
+image::lag_failure/topology.svg[LACP Aggregate w/ Degraded Link topology]
+endif::testgroup[]
+ifndef::testgroup[]
+image::topology.svg[LACP Aggregate w/ Degraded Link topology]
+endif::testgroup[]
+endif::topdoc[]
+==== Test sequence
+. Set up topology and attach to target DUTs
+. Set up link aggregate, lag0, between dut1 and dut2
+. Initial connectivity check ...
+. Verify failure modes
+
+
+<<<
+

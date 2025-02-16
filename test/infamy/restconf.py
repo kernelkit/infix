@@ -265,6 +265,7 @@ class Device(Transport):
             return {container: v}
 
     def put_config_dicts(self, models):
+        """PUT full configuration of all models to running-config"""
         infer_put_dict(self.name, models)
         running = self.get_running()
 
@@ -273,8 +274,9 @@ class Device(Transport):
             lyd = mod.parse_data_dict(models[model], no_state=True, validate=False)
             running.merge(lyd)
 
-        return self.put_datastore("running", json.loads(running.print_mem("json", with_siblings=True, pretty=False)))
-
+        cfg = running.print_mem("json", with_siblings=True, pretty=True)
+        # print(f"PUT new running-config: {cfg}")
+        return self.put_datastore("running", json.loads(cfg))
 
     def put_config_dict(self, modname, edit):
         """Add @edit to running config and put the whole configuration"""
@@ -298,8 +300,9 @@ class Device(Transport):
 
         change = mod.parse_data_dict(edit, no_state=True, validate=False)
         running.merge_module(change)
-        data = json.loads(running.print_mem("json", with_siblings=True,
-                                            pretty=False))
+        cfg = running.print_mem("json", with_siblings=True, pretty=False)
+        # print(f"PUT new running-config: {cfg}")
+        data = json.loads(cfg)
 
         return self.put_datastore("running", data)
 

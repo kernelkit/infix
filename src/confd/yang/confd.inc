@@ -1,5 +1,6 @@
 # -*- sh -*-
 # REMEMBER TO UPDATE infix-interfaces ALSO IN containers.inc
+#FORCE_UPDATE="infix-interfaces"
 MODULES=(
 	"ietf-system@2014-08-06.yang -e authentication -e local-users -e ntp -e ntp-udp-port -e timezone-name"
 	"iana-timezones@2013-11-19.yang"
@@ -26,7 +27,7 @@ MODULES=(
 	"infix-hardware@2024-04-25.yang"
 	"ieee802-dot1q-types@2022-10-29.yang"
 	"infix-ip@2024-09-16.yang"
-	"infix-if-type@2024-10-13.yang"
+	"infix-if-type@2025-02-12.yang"
 	"infix-routing@2024-11-27.yang"
 	"ieee802-dot1ab-lldp@2022-03-15.yang"
 	"infix-lldp@2025-01-08.yang"
@@ -39,7 +40,9 @@ MODULES=(
 	"ieee802-ethernet-interface@2019-06-21.yang"
 	"infix-ethernet-interface@2024-02-27.yang"
 	"infix-factory-default@2023-06-28.yang"
-	"infix-interfaces@2025-01-08.yang -e vlan-filtering"
+	"infix-interfaces@2025-01-09.yang -e vlan-filtering"
+	"infix-crypto-types@2025-02-04.yang"
+	"infix-keystore@2025-02-04.yang"
 
 	# from rousette
 	"ietf-restconf@2017-01-26.yang"

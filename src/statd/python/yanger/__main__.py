@@ -1,6 +1,5 @@
 import logging
 import logging.handlers
-import subprocess
 import json
 import sys  # (built-in module)
 import os
@@ -76,6 +75,9 @@ def main():
     elif args.model == 'ietf-system':
         from . import ietf_system
         yang_data = ietf_system.operational()
+    elif args.model == 'ieee802-dot1ab-lldp':
+        from . import infix_lldp           
+        yang_data = infix_lldp.operational()
     else:
         common.LOG.warning("Unsupported model %s", args.model)
         sys.exit(1)

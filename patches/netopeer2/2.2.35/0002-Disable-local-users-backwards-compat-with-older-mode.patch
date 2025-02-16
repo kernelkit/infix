@@ -1,11 +1,11 @@
 From d2e4e60838761e2bdd02d651b8e0bea47cc2dcb5 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Mattias=20Walstr=C3=B6m?= <lazzer@gmail.com>
 Date: Tue, 2 Jul 2024 14:56:15 +0200
-Subject: [PATCH 2/3] Disable local users (backwards compat with older model)
+Subject: [PATCH 2/4] Disable local users (backwards compat with older model)
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
-Organization: Addiva Elektronik
+Organization: Wires
 
 Drop local-users, because if enabled netopeer require all users that
 should be allowed to use NETCONF to also be configured in the updated

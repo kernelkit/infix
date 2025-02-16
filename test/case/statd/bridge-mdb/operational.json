@@ -34,6 +34,11 @@
       },
       {
         "admin-status": "up",
+        "ieee802-ethernet-interface:ethernet": {
+          "auto-negotation": {
+            "enable": false
+          }
+        },
         "ietf-ip:ipv4": {
           "mtu": 1500
         },
@@ -55,10 +60,15 @@
           "in-octets": "143181",
           "out-octets": "1975737"
         },
-        "type": "infix-if-type:etherlike"
+        "type": "infix-if-type:ethernet"
       },
       {
         "admin-status": "up",
+        "ieee802-ethernet-interface:ethernet": {
+          "auto-negotation": {
+            "enable": false
+          }
+        },
         "ietf-ip:ipv4": {
           "mtu": 1500
         },
@@ -90,10 +100,15 @@
           "in-octets": "1980",
           "out-octets": "46052"
         },
-        "type": "infix-if-type:etherlike"
+        "type": "infix-if-type:ethernet"
       },
       {
         "admin-status": "up",
+        "ieee802-ethernet-interface:ethernet": {
+          "auto-negotation": {
+            "enable": false
+          }
+        },
         "ietf-ip:ipv4": {
           "mtu": 1500
         },
@@ -125,10 +140,15 @@
           "in-octets": "866",
           "out-octets": "47146"
         },
-        "type": "infix-if-type:etherlike"
+        "type": "infix-if-type:ethernet"
       },
       {
         "admin-status": "up",
+        "ieee802-ethernet-interface:ethernet": {
+          "auto-negotation": {
+            "enable": false
+          }
+        },
         "ietf-ip:ipv4": {
           "mtu": 1500
         },
@@ -160,10 +180,15 @@
           "in-octets": "936",
           "out-octets": "46200"
         },
-        "type": "infix-if-type:etherlike"
+        "type": "infix-if-type:ethernet"
       },
       {
         "admin-status": "up",
+        "ieee802-ethernet-interface:ethernet": {
+          "auto-negotation": {
+            "enable": false
+          }
+        },
         "ietf-ip:ipv4": {
           "mtu": 1500
         },
@@ -185,10 +210,15 @@
           "in-octets": "14460",
           "out-octets": "17169"
         },
-        "type": "infix-if-type:etherlike"
+        "type": "infix-if-type:ethernet"
       },
       {
         "admin-status": "up",
+        "ieee802-ethernet-interface:ethernet": {
+          "auto-negotation": {
+            "enable": false
+          }
+        },
         "ietf-ip:ipv4": {
           "mtu": 1500
         },
@@ -210,10 +240,15 @@
           "in-octets": "15383",
           "out-octets": "17129"
         },
-        "type": "infix-if-type:etherlike"
+        "type": "infix-if-type:ethernet"
       },
       {
         "admin-status": "up",
+        "ieee802-ethernet-interface:ethernet": {
+          "auto-negotation": {
+            "enable": false
+          }
+        },
         "ietf-ip:ipv4": {
           "mtu": 1500
         },
@@ -235,7 +270,7 @@
           "in-octets": "12245",
           "out-octets": "17169"
         },
-        "type": "infix-if-type:etherlike"
+        "type": "infix-if-type:ethernet"
       },
       {
         "admin-status": "up",
