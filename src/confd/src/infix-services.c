@@ -349,7 +349,8 @@ static int lldp_change(sr_session_ctx_t *session, uint32_t sub_id, const char *m
 			if (erase(LLDP_CONFIG))
 				ERRNO("Failed to remove old %s", LLDP_CONFIG);
 
-			rename(LLDP_CONFIG_NEXT, LLDP_CONFIG);
+			if (rename(LLDP_CONFIG_NEXT, LLDP_CONFIG))
+				ERRNO("Failed switching to new %s", LLDP_CONFIG);
 		}
 		else
 			if (erase(LLDP_CONFIG))
@@ -531,7 +532,10 @@ static int change_keystore_cb(sr_session_ctx_t *session, uint32_t sub_id, const 
 			if(rmrf(SSH_HOSTKEYS)) {
 				ERRNO("Failed to remove old SSH hostkeys: %d", errno);
 			}
-			rename(SSH_HOSTKEYS_NEXT, SSH_HOSTKEYS);
+
+			if (rename(SSH_HOSTKEYS_NEXT, SSH_HOSTKEYS))
+				ERRNO("Failed switching to new %s", SSH_HOSTKEYS);
+
 			svc_change(session, event, "/infix-services:ssh", "ssh", "sshd");
 		}
 		return SR_ERR_OK;
@@ -564,7 +568,12 @@ static int change_keystore_cb(sr_session_ctx_t *session, uint32_t sub_id, const 
 		}
 		private_key = lydx_get_cattr(change, "cleartext-private-key");
 		public_key = lydx_get_cattr(change, "public-key");
-		mkdir(SSH_HOSTKEYS_NEXT, 0600);
+
+		if (mkdir(SSH_HOSTKEYS_NEXT, 0600) && (errno != EEXIST)) {
+			ERRNO("Failed creating %s", SSH_HOSTKEYS_NEXT);
+			rc = SR_ERR_INTERNAL;
+		}
+
 		if(systemf("/usr/libexec/infix/mksshkey %s %s %s %s", name, SSH_HOSTKEYS_NEXT, public_key, private_key))
 			rc = SR_ERR_INTERNAL;
        }

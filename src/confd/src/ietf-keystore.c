@@ -148,6 +148,7 @@ int ietf_keystore_init(struct confd *confd)
 
 	REGISTER_CHANGE(confd->session, "ietf-keystore", "/ietf-keystore:keystore//.",
 			SR_SUBSCR_UPDATE, change_cb, confd, &confd->sub);
+	return SR_ERR_OK;
 fail:
 	if(rc)
 		ERROR("%s failed: %s", __func__, sr_strerror(rc));

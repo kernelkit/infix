@@ -289,7 +289,8 @@ static void del(const char *subnet, struct lyd_node *cfg)
 	fclose(next);
 
 	/* Replace old leases file */
-	rename(DNSMASQ_LEASES"+", DNSMASQ_LEASES);
+	if (rename(DNSMASQ_LEASES"+", DNSMASQ_LEASES))
+		ERRNO("Failed switching to new %s", DNSMASQ_LEASES);
 }
 
 static int change(sr_session_ctx_t *session, uint32_t sub_id, const char *module,

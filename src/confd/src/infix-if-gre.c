@@ -5,17 +5,18 @@
 
 int gre_gen(struct lyd_node *dif, struct lyd_node *cif, FILE *ip)
 {
-	const char *ifname, *local, *remote;
+	const char *local, *remote;
 	struct lyd_node *gre;
 	int ipv6;
 
-	ifname = lydx_get_cattr(cif, "name");
 	gre = lydx_get_child(cif, "gre");
 	local = lydx_get_cattr(gre, "local");
 	remote = lydx_get_cattr(gre, "remote");
+
 	ipv6 = !!strstr(local, ":");
 
-	fprintf(ip, "link add name %s", ifname);
+	fprintf(ip, "link add name %s",
+		lydx_get_cattr(cif, "name"));
 
 	switch (iftype_from_iface(cif)) {
 	case IFT_GRE:
