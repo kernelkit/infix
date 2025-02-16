@@ -213,13 +213,9 @@ int hostnamefmt      (struct confd *confd, const char *fmt, char *hostnm, size_t
 
 /* infix-containers.c */
 #ifdef CONTAINERS
-int  infix_containers_init(struct confd *confd);
-void infix_containers_pre_hook(sr_session_ctx_t *session, struct confd *confd);
-void infix_containers_post_hook(sr_session_ctx_t *session, struct confd *confd);
+int infix_containers_init(struct confd *confd);
 #else
-static inline int  infix_containers_init(struct confd *confd) { return 0; }
-static inline void infix_containers_pre_hook(sr_session_ctx_t *session, struct confd *confd) {}
-static inline void infix_containers_post_hook(sr_session_ctx_t *session, struct confd *confd) {}
+static inline int infix_containers_init(struct confd *confd) { return 0; }
 #endif
 
 /* infix-dhcp-common.c */

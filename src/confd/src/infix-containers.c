@@ -21,9 +21,16 @@
 #define  CFG_XPATH    "/infix-containers:containers"
 
 #define  _PATH_CONT   "/run/containers"
-#define  _PATH_INBOX  _PATH_CONT "/INBOX"
 
-
+/*
+ * Create a setup/create/upgrade script and instantiate a new instance
+ * that Finit will start when all networking and other dependencies are
+ * out of the way.  Finit calls the `/usr/sbin/container` wrapper script
+ * in the pre: hook to fetch and create the container instance.
+ *
+ * The script we create here, on every boot, contains all information
+ * needed to recreate and upgrade the user's container at runtime.
+ */
 static int add(const char *name, struct lyd_node *cif)
 {
 	const char *restart_policy, *string;
@@ -206,24 +213,22 @@ static int add(const char *name, struct lyd_node *cif)
 	fchmod(fileno(fp), 0700);
 	fclose(fp);
 
-	/* Enable, or update, container -- both trigger setup script. */
+	/* Enable, or update, container -- both trigger container setup. */
 	systemf("initctl -bnq enable container@%s.conf", name);
 	systemf("initctl -bnq touch container@%s.conf", name);
 
 	return 0;
 }
 
+/*
+ * Remove setup/create/upgrade script and disable the currently running
+ * instance.  The `/usr/sbin/container` wrapper script is called when
+ * Finit removes the instance, and it does not need the file we erase.
+ */
 static int del(const char *name)
 {
-	char fn[strlen(_PATH_CONT) + strlen(name) + 10];
-
-	/* Remove container setup script */
-	snprintf(fn, sizeof(fn), "%s/%s.sh", _PATH_CONT, name);
-	erase(fn);
-
-	/* Stop and schedule for deletion */
-	systemf("initctl -bnq stop container:%s", name);
-	writesf(name, "a", "%s", _PATH_INBOX);
+	erasef("%s/%s.sh", _PATH_CONT, name);
+	systemf("initctl -bnq disable container@%s.conf", name);
 
 	return SR_ERR_OK;
 }
@@ -312,7 +317,7 @@ static int action(sr_session_ctx_t *session, uint32_t sub_id, const char *xpath,
 		return SR_ERR_INTERNAL;
 	cmd += 2;
 
-	DEBUG("CALLING 'container %s %s' (xpath %s)", cmd, name, xpath);
+	DEBUG("RPC xpath %s, calling 'container %s %s'", xpath, cmd, name);
 	if (systemf("container %s %s", cmd, name))
 		return SR_ERR_INTERNAL;
 
@@ -333,34 +338,6 @@ static int oci_load(sr_session_ctx_t *session, uint32_t sub_id, const char *xpat
 		return SR_ERR_SYS;
 
 	return SR_ERR_OK;
-}
-
-/*
- * Containers depend on a lot of other system resources being properly
- * set up, e.g., networking, which is run by dagger.  So we need to wait
- * for all that before we can launch new, or modified, containers.  This
- * post hook runs as (one of) the last actions on a config change/boot.
- */
-void infix_containers_post_hook(sr_session_ctx_t *session, struct confd *confd)
-{
-	char name[256];
-	FILE *fp;
-
-	fp = fopen(_PATH_INBOX, "r");
-	if (!fp)
-		return;		/* nothing to delete */
-
-	while (fgets(name, sizeof(name), fp)) {
-		chomp(name);
-		systemf("initctl -bnq disable container@%s.conf", name);
-		systemf("container delete %s", name);
-		systemf("initctl -bnq cond clr container:%s", name);
-	}
-
-	fclose(fp);
-	erase(_PATH_INBOX);
-
-	systemf("podman volume prune -f");
 }
 
 int infix_containers_init(struct confd *confd)

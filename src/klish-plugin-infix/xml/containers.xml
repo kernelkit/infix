@@ -38,6 +38,7 @@
   <COMMAND name="prune" help="Clean up all unused containers, images and volume data">
     <ACTION sym="script" in="tty" out="tty" interrupt="true">
       doas podman system prune
+      doas podman volume prune
     </ACTION>
   </COMMAND>
 

@@ -75,9 +75,6 @@ int core_post_hook(sr_session_ctx_t *session, uint32_t sub_id, const char *modul
 		return SR_ERR_SYS;
 	}
 
-	/* Everything done, including interfaces, launch all container scripts */
-	infix_containers_post_hook(session, priv);
-
 	/* skip reload in bootstrap, implicit reload in runlevel change */
 	if (systemf("runlevel >/dev/null 2>&1"))
 		return SR_ERR_OK;

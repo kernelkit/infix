@@ -274,7 +274,6 @@ create()
 delete()
 {
     name=$1
-    image=$2
 
     if [ -z "$name" ]; then
 	echo "Usage:"
@@ -283,7 +282,7 @@ delete()
     fi
 
     # Should already be stopped, but if not ...
-    container stop "$name"
+    container stop "$name" >/dev/null
 
     while running "$name"; do
 	_=$((timeout -= 1))
@@ -585,11 +584,12 @@ case $cmd in
 	;;
     delete)
 	cmd=$1
-	name=$2
+	[ -n "$name" ] || name=$2
 	if [ "$cmd" = "network" ] && [ -n "$name" ]; then
 	    netwrm "$name"
 	else
-	    delete "$@"
+	    [ -n "$name" ] || name=$1
+	    delete "$name"
 	fi
 	;;
     exec)
@@ -835,8 +835,19 @@ case $cmd in
 	;;
     *)
 	if [ -n "$SERVICE_SCRIPT_TYPE" ] && [ -n "$SERVICE_ID" ]; then
-	    # Called as pre-script from Finit service
-	    exec $container -n "$SERVICE_ID" setup
+	    case "$SERVICE_SCRIPT_TYPE" in
+		pre)
+		    # Called as pre-script from Finit service
+		    exec $container -q -n "$SERVICE_ID" setup
+		    ;;
+		cleanup)
+		    # Called as cleanup-script from Finit service
+		    exec $container -q -n "$SERVICE_ID" delete
+		    ;;
+		*)
+		    false
+		    ;;
+	    esac
 	fi
 	usage
 	exit 1
