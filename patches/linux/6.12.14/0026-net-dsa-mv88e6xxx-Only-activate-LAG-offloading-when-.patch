@@ -1,8 +1,11 @@
-From a98487405e1a7b8b69569a3e5f7765f395c36f55 Mon Sep 17 00:00:00 2001
+From 43a67b5bb9b829e3317cc1fb9166f1ee6dea1b1e Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Wed, 12 Feb 2025 22:03:14 +0100
 Subject: [PATCH 26/26] net: dsa: mv88e6xxx: Only activate LAG offloading when
  bridged
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
 Organization: Wires
 
 The current port isolation scheme for mv88e6xxx is detailed here:
@@ -47,7 +50,7 @@ Before joining a bridge, the offload does not offer any performance
 benefit anyway. All ingressing packet will always have to go to the
 CPU; egress traffic always relies on software hashing.
 
-Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
 ---
  drivers/net/dsa/mv88e6xxx/chip.c | 42 +++++++++++++++-----------------
  1 file changed, 20 insertions(+), 22 deletions(-)

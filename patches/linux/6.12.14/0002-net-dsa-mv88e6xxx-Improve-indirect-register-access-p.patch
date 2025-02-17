@@ -1,8 +1,11 @@
-From 765cc95de163acf8022b093ce227184e04b49d7b Mon Sep 17 00:00:00 2001
+From a994279e52be28e36bd7e36583b5382ee4a1bd2c Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Wed, 27 Mar 2024 15:52:43 +0100
 Subject: [PATCH 02/26] net: dsa: mv88e6xxx: Improve indirect register access
  perf on 6393
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
 Organization: Wires
 
 When operating in multi-chip mode, the 6393 family maps a subset of
@@ -14,7 +17,7 @@ Therefore, add a new set of SMI operations which remaps accesses to
 such registers to the corresponding directly addressable register. All
 other accesses use the regular indirect interface.
 
-Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
 ---
  drivers/net/dsa/mv88e6xxx/chip.c    |  7 +++
  drivers/net/dsa/mv88e6xxx/global1.h |  3 ++
