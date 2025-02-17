@@ -1,8 +1,11 @@
-From d8d81ca2a348095d87110d3d6a65134f1b7ce212 Mon Sep 17 00:00:00 2001
+From f5b525c808b13b43934e78464d2b01a7d27ce4b6 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Fri, 24 Nov 2023 23:29:55 +0100
 Subject: [PATCH 23/26] nvmem: layouts: onie-tlv: Let device probe even when
  TLV is invalid
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
 Organization: Wires
 
 Before this change, probing an NVMEM device, expected to contain a
@@ -14,7 +17,7 @@ be successfully probed.
 Therefore, settle for reporting data corruption issues in the log, and
 simply refrain from registering any cells in those cases.
 
-Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
 ---
  drivers/nvmem/layouts/onie-tlv.c | 6 +++---
  1 file changed, 3 insertions(+), 3 deletions(-)
