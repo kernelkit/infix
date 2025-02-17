@@ -164,6 +164,59 @@ Now you can rebuild `confd`, just as described above, and restart Infix:
     make confd-rebuild all run
 
 
+### `statd`
+
+The Infix status daemon, `src/statd`, is responsible for populating the 
+sysrepo `operational` datastore. Like `confd`, it uses XPath subscriptions, 
+but unlike `confd`, it relies entirely on `yanger`, a Python script that 
+gathers data from local linux services and feeds it into sysrepo.
+
+To apply changes, rebuild the image:
+
+    make python-statd-rebuild statd-rebuild all
+
+Rebuilding the image and testing on target for every change during 
+development process can be tedious. Instead, `yanger` allows remote 
+execution, running the script directly on the host system (test 
+container):
+
+    infamy0:test # ../src/statd/python/yanger/yanger -x "../utils/ixll -A ssh d3a" ieee802-dot1ab-lldp
+
+`ixll` is a utility script that lets you run network commands using an
+**interface name** instead of a hostname. It makes operations like 
+`ssh`, `scp`, and network discovery easier.
+
+Normally, `yanger` runs commands **locally** to retrieve data 
+(e.g., `lldpcli` when handling `ieee802-dot1ab-lldp`). However, when 
+executed with `-x "../utils/ixll -A ssh d3a"` it redirects these 
+commands to a remote system connected to the local `d3a` interface via 
+SSH. This setup is used for running `yanger` in an 
+[interactive test environment](testing.md#interactive-usage). The yanger
+script runs on the `host` system, but key commands are executed on the 
+`target` system.
+
+For debugging or testing, you can capture system command output and 
+replay it later without needing a live system.
+
+To capture:
+
+    infamy0:test # ../src/statd/python/yanger/yanger -c /tmp/capture ieee802-dot1ab-lldp
+
+To replay:
+
+    infamy0:test # ../src/statd/python/yanger/yanger -r /tmp/capture ieee802-dot1ab-lldp
+
+This is especially useful when working in isolated environments or debugging
+issues without direct access to the DUT.
+
+### Agree on YANG Model
+
+When making changes to the `confd` and `statd` services, you will often need to update
+the YANG models. If you are adding a new YANG module, it's best to follow the 
+structure of an existing one. However, before making any changes, **always discuss
+them with the Infix core team**. This helps avoid issues later in development and 
+makes pull request reviews smoother.
+
 Testing
 -------
 
@@ -174,6 +227,11 @@ The Infix automated test suite is built around Qemu and [Qeneth][2], see:
 
  * [Testing](testing.md)
  * [Docker Image](../test/docker/README.md)
+
+With any new feature added to Infix, it is essential to include a 
+relevant test case. See the 
+[Test Development](testing.md#test-development) section for guidance
+on adding test cases.
 
 
 Reviewing
