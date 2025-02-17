@@ -243,23 +243,15 @@ spanning tree matches the expected one.
 
 Integration to Infix
 --------------------
-To successfully run all Infix tests, the image must be built in 
-'test-mode'. This can be achieved by setting the DISK_IMAGE_TEST_MODE
-parameter to true. Although this is the default setting, it’s advisable
-to verify it by running:
+When the test environment is started with Qeneth, it doesn't use the 
+base image directly. Instead, it creates a copy and inserts a `test-mode`
+flag into it. During the bootstrap phase, the system checks for the 
+presence of the test-mode flag (file).
 
-    $ make menuconfig
-    (External Options --> -*- Disk image --> [*] Enable Test Mode)
-
-Building an image in 'test-mode' results in the creation of a 'test-mode'
-file within the auxiliary (aux) partition of the Infix disk image 
-(/mnt/aux/test-mode).
-
-During the bootstrap phase, the system checks for the presence of this 
-test-mode flag (file). If the flag exists, a 'test-config.cfg' file is 
-generated. In the following step, the system loads the 'test-config' 
-instead of the standard startup-config (or factory-config). This 
-configuration is simple and safe, equivalent to the one used in 'Secure Mode'
+If the flag exists, a 'test-config.cfg' file is generated. In the 
+following step, the system loads the 'test-config' instead of the
+standard `startup-config` (or `factory-config`). This configuration
+is simple and safe, equivalent to the one used in 'Secure Mode' 
 (also known as 'failure-config').
 
 Additionally, the configuration enables extra RPCs related to system 

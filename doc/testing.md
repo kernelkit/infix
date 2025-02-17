@@ -25,17 +25,6 @@ for `x86_64`:
     $ make
     $ make test
 
-It is important to mention that Infix build system by default creates
-an image in 'test-mode'. The mode is set by DISK_IMAGE_TEST_MODE
-parameter (default=true). To generate a standard image set the
-DISK_IMAGE_TEST_MODE to 'false'. However, only the test mode ensures
-that all Infix tests are executed properly. Prior to the set of commands
-above, it is always good to check that DISK_IMAGE_TEST_MODE is properly
-set by running:
-
-    $ make menuconfig
-    (External Options --> -*- Disk image --> [*] Enable Test Mode)
-
 ### Physical Devices
 
 To run the tests on a preexisting topology from the host's network
@@ -99,8 +88,11 @@ arguments:
 To run a suite of tests, e.g., only the DHCP client tests, pass the
 suite as an argument to [9PM][]:
 
-    11:42:53 infamy0:test # ./9pm/9pm.py case/infix_dhcp/all.yaml
+    11:42:53 infamy0:test # ./9pm/9pm.py case/infix_dhcp/infix_dhcp.yaml
 
+To run the suite of all tests:
+
+    11:42:53 infamy0:test # ./9pm/9pm.py case/all.yaml
 
 ### Connecting to Infamy
 
@@ -314,6 +306,53 @@ Verify that it it possible to change hostname
 The test specifaction can be genererated with:
 
 	$ make test-spec
+
+### Test Development
+
+For adding a new test to the automated regression test suite, it's best
+to start by reviewing an existing test case.
+
+All tests are located in the `infix/test/case` repository and are 
+grouped by the features they verify. For example, 
+`infix/test/case/infix_services` contains tests for various Infix 
+services, such as LLDP and mDNS.
+
+While test grouping is flexible, each test should be placed in a 
+logically relevant category.
+
+When creating a new test group, add it to `infix/test/case/all.yaml`,
+to enable it to run as a 
+[subset of the test suite](#running-subsets-of-tests):
+
+```
+- name:  infix-services
+  suite: infix_services/infix_services.yaml
+```
+
+A new test (e.g., lldp_enable_disable) should be added to the 
+corresponding test group .yaml file, such as 
+`infix/test/cases/infix_services.yaml`:
+
+```
+- name: lldp_enable_disable
+  case: lldp_enable_disable/test.py
+```
+
+It is necessary to include the test in 
+`infix/test/case/infix_services/Readme.adoc` to ensure proper test 
+specification generation:
+
+```
+include::lldp_enable_disable/Readme.adoc[]
+```
+
+Each test case should have its own directory under, 
+`infix/test/case/infix_services`, containing: 
+  - `test.py` - the test script
+  - `topology.dot` - the logical topology definition.
+
+When the [test specification](#test-specification) is generated, 
+`topology.svg` and `Readme.adoc` should also be created. 
 
 [9PM]:    https://github.com/rical/9pm
 [Qeneth]: https://github.com/wkz/qeneth
