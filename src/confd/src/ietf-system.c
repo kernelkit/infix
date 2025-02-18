@@ -45,6 +45,12 @@ static char   *os  = NULL;
 static char   *nm  = NULL;
 static char   *id  = NULL;
 
+static const char *admin_groups[] = {
+	"wheel",
+	"frrvty",
+	NULL
+};
+
 static struct { char *name, *shell; } shells[] = {
 	{ "infix-system:sh",    "/bin/sh"    },
 	{ "infix-system:bash",  "/bin/bash"  },
@@ -599,10 +605,16 @@ fail:
 	return rc;
 }
 
+static bool group_exists(const char *group)
+{
+	if (!systemf("grep -q '^%s:' /etc/group", group))
+		return true;
+	return false;
+}
+
 static bool is_group_member(const char *user, const char *group)
 {
-	/* Check if user is already in group */
-	if (!systemf("grep %s /etc/group |grep -q %s", group, user))
+	if (!systemf("grep '^%s:' /etc/group |grep -q %s", group, user))
 		return true;
 
 	return false;
@@ -610,15 +622,22 @@ static bool is_group_member(const char *user, const char *group)
 
 static void add_group(const char *user, const char *group)
 {
-	bool is_already = is_group_member(user, group);
+	if (!group_exists(group))
+		return; /* silently skip non-existent groups */
 
-	if (is_already)
-		return; /* already group member */
+	if (is_group_member(user, group))
+		return;
 
 	if (systemf("adduser %s %s", user, group))
 		AUDIT("Failed giving user \"%s\" UNIX %s permissions.", user, group);
 	else
 		AUDIT("User \"%s\" added to UNIX \"%s\" group.", user, group);
+}
+
+static void add_groups(const char *user, const char **groups)
+{
+	for (size_t i = 0; groups[i]; i++)
+		add_group(user, groups[i]);
 }
 
 static void del_group(const char *user, const char *group)
@@ -632,6 +651,12 @@ static void del_group(const char *user, const char *group)
 		AUDIT("Failed removing user \"%s\" from UNIX \"%s\" group.", user, group);
 	else
 		AUDIT("User \"%s\" removed from UNIX \"%s\" group.", user, group);
+}
+
+static void del_groups(const char *user, const char **groups)
+{
+	for (size_t i = 0; groups[i]; i++)
+		del_group(user, groups[i]);
 }
 
 /* Users with a valid shell are also allowed CLI access */
@@ -1446,9 +1471,9 @@ static int change_nacm(sr_session_ctx_t *session, uint32_t sub_id, const char *m
 			AUDIT("Failed adjusting shell for user \"%s\"", user);
 
 		if (is_admin)
-			add_group(user, "wheel");
+			add_groups(user, admin_groups);
 		else
-			del_group(user, "wheel");
+			del_groups(user, admin_groups);
 	}
 
 cleanup:
