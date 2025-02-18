@@ -127,3 +127,4 @@ more information, see: [Infix in Virtual Environments](doc/virtual.md).
 [Coverity Status]: https://scan.coverity.com/projects/29393/badge.svg
 [discord-badge]:   https://img.shields.io/discord/1182652155618918411.svg?logo=discord
 [discord-url]:     https://discord.gg/6bHJWQNVxN
+
