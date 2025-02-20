@@ -35,9 +35,13 @@ static bool iface_uses_autoneg(struct lyd_node *cif)
 static int netdag_gen_ethtool_flow_control(struct dagger *net, struct lyd_node *cif)
 {
 	const char *ifname = lydx_get_cattr(cif, "name");
+	enum netdag_init phase = NETDAG_INIT_PHYS;
 	FILE *fp;
 
-	fp = dagger_fopen_net_init(net, ifname, NETDAG_INIT_PHYS, "ethtool-flow-control.sh");
+	if (iface_has_quirk(ifname, "phy-detached-when-down"))
+		phase = NETDAG_INIT_POST;
+
+	fp = dagger_fopen_net_init(net, ifname, phase, "ethtool-flow-control.sh");
 	if (!fp)
 		return -EIO;
 	fprintf(fp, "[[ -n $(ethtool --json %s | jq '.[] | select(.\"supported-pause-frame-use\" == \"No\")') ]] && exit 0\n", ifname);
@@ -52,11 +56,15 @@ static int netdag_gen_ethtool_autoneg(struct dagger *net, struct lyd_node *cif)
 {
 	struct lyd_node *eth = lydx_get_child(cif, "ethernet");
 	const char *ifname = lydx_get_cattr(cif, "name");
+	enum netdag_init phase = NETDAG_INIT_PHYS;
 	const char *speed, *duplex;
 	int mbps, err = 0;
 	FILE *fp;
 
-	fp = dagger_fopen_net_init(net, ifname, NETDAG_INIT_PHYS, "ethtool-aneg.sh");
+	if (iface_has_quirk(ifname, "phy-detached-when-down"))
+		phase = NETDAG_INIT_POST;
+
+	fp = dagger_fopen_net_init(net, ifname, phase, "ethtool-aneg.sh");
 	if (!fp)
 		return -EIO;
 

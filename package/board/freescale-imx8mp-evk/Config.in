@@ -1,0 +1,6 @@
+config BR2_PACKAGE_FREESCALE_IMX8MP_EVK
+	bool "NXP i.MX8MP EVK"
+	depends on BR2_aarch64
+	help
+	  NXP i.MX8MP EVK
+
