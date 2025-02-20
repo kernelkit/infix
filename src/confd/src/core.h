@@ -124,6 +124,7 @@ struct confd {
 	sr_subscription_ctx_t  *sub;
 	sr_subscription_ctx_t  *fsub;    /* factory-default sub */
 	json_t                 *root;
+	json_t                 *ifquirks;
 	struct dagger		netdag;
 };
 

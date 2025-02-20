@@ -126,6 +126,12 @@ int sr_plugin_init_cb(sr_session_ctx_t *session, void **priv)
 	confd.root = json_load_file("/run/system.json", 0, NULL);
 	if (!confd.root)
 		goto err;
+
+	/* An optional file that contains hardware specific quirks for
+	 * the network interfaces on running board.
+	 */
+	confd.ifquirks = json_load_file("/etc/product/interface-quirks.json", 0, NULL);
+
 	rc = ietf_interfaces_init(&confd);
 	if (rc)
 		goto err;

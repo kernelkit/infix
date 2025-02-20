@@ -92,6 +92,8 @@ static inline bool is_member_port(struct lyd_node *cif)
 	return false;
 }
 
+bool iface_has_quirk(const char *ifname, const char *quirkname);
+
 
 /* ieee802-ethernet-interface.c */
 int netdag_gen_ethtool(struct dagger *net, struct lyd_node *cif, struct lyd_node *dif);
