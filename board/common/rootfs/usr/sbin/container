@@ -282,9 +282,11 @@ delete()
     fi
 
     # Should already be stopped, but if not ...
+    log "$name: should already be stopped, double checking ..."
     container stop "$name" >/dev/null
 
     while running "$name"; do
+	log "$name: still running, waiting for it to stop ..."
 	_=$((timeout -= 1))
 	if [ $timeout -le 0 ]; then
 	    err 1 "timed out waiting for container $1 to stop before deleting it."
@@ -292,6 +294,7 @@ delete()
 	sleep 1
     done
 
+    log "$name: calling podman rm -vif ..."
     podman rm -vif "$name" >/dev/null 2>&1
     [ -n "$quiet" ] || log "Container $name has been removed."
 }
@@ -428,7 +431,7 @@ commands:
   run      NAME [CMD]      Run a container interactively, with an optional command
   save     IMAGE FILE      Save a container image to an OCI tarball FILE[.tar.gz]
   setup    NAME            Create and set up container as a Finit task
-  shell                    Start a shell inside a container
+  shell   [CMD]            Start a shell, or run CMD, inside a container
   show    [image | volume] Show containers, images, or volumes
   stat                     Show continuous stats about containers (Ctrl-C aborts)
   start   [NAME]           Start a container, see -n
@@ -593,11 +596,15 @@ case $cmd in
 	fi
 	;;
     exec)
-	podman exec -it "$@"
+	if [ -z "$name" ]; then
+	    name="$1"
+	    shift
+	fi
+	podman exec -i "$name" "$@"
 	;;
     flush)
 	echo "Cleaning up any lingering containers";
-	podman rm -av
+	podman rm -av $force
 	;;
     find)
 	cmd=$1
@@ -713,7 +720,15 @@ case $cmd in
 	done
 	;;
     shell)
-	podman exec -it "$1" sh -l
+	if [ -z "$name" ]; then
+	    name="$1"
+	    shift
+	fi
+	if [ $# -gt 0 ]; then
+	    podman exec -i "$name" sh -c "$*"
+	else
+	    podman exec -it "$name" sh -l
+	fi
 	;;
     show)
 	cmd=$1
@@ -842,6 +857,7 @@ case $cmd in
 		    ;;
 		cleanup)
 		    # Called as cleanup-script from Finit service
+		    log "Calling $container -n $SERVICE_ID delete"
 		    exec $container -q -n "$SERVICE_ID" delete
 		    ;;
 		*)
