@@ -7,6 +7,7 @@ Verifies Infix Docker container support:
  - Common setup with a docker0 bridge, automatic VETH pairs to container(s)
  - Connecting a container with a VETH pair to a standard Linux bridge
  - Assigning a physical Ethernet interface to a container
+ - Upgrading a container with a volume, verifying volume data is intact
  - Basic firewall container running in host network mode and full privileges
 
 <<<
@@ -18,5 +19,7 @@ include::container_bridge/Readme.adoc[]
 include::container_phys/Readme.adoc[]
 
 include::container_veth/Readme.adoc[]
+
+include::container_volume/Readme.adoc[]
 
 include::container_firewall_basic/Readme.adoc[]
