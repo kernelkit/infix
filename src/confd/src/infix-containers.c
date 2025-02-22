@@ -33,7 +33,7 @@
  */
 static int add(const char *name, struct lyd_node *cif)
 {
-	const char *restart_policy, *string;
+	const char *restart_policy, *string, *image;
 	struct lyd_node *node, *nets, *caps;
 	char script[strlen(name) + 5];
 	FILE *fp, *ap;
@@ -60,10 +60,17 @@ static int add(const char *name, struct lyd_node *cif)
 	 * setup at creation/boot and for manual upgrade.  The delete
 	 * command ensures any already running container is stopped and
 	 * deleted so that it releases all claimed resources.
+	 *
+	 * The odd meta data is not used by the script itself, instead
+	 * it is used by the /usr/sbin/container wrapper when upgrading
+	 * a running container instance.
 	 */
+	image = lydx_get_cattr(cif, "image");
 	fprintf(fp, "#!/bin/sh\n"
+		"# meta-name: %s\n"
+		"# meta-image: %s\n"
 		"container --quiet delete %s >/dev/null\n"
-		"container --quiet", name);
+		"container --quiet", name, image, name);
 
 	LYX_LIST_FOR_EACH(lyd_child(cif), node, "dns")
 		fprintf(fp, " --dns %s", lyd_get_value(node));
@@ -204,7 +211,7 @@ static int add(const char *name, struct lyd_node *cif)
 			fprintf(fp, " --checksum sha512:%s", string);
 	}
 
-	fprintf(fp, " create %s %s", name, lydx_get_cattr(cif, "image"));
+	fprintf(fp, " create %s %s", name, image);
 
  	if ((string = lydx_get_cattr(cif, "command")))
 		fprintf(fp, " %s", string);

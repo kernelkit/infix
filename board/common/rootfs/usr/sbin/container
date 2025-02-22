@@ -436,6 +436,7 @@ commands:
   stat                     Show continuous stats about containers (Ctrl-C aborts)
   start   [NAME]           Start a container, see -n
   stop    [NAME]           Stop a container, see -n
+  upgrade  NAME            Upgrade a running container (stop, pull, restart)
   volume  [prune]          Prune unused volumes
 EOF
 }
@@ -821,15 +822,15 @@ case $cmd in
 
 	# Likely an OCI archive, or local directory, assume user has updated image.
 	if echo "$img" | grep -Eq '^localhost/'; then
-	    file=$(awk '{s=$NF} END{print s}' "$script")
-	    echo "Upgrading container ${1} with local archive: $file ..."
+	    file=$(awk '/^# meta-image:/ {print $3}' "$script")
+	    echo ">> Upgrading container $1 using $file ..."
 	else
 	    printf ">> Stopping ... "
 	    podman stop "$1"
 	    printf ">> "
 	    podman pull "$img" || (echo "Failed fetching $img, check your network (settings)."; exit 1)
+	    echo ">> Starting $1 ..."
 	fi
-	echo ">> Starting $1 ..."
 	if ! "$script"; then
 	    echo ">> Failed recreating container $1"
 	    exit 1
