@@ -8,7 +8,8 @@ All notable changes to the project are documented in this file.
 -------------------------
 
 ### Changes
- - Upgrade Linux kernel to 6.12.14 (LTS)
+ - Upgrade Linux kernel to 6.12.16 (LTS)
+ - Upgrade Buildroot to 2024.02.11 (LTS)
  - YANG type for SSH private/public keys has changed, from
    ietf-crypto-types to infix-crypto-types
  - Add support for link aggregation (lag), static (balance-xor) and LACP
