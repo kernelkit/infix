@@ -1059,7 +1059,7 @@ The resulting address (10.1.2.100/24) is of type *dhcp*.
 The (only) way to disable IPv6 link-local addresses is by disabling IPv6
 on the interface.
 
-```(disabling
+```
 admin@example:/> configure
 admin@example:/config/> edit interface eth0 ipv6
 admin@example:/config/interface/eth0/ipv6/> set enabled false
@@ -1173,12 +1173,13 @@ have changed type to *random*.
 To be able to route (static or dynamic) on the interface it is
 required to enable forwarding. This setting controls if packets
 received on this interface can be forwarded.
-   ```
-   admin@example:/config/> edit interface eth0
-   admin@example:/config/interface/eth0/> set ipv4 forwarding
-   admin@example:/config/interface/eth0/> leave
-   admin@example:/>
-   ```
+
+```
+admin@example:/config/> edit interface eth0
+admin@example:/config/interface/eth0/> set ipv4 forwarding
+admin@example:/config/interface/eth0/> leave
+admin@example:/>
+```
 
 
 ### IPv6 forwarding
