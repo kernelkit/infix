@@ -14,6 +14,8 @@ All notable changes to the project are documented in this file.
  - Add support for the [i.MX 8M Plus EVK][EVK]
  - YANG type change for SSH private/public keys, from ietf-crypto-types
    to infix-crypto-types
+ - Disable global IPv6 forwarding by default, enable by per-interface
+   setting.  Note, route advertisements are always accepted.  Issue #785
  - Drop automatic default route (interface route) for IPv4 autoconf, not
    necessary and causes more confusion than good.  Issue #923
 
