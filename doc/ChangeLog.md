@@ -12,9 +12,13 @@ All notable changes to the project are documented in this file.
  - YANG type for SSH private/public keys has changed, from
    ietf-crypto-types to infix-crypto-types
  - Add support for link aggregation (lag), static (balance-xor) and LACP
+ - Drop automatic default route (interface route) for IPv4 autoconf, not
+   necessary and causes more confusion than good.  Issue #923
 
 ### Fixes
- - N/A
+ - Fix #956: CLI `copy` command complains it cannot change owner when
+   copying `factory-config` to `running-config`.  Bogus error, the
+   latter is not really a file
 
 
 [v25.01.0][] - 2025-01-31
