@@ -1183,23 +1183,27 @@ received on this interface can be forwarded.
 
 ### IPv6 forwarding
 
-This flag behaves totally different than for IPv4. For IPv6 the
-ability to route between interfaces is always enabled, instead this
-flag controls if the interface will be in host/router mode.
+Due to how the Linux kernel manages IPv6 forwarding, we can not fully
+control it per interface via this setting like how IPv4 works.  Instead,
+IPv6 forwarding is globally enabled when at least one interface enable
+forwarding, otherwise it is disabled.
 
-| **Feature**                              | **Forward enabled** | **Forward disabled** |
-|:-----------------------------------------|:--------------------|:---------------------|
-| IsRouter set in Neighbour Advertisements | Yes                 | No                   |
-| Transmit Router Solicitations            | No                  | Yes                  |
-| Router Advertisements are ignored        | No                  | Yes                  |
-| Accept Redirects                         | No                  | Yes                  |
+The following table shows the system IPv6 features that the `forwarding`
+setting control when it is *Enabled* or *Disabled:
 
-   ```
-   admin@example:/config/> edit interface eth0
-   admin@example:/config/interface/eth0/> set ipv6 forwarding
-   admin@example:/config/interface/eth0/> leave
-   admin@example:/>
-   ```
+| **IPv6 Feature**                         | **Enabled** | **Disabled** |
+|:-----------------------------------------|:------------|:-------------|
+| IsRouter set in Neighbour Advertisements | Yes         | No           |
+| Transmit Router Solicitations            | No          | Yes          |
+| Router Advertisements are ignored        | Yes         | Yes          |
+| Accept Redirects                         | No          | Yes          |
+
+```
+admin@example:/config/> edit interface eth0
+admin@example:/config/interface/eth0/> set ipv6 forwarding
+admin@example:/config/interface/eth0/> leave
+admin@example:/>
+```
 
 
 ## Routing support
