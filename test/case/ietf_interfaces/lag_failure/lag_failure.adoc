@@ -5,7 +5,7 @@ links stop forwarding traffic, without carrier loss.
 
 .Logical network setup, link breakers (lb1 & lb2) here managed by host PC
 ifdef::topdoc[]
-image::../../test/case/ietf_interfaces/lag_failure/lag-failure.svg[]
+image::{topdoc}../../test/case/ietf_interfaces/lag_failure/lag-failure.svg[]
 endif::topdoc[]
 ifndef::topdoc[]
 ifdef::testgroup[]
