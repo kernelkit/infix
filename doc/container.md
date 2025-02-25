@@ -31,9 +31,9 @@ Infix comes with native support for Docker containers using [podman][].
 The [YANG model][1] describes the current level of support, complete
 enough to run both system and application containers.
 
-Key design features, like using Linux switchdev, allow users to assign
-switch ports directly to containers, not just bridged VETH pairs, this
-is a rare and in many cases *unique* feature of Infix.
+Key design features of Infix, like using Linux switchdev, allow users to
+assign switch ports directly to containers, not just bridged VETH pairs.
+This is a rare and in many cases *unique* feature of Infix.
 
 All network specific settings are done using the IETF interfaces YANG
 model, with augments for containers to ensure smooth integration with
@@ -43,7 +43,7 @@ container networking in podman.
 > Even though the `podman` command can be used directly from a shell
 > prompt, we strongly recommend using the CLI commands instead.  They
 > employ the services of a wrapper `container` script which handles the
-> integration of containers in the system.
+> integration of Docker containers in the system.
 
 
 Caution
@@ -83,18 +83,20 @@ In the CLI, containers can be run in one of two ways:
  1. `container run IMAGE [COMMAND]`, or
  2. enter `configure` context, then `edit container NAME`
 
-The former is useful mostly for testing, or running single commands in
-an image.  It is a wrapper for `podman run -it --rm ...`, while the
-latter is a wrapper and adaptation of `podman create ...`.
+The first is useful mostly for testing, or running single commands in
+an image.  It is a wrapper for `podman run -it --rm ...`.
 
-The second creates a read-only container that is automatically started
-at every boot.  When non-volatile storage is needed, data stored in a
-volume is persisted until explicitly removed from the configuration,
-i.e., across host and container reboots and upgrades.
+The second creates a read-only container that by default automatically
+start at every boot.   It basically wraps `podman create ...`.
 
-Another option is [Content Mounts](#content-mounts), where the content
-of a file mounted into the container is kept along with the container
-configuration in the device's `startup-config`.
+When non-volatile storage is needed two complementary options exist:
+
+ - **Volumes:** data stored in a volume is persisted until explicitly
+   removed from the configuration, i.e., across host reboots and
+   container upgrades
+ - **[Content Mounts](#content-mounts):** where the content of a file
+  mounted into the container is kept along with the container
+  configuration in the device's `startup-config`
 
 Podman ensures (using tmpfs) all containers have writable directories
 for certain critical file system paths: `/dev`, `/dev/shm`, `/run`,
@@ -127,24 +129,30 @@ Classic Hello World:
     Hello from Docker!
     This message shows that your installation appears to be working correctly.
 
-Persistent web server using nginx, sharing the host's network:
+A web server with [nginx][], using standard docker bridge.  Podman will
+automatically create a VETH pair for us, connecting the container to the
+`docker0` bridge:
 
     admin@example:/> configure
-    admin@example:/config> edit container web
-    admin@example:/config/container/web> set image docker://nginx:alpine
-    admin@example:/config/container/web> set publish 80:80
-    admin@example:/config/container/web> set network host
-    admin@example:/config/container/web> leave
+    admin@example:/config/> edit interface docker0
+    admin@example:/config/interface/docker0/> set container-network
+    admin@example:/config/interface/docker0/> end
+    admin@example:/config/> edit container web
+    admin@example:/config/container/web/> set image docker://nginx:alpine
+    admin@example:/config/container/web/> set network publish 8080:80
+    admin@example:/config/container/web/> set network interface docker0
+    admin@example:/config/container/web/> set volume cache target /var/cache
+    admin@example:/config/container/web/> leave
     admin@example:/> show container
 
 Exit to the shell and verify the service with curl, or try to attach
 to your device's IP address using your browser:
 
-    admin@example:~$ curl http://localhost
+    admin@example:~$ curl http://localhost:8080
 
-or connect to port 80 of your running Infix system with a browser.  See
-the following sections for how to add more interfaces and manage your
-container at runtime.
+or connect to port 8080 of your running Infix system with a browser.
+See the following sections for how to add more interfaces and manage
+your container at runtime.
 
 
 Container Images
@@ -456,11 +464,11 @@ in a `bridge`.  Below an example of a system container calls `set
 network interface docker0`, here we show how to set options for that
 network:
 
-    admin@example:/config/container/ntpd/> edit network docker0 
-    admin@example:/config/container/ntpd/network/docker0/> 
-    admin@example:/config/container/ntpd/network/docker0/> set option 
+    admin@example:/config/container/ntpd/> edit network interface docker0
+    admin@example:/config/container/ntpd/network/interface/docker0/>
+    admin@example:/config/container/ntpd/network/interface/docker0/> set option
     <string>  Options for masquerading container bridges.
-    admin@example:/config/container/ntpd/network/docker0/> help option 
+    admin@example:/config/container/ntpd/network/interface/docker0/> help option
     NAME
             option <string>
     
@@ -471,9 +479,9 @@ network:
                      mac=00:01:02:c0:ff:ee -- set fixed MAC address in container
                      interface_name=foo0   -- set interface name inside container
     
-    admin@example:/config/container/ntpd/network/docker0/> set option ip=172.17.0.2
-    admin@example:/config/container/ntpd/network/docker0/> set option interface_name=wan
-    admin@example:/config/container/ntpd/network/docker0/> leave
+    admin@example:/config/container/ntpd/network/interface/docker0/> set option ip=172.17.0.2
+    admin@example:/config/container/ntpd/network/interface/docker0/> set option interface_name=wan
+    admin@example:/config/container/ntpd/network/interface/docker0/> leave
 
 
 ### Container Host Interface
@@ -903,4 +911,5 @@ Container Image](#upgrading-a-container-image) (above).
 [14]:     https://github.com/kernelkit/curiOS/
 [15]:     https://github.com/kernelkit/curiOS/blob/2e4748f65e356b2c117f586cd9420d7ba66f79d5/board/system/rootfs/etc/inittab
 [tini]:   https://github.com/krallin/tini
+[nginx]:  https://hub.docker.com/_/nginx
 [podman]: https://podman.io

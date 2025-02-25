@@ -10,16 +10,23 @@ All notable changes to the project are documented in this file.
 ### Changes
  - Upgrade Linux kernel to 6.12.16 (LTS)
  - Upgrade Buildroot to 2024.02.11 (LTS)
- - YANG type for SSH private/public keys has changed, from
-   ietf-crypto-types to infix-crypto-types
  - Add support for link aggregation (lag), static (balance-xor) and LACP
+ - Add support for the [i.MX 8M Plus EVK][EVK]
+ - YANG type change for SSH private/public keys, from ietf-crypto-types
+   to infix-crypto-types
  - Drop automatic default route (interface route) for IPv4 autoconf, not
    necessary and causes more confusion than good.  Issue #923
 
 ### Fixes
+ - Fix #902: containers "linger" in the system (state 'exited') after
+   having removed them from the configuration
+ - Fix #930: container configuration changes does not apply at runtime
+   only when saved to `startup-config` and system is rebooted
  - Fix #956: CLI `copy` command complains it cannot change owner when
    copying `factory-config` to `running-config`.  Bogus error, the
    latter is not really a file
+
+[EVK]: https://www.nxp.com/design/design-center/development-boards-and-designs/8MPLUSLPD4-EVK
 
 
 [v25.01.0][] - 2025-01-31

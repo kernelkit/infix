@@ -572,6 +572,7 @@ def config_abr(target, data, link1, link2, link3):
         }
     })
 
+
 with infamy.Test() as test:
     with test.step("Set up topology and attach to target DUTs"):
         env = infamy.Env()
@@ -585,6 +586,7 @@ with infamy.Test() as test:
             test.skip()
         if not R3.has_model("infix-containers"):
             test.skip()
+
     with test.step("Configure DUTs"):
         _, R1ring1 = env.ltop.xlate("R1", "ring1")
         _, R1ring2 = env.ltop.xlate("R1", "ring2")
@@ -607,7 +609,7 @@ with infamy.Test() as test:
 
         _, R1data = env.ltop.xlate("R1", "data")
         _, R3data = env.ltop.xlate("R3", "data")
-        _, ABRdata =  env.ltop.xlate("ABR", "data")
+        _, ABRdata = env.ltop.xlate("ABR", "data")
         _, ABRlink1 = env.ltop.xlate("ABR", "link1")
         _, ABRlink2 = env.ltop.xlate("ABR", "link2")
         _, ABRlink3 = env.ltop.xlate("ABR", "link3")
@@ -617,13 +619,15 @@ with infamy.Test() as test:
                       lambda: config_generic(R3, 3, R3ring1, R3ring2, R3link),
                       lambda: config_abr(ABR, ABRdata, ABRlink1, ABRlink2, ABRlink3))
 
-    with infamy.IsolatedMacVlans({hostR1ring1: "iface1", hostR2ring2: "iface2"}) as sw1,\
+    with infamy.IsolatedMacVlans({hostR1ring1: "iface1", hostR2ring2: "iface2"}) as sw1, \
          infamy.IsolatedMacVlans({hostR2ring1: "iface1", hostR3ring2: "iface2"}) as sw2, \
          infamy.IsolatedMacVlans({hostR3ring1: "iface1", hostR1ring2: "iface2"}) as sw3:
-        create_vlan_bridge(sw1)
-        create_vlan_bridge(sw2)
-        create_vlan_bridge(sw3)
-        #breakpoint()
+
+        util.parallel(lambda: create_vlan_bridge(sw1),
+                      lambda: create_vlan_bridge(sw2),
+                      lambda: create_vlan_bridge(sw3))
+        # breakpoint()
+
         _, hport0 = env.ltop.xlate("host", "data4")
 
         with test.step("Wait for all routers to peer"):
@@ -641,14 +645,14 @@ with infamy.Test() as test:
         with infamy.IsolatedMacVlan(hport0) as ns:
             ns.addip("192.168.100.2")
             ns.addroute("0.0.0.0/0", "192.168.100.1")
-            #breakpoint()
+            # breakpoint()
             with test.step("Verify ABR:data can access container A on R1 (10.1.1.101)"):
-                furl=Furl("http://10.1.1.101:8080")
+                furl = Furl("http://10.1.1.101:8080")
                 util.until(lambda: furl.nscheck(ns, BODY))
             with test.step("Verify ABR:data can access container A on R2 (10.1.2.101)"):
-                furl=Furl("http://10.1.2.101:8080")
+                furl = Furl("http://10.1.2.101:8080")
                 util.until(lambda: furl.nscheck(ns, BODY))
             with test.step("Verify ABR:data can access container A on R3 (10.1.3.101)"):
-                furl=Furl("http://10.1.3.101:8080")
+                furl = Furl("http://10.1.3.101:8080")
                 util.until(lambda: furl.nscheck(ns, BODY))
     test.succeed()

@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 # This script can be used to start, stop, create, and delete containers.
 # It is what confd use, with the Finit container@.conf template, to set
 # up, run, and delete containers.
@@ -9,6 +9,7 @@
 DOWNLOADS=/var/lib/containers/oci
 BUILTIN=/lib/oci
 TMPDIR=/var/tmp
+container=$0
 checksum=""
 extracted=
 timeout=30
@@ -109,33 +110,34 @@ EOF
 # If there are more index files, this function does not handle them.
 unpack_archive()
 {
-    image=$1
-    name=$2
+    uri=$1
+    tag=$2
+    img=$(basename "$uri")
 
     # Supported transports for load and create
-    case "$image" in
+    case "$uri" in
 	oci:*)			# Unpacked OCI image
-	    file=${image#oci:}
+	    file=${uri#oci:}
 	    ;;
 	oci-archive:*)		# Packed OCI image, .tar or .tar.gz format
-	    file=${image#oci-archive:}
+	    file=${uri#oci-archive:}
 	    ;;
 	ftp://* | http://* | https://*)
-            if ! file=$(fetch "$image"); then
+            if ! file=$(fetch "$uri"); then
 		return 1
 	    fi
             ;;
 	*)			# docker://*, docker-archive:*, or URL
-	    if podman image exists "$image"; then
-		echo "$image"
+	    if podman image exists "$img"; then
+		echo "$img"
 		return 0
 	    fi
 	    # XXX: use --retry=0 with Podman 5.0 or later.
-	    if ! id=$(podman pull --quiet "$image"); then
-		log "Failed pulling $image"
+	    if ! id=$(podman pull --quiet "$uri"); then
+		log "Failed pulling $uri"
 		return 1
 	    fi
-	    # Echo image name to caller
+	    # Echo image tag to caller
 	    podman images --filter id="$id" --format "{{.Repository}}:{{.Tag}}"
 	    return 0
 	    ;;
@@ -147,7 +149,7 @@ unpack_archive()
 	elif [ -e "$BUILTIN/$file" ]; then
 	    file="$BUILTIN/$file"
 	else
-	    err 1 "cannot find OCI archive $file in search path."
+	    err 1 "cannot find OCI archive $file in URI $uri"
 	fi
     fi
 
@@ -171,8 +173,8 @@ unpack_archive()
 
     dir=$(dirname "$index")
     if echo "$dir" | grep -q ":"; then
-        if [ -z "$name" ]; then
-            name="$dir"
+        if [ -z "$tag" ]; then
+            tag="$dir"
         fi
         sanitized_dir=$(echo "$dir" | cut -d':' -f1)
         mv "$dir" "$sanitized_dir" || err 1 "failed renaming $dir to $sanitized_dir"
@@ -188,21 +190,21 @@ unpack_archive()
 	rm -rf "$dir"
     fi
 
-    # Rename image from podman default $dir:latest
-    if [ -n "$name" ]; then
-	podman tag "$dir" "$name" >/dev/null
-	podman rmi "$dir"         >/dev/null
+    # Retag image from podman default $dir:latest
+    if [ -n "$tag" ]; then
+	podman tag "$dir" "$tag" >/dev/null
+	podman rmi "$dir"        >/dev/null
     else
-	name=$dir
+	tag=$dir
     fi
 
-    echo "$name"
+    echo "$tag"
 }
 
 running()
 {
-    run=$(podman inspect "$1" 2>/dev/null |jq .[].State.Running)
-    [ "$run" = "true" ] && return 0
+    status=$(podman inspect -f '{{.State.Status}}' "$1" 2>/dev/null)
+    [ "$status" = "running" ] && return 0
     return 1
 }
 
@@ -272,7 +274,6 @@ create()
 delete()
 {
     name=$1
-    image=$2
 
     if [ -z "$name" ]; then
 	echo "Usage:"
@@ -281,9 +282,11 @@ delete()
     fi
 
     # Should already be stopped, but if not ...
-    container stop "$name"
+    log "$name: should already be stopped, double checking ..."
+    container stop "$name" >/dev/null
 
     while running "$name"; do
+	log "$name: still running, waiting for it to stop ..."
 	_=$((timeout -= 1))
 	if [ $timeout -le 0 ]; then
 	    err 1 "timed out waiting for container $1 to stop before deleting it."
@@ -291,6 +294,7 @@ delete()
 	sleep 1
     done
 
+    log "$name: calling podman rm -vif ..."
     podman rm -vif "$name" >/dev/null 2>&1
     [ -n "$quiet" ] || log "Container $name has been removed."
 }
@@ -315,7 +319,7 @@ start()
 	return
     fi
 
-    initctl -bq cond set "container:$name"
+    initctl start container:$name
     # Real work is done by wrap() courtesy of finit sysv emulation
 }
 
@@ -328,7 +332,7 @@ stop()
 	return
     fi
 
-    initctl -bq cond clr "container:$name"
+    initctl stop container:$name
     # Real work is done by wrap() courtesy of finit sysv emulation
 }
 
@@ -337,7 +341,8 @@ wrap()
     name=$1
     cmd=$2
 
-    podman "$cmd" "$name"
+    # Skip "echo $name" from podman start in log
+    podman "$cmd" "$name" >/dev/null
 }
 
 # Removes network $1 from all containers
@@ -426,11 +431,12 @@ commands:
   run      NAME [CMD]      Run a container interactively, with an optional command
   save     IMAGE FILE      Save a container image to an OCI tarball FILE[.tar.gz]
   setup    NAME            Create and set up container as a Finit task
-  shell                    Start a shell inside a container
+  shell   [CMD]            Start a shell, or run CMD, inside a container
   show    [image | volume] Show containers, images, or volumes
   stat                     Show continuous stats about containers (Ctrl-C aborts)
   start   [NAME]           Start a container, see -n
   stop    [NAME]           Stop a container, see -n
+  upgrade  NAME            Upgrade a running container (stop, pull, restart)
   volume  [prune]          Prune unused volumes
 EOF
 }
@@ -582,19 +588,24 @@ case $cmd in
 	;;
     delete)
 	cmd=$1
-	name=$2
+	[ -n "$name" ] || name=$2
 	if [ "$cmd" = "network" ] && [ -n "$name" ]; then
 	    netwrm "$name"
 	else
-	    delete "$@"
+	    [ -n "$name" ] || name=$1
+	    delete "$name"
 	fi
 	;;
     exec)
-	podman exec -it "$@"
+	if [ -z "$name" ]; then
+	    name="$1"
+	    shift
+	fi
+	podman exec -i "$name" "$@"
 	;;
     flush)
 	echo "Cleaning up any lingering containers";
-	podman rm -av
+	podman rm -av $force
 	;;
     find)
 	cmd=$1
@@ -700,17 +711,25 @@ case $cmd in
 	script=/run/containers/${name}.sh
 	[ -x "$script" ] || err 1 "setup: $script does not exist or is not executable."
 	while ! "$script"; do
-	    # Wait for address/route changes, or retry every 60 secods
-	    # shellcheck disable=2162,3045
-	    ip monitor address route | while read -t 60 _; do break; done
+            log "${name}: setup failed, waiting for network changes ..."
+	    read -t 60 _ < <(ip monitor address route)
 
 	    # On IP address/route changes, wait a few seconds more to ensure
 	    # the system has ample time to react and set things up for us.
+	    log "${name}: retrying ..."
 	    sleep 2
 	done
 	;;
     shell)
-	podman exec -it "$1" sh -l
+	if [ -z "$name" ]; then
+	    name="$1"
+	    shift
+	fi
+	if [ $# -gt 0 ]; then
+	    podman exec -i "$name" sh -c "$*"
+	else
+	    podman exec -it "$name" sh -l
+	fi
 	;;
     show)
 	cmd=$1
@@ -803,15 +822,15 @@ case $cmd in
 
 	# Likely an OCI archive, or local directory, assume user has updated image.
 	if echo "$img" | grep -Eq '^localhost/'; then
-	    file=$(awk '{s=$NF} END{print s}' "$script")
-	    echo "Upgrading container ${1} with local archive: $file ..."
+	    file=$(awk '/^# meta-image:/ {print $3}' "$script")
+	    echo ">> Upgrading container $1 using $file ..."
 	else
 	    printf ">> Stopping ... "
 	    podman stop "$1"
 	    printf ">> "
 	    podman pull "$img" || (echo "Failed fetching $img, check your network (settings)."; exit 1)
+	    echo ">> Starting $1 ..."
 	fi
-	echo ">> Starting $1 ..."
 	if ! "$script"; then
 	    echo ">> Failed recreating container $1"
 	    exit 1
@@ -831,6 +850,22 @@ case $cmd in
 	esac
 	;;
     *)
+	if [ -n "$SERVICE_SCRIPT_TYPE" ] && [ -n "$SERVICE_ID" ]; then
+	    case "$SERVICE_SCRIPT_TYPE" in
+		pre)
+		    # Called as pre-script from Finit service
+		    exec $container -q -n "$SERVICE_ID" setup
+		    ;;
+		cleanup)
+		    # Called as cleanup-script from Finit service
+		    log "Calling $container -n $SERVICE_ID delete"
+		    exec $container -q -n "$SERVICE_ID" delete
+		    ;;
+		*)
+		    false
+		    ;;
+	    esac
+	fi
 	usage
 	exit 1
 	;;

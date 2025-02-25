@@ -17,10 +17,12 @@ endif::testgroup[]
 endif::topdoc[]
 ==== Test sequence
 . Set up topology and attach to target DUT
-. Create container 'web-phys' from bundled OCI image
-. Verify container 'web-phys' has started
+. Create httpd container from bundled OCI image
+. Verify container has started
 . Verify host:data can ping 10.0.0.2
-. Verify container 'web-phys' is reachable on http://10.0.0.2:91
+. Verify container is reachable on http://10.0.0.2:91
+. Add a content mount, overriding index.html
+. Verify server is restarted and returns new content
 
 
 <<<

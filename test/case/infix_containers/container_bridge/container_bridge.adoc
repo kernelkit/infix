@@ -21,10 +21,10 @@ endif::testgroup[]
 endif::topdoc[]
 ==== Test sequence
 . Set up topology and attach to target DUT
-. Create container 'web-docker0' from bundled OCI image
-. Verify container 'web-docker0' has started
-. Verify basic DUT connectivity, host:data can ping DUT 10.0.0.2
-. Verify container 'web-docker0' is reachable on http://10.0.0.2:8080
+. Create httpd container from bundled OCI image
+. Verify container has started
+. Verify DUT connectivity, host can reach 10.0.0.2
+. Verify container is reachable on http://10.0.0.2:8080
 
 
 <<<
