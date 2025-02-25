@@ -1059,7 +1059,7 @@ The resulting address (10.1.2.100/24) is of type *dhcp*.
 The (only) way to disable IPv6 link-local addresses is by disabling IPv6
 on the interface.
 
-```(disabling
+```
 admin@example:/> configure
 admin@example:/config/> edit interface eth0 ipv6
 admin@example:/config/interface/eth0/ipv6/> set enabled false
@@ -1173,33 +1173,38 @@ have changed type to *random*.
 To be able to route (static or dynamic) on the interface it is
 required to enable forwarding. This setting controls if packets
 received on this interface can be forwarded.
-   ```
-   admin@example:/config/> edit interface eth0
-   admin@example:/config/interface/eth0/> set ipv4 forwarding
-   admin@example:/config/interface/eth0/> leave
-   admin@example:/>
-   ```
+
+```
+admin@example:/config/> edit interface eth0
+admin@example:/config/interface/eth0/> set ipv4 forwarding
+admin@example:/config/interface/eth0/> leave
+admin@example:/>
+```
 
 
 ### IPv6 forwarding
 
-This flag behaves totally different than for IPv4. For IPv6 the
-ability to route between interfaces is always enabled, instead this
-flag controls if the interface will be in host/router mode.
+Due to how the Linux kernel manages IPv6 forwarding, we can not fully
+control it per interface via this setting like how IPv4 works.  Instead,
+IPv6 forwarding is globally enabled when at least one interface enable
+forwarding, otherwise it is disabled.
 
-| **Feature**                              | **Forward enabled** | **Forward disabled** |
-|:-----------------------------------------|:--------------------|:---------------------|
-| IsRouter set in Neighbour Advertisements | Yes                 | No                   |
-| Transmit Router Solicitations            | No                  | Yes                  |
-| Router Advertisements are ignored        | No                  | Yes                  |
-| Accept Redirects                         | No                  | Yes                  |
+The following table shows the system IPv6 features that the `forwarding`
+setting control when it is *Enabled* or *Disabled:
 
-   ```
-   admin@example:/config/> edit interface eth0
-   admin@example:/config/interface/eth0/> set ipv6 forwarding
-   admin@example:/config/interface/eth0/> leave
-   admin@example:/>
-   ```
+| **IPv6 Feature**                         | **Enabled** | **Disabled** |
+|:-----------------------------------------|:------------|:-------------|
+| IsRouter set in Neighbour Advertisements | Yes         | No           |
+| Transmit Router Solicitations            | No          | Yes          |
+| Router Advertisements are ignored        | Yes         | Yes          |
+| Accept Redirects                         | No          | Yes          |
+
+```
+admin@example:/config/> edit interface eth0
+admin@example:/config/interface/eth0/> set ipv6 forwarding
+admin@example:/config/interface/eth0/> leave
+admin@example:/>
+```
 
 
 ## Routing support
