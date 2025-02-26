@@ -1,0 +1,9 @@
+---
+- name: igmp_basic
+  case: igmp_basic/test.py
+
+- name: igmp_vlan
+  case: igmp_vlan/test.py
+
+- name: static_multicast_filters
+  case: static_multicast_filters/test.py

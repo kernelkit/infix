@@ -5,7 +5,7 @@ modes during basic failure scenarios.
 
 .Internal network setup, PC verifies connectivity with dut2 via dut1
 ifdef::topdoc[]
-image::{topdoc}../../test/case/ietf_interfaces/lag_basic/lag-basic.svg[Internal networks]
+image::../../test/case/ietf_interfaces/lag_basic/lag-basic.svg[Internal networks]
 endif::topdoc[]
 ifndef::topdoc[]
 ifdef::testgroup[]

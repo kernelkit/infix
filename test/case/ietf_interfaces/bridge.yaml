@@ -1,0 +1,22 @@
+---
+
+- name: bridge_fwd_sgl_dut
+  case: bridge_fwd_sgl_dut/test.py
+
+- name: bridge_fwd_dual_dut
+  case: bridge_fwd_dual_dut/test.py
+
+- name: bridge_stp_basic
+  case: bridge_stp_basic/test.py
+
+- name: bridge_vlan_separation
+  case: bridge_vlan_separation/test.py
+
+- name: bridge_basic
+  case: bridge_basic/test.py
+
+- name: bridge_veth
+  case: bridge_veth/test.py
+
+- name: bridge_vlan
+  case: bridge_vlan/test.py
