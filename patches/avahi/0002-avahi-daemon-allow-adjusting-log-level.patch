@@ -1,7 +1,7 @@
 From bceb724d328f156efa4ad18f26f1760504bd093d Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Wed, 27 Nov 2024 08:44:57 +0100
-Subject: [PATCH 2/2] avahi-daemon: allow adjusting log level
+Subject: [PATCH 2/3] avahi-daemon: allow adjusting log level
 Organization: Addiva Elektronik
 
 Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
