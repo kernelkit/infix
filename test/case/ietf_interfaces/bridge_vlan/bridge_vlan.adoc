@@ -5,7 +5,7 @@ which in turn untags one VLAN outisde a non-VLAN filtering bridge.
 
 .Logical network setup
 ifdef::topdoc[]
-image::{topdoc}../../test/case/ietf_interfaces/bridge_vlan/bridge-vlan.svg[]
+image::../../test/case/ietf_interfaces/bridge_vlan/bridge-vlan.svg[]
 endif::topdoc[]
 ifndef::topdoc[]
 ifdef::testgroup[]
