@@ -1,18 +1,9 @@
 ---
-- name: lldp_enable_disable
-  case: lldp_enable_disable/test.py
+- name: lldp
+  suite: lldp.yaml
 
-- name: lldp_admin_status
-  case: lldp_admin_status/test.py
+- name: mdns
+  suite: mdns.yaml
 
-- name: mdns_enable_disable
-  case: mdns_enable_disable/test.py
-
-- name: mdns_allow_deny
-  case: mdns_allow_deny/test.py
-
-- name: ssh_server_config
-  case: ssh_server_config/test.py
-
-- name: ssh_key_authentication
-  case: ssh_key_authentication/test.py
+- name: ssh
+  suite: ssh.yaml
