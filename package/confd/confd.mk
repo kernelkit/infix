@@ -26,8 +26,10 @@ CONFD_CONF_OPTS += --disable-containers
 endif
 
 define CONFD_INSTALL_EXTRA
-	cp $(CONFD_PKGDIR)/confd.conf  $(FINIT_D)/available/
-	ln -sf ../available/confd.conf $(FINIT_D)/enabled/confd.conf
+	for fn in confd.conf resolvconf.conf; do \
+		cp $(CONFD_PKGDIR)/$$fn  $(FINIT_D)/available/; \
+		ln -sf ../available/$$fn $(FINIT_D)/enabled/$$fn; \
+	done
 	cp $(CONFD_PKGDIR)/tmpfiles.conf $(TARGET_DIR)/etc/tmpfiles.d/confd.conf
 	mkdir -p $(TARGET_DIR)/etc/avahi/services
 	cp $(CONFD_PKGDIR)/avahi.service $(TARGET_DIR)/etc/avahi/services/netconf.service

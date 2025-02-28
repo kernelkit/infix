@@ -540,11 +540,8 @@ static int change_dns(sr_session_ctx_t *session, uint32_t sub_id, const char *mo
 			(void)rename(RESOLV_NEXT, RESOLV_CONF);
 		}
 
-		/* in bootstrap, another resolvconf will soon take your call */
-		if (systemf("initctl -bq cond get hook/sys/up"))
-			return 0;
+		systemf("initctl -bq touch resolvconf");
 
-		systemf("resolvconf -u");
 		return SR_ERR_OK;
 
 	default:
@@ -1761,7 +1758,7 @@ static int change_hostname(sr_session_ctx_t *session, uint32_t sub_id, const cha
 	/* Inform any running lldpd and avahi of the change ... */
 	systemf("initctl -bq status lldpd && lldpcli configure system hostname %s", hostnm);
 	systemf("initctl -bq status mdns  && avahi-set-host-name %s", hostnm);
-	systemf("initctl -nbq touch netbrowse");
+	systemf("initctl -bq touch netbrowse");
 err:
 	if (fmt)
 		free(fmt);
