@@ -13,6 +13,7 @@
 #include <linux/netlink.h>
 #include <linux/rtnetlink.h>
 
+#include <libite/lite.h>
 #include <jansson.h>
 #include <ctype.h>
 #include <linux/if.h>
@@ -408,6 +409,9 @@ int main(int argc, char *argv[])
 	ev_signal_init(&sigusr1_watcher, sigusr1_cb, SIGUSR1);
 	sigusr1_watcher.data = &statd;
 	ev_signal_start(statd.ev_loop, &sigusr1_watcher);
+
+	/* Signal readiness to Finit */
+	pidfile(NULL);
 
 	INFO("Status daemon entering main event loop");
 	ev_run(statd.ev_loop, 0);
