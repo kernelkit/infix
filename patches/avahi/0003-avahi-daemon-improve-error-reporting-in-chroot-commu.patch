@@ -1,0 +1,60 @@
+From 50ddfbefe5ac4d87040cb177e7cf432d4da04e97 Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Wed, 26 Feb 2025 17:42:08 +0100
+Subject: [PATCH 3/3] avahi-daemon: improve error reporting in chroot
+ communication
+Organization: Addiva Elektronik
+
+Improve logging of error in chroot communication by including the
+filename in the log message.  Instead of this:
+
+    avahi-daemon[3590]: chroot.c: open() failed: No such file or directory
+
+log this:
+
+    avahi-daemon[3590]: chroot.c: open(/etc/resolv.conf) failed: No such file or directory
+
+Which on a system with resolvconf would make the sysadmin a lot calmer,
+since the file had not yet been created at boot.
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ avahi-daemon/chroot.c | 9 ++++++---
+ 1 file changed, 6 insertions(+), 3 deletions(-)
+
+diff --git a/avahi-daemon/chroot.c b/avahi-daemon/chroot.c
+index ccd56be..fbaad69 100644
+--- a/avahi-daemon/chroot.c
++++ b/avahi-daemon/chroot.c
+@@ -237,12 +237,13 @@ static int helper_main(int fd) {
+             case AVAHI_CHROOT_GET_RECORD_BROWSER_INTROSPECT:
+ #endif
+             case AVAHI_CHROOT_GET_RESOLV_CONF: {
++                const char *fn = get_file_name_table[(int) command];
+                 int payload;
+ 
+-                if ((payload = open(get_file_name_table[(int) command], O_RDONLY)) < 0) {
++                if ((payload = open(fn, O_RDONLY)) < 0) {
+                     uint8_t c = AVAHI_CHROOT_FAILURE;
+ 
+-                    avahi_log_error(__FILE__": open() failed: %s", strerror(errno));
++                    avahi_log_error(__FILE__": open(%s) failed: %s", fn, strerror(errno));
+ 
+                     if (write(fd, &c, sizeof(c)) != sizeof(c)) {
+                         avahi_log_error(__FILE__": write() failed: %s\n", strerror(errno));
+@@ -262,9 +263,11 @@ static int helper_main(int fd) {
+ 
+             case AVAHI_CHROOT_UNLINK_SOCKET:
+             case AVAHI_CHROOT_UNLINK_PID: {
++                const char *fn = unlink_file_name_table[(int) command];
+                 uint8_t c = AVAHI_CHROOT_SUCCESS;
+ 
+-                unlink(unlink_file_name_table[(int) command]);
++                if (unlink(fn) && errno != ENOENT)
++                    avahi_log_error(__FILE__": unlink(%s) failed: %s", fn, strerror(errno));
+ 
+                 if (write(fd, &c, sizeof(c)) != sizeof(c)) {
+                     avahi_log_error(__FILE__": write() failed: %s\n", strerror(errno));
+-- 
+2.43.0
+
