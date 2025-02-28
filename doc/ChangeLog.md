@@ -4,7 +4,7 @@ Change Log
 All notable changes to the project are documented in this file.
 
 
-[v25.02.0][UNRELASED] -
+[v25.02.0][] - 2025-03-03
 -------------------------
 
 ### Changes
@@ -18,8 +18,11 @@ All notable changes to the project are documented in this file.
    setting.  Note, route advertisements are always accepted.  Issue #785
  - Drop automatic default route (interface route) for IPv4 autoconf, not
    necessary and causes more confusion than good.  Issue #923
+ - Update scripting with new RESTCONF examples
 
 ### Fixes
+ - Fix #896: `/etc/resolv.conf` not properly generated when system runs
+   in fail secure mode (failing to load `startup-config`)
  - Fix #902: containers "linger" in the system (state 'exited') after
    having removed them from the configuration
  - Fix #930: container configuration changes does not apply at runtime
