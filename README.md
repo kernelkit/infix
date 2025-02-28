@@ -106,6 +106,16 @@ more information, see: [Infix in Virtual Environments](doc/virtual.md).
 >
 > For *customer specific builds* of Infix, see your product repository.
 
+
+----
+
+<div align="center">
+  <a href="https://github.com/wires-se"><img src="https://raw.githubusercontent.com/wires-se/.github/main/profile/logo.png" width=300></a>
+  <br />Infix development is sponsored by <a href="https://wires.se">Wires<a>
+</div>
+
+----
+
 [^1]: An immutable operating system is one with read-only file systems,
     atomic updates, rollbacks, declarative configuration, and workload
     isolation.  All to improve reliability, scalability, and security.
