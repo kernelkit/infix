@@ -7,7 +7,7 @@ subnets.
 
 .Internal network setup, client2 and client3 are on the same LAN
 ifdef::topdoc[]
-image::../../test/case/infix_dhcp/server_subnets/dhcp-subnets.svg[Internal networks]
+image::{topdoc}../../test/case/infix_dhcp/server_subnets/dhcp-subnets.svg[Internal networks]
 endif::topdoc[]
 ifndef::topdoc[]
 ifdef::testgroup[]
