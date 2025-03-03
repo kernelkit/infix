@@ -25,7 +25,7 @@ def replace_image_tag(text, test_dir):
         label = match.group("label")
 
         return f"""ifdef::topdoc[]
-image::../../{test_dir}/{image_name}[{label}]
+image::{{topdoc}}../../{test_dir}/{image_name}[{label}]
 endif::topdoc[]
 ifndef::topdoc[]
 ifdef::testgroup[]
