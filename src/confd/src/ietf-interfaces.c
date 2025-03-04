@@ -415,6 +415,8 @@ static int netdag_gen_afspec_add(sr_session_ctx_t *session, struct dagger *net, 
 		return vxlan_gen(NULL, cif, ip);
 	case IFT_WIFI:
 		return wifi_gen(NULL, cif, net);
+	case IFT_WIREGUARD:
+		return wireguard_gen(NULL, cif, ip, net);
 	case IFT_ETH:
 		return netdag_gen_ethtool(net, cif, dif);
 	case IFT_LO:
@@ -450,6 +452,7 @@ static int netdag_gen_afspec_set(sr_session_ctx_t *session, struct dagger *net, 
 	case IFT_GRETAP:
 	case IFT_VETH:
 	case IFT_VXLAN:
+	case IFT_WIREGUARD:
 	case IFT_LO:
 		return 0;
 
@@ -486,6 +489,8 @@ static bool netdag_must_del(struct lyd_node *dif, struct lyd_node *cif)
 		return lydx_get_descendant(lyd_child(dif), "veth", NULL);
 	case IFT_VXLAN:
 		return lydx_get_descendant(lyd_child(dif), "vxlan", NULL);
+	case IFT_WIREGUARD:
+		return lydx_get_descendant(lyd_child(dif), "wireguard", NULL);
 	case IFT_UNKNOWN:
 		ERR_IFACE(cif, -EINVAL, "unsupported interface type \"%s\"",
 			  lydx_get_cattr(cif, "type"));
@@ -572,6 +577,7 @@ static int netdag_gen_iface_del(struct dagger *net, struct lyd_node *dif,
 	case IFT_LAG:
 	case IFT_VLAN:
 	case IFT_VXLAN:
+	case IFT_WIREGUARD:
 	case IFT_UNKNOWN:
 		link_gen_del(dif, ip);
 		break;
@@ -738,6 +744,7 @@ static int netdag_init_iface(struct lyd_node *cif)
 	case IFT_GRETAP:
 	case IFT_LO:
 	case IFT_VXLAN:
+	case IFT_WIREGUARD:
 	case IFT_UNKNOWN:
 		break;
 	}

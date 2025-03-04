@@ -1,0 +1,155 @@
+submodule infix-if-wireguard {
+  yang-version 1.1;
+  belongs-to infix-interfaces {
+    prefix infix-if;
+  }
+
+  import ietf-interfaces {
+    prefix if;
+  }
+  import ietf-inet-types {
+    prefix inet;
+  }
+  import infix-crypto-types {
+    prefix ixct;
+  }
+  import ietf-keystore {
+    prefix ks;
+  }
+  import ietf-truststore {
+    prefix ts;
+  }
+  import infix-if-type {
+    prefix infixift;
+  }
+
+  organization "KernelKit";
+  contact      "kernelkit@googlegroups.com";
+  description  "WireGuard VPN tunnel interface";
+
+  revision 2025-11-09 {
+    description "Initial revision";
+    reference "internal";
+  }
+
+  typedef port {
+    type inet:port-number;
+    description
+      "WireGuard UDP port. Valid range: 0..65535.";
+  }
+
+  typedef keepalive-interval {
+    type uint16 {
+      range "1..65535";
+    }
+    units "seconds";
+    description
+      "Persistent keepalive interval in seconds.
+
+       A keepalive packet will be sent to the peer endpoint at this
+       interval if no traffic has been exchanged. This is useful for
+       traversing NAT and firewalls that may close the UDP connection
+       after a period of inactivity.
+
+       Recommended value is 25 seconds for peers behind NAT.";
+  }
+
+  augment "/if:interfaces/if:interface" {
+    when "derived-from-or-self(if:type, 'infixift:wireguard')" {
+      description "Only shown for if:type infixift:wireguard";
+    }
+    container wireguard {
+      description "WireGuard VPN configuration";
+
+      leaf listen-port {
+        type port;
+        default 51820;
+        description "Local UDP port to listen on for incoming WireGuard traffic";
+      }
+
+      leaf private-key {
+        type ks:asymmetric-key-ref;
+        mandatory true;
+        description "Reference to WireGuard private key (X25519/Curve25519 format)";
+        must "not(deref(.)/../ks:public-key-format) or "
+          + "(derived-from-or-self(deref(.)/../ks:public-key-format,  'ixct:x25519-public-key-format') and "
+          + "derived-from-or-self(deref(.)/../ks:private-key-format,  'ixct:x25519-private-key-format'))" {
+          error-message "Private key must be in WireGuard (X25519/Curve25519) format";
+        }
+      }
+
+      list peer {
+        key "public-key-bag public-key";
+        description "WireGuard peer configuration";
+
+        leaf public-key-bag {
+          type ts:public-key-bag-ref;
+          description "Reference to public key bag containing peer's public key";
+        }
+
+        leaf public-key {
+          type ts:public-key-ref;
+          description "Reference to peer's WireGuard public key (X25519/Curve25519 format)";
+          must "not(deref(.)/../ts:public-key-format) or "
+            + "(derived-from-or-self(deref(.)/../ts:public-key-format,  'ixct:x25519-public-key-format'))" {
+            error-message "Public key must be in WireGuard (X25519/Curve25519) format";
+          }
+        }
+
+        leaf preshared-key {
+          type ks:symmetric-key-ref;
+          description
+            "Optional preshared key for additional layer of symmetric encryption.
+
+             This provides post-quantum resistance as an attacker would need
+             to break both the Curve25519 key exchange and this symmetric key.";
+          must "derived-from-or-self(deref(.)/../ks:key-format, 'ixct:wireguard-symmetric-key-format')" {
+            error-message "Preshared key must be in wireguard-symmetric-key-format";
+          }
+        }
+
+        leaf endpoint {
+          type inet:host;
+          description
+            "Peer endpoint address (IP address or DNS hostname).
+
+             If not specified, this peer can only be a responder and cannot
+             initiate connections. WireGuard will learn the endpoint from
+             incoming authenticated packets.";
+        }
+
+        leaf endpoint-port {
+          type port;
+          default 51820;
+          description "Peer endpoint UDP port";
+        }
+
+        leaf-list allowed-ips {
+          type inet:ip-prefix;
+          min-elements 1;
+          description
+            "List of IP address ranges (in CIDR notation) that are allowed
+             to be used as source addresses inside the tunnel from this peer.
+
+             This also controls which destination addresses will be routed
+             to this peer. For example:
+             - '10.0.0.2/32' allows only this single IP
+             - '10.0.0.0/24' allows the entire subnet
+             - '0.0.0.0/0, ::/0' routes all traffic through this peer
+
+             WireGuard uses this as a cryptographic routing table.";
+        }
+
+        leaf persistent-keepalive {
+          type keepalive-interval;
+          description
+            "Interval in seconds to send keepalive packets to this peer.
+
+             If not specified (or set to 0), keepalive is disabled.
+             Use this when the peer is behind NAT or a firewall that may
+             close the UDP connection after inactivity.";
+        }
+      }
+    }
+  }
+}
