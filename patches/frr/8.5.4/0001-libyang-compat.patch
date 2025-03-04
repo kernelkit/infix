@@ -1,0 +1,22 @@
+diff --git a/lib/yang.c b/lib/yang.c
+index ef1cf898a..c780b8e8c 100644
+--- a/lib/yang.c
++++ b/lib/yang.c
+@@ -647,7 +647,7 @@ struct yang_data *yang_data_list_find(const struct list *list,
+ }
+ 
+ /* Make libyang log its errors using FRR logging infrastructure. */
+-static void ly_log_cb(LY_LOG_LEVEL level, const char *msg, const char *path)
++static void ly_log_cb(LY_LOG_LEVEL level, const char *msg, const char *path, uint64_t line)
+ {
+ 	int priority = LOG_ERR;
+ 
+@@ -742,7 +742,7 @@ struct ly_ctx *yang_ctx_new_setup(bool embedded_modules, bool explicit_compile)
+ void yang_init(bool embedded_modules, bool defer_compile)
+ {
+ 	/* Initialize libyang global parameters that affect all containers. */
+-	ly_set_log_clb(ly_log_cb, 1);
++	ly_set_log_clb(ly_log_cb);
+ 	ly_log_options(LY_LOLOG | LY_LOSTORE);
+ 
+ 	/* Initialize libyang container for native models. */
