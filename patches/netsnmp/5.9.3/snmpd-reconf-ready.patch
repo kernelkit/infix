@@ -1,5 +1,15 @@
---- a/agent/snmpd.c	2023-11-10 08:51:59.539942616 +0100
-+++ b/agent/snmpd.c	2023-11-10 08:56:27.719112830 +0100
+diff -urN netsnmp-5.9.3.orig/agent/snmpd.c netsnmp-5.9.3/agent/snmpd.c
+--- netsnmp-5.9.3.orig/agent/snmpd.c	2025-03-04 18:09:48.420162455 +0100
++++ netsnmp-5.9.3/agent/snmpd.c	2025-03-04 18:13:48.149281606 +0100
+@@ -123,7 +123,7 @@
+ #  define PATH_MAX 255
+ # endif
+ #endif
+-
++#include <sys/stat.h>
+ #include <net-snmp/net-snmp-includes.h>
+ #include <net-snmp/agent/net-snmp-agent-includes.h>
+ #include "agent_global_vars.h"
 @@ -179,6 +179,7 @@
  #define TIMETICK         500000L
  
