@@ -1,0 +1,67 @@
+diff -urN frr-9.1.3.orig/lib/yang.c frr-9.1.3/lib/yang.c
+--- frr-9.1.3.orig/lib/yang.c	2024-12-27 22:06:42.000000000 +0100
++++ frr-9.1.3/lib/yang.c	2025-03-04 12:23:06.723640114 +0100
+@@ -10,11 +10,23 @@
+ #include "lib_errors.h"
+ #include "yang.h"
+ #include "yang_translator.h"
++#include <libyang/version.h>
+ #include "northbound.h"
+ 
+ DEFINE_MTYPE_STATIC(LIB, YANG_MODULE, "YANG module");
+ DEFINE_MTYPE_STATIC(LIB, YANG_DATA, "YANG data structure");
+ 
++/* Safe to remove after libyang 2.2.8 */
++#if (LY_VERSION_MAJOR < 3)
++#define yang_lyd_find_xpath3(ctx_node, tree, xpath, format, prefix_data, vars, \
++			     set)                                              \
++	lyd_find_xpath3(ctx_node, tree, xpath, vars, set)
++#else
++#define yang_lyd_find_xpath3(ctx_node, tree, xpath, format, prefix_data, vars, \
++			     set)                                              \
++	lyd_find_xpath3(ctx_node, tree, xpath, LY_VALUE_JSON, NULL, vars, set)
++#endif
++
+ /* libyang container. */
+ struct ly_ctx *ly_native_ctx;
+ 
+@@ -657,7 +669,12 @@
+ }
+ 
+ /* Make libyang log its errors using FRR logging infrastructure. */
+-static void ly_log_cb(LY_LOG_LEVEL level, const char *msg, const char *path)
++static void ly_zlog_cb(LY_LOG_LEVEL level, const char *msg, const char *data_path
++#if !(LY_VERSION_MAJOR < 3)
++		       ,
++		       const char *schema_path, uint64_t line
++#endif
++)
+ {
+ 	int priority = LOG_ERR;
+ 
+@@ -674,8 +691,14 @@
+ 		break;
+ 	}
+ 
+-	if (path)
+-		zlog(priority, "libyang: %s (%s)", msg, path);
++	if (data_path)
++		zlog(priority, "libyang: %s (%s)", msg, data_path);
++#if !(LY_VERSION_MAJOR < 3)
++	else if (schema_path)
++		zlog(priority, "libyang %s (%s)\n", msg, schema_path);
++	else if (line)
++		zlog(priority, "libyang %s (line %" PRIu64 ")\n", msg, line);
++#endif
+ 	else
+ 		zlog(priority, "libyang: %s", msg);
+ }
+@@ -752,7 +775,7 @@
+ void yang_init(bool embedded_modules, bool defer_compile)
+ {
+ 	/* Initialize libyang global parameters that affect all containers. */
+-	ly_set_log_clb(ly_log_cb, 1);
++	ly_set_log_clb(ly_zlog_cb);
+ 	ly_log_options(LY_LOLOG | LY_LOSTORE);
+ 
+ 	/* Initialize libyang container for native models. */
