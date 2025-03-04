@@ -1,0 +1,97 @@
+From 7e93dca4dab6bdbb39fd7f7c0f436839a1eb626e Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Wed, 5 Jul 2023 22:38:56 +0200
+Subject: [PATCH 1/2] adduser: clarify adduser -D behavior and add -d for SSH
+ key login
+Organization: Addiva Elektronik
+
+Clarify that -D locks the account (!), then add -d to create an account
+for which password login is disabled (*) but the user can log in with
+SSH keys.
+
+This also adjusts the long option --disabled-password, which was mapped
+to -D, probably mistakenly.  With this change BusyBox adduser behaves
+the same as Debian's --disabled-login and --disabled-password.
+
+Fixes #10981
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ loginutils/adduser.c | 24 ++++++++++++++----------
+ 1 file changed, 14 insertions(+), 10 deletions(-)
+
+diff --git a/loginutils/adduser.c b/loginutils/adduser.c
+index d3c795afa..cf6a0264a 100644
+--- a/loginutils/adduser.c
++++ b/loginutils/adduser.c
+@@ -62,7 +62,8 @@
+ //usage:     "\n	-s SHELL	Login shell"
+ //usage:     "\n	-G GRP		Group"
+ //usage:     "\n	-S		Create a system user"
+-//usage:     "\n	-D		Don't assign a password"
++//usage:     "\n	-D		Don't assign a password (locked account)"
++//usage:     "\n	-d		Like -D but allow login using SSH keys"
+ //usage:     "\n	-H		Don't create home directory"
+ //usage:     "\n	-u UID		User id"
+ //usage:     "\n	-k SKEL		Skeleton directory (/etc/skel)"
+@@ -82,10 +83,11 @@
+ #define OPT_SHELL          (1 << 2)
+ #define OPT_GID            (1 << 3)
+ #define OPT_DONT_SET_PASS  (1 << 4)
+-#define OPT_SYSTEM_ACCOUNT (1 << 5)
+-#define OPT_DONT_MAKE_HOME (1 << 6)
+-#define OPT_UID            (1 << 7)
+-#define OPT_SKEL           (1 << 8)
++#define OPT_DISABLED_PASS  (1 << 5)
++#define OPT_SYSTEM_ACCOUNT (1 << 6)
++#define OPT_DONT_MAKE_HOME (1 << 7)
++#define OPT_UID            (1 << 8)
++#define OPT_SKEL           (1 << 9)
+ 
+ /* remix */
+ /* recoded such that the uid may be passed in *p */
+@@ -168,7 +170,8 @@ static const char adduser_longopts[] ALIGN1 =
+ 		"gecos\0"               Required_argument "g"
+ 		"shell\0"               Required_argument "s"
+ 		"ingroup\0"             Required_argument "G"
+-		"disabled-password\0"   No_argument       "D"
++		"disabled-password\0"   No_argument       "d"
++		"disabled-login\0"      No_argument       "D"
+ 		"empty-password\0"      No_argument       "D"
+ 		"system\0"              No_argument       "S"
+ 		"no-create-home\0"      No_argument       "H"
+@@ -202,10 +205,10 @@ int adduser_main(int argc UNUSED_PARAM, char **argv)
+ 	pw.pw_dir = NULL;
+ 
+ 	opts = getopt32long(argv, "^"
+-			"h:g:s:G:DSHu:k:"
++			"h:g:s:G:DdSHu:k:"
+ 			/* at least one and at most two non-option args */
+ 			/* disable interactive passwd for system accounts */
+-			"\0" "-1:?2:SD",
++			"\0" "-1:?2:SDd",
+ 			adduser_longopts,
+ 			&pw.pw_dir, &pw.pw_gecos, &pw.pw_shell,
+ 			&usegroup, &uid, &skel
+@@ -263,7 +266,8 @@ int adduser_main(int argc UNUSED_PARAM, char **argv)
+ 	 * 8. unix date when login expires (i.e. when it may no longer be used)
+ 	 */
+ 	/* fields:     2 3  4 5     6 78 */
+-	p = xasprintf("!:%u:0:99999:7:::", (unsigned)(time(NULL)) / (24*60*60));
++	p = xasprintf("%c:%u:0:99999:7:::", (opts & OPT_DISABLED_PASS) ? '*' : '!',
++			(unsigned)(time(NULL)) / (24*60*60));
+ 	/* ignore errors: if file is missing we suppose admin doesn't want it */
+ 	update_passwd(bb_path_shadow_file, pw.pw_name, p, NULL);
+ 	if (ENABLE_FEATURE_CLEAN_UP)
+@@ -305,7 +309,7 @@ int adduser_main(int argc UNUSED_PARAM, char **argv)
+ 		}
+ 	}
+ 
+-	if (!(opts & OPT_DONT_SET_PASS)) {
++	if (!(opts & (OPT_DONT_SET_PASS | OPT_DISABLED_PASS))) {
+ 		/* interactively set passwd */
+ 		passwd_wrapper(pw.pw_name);
+ 	}
+-- 
+2.34.1
+
