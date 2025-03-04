@@ -4,7 +4,7 @@ Change Log
 All notable changes to the project are documented in this file.
 
 
-[v25.02.0][] - 2025-03-03
+[v25.02.0][] - 2025-03-04
 -------------------------
 
 ### Changes
@@ -27,6 +27,7 @@ All notable changes to the project are documented in this file.
    having removed them from the configuration
  - Fix #930: container configuration changes does not apply at runtime
    only when saved to `startup-config` and system is rebooted
+ - Fix #936: DHCP server reconfiguration does not always take effect.
  - Fix #956: CLI `copy` command complains it cannot change owner when
    copying `factory-config` to `running-config`.  Bogus error, the
    latter is not really a file
