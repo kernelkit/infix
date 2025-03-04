@@ -227,6 +227,7 @@ if [ "$containerize" ]; then
 	 --env INFAMY_ARGS="$INFAMY_ARGS" \
 	 --env INFAMY_EXTRA_ARGS="$INFAMY_EXTRA_ARGS" \
 	 --env PROMPT_DIRTRIM="$ixdir" \
+	 --env NINEPM_PROJ_CONFIG="$NINEPM_PROJ_CONFIG" \
 	 --env PS1="$(build_ps1)" \
 	 $extra_env \
 	 --expose 9001-9010 --publish-all \
