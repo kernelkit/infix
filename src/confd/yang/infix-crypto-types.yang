@@ -24,4 +24,19 @@ module infix-crypto-types {
     base public-key-format;
     base ct:ssh-public-key-format;
   }
+
+  identity ed25519-public-key-format {
+    base public-key-format;
+    base ct:public-key-format;
+  }
+
+  identity ed25519-private-key-format {
+    base public-key-format;
+    base ct:private-key-format;
+  }
+  identity wireguard-symmetric-key-format {
+    base ct:symmetric-key-format;
+    description "Indicates a 32-byte raw octet string format specific to
+     WireGuard pre-shared keys.";
+  }
 }

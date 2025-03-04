@@ -22,16 +22,17 @@
 #define ONOFF(boolean) boolean ? "on" : "off"
 
 #define IFTYPES(_map) \
-	_map(IFT_BRIDGE, "infix-if-type:bridge")	\
-	_map(IFT_DUMMY,  "infix-if-type:dummy")		\
-	_map(IFT_ETH,    "infix-if-type:ethernet")	\
-	_map(IFT_GRE,    "infix-if-type:gre")		\
-	_map(IFT_GRETAP, "infix-if-type:gretap")	\
-	_map(IFT_LAG,    "infix-if-type:lag")	\
-	_map(IFT_LO,     "infix-if-type:loopback")	\
-	_map(IFT_VETH,   "infix-if-type:veth")		\
-	_map(IFT_VLAN,   "infix-if-type:vlan")		\
-	_map(IFT_VXLAN,  "infix-if-type:vxlan")		\
+	_map(IFT_BRIDGE,   "infix-if-type:bridge")	\
+	_map(IFT_DUMMY,    "infix-if-type:dummy")		\
+	_map(IFT_ETH,      "infix-if-type:ethernet")	\
+	_map(IFT_GRE,      "infix-if-type:gre")		\
+	_map(IFT_GRETAP,   "infix-if-type:gretap")	\
+	_map(IFT_LAG,      "infix-if-type:lag")	\
+	_map(IFT_LO,       "infix-if-type:loopback")	\
+	_map(IFT_VETH,     "infix-if-type:veth")		\
+	_map(IFT_VLAN,     "infix-if-type:vlan")		\
+	_map(IFT_VXLAN,    "infix-if-type:vxlan")		\
+	_map(IFT_WIREGUARD,"infix-if-type:vxlan")	\
 	/*  */
 
 enum iftype {
@@ -140,5 +141,8 @@ int vlan_add_deps(struct lyd_node *cif);
 
 /* infix-if-vxlan.c */
 int vxlan_gen(struct lyd_node *dif, struct lyd_node *cif, FILE *ip);
+
+/* infix-if-wireguard */
+int wireguard_gen(struct lyd_node *dif, struct lyd_node *cif, FILE *ip, struct lyd_node *tree, struct dagger *net);
 
 #endif /* CONFD_IETF_INTERFACES_H_ */

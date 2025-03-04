@@ -394,7 +394,7 @@ static int dummy_gen(struct lyd_node *dif, struct lyd_node *cif, FILE *ip)
 }
 
 static int netdag_gen_afspec_add(sr_session_ctx_t *session, struct dagger *net, struct lyd_node *dif,
-				 struct lyd_node *cif, FILE *ip)
+				 struct lyd_node *cif, FILE *ip, struct lyd_node *tree)
 {
 	const char *ifname = lydx_get_cattr(cif, "name");
 
@@ -416,7 +416,8 @@ static int netdag_gen_afspec_add(sr_session_ctx_t *session, struct dagger *net, 
 		return vlan_gen(NULL, cif, ip);
 	case IFT_VXLAN:
 		return vxlan_gen(NULL, cif, ip);
-
+	case IFT_WIREGUARD:
+		return wireguard_gen(NULL, cif, ip, tree, net);
 	case IFT_ETH:
 	case IFT_LO:
 	case IFT_UNKNOWN:
@@ -446,6 +447,7 @@ static int netdag_gen_afspec_set(sr_session_ctx_t *session, struct dagger *net, 
 	case IFT_GRETAP:
 	case IFT_VETH:
 	case IFT_VXLAN:
+	case IFT_WIREGUARD:
 		return 0;
 
 	case IFT_ETH:
@@ -482,6 +484,8 @@ static bool netdag_must_del(struct lyd_node *dif, struct lyd_node *cif)
 		return lydx_get_descendant(lyd_child(dif), "veth", NULL);
 	case IFT_VXLAN:
 		return lydx_get_descendant(lyd_child(dif), "vxlan", NULL);
+	case IFT_WIREGUARD:
+		return lydx_get_descendant(lyd_child(dif), "wireguard", NULL);
 	case IFT_UNKNOWN:
 		ERR_IFACE(cif, -EINVAL, "unsupported interface type \"%s\"",
 			  lydx_get_cattr(cif, "type"));
@@ -564,6 +568,7 @@ static int netdag_gen_iface_del(struct dagger *net, struct lyd_node *dif,
 	case IFT_LAG:
 	case IFT_VLAN:
 	case IFT_VXLAN:
+	case IFT_WIREGUARD:
 	case IFT_UNKNOWN:
 		link_gen_del(dif, ip);
 		break;
@@ -574,7 +579,7 @@ static int netdag_gen_iface_del(struct dagger *net, struct lyd_node *dif,
 }
 
 static sr_error_t netdag_gen_iface(sr_session_ctx_t *session, struct dagger *net,
-				   struct lyd_node *dif, struct lyd_node *cif)
+				   struct lyd_node *dif, struct lyd_node *cif, struct lyd_node *tree)
 {
 	const char *ifname = lydx_get_cattr(dif, "name");
 	enum lydx_op op = lydx_get_op(dif);
@@ -631,7 +636,7 @@ static sr_error_t netdag_gen_iface(sr_session_ctx_t *session, struct dagger *net
 	}
 
 	if (!fixed && op == LYDX_OP_CREATE) {
-		err = netdag_gen_afspec_add(session, net, dif, cif, ip);
+		err = netdag_gen_afspec_add(session, net, dif, cif, ip, tree);
 		if (err)
 			goto err_close_ip;
 	}
@@ -714,6 +719,7 @@ static int netdag_init_iface(struct lyd_node *cif)
 	case IFT_GRETAP:
 	case IFT_LO:
 	case IFT_VXLAN:
+	case IFT_WIREGUARD:
 	case IFT_UNKNOWN:
 		break;
 	}
@@ -811,7 +817,7 @@ static int ifchange(sr_session_ctx_t *session, uint32_t sub_id, const char *modu
 				    lydx_get_cattr(cif, "name")))
 				break;
 
-		err = netdag_gen_iface(session, &confd->netdag, dif, cif);
+		err = netdag_gen_iface(session, &confd->netdag, dif, cif, cfg->tree);
 		if (err)
 			break;
 	}

@@ -1,0 +1,89 @@
+submodule infix-if-wireguard {
+  yang-version 1.1;
+  belongs-to infix-interfaces {
+    prefix infix-if;
+  }
+
+  import ietf-interfaces {
+    prefix if;
+  }
+  import ietf-inet-types {
+    prefix inet;
+  }
+  import infix-crypto-types {
+    prefix ixct;
+  }
+  import ietf-keystore {
+    prefix ks;
+  }
+  import infix-if-type {
+    prefix infixift;
+  }
+
+  organization "KernelKit";
+  contact      "kernelkit@googlegroups.com";
+  description  "Wireguard VPN tunnel";
+
+  revision 2025-01-19 {
+    description "Initial revision";
+    reference "internal";
+  }
+
+  typedef port {
+    type inet:port-number;
+    description
+      "WireGuard UDP port. Valid range: 0..65535.";
+  }
+
+  augment "/if:interfaces/if:interface" {
+    when "derived-from-or-self(if:type, 'infixift:wireguard')" {
+      description "Only shown for if:type infixift:wireguard";
+    }
+    container wireguard {
+      description "WireGuard VPN configuration";
+
+      uses infix-if:local-remote;
+
+      leaf remote-port {
+        type port;
+        default 51820;
+        description "Remote WireGuard endpoint port";
+      }
+
+      leaf local-port {
+        type port;
+        default 51820;
+        description "Local WireGuard endpoint port";
+      }
+
+      leaf local-key-pair {
+        type ks:asymmetric-key-ref;
+        mandatory true;
+        description "Reference to WireGuard asymmetric key pair";
+        must "not(deref(.)/../ks:public-key-format) or "
+          + "(derived-from-or-self(deref(.)/../ks:public-key-format,  'ixct:ed25519-public-key-format') and"
+          + "derived-from-or-self(deref(.)/../ks:private-key-format,  'ixct:ed25519-private-key-format'))" {
+          error-message "Keys neeed to be in wireguard format";
+        }
+      }
+      leaf remote-public-key {
+        type ks:asymmetric-key-ref;
+        mandatory true;
+        description "Reference to WireGuard asymmetric key pair";
+        must "not(deref(.)/../ks:public-key-format) or "
+          + "(derived-from-or-self(deref(.)/../ks:public-key-format,  'ixct:ed25519-public-key-format'))" {
+          error-message "Keys neeed to be in wireguard format";
+        }
+      }
+
+      leaf preshared-key {
+        type ks:symmetric-key-ref;
+        description "Optional preshared key for additional security";
+        mandatory false;
+        must "derived-from-or-self(deref(.)/../ks:key-format, 'ixct:wireguard-symmetric-key-format')" {
+          error-message "WireGuard preshared key must be wireguard-symmetric-key-format";
+        }
+      }
+    }
+  }
+}
