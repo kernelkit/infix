@@ -23,11 +23,11 @@ struct infix_ds {
 };
 
 struct infix_ds infix_config[] = {
-	{ "startup-config",     "startup",     SR_DS_STARTUP,         1, "/cfg/startup-config.cfg" },
-	{ "running-config",     "running",     SR_DS_RUNNING,         1, NULL },
-	{ "candidate-config",   "candidate",   SR_DS_CANDIDATE,       1, NULL },
-	{ "operational-config", "operational", SR_DS_OPERATIONAL,     1, NULL },
-	{ "factory-config",     "factory-default",          SR_DS_FACTORY_DEFAULT, 0, NULL }
+	{ "startup-config",     "startup",          SR_DS_STARTUP,         1, "/cfg/startup-config.cfg" },
+	{ "running-config",     "running",          SR_DS_RUNNING,         1, NULL },
+	{ "candidate-config",   "candidate",        SR_DS_CANDIDATE,       1, NULL },
+	{ "operational-config", "operational",      SR_DS_OPERATIONAL,     1, NULL },
+	{ "factory-config",     "factory-default",  SR_DS_FACTORY_DEFAULT, 0, NULL }
 };
 
 static const char *prognm = "copy";
@@ -108,15 +108,15 @@ static const char *infix_ds(const char *text, struct infix_ds **ds)
 }
 
 
-static int copy(const char *src, const char *dst, const char *user)
+static int copy(const char *src, const char *dst, const char *remote_user)
 {
 	struct infix_ds *srcds = NULL, *dstds = NULL;
 	char temp_file[20] = "/tmp/copy.XXXXXX";
 	const char *tmpfn = NULL;
 	sr_session_ctx_t *sess;
 	const char *fn = NULL;
-	const char *username;
 	sr_conn_ctx_t *conn;
+	const char *user;
 	char adjust[256];
 	mode_t oldmask;
 	int rc = 0;
@@ -135,7 +135,7 @@ static int copy(const char *src, const char *dst, const char *user)
 		goto err;
 	}
 
-	username = getuser();
+	user = getuser();
 
 	/* 1. Regular ds copy */
 	if (srcds && dstds) {
@@ -157,13 +157,13 @@ static int copy(const char *src, const char *dst, const char *user)
 		if (sr_session_start(conn, dstds->datastore, &sess)) {
 			fprintf(stderr, ERRMSG "unable to open transaction to %s\n", dst);
 		} else {
-			sr_nacm_set_user(sess, username);
+			sr_nacm_set_user(sess, user);
 			rc = sr_copy_config(sess, NULL, srcds->datastore, timeout * 1000);
 			if (rc)
 				emsg(sess, ERRMSG "unable to copy configuration, err %d: %s\n",
 				     rc, sr_strerror(rc));
 			else
-				set_owner(dstds->path, username);
+				set_owner(dstds->path, user);
 		}
 		rc = sr_disconnect(conn);
 
@@ -187,11 +187,11 @@ static int copy(const char *src, const char *dst, const char *user)
 			if (rc)
 				fprintf(stderr, ERRMSG "failed exporting %s to %s\n", src, fn);
 			else {
-				rc = systemf("curl %s -LT %s %s", user, fn, dst);
+				rc = systemf("curl %s -LT %s %s", remote_user, fn, dst);
 				if (rc)
 					fprintf(stderr, ERRMSG "failed uploading %s to %s\n", src, dst);
 				else
-					set_owner(dst, username);
+					set_owner(dst, user);
 			}
 			goto err;
 		}
@@ -219,7 +219,7 @@ static int copy(const char *src, const char *dst, const char *user)
 		if (rc)
 			fprintf(stderr, ERRMSG "failed copy %s to %s\n", src, fn);
 		else
-			set_owner(fn, username);
+			set_owner(fn, user);
 	} else if (dstds) {
 		if (!dstds->sysrepocfg) {
 			fprintf(stderr, ERRMSG "not possible to import to this datastore.\n");
@@ -245,7 +245,7 @@ static int copy(const char *src, const char *dst, const char *user)
 		}
 
 		if (tmpfn)
-			rc = systemf("curl %s -Lo %s %s", user, fn, src);
+			rc = systemf("curl %s -Lo %s %s", remote_user, fn, src);
 		if (rc) {
 			fprintf(stderr, ERRMSG "failed downloading %s", src);
 		} else {
@@ -274,7 +274,7 @@ static int copy(const char *src, const char *dst, const char *user)
 				}
 			}
 
-			rc = systemf("curl %s -Lo %s %s", user, fn, src);
+			rc = systemf("curl %s -Lo %s %s", remote_user, fn, src);
 		} else if (strstr(dst, "://")) {
 			fn = cfg_adjust(src, NULL, adjust, sizeof(adjust));
 			if (!fn) {
@@ -286,7 +286,7 @@ static int copy(const char *src, const char *dst, const char *user)
 			if (access(fn, F_OK))
 				fprintf(stderr, ERRMSG "no such file %s, aborting.", fn);
 			else
-				rc = systemf("curl %s -LT %s %s", user, fn, dst);
+				rc = systemf("curl %s -LT %s %s", remote_user, fn, dst);
 		} else {
 			if (!access(dst, F_OK)) {
 				if (!yorn("Overwrite existing file %s", dst)) {
