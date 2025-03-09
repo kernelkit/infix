@@ -28,6 +28,10 @@ int files(const char *path, const char *stripext)
 		if (d->d_type != DT_REG || d->d_name[0] == '.')
 			continue;
 
+		/* skip startup in /cfg, listed by plugin */
+		if (!strcmp(path, "/cfg") && !strcmp(d->d_name, "startup-config.cfg"))
+			continue;
+
 		strlcpy(name, d->d_name, sizeof(name));
 		if (stripext) {
 			size_t pos = has_ext(name, stripext);

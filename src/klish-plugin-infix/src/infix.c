@@ -102,7 +102,7 @@ int infix_datastore(kcontext_t *ctx)
 	}
 
 done:
-	return systemf("files /cfg .cfg");
+	return systemf("files /cfg");
 }
 
 int infix_erase(kcontext_t *ctx)
