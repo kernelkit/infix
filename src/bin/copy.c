@@ -3,6 +3,7 @@
 
 #include <getopt.h>
 #include <pwd.h>
+#include <grp.h>
 #include <stdio.h>
 #include <stdarg.h>
 
@@ -64,6 +65,9 @@ end:
 	}
 }
 
+/*
+ * Current system user, same as sysrepo user
+ */
 static char *getuser(void)
 {
 	const struct passwd *pw;
@@ -79,18 +83,87 @@ static char *getuser(void)
 	return pw->pw_name;
 }
 
+/*
+ * If UNIX user is in UNIX group of directory containing file,
+ * return gid, otherwise -1
+ *
+ * E.g., writing to /cfg/foo, where /cfg is owned by root:wheel,
+ * should result in the file being owned by $LOGNAME:wheel with
+ * 0660 perms for other users in same group.
+ */
+static gid_t in_group(const char *user, const char *fn, gid_t *gid)
+{
+	char dir[strlen(fn) + 2];
+	const struct passwd *pw;
+	int i, num = 0, rc = 0;
+	struct stat st;
+	gid_t *groups;
+	char *ptr;
+
+	pw = getpwnam(user);
+	if (!pw)
+		return 0;
+
+	strlcpy(dir, fn, sizeof(dir));
+	ptr = strrchr(dir, '/');
+	if (ptr)
+		*ptr = 0;
+	else
+		strlcpy(dir, ".", sizeof(dir));
+
+	if (stat(dir, &st))
+		return 0;
+
+	getgrouplist(user, pw->pw_gid, NULL, &num);
+
+	groups = malloc(num * sizeof(gid_t));
+	if (!groups) {
+		perror("in_group() malloc");
+		return 0;
+	}
+
+	getgrouplist(user, pw->pw_gid, groups, &num);
+	for (i = 0; i < num; i++) {
+		if (groups[i] == st.st_gid) {
+			*gid = st.st_gid;
+			rc = 1;
+			break;
+		}
+	}
+	free(groups);
+
+	return rc;
+}
+
+/*
+ * Set group owner so other users with same directory permissions can
+ * read/write the file as well.  E.g., an 'admin' level user in group
+ * 'wheel' writing a new file to `/cfg` should be possible to read and
+ * write to by other administrators.
+ *
+ * This function is called only when the file has been successfully
+ * copied or created in a file system directory.  This is why we can
+ * safely ignore any EPERM errors to chown(), below, because if the file
+ * already existed, created by another user, we are not allowed to chgrp
+ * it.  The sole purpose of this function is to allow other users in the
+ * same group to access the file in the future.
+ */
 static void set_owner(const char *fn, const char *user)
 {
-	struct passwd *pw;
+	gid_t gid = 9999;
 
 	if (!fn)
 		return;	/* not an error, e.g., running-config is not a file */
 
-	pw = getpwnam(user);
-	if (pw && !chmod(fn, 0660) && !chown(fn, pw->pw_uid, pw->pw_gid))
-		return;
+	if (!in_group(user, fn, &gid))
+		return;	/* user not in parent directory's group */
 
-	fprintf(stderr, ERRMSG "setting owner %s on %s: %s\n", user, fn, strerror(errno));
+	if (chown(fn, -1, gid) && errno != EPERM) {
+		const struct group *gr = getgrgid(gid);
+
+		fprintf(stderr, ERRMSG "setting group owner %s (%d) on %s: %s\n",
+			gr ? gr->gr_name : "<unknown>", gid, fn, strerror(errno));
+	}
 }
 
 static const char *infix_ds(const char *text, struct infix_ds **ds)
@@ -121,7 +194,8 @@ static int copy(const char *src, const char *dst, const char *remote_user)
 	mode_t oldmask;
 	int rc = 0;
 
-	oldmask = umask(0660);
+	/* rw for user and group only */
+	oldmask = umask(0006);
 
 	src = infix_ds(src, &srcds);
 	if (!src)
