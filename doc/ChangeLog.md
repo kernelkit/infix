@@ -31,6 +31,8 @@ All notable changes to the project are documented in this file.
  - Fix #956: CLI `copy` command complains it cannot change owner when
    copying `factory-config` to `running-config`.  Bogus error, the
    latter is not really a file
+ - Fix #977: "Operation not permitted" when saving `running-config` to
+   `startup-config` (harmless warning but annoying and concerning)
 
 [EVK]: https://www.nxp.com/design/design-center/development-boards-and-designs/8MPLUSLPD4-EVK
 
