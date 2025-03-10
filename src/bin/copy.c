@@ -6,6 +6,7 @@
 #include <grp.h>
 #include <stdio.h>
 #include <stdarg.h>
+#include <libgen.h>
 
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -85,7 +86,7 @@ static char *getuser(void)
 
 /*
  * If UNIX user is in UNIX group of directory containing file,
- * return gid, otherwise -1
+ * return 1, otherwise 0.
  *
  * E.g., writing to /cfg/foo, where /cfg is owned by root:wheel,
  * should result in the file being owned by $LOGNAME:wheel with
@@ -93,23 +94,19 @@ static char *getuser(void)
  */
 static gid_t in_group(const char *user, const char *fn, gid_t *gid)
 {
-	char dir[strlen(fn) + 2];
+	char path[PATH_MAX];
 	const struct passwd *pw;
 	int i, num = 0, rc = 0;
 	struct stat st;
 	gid_t *groups;
-	char *ptr;
+	char *dir;
 
 	pw = getpwnam(user);
 	if (!pw)
 		return 0;
 
-	strlcpy(dir, fn, sizeof(dir));
-	ptr = strrchr(dir, '/');
-	if (ptr)
-		*ptr = 0;
-	else
-		strlcpy(dir, ".", sizeof(dir));
+	strlcpy(path, fn, sizeof(path));
+	dir = dirname(path);
 
 	if (stat(dir, &st))
 		return 0;
