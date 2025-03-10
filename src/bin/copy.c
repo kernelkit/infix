@@ -114,8 +114,7 @@ static gid_t in_group(const char *user, const char *fn, gid_t *gid)
 	if (stat(dir, &st))
 		return 0;
 
-	getgrouplist(user, pw->pw_gid, NULL, &num);
-
+	num = NGROUPS_MAX;
 	groups = malloc(num * sizeof(gid_t));
 	if (!groups) {
 		perror("in_group() malloc");
