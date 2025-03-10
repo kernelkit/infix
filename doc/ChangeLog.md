@@ -8,7 +8,7 @@ All notable changes to the project are documented in this file.
 -------------------------
 
 ### Changes
- - Upgrade Linux kernel to 6.12.17 (LTS)
+ - Upgrade Linux kernel to 6.12.18 (LTS)
  - Upgrade Buildroot to 2024.02.11 (LTS)
  - Add support for link aggregation (lag), static (balance-xor) and LACP
  - Add support for the [i.MX 8M Plus EVK][EVK]
