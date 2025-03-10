@@ -155,10 +155,11 @@ static void set_owner(const char *fn, const char *user)
 		return;	/* user not in parent directory's group */
 
 	if (chown(fn, -1, gid) && errno != EPERM) {
+		int _errno = errno;
 		const struct group *gr = getgrgid(gid);
 
 		fprintf(stderr, ERRMSG "setting group owner %s (%d) on %s: %s\n",
-			gr ? gr->gr_name : "<unknown>", gid, fn, strerror(errno));
+			gr ? gr->gr_name : "<unknown>", gid, fn, strerror(_errno));
 	}
 }
 
