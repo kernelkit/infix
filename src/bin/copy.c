@@ -202,7 +202,7 @@ static int copy(const char *src, const char *dst, const char *remote_user)
 		goto err;
 
 	if (!strcmp(src, dst)) {
-		fprintf(stderr, ERRMSG "source and destination are the same, aborting.");
+		fprintf(stderr, ERRMSG "source and destination are the same, aborting.\n");
 		goto err;
 	}
 
