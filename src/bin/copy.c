@@ -418,7 +418,7 @@ int main(int argc, char *argv[])
 	if (timeout < 0)
 		timeout = 120;
 
-	if (optind >= argc)
+	if (argc - optind != 2)
 		return usage(1);
 
 	src = argv[optind++];
