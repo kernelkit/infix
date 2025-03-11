@@ -92,7 +92,7 @@ static char *getuser(void)
  * should result in the file being owned by $LOGNAME:wheel with
  * 0660 perms for other users in same group.
  */
-static gid_t in_group(const char *user, const char *fn, gid_t *gid)
+static int in_group(const char *user, const char *fn, gid_t *gid)
 {
 	char path[PATH_MAX];
 	const struct passwd *pw;
