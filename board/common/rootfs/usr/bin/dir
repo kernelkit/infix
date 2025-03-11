@@ -21,7 +21,11 @@ dir()
 if [ -d "$1" ]; then
     dir "$1"
 else
-    dir "$HOME"
+    if [ "$USER" = "root" ]; then
+	dir "$HOME"
+    else
+	dir "/home/$USER"
+    fi
     dir "/cfg"
     dir "/log"
 fi

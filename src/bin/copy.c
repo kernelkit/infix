@@ -3,8 +3,10 @@
 
 #include <getopt.h>
 #include <pwd.h>
+#include <grp.h>
 #include <stdio.h>
 #include <stdarg.h>
+#include <libgen.h>
 
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -23,11 +25,11 @@ struct infix_ds {
 };
 
 struct infix_ds infix_config[] = {
-	{ "startup-config",     "startup",     SR_DS_STARTUP,         1, "/cfg/startup-config.cfg" },
-	{ "running-config",     "running",     SR_DS_RUNNING,         1, NULL },
-	{ "candidate-config",   "candidate",   SR_DS_CANDIDATE,       1, NULL },
-	{ "operational-config", "operational", SR_DS_OPERATIONAL,     1, NULL },
-	{ "factory-config",     "factory-default",          SR_DS_FACTORY_DEFAULT, 0, NULL }
+	{ "startup-config",     "startup",          SR_DS_STARTUP,         1, "/cfg/startup-config.cfg" },
+	{ "running-config",     "running",          SR_DS_RUNNING,         1, NULL },
+	{ "candidate-config",   "candidate",        SR_DS_CANDIDATE,       1, NULL },
+	{ "operational-config", "operational",      SR_DS_OPERATIONAL,     1, NULL },
+	{ "factory-config",     "factory-default",  SR_DS_FACTORY_DEFAULT, 0, NULL }
 };
 
 static const char *prognm = "copy";
@@ -64,6 +66,9 @@ end:
 	}
 }
 
+/*
+ * Current system user, same as sysrepo user
+ */
 static char *getuser(void)
 {
 	const struct passwd *pw;
@@ -79,18 +84,83 @@ static char *getuser(void)
 	return pw->pw_name;
 }
 
+/*
+ * If UNIX user is in UNIX group of directory containing file,
+ * return 1, otherwise 0.
+ *
+ * E.g., writing to /cfg/foo, where /cfg is owned by root:wheel,
+ * should result in the file being owned by $LOGNAME:wheel with
+ * 0660 perms for other users in same group.
+ */
+static int in_group(const char *user, const char *fn, gid_t *gid)
+{
+	char path[PATH_MAX];
+	const struct passwd *pw;
+	int i, num = 0, rc = 0;
+	struct stat st;
+	gid_t *groups;
+	char *dir;
+
+	pw = getpwnam(user);
+	if (!pw)
+		return 0;
+
+	strlcpy(path, fn, sizeof(path));
+	dir = dirname(path);
+
+	if (stat(dir, &st))
+		return 0;
+
+	num = NGROUPS_MAX;
+	groups = malloc(num * sizeof(gid_t));
+	if (!groups) {
+		perror("in_group() malloc");
+		return 0;
+	}
+
+	getgrouplist(user, pw->pw_gid, groups, &num);
+	for (i = 0; i < num; i++) {
+		if (groups[i] == st.st_gid) {
+			*gid = st.st_gid;
+			rc = 1;
+			break;
+		}
+	}
+	free(groups);
+
+	return rc;
+}
+
+/*
+ * Set group owner so other users with same directory permissions can
+ * read/write the file as well.  E.g., an 'admin' level user in group
+ * 'wheel' writing a new file to `/cfg` should be possible to read and
+ * write to by other administrators.
+ *
+ * This function is called only when the file has been successfully
+ * copied or created in a file system directory.  This is why we can
+ * safely ignore any EPERM errors to chown(), below, because if the file
+ * already existed, created by another user, we are not allowed to chgrp
+ * it.  The sole purpose of this function is to allow other users in the
+ * same group to access the file in the future.
+ */
 static void set_owner(const char *fn, const char *user)
 {
-	struct passwd *pw;
+	gid_t gid = 9999;
 
 	if (!fn)
 		return;	/* not an error, e.g., running-config is not a file */
 
-	pw = getpwnam(user);
-	if (pw && !chmod(fn, 0660) && !chown(fn, pw->pw_uid, pw->pw_gid))
-		return;
+	if (!in_group(user, fn, &gid))
+		return;	/* user not in parent directory's group */
 
-	fprintf(stderr, ERRMSG "setting owner %s on %s: %s\n", user, fn, strerror(errno));
+	if (chown(fn, -1, gid) && errno != EPERM) {
+		int _errno = errno;
+		const struct group *gr = getgrgid(gid);
+
+		fprintf(stderr, ERRMSG "setting group owner %s (%d) on %s: %s\n",
+			gr ? gr->gr_name : "<unknown>", gid, fn, strerror(_errno));
+	}
 }
 
 static const char *infix_ds(const char *text, struct infix_ds **ds)
@@ -108,20 +178,21 @@ static const char *infix_ds(const char *text, struct infix_ds **ds)
 }
 
 
-static int copy(const char *src, const char *dst, const char *user)
+static int copy(const char *src, const char *dst, const char *remote_user)
 {
 	struct infix_ds *srcds = NULL, *dstds = NULL;
 	char temp_file[20] = "/tmp/copy.XXXXXX";
 	const char *tmpfn = NULL;
 	sr_session_ctx_t *sess;
 	const char *fn = NULL;
-	const char *username;
 	sr_conn_ctx_t *conn;
+	const char *user;
 	char adjust[256];
 	mode_t oldmask;
 	int rc = 0;
 
-	oldmask = umask(0660);
+	/* rw for user and group only */
+	oldmask = umask(0006);
 
 	src = infix_ds(src, &srcds);
 	if (!src)
@@ -131,11 +202,11 @@ static int copy(const char *src, const char *dst, const char *user)
 		goto err;
 
 	if (!strcmp(src, dst)) {
-		fprintf(stderr, ERRMSG "source and destination are the same, aborting.");
+		fprintf(stderr, ERRMSG "source and destination are the same, aborting.\n");
 		goto err;
 	}
 
-	username = getuser();
+	user = getuser();
 
 	/* 1. Regular ds copy */
 	if (srcds && dstds) {
@@ -157,13 +228,13 @@ static int copy(const char *src, const char *dst, const char *user)
 		if (sr_session_start(conn, dstds->datastore, &sess)) {
 			fprintf(stderr, ERRMSG "unable to open transaction to %s\n", dst);
 		} else {
-			sr_nacm_set_user(sess, username);
+			sr_nacm_set_user(sess, user);
 			rc = sr_copy_config(sess, NULL, srcds->datastore, timeout * 1000);
 			if (rc)
 				emsg(sess, ERRMSG "unable to copy configuration, err %d: %s\n",
 				     rc, sr_strerror(rc));
 			else
-				set_owner(dstds->path, username);
+				set_owner(dstds->path, user);
 		}
 		rc = sr_disconnect(conn);
 
@@ -187,11 +258,11 @@ static int copy(const char *src, const char *dst, const char *user)
 			if (rc)
 				fprintf(stderr, ERRMSG "failed exporting %s to %s\n", src, fn);
 			else {
-				rc = systemf("curl %s -LT %s %s", user, fn, dst);
+				rc = systemf("curl %s -LT %s %s", remote_user, fn, dst);
 				if (rc)
 					fprintf(stderr, ERRMSG "failed uploading %s to %s\n", src, dst);
 				else
-					set_owner(dst, username);
+					set_owner(dst, user);
 			}
 			goto err;
 		}
@@ -219,7 +290,7 @@ static int copy(const char *src, const char *dst, const char *user)
 		if (rc)
 			fprintf(stderr, ERRMSG "failed copy %s to %s\n", src, fn);
 		else
-			set_owner(fn, username);
+			set_owner(fn, user);
 	} else if (dstds) {
 		if (!dstds->sysrepocfg) {
 			fprintf(stderr, ERRMSG "not possible to import to this datastore.\n");
@@ -245,7 +316,7 @@ static int copy(const char *src, const char *dst, const char *user)
 		}
 
 		if (tmpfn)
-			rc = systemf("curl %s -Lo %s %s", user, fn, src);
+			rc = systemf("curl %s -Lo %s %s", remote_user, fn, src);
 		if (rc) {
 			fprintf(stderr, ERRMSG "failed downloading %s", src);
 		} else {
@@ -274,7 +345,7 @@ static int copy(const char *src, const char *dst, const char *user)
 				}
 			}
 
-			rc = systemf("curl %s -Lo %s %s", user, fn, src);
+			rc = systemf("curl %s -Lo %s %s", remote_user, fn, src);
 		} else if (strstr(dst, "://")) {
 			fn = cfg_adjust(src, NULL, adjust, sizeof(adjust));
 			if (!fn) {
@@ -286,7 +357,7 @@ static int copy(const char *src, const char *dst, const char *user)
 			if (access(fn, F_OK))
 				fprintf(stderr, ERRMSG "no such file %s, aborting.", fn);
 			else
-				rc = systemf("curl %s -LT %s %s", user, fn, dst);
+				rc = systemf("curl %s -LT %s %s", remote_user, fn, dst);
 		} else {
 			if (!access(dst, F_OK)) {
 				if (!yorn("Overwrite existing file %s", dst)) {
@@ -347,7 +418,7 @@ int main(int argc, char *argv[])
 	if (timeout < 0)
 		timeout = 120;
 
-	if (optind >= argc)
+	if (argc - optind != 2)
 		return usage(1);
 
 	src = argv[optind++];
