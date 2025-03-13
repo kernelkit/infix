@@ -1,0 +1,30 @@
+From 5868d5bd7486b5e741deed2a8f3acaf16ca6544a Mon Sep 17 00:00:00 2001
+From: Michal Vasko <mvasko@cesnet.cz>
+Date: Mon, 27 Jan 2025 12:08:59 +0100
+Subject: [PATCH 10/27] SOVERSION bump to version 3.6.12
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
+
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ CMakeLists.txt | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 2808ddfac..7d9055b78 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -66,7 +66,7 @@ set(LIBYANG_VERSION ${LIBYANG_MAJOR_VERSION}.${LIBYANG_MINOR_VERSION}.${LIBYANG_
+ # set version of the library
+ set(LIBYANG_MAJOR_SOVERSION 3)
+ set(LIBYANG_MINOR_SOVERSION 6)
+-set(LIBYANG_MICRO_SOVERSION 11)
++set(LIBYANG_MICRO_SOVERSION 12)
+ set(LIBYANG_SOVERSION_FULL ${LIBYANG_MAJOR_SOVERSION}.${LIBYANG_MINOR_SOVERSION}.${LIBYANG_MICRO_SOVERSION})
+ set(LIBYANG_SOVERSION ${LIBYANG_MAJOR_SOVERSION})
+ 
+-- 
+2.43.0
+

@@ -1,0 +1,52 @@
+From b12087bde00ed514349ff7e61cf06522aa83b03d Mon Sep 17 00:00:00 2001
+From: Michal Vasko <mvasko@cesnet.cz>
+Date: Thu, 30 Jan 2025 14:25:02 +0100
+Subject: [PATCH 19/27] tree data new REFACTOR formatting
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
+
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ src/tree_data_new.c | 12 +++++++-----
+ 1 file changed, 7 insertions(+), 5 deletions(-)
+
+diff --git a/src/tree_data_new.c b/src/tree_data_new.c
+index 0b6d81ee3..667622c14 100644
+--- a/src/tree_data_new.c
++++ b/src/tree_data_new.c
+@@ -1814,7 +1814,8 @@ lyd_new_path_(struct lyd_node *parent, const struct ly_ctx *ctx, const struct ly
+             if (val) {
+                 LY_CHECK_GOTO(ret = lyd_create_term2(schema, val, &node), cleanup);
+             } else {
+-                LY_CHECK_GOTO(ret = lyd_create_term(schema, value, value_len, 0, store_only, NULL, format, NULL, LYD_HINT_DATA, NULL, &node), cleanup);
++                LY_CHECK_GOTO(ret = lyd_create_term(schema, value, value_len, 0, store_only, NULL, format, NULL,
++                        LYD_HINT_DATA, NULL, &node), cleanup);
+             }
+             break;
+         case LYS_LEAF:
+@@ -1839,15 +1840,16 @@ lyd_new_path_(struct lyd_node *parent, const struct ly_ctx *ctx, const struct ly
+                     if (value && (format == LY_VALUE_JSON) && !ly_strncmp("[null]", value, value_len)) {
+                         hints |= LYD_VALHINT_EMPTY;
+                     }
+-                    LY_CHECK_GOTO(ret = lyd_create_opaq(ctx, schema->name, strlen(schema->name), NULL, 0,
+-                            schema->module->name, strlen(schema->module->name), value, value_len, NULL, format, NULL, hints, &node),
+-                            cleanup);
++                    ret = lyd_create_opaq(ctx, schema->name, strlen(schema->name), NULL, 0, schema->module->name,
++                            strlen(schema->module->name), value, value_len, NULL, format, NULL, hints, &node);
++                    LY_CHECK_GOTO(ret, cleanup);
+                     break;
+                 }
+             }
+ 
+             /* create a leaf instance */
+-            LY_CHECK_GOTO(ret = lyd_create_term(schema, value, value_len, 0, store_only, NULL, format, NULL, LYD_HINT_DATA, NULL, &node), cleanup);
++            LY_CHECK_GOTO(ret = lyd_create_term(schema, value, value_len, 0, store_only, NULL, format, NULL,
++                    LYD_HINT_DATA, NULL, &node), cleanup);
+             break;
+         case LYS_ANYDATA:
+         case LYS_ANYXML:
+-- 
+2.43.0
+

@@ -1,0 +1,101 @@
+From 01d983d18bf6edc7d77191432b928feca1fdbafb Mon Sep 17 00:00:00 2001
+From: Michal Vasko <mvasko@cesnet.cz>
+Date: Thu, 16 Jan 2025 09:27:41 +0100
+Subject: [PATCH 02/27] schema compile node BUGFIX proper free on error
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
+
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ src/schema_compile_node.c | 16 +++++++++-------
+ src/tree_schema_free.c    |  9 +--------
+ src/tree_schema_free.h    |  9 +++++++++
+ 3 files changed, 19 insertions(+), 15 deletions(-)
+
+diff --git a/src/schema_compile_node.c b/src/schema_compile_node.c
+index 8807b0f34..b0e56df0f 100644
+--- a/src/schema_compile_node.c
++++ b/src/schema_compile_node.c
+@@ -365,12 +365,12 @@ lysc_range_dup(struct lysc_ctx *ctx, const struct lysc_range *orig, struct ly_se
+     dup = calloc(1, sizeof *dup);
+     LY_CHECK_ERR_RET(!dup, LOGMEM(ctx->ctx), NULL);
+     if (orig->parts) {
+-        LY_ARRAY_CREATE_GOTO(ctx->ctx, dup->parts, LY_ARRAY_COUNT(orig->parts), ret, cleanup);
++        LY_ARRAY_CREATE_GOTO(ctx->ctx, dup->parts, LY_ARRAY_COUNT(orig->parts), ret, error);
+         (*((LY_ARRAY_COUNT_TYPE *)(dup->parts) - 1)) = LY_ARRAY_COUNT(orig->parts);
+         memcpy(dup->parts, orig->parts, LY_ARRAY_COUNT(dup->parts) * sizeof *dup->parts);
+     }
+-    DUP_STRING_GOTO(ctx->ctx, orig->eapptag, dup->eapptag, ret, cleanup);
+-    DUP_STRING_GOTO(ctx->ctx, orig->emsg, dup->emsg, ret, cleanup);
++    DUP_STRING_GOTO(ctx->ctx, orig->eapptag, dup->eapptag, ret, error);
++    DUP_STRING_GOTO(ctx->ctx, orig->emsg, dup->emsg, ret, error);
+ 
+     /* collect all range extensions */
+     if (tpdf_chain->count > tpdf_chain_last) {
+@@ -381,15 +381,17 @@ lysc_range_dup(struct lysc_ctx *ctx, const struct lysc_range *orig, struct ly_se
+             if (!tpdf_item->tpdf->type.range) {
+                 continue;
+             }
+-            COMPILE_EXTS_GOTO(ctx, tpdf_item->tpdf->type.range->exts, dup->exts, dup, ret, cleanup);
++            COMPILE_EXTS_GOTO(ctx, tpdf_item->tpdf->type.range->exts, dup->exts, dup, ret, error);
+         } while (i > tpdf_chain_last);
+     }
+ 
+     return dup;
+ 
+-cleanup:
+-    free(dup);
+-    (void) ret; /* set but not used due to the return type */
++error:
++    if (dup) {
++        lysc_range_free(&ctx->free_ctx, dup);
++        free(dup);
++    }
+     return NULL;
+ }
+ 
+diff --git a/src/tree_schema_free.c b/src/tree_schema_free.c
+index 040872b7e..21e7ed74c 100644
+--- a/src/tree_schema_free.c
++++ b/src/tree_schema_free.c
+@@ -825,14 +825,7 @@ lysc_ident_free(struct lysf_ctx *ctx, struct lysc_ident *ident)
+     FREE_ARRAY(ctx, ident->exts, lysc_ext_instance_free);
+ }
+ 
+-/**
+- * @brief Free the compiled range structure.
+- *
+- * @param[in] ctx Free context.
+- * @param[in,out] range Compiled range structure to be freed.
+- * Since the structure is typically part of the sized array, the structure itself is not freed.
+- */
+-static void
++void
+ lysc_range_free(struct lysf_ctx *ctx, struct lysc_range *range)
+ {
+     LY_ARRAY_FREE(range->parts);
+diff --git a/src/tree_schema_free.h b/src/tree_schema_free.h
+index d79164b9b..f4141ded1 100644
+--- a/src/tree_schema_free.h
++++ b/src/tree_schema_free.h
+@@ -134,6 +134,15 @@ void lysc_ext_instance_free(struct lysf_ctx *ctx, struct lysc_ext_instance *ext)
+  */
+ void lysc_iffeature_free(struct lysf_ctx *ctx, struct lysc_iffeature *iff);
+ 
++/**
++ * @brief Free the compiled range structure.
++ *
++ * @param[in] ctx Free context.
++ * @param[in,out] range Compiled range structure to be freed.
++ * Since the structure is typically part of the sized array, the structure itself is not freed.
++ */
++void lysc_range_free(struct lysf_ctx *ctx, struct lysc_range *range);
++
+ /**
+  * @brief Free a compiled pattern.
+  *
+-- 
+2.43.0
+

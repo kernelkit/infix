@@ -1,0 +1,30 @@
+From d026da64770e533afa593113217dcdba9ac6988c Mon Sep 17 00:00:00 2001
+From: Michal Vasko <mvasko@cesnet.cz>
+Date: Mon, 27 Jan 2025 12:08:16 +0100
+Subject: [PATCH 09/27] tree schema BUGFIX keep user options
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
+
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ src/tree_schema.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/tree_schema.c b/src/tree_schema.c
+index 21e24132e..878d598ef 100644
+--- a/src/tree_schema.c
++++ b/src/tree_schema.c
+@@ -544,7 +544,7 @@ lys_find_xpath(const struct ly_ctx *ctx, const struct lysc_node *ctx_node, const
+     LY_CHECK_ARG_RET(NULL, ctx || ctx_node, xpath, set, LY_EINVAL);
+     LY_CHECK_CTX_EQUAL_RET(ctx, ctx_node ? ctx_node->module->ctx : NULL, LY_EINVAL);
+     if (!(options & LYXP_SCNODE_ALL)) {
+-        options = LYXP_SCNODE;
++        options |= LYXP_SCNODE;
+     }
+     if (!ctx) {
+         ctx = ctx_node->module->ctx;
+-- 
+2.43.0
+

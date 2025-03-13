@@ -1,0 +1,30 @@
+From e5e917cc5fb717c81b64eb122cdc83796d178180 Mon Sep 17 00:00:00 2001
+From: Michal Vasko <mvasko@cesnet.cz>
+Date: Thu, 16 Jan 2025 09:28:40 +0100
+Subject: [PATCH 06/27] VERSION bump to version 3.7.9
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
+
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ CMakeLists.txt | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index f422c6aa3..2808ddfac 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -60,7 +60,7 @@ set (CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+ # set version of the project
+ set(LIBYANG_MAJOR_VERSION 3)
+ set(LIBYANG_MINOR_VERSION 7)
+-set(LIBYANG_MICRO_VERSION 8)
++set(LIBYANG_MICRO_VERSION 9)
+ set(LIBYANG_VERSION ${LIBYANG_MAJOR_VERSION}.${LIBYANG_MINOR_VERSION}.${LIBYANG_MICRO_VERSION})
+ 
+ # set version of the library
+-- 
+2.43.0
+

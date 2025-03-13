@@ -1,0 +1,29 @@
+From 55e1dd1cb6db054a34885ea82e5fa5404817d2d9 Mon Sep 17 00:00:00 2001
+From: Michal Vasko <mvasko@cesnet.cz>
+Date: Thu, 16 Jan 2025 09:27:53 +0100
+Subject: [PATCH 03/27] xpath BUGFIX memory leak
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
+
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ src/xpath.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/src/xpath.c b/src/xpath.c
+index 9594c485a..05dda2dc7 100644
+--- a/src/xpath.c
++++ b/src/xpath.c
+@@ -4972,6 +4972,7 @@ xpath_re_match(struct lyxp_set **args, uint32_t UNUSED(arg_count), struct lyxp_s
+         LOG_LOCBACK(0, 1);
+     }
+     if (rc != LY_SUCCESS) {
++        free(*pattern);
+         LY_ARRAY_FREE(patterns);
+         return rc;
+     }
+-- 
+2.43.0
+

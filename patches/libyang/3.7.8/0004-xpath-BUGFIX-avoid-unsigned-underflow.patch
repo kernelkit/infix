@@ -1,0 +1,46 @@
+From 22a6ddf8a698bfff4baacf8f497d0bbb04d63aaa Mon Sep 17 00:00:00 2001
+From: Michal Vasko <mvasko@cesnet.cz>
+Date: Thu, 16 Jan 2025 09:28:01 +0100
+Subject: [PATCH 04/27] xpath BUGFIX avoid unsigned underflow
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
+
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ src/xpath.c | 18 ++++++++++--------
+ 1 file changed, 10 insertions(+), 8 deletions(-)
+
+diff --git a/src/xpath.c b/src/xpath.c
+index 05dda2dc7..1e7130a8c 100644
+--- a/src/xpath.c
++++ b/src/xpath.c
+@@ -8237,14 +8237,16 @@ moveto:
+             }
+             LY_CHECK_GOTO(rc, cleanup);
+ 
+-            i = set->used;
+-            do {
+-                --i;
+-                if (set->val.scnodes[i].in_ctx > LYXP_SET_SCNODE_ATOM_NODE) {
+-                    found = 1;
+-                    break;
+-                }
+-            } while (i);
++            if (set->used) {
++                i = set->used;
++                do {
++                    --i;
++                    if (set->val.scnodes[i].in_ctx > LYXP_SET_SCNODE_ATOM_NODE) {
++                        found = 1;
++                        break;
++                    }
++                } while (i);
++            }
+             if (!found) {
+                 /* generate message */
+                 eval_name_test_scnode_no_match_msg(set, scparent, ncname, ncname_len, exp->expr, options);
+-- 
+2.43.0
+

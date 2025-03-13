@@ -1,0 +1,65 @@
+From fa13ddb33db1c6300d52305eb2e160eb4f414a84 Mon Sep 17 00:00:00 2001
+From: Michal Vasko <mvasko@cesnet.cz>
+Date: Fri, 31 Jan 2025 15:43:50 +0100
+Subject: [PATCH 27/27] doc UPDATE missing doxygen
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
+
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ src/diff.c | 23 +++++++++++++++++++++++
+ 1 file changed, 23 insertions(+)
+
+diff --git a/src/diff.c b/src/diff.c
+index f0fc54a59..7a2a32cd4 100644
+--- a/src/diff.c
++++ b/src/diff.c
+@@ -2574,6 +2574,13 @@ lyd_diff_merge_all(struct lyd_node **diff, const struct lyd_node *src_diff, uint
+     return lyd_diff_merge_module(diff, src_diff, NULL, NULL, NULL, options);
+ }
+ 
++/**
++ * @brief Reverse diff value meta by switching it for the node value.
++ *
++ * @param[in] node Parent meta node.
++ * @param[in] mod Meta module.
++ * @return LY_ERR value.
++ */
+ static LY_ERR
+ lyd_diff_reverse_value(struct lyd_node *node, const struct lys_module *mod)
+ {
+@@ -2615,6 +2622,13 @@ cleanup:
+     return ret;
+ }
+ 
++/**
++ * @brief Reverse diff default meta by switching it for the node dflt flag.
++ *
++ * @param[in] node Parent meta node.
++ * @param[in] mod Meta module.
++ * @return LY_ERR value.
++ */
+ static LY_ERR
+ lyd_diff_reverse_default(struct lyd_node *node, const struct lys_module *mod)
+ {
+@@ -2647,6 +2661,15 @@ lyd_diff_reverse_default(struct lyd_node *node, const struct lys_module *mod)
+     return LY_SUCCESS;
+ }
+ 
++/**
++ * @brief Reverse diff meta by switching their values.
++ *
++ * @param[in] node Parent meta node.
++ * @param[in] mod Meta module.
++ * @param[in] name1 First meta name.
++ * @param[in] name2 Second meta name.
++ * @return LY_ERR value.
++ */
+ static LY_ERR
+ lyd_diff_reverse_meta(struct lyd_node *node, const struct lys_module *mod, const char *name1, const char *name2)
+ {
+-- 
+2.43.0
+

@@ -1,0 +1,40 @@
+From 06a82f7855e2b6513d81b3cbe2f2f0bdbc817d11 Mon Sep 17 00:00:00 2001
+From: Michal Vasko <mvasko@cesnet.cz>
+Date: Thu, 30 Jan 2025 14:24:13 +0100
+Subject: [PATCH 17/27] printer xml UPDATE print JSON any values
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
+
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ src/printer_xml.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/src/printer_xml.c b/src/printer_xml.c
+index 31c5ad4ca..815dae230 100644
+--- a/src/printer_xml.c
++++ b/src/printer_xml.c
+@@ -463,6 +463,7 @@ no_content:
+             pctx->options = prev_opts;
+             break;
+         case LYD_ANYDATA_STRING:
++        case LYD_ANYDATA_JSON:
+             /* escape XML-sensitive characters */
+             if (!any->value.str[0]) {
+                 goto no_content;
+@@ -478,9 +479,8 @@ no_content:
+             }
+             ly_print_(pctx->out, ">%s", any->value.str);
+             break;
+-        case LYD_ANYDATA_JSON:
+         case LYD_ANYDATA_LYB:
+-            /* JSON and LYB format is not supported */
++            /* LYB format is not supported */
+             LOGWRN(pctx->ctx, "Unable to print anydata content (type %d) as XML.", any->value_type);
+             goto no_content;
+         }
+-- 
+2.43.0
+
