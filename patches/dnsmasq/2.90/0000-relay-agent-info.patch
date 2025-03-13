@@ -27,11 +27,11 @@ Date:   Fri Aug 23 10:52:17 2024 +0200
     
     Signed-off-by: Stefan Schlosser <sgs@grmmbl.org>
 
-diff --git dnsmasq-2.90/src/dhcp.c dnsmasq-2.90/src/dhcp.c
-index b65facd..4c399eb 100644
---- dnsmasq-2.90/src/dhcp.c
-+++ dnsmasq-2.90/src/dhcp.c
-@@ -1117,7 +1117,10 @@ static int relay_upstream4(int iface_index, struct dhcp_packet *mess, size_t sz)
+
+diff -urN dnsmasq-2.90.org/src/dhcp.c dnsmasq-2.90/src/dhcp.c
+--- dnsmasq-2.90.org/src/dhcp.c	2024-02-13 14:49:15.000000000 +0100
++++ dnsmasq-2.90/src/dhcp.c	2025-03-04 09:33:16.593331072 +0100
+@@ -1117,7 +1117,10 @@
  	    /* plug in our address */
  	    mess->giaddr.s_addr = relay->local.addr4.s_addr;
  	  }
@@ -43,22 +43,20 @@ index b65facd..4c399eb 100644
  	to.sa.sa_family = AF_INET;
  	to.in.sin_addr = relay->server.addr4;
  	to.in.sin_port = htons(relay->port);
-diff --git dnsmasq-2.90/src/dnsmasq.h dnsmasq-2.90/src/dnsmasq.h
-index e455c3f..73cb94e 100644
---- dnsmasq-2.90/src/dnsmasq.h
-+++ dnsmasq-2.90/src/dnsmasq.h
-@@ -1902,3 +1902,6 @@ int add_update_server(int flags,
+diff -urN dnsmasq-2.90.org/src/dnsmasq.h dnsmasq-2.90/src/dnsmasq.h
+--- dnsmasq-2.90.org/src/dnsmasq.h	2024-02-13 14:49:15.000000000 +0100
++++ dnsmasq-2.90/src/dnsmasq.h	2025-03-04 09:33:16.594331092 +0100
+@@ -1902,3 +1902,6 @@
  		      const char *interface,
  		      const char *domain,
  		      union all_addr *local_addr); 
 +
 +
 +int add_relay_agent_info(struct dhcp_relay *relay, struct dhcp_packet *mess, size_t sz);
-diff --git dnsmasq-2.90/src/rfc2131.c dnsmasq-2.90/src/rfc2131.c
-index 68834ea..05a4faa 100644
---- dnsmasq-2.90/src/rfc2131.c
-+++ dnsmasq-2.90/src/rfc2131.c
-@@ -2812,4 +2812,129 @@ static void apply_delay(u32 xid, time_t recvtime, struct dhcp_netid *netid)
+diff -urN dnsmasq-2.90.org/src/rfc2131.c dnsmasq-2.90/src/rfc2131.c
+--- dnsmasq-2.90.org/src/rfc2131.c	2024-02-13 14:49:15.000000000 +0100
++++ dnsmasq-2.90/src/rfc2131.c	2025-03-04 09:45:24.652581206 +0100
+@@ -2812,4 +2812,130 @@
      }
  }
  
@@ -149,6 +147,7 @@ index 68834ea..05a4faa 100644
 +  struct dhcp_vendor *vendor;
 +  struct relay_info info;
 +  int ifindex;
++  static unsigned char ifindex_bytes[4];
 +
 +  if (option_find(mess, sz, OPTION_AGENT_ID, 1))
 +    return 0; /* don't alter any existing relay agent info */
@@ -179,9 +178,9 @@ index 68834ea..05a4faa 100644
 +  /* use interface index as circuit-id if not specified */
 +  if (info.circuit.len == 0)
 +    {
-+    ifindex = htonl(relay->iface_index);
-+    info.circuit.data = &ifindex;
-+    info.circuit.len = sizeof(ifindex);
++    memcpy(ifindex_bytes, &ifindex, sizeof(ifindex));
++    info.circuit.data = ifindex_bytes;
++    info.circuit.len = sizeof(ifindex_bytes);
 +    }
 +
 +  return option_add(mess, sz, &info);
