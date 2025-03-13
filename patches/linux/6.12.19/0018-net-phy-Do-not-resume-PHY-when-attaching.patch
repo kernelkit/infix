@@ -1,4 +1,4 @@
-From c6dd269683ee65b1a2879692379fba13cae40bd5 Mon Sep 17 00:00:00 2001
+From 3237ce7378e0ce25950cbfdc323c6e27afd30d86 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Wed, 27 Mar 2024 10:10:19 +0100
 Subject: [PATCH 18/26] net: phy: Do not resume PHY when attaching
@@ -25,7 +25,7 @@ Signed-off-by: Mattias Walström <lazzer@gmail.com>
  1 file changed, 1 deletion(-)
 
 diff --git a/drivers/net/phy/phy_device.c b/drivers/net/phy/phy_device.c
-index 499797646580..0acfef4fe43e 100644
+index 119dfa2d6643..7c7cc6edf314 100644
 --- a/drivers/net/phy/phy_device.c
 +++ b/drivers/net/phy/phy_device.c
 @@ -1634,7 +1634,6 @@ int phy_attach_direct(struct net_device *dev, struct phy_device *phydev,

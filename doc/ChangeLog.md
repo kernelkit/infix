@@ -4,6 +4,14 @@ Change Log
 All notable changes to the project are documented in this file.
 
 
+[v25.03.0][UNRELEASED] -
+-------------------------
+
+### Changes
+ - Upgrade Linux kernel to 6.12.19 (LTS)
+
+### Fixes
+
 [v25.02.0][] - 2025-03-04
 -------------------------
 
