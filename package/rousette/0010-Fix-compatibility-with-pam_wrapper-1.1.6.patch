@@ -1,11 +1,11 @@
 From 64997543d48236cd2aae417568bc54d32c54df21 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Jan=20Kundr=C3=A1t?= <jan.kundrat@cesnet.cz>
 Date: Mon, 2 Dec 2024 14:43:36 +0100
-Subject: [PATCH 10/20] Fix compatibility with pam_wrapper 1.1.6+
+Subject: [PATCH 10/28] Fix compatibility with pam_wrapper 1.1.6+
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
-Organization: Addiva Elektronik
+Organization: Wires
 
 An year ago I reported a bug that the pam_wrapper project says that they
 use a variable called `PAM_WRAPPER_DISABLE_DEEPBIND`, but in fact they

@@ -1,11 +1,11 @@
 From a923f490350dc61b9f3e6000c06c1d7950a78a61 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Jan=20Kundr=C3=A1t?= <jan.kundrat@cesnet.cz>
 Date: Wed, 18 Dec 2024 16:12:14 +0100
-Subject: [PATCH 5/6] DRY: a dummy leaf XPath
+Subject: [PATCH 5/8] DRY: a dummy leaf XPath
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
-Organization: Addiva Elektronik
+Organization: Wires
 
 Change-Id: I47fca61d27380af07b2327f3ee5b984a8a8afb66
 Signed-off-by: Mattias Walström <lazzer@gmail.com>

@@ -1,12 +1,12 @@
 From 60eac2b2d60f8f1918a0914272975dd53f527c01 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Tom=C3=A1=C5=A1=20Pecka?= <tomas.pecka@cesnet.cz>
 Date: Mon, 2 Dec 2024 19:36:10 +0100
-Subject: [PATCH 12/20] tests: extend clientRequest wrappers interface and use
+Subject: [PATCH 12/28] tests: extend clientRequest wrappers interface and use
  it
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
-Organization: Addiva Elektronik
+Organization: Wires
 
 This is a preparation for refactoring in the next few commits.
 I will generalize the clientRequest interface to accept server

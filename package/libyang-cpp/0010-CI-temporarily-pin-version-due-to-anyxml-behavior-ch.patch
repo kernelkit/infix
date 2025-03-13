@@ -1,0 +1,39 @@
+From 82c963766ad4e4a802db7be656acbedb640745e9 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan=20Kundr=C3=A1t?= <jan.kundrat@cesnet.cz>
+Date: Thu, 30 Jan 2025 16:34:12 +0100
+Subject: [PATCH 10/13] CI: temporarily pin version due to anyxml behavior
+ changes upstream
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
+
+Change-Id: Id977f4d045098c1b93656c0efb871c9a1b650e2d
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ .zuul.yaml | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/.zuul.yaml b/.zuul.yaml
+index b41c490..19f0def 100644
+--- a/.zuul.yaml
++++ b/.zuul.yaml
+@@ -4,13 +4,13 @@
+         - f38-gcc-cover:
+             required-projects:
+               - name: github/CESNET/libyang
+-                override-checkout: devel
++                override-checkout: cesnet/2025-01-29
+               - name: github/onqtam/doctest
+                 override-checkout: v2.3.6
+         - f38-clang-asan-ubsan:
+             required-projects: &projects
+               - name: github/CESNET/libyang
+-                override-checkout: devel
++                override-checkout: cesnet/2025-01-29
+               - name: github/onqtam/doctest
+                 override-checkout: v2.4.11
+         - f38-clang-tsan:
+-- 
+2.43.0
+

@@ -1,11 +1,11 @@
 From 23fa270a747c35d65aeeba691599ed6b21b501f0 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Jan=20Kundr=C3=A1t?= <jan.kundrat@cesnet.cz>
 Date: Tue, 29 Oct 2024 15:15:52 +0100
-Subject: [PATCH 1/6] error handling changes in upstream sysrepo
+Subject: [PATCH 1/8] error handling changes in upstream sysrepo
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
-Organization: Addiva Elektronik
+Organization: Wires
 
 Upstream commit 396e331e4634a417420a71ad723567b42d75c443 removed these
 extra error entries.

@@ -1,11 +1,11 @@
 From 01f2633cef60495d5cafc4b4b1f25273b03ab3cd Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Bed=C5=99ich=20Schindler?= <bedrich.schindler@gmail.com>
 Date: Tue, 22 Oct 2024 15:11:30 +0200
-Subject: [PATCH 6/8] schema: Make choice and case statements available
+Subject: [PATCH 06/13] schema: Make choice and case statements available
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
-Organization: Addiva Elektronik
+Organization: Wires
 
 Make choice and case statements available so that they can be accessed
 if end-user requires reading schema nodes.

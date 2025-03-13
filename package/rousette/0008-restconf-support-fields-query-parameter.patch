@@ -1,11 +1,11 @@
 From 6819561d97e38569c319e36ca2e99768036b4032 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Tom=C3=A1=C5=A1=20Pecka?= <tomas.pecka@cesnet.cz>
 Date: Wed, 21 Aug 2024 19:18:08 +0200
-Subject: [PATCH 08/20] restconf: support fields query parameter
+Subject: [PATCH 08/28] restconf: support fields query parameter
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
-Organization: Addiva Elektronik
+Organization: Wires
 
 This patch adds support for fields query parameter [1].
 

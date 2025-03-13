@@ -1,0 +1,30 @@
+From 05274bd27b886e67accc86be7153ed76465b156e Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Tom=C3=A1=C5=A1=20Pecka?= <tomas.pecka@cesnet.cz>
+Date: Wed, 15 Jan 2025 17:56:26 +0100
+Subject: [PATCH 23/28] restconf: add missing pragma once
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
+
+Change-Id: I6d337c99351e24226fb322a40ba2e96655104860
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ src/restconf/NotificationStream.h | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/src/restconf/NotificationStream.h b/src/restconf/NotificationStream.h
+index 6840f11..3029a0d 100644
+--- a/src/restconf/NotificationStream.h
++++ b/src/restconf/NotificationStream.h
+@@ -5,6 +5,7 @@
+  *
+  */
+ 
++#pragma once
+ #include <optional>
+ #include <sysrepo-cpp/Session.hpp>
+ #include <sysrepo-cpp/Subscription.hpp>
+-- 
+2.43.0
+

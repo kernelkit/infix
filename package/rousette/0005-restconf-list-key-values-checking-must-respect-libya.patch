@@ -1,12 +1,12 @@
 From 8b13c1e4ccaa61a241674c27063439e257fa88de Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Tom=C3=A1=C5=A1=20Pecka?= <tomas.pecka@cesnet.cz>
 Date: Wed, 2 Oct 2024 20:21:28 +0200
-Subject: [PATCH 05/20] restconf: list key values checking must respect
+Subject: [PATCH 05/28] restconf: list key values checking must respect
  libyang's canonicalization
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
-Organization: Addiva Elektronik
+Organization: Wires
 
 While dealing with the issue that was fixed in the previous commit we
 realized that the issue is deeper. Not only that our parser rejected

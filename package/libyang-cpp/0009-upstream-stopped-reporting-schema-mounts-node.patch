@@ -1,11 +1,11 @@
 From 39c7530caa510144c17521278b721ba1e6d8ff40 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Tom=C3=A1=C5=A1=20Pecka?= <tomas.pecka@cesnet.cz>
 Date: Thu, 9 Jan 2025 15:31:37 +0100
-Subject: [PATCH 8/8] upstream stopped reporting schema-mounts node
+Subject: [PATCH 09/13] upstream stopped reporting schema-mounts node
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
-Organization: Addiva Elektronik
+Organization: Wires
 
 Change-Id: I940769d38d56fcfda3e1408c92331fdb00c161e9
 Signed-off-by: Mattias Walström <lazzer@gmail.com>

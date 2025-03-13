@@ -1,11 +1,11 @@
 From f2db30721d909d127645721f4149de0cd36d2b1c Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Jan=20Kundr=C3=A1t?= <jan.kundrat@cesnet.cz>
 Date: Tue, 17 Dec 2024 11:41:10 +0100
-Subject: [PATCH 4/6] refactor: don't use `module` as a variable name
+Subject: [PATCH 4/8] refactor: don't use `module` as a variable name
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
-Organization: Addiva Elektronik
+Organization: Wires
 
 ...to unify stuff with all other occurrences, and to not use that magic
 identifier.

@@ -1,11 +1,11 @@
 From 1102ecdcafbc9206f59b383769687e418557838e Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Bed=C5=99ich=20Schindler?= <bedrich.schindler@gmail.com>
 Date: Mon, 25 Nov 2024 15:54:02 +0100
-Subject: [PATCH 5/8] schema: make leaf-list's `default` statement available
+Subject: [PATCH 05/13] schema: make leaf-list's `default` statement available
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
-Organization: Addiva Elektronik
+Organization: Wires
 
 Make leaf-list's `default` statement available so that it can be
 accessed if end-user requires reading schema nodes.

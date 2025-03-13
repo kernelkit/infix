@@ -1,11 +1,11 @@
 From 8a233202647f24538f2bbb8fff1e38d52e3599a4 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Tom=C3=A1=C5=A1=20Pecka?= <tomas.pecka@cesnet.cz>
 Date: Wed, 16 Oct 2024 11:05:09 +0200
-Subject: [PATCH 03/20] uri: correct x3 rule class names
+Subject: [PATCH 03/28] uri: correct x3 rule class names
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
-Organization: Addiva Elektronik
+Organization: Wires
 
 Fixes: e06d5bf ("server: parser for data resources in URI paths")
 Change-Id: Ic953e568d841032113ede1c0e896574361c0ebe2

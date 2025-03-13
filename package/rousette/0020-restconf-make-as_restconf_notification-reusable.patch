@@ -1,11 +1,11 @@
 From ed0ff23f7ad341d663484f0b2a617cd3bc4923c8 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Tom=C3=A1=C5=A1=20Pecka?= <tomas.pecka@cesnet.cz>
 Date: Tue, 3 Dec 2024 19:27:49 +0100
-Subject: [PATCH 20/20] restconf: make as_restconf_notification reusable
+Subject: [PATCH 20/28] restconf: make as_restconf_notification reusable
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
-Organization: Addiva Elektronik
+Organization: Wires
 
 The YANG-PUSH notifications are supposed to be wrapped in this too, so
 this needs to be accessible from multiple places.

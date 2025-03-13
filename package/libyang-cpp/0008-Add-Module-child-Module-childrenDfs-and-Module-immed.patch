@@ -1,0 +1,652 @@
+From 32b200ed06e9adb44a8d4ce6771f18812a54d06e Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Bed=C5=99ich=20Schindler?= <bedrich.schindler@gmail.com>
+Date: Wed, 20 Nov 2024 10:20:19 +0100
+Subject: [PATCH 08/13] Add `Module::child()`, `Module::childrenDfs()` and
+ `Module::immediateChildren()`
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
+
+Those functions are implemented in the same manner as in `SchemaNode`
+and allows to walk through modules children. This is counterpart to
+already implemented `Module::childInstantiables()` that returns
+instantiables schema nodes. These return all nodes, including
+the schema-only nodes such as choice and case if end-user needs
+to read its schema.
+
+While the implementation is inspired by functions in `SchemaNode`,
+imlementation of `Module::parent()` and `Module::siblings()` was omitted
+as those do no make sense on `Module`.
+
+Change-Id: I38c8374304f859d65343d04d08302e07deb05f27
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ include/libyang-cpp/Collection.hpp |   1 +
+ include/libyang-cpp/Module.hpp     |   5 +
+ src/Module.cpp                     |  40 +++
+ tests/context.cpp                  |   5 +
+ tests/example_schema.hpp           |  21 ++
+ tests/schema_node.cpp              | 409 +++++++++++++++++++----------
+ 6 files changed, 346 insertions(+), 135 deletions(-)
+
+diff --git a/include/libyang-cpp/Collection.hpp b/include/libyang-cpp/Collection.hpp
+index 557a0a2..4324791 100644
+--- a/include/libyang-cpp/Collection.hpp
++++ b/include/libyang-cpp/Collection.hpp
+@@ -98,6 +98,7 @@ class LIBYANG_CPP_EXPORT Collection {
+ public:
+     friend DataNode;
+     friend Iterator<NodeType, ITER_TYPE>;
++    friend Module;
+     friend SchemaNode;
+     ~Collection();
+     Collection(const Collection<NodeType, ITER_TYPE>&);
+diff --git a/include/libyang-cpp/Module.hpp b/include/libyang-cpp/Module.hpp
+index f10c36f..ab20d36 100644
+--- a/include/libyang-cpp/Module.hpp
++++ b/include/libyang-cpp/Module.hpp
+@@ -34,6 +34,8 @@ class ChildInstanstiables;
+ class Identity;
+ class SchemaNode;
+ class SubmoduleParsed;
++template <typename NodeType, IterationType ITER_TYPE>
++class Collection;
+ 
+ namespace types {
+ class IdentityRef;
+@@ -86,7 +88,10 @@ public:
+ 
+     std::vector<Identity> identities() const;
+ 
++    std::optional<SchemaNode> child() const;
+     ChildInstanstiables childInstantiables() const;
++    libyang::Collection<SchemaNode, IterationType::Dfs> childrenDfs() const;
++    Collection<SchemaNode, IterationType::Sibling> immediateChildren() const;
+     std::vector<SchemaNode> actionRpcs() const;
+ 
+     std::string printStr(const SchemaOutputFormat format, const std::optional<SchemaPrintFlags> flags = std::nullopt, std::optional<size_t> lineLength = std::nullopt) const;
+diff --git a/src/Module.cpp b/src/Module.cpp
+index 4dc9e3b..d6d4023 100644
+--- a/src/Module.cpp
++++ b/src/Module.cpp
+@@ -8,6 +8,7 @@
+ 
+ #include <algorithm>
+ #include <libyang-cpp/ChildInstantiables.hpp>
++#include <libyang-cpp/Collection.hpp>
+ #include <libyang-cpp/Module.hpp>
+ #include <libyang-cpp/Utils.hpp>
+ #include <libyang/libyang.h>
+@@ -178,6 +179,23 @@ std::vector<Identity> Module::identities() const
+     return res;
+ }
+ 
++/**
++ * @brief Returns the first child node of this module.
++ * @return The child, or std::nullopt if there are no children.
++ */
++std::optional<SchemaNode> Module::child() const
++{
++    if (!m_module->implemented) {
++        throw Error{"Module::child: module is not implemented"};
++    }
++
++    if (!m_module->compiled->data) {
++        return std::nullopt;
++    }
++
++    return SchemaNode{m_module->compiled->data, m_ctx};
++}
++
+ /**
+  * @brief Returns a collection of data instantiable top-level nodes of this module.
+  *
+@@ -191,6 +209,28 @@ ChildInstanstiables Module::childInstantiables() const
+     return ChildInstanstiables{nullptr, m_module->compiled, m_ctx};
+ }
+ 
++/**
++ * @brief Returns a collection for iterating depth-first over the subtree this module points to.
++ */
++Collection<SchemaNode, IterationType::Dfs> Module::childrenDfs() const
++{
++    if (!m_module->implemented) {
++        throw Error{"Module::childrenDfs: module is not implemented"};
++    }
++    return Collection<SchemaNode, IterationType::Dfs>{m_module->compiled->data, m_ctx};
++}
++
++/**
++ * @brief Returns a collection for iterating over the immediate children of where this module points to.
++ *
++ * This is a convenience function for iterating over this->child().siblings() which does not throw even when module has no children.
++ */
++Collection<SchemaNode, IterationType::Sibling> Module::immediateChildren() const
++{
++    auto c = child();
++    return c ? c->siblings() : Collection<SchemaNode, IterationType::Sibling>{nullptr, nullptr};
++}
++
+ /**
+  * @brief Returns a collection of RPC nodes (not action nodes) as SchemaNode
+  *
+diff --git a/tests/context.cpp b/tests/context.cpp
+index 5929b75..25343db 100644
+--- a/tests/context.cpp
++++ b/tests/context.cpp
+@@ -713,6 +713,11 @@ TEST_CASE("context")
+   +--rw anydataWithMandatoryChild       anydata
+   +--rw anyxmlBasic?                    anyxml
+   +--rw anyxmlWithMandatoryChild        anyxml
++  +--rw (choiceOnModule)?
++  |  +--:(case1)
++  |  |  +--rw choiceOnModuleLeaf1?   string
++  |  +--:(case2)
++  |     +--rw choiceOnModuleLeaf2?   string
+   +--rw choiceBasicContainer
+   |  +--rw (choiceBasic)?
+   |     +--:(case1)
+diff --git a/tests/example_schema.hpp b/tests/example_schema.hpp
+index ae3b4de..0d8acb9 100644
+--- a/tests/example_schema.hpp
++++ b/tests/example_schema.hpp
+@@ -390,6 +390,19 @@ module type_module {
+         mandatory true;
+     }
+ 
++    choice choiceOnModule {
++        case case1 {
++            leaf choiceOnModuleLeaf1 {
++                type string;
++            }
++        }
++        case case2 {
++            leaf choiceOnModuleLeaf2 {
++                type string;
++            }
++        }
++    }
++
+     container choiceBasicContainer {
+         choice choiceBasic {
+             case case1 {
+@@ -787,6 +800,14 @@ module type_module {
+ }
+ )"s;
+ 
++const auto empty_module = R"(
++module empty_module {
++    yang-version 1.1;
++    namespace "e";
++    prefix "e";
++}
++)"s;
++
+ const auto with_inet_types_module = R"(
+ module with-inet-types {
+   yang-version 1.1;
+diff --git a/tests/schema_node.cpp b/tests/schema_node.cpp
+index 8d74bd2..0001377 100644
+--- a/tests/schema_node.cpp
++++ b/tests/schema_node.cpp
+@@ -24,8 +24,10 @@ TEST_CASE("SchemaNode")
+         libyang::ContextOptions::SetPrivParsed | libyang::ContextOptions::NoYangLibrary | libyang::ContextOptions::DisableSearchCwd};
+     ctx->parseModule(example_schema, libyang::SchemaFormat::YANG);
+     ctx->parseModule(type_module, libyang::SchemaFormat::YANG);
++    ctx->parseModule(empty_module, libyang::SchemaFormat::YANG);
+     ctxWithParsed->parseModule(example_schema, libyang::SchemaFormat::YANG);
+     ctxWithParsed->parseModule(type_module, libyang::SchemaFormat::YANG);
++    ctxWithParsed->parseModule(empty_module, libyang::SchemaFormat::YANG);
+ 
+     DOCTEST_SUBCASE("context lifetime")
+     {
+@@ -74,10 +76,34 @@ TEST_CASE("SchemaNode")
+         REQUIRE(node->schema().path() == "/example-schema:person");
+     }
+ 
+-    DOCTEST_SUBCASE("SchemaNode::child")
++    DOCTEST_SUBCASE("child")
+     {
+-        REQUIRE(ctx->findPath("/type_module:listAdvancedWithTwoKey").child()->name() == "first");
+-        REQUIRE(!ctx->findPath("/type_module:leafString").child().has_value());
++        DOCTEST_SUBCASE("implemented module")
++        {
++            DOCTEST_SUBCASE("SchemaNode::child")
++            {
++                REQUIRE(ctx->findPath("/type_module:listAdvancedWithTwoKey").child()->name() == "first");
++                REQUIRE(!ctx->findPath("/type_module:leafString").child().has_value());
++            }
++
++            DOCTEST_SUBCASE("Module::child")
++            {
++                REQUIRE(ctx->getModule("type_module", std::nullopt)->child()->name() == "anydataBasic");
++                REQUIRE(!ctx->getModule("empty_module", std::nullopt)->child());
++            }
++        }
++
++        DOCTEST_SUBCASE("unimplemented module")
++        {
++            DOCTEST_SUBCASE("Module::child")
++            {
++                ctx->setSearchDir(TESTS_DIR / "yang");
++                auto modYangPatch = ctx->loadModule("ietf-yang-patch", std::nullopt);
++                auto modRestconf = ctx->getModule("ietf-restconf", "2017-01-26");
++                REQUIRE(!modRestconf->implemented());
++                REQUIRE_THROWS_WITH_AS(modRestconf->child(), "Module::child: module is not implemented", libyang::Error);
++            }
++        }
+     }
+ 
+     DOCTEST_SUBCASE("SchemaNode::config")
+@@ -160,162 +186,275 @@ TEST_CASE("SchemaNode")
+ 
+     DOCTEST_SUBCASE("childInstantiables")
+     {
+-        std::vector<std::string> expectedPaths;
+-        std::optional<libyang::ChildInstanstiables> children;
+-
+-        DOCTEST_SUBCASE("SchemaNode::childInstantiables")
++        DOCTEST_SUBCASE("implemented module")
+         {
+-            expectedPaths = {
+-                "/type_module:listAdvancedWithOneKey/lol",
+-                "/type_module:listAdvancedWithOneKey/notKey1",
+-                "/type_module:listAdvancedWithOneKey/notKey2",
+-                "/type_module:listAdvancedWithOneKey/notKey3",
+-                "/type_module:listAdvancedWithOneKey/notKey4",
+-            };
++            std::vector<std::string> expectedPaths;
++            std::optional<libyang::ChildInstanstiables> children;
++
++            DOCTEST_SUBCASE("SchemaNode::childInstantiables")
++            {
++                expectedPaths = {
++                    "/type_module:listAdvancedWithOneKey/lol",
++                    "/type_module:listAdvancedWithOneKey/notKey1",
++                    "/type_module:listAdvancedWithOneKey/notKey2",
++                    "/type_module:listAdvancedWithOneKey/notKey3",
++                    "/type_module:listAdvancedWithOneKey/notKey4",
++                };
++
++                children = ctx->findPath("/type_module:listAdvancedWithOneKey").childInstantiables();
++            }
+ 
+-            children = ctx->findPath("/type_module:listAdvancedWithOneKey").childInstantiables();
+-        }
++            DOCTEST_SUBCASE("Module::childInstantiables")
++            {
++                expectedPaths = {
++                    "/type_module:anydataBasic",
++                    "/type_module:anydataWithMandatoryChild",
++                    "/type_module:anyxmlBasic",
++                    "/type_module:anyxmlWithMandatoryChild",
++                    "/type_module:choiceOnModuleLeaf1",
++                    "/type_module:choiceOnModuleLeaf2",
++                    "/type_module:choiceBasicContainer",
++                    "/type_module:choiceWithMandatoryContainer",
++                    "/type_module:choiceWithDefaultContainer",
++                    "/type_module:implicitCaseContainer",
++                    "/type_module:leafBinary",
++                    "/type_module:leafBits",
++                    "/type_module:leafEnum",
++                    "/type_module:leafEnum2",
++                    "/type_module:leafNumber",
++                    "/type_module:leafRef",
++                    "/type_module:leafRefRelaxed",
++                    "/type_module:leafString",
++                    "/type_module:leafUnion",
++                    "/type_module:meal",
++                    "/type_module:leafWithConfigFalse",
++                    "/type_module:leafWithDefaultValue",
++                    "/type_module:leafWithDescription",
++                    "/type_module:leafWithMandatoryTrue",
++                    "/type_module:leafWithStatusDeprecated",
++                    "/type_module:leafWithStatusObsolete",
++                    "/type_module:leafWithUnits",
++                    "/type_module:iid-valid",
++                    "/type_module:iid-relaxed",
++                    "/type_module:leafListBasic",
++                    "/type_module:leafListWithDefault",
++                    "/type_module:leafListWithMinMaxElements",
++                    "/type_module:leafListWithUnits",
++                    "/type_module:listBasic",
++                    "/type_module:listAdvancedWithOneKey",
++                    "/type_module:listAdvancedWithTwoKey",
++                    "/type_module:listWithMinMaxElements",
++                    "/type_module:numeric",
++                    "/type_module:container",
++                    "/type_module:containerWithMandatoryChild",
++                };
++                children = ctx->getModule("type_module", std::nullopt)->childInstantiables();
++            }
+ 
+-        DOCTEST_SUBCASE("Module::childInstantiables")
+-        {
+-            expectedPaths = {
+-                "/type_module:anydataBasic",
+-                "/type_module:anydataWithMandatoryChild",
+-                "/type_module:anyxmlBasic",
+-                "/type_module:anyxmlWithMandatoryChild",
+-                "/type_module:choiceBasicContainer",
+-                "/type_module:choiceWithMandatoryContainer",
+-                "/type_module:choiceWithDefaultContainer",
+-                "/type_module:implicitCaseContainer",
+-                "/type_module:leafBinary",
+-                "/type_module:leafBits",
+-                "/type_module:leafEnum",
+-                "/type_module:leafEnum2",
+-                "/type_module:leafNumber",
+-                "/type_module:leafRef",
+-                "/type_module:leafRefRelaxed",
+-                "/type_module:leafString",
+-                "/type_module:leafUnion",
+-                "/type_module:meal",
+-                "/type_module:leafWithConfigFalse",
+-                "/type_module:leafWithDefaultValue",
+-                "/type_module:leafWithDescription",
+-                "/type_module:leafWithMandatoryTrue",
+-                "/type_module:leafWithStatusDeprecated",
+-                "/type_module:leafWithStatusObsolete",
+-                "/type_module:leafWithUnits",
+-                "/type_module:iid-valid",
+-                "/type_module:iid-relaxed",
+-                "/type_module:leafListBasic",
+-                "/type_module:leafListWithDefault",
+-                "/type_module:leafListWithMinMaxElements",
+-                "/type_module:leafListWithUnits",
+-                "/type_module:listBasic",
+-                "/type_module:listAdvancedWithOneKey",
+-                "/type_module:listAdvancedWithTwoKey",
+-                "/type_module:listWithMinMaxElements",
+-                "/type_module:numeric",
+-                "/type_module:container",
+-                "/type_module:containerWithMandatoryChild",
+-            };
+-            children = ctx->getModule("type_module", std::nullopt)->childInstantiables();
+-        }
++            std::vector<std::string> actualPaths;
++            for (const auto& child : *children) {
++                actualPaths.emplace_back(child.path());
++            }
+ 
+-        std::vector<std::string> actualPaths;
+-        for (const auto& child : *children) {
+-            actualPaths.emplace_back(child.path());
++            REQUIRE(expectedPaths == actualPaths);
+         }
+ 
+-        REQUIRE(expectedPaths == actualPaths);
++        DOCTEST_SUBCASE("unimplemented module")
++        {
++            DOCTEST_SUBCASE("Module::childInstantiables")
++            {
++                ctx->setSearchDir(TESTS_DIR / "yang");
++                auto modYangPatch = ctx->loadModule("ietf-yang-patch", std::nullopt);
++                auto modRestconf = ctx->getModule("ietf-restconf", "2017-01-26");
++                REQUIRE(!modRestconf->implemented());
++                REQUIRE_THROWS_WITH_AS(modRestconf->childInstantiables(), "Module::childInstantiables: module is not implemented", libyang::Error);
++            }
++        }
+     }
+ 
+-    DOCTEST_SUBCASE("SchemaNode::childrenDfs")
++    DOCTEST_SUBCASE("childrenDfs")
+     {
+-        std::vector<std::string> expectedPaths;
++        DOCTEST_SUBCASE("implemented module")
++        {
++            std::vector<std::string> expectedPaths;
++            std::optional<libyang::Collection<libyang::SchemaNode, libyang::IterationType::Dfs>> children;
+ 
+-        const char* path;
++            DOCTEST_SUBCASE("SchemaNode::childrenDfs")
++            {
++                DOCTEST_SUBCASE("listAdvancedWithTwoKey")
++                {
++                    expectedPaths = {
++                        "/type_module:listAdvancedWithTwoKey",
++                        "/type_module:listAdvancedWithTwoKey/first",
++                        "/type_module:listAdvancedWithTwoKey/second",
++                    };
++                    children = ctx->findPath("/type_module:listAdvancedWithTwoKey").childrenDfs();
++                }
+ 
+-        DOCTEST_SUBCASE("listAdvancedWithTwoKey")
+-        {
+-            expectedPaths = {
+-                "/type_module:listAdvancedWithTwoKey",
+-                "/type_module:listAdvancedWithTwoKey/first",
+-                "/type_module:listAdvancedWithTwoKey/second",
+-            };
++                DOCTEST_SUBCASE("DFS on a leaf")
++                {
++                    expectedPaths = {
++                        "/type_module:leafString",
++                    };
++                    children = ctx->findPath("/type_module:leafString").childrenDfs();
++                }
++            }
+ 
+-            path = "/type_module:listAdvancedWithTwoKey";
+-        }
++            DOCTEST_SUBCASE("Module::childrenDfs")
++            {
++                expectedPaths = {
++                    "/type_module:anydataBasic",
++                };
++                children = ctx->getModule("type_module", std::nullopt)->childrenDfs();
++            }
+ 
+-        DOCTEST_SUBCASE("DFS on a leaf")
+-        {
+-            expectedPaths = {
+-                "/type_module:leafString",
+-            };
++            std::vector<std::string> actualPaths;
++            for (const auto& it : *children) {
++                actualPaths.emplace_back(it.path());
++            }
+ 
+-            path = "/type_module:leafString";
++            REQUIRE(actualPaths == expectedPaths);
+         }
+ 
+-        std::vector<std::string> actualPaths;
+-        for (const auto& it : ctx->findPath(path).childrenDfs()) {
+-            actualPaths.emplace_back(it.path());
++        DOCTEST_SUBCASE("unimplemented module")
++        {
++            DOCTEST_SUBCASE("Module::childrenDfs")
++            {
++                ctx->setSearchDir(TESTS_DIR / "yang");
++                auto modYangPatch = ctx->loadModule("ietf-yang-patch", std::nullopt);
++                auto modRestconf = ctx->getModule("ietf-restconf", "2017-01-26");
++                REQUIRE(!modRestconf->implemented());
++                REQUIRE_THROWS_WITH_AS(modRestconf->childrenDfs(), "Module::childrenDfs: module is not implemented", libyang::Error);
++            }
+         }
+-
+-        REQUIRE(actualPaths == expectedPaths);
+     }
+ 
+-    DOCTEST_SUBCASE("SchemaNode::immediateChildren")
++    DOCTEST_SUBCASE("immediateChildren")
+     {
+-        std::vector<std::string> expectedPaths;
+-        const char* path;
+-        DOCTEST_SUBCASE("listAdvancedWithTwoKey")
+-        {
+-            expectedPaths = {
+-                "/type_module:listAdvancedWithTwoKey/first",
+-                "/type_module:listAdvancedWithTwoKey/second",
+-            };
+-            path = "/type_module:listAdvancedWithTwoKey";
+-        }
+-        DOCTEST_SUBCASE("leaf")
++        DOCTEST_SUBCASE("implemented module")
+         {
+-            expectedPaths = {
+-            };
+-            path = "/type_module:leafString";
+-        }
+-        DOCTEST_SUBCASE("no recursion")
+-        {
+-            expectedPaths = {
+-                "/type_module:container/x",
+-                "/type_module:container/y",
+-                "/type_module:container/z",
+-            };
+-            path = "/type_module:container";
+-        }
+-        DOCTEST_SUBCASE("empty container")
+-        {
+-            expectedPaths = {
+-            };
+-            path = "/type_module:container/y";
+-        }
+-        DOCTEST_SUBCASE("one item")
+-        {
+-            expectedPaths = {
+-                "/type_module:container/z/z1",
+-            };
+-            path = "/type_module:container/z";
++            std::vector<std::string> expectedPaths;
++            std::optional<libyang::Collection<libyang::SchemaNode, libyang::IterationType::Sibling>> children;
++
++            DOCTEST_SUBCASE("SchemaNode::immediateChildren")
++            {
++                DOCTEST_SUBCASE("listAdvancedWithTwoKey")
++                {
++                    expectedPaths = {
++                        "/type_module:listAdvancedWithTwoKey/first",
++                        "/type_module:listAdvancedWithTwoKey/second",
++                    };
++                    children = ctx->findPath("/type_module:listAdvancedWithTwoKey").immediateChildren();
++                }
++                DOCTEST_SUBCASE("leaf")
++                {
++                    expectedPaths = {};
++                    children = ctx->findPath("/type_module:leafString").immediateChildren();
++                }
++                DOCTEST_SUBCASE("no recursion")
++                {
++                    expectedPaths = {
++                        "/type_module:container/x",
++                        "/type_module:container/y",
++                        "/type_module:container/z",
++                    };
++                    children = ctx->findPath("/type_module:container").immediateChildren();
++                }
++                DOCTEST_SUBCASE("empty container")
++                {
++                    expectedPaths = {};
++                    children = ctx->findPath("/type_module:container/y").immediateChildren();
++                }
++                DOCTEST_SUBCASE("one item")
++                {
++                    expectedPaths = {
++                        "/type_module:container/z/z1",
++                    };
++                    children = ctx->findPath("/type_module:container/z").immediateChildren();
++                }
++                DOCTEST_SUBCASE("two items")
++                {
++                    expectedPaths = {
++                        "/type_module:container/x/x1",
++                        "/type_module:container/x/x2",
++                    };
++                    children = ctx->findPath("/type_module:container/x").immediateChildren();
++                }
++            }
++
++            DOCTEST_SUBCASE("Module::immediateChildren")
++            {
++                expectedPaths = {
++                    "/type_module:anydataBasic",
++                    "/type_module:anydataWithMandatoryChild",
++                    "/type_module:anyxmlBasic",
++                    "/type_module:anyxmlWithMandatoryChild",
++                    // choiceOnModule is a choice, so it doesn't have path "/type_module:choiceOnModule".
++                    // This node is tested at the end of the test subcase.
++                    "/",
++                    "/type_module:choiceBasicContainer",
++                    "/type_module:choiceWithMandatoryContainer",
++                    "/type_module:choiceWithDefaultContainer",
++                    "/type_module:implicitCaseContainer",
++                    "/type_module:leafBinary",
++                    "/type_module:leafBits",
++                    "/type_module:leafEnum",
++                    "/type_module:leafEnum2",
++                    "/type_module:leafNumber",
++                    "/type_module:leafRef",
++                    "/type_module:leafRefRelaxed",
++                    "/type_module:leafString",
++                    "/type_module:leafUnion",
++                    "/type_module:meal",
++                    "/type_module:leafWithConfigFalse",
++                    "/type_module:leafWithDefaultValue",
++                    "/type_module:leafWithDescription",
++                    "/type_module:leafWithMandatoryTrue",
++                    "/type_module:leafWithStatusDeprecated",
++                    "/type_module:leafWithStatusObsolete",
++                    "/type_module:leafWithUnits",
++                    "/type_module:iid-valid",
++                    "/type_module:iid-relaxed",
++                    "/type_module:leafListBasic",
++                    "/type_module:leafListWithDefault",
++                    "/type_module:leafListWithMinMaxElements",
++                    "/type_module:leafListWithUnits",
++                    "/type_module:listBasic",
++                    "/type_module:listAdvancedWithOneKey",
++                    "/type_module:listAdvancedWithTwoKey",
++                    "/type_module:listWithMinMaxElements",
++                    "/type_module:numeric",
++                    "/type_module:container",
++                    "/type_module:containerWithMandatoryChild",
++                };
++                children = ctx->getModule("type_module", std::nullopt)->immediateChildren();
++
++                std::vector<std::string> actualNames;
++                for (auto it : children.value()) {
++                    actualNames.emplace_back(it.name());
++                }
++                // choiceOnModule is a choice, so it doesn't have path, just name.
++                REQUIRE(actualNames[4] == "choiceOnModule");
++            }
++
++            std::vector<std::string> actualPaths;
++            for (const auto& it : *children) {
++                actualPaths.emplace_back(it.path());
++            }
++            REQUIRE(actualPaths == expectedPaths);
+         }
+-        DOCTEST_SUBCASE("two items")
++
++        DOCTEST_SUBCASE("unimplemented module")
+         {
+-            expectedPaths = {
+-                "/type_module:container/x/x1",
+-                "/type_module:container/x/x2",
+-            };
+-            path = "/type_module:container/x";
+-        }
+-        std::vector<std::string> actualPaths;
+-        for (const auto& it : ctx->findPath(path).immediateChildren()) {
+-            actualPaths.emplace_back(it.path());
++            DOCTEST_SUBCASE("Module::immediateChildren")
++            {
++                ctx->setSearchDir(TESTS_DIR / "yang");
++                auto modYangPatch = ctx->loadModule("ietf-yang-patch", std::nullopt);
++                auto modRestconf = ctx->getModule("ietf-restconf", "2017-01-26");
++                REQUIRE(!modRestconf->implemented());
++                REQUIRE_THROWS_WITH_AS(modRestconf->immediateChildren(), "Module::child: module is not implemented", libyang::Error);
++            }
+         }
+-        REQUIRE(actualPaths == expectedPaths);
+     }
+ 
+     DOCTEST_SUBCASE("SchemaNode::siblings")
+-- 
+2.43.0
+

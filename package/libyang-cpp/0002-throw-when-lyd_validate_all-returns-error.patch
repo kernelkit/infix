@@ -1,11 +1,11 @@
 From 7e015f3486bdbb54f1dcc2e2ce51102b1d623081 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Tom=C3=A1=C5=A1=20Pecka?= <tomas.pecka@cesnet.cz>
 Date: Wed, 23 Oct 2024 12:52:24 +0200
-Subject: [PATCH 2/8] throw when lyd_validate_all returns error
+Subject: [PATCH 02/13] throw when lyd_validate_all returns error
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
-Organization: Addiva Elektronik
+Organization: Wires
 
 Bug: https://github.com/CESNET/libyang-cpp/issues/20
 Change-Id: I005a2f1b057978573a4046e7b4cc31d77e36fde3

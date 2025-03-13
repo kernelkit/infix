@@ -1,0 +1,67 @@
+From 8d406728a53c2e77a4fe7393b7e30d42b8f9b9bb Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan=20Kundr=C3=A1t?= <jan.kundrat@cesnet.cz>
+Date: Thu, 30 Jan 2025 15:40:22 +0100
+Subject: [PATCH 13/13] Adapt to upstream changes in anyxml JSON printing
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
+
+Change-Id: I5f6de28cebc95a446549017c2768b450f4fd6526
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ .zuul.yaml          | 4 ++--
+ CMakeLists.txt      | 3 ++-
+ tests/data_node.cpp | 2 +-
+ 3 files changed, 5 insertions(+), 4 deletions(-)
+
+diff --git a/.zuul.yaml b/.zuul.yaml
+index 19f0def..b41c490 100644
+--- a/.zuul.yaml
++++ b/.zuul.yaml
+@@ -4,13 +4,13 @@
+         - f38-gcc-cover:
+             required-projects:
+               - name: github/CESNET/libyang
+-                override-checkout: cesnet/2025-01-29
++                override-checkout: devel
+               - name: github/onqtam/doctest
+                 override-checkout: v2.3.6
+         - f38-clang-asan-ubsan:
+             required-projects: &projects
+               - name: github/CESNET/libyang
+-                override-checkout: cesnet/2025-01-29
++                override-checkout: devel
+               - name: github/onqtam/doctest
+                 override-checkout: v2.4.11
+         - f38-clang-tsan:
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 512af8c..a40fd52 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -29,7 +29,8 @@ option(WITH_DOCS "Create and install internal documentation (needs Doxygen)" ${D
+ option(BUILD_SHARED_LIBS "By default, shared libs are enabled. Turn off for a static build." ON)
+ 
+ find_package(PkgConfig REQUIRED)
+-pkg_check_modules(LIBYANG REQUIRED libyang>=3.7.8 IMPORTED_TARGET)
++# FIXME: it's actually 3.7.12, but that hasn't been released yet
++pkg_check_modules(LIBYANG REQUIRED libyang>=3.7.11 IMPORTED_TARGET)
+ 
+ # FIXME from gcc 14.1 on we should be able to use the calendar/time from libstdc++ and thus remove the date dependency
+ find_package(date)
+diff --git a/tests/data_node.cpp b/tests/data_node.cpp
+index 45fd6c1..14470dd 100644
+--- a/tests/data_node.cpp
++++ b/tests/data_node.cpp
+@@ -1568,7 +1568,7 @@ TEST_CASE("Data Node manipulation")
+                 REQUIRE(*jsonAnyXmlNode.createdNode->printStr(libyang::DataFormat::JSON, libyang::PrintFlags::Shrink | libyang::PrintFlags::WithSiblings)
+                         == R"|({"example-schema:ax":[1,2,3]})|"s);
+                 REQUIRE(*jsonAnyXmlNode.createdNode->printStr(libyang::DataFormat::XML, libyang::PrintFlags::Shrink | libyang::PrintFlags::WithSiblings)
+-                        == R"|(<ax xmlns="http://example.com/coze"/>)|"s);
++                        == R"|(<ax xmlns="http://example.com/coze">)|"s + origJSON + "</ax>");
+             }
+ 
+             REQUIRE(!!val);
+-- 
+2.43.0
+

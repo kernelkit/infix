@@ -1,11 +1,11 @@
 From 490d8bb242d33213b948485f5b94c55e22cf86a6 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Jan=20Kundr=C3=A1t?= <jan.kundrat@cesnet.cz>
 Date: Thu, 21 Nov 2024 11:32:44 +0100
-Subject: [PATCH 3/8] remove a misleading comment
+Subject: [PATCH 03/13] remove a misleading comment
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
-Organization: Addiva Elektronik
+Organization: Wires
 
 The whole intention within action's input/output handling here was to
 put some emphasis on the fact that we aren't tracking the input/output

@@ -1,11 +1,11 @@
 From 36943051d8563bee0c9cf89eec28acf5d3617272 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Tom=C3=A1=C5=A1=20Pecka?= <tomas.pecka@cesnet.cz>
 Date: Tue, 3 Dec 2024 12:02:24 +0100
-Subject: [PATCH 17/20] tests: helper function to construct server URI
+Subject: [PATCH 17/28] tests: helper function to construct server URI
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
-Organization: Addiva Elektronik
+Organization: Wires
 
 Change-Id: Ic7c03b32a29b07464291f99027530010a7902f77
 Signed-off-by: Mattias Walström <lazzer@gmail.com>

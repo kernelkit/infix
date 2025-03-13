@@ -1,11 +1,11 @@
 From f86df829979a26d5192a86c3b43c1393dcba7140 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Tom=C3=A1=C5=A1=20Pecka?= <tomas.pecka@cesnet.cz>
 Date: Tue, 3 Dec 2024 11:45:41 +0100
-Subject: [PATCH 15/20] tests: rename NotificationWatcher
+Subject: [PATCH 15/28] tests: rename NotificationWatcher
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
-Organization: Addiva Elektronik
+Organization: Wires
 
 This watches notifications going through RESTCONF, so I think
 RestconfNotificatonWatcher is better name for this.

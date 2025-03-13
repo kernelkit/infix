@@ -1,11 +1,11 @@
 From 552a366990fe1fe2cdd8d155fa5cecb3ff3fbc13 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Jan=20Kundr=C3=A1t?= <jan.kundrat@cesnet.cz>
 Date: Wed, 4 Dec 2024 15:51:41 +0100
-Subject: [PATCH 3/6] We don't support sysrepo v3 yet
+Subject: [PATCH 3/8] We don't support sysrepo v3 yet
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
-Organization: Addiva Elektronik
+Organization: Wires
 
 That version introduced some backward-incompatible changes to the way
 how operational data are treated, especially in presence of "discards"
