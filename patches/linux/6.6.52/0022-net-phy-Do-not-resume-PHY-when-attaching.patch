@@ -1,8 +1,8 @@
 From cdddc24c05cedc0d0fabc48da17ec26aeb7c1ef9 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Wed, 27 Mar 2024 10:10:19 +0100
-Subject: [PATCH 22/35] net: phy: Do not resume PHY when attaching
-Organization: Addiva Elektronik
+Subject: [PATCH 22/36] net: phy: Do not resume PHY when attaching
+Organization: Wires
 
 The PHY should not start negotiating with its link-partner until
 explicitly instructed to do so.

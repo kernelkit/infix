@@ -1,8 +1,8 @@
 From a5cf5c0353db07e74d7a29dd4d5c2cb7775d5bec Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Thu, 16 Nov 2023 21:59:35 +0100
-Subject: [PATCH 10/35] net: dsa: mv88e6xxx: Add LED support for 6393X
-Organization: Addiva Elektronik
+Subject: [PATCH 10/36] net: dsa: mv88e6xxx: Add LED support for 6393X
+Organization: Wires
 
 Trigger support:
 - "none"

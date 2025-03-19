@@ -1,9 +1,9 @@
 From ceaaa4f44f9b3ec82c4e0a24c2322aae58fa3aa0 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Wed, 6 Nov 2024 15:39:33 +0100
-Subject: [PATCH 34/35] net: dsa: mb88e6xxx: use EOPNOTSUPP for unsupported
+Subject: [PATCH 34/36] net: dsa: mb88e6xxx: use EOPNOTSUPP for unsupported
  flags
-Organization: Addiva Elektronik
+Organization: Wires
 
 Make sure to return correct error code for unsupported flags, and
 propagate any error.
