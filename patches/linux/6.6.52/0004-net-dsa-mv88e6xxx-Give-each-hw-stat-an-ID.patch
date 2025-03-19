@@ -1,8 +1,8 @@
 From 5916503e23e7f85796c1f927747e66b9535bac53 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Thu, 14 Dec 2023 14:50:25 +0100
-Subject: [PATCH 04/35] net: dsa: mv88e6xxx: Give each hw stat an ID
-Organization: Addiva Elektronik
+Subject: [PATCH 04/36] net: dsa: mv88e6xxx: Give each hw stat an ID
+Organization: Wires
 
 With the upcoming standard counter group support, we are no longer
 reading out the whole set of counters, but rather mapping a subset to

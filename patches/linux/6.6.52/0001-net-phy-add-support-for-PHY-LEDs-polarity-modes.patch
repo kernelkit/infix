@@ -1,8 +1,8 @@
 From 4be3e500b670f7b98e3dd6696b8e51e83f122c65 Mon Sep 17 00:00:00 2001
 From: Christian Marangi <ansuelsmth@gmail.com>
 Date: Thu, 25 Jan 2024 21:36:59 +0100
-Subject: [PATCH 01/35] net: phy: add support for PHY LEDs polarity modes
-Organization: Addiva Elektronik
+Subject: [PATCH 01/36] net: phy: add support for PHY LEDs polarity modes
+Organization: Wires
 
 Add support for PHY LEDs polarity modes. Some PHY require LED to be set
 to active low to be turned ON. Adds support for this by declaring
