@@ -99,7 +99,7 @@ jobs:
       - name: Build ${{ matrix.target }}${{ steps.vars.outputs.flv }}
         run: |
           echo "Building ${{ matrix.target }}${{ steps.vars.outputs.flv }}_defconfig ..."
-          make
+          make -j$((2 * `getconf _NPROCESSORS_ONLN`))
 
       - name:  Check SBOM from Build
         run: |
