@@ -43,6 +43,7 @@ MODULES=(
 	"infix-interfaces@2025-01-09.yang -e vlan-filtering"
 	"infix-crypto-types@2025-02-04.yang"
 	"infix-keystore@2025-02-04.yang"
+	"infix-test@2024-08-16.yang"
 
 	# from rousette
 	"ietf-restconf@2017-01-26.yang"
