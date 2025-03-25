@@ -349,17 +349,17 @@
     </PARAM>
     <ACTION sym="script" in="tty" out="tty" interrupt="true">
     if [ -z "$KLISH_PARAM_name" ]; then
-       doas vtysh -c "show ip ospf" |pager
+       doas vtysh -c "show-legacy ip ospf" |pager
     elif [ "$KLISH_PARAM_name" == "neighbor" ];then
-       doas vtysh -c "show ip ospf neighbor" |pager
+       doas vtysh -c "show-legacy ip ospf neighbor" |pager
     elif [ "$KLISH_PARAM_name" == "interfaces" ];then
-       doas vtysh -c "show ip ospf interface" |pager
+       doas vtysh -c "show-legacy ip ospf interface" |pager
     elif [ "$KLISH_PARAM_name" == "routes" ];then
-       doas vtysh -c "show ip ospf route" |pager
+       doas vtysh -c "show-legacy ip ospf route" |pager
     elif [ "$KLISH_PARAM_name" == "database" ];then
-       doas vtysh -c "show ip ospf database" |pager
+       doas vtysh -c "show-legacy ip ospf database" |pager
     elif [ "$KLISH_PARAM_name" == "bfd" ];then
-       doas vtysh -c "show bfd peers" |pager
+       doas vtysh -c "show-legacy bfd peers" |pager
     fi
     </ACTION>
   </COMMAND>
@@ -380,7 +380,7 @@
           KLISH_PARAM_ip=ipv6
           ;;
       esac
-      show -p $KLISH_PARAM_ip route |pager
+      show-legacy -p $KLISH_PARAM_ip route |pager
     </ACTION>
   </COMMAND>
 
@@ -437,7 +437,7 @@
 
       <COMMAND name="route" help="Show IPv4 routing table" mode="switch">
         <ACTION sym="script" in="tty" out="tty" interrupt="true">
-          show -p ip route |pager
+          show-legacy -p ip route |pager
         </ACTION>
       </COMMAND>
     </SWITCH>
@@ -451,7 +451,7 @@
     <SWITCH name="optional" min="0">
       <COMMAND name="route" help="Show IPv6 routing table" mode="switch">
         <ACTION sym="script" in="tty" out="tty" interrupt="true">
-          show -p ipv6 route |pager
+          show-legacy -p ipv6 route |pager
         </ACTION>
       </COMMAND>
     </SWITCH>
