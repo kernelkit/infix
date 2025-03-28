@@ -39,6 +39,11 @@ err()
     [ "$rc" -eq 0 ] || exit "$rc"
 }
 
+pidfn()
+{
+    echo "/run/containers/${1}.pid"
+}
+
 check()
 {
     file=$1
@@ -235,7 +240,7 @@ create()
     args="$args --read-only --replace --quiet --cgroup-parent=containers $caps"
     args="$args --restart=$restart --systemd=false --tz=local $privileged"
     args="$args $vol $mount $hostname $entrypoint $env $port $logging"
-    pidfn=/run/container:${name}.pid
+    pidfile=/run/container:${name}.pid
 
     [ -n "$quiet" ] || log "---------------------------------------"
     [ -n "$quiet" ] || log "Got name: $name image: $image"
@@ -258,8 +263,8 @@ create()
     fi
 
     # shellcheck disable=SC2048
-    log "podman create --name $name --conmon-pidfile=$pidfn $args $image $*"
-    if podman create --name "$name" --conmon-pidfile="$pidfn" $args "$image" $*; then
+    log "podman create --name $name --conmon-pidfile=$pidfile $args $image $*"
+    if podman create --name "$name" --conmon-pidfile="$pidfile" $args "$image" $*; then
 	[ -n "$quiet"  ] || log "Successfully created container $name from $image"
 	[ -n "$manual" ] || start "$name"
 
@@ -340,6 +345,24 @@ wrap()
 {
     name=$1
     cmd=$2
+    pidfile=$(pidfn "$name")
+
+    # Containers have three phases: setup, running, and teardown.
+
+    # The setup phase may run forever in the background trying to fetch
+    # the image.  It saves its PID in /run/containers/${name}.pid
+    if [ "$cmd" = "stop" ] && [ -f "$pidfile" ]; then
+        pid=$(cat "$pidfile")
+
+	# Check if setup is still running ...
+	if kill -0 "$pid" 2>/dev/null; then
+            kill "$pid"
+            wait "$pid" 2>/dev/null
+        fi
+
+        rm -f "$pidfile"
+        return 0
+    fi
 
     # Skip "echo $name" from podman start in log
     podman "$cmd" "$name" >/dev/null
@@ -375,7 +398,14 @@ netrestart()
 
 cleanup()
 {
+    pidfile=$(pidfn "$name")
+
     log "Received signal, exiting."
+    if [ -n "$name" ] && [ -f "$pidfile" ]; then
+	log "$name: in setup phase, removing $pidfile ..."
+	rm -f "$pidfile"
+    fi
+
     exit 1
 }
 
@@ -574,7 +604,7 @@ if [ -n "$cmd" ]; then
     shift
 fi
 
-trap cleanup INT TERM
+trap cleanup INT HUP TERM
 
 case $cmd in
     # Does not work atm., cannot attach to TTY because
@@ -710,6 +740,12 @@ case $cmd in
 	[ -n "$name" ] || err 1 "setup: missing container name."
 	script=/run/containers/${name}.sh
 	[ -x "$script" ] || err 1 "setup: $script does not exist or is not executable."
+
+	# Save our PID in case we get stuck here and someone wants to
+	# stop us, e.g., due to reconfiguration or reboot.
+	pidfile=$(pidfn "${name}")
+	echo $$ > "$pidfile"
+
 	while ! "$script"; do
             log "${name}: setup failed, waiting for network changes ..."
 	    read -t 60 _ < <(ip monitor address route)
@@ -719,6 +755,8 @@ case $cmd in
 	    log "${name}: retrying ..."
 	    sleep 2
 	done
+
+	rm -f "$pidfile"
 	;;
     shell)
 	if [ -z "$name" ]; then
