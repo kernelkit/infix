@@ -6,7 +6,9 @@ All notable changes to the project are documented in this file.
 
 [v25.03.0][UNRELEASED] -
 -------------------------
-**News:** this release is the first with the new Buildroot LTS (2025.02)
+
+> [!IMPORTANT]
+> This release is the first with the new Buildroot 2025.02 (LTS)
 
 ### Changes
  - Upgrade Linux kernel to 6.12.21 (LTS)
@@ -14,6 +16,10 @@ All notable changes to the project are documented in this file.
 
 ### Fixes
  - Fix #964: YANG schema warning in syslog: missing 'monitor' node for lag
+ - Fix #980: the system fails to reboot when a container is (stuck), for
+   whatever reason, in its 'setup' state
+ - Fix #990: web console, ttyd service, stopped working after upgrade to
+   Buildroot 2025.02, caused by new (missing) option `--writable`
 
 
 [v25.02.0][] - 2025-03-04
