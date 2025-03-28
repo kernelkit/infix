@@ -125,7 +125,7 @@ jobs:
           cd output/
           mv images ${{ steps.vars.outputs.dir }}
           ln -s ${{ steps.vars.outputs.dir }} images
-          tar chfz ${{ steps.vars.outputs.tgz }} ${{ steps.vars.outputs.dir }}
+          tar cfz ${{ steps.vars.outputs.tgz }} ${{ steps.vars.outputs.dir }}
 
       - uses: actions/upload-artifact@v4
         with:
