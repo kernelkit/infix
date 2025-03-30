@@ -13,6 +13,8 @@ All notable changes to the project are documented in this file.
  - Upgrade Buildroot to 2025.02.0 (LTS)
 
 ### Fixes
+ - Fix #964: YANG schema warning in syslog: missing 'monitor' node for lag
+
 
 [v25.02.0][] - 2025-03-04
 -------------------------

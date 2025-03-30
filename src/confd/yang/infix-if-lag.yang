@@ -21,6 +21,11 @@ submodule infix-if-lag {
   contact      "kernelkit@googlegroups.com";
   description  "Linux link aggregates (lag) for ietf-interfaces.";
 
+  revision 2025-03-28 {
+    description "Drop unused must expressions for link and arp monitor.";
+    reference "internal";
+  }
+
   revision 2025-01-09 {
     description "Initial revision.";
     reference "internal";
@@ -264,16 +269,6 @@ submodule infix-if-lag {
             units "milliseconds";
           }
         }
-      }
-
-      must "not(./mode = 'lacp' and ./monitor/arp-monitor/interval > 0)" {
-        error-message "ARP monitor cannot be enabled in LACP mode.";
-        description "The Linux bond driver disables miimon when arpmon != 0.";
-      }
-
-      must "not(./mode = 'lacp' and ./monitor/link-monitor/interval = 0)" {
-        error-message "Link monitor must be enabled in LACP mode.";
-        description "The Linux bond driver requires miimon in 802.3ad mode.";
       }
     }
   }
