@@ -1,4 +1,4 @@
-From 0f20677a9c7ad86776b1edb0421c3e3a38d81b11 Mon Sep 17 00:00:00 2001
+From 86b1608084c6e9676db0641f31203d8067893470 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Thu, 16 Nov 2023 19:44:32 +0100
 Subject: [PATCH 05/26] net: dsa: mv88e6xxx: Add LED infrastructure
@@ -34,7 +34,7 @@ index a9a9651187db..6720d9303914 100644
  mv88e6xxx-objs += pcs-6352.o
  mv88e6xxx-objs += pcs-639x.o
 diff --git a/drivers/net/dsa/mv88e6xxx/chip.c b/drivers/net/dsa/mv88e6xxx/chip.c
-index 98bd635b0ba9..97cebc490fac 100644
+index cdf48fae0623..0a7858280903 100644
 --- a/drivers/net/dsa/mv88e6xxx/chip.c
 +++ b/drivers/net/dsa/mv88e6xxx/chip.c
 @@ -37,6 +37,7 @@
@@ -45,7 +45,7 @@ index 98bd635b0ba9..97cebc490fac 100644
  #include "phy.h"
  #include "port.h"
  #include "ptp.h"
-@@ -4115,7 +4116,9 @@ static int mv88e6xxx_port_setup(struct dsa_switch *ds, int port)
+@@ -4145,7 +4146,9 @@ static int mv88e6xxx_port_setup(struct dsa_switch *ds, int port)
  			return err;
  	}
  

@@ -1,4 +1,4 @@
-From a96464b50f25bb90c7d0dd0bbbde0db2d95dde98 Mon Sep 17 00:00:00 2001
+From 70c1d59448db0ec88c07fa4ff5748b0df740a8d2 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Tue, 28 May 2024 11:04:22 +0200
 Subject: [PATCH 11/26] net: dsa: mv88e6xxx: Add mqprio qdisc support
@@ -35,7 +35,7 @@ Signed-off-by: Mattias Walström <lazzer@gmail.com>
  2 files changed, 73 insertions(+), 1 deletion(-)
 
 diff --git a/drivers/net/dsa/mv88e6xxx/chip.c b/drivers/net/dsa/mv88e6xxx/chip.c
-index 3151df2a27c7..f50ad71bb28b 100644
+index e05caeabdc85..ad997818047e 100644
 --- a/drivers/net/dsa/mv88e6xxx/chip.c
 +++ b/drivers/net/dsa/mv88e6xxx/chip.c
 @@ -31,6 +31,7 @@
@@ -46,7 +46,7 @@ index 3151df2a27c7..f50ad71bb28b 100644
  
  #include "chip.h"
  #include "devlink.h"
-@@ -7126,6 +7127,68 @@ static int mv88e6xxx_port_del_etype_prio(struct dsa_switch *ds, int port,
+@@ -7163,6 +7164,68 @@ static int mv88e6xxx_port_del_etype_prio(struct dsa_switch *ds, int port,
  	return err;
  }
  
@@ -115,7 +115,7 @@ index 3151df2a27c7..f50ad71bb28b 100644
  static const struct phylink_mac_ops mv88e6xxx_phylink_mac_ops = {
  	.mac_select_pcs		= mv88e6xxx_mac_select_pcs,
  	.mac_prepare		= mv88e6xxx_mac_prepare,
-@@ -7197,6 +7260,7 @@ static const struct dsa_switch_ops mv88e6xxx_switch_ops = {
+@@ -7234,6 +7297,7 @@ static const struct dsa_switch_ops mv88e6xxx_switch_ops = {
  	.crosschip_lag_leave	= mv88e6xxx_crosschip_lag_leave,
  	.port_add_etype_prio	= mv88e6xxx_port_add_etype_prio,
  	.port_del_etype_prio	= mv88e6xxx_port_del_etype_prio,
@@ -123,7 +123,7 @@ index 3151df2a27c7..f50ad71bb28b 100644
  };
  
  static int mv88e6xxx_register_switch(struct mv88e6xxx_chip *chip)
-@@ -7223,6 +7287,12 @@ static int mv88e6xxx_register_switch(struct mv88e6xxx_chip *chip)
+@@ -7260,6 +7324,12 @@ static int mv88e6xxx_register_switch(struct mv88e6xxx_chip *chip)
  	 */
  	ds->num_lag_ids = mv88e6xxx_has_lag(chip) ? 16 : 0;
  

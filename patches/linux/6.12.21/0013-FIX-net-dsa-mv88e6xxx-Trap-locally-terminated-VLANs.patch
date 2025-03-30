@@ -1,4 +1,4 @@
-From 83feadaef63052c98987bfb6d6623a55a095f852 Mon Sep 17 00:00:00 2001
+From 373d60426de6d19fd668e1e0b599ca430f351a18 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Tue, 26 Nov 2024 19:45:59 +0100
 Subject: [PATCH 13/26] [FIX] net: dsa: mv88e6xxx: Trap locally terminated
@@ -36,10 +36,10 @@ Signed-off-by: Mattias Walström <lazzer@gmail.com>
  3 files changed, 27 insertions(+), 14 deletions(-)
 
 diff --git a/drivers/net/dsa/mv88e6xxx/chip.c b/drivers/net/dsa/mv88e6xxx/chip.c
-index 2a46bf5f3da8..785cd3d0e2b1 100644
+index 40e8d2018fee..30f8a5388733 100644
 --- a/drivers/net/dsa/mv88e6xxx/chip.c
 +++ b/drivers/net/dsa/mv88e6xxx/chip.c
-@@ -2631,7 +2631,7 @@ static int mv88e6xxx_port_broadcast_sync(struct mv88e6xxx_chip *chip, int port,
+@@ -2654,7 +2654,7 @@ static int mv88e6xxx_port_broadcast_sync(struct mv88e6xxx_chip *chip, int port,
  }
  
  static int mv88e6xxx_port_vlan_join(struct mv88e6xxx_chip *chip, int port,
@@ -48,7 +48,7 @@ index 2a46bf5f3da8..785cd3d0e2b1 100644
  {
  	const u8 non_member = MV88E6XXX_G1_VTU_DATA_MEMBER_TAG_NON_MEMBER;
  	struct mv88e6xxx_vtu_entry vlan;
-@@ -2643,9 +2643,7 @@ static int mv88e6xxx_port_vlan_join(struct mv88e6xxx_chip *chip, int port,
+@@ -2666,9 +2666,7 @@ static int mv88e6xxx_port_vlan_join(struct mv88e6xxx_chip *chip, int port,
  
  	if (!vlan.valid) {
  		memset(&vlan, 0, sizeof(vlan));
@@ -59,7 +59,7 @@ index 2a46bf5f3da8..785cd3d0e2b1 100644
  
  		err = mv88e6xxx_atu_new(chip, &vlan.fid);
  		if (err)
-@@ -2668,6 +2666,9 @@ static int mv88e6xxx_port_vlan_join(struct mv88e6xxx_chip *chip, int port,
+@@ -2691,6 +2689,9 @@ static int mv88e6xxx_port_vlan_join(struct mv88e6xxx_chip *chip, int port,
  		if (err)
  			return err;
  	} else if (vlan.member[port] != member) {
@@ -69,7 +69,7 @@ index 2a46bf5f3da8..785cd3d0e2b1 100644
  		vlan.member[port] = member;
  
  		err = mv88e6xxx_vtu_loadpurge(chip, &vlan);
-@@ -2714,7 +2715,8 @@ static int mv88e6xxx_port_vlan_add(struct dsa_switch *ds, int port,
+@@ -2737,7 +2738,8 @@ static int mv88e6xxx_port_vlan_add(struct dsa_switch *ds, int port,
  
  	mv88e6xxx_reg_lock(chip);
  
@@ -79,7 +79,7 @@ index 2a46bf5f3da8..785cd3d0e2b1 100644
  	if (err) {
  		dev_err(ds->dev, "p%d: failed to add VLAN %d%c\n", port,
  			vlan->vid, untagged ? 'u' : 't');
-@@ -3454,14 +3456,17 @@ static int mv88e6xxx_setup_port(struct mv88e6xxx_chip *chip, int port)
+@@ -3484,14 +3486,17 @@ static int mv88e6xxx_setup_port(struct mv88e6xxx_chip *chip, int port)
  	if (err)
  		return err;
  
@@ -104,7 +104,7 @@ index 2a46bf5f3da8..785cd3d0e2b1 100644
  	    chip->info->ops->port_set_policy) {
  		err = chip->info->ops->port_set_policy(chip, port,
  						MV88E6XXX_POLICY_MAPPING_VTU,
-@@ -3491,7 +3496,7 @@ static int mv88e6xxx_setup_port(struct mv88e6xxx_chip *chip, int port)
+@@ -3521,7 +3526,7 @@ static int mv88e6xxx_setup_port(struct mv88e6xxx_chip *chip, int port)
  	 */
  	err = mv88e6xxx_port_vlan_join(chip, port, MV88E6XXX_VID_STANDALONE,
  				       MV88E6XXX_G1_VTU_DATA_MEMBER_TAG_UNMODIFIED,
@@ -113,7 +113,7 @@ index 2a46bf5f3da8..785cd3d0e2b1 100644
  	if (err)
  		return err;
  
-@@ -3505,7 +3510,7 @@ static int mv88e6xxx_setup_port(struct mv88e6xxx_chip *chip, int port)
+@@ -3535,7 +3540,7 @@ static int mv88e6xxx_setup_port(struct mv88e6xxx_chip *chip, int port)
  	 */
  	err = mv88e6xxx_port_vlan_join(chip, port, MV88E6XXX_VID_BRIDGED,
  				       MV88E6XXX_G1_VTU_DATA_MEMBER_TAG_UNMODIFIED,

@@ -1,4 +1,4 @@
-From 69630914e982d5ac1ddde9b36798d1f80f6d1e4d Mon Sep 17 00:00:00 2001
+From 823687aa03d866f3b76b5e40e35fa56c7f6f4492 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Wed, 12 Feb 2025 22:03:14 +0100
 Subject: [PATCH 26/26] net: dsa: mv88e6xxx: Only activate LAG offloading when
@@ -56,10 +56,10 @@ Signed-off-by: Mattias Walström <lazzer@gmail.com>
  1 file changed, 20 insertions(+), 22 deletions(-)
 
 diff --git a/drivers/net/dsa/mv88e6xxx/chip.c b/drivers/net/dsa/mv88e6xxx/chip.c
-index 785cd3d0e2b1..37e79d52c175 100644
+index 30f8a5388733..c1f8adaa008a 100644
 --- a/drivers/net/dsa/mv88e6xxx/chip.c
 +++ b/drivers/net/dsa/mv88e6xxx/chip.c
-@@ -3065,6 +3065,7 @@ static int mv88e6xxx_port_bridge_join(struct dsa_switch *ds, int port,
+@@ -3095,6 +3095,7 @@ static int mv88e6xxx_port_bridge_join(struct dsa_switch *ds, int port,
  				      struct netlink_ext_ack *extack)
  {
  	struct mv88e6xxx_chip *chip = ds->priv;
@@ -67,7 +67,7 @@ index 785cd3d0e2b1..37e79d52c175 100644
  	int err;
  
  	mv88e6xxx_reg_lock(chip);
-@@ -3073,6 +3074,13 @@ static int mv88e6xxx_port_bridge_join(struct dsa_switch *ds, int port,
+@@ -3103,6 +3104,13 @@ static int mv88e6xxx_port_bridge_join(struct dsa_switch *ds, int port,
  	if (err)
  		goto unlock;
  
@@ -81,7 +81,7 @@ index 785cd3d0e2b1..37e79d52c175 100644
  	err = mv88e6xxx_port_set_map_da(chip, port, true);
  	if (err)
  		goto unlock;
-@@ -3117,6 +3125,14 @@ static void mv88e6xxx_port_bridge_leave(struct dsa_switch *ds, int port,
+@@ -3147,6 +3155,14 @@ static void mv88e6xxx_port_bridge_leave(struct dsa_switch *ds, int port,
  			"port %d failed to restore map-DA: %pe\n",
  			port, ERR_PTR(err));
  
@@ -96,7 +96,7 @@ index 785cd3d0e2b1..37e79d52c175 100644
  	err = mv88e6xxx_port_commit_pvid(chip, port);
  	if (err)
  		dev_err(ds->dev,
-@@ -6992,30 +7008,13 @@ static int mv88e6xxx_port_lag_join(struct dsa_switch *ds, int port,
+@@ -7029,30 +7045,13 @@ static int mv88e6xxx_port_lag_join(struct dsa_switch *ds, int port,
  				   struct netlink_ext_ack *extack)
  {
  	struct mv88e6xxx_chip *chip = ds->priv;
@@ -128,7 +128,7 @@ index 785cd3d0e2b1..37e79d52c175 100644
  	mv88e6xxx_reg_unlock(chip);
  	return err;
  }
-@@ -7024,13 +7023,12 @@ static int mv88e6xxx_port_lag_leave(struct dsa_switch *ds, int port,
+@@ -7061,13 +7060,12 @@ static int mv88e6xxx_port_lag_leave(struct dsa_switch *ds, int port,
  				    struct dsa_lag lag)
  {
  	struct mv88e6xxx_chip *chip = ds->priv;

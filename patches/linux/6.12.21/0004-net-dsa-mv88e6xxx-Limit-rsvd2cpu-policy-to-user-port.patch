@@ -1,4 +1,4 @@
-From 28aba5404165db8a16fabbfa00ae201713aca7ff Mon Sep 17 00:00:00 2001
+From 6cbb6a0a54d81ff5b117b023ac7e251ab1e9c556 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Wed, 24 Apr 2024 22:41:04 +0200
 Subject: [PATCH 04/26] net: dsa: mv88e6xxx: Limit rsvd2cpu policy to user
