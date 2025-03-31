@@ -1,4 +1,4 @@
-From f5833370f8886f6c7e247752179d6c98c7b55d87 Mon Sep 17 00:00:00 2001
+From 6bd6c3c49c438e35d61669879b64b6c4a00d1a19 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Wed, 27 Mar 2024 15:52:43 +0100
 Subject: [PATCH 02/26] net: dsa: mv88e6xxx: Improve indirect register access
@@ -27,10 +27,10 @@ Signed-off-by: Mattias Walström <lazzer@gmail.com>
  5 files changed, 119 insertions(+)
 
 diff --git a/drivers/net/dsa/mv88e6xxx/chip.c b/drivers/net/dsa/mv88e6xxx/chip.c
-index 1f0b0c07ed9d..f9d892d036be 100644
+index 2565277582c5..7ba492ee5c86 100644
 --- a/drivers/net/dsa/mv88e6xxx/chip.c
 +++ b/drivers/net/dsa/mv88e6xxx/chip.c
-@@ -6472,6 +6472,13 @@ static int mv88e6xxx_detect(struct mv88e6xxx_chip *chip)
+@@ -6502,6 +6502,13 @@ static int mv88e6xxx_detect(struct mv88e6xxx_chip *chip)
  	/* Update the compatible info with the probed one */
  	chip->info = info;
  

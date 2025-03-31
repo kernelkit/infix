@@ -9,7 +9,7 @@ All notable changes to the project are documented in this file.
 **News:** this release is the first with the new Buildroot LTS (2025.02)
 
 ### Changes
- - Upgrade Linux kernel to 6.12.19 (LTS)
+ - Upgrade Linux kernel to 6.12.21 (LTS)
  - Upgrade Buildroot to 2025.02.0 (LTS)
 
 ### Fixes
