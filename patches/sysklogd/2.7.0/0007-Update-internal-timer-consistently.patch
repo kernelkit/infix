@@ -1,0 +1,44 @@
+From b5b4a4ecb893dd643fb25763fb9c6f6ca972725e Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Sun, 2 Mar 2025 13:56:46 +0100
+Subject: [PATCH 07/16] Update internal timer consistently
+Organization: Wires
+
+Timer is already updated by parsemsg() before calling logmsg().  For
+consistency, add explicit update also to printsys() (kernel) and
+flog() (internally originated) messages.
+
+Issue #70
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ src/syslogd.c | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/src/syslogd.c b/src/syslogd.c
+index 5a40732..1737f7c 100644
+--- a/src/syslogd.c
++++ b/src/syslogd.c
+@@ -1467,6 +1467,9 @@ void printsys(char *msg)
+ 	char *lp, *p, *q;
+ 	int c;
+ 
++	/* Update current time before logging */
++	timer_update();
++
+ 	lp = line;
+ 	for (p = msg; *p != '\0';) {
+ 		memset(&buffer, 0, sizeof(buffer));
+@@ -2669,6 +2672,9 @@ void flog(int pri, char *fmt, ...)
+ 	char proc_id[10];
+ 	va_list ap;
+ 
++	/* Update current time before logging */
++	timer_update();
++
+ 	va_start(ap, fmt);
+ 	(void)vsnprintf(buf, sizeof(buf), fmt, ap);
+ 	va_end(ap);
+-- 
+2.43.0
+

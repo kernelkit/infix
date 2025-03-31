@@ -1,0 +1,99 @@
+From 8cdf4b0c4b9914b8b7aa1c1c1d76dad0fa429115 Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Sat, 1 Mar 2025 09:23:01 +0100
+Subject: [PATCH 06/16] Fix #93: update documentation on behavior of -T flag
+Organization: Wires
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ man/syslogd.8 | 17 ++++++++++-------
+ src/syslogd.c | 10 +++++-----
+ 2 files changed, 15 insertions(+), 12 deletions(-)
+
+diff --git a/man/syslogd.8 b/man/syslogd.8
+index f3e6ad2..7534529 100644
+--- a/man/syslogd.8
++++ b/man/syslogd.8
+@@ -411,10 +411,13 @@ the command line option always wins, so it must be removed for
+ .Nm
+ to consider the .conf file option instead.
+ .It Fl T
+-Always use the local time and date for messages received from the network,
+-instead of the timestamp field supplied in the message by the remote host.
+-This is useful if some of the originating hosts cannot keep time properly
+-or are unable to generate a correct timestamp.
++Always use the local time and date for messages instead of the timestamp
++field in the log message.  This applies to both messages received from a
++remote syslog server and locally originated.  Useful if the originating
++hosts cannot keep time properly or are unable to generate a correct
++timestamp.  See
++.Fl t
++for details on the timestamp of (local) kernel messages.
+ .It Fl t
+ Keep (trust) kernel timestamp.
+ .Pp
+@@ -472,9 +475,9 @@ API included with the
+ .Nm sysklogd
+ project.
+ .Pp
+-The date and time are taken from the received message.  If the format of
+-the timestamp field is incorrect, time obtained from the local host is
+-used instead.  This can be overridden by the
++The date and time for a log message are by default read from the
++received message.  If the format of the timestamp field is incorrect,
++the time of reception is used instead.  See also the
+ .Fl T
+ flag.
+ .Sh SECURITY
+diff --git a/src/syslogd.c b/src/syslogd.c
+index b52af73..5a40732 100644
+--- a/src/syslogd.c
++++ b/src/syslogd.c
+@@ -148,7 +148,7 @@ static int	  no_compress;		  /* don't compress messages (1=pipes, 2=all) */
+ static int	  secure_opt;		  /* sink for others, log to remote, or only unix domain socks */
+ static int	  secure_mode;		  /* same as above but from syslog.conf, only if cmdline unset */
+ 
+-static int	  RemoteAddDate;	  /* Always set the date on remote messages */
++static int	  AlwaysAddDate;	  /* Always use our timestamp for log messages */
+ static int	  RemoteHostname;	  /* Log remote hostname from the message */
+ 
+ static int	  KernLog = 1;		  /* Track kernel logs by default */
+@@ -458,7 +458,7 @@ int usage(int code)
+ 	       "            If specified twice, no socket at all will be opened, which also\n"
+ 	       "            disables support for logging to remote machines.\n"
+ 	       "  -t        Keep kernel timestamp, even after initial ring buffer emptying\n"
+-	       "  -T        Use local time and date for messages received from remote hosts\n"
++	       "  -T        Use local time and date for log messages (both local and remote)\n"
+ 	       "  -?        Show this help text\n"
+ 	       "  -v        Show program version and exit\n"
+ 	       "\n"
+@@ -585,7 +585,7 @@ int main(int argc, char *argv[])
+ 			break;
+ 
+ 		case 'T':
+-			RemoteAddDate = 1;
++			AlwaysAddDate = 1;
+ 			break;
+ 
+ 		case 't':	/* keep/trust kernel timestamp always */
+@@ -1129,7 +1129,7 @@ parsemsg_rfc5424(const char *from, int pri, char *msg)
+ 		}
+ #undef PARSE_NUMBER
+ 		PARSE_CHAR("TIMESTAMP", ' ');
+-		if (!RemoteAddDate)
++		if (!AlwaysAddDate)
+ 			timestamp = &timestamp_remote;
+ 	}
+ 
+@@ -1311,7 +1311,7 @@ parsemsg_rfc3164(const char *from, int pri, char *msg)
+ 
+ 		msg += RFC3164_DATELEN + 1;
+ 
+-		if (!RemoteAddDate) {
++		if (!AlwaysAddDate) {
+ 			struct timeval tv;
+ 			time_t t_remote;
+ 			struct tm tm_now;
+-- 
+2.43.0
+

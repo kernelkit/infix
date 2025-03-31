@@ -1,0 +1,28 @@
+From 13c8071821ad27247061dbf4efe5a34505520bc1 Mon Sep 17 00:00:00 2001
+From: Patrick Oppenlander <patrick.oppenlander@gmail.com>
+Date: Thu, 23 Jan 2025 15:22:57 +1100
+Subject: [PATCH 02/16] fix local hostname '+@', '-@' support
+Organization: Wires
+
+Signed-off-by: Patrick Oppenlander <patrick.oppenlander@gmail.com>
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ src/syslogd.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/syslogd.c b/src/syslogd.c
+index 5ad4dbc..c07e143 100644
+--- a/src/syslogd.c
++++ b/src/syslogd.c
+@@ -3895,7 +3895,7 @@ static int cfparse(FILE *fp, struct files *newf)
+ 					char *local = LocalHostName;
+ 
+ 					while (i < sizeof(host) - 1 && *local)
+-						host[i++] = *local;
++						host[i++] = *local++;
+ 					p++;
+ 				} else if (!isprint(*p) || isblank(*p))
+ 					break;
+-- 
+2.43.0
+

@@ -21,6 +21,12 @@ All notable changes to the project are documented in this file.
  - Fix #990: web console, ttyd service, stopped working after upgrade to
    Buildroot 2025.02, caused by new (missing) option `--writable`
  - Fix TCAM memory corruption in `mvpp2` Ethernet controller
+ - Fix annoying (but harmless) usage message from the logger tool when
+   `startup-config` fails to load and the system reverts to failure mode
+ - Fix harmless log warning for product specific init when no product
+   specific init scripts are found
+ - Backport fixes for sysklogd, affecting hostname filtering and periods
+   in TAG names, pending official backport in Buildroot
 
 
 [v25.02.0][] - 2025-03-04

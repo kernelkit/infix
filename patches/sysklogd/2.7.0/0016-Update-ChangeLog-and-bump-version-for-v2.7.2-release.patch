@@ -1,0 +1,47 @@
+From 5fb314cb9060afa3bd4eed2f0be3200f02f729e9 Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Mon, 31 Mar 2025 13:26:13 +0200
+Subject: [PATCH 16/16] Update ChangeLog and bump version for v2.7.2 release
+Organization: Wires
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ ChangeLog.md | 4 +++-
+ configure.ac | 2 +-
+ 2 files changed, 4 insertions(+), 2 deletions(-)
+
+diff --git a/ChangeLog.md b/ChangeLog.md
+index 140cfc4..8d8bb43 100644
+--- a/ChangeLog.md
++++ b/ChangeLog.md
+@@ -4,11 +4,13 @@ Change Log
+ All relevant changes to the project are documented in this file.
+ 
+ 
+-[v2.7.2][UNRELEASED]
++[v2.7.2][] - 2025-03-31
+ -----------------------
+ 
+ ### Changes
+ - Increased code coverage testing of tag parser
++- Improved error handling in `logger` when invalid arguments to
++  `-p` and `-o` are encountered
+ 
+ ### Fixes
+ - Fix #102: allow `.` in tag names, regression in v2.7.1
+diff --git a/configure.ac b/configure.ac
+index 13dadfa..fe79595 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -25,7 +25,7 @@
+ # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+ # SUCH DAMAGE.
+ 
+-AC_INIT([sysklogd], [2.7.2-beta1],
++AC_INIT([sysklogd], [2.7.2],
+ 	[https://github.com/troglobit/sysklogd/issues],,
+ 	[https://github.com/troglobit/sysklogd])
+ AC_CONFIG_AUX_DIR(aux)
+-- 
+2.43.0
+
