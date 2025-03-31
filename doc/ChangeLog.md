@@ -20,6 +20,7 @@ All notable changes to the project are documented in this file.
    whatever reason, in its 'setup' state
  - Fix #990: web console, ttyd service, stopped working after upgrade to
    Buildroot 2025.02, caused by new (missing) option `--writable`
+ - Fix TCAM memory corruption in `mvpp2` Ethernet controller
 
 
 [v25.02.0][] - 2025-03-04
