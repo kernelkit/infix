@@ -10,7 +10,7 @@
 
 banner_append()
 {
-    printf "\n$@\n" | tee -a \
+    printf "\n%s\n" "$*" | tee -a \
 			  /etc/banner \
 			  /etc/issue \
 			  /etc/issue.net \
@@ -28,12 +28,14 @@ perms()
 
 note()
 {
-    logger -I $$ -p user.notice -t load "$*"
+    msg="$*"
+    logger -I $$ -p user.notice -t load -- "$msg"
 }
 
 err()
 {
-    logger -I $$ -p user.error -t load "$*"
+    msg="$*"
+    logger -I $$ -p user.error -t load -- "$msg"
 }
 
 
@@ -45,6 +47,8 @@ while getopts "t:" opt; do
     case ${opt} in
 	t)
 	    sysrepocfg="$sysrepocfg -t $OPTARG"
+	    ;;
+	*)
 	    ;;
     esac
 done
@@ -122,6 +126,9 @@ if ! $sysrepocfg -v2 -I"$fn" -f json; then
 	    err "Failed loading $fn, aborting!"
 	    banner_append "CRITICAL ERROR: Logins are disabled, no credentials available"
 	    initctl -nbq runlevel 9
+	    ;;
+	*)
+	    err "Unknown config $config, aborting!"
 	    ;;
     esac
 
