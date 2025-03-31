@@ -239,35 +239,35 @@
     <SWITCH name="optional" min="0">
       <COMMAND name="fdb" help="Show unicast forwarding database">
         <ACTION sym="script" in="tty" out="tty" interrupt="true">
-	  bridge -color fdb |pager
-	</ACTION>
+          bridge -color fdb |pager
+        </ACTION>
       </COMMAND>
       <COMMAND name="mdb" help="Show mulficast forwarding database">
-	<SWITCH name="optional" min="0">
-	  <COMMAND name="detailed" help="Detailed (full) output">
+        <SWITCH name="optional" min="0">
+          <COMMAND name="detailed" help="Detailed (full) output">
             <ACTION sym="script" in="tty" out="tty" interrupt="true">
-	      bridge -color -d mdb |pager
-	    </ACTION>
-	  </COMMAND>
-	</SWITCH>
+              bridge -color -d mdb |pager
+            </ACTION>
+          </COMMAND>
+        </SWITCH>
         <ACTION sym="script" in="tty" out="tty" interrupt="true">
-	  sysrepocfg -d operational -X -f json -x /ietf-interfaces:interfaces | \
-	    /usr/libexec/statd/cli-pretty show-bridge-mdb |pager
-	</ACTION>
+          sysrepocfg -d operational -X -f json -x /ietf-interfaces:interfaces | \
+          /usr/libexec/statd/cli-pretty show-bridge-mdb |pager
+        </ACTION>
       </COMMAND>
       <COMMAND name="stp" help="Show spanning tree status">
         <ACTION sym="script" in="tty" out="tty" interrupt="true">
-	  sysrepocfg -d operational -X -f json -x /ietf-interfaces:interfaces | \
-	    /usr/libexec/statd/cli-pretty show-bridge-stp |pager
-	</ACTION>
+          sysrepocfg -d operational -X -f json -x /ietf-interfaces:interfaces | \
+          /usr/libexec/statd/cli-pretty show-bridge-stp |pager
+        </ACTION>
       </COMMAND>
       <COMMAND name="vlan" help="Show VLAN table">
         <ACTION sym="script">bridge -color vlan</ACTION>
         <SWITCH name="optional" min="0">
           <COMMAND name="detailed" help="Detailed (full) output">
             <ACTION sym="script" in="tty" out="tty" interrupt="true">
-	      bridge -color -d vlan |pager
-	    </ACTION>
+              bridge -color -d vlan |pager
+            </ACTION>
           </COMMAND>
         </SWITCH>
       </COMMAND>
@@ -307,11 +307,11 @@
 
     <SWITCH name="optional" min="0">
       <COMMAND name="statistics" help="Show DHCP server statistics">
-	<ACTION sym="script" in="tty" out="tty" interrupt="true">show dhcp stat</ACTION>
+        <ACTION sym="script" in="tty" out="tty" interrupt="true">show dhcp stat</ACTION>
       </COMMAND>
 
       <COMMAND name="detailed" help="Detailed (full operational) output">
-	<ACTION sym="script" in="tty" out="tty" interrupt="true">show dhcp detail</ACTION>
+        <ACTION sym="script" in="tty" out="tty" interrupt="true">show dhcp detail</ACTION>
       </COMMAND>
 
     </SWITCH>
@@ -340,11 +340,11 @@
   <COMMAND name="ospf" help="Show OSPF status">
     <PARAM name="name" ptype="/STRING" help="neighbor, interfaces or bfd" min="0" max="1">
       <COMPL>
-	<ACTION sym="printl">neighbor</ACTION>
-	<ACTION sym="printl">interfaces</ACTION>
-	<ACTION sym="printl">routes</ACTION>
-	<ACTION sym="printl">database</ACTION>
-	<ACTION sym="printl">bfd</ACTION>
+        <ACTION sym="printl">neighbor</ACTION>
+        <ACTION sym="printl">interfaces</ACTION>
+        <ACTION sym="printl">routes</ACTION>
+        <ACTION sym="printl">database</ACTION>
+        <ACTION sym="printl">bfd</ACTION>
       </COMPL>
     </PARAM>
     <ACTION sym="script" in="tty" out="tty" interrupt="true">
@@ -366,10 +366,10 @@
 
   <COMMAND name="routes" help="Show routing table">
     <PARAM name="ip" ptype="/STRING" help="ipv4 or ipv6" min="0" max="1">
-	<COMPL>
-	  <ACTION sym="printl">ipv4</ACTION>
-	  <ACTION sym="printl">ipv6</ACTION>
-	</COMPL>
+      <COMPL>
+        <ACTION sym="printl">ipv4</ACTION>
+        <ACTION sym="printl">ipv6</ACTION>
+      </COMPL>
     </PARAM>
     <ACTION sym="script" in="tty" out="tty" interrupt="true">
       case $KLISH_PARAM_ip in
@@ -419,26 +419,26 @@
     <SWITCH name="optional" min="0">
       <COMMAND name="brief" help="Simplified (human-readable) output" mode="switch">
         <ACTION sym="script" in="tty" out="tty" interrupt="true">
-	  ip -color -br addr | sort -V | sed 's/@dsa[0-9]/     /' |pager
-	</ACTION>
+          ip -color -br addr | sort -V | sed 's/@dsa[0-9]/     /' |pager
+        </ACTION>
       </COMMAND>
 
       <COMMAND name="detailed" help="Detailed (full) output" mode="switch">
         <ACTION sym="script" in="tty" out="tty" interrupt="true">
-	  ip -color -d addr |pager
-	</ACTION>
+          ip -color -d addr |pager
+        </ACTION>
       </COMMAND>
 
       <COMMAND name="multicast" help="Show IGMP/MLD status" mode="switch">
         <ACTION sym="script" in="tty" out="tty" interrupt="true">
-	  mctl |pager
-	</ACTION>
+          mctl |pager
+        </ACTION>
       </COMMAND>
 
       <COMMAND name="route" help="Show IPv4 routing table" mode="switch">
         <ACTION sym="script" in="tty" out="tty" interrupt="true">
-	  show -p ip route |pager
-	</ACTION>
+          show -p ip route |pager
+        </ACTION>
       </COMMAND>
     </SWITCH>
   </COMMAND>
@@ -451,8 +451,8 @@
     <SWITCH name="optional" min="0">
       <COMMAND name="route" help="Show IPv6 routing table" mode="switch">
         <ACTION sym="script" in="tty" out="tty" interrupt="true">
-	  show -p ipv6 route |pager
-	</ACTION>
+          show -p ipv6 route |pager
+        </ACTION>
       </COMMAND>
     </SWITCH>
   </COMMAND>
@@ -530,11 +530,11 @@
       if [ -n "$KLISH_PARAM_split" ]; then
         if echo $KLISH_PARAM_addrlen |grep -q ':'; then
           split="-S $KLISH_PARAM_split"
-	else
+        else
           split="-s $KLISH_PARAM_split"
-	fi
+        fi
       else
-	split=""
+        split=""
       fi
       netcalc $split $KLISH_PARAM_addrlen $KLISH_PARAM_netmask
     </ACTION>
