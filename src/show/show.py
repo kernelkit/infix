@@ -99,7 +99,7 @@ def interface(args: List[str]) -> None:
         print(json.dumps(data, indent=2))
         return
 
-    if len(args) == 0:
+    if len(args) == 0 or not args[0]:  # Treat "" as no arg.
         cli_pretty(data, "show-interfaces")
     elif len(args) == 1:
         iface = args[0]
@@ -130,10 +130,8 @@ def software(args: List[str]) -> None:
     if RAW_OUTPUT:
         print(json.dumps(data, indent=2))
         return
-
-    if len(args) == 0:
+    if len(args) == 0 or not args[0]:  # Treat "" as no arg.
         cli_pretty(data, "show-software")
-        print(".....")
     elif len(args) == 1:
         name = args[0]
         if name not in ("primary", "secondary"):

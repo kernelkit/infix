@@ -251,14 +251,12 @@
           </COMMAND>
         </SWITCH>
         <ACTION sym="script" in="tty" out="tty" interrupt="true">
-          sysrepocfg -d operational -X -f json -x /ietf-interfaces:interfaces | \
-          /usr/libexec/statd/cli-pretty show-bridge-mdb |pager
+          show --raw interface | /usr/libexec/statd/cli-pretty show-bridge-mdb |pager
         </ACTION>
       </COMMAND>
       <COMMAND name="stp" help="Show spanning tree status">
         <ACTION sym="script" in="tty" out="tty" interrupt="true">
-          sysrepocfg -d operational -X -f json -x /ietf-interfaces:interfaces | \
-          /usr/libexec/statd/cli-pretty show-bridge-stp |pager
+          show --raw interface | /usr/libexec/statd/cli-pretty show-bridge-stp |pager
         </ACTION>
       </COMMAND>
       <COMMAND name="vlan" help="Show VLAN table">
@@ -292,8 +290,7 @@
 
   <COMMAND name="ntp" help="Show NTP (client) status">
     <ACTION sym="script">
-      sysrepocfg -d operational -X -f json -x /system-state/ntp  | \
-         /usr/libexec/statd/cli-pretty "show-ntp"
+      show ntp
     </ACTION>
     <SWITCH name="optional" min="0">
       <COMMAND name="tracking" help="Show NTP tracking">
@@ -325,15 +322,7 @@
       </COMMAND>
     </SWITCH>
     <ACTION sym="script">
-      tmp=$(mktemp)
-      sysrepocfg -d operational -X -f json -x /ietf-system:system-state/infix-system:software | \
-              jq -r '.[][].slot |= sort_by(.name)' > "$tmp"
-      if [ -n "$KLISH_PARAM_name" ]; then
-          cat "$tmp" | /usr/libexec/statd/cli-pretty "show-software" -n "$KLISH_PARAM_name"
-      else
-          cat "$tmp" | /usr/libexec/statd/cli-pretty "show-software"
-      fi
-      rm "$tmp"
+      show software "$KLISH_PARAM_name"
     </ACTION>
   </COMMAND>
 
@@ -386,8 +375,7 @@
 
   <COMMAND name="hardware" help="Show hardware information">
     <ACTION sym="script" in="tty" out="tty" interrupt="true">
-      sysrepocfg -f json -X -d operational -x "/ietf-hardware:hardware" | \
-      /usr/libexec/statd/cli-pretty "show-hardware" |pager
+      show hardware |pager
     </ACTION>
   </COMMAND>
 
@@ -400,14 +388,7 @@
       </COMMAND>
     </SWITCH>
     <ACTION sym="script" in="tty" out="tty" interrupt="true">
-      if [ -n "$KLISH_PARAM_name" ]; then
-        doas sysrepocfg -f json -X -d operational -x \
-          "/ietf-interfaces:interfaces/interface[name=\"$KLISH_PARAM_name\"]" | \
-          /usr/libexec/statd/cli-pretty "show-interfaces" -n "$KLISH_PARAM_name" |pager
-      else
-        doas sysrepocfg -f json -X -d operational -m ietf-interfaces | \
-          /usr/libexec/statd/cli-pretty "show-interfaces" |pager
-      fi
+        show interface "$KLISH_PARAM_name" |pager
     </ACTION>
   </COMMAND>
 
