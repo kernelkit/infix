@@ -1193,7 +1193,7 @@ def show_software(json, name):
                f"{'VERSION':<{PadSoftware.version}}"
                f"{'DATE':<{PadSoftware.date}}")
         print(Decore.invert(hdr))
-        for _s in slots:
+        for _s in reversed(slots):
             slot = Software(_s)
             if slot.is_rootfs():
                 slot.print()
