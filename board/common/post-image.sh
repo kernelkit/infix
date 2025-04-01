@@ -90,7 +90,7 @@ if [ "$BR2_TARGET_ROOTFS_SQUASHFS" = "y" ]; then
     rel=$(ver)
     ln -sf rootfs.squashfs "$BINARIES_DIR/${NAME}${rel}.img"
     if [ -n "$rel" ]; then
-	ln -sf "$BINARIES_DIR/${NAME}${rel}.img" "$BINARIES_DIR/${NAME}.img"
+	ln -sf "${NAME}${rel}.img" "$BINARIES_DIR/${NAME}.img"
     fi
 fi
 
