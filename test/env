@@ -74,7 +74,7 @@ get_base_img()
 {
     local files="$1"
     local base_img_file
-    base_img_file=$(echo "$files" | tr ' ' '\n' | grep -- '-disk.img$')
+    base_img_file=$(echo "$files" | tr ' ' '\n' | grep -- '-disk.qcow2$')
     echo "$envdir/qeneth/$(basename "$base_img_file")"
 }
 
@@ -96,16 +96,20 @@ start_topology()
     done
 
     base_img=$(get_base_img "$files")
-    test_img="${base_img%-disk.img}-disk-test.img"
-    
-    $testdir/inject-test-mode -b "$base_img" -o "$test_img"
+    test_img_name="${base_img%-disk.qcow2}-disk-test"
+    base_img_name="${base_img%-disk.qcow2}-disk"
+    test_img_raw="${test_img_name}.img"
+    base_img_raw="${base_img_name}.img"
+    test_img_qcow2="${test_img_name}.qcow2"
 
-    img_name=$(basename "$test_img")
+    qemu-img convert -f qcow2 -O raw "$base_img" "$base_img_raw"
+    $testdir/inject-test-mode -b "$base_img_raw" -o "$test_img_raw"
+    qemu-img convert -f raw -O qcow2 "$test_img_raw" "$test_img_qcow2"
+    img_name=$(basename $test_img_qcow2)
     sed -i "s/qn_image=\".*\"/qn_image=\"$img_name\"/" "$envdir/qeneth/topology.dot.in"
 
     (cd "$envdir/qeneth/" && $qeneth generate && $qeneth start)
     INFAMY_ARGS="$INFAMY_ARGS $envdir/qeneth/topology.dot"
-
     cat <<EOF >"$envdir/bin/qeneth"
 #!/bin/sh
 cd $envdir/qeneth && exec $testdir/qeneth/qeneth "\$@"

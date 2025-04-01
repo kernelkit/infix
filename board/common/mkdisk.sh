@@ -127,7 +127,7 @@ bootdata=
 diskimg=disk.img
 bootimg=
 bootpart=
-
+tmpimage=$(mktemp)
 while getopts "a:b:B:n:s:" opt; do
     case ${opt} in
 	a)
@@ -166,7 +166,7 @@ awk \
 	  -vimgsize=$imgsize \
 	  -vcfgsize=$cfgsize \
 	  -vvarsize=$varsize \
-	  -vdiskimg=$diskimg \
+	  -vdiskimg=$tmpimage \
 	  -vbootimg="$bootimg" -vbootpart="$bootpart" \
 	  '{
 		sub(/@TOTALSIZE@/, total);
@@ -211,5 +211,7 @@ genimage \
     --rootpath "$root" \
     --tmppath  "$tmp" \
     --inputpath "$BINARIES_DIR" \
-    --outputpath "$BINARIES_DIR" \
     --config "$root/genimage.cfg"
+
+qemu-img convert -c -O qcow2 "$tmpimage" "$BINARIES_DIR/$diskimg"
+rm "$tmpimage"
