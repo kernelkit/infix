@@ -95,6 +95,11 @@ jobs:
           name: artifact-${{ matrix.target }}
           path: output/*.tar.gz
 
+      - uses: actions/upload-artifact@v4
+        with:
+          name: artifact-disk-image-${{ matrix.target }}
+          path: output/images/*.qcow2
+
   release:
     name: Release Infix ${{ github.ref_name }}
     needs: build
@@ -141,6 +146,11 @@ jobs:
           for file in *.tar.gz; do
               sha256sum $file > $file.sha256
           done
+          if ls *.qcow2 &>/dev/null; then
+            for file in *.qcow2; do
+              sha256sum "$file" > "$file.sha256"
+            done
+          fi
 
       - name: Extract ChangeLog entry ...
         run: |
@@ -155,7 +165,7 @@ jobs:
           makeLatest: ${{ steps.rel.outputs.latest }}
           discussionCategory: ${{ steps.rel.outputs.cat }}
           bodyFile:  release.md
-          artifacts: "*.tar.gz*"
+          artifacts: "*.tar.gz*,*.qcow2*"
 
       - name: Summary
         run: |
