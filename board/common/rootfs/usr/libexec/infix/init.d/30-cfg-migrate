@@ -11,7 +11,7 @@ chown root:wheel "$BACKUP_DIR"
 chmod 0770       "$BACKUP_DIR"
 
 if [ ! -f "$CONFIG_FILE" ]; then
-    note "No $(basename "$CONFIG_FILE" .cfg) yet, likely factory reset."
+    logger -I $$ -k -p user.notice -t $(basename "$0")  "No $(basename "$CONFIG_FILE" .cfg) yet, likely factory reset."
     exit 0
 elif migrate -cq "$CONFIG_FILE"; then
     exit 0
