@@ -46,8 +46,8 @@ atoi()
 file_version()
 {
     jq -r '
-        if .["infix-meta:meta"] | has("infix-meta:version") then
-            .["infix-meta:meta"]["infix-meta:version"]
+        if .["infix-meta:meta"] | has("version") then
+            .["infix-meta:meta"]["version"]
         else
             "0.0"
         end
