@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 
 usage()
 {
@@ -66,11 +67,11 @@ if ! [ "$KERNEL_TAG" ]; then
 fi
 
 NEW_VER=${KERNEL_TAG#v}
-
 if ! [ "$PATCH_DIR" ]; then
     ixdir=$(getconfig BR2_EXTERNAL_INFIX_PATH)
     [ "$ixdir" ] && PATCH_DIR="$ixdir/patches/linux/$NEW_VER"
 fi
+PATCHES_BASE=$(dirname $PATCH_DIR)
 
 if ! [ "$PATCH_DIR" ]; then
     echo "Patch directory was not supplied, and could not be inferred" >&2
@@ -88,6 +89,17 @@ PATCH_DIR=$(readlink -f $PATCH_DIR)
 DEFCONFIG_DIR=$(readlink -f $DEFCONFIG_DIR)
 
 git ls-files --error-unmatch $PATCH_DIR 1>/dev/null 2>&1 && git -C $PATCH_DIR rm -f *.patch
-git -C $KERNEL_DIR format-patch -o $PATCH_DIR $KERNEL_TAG..HEAD
+git -C $KERNEL_DIR format-patch --no-signoff --no-encode-email-headers --no-cover-letter --no-signature -o $PATCH_DIR $KERNEL_TAG..HEAD
 git -C $PATCH_DIR add *.patch
+
+if [ -d ${PATCHES_BASE}/${OLD_VER} ]; then
+	git rm -rf ${PATCHES_BASE}/${OLD_VER}
+fi
 find "$DEFCONFIG_DIR" -name "*_defconfig" -exec sed -i "s/BR2_LINUX_KERNEL_CUSTOM_VERSION_VALUE=\"$OLD_VER\"/BR2_LINUX_KERNEL_CUSTOM_VERSION_VALUE=\"$NEW_VER\"/" {} \;
+
+
+echo "Update checksum for kernel, this may take a while..."
+curl -o "/tmp/linux-${ixkver}.tar.xz" "https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-${ixkver}.tar.xz"
+echo "# Calculated with $0" > "${PATCHES_BASE}/linux.hash"
+cd /tmp && echo "sha256   $(sha256sum linux-${ixkver}.tar.xz)" >> "${PATCHES_BASE}/linux.hash"
+git -C ${PATCHES_BASE} add linux.hash
