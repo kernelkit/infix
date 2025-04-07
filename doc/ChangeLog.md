@@ -4,6 +4,19 @@ Change Log
 All notable changes to the project are documented in this file.
 
 
+[v25.04.0][UNRELEASED]
+-------------------------
+
+### Changes
+ - N/A
+
+### Fixes
+ - Fix #1006: NanoPi R2S corrupt startup, regression in Infix v25.02.0
+   - Bump R2S kernel, now same as tier one boards
+ - Fix group owner and permissions of `/cfg/backup` directory
+ - Fix extraction of old version for `/cfg/backup/` files
+
+
 [v25.03.0][] - 2025-03-31
 -------------------------
 
@@ -1530,6 +1543,7 @@ Supported YANG models in addition to those used by sysrepo and netopeer:
 
 [buildroot]:  https://buildroot.org/
 [UNRELEASED]: https://github.com/kernelkit/infix/compare/v25.03.0...HEAD
+[v25.04.0]:   https://github.com/kernelkit/infix/compare/v25.03.0...v25.04.0
 [v25.03.0]:   https://github.com/kernelkit/infix/compare/v25.02.0...v25.03.0
 [v25.02.0]:   https://github.com/kernelkit/infix/compare/v25.01.0...v25.02.0
 [v25.01.0]:   https://github.com/kernelkit/infix/compare/v24.11.0...v25.01.0
