@@ -1,4 +1,4 @@
-From 774cf1d3f5b9cfac247c3efcf4eed39d06c675dc Mon Sep 17 00:00:00 2001
+From 412fc6e03cfa025b34791b21a99d2a57a3e55d6b Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Tue, 12 Mar 2024 10:27:24 +0100
 Subject: [PATCH 01/28] [FIX] net: dsa: mv88e6xxx: Fix timeout on waiting for
@@ -8,8 +8,6 @@ Organization: Wires
 In a multi-chip setup, delays of up to 750ms are observed before the
 device (6393X) signals completion of PPU initialization (Global 1,
 register 0, bit 15). Therefore, increase the timeout threshold to 1s.
-
-Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
 ---
  drivers/net/dsa/mv88e6xxx/chip.c | 2 +-
  1 file changed, 1 insertion(+), 1 deletion(-)
@@ -27,6 +25,3 @@ index 5aeecfab9630..2565277582c5 100644
  	u16 data;
  	int err;
  	int i;
--- 
-2.43.0
-

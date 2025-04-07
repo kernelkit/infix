@@ -1,4 +1,4 @@
-From 69f9bda6cab34556e67a096c282eee7337f97f26 Mon Sep 17 00:00:00 2001
+From c93ff33ba09c6af6a20f62e07590c01bc9252b78 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Tue, 12 Dec 2023 09:51:05 +0100
 Subject: [PATCH 17/28] net: phy: marvell10g: Support LEDs tied to a single
@@ -14,8 +14,6 @@ tied to a particular media side, and use that information to refine
 the offloading of the "netdev" trigger, such that LEDs attached to the
 RJ45 jack only lights up when a copper link is established, and vice
 versa for the SFP cage.
-
-Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
 ---
  drivers/net/phy/marvell10g.c | 23 ++++++++++++++++++++++-
  1 file changed, 22 insertions(+), 1 deletion(-)
@@ -75,6 +73,3 @@ index 9f8475b67ef7..82b2e9b55b67 100644
  	/* mv3310_led_polarity_set() will not be called unless the
  	 * device tree specifies a mode that of_phy_led() considers to
  	 * be a non-default configuration. I.e., something other than
--- 
-2.43.0
-

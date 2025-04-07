@@ -1,4 +1,4 @@
-From db0d727f6cc90ccea2378d876329c151db1670dc Mon Sep 17 00:00:00 2001
+From 094213f7f29c8a39e4a4524b67e3e40c338b5a7b Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Fri, 24 Nov 2023 23:29:55 +0100
 Subject: [PATCH 23/28] nvmem: layouts: onie-tlv: Let device probe even when
@@ -13,8 +13,6 @@ be successfully probed.
 
 Therefore, settle for reporting data corruption issues in the log, and
 simply refrain from registering any cells in those cases.
-
-Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
 ---
  drivers/nvmem/layouts/onie-tlv.c | 6 +++---
  1 file changed, 3 insertions(+), 3 deletions(-)
@@ -50,6 +48,3 @@ index 0967a32319a2..48547d5bb502 100644
  
  	data = table + hdr_len;
  	ret = onie_tlv_add_cells(dev, nvmem, data_len, data);
--- 
-2.43.0
-

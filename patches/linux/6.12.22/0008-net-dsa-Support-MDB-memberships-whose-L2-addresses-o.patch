@@ -1,4 +1,4 @@
-From a88679c946d5163eb0e30718109c18ddbbd8cfc6 Mon Sep 17 00:00:00 2001
+From 8325784bddadb53ea2601858012be7097fa13c94 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Tue, 16 Jan 2024 16:00:55 +0100
 Subject: [PATCH 08/28] net: dsa: Support MDB memberships whose L2 addresses
@@ -29,8 +29,6 @@ as long as the count is positive. Fortunately, all the infrastructure
 needed to do this is already in place, since it is also needed on CPU
 and DSA ports. Thus, "implement" this by simply removing the guards
 which previously skipped reference countung on user ports.
-
-Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
 ---
  net/dsa/switch.c | 16 ----------------
  1 file changed, 16 deletions(-)
@@ -69,6 +67,3 @@ index 3d2feeea897b..628e8a884dde 100644
  	mutex_lock(&dp->addr_lists_lock);
  
  	a = dsa_mac_addr_find(&dp->mdbs, mdb->addr, mdb->vid, db);
--- 
-2.43.0
-

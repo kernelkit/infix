@@ -1,4 +1,4 @@
-From f70be42f0ee50cda8c1cde14442ea8285c01834b Mon Sep 17 00:00:00 2001
+From a4d0d5bff004b329cd83fa0806d52a6eb1977b55 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Wed, 27 Mar 2024 10:10:19 +0100
 Subject: [PATCH 18/28] net: phy: Do not resume PHY when attaching
@@ -15,8 +15,6 @@ Otherwise, drivers that attached to their PHYs during
 probing (e.g. DSA) would end up with a physical link being
 established, even though the corresponding interface was still
 administratively down.
-
-Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
 ---
  drivers/net/phy/phy_device.c | 1 -
  1 file changed, 1 deletion(-)
@@ -33,6 +31,3 @@ index 119dfa2d6643..7c7cc6edf314 100644
  	if (!phydev->is_on_sfp_module)
  		phy_led_triggers_register(phydev);
  
--- 
-2.43.0
-
