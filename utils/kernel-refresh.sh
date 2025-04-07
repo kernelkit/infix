@@ -3,21 +3,27 @@
 usage()
 {
     cat <<EOF
-usage: $0 -k <kernel-dir> -o <old-version> [-t <kernel-tag>] [-p <patch-dir>] [-d <defconfig-dir>]
+Synchronize patches/linux/\$TAG with changes from a kernel GIT tree.
 
-Synchronize patches directory with changes from a GIT versioned kernel
-tree.
+Usage:
+  $0 -k kernel-dir -o old-version [-t kernel-tag] [-p patch-dir] [-d defconfig-dir]
 
-  -k <kernel-dir>    Path to kernel tree.
-  -o <old-version>   Version to be replaced by new kernel version.
-  -t <kernel-tag>    Base tag from which to generate patches. Default: "v"
-                     followed by the value of BR2_LINUX_KERNEL_VERSION in
-                     the current configuration.
-  -p <patch-dir>     Path to kernel patches directory. Default: the value of
-                     BR2_EXTERNAL_INFIX_PATH in the current configuration,
-                     followed by "/patches/linux/<kernel-tag>".
-  -d <defconfig-dir> Path to defconfig. Default the value of BR2_EXTERNAL_INFIX_PATH
-                     in the current configuration, followed by "/configs".
+Options:
+  -h                 This help text
+  -k kernel-dir      Path to kernel tree
+  -o old-version     Version to be replaced by new kernel version
+  -t kernel-tag      Base tag from which to generate patches.
+                     Default: "v" + \$BR2_LINUX_KERNEL_VERSION
+  -p patch-dir       Path to kernel patches directory
+                     Default: \$BR2_EXTERNAL_INFIX_PATH + "/patches/linux/\$kernel-tag"
+  -d defconfig-dir   Path to defconfig
+                     Default: \$BR2_EXTERNAL_INFIX_PATH + "/configs"
+
+Example:
+  cd infix/output
+  ln -s ../local.mk     # Set LINUX_OVERRIDE_SRCDIR to git tree, e.g., ~/src/linux
+  ../utils/kernel-refresh.sh -k ~/src/linux -o 6.12.21 -t v6.12.21 \\
+                             -p ~/src/x-misc/patches/linux/6.12.21
 
 EOF
 }
@@ -34,13 +40,14 @@ if [ $# -lt 1 ]; then
     exit 1
 fi
 
-while getopts "k:o:p:d:t:" flag; do
+while getopts "hk:o:p:d:t:" flag; do
     case "${flag}" in
-            k) KERNEL_DIR=${OPTARG};;
-            t) KERNEL_TAG=${OPTARG};;
-            o) OLD_VER=${OPTARG};;
-            p) PATCH_DIR=${OPTARG};;
-            d) DEFCONFIG_DIR=${OPTARG};;
+	h) usage; exit 0;;
+        k) KERNEL_DIR=${OPTARG};;
+        t) KERNEL_TAG=${OPTARG};;
+        o) OLD_VER=${OPTARG};;
+        p) PATCH_DIR=${OPTARG};;
+        d) DEFCONFIG_DIR=${OPTARG};;
         *) exit 1;;
     esac
 done
@@ -80,7 +87,7 @@ KERNEL_DIR=$(readlink -f $KERNEL_DIR)
 PATCH_DIR=$(readlink -f $PATCH_DIR)
 DEFCONFIG_DIR=$(readlink -f $DEFCONFIG_DIR)
 
-git ls-files --error-unmatch $PATCH_DIR 1>/dev/null 2>&1 && git -C $PATCH_DIR rm *.patch
+git ls-files --error-unmatch $PATCH_DIR 1>/dev/null 2>&1 && git -C $PATCH_DIR rm -f *.patch
 git -C $KERNEL_DIR format-patch -o $PATCH_DIR $KERNEL_TAG..HEAD
 git -C $PATCH_DIR add *.patch
 find "$DEFCONFIG_DIR" -name "*_defconfig" -exec sed -i "s/BR2_LINUX_KERNEL_CUSTOM_VERSION_VALUE=\"$OLD_VER\"/BR2_LINUX_KERNEL_CUSTOM_VERSION_VALUE=\"$NEW_VER\"/" {} \;

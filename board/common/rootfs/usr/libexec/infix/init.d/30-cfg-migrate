@@ -4,7 +4,11 @@
 # the migrate tool inserts old version in name before .cfg extension.
 CONFIG_FILE="/cfg/startup-config.cfg"
 BACKUP_FILE="/cfg/backup/startup-config.cfg"
-mkdir -p "$(dirname "$BACKUP_FILE")"
+BACKUP_DIR="$(dirname "$BACKUP_FILE")"
+
+mkdir -p         "$BACKUP_DIR"
+chown root:wheel "$BACKUP_DIR"
+chmod 0770       "$BACKUP_DIR"
 
 if [ ! -f "$CONFIG_FILE" ]; then
     note "No $(basename "$CONFIG_FILE" .cfg) yet, likely factory reset."

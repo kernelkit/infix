@@ -1,7 +1,7 @@
 From 774cf1d3f5b9cfac247c3efcf4eed39d06c675dc Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Tue, 12 Mar 2024 10:27:24 +0100
-Subject: [PATCH 01/27] [FIX] net: dsa: mv88e6xxx: Fix timeout on waiting for
+Subject: [PATCH 01/28] [FIX] net: dsa: mv88e6xxx: Fix timeout on waiting for
  PPU on 6393X
 Organization: Wires
 

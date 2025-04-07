@@ -1,7 +1,7 @@
-From f33dc6fb8cd78eb3b1b2ea3de68b8a54efabdac2 Mon Sep 17 00:00:00 2001
+From 444179c2b41b18c4e9e2300aa7ccd469be809b04 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Tue, 18 Mar 2025 10:55:09 +0100
-Subject: [PATCH 27/27] net: mvpp2: Prevent parser TCAM memory corruption
+Subject: [PATCH 27/28] net: mvpp2: Prevent parser TCAM memory corruption
 Organization: Wires
 
 Protect the parser TCAM/SRAM memory, and the cached (shadow) SRAM

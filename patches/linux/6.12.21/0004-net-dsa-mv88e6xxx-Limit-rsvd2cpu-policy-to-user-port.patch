@@ -1,7 +1,7 @@
 From 6cbb6a0a54d81ff5b117b023ac7e251ab1e9c556 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Wed, 24 Apr 2024 22:41:04 +0200
-Subject: [PATCH 04/27] net: dsa: mv88e6xxx: Limit rsvd2cpu policy to user
+Subject: [PATCH 04/28] net: dsa: mv88e6xxx: Limit rsvd2cpu policy to user
  ports on 6393X
 Organization: Wires
 

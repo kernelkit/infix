@@ -1,7 +1,7 @@
 From 5496a27ee644f72b721eba0e8c057efb65ee445f Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Thu, 16 Nov 2023 21:59:35 +0100
-Subject: [PATCH 06/27] net: dsa: mv88e6xxx: Add LED support for 6393X
+Subject: [PATCH 06/28] net: dsa: mv88e6xxx: Add LED support for 6393X
 Organization: Wires
 
 Trigger support:
