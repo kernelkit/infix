@@ -1,10 +1,9 @@
-From c6528f18fbafef721c18e546aa0b60c1b1d772c6 Mon Sep 17 00:00:00 2001
+From d9b49e23c7848972227ffc6f079d8c62d2a03c2e Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Thu, 21 Mar 2024 19:12:15 +0100
 Subject: [PATCH 09/28] net: dsa: Support EtherType based priority overrides
 Organization: Wires
 
-Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
 ---
  include/net/dsa.h |  4 ++++
  net/dsa/user.c    | 56 +++++++++++++++++++++++++++++++++++++++++++++--
@@ -113,6 +112,3 @@ index 64f660d2334b..e13fb22e2c2b 100644
  		}
  		break;
  	case IEEE_8021QAZ_APP_SEL_DSCP:
--- 
-2.43.0
-

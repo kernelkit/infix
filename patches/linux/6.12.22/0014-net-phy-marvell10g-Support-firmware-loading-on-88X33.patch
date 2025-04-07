@@ -1,4 +1,4 @@
-From a6368c60ac6ae2e0d97ac571b6506aa09becbb71 Mon Sep 17 00:00:00 2001
+From 898de5125467a650acf7da4cd938cbd0ac1c1be1 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Tue, 19 Sep 2023 18:38:10 +0200
 Subject: [PATCH 14/28] net: phy: marvell10g: Support firmware loading on
@@ -11,8 +11,6 @@ its RAM, ask userspace for the binary and load it over XMDIO.
 We have no choice but to bail out of the probe if firmware is not
 available, as the device does not have any built-in image on which to
 fall back.
-
-Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
 ---
  drivers/net/phy/marvell10g.c | 161 +++++++++++++++++++++++++++++++++++
  1 file changed, 161 insertions(+)
@@ -236,6 +234,3 @@ index 6642eb642d4b..79d9483419c0 100644
  MODULE_DESCRIPTION("Marvell Alaska X/M multi-gigabit Ethernet PHY driver");
 +MODULE_FIRMWARE("mrvl/x3310fw.hdr");
  MODULE_LICENSE("GPL");
--- 
-2.43.0
-

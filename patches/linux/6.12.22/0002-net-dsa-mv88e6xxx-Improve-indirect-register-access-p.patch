@@ -1,4 +1,4 @@
-From 6bd6c3c49c438e35d61669879b64b6c4a00d1a19 Mon Sep 17 00:00:00 2001
+From 64426e005ad2ee6485c5ddf5421279278f48862b Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Wed, 27 Mar 2024 15:52:43 +0100
 Subject: [PATCH 02/28] net: dsa: mv88e6xxx: Improve indirect register access
@@ -13,8 +13,6 @@ previous families).
 Therefore, add a new set of SMI operations which remaps accesses to
 such registers to the corresponding directly addressable register. All
 other accesses use the regular indirect interface.
-
-Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
 ---
  drivers/net/dsa/mv88e6xxx/chip.c    |  7 +++
  drivers/net/dsa/mv88e6xxx/global1.h |  3 ++
@@ -211,6 +209,3 @@ index c6c71d5757f5..788cf68b7b33 100644
  int mv88e6xxx_smi_init(struct mv88e6xxx_chip *chip,
  		       struct mii_bus *bus, int sw_addr);
  
--- 
-2.43.0
-

@@ -1,4 +1,4 @@
-From ed58f4b6e7344bdefceb7ac31d1c769a6d127827 Mon Sep 17 00:00:00 2001
+From ca424b04e9a753cfeb3a92d080a595fc28498fac Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Mon, 29 Apr 2024 15:14:51 +0200
 Subject: [PATCH 24/28] usb: core: adjust log level for unauthorized devices
@@ -9,7 +9,6 @@ so let's adjust the log level so these messages slip below radar for the
 commonly used 'quiet' log level.
 
 Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
-Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
 ---
  drivers/usb/core/driver.c  | 4 ++--
  drivers/usb/core/generic.c | 2 +-
@@ -45,6 +44,3 @@ index b134bff5c3fe..60575a01a810 100644
  	else {
  		c = usb_choose_configuration(udev);
  		if (c >= 0) {
--- 
-2.43.0
-

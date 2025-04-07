@@ -1,11 +1,10 @@
-From bc41b93b365694ac36a19565270b8deda3b8cb79 Mon Sep 17 00:00:00 2001
+From e77eb9a0196bad9f683411a0985821ab078da741 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Fri, 22 Mar 2024 16:15:43 +0100
 Subject: [PATCH 10/28] net: dsa: mv88e6xxx: Support EtherType based priority
  overrides
 Organization: Wires
 
-Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
 ---
  drivers/net/dsa/mv88e6xxx/chip.c    | 64 +++++++++++++++++++++++++++++
  drivers/net/dsa/mv88e6xxx/chip.h    | 21 ++++++++++
@@ -371,6 +370,3 @@ index 7157864dc20f..7edb04c41ac8 100644
  int mv88e6xxx_port_set_message_port(struct mv88e6xxx_chip *chip, int port,
  				    bool message_port);
  int mv88e6xxx_port_set_trunk(struct mv88e6xxx_chip *chip, int port,
--- 
-2.43.0
-

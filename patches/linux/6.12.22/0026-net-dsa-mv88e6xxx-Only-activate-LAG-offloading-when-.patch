@@ -1,4 +1,4 @@
-From 823687aa03d866f3b76b5e40e35fa56c7f6f4492 Mon Sep 17 00:00:00 2001
+From 415473236cee34dc39da4ba25a1c1c006838164c Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Wed, 12 Feb 2025 22:03:14 +0100
 Subject: [PATCH 26/28] net: dsa: mv88e6xxx: Only activate LAG offloading when
@@ -46,8 +46,6 @@ existing port isolation to work as intended.
 Before joining a bridge, the offload does not offer any performance
 benefit anyway. All ingressing packet will always have to go to the
 CPU; egress traffic always relies on software hashing.
-
-Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
 ---
  drivers/net/dsa/mv88e6xxx/chip.c | 42 +++++++++++++++-----------------
  1 file changed, 20 insertions(+), 22 deletions(-)
@@ -142,6 +140,3 @@ index 30f8a5388733..c1f8adaa008a 100644
  }
  
  static int mv88e6xxx_crosschip_lag_change(struct dsa_switch *ds, int sw_index,
--- 
-2.43.0
-

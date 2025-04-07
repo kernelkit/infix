@@ -1,4 +1,4 @@
-From 5496a27ee644f72b721eba0e8c057efb65ee445f Mon Sep 17 00:00:00 2001
+From fcd9b8f9d6b91eab102dfa97ab7488abd1fbb9e4 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Thu, 16 Nov 2023 21:59:35 +0100
 Subject: [PATCH 06/28] net: dsa: mv88e6xxx: Add LED support for 6393X
@@ -8,8 +8,6 @@ Trigger support:
 - "none"
 - "timer"
 - "netdev"
-
-Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
 ---
  drivers/net/dsa/mv88e6xxx/chip.c |   1 +
  drivers/net/dsa/mv88e6xxx/leds.c | 229 +++++++++++++++++++++++++++++++
@@ -359,6 +357,3 @@ index ddadeb9bfdae..7157864dc20f 100644
  int mv88e6393x_set_egress_port(struct mv88e6xxx_chip *chip,
  			       enum mv88e6xxx_egress_direction direction,
  			       int port);
--- 
-2.43.0
-

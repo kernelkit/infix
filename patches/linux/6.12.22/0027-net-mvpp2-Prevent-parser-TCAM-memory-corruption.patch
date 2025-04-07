@@ -1,4 +1,4 @@
-From 444179c2b41b18c4e9e2300aa7ccd469be809b04 Mon Sep 17 00:00:00 2001
+From f6862a76eca677ba1ad2892e781204a463ea78ee Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Tue, 18 Mar 2025 10:55:09 +0100
 Subject: [PATCH 27/28] net: mvpp2: Prevent parser TCAM memory corruption
@@ -646,6 +646,3 @@ index 9af22f497a40..a96edc7dc0de 100644
 +	spin_unlock_bh(&priv->prs_spinlock);
  	return val;
  }
--- 
-2.43.0
-

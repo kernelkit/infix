@@ -1,4 +1,4 @@
-From 9ca4c28ccf7857a36db8dd3c37dcd005222bdb78 Mon Sep 17 00:00:00 2001
+From 7884dc7b9dbd40165a34da8cdd4f7ebfdcfcfd86 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Wed, 15 Nov 2023 20:58:42 +0100
 Subject: [PATCH 16/28] net: phy: marvell10g: Add LED support for 88X3310
@@ -17,8 +17,6 @@ Trigger support:
 	   software blinking
 - "netdev": Offload link or duplex information to the solid behavior;
   	    tx and/or rx activity to blink behavior.
-
-Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
 ---
  drivers/net/phy/marvell10g.c | 422 +++++++++++++++++++++++++++++++++++
  1 file changed, 422 insertions(+)
@@ -512,6 +510,3 @@ index 268484092776..9f8475b67ef7 100644
  	},
  	{
  		.phy_id		= MARVELL_PHY_ID_88X3310,
--- 
-2.43.0
-

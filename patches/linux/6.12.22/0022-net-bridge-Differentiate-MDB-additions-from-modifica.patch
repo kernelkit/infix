@@ -1,4 +1,4 @@
-From 7c751c24428060c3e87f164eb2a054db410f4b0d Mon Sep 17 00:00:00 2001
+From b6d5faea067b67dae8983ca116112a2b86cd0e9b Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Thu, 16 May 2024 14:51:54 +0200
 Subject: [PATCH 22/28] net: bridge: Differentiate MDB additions from
@@ -21,8 +21,6 @@ generated.
 
 Therefore, discriminate new groups from changes to existing groups by
 introducing a RTM_SETMDB events to be used in the latter scenario.
-
-Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
 ---
  include/uapi/linux/rtnetlink.h | 2 ++
  net/bridge/br_mdb.c            | 4 ++--
@@ -104,6 +102,3 @@ index 34be07a1fd00..9c8bf38e0079 100644
  unlock_continue:
  		spin_unlock(&brmctx->br->multicast_lock);
  	}
--- 
-2.43.0
-
