@@ -23,7 +23,7 @@ if [ -n "$IMAGE_ID" ]; then
 else
     NAME="$INFIX_ID"-$(echo "$BR2_ARCH" | tr _ - | sed 's/x86-64/x86_64/')
 fi
-diskimg=disk.img
+diskimg=disk.qcow2
 
 ver()
 {
@@ -48,7 +48,7 @@ fi
 load_cfg DISK_IMAGE
 if [ "$DISK_IMAGE" = "y" ]; then
     ixmsg "Creating Disk Image"
-    diskimg="${NAME}-disk$(ver).img"
+    diskimg="${NAME}-disk$(ver).qcow2"
     bootcfg=
     if [ "$DISK_IMAGE_BOOT_DATA" ]; then
 	bootcfg="-b $DISK_IMAGE_BOOT_DATA -B $DISK_IMAGE_BOOT_OFFSET"
@@ -90,7 +90,7 @@ if [ "$BR2_TARGET_ROOTFS_SQUASHFS" = "y" ]; then
     rel=$(ver)
     ln -sf rootfs.squashfs "$BINARIES_DIR/${NAME}${rel}.img"
     if [ -n "$rel" ]; then
-	ln -sf "$BINARIES_DIR/${NAME}${rel}.img" "$BINARIES_DIR/${NAME}.img"
+	ln -sf "${NAME}${rel}.img" "$BINARIES_DIR/${NAME}.img"
     fi
 fi
 

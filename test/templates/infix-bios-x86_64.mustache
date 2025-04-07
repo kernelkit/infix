@@ -1,0 +1,26 @@
+#!/bin/sh
+
+con=hvc0
+tty -s && con=hvc2
+
+img={{#qn_image}}{{qn_image}}{{/qn_image}}{{^qn_image}}infix-x86_64-disk.img{{/qn_image}}
+bios={{#qn_bios}}{{qn_bios}}{{/qn_bios}}{{^qn_bios}}OVMF.fd{{/qn_bios}}
+{{> inc/infix-usb}}
+
+origimg=$(realpath $img)
+qemu-img create -f qcow2 -o backing_file=$origimg -F qcow2 {{name}}.qcow2
+
+truncate -s 0 $imgdir/{{name}}.mactab
+{{#links}}
+echo "{{qn_name}}	{{qn_mac}}" >>$imgdir/{{name}}.mactab
+{{/links}}
+
+exec qemu-system-x86_64 -M pc,accel=kvm:tcg -cpu max \
+  -m {{#qn_mem}}{{qn_mem}}{{/qn_mem}}{{^qn_mem}}256M{{/qn_mem}} \
+{{> ../qeneth/templates/inc/qemu-links}}
+    -fw_cfg name=opt/mactab,file=$imgdir/{{name}}.mactab \
+    -bios $bios \
+    -drive file={{name}}.qcow2,if=virtio,format=qcow2,bus=0,unit=1 \
+    $usb_cmd \
+{{> ../qeneth/templates/inc/infix-common}}
+{{> ../qeneth/templates/inc/qemu-console}}

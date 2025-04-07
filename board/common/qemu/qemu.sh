@@ -120,7 +120,7 @@ rootfs_args()
 	echo -n "-device sd-card,drive=mmc "
 	echo -n "-drive id=mmc,file=$CONFIG_QEMU_ROOTFS,if=none,format=raw "
     elif [ "$CONFIG_QEMU_ROOTFS_VSCSI" = "y" ]; then
-	echo -n "-drive file=$CONFIG_QEMU_ROOTFS.qcow2,if=virtio,format=qcow2,bus=0,unit=0 "
+	echo -n "-drive file=qemu.qcow2,if=virtio,format=qcow2,bus=0,unit=0 "
     fi
 }
 
@@ -316,13 +316,13 @@ gdb_args()
 run_qemu()
 {
     if [ "$CONFIG_QEMU_ROOTFS_VSCSI" = "y" ]; then
-	if ! qemu-img check "${CONFIG_QEMU_ROOTFS}.qcow2"; then
-	    rm -f "${CONFIG_QEMU_ROOTFS}.qcow2"
+	if ! qemu-img check "qemu.qcow2"; then
+	    rm -f "qemu.qcow2"
 	fi
-	if [ ! -f "${CONFIG_QEMU_ROOTFS}.qcow2" ]; then
+	if [ ! -f "qemu.qcow2" ]; then
 	    echo "Creating qcow2 disk image for Qemu ..."
 	    qemu-img create -f qcow2 -o backing_file="$CONFIG_QEMU_ROOTFS" \
-		     -F raw "${CONFIG_QEMU_ROOTFS}.qcow2" > /dev/null
+		     -F qcow2 "qemu.qcow2" > /dev/null
 	fi
     fi
 
