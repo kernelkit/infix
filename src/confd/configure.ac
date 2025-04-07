@@ -19,8 +19,11 @@ AC_CONFIG_FILES([
 	share/migrate/1.3/Makefile
 	share/migrate/1.4/Makefile
 	share/migrate/1.5/Makefile
-	src/Makefile
 	yang/Makefile
+	yang/confd/Makefile
+	yang/test-mode/Makefile
+	yang/rousette/Makefile
+	src/Makefile
 ])
 
 AC_PROG_CC
@@ -83,7 +86,7 @@ DATAROOTDIR=`eval echo $datarootdir`
 DATAROOTDIR=`eval echo $DATAROOTDIR`
 AC_SUBST(DATAROOTDIR)
 
-YANGDIR=`eval echo $datarootdir/yang/modules/confd`
+YANGDIR=`eval echo $datarootdir/yang/modules`
 AC_SUBST(YANGDIR)
 
 LIBDIR=`eval echo $libdir`

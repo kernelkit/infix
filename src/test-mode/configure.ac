@@ -6,7 +6,6 @@ AM_SILENT_RULES(yes)
 AC_CONFIG_FILES([
 	Makefile
 	src/Makefile
-	yang/Makefile
 ])
 
 AC_PROG_CC
