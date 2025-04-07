@@ -8,14 +8,14 @@ All notable changes to the project are documented in this file.
 -------------------------
 
 ### Changes
- - N/A
+ - Format for disk image (for QEMU) has changed to `qcow2`
 
 ### Fixes
+ - Fix #1002: Broken symlink in release package
  - Fix #1006: NanoPi R2S corrupt startup, regression in Infix v25.02.0
    - Bump R2S kernel, now same as tier one boards
  - Fix group owner and permissions of `/cfg/backup` directory
  - Fix extraction of old version for `/cfg/backup/` files
-
 
 [v25.03.0][] - 2025-03-31
 -------------------------
