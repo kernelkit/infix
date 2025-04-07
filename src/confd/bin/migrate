@@ -9,6 +9,7 @@ usage()
     echo
     echo "options:"
     echo "  -b FILE  Create backup FILE, appends detected version before .ext"
+    echo "  -e       Print all messages on stderr instead of syslog"
     echo "  -c       Check only, returns false when migration is not needed"
     echo "  -h       This help text"
     echo "  -i       Edit file in-place instead of sending to stdout, like sed"
@@ -30,12 +31,21 @@ note()
     if [ -n "$quiet" ]; then
         return
     fi
-    logger -I $$ -k -p user.notice -t "$ident" "$1"
+
+    if [ -n "$nolog" ]; then
+        echo "$1" >&2
+    else
+        logger -I $$ -k -p user.notice -t "$ident" "$1"
+    fi
 }
 
 err()
 {
-    logger -I $$ -k -p user.err -t "$ident" "$1"
+    if [ -n "$nolog" ]; then
+        echo "Error: $1" >&2
+    else
+        logger -I $$ -k -p user.err -t "$ident" "$1"
+    fi
 }
 
 # Convert human-readable version to integer level
@@ -122,7 +132,7 @@ chmod 600 "$tmp"
 
 trap cleanup INT HUP TERM EXIT
 
-OPTS=$(getopt -o b:chiqs: -- "$@")
+OPTS=$(getopt -o b:echiqs: -- "$@")
 eval set -- "$OPTS"
 
 while [ -n "$1" ]; do
@@ -130,6 +140,9 @@ while [ -n "$1" ]; do
         -b)
             bak=$2
             shift
+            ;;
+        -e)
+            nolog=1
             ;;
         -c)
             check=1
