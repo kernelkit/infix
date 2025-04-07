@@ -131,6 +131,8 @@ This rebuilds (and installs) `foo` and `bar`, the `all` target calls
 on Buildroot to finalize the target filesystem and generate the images.
 The final `run` argument is explained below.
 
+
+
 ### `confd`
 
 The Infix `src/confd/` is the engine of the system.  Currently it is a
@@ -217,21 +219,24 @@ structure of an existing one. However, before making any changes, **always discu
 them with the Infix core team**. This helps avoid issues later in development and 
 makes pull request reviews smoother.
 
+
 Testing
 -------
 
 Manual testing can be done using Qemu by calling <kbd>make run</kbd>,
-see also [Infix in Virtual Environments](virtual.md).
+see also [Infix in Virtual Environments](virtual.md), or on a physical
+device by upgrading to the latest build or "[netbooting](netboot.md)"
+and running the image from RAM.  The latter is how most board porting
+work is done -- **much quicker** change-load-test cycles.
 
 The Infix automated test suite is built around Qemu and [Qeneth][2], see:
 
  * [Testing](testing.md)
  * [Docker Image](../test/docker/README.md)
 
-With any new feature added to Infix, it is essential to include a 
-relevant test case. See the 
-[Test Development](testing.md#test-development) section for guidance
-on adding test cases.
+With any new feature added to Infix, it is essential to include relevant
+test case(s).  See the [Test Development](testing.md#test-development)
+section for guidance on adding test cases.
 
 
 Reviewing
