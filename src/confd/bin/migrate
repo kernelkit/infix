@@ -75,7 +75,7 @@ confd_version()
 # Update meta data with the latest version
 meta_version()
 {
-    if jq --arg version "$sys_version" '.["infix-meta:meta"] = {"infix-meta:version": $version}' "$2" \
+    if jq --arg version "$sys_version" '.["infix-meta:meta"] = {"version": $version}' "$2" \
         > "${2}.tmp" && mv "${2}.tmp" "$2"; then
             note "$1: configuration updated to version $sys_version."
             return 0
