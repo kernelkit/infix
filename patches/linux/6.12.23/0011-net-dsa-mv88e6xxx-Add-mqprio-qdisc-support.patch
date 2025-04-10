@@ -1,7 +1,7 @@
-From 3fce5d8eb2b75aa4e549c798c703b99a5c895517 Mon Sep 17 00:00:00 2001
+From d253013e702aca0e4f91bea6f88a9442e25a8384 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Tue, 28 May 2024 11:04:22 +0200
-Subject: [PATCH 11/28] net: dsa: mv88e6xxx: Add mqprio qdisc support
+Subject: [PATCH 11/27] net: dsa: mv88e6xxx: Add mqprio qdisc support
 Organization: Wires
 
 Add support for attaching mqprio qdisc's to mv88e6xxx ports and use
@@ -30,7 +30,7 @@ handle the mapping down to the "real" number.
  2 files changed, 73 insertions(+), 1 deletion(-)
 
 diff --git a/drivers/net/dsa/mv88e6xxx/chip.c b/drivers/net/dsa/mv88e6xxx/chip.c
-index e05caeabdc85..ad997818047e 100644
+index 97b4e3770994..d2404e9431b1 100644
 --- a/drivers/net/dsa/mv88e6xxx/chip.c
 +++ b/drivers/net/dsa/mv88e6xxx/chip.c
 @@ -31,6 +31,7 @@

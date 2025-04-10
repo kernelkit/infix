@@ -1,7 +1,7 @@
-From 4a519b0c0f6b213373756c81766f0d2564b782e7 Mon Sep 17 00:00:00 2001
+From 60514772701b8335077c9bbd7107786d2a7a3ed4 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Mon, 4 Mar 2024 16:47:28 +0100
-Subject: [PATCH 19/28] net: bridge: avoid classifying unknown multicast as
+Subject: [PATCH 19/27] net: bridge: avoid classifying unknown multicast as
  mrouters_only
 Organization: Wires
 

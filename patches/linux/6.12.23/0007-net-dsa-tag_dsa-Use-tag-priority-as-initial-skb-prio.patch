@@ -1,7 +1,7 @@
-From a7f85153c0aa99c567c62a14f8c29eb3577265d9 Mon Sep 17 00:00:00 2001
+From 7ae7d5ff2239d9d99e0fc769a07bcdcb3edfde94 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Tue, 28 May 2024 10:38:42 +0200
-Subject: [PATCH 07/28] net: dsa: tag_dsa: Use tag priority as initial
+Subject: [PATCH 07/27] net: dsa: tag_dsa: Use tag priority as initial
  skb->priority
 Organization: Wires
 

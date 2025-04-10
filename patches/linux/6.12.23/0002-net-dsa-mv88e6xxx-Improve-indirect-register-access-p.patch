@@ -1,7 +1,7 @@
-From 64426e005ad2ee6485c5ddf5421279278f48862b Mon Sep 17 00:00:00 2001
+From de553470d110f8a685f084e095cabe70f6e034e7 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Wed, 27 Mar 2024 15:52:43 +0100
-Subject: [PATCH 02/28] net: dsa: mv88e6xxx: Improve indirect register access
+Subject: [PATCH 02/27] net: dsa: mv88e6xxx: Improve indirect register access
  perf on 6393
 Organization: Wires
 
@@ -22,7 +22,7 @@ other accesses use the regular indirect interface.
  5 files changed, 119 insertions(+)
 
 diff --git a/drivers/net/dsa/mv88e6xxx/chip.c b/drivers/net/dsa/mv88e6xxx/chip.c
-index 2565277582c5..7ba492ee5c86 100644
+index 378b6714dcf9..e3da229cc309 100644
 --- a/drivers/net/dsa/mv88e6xxx/chip.c
 +++ b/drivers/net/dsa/mv88e6xxx/chip.c
 @@ -6502,6 +6502,13 @@ static int mv88e6xxx_detect(struct mv88e6xxx_chip *chip)

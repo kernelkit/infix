@@ -1,7 +1,7 @@
-From c93ff33ba09c6af6a20f62e07590c01bc9252b78 Mon Sep 17 00:00:00 2001
+From a37059a58453694376e6e5df700d6d4c51703b13 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Tue, 12 Dec 2023 09:51:05 +0100
-Subject: [PATCH 17/28] net: phy: marvell10g: Support LEDs tied to a single
+Subject: [PATCH 17/27] net: phy: marvell10g: Support LEDs tied to a single
  media side
 Organization: Wires
 
