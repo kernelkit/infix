@@ -15,6 +15,7 @@ All notable changes to the project are documented in this file.
  - Fix #1002: Broken symlink in release package
  - Fix #1006: NanoPi R2S corrupt startup, regression in Infix v25.02.0
    - Bump R2S kernel, now same as tier one boards
+ - Fix #1015: Not possible to save custom SSH settings in startup-config
  - Fix group owner and permissions of `/cfg/backup` directory
  - Fix extraction of old version for `/cfg/backup/` files
 
