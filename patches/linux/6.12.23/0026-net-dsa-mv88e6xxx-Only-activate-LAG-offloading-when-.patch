@@ -1,7 +1,7 @@
-From 415473236cee34dc39da4ba25a1c1c006838164c Mon Sep 17 00:00:00 2001
+From fff392ae3166cc2afa80f3eca6066fa21eb6e28e Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Wed, 12 Feb 2025 22:03:14 +0100
-Subject: [PATCH 26/28] net: dsa: mv88e6xxx: Only activate LAG offloading when
+Subject: [PATCH 26/27] net: dsa: mv88e6xxx: Only activate LAG offloading when
  bridged
 Organization: Wires
 
@@ -51,7 +51,7 @@ CPU; egress traffic always relies on software hashing.
  1 file changed, 20 insertions(+), 22 deletions(-)
 
 diff --git a/drivers/net/dsa/mv88e6xxx/chip.c b/drivers/net/dsa/mv88e6xxx/chip.c
-index 30f8a5388733..c1f8adaa008a 100644
+index 41f3223313d0..7bee935fd40f 100644
 --- a/drivers/net/dsa/mv88e6xxx/chip.c
 +++ b/drivers/net/dsa/mv88e6xxx/chip.c
 @@ -3095,6 +3095,7 @@ static int mv88e6xxx_port_bridge_join(struct dsa_switch *ds, int port,

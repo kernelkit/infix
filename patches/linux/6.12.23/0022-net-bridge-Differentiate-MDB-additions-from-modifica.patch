@@ -1,7 +1,7 @@
-From b6d5faea067b67dae8983ca116112a2b86cd0e9b Mon Sep 17 00:00:00 2001
+From 69a5b99e93002daa2a65574677c9ab595f3c8b8d Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Thu, 16 May 2024 14:51:54 +0200
-Subject: [PATCH 22/28] net: bridge: Differentiate MDB additions from
+Subject: [PATCH 22/27] net: bridge: Differentiate MDB additions from
  modifications
 Organization: Wires
 

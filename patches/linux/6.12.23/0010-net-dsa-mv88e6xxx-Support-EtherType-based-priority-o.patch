@@ -1,7 +1,7 @@
-From e77eb9a0196bad9f683411a0985821ab078da741 Mon Sep 17 00:00:00 2001
+From 6c90dd976e8ecb860533a0d1c07620bbb3401d28 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Fri, 22 Mar 2024 16:15:43 +0100
-Subject: [PATCH 10/28] net: dsa: mv88e6xxx: Support EtherType based priority
+Subject: [PATCH 10/27] net: dsa: mv88e6xxx: Support EtherType based priority
  overrides
 Organization: Wires
 
@@ -15,7 +15,7 @@ Organization: Wires
  6 files changed, 207 insertions(+), 4 deletions(-)
 
 diff --git a/drivers/net/dsa/mv88e6xxx/chip.c b/drivers/net/dsa/mv88e6xxx/chip.c
-index cd746bea31be..e05caeabdc85 100644
+index 8c7b8673b694..97b4e3770994 100644
 --- a/drivers/net/dsa/mv88e6xxx/chip.c
 +++ b/drivers/net/dsa/mv88e6xxx/chip.c
 @@ -1715,6 +1715,11 @@ static int mv88e6xxx_rmu_setup(struct mv88e6xxx_chip *chip)

@@ -1,7 +1,7 @@
-From fcd9b8f9d6b91eab102dfa97ab7488abd1fbb9e4 Mon Sep 17 00:00:00 2001
+From 511ad81be48ff78279864de5ca9154ae12a2361b Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Thu, 16 Nov 2023 21:59:35 +0100
-Subject: [PATCH 06/28] net: dsa: mv88e6xxx: Add LED support for 6393X
+Subject: [PATCH 06/27] net: dsa: mv88e6xxx: Add LED support for 6393X
 Organization: Wires
 
 Trigger support:
@@ -17,7 +17,7 @@ Trigger support:
  5 files changed, 272 insertions(+)
 
 diff --git a/drivers/net/dsa/mv88e6xxx/chip.c b/drivers/net/dsa/mv88e6xxx/chip.c
-index 0a7858280903..cd746bea31be 100644
+index e1224c3d217a..8c7b8673b694 100644
 --- a/drivers/net/dsa/mv88e6xxx/chip.c
 +++ b/drivers/net/dsa/mv88e6xxx/chip.c
 @@ -5657,6 +5657,7 @@ static const struct mv88e6xxx_ops mv88e6393x_ops = {
