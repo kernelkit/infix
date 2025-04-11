@@ -6,7 +6,7 @@ All notable changes to the project are documented in this file.
 [v25.03.1][] - 2025-04-11
 -------------------------
 
-### Changes
+### Fixes
  - Fix configuration migration issues when upgrading
 
 
@@ -1536,6 +1536,7 @@ Supported YANG models in addition to those used by sysrepo and netopeer:
 
 [buildroot]:  https://buildroot.org/
 [UNRELEASED]: https://github.com/kernelkit/infix/compare/v25.03.0...HEAD
+[v25.03.1]:   https://github.com/kernelkit/infix/compare/v25.03.0...v25.03.1
 [v25.03.0]:   https://github.com/kernelkit/infix/compare/v25.02.0...v25.03.0
 [v25.02.0]:   https://github.com/kernelkit/infix/compare/v25.01.0...v25.02.0
 [v25.01.0]:   https://github.com/kernelkit/infix/compare/v24.11.0...v25.01.0
