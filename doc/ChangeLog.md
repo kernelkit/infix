@@ -3,6 +3,12 @@ Change Log
 
 All notable changes to the project are documented in this file.
 
+[v25.03.1][] - 2025-04-11
+-------------------------
+
+### Changes
+ - Fix configuration migration issues when upgrading
+
 
 [v25.03.0][] - 2025-03-31
 -------------------------
