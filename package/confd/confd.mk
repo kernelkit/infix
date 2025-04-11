@@ -35,13 +35,30 @@ define CONFD_INSTALL_EXTRA
 	cp $(CONFD_PKGDIR)/avahi.service $(TARGET_DIR)/etc/avahi/services/netconf.service
 endef
 
+NETOPEER2_SEARCHPATH=$(TARGET_DIR)/usr/share/yang/modules/netopeer2/
+SYSREPO_SEARCHPATH=$(TARGET_DIR)/usr/share/yang/modules/sysrepo/
+LIBNETCONF2_SEARCHPATH=$(TARGET_DIR)/usr/share/yang/modules/libnetconf2/
+CONFD_SEARCHPATH=$(TARGET_DIR)/usr/share/yang/modules/confd/
+TEST_MODE_SEARCHPATH=$(TARGET_DIR)/usr/share/yang/modules/test-mode/
+ROUSETTE_SEARCHPATH=$(TARGET_DIR)/usr/share/yang/modules/rousette/
 COMMON_SYSREPO_ENV = \
 	SYSREPO_SHM_PREFIX=$(CONFD_SYSREPO_SHM_PREFIX) \
 	SYSREPOCTL_EXECUTABLE="$(HOST_DIR)/bin/sysrepoctl" \
 	SYSREPOCFG_EXECUTABLE="$(HOST_DIR)/bin/sysrepocfg" \
-	SEARCH_PATH="$(TARGET_DIR)/usr/share/yang/modules/confd/"
+	SEARCH_PATH="$(NETOPEER2_SEARCHPATH) $(SYSREPO_SEARCHPATH) $(LIBNETCONF2_SEARCHPATH) $(TEST_MODE_SEARCHPATH) $(CONFD_SEARCHPATH) $(ROUSETTE_SEARCHPATH)"
+
 
 define CONFD_INSTALL_YANG_MODULES
+	$(COMMON_SYSREPO_ENV) \
+	$(BR2_EXTERNAL_INFIX_PATH)/utils/srload $(@D)/yang/sysrepo.inc
+	$(COMMON_SYSREPO_ENV) \
+	$(BR2_EXTERNAL_INFIX_PATH)/utils/srload $(@D)/yang/libnetconf2.inc
+	$(COMMON_SYSREPO_ENV) \
+	$(BR2_EXTERNAL_INFIX_PATH)/utils/srload $(@D)/yang/netopeer2.inc
+	$(COMMON_SYSREPO_ENV) \
+	$(BR2_EXTERNAL_INFIX_PATH)/utils/srload $(@D)/yang/rousette.inc
+	$(COMMON_SYSREPO_ENV) \
+	$(BR2_EXTERNAL_INFIX_PATH)/utils/srload $(@D)/yang/test-mode.inc
 	$(COMMON_SYSREPO_ENV) \
 	$(BR2_EXTERNAL_INFIX_PATH)/utils/srload $(@D)/yang/confd.inc
 endef
@@ -57,11 +74,13 @@ define CONFD_PERMISSIONS
 	/etc/sysrepo/data/ r 660 root wheel - - - - -
 	/etc/sysrepo/data  d 770 root wheel - - - - -
 endef
-
+define CONFD_EMPTY_SYSREPO
+	rm -rf $(TARGET_DIR)/etc/sysrepo/data/
+endef
 define CONFD_CLEANUP
 	rm -f /dev/shm/$(CONFD_SYSREPO_SHM_PREFIX)*
 endef
-
+CONFD_PRE_INSTALL_TARGET_HOOKS += CONFD_EMPTY_SYSREPO
 CONFD_PRE_INSTALL_TARGET_HOOKS += CONFD_CLEANUP
 CONFD_POST_INSTALL_TARGET_HOOKS += CONFD_INSTALL_EXTRA
 CONFD_POST_INSTALL_TARGET_HOOKS += CONFD_INSTALL_YANG_MODULES

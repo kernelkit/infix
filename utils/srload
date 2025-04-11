@@ -20,7 +20,6 @@ else
     SYSREPOCTL=$(command sysrepoctl)
 fi
 
-MODDIR=${SEARCH_PATH}
 PERMS="660"
 #OWNER=root
 #GROUP=wheel
@@ -99,6 +98,18 @@ SCTL_MODULES=$($SYSREPOCTL -l |tail -n +5 |head -n -3)
 for module in "${MODULES[@]}"; do
     name=$(echo "$module" | awk -F'[@.]' '{print $1}')
     date=$(echo "$module" | awk -F'[@.]' '{print $2}')
+    for dir in $SEARCH_PATH; do
+       if [ -n "${date}" ]; then
+          yang=${name}@${date}.yang
+       else
+          yang=${name}.yang
+       fi
+       if [ -f "${dir}/${yang}" ]; then
+	  MODDIR="${dir}"
+       fi
+    done
+    [ -z "${MODDIR}" ] && echo "Could not find ${yang} in ${SEARCH_PATH}" && exit 1
+
 
     SCTL_MODULE=$(echo "$SCTL_MODULES" | grep "^$name \+|[^|]*| I")
     if [ -z "$SCTL_MODULE" ]; then
