@@ -38,7 +38,7 @@
 #define XPATH_ROUTING_BASE "/ietf-routing:routing/control-plane-protocols/control-plane-protocol"
 #define XPATH_ROUTING_TABLE "/ietf-routing:routing/ribs"
 #define XPATH_HARDWARE_BASE "/ietf-hardware:hardware"
-#define XPATH_SYSTEM_BASE "/ietf-system:system-state"
+#define XPATH_SYSTEM_BASE "/ietf-system"
 #define XPATH_ROUTING_OSPF XPATH_ROUTING_BASE "/ospf"
 #define XPATH_CONTAIN_BASE  "/infix-containers:containers"
 #define XPATH_DHCP_SERVER_BASE  "/infix-dhcp-server:dhcp-server"
@@ -344,7 +344,9 @@ static int subscribe_to_all(struct statd *statd)
 		return SR_ERR_INTERNAL;
 	if (subscribe(statd, "ietf-hardware", XPATH_HARDWARE_BASE, sr_generic_cb))
 		return SR_ERR_INTERNAL;
-	if (subscribe(statd, "ietf-system", XPATH_SYSTEM_BASE, sr_generic_cb))
+	if (subscribe(statd, "ietf-system", XPATH_SYSTEM_BASE":system", sr_generic_cb))
+		return SR_ERR_INTERNAL;
+	if (subscribe(statd, "ietf-system", XPATH_SYSTEM_BASE":system-state", sr_generic_cb))
 		return SR_ERR_INTERNAL;
 	if (subscribe(statd, "ieee802-dot1ab-lldp", XPATH_LLDP_BASE, sr_generic_cb))
 		return SR_ERR_INTERNAL;
