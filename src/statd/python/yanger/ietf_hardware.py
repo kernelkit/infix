@@ -78,13 +78,18 @@ def usb_port_components(systemjson):
 
 
 def operational():
-    systemjson = HOST.read_json("/run/system.json")
+    try:
+        systemjson = HOST.read_json("/run/system.json")
+        vpd_components(systemjson)
+        usb_port_components(systemjson)
+        components = vpd_component + usb_port_components + []
+
+    except:
+        components = []
 
     return {
         "ietf-hardware:hardware": {
             "component":
-            vpd_components(systemjson) +
-            usb_port_components(systemjson) +
-            [],
+            components
         },
     }

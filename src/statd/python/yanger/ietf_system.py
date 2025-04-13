@@ -171,19 +171,25 @@ def add_software(out):
     except subprocess.CalledProcessError:
         pass    # Maybe an upgrade i progress, then rauc does not respond
 
-    installer_status = HOST.run_json(["rauc-installation-status"])
-    installer = {}
-    if installer_status.get("operation"):
-        installer["operation"] = installer_status["operation"]
-    if "progress" in installer_status:
-        progress = {}
+    except FileNotFoundError:
+        pass
 
-        if installer_status["progress"].get("percentage"):
-            progress["percentage"] = int(installer_status["progress"]["percentage"])
-        if installer_status["progress"].get("message"):
-            progress["message"] = installer_status["progress"]["message"]
-        installer["progress"] = progress
-    software["installer"] = installer
+    installer = {}
+    try:
+        installer_status = HOST.run_json(["rauc-installation-status"])
+        if installer_status.get("operation"):
+            installer["operation"] = installer_status["operation"]
+        if "progress" in installer_status:
+            progress = {}
+
+            if installer_status["progress"].get("percentage"):
+                progress["percentage"] = int(installer_status["progress"]["percentage"])
+            if installer_status["progress"].get("message"):
+                progress["message"] = installer_status["progress"]["message"]
+            installer["progress"] = progress
+        software["installer"] = installer
+    except FileNotFoundError:
+        pass
 
     insert(out, "infix-system:software", software)
 
