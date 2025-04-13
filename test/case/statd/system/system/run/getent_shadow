@@ -1,0 +1,17 @@
+root:*:::::::
+daemon:*:::::::
+bin:*:::::::
+sys:*:::::::
+sync:*:::::::
+mail:*:::::::
+www-data:*:::::::
+sys-cli:*:::::::
+backup:*:::::::
+nobody:*:::::::
+yangnobody:*:::::::
+avahi:*:::::::
+chrony:*:::::::
+dbus:*:::::::
+frr:*:::::::
+sshd:*:::::::
+admin:$5$mI/zpOAqZYKLC2WU$i7iPzZiIjOjrBF3NyftS9CCq8dfYwHwrmUK097Jca9A:::::::
