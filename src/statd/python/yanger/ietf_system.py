@@ -123,7 +123,7 @@ def add_dns(out):
 
 def add_software_slots(out, data):
     slots = []
-    for slot in data["slots"]:
+    for slot in data.get("slots", []):
         for key, value in slot.items():
             new = {}
             new["name"] = key
@@ -178,10 +178,10 @@ def add_platform(out):
 def add_software(out):
     software = {}
     try:
-        data = HOST.run_json(["rauc", "status", "--detailed", "--output-format=json"])
-        software["compatible"] = data["compatible"]
-        software["variant"] = data["variant"]
-        software["booted"] = data["booted"]
+        data = HOST.run_json(["rauc", "status", "--detailed", "--output-format=json"], {})
+        software["compatible"] = data.get("compatible", "")
+        software["variant"] = data.get("variant", "")
+        software["booted"] = data.get("booted", "")
         boot_order = get_boot_order()
         if not boot_order is None:
             software["boot-order"] = boot_order
@@ -189,25 +189,19 @@ def add_software(out):
     except subprocess.CalledProcessError:
         pass    # Maybe an upgrade i progress, then rauc does not respond
 
-    except FileNotFoundError:
-        pass
-
     installer = {}
-    try:
-        installer_status = HOST.run_json(["rauc-installation-status"])
-        if installer_status.get("operation"):
-            installer["operation"] = installer_status["operation"]
-        if "progress" in installer_status:
-            progress = {}
+    installer_status = HOST.run_json(["rauc-installation-status"], {})
+    if installer_status.get("operation", {}):
+        installer["operation"] = installer_status["operation"]
+    if "progress" in installer_status:
+        progress = {}
 
-            if installer_status["progress"].get("percentage"):
-                progress["percentage"] = int(installer_status["progress"]["percentage"])
-            if installer_status["progress"].get("message"):
-                progress["message"] = installer_status["progress"]["message"]
-            installer["progress"] = progress
-        software["installer"] = installer
-    except FileNotFoundError:
-        pass
+        if installer_status["progress"].get("percentage"):
+            progress["percentage"] = int(installer_status["progress"]["percentage"])
+        if installer_status["progress"].get("message"):
+            progress["message"] = installer_status["progress"]["message"]
+        installer["progress"] = progress
+    software["installer"] = installer
 
     insert(out, "infix-system:software", software)
 
