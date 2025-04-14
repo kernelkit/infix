@@ -115,7 +115,8 @@ def add_dns(out):
                 continue
 
         elif line.startswith('search'):
-            search.extend(line.split()[1:])
+            parts = line.split('#', 1)
+            search.extend(parts[0].split()[1:])
 
     insert(out, "infix-system:dns-resolver", "options", options)
     insert(out, "infix-system:dns-resolver", "server", servers)
