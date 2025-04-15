@@ -32,7 +32,7 @@
 #define MFD_NOEXEC_SEAL 0x0008U
 #endif
 
-#define YANGER_BINPATH "/usr/libexec/statd/yanger"
+#define YANGER_BINPATH YANGER_DIR"/yanger"
 #define XPATH_MAX PATH_MAX
 #define XPATH_IFACE_BASE "/ietf-interfaces:interfaces"
 #define XPATH_ROUTING_BASE "/ietf-routing:routing/control-plane-protocols/control-plane-protocol"

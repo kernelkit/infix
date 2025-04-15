@@ -17,6 +17,15 @@ AC_ARG_ENABLE(containers,
         AS_HELP_STRING([--enable-containers], [Enable support for containers]),,[
 	enable_containers=no])
 
+AC_ARG_WITH([yanger-dir],
+  [AS_HELP_STRING([--with-yanger-dir=DIR],
+    [specify the path to yanger])],
+  [YANGER_DIR="$withval"],
+  [YANGER_DIR="/usr/libexec/statd"])
+
+# Define YANGER_DIR for use in C code
+AC_DEFINE_UNQUOTED([YANGER_DIR], ["$YANGER_DIR"], [Path to yanger])
+
 # C defines
 AS_IF([test "x$enable_containers" = "xyes"], [
         AC_DEFINE(CONTAINERS, 1, [Built with container support])])
@@ -73,6 +82,7 @@ cat <<EOF
   Exec prefix...........: $eprefix
   Sysconfdir............: `eval echo $sysconfdir`
   Localstatedir.........: `eval echo $localstatedir`
+  Yangerdir.............: $YANGER_DIR
   Default fstab.........: `eval echo $fstab`
   System environment....: ${sysconfig_path:-${sysconfig}}
   C Compiler............: $CC $CFLAGS $CPPFLAGS $LDFLAGS $LIBS
