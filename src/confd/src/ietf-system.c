@@ -38,10 +38,6 @@ struct sr_change {
 	sr_val_t *new;
 };
 
-static char   *ver = NULL;
-static char   *rel = NULL;
-static char   *sys = NULL;
-static char   *os  = NULL;
 static char   *nm  = NULL;
 static char   *id  = NULL;
 
@@ -90,16 +86,8 @@ static void setvar(const char *line, const char *key, char **var)
 
 static void os_init(void)
 {
-	struct utsname uts;
 	char line[80];
 	FILE *fp;
-
-	if (!uname(&uts)) {
-		os  = strdup(uts.sysname);
-		ver = strdup(uts.release);
-		rel = strdup(uts.release);
-		sys = strdup(uts.machine);
-	}
 
 	fp = fopen("/etc/os-release", "r");
 	if (!fp) {
@@ -110,34 +98,10 @@ static void os_init(void)
 
 	while (fgets(line, sizeof(line), fp)) {
 		line[strlen(line) - 1] = 0; /* drop \n */
-		setvar(line, "NAME", &os);
-		setvar(line, "VERSION_ID", &ver);
-		setvar(line, "BUILD_ID", &rel);
-		setvar(line, "ARCHITECTURE", &sys);
 		setvar(line, "DEFAULT_HOSTNAME", &nm);
 		setvar(line, "ID", &id);
 	}
 	fclose(fp);
-}
-
-static char *fmtime(time_t t, char *buf, size_t len)
-{
-        const char *isofmt = "%FT%T%z";
-        struct tm tm;
-        size_t i, n;
-
-	tzset();
-        localtime_r(&t, &tm);
-        n = strftime(buf, len, isofmt, &tm);
-        i = n - 5;
-        if (buf[i] == '+' || buf[i] == '-') {
-                buf[i + 6] = buf[i + 5];
-                buf[i + 5] = buf[i + 4];
-                buf[i + 4] = buf[i + 3];
-                buf[i + 3] = ':';
-        }
-
-        return buf;
 }
 
 static sr_error_t _sr_change_iter(sr_session_ctx_t *session, struct confd *confd, char *xpath,
@@ -163,71 +127,6 @@ static sr_error_t _sr_change_iter(sr_session_ctx_t *session, struct confd *confd
 	sr_free_change_iter(iter);
 
 	return SR_ERR_OK;
-}
-
-static int clock_cb(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
-		    const char *path, const char *request_path, uint32_t request_id,
-		    struct lyd_node **parent, void *priv)
-{
-	static char boottime[64] = { 0 };
-	const struct ly_ctx *ctx;
-	char curtime[64];
-	time_t now, boot;
-	int rc;
-
-	ctx = sr_acquire_context(sr_session_get_connection(session));
-
-	now = time(NULL);
-	if (!boottime[0]) {
-		struct sysinfo si;
-
-		sysinfo(&si);
-		boot = now - si.uptime;
-		fmtime(boot, boottime, sizeof(boottime));
-	}
-	fmtime(now, curtime, sizeof(curtime));
-
-	if ((rc = lydx_new_path(ctx, parent, CLOCK_PATH_, "boot-datetime", "%s", boottime)))
-		goto fail;
-	if ((rc = lydx_new_path(ctx, parent, CLOCK_PATH_, "current-datetime", "%s", curtime)))
-		goto fail;
-
-	if (rc) {
-	fail:
-		ERROR("Failed building data tree, libyang error %d", rc);
-		rc = SR_ERR_INTERNAL;
-	}
-
-	sr_release_context(sr_session_get_connection(session));
-	return rc;
-}
-
-static int platform_cb(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
-		       const char *path, const char *request_path, uint32_t request_id,
-		       struct lyd_node **parent, void *priv)
-{
-	const struct ly_ctx *ctx;
-	int rc;
-
-	ctx = sr_acquire_context(sr_session_get_connection(session));
-
-	if ((rc = lydx_new_path(ctx, parent, PLATFORM_PATH_, "os-name", "%s", os)))
-		goto fail;
-	if ((rc = lydx_new_path(ctx, parent, PLATFORM_PATH_, "os-release", "%s", rel)))
-		goto fail;
-	if ((rc = lydx_new_path(ctx, parent, PLATFORM_PATH_, "os-version", "%s", ver)))
-		goto fail;
-	if ((rc = lydx_new_path(ctx, parent, PLATFORM_PATH_, "machine", "%s", sys)))
-		goto fail;
-
-	if (rc) {
-	fail:
-		ERROR("Failed building data tree, libyang error %d", rc);
-		rc = SR_ERR_INTERNAL;
-	}
-
-	sr_release_context(sr_session_get_connection(session));
-	return rc;
 }
 
 static int rpc_exec(sr_session_ctx_t *session, uint32_t sub_id, const char *path,
@@ -1408,30 +1307,6 @@ static int change_auth(sr_session_ctx_t *session, uint32_t sub_id, const char *m
 	return SR_ERR_OK;
 }
 
-static int auth_cb(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
-		    const char *path, const char *request_path, uint32_t request_id,
-		    struct lyd_node **parent, void *priv)
-{
-	const char *fmt = "/ietf-system:system/authentication/user[name='%s']/password";
-	struct spwd *spwd;
-
-	setspent();
-	while ((spwd = getspent())) {
-		char xpath[256];
-
-		/* Skip any records that do not pass YANG validation */
-		if (!spwd->sp_pwdp || spwd->sp_pwdp[0] == '0' ||
-		     spwd->sp_pwdp[0] == '*' || spwd->sp_pwdp[0] == '!')
-			continue;
-
-		snprintf(xpath, sizeof(xpath), fmt, spwd->sp_namp);
-		lyd_new_path(*parent, NULL, xpath, spwd->sp_pwdp, 0, 0);
-	}
-	endspent();
-
-	return SR_ERR_OK;
-}
-
 static int change_nacm(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
 		       const char *_, sr_event_t event, unsigned request_id, void *priv)
 {
@@ -1773,23 +1648,6 @@ err:
 	return SR_ERR_OK;
 }
 
-static int hostname_cb(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
-		       const char *path, const char *request_path, uint32_t request_id,
-		       struct lyd_node **parent, void *priv)
-{
-	char hostname[128];
-	int rc;
-
-	gethostname(hostname, sizeof(hostname));
-	rc = lyd_new_path(*parent, NULL, path, hostname, 0, NULL);
-	if (rc) {
-		ERROR("Failed building data tree, libyang error %d", rc);
-		rc = SR_ERR_INTERNAL;
-	}
-
-	return rc;
-}
-
 int ietf_system_init(struct confd *confd)
 {
 	int rc;
@@ -1797,21 +1655,16 @@ int ietf_system_init(struct confd *confd)
 	os_init();
 
 	REGISTER_CHANGE(confd->session, "ietf-system", XPATH_AUTH_, 0, change_auth, confd, &confd->sub);
-	REGISTER_OPER(confd->session, "ietf-system", PASSWORD_PATH, auth_cb, confd, 0, &confd->sub);
 	REGISTER_MONITOR(confd->session, "ietf-netconf-acm", "/ietf-netconf-acm:nacm//.",
 			 0, change_nacm, confd, &confd->sub);
 
 	REGISTER_CHANGE(confd->session, "ietf-system", XPATH_BASE_"/hostname", 0, change_hostname, confd, &confd->sub);
-	REGISTER_OPER(confd->session, "ietf-system", XPATH_BASE_"/hostname", hostname_cb, confd, 0, &confd->sub);
 	REGISTER_CHANGE(confd->session, "ietf-system", XPATH_BASE_"/infix-system:motd", 0, change_motd, confd, &confd->sub);
 	REGISTER_CHANGE(confd->session, "ietf-system", XPATH_BASE_"/infix-system:motd-banner", 0, change_motd_banner, confd, &confd->sub);
 	REGISTER_CHANGE(confd->session, "ietf-system", XPATH_BASE_"/infix-system:text-editor", 0, change_editor, confd, &confd->sub);
 	REGISTER_CHANGE(confd->session, "ietf-system", XPATH_BASE_"/clock", 0, change_clock, confd, &confd->sub);
 	REGISTER_CHANGE(confd->session, "ietf-system", XPATH_BASE_"/ntp", 0, change_ntp, confd, &confd->sub);
 	REGISTER_CHANGE(confd->session, "ietf-system", XPATH_BASE_"/dns-resolver", 0, change_dns, confd, &confd->sub);
-
-	REGISTER_OPER(confd->session, "ietf-system", CLOCK_PATH_, clock_cb, NULL, 0, &confd->sub);
-	REGISTER_OPER(confd->session, "ietf-system", PLATFORM_PATH_, platform_cb, NULL, 0, &confd->sub);
 
 	REGISTER_RPC(confd->session, "/ietf-system:system-restart",  rpc_exec, "reboot", &confd->sub);
 	REGISTER_RPC(confd->session, "/ietf-system:system-shutdown", rpc_exec, "poweroff", &confd->sub);
