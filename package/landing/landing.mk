@@ -11,6 +11,7 @@ LANDING_LICENSE = ISC
 LANDING_LICENSE_FILES = LICENSE
 
 define LANDING_INSTALL_TARGET_CMDS
+        mkdir -p $(TARGET_DIR)/usr/html/
 	cp $(@D)/*.html $(TARGET_DIR)/usr/html/
 	cp $(@D)/*.png  $(TARGET_DIR)/usr/html/
 endef

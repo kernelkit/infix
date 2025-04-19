@@ -1,0 +1,27 @@
+diff -urN lowdown-VERSION_1_0_2.orig/configure lowdown-VERSION_1_0_2/configure
+--- lowdown-VERSION_1_0_2.orig/configure	2025-03-21 12:58:06.151106271 +0000
++++ lowdown-VERSION_1_0_2/configure	2025-03-21 13:20:20.649825864 +0000
+@@ -61,12 +61,7 @@
+ 
+ MAKE_FLAGS=""
+ 
+-if [ -n "${MAKELEVEL}" ]; then
+-	if [ "${MAKELEVEL}" -gt 0 ] ; then
+-		MAKE_FLAGS="--no-print-directory"
+-		echo "all:" | make ${MAKE_FLAGS} -sf - 2>/dev/null || MAKE_FLAGS=""
+-	fi
+-fi
++MAKE_FLAGS="--no-print-directory"
+ 
+ if [ -n "$MAKE_FLAGS" ]; then 
+ 	echo "GNU submake detected: using --no-print-directory" 1>&2
+@@ -79,9 +74,6 @@
+ # in.
+ #----------------------------------------------------------------------
+ 
+-AR=`printf "all:\\n\\t@echo \\\$(AR)\\n" | make ${MAKE_FLAGS} -sf -`
+-CC=`printf "all:\\n\\t@echo \\\$(CC)\\n" | make ${MAKE_FLAGS} -sf -`
+-CFLAGS=`printf "all:\\n\\t@echo \\\$(CFLAGS)\\n" | make ${MAKE_FLAGS} -sf -`
+ CFLAGS="${CFLAGS} -g -W -Wall -Wextra -Wmissing-prototypes -Wstrict-prototypes"
+ CFLAGS="${CFLAGS} -Wwrite-strings -Wno-unused-parameter"
+ LDLIBS=
