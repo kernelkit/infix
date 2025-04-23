@@ -1,7 +1,7 @@
 import subprocess
 import ipaddress
 
-from .common import insert
+from .common import insert,YangDate
 from .host import HOST
 
 def uboot_get_boot_order():
@@ -115,7 +115,8 @@ def add_dns(out):
                 continue
 
         elif line.startswith('search'):
-            search.extend(line.split()[1:])
+            parts = line.split('#', 1)
+            search.extend(parts[0].split()[1:])
 
     insert(out, "infix-system:dns-resolver", "options", options)
     insert(out, "infix-system:dns-resolver", "server", servers)
@@ -123,7 +124,7 @@ def add_dns(out):
 
 def add_software_slots(out, data):
     slots = []
-    for slot in data["slots"]:
+    for slot in data.get("slots", []):
         for key, value in slot.items():
             new = {}
             new["name"] = key
@@ -157,13 +158,31 @@ def add_software_slots(out, data):
             slots.append(new)
     out["slot"] = slots
 
+def add_platform(out):
+    platform = {}
+    pmap = {
+        "NAME": "os-name",
+        "VERSION_ID": "os-version",
+        "BUILD_ID": "os-release",
+        "ARCHITECTURE": "machine"
+    }
+
+    os_release = HOST.read("/etc/os-release")
+    for line in os_release.splitlines():
+        key, value = line.split('=')
+        name = pmap.get(key)
+        if name:
+            platform[name] = value.strip("\"")
+
+    insert(out, "platform", platform)
+
 def add_software(out):
     software = {}
     try:
-        data = HOST.run_json(["rauc", "status", "--detailed", "--output-format=json"])
-        software["compatible"] = data["compatible"]
-        software["variant"] = data["variant"]
-        software["booted"] = data["booted"]
+        data = HOST.run_json(["rauc", "status", "--detailed", "--output-format=json"], {})
+        software["compatible"] = data.get("compatible", "")
+        software["variant"] = data.get("variant", "")
+        software["booted"] = data.get("booted", "")
         boot_order = get_boot_order()
         if not boot_order is None:
             software["boot-order"] = boot_order
@@ -171,9 +190,9 @@ def add_software(out):
     except subprocess.CalledProcessError:
         pass    # Maybe an upgrade i progress, then rauc does not respond
 
-    installer_status = HOST.run_json(["rauc-installation-status"])
     installer = {}
-    if installer_status.get("operation"):
+    installer_status = HOST.run_json(["rauc-installation-status"], {})
+    if installer_status.get("operation", {}):
         installer["operation"] = installer_status["operation"]
     if "progress" in installer_status:
         progress = {}
@@ -187,15 +206,61 @@ def add_software(out):
 
     insert(out, "infix-system:software", software)
 
+def add_hostname(out):
+    hostname =  HOST.run(tuple(["hostname"]))
+    out["hostname"] = hostname.strip()
+
+def add_users(out):
+    shadow_output = HOST.run_multiline(["getent", "shadow"], [])
+    users = []
+
+    for line in shadow_output:
+        parts = line.split(':')
+        if len(parts) < 2:
+            continue
+        username = parts[0]
+        password_hash = parts[1]
+
+        # Skip any records that do not pass YANG validation
+        if (not password_hash or
+            password_hash.startswith('0') or
+            password_hash.startswith('*') or
+            password_hash.startswith('!')):
+            continue
+        user = {}
+        user["name"] = username
+        user["password"] = password_hash
+        users.append(user)
+
+
+    insert(out, "authentication", "user", users)
+
+def add_clock(out):
+    clock = {}
+    clock_now=YangDate()
+
+    uptime=HOST.read("/proc/uptime")
+    uptime = float(uptime.split()[0])
+
+    clock["boot-datetime"] = str(clock_now.from_seconds(uptime))
+    clock["current-datetime"] = str(clock_now)
+    insert(out, "clock", clock)
+
 def operational():
     out = {
+        "ietf-system:system": {
+        },
         "ietf-system:system-state": {
         }
     }
     out_state = out["ietf-system:system-state"]
-
+    out_system = out["ietf-system:system"]
+    add_hostname(out_system)
+    add_users(out_system)
     add_software(out_state)
     add_ntp(out_state)
     add_dns(out_state)
+    add_clock(out_state)
+    add_platform(out_state)
 
     return out

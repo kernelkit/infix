@@ -23,7 +23,33 @@
       }
     ]
   },
+  "ietf-system:system": {
+    "authentication": {
+      "user": [
+        {
+          "name": "admin",
+          "password": "$5$mI/zpOAqZYKLC2WU$i7iPzZiIjOjrBF3NyftS9CCq8dfYwHwrmUK097Jca9A"
+        }
+      ]
+    },
+    "hostname": "target"
+  },
   "ietf-system:system-state": {
+    "clock": {
+      "boot-datetime": "2025-04-23T11:42:01+00:00",
+      "current-datetime": "2025-04-23T11:42:27+00:00"
+    },
+    "infix-system:dns-resolver": {
+      "options": {},
+      "search": [],
+      "server": [
+        {
+          "address": "192.168.2.1",
+          "interface": "e7",
+          "origin": "dhcp"
+        }
+      ]
+    },
     "infix-system:ntp": {
       "sources": {
         "source": [
@@ -117,6 +143,12 @@
         }
       ],
       "variant": ""
+    },
+    "platform": {
+      "machine": "x86_64",
+      "os-name": "Infix",
+      "os-release": "v25.03.0-48-gfb8e3e5b-dirty",
+      "os-version": "v25.03.0-48-gfb8e3e5b-dirty"
     }
   }
 }

@@ -1,0 +1,16 @@
+NAME="Infix"
+ID=infix
+PRETTY_NAME="Infix -- a Network Operating System v25.03.0-48-gfb8e3e5b-dirty"
+ID_LIKE="buildroot"
+DEFAULT_HOSTNAME=ix
+VERSION="v25.03.0-48-gfb8e3e5b-dirty"
+VERSION_ID=v25.03.0-48-gfb8e3e5b-dirty
+BUILD_ID="v25.03.0-48-gfb8e3e5b-dirty"
+IMAGE_ID="infix-x86_64"
+ARCHITECTURE="x86_64"
+HOME_URL=https://github.com/kernelkit/infix/
+VENDOR_NAME="KernelKit"
+VENDOR_HOME="https://github.com/kernelkit"
+DOCUMENTATION_URL="https://github.com/kernelkit/infix/tree/main/doc"
+SUPPORT_URL="mailto:kernelkit@googlegroups.com"
+INFIX_DESC="Infix is a Network Operating System based on Linux.  It can be set up both as a switch, with offloading using switchdev, and a router with firewalling."
