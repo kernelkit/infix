@@ -9,6 +9,7 @@ All notable changes to the project are documented in this file.
 
 ### Changes
  - Upgrade Linux kernel to 6.12.23 (LTS)
+ - Upgrade Buildroot to 2025.02.1 (LTS)
  - Format for disk image (for QEMU) has changed to `qcow2`
 
 ### Fixes
