@@ -1,0 +1,46 @@
+From 5059085e17b7967a8ed10f10c0cfbe1413a6955c Mon Sep 17 00:00:00 2001
+From: Liu Ying <victor.liu@nxp.com>
+Date: Mon, 4 Nov 2024 11:27:58 +0800
+Subject: [PATCH 28/35] drm: of: Get MEDIA_BUS_FMT_RGB101010_1X7X5_{JEIDA,
+ SPWG} LVDS data mappings
+Organization: Wires
+
+Add MEDIA_BUS_FMT_RGB101010_1X7X5_{JEIDA,SPWG} support in
+drm_of_lvds_get_data_mapping() function implementation so that function
+callers may get the two LVDS data mappings.
+
+Signed-off-by: Liu Ying <victor.liu@nxp.com>
+Reviewed-by: Dmitry Baryshkov <dmitry.baryshkov@linaro.org>
+Link: https://patchwork.freedesktop.org/patch/msgid/20241104032806.611890-6-victor.liu@nxp.com
+Signed-off-by: Dmitry Baryshkov <dmitry.baryshkov@linaro.org>
+---
+ drivers/gpu/drm/drm_of.c | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/drivers/gpu/drm/drm_of.c b/drivers/gpu/drm/drm_of.c
+index 177b600895d3..89863a35c731 100644
+--- a/drivers/gpu/drm/drm_of.c
++++ b/drivers/gpu/drm/drm_of.c
+@@ -410,7 +410,9 @@ EXPORT_SYMBOL_GPL(drm_of_lvds_get_dual_link_pixel_order);
+  * Return:
+  * * MEDIA_BUS_FMT_RGB666_1X7X3_SPWG - data-mapping is "jeida-18"
+  * * MEDIA_BUS_FMT_RGB888_1X7X4_JEIDA - data-mapping is "jeida-24"
++ * * MEDIA_BUS_FMT_RGB101010_1X7X5_JEIDA - data-mapping is "jeida-30"
+  * * MEDIA_BUS_FMT_RGB888_1X7X4_SPWG - data-mapping is "vesa-24"
++ * * MEDIA_BUS_FMT_RGB101010_1X7X5_SPWG - data-mapping is "vesa-30"
+  * * -EINVAL - the "data-mapping" property is unsupported
+  * * -ENODEV - the "data-mapping" property is missing
+  */
+@@ -427,8 +429,12 @@ int drm_of_lvds_get_data_mapping(const struct device_node *port)
+ 		return MEDIA_BUS_FMT_RGB666_1X7X3_SPWG;
+ 	if (!strcmp(mapping, "jeida-24"))
+ 		return MEDIA_BUS_FMT_RGB888_1X7X4_JEIDA;
++	if (!strcmp(mapping, "jeida-30"))
++		return MEDIA_BUS_FMT_RGB101010_1X7X5_JEIDA;
+ 	if (!strcmp(mapping, "vesa-24"))
+ 		return MEDIA_BUS_FMT_RGB888_1X7X4_SPWG;
++	if (!strcmp(mapping, "vesa-30"))
++		return MEDIA_BUS_FMT_RGB101010_1X7X5_SPWG;
+ 
+ 	return -EINVAL;
+ }
