@@ -1,0 +1,1 @@
+root=/dev/mmcblk1p2 rootwait 8250.nr_uarts=1 console=tty1 console=ttyS0,115200 quiet
