@@ -82,9 +82,6 @@ else
     fi
 fi
 
-# Ensure users in admin group can access all datastores
-chgrp wheel /dev/shm/*
-
 if [ ! -f "$fn" ]; then
     case "$config" in
 	startup-config)
