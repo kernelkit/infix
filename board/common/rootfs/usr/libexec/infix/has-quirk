@@ -1,0 +1,12 @@
+#!/bin/sh
+if [ $# -lt 2 ]; then
+        echo "usage: $0 <quirk-name> <ifname>"
+        exit 1
+fi
+quirk=$1
+ifname=$2
+if [ -f "/etc/product/interface-quirks.json" ]; then
+        echo "$(jq -r --arg iface "$ifname" --arg quirk "$quirk" '.[$iface][$quirk] // "false"' /etc/product/interface-quirks.json)"
+else
+        echo "false"
+fi
