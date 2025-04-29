@@ -71,9 +71,10 @@ endef
 endif
 
 define CONFD_PERMISSIONS
-	/etc/sysrepo/data/ r 660 root wheel - - - - -
-	/etc/sysrepo/data  d 770 root wheel - - - - -
+	/etc/sysrepo/data/ r 660 root sys-cli - - - - -
+	/etc/sysrepo/data  d 770 root sys-cli - - - - -
 endef
+
 define CONFD_EMPTY_SYSREPO
 	rm -rf $(TARGET_DIR)/etc/sysrepo/data/
 endef
