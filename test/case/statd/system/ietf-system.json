@@ -128,6 +128,148 @@
       "os-version": "v25.04.0-rc1-3-g8daf1571-dirty",
       "os-release": "v25.04.0-rc1-3-g8daf1571-dirty",
       "machine": "x86_64"
+    },
+    "infix-system:services": {
+      "service": [
+        {
+          "pid": 1185,
+          "name": "udevd",
+          "status": "running",
+          "description": "Device event daemon (udev)"
+        },
+        {
+          "pid": 2248,
+          "name": "dbus",
+          "status": "running",
+          "description": "D-Bus message bus daemon"
+        },
+        {
+          "pid": 3039,
+          "name": "confd",
+          "status": "running",
+          "description": "Configuration daemon"
+        },
+        {
+          "pid": 3548,
+          "name": "netopeer",
+          "status": "running",
+          "description": "NETCONF server"
+        },
+        {
+          "pid": 2249,
+          "name": "dnsmasq",
+          "status": "running",
+          "description": "DHCP/DNS proxy"
+        },
+        {
+          "pid": 3559,
+          "name": "tty:hvc0",
+          "status": "running",
+          "description": "Getty on hvc0"
+        },
+        {
+          "pid": 2340,
+          "name": "iitod",
+          "status": "running",
+          "description": "LED daemon"
+        },
+        {
+          "pid": 3560,
+          "name": "klishd",
+          "status": "running",
+          "description": "CLI backend daemon"
+        },
+        {
+          "pid": 3617,
+          "name": "mdns-alias",
+          "status": "running",
+          "description": "mDNS alias advertiser "
+        },
+        {
+          "pid": 0,
+          "name": "mstpd",
+          "status": "stopped",
+          "description": "Spanning Tree daemon"
+        },
+        {
+          "pid": 3564,
+          "name": "rauc",
+          "status": "running",
+          "description": "Software update service"
+        },
+        {
+          "pid": 0,
+          "name": "resolvconf",
+          "status": "done",
+          "description": "Update DNS configuration"
+        },
+        {
+          "pid": 3472,
+          "name": "statd",
+          "status": "running",
+          "description": "Status daemon"
+        },
+        {
+          "pid": 3653,
+          "name": "staticd",
+          "status": "running",
+          "description": "Static routing daemon"
+        },
+        {
+          "pid": 2241,
+          "name": "syslogd",
+          "status": "running",
+          "description": "System log daemon"
+        },
+        {
+          "pid": 2242,
+          "name": "watchdogd",
+          "status": "running",
+          "description": "System watchdog daemon"
+        },
+        {
+          "pid": 3587,
+          "name": "zebra",
+          "status": "running",
+          "description": "Zebra routing daemon"
+        },
+        {
+          "pid": 3616,
+          "name": "mdns",
+          "status": "running",
+          "description": "Avahi mDNS-SD daemon"
+        },
+        {
+          "pid": 3618,
+          "name": "chronyd",
+          "status": "running",
+          "description": "Chrony NTP v3/v4 daemon"
+        },
+        {
+          "pid": 3633,
+          "name": "lldpd",
+          "status": "running",
+          "description": "LLDP daemon (IEEE 802.1ab)"
+        },
+        {
+          "pid": 3635,
+          "name": "nginx",
+          "status": "running",
+          "description": "Web server"
+        },
+        {
+          "pid": 3636,
+          "name": "rousette",
+          "status": "running",
+          "description": "RESTCONF server"
+        },
+        {
+          "pid": 3641,
+          "name": "sshd",
+          "status": "running",
+          "description": "OpenSSH daemon"
+        }
+      ]
     }
   }
 }
