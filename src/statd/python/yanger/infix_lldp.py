@@ -4,14 +4,29 @@ from collections import defaultdict
 def operational():
     """Retrieve LLDP neighbor information and store in remote-systems-data under the correct port."""
 
-    # Reference: https://www.ieee802.org/1/files/public/YANGs/ieee802-types.yang
-    subtype_mapping = {
-        "component": "chassis-component",
+    # https://www.ieee802.org/1/files/public/YANGs/ieee802-types.yang
+    # <chassis-component> and <port-component> subtypes are not supported in
+    # https://github.com/lldpd/lldpd until v1.0.19
+    chassis_id_subtype_mapping = {
+        #"unhandled": "chassis-component",
         "ifalias": "interface-alias",
-        "port": "port-component",
+        #"unhandled": "port-component",
         "mac": "mac-address",
         "ip": "network-address",
         "ifname": "interface-name",
+        "local": "local"
+    }
+
+    # https://www.ieee802.org/1/files/public/YANGs/ieee802-types.yang
+    # <port-component> and <agent-circuit-id> subtypes are not supported in
+    # https://github.com/lldpd/lldpd until v1.0.19
+    port_id_subtype_mapping = {
+        "ifalias": "interface-alias",
+        #"unhandled": "port-component",
+        "mac": "mac-address",
+        "ip": "network-address",
+        "ifname": "interface-name",
+        #"unhandled": "agent-circuit-id"
         "local": "local"
     }
 
@@ -32,10 +47,10 @@ def operational():
             time_mark = parse_time(iface_data.get("age"))
 
             chassis = iface_data.get("chassis", {})
-            chassis_id_type, chassis_id_value = extract_chassis_id(chassis, subtype_mapping)
+            chassis_id_type, chassis_id_value = extract_chassis_id(chassis, chassis_id_subtype_mapping)
 
             port_info = iface_data.get("port", {})
-            port_id_type = subtype_mapping.get(port_info.get("id", {}).get("type"), "unknown")
+            port_id_type = port_id_subtype_mapping.get(port_info.get("id", {}).get("type"), "unknown")
             port_id_value = port_info.get("id", {}).get("value", "")
 
             remote_entry = {
