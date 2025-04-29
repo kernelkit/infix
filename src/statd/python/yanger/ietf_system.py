@@ -177,6 +177,24 @@ def add_platform(out):
 
     insert(out, "platform", platform)
 
+def add_services(out):
+    data = HOST.run_json(["initctl", "-j"], [])
+    services = []
+
+    for d in data:
+        if "pid" not in d or "status" not in d or "identity" not in d or "description" not in d:
+            continue
+
+        entry = {
+            "pid": d["pid"],
+            "name": d["identity"],
+            "status": d["status"],
+            "description": d["description"]
+        }
+        services.append(entry)
+
+    insert(out, "infix-system:services", "service", services)
+
 def add_software(out):
     software = {}
     try:
@@ -291,5 +309,6 @@ def operational():
     add_dns(out_state)
     add_clock(out_state)
     add_platform(out_state)
+    add_services(out_state)
 
     return out
