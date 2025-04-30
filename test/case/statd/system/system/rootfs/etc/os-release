@@ -1,11 +1,11 @@
 NAME="Infix"
 ID=infix
-PRETTY_NAME="Infix -- a Network Operating System v25.03.0-48-gfb8e3e5b-dirty"
+PRETTY_NAME="Infix -- a Network Operating System v25.04.0-rc1-3-g8daf1571-dirty"
 ID_LIKE="buildroot"
 DEFAULT_HOSTNAME=ix
-VERSION="v25.03.0-48-gfb8e3e5b-dirty"
-VERSION_ID=v25.03.0-48-gfb8e3e5b-dirty
-BUILD_ID="v25.03.0-48-gfb8e3e5b-dirty"
+VERSION="v25.04.0-rc1-3-g8daf1571-dirty"
+VERSION_ID=v25.04.0-rc1-3-g8daf1571-dirty
+BUILD_ID="v25.04.0-rc1-3-g8daf1571-dirty"
 IMAGE_ID="infix-x86_64"
 ARCHITECTURE="x86_64"
 HOME_URL=https://github.com/kernelkit/infix/
