@@ -411,23 +411,3 @@ class Device(Transport):
         # Apply the configuration change
         return self.put_config(lyd.print_mem("xml", with_siblings=True,
                                              pretty=False))
-
-    def get_current_time_with_offset(self):
-        """
-        Return current datetime with offset.
-
-        This method retrieves the current datetime from the raw data
-        before it is passed through libyang. This is necessary because
-        libyang "adjusts" the time for the offset, and we need the
-        unadjusted time.
-        """
-        data = self.get_data("/ietf-system:system-state/clock", parse=False)
-        parsed_data = lxml.etree.fromstring(data)
-
-        xpath = './/{urn:ietf:params:xml:ns:yang:ietf-system}current-datetime'
-        current_datetime = parsed_data.find(xpath)
-
-        if current_datetime is not None:
-            return current_datetime.text
-        else:
-            raise ValueError("current-datetime element not found in the response")

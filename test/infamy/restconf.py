@@ -359,19 +359,6 @@ class Device(Transport):
 
         return response.content
 
-    def get_current_time_with_offset(self):
-        """
-        Return current datetime with offset.
-
-        This method retrieves the current datetime from the raw data
-        before it is passed through libyang. This is necessary because
-        libyang "adjusts" the time for the offset, and we need the
-        unadjusted time.
-        """
-        data = self.get_data("/ietf-system:system-state/clock", parse=False)
-        data = json.loads(data)
-        return data["ietf-system:system-state"]["clock"]["current-datetime"]
-
     def delete_xpath(self, xpath):
         """Delete XPath from running config"""
         path = f"/ds/ietf-datastores:running{xpath_to_uri(xpath)}"

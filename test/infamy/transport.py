@@ -43,11 +43,6 @@ class Transport(ABC):
         pass
 
     @abstractmethod
-    def get_current_time_with_offset(self):
-        """Needed since libyang is too nice and removes the original offset"""
-        pass
-
-    @abstractmethod
     def call_dict(self, module, call):
         pass
 

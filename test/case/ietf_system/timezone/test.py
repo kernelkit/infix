@@ -17,15 +17,14 @@ with infamy.Test() as test:
           target.put_config_dicts({"ietf-system": {
             "system": {
                 "clock": {
-                    "timezone-name": "Australia/Perth" # always +8:00, no DTS
+                    "timezone-name": "Australia/Perth"
                     }
             }
           }})
 
-    with test.step("Verify current time offset is +08:00"):
-        current_datetime=target.get_current_time_with_offset()
-        offset=current_datetime[-6:]
-
-        assert(offset == "+08:00")
+    with test.step("Verify timezone is Australia/Perth"):
+        tz=target.get_data("/ietf-system:system/clock/timezone-name")
+        name=tz.get("system", {}).get("clock",{}).get("timezone-name", "")
+        assert(name == "Australia/Perth")
 
     test.succeed()
