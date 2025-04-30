@@ -4,7 +4,7 @@ Change Log
 All notable changes to the project are documented in this file.
 
 
-[v25.04.0][UNRELEASED]
+[v25.04.0][] - 2025-04-30
 -------------------------
 
 ### Changes
@@ -19,6 +19,7 @@ All notable changes to the project are documented in this file.
  - Fix #1015: Not possible to save custom SSH settings in startup-config
  - Fix group owner and permissions of `/cfg/backup` directory
  - Fix extraction of old version for `/cfg/backup/` files
+ - Fix configuration migration issues when upgrading
 
 [v25.03.0][] - 2025-03-31
 -------------------------
@@ -1545,7 +1546,7 @@ Supported YANG models in addition to those used by sysrepo and netopeer:
  - N/A
 
 [buildroot]:  https://buildroot.org/
-[UNRELEASED]: https://github.com/kernelkit/infix/compare/v25.03.0...HEAD
+[UNRELEASED]: https://github.com/kernelkit/infix/compare/v25.04.0...HEAD
 [v25.04.0]:   https://github.com/kernelkit/infix/compare/v25.03.0...v25.04.0
 [v25.03.0]:   https://github.com/kernelkit/infix/compare/v25.02.0...v25.03.0
 [v25.02.0]:   https://github.com/kernelkit/infix/compare/v25.01.0...v25.02.0
