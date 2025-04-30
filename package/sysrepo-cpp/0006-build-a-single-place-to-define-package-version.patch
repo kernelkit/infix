@@ -1,11 +1,11 @@
 From 80e9659b41ea1de2e20d62f94319fe5af26adcee Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Jan=20Kundr=C3=A1t?= <jan.kundrat@cesnet.cz>
 Date: Wed, 18 Dec 2024 17:57:36 +0100
-Subject: [PATCH 6/6] build: a single place to define package version
+Subject: [PATCH 06/20] build: a single place to define package version
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
-Organization: Addiva Elektronik
+Organization: Wires
 
 Don't ask me how I found out that I need this :).
 

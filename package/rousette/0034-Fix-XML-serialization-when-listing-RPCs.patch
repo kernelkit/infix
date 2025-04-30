@@ -1,0 +1,122 @@
+From 061d960d9435018aaba3b2d1b4d857ddb8836d1b Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan=20Kundr=C3=A1t?= <jan.kundrat@cesnet.cz>
+Date: Fri, 14 Mar 2025 15:38:44 +0100
+Subject: [PATCH 34/44] Fix XML serialization when listing RPCs
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
+
+The RFC says [1] that each RPC entry that's listed in the reply should
+look like this when serialized into the XML format:
+
+ <system-restart xmlns='urn:ietf:params:xml:ns:yang:ietf-system'/>
+
+Our old code would, due to the way how libyang deals with opaque nodes,
+just try to dump the JSON-ish `[null]` bits in there, which is wrong.
+
+[1] https://datatracker.ietf.org/doc/html/rfc8040#page-84
+
+Change-Id: I6ea433dbd3fcf3ca2883d3fa00c9d215c0e1bb4f
+Depends-on: https://gerrit.cesnet.cz/c/CzechLight/br2-external/+/8443
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ src/restconf/Server.cpp | 16 +++++++++++++---
+ tests/restconf-rpc.cpp  | 33 ++++++++++++++++++++++++++++++++-
+ 2 files changed, 45 insertions(+), 4 deletions(-)
+
+diff --git a/src/restconf/Server.cpp b/src/restconf/Server.cpp
+index 28e2e4c..05239e9 100644
+--- a/src/restconf/Server.cpp
++++ b/src/restconf/Server.cpp
+@@ -712,7 +712,7 @@ void processPutOrPlainPatch(std::shared_ptr<RequestContext> requestCtx, const st
+ }
+ 
+ /** @brief Build data trees for endpoints returning ietf-restconf:restconf data */
+-libyang::DataNode apiResource(const libyang::Context& ctx, const RestconfRequest::Type& type)
++libyang::DataNode apiResource(const libyang::Context& ctx, const RestconfRequest::Type& type, libyang::DataFormat dataFormat)
+ {
+     const auto yangLib = *ctx.getModuleLatest("ietf-yang-library");
+     const auto yangApiExt = ctx.getModuleImplemented("ietf-restconf")->extensionInstance("yang-api");
+@@ -736,7 +736,16 @@ libyang::DataNode apiResource(const libyang::Context& ctx, const RestconfRequest
+             }
+ 
+             for (const auto& rpc : mod.actionRpcs()) {
+-                operations.insertChild(*ctx.newOpaqueJSON({rpc.module().name(), rpc.module().name(), rpc.name()}, libyang::JSON{"[null]"}));
++                switch (dataFormat) {
++                case libyang::DataFormat::JSON:
++                    operations.insertChild(*ctx.newOpaqueJSON({rpc.module().name(), rpc.module().name(), rpc.name()}, libyang::JSON{"[null]"}));
++                    break;
++                case libyang::DataFormat::XML:
++                    operations.insertChild(*ctx.newOpaqueXML({rpc.module().ns(), rpc.module().name(), rpc.name()}, std::nullopt));
++                    break;
++                default:
++                    throw std::logic_error{"Invalid data format for apiResource()"};
++                }
+             }
+         }
+     } else {
+@@ -987,7 +996,8 @@ Server::Server(sysrepo::Connection conn, const std::string& address, const std::
+                 case RestconfRequest::Type::YangLibraryVersion:
+                 case RestconfRequest::Type::ListRPC:
+                     res.write_head(200, {contentType(dataFormat.response), CORS});
+-                    res.end(*apiResource(sess.getContext(), restconfRequest.type).printStr(dataFormat.response, libyang::PrintFlags::WithSiblings | libyang::PrintFlags::KeepEmptyCont));
++                    res.end(*apiResource(sess.getContext(), restconfRequest.type, dataFormat.response)
++                                 .printStr(dataFormat.response, libyang::PrintFlags::WithSiblings | libyang::PrintFlags::KeepEmptyCont));
+                     break;
+ 
+                 case RestconfRequest::Type::GetData: {
+diff --git a/tests/restconf-rpc.cpp b/tests/restconf-rpc.cpp
+index c4229a0..d49b121 100644
+--- a/tests/restconf-rpc.cpp
++++ b/tests/restconf-rpc.cpp
+@@ -79,7 +79,9 @@ TEST_CASE("invoking actions and rpcs")
+ 
+     SECTION("List RPCs")
+     {
+-        REQUIRE(get(RESTCONF_OPER_ROOT, {AUTH_ROOT}) == Response{200, jsonHeaders, R"({
++        SECTION("JSON")
++        {
++            REQUIRE(get(RESTCONF_OPER_ROOT, {AUTH_ROOT}) == Response{200, jsonHeaders, R"({
+   "ietf-restconf:restconf": {
+     "operations": {
+       "ietf-factory-default:factory-reset": [null],
+@@ -103,6 +105,35 @@ TEST_CASE("invoking actions and rpcs")
+   }
+ }
+ )"});
++        }
++
++        SECTION("XML")
++        {
++            REQUIRE(get(RESTCONF_OPER_ROOT, {AUTH_ROOT, CONTENT_TYPE_XML})
++                    == Response{200, xmlHeaders,
++                                R"(<restconf xmlns="urn:ietf:params:xml:ns:yang:ietf-restconf">
++  <operations>
++    <factory-reset xmlns="urn:ietf:params:xml:ns:yang:ietf-factory-default"/>
++    <get-config xmlns="urn:ietf:params:xml:ns:netconf:base:1.0"/>
++    <edit-config xmlns="urn:ietf:params:xml:ns:netconf:base:1.0"/>
++    <copy-config xmlns="urn:ietf:params:xml:ns:netconf:base:1.0"/>
++    <delete-config xmlns="urn:ietf:params:xml:ns:netconf:base:1.0"/>
++    <lock xmlns="urn:ietf:params:xml:ns:netconf:base:1.0"/>
++    <unlock xmlns="urn:ietf:params:xml:ns:netconf:base:1.0"/>
++    <get xmlns="urn:ietf:params:xml:ns:netconf:base:1.0"/>
++    <close-session xmlns="urn:ietf:params:xml:ns:netconf:base:1.0"/>
++    <kill-session xmlns="urn:ietf:params:xml:ns:netconf:base:1.0"/>
++    <set-current-datetime xmlns="urn:ietf:params:xml:ns:yang:ietf-system"/>
++    <system-restart xmlns="urn:ietf:params:xml:ns:yang:ietf-system"/>
++    <system-shutdown xmlns="urn:ietf:params:xml:ns:yang:ietf-system"/>
++    <test-rpc xmlns="http://example.tld/example"/>
++    <test-rpc-no-output xmlns="http://example.tld/example"/>
++    <test-rpc-no-input xmlns="http://example.tld/example"/>
++    <test-rpc-no-input-no-output xmlns="http://example.tld/example"/>
++  </operations>
++</restconf>
++)"});
++        }
+     }
+ 
+     SECTION("RPC")
+-- 
+2.43.0
+

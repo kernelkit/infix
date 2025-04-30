@@ -1,0 +1,66 @@
+From 7519fcd35216072a6b1eebe2a79e19789be345a9 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan=20Kundr=C3=A1t?= <jan.kundrat@cesnet.cz>
+Date: Wed, 9 Apr 2025 15:35:37 +0200
+Subject: [PATCH 18/18] CI: renamed project upstream
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
+
+Change-Id: I5447f243297fbfde7c364eb3919b00db239bd069
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ .zuul.yaml  | 4 ++--
+ README.md   | 2 +-
+ ci/build.sh | 2 +-
+ 3 files changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/.zuul.yaml b/.zuul.yaml
+index b41c490..7b92766 100644
+--- a/.zuul.yaml
++++ b/.zuul.yaml
+@@ -5,13 +5,13 @@
+             required-projects:
+               - name: github/CESNET/libyang
+                 override-checkout: devel
+-              - name: github/onqtam/doctest
++              - name: github/doctest/doctest
+                 override-checkout: v2.3.6
+         - f38-clang-asan-ubsan:
+             required-projects: &projects
+               - name: github/CESNET/libyang
+                 override-checkout: devel
+-              - name: github/onqtam/doctest
++              - name: github/doctest/doctest
+                 override-checkout: v2.4.11
+         - f38-clang-tsan:
+             required-projects: *projects
+diff --git a/README.md b/README.md
+index d76975b..8291e00 100644
+--- a/README.md
++++ b/README.md
+@@ -11,7 +11,7 @@ Object lifetimes are managed automatically via RAII.
+ - [libyang v3](https://github.com/CESNET/libyang) - the `devel` branch (even for the `master` branch of *libyang-cpp*)
+ - C++20 compiler (e.g., GCC 10.x+, clang 10+)
+ - CMake 3.19+
+-- optionally for built-in tests, [Doctest](https://github.com/onqtam/doctest/) as a C++ unit test framework
++- optionally for built-in tests, [Doctest](https://github.com/doctest/doctest/) as a C++ unit test framework
+ - optionally for the docs, Doxygen
+ 
+ ## Building
+diff --git a/ci/build.sh b/ci/build.sh
+index d06b646..0867f07 100755
+--- a/ci/build.sh
++++ b/ci/build.sh
+@@ -73,7 +73,7 @@ build_n_test() {
+ }
+ 
+ build_n_test github/CESNET/libyang -DENABLE_BUILD_TESTS=ON -DENABLE_VALGRIND_TESTS=OFF
+-build_n_test github/onqtam/doctest -DDOCTEST_WITH_TESTS=OFF
++build_n_test github/doctest/doctest -DDOCTEST_WITH_TESTS=OFF
+ build_n_test ${ZUUL_PROJECT_NAME} -DBUILD_TESTING=ON
+ 
+ pushd ${BUILD_DIR}/${ZUUL_PROJECT_NAME}
+-- 
+2.43.0
+

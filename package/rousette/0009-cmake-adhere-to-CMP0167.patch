@@ -1,11 +1,11 @@
 From 48d9b6ba3f3f892b9060b76b505d2f9a3aeb9e02 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Tom=C3=A1=C5=A1=20Pecka?= <tomas.pecka@cesnet.cz>
 Date: Mon, 25 Nov 2024 09:15:55 +0100
-Subject: [PATCH 09/20] cmake: adhere to CMP0167
+Subject: [PATCH 09/44] cmake: adhere to CMP0167
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
-Organization: Addiva Elektronik
+Organization: Wires
 
 After locally updating to cmake 3.30 I have seen a warning that our way
 of finding boost library is deprecated [1].

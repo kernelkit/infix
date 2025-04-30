@@ -1,11 +1,11 @@
 From fda47b6a6cfdaecc24e96c4d6138c6de3ef116e0 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Tom=C3=A1=C5=A1=20Pecka?= <tomas.pecka@cesnet.cz>
 Date: Mon, 7 Oct 2024 21:21:22 +0200
-Subject: [PATCH 06/20] tests: test querying lists with union keys
+Subject: [PATCH 06/44] tests: test querying lists with union keys
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
-Organization: Addiva Elektronik
+Organization: Wires
 
 Test that we correctly work with keys that are unions of something
 that can have a module namespace and that must not have it.

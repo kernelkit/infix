@@ -1,0 +1,70 @@
+From 0ef0307d6664affc0547c2e65c8c33900bd7cfc9 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Tom=C3=A1=C5=A1=20Pecka?= <tomas.pecka@cesnet.cz>
+Date: Mon, 14 Apr 2025 15:12:00 +0200
+Subject: [PATCH 42/44] restconf: simplify condition in NACM anonymous access
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
+
+The condition required that all access-operations values are "read". But
+access-operations is a union, so it is enough to check that we have only
+one value in the union and that it is "read".
+
+Also test what happens if anonymous rule access-operation is a union of
+read and something else.
+
+Change-Id: I291243d9e2167601b24d49684d53c361407f66be
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ src/auth/Nacm.cpp       |  4 +---
+ tests/restconf-nacm.cpp | 18 ++++++++++++++++++
+ 2 files changed, 19 insertions(+), 3 deletions(-)
+
+diff --git a/src/auth/Nacm.cpp b/src/auth/Nacm.cpp
+index 61a7dcc..d0dc4a2 100644
+--- a/src/auth/Nacm.cpp
++++ b/src/auth/Nacm.cpp
+@@ -12,9 +12,7 @@ namespace {
+ bool isRuleReadOnly(const libyang::DataNode& rule)
+ {
+     auto accessOperations = rule.findXPath("access-operations");
+-    return !accessOperations.empty() && std::all_of(accessOperations.begin(), accessOperations.end(), [](const auto& e) {
+-        return e.asTerm().valueStr() == "read";
+-    });
++    return accessOperations.size() == 1 && accessOperations.begin()->asTerm().valueStr() == "read";
+ }
+ 
+ bool isRuleWildcardDeny(const libyang::DataNode& rule)
+diff --git a/tests/restconf-nacm.cpp b/tests/restconf-nacm.cpp
+index 546d694..30f4210 100644
+--- a/tests/restconf-nacm.cpp
++++ b/tests/restconf-nacm.cpp
+@@ -95,6 +95,24 @@ TEST_CASE("NACM")
+             srSess.applyChanges();
+         }
+ 
++        DOCTEST_SUBCASE("Anonymous has one rule with both read and update access operations")
++        {
++            srSess.deleteItem("/ietf-netconf-acm:nacm/rule-list");
++            srSess.applyChanges();
++            srSess.setItem("/ietf-netconf-acm:nacm/rule-list[name='anon rule']/group[.='yangnobody']", "");
++            srSess.setItem("/ietf-netconf-acm:nacm/rule-list[name='anon rule']/rule[name='1']/module-name", "ietf-system");
++            srSess.setItem("/ietf-netconf-acm:nacm/rule-list[name='anon rule']/rule[name='1']/action", "permit");
++            srSess.setItem("/ietf-netconf-acm:nacm/rule-list[name='anon rule']/rule[name='1']/access-operations", "read update");
++            srSess.setItem("/ietf-netconf-acm:nacm/rule-list[name='anon rule']/rule[name='1']/path", "/ietf-system:system");
++            srSess.setItem("/ietf-netconf-acm:nacm/rule-list[name='anon rule']/rule[name='2']/module-name", "*");
++            srSess.setItem("/ietf-netconf-acm:nacm/rule-list[name='anon rule']/rule[name='2']/action", "deny");
++
++            srSess.setItem("/ietf-netconf-acm:nacm/rule-list[name='dwdm rule']/group[.='optics']", "");
++            srSess.setItem("/ietf-netconf-acm:nacm/rule-list[name='dwdm rule']/rule[name='1']/module-name", "ietf-system");
++            srSess.setItem("/ietf-netconf-acm:nacm/rule-list[name='dwdm rule']/rule[name='1']/action", "permit");
++            srSess.applyChanges();
++        }
++
+         DOCTEST_SUBCASE("Anonymous rulelist OK, but not at first place")
+         {
+             srSess.deleteItem("/ietf-netconf-acm:nacm/rule-list");
+-- 
+2.43.0
+

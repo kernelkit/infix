@@ -1,12 +1,12 @@
 From 96cbf730010ee9539d05d0d72697dc960b3a938c Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Tom=C3=A1=C5=A1=20Pecka?= <tomas.pecka@cesnet.cz>
 Date: Mon, 7 Oct 2024 20:46:24 +0200
-Subject: [PATCH 04/20] restconf: parser should work on raw percent-encoded
+Subject: [PATCH 04/44] restconf: parser should work on raw percent-encoded
  paths
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
-Organization: Addiva Elektronik
+Organization: Wires
 
 The difference between nghttp2's uri_ref::path and raw_path is that the
 raw_path keeps the percent encoding, while the path converts the percent

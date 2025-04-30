@@ -1,0 +1,133 @@
+From ad070266f9347f159874e6b2fa57302385f354e3 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Tom=C3=A1=C5=A1=20Pecka?= <tomas.pecka@cesnet.cz>
+Date: Wed, 9 Apr 2025 14:51:31 +0200
+Subject: [PATCH 17/20] wrap sr_nacm_check_operation
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
+
+Sysrepo provides API function for explicit checking if an operation can
+be authorized on a node. This might come handy if one decides to do NACM
+authorization himself, like we will do in our RESTCONF server.
+
+Change-Id: Ida41514a7f03ab120a331363b7f9ed8b69918d88
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ include/sysrepo-cpp/Session.hpp |  1 +
+ src/Session.cpp                 | 13 ++++++++++
+ tests/session.cpp               | 46 +++++++++++++++++++++++++++++++++
+ tests/test_module.yang          |  4 +++
+ 4 files changed, 64 insertions(+)
+
+diff --git a/include/sysrepo-cpp/Session.hpp b/include/sysrepo-cpp/Session.hpp
+index 1c409b8..2112d21 100644
+--- a/include/sysrepo-cpp/Session.hpp
++++ b/include/sysrepo-cpp/Session.hpp
+@@ -101,6 +101,7 @@ public:
+ 
+     void setNacmUser(const std::string& user);
+     std::optional<std::string> getNacmUser() const;
++    bool checkNacmOperation(const libyang::DataNode& node) const;
+     [[nodiscard]] Subscription initNacm(
+             SubscribeOptions opts = SubscribeOptions::Default,
+             ExceptionHandler handler = nullptr,
+diff --git a/src/Session.cpp b/src/Session.cpp
+index 2273c79..ce0dec2 100644
+--- a/src/Session.cpp
++++ b/src/Session.cpp
+@@ -715,6 +715,19 @@ std::optional<std::string> Session::getNacmUser() const
+     return username ? std::make_optional<std::string>(username) : std::nullopt;
+ }
+ 
++/**
++ * @brief Checks if operation is allowed for current NACM user. Wraps `sr_nacm_check_operation`.
++ * @return true if the current user is authorized to perform operation on given @p node.
++ *
++ * Details on unsuccessfull authorizations can be retrieved via Session::getErrors.
++ * Note that if the NACM user is not set, `sr_nacm_check_operation` and this function both return true.
++ */
++bool Session::checkNacmOperation(const libyang::DataNode& node) const
++{
++    auto res = sr_nacm_check_operation(m_sess.get(), libyang::getRawNode(node));
++    return res == SR_ERR_OK;
++}
++
+ /**
+  * @brief Initializes NACM callbacks.
+  *
+diff --git a/tests/session.cpp b/tests/session.cpp
+index 548b371..35dd545 100644
+--- a/tests/session.cpp
++++ b/tests/session.cpp
+@@ -423,6 +423,52 @@ TEST_CASE("session")
+                 sysrepo::ErrorWithCode);
+     }
+ 
++    DOCTEST_SUBCASE("Session::checkNacmOperation")
++    {
++        auto nacmSub = sess.initNacm();
++
++        // check NACM access for RPCs
++        auto shutdownRPC = sess.getContext().newPath("/test_module:shutdown", std::nullopt);
++        auto denyAllRPC = sess.getContext().newPath("/test_module:deny-all-rpc", std::nullopt);
++
++        // user not set, everything is permitted
++        REQUIRE(sess.checkNacmOperation(shutdownRPC) == true);
++        REQUIRE(sess.checkNacmOperation(denyAllRPC) == true);
++        REQUIRE(sess.getErrors().size() == 0);
++
++        sess.setNacmUser("root");
++        REQUIRE(sess.checkNacmOperation(shutdownRPC) == true);
++        REQUIRE(sess.checkNacmOperation(denyAllRPC) == true);
++        REQUIRE(sess.getErrors().size() == 0);
++
++        sess.setNacmUser("nobody");
++        REQUIRE(sess.checkNacmOperation(shutdownRPC) == true);
++        REQUIRE(sess.checkNacmOperation(denyAllRPC) == false);
++        REQUIRE(sess.getErrors().size() == 1);
++        REQUIRE(sess.getErrors().at(0) == sysrepo::ErrorInfo{
++                    .code = sysrepo::ErrorCode::Unauthorized,
++                    .errorMessage = "Executing the operation is denied because \"nobody\" NACM authorization failed.",
++                });
++
++        sess.setNacmUser("root"); // 'nobody' is not authorized to write into this subtree
++        sess.switchDatastore(sysrepo::Datastore::Running);
++        sess.setItem("/ietf-netconf-acm:nacm/enable-external-groups", "false");
++        sess.setItem("/ietf-netconf-acm:nacm/groups/group[name='grp']/user-name[.='nobody']", "");
++        sess.setItem("/ietf-netconf-acm:nacm/rule-list[name='rule']/group[.='grp']", "");
++        sess.setItem("/ietf-netconf-acm:nacm/rule-list[name='rule']/rule[name='1']/module-name", "test_module");
++        sess.setItem("/ietf-netconf-acm:nacm/rule-list[name='rule']/rule[name='1']/access-operations", "*");
++        sess.setItem("/ietf-netconf-acm:nacm/rule-list[name='rule']/rule[name='1']/action", "deny");
++        sess.applyChanges();
++
++        sess.setNacmUser("root");
++        REQUIRE(sess.checkNacmOperation(denyAllRPC) == true);
++        REQUIRE(sess.checkNacmOperation(shutdownRPC) == true);
++
++        sess.setNacmUser("nobody");
++        REQUIRE(sess.checkNacmOperation(denyAllRPC) == false);
++        REQUIRE(sess.checkNacmOperation(shutdownRPC) == false);
++    }
++
+     DOCTEST_SUBCASE("Session::getPendingChanges")
+     {
+         REQUIRE(sess.getPendingChanges() == std::nullopt);
+diff --git a/tests/test_module.yang b/tests/test_module.yang
+index 02c467b..3d6c26d 100644
+--- a/tests/test_module.yang
++++ b/tests/test_module.yang
+@@ -55,6 +55,10 @@ module test_module {
+   rpc noop {
+   }
+ 
++  rpc deny-all-rpc {
++    nacm:default-deny-all;
++  }
++
+   rpc shutdown {
+     output {
+       leaf success {
+-- 
+2.43.0
+

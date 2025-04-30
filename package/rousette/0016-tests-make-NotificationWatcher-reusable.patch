@@ -1,11 +1,11 @@
 From 30d704588fa7eb9d32f66296ec5f6784f082869e Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Tom=C3=A1=C5=A1=20Pecka?= <tomas.pecka@cesnet.cz>
 Date: Mon, 2 Dec 2024 20:11:32 +0100
-Subject: [PATCH 16/20] tests: make NotificationWatcher reusable
+Subject: [PATCH 16/44] tests: make NotificationWatcher reusable
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
-Organization: Addiva Elektronik
+Organization: Wires
 
 We will need some parts of this in yang push tests
 

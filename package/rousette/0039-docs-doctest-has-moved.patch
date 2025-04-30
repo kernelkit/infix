@@ -1,0 +1,31 @@
+From 422eae2ae879872bd618e3ba19418d20c197650d Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan=20Kundr=C3=A1t?= <jan.kundrat@cesnet.cz>
+Date: Wed, 9 Apr 2025 15:52:34 +0200
+Subject: [PATCH 39/44] docs: doctest has moved
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
+
+Change-Id: I45d605f080434a0726d729c7b186ab1bbeb8d8e1
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ README.md | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/README.md b/README.md
+index 3fbfd21..646976d 100644
+--- a/README.md
++++ b/README.md
+@@ -94,7 +94,7 @@ In practical terms, this means that the NACM access rules for the following XPat
+ - C++20 compiler (e.g., GCC 10.x+, clang 10+)
+ - CMake 3.19+
+ - optionally systemd - the shared library for logging to `sd-journal`
+-- optionally for built-in tests, [Doctest](https://github.com/onqtam/doctest/) as a C++ unit test framework
++- optionally for built-in tests, [Doctest](https://github.com/doctest/doctest/) as a C++ unit test framework
+ - optionally for built-in tests, [trompeloeil](https://github.com/rollbear/trompeloeil) for mock objects in C++
+ - optionally for built-in tests, [`pam_matrix` and `pam_wrapper`](https://cwrap.org/pam_wrapper.html) for PAM mocking
+ 
+-- 
+2.43.0
+

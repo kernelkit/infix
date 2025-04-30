@@ -1,0 +1,55 @@
+From 67eed65414cb9ccd031e16ec76149cc09c341186 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Tom=C3=A1=C5=A1=20Pecka?= <tomas.pecka@cesnet.cz>
+Date: Tue, 15 Apr 2025 15:26:30 +0200
+Subject: [PATCH 20/20] wrap sr_nacm_get_recovery_user
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
+
+The function does not actually need a session, I am only adding it to
+Session so it is in the same place as other NACM user methods.
+
+Change-Id: I3ee015b2bdc180ab1a9115ffc1a3a53f8e6f677c
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ include/sysrepo-cpp/Session.hpp |  1 +
+ src/Session.cpp                 | 10 ++++++++++
+ 2 files changed, 11 insertions(+)
+
+diff --git a/include/sysrepo-cpp/Session.hpp b/include/sysrepo-cpp/Session.hpp
+index 2112d21..2612e86 100644
+--- a/include/sysrepo-cpp/Session.hpp
++++ b/include/sysrepo-cpp/Session.hpp
+@@ -101,6 +101,7 @@ public:
+ 
+     void setNacmUser(const std::string& user);
+     std::optional<std::string> getNacmUser() const;
++    static std::string getNacmRecoveryUser();
+     bool checkNacmOperation(const libyang::DataNode& node) const;
+     [[nodiscard]] Subscription initNacm(
+             SubscribeOptions opts = SubscribeOptions::Default,
+diff --git a/src/Session.cpp b/src/Session.cpp
+index 7d44662..e96e6ec 100644
+--- a/src/Session.cpp
++++ b/src/Session.cpp
+@@ -715,6 +715,16 @@ std::optional<std::string> Session::getNacmUser() const
+     return username ? std::make_optional<std::string>(username) : std::nullopt;
+ }
+ 
++/**
++ * @brief Get the sysrepo NACM recovery user.
++ *
++ * wraps `sr_nacm_get_recovery_user`.
++ */
++std::string Session::getNacmRecoveryUser()
++{
++    return sr_nacm_get_recovery_user();
++}
++
+ /**
+  * @brief Checks if operation is allowed for current NACM user. Wraps `sr_nacm_check_operation`.
+  * @return true if the current user is authorized to perform operation on given @p node.
+-- 
+2.43.0
+
