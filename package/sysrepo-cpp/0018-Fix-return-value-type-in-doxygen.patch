@@ -1,0 +1,50 @@
+From cecf636eecea53a597bcbf75eb4dda0f916e9967 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Tom=C3=A1=C5=A1=20Pecka?= <tomas.pecka@cesnet.cz>
+Date: Tue, 15 Apr 2025 10:54:11 +0200
+Subject: [PATCH 18/20] Fix return value type in doxygen
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
+
+Fixes: 415c401 ("wrap dynamic subscription functions")
+Change-Id: I66912530d8aa16bb4dde3d35611be1e6e4247b36
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ src/Session.cpp | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/src/Session.cpp b/src/Session.cpp
+index ce0dec2..8258295 100644
+--- a/src/Session.cpp
++++ b/src/Session.cpp
+@@ -564,7 +564,7 @@ Subscription Session::onNotification(
+  * @param anchorTime Optional anchor time for the period. Anchor time acts as a reference point for the period.
+  * @param stopTime Optional stop time ending the notification subscription.
+  *
+- * @return A YangPushSubscription handle.
++ * @return A DynamicSubscription handle.
+  */
+ DynamicSubscription Session::yangPushPeriodic(
+     const std::optional<std::variant<std::string, libyang::DataNodeAny>>& filter,
+@@ -601,7 +601,7 @@ DynamicSubscription Session::yangPushPeriodic(
+  * @param syncOnStart Whether to start with a notification of the current state.
+  * @param stopTime Optional stop time ending the notification subscription.
+  *
+- * @return A YangPushSubscription handle.
++ * @return A DynamicSubscription handle.
+  */
+ DynamicSubscription Session::yangPushOnChange(
+     const std::optional<std::variant<std::string, libyang::DataNodeAny>>& filter,
+@@ -650,7 +650,7 @@ DynamicSubscription Session::yangPushOnChange(
+  * @param stopTime Optional stop time ending the subscription.
+  * @param startTime Optional start time of the subscription, used for replaying stored notifications.
+  *
+- * @return A YangPushSubscription handle.
++ * @return A DynamicSubscription handle.
+  */
+ DynamicSubscription Session::subscribeNotifications(
+     const std::optional<std::variant<std::string, libyang::DataNodeAny>>& filter,
+-- 
+2.43.0
+

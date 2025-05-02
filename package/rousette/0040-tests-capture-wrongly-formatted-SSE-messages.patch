@@ -1,0 +1,35 @@
+From b60c30e4eb482ce7b72ba95c8e6edc94f232ca37 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Tom=C3=A1=C5=A1=20Pecka?= <tomas.pecka@cesnet.cz>
+Date: Tue, 8 Apr 2025 18:12:18 +0200
+Subject: [PATCH 40/44] tests: capture wrongly-formatted SSE messages
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
+
+Sometimes during development I do things wrong(TM) and the Server Sent
+Events data stream is not prefixed.
+The log failure is unhelpful, so this patch should make the failures
+more clear in such cases.
+
+Change-Id: I0d4643a6d7fe56ea5ce694c734a76b6dd471ff4c
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ tests/restconf_utils.cpp | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/tests/restconf_utils.cpp b/tests/restconf_utils.cpp
+index c3ff1de..72c2c5a 100644
+--- a/tests/restconf_utils.cpp
++++ b/tests/restconf_utils.cpp
+@@ -224,6 +224,7 @@ std::vector<std::string> SSEClient::parseEvents(const std::string& msg)
+             res.emplace_back(std::move(event));
+             event.clear();
+         } else {
++            CAPTURE(msg);
+             FAIL("Unprefixed response");
+         }
+     }
+-- 
+2.43.0
+

@@ -8,6 +8,9 @@
           "password": "$5$mI/zpOAqZYKLC2WU$i7iPzZiIjOjrBF3NyftS9CCq8dfYwHwrmUK097Jca9A"
         }
       ]
+    },
+    "clock": {
+      "timezone-utc-offset": 0
     }
   },
   "ietf-system:system-state": {
@@ -117,13 +120,13 @@
       "search": []
     },
     "clock": {
-      "boot-datetime": "2025-04-23T11:42:01+00:00",
-      "current-datetime": "2025-04-23T11:42:27+00:00"
+      "boot-datetime": "2025-04-30T09:47:32+00:00",
+      "current-datetime": "2025-04-30T09:48:01+00:00"
     },
     "platform": {
       "os-name": "Infix",
-      "os-version": "v25.03.0-48-gfb8e3e5b-dirty",
-      "os-release": "v25.03.0-48-gfb8e3e5b-dirty",
+      "os-version": "v25.04.0-rc1-3-g8daf1571-dirty",
+      "os-release": "v25.04.0-rc1-3-g8daf1571-dirty",
       "machine": "x86_64"
     }
   }

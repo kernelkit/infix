@@ -1,0 +1,54 @@
+From cc815dac4ea17ccb09a0481ad82745a194efe95f Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Tom=C3=A1=C5=A1=20Pecka?= <tomas.pecka@cesnet.cz>
+Date: Mon, 27 Jan 2025 19:17:07 +0100
+Subject: [PATCH 28/44] server: prepare checking if yang features are enabled
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
+
+We are not requiring any now, but next commits will need it. I am
+splitting this into a separate commit for clarity.
+
+Change-Id: I0a8874b55b21d5ed6c7222f0c36a36c3c5ff52c5
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ src/restconf/Server.cpp | 22 ++++++++++++++--------
+ 1 file changed, 14 insertions(+), 8 deletions(-)
+
+diff --git a/src/restconf/Server.cpp b/src/restconf/Server.cpp
+index d356f7e..55e504a 100644
+--- a/src/restconf/Server.cpp
++++ b/src/restconf/Server.cpp
+@@ -817,14 +817,20 @@ Server::Server(sysrepo::Connection conn, const std::string& address, const std::
+     , server{std::make_unique<nghttp2::asio_http2::server::http2>()}
+     , dwdmEvents{std::make_unique<sr::OpticalEvents>(conn.sessionStart())}
+ {
+-    for (const auto& [module, version] : {
+-             std::pair<std::string, std::string>{"ietf-restconf", "2017-01-26"},
+-             {"ietf-restconf-monitoring", "2017-01-26"},
+-             {"ietf-netconf", ""},
+-             {"ietf-yang-library", "2019-01-04"},
+-             {"ietf-yang-patch", "2017-02-22"},
+-             }) {
+-        if (!conn.sessionStart().getContext().getModuleImplemented(module)) {
++    for (const auto& [module, version, features] : {
++             std::tuple<std::string, std::string, std::vector<std::string>>{"ietf-restconf", "2017-01-26", {}},
++             {"ietf-restconf-monitoring", "2017-01-26", {}},
++             {"ietf-netconf", "", {}},
++             {"ietf-yang-library", "2019-01-04", {}},
++             {"ietf-yang-patch", "2017-02-22", {}},
++         }) {
++        if (auto mod = conn.sessionStart().getContext().getModuleImplemented(module)) {
++            for (const auto& feature : features) {
++                if (!mod->featureEnabled(feature)) {
++                    throw std::runtime_error("Module "s + module + "@" + version + " does not implement feature " + feature);
++                }
++            }
++        } else {
+             throw std::runtime_error("Module "s + module + "@" + version + " is not implemented in sysrepo");
+         }
+     }
+-- 
+2.43.0
+

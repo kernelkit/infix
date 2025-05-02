@@ -1,0 +1,260 @@
+From f958af42bf5d9fbd901ed59ebc1359ac0ddcc00f Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan=20Kundr=C3=A1t?= <jan.kundrat@cesnet.cz>
+Date: Fri, 14 Mar 2025 11:36:50 +0100
+Subject: [PATCH 15/18] API/ABI change: opaque node naming
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
+
+Our C++ API would ignore the "module name or XML prefix", which turns
+out to be *the* relevant part when it comes to opaque node naming. The
+prefix is, instead, just that string that might have been inherited from
+the parent node when parsing the serialized data; it's an optional
+thingy which, if not set explicitly, is implicitly inherited.
+
+Adapt the API for this, and since this *will* break the build, let's
+bump the package version.
+
+Change-Id: I199afe5fa7a571034b744531c63b93b9c656563a
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ CMakeLists.txt                   |  5 ++---
+ include/libyang-cpp/Context.hpp  |  4 ++--
+ include/libyang-cpp/DataNode.hpp | 11 ++++++++--
+ src/Context.cpp                  | 32 ++++++++++++++++++++--------
+ src/DataNode.cpp                 | 19 ++++++++++++++---
+ tests/data_node.cpp              | 36 ++++++++++++++++++++++++++------
+ 6 files changed, 82 insertions(+), 25 deletions(-)
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index a40fd52..c5fec45 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -21,7 +21,7 @@ add_custom_target(libyang-cpp-version-cmake
+         cmake/ProjectGitVersionRunner.cmake
+         )
+ include(cmake/ProjectGitVersion.cmake)
+-set(LIBYANG_CPP_PKG_VERSION "3")
++set(LIBYANG_CPP_PKG_VERSION "4")
+ prepare_git_version(LIBYANG_CPP_VERSION ${LIBYANG_CPP_PKG_VERSION})
+ 
+ find_package(Doxygen)
+@@ -29,8 +29,7 @@ option(WITH_DOCS "Create and install internal documentation (needs Doxygen)" ${D
+ option(BUILD_SHARED_LIBS "By default, shared libs are enabled. Turn off for a static build." ON)
+ 
+ find_package(PkgConfig REQUIRED)
+-# FIXME: it's actually 3.7.12, but that hasn't been released yet
+-pkg_check_modules(LIBYANG REQUIRED libyang>=3.7.11 IMPORTED_TARGET)
++pkg_check_modules(LIBYANG REQUIRED libyang>=3.10.1 IMPORTED_TARGET)
+ 
+ # FIXME from gcc 14.1 on we should be able to use the calendar/time from libstdc++ and thus remove the date dependency
+ find_package(date)
+diff --git a/include/libyang-cpp/Context.hpp b/include/libyang-cpp/Context.hpp
+index baa47b3..ca89063 100644
+--- a/include/libyang-cpp/Context.hpp
++++ b/include/libyang-cpp/Context.hpp
+@@ -115,8 +115,8 @@ public:
+     CreatedNodes newPath2(const std::string& path, libyang::JSON json, const std::optional<CreationOptions> options = std::nullopt) const;
+     CreatedNodes newPath2(const std::string& path, libyang::XML xml, const std::optional<CreationOptions> options = std::nullopt) const;
+     std::optional<DataNode> newExtPath(const ExtensionInstance& ext, const std::string& path, const std::optional<std::string>& value, const std::optional<CreationOptions> options = std::nullopt) const;
+-    std::optional<DataNode> newOpaqueJSON(const std::string& moduleName, const std::string& name, const std::optional<libyang::JSON>& value) const;
+-    std::optional<DataNode> newOpaqueXML(const std::string& moduleName, const std::string& name, const std::optional<libyang::XML>& value) const;
++    std::optional<DataNode> newOpaqueJSON(const OpaqueName& name, const std::optional<libyang::JSON>& value) const;
++    std::optional<DataNode> newOpaqueXML(const OpaqueName& name, const std::optional<libyang::XML>& value) const;
+     SchemaNode findPath(const std::string& dataPath, const InputOutputNodes inputOutputNodes = InputOutputNodes::Input) const;
+     Set<SchemaNode> findXPath(const std::string& path) const;
+ 
+diff --git a/include/libyang-cpp/DataNode.hpp b/include/libyang-cpp/DataNode.hpp
+index 851681b..310b5e3 100644
+--- a/include/libyang-cpp/DataNode.hpp
++++ b/include/libyang-cpp/DataNode.hpp
+@@ -225,15 +225,22 @@ private:
+ };
+ 
+ /**
+- * @brief Contains a (possibly module-qualified) name of an opaque node.
++ * @brief Contains a name of an opaque node.
+  *
+- * This is generic container of a prefix/module string and a name string.
++ * An opaque node always has a name, and a module (or XML namespace) to which this node belongs.
++ * Sometimes, it also has a prefix.
++ *
++ * If the prefix is set *and* the underlying node is an opaque JSON one, then the prefix must be the same as the "module or namespace" name.
++ * If the underlying node is an opaque XML one, then the XML prefix might be something completely different, and in that case the real fun begins.
++ * Review the libayng C manual, this is something that the C++ wrapper doesn't really have under control.
+  *
+  * Wraps `ly_opaq_name`.
+  */
+ struct LIBYANG_CPP_EXPORT OpaqueName {
++    std::string moduleOrNamespace;
+     std::optional<std::string> prefix;
+     std::string name;
++    std::string pretty() const;
+ };
+ 
+ /**
+diff --git a/src/Context.cpp b/src/Context.cpp
+index 287f8c8..fec2f27 100644
+--- a/src/Context.cpp
++++ b/src/Context.cpp
+@@ -378,17 +378,25 @@ std::optional<DataNode> Context::newExtPath(const ExtensionInstance& ext, const
+  *
+  * Wraps `lyd_new_opaq`.
+  *
+- * @param moduleName Node module name, used as a prefix as well
+  * @param name Name of the created node
+  * @param value JSON data blob, if any
+  * @return Returns the newly created node (if created)
+  */
+-std::optional<DataNode> Context::newOpaqueJSON(const std::string& moduleName, const std::string& name, const std::optional<libyang::JSON>& value) const
++std::optional<DataNode> Context::newOpaqueJSON(const OpaqueName& name, const std::optional<libyang::JSON>& value) const
+ {
++    if (name.prefix && *name.prefix != name.moduleOrNamespace) {
++        throw Error{"invalid opaque JSON node: prefix \"" + *name.prefix + "\" doesn't match module name \"" + name.moduleOrNamespace + "\""};
++    }
+     lyd_node* out;
+-    auto err = lyd_new_opaq(nullptr, m_ctx.get(), name.c_str(), value ? value->content.c_str() : nullptr, nullptr, moduleName.c_str(), &out);
++    auto err = lyd_new_opaq(nullptr,
++                            m_ctx.get(),
++                            name.name.c_str(),
++                            value ? value->content.c_str() : nullptr,
++                            name.prefix ? name.prefix->c_str() : nullptr,
++                            name.moduleOrNamespace.c_str(),
++                            &out);
+ 
+-    throwIfError(err, "Couldn't create an opaque JSON node '"s + moduleName + ':' + name + "'");
++    throwIfError(err, "Couldn't create an opaque JSON node " + name.pretty());
+ 
+     if (out) {
+         return DataNode{out, std::make_shared<internal_refcount>(m_ctx)};
+@@ -403,17 +411,23 @@ std::optional<DataNode> Context::newOpaqueJSON(const std::string& moduleName, co
+  *
+  * Wraps `lyd_new_opaq2`.
+  *
+- * @param xmlNamespace Node module namespace
+  * @param name Name of the created node
+  * @param value XML data blob, if any
+  * @return Returns the newly created node (if created)
+  */
+-std::optional<DataNode> Context::newOpaqueXML(const std::string& xmlNamespace, const std::string& name, const std::optional<libyang::XML>& value) const
++std::optional<DataNode> Context::newOpaqueXML(const OpaqueName& name, const std::optional<libyang::XML>& value) const
+ {
++    // the XML node naming is "complex", we cannot really check the XML namespace for sanity here
+     lyd_node* out;
+-    auto err = lyd_new_opaq2(nullptr, m_ctx.get(), name.c_str(), value ? value->content.c_str() : nullptr, nullptr, xmlNamespace.c_str(), &out);
+-
+-    throwIfError(err, "Couldn't create an opaque XML node '"s + name +"' from namespace '" + xmlNamespace + "'");
++    auto err = lyd_new_opaq2(nullptr,
++                             m_ctx.get(),
++                             name.name.c_str(),
++                             value ? value->content.c_str() : nullptr,
++                             name.prefix ? name.prefix->c_str() : nullptr,
++                             name.moduleOrNamespace.c_str(),
++                             &out);
++
++    throwIfError(err, "Couldn't create an opaque XML node " + name.pretty());
+ 
+     if (out) {
+         return DataNode{out, std::make_shared<internal_refcount>(m_ctx)};
+diff --git a/src/DataNode.cpp b/src/DataNode.cpp
+index b899b18..344f1b6 100644
+--- a/src/DataNode.cpp
++++ b/src/DataNode.cpp
+@@ -1112,9 +1112,9 @@ OpaqueName DataNodeOpaque::name() const
+ {
+     auto opaq = reinterpret_cast<lyd_node_opaq*>(m_node);
+     return OpaqueName{
+-        .prefix = opaq->name.prefix ? std::optional(opaq->name.prefix) : std::nullopt,
+-        .name = opaq->name.name
+-    };
++        .moduleOrNamespace = opaq->name.module_name,
++        .prefix = opaq->name.prefix ? std::optional{opaq->name.prefix} : std::nullopt,
++        .name = opaq->name.name};
+ }
+ 
+ std::string DataNodeOpaque::value() const
+@@ -1122,6 +1122,19 @@ std::string DataNodeOpaque::value() const
+     return reinterpret_cast<lyd_node_opaq*>(m_node)->value;
+ }
+ 
++std::string OpaqueName::pretty() const
++{
++    if (prefix) {
++        if (*prefix == moduleOrNamespace) {
++            return *prefix + ':' + name;
++        } else {
++            return "{" + moduleOrNamespace + "}, " + *prefix + ':' + name;
++        }
++    } else {
++        return "{" + moduleOrNamespace + "}, " + name;
++    }
++}
++
+ /**
+  * Wraps a raw non-null lyd_node pointer.
+  * @param node The pointer to be wrapped. Must not be null.
+diff --git a/tests/data_node.cpp b/tests/data_node.cpp
+index b6ee455..a1096a6 100644
+--- a/tests/data_node.cpp
++++ b/tests/data_node.cpp
+@@ -1969,9 +1969,11 @@ TEST_CASE("Data Node manipulation")
+ 
+         DOCTEST_SUBCASE("opaque nodes for sysrepo ops data discard")
+         {
+-            auto discard1 = ctx.newOpaqueJSON("sysrepo", "discard-items", libyang::JSON{"/example-schema:a"});
++            // the "short" form with no prefix
++            auto discard1 = ctx.newOpaqueJSON(libyang::OpaqueName{"sysrepo", std::nullopt, "discard-items"}, libyang::JSON{"/example-schema:a"});
+             REQUIRE(!!discard1);
+-            auto discard2 = ctx.newOpaqueJSON("sysrepo", "discard-items", libyang::JSON{"/example-schema:b"});
++            // let's use a prefix form here
++            auto discard2 = ctx.newOpaqueJSON(libyang::OpaqueName{"sysrepo", "sysrepo", "discard-items"}, libyang::JSON{"/example-schema:b"});
+             REQUIRE(!!discard2);
+             discard1->insertSibling(*discard2);
+             REQUIRE(*discard1->printStr(libyang::DataFormat::JSON, libyang::PrintFlags::WithSiblings)
+@@ -2001,16 +2003,38 @@ TEST_CASE("Data Node manipulation")
+             auto data = ctx.newPath2("/example-schema:myRpc/outputLeaf", "AHOJ", libyang::CreationOptions::Output).createdNode;
+             REQUIRE(data);
+             data->newPath("/example-schema:myRpc/another", "yay", libyang::CreationOptions::Output);
++            std::string prettyName;
+ 
+-            DOCTEST_SUBCASE("JSON") {
+-                out = ctx.newOpaqueJSON(data->schema().module().name(), "output", std::nullopt);
++            DOCTEST_SUBCASE("JSON no prefix") {
++                out = ctx.newOpaqueJSON({data->schema().module().name(), std::nullopt, "output"}, std::nullopt);
++                prettyName = "{example-schema}, output";
+             }
+ 
+-            DOCTEST_SUBCASE("XML") {
+-                out = ctx.newOpaqueXML(data->schema().module().ns(), "output", std::nullopt);
++            DOCTEST_SUBCASE("JSON with prefix") {
++                out = ctx.newOpaqueJSON({data->schema().module().name(), data->schema().module().name(), "output"}, std::nullopt);
++                prettyName = "example-schema:output";
++
++                // wrong prefix is detected
++                REQUIRE_THROWS_WITH_AS(ctx.newOpaqueJSON({data->schema().module().name(), "xxx", "output"}, std::nullopt),
++                                       R"(invalid opaque JSON node: prefix "xxx" doesn't match module name "example-schema")",
++                                       libyang::Error);
++            }
++
++            DOCTEST_SUBCASE("XML no prefix") {
++                out = ctx.newOpaqueXML({data->schema().module().ns(), std::nullopt, "output"}, std::nullopt);
++                prettyName = "{http://example.com/coze}, output";
++            }
++
++            DOCTEST_SUBCASE("XML with prefix") {
++                out = ctx.newOpaqueXML({data->schema().module().ns(),
++                                        data->schema().module().name() /* prefix is a module name, not the XML NS*/,
++                                        "output"},
++                                       std::nullopt);
++                prettyName = "{http://example.com/coze}, example-schema:output";
+             }
+ 
+             REQUIRE(out);
++            REQUIRE(prettyName == out->asOpaque().name().pretty());
+             data->unlinkWithSiblings();
+             out->insertChild(*data);
+ 
+-- 
+2.43.0
+

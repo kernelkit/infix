@@ -1,11 +1,11 @@
 From 0beaee041fd4fcfbebcbb2912eb6b26ec71f50c7 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Tom=C3=A1=C5=A1=20Pecka?= <tomas.pecka@cesnet.cz>
 Date: Mon, 2 Dec 2024 20:01:54 +0100
-Subject: [PATCH 13/20] tests: move stuff from the header file into cpp file
+Subject: [PATCH 13/44] tests: move stuff from the header file into cpp file
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
-Organization: Addiva Elektronik
+Organization: Wires
 
 Allright, I have had enough. I am no longer waiting for a minute for a
 recompilation of one test.

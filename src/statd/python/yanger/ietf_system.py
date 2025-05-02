@@ -1,5 +1,6 @@
 import subprocess
 import ipaddress
+import re
 
 from .common import insert,YangDate
 from .host import HOST
@@ -210,6 +211,33 @@ def add_hostname(out):
     hostname =  HOST.run(tuple(["hostname"]))
     out["hostname"] = hostname.strip()
 
+def add_timezone(out):
+    path = HOST.run(tuple("realpath /etc/localtime".split()), "")
+    timezone = None
+    prefixes = [
+        '/usr/share/zoneinfo/posix/',
+        '/usr/share/zoneinfo/right/',
+        '/usr/share/zoneinfo/'
+    ]
+
+    for prefix in prefixes:
+        if path is not None and path.startswith(prefix):
+            timezone = path[len(prefix):]
+            break
+    if timezone is not None:
+        timezone=timezone.strip()
+        pattern = r'Etc/GMT([\+\-]\d{1,2})$'
+        match = re.search(pattern, timezone)
+        if match:
+            offset = -int(match.group(1))
+            insert(out, "clock", "timezone-utc-offset", offset)
+        else:
+            if timezone == "Etc/UTC":
+                insert(out, "clock", "timezone-utc-offset", 0)
+            else:
+                insert(out, "clock", "timezone-name", timezone)
+
+
 def add_users(out):
     shadow_output = HOST.run_multiline(["getent", "shadow"], [])
     users = []
@@ -257,6 +285,7 @@ def operational():
     out_system = out["ietf-system:system"]
     add_hostname(out_system)
     add_users(out_system)
+    add_timezone(out_system)
     add_software(out_state)
     add_ntp(out_state)
     add_dns(out_state)

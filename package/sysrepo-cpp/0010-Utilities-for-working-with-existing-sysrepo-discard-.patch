@@ -1,0 +1,222 @@
+From 6ed5442db482a9a37128add02778aebd096f9207 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan=20Kundr=C3=A1t?= <jan.kundrat@cesnet.cz>
+Date: Fri, 14 Mar 2025 16:20:09 +0100
+Subject: [PATCH 10/20] Utilities for working with existing
+ sysrepo:discard-items nodes
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
+
+findMatchingDiscard() and findMatchingDiscardPrefixes() are useful for
+figuring out which nodes need to be prune when adding/modifying a
+discarding node.
+
+unlinkFromForest() is useful for removing "a node" from a forest of data
+node trees. Sometimes the node to be deleted *could* be a root node
+which is also the first sibling among its collection of siblings, and in
+that case some extra care is needed to ensure that we still have a
+reference to something after we've done with the unlinking.
+
+In the real world this doesn't happen that often because there usually
+is something like a top-level container node below which we're
+processing these discards. Still, let's put this utility function into a
+single place.
+
+Depends-on: https://gerrit.cesnet.cz/c/CzechLight/libyang-cpp/+/8436
+Change-Id: Ib346be6887f75220a8a6435864c74aef8d5925bb
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ include/sysrepo-cpp/utils/utils.hpp |  3 ++
+ src/Session.cpp                     |  3 ++
+ src/utils/utils.cpp                 | 57 ++++++++++++++++++++++
+ tests/session.cpp                   | 74 +++++++++++++++++++++++++++--
+ 4 files changed, 134 insertions(+), 3 deletions(-)
+
+diff --git a/include/sysrepo-cpp/utils/utils.hpp b/include/sysrepo-cpp/utils/utils.hpp
+index 22d7d66..64b1c2e 100644
+--- a/include/sysrepo-cpp/utils/utils.hpp
++++ b/include/sysrepo-cpp/utils/utils.hpp
+@@ -12,4 +12,7 @@
+ namespace sysrepo {
+ Session wrapUnmanagedSession(sr_session_ctx_s* session);
+ void setLogLevelStderr(const LogLevel);
++std::optional<libyang::DataNodeOpaque> findMatchingDiscard(libyang::DataNode root, const std::string& xpath);
++std::vector<libyang::DataNodeOpaque> findMatchingDiscardPrefixes(libyang::DataNode root, const std::string& xpathPrefix);
++void unlinkFromForest(std::optional<libyang::DataNode>& root, libyang::DataNode node);
+ }
+diff --git a/src/Session.cpp b/src/Session.cpp
+index 5df04bc..3c21e84 100644
+--- a/src/Session.cpp
++++ b/src/Session.cpp
+@@ -153,6 +153,7 @@ void Session::deleteItem(const std::string& path, const EditOptions opts)
+  * Wraps `sr_discard_items`.
+  *
+  * @param xpath Expression filtering the nodes to discard, nullopt for all nodes.
++ * @see findMatchingDiscard()
+  */
+ void Session::dropForeignOperationalContent(const std::optional<std::string>& xpath)
+ {
+@@ -167,6 +168,8 @@ void Session::dropForeignOperationalContent(const std::optional<std::string>& xp
+  * with the "replace" operation.
+  *
+  * Wraps `sr_get_oper_changes`.
++ *
++ * @see findMatchingDiscard()
+  */
+ std::optional<libyang::DataNode> Session::operationalChanges(const std::optional<std::string>& moduleName) const
+ {
+diff --git a/src/utils/utils.cpp b/src/utils/utils.cpp
+index 972a4fa..e339e88 100644
+--- a/src/utils/utils.cpp
++++ b/src/utils/utils.cpp
+@@ -72,4 +72,61 @@ void checkNoThreadFlag(const SubscribeOptions opts, const std::optional<FDHandli
+     }
+ }
+ 
++/**
++ * @short If there's a sysrepo:discard-items node which matches the given XPath, return it
++ *
++ * @see Session::operationalChanges()
++ * @see Session::dropForeignOperationalContent()
++ */
++std::optional<libyang::DataNode> findMatchingDiscard(libyang::DataNode root, const std::string& xpath)
++{
++    auto discard = root.firstOpaqueSibling();
++    while (discard) {
++        if (discard->name().matches("sysrepo", "discard-items") && discard->value() == xpath) {
++            return discard;
++        }
++        if (auto next = discard->nextSibling()) {
++            discard = next->asOpaque();
++        } else {
++            break;
++        }
++    }
++    return std::nullopt;
++}
++
++/**
++ * @short Find all sysrepo:discard-items nodes which match the given XPath or the descendats of this XPath
++ */
++std::vector<libyang::DataNode> findMatchingDiscardPrefixes(libyang::DataNode root, const std::string& xpathPrefix)
++{
++    auto withSlash = (xpathPrefix.empty() || xpathPrefix[xpathPrefix.size() - 1] == '/') ? xpathPrefix : xpathPrefix + '/';
++    auto withBracket = (xpathPrefix.empty() || xpathPrefix[xpathPrefix.size() - 1] == '[') ? xpathPrefix : xpathPrefix + '[';
++    std::vector<libyang::DataNode> res;
++    auto discard = root.firstOpaqueSibling();
++    while (discard) {
++        if (discard->name().matches("sysrepo", "discard-items")) {
++            if (auto text = discard->value(); text == xpathPrefix || text.starts_with(withSlash) || text.starts_with(withBracket)) {
++                res.emplace_back(*discard);
++            }
++        }
++        if (auto next = discard->nextSibling()) {
++            discard = next->asOpaque();
++        } else {
++            break;
++        }
++    }
++    return res;
++}
++
++/**
++ * @short Remove a node from a forest of tree nodes while modifying the root in-place
++ */
++void unlinkFromForest(std::optional<libyang::DataNode>& root, libyang::DataNode node)
++{
++    if (node == root) {
++        root = node.nextSibling();
++    }
++    node.unlink();
++}
++
+ }
+diff --git a/tests/session.cpp b/tests/session.cpp
+index 5be0d79..9a419a1 100644
+--- a/tests/session.cpp
++++ b/tests/session.cpp
+@@ -245,9 +245,77 @@ TEST_CASE("session")
+             sess.applyChanges();
+             REQUIRE(!sess.getData(leaf));
+ 
+-            // Using discardOperationalChanges makes the leaf visible again (in the operational datastore).
+-            // Also, no need to applyChanges().
+-            sess.discardOperationalChanges("test_module");
++            // check that a magic sysrepo:discard-items node is in place
++            REQUIRE(!!sess.operationalChanges());
++            auto matchingDiscard = sysrepo::findMatchingDiscard(*sess.operationalChanges(), leaf);
++            REQUIRE(!!matchingDiscard);
++            REQUIRE(matchingDiscard->value() == leaf);
++            REQUIRE(matchingDiscard->name().moduleOrNamespace == "sysrepo");
++            REQUIRE(matchingDiscard->name().name == "discard-items");
++            REQUIRE(!sysrepo::findMatchingDiscard(*sess.operationalChanges(), "something else"));
++
++            DOCTEST_SUBCASE("forget changes via discardOperationalChanges(module)")
++            {
++                // Using discardOperationalChanges makes the leaf visible again (in the operational datastore).
++                // Also, no need to applyChanges().
++                sess.discardOperationalChanges("test_module");
++            }
++
++            DOCTEST_SUBCASE("forget changes via a selective edit")
++            {
++                // this edit only has a single node, which means that we cannot really call unlink() and hope for a sane result
++                REQUIRE(matchingDiscard->firstSibling() == *matchingDiscard);
++
++                // so, we add a dummy node instead...
++                auto root = matchingDiscard->newPath("/test_module:popelnice/s", "foo");
++                // ...and only then we nuke the eixtsing discard-items node
++                matchingDiscard->unlink();
++                sess.editBatch(*root, sysrepo::DefaultOperation::Replace);
++                sess.applyChanges();
++            }
++
++            DOCTEST_SUBCASE("multiple sysrepo:discard-items nodes")
++            {
++                sess.dropForeignOperationalContent("/test_module:popelnice");
++                sess.dropForeignOperationalContent("/test_module:popelnice/s");
++                sess.dropForeignOperationalContent("/test_module:values");
++                sess.dropForeignOperationalContent("/test_module:popelnice/content");
++                sess.dropForeignOperationalContent("/test_module:denyAllLeaf");
++                sess.dropForeignOperationalContent(leaf); // yup, once more, in addition to the one at the very beginning
++                sess.applyChanges();
++
++                auto forPopelnice = sysrepo::findMatchingDiscard(*sess.operationalChanges(), "/test_module:popelnice");
++                REQUIRE(!!forPopelnice);
++                REQUIRE(forPopelnice->value() == "/test_module:popelnice");
++                auto oneMatch = sysrepo::findMatchingDiscard(*sess.operationalChanges(), "/test_module:values");
++                REQUIRE(!!oneMatch);
++                REQUIRE(oneMatch->value() == "/test_module:values");
++
++                auto atOrBelowPopelnice = sysrepo::findMatchingDiscardPrefixes(*sess.operationalChanges(), "/test_module:popelnice");
++                REQUIRE(atOrBelowPopelnice.size() == 3);
++                // yup, these are apparently backwards compared to how I put them in. Never mind.
++                REQUIRE(atOrBelowPopelnice[2].value() == "/test_module:popelnice");
++                REQUIRE(atOrBelowPopelnice[1].value() == "/test_module:popelnice/s");
++                REQUIRE(atOrBelowPopelnice[0].value() == "/test_module:popelnice/content");
++
++                auto belowPopelnice = sysrepo::findMatchingDiscardPrefixes(*sess.operationalChanges(), "/test_module:popelnice/");
++                REQUIRE(belowPopelnice.size() == 2);
++                // again, the order is reversed
++                REQUIRE(belowPopelnice[1].value() == "/test_module:popelnice/s");
++                REQUIRE(belowPopelnice[0].value() == "/test_module:popelnice/content");
++
++                auto newEdit = sess.operationalChanges();
++                auto forLeaf = sysrepo::findMatchingDiscardPrefixes(*newEdit, leaf);
++                REQUIRE(forLeaf.size() == 2);
++                REQUIRE(forLeaf[0].value() == leaf);
++                REQUIRE(forLeaf[1].value() == leaf);
++                for (auto node : forLeaf) {
++                    sysrepo::unlinkFromForest(newEdit, node);
++                }
++                sess.editBatch(*newEdit, sysrepo::DefaultOperation::Replace);
++                sess.applyChanges();
++            }
++
+             REQUIRE(sess.getData(leaf)->asTerm().valueStr() == "123");
+         }
+ 
+-- 
+2.43.0
+

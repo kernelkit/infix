@@ -1,11 +1,11 @@
 From d0f6422fee7a46fcb7445c88f499f61b3eb0ead0 Mon Sep 17 00:00:00 2001
 From: Adam Piecek <Adam.Piecek@cesnet.cz>
 Date: Wed, 23 Oct 2024 14:37:09 +0200
-Subject: [PATCH 1/8] added support for RpcYang in Context::parseOp
+Subject: [PATCH 01/18] added support for RpcYang in Context::parseOp
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
-Organization: Addiva Elektronik
+Organization: Wires
 
 Change-Id: I25182ea2d042be1e6e4246e18aee260cc032e547
 Signed-off-by: Mattias Walström <lazzer@gmail.com>

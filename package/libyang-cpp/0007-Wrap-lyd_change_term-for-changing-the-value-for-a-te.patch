@@ -1,12 +1,12 @@
 From a1acdc794facf8cbf113f73274ecebd5898c81a1 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Jan=20Kundr=C3=A1t?= <jan.kundrat@cesnet.cz>
 Date: Tue, 17 Dec 2024 15:08:43 +0100
-Subject: [PATCH 7/8] Wrap lyd_change_term for changing the value for a
+Subject: [PATCH 07/18] Wrap lyd_change_term for changing the value for a
  terminal node
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
-Organization: Addiva Elektronik
+Organization: Wires
 
 Previously, the code would require a newPath(...,
 libyang::CreationOptions::Update), which is quite a mouthful.

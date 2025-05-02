@@ -1,0 +1,54 @@
+From f45d7cab63431c94a4db859b07ea6f503214ebaa Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan=20Kundr=C3=A1t?= <jan.kundrat@cesnet.cz>
+Date: Thu, 13 Mar 2025 17:10:17 +0100
+Subject: [PATCH 29/44] tests: refactor default handling
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
+
+...so that a followup commit which uses
+libyang::PrintFlags::KeepEmptyCont introduces less noise.
+
+Change-Id: I587cf8a5fc0e87b37f4bb91a74d848f58b61e336
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ tests/restconf-defaults.cpp | 8 ++++----
+ 1 file changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/tests/restconf-defaults.cpp b/tests/restconf-defaults.cpp
+index dd8b4da..d5c6004 100644
+--- a/tests/restconf-defaults.cpp
++++ b/tests/restconf-defaults.cpp
+@@ -32,7 +32,7 @@ TEST_CASE("default handling")
+     auto server = rousette::restconf::Server{srConn, SERVER_ADDRESS, SERVER_PORT};
+ 
+     // default value of /example:a/b/c/enabled is implicitly set so it should not be printed
+-    REQUIRE(get(RESTCONF_DATA_ROOT "/example:a", {}) == Response{200, jsonHeaders, R"({
++    REQUIRE(get(RESTCONF_DATA_ROOT "/example:a/b/c", {}) == Response{200, jsonHeaders, R"({
+ 
+ }
+ )"});
+@@ -72,7 +72,7 @@ TEST_CASE("default handling")
+ )"});
+ 
+     // default value is explicitly set so it should be printed
+-    REQUIRE(get(RESTCONF_DATA_ROOT "/example:a", {}) == Response{200, jsonHeaders, R"({
++    REQUIRE(get(RESTCONF_DATA_ROOT "/example:a/b/c", {}) == Response{200, jsonHeaders, R"({
+   "example:a": {
+     "b": {
+       "c": {
+@@ -86,8 +86,8 @@ TEST_CASE("default handling")
+     // RFC 6243, sec. 2.3.3: A valid 'delete' operation attribute for a data node that has been set by a client to its schema default value MUST succeed.
+     REQUIRE(httpDelete(RESTCONF_DATA_ROOT "/example:a/b/c/enabled", {AUTH_ROOT}) == Response{204, noContentTypeHeaders, ""});
+ 
+-    // default value is implicitly set so it should be printed
+-    REQUIRE(get(RESTCONF_DATA_ROOT "/example:a", {}) == Response{200, jsonHeaders, R"({
++    // default value is only there implicitly, so it should *not* be printed
++    REQUIRE(get(RESTCONF_DATA_ROOT "/example:a/b/c", {}) == Response{200, jsonHeaders, R"({
+ 
+ }
+ )"});
+-- 
+2.43.0
+

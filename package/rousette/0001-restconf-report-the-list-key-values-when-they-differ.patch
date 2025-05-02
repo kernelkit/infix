@@ -1,12 +1,12 @@
 From 9622a68eba4aeaa60619b4c33d050ce91b27653d Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Tom=C3=A1=C5=A1=20Pecka?= <tomas.pecka@cesnet.cz>
 Date: Tue, 8 Oct 2024 12:22:49 +0200
-Subject: [PATCH 01/20] restconf: report the list key values when they differ
+Subject: [PATCH 01/44] restconf: report the list key values when they differ
  between URI and data
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
-Organization: Addiva Elektronik
+Organization: Wires
 
 For creating (leaf-)list instances with PUT and PATCH methods one has
 to specify the list key values in the URI and in the data as well.

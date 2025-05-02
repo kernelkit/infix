@@ -1,11 +1,11 @@
 From 849aa35274d5e07726cb849fe724962754b3fa29 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Tom=C3=A1=C5=A1=20Pecka?= <tomas.pecka@cesnet.cz>
 Date: Mon, 2 Dec 2024 20:20:48 +0100
-Subject: [PATCH 11/20] tests: add missing pragma once
+Subject: [PATCH 11/44] tests: add missing pragma once
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
-Organization: Addiva Elektronik
+Organization: Wires
 
 Change-Id: I269c20e5a914aa8c7bc9431147dd9785ea1aedda
 Signed-off-by: Mattias Walström <lazzer@gmail.com>

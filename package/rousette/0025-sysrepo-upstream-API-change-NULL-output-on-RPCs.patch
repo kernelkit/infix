@@ -1,0 +1,53 @@
+From 08458725211e707dec7bfebf7c5188e766136677 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan=20Kundr=C3=A1t?= <jan.kundrat@cesnet.cz>
+Date: Fri, 7 Feb 2025 17:34:04 +0100
+Subject: [PATCH 25/44] sysrepo upstream API change: NULL output on RPCs
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
+
+Depends-on: https://gerrit.cesnet.cz/c/CzechLight/dependencies/+/8289
+Change-Id: I8db21637246492b0f79d1adf7df1704df5173e39
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ CMakeLists.txt          | 2 +-
+ src/restconf/Server.cpp | 4 ++--
+ 2 files changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 7f3a9c0..cdd0eb4 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -74,7 +74,7 @@ find_package(PkgConfig)
+ pkg_check_modules(nghttp2 REQUIRED IMPORTED_TARGET libnghttp2_asio>=0.0.90 libnghttp2)
+ find_package(Boost REQUIRED CONFIG COMPONENTS system thread)
+ 
+-pkg_check_modules(SYSREPO-CPP REQUIRED IMPORTED_TARGET sysrepo-cpp>=4)
++pkg_check_modules(SYSREPO-CPP REQUIRED IMPORTED_TARGET sysrepo-cpp>=5)
+ pkg_check_modules(LIBYANG-CPP REQUIRED IMPORTED_TARGET libyang-cpp>=3)
+ pkg_check_modules(SYSTEMD IMPORTED_TARGET libsystemd)
+ pkg_check_modules(PAM REQUIRED IMPORTED_TARGET pam)
+diff --git a/src/restconf/Server.cpp b/src/restconf/Server.cpp
+index 7c66ea4..daf23ed 100644
+--- a/src/restconf/Server.cpp
++++ b/src/restconf/Server.cpp
+@@ -462,13 +462,13 @@ void processActionOrRPC(std::shared_ptr<RequestContext> requestCtx, const std::c
+ 
+     auto rpcReply = requestCtx->sess.sendRPC(*rpcNode, timeout);
+ 
+-    if (rpcReply.immediateChildren().empty()) {
++    if (!rpcReply || rpcReply->immediateChildren().empty()) {
+         requestCtx->res.write_head(204, {CORS});
+         requestCtx->res.end();
+         return;
+     }
+ 
+-    auto responseNode = rpcReply.child();
++    auto responseNode = rpcReply->child();
+     responseNode->unlinkWithSiblings();
+ 
+     auto envelope = ctx.newOpaqueJSON(rpcNode->schema().module().name(), "output", std::nullopt);
+-- 
+2.43.0
+

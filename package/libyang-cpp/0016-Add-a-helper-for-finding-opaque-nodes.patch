@@ -1,0 +1,462 @@
+From 8c59ecc5c687f8ee2ce62825835a378b422185f2 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan=20Kundr=C3=A1t?= <jan.kundrat@cesnet.cz>
+Date: Fri, 14 Mar 2025 13:41:01 +0100
+Subject: [PATCH 16/18] Add a helper for finding opaque nodes
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
+
+This is needed for sysrepo where we want to search through the
+sysrepo:discard-items top-level opaque nodes.
+
+At first I wanted to simply wrap lyd_find_sibling_opaq_next(), but its
+semantics is quite different to what is needed in the code which uses
+sysrepo, so here's my attempt at a nice-ish API.
+
+Change-Id: I2571961e42f6d7a121e27c881cacdcfec0e87762
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ include/libyang-cpp/DataNode.hpp   |   2 +
+ src/DataNode.cpp                   |  49 ++++++
+ tests/data_node.cpp                |  74 +++++++++
+ tests/yang/sysrepo@2024-10-25.yang | 257 +++++++++++++++++++++++++++++
+ 4 files changed, 382 insertions(+)
+ create mode 100644 tests/yang/sysrepo@2024-10-25.yang
+
+diff --git a/include/libyang-cpp/DataNode.hpp b/include/libyang-cpp/DataNode.hpp
+index 310b5e3..50d6c0e 100644
+--- a/include/libyang-cpp/DataNode.hpp
++++ b/include/libyang-cpp/DataNode.hpp
+@@ -102,6 +102,7 @@ public:
+ 
+     bool isOpaque() const;
+     DataNodeOpaque asOpaque() const;
++    std::optional<DataNodeOpaque> firstOpaqueSibling() const;
+ 
+     // TODO: allow setting the `parent` argument
+     DataNode duplicate(const std::optional<DuplicationOptions> opts = std::nullopt) const;
+@@ -241,6 +242,7 @@ struct LIBYANG_CPP_EXPORT OpaqueName {
+     std::optional<std::string> prefix;
+     std::string name;
+     std::string pretty() const;
++    bool matches(const std::string& prefixIsh, const std::string& name) const;
+ };
+ 
+ /**
+diff --git a/src/DataNode.cpp b/src/DataNode.cpp
+index 344f1b6..7e87917 100644
+--- a/src/DataNode.cpp
++++ b/src/DataNode.cpp
+@@ -1135,6 +1135,20 @@ std::string OpaqueName::pretty() const
+     }
+ }
+ 
++/**
++ * @short Fuzzy-match a real-world name against a combination of "something like a prefix" and "unqualified name"
++ *
++ * Because libyang doesn't propagate inherited prefixes, and because opaque nodes are magic, we seem to require
++ * this "fuzzy matching". It won't properly report a match on opaque nodes with a prefix that's inherited when
++ * using XML namespaces, though.
++ * */
++bool OpaqueName::matches(const std::string& prefixIsh, const std::string& name) const
++{
++    return name == this->name
++        && (prefixIsh == moduleOrNamespace
++            || (!!prefix && prefixIsh == *prefix));
++}
++
+ /**
+  * Wraps a raw non-null lyd_node pointer.
+  * @param node The pointer to be wrapped. Must not be null.
+@@ -1305,4 +1319,39 @@ bool DataNode::siblingsEqual(const libyang::DataNode& other, const DataCompare f
+     }
+ }
+ 
++/**
++ * @short Find the first opaque node among the siblings
++ *
++ * This function was inspired by `lyd_find_sibling_opaq_next()`.
++ * */
++std::optional<DataNodeOpaque> DataNode::firstOpaqueSibling() const
++{
++    struct lyd_node *candidate = m_node;
++
++    // Skip all non-opaque nodes; libyang guarantees to have them first, followed by a (possibly empty) set
++    // of opaque nodes. This is not documented anywhere, but it was explicitly confirmed by the maintainer:
++    //
++    // JK: can I rely on all non-opaque nodes being listed first among the siblings, and then all opaque nodes
++    // in one continuous sequence (but with an unspecified order among the opaque nodes themselves)?
++    //
++    // MV: yep
++    while (candidate && candidate->schema) {
++        candidate = candidate->next;
++    }
++
++    // walk back through the opaque nodes; however, libyang lists are not your regular linked lists
++    while (candidate
++           && !candidate->prev->schema // don't go from the first opaque node through the non-opaque ones
++           && candidate->prev->next // don't wrap from the first node to the last one in case all of them are opaque
++    ) {
++        candidate = candidate->prev;
++    }
++
++    if (candidate) {
++        return DataNode{candidate, m_refs}.asOpaque();
++    }
++
++    return std::nullopt;
++}
++
+ }
+diff --git a/tests/data_node.cpp b/tests/data_node.cpp
+index a1096a6..db5a28e 100644
+--- a/tests/data_node.cpp
++++ b/tests/data_node.cpp
+@@ -1982,6 +1982,80 @@ TEST_CASE("Data Node manipulation")
+   "sysrepo:discard-items": "/example-schema:b"
+ }
+ )");
++
++            // check that a list which only consists of opaque nodes doesn't break our iteration
++            REQUIRE(!!discard1->firstOpaqueSibling());
++            REQUIRE(*discard1->firstOpaqueSibling() == *discard1);
++            REQUIRE(!!discard2->firstOpaqueSibling());
++            REQUIRE(*discard2->firstOpaqueSibling() == *discard1);
++
++            auto leafInt16 = ctx.newPath("/example-schema:leafInt16", "666");
++            leafInt16.insertSibling(*discard1);
++            REQUIRE(*discard1->firstSibling().printStr(libyang::DataFormat::JSON, libyang::PrintFlags::WithSiblings)
++                    == R"({
++  "example-schema:leafInt16": 666,
++  "sysrepo:discard-items": "/example-schema:a",
++  "sysrepo:discard-items": "/example-schema:b"
++}
++)");
++            REQUIRE(leafInt16.firstSibling().path() == "/example-schema:leafInt16");
++            REQUIRE(discard1->firstSibling().path() == "/example-schema:leafInt16");
++            REQUIRE(discard2->firstSibling().path() == "/example-schema:leafInt16");
++
++            auto dummy = ctx.newPath("/example-schema:dummy", "blah");
++            auto opaqueLeaf = ctx.newPath("/example-schema:leafInt32", std::nullopt, libyang::CreationOptions::Opaque);
++            opaqueLeaf.newAttrOpaqueJSON("ietf-netconf", "operation", "delete");
++            dummy.insertSibling(opaqueLeaf);
++
++            // FIXME reword this: this one might not be handled by sysrepo, but we want it for our fuzzy matcher testing anyway
++            auto discard3 = ctx.newOpaqueXML(libyang::OpaqueName{"http://www.sysrepo.org/yang/sysrepo", "sysrepo", "discard-items"}, libyang::XML{"/example-schema:c"});
++            REQUIRE(!!discard3);
++            // notice that it's printed without a proper prefix at first...
++            REQUIRE(*discard3->printStr(libyang::DataFormat::JSON, libyang::PrintFlags::Shrink)
++                    == R"({"discard-items":"/example-schema:c"})");
++            // ...but after loading the module, the proper module is added back
++            ctx.parseModule(TESTS_DIR / "yang" / "sysrepo@2024-10-25.yang", libyang::SchemaFormat::YANG);
++            REQUIRE(*discard3->printStr(libyang::DataFormat::JSON, libyang::PrintFlags::Shrink)
++                    == R"({"sysrepo:discard-items":"/example-schema:c"})");
++
++            dummy.insertSibling(*discard3);
++            leafInt16.insertSibling(dummy);
++            REQUIRE(*discard1->firstSibling().printStr(libyang::DataFormat::JSON, libyang::PrintFlags::WithSiblings)
++                    == R"({
++  "example-schema:dummy": "blah",
++  "example-schema:leafInt16": 666,
++  "sysrepo:discard-items": "/example-schema:a",
++  "sysrepo:discard-items": "/example-schema:b",
++  "example-schema:leafInt32": "",
++  "@example-schema:leafInt32": {
++    "ietf-netconf:operation": "delete"
++  },
++  "sysrepo:discard-items": "/example-schema:c"
++}
++)");
++
++            REQUIRE(dummy.firstOpaqueSibling() == discard1);
++            REQUIRE(dummy.firstOpaqueSibling() != discard2);
++            REQUIRE(leafInt16.firstOpaqueSibling() == discard1);
++            REQUIRE(opaqueLeaf.firstOpaqueSibling() == discard1);
++            REQUIRE(discard1->firstOpaqueSibling() == discard1);
++            REQUIRE(discard2->firstOpaqueSibling() == discard1);
++            REQUIRE(discard3->firstOpaqueSibling() == discard1);
++            REQUIRE(discard1->asOpaque().name().matches("sysrepo", "discard-items"));
++            REQUIRE(!discard1->asOpaque().name().matches("http://www.sysrepo.org/yang/sysrepo", "discard-items"));
++            REQUIRE(discard2->asOpaque().name().matches("sysrepo", "discard-items"));
++            REQUIRE(!discard2->asOpaque().name().matches("http://www.sysrepo.org/yang/sysrepo", "discard-items"));
++            REQUIRE(discard3->asOpaque().name().matches("sysrepo", "discard-items"));
++            REQUIRE(discard3->asOpaque().name().matches("http://www.sysrepo.org/yang/sysrepo", "discard-items"));
++            REQUIRE(!opaqueLeaf.asOpaque().name().matches("sysrepo", "discard-items"));
++
++            REQUIRE(!!dummy.firstOpaqueSibling()->nextSibling());
++            REQUIRE(dummy.firstOpaqueSibling()->nextSibling() == discard2);
++            REQUIRE(!!dummy.firstOpaqueSibling()->nextSibling()->nextSibling());
++            REQUIRE(dummy.firstOpaqueSibling()->nextSibling()->nextSibling() == opaqueLeaf);
++            REQUIRE(!!dummy.firstOpaqueSibling()->nextSibling()->nextSibling()->nextSibling());
++            REQUIRE(dummy.firstOpaqueSibling()->nextSibling()->nextSibling()->nextSibling() == discard3);
++            REQUIRE(!dummy.firstOpaqueSibling()->nextSibling()->nextSibling()->nextSibling()->nextSibling());
+         }
+ 
+         DOCTEST_SUBCASE("RESTCONF RPC output")
+diff --git a/tests/yang/sysrepo@2024-10-25.yang b/tests/yang/sysrepo@2024-10-25.yang
+new file mode 100644
+index 0000000..f5bc32c
+--- /dev/null
++++ b/tests/yang/sysrepo@2024-10-25.yang
+@@ -0,0 +1,257 @@
++module sysrepo {
++    namespace "http://www.sysrepo.org/yang/sysrepo";
++    prefix sr;
++
++    yang-version 1.1;
++
++    import ietf-yang-types {
++        prefix yang;
++    }
++
++    import ietf-datastores {
++        prefix ds;
++    }
++
++    import ietf-yang-metadata {
++        prefix md;
++        revision-date 2016-08-05;
++    }
++
++    organization
++        "CESNET";
++
++    contact
++        "Author: Michal Vasko
++                 <mvasko@cesnet.cz>";
++
++    description
++        "Sysrepo YANG datastore internal attributes and information.";
++
++    revision "2024-10-25" {
++        description
++            "Removed redundant metadata used for push operational data.";
++    }
++
++    revision "2019-07-10" {
++        description
++            "Initial revision.";
++    }
++
++    typedef module-ref {
++        description
++            "Reference to a module.";
++        type leafref {
++            path "/sysrepo-modules/module/name";
++        }
++    }
++
++    md:annotation operation {
++        type enumeration {
++            enum none {
++                description
++                    "Node with this operation must exist but does not affect the datastore in any way.";
++                reference
++                    "RFC 6241 section 7.2.: default-operation";
++            }
++            enum ether {
++                description
++                    "Node with this operation does not have to exist and does not affect the datastore in any way.";
++            }
++            enum purge {
++                description
++                    "Node with this operation represents an arbitrary generic node instance and all
++                     the instances will be deleted.";
++            }
++        }
++        description
++            "Additional proprietary <edit-config> operations used internally.";
++        reference
++            "RFC 6241 section 7.2.";
++    }
++
++    identity notification {
++        base ds:datastore;
++        description
++            "Special datastore for storing notifications for replay.";
++    }
++
++    grouping module-info-grp {
++        leaf name {
++            type string;
++            description
++                "Module name.";
++        }
++
++        leaf revision {
++            type string;
++            description
++                "Module revision.";
++        }
++
++        leaf-list enabled-feature {
++            type string;
++            description
++                "List of all the enabled features.";
++        }
++
++        list plugin {
++            key "datastore";
++            description
++                "Module datastore plugin handling specific datastore data.";
++
++            leaf datastore {
++                type identityref {
++                    base ds:datastore;
++                }
++                description
++                    "Datastore of this plugin.";
++            }
++
++            leaf name {
++                type string;
++                mandatory true;
++                description
++                    "Specific plugin name as present in the plugin structures.";
++            }
++        }
++    }
++
++    grouping deps-grp {
++        list lref {
++            description
++                "Dependency of a leafref node.";
++
++            leaf target-path {
++                type yang:xpath1.0;
++                mandatory true;
++                description
++                    "Path identifying the leafref target node.";
++            }
++
++            leaf target-module {
++                type module-ref;
++                mandatory true;
++                description
++                    "Foreign target module of the leafref.";
++            }
++        }
++
++        list inst-id {
++            description
++                "Dependency of an instance-identifier node.";
++
++            leaf source-path {
++                type yang:xpath1.0;
++                mandatory true;
++                description
++                    "Path identifying the instance-identifier node.";
++            }
++
++            leaf default-target-path {
++                type yang:xpath1.0;
++                description
++                    "Default instance-identifier value.";
++            }
++        }
++
++        list xpath {
++            description
++                "Dependency of an XPath expression - must or when statement.";
++
++            leaf expression {
++                type yang:xpath1.0;
++                mandatory true;
++                description
++                    "XPath expression of the dependency - must or when statement argument.";
++            }
++
++            leaf-list target-module {
++                type module-ref;
++                description
++                    "Foreign modules with the data needed for evaluation of the XPath.";
++            }
++        }
++    }
++
++    container sysrepo-modules {
++        config false;
++        description
++            "All installed Sysrepo modules.";
++
++        leaf content-id {
++            type uint32;
++            mandatory true;
++            description
++                "Sysrepo module-set content-id to be used for its generated yang-library data.";
++        }
++
++        list module {
++            key "name";
++            description
++                "Sysrepo module.";
++
++            uses module-info-grp;
++
++            leaf replay-support {
++                type yang:date-and-time;
++                description
++                    "Present only if the module supports replay. Means the earliest stored notification if any present.
++                     Otherwise the time the replay support was switched on.";
++            }
++
++            container deps {
++                description
++                    "Module data dependencies on other modules.";
++                uses deps-grp;
++            }
++
++            leaf-list inverse-deps {
++                type module-ref;
++                description
++                    "List of modules that depend on this module.";
++            }
++
++            list rpc {
++                key "path";
++                description
++                    "Module RPC/actions.";
++
++                leaf path {
++                    type yang:xpath1.0;
++                    description
++                        "Path identifying the operation.";
++                }
++
++                container in {
++                    description
++                        "Operation input dependencies.";
++                    uses deps-grp;
++                }
++
++                container out {
++                    description
++                        "Operation output dependencies.";
++                    uses deps-grp;
++                }
++            }
++
++            list notification {
++                key "path";
++                description
++                    "Module notifications.";
++
++                leaf path {
++                    type yang:xpath1.0;
++                    description
++                        "Path identifying the notification.";
++                }
++
++                container deps {
++                    description
++                        "Notification dependencies.";
++                    uses deps-grp;
++                }
++            }
++        }
++    }
++}
+-- 
+2.43.0
+

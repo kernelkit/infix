@@ -1,0 +1,59 @@
+From 4e287e1e2af95c1ec077689e4f353f657469e5e5 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan=20Kundr=C3=A1t?= <jan.kundrat@cesnet.cz>
+Date: Tue, 8 Apr 2025 17:00:44 +0200
+Subject: [PATCH 38/44] requests: create sysrepo session later
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
+
+I was looking at all places where a sysrepo session is used, and tried
+to defer their creations until the last moment possible, just to
+(potentially) save some resources when it isn't needed. Some of these
+changes are cosmetic, but I was touching that code anyway.
+
+This cannot be done for the generic `restconfRoot` handler because of
+its associated error handling which requires a libyang context. Well, it
+*could* be done, but I don't feel like doing some m_monitoringSession
+magic for little to no purpose.
+
+Change-Id: Ia84c90abc1464e4a0f9682779d7471aefad9e2de
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ src/restconf/Server.cpp | 5 ++---
+ 1 file changed, 2 insertions(+), 3 deletions(-)
+
+diff --git a/src/restconf/Server.cpp b/src/restconf/Server.cpp
+index a840e6e..f3c515b 100644
+--- a/src/restconf/Server.cpp
++++ b/src/restconf/Server.cpp
+@@ -902,7 +902,6 @@ Server::Server(sysrepo::Connection conn, const std::string& address, const std::
+     });
+ 
+     server->handle(netconfStreamRoot, [this, conn](const auto& req, const auto& res) mutable {
+-        auto sess = conn.sessionStart();
+         std::optional<std::string> xpathFilter;
+         std::optional<sysrepo::NotificationTimeStamp> startTime;
+         std::optional<sysrepo::NotificationTimeStamp> stopTime;
+@@ -914,6 +913,7 @@ Server::Server(sysrepo::Connection conn, const std::string& address, const std::
+         }
+ 
+         try {
++            auto sess = conn.sessionStart();
+             authorizeRequest(nacm, sess, req);
+ 
+             auto streamRequest = asRestconfStreamRequest(req.method(), req.uri().path, req.uri().raw_query);
+@@ -962,9 +962,8 @@ Server::Server(sysrepo::Connection conn, const std::string& address, const std::
+             return;
+         }
+ 
+-        auto sess = conn.sessionStart(sysrepo::Datastore::Operational);
+-
+         try {
++            auto sess = conn.sessionStart(sysrepo::Datastore::Operational);
+             authorizeRequest(nacm, sess, req);
+ 
+             if (auto mod = asYangModule(sess.getContext(), req.uri().path); mod && hasAccessToYangSchema(sess, *mod)) {
+-- 
+2.43.0
+

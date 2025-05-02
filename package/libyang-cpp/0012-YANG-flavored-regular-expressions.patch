@@ -1,0 +1,173 @@
+From 1533458346b4f395b1187c646b61bbcb1fddc615 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan=20Kundr=C3=A1t?= <jan.kundrat@cesnet.cz>
+Date: Mon, 4 Nov 2024 14:52:12 +0100
+Subject: [PATCH 12/18] YANG-flavored regular expressions
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
+
+Change-Id: I93b2756d0f470585280c076308df3f384bd7765d
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ CMakeLists.txt                |  3 +++
+ include/libyang-cpp/Regex.hpp | 28 ++++++++++++++++++++++
+ src/Regex.cpp                 | 45 +++++++++++++++++++++++++++++++++++
+ tests/regex.cpp               | 30 +++++++++++++++++++++++
+ 4 files changed, 106 insertions(+)
+ create mode 100644 include/libyang-cpp/Regex.hpp
+ create mode 100644 src/Regex.cpp
+ create mode 100644 tests/regex.cpp
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index c518ca8..512af8c 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -54,6 +54,7 @@ add_library(yang-cpp
+     src/Enum.cpp
+     src/Collection.cpp
+     src/Module.cpp
++    src/Regex.cpp
+     src/SchemaNode.cpp
+     src/Set.cpp
+     src/Type.cpp
+@@ -83,6 +84,7 @@ if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.24")
+             libyang-cpp/Enum.hpp
+             libyang-cpp/ChildInstantiables.hpp
+             libyang-cpp/Module.hpp
++            libyang-cpp/Regex.hpp
+             libyang-cpp/Set.hpp
+             libyang-cpp/SchemaNode.hpp
+             libyang-cpp/Time.hpp
+@@ -119,6 +121,7 @@ if(BUILD_TESTING)
+     libyang_cpp_test(schema_node)
+     libyang_cpp_test(unsafe)
+     target_link_libraries(test_unsafe PkgConfig::LIBYANG)
++    libyang_cpp_test(regex)
+ 
+     if(date_FOUND)
+         add_executable(test_time-stl-hhdate tests/time.cpp)
+diff --git a/include/libyang-cpp/Regex.hpp b/include/libyang-cpp/Regex.hpp
+new file mode 100644
+index 0000000..31935f2
+--- /dev/null
++++ b/include/libyang-cpp/Regex.hpp
+@@ -0,0 +1,28 @@
++/*
++ * Copyright (C) 2025 CESNET, https://photonics.cesnet.cz/
++ *
++ * Written by Jan Kundrát <jan.kundrat@cesnet.cz>
++ *
++ * SPDX-License-Identifier: BSD-3-Clause
++ */
++#pragma once
++#include <libyang-cpp/export.h>
++#include <string>
++
++namespace libyang {
++class Context;
++
++/**
++ * @brief A regular expression pattern which uses the YANG-flavored regex engine
++ */
++class LIBYANG_CPP_EXPORT Regex {
++public:
++    Regex(const std::string& pattern);
++    ~Regex();
++    bool matches(const std::string& input);
++
++private:
++    void* code;
++};
++
++}
+diff --git a/src/Regex.cpp b/src/Regex.cpp
+new file mode 100644
+index 0000000..a34fcd5
+--- /dev/null
++++ b/src/Regex.cpp
+@@ -0,0 +1,45 @@
++/*
++ * Copyright (C) 2025 CESNET, https://photonics.cesnet.cz/
++ *
++ * Written by Jan Kundrát <jan.kundrat@cesnet.cz>
++ *
++ * SPDX-License-Identifier: BSD-3-Clause
++ */
++
++// The following header MUST be included before anything else which "might" use PCRE2
++// because that library uses the preprocessor to prepare the "correct" versions of symbols.
++#include <libyang/tree_data.h>
++
++#include <libyang-cpp/Regex.hpp>
++#include <pcre2.h>
++#include "utils/exception.hpp"
++
++#define THE_PCRE2_CODE_P reinterpret_cast<pcre2_code*>(this->code)
++#define THE_PCRE2_CODE_P_P reinterpret_cast<pcre2_code**>(&this->code)
++
++namespace libyang {
++
++Regex::Regex(const std::string& pattern)
++    : code(nullptr)
++{
++    auto res = ly_pattern_compile(nullptr, pattern.c_str(), THE_PCRE2_CODE_P_P);
++    throwIfError(res, ly_last_logmsg());
++}
++
++Regex::~Regex()
++{
++    pcre2_code_free(THE_PCRE2_CODE_P);
++}
++
++bool Regex::matches(const std::string& input)
++{
++    auto res = ly_pattern_match(nullptr, nullptr /* we have a precompiled pattern */, input.c_str(), input.size(), THE_PCRE2_CODE_P_P);
++    if (res == LY_SUCCESS) {
++        return true;
++    } else if (res == LY_ENOT) {
++        return false;
++    } else {
++        throwError(res, ly_last_logmsg());
++    }
++}
++}
+diff --git a/tests/regex.cpp b/tests/regex.cpp
+new file mode 100644
+index 0000000..7594f43
+--- /dev/null
++++ b/tests/regex.cpp
+@@ -0,0 +1,30 @@
++/*
++ * Copyright (C) 2025 CESNET, https://photonics.cesnet.cz/
++ *
++ * Written by Jan Kundrát <jan.kundrat@cesnet.cz>
++ *
++ * SPDX-License-Identifier: BSD-3-Clause
++ */
++
++#include <doctest/doctest.h>
++#include <libyang-cpp/Regex.hpp>
++#include <libyang-cpp/Utils.hpp>
++
++TEST_CASE("regex")
++{
++    using libyang::Regex;
++    using namespace std::string_literals;
++
++    REQUIRE_THROWS_WITH_AS(Regex{"\\"}, R"(Regular expression "\" is not valid ("": \ at end of pattern).: LY_EVALID)", libyang::ErrorWithCode);
++
++    Regex re{"ahoj"};
++    REQUIRE(re.matches("ahoj"));
++    REQUIRE(!re.matches("cau"));
++    REQUIRE(re.matches("ahoj")); // test repeated calls as well
++    REQUIRE(!re.matches("oj"));
++    REQUIRE(!re.matches("aho"));
++
++    // Testing runtime errors during pattern *matching* is tricky. There's a limit on backtracking,
++    // so testing a pattern like x+x+y on an obscenely long string of "x" characters *will* do the trick, eventually,
++    // but the PCRE2 library has a default limit of 10M attempts. That's a VERY big number to hit during a test :(.
++}
+-- 
+2.43.0
+

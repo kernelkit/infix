@@ -17,7 +17,7 @@ endif::topdoc[]
 ==== Test sequence
 . Set up topology and attach to target DUT
 . Set timezone UTC offset to +12
-. Verify current time offset is +12:00
+. Verify current timezone is UTC+12:00
 
 
 <<<

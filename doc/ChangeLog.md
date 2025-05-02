@@ -3,6 +3,15 @@ Change Log
 
 All notable changes to the project are documented in this file.
 
+[v25.05.0][UNRELEASED]
+-------------------------
+### Changes
+- Upgrade libyang to 3.12.2
+- Upgrade sysrepo to 3.6.11
+- Upgrade netopeer2 (NETCONF) to 2.4.1
+
+### Fixes
+
 
 [v25.04.0][] - 2025-04-30
 -------------------------
@@ -1547,6 +1556,7 @@ Supported YANG models in addition to those used by sysrepo and netopeer:
 
 [buildroot]:  https://buildroot.org/
 [UNRELEASED]: https://github.com/kernelkit/infix/compare/v25.04.0...HEAD
+[v25.05.0]:   https://github.com/kernelkit/infix/compare/v25.04.0...v25.05.0
 [v25.04.0]:   https://github.com/kernelkit/infix/compare/v25.03.0...v25.04.0
 [v25.03.0]:   https://github.com/kernelkit/infix/compare/v25.02.0...v25.03.0
 [v25.02.0]:   https://github.com/kernelkit/infix/compare/v25.01.0...v25.02.0

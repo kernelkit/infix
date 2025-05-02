@@ -1,0 +1,40 @@
+From 50a216e35a555961f94a32a71bb2d45ac611d0aa Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan=20Kundr=C3=A1t?= <jan.kundrat@cesnet.cz>
+Date: Wed, 29 Jan 2025 22:49:08 +0100
+Subject: [PATCH 11/18] build: a single place to define package version
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
+
+Change-Id: I2cd7397895ed4852f852e99b97543dde76eaff8f
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ CMakeLists.txt | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 732f52b..c518ca8 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -21,7 +21,8 @@ add_custom_target(libyang-cpp-version-cmake
+         cmake/ProjectGitVersionRunner.cmake
+         )
+ include(cmake/ProjectGitVersion.cmake)
+-prepare_git_version(LIBYANG_CPP_VERSION "3")
++set(LIBYANG_CPP_PKG_VERSION "3")
++prepare_git_version(LIBYANG_CPP_VERSION ${LIBYANG_CPP_PKG_VERSION})
+ 
+ find_package(Doxygen)
+ option(WITH_DOCS "Create and install internal documentation (needs Doxygen)" ${DOXYGEN_FOUND})
+@@ -29,7 +30,6 @@ option(BUILD_SHARED_LIBS "By default, shared libs are enabled. Turn off for a st
+ 
+ find_package(PkgConfig REQUIRED)
+ pkg_check_modules(LIBYANG REQUIRED libyang>=3.7.8 IMPORTED_TARGET)
+-set(LIBYANG_CPP_PKG_VERSION "3")
+ 
+ # FIXME from gcc 14.1 on we should be able to use the calendar/time from libstdc++ and thus remove the date dependency
+ find_package(date)
+-- 
+2.43.0
+

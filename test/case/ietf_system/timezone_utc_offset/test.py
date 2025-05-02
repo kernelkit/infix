@@ -21,10 +21,9 @@ with infamy.Test() as test:
             }
           }})
 
-    with test.step("Verify current time offset is +12:00"):
-        current_datetime=target.get_current_time_with_offset()
-        offset=current_datetime[-6:]
-
-        assert(offset == "+12:00")
+    with test.step("Verify current timezone is UTC+12:00"):
+        tz=target.get_data("/ietf-system:system/clock/timezone-utc-offset")
+        offset=tz.get("system", {}).get("clock",{}).get("timezone-utc-offset", 0)
+        assert(offset == 12)
 
     test.succeed()
