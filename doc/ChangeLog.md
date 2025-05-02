@@ -6,6 +6,7 @@ All notable changes to the project are documented in this file.
 [v25.05.0][UNRELEASED]
 -------------------------
 ### Changes
+- Upgrade Linux kernel to 6.12.26 (LTS)
 - Upgrade libyang to 3.12.2
 - Upgrade sysrepo to 3.6.11
 - Upgrade netopeer2 (NETCONF) to 2.4.1
