@@ -3,16 +3,16 @@
 
 <<<
 
-include::mdns_enable_disable/Readme.adoc[]
+include::mdns/mdns_enable_disable/Readme.adoc[]
 
-include::mdns_allow_deny/Readme.adoc[]
+include::mdns/mdns_allow_deny/Readme.adoc[]
 
-include::lldp_enable_disable/Readme.adoc[]
+include::lldp/lldp_enable_disable/Readme.adoc[]
 
-include::lldp_admin_status/Readme.adoc[]
+include::lldp/lldp_admin_status/Readme.adoc[]
 
-include::lldp_ieee_group_forward/Readme.adoc[]
+include::lldp/lldp_ieee_group_forward/Readme.adoc[]
 
-include::ssh_server_config/Readme.adoc[]
+include::ssh/ssh_server_config/Readme.adoc[]
 
-include::ssh_key_authentication/Readme.adoc[]
+include::ssh/ssh_key_authentication/Readme.adoc[]
