@@ -5,11 +5,11 @@ Operation and non-operation are confirmed using tcpdump.
 
 ==== Topology
 ifdef::topdoc[]
-image::{topdoc}../../test/case/infix_services/lldp_ieee_group_forward/topology.svg[LLDP IEEE Group Forward topology]
+image::{topdoc}../../test/case/infix_services/lldp/lldp_ieee_group_forward/topology.svg[LLDP IEEE Group Forward topology]
 endif::topdoc[]
 ifndef::topdoc[]
 ifdef::testgroup[]
-image::lldp_ieee_group_forward/topology.svg[LLDP IEEE Group Forward topology]
+image::lldp/lldp_ieee_group_forward/topology.svg[LLDP IEEE Group Forward topology]
 endif::testgroup[]
 ifndef::testgroup[]
 image::topology.svg[LLDP IEEE Group Forward topology]
@@ -17,8 +17,7 @@ endif::testgroup[]
 endif::topdoc[]
 ==== Test sequence
 . Set up topology and attach to target DUT
-. Enable target interfaces and create bridge
-. Disable LLDP on target
+. Configure interfaces and disable LLDP daemon
 . Verify LLDP absence on host:data2
 . Enable LLDP flooding by setting group forward
 . Verify LLDP arrival on host:data2

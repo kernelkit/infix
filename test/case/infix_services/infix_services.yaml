@@ -1,9 +1,9 @@
 ---
 - name: lldp
-  suite: lldp.yaml
+  suite: lldp/lldp.yaml
 
 - name: mdns
-  suite: mdns.yaml
+  suite: mdns/mdns.yaml
 
 - name: ssh
-  suite: ssh.yaml
+  suite: ssh/ssh.yaml
