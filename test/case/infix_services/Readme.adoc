@@ -11,6 +11,8 @@ include::lldp_enable_disable/Readme.adoc[]
 
 include::lldp_admin_status/Readme.adoc[]
 
+include::lldp_ieee_group_forward/Readme.adoc[]
+
 include::ssh_server_config/Readme.adoc[]
 
 include::ssh_key_authentication/Readme.adoc[]
