@@ -35,7 +35,7 @@
 <!-- host&#45;&#45;target -->
 <g id="edge1" class="edge">
 <title>host:mgmt&#45;&#45;target:mgmt</title>
-<path fill="none" stroke="lightgrey" stroke-width="2" d="M108,-58C108,-58 308.03,-58 308.03,-58"/>
+<path fill="none" stroke="lightgray" stroke-width="2" d="M108,-58C108,-58 308.03,-58 308.03,-58"/>
 </g>
 <!-- host&#45;&#45;target -->
 <g id="edge2" class="edge">
