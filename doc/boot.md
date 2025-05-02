@@ -349,5 +349,6 @@ can funtion reasonably well without a persistent `/var`, loosing
 If `var` is not available, Infix will still persist `/var/lib` using
 `cfg` as the backing storage.
 
-[^1]: See [CLI Upgrade](cli/upgrade.md) for information on upgrading
-    via CLI.
+[^1]: See [Upgrading procedures and boot
+    order](system.md#upgrade-procedures-and-boot-order) for
+    information on upgrading via CLI.
