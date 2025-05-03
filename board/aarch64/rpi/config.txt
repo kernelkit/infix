@@ -7,8 +7,11 @@
 start_file=start4.elf
 fixup_file=fixup4.dat
 
+kernel=u-boot.bin
+
 device_tree=bcm2711-rpi-4-b.dtb
-kernel=Image
+dtoverlay=rpi-env
+dtoverlay=infix-key
 
 # To use an external initramfs file
 #initramfs rootfs.cpio.gz
@@ -28,5 +31,11 @@ enable_uart=1
 force_turbo=1
 #dtoverlay=miniuart-bt
 
+# Run as fast as firmware / board allows
+arm_boost=1
+
 # enable 64bits support
 arm_64bit=1
+
+# Enable early debugging info
+uart_2ndstage=1
