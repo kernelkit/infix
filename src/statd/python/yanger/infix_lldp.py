@@ -15,9 +15,9 @@ def operational():
         "local": "local"
     }
 
-    DEFAULT_MAC = "00-00-00-00-00-00"
+    LLDP_MULTICAST_MAC = "01:80:C2:00:00:0E"
 
-    port_data = defaultdict(lambda: {"remote-systems-data": [], "dest-mac-address": None})
+    port_data = defaultdict(lambda: {"remote-systems-data": [], "dest-mac-address": LLDP_MULTICAST_MAC})
 
     data = HOST.run_json(["lldpcli", "show", "neighbors", "-f", "json"])
 
@@ -38,12 +38,6 @@ def operational():
             port_id_type = subtype_mapping.get(port_info.get("id", {}).get("type"), "unknown")
             port_id_value = port_info.get("id", {}).get("value", "")
 
-            dest_mac_address = (
-                chassis_id_value.replace(":", "-") if chassis_id_type == "mac-address" else
-                port_id_value.replace(":", "-") if port_id_type == "mac-address" else
-                DEFAULT_MAC
-            )
-
             remote_entry = {
                 "time-mark": time_mark,
                 "remote-index": remote_index,
@@ -54,9 +48,6 @@ def operational():
             }
 
             port_data[iface_name]["remote-systems-data"].append(remote_entry)
-
-            if port_data[iface_name]["dest-mac-address"] is None:
-                port_data[iface_name]["dest-mac-address"] = dest_mac_address
 
     formatted_output = {
         "ieee802-dot1ab-lldp:lldp": {

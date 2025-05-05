@@ -45,7 +45,7 @@ def verify_admin_status(test, target, port, admin_status, local_capture, remote_
             "lldp": {
                 "port": [{
                     "name": target["data"],
-                    "dest-mac-address": "00-00-00-00-00-00",
+                    "dest-mac-address": "01:80:C2:00:00:0E",
                     "admin-status": admin_status
                 }]
             }
