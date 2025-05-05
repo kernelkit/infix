@@ -356,17 +356,22 @@ booted from one partition, an `upgrade` will apply to the other
 (inactive) partition.
 
 1. Download and unpack the release to install. Make the image *pkg*
-   bundle available at some suitable URL (FTP/TFTP/SFTP/HTTP/HTTPS).
-1. Assume the unit has booted the `primary` image. Then running the
+   bundle available at some URL[^10]
+2. Assume the unit has booted the `primary` image. Then running the
    `upgrade` command installs a new image on the `secondary`
-   partition.
-1. As part of a successful upgrade, the boot-order is implictly
-   changed to boot the newly installed image.
-1. Reboot the unit.
-1. During boot, the unit may [migrate](#configuration-migration) the
-   startup configuration inline with newer configuration definitions.
-1. The unit now runs the new image. To upgrade the remaining partition
-   (`primary`), run the same upgrade command again, and reboot.
+   partition
+3. As part of a successful upgrade, the boot-order is implictly
+   changed to boot the newly installed image
+4. Reboot the unit
+5. The unit now runs the new image. To upgrade the remaining partition
+   (`primary`), run the same upgrade command again, and (optionally)
+   reboot to verify the upgrade
+   
+> [!CAUTION]
+> During boot, the unit may [migrate](#configuration-migration) the
+> startup configuration for any syntax changes.  It is therefore
+> important that you make sure to upgrade the other partition as well
+> after reboot, of course after having verified your setup.
 
 The CLI example below shows steps 2-4.
 
@@ -507,10 +512,10 @@ backup configuration available.  The objective is to avoid ending up
 with the unit in *failure config*.
 
 1. Find the backup configuration file.
-1. Run `upgrade URL` to install Infix image to downgrade to.
-1. Copy backup startup configuration to current startup configuration
+2. Run `upgrade URL` to install Infix image to downgrade to.
+3. Copy backup startup configuration to current startup configuration
    (from shell).
-1. Reboot.
+4. Reboot.
 
 *Find the backup configuration file:*
 
@@ -577,10 +582,10 @@ This procedure assumes you have access to the unit's console port and
 its default login credentials[^9].
 
 1. Downgrade
-1. Reboot
-1. Login with unit's default credentials
-1. Conduct factory reset
-1. (Then go on configure the unit as you wish)
+2. Reboot
+3. Login with unit's default credentials
+4. Conduct factory reset
+5. (Then go on configure the unit as you wish)
 
 *Use `upgrade` command to downgrade:*
 
@@ -682,3 +687,4 @@ Continued configuration is done as with any unit after factory reset.
     interfaces. With direct access, one can connect with e.g., SSH,
     using link local IPv6 addresses. This as an alternative to
     connecting via a console port.
+[^10]: Set up an FTP/TFTP/SFTP or HTTP/HTTPS server on the same LAN. 
