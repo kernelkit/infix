@@ -1,0 +1,269 @@
+#!/bin/sh
+
+set -e
+
+usage()
+{
+    cat <<EOF
+usage: $0 COMMAND [ARGS...]
+
+Update contents of Infix images
+
+Commands:
+
+  unpack PKG KEY-DIR DIR
+
+    Unpack the RAUC bundle PKG and the root filesystem contained in
+    it, using the keys stored in KEY-DIR, and store the results in
+    DIR.
+
+  pack DIR [KEY-DIR] PKG
+
+    Repackage the (possibly modified) root filesystem in DIR, updating
+    all signatures as necessary using the keys stored in KEY-DIR (or
+    the keys used to unpack the bundle, if not specified) and store
+    the resulting bundle in PKG.
+
+  exec DIR COMMAND [ARGS...]
+
+    Run COMMAND, possibly with ARGS, from the root of the filesystem
+    in DIR, inside of a fakeroot context that allows otherwise
+    privileged operations such as ownership modifications.
+
+  help
+
+    Show this message and exit.
+
+Key directories:
+
+  KEY-DIR arguments must reference a directory that contains the
+  public/private keypair used to verify/sign an image. Most commonly,
+  board/common/signing-keys/development from the Infix source tree is
+  used to validate the input image.
+
+Example:
+
+  Include a custom file inside a prebuilt Infix image, assign it to
+  the UID/GID 1337; and package up the results, signing it with the
+  same developer key that was used to create it:
+
+    ixbin unpack infix-aarch64.pkg ~/infix/board/common/signing-keys/development tmp
+    cp VBRUN300.DLL tmp/rootfs/lib/
+    ixbin exec tmp chown 1337:1337 lib/VBRUN300.DLL
+    ixbin pack tmp infix-vb3-aarch64.pkg
+
+EOF
+}
+
+msg()
+{
+    printf "\e[37;44mixbin: %-80s\e[0m\n" "$*"
+}
+
+err()
+{
+    printf "\e[37;41mixbin: ERROR: %-73s\e[0m\n" "$*" >&2
+}
+
+die()
+{
+    err "$*"
+    exit 1
+}
+
+ensuredeps()
+{
+    local DEPS="fakeroot mksquashfs unsquashfs awk env mkimage truncate dtc fdtget rauc"
+    local missing=
+
+    for dep in $DEPS; do
+	command -v $dep >/dev/null && continue
+	missing="$missing $dep"
+    done
+
+    if [ -n "$missing" ]; then
+	die "Missing dependencies:$missing"
+    fi
+}
+
+squnpack()
+{
+    local sq="$WORKDIR"/pkg/rootfs.img
+
+    # Capture the original compression algo and block size for when we
+    # resquash it later on.
+    unsquashfs -s "$sq" | awk '
+    	       /^Compression/ { printf(" -comp %s", $2); }
+	       /^Block size/ { printf(" -b %s", $3); }
+    ' >"$WORKDIR"/mksquash-opts
+
+    $FAKEROOT unsquashfs -d "$WORKDIR"/rootfs "$sq"
+}
+
+sqexec()
+{
+    $FAKEROOT env -C "$WORKDIR"/rootfs "$@"
+}
+
+sqpack()
+{
+    $FAKEROOT mksquashfs "$WORKDIR"/rootfs "$WORKDIR"/pkg/rootfs.img \
+	      $(cat "$WORKDIR"/mksquash-opts) -noappend "$@"
+}
+
+sqsign()
+{
+    local its="$1"
+    local keys="$2"
+    local hsize="$3"
+    local out="$4"
+
+    mkimage -E -p "$hsize" -B "$hsize" -k "$keys" -f "$its" "$WORKDIR"/sign.itb
+    truncate -s $(($hsize)) "$WORKDIR"/sign.itb
+    mv "$WORKDIR"/sign.itb "$out"
+}
+
+sqresign()
+{
+    local keys="$1"
+    local sq="$WORKDIR"/pkg/rootfs.img
+    local itbh="$WORKDIR"/pkg/rootfs.itbh
+
+    signsize=$(printf '0x%x' $(fdtget "$itbh" /images/rootfs data-position))
+
+    dtc -I dtb -O dts "$itbh" | awk -v sq="$sq" '
+    	/timestamp =/ || /data-\w+ =/ || /signer-\w+ =/ || /value =/{
+		/* Remove old signature */
+		next;
+	}
+
+	/compression = "none"/ {
+		/* Splice in reference to the squash */
+		print;
+		sub("compression", "data");
+		sub("\"none\"", sprintf("/incbin/(\"%s\")", sq));
+		print;
+		next;
+	}
+
+	{
+		/* Keep the rest as-is */
+		print;
+	};
+    ' >"$WORKDIR"/resign.its
+
+    sqsign "$WORKDIR"/resign.its "$keys" "$signsize" "$itbh"
+}
+
+unpack()
+{
+    local pkg="$1"
+    local keys="$2"
+    WORKDIR=$(readlink -f "$3")
+
+    case "$#" in
+	3)
+	    ;;
+	*)
+	    echo "Usage: ixbin unpack PKG KEYS DIR" >&2
+	    exit 1
+    esac
+
+    local crt=$(ls "$keys"/*.crt | head -n1)
+    [ -r "$crt" ] || die "No public key found in $keys"
+
+    msg "Setting up working directory"
+    mkdir -p "$WORKDIR"
+    cp -a "$keys" "$WORKDIR"/in-keys
+
+    touch "$WORKDIR"/fakeroot-state
+    FAKEROOT="fakeroot -i $WORKDIR/fakeroot-state -s $WORKDIR/fakeroot-state"
+
+    msg "Unpacking RAUC bundle"
+    rauc --keyring="$crt" extract "$pkg" "$WORKDIR"/pkg
+    msg "Unpacking Squash filesystem"
+    squnpack
+    msg "OK, $WORKDIR/rootfs can now be modified"
+}
+
+run()
+{
+    WORKDIR=$(readlink -f "$1")
+    shift
+
+    [ -r "$WORKDIR"/fakeroot-state ] || \
+	die "$WORKDIR does not contain an unpacked image"
+    FAKEROOT="fakeroot -i $WORKDIR/fakeroot-state -s $WORKDIR/fakeroot-state"
+
+    sqexec "$@"
+}
+
+pack()
+{
+    WORKDIR=$(readlink -f "$1")
+    local keys="$2"
+    local pkg="$3"
+
+    case "$#" in
+	3)
+	    ;;
+	2)
+	    keys="$WORKDIR"/in-keys
+	    pkg="$2"
+	    ;;
+	*)
+	    echo "Usage: ixbin pack DIR [KEYS] DIR" >&2
+	    exit 1
+    esac
+
+    [ -r "$WORKDIR"/fakeroot-state ] || \
+	die "$WORKDIR does not contain an unpacked image"
+
+    local crt=$(ls "$keys"/*.crt | head -n1)
+    [ -r "$crt" ] || die "No public key found in $keys"
+
+    local key=$(ls "$keys"/*.key | head -n1)
+    [ -r "$crt" ] || die "No private key found in $keys"
+
+    FAKEROOT="fakeroot -i $WORKDIR/fakeroot-state -s $WORKDIR/fakeroot-state"
+
+    msg "Packing up Squash filesystem"
+    sqpack
+    [ -f "$WORKDIR"/pkg/rootfs.itbh ] && {
+	msg "Updating Squash filesystem signature"
+	sqresign "$keys"
+    }
+
+    msg "Creating RAUC bundle"
+    rauc --keyring="$crt" --cert="$crt" --key="$key" bundle "$WORKDIR"/pkg "$pkg"
+    msg "OK, updated bundle available in $pkg"
+}
+
+if [ $# -lt 1 ]; then
+    usage
+    exit 1
+fi
+
+cmd="$1"
+shift
+
+case "$cmd" in
+    unpack)
+	ensuredeps
+	unpack "$@"
+	;;
+    "exec")
+	ensuredeps
+	run "$@"
+	;;
+    pack)
+	ensuredeps
+	pack "$@"
+	;;
+    help)
+	usage
+	;;
+    *)
+	die "Unknown command \"$cmd\""
+	;;
+esac
