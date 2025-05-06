@@ -49,14 +49,6 @@ class PadRoute:
         else:
             raise ValueError(f"unknown IP version: {ipv}")
 
-
-class PadSoftware:
-    name = 10
-    date = 25
-    hash = 64
-    state = 10
-    version = 23
-
 class PadDhcpServer:
     ip = 17
     mac = 19
@@ -286,40 +278,6 @@ class Route:
             row += f"{'':>{PadRoute.pref}} "
             row += f"{hop:<{PadRoute.next_hop}}  "
             print(row)
-
-
-class Software:
-    """Software bundle class """
-    def __init__(self, data):
-        self.data = data
-        self.name = data.get('bootname', '')
-        self.size = data.get('size', '')
-        self.type = data.get('class', '')
-        self.hash = data.get('sha256', '')
-        self.state = data.get('state', '')
-        self.version = get_json_data('', self.data, 'bundle', 'version')
-        self.date = get_json_data('', self.data, 'installed', 'datetime')
-
-    def is_rootfs(self):
-        """True if bundle type is 'rootfs'"""
-        return self.type == "rootfs"
-
-    def print(self):
-        """Brief information about one bundle"""
-        row  = f"{self.name:<{PadSoftware.name}}"
-        row += f"{self.state:<{PadSoftware.state}}"
-        row += f"{self.version:<{PadSoftware.version}}"
-        row += f"{self.date:<{PadSoftware.date}}"
-        print(row)
-
-    def detail(self):
-        """Detailed information about one bundle"""
-        print(f"Name      : {self.name}")
-        print(f"State     : {self.state}")
-        print(f"Version   : {self.version}")
-        print(f"Size      : {self.size}")
-        print(f"SHA-256   : {self.hash}")
-        print(f"Installed : {self.date}")
 
 class USBport:
     def __init__(self, data):
@@ -1159,45 +1117,6 @@ def show_routing_table(json, ip):
                 route = Route(r, ip)
                 route.print()
 
-
-def find_slot(_slots, name):
-    for _slot in [Software(data) for data in _slots]:
-        if _slot.name == name:
-            return _slot
-
-    return False
-
-
-def show_software(json, name):
-    if not json.get("ietf-system:system-state", "infix-system:software"):
-        print("Error, cannot find infix-system:software")
-        sys.exit(1)
-
-    software = get_json_data({}, json, 'ietf-system:system-state', 'infix-system:software')
-    slots = software.get("slot")
-    boot_order = software.get("boot-order", ["Unknown"])
-    if name:
-        slot = find_slot(slots, name)
-        if slot:
-            slot.detail()
-    else:
-        print(Decore.invert("BOOT ORDER"))
-        order=""
-        for boot in boot_order:
-            order+=f"{boot.strip()} "
-        print(order)
-        print("")
-
-        hdr = (f"{'NAME':<{PadSoftware.name}}"
-               f"{'STATE':<{PadSoftware.state}}"
-               f"{'VERSION':<{PadSoftware.version}}"
-               f"{'DATE':<{PadSoftware.date}}")
-        print(Decore.invert(hdr))
-        for _s in reversed(slots):
-            slot = Software(_s)
-            if slot.is_rootfs():
-                slot.print()
-
 def show_hardware(json):
     if not json.get("ietf-hardware:hardware"):
        print(f"Error, top level \"ietf-hardware:component\" missing")
@@ -1282,9 +1201,6 @@ def main():
     parser_show_bridge_stp = subparsers.add_parser('show-bridge-stp',
                                                    help='Show spanning tree state')
 
-    parser_show_software = subparsers.add_parser('show-software', help='Show software versions')
-    parser_show_software.add_argument('-n', '--name', help='Slotname')
-
     parser_show_hardware = subparsers.add_parser('show-hardware', help='Show USB ports')
 
     parser_show_ntp_sources = subparsers.add_parser('show-ntp', help='Show NTP sources')
@@ -1301,8 +1217,6 @@ def main():
         show_interfaces(json_data, args.name)
     elif args.command == "show-routing-table":
         show_routing_table(json_data, args.ip)
-    elif args.command == "show-software":
-        show_software(json_data, args.name)
     elif args.command == "show-bridge-mdb":
         show_bridge_mdb(json_data)
     elif args.command == "show-bridge-stp":
