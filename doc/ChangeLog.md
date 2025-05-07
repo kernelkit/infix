@@ -11,6 +11,7 @@ All notable changes to the project are documented in this file.
 - Upgrade sysrepo to 3.6.11
 - Upgrade netopeer2 (NETCONF) to 2.4.1
 - Add documentation on Infix upgrading and downgrading, issue #1009
+- Add HDMI and USB support for iMX8MP-evk
 
 ### Fixes
 
