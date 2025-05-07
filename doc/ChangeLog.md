@@ -14,6 +14,7 @@ All notable changes to the project are documented in this file.
 - Add HDMI and USB support for iMX8MP-evk
 
 ### Fixes
+- Fix containers with multiple mounts
 
 
 [v25.04.0][] - 2025-04-30

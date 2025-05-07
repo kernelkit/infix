@@ -550,7 +550,7 @@ while [ "$1" != "" ]; do
 	    ;;
 	-m | --mount)
 	    shift
-	    mount="--mount=$1"
+	    mount="$mount --mount=$1"
 	    ;;
 	--manual)
 	    manual=true
@@ -696,7 +696,7 @@ case $cmd in
 	    oci)
 		find $BUILTIN $DOWNLOADS -type f 2>/dev/null
 		;;
-	    *)		
+	    *)
 		podman ps $all --format "{{.Names}}"
 		;;
 	esac
