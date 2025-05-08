@@ -15,6 +15,7 @@ All notable changes to the project are documented in this file.
 
 ### Fixes
 - Fix containers with multiple mounts
+- Correct description for LAG LACP modes 
 
 
 [v25.04.0][] - 2025-04-30
