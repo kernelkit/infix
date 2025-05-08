@@ -88,10 +88,10 @@ submodule infix-if-lag {
 
     type enumeration {
       enum passive {
-        description "LACP active mode";
+        description "LACP passive mode";
       }
       enum active {
-        description "LACP passive mode.";
+        description "LACP active mode.";
       }
     }
   }
