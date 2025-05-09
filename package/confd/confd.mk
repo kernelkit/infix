@@ -70,22 +70,34 @@ define CONFD_INSTALL_YANG_MODULES_CONTAINERS
 endef
 endif
 
-define CONFD_PERMISSIONS
-	/etc/sysrepo/data/ r 660 root sys-cli - - - - -
-	/etc/sysrepo/data  d 770 root sys-cli - - - - -
+# PER_PACKAGE_DIR
+# Since the last package in the dependency chain that runs sysrepoctl is confd, we need to
+# manually copy the *real* content here from host-sysrepo.
+ifeq ($(BR2_PER_PACKAGE_DIRECTORIES),y)
+define CONFD_INSTALL_IN_ROMFS
+	cp -a $(PER_PACKAGE_DIR)/host-sysrepo/target/etc/sysrepo/* $(PER_PACKAGE_DIR)/confd/target/etc/sysrepo/
 endef
+endif
 
+# PER_PACKAGE_DIR
+# Need to do some special stuff if using per-packet (parallel) since sysrepo install the submodules in
+# $(PER_PACKAGE_DIR)/host-sysrepo/target/etc/sysrepo/ but $(PER_PACKAGE_DIR)/confd/target/etc/sysrepo/ contains remains
+# of other packets that have installed its models (netopeer2), we want the result in $(PER_PACKAGE_DIR)/host-sysrepo/target/etc/sysrepo/
 define CONFD_EMPTY_SYSREPO
-	rm -rf $(TARGET_DIR)/etc/sysrepo/data/
+	rm -rf $(TARGET_DIR)/etc/sysrepo/*
+	if [ "$(BR2_PER_PACKAGE_DIRECTORIES)" = "y" ]; then \
+		rm -rf $(PER_PACKAGE_DIR)/host-sysrepo/target/etc/sysrepo/* $(PER_PACKAGE_DIR)/confd/target/etc/sysrepo/*; \
+	fi
 endef
 define CONFD_CLEANUP
 	rm -f /dev/shm/$(CONFD_SYSREPO_SHM_PREFIX)*
 endef
-CONFD_PRE_INSTALL_TARGET_HOOKS += CONFD_EMPTY_SYSREPO
-CONFD_PRE_INSTALL_TARGET_HOOKS += CONFD_CLEANUP
+CONFD_PRE_BUILD_HOOKS += CONFD_EMPTY_SYSREPO
+CONFD_PRE_BUILD_HOOKS += CONFD_CLEANUP
 CONFD_POST_INSTALL_TARGET_HOOKS += CONFD_INSTALL_EXTRA
 CONFD_POST_INSTALL_TARGET_HOOKS += CONFD_INSTALL_YANG_MODULES
 CONFD_POST_INSTALL_TARGET_HOOKS += CONFD_INSTALL_YANG_MODULES_CONTAINERS
-CONFD_POST_INSTALL_TARGET_HOOKS += CONFD_CLEANUP
+CONFD_POST_INSTALL_TARGET_HOOKS += CONFD_INSTALL_IN_ROMFS
+CONFD_TARGET_FINALIZE_HOOKS += CONFD_CLEANUP
 
 $(eval $(autotools-package))
