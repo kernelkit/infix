@@ -14,11 +14,11 @@
 <polygon fill="none" stroke="black" points="0,-0.5 0,-69.5 108,-69.5 108,-0.5 0,-0.5"/>
 <text text-anchor="middle" x="25" y="-31.3" font-family="DejaVu Sans Mono, Book" font-size="14.00">host</text>
 <polyline fill="none" stroke="black" points="50,-0.5 50,-69.5 "/>
-<text text-anchor="middle" x="79" y="-54.3" font-family="DejaVu Sans Mono, Book" font-size="14.00">tgt</text>
+<text text-anchor="middle" x="79" y="-54.3" font-family="DejaVu Sans Mono, Book" font-size="14.00">mgmt</text>
 <polyline fill="none" stroke="black" points="50,-46.5 108,-46.5 "/>
-<text text-anchor="middle" x="79" y="-31.3" font-family="DejaVu Sans Mono, Book" font-size="14.00">data0</text>
+<text text-anchor="middle" x="79" y="-31.3" font-family="DejaVu Sans Mono, Book" font-size="14.00">data1</text>
 <polyline fill="none" stroke="black" points="50,-23.5 108,-23.5 "/>
-<text text-anchor="middle" x="79" y="-8.3" font-family="DejaVu Sans Mono, Book" font-size="14.00">data1</text>
+<text text-anchor="middle" x="79" y="-8.3" font-family="DejaVu Sans Mono, Book" font-size="14.00">data2</text>
 </g>
 <!-- target -->
 <g id="node2" class="node">
@@ -26,25 +26,25 @@
 <polygon fill="none" stroke="black" points="308.03,-0.5 308.03,-69.5 432.03,-69.5 432.03,-0.5 308.03,-0.5"/>
 <text text-anchor="middle" x="337.03" y="-54.3" font-family="DejaVu Sans Mono, Book" font-size="14.00">mgmt</text>
 <polyline fill="none" stroke="black" points="308.03,-46.5 366.03,-46.5 "/>
-<text text-anchor="middle" x="337.03" y="-31.3" font-family="DejaVu Sans Mono, Book" font-size="14.00">data0</text>
+<text text-anchor="middle" x="337.03" y="-31.3" font-family="DejaVu Sans Mono, Book" font-size="14.00">data1</text>
 <polyline fill="none" stroke="black" points="308.03,-23.5 366.03,-23.5 "/>
-<text text-anchor="middle" x="337.03" y="-8.3" font-family="DejaVu Sans Mono, Book" font-size="14.00">data1</text>
+<text text-anchor="middle" x="337.03" y="-8.3" font-family="DejaVu Sans Mono, Book" font-size="14.00">data2</text>
 <polyline fill="none" stroke="black" points="366.03,-0.5 366.03,-69.5 "/>
 <text text-anchor="middle" x="399.03" y="-31.3" font-family="DejaVu Sans Mono, Book" font-size="14.00">target</text>
 </g>
 <!-- host&#45;&#45;target -->
 <g id="edge1" class="edge">
-<title>host:tgt&#45;&#45;target:mgmt</title>
-<path fill="none" stroke="cornflowerblue" stroke-width="2" d="M108,-58C108,-58 308.03,-58 308.03,-58"/>
+<title>host:mgmt&#45;&#45;target:mgmt</title>
+<path fill="none" stroke="lightgray" stroke-width="2" d="M108,-58C108,-58 308.03,-58 308.03,-58"/>
 </g>
 <!-- host&#45;&#45;target -->
 <g id="edge2" class="edge">
-<title>host:data0&#45;&#45;target:data0</title>
+<title>host:data1&#45;&#45;target:data1</title>
 <path fill="none" stroke="black" stroke-width="2" d="M108,-35C108,-35 308.03,-35 308.03,-35"/>
 </g>
 <!-- host&#45;&#45;target -->
 <g id="edge3" class="edge">
-<title>host:data1&#45;&#45;target:data1</title>
+<title>host:data2&#45;&#45;target:data2</title>
 <path fill="none" stroke="black" stroke-width="2" d="M108,-12C108,-12 308.03,-12 308.03,-12"/>
 </g>
 </g>

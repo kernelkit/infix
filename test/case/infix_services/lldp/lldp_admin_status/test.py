@@ -22,7 +22,7 @@ def capture_traffic(iface, sec):
         return sniffer.output()
         
 def send_lldp_packet(iface, chassis_id, chassis_id_subtype, ttl=3):
-    eth = Ether(dst="01:80:c2:00:00:0e", type=0x88cc)
+    eth = Ether(src="02:01:02:03:04:05", dst="01:80:C2:00:00:0E", type=0x88cc)
     lldpdu = eth / LLDPDU() 
     lldpdu /= LLDPDUChassisID(subtype=chassis_id_subtype, id=chassis_id)
     lldpdu /= LLDPDUPortID(subtype=5, id=iface) 
@@ -45,7 +45,7 @@ def verify_admin_status(test, target, port, admin_status, local_capture, remote_
             "lldp": {
                 "port": [{
                     "name": target["data"],
-                    "dest-mac-address": "00-00-00-00-00-00",
+                    "dest-mac-address": "01:80:C2:00:00:0E",
                     "admin-status": admin_status
                 }]
             }

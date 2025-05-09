@@ -13,7 +13,6 @@ class Pad:
     state = 12
     data = 41
 
-
 class PadMdb:
     bridge = 7
     vlan = 6
@@ -48,7 +47,6 @@ class PadRoute:
             PadRoute.next_hop = 39
         else:
             raise ValueError(f"unknown IP version: {ipv}")
-
 
 class PadSoftware:
     name = 10
@@ -108,6 +106,13 @@ class Decore():
     @staticmethod
     def gray_bg(txt):
         return Decore.decorate("100", txt)
+
+class PadLldp:
+    interface = 16
+    rem_idx = 10
+    time = 12
+    chassis_id = 20
+    port_id = 20
 
 def datetime_now():
     if UNIT_TEST:
@@ -177,8 +182,6 @@ class Date(datetime):
         date, tz = ydate.split("+")
         tz = tz.replace(":", "")
         return cls.strptime(f"{date}+{tz}", "%Y-%m-%dT%H:%M:%S%z")
-
-
 
 class Route:
     def __init__(self, data, ip):
@@ -286,7 +289,6 @@ class Route:
             row += f"{'':>{PadRoute.pref}} "
             row += f"{hop:<{PadRoute.next_hop}}  "
             print(row)
-
 
 class Software:
     """Software bundle class """
@@ -430,7 +432,6 @@ class DhcpServer:
         print(f"{'DHCP request messages received':<{32}}: {self.in_requests}")
         print(f"{'DHCP release messages received':<{32}}: {self.in_discovers}")
         print(f"{'DHCP inform messages received':<{32}}: {self.in_discovers}")
-
 
 class Iface:
     def __init__(self, data):
@@ -929,6 +930,24 @@ class Iface:
             print(f"{'  last change':<{20}}: {Date.from_yang(tc.get('time')).pretty()}")
             print(f"{'  port':<{20}}: {tc.get('port', 'UNKNOWN')}")
 
+class LldpNeighbor:
+    def __init__(self, iface, data):
+        self.interface = iface
+        self.remote_index = data.get("remote-index", 0)
+        self.time_mark = data.get("time-mark", 0)
+        self.chassis_id = data.get("chassis-id", "unknown")
+        self.port_id = data.get("port-id", "unknown")
+
+    def print(self):
+        row = (
+            f"{self.interface:<{PadLldp.interface}}"
+            f"{self.remote_index:<{PadLldp.rem_idx}}"
+            f"{self.time_mark:<{PadLldp.time}}"
+            f"{self.chassis_id:<{PadLldp.chassis_id}}"
+            f"{self.port_id:<{PadLldp.port_id}}"
+        )
+        print(row)
+
 
 def find_iface(_ifaces, name):
     for _iface in [Iface(data) for data in _ifaces]:
@@ -936,7 +955,6 @@ def find_iface(_ifaces, name):
             return _iface
 
     return False
-
 
 def version_sort(s):
     return [int(x) if x.isdigit() else x for x in re.split(r'(\d+)', s)]
@@ -948,13 +966,11 @@ def brport_sort(iface):
     brname = iface.get("infix-interfaces:bridge-port", {}).get("bridge", "")
     return version_sort(brname) + version_sort(iface["name"])
 
-
 def print_interface(iface):
     iface.pr_name()
     iface.pr_proto_eth()
     iface.pr_proto_ipv4()
     iface.pr_proto_ipv6()
-
 
 def pr_interface_list(json):
     hdr = (f"{'INTERFACE':<{Pad.iface}}"
@@ -1016,7 +1032,6 @@ def pr_interface_list(json):
 
         print_interface(iface)
 
-
 def show_interfaces(json, name):
     if name:
         if not json.get("ietf-interfaces:interfaces"):
@@ -1033,7 +1048,6 @@ def show_interfaces(json, name):
             print("Error, top level \"ietf-interfaces:interfaces\" missing")
             sys.exit(1)
         pr_interface_list(json)
-
 
 def show_bridge_mdb(json):
     header_printed = False
@@ -1055,8 +1069,6 @@ def show_bridge_mdb(json):
             header_printed = True
         iface.pr_mdb(iface.name)
         iface.pr_vlans_mdb(iface.name)
-
-
 
 def show_bridge_stp_port(ifname, brport):
     stp = brport["stp"]
@@ -1135,7 +1147,6 @@ def show_bridge_stp(json):
 
         show_bridge_stp_port(port["name"], brport)
 
-
 def show_routing_table(json, ip):
     if not json.get("ietf-routing:routing"):
         print("Error, top level \"ietf-routing:routing\" missing")
@@ -1159,14 +1170,12 @@ def show_routing_table(json, ip):
                 route = Route(r, ip)
                 route.print()
 
-
 def find_slot(_slots, name):
     for _slot in [Software(data) for data in _slots]:
         if _slot.name == name:
             return _slot
 
     return False
-
 
 def show_software(json, name):
     if not json.get("ietf-system:system-state", "infix-system:software"):
@@ -1255,6 +1264,36 @@ def show_dhcp_server(json, stats):
         print(Decore.invert(hdr))
         server.print()
 
+def show_lldp(json):
+    if not json.get("ieee802-dot1ab-lldp:lldp"):
+        print("Error: No LLDP data available.")
+        sys.exit(1)
+
+    lldp_ports = json["ieee802-dot1ab-lldp:lldp"].get("port", [])
+
+    if not lldp_ports:
+        print("No LLDP neighbors found.")
+        return
+
+    header = (
+        f"{'INTERFACE':<{PadLldp.interface}}"
+        f"{'REM-IDX':<{PadLldp.rem_idx}}"
+        f"{'TIME':<{PadLldp.time}}"
+        f"{'CHASSIS-ID':<{PadLldp.chassis_id}}"
+        f"{'PORT-ID':<{PadLldp.port_id}}"
+    )
+    
+    print(Decore.invert(header))
+
+    for port_data in lldp_ports:
+        port_name = port_data["name"]
+        neighbors = port_data.get("remote-systems-data", [])
+        
+        for neighbor in neighbors:
+            entry = LldpNeighbor(port_name, neighbor)
+            entry.print()
+
+
 def main():
     global UNIT_TEST
 
@@ -1272,27 +1311,29 @@ def main():
 
     parser.add_argument('-t', '--test', action='store_true', help='Enable unit test mode')
 
-    parser_show_routing_table = subparsers.add_parser('show-routing-table', help='Show the routing table')
-    parser_show_routing_table.add_argument('-i', '--ip', required=True, help='IPv4 or IPv6 address')
+    subparsers.add_parser('show-routing-table', help='Show the routing table') \
+        .add_argument('-i', '--ip', required=True, help='IPv4 or IPv6 address')
 
-    parser_show_interfaces = subparsers.add_parser('show-interfaces', help='Show interfaces')
-    parser_show_interfaces.add_argument('-n', '--name', help='Interface name')
+    subparsers.add_parser('show-interfaces', help='Show interfaces') \
+        .add_argument('-n', '--name', help='Interface name')
+    
+    subparsers.add_parser('show-software', help='Show software versions') \
+        .add_argument('-n', '--name', help='Slotname')
 
-    parser_show_bridge_mdb = subparsers.add_parser('show-bridge-mdb', help='Show bridge MDB')
-    parser_show_bridge_stp = subparsers.add_parser('show-bridge-stp',
-                                                   help='Show spanning tree state')
+    subparsers.add_parser('show-dhcp-server', help='Show DHCP server') \
+        .add_argument("-s", "--stats", action="store_true", help="Show server statistics")
 
-    parser_show_software = subparsers.add_parser('show-software', help='Show software versions')
-    parser_show_software.add_argument('-n', '--name', help='Slotname')
+    subparsers.add_parser('show-bridge-mdb', help='Show bridge MDB')
 
-    parser_show_hardware = subparsers.add_parser('show-hardware', help='Show USB ports')
+    subparsers.add_parser('show-bridge-stp', help='Show spanning tree state')
 
-    parser_show_ntp_sources = subparsers.add_parser('show-ntp', help='Show NTP sources')
+    subparsers.add_parser('show-hardware', help='Show USB ports')
 
-    parser_show_boot_order = subparsers.add_parser('show-boot-order', help='Show NTP sources')
+    subparsers.add_parser('show-ntp', help='Show NTP sources')
 
-    parser_dhcp_srv = subparsers.add_parser('show-dhcp-server', help='Show DHCP server')
-    parser_dhcp_srv.add_argument("-s", "--stats", action="store_true", help="Show server statistics")
+    subparsers.add_parser('show-boot-order', help='Show NTP sources')
+
+    subparsers.add_parser('show-lldp', help='Show LLDP neighbors')
 
     args = parser.parse_args()
     UNIT_TEST = args.test
@@ -1313,6 +1354,8 @@ def main():
         show_ntp(json_data)
     elif args.command == "show-dhcp-server":
         show_dhcp_server(json_data, args.stats)
+    elif args.command == "show-lldp":
+        show_lldp(json_data)
     else:
         print(f"Error, unknown command '{args.command}'")
         sys.exit(1)

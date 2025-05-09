@@ -19,6 +19,6 @@ graph "1x3" {
 	];
 
 	host:mgmt -- target:mgmt [requires="mgmt", color="lightgray"]
-	host:data1 -- target:data1 [color="black"]
-	host:data2 -- target:data2 [color="black"]
+	host:data1 -- target:data1 [color="black", requires="ieee-mc"]
+	host:data2 -- target:data2 [color="black", requires="ieee-mc"]
 }

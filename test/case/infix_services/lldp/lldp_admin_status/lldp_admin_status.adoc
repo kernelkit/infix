@@ -4,11 +4,11 @@ Verify that LLDP admin status is set properly by lldpd
 
 ==== Topology
 ifdef::topdoc[]
-image::{topdoc}../../test/case/infix_services/lldp_admin_status/topology.svg[LLDP admin status topology]
+image::{topdoc}../../test/case/infix_services/lldp/lldp_admin_status/topology.svg[LLDP admin status topology]
 endif::topdoc[]
 ifndef::topdoc[]
 ifdef::testgroup[]
-image::lldp_admin_status/topology.svg[LLDP admin status topology]
+image::lldp/lldp_admin_status/topology.svg[LLDP admin status topology]
 endif::testgroup[]
 ifndef::testgroup[]
 image::topology.svg[LLDP admin status topology]

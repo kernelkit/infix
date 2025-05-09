@@ -5,11 +5,11 @@ Operation and non-operation are confirmed using tcpdump.
 
 ==== Topology
 ifdef::topdoc[]
-image::{topdoc}../../test/case/infix_services/lldp_enable_disable/topology.svg[LLDP enable disable topology]
+image::{topdoc}../../test/case/infix_services/lldp/lldp_enable_disable/topology.svg[LLDP enable disable topology]
 endif::topdoc[]
 ifndef::topdoc[]
 ifdef::testgroup[]
-image::lldp_enable_disable/topology.svg[LLDP enable disable topology]
+image::lldp/lldp_enable_disable/topology.svg[LLDP enable disable topology]
 endif::testgroup[]
 ifndef::testgroup[]
 image::topology.svg[LLDP enable disable topology]
