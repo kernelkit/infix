@@ -1,4 +1,4 @@
-From 7ba5eea475b969ec5c1827a76b7dc714b551f6ad Mon Sep 17 00:00:00 2001
+From ea700e84140bacf1f77448f03ed74dcc2344d6bd Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Thu, 16 Jan 2025 12:35:12 +0100
 Subject: [PATCH 25/27] net: dsa: mv88e6xxx: collapse disabled state into

@@ -1,4 +1,4 @@
-From 47be565408de02e2ab973d0b05bf88826d2e3510 Mon Sep 17 00:00:00 2001
+From 4dcbb380eb1fdd006c5b0c4a0c2a0a578abdfdbe Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Sun, 11 Aug 2024 11:27:35 +0200
 Subject: [PATCH 27/27] net: usb: r8152: add r8153b support for link/activity
