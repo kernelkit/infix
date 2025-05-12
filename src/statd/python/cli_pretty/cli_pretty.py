@@ -741,7 +741,7 @@ class Iface:
             lower.pr_name(pipe)
             lower.pr_proto_lag()
 
-    def pr_veth(self, _ifaces):
+    def pr_veth(self):
         self.pr_name(pipe="")
         self.pr_proto_veth()
         self.pr_proto_ipv4()
@@ -1030,7 +1030,7 @@ def pr_interface_list(json):
             continue
 
         if iface.is_veth():
-            iface.pr_veth(ifaces)
+            iface.pr_veth()
             continue
 
         if iface.is_gre():
@@ -1349,50 +1349,51 @@ def main():
 
     parser.add_argument('-t', '--test', action='store_true', help='Enable unit test mode')
 
-    parser_show_routing_table = subparsers.add_parser('show-routing-table', help='Show the routing table')
-    parser_show_routing_table.add_argument('-i', '--ip', required=True, help='IPv4 or IPv6 address')
+    subparsers.add_parser('show-boot-order', help='Show NTP sources')
 
-    parser_show_interfaces = subparsers.add_parser('show-interfaces', help='Show interfaces')
-    parser_show_interfaces.add_argument('-n', '--name', help='Interface name')
+    subparsers.add_parser('show-bridge-mdb', help='Show bridge MDB')
 
-    parser_show_bridge_mdb = subparsers.add_parser('show-bridge-mdb', help='Show bridge MDB')
-    parser_show_bridge_stp = subparsers.add_parser('show-bridge-stp',
-                                                   help='Show spanning tree state')
+    subparsers.add_parser('show-bridge-stp', help='Show spanning tree state')
 
-    parser_show_software = subparsers.add_parser('show-software', help='Show software versions')
-    parser_show_software.add_argument('-n', '--name', help='Slotname')
+    subparsers.add_parser('show-dhcp-server', help='Show DHCP server') \
+    .add_argument("-s", "--stats", action="store_true", help="Show server statistics")
 
-    parser_show_hardware = subparsers.add_parser('show-hardware', help='Show USB ports')
+    subparsers.add_parser('show-hardware', help='Show USB ports')
 
-    parser_show_ntp_sources = subparsers.add_parser('show-ntp', help='Show NTP sources')
+    subparsers.add_parser('show-interfaces', help='Show interfaces') \
+    .add_argument('-n', '--name', help='Interface name')
 
-    parser_show_boot_order = subparsers.add_parser('show-boot-order', help='Show NTP sources')
-
-    parser_dhcp_srv = subparsers.add_parser('show-dhcp-server', help='Show DHCP server')
-    parser_dhcp_srv.add_argument("-s", "--stats", action="store_true", help="Show server statistics")
     subparsers.add_parser('show-lldp', help='Show LLDP neighbors')
+
+    subparsers.add_parser('show-ntp', help='Show NTP sources')
+
+    subparsers.add_parser('show-routing-table', help='Show the routing table') \
+    .add_argument('-i', '--ip', required=True, help='IPv4 or IPv6 address')
+
+    subparsers.add_parser('show-software', help='Show software versions') \
+    .add_argument('-n', '--name', help='Slotname')
 
     args = parser.parse_args()
     UNIT_TEST = args.test
 
-    if args.command == "show-interfaces":
+    if args.command == "show-bridge-mdb":
+        show_bridge_mdb(json_data)
+    elif args.command == "show-bridge-stp":
+        show_bridge_stp(json_data)
+    elif args.command == "show-dhcp-server":
+        show_dhcp_server(json_data, args.stats)
+    elif args.command == "show-hardware":
+        show_hardware(json_data)
+    elif args.command == "show-interfaces":
         show_interfaces(json_data, args.name)
+    elif args.command == "show-lldp":
+        show_lldp(json_data)
+    elif args.command == "show-ntp":
+        show_ntp(json_data)
     elif args.command == "show-routing-table":
         show_routing_table(json_data, args.ip)
     elif args.command == "show-software":
         show_software(json_data, args.name)
-    elif args.command == "show-bridge-mdb":
-        show_bridge_mdb(json_data)
-    elif args.command == "show-bridge-stp":
-        show_bridge_stp(json_data)
-    elif args.command == "show-hardware":
-        show_hardware(json_data)
-    elif args.command == "show-ntp":
-        show_ntp(json_data)
-    elif args.command == "show-dhcp-server":
-        show_dhcp_server(json_data, args.stats)
-    elif args.command == "show-lldp":
-        show_lldp(json_data)
     else:
         print(f"Error, unknown command '{args.command}'")
         sys.exit(1)
