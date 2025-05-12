@@ -373,6 +373,12 @@
     </ACTION>
   </COMMAND>
 
+  <COMMAND name="lldp" help="Show LLDP neighbors">
+    <ACTION sym="script">
+      show lldp
+    </ACTION>
+  </COMMAND>
+
   <COMMAND name="hardware" help="Show hardware information">
     <ACTION sym="script" in="tty" out="tty" interrupt="true">
       show hardware |pager

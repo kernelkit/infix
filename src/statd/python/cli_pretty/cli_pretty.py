@@ -109,6 +109,13 @@ class Decore():
     def gray_bg(txt):
         return Decore.decorate("100", txt)
 
+class PadLldp:
+    interface = 16
+    rem_idx = 10
+    time = 12
+    chassis_id = 20
+    port_id = 20
+
 def datetime_now():
     if UNIT_TEST:
         return datetime(2023, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
@@ -929,6 +936,24 @@ class Iface:
             print(f"{'  last change':<{20}}: {Date.from_yang(tc.get('time')).pretty()}")
             print(f"{'  port':<{20}}: {tc.get('port', 'UNKNOWN')}")
 
+class LldpNeighbor:
+    def __init__(self, iface, data):
+        self.interface = iface
+        self.remote_index = data.get("remote-index", 0)
+        self.time_mark = data.get("time-mark", 0)
+        self.chassis_id = data.get("chassis-id", "unknown")
+        self.port_id = data.get("port-id", "unknown")
+
+    def print(self):
+        row = (
+            f"{self.interface:<{PadLldp.interface}}"
+            f"{self.remote_index:<{PadLldp.rem_idx}}"
+            f"{self.time_mark:<{PadLldp.time}}"
+            f"{self.chassis_id:<{PadLldp.chassis_id}}"
+            f"{self.port_id:<{PadLldp.port_id}}"
+        )
+        print(row)
+
 
 def find_iface(_ifaces, name):
     for _iface in [Iface(data) for data in _ifaces]:
@@ -1255,6 +1280,36 @@ def show_dhcp_server(json, stats):
         print(Decore.invert(hdr))
         server.print()
 
+def show_lldp(json):
+    if not json.get("ieee802-dot1ab-lldp:lldp"):
+        print("Error: No LLDP data available.")
+        sys.exit(1)
+
+    lldp_ports = json["ieee802-dot1ab-lldp:lldp"].get("port", [])
+
+    if not lldp_ports:
+        print("No LLDP neighbors found.")
+        return
+
+    header = (
+        f"{'INTERFACE':<{PadLldp.interface}}"
+        f"{'REM-IDX':<{PadLldp.rem_idx}}"
+        f"{'TIME':<{PadLldp.time}}"
+        f"{'CHASSIS-ID':<{PadLldp.chassis_id}}"
+        f"{'PORT-ID':<{PadLldp.port_id}}"
+    )
+    
+    print(Decore.invert(header))
+
+    for port_data in lldp_ports:
+        port_name = port_data["name"]
+        neighbors = port_data.get("remote-systems-data", [])
+        
+        for neighbor in neighbors:
+            entry = LldpNeighbor(port_name, neighbor)
+            entry.print()
+
+
 def main():
     global UNIT_TEST
 
@@ -1293,6 +1348,7 @@ def main():
 
     parser_dhcp_srv = subparsers.add_parser('show-dhcp-server', help='Show DHCP server')
     parser_dhcp_srv.add_argument("-s", "--stats", action="store_true", help="Show server statistics")
+    subparsers.add_parser('show-lldp', help='Show LLDP neighbors')
 
     args = parser.parse_args()
     UNIT_TEST = args.test
@@ -1313,6 +1369,8 @@ def main():
         show_ntp(json_data)
     elif args.command == "show-dhcp-server":
         show_dhcp_server(json_data, args.stats)
+    elif args.command == "show-lldp":
+        show_lldp(json_data)
     else:
         print(f"Error, unknown command '{args.command}'")
         sys.exit(1)
