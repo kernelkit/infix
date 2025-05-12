@@ -20,6 +20,7 @@ class PadMdb:
     group = 20
     ports = 45
 
+
 class PadStpPort:
     port = 12
     id = 7
@@ -29,6 +30,7 @@ class PadStpPort:
     designated = 31
 
     total = 12 + 7 + 12 + 12 + 6 + 31
+
 
 class PadRoute:
     dest = 30
@@ -57,6 +59,7 @@ class PadSoftware:
     state = 10
     version = 23
 
+
 class PadDhcpServer:
     ip = 17
     mac = 19
@@ -64,10 +67,12 @@ class PadDhcpServer:
     cid = 19
     exp = 10
 
+
 class PadUsbPort:
     title = 30
     name = 20
     state = 10
+
 
 class PadNtpSource:
     address = 16
@@ -75,6 +80,7 @@ class PadNtpSource:
     state = 13
     stratum = 11
     poll = 14
+
 
 class Decore():
     @staticmethod
@@ -109,6 +115,7 @@ class Decore():
     def gray_bg(txt):
         return Decore.decorate("100", txt)
 
+
 class PadLldp:
     interface = 16
     rem_idx = 10
@@ -116,10 +123,12 @@ class PadLldp:
     chassis_id = 20
     port_id = 20
 
+
 def datetime_now():
     if UNIT_TEST:
         return datetime(2023, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
     return datetime.now(timezone.utc)
+
 
 def get_json_data(default, indata, *args):
     data = indata
@@ -131,11 +140,13 @@ def get_json_data(default, indata, *args):
 
     return data
 
+
 def remove_yang_prefix(key):
     parts = key.split(":", 1)
     if len(parts) > 1:
         return parts[1]
     return key
+
 
 class Date(datetime):
     def _pretty_delta(delta):
@@ -184,7 +195,6 @@ class Date(datetime):
         date, tz = ydate.split("+")
         tz = tz.replace(":", "")
         return cls.strptime(f"{date}+{tz}", "%Y-%m-%dT%H:%M:%S%z")
-
 
 
 class Route:
@@ -328,6 +338,7 @@ class Software:
         print(f"SHA-256   : {self.hash}")
         print(f"Installed : {self.date}")
 
+
 class USBport:
     def __init__(self, data):
         self.data = data
@@ -339,6 +350,7 @@ class USBport:
         row = f"{self.name:<{PadUsbPort.name}}"
         row += f"{self.state:<{PadUsbPort.state}}"
         print(row)
+
 
 class STPBridgeID:
     def __init__(self, id):
@@ -352,6 +364,7 @@ class STPBridgeID:
         )
         return f"{prio:1x}.{sysid:03x}.{addr}"
 
+
 class STPPortID:
     def __init__(self, id):
         self.id = id
@@ -362,6 +375,7 @@ class STPPortID:
             self.id["port-id"],
         )
         return f"{prio:1x}.{pid:03x}"
+
 
 class DhcpServer:
     def __init__(self, data):
@@ -540,6 +554,7 @@ class Iface:
 
     def is_gretap(self):
         return self.data['type'] == "infix-if-type:gretap"
+    
     def oper(self, detail=False):
         """Remap in brief overview to fit column widths."""
         if not detail and self.oper_status == "lower-layer-down":
@@ -936,6 +951,7 @@ class Iface:
             print(f"{'  last change':<{20}}: {Date.from_yang(tc.get('time')).pretty()}")
             print(f"{'  port':<{20}}: {tc.get('port', 'UNKNOWN')}")
 
+
 class LldpNeighbor:
     def __init__(self, iface, data):
         self.interface = iface
@@ -966,8 +982,10 @@ def find_iface(_ifaces, name):
 def version_sort(s):
     return [int(x) if x.isdigit() else x for x in re.split(r'(\d+)', s)]
 
+
 def ifname_sort(iface):
     return version_sort(iface["name"])
+
 
 def brport_sort(iface):
     brname = iface.get("infix-interfaces:bridge-port", {}).get("bridge", "")
@@ -1082,7 +1100,6 @@ def show_bridge_mdb(json):
         iface.pr_vlans_mdb(iface.name)
 
 
-
 def show_bridge_stp_port(ifname, brport):
     stp = brport["stp"]
 
@@ -1115,6 +1132,7 @@ def show_bridge_stp_port(ifname, brport):
         f"{designated:<{PadStpPort.designated}}"
     )
     print(row)
+
 
 def show_bridge_stp(json):
     if not json.get("ietf-interfaces:interfaces"):
@@ -1223,6 +1241,7 @@ def show_software(json, name):
             if slot.is_rootfs():
                 slot.print()
 
+
 def show_hardware(json):
     if not json.get("ietf-hardware:hardware"):
        print(f"Error, top level \"ietf-hardware:component\" missing")
@@ -1240,6 +1259,7 @@ def show_hardware(json):
         if component.get("class") == "infix-hardware:usb":
             port = USBport(component)
             port.print()
+
 
 def show_ntp(json):
     if not json.get("ietf-system:system-state"):
@@ -1261,6 +1281,7 @@ def show_ntp(json):
         row += f"{source['poll']:>{PadNtpSource.poll}}"
         print(row)
 
+
 def show_dhcp_server(json, stats):
     data = json.get("infix-dhcp-server:dhcp-server")
     if not data:
@@ -1279,6 +1300,7 @@ def show_dhcp_server(json, stats):
                f"{'EXPIRES':>{PadDhcpServer.exp}}")
         print(Decore.invert(hdr))
         server.print()
+
 
 def show_lldp(json):
     if not json.get("ieee802-dot1ab-lldp:lldp"):
