@@ -13,7 +13,11 @@ on:
         required: false
         default: true
         type: boolean
-
+      parallell:
+        description: 'Massive parallel build of each image'
+        required: false
+        default: true
+        type: boolean
 jobs:
   build:
     name: Build Infix ${{ matrix.target }}
@@ -71,6 +75,7 @@ jobs:
           echo "tgz=infix-$target.tar.gz" >> $GITHUB_OUTPUT
           echo "flv=$flavor"              >> $GITHUB_OUTPUT
           echo "Building target ${target}${flavor}_defconfig"
+
       - name: Restore Cache of dl/
         uses: actions/cache@v4
         with:
@@ -96,10 +101,24 @@ jobs:
         run: |
           make test-unit
 
+      - name: Prepare parallel build
+        id: parallel
+        run: |
+
+          if [ "${{ ((github.event.inputs.parallel == 'true' && github.event_name == 'workflow_dispatch') || (github.ref_name != 'main' && github.event_name != 'workflow_dispatch')) }}" == "true" ]; then
+             echo "BR2_PER_PACKAGE_DIRECTORIES=y" >> output/.config
+             MAKE="make -j$((`getconf _NPROCESSORS_ONLN` / 2 + 2))"
+             echo "Building in parallel with -j$((`getconf _NPROCESSORS_ONLN` / 2 + 2))"
+          else
+             echo "Disabling parallel build"
+             MAKE="make"
+          fi
+          echo "MAKE=$MAKE" >> $GITHUB_OUTPUT
+
       - name: Build ${{ matrix.target }}${{ steps.vars.outputs.flv }}
         run: |
           echo "Building ${{ matrix.target }}${{ steps.vars.outputs.flv }}_defconfig ..."
-          make
+          eval "${{ steps.parallel.outputs.MAKE }}"
 
       - name:  Check SBOM from Build
         run: |
