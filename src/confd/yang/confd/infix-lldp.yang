@@ -11,6 +11,13 @@ module infix-lldp {
   contact      "kernelkit@googlegroups.com";
   description  "Infix augments and deviations to ieee-dot1ab-lldp.";
 
+  revision 2025-05-05 {
+    description 
+      "Restrict 'dest-mac-address' to only allow the LLDP multicast MAC
+       address (01:80:C2:00:00:0E).";
+    reference "internal";
+  }
+
   revision 2025-01-08 {
     description "Enable std. /lldp:lldp/message-tx-interval";
   }
@@ -29,6 +36,22 @@ module infix-lldp {
     leaf enabled {
       type boolean;
       description "Globally enable or disable IEEE 802.1ab LLDP agent.";
+    }
+  }
+
+  deviation "/lldp:lldp/lldp:port/lldp:dest-mac-address" {
+    deviate replace {
+      type string {
+        pattern "([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2}";
+      }
+    }
+  }
+
+  deviation "/lldp:lldp/lldp:port/lldp:dest-mac-address" {
+    deviate add {
+      must "translate(., 'abcdef', 'ABCDEF') = '01:80:C2:00:00:0E'" {
+        error-message "Only the LLDP Multicast MAC (01:80:C2:00:00:0E) is allowed.";
+      }
     }
   }
 
