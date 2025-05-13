@@ -477,22 +477,22 @@
     <ACTION sym="script">sysinfo</ACTION>
     </COMMAND>
   -->
-    <COMMAND name="version" help="Show software version">
-      <ACTION sym="script" in="tty" interrupt="true">cat /etc/version</ACTION>
-    </COMMAND>
-
-    <COMMAND name="factory-config" help="Show factory-config">
-      <ACTION sym="script" in="tty" out="tty" interrupt="true">jq -C . /etc/factory-config.cfg |pager</ACTION>
-    </COMMAND>
-
-    <COMMAND name="running-config" help="Show running-config">
-      <ACTION sym="script" in="tty" out="tty" interrupt="true">sysrepocfg -X -f json | jq -C . |pager</ACTION>
-    </COMMAND>
-
-    <COMMAND name="startup-config" help="Show startup-config">
-      <ACTION sym="script" in="tty" out="tty" interrupt="true">jq -C . /cfg/startup-config.cfg |pager</ACTION>
-    </COMMAND>
+  <COMMAND name="version" help="Show software version">
+    <ACTION sym="script" in="tty" interrupt="true">cat /etc/version</ACTION>
   </COMMAND>
+
+  <COMMAND name="factory-config" help="Show factory-config">
+    <ACTION sym="script" in="tty" out="tty" interrupt="true">jq -C . /etc/factory-config.cfg |pager</ACTION>
+  </COMMAND>
+
+  <COMMAND name="running-config" help="Show running-config">
+    <ACTION sym="script" in="tty" out="tty" interrupt="true">sysrepocfg -X -f json | jq -C . |pager</ACTION>
+  </COMMAND>
+
+  <COMMAND name="startup-config" help="Show startup-config">
+    <ACTION sym="script" in="tty" out="tty" interrupt="true">jq -C . /cfg/startup-config.cfg |pager</ACTION>
+  </COMMAND>
+
   <COMMAND name="factory-reset" help="Restore the system to factory default state">
     <ACTION sym="script" in="tty" out="tty" interrupt="true">
       /bin/yorn "This will restore the device to factory defaults"
@@ -587,6 +587,7 @@
     </ACTION>
   </COMMAND>
 
+</COMMAND>
 </VIEW>
 
 <VIEW name="config">
