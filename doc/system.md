@@ -749,7 +749,7 @@ Continued configuration is done as with any unit after factory reset.
 [3]: https://www.rfc-editor.org/rfc/rfc8341
 [4]: https://chrony-project.org/doc/4.6.1/chronyc.html
 [5]: https://github.com/kernelkit/infix/blob/main/src/confd/yang/confd/infix-system-software.yang
-[6]: boot.md#system-configuration
+[6]: netboot.md
 [7]: introduction.md#system-boot
 [8]: management.md#console-port
 [^9]: In failure config, Infix puts all Ethernet ports as individual
