@@ -250,7 +250,35 @@ static int change(sr_session_ctx_t *session, uint32_t sub_id, const char *module
 	switch (event) {
 	case SR_EV_DONE:
 		break;
+
 	case SR_EV_CHANGE:
+		err = sr_get_data(session, CFG_XPATH "//.", 0, 0, 0, &cfg);
+		if (err || !cfg)
+			return SR_ERR_INTERNAL;
+
+		cifs = lydx_get_descendant(cfg->tree, "containers", "container", NULL);
+		LYX_LIST_FOR_EACH(cifs, cif, "container") {
+			struct lyd_node *mount;
+			LYX_LIST_FOR_EACH(lyd_child(cif), mount, "mount") {
+				const char *src  = lydx_get_cattr(mount, "source");
+				const char *id   = lydx_get_cattr(mount, "name");
+
+				if (src && access(src, R_OK) != 0) {
+				    	char errmsg[256];
+				    	const char *reason = strerror(errno);
+				    	snprintf(errmsg, sizeof(errmsg),
+				             	"Container '%s': mount '%s' source file '%s' is invalid: %s",
+				             	lydx_get_cattr(cif, "name"), id, src, reason);
+				    	sr_session_set_error_message(session, errmsg);
+				    	sr_release_data(cfg);
+				    	return SR_ERR_VALIDATION_FAILED;
+				}
+			}
+		}
+
+		sr_release_data(cfg);
+		return SR_ERR_OK;
+
 	case SR_EV_ABORT:
 	default:
 		return SR_ERR_OK;

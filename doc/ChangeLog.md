@@ -20,6 +20,7 @@ All notable changes to the project are documented in this file.
 ### Fixes
 - Fix containers with multiple mounts
 - Correct description for LAG LACP modes 
+- Fix #1040: Add `mount` constraint for container config 
 
 
 [v25.04.0][] - 2025-04-30
