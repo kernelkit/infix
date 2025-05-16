@@ -12,6 +12,10 @@ All notable changes to the project are documented in this file.
 - Upgrade netopeer2 (NETCONF) to 2.4.1
 - Add documentation on Infix upgrading and downgrading, issue #1009
 - Add HDMI and USB support for iMX8MP-evk
+- Enforced strict format for LLDP destination MAC address:
+  - Only accepts colon-separated format: `01:80:C2:00:00:0E`
+- Add `show lldp` command to show discovered neighbors per interface.
+- Add configuration support for per-interface LLDP administrative status
 
 ### Fixes
 - Fix containers with multiple mounts
@@ -128,6 +132,7 @@ All notable changes to the project are documented in this file.
  - Add support for GRE/GRETAP tunnels
  - Add support for STP/RSTP on bridges
  - Add support for VXLAN tunnels
+ - Add support for configuring global LLDP `message-tx-interval`
 
 ### Fixes
 

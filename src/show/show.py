@@ -154,6 +154,15 @@ def routes(args: List[str]):
         return
     cli_pretty(data, "show-routing-table", "-i", ip_version)
 
+def lldp(args: List[str]):
+    data = run_sysrepocfg("/ieee802-dot1ab-lldp:lldp")
+    if not data:
+        print("No lldp data retrieved.")
+        return
+    if RAW_OUTPUT:
+        print(json.dumps(data, indent=2))
+        return
+    cli_pretty(data, "show-lldp")
 
 def execute_command(command: str, args: List[str]):
     command_mapping = {
@@ -162,6 +171,7 @@ def execute_command(command: str, args: List[str]):
         'interface': interface,
         'ntp': ntp,
         'routes': routes,
+        'lldp': lldp,
         'software' : software,
         'stp': stp,
     }

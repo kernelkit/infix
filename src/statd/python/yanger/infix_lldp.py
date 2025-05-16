@@ -4,20 +4,35 @@ from collections import defaultdict
 def operational():
     """Retrieve LLDP neighbor information and store in remote-systems-data under the correct port."""
 
-    # Reference: https://www.ieee802.org/1/files/public/YANGs/ieee802-types.yang
-    subtype_mapping = {
-        "component": "chassis-component",
+    # https://www.ieee802.org/1/files/public/YANGs/ieee802-types.yang
+    # <chassis-component> and <port-component> subtypes are not supported in
+    # https://github.com/lldpd/lldpd until v1.0.19
+    chassis_id_subtype_mapping = {
+        #"unhandled": "chassis-component",
         "ifalias": "interface-alias",
-        "port": "port-component",
+        #"unhandled": "port-component",
         "mac": "mac-address",
         "ip": "network-address",
         "ifname": "interface-name",
         "local": "local"
     }
 
-    DEFAULT_MAC = "00-00-00-00-00-00"
+    # https://www.ieee802.org/1/files/public/YANGs/ieee802-types.yang
+    # <port-component> and <agent-circuit-id> subtypes are not supported in
+    # https://github.com/lldpd/lldpd until v1.0.19
+    port_id_subtype_mapping = {
+        "ifalias": "interface-alias",
+        #"unhandled": "port-component",
+        "mac": "mac-address",
+        "ip": "network-address",
+        "ifname": "interface-name",
+        #"unhandled": "agent-circuit-id"
+        "local": "local"
+    }
 
-    port_data = defaultdict(lambda: {"remote-systems-data": [], "dest-mac-address": None})
+    LLDP_MULTICAST_MAC = "01:80:C2:00:00:0E"
+
+    port_data = defaultdict(lambda: {"remote-systems-data": [], "dest-mac-address": LLDP_MULTICAST_MAC})
 
     data = HOST.run_json(["lldpcli", "show", "neighbors", "-f", "json"])
 
@@ -32,17 +47,11 @@ def operational():
             time_mark = parse_time(iface_data.get("age"))
 
             chassis = iface_data.get("chassis", {})
-            chassis_id_type, chassis_id_value = extract_chassis_id(chassis, subtype_mapping)
+            chassis_id_type, chassis_id_value = extract_chassis_id(chassis, chassis_id_subtype_mapping)
 
             port_info = iface_data.get("port", {})
-            port_id_type = subtype_mapping.get(port_info.get("id", {}).get("type"), "unknown")
+            port_id_type = port_id_subtype_mapping.get(port_info.get("id", {}).get("type"), "unknown")
             port_id_value = port_info.get("id", {}).get("value", "")
-
-            dest_mac_address = (
-                chassis_id_value.replace(":", "-") if chassis_id_type == "mac-address" else
-                port_id_value.replace(":", "-") if port_id_type == "mac-address" else
-                DEFAULT_MAC
-            )
 
             remote_entry = {
                 "time-mark": time_mark,
@@ -54,9 +63,6 @@ def operational():
             }
 
             port_data[iface_name]["remote-systems-data"].append(remote_entry)
-
-            if port_data[iface_name]["dest-mac-address"] is None:
-                port_data[iface_name]["dest-mac-address"] = dest_mac_address
 
     formatted_output = {
         "ieee802-dot1ab-lldp:lldp": {
