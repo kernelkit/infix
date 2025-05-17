@@ -357,25 +357,45 @@ booted from one partition, an `upgrade` will apply to the other
 
 1. Download and unpack the release to install. Make the image *pkg*
    bundle available at some URL[^10]
-2. Assume the unit has booted the `primary` image. Then running the
+2. (Optional) Backup the startup configuration
+3. Assume the unit has booted the `primary` image. Then running the
    `upgrade` command installs a new image on the `secondary`
    partition
-3. As part of a successful upgrade, the boot-order is implictly
+4. As part of a successful upgrade, the boot-order is implictly
    changed to boot the newly installed image
-4. Reboot the unit
-5. The unit now runs the new image. To upgrade the remaining partition
+5. Reboot the unit
+6. The unit now runs the new image. To upgrade the remaining partition
    (`primary`), run the same upgrade command again, and (optionally)
    reboot to verify the upgrade
    
 > [!CAUTION]
-> During boot, the unit may [migrate](#configuration-migration) the
-> startup configuration for any syntax changes.  It is therefore
-> important that you make sure to upgrade the other partition as well
-> after reboot, of course after having verified your setup.
+> During boot (step 5), the unit may
+> [migrate](#configuration-migration) the startup configuration for
+> any syntax changes.  It is therefore important that you make sure to
+> upgrade the other partition as well after reboot, of course after
+> having verified your setup.
 
-The CLI example below shows steps 2-4.
+The CLI example below shows steps 2-5.
 
-Upgrade: here the image *pkg bundle* was made available via TFTP.
+*Backup startup configuration:* It is recommended to backup the
+startup configuration before performing an upgrade. The backup is
+useful if the upgrade fails, and makes a later
+[downgrade](#downgrading-infix) smoother to conduct.
+
+```
+admin@example:/> dir /cfg
+/cfg directory
+backup/             ssl/                startup-config.cfg
+
+admin@example:/> copy /cfg/startup-config.cfg /cfg/v25.01.0-startup-config.cfg
+admin@example:/> dir /cfg
+/cfg directory
+backup/             ssl/                startup-config.cfg           v25.01.0-startup-config.cfg
+
+admin@example:/> 
+```
+
+*Upgrade:* Here the image *pkg bundle* was made available via TFTP.
 
 ```
 admin@example:/> upgrade tftp://198.18.117.1/infix-aarch64-25.03.1.pkg
@@ -393,7 +413,7 @@ Installing `tftp://198.18.117.1/infix-aarch64-25.03.1.pkg` succeeded
 admin@example:/>
 ```
 
-Reboot: The unit will boot on the other partition, with the newly
+*Reboot:* The unit will boot on the other partition, with the newly
 installed image. The `Loading startup-config` step conducts migration
 of startup configuration if applicable.
 
@@ -435,7 +455,7 @@ As shown, the *boot order* has been updated, so that *secondary* is
 now the preferred boot source.
 
 To upgrade the remaining partition (`primary`), run the `upgrade URL`
-command again, and reboot.
+command again, and (optionally) reboot.
 
 ### Configuration Migration
 
@@ -519,8 +539,25 @@ with the unit in *failure config*.
 
 *Find the backup configuration file:*
 
-Assume you have a backup startup config for the version to downgrade
-to (here Infix v25.01.0, config `version 1.4`).
+Assume you have a backup startup config for the Infix version to
+downgrade to (here Infix v25.01.0, config `version 1.4`).
+
+The preferred approach is to use a startup configuration backed up
+when running Infix v25.01.0 on the unit. See the section on [upgrading
+Infix](#upgrading-infix) above for more information. In the example
+below, there is a backup file available named
+*v25.01.0-startup-config.cfg* 
+
+```
+admin@example:/> dir /cfg
+/cfg directory
+backup/             ssl/                startup-config.cfg           v25.01.0-startup-config.cfg
+
+admin@example:/> 
+```
+
+The alternative is to use a startup config implicitly backed up by the
+system as part of [configuration migration](#configuration-migration).
 
 ```
 admin@example:/> dir /cfg/backup/
@@ -529,6 +566,23 @@ startup-config-1.4.cfg
 
 admin@example:/>
 ```
+
+> [!CAUTION] Using a backup configuration file stored when the unit
+> was running the old version (e.g., v25.01.0-startup-config.cfg) is
+> preferred. Although backup files stored due to configuration
+> migration (e.g., startup-config-1.4.cfg) usually works too if the
+> configuration file version (`1.4`) matches, there are
+> situations when the system may fail to apply it as described below.
+
+The *configuration file version* (`1.4`) is only incremented when
+changes in YANG configuration syntax mandates it to handle
+*upgrading*.  Say the next Infix version includes a new feature
+setting, it can still have version `1.4`, as upgrading to it would not
+need migration. If a user then enables the new feature setting, the
+new configuration will no longer be compatible with the previous *Infix
+version*. A downgrade after enabling new features risks ending up with
+the unit in *failure config*. 
+
 
 *Use `upgrade` command to downgrade:*
 
@@ -548,6 +602,19 @@ admin@example:/>
 
 *Apply the backup configuration file:*
 
+It is recommended to use a backup configuration file for the Infix version to
+downgrade to, if there is one available.
+
+```
+admin@example:/> copy /cfg/v25.01.0-startup-config.cfg /cfg/startup-config.cfg
+Overwrite existing file /cfg/startup-config.cfg (y/N)? y
+admin@example:/>
+```
+
+An alternative is to use a backup file stored when the system
+conducted a [configuration migration](#configuration-migration). See
+the *caution* note above.
+
 ```
 admin@example:/> copy /cfg/backup/startup-config-1.4.cfg /cfg/startup-config.cfg
 Overwrite existing file /cfg/startup-config.cfg (y/N)? y
@@ -556,8 +623,7 @@ admin@example:/>
 
 *Reboot:*
 
-The unit will come up with the applied backup configuration instead of
-failure config.
+The unit will come up with the applied backup configuration. 
 
 ```
 admin@example:/> reboot
@@ -575,6 +641,9 @@ admin@example:/> reboot
 Infix -- a Network Operating System v25.01.0 (ttyS0)
 example login:
 ```
+> [!NOTE]
+> If the unit despite these measures ends up in *failure config*, see
+> the next section for more information on how to recover.
 
 #### Downgrading without applying a backup startup configuration
 
@@ -688,3 +757,5 @@ Continued configuration is done as with any unit after factory reset.
     using link local IPv6 addresses. This as an alternative to
     connecting via a console port.
 [^10]: Set up an FTP/TFTP/SFTP or HTTP/HTTPS server on the same LAN. 
+
+[11]: scripting.md#-backup-configuration-using-sysrepocfg-and-scp

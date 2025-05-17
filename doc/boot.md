@@ -63,7 +63,7 @@ bootloader's validation procedure, user configuration is kept to a
 minimum.  Two settings are available:
 
 - **Boot order**: Since Infix maintains two copies of its software image,
-  and as some bootloaders support netbooting, the order in which boot
+  and as some bootloaders support [netbooting][2], the order in which boot
   sources are considered can be configured. To select the active
   source, use [RAUC][]:
 
@@ -352,3 +352,5 @@ If `var` is not available, Infix will still persist `/var/lib` using
 [^1]: See [Upgrading procedures and boot
     order](system.md#upgrade-procedures-and-boot-order) for
     information on upgrading via CLI.
+
+[2]: netboot.md
