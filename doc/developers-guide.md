@@ -168,36 +168,36 @@ Now you can rebuild `confd`, just as described above, and restart Infix:
 
 ### `statd`
 
-The Infix status daemon, `src/statd`, is responsible for populating the 
-sysrepo `operational` datastore. Like `confd`, it uses XPath subscriptions, 
-but unlike `confd`, it relies entirely on `yanger`, a Python script that 
+The Infix status daemon, `src/statd`, is responsible for populating the
+sysrepo `operational` datastore. Like `confd`, it uses XPath subscriptions,
+but unlike `confd`, it relies entirely on `yanger`, a Python script that
 gathers data from local linux services and feeds it into sysrepo.
 
 To apply changes, rebuild the image:
 
     make python-statd-rebuild statd-rebuild all
 
-Rebuilding the image and testing on target for every change during 
-development process can be tedious. Instead, `yanger` allows remote 
-execution, running the script directly on the host system (test 
+Rebuilding the image and testing on target for every change during
+development process can be tedious. Instead, `yanger` allows remote
+execution, running the script directly on the host system (test
 container):
 
     infamy0:test # ../src/statd/python/yanger/yanger -x "../utils/ixll -A ssh d3a" ieee802-dot1ab-lldp
 
 `ixll` is a utility script that lets you run network commands using an
-**interface name** instead of a hostname. It makes operations like 
+**interface name** instead of a hostname. It makes operations like
 `ssh`, `scp`, and network discovery easier.
 
-Normally, `yanger` runs commands **locally** to retrieve data 
-(e.g., `lldpcli` when handling `ieee802-dot1ab-lldp`). However, when 
-executed with `-x "../utils/ixll -A ssh d3a"` it redirects these 
-commands to a remote system connected to the local `d3a` interface via 
-SSH. This setup is used for running `yanger` in an 
+Normally, `yanger` runs commands **locally** to retrieve data
+(e.g., `lldpcli` when handling `ieee802-dot1ab-lldp`). However, when
+executed with `-x "../utils/ixll -A ssh d3a"` it redirects these
+commands to a remote system connected to the local `d3a` interface via
+SSH. This setup is used for running `yanger` in an
 [interactive test environment](testing.md#interactive-usage). The yanger
-script runs on the `host` system, but key commands are executed on the 
+script runs on the `host` system, but key commands are executed on the
 `target` system.
 
-For debugging or testing, you can capture system command output and 
+For debugging or testing, you can capture system command output and
 replay it later without needing a live system.
 
 To capture:
@@ -211,12 +211,173 @@ To replay:
 This is especially useful when working in isolated environments or debugging
 issues without direct access to the DUT.
 
+### Upgrading Packages
+
+#### Buildroot
+
+Kernelkit maintains an internal [fork of
+Buildroot](https://github.com/kernelkit/buildroot), with branches
+following the naming scheme `YYYY.MM.patch-kkit`
+e.g. `2025.02.1-kkit`, which means a new branch should be created
+whenever Buildroot is updated. These branches should contain **only**
+changes to existing packages (but no new patches), modifications to
+Buildroot itself or upstream backports.
+
+KernelKit track the latest Buildroot LTS (Long-Term Support) release
+and updates. The upgrade of LTS minor releases is expected to have low
+impact and should be done as soon there is a patch release of
+Buildroot LTS is available.
+
+> **Depending on your setup, follow the appropriate steps below.**
+
+🔁 If you **already have** the Buildroot repo locally
+
+1. Navigate to the Buildroot directory
+   ```bash
+    $ cd buildroot
+   ```
+2. Pull the latest changes from KernelKit
+   ```bash
+   $ git pull
+   ```
+3. Fetch the latest tags from upstream
+   ```bash
+   $ git fetch upstream --tags
+   ```
+
+
+🆕 If you don't have the repo locally
+
+1. Clone the Kernelkit Buildroot repository
+   ```bash
+   $ git clone git@github.com:kernelkit/buildroot.git
+   ```
+
+2. Add the upstream remote
+   ```bash
+   $ git remote add upstream https://gitlab.com/buildroot.org/buildroot.git
+   ```
+3. Checkout old KernelKit branch
+   ```bash
+   $ git checkout 2025.02.1-kkit
+   ```
+
+
+🛠  Continue from here (applies to both cases):
+
+4. Create a new branch based on the **previous** KernelKit Buildroot
+   release (e.g.  `2025.02.1-kkit`) and name it according to the naming scheme (e.g. `2025.02.2-kkit`)
+   ```bash
+   $ git checkout -b 2025.02.2-kkit
+   ```
+5. Rebase the new branch onto the corresponding upstream release
+   ```bash
+   $ git rebase 2025.02.2
+   ```
+> [!NOTE] It is **not** allowed to rebase the branch when bumped in Infix.
+
+6. Push the new branch and tags
+   ```bash
+   $ git push origin 2025.02.2-kkit --tags
+   ```
+7. In Infix, checkout new branch of Buildroot
+   ```bash
+   $ cd buildroot
+   $ git fetch
+   $ git checkout 2025.02.2-kkit
+   ```
+8. Push changes
+Commit and push the changes. Don’t forget to update the changelog.
+
+9. Create a pull request.
+
+> [!NOTE] Remember to set the pull request label to `ci:main` to ensure full CI coverage.
+
+
+#### Linux kernel
+
+KernelKit maintains an internal [fork of Linux
+kernel](https://github.com/kernelkit/linux), with branches following
+the naming scheme `kkit-linux-[version].y`, e.g. `kkit-6.12.y`, which
+means a new branch should be created whenever the major kernel version
+is updated. This branch should contain *all* kernel patches used by
+Infix.
+
+KernelKit track the latest Linux kernel LTS (Long-Term Support)
+release and updates. The upgrade of LTS minor releases is expected to
+have low impact and should be done as soon as a patch release of the
+LTS Linux kernel is available.
+
+
+🔁 If you **already have** the Linux kernel repo locally
+
+1. Navigate to the Linux kernel directory
+   ```bash
+   $ cd linux
+   ```
+2. Get latest changes from KernelKit
+   ```bash
+   $ git pull
+   ```
+3. Fetch the latest tags from upstream
+   ```bash
+   $ git fetch upstream --tags
+   ```
+
+🆕 If you don't have the repo locally
+
+1. Clone the KernelKit Linux kernel repository
+   ```bash
+   $ git clone git@github.com:kernelkit/linux.git
+	```
+2. Add the upstream remote
+   ```bash
+   $ git remote add upstream git://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git
+   ```
+
+3. Checkout correct kernel branch
+   ```bash
+   $ git checkout kkit-linux-6.12.y
+   ```
+
+🛠  Continue from here (applies to both cases)
+
+
+4. Rebase on the upstream release
+   ```bash
+   $ git rebase v6.12.29
+   ```
+
+6. Push changes and the tags
+   ```bash
+
+   $ git push -f origin kkit-linux-6.12.y --tags
+   ```
+
+**Move to your infix directory**
+
+7. Generate patches
+   ```bash
+   $ make x86_64_defconfig
+   $ cd output
+   $ ../utils/kernel-refresh.sh -k /path/to/linux -o 6.12.28 -t v6.12.29
+   ```
+   > [!NOTE] See help of `kernel-refresh.sh` script for more information
+
+
+8. Push changes
+   Commit and push the changes. Don’t forget to update the s:changelog:doc/ChangeLog.md.
+
+9. Create a pull request.
+   > [!NOTE] Remember to set the pull request label to `ci:main` to ensure full CI coverage.
+
+
 ### Agree on YANG Model
 
 When making changes to the `confd` and `statd` services, you will often need to update
-the YANG models. If you are adding a new YANG module, it's best to follow the 
+the YANG models. If you are adding a new YANG module, it's best to follow the
 structure of an existing one. However, before making any changes, **always discuss
-them with the Infix core team**. This helps avoid issues later in development and 
+them with the Infix core team**. This helps avoid issues later in development and
 makes pull request reviews smoother.
 
 
