@@ -22,6 +22,13 @@ module infix-containers {
     prefix infix-sys;
   }
 
+  revision 2025-05-14 {
+    description
+      "Validation improvement:
+       - Added constraint to require either 'source' or 'content' in a container mount.";
+    reference "internal";
+  }
+
   revision 2024-11-15 {
     description "Two major changes:
                   - Add support for ftp/http/https images with checksum
@@ -342,6 +349,7 @@ module infix-containers {
         }
 
         choice data {
+          mandatory true;
           case source {
             leaf source {
               description "Host path to mount in container, may be a glob.
