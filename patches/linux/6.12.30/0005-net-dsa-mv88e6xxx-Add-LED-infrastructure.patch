@@ -1,8 +1,7 @@
-From 15b1063f2dd41d23653f3de07161ad19bb805b2c Mon Sep 17 00:00:00 2001
+From 8ce7a3a19676c148e6c247641000a5d5b86c6a3d Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Thu, 16 Nov 2023 19:44:32 +0100
 Subject: [PATCH 05/27] net: dsa: mv88e6xxx: Add LED infrastructure
-Organization: Wires
 
 Parse DT for LEDs and register them for devices that support it,
 though no actual implementations exist yet.
