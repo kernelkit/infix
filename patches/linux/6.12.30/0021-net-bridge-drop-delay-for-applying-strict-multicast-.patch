@@ -1,9 +1,8 @@
-From 54e9433911547d43d8c11032622ece2b27b7075f Mon Sep 17 00:00:00 2001
+From ec644e878010241f593bfccb2f7127dec6f69294 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Thu, 4 Apr 2024 16:36:30 +0200
 Subject: [PATCH 21/27] net: bridge: drop delay for applying strict multicast
  filtering
-Organization: Wires
 
 This *local* patch drops the initial delay before applying strict multicast
 filtering, introduced in [1] and recently updated in [2].

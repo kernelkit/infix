@@ -1,9 +1,8 @@
-From 35b9ae5dd4e5447ea20f97c1eda3b43eaa5d7f37 Mon Sep 17 00:00:00 2001
+From d46286898fbadf40a2fe1f4e449a3acdaede788b Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Thu, 16 May 2024 14:51:54 +0200
 Subject: [PATCH 22/27] net: bridge: Differentiate MDB additions from
  modifications
-Organization: Wires
 
 Before this change, the reception of an IGMPv3 report (and analogously
 for MLDv2) that adds a new group, would trigger two MDB RTM_NEWMDB
