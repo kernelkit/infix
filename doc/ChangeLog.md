@@ -6,6 +6,7 @@ All notable changes to the project are documented in this file.
 [v25.05.0][UNRELEASED]
 -------------------------
 ### Changes
+- Upgrade Buildroot to 2025.02.3 (LTS)
 - Upgrade Linux kernel to 6.12.30 (LTS)
 - Upgrade libyang to 3.12.2
 - Upgrade sysrepo to 3.6.11
