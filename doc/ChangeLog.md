@@ -5,12 +5,14 @@ All notable changes to the project are documented in this file.
 
 [v25.05.0][UNRELEASED]
 -------------------------
+
 ### Changes
 - Upgrade Buildroot to 2025.02.3 (LTS)
 - Upgrade Linux kernel to 6.12.30 (LTS)
 - Upgrade libyang to 3.12.2
 - Upgrade sysrepo to 3.6.11
 - Upgrade netopeer2 (NETCONF) to 2.4.1
+- New hardware support: Raspberry Pi 4B (aarch64)
 - Add documentation on Infix upgrading and downgrading, issue #1009
 - Add HDMI and USB support for iMX8MP-evk
 - Enforced strict format for LLDP destination MAC address:
