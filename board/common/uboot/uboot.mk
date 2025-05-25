@@ -17,14 +17,23 @@ endef
 # U-Boot build tree. This will then be built in to the final U-Boot
 # image's control DT via the CONFIG_DEVICE_TREE_INCLUDES option (see
 # extras.config).
+#
+# Some platforms, most notably Raspberry Pi, load the device tree
+# from the SPL, effectively overriding the built-in control DT.
+# For that we bundle an overlay that can be included instead.
 define UBOOT_PRE_BUILD_INSTALL_KEY
-	$(HOST_DIR)/bin/dtc <(echo '/dts-v1/; / { signature {}; };') >$(@D)/infix-key.dtb
+	$(HOST_DIR)/bin/dtc -a 1024 <(echo '/dts-v1/; / { signature {}; };') \
+		>$(@D)/infix-key.dtb
 	$(foreach key, \
 		$(call qstrip,$(TRUSTED_KEYS_DEVELOPMENT_PATH)) $(call qstrip,$(TRUSTED_KEYS_EXTRA_PATH)),\
 		$(call uboot-add-pubkey,$(key),$(@D)/infix-key.dtb))
 	$(HOST_DIR)/bin/dtc -I dtb -O dts \
 		<$(@D)/infix-key.dtb \
-	| sed -e 's:/dts-v[0-9]\+/;::' >$(@D)/arch/$(UBOOT_ARCH)/dts/infix-key.dtsi
+		| sed -e 's:/dts-v[0-9]\+/;::' \
+		| tee $(@D)/arch/$(UBOOT_ARCH)/dts/infix-key.dtsi \
+		| sed -e '1i\/dts-v1/;\n/plugin/;\n' -e '/^$$/d' -e 's:/ {:\&{/} {:' \
+		>$(@D)/arch/$(UBOOT_ARCH)/dts/infix-key.dtso
+
 	rm $(@D)/infix-key.dtb
 endef
 UBOOT_PRE_BUILD_HOOKS += UBOOT_PRE_BUILD_INSTALL_KEY
