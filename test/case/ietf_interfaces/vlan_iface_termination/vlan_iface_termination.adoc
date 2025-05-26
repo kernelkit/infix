@@ -7,14 +7,14 @@ attached to a VLAN filtering bridge are always locally terminated.
 .---------------------------.
 |           target          |
 |                           |
-|  data0.10  br0  data1.10  |
+|  data1.10  br0  data2.10  |
 |      \    /   \    /      |
-'------data0-----data1------'
+'------data1-----data2------'
          |         |
          |         |
-.------data0-----data1------.
+.------data1-----data2------.
 |      /      :     \       |
-|  data0.10   :   data1.10  |
+|  data1.10   :   data2.10  |
 |             :             |
 |           host            |
 |             :             |
@@ -22,7 +22,7 @@ attached to a VLAN filtering bridge are always locally terminated.
 ....
 
 In this setup, even though VLAN 10 is allowed to ingress and egress on
-both `data0` and `data1`, _bridging_ of packets from one to the other
+both `data1` and `data2`, _bridging_ of packets from one to the other
 must _not_ be allowed.
 
 ==== Topology
@@ -41,10 +41,10 @@ endif::topdoc[]
 . Set up topology and attach to target
 . Configure bridge and VLAN interfaces on target
 . Configure IP addresses and VLAN interfaces on host
-. Verify that host:data0 reaches host:data1 with untagged packets
-. Verify that traffic on VLAN 10 from host:data0 does not reach host:data1
-. Verify that host:data0 can reach target on VLAN 10
+. Verify that host:data1 reaches host:data2 with untagged packets
+. Verify that traffic on VLAN 10 from host:data1 does not reach host:data2
 . Verify that host:data1 can reach target on VLAN 10
+. Verify that host:data2 can reach target on VLAN 10
 
 
 <<<

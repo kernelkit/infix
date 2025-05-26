@@ -46,7 +46,7 @@ admin@infix-c0-ff-ee:~$
 
 ## LLDP
 
-Infix supports LLDP (IEEE 802.1AB).  For a device with factory default
+Infix supports LLDP (IEEE 802.1AB). For a device with factory default
 settings, the link-local IPv6 address can be read from the Management
 Address TLV using *tcpdump* or other sniffing tools[^1]:
 
@@ -131,6 +131,10 @@ tcpdump: listening on tap0, link-type EN10MB (Ethernet), snapshot length 262144 
 linux-pc:#
 ```
 
+The following capabilities are available via NETCONF/RESTCONF or the Infix CLI.
+
+### LLDP Enable/Disable
+
 The LLDP service can be disabled using the following commands.
 
 ```
@@ -140,6 +144,59 @@ admin@infix-c0-ff-ee:/config/> leave
 admin@infix-c0-ff-ee:/> 
 ```
 
+To reenable it from the CLI config mode:
+
+```
+admin@test-00-01-00:/config/> set lldp enabled 
+admin@test-00-01-00:/config/> leave
+```
+
+### LLDP Message Transmission Interval
+
+By default, LLDP uses a `message-tx-interval` of 30 seconds, as defined
+by the IEEE standard. Infix allows this value to be customized.
+To change it using the CLI:
+
+```
+admin@test-00-01-00:/config/> set lldp message-tx-interval 1
+admin@test-00-01-00:/config/> leave
+```
+
+### LLDP Administrative Status per Interface
+
+Infix supports configuring the LLDP administrative status on a per-port
+basis. The default mode is `tx-and-rx`, but the following options are 
+also supported:
+
+- `rx-only` – Receive LLDP packets only
+- `tx-only` – Transmit LLDP packets only
+- `disabled` – Disable LLDP on the interface
+
+Example configuration:
+
+```
+admin@test-00-01-00:/config/> set lldp port e8 dest-mac-address 01:80:C2:00:00:0E admin-status disabled
+admin@test-00-01-00:/config/> set lldp port e5 dest-mac-address 01:80:C2:00:00:0E admin-status rx-only 
+admin@test-00-01-00:/config/> set lldp port e6 dest-mac-address 01:80:C2:00:00:0E admin-status tx-only
+admin@test-00-01-00:/config/> leave
+```
+
+> [!NOTE]
+> The destination MAC address must be the standard LLDP multicast 
+> address: `01:80:C2:00:00:0E`.
+
+###  Displaying LLDP Neighbor Information
+
+In CLI mode, Infix also provides a convenient `show lldp` command to
+list LLDP neighbors detected on each interface:
+
+```
+admin@test-00-01-00:/> show lldp 
+INTERFACE       REM-IDX   TIME        CHASSIS-ID          PORT-ID             
+e5              1         902         00:a0:85:00:04:01   00:a0:85:00:04:07   
+e6              3         897         00:a0:85:00:03:01   00:a0:85:00:03:07   
+e8              2         901         00:a0:85:00:02:01   00:a0:85:00:02:05
+```
 
 ## mDNS-SD
 
