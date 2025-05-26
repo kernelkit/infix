@@ -1,0 +1,78 @@
+name: Test Infix
+
+on:
+  workflow_dispatch:
+  workflow_call:
+    inputs:
+      target:
+        required: true
+        type: string
+
+jobs:
+  test:
+    name: Regression Test of Infix x86_64
+    runs-on: [ self-hosted, regression ]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          clean: true
+          submodules: recursive
+
+      - name: Set Build Variables
+        id: vars
+        run: |
+          if [ -n "${{ needs.build.outputs.build_id }}" ]; then
+              echo "INFIX_BUILD_ID=${{ needs.build.outputs.build_id }}" \
+                   >>$GITHUB_ENV
+          fi
+
+          if [ "$GITHUB_REF_NAME" != "main" ]; then
+              flavor="_minimal"
+          else
+              flavor=""
+          fi
+          echo "flv=$flavor"              >> $GITHUB_OUTPUT
+
+      - name: Configure x86_64${{ steps.vars.outputs.flv }}
+        run: |
+          make x86_64${{ steps.vars.outputs.flv }}_defconfig
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: "artifact-*"
+          merge-multiple: true
+
+      - name: Restore x86-64${{ steps.vars.outputs.flv }} output/
+        run: |
+          ls -l
+          mkdir -p output
+          mv infix-x86_64.tar.gz output/
+          cd output/
+          tar xf infix-x86_64.tar.gz
+          ln -s infix-x86_64 images
+
+      - name: Regression Test x86_64${{ steps.vars.outputs.flv }}
+        run: |
+          make test
+
+      - name: Publish Test Result for x86_64${{ steps.vars.outputs.flv }}
+        # Ensure this runs even if Regression Test fails
+        if: always()
+        run: cat test/.log/last/result-gh.md >> $GITHUB_STEP_SUMMARY
+
+      - name: Generate Test Report for x86_64${{ steps.vars.outputs.flv }}
+        # Ensure this runs even if Regression Test fails
+        if: always()
+        run: |
+          asciidoctor-pdf \
+          --theme test/9pm/report/theme.yml \
+          -a pdf-fontsdir=test/9pm/report/fonts \
+          test/.log/last/report.adoc \
+          -o test/.log/last/report.pdf
+
+      - name: Upload Test Report as Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-report
+          path: test/.log/last/report.pdf
+
