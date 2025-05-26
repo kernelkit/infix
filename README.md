@@ -93,12 +93,14 @@ The [following boards](board/aarch64/README.md) are fully supported:
  - Marvell CN9130 CRB
  - Marvell EspressoBIN
  - Microchip SparX-5i PCB135 (eMMC)
- - StarFive VisionFive2
+ - Raspberry Pi 4B
  - NanoPi R2S
 
-An x86_64 build is also available, primarily intended for development
-and testing, but can also be used for evaluation and demo purposes.  For
-more information, see: [Infix in Virtual Environments](doc/virtual.md).
+Additionally, StarFive VisionFive2, a RISC-V based two-port router, and
+an x86_64 build is also available.  The latter is primarily intended for
+development and testing, but can also be used for evaluation and demo
+purposes.  For more information, see: [Infix in Virtual
+Environments](doc/virtual.md).
 
 > See the [GitHub Releases](https://github.com/kernelkit/infix/releases)
 > page for our pre-built images.  The *[Latest Build][]* has bleeding

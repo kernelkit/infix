@@ -104,7 +104,7 @@ module infix-dhcp-client {
 
            The default is an empty list, meaning all supported options.  To
            restrict the client to only get IP address and default route, set
-           this to: 'subnet router'";
+           this to: 'netmask router'";
 
         must "not(id = 'fqdn' and 'value/hex')" {
           error-message "FQDN option must use string format";
