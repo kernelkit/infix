@@ -1,4 +1,4 @@
-name: Build Infix
+name: Build
 
 on:
   workflow_dispatch:
@@ -19,9 +19,12 @@ on:
       target:
         required: true
         type: string
+      name:
+        required: true
+        type: string
 jobs:
   build:
-    name: Build Infix ${{ inputs.target }}
+    name: Build ${{ inputs.name }} ${{ inputs.target }}
     runs-on: [ self-hosted, latest ]
     strategy:
       fail-fast: false
@@ -70,8 +73,9 @@ jobs:
               fi
           fi
           target=${{ inputs.target }}
-          echo "dir=infix-$target"        >> $GITHUB_OUTPUT
-          echo "tgz=infix-$target.tar.gz" >> $GITHUB_OUTPUT
+          name=${{ inputs.name }}
+          echo "dir=${name}-${target}"        >> $GITHUB_OUTPUT
+          echo "tgz=${name}-${target}.tar.gz" >> $GITHUB_OUTPUT
           echo "flv=$flavor"              >> $GITHUB_OUTPUT
           echo "Building target ${target}${flavor}_defconfig"
 

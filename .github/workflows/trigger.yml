@@ -14,11 +14,13 @@ jobs:
     uses: ./.github/workflows/build.yml
     with:
       target: x86_64 
+      name: infix
 
   build-aarch64:
     uses: ./.github/workflows/build.yml
     with:
       target: aarch64 
+      name: infix
 
   test-run-x86_64:
     needs: build-x86_64
