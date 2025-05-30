@@ -1,4 +1,4 @@
-From 3b64cbe7764bb3cb77953c8d0b8676c685c9f0b5 Mon Sep 17 00:00:00 2001
+From 83dba1584515e3d938c622ae85eae45f60ca2ae5 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Wed, 15 Nov 2023 20:58:42 +0100
 Subject: [PATCH 16/27] net: phy: marvell10g: Add LED support for 88X3310

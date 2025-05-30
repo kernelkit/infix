@@ -1,4 +1,4 @@
-From cd8e2556f6b220fd6795779a37fbd6ff3159dcaf Mon Sep 17 00:00:00 2001
+From 84f59ec2cbacdb14b98099815cbeebc5aff469f8 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Fri, 24 Nov 2023 23:29:55 +0100
 Subject: [PATCH 23/27] nvmem: layouts: onie-tlv: Let device probe even when
