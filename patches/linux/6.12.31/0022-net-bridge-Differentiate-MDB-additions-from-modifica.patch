@@ -1,4 +1,4 @@
-From d46286898fbadf40a2fe1f4e449a3acdaede788b Mon Sep 17 00:00:00 2001
+From 04773017c6b110e772affd956bcebc412b5420a5 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Thu, 16 May 2024 14:51:54 +0200
 Subject: [PATCH 22/27] net: bridge: Differentiate MDB additions from
@@ -40,7 +40,7 @@ index db7254d52d93..63508279df47 100644
  	RTM_NEWNSID = 88,
  #define RTM_NEWNSID RTM_NEWNSID
 diff --git a/net/bridge/br_mdb.c b/net/bridge/br_mdb.c
-index 1a52a0bca086..d5757ab72d2f 100644
+index 7e1ad229e133..3b1873e7c499 100644
 --- a/net/bridge/br_mdb.c
 +++ b/net/bridge/br_mdb.c
 @@ -734,7 +734,7 @@ static int br_mdb_replace_group_sg(const struct br_mdb_config *cfg,
