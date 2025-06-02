@@ -1,0 +1,21 @@
+#!/bin/sh
+if [ $# -lt 2 ]; then
+	echo "usage: $0 <ifname> <timeout>"
+	exit 1
+fi
+
+ifname=$1
+timeout=$2
+while true; do
+    if ip link show $ifname &>/dev/null; then
+        break
+    fi
+
+    retries=$(($retries + 1))
+    if [ $retries -ge $timeout ]; then
+        logger -t wait-interface "Timeout: Interface $ifname not found after $timeout seconds"
+        exit 1
+    fi
+
+    sleep 1
+done
