@@ -3,11 +3,11 @@ name: Build
 on:
   workflow_dispatch:
     inputs:
-      minimal:
-        description: 'Build minimal defconfigs'
+      flavor:
+        description: 'Optional build flavor (e.g. _minimal)'
         required: false
-        default: true
-        type: boolean
+        default: ''
+        type: string
       parallell:
         description: 'Massive parallel build of each image'
         required: false
@@ -28,19 +28,18 @@ on:
       name:
         required: true
         type: string
-      minimal:
+      flavor:
         required: false
-        type: boolean
-        default: true
+        type: string
+        default: ''
       infix_repo:
         required: false
         type: string
         default: kernelkit/infix
 
 env:
-  MINIMAL: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.minimal || inputs.minimal }}
+  FLV: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.flavor || inputs.flavor }}
   INFIX_REPO: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.infix_repo || inputs.infix_repo }}
-
 
 jobs:
   build:
@@ -81,18 +80,12 @@ jobs:
                   | tee -a $GITHUB_OUTPUT $GITHUB_ENV
           fi
 
-          if [ "${MINIMAL}" == "true" ]; then
-              flavor="_minimal"
-              else
-              flavor=""
-          fi
-
           target=${{ inputs.target }}
           name=${{ inputs.name }}
           echo "dir=${name}-${target}"        >> $GITHUB_OUTPUT
           echo "tgz=${name}-${target}.tar.gz" >> $GITHUB_OUTPUT
-          echo "flv=$flavor"              >> $GITHUB_OUTPUT
-          echo "Building target ${target}${flavor}_defconfig"
+          echo "flv=$FLV"              >> $GITHUB_OUTPUT
+          echo "Building target ${target}${FLV}_defconfig"
 
       - name: Restore Cache of dl/
         uses: actions/cache@v4
