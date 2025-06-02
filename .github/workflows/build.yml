@@ -22,6 +22,15 @@ on:
       name:
         required: true
         type: string
+      minimal:
+        required: false
+        type: boolean
+        default: true
+
+env:
+  MINIMAL: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.minimal || inputs.minimal }}
+
+
 jobs:
   build:
     name: Build ${{ inputs.name }} ${{ inputs.target }}
@@ -57,21 +66,13 @@ jobs:
                   "${{ github.event.number }}" "${{ github.event.pull_request.head.sha }}" \
                   | tee -a $GITHUB_OUTPUT $GITHUB_ENV
           fi
-          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
-              if [ "${{ github.event.inputs.minimal }}" == "true" ]; then
-                  flavor="_minimal"
-              fi
-          else
-              # Ensure 'release' job get the proper image when building main
-              if [ "$GITHUB_REF_NAME" != "main" ]; then
-                  flavor="_minimal"
+
+          if [ "${MINIMAL}" == "true" ]; then
+              flavor="_minimal"
               else
-                  flavor=""
-              fi
-              if ${{ contains(github.event.pull_request.labels.*.name, 'ci:main') }}; then
-                  flavor=""
-              fi
+              flavor=""
           fi
+
           target=${{ inputs.target }}
           name=${{ inputs.name }}
           echo "dir=${name}-${target}"        >> $GITHUB_OUTPUT
