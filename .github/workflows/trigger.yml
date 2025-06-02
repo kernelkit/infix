@@ -15,12 +15,14 @@ jobs:
     with:
       target: x86_64 
       name: infix
+      flavor: _minimal
 
   build-aarch64:
     uses: ./.github/workflows/build.yml
     with:
       target: aarch64 
       name: infix
+      flavor: _minimal
 
   test-run-x86_64:
     needs: build-x86_64
