@@ -28,7 +28,6 @@ KLISH_PLUGIN_INFIX_CONF_OPTS += --enable-shell
 else
 KLISH_PLUGIN_INFIX_CONF_OPTS += --disable-shell
 endif
-
 ifeq ($(BR2_PACKAGE_BASH),y)
 KLISH_PLUGIN_INFIX_CONF_OPTS += --with-shell=/bin/bash
 else
