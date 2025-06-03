@@ -24,6 +24,7 @@ module infix-interfaces {
   include infix-if-vlan;
   include infix-if-gre;
   include infix-if-vxlan;
+  include infix-if-wlan;
 
   organization "KernelKit";
   contact      "kernelkit@googlegroups.com";

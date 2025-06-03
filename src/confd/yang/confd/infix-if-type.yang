@@ -98,4 +98,9 @@ module infix-if-type {
     base ianaift:l2vlan;
     description "Layer 2 Virtual LAN using 802.1Q.";
   }
+  identity wlan {
+    base infix-interface-type;
+    base ianaift:ieee80211;
+    description "WIFI KABEL";
+  }
 }

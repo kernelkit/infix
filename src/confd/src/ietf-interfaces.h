@@ -25,6 +25,7 @@
 	_map(IFT_BRIDGE, "infix-if-type:bridge")	\
 	_map(IFT_DUMMY,  "infix-if-type:dummy")		\
 	_map(IFT_ETH,    "infix-if-type:ethernet")	\
+	_map(IFT_WLAN,   "infix-if-type:wlan")	        \
 	_map(IFT_GRE,    "infix-if-type:gre")		\
 	_map(IFT_GRETAP, "infix-if-type:gretap")	\
 	_map(IFT_LAG,    "infix-if-type:lag")	\
@@ -92,6 +93,8 @@ static inline bool is_member_port(struct lyd_node *cif)
 	return false;
 }
 
+sr_error_t netdag_gen_iface_timeout(struct dagger *net, const char *ifname);
+
 bool iface_has_quirk(const char *ifname, const char *quirkname);
 
 
@@ -118,6 +121,15 @@ int bridge_add_deps(struct lyd_node *cif);
 int bridge_mcd_gen(struct lyd_node *cifs);
 /* infix-if-bridge-port.c */
 int bridge_port_gen(struct lyd_node *dif, struct lyd_node *cif, FILE *ip);
+
+/* infix-if-wlan.c */
+int wlan_gen(struct lyd_node *dif, struct lyd_node *cif, struct dagger *net);
+int wlan_gen_del(struct lyd_node *dif,  struct dagger *net);
+int wlan_scan(sr_session_ctx_t *session, uint32_t sub_id, const char *xpath,
+		     const sr_val_t *input, const size_t input_cnt,
+		     sr_event_t event, unsigned request_id,
+		     sr_val_t **output, size_t *output_cnt,
+		     void *priv);
 
 /* infix-if-gre.c */
 int gre_gen(struct lyd_node *dif, struct lyd_node *cif, FILE *ip);

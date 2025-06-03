@@ -11,6 +11,8 @@
 #include <srx/srx_val.h>
 
 #include "ietf-interfaces.h"
+#define  IFACE_PROBE_TIMEOUT 40
+
 
 bool iface_has_quirk(const char *ifname, const char *quirkname)
 {
@@ -46,6 +48,9 @@ static bool iface_is_phys(const char *ifname)
 		goto out;
 
 	if (json_unpack(link, "[{s:s}]", "link_type", &attr))
+		goto out_free;
+
+	if (json_unpack(link, "usb", "parentbus", &attr))
 		goto out_free;
 
 	if (strcmp(attr, "ether"))
@@ -112,6 +117,8 @@ static int ifchange_cand_infer_type(sr_session_ctx_t *session, const char *path)
 		inferred.data.string_val = "infix-if-type:gretap";
 	else if (!fnmatch("vxlan+([0-9])", ifname, FNM_EXTMATCH))
 		inferred.data.string_val = "infix-if-type:vxlan";
+	else if (!fnmatch("wlan+([0-9])", ifname, FNM_EXTMATCH))
+		inferred.data.string_val = "infix-if-type:wlan";
 	free(ifname);
 
 	if (inferred.data.string_val)
@@ -416,6 +423,8 @@ static int netdag_gen_afspec_add(sr_session_ctx_t *session, struct dagger *net, 
 		return vlan_gen(NULL, cif, ip);
 	case IFT_VXLAN:
 		return vxlan_gen(NULL, cif, ip);
+	case IFT_WLAN:
+		return wlan_gen(NULL, cif, net);
 
 	case IFT_ETH:
 	case IFT_LO:
@@ -440,6 +449,8 @@ static int netdag_gen_afspec_set(sr_session_ctx_t *session, struct dagger *net, 
 		return lag_gen(dif, cif, ip, 0);
 	case IFT_VLAN:
 		return vlan_gen(dif, cif, ip);
+	case IFT_WLAN:
+		return wlan_gen(dif, cif, net);
 
 	case IFT_DUMMY:
 	case IFT_GRE:
@@ -466,11 +477,13 @@ static bool netdag_must_del(struct lyd_node *dif, struct lyd_node *cif)
 	case IFT_DUMMY:
 	case IFT_LO:
 		break;
+	case IFT_WLAN:
 	case IFT_ETH:
-	/* case IFT_LAG: */
-	/* 	... REMEMBER WHEN ADDING BOND SUPPORT ... */
 		return lydx_get_child(dif, "custom-phys-address");
+
 	case IFT_GRE:
+		return lydx_get_descendant(lyd_child(dif), "gre", NULL);
+
 	case IFT_GRETAP:
 		return lydx_get_descendant(lyd_child(dif), "gre", NULL);
 	case IFT_LAG:
@@ -554,6 +567,10 @@ static int netdag_gen_iface_del(struct dagger *net, struct lyd_node *dif,
 	case IFT_LO:
 		eth_gen_del(dif, ip);
 		break;
+	case IFT_WLAN:
+		eth_gen_del(dif, ip);
+		wlan_gen_del(dif, net);
+		break;
 	case IFT_VETH:
 		veth_gen_del(dif, ip);
 		break;
@@ -573,6 +590,17 @@ static int netdag_gen_iface_del(struct dagger *net, struct lyd_node *dif,
 	return 0;
 }
 
+ sr_error_t netdag_gen_iface_timeout(struct dagger *net, const char *ifname) {
+	FILE *wait = dagger_fopen_net_init(net, ifname, NETDAG_INIT_TIMEOUT, "wait-interface.sh");
+	if (!wait) {
+		return -EIO;
+	}
+
+	fprintf(wait, "/usr/libexec/confd/wait-interface %s %d\n", ifname, IFACE_PROBE_TIMEOUT);
+	fclose(wait);
+	return SR_ERR_OK;
+}
+
 static sr_error_t netdag_gen_iface(sr_session_ctx_t *session, struct dagger *net,
 				   struct lyd_node *dif, struct lyd_node *cif)
 {
@@ -582,6 +610,11 @@ static sr_error_t netdag_gen_iface(sr_session_ctx_t *session, struct dagger *net
 	int err = 0;
 	bool fixed;
 	FILE *ip;
+
+
+	err = netdag_gen_iface_timeout(net, ifname);
+	if (err)
+		goto err;
 
 	if ((err = cni_netdag_gen_iface(net, ifname, dif, cif))) {
 		/* error or managed by CNI/podman */
@@ -710,6 +743,7 @@ static int netdag_init_iface(struct lyd_node *cif)
 
 	case IFT_DUMMY:
 	case IFT_ETH:
+	case IFT_WLAN:
 	case IFT_GRE:
 	case IFT_GRETAP:
 	case IFT_LO:
@@ -837,7 +871,7 @@ int ietf_interfaces_init(struct confd *confd)
 			0, ifchange, confd, &confd->sub);
 	REGISTER_CHANGE(confd->cand, "ietf-interfaces", "/ietf-interfaces:interfaces//.",
 			SR_SUBSCR_UPDATE, ifchange_cand, confd, &confd->sub);
-
+	REGISTER_RPC(confd->session, "/ietf-interfaces:interfaces/interface/infix-interfaces:wlan/scan",  wlan_scan, NULL, &confd->sub);
 	return SR_ERR_OK;
 fail:
 	ERROR("failed, error %d: %s", rc, sr_strerror(rc));

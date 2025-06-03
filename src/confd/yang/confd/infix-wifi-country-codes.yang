@@ -1,0 +1,287 @@
+module infix-wifi-country-codes {
+  yang-version 1.1;
+  namespace "urn:infix:wifi-country-codes";
+  prefix iwcc;
+
+  organization   "KernelKit";
+
+  contact        "kernelkit@googlegroups.com";
+
+  description
+    "This module defines country codes for WiFi regulatory domain
+     configuration based on ISO 3166-1 alpha-2 standard.
+
+     This model provides country code definitions for use in
+     802.11 wireless LAN regulatory compliance configuration.
+
+     The regulatory domain configuration follows the principles
+     established in IETF RFCs for wireless access point management.";
+
+  revision 2025-06-02 {
+    description
+      "Initial revision for WiFi country code support.";
+    reference
+      "RFC 5415: Control And Provisioning of Wireless Access Points (CAPWAP) Protocol Specification
+       RFC 5416: Control and Provisioning of Wireless Access Points (CAPWAP) Protocol Binding for IEEE 802.11";
+  }
+
+  typedef country-code {
+    type enumeration {
+      enum "AD" { description "Andorra"; }
+      enum "AE" { description "United Arab Emirates"; }
+      enum "AF" { description "Afghanistan"; }
+      enum "AG" { description "Antigua and Barbuda"; }
+      enum "AI" { description "Anguilla"; }
+      enum "AL" { description "Albania"; }
+      enum "AM" { description "Armenia"; }
+      enum "AO" { description "Angola"; }
+      enum "AQ" { description "Antarctica"; }
+      enum "AR" { description "Argentina"; }
+      enum "AS" { description "American Samoa"; }
+      enum "AT" { description "Austria"; }
+      enum "AU" { description "Australia"; }
+      enum "AW" { description "Aruba"; }
+      enum "AX" { description "Åland Islands"; }
+      enum "AZ" { description "Azerbaijan"; }
+      enum "BA" { description "Bosnia and Herzegovina"; }
+      enum "BB" { description "Barbados"; }
+      enum "BD" { description "Bangladesh"; }
+      enum "BE" { description "Belgium"; }
+      enum "BF" { description "Burkina Faso"; }
+      enum "BG" { description "Bulgaria"; }
+      enum "BH" { description "Bahrain"; }
+      enum "BI" { description "Burundi"; }
+      enum "BJ" { description "Benin"; }
+      enum "BL" { description "Saint Barthélemy"; }
+      enum "BM" { description "Bermuda"; }
+      enum "BN" { description "Brunei Darussalam"; }
+      enum "BO" { description "Bolivia"; }
+      enum "BQ" { description "Bonaire, Sint Eustatius and Saba"; }
+      enum "BR" { description "Brazil"; }
+      enum "BS" { description "Bahamas"; }
+      enum "BT" { description "Bhutan"; }
+      enum "BV" { description "Bouvet Island"; }
+      enum "BW" { description "Botswana"; }
+      enum "BY" { description "Belarus"; }
+      enum "BZ" { description "Belize"; }
+      enum "CA" { description "Canada"; }
+      enum "CC" { description "Cocos (Keeling) Islands"; }
+      enum "CD" { description "Congo, Democratic Republic of the"; }
+      enum "CF" { description "Central African Republic"; }
+      enum "CG" { description "Congo"; }
+      enum "CH" { description "Switzerland"; }
+      enum "CI" { description "Côte d'Ivoire"; }
+      enum "CK" { description "Cook Islands"; }
+      enum "CL" { description "Chile"; }
+      enum "CM" { description "Cameroon"; }
+      enum "CN" { description "China"; }
+      enum "CO" { description "Colombia"; }
+      enum "CR" { description "Costa Rica"; }
+      enum "CU" { description "Cuba"; }
+      enum "CV" { description "Cabo Verde"; }
+      enum "CW" { description "Curaçao"; }
+      enum "CX" { description "Christmas Island"; }
+      enum "CY" { description "Cyprus"; }
+      enum "CZ" { description "Czechia"; }
+      enum "DE" { description "Germany"; }
+      enum "DJ" { description "Djibouti"; }
+      enum "DK" { description "Denmark"; }
+      enum "DM" { description "Dominica"; }
+      enum "DO" { description "Dominican Republic"; }
+      enum "DZ" { description "Algeria"; }
+      enum "EC" { description "Ecuador"; }
+      enum "EE" { description "Estonia"; }
+      enum "EG" { description "Egypt"; }
+      enum "EH" { description "Western Sahara"; }
+      enum "ER" { description "Eritrea"; }
+      enum "ES" { description "Spain"; }
+      enum "ET" { description "Ethiopia"; }
+      enum "FI" { description "Finland"; }
+      enum "FJ" { description "Fiji"; }
+      enum "FK" { description "Falkland Islands (Malvinas)"; }
+      enum "FM" { description "Micronesia"; }
+      enum "FO" { description "Faroe Islands"; }
+      enum "FR" { description "France"; }
+      enum "GA" { description "Gabon"; }
+      enum "GB" { description "United Kingdom"; }
+      enum "GD" { description "Grenada"; }
+      enum "GE" { description "Georgia"; }
+      enum "GF" { description "French Guiana"; }
+      enum "GG" { description "Guernsey"; }
+      enum "GH" { description "Ghana"; }
+      enum "GI" { description "Gibraltar"; }
+      enum "GL" { description "Greenland"; }
+      enum "GM" { description "Gambia"; }
+      enum "GN" { description "Guinea"; }
+      enum "GP" { description "Guadeloupe"; }
+      enum "GQ" { description "Equatorial Guinea"; }
+      enum "GR" { description "Greece"; }
+      enum "GS" { description "South Georgia and the South Sandwich Islands"; }
+      enum "GT" { description "Guatemala"; }
+      enum "GU" { description "Guam"; }
+      enum "GW" { description "Guinea-Bissau"; }
+      enum "GY" { description "Guyana"; }
+      enum "HK" { description "Hong Kong"; }
+      enum "HM" { description "Heard Island and McDonald Islands"; }
+      enum "HN" { description "Honduras"; }
+      enum "HR" { description "Croatia"; }
+      enum "HT" { description "Haiti"; }
+      enum "HU" { description "Hungary"; }
+      enum "ID" { description "Indonesia"; }
+      enum "IE" { description "Ireland"; }
+      enum "IL" { description "Israel"; }
+      enum "IM" { description "Isle of Man"; }
+      enum "IN" { description "India"; }
+      enum "IO" { description "British Indian Ocean Territory"; }
+      enum "IQ" { description "Iraq"; }
+      enum "IR" { description "Iran"; }
+      enum "IS" { description "Iceland"; }
+      enum "IT" { description "Italy"; }
+      enum "JE" { description "Jersey"; }
+      enum "JM" { description "Jamaica"; }
+      enum "JO" { description "Jordan"; }
+      enum "JP" { description "Japan"; }
+      enum "KE" { description "Kenya"; }
+      enum "KG" { description "Kyrgyzstan"; }
+      enum "KH" { description "Cambodia"; }
+      enum "KI" { description "Kiribati"; }
+      enum "KM" { description "Comoros"; }
+      enum "KN" { description "Saint Kitts and Nevis"; }
+      enum "KP" { description "Korea, Democratic People's Republic of"; }
+      enum "KR" { description "Korea, Republic of"; }
+      enum "KW" { description "Kuwait"; }
+      enum "KY" { description "Cayman Islands"; }
+      enum "KZ" { description "Kazakhstan"; }
+      enum "LA" { description "Lao People's Democratic Republic"; }
+      enum "LB" { description "Lebanon"; }
+      enum "LC" { description "Saint Lucia"; }
+      enum "LI" { description "Liechtenstein"; }
+      enum "LK" { description "Sri Lanka"; }
+      enum "LR" { description "Liberia"; }
+      enum "LS" { description "Lesotho"; }
+      enum "LT" { description "Lithuania"; }
+      enum "LU" { description "Luxembourg"; }
+      enum "LV" { description "Latvia"; }
+      enum "LY" { description "Libya"; }
+      enum "MA" { description "Morocco"; }
+      enum "MC" { description "Monaco"; }
+      enum "MD" { description "Moldova"; }
+      enum "ME" { description "Montenegro"; }
+      enum "MF" { description "Saint Martin (French part)"; }
+      enum "MG" { description "Madagascar"; }
+      enum "MH" { description "Marshall Islands"; }
+      enum "MK" { description "North Macedonia"; }
+      enum "ML" { description "Mali"; }
+      enum "MM" { description "Myanmar"; }
+      enum "MN" { description "Mongolia"; }
+      enum "MO" { description "Macao"; }
+      enum "MP" { description "Northern Mariana Islands"; }
+      enum "MQ" { description "Martinique"; }
+      enum "MR" { description "Mauritania"; }
+      enum "MS" { description "Montserrat"; }
+      enum "MT" { description "Malta"; }
+      enum "MU" { description "Mauritius"; }
+      enum "MV" { description "Maldives"; }
+      enum "MW" { description "Malawi"; }
+      enum "MX" { description "Mexico"; }
+      enum "MY" { description "Malaysia"; }
+      enum "MZ" { description "Mozambique"; }
+      enum "NA" { description "Namibia"; }
+      enum "NC" { description "New Caledonia"; }
+      enum "NE" { description "Niger"; }
+      enum "NF" { description "Norfolk Island"; }
+      enum "NG" { description "Nigeria"; }
+      enum "NI" { description "Nicaragua"; }
+      enum "NL" { description "Netherlands"; }
+      enum "NO" { description "Norway"; }
+      enum "NP" { description "Nepal"; }
+      enum "NR" { description "Nauru"; }
+      enum "NU" { description "Niue"; }
+      enum "NZ" { description "New Zealand"; }
+      enum "OM" { description "Oman"; }
+      enum "PA" { description "Panama"; }
+      enum "PE" { description "Peru"; }
+      enum "PF" { description "French Polynesia"; }
+      enum "PG" { description "Papua New Guinea"; }
+      enum "PH" { description "Philippines"; }
+      enum "PK" { description "Pakistan"; }
+      enum "PL" { description "Poland"; }
+      enum "PM" { description "Saint Pierre and Miquelon"; }
+      enum "PN" { description "Pitcairn"; }
+      enum "PR" { description "Puerto Rico"; }
+      enum "PS" { description "Palestine, State of"; }
+      enum "PT" { description "Portugal"; }
+      enum "PW" { description "Palau"; }
+      enum "PY" { description "Paraguay"; }
+      enum "QA" { description "Qatar"; }
+      enum "RE" { description "Réunion"; }
+      enum "RO" { description "Romania"; }
+      enum "RS" { description "Serbia"; }
+      enum "RU" { description "Russian Federation"; }
+      enum "RW" { description "Rwanda"; }
+      enum "SA" { description "Saudi Arabia"; }
+      enum "SB" { description "Solomon Islands"; }
+      enum "SC" { description "Seychelles"; }
+      enum "SD" { description "Sudan"; }
+      enum "SE" { description "Sweden"; }
+      enum "SG" { description "Singapore"; }
+      enum "SH" { description "Saint Helena, Ascension and Tristan da Cunha"; }
+      enum "SI" { description "Slovenia"; }
+      enum "SJ" { description "Svalbard and Jan Mayen"; }
+      enum "SK" { description "Slovakia"; }
+      enum "SL" { description "Sierra Leone"; }
+      enum "SM" { description "San Marino"; }
+      enum "SN" { description "Senegal"; }
+      enum "SO" { description "Somalia"; }
+      enum "SR" { description "Suriname"; }
+      enum "SS" { description "South Sudan"; }
+      enum "ST" { description "Sao Tome and Principe"; }
+      enum "SV" { description "El Salvador"; }
+      enum "SX" { description "Sint Maarten (Dutch part)"; }
+      enum "SY" { description "Syrian Arab Republic"; }
+      enum "SZ" { description "Eswatini"; }
+      enum "TC" { description "Turks and Caicos Islands"; }
+      enum "TD" { description "Chad"; }
+      enum "TF" { description "French Southern Territories"; }
+      enum "TG" { description "Togo"; }
+      enum "TH" { description "Thailand"; }
+      enum "TJ" { description "Tajikistan"; }
+      enum "TK" { description "Tokelau"; }
+      enum "TL" { description "Timor-Leste"; }
+      enum "TM" { description "Turkmenistan"; }
+      enum "TN" { description "Tunisia"; }
+      enum "TO" { description "Tonga"; }
+      enum "TR" { description "Turkey"; }
+      enum "TT" { description "Trinidad and Tobago"; }
+      enum "TV" { description "Tuvalu"; }
+      enum "TW" { description "Taiwan"; }
+      enum "TZ" { description "Tanzania"; }
+      enum "UA" { description "Ukraine"; }
+      enum "UG" { description "Uganda"; }
+      enum "UM" { description "United States Minor Outlying Islands"; }
+      enum "US" { description "United States of America"; }
+      enum "UY" { description "Uruguay"; }
+      enum "UZ" { description "Uzbekistan"; }
+      enum "VA" { description "Holy See (Vatican City State)"; }
+      enum "VC" { description "Saint Vincent and the Grenadines"; }
+      enum "VE" { description "Venezuela"; }
+      enum "VG" { description "Virgin Islands, British"; }
+      enum "VI" { description "Virgin Islands, U.S."; }
+      enum "VN" { description "Viet Nam"; }
+      enum "VU" { description "Vanuatu"; }
+      enum "WF" { description "Wallis and Futuna"; }
+      enum "WS" { description "Samoa"; }
+      enum "YE" { description "Yemen"; }
+      enum "YT" { description "Mayotte"; }
+      enum "ZA" { description "South Africa"; }
+      enum "ZM" { description "Zambia"; }
+      enum "ZW" { description "Zimbabwe"; }
+    }
+    description
+      "Complete list of ISO 3166-1 alpha-2 country codes for
+       regulatory domain configuration.";
+    reference
+      "ISO 3166-1:2020 Codes for the representation of names of countries
+       and their subdivisions -- Part 1: Country codes";
+  }
+}
