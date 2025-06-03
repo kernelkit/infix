@@ -1,0 +1,185 @@
+submodule infix-if-wifi {
+  yang-version 1.1;
+  belongs-to infix-interfaces {
+    prefix infix-if;
+  }
+  import ietf-interfaces {
+    prefix if;
+  }
+  import ietf-yang-types {
+    prefix yang;
+  }
+  import ietf-netconf-acm {
+    prefix nacm;
+  }
+  import ietf-keystore {
+    prefix ks;
+  }
+  import infix-crypto-types {
+    prefix ixct;
+  }
+  import infix-if-type {
+    prefix infixift;
+  }
+  import infix-wifi-country-codes {
+    prefix iwcc;
+  }
+
+  organization "KernelKit";
+  contact      "kernelkit@googlegroups.com";
+  description
+    "WiFi-specific extensions to the standard IETF interfaces model.
+
+     This submodule defines configuration and operational data relevant to
+     WiFi interfaces, including security settings, network
+     discovery, and regulatory compliance.
+
+     It supports WiFi client mode and enables comprehensive management of
+     wireless connections, including encryption, country codes, and scanning.";
+
+  revision 2025-05-27 {
+    description "Initial revision.";
+    reference "internal";
+  }
+
+  feature wifi {
+    description "WiFi support is an optional build-time feature in Infix.";
+  }
+
+  typedef encryption {
+    type enumeration {
+      enum auto {
+        description
+          "Enables WPA/WPA2/WPA3 encryption with automatic protocol
+           negotiation. The system uses the strongest supported variant supported by Access Point.";
+      }
+      enum disabled {
+        description
+          "Disables encryption for an open network.
+
+           WARNING: Open networks transmit data unencrypted and should only
+           be used in trusted environments.";
+      }
+    }
+    description
+      "Encryption modes available for WiFi connections.
+
+       - auto: Secure connection using WPA3/WPA2/WPA (auto-selected)
+       - disabled: Open network (unencrypted)";
+  }
+
+
+  augment "/if:interfaces/if:interface" {
+    when "derived-from-or-self(if:type, 'infixift:wifi')" {
+      description
+        "Applies only to interfaces of type 'wifi'.";
+    }
+
+    container wifi {
+      if-feature wifi;
+      presence "Configure Wi-Fi settings";
+
+      description
+        "WiFi-specific configuration and operational data.";
+
+      leaf country-code {
+        type iwcc:country-code;
+        mandatory true;
+        description
+          "Two-letter ISO 3166-1 country code for regulatory compliance.
+
+           Examples: 'US', 'DE', 'JP'.
+
+           WARNING: Incorrect values may violate local laws.";
+
+
+      }
+
+      leaf encryption {
+        default auto;
+        type encryption;
+
+        description
+          "WiFi encryption method.
+
+           - auto (default): Enables WPA2/WPA3 auto-negotiation
+           - disabled: Disables encryption (open network)";
+      }
+
+      leaf ssid {
+        type string {
+          length "1..32";
+        }
+        mandatory true;
+
+        description
+          "WiFi network name (SSID).
+
+           Case-sensitive, must match the target network.
+
+           Length: 1–32 characters.";
+      }
+
+      leaf secret {
+        type ks:symmetric-key-ref;
+        mandatory true;
+        must "../encryption != 'disabled'" {
+           error-message
+            "Pre-shared key required unless encryption is disabled.";
+        }
+
+        description
+          "Pre-shared key (PSK) for WPA-secured networks.";
+      }
+
+      leaf rssi {
+        config false;
+        type int16;
+        units "dBm";
+        description
+          "Current received signal strength (RSSI) in dBm.
+
+           Lower (more negative) values indicate stronger signals.";
+      }
+
+      list scan-results {
+        config false;
+        key ssid;
+        description
+          "List of discovered networks.";
+
+        leaf ssid {
+          type string;
+          description
+            "SSID of the discovered network.";
+        }
+
+        leaf bssid {
+          type string;
+          description
+            "BSSID of the discovered network.";
+        }
+
+        leaf rssi {
+          type int16;
+          units "dBm";
+          description
+            "Signal strength of the network.";
+        }
+
+        leaf channel {
+          type int16;
+          description
+            "Channel on which the network was detected.";
+        }
+
+        leaf-list encryption {
+          ordered-by user;
+          type string;
+          description
+            "Human-readable description of the detected security.";
+        }
+      }
+    }
+  }
+}

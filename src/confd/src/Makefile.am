@@ -37,6 +37,7 @@ confd_plugin_la_SOURCES =			\
 	  infix-if-vlan.c			\
 	  infix-if-gre.c			\
 	  infix-if-vxlan.c			\
+	  infix-if-wifi.c			\
 	ietf-keystore.c				\
 	ietf-system.c				\
 	ietf-syslog.c				\
