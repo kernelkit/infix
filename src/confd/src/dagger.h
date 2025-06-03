@@ -52,6 +52,9 @@ enum netdag_exit {
 };
 
 enum netdag_init {
+	/* Timeout for slow interfaces */
+	NETDAG_INIT_TIMEOUT = 00,
+
 	/* Configure link layer */
 	NETDAG_INIT_PHYS = 10,
 
