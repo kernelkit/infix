@@ -2,20 +2,46 @@ name: Test Infix
 
 on:
   workflow_dispatch:
+    inputs:
+      infix_repo:
+        description: 'Repo to checkout (for spin overrides)'
+        required: false
+        default: kernelkit/infix
+        type: string
+
   workflow_call:
     inputs:
       target:
         required: true
         type: string
+      name:
+        required: true
+        type: string
+      flavor:
+        required: false
+        type: string
+        default: ''
+      infix_repo:
+        required: false
+        type: string
+        default: kernelkit/infix
+
+env:
+  FLV: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.flavor || inputs.flavor }}
+  INFIX_REPO: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.infix_repo || inputs.infix_repo }}
 
 jobs:
   test:
-    name: Regression Test of Infix x86_64
+    name: Regression Test ${{ inputs.name }} ${{ inputs.target }}
     runs-on: [ self-hosted, regression ]
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout infix repo
+        uses: actions/checkout@v4
         with:
+          repository: ${{ env.INFIX_REPO }}
+          ref: ${{ github.ref }}
           clean: true
+          fetch-depth: 0
           submodules: recursive
 
       - name: Set Build Variables
@@ -26,16 +52,11 @@ jobs:
                    >>$GITHUB_ENV
           fi
 
-          if [ "$GITHUB_REF_NAME" != "main" ]; then
-              flavor="_minimal"
-          else
-              flavor=""
-          fi
-          echo "flv=$flavor"              >> $GITHUB_OUTPUT
+          echo "flv=$FLV" >> $GITHUB_OUTPUT
 
-      - name: Configure x86_64${{ steps.vars.outputs.flv }}
+      - name: Configure ${{ inputs.target }}${{ steps.vars.outputs.flv }}
         run: |
-          make x86_64${{ steps.vars.outputs.flv }}_defconfig
+          make ${{ inputs.target }}${{ steps.vars.outputs.flv }}_defconfig
 
       - uses: actions/download-artifact@v4
         with:
@@ -44,12 +65,15 @@ jobs:
 
       - name: Restore x86-64${{ steps.vars.outputs.flv }} output/
         run: |
+          target=${{ inputs.target }}
+          name=${{ inputs.name }}
+
           ls -l
           mkdir -p output
-          mv infix-x86_64.tar.gz output/
+          mv ${name}-${target}.tar.gz output/
           cd output/
-          tar xf infix-x86_64.tar.gz
-          ln -s infix-x86_64 images
+          tar xf ${name}-${target}.tar.gz
+          ln -s ${name}-${target} images
 
       - name: Regression Test x86_64${{ steps.vars.outputs.flv }}
         run: |
