@@ -104,6 +104,10 @@ class Decore():
         return Decore.decorate("32", txt, "39")
 
     @staticmethod
+    def bright_green(txt):
+        return Decore.decorate("1;32", txt, "39")
+
+    @staticmethod
     def yellow(txt):
         return Decore.decorate("33", txt, "39")
 
@@ -524,12 +528,15 @@ class Iface:
 
         self.gre = self.data.get('infix-interfaces:gre')
         self.vxlan = self.data.get('infix-interfaces:vxlan')
+        self.wlan = self.data.get('infix-interfaces:wlan')
 
         if self.data.get('infix-interfaces:vlan'):
             self.lower_if = self.data.get('infix-interfaces:vlan', None).get('lower-layer-if',None)
         else:
             self.lower_if = ''
 
+    def is_wlan(self):
+        return self.type == "infix-if-type:wlan"
     def is_vlan(self):
         return self.type == "infix-if-type:vlan"
 
@@ -554,7 +561,7 @@ class Iface:
 
     def is_gretap(self):
         return self.data['type'] == "infix-if-type:gretap"
-    
+
     def oper(self, detail=False):
         """Remap in brief overview to fit column widths."""
         if not detail and self.oper_status == "lower-layer-down":
@@ -623,6 +630,37 @@ class Iface:
 
     def pr_proto_loopack(self, pipe=''):
         row = self._pr_proto_common("loopback", False, pipe);
+        print(row)
+
+    def pr_proto_wlan(self, pipe=''):
+        row = self._pr_proto_common("wlan", True, pipe);
+        print(row)
+        ssid = None
+        rssi = None
+
+        if self.wlan:
+            rssi=self.wlan.get("rssi")
+            ssid=self.wlan.get("ssid")
+        if ssid is None:
+            ssid="------"
+
+        if rssi is None:
+            signal="------"
+        else:
+            if rssi >= -60:
+                signal = Decore.bright_green("excellent")
+            elif rssi >= -70:
+                signal = Decore.green("good")
+            elif rssi >= -80:
+                signal = Decore.yellow("poor")
+            else:
+                signal = Decore.red("bad")
+
+        data_str = f"ssid: {ssid}, signal: {signal}"
+
+        row =  f"{'':<{Pad.iface}}"
+        row += f"{'wlan':<{Pad.proto}}"
+        row += f"{'':<{Pad.state}}{data_str}"
         print(row)
 
     def pr_proto_br(self, br_vlans):
@@ -762,6 +800,12 @@ class Iface:
     def pr_vxlan(self):
         self.pr_name(pipe="")
         self.pr_proto_vxlan()
+        self.pr_proto_ipv4()
+        self.pr_proto_ipv6()
+
+    def pr_wlan(self):
+        self.pr_name(pipe="")
+        self.pr_proto_wlan()
         self.pr_proto_ipv4()
         self.pr_proto_ipv6()
 
@@ -1045,6 +1089,10 @@ def pr_interface_list(json):
             iface.pr_vxlan()
             continue
 
+        if iface.is_wlan():
+            iface.pr_wlan()
+            continue
+
         if iface.is_vlan():
             iface.pr_vlan(ifaces)
             continue
@@ -1320,13 +1368,13 @@ def show_lldp(json):
         f"{'CHASSIS-ID':<{PadLldp.chassis_id}}"
         f"{'PORT-ID':<{PadLldp.port_id}}"
     )
-    
+
     print(Decore.invert(header))
 
     for port_data in lldp_ports:
         port_name = port_data["name"]
         neighbors = port_data.get("remote-systems-data", [])
-        
+
         for neighbor in neighbors:
             entry = LldpNeighbor(port_name, neighbor)
             entry.print()
