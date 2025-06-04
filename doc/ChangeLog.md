@@ -7,7 +7,7 @@ All notable changes to the project are documented in this file.
 -------------------------
 
 ### Changes
-- Upgrade Linux kernel to 6.12.31 (LTS)
+- Upgrade Linux kernel to 6.12.32 (LTS)
 
 ### Fixes
 
