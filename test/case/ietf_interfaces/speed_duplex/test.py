@@ -9,7 +9,28 @@ import infamy
 import infamy.iface as iface
 import subprocess
 
-def set_speed_duplex(iface, exp_speed, exp_duplex):
+def get_target_speed_duplex(target, interface):
+    path = iface.get_xpath(interface)
+    content = target.get_data(path)
+    if not content or "interfaces" not in content:
+        return None, None
+
+    for intf in content["interfaces"].get("interface", []):
+        if intf.get("name") != interface:
+            continue
+
+        eth = intf.get("ethernet") or intf.get("ieee802-ethernet-interface:ethernet")
+        if not eth:
+            return None, None
+
+        speed = eth.get("speed")
+        duplex = eth.get("duplex")
+
+        return speed, duplex
+
+    return None, None
+
+def set_host_speed_duplex(iface, exp_speed, exp_duplex):
     duplex_flag = "full" if exp_duplex == "full" else "half"
     try:
         subprocess.run([
@@ -20,13 +41,36 @@ def set_speed_duplex(iface, exp_speed, exp_duplex):
         ], check=True)
     except subprocess.CalledProcessError as e:
         raise RuntimeError(f"Failed to set speed/duplex via ethtool: {e}")
+    
+def set_target_speed_duplex(interface, speed, duplex):
+    target.put_config_dicts({
+            "ietf-interfaces": {
+                "interfaces": {
+                    "interface": [{
+                        "name": interface,
+                        "ethernet": {
+                            "auto-negotiation": {
+                                "enable": False
+                            },
+                            "speed": speed / 1000,
+                            "duplex": duplex
+                        }
+                    }]
+                }
+            }
+        })
 
 def verify_speed_duplex(target, interface, exp_speed, exp_duplex):
-    act_speed = iface.get_param(target, interface, "speed")
-    act_duplex = iface.get_param(target, interface, "duplex")
+    act_speed, act_duplex = get_target_speed_duplex(target, interface)
 
-    if act_speed != exp_speed:
-        print(f"act_speed: {act_speed}, exp_speed: {exp_speed}")
+    if act_speed is None or act_duplex is None:
+        print(f"Could not fetch speed or duplex from target for interface {interface}")
+        test.fail()
+
+    # RESTCONF returns speed as float in Gbps, e.g. 0.1 = 100Mb/s
+    expected_speed_in_gbps = exp_speed / 1000
+    if float(act_speed) != expected_speed_in_gbps:
+        print(f"act_speed: {act_speed}, exp_speed: {expected_speed_in_gbps}")
         test.fail()
 
     if act_duplex.lower() != exp_duplex.lower():
@@ -38,25 +82,38 @@ with infamy.Test() as test:
         env = infamy.Env()
         target = env.attach("target", "mgmt")
         _, hdata = env.ltop.xlate("host", "data")
+        _, tdata = env.ltop.xlate("target", "data")
 
-    with test.step("Enable target interface"):
+    with test.step("Enable target interface and disable auto-negotiation"):
         target.put_config_dicts({
             "ietf-interfaces": {
                 "interfaces": {
                     "interface": [{
                         "name": target["data"], 
-                        "enabled": True
+                        "enabled": True,
                     }]
                 }
             }
         })
-    
-    with test.step("Verify 100/Full"):
-        set_speed_duplex(hdata, 100, "full")
-        verify_speed_duplex(target, hdata, 100, "full")
+
     with test.step("Verify 10/Full"):
-        set_speed_duplex(hdata, 100, "full")
-        verify_speed_duplex(target, hdata, 10, "full")
-        
-        
+        set_host_speed_duplex(hdata, 10, "full")
+        set_target_speed_duplex(tdata, 10, "full" )
+        verify_speed_duplex(target, tdata, 10, "full")
+
+    with test.step("Verify 10/Half"):
+        set_host_speed_duplex(hdata, 10, "half")
+        set_target_speed_duplex(tdata, 10, "half" )
+        verify_speed_duplex(target, tdata, 10, "half")
+
+    with test.step("Verify 100/Full"):
+        set_host_speed_duplex(hdata, 100, "full")
+        set_target_speed_duplex(tdata, 100, "full" )
+        verify_speed_duplex(target, tdata, 100, "full")
+
+    with test.step("Verify 100/Half"):
+        set_host_speed_duplex(hdata, 100, "half")
+        set_target_speed_duplex(tdata, 100, "half" )
+        verify_speed_duplex(target, tdata, 100, "half")
+
     test.succeed()
