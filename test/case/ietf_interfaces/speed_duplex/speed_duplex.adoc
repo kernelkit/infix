@@ -1,0 +1,25 @@
+=== Interface Speed Duplex
+==== Description
+Verify that auto-negotiation results in expected speed/duplex mode.
+
+==== Topology
+ifdef::topdoc[]
+image::{topdoc}../../test/case/ietf_interfaces/speed_duplex/topology.svg[Interface Speed Duplex topology]
+endif::topdoc[]
+ifndef::topdoc[]
+ifdef::testgroup[]
+image::speed_duplex/topology.svg[Interface Speed Duplex topology]
+endif::testgroup[]
+ifndef::testgroup[]
+image::topology.svg[Interface Speed Duplex topology]
+endif::testgroup[]
+endif::topdoc[]
+==== Test sequence
+. Set up topology and attach to target DUT
+. Enable target interface
+. Verify 100/Full
+. Verify 10/Full
+
+
+<<<
+
