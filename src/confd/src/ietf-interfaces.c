@@ -477,13 +477,12 @@ static bool netdag_must_del(struct lyd_node *dif, struct lyd_node *cif)
 	case IFT_DUMMY:
 	case IFT_LO:
 		break;
+
 	case IFT_WIFI:
 	case IFT_ETH:
 		return lydx_get_child(dif, "custom-phys-address");
 
 	case IFT_GRE:
-		return lydx_get_descendant(lyd_child(dif), "gre", NULL);
-
 	case IFT_GRETAP:
 		return lydx_get_descendant(lyd_child(dif), "gre", NULL);
 	case IFT_LAG:
