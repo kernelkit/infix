@@ -1,13 +1,13 @@
 ################################################################################
 #
-# WLAN support
+# Wi-Fi support
 #
 ################################################################################
 
-WLAN_SUPPORT_PACKAGE_VERSION = 1.0
-WLAN_SUPPORT_PACKAGE_LICENSE = MIT
+FEATURE_WIFI_SUPPORT_PACKAGE_VERSION = 1.0
+FEATURE_WIFI_SUPPORT_PACKAGE_LICENSE = MIT
 
-define WLAN_SUPPORT_LINUX_CONFIG_FIXUPS
+define FEATURE_WIFI_SUPPORT_LINUX_CONFIG_FIXUPS
 	# Enable WLAN support in kernel
 	$(call KCONFIG_ENABLE_OPT,CONFIG_WLAN)
 	$(call KCONFIG_ENABLE_OPT,CONFIG_RFKILL)

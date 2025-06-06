@@ -1,5 +1,5 @@
-config BR2_PACKAGE_WLAN_SUPPORT
-	bool "wlan-support"
+config BR2_PACKAGE_FEATURE_WIFI_SUPPORT
+	bool "feature-wifi-support"
 	select BR2_PACKAGE_WPA_SUPPLICANT
 	select BR2_PACKAGE_WPA_SUPPLICANT_WPA3
 	select BR2_PACKAGE_WPA_SUPPLICANT_DEBUG_SYSLOG
@@ -15,5 +15,5 @@ config BR2_PACKAGE_WLAN_SUPPORT
 	select BR2_PACKAGE_LINUX_FIRMWARE_RTL_88XX
 
 help
-	  wlan-support enables all requried applications needed to run WLAN
-          on Infix, some firmwares and some drivers.
+	  Enables WiFi in Infix. Enables all requried applications and
+	  some firmwares and some drivers.
