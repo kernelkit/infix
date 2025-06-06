@@ -117,8 +117,8 @@ static int ifchange_cand_infer_type(sr_session_ctx_t *session, const char *path)
 		inferred.data.string_val = "infix-if-type:gretap";
 	else if (!fnmatch("vxlan+([0-9])", ifname, FNM_EXTMATCH))
 		inferred.data.string_val = "infix-if-type:vxlan";
-	else if (!fnmatch("wlan+([0-9])", ifname, FNM_EXTMATCH))
-		inferred.data.string_val = "infix-if-type:wlan";
+	else if (!fnmatch("wlan+([0-9])", ifname, FNM_EXTMATCH) || !fnmatch("wifi+([0-9])", ifname, FNM_EXTMATCH))
+		inferred.data.string_val = "infix-if-type:wifi";
 	free(ifname);
 
 	if (inferred.data.string_val)
@@ -423,8 +423,8 @@ static int netdag_gen_afspec_add(sr_session_ctx_t *session, struct dagger *net, 
 		return vlan_gen(NULL, cif, ip);
 	case IFT_VXLAN:
 		return vxlan_gen(NULL, cif, ip);
-	case IFT_WLAN:
-		return wlan_gen(NULL, cif, net);
+	case IFT_WIFI:
+		return wifi_gen(NULL, cif, net);
 
 	case IFT_ETH:
 	case IFT_LO:
@@ -449,8 +449,8 @@ static int netdag_gen_afspec_set(sr_session_ctx_t *session, struct dagger *net, 
 		return lag_gen(dif, cif, ip, 0);
 	case IFT_VLAN:
 		return vlan_gen(dif, cif, ip);
-	case IFT_WLAN:
-		return wlan_gen(dif, cif, net);
+	case IFT_WIFI:
+		return wifi_gen(dif, cif, net);
 
 	case IFT_DUMMY:
 	case IFT_GRE:
@@ -477,7 +477,7 @@ static bool netdag_must_del(struct lyd_node *dif, struct lyd_node *cif)
 	case IFT_DUMMY:
 	case IFT_LO:
 		break;
-	case IFT_WLAN:
+	case IFT_WIFI:
 	case IFT_ETH:
 		return lydx_get_child(dif, "custom-phys-address");
 
@@ -567,9 +567,9 @@ static int netdag_gen_iface_del(struct dagger *net, struct lyd_node *dif,
 	case IFT_LO:
 		eth_gen_del(dif, ip);
 		break;
-	case IFT_WLAN:
+	case IFT_WIFI:
 		eth_gen_del(dif, ip);
-		wlan_gen_del(dif, net);
+		wifi_gen_del(dif, net);
 		break;
 	case IFT_VETH:
 		veth_gen_del(dif, ip);
@@ -743,7 +743,7 @@ static int netdag_init_iface(struct lyd_node *cif)
 
 	case IFT_DUMMY:
 	case IFT_ETH:
-	case IFT_WLAN:
+	case IFT_WIFI:
 	case IFT_GRE:
 	case IFT_GRETAP:
 	case IFT_LO:
@@ -871,7 +871,7 @@ int ietf_interfaces_init(struct confd *confd)
 			0, ifchange, confd, &confd->sub);
 	REGISTER_CHANGE(confd->cand, "ietf-interfaces", "/ietf-interfaces:interfaces//.",
 			SR_SUBSCR_UPDATE, ifchange_cand, confd, &confd->sub);
-	REGISTER_RPC(confd->session, "/ietf-interfaces:interfaces/interface/infix-interfaces:wlan/scan",  wlan_scan, NULL, &confd->sub);
+	REGISTER_RPC(confd->session, "/ietf-interfaces:interfaces/interface/infix-interfaces:wifi/scan",  wifi_scan, NULL, &confd->sub);
 	return SR_ERR_OK;
 fail:
 	ERROR("failed, error %d: %s", rc, sr_strerror(rc));

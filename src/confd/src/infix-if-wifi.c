@@ -4,20 +4,20 @@
 #include "ietf-interfaces.h"
 
 #define WPA_SUPPLICANT_CONF "/etc/finit.d/available/wpa-supplicant-%s.conf"
-int wlan_gen(struct lyd_node *dif, struct lyd_node *cif, struct dagger *net)
+int wifi_gen(struct lyd_node *dif, struct lyd_node *cif, struct dagger *net)
 {
 	const char *ssid, *secret, *ifname, *country, *encryption;
 	FILE *wpa_supplicant = NULL, *finit = NULL;
-	struct lyd_node *wlan;
+	struct lyd_node *wifi;
 	char *encryption_str;
 	FILE *wpa = NULL;
 
 	ifname = lydx_get_cattr(cif, "name");
-	wlan   = lydx_get_child(cif, "wlan");
-	ssid   = lydx_get_cattr(wlan, "ssid");
-	secret = lydx_get_cattr(wlan, "secret");
-	country = lydx_get_cattr(wlan, "country-code");
-	encryption = lydx_get_cattr(wlan, "encryption");
+	wifi   = lydx_get_child(cif, "wifi");
+	ssid   = lydx_get_cattr(wifi, "ssid");
+	secret = lydx_get_cattr(wifi, "secret");
+	country = lydx_get_cattr(wifi, "country-code");
+	encryption = lydx_get_cattr(wifi, "encryption");
 
 	finit = fopenf("w", WPA_SUPPLICANT_CONF, ifname);
 	if (!finit)
@@ -59,7 +59,7 @@ int wlan_gen(struct lyd_node *dif, struct lyd_node *cif, struct dagger *net)
 	return SR_ERR_OK;
 }
 
-int wlan_gen_del(struct lyd_node *dif,  struct dagger *net)
+int wifi_gen_del(struct lyd_node *dif,  struct dagger *net)
 {
 	const char *ifname = lydx_get_cattr(dif, "name");
 	FILE *iw = dagger_fopen_net_exit(net, ifname, NETDAG_EXIT_PRE, "iw.sh");
@@ -73,7 +73,7 @@ int wlan_gen_del(struct lyd_node *dif,  struct dagger *net)
 	return SR_ERR_OK;
 }
 
-int wlan_scan(sr_session_ctx_t *session, uint32_t sub_id, const char *xpath,
+int wifi_scan(sr_session_ctx_t *session, uint32_t sub_id, const char *xpath,
               const sr_val_t *input, const size_t input_cnt,
               sr_event_t event, unsigned request_id,
               sr_val_t **output, size_t *output_cnt,

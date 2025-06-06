@@ -1,4 +1,4 @@
-submodule infix-if-wlan {
+submodule infix-if-wifi {
   yang-version 1.1;
   belongs-to infix-interfaces {
     prefix infix-if;
@@ -22,7 +22,7 @@ submodule infix-if-wlan {
     "WiFi-specific extensions to the standard IETF interfaces model.
 
      This submodule defines configuration and operational data relevant to
-     wireless LAN (WLAN) interfaces, including security settings, network
+     WiFi interfaces, including security settings, network
      discovery, and regulatory compliance.
 
      It supports WiFi client mode and enables comprehensive management of
@@ -33,11 +33,15 @@ submodule infix-if-wlan {
     reference "internal";
   }
 
+  feature enable-wifi {
+    description "WiFi support is an optional build-time feature in Infix.";
+  }
+
   typedef encryption {
     type enumeration {
       enum WPA {
         description
-          "Enables WPA3/WPA2/WPA encryption with automatic protocol
+          "Enables WPA/WPA2/WPA3 encryption with automatic protocol
            negotiation. The system uses the strongest supported variant.";
       }
       enum disabled {
@@ -55,42 +59,17 @@ submodule infix-if-wlan {
        - disabled: Open network (unencrypted)";
   }
 
-  identity wlan-mode {
-    description
-      "Base identity for WiFi operating modes.
-
-       Used to define different interface roles such as client, AP, ad-hoc, etc.";
-  }
-
-  identity client {
-    base wlan-mode;
-    description
-      "WiFi client (station) mode.
-
-       Connects to an existing wireless network as a station.";
-  }
 
   augment "/if:interfaces/if:interface" {
-    when "derived-from-or-self(if:type, 'infixift:wlan')" {
+    when "derived-from-or-self(if:type, 'infixift:wifi')" {
       description
-        "Applies only to interfaces of type 'wlan'.";
+        "Applies only to interfaces of type 'wifi'.";
     }
 
-    container wlan {
+    if-feature enable-wifi;
+    container wifi {
       description
         "WiFi-specific configuration and operational data.";
-
-      leaf mode {
-        type identityref {
-          base wlan-mode;
-        }
-        description
-          "WiFi interface mode, e.g., 'client'.
-
-           Determines how the interface operates within a wireless network.
-
-           May require interface restart after change.";
-      }
 
       leaf country-code {
         mandatory true;
