@@ -864,6 +864,14 @@ err_abandon:
 	return err;
 }
 
+int poke(sr_session_ctx_t *session, uint32_t sub_id, const char *xpath,
+              const sr_val_t *input, const size_t input_cnt,
+              sr_event_t event, unsigned request_id,
+              sr_val_t **output, size_t *output_cnt,
+              void *priv)
+{
+	return 0;
+}
 int ietf_interfaces_init(struct confd *confd)
 {
 	int rc;
@@ -872,8 +880,9 @@ int ietf_interfaces_init(struct confd *confd)
 			0, ifchange, confd, &confd->sub);
 	REGISTER_CHANGE(confd->cand, "ietf-interfaces", "/ietf-interfaces:interfaces//.",
 			SR_SUBSCR_UPDATE, ifchange_cand, confd, &confd->sub);
+//	REGISTER_RPC(confd->session, "/infix-example:example/poke", poke, NULL, &confd->sub);
 #ifdef HAVE_WIFI
-	REGISTER_RPC(confd->session, "/ietf-interfaces:interfaces/interface/infix-interfaces:wifi/scan",  wifi_scan, NULL, &confd->sub);
+	REGISTER_RPC(confd->session, "/ietf-interfaces:interfaces/interface/infix-interfaces:wifi/scan", wifi_scan, NULL, &confd->sub);
 #endif
 	return SR_ERR_OK;
 fail:

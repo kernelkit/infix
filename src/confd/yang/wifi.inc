@@ -1,4 +1,4 @@
 MODULES=(
-	"infix-if-type -e enable-wifi"
 	"infix-interfaces -e enable-wifi"
+	"infix-if-type -e enable-wifi"
 )

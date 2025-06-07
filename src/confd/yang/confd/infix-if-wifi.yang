@@ -66,8 +66,8 @@ submodule infix-if-wifi {
         "Applies only to interfaces of type 'wifi'.";
     }
 
-    if-feature enable-wifi;
     container wifi {
+      if-feature enable-wifi;
       description
         "WiFi-specific configuration and operational data.";
 
