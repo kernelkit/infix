@@ -872,7 +872,9 @@ int ietf_interfaces_init(struct confd *confd)
 			0, ifchange, confd, &confd->sub);
 	REGISTER_CHANGE(confd->cand, "ietf-interfaces", "/ietf-interfaces:interfaces//.",
 			SR_SUBSCR_UPDATE, ifchange_cand, confd, &confd->sub);
+#ifdef HAVE_WIFI
 	REGISTER_RPC(confd->session, "/ietf-interfaces:interfaces/interface/infix-interfaces:wifi/scan",  wifi_scan, NULL, &confd->sub);
+#endif
 	return SR_ERR_OK;
 fail:
 	ERROR("failed, error %d: %s", rc, sr_strerror(rc));

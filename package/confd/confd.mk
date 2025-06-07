@@ -25,6 +25,11 @@ else
 CONFD_CONF_OPTS += --disable-containers
 endif
 
+ifeq ($(BR2_PACKAGE_FEATURE_WIFI_SUPPORT),y)
+CONFD_CONF_OPTS += --enable-wifi
+else
+CONFD_CONF_OPTS += --disable-wifi
+endif
 define CONFD_INSTALL_EXTRA
 	for fn in confd.conf resolvconf.conf; do \
 		cp $(CONFD_PKGDIR)/$$fn  $(FINIT_D)/available/; \
