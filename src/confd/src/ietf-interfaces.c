@@ -50,10 +50,6 @@ static bool iface_is_phys(const char *ifname)
 	if (json_unpack(link, "[{s:s}]", "link_type", &attr))
 		goto out_free;
 
-	/* USB interfaces are "physical" interfaces right now, no support for hotplug*/
-	if (json_unpack(link, "usb", "parentbus", &attr))
-		goto out_free;
-
 	if (strcmp(attr, "ether"))
 		goto out_free;
 
@@ -90,9 +86,7 @@ static int ifchange_cand_infer_type(sr_session_ctx_t *session, const char *path)
 		goto out;
 	}
 
-	if (!fnmatch("wifi+([0-9])", ifname, FNM_EXTMATCH))
-		inferred.data.string_val = "infix-if-type:wifi";
-	else if (iface_is_phys(ifname))
+	if (iface_is_phys(ifname))
 		inferred.data.string_val = "infix-if-type:ethernet";
 	else if (!fnmatch("br+([0-9])", ifname, FNM_EXTMATCH))
 		inferred.data.string_val = "infix-if-type:bridge";
@@ -120,6 +114,8 @@ static int ifchange_cand_infer_type(sr_session_ctx_t *session, const char *path)
 		inferred.data.string_val = "infix-if-type:gretap";
 	else if (!fnmatch("vxlan+([0-9])", ifname, FNM_EXTMATCH))
 		inferred.data.string_val = "infix-if-type:vxlan";
+	else if (!fnmatch("wifi+([0-9])", ifname, FNM_EXTMATCH))
+		inferred.data.string_val = "infix-if-type:wifi";
 
 	free(ifname);
 
@@ -880,7 +876,6 @@ int ietf_interfaces_init(struct confd *confd)
 			0, ifchange, confd, &confd->sub);
 	REGISTER_CHANGE(confd->cand, "ietf-interfaces", "/ietf-interfaces:interfaces//.",
 			SR_SUBSCR_UPDATE, ifchange_cand, confd, &confd->sub);
-//	REGISTER_RPC(confd->session, "/infix-example:example/poke", poke, NULL, &confd->sub);
 #ifdef HAVE_WIFI
 	REGISTER_RPC(confd->session, "/ietf-interfaces:interfaces/interface/infix-interfaces:wifi/scan", wifi_scan, NULL, &confd->sub);
 #endif
