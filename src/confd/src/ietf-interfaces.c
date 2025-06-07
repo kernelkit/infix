@@ -90,7 +90,7 @@ static int ifchange_cand_infer_type(sr_session_ctx_t *session, const char *path)
 		goto out;
 	}
 
-	if (!fnmatch("wlan+([0-9])", ifname, FNM_EXTMATCH) || !fnmatch("wifi+([0-9])", ifname, FNM_EXTMATCH))
+	if (!fnmatch("wifi+([0-9])", ifname, FNM_EXTMATCH))
 		inferred.data.string_val = "infix-if-type:wifi";
 	else if (iface_is_phys(ifname))
 		inferred.data.string_val = "infix-if-type:ethernet";
