@@ -546,10 +546,12 @@ static int netdag_gen_iface_del(struct dagger *net, struct lyd_node *dif,
 
 	DEBUG_IFACE(dif, "");
 
-	ip = dagger_fopen_net_exit(net, ifname, NETDAG_EXIT, "exit.ip");
+	ip = dagger_fopen_net_exit(net, ifname, NETDAG_EXIT, "exit.sh");
 	if (!ip)
 		return -EIO;
 
+	fprintf(ip, "[[ -d /sys/class/net/%s ]] || exit 0\n", ifname);
+	fputs("ip -b << EOF\n", ip);
 	type = iftype_from_iface(dif);
 	if (type == IFT_UNKNOWN)
 		/* The interface is still in running, so we need to
@@ -583,6 +585,7 @@ static int netdag_gen_iface_del(struct dagger *net, struct lyd_node *dif,
 		break;
 	}
 
+	fputs("EOF\n", ip);
 	fclose(ip);
 	return 0;
 }
