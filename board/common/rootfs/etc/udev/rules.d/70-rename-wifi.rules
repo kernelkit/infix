@@ -1,0 +1,3 @@
+#SUBSYSTEM=="net", KERNEL=="wlan*", NAME="wifi%n"
+#SUBSYSTEM=="net", KERNEL=="wlp*", NAME="wifi%n"
+SUBSYSTEM=="net", ACTION=="add", TEST=="/sys/class/net/$name/wireless", NAME="wifi%n"

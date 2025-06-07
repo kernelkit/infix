@@ -1,0 +1,100 @@
+#!/usr/bin/env python3
+
+import argparse
+import json
+import os
+import sys
+
+from pyroute2 import IW, IPRoute
+
+def parse_bss(bss_attrs):
+    bss_dict = dict(bss_attrs.get('attrs', []))
+    ssid = "<hidden>"
+    bssid = bss_dict.get('NL80211_BSS_BSSID')
+    freq = bss_dict.get('NL80211_BSS_FREQUENCY')
+    security = "unknown"
+
+    # Signal: sometimes dict, sometimes int
+    signal_info = bss_dict.get('NL80211_BSS_SIGNAL_MBM')
+    signal = 999
+    if isinstance(signal_info, dict):
+        signal = signal_info.get('SIGNAL_STRENGTH', {}).get('VALUE')
+    elif isinstance(signal_info, int):
+        signal = signal_info / 100.0
+
+    # SSID is inside information elements
+    ies = bss_dict.get('NL80211_BSS_INFORMATION_ELEMENTS', {})
+    if isinstance(ies, dict):
+        raw_ssid = ies.get('SSID')
+        if raw_ssid:
+            ssid = raw_ssid.decode(errors='replace')
+
+        # Check encryption types
+        if 'RSN' in ies:
+            auth_suites = ies['RSN']['auth_suites']
+            if ('PSK' in auth_suites) and ('SAE' in auth_suites):
+                security = 'WPA2/WPA3'
+            elif 'PSK' in  auth_suites:
+                security = 'WPA2'
+            elif 'SAE' in  auth_suites:
+                security = 'WPA3'
+            else:
+                security = 'Unknown'
+        elif 'WPA' in ies:
+            security = 'WPA1'
+        elif 'Privacy' in bss_dict.get('NL80211_BSS_CAPABILITY', {}):
+            security = 'WEP'
+        else:
+            security = 'Open'
+
+    channel = None
+    if freq:
+        if 2412 <= freq <= 2484:
+            channel = (freq - 2407) // 5
+        elif 5170 <= freq <= 5825:
+            channel = (freq - 5000) // 5
+        elif 5955 <= freq <= 7115:  # Wi-Fi 6E
+            channel = (freq - 5950) // 5
+
+    return  ssid, {
+        'bssid': bssid,
+        'signal': signal,
+        'frequency': freq,
+        'channel': channel,
+        'security': security
+    }
+
+def main():
+    best_ssids = {}
+    iw = IW()
+
+    parser = argparse.ArgumentParser(description="Scan Wi-Fi networks using pyroute2")
+    parser.add_argument('--interface', '-i', required=True, help='Wireless interface name')
+    args = parser.parse_args()
+    ifname=args.interface
+    if not os.path.isdir(f"/sys/class/net/{ifname}/wireless"):
+        print(f"{ifname}: unsupported interface, not a Wi-Fi interface")
+        sys.exit(1)
+
+    ip = IPRoute()
+    index = ip.link_lookup(ifname=ifname)[0]
+
+    ip.link('set', index=index, state='up')
+    try:
+        results = iw.scan(index)  # assuming IFINDEX 3 works for you
+        for r in results:
+            for k, v in r.get("attrs", []):
+                if k == "NL80211_ATTR_BSS":
+                    ssid, data = parse_bss(v)
+                    signal = data.get("signal")
+                    if ssid not in best_ssids or signal < best_ssids[ssid]["signal"]:
+                        best_ssids[ssid] = data
+
+        with open(f"/tmp/networks-{ifname}.json", "w") as f:
+            json.dump(best_ssids, f, indent=2)
+
+    finally:
+        iw.close()
+
+if __name__ == "__main__":
+    main()
