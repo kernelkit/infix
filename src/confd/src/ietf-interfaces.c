@@ -29,6 +29,12 @@ bool iface_has_quirk(const char *ifname, const char *quirkname)
 
 	return quirk ? json_is_true(quirk) : false;
 }
+static bool iface_is_wifi(const char *ifname) {
+	if (fexistf("/sys/class/net/%s/wireless", ifname))
+		return true;
+
+	return false;
+}
 static bool iface_is_phys(const char *ifname)
 {
 	bool is_phys = false;
@@ -590,14 +596,18 @@ static int netdag_gen_iface_del(struct dagger *net, struct lyd_node *dif,
 	return 0;
 }
 
- sr_error_t netdag_gen_iface_timeout(struct dagger *net, const char *ifname) {
-	FILE *wait = dagger_fopen_net_init(net, ifname, NETDAG_INIT_TIMEOUT, "wait-interface.sh");
-	if (!wait) {
-		return -EIO;
-	}
+sr_error_t netdag_gen_iface_timeout(struct dagger *net, const char *ifname)
+{
+	if (iface_is_phys(ifname) || iface_is_wifi(ifname)) {
+		FILE *wait = dagger_fopen_net_init(net, ifname, NETDAG_INIT_TIMEOUT, "wait-interface.sh");
+		if (!wait) {
+			return -EIO;
+		}
 
-	fprintf(wait, "/usr/libexec/confd/wait-interface %s %d\n", ifname, IFACE_PROBE_TIMEOUT);
-	fclose(wait);
+		fprintf(wait, "/usr/libexec/confd/wait-interface %s %d\n", ifname, IFACE_PROBE_TIMEOUT);
+		fclose(wait);
+	 }
+
 	return SR_ERR_OK;
 }
 
