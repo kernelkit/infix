@@ -139,7 +139,7 @@ def interface(iplink, ipaddr):
             if v := vlan.vlan(iplink):
                 interface["infix-interfaces:vlan"] = v
         case "infix-if-type:wifi":
-            if w := wifi.wlan(iplink["ifname"]):
+            if w := wifi.wifi(iplink["ifname"]):
                 interface["infix-interfaces:wifi"] = w
 
     match iplink2yang_lower(iplink):
