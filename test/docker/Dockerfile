@@ -26,7 +26,8 @@ RUN apk add --no-cache \
     openssl \
     curl \
     e2tools \
-    make
+    make \
+    ethtool
 
 ARG MTOOL_VERSION="3.0"
 RUN wget https://github.com/troglobit/mtools/releases/download/v3.0/mtools-$MTOOL_VERSION.tar.gz -O /tmp/mtools-$MTOOL_VERSION.tar.gz
