@@ -492,6 +492,7 @@
   <COMMAND name="startup-config" help="Show startup-config">
     <ACTION sym="script" in="tty" out="tty" interrupt="true">jq -C . /cfg/startup-config.cfg |pager</ACTION>
   </COMMAND>
+</COMMAND>
 
   <COMMAND name="factory-reset" help="Restore the system to factory default state">
     <ACTION sym="script" in="tty" out="tty" interrupt="true">
@@ -586,8 +587,6 @@
       rauc install $force $KLISH_PARAM_URI
     </ACTION>
   </COMMAND>
-
-</COMMAND>
 </VIEW>
 
 <VIEW name="config">
