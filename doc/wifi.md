@@ -55,8 +55,8 @@ ssid3                                   40        excellent
 ssid4                                   40        excellent
 ```
 
-In the CLI, signal strength is reported as: excellent, good, fair, or
-poor. For precise values, use NETCONF or RESTCONF, where the RSSI (in
+In the CLI, signal strength is reported as: excellent, good, poor or
+bad. For precise values, use NETCONF or RESTCONF, where the RSSI (in
 dBm) is available in the operational datastore.
 
 Configure your Wi-Fi secret in the keystore, it should be between 8
