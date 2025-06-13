@@ -60,11 +60,11 @@ int wifi_gen(struct lyd_node *dif, struct lyd_node *cif, struct dagger *net, sr_
 		goto out;
 	}
 
-	if (!strcmp(encryption, "disabled"))
+	if (!strcmp(encryption, "disabled")) {
 		asprintf(&encryption_str, "key_mgmt=NONE");
-	else
-		asprintf(&encryption_str, "psk=\"%s\"", secret);
-
+	} else {
+		asprintf(&encryption_str, "key_mgmt=SAE WPA-PSK\npsk=\"%s\"", secret);
+	}
 	fprintf(wpa_supplicant,
 		"country=%s\n"
 		"ctrl_interface=/run/wpa_supplicant\n"
@@ -74,7 +74,7 @@ int wifi_gen(struct lyd_node *dif, struct lyd_node *cif, struct dagger *net, sr_
 		"network={\n"
 		"ssid=\"%s\"\n"
 		"%s\n"
-		"}", country, ssid, encryption_str);
+		"}\n", country, ssid, encryption_str);
 	free(encryption_str);
 	fclose(wpa_supplicant);
 out:

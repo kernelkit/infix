@@ -48,10 +48,10 @@ submodule infix-if-wifi {
 
   typedef encryption {
     type enumeration {
-      enum WPA {
+      enum auto {
         description
           "Enables WPA/WPA2/WPA3 encryption with automatic protocol
-           negotiation. The system uses the strongest supported variant.";
+           negotiation. The system uses the strongest supported variant supported by Access Point.";
       }
       enum disabled {
         description
@@ -64,7 +64,7 @@ submodule infix-if-wifi {
     description
       "Encryption modes available for WiFi connections.
 
-       - WPA: Secure connection using WPA3/WPA2/WPA (auto-selected)
+       - auto: Secure connection using WPA3/WPA2/WPA (auto-selected)
        - disabled: Open network (unencrypted)";
   }
 
@@ -92,12 +92,12 @@ submodule infix-if-wifi {
       }
 
       leaf encryption {
-        default WPA;
+        default auto;
         type encryption;
         description
           "WiFi encryption method.
 
-           - WPA (default): Enables WPA3/WPA2/WPA auto-negotiation
+           - auto (default): Enables WPA3/WPA2/WPA auto-negotiation
            - disabled: Disables encryption (open network)";
       }
 
