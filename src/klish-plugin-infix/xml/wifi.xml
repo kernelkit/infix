@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<KLISH
+  xmlns="https://klish.libcode.org/klish3"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="https://src.libcode.org/pkun/klish/src/master/klish.xsd">
+
+  <PTYPE name="WIFI-IFACES">
+    <COMPL>
+      <ACTION sym="script">doas ls -d /sys/class/net/*/wireless 2>/dev/null | sed 's|.*/\([^/]*\)/wireless|\1|'</ACTION>>
+    </COMPL>
+    <ACTION sym="STRING"/>
+  </PTYPE>
+
+  <VIEW name="main">
+    <COMMAND name="show" help="Show system status and configuration files" mode="switch">
+      <COMMAND name="wifi" help="Controls Wi-Fi" mode="switch">
+	<COMMAND name="scan" help="Scan for local SSIDs">
+	  <PARAM name="name" ptype="/WIFI-IFACES" help="Wi-Fi interface name" />
+	  <ACTION sym="script" out="tty" interrupt="true">
+	    show wifi "$KLISH_PARAM_name" |pager
+	  </ACTION>
+	</COMMAND>
+      </COMMAND>
+    </COMMAND>
+  </VIEW>
+</KLISH>

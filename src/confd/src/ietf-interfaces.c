@@ -11,6 +11,8 @@
 #include <srx/srx_val.h>
 
 #include "ietf-interfaces.h"
+#define  IFACE_PROBE_TIMEOUT 40
+
 
 bool iface_has_quirk(const char *ifname, const char *quirkname)
 {
@@ -27,6 +29,7 @@ bool iface_has_quirk(const char *ifname, const char *quirkname)
 
 	return quirk ? json_is_true(quirk) : false;
 }
+
 static bool iface_is_phys(const char *ifname)
 {
 	bool is_phys = false;
@@ -84,7 +87,9 @@ static int ifchange_cand_infer_type(sr_session_ctx_t *session, const char *path)
 		goto out;
 	}
 
-	if (iface_is_phys(ifname))
+	if (!fnmatch("wifi+([0-9])", ifname, FNM_EXTMATCH))
+		inferred.data.string_val = "infix-if-type:wifi";
+	else if (iface_is_phys(ifname))
 		inferred.data.string_val = "infix-if-type:ethernet";
 	else if (!fnmatch("br+([0-9])", ifname, FNM_EXTMATCH))
 		inferred.data.string_val = "infix-if-type:bridge";
@@ -112,6 +117,7 @@ static int ifchange_cand_infer_type(sr_session_ctx_t *session, const char *path)
 		inferred.data.string_val = "infix-if-type:gretap";
 	else if (!fnmatch("vxlan+([0-9])", ifname, FNM_EXTMATCH))
 		inferred.data.string_val = "infix-if-type:vxlan";
+
 	free(ifname);
 
 	if (inferred.data.string_val)
@@ -416,6 +422,8 @@ static int netdag_gen_afspec_add(sr_session_ctx_t *session, struct dagger *net, 
 		return vlan_gen(NULL, cif, ip);
 	case IFT_VXLAN:
 		return vxlan_gen(NULL, cif, ip);
+	case IFT_WIFI:
+		return wifi_gen(NULL, cif, net, session);
 
 	case IFT_ETH:
 	case IFT_LO:
@@ -440,6 +448,8 @@ static int netdag_gen_afspec_set(sr_session_ctx_t *session, struct dagger *net, 
 		return lag_gen(dif, cif, ip, 0);
 	case IFT_VLAN:
 		return vlan_gen(dif, cif, ip);
+	case IFT_WIFI:
+		return wifi_gen(dif, cif, net, session);
 
 	case IFT_DUMMY:
 	case IFT_GRE:
@@ -466,10 +476,11 @@ static bool netdag_must_del(struct lyd_node *dif, struct lyd_node *cif)
 	case IFT_DUMMY:
 	case IFT_LO:
 		break;
+
+	case IFT_WIFI:
 	case IFT_ETH:
-	/* case IFT_LAG: */
-	/* 	... REMEMBER WHEN ADDING BOND SUPPORT ... */
 		return lydx_get_child(dif, "custom-phys-address");
+
 	case IFT_GRE:
 	case IFT_GRETAP:
 		return lydx_get_descendant(lyd_child(dif), "gre", NULL);
@@ -492,39 +503,39 @@ static bool netdag_must_del(struct lyd_node *dif, struct lyd_node *cif)
 	return false;
 }
 
-static int eth_gen_del(struct lyd_node *dif, FILE *ip)
+static int eth_gen_del(struct lyd_node *dif, FILE *sh)
 {
 	const char *ifname = lydx_get_cattr(dif, "name");
 	char mac[18];
 	FILE *pp;
 
-	fprintf(ip, "link set dev %s down", ifname);
+	fprintf(sh, "ip link set dev %s down", ifname);
 
 	pp = cni_popen("ip -d -j link show dev %s | jq -rM .[].permaddr", ifname);
 	if (pp) {
 		if (fgets(mac, sizeof(mac), pp) && !strstr(mac, "null"))
-			fprintf(ip, " address %s", mac);
+			fprintf(sh, " address %s", mac);
 		pclose(pp);
 	}
 
-	fputc('\n', ip);
+	fputc('\n', sh);
 
-	fprintf(ip, "addr flush dev %s\n", ifname);
+	fprintf(sh, "ip addr flush dev %s\n", ifname);
 	return 0;
 }
 
-static int link_gen_del(struct lyd_node *dif, FILE *ip)
+static int link_gen_del(struct lyd_node *dif, FILE *sh)
 {
-	fprintf(ip, "link del dev %s\n", lydx_get_cattr(dif, "name"));
+	fprintf(sh, "ip link del dev %s\n", lydx_get_cattr(dif, "name"));
 	return 0;
 }
 
-static int veth_gen_del(struct lyd_node *dif, FILE *ip)
+static int veth_gen_del(struct lyd_node *dif, FILE *sh)
 {
 	if (!veth_is_primary(dif))
 		return 0;
 
-	return link_gen_del(dif, ip);
+	return link_gen_del(dif, sh);
 }
 
 static int netdag_gen_iface_del(struct dagger *net, struct lyd_node *dif,
@@ -532,14 +543,15 @@ static int netdag_gen_iface_del(struct dagger *net, struct lyd_node *dif,
 {
 	const char *ifname = lydx_get_cattr(dif, "name");
 	enum iftype type;
-	FILE *ip;
+	FILE *sh;
 
 	DEBUG_IFACE(dif, "");
 
-	ip = dagger_fopen_net_exit(net, ifname, NETDAG_EXIT, "exit.ip");
-	if (!ip)
+	sh = dagger_fopen_net_exit(net, ifname, NETDAG_EXIT, "exit.sh");
+	if (!sh)
 		return -EIO;
 
+	fprintf(sh, "[[ -d /sys/class/net/%s ]] || exit 0\n\n", ifname);
 	type = iftype_from_iface(dif);
 	if (type == IFT_UNKNOWN)
 		/* The interface is still in running, so we need to
@@ -552,10 +564,14 @@ static int netdag_gen_iface_del(struct dagger *net, struct lyd_node *dif,
 	switch (type) {
 	case IFT_ETH:
 	case IFT_LO:
-		eth_gen_del(dif, ip);
+		eth_gen_del(dif, sh);
+		break;
+	case IFT_WIFI:
+		eth_gen_del(dif, sh);
+		wifi_gen_del(dif, net);
 		break;
 	case IFT_VETH:
-		veth_gen_del(dif, ip);
+		veth_gen_del(dif, sh);
 		break;
 	case IFT_BRIDGE:
 	case IFT_DUMMY:
@@ -565,23 +581,43 @@ static int netdag_gen_iface_del(struct dagger *net, struct lyd_node *dif,
 	case IFT_VLAN:
 	case IFT_VXLAN:
 	case IFT_UNKNOWN:
-		link_gen_del(dif, ip);
+		link_gen_del(dif, sh);
 		break;
 	}
 
-	fclose(ip);
+	fclose(sh);
 	return 0;
+}
+
+static sr_error_t netdag_gen_iface_timeout(struct dagger *net, const char *ifname, const char *iftype)
+{
+	if (!strcmp(iftype, "infix-if-type:ethernet") || !strcmp(iftype, "infix-if-type:wifi")) {
+		FILE *wait = dagger_fopen_net_init(net, ifname, NETDAG_INIT_TIMEOUT, "wait-interface.sh");
+		if (!wait) {
+			return -EIO;
+		}
+
+		fprintf(wait, "/usr/libexec/confd/wait-interface %s %d\n", ifname, IFACE_PROBE_TIMEOUT);
+		fclose(wait);
+	 }
+	return SR_ERR_OK;
 }
 
 static sr_error_t netdag_gen_iface(sr_session_ctx_t *session, struct dagger *net,
 				   struct lyd_node *dif, struct lyd_node *cif)
 {
 	const char *ifname = lydx_get_cattr(dif, "name");
+	const char *iftype = lydx_get_cattr(dif, "type")?:lydx_get_cattr(cif, "type");
 	enum lydx_op op = lydx_get_op(dif);
 	const char *attr;
 	int err = 0;
 	bool fixed;
 	FILE *ip;
+
+
+	err = netdag_gen_iface_timeout(net, ifname, iftype);
+	if (err)
+		goto err;
 
 	if ((err = cni_netdag_gen_iface(net, ifname, dif, cif))) {
 		/* error or managed by CNI/podman */
@@ -630,7 +666,7 @@ static sr_error_t netdag_gen_iface(sr_session_ctx_t *session, struct dagger *net
 		goto err;
 	}
 
-	if (!fixed && op == LYDX_OP_CREATE) {
+	if ((!fixed || !strcmp(iftype, "infix-if-type:wifi")) && op == LYDX_OP_CREATE) {
 		err = netdag_gen_afspec_add(session, net, dif, cif, ip);
 		if (err)
 			goto err_close_ip;
@@ -655,7 +691,7 @@ static sr_error_t netdag_gen_iface(sr_session_ctx_t *session, struct dagger *net
 		goto err_close_ip;
 
 	/* Set type specific attributes */
-	if (!fixed && op != LYDX_OP_CREATE) {
+	if ((!fixed || !strcmp(iftype, "infix-if-type:wifi")) && op != LYDX_OP_CREATE) {
 		err = netdag_gen_afspec_set(session, net, dif, cif, ip);
 		if (err)
 			goto err_close_ip;
@@ -710,6 +746,7 @@ static int netdag_init_iface(struct lyd_node *cif)
 
 	case IFT_DUMMY:
 	case IFT_ETH:
+	case IFT_WIFI:
 	case IFT_GRE:
 	case IFT_GRETAP:
 	case IFT_LO:
@@ -837,7 +874,9 @@ int ietf_interfaces_init(struct confd *confd)
 			0, ifchange, confd, &confd->sub);
 	REGISTER_CHANGE(confd->cand, "ietf-interfaces", "/ietf-interfaces:interfaces//.",
 			SR_SUBSCR_UPDATE, ifchange_cand, confd, &confd->sub);
-
+//#ifdef HAVE_WIFI
+//	REGISTER_RPC(confd->session, "/ietf-interfaces:interfaces/interface/infix-interfaces:wifi/scan", wifi_scan, NULL, &confd->sub);
+//#endif
 	return SR_ERR_OK;
 fail:
 	ERROR("failed, error %d: %s", rc, sr_strerror(rc));

@@ -22,6 +22,10 @@ AC_ARG_ENABLE(containers,
         AS_HELP_STRING([--enable-containers], [Enable support for containers]),,[
 	enable_containers=no])
 
+AC_ARG_ENABLE(wifi,
+        AS_HELP_STRING([--enable-wifi], [Enable support for Wi-Fi]),,[
+	enable_wifi=no])
+
 AC_ARG_ENABLE(shell,
         AS_HELP_STRING([--enable-shell], [Enable shell access from CLI]),,[
 	enable_shell=no])
@@ -39,6 +43,7 @@ AC_CHECK_LIB([klish], [kplugin_new],, AC_MSG_ERROR([Klish not found]))
 
 # Control build with automake flags
 AM_CONDITIONAL(CONTAINERS,   [test "x$enable_containers" != "xno"])
+AM_CONDITIONAL(WIFI,         [test "x$enable_wifi" != "xno"])
 AM_CONDITIONAL(SHELL,        [test "x$enable_shell" != "xno"])
 
 AS_IF([test "x$with_shell" != "xno"], [
@@ -70,6 +75,7 @@ cat <<EOF
 
 Optional features:
   Container support ....: $enable_containers
+  Wi-Fi support ........: $enable_wifi
   Allow shell access ...: $enable_shell
   Shell to use .........: $with_shell
 

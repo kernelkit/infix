@@ -24,4 +24,14 @@ module infix-crypto-types {
     base public-key-format;
     base ct:ssh-public-key-format;
   }
+  identity symmetric-key-format {
+    description
+      "Base for symmetric key format";
+  }
+  identity wifi-preshared-key-format {
+    base ct:symmetric-key-format;
+    base symmetric-key-format;
+    description
+      "WiFi secret key";
+  }
 }

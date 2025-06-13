@@ -1,5 +1,4 @@
 # -*- sh -*-
-# REMEMBER TO UPDATE infix-interfaces ALSO IN containers.inc
 
 MODULES=(
 	"ietf-system@2014-08-06.yang -e authentication -e local-users -e ntp -e ntp-udp-port -e timezone-name"
@@ -36,6 +35,8 @@ MODULES=(
 	"infix-ethernet-interface@2024-02-27.yang"
 	"infix-factory-default@2023-06-28.yang"
 	"infix-interfaces@2025-01-09.yang -e vlan-filtering"
+	"ietf-crypto-types -e cleartext-symmetric-keys"
 	"infix-crypto-types@2025-02-04.yang"
+	"ietf-keystore -e symmetric-keys"
 	"infix-keystore@2025-02-04.yang"
 )
