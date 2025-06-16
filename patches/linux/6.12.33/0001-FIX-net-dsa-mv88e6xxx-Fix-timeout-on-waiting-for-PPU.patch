@@ -1,4 +1,4 @@
-From fcbddd99782709b8bb8b028b580eaaf750431502 Mon Sep 17 00:00:00 2001
+From 7547e959dd19b672d5ed66c2b86ee7b287e3c797 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Tue, 12 Mar 2024 10:27:24 +0100
 Subject: [PATCH 01/27] [FIX] net: dsa: mv88e6xxx: Fix timeout on waiting for

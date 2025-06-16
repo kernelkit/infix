@@ -1,4 +1,4 @@
-From d8e5e7cef63d5eba6ef2c9e4f1f2cec359b71019 Mon Sep 17 00:00:00 2001
+From ed82763c15a29717e998e59cf3e5750d637403ff Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Thu, 4 Apr 2024 16:36:30 +0200
 Subject: [PATCH 21/27] net: bridge: drop delay for applying strict multicast
