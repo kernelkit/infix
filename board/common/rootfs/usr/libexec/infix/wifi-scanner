@@ -1,0 +1,16 @@
+#!/bin/sh
+
+if [ $# -ne 1 ]; then
+	echo "usage: $0 <ifname>"
+	exit 1
+fi
+ifname=$1
+
+TIMEOUT=300
+status=$(wpa_cli -i $ifname scan)
+while [ "$status" != "OK" ]; do
+	status=$(wpa_cli -i $ifname scan)
+	TIMEOUT=$((TIMEOUT-1))
+	[ $TIMEOUT -eq 0 ] && logger -t wifi-scanner "Failed to start scanning $ifname" && exit 1
+	sleep 0.5
+done
