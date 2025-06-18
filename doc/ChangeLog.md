@@ -7,7 +7,7 @@ All notable changes to the project are documented in this file.
 -------------------------
 
 ### Changes
-- Upgrade Linux kernel to 6.12.32 (LTS)
+- Upgrade Linux kernel to 6.12.33 (LTS)
 
 ### Fixes
 - Fix #1060: Restore of missing CLI commands, regression in Infix v25.05.0
