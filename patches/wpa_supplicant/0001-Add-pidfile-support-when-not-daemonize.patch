@@ -1,0 +1,232 @@
+From 9df1957e656940a50b844da879911ab5981ad1a9 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Mattias=20Walstr=C3=B6m?= <lazzer@gmail.com>
+Date: Wed, 18 Jun 2025 21:21:18 +0200
+Subject: [PATCH] Add pidfile support when not daemonize
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
+
+Adds pidfile.c from libite
+
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ wpa_supplicant/Makefile         |   1 +
+ wpa_supplicant/pidfile.c        | 153 ++++++++++++++++++++++++++++++++
+ wpa_supplicant/wpa_supplicant.c |   7 +-
+ 3 files changed, 160 insertions(+), 1 deletion(-)
+ create mode 100644 wpa_supplicant/pidfile.c
+
+diff --git a/wpa_supplicant/Makefile b/wpa_supplicant/Makefile
+index fd7d7a0bd..e14c7732a 100644
+--- a/wpa_supplicant/Makefile
++++ b/wpa_supplicant/Makefile
+@@ -104,6 +104,7 @@ endif
+ OBJS = config.o
+ OBJS += notify.o
+ OBJS += bss.o
++OBJS += pidfile.o
+ OBJS += eap_register.o
+ OBJS += ../src/utils/common.o
+ OBJS += ../src/utils/config.o
+diff --git a/wpa_supplicant/pidfile.c b/wpa_supplicant/pidfile.c
+new file mode 100644
+index 000000000..29dfbe242
+--- /dev/null
++++ b/wpa_supplicant/pidfile.c
+@@ -0,0 +1,153 @@
++/*	Updated by troglobit for libite/finit/uftpd projects 2016/07/04 */
++/*	$OpenBSD: pidfile.c,v 1.11 2015/06/03 02:24:36 millert Exp $	*/
++/*	$NetBSD: pidfile.c,v 1.4 2001/02/19 22:43:42 cgd Exp $	*/
++
++/*-
++ * Copyright (c) 1999 The NetBSD Foundation, Inc.
++ * All rights reserved.
++ *
++ * This code is derived from software contributed to The NetBSD Foundation
++ * by Jason R. Thorpe.
++ *
++ * Redistribution and use in source and binary forms, with or without
++ * modification, are permitted provided that the following conditions
++ * are met:
++ * 1. Redistributions of source code must retain the above copyright
++ *    notice, this list of conditions and the following disclaimer.
++ * 2. Redistributions in binary form must reproduce the above copyright
++ *    notice, this list of conditions and the following disclaimer in the
++ *    documentation and/or other materials provided with the distribution.
++ *
++ * THIS SOFTWARE IS PROVIDED BY THE NETBSD FOUNDATION, INC. AND CONTRIBUTORS
++ * ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
++ * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
++ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE FOUNDATION OR CONTRIBUTORS
++ * BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
++ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
++ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
++ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
++ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
++ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
++ * POSSIBILITY OF SUCH DAMAGE.
++ */
++
++/**
++ * @file pidfile.c
++ * @author NetBSD Foundation Inc.
++ * @date 1999
++ * @copyright 2-clause BSD License
++ */
++
++#include <sys/stat.h>		/* utimensat() */
++#include <sys/time.h>		/* utimensat() on *BSD */
++#include <sys/types.h>
++#include <errno.h>
++#include <paths.h>
++#include <stdio.h>
++#include <stdlib.h>
++#include <unistd.h>
++
++#ifndef pidfile
++static char *pidfile_path = NULL;
++static pid_t pidfile_pid  = 0;
++
++static void pidfile_cleanup(void);
++
++const  char *__pidfile_path = _PATH_VARRUN; /* Note: includes trailing slash '/' */
++const  char *__pidfile_name = NULL;
++extern char *__progname;
++
++/**
++ * Create or update mtime of process PID file.
++ * @param basename  Program name, or @c NULL, may start with '/'
++ *
++ * This function is intended to be used by UNIX daemons to save the PID of the main process
++ * responsible for handling signals.  If @p basename is @c NULL the implicit @a __progname
++ * variable from the C-library is used.  The @p basename may also start with '/', in which
++ * case it is interpreted as the absolute path to the PID file.
++ *
++ * @returns POSIX OK(0) on success, otherwise non-zero on error.
++ */
++int pidfile(const char *basename)
++{
++	int save_errno;
++	int atexit_already;
++	pid_t pid;
++	FILE *f;
++
++	if (basename == NULL)
++		basename = __progname;
++
++	pid = getpid();
++	atexit_already = 0;
++
++	if (pidfile_path != NULL) {
++		if (!access(pidfile_path, R_OK) && pid == pidfile_pid) {
++			utimensat(0, pidfile_path, NULL, 0);
++			return (0);
++		}
++		free(pidfile_path);
++		pidfile_path = NULL;
++		__pidfile_name = NULL;
++		atexit_already = 1;
++	}
++
++	if (basename[0] != '/') {
++		if (asprintf(&pidfile_path, "%s.pid", basename) == -1)
++			return (-1);
++	} else {
++		if (asprintf(&pidfile_path, "%s", basename) == -1)
++			return (-1);
++	}
++
++	if ((f = fopen(pidfile_path, "w")) == NULL) {
++		save_errno = errno;
++		free(pidfile_path);
++		pidfile_path = NULL;
++		errno = save_errno;
++		return (-1);
++	}
++
++	if (fprintf(f, "%ld\n", (long)pid) <= 0 || fflush(f) != 0) {
++		save_errno = errno;
++		(void) fclose(f);
++		(void) unlink(pidfile_path);
++		free(pidfile_path);
++		pidfile_path = NULL;
++		errno = save_errno;
++		return (-1);
++	}
++	(void) fclose(f);
++	__pidfile_name = pidfile_path;
++
++	/*
++	 * LITE extension, no need to set up another atexit() handler
++	 * if user only called us to update the mtime of the PID file
++	 */
++	if (atexit_already)
++		return (0);
++
++	pidfile_pid = pid;
++	if (atexit(pidfile_cleanup) < 0) {
++		save_errno = errno;
++		(void) unlink(pidfile_path);
++		free(pidfile_path);
++		pidfile_path = NULL;
++		pidfile_pid = 0;
++		errno = save_errno;
++		return (-1);
++	}
++
++	return (0);
++}
++
++static void
++pidfile_cleanup(void)
++{
++	if (pidfile_path != NULL && pidfile_pid == getpid()) {
++		(void) unlink(pidfile_path);
++		free(pidfile_path);
++		pidfile_path = NULL;
++	}
++}
++#endif
+diff --git a/wpa_supplicant/wpa_supplicant.c b/wpa_supplicant/wpa_supplicant.c
+index dfbd63163..3a762ebc2 100644
+--- a/wpa_supplicant/wpa_supplicant.c
++++ b/wpa_supplicant/wpa_supplicant.c
+@@ -123,6 +123,7 @@ const char *const wpa_supplicant_full_license5 =
+ "\n";
+ #endif /* CONFIG_NO_STDOUT_DEBUG */
+ 
++int pidfile(const char *basename);
+ 
+ static void wpa_bss_tmp_disallow_timeout(void *eloop_ctx, void *timeout_ctx);
+ static void wpas_verify_ssid_beacon(void *eloop_ctx, void *timeout_ctx);
+@@ -1490,6 +1491,9 @@ static void wpa_supplicant_reconfig(int sig, void *signal_ctx)
+ 		/* Ignore errors since we cannot really do much to fix this */
+ 		wpa_printf(MSG_DEBUG, "Could not reopen debug log file");
+ 	}
++
++	if (!global->params.daemonize)
++		pidfile(global->params.pid_file);
+ }
+ 
+ 
+@@ -8555,7 +8559,6 @@ struct wpa_global * wpa_supplicant_init(struct wpa_params *params)
+ 	return global;
+ }
+ 
+-
+ /**
+  * wpa_supplicant_run - Run the %wpa_supplicant main event loop
+  * @global: Pointer to global data from wpa_supplicant_init()
+@@ -8589,6 +8592,8 @@ int wpa_supplicant_run(struct wpa_global *global)
+ 	eloop_register_signal_terminate(wpa_supplicant_terminate, global);
+ 	eloop_register_signal_reconfig(wpa_supplicant_reconfig, global);
+ 
++	if (!global->params.daemonize)
++		pidfile(global->params.pid_file);
+ 	eloop_run();
+ 
+ 	return 0;
+-- 
+2.43.0
+
