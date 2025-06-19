@@ -7,7 +7,7 @@ All notable changes to the project are documented in this file.
 -------------------------
 
 ### Changes
-- Upgrade Linux kernel to 6.12.33 (LTS)
+- Upgrade Linux kernel to 6.12.34 (LTS)
 - Add Wi-Fi client support and add support for some USB-Wi-Fi cards
 
 ### Fixes
