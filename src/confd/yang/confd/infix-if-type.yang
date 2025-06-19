@@ -39,6 +39,14 @@ module infix-if-type {
   }
 
   /*
+   * Features
+   */
+
+  feature wifi {
+    description "WiFi support is an optional build-time feature in Infix.";
+  }
+
+  /*
    * Identities
    */
 
@@ -97,5 +105,11 @@ module infix-if-type {
     base infix-interface-type;
     base ianaift:l2vlan;
     description "Layer 2 Virtual LAN using 802.1Q.";
+  }
+  identity wifi {
+    if-feature wifi;
+    base infix-interface-type;
+    base ianaift:ieee80211;
+    description "WiFi interface";
   }
 }

@@ -1,0 +1,18 @@
+config BR2_PACKAGE_FEATURE_WIFI
+	bool "Feature Wi-Fi"
+	select BR2_PACKAGE_WPA_SUPPLICANT
+	select BR2_PACKAGE_WPA_SUPPLICANT_WPA3
+	select BR2_PACKAGE_WPA_SUPPLICANT_DEBUG_SYSLOG
+	select BR2_PACKAGE_WPA_SUPPLICANT_AUTOSCAN
+	select BR2_PACKAGE_WPA_SUPPLICANT_CLI
+	help
+	  Enables WiFi in Infix. Enables all requried applications.
+
+config BR2_PACKAGE_FEATURE_WIFI_DONGLE_REALTEK
+       bool "Realtek USB WiFi Dongles"
+       depends on BR2_PACKAGE_FEATURE_WIFI
+       select BR2_PACKAGE_LINUX_FIRMWARE
+       select BR2_PACKAGE_LINUX_FIRMWARE_RTL_RTW88
+       select BR2_PACKAGE_LINUX_FIRMWARE_RTL_RTW89
+       help
+         Enables Support for RTW88 and RTW89 USB dongles.

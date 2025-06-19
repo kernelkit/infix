@@ -1,3 +1,4 @@
+from ..host import HOST
 from . import common
 
 from . import bridge
@@ -7,6 +8,7 @@ from . import lag
 from . import tun
 from . import veth
 from . import vlan
+from . import wifi
 
 
 def statistics(iplink):
@@ -24,13 +26,16 @@ def statistics(iplink):
 
 
 def iplink2yang_type(iplink):
+    ifname=iplink["ifname"]
     match iplink["link_type"]:
         case "loopback":
             return "infix-if-type:loopback"
         case "gre"|"gre6":
             return "infix-if-type:gre"
         case "ether":
-            pass
+            data = HOST.run(tuple(f"ls /sys/class/net/{ifname}/wireless/".split()), default="no")
+            if data != "no":
+                return "infix-if-type:wifi"
         case _:
             return "infix-if-type:other"
 
@@ -133,6 +138,9 @@ def interface(iplink, ipaddr):
         case "infix-if-type:vlan":
             if v := vlan.vlan(iplink):
                 interface["infix-interfaces:vlan"] = v
+        case "infix-if-type:wifi":
+            if w := wifi.wifi(iplink["ifname"]):
+                interface["infix-interfaces:wifi"] = w
 
     match iplink2yang_lower(iplink):
         case "infix-interfaces:bridge-port":

@@ -78,7 +78,7 @@ config QEMU_MACHINE
 
 config QEMU_MACHINE_RAM
 	string "RAM size (k/M/G)"
-	default "384M"
+	default "448M"
 	help
 	  The default, 384 MiB, works for most configurations.  However,
 	  if you get kernel panic with: "System is deadlocked on memory",

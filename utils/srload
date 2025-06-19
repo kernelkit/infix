@@ -82,7 +82,10 @@ chperm()
 
 enable()
 {
-    $SYSREPOCTL -c "$1" -e "$2" -v2
+    local module=$1
+    local feature=$2
+    echo "*** Enable feature $feature in $module."
+    $SYSREPOCTL -c $module -e $feature -v2
     local rc=$?
     if [ $rc -ne 0 ]; then
         exit $rc
@@ -93,7 +96,7 @@ enable()
 SCTL_MODULES=$($SYSREPOCTL -l |tail -n +5 |head -n -3)
 
 for module in "${MODULES[@]}"; do
-    name=$(echo "$module" | awk -F'[@.]' '{print $1}')
+    name=$(echo "$module" | awk '{match($1, /[^@.]+/); print substr($1, RSTART, RLENGTH)}')
     date=$(echo "$module" | awk -F'[@.]' '{print $2}')
     for dir in $SEARCH_PATH; do
        if [ -n "${date}" ]; then
@@ -105,10 +108,15 @@ for module in "${MODULES[@]}"; do
 	  MODDIR="${dir}"
        fi
     done
-    [ -z "${MODDIR}" ] && echo "Could not find ${yang} in ${SEARCH_PATH}" && exit 1
 
+    # If no .yang we just modfify an existing model
+    if [[ "$module" == *.yang* && -z "$MODDIR" ]]; then
+	    echo "Could not find ${yang} in ${SEARCH_PATH}"
+	    exit 1
+    fi
 
     SCTL_MODULE=$(echo "$SCTL_MODULES" | grep "^$name \+|[^|]*| I")
+
     if [ -z "$SCTL_MODULE" ]; then
         # prepare command to install module with all its features
 	echo "*** Installing YANG model $name ..."
@@ -117,7 +125,7 @@ for module in "${MODULES[@]}"; do
     fi
 
     rev=$(echo "$SCTL_MODULE" | awk '{print $3}')
-    if [ "$rev" != "$date" ] || echo "$FORCE_UPDATE" | grep -qw "$name"; then
+    if [ -n "$date" ] && [ "$rev" != "$date" ] || echo "$FORCE_UPDATE" | grep -qw "$name"; then
         # update module without any features
         file=$(echo "$module" | cut -d' ' -f 1)
 	echo "*** Updating YANG model $name ($file) ..."
@@ -133,8 +141,7 @@ for module in "${MODULES[@]}"; do
         chperm "$name"
     fi
 
-    # parse sysrepoctl features and add extra space at the end for easier matching
-    sctl_features="`echo "$SCTL_MODULE" | sed 's/\([^|]*|\)\{6\}\(.*\)/\2/'` "
+    sctl_features="`echo "$SCTL_MODULE" | awk -F '|' '{print $NF}' | xargs`"
     # parse features we want to enable
     features=`echo "$module" | sed 's/[^ ]* \(.*\)/\1/'`
     while [ "${features:0:3}" = "-e " ]; do

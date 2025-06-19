@@ -3,9 +3,14 @@ module infix-meta {
   namespace "urn:infix:meta:ns:yang:1.0";
   prefix infix-meta;
 
+  import ietf-yang-metadata {
+    prefix md;
+  }
+
   organization "KernelKit";
   contact      "kernelkit@googlegroups.com";
   description  "Infix metadata.";
+
 
   revision 2024-10-18 {
     description "Mark entire meta container obsolete.";
@@ -14,6 +19,12 @@ module infix-meta {
   revision 2024-06-19 {
     description "Initial revision.";
     reference "internal";
+  }
+
+  md:annotation dirty {
+    type string;
+    description
+      "data";
   }
 
   container meta {

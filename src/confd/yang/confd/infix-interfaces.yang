@@ -3,9 +3,6 @@ module infix-interfaces {
   namespace "urn:infix:interfaces:ns:yang:1.0";
   prefix infix-if;
 
-  import infix-if-type {
-    prefix infix-ift;
-  }
   import ietf-interfaces {
     prefix if;
   }
@@ -14,6 +11,12 @@ module infix-interfaces {
   }
   import ietf-inet-types {
     prefix inet;
+  }
+  import ietf-keystore {
+    prefix ks;
+  }
+  import infix-if-type {
+    prefix infix-ift;
   }
 
   include infix-if-base;
@@ -24,12 +27,18 @@ module infix-interfaces {
   include infix-if-vlan;
   include infix-if-gre;
   include infix-if-vxlan;
+  include infix-if-wifi;
 
   organization "KernelKit";
   contact      "kernelkit@googlegroups.com";
   description  "Linux bridge and lag extensions for ietf-interfaces.";
 
-  revision 2025-01-09 {
+  revision 2025-06-17 {
+    description "Add support for Wi-Fi client.";
+    reference "internal";
+  }
+
+ revision 2025-01-09 {
     description "Add support for link aggregation, static and LACP.";
     reference "internal";
   }

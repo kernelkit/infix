@@ -82,6 +82,20 @@ class PadNtpSource:
     poll = 14
 
 
+class PadWifiScan:
+    ssid  = 40
+    encryption = 30
+    signal = 9
+
+
+class PadLldp:
+    interface = 16
+    rem_idx = 10
+    time = 12
+    chassis_id = 20
+    port_id = 20
+
+
 class Decore():
     @staticmethod
     def decorate(sgr, txt, restore="0"):
@@ -104,6 +118,10 @@ class Decore():
         return Decore.decorate("32", txt, "39")
 
     @staticmethod
+    def bright_green(txt):
+        return Decore.decorate("1;32", txt, "39")
+
+    @staticmethod
     def yellow(txt):
         return Decore.decorate("33", txt, "39")
 
@@ -116,12 +134,17 @@ class Decore():
         return Decore.decorate("100", txt)
 
 
-class PadLldp:
-    interface = 16
-    rem_idx = 10
-    time = 12
-    chassis_id = 20
-    port_id = 20
+def rssi_to_status(rssi):
+    if rssi <= -75:
+        status = Decore.bright_green("excellent")
+    elif rssi <= -65:
+        status = Decore.green("good")
+    elif rssi <= -50:
+        status = Decore.yellow("poor")
+    else:
+        status = Decore.red("bad")
+
+    return status
 
 
 def datetime_now():
@@ -195,7 +218,6 @@ class Date(datetime):
         date, tz = ydate.split("+")
         tz = tz.replace(":", "")
         return cls.strptime(f"{date}+{tz}", "%Y-%m-%dT%H:%M:%S%z")
-
 
 class Route:
     def __init__(self, data, ip):
@@ -524,11 +546,15 @@ class Iface:
 
         self.gre = self.data.get('infix-interfaces:gre')
         self.vxlan = self.data.get('infix-interfaces:vxlan')
+        self.wifi = self.data.get('infix-interfaces:wifi')
 
         if self.data.get('infix-interfaces:vlan'):
             self.lower_if = self.data.get('infix-interfaces:vlan', None).get('lower-layer-if',None)
         else:
             self.lower_if = ''
+
+    def is_wifi(self):
+        return self.type == "infix-if-type:wifi"
 
     def is_vlan(self):
         return self.type == "infix-if-type:vlan"
@@ -554,7 +580,7 @@ class Iface:
 
     def is_gretap(self):
         return self.data['type'] == "infix-if-type:gretap"
-    
+
     def oper(self, detail=False):
         """Remap in brief overview to fit column widths."""
         if not detail and self.oper_status == "lower-layer-down":
@@ -623,6 +649,47 @@ class Iface:
 
     def pr_proto_loopack(self, pipe=''):
         row = self._pr_proto_common("loopback", False, pipe);
+        print(row)
+
+    def pr_wifi_ssids(self):
+        hdr =  (f"{'SSID':<{PadWifiScan.ssid}}"
+                f"{'ENCRYPTION':<{PadWifiScan.encryption}}"
+                f"{'SIGNAL':<{PadWifiScan.signal}}"
+                )
+
+        print(Decore.invert(hdr))
+        results=self.wifi.get("scan-results", {})
+        for result in results:
+            encstr = ",".join(result["encryption"])
+            status=rssi_to_status(result["rssi"])
+            row = f"{result['ssid']:<{PadWifiScan.ssid}}"
+            row += f"{encstr:<{PadWifiScan.encryption}}"
+            row += f"{status:<{PadWifiScan.signal}}"
+
+            print(row)
+
+
+    def pr_proto_wifi(self, pipe=''):
+        row = self._pr_proto_common("ethernet", True, pipe);
+        print(row)
+        ssid = None
+        rssi = None
+
+        if self.wifi:
+            rssi=self.wifi.get("rssi")
+            ssid=self.wifi.get("ssid")
+        if ssid is None:
+            ssid="------"
+
+        if rssi is None:
+            signal="------"
+        else:
+            signal=rssi_to_status(rssi)
+        data_str = f"ssid: {ssid}, signal: {signal}"
+
+        row =  f"{'':<{Pad.iface}}"
+        row += f"{'wifi':<{Pad.proto}}"
+        row += f"{'':<{Pad.state}}{data_str}"
         print(row)
 
     def pr_proto_br(self, br_vlans):
@@ -765,6 +832,12 @@ class Iface:
         self.pr_proto_ipv4()
         self.pr_proto_ipv6()
 
+    def pr_wifi(self):
+        self.pr_name(pipe="")
+        self.pr_proto_wifi()
+        self.pr_proto_ipv4()
+        self.pr_proto_ipv6()
+
     def pr_vlan(self, _ifaces):
         self.pr_name(pipe="")
         self.pr_proto_eth()
@@ -873,6 +946,14 @@ class Iface:
                 first = False
         else:
                 print(f"{'ipv6 addresses':<{20}}:")
+
+        if self.wifi:
+            ssid=self.wifi.get('ssid', "----")
+            rssi=self.wifi.get('rssi', "----")
+            print(f"{'SSID':<{20}}: {ssid}")
+            print(f"{'Signal':<{20}}: {rssi}")
+            print("")
+            self.pr_wifi_ssids()
 
         if self.gre:
             print(f"{'local address':<{20}}: {self.gre['local']}")
@@ -1043,6 +1124,10 @@ def pr_interface_list(json):
 
         if iface.is_vxlan():
             iface.pr_vxlan()
+            continue
+
+        if iface.is_wifi():
+            iface.pr_wifi()
             continue
 
         if iface.is_vlan():
@@ -1320,13 +1405,13 @@ def show_lldp(json):
         f"{'CHASSIS-ID':<{PadLldp.chassis_id}}"
         f"{'PORT-ID':<{PadLldp.port_id}}"
     )
-    
+
     print(Decore.invert(header))
 
     for port_data in lldp_ports:
         port_name = port_data["name"]
         neighbors = port_data.get("remote-systems-data", [])
-        
+
         for neighbor in neighbors:
             entry = LldpNeighbor(port_name, neighbor)
             entry.print()
@@ -1394,6 +1479,7 @@ def main():
         show_routing_table(json_data, args.ip)
     elif args.command == "show-software":
         show_software(json_data, args.name)
+
     else:
         print(f"Error, unknown command '{args.command}'")
         sys.exit(1)

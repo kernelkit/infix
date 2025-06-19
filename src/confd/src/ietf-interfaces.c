@@ -9,8 +9,11 @@
 #include <srx/common.h>
 #include <srx/lyx.h>
 #include <srx/srx_val.h>
+#include <libyang/libyang.h>
 
 #include "ietf-interfaces.h"
+#define  IFACE_PROBE_TIMEOUT 40
+
 
 bool iface_has_quirk(const char *ifname, const char *quirkname)
 {
@@ -27,6 +30,7 @@ bool iface_has_quirk(const char *ifname, const char *quirkname)
 
 	return quirk ? json_is_true(quirk) : false;
 }
+
 static bool iface_is_phys(const char *ifname)
 {
 	bool is_phys = false;
@@ -84,7 +88,9 @@ static int ifchange_cand_infer_type(sr_session_ctx_t *session, const char *path)
 		goto out;
 	}
 
-	if (iface_is_phys(ifname))
+	if (!fnmatch("wifi+([0-9])", ifname, FNM_EXTMATCH))
+		inferred.data.string_val = "infix-if-type:wifi";
+	else if (iface_is_phys(ifname))
 		inferred.data.string_val = "infix-if-type:ethernet";
 	else if (!fnmatch("br+([0-9])", ifname, FNM_EXTMATCH))
 		inferred.data.string_val = "infix-if-type:bridge";
@@ -112,6 +118,7 @@ static int ifchange_cand_infer_type(sr_session_ctx_t *session, const char *path)
 		inferred.data.string_val = "infix-if-type:gretap";
 	else if (!fnmatch("vxlan+([0-9])", ifname, FNM_EXTMATCH))
 		inferred.data.string_val = "infix-if-type:vxlan";
+
 	free(ifname);
 
 	if (inferred.data.string_val)
@@ -416,9 +423,13 @@ static int netdag_gen_afspec_add(sr_session_ctx_t *session, struct dagger *net, 
 		return vlan_gen(NULL, cif, ip);
 	case IFT_VXLAN:
 		return vxlan_gen(NULL, cif, ip);
-
+	case IFT_WIFI:
+		return wifi_gen(NULL, cif, net);
 	case IFT_ETH:
+		return netdag_gen_ethtool(net, cif, dif);
 	case IFT_LO:
+		return 0;
+
 	case IFT_UNKNOWN:
 		sr_session_set_error_message(net->session, "%s: unsupported interface type \"%s\"",
 					     ifname, lydx_get_cattr(cif, "type"));
@@ -440,16 +451,18 @@ static int netdag_gen_afspec_set(sr_session_ctx_t *session, struct dagger *net, 
 		return lag_gen(dif, cif, ip, 0);
 	case IFT_VLAN:
 		return vlan_gen(dif, cif, ip);
-
+	case IFT_ETH:
+		return netdag_gen_ethtool(net, cif, dif);
+	case IFT_WIFI:
+		return wifi_gen(dif, cif, net);
 	case IFT_DUMMY:
 	case IFT_GRE:
 	case IFT_GRETAP:
 	case IFT_VETH:
 	case IFT_VXLAN:
+	case IFT_LO:
 		return 0;
 
-	case IFT_ETH:
-	case IFT_LO:
 	case IFT_UNKNOWN:
 		return ERR_IFACE(cif, -ENOSYS, "unsupported interface type \"%s\"",
 				 lydx_get_cattr(cif, "type"));
@@ -466,10 +479,11 @@ static bool netdag_must_del(struct lyd_node *dif, struct lyd_node *cif)
 	case IFT_DUMMY:
 	case IFT_LO:
 		break;
+
+	case IFT_WIFI:
 	case IFT_ETH:
-	/* case IFT_LAG: */
-	/* 	... REMEMBER WHEN ADDING BOND SUPPORT ... */
 		return lydx_get_child(dif, "custom-phys-address");
+
 	case IFT_GRE:
 	case IFT_GRETAP:
 		return lydx_get_descendant(lyd_child(dif), "gre", NULL);
@@ -519,12 +533,12 @@ static int link_gen_del(struct lyd_node *dif, FILE *ip)
 	return 0;
 }
 
-static int veth_gen_del(struct lyd_node *dif, FILE *ip)
+static int veth_gen_del(struct lyd_node *dif, FILE *sh)
 {
 	if (!veth_is_primary(dif))
 		return 0;
 
-	return link_gen_del(dif, ip);
+	return link_gen_del(dif, sh);
 }
 
 static int netdag_gen_iface_del(struct dagger *net, struct lyd_node *dif,
@@ -554,6 +568,10 @@ static int netdag_gen_iface_del(struct dagger *net, struct lyd_node *dif,
 	case IFT_LO:
 		eth_gen_del(dif, ip);
 		break;
+	case IFT_WIFI:
+		eth_gen_del(dif, ip);
+		wifi_gen_del(dif, net);
+		break;
 	case IFT_VETH:
 		veth_gen_del(dif, ip);
 		break;
@@ -573,15 +591,34 @@ static int netdag_gen_iface_del(struct dagger *net, struct lyd_node *dif,
 	return 0;
 }
 
+static sr_error_t netdag_gen_iface_timeout(struct dagger *net, const char *ifname, const char *iftype)
+{
+	if (!strcmp(iftype, "infix-if-type:ethernet") || !strcmp(iftype, "infix-if-type:wifi")) {
+		FILE *wait = dagger_fopen_net_init(net, ifname, NETDAG_INIT_TIMEOUT, "wait-interface.sh");
+		if (!wait) {
+			return -EIO;
+		}
+
+		fprintf(wait, "/usr/libexec/confd/wait-interface %s %d\n", ifname, IFACE_PROBE_TIMEOUT);
+		fclose(wait);
+	 }
+	return SR_ERR_OK;
+}
+
 static sr_error_t netdag_gen_iface(sr_session_ctx_t *session, struct dagger *net,
 				   struct lyd_node *dif, struct lyd_node *cif)
 {
 	const char *ifname = lydx_get_cattr(dif, "name");
+	const char *iftype = lydx_get_cattr(dif, "type")?:lydx_get_cattr(cif, "type");
 	enum lydx_op op = lydx_get_op(dif);
 	const char *attr;
 	int err = 0;
-	bool fixed;
 	FILE *ip;
+
+
+	err = netdag_gen_iface_timeout(net, ifname, iftype);
+	if (err)
+		goto err;
 
 	if ((err = cni_netdag_gen_iface(net, ifname, dif, cif))) {
 		/* error or managed by CNI/podman */
@@ -590,9 +627,7 @@ static sr_error_t netdag_gen_iface(sr_session_ctx_t *session, struct dagger *net
 		goto err;
 	}
 
-	fixed = iface_is_phys(ifname) || !strcmp(ifname, "lo");
-
-	DEBUG("%s(%s) %s", ifname, fixed ? "fixed" : "dynamic",
+	DEBUG("%s %s", ifname,
 	      (op == LYDX_OP_NONE) ? "mod" : ((op == LYDX_OP_CREATE) ? "add" : "del"));
 
 	if (op == LYDX_OP_DELETE) {
@@ -630,7 +665,7 @@ static sr_error_t netdag_gen_iface(sr_session_ctx_t *session, struct dagger *net
 		goto err;
 	}
 
-	if (!fixed && op == LYDX_OP_CREATE) {
+	if (op == LYDX_OP_CREATE) {
 		err = netdag_gen_afspec_add(session, net, dif, cif, ip);
 		if (err)
 			goto err_close_ip;
@@ -655,7 +690,7 @@ static sr_error_t netdag_gen_iface(sr_session_ctx_t *session, struct dagger *net
 		goto err_close_ip;
 
 	/* Set type specific attributes */
-	if (!fixed && op != LYDX_OP_CREATE) {
+	if (op != LYDX_OP_CREATE) {
 		err = netdag_gen_afspec_set(session, net, dif, cif, ip);
 		if (err)
 			goto err_close_ip;
@@ -678,8 +713,6 @@ static sr_error_t netdag_gen_iface(sr_session_ctx_t *session, struct dagger *net
 		fprintf(ip, "link set dev %s up state up\n", ifname);
 
 	err = err ? : netdag_gen_sysctl(net, cif, dif);
-
-	err = err ? : netdag_gen_ethtool(net, cif, dif);
 
 err_close_ip:
 	fclose(ip);
@@ -710,6 +743,7 @@ static int netdag_init_iface(struct lyd_node *cif)
 
 	case IFT_DUMMY:
 	case IFT_ETH:
+	case IFT_WIFI:
 	case IFT_GRE:
 	case IFT_GRETAP:
 	case IFT_LO:
@@ -790,7 +824,7 @@ static int ifchange(sr_session_ctx_t *session, uint32_t sub_id, const char *modu
 	if (err)
 		return err;
 
-	err = sr_get_data(session, "/interfaces/interface", 0, 0, 0, &cfg);
+	err = sr_get_data(session, "//.", 0, 0, 0, &cfg);
 	if (err || !cfg)
 		goto err_abandon;
 
@@ -800,7 +834,6 @@ static int ifchange(sr_session_ctx_t *session, uint32_t sub_id, const char *modu
 
 	cifs = lydx_get_descendant(cfg->tree, "interfaces", "interface", NULL);
 	difs = lydx_get_descendant(diff, "interfaces", "interface", NULL);
-
 	err = netdag_init(session, &confd->netdag, cifs, difs);
 	if (err)
 		goto err_free_diff;
@@ -829,15 +862,72 @@ err_abandon:
 	return err;
 }
 
+static int keystorecb(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
+		    const char *xpath, sr_event_t event, unsigned request_id, void *_confd)
+{
+	const struct lyd_node *diff;
+	const char *secret_name;
+	struct confd *confd = _confd;
+	struct lyd_node *interfaces, *interface, *dkeys, *dkey, *wifi;
+	sr_data_t *cfg = NULL;
+        int err = SR_ERR_OK;
+
+	switch (event) {
+	case SR_EV_CHANGE:
+		break;
+	default:
+		return SR_ERR_OK;
+	}
+
+	err = sr_get_data(session, "/interfaces/interface", 0, 0, 0, &cfg);
+	if (err || !cfg)
+		return err;
+
+	diff = sr_get_change_diff(session);
+	if (!diff)
+		goto cleanup;
+
+	interfaces = lydx_get_descendant(cfg->tree, "interfaces", "interface", NULL);
+	dkeys = lydx_get_descendant((struct lyd_node*) diff, "keystore", "symmetric-keys", "symmetric-key", NULL);
+
+	LYX_LIST_FOR_EACH(dkeys, dkey, "symmetric-key") {
+		secret_name = lydx_get_cattr(dkey, "name");
+		if (!secret_name)
+			continue;
+
+		LYX_LIST_FOR_EACH(interfaces, interface, "interface") {
+			const char *name;
+
+			if (iftype_from_iface(interface) != IFT_WIFI)
+				continue;
+
+			wifi = lydx_get_child(interface, "wifi");
+			if (!wifi)
+				continue;
+
+			name = lydx_get_cattr(wifi, "secret");
+			if (!name || strcmp(name, secret_name))
+				continue;
+			wifi_gen(NULL, interface, &confd->netdag);
+		}
+	}
+
+cleanup:
+	if (cfg)
+		sr_release_data(cfg);
+	return err;
+}
+
 int ietf_interfaces_init(struct confd *confd)
 {
 	int rc;
 
 	REGISTER_CHANGE(confd->session, "ietf-interfaces", "/ietf-interfaces:interfaces//.",
-			0, ifchange, confd, &confd->sub);
+			SR_SUBSCR_CHANGE_ALL_MODULES, ifchange, confd, &confd->sub);
+	REGISTER_CHANGE(confd->session, "ietf-keystore", "//*",
+			SR_SUBSCR_CHANGE_ALL_MODULES, keystorecb, confd, &confd->sub);
 	REGISTER_CHANGE(confd->cand, "ietf-interfaces", "/ietf-interfaces:interfaces//.",
 			SR_SUBSCR_UPDATE, ifchange_cand, confd, &confd->sub);
-
 	return SR_ERR_OK;
 fail:
 	ERROR("failed, error %d: %s", rc, sr_strerror(rc));

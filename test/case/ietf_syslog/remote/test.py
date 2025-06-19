@@ -90,7 +90,6 @@ with infamy.Test() as test:
                 "interface": [
                     {
                         "name": server_link,
-                        "type": "infix-if-type:bridge",
                         "enabled": True,
                         "ipv4": {
                             "address": [

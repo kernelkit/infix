@@ -12,6 +12,7 @@
 #include <sys/time.h>
 #include <sys/param.h>
 #include <unistd.h>
+#include <stdbool.h>
 
 #include <libite/lite.h>
 #include <libite/queue.h>
@@ -137,9 +138,20 @@ static inline int register_change(sr_session_ctx_t *session, const char *module,
 	int flags, sr_module_change_cb cb, void *arg, sr_subscription_ctx_t **sub)
 {
 	struct confd *ptr = (struct confd *)arg;
+	bool need_core_hooks;
 	int rc;
 
-	if (!flags) {
+	/*
+	 * For standard subscribtions we hook into the callback chain
+	 * for all modules to figure out, per changeset, which of the
+	 * callbacks is the last one.  This is where we want to call the
+	 * global commit-done hook for candidate -> running changes and
+	 * the startup-save hook for running -> startup copying.
+	 */
+
+	need_core_hooks = !(flags & SR_SUBSCR_UPDATE);
+
+	if (need_core_hooks) {
 		sr_module_change_subscribe(ptr->session, module, xpath, core_pre_hook, NULL,
 				0, SR_SUBSCR_PASSIVE, sub);
 	}
@@ -151,14 +163,7 @@ static inline int register_change(sr_session_ctx_t *session, const char *module,
 		return rc;
 	}
 
-	/*
-	 * For standard subscribtions we hook into the callback chain
-	 * for all modules to figure out, per changeset, which of the
-	 * callbacks is the last one.  This is where we want to call the
-	 * global commit-done hook for candidate -> running changes and
-	 * the startup-save hook for running -> startup copying.
-	 */
-	if (!flags) {
+	if (need_core_hooks) {
 		sr_module_change_subscribe(ptr->session, module, xpath, core_post_hook, NULL,
 				core_hook_prio(), SR_SUBSCR_PASSIVE, sub);
 		sr_module_change_subscribe(ptr->startup, module, xpath, core_startup_save, NULL,

@@ -5,6 +5,10 @@ module infix-crypto-types {
   import ietf-crypto-types {
     prefix ct;
   }
+
+  revision 2025-06-17 {
+    description "Add Wi-Fi secret support.";
+  }
   revision 2025-02-04 {
     description "Initial";
   }
@@ -23,5 +27,15 @@ module infix-crypto-types {
   identity ssh-public-key-format {
     base public-key-format;
     base ct:ssh-public-key-format;
+  }
+  identity symmetric-key-format {
+    description
+      "Base for symmetric key format";
+  }
+  identity wifi-preshared-key-format {
+    base ct:symmetric-key-format;
+    base symmetric-key-format;
+    description
+      "WiFi secret key";
   }
 }

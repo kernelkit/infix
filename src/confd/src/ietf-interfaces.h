@@ -25,6 +25,7 @@
 	_map(IFT_BRIDGE, "infix-if-type:bridge")	\
 	_map(IFT_DUMMY,  "infix-if-type:dummy")		\
 	_map(IFT_ETH,    "infix-if-type:ethernet")	\
+	_map(IFT_WIFI,   "infix-if-type:wifi")	        \
 	_map(IFT_GRE,    "infix-if-type:gre")		\
 	_map(IFT_GRETAP, "infix-if-type:gretap")	\
 	_map(IFT_LAG,    "infix-if-type:lag")	\
@@ -118,6 +119,10 @@ int bridge_add_deps(struct lyd_node *cif);
 int bridge_mcd_gen(struct lyd_node *cifs);
 /* infix-if-bridge-port.c */
 int bridge_port_gen(struct lyd_node *dif, struct lyd_node *cif, FILE *ip);
+
+/* infix-if-wifi.c */
+int wifi_gen(struct lyd_node *dif, struct lyd_node *cif, struct dagger *net);
+int wifi_gen_del(struct lyd_node *dif,  struct dagger *net);
 
 /* infix-if-gre.c */
 int gre_gen(struct lyd_node *dif, struct lyd_node *cif, FILE *ip);

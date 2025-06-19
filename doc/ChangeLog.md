@@ -3,11 +3,21 @@ Change Log
 
 All notable changes to the project are documented in this file.
 
-[v25.05.1][] - 2025-06-12
+[v25.06.0][UNRELEASED] -
 -------------------------
 
 ### Changes
 - Upgrade Linux kernel to 6.12.33 (LTS)
+- Add Wi-Fi client support and add support for some USB-Wi-Fi cards
+
+### Fixes
+
+
+[v25.05.1][] - 2025-06-12
+-------------------------
+
+### Changes
+- Upgrade Linux kernel to 6.12.32 (LTS)
 
 ### Fixes
 - Fix #1060: Restore of missing CLI commands, regression in Infix v25.05.0

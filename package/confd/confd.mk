@@ -25,6 +25,11 @@ else
 CONFD_CONF_OPTS += --disable-containers
 endif
 
+ifeq ($(BR2_PACKAGE_FEATURE_WIFI),y)
+CONFD_CONF_OPTS += --enable-wifi
+else
+CONFD_CONF_OPTS += --disable-wifi
+endif
 define CONFD_INSTALL_EXTRA
 	for fn in confd.conf resolvconf.conf; do \
 		cp $(CONFD_PKGDIR)/$$fn  $(FINIT_D)/available/; \
@@ -69,6 +74,12 @@ define CONFD_INSTALL_YANG_MODULES_CONTAINERS
 	$(BR2_EXTERNAL_INFIX_PATH)/utils/srload $(@D)/yang/containers.inc
 endef
 endif
+ifeq ($(BR2_PACKAGE_FEATURE_WIFI),y)
+define CONFD_INSTALL_YANG_MODULES_WIFI
+	$(COMMON_SYSREPO_ENV) \
+	$(BR2_EXTERNAL_INFIX_PATH)/utils/srload $(@D)/yang/wifi.inc
+endef
+endif
 
 # PER_PACKAGE_DIR
 # Since the last package in the dependency chain that runs sysrepoctl is confd, we need to
@@ -97,6 +108,7 @@ CONFD_PRE_BUILD_HOOKS += CONFD_CLEANUP
 CONFD_POST_INSTALL_TARGET_HOOKS += CONFD_INSTALL_EXTRA
 CONFD_POST_INSTALL_TARGET_HOOKS += CONFD_INSTALL_YANG_MODULES
 CONFD_POST_INSTALL_TARGET_HOOKS += CONFD_INSTALL_YANG_MODULES_CONTAINERS
+CONFD_POST_INSTALL_TARGET_HOOKS += CONFD_INSTALL_YANG_MODULES_WIFI
 CONFD_POST_INSTALL_TARGET_HOOKS += CONFD_INSTALL_IN_ROMFS
 CONFD_TARGET_FINALIZE_HOOKS += CONFD_CLEANUP
 

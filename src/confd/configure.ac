@@ -41,6 +41,10 @@ AC_ARG_ENABLE(containers,
         AS_HELP_STRING([--enable-containers], [Enable support for containers]),,[
 	enable_containers=no])
 
+AC_ARG_ENABLE(wifi,
+        AS_HELP_STRING([--enable-wifi], [Enable support for Wi-Fi]),,[
+	enable_wifi=no])
+
 AC_ARG_WITH(login-shell,
         AS_HELP_STRING([--with-login-shell=shell], [Login shell for new users, default: /bin/false]),
 	[login_shell=$withval], [login_shell=yes])
@@ -51,6 +55,9 @@ AC_ARG_WITH(crypt,
 
 AS_IF([test "x$enable_containers" = "xyes"], [
         AC_DEFINE(CONTAINERS, 1, [Built with container support])])
+
+AS_IF([test "x$enable_wifi" = "xyes"], [
+        AC_DEFINE(HAVE_WIFI, 1, [Built with Wi-Fi support])])
 
 AS_IF([test "x$with_login_shell" != "xno"], [
 	AS_IF([test "x$login_shell" = "xyes"], [login_shell=/bin/false])
@@ -122,6 +129,7 @@ cat <<EOF
 
 Optional features:
   Container support ....: $enable_containers
+  Wi-Fi support ........: $enable_wifi
   Login shell ..........: $login_shell
   Default crypt algo ...: $crypt
 

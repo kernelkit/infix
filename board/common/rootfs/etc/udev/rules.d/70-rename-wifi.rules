@@ -1,0 +1,1 @@
+SUBSYSTEM=="net", ACTION=="add", TEST=="/sys/class/net/$name/wireless", NAME="wifi%n"
