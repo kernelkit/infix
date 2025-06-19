@@ -114,23 +114,6 @@ int netdag_gen_ethtool(struct dagger *net, struct lyd_node *cif, struct lyd_node
 	struct lyd_node *eth = lydx_get_child(dif, "ethernet");
 	int err;
 
-	/*
-	 * Story time: when assigning a physical interface to a container, and then
-	 *             removing it, even though our type may be 'etherlike' we will
-	 *             get the following from sysrepo:
-	 *
-	 *               "ieee802-ethernet-interface:ethernet": {
-	 *                 "@": {
-	 *                   "yang:operation": "delete"
-	 *                 },
-	 *                 "duplex": "full"
-	 *               },
-	 *
-	 *             Hence this "redundant" check.
-	 */
-	if (iftype_from_iface(cif) != IFT_ETH)
-		return 0;
-
 	if (!eth)
 		return 0;
 

@@ -416,9 +416,11 @@ static int netdag_gen_afspec_add(sr_session_ctx_t *session, struct dagger *net, 
 		return vlan_gen(NULL, cif, ip);
 	case IFT_VXLAN:
 		return vxlan_gen(NULL, cif, ip);
-
 	case IFT_ETH:
+		return netdag_gen_ethtool(net, cif, dif);
 	case IFT_LO:
+		return 0;
+
 	case IFT_UNKNOWN:
 		sr_session_set_error_message(net->session, "%s: unsupported interface type \"%s\"",
 					     ifname, lydx_get_cattr(cif, "type"));
@@ -440,16 +442,17 @@ static int netdag_gen_afspec_set(sr_session_ctx_t *session, struct dagger *net, 
 		return lag_gen(dif, cif, ip, 0);
 	case IFT_VLAN:
 		return vlan_gen(dif, cif, ip);
+	case IFT_ETH:
+		return netdag_gen_ethtool(net, cif, dif);
 
 	case IFT_DUMMY:
 	case IFT_GRE:
 	case IFT_GRETAP:
 	case IFT_VETH:
 	case IFT_VXLAN:
+	case IFT_LO:
 		return 0;
 
-	case IFT_ETH:
-	case IFT_LO:
 	case IFT_UNKNOWN:
 		return ERR_IFACE(cif, -ENOSYS, "unsupported interface type \"%s\"",
 				 lydx_get_cattr(cif, "type"));
@@ -580,7 +583,6 @@ static sr_error_t netdag_gen_iface(sr_session_ctx_t *session, struct dagger *net
 	enum lydx_op op = lydx_get_op(dif);
 	const char *attr;
 	int err = 0;
-	bool fixed;
 	FILE *ip;
 
 	if ((err = cni_netdag_gen_iface(net, ifname, dif, cif))) {
@@ -590,9 +592,7 @@ static sr_error_t netdag_gen_iface(sr_session_ctx_t *session, struct dagger *net
 		goto err;
 	}
 
-	fixed = iface_is_phys(ifname) || !strcmp(ifname, "lo");
-
-	DEBUG("%s(%s) %s", ifname, fixed ? "fixed" : "dynamic",
+	DEBUG("%s %s", ifname,
 	      (op == LYDX_OP_NONE) ? "mod" : ((op == LYDX_OP_CREATE) ? "add" : "del"));
 
 	if (op == LYDX_OP_DELETE) {
@@ -630,7 +630,7 @@ static sr_error_t netdag_gen_iface(sr_session_ctx_t *session, struct dagger *net
 		goto err;
 	}
 
-	if (!fixed && op == LYDX_OP_CREATE) {
+	if (op == LYDX_OP_CREATE) {
 		err = netdag_gen_afspec_add(session, net, dif, cif, ip);
 		if (err)
 			goto err_close_ip;
@@ -655,7 +655,7 @@ static sr_error_t netdag_gen_iface(sr_session_ctx_t *session, struct dagger *net
 		goto err_close_ip;
 
 	/* Set type specific attributes */
-	if (!fixed && op != LYDX_OP_CREATE) {
+	if (op != LYDX_OP_CREATE) {
 		err = netdag_gen_afspec_set(session, net, dif, cif, ip);
 		if (err)
 			goto err_close_ip;
@@ -678,8 +678,6 @@ static sr_error_t netdag_gen_iface(sr_session_ctx_t *session, struct dagger *net
 		fprintf(ip, "link set dev %s up state up\n", ifname);
 
 	err = err ? : netdag_gen_sysctl(net, cif, dif);
-
-	err = err ? : netdag_gen_ethtool(net, cif, dif);
 
 err_close_ip:
 	fclose(ip);
