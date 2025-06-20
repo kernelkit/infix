@@ -1,7 +1,8 @@
-From fac56a1227db1dd3858cfe93b71f568de165a345 Mon Sep 17 00:00:00 2001
+From c1339df45da3816dbe5bcdbc850a5e313eaa7b3d Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Wed, 27 Mar 2024 10:10:19 +0100
 Subject: [PATCH 18/27] net: phy: Do not resume PHY when attaching
+Organization: Wires
 
 The PHY should not start negotiating with its link-partner until
 explicitly instructed to do so.
@@ -19,7 +20,7 @@ administratively down.
  1 file changed, 1 deletion(-)
 
 diff --git a/drivers/net/phy/phy_device.c b/drivers/net/phy/phy_device.c
-index 8af44224480f..a2e386e9fafc 100644
+index 13dea33d86ff..25d0face304a 100644
 --- a/drivers/net/phy/phy_device.c
 +++ b/drivers/net/phy/phy_device.c
 @@ -1661,7 +1661,6 @@ int phy_attach_direct(struct net_device *dev, struct phy_device *phydev,
