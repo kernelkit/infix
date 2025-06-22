@@ -9,7 +9,7 @@
 			ixbootdelay = "0.5";
 			bootdelay = "-2";
 			bootmenu_delay = "10";
-			boot_targets = "mmc1";
+			boot_targets = "mmc0";
 			ethprime = "eth0";
 			bootcmd = "run ixboot";
 

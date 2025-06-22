@@ -1,5 +1,6 @@
 #!/bin/sh
 set -e
+#. "$BR2_CONFIG" 2>/dev/null
 
 BOARD_DIR=$(dirname "$0")
 GENIMAGE_CFG="${BUILD_DIR}/genimage.cfg"
@@ -18,17 +19,22 @@ find "${BINARIES_DIR}" -type f -name '*.dtbo' -exec mv '{}' "${BINARIES_DIR}/rpi
 
 # Create FILES array for the genimage.cfg generation
 FILES=""
-for f in "${BINARIES_DIR}"/*.dtb "${BINARIES_DIR}"/rpi-firmware/*; do
+for f in "${BINARIES_DIR}"/rpi-firmware/*; do
     case "$f" in
         *~|*.bak) continue ;;
     esac
+    echo "${FILES}" | grep -q `basename $f` && continue # If already exist it has been added by us.
     FILES="${FILES}\t\t\t\"${f#"${BINARIES_DIR}/"}\",\n"
 done
 
+echo $FILES
 KERNEL=$(sed -n 's/^kernel=//p' "${BINARIES_DIR}/rpi-firmware/config.txt")
 FILES="${FILES}\t\t\t\"${KERNEL}\""
 
-sed "s|#BOOT_FILES#|${FILES}|" "${BOARD_DIR}/genimage.cfg.in" > "${GENIMAGE_CFG}"
+
+sed "s|#BOOT_FILES#|${FILES}|" "${BOARD_DIR}/genimage.cfg.in" | \
+sed "s|#VERSION#|${RELEASE}|"  | \
+sed "s|#INFIX_ID#|${INFIX_ID}|" > "${GENIMAGE_CFG}"
 
 ROOTPATH_TMP=$(mktemp -d)
 trap 'rm -rf \"$ROOTPATH_TMP\"' EXIT
