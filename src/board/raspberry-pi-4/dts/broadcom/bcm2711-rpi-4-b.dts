@@ -1,0 +1,22 @@
+#include <arm64/broadcom/bcm2711-rpi-4-b.dts>
+
+/ {
+	framebuffer@3e402000 {
+		compatible = "simple-framebuffer";
+		reg = <0x3e402000 0x1000>;
+		width = <800>;
+		height = <480>;
+		stride = <1600>;
+		format = "r5g6b5";
+		status = "okay";
+	};
+	chosen {
+		/* 8250 auxiliary UART instead of pl011 */
+		stdout-path = "serial1:115200n8";
+
+		infix {
+			/* Default admin user password: 'admin' */
+			factory-password-hash = "$5$mI/zpOAqZYKLC2WU$i7iPzZiIjOjrBF3NyftS9CCq8dfYwHwrmUK097Jca9A";
+		};
+	};
+};

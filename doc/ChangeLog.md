@@ -3,6 +3,15 @@ Change Log
 
 All notable changes to the project are documented in this file.
 
+[v25.07.0][UNRELEASED] -
+-------------------------
+
+### Changes
+- Raspberry Pi 4 is now a part of the aarch64 image, as well as a SDcard
+  image for initial deployments.
+
+
+### Fixes
 [v25.06.0][] - 2025-07-01
 -------------------------
 
@@ -1594,6 +1603,7 @@ Supported YANG models in addition to those used by sysrepo and netopeer:
  - N/A
 
 [buildroot]:  https://buildroot.org/
+[UNRELEASED]: https://github.com/kernelkit/infix/compare/v25.06.1...HEAD
 [v25.06.0]:   https://github.com/kernelkit/infix/compare/v25.05.1...v26.06.0
 [v25.05.1]:   https://github.com/kernelkit/infix/compare/v25.05.0...v25.05.1
 [v25.05.0]:   https://github.com/kernelkit/infix/compare/v25.04.0...v25.05.0

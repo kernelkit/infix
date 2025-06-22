@@ -114,6 +114,12 @@ grep -qsE '^/bin/true$$' "$TARGET_DIR/etc/shells" \
 grep -qsE '^/bin/false$$' "$TARGET_DIR/etc/shells" \
         || echo "/bin/false" >> "$TARGET_DIR/etc/shells"
 
+boards=$(${BR2_EXTERNAL_INFIX_PATH}/board/common/selected-boards.sh ${BR2_EXTERNAL_INFIX_PATH} ${O})
+
+for board in $boards; do
+	[ ! -f "${BR2_EXTERNAL_INFIX_PATH}/src/board/${board}/post-build.sh" ] && continue
+	${BR2_EXTERNAL_INFIX_PATH}/src/board/${board}/post-build.sh
+done
 # Allow clish (symlink to /usr/bin/klish) to be a login shell
 grep -qsE '^/bin/clish$$' "$TARGET_DIR/etc/shells" \
         || echo "/bin/clish" >> "$TARGET_DIR/etc/shells"
