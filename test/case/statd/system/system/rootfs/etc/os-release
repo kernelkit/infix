@@ -1,6 +1,6 @@
 NAME="Infix"
 ID=infix
-PRETTY_NAME="Infix -- a Network Operating System v25.04.0-rc1-3-g8daf1571-dirty"
+PRETTY_NAME="Infix OS — Immutable.Friendly.Secure v25.04.0-rc1-3-g8daf1571-dirty"
 ID_LIKE="buildroot"
 DEFAULT_HOSTNAME=ix
 VERSION="v25.04.0-rc1-3-g8daf1571-dirty"
@@ -13,4 +13,4 @@ VENDOR_NAME="KernelKit"
 VENDOR_HOME="https://github.com/kernelkit"
 DOCUMENTATION_URL="https://github.com/kernelkit/infix/tree/main/doc"
 SUPPORT_URL="mailto:kernelkit@googlegroups.com"
-INFIX_DESC="Infix is a Network Operating System based on Linux.  It can be set up both as a switch, with offloading using switchdev, and a router with firewalling."
+INFIX_DESC="Infix is an operating system based on Linux and modeled with YANG.  It can be set up both as a switch, with offloading using switchdev, a router with firewalling, or a secure end device.  All while supporting advanced networking scenarios and running Docker containers."

@@ -79,11 +79,11 @@ typically setup to run at 115200 baud, 8N1.
 
 
 ```
-Infix -- a Network Operating System v24.11.1 (ttyS0)
+Infix OS — Immutable.Friendly.Secure v24.11.1 (ttyS0)
 example login: admin
 Password:
 .-------.
-|  . .  | Infix -- a Network Operating System
+|  . .  | Infix OS — Immutable.Friendly.Secure
 |-. v .-| https://kernelkit.org
 '-'---'-'
 

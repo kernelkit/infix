@@ -45,11 +45,11 @@ The default credentials for the demo builds is
     login: admin
     password: admin
 
-    Infix -- a Network Operating System v24.09.0-rc1 (hvc0)
+    Infix OS — Immutable.Friendly.Secure v24.09.0-rc1 (hvc0)
     infix-00-00-00 login: admin
     Password: 
     .-------.
-    |  . .  | Infix -- a Network Operating System
+    |  . .  | Infix OS — Immutable.Friendly.Secure
     |-. v .-| https://kernelkit.org
     '-'---'-'
 
@@ -122,9 +122,9 @@ There's a lot of tutorials and guides online, start here:
 About
 -----
 
-Infix is a free, Linux based, immutable Network Operating System (NOS)
-built on Buildroot, and sysrepo.  A powerful mix that ease porting to
-different platforms, simplify long-term maintenance, and provide easy
-management using NETCONF, RESTCONF, or the built-in command line
-interface (CLI) from a console or SSH login.
+Infix is a free, Linux-based, immutable operating system built around
+Buildroot, and sysrepo.  A powerful mix that ease porting to different
+platforms, simplify long-term maintenance, and provide easy management
+using NETCONF, RESTCONF, or the built-in command line interface (CLI)
+from a console or SSH login.
 

@@ -2,11 +2,11 @@
 
 <img align="right" src="doc/logo.png" alt="Infix - Linux <3 NETCONF" width=480 border=10>
 
-Infix is a free, Linux based, immutable Network Operating System (NOS)
-built on [Buildroot][1], and [sysrepo][2].  A powerful mix that ease
-porting to different platforms, simplify long-term maintenance, and
-provide made-easy management using NETCONF, RESTCONF[^2], or the
-built-in command line interface (CLI) from a console or SSH login.
+Infix is a free, Linux-based, immutable operating system built around
+[Buildroot][1] and [sysrepo][2].  A powerful mix that ease porting to
+different platforms, simplify long-term maintenance, and provide
+made-easy management using NETCONF, RESTCONF[^2], or the built-in
+command line interface (CLI) from a console or SSH login.
 
 > Click the **▶ Example CLI Session** foldout below for an example, or
 > head on over to the [Infix Documentation](doc/README.md) for more
@@ -27,13 +27,15 @@ it maintenance-free.  Configuration and data, e.g, containers, is stored
 on separate partitions to ensure complete separation from system files
 and allow for seamless backup, restore, and provisioning.
 
-In itself, Infix is perfectly suited for dedicated networking tasks, and
-with native support for Docker containers, the operating system provides
-a versatile platform that can easily be adapted to any customer need.
-Be it legacy applications, network protocols, process monitoring, or
-edge data analysis, it can run close to end equipment.  Either directly
-connected on dedicated Ethernet ports or indirectly using virtual
-network cables to exist on the same LAN as other connected equipment.
+In itself, Infix is perfectly suited for dedicated networking tasks,
+such as routing, switching, and monitoring.  This is how it started, as
+a network focused operating system.  Now, with native support for Docker
+containers, it provides a versatile platform that can easily be adapted
+to any customer need.  Be it legacy applications, network protocols,
+process monitoring, or edge data analysis, it can run close to end
+equipment.  Either directly connected on dedicated Ethernet ports or
+indirectly using virtual network cables to exist on the same LAN as
+other connected equipment.
 
 The simple design of Infix provides complete control over both system
 and data, minimal cognitive burden, and makes it incredibly easy to get

@@ -1,7 +1,7 @@
 <img align="right" src="logo.png" alt="Infix - Linux <3 NETCONF" width=480 border=10>
 
-Welcome to Infix, your friendly Network Operating System!  On these
-pages you can find both user and developer documentation.
+Welcome to Infix, your immutable, friendly, and secure operating system!
+On these pages you can find both user and developer documentation.
 
 Most topics on configuring the system include CLI examples, but every
 setting, as well as status read-back from the operational datastore, is
