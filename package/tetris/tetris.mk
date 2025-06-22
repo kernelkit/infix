@@ -4,7 +4,7 @@
 #
 ################################################################################
 
-TETRIS_VERSION = 1.4.0
+TETRIS_VERSION = 1.5.0
 TETRIS_SITE = https://github.com/troglobit/tetris/releases/download/$(TETRIS_VERSION)
 TETRIS_LICENSE = ISC
 TETRIS_LICENSE_FILES = LICENSE
