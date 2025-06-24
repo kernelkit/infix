@@ -294,7 +294,7 @@ rtt min/avg/max/mdev = 0.852/1.105/1.348/0.202 ms
 linux-pc:# ssh admin@infix-c0-ff-ee.local
 (admin@infix-c0-ff-ee.local) Password: 
 .-------.
-|  . .  | Infix -- a Network Operating System
+|  . .  | Infix OS — Immutable.Friendly.Secure
 |-. v .-| https://kernelkit.org
 '-'---'-
 
@@ -334,7 +334,7 @@ rtt min/avg/max/mdev = 0.751/1.482/2.281/0.626 ms
 linux-pc:# ssh admin@infix.local
 (admin@infix.local) Password: 
 .-------.
-|  . .  | Infix -- a Network Operating System
+|  . .  | Infix OS — Immutable.Friendly.Secure
 |-. v .-| https://kernelkit.org
 '-'---'-
 

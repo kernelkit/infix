@@ -427,11 +427,11 @@ admin@example:/> reboot
 [ OK ] Update DNS configuration
 [ OK ] Starting Status daemon
 
-Infix -- a Network Operating System v25.03.1 (ttyS0)
+Infix OS — Immutable.Friendly.Secure v25.03.1 (ttyS0)
 example login: admin
 Password:
 .-------.
-|  . .  | Infix -- a Network Operating System
+|  . .  | Infix OS — Immutable.Friendly.Secure
 |-. v .-| https://kernelkit.org
 '-'---'-'
 
@@ -638,7 +638,7 @@ admin@example:/> reboot
 [ OK ] Verifying self-signed https certificate
 [ OK ] Starting Status daemon
 
-Infix -- a Network Operating System v25.01.0 (ttyS0)
+Infix OS — Immutable.Friendly.Secure v25.01.0 (ttyS0)
 example login:
 ```
 > [!NOTE]
@@ -695,7 +695,7 @@ admin@example:/> reboot
 [ OK ] Verifying self-signed https certificate
 [ OK ] Starting Status daemon
 
-Infix -- a Network Operating System v25.01.0 (ttyS0)
+Infix OS — Immutable.Friendly.Secure v25.01.0 (ttyS0)
 
 ERROR: Corrupt startup-config, system has reverted to default login credentials
 failed-00-00-00 login:
@@ -738,7 +738,7 @@ Reboot now to perform reset, (y/N)? y
 
 Please press Enter to activate this console.
 
-Infix -- a Network Operating System v25.01.0 (ttyS0)
+Infix OS — Immutable.Friendly.Secure v25.01.0 (ttyS0)
 example login:
 ```
 

@@ -1,4 +1,4 @@
 # Locally computed
 sha256  ab15fd526bd8dd18a9e77ebc139656bf4d33e97fc7238cd11bf60e2b9b8666c6  COPYING
-sha256  3e7f777a054fbc29173bcdafe50ca096a8abf9e556bec9f52617c9881c9ce3e3  curios-httpd-oci-arm64-v24.11.0.tar.gz
-sha256  bfa52f712301427a21b89cfee31ca315e1404973affaf34b23978a70a3ec4f63  curios-httpd-oci-amd64-v24.11.0.tar.gz
+sha256  c4995c0a7a96d5273c97c7c026c03ff5e2a42cade6d66808fdeba0fae9a343d8  curios-httpd-oci-arm64-v25.06.0.tar.gz
+sha256  4d48a03b38eabe558052ecbab7560e6d9f995311eb91b90ddaac336b5f001a5e  curios-httpd-oci-amd64-v25.06.0.tar.gz

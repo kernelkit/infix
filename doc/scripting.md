@@ -92,7 +92,7 @@ Are you sure you want to continue connecting (yes/no/[fingerprint])? yes
 Warning: Permanently added 'fe80::ff:fe00:0%eth0' (ED25519) to the list of known hosts.
 admin@fe80::ff:fe00:0%eth0's password: *****
 .-------.
-|  . .  | Infix -- a Network Operating System
+|  . .  | Infix OS — Immutable.Friendly.Secure
 |-. v .-| https://kernelkit.org
 '-'---'-'
 
@@ -1263,7 +1263,7 @@ It should now be possible to access the switch from the PC via SSH (or NETCONF).
 ~ $ ssh admin@fe80::0053:00ff:fe06:1101%eth1
 admin@fe80::0053:00ff:fe06:1101%eth1's password: 
 .-------.
-|  . .  | Infix -- a Network Operating System
+|  . .  | Infix OS — Immutable.Friendly.Secure
 |-. v .-| https://kernelkit.org
 '-'---'-'
 

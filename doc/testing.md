@@ -123,11 +123,11 @@ there is another helper script in Infamy for this:
     Trying 127.0.0.1...
     Connected to 127.0.0.1.
 
-    Infix -- a Network Operating System v23.11.0-226-g0c144da (console)
+    Infix OS — Immutable.Friendly.Secure v23.11.0-226-g0c144da (console)
     infix-00-00-00 login: admin
     Password:
     .-------.
-    |  . .  | Infix -- a Network Operating System
+    |  . .  | Infix OS — Immutable.Friendly.Secure
     |-. v .-| https://kernelkit.org
     '-'---'-'
 

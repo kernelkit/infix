@@ -214,7 +214,7 @@ text file without line breaks (`-w0`):
 ```bash
 $ echo "Li0tLS0tLS0uCnwgIC4gLiAgfCBJbmZpeCAtLSBhIE5ldHdvcmsgT3BlcmF0aW5nIFN5c3RlbQp8LS4gdiAuLXwgaHR0cHM6Ly9rZXJuZWxraXQuZ2l0aHViLmlvCictJy0tLSctJwo=" |base64 -d
 .-------.
-|  . .  | Infix -- a Network Operating System
+|  . .  | Infix OS — Immutable.Friendly.Secure
 |-. v .-| https://kernelkit.github.io
 '-'---'-'
 ```

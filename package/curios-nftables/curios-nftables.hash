@@ -1,4 +1,4 @@
 # Locally computed
 sha256  ab15fd526bd8dd18a9e77ebc139656bf4d33e97fc7238cd11bf60e2b9b8666c6  COPYING
-sha256  95b3625587738cb0a8cc6e9eb41d10a0b2f77ae99dbb1d9b213148d35268eb75  curios-nftables-oci-arm64-v24.11.0.tar.gz
-sha256  4f61ccef90721b8f95a5c7b77b69ccccb5dbd215b9c38986d20e5b245244e902  curios-nftables-oci-amd64-v24.11.0.tar.gz
+sha256  94c7173fe4b8e64dcb1e0f67b974c23753ccce73bc07212a87e35f41a41ae5b8  curios-nftables-oci-arm64-v25.06.0.tar.gz
+sha256  feceb82327cccb4433db63e469f6ed115c10c0266242f0171b85ae1a88472757  curios-nftables-oci-amd64-v25.06.0.tar.gz
