@@ -8,9 +8,13 @@ All notable changes to the project are documented in this file.
 
 ### Changes
 - Upgrade Linux kernel to 6.12.34 (LTS)
+- Upgrade curiOS built-in containers to v25.06.0
 - Add Wi-Fi client support and add support for some USB-Wi-Fi cards
+- New slogan: Infix OS — Immutable.Friendly.Secure
 
 ### Fixes
+- cli: fix by-word movement, detect word barrier using non-alphanum chars
+- cli: fix delete word left/right, make sure to save word in kill buffer
 
 
 [v25.05.1][] - 2025-06-12
