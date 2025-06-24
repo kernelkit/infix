@@ -29,6 +29,7 @@ jobs:
     uses: ./.github/workflows/test.yml
     with:
       target: "x86_64"
+      name: "infix"
 
   test-publish-x86_64:
     needs: test-run-x86_64
