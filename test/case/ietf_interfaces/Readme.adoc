@@ -29,6 +29,8 @@ include::bridge_veth/Readme.adoc[]
 
 include::bridge_vlan/Readme.adoc[]
 
+include::speed_duplex_copper/Readme.adoc[]
+
 include::bridge_vlan_separation/Readme.adoc[]
 
 include::dual_bridge/Readme.adoc[]
