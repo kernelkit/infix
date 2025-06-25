@@ -1,0 +1,1 @@
+speed_duplex_copper.adoc
