@@ -22,6 +22,11 @@ module infix-containers {
     prefix infix-sys;
   }
 
+  revision 2025-06-25 {
+    description "Add file mode option to content mounts, allows creating scripts.";
+    reference "internal";
+  }
+
   revision 2025-05-14 {
     description
       "Validation improvement:
@@ -387,6 +392,16 @@ module infix-containers {
           mandatory true;
           type string {
             pattern '/.*';
+          }
+        }
+
+        leaf mode {
+          description "File permissions for content mounts (not used for source mounts).
+
+                       Octal notation (e.g., '755', '0644', '4755').  When not specified,
+                       the mode will be '0644'.";
+          type string {
+            pattern '0?[0-7]{3,4}';
           }
         }
 
