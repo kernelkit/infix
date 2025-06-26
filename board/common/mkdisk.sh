@@ -213,5 +213,5 @@ genimage \
     --inputpath "$BINARIES_DIR" \
     --config "$root/genimage.cfg"
 
-qemu-img convert -c -O qcow2 "$tmpimage" "$BINARIES_DIR/$diskimg"
+qemu-img convert -c -m $(($(nproc) * 2)) -O qcow2 "$tmpimage" "$BINARIES_DIR/$diskimg"
 rm "$tmpimage"
