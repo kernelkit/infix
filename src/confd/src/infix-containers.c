@@ -113,10 +113,25 @@ static int add(const char *name, struct lyd_node *cif)
 
 		/* Content mount: create a unique file with 'content' and bind mount */
 		if (data) {
+			const char *mode = lydx_get_cattr(node, "mode");
 			const char *contdir = "/run/containers/files";
+			mode_t file_mode = 0644;
 			char cmd[256];
+			int pos, fd;
 			FILE *pp;
-			int pos;
+
+			if (mode) {
+				unsigned long val;
+				char *endptr;
+
+				val = strtoul(mode, &endptr, 8);
+				if (*endptr != '\0' || val > 07777) {
+					ERROR("%s: invalid file mode '%s'", nm, mode);
+					continue;
+				}
+
+				file_mode = (mode_t)val;
+			}
 
 			/*
 			 * prefix file name with container name, shared namespace,
@@ -129,6 +144,27 @@ static int add(const char *name, struct lyd_node *cif)
 					nm[i] = '-';
 			}
 
+			/*
+			 * Always create with secure permissions, then immediately
+			 * set final mode.  This takes care of both new files and
+			 * updates to existing files atomically.
+			 */
+			fd = open(nm, O_CREAT | O_WRONLY | O_TRUNC, 0600);
+			if (fd < 0) {
+				ERRNO("%s: failed creating file %s", name, nm);
+				continue;
+			}
+
+			/* Set final permissions */
+			if (fchmod(fd, file_mode) < 0) {
+				ERRNO("%s: failed setting file mode %s", nm, mode);
+				close(fd);
+				unlink(nm);
+				continue;
+			}
+			close(fd);
+
+			/* Now decode base64 content into the properly secured file */
 			snprintf(cmd, sizeof(cmd), "base64 -d > %s", nm);
 			pp = popen(cmd, "w");
 			if (!pp || fputs(data, pp) < 0) {
@@ -137,8 +173,8 @@ static int add(const char *name, struct lyd_node *cif)
 					pclose(pp);
 				continue;
 			}
-
 			pclose(pp);
+
 			type = "bind"; /* discard any configured setting */
 			src = nm;      /* discard any source, not used for content mounts */
 		}
