@@ -1,4 +1,4 @@
-From 15e00c59d7264bbd33e715fb1bd19015688bd36e Mon Sep 17 00:00:00 2001
+From 761e5315fc2bac3809258e9719efd1475a73ac14 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Mon, 4 Mar 2024 16:47:28 +0100
 Subject: [PATCH 19/27] net: bridge: avoid classifying unknown multicast as
@@ -153,10 +153,10 @@ index ceaa5a89b947..e54d648db7de 100644
  			br_multicast_flood(mdst, skb, brmctx, local_rcv, false);
  	}
 diff --git a/net/bridge/br_multicast.c b/net/bridge/br_multicast.c
-index b2ae0d2434d2..3137c1fcfc6a 100644
+index 733ff6b758f6..b1799e03403f 100644
 --- a/net/bridge/br_multicast.c
 +++ b/net/bridge/br_multicast.c
-@@ -3774,6 +3774,11 @@ static void br_multicast_err_count(const struct net_bridge *br,
+@@ -3835,6 +3835,11 @@ static void br_multicast_err_count(const struct net_bridge *br,
  	u64_stats_update_end(&pstats->syncp);
  }
  
@@ -168,7 +168,7 @@ index b2ae0d2434d2..3137c1fcfc6a 100644
  static void br_multicast_pim(struct net_bridge_mcast *brmctx,
  			     struct net_bridge_mcast_port *pmctx,
  			     const struct sk_buff *skb)
-@@ -3820,7 +3825,8 @@ static int br_multicast_ipv4_rcv(struct net_bridge_mcast *brmctx,
+@@ -3881,7 +3886,8 @@ static int br_multicast_ipv4_rcv(struct net_bridge_mcast *brmctx,
  
  	if (err == -ENOMSG) {
  		if (!ipv4_is_local_multicast(ip_hdr(skb)->daddr)) {
@@ -178,7 +178,7 @@ index b2ae0d2434d2..3137c1fcfc6a 100644
  		} else if (pim_ipv4_all_pim_routers(ip_hdr(skb)->daddr)) {
  			if (ip_hdr(skb)->protocol == IPPROTO_PIM)
  				br_multicast_pim(brmctx, pmctx, skb);
-@@ -3889,7 +3895,8 @@ static int br_multicast_ipv6_rcv(struct net_bridge_mcast *brmctx,
+@@ -3950,7 +3956,8 @@ static int br_multicast_ipv6_rcv(struct net_bridge_mcast *brmctx,
  
  	if (err == -ENOMSG || err == -ENODATA) {
  		if (!ipv6_addr_is_ll_all_nodes(&ipv6_hdr(skb)->daddr))
@@ -189,7 +189,7 @@ index b2ae0d2434d2..3137c1fcfc6a 100644
  		    ipv6_addr_is_all_snoopers(&ipv6_hdr(skb)->daddr))
  			br_ip6_multicast_mrd_rcv(brmctx, pmctx, skb);
 diff --git a/net/bridge/br_private.h b/net/bridge/br_private.h
-index df502cc1191c..b456cf9ec1cc 100644
+index 6a1bce8959af..ed5325c6add9 100644
 --- a/net/bridge/br_private.h
 +++ b/net/bridge/br_private.h
 @@ -483,6 +483,7 @@ enum net_bridge_opts {
@@ -211,7 +211,7 @@ index df502cc1191c..b456cf9ec1cc 100644
  
  /* return true if both source port and dest port are isolated */
  static inline bool br_skb_isolated(const struct net_bridge_port *to,
-@@ -1409,6 +1410,19 @@ static inline void br_multicast_flood(struct net_bridge_mdb_entry *mdst,
+@@ -1410,6 +1411,19 @@ static inline void br_multicast_flood(struct net_bridge_mdb_entry *mdst,
  {
  }
  
