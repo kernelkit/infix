@@ -91,12 +91,11 @@ DEFCONFIG_DIR=$(readlink -f $DEFCONFIG_DIR)
 git ls-files --error-unmatch $PATCH_DIR 1>/dev/null 2>&1 && git -C $PATCH_DIR rm -f *.patch
 git -C $KERNEL_DIR format-patch --no-signoff --no-encode-email-headers --no-cover-letter --no-signature -o $PATCH_DIR $KERNEL_TAG..HEAD
 git -C $PATCH_DIR add *.patch
-
 if [ -d ${PATCHES_BASE}/${OLD_VER} ]; then
 	git rm -rf ${PATCHES_BASE}/${OLD_VER}
 fi
 find "$DEFCONFIG_DIR" -name "*_defconfig" -exec sed -i "s/BR2_LINUX_KERNEL_CUSTOM_VERSION_VALUE=\"$OLD_VER\"/BR2_LINUX_KERNEL_CUSTOM_VERSION_VALUE=\"$NEW_VER\"/" {} \;
-
+git -C $DEFCONFIG_DIR add *_defconfig
 
 echo "Update checksum for kernel, this may take a while..."
 curl -o "/tmp/linux-${ixkver}.tar.xz" "https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-${ixkver}.tar.xz"
