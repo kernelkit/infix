@@ -1,4 +1,4 @@
-From ad47c2664cd32613e455c50cff2b372292a57659 Mon Sep 17 00:00:00 2001
+From 1e0eb62180058e98c7d18e3e04540925801e34b5 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Thu, 16 May 2024 14:51:54 +0200
 Subject: [PATCH 22/27] net: bridge: Differentiate MDB additions from
@@ -63,7 +63,7 @@ index 7e1ad229e133..3b1873e7c499 100644
  	if (br_multicast_should_handle_mode(brmctx, cfg->group.proto))
  		br_multicast_star_g_handle_mode(pg, cfg->filter_mode);
 diff --git a/net/bridge/br_multicast.c b/net/bridge/br_multicast.c
-index 34be07a1fd00..9c8bf38e0079 100644
+index 282105bdca85..aa97b07ed528 100644
 --- a/net/bridge/br_multicast.c
 +++ b/net/bridge/br_multicast.c
 @@ -619,7 +619,7 @@ static void br_multicast_fwd_src_handle(struct net_bridge_group_src *src)
@@ -84,7 +84,7 @@ index 34be07a1fd00..9c8bf38e0079 100644
  	}
  out:
  	spin_unlock(&br->multicast_lock);
-@@ -2887,7 +2887,7 @@ static int br_ip4_multicast_igmp3_report(struct net_bridge_mcast *brmctx,
+@@ -2948,7 +2948,7 @@ static int br_ip4_multicast_igmp3_report(struct net_bridge_mcast *brmctx,
  			break;
  		}
  		if (changed)
@@ -93,7 +93,7 @@ index 34be07a1fd00..9c8bf38e0079 100644
  unlock_continue:
  		spin_unlock(&brmctx->br->multicast_lock);
  	}
-@@ -3029,7 +3029,7 @@ static int br_ip6_multicast_mld2_report(struct net_bridge_mcast *brmctx,
+@@ -3090,7 +3090,7 @@ static int br_ip6_multicast_mld2_report(struct net_bridge_mcast *brmctx,
  			break;
  		}
  		if (changed)

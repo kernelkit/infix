@@ -8,7 +8,7 @@ All notable changes to the project are documented in this file.
 
 ### Changes
 - Upgrade Buildroot to 2025.02.4 (LTS)
-- Upgrade Linux kernel to 6.12.34 (LTS)
+- Upgrade Linux kernel to 6.12.35 (LTS)
 - Upgrade curiOS built-in containers to v25.06.0
 - Add support for setting mode of a container content mount, issue #1070
 - Add Wi-Fi client support and add support for some USB-Wi-Fi cards
