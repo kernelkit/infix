@@ -5,6 +5,8 @@ config BR2_PACKAGE_FEATURE_WIFI
 	select BR2_PACKAGE_WPA_SUPPLICANT_DEBUG_SYSLOG
 	select BR2_PACKAGE_WPA_SUPPLICANT_AUTOSCAN
 	select BR2_PACKAGE_WPA_SUPPLICANT_CLI
+	select BR2_PACKAGE_WIRELESS_REGDB
+	select BR2_PACKAGE_IW
 	help
 	  Enables WiFi in Infix. Enables all requried applications.
 
