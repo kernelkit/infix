@@ -1,0 +1,61 @@
+#include <arm64/broadcom/bcm2711-rpi-4-b.dts>
+
+/ {
+	framebuffer@3e402000 {
+		compatible = "simple-framebuffer";
+		reg = <0x3e402000 0x1000>;
+		width = <800>;
+		height = <480>;
+		stride = <1600>;
+		format = "r5g6b5";
+		status = "okay";
+	};
+	chosen {
+		/* 8250 auxiliary UART instead of pl011 */
+		stdout-path = "serial1:115200n8";
+
+		infix {
+			/* Default admin user password: 'admin' */
+			factory-password-hash = "$5$mI/zpOAqZYKLC2WU$i7iPzZiIjOjrBF3NyftS9CCq8dfYwHwrmUK097Jca9A";
+			usb-ports = <&usb>;
+			usb-port-names = "USB";
+		};
+	};
+};
+
+&i2c1 {
+    status = "okay";
+
+    touchscreen@38 {
+        compatible = "focaltech,ft5406";
+        reg = <0x38>;
+        interrupt-parent = <&gpio>;
+        interrupts = <27 IRQ_TYPE_EDGE_FALLING>;
+    };
+};
+&dsi1 {
+    status = "okay";
+    #address-cells = <1>;
+    #size-cells = <0>;
+
+    ports {
+        port@1 {
+            reg = <1>;
+            dsi_out_port: endpoint {
+                remote-endpoint = <&panel_dsi_port>;
+            };
+        };
+    };
+
+    panel@0 {
+        compatible = "raspberrypi,7inch-touchscreen-panel";
+        reg = <0>;
+
+        port {
+            panel_dsi_port: endpoint {
+                remote-endpoint = <&dsi_out_port>;
+            };
+        };
+    };
+};
+

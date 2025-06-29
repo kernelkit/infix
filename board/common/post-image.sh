@@ -108,3 +108,11 @@ rm -f "$BINARIES_DIR/qemu.cfg.old" "$BINARIES_DIR/.config.old"
 
 # Quick intro for beginners, with links to more information
 cp "$BR2_EXTERNAL_INFIX_PATH/board/common/README.txt" "$BINARIES_DIR/"
+
+boards=$(${BR2_EXTERNAL_INFIX_PATH}/board/common/selected-boards.sh ${BR2_EXTERNAL_INFIX_PATH} ${O})
+for board in $boards; do
+	[ ! -f "${BR2_EXTERNAL_INFIX_PATH}/src/board/${board}/post-image.sh" ] && continue
+	RELEASE=$(ver)
+	export INFIX_ID RELEASE
+	${BR2_EXTERNAL_INFIX_PATH}/src/board/${board}/post-image.sh
+done
