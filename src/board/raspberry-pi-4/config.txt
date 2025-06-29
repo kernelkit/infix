@@ -12,6 +12,7 @@ kernel=u-boot.bin
 device_tree=bcm2711-rpi-4-b.dtb
 dtoverlay=rpi-env
 dtoverlay=infix-key
+dtoverlay=vc4-kms-v3d
 
 # To use an external initramfs file
 #initramfs rootfs.cpio.gz
