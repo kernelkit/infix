@@ -3,7 +3,7 @@ Change Log
 
 All notable changes to the project are documented in this file.
 
-[v25.06.0][UNRELEASED] -
+[v25.06.0][] - 2025-06-30
 -------------------------
 
 ### Changes
@@ -1594,7 +1594,7 @@ Supported YANG models in addition to those used by sysrepo and netopeer:
  - N/A
 
 [buildroot]:  https://buildroot.org/
-[UNRELEASED]: https://github.com/kernelkit/infix/compare/v25.05.1...HEAD
+[v25.06.0]:   https://github.com/kernelkit/infix/compare/v25.05.1...v26.06.0
 [v25.05.1]:   https://github.com/kernelkit/infix/compare/v25.05.0...v25.05.1
 [v25.05.0]:   https://github.com/kernelkit/infix/compare/v25.04.0...v25.05.0
 [v25.04.0]:   https://github.com/kernelkit/infix/compare/v25.03.0...v25.04.0
