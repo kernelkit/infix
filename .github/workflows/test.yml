@@ -29,11 +29,16 @@ on:
         required: false
         type: string
         default: ''
+      test-path:
+        required: false
+        type: string
+        default: 'test'
 
 env:
   FLV: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.flavor || inputs.flavor }}
   INFIX_REPO: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.infix_repo || inputs.infix_repo }}
   NINEPM_CONF: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.ninepm-conf || inputs.ninepm-conf }}
+  TEST_PATH: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.test-path || inputs.test-path }}
 
 jobs:
   test:
@@ -91,21 +96,21 @@ jobs:
       - name: Publish Test Result for x86_64${{ steps.vars.outputs.flv }}
         # Ensure this runs even if Regression Test fails
         if: always()
-        run: cat test/.log/last/result-gh.md >> $GITHUB_STEP_SUMMARY
+        run: cat $TEST_PATH/.log/last/result-gh.md >> $GITHUB_STEP_SUMMARY
 
       - name: Generate Test Report for x86_64${{ steps.vars.outputs.flv }}
         # Ensure this runs even if Regression Test fails
         if: always()
         run: |
           asciidoctor-pdf \
-          --theme test/9pm/report/theme.yml \
-          -a pdf-fontsdir=test/9pm/report/fonts \
-          test/.log/last/report.adoc \
-          -o test/.log/last/report.pdf
+          --theme $TEST_PATH/9pm/report/theme.yml \
+          -a pdf-fontsdir=$TEST_PATH/9pm/report/fonts \
+          $TEST_PATH/.log/last/report.adoc \
+          -o $TEST_PATH/.log/last/report.pdf
 
       - name: Upload Test Report as Artifact
         uses: actions/upload-artifact@v4
         with:
           name: test-report
-          path: test/.log/last/report.pdf
+          path: ${{ env.TEST_PATH }}/.log/last/report.pdf
 
