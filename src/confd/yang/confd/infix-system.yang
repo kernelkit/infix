@@ -28,6 +28,11 @@ module infix-system {
   contact      "kernelkit@googlegroups.com";
   description  "Infix augments and deviations to ietf-system.";
 
+  revision 2025-04-29 {
+    description "Add services status.";
+    reference "internal";
+  }
+
   revision 2025-01-25 {
     description "Add DNS resolver status.";
     reference "internal";
@@ -409,6 +414,99 @@ module infix-system {
         leaf cache-misses {
           description "Number of failed cache lookups";
           type yang:counter64;
+        }
+      }
+    }
+
+    container services {
+      description "List of monitored system services (processes)";
+      config false;
+
+      list service {
+        key "pid";
+        description "Tracked system service processes.";
+
+        leaf pid {
+          type uint32;
+          description "Process ID (PID) of the service.";
+        }
+
+        leaf name {
+          type string;
+          description "Name of the service or process.";
+        }
+
+        leaf description {
+          type string;
+          description
+            "Short description of the service.";
+        }
+
+        leaf status {
+          type enumeration {
+            enum halted {
+              description "Service is halted.";
+            }
+            enum missing {
+              description "Service files or dependencies are missing.";
+            }
+            enum crashed {
+              description "Service has crashed.";
+            }
+            enum stopped {
+              description "Service has been manually stopped.";
+            }
+            enum busy {
+              description "Service is busy.";
+            }
+            enum restart {
+              description "Service is restarting.";
+            }
+            enum conflict {
+              description "Service has a conflict preventing start.";
+            }
+            enum unknown {
+              description "Service is in an unknown state.";
+            }
+            enum done {
+              description "Service task has completed.";
+            }
+            enum failed {
+              description "Service task has failed.";
+            }
+            enum active {
+              description "Run/task type service is active.";
+            }
+            enum stopping {
+              description "Service is in the process of stopping.";
+            }
+            enum teardown {
+              description "Service is performing teardown operations.";
+            }
+            enum setup {
+              description "Service is setting up.";
+            }
+            enum cleanup {
+              description "Service is cleaning up.";
+            }
+            enum paused {
+              description "Service is paused.";
+            }
+            enum waiting {
+              description "Service is waiting for conditions.";
+            }
+            enum starting {
+              description "Service is starting.";
+            }
+            enum running {
+              description "Service is running.";
+            }
+            enum dead {
+              description "Service process is dead.";
+            }
+          }
+          description
+            "Detailed current status of the process.";
         }
       }
     }
