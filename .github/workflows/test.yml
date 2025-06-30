@@ -25,10 +25,15 @@ on:
         required: false
         type: string
         default: kernelkit/infix
+      ninepm-conf:
+        required: false
+        type: string
+        default: ''
 
 env:
   FLV: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.flavor || inputs.flavor }}
   INFIX_REPO: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.infix_repo || inputs.infix_repo }}
+  NINEPM_CONF: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.ninepm-conf || inputs.ninepm-conf }}
 
 jobs:
   test:
@@ -77,6 +82,10 @@ jobs:
 
       - name: Regression Test x86_64${{ steps.vars.outputs.flv }}
         run: |
+          if [ -n "$NINEPM_CONF" ]; then
+            export NINEPM_PROJ_CONFIG="${GITHUB_WORKSPACE}/$NINEPM_CONF"
+            echo "DEBUG: NINEPM_PROJ_CONFIG is '$NINEPM_PROJ_CONFIG'"
+          fi
           make test
 
       - name: Publish Test Result for x86_64${{ steps.vars.outputs.flv }}
