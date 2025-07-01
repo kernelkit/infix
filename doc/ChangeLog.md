@@ -3,7 +3,7 @@ Change Log
 
 All notable changes to the project are documented in this file.
 
-[v25.06.0][] - 2025-06-30
+[v25.06.0][] - 2025-07-01
 -------------------------
 
 ### Changes
