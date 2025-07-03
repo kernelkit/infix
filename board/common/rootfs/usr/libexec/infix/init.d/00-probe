@@ -308,16 +308,52 @@ def probe_qemusystem(out):
     subprocess.run("initctl -nbq cond set qemu".split(), check=False)
     return 0
 
+def rasberry_pi_4_usb_ports(out):
+    out["usb-ports"] = [
+        {
+            "name": "USB",
+            "path": "/sys/devices/platform/scb/fd500000.pcie/pci0000:00/0000:00:00.0/0000:01:00.0/usb1/authorized"
+        },
+        {
+            "name": "USB",
+            "path": "/sys/devices/platform/scb/fd500000.pcie/pci0000:00/0000:00:00.0/0000:01:00.0/usb1/authorized_default"
+        },
+        {
+            "name": "USB",
+            "path": "/sys/devices/platform/scb/fd500000.pcie/pci0000:00/0000:00:00.0/0000:01:00.0/usb1/1-1/authorized",
+        },
+        {
+            "name": "USB",
+            "path": "/sys/devices/platform/scb/fd500000.pcie/pci0000:00/0000:00:00.0/0000:01:00.0/usb1/1-0:1.0/authorized"
+        },
+        {
+            "name": "USB",
+            "path": "/sys/devices/platform/scb/fd500000.pcie/pci0000:00/0000:00:00.0/0000:01:00.0/usb2/authorized"
+        },
+        {
+            "name": "USB",
+            "path": "/sys/devices/platform/scb/fd500000.pcie/pci0000:00/0000:00:00.0/0000:01:00.0/usb2/authorized_default"
+        },
+        {
+            "name": "USB3",
+            "path": "/sys/devices/platform/scb/fd500000.pcie/pci0000:00/0000:00:00.0/0000:01:00.0/usb2/2-0:1.0/authorized"
+        }
+    ]
 
 def probe_dtsystem(out):
     """Probe DTS based system, expects a VPD in ONIE PROM format."""
     dtsys = DTSystem()
     vpds = dtsys.infix_vpds()
-    dtsys.infix_usb_devices(out)
+
     model = dtsys.base.str("model")
     if model:
         out["product-name"] = model
 
+    # Since rpi4 has USB on PCIe, there is no phandle reference
+    if model and model.startswith("Raspberry Pi 4"):
+        rasberry_pi_4_usb_ports(out)
+    else:
+        dtsys.infix_usb_devices(out)
     out["compatible"] = dtsys.base.str_array("compatible")
 
     staticpw = dtsys.infix.str("factory-password-hash")
