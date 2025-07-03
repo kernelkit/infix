@@ -2,7 +2,11 @@
 """
 Interface Speed Duplex (Copper)
 
-Verify that auto-negotiation results in expected speed/duplex mode.
+Verify that the interface operates at the expected speed/duplex in two scenarios:
+
+1. Fixed configuration – host and target are both manually set to a specific speed/duplex
+2. Auto-negotiation – host advertises selectable modes and the target negotiates
+ to the highest common speed/duplex.
 """
 
 import infamy
@@ -164,22 +168,22 @@ with infamy.Test() as test:
         ns.addip("10.0.0.1")
 
         # Fixed mode tests
-        with test.step("Set fixed 10/full"):
+        with test.step("Verify fixed 10/full"):
             set_host_speed_duplex(hdata, 10, "full")
             set_target_speed_duplex(target, tdata, 10, "full")
             verify_speed_duplex(target, ns, tdata, 10, "full")
 
-        with test.step("Set fixed 10/half"):
+        with test.step("Verify fixed 10/half"):
             set_host_speed_duplex(hdata, 10, "half")
             set_target_speed_duplex(target, tdata, 10, "half")
             verify_speed_duplex(target, ns, tdata, 10, "half")
 
-        with test.step("Set fixed 100/full"):
+        with test.step("Verify fixed 100/full"):
             set_host_speed_duplex(hdata, 100, "full")
             set_target_speed_duplex(target, tdata, 100, "full")
             verify_speed_duplex(target, ns, tdata, 100, "full")
 
-        with test.step("Set fixed 100/half"):
+        with test.step("Verify fixed 100/half"):
             set_host_speed_duplex(hdata, 100, "half")
             set_target_speed_duplex(target, tdata, 100, "half")
             verify_speed_duplex(target, ns, tdata, 100, "half")
@@ -189,27 +193,27 @@ with infamy.Test() as test:
             enable_host_autoneg(hdata)
             enable_target_autoneg(target, tdata)
 
-        with test.step("Configure host to advertise 10/Full only"):
+        with test.step("Verify auto-negotiation to 10/Full only"):
             advertise_host_modes(hdata, ["10full"])
             verify_speed_duplex(target, ns, tdata, 10, "full")
 
-        with test.step("Configure host to advertise 10/Half only"):
+        with test.step("Verify auto-negotiation to 10/Half only"):
             advertise_host_modes(hdata, ["10half"])
             verify_speed_duplex(target, ns, tdata, 10, "half")
 
-        with test.step("Configure host to advertise 100/Full only"):
+        with test.step("Verify auto-negotiation to 100/Full only"):
             advertise_host_modes(hdata, ["100full"])
             verify_speed_duplex(target, ns, tdata, 100, "full")
 
-        with test.step("Configure host to advertise 100/Half only"):
+        with test.step("Verify auto-negotiation to 100/Half only"):
             advertise_host_modes(hdata, ["100half"])
             verify_speed_duplex(target, ns, tdata, 100, "half")
 
-        with test.step("Configure host to advertise 10/half + 10/full + 100/half"):
+        with test.step("Verify auto-negotiation to 10/half + 10/full + 100/half"):
             advertise_host_modes(hdata, ["10half", "10full", "100half"])
             verify_speed_duplex(target, ns, tdata, 100, "half")
 
-        with test.step("Configure host to advertise 10/half + 10/full + 100/half + 100/full + 1000/full"):
+        with test.step("Verify auto-negotiation to 10/half + 10/full + 100/half + 100/full + 1000/full"):
             advertise_host_modes(hdata, ["10half", "10full", "100half", "100full", "1000full"])
             verify_speed_duplex(target, ns, tdata, 1000, "full")
 
