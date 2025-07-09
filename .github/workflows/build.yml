@@ -1,30 +1,51 @@
-name: Bob the Builder
+name: Build
 
 on:
-  pull_request:
-    types: [opened, synchronize, reopened, labeled]
-  push:
-    branches:
-      - main
   workflow_dispatch:
     inputs:
-      minimal:
-        description: 'Build minimal defconfigs'
+      flavor:
+        description: 'Optional build flavor (e.g. _minimal)'
         required: false
-        default: true
-        type: boolean
-      parallell:
+        default: ''
+        type: string
+      parallel:
         description: 'Massive parallel build of each image'
         required: false
         default: true
         type: boolean
+      infix_repo:
+        description: 'Repo to checkout (for spin overrides)'
+        required: false
+        default: kernelkit/infix
+        type: string
+
+
+  workflow_call:
+    inputs:
+      target:
+        required: true
+        type: string
+      name:
+        required: true
+        type: string
+      flavor:
+        required: false
+        type: string
+        default: ''
+      infix_repo:
+        required: false
+        type: string
+        default: kernelkit/infix
+
+env:
+  FLV: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.flavor || inputs.flavor }}
+  INFIX_REPO: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.infix_repo || inputs.infix_repo }}
+
 jobs:
   build:
-    name: Build Infix ${{ matrix.target }}
+    name: Build ${{ inputs.name }} ${{ inputs.target }}
     runs-on: [ self-hosted, latest ]
     strategy:
-      matrix:
-        target: [aarch64, x86_64]
       fail-fast: false
     outputs:
       build_id: ${{ steps.vars.outputs.INFIX_BUILD_ID }}
@@ -36,8 +57,11 @@ jobs:
           rm -rf ./.??* || true
           ls -la ./
 
-      - uses: actions/checkout@v4
+      - name: Checkout infix repo
+        uses: actions/checkout@v4
         with:
+          repository: ${{ env.INFIX_REPO }}
+          ref: ${{ github.ref }}
           clean: true
           fetch-depth: 0
           submodules: recursive
@@ -55,26 +79,13 @@ jobs:
                   "${{ github.event.number }}" "${{ github.event.pull_request.head.sha }}" \
                   | tee -a $GITHUB_OUTPUT $GITHUB_ENV
           fi
-          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
-              if [ "${{ github.event.inputs.minimal }}" == "true" ]; then
-                  flavor="_minimal"
-              fi
-          else
-              # Ensure 'release' job get the proper image when building main
-              if [ "$GITHUB_REF_NAME" != "main" ]; then
-                  flavor="_minimal"
-              else
-                  flavor=""
-              fi
-              if ${{ contains(github.event.pull_request.labels.*.name, 'ci:main') }}; then
-                  flavor=""
-              fi
-          fi
-          target=${{ matrix.target }}
-          echo "dir=infix-$target"        >> $GITHUB_OUTPUT
-          echo "tgz=infix-$target.tar.gz" >> $GITHUB_OUTPUT
-          echo "flv=$flavor"              >> $GITHUB_OUTPUT
-          echo "Building target ${target}${flavor}_defconfig"
+
+          target=${{ inputs.target }}
+          name=${{ inputs.name }}
+          echo "dir=${name}-${target}"        >> $GITHUB_OUTPUT
+          echo "tgz=${name}-${target}.tar.gz" >> $GITHUB_OUTPUT
+          echo "flv=$FLV"              >> $GITHUB_OUTPUT
+          echo "Building target ${target}${FLV}_defconfig"
 
       - name: Restore Cache of dl/
         uses: actions/cache@v4
@@ -88,16 +99,16 @@ jobs:
         uses: actions/cache@v4
         with:
           path: .ccache/
-          key: ccache-${{ matrix.target }}-${{ hashFiles('.git/modules/buildroot/HEAD', 'package/*/*.hash') }}
+          key: ccache-${{ inputs.target }}-${{ hashFiles('.git/modules/buildroot/HEAD', 'package/*/*.hash') }}
           restore-keys: |
-            ccache-${{ matrix.target }}-
+            ccache-${{ inputs.target }}-
             ccache-
 
-      - name: Configure ${{ matrix.target }}${{ steps.vars.outputs.flv }}
+      - name: Configure ${{ inputs.target }}${{ steps.vars.outputs.flv }}
         run: |
-          make ${{ matrix.target }}${{ steps.vars.outputs.flv }}_defconfig
+          make ${{ inputs.target }}${{ steps.vars.outputs.flv }}_defconfig
 
-      - name: Unit Test ${{ matrix.target }}
+      - name: Unit Test ${{ inputs.target }}
         run: |
           make test-unit
 
@@ -115,9 +126,9 @@ jobs:
           fi
           echo "MAKE=$MAKE" >> $GITHUB_OUTPUT
 
-      - name: Build ${{ matrix.target }}${{ steps.vars.outputs.flv }}
+      - name: Build ${{ inputs.target }}${{ steps.vars.outputs.flv }}
         run: |
-          echo "Building ${{ matrix.target }}${{ steps.vars.outputs.flv }}_defconfig ..."
+          echo "Building ${{ inputs.target }}${{ steps.vars.outputs.flv }}_defconfig ..."
           eval "${{ steps.parallel.outputs.MAKE }}"
 
       - name:  Check SBOM from Build
@@ -139,7 +150,7 @@ jobs:
           printf "Size of output/images/: "
           ls -l output/images/
 
-      - name: Prepare ${{ matrix.target }} Artifact
+      - name: Prepare ${{ inputs.target }} Artifact
         run: |
           cd output/
           mv images ${{ steps.vars.outputs.dir }}
@@ -149,111 +160,4 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           path: output/${{ steps.vars.outputs.tgz }}
-          name: artifact-${{ matrix.target }}
-
-  test:
-    name: Regression Test of Infix x86_64
-    needs: build
-    runs-on: [ self-hosted, regression ]
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          clean: true
-          submodules: recursive
-
-      - name: Set Build Variables
-        id: vars
-        run: |
-          if [ -n "${{ needs.build.outputs.build_id }}" ]; then
-              echo "INFIX_BUILD_ID=${{ needs.build.outputs.build_id }}" \
-                   >>$GITHUB_ENV
-          fi
-
-          if [ "$GITHUB_REF_NAME" != "main" ]; then
-              flavor="_minimal"
-          else
-              flavor=""
-          fi
-          echo "flv=$flavor"              >> $GITHUB_OUTPUT
-
-      - name: Configure x86_64${{ steps.vars.outputs.flv }}
-        run: |
-          make x86_64${{ steps.vars.outputs.flv }}_defconfig
-
-      - uses: actions/download-artifact@v4
-        with:
-          pattern: "artifact-*"
-          merge-multiple: true
-
-      - name: Restore x86-64${{ steps.vars.outputs.flv }} output/
-        run: |
-          ls -l
-          mkdir -p output
-          mv infix-x86_64.tar.gz output/
-          cd output/
-          tar xf infix-x86_64.tar.gz
-          ln -s infix-x86_64 images
-
-      - name: Regression Test x86_64${{ steps.vars.outputs.flv }}
-        run: |
-          make test
-
-      - name: Publish Test Result for x86_64${{ steps.vars.outputs.flv }}
-        # Ensure this runs even if Regression Test fails
-        if: always()
-        run: cat test/.log/last/result-gh.md >> $GITHUB_STEP_SUMMARY
-
-      - name: Generate Test Report for x86_64${{ steps.vars.outputs.flv }}
-        # Ensure this runs even if Regression Test fails
-        if: always()
-        run: |
-          asciidoctor-pdf \
-          --theme test/9pm/report/theme.yml \
-          -a pdf-fontsdir=test/9pm/report/fonts \
-          test/.log/last/report.adoc \
-          -o test/.log/last/report.pdf
-
-      - name: Upload Test Report as Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: test-report
-          path: test/.log/last/report.pdf
-
-  release:
-    if: ${{github.repository_owner == 'kernelkit' && github.ref_name == 'main'}}
-    name: Upload Latest Build
-    needs: test
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/download-artifact@v4
-        with:
-          pattern: "artifact-*"
-          merge-multiple: true
-
-      - name: Create checksums ...
-        run: |
-          for file in *.tar.gz; do
-              sha256sum $file > $file.sha256
-          done
-
-      - uses: ncipollo/release-action@v1
-        with:
-          allowUpdates: true
-          omitName: true
-          omitBody: true
-          omitBodyDuringUpdate: true
-          prerelease: true
-          tag: "latest"
-          token: ${{ secrets.GITHUB_TOKEN }}
-          artifacts: "*.tar.gz*"
-
-      - name: Summary
-        run: |
-          cat <<EOF >> $GITHUB_STEP_SUMMARY
-          # Latest Build Complete! :rocket:
-
-          For the public download links of these build artifacts, please see:
-           <https://github.com/kernelkit/infix/releases/tag/latest>
-          EOF
+          name: artifact-${{ inputs.target }}

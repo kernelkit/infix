@@ -1,0 +1,37 @@
+name: Self Trigger
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled]
+  push:
+    branches:
+      - main
+      - ci-workflow-redesign
+  workflow_dispatch:
+
+jobs:
+  build-x86_64:
+    uses: ./.github/workflows/build.yml
+    with:
+      target: "x86_64"
+      name: "infix"
+      flavor: "_minimal"
+
+  build-aarch64:
+    uses: ./.github/workflows/build.yml
+    with:
+      target: "aarch64"
+      name: "infix"
+      flavor: "_minimal"
+
+  test-run-x86_64:
+    needs: build-x86_64
+    uses: ./.github/workflows/test.yml
+    with:
+      target: "x86_64"
+      name: "infix"
+
+  test-publish-x86_64:
+    needs: test-run-x86_64
+    uses: ./.github/workflows/publish.yml
+
