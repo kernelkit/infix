@@ -78,6 +78,7 @@ PKG_CHECK_MODULES([jansson], [jansson >= 2.0.0])
 PKG_CHECK_MODULES([libite],  [libite >= 2.6.1])
 PKG_CHECK_MODULES([sysrepo], [sysrepo >= 2.2.36])
 PKG_CHECK_MODULES([libsrx],  [libsrx >= 1.0.0])
+PKG_CHECK_MODULES([libssl],  [libssl >= 1.0.0])
 
 # Control build with automake flags
 AM_CONDITIONAL(CONTAINERS,   [test "x$enable_containers" != "xno"])
