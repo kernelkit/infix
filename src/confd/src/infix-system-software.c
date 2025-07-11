@@ -63,24 +63,24 @@ static int infix_system_sw_set_boot_order(sr_session_ctx_t *session, uint32_t su
 		const sr_val_t *val = &input[i];
 
 		if (i != 0)
-			 strlcat(boot_order, " ", sizeof(boot_order));
-		 strlcat(boot_order, val->data.string_val, sizeof(boot_order));
-	 }
+			strlcat(boot_order, " ", sizeof(boot_order));
+		strlcat(boot_order, val->data.string_val, sizeof(boot_order));
+	}
 
-	 if (fexist("/sys/firmware/devicetree/base/chosen/u-boot,version")) {
-		 if (systemf("fw_setenv BOOT_ORDER %s", boot_order)) {
-			 ERROR("Set-boot-order: Failed to set boot order in U-Boot");
-			 return SR_ERR_INTERNAL;
-		 }
-	 } else if (fexist("/mnt/aux/grub/grubenv")) {
-		 if (systemf("grub-editenv /mnt/aux/grub/grubenv set ORDER=\"%s\"", boot_order)) {
-			 ERROR("Set-boot-order: Failed to set boot order in Grub");
-			 return SR_ERR_INTERNAL;
-		 }
-	 } else {
-		 ERROR("No supported boot loader found");
-		 return SR_ERR_UNSUPPORTED;
-	 }
+	if (fexist("/sys/firmware/devicetree/base/chosen/u-boot,version")) {
+		if (systemf("fw_setenv BOOT_ORDER %s", boot_order)) {
+			ERROR("Set-boot-order: Failed to set boot order in U-Boot");
+			return SR_ERR_INTERNAL;
+		}
+	} else if (fexist("/mnt/aux/grub/grubenv")) {
+		if (systemf("grub-editenv /mnt/aux/grub/grubenv set ORDER=\"%s\"", boot_order)) {
+			ERROR("Set-boot-order: Failed to set boot order in Grub");
+			return SR_ERR_INTERNAL;
+		}
+	} else {
+		ERROR("No supported boot loader found");
+		return SR_ERR_UNSUPPORTED;
+	}
 
 	return SR_ERR_OK;
 }
