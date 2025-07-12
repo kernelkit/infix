@@ -2,9 +2,11 @@ Package Override
 ================
 
 This guide demonstrates how the `local.mk` file is utilized to override
-a Linux Buildroot package.  As an example we use `tcpdump` to illustrate
-this process.
+a Buildroot package, which can be very useful when fixing bugs, adding
+features, or evaluating new releases of packages.  As an example we use
+`tcpdump` to illustrate this process.
 
+> [!TIP]
 > For a comprehensive guide to utilizing Buildroot during development,
 > including the `<pkg>_OVERRIDE_SRCDIR` mechanism, shown below, please
 > see [Using Buildroot during development][1] in the official docs.
@@ -67,9 +69,10 @@ drwxr-xr-x   7 group user 12288 Nov 10 18:28 tcpdump-custom/
 As long as your local override is in place, Buildroot will use your
 custom version.
 
-> **Remember:** the build directory is ephemeral, so be careful to
-> change any of the files therein.  It can be useful though during
-> debugging, but just make sure to learn the difference between the
-> various Buildroot commands to build, clean, reconfigure, etc.
+> [!NOTE]
+> Remember, the build directory is ephemeral, so be careful to change
+> any of the files therein.  It can be useful though during debugging,
+> but just make sure to learn the difference between the various
+> Buildroot commands to build, clean, reconfigure, etc.
 
 [1]: https://buildroot.org/downloads/manual/manual.html#_using_buildroot_during_development
