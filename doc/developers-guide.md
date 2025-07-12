@@ -137,6 +137,14 @@ on Buildroot to finalize the target filesystem and generate the images.
 The final `run` argument is explained below.
 
 
+### YANG Model
+
+When making changes to the `confd` and `statd` services, you will often
+need to update the YANG models.  If you are adding a new YANG module,
+it's best to follow the structure of an existing one.  However, before
+making any changes, **always discuss them with the Infix core team**.
+This helps avoid issues later in development and makes pull request
+reviews smoother.
 
 ### `confd`
 
@@ -216,174 +224,156 @@ To replay:
 This is especially useful when working in isolated environments or debugging
 issues without direct access to the DUT.
 
-### Upgrading Packages
 
-#### Buildroot
+## Upgrading Packages
 
-Kernelkit maintains an internal [fork of
-Buildroot](https://github.com/kernelkit/buildroot), with branches
-following the naming scheme `YYYY.MM.patch-kkit`
+### Buildroot
+
+The Kernelkit team maintains an internal [fork of Buildroot][9], with
+branches following the naming scheme `YYYY.MM.patch-kkit`
 e.g. `2025.02.1-kkit`, which means a new branch should be created
 whenever Buildroot is updated. These branches should contain **only**
 changes to existing packages (but no new patches), modifications to
 Buildroot itself or upstream backports.
 
-KernelKit track the latest Buildroot LTS (Long-Term Support) release
-and updates. The upgrade of LTS minor releases is expected to have low
-impact and should be done as soon there is a patch release of
-Buildroot LTS is available.
+The team tracks the latest Buildroot LTS (Long-Term Support) release and
+updates.  The impact of minor LTS release upgrades is expected to have a
+very low impact and should be done as soon there is a patch release of a
+Buildroot LTS available.
 
 > **Depending on your setup, follow the appropriate steps below.**
 
-🔁 If you **already have** the Buildroot repo locally
+#### Repo locally cloned already
 
 1. Navigate to the Buildroot directory
-   ```bash
-    $ cd buildroot
-   ```
-2. Pull the latest changes from KernelKit
-   ```bash
-   $ git pull
-   ```
-3. Fetch the latest tags from upstream
-   ```bash
-   $ git fetch upstream --tags
-   ```
 
+        cd buildroot/
 
-🆕 If you don't have the repo locally
+1. Pull the latest changes from KernelKit
+
+        git pull
+
+1. Fetch the latest tags from upstream
+
+        git fetch upstream --tags
+
+#### No local repo yet
 
 1. Clone the Kernelkit Buildroot repository
-   ```bash
-   $ git clone git@github.com:kernelkit/buildroot.git
-   ```
 
-2. Add the upstream remote
-   ```bash
-   $ git remote add upstream https://gitlab.com/buildroot.org/buildroot.git
-   ```
-3. Checkout old KernelKit branch
-   ```bash
-   $ git checkout 2025.02.1-kkit
-   ```
+        git clone git@github.com:kernelkit/buildroot.git
 
+1. Add the upstream remote
 
-🛠  Continue from here (applies to both cases):
+        git remote add upstream https://gitlab.com/buildroot.org/buildroot.git
 
-4. Create a new branch based on the **previous** KernelKit Buildroot
-   release (e.g.  `2025.02.1-kkit`) and name it according to the naming scheme (e.g. `2025.02.2-kkit`)
-   ```bash
-   $ git checkout -b 2025.02.2-kkit
-   ```
-5. Rebase the new branch onto the corresponding upstream release
-   ```bash
-   $ git rebase 2025.02.2
-   ```
-> [!NOTE] It is **not** allowed to rebase the branch when bumped in Infix.
+1. Checkout old KernelKit branch
+ 
+        git checkout 2025.02.1-kkit
+ 
+> [!NOTE] 
+> Below, it is **not** allowed to rebase the branch when bumped in Infix.
 
-6. Push the new branch and tags
-   ```bash
-   $ git push origin 2025.02.2-kkit --tags
-   ```
-7. In Infix, checkout new branch of Buildroot
-   ```bash
-   $ cd buildroot
-   $ git fetch
-   $ git checkout 2025.02.2-kkit
-   ```
-8. Push changes
-Commit and push the changes. Don’t forget to update the changelog.
+#### Continue Here
 
-9. Create a pull request.
+1. Create a new branch based on the **previous** KernelKit Buildroot
+   release (e.g.  `2025.02.1-kkit`) and name it according to the naming
+   scheme (e.g. `2025.02.2-kkit`)
 
-> [!NOTE] Remember to set the pull request label to `ci:main` to ensure full CI coverage.
+        git checkout -b 2025.02.2-kkit
 
+1. Rebase the new branch onto the corresponding upstream release
 
-#### Linux kernel
+        git rebase 2025.02.2
 
-KernelKit maintains an internal [fork of Linux
-kernel](https://github.com/kernelkit/linux), with branches following
-the naming scheme `kkit-linux-[version].y`, e.g. `kkit-6.12.y`, which
-means a new branch should be created whenever the major kernel version
-is updated. This branch should contain *all* kernel patches used by
-Infix.
+1. Push the new branch and tags
 
-KernelKit track the latest Linux kernel LTS (Long-Term Support)
-release and updates. The upgrade of LTS minor releases is expected to
-have low impact and should be done as soon as a patch release of the
-LTS Linux kernel is available.
+        git push origin 2025.02.2-kkit --tags
+
+1. In Infix, checkout new branch of Buildroot
+
+        cd buildroot
+        git fetch
+        git checkout 2025.02.2-kkit
+
+1. Commit and push the changes.  *Remember to update the ChangeLog!*
+
+1. Create a pull request.
+
+> [!NOTE] 
+> Remember to set the pull request label to `ci:main` to ensure full CI
+> coverage.
 
 
-🔁 If you **already have** the Linux kernel repo locally
+### Linux kernel
+
+The KernelKit team maintains an internal [fork of Linux kernel][10],
+with branches following the naming scheme `kkit-linux-[version].y`,
+e.g. `kkit-6.12.y`, which means a new branch should be created whenever
+the major kernel version is updated. This branch should contain *all*
+kernel patches used by Infix.
+
+The team tracks the latest Linux kernel LTS (Long-Term Support) release
+and updates.  The upgrade of LTS minor releases is expected to have low
+impact and should be done as soon as a patch release of the LTS Linux
+kernel is available.
+
+#### Repo locally cloned already
 
 1. Navigate to the Linux kernel directory
-   ```bash
-   $ cd linux
-   ```
-2. Get latest changes from KernelKit
-   ```bash
-   $ git pull
-   ```
-3. Fetch the latest tags from upstream
-   ```bash
-   $ git fetch upstream --tags
-   ```
 
-🆕 If you don't have the repo locally
+        cd linux
+
+1. Get latest changes from KernelKit
+
+        git pull
+
+1. Fetch the latest tags from upstream
+
+        git fetch upstream --tags
+
+#### No local repo yet
 
 1. Clone the KernelKit Linux kernel repository
-   ```bash
-   $ git clone git@github.com:kernelkit/linux.git
-	```
-2. Add the upstream remote
-   ```bash
-   $ git remote add upstream git://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git
-   ```
 
-3. Checkout correct kernel branch
-   ```bash
-   $ git checkout kkit-linux-6.12.y
-   ```
+        git clone git@github.com:kernelkit/linux.git
 
-🛠  Continue from here (applies to both cases)
+1. Add the upstream remote
 
+        git remote add upstream git://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git
 
-4. Rebase on the upstream release
-   ```bash
-   $ git rebase v6.12.29
-   ```
+1. Checkout correct kernel branch
 
-6. Push changes and the tags
-   ```bash
+        git checkout kkit-linux-6.12.y
 
-   $ git push -f origin kkit-linux-6.12.y --tags
-   ```
+#### Continue Here
 
-**Move to your infix directory**
+1. Rebase on the upstream release
 
-7. Generate patches
-   ```bash
-   $ make x86_64_defconfig
-   $ cd output
-   $ ../utils/kernel-refresh.sh -k /path/to/linux -o 6.12.28 -t v6.12.29
-   ```
-   > [!NOTE] See help of `kernel-refresh.sh` script for more information
+        git rebase v6.12.29
 
+1. Push changes and the tags
+ 
+        git push -f origin kkit-linux-6.12.y --tags
 
-8. Push changes
-   Commit and push the changes. Don’t forget to update the s:changelog:doc/ChangeLog.md.
+**Move to your Infix source tree**
 
-9. Create a pull request.
-   > [!NOTE] Remember to set the pull request label to `ci:main` to ensure full CI coverage.
+> [!NOTE] 
+> See help of `kernel-refresh.sh` script for more information.
 
+1. Generate patches
 
-### Agree on YANG Model
+        make x86_64_defconfig
+        cd output
+        ../utils/kernel-refresh.sh -k /path/to/linux -o 6.12.28 -t v6.12.29
 
-When making changes to the `confd` and `statd` services, you will often need to update
-the YANG models. If you are adding a new YANG module, it's best to follow the
-structure of an existing one. However, before making any changes, **always discuss
-them with the Infix core team**. This helps avoid issues later in development and
-makes pull request reviews smoother.
+1. Commit and push the changes.  Remember to update the ChangeLog
+1. Create a pull request
+
+> [!NOTE] 
+> Remember to set the pull request label to `ci:main` to ensure full CI
+> coverage.
+
 
 
 Testing
@@ -477,3 +467,5 @@ $ git submodule update --init
 [6]: https://docs.github.com/en/actions/managing-workflow-runs-and-deployments/managing-workflow-runs/disabling-and-enabling-a-workflow
 [7]: https://cli.github.com/
 [8]: https://github.com/kernelkit/infix/blob/main/utils/gh-dl-artifact.sh
+[9]: https://github.com/kernelkit/buildroot
+[10]: https://github.com/kernelkit/linux
