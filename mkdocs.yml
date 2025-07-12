@@ -11,7 +11,7 @@ edit_uri: edit/master/doc/
 exclude_docs: |
   ChangeLog.md
   cli/README.md
-  eth-counters.md
+  README.md
   TODO.org
 
 nav:
@@ -39,6 +39,7 @@ nav:
       - Scripting Infix: scripting.md
       - Tunneling (L2/L3): tunnels.md
       - Quality of Service: qos.md
+      - RMON Counters: eth-counters.md
       - Syslog Support: syslog.md
       - Virtual Environments: virtual.md
       - Wireless LAN (WiFi): wifi.md
