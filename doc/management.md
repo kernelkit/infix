@@ -194,10 +194,6 @@ admin@example:/config/web/restconf/> no enabled
 admin@example:/config/web/restconf/>
 ```
 
-# System Upgrade
+## System Upgrade
 
-See [upgrading procedures and boot order][1] for information on
-    upgrading.
-
-
-[1]: system.md#upgrade-procedures-and-boot-order
+See [Upgrade & Boot Order](upgrade.md) for information on upgrading.

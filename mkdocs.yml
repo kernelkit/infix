@@ -17,9 +17,10 @@ exclude_docs: |
 nav:
   - About: index.md
   - Introduction: introduction.md
+  - Network Configuration: networking.md
   - System Configuration: system.md
   - System Management: management.md
-  - Network Configuration: networking.md
+  - System Upgrade: upgrade.md
   - CLI:
       - Introduction : cli/introduction.md
       - Configuration: cli/configure.md
