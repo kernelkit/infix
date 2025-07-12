@@ -1,4 +1,4 @@
-# Management
+# System Management
 
 The system utilizes YANG models for keeping configuration and operational
 data. These databases can be managed through different interfaces such

@@ -1,4 +1,4 @@
-## Syslog Support
+# Syslog Support
 
 The system comes with native logging to internal storage, `/var/log/`,
 or `/log` for a shortcut.  Depending on the device, this may be a RAM
@@ -13,7 +13,7 @@ sink), this is covered briefly at the very end of this document.
 > a listing of existing native log files.
 
 
-### Log to File
+## Log to File
 
 Logging to a local file is useful when combined with an external media.
 E.g., a USB stick with a log partition (named/labeled: "log").  Below is
@@ -43,7 +43,7 @@ admin@example:/>
 > that the filename is not already in use.
 
 
-### Log Rotation
+## Log Rotation
 
 By default log files are allowed to grow to a size of 1 MiB after which
 they are "rotated".  The whole reason for this is to not fill up the
@@ -113,7 +113,7 @@ admin@example:/>
 ```
 
 
-### Log Format
+## Log Format
 
 There are three major syslog log formats, the default is [RFC3164][] for
 log files and BSD for remote logging.  Depending on time synchronization
@@ -144,7 +144,7 @@ admin@example:/>
 [RFC3164]: https://datatracker.ietf.org/doc/html/rfc3164
 [RFC5424]: https://datatracker.ietf.org/doc/html/rfc5424
 
-### Log to Remote Server
+## Log to Remote Server
 
 Logging to a remote syslog server is the recommended way of supervising
 the system.  This way all login attempts (console, SSH, or web) and any
@@ -176,7 +176,7 @@ admin@example:/>
 > above can be found by tapping the Tab key.
 
 
-### Acting as a Log Server
+## Acting as a Log Server
 
 The syslog server can act as a log sink for other devices on a LAN.  For
 this to work you need a static IP address, here we use 10.0.0.1/24.

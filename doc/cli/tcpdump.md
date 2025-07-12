@@ -1,4 +1,4 @@
-## Network Traffic Inspection
+# Network Monitoring
 
 `tcpdump` is useful tool for analyzing and diagnosing network problems.
 This document presents the limited feature set that exposed is in the
@@ -10,7 +10,7 @@ A section called [Examples](#examples) follows that, which may be what
 you want to scroll down to.
 
 
-### Hardware Overview
+## Hardware Overview
 
 Using `tcpdump` effectively requires an understanding of how the
 underlying hardware works.  For a standard PC, or common single-board
@@ -67,7 +67,7 @@ called *RMON counters*, can be very useful too.  Seeing counters of a
 particular type increment means traffic is ingressing or egressing.
 
 
-### Examples
+## Examples
 
 Listen to all traffic on an interface:
 

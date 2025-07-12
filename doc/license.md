@@ -1,5 +1,5 @@
 Origin & Licensing
-------------------
+==================
 
 Infix is entirely built on Open Source components (packages).  Most of
 them, as well as the build system with its helper scripts and tools, is
