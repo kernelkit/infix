@@ -1,5 +1,5 @@
-Infix in Virtual Environments
-=============================
+Virtual Environments
+=====================
 
 Infix primarily targets real hardware, deployment to the cloud is not a
 priority at the moment.  However, for development and testing purposes

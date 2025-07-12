@@ -67,15 +67,15 @@ minimum.  Two settings are available:
   sources are considered can be configured. To select the active
   source, use [RAUC][]:
 
-  `rauc status mark-active <slot>`
+        rauc status mark-active <slot>
 
-  Where `<slot>` is one of:
+    Where `<slot>` is one of:
 
-  | `<slot>` | Source                    |
-  |----------|---------------------------|
-  | rootfs.0 | Primary partition         |
-  | rootfs.1 | Secondary partition       |
-  | net.0    | Netboot (where supported) |
+    | `<slot>`   | Source                    |
+    |------------|---------------------------|
+    | `rootfs.0` | Primary partition         |
+    | `rootfs.1` | Secondary partition       |
+    | `net.0`    | Netboot (where supported) |
 
 - **Debug**: By default, the kernel will only output errors to the
   console during boot. Optionally, this can be altered such that all
@@ -126,7 +126,7 @@ Interface](#bootloader-interface).
 
 
 System Upgrade
-==============
+--------------
 
 Much of the minutiae of software upgrades is delegated to [RAUC][],
 which offers lots of benefits out-of-the-box:
@@ -160,10 +160,9 @@ same upgrade command again will bring both partitions into sync.
 
 
 Image Formats
-=============
+-------------
 
-SquashFS Image
---------------
+### SquashFS Image
 
 **Canonical Name**: `rootfs.squashfs`
 
@@ -176,8 +175,7 @@ virtual instance of Infix.
 
 [initrd]: https://docs.kernel.org/admin-guide/initrd.html
 
-FIT Framed Squash Image
------------------------
+### FIT Framed Squash Image
 
 **Canonical Name**: `rootfs.itb`
 
@@ -219,8 +217,7 @@ the information needed by U-Boot in a single file.
 [FIT]: https://u-boot.readthedocs.io/en/latest/usage/fit.html
 
 
-RAUC Upgrade Bundle
--------------------
+### RAUC Upgrade Bundle
 
 **Canonical Name**: `infix-${ARCH}.pkg`
 
@@ -233,8 +230,7 @@ When performing a [System Upgrade](#system-upgrade), this is the
 format to use.
 
 
-Disk Image
-----------
+### Disk Image
 
 **Canonical Name**: `disk.img`
 
@@ -264,7 +260,7 @@ scheme. Partitions marked with an asterisk are optional.
     |           |
     '-----------'
 
-### `boot` - Bootloader
+**`boot` - Bootloader**
 
 | Parameter | Value                                   |
 |-----------|-----------------------------------------|
@@ -278,8 +274,7 @@ in a separate storage device, e.g. a serial FLASH.
 On x86_64, this partition holds the EFI system partition, containing
 the GRUB bootloader.
 
-
-### `aux` - Auxiliary Data
+**`aux` - Auxiliary Data**
 
 | Parameter | Value           |
 |-----------|-----------------|
@@ -307,8 +302,7 @@ Note that the bootloader's primary environment is bundled in the
 binary - `uboot.env` is only used to import a few settings that is
 required to configure the boot order.
 
-
-### `primary`/`secondary` - Root Filesystems
+**`primary`/`secondary` - Root Filesystems**
 
 | Parameter | Value             |
 |-----------|-------------------|
@@ -320,8 +314,7 @@ Holds the [SquashFS Image](#squashfs-image). Two copies exist so that
 an incomplete upgrade does not brick the system, and to allow fast
 rollbacks when upgrading to a new version.
 
-
-### `cfg` - Configuration Data
+**`cfg` - Configuration Data**
 
 | Parameter | Value           |
 |-----------|-----------------|
@@ -332,8 +325,7 @@ rollbacks when upgrading to a new version.
 Non-volatile storage of the system configuration and user data.
 Concretely, user data is everything stored under `/root` and `/home`.
 
-
-### `var` - Variable Data
+**`var` - Variable Data**
 
 | Parameter | Value           |
 |-----------|-----------------|

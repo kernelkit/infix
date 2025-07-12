@@ -129,7 +129,8 @@ In *configure context* the following commands are available:
 | `do command`      | Call admin-exec command: `do show log`                 |
 | `commit`          |                                                        |
 
-### Example Session
+
+## Example Session
 
 > Remember to use the `TAB` and `?` keys to speed up your navigation.
 > See `help keybindings` for more tips!

@@ -1,5 +1,4 @@
-Configure Context
------------------
+# CLI Configure Context
 
 Enter the configure context from admin-exec by typing `configure`
 followed by Enter.  Available commands, press `?` at the prompt:
@@ -48,7 +47,7 @@ admin@host:/config/>
 > support are common to all systems.
 
 
-### Set IP Address on an Interface
+## Set IP Address on an Interface
 
 ```
 admin@host:/config/> edit interface eth0
@@ -73,7 +72,7 @@ interfaces {
 ```
 
 
-### Saving Changes
+## Saving Changes
 
 Apply the changes (from candidate to `running-config`):
 
@@ -108,7 +107,7 @@ verify the changes are saved.
 > are allowed at the moment.  Use the `TAB` key to make this easier.
 
 
-### Changing Hostname
+## Changing Hostname
 
 Settings like hostname are located in the `ietf-system.yang` model.
 Here is how it can be set.
@@ -127,7 +126,7 @@ is committed.
 > advertise the hostname, are restarted when the hostname is changed.
 
 
-### Changing Password
+## Changing Password
 
 User management, including passwords, is also a part of `ietf-system`.
 
@@ -154,7 +153,7 @@ then be used with `set password ...`.
 > strings using the UNIX command `pwgen`.
 
 
-### SSH Authorized Key
+## SSH Authorized Key
 
 Logging in remotely with SSH is possible by adding a *public key* to a
 user.  Here we add the authorized key to the admin user, multiple keys
@@ -178,7 +177,7 @@ admin@host:/config/system/authentication/user/admin/authorized-key/example@host/
 > key data, so there is no need to use the `text-editor` command, `set`
 > does the job.
 
-### Creating a VETH Pair
+## Creating a VETH Pair
 
 The following example creates a `veth0a <--> veth0b` virtual Ethernet
 pair which is useful for connecting, e.g., a container to the physical
@@ -219,7 +218,7 @@ See the bridging example below for more.
 > NETCONF, however, you must include the `veth0b` interface.
 
 
-### Creating a Bridge
+## Creating a Bridge
 
 Building on the previous example, we now create a non-VLAN filtering
 bridge (`br0`) that forwards any, normally link-local, LLDP traffic

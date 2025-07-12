@@ -1,5 +1,4 @@
-Upgrading the Software
-----------------------
+# Upgrading the System
 
 The admin-exec command `upgrade` can be used to install software images, or
 bundles.  A bundle is a signed and self-contained package that carries all the
