@@ -146,16 +146,13 @@ To initiate a system upgrade from the shell[^1], run:
 
     rauc install <file|url>
 
-Where the file or URL points to a [RAUC Upgrade
-Bundle](#rauc-upgrade-bundle).
+Where the file or URL points to a [RAUC Upgrade Bundle](#rauc-upgrade-bundle).
 
 This will upgrade the partition not currently running.  After a
 successful upgrade is completed, you can reboot your system, which
 will then boot from the newly installed image.  Since the partition
 from which you were originally running is now inactive, running the
 same upgrade command again will bring both partitions into sync.
-
-[RAUC]: https://rauc.io
 
 
 Image Formats
@@ -171,8 +168,6 @@ this image, or is dependent on it, in one way or another.
 
 On its own, it can be used as an [initrd][] to efficiently boot a
 virtual instance of Infix.
-
-[initrd]: https://docs.kernel.org/admin-guide/initrd.html
 
 ### FIT Framed Squash Image
 
@@ -213,20 +208,19 @@ validate the SquashFS's contents. This path was chosen because:
 In its full form, it can be used to netboot Infix, as it contains all
 the information needed by U-Boot in a single file.
 
-[FIT]: https://u-boot.readthedocs.io/en/latest/usage/fit.html
-
 
 ### RAUC Upgrade Bundle
 
 **Canonical Name**: `infix-${ARCH}.pkg`
 
-Itself a SquashFS image, it contains the Infix [SquashFS
-Image](#squashfs-image) along with the header of the [FIT Framed
-Squash Image](#fit-framed-squash-image), and some supporting files to
-let [RAUC][] know how install it on the target system.
+Itself a SquashFS image, this bundle (sometimes referred to package)
+contains the Infix [SquashFS Image](#squashfs-image) along with the
+header of the [FIT Framed Squash Image](#fit-framed-squash-image), and
+some supporting files to let [RAUC][] know how install it on the target
+system.
 
-When performing a [System Upgrade](#system-upgrade), this is the
-format to use.
+When performing a [System Upgrade](#system-upgrade), this is the format
+to use.
 
 
 ### Disk Image
@@ -287,10 +281,12 @@ bootloader configuration etc.
 
 Typical layout when using U-Boot bootloader:
 
+```
     /
     ├ primary.itbh
     ├ secondary.itbh
     └ uboot.env
+```
 
 During boot, an ITB header along with the corresponding root
 filesystem image are concatenated in memory, by U-Boot, to form a
@@ -340,8 +336,9 @@ can funtion reasonably well without a persistent `/var`, loosing
 If `var` is not available, Infix will still persist `/var/lib` using
 `cfg` as the backing storage.
 
-[^1]: See [Upgrading procedures and boot
-    order](system.md#upgrade-procedures-and-boot-order) for
-    information on upgrading via CLI.
+[^1]: See [Upgrade & Boot Order](upgrade.md) for more information.
 
-[2]: netboot.md
+[2]:      netboot.md
+[FIT]:    https://u-boot.readthedocs.io/en/latest/usage/fit.html
+[RAUC]:   https://rauc.io
+[initrd]: https://docs.kernel.org/admin-guide/initrd.html

@@ -14,6 +14,9 @@ the Buildroot `make menuconfig` system.
          -> System configuration
             -> [*]Enable root login with password
 
+> [!IMPORTANT]
+> Please see the [Contributing](#contributing) section, below, for
+> details on how to fork and clone when contributing to Infix.
 
 Cloning
 -------
@@ -25,13 +28,11 @@ tree to your PC:
 ```bash
 $ mkdir ~/Projects; cd ~/Projects
 $ git clone https://github.com/kernelkit/infix.git
+..
 $ cd infix/
 $ git submodule update --init
+..
 ```
-
-> Please see the [Contributing](#contributing) section, below, for
-> details on how to fork and clone when contributing to Infix.
-
 
 ### Customer Builds
 
@@ -57,6 +58,10 @@ Other caveats should be documented in the customer specific trees.
 Building
 --------
 
+> [!TIP]
+> For more details, see the Getting Started and System Requirements
+> sections of the [excellent Buildroot manual][1].
+
 Buildroot is almost stand-alone, it needs a few locally installed tools
 to bootstrap itself.  The most common ones are usually part of the base
 install of the OS, but specific ones for building need the following.
@@ -70,9 +75,6 @@ $ sudo apt install bc binutils build-essential bzip2 cpio \
                    autopoint bison flex autoconf automake \
                    mtools
 ```
-
-> For details, see the Getting Started and System Requirements sections
-> of the [excellent manual][1].
 
 To build an Infix image; select the target and then make:
 
@@ -96,12 +98,14 @@ and services are required on your system:
 ```bash
 $ sudo apt install jq graphviz qemu-system-x86 qemu-system-arm \
 				   ethtool gdb-multiarch tcpdump tshark
+..
 ```
 
 To be able to build the test specification you also need:
 
 ```bash
 $ sudo apt-get install python3-graphviz ruby-asciidoctor-pdf
+..
 ```
 
 
@@ -422,10 +426,10 @@ corresponding image for execution with our normal tooling:
     cd x-artifact-a1b2c3d4-x86_64
     make run
 
-> **Note:** CI artifacts are built from a merge commit of the source
-> and target branches.  Therefore, the version in the Infix banner
-> will not match the SHA of the commit you have checked out.
-
+> [!NOTE]
+> CI artifacts are built from a merge commit of the source and target
+> branches.  Therefore, the version in the Infix banner will not match
+> the SHA of the commit you have checked out.
 
 Contributing
 ------------
@@ -437,28 +441,32 @@ fork, and then use GitHub to create a *Pull Reqeuest*.
 For this to work as *painlessly as possible* for everyone involved:
 
  1. Fork Infix to your own user or organization[^1]
- 2. Fork all the Infix submodules, e.g., `kernelkit/buildroot` to your
+ 1. Fork all the Infix submodules, e.g., `kernelkit/buildroot` to your
     own user or organization as well
- 3. Clone your fork of Infix to your laptop/workstation
- 4. [Deactivate the Actions][6] you don't want in your fork
- 5. Please read the [Contributing Guidelines][5] as well!
+ 1. Clone your fork of Infix to your laptop/workstation
+ 1. [Deactivate the Actions][6] you don't want in your fork
+ 1. Please read the [Contributing Guidelines][5] as well!
 
 ```bash
 $ cd ~/Projects
 $ git clone https://github.com/YOUR_USER_NAME/infix.git
+...
 $ cd infix/
 $ git submodule update --init
+...
 ```
-> **Note:** when updating/synchronizing with upstream Infix changes you
-> may have to synchronize your forks as well.  GitHub have a `Sync fork`
-> button in the GUI for your fork for this purpose.  A cronjob on your
-> server of choice can do this for you with the [GitHub CLI tool][7].
+
+> [!NOTE]
+> When updating/synchronizing with upstream Infix changes you may have
+> to synchronize your forks as well.  GitHub have a `Sync fork` button
+> in the GUI for your fork for this purpose.  A cronjob on your server
+> of choice can do this for you with the [GitHub CLI tool][7].
 
 [^1]: Organizations should make sure to lock the `main` (or `master`)
     branch of their clones to ensure members do not accidentally merge
     changes there.  Keeping these branches in sync with upstream Infix
     is highly recommended as a baseline and reference.  For integration
-	of local changes another company-specific branch can be used instead.
+    of local changes another company-specific branch can be used instead.
 
 [0]: https://github.com/kernelkit/infix/releases
 [1]: https://buildroot.org/downloads/manual/manual.html
