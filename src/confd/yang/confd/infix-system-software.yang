@@ -204,16 +204,42 @@ submodule infix-system-software {
      description
        "Upgrade the system's software by installing the specified bundle.";
      input {
-       leaf url {
-         type string;
+       choice source {
          mandatory true;
          description
-           "The location of the software bundle, specified as a Uniform
-           Resource Locator (URL).  Currently supported protocols include
-           FTP, HTTP(S) and SCP.";
+           "Source of the software bundle to install.";
+         case url {
+           leaf url {
+             type string;
+             description
+               "The location of the software bundle, specified as a Uniform
+               Resource Locator (URL). Currently supported protocols include
+               FTP, HTTP(S) and SCP.";
+           }
+         }
+
+         case upload {
+           leaf image {
+             type binary;
+             description
+               "The image data to install, provided as base64-encoded binary data.";
+           }
+         }
        }
      }
   }
+  rpc install-upload-bundle {
+    nacm:default-deny-all;
+    description "Upgrade the system's software by installing from a supplied blob.";
+    input {
+      leaf image {
+        type binary;
+        mandatory true;
+        description "The image to install";
+      }
+    }
+  }
+
   rpc set-boot-order {
     nacm:default-deny-all;
     description
