@@ -393,8 +393,8 @@ work is done -- **much quicker** change-load-test cycles.
 
 The Infix automated test suite is built around Qemu and [Qeneth][2], see:
 
- * [Testing](testing.md)
- * [Docker Image](../test/docker/README.md)
+ * [Regression Testing with Infamy](testing.md)
+ * [Docker Image](https://github.com/kernelkit/infix/blob/main/test/docker/README.md)
 
 With any new feature added to Infix, it is essential to include relevant
 test case(s).  See the [Test Development](testing.md#test-development)
@@ -404,14 +404,13 @@ section for guidance on adding test cases.
 Reviewing
 ---------
 
-While reviewing a pull request, you might find yourself wanting to
-play around with a VM running that _exact_ version.  For such
-occations, [gh-dl-artifact.sh](../utils/gh-dl-artifact.sh) is your
-friend in need!  It will use the [GitHub CLI
-(gh)](https://cli.github.com) to locate a prebuilt image from our CI
+While reviewing a pull request, you might find yourself wanting to play
+around with a VM running that _exact_ version.  For such occasions,
+[gh-dl-artifact.sh][8] is your friend in need!  It employs the [GitHub
+CLI (gh)](https://cli.github.com) to locate a prebuilt image from our CI
 workflow, download it, and prepare a local output directory from which
-you can launch both `make run` instances, and run regression tests
-with `make test` and friends.
+you can launch both `make run` instances, and run regression tests with
+`make test` and friends.
 
 For example, if you are curious about how PR 666 behaves in some
 particular situation, you can use `gh` to switch to that branch, from
@@ -469,3 +468,4 @@ $ git submodule update --init
 [5]: https://github.com/kernelkit/infix/blob/main/.github/CONTRIBUTING.md
 [6]: https://docs.github.com/en/actions/managing-workflow-runs-and-deployments/managing-workflow-runs/disabling-and-enabling-a-workflow
 [7]: https://cli.github.com/
+[8]: https://github.com/kernelkit/infix/blob/main/utils/gh-dl-artifact.sh
