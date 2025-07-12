@@ -74,12 +74,13 @@ encoded strings is a decision imposed by Infix; the ONIE specification
 allows for arbitrary binary data.
 
 **Example**:
+
 ```json
 {
-	...
-	"vendor-extension": [
-		[ 12345, "my extension data" ]
-	]
+    ...
+    "vendor-extension": [
+        [ 12345, "my extension data" ]
+    ]
 }
 ```
 
@@ -102,12 +103,13 @@ Since the extension is itself stored in a JSON document, it has to be
 appropriately quoted.
 
 **Example**:
+
 ```json
 {
-	...
-	"vendor-extension": [
-		[ 61046, "{\"pwhash\":\"$6$9rufAxdqCrxrwfQR$G0l9cTVlu/vOhxgo/uMKfRDOmZRd5XWF3vKr5da6qYoxuTJBS/Pl9K.5lrabWoWFFc.71yFMaSlZz0O8FtAtl.\"}" ]
-	]
+    ...
+    "vendor-extension": [
+        [ 61046, "{\"pwhash\":\"$6$9rufAxdqCrxrwfQR$G0l9cTVlu/vOhxgo/uMKfRDOmZRd5XWF3vKr5da6qYoxuTJBS/Pl9K.5lrabWoWFFc.71yFMaSlZz0O8FtAtl.\"}" ]
+    ]
 }
 ```
 
