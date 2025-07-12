@@ -67,7 +67,8 @@ $ sudo apt install bc binutils build-essential bzip2 cpio \
                    diffutils file findutils git gzip      \
                    libncurses-dev libssl-dev perl patch   \
                    python3 rsync sed tar unzip wget       \
-                   autopoint bison flex autoconf automake
+                   autopoint bison flex autoconf automake \
+                   mtools
 ```
 
 > For details, see the Getting Started and System Requirements sections

@@ -97,6 +97,7 @@ filter_iface_ports()
     for phy in $ifaces; do
         found=""
         for port in $ports; do
+            [ -d "/sys/class/net/${port}/wireless" ] && continue
             if [ "$port" = "$phy" ]; then
                found=true
                break
@@ -147,7 +148,6 @@ ports=$(ip -d -j link show group port | jq -r '
 
 # Remaining external interfaces not classified as switch ports
 ifaces="$(filter_iface_ports "$phys_ifaces" "$ports")"
-
 cat <<EOF
 {
   "ietf-interfaces:interfaces": {
@@ -193,7 +193,7 @@ cat <<EOF
       }
 $(for iface in $ifaces; do gen_iface_json "$iface"; done)
 $(for iface in $ports;  do gen_iface_json "$iface" "$bridge"; done)
-    ]
+      ]
 EOF
 if [ "$dhcp" = "true" ] && [ -n "$bridge" ]; then
 cat <<EOF
