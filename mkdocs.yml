@@ -1,0 +1,114 @@
+site_name: User's Guide
+site_description: Infix Documentation
+site_url: https://kernelkit.github.io/infix/
+repo_url: https://github.com/kernelkit/infix/
+repo_name: kernelkit/infix
+site_author: The KernelKit Team
+copyright: Copyright &copy; 2022-2025 The KernelKit Authors
+docs_dir: doc/
+edit_uri: edit/master/doc/
+
+exclude_docs: |
+  ChangeLog.md
+  cli/README.md
+  eth-counters.md
+  TODO.org
+
+nav:
+  - About: index.md
+  - Introduction: introduction.md
+  - System Configuration: system.md
+  - System Management: management.md
+  - Network Configuration: networking.md
+  - CLI:
+      - Introduction : cli/introduction.md
+      - Configuration: cli/configure.md
+      - Keybindings: cli/keybindings.md
+      - Network Calculator: cli/netcalc.md
+      - Network Monitoring: cli/tcpdump.md
+      - Quickstart Guide:  cli/quick.md
+      - Text Edítor: cli/text-editor.md
+      - Upgrading: cli/upgrade.md
+  - In-Depth:
+      - Boot Procedure: boot.md
+      - DHCP Server: dhcp.md
+      - Docker Containers: container.md
+      - Hardware Info & Status: hardware.md
+      - Network Discovery: discovery.md
+      - Scripting Infix: scripting.md
+      - Tunneling (L2/L3): tunnels.md
+      - Quality of Service: qos.md
+      - Syslog Support: syslog.md
+      - Virtual Environments: virtual.md
+      - Wireless LAN (WiFi): wifi.md
+  - For Developers:
+      - Branding & Releases: branding.md
+      - Developer's Guide: developers-guide.md
+      - Developing with Buildroot: override-package.md
+      - Netboot HowTo: netboot.md
+      - Regression Testing: testing.md
+      - Test System Architechture: test-arch.md
+      - Vital Product Data (VPD): vpd.md
+  - Origin & Licensing: license.md
+
+theme:
+  logo: jack.png
+  name: material
+  features:
+    - toc.follow
+#    - toc.integrate
+    - navigation.path
+#    - navigation.prune
+    - navigation.instant
+#    - navigation.instant.progress
+    - navigation.tracking
+#    - navigation.tabs
+#    - navigation.sections
+#    - navigation.expand
+#    - navigation.top
+#    - navigation.footer
+    - search.highlight
+    - search.share
+#    - content.action.edit
+    - content.code.copy
+    - content.code.annotate
+    - content.footnote.tooltips
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: orange
+      accent: orange
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: black
+      accent: orange
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - footnotes
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.tabbed:
+      alternate_style: true
+  - tables
+  - toc:
+      permalink: true
+
+plugins:
+  - search
+  - callouts
+
+extra:
+  generator: false
+  homepage: https://kernelkit.org/
