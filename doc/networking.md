@@ -238,7 +238,7 @@ Multicast filtering in the bridge is handled by the bridge itself.  It
 can filter both IP multicast and MAC multicast.  For IP multicast it
 also supports "snooping", i.e., IGMP and MLD, to automatically reduce
 the broadcast effects of multicast.  See the next section for a summary
-of the [terminology used](#terminology--abbreviations).
+of the [terminology used](#terminology-abbreviations).
 
 > [!IMPORTANT]
 > Currently there is no way to just enable multicast filtering without
@@ -1253,7 +1253,7 @@ router 192.168.1.1, using the highest possible distance:
     admin@example:/>
 
 > [!TIP]
-> Remember to enable [IPv4 forwarding](#IPv4-forwarding) for the
+> Remember to enable [IPv4 forwarding](#ipv4-forwarding) for the
 > interfaces you want to route between.
 
 
@@ -1277,7 +1277,7 @@ enable OSPF and set one active interface in area 0:
     admin@example:/>
 
 > [!TIP]
-> Remember to enable [IPv4 forwarding](#IPv4-forwarding) for all the
+> Remember to enable [IPv4 forwarding](#ipv4-forwarding) for all the
 > interfaces you want to route between.
 
 

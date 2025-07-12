@@ -107,7 +107,7 @@ and TFTP to transfer the image to the system's RAM.
 
 Access to U-Boot's shell is disabled to prevent side-loading of
 malicious software.  To configure the active boot partition, refer to
-the [Bootloader Interface](#bootloader-interface) section.
+the [Bootloader Configuration](#configuration) section.
 
 
 ### GRUB
@@ -119,10 +119,9 @@ standard [System Upgrade](#system-upgrade) can be performed on
 virtualized instances.
 
 Access to the GRUB shell is not limited in any way, and the boot
-partition can be selected interactively at boot using the arrow
-keys. It is also possible to permanently configure the default
-partition from Infix using the [Bootloader
-Interface](#bootloader-interface).
+partition can be selected interactively at boot using the arrow keys. It
+is also possible to permanently configure the default partition from
+Infix using the [Bootloader Configuration](#configuration).
 
 
 System Upgrade
@@ -192,9 +191,9 @@ stored in the `/boot` directory of the filesystem.
 
 On disk, this image is then stored broken up into its two components;
 the _FIT header_ (`rootfs.itbh`) and the SquashFS image.  The header
-is stored on the [Auxiliary Data](#aux---auxiliary-data) partition of
+is stored on the [Auxiliary Data](#aux-auxiliary-data) partition of
 the [Disk Image](#disk-image), while the SquashFS image is stored in
-one of the [Root Filesystem](#primarysecondary---root-filesystems)
+one of the [Root Filesystem](#primarysecondary-root-filesystems)
 partitions.
 
 When the system boots, U-Boot will concatenate the two parts to
@@ -260,7 +259,7 @@ scheme. Partitions marked with an asterisk are optional.
     |           |
     '-----------'
 
-**`boot` - Bootloader**
+#### `boot` - Bootloader
 
 | Parameter | Value                                   |
 |-----------|-----------------------------------------|
@@ -274,7 +273,7 @@ in a separate storage device, e.g. a serial FLASH.
 On x86_64, this partition holds the EFI system partition, containing
 the GRUB bootloader.
 
-**`aux` - Auxiliary Data**
+#### `aux` - Auxiliary Data
 
 | Parameter | Value           |
 |-----------|-----------------|
@@ -302,7 +301,7 @@ Note that the bootloader's primary environment is bundled in the
 binary - `uboot.env` is only used to import a few settings that is
 required to configure the boot order.
 
-**`primary`/`secondary` - Root Filesystems**
+#### `primary`/`secondary` - Root Filesystems
 
 | Parameter | Value             |
 |-----------|-------------------|
@@ -314,7 +313,7 @@ Holds the [SquashFS Image](#squashfs-image). Two copies exist so that
 an incomplete upgrade does not brick the system, and to allow fast
 rollbacks when upgrading to a new version.
 
-**`cfg` - Configuration Data**
+#### `cfg` - Configuration Data
 
 | Parameter | Value           |
 |-----------|-----------------|
@@ -325,7 +324,7 @@ rollbacks when upgrading to a new version.
 Non-volatile storage of the system configuration and user data.
 Concretely, user data is everything stored under `/root` and `/home`.
 
-**`var` - Variable Data**
+#### `var` - Variable Data
 
 | Parameter | Value           |
 |-----------|-----------------|
