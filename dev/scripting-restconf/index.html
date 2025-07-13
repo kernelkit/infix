@@ -10,28 +10,28 @@
       
       
       
-        <link rel="canonical" href="https://kernelkit.github.io/infix/dev/cli/netcalc/">
+        <link rel="canonical" href="https://kernelkit.github.io/infix/dev/scripting-restconf/">
       
       
-        <link rel="prev" href="../keybindings/">
+        <link rel="prev" href="../scripting-sysrepocfg/">
       
       
-        <link rel="next" href="../tcpdump/">
+        <link rel="next" href="../scripting-prod/">
       
       
-      <link rel="icon" href="../../assets/images/favicon.png">
+      <link rel="icon" href="../assets/images/favicon.png">
       <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.15">
     
     
       
-        <title>Network Calculator - User's Guide</title>
+        <title>Remote RESTCONF - User's Guide</title>
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.342714a4.min.css">
+      <link rel="stylesheet" href="../assets/stylesheets/main.342714a4.min.css">
       
         
-        <link rel="stylesheet" href="../../assets/stylesheets/palette.06af60db.min.css">
+        <link rel="stylesheet" href="../assets/stylesheets/palette.06af60db.min.css">
       
       
 
@@ -50,7 +50,7 @@
       
     
     
-    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
@@ -76,7 +76,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#network-calculator" class="md-skip">
+        <a href="#examples-using-restconf" class="md-skip">
           Skip to content
         </a>
       
@@ -98,7 +98,7 @@
   <nav class="md-header__inner md-grid" aria-label="Header">
     <a href="https://kernelkit.org/" title="User&#39;s Guide" class="md-header__button md-logo" aria-label="User's Guide" data-md-component="logo">
       
-  <img src="../../jack.png" alt="logo">
+  <img src="../jack.png" alt="logo">
 
     </a>
     <label class="md-header__button md-icon" for="__drawer">
@@ -115,7 +115,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Network Calculator
+              Remote RESTCONF
             
           </span>
         </div>
@@ -238,7 +238,7 @@
   <label class="md-nav__title" for="__drawer">
     <a href="https://kernelkit.org/" title="User&#39;s Guide" class="md-nav__button md-logo" aria-label="User's Guide" data-md-component="logo">
       
-  <img src="../../jack.png" alt="logo">
+  <img src="../jack.png" alt="logo">
 
     </a>
     User's Guide
@@ -265,7 +265,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../.." class="md-nav__link">
+      <a href=".." class="md-nav__link">
         
   
   
@@ -287,7 +287,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../introduction/" class="md-nav__link">
+      <a href="../introduction/" class="md-nav__link">
         
   
   
@@ -309,7 +309,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../networking/" class="md-nav__link">
+      <a href="../networking/" class="md-nav__link">
         
   
   
@@ -331,7 +331,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../system/" class="md-nav__link">
+      <a href="../system/" class="md-nav__link">
         
   
   
@@ -353,7 +353,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../management/" class="md-nav__link">
+      <a href="../management/" class="md-nav__link">
         
   
   
@@ -375,7 +375,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../upgrade/" class="md-nav__link">
+      <a href="../upgrade/" class="md-nav__link">
         
   
   
@@ -397,7 +397,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../license/" class="md-nav__link">
+      <a href="../license/" class="md-nav__link">
         
   
   
@@ -408,6 +408,240 @@
   
 
       </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    CLI
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            CLI
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/introduction/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Introduction
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/configure/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Configuration
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/keybindings/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Keybindings
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/netcalc/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Network Calculator
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/tcpdump/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Network Monitoring
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/quick/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Quickstart Guide
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/text-editor/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Text Edítor
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/upgrade/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Upgrading
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
     </li>
   
 
@@ -434,15 +668,15 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9" checked>
         
           
-          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="">
+          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="">
             
   
   
   <span class="md-ellipsis">
-    CLI
+    In-Depth
     
   </span>
   
@@ -450,10 +684,10 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="true">
-          <label class="md-nav__title" for="__nav_8">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_9">
             <span class="md-nav__icon md-icon"></span>
-            CLI
+            In-Depth
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
             
@@ -464,7 +698,164 @@
   
   
     <li class="md-nav__item">
-      <a href="../introduction/" class="md-nav__link">
+      <a href="../boot/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Boot Procedure
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../dhcp/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    DHCP Server
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../container/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Docker Containers
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../hardware/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Hardware Info & Status
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../discovery/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Network Discovery
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9_6" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_9_6" id="__nav_9_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Scripting Infix
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_9_6_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_9_6">
+            <span class="md-nav__icon md-icon"></span>
+            Scripting Infix
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../scripting/" class="md-nav__link">
         
   
   
@@ -487,35 +878,12 @@
   
   
     <li class="md-nav__item">
-      <a href="../configure/" class="md-nav__link">
+      <a href="../scripting-sysrepocfg/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
-    Configuration
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../keybindings/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Keybindings
+    Advanced Usage
     
   </span>
   
@@ -547,7 +915,7 @@
   
   
   <span class="md-ellipsis">
-    Network Calculator
+    Remote RESTCONF
     
   </span>
   
@@ -560,7 +928,7 @@
   
   
   <span class="md-ellipsis">
-    Network Calculator
+    Remote RESTCONF
     
   </span>
   
@@ -583,18 +951,54 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#description" class="md-nav__link">
+  <a href="#factory-reset" class="md-nav__link">
     <span class="md-ellipsis">
-      Description
+      Factory Reset
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#examples" class="md-nav__link">
+  <a href="#system-reboot" class="md-nav__link">
     <span class="md-ellipsis">
-      Examples
+      System Reboot
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#set-date-and-time" class="md-nav__link">
+    <span class="md-ellipsis">
+      Set Date and Time
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#read-hostname" class="md-nav__link">
+    <span class="md-ellipsis">
+      Read Hostname
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#set-hostname" class="md-nav__link">
+    <span class="md-ellipsis">
+      Set Hostname
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#copy-running-to-startup" class="md-nav__link">
+    <span class="md-ellipsis">
+      Copy Running to Startup
     </span>
   </a>
   
@@ -616,373 +1020,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../tcpdump/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Network Monitoring
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../quick/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Quickstart Guide
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../text-editor/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Text Edítor
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../upgrade/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Upgrading
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    
-    
-    
-    
-      
-        
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9" >
-        
-          
-          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="">
-            
-  
-  
-  <span class="md-ellipsis">
-    In-Depth
-    
-  </span>
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_9">
-            <span class="md-nav__icon md-icon"></span>
-            In-Depth
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../boot/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Boot Procedure
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../dhcp/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    DHCP Server
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../container/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Docker Containers
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../hardware/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Hardware Info & Status
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../discovery/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Network Discovery
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    
-    
-    
-    
-      
-    
-    
-    <li class="md-nav__item md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9_6" >
-        
-          
-          <label class="md-nav__link" for="__nav_9_6" id="__nav_9_6_label" tabindex="0">
-            
-  
-  
-  <span class="md-ellipsis">
-    Scripting Infix
-    
-  </span>
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_9_6_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_9_6">
-            <span class="md-nav__icon md-icon"></span>
-            Scripting Infix
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../scripting/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Introduction
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../scripting-sysrepocfg/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Advanced Usage
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../scripting-restconf/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Remote RESTCONF
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../scripting-prod/" class="md-nav__link">
+      <a href="../scripting-prod/" class="md-nav__link">
         
   
   
@@ -1013,7 +1051,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../tunnels/" class="md-nav__link">
+      <a href="../tunnels/" class="md-nav__link">
         
   
   
@@ -1036,7 +1074,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../qos/" class="md-nav__link">
+      <a href="../qos/" class="md-nav__link">
         
   
   
@@ -1059,7 +1097,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../eth-counters/" class="md-nav__link">
+      <a href="../eth-counters/" class="md-nav__link">
         
   
   
@@ -1082,7 +1120,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../syslog/" class="md-nav__link">
+      <a href="../syslog/" class="md-nav__link">
         
   
   
@@ -1105,7 +1143,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../virtual/" class="md-nav__link">
+      <a href="../virtual/" class="md-nav__link">
         
   
   
@@ -1128,7 +1166,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../wifi/" class="md-nav__link">
+      <a href="../wifi/" class="md-nav__link">
         
   
   
@@ -1201,7 +1239,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../branding/" class="md-nav__link">
+      <a href="../branding/" class="md-nav__link">
         
   
   
@@ -1224,7 +1262,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../developers-guide/" class="md-nav__link">
+      <a href="../developers-guide/" class="md-nav__link">
         
   
   
@@ -1247,7 +1285,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../override-package/" class="md-nav__link">
+      <a href="../override-package/" class="md-nav__link">
         
   
   
@@ -1270,7 +1308,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../netboot/" class="md-nav__link">
+      <a href="../netboot/" class="md-nav__link">
         
   
   
@@ -1293,7 +1331,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../testing/" class="md-nav__link">
+      <a href="../testing/" class="md-nav__link">
         
   
   
@@ -1316,7 +1354,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../test-arch/" class="md-nav__link">
+      <a href="../test-arch/" class="md-nav__link">
         
   
   
@@ -1339,7 +1377,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../vpd/" class="md-nav__link">
+      <a href="../vpd/" class="md-nav__link">
         
   
   
@@ -1389,18 +1427,54 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#description" class="md-nav__link">
+  <a href="#factory-reset" class="md-nav__link">
     <span class="md-ellipsis">
-      Description
+      Factory Reset
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#examples" class="md-nav__link">
+  <a href="#system-reboot" class="md-nav__link">
     <span class="md-ellipsis">
-      Examples
+      System Reboot
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#set-date-and-time" class="md-nav__link">
+    <span class="md-ellipsis">
+      Set Date and Time
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#read-hostname" class="md-nav__link">
+    <span class="md-ellipsis">
+      Read Hostname
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#set-hostname" class="md-nav__link">
+    <span class="md-ellipsis">
+      Set Hostname
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#copy-running-to-startup" class="md-nav__link">
+    <span class="md-ellipsis">
+      Copy Running to Startup
     </span>
   </a>
   
@@ -1425,54 +1499,61 @@
   
 
 
-<h1 id="network-calculator">Network Calculator<a class="headerlink" href="#network-calculator" title="Permanent link">&para;</a></h1>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>netcalc &lt;ADDRESS/LEN | NETWORK NETMASK&gt; [split &lt;1-32 | 64-128&gt;]
+<h1 id="examples-using-restconf">Examples using RESTCONF<a class="headerlink" href="#examples-using-restconf" title="Permanent link">&para;</a></h1>
+<h2 id="factory-reset">Factory Reset<a class="headerlink" href="#factory-reset" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>~$ curl -kX POST -u admin:admin \
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>        -H &quot;Content-Type: application/yang-data+json&quot; \
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>        https://example.local/restconf/operations/ietf-factory-default:factory-reset
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>curl: (56) OpenSSL SSL_read: error:0A000126:SSL routines::unexpected eof while reading, errno 0
 </code></pre></div>
-<h2 id="description">Description<a class="headerlink" href="#description" title="Permanent link">&para;</a></h2>
-<p><code>netcalc</code> is a network calculator that takes an IP address and a subnet
-mask, or an IP address and prefix mask in CIDR notation, and then returns
-information about the subnet.  Both IPv4 and IPv6 is supported.</p>
-<p>A subnet can be entered in two ways:</p>
-<ul>
-<li><code>192.168.2.0 255.255.255.0</code>: traditional IPv4 'address netmask' style</li>
-<li><code>192.168.2.0/24</code>: modern prefix length, same also for IPv6</li>
-</ul>
-<p>An optional <code>split LEN</code> can be given as argument, the new length value
-must be bigger than the current prefix length.  See example below.</p>
-<h2 id="examples">Examples<a class="headerlink" href="#examples" title="Permanent link">&para;</a></h2>
-<p>Its most commonly used features are to understand how many addresses an
-IP subnet has, what the broadcast address is, first and last <em>usable</em>
-address.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>admin@example:/&gt; netcalc 192.168.2.0/24
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>Address  : 192.168.2.0          11000000.10101000.00000010. 00000000
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>Netmask  : 255.255.255.0 = 24   11111111.11111111.11111111. 00000000
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>Wildcard : 0.0.0.255            00000000.00000000.00000000. 11111111
-<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>=&gt;
-<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>Network  : 192.168.2.0/24       11000000.10101000.00000010. 00000000
-<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>HostMin  : 192.168.2.1          11000000.10101000.00000010. 00000001
-<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>HostMax  : 192.168.2.254        11000000.10101000.00000010. 11111110
-<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>Broadcast: 192.168.2.255        11000000.10101000.00000010. 11111111
-<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>Hosts/Net: 254                   Class C, Private network (RFC1918)
+<h2 id="system-reboot">System Reboot<a class="headerlink" href="#system-reboot" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>~$ curl -kX POST -u admin:admin \
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>        -H &quot;Content-Type: application/yang-data+json&quot; \
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>        https://example.local/restconf/operations/ietf-system:system-restart
 </code></pre></div>
-<p>Another common use-case is for IP subnetting, i.e., using only as many
-addresses for an IP subnet as needed.  Example, to split the above /24
-in four:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>admin@example:/&gt; netcalc 192.168.2.0/24 split 26
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>Address  : 192.168.2.0          11000000.10101000.00000010. 00000000
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>Netmask  : 255.255.255.0 = 24   11111111.11111111.11111111. 00000000
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>Wildcard : 0.0.0.255            00000000.00000000.00000000. 11111111
-<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>=&gt;
-<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>Network  : 192.168.2.0/24       11000000.10101000.00000010. 00000000
-<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>HostMin  : 192.168.2.1          11000000.10101000.00000010. 00000001
-<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>HostMax  : 192.168.2.254        11000000.10101000.00000010. 11111110
-<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>Broadcast: 192.168.2.255        11000000.10101000.00000010. 11111111
-<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>Hosts/Net: 254                   Class C, Private network (RFC1918)
-<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>
-<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>[Split network/26]
-<a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a>Network  : 192.168.2.0   - 192.168.2.63     Netmask  : 255.255.255.192
-<a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a>Network  : 192.168.2.64  - 192.168.2.127    Netmask  : 255.255.255.192
-<a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a>Network  : 192.168.2.128 - 192.168.2.191    Netmask  : 255.255.255.192
-<a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a>Network  : 192.168.2.192 - 192.168.2.255    Netmask  : 255.255.255.192
+<h2 id="set-date-and-time">Set Date and Time<a class="headerlink" href="#set-date-and-time" title="Permanent link">&para;</a></h2>
+<p>Here's an example of an RPC that takes input/argument:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>~$ curl -kX POST -u admin:admin \
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>        -H &quot;Content-Type: application/yang-data+json&quot; \
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>        -d &#39;{&quot;ietf-system:input&quot;: {&quot;current-datetime&quot;: &quot;2024-04-17T13:48:02-01:00&quot;}}&#39; \
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>        https://example.local/restconf/operations/ietf-system:set-current-datetime
+</code></pre></div>
+<p>You can verify that the changes took by a remote SSH command:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>~$ ssh admin@example.local &#39;date&#39;
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>Wed Apr 17 14:48:12 UTC 2024
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>~$
+</code></pre></div>
+<h2 id="read-hostname">Read Hostname<a class="headerlink" href="#read-hostname" title="Permanent link">&para;</a></h2>
+<p>Example of fetching JSON configuration data to stdout:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>~$ curl -kX GET -u admin:admin \
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>        -H &#39;Accept: application/yang-data+json&#39; \
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>        https://example.local/restconf/data/ietf-system:system/hostname
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>{
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>  &quot;ietf-system:system&quot;: {
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>    &quot;hostname&quot;: &quot;foo&quot;
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>  }
+<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>}
+</code></pre></div>
+<h2 id="set-hostname">Set Hostname<a class="headerlink" href="#set-hostname" title="Permanent link">&para;</a></h2>
+<p>Example of inline JSON data:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>~$ curl -kX PATCH -u admin:admin \
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>     -H &#39;Content-Type: application/yang-data+json&#39; \
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>     -d &#39;{&quot;ietf-system:system&quot;:{&quot;hostname&quot;:&quot;bar&quot;}}&#39; \
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>     https://example.local/restconf/data/ietf-system:system
+</code></pre></div>
+<h2 id="copy-running-to-startup">Copy Running to Startup<a class="headerlink" href="#copy-running-to-startup" title="Permanent link">&para;</a></h2>
+<p>No copy command available yet to copy between datastores, and the
+Rousette back-end also does not support "write-through" to the
+startup datastore.</p>
+<p>To save running-config to startup-config, use the following example to
+fetch running to a local file and then update startup with it:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>~$ curl -kX GET -u admin:admin -o running-config.json \
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>        -H &#39;Accept: application/yang-data+json&#39;       \
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>         https://example.local/restconf/ds/ietf-datastores:running
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>~$ curl -kX PUT -u admin:admin -d @running-config.json \
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>        -H &#39;Content-Type: application/yang-data+json&#39;  \
+<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>        https://example.local/restconf/ds/ietf-datastores:startup
 </code></pre></div>
 
 
@@ -1521,10 +1602,10 @@ in four:</p>
     
     
       
-      <script id="__config" type="application/json">{"base": "../..", "features": ["toc.follow", "navigation.path", "navigation.instant", "navigation.tracking", "navigation.sections", "search.highlight", "search.share", "content.code.copy", "content.code.annotate", "content.footnote.tooltips"], "search": "../../assets/javascripts/workers/search.d50fe291.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+      <script id="__config" type="application/json">{"base": "..", "features": ["toc.follow", "navigation.path", "navigation.instant", "navigation.tracking", "navigation.sections", "search.highlight", "search.share", "content.code.copy", "content.code.annotate", "content.footnote.tooltips"], "search": "../assets/javascripts/workers/search.d50fe291.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../../assets/javascripts/bundle.56ea9cef.min.js"></script>
+      <script src="../assets/javascripts/bundle.56ea9cef.min.js"></script>
       
     
   </body>

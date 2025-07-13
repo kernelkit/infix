@@ -65,6 +65,18 @@
          <lastmod>2025-07-13</lastmod>
     </url>
     <url>
+         <loc>https://kernelkit.github.io/infix/dev/scripting-prod/</loc>
+         <lastmod>2025-07-13</lastmod>
+    </url>
+    <url>
+         <loc>https://kernelkit.github.io/infix/dev/scripting-restconf/</loc>
+         <lastmod>2025-07-13</lastmod>
+    </url>
+    <url>
+         <loc>https://kernelkit.github.io/infix/dev/scripting-sysrepocfg/</loc>
+         <lastmod>2025-07-13</lastmod>
+    </url>
+    <url>
          <loc>https://kernelkit.github.io/infix/dev/scripting/</loc>
          <lastmod>2025-07-13</lastmod>
     </url>
