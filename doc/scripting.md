@@ -13,30 +13,30 @@ to a remote device over SSH, use Linux/UNIX.  With advances lately in
 both Windows and macOS, many of the user friendly tools previously only
 available in Linux are now available there too.
 
- - The shell prompt for the PC laptop side:
- 
-   ```shell
+- The shell prompt for the PC laptop side:
+
+   ```
    ~$
    ```
 
- - The shell prompt when logged in to an Infix device:
+- The shell prompt when logged in to an Infix device:
 
-   ```shell
+   ```
    admin@example:~$
    ```
 
-> **Note:** the shell script commands used here are the raw variants
-> which the CLI usually wraps in a warm and snugly blanket.  Meaning
-> they may change over time, while the CLI wrappers do *not*.  That
-> being said, please let us know if you find any inconsistencies.
-
+> [!NOTE]
+> The shell script commands used here are the raw variants which the CLI
+> usually wraps in a warm and snugly blanket.  Meaning they may change
+> over time, while the CLI wrappers do *not*.  That being said, please
+> let us know if you find any inconsistencies.
 
 ## Tips
 
- - Ensure the `admin` user does *not* have `clish` as login shell
- - Enable [SSH key authentication](system.md#ssh-authorized-key)
- - Deploy same SSH *public* key to many Infix devices
- - Secure your *private* SSH key using, e.g., `ssh-agent`
+- Ensure the `admin` user does *not* have `clish` as login shell
+- Enable [SSH key authentication](system.md#ssh-authorized-key)
+- Deploy same SSH *public* key to many Infix devices
+- Secure your *private* SSH key using, e.g., `ssh-agent`
 
 The `ssh-keygen` command, used to create the private/public key pair,
 asks for a passphrase and although this is *technically optional* it is
@@ -46,12 +46,11 @@ command.
 
 Useful links on SSH, keys, and using `ssh-agent`:
 
- - https://en.wikipedia.org/wiki/Ssh-agent
- - https://www.cyberciti.biz/faq/how-to-use-ssh-agent-for-authentication-on-linux-unix/
- - https://goteleport.com/blog/how-to-use-ssh-agent-safely/
+- <https://en.wikipedia.org/wiki/Ssh-agent>
+- <https://www.cyberciti.biz/faq/how-to-use-ssh-agent-for-authentication-on-linux-unix/>
+- <https://goteleport.com/blog/how-to-use-ssh-agent-safely/>
 
-
-## Admin User Not Authorized?
+## Admin User Not Authorized
 
 All system services and critical configuration files are owned by the
 locked-down `root` user.  It is not possible to activate the `root` user
@@ -64,7 +63,7 @@ Here we are logged in to an example device:
 admin@example:~$ cp /cfg/startup-config.cfg /cfg/backup-config.cfg
 cp: can't create '/cfg/backup-config.cfg': Permission denied
 admin@example:~$ sudo cp /cfg/startup-config.cfg /cfg/backup-config.cfg
-``` 
+```
 
 ## Examples
 
@@ -117,7 +116,7 @@ instead:
 ```
 ~$ ssh admin@infix.local%eth0
 The authenticity of host 'infix.local%eth0 (infix.local%eth0)' can't be established.
-``` 
+```
 
 ### Factory Reset
 
@@ -130,7 +129,7 @@ when the device boots up it erases all writable storage.
 admin@infix.local%eth0's password: *****
 ```
 
-### System Reboot 
+### System Reboot
 
 ```
 ~$ ssh admin@infix.local%eth0 reboot
@@ -151,6 +150,7 @@ use the PCs current time as argument:
 admin@infix.local%eth0's password: *****
 ```
 
+> [!TIP]
 > The `-u` option ensures saving system time to the RTC in UTC time.
 
 Verify that the change took:
@@ -174,19 +174,19 @@ the remote system:
 
 ```
 ~$ ssh admin@infix.local%qtap0 ip -br a
-admin@infix.local%qtap0's password: 
-lo               UP             127.0.0.1/8 ::1/128 
-e0               UP             fe80::ff:fe00:0/64 
-e1               UP             
-e2               UP             
-e3               UP             
-e4               UP             
-e5               UP             fe80::ff:fe00:5/64 
-e6               UP             fe80::ff:fe00:6/64 
-e7               UP             fe80::ff:fe00:7/64 
-e8               UP             fe80::ff:fe00:8/64 
-e9               UP             192.168.2.200/24 fe80::ff:fe00:9/64 
-br0              UP             
+admin@infix.local%qtap0's password:
+lo               UP             127.0.0.1/8 ::1/128
+e0               UP             fe80::ff:fe00:0/64
+e1               UP
+e2               UP
+e3               UP
+e4               UP
+e5               UP             fe80::ff:fe00:5/64
+e6               UP             fe80::ff:fe00:6/64
+e7               UP             fe80::ff:fe00:7/64
+e8               UP             fe80::ff:fe00:8/64
+e9               UP             192.168.2.200/24 fe80::ff:fe00:9/64
+br0              UP
 ```
 
 Here we see a loopback interface (lo), ten Ethernet ports (e0-e9) and a
@@ -198,10 +198,10 @@ I know it's port e6 that I want to take down:
 
 ```
 ~$ ssh admin@infix.local%qtap0 ip link set e6 down
-admin@infix.local%qtap0's password: 
+admin@infix.local%qtap0's password:
 RTNETLINK answers: Operation not permitted
 ~$ ssh admin@infix.local%qtap0 sudo ip link set e6 down
-admin@infix.local%qtap0's password: 
+admin@infix.local%qtap0's password:
 ```
 
 Changing the operational link state of a port is a privileged command,
@@ -211,19 +211,19 @@ Inspecting the link state again show the port is now down:
 
 ```
 ~$ ssh admin@infix.local%qtap0 ip -br a
-admin@infix.local%qtap0's password: 
-lo               UP             127.0.0.1/8 ::1/128 
-e0               UP             fe80::ff:fe00:0/64 
-e1               UP             
-e2               UP             
-e3               UP             
-e4               UP             
-e5               UP             fe80::ff:fe00:5/64 
-e6               DOWN           
-e7               UP             fe80::ff:fe00:7/64 
-e8               UP             fe80::ff:fe00:8/64 
-e9               UP             192.168.2.200/24 fe80::ff:fe00:9/64 
-br0              UP  
+admin@infix.local%qtap0's password:
+lo               UP             127.0.0.1/8 ::1/128
+e0               UP             fe80::ff:fe00:0/64
+e1               UP
+e2               UP
+e3               UP
+e4               UP
+e5               UP             fe80::ff:fe00:5/64
+e6               DOWN
+e7               UP             fe80::ff:fe00:7/64
+e8               UP             fe80::ff:fe00:8/64
+e9               UP             192.168.2.200/24 fe80::ff:fe00:9/64
+br0              UP
 ```
 
 ### Check Device's Network Connectivity
@@ -297,7 +297,7 @@ Create an upload directory where `admin` has write permission:
 
 ```
 ~$ ssh admin@infix.local%eth0 "sudo mkdir /var/tmp/upload; sudo chown admin /var/tmp/upload"
-admin@infix.local%eth0's password: 
+admin@infix.local%eth0's password:
 ```
 
 Copy the file with secure copy, first we show the nasty IPv6 version of
@@ -305,8 +305,8 @@ the command:
 
 ```
 ~$ scp infix-aarch64-24.06.0.pkg admin@\[fe80::ff:fe00:0%eth0\]:/var/tmp/upload/
-admin@fe80::ff:fe00:0%eth0's password: 
-infix-aarch64-24.06.0.pkg                                    100%  296   601.4KB/s   00:00 
+admin@fe80::ff:fe00:0%eth0's password:
+infix-aarch64-24.06.0.pkg                              100%  296   601.4KB/s   00:00
 ```
 
 And the upgrade command itself:
@@ -328,16 +328,15 @@ persistent storage).
 ```
 ~$ ssh admin@infix.local%eth0 rm /var/tmp/upload/infix-aarch64-24.06.0.pkg
 admin@infix.local%eth0's password: *****
-~$ 
+~$
 ```
 
 ### Controlling LEDs for Production Tests
 
-As part of production testing, LED verification is often expected to
-be performed. Infix uses standard [Linux support for LED
-management][6], where LEDs appear in the file system under
-/sys/class/leds and can be controlled using *echo* command. `sudo`
-privileges are required.
+As part of production testing, LED verification is often expected to be
+performed.  Infix uses standard [Linux support for LED management][6],
+where LEDs appear in the file system under /sys/class/leds and can be
+controlled using *echo* command. `sudo` privileges are required.
 
 When interacting with LEDs this way, first disable the Infix *iitod*
 daemon to avoid conflicting LED control.
@@ -346,8 +345,8 @@ daemon to avoid conflicting LED control.
 ~$ ssh admin@example.local 'initctl stop iitod'
 ```
 
-Then run the test, e.g., visually control that a red LED labeled
-'LAN' is working.
+Then run the test, e.g., visually control that a red LED labeled 'LAN'
+is working.
 
 ```
 ~$ ssh admin@example.local 'echo none | sudo tee /sys/class/leds/red\:lan/trigger'
@@ -360,6 +359,7 @@ To turn off the same LED, run the following commands.
 ~$ ssh admin@example.local 'echo none | sudo tee /sys/class/leds/red\:lan/trigger'
 ~$ ssh admin@example.local 'echo 0    | sudo tee /sys/class/leds/red\:lan/brightness'
 ```
+
 When done with LED testing, enable Infix *iitod* daemon again.
 
 ```
@@ -375,37 +375,34 @@ under /sys/class/power_supply. The following example reads status of
 two power supplies named *pwr1* and *pwr2*.
 
 ```
-~$ ssh admin@example 'cat /sys/class/power_supply/pwr1/online' 
+~$ ssh admin@example 'cat /sys/class/power_supply/pwr1/online'
 1
-~$ ssh admin@example 'cat /sys/class/power_supply/pwr2/online' 
+~$ ssh admin@example 'cat /sys/class/power_supply/pwr2/online'
 0
-~$ 
+~$
 ```
-Here, only *pwr1* happened to have power. 
 
+Here, only *pwr1* happened to have power.
 
 ## Examples using SSH and sysrepocfg
 
-
 [sysrepocfg][4] can be used to interact with the YANG models when logged
-in to infix. Thus, *set config*, *read config*, *read status* and
-*RPC* can be conducted using sysrepocfg for supported YANG models. 
-It is possible to make configuration changes by operating on the
-*startup* database.
+in to infix. Thus, *set config*, *read config*, *read status* and *RPC*
+can be conducted using sysrepocfg for supported YANG models.  It is
+possible to make configuration changes by operating on the *startup*
+database.
 
-See [sysrepocfg][4] for information. Examples below will utilize 
-
-
+See [sysrepocfg][4] for information. Examples below will utilize
 
 - `sysrepocfg -I FILE -fjson -d DATABASE` to import/write a JSON
   formatted configuration file to the specified database.
 - `sysrepocfg -E FILE -fjson -d DATABASE` to edit/merge JSON formatted
   configuration in FILE with the specified database.
--  `sysrepocfg -R FILE -fjson` to execute remote procedure call (RPC) defined in
-   FILE (JSON formatted). 
+-  `sysrepocfg -R FILE -fjson` to execute remote procedure call (RPC)
+   defined in FILE (JSON formatted).
 - `sysrepocfg -X -fjson -d DATABASE -x xpath` to read configuration or
   status from specified database.
-  
+
 For importing (-I) and editing (-E), `-d running` is typically used in
 examples below. Specify `-d startup` to apply changes to startup
 configuration. Exporting (-X) could operate on configuration (e.g.,
@@ -415,7 +412,7 @@ Some commands require a file as input. In examples below we assume
 it been transferred to Infix in advance, e.g. using `scp` as shown below.
 
 ```
-~$ cat file.json 
+~$ cat file.json
 {
    "ietf-factory-default:factory-reset": {
    }
@@ -426,9 +423,8 @@ it been transferred to Infix in advance, e.g. using `scp` as shown below.
 
 ### Factory Reset Using sysrepocfg
 
-
 ```
-~$ cat file.json 
+~$ cat file.json
 {
    "ietf-factory-default:factory-reset": {
    }
@@ -436,15 +432,16 @@ it been transferred to Infix in advance, e.g. using `scp` as shown below.
 ~$ scp file.json admin@example.local:/tmp/file.json
 ~$ ssh admin@example.local 'sysrepocfg -fjson -R /tmp/file.json'
 ^C
-~$ 
+~$
 ```
+
 See [Factory Reset](#factory-reset) for another (simpler) alternative.
 
 If it is only wished to copy factory config to running config the
 following RPC is available
 
 ```
-~$ cat file.json 
+~$ cat file.json
 {
    "infix-factory-default:factory-default": {
    }
@@ -452,15 +449,13 @@ following RPC is available
 ~$ scp file.json admin@example.local:/tmp/file.json
 ~$ ssh admin@example.local 'sysrepocfg -fjson -R /tmp/file.json'
 ^C
-~$ 
+~$
 ```
-
 
 ### System Reboot Using sysrepocfg
 
-
 ```
-~$ cat /tmp/file.json 
+~$ cat /tmp/file.json
 {
    "ietf-system:system-restart": {
    }
@@ -469,12 +464,10 @@ following RPC is available
 ~$ ssh admin@example.local 'sysrepocfg -fjson -R /tmp/file.json'
 ~$
 ```
+
 See [System Reboot](#system-reboot) for another (simpler) alternative.
 
-
-
 ### Set Date and Time Using sysrepocfg
-
 
 ```
 ~$ ssh admin@example.local 'date'
@@ -482,24 +475,26 @@ Sun Nov 20 10:20:23 UTC 2005
 ~$ cat file.json
 {
    "ietf-system:set-current-datetime": {
-	"current-datetime": "2024-04-17T13:48:02-01:00"
+      "current-datetime": "2024-04-17T13:48:02-01:00"
    }
 }
 ~$ scp file.json admin@example.local:/tmp/file.json
 ~$ ssh admin@example.local 'sysrepocfg -fjson -R /tmp/file.json'
 ~$ ssh admin@example.local 'date'
 Wed Apr 17 14:48:12 UTC 2024
-~$ 
+~$
 ```
-See [Set Date and Time](#set-date-and-time) for another (simpler) alternative.
+
+See [Set Date and Time](#set-date-and-time) for another (simpler)
+alternative.
 
 ### Remote Control of Ethernet Ports Using sysrepocfg
-
 
 Reading administrative status of interface *e0* of running configuration.
 
 ```
-~$ ssh admin@example.local 'sysrepocfg -X -fjson -d running -e report-all -x \"/ietf-interfaces:interfaces/interface[name='e0']/enabled\"'
+~$ ssh admin@example.local 'sysrepocfg -X -fjson -d running -e report-all \
+       -x \"/ietf-interfaces:interfaces/interface[name='e0']/enabled\"'
 {
   "ietf-interfaces:interfaces": {
     "interface": [
@@ -512,11 +507,14 @@ Reading administrative status of interface *e0* of running configuration.
 }
 ~$
 ```
-> Note: Without `-e report-all` argument the line `"enabled: true`
-> would not be shown as `true` is default.
+
+> [!NOTE]
+> Without `-e report-all` argument the line `"enabled: true` would not
+> be shown as `true` is default.
 
 ```
-~$ ssh admin@example.local "sysrepocfg -X -fjson -d running -x \"/ietf-interfaces:interfaces/interface[name='e0']/enabled\""
+~$ ssh admin@example.local "sysrepocfg -X -fjson -d running \
+       -x \"/ietf-interfaces:interfaces/interface[name='e0']/enabled\""
 {
   "ietf-interfaces:interfaces": {
     "interface": [
@@ -528,7 +526,6 @@ Reading administrative status of interface *e0* of running configuration.
 }
 ~$
 ```
-
 
 Setting the administrative status of interface *e0* of running configuration.
 
@@ -545,17 +542,16 @@ $ cat file.json
   }
 }
 ~$ scp file.json admin@example.local:/tmp/file.json
-~$ ssh admin@example.local 'sysrepocfg -E /tmp/file.json -fjson -d running' 
+~$ ssh admin@example.local 'sysrepocfg -E /tmp/file.json -fjson -d running'
 ~$
 ```
 
 ### Enable/Disable DHCPv4 client
 
-
 Enabling DHCPv4 client on interface *e0*, with current default options.
 
 ```
-~$ cat /tmp/file.json 
+~$ cat /tmp/file.json
 {
   "infix-dhcp-client:dhcp-client": {
     "enabled": true,
@@ -567,29 +563,29 @@ Enabling DHCPv4 client on interface *e0*, with current default options.
   }
 }
 ~$ scp file.json admin@example.local:/tmp/file.json
-~$ ssh admin@example.local 'sysrepocfg -E /tmp/file.json -fjson -d running' 
+~$ ssh admin@example.local 'sysrepocfg -E /tmp/file.json -fjson -d running'
 ~$
 ```
 
-Disabling DHCPv4 client. 
+Disabling DHCPv4 client.
 
 ```
-~$ cat /tmp/file.json 
+~$ cat /tmp/file.json
 {
   "infix-dhcp-client:dhcp-client": {
     "enabled": false
   }
 }
 ~$ scp file.json admin@example.local:/tmp/file.json
-~$ ssh admin@example.local 'sysrepocfg -E /tmp/file.json -fjson -d running' 
+~$ ssh admin@example.local 'sysrepocfg -E /tmp/file.json -fjson -d running'
 ~$
 ```
 
 Configuration for client interface *e0* remains, but does not apply as
-DHCPv4 is disabled. 
+DHCPv4 is disabled.
 
 ```
-admin@example:~$ sysrepocfg -X -fjson -d running -x "/infix-dhcp-client:dhcp-client" 
+admin@example:~$ sysrepocfg -X -fjson -d running -x "/infix-dhcp-client:dhcp-client"
 {
   "infix-dhcp-client:dhcp-client": {
     "enabled": false,
@@ -600,13 +596,12 @@ admin@example:~$ sysrepocfg -X -fjson -d running -x "/infix-dhcp-client:dhcp-cli
     ]
   }
 }
-admin@example:~$ 
+admin@example:~$
 ```
 
 To fully remove the DHCPv4 client configuration or a specific
 *client-if* with sysrepocfg, one would need to read out the full
 configuration, remove relevant parts and read back.
-
 
 ### Enable/Disable IPv6
 
@@ -619,9 +614,9 @@ below shows IPv4 and IPv6 addresses assigned on *e0*.
     link/ether 02:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff
     inet 10.0.2.15/24 scope global proto dhcp e0
        valid_lft forever preferred_lft forever
-    inet6 fec0::ff:fe00:0/64 scope site dynamic mngtmpaddr proto kernel_ra 
+    inet6 fec0::ff:fe00:0/64 scope site dynamic mngtmpaddr proto kernel_ra
        valid_lft 86380sec preferred_lft 14380sec
-    inet6 fe80::ff:fe00:0/64 scope link proto kernel_ll 
+    inet6 fe80::ff:fe00:0/64 scope link proto kernel_ll
        valid_lft forever preferred_lft forever
 ~$
 ```
@@ -630,7 +625,7 @@ IPv6 is enabled/disabled per interface. The example below disables IPv6
 on interface *e0*.
 
 ```
-~$ cat /tmp/file.json 
+~$ cat /tmp/file.json
 {
   "ietf-interfaces:interfaces": {
     "interface": [
@@ -644,13 +639,13 @@ on interface *e0*.
   }
 }
 ~$ scp file.json admin@example.local:/tmp/file.json
-~$ ssh admin@example.local 'sysrepocfg -E /tmp/file.json -fjson -d running' 
+~$ ssh admin@example.local 'sysrepocfg -E /tmp/file.json -fjson -d running'
 ~$ ssh admin@example.local 'ip addr show dev e0'
 2: e0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast state UP group default qlen 1000
     link/ether 02:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff
     inet 10.0.2.15/24 scope global proto dhcp e0
        valid_lft forever preferred_lft forever
-~$ 
+~$
 ```
 
 ### Change a Binary Setting
@@ -667,16 +662,16 @@ Stripped down, it looks something like this:
 if tmp=$(sysrepocfg -G "$xpath"); then
     file=$(mktemp)
 
-	echo "$tmp" | base64 -d > "$file"
-	if edit "$file"; then
-		tmp=$(base64 -w0 < "$file")
-		sysrepocfg -S "$xpath" -u "$tmp"
-	fi
+    echo "$tmp" | base64 -d > "$file"
+    if edit "$file"; then
+        tmp=$(base64 -w0 < "$file")
+        sysrepocfg -S "$xpath" -u "$tmp"
+    fi
 
-	rm -f "$file"
+    rm -f "$file"
 else
-	echo "Failed to retrieve value for $xpath"
-	exit 1
+    echo "Failed to retrieve value for $xpath"
+    exit 1
 fi
 ```
 
@@ -707,7 +702,7 @@ mounted to `/var/www/index.html` can look like this:
       }
     ]
   }
-``` 
+```
 
 The command to edit this file, and restart the container with the new
 contents, look like this:
@@ -716,8 +711,7 @@ contents, look like this:
 admin@infix:~$ cfg edit "/infix-containers:containers/container[name='web']/mount[name='index.html']/content"
 ```
 
-
-### <a id="backup"></a> Backup Configuration Using sysrepocfg And scp 
+### <a id="backup"></a> Backup Configuration Using sysrepocfg And scp
 
 Displaying running or startup configuration is possible with
 `sysrepocfg -X`, as shown below.
@@ -739,31 +733,31 @@ An example for backing up startup configuration from remote PC.
 ~$
 ```
 
-Or possibly skip intermediate storage of file 
+Or possibly skip intermediate storage of file
+
 ```
 ~$ ssh admin@example.local 'sysrepocfg -X -fjson -d startup' > backup.json
 ~$
 ```
 
-A final example is to only use `scp`. This is simpler, but only works to backup the
-startup configuration (not running).
+A final example is to only use `scp`. This is simpler, but only works to
+backup the startup configuration (not running).
 
 ```
 ~$ scp admin@example.local:/cfg/startup-config.cfg backup.json
 ~$
 ```
 
-### <a id="restore"></a> Restore Configuration Using sysrepocfg and ssh/scp 
+### <a id="restore"></a> Restore Configuration Using sysrepocfg and ssh/scp
 
-
-To restore a backup configuration to startup, the simplest way is to
-use `scp` and reboot as shown below
+To restore a backup configuration to startup, the simplest way is to use
+`scp` and reboot as shown below
 
 ```
 ~$ scp admin@example.local:/cfg/startup-config.cfg backup.json
 ~$ ssh admin@example.local 'reboot'
 Connection to switch.local closed by remote host.
-~$ 
+~$
 ```
 
 An alternative method to restore a backup configuration is to use the
@@ -773,16 +767,17 @@ The example below imports the backup configuration to startup, and
 reboots the unit.
 
 ```
-~$ scp backup.json admin@example.local:/tmp/ 
+~$ scp backup.json admin@example.local:/tmp/
 ~$ ssh admin@example.local 'sudo sysrepocfg -I /tmp/backup.json -fjson -d startup'
 ~$ ssh admin@example.local 'reboot'
 Connection to switch.local closed by remote host.
-~$ 
+~$
 ```
 
-> Note: admin login credentials (hash) are stored as part of the
-> configuration file. When replacing a switch and applying the backed 
-> up configuration from the former switch, the password on the
+> [!NOTE]
+> The login credentials (hash) for the `admin` user are stored as part
+> of the configuration file.  When replacing a switch and applying the
+> backed up configuration from the former switch, the password on the
 > replacement unit will also change.
 
 ### Copy Running to Startup Using sysrepocfg
@@ -810,7 +805,6 @@ Infix supports IETF Hardware YANG with augments for ONIE formatted
 production data stored in EEPROMs, if available. See Infix [VPD
 documentation][5], as well as *ietf-hardware* and *infix-hardware* YANG
 models for details.
-
 
 ```
 ~$ ssh admin@example.local 'sysrepocfg -X -fjson -d operational -x /ietf-hardware:hardware'
@@ -845,7 +839,7 @@ models for details.
     ]
   }
 }
-~$ 
+~$
 ```
 
 ## Examples using RESTCONF
@@ -855,7 +849,7 @@ models for details.
 ```
 ~$ curl -kX POST -u admin:admin \
         -H "Content-Type: application/yang-data+json" \
-		https://example.local/restconf/operations/ietf-factory-default:factory-reset
+        https://example.local/restconf/operations/ietf-factory-default:factory-reset
 curl: (56) OpenSSL SSL_read: error:0A000126:SSL routines::unexpected eof while reading, errno 0
 ```
 
@@ -864,7 +858,7 @@ curl: (56) OpenSSL SSL_read: error:0A000126:SSL routines::unexpected eof while r
 ```
 ~$ curl -kX POST -u admin:admin \
         -H "Content-Type: application/yang-data+json" \
-		https://example.local/restconf/operations/ietf-system:system-restart
+        https://example.local/restconf/operations/ietf-system:system-restart
 ```
 
 ### Set Date and Time
@@ -873,10 +867,9 @@ Here's an example of an RPC that takes input/argument:
 
 ```
 ~$ curl -kX POST -u admin:admin \
-	    -H "Content-Type: application/yang-data+json" \
-	    -d '{"ietf-system:input": {"current-datetime": "2024-04-17T13:48:02-01:00"}}' \
-		https://example.local/restconf/operations/ietf-system:set-current-datetime
-
+        -H "Content-Type: application/yang-data+json" \
+        -d '{"ietf-system:input": {"current-datetime": "2024-04-17T13:48:02-01:00"}}' \
+        https://example.local/restconf/operations/ietf-system:set-current-datetime
 ```
 
 You can verify that the changes took by a remote SSH command:
@@ -894,7 +887,7 @@ Example of fetching JSON configuration data to stdout:
 ```
 ~$ curl -kX GET -u admin:admin \
         -H 'Accept: application/yang-data+json' \
-		https://example.local/restconf/data/ietf-system:system/hostname
+        https://example.local/restconf/data/ietf-system:system/hostname
 {
   "ietf-system:system": {
     "hostname": "foo"
@@ -932,20 +925,18 @@ fetch running to a local file and then update startup with it:
         https://example.local/restconf/ds/ietf-datastores:startup
 ```
 
-
 ## Miscellaneous
 
-### <a id="port-test-intro"></a> Port Configuration Example for Production Tests 
+### <a id="port-test-intro"></a> Port Configuration Example for Production Tests
 
-As part of production tests, verification Ethernet ports are expected
-to be performed. A common way is to connect a test PC to two ports and
-send a *ping* traversing all ports.  This can be achieved by using
-VLANs on the switch as described in this section. The resulting
-configuration file can be applied to the running configuration of the
-produced unit, e.g, use config file restore as described
-[above](#restore).
+As part of production tests, verification Ethernet ports are expected to
+be performed. A common way is to connect a test PC to two ports and send
+a *ping* traversing all ports.  This can be achieved by using VLANs on
+the switch as described in this section. The resulting configuration
+file can be applied to the running configuration of the produced unit,
+e.g, use config file restore as described [above](#restore).
 
-In this example we assume a 10 port switch, with ports e1-e10. 
+In this example we assume a 10 port switch, with ports e1-e10.
 
 The following VLAN configuration and cable connections will be used:
 
@@ -960,40 +951,41 @@ The following VLAN configuration and cable connections will be used:
 The test PC is connected to e1 and e10 via different interfaces
 (alternatively, two different PCs are used).
 
+> [!TIP]
 > Configuration here is done via console. When configuring remotely
 > over SSH, remember to keep one IP address (the one used for the SSH
 > connection)! I.e., set a static IP address first, then perform the
-> VLAN configuration step."
+> VLAN configuration step.
 
 #### Configuration at Start
 
 Starting out, we assume a configuration where all ports are network
 interfaces (possibly with IPv6 enabled).
 
-``` shell
+```
 admin@example:/> show interfaces
-lo              ethernet   UP          00:00:00:00:00:00                        
+lo              ethernet   UP          00:00:00:00:00:00
                 ipv4                   127.0.0.1/8 (static)
                 ipv6                   ::1/128 (static)
-e1              ethernet   LOWER-DOWN  00:53:00:06:11:01                        
-e2              ethernet   LOWER-DOWN  00:53:00:06:11:02                        
-e3              ethernet   LOWER-DOWN  00:53:00:06:11:03                        
-e4              ethernet   LOWER-DOWN  00:53:00:06:11:04                        
-e5              ethernet   LOWER-DOWN  00:53:00:06:11:05                        
-e6              ethernet   LOWER-DOWN  00:53:00:06:11:06                        
-e7              ethernet   LOWER-DOWN  00:53:00:06:11:07                        
-e8              ethernet   LOWER-DOWN  00:53:00:06:11:08                        
-e9              ethernet   LOWER-DOWN  00:53:00:06:11:09                        
-e10             ethernet   UP          00:53:00:06:11:0a                        
+e1              ethernet   LOWER-DOWN  00:53:00:06:11:01
+e2              ethernet   LOWER-DOWN  00:53:00:06:11:02
+e3              ethernet   LOWER-DOWN  00:53:00:06:11:03
+e4              ethernet   LOWER-DOWN  00:53:00:06:11:04
+e5              ethernet   LOWER-DOWN  00:53:00:06:11:05
+e6              ethernet   LOWER-DOWN  00:53:00:06:11:06
+e7              ethernet   LOWER-DOWN  00:53:00:06:11:07
+e8              ethernet   LOWER-DOWN  00:53:00:06:11:08
+e9              ethernet   LOWER-DOWN  00:53:00:06:11:09
+e10             ethernet   UP          00:53:00:06:11:0a
                 ipv6                   fe80::0053:00ff:fe06:110a/64 (link-layer)
-admin@example:/> 
+admin@example:/>
 ```
 
 #### Creating Bridge and Adding Ports
 
-The example below uses Infix documentation on [creating bridges][8]. 
+The example below uses Infix documentation on [creating bridges][8].
 
-``` shell
+```
 admin@example:/> configure
 admin@example:/config/> edit interface br0
 admin@example:/config/interface/br0/> end
@@ -1007,7 +999,7 @@ admin@example:/config/> set interface e7 bridge-port bridge br0
 admin@example:/config/> set interface e8 bridge-port bridge br0
 admin@example:/config/> set interface e9 bridge-port bridge br0
 admin@example:/config/> set interface e10 bridge-port bridge br0
-admin@example:/config/> 
+admin@example:/config/>
 ```
 
 The interface status can be viewed using "show interface" after
@@ -1018,39 +1010,38 @@ address. Or skip 'leave' and stay in configuration context until done
 with all sections, including the one on [Add IP on
 Switch](#ip-on-switch).
 
-``` shell
+```
 admin@example:/config/> leave
-admin@example:/> 
+admin@example:/>
 admin@example:/> show interfaces
-INTERFACE       PROTOCOL   STATE       DATA                                     
-br0             bridge                 
-│               ethernet   UP          00:53:00:06:11:01                        
-├ e1            bridge     LOWER-DOWN  
-├ e2            bridge     LOWER-DOWN  
-├ e3            bridge     LOWER-DOWN  
-├ e4            bridge     LOWER-DOWN  
-├ e5            bridge     LOWER-DOWN  
-├ e6            bridge     LOWER-DOWN  
-├ e7            bridge     LOWER-DOWN  
-├ e8            bridge     LOWER-DOWN  
-├ e9            bridge     LOWER-DOWN  
-└ e10           bridge     FORWARDING  
-lo              ethernet   UP          00:00:00:00:00:00                        
+INTERFACE       PROTOCOL   STATE       DATA
+br0             bridge
+│               ethernet   UP          00:53:00:06:11:01
+├ e1            bridge     LOWER-DOWN
+├ e2            bridge     LOWER-DOWN
+├ e3            bridge     LOWER-DOWN
+├ e4            bridge     LOWER-DOWN
+├ e5            bridge     LOWER-DOWN
+├ e6            bridge     LOWER-DOWN
+├ e7            bridge     LOWER-DOWN
+├ e8            bridge     LOWER-DOWN
+├ e9            bridge     LOWER-DOWN
+└ e10           bridge     FORWARDING
+lo              ethernet   UP          00:00:00:00:00:00
                 ipv4                   127.0.0.1/8 (static)
                 ipv6                   ::1/128 (static)
-admin@example:/> 
+admin@example:/>
 ```
 
 #### Assign VLANs to Ports
 
-Then configure VLANs as outlined [above](#port-test-intro):
-default VID for ingress (PVID), which is done per port, and egress
-mode (untagged), which is done at the bridge level. See Infix
-[documentation for VLAN bridges][9] for more information.
+Then configure VLANs as outlined [above](#port-test-intro): default VID
+for ingress (PVID), which is done per port, and egress mode (untagged),
+which is done at the bridge level. See Infix [documentation for VLAN
+bridges][9] for more information.
 
-
-``` shell
-admin@example:/> 
+```
+admin@example:/>
 admin@example:/> configure
 admin@example:/config/> set interface e1 bridge-port pvid 10
 admin@example:/config/> set interface e2 bridge-port pvid 10
@@ -1075,30 +1066,30 @@ admin@example:/config/interface/br0/bridge/vlans/> set vlan 40 untagged e8
 admin@example:/config/interface/br0/bridge/vlans/> set vlan 50 untagged e9
 admin@example:/config/interface/br0/bridge/vlans/> set vlan 50 untagged e10
 admin@example:/config/interface/br0/bridge/vlans/> leave
-admin@example:/> 
+admin@example:/>
 ```
 
 Interface status would now should something like the following
 
-``` shell
-admin@example:/> show interfaces 
-INTERFACE       PROTOCOL   STATE       DATA                                     
-br0             bridge                 
-│               ethernet   UP          00:53:00:06:11:01                        
-├ e1            bridge     LOWER-DOWN  vlan:10u pvid:10                         
-├ e2            bridge     LOWER-DOWN  vlan:10u pvid:10                         
-├ e3            bridge     LOWER-DOWN  vlan:20u pvid:20                         
-├ e4            bridge     LOWER-DOWN  vlan:20u pvid:20                         
-├ e5            bridge     LOWER-DOWN  vlan:30u pvid:30                         
-├ e6            bridge     LOWER-DOWN  vlan:30u pvid:30                         
-├ e7            bridge     LOWER-DOWN  vlan:40u pvid:40                         
-├ e8            bridge     LOWER-DOWN  vlan:40u pvid:40                         
-├ e9            bridge     LOWER-DOWN  vlan:50u pvid:50                         
-└ e10           bridge     FORWARDING  vlan:50u pvid:50                         
-lo              ethernet   UP          00:00:00:00:00:00                        
+```
+admin@example:/> show interfaces
+INTERFACE       PROTOCOL   STATE       DATA
+br0             bridge
+│               ethernet   UP          00:53:00:06:11:01
+├ e1            bridge     LOWER-DOWN  vlan:10u pvid:10
+├ e2            bridge     LOWER-DOWN  vlan:10u pvid:10
+├ e3            bridge     LOWER-DOWN  vlan:20u pvid:20
+├ e4            bridge     LOWER-DOWN  vlan:20u pvid:20
+├ e5            bridge     LOWER-DOWN  vlan:30u pvid:30
+├ e6            bridge     LOWER-DOWN  vlan:30u pvid:30
+├ e7            bridge     LOWER-DOWN  vlan:40u pvid:40
+├ e8            bridge     LOWER-DOWN  vlan:40u pvid:40
+├ e9            bridge     LOWER-DOWN  vlan:50u pvid:50
+└ e10           bridge     FORWARDING  vlan:50u pvid:50
+lo              ethernet   UP          00:00:00:00:00:00
                 ipv4                   127.0.0.1/8 (static)
                 ipv6                   ::1/128 (static)
-admin@example:/> 
+admin@example:/>
 ```
 
 #### Connect Cables and Test
@@ -1107,36 +1098,36 @@ We can now connect the PC to e1 and e10, and the other ports are
 patched according to plan [above](#port-test-intro). We should get
 link up on all ports.
 
-``` shell
-admin@example:/> show interfaces 
-INTERFACE       PROTOCOL   STATE       DATA                                     
-br0             bridge                 
-│               ethernet   UP          00:53:00:06:11:01                        
-├ e1            bridge     FORWARDING  vlan:10u pvid:10                         
-├ e2            bridge     FORWARDING  vlan:10u pvid:10                         
-├ e3            bridge     FORWARDING  vlan:20u pvid:20                         
-├ e4            bridge     FORWARDING  vlan:20u pvid:20                         
-├ e5            bridge     FORWARDING  vlan:30u pvid:30                         
-├ e6            bridge     FORWARDING  vlan:30u pvid:30                         
-├ e7            bridge     FORWARDING  vlan:40u pvid:40                         
-├ e8            bridge     FORWARDING  vlan:40u pvid:40                         
-├ e9            bridge     FORWARDING  vlan:50u pvid:50                         
-└ e10           bridge     FORWARDING  vlan:50u pvid:50                         
-lo              ethernet   UP          00:00:00:00:00:00                        
+```
+admin@example:/> show interfaces
+INTERFACE       PROTOCOL   STATE       DATA
+br0             bridge
+│               ethernet   UP          00:53:00:06:11:01
+├ e1            bridge     FORWARDING  vlan:10u pvid:10
+├ e2            bridge     FORWARDING  vlan:10u pvid:10
+├ e3            bridge     FORWARDING  vlan:20u pvid:20
+├ e4            bridge     FORWARDING  vlan:20u pvid:20
+├ e5            bridge     FORWARDING  vlan:30u pvid:30
+├ e6            bridge     FORWARDING  vlan:30u pvid:30
+├ e7            bridge     FORWARDING  vlan:40u pvid:40
+├ e8            bridge     FORWARDING  vlan:40u pvid:40
+├ e9            bridge     FORWARDING  vlan:50u pvid:50
+└ e10           bridge     FORWARDING  vlan:50u pvid:50
+lo              ethernet   UP          00:00:00:00:00:00
                 ipv4                   127.0.0.1/8 (static)
                 ipv6                   ::1/128 (static)
-admin@example:/> 
+admin@example:/>
 ```
 
 Here we use IPv6 ping all hosts (ff02::1) on PC interface eth1 to
-check reachability to the other interface of the PC. 
+check reachability to the other interface of the PC.
 
-> A recommendation is to use network name spaces on PC to ensure
-> traffic really goes out to switch, instead of being looped
-> internally. Or use two PCs. 
+> [!TIP]
+> We recommend using network namespaces (Linux only) on the PC to ensure
+> that traffic is actually sent out to the switch, rather than being
+> looped back internally. Alternatively, use two separate PCs.
 
-
-``` shell
+```
 ~ $ ping -L ff02::1%eth1
 PING ff02::1%eth1(ff02::1%eth1) 56 data bytes
 64 bytes from fe80::488a:a35f:9d41:ac9c%eth1: icmp_seq=1 ttl=64 time=0.496 ms
@@ -1155,7 +1146,7 @@ rtt min/avg/max/mdev = 0.473/0.548/0.736/0.088 ms
 We can verify that traffic goes through the switch by disconnecting
 one of the patch cables, e.g., between e4 and e5
 
-``` shell
+```
 ~ $ ping -L ff02::1%eth1
 PING ff02::1%eth1(ff02::1%eth1) 56 data bytes
 64 bytes from fe80::488a:a35f:9d41:ac9c%eth1: icmp_seq=1 ttl=64 time=0.510 ms
@@ -1176,21 +1167,20 @@ PING ff02::1%eth1(ff02::1%eth1) 56 data bytes
 --- ff02::1%eth1 ping statistics ---
 20 packets transmitted, 12 received, 40% packet loss, time 19432ms
 rtt min/avg/max/mdev = 0.448/0.634/0.961/0.156 ms
-~ $ 
+~ $
 ```
 
-#### <a id="ip-on-switch"></a> Add IP Address on Switch 
+#### <a id="ip-on-switch"></a> Add IP Address on Switch
 
 The configuration so far does not provide a means to connect to the
-switch management via SSH or NETCONF, as the switch has no IP
-address. The example below shows how to add the switch to VLAN 10 (as
-used for ports e1 and e2) and enables IPv6.
+switch management via SSH or NETCONF, as the switch has no IP address.
+The example below shows how to add the switch to VLAN 10 (as used for
+ports e1 and e2) and enables IPv6.
 
-
-``` shell
+```
 admin@example:/config/> edit interface vlan10
 admin@example:/config/interface/vlan10/> set vlan lower-layer-if br0
-admin@example:/config/interface/vlan10/> set ipv6 enabled 
+admin@example:/config/interface/vlan10/> set ipv6 enabled
 admin@example:/config/interface/vlan10/> show
 type vlan;
 ipv6 {
@@ -1201,45 +1191,45 @@ vlan {
   id 10;
   lower-layer-if br0;
 }
-admin@example:/config/interface/vlan10/> 
+admin@example:/config/interface/vlan10/>
 admin@example:/config/interface/vlan10/> end
-admin@example:/config/> edit interface br0 bridge vlans 
+admin@example:/config/> edit interface br0 bridge vlans
 admin@example:/config/interface/br0/bridge/vlans/> set vlan 10 tagged br0
 admin@example:/config/interface/br0/bridge/vlans/> leave
-admin@example:/> 
+admin@example:/>
 ```
 
 Interface *vlan10* with an auto-configured IPv6 address should appear.
 
-``` shell
+```
 admin@example:/> show interfaces
-INTERFACE       PROTOCOL   STATE       DATA                                     
-br0             bridge                 vlan:10t                                 
-│               ethernet   UP          00:53:00:06:11:01                        
-├ e1            bridge     FORWARDING  vlan:10u pvid:10                         
-├ e2            bridge     FORWARDING  vlan:10u pvid:10                         
-├ e3            bridge     FORWARDING  vlan:20u pvid:20                         
-├ e4            bridge     FORWARDING  vlan:20u pvid:20                         
-├ e5            bridge     FORWARDING  vlan:30u pvid:30                         
-├ e6            bridge     FORWARDING  vlan:30u pvid:30                         
-├ e7            bridge     FORWARDING  vlan:40u pvid:40                         
-├ e8            bridge     FORWARDING  vlan:40u pvid:40                         
-├ e9            bridge     FORWARDING  vlan:50u pvid:50                         
-└ e10           bridge     FORWARDING  vlan:50u pvid:50                         
-lo              ethernet   UP          00:00:00:00:00:00                        
+INTERFACE       PROTOCOL   STATE       DATA
+br0             bridge                 vlan:10t
+│               ethernet   UP          00:53:00:06:11:01
+├ e1            bridge     FORWARDING  vlan:10u pvid:10
+├ e2            bridge     FORWARDING  vlan:10u pvid:10
+├ e3            bridge     FORWARDING  vlan:20u pvid:20
+├ e4            bridge     FORWARDING  vlan:20u pvid:20
+├ e5            bridge     FORWARDING  vlan:30u pvid:30
+├ e6            bridge     FORWARDING  vlan:30u pvid:30
+├ e7            bridge     FORWARDING  vlan:40u pvid:40
+├ e8            bridge     FORWARDING  vlan:40u pvid:40
+├ e9            bridge     FORWARDING  vlan:50u pvid:50
+└ e10           bridge     FORWARDING  vlan:50u pvid:50
+lo              ethernet   UP          00:00:00:00:00:00
                 ipv4                   127.0.0.1/8 (static)
                 ipv6                   ::1/128 (static)
-vlan10          ethernet   UP          00:53:00:06:11:01                        
+vlan10          ethernet   UP          00:53:00:06:11:01
 │               ipv6                   fe80::0053:00ff:fe06:1101/64 (link-layer)
-└ br0           ethernet   UP          00:53:00:06:11:01                        
-admin@example:/> 
+└ br0           ethernet   UP          00:53:00:06:11:01
+admin@example:/>
 ```
 
 When pinging "IPv6 all hosts" from the PC, there should be two
 responses for every ping, one from the switch and one from the PC
 attached to e10.
 
-``` shell
+```
 ~ $ ping -L ff02::1%eth1
 PING ff02::1%eth1(ff02::1%eth1) 56 data bytes
 64 bytes from fe80::488a:a35f:9d41:ac9c%eth1: icmp_seq=1 ttl=64 time=0.508 ms
@@ -1254,14 +1244,14 @@ PING ff02::1%eth1(ff02::1%eth1) 56 data bytes
 --- ff02::1%eth1 ping statistics ---
 4 packets transmitted, 4 received, +4 duplicates, 0% packet loss, time 3031ms
 rtt min/avg/max/mdev = 0.452/0.631/0.968/0.211 ms
-~ $ 
+~ $
 ```
 
 It should now be possible to access the switch from the PC via SSH (or NETCONF).
 
-``` shell
+```
 ~ $ ssh admin@fe80::0053:00ff:fe06:1101%eth1
-admin@fe80::0053:00ff:fe06:1101%eth1's password: 
+admin@fe80::0053:00ff:fe06:1101%eth1's password:
 .-------.
 |  . .  | Infix OS — Immutable.Friendly.Secure
 |-. v .-| https://kernelkit.org
@@ -1275,9 +1265,6 @@ admin@example:~$ exit
 
 See previous sections on [backup](#backup) and [restore](#restore) of
 the created configuration.
-
-
-
 
 [1]: discovery.md
 [2]: https://rauc.io/
