@@ -110,7 +110,10 @@ markdown_extensions:
 plugins:
   - search
   - callouts
+  - mike
 
 extra:
   generator: false
   homepage: https://kernelkit.org/
+  version:
+    provider: mike
