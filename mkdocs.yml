@@ -65,7 +65,7 @@ theme:
     - navigation.sections
 #    - navigation.expand
 #    - navigation.top
-    - navigation.footer
+#    - navigation.footer
     - search.highlight
     - search.share
 #    - content.action.edit
@@ -109,4 +109,5 @@ plugins:
   - callouts
 
 extra:
+  generator: false
   homepage: https://kernelkit.org/
