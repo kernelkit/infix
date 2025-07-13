@@ -36,7 +36,11 @@ nav:
       - Docker Containers: container.md
       - Hardware Info & Status: hardware.md
       - Network Discovery: discovery.md
-      - Scripting Infix: scripting.md
+      - Scripting Infix:
+          - Introduction: scripting.md
+          - Advanced Usage: scripting-sysrepocfg.md
+          - Remote RESTCONF: scripting-restconf.md
+          - Production Testing: scripting-prod.md
       - Tunneling (L2/L3): tunnels.md
       - Quality of Service: qos.md
       - RMON Counters: eth-counters.md
