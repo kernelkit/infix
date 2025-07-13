@@ -1,0 +1,2556 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Infix Documentation">
+      
+      
+      
+        <link rel="canonical" href="https://kernelkit.github.io/infix/dev/container/">
+      
+      
+        <link rel="prev" href="../dhcp/">
+      
+      
+        <link rel="next" href="../hardware/">
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.15">
+    
+    
+      
+        <title>Docker Containers - User's Guide</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.342714a4.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.06af60db.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="orange" data-md-color-accent="orange">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#containers-in-infix" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="https://kernelkit.org/" title="User&#39;s Guide" class="md-header__button md-logo" aria-label="User's Guide" data-md-component="logo">
+      
+  <img src="../jack.png" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            User's Guide
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Docker Containers
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="orange" data-md-color-accent="orange"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="black" data-md-color-accent="orange"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+          <a href="javascript:void(0)" class="md-search__icon md-icon" title="Share" aria-label="Share" data-clipboard data-clipboard-text="" data-md-component="search-share" tabindex="-1">
+            
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9a3 3 0 0 0-3 3 3 3 0 0 0 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.15c-.05.21-.08.43-.08.66 0 1.61 1.31 2.91 2.92 2.91s2.92-1.3 2.92-2.91A2.92 2.92 0 0 0 18 16.08"/></svg>
+          </a>
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/kernelkit/infix/" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.7.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81"/></svg>
+  </div>
+  <div class="md-source__repository">
+    kernelkit/infix
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="https://kernelkit.org/" title="User&#39;s Guide" class="md-nav__button md-logo" aria-label="User's Guide" data-md-component="logo">
+      
+  <img src="../jack.png" alt="logo">
+
+    </a>
+    User's Guide
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/kernelkit/infix/" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.7.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81"/></svg>
+  </div>
+  <div class="md-source__repository">
+    kernelkit/infix
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    About
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../introduction/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Introduction
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../networking/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Network Configuration
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../system/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    System Configuration
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../management/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    System Management
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../upgrade/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    System Upgrade
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../license/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Origin & Licensing
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    CLI
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            CLI
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/introduction/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Introduction
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/configure/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Configuration
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/keybindings/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Keybindings
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/netcalc/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Network Calculator
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/tcpdump/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Network Monitoring
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/quick/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Quickstart Guide
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/text-editor/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Text Edítor
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/upgrade/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Upgrading
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    In-Depth
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_9">
+            <span class="md-nav__icon md-icon"></span>
+            In-Depth
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../boot/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Boot Procedure
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../dhcp/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    DHCP Server
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    Docker Containers
+    
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    Docker Containers
+    
+  </span>
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#caution" class="md-nav__link">
+    <span class="md-ellipsis">
+      Caution
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#getting-started" class="md-nav__link">
+    <span class="md-ellipsis">
+      Getting Started
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Getting Started">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      Examples
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#container-images" class="md-nav__link">
+    <span class="md-ellipsis">
+      Container Images
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#upgrading-a-container-image" class="md-nav__link">
+    <span class="md-ellipsis">
+      Upgrading a Container Image
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#capabilities" class="md-nav__link">
+    <span class="md-ellipsis">
+      Capabilities
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#networking-and-containers" class="md-nav__link">
+    <span class="md-ellipsis">
+      Networking and Containers
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Networking and Containers">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#container-bridge" class="md-nav__link">
+    <span class="md-ellipsis">
+      Container Bridge
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#container-host-interface" class="md-nav__link">
+    <span class="md-ellipsis">
+      Container Host Interface
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Container Host Interface">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#routed-setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      Routed Setup
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#bridged-setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      Bridged Setup
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#host-networking" class="md-nav__link">
+    <span class="md-ellipsis">
+      Host Networking
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mounts-and-volumes" class="md-nav__link">
+    <span class="md-ellipsis">
+      Mounts and Volumes
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Mounts and Volumes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#content-mounts" class="md-nav__link">
+    <span class="md-ellipsis">
+      Content Mounts
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#example-containers" class="md-nav__link">
+    <span class="md-ellipsis">
+      Example Containers
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Example Containers">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#system-container" class="md-nav__link">
+    <span class="md-ellipsis">
+      System Container
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#application-container-nftables" class="md-nav__link">
+    <span class="md-ellipsis">
+      Application Container: nftables
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#application-container-ntpd" class="md-nav__link">
+    <span class="md-ellipsis">
+      Application Container: ntpd
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#advanced" class="md-nav__link">
+    <span class="md-ellipsis">
+      Advanced
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Advanced">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#running-host-commands-from-container" class="md-nav__link">
+    <span class="md-ellipsis">
+      Running Host Commands From Container
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#container-requirements" class="md-nav__link">
+    <span class="md-ellipsis">
+      Container Requirements
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Container Requirements">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#advanced-users" class="md-nav__link">
+    <span class="md-ellipsis">
+      Advanced Users
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../hardware/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Hardware Info & Status
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../discovery/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Network Discovery
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../scripting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Scripting Infix
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tunnels/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Tunneling (L2/L3)
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../qos/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Quality of Service
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../eth-counters/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    RMON Counters
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../syslog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Syslog Support
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../virtual/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Virtual Environments
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../wifi/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Wireless LAN (WiFi)
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_10" >
+        
+          
+          <label class="md-nav__link" for="__nav_10" id="__nav_10_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    For Developers
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_10">
+            <span class="md-nav__icon md-icon"></span>
+            For Developers
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../branding/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Branding & Releases
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../developers-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Developer's Guide
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../override-package/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Developing with Buildroot
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../netboot/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Netboot HowTo
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../testing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Regression Testing
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../test-arch/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Test System Architechture
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../vpd/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Vital Product Data (VPD)
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#caution" class="md-nav__link">
+    <span class="md-ellipsis">
+      Caution
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#getting-started" class="md-nav__link">
+    <span class="md-ellipsis">
+      Getting Started
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Getting Started">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      Examples
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#container-images" class="md-nav__link">
+    <span class="md-ellipsis">
+      Container Images
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#upgrading-a-container-image" class="md-nav__link">
+    <span class="md-ellipsis">
+      Upgrading a Container Image
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#capabilities" class="md-nav__link">
+    <span class="md-ellipsis">
+      Capabilities
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#networking-and-containers" class="md-nav__link">
+    <span class="md-ellipsis">
+      Networking and Containers
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Networking and Containers">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#container-bridge" class="md-nav__link">
+    <span class="md-ellipsis">
+      Container Bridge
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#container-host-interface" class="md-nav__link">
+    <span class="md-ellipsis">
+      Container Host Interface
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Container Host Interface">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#routed-setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      Routed Setup
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#bridged-setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      Bridged Setup
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#host-networking" class="md-nav__link">
+    <span class="md-ellipsis">
+      Host Networking
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mounts-and-volumes" class="md-nav__link">
+    <span class="md-ellipsis">
+      Mounts and Volumes
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Mounts and Volumes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#content-mounts" class="md-nav__link">
+    <span class="md-ellipsis">
+      Content Mounts
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#example-containers" class="md-nav__link">
+    <span class="md-ellipsis">
+      Example Containers
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Example Containers">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#system-container" class="md-nav__link">
+    <span class="md-ellipsis">
+      System Container
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#application-container-nftables" class="md-nav__link">
+    <span class="md-ellipsis">
+      Application Container: nftables
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#application-container-ntpd" class="md-nav__link">
+    <span class="md-ellipsis">
+      Application Container: ntpd
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#advanced" class="md-nav__link">
+    <span class="md-ellipsis">
+      Advanced
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Advanced">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#running-host-commands-from-container" class="md-nav__link">
+    <span class="md-ellipsis">
+      Running Host Commands From Container
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#container-requirements" class="md-nav__link">
+    <span class="md-ellipsis">
+      Container Requirements
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Container Requirements">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#advanced-users" class="md-nav__link">
+    <span class="md-ellipsis">
+      Advanced Users
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="containers-in-infix">Containers in Infix<a class="headerlink" href="#containers-in-infix" title="Permanent link">&para;</a></h1>
+<p><img align="right" alt="Docker whale" src="../img/docker.webp" width="360" /></p>
+<p>Infix comes with native support for Docker containers using <a href="https://podman.io">podman</a>.
+The <a href="https://github.com/kernelkit/infix/blob/main/src/confd/yang/infix-containers.yang">YANG model</a> describes the current level of support, complete
+enough to run both system and application containers.</p>
+<p>Key design features of Infix, like using Linux switchdev, allow users to
+assign switch ports directly to containers, not just bridged VETH pairs.
+This is a rare and in many cases <em>unique</em> feature of Infix.</p>
+<p>All network specific settings are done using the IETF interfaces YANG
+model, with augments for containers to ensure smooth integration with
+container networking in podman.</p>
+<div class="admonition tip">
+<p class="admonition-title">Important</p>
+<p>Even though the <code>podman</code> command can be used directly from a shell
+prompt, we strongly recommend using the CLI commands instead.  They
+employ the services of a wrapper <code>container</code> script which handles the
+integration of Docker containers in the system.</p>
+</div>
+<h2 id="caution">Caution<a class="headerlink" href="#caution" title="Permanent link">&para;</a></h2>
+<p>A word of warning.  Containers can run on your system in privileged
+mode, as <code>root</code>, giving them full access to devices on your system.
+Even though containers are fenced from the host with Linux namespaces,
+resource limited using cgroups, and normally run with capped privileges,
+a privileged container is relatively easy to break out of.  A trivial
+example is given in the <a href="#advanced">Advanced</a> section of this document.</p>
+<p>We recommend avoiding privileged containers, if possible (they do have
+valid use-cases) and instead use <a href="#capabilities">capabilities</a>.</p>
+<p>Remember:</p>
+<ul>
+<li>If the system is compromised, containers can be used to easily
+   install malicious software in your system and over the network</li>
+<li>Your system is as secure as anything you run in the container</li>
+<li>If you run containers, there is no security guarantee of any kind</li>
+<li>Running 3rd party container images on your system could open a
+   security hole/attack vector/surface</li>
+<li>An expert with knowledge how to build exploits will be able to
+   jailbreak/elevate to root even if best practices are followed</li>
+</ul>
+<p>This being said, a system suspected of being compromised can always be
+restored to a safe state with a factory reset.  Provided, of course,
+that it has secure boot enabled.</p>
+<h2 id="getting-started">Getting Started<a class="headerlink" href="#getting-started" title="Permanent link">&para;</a></h2>
+<p>In the CLI, containers can be run in one of two ways:</p>
+<ol>
+<li><code>container run IMAGE [COMMAND]</code>, or</li>
+<li>enter <code>configure</code> context, then <code>edit container NAME</code></li>
+</ol>
+<p>The first is useful mostly for testing, or running single commands in
+an image.  It is a wrapper for <code>podman run -it --rm ...</code>.</p>
+<p>The second creates a read-only container that by default automatically
+start at every boot.   It basically wraps <code>podman create ...</code>.</p>
+<p>When non-volatile storage is needed two complementary options exist:</p>
+<ul>
+<li><strong>Volumes:</strong> data stored in a volume is persisted until explicitly
+   removed from the configuration, i.e., across host reboots and
+   container upgrades</li>
+<li><strong><a href="#content-mounts">Content Mounts</a>:</strong> where the content of a file
+  mounted into the container is kept along with the container
+  configuration in the device's <code>startup-config</code></li>
+</ul>
+<p>Podman ensures (using tmpfs) all containers have writable directories
+for certain critical file system paths: <code>/dev</code>, <code>/dev/shm</code>, <code>/run</code>,
+<code>/tmp</code>, and <code>/var/tmp</code>.  Meaning, what you most often need is writable
+volumes for <code>/var/lib</code> and <code>/etc</code>, or only file mounts for a few files
+in <code>/etc</code>.  The <a href="#container-requirements">actual requirements</a> depend on
+your container image and application to run.</p>
+<div class="admonition tip">
+<p class="admonition-title">Important</p>
+<p>When running containers from public registries, double-check that they
+support the CPU architecture of your host system.  Remember, unlike
+virtualization, containers reuse the host's CPU and kernel.</p>
+</div>
+<p><img align="right" alt="Hello World" src="../img/docker-hello-world.svg" width="360" /></p>
+<h3 id="examples">Examples<a class="headerlink" href="#examples" title="Permanent link">&para;</a></h3>
+<p>Classic Hello World:</p>
+<div class="highlight"><pre><span></span><code>admin@example:/&gt; container run docker://hello-world
+Starting docker://hello-world :: use Ctrl-p Ctrl-q to detach
+Trying to pull docker.io/library/hello-world:latest...
+Getting image source signatures
+Copying blob c1ec31eb5944 done
+Copying config d2c94e258d done
+Writing manifest to image destination
+Storing signatures
+
+Hello from Docker!
+This message shows that your installation appears to be working correctly.
+</code></pre></div>
+<p>A web server with <a href="https://hub.docker.com/_/nginx">nginx</a>, using standard docker bridge.  Podman will
+automatically create a VETH pair for us, connecting the container to the
+<code>docker0</code> bridge:</p>
+<div class="highlight"><pre><span></span><code>admin@example:/&gt; configure
+admin@example:/config/&gt; edit interface docker0
+admin@example:/config/interface/docker0/&gt; set container-network
+admin@example:/config/interface/docker0/&gt; end
+admin@example:/config/&gt; edit container web
+admin@example:/config/container/web/&gt; set image docker://nginx:alpine
+admin@example:/config/container/web/&gt; set network publish 8080:80
+admin@example:/config/container/web/&gt; set network interface docker0
+admin@example:/config/container/web/&gt; set volume cache target /var/cache
+admin@example:/config/container/web/&gt; leave
+admin@example:/&gt; show container
+</code></pre></div>
+<p>Exit to the shell and verify the service with curl, or try to attach
+to your device's IP address using your browser:</p>
+<div class="highlight"><pre><span></span><code>admin@example:~$ curl http://localhost:8080
+</code></pre></div>
+<p>or connect to port 8080 of your running Infix system with a browser.
+See the following sections for how to add more interfaces and manage
+your container at runtime.</p>
+<h2 id="container-images">Container Images<a class="headerlink" href="#container-images" title="Permanent link">&para;</a></h2>
+<p>The underlying <code>podman</code> project supports importing and fetching images in
+a variety of ways, the most common ones are also supported by Infix.  In
+this section we present how to use them and in the next section we show
+how to upgrade to a newer base image.</p>
+<p>The CLI help shows:</p>
+<div class="highlight"><pre><span></span><code>admin@example:/config/container/system/&gt; help image
+NAME
+    image &lt;string&gt;
+
+DESCRIPTION
+    Docker image for the container: [transport]name[:tag|@digest]
+
+    quay.io/username/myimage     -- Pull myimage:latest
+    docker://busybox             -- Pull busybox:latest from Docker Hub
+    docker://ghcr.io/usr/img     -- Pull img:latest from GitHub packages
+    dir:/media/usb/myimage:1.1   -- Use myimage v1.1 from USB media
+    docker-archive:/tmp/archive  -- Use archive:latest from tarball
+    oci-archive:/lib/oci/archive -- Use archive:latest from OCI archive
+                                    May be in .tar or .tar.gz format
+
+    Additionally, the following URIs are also supported for setups
+    that do not use a HUB or similar.  Recommend using &#39;checksum&#39;!
+
+    ftp://addr/path/to/archive   -- Downloaded using wget
+    http://addr/path/to/archive  -- Downloaded using curl
+    https://addr/path/to/archive -- Downloaded using curl
+
+    Note: if a remote repository cannot be reached, the creation of the
+          container will be put on a queue that retries pull every time
+          there is a route change in the host&#39;s system.
+</code></pre></div>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>The built-in help system in the CLI is generated from the YANG model,
+so the same information is also available for remote NETCONF users.</p>
+</div>
+<p>The two most common variants are <code>docker://</code> and <code>oci-archive:/</code>.</p>
+<p>The former requires a working Docker registry and the latter operates on
+a plain OCI archive.  Infix does not come with a built-in registry, so
+the <code>docker://</code> option is best used with external services, which in
+turn require <a href="../networking/">networking</a> to be up.  In a deployment phase the
+easiest may be to set up a single interface on your host system with
+DHCP client.</p>
+<p>The default method is <code>docker://</code>, so when setting the <code>image</code> for your
+container, you can omit the <code>docker://</code> prefix.  You can also use the
+admin-exec command <code>container pull docker://...</code>, and when configuring a
+container <code>podman</code> will check first if it has the image before trying to
+download anything.  (See also the upgrade section, below.)</p>
+<p>The <code>oci-archive:/</code> is interesting since many users may not have, or do
+not want to, publish their images in a registry.  Use the Docker <a href="https://docs.docker.com/build/exporters/oci-docker/">OCI
+exporter</a> or any other tool that supports generating <a href="https://github.com/opencontainers/image-spec/blob/main/image-layout.md">OCI Image</a>
+format.  Infix supports loading both <code>.tar</code> or <code>.tar.gz</code> formats.</p>
+<p>Here we show a simple example of fetching an OCI image to the system,
+but many others exist, tools like <code>wget</code>, <code>curl</code>, and <code>scp</code> come to
+mind.</p>
+<p><strong>Shell OCI Example:</strong></p>
+<div class="highlight"><pre><span></span><code>admin@example:~$ cd /var/tmp/
+admin@example:/var/tmp$ sudo wget https://github.com/kernelkit/curiOS/releases/download/edge/curios-oci-amd64.tar.gz
+Connecting to github.com (140.82.121.3:443)
+wget: note: TLS certificate validation not implemented
+Connecting to objects.githubusercontent.com (185.199.109.133:443)
+saving to &#39;curios-oci-amd64.tar.gz&#39;
+curios-oci-amd64.tar 100% |*********************************| 7091k  0:00:00 ETA
+&#39;curios-oci-amd64.tar.gz&#39; saved
+admin@example:/var/tmp$ ll
+total 7104
+drwxr-xr-x    3 root     root          4096 Mar 27 14:22 ./
+drwxr-xr-x   14 root     root          4096 Mar 27 11:57 ../
+-rw-r--r--    1 root     root       7261785 Mar 27 14:22 curios-oci-amd64.tar.gz
+drwx------    6 frr      frr           4096 Mar 27 11:57 frr/
+</code></pre></div>
+<p>Importing the image into Podman can be done either from the CLI
+admin-exec context ...</p>
+<div class="highlight"><pre><span></span><code>admin@example:/var/tmp$ cli
+admin@example:/&gt; container load /var/tmp/curios-oci-amd64.tar.gz name curios:edge
+</code></pre></div>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>The <code>name curios:edge</code> is the tag you give the imported (raw) archive
+which you can then reference in your container image configuration:
+<code>set image curios:edge</code>.</p>
+</div>
+<p>... or by giving the container configuration the full path to the OCI
+archive, which helps greatly with container upgrades (see below):</p>
+<div class="highlight"><pre><span></span><code>admin@example:/config/container/system/&gt; set image oci-archive:/var/tmp/curios-oci-amd64.tar.gz
+</code></pre></div>
+<p><strong>Checksum Example:</strong></p>
+<div class="highlight"><pre><span></span><code>admin@example:/&gt; configure
+admin@example:/config/&gt; edit container sys
+admin@example:/config/container/sys/&gt; set hostname sys
+admin@example:/config/container/sys/&gt; set image ftp://192.168.122.1/curios-oci-amd64-v24.05.0.tar.gz
+admin@example:/config/container/sys/&gt; set checksum
+    md5 sha256 sha512
+admin@example:/config/container/sys/&gt; set checksum sha256 4f01077036527498ed910f1a3e80645ae3eff629d10043cf80ebc6850c99c629
+admin@example:/config/container/sys/&gt; leave
+admin@example:/&gt; copy running-config startup-config
+admin@example:/&gt; show container
+CONTAINER ID  IMAGE                                             COMMAND               CREATED         STATUS        PORTS       NAMES
+b02e945c43c9  localhost/curios-oci-amd64-v24.05.0:latest                              5 seconds ago   Up 5 seconds              sys
+
+admin@example:/&gt; show log
+...
+Nov 20 07:24:56 infix container[5040]: Fetching ftp://192.168.122.1/curios-oci-amd64-v24.05.0.tar.gz
+Nov 20 07:24:56 infix container[5040]: curios-oci-amd64-v24.05.0.tar.gz downloaded successfully.
+Nov 20 07:24:56 infix container[5040]: curios-oci-amd64-v24.05.0.tar.gz checksum verified OK.
+Nov 20 07:24:57 infix container[5040]: Cleaning up extracted curios-oci-amd64-v24.05.0
+Nov 20 07:24:57 infix container[5040]: podman create --name sys --conmon-pidfile=/run/container:sys.pid --read-only --replace --quiet --cgroup-parent=containers  --restart=always --systemd=false --tz=local --hostname sys --log-driver k8s-file --log-opt path=/run/containers/sys.fifo --network=none curios-oci-amd64-v24.05.0
+Nov 20 07:24:57 infix container[3556]: b02e945c43c9bce2c4be88e31d6f63cfdb1a3c8bdd02179376eb059a49ae05e4
+</code></pre></div>
+<h2 id="upgrading-a-container-image">Upgrading a Container Image<a class="headerlink" href="#upgrading-a-container-image" title="Permanent link">&para;</a></h2>
+<p><img align="right" alt="Up-to-date Shield" src="../img/shield-checkmark.svg" width="100" /></p>
+<p>The applications in your container are an active part of the system as a
+whole, so make it a routine to keep your container images up-to-date!</p>
+<p>Containers are created at first setup and at every boot.  If the image
+exists in the file system it is reused -- i.e., an image pulled from a
+remote registry is not fetched again.</p>
+<p>To upgrade a versioned image:
+ - update your <code>running-config</code> to use the new <code>image:tag</code>
+ - <code>leave</code> to activate the change, if you are in the CLI
+ - Podman pulls the new image in the background
+ - Your container is recreated with the new image
+ - The container is started</p>
+<p>For "unversioned" images, e.g., images using a <code>:latest</code> or <code>:edge</code> tag,
+use the following CLI command (<code>NAME</code> is the name of your container):</p>
+<div class="highlight"><pre><span></span><code>admin@example:/&gt; container upgrade NAME
+</code></pre></div>
+<p>This stops the container, does <code>container pull IMAGE</code>, and recreates it
+with the new image.  Upgraded containers are automatically restarted.</p>
+<p><strong>Example using registry:</strong></p>
+<div class="highlight"><pre><span></span><code>admin@example:/&gt; container upgrade system
+system
+Trying to pull ghcr.io/kernelkit/curios:edge...
+Getting image source signatures
+Copying blob 07bfba95fe93 done
+Copying config 0cb6059c0f done
+Writing manifest to image destination
+Storing signatures
+0cb6059c0f4111650ddbc7dbc4880c64ab8180d4bdbb7269c08034defc348f17
+system: not running.
+59618cc3c84bef341c1f5251a62be1592e459cc990f0b8864bc0f5be70e60719
+</code></pre></div>
+<p>An OCI archive image can be upgraded in a similar manner, the first step
+is of course to get the new archive onto the system (see above), and
+then, provided the <code>oci-archive:/path/to/archive</code> format is used, call
+the upgrade command as</p>
+<div class="highlight"><pre><span></span><code>admin@example:/&gt; container upgrade system
+Upgrading container system with local archive: oci-archive:/var/tmp/curios-oci-amd64.tar.gz ...
+7ab4a07ee0c6039837419b7afda4da1527a70f0c60c0f0ac21cafee05ba24b52
+</code></pre></div>
+<p>OCI archives can also be fetched from ftp/http/https URL, in that case
+the upgrade can be done the same way as a registry image (above).</p>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>Containers running from OCI images embedded in the operating system,
+e.g., <code>/lib/oci/mycontainer.tar.gz</code>, always run from the version in
+the operating system.  To upgrade, install the new container image at
+build time, after system upgrade the container is also upgraded.  The
+system unpacks and loads the OCI images into Podman every boot, which
+ensures the running container always has known starting state.</p>
+<p><strong>Example:</strong> default builds of Infix include a couple of OCI images
+for reference, one is <code>/lib/oci/curios-nftables-v24.11.0.tar.gz</code>, but
+there is also a symlink called <code>curios-nftables-latest.tar.gz</code> in the
+same directory, which is what the Infix regression tests use in the
+image configuration of the container.  This is what enables easy
+upgrades of the container along with the system itself.</p>
+</div>
+<h2 id="capabilities">Capabilities<a class="headerlink" href="#capabilities" title="Permanent link">&para;</a></h2>
+<p>An unprivileged container works for almost all use-cases, but there are
+occasions where they are too restricted and users start looking for the
+<code>privileged</code> flag.  Capabilities offers a middle ground.</p>
+<p>For example, a system container from which <code>ping</code> does not work:</p>
+<div class="highlight"><pre><span></span><code>admin@example:/config/container/system/&gt; edit capabilities
+admin@example:/config/container/system/capabilities/&gt; set add net_raw
+admin@example:/config/container/system/capabilities/&gt; end
+admin@infix-00-00-00:/config/container/system/&gt; show
+...
+capabilities {
+  add net_raw;
+}
+...
+</code></pre></div>
+<p>Infix supports a subset of all <a href="https://man7.org/linux/man-pages/man7/capabilities.7.html">capabilities</a> that are relevant for
+containers.  Please note, that this is an advanced topic that require
+time and analysis of your container application to figure out which
+capabilities you need.</p>
+<h2 id="networking-and-containers">Networking and Containers<a class="headerlink" href="#networking-and-containers" title="Permanent link">&para;</a></h2>
+<p>By default, unlike other systems, persistent<sup id="fnref:1"><a class="footnote-ref" href="#fn:1">2</a></sup> containers have no
+networking enabled.  All network access has to be set up explicitly.
+Currently two types of of container networks are supported:</p>
+<ul>
+<li><code>host</code>: an managed host interface, e.g., one end of a VETH pair,
+   or even a physical interface</li>
+<li><code>bridge</code>: an IP masquerading bridge</li>
+</ul>
+<p>In the former the interface is delegated to (moved into) the container,
+while in the latter a VETH pair is automatically created by Podman and
+one end delegated to the container, while the other end is assigned to
+the bridge (see the next section).</p>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>For more information on VETH pairs, see the <a href="../networking/">Networking Guide</a>.</p>
+</div>
+<h3 id="container-bridge">Container Bridge<a class="headerlink" href="#container-bridge" title="Permanent link">&para;</a></h3>
+<p>A container bridge is what most container setups use and users want.</p>
+<p><img alt="IP Masquerading Container Bridge" src="../img/cni-bridge-firewall.svg" /></p>
+<p>The difference from a regular bridge is that the container runtime fully
+manages them -- connecting containers with automatically created VETH
+pairs (look at the bridge port names) and setting up firewall rules
+between the host and other containers, as well as managing port
+forwarding.  This transparent background management is what makes
+container use seem to be so simple.</p>
+<p>All interface configuration is done in configure context.</p>
+<div class="highlight"><pre><span></span><code>admin@example:/&gt; configure
+admin@example:/config&gt; edit interface docker0
+admin@example:/config/interface/docker0/&gt; set container-network
+admin@example:/config/interface/docker0/&gt; leave
+</code></pre></div>
+<p>There is more to this story.  When using the CLI, and sticking to common
+interface nomenclature, Infix helps you with some of the boring stuff.
+E.g., creating a new interface with a name like <code>brN</code> or <code>dockerN</code>
+automatically <em>infers</em> the interface types, which you would otherwise
+have to set manually:</p>
+<div class="highlight"><pre><span></span><code>admin@example:/config/interface/docker0/&gt; set type bridge
+admin@example:/config/interface/docker0/&gt; set container-network type bridge
+</code></pre></div>
+<div class="admonition tip">
+<p class="admonition-title">Important</p>
+<p>When configuring the system via an API such as NETCONF or RESTCONF, no
+settings are inferred.  Instead it is up to the caller to fully define
+the desired setup.  This makes the CLI very useful for first setup and
+then extracting the resulting XML from the shell using the <code>cfg -X</code>
+command.</p>
+</div>
+<p>We have to declare the interface as a container network, ensuring the
+interface cannot be used by the system for any other purpose.  E.g., a
+container <code>host</code> interface is supposed to be used by a container, by
+declaring it as such we can guarantee that it would never accidentally
+be added as a bridge or lag port.  Hence, to move an interface currently
+set as a <code>bridge-port</code> it must be removed from the bridge before being
+given to a container.</p>
+<p>The default subnet for a container <code>bridge</code> is 172.17.0.0/16, the bridge
+takes the <code>.1</code> address and hand out the rest of the range to containers
+in a round-robin like fashion.  A container with this <code>network</code> get an
+automatically created VETH pair connection to the bridge and a lot of
+other networking parameters (DNS, default route) are set up.</p>
+<p>Some of the defaults of a container <code>bridge</code> can be changed, e.g.,
+instead of <code>set container-network type bridge</code>, above, do:</p>
+<div class="highlight"><pre><span></span><code>admin@example:/config/interface/docker0/&gt; edit container-network
+admin@example:/config/interface/docker0/container-network/&gt; set type bridge
+admin@example:/config/interface/docker0/container-network/&gt; edit subnet 192.168.0.0/16
+admin@example:/config/interface/docker0/container-network/subnet/192.168.0.0/16/&gt; set gateway 192.168.255.254
+admin@example:/config/interface/docker0/container-network/subnet/192.168.0.0/16/&gt; end
+admin@example:/config/interface/docker0/container-network/&gt; edit route 10.0.10.0/24
+admin@example:/config/interface/docker0/container-network/route/10.0.10.0/24/&gt; set gateway 192.168.10.254
+admin@example:/config/interface/docker0/container-network/route/10.0.10.0/24/&gt; end
+admin@example:/config/interface/docker0/container-network/&gt; end
+admin@example:/config/interface/docker0/&gt; leave
+</code></pre></div>
+<p>Other network settings, like DNS and domain, use built-in defaults, but
+can be overridden from each container.  Other common settings per
+container is the IP address and name of the network interface inside the
+container.  The default, after each stop/start cycle, or reboot of the
+host, is to name the interfaces <code>eth0</code>, <code>eth1</code>, in the order they are
+given in the <code>network</code> list, and to give the container the next address
+in a <code>bridge</code>.  Below an example of a system container calls <code>set
+network interface docker0</code>, here we show how to set options for that
+network:</p>
+<div class="highlight"><pre><span></span><code>admin@example:/config/container/ntpd/&gt; edit network interface docker0
+admin@example:/config/container/ntpd/network/interface/docker0/&gt;
+admin@example:/config/container/ntpd/network/interface/docker0/&gt; set option
+&lt;string&gt;  Options for masquerading container bridges.
+admin@example:/config/container/ntpd/network/interface/docker0/&gt; help option
+NAME
+        option &lt;string&gt;
+
+DESCRIPTION
+        Options for masquerading container bridges.
+
+        Example: ip=1.2.3.4            -- request a specific IP (IPv4 or IPv6)
+                 mac=00:01:02:c0:ff:ee -- set fixed MAC address in container
+                 interface_name=foo0   -- set interface name inside container
+
+admin@example:/config/container/ntpd/network/interface/docker0/&gt; set option ip=172.17.0.2
+admin@example:/config/container/ntpd/network/interface/docker0/&gt; set option interface_name=wan
+admin@example:/config/container/ntpd/network/interface/docker0/&gt; leave
+</code></pre></div>
+<h3 id="container-host-interface">Container Host Interface<a class="headerlink" href="#container-host-interface" title="Permanent link">&para;</a></h3>
+<p>Another common use-case is to move network interfaces into the network
+namespace of a container<sup id="fnref:3"><a class="footnote-ref" href="#fn:3">1</a></sup>.  This of course works with plain Ethernet
+interfaces as well, but here we will use one end of a VETH pair as an
+example.</p>
+<p>The network <code>option</code> setting is available also for this case, but only
+the <code>interface_name=foo0</code> option works.  Which is still very useful.  To
+set:</p>
+<ul>
+<li>IP address, use IPv4/IPv6 settings in the interface settings</li>
+<li>MAC address, to use the <code>custom-phys-address</code> in the interface settings</li>
+</ul>
+<p>For an example of both, see the next section.</p>
+<h4 id="routed-setup">Routed Setup<a class="headerlink" href="#routed-setup" title="Permanent link">&para;</a></h4>
+<p>In this routed setup we reserve 192.168.0.0/24 for the network between
+the host and the <code>ntpd</code> container.</p>
+<p><img alt="Basic VETH pair connecting ntpd container." src="../img/cni-ntpd-routed.svg" /></p>
+<p>Configuration is a straight-forward VETH pair setup where we name the
+container-end of pair <code>ntpd</code>.  This is just a convenience for us when
+reading the configuration later.  The <em>real action</em> happens on the last
+line where we declare the <code>ntpd</code> end as a container network interface:</p>
+<div class="highlight"><pre><span></span><code>admin@example:/config/&gt; edit interface veth0
+admin@example:/config/interface/veth0/&gt; set veth peer ntpd
+admin@example:/config/interface/veth0/&gt; set ipv4 address 192.168.0.1 prefix-length 24
+admin@example:/config/interface/veth0/&gt; end
+admin@example:/config/&gt; edit interface ntpd
+admin@example:/config/interface/ntpd/&gt; set ipv4 address 192.168.0.2 prefix-length 24
+admin@example:/config/interface/ntpd/&gt; set custom-phys-address static 00:c0:ff:ee:00:01
+admin@example:/config/interface/ntpd/&gt; set container-network
+</code></pre></div>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>Notice how you can also set a custom MAC address at the same time.</p>
+</div>
+<p>Adding the interface to the container is the same as before, but since
+everything for host interfaces is set up in the interfaces context, we
+can take a bit of a shortcut.</p>
+<div class="highlight"><pre><span></span><code>admin@example:/config/container/ntpd/&gt; set network interface ntpd
+admin@example:/config/container/ntpd/&gt; leave
+</code></pre></div>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>Use the <code>set network interface ntpd option interface_name=foo0</code> to set
+the name of the interface inside the container to <code>foo0</code>.</p>
+</div>
+<p>The point of the routed case is that port forwarding from the container
+in this case is limited to a single interface, not <em>all interfaces</em> as
+is the default in the masquerading container bridge setup.</p>
+<h4 id="bridged-setup">Bridged Setup<a class="headerlink" href="#bridged-setup" title="Permanent link">&para;</a></h4>
+<p>A perhaps more common case is to bridge the other end of the VETH pair
+with other physical ports.  In this section we show how to add a new
+pair to give our container two interfaces:</p>
+<p><img alt="Bridged setup with ntpd container." src="../img/cni-ntpd-bridged.svg" /></p>
+<p>We start by adding the second VETH pair:</p>
+<div class="highlight"><pre><span></span><code>admin@example:/config/&gt; edit interface veth1a
+admin@example:/config/interface/veth1a/&gt; set veth peer veth1
+admin@example:/config/interface/veth1a/&gt; set ipv4 address 192.168.1.2 prefix-length 24
+</code></pre></div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The LAN bridge (br1) in this example has IP address 192.168.1.1.</p>
+</div>
+<p>When a container has multiple host interfaces it can often be useful to
+have a default route installed.  This can be added from the host with a
+<code>0.0.0.0/0</code> route on one of the interfaces:</p>
+<div class="highlight"><pre><span></span><code>admin@example:/config/interface/veth1a/&gt; set container-network route 0.0.0.0/0 gateway 192.168.1.1
+admin@example:/config/interface/veth1a/&gt; show
+type veth;
+container-network {
+  type host;
+  route 0.0.0.0/0 {
+    gateway 192.168.1.1;
+  }
+}
+veth {
+  peer veth1;
+}
+admin@example:/config/interface/veth1a/&gt; end
+admin@example:/config/&gt; set interface veth1 bridge-port bridge br1
+</code></pre></div>
+<p>Please note, container network routes require the base interface also
+have a static IP address set.  Setting only the route, but no address,
+means the route is skipped.</p>
+<h3 id="host-networking">Host Networking<a class="headerlink" href="#host-networking" title="Permanent link">&para;</a></h3>
+<p>The third use-case is host networking, this is where a container share
+the network namespace of the host.  An example here could be a nftables
+or ntpd container -- single applications which add core functionality to
+the host operating system.</p>
+<p>The host networking setup cannot be combined with any other network.</p>
+<p>For an example, <a href="#application-container-nftables">see below</a>.</p>
+<h2 id="mounts-and-volumes">Mounts and Volumes<a class="headerlink" href="#mounts-and-volumes" title="Permanent link">&para;</a></h2>
+<p>It is possible to mount files, directories, and even files matching a
+glob, into a container.  This gives precise control over the container's
+file system:</p>
+<div class="highlight"><pre><span></span><code>admin@example:/config/container/system/&gt; edit mount leds
+admin@example:/config/container/system/mount/leds&gt; set source /sys/class/leds
+admin@example:/config/container/system/mount/leds&gt; set target /sys/class/leds
+admin@example:/config/container/system/mount/leds&gt; end
+admin@example:/config/container/system/&gt;
+</code></pre></div>
+<p>Any type of file can be <em>bind mounted</em> into the container, just watch
+out for permissions though.  In the example above, <code>/sys/class/leds</code> is
+not writable from a container unless it runs in <em>privileged</em> mode.  For
+plain configuration files you get more freedom, and your container can
+rely on, e.g., <em>inotify</em> events to trigger reloading its services when
+you change the file on the host.</p>
+<p>So it depends on the container, and indeed your overall setup, what to
+use.  An intriguing option is <em>Content Mounts</em>, which when changed also
+trigger a container restart.</p>
+<p>Other times <em>volumes</em> are a better fit.  A volume is an automatically
+created read-writable entity that follows the life of your container.</p>
+<div class="highlight"><pre><span></span><code>admin@example:/config/container/ntpd/&gt; set volume varlib target /var/lib
+</code></pre></div>
+<p>Volumes are persistent across both reboots and upgrades of the base
+image.  They are created by Podman when the container first starts up,
+unlike a regular bind mount it synchronizes with the contents of the
+underlying container image's path at first use.  I.e., "bind-mount, if
+empty: then rsync".</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Infix support named volumes (only), and it is not possible to share a
+volume between containers.  All the tricks possible with volumes may
+be added in a later release.</p>
+</div>
+<h3 id="content-mounts">Content Mounts<a class="headerlink" href="#content-mounts" title="Permanent link">&para;</a></h3>
+<p>Content mounts are a special type of file mount where the file contents
+is stored with the container configuration.  This can be very useful
+when deploying similar systems at multiple sites.  When the host loads
+its <code>startup-config</code> (or even <code>factory-config</code>) a temporary file is
+created using the decoded base64 data from the <code>content</code> node.</p>
+<div class="highlight"><pre><span></span><code>admin@example:/config/container/ntpd/&gt; edit mount ntpd.conf
+admin@example:/config/container/ntpd/mount/ntpd.conf&gt; text-editor content
+... interactive editor starts up ...
+admin@example:/config/container/ntpd/mount/ntpd.conf&gt; set target /etc/ntpd.conf
+admin@example:/config/container/ntpd/mount/ntpd.conf&gt; end
+admin@example:/config/container/ntpd/&gt;
+</code></pre></div>
+<p>The editor is a small <a href="https://github.com/troglobit/mg">Emacs clone called Mg</a>, see the built-in help
+text, or press Ctrl-x Ctrl-c to exit and save.  When the editor exits
+the contents are base64 encoded and stored in the candidate datastore.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Since these files are always recreated when the host is restarted,
+changes made by the container are not preserved, or saved back to the
+host's startup-config.</p>
+</div>
+<p>Infix has three different text editors available.  For more information,
+see <a href="../cli/text-editor/">CLI Text Editor</a>.</p>
+<h2 id="example-containers">Example Containers<a class="headerlink" href="#example-containers" title="Permanent link">&para;</a></h2>
+<h3 id="system-container">System Container<a class="headerlink" href="#system-container" title="Permanent link">&para;</a></h3>
+<p>Let's try out what we've learned by setting up a system container, a
+container providing multiple services, using the <code>docker0</code> interface
+we created previously:</p>
+<div class="highlight"><pre><span></span><code>admin@example:/&gt; configure
+admin@example:/config&gt; edit container system
+admin@example:/config/container/system/&gt; set image ghcr.io/kernelkit/curios:edge
+admin@example:/config/container/system/&gt; set network interface docker0
+admin@example:/config/container/system/&gt; set publish 222:22
+admin@example:/config/container/system/&gt; leave
+</code></pre></div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Ensure you have a network connection to the registry.  If the image
+cannot be pulled, creation of the container will be put in a queue and
+be retried every time there is a change in the routing table, e.g.,
+default route is added, and every 60 seconds.</p>
+</div>
+<p>Provided the image is downloaded successfully, a new <code>system</code> container
+now runs behind the docker0 interface, forwarding container port 22 to
+port 222 on all of the host's interfaces.  (See <code>help publish</code> in the
+container configuration context for the full syntax.)</p>
+<p>Available containers can be accessed from admin-exec:</p>
+<div class="highlight"><pre><span></span><code>admin@example:/&gt; show container
+CONTAINER ID  IMAGE                          COMMAND     CREATED       STATUS       PORTS                 NAMES
+439af2917b44  ghcr.io/kernelkit/curios:edge              41 hours ago  Up 16 hours  0.0.0.0:222-&gt;222/tcp  system
+</code></pre></div>
+<p>This is a system container, so you can "attach" to it by starting a
+shell (or logging in with SSH):</p>
+<div class="highlight"><pre><span></span><code>admin@example:/&gt; container shell system
+root@439af2917b44:/#
+</code></pre></div>
+<p>Notice how the hostname inside the container changes.  By default the
+container ID (hash) is used, but this can be easily changed:</p>
+<div class="highlight"><pre><span></span><code>root@439af2917b44:/# exit
+admin@example:/&gt; configure
+admin@example:/config/&gt; edit container system
+admin@example:/config/container/system/&gt; set hostname sys101
+admin@example:/config/container/system/&gt; leave
+admin@example:/&gt; container shell system
+root@sys101:/#
+</code></pre></div>
+<p>In fact, the container <code>hostname</code> setting supports the same format
+specifiers as the host's <code>hostname</code> setting:</p>
+<ul>
+<li><code>%i</code>: OS ID, from <code>/etc/os-release</code>, from Menuconfig branding</li>
+<li><code>%h</code>: Default hostname, from <code>/etc/os-release</code>, from branding</li>
+<li><code>%m</code>: NIC specific part of base MAC, e.g., to <code>c0-ff-ee</code></li>
+<li><code>%%</code>: Literal %</li>
+</ul>
+<p>The most useful combination is probably <code>"container-name-%m"</code>, which in
+this example give the container hostname <code>container-name-c0-ff-ee</code>.</p>
+<h3 id="application-container-nftables">Application Container: nftables<a class="headerlink" href="#application-container-nftables" title="Permanent link">&para;</a></h3>
+<p>Infix currently does not have a native firewall configuration, and even
+when it does it will never expose the full capabilities of <code>nftables</code>.
+For advanced setups, the following is an interesting alternative.</p>
+<div class="highlight"><pre><span></span><code>admin@example:/&gt; configure
+admin@example:/config&gt; edit container nftables
+admin@example:/config/container/nftables/&gt; set image ghcr.io/kernelkit/curios-nftables:edge
+admin@example:/config/container/nftables/&gt; set network host
+admin@example:/config/container/nftables/&gt; set privileged
+admin@example:/config/container/nftables/&gt; edit mount nftables.conf
+admin@example:/config/container/nftables/mount/nftables.conf/&gt; set target /etc/nftables.conf
+admin@example:/config/container/nftables/mount/nftables.conf/&gt; text-editor content
+... interactive editor starts up where you can paste your rules ...
+admin@example:/config/container/nftables/mount/nftables.conf/&gt; leave
+</code></pre></div>
+<p>Notice how we <code>set network host</code>, so the container can see and act on
+all the host's interfaces, and that we also have to run the container
+in <em>privileged</em> mode.</p>
+<h3 id="application-container-ntpd">Application Container: ntpd<a class="headerlink" href="#application-container-ntpd" title="Permanent link">&para;</a></h3>
+<p>The default NTP server/client in Infix is Chrony, a fully working and
+capable workhorse for most use-cases.  However, it does not support a
+feature like multicasting, for that you need ISC ntpd.</p>
+<p>As we did with <code>nftables</code>, previously, we can use host networking and
+set up a read-only config file that is bind-mounted into the container's
+file system and store in the host's <code>startup-config</code>.  However, <code>ntpd</code>
+also saves clock drift information in <code>/var/lib/ntpd</code>, so we will also
+use volumes in this example.</p>
+<div class="highlight"><pre><span></span><code>admin@example:/&gt; configure
+admin@example:/config&gt; edit container ntpd
+admin@example:/config/container/ntpd/&gt; set image ghcr.io/kernelkit/curios-ntpd:edge
+admin@example:/config/container/ntpd/&gt; set network interface ntpd    # From veth0 above
+admin@example:/config/container/ntpd/&gt; edit mount ntp.conf
+admin@example:/config/container/ntpd/mount/ntp.conf/&gt; set target /etc/ntp.conf
+admin@example:/config/container/ntpd/mount/ntp.conf/&gt; text-editor content
+... interactive editor starts up where you can paste your rules ...
+admin@example:/config/container/ntpd/mount/ntp.conf/&gt; end
+admin@example:/config/container/ntpd/&gt; edit volume varlib
+admin@example:/config/container/ntpd/volume/varlib/&gt; set target /var/lib
+admin@example:/config/container/ntpd/volume/varlib/&gt; leave
+admin@example:/&gt; copy running-config startup-config
+</code></pre></div>
+<p>The <code>ntp.conf</code> file is stored in the host's <code>startup-config</code> and any
+state data in the container's <code>/var/lib</code> is retained between reboots
+and across image upgrades.</p>
+<h2 id="advanced">Advanced<a class="headerlink" href="#advanced" title="Permanent link">&para;</a></h2>
+<p>This section covers advanced, and sometimes dangerous, topics.  Please
+read any warnings and always consider the security aspects.</p>
+<h3 id="running-host-commands-from-container">Running Host Commands From Container<a class="headerlink" href="#running-host-commands-from-container" title="Permanent link">&para;</a></h3>
+<p>SSH login with keys is very handy, both remote scripting friendly <em>and
+secure</em>, but it does require a few extra configuration steps.  The way
+to set it up is covered in part in <a href="../system/#ssh-authorized-key">SSH Authorized Key</a>.</p>
+<p>Another <em>insecure</em> approach is to access the host system directly,
+bypassing the namespaces that make up the boundary between host and
+container.</p>
+<div class="admonition warning">
+<p class="admonition-title">Caution</p>
+<p>Please note, this completely demolishes the isolation barrier between
+container and host operating system.  It is only suitable in
+situations where the container serves more as a unit of distribution
+rather than as a separate component of the system.  <em>Strongly
+recommended</em> to use this only in trusted setups!  Consider also
+limiting the time frame in which this is active!</p>
+</div>
+<p>First, enable <em>Privileged</em> mode, this unlocks the door and allows the
+container to manage resources on the host system.  An example is the
+<code>nftables</code> container mentioned previously.</p>
+<div class="highlight"><pre><span></span><code>admin@example:/config/container/system/&gt; set privileged
+</code></pre></div>
+<p>Second, mount the host's <code>/proc/1</code> directory to somewhere inside your
+container.  Here we pick <code>/1</code>:</p>
+<div class="highlight"><pre><span></span><code>admin@example:/config/container/system/&gt; edit mount host
+admin@example:/config/container/system/mount/host/&gt; set source /proc/1
+admin@example:/config/container/system/mount/host/&gt; set target /1
+admin@example:/config/container/system/mount/host/&gt; leave
+</code></pre></div>
+<p>Third, from inside the container, use the host's PID 1 namespaces with
+the <code>nsenter</code><sup id="fnref:2"><a class="footnote-ref" href="#fn:2">3</a></sup> command to slide through the container's walls.  Here
+we show two example calls to <code>hostname</code>, first the container's own name
+and then asking what the hostname is on the host:</p>
+<div class="highlight"><pre><span></span><code>root@sys101:/# hostname
+sys101
+root@sys101:/# nsenter -m/1/ns/mnt -u/1/ns/uts -i/1/ns/ipc -n/1/ns/net hostname
+example
+</code></pre></div>
+<p>One use-case for this method is when extending Infix with a management
+container that connects to other systems.  For some tips on how to
+control an Infix system this way, see <a href="../scripting/">Scripting Infix</a>.</p>
+<h2 id="container-requirements">Container Requirements<a class="headerlink" href="#container-requirements" title="Permanent link">&para;</a></h2>
+<p>In addition to general <a href="https://docs.docker.com/build/building/best-practices/"><em>best practices</em></a> for container images, there
+are a few more things to consider when targeting embedded systems:</p>
+<ul>
+<li>Ensure the image targets the CPU architecture of the target system,<br />
+   learn more about <a href="https://docs.docker.com/build/building/multi-platform/">Multi-platform Builds</a></li>
+<li>Follow <a href="https://docs.docker.com/get-started/docker-concepts/building-images/build-tag-and-publish-an-image/#tagging-images">best practices for naming and tagging</a>, e.g., <code>:latest</code> vs <code>:1.0</code></li>
+<li>Follow <a href="https://github.com/opencontainers/image-spec/blob/main/image-layout.md">OCI recommendations and layout</a>,<br />
+   learn more about <a href="https://man7.org/linux/man-pages/man7/capabilities.7.html">OCI and Docker Exporters</a></li>
+</ul>
+<p>If the <a href="https://www.docker.com/blog/multi-arch-images/">Docker documentation</a> is not enough, there are plenty of
+<a href="https://lemariva.com/blog/2018/05/tutorial-docker-on-embedded-systems-raspberry-pi-beagleboard">guides online</a> with examples on how to create your own container
+image.  For the more advanced, please see the next section.</p>
+<h3 id="advanced-users">Advanced Users<a class="headerlink" href="#advanced-users" title="Permanent link">&para;</a></h3>
+<p>Most people prefer their system containers small, often based on Alpine
+Linux, or similar, with only a few small applications, including their
+own, and an SSH server perhaps.  For some developers, even this is too
+big, so they roll their own from source.  This section is for you.</p>
+<p>Depending on your needs, here is a checklist:</p>
+<ul>
+<li>you need something that can forward signals, e.g.,</li>
+<li><a href="https://github.com/krallin/tini">tini</a></li>
+<li><a href="https://sirikon.me/posts/0009-pid-1-bash-script-docker-container.html">Bash only</a>, or</li>
+<li>BusyBox init, a classic most embedded developers know, but read on ...</li>
+<li>a system container only need the bare necessities of a system bringup</li>
+<li>E.g., BusyBox's init, <a href="https://github.com/kernelkit/curiOS/blob/2e4748f65e356b2c117f586cd9420d7ba66f79d5/board/system/rootfs/etc/inittab">but not everything</a></li>
+<li>Some of the networking is set up by Podman and CNI for you, but
+     you may want to run a DHCP client?</li>
+<li>Do <em>not</em> rename interfaces inside the container, use the dedicated
+     <code>interface_name</code> option in the configuration instead</li>
+<li>Remember, Podman provides a <code>tmpfs</code> for all critical system paths:
+     <code>/dev</code>, <code>/dev/shm</code>, <code>/run</code>, <code>/tmp</code>, and <code>/var/tmp</code>, so you don't
+     need to clean or set up any of these mount points</li>
+</ul>
+<p>Examples using <code>tini</code> and BusyBox init are available from the KernelKit
+<a href="https://github.com/kernelkit/curiOS/">curiOS project</a>.  It is a small Buildroot based container image
+builder that generates OCI compatible image tarballs without any tools
+from Docker or Podman -- ready-made images exist for testing on both
+AMD64 and ARM64 targets, as well as <code>docker pull</code> images and and OCI
+tarballs with SHA256 checksums for integrity checking.</p>
+<p>Finally, if you build your own version of Infix, and embed OCI tarballs
+in the system image, then see the tip at the end of <a href="#upgrading-a-container-image">Upgrading a
+Container Image</a> (above).</p>
+<div class="footnote">
+<hr />
+<ol>
+<li id="fn:3">
+<p>Something which the container bridge network type does behind the
+scenes with one end of an automatically created VETH pair.&#160;<a class="footnote-backref" href="#fnref:3" title="Jump back to footnote 1 in the text">&#8617;</a></p>
+</li>
+<li id="fn:1">
+<p>this does not apply to the admin-exec command <code>container run</code>.
+This command is intended to be used for testing and evaluating
+container images.  Such containers are given a private network
+behind an IP masquerading bridge.&#160;<a class="footnote-backref" href="#fnref:1" title="Jump back to footnote 2 in the text">&#8617;</a></p>
+</li>
+<li id="fn:2">
+<p>The <code>nsenter</code> program is available from either the util-linux
+package in Debian/Ubuntu/Mint, or in BusyBox.  Note, however,
+it may not be enabled by default in BusyBox.&#160;<a class="footnote-backref" href="#fnref:2" title="Jump back to footnote 3 in the text">&#8617;</a></p>
+</li>
+</ol>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright &copy; 2025 The KernelKit Authors
+    </div>
+  
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      <script id="__config" type="application/json">{"base": "..", "features": ["toc.follow", "navigation.path", "navigation.instant", "navigation.tracking", "navigation.sections", "search.highlight", "search.share", "content.code.copy", "content.code.annotate", "content.footnote.tooltips"], "search": "../assets/javascripts/workers/search.d50fe291.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.56ea9cef.min.js"></script>
+      
+    
+  </body>
+</html>
