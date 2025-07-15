@@ -555,6 +555,19 @@
     </ACTION>
   </COMMAND>
 
+  <COMMAND name="terminal" help="Control the terminal (tty)" mode="switch">
+    <COMMAND name="reset" help="Reset terminal settings in case they are garbled">
+      <ACTION sym="script" in="tty" out="tty" interrupt="true">
+	reset
+      </ACTION>
+    </COMMAND>
+    <COMMAND name="resize" help="Force detect size change after terminal resize">
+      <ACTION sym="script" in="tty" out="tty" interrupt="true">
+	resize >/dev/null
+      </ACTION>
+    </COMMAND>
+  </COMMAND>
+
   <COMMAND name="tcpdump" help="Capture network traffic">
     <PARAM name="iface" ptype="/IFACES" help="Interrface to run capture on"/>
     <SWITCH name="optional" min="0" max="7">
