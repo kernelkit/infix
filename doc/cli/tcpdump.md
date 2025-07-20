@@ -57,10 +57,14 @@ up the switch core to mirror traffic ingressing and/or egressing a set
 of ports to another port.  On this *monitor port* you can then run your
 tcpdump, which means you need an external device (laptop).
 
+----
+
 > A planned feature is to support mirroring traffic to the CPU port,
 > which would be an effective way to log and monitor traffic over a
 > longer period of time.  Highly effective for diagnosing intermittent
 > and other rare network issues.
+
+----
 
 If only "proof of life" is required, then sometimes port counters, also
 called *RMON counters*, can be very useful too.  Seeing counters of a

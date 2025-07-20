@@ -40,12 +40,15 @@ admin@host:/config/interface/eth0/> up
 admin@host:/config/>
 ```
 
-> **Note:** the tree structure in the configure context is automatically
-> generated from the system's supported NETCONF YANG models, which may
-> vary between products.  However, the `ietf-interfaces.yang` and
-> `ietf-ip.yang` models, for instance, that provide basic networking
+----
+
+> **Note:** commands in configure context are automatically generated
+> from the system's YANG models, hence different products likely have a
+> different set of commands.  However, both the `ietf-interfaces.yang`
+> and `ietf-ip.yang` models, for instance, that provide the networking
 > support are common to all systems.
 
+----
 
 ## Set IP Address on an Interface
 
@@ -103,9 +106,12 @@ admin@host:/> copy running-config startup-config
 The `startup-config` can also be inspected with the `show` command to
 verify the changes are saved.
 
-> **Note:** most (all) commands need to be spelled out, no short forms
-> are allowed at the moment.  Use the `TAB` key to make this easier.
+----
 
+> **Note:** all commands need to be spelled out, no short forms are
+> allowed in the CLI.  Use the `TAB` key to make your life easier.
+
+----
 
 ## Changing Hostname
 
@@ -122,9 +128,12 @@ admin@example:/>
 Notice how the hostname in the prompt does not change until the change
 is committed.
 
+----
+
 > **Note:** critical services like syslog, mDNS, LLDP, and similar that
 > advertise the hostname, are restarted when the hostname is changed.
 
+----
 
 ## Changing Password
 
@@ -148,10 +157,13 @@ the `do password encrypt` command.  This launches the admin-exec command
 to hash, and optionally salt, your password.  This encrypted string can
 then be used with `set password ...`.
 
+----
+
 > **Tip:** if you are having trouble thinking of a password, there is
 > also `do password generate`, which generates random but readable
 > strings using the UNIX command `pwgen`.
 
+----
 
 ## SSH Authorized Key
 
@@ -173,9 +185,13 @@ key-data AAAAB3NzaC1yc2EAAAADAQABAAABgQC8iBL42yeMBioFay7lty1C4ZDTHcHyo739gc91rTT
 admin@host:/config/system/authentication/user/admin/authorized-key/example@host/> leave
 ```
 
+----
+
 > **Note:** the `ssh-keygen` program already base64 encodes the public
 > key data, so there is no need to use the `text-editor` command, `set`
 > does the job.
+
+----
 
 ## Creating a VETH Pair
 
@@ -213,10 +229,13 @@ admin@host:/config/> leave
 
 See the bridging example below for more.
 
+----
+
 > **Note:** in the CLI you do not have to create the `veth0b` interface.
 > The system _infers_ this for you.  When setting up a VETH pair using
 > NETCONF, however, you must include the `veth0b` interface.
 
+----
 
 ## Creating a Bridge
 
@@ -272,6 +291,10 @@ the VETH pair from the previous example) are now bridged.  Any traffic
 ingressing one port will egress the other.  Only reserved IEEE multicast
 is filtered, except LLDP frames as shown above.
 
+----
+
 > **Note:** the bridge can be named anything, provided the interface
 > name is not already taken.  However, for any name outside the pattern
 > `br[0-9]+`, you have to set the interface type manually to `bridge`.
+
+----
