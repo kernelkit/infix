@@ -1,4 +1,4 @@
-![Infix - Linux <3 NETCONF](logo.png){ width=480 align=right }
+![Infix - Linux <3 NETCONF](logo.png){ align=right  width="480" }
 
 Welcome to Infix, your immutable, friendly, and secure operating system!
 On these pages you can find both user and developer documentation.

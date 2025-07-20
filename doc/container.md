@@ -1,7 +1,7 @@
-Containers in Infix
-===================
+Docker Container Support
+========================
 
-![Docker whale](img/docker.webp){ width=360 align="right" }
+![Docker whale](img/docker.webp){ align=right width="360" }
 
 Infix comes with native support for Docker containers using [podman][].
 The [YANG model][1] describes the current level of support, complete
@@ -86,10 +86,9 @@ your container image and application to run.
 > support the CPU architecture of your host system.  Remember, unlike
 > virtualization, containers reuse the host's CPU and kernel.
 
+![Hello World](img/docker-hello-world.svg){ align=right width="200" }
 
-![Hello World](img/docker-hello-world.svg){align="right" width="360"}
-
-### Examples
+### Example: Hello World
 
 Classic Hello World:
 
@@ -104,6 +103,8 @@ Classic Hello World:
 
     Hello from Docker!
     This message shows that your installation appears to be working correctly.
+
+### Example: Web Server
 
 A web server with [nginx][], using standard docker bridge.  Podman will
 automatically create a VETH pair for us, connecting the container to the
@@ -255,7 +256,7 @@ archive, which helps greatly with container upgrades (see below):
 
 Upgrading a Container Image
 ---------------------------
-![Up-to-date Shield](img/shield-checkmark.svg){align="right" width="100"}
+![Up-to-date Shield](img/shield-checkmark.svg){ align=right width="100" }
 
 The applications in your container are an active part of the system as a
 whole, so make it a routine to keep your container images up-to-date!
