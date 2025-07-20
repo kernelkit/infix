@@ -3,8 +3,7 @@ site_description: Infix Documentation
 site_url: https://kernelkit.github.io/infix/
 repo_url: https://github.com/kernelkit/infix/
 repo_name: kernelkit/infix
-site_author: The KernelKit Team
-copyright: Copyright &copy; 2022-2025 The KernelKit Authors
+copyright: Copyright &copy; 2022-2025 The KernelKit Team
 docs_dir: doc/
 edit_uri: edit/master/doc/
 
@@ -58,7 +57,7 @@ nav:
   - Origin & Licensing: license.md
 
 theme:
-  logo: jack.png
+  logo: logo-plain.png
   name: material
   features:
     - toc.follow
@@ -115,6 +114,16 @@ plugins:
   - search
   - callouts
   - mike
+  - to-pdf:
+      cover: true
+      enabled_if_env: PDF_EXPORT
+      cover_logo: logo-plain.png
+      cover_subtitle: Immutable.Friendly.Secure
+      custom_template_path: doc/templates
+      output_path: pdf/infix-user-guide.pdf
+      toc_level: 2
+      ordered_chapter_level: 3
+      heading_shift: false
 
 extra:
   generator: false

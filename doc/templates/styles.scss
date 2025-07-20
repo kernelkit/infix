@@ -1,0 +1,148 @@
+// Override plugin defaults with !important to ensure our styles take precedence
+article#doc-cover {
+    display: flex !important;
+    flex-direction: column !important;
+    height: 100vh !important;
+    text-align: center !important;
+    padding: 20px !important;
+}
+
+article#doc-cover > .wrapper.upper {
+    flex: 0 0 120px !important;
+    text-align: center !important;
+    margin-bottom: 20px !important;
+    max-height: none !important;
+}
+
+// Simple img tag approach for centered logo
+article#doc-cover > .wrapper.upper > img.logo {
+    width: 360px !important;
+    height: auto !important;  // Maintains aspect ratio automatically
+    display: block !important;
+    margin: 250px auto 0 auto !important;
+    padding: 0;
+}
+
+article#doc-cover > .wrapper h1 {
+    font-size: 52px !important;
+    margin: 0 auto 0 auto !important;
+    color: #808080 !important;
+    border-bottom: none !important;
+}
+
+// Copyright text on cover page should match logo grey color
+article#doc-cover .properties address p#copyright {
+    color: #808080 !important;
+}
+
+article#doc-cover > .wrapper h2 {
+    font-size: 28px !important;
+    color: #808080 !important;
+    margin: 0 !important;
+}
+
+article#doc-cover .divider {
+    width: 150px !important;
+    height: 3px !important;
+    background: #ff7f2a !important;
+    margin: 20px auto !important;
+    border: none !important;
+}
+
+// Proper heading hierarchy for 12pt base text (print standards)
+h1 {
+    color: black !important;
+    font-size: 24pt !important;  // 2.0x base text
+    line-height: 1.2 !important;
+    margin-top: 24pt !important;
+    margin-bottom: 12pt !important;
+}
+
+h2 {
+    color: black !important;
+    font-size: 20pt !important;  // 1.67x base text
+    line-height: 1.3 !important;
+    margin-top: 20pt !important;
+    margin-bottom: 10pt !important;
+}
+
+h3 {
+    color: black !important;
+    font-size: 16pt !important;  // 1.33x base text
+    line-height: 1.3 !important;
+    margin-top: 16pt !important;
+    margin-bottom: 8pt !important;
+}
+
+h4 {
+    color: black !important;
+    font-size: 14pt !important;  // 1.17x base text
+    line-height: 1.4 !important;
+    margin-top: 14pt !important;
+    margin-bottom: 7pt !important;
+}
+
+h5, h6 {
+    color: black !important;
+    font-size: 13pt !important;  // 1.08x base text
+    line-height: 1.4 !important;
+    margin-top: 12pt !important;
+    margin-bottom: 6pt !important;
+}
+
+article h1 {
+    border-bottom: 2px solid #ff7f2a;
+}
+
+article h2 {
+    border-bottom: 1px solid #ff7f2a;
+}
+
+article h3 {
+    border-bottom: 0.5px solid #ff7f2a;
+}
+
+// Set base font size to 12pt for all content
+body, article {
+    font-size: 12pt !important;
+    line-height: 1.6 !important;
+}
+
+// Ensure paragraphs use 12pt
+p {
+    font-size: 12pt !important;
+    line-height: 1.6 !important;
+}
+
+// Code blocks and inline code should be 10pt
+pre, code, var, samp, kbd, tt {
+    font-size: 10pt !important;
+}
+
+// Override any nested code font sizes
+pre code, pre var, pre samp, pre kbd, pre tt {
+    font-size: 10pt !important;
+}
+
+// Lists should also use 12pt
+ul, ol, li {
+    font-size: 12pt !important;
+}
+
+// Table content can be smaller to fit all details
+table, td, th {
+    font-size: 10pt !important;
+}
+
+// Override the tiny @page header/footer fonts to be more readable
+@page {
+    @top-right {
+        font-size: 10pt !important;
+    }
+    @bottom-center {
+        font-size: 10pt !important;
+    }
+    @bottom-right {
+        font-size: 10pt !important;
+    }
+}
