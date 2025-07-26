@@ -37,38 +37,78 @@ submodule infix-if-wifi {
      It supports WiFi client mode and enables comprehensive management of
      wireless connections, including encryption, country codes, and scanning.";
 
+  revision 2025-07-27 {
+    description "Refactor module and add support for Accesspoint mode.";
+    reference "internal";
+  }
   revision 2025-05-27 {
     description "Initial revision.";
     reference "internal";
   }
 
   feature wifi {
-    description "WiFi support is an optional build-time feature in Infix.";
+    description
+      "WiFi support is an optional build-time feature in Infix.";
   }
 
-  typedef encryption {
+  typedef mode {
     type enumeration {
-      enum auto {
+      enum client {
         description
-          "Enables WPA/WPA2/WPA3 encryption with automatic protocol
-           negotiation. The system uses the strongest supported variant supported by Access Point.";
+        "WiFi client mode - connects to existing access points.";
       }
-      enum disabled {
+      enum accesspoint {
         description
-          "Disables encryption for an open network.
-
-           WARNING: Open networks transmit data unencrypted and should only
-           be used in trusted environments.";
+        "WiFi access point mode - provides network access to clients.";
       }
     }
     description
-      "Encryption modes available for WiFi connections.
-
-       - auto: Secure connection using WPA3/WPA2/WPA (auto-selected)
-       - disabled: Open network (unencrypted)";
+      "WiFi operation modes.";
   }
-
-
+  typedef band {
+    type enumeration {
+      enum "2.4GHz" {
+        description
+          "2.4 GHz frequency band.";
+      }
+      enum "5GHz" {
+        description
+          "5 GHz frequency band.";
+      }
+    }
+    description "WiFi frequency bands.";
+  }
+  typedef channel {
+    type enumeration {
+      enum "auto" {
+        description "Automatic channel selection (recommended).";
+      }
+      enum "1" { description "2.412 GHz"; }
+      enum "2" { description "2.417 GHz"; }
+      enum "3" { description "2.422 GHz"; }
+      enum "4" { description "2.427 GHz"; }
+      enum "5" { description "2.432 GHz"; }
+      enum "6" { description "2.437 GHz"; }
+      enum "7" { description "2.442 GHz"; }
+      enum "8" { description "2.447 GHz"; }
+      enum "9" { description "2.452 GHz"; }
+      enum "10" { description "2.457 GHz"; }
+      enum "11" { description "2.462 GHz"; }
+      enum "12" { description "2.467 GHz"; }
+      enum "13" { description "2.472 GHz"; }
+      enum "14" { description "2.484 GHz (Only valid in Japan)"; }
+      enum "36" { description "5.18 GHz"; }
+      enum "40" { description "5.20 GHz"; }
+      enum "44" { description "5.22 GHz"; }
+      enum "48" { description "5.24 GHz"; }
+      enum "149" { description "5.745 GHz"; }
+      enum "153" { description "5.765 GHz"; }
+      enum "157" { description "5.785 GHz"; }
+      enum "161" { description "5.805 GHz"; }
+      enum "165" { description "5.825 GHz"; }
+    }
+    description "WiFi channels with auto-selection option.";
+  }
   augment "/if:interfaces/if:interface" {
     when "derived-from-or-self(if:type, 'infixift:wifi')" {
       description
@@ -84,65 +124,104 @@ submodule infix-if-wifi {
 
       leaf country-code {
         type iwcc:country-code;
-        mandatory true;
         description
           "Two-letter ISO 3166-1 country code for regulatory compliance.
 
            Examples: 'US', 'DE', 'JP'.
 
            WARNING: Incorrect values may violate local laws.";
-
-
       }
-
-      leaf encryption {
-        default auto;
-        type encryption;
-
-        description
-          "WiFi encryption method.
-
-           - auto (default): Enables WPA2/WPA3 auto-negotiation
-           - disabled: Disables encryption (open network)";
-      }
-
-      leaf ssid {
-        type string {
-          length "1..32";
-        }
-        mandatory true;
-
-        description
-          "WiFi network name (SSID).
-
-           Case-sensitive, must match the target network.
-
-           Length: 1–32 characters.";
-      }
-
-      leaf secret {
-        type ks:symmetric-key-ref;
-        mandatory true;
-        must "../encryption != 'disabled'" {
-           error-message
-            "Pre-shared key required unless encryption is disabled.";
-        }
-
-        description
-          "Pre-shared key (PSK) for WPA-secured networks.";
-      }
-
-      leaf rssi {
+      leaf active-ssid {
+        type string;
         config false;
+        when "../mode = 'client'" {
+          description
+            "Applies only when in mode 'client'.";
+        }
+        description "Active SSID";
+      }
+      leaf active-rssi {
         type int16;
         units "dBm";
+        config false;
+        when "../mode = 'client'" {
+          description
+            "Applies only when in mode 'client'.";
+        }
         description
-          "Current received signal strength (RSSI) in dBm.
-
-           Lower (more negative) values indicate stronger signals.";
+          "Active RSSI for connected SSID.";
+      }
+      leaf mode {
+        type mode;
+        default 'client';
+        description "WiFi operation mode.";
       }
 
+      leaf band {
+        type band;
+        when "../mode = 'accesspoint'" {
+          description
+            "Applies only when in mode 'accesspoint'.";
+        }
+        mandatory true;
+        description
+          "WiFi frequency band for access point mode.";
+      }
+
+      leaf channel {
+        when "../mode = 'accesspoint'";
+        type channel;
+        default "auto";
+        must ". = 'auto' or " +
+          "(../band = '2.4GHz' and . >= '1' and . <= '14') or " +
+          "(../band = '5GHz' and . >= '36' and . <= '165')" {
+          error-message "Channel must be valid for selected band or use 'auto'.";
+        }
+        description
+          "WiFi channel selection for access point mode.
+          'auto' (default)
+           Manual selection available for common channels.";
+      }
+      list ssid {
+        must "../country-code" {
+          error-message "Country code is required when SSIDs are configured.";
+        }
+
+        key name;
+        leaf name {
+          type string {
+            length "1..32";
+          }
+          mandatory true;
+          description
+            "WiFi network name (SSID).
+
+             Case-sensitive.
+
+              Length: 1–32 characters.";
+        }
+
+        leaf encryption {
+          type empty;
+          description
+            "Enable WPA2/WPA3 encryption with automatic protocol negotiation.
+             If not present, network operates as open (no encryption).";
+        }
+
+        leaf secret {
+          type ks:symmetric-key-ref;
+          must "../encryption" {
+            error-message "Pre-shared key can only be set when encryption is enabled.";
+          }
+          description
+            "Pre-shared key (PSK) for WPA-secured networks.";
+        }
+      }
       list scan-results {
+        when "../mode = 'client'" {
+          description
+            "Applies only when in mode 'client'.";
+        }
         config false;
         key ssid;
         description
@@ -178,6 +257,24 @@ submodule infix-if-wifi {
           type string;
           description
             "Human-readable description of the detected security.";
+        }
+      }
+      list connected-stations {
+        when "../mode = 'accesspoint'" {
+          description
+            "Applies only when in mode 'accesspoint'.";
+        }
+        key mac;
+        leaf mac  {
+          type yang:phys-address;
+          description
+            "Mac address of connected station";
+        }
+        leaf rssi {
+          type int16;
+          units "dBm";
+          description
+            "Signal for connected station";
         }
       }
     }

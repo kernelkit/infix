@@ -10,7 +10,7 @@ def wifi(ifname):
         for line in data.splitlines():
             k,v = line.split("=")
             if k == "ssid":
-                wifi_data["ssid"] = v
+                wifi_data["active-ssid"] = v
 
         data=HOST.run(tuple(f"wpa_cli -i {ifname} signal_poll".split()), default="FAIL")
 
@@ -19,7 +19,7 @@ def wifi(ifname):
             for line in data.splitlines():
                 k,v = line.strip().split("=")
                 if k == "RSSI":
-                    wifi_data["rssi"]=int(v)
+                    wifi_data["active-rssi"]=int(v)
     data=HOST.run(tuple(f"wpa_cli -i {ifname} scan_result".split()), default="FAIL")
 
     if data != "FAIL":
