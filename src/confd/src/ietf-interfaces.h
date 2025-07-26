@@ -123,7 +123,7 @@ int bridge_port_gen(struct lyd_node *dif, struct lyd_node *cif, FILE *ip);
 
 /* infix-if-wifi.c */
 int wifi_gen(struct lyd_node *dif, struct lyd_node *cif, struct dagger *net);
-int wifi_gen_del(struct lyd_node *dif,  struct dagger *net);
+int wifi_gen_del(struct lyd_node *iface,  struct dagger *net);
 
 /* infix-if-gre.c */
 int gre_gen(struct lyd_node *dif, struct lyd_node *cif, FILE *ip);
