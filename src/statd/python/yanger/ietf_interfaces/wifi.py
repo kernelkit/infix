@@ -15,7 +15,7 @@ def wifi(ifname):
                         continue
                     k,v = line.split("=", 1)
                     if k == "ssid":
-                        wifi_data["ssid"] = v
+                        wifi_data["active-ssid"] = v
                     if k == "wpa_state" and v == "DISCONNECTED": # wpa_suppicant has most likely restarted, restart scanning
                         HOST.run(tuple(f"wpa_cli -i {ifname} scan".split()), default="")
                 except ValueError:
@@ -33,7 +33,7 @@ def wifi(ifname):
                                 continue
                             k,v = line.strip().split("=", 1)
                             if k == "RSSI":
-                                wifi_data["rssi"]=int(v)
+                                wifi_data["active-rssi"]=int(v)
                         except (ValueError, KeyError):
                             # Skip malformed lines or invalid integers
                             continue
