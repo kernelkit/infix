@@ -11,8 +11,6 @@ def wifi(ifname):
             k,v = line.split("=")
             if k == "ssid":
                 wifi_data["ssid"] = v
-            if k == "wpa_state" and v == "DISCONNECTED": # wpa_suppicant has most likely restarted, restart scanning
-                HOST.run(tuple(f"wpa_cli -i {ifname} scan".split()), default="")
 
         data=HOST.run(tuple(f"wpa_cli -i {ifname} signal_poll".split()), default="FAIL")
 
