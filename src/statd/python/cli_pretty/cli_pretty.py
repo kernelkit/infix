@@ -987,22 +987,19 @@ class Iface:
         print(row)
         ssid = None
         rssi = None
-
+        status_str=""
         if self.wifi:
-            rssi=self.wifi.get("rssi")
-            ssid=self.wifi.get("ssid")
-        if ssid is None:
-            ssid="------"
-
-        if rssi is None:
-            signal="------"
+            rssi=self.wifi.get("active-rssi")
+            ssid=self.wifi.get("active-ssid")
         else:
             signal=rssi_to_status(rssi)
-        data_str = f"ssid: {ssid}, signal: {signal}"
+
+        if ssid is not None:
+            status_str = f"ssid: {ssid}, signal: {signal}"
 
         row =  f"{'':<{Pad.iface}}"
         row += f"{'wifi':<{Pad.proto}}"
-        row += f"{'':<{Pad.state}}{data_str}"
+        row += f"{'':<{Pad.state}}{status_str}"
         print(row)
 
     def pr_proto_br(self, br_vlans):
@@ -1261,11 +1258,12 @@ class Iface:
                 print(f"{'ipv6 addresses':<{20}}:")
 
         if self.wifi:
-            ssid=self.wifi.get('ssid', "----")
-            rssi=self.wifi.get('rssi', "----")
-            print(f"{'SSID':<{20}}: {ssid}")
-            print(f"{'Signal':<{20}}: {rssi}")
-            print("")
+            ssid=self.wifi.get('active-ssid')
+            rssi=self.wifi.get('active-rssi')
+            if ssid is not None:
+                print(f"{'SSID':<{20}}: {ssid}")
+                print(f"{'Signal':<{20}}: {rssi}")
+                print("")
             self.pr_wifi_ssids()
 
         if self.gre:
