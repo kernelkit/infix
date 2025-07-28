@@ -36,6 +36,10 @@ on:
         required: false
         type: string
         default: kernelkit/infix
+      parallel:
+        required: false
+        type: boolean
+        default: false
 
 env:
   FLV: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.flavor || inputs.flavor }}
