@@ -183,6 +183,9 @@ submodule infix-if-wifi {
            Manual selection available for common channels.";
       }
       list ssid {
+        max-elements 1;
+        description "WiFi network configuration (currently limited to 1 SSID).";
+
         must "../country-code" {
           error-message "Country code is required when SSIDs are configured.";
         }
