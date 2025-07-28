@@ -14,8 +14,7 @@ exclude_docs: |
   TODO.org
 
 nav:
-  - About: index.md
-  - Introduction: introduction.md
+  - Introduction: index.md
   - CLI:
       - Introduction: cli/introduction.md
       - Configuration: cli/configure.md

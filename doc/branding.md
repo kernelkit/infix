@@ -50,7 +50,7 @@ at boot.  This also ensures the device can always be restored to a known
 state after a factory reset, since the `factory-config` is guaranteed to
 be compatible with the YANG models for the given software version. (For
 more information on how the system boots, please see the section [Key
-Concepts](introduction.md#key-concepts) in the Introduction document.)
+Concepts](index.md#key-concepts) in the Introduction document.)
 
 However, for custom builds of Infix it is possible to override this with
 a single static `/etc/factory-config.cfg` (and failure-config) in your
