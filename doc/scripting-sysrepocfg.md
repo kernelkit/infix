@@ -1,12 +1,16 @@
-# Examples using SSH and sysrepocfg
+> [!NOTE]
+> This method is a legacy "simple and human-friendly" way to manage the
+> system.  These days we strongly recommend using [RESTCONF][1] instead.
 
-[sysrepocfg][4] can be used to interact with the YANG models when logged
-in to infix. Thus, *set config*, *read config*, *read status* and *RPC*
-can be conducted using sysrepocfg for supported YANG models.  It is
-possible to make configuration changes by operating on the *startup*
-database.
+# Legacy Scripting
 
-See [sysrepocfg][4] for information. Examples below will utilize
+Although not the primary interface for Infix, it is possible to interact
+with the system using raw [sysrepocfg][0] commands.  This way you get to
+interact directly with the YANG models when logged in to Infix.  Thus, a
+*set config*, *read config*, *read status* and an *RPC* can be conducted
+using `sysrepocfg` for any supported YANG model.
+
+See [sysrepocfg][0] for more information.  Examples below will utilize:
 
 - `sysrepocfg -I FILE -fjson -d DATABASE` to import/write a JSON
   formatted configuration file to the specified database.
@@ -419,7 +423,7 @@ An alternative is to write it to a temporary file, and use `sysrepocfg
 
 The IETF Hardware YANG model has been augmented for ONIE formatted
 production data stored in EEPROMs, if available.  For details, see the
-[VPD documentation][5] and the *ietf-hardware* and *infix-hardware*
+[VPD documentation][2] and the *ietf-hardware* and *infix-hardware*
 YANG models.
 
 ```
@@ -458,5 +462,6 @@ YANG models.
 ~$
 ```
 
-[4]: https://netopeer.liberouter.org/doc/sysrepo/libyang1/html/sysrepocfg.html
-[5]: vpd.md
+[0]: https://netopeer.liberouter.org/doc/sysrepo/libyang1/html/sysrepocfg.html
+[1]: scripting-restconf.md
+[2]: vpd.md
