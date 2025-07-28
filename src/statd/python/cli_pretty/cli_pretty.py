@@ -201,6 +201,10 @@ class PadWifiScan:
     encryption = 30
     signal = 9
 
+class PadWifiStations:
+    mac = 20
+    signal = 9
+
 
 class PadLldp:
     interface = 16
@@ -965,13 +969,30 @@ class Iface:
         row = self._pr_proto_common("loopback", False, pipe);
         print(row)
 
-    def pr_wifi_ssids(self):
-        hdr = (f"{'SSID':<{PadWifiScan.ssid}}"
-               f"{'ENCRYPTION':<{PadWifiScan.encryption}}"
-               f"{'SIGNAL':<{PadWifiScan.signal}}")
-
+    def pr_wifi_stations(self):
+        hdr = "\nCONNECTED STATIONS"
         print(Decore.invert(hdr))
-        results = self.wifi.get("scan-results", {})
+        hdr =  (f"{'MAC':<{PadWifiStations.mac}}"
+                f"{'SIGNAL':<{PadWifiStations.signal}}"
+                )
+        print(Decore.invert(hdr))
+
+        stations=self.wifi.get("connected-stations", {})
+        for station in stations:
+            status=rssi_to_status(station["rssi"])
+            row = f"{station['mac']:<{PadWifiStations.mac}}"
+            row += f"{status:<{PadWifiStations.signal}}"
+            print(row)
+
+    def pr_wifi_ssids(self):
+        hdr = "\nSCAN RESULTS"
+        print(Decore.invert(hdr))
+        hdr =  (f"{'SSID':<{PadWifiScan.ssid}}"
+                f"{'ENCRYPTION':<{PadWifiScan.encryption}}"
+                f"{'SIGNAL':<{PadWifiScan.signal}}")
+        print(Decore.invert(hdr))
+
+        results=self.wifi.get("scan-results", {})
         for result in results:
             encstr = ", ".join(result["encryption"])
             status = rssi_to_status(result["rssi"])
@@ -989,14 +1010,16 @@ class Iface:
         rssi = None
         status_str=""
         if self.wifi:
-            rssi=self.wifi.get("active-rssi")
-            ssid=self.wifi.get("active-ssid")
-        else:
-            signal=rssi_to_status(rssi)
+            if self.wifi.get("mode", "") == "client":
+                ssid=self.wifi.get("active-ssid")
+                if ssid is not None:
+                    rssi=self.wifi.get("active-rssi")
+                    signal=rssi_to_status(rssi)
 
-        if ssid is not None:
-            status_str = f"ssid: {ssid}, signal: {signal}"
-
+                    status_str = f"ssid: {ssid}, signal: {signal}"
+            elif self.wifi.get("mode", "") == "accesspoint":
+                stations=self.wifi.get("connected-stations", {})
+                status_str = f"Connected stations: {len(stations)}"
         row =  f"{'':<{Pad.iface}}"
         row += f"{'wifi':<{Pad.proto}}"
         row += f"{'':<{Pad.state}}{status_str}"
@@ -1257,15 +1280,6 @@ class Iface:
         else:
                 print(f"{'ipv6 addresses':<{20}}:")
 
-        if self.wifi:
-            ssid=self.wifi.get('active-ssid')
-            rssi=self.wifi.get('active-rssi')
-            if ssid is not None:
-                print(f"{'SSID':<{20}}: {ssid}")
-                print(f"{'Signal':<{20}}: {rssi}")
-                print("")
-            self.pr_wifi_ssids()
-
         if self.gre:
             print(f"{'local address':<{20}}: {self.gre['local']}")
             print(f"{'remote address':<{20}}: {self.gre['remote']}")
@@ -1286,6 +1300,18 @@ class Iface:
             for key, val in frame.items():
                 key = remove_yang_prefix(key)
                 print(f"eth-{key:<{25}}: {val}")
+        if self.wifi:
+            ssid=self.wifi.get('active-ssid', "")
+            rssi=self.wifi.get('active-rssi', "")
+            mode=self.wifi.get('mode')
+            if mode == "client":
+                print(f"{'SSID':<{20}}: {ssid}")
+                print(f"{'Signal':<{20}}: {rssi}")
+                print("")
+                self.pr_wifi_ssids()
+            if mode == "accesspoint":
+                self.pr_wifi_stations()
+
 
     def pr_mdb(self, bridge):
         for group in self.br_mdb.get("multicast-filter", {}):
