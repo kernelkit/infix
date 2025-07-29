@@ -3,6 +3,10 @@ name: Build
 on:
   workflow_dispatch:
     inputs:
+      target:
+        description: "Build target (e.g. aarch64)"
+        default: "x86_64"
+        type: string
       flavor:
         description: 'Optional build flavor (e.g. _minimal)'
         default: ''
@@ -11,6 +15,10 @@ on:
         description: 'Massive parallel build of each image'
         default: true
         type: boolean
+      name:
+        description: "Name (for spin overrides)"
+        default: "infix"
+        type: string
       infix_repo:
         description: 'Repo to checkout (for spin overrides)'
         default: kernelkit/infix
@@ -39,12 +47,14 @@ on:
         default: false
 
 env:
+  NAME: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.name || inputs.name }}
+  TARGET: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.target || inputs.target }}
   FLV: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.flavor || inputs.flavor }}
   INFIX_REPO: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.infix_repo || inputs.infix_repo }}
 
 jobs:
   build:
-    name: Build ${{ inputs.name }} ${{ inputs.target }}
+    name: Build ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.name || inputs.name }} ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.target || inputs.target }}
     runs-on: [ self-hosted, latest ]
     strategy:
       fail-fast: false
@@ -81,8 +91,8 @@ jobs:
                   | tee -a $GITHUB_OUTPUT $GITHUB_ENV
           fi
 
-          target=${{ inputs.target }}
-          name=${{ inputs.name }}
+          target=${{ env.TARGET }}
+          name=${{ env.NAME }}
           echo "dir=${name}-${target}"        >> $GITHUB_OUTPUT
           echo "tgz=${name}-${target}.tar.gz" >> $GITHUB_OUTPUT
           echo "flv=$FLV"              >> $GITHUB_OUTPUT
@@ -100,16 +110,16 @@ jobs:
         uses: actions/cache@v4
         with:
           path: .ccache/
-          key: ccache-${{ inputs.target }}-${{ hashFiles('.git/modules/buildroot/HEAD', 'package/*/*.hash') }}
+          key: ccache-${{ env.TARGET }}-${{ hashFiles('.git/modules/buildroot/HEAD', 'package/*/*.hash') }}
           restore-keys: |
-            ccache-${{ inputs.target }}-
+            ccache-${{ env.TARGET }}-
             ccache-
 
-      - name: Configure ${{ inputs.target }}${{ steps.vars.outputs.flv }}
+      - name: Configure ${{ env.TARGET }}${{ steps.vars.outputs.flv }}
         run: |
-          make ${{ inputs.target }}${{ steps.vars.outputs.flv }}_defconfig
+          make ${{ env.TARGET }}${{ steps.vars.outputs.flv }}_defconfig
 
-      - name: Unit Test ${{ inputs.target }}
+      - name: Unit Test ${{ env.TARGET }}
         run: |
           make test-unit
 
@@ -127,9 +137,9 @@ jobs:
           fi
           echo "MAKE=$MAKE" >> $GITHUB_OUTPUT
 
-      - name: Build ${{ inputs.target }}${{ steps.vars.outputs.flv }}
+      - name: Build ${{ env.TARGET }}${{ steps.vars.outputs.flv }}
         run: |
-          echo "Building ${{ inputs.target }}${{ steps.vars.outputs.flv }}_defconfig ..."
+          echo "Building ${{ env.TARGET }}${{ steps.vars.outputs.flv }}_defconfig ..."
           eval "${{ steps.parallel.outputs.MAKE }}"
 
       - name:  Check SBOM from Build
@@ -151,7 +161,7 @@ jobs:
           printf "Size of output/images/: "
           ls -l output/images/
 
-      - name: Prepare ${{ inputs.target }} Artifact
+      - name: Prepare ${{ env.TARGET }} Artifact
         run: |
           cd output/
           mv images ${{ steps.vars.outputs.dir }}
@@ -161,4 +171,4 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           path: output/${{ steps.vars.outputs.tgz }}
-          name: artifact-${{ inputs.target }}
+          name: artifact-${{ env.TARGET }}
