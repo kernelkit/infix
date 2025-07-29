@@ -6,6 +6,8 @@ repo_name: kernelkit/infix
 copyright: Copyright &copy; 2022-2025 The KernelKit Team
 docs_dir: doc/
 edit_uri: edit/master/doc/
+extra_css:
+  - extra.css
 
 exclude_docs: |
   ChangeLog.md
