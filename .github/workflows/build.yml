@@ -5,17 +5,14 @@ on:
     inputs:
       flavor:
         description: 'Optional build flavor (e.g. _minimal)'
-        required: false
         default: ''
         type: string
       parallel:
         description: 'Massive parallel build of each image'
-        required: false
         default: true
         type: boolean
       infix_repo:
         description: 'Repo to checkout (for spin overrides)'
-        required: false
         default: kernelkit/infix
         type: string
 
