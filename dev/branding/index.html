@@ -50,6 +50,8 @@
       
     
     
+      <link rel="stylesheet" href="../extra.css">
+    
     <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
@@ -1807,7 +1809,7 @@ Infix by default generates the device's initial configuration every time
 at boot.  This also ensures the device can always be restored to a known
 state after a factory reset, since the <code>factory-config</code> is guaranteed to
 be compatible with the YANG models for the given software version. (For
-more information on how the system boots, please see the section <a href="introduction.md#key-concepts">Key
+more information on how the system boots, please see the section <a href="../#key-concepts">Key
 Concepts</a> in the Introduction document.)</p>
 <p>However, for custom builds of Infix it is possible to override this with
 a single static <code>/etc/factory-config.cfg</code> (and failure-config) in your

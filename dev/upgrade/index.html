@@ -50,6 +50,8 @@
       
     
     
+      <link rel="stylesheet" href="../extra.css">
+    
     <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
@@ -1774,7 +1776,7 @@ comparing the files from the <em>shell</em>. An example is shown below.</p>
 <p>Downgrading to an earlier version is possible, however, downgrading is
 <strong>not</strong> guaranteed to work smoothly.  In particular, when the unit boots
 up with the downgraded version, it may fail to apply the <em>startup
-config</em>, and instead apply its <a href="introduction.md#system-boot">failure config</a>.</p>
+config</em>, and instead apply its <a href="../boot/#system-boot">failure config</a>.</p>
 <p>We consider two cases: downgrading with and without applying a backup
 startup configuration before rebooting.</p>
 <p>In both cases we start out with a unit running Infix v25.03.1, and
@@ -1912,7 +1914,7 @@ its default login credentials<sup id="fnref:1"><a class="footnote-ref" href="#fn
 <p><em>Reboot:</em></p>
 <p>Conduct a reboot. During boot, the unit fails to apply the existing
 startup configuration (config version <code>1.5</code> while software expects
-version <code>1.4</code> or earlier), and instead applies its <a href="introduction.md#system-boot">failure
+version <code>1.4</code> or earlier), and instead applies its <a href="../boot/#system-boot">failure
 config</a>. This is what is seen on the console when this situation
 occurs. Note that the login prompt displays <code>failed</code> as part of the
 <em>hostname</em>.</p>
