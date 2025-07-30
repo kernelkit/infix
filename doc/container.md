@@ -1,31 +1,7 @@
-Containers in Infix
-===================
-<img align="right" src="img/docker.webp" alt="Docker whale" width=360>
+Docker Container Support
+========================
 
-* [Introduction](#introduction)
-* [Caution](#caution)
-* [Getting Started](#getting-started)
-  * [Examples](#examples)
-* [Container Images](#container-images)
-* [Upgrading a Container Image](#upgrading-a-container-image)
-* [Networking and Containers](#networking-and-containers)
-  * [Container Bridge](#container-bridge)
-  * [Container Host Interface](#container-host-interface)
-  * [Host Networking](#host-networking)
-* [Mounts and Volumes](#mounts-and-volumes)
-  * [Content Mounts](#content-mounts)
-* [Example Containers](#example-containers)
-  * [System Container](#system-container)
-  * [Application Container: nftables](#application-container-nftables)
-  * [Application Container: ntpd](#application-container-ntpd)
-* [Advanced](#advanced)
-  * [Running Host Commands From Container](#running-host-commands-from-container)
-* [Container Requirements](#container-requirements)
-  * [Advanced Users](#advanced-users)
-
-
-Introduction
-------------
+![Docker whale](img/docker.webp){ align=right width="360" }
 
 Infix comes with native support for Docker containers using [podman][].
 The [YANG model][1] describes the current level of support, complete
@@ -110,10 +86,9 @@ your container image and application to run.
 > support the CPU architecture of your host system.  Remember, unlike
 > virtualization, containers reuse the host's CPU and kernel.
 
+![Hello World](img/docker-hello-world.svg){ align=right width="200" }
 
-<img align="right" src="img/docker-hello-world.svg" alt="Hello World" width=360>
-
-### Examples
+### Example: Hello World
 
 Classic Hello World:
 
@@ -128,6 +103,8 @@ Classic Hello World:
 
     Hello from Docker!
     This message shows that your installation appears to be working correctly.
+
+### Example: Web Server
 
 A web server with [nginx][], using standard docker bridge.  Podman will
 automatically create a VETH pair for us, connecting the container to the
@@ -279,7 +256,7 @@ archive, which helps greatly with container upgrades (see below):
 
 Upgrading a Container Image
 ---------------------------
-<img align="right" src="img/shield-checkmark.svg" alt="Hello World" width=100>
+![Up-to-date Shield](img/shield-checkmark.svg){ align=right width="100" }
 
 The applications in your container are an active part of the system as a
 whole, so make it a routine to keep your container images up-to-date!

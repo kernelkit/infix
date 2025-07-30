@@ -1,0 +1,23 @@
+<article id="doc-cover">
+    {% if cover_logo is defined %}
+        <div class="wrapper upper">
+            <img src="{{ cover_logo | to_url }}" alt="Logo" class="logo">
+        </div>
+    {% else %}
+        <div class="wrapper"></div>
+    {% endif %}
+
+    <div class="wrapper">
+        <h2>{{ cover_subtitle | e }}</h2>
+        <div class="divider"></div>
+        <h1>{{ cover_title | e }}</h1>
+    </div>
+
+    <div class="properties">
+        <address>
+            {% if copyright is defined %}
+                <p id="copyright">{{ copyright | e }}</p>
+	    {% endif %}
+        </address>
+    </div>
+</article>

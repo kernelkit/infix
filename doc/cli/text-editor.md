@@ -44,10 +44,13 @@ C-x i   insert    C-x g   goto-ln  C-x o other win   C-x C-x swap     M-q reform
   - tap `c`
   - release `Ctrl`
 
+----
+
 > The status field at the bottom asks if you are really sure, and/or if
 > you want to add a final Enter/newline to the file.  For binary content
 > that final newline may be important.
 
+----
 
 ## Changing the Editor
 

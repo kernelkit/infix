@@ -24,7 +24,6 @@ on:
         default: kernelkit/infix
         type: string
 
-
   workflow_call:
     inputs:
       target:

@@ -1,5 +1,5 @@
-Infix in Virtual Environments
-=============================
+Virtual Environments
+=====================
 
 Infix primarily targets real hardware, deployment to the cloud is not a
 priority at the moment.  However, for development and testing purposes
@@ -33,8 +33,8 @@ from a pre-built Infix release tarball, using <kbd>./qemu.sh -c</kbd>
 
 The Infix test suite is built around Qemu and [Qeneth][qeth], see:
 
- * [Testing](testing.md)
- * [Docker Image](../test/docker/README.md)
+ * [Regression Testing with Infamy](testing.md)
+ * [Infamy Docker Image](https://github.com/kernelkit/infix/blob/main/test/docker/README.md)
 
 
 GNS3

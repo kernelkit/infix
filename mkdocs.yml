@@ -1,0 +1,135 @@
+site_name: User's Guide
+site_description: Infix Documentation
+site_url: https://kernelkit.github.io/infix/
+repo_url: https://github.com/kernelkit/infix/
+repo_name: kernelkit/infix
+copyright: Copyright &copy; 2022-2025 The KernelKit Team
+docs_dir: doc/
+edit_uri: edit/master/doc/
+extra_css:
+  - extra.css
+
+exclude_docs: |
+  ChangeLog.md
+  cli/README.md
+  README.md
+  TODO.org
+
+nav:
+  - Introduction: index.md
+  - CLI:
+      - Introduction: cli/introduction.md
+      - Configuration: cli/configure.md
+      - Keybindings: cli/keybindings.md
+      - Network Calculator: cli/netcalc.md
+      - Network Monitoring: cli/tcpdump.md
+      - Quickstart Guide:  cli/quick.md
+      - Text Editor: cli/text-editor.md
+      - Upgrading: cli/upgrade.md
+  - Docker Containers: container.md
+  - Networking:
+      - Network Configuration: networking.md
+      - Quality of Service: qos.md
+      - RMON Counters: eth-counters.md
+      - Tunneling (L2/L3): tunnels.md
+      - Wireless LAN (WiFi): wifi.md
+  - Services:
+      - Device Discovery: discovery.md
+      - DHCP Server: dhcp.md
+  - System:
+      - Boot Procedure: boot.md
+      - Configuration: system.md
+      - Hardware Info & Status: hardware.md
+      - Management: management.md
+      - Syslog Support: syslog.md
+      - Upgrade: upgrade.md
+  - Scripting:
+      - Introduction: scripting.md
+      - Legacy Scripting: scripting-sysrepocfg.md
+      - Production Testing: scripting-prod.md
+      - Remote RESTCONF: scripting-restconf.md
+  - Developer's Corner:
+      - Branding & Releases: branding.md
+      - Developer's Guide: developers-guide.md
+      - Developing with Buildroot: override-package.md
+      - Netboot HowTo: netboot.md
+      - Regression Testing: testing.md
+      - Test System Architecture: test-arch.md
+      - Virtual Environments: virtual.md
+      - Vital Product Data (VPD): vpd.md
+  - Origin & Licensing: license.md
+
+theme:
+  logo: logo-plain.png
+  name: material
+  features:
+    - toc.follow
+#    - toc.integrate
+    - navigation.path
+    - navigation.instant
+    - navigation.instant.progress
+    - navigation.tracking
+    - navigation.indexes
+#    - navigation.tabs
+#    - navigation.sections
+#    - navigation.expand
+#    - navigation.top
+#    - navigation.footer
+    - search.highlight
+    - search.share
+#    - content.action.edit
+    - content.code.copy
+    - content.code.annotate
+    - content.footnote.tooltips
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: orange
+      accent: orange
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: black
+      accent: orange
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - footnotes
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.tabbed:
+      alternate_style: true
+  - tables
+  - toc:
+      permalink: true
+
+plugins:
+  - search
+  - callouts
+  - mike
+  - to-pdf:
+      cover: true
+      enabled_if_env: PDF_EXPORT
+      cover_logo: logo-plain.png
+      cover_subtitle: Immutable.Friendly.Secure
+      custom_template_path: doc/templates
+      output_path: pdf/infix-user-guide.pdf
+      toc_level: 2
+      ordered_chapter_level: 3
+      heading_shift: false
+
+extra:
+  generator: false
+  homepage: https://kernelkit.org/
+  version:
+    provider: mike

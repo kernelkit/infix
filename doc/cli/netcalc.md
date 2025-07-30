@@ -1,4 +1,4 @@
-## Usage
+# Network Calculator
 
 ```
 netcalc <ADDRESS/LEN | NETWORK NETMASK> [split <1-32 | 64-128>]
@@ -12,8 +12,8 @@ information about the subnet.  Both IPv4 and IPv6 is supported.
 
 A subnet can be entered in two ways:
 
- - `192.168.2.0 255.255.255.0`: traditional IPv4 'address netmask' style
- - `192.168.2.0/24`: modern prefix length, same also for IPv6
+- `192.168.2.0 255.255.255.0`: traditional IPv4 'address netmask' style
+- `192.168.2.0/24`: modern prefix length, same also for IPv6
 
 An optional `split LEN` can be given as argument, the new length value
 must be bigger than the current prefix length.  See example below.

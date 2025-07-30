@@ -1,4 +1,4 @@
-# Management
+# System Management
 
 The system utilizes YANG models for keeping configuration and operational
 data. These databases can be managed through different interfaces such
@@ -194,10 +194,6 @@ admin@example:/config/web/restconf/> no enabled
 admin@example:/config/web/restconf/>
 ```
 
-# System Upgrade
+## System Upgrade
 
-See [upgrading procedures and boot order][1] for information on
-    upgrading.
-
-
-[1]: system.md#upgrade-procedures-and-boot-order
+See [Upgrade & Boot Order](upgrade.md) for information on upgrading.

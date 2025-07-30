@@ -1,4 +1,4 @@
-# Discover Devices
+# Device Discovery
 
 Infix advertises itself via the [mDNS-SD](#mdns-sd) and [LLDP](#lldp)
 discovery protocols.  mDNS-SD has good client support in Windows, macOS
@@ -8,9 +8,9 @@ An even simpler method is available when directly attached to an Infix
 device:
 
 ```
-       .----.      Ethernet       .-------.
-       | PC +---------------------+ Infix |
-       '----' if1              e1 '-------'
+.----.       Ethernet      .--------.
+| PC +---------------------+ Device |
+'----' if1              e1 '--------'
 ```
 
 With IPv6 you can *ping the all-hosts* address (ff02::1), the device's

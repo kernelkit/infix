@@ -1,0 +1,12 @@
+.md-header__title {
+    font-size: 1.1rem;
+    line-height: 2.6rem;
+}
+
+[data-md-color-primary="orange"] {
+    --md-primary-fg-color: #ff7f2a;
+    --md-primary-bg-color: #5c5f5c;
+}
+[data-md-color-primary="black"] {
+    --md-primary-bg-color: #5c5f5c;
+}

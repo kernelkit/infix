@@ -1,4 +1,4 @@
-# Introduction
+# CLI Introduction
 
 The command line interface (CLI, see-ell-aye) implements a CISCO-like,
 or Juniper Networks JunOS-like, CLI.  It is the traditional way of
@@ -10,8 +10,7 @@ Nevertheless, when it comes to initial deployment and debugging, it
 is very useful to know how to navigate and use the CLI.  This very
 short guide intends to help you with that.
 
-
-## About
+----
 
 New users usually get the CLI as the default "shell" when logging in,
 but the default `admin` user logs in to `bash`.  To access the CLI,
@@ -35,9 +34,12 @@ admin@host-12-34-56:/> show                   # Try: Tab or ?
 admin@host-12-34-56:/>                        # Try: Tab or ?
 ```
 
-> **Tip:** Even on an empty command line you can tap the Tab or ? keys.
-> See `help keybindings` for more tips!
+----
 
+> **Note:** even on an empty command line, you can tap the `Tab` or `?` keys.  
+> See [`help keybindings`](keybindings.md) for more tips!
+
+----
 
 ## Key Concepts
 
@@ -129,10 +131,15 @@ In *configure context* the following commands are available:
 | `do command`      | Call admin-exec command: `do show log`                 |
 | `commit`          |                                                        |
 
-### Example Session
 
-> Remember to use the `TAB` and `?` keys to speed up your navigation.
-> See `help keybindings` for more tips!
+## Example Session
+
+----
+
+> Remember to use the `TAB` and `?` keys to speed up your navigation.  
+> See [`help keybindings`](keybindings.md) for more tips!
+
+----
 
 In this example we enter configure context to add an IPv4 address to
 interface `eth0`, then we apply the changes using the `leave` command.
@@ -180,4 +187,3 @@ admin@host-12-34-56:/> copy startup-config running-config
 ```
 
 Or restarting the device.
-
