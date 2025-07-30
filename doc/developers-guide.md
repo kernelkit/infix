@@ -108,6 +108,35 @@ $ sudo apt-get install python3-graphviz ruby-asciidoctor-pdf
 ..
 ```
 
+### Documentation
+
+The documentation is written in Markdown, with GitHub extensions, and
+published using [MkDocs, material theme][11].  This means some features
+require MkDocs *hinting* which may not render fully when previewing on
+GitHub -- this is OK.
+
+MkDocs is packaged and available to install via `apt`, but not all of
+the plugins and extensions we rely on are available, so instead we do
+recommend using `pipx` to install the necessary tooling:
+
+```bash
+$ sudo apt install pipx
+$ pipx install mkdocs
+$ pipx inject mkdocs mkdocs-material pymdown-extensions mkdocs-callouts mike mkdocs-to-pdf
+```
+
+The last two packages, `mike` and `mkdocs-to-pdf`, are used for online
+versioning and PDF generation by GitHub Actions, but since they are in
+the `mkdocs.yml` file, everyone who wants to preview the documentation
+have to install all the tooling.
+
+Preview with:
+
+```
+$ cd ~/src/infix/
+$ mkdocs serve
+```
+
 
 Development
 -----------
@@ -469,3 +498,4 @@ $ git submodule update --init
 [8]: https://github.com/kernelkit/infix/blob/main/utils/gh-dl-artifact.sh
 [9]: https://github.com/kernelkit/buildroot
 [10]: https://github.com/kernelkit/linux
+[11]: https://squidfunk.github.io/mkdocs-material/
