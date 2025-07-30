@@ -8,12 +8,13 @@ different platforms, simplify long-term maintenance, and provide
 made-easy management using NETCONF, RESTCONF[^2], or the built-in
 command line interface (CLI) from a console or SSH login.
 
-> Click the **▶ Example CLI Session** foldout below for an example, or
-> head on over to the [Infix Documentation](doc/README.md) for more
-> information on how to set up the system.
+> [!TIP]
+> _Curious how it works?_ Click the **▶ Example CLI Session** below to see
+> it in action  
+> — or jump into the comprehensive [Infix Documentation][4] to learn even more.
 
-Although primarily focused on switches and routers, the core values
-may be appealing for other use-cases as well:
+Geared for switches and routers — yet its core value fits plenty of
+other use cases:
 
 - Runs from a squashfs image on a read-only partition
 - Single configuration file on a separate partition
@@ -95,6 +96,7 @@ The [following boards](board/aarch64/README.md) are fully supported:
  - Marvell CN9130 CRB
  - Marvell EspressoBIN
  - Microchip SparX-5i PCB135 (eMMC)
+ - NXP i.MX8MP EVK
  - Raspberry Pi 4B
  - NanoPi R2S
 
@@ -123,16 +125,17 @@ Environments](doc/virtual.md).
 [^1]: An immutable operating system is one with read-only file systems,
     atomic updates, rollbacks, declarative configuration, and workload
     isolation.  All to improve reliability, scalability, and security.
-    For more information, see <https://ceur-ws.org/Vol-3386/paper9.pdf>
-    and <https://www.zdnet.com/article/what-is-immutable-linux-heres-why-youd-run-an-immutable-linux-distro/>.
-
+    For more information, see this [survey paper][5] and [article][6].
 [^2]: Partial RESTCONF support, features like HTTP PATCH, OPTIONS, HEAD,
     and copying between datastores are still missing.
 
-[1]: https://buildroot.org/
-[2]: https://www.sysrepo.org/
+[1]: https://buildroot.org/ "Buildroot Homepage"
+[2]: https://www.sysrepo.org/ "Sysrepo Homepage"
 [3]: doc/cli/introduction.md
-[Latest Build]:    https://github.com/kernelkit/infix/releases/tag/latest
+[4]: https://kernelkit.org/infix/ "Infix User's Guide"
+[5]: https://ceur-ws.org/Vol-3386/paper9.pdf "Immutable Operating Systems: A Survey"
+[6]: https://www.zdnet.com/article/what-is-immutable-linux-heres-why-youd-run-an-immutable-linux-distro/ "Why you should run an immutable Linux distro"
+[Latest Build]:    https://github.com/kernelkit/infix/releases/tag/latest "Latest build"
 [License]:         https://en.wikipedia.org/wiki/GPL_license
 [License Badge]:   https://img.shields.io/badge/License-GPL%20v2-blue.svg
 [GitHub]:          https://github.com/kernelkit/infix/actions/workflows/build.yml/
