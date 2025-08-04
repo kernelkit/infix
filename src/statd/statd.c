@@ -43,6 +43,7 @@
 #define XPATH_CONTAIN_BASE  "/infix-containers:containers"
 #define XPATH_DHCP_SERVER_BASE  "/infix-dhcp-server:dhcp-server"
 #define XPATH_LLDP_BASE "/ieee802-dot1ab-lldp:lldp"
+#define XPATH_FIREWALL_BASE "/infix-firewall:firewall"
 
 TAILQ_HEAD(sub_head, sub);
 
@@ -355,6 +356,8 @@ static int subscribe_to_all(struct statd *statd)
 		return SR_ERR_INTERNAL;
 #endif
 	if (subscribe(statd, "infix-dhcp-server", XPATH_DHCP_SERVER_BASE, sr_generic_cb))
+		return SR_ERR_INTERNAL;
+	if (subscribe(statd, "infix-firewall", XPATH_FIREWALL_BASE, sr_generic_cb))
 		return SR_ERR_INTERNAL;
 
 	INFO("Successfully subscribed to all models");
