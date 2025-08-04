@@ -10,7 +10,7 @@ CONFD_SITE = $(BR2_EXTERNAL_INFIX_PATH)/src/confd
 CONFD_LICENSE = BSD-3-Clause
 CONFD_LICENSE_FILES = LICENSE
 CONFD_REDISTRIBUTE = NO
-CONFD_DEPENDENCIES = host-sysrepo sysrepo netopeer2 jansson libite sysrepo libsrx libglib2
+CONFD_DEPENDENCIES = host-sysrepo sysrepo netopeer2 jansson libite sysrepo libsrx libglib2 firewalld
 CONFD_AUTORECONF = YES
 CONFD_CONF_OPTS += --disable-silent-rules --with-crypt=$(BR2_PACKAGE_CONFD_DEFAULT_CRYPT)
 CONFD_SYSREPO_SHM_PREFIX = sr_buildroot$(subst /,_,$(CONFIG_DIR))_confd
@@ -102,6 +102,11 @@ define CONFD_EMPTY_SYSREPO
 endef
 define CONFD_CLEANUP
 	rm -f /dev/shm/$(CONFD_SYSREPO_SHM_PREFIX)*
+	rm -rf $(TARGET_DIR)/etc/firewall*
+	rm -f  $(TARGET_DIR)/usr/bin/firewall-applet
+	rm -rf $(TARGET_DIR)/usr/share/firewalld
+	mkdir -p $(TARGET_DIR)/etc/firewalld
+	touch $(TARGET_DIR)/etc/firewalld/firewalld.conf
 endef
 CONFD_PRE_BUILD_HOOKS += CONFD_EMPTY_SYSREPO
 CONFD_PRE_BUILD_HOOKS += CONFD_CLEANUP

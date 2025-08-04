@@ -1,0 +1,431 @@
+module infix-firewall {
+  yang-version 1.1;
+  namespace "urn:infix:firewall:ns:yang:1.0";
+  prefix ifw;
+
+  import ietf-inet-types {
+    prefix inet;
+    reference "RFC 6991: Common YANG Data Types";
+  }
+
+  import ietf-interfaces {
+    prefix if;
+    reference "RFC 8343: A YANG Data Model for Interface Management";
+  }
+
+  organization "KernelKit";
+  contact      "kernelkit@googlegroups.com";
+  description  "Zone-based firewall inspired by firewalld concepts.";
+
+  revision 2025-04-26 {
+    description "Initial revision.";
+    reference "internal";
+  }
+
+  /*
+   * Type definitions
+   */
+
+  typedef rule-action {
+    description "Actions that can be performed on packets.";
+
+    type enumeration {
+      enum accept {
+        description "Accept the packet.";
+      }
+      enum reject {
+        description "Reject the packet and send an ICMP error.";
+      }
+      enum drop {
+        description "Drop the packet silently.";
+      }
+      enum mark {
+        description "Mark the packet.";
+      }
+    }
+  }
+
+  typedef rule-family {
+    description "Address family for direct nftables use.";
+
+    type enumeration {
+      enum ipv4 {
+        description "IPv4.";
+      }
+      enum ipv6 {
+        description "IPv6.";
+      }
+      enum bridge {
+        description "Ethernet bridge.";
+      }
+    }
+  }
+
+  typedef zone-policy {
+    description "Default policy for a zone.";
+
+    type enumeration {
+      enum accept {
+        description "Accept all connections by default.";
+      }
+      enum reject {
+        description "Reject all connections by default.";
+      }
+      enum drop {
+        description "Drop all connections by default.";
+      }
+    }
+  }
+
+  typedef zone-ref {
+    description "Reference to a named zone or symbolic value: 'host' or 'any'.";
+    type union {
+      type string {
+        pattern 'host|any';
+      }
+      type leafref {
+        path "../../zones/zone/name";
+      }
+    }
+  }
+
+  typedef policy-action {
+    type enumeration {
+      enum continue {
+        description "Non-terminal policy. Matching traffic is accepted or allowed to proceed, and other policies continue to be evaluated.";
+      }
+      enum accept {
+        description "Accept matching traffic and stop evaluating further policies.";
+      }
+      enum reject {
+        description "Reject matching traffic (e.g., send ICMP unreachable) and stop evaluating further policies.";
+      }
+      enum drop {
+        description "Silently drop matching traffic and stop evaluating further policies.";
+      }
+    }
+    description "Action for traffic that does not match any specific service or port entry.";
+  }
+
+  typedef protocol-type {
+    description "Network protocols supported for services and port definitions.";
+
+    type enumeration {
+      enum tcp {
+        description "TCP protocol.";
+      }
+      enum udp {
+        description "UDP protocol.";
+      }
+      enum sctp {
+        description "SCTP protocol.";
+      }
+      enum dccp {
+        description "DCCP protocol.";
+      }
+    }
+  }
+
+  // firewall-cmd --get-icmptypes
+  typedef icmp-type {
+    description "Available ICMP/ICMPv6 types for icmp-blocks.";
+
+    type enumeration {
+      enum echo-reply {
+        description "Echo reply.";
+      }
+      enum destination-unreachable {
+        description "Destination unreachable.";
+      }
+      enum source-quench {
+        description "Source quench.";
+      }
+      enum redirect {
+        description "Redirect.";
+      }
+      enum echo-request {
+        description "Echo request.";
+      }
+      enum router-advertisement {
+        description "Router advertisement.";
+      }
+      enum router-solicitation {
+        description "Router solicitation.";
+      }
+      enum time-exceeded {
+        description "Time exceeded.";
+      }
+      enum parameter-problem {
+        description "Parameter problem.";
+      }
+      enum timestamp-request {
+        description "Timestamp request.";
+      }
+      enum timestamp-reply {
+        description "Timestamp reply.";
+      }
+      enum address-mask-request {
+        description "Address mask request.";
+      }
+      enum address-mask-reply {
+        description "Address mask reply.";
+      }
+      enum packet-too-big {
+        description "Packet too big.";
+      }
+      enum neighbor-solicitation {
+        description "Neighbor solicitation.";
+      }
+      enum neighbor-advertisement {
+        description "Neighbor advertisement.";
+      }
+    }
+  }
+
+  /*
+   * Main container and configuration
+   */
+
+  container firewall {
+    description "Zone-based firewall configuration.";
+
+    leaf enabled {
+      description "Enable or disable the firewall.";
+      type boolean;
+      default true;
+    }
+
+    leaf default {
+      description "Default zone for interfaces.
+
+                   Any interface not explicitly associated with a zone is placed in this zone.";
+      type leafref {
+        path "../zones/zone/name";
+      }
+    }
+
+    leaf logging {
+      description "Log level for denied (rejected/dropped) packets.";
+      type enumeration {
+        enum all {
+          description "Log all denied packets.";
+        }
+        enum unicast {
+          description "Log unicast denied packets.";
+        }
+        enum broadcast {
+          description "Log broadcast denied packets.";
+        }
+        enum multicast {
+          description "Log multicast denied packets.";
+        }
+        enum off {
+          description "Do not log denied packets.";
+        }
+      }
+      default off;
+    }
+
+    container zones {
+      description "Available firewall zones.";
+
+      list zone {
+        description "A zone defines a level of trust for network connections.";
+        key "name";
+
+        leaf name {
+          description "Name of the zone.";
+          type string {
+            length "1..17";
+            pattern '[a-zA-Z0-9\-_]+';
+          }
+        }
+
+        leaf description {
+          description "Free-form description of the zone.";
+          type string;
+        }
+
+        leaf policy {
+          description "Default action for traffic matching no explicit rule.
+
+                       Note, see also the 'forwarding' setting for this zone.";
+          type zone-policy;
+          default reject;
+        }
+
+        leaf-list interfaces {
+          description "Interfaces assigned to this zone.";
+          type if:interface-ref;
+        }
+
+        leaf-list sources {
+          description "Source networks assigned to this zone.";
+          type inet:ip-prefix;
+        }
+
+        leaf forwarding {
+          description "Allow forwarding between interfaces/sources in the same zone.
+
+                       Note, this setting applies regardless of the zone policy!";
+          type boolean;
+          default false;
+        }
+
+        leaf masquerade {
+          description "Enable masquerading (SNAT) for traffic egressing this zone.";
+          type boolean;
+          default false;
+        }
+
+        list forward {
+          description "Forward traffic another port and/or host (DNAT).";
+          key "port proto";
+
+          leaf port {
+            description "Local port to forward from.";
+            type inet:port-number;
+          }
+
+          leaf proto {
+            description "Network protocol.";
+            type protocol-type;
+          }
+
+          container to {
+            description "Forward matching traffic to given address and port.";
+            leaf addr {
+              description "IP address to forward to.";
+              type inet:ip-address;
+            }
+
+            leaf port {
+              description "Port to forward to.";
+              type inet:port-number;
+            }
+          }
+        }
+
+        leaf-list services {
+          description "Services allowed to ingress this zone.";
+          type leafref {
+            path "../../../services/service/name";
+          }
+        }
+
+        list icmp-blocks {
+          description "ICMP and ICMPv6 types to block.";
+          key "icmp-type";
+
+          leaf icmp-type {
+            description "ICMP type.";
+            type icmp-type;
+          }
+        }
+      }
+    }
+
+    list policy {
+      description "Rules for filtering traffic forwarded between zones.";
+      key "name";
+
+      leaf name {
+        description "Unique identifier (filename) for this policy, e.g., LAN-to-WAN.";
+        type string {
+          length "1..17";
+          pattern '[a-zA-Z0-9\-_]+';
+        }
+      }
+
+      leaf description {
+        description "Free-form description of this policy's purpose and scope.";
+        type string;
+      }
+
+      leaf-list ingress {
+        type ifw:zone-ref;
+        description "List of zones traffic is entering. Use symbolic 'host' or 'any' as needed.";
+      }
+
+      leaf-list egress {
+        description "List of zones traffic is exiting from. Use symbolic 'host' or 'any' as needed.";
+        type ifw:zone-ref;
+      }
+
+      leaf masquerade {
+        description "Enable masquerading (SNAT) for traffic matching this policy.";
+        type boolean;
+      }
+
+      leaf policy {
+        description "Policy for non-matching traffic. 'continue' means policy is non-terminal.";
+        type policy-action;
+        default "continue";
+      }
+
+      leaf-list service {
+        description "Allowed services, all other traffic follows the policy default action.";
+        type leafref {
+          path "../../services/service/name";
+        }
+      }
+   }
+
+    container services {
+      description "Predefined network services.";
+
+      list service {
+        description "Manage services, human-friendly names of port+protocol pairs.
+
+                     A service is a collection of port and protocol pairs.  Used by the firewall
+                     instead of hard-coding raw port numbers everywhere.";
+        key "name";
+
+        leaf name {
+          description "Name of the service.";
+          type string {
+            length "1..17";
+            pattern '[a-zA-Z0-9\-_]+';
+          }
+        }
+
+        leaf description {
+          description "Free-form description of the service.";
+          type string;
+        }
+
+        list port {
+          description "Port, or range of ports, and protocol to match.";
+          key "lower proto";
+
+          leaf lower {
+            type inet:port-number;
+            description "Lower port in range.";
+          }
+
+          leaf upper {
+            type inet:port-number;
+            must "../lower <= .";
+            description "Upper port in range.";
+          }
+
+          leaf proto {
+            description "Layer 4 protocol.";
+            type protocol-type;
+          }
+
+          // Rare, but one example is upnp: 1900/udp
+          leaf match-source {
+            description "Match on source port(s) instead of default: destination.";
+            type boolean;
+          }
+        }
+
+        leaf destination {
+          type inet:ip-address;
+          description "Destination IP address/group to match this service to.";
+        }
+      }
+    }
+  }
+}
