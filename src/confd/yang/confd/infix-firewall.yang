@@ -1,0 +1,495 @@
+module infix-firewall {
+  yang-version 1.1;
+  namespace "urn:infix:firewall:ns:yang:1.0";
+  prefix ifw;
+
+  import ietf-inet-types {
+    prefix inet;
+    reference "RFC 6991: Common YANG Data Types";
+  }
+
+  import ietf-interfaces {
+    prefix if;
+    reference "RFC 8343: A YANG Data Model for Interface Management";
+  }
+
+  import infix-firewall-icmp-types {
+    prefix ifw-icmp;
+    reference "internal";
+  }
+
+  import infix-firewall-services {
+    prefix ifw-svc;
+    reference "internal";
+  }
+
+  organization "KernelKit";
+  contact      "kernelkit@googlegroups.com";
+  description  "Zone-based firewall inspired by firewalld concepts.";
+
+  revision 2025-04-26 {
+    description "Initial revision.";
+    reference "internal";
+  }
+
+  /*
+   * Type definitions
+   */
+
+  typedef ident {
+    description "Generic filesystem-safe identifier (filename).";
+    type string {
+      length "2..64";
+      pattern '[a-zA-Z0-9\-_]+';
+    }
+  }
+
+  typedef zone-action {
+    description "Default action for a zone.";
+
+    type enumeration {
+      enum accept {
+        description "Accept all connections by default.";
+      }
+      enum reject {
+        description "Reject all connections, except ICMP, by default.";
+      }
+      enum drop {
+        description "Drop all connections by default.";
+      }
+    }
+  }
+
+  typedef zone-ref {
+    description "Reference to a named zone or symbolic value: 'HOST' or 'ANY'.";
+    type union {
+      type enumeration {
+        enum HOST {
+          description "Refers to the local host/device itself";
+        }
+        enum ANY {
+          description "Refers to any zone";
+        }
+      }
+      type leafref {
+        path "../../zone/name";
+      }
+    }
+  }
+
+  typedef policy-action {
+    type enumeration {
+      enum continue {
+        description "Non-terminal policy. Matching traffic is accepted or allowed to proceed, and other policies continue to be evaluated.";
+      }
+      enum accept {
+        description "Accept matching traffic and stop evaluating further policies.";
+      }
+      enum reject {
+        description "Reject matching traffic (e.g., send ICMP unreachable) and stop evaluating further policies.";
+      }
+      enum drop {
+        description "Silently drop matching traffic and stop evaluating further policies.";
+      }
+    }
+    description "Action for traffic that does not match any specific service or port entry.";
+  }
+
+  typedef protocol-type {
+    description "Network protocols supported for services and port definitions.";
+
+    type enumeration {
+      enum tcp {
+        description "TCP protocol.";
+      }
+      enum udp {
+        description "UDP protocol.";
+      }
+      enum sctp {
+        description "SCTP protocol.";
+      }
+      enum dccp {
+        description "DCCP protocol.";
+      }
+    }
+  }
+
+  /*
+   * Main container and configuration
+   */
+
+  container firewall {
+    description "Zone-based firewall configuration.";
+    presence "Activate firewall.";
+
+    leaf enabled {
+      description "Enable or disable the firewall.
+
+                   Note, by disabling the firewall all rules are unloaded from the kernel, making
+                   the system fully open!  This can be useful when debugging firewall issues, but
+                   remember to re-enable when done, and maybe remove connections to the Internet
+                   before disabling.";
+      type boolean;
+      default true;
+    }
+
+    leaf default {
+      description "Default zone for interfaces.
+
+                   Any interface not explicitly associated with a zone is placed in this zone.";
+      type leafref {
+        path "../zone/name";
+      }
+      mandatory true;
+    }
+
+    leaf logging {
+      description "Enable logging of denied (rejected/dropped) packets.
+
+                   Add logging rules right before reject and drop rules in the INPUT, FORWARD and
+                   OUTPUT chains for the default rules and also final reject and drop rules in
+                   zones for the configured link-layer packet type.";
+      type enumeration {
+        enum all {
+          description "Log all denied packets.";
+        }
+        enum unicast {
+          description "Log unicast denied packets.";
+        }
+        enum broadcast {
+          description "Log broadcast denied packets.";
+        }
+        enum multicast {
+          description "Log multicast denied packets.";
+        }
+        enum off {
+          description "Do not log denied packets.";
+        }
+      }
+      default off;
+    }
+
+    list zone {
+      description "A zone defines a level of trust for network connections.";
+      key "name";
+
+      must "count(interface) = 0 or count(network) = 0" {
+        error-message "A zone cannot have both interfaces and networks - use interfaces for local traffic or networks for forwarding";
+      }
+
+      leaf name {
+        description "Name of the zone.";
+        type ident;
+      }
+
+      leaf action {
+        description "Default action for traffic from this zone to HOST.
+
+                     When 'accept', all traffic from this zone can reach HOST services.
+                     When 'reject' or 'drop', only explicitly listed services are allowed
+                     to reach HOST, all other traffic is rejected/dropped.  I.e., an ICMP
+                     unreachable message or silent drop.";
+        type zone-action;
+        default reject;
+      }
+
+      leaf immutable {
+        description "Indicates if this zone is read-only/system-defined and cannot be modified.";
+        config false;
+        type boolean;
+      }
+
+      leaf description {
+        description "Free-form description of the zone.";
+        type string;
+      }
+
+      leaf-list interface {
+        description "List of interfaces assigned to this zone.";
+        type if:interface-ref;
+
+        must "count(/firewall/zone[interface = current()]) <= 1" {
+          error-message "An interface can only be assigned to one firewall zone";
+        }
+      }
+
+      leaf-list network {
+        description "IP networks assigned to this zone.";
+        type inet:ip-prefix;
+      }
+
+      leaf-list service {
+        description "Services allowed from this zone to HOST (INPUT chain only).
+
+                     These define exceptions when action is 'reject' or 'drop'.
+                     Ignored when action is 'accept' (all services allowed).";
+        type union {
+          type leafref {
+            path "../../service/name";
+          }
+          type ifw-svc:well-known-service;
+        }
+      }
+
+      list port-forward {
+        description "Forward traffic to another port and/or host (DNAT).
+
+                     Port forwarding rules within a zone apply to traffic matching
+                     the zone's interfaces or networks.";
+        key "lower proto";
+
+        leaf lower {
+          description "Local port to forward from.";
+          type inet:port-number;
+          mandatory true;
+        }
+
+        leaf upper {
+          description "Upper port when forwarding a range of ports.";
+          type inet:port-number;
+          must "../lower <= .";
+        }
+
+        leaf proto {
+          description "Network protocol to forward.";
+          type protocol-type;
+          mandatory true;
+        }
+
+        container to {
+          description "Destination to forward to.";
+
+          leaf addr {
+            description "Destination IPv4/IPv6 address to forward to.";
+            type inet:ip-address;
+          }
+
+          leaf port {
+            description "Destination port to forward to.  Defaults to 'lower',
+                         and the upper is then automatically calculated.";
+            type inet:port-number;
+          }
+        }
+      }
+    }
+
+    list policy {
+      description "Rules for filtering traffic forwarded between zones (inter-zone).";
+      ordered-by user;
+      key "name";
+
+      must "count(ingress) > 0 and count(egress) > 0" {
+        error-message "A policy must have at least one ingress and one egress zone defined";
+      }
+
+      leaf name {
+        description "Unique identifier (filename) for this policy, e.g., LAN-to-WAN.";
+        type ident;
+      }
+
+      leaf action {
+        description "Action for non-matching traffic.
+
+                     With 'continue' non-matching traffic is allowed to continue to
+                     be processed by the next policy rule, or in the end be dropped.";
+        type policy-action;
+        default "reject";
+      }
+
+      leaf immutable {
+        description "Indicates if this policy is read-only/system-defined and cannot be modified.";
+        config false;
+        type boolean;
+      }
+
+      leaf description {
+        description "Free-form description of this policy's purpose and scope.";
+        type string;
+      }
+
+      leaf-list ingress {
+        type ifw:zone-ref;
+        description "List of zones traffic is entering. Use symbolic 'HOST' or 'ANY' as needed.";
+      }
+
+      leaf-list egress {
+        description "List of zones traffic is exiting from. Use symbolic 'HOST' or 'ANY' as needed.";
+        type ifw:zone-ref;
+      }
+
+      leaf masquerade {
+        description "Enable masquerading (SNAT) for traffic matching this policy.
+
+                     Matching traffic will have their source IP address changed on egress,
+                     using the IP address of the interface the traffic egresses.";
+        type boolean;
+      }
+
+      leaf-list service {
+        description "Services to allow between ingress and egress zones.
+
+                     Services that are not in this list follow the default policy action.  When
+                     it is 'accept', all services are accepted, regardless of this list.  When
+                     action is 'reject' or 'drop': these services are accepted, while others are
+                     rejected/dropped.  When action is 'continue', traffic not matching the list
+                     is passed on to the next policy.";
+        type union {
+          type leafref {
+            path "../../service/name";
+          }
+          type ifw-svc:well-known-service;
+        }
+      }
+
+      container custom {
+        description "Custom filters, prioritized over other policy elements.";
+
+        list filter {
+          description "Custom traffic filters with specific matching criteria.
+
+                       Evaluation order = list order.";
+          ordered-by user;
+          key "name";
+
+          must "action" {
+            error-message "Custom filters must have a valid action.";
+          }
+
+          must "not(icmp) or icmp/type" {
+            error-message "ICMP filters must specify an ICMP type.";
+          }
+
+          leaf name {
+            description "Unique identifier for this filter within the policy.";
+            type ident;
+          }
+
+          leaf family {
+            description "Address family selector.";
+            type enumeration { enum ipv4; enum ipv6; enum both; }
+            default both;
+          }
+
+          choice type {
+            description "Type of traffic to match for this filter.";
+
+            case icmp {
+              container icmp {
+                leaf type {
+                  description "ICMP type to match.";
+                  type ifw-icmp:type;
+                }
+              }
+            }
+          }
+
+          leaf action {
+            description "How to handle filter matches.";
+            // XXX: Different from similar enums because we may add 'mark' later
+            type enumeration { enum accept; enum drop; enum reject; }
+            default accept;
+          }
+
+          leaf priority {
+            // Sorting order as read from firewalld
+            description "Effective priority of this filter.";
+            config false;
+            type int16;
+          }
+        }
+      }
+
+      leaf priority {
+        // Sorting order as read from firewalld
+        description "Effective priority of this filter.";
+        config false;
+        type int16;
+      }
+   }
+
+    list service {
+      description "Manage services, human-friendly names of port+protocol pairs.
+
+                     A service is a collection of port and protocol pairs.  Used by the firewall
+                     instead of hard-coding raw port numbers everywhere.";
+      key "name";
+
+      leaf name {
+        description "Name of the service.";
+        type ident;
+      }
+
+      leaf description {
+        description "Free-form description of the service.";
+        type string;
+      }
+
+      list port {
+        description "Port, or range of ports, and protocol to match.";
+        key "lower proto";
+
+        leaf lower {
+          description "Lower port in range.";
+          type inet:port-number;
+        }
+
+        leaf upper {
+          description "Upper port in range.";
+          type inet:port-number;
+          must "../lower <= .";
+        }
+
+        leaf proto {
+          description "Layer 4 protocol.";
+          type protocol-type;
+        }
+      }
+
+      leaf destination {
+        type union {
+          type inet:ip-address;
+          type inet:ip-prefix;
+        }
+        description "Destination IP address/group to match this service to.";
+      }
+    }
+
+    leaf lockdown {
+      description "Current state of emergency lockdown mode.";
+      config false;
+      type boolean;
+    }
+
+    action lockdown-mode {
+      description "Emergency lockdown mode blocks all network traffic.
+
+                   This action is effectively a kill switch for all network
+                   connections, immediately dropping all incoming and outgoing
+                   packets and terminating existing sessions. It is intended for
+                   emergency situations such as active security breaches where
+                   immediate network isolation is required.
+
+                   WARNING: Activating lockdown mode will sever all remote
+                   connections including SSH sessions. Physical console access
+                   will be required to deactivate lockdown mode and restore
+                   normal network operations.
+
+                   Implementation uses firewalld panic mode under the hood to
+                   achieve complete traffic blocking at the netfilter level.";
+      input {
+        leaf operation {
+          description "Lockdown operation to perform";
+          type enumeration {
+            enum now {
+              description "Enable lockdown mode immediately - block all traffic";
+            }
+            enum cancel {
+              description "Cancel lockdown mode - restore normal operation";
+            }
+          }
+          mandatory true;
+        }
+      }
+    }
+  }
+}

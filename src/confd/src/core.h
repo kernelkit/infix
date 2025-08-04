@@ -256,4 +256,7 @@ int ietf_hardware_init(struct confd *confd);
 /* ietf-keystore.c */
 int ietf_keystore_init(struct confd *confd);
 
+/* infix-firewall.c */
+int infix_firewall_init(struct confd *confd);
+
 #endif	/* CONFD_CORE_H_ */

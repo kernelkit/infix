@@ -1,11 +1,18 @@
 #!/bin/sh
+opts="-n1"
+
+if [ "$1" = "-q" ]; then
+    opts="$opts -s"
+    shift
+fi
+
 Q=$@
 
 /bin/echo -n "$Q, are you sure (y/N)? "
-read -n1 yorn
+read $opts yorn
 echo
 
-if [ x$yorn != "xy" ] && [ x$yorn != "xY" ]; then
+if [ "x$yorn" != "xy" ] && [ "x$yorn" != "xY" ]; then
    echo "OK, aborting."
    exit 1
 fi

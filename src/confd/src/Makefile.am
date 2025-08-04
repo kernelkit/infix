@@ -47,6 +47,7 @@ confd_plugin_la_SOURCES =			\
 	infix-dhcp-client.c			\
 	infix-dhcp-server.c			\
 	infix-factory.c				\
+	infix-firewall.c			\
 	infix-meta.c				\
 	infix-services.c			\
 	infix-system-software.c 		\
