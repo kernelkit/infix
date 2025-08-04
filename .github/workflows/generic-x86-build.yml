@@ -1,0 +1,78 @@
+name: Generic X86 GitHub Build
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    name: Infix x86_64
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            bc binutils build-essential bzip2 cpio \
+            diffutils file findutils git gzip \
+            libncurses-dev libssl-dev perl patch \
+            python3 rsync sed tar unzip wget \
+            autopoint bison flex autoconf automake \
+            mtools
+
+      - name: Checkout infix repo
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository }}
+          ref: ${{ github.ref }}
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Set Build Variables
+        id: vars
+        run: |
+          echo "INFIX_BUILD_ID=${{ github.run_id }}" >> $GITHUB_OUTPUT
+          echo "dir=Infix-x86_64" >> $GITHUB_OUTPUT
+          echo "tgz=Infix-x86_64.tar.gz" >> $GITHUB_OUTPUT
+          echo "flv=_minimal" >> $GITHUB_OUTPUT
+
+      - name: Configure x86_64_minimal
+        run: |
+          make x86_64_minimal_defconfig
+
+      - name: Unit Test x86_64
+        run: |
+          make test-unit
+
+      - name: Build x86_64_minimal
+        run: |
+          make
+
+      - name: Check SBOM
+        run: |
+          make legal-info
+
+      - name: Build test spec
+        run: |
+          make test-spec
+
+      - name: Report Build Size
+        run: |
+          du -sh .
+          du -sh output
+          du -sh dl || true
+          ls -l output/images/
+
+      - name: Prepare Artifact
+        run: |
+          cd output/
+          mv images Infix-x86_64
+          ln -s Infix-x86_64 images
+          tar cfz Infix-x86_64.tar.gz Infix-x86_64
+
+      - uses: actions/upload-artifact@v4
+        with:
+          path: output/Infix-x86_64.tar.gz
+          name: artifact-x86_64
+
