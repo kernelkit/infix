@@ -9,7 +9,7 @@
         "class": "infix-hardware:usb",
         "name": "USB",
         "state": {
-          "admin-state": "unlocked",
+          "admin-state": "locked",
           "oper-state": "enabled"
         }
       },
@@ -17,7 +17,7 @@
         "class": "infix-hardware:usb",
         "name": "USB2",
         "state": {
-          "admin-state": "unlocked",
+          "admin-state": "locked",
           "oper-state": "enabled"
         }
       }
