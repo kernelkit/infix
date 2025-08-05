@@ -35,14 +35,14 @@ log()
 {
     local fn="/var/log/syslog"
     [ -n "$1" ] && fn="/var/log/$1"
-    less +G "$fn"
+    less +G -r "$fn"
 }
 
 follow()
 {
     local fn="/var/log/syslog"
     [ -n "$1" ] && fn="/var/log/$1"
-    tail -F "$fn"
+    less +F -r "$fn"
 }
 
 _logfile_completions()
