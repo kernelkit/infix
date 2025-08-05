@@ -116,6 +116,11 @@ class Localhost(Host):
 
         return None
 
+    def exists(self, path: str) -> bool:
+        try:
+            return os.path.exists(path)
+        except OSError:
+            return False
 
 class Remotehost(Localhost):
     def __init__(self, prefix, capdir):
@@ -159,6 +164,18 @@ class Remotehost(Localhost):
 
         return out
 
+    def exists(self, path: str) -> bool:
+        if not self._run(("ls", path), default="", log=False):
+            return False
+
+        if self.capdir:
+            dirname = os.path.join(self.capdir, "rootfs", os.path.dirname(path[1:]))
+            filname = os.path.join(self.capdir, "rootfs", path[1:])
+            os.makedirs(dirname, exist_ok=True)
+            open(filname, "w", encoding='utf-8').close()  # Create empty file
+
+        return True
+
     def read(self, path):
         out = self._run(("cat", path), default="", log=False)
 
@@ -198,6 +215,13 @@ class Replayhost(Host):
             if log:
                 common.LOG.error(f"No recording found for run \"{path}\"")
             raise
+
+    def exists(self, path: str) -> bool:
+        path = os.path.join(self.replaydir, "rootfs", path[1:])
+        try:
+            return os.path.exists(path)
+        except OSError:
+            return False
 
     def read(self, path):
         path = os.path.join(self.replaydir, "rootfs", path[1:])
