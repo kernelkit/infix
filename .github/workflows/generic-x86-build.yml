@@ -6,6 +6,7 @@ on:
 
 jobs:
   build:
+    if: github.repository == 'kernelkit/infix'
     name: Infix x86_64
     runs-on: ubuntu-latest
 

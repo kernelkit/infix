@@ -1,11 +1,11 @@
 NAME="Infix"
 ID=infix
-PRETTY_NAME="Infix OS — Immutable.Friendly.Secure v25.04.0-rc1-3-g8daf1571-dirty"
+PRETTY_NAME="Infix OS — Immutable.Friendly.Secure v25.06.0"
 ID_LIKE="buildroot"
 DEFAULT_HOSTNAME=ix
-VERSION="v25.04.0-rc1-3-g8daf1571-dirty"
-VERSION_ID=v25.04.0-rc1-3-g8daf1571-dirty
-BUILD_ID="v25.04.0-rc1-3-g8daf1571-dirty"
+VERSION="v25.06.0"
+VERSION_ID=v25.06.0
+BUILD_ID="v25.06.0"
 IMAGE_ID="infix-x86_64"
 ARCHITECTURE="x86_64"
 HOME_URL=https://github.com/kernelkit/infix/

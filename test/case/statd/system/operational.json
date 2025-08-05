@@ -39,8 +39,8 @@
   },
   "ietf-system:system-state": {
     "clock": {
-      "boot-datetime": "2025-04-30T09:47:32+00:00",
-      "current-datetime": "2025-04-30T09:48:01+00:00"
+      "boot-datetime": "2025-08-05T12:38:12+00:00",
+      "current-datetime": "2025-08-05T13:35:53+00:00"
     },
     "infix-system:dns-resolver": {
       "options": {},
@@ -150,8 +150,8 @@
     "platform": {
       "machine": "x86_64",
       "os-name": "Infix",
-      "os-release": "v25.04.0-rc1-3-g8daf1571-dirty",
-      "os-version": "v25.04.0-rc1-3-g8daf1571-dirty"
+      "os-release": "v25.06.0",
+      "os-version": "v25.06.0"
     }
   }
 }
