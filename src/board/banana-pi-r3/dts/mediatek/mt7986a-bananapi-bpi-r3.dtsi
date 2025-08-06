@@ -1,0 +1,59 @@
+#include <arm64/mediatek/mt7986a-bananapi-bpi-r3.dts>
+
+/ {
+	chosen {
+		infix {
+			/* Default admin user password: 'admin' */
+			factory-password-hash = "$5$mI/zpOAqZYKLC2WU$i7iPzZiIjOjrBF3NyftS9CCq8dfYwHwrmUK097Jca9A";
+			usb-ports = <&ssusb>;
+			usb-port-names = "USB";
+		};
+	};
+};
+
+&cpu_thermal {
+	/delete-node/ trips;
+	/delete-node/ cooling-maps;
+	trips {
+		cpu_trip_active_cool: cpu-trip-active-cool {
+			temperature = <40000>;   // 40°C
+			hysteresis = <2000>;     // 2°C hysteresis
+			type = "active";
+		};
+		cpu_trip_active_low: cpu-trip-active-low {
+			temperature = <45000>;   // 40°C
+			hysteresis = <2000>;     // 2°C hysteresis
+			type = "active";
+		};
+		cpu_trip_active_med: cpu-trip-active-med {
+			temperature = <60000>;   // 60°C
+			hysteresis = <2000>;     // 2°C hysteresis
+			type = "active";
+		};
+		cpu_trip_hot: cpu-trip-hot {
+			temperature = <80000>;   // 80°C
+			hysteresis = <2000>;     // 2°C hysteresis
+			type = "hot";
+		};
+		cpu_trip_critical: cpu-trip-critical {
+			temperature = <90000>;   // 90°C
+			hysteresis = <2000>;     // 2°C hysteresis
+			type = "critical";
+		};
+	};
+
+	cooling-maps {
+		map-cpu-40deg {
+			cooling-device = <&fan 0 0>;
+			trip = <&cpu_trip_active_cool>;
+		};
+		map-cpu-45deg {
+			cooling-device = <&fan 1 1>;
+			trip = <&cpu_trip_active_low>;
+		};
+		map-cpu-60deg {
+			cooling-device = <&fan 2 2>;
+			trip = <&cpu_trip_active_med>;
+		};
+	};
+};
