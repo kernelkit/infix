@@ -1,0 +1,25 @@
+/ {
+       config {
+               env: environment {
+                       /* After the MMC driver has enabled bus power,
+                        * the controller seems to sometimes detect a
+                        * card removal state , which causes it to
+                        * disable power again. This hack re-enables the
+                        * bus power in those cases.
+                        */
+                       bootcmd = "run ixboot";
+                       boot_targets = "mmc0";
+                       ethprime = "eth0";
+                       fdt_addr_r = "0x43f00000";
+                       kernel_addr_r = "0x44000000";
+                       scriptaddr = "0x48000000";
+                       ramdisk_addr_r = "0x4A000000";
+                       
+                       /* This is a development platform, keep
+                        * developer mode statically enabled.
+                        */
+                       ixbtn-devmode = "setenv dev_mode yes; echo Enabled";
+                       ixbtn-factory = "echo \"No button available, use bootmenu\"";
+               };
+       };
+};

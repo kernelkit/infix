@@ -1,0 +1,10 @@
+#include <arm64/mediatek/mt7986a-bananapi-bpi-r3.dts>
+
+/ {
+	chosen {
+		infix {
+			/* Default admin user password: 'admin' */
+			factory-password-hash = "$5$mI/zpOAqZYKLC2WU$i7iPzZiIjOjrBF3NyftS9CCq8dfYwHwrmUK097Jca9A";
+		};
+	};
+};

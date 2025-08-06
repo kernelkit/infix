@@ -1,0 +1,51 @@
+#!/bin/bash
+set -e
+
+#SDCARD=$(grep "^BR2_PACKAGE_BANANA_PI_R3_SDCARD=" "$BR2_CONFIG")
+#[ -z "${SDCARD}" ] && exit 0
+
+BOARD_DIR=$(dirname "$0")
+GENIMAGE_CFG="${BUILD_DIR}/genimage.cfg"
+GENIMAGE_TMP="${BUILD_DIR}/genimage.tmp"
+
+# For BPI-R3, we need device trees in binaries directory
+# find "${TARGET_DIR}/boot" -type f -name '*.dtb' -exec cp '{}' "${BINARIES_DIR}/" \;
+
+# Create boot partition files for BPI-R3
+# BPI-R3 uses different boot structure than RPi
+FILES=""
+
+# Add U-Boot files if they exist
+#[ ! -f "${BINARIES_DIR}/u-boot.bin" ] || [ ! -f "${BINARIES_DIR}/bl31.bin" ] || [ ! -f "${BINARIES_DIR}/bl2.img" ] || [ ! -f  "${BINARIES_DIR}/fip.bin" ] && exit 1
+
+
+#FILES="${FILES}\t\t\t\"u-boot.bin\",\n"
+#FILES="${FILES}\t\t\t\"u-boot-sunxi-with-spl.bin\",\n"
+# Add ARM Trusted Firmware files
+#FILES="${FILES}\t\t\t\"bl31.bin\",\n"
+#FILES="${FILES}\t\t\t\"bl2.img\",\n"
+#FILES="${FILES}\t\t\t\"fip.bin\""
+
+#echo "Boot files to include:"
+#echo -e "$FILES"
+
+# Generate the genimage configuration
+#sed "s|#BOOT_FILES#|${FILES}|" "${BOARD_DIR}/genimage.cfg.in" | \
+sed "s|#VERSION#|${RELEASE}|"  "${BOARD_DIR}/genimage.cfg.in" | \
+sed "s|#INFIX_ID#|${INFIX_ID}|" > "${GENIMAGE_CFG}"
+
+# Create temporary root path
+ROOTPATH_TMP=$(mktemp -d)
+trap 'rm -rf \"$ROOTPATH_TMP\"' EXIT
+
+# Clean previous genimage temp directory
+rm -rf "${GENIMAGE_TMP}"
+
+echo "ddldlda" > /tmp/data
+# Generate the SD card image
+genimage					\
+    --rootpath   "${ROOTPATH_TMP}"		\
+    --tmppath    "${GENIMAGE_TMP}"		\
+    --inputpath  "${BINARIES_DIR}"		\
+    --outputpath "${BINARIES_DIR}"		\
+    --config     "${GENIMAGE_CFG}"
