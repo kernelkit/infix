@@ -1566,19 +1566,22 @@ there is an <code>x86_64</code> build that runs in <a href="https://www.qemu.org
 which is a very user-friendly tool for playing around with simple to
 complex network setups, verifying interoperability between vendors, etc.</p>
 <h2 id="qemu">QEMU<a class="headerlink" href="#qemu" title="Permanent link">&para;</a></h2>
-<blockquote>
-<p><strong>Note:</strong> installation for Debian/Ubuntu based systems: <kbd>sudo apt
-install virt-manager</kbd> -- dependencies ensure the relevant Qemu
-packages are pulled in as well.  Installing <a href="https://virt-manager.org/">virt-manager</a> helps
-set up Qemu networking on your system.</p>
-</blockquote>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>Installation for Debian/Ubuntu based systems can be done by "simply":
+<kbd>sudo apt install virt-manager</kbd> -- dependencies ensure the
+relevant Qemu packages are pulled in as well.  This trick, installing
+<a href="https://virt-manager.org/">virt-manager</a>, helps set up Qemu networking on your system.</p>
+</div>
 <p>A virtualized Infix x86_64 instance can easily be launched from a Linux
 system, with <a href="https://www.qemu.org/">Qemu</a> installed, by issuing:</p>
-<div class="highlight"><pre><span></span><code>./qemu.sh
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>$ ./qemu.sh
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>...
 </code></pre></div>
 <p>from an unpacked <a href="https://github.com/kernelkit/infix/releases">release tarball</a>.  From a built source tree of
 Infix the same functionality is bundled as:</p>
-<div class="highlight"><pre><span></span><code>make run
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>$ make run
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>...
 </code></pre></div>
 <p>To change settings, e.g. networking, <kbd>make run-menuconfig</kbd>, or
 from a pre-built Infix release tarball, using <kbd>./qemu.sh -c</kbd></p>

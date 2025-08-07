@@ -1641,11 +1641,12 @@ bus, here is an example:</p>
 locked, all connected devices will get power, but never authorized by
 Linux to use.</p>
 <h3 id="configure-usb-port">Configure USB port<a class="headerlink" href="#configure-usb-port" title="Permanent link">&para;</a></h3>
-<blockquote>
-<p><strong>Note:</strong> You can only configure USB ports known to the system.  See
-<code>show hardware</code> in admin-exec context.  (Use <code>do</code> prefix in configure
-context.)</p>
-</blockquote>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>You can only configure USB ports known to the system.  See the CLI
+command <code>show hardware</code> in admin-exec context.  (Use <code>do</code> prefix in
+configure context.)</p>
+</div>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>admin@example:/&gt; configure
 <a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>admin@example:/config/&gt; set hardware component USB state admin-state unlocked
 <a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>admin@example:/config/&gt; leave

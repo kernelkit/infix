@@ -1800,31 +1800,36 @@
 
 <h1 id="regression-testing-with-infamy">Regression Testing with Infamy<a class="headerlink" href="#regression-testing-with-infamy" title="Permanent link">&para;</a></h1>
 <p>Infix comes with a test suite that is intended to provide end-to-end
-verification of supported features.  Generally speaking, this means
-that one or more DUTs are configured over NETCONF; the resulting
+verification of supported features.  Generally speaking, this means that
+one or more DUTs are configured over NETCONF or RESTCONF; the resulting
 network is then black-box tested by injecting and inspecting network
 traffic at various points.</p>
-<p>This document is intended to be a practical guide on how to run,
-develop and debug tests. There is a separate document describing the
-<a href="../test-arch/">Test System Architecture</a>.</p>
+<p>This document is intended to be a practical guide on how to run, develop
+and debug tests.  There is a separate document describing the <a href="../test-arch/">Test
+System Architecture</a>.</p>
 <h2 id="modes-of-testing">Modes of Testing<a class="headerlink" href="#modes-of-testing" title="Permanent link">&para;</a></h2>
 <h3 id="virtual-devices">Virtual Devices<a class="headerlink" href="#virtual-devices" title="Permanent link">&para;</a></h3>
 <p>By default, tests are run on a topology made up of virtual Infix nodes
 using <a href="https://github.com/wkz/qeneth">Qeneth</a>. To run the full regression test suite: build Infix
 for <code>x86_64</code>:</p>
-<div class="highlight"><pre><span></span><code>$ make x86_64_defconfig
-$ make
-$ make test
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>$ make x86_64_defconfig
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>...
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>$ make
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>...
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>$ make test
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>...
 </code></pre></div>
 <h3 id="physical-devices">Physical Devices<a class="headerlink" href="#physical-devices" title="Permanent link">&para;</a></h3>
 <p>To run the tests on a preexisting topology from the host's network
 namespace, specify the <code>host</code> <code>TEST_MODE</code>:</p>
-<div class="highlight"><pre><span></span><code>$ make TEST_MODE=host test
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>$ make TEST_MODE=host test
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>...
 </code></pre></div>
 <p>This typically used when testing on physical hardware. By default the
 topology will be sourced from <code>/etc/infamy.dot</code>, but this can be
 overwritten by setting the <code>TOPOLOGY</code> variable:</p>
-<div class="highlight"><pre><span></span><code>$ make TEST_MODE=host TOPOLOGY=~/my-topology.dot test
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>$ make TEST_MODE=host TOPOLOGY=~/my-topology.dot test
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>...
 </code></pre></div>
 <h3 id="make-run-devices"><code>make run</code> Devices<a class="headerlink" href="#make-run-devices" title="Permanent link">&para;</a></h3>
 <p>Some tests only require a single DUT.  These can therefore be run
@@ -1832,22 +1837,23 @@ against an Infix image started from <code>make run</code>. This requires that th
 instance is configured to use TAP networking.</p>
 <p>When the instance is running, you can open a separate terminal and run
 the subset of the test suite that can be mapped to it:</p>
-<div class="highlight"><pre><span></span><code>$ make TEST_MODE=run test
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>$ make TEST_MODE=run test
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>...
 </code></pre></div>
 <h2 id="interactive-usage">Interactive Usage<a class="headerlink" href="#interactive-usage" title="Permanent link">&para;</a></h2>
 <p>When developing and debugging tests, the overhead of repeatedly
 setting up and tearing down the test environment can quickly start to
 weigh you down. In these situation, you can start an interactive test
 environment:</p>
-<div class="highlight"><pre><span></span><code>$ make test-sh
-Info: Generating topology
-Info: Generating node YAML
-Info: Generating executables
-Info: Launching dut1
-Info: Launching dut2
-Info: Launching dut3
-Info: Launching dut4
-11:42:52 infamy0:test #
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>$ make test-sh
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>Info: Generating topology
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>Info: Generating node YAML
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>Info: Generating executables
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>Info: Launching dut1
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>Info: Launching dut2
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>Info: Launching dut3
+<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>Info: Launching dut4
+<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a>11:42:52 infamy0:test #
 </code></pre></div>
 <p>The example above uses the default mode (<code>qeneth</code>), but the <code>host</code> and
 <code>run</code> modes also support the <code>test-sh</code> target.</p>
@@ -1858,73 +1864,76 @@ devices, and <em>step</em> your code.</p>
 <h3 id="running-subsets-of-tests">Running Subsets of Tests<a class="headerlink" href="#running-subsets-of-tests" title="Permanent link">&para;</a></h3>
 <p>Each test case is a separate executable, which can be run without
 arguments:</p>
-<div class="highlight"><pre><span></span><code>11:42:53 infamy0:test # ./case/infix_dhcp/dhcp_basic.py
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>11:42:53 infamy0:test # ./case/infix_dhcp/dhcp_basic.py
 </code></pre></div>
 <p>To run a suite of tests, e.g., only the DHCP client tests, pass the
 suite as an argument to <a href="https://github.com/rical/9pm">9PM</a>:</p>
-<div class="highlight"><pre><span></span><code>11:42:53 infamy0:test # ./9pm/9pm.py case/infix_dhcp/infix_dhcp.yaml
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>11:42:53 infamy0:test # ./9pm/9pm.py case/infix_dhcp/infix_dhcp.yaml
 </code></pre></div>
 <p>To run the suite of all tests:</p>
-<div class="highlight"><pre><span></span><code>11:42:53 infamy0:test # ./9pm/9pm.py case/all.yaml
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>11:42:53 infamy0:test # ./9pm/9pm.py case/all.yaml
 </code></pre></div>
 <h3 id="connecting-to-infamy">Connecting to Infamy<a class="headerlink" href="#connecting-to-infamy" title="Permanent link">&para;</a></h3>
 <p>The test system runs in a Docker container, so to get a shell prompt in
 <em>another terminal</em> you need to connect to that container.  Infamy comes
 with a helper script for this:</p>
-<div class="highlight"><pre><span></span><code>$ ./test/shell
-11:42:53 infamy0:test #
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>$ ./test/shell
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>11:42:53 infamy0:test #
 </code></pre></div>
 <p>By default it connect to the latest started Infamy instance.  If you for
 some reason run multiple instances of Infamy the <code>shell</code> script takes an
 optional argument "system", which is the hostname of the container you
 want to connect to:</p>
-<div class="highlight"><pre><span></span><code>$ ./test/shell infamy2
-11:42:53 infamy2:test #
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>$ ./test/shell infamy2
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>11:42:53 infamy2:test #
 </code></pre></div>
 <h3 id="connecting-to-a-dut">Connecting to a DUT<a class="headerlink" href="#connecting-to-a-dut" title="Permanent link">&para;</a></h3>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>The <code>console</code> script uses <code>telnet</code> to connect to a port forwarded to
+<code>localhost</code> by the Docker container.  To exit Telnet, use Ctrl-] and
+then 'q' followed by enter.  This can be customized in <code>~/.telnetrc</code></p>
+</div>
 <p>All DUTs in a virtual Infamy topology are emulated in Qemu instances
 managed by qeneth.  If you want to watch what's happening on one of the
 target systems, e.g., tail a log file or run <code>tcpdump</code> during the test,
 there is another helper script in Infamy for this:</p>
-<div class="highlight"><pre><span></span><code>$ ./test/console 1
-Trying 127.0.0.1...
-Connected to 127.0.0.1.
-
-Infix OS — Immutable.Friendly.Secure v23.11.0-226-g0c144da (console)
-infix-00-00-00 login: admin
-Password:
-.-------.
-|  . .  | Infix OS — Immutable.Friendly.Secure
-|-. v .-| https://kernelkit.org
-&#39;-&#39;---&#39;-&#39;
-
-Run the command &#39;cli&#39; for interactive OAM
-
-admin@infix-00-00-00:~$
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>$ ./test/console 1
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>Trying 127.0.0.1...
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>Connected to 127.0.0.1.
+<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>
+<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a>Infix OS — Immutable.Friendly.Secure v23.11.0-226-g0c144da (console)
+<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a>infix-00-00-00 login: admin
+<a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a>Password:
+<a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a>.-------.
+<a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a>|  . .  | Infix OS — Immutable.Friendly.Secure
+<a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a>|-. v .-| https://kernelkit.org
+<a id="__codelineno-10-11" name="__codelineno-10-11" href="#__codelineno-10-11"></a>&#39;-&#39;---&#39;-&#39;
+<a id="__codelineno-10-12" name="__codelineno-10-12" href="#__codelineno-10-12"></a>
+<a id="__codelineno-10-13" name="__codelineno-10-13" href="#__codelineno-10-13"></a>Run the command &#39;cli&#39; for interactive OAM
+<a id="__codelineno-10-14" name="__codelineno-10-14" href="#__codelineno-10-14"></a>
+<a id="__codelineno-10-15" name="__codelineno-10-15" href="#__codelineno-10-15"></a>admin@infix-00-00-00:~$
 </code></pre></div>
 <p>From here we can observe <code>dut1</code> freely while running tests.</p>
-<blockquote>
-<p>The <code>console</code> script uses <code>telnet</code> to connect to a port forwarded to
-<code>localhost</code> by the Docker container.  To exit Telnet, use Ctrl-] and
-then 'q' followed by enter.  This can be customized in <code>~/.telnetrc</code></p>
-</blockquote>
 <p>Like the <code>shell</code> script, <code>console</code> takes an optional "system" argument
 in case you run multiple instances of Infamy:</p>
-<div class="highlight"><pre><span></span><code>$ ./test/console 1 infamy2
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>$ ./test/console 1 infamy2
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>...
 </code></pre></div>
 <p>You can also connect to the console of a DUT from within a <code>shell</code>:</p>
-<div class="highlight"><pre><span></span><code>$ ./test/shell
-11:42:54 infamy0:test # qeneth status
-11:42:54 infamy0:test # qeneth console dut1
-login: admin
-password: *****
-admin@infix-00-00-00:~$
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>$ ./test/shell
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>11:42:54 infamy0:test # qeneth status
+<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>11:42:54 infamy0:test # qeneth console dut1
+<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a>login: admin
+<a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a>password: *****
+<a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a>admin@infix-00-00-00:~$
 </code></pre></div>
-<blockquote>
-<p><strong>Note:</strong> disconnect from the qeneth console by using bringing up the
-old Telnet "menu" using Ctrl-], compared to standard Telnet this is
-the BusyBox version so you press 'e' + enter instead of 'q' to quit.</p>
-</blockquote>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>Disconnect from the qeneth console by using bringing up the old Telnet
+"menu" using Ctrl-], compared to standard Telnet this is the BusyBox
+version so you press 'e' + enter instead of 'q' to quit.</p>
+</div>
 <h3 id="attaching-to-macvlans">Attaching to MACVLANs<a class="headerlink" href="#attaching-to-macvlans" title="Permanent link">&para;</a></h3>
 <p>To fully isolate the host's interfaces from one another, many tests
 will stack a MACVLAN on an interface, which is then placed in a
@@ -1932,20 +1941,20 @@ separate network namespace.</p>
 <p>It is often useful to attach to those namespaces, so that you can
 interactively inject traffic into the test setup.</p>
 <p>First, connect to the Infamy instance in question:</p>
-<div class="highlight"><pre><span></span><code>$ ./test/shell
-11:43:19 infamy0:test #
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>$ ./test/shell
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>11:43:19 infamy0:test #
 </code></pre></div>
 <p>Then, attach to the MACVLAN namespace by running the <code>nsenter</code> helper
 script from the test directory, supplying the base interface name as
 the first argument:</p>
-<div class="highlight"><pre><span></span><code>11:43:19 infamy0:test # ./nsenter d1b
-11:43:20 infamy0(d1b):test #
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>11:43:19 infamy0:test # ./nsenter d1b
+<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>11:43:20 infamy0(d1b):test #
 </code></pre></div>
 <p>By default, an interactive shell is started, but you can also supply
 another command:</p>
-<div class="highlight"><pre><span></span><code>11:43:19 infamy0:test # ./nsenter d1b ip -br addr
-lo               UNKNOWN        127.0.0.1/8 ::1/128
-iface@if7        UP             10.0.0.1/24 fe80::38d0:88ff:fe77:b7cd/64
+<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>11:43:19 infamy0:test # ./nsenter d1b ip -br addr
+<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>lo               UNKNOWN        127.0.0.1/8 ::1/128
+<a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>iface@if7        UP             10.0.0.1/24 fe80::38d0:88ff:fe77:b7cd/64
 </code></pre></div>
 <p>You can now freely debug the network activity of your test and the
 responses from the DUT.</p>
@@ -1956,13 +1965,13 @@ interactively inspect either the test's or the device's state.</p>
 <p>Simply insert a call to <code>breakpoint()</code> at the point of interest in
 your test and run it as normal. Once Python executes the call, it will
 drop you into the Python debugger:</p>
-<div class="highlight"><pre><span></span><code>11:42:58 infamy0:test # ./case/infix_dhcp/dhcp_basic.py
-# Starting (2024-02-10 11:42:59)
-# Probing dut1 on port d1a for IPv6LL mgmt address ...
-# Connecting to mgmt IP fe80::ff:fe00:0%d1a:830 ...
-ok 1 - Initialize
-&gt; /home/jocke/src/infix/test/case/infix_dhcp/dhcp_basic.py(44)&lt;module&gt;()
-(Pdb)
+<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>11:42:58 infamy0:test # ./case/infix_dhcp/dhcp_basic.py
+<a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a># Starting (2024-02-10 11:42:59)
+<a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a># Probing dut1 on port d1a for IPv6LL mgmt address ...
+<a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a># Connecting to mgmt IP fe80::ff:fe00:0%d1a:830 ...
+<a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a>ok 1 - Initialize
+<a id="__codelineno-16-6" name="__codelineno-16-6" href="#__codelineno-16-6"></a>&gt; /home/jocke/src/infix/test/case/infix_dhcp/dhcp_basic.py(44)&lt;module&gt;()
+<a id="__codelineno-16-7" name="__codelineno-16-7" href="#__codelineno-16-7"></a>(Pdb)
 </code></pre></div>
 <p>At this point you have full access to the test's state, but it is also
 an opportunity to inspect the state of the DUTs (e.g. via their
@@ -1970,7 +1979,7 @@ console or over SSH).</p>
 <p>It is also possible to run a test under Pdb from the get-go, if you
 want to setup breakpoints without modifying the source, or simply step
 through the code:</p>
-<div class="highlight"><pre><span></span><code>11:42:58 infamy0:test # python -m pdb case/infix_dhcp/dhcp_basic.py
+<div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>11:42:58 infamy0:test # python -m pdb case/infix_dhcp/dhcp_basic.py
 </code></pre></div>
 <h3 id="deterministic-topology-mappings">Deterministic Topology Mappings<a class="headerlink" href="#deterministic-topology-mappings" title="Permanent link">&para;</a></h3>
 <p>By default, mappings from logical to physical topologies are not
@@ -1979,43 +1988,43 @@ debugging a failing test, since logical nodes are suffled around
 between phyical nodes. In such cases, supplying a <code>PYTHONHASHSEED</code>
 variable (set to any 32-bit unsigned integer) when launching the test
 environment will make sure that topology mappings are deterministic:</p>
-<div class="highlight"><pre><span></span><code>$ make PYTHONHASHSEED=0 test-sh
+<div class="highlight"><pre><span></span><code><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a>$ make PYTHONHASHSEED=0 test-sh
 </code></pre></div>
 <p>If a seed is not supplied, a random value is chosen. This seed is
 logged by the <code>meta/reproducible.py</code> test case when running a test
 suite:</p>
-<div class="highlight"><pre><span></span><code>$ make test
-Info: Generating topology
-Info: Generating node YAML
-Info: Generating executables
-Info: Launching dut1
-Info: Launching dut2
-Info: Launching dut3
-Info: Launching dut4
-9PM - Simplicity is the ultimate sophistication
-
-Starting test 0002-reproducible.py
-2024-05-03 10:40:30 # Starting (2024-05-03 10:40:30)
-2024-05-03 10:40:30 # Specify PYTHONHASHSEED=3773822171 to reproduce this test environment
-2024-05-03 10:40:30 ok 1 - $PYTHONHASHSEED is set
-2024-05-03 10:40:30 # Exiting (2024-05-03 10:40:30)
-2024-05-03 10:40:30 1..1
-...
+<div class="highlight"><pre><span></span><code><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a>$ make test
+<a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a>Info: Generating topology
+<a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a>Info: Generating node YAML
+<a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a>Info: Generating executables
+<a id="__codelineno-19-5" name="__codelineno-19-5" href="#__codelineno-19-5"></a>Info: Launching dut1
+<a id="__codelineno-19-6" name="__codelineno-19-6" href="#__codelineno-19-6"></a>Info: Launching dut2
+<a id="__codelineno-19-7" name="__codelineno-19-7" href="#__codelineno-19-7"></a>Info: Launching dut3
+<a id="__codelineno-19-8" name="__codelineno-19-8" href="#__codelineno-19-8"></a>Info: Launching dut4
+<a id="__codelineno-19-9" name="__codelineno-19-9" href="#__codelineno-19-9"></a>9PM - Simplicity is the ultimate sophistication
+<a id="__codelineno-19-10" name="__codelineno-19-10" href="#__codelineno-19-10"></a>
+<a id="__codelineno-19-11" name="__codelineno-19-11" href="#__codelineno-19-11"></a>Starting test 0002-reproducible.py
+<a id="__codelineno-19-12" name="__codelineno-19-12" href="#__codelineno-19-12"></a>2024-05-03 10:40:30 # Starting (2024-05-03 10:40:30)
+<a id="__codelineno-19-13" name="__codelineno-19-13" href="#__codelineno-19-13"></a>2024-05-03 10:40:30 # Specify PYTHONHASHSEED=3773822171 to reproduce this test environment
+<a id="__codelineno-19-14" name="__codelineno-19-14" href="#__codelineno-19-14"></a>2024-05-03 10:40:30 ok 1 - $PYTHONHASHSEED is set
+<a id="__codelineno-19-15" name="__codelineno-19-15" href="#__codelineno-19-15"></a>2024-05-03 10:40:30 # Exiting (2024-05-03 10:40:30)
+<a id="__codelineno-19-16" name="__codelineno-19-16" href="#__codelineno-19-16"></a>2024-05-03 10:40:30 1..1
+<a id="__codelineno-19-17" name="__codelineno-19-17" href="#__codelineno-19-17"></a>...
 </code></pre></div>
 <p>This is useful because this value can then be used to rerun a test (or
 the whole suite) with identical topology mappings:</p>
-<div class="highlight"><pre><span></span><code>$ make PYTHONHASHSEED=3773822171 TESTS=case/ietf_system/hostname.py test
+<div class="highlight"><pre><span></span><code><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a>$ make PYTHONHASHSEED=3773822171 TESTS=case/ietf_system/hostname.py test
 </code></pre></div>
 <h3 id="deterministic-transport-protocol">Deterministic Transport Protocol<a class="headerlink" href="#deterministic-transport-protocol" title="Permanent link">&para;</a></h3>
 <p>By default, the communication transport protocol (NETCONF/RESTCONF) is
 chosen randomly.  If you supply a <code>PYTHONHASHSEED</code> as described above,
 you get the same protocol used for that hash.  But if you want to choose
 the protocol, add extra arguments to Infamy:</p>
-<div class="highlight"><pre><span></span><code>$ make INFAMY_EXTRA_ARGS=&quot;--transport=restconf&quot; TESTS=case/ietf_system/hostname.py test
+<div class="highlight"><pre><span></span><code><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a>$ make INFAMY_EXTRA_ARGS=&quot;--transport=restconf&quot; TESTS=case/ietf_system/hostname.py test
 </code></pre></div>
 <p>or, when running interactively:</p>
-<div class="highlight"><pre><span></span><code>$ make test-sh
-09:08:17 infamy0:test # ./9pm/9pm.py -o&quot;--transport=restconf&quot; case/ietf_system/hostname.py
+<div class="highlight"><pre><span></span><code><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a>$ make test-sh
+<a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a>09:08:17 infamy0:test # ./9pm/9pm.py -o&quot;--transport=restconf&quot; case/ietf_system/hostname.py
 </code></pre></div>
 <h3 id="test-specification">Test specification<a class="headerlink" href="#test-specification" title="Permanent link">&para;</a></h3>
 <p>The test specification is automaticly generated from the test cases,
@@ -2024,54 +2033,57 @@ this puts some constraints on the test cases:</p>
 only the steps so the result can be reproduced manually.  E.g., instead
 of <code>set ip address on the interface</code> it should be more human readable,
 for example:</p>
-<p><div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">test</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="s2">&quot;Set IPv4 address on the interface dut:cross&quot;</span><span class="p">)</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="n">test</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="s2">&quot;Verify the IP address is set on dut:cross&quot;</span><span class="p">)</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a><span class="n">test</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="s2">&quot;Set IPv4 address on the interface dut:cross&quot;</span><span class="p">)</span>
+<a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a><span class="n">test</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="s2">&quot;Verify the IP address is set on dut:cross&quot;</span><span class="p">)</span>
 </code></pre></div>
-where dut, cross and the IPv4 address could be found inside the
+<p>where <em>dut</em>, <em>cross</em> and the IPv4 address could be found inside the
 logical topology for the test.</p>
-<p>Each test case must begin with the test name followed by a empty line and
-the description of the test. For example:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>&quot;&quot;&quot;
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>Set hostname
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>Verify that it it possible to change hostname
-<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>&quot;&quot;&quot;
+<p>Each test case must begin with the test name followed by a empty line
+and the description of the test. For example:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a>&quot;&quot;&quot;
+<a id="__codelineno-24-2" name="__codelineno-24-2" href="#__codelineno-24-2"></a>Set hostname
+<a id="__codelineno-24-3" name="__codelineno-24-3" href="#__codelineno-24-3"></a>
+<a id="__codelineno-24-4" name="__codelineno-24-4" href="#__codelineno-24-4"></a>Verify that it it possible to change hostname
+<a id="__codelineno-24-5" name="__codelineno-24-5" href="#__codelineno-24-5"></a>&quot;&quot;&quot;
 </code></pre></div>
 <p>The test specifaction can be genererated with:</p>
-<div class="highlight"><pre><span></span><code>$ make test-spec
+<div class="highlight"><pre><span></span><code><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a>$ make test-spec
+<a id="__codelineno-25-2" name="__codelineno-25-2" href="#__codelineno-25-2"></a>...
 </code></pre></div>
 <h3 id="test-development">Test Development<a class="headerlink" href="#test-development" title="Permanent link">&para;</a></h3>
 <p>For adding a new test to the automated regression test suite, it's best
 to start by reviewing an existing test case.</p>
-<p>All tests are located in the <code>infix/test/case</code> repository and are 
-grouped by the features they verify. For example, 
-<code>infix/test/case/infix_services</code> contains tests for various Infix 
+<p>All tests are located in the <code>infix/test/case</code> repository and are
+grouped by the features they verify. For example,
+<code>infix/test/case/infix_services</code> contains tests for various Infix
 services, such as LLDP and mDNS.</p>
-<p>While test grouping is flexible, each test should be placed in a 
+<p>While test grouping is flexible, each test should be placed in a
 logically relevant category.</p>
-<p>When creating a new test group, add it to <code>infix/test/case/all.yaml</code>,
-to enable it to run as a 
-<a href="#running-subsets-of-tests">subset of the test suite</a>:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>- name:  infix-services
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>  suite: infix_services/infix_services.yaml
+<p>When creating a new test group, add it to <code>infix/test/case/all.yaml</code>, to
+enable it to run as a <a href="#running-subsets-of-tests">subset of the test
+suite</a>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a>- name:  infix-services
+<a id="__codelineno-26-2" name="__codelineno-26-2" href="#__codelineno-26-2"></a>  suite: infix_services/infix_services.yaml
 </code></pre></div>
-<p>A new test (e.g., lldp_enable_disable) should be added to the 
-corresponding test group .yaml file, such as 
+<p>A new test (e.g., lldp_enable_disable) should be added to the
+corresponding test group .yaml file, such as
 <code>infix/test/cases/infix_services.yaml</code>:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>- name: lldp_enable_disable
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>  case: lldp_enable_disable/test.py
+<div class="highlight"><pre><span></span><code><a id="__codelineno-27-1" name="__codelineno-27-1" href="#__codelineno-27-1"></a>- name: lldp_enable_disable
+<a id="__codelineno-27-2" name="__codelineno-27-2" href="#__codelineno-27-2"></a>  case: lldp_enable_disable/test.py
 </code></pre></div>
-<p>It is necessary to include the test in 
-<code>infix/test/case/infix_services/Readme.adoc</code> to ensure proper test 
+<p>It is necessary to include the test in
+<code>infix/test/case/infix_services/Readme.adoc</code> to ensure proper test
 specification generation:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>include::lldp_enable_disable/Readme.adoc[]
+<div class="highlight"><pre><span></span><code><a id="__codelineno-28-1" name="__codelineno-28-1" href="#__codelineno-28-1"></a>include::lldp_enable_disable/Readme.adoc[]
 </code></pre></div>
-<p>Each test case should have its own directory under, 
-<code>infix/test/case/infix_services</code>, containing: 
-  - <code>test.py</code> - the test script
-  - <code>topology.dot</code> - the logical topology definition.</p>
-<p>When the <a href="#test-specification">test specification</a> is generated, 
-<code>topology.svg</code> and <code>Readme.adoc</code> should also be created. </p>
+<p>Each test case should have its own directory under,
+<code>infix/test/case/infix_services</code>, containing:</p>
+<ul>
+<li><code>test.py</code> - the test script</li>
+<li><code>topology.dot</code> - the logical topology definition.</li>
+</ul>
+<p>When the <a href="#test-specification">test specification</a> is generated,
+<code>topology.svg</code> and <code>Readme.adoc</code> should also be created.</p>
 
 
 

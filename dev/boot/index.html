@@ -989,6 +989,30 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Failure Modes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#vpd-fail" class="md-nav__link">
+    <span class="md-ellipsis">
+      VPD Fail
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#broken-startup-config" class="md-nav__link">
+    <span class="md-ellipsis">
+      Broken startup-config
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
         
       </ul>
@@ -1739,6 +1763,30 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Failure Modes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#vpd-fail" class="md-nav__link">
+    <span class="md-ellipsis">
+      VPD Fail
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#broken-startup-config" class="md-nav__link">
+    <span class="md-ellipsis">
+      Broken startup-config
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
         
       </ul>
@@ -1880,37 +1928,31 @@
 <p>Systems running Infix will typically boot in multiple phases, forming
 a boot chain. Each link in the chain has three main responsibilities:</p>
 <ol>
-<li>
-<p>Ensuring the integrity of the next link before passing control to
-   it. This avoids silent failures stemming from data corruption.</p>
-</li>
-<li>
-<p>Ensuring the authenticity of the next link before passing control
+<li>Ensuring the integrity of the next link before passing control to
+   it. This avoids silent failures stemming from data corruption.</li>
+<li>Ensuring the authenticity of the next link before passing control
    to it, commonly referred to as <em>Secure Boot</em>. This protects against
-   malicious attempts to modify a system's firmware.</p>
-</li>
-<li>
-<p>Preparing the system state according to the requirements of the
+   malicious attempts to modify a system's firmware.</li>
+<li>Preparing the system state according to the requirements of the
    next link. E.g. the Linux kernel requires the system's RAM to be
-   operational.</p>
-</li>
+   operational.</li>
 </ol>
 <p>A typical chain consists of four stages:</p>
-<div class="highlight"><pre><span></span><code>    .---------.
-    |   ROM   &gt;---.   Determine the location of and load the SPL
-    &#39;---------&#39;   |
-.-----------------&#39;
-|   .---------.
-&#39;---&gt;   SPL   &gt;---.   Perform DDR training and load the TPL
-    &#39;---------&#39;   |
-.-----------------&#39;
-|   .---------.
-&#39;---&gt;   TPL   &gt;---.   Load Linux kernel, device tree, and root filesystem
-    &#39;---------&#39;   |
-.-----------------&#39;
-|   .---------.
-&#39;---&gt;  Infix  |       Get down to business
-    &#39;---------&#39;
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>    .---------.
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    |   ROM   &gt;---.   Determine the location of and load the SPL
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    &#39;---------&#39;   |
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>.-----------------&#39;
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>|   .---------.
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>&#39;---&gt;   SPL   &gt;---.   Perform DDR training and load the TPL
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    &#39;---------&#39;   |
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>.-----------------&#39;
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>|   .---------.
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>&#39;---&gt;   TPL   &gt;---.   Load Linux kernel, device tree, and root filesystem
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>    &#39;---------&#39;   |
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>.-----------------&#39;
+<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>|   .---------.
+<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>&#39;---&gt;  Infix  |       Get down to business
+<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>    &#39;---------&#39;
 </code></pre></div>
 <p>After a reset, hardware will pass control to a program (<em>ROM</em>) which
 is almost always programmed into the SoC by the vendor.  This program
@@ -1932,20 +1974,19 @@ described by existing documentation provided by the SoC vendor.</p>
 <p>To mitigate the risk of a malicious user being able to circumvent the
 bootloader's validation procedure, user configuration is kept to a
 minimum.  Two settings are available:</p>
-<ul>
-<li>
 <p><strong>Boot order</strong>: Since Infix maintains two copies of its software image,
-  and as some bootloaders support <a href="../netboot/">netbooting</a>, the order in which boot
-  sources are considered can be configured. To select the active
-  source, use <a href="https://rauc.io">RAUC</a>:</p>
-<div class="highlight"><pre><span></span><code>rauc status mark-active &lt;slot&gt;
+and as some bootloaders support <a href="../netboot/">netbooting</a>, the order in which boot
+sources are considered can be configured. To select the active
+source, use <a href="https://rauc.io">RAUC</a>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>root@example:~# rauc status mark-active &lt;slot&gt;
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>...
 </code></pre></div>
 <p>Where <code>&lt;slot&gt;</code> is one of:</p>
 <table>
 <thead>
 <tr>
-<th><code>&lt;slot&gt;</code></th>
-<th>Source</th>
+<th><strong><code>&lt;slot&gt;</code></strong></th>
+<th><strong>Source</strong></th>
 </tr>
 </thead>
 <tbody>
@@ -1963,19 +2004,17 @@ minimum.  Two settings are available:</p>
 </tr>
 </tbody>
 </table>
-</li>
-<li>
 <p><strong>Debug</strong>: By default, the kernel will only output errors to the
-  console during boot. Optionally, this can be altered such that all
-  enabled messages are logged.</p>
-</li>
-</ul>
+console during boot. Optionally, this can be altered such that all
+enabled messages are logged.</p>
 <p>On systems using <em>U-Boot</em>, this can be enabled by running <code>fw_setenv
-  DEBUG 1</code>. To restore the default behavior, run <code>fw_setenv DEBUG</code>.</p>
-<p>On systems running <em>GRUB</em>, this can be enabled by running
-  <code>grub-editenv /mnt/aux/grub/grubenv set DEBUG=1</code>. To restore the
-  default behavior, run <code>grub-editenv /mnt/aux/grub/grubenv unset
-  DEBUG</code></p>
+DEBUG 1</code>. To restore the default behavior, run <code>fw_setenv DEBUG</code>.</p>
+<p>On systems running <em>GRUB</em>, this can be enabled by running:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>root@example:~# grub-editenv /mnt/aux/grub/grubenv set DEBUG=1
+</code></pre></div>
+<p>To restore the default behavior, run:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>root@example:~# grub-editenv /mnt/aux/grub/grubenv unset DEBUG
+</code></pre></div>
 <h3 id="u-boot">U-Boot<a class="headerlink" href="#u-boot" title="Permanent link">&para;</a></h3>
 <p>Used on <em>aarch64</em> based systems.  It is able to verify both the
 <em>integrity</em> and <em>authenticity</em> of an Infix image.  As such, it can be
@@ -2007,45 +2046,46 @@ password in VPD, are detailed later in this section.</p>
 <p><img alt="System boot flowchart" src="../img/fail-secure.svg" /></p>
 <ol>
 <li>Before mounting <code>/cfg</code> and <code>/var</code> partitions, hosting read-writable
-    data like <code>startup-config</code> and container images, the system first
-    checks if a factory reset has been requested by the user, if so it
-    wipes the contents of these partitions</li>
+   data like <code>startup-config</code> and container images, the system first
+   checks if a factory reset has been requested by the user, if so it
+   wipes the contents of these partitions</li>
 <li>Linux boots with a device tree which is used for detecting generic
-    make and model of the device, e.g., number of interfaces.  It may
-    also reference an EEPROM with <a href="../vpd/">Vital Product Data</a>.  That is
-    where the base MAC address and per-device password hash is stored.
-    (Generic builds use the same MAC address and password)</li>
+   make and model of the device, e.g., number of interfaces.  It may
+   also reference an EEPROM with <a href="../vpd/">Vital Product Data</a>.  That is
+   where the base MAC address and per-device password hash is stored.
+   (Generic builds use the same MAC address and password)</li>
 <li>On every boot the system's <code>factory-config</code> and <code>failure-config</code> are
-    generated from the YANG<sup id="fnref:2"><a class="footnote-ref" href="#fn:2">2</a></sup> models of the current firmware version.
-    This ensures that a factory reset device can always boot, and that
-    there is a working fail safe, or rather <em>fail secure</em>, mode</li>
+   generated from the YANG<sup id="fnref:2"><a class="footnote-ref" href="#fn:2">2</a></sup> models of the current firmware version.
+   This ensures that a factory reset device can always boot, and that
+   there is a working fail safe, or rather <em>fail secure</em>, mode</li>
 <li>On first power-on, and after a factory reset, the system does not
-    have a <code>startup-config</code>, in which case <code>factory-config</code> is copied
-    to <code>startup-config</code> -- if a per-product specific version exists it
-    is preferred over the generated one</li>
+   have a <code>startup-config</code>, in which case <code>factory-config</code> is copied
+   to <code>startup-config</code> -- if a per-product specific version exists it
+   is preferred over the generated one</li>
 <li>Provided the integrity of the <code>startup-config</code> is OK, a system
-    service loads and activates the configuration</li>
+   service loads and activates the configuration</li>
 </ol>
 <h3 id="failure-modes">Failure Modes<a class="headerlink" href="#failure-modes" title="Permanent link">&para;</a></h3>
 <p>So, what happens if any of the steps above fail?</p>
-<p><strong>VPD Fail</strong></p>
+<h4 id="vpd-fail">VPD Fail<a class="headerlink" href="#vpd-fail" title="Permanent link">&para;</a></h4>
 <p>The per-device password cannot be read, or is corrupt, so the system
 <code>factory-config</code> and <code>failure-config</code> are not generated:</p>
 <ol>
 <li>First boot, or after factory reset: <code>startup-config</code> cannot be
-    created or loaded, and <code>failure-config</code> cannot be loaded.  The
-    system ends up in an unrecoverable state, i.e., <strong>RMA<sup id="fnref:3"><a class="footnote-ref" href="#fn:3">3</a></sup> Mode</strong></li>
+   created or loaded, and <code>failure-config</code> cannot be loaded.  The
+   system ends up in an unrecoverable state, i.e., <strong>RMA<sup id="fnref:3"><a class="footnote-ref" href="#fn:3">3</a></sup> Mode</strong></li>
 <li>The system has booted (at least) once with correct VPD and password
-    and already has a <code>startup-config</code>.  Provided the <code>startup-config</code>
-    is OK (see below), it is loaded and system boots successfully</li>
+   and already has a <code>startup-config</code>.  Provided the <code>startup-config</code>
+   is OK (see below), it is loaded and system boots successfully</li>
 </ol>
 <p>In both cases, external factory reset modes/button will not help, and
 in the second case will cause the device to fail on the next boot.</p>
-<blockquote>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
 <p>The second case does not yet have any warning or event that can be
 detected from the outside.  This is planned for a later release.</p>
-</blockquote>
-<p><strong>Broken startup-config</strong></p>
+</div>
+<h4 id="broken-startup-config">Broken startup-config<a class="headerlink" href="#broken-startup-config" title="Permanent link">&para;</a></h4>
 <p>If loading <code>startup-config</code> fails for some reason, e.g., invalid JSON
 syntax, failed validation against the system's YANG model, or a bug in
 the system's <code>confd</code> service, the <em>Fail Secure Mode</em> is triggered and
@@ -2067,24 +2107,19 @@ the device's base MAC address.</p>
 <p>Much of the minutiae of software upgrades is delegated to <a href="https://rauc.io">RAUC</a>,
 which offers lots of benefits out-of-the-box:</p>
 <ul>
-<li>
-<p>Upgrade Bundles are always signed, such that their authenticity can
+<li>Upgrade Bundles are always signed, such that their authenticity can
   be verified by the running operating system, before the new one is
-  installed.</p>
-</li>
-<li>
-<p>The bureaucracy of interfacing with different bootloaders, manage
+  installed.</li>
+<li>The bureaucracy of interfacing with different bootloaders, manage
   the boot order, is a simple matter of providing a compatible
-  configuration.</p>
-</li>
-<li>
-<p>Updates can be sourced from the local filesystem (including external
+  configuration.</li>
+<li>Updates can be sourced from the local filesystem (including external
   media like USB sticks or SD-cards) and from remote servers using FTP
-  or HTTP(S).</p>
-</li>
+  or HTTP(S).</li>
 </ul>
 <p>To initiate a system upgrade from the shell<sup id="fnref:1"><a class="footnote-ref" href="#fn:1">1</a></sup>, run:</p>
-<div class="highlight"><pre><span></span><code>rauc install &lt;file|url&gt;
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>root@example:~# rauc install &lt;file|url&gt;
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>...
 </code></pre></div>
 <p>Where the file or URL points to a <a href="#rauc-upgrade-bundle">RAUC Upgrade Bundle</a>.</p>
 <p>This will upgrade the partition not currently running.  After a
@@ -2151,34 +2186,34 @@ to use.</p>
 <p>Infix runs from a block device (e.g. eMMC or virtio disk) with the
 following layout. The disk is expected to use the GPT partitioning
 scheme. Partitions marked with an asterisk are optional.</p>
-<div class="highlight"><pre><span></span><code>.-----------.
-| GPT Table |
-:-----------:
-|    boot*  |
-:-----------:
-|    aux    |
-:-----------:
-|           |
-|  primary  |
-|           |
-:-----------:
-|           |
-| secondary |
-|           |
-:-----------:
-|    cfg    |
-:-----------:
-|           |
-|    var*   |
-|           |
-&#39;-----------&#39;
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>.-----------.
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>| GPT Table |
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>:-----------:
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>|    boot*  |
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>:-----------:
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>|    aux    |
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>:-----------:
+<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>|           |
+<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a>|  primary  |
+<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a>|           |
+<a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a>:-----------:
+<a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a>|           |
+<a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a>| secondary |
+<a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a>|           |
+<a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a>:-----------:
+<a id="__codelineno-5-16" name="__codelineno-5-16" href="#__codelineno-5-16"></a>|    cfg    |
+<a id="__codelineno-5-17" name="__codelineno-5-17" href="#__codelineno-5-17"></a>:-----------:
+<a id="__codelineno-5-18" name="__codelineno-5-18" href="#__codelineno-5-18"></a>|           |
+<a id="__codelineno-5-19" name="__codelineno-5-19" href="#__codelineno-5-19"></a>|    var*   |
+<a id="__codelineno-5-20" name="__codelineno-5-20" href="#__codelineno-5-20"></a>|           |
+<a id="__codelineno-5-21" name="__codelineno-5-21" href="#__codelineno-5-21"></a>&#39;-----------&#39;
 </code></pre></div>
 <h4 id="boot-bootloader"><code>boot</code> - Bootloader<a class="headerlink" href="#boot-bootloader" title="Permanent link">&para;</a></h4>
 <table>
 <thead>
 <tr>
-<th>Parameter</th>
-<th>Value</th>
+<th><strong>Parameter</strong></th>
+<th><strong>Value</strong></th>
 </tr>
 </thead>
 <tbody>
@@ -2204,8 +2239,8 @@ the GRUB bootloader.</p>
 <table>
 <thead>
 <tr>
-<th>Parameter</th>
-<th>Value</th>
+<th><strong>Parameter</strong></th>
+<th><strong>Value</strong></th>
 </tr>
 </thead>
 <tbody>
@@ -2227,10 +2262,10 @@ the GRUB bootloader.</p>
 such as image signatures required to validate the chain of trust,
 bootloader configuration etc.</p>
 <p>Typical layout when using U-Boot bootloader:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>    /
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    ├ primary.itbh
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    ├ secondary.itbh
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    └ uboot.env
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>/
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>├ primary.itbh
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>├ secondary.itbh
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>└ uboot.env
 </code></pre></div>
 <p>During boot, an ITB header along with the corresponding root
 filesystem image are concatenated in memory, by U-Boot, to form a
@@ -2243,8 +2278,8 @@ required to configure the boot order.</p>
 <table>
 <thead>
 <tr>
-<th>Parameter</th>
-<th>Value</th>
+<th><strong>Parameter</strong></th>
+<th><strong>Value</strong></th>
 </tr>
 </thead>
 <tbody>
@@ -2269,8 +2304,8 @@ rollbacks when upgrading to a new version.</p>
 <table>
 <thead>
 <tr>
-<th>Parameter</th>
-<th>Value</th>
+<th><strong>Parameter</strong></th>
+<th><strong>Value</strong></th>
 </tr>
 </thead>
 <tbody>
@@ -2294,8 +2329,8 @@ Concretely, user data is everything stored under <code>/root</code> and <code>/h
 <table>
 <thead>
 <tr>
-<th>Parameter</th>
-<th>Value</th>
+<th><strong>Parameter</strong></th>
+<th><strong>Value</strong></th>
 </tr>
 </thead>
 <tbody>

@@ -1649,93 +1649,96 @@ disk, meaning logs are not retained across reboots.  This document
 details how to log to external media or remote syslog servers.</p>
 <p>It is also possible to set up the device to act as a syslog server (log
 sink), this is covered briefly at the very end of this document.</p>
-<blockquote>
-<p><strong>Note:</strong> the native logging cannot be modified, only the log file
-rotation can be changed.  Please see the <code>dir</code> admin-exec command for
-a listing of existing native log files.</p>
-</blockquote>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The default logging setup in the system cannot be modified, only the
+log file rotation.  Please see the <code>dir</code> admin-exec command for a
+listing of existing log files.</p>
+</div>
 <h2 id="log-to-file">Log to File<a class="headerlink" href="#log-to-file" title="Permanent link">&para;</a></h2>
 <p>Logging to a local file is useful when combined with an external media.
 E.g., a USB stick with a log partition (named/labeled: "log").  Below is
 an example.</p>
 <p>For a list of available log facilities, see the table in a later section.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>admin@example:/&gt;<span class="w"> </span>configure
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>admin@example:/config/&gt;<span class="w"> </span>edit<span class="w"> </span>syslog
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>admin@example:/config/syslog/&gt;<span class="w"> </span>edit<span class="w"> </span>actions<span class="w"> </span>log-file<span class="w"> </span>file:/media/log/mylog
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>admin@example:/config/syslog/actions/log-file/file:/media/log/mylog/&gt;<span class="w"> </span><span class="nb">set</span><span class="w"> </span>facility-list
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">      </span>all<span class="w">    </span>audit<span class="w">     </span>auth<span class="w"> </span>authpriv<span class="w">  </span>console<span class="w">     </span>cron<span class="w">    </span>cron2<span class="w">   </span>daemon<span class="w">      </span>ftp<span class="w">     </span>kern
-<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">   </span>local0<span class="w">   </span>local1<span class="w">   </span>local2<span class="w">   </span>local3<span class="w">   </span>local4<span class="w">   </span>local5<span class="w">   </span>local6<span class="w">   </span>local7<span class="w">      </span>lpr<span class="w">     </span>mail
-<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">     </span>news<span class="w">      </span>ntp<span class="w">   </span>syslog<span class="w">     </span>user<span class="w">     </span>uucp
-<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>admin@example:/config/syslog/actions/log-file/file:/media/log/mylog/&gt;<span class="w"> </span><span class="nb">set</span><span class="w"> </span>facility-list<span class="w"> </span>all<span class="w"> </span>severity
-<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="w">     </span>alert<span class="w">       </span>all<span class="w">  </span>critical<span class="w">     </span>debug<span class="w"> </span>emergency<span class="w">     </span>error<span class="w">      </span>info<span class="w">      </span>none<span class="w">    </span>notice<span class="w">   </span>warning
-<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>admin@example:/config/syslog/actions/log-file/file:/media/log/mylog/&gt;<span class="w"> </span><span class="nb">set</span><span class="w"> </span>facility-list<span class="w"> </span>all<span class="w"> </span>severity<span class="w"> </span>critical
-<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>admin@example:/config/syslog/actions/log-file/file:/media/log/mylog/&gt;<span class="w"> </span><span class="nb">set</span><span class="w"> </span>facility-list<span class="w"> </span>mail<span class="w"> </span>severity<span class="w"> </span>warning
-<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>admin@example:/config/syslog/actions/log-file/file:/media/log/mylog/&gt;<span class="w"> </span>leave
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>admin@example:/&gt; configure
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>admin@example:/config/&gt; edit syslog
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>admin@example:/config/syslog/&gt; edit actions log-file file:/media/log/mylog
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>admin@example:/config/syslog/actions/log-file/file:/media/log/mylog/&gt; set facility-list
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>      all    audit     auth authpriv  console     cron    cron2   daemon      ftp     kern
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>   local0   local1   local2   local3   local4   local5   local6   local7      lpr     mail
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>     news      ntp   syslog     user     uucp
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>admin@example:/config/syslog/actions/log-file/file:/media/log/mylog/&gt; set facility-list all severity
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>     alert       all  critical     debug emergency     error      info      none    notice   warning
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>admin@example:/config/syslog/actions/log-file/file:/media/log/mylog/&gt; set facility-list all severity critical
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>admin@example:/config/syslog/actions/log-file/file:/media/log/mylog/&gt; set facility-list mail severity warning
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>admin@example:/config/syslog/actions/log-file/file:/media/log/mylog/&gt; leave
 <a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>admin@example:/&gt;
 </code></pre></div>
-<blockquote>
-<p><strong>Note:</strong> the <code>log-file</code> syntax requires the leading prefix <code>file:</code>.
-If the path is not absolute, e.g., <code>file:mylog</code>, the file is saved to
-the system default path, i.e., <code>/log/mylog</code>.  In this case, verify
-that the filename is not already in use.</p>
-</blockquote>
+<div class="admonition tip">
+<p class="admonition-title">Important</p>
+<p>The <code>log-file</code> syntax requires the leading prefix <code>file:</code>.  If the
+path is not absolute, e.g., <code>file:mylog</code>, the file is saved to the
+system default path, i.e., <code>/log/mylog</code>.  In this case, verify that
+the filename is not already in use.</p>
+</div>
 <h2 id="log-rotation">Log Rotation<a class="headerlink" href="#log-rotation" title="Permanent link">&para;</a></h2>
 <p>By default log files are allowed to grow to a size of 1 MiB after which
 they are "rotated".  The whole reason for this is to not fill up the
 disk with outdated logs.  A rotated file is saved in stages and older
 ones are also compressed (using <code>gzip</code>).  Use the <code>show log</code> command in
 admin-exec context to start the log file viewer:</p>
-<div class="highlight"><pre><span></span><code>admin@example:/config/syslog/&gt; do show log
-log  log.0  log.1.gz  log.2.gz  log.3.gz  log.4.gz  log.5.gz
-admin@example:/config/syslog/&gt; do show log log.1.gz
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>admin@example:/config/syslog/&gt; do show log
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>log  log.0  log.1.gz  log.2.gz  log.3.gz  log.4.gz  log.5.gz
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>admin@example:/config/syslog/&gt; do show log log.1.gz
 </code></pre></div>
-<blockquote>
-<p><strong>Tip:</strong> use the Tab key on your keyboard list available log files.
-The <code>do</code> prefix is also very useful in configure context to access
-commands from admin-exec context.</p>
-</blockquote>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>Use the Tab key on your keyboard list available log files.  The <code>do</code>
+prefix is also very useful in configure context to access commands
+from admin-exec context.</p>
+</div>
 <p>By default 10 compressed older files are saved.  Here the oldest is
 <code>log.5.gz</code> and the most recently rotated one is <code>log.0</code>.</p>
 <p>Log file rotation can be configured both globally and per log file.
 Here we show the global settings, the set up is the same for per log
 file, which if unset inherit the global settings:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>admin@example:/&gt;<span class="w"> </span>configure<span class="w"> </span>
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>admin@example:/config/&gt;<span class="w"> </span>edit<span class="w"> </span>syslog<span class="w"> </span>file-rotation
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>admin@example:/config/syslog/file-rotation/&gt;<span class="w"> </span>show
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>admin@example:/config/syslog/file-rotation/&gt;
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>admin@example:/&gt; configure
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>admin@example:/config/&gt; edit syslog file-rotation
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>admin@example:/config/syslog/file-rotation/&gt; show
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>admin@example:/config/syslog/file-rotation/&gt;
 </code></pre></div>
 <p>The defaults are not shown.  We can inspect them by asking the YANG
 model for the help texts:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>admin@example:/config/syslog/file-rotation/&gt;<span class="w"> </span><span class="nb">help</span>
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">   </span>max-file-size<span class="w">    </span>number-of-files
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>admin@example:/config/syslog/file-rotation/&gt;<span class="w"> </span><span class="nb">help</span><span class="w"> </span>max-file-size<span class="w"> </span>
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>NAME
-<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">        </span>max-file-size<span class="w"> </span>kilobytes
-<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>
-<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>DESCRIPTION
-<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="w">        </span>Maximum<span class="w"> </span>log<span class="w"> </span>file<span class="w"> </span>size<span class="w"> </span><span class="o">(</span>kiB<span class="o">)</span>,<span class="w"> </span>before<span class="w"> </span>rotation.
-<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>
-<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>DEFAULT
-<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="w">        </span><span class="m">1024</span>
-<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>admin@example:/config/syslog/file-rotation/&gt;<span class="w"> </span><span class="nb">help</span><span class="w"> </span>number-of-files<span class="w"> </span>
-<a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a>NAME
-<a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a><span class="w">        </span>number-of-files<span class="w"> </span><span class="o">[</span><span class="m">0</span>..4294967295<span class="o">]</span>
-<a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a>
-<a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a>DESCRIPTION
-<a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a><span class="w">        </span>Maximum<span class="w"> </span>number<span class="w"> </span>of<span class="w"> </span>log<span class="w"> </span>files<span class="w"> </span>retained.
-<a id="__codelineno-2-18" name="__codelineno-2-18" href="#__codelineno-2-18"></a>
-<a id="__codelineno-2-19" name="__codelineno-2-19" href="#__codelineno-2-19"></a>DEFAULT
-<a id="__codelineno-2-20" name="__codelineno-2-20" href="#__codelineno-2-20"></a><span class="w">        </span><span class="m">10</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>admin@example:/config/syslog/file-rotation/&gt; help
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>   max-file-size    number-of-files
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>admin@example:/config/syslog/file-rotation/&gt; help max-file-size 
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>NAME
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>        max-file-size kilobytes
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>DESCRIPTION
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>        Maximum log file size (kiB), before rotation.
+<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>
+<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>DEFAULT
+<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>        1024
+<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a>admin@example:/config/syslog/file-rotation/&gt; help number-of-files 
+<a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a>NAME
+<a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a>        number-of-files [0..4294967295]
+<a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a>
+<a id="__codelineno-3-16" name="__codelineno-3-16" href="#__codelineno-3-16"></a>DESCRIPTION
+<a id="__codelineno-3-17" name="__codelineno-3-17" href="#__codelineno-3-17"></a>        Maximum number of log files retained.
+<a id="__codelineno-3-18" name="__codelineno-3-18" href="#__codelineno-3-18"></a>
+<a id="__codelineno-3-19" name="__codelineno-3-19" href="#__codelineno-3-19"></a>DEFAULT
+<a id="__codelineno-3-20" name="__codelineno-3-20" href="#__codelineno-3-20"></a>        10
 </code></pre></div>
 <p>To change the defaults to something smaller, 512 kiB and 20 (remember
 everything after .0 is compressed, and text compresses well):</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>admin@example:/config/syslog/file-rotation/&gt;<span class="w"> </span><span class="nb">set</span><span class="w"> </span>max-file-size<span class="w"> </span><span class="m">512</span>
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>admin@example:/config/syslog/file-rotation/&gt;<span class="w"> </span><span class="nb">set</span><span class="w"> </span>number-of-files<span class="w"> </span><span class="m">20</span>
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>admin@example:/config/syslog/file-rotation/&gt;<span class="w"> </span>show
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>number-of-files<span class="w"> </span><span class="m">20</span><span class="p">;</span>
-<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>max-file-size<span class="w"> </span><span class="m">512</span><span class="p">;</span>
-<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>admin@example:/config/syslog/file-rotation/&gt;<span class="w"> </span>leave
-<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>admin@example:/&gt;<span class="w"> </span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>admin@example:/config/syslog/file-rotation/&gt;<span class="w"> </span><span class="nb">set</span><span class="w"> </span>max-file-size<span class="w"> </span><span class="m">512</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>admin@example:/config/syslog/file-rotation/&gt;<span class="w"> </span><span class="nb">set</span><span class="w"> </span>number-of-files<span class="w"> </span><span class="m">20</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>admin@example:/config/syslog/file-rotation/&gt;<span class="w"> </span>show
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>number-of-files<span class="w"> </span><span class="m">20</span><span class="p">;</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>max-file-size<span class="w"> </span><span class="m">512</span><span class="p">;</span>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>admin@example:/config/syslog/file-rotation/&gt;<span class="w"> </span>leave
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>admin@example:/&gt;
 </code></pre></div>
 <h2 id="log-format">Log Format<a class="headerlink" href="#log-format" title="Permanent link">&para;</a></h2>
 <p>There are three major syslog log formats, the default is <a href="https://datatracker.ietf.org/doc/html/rfc3164">RFC3164</a> for
@@ -1743,21 +1746,21 @@ log files and BSD for remote logging.  Depending on time synchronization
 and remote log server capabilities, or policies, the <a href="https://datatracker.ietf.org/doc/html/rfc5424">RFC5424</a> format
 is often preferred since it not only has better time resolution but also
 supports structured logging:</p>
-<div class="highlight"><pre><span></span><code>BSD     : myproc[8710]: Kilroy was here.
-RFC3164 : Aug 24 05:14:15 192.0.2.1 myproc[8710]: Kilroy was here.
-RFC5424 : 2003-08-24T05:14:15.000003-07:00 192.0.2.1 myproc 8710 - - Kilroy was here.
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>BSD     : myproc[8710]: Kilroy was here.
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>RFC3164 : Aug 24 05:14:15 192.0.2.1 myproc[8710]: Kilroy was here.
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>RFC5424 : 2003-08-24T05:14:15.000003-07:00 192.0.2.1 myproc 8710 - - Kilroy was here.
 </code></pre></div>
 <p>The BSD format is only applicable to remote logging.  It remains the
 default for compatibility reasons, and is recommended since the device
 may not have proper time, making it better for the remote log server to
 perform time stamping at the time of arrival.</p>
 <p>Configuring the log format is the same for log files and remotes:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>admin@example:/config/&gt;<span class="w"> </span>edit<span class="w"> </span>syslog<span class="w"> </span>actions<span class="w"> </span>log-file<span class="w"> </span>file:foobar<span class="w"> </span>
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>admin@example:/config/syslog/actions/log-file/file:foobar/&gt;<span class="w"> </span><span class="nb">set</span><span class="w"> </span>log-format<span class="w"> </span>
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">                  </span>bsd<span class="w">               </span>rfc3164<span class="w">              </span>rfc5424
-<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>admin@example:/config/syslog/actions/log-file/file:foobar/&gt;<span class="w"> </span><span class="nb">set</span><span class="w"> </span>log-format<span class="w"> </span>rfc5424<span class="w"> </span>
-<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>admin@example:/config/syslog/actions/log-file/file:foobar/&gt;<span class="w"> </span>leave
-<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>admin@example:/&gt;
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>admin@example:/config/&gt; edit syslog actions log-file file:foobar 
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>admin@example:/config/syslog/actions/log-file/file:foobar/&gt; set log-format 
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>                  bsd               rfc3164              rfc5424
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>admin@example:/config/syslog/actions/log-file/file:foobar/&gt; set log-format rfc5424 
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>admin@example:/config/syslog/actions/log-file/file:foobar/&gt; leave
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>admin@example:/&gt;
 </code></pre></div>
 <h2 id="log-to-remote-server">Log to Remote Server<a class="headerlink" href="#log-to-remote-server" title="Permanent link">&para;</a></h2>
 <p>Logging to a remote syslog server is the recommended way of supervising
@@ -1770,31 +1773,32 @@ because your device may not have DNS set up or even available, and some
 remote syslog servers do not support receiving time stamped log messages
 -- this is of course entirely dependent on how the remote server is set
 up, as well as local policy.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>admin@example:/config/&gt;<span class="w"> </span>edit<span class="w"> </span>syslog
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">       </span>actions<span class="w"> </span>file-rotation<span class="w">        </span>server
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>admin@example:/config/&gt;<span class="w"> </span>edit<span class="w"> </span>syslog<span class="w"> </span>actions<span class="w"> </span>destination<span class="w"> </span>moon
-<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>admin@example:/config/syslog/actions/destination/moon/&gt;<span class="w"> </span><span class="nb">set</span>
-<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w"> </span>facility-list<span class="w">    </span>log-format<span class="w">           </span>udp
-<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>admin@example:/config/syslog/actions/destination/moon/&gt;<span class="w"> </span><span class="nb">set</span><span class="w"> </span>udp
-<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="w"> </span>address<span class="w">    </span>port
-<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>admin@example:/config/syslog/actions/destination/moon/&gt;<span class="w"> </span><span class="nb">set</span><span class="w"> </span>udp<span class="w"> </span>address<span class="w"> </span><span class="m">192</span>.168.0.12
-<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a>admin@example:/config/syslog/actions/destination/moon/&gt;<span class="w"> </span><span class="nb">set</span><span class="w"> </span>facility-list<span class="w"> </span>container<span class="w"> </span>severity<span class="w"> </span>all
-<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a>admin@example:/config/syslog/actions/destination/moon/&gt;<span class="w"> </span>leave
-<a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a>admin@example:/&gt;
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>admin@example:/config/&gt;<span class="w"> </span>edit<span class="w"> </span>syslog
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">       </span>actions<span class="w"> </span>file-rotation<span class="w">        </span>server
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>admin@example:/config/&gt;<span class="w"> </span>edit<span class="w"> </span>syslog<span class="w"> </span>actions<span class="w"> </span>destination<span class="w"> </span>moon
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>admin@example:/config/syslog/actions/destination/moon/&gt;<span class="w"> </span><span class="nb">set</span>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w"> </span>facility-list<span class="w">    </span>log-format<span class="w">           </span>udp
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>admin@example:/config/syslog/actions/destination/moon/&gt;<span class="w"> </span><span class="nb">set</span><span class="w"> </span>udp
+<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="w"> </span>address<span class="w">    </span>port
+<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>admin@example:/config/syslog/actions/destination/moon/&gt;<span class="w"> </span><span class="nb">set</span><span class="w"> </span>udp<span class="w"> </span>address<span class="w"> </span><span class="m">192</span>.168.0.12
+<a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a>admin@example:/config/syslog/actions/destination/moon/&gt;<span class="w"> </span><span class="nb">set</span><span class="w"> </span>facility-list<span class="w"> </span>container<span class="w"> </span>severity<span class="w"> </span>all
+<a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a>admin@example:/config/syslog/actions/destination/moon/&gt;<span class="w"> </span>leave
+<a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a>admin@example:/&gt;
 </code></pre></div>
-<blockquote>
-<p><strong>Note:</strong> the alternatives shown below each prompt in the example
-above can be found by tapping the Tab key.</p>
-</blockquote>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>The alternatives shown below each prompt in the example above can be
+found by tapping the Tab key.</p>
+</div>
 <h2 id="acting-as-a-log-server">Acting as a Log Server<a class="headerlink" href="#acting-as-a-log-server" title="Permanent link">&para;</a></h2>
 <p>The syslog server can act as a log sink for other devices on a LAN.  For
 this to work you need a static IP address, here we use 10.0.0.1/24.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>admin@example:/&gt;<span class="w"> </span>configure
-<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>admin@example:/config/&gt;<span class="w"> </span>edit<span class="w"> </span>syslog<span class="w"> </span>server
-<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>admin@example:/config/syslog/server/&gt;<span class="w"> </span><span class="nb">set</span><span class="w"> </span>enabled<span class="w"> </span><span class="nb">true</span>
-<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>admin@example:/config/syslog/server/&gt;<span class="w"> </span><span class="nb">set</span><span class="w"> </span>listen<span class="w"> </span>udp<span class="w"> </span><span class="m">514</span><span class="w"> </span>address<span class="w"> </span><span class="m">10</span>.0.0.1
-<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>admin@example:/config/syslog/server/&gt;<span class="w"> </span>leave
-<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>admin@example:/&gt;
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>admin@example:/&gt;<span class="w"> </span>configure
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>admin@example:/config/&gt;<span class="w"> </span>edit<span class="w"> </span>syslog<span class="w"> </span>server
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>admin@example:/config/syslog/server/&gt;<span class="w"> </span><span class="nb">set</span><span class="w"> </span>enabled<span class="w"> </span><span class="nb">true</span>
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>admin@example:/config/syslog/server/&gt;<span class="w"> </span><span class="nb">set</span><span class="w"> </span>listen<span class="w"> </span>udp<span class="w"> </span><span class="m">514</span><span class="w"> </span>address<span class="w"> </span><span class="m">10</span>.0.0.1
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>admin@example:/config/syslog/server/&gt;<span class="w"> </span>leave
+<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>admin@example:/&gt;
 </code></pre></div>
 <p>See the above <a href="#log-to-file">Log to File</a> section on how to set up
 filtering of received logs to local files.  Please note, filtering based

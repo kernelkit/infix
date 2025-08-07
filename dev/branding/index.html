@@ -1331,6 +1331,48 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Example Snippets">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#ietf-system" class="md-nav__link">
+    <span class="md-ellipsis">
+      IETF System
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ietf-keystore" class="md-nav__link">
+    <span class="md-ellipsis">
+      IETF Keystore
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ietf-netconf-server" class="md-nav__link">
+    <span class="md-ellipsis">
+      IETF NETCONF Server
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#infix-services" class="md-nav__link">
+    <span class="md-ellipsis">
+      Infix Services
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
         
       </ul>
@@ -1682,6 +1724,48 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Example Snippets">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#ietf-system" class="md-nav__link">
+    <span class="md-ellipsis">
+      IETF System
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ietf-keystore" class="md-nav__link">
+    <span class="md-ellipsis">
+      IETF Keystore
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ietf-netconf-server" class="md-nav__link">
+    <span class="md-ellipsis">
+      IETF NETCONF Server
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#infix-services" class="md-nav__link">
+    <span class="md-ellipsis">
+      Infix Services
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
         
       </ul>
@@ -1775,7 +1859,8 @@
 
 
 <h1 id="branding-releases">Branding &amp; Releases<a class="headerlink" href="#branding-releases" title="Permanent link">&para;</a></h1>
-<p>This document is for projects using Infix as a br2-external, i.e., OEMs.</p>
+<p>This document is for projects using Infix as a br2-external, i.e., OEMs
+that want to create *their own "Spin" of Infix.</p>
 <h2 id="branding">Branding<a class="headerlink" href="#branding" title="Permanent link">&para;</a></h2>
 <p>Branding is done in menuconfig, there are several settings affecting
 it, most are in the Infix external subsection called "Branding", but
@@ -1792,17 +1877,17 @@ check this for you and you may end up with odd results.</p>
 <p>Verify the result after a build by inspecting:</p>
 <ul>
 <li><code>output/images/*</code>: names, missing prefix, etc.</li>
-<li><code>output/target/etc/os-release</code>: this file is sourced by
-    other build scripts, e.g., <code>mkgns3a.sh</code>.  For reference, see
-    https://www.freedesktop.org/software/systemd/man/os-release.html</li>
+<li><code>output/target/etc/os-release</code>: this file is sourced by other build
+  scripts, e.g., <code>mkgns3a.sh</code>.  For reference, see <a href="https://www.freedesktop.org/software/systemd/man/os-release.html">os-release(5)</a></li>
 </ul>
-<blockquote>
-<p><strong>Note:</strong> to get proper GIT revision (hash) from your composed OS,
-remember in menuconfig to set <code>INFIX_OEM_PATH</code>.  When unset the
-Infix <code>post-build.sh</code> script defaults to the Infix base path.  The
-revision is stored in the file <code>/etc/os-release</code> as BUILD_ID and
-is also in the file <code>/etc/version</code>.  See below for more info.</p>
-</blockquote>
+<div class="admonition tip">
+<p class="admonition-title">Important</p>
+<p>To get a proper GIT revision (hash) from your OS spin, remember to set
+in menuconfig <code>INFIX_OEM_PATH</code>.  When unset, the Infix <code>post-build.sh</code>
+script defaults to the Infix base path.  The revision is stored in the
+file <code>/etc/os-release</code> as <code>BUILD_ID</code>, also in the file <code>/etc/version</code>.
+See below for more info.</p>
+</div>
 <h2 id="factory-failure-config">Factory &amp; Failure Config<a class="headerlink" href="#factory-failure-config" title="Permanent link">&para;</a></h2>
 <p>To support booting the same image (CPU architecture) on multiple boards,
 Infix by default generates the device's initial configuration every time
@@ -1822,22 +1907,23 @@ available keywords, see the next section for examples of how to use
 them:</p>
 <ul>
 <li><strong>Default password hash:</strong> <code>$factory$</code> (from VPD, .dtb, or built-in)<br />
-   XPath: <code>/ietf-system:system/authentication/user/password</code></li>
+  XPath: <code>/ietf-system:system/authentication/user/password</code></li>
 <li><strong>Default SSH and NETCONF hostkey:</strong> <code>genkey</code> (regenerated at factory reset)
-   XPath: <code>/ietf-keystore:keystore/asymmetric-keys/asymmetric-key[name='genkey']</code></li>
+  XPath: <code>/ietf-keystore:keystore/asymmetric-keys/asymmetric-key[name='genkey']</code></li>
 <li><strong>Hostname format specifiers:</strong><br />
-   XPath: <code>/ietf-system:system/hostname</code></li>
+  XPath: <code>/ietf-system:system/hostname</code></li>
 <li><code>%i</code>: OS ID, from <code>/etc/os-release</code>, from Menuconfig branding</li>
 <li><code>%h</code>: Default hostname, from <code>/etc/os-release</code>, from branding</li>
 <li><code>%m</code>: NIC specific part of base MAC, e.g., to <code>c0-ff-ee</code></li>
 <li><code>%%</code>: Literal %</li>
 </ul>
 <h3 id="static-files">Static Files<a class="headerlink" href="#static-files" title="Permanent link">&para;</a></h3>
-<blockquote>
-<p><strong>Caveat:</strong> maintaining static a factory-config and failure-config may
-seem like an obvious choice, but as YANG models evolve (even the IETF
+<div class="admonition warning">
+<p class="admonition-title">Caution</p>
+<p>Maintaining a static <code>factory-config</code> and <code>failure-config</code> may seem
+like an obvious choice, but as YANG models evolve (even the IETF
 models get upgraded), you may need to upgrade your static files.</p>
-</blockquote>
+</div>
 <p>First, for one-off builds (one image per product), the simplest way is
 to override the location where the system looks for the files, <code>/etc</code>
 already at build time.  This can be done using a Buildroot rootfs
@@ -1879,28 +1965,28 @@ last three octets of the system's base MAC address.  To override the
 base hostname, set <code>BR2_TARGET_GENERIC_HOSTNAME</code> in your defconfig.</p>
 <p>The static files are installed by Infix <code>confd</code> in <code>/usr/share/confd/</code>
 at build time.  It contains two subdirectories:</p>
-<div class="highlight"><pre><span></span><code>/usr/share/confd/
- |- factory.d/
- |  |- 10-foo.json
- |  |- 10-bar.json
- |  `- 10-qux.json
- `- failure.d/
-    |- 10-xyzzy.json
-    `- 10-garply.json
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>/usr/share/confd/
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a> |- factory.d/
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a> |  |- 10-foo.json
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a> |  |- 10-bar.json
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a> |  `- 10-qux.json
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a> `- failure.d/
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    |- 10-xyzzy.json
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>    `- 10-garply.json
 </code></pre></div>
 <p>To override, or extend, these files in you br2-external, set up a rootfs
 overlay and add it last in <code>BR2_ROOTFS_OVERLAY</code>.  Your overlay can look
 something like this:</p>
-<div class="highlight"><pre><span></span><code>./board/common/rootfs/
-  |- etc/
-  |  |- confdrc             # See below
-  |  `- confdrc.local
-  `- usr/
-     `- share/
-        `- confd/
-           |- 10-foo.json   # Override Infix foo
-           |- 30-bar.json   # Extend, probably 10-bar.json
-           `- 30-fred.json  # Extend, your own defaults
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>./board/common/rootfs/
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>  |- etc/
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>  |  |- confdrc             # See below
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>  |  `- confdrc.local
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>  `- usr/
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>     `- share/
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>        `- confd/
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>           |- 10-foo.json   # Override Infix foo
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>           |- 30-bar.json   # Extend, probably 10-bar.json
+<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>           `- 30-fred.json  # Extend, your own defaults
 </code></pre></div>
 <p>Using the same filename in your overlay, here <code>10-foo.json</code>, completely
 replaces the contents of the same file provided by Infix.  If you just
@@ -1912,122 +1998,123 @@ generated by Infix' <code>gen-function</code> scripts.  Your br2-external can
 provide a few custom ones that the <code>bootstrap</code> knows about, e.g.,
 <code>gen-ifs-custom</code> that overrides <code>20-interfaces.json</code>.  See the
 bootstrap script for more help, and up-to-date information.</p>
-<blockquote>
-<p><strong>Note:</strong> you may not need to provide your own <code>/etc/confdrc</code>.  The
-one installed by <code>confd</code> is usually enough.  However, if you want to
-adjust the behavior of <code>bootstrap</code> you may want to override it.  There
-is also <code>confdrc.local</code>, which usually is enough to change arguments
-to scripts like <code>gen-interfaces</code>, e.g., to create a bridge by default,
-you may want to look into <code>GEN_IFACE_OPTS</code>.</p>
-</blockquote>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>You may not need to provide your own <code>/etc/confdrc</code> for your spin.
+The one installed by <code>confd</code> is usually enough.  However, if you want
+to adjust the behavior of <code>bootstrap</code> you may want to override it.
+There is also <code>confdrc.local</code>, which usually is enough to change
+arguments to scripts like <code>gen-interfaces</code>, e.g., to create a bridge
+by default, you may want to look into <code>GEN_IFACE_OPTS</code>.</p>
+</div>
 <h3 id="example-snippets">Example Snippets<a class="headerlink" href="#example-snippets" title="Permanent link">&para;</a></h3>
-<p><strong>IETF System:</strong></p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>  &quot;ietf-system:system&quot;: {
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    &quot;hostname&quot;: &quot;example-%m&quot;,
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    &quot;ntp&quot;: {
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>      &quot;enabled&quot;: true,
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>      &quot;server&quot;: [
-<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>        {
-<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>          &quot;name&quot;: &quot;ntp.org&quot;,
-<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>          &quot;udp&quot;: {
-<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>            &quot;address&quot;: &quot;pool.ntp.org&quot;
-<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>          }
-<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>        }
-<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>      ]
-<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>    },
-<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>    &quot;authentication&quot;: {
-<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>      &quot;user&quot;: [
-<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>        {
-<a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>          &quot;name&quot;: &quot;admin&quot;,
-<a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>          &quot;password&quot;: &quot;$factory$&quot;,
-<a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>          &quot;infix-system:shell&quot;: &quot;bash&quot;
-<a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a>        }
-<a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a>      ]
-<a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a>    },
-<a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a>    &quot;infix-system:motd-banner&quot;: &quot;Li0tLS0tLS0uCnwgIC4gLiAgfCBJbmZpeCAtLSBhIE5ldHdvcmsgT3BlcmF0aW5nIFN5c3RlbQp8LS4gdiAuLXwgaHR0cHM6Ly9rZXJuZWxraXQuZ2l0aHViLmlvCictJy0tLSctJwo=&quot;
-<a id="__codelineno-0-24" name="__codelineno-0-24" href="#__codelineno-0-24"></a>  },            # &lt;---- REMEMBER COMMA SEPARATORS IN SNIPPETS!
-<a id="__codelineno-0-25" name="__codelineno-0-25" href="#__codelineno-0-25"></a>                # &lt;---- ... and no comments.
+<h4 id="ietf-system">IETF System<a class="headerlink" href="#ietf-system" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>  &quot;ietf-system:system&quot;: {
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>    &quot;hostname&quot;: &quot;example-%m&quot;,
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>    &quot;ntp&quot;: {
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>      &quot;enabled&quot;: true,
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>      &quot;server&quot;: [
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>        {
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>          &quot;name&quot;: &quot;ntp.org&quot;,
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>          &quot;udp&quot;: {
+<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>            &quot;address&quot;: &quot;pool.ntp.org&quot;
+<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>          }
+<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>        }
+<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>      ]
+<a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a>    },
+<a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a>    &quot;authentication&quot;: {
+<a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a>      &quot;user&quot;: [
+<a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a>        {
+<a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a>          &quot;name&quot;: &quot;admin&quot;,
+<a id="__codelineno-2-18" name="__codelineno-2-18" href="#__codelineno-2-18"></a>          &quot;password&quot;: &quot;$factory$&quot;,
+<a id="__codelineno-2-19" name="__codelineno-2-19" href="#__codelineno-2-19"></a>          &quot;infix-system:shell&quot;: &quot;bash&quot;
+<a id="__codelineno-2-20" name="__codelineno-2-20" href="#__codelineno-2-20"></a>        }
+<a id="__codelineno-2-21" name="__codelineno-2-21" href="#__codelineno-2-21"></a>      ]
+<a id="__codelineno-2-22" name="__codelineno-2-22" href="#__codelineno-2-22"></a>    },
+<a id="__codelineno-2-23" name="__codelineno-2-23" href="#__codelineno-2-23"></a>    &quot;infix-system:motd-banner&quot;: &quot;Li0tLS0tLS0uCnwgIC4gLiAgfCBJbmZpeCAtLSBhIE5ldHdvcmsgT3BlcmF0aW5nIFN5c3RlbQp8LS4gdiAuLXwgaHR0cHM6Ly9rZXJuZWxraXQuZ2l0aHViLmlvCictJy0tLSctJwo=&quot;
+<a id="__codelineno-2-24" name="__codelineno-2-24" href="#__codelineno-2-24"></a>  },            # &lt;---- REMEMBER COMMA SEPARATORS IN SNIPPETS!
+<a id="__codelineno-2-25" name="__codelineno-2-25" href="#__codelineno-2-25"></a>                # &lt;---- ... and no comments.
 </code></pre></div>
 <p>The <code>motd-banner</code> is a binary type, which is basically a Base64 encoded
 text file without line breaks (<code>-w0</code>):</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>$<span class="w"> </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Li0tLS0tLS0uCnwgIC4gLiAgfCBJbmZpeCAtLSBhIE5ldHdvcmsgT3BlcmF0aW5nIFN5c3RlbQp8LS4gdiAuLXwgaHR0cHM6Ly9rZXJuZWxraXQuZ2l0aHViLmlvCictJy0tLSctJwo=&quot;</span><span class="w"> </span><span class="p">|</span>base64<span class="w"> </span>-d
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>.-------.
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="p">|</span><span class="w">  </span>.<span class="w"> </span>.<span class="w">  </span><span class="p">|</span><span class="w"> </span>Infix<span class="w"> </span>OS<span class="w"> </span>—<span class="w"> </span>Immutable.Friendly.Secure
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="p">|</span>-.<span class="w"> </span>v<span class="w"> </span>.-<span class="p">|</span><span class="w"> </span>https://kernelkit.github.io
-<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="s1">&#39;-&#39;</span>---<span class="s1">&#39;-&#39;</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>$<span class="w"> </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Li0tLS0tLS0uCnwgIC4gLiAgfCBJbmZpeCAtLSBhIE5ldHdvcmsgT3BlcmF0aW5nIFN5c3RlbQp8LS4gdiAuLXwgaHR0cHM6Ly9rZXJuZWxraXQuZ2l0aHViLmlvCictJy0tLSctJwo=&quot;</span><span class="w"> </span><span class="p">|</span>base64<span class="w"> </span>-d
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>.-------.
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="p">|</span><span class="w">  </span>.<span class="w"> </span>.<span class="w">  </span><span class="p">|</span><span class="w"> </span>Infix<span class="w"> </span>OS<span class="w"> </span>—<span class="w"> </span>Immutable.Friendly.Secure
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="p">|</span>-.<span class="w"> </span>v<span class="w"> </span>.-<span class="p">|</span><span class="w"> </span>https://kernelkit.github.io
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="s1">&#39;-&#39;</span>---<span class="s1">&#39;-&#39;</span>
 </code></pre></div>
-<p><strong>IETF Keystore</strong></p>
+<h4 id="ietf-keystore">IETF Keystore<a class="headerlink" href="#ietf-keystore" title="Permanent link">&para;</a></h4>
 <p>Notice how both the public and private keys are left empty here, this
 cause them to be always automatically regenerated after each factory reset.
 Keeping the <code>factory-config</code> snippet like this means we can use the same
 file on multiple devices, without risking them sharing the same host
 keys.  Sometimes you may want the same host keys, but that is the easy
 use-case and not documented here.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="w">  </span><span class="nt">&quot;ietf-keystore:keystore&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">    </span><span class="nt">&quot;asymmetric-keys&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">      </span><span class="nt">&quot;asymmetric-key&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">        </span><span class="p">{</span>
-<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">          </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;genkey&quot;</span><span class="p">,</span>
-<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">          </span><span class="nt">&quot;public-key-format&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ietf-crypto-types:ssh-public-key-format&quot;</span><span class="p">,</span>
-<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">          </span><span class="nt">&quot;public-key&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;&quot;</span><span class="p">,</span>
-<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="w">          </span><span class="nt">&quot;private-key-format&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ietf-crypto-types:rsa-private-key-format&quot;</span><span class="p">,</span>
-<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="w">          </span><span class="nt">&quot;cleartext-private-key&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;&quot;</span><span class="p">,</span>
-<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="w">          </span><span class="nt">&quot;certificates&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span>
-<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="w">        </span><span class="p">}</span>
-<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="w">      </span><span class="p">]</span>
-<a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="w">    </span><span class="p">}</span>
-<a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a><span class="w">  </span><span class="p">},</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="w">  </span><span class="nt">&quot;ietf-keystore:keystore&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">    </span><span class="nt">&quot;asymmetric-keys&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">      </span><span class="nt">&quot;asymmetric-key&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">        </span><span class="p">{</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">          </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;genkey&quot;</span><span class="p">,</span>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">          </span><span class="nt">&quot;public-key-format&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ietf-crypto-types:ssh-public-key-format&quot;</span><span class="p">,</span>
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="w">          </span><span class="nt">&quot;public-key&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;&quot;</span><span class="p">,</span>
+<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="w">          </span><span class="nt">&quot;private-key-format&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ietf-crypto-types:rsa-private-key-format&quot;</span><span class="p">,</span>
+<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="w">          </span><span class="nt">&quot;cleartext-private-key&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;&quot;</span><span class="p">,</span>
+<a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a><span class="w">          </span><span class="nt">&quot;certificates&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span>
+<a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a><span class="w">        </span><span class="p">}</span>
+<a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a><span class="w">      </span><span class="p">]</span>
+<a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a><span class="w">  </span><span class="p">},</span>
 </code></pre></div>
-<p><strong>IETF NETCONF Server</strong></p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="w">  </span><span class="nt">&quot;ietf-netconf-server:netconf-server&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">    </span><span class="nt">&quot;listen&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">      </span><span class="nt">&quot;endpoints&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">        </span><span class="nt">&quot;endpoint&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">          </span><span class="p">{</span>
-<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">            </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;default-ssh&quot;</span><span class="p">,</span>
-<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">            </span><span class="nt">&quot;ssh&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="w">              </span><span class="nt">&quot;tcp-server-parameters&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="w">                </span><span class="nt">&quot;local-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;::&quot;</span>
-<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="w">              </span><span class="p">},</span>
-<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="w">              </span><span class="nt">&quot;ssh-server-parameters&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="w">                </span><span class="nt">&quot;server-identity&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a><span class="w">                  </span><span class="nt">&quot;host-key&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-<a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a><span class="w">                    </span><span class="p">{</span>
-<a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a><span class="w">                      </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;default-key&quot;</span><span class="p">,</span>
-<a id="__codelineno-3-16" name="__codelineno-3-16" href="#__codelineno-3-16"></a><span class="w">                      </span><span class="nt">&quot;public-key&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-3-17" name="__codelineno-3-17" href="#__codelineno-3-17"></a><span class="w">                        </span><span class="nt">&quot;central-keystore-reference&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;genkey&quot;</span>
-<a id="__codelineno-3-18" name="__codelineno-3-18" href="#__codelineno-3-18"></a><span class="w">                      </span><span class="p">}</span>
-<a id="__codelineno-3-19" name="__codelineno-3-19" href="#__codelineno-3-19"></a><span class="w">                    </span><span class="p">}</span>
-<a id="__codelineno-3-20" name="__codelineno-3-20" href="#__codelineno-3-20"></a><span class="w">                  </span><span class="p">]</span>
-<a id="__codelineno-3-21" name="__codelineno-3-21" href="#__codelineno-3-21"></a><span class="w">                </span><span class="p">}</span>
-<a id="__codelineno-3-22" name="__codelineno-3-22" href="#__codelineno-3-22"></a><span class="w">              </span><span class="p">}</span>
-<a id="__codelineno-3-23" name="__codelineno-3-23" href="#__codelineno-3-23"></a><span class="w">            </span><span class="p">}</span>
-<a id="__codelineno-3-24" name="__codelineno-3-24" href="#__codelineno-3-24"></a><span class="w">          </span><span class="p">}</span>
-<a id="__codelineno-3-25" name="__codelineno-3-25" href="#__codelineno-3-25"></a><span class="w">        </span><span class="p">]</span>
-<a id="__codelineno-3-26" name="__codelineno-3-26" href="#__codelineno-3-26"></a><span class="w">      </span><span class="p">}</span>
-<a id="__codelineno-3-27" name="__codelineno-3-27" href="#__codelineno-3-27"></a><span class="w">    </span><span class="p">}</span>
-<a id="__codelineno-3-28" name="__codelineno-3-28" href="#__codelineno-3-28"></a><span class="w">  </span><span class="p">},</span>
+<h4 id="ietf-netconf-server">IETF NETCONF Server<a class="headerlink" href="#ietf-netconf-server" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="w">  </span><span class="nt">&quot;ietf-netconf-server:netconf-server&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">    </span><span class="nt">&quot;listen&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">      </span><span class="nt">&quot;endpoints&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">        </span><span class="nt">&quot;endpoint&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">          </span><span class="p">{</span>
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="w">            </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;default-ssh&quot;</span><span class="p">,</span>
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="w">            </span><span class="nt">&quot;ssh&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="w">              </span><span class="nt">&quot;tcp-server-parameters&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="w">                </span><span class="nt">&quot;local-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;::&quot;</span>
+<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="w">              </span><span class="p">},</span>
+<a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a><span class="w">              </span><span class="nt">&quot;ssh-server-parameters&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a><span class="w">                </span><span class="nt">&quot;server-identity&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a><span class="w">                  </span><span class="nt">&quot;host-key&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a><span class="w">                    </span><span class="p">{</span>
+<a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a><span class="w">                      </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;default-key&quot;</span><span class="p">,</span>
+<a id="__codelineno-5-16" name="__codelineno-5-16" href="#__codelineno-5-16"></a><span class="w">                      </span><span class="nt">&quot;public-key&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-5-17" name="__codelineno-5-17" href="#__codelineno-5-17"></a><span class="w">                        </span><span class="nt">&quot;central-keystore-reference&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;genkey&quot;</span>
+<a id="__codelineno-5-18" name="__codelineno-5-18" href="#__codelineno-5-18"></a><span class="w">                      </span><span class="p">}</span>
+<a id="__codelineno-5-19" name="__codelineno-5-19" href="#__codelineno-5-19"></a><span class="w">                    </span><span class="p">}</span>
+<a id="__codelineno-5-20" name="__codelineno-5-20" href="#__codelineno-5-20"></a><span class="w">                  </span><span class="p">]</span>
+<a id="__codelineno-5-21" name="__codelineno-5-21" href="#__codelineno-5-21"></a><span class="w">                </span><span class="p">}</span>
+<a id="__codelineno-5-22" name="__codelineno-5-22" href="#__codelineno-5-22"></a><span class="w">              </span><span class="p">}</span>
+<a id="__codelineno-5-23" name="__codelineno-5-23" href="#__codelineno-5-23"></a><span class="w">            </span><span class="p">}</span>
+<a id="__codelineno-5-24" name="__codelineno-5-24" href="#__codelineno-5-24"></a><span class="w">          </span><span class="p">}</span>
+<a id="__codelineno-5-25" name="__codelineno-5-25" href="#__codelineno-5-25"></a><span class="w">        </span><span class="p">]</span>
+<a id="__codelineno-5-26" name="__codelineno-5-26" href="#__codelineno-5-26"></a><span class="w">      </span><span class="p">}</span>
+<a id="__codelineno-5-27" name="__codelineno-5-27" href="#__codelineno-5-27"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-5-28" name="__codelineno-5-28" href="#__codelineno-5-28"></a><span class="w">  </span><span class="p">},</span>
 </code></pre></div>
-<p><strong>Infix Services</strong>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="w">  </span><span class="nt">&quot;infix-services:ssh&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">    </span><span class="nt">&quot;enabled&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">    </span><span class="nt">&quot;hostkey&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">      </span><span class="s2">&quot;genkey&quot;</span>
-<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">    </span><span class="p">],</span>
-<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">    </span><span class="nt">&quot;listen&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="w">      </span><span class="p">{</span>
-<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="w">        </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ipv4&quot;</span><span class="p">,</span>
-<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="w">        </span><span class="nt">&quot;address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;0.0.0.0&quot;</span><span class="p">,</span>
-<a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a><span class="w">        </span><span class="nt">&quot;port&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">22</span>
-<a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a><span class="w">      </span><span class="p">},</span>
-<a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a><span class="w">      </span><span class="p">{</span>
-<a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a><span class="w">        </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ipv6&quot;</span><span class="p">,</span>
-<a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a><span class="w">        </span><span class="nt">&quot;address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;::1&quot;</span><span class="p">,</span>
-<a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a><span class="w">        </span><span class="nt">&quot;port&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">22</span>
-<a id="__codelineno-4-16" name="__codelineno-4-16" href="#__codelineno-4-16"></a><span class="w">      </span><span class="p">}</span>
-<a id="__codelineno-4-17" name="__codelineno-4-17" href="#__codelineno-4-17"></a><span class="w">    </span><span class="p">]</span>
-<a id="__codelineno-4-18" name="__codelineno-4-18" href="#__codelineno-4-18"></a><span class="w">  </span><span class="p">}</span>
-</code></pre></div></p>
+<h4 id="infix-services">Infix Services<a class="headerlink" href="#infix-services" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="w">  </span><span class="nt">&quot;infix-services:ssh&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">    </span><span class="nt">&quot;enabled&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">    </span><span class="nt">&quot;hostkey&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">      </span><span class="s2">&quot;genkey&quot;</span>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">    </span><span class="p">],</span>
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="w">    </span><span class="nt">&quot;listen&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="w">      </span><span class="p">{</span>
+<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="w">        </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ipv4&quot;</span><span class="p">,</span>
+<a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="w">        </span><span class="nt">&quot;address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;0.0.0.0&quot;</span><span class="p">,</span>
+<a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="w">        </span><span class="nt">&quot;port&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">22</span>
+<a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a><span class="w">      </span><span class="p">},</span>
+<a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a><span class="w">      </span><span class="p">{</span>
+<a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a><span class="w">        </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ipv6&quot;</span><span class="p">,</span>
+<a id="__codelineno-6-14" name="__codelineno-6-14" href="#__codelineno-6-14"></a><span class="w">        </span><span class="nt">&quot;address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;::1&quot;</span><span class="p">,</span>
+<a id="__codelineno-6-15" name="__codelineno-6-15" href="#__codelineno-6-15"></a><span class="w">        </span><span class="nt">&quot;port&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">22</span>
+<a id="__codelineno-6-16" name="__codelineno-6-16" href="#__codelineno-6-16"></a><span class="w">      </span><span class="p">}</span>
+<a id="__codelineno-6-17" name="__codelineno-6-17" href="#__codelineno-6-17"></a><span class="w">    </span><span class="p">]</span>
+<a id="__codelineno-6-18" name="__codelineno-6-18" href="#__codelineno-6-18"></a><span class="w">  </span><span class="p">}</span>
+</code></pre></div>
 <h2 id="integration">Integration<a class="headerlink" href="#integration" title="Permanent link">&para;</a></h2>
 <p>When integrating your software stack with Infix there may be protocols
 that want to change system settings like hostname and dynamically set
@@ -2043,14 +2130,14 @@ by other "address providers", e.g., PROFINET.</p>
 <p>Changing properties like hostname should be done by injecting a change
 into Infix, by for example calling <code>sysrepocfg -Ediff.xml</code>.  Here is an
 example of how to get the current hostname and apply an XML diff:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>root@infix-00-00-00:~# sysrepocfg -X -x &quot;/system/hostname&quot; &gt; hostnm.xml
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>root@infix-00-00-00:~# cat hostnm.xml
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>&lt;system xmlns=&quot;urn:ietf:params:xml:ns:yang:ietf-system&quot;&gt;
-<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>  &lt;hostname&gt;infix-00-00-00&lt;/hostname&gt;
-<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>&lt;/system&gt;
-<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>root@infix-00-00-00:~# edit hostnm.xml
-<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>root@infix-00-00-00:~# sysrepocfg -Ehostnm.xml
-<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>root@example:~# 
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>root@infix-00-00-00:~# sysrepocfg -X -x &quot;/system/hostname&quot; &gt; hostnm.xml
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>root@infix-00-00-00:~# cat hostnm.xml
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>&lt;system xmlns=&quot;urn:ietf:params:xml:ns:yang:ietf-system&quot;&gt;
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>  &lt;hostname&gt;infix-00-00-00&lt;/hostname&gt;
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>&lt;/system&gt;
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>root@infix-00-00-00:~# edit hostnm.xml
+<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a>root@infix-00-00-00:~# sysrepocfg -Ehostnm.xml
+<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>root@example:~#
 </code></pre></div>
 <p>Second, perform all changes on <code>running-config</code>, the running datastore.
 That way you have a clear state to return to if your application needs
@@ -2070,7 +2157,7 @@ two states.  The <code>startup-config</code> is applied in runlevel S (bootstrap
 and the system then enters runlevel 2 for normal operation.</p>
 <p>This allow you to keep a set of functionality that is provided by the
 underlying system, and another managed by your application.  You can
-of course in your br2-external provide a sysrepo plugin that block 
+of course in your br2-external provide a sysrepo plugin that block
 operations on certain datastores when your application is enabled.
 E.g., to prevent changes to startup after initial deployment.  In
 that case a proper factory reset would be needed to get back to a
@@ -2083,23 +2170,24 @@ let us talk about versioning in general.</p>
 <p>Two popular scheme for versioning a product derived from Infix:</p>
 <ol>
 <li>Track Infix major.minor, e.g. <em>Foobar v23.08.z</em>, where <code>z</code> is
-    your patch level.  I.e., Foobar v23.08.0 could be based on Infix
-    v23.08.0, or v23.08.12, it is up to you.  Maybe you based it on
-    v23.08.12 and then back ported changes from v23.10.0, but it was
-    the first release you made to your customer(s).</li>
+   your patch level.  I.e., Foobar v23.08.0 could be based on Infix
+   v23.08.0, or v23.08.12, it is up to you.  Maybe you based it on
+   v23.08.12 and then back ported changes from v23.10.0, but it was
+   the first release you made to your customer(s).</li>
 <li>Start from v1.0.0 and step the major number every time you sync
-    with a new Infix release, or every time Infix bumps to the next
-    Buildroot LTS.</li>
+   with a new Infix release, or every time Infix bumps to the next
+   Buildroot LTS.</li>
 </ol>
 <p>The important thing is to be consistent, not only for your own sake,
 but also for your end customers.  The <em>major.minor.patch</em> style is
 the most common and often recommended style, which usually maps well
 to other systems, e.g. PROFINET GSDML files require this (<em>VX.Y.Z</em>).
 But you can of course use only two numbers, <em>major.minor</em>, as well.</p>
-<blockquote>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
 <p>What could be confusing, however, is if you use the name <em>Infix</em>
 with your own versioning scheme.</p>
-</blockquote>
+</div>
 <h3 id="specifying-versioning-information">Specifying Versioning Information<a class="headerlink" href="#specifying-versioning-information" title="Permanent link">&para;</a></h3>
 <p>Two optional environment variables control the version information
 recorded in images. Both of these <strong>must be</strong> a lower-case string (no
