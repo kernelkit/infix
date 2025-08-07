@@ -1,11 +1,9 @@
-Branding & Releases
-===================
+# Branding & Releases
 
-This document is for projects using Infix as a br2-external, i.e., OEMs.
+This document is for projects using Infix as a br2-external, i.e., OEMs
+that want to create *their own "Spin"* of Infix.
 
-
-Branding
---------
+## Branding
 
 Branding is done in menuconfig, there are several settings affecting
 it, most are in the Infix external subsection called "Branding", but
@@ -24,25 +22,18 @@ check this for you and you may end up with odd results.
 
 Verify the result after a build by inspecting:
 
-  - `output/images/*`: names, missing prefix, etc.
-  - `output/target/etc/os-release`: this file is sourced by
-    other build scripts, e.g., `mkgns3a.sh`.  For reference, see
-	https://www.freedesktop.org/software/systemd/man/os-release.html
+- `output/images/*`: names, missing prefix, etc.
+- `output/target/etc/os-release`: this file is sourced by other build
+  scripts, e.g., `mkgns3a.sh`.  For reference, see [os-release(5)][]
 
-> **Note:** to get proper GIT revision (hash) from your composed OS,
-> remember in menuconfig to set `INFIX_OEM_PATH`.  When unset the
-> Infix `post-build.sh` script defaults to the Infix base path.  The
-> revision is stored in the file `/etc/os-release` as BUILD_ID and
-> is also in the file `/etc/version`.  See below for more info.
+> [!IMPORTANT]
+> To get a proper GIT revision (hash) from your OS spin, remember to set
+> in menuconfig `INFIX_OEM_PATH`.  When unset, the Infix `post-build.sh`
+> script defaults to the Infix base path.  The revision is stored in the
+> file `/etc/os-release` as `BUILD_ID`, also in the file `/etc/version`.
+> See below for more info.
 
-[^1]: The base MAC address is defined in the device's Vital Product
-    Data (VPD) EEPROM, or similar, which is used by the kernel to
-    create the system interfaces.  This MAC address is usually also
-    printed on a label on the device.
-
-
-Factory & Failure Config
-------------------------
+## Factory & Failure Config
 
 To support booting the same image (CPU architecture) on multiple boards,
 Infix by default generates the device's initial configuration every time
@@ -56,7 +47,6 @@ However, for custom builds of Infix it is possible to override this with
 a single static `/etc/factory-config.cfg` (and failure-config) in your
 rootfs overlay -- with a [VPD](vpd.md) you can even support several!
 
-
 ### Variables & Format Specifiers
 
 Parts of the configuration you likely always want to generated, like the
@@ -65,22 +55,22 @@ unique (per-device with a VPD) password hash.  This section lists the
 available keywords, see the next section for examples of how to use
 them:
 
- - **Default password hash:** `$factory$` (from VPD, .dtb, or built-in)  
-   XPath: `/ietf-system:system/authentication/user/password`
- - **Default SSH and NETCONF hostkey:** `genkey` (regenerated at factory reset)
-   XPath: `/ietf-keystore:keystore/asymmetric-keys/asymmetric-key[name='genkey']`
- - **Hostname format specifiers:**  
-   XPath: `/ietf-system:system/hostname`
+- **Default password hash:** `$factory$` (from VPD, .dtb, or built-in)  
+  XPath: `/ietf-system:system/authentication/user/password`
+- **Default SSH and NETCONF hostkey:** `genkey` (regenerated at factory reset)
+  XPath: `/ietf-keystore:keystore/asymmetric-keys/asymmetric-key[name='genkey']`
+- **Hostname format specifiers:**  
+  XPath: `/ietf-system:system/hostname`
    - `%i`: OS ID, from `/etc/os-release`, from Menuconfig branding
    - `%h`: Default hostname, from `/etc/os-release`, from branding
    - `%m`: NIC specific part of base MAC, e.g., to `c0-ff-ee`
    - `%%`: Literal %
 
-
 ### Static Files
 
-> **Caveat:** maintaining static a factory-config and failure-config may
-> seem like an obvious choice, but as YANG models evolve (even the IETF
+> [!CAUTION]
+> Maintaining a static `factory-config` and `failure-config` may seem
+> like an obvious choice, but as YANG models evolve (even the IETF
 > models get upgraded), you may need to upgrade your static files.
 
 First, for one-off builds (one image per product), the simplest way is
@@ -103,9 +93,8 @@ after `00-probe` has run. The lower case version of the string is used.
 
 I.e., create a rootfs overlay that provides any combination of:
 
- - `/usr/share/product/<PRODUCT>/etc/factory-config.cfg`
- - `/usr/share/product/<PRODUCT>/etc/failure-config.cfg`
-
+- `/usr/share/product/<PRODUCT>/etc/factory-config.cfg`
+- `/usr/share/product/<PRODUCT>/etc/failure-config.cfg`
 
 ### Dynamically Generated
 
@@ -113,14 +102,14 @@ The generated `factory-config` and `failure-config` files consist of
 both static JSON files and part generated files at runtime for each
 device.  The resulting files are written to the RAM disk in `/run`:
 
- - `/run/confd/factory-config.gen`
- - `/run/confd/failure-config.gen`
+- `/run/confd/factory-config.gen`
+- `/run/confd/failure-config.gen`
 
 Provided no custom overrides (see above) have been installed already,
 these files are then copied to:
 
- - `/etc/factory-config.cfg`
- - `/etc/failure-config.cfg`
+- `/etc/factory-config.cfg`
+- `/etc/failure-config.cfg`
 
 ... where the bootstrap process expects them to be in the next step.
 
@@ -132,29 +121,33 @@ base hostname, set `BR2_TARGET_GENERIC_HOSTNAME` in your defconfig.
 The static files are installed by Infix `confd` in `/usr/share/confd/`
 at build time.  It contains two subdirectories:
 
-    /usr/share/confd/
-     |- factory.d/
-     |  |- 10-foo.json
-     |  |- 10-bar.json
-     |  `- 10-qux.json
-     `- failure.d/
-        |- 10-xyzzy.json
-        `- 10-garply.json
+```
+/usr/share/confd/
+ |- factory.d/
+ |  |- 10-foo.json
+ |  |- 10-bar.json
+ |  `- 10-qux.json
+ `- failure.d/
+    |- 10-xyzzy.json
+    `- 10-garply.json
+```
 
 To override, or extend, these files in you br2-external, set up a rootfs
 overlay and add it last in `BR2_ROOTFS_OVERLAY`.  Your overlay can look
 something like this:
 
-    ./board/common/rootfs/
-      |- etc/
-      |  |- confdrc             # See below
-      |  `- confdrc.local
-      `- usr/
-         `- share/
-            `- confd/
-               |- 10-foo.json   # Override Infix foo
-               |- 30-bar.json   # Extend, probably 10-bar.json
-               `- 30-fred.json  # Extend, your own defaults
+```
+./board/common/rootfs/
+  |- etc/
+  |  |- confdrc             # See below
+  |  `- confdrc.local
+  `- usr/
+     `- share/
+        `- confd/
+           |- 10-foo.json   # Override Infix foo
+           |- 30-bar.json   # Extend, probably 10-bar.json
+           `- 30-fred.json  # Extend, your own defaults
+```
 
 Using the same filename in your overlay, here `10-foo.json`, completely
 replaces the contents of the same file provided by Infix.  If you just
@@ -168,17 +161,17 @@ provide a few custom ones that the `bootstrap` knows about, e.g.,
 `gen-ifs-custom` that overrides `20-interfaces.json`.  See the
 bootstrap script for more help, and up-to-date information.
 
-> **Note:** you may not need to provide your own `/etc/confdrc`.  The
-> one installed by `confd` is usually enough.  However, if you want to
-> adjust the behavior of `bootstrap` you may want to override it.  There
-> is also `confdrc.local`, which usually is enough to change arguments
-> to scripts like `gen-interfaces`, e.g., to create a bridge by default,
-> you may want to look into `GEN_IFACE_OPTS`.
-
+> [!TIP]
+> You may not need to provide your own `/etc/confdrc` for your spin.
+> The one installed by `confd` is usually enough.  However, if you want
+> to adjust the behavior of `bootstrap` you may want to override it.
+> There is also `confdrc.local`, which usually is enough to change
+> arguments to scripts like `gen-interfaces`, e.g., to create a bridge
+> by default, you may want to look into `GEN_IFACE_OPTS`.
 
 ### Example Snippets
 
-**IETF System:**
+#### IETF System
 
 ```hsib
   "ietf-system:system": {
@@ -211,15 +204,16 @@ bootstrap script for more help, and up-to-date information.
 The `motd-banner` is a binary type, which is basically a Base64 encoded
 text file without line breaks (`-w0`):
 
-```bash
-$ echo "Li0tLS0tLS0uCnwgIC4gLiAgfCBJbmZpeCAtLSBhIE5ldHdvcmsgT3BlcmF0aW5nIFN5c3RlbQp8LS4gdiAuLXwgaHR0cHM6Ly9rZXJuZWxraXQuZ2l0aHViLmlvCictJy0tLSctJwo=" |base64 -d
+```
+$ echo "Li0tLS0tLS0uCnwgIC4gLiAgfCBJbmZpeCAtLSBhIE5ldHdvcmsgT3BlcmF0aW5nIFN5c3RlbQp8LS4gdiAuLXwgaHR0cHM6Ly9rZXJuZWxraXQuZ2l0aHViLmlvCictJy0tLSctJwo=" \
+    | base64 -d
 .-------.
 |  . .  | Infix OS — Immutable.Friendly.Secure
 |-. v .-| https://kernelkit.github.io
 '-'---'-'
 ```
 
-**IETF Keystore**
+#### IETF Keystore
 
 Notice how both the public and private keys are left empty here, this
 cause them to be always automatically regenerated after each factory reset.
@@ -245,7 +239,7 @@ use-case and not documented here.
   },
 ```
 
-**IETF NETCONF Server**
+#### IETF NETCONF Server
 
 ```json
   "ietf-netconf-server:netconf-server": {
@@ -278,7 +272,8 @@ use-case and not documented here.
   },
 ```
 
-**Infix Services**
+#### Infix Services
+
 ```json
   "infix-services:ssh": {
     "enabled": true,
@@ -300,10 +295,7 @@ use-case and not documented here.
   }
 ```
 
-
-
-Integration
------------
+## Integration
 
 When integrating your software stack with Infix there may be protocols
 that want to change system settings like hostname and dynamically set
@@ -330,7 +322,7 @@ root@infix-00-00-00:~# cat hostnm.xml
 </system>
 root@infix-00-00-00:~# edit hostnm.xml
 root@infix-00-00-00:~# sysrepocfg -Ehostnm.xml
-root@example:~# 
+root@example:~#
 ```
 
 Second, perform all changes on `running-config`, the running datastore.
@@ -344,8 +336,8 @@ activate all.)
 
 You can consider the system composed of two entities:
 
-  - NETCONF starts up the system using `startup-config`, then
-  - Hands over control to your application at runtime
+- NETCONF starts up the system using `startup-config`, then
+- Hands over control to your application at runtime
 
 Infix is prepared for this by already having two "runlevels" for these
 two states.  The `startup-config` is applied in runlevel S (bootstrap)
@@ -353,15 +345,13 @@ and the system then enters runlevel 2 for normal operation.
 
 This allow you to keep a set of functionality that is provided by the
 underlying system, and another managed by your application.  You can
-of course in your br2-external provide a sysrepo plugin that block 
+of course in your br2-external provide a sysrepo plugin that block
 operations on certain datastores when your application is enabled.
 E.g., to prevent changes to startup after initial deployment.  In
 that case a proper factory reset would be needed to get back to a
 "pre-deployment" state where you can reconfigure your baseline.
 
-
-Releases
---------
+## Releases
 
 A release build requires the global variable `INFIX_RELEASE` to be set.
 It can be derived from GIT, if the source tree is kept in GIT VCS.  First,
@@ -371,14 +361,14 @@ let us talk about versioning in general.
 
 Two popular scheme for versioning a product derived from Infix:
 
- 1. Track Infix major.minor, e.g. *Foobar v23.08.z*, where `z` is
-    your patch level.  I.e., Foobar v23.08.0 could be based on Infix
-    v23.08.0, or v23.08.12, it is up to you.  Maybe you based it on
-    v23.08.12 and then back ported changes from v23.10.0, but it was
-    the first release you made to your customer(s).
- 2. Start from v1.0.0 and step the major number every time you sync
-    with a new Infix release, or every time Infix bumps to the next
-    Buildroot LTS.
+1. Track Infix major.minor, e.g. *Foobar v23.08.z*, where `z` is
+   your patch level.  I.e., Foobar v23.08.0 could be based on Infix
+   v23.08.0, or v23.08.12, it is up to you.  Maybe you based it on
+   v23.08.12 and then back ported changes from v23.10.0, but it was
+   the first release you made to your customer(s).
+1. Start from v1.0.0 and step the major number every time you sync
+   with a new Infix release, or every time Infix bumps to the next
+   Buildroot LTS.
 
 The important thing is to be consistent, not only for your own sake,
 but also for your end customers.  The *major.minor.patch* style is
@@ -386,9 +376,9 @@ the most common and often recommended style, which usually maps well
 to other systems, e.g. PROFINET GSDML files require this (*VX.Y.Z*).
 But you can of course use only two numbers, *major.minor*, as well.
 
+> [!WARNING]
 > What could be confusing, however, is if you use the name *Infix*
 > with your own versioning scheme.
-
 
 ### Specifying Versioning Information
 
@@ -416,4 +406,10 @@ generated file names like disk images, etc.
 
 **Default:** `${INFIX_BUILD_ID}`
 
-[NanoPi R2S]: https://github.com/kernelkit/infix/blob/main/board/aarch64/r2s/rootfs/etc/factory-config.cfg
+[^1]: The base MAC address is defined in the device's Vital Product
+    Data (VPD) EEPROM, or similar, which is used by the kernel to
+    create the system interfaces.  This MAC address is usually also
+    printed on a label on the device.
+
+[NanoPi R2S]:    https://github.com/kernelkit/infix/blob/main/board/aarch64/r2s/rootfs/etc/factory-config.cfg
+[os-release(5)]: https://www.freedesktop.org/software/systemd/man/os-release.html

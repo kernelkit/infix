@@ -51,9 +51,10 @@ Linux to use.
 
 ### Configure USB port
 
-> **Note:** You can only configure USB ports known to the system.  See
-> `show hardware` in admin-exec context.  (Use `do` prefix in configure
-> context.)
+> [!NOTE]
+> You can only configure USB ports known to the system.  See the CLI
+> command `show hardware` in admin-exec context.  (Use `do` prefix in
+> configure context.)
 
 ```
 admin@example:/> configure
@@ -83,6 +84,5 @@ cached data to disk before returning the prompt:
 ```
 admin@example:~$ sudo umount /media/log
 ```
-
 
 [1]:  https://www.rfc-editor.org/rfc/rfc8348.html

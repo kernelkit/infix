@@ -1,37 +1,36 @@
-Boot Procedure
-==============
+# Boot Procedure
 
 Systems running Infix will typically boot in multiple phases, forming
 a boot chain. Each link in the chain has three main responsibilities:
 
 1. Ensuring the integrity of the next link before passing control to
    it. This avoids silent failures stemming from data corruption.
-
-2. Ensuring the authenticity of the next link before passing control
+1. Ensuring the authenticity of the next link before passing control
    to it, commonly referred to as _Secure Boot_. This protects against
    malicious attempts to modify a system's firmware.
-
-3. Preparing the system state according to the requirements of the
+1. Preparing the system state according to the requirements of the
    next link. E.g. the Linux kernel requires the system's RAM to be
    operational.
 
 A typical chain consists of four stages:
 
-        .---------.
-        |   ROM   >---.   Determine the location of and load the SPL
-        '---------'   |
-    .-----------------'
-    |   .---------.
-    '--->   SPL   >---.   Perform DDR training and load the TPL
-        '---------'   |
-    .-----------------'
-    |   .---------.
-    '--->   TPL   >---.   Load Linux kernel, device tree, and root filesystem
-        '---------'   |
-    .-----------------'
-    |   .---------.
-    '--->  Infix  |       Get down to business
-        '---------'
+```
+    .---------.
+    |   ROM   >---.   Determine the location of and load the SPL
+    '---------'   |
+.-----------------'
+|   .---------.
+'--->   SPL   >---.   Perform DDR training and load the TPL
+    '---------'   |
+.-----------------'
+|   .---------.
+'--->   TPL   >---.   Load Linux kernel, device tree, and root filesystem
+    '---------'   |
+.-----------------'
+|   .---------.
+'--->  Infix  |       Get down to business
+    '---------'
+```
 
 After a reset, hardware will pass control to a program (_ROM_) which
 is almost always programmed into the SoC by the vendor.  This program
@@ -52,9 +51,7 @@ This document's focus is to describe the final two phases of the boot
 chain, as the initial phases are very hardware dependent, better
 described by existing documentation provided by the SoC vendor.
 
-
-Bootloader
-----------
+## Bootloader
 
 ### Configuration
 
@@ -62,33 +59,42 @@ To mitigate the risk of a malicious user being able to circumvent the
 bootloader's validation procedure, user configuration is kept to a
 minimum.  Two settings are available:
 
-- **Boot order**: Since Infix maintains two copies of its software image,
-  and as some bootloaders support [netbooting][2], the order in which boot
-  sources are considered can be configured. To select the active
-  source, use [RAUC][]:
+**Boot order**: Since Infix maintains two copies of its software image,
+and as some bootloaders support [netbooting][2], the order in which boot
+sources are considered can be configured. To select the active
+source, use [RAUC][]:
 
-        rauc status mark-active <slot>
+```
+root@example:~# rauc status mark-active <slot>
+...
+```
 
-    Where `<slot>` is one of:
+Where `<slot>` is one of:
 
-    | `<slot>`   | Source                    |
-    |------------|---------------------------|
-    | `rootfs.0` | Primary partition         |
-    | `rootfs.1` | Secondary partition       |
-    | `net.0`    | Netboot (where supported) |
+| **`<slot>`** | **Source**                |
+|--------------|---------------------------|
+| `rootfs.0`   | Primary partition         |
+| `rootfs.1`   | Secondary partition       |
+| `net.0`      | Netboot (where supported) |
 
-- **Debug**: By default, the kernel will only output errors to the
-  console during boot. Optionally, this can be altered such that all
-  enabled messages are logged.
+**Debug**: By default, the kernel will only output errors to the
+console during boot. Optionally, this can be altered such that all
+enabled messages are logged.
 
-  On systems using _U-Boot_, this can be enabled by running `fw_setenv
-  DEBUG 1`. To restore the default behavior, run `fw_setenv DEBUG`.
+On systems using _U-Boot_, this can be enabled by running `fw_setenv
+DEBUG 1`. To restore the default behavior, run `fw_setenv DEBUG`.
 
-  On systems running _GRUB_, this can be enabled by running
-  `grub-editenv /mnt/aux/grub/grubenv set DEBUG=1`. To restore the
-  default behavior, run `grub-editenv /mnt/aux/grub/grubenv unset
-  DEBUG`
+On systems running _GRUB_, this can be enabled by running:
 
+```
+root@example:~# grub-editenv /mnt/aux/grub/grubenv set DEBUG=1
+```
+
+To restore the default behavior, run:
+
+```
+root@example:~# grub-editenv /mnt/aux/grub/grubenv unset DEBUG
+```
 
 ### U-Boot
 
@@ -109,7 +115,6 @@ Access to U-Boot's shell is disabled to prevent side-loading of
 malicious software.  To configure the active boot partition, refer to
 the [Bootloader Configuration](#configuration) section.
 
-
 ### GRUB
 
 Used on _x86_64_ based systems.  Neither the _integrity_ nor the
@@ -123,7 +128,6 @@ partition can be selected interactively at boot using the arrow keys. It
 is also possible to permanently configure the default partition from
 Infix using the [Bootloader Configuration](#configuration).
 
-
 ## System Boot
 
 After the system firmware (BIOS or and [boot loader](boot.md) start
@@ -132,49 +136,50 @@ password in VPD, are detailed later in this section.
 
 ![System boot flowchart](img/fail-secure.svg)
 
- 1. Before mounting `/cfg` and `/var` partitions, hosting read-writable
-    data like `startup-config` and container images, the system first
-    checks if a factory reset has been requested by the user, if so it
-    wipes the contents of these partitions
- 2. Linux boots with a device tree which is used for detecting generic
-    make and model of the device, e.g., number of interfaces.  It may
-    also reference an EEPROM with [Vital Product Data](vpd.md).  That is
-    where the base MAC address and per-device password hash is stored.
-    (Generic builds use the same MAC address and password)
- 3. On every boot the system's `factory-config` and `failure-config` are
-    generated from the YANG[^2] models of the current firmware version.
-    This ensures that a factory reset device can always boot, and that
-    there is a working fail safe, or rather *fail secure*, mode
- 4. On first power-on, and after a factory reset, the system does not
-    have a `startup-config`, in which case `factory-config` is copied
-    to `startup-config` -- if a per-product specific version exists it
-    is preferred over the generated one
- 5. Provided the integrity of the `startup-config` is OK, a system
-    service loads and activates the configuration
+1. Before mounting `/cfg` and `/var` partitions, hosting read-writable
+   data like `startup-config` and container images, the system first
+   checks if a factory reset has been requested by the user, if so it
+   wipes the contents of these partitions
+1. Linux boots with a device tree which is used for detecting generic
+   make and model of the device, e.g., number of interfaces.  It may
+   also reference an EEPROM with [Vital Product Data](vpd.md).  That is
+   where the base MAC address and per-device password hash is stored.
+   (Generic builds use the same MAC address and password)
+1. On every boot the system's `factory-config` and `failure-config` are
+   generated from the YANG[^2] models of the current firmware version.
+   This ensures that a factory reset device can always boot, and that
+   there is a working fail safe, or rather *fail secure*, mode
+1. On first power-on, and after a factory reset, the system does not
+   have a `startup-config`, in which case `factory-config` is copied
+   to `startup-config` -- if a per-product specific version exists it
+   is preferred over the generated one
+1. Provided the integrity of the `startup-config` is OK, a system
+   service loads and activates the configuration
 
 ### Failure Modes
 
 So, what happens if any of the steps above fail?
 
-**VPD Fail**
+#### VPD Fail
 
 The per-device password cannot be read, or is corrupt, so the system
 `factory-config` and `failure-config` are not generated:
 
- 1. First boot, or after factory reset: `startup-config` cannot be
-    created or loaded, and `failure-config` cannot be loaded.  The
-    system ends up in an unrecoverable state, i.e., **RMA[^3] Mode**
- 2. The system has booted (at least) once with correct VPD and password
-    and already has a `startup-config`.  Provided the `startup-config`
-    is OK (see below), it is loaded and system boots successfully
+1. First boot, or after factory reset: `startup-config` cannot be
+   created or loaded, and `failure-config` cannot be loaded.  The
+   system ends up in an unrecoverable state, i.e., **RMA[^3] Mode**
+1. The system has booted (at least) once with correct VPD and password
+   and already has a `startup-config`.  Provided the `startup-config`
+   is OK (see below), it is loaded and system boots successfully
 
 In both cases, external factory reset modes/button will not help, and
 in the second case will cause the device to fail on the next boot.
 
+> [!NOTE]
 > The second case does not yet have any warning or event that can be
 > detected from the outside.  This is planned for a later release.
 
-**Broken startup-config**
+#### Broken startup-config
 
 If loading `startup-config` fails for some reason, e.g., invalid JSON
 syntax, failed validation against the system's YANG model, or a bug in
@@ -194,9 +199,7 @@ link-local, and device discovery protocols: LLDP, mDNS-SD.  The login
 and shell prompt are set to `failure-c0-ff-ee`, the last three octets of
 the device's base MAC address.
 
-
-System Upgrade
---------------
+## System Upgrade
 
 Much of the minutiae of software upgrades is delegated to [RAUC][],
 which offers lots of benefits out-of-the-box:
@@ -204,18 +207,19 @@ which offers lots of benefits out-of-the-box:
 - Upgrade Bundles are always signed, such that their authenticity can
   be verified by the running operating system, before the new one is
   installed.
-
 - The bureaucracy of interfacing with different bootloaders, manage
   the boot order, is a simple matter of providing a compatible
   configuration.
-
 - Updates can be sourced from the local filesystem (including external
   media like USB sticks or SD-cards) and from remote servers using FTP
   or HTTP(S).
 
 To initiate a system upgrade from the shell[^1], run:
 
-    rauc install <file|url>
+```
+root@example:~# rauc install <file|url>
+...
+```
 
 Where the file or URL points to a [RAUC Upgrade Bundle](#rauc-upgrade-bundle).
 
@@ -225,9 +229,7 @@ will then boot from the newly installed image.  Since the partition
 from which you were originally running is now inactive, running the
 same upgrade command again will bring both partitions into sync.
 
-
-Image Formats
--------------
+## Image Formats
 
 ### SquashFS Image
 
@@ -279,7 +281,6 @@ validate the SquashFS's contents. This path was chosen because:
 In its full form, it can be used to netboot Infix, as it contains all
 the information needed by U-Boot in a single file.
 
-
 ### RAUC Upgrade Bundle
 
 **Canonical Name**: `infix-${ARCH}.pkg`
@@ -293,7 +294,6 @@ system.
 When performing a [System Upgrade](#system-upgrade), this is the format
 to use.
 
-
 ### Disk Image
 
 **Canonical Name**: `disk.img`
@@ -302,35 +302,37 @@ Infix runs from a block device (e.g. eMMC or virtio disk) with the
 following layout. The disk is expected to use the GPT partitioning
 scheme. Partitions marked with an asterisk are optional.
 
-    .-----------.
-    | GPT Table |
-    :-----------:
-    |    boot*  |
-    :-----------:
-    |    aux    |
-    :-----------:
-    |           |
-    |  primary  |
-    |           |
-    :-----------:
-    |           |
-    | secondary |
-    |           |
-    :-----------:
-    |    cfg    |
-    :-----------:
-    |           |
-    |    var*   |
-    |           |
-    '-----------'
+```
+.-----------.
+| GPT Table |
+:-----------:
+|    boot*  |
+:-----------:
+|    aux    |
+:-----------:
+|           |
+|  primary  |
+|           |
+:-----------:
+|           |
+| secondary |
+|           |
+:-----------:
+|    cfg    |
+:-----------:
+|           |
+|    var*   |
+|           |
+'-----------'
+```
 
 #### `boot` - Bootloader
 
-| Parameter | Value                                   |
-|-----------|-----------------------------------------|
-| Required  | No                                      |
-| Size      | 4 MiB                                   |
-| Format    | Raw binary, as dictated by the hardware |
+| **Parameter** | **Value**                               |
+|---------------|-----------------------------------------|
+| Required      | No                                      |
+| Size          | 4 MiB                                   |
+| Format        | Raw binary, as dictated by the hardware |
 
 Optional partition containing the system's bootloader. May also reside
 in a separate storage device, e.g. a serial FLASH.
@@ -340,11 +342,11 @@ the GRUB bootloader.
 
 #### `aux` - Auxiliary Data
 
-| Parameter | Value           |
-|-----------|-----------------|
-| Required  | Yes             |
-| Size      | 4 MiB           |
-| Format    | EXT4 filesystem |
+| **Parameter** | **Value**       |
+|---------------|-----------------|
+| Required      | Yes             |
+| Size          | 4 MiB           |
+| Format        | EXT4 filesystem |
 
 Holds information that is shared between Infix and its bootloader,
 such as image signatures required to validate the chain of trust,
@@ -353,10 +355,10 @@ bootloader configuration etc.
 Typical layout when using U-Boot bootloader:
 
 ```
-    /
-    ├ primary.itbh
-    ├ secondary.itbh
-    └ uboot.env
+/
+├ primary.itbh
+├ secondary.itbh
+└ uboot.env
 ```
 
 During boot, an ITB header along with the corresponding root
@@ -370,11 +372,11 @@ required to configure the boot order.
 
 #### `primary`/`secondary` - Root Filesystems
 
-| Parameter | Value             |
-|-----------|-------------------|
-| Required  | Yes               |
-| Size      | >= 256 MiB        |
-| Format    | Squash filesystem |
+| **Parameter** | **Value**         |
+|---------------|-------------------|
+| Required      | Yes               |
+| Size          | >= 256 MiB        |
+| Format        | Squash filesystem |
 
 Holds the [SquashFS Image](#squashfs-image). Two copies exist so that
 an incomplete upgrade does not brick the system, and to allow fast
@@ -382,22 +384,22 @@ rollbacks when upgrading to a new version.
 
 #### `cfg` - Configuration Data
 
-| Parameter | Value           |
-|-----------|-----------------|
-| Required  | Yes             |
-| Size      | >= 16 MiB       |
-| Format    | EXT4 filesystem |
+| **Parameter** | **Value**       |
+|---------------|-----------------|
+| Required      | Yes             |
+| Size          | >= 16 MiB       |
+| Format        | EXT4 filesystem |
 
 Non-volatile storage of the system configuration and user data.
 Concretely, user data is everything stored under `/root` and `/home`.
 
 #### `var` - Variable Data
 
-| Parameter | Value           |
-|-----------|-----------------|
-| Required  | No              |
-| Size      | >= 16 MiB       |
-| Format    | EXT4 filesystem |
+| **Parameter** | **Value**       |
+|---------------|-----------------|
+| Required      | No              |
+| Size          | >= 16 MiB       |
+| Format        | EXT4 filesystem |
 
 Persistent storage for everything under `/var`. This is maintained as
 a separate filesystem from the data in `cfg`, because while the system
@@ -410,7 +412,7 @@ If `var` is not available, Infix will still persist `/var/lib` using
 [^1]: See [Upgrade & Boot Order](upgrade.md) for more information.
 [^2]: YANG is a modeling language from IETF, replacing that used for
     SNMP (MIB), used to describe the subsystems and properties of
-	the system.
+    the system.
 [^3]: Return Merchandise Authorization (RMA), i.e., broken beyond repair
     by end-user and eligible for return to manufacturer.
 [^4]: Customer specific builds can define their own `failure-config`.
@@ -419,7 +421,6 @@ If `var` is not available, Infix will still persist `/var/lib` using
     even disables ports, to ensure that the device does not cause any
     security problems on the network.  E.g., start forwarding traffic
     between previously isolated VLANs.
-
 
 [2]:      netboot.md
 [FIT]:    https://u-boot.readthedocs.io/en/latest/usage/fit.html

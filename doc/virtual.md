@@ -9,33 +9,38 @@ These images also work with the Graphical Network Simulator ([GNS3][]),
 which is a very user-friendly tool for playing around with simple to
 complex network setups, verifying interoperability between vendors, etc.
 
-
 QEMU
 ----
 
-> **Note:** installation for Debian/Ubuntu based systems: <kbd>sudo apt
-> install virt-manager</kbd> -- dependencies ensure the relevant Qemu
-> packages are pulled in as well.  Installing [virt-manager][virt] helps
-> set up Qemu networking on your system.
+> [!TIP]
+> Installation for Debian/Ubuntu based systems can be done by "simply":
+> <kbd>sudo apt install virt-manager</kbd> -- dependencies ensure the
+> relevant Qemu packages are pulled in as well.  This trick, installing
+> [virt-manager][virt], helps set up Qemu networking on your system.
 
 A virtualized Infix x86_64 instance can easily be launched from a Linux
 system, with [Qemu][] installed, by issuing:
 
-    ./qemu.sh
+```
+$ ./qemu.sh
+...
+```
 
 from an unpacked [release tarball][rels].  From a built source tree of
 Infix the same functionality is bundled as:
 
-    make run
+```
+$ make run
+...
+```
 
 To change settings, e.g. networking, <kbd>make run-menuconfig</kbd>, or
 from a pre-built Infix release tarball, using <kbd>./qemu.sh -c</kbd>
 
 The Infix test suite is built around Qemu and [Qeneth][qeth], see:
 
- * [Regression Testing with Infamy](testing.md)
- * [Infamy Docker Image](https://github.com/kernelkit/infix/blob/main/test/docker/README.md)
-
+* [Regression Testing with Infamy](testing.md)
+* [Infamy Docker Image](https://github.com/kernelkit/infix/blob/main/test/docker/README.md)
 
 GNS3
 ----
