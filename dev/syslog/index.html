@@ -1732,12 +1732,12 @@ model for the help texts:</p>
 </code></pre></div>
 <p>To change the defaults to something smaller, 512 kiB and 20 (remember
 everything after .0 is compressed, and text compresses well):</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>admin@example:/config/syslog/file-rotation/&gt;<span class="w"> </span><span class="nb">set</span><span class="w"> </span>max-file-size<span class="w"> </span><span class="m">512</span>
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>admin@example:/config/syslog/file-rotation/&gt;<span class="w"> </span><span class="nb">set</span><span class="w"> </span>number-of-files<span class="w"> </span><span class="m">20</span>
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>admin@example:/config/syslog/file-rotation/&gt;<span class="w"> </span>show
-<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>number-of-files<span class="w"> </span><span class="m">20</span><span class="p">;</span>
-<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>max-file-size<span class="w"> </span><span class="m">512</span><span class="p">;</span>
-<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>admin@example:/config/syslog/file-rotation/&gt;<span class="w"> </span>leave
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>admin@example:/config/syslog/file-rotation/&gt; set max-file-size 512
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>admin@example:/config/syslog/file-rotation/&gt; set number-of-files 20
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>admin@example:/config/syslog/file-rotation/&gt; show
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>number-of-files 20;
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>max-file-size 512;
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>admin@example:/config/syslog/file-rotation/&gt; leave
 <a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>admin@example:/&gt;
 </code></pre></div>
 <h2 id="log-format">Log Format<a class="headerlink" href="#log-format" title="Permanent link">&para;</a></h2>
@@ -1773,16 +1773,16 @@ because your device may not have DNS set up or even available, and some
 remote syslog servers do not support receiving time stamped log messages
 -- this is of course entirely dependent on how the remote server is set
 up, as well as local policy.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>admin@example:/config/&gt;<span class="w"> </span>edit<span class="w"> </span>syslog
-<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">       </span>actions<span class="w"> </span>file-rotation<span class="w">        </span>server
-<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>admin@example:/config/&gt;<span class="w"> </span>edit<span class="w"> </span>syslog<span class="w"> </span>actions<span class="w"> </span>destination<span class="w"> </span>moon
-<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>admin@example:/config/syslog/actions/destination/moon/&gt;<span class="w"> </span><span class="nb">set</span>
-<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w"> </span>facility-list<span class="w">    </span>log-format<span class="w">           </span>udp
-<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>admin@example:/config/syslog/actions/destination/moon/&gt;<span class="w"> </span><span class="nb">set</span><span class="w"> </span>udp
-<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="w"> </span>address<span class="w">    </span>port
-<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>admin@example:/config/syslog/actions/destination/moon/&gt;<span class="w"> </span><span class="nb">set</span><span class="w"> </span>udp<span class="w"> </span>address<span class="w"> </span><span class="m">192</span>.168.0.12
-<a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a>admin@example:/config/syslog/actions/destination/moon/&gt;<span class="w"> </span><span class="nb">set</span><span class="w"> </span>facility-list<span class="w"> </span>container<span class="w"> </span>severity<span class="w"> </span>all
-<a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a>admin@example:/config/syslog/actions/destination/moon/&gt;<span class="w"> </span>leave
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>admin@example:/config/&gt; edit syslog
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>       actions file-rotation        server
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>admin@example:/config/&gt; edit syslog actions destination moon
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>admin@example:/config/syslog/actions/destination/moon/&gt; set
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a> facility-list    log-format           udp
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>admin@example:/config/syslog/actions/destination/moon/&gt; set udp
+<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a> address    port
+<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>admin@example:/config/syslog/actions/destination/moon/&gt; set udp address 192.168.0.12
+<a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a>admin@example:/config/syslog/actions/destination/moon/&gt; set facility-list container severity all
+<a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a>admin@example:/config/syslog/actions/destination/moon/&gt; leave
 <a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a>admin@example:/&gt;
 </code></pre></div>
 <div class="admonition tip">
@@ -1793,11 +1793,11 @@ found by tapping the Tab key.</p>
 <h2 id="acting-as-a-log-server">Acting as a Log Server<a class="headerlink" href="#acting-as-a-log-server" title="Permanent link">&para;</a></h2>
 <p>The syslog server can act as a log sink for other devices on a LAN.  For
 this to work you need a static IP address, here we use 10.0.0.1/24.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>admin@example:/&gt;<span class="w"> </span>configure
-<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>admin@example:/config/&gt;<span class="w"> </span>edit<span class="w"> </span>syslog<span class="w"> </span>server
-<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>admin@example:/config/syslog/server/&gt;<span class="w"> </span><span class="nb">set</span><span class="w"> </span>enabled<span class="w"> </span><span class="nb">true</span>
-<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>admin@example:/config/syslog/server/&gt;<span class="w"> </span><span class="nb">set</span><span class="w"> </span>listen<span class="w"> </span>udp<span class="w"> </span><span class="m">514</span><span class="w"> </span>address<span class="w"> </span><span class="m">10</span>.0.0.1
-<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>admin@example:/config/syslog/server/&gt;<span class="w"> </span>leave
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>admin@example:/&gt; configure
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>admin@example:/config/&gt; edit syslog server
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>admin@example:/config/syslog/server/&gt; set enabled true
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>admin@example:/config/syslog/server/&gt; set listen udp 514 address 10.0.0.1
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>admin@example:/config/syslog/server/&gt; leave
 <a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>admin@example:/&gt;
 </code></pre></div>
 <p>See the above <a href="#log-to-file">Log to File</a> section on how to set up

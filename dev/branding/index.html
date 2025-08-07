@@ -2037,11 +2037,12 @@ by default, you may want to look into <code>GEN_IFACE_OPTS</code>.</p>
 </code></pre></div>
 <p>The <code>motd-banner</code> is a binary type, which is basically a Base64 encoded
 text file without line breaks (<code>-w0</code>):</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>$<span class="w"> </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Li0tLS0tLS0uCnwgIC4gLiAgfCBJbmZpeCAtLSBhIE5ldHdvcmsgT3BlcmF0aW5nIFN5c3RlbQp8LS4gdiAuLXwgaHR0cHM6Ly9rZXJuZWxraXQuZ2l0aHViLmlvCictJy0tLSctJwo=&quot;</span><span class="w"> </span><span class="p">|</span>base64<span class="w"> </span>-d
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>.-------.
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="p">|</span><span class="w">  </span>.<span class="w"> </span>.<span class="w">  </span><span class="p">|</span><span class="w"> </span>Infix<span class="w"> </span>OS<span class="w"> </span>—<span class="w"> </span>Immutable.Friendly.Secure
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="p">|</span>-.<span class="w"> </span>v<span class="w"> </span>.-<span class="p">|</span><span class="w"> </span>https://kernelkit.github.io
-<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="s1">&#39;-&#39;</span>---<span class="s1">&#39;-&#39;</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>$ echo &quot;Li0tLS0tLS0uCnwgIC4gLiAgfCBJbmZpeCAtLSBhIE5ldHdvcmsgT3BlcmF0aW5nIFN5c3RlbQp8LS4gdiAuLXwgaHR0cHM6Ly9rZXJuZWxraXQuZ2l0aHViLmlvCictJy0tLSctJwo=&quot; \
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>    | base64 -d
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>.-------.
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>|  . .  | Infix OS — Immutable.Friendly.Secure
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>|-. v .-| https://kernelkit.github.io
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>&#39;-&#39;---&#39;-&#39;
 </code></pre></div>
 <h4 id="ietf-keystore">IETF Keystore<a class="headerlink" href="#ietf-keystore" title="Permanent link">&para;</a></h4>
 <p>Notice how both the public and private keys are left empty here, this
