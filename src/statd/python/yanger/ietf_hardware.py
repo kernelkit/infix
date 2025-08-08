@@ -61,18 +61,16 @@ def usb_port_components(systemjson):
 
             path = usb_port["path"]
             if os.path.basename(path) == "authorized_default":
-                # TODO: Untestable. Should be done via the host API
-                if os.path.exists(path):
-                    with open(path, "r") as f:
-                        names.append(usb_port["name"])
-                        data = int(f.readline().strip())
-                        enabled = "unlocked" if data == 1 else "locked"
-                        port["state"] = {}
-                        port["state"]["admin-state"] = enabled
-                        port["name"] = usb_port["name"]
-                        port["class"] = "infix-hardware:usb"
-                        port["state"]["oper-state"] = "enabled"
-                        ports.append(port)
+                if HOST.exists(path):
+                    names.append(usb_port["name"])
+                    data = int(HOST.read(path))
+                    enabled = "unlocked" if data == 1 else "locked"
+                    port["state"] = {}
+                    port["state"]["admin-state"] = enabled
+                    port["name"] = usb_port["name"]
+                    port["class"] = "infix-hardware:usb"
+                    port["state"]["oper-state"] = "enabled"
+                    ports.append(port)
 
     return ports
 

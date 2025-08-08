@@ -1,4 +1,4 @@
-name: Self Trigger
+name: Kernelkit Trigger
 
 on:
   pull_request:
@@ -11,6 +11,7 @@ on:
 
 jobs:
   build-x86_64:
+    if: startsWith(github.repository, 'kernelkit/')
     uses: ./.github/workflows/build.yml
     with:
       target: "x86_64"
@@ -18,6 +19,7 @@ jobs:
       flavor: "_minimal"
 
   build-aarch64:
+    if: startsWith(github.repository, 'kernelkit/')
     uses: ./.github/workflows/build.yml
     with:
       target: "aarch64"
@@ -25,6 +27,7 @@ jobs:
       flavor: "_minimal"
 
   test-run-x86_64:
+    if: startsWith(github.repository, 'kernelkit/')
     needs: build-x86_64
     uses: ./.github/workflows/test.yml
     with:
@@ -32,6 +35,7 @@ jobs:
       name: "infix"
 
   test-publish-x86_64:
+    if: startsWith(github.repository, 'kernelkit/')
     needs: test-run-x86_64
     uses: ./.github/workflows/publish.yml
 
