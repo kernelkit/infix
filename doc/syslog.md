@@ -8,10 +8,10 @@ details how to log to external media or remote syslog servers.
 It is also possible to set up the device to act as a syslog server (log
 sink), this is covered briefly at the very end of this document.
 
-> **Note:** the native logging cannot be modified, only the log file
-> rotation can be changed.  Please see the `dir` admin-exec command for
-> a listing of existing native log files.
-
+> [!NOTE]
+> The default logging setup in the system cannot be modified, only the
+> log file rotation.  Please see the `dir` admin-exec command for a
+> listing of existing log files.
 
 ## Log to File
 
@@ -21,7 +21,7 @@ an example.
 
 For a list of available log facilities, see the table in a later section.
 
-```bash
+```
 admin@example:/> configure
 admin@example:/config/> edit syslog
 admin@example:/config/syslog/> edit actions log-file file:/media/log/mylog
@@ -37,11 +37,11 @@ admin@example:/config/syslog/actions/log-file/file:/media/log/mylog/> leave
 admin@example:/>
 ```
 
-> **Note:** the `log-file` syntax requires the leading prefix `file:`.
-> If the path is not absolute, e.g., `file:mylog`, the file is saved to
-> the system default path, i.e., `/log/mylog`.  In this case, verify
-> that the filename is not already in use.
-
+> [!IMPORTANT]
+> The `log-file` syntax requires the leading prefix `file:`.  If the
+> path is not absolute, e.g., `file:mylog`, the file is saved to the
+> system default path, i.e., `/log/mylog`.  In this case, verify that
+> the filename is not already in use.
 
 ## Log Rotation
 
@@ -51,13 +51,16 @@ disk with outdated logs.  A rotated file is saved in stages and older
 ones are also compressed (using `gzip`).  Use the `show log` command in
 admin-exec context to start the log file viewer:
 
-    admin@example:/config/syslog/> do show log
-    log  log.0  log.1.gz  log.2.gz  log.3.gz  log.4.gz  log.5.gz
-    admin@example:/config/syslog/> do show log log.1.gz
+```
+admin@example:/config/syslog/> do show log
+log  log.0  log.1.gz  log.2.gz  log.3.gz  log.4.gz  log.5.gz
+admin@example:/config/syslog/> do show log log.1.gz
+```
 
-> **Tip:** use the Tab key on your keyboard list available log files.
-> The `do` prefix is also very useful in configure context to access
-> commands from admin-exec context.
+> [!TIP]
+> Use the Tab key on your keyboard list available log files.  The `do`
+> prefix is also very useful in configure context to access commands
+> from admin-exec context.
 
 By default 10 compressed older files are saved.  Here the oldest is
 `log.5.gz` and the most recently rotated one is `log.0`.
@@ -66,8 +69,8 @@ Log file rotation can be configured both globally and per log file.
 Here we show the global settings, the set up is the same for per log
 file, which if unset inherit the global settings:
 
-```bash
-admin@example:/> configure 
+```
+admin@example:/> configure
 admin@example:/config/> edit syslog file-rotation
 admin@example:/config/syslog/file-rotation/> show
 admin@example:/config/syslog/file-rotation/>
@@ -76,7 +79,7 @@ admin@example:/config/syslog/file-rotation/>
 The defaults are not shown.  We can inspect them by asking the YANG
 model for the help texts:
 
-```bash
+```
 admin@example:/config/syslog/file-rotation/> help
    max-file-size    number-of-files
 admin@example:/config/syslog/file-rotation/> help max-file-size 
@@ -102,16 +105,15 @@ DEFAULT
 To change the defaults to something smaller, 512 kiB and 20 (remember
 everything after .0 is compressed, and text compresses well):
 
-```bash
+```
 admin@example:/config/syslog/file-rotation/> set max-file-size 512
 admin@example:/config/syslog/file-rotation/> set number-of-files 20
 admin@example:/config/syslog/file-rotation/> show
 number-of-files 20;
 max-file-size 512;
 admin@example:/config/syslog/file-rotation/> leave
-admin@example:/> 
+admin@example:/>
 ```
-
 
 ## Log Format
 
@@ -121,9 +123,11 @@ and remote log server capabilities, or policies, the [RFC5424][] format
 is often preferred since it not only has better time resolution but also
 supports structured logging:
 
-	BSD     : myproc[8710]: Kilroy was here.
-	RFC3164 : Aug 24 05:14:15 192.0.2.1 myproc[8710]: Kilroy was here.
-	RFC5424 : 2003-08-24T05:14:15.000003-07:00 192.0.2.1 myproc 8710 - - Kilroy was here.
+```
+BSD     : myproc[8710]: Kilroy was here.
+RFC3164 : Aug 24 05:14:15 192.0.2.1 myproc[8710]: Kilroy was here.
+RFC5424 : 2003-08-24T05:14:15.000003-07:00 192.0.2.1 myproc 8710 - - Kilroy was here.
+```
 
 The BSD format is only applicable to remote logging.  It remains the
 default for compatibility reasons, and is recommended since the device
@@ -132,7 +136,7 @@ perform time stamping at the time of arrival.
 
 Configuring the log format is the same for log files and remotes:
 
-```bash
+```
 admin@example:/config/> edit syslog actions log-file file:foobar 
 admin@example:/config/syslog/actions/log-file/file:foobar/> set log-format 
                   bsd               rfc3164              rfc5424
@@ -140,9 +144,6 @@ admin@example:/config/syslog/actions/log-file/file:foobar/> set log-format rfc54
 admin@example:/config/syslog/actions/log-file/file:foobar/> leave
 admin@example:/>
 ```
-
-[RFC3164]: https://datatracker.ietf.org/doc/html/rfc3164
-[RFC5424]: https://datatracker.ietf.org/doc/html/rfc5424
 
 ## Log to Remote Server
 
@@ -158,7 +159,7 @@ remote syslog servers do not support receiving time stamped log messages
 -- this is of course entirely dependent on how the remote server is set
 up, as well as local policy.
 
-```bash
+```
 admin@example:/config/> edit syslog
        actions file-rotation        server
 admin@example:/config/> edit syslog actions destination moon
@@ -172,16 +173,16 @@ admin@example:/config/syslog/actions/destination/moon/> leave
 admin@example:/>
 ```
 
-> **Note:** the alternatives shown below each prompt in the example
-> above can be found by tapping the Tab key.
-
+> [!TIP]
+> The alternatives shown below each prompt in the example above can be
+> found by tapping the Tab key.
 
 ## Acting as a Log Server
 
 The syslog server can act as a log sink for other devices on a LAN.  For
 this to work you need a static IP address, here we use 10.0.0.1/24.
 
-```bash
+```
 admin@example:/> configure
 admin@example:/config/> edit syslog server
 admin@example:/config/syslog/server/> set enabled true
@@ -193,7 +194,6 @@ admin@example:/>
 See the above [Log to File](#log-to-file) section on how to set up
 filtering of received logs to local files.  Please note, filtering based
 on property, e.g., hostname, is not supported yet.
-
 
 ### Facilities
 
@@ -225,3 +225,6 @@ on property, e.g., hostname, is not supported yet.
 | 23       | web*         | local7, reserved for nginx web server     |
 
 Facilities marked `*` are local augments to the model.
+
+[RFC3164]: https://datatracker.ietf.org/doc/html/rfc3164
+[RFC5424]: https://datatracker.ietf.org/doc/html/rfc5424
