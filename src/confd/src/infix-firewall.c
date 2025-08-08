@@ -258,6 +258,56 @@ static int generate_firewalld_conf(struct lyd_node *tree)
 	return SR_ERR_OK;
 }
 
+static int create_default_zone(sr_session_ctx_t *session, const char *name,
+			      const char *policy, const char *desc,
+			      const char *services[])
+{
+	char xpath[256];
+	int rc;
+
+	snprintf(xpath, sizeof(xpath), CFG_XPATH "/zones/zone[name='%s']/name", name);
+	rc = sr_set_item_str(session, xpath, name, NULL, 0);
+	if (rc) return rc;
+
+	snprintf(xpath, sizeof(xpath), CFG_XPATH "/zones/zone[name='%s']/description", name);
+	rc = sr_set_item_str(session, xpath, desc, NULL, 0);
+	if (rc) return rc;
+
+	snprintf(xpath, sizeof(xpath), CFG_XPATH "/zones/zone[name='%s']/policy", name);
+	rc = sr_set_item_str(session, xpath, policy, NULL, 0);
+	if (rc) return rc;
+
+	for (int i = 0; services && services[i]; i++) {
+		snprintf(xpath, sizeof(xpath), CFG_XPATH "/zones/zone[name='%s']/services[.='%s']", name, services[i]);
+		rc = sr_set_item_str(session, xpath, services[i], NULL, 0);
+		if (rc) return rc;
+	}
+
+	return SR_ERR_OK;
+}
+
+static int infer_default_zones(sr_session_ctx_t *session)
+{
+	int rc;
+
+	const char *internal_services[] = {"ssh", "dns", "http", "https", NULL};
+	rc = create_default_zone(session, "internal", "accept", "Internal trusted network", internal_services);
+	if (rc) return rc;
+
+	rc = create_default_zone(session, "external", "drop", "External untrusted network", NULL);
+	if (rc) return rc;
+
+	const char *dmz_services[] = {"http", "https", NULL};
+	rc = create_default_zone(session, "dmz", "reject", "Demilitarized zone", dmz_services);
+	if (rc) return rc;
+
+	const char *public_services[] = {"ssh", NULL};
+	rc = create_default_zone(session, "public", "reject", "Public access zone", public_services);
+	if (rc) return rc;
+
+	return SR_ERR_OK;
+}
+
 static int change(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
 		  const char *xpath, sr_event_t event, unsigned request_id, void *_confd)
 {
@@ -295,7 +345,17 @@ static int change(sr_session_ctx_t *session, uint32_t sub_id, const char *module
 		goto err_release_data;
 
 	if (lydx_is_enabled(global, "enabled")) {
+		sr_data_t *zones_data;
+
 		system("initctl -nbq enable firewalld");
+
+		if (!sr_get_data(session, CFG_XPATH "/zones", 0, 0, 0, &zones_data) &&
+		    (!zones_data || !zones_data->tree)) {
+			infer_default_zones(session);
+			sr_apply_changes(session, 0);
+		}
+		if (zones_data)
+			sr_release_data(zones_data);
 	} else {
 		system("initctl -nbq disable firewalld");
 		goto done;
@@ -390,6 +450,8 @@ int infix_firewall_init(struct confd *confd)
 	mkdir(FIREWALLD_SERVICES_DIR, 0755);
 	mkdir(FIREWALLD_POLICIES_DIR, 0755);
 	
+	sr_apply_changes(confd->session, 0);
+
 	REGISTER_CHANGE(confd->session, MODULE, CFG_XPATH, 0, change, confd, &confd->sub);
 	
 	return SR_ERR_OK;

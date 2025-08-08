@@ -29,6 +29,7 @@ MODULES=(
 	"infix-dhcp-client@2025-01-29.yang"
 	"infix-dhcp-server@2025-01-29.yang"
 	"infix-firewall@2025-04-26.yang"
+	"infix-firewall-services@2025-04-26.yang"
 	"infix-meta@2024-10-18.yang"
 	"infix-system@2025-01-25.yang"
 	"infix-services@2024-12-03.yang"

@@ -13,6 +13,11 @@ module infix-firewall {
     reference "RFC 8343: A YANG Data Model for Interface Management";
   }
 
+  import infix-firewall-services {
+    prefix ifw-svc;
+    reference "infix-firewall-services.yang";
+  }
+
   organization "KernelKit";
   contact      "kernelkit@googlegroups.com";
   description  "Zone-based firewall inspired by firewalld concepts.";
@@ -308,8 +313,11 @@ module infix-firewall {
 
         leaf-list services {
           description "Services allowed to ingress this zone.";
-          type leafref {
-            path "../../../services/service/name";
+          type union {
+            type leafref {
+              path "../../../services/service/name";
+            }
+            type ifw-svc:well-known-service;
           }
         }
 
@@ -365,8 +373,11 @@ module infix-firewall {
 
       leaf-list service {
         description "Allowed services, all other traffic follows the policy default action.";
-        type leafref {
-          path "../../services/service/name";
+        type union {
+          type leafref {
+            path "../../services/service/name";
+          }
+          type ifw-svc:well-known-service;
         }
       }
    }
