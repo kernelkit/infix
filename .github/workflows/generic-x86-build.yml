@@ -2,10 +2,10 @@ name: Generic X86 GitHub Build
 
 on:
   push:
-  pull_request:
 
 jobs:
   build:
+    if: github.repository != 'kernelkit/infix'
     name: Infix x86_64
     runs-on: ubuntu-latest
 
