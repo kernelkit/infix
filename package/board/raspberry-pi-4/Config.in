@@ -9,33 +9,6 @@ config BR2_PACKAGE_RASPBERRY_PI_4
 	select BR2_PACKAGE_RPI_FIRMWARE_VARIANT_PI4
 	select BR2_PACKAGE_RPI_FIRMWARE_VARIANT_PI4_X
 	select SDCARD_AUX
-	select BR2_TARGET_UBOOT
-	select BR2_TARGET_UBOOT_FORMAT_CUSTOM
-	select BR2_TARGET_UBOOT_NEEDS_DTC
 	select BR2_TARGET_UBOOT_NEEDS_UBOOT_TOOLS
-	select BR2_TARGET_UBOOT_BUILD_SYSTEM_KCONFIG
 	help
 	  Raspberry pi 4
-
-# Don't redefine - just set conditional defaults
-if BR2_PACKAGE_RASPBERRY_PI_4
-
-config BR2_TARGET_UBOOT_BOARD_DEFCONFIG
-	default "rpi_arm64"
-
-config BR2_TARGET_UBOOT_CONFIG_FRAGMENT_FILES
-	default "${BR2_EXTERNAL_INFIX_PATH}/board/common/uboot/extras.config ${BR2_EXTERNAL_INFIX_PATH}/src/board/raspberry-pi-4/uboot/extras.config"
-
-config BR2_TARGET_UBOOT_FORMAT_CUSTOM_NAME
-	default "arch/arm/dts/infix-key.dtbo arch/arm/dts/rpi-env.dtbo"
-
-config BR2_TARGET_UBOOT_CUSTOM_DTS_PATH
-	default "${BR2_EXTERNAL_INFIX_PATH}/src/board/raspberry-pi-4/uboot/rpi-env.dtso"
-
-config BR2_PACKAGE_RPI_FIRMWARE_CONFIG_FILE
-	default "${BR2_EXTERNAL_INFIX_PATH}/src/board/raspberry-pi-4/config.txt"
-
-config BR2_PACKAGE_RPI_FIRMWARE_CMDLINE_FILE
-	default "${BR2_EXTERNAL_INFIX_PATH}/src/board/raspberry-pi-4/cmdline.txt"
-
-endif
