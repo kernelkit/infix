@@ -14,7 +14,7 @@
 static char rawgetch(void)
 {
 	struct termios saved, c;
-	char key;
+	int key;
 
 	if (tcgetattr(fileno(stdin), &saved) < 0)
 		return -1;
@@ -33,7 +33,10 @@ static char rawgetch(void)
 	key = getchar();
 	tcsetattr(fileno(stdin), TCSANOW, &saved);
 
-	return key;
+	if (key == EOF)
+		return -1;
+
+	return (char)key;
 }
 
 int yorn(const char *fmt, ...)

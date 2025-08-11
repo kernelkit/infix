@@ -26,10 +26,6 @@ static int do_erase(const char *path)
 		}
 
 		cfg_adjust(path, NULL, fn, len);
-		if (access(fn, F_OK)) {
-			fprintf(stderr, "No such file: %s\n", fn);
-			return -1;
-		}
 	} else
 		fn = (char *)path;
 
