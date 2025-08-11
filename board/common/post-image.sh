@@ -86,28 +86,30 @@ if [ "$FIT_IMAGE" = "y" ]; then
     $common/mkfit.sh
 fi
 
+# Only for regular builds, not bootloader-only builds
 if [ "$BR2_TARGET_ROOTFS_SQUASHFS" = "y" ]; then
     rel=$(ver)
     ln -sf rootfs.squashfs "$BINARIES_DIR/${NAME}${rel}.img"
     if [ -n "$rel" ]; then
 	ln -sf "${NAME}${rel}.img" "$BINARIES_DIR/${NAME}.img"
     fi
+
+    cp "$BR2_EXTERNAL_INFIX_PATH/board/common/rootfs/usr/bin/onieprom" "$BINARIES_DIR/"
+
+    # Menuconfig support for modifying Qemu args in release tarballs
+    cp "$BR2_EXTERNAL_INFIX_PATH/board/common/qemu/qemu.sh" "$BINARIES_DIR/"
+    sed -e "s/@ARCH@/QEMU_$BR2_ARCH/" \
+	-e "s/@DISK_IMG@/$diskimg/"   \
+	< "$BR2_EXTERNAL_INFIX_PATH/board/common/qemu/Config.in.in" \
+	> "$BINARIES_DIR/Config.in"
+    rm -f "$BINARIES_DIR/qemu.cfg"
+    CONFIG_="CONFIG_" BR2_CONFIG="$BINARIES_DIR/qemu.cfg" \
+	   "$O/build/buildroot-config/conf" --olddefconfig "$BINARIES_DIR/Config.in"
+    rm -f "$BINARIES_DIR/qemu.cfg.old" "$BINARIES_DIR/.config.old"
+
+    # Quick intro for beginners, with links to more information
+    cp "$BR2_EXTERNAL_INFIX_PATH/board/common/README.txt" "$BINARIES_DIR/"
 fi
-
-# Menuconfig support for modifying Qemu args in release tarballs
-cp "$BR2_EXTERNAL_INFIX_PATH/board/common/rootfs/usr/bin/onieprom" "$BINARIES_DIR/"
-cp "$BR2_EXTERNAL_INFIX_PATH/board/common/qemu/qemu.sh" "$BINARIES_DIR/"
-sed -e "s/@ARCH@/QEMU_$BR2_ARCH/" \
-    -e "s/@DISK_IMG@/$diskimg/"   \
-    < "$BR2_EXTERNAL_INFIX_PATH/board/common/qemu/Config.in.in" \
-    > "$BINARIES_DIR/Config.in"
-rm -f "$BINARIES_DIR/qemu.cfg"
-CONFIG_="CONFIG_" BR2_CONFIG="$BINARIES_DIR/qemu.cfg" \
-       "$O/build/buildroot-config/conf" --olddefconfig "$BINARIES_DIR/Config.in"
-rm -f "$BINARIES_DIR/qemu.cfg.old" "$BINARIES_DIR/.config.old"
-
-# Quick intro for beginners, with links to more information
-cp "$BR2_EXTERNAL_INFIX_PATH/board/common/README.txt" "$BINARIES_DIR/"
 
 boards=$(${BR2_EXTERNAL_INFIX_PATH}/board/common/selected-boards.sh ${BR2_EXTERNAL_INFIX_PATH} ${O})
 for board in $boards; do
