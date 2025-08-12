@@ -1,0 +1,143 @@
+name: Build Bootloaders
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch to build from'
+        default: 'main'
+        type: string
+
+jobs:
+  build:
+    name: Build ${{ matrix.defconfig }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        defconfig:
+          - fireant_boot
+          - cn9130_crb_boot
+          - aarch64_qemu_boot
+          - rpi4_boot
+    env:
+      MAKEFLAGS: -j5
+    steps:
+      - name: Cleanup Build Folder
+        run: |
+          ls -la ./
+          rm -rf ./* || true
+          rm -rf ./.??* || true
+          ls -la ./
+
+      - name: Checkout infix repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.branch || github.ref }}
+          clean: true
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Set Build Variables
+        id: vars
+        run: |
+          defconfig=${{ matrix.defconfig }}
+          version=$(awk -F'"' '/BR2_TARGET_UBOOT_CUSTOM_VERSION_VALUE=/ {print $2}' configs/${defconfig}_defconfig)
+          version=${version:-git}
+          filename=$(echo "${defconfig}" | tr '_' '-')
+
+          # TODO: Replace hardcoded rev with actual revision stepping
+          rev="latest"
+
+          archive="${filename}-${version}-${rev}.tar.gz"
+          dirname="${filename}-${version}-${rev}"
+
+          echo "defconfig=${defconfig}" >> $GITHUB_OUTPUT
+          echo "version=${version}"     >> $GITHUB_OUTPUT
+          echo "rev=${rev}"             >> $GITHUB_OUTPUT
+          echo "archive=${archive}"     >> $GITHUB_OUTPUT
+          echo "dirname=${dirname}"     >> $GITHUB_OUTPUT
+
+          echo "Building ${defconfig}_defconfig, version ${version}-${rev}, artifact ${archive} ..."
+
+      - name: Restore Cache of dl/
+        uses: actions/cache@v4
+        with:
+          path: dl/
+          key: dl-boot-${{ hashFiles('.git/modules/buildroot/HEAD', 'configs/*', 'package/*/*.hash') }}
+          restore-keys: |
+            dl-boot-
+            dl-
+
+      - name: Restore Cache of .ccache/
+        uses: actions/cache@v4
+        with:
+          path: .ccache/
+          key: ccache-boot-${{ matrix.defconfig }}-${{ hashFiles('.git/modules/buildroot/HEAD', 'package/*/*.hash') }}
+          restore-keys: |
+            ccache-boot-${{ matrix.defconfig }}-
+            ccache-boot-
+            ccache-
+
+      - name: Configure ${{ matrix.defconfig }}_defconfig
+        run: |
+          make ${{ matrix.defconfig }}_defconfig
+
+      - name: Build ${{ matrix.defconfig }}_defconfig
+        run: |
+          echo "Building ${{ matrix.defconfig }}_defconfig ..."
+          make -j$((`getconf _NPROCESSORS_ONLN` / 2 + 2))
+
+      - name: Resulting size of build
+        run: |
+          printf "Size of output/images/: "
+          ls -l output/images/
+
+      - name: Prepare ${{ matrix.defconfig }} Artifact
+        run: |
+          cd output/
+          mv images ${{ steps.vars.outputs.dirname }}
+          tar cfz ${{ steps.vars.outputs.archive }} ${{ steps.vars.outputs.dirname }}/
+
+      - uses: actions/upload-artifact@v4
+        with:
+          path: output/${{ steps.vars.outputs.archive }}
+          name: artifact-${{ matrix.defconfig }}
+
+  publish:
+    name: Upload Bootloader Artifacts
+    runs-on: ubuntu-latest
+    needs: build
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: "artifact-*"
+          merge-multiple: true
+
+      - name: Create checksums ...
+        run: |
+          for file in *.tar.gz; do
+              sha256sum $file > $file.sha256
+          done
+
+      - uses: ncipollo/release-action@v1
+        with:
+          allowUpdates: true
+          omitName: true
+          omitBody: true
+          omitBodyDuringUpdate: true
+          prerelease: true
+          tag: "latest-boot"
+          token: ${{ secrets.GITHUB_TOKEN }}
+          artifacts: "*.tar.gz*"
+
+      - name: Summary
+        run: |
+          cat <<EOF >> $GITHUB_STEP_SUMMARY
+          # Bootloader Build Complete! :rocket:
+
+          For the public download links of these bootloader artifacts, please see:
+           <https://github.com/kernelkit/infix/releases/tag/latest-boot>
+          EOF
