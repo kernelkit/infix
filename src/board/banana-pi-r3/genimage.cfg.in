@@ -24,8 +24,8 @@ image #INFIX_ID##VERSION#-bpi-r3-sdcard.img {
 
         }
         # BL2 bootloader partition (MediaTek official location)
-    	partition bl2 {
-        	  image = "bl2.img"
+	partition bl2 {
+		  image = "bl2.img"
 		  offset = 1024s   # 0x80000 = sector 1024
 		  size = 4M       # 0x400000
 		  bootable = true
