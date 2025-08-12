@@ -5,41 +5,6 @@ config BR2_PACKAGE_BANANA_PI_R3
 	select BR2_PACKAGE_LINUX_FIRMWARE
 	select BR2_PACKAGE_LINUX_FIRMWARE_MEDIATEK
 	select BR2_PACKAGE_LINUX_FIRMWARE_MEDIATEK_MT7986
-	#select BR2_PACKAGE_BANANA_PI_R3_SDCARD
-       	select SDCARD_AUX
-       	# select BR2_TARGET_ARM_TRUSTED_FIRMWARE
-       	# select  BR2_TARGET_ARM_TRUSTED_FIRMWARE_CUSTOM_GIT # Does not work, needs a hook in the .mk file
-       	# select BR2_TARGET_ARM_TRUSTED_FIRMWARE_FIP
-       	# select BR2_TARGET_ARM_TRUSTED_FIRMWARE_UBOOT_AS_BL33
-       	# select BR2_TARGET_UBOOT
-       	# select BR2_TARGET_UBOOT_FORMAT_CUSTOM
-       	# select BR2_TARGET_UBOOT_NEEDS_DTC
-       	# select BR2_TARGET_UBOOT_NEEDS_UBOOT_TOOLS
-       	# select BR2_TARGET_UBOOT_BUILD_SYSTEM_KCONFIG
-       	help
+	select SDCARD_AUX
+	help
 	  Build Banana PI R3 support
-
-# Don't redefine - just set conditional defaults
-# config BR2_TARGET_UBOOT_BOARD_DEFCONFIG
-# 	default "mt7986a_bpir3_sd"
-
-# config BR2_TARGET_UBOOT_CONFIG_FRAGMENT_FILES
-# 	default "${BR2_EXTERNAL_INFIX_PATH}/board/common/uboot/extras.config ${BR2_EXTERNAL_INFIX_PATH}/src/board/banana-pi-r3/uboot/extras.config"
-
-# config BR2_TARGET_UBOOT_FORMAT_CUSTOM_NAME
-# 	default "arch/arm/dts/infix-key.dtbo arch/arm/dts/rpi-env.dtbo"
-
-# config BR2_TARGET_UBOOT_CUSTOM_DTS_PATH
-# 	default "${BR2_EXTERNAL_INFIX_PATH}/src/board/banana-pi-r3/uboot/rpi-env.dtso"
-
-# config BR2_TARGET_ARM_TRUSTED_FIRMWARE_CUSTOM_REPO_URL
-#        default "https://github.com/mtk-openwrt/arm-trusted-firmware.git"
-
-# config BR2_TARGET_ARM_TRUSTED_FIRMWARE_CUSTOM_REPO_VERSION
-#        default "78a0dfd927bb00ce973a1f8eb4079df0f755887a"
-
-# config BR2_TARGET_ARM_TRUSTED_FIRMWARE_PLATFORM
-#        default "mt7986"
-
-# config BR2_TARGET_ARM_TRUSTED_FIRMWARE_ADDITIONAL_VARIABLES
-#        default "BOOT_DEVICE=sdmmc USE_COHERENT_MEM=1"

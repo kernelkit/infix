@@ -1,10 +1,6 @@
 GENIMAGE_CFG="$(BUILD_DIR)/genimage.cfg"
 GENIMAGE_TMP="$(BUILD_DIR)/genimage.tmp"
 BOARD_DIR="$(BR2_EXTERNAL_INFIX_PATH)/src/board/banana-pi-r3"
-BOOTLOADER_NAME=fip.bin
-BOOTLOADER2_NAME=bl2.img
-
-BOOTLOADER_PATH=/home/lazzer/Documents/github.com/kernelkit/infix3/output-bootloader/images
 
 define BANANA_PI_R3_LINUX_CONFIG_FIXUPS
 	$(call KCONFIG_ENABLE_OPT,CONFIG_ARCH_MEDIATEK)
@@ -39,35 +35,6 @@ define BANANA_PI_R3_LINUX_CONFIG_FIXUPS
 	$(call KCONFIG_SET_OPT,CONFIG_NVMEM_MTK_EFUSE,m)
 	$(call KCONFIG_SET_OPT,CONFIG_CRYPTO_DEV_SAFEXCEL,m)
 endef
-
-ifeq ($(BR2_PACKAGE_BANANA_PI_R3),y)
-define GENERATE_SD_CARD
-	VERSION="-$(INFIX_RELEASE)"
-	cp "$(BOOTLOADER_PATH)/$(BOOTLOADER_NAME)" "$(BINARIES_DIR)"
-	cp "$(BOOTLOADER_PATH)/$(BOOTLOADER2_NAME)" "$(BINARIES_DIR)"
-	sed "s|#VERSION#|$(RELEASE)|"  "$(BOARD_DIR)/genimage.cfg.in" | \
-	sed "s|#INFIX_ID#|$(INFIX_ID)|" > "$(GENIMAGE_CFG)"
-        # Create temporary root path
-	ROOTPATH_TMP=$(mktemp -d)
-	trap 'rm -rf \"$ROOTPATH_TMP\"' EXIT
-
-        # Clean previous genimage temp directory
-	rm -rf "${GENIMAGE_TMP}"
-
-        # Generate the SD card image
-	$(HOST_DIR)/bin/genimage			\
-	    	--rootpath   "${ROOTPATH_TMP}"		\
-		--tmppath    "$(GENIMAGE_TMP)"		\
-                --inputpath  "$(BINARIES_DIR)"		\
-		--outputpath "$(BINARIES_DIR)"		\
-		--config     "${GENIMAGE_CFG}"
-endef
-endif
-.PHONY: generate-sdcard-image
-all: generate-sdcard-image
-generate-sdcard-image: target-post-image
-	$(call GENERATE_SD_CARD)
-
 
 $(eval $(ix-board))
 $(eval $(generic-package))

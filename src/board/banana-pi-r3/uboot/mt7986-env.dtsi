@@ -14,7 +14,7 @@
                        kernel_addr_r = "0x44000000";
                        scriptaddr = "0x48000000";
                        ramdisk_addr_r = "0x4A000000";
-                       
+
                        /* This is a development platform, keep
                         * developer mode statically enabled.
                         */
