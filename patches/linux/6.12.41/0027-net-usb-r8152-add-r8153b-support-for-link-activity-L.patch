@@ -1,7 +1,7 @@
-From 73b60d31a3318344428842c7368b2f1eb0c05596 Mon Sep 17 00:00:00 2001
+From 88b269d1202c6258122074c46da6a473ddbecd68 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Sun, 11 Aug 2024 11:27:35 +0200
-Subject: [PATCH 27/27] net: usb: r8152: add r8153b support for link/activity
+Subject: [PATCH 27/28] net: usb: r8152: add r8153b support for link/activity
  LEDs
 Organization: Wires
 

@@ -1,7 +1,7 @@
-From 0e24579e619a9d3ebb03293822092e03d16d6ad2 Mon Sep 17 00:00:00 2001
+From 0ee7fad47096411012f1f6b2ee6d0977e53f82b6 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Wed, 12 Feb 2025 22:03:14 +0100
-Subject: [PATCH 26/27] net: dsa: mv88e6xxx: Only activate LAG offloading when
+Subject: [PATCH 26/28] net: dsa: mv88e6xxx: Only activate LAG offloading when
  bridged
 Organization: Wires
 
