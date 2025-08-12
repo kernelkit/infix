@@ -11,12 +11,6 @@ on:
       - 'doc/**'
       - 'mkdocs.yml'
       - '.github/workflows/docs.yml'
-  pull_request:
-    types: [opened, synchronize, reopened, labeled]
-    paths:
-      - 'doc/**'
-      - 'mkdocs.yml'
-      - '.github/workflows/docs.yml'
 
 permissions:
   contents: write
