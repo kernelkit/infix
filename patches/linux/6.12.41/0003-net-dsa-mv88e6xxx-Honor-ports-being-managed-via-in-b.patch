@@ -1,7 +1,7 @@
-From 379dd2a00dc647b034befead65b26e467e63ae75 Mon Sep 17 00:00:00 2001
+From ea391b706ca007c6b7ef5cb94eae03c8b062ebfc Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Mon, 22 Apr 2024 23:18:01 +0200
-Subject: [PATCH 03/27] net: dsa: mv88e6xxx: Honor ports being managed via
+Subject: [PATCH 03/28] net: dsa: mv88e6xxx: Honor ports being managed via
  in-band-status
 Organization: Wires
 

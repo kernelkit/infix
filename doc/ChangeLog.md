@@ -3,10 +3,12 @@ Change Log
 
 All notable changes to the project are documented in this file.
 
-[v25.07.0][UNRELEASED] -
+[v25.08.0][UNRELEASED] -
 -------------------------
 
 ### Changes
+- Upgrade Buildroot to 2025.02.5 (LTS)
+- Upgrade Linux kernel to 6.12.41 (LTS)
 - Raspberry Pi 4 is now a part of the aarch64 image, as well as a SDcard
   image for initial deployments.
 

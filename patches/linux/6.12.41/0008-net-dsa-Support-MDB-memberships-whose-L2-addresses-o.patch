@@ -1,7 +1,7 @@
-From bbbf265610459ec49afcde923d1872ca3e2ad679 Mon Sep 17 00:00:00 2001
+From 98b74c2e6fac87118c97b676c426bb7c8effccbe Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Tue, 16 Jan 2024 16:00:55 +0100
-Subject: [PATCH 08/27] net: dsa: Support MDB memberships whose L2 addresses
+Subject: [PATCH 08/28] net: dsa: Support MDB memberships whose L2 addresses
  overlap
 Organization: Wires
 

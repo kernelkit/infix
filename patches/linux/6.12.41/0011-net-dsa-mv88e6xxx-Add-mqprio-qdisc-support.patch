@@ -1,7 +1,7 @@
-From a239baf492b7c4a1280562bb9478006627b73036 Mon Sep 17 00:00:00 2001
+From 3f51b144a86bd1b7f14c096898d3f1eda2348694 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Tue, 28 May 2024 11:04:22 +0200
-Subject: [PATCH 11/27] net: dsa: mv88e6xxx: Add mqprio qdisc support
+Subject: [PATCH 11/28] net: dsa: mv88e6xxx: Add mqprio qdisc support
 Organization: Wires
 
 Add support for attaching mqprio qdisc's to mv88e6xxx ports and use

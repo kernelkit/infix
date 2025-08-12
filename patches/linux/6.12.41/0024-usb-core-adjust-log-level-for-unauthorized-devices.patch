@@ -1,7 +1,7 @@
-From df19ceb2579bd87d58f2caab739d8ba678785f5c Mon Sep 17 00:00:00 2001
+From 9baf482d227725038fb3cb45c8867f572834fdde Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Mon, 29 Apr 2024 15:14:51 +0200
-Subject: [PATCH 24/27] usb: core: adjust log level for unauthorized devices
+Subject: [PATCH 24/28] usb: core: adjust log level for unauthorized devices
 Organization: Wires
 
 The fact that a USB device currently is not authorized is not an error,
