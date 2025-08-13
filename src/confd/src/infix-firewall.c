@@ -139,15 +139,19 @@ static int generate_zone(const char *name, struct lyd_node *cfg)
 		}
 	}
 	
+#if 0 /* ADVANCED FEATURE: icmp-blocks removed from YANG model */
 	LYX_LIST_FOR_EACH(lyd_child(cfg), node, "icmp-blocks") {
 		const char *icmp_type = lydx_get_cattr(node, "icmp-type");
 		fprintf(fp, "  <icmp-block name=\"%s\"/>\n", icmp_type);
 	}
+#endif
 	
 	if (lydx_is_enabled(cfg, "forwarding"))
 		fprintf(fp, "  <forward/>\n");
+#if 0 /* REMOVED: Zone-level masquerade - handled by policy rules instead */
 	if (lydx_is_enabled(cfg, "masquerade"))
 		fprintf(fp, "  <masquerade/>\n");
+#endif
 	
 	fprintf(fp, "</zone>\n");
 	
@@ -156,7 +160,10 @@ static int generate_zone(const char *name, struct lyd_node *cfg)
 
 static int generate_service(const char *name, struct lyd_node *service_cfg)
 {
-	const char *desc, *destination;
+	const char *desc;
+#if 0 /* ADVANCED FEATURE: destination variable for service destinations */
+	const char *destination;
+#endif
 	struct lyd_node *node;
 	FILE *fp;
 	
@@ -165,15 +172,19 @@ static int generate_service(const char *name, struct lyd_node *service_cfg)
 		return SR_ERR_SYS;
 	
 	desc = lydx_get_cattr(service_cfg, "description");
+#if 0 /* ADVANCED FEATURE: service destinations removed from YANG model */
 	destination = lydx_get_cattr(service_cfg, "destination");
+#endif
 	
 	fprintf(fp, "<service>\n");
 	
 	if (desc)
 		fprintf(fp, "  <short>%s</short>\n", desc);
 	
+#if 0 /* ADVANCED FEATURE: service destinations removed from YANG model */
 	if (destination)
 		fprintf(fp, "  <destination ipv4=\"%s\"/>\n", destination);
+#endif
 	
 	LYX_LIST_FOR_EACH(lyd_child(service_cfg), node, "port") {
 		const char *lower = lydx_get_cattr(node, "lower");

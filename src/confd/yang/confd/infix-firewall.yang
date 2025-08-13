@@ -96,9 +96,11 @@ module infix-firewall {
 
   typedef policy-action {
     type enumeration {
+      /* ADVANCED FEATURE: Commented out - requires policy ordering/priority system
       enum continue {
         description "Non-terminal policy. Matching traffic is accepted or allowed to proceed, and other policies continue to be evaluated.";
       }
+      */
       enum accept {
         description "Accept matching traffic and stop evaluating further policies.";
       }
@@ -131,7 +133,8 @@ module infix-firewall {
     }
   }
 
-  // firewall-cmd --get-icmptypes
+  /* firewall-cmd --get-icmptypes */
+  /* ADVANCED FEATURE: Commented out for simplicity - users rarely need granular ICMP control
   typedef icmp-type {
     description "Available ICMP/ICMPv6 types for icmp-blocks.";
 
@@ -186,6 +189,7 @@ module infix-firewall {
       }
     }
   }
+  */
 
   /*
    * Main container and configuration
@@ -277,11 +281,7 @@ module infix-firewall {
           default false;
         }
 
-        leaf masquerade {
-          description "Enable masquerading (SNAT) for traffic egressing this zone.";
-          type boolean;
-          default false;
-        }
+        /* REMOVED: Zone-level masquerade is handled by policy rules instead */
 
         list forward {
           description "Forward traffic another port and/or host (DNAT).";
@@ -321,6 +321,7 @@ module infix-firewall {
           }
         }
 
+        /* ADVANCED FEATURE: Commented out for simplicity - users rarely need granular ICMP control
         list icmp-blocks {
           description "ICMP and ICMPv6 types to block.";
           key "icmp-type";
@@ -330,6 +331,7 @@ module infix-firewall {
             type icmp-type;
           }
         }
+        */
       }
     }
 
@@ -366,9 +368,9 @@ module infix-firewall {
       }
 
       leaf policy {
-        description "Policy for non-matching traffic. 'continue' means policy is non-terminal.";
+        description "Policy for non-matching traffic. All policies are terminal (accept/reject/drop).";
         type policy-action;
-        default "continue";
+        default "reject";
       }
 
       leaf-list service {
@@ -425,17 +427,20 @@ module infix-firewall {
             type protocol-type;
           }
 
-          // Rare, but one example is upnp: 1900/udp
+          /* ADVANCED FEATURE: Commented out for simplicity - rarely needed
           leaf match-source {
             description "Match on source port(s) instead of default: destination.";
             type boolean;
           }
+          */
         }
 
+        /* ADVANCED FEATURE: Commented out for simplicity - service-specific destinations are complex
         leaf destination {
           type inet:ip-address;
           description "Destination IP address/group to match this service to.";
         }
+        */
       }
     }
   }
