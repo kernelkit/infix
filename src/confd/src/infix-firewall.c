@@ -13,6 +13,7 @@
 #include <libyang/libyang.h>
 
 #include "core.h"
+#include "ietf-interfaces.h"
 
 #define MODULE                 "infix-firewall"
 #define XPATH                  "/infix-firewall:firewall"
@@ -62,6 +63,23 @@ static const char *policy_action_to_target(const char *action)
 	return policy_action_map[0].yang;
 }
 
+static void mark_interfaces_used(struct lyd_node *cfg, char **l3_ifaces)
+{
+	struct lyd_node *node;
+
+	LYX_LIST_FOR_EACH(lyd_child(cfg), node, "interfaces") {
+		const char *ifname = lyd_get_value(node);
+
+		for (int i = 0; l3_ifaces[i]; i++) {
+			if (!strcmp(l3_ifaces[i], ifname)) {
+				l3_ifaces[i][0] = '\0';
+				break;
+			}
+		}
+	}
+}
+
+
 static FILE *open_file(const char *dir, const char *name)
 {
 	FILE *fp;
@@ -92,7 +110,7 @@ static int delete_file(const char *dir, const char *name)
 	return SR_ERR_OK;
 }
 
-static int generate_zone(const char *name, struct lyd_node *cfg)
+static int generate_zone_with_extra_interfaces(const char *name, struct lyd_node *cfg, char **extra_ifaces)
 {
 	const char *policy, *desc;
 	struct lyd_node *node;
@@ -112,6 +130,14 @@ static int generate_zone(const char *name, struct lyd_node *cfg)
 	
 	LYX_LIST_FOR_EACH(lyd_child(cfg), node, "interfaces")
 		fprintf(fp, "  <interface name=\"%s\"/>\n", lyd_get_value(node));
+
+	if (extra_ifaces) {
+		for (int i = 0; extra_ifaces[i]; i++) {
+			if (extra_ifaces[i][0] != '\0') {
+				fprintf(fp, "  <interface name=\"%s\"/>\n", extra_ifaces[i]);
+			}
+		}
+	}
 	
 	LYX_LIST_FOR_EACH(lyd_child(cfg), node, "sources")
 		fprintf(fp, "  <source address=\"%s\"/>\n", lyd_get_value(node));
@@ -156,6 +182,43 @@ static int generate_zone(const char *name, struct lyd_node *cfg)
 	fprintf(fp, "</zone>\n");
 	
 	return close_file(fp);
+}
+
+static int generate_zone(const char *name, struct lyd_node *cfg)
+{
+	return generate_zone_with_extra_interfaces(name, cfg, NULL);
+}
+
+static int generate_default_zone_with_remaining_interfaces(struct lyd_node *tree, char **l3_ifaces)
+{
+	const char *default_zone = lydx_get_cattr(lydx_get_descendant(tree, "firewall", NULL), "default");
+	struct lyd_node *zones, *zone_cfg = NULL;
+	int unassigned_count = 0;
+	
+	for (int i = 0; l3_ifaces[i]; i++) {
+		if (l3_ifaces[i][0] != '\0') {
+			unassigned_count++;
+		}
+	}
+	
+	if (unassigned_count == 0)
+		return 0;
+	
+	zones = lydx_get_descendant(tree, "firewall", "zone", NULL);
+	LYX_LIST_FOR_EACH(zones, zone_cfg, "zone") {
+		const char *name = lydx_get_cattr(zone_cfg, "name");
+		if (!strcmp(name, default_zone))
+			break;
+	}
+	
+	ERROR("Adding %d unassigned interfaces to default zone '%s':", unassigned_count, default_zone);
+	for (int i = 0; l3_ifaces[i]; i++) {
+		if (l3_ifaces[i][0] != '\0') {
+			ERROR("  - %s", l3_ifaces[i]);
+		}
+	}
+	
+	return generate_zone_with_extra_interfaces(default_zone, zone_cfg, l3_ifaces);
 }
 
 static int generate_service(const char *name, struct lyd_node *service_cfg)
@@ -319,17 +382,24 @@ static int change(sr_session_ctx_t *session, uint32_t sub_id, const char *module
 		break;
 	}
 
-	err = sr_get_data(session, XPATH "//.", 0, 0, 0, &cfg);
+	err = sr_get_data(session, "//.", 0, 0, 0, &cfg);
 	if (err || !cfg)
 		return SR_ERR_INTERNAL;
-	
+
 	tree = cfg->tree;
 	global = lydx_get_descendant(tree, "firewall", NULL);
+
+	/* Get L3 interfaces for default zone assignment */
+	char **l3_ifaces = NULL;
+	if (ietf_interfaces_get_all_l3(tree, &l3_ifaces) != 0) {
+		ERROR("Failed to get L3 interfaces");
+		l3_ifaces = NULL;
+	}
 	
 	err = srx_get_diff(session, &diff);
 	if (err)
 		goto err_release_data;
-	
+
 	if (!diff)
 		goto err_release_data;
 
@@ -338,10 +408,12 @@ static int change(sr_session_ctx_t *session, uint32_t sub_id, const char *module
 
 	if (lydx_get_descendant(diff, "firewall", "default", NULL) ||
 	    lydx_get_descendant(diff, "firewall", "logging", NULL)) {
-		generate_firewalld_conf(tree);
+		generate_firewalld_conf(global);
 		reload_needed = true;
 	}
 
+	/* Stage 1: Generate explicit zones (skip default zone) */
+	const char *default_zone = lydx_get_cattr(global, "default");
 	list = lydx_get_descendant(diff, "firewall", "zone", NULL);
 	LYX_LIST_FOR_EACH(list, node, "zone") {
 		const char *name = lydx_get_cattr(node, "name");
@@ -357,11 +429,24 @@ static int change(sr_session_ctx_t *session, uint32_t sub_id, const char *module
 			if (strcmp(name, lydx_get_cattr(cnode, "name")))
 				continue;
 
+			/* Skip default zone in stage 1 */
+			if (!strcmp(name, default_zone)) {
+				if (l3_ifaces)
+					mark_interfaces_used(cnode, l3_ifaces);
+				break;
+			}
+
 			generate_zone(name, cnode);
+			if (l3_ifaces)
+				mark_interfaces_used(cnode, l3_ifaces);
 			reload_needed = true;
 			break;
 		}
 	}
+	
+	/* Stage 2: Generate default zone with remaining interfaces */
+	if (l3_ifaces && generate_default_zone_with_remaining_interfaces(tree, l3_ifaces) == 0)
+		reload_needed = true;
 	
 	list = lydx_get_descendant(diff, "firewall", "service", NULL);
 	LYX_LIST_FOR_EACH(list, node, "service") {
@@ -410,6 +495,12 @@ static int change(sr_session_ctx_t *session, uint32_t sub_id, const char *module
 	
 done:
 	systemf("initctl -nbq %s firewalld", global ? "enable" : "disable");
+
+	if (l3_ifaces) {
+		for (int i = 0; l3_ifaces[i]; i++)
+			free(l3_ifaces[i]);
+		free(l3_ifaces);
+	}
 
 	lyd_free_tree(diff);
 err_release_data:
