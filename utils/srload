@@ -84,7 +84,7 @@ enable()
 {
     local module=$1
     local feature=$2
-    echo "*** Enable feature $feature in $module."
+    #echo "*** Enable feature $feature in $module."
     $SYSREPOCTL -c $module -e $feature -v2
     local rc=$?
     if [ $rc -ne 0 ]; then
@@ -119,7 +119,7 @@ for module in "${MODULES[@]}"; do
 
     if [ -z "$SCTL_MODULE" ]; then
         # prepare command to install module with all its features
-	echo "*** Installing YANG model $name ..."
+	#echo "*** Installing YANG model $name ..."
         install "$module"
 	continue
     fi
@@ -164,7 +164,7 @@ done
 
 # install all the new modules
 if [ -n "${CMD_INSTALL}" ]; then
-    printf "*** Installing YANG models ...\n%s" "$CMD_INSTALL"
+    printf "*** Installing YANG models from %s ...\n%s" "$(basename "$1")" "$CMD_INSTALL"
     eval $CMD_INSTALL
     rc=$?
     if [ $rc -ne 0 ]; then
