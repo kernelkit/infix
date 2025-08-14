@@ -28,6 +28,12 @@ module infix-firewall-services {
       enum "dhcp" {
         description "udp/67-68 — Dynamic Host Configuration Protocol for network configuration";
       }
+      enum "dhcpv6" {
+        description "udp/547 — Allow incoming DHCP for IPv6 requests from clients or relay agents.";
+      }
+      enum "dhcpv6-client" {
+        description "udp/546 — Allow a DHCP for IPv6 client to obtain a lease.";
+      }
       enum "dns" {
         description "tcp+udp/53 — Domain Name System for name resolution";
       }
@@ -46,7 +52,10 @@ module infix-firewall-services {
       enum "imaps" {
         description "tcp/993 — Secure Internet Message Access Protocol for encrypted email access";
       }
-      enum "kerberos" {
+      enum "ipp" {
+        description "tcp+udp/631 — Internet Printing Protocol (IPP) is used for distributed printing.";
+      }
+       enum "kerberos" {
         description "tcp+udp/88 — Network authentication protocol";
       }
       enum "ldap" {
