@@ -31,38 +31,11 @@ module infix-firewall {
    * Type definitions
    */
 
-  typedef rule-action {
-    description "Actions that can be performed on packets.";
-
-    type enumeration {
-      enum accept {
-        description "Accept the packet.";
-      }
-      enum reject {
-        description "Reject the packet and send an ICMP error.";
-      }
-      enum drop {
-        description "Drop the packet silently.";
-      }
-      enum mark {
-        description "Mark the packet.";
-      }
-    }
-  }
-
-  typedef rule-family {
-    description "Address family for direct nftables use.";
-
-    type enumeration {
-      enum ipv4 {
-        description "IPv4.";
-      }
-      enum ipv6 {
-        description "IPv6.";
-      }
-      enum bridge {
-        description "Ethernet bridge.";
-      }
+  typedef ident {
+    description "Generic filesystem-safe identifier (filename).";
+    type string {
+      length "2..64";
+      pattern '[a-zA-Z0-9\-_]+';
     }
   }
 
@@ -89,7 +62,7 @@ module infix-firewall {
         pattern 'host|any';
       }
       type leafref {
-        path "../../zones/zone/name";
+        path "../../zone/name";
       }
     }
   }
@@ -197,20 +170,26 @@ module infix-firewall {
 
   container firewall {
     description "Zone-based firewall configuration.";
-
+    presence "Enable the firewall.";
+/*
     leaf enabled {
-      description "Enable or disable the firewall.";
-      type boolean;
-      default true;
-    }
+      description "Enable or disable the firewall.
 
+                   Note, by disabling the firewall all rules are unloaded from the kernel, making
+                   the system fully open!  This can be useful when debugging firewall issues, but
+                   remember to re-enable when done, and maybe remove connections to the Internet
+                   before disabling.";
+      type boolean;
+    }
+*/
     leaf default {
       description "Default zone for interfaces.
 
                    Any interface not explicitly associated with a zone is placed in this zone.";
       type leafref {
-        path "../zones/zone/name";
+        path "../zone/name";
       }
+      mandatory true;
     }
 
     leaf logging {
@@ -235,104 +214,94 @@ module infix-firewall {
       default off;
     }
 
-    container zones {
-      description "Available firewall zones.";
+    list zone {
+      description "A zone defines a level of trust for network connections.";
+      key "name";
 
-      list zone {
-        description "A zone defines a level of trust for network connections.";
-        key "name";
+      leaf name {
+        description "Name of the zone.";
+        type ident;
+      }
 
-        leaf name {
-          description "Name of the zone.";
-          type string {
-            length "1..17";
-            pattern '[a-zA-Z0-9\-_]+';
-          }
-        }
+      leaf description {
+        description "Free-form description of the zone.";
+        type string;
+      }
 
-        leaf description {
-          description "Free-form description of the zone.";
-          type string;
-        }
-
-        leaf policy {
-          description "Default action for traffic matching no explicit rule.
+      leaf policy {
+        description "Default action for traffic matching no explicit rule.
 
                        Note, see also the 'forwarding' setting for this zone.";
-          type zone-policy;
-          default reject;
+        type zone-policy;
+        default reject;
+      }
+
+      leaf-list interfaces {
+        description "Interfaces assigned to this zone.";
+        type if:interface-ref;
+      }
+
+      leaf-list sources {
+        description "Source networks assigned to this zone.";
+        type inet:ip-prefix;
+      }
+
+      leaf forwarding {
+        description "Allow forwarding between interfaces/sources in the same zone.
+
+                     Note, this setting applies regardless of (before) the zone policy!";
+        type boolean;
+      }
+
+      list port-forward {
+        description "Forward traffic another port and/or host (DNAT).";
+        key "port proto";
+
+        leaf port {
+          description "Local port to forward from.";
+          type inet:port-number;
         }
 
-        leaf-list interfaces {
-          description "Interfaces assigned to this zone.";
-          type if:interface-ref;
+        leaf proto {
+          description "Network protocol.";
+          type protocol-type;
         }
 
-        leaf-list sources {
-          description "Source networks assigned to this zone.";
-          type inet:ip-prefix;
-        }
-
-        leaf forwarding {
-          description "Allow forwarding between interfaces/sources in the same zone.
-
-                       Note, this setting applies regardless of the zone policy!";
-          type boolean;
-          default false;
-        }
-
-        /* REMOVED: Zone-level masquerade is handled by policy rules instead */
-
-        list forward {
-          description "Forward traffic another port and/or host (DNAT).";
-          key "port proto";
+        container to {
+          description "Forward matching traffic to given address and port.";
+          leaf addr {
+            description "IP address to forward to.";
+            type inet:ip-address;
+          }
 
           leaf port {
-            description "Local port to forward from.";
+            description "Port to forward to.";
             type inet:port-number;
           }
-
-          leaf proto {
-            description "Network protocol.";
-            type protocol-type;
-          }
-
-          container to {
-            description "Forward matching traffic to given address and port.";
-            leaf addr {
-              description "IP address to forward to.";
-              type inet:ip-address;
-            }
-
-            leaf port {
-              description "Port to forward to.";
-              type inet:port-number;
-            }
-          }
         }
-
-        leaf-list services {
-          description "Services allowed to ingress this zone.";
-          type union {
-            type leafref {
-              path "../../../services/service/name";
-            }
-            type ifw-svc:well-known-service;
-          }
-        }
-
-        /* ADVANCED FEATURE: Commented out for simplicity - users rarely need granular ICMP control
-        list icmp-blocks {
-          description "ICMP and ICMPv6 types to block.";
-          key "icmp-type";
-
-          leaf icmp-type {
-            description "ICMP type.";
-            type icmp-type;
-          }
-        }
-        */
       }
+
+      leaf-list services {
+        description "Services allowed to ingress this zone.";
+        type union {
+          type leafref {
+            path "../../service/name";
+          }
+          type ifw-svc:well-known-service;
+        }
+      }
+
+      /* ADVANCED FEATURE: Commented out for simplicity - users rarely need granular ICMP control
+         list icmp-blocks {
+         description "ICMP and ICMPv6 types to block.";
+         key "icmp-type";
+
+         leaf icmp-type {
+         description "ICMP type.";
+         type icmp-type;
+         }
+         }
+      */
     }
 
     list policy {
@@ -341,10 +310,7 @@ module infix-firewall {
 
       leaf name {
         description "Unique identifier (filename) for this policy, e.g., LAN-to-WAN.";
-        type string {
-          length "1..17";
-          pattern '[a-zA-Z0-9\-_]+';
-        }
+        type ident;
       }
 
       leaf description {
@@ -377,71 +343,64 @@ module infix-firewall {
         description "Allowed services, all other traffic follows the policy default action.";
         type union {
           type leafref {
-            path "../../services/service/name";
+            path "../../service/name";
           }
           type ifw-svc:well-known-service;
         }
       }
    }
 
-    container services {
-      description "Predefined network services.";
-
-      list service {
-        description "Manage services, human-friendly names of port+protocol pairs.
+    list service {
+      description "Manage services, human-friendly names of port+protocol pairs.
 
                      A service is a collection of port and protocol pairs.  Used by the firewall
                      instead of hard-coding raw port numbers everywhere.";
-        key "name";
+      key "name";
 
-        leaf name {
-          description "Name of the service.";
-          type string {
-            length "1..17";
-            pattern '[a-zA-Z0-9\-_]+';
-          }
+      leaf name {
+        description "Name of the service.";
+        type ident;
+      }
+
+      leaf description {
+        description "Free-form description of the service.";
+        type string;
+      }
+
+      list port {
+        description "Port, or range of ports, and protocol to match.";
+        key "lower proto";
+
+        leaf lower {
+          type inet:port-number;
+          description "Lower port in range.";
         }
 
-        leaf description {
-          description "Free-form description of the service.";
-          type string;
+        leaf upper {
+          type inet:port-number;
+          must "../lower <= .";
+          description "Upper port in range.";
         }
 
-        list port {
-          description "Port, or range of ports, and protocol to match.";
-          key "lower proto";
-
-          leaf lower {
-            type inet:port-number;
-            description "Lower port in range.";
-          }
-
-          leaf upper {
-            type inet:port-number;
-            must "../lower <= .";
-            description "Upper port in range.";
-          }
-
-          leaf proto {
-            description "Layer 4 protocol.";
-            type protocol-type;
-          }
-
-          /* ADVANCED FEATURE: Commented out for simplicity - rarely needed
-          leaf match-source {
-            description "Match on source port(s) instead of default: destination.";
-            type boolean;
-          }
-          */
+        leaf proto {
+          description "Layer 4 protocol.";
+          type protocol-type;
         }
 
-        /* ADVANCED FEATURE: Commented out for simplicity - service-specific destinations are complex
-        leaf destination {
-          type inet:ip-address;
-          description "Destination IP address/group to match this service to.";
-        }
+        /* ADVANCED FEATURE: Commented out for simplicity - rarely needed
+           leaf match-source {
+           description "Match on source port(s) instead of default: destination.";
+           type boolean;
+           }
         */
       }
+
+      /* ADVANCED FEATURE: Commented out for simplicity - service-specific destinations are complex
+         leaf destination {
+         type inet:ip-address;
+         description "Destination IP address/group to match this service to.";
+         }
+      */
     }
   }
 }

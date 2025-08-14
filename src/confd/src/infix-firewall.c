@@ -15,7 +15,7 @@
 #include "core.h"
 
 #define MODULE                 "infix-firewall"
-#define CFG_XPATH              "/infix-firewall:firewall"
+#define XPATH                  "/infix-firewall:firewall"
 
 #define FIREWALLD_DIR          "/etc/firewalld"
 #define FIREWALLD_CONF         FIREWALLD_DIR "/firewalld.conf"
@@ -106,7 +106,7 @@ static int generate_zone(const char *name, struct lyd_node *cfg)
 	desc = lydx_get_cattr(cfg, "description");
 	
 	fprintf(fp, "<zone target=\"%s\">\n", zone_policy_to_target(policy));
-	fprintf(fp, "  <short>%s</short>", name);
+	fprintf(fp, "  <short>%s</short>\n", name);
 	if (desc)
 		fprintf(fp, "  <description>%s</description>\n", desc);
 	
@@ -119,7 +119,7 @@ static int generate_zone(const char *name, struct lyd_node *cfg)
 	LYX_LIST_FOR_EACH(lyd_child(cfg), node, "services")
 		fprintf(fp, "  <service name=\"%s\"/>\n", lyd_get_value(node));
 	
-	LYX_LIST_FOR_EACH(lyd_child(cfg), node, "forward") {
+	LYX_LIST_FOR_EACH(lyd_child(cfg), node, "port-forward") {
 		const char *port = lydx_get_cattr(node, "port");
 		const char *proto = lydx_get_cattr(node, "proto");
 		struct lyd_node *to = lydx_get_child(node, "to");
@@ -241,7 +241,6 @@ static int generate_policy(const char *name, struct lyd_node *policy_cfg)
 
 static int generate_firewalld_conf(struct lyd_node *tree)
 {
-	const char *default_zone, *logging;
 	FILE *fp;
 
 	fp = fopen(FIREWALLD_CONF, "w");
@@ -250,16 +249,13 @@ static int generate_firewalld_conf(struct lyd_node *tree)
 		return SR_ERR_SYS;
 	}
 
-	default_zone = lydx_get_cattr(tree, "default");
-	logging = lydx_get_cattr(tree, "logging");
-
-	fprintf(fp, "DefaultZone=%s\n", default_zone ? default_zone : "public");
+	fprintf(fp, "DefaultZone=%s\n", lydx_get_cattr(tree, "default"));
 	fprintf(fp, "MinimalMark=100\n");
 	fprintf(fp, "CleanupOnExit=yes\n");
 	fprintf(fp, "Lockdown=no\n");
 	fprintf(fp, "IPv6_rpfilter=yes\n");
 	fprintf(fp, "IndividualCalls=no\n");
-	fprintf(fp, "LogDenied=%s\n", logging ? logging : "off");
+	fprintf(fp, "LogDenied=%s\n", lydx_get_cattr(tree, "logging") ?: "off");
 	fprintf(fp, "AutomaticHelpers=system\n");
 	fprintf(fp, "FirewallBackend=nftables\n");
 	fprintf(fp, "FlushAllOnReload=yes\n");
@@ -269,52 +265,34 @@ static int generate_firewalld_conf(struct lyd_node *tree)
 	return SR_ERR_OK;
 }
 
-static int create_default_zone(sr_session_ctx_t *session, const char *name,
-			      const char *policy, const char *desc,
-			      const char *services[])
+static int infer_zone(sr_session_ctx_t *session, const char *name, const char *desc,
+		      const char *policy, bool forwarding, const char *services[])
 {
-	char xpath[256];
 	int rc;
 
-	snprintf(xpath, sizeof(xpath), CFG_XPATH "/zones/zone[name='%s']/name", name);
-	rc = sr_set_item_str(session, xpath, name, NULL, 0);
-	if (rc) return rc;
+	ERROR("Inferring zone %s (%s), policy %s forwarding %d", name, desc, policy, forwarding);
 
-	snprintf(xpath, sizeof(xpath), CFG_XPATH "/zones/zone[name='%s']/description", name);
-	rc = sr_set_item_str(session, xpath, desc, NULL, 0);
-	if (rc) return rc;
+	rc = srx_set_str(session, name, 0, XPATH "/zone[name='%s']/name", name);
+	if (rc)
+		return rc;
 
-	snprintf(xpath, sizeof(xpath), CFG_XPATH "/zones/zone[name='%s']/policy", name);
-	rc = sr_set_item_str(session, xpath, policy, NULL, 0);
-	if (rc) return rc;
+	rc = srx_set_str(session, desc, 0, XPATH "/zone[name='%s']/description", name);
+	if (rc)
+		return rc;
+
+	rc = srx_set_str(session, policy, 0, XPATH "/zone[name='%s']/policy", name);
+	if (rc)
+		return rc;
+
+	rc = srx_set_bool(session, forwarding, 0, XPATH "/zone[name='%s']/forwarding", name);
+	if (rc)
+		return rc;
 
 	for (int i = 0; services && services[i]; i++) {
-		snprintf(xpath, sizeof(xpath), CFG_XPATH "/zones/zone[name='%s']/services[.='%s']", name, services[i]);
-		rc = sr_set_item_str(session, xpath, services[i], NULL, 0);
-		if (rc) return rc;
+		rc = srx_set_str(session, services[i], 0, XPATH "/zone[name='%s']/services[.='%s']", name, services[i]);
+		if (rc)
+			return rc;
 	}
-
-	return SR_ERR_OK;
-}
-
-static int infer_default_zones(sr_session_ctx_t *session)
-{
-	int rc;
-
-	const char *internal_services[] = {"ssh", "dns", "http", "https", NULL};
-	rc = create_default_zone(session, "internal", "accept", "Internal trusted network", internal_services);
-	if (rc) return rc;
-
-	rc = create_default_zone(session, "external", "drop", "External untrusted network", NULL);
-	if (rc) return rc;
-
-	const char *dmz_services[] = {"http", "https", NULL};
-	rc = create_default_zone(session, "dmz", "reject", "Demilitarized zone", dmz_services);
-	if (rc) return rc;
-
-	const char *public_services[] = {"ssh", NULL};
-	rc = create_default_zone(session, "public", "reject", "Public access zone", public_services);
-	if (rc) return rc;
 
 	return SR_ERR_OK;
 }
@@ -341,7 +319,7 @@ static int change(sr_session_ctx_t *session, uint32_t sub_id, const char *module
 		break;
 	}
 
-	err = sr_get_data(session, CFG_XPATH "//.", 0, 0, 0, &cfg);
+	err = sr_get_data(session, XPATH "//.", 0, 0, 0, &cfg);
 	if (err || !cfg)
 		return SR_ERR_INTERNAL;
 	
@@ -355,22 +333,8 @@ static int change(sr_session_ctx_t *session, uint32_t sub_id, const char *module
 	if (!diff)
 		goto err_release_data;
 
-	if (lydx_is_enabled(global, "enabled")) {
-		sr_data_t *zones_data;
-
-		system("initctl -nbq enable firewalld");
-
-		if (!sr_get_data(session, CFG_XPATH "/zones", 0, 0, 0, &zones_data) &&
-		    (!zones_data || !zones_data->tree)) {
-			infer_default_zones(session);
-			sr_apply_changes(session, 0);
-		}
-		if (zones_data)
-			sr_release_data(zones_data);
-	} else {
-		system("initctl -nbq disable firewalld");
+	if (!global)
 		goto done;
-	}
 
 	if (lydx_get_descendant(diff, "firewall", "default", NULL) ||
 	    lydx_get_descendant(diff, "firewall", "logging", NULL)) {
@@ -378,7 +342,7 @@ static int change(sr_session_ctx_t *session, uint32_t sub_id, const char *module
 		reload_needed = true;
 	}
 
-	list = lydx_get_descendant(diff, "firewall", "zones", "zone", NULL);
+	list = lydx_get_descendant(diff, "firewall", "zone", NULL);
 	LYX_LIST_FOR_EACH(list, node, "zone") {
 		const char *name = lydx_get_cattr(node, "name");
 			
@@ -388,7 +352,7 @@ static int change(sr_session_ctx_t *session, uint32_t sub_id, const char *module
 			continue;
 		}
 
-		clist = lydx_get_descendant(tree, "firewall", "zones", "zone", NULL);
+		clist = lydx_get_descendant(tree, "firewall", "zone", NULL);
 		LYX_LIST_FOR_EACH(clist, cnode, "zone") {
 			if (strcmp(name, lydx_get_cattr(cnode, "name")))
 				continue;
@@ -399,7 +363,7 @@ static int change(sr_session_ctx_t *session, uint32_t sub_id, const char *module
 		}
 	}
 	
-	list = lydx_get_descendant(diff, "firewall", "services", "service", NULL);
+	list = lydx_get_descendant(diff, "firewall", "service", NULL);
 	LYX_LIST_FOR_EACH(list, node, "service") {
 		const char *name = lydx_get_cattr(node, "name");
 			
@@ -409,7 +373,7 @@ static int change(sr_session_ctx_t *session, uint32_t sub_id, const char *module
 			continue;
 		}
 
-		clist = lydx_get_descendant(tree, "firewall", "services", "service", NULL);
+		clist = lydx_get_descendant(tree, "firewall", "service", NULL);
 		LYX_LIST_FOR_EACH(clist, cnode, "service") {
 			if (strcmp(name, lydx_get_cattr(cnode, "name")))
 				continue;
@@ -445,6 +409,8 @@ static int change(sr_session_ctx_t *session, uint32_t sub_id, const char *module
 		system("initctl -nbq touch firewalld");
 	
 done:
+	systemf("initctl -nbq %s firewalld", global ? "enable" : "disable");
+
 	lyd_free_tree(diff);
 err_release_data:
 	sr_release_data(cfg);
@@ -452,19 +418,64 @@ err_release_data:
 	return err;
 }
 
+/*
+ * Set up default zones with sane defaults:
+ *
+ *  internal: This is the default zone, which trusts all ingressing traffic.
+ *            It is used for internal trusted networks and allows forwarding
+ *            between all interfaces and networks in the zone.
+ *
+ *  external: Untrusted zone, for WAN interfaces, only ssh and dhcpv6 client
+ *            traffic is allowed to ingress.
+ *
+ */
+static int cand(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
+		const char *path, sr_event_t event, unsigned request_id, void *priv)
+{
+	const char *ext_svc[] = {"ssh", "dhcpv6-client", NULL};
+	const char *int_svc[] = { NULL};
+	size_t cnt = 0;
+	int rc;
+
+	if (event != SR_EV_UPDATE && event != SR_EV_CHANGE)
+		return 0;
+
+	/* If unset, this is the first time we're called */
+	if (srx_get_str(session, XPATH "/default"))
+		return 0;
+
+	rc = srx_nitems(session, &cnt, XPATH "/zones");
+	if (rc || cnt) {
+		WARN("firewall has zones defined %zu, but no default zone for new interfaces! (rc %d)",
+		     cnt, rc);
+		return 0;
+	}
+
+	rc = infer_zone(session, "external", "External untrusted network, only SSH and DHCPv6 client.",
+			"drop", true, ext_svc);
+	if (rc)
+		return rc;
+
+	rc = infer_zone(session, "internal", "Internal trusted network, forwarding between networks.",
+			"accept", true, int_svc);
+	if (rc)
+		return rc;
+
+	/* Set up default zone for new networks */
+	rc = srx_set_str(session, "internal", 0, XPATH "/default");
+	if (rc)
+		return rc;
+
+	return SR_ERR_OK;
+}
+
 int infix_firewall_init(struct confd *confd)
 {
 	int rc;
-	
-	mkdir(FIREWALLD_DIR, 0755);
-	mkdir(FIREWALLD_ZONES_DIR, 0755);
-	mkdir(FIREWALLD_SERVICES_DIR, 0755);
-	mkdir(FIREWALLD_POLICIES_DIR, 0755);
-	
-	sr_apply_changes(confd->session, 0);
 
-	REGISTER_CHANGE(confd->session, MODULE, CFG_XPATH, 0, change, confd, &confd->sub);
-	
+	REGISTER_CHANGE(confd->session, MODULE, XPATH, 0, change, confd, &confd->sub);
+	REGISTER_CHANGE(confd->cand, MODULE, XPATH "//.", SR_SUBSCR_UPDATE, cand, confd, &confd->sub);
+
 	return SR_ERR_OK;
 fail:
 	ERROR("init failed: %s", sr_strerror(rc));

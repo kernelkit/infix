@@ -100,12 +100,22 @@ define CONFD_EMPTY_SYSREPO
 		rm -rf $(PER_PACKAGE_DIR)/host-sysrepo/target/etc/sysrepo/* $(PER_PACKAGE_DIR)/confd/target/etc/sysrepo/*; \
 	fi
 endef
+
+# The three zones that are *not* deleted from the default install
+# are required by firewalld (core/fw.py), in particular block.xml
 define CONFD_CLEANUP
 	rm -f /dev/shm/$(CONFD_SYSREPO_SHM_PREFIX)*
 	rm -rf $(TARGET_DIR)/etc/firewall*
 	rm -f  $(TARGET_DIR)/usr/bin/firewall-applet
 	rm -rf $(TARGET_DIR)/usr/share/firewalld
-	mkdir -p $(TARGET_DIR)/etc/firewalld
+	find     $(TARGET_DIR)/usr/lib/firewalld/zones -type f \
+		! -name block.xml   \
+		! -name drop.xml    \
+		! -name trusted.xml \
+		-delete
+	mkdir -p $(TARGET_DIR)/etc/firewalld/zones
+	mkdir -p $(TARGET_DIR)/etc/firewalld/policies
+	mkdir -p $(TARGET_DIR)/etc/firewalld/services
 	touch $(TARGET_DIR)/etc/firewalld/firewalld.conf
 endef
 CONFD_PRE_BUILD_HOOKS += CONFD_EMPTY_SYSREPO
