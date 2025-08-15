@@ -14,6 +14,7 @@ CONFD_DEPENDENCIES = host-sysrepo sysrepo netopeer2 jansson libite sysrepo libsr
 CONFD_AUTORECONF = YES
 CONFD_CONF_OPTS += --disable-silent-rules --with-crypt=$(BR2_PACKAGE_CONFD_DEFAULT_CRYPT)
 CONFD_SYSREPO_SHM_PREFIX = sr_buildroot$(subst /,_,$(CONFIG_DIR))_confd
+CONFD_FIREWALL_SERVICES_YANG = $(CONFD_SRCDIR)/yang/confd/infix-firewall-services.yang
 
 define CONFD_CONF_ENV
 	CFLAGS="$(INFIX_CFLAGS)"
@@ -103,6 +104,8 @@ endef
 
 # The three zones that are *not* deleted from the default install
 # are required by firewalld (core/fw.py), in particular block.xml
+# Firewalld services cleanup: keep only services that match YANG enums,
+# remove all others, and validate that all enums have corresponding .xml files
 define CONFD_CLEANUP
 	rm -f /dev/shm/$(CONFD_SYSREPO_SHM_PREFIX)*
 	rm -rf $(TARGET_DIR)/etc/firewall*
@@ -117,6 +120,29 @@ define CONFD_CLEANUP
 	mkdir -p $(TARGET_DIR)/etc/firewalld/policies
 	mkdir -p $(TARGET_DIR)/etc/firewalld/services
 	touch $(TARGET_DIR)/etc/firewalld/firewalld.conf
+	if [ ! -f "$(CONFD_FIREWALL_SERVICES_YANG)" ]; then					\
+		echo "ERROR: $(CONFD_FIREWALL_SERVICES_YANG) not found";			\
+		exit 1;										\
+	fi;											\
+	ENUMS=$$(grep 'enum "' $(CONFD_FIREWALL_SERVICES_YANG) |				\
+	         sed 's/.*enum "\([^"]*\)".*/\1/');						\
+	MISSING=0;										\
+	for service in $$ENUMS; do								\
+		if [ ! -f "$(TARGET_DIR)/usr/lib/firewalld/services/$$service.xml" ]; then	\
+			echo "Service $$service is not a firewalld pre-defined service";	\
+			MISSING=1;								\
+		fi;										\
+	done;											\
+	if [ $$MISSING -eq 1 ]; then								\
+		exit 1;										\
+	fi;											\
+	cd $(TARGET_DIR)/usr/lib/firewalld/services/;						\
+	for xmlfile in *.xml; do								\
+		service=$${xmlfile%.xml};							\
+		if ! echo "$$ENUMS" | grep -q "^$$service$$"; then				\
+			rm "$$xmlfile";								\
+		fi;										\
+	done
 endef
 CONFD_PRE_BUILD_HOOKS += CONFD_EMPTY_SYSREPO
 CONFD_PRE_BUILD_HOOKS += CONFD_CLEANUP
