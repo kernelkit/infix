@@ -1,4 +1,4 @@
-From d87176a8d2655d2bf049744626845fa4e79e2695 Mon Sep 17 00:00:00 2001
+From 09ce57976021cd1bcd6c16393ed06d6e74c04394 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Tue, 12 Dec 2023 09:51:05 +0100
 Subject: [PATCH 17/28] net: phy: marvell10g: Support LEDs tied to a single
