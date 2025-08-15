@@ -5,17 +5,10 @@ module infix-firewall-services {
 
   organization "KernelKit";
   contact      "kernelkit@googlegroups.com";
-  description  "Well-defined network services for Infix firewall.
-
-               This module defines an enumeration of well-known network services
-               following the pattern established by iana-timezones.yang, where each
-               service is represented as an enum value with a descriptive text
-               explaining what the service does and the ports/protocols it uses.";
+  description  "Common well-defined network services.";
 
   revision 2025-04-26 {
-    description "Refactored to use enum-based approach similar to iana-timezones.yang.
-                 Each well-known service is now defined as an enum value with
-                 human-friendly descriptions covering purpose and technical details.";
+    description "Initial revision.";
     reference "internal";
   }
 
@@ -23,124 +16,127 @@ module infix-firewall-services {
     description "Well-known network services, with standard port assignments from IANA.";
     type enumeration {
       enum "bgp" {
-        description "tcp/179 — Border Gateway Protocol for internet routing";
+        description "179/tcp — Border Gateway Protocol for internet routing";
       }
       enum "dhcp" {
-        description "udp/67-68 — Dynamic Host Configuration Protocol for network configuration";
+        description "67-68/udp — Dynamic Host Configuration Protocol for network configuration";
       }
       enum "dhcpv6" {
-        description "udp/547 — Allow incoming DHCP for IPv6 requests from clients or relay agents.";
+        description "547/udp — Allow incoming DHCP for IPv6 requests from clients or relay agents.";
       }
       enum "dhcpv6-client" {
-        description "udp/546 — Allow a DHCP for IPv6 client to obtain a lease.";
+        description "546/udp — Allow a DHCP for IPv6 client to obtain a lease.";
       }
       enum "dns" {
-        description "tcp+udp/53 — Domain Name System for name resolution";
+        description "53/tcp+udp — Domain Name System for name resolution";
       }
       enum "ftp" {
-        description "tcp/20-21 — File Transfer Protocol for file transfers";
+        description "20-21/tcp — File Transfer Protocol for file transfers";
       }
       enum "http" {
-        description "tcp/80 — Hypertext Transfer Protocol for web traffic";
+        description "80/tcp — Hypertext Transfer Protocol for web traffic";
       }
       enum "https" {
-        description "tcp/443 — Secure Hypertext Transfer Protocol for encrypted web traffic";
+        description "443/tcp — Secure Hypertext Transfer Protocol for encrypted web traffic";
       }
       enum "imap" {
-        description "tcp/143 — Internet Message Access Protocol for email access";
+        description "143/tcp — Internet Message Access Protocol for email access";
       }
       enum "imaps" {
-        description "tcp/993 — Secure Internet Message Access Protocol for encrypted email access";
+        description "993/tcp — Secure Internet Message Access Protocol for encrypted email access";
       }
       enum "ipp" {
-        description "tcp+udp/631 — Internet Printing Protocol (IPP) is used for distributed printing.";
+        description "631/tcp+udp — Internet Printing Protocol (IPP) is used for distributed printing.";
       }
        enum "kerberos" {
-        description "tcp+udp/88 — Network authentication protocol";
+        description "88/tcp+udp — Network authentication protocol";
       }
       enum "ldap" {
-        description "tcp/389 — Lightweight Directory Access Protocol for directory services";
+        description "389/tcp — Lightweight Directory Access Protocol for directory services";
       }
       enum "mdns" {
-        description "udp/5353 — Multicast DNS for local network service discovery";
+        description "5353/udp — Multicast DNS for local network service discovery";
       }
       enum "mongodb" {
-        description "tcp/27017 — Document-oriented NoSQL database";
+        description "27017/tcp — Document-oriented NoSQL database";
       }
       enum "mqtt" {
-        description "tcp/1883 — Message Queuing Telemetry Transport for IoT";
+        description "1883/tcp — Message Queuing Telemetry Transport for IoT";
       }
       enum "mssql" {
-        description "tcp/1433 — Microsoft SQL Server database";
+        description "1433/tcp — Microsoft SQL Server database";
       }
       enum "mysql" {
-        description "tcp/3306 — MySQL database server connections";
+        description "3306/tcp — MySQL database server connections";
       }
       enum "netbios-ns" {
-        description "udp/137 — NetBIOS Name Service for Windows networking";
+        description "137/udp — NetBIOS Name Service for Windows networking";
       }
       enum "nfs" {
-        description "tcp+udp/2049 — Network File System for distributed file sharing";
+        description "2049/tcp+udp — Network File System for distributed file sharing";
       }
       enum "ntp" {
-        description "udp/123 — Network Time Protocol for time synchronization";
+        description "123/udp — Network Time Protocol for time synchronization";
       }
       enum "openvpn" {
-        description "udp/1194 — OpenVPN secure tunnel for VPN connections";
+        description "1194/udp — OpenVPN secure tunnel for VPN connections";
       }
       enum "pop3" {
-        description "tcp/110 — Post Office Protocol version 3 for email retrieval";
+        description "110/tcp — Post Office Protocol version 3 for email retrieval";
       }
       enum "pop3s" {
-        description "tcp/995 — Secure Post Office Protocol version 3 for encrypted email retrieval";
+        description "995/tcp — Secure Post Office Protocol version 3 for encrypted email retrieval";
       }
       enum "postgresql" {
-        description "tcp/5432 — PostgreSQL database server connections";
+        description "5432/tcp — PostgreSQL database server connections";
       }
       enum "radius" {
-        description "tcp+udp/1812-1813 — Remote Authentication Dial-in User Service";
+        description "1812-1813/tcp+udp — Remote Authentication Dial-in User Service";
       }
       enum "rdp" {
-        description "tcp/3389 — Remote Desktop Protocol for Windows remote access";
+        description "3389/tcp — Remote Desktop Protocol for Windows remote access";
       }
       enum "samba" {
-        description "tcp/445 — Windows file and printer sharing";
+        description "445/tcp — Windows file and printer sharing";
+      }
+      enum "samba-client" {
+        description "138/udp — Windows file and printer sharing (client-only)";
       }
       enum "sip" {
-        description "tcp+udp/5060 — Session Initiation Protocol for VoIP communications";
+        description "5060/tcp+udp — Session Initiation Protocol for VoIP communications";
       }
       enum "sips" {
-        description "tcp+udp/5061 — Secure Session Initiation Protocol for encrypted VoIP";
+        description "5061/tcp+udp — Secure Session Initiation Protocol for encrypted VoIP";
       }
       enum "smtp" {
-        description "tcp/25 — Simple Mail Transfer Protocol for email transmission";
+        description "25/tcp — Simple Mail Transfer Protocol for email transmission";
       }
       enum "snmp" {
-        description "udp/161 — Simple Network Management Protocol for network monitoring";
+        description "161/udp — Simple Network Management Protocol for network monitoring";
       }
       enum "snmptrap" {
-        description "udp/162 — Simple Network Management Protocol trap notifications";
+        description "162/udp — Simple Network Management Protocol trap notifications";
       }
       enum "ssh" {
-        description "tcp/22 — Secure Shell for remote login and command execution";
+        description "22/tcp — Secure Shell for remote login and command execution";
       }
       enum "ssdp" {
-        description "udp/1900 — Simple Service Discovery Protocol for UPnP device discovery";
+        description "1900/udp — Simple Service Discovery Protocol for UPnP device discovery";
       }
       enum "telnet" {
-        description "tcp/23 — Telnet protocol for remote terminal access";
+        description "23/tcp — Telnet protocol for remote terminal access";
       }
       enum "tftp" {
-        description "udp/69 — Trivial File Transfer Protocol for simple file transfers";
+        description "69/udp — Trivial File Transfer Protocol for simple file transfers";
       }
       enum "vnc-server" {
-        description "tcp/5900-5906 — Virtual Network Computing server for remote desktop access";
+        description "5900-5906/tcp — Virtual Network Computing server for remote desktop access";
       }
       enum "wireguard" {
-        description "udp/51820 — Modern VPN tunnel for secure networking";
+        description "51820/udp — Modern VPN tunnel for secure networking";
       }
       enum "xdmcp" {
-        description "tcp+udp/177 — X Display Manager Control Protocol for remote X11 sessions";
+        description "177/tcp+udp — X Display Manager Control Protocol for remote X11 sessions";
       }
     }
   }
