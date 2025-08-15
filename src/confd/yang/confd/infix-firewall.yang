@@ -69,11 +69,10 @@ module infix-firewall {
 
   typedef policy-action {
     type enumeration {
-      /* ADVANCED FEATURE: Commented out - requires policy ordering/priority system
+      /* ADVANCED FEATURE: Commented out - requires policy ordering/priority system */
       enum continue {
         description "Non-terminal policy. Matching traffic is accepted or allowed to proceed, and other policies continue to be evaluated.";
       }
-      */
       enum accept {
         description "Accept matching traffic and stop evaluating further policies.";
       }
@@ -231,7 +230,7 @@ module infix-firewall {
       leaf policy {
         description "Default action for traffic matching no explicit rule.
 
-                       Note, see also the 'forwarding' setting for this zone.";
+                     Note, see also the 'forwarding' setting for this zone.";
         type zone-policy;
         default reject;
       }
