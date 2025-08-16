@@ -235,18 +235,22 @@ module infix-firewall {
         default reject;
       }
 
-      leaf-list interfaces {
-        description "Interfaces assigned to this zone.";
+      leaf-list interface {
+        description "List of interfaces assigned to this zone.";
         type if:interface-ref;
+
+        must "count(/firewall/zone[interface = current()]) <= 1" {
+          error-message "An interface can only be assigned to one firewall zone";
+        }
       }
 
-      leaf-list sources {
+      leaf-list source {
         description "Source networks assigned to this zone.";
         type inet:ip-prefix;
       }
 
       leaf forwarding {
-        description "Allow forwarding between interfaces/sources in the same zone.
+        description "Allow forwarding between interfaces/networks in the same zone.
 
                      Note, this setting applies regardless of (before) the zone policy!";
         type boolean;
@@ -280,7 +284,7 @@ module infix-firewall {
         }
       }
 
-      leaf-list services {
+      leaf-list service {
         description "Services allowed to ingress this zone.";
         type union {
           type leafref {

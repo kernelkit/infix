@@ -10,9 +10,9 @@
 	    },
 	    {
 		"name": "external",
-		"description": "External untrusted network, only SSH and DHCPv6 client.",
+		"description": "External untrusted network, only SSH and DHCPv6 client allowed in.",
 		"policy": "drop",
-		"services": [ "ssh", "dhcpv6-client" ]
+		"service": [ "ssh", "dhcpv6-client" ]
 	    }
 	]
     }

@@ -67,7 +67,7 @@ static void mark_interfaces_used(struct lyd_node *cfg, char **l3_ifaces)
 {
 	struct lyd_node *node;
 
-	LYX_LIST_FOR_EACH(lyd_child(cfg), node, "interfaces") {
+	LYX_LIST_FOR_EACH(lyd_child(cfg), node, "interface") {
 		const char *ifname = lyd_get_value(node);
 
 		for (int i = 0; l3_ifaces[i]; i++) {
@@ -127,8 +127,8 @@ static int generate_zone_with_extra_interfaces(const char *name, struct lyd_node
 	fprintf(fp, "  <short>%s</short>\n", name);
 	if (desc)
 		fprintf(fp, "  <description>%s</description>\n", desc);
-	
-	LYX_LIST_FOR_EACH(lyd_child(cfg), node, "interfaces")
+
+	LYX_LIST_FOR_EACH(lyd_child(cfg), node, "interface")
 		fprintf(fp, "  <interface name=\"%s\"/>\n", lyd_get_value(node));
 
 	if (extra_ifaces) {
@@ -138,13 +138,13 @@ static int generate_zone_with_extra_interfaces(const char *name, struct lyd_node
 			}
 		}
 	}
-	
-	LYX_LIST_FOR_EACH(lyd_child(cfg), node, "sources")
+
+	LYX_LIST_FOR_EACH(lyd_child(cfg), node, "source")
 		fprintf(fp, "  <source address=\"%s\"/>\n", lyd_get_value(node));
-	
-	LYX_LIST_FOR_EACH(lyd_child(cfg), node, "services")
+
+	LYX_LIST_FOR_EACH(lyd_child(cfg), node, "service")
 		fprintf(fp, "  <service name=\"%s\"/>\n", lyd_get_value(node));
-	
+
 	LYX_LIST_FOR_EACH(lyd_child(cfg), node, "port-forward") {
 		const char *port = lydx_get_cattr(node, "port");
 		const char *proto = lydx_get_cattr(node, "proto");
@@ -352,7 +352,8 @@ static int infer_zone(sr_session_ctx_t *session, const char *name, const char *d
 		return rc;
 
 	for (int i = 0; services && services[i]; i++) {
-		rc = srx_set_str(session, services[i], 0, XPATH "/zone[name='%s']/services[.='%s']", name, services[i]);
+		rc = srx_set_str(session, services[i], 0, XPATH "/zone[name='%s']/service[.='%s']",
+				 name, services[i]);
 		if (rc)
 			return rc;
 	}

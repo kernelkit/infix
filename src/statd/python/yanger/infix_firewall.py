@@ -29,9 +29,9 @@ def get_zone_data(fw, name):
         zone = {
             "name": name,
             "policy": "accept",
-            "interfaces": list(settings.get('interfaces', [])),
-            # "sources": list(settings.get('sources', [])),
-            "services": list(settings.get('services', [])),
+            "interface": list(settings.get('interfaces', [])),
+            "source": list(settings.get('sources', [])),
+            "service": list(settings.get('services', [])),
             "port-forward": [],
             "forwarding": False
         }
