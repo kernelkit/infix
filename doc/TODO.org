@@ -8,11 +8,11 @@
   be queried using =firewall-cmd --query-panic=, which returns =yes=
 - [ ] Remove debug log messages!
 - [ ] Add "Log Messages" section to =show firewall= when =LogDenied ≠ off=
-- [ ] Rename policy->policy to policy->action, and replace allow->forward
-- [ ] Rename zone->sources to networks
-- [ ] A zone's policy is for ingress, clarify this if missing!
-- [ ] Any services/ports listed in a zone with policy:accept are a NO-OP
-- [ ] =firwall-cmd --reload= takes fooooorever! :-(
+- [1/2] Rename policy->policy to policy->action, and replace allow->forward
+- [X] Rename zone->sources to networks
+- [X] A zone's action is for ingress, clarify this if missing!
+- [X] Any services/ports listed in a zone with policy:accept are a NO-OP
+- [X] =firwall-cmd --reload= takes fooooorever! :-(
 
 * TODO doc: User Guide
 

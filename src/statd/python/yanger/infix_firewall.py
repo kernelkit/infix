@@ -36,7 +36,7 @@ def get_zone_data(fw, name):
             "name": name,
             "action": "accept",
             "interface": list(settings.get('interfaces', [])),
-            "source": list(settings.get('sources', [])),
+            "network": list(settings.get('sources', [])),
             "service": list(settings.get('services', [])),
             "port-forward": [],
             "forwarding": False
@@ -106,9 +106,9 @@ def get_zones(fw):
         for name, zone_info in active_zones.items():
             zone_data = get_zone_data(fwz, name)
             if zone_data:
-                # Override interfaces and sources with active zone data to ensure accuracy
+                # Override interfaces and networks with active zone data to ensure accuracy
                 zone_data['interface'] = list(zone_info.get('interfaces', []))
-                zone_data['source'] = list(zone_info.get('sources', []))
+                zone_data['network'] = list(zone_info.get('sources', []))
                 zones.append(zone_data)
 
     except Exception as e:

@@ -169,7 +169,7 @@ static int generate_zone(struct lyd_node *cfg, const char *name, char **ifaces)
 		log_unzoned(name, ifaces);
 	}
 
-	LYX_LIST_FOR_EACH(lyd_child(cfg), node, "source")
+	LYX_LIST_FOR_EACH(lyd_child(cfg), node, "network")
 		fprintf(fp, "  <source address=\"%s\"/>\n", lyd_get_value(node));
 
 	LYX_LIST_FOR_EACH(lyd_child(cfg), node, "service")

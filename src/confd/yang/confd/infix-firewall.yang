@@ -228,7 +228,7 @@ module infix-firewall {
       }
 
       leaf action {
-        description "Default action for traffic matching no explicit rule.
+        description "Default for ingressing traffic not matching an explicit rule.
 
                      Note, see also the 'forwarding' setting for this zone.";
         type zone-action;
@@ -244,8 +244,8 @@ module infix-firewall {
         }
       }
 
-      leaf-list source {
-        description "Source networks assigned to this zone.";
+      leaf-list network {
+        description "IP networks assigned to this zone.";
         type inet:ip-prefix;
       }
 
@@ -285,7 +285,7 @@ module infix-firewall {
       }
 
       leaf-list service {
-        description "Services allowed to ingress this zone.";
+        description "Services allowed to ingress zone when action != accept.";
         type union {
           type leafref {
             path "../../service/name";

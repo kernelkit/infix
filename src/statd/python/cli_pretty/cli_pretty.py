@@ -1507,6 +1507,40 @@ def show_firewall(json):
     show_firewall_policy(json)
 
 
+def ip_in_network(ip_addr, network):
+    """Check if an IP address falls within a CIDR network"""
+    try:
+        import ipaddress
+        ip = ipaddress.ip_address(ip_addr)
+        net = ipaddress.ip_network(network, strict=False)
+        return ip in net
+    except:
+        return False
+
+
+def pfw_cond(zones):
+    """Check for port-forwards that target IPs within zone networks"""
+    cond = []
+
+    # Collect all port-forwards with destinations
+    pfwd = []
+    for zone in zones:
+        zone_name = zone.get('name', '')
+        for pf in zone.get('port-forward', []):
+            to = pf.get('to', {})
+            if 'addr' in to:
+                pfwd.append((zone_name, to['addr']))
+
+    # Check each destination against all zone networks
+    for zone in zones:
+        zone_name = zone.get('name', '')
+        for network in zone.get('network', []):
+            for pf_zone, dest_ip in pfwd:
+                if ip_in_network(dest_ip, network):
+                    cond.append(f"Port-forward in {pf_zone} targets {dest_ip} in {zone_name} network {network}")
+    return cond
+
+
 def build_policy_map(policies):
     """Build enhanced policy lookup with conditional detection"""
     policy_map = {}
@@ -1554,6 +1588,10 @@ def traffic_symbol(from_zone, to_zone, policy_map, zones, cell_width):
     key = (from_zone, to_zone)
     policy = policy_map.get(key)
 
+    # Check for port-forward network overlap conditionals
+    cond = pfw_cond(zones)
+    pfwd_overlap = any(from_zone in cond or to_zone in cond for cond in cond)
+
     if not policy or not policy['allow']:
         # Check if from_zone has port forwarding rules (makes it conditional)
         zone = next((z for z in zones if z.get('name') == from_zone), None)
@@ -1564,9 +1602,13 @@ def traffic_symbol(from_zone, to_zone, policy_map, zones, cell_width):
                 # Some traffic allowed via port forwarding
                 return make_cell("⚠", Decore.yellow_bg)
 
+        # Check for port-forward network overlap
+        if pfwd_overlap:
+            return make_cell("⚠", Decore.yellow_bg)
+
         return make_cell("✗", Decore.red_bg)
 
-    if policy['conditional']:
+    if policy['conditional'] or pfwd_overlap:
         return make_cell("⚠", Decore.yellow_bg)
 
     return make_cell("✓", Decore.green_bg)
@@ -1670,9 +1712,9 @@ def show_firewall_zone(json, zone_name=None):
         interfaces = zone.get('interface', [])
         if not interfaces:
             interfaces = ""
-        sources = zone.get('source', [])
-        if not sources:
-            sources = ""
+        networks = zone.get('network', [])
+        if not networks:
+            networks = ""
         services = zone.get('service', [])
         if not services:
             services = ""
@@ -1687,7 +1729,7 @@ def show_firewall_zone(json, zone_name=None):
         print(f"{'name':<20}: {zone_name}")
         print(f"{'action':<20}: {action}")
         print(f"{'interfaces':<20}: {', '.join(interfaces)}")
-        print(f"{'sources':<20}: {', '.join(sources)}")
+        print(f"{'networks':<20}: {', '.join(networks)}")
         print(f"{'forwarding':<20}: {forwarding}")
         print(f"{'services':<20}: {services_display}")
 
