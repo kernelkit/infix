@@ -142,31 +142,59 @@ int infix_ifaces(kcontext_t *ctx)
 	return 0;
 }
 
-static int firewall_completion(const char *type)
+static int firewall_dbus_completion(const char *interface, const char *method, const char *parser)
 {
-	const char *cmd = "sysrepocfg -X -d operational -f json -x";
-
-	return systemf("%s /infix-firewall:firewall/%s/name 2>/dev/null"
-		       " | jq -r '.\"infix-firewall:firewall\".%s[]?.name // empty'"
-		       " 2>/dev/null", cmd, type, type);
+	return systemf("gdbus call --system --dest org.fedoraproject.FirewallD1 "
+		       "--object-path /org/fedoraproject/FirewallD1 "
+		       "--method org.fedoraproject.FirewallD1.%s.%s 2>/dev/null "
+		       "| %s", interface, method, parser);
 }
 
+/*
+ * Completion function for firewall zones.
+ * D-Bus returns variant format: ({'zone1': {...}},)
+ * Pipeline:
+ *   - sed removes wrapper parentheses
+ *   - tr converts single to double quotes
+ *   - jq extracts keys
+ */
 int infix_firewall_zones(kcontext_t *ctx)
 {
 	(void)ctx;
-	return firewall_completion("zone");
+	return firewall_dbus_completion("zone", "getActiveZones",
+		"sed 's/^(//; s/,)$//' | tr \"'\" '\"' | jq -r 'keys[]' 2>/dev/null");
 }
 
+/*
+ * Completion function for firewall policies.
+ * D-Bus returns variant format: (['policy1', 'policy2'],)
+ * Pipeline:
+ *   - sed removes wrapper parentheses
+ *   - tr converts single to double quotes
+ *   - jq extracts array items
+ */
 int infix_firewall_policies(kcontext_t *ctx)
 {
 	(void)ctx;
-	return firewall_completion("policy");
+	return firewall_dbus_completion("policy", "getPolicies",
+		"sed 's/^(//; s/,)$//' | tr \"'\" '\"' | jq -r '.[]' 2>/dev/null");
 }
 
+/*
+ * Completion function for firewall services.
+ * D-Bus returns variant format: (['dhcp', 'dns', 'ssh'],)
+ * Pipeline:
+ *   - sed removes wrapper parentheses
+ *   - tr converts single to double quotes
+ *   - jq extracts array items
+ */
 int infix_firewall_services(kcontext_t *ctx)
 {
 	(void)ctx;
-	return firewall_completion("service");
+	return systemf("gdbus call --system --dest org.fedoraproject.FirewallD1 "
+		       "--object-path /org/fedoraproject/FirewallD1 "
+		       "--method org.fedoraproject.FirewallD1.listServices 2>/dev/null "
+		       "| sed 's/^(//; s/,)$//' | tr \"'\" '\"' | jq -r '.[]' 2>/dev/null");
 }
 
 int infix_copy(kcontext_t *ctx)

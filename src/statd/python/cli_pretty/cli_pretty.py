@@ -163,6 +163,18 @@ class Decore():
         return Decore.decorate("100", txt)
 
     @staticmethod
+    def red_bg(txt):
+        return Decore.decorate("41", txt, "49")
+
+    @staticmethod
+    def green_bg(txt):
+        return Decore.decorate("42", txt, "49")
+
+    @staticmethod
+    def yellow_bg(txt):
+        return Decore.decorate("43", txt, "49")
+
+    @staticmethod
     def title(txt, len=None, bold=True):
         """Print section header with horizontal bar line above it
         Args:
@@ -1530,10 +1542,14 @@ def build_policy_map(policies):
     return policy_map
 
 
-def traffic_symbol(from_zone, to_zone, policy_map, zones):
+def traffic_symbol(from_zone, to_zone, policy_map, zones, cell_width):
     """Determine the symbol to show for zone-to-zone traffic"""
+    def make_cell(symbol, bg_func):
+        # Create full-width colored cell
+        return bg_func(f" {symbol:^{cell_width}} ")
+
     if from_zone == to_zone:
-        return "✓"
+        return make_cell("✓", Decore.green_bg)
 
     key = (from_zone, to_zone)
     policy = policy_map.get(key)
@@ -1545,14 +1561,15 @@ def traffic_symbol(from_zone, to_zone, policy_map, zones):
             action = zone.get('policy', 'accept')
             pfwd = zone.get('port-forward', [])
             if action in ['reject', 'drop'] and pfwd:
-                return "⚠"  # Some traffic allowed via port forwarding
+                # Some traffic allowed via port forwarding
+                return make_cell("⚠", Decore.yellow_bg)
 
-        return "✗"
+        return make_cell("✗", Decore.red_bg)
 
     if policy['conditional']:
-        return "⚠"
+        return make_cell("⚠", Decore.yellow_bg)
 
-    return "✓"
+    return make_cell("✓", Decore.green_bg)
 
 
 def show_firewall_matrix(fw):
@@ -1615,15 +1632,26 @@ def show_firewall_matrix(fw):
     for from_zone in zone_names:
         row = f"│ {from_zone:>{left_col_width}} │"
         for to_zone in zone_names:
-            symbol = traffic_symbol(from_zone, to_zone, policy_map, zones)
-            row += f" {symbol:^{col_width}} │"
+            symbol = traffic_symbol(from_zone, to_zone, policy_map, zones, col_width)
+            row += f"{symbol}│"
         print(f"{indent}{row}")
     print(f"{indent}{bottom_border}")
 
-    # Center the legend
-    legend = "✓ Allow   ✗ Deny   ⚠ Conditional"
-    legend_padding = max(0, (target_width - len(legend)) // 2)
-    print(f"{'':<{legend_padding}}{legend}")
+    # Center the legend - define parts first for length calculation
+    legend_data = [
+        ("✓ Allow", Decore.green_bg),
+        ("✗ Deny", Decore.red_bg),
+        ("⚠ Conditional", Decore.yellow_bg)
+    ]
+
+    # Calculate visible length, then colorize the parts
+    visible_parts = [f" {text} " for text, _ in legend_data]
+    visible_legend = "   ".join(visible_parts)
+    colorized_parts = [bg_func(f" {text} ") for text, bg_func in legend_data]
+    legend = "   ".join(colorized_parts)
+    # Depending on taste and number of zones, but +1 works for me
+    legend_padding = max(0, (target_width - len(visible_legend)) // 2) + 1
+    print(f"{' ' * legend_padding}{legend}")
 
 
 def show_firewall_zone(json, zone_name=None):
