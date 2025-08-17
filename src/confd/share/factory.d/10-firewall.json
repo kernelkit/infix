@@ -5,13 +5,13 @@
 	    {
 		"name": "internal",
 		"description": "Internal trusted network, forwarding between networks in same zone.",
-		"policy": "accept",
+		"action": "accept",
 		"forwarding": true
 	    },
 	    {
 		"name": "external",
 		"description": "External untrusted network, only SSH and DHCPv6 client allowed in.",
-		"policy": "drop",
+		"action": "drop",
 		"service": [ "ssh", "dhcpv6-client" ]
 	    }
 	]

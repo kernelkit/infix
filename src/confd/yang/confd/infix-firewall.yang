@@ -39,8 +39,8 @@ module infix-firewall {
     }
   }
 
-  typedef zone-policy {
-    description "Default policy for a zone.";
+  typedef zone-action {
+    description "Default action for a zone.";
 
     type enumeration {
       enum accept {
@@ -227,11 +227,11 @@ module infix-firewall {
         type string;
       }
 
-      leaf policy {
+      leaf action {
         description "Default action for traffic matching no explicit rule.
 
                      Note, see also the 'forwarding' setting for this zone.";
-        type zone-policy;
+        type zone-action;
         default reject;
       }
 
@@ -252,7 +252,7 @@ module infix-firewall {
       leaf forwarding {
         description "Allow forwarding between interfaces/networks in the same zone.
 
-                     Note, this setting applies regardless of (before) the zone policy!";
+                     Note, this setting applies regardless of (before) the zone action!";
         type boolean;
       }
 
@@ -336,8 +336,8 @@ module infix-firewall {
         type boolean;
       }
 
-      leaf policy {
-        description "Policy for non-matching traffic. All policies are terminal (accept/reject/drop).";
+      leaf action {
+        description "Action for non-matching traffic. All policies are terminal (accept/reject/drop).";
         type policy-action;
         default "reject";
       }

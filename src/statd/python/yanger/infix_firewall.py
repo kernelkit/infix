@@ -34,7 +34,7 @@ def get_zone_data(fw, name):
         settings = fw.getZoneSettings2(name)
         zone = {
             "name": name,
-            "policy": "accept",
+            "action": "accept",
             "interface": list(settings.get('interfaces', [])),
             "source": list(settings.get('sources', [])),
             "service": list(settings.get('services', [])),
@@ -43,14 +43,14 @@ def get_zone_data(fw, name):
         }
 
         target = settings.get('target', 'default')
-        policy = {
+        action = {
             "%%REJECT%%": "reject",
             "REJECT": "reject",
             "ACCEPT": "accept",
             "DROP": "drop",
             "default": "accept"
         }
-        zone["policy"] = policy.get(target, "accept")
+        zone["action"] = action.get(target, "accept")
         zone["forwarding"] = bool(settings.get('forward', 0))
         zone["description"] = settings.get('description', 0)
 
@@ -123,7 +123,7 @@ def get_policy_data(fw, name):
 
         policy = {
             "name": name,
-            "policy": "reject",
+            "action": "reject",
             # "priority": 32767,
             "ingress": [],
             "egress": []
@@ -136,7 +136,7 @@ def get_policy_data(fw, name):
             "REJECT": "reject",
             "DROP": "drop"
         }
-        policy["policy"] = action.get(target, "reject")
+        policy["action"] = action.get(target, "reject")
 
         # priority = settings.get('priority', 32767)
         # if isinstance(priority, int):

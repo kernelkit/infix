@@ -1515,7 +1515,7 @@ def build_policy_map(policies):
         ingress_zones = policy.get('ingress', [])
         egress_zones = policy.get('egress', [])
         services = policy.get('service', [])
-        policy_action = policy.get('policy', 'reject')
+        action = policy.get('action', 'reject')
         policy_name = policy.get('name', 'unknown')
 
         for ing in ingress_zones:
@@ -1531,7 +1531,7 @@ def build_policy_map(policies):
                             'policies': []
                         }
 
-                    if policy_action in ['accept', 'continue']:
+                    if action in ['accept', 'continue']:
                         policy_map[key]['allow'] = True
 
                     if services:
@@ -1558,7 +1558,7 @@ def traffic_symbol(from_zone, to_zone, policy_map, zones, cell_width):
         # Check if from_zone has port forwarding rules (makes it conditional)
         zone = next((z for z in zones if z.get('name') == from_zone), None)
         if zone:
-            action = zone.get('policy', 'accept')
+            action = zone.get('action', 'accept')
             pfwd = zone.get('port-forward', [])
             if action in ['reject', 'drop'] and pfwd:
                 # Some traffic allowed via port forwarding
@@ -1676,8 +1676,8 @@ def show_firewall_zone(json, zone_name=None):
         services = zone.get('service', [])
         if not services:
             services = ""
-        policy = zone.get('policy', 'accept')
-        if policy == 'accept':
+        action = zone.get('action', 'accept')
+        if action == 'accept':
             services_display = "(any)"
         else:
             services_display = ", ".join(services) if services else "(none)"
@@ -1685,7 +1685,7 @@ def show_firewall_zone(json, zone_name=None):
 
         print(format_description('description', description))
         print(f"{'name':<20}: {zone_name}")
-        print(f"{'policy':<20}: {policy}")
+        print(f"{'action':<20}: {action}")
         print(f"{'interfaces':<20}: {', '.join(interfaces)}")
         print(f"{'sources':<20}: {', '.join(sources)}")
         print(f"{'forwarding':<20}: {forwarding}")
@@ -1741,7 +1741,7 @@ def show_firewall_zone(json, zone_name=None):
         print(Decore.invert(hdr))
         for zone in zones:
             name = zone.get('name', '')
-            action = zone.get('policy', 'accept')
+            action = zone.get('action', 'accept')
             interfaces = ", ".join(zone.get('interface', []))
             if not interfaces:
                 interfaces = "(none)"
@@ -1771,7 +1771,7 @@ def show_firewall_policy(json, policy_name=None):
 
         ingress = policy.get('ingress', [])
         egress = policy.get('egress', [])
-        policy_action = policy.get('policy', 'reject')
+        action = policy.get('action', 'reject')
         masquerade = "yes" if policy.get('masquerade') else "no"
         description = policy.get('description', '')
         services = policy.get('service', [])
@@ -1784,7 +1784,7 @@ def show_firewall_policy(json, policy_name=None):
         print(f"{'name':<20}: {policy_name}")
         print(f"{'ingress':<20}: {', '.join(ingress) if ingress else '(none)'}")
         print(f"{'egress':<20}: {', '.join(egress) if egress else '(none)'}")
-        print(f"{'policy':<20}: {policy_action}")
+        print(f"{'action':<20}: {action}")
         print(f"{'masquerade':<20}: {masquerade}")
         print(f"{'services':<20}: {services_display}")
     else:
@@ -1798,7 +1798,7 @@ def show_firewall_policy(json, policy_name=None):
             name = policy.get('name', '')
             ingress = ", ".join(policy.get('ingress', []))
             egress = ", ".join(policy.get('egress', []))
-            action = policy.get('policy', 'reject')
+            action = policy.get('action', 'reject')
 
             print(f"{name:<{PadFirewall.policy_name}}"
                   f"{action:<{PadFirewall.policy_action}}"

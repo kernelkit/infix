@@ -27,7 +27,7 @@
 static struct {
 	const char *yang;
 	const char *target;
-} zone_policy_map[] = {
+} zone_action_map[] = {
 	{ "reject", "%%REJECT%%" },
 	{ "accept", "ACCEPT" },
 	{ "drop",   "DROP" },
@@ -43,14 +43,14 @@ static struct {
 	{ "drop",     "DROP" },
 };
 
-static const char *zone_policy_to_target(const char *policy)
+static const char *zone_action_to_target(const char *action)
 {
-	for (size_t i = 0; policy && i < NELEMS(zone_policy_map); i++) {
-		if (!strcmp(policy, zone_policy_map[i].yang))
-			return zone_policy_map[i].target;
+	for (size_t i = 0; action && i < NELEMS(zone_action_map); i++) {
+		if (!strcmp(action, zone_action_map[i].yang))
+			return zone_action_map[i].target;
 	}
-	
-	return zone_policy_map[0].yang;
+
+	return zone_action_map[0].yang;
 }
 
 static const char *policy_action_to_target(const char *action)
@@ -59,7 +59,7 @@ static const char *policy_action_to_target(const char *action)
 		if (!strcmp(action, policy_action_map[i].yang))
 			return policy_action_map[i].target;
 	}
-	
+
 	return policy_action_map[0].yang;
 }
 
@@ -111,13 +111,13 @@ static void log_unzoned(const char *name, char **ifaces)
 static FILE *open_file(const char *dir, const char *name)
 {
 	FILE *fp;
-	
+
 	fp = fopenf("w", "%s/%s.xml", dir, name);
 	if (!fp) {
 		ERRNO("Failed creating %s/%s.xml: %s", dir, name, strerror(errno));
 		return NULL;
 	}
-	
+
 	fprintf(fp, "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n");
 	return fp;
 }
@@ -134,24 +134,24 @@ static int delete_file(const char *dir, const char *name)
 		ERRNO("Failed deleting %s/%s.xml: %s", dir, name, strerror(errno));
 		return SR_ERR_SYS;
 	}
-	
+
 	return SR_ERR_OK;
 }
 
-static int generate_zone(const char *name, struct lyd_node *cfg, char **ifaces)
+static int generate_zone(struct lyd_node *cfg, const char *name, char **ifaces)
 {
-	const char *policy, *desc;
+	const char *action, *desc;
 	struct lyd_node *node;
 	FILE *fp;
-	
+
 	fp = open_file(FIREWALLD_ZONES_DIR, name);
 	if (!fp)
 		return SR_ERR_SYS;
-	
-	policy = lydx_get_cattr(cfg, "policy");
+
+	action = lydx_get_cattr(cfg, "action");
 	desc = lydx_get_cattr(cfg, "description");
-	
-	fprintf(fp, "<zone target=\"%s\">\n", zone_policy_to_target(policy));
+
+	fprintf(fp, "<zone target=\"%s\">\n", zone_action_to_target(action));
 	fprintf(fp, "  <short>%s</short>\n", name);
 	if (desc)
 		fprintf(fp, "  <description>%s</description>\n", desc);
@@ -179,42 +179,42 @@ static int generate_zone(const char *name, struct lyd_node *cfg, char **ifaces)
 		const char *port = lydx_get_cattr(node, "port");
 		const char *proto = lydx_get_cattr(node, "proto");
 		struct lyd_node *to = lydx_get_child(node, "to");
-		
+
 		if (to) {
 			const char *to_addr = lydx_get_cattr(to, "addr");
 			const char *to_port = lydx_get_cattr(to, "port");
-			
+
 			fprintf(fp, "  <forward-port port=\"%s\" protocol=\"%s\"", port, proto);
-			
+
 			if (to_addr)
 				fprintf(fp, " to-addr=\"%s\"", to_addr);
 			if (to_port)
 				fprintf(fp, " to-port=\"%s\"", to_port);
-			
+
 			fprintf(fp, "/>\n");
 		}
 	}
-	
+
 #if 0 /* ADVANCED FEATURE: icmp-blocks removed from YANG model */
 	LYX_LIST_FOR_EACH(lyd_child(cfg), node, "icmp-blocks") {
 		const char *icmp_type = lydx_get_cattr(node, "icmp-type");
 		fprintf(fp, "  <icmp-block name=\"%s\"/>\n", icmp_type);
 	}
 #endif
-	
+
 	if (lydx_is_enabled(cfg, "forwarding"))
 		fprintf(fp, "  <forward/>\n");
 #if 0 /* REMOVED: Zone-level masquerade - handled by policy rules instead */
 	if (lydx_is_enabled(cfg, "masquerade"))
 		fprintf(fp, "  <masquerade/>\n");
 #endif
-	
+
 	fprintf(fp, "</zone>\n");
-	
+
 	return close_file(fp);
 }
 
-static int generate_service(const char *name, struct lyd_node *service_cfg)
+static int generate_service(struct lyd_node *cfg, const char *name)
 {
 	const char *desc;
 #if 0 /* ADVANCED FEATURE: destination variable for service destinations */
@@ -222,80 +222,80 @@ static int generate_service(const char *name, struct lyd_node *service_cfg)
 #endif
 	struct lyd_node *node;
 	FILE *fp;
-	
+
 	fp = open_file(FIREWALLD_SERVICES_DIR, name);
 	if (!fp)
 		return SR_ERR_SYS;
-	
-	desc = lydx_get_cattr(service_cfg, "description");
+
+	desc = lydx_get_cattr(cfg, "description");
 #if 0 /* ADVANCED FEATURE: service destinations removed from YANG model */
-	destination = lydx_get_cattr(service_cfg, "destination");
+	destination = lydx_get_cattr(cfg, "destination");
 #endif
-	
+
 	fprintf(fp, "<service>\n");
-	
+
 	if (desc)
 		fprintf(fp, "  <short>%s</short>\n", desc);
-	
+
 #if 0 /* ADVANCED FEATURE: service destinations removed from YANG model */
 	if (destination)
 		fprintf(fp, "  <destination ipv4=\"%s\"/>\n", destination);
 #endif
-	
-	LYX_LIST_FOR_EACH(lyd_child(service_cfg), node, "port") {
+
+	LYX_LIST_FOR_EACH(lyd_child(cfg), node, "port") {
 		const char *lower = lydx_get_cattr(node, "lower");
 		const char *upper = lydx_get_cattr(node, "upper");
 		const char *proto = lydx_get_cattr(node, "proto");
-		
+
 		if (upper && strcmp(lower, upper))
 			fprintf(fp, "  <port port=\"%s-%s\" protocol=\"%s\"/>\n", lower, upper, proto);
 		else
 			fprintf(fp, "  <port port=\"%s\" protocol=\"%s\"/>\n", lower, proto);
 	}
-	
+
 	fprintf(fp, "</service>\n");
-	
+
 	return close_file(fp);
 }
 
-static int generate_policy(const char *name, struct lyd_node *policy_cfg)
+static int generate_policy(struct lyd_node *cfg, const char *name)
 {
-	const char *desc, *policy;
+	const char *desc, *action;
 	struct lyd_node *node;
 	bool masquerade;
 	FILE *fp;
-	
+
 	fp = open_file(FIREWALLD_POLICIES_DIR, name);
 	if (!fp)
 		return SR_ERR_SYS;
-	
-	desc = lydx_get_cattr(policy_cfg, "description");
-	policy = lydx_get_cattr(policy_cfg, "policy");
-	masquerade = lydx_is_enabled(policy_cfg, "masquerade");
-	
-	fprintf(fp, "<policy target=\"%s\">\n", policy_action_to_target(policy));
-	
+
+	desc = lydx_get_cattr(cfg, "description");
+	action = lydx_get_cattr(cfg, "action");
+	masquerade = lydx_is_enabled(cfg, "masquerade");
+
+	fprintf(fp, "<policy target=\"%s\">\n", policy_action_to_target(action));
+
 	if (desc)
 		fprintf(fp, "  <description>%s</description>\n", desc);
-	
-	LYX_LIST_FOR_EACH(lyd_child(policy_cfg), node, "ingress")
+
+	LYX_LIST_FOR_EACH(lyd_child(cfg), node, "ingress")
 		fprintf(fp, "  <ingress-zone name=\"%s\"/>\n", lyd_get_value(node));
-	
-	LYX_LIST_FOR_EACH(lyd_child(policy_cfg), node, "egress")
+
+	LYX_LIST_FOR_EACH(lyd_child(cfg), node, "egress")
 		fprintf(fp, "  <egress-zone name=\"%s\"/>\n", lyd_get_value(node));
-	
-	LYX_LIST_FOR_EACH(lyd_child(policy_cfg), node, "service")
+
+	LYX_LIST_FOR_EACH(lyd_child(cfg), node, "service")
 		fprintf(fp, "  <service name=\"%s\"/>\n", lyd_get_value(node));
-	
+
 	if (masquerade)
 		fprintf(fp, "  <masquerade/>\n");
-	
+
 	fprintf(fp, "</policy>\n");
-	
+
 	return close_file(fp);
 }
 
-static int generate_firewalld_conf(struct lyd_node *tree)
+static int generate_firewalld_conf(struct lyd_node *cfg)
 {
 	FILE *fp;
 
@@ -305,13 +305,13 @@ static int generate_firewalld_conf(struct lyd_node *tree)
 		return SR_ERR_SYS;
 	}
 
-	fprintf(fp, "DefaultZone=%s\n", lydx_get_cattr(tree, "default"));
+	fprintf(fp, "DefaultZone=%s\n", lydx_get_cattr(cfg, "default"));
 	fprintf(fp, "MinimalMark=100\n");
 	fprintf(fp, "CleanupOnExit=yes\n");
 	fprintf(fp, "Lockdown=no\n");
 	fprintf(fp, "IPv6_rpfilter=yes\n");
 	fprintf(fp, "IndividualCalls=no\n");
-	fprintf(fp, "LogDenied=%s\n", lydx_get_cattr(tree, "logging") ?: "off");
+	fprintf(fp, "LogDenied=%s\n", lydx_get_cattr(cfg, "logging") ?: "off");
 	fprintf(fp, "AutomaticHelpers=system\n");
 	fprintf(fp, "FirewallBackend=nftables\n");
 	fprintf(fp, "FlushAllOnReload=yes\n");
@@ -322,11 +322,11 @@ static int generate_firewalld_conf(struct lyd_node *tree)
 }
 
 static int infer_zone(sr_session_ctx_t *session, const char *name, const char *desc,
-		      const char *policy, bool forwarding, const char *services[])
+		      const char *action, bool forwarding, const char *services[])
 {
 	int rc;
 
-	ERROR("Inferring zone %s (%s), policy %s forwarding %d", name, desc, policy, forwarding);
+	DEBUG("Inferring zone %s (%s), action %s forwarding %d", name, desc, action, forwarding);
 
 	rc = srx_set_str(session, name, 0, XPATH "/zone[name='%s']/name", name);
 	if (rc)
@@ -336,7 +336,7 @@ static int infer_zone(sr_session_ctx_t *session, const char *name, const char *d
 	if (rc)
 		return rc;
 
-	rc = srx_set_str(session, policy, 0, XPATH "/zone[name='%s']/policy", name);
+	rc = srx_set_str(session, action, 0, XPATH "/zone[name='%s']/action", name);
 	if (rc)
 		return rc;
 
@@ -389,7 +389,7 @@ static int change(sr_session_ctx_t *session, uint32_t sub_id, const char *module
 		ERROR("Failed to get L3 interfaces");
 		ifaces = NULL;
 	}
-	
+
 	err = srx_get_diff(session, &diff);
 	if (err)
 		goto err_release_data;
@@ -410,68 +410,68 @@ static int change(sr_session_ctx_t *session, uint32_t sub_id, const char *module
 	if (lydx_get_descendant(diff, "firewall", NULL)) {
 		const char *default_zone = lydx_get_cattr(global, "default");
 		struct lyd_node *list, *node;
-		
+
 		/* First, handle deletions by removing files */
 		list = lydx_get_descendant(diff, "firewall", "zone", NULL);
 		LYX_LIST_FOR_EACH(list, node, "zone") {
 			if (lydx_get_op(node) == LYDX_OP_DELETE)
 				delete_file(FIREWALLD_ZONES_DIR, lydx_get_cattr(node, "name"));
 		}
-		
+
 		list = lydx_get_descendant(diff, "firewall", "service", NULL);
 		LYX_LIST_FOR_EACH(list, node, "service") {
 			if (lydx_get_op(node) == LYDX_OP_DELETE)
 				delete_file(FIREWALLD_SERVICES_DIR, lydx_get_cattr(node, "name"));
 		}
-		
+
 		list = lydx_get_descendant(diff, "firewall", "policy", NULL);
 		LYX_LIST_FOR_EACH(list, node, "policy") {
 			if (lydx_get_op(node) == LYDX_OP_DELETE)
 				delete_file(FIREWALLD_POLICIES_DIR, lydx_get_cattr(node, "name"));
 		}
-		
+
 		/* Regenerate all non-default zones first */
 		clist = lydx_get_descendant(tree, "firewall", "zone", NULL);
 		LYX_LIST_FOR_EACH(clist, cnode, "zone") {
 			const char *name = lydx_get_cattr(cnode, "name");
-			
+
 			/* Skip default zone - we'll do it last */
 			if (!strcmp(name, default_zone))
 				continue;
-				
+
 			mark_interfaces_used(cnode, ifaces);
-			generate_zone(name, cnode, NULL);
+			generate_zone(cnode, name, NULL);
 		}
-		
+
 		/* Generate default zone last with any unzoned interfaces */
 		clist = lydx_get_descendant(tree, "firewall", "zone", NULL);
 		LYX_LIST_FOR_EACH(clist, cnode, "zone") {
 			const char *name = lydx_get_cattr(cnode, "name");
-			
+
 			if (strcmp(name, default_zone))
 				continue;
 
 			mark_interfaces_used(cnode, ifaces);
-			generate_zone(name, cnode, ifaces);
+			generate_zone(cnode, name, ifaces);
 			break;
 		}
-		
+
 		/* Regenerate all services */
 		clist = lydx_get_descendant(tree, "firewall", "service", NULL);
 		LYX_LIST_FOR_EACH(clist, cnode, "service")
-			generate_service(lydx_get_cattr(cnode, "name"), cnode);
-		
+			generate_service(cnode, lydx_get_cattr(cnode, "name"));
+
 		/* Regenerate all policies */
 		clist = lydx_get_descendant(tree, "firewall", "policy", NULL);
 		LYX_LIST_FOR_EACH(clist, cnode, "policy")
-			generate_policy(lydx_get_cattr(cnode, "name"), cnode);
-		
+			generate_policy(cnode, lydx_get_cattr(cnode, "name"));
+
 		reload_needed = true;
 	}
 
 	if (reload_needed)
 		system("initctl -nbq touch firewalld");
-	
+
 done:
 	systemf("initctl -nbq %s firewalld", global ? "enable" : "disable");
 
@@ -484,7 +484,7 @@ done:
 	lyd_free_tree(diff);
 err_release_data:
 	sr_release_data(cfg);
-	
+
 	return err;
 }
 
