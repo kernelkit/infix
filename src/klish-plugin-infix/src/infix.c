@@ -142,6 +142,33 @@ int infix_ifaces(kcontext_t *ctx)
 	return 0;
 }
 
+static int firewall_completion(const char *type)
+{
+	const char *cmd = "sysrepocfg -X -d operational -f json -x";
+
+	return systemf("%s /infix-firewall:firewall/%s/name 2>/dev/null"
+		       " | jq -r '.\"infix-firewall:firewall\".%s[]?.name // empty'"
+		       " 2>/dev/null", cmd, type, type);
+}
+
+int infix_firewall_zones(kcontext_t *ctx)
+{
+	(void)ctx;
+	return firewall_completion("zone");
+}
+
+int infix_firewall_policies(kcontext_t *ctx)
+{
+	(void)ctx;
+	return firewall_completion("policy");
+}
+
+int infix_firewall_services(kcontext_t *ctx)
+{
+	(void)ctx;
+	return firewall_completion("service");
+}
+
 int infix_copy(kcontext_t *ctx)
 {
 	kpargv_t *pargv = kcontext_pargv(ctx);
@@ -228,6 +255,9 @@ int kplugin_infix_init(kcontext_t *ctx)
 	kplugin_add_syms(plugin, ksym_new("erase", infix_erase));
 	kplugin_add_syms(plugin, ksym_new("files", infix_files));
 	kplugin_add_syms(plugin, ksym_new("ifaces", infix_ifaces));
+	kplugin_add_syms(plugin, ksym_new("firewall_zones", infix_firewall_zones));
+	kplugin_add_syms(plugin, ksym_new("firewall_policies", infix_firewall_policies));
+	kplugin_add_syms(plugin, ksym_new("firewall_services", infix_firewall_services));
 	kplugin_add_syms(plugin, ksym_new("shell", infix_shell));
 
 	return 0;

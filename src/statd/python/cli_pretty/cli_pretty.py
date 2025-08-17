@@ -3,6 +3,7 @@ import json
 import argparse
 import sys
 import re
+import textwrap
 from datetime import datetime, timezone
 
 UNIT_TEST = False
@@ -96,6 +97,34 @@ class PadLldp:
     port_id = 20
 
 
+class PadFirewall:
+    zone_name = 20
+    zone_action = 9
+    zone_interfaces = 40
+    zone_services = 20
+
+    zone_pfwd_from = 20
+    zone_pfwd_to = 69
+
+    zone_flow_to = 20
+    zone_flow_action = 9
+    zone_flow_policy = 60
+
+    policy_name = 20
+    policy_action = 9
+    policy_ingress = 40
+    policy_egress = 20
+
+    service_name = 20
+    service_ports = 69
+
+    @classmethod
+    def table_width(cls):
+        """Table width for zones/policies tables, used to center matrix"""
+        return cls.zone_name + cls.zone_action + cls.zone_interfaces \
+            + cls.zone_services
+
+
 class Decore():
     @staticmethod
     def decorate(sgr, txt, restore="0"):
@@ -133,6 +162,22 @@ class Decore():
     def gray_bg(txt):
         return Decore.decorate("100", txt)
 
+    @staticmethod
+    def title(txt, len=None, bold=True):
+        """Print section header with horizontal bar line above it
+        Args:
+            txt: The header text to display
+            len: Length of horizontal bar line (defaults to len(txt))
+            bold: Whether to make the text bold
+        """
+        length = len if len is not None else len(txt)
+        underline = "─" * length
+        print(underline)
+        if bold:
+            print(Decore.bold(txt))
+        else:
+            print(txt)
+
 
 def rssi_to_status(rssi):
     if rssi <= -75:
@@ -169,6 +214,24 @@ def remove_yang_prefix(key):
     if len(parts) > 1:
         return parts[1]
     return key
+
+
+def format_description(label, description, width=60):
+    """Format description text with proper line wrapping"""
+    if not description:
+        return f"{label:<20}:"
+
+    lines = textwrap.wrap(description, width=width)
+    if not lines:
+        return f"{label:<20}:"
+
+    # First line with label
+    result = f"{label:<20}: {lines[0]}"
+    # Subsequent lines indented
+    for line in lines[1:]:
+        result += f"\n{'':<20}  {line}"
+
+    return result
 
 
 class Date(datetime):
@@ -652,16 +715,15 @@ class Iface:
         print(row)
 
     def pr_wifi_ssids(self):
-        hdr =  (f"{'SSID':<{PadWifiScan.ssid}}"
-                f"{'ENCRYPTION':<{PadWifiScan.encryption}}"
-                f"{'SIGNAL':<{PadWifiScan.signal}}"
-                )
+        hdr = (f"{'SSID':<{PadWifiScan.ssid}}"
+               f"{'ENCRYPTION':<{PadWifiScan.encryption}}"
+               f"{'SIGNAL':<{PadWifiScan.signal}}")
 
         print(Decore.invert(hdr))
-        results=self.wifi.get("scan-results", {})
+        results = self.wifi.get("scan-results", {})
         for result in results:
-            encstr = ",".join(result["encryption"])
-            status=rssi_to_status(result["rssi"])
+            encstr = ", ".join(result["encryption"])
+            status = rssi_to_status(result["rssi"])
             row = f"{result['ssid']:<{PadWifiScan.ssid}}"
             row += f"{encstr:<{PadWifiScan.encryption}}"
             row += f"{status:<{PadWifiScan.signal}}"
@@ -1329,13 +1391,12 @@ def show_software(json, name):
 
 def show_hardware(json):
     if not json.get("ietf-hardware:hardware"):
-       print(f"Error, top level \"ietf-hardware:component\" missing")
-       sys.exit(1)
+        print("Error, top level \"ietf-hardware:component\" missing")
+        sys.exit(1)
 
-    hdr = (f"{'USB PORTS':<{PadUsbPort.title}}")
-    print(Decore.invert(hdr))
-    hdr =  (f"{'NAME':<{PadUsbPort.name}}"
-            f"{'STATE':<{PadUsbPort.state}}")
+    hdr = (f"{'NAME':<{PadUsbPort.name}}"
+           f"{'STATE':<{PadUsbPort.state}}")
+    Decore.title("USB PORTS", PadUsbPort.title)  # TODO: could be len(hdr)
     print(Decore.invert(hdr))
 
     components = get_json_data({}, json, "ietf-hardware:hardware", "component")
@@ -1417,6 +1478,354 @@ def show_lldp(json):
             entry.print()
 
 
+def show_firewall(json):
+    """Show firewall overview with matrix and tables"""
+    fw = json.get('infix-firewall:firewall', {})
+    if not fw:
+        print("Firewall disabled.")
+        return
+
+    # Adjust 20 + 8, where 8 is len(bold) + len(restore)
+    print(f"{Decore.bold('Firewall'):<28}: enabled")  # TODO: 'pause' RPC state
+    print(f"{Decore.bold('Default zone'):<28}: {fw.get('default', 'unknown')}")
+    print(f"{Decore.bold('Log denied traffic'):<28}: {fw.get('logging', 'off')}")
+
+    show_firewall_matrix(fw)
+    show_firewall_zone(json)
+    show_firewall_policy(json)
+
+
+def build_policy_map(policies):
+    """Build enhanced policy lookup with conditional detection"""
+    policy_map = {}
+
+    for policy in policies:
+        ingress_zones = policy.get('ingress', [])
+        egress_zones = policy.get('egress', [])
+        services = policy.get('service', [])
+        policy_action = policy.get('policy', 'reject')
+        policy_name = policy.get('name', 'unknown')
+
+        for ing in ingress_zones:
+            for egr in egress_zones:
+                if ing != 'ANY' and egr != 'ANY':
+                    key = (ing, egr)
+
+                    if key not in policy_map:
+                        policy_map[key] = {
+                            'allow': False,
+                            'conditional': False,
+                            'services': set(),
+                            'policies': []
+                        }
+
+                    if policy_action in ['accept', 'continue']:
+                        policy_map[key]['allow'] = True
+
+                    if services:
+                        policy_map[key]['conditional'] = True
+                        policy_map[key]['services'].update(services)
+
+                    policy_map[key]['policies'].append(policy_name)
+    return policy_map
+
+
+def traffic_symbol(from_zone, to_zone, policy_map, zones):
+    """Determine the symbol to show for zone-to-zone traffic"""
+    if from_zone == to_zone:
+        return "✓"
+
+    key = (from_zone, to_zone)
+    policy = policy_map.get(key)
+
+    if not policy or not policy['allow']:
+        # Check if from_zone has port forwarding rules (makes it conditional)
+        zone = next((z for z in zones if z.get('name') == from_zone), None)
+        if zone:
+            action = zone.get('policy', 'accept')
+            pfwd = zone.get('port-forward', [])
+            if action in ['reject', 'drop'] and pfwd:
+                return "⚠"  # Some traffic allowed via port forwarding
+
+        return "✗"
+
+    if policy['conditional']:
+        return "⚠"
+
+    return "✓"
+
+
+def show_firewall_matrix(fw):
+    """Show zone-to-zone traffic matrix"""
+    zones = fw.get('zone', [])
+    policies = fw.get('policy', [])
+
+    # No need for a matrix if there's only one zone
+    if len(zones) <= 1:
+        return None
+
+    zone_names = [z['name'] for z in zones if z.get('interface')]
+    if len(zone_names) <= 1:
+        return None
+
+    # Build enhanced policy lookup map
+    policy_map = build_policy_map(policies)
+
+    max_zone_len = max(len(zone) for zone in zone_names)
+    col_width = max(max_zone_len, 1)  # At least 1 char for symbols
+    left_col_width = max_zone_len
+
+    # Box drawing characters for proper borders, '+ 2' is for spacing
+    top_border = "┌" + "─" * left_col_width + "──" + "┬"
+    for _ in zone_names:
+        top_border += "─" * (col_width + 2) + "┬"
+    top_border = top_border[:-1] + "┐"  # Replace last ┬ with ┐
+
+    middle_border = "├" + "─" * left_col_width + "──" + "┼"
+    for _ in zone_names:
+        middle_border += "─" * (col_width + 2) + "┼"
+    middle_border = middle_border[:-1] + "┤"  # Replace last ┼ with ┤
+
+    bottom_border = "└" + "─" * left_col_width + "──" + "┴"
+    for _ in zone_names:
+        bottom_border += "─" * (col_width + 2) + "┴"
+    bottom_border = bottom_border[:-1] + "┘"  # Replace last ┴ with ┘
+
+    # Header with arrow in top-left cell
+    hdr = f"│ {'→':^{left_col_width}} │"
+    for zone in zone_names:
+        hdr += f" {zone:^{col_width}} │"
+
+    # Calculate centering relative to zones/policies table width
+    matrix_width = len(top_border)
+    target_width = PadFirewall.table_width()
+    padding = max(0, (target_width - matrix_width) // 2)
+    indent = " " * padding
+
+    # Center the title underline to match table width
+    title_padding = max(0, (target_width - len("Zone Matrix")) // 2)
+    title_underline = "─" * target_width
+
+    print(title_underline)
+    print(f"{'':<{title_padding}}{Decore.bold('Zone Matrix')}")
+    print(f"{indent}{top_border}")
+    print(f"{indent}{hdr}")
+    print(f"{indent}{middle_border}")
+
+    for from_zone in zone_names:
+        row = f"│ {from_zone:>{left_col_width}} │"
+        for to_zone in zone_names:
+            symbol = traffic_symbol(from_zone, to_zone, policy_map, zones)
+            row += f" {symbol:^{col_width}} │"
+        print(f"{indent}{row}")
+    print(f"{indent}{bottom_border}")
+
+    # Center the legend
+    legend = "✓ Allow   ✗ Deny   ⚠ Conditional"
+    legend_padding = max(0, (target_width - len(legend)) // 2)
+    print(f"{'':<{legend_padding}}{legend}")
+
+
+def show_firewall_zone(json, zone_name=None):
+    """Show firewall zones table or specific zone details"""
+    fw = json.get('infix-firewall:firewall', {})
+    zones = fw.get('zone', [])
+    policies = fw.get('policy', [])
+
+    if zone_name:
+        zone = next((z for z in zones if z.get('name') == zone_name), None)
+        if not zone:
+            print(f"Zone '{zone_name}' not found")
+            return
+
+        description = zone.get('description', '')
+        interfaces = zone.get('interface', [])
+        if not interfaces:
+            interfaces = ""
+        sources = zone.get('source', [])
+        if not sources:
+            sources = ""
+        services = zone.get('service', [])
+        if not services:
+            services = ""
+        policy = zone.get('policy', 'accept')
+        if policy == 'accept':
+            services_display = "(any)"
+        else:
+            services_display = ", ".join(services) if services else "(none)"
+        forwarding = "yes" if zone.get('forwarding') else "no"
+
+        print(format_description('description', description))
+        print(f"{'name':<20}: {zone_name}")
+        print(f"{'policy':<20}: {policy}")
+        print(f"{'interfaces':<20}: {', '.join(interfaces)}")
+        print(f"{'sources':<20}: {', '.join(sources)}")
+        print(f"{'forwarding':<20}: {forwarding}")
+        print(f"{'services':<20}: {services_display}")
+
+        port_forwards = zone.get('port-forward', [])
+        if port_forwards:
+            hdr = (f"{'FROM':<{PadFirewall.zone_pfwd_from}}"
+                   f"{'TO':<{PadFirewall.zone_pfwd_to}}")
+            Decore.title("Port Forwards", len(hdr))
+            print(Decore.invert(hdr))
+
+            for fwd in port_forwards:
+                lower = fwd.get('port', {})
+                proto = fwd.get('proto', {})
+                from_port = f"{lower}/{proto}"
+
+                to = fwd.get('to', {})
+                to_str = f"{to.get('addr', '')}:{to.get('port', lower)}"
+
+                print(f"{from_port:<{PadFirewall.zone_pfwd_from}}"
+                      f"{to_str:<{PadFirewall.zone_pfwd_to}}")
+
+        hdr = (f"{'TO ZONE':<{PadFirewall.zone_flow_to}}"
+               f"{'ACTION':<{PadFirewall.zone_flow_action}}"
+               f"{'POLICY':<{PadFirewall.zone_flow_policy}}")
+        Decore.title("Traffic Flows", len(hdr))
+        print(Decore.invert(hdr))
+
+        for other_zone in zones:
+            if other_zone.get('name') == zone_name:
+                continue
+
+            # Check if there's a policy allowing this flow
+            other_name = other_zone.get('name')
+            policy_name = "(none)"
+            action = "✗ deny"
+            for policy in policies:
+                if zone_name in policy.get('ingress', []) and other_name \
+                   in policy.get('egress', []):
+                    policy_name = policy.get('name', 'unknown')
+                    action = "✓ allow"
+                    break
+            print(f"{other_name:<{PadFirewall.zone_flow_to}}"
+                  f"{action:<{PadFirewall.zone_flow_action}}"
+                  f"{policy_name}")
+    else:
+        hdr = (f"{'NAME':<{PadFirewall.zone_name}}"
+               f"{'ACTION':<{PadFirewall.zone_action}}"
+               f"{'INTERFACES':<{PadFirewall.zone_interfaces}}"
+               f"{'SERVICES':<{PadFirewall.zone_services}}")
+        Decore.title("Zones", len(hdr))
+        print(Decore.invert(hdr))
+        for zone in zones:
+            name = zone.get('name', '')
+            action = zone.get('policy', 'accept')
+            interfaces = ", ".join(zone.get('interface', []))
+            if not interfaces:
+                interfaces = "(none)"
+            services = ", ".join(zone.get('service', []))
+            if not services:
+                if action == "accept":
+                    services = "(any)"
+                else:
+                    services = "(none)"
+
+            print(f"{name:<{PadFirewall.zone_name}}"
+                  f"{action:<{PadFirewall.zone_action}}"
+                  f"{interfaces:<{PadFirewall.zone_interfaces}}"
+                  f"{services}")
+
+
+def show_firewall_policy(json, policy_name=None):
+    """Show firewall policies table or specific policy details"""
+    fw = json.get('infix-firewall:firewall', {})
+    policies = fw.get('policy', [])
+
+    if policy_name:
+        policy = next((p for p in policies if p.get('name') == policy_name), None)
+        if not policy:
+            print(f"Policy '{policy_name}' not found")
+            return
+
+        ingress = policy.get('ingress', [])
+        egress = policy.get('egress', [])
+        policy_action = policy.get('policy', 'reject')
+        masquerade = "yes" if policy.get('masquerade') else "no"
+        description = policy.get('description', '')
+        services = policy.get('service', [])
+        if policy == 'accept':
+            services_display = "(all)"
+        else:
+            services_display = ", ".join(services) if services else "(none)"
+
+        print(format_description('description', description))
+        print(f"{'name':<20}: {policy_name}")
+        print(f"{'ingress':<20}: {', '.join(ingress) if ingress else '(none)'}")
+        print(f"{'egress':<20}: {', '.join(egress) if egress else '(none)'}")
+        print(f"{'policy':<20}: {policy_action}")
+        print(f"{'masquerade':<20}: {masquerade}")
+        print(f"{'services':<20}: {services_display}")
+    else:
+        hdr = (f"{'NAME':<{PadFirewall.policy_name}}"
+               f"{'ACTION':<{PadFirewall.policy_action}}"
+               f"{'INGRESS':<{PadFirewall.policy_ingress}}"
+               f"{'EGRESS':<{PadFirewall.policy_egress}}")
+        Decore.title("Policies", len(hdr))
+        print(Decore.invert(hdr))
+        for policy in policies:
+            name = policy.get('name', '')
+            ingress = ", ".join(policy.get('ingress', []))
+            egress = ", ".join(policy.get('egress', []))
+            action = policy.get('policy', 'reject')
+
+            print(f"{name:<{PadFirewall.policy_name}}"
+                  f"{action:<{PadFirewall.policy_action}}"
+                  f"{ingress:<{PadFirewall.policy_ingress}}"
+                  f"{egress:<{PadFirewall.policy_egress}}")
+
+
+def format_port_list(ports):
+    """Format port list from YANG data"""
+    if not ports:
+        return "(none)"
+
+    formatted = []
+    for port in ports:
+        proto = port.get('proto', 'tcp')
+        lower = port.get('lower')
+        upper = port.get('upper')
+
+        if upper and upper != lower:
+            formatted.append(f"{lower}-{upper}/{proto}")
+        else:
+            formatted.append(f"{lower}/{proto}")
+
+    return ", ".join(formatted)
+
+
+def show_firewall_service(json, name=None):
+    """Show firewall services table or specific service details"""
+    fw = json.get('infix-firewall:firewall', {})
+    services = fw.get('service', [])
+
+    if name:
+        service = next((s for s in services if s.get('name') == name), None)
+        if not service:
+            print(f"Service '{name}' not found")
+            return
+
+        ports = format_port_list(service.get('port', []))
+        description = service.get('description', '')
+
+        print(f"{'name':<20}: {name}")
+        print(f"{'ports':<20}: {ports}")
+        print(format_description('description', description))
+    else:
+        hdr = (f"{'NAME':<{PadFirewall.service_name}}"
+               f"{'PORTS':<{PadFirewall.service_ports}}")
+        print(Decore.invert(hdr))
+        for service in services:
+            name = service.get('name', '')
+            ports = format_port_list(service.get('port', []))
+
+            print(f"{name:<{PadFirewall.service_name}}"
+                  f"{ports:<{PadFirewall.service_ports}}")
+
+
 def main():
     global UNIT_TEST
 
@@ -1449,6 +1858,13 @@ def main():
     .add_argument('-n', '--name', help='Interface name')
 
     subparsers.add_parser('show-lldp', help='Show LLDP neighbors')
+    subparsers.add_parser('show-firewall', help='Show firewall overview')
+    subparsers.add_parser('show-firewall-zone', help='Show firewall zones') \
+        .add_argument('name', nargs='?', help='Zone name')
+    subparsers.add_parser('show-firewall-policy', help='Show firewall policies') \
+        .add_argument('name', nargs='?', help='Policy name')
+    subparsers.add_parser('show-firewall-service', help='Show firewall services') \
+        .add_argument('name', nargs='?', help='Service name')
 
     subparsers.add_parser('show-ntp', help='Show NTP sources')
 
@@ -1473,6 +1889,14 @@ def main():
         show_interfaces(json_data, args.name)
     elif args.command == "show-lldp":
         show_lldp(json_data)
+    elif args.command == "show-firewall":
+        show_firewall(json_data)
+    elif args.command == "show-firewall-zone":
+        show_firewall_zone(json_data, args.name)
+    elif args.command == "show-firewall-policy":
+        show_firewall_policy(json_data, args.name)
+    elif args.command == "show-firewall-service":
+        show_firewall_service(json_data, args.name)
     elif args.command == "show-ntp":
         show_ntp(json_data)
     elif args.command == "show-routing-table":

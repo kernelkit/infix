@@ -10,7 +10,7 @@ import dbus
 from . import common
 
 
-def get_interface(interface = "org.fedoraproject.FirewallD1"):
+def get_interface(interface="org.fedoraproject.FirewallD1"):
     try:
         bus = dbus.SystemBus()
         obj = bus.get_object("org.fedoraproject.FirewallD1",
@@ -23,9 +23,15 @@ def get_interface(interface = "org.fedoraproject.FirewallD1"):
 
 
 def get_zone_data(fw, name):
+    """
+    $ gdbus call --system --dest org.fedoraproject.FirewallD1               \
+                 --object-path /org/fedoraproject/FirewallD1                \
+                 --method org.fedoraproject.FirewallD1.zone.getForwardPorts \
+                 external
+    ([['443', 'tcp', '443', '192.168.2.10']],)
+    """
     try:
         settings = fw.getZoneSettings2(name)
-
         zone = {
             "name": name,
             "policy": "accept",
@@ -45,36 +51,42 @@ def get_zone_data(fw, name):
             "default": "accept"
         }
         zone["policy"] = policy.get(target, "accept")
+        zone["forwarding"] = bool(settings.get('forward', 0))
+        zone["description"] = settings.get('description', 0)
 
         forwards = settings.get('forward_ports', [])
         for fwd in forwards:
-            fwd_data = {}
-            port_data = {}
+            try:
+                if len(fwd) >= 4:
+                    port, protocol, toport, toaddr = fwd[:4]  # Fixed field order!
 
-            if len(fwd) >= 4:
-                port, protocol, toaddr, toport = fwd[:4]
+                    # TODO: extend YANG model with lower/upper
+                    fwd_data = {
+                        'port': int(port),  # TODO: Single port number now.
+                        'proto': str(protocol),
+                        'to': {
+                            'addr': str(toaddr)
+                        }
+                    }
 
-                if '-' in str(port):
-                    lower, upper = str(port).split('-', 1)
-                    port_data['lower'] = int(lower)
-                    port_data['upper'] = int(upper)
-                else:
-                    port_data['lower'] = int(port)
-                port_data['proto'] = protocol
+                    # Handle destination port - might be empty or IP
+                    if toport and str(toport).strip():
+                        toport_str = str(toport).strip()
+                        # Skip if toport looks like an IP address instead of port
+                        if '.' not in toport_str and ':' not in toport_str:
+                            fwd_data['to']['port'] = int(toport_str)
+                        else:
+                            # If toport looks like IP, use the same port as source
+                            fwd_data['to']['port'] = int(port)
+                    else:
+                        # No destination port specified, use same as source
+                        fwd_data['to']['port'] = int(port)
 
-                fwd_data['port'] = port_data
-                fwd_data['to'] = {'addr': toaddr}
+                    zone["port-forward"].append(fwd_data)
 
-                if '-' in str(toport):
-                    lower, upper = str(toport).split('-', 1)
-                    fwd_data['to']['lower'] = int(lower)
-                    fwd_data['to']['upper'] = int(upper)
-                else:
-                    fwd_data['to']['lower'] = int(toport)
-
-                zone["port-forward"].append(fwd_data)
-
-        zone["forwarding"] = bool(settings.get('forward', 0))
+            except (ValueError, TypeError) as e:
+                common.LOG.warning("Skipping invalid port forward rule in zone %s: %s (data: %s)",
+                                   name, e, fwd)
         return zone
 
     except Exception as e:
@@ -83,15 +95,20 @@ def get_zone_data(fw, name):
 
 
 def get_zones(fw):
+    """Get only active zones (loaded in kernel) instead of all zones"""
     zones = []
     try:
-        fw = get_interface("org.fedoraproject.FirewallD1.zone")
-        if not fw:
+        fwz = get_interface("org.fedoraproject.FirewallD1.zone")
+        if not fwz:
             return zones
 
-        for name in fw.getZones():
-            zone_data = get_zone_data(fw, name)
+        active_zones = fwz.getActiveZones()
+        for name, zone_info in active_zones.items():
+            zone_data = get_zone_data(fwz, name)
             if zone_data:
+                # Override interfaces and sources with active zone data to ensure accuracy
+                zone_data['interface'] = list(zone_info.get('interfaces', []))
+                zone_data['source'] = list(zone_info.get('sources', []))
                 zones.append(zone_data)
 
     except Exception as e:
@@ -133,7 +150,7 @@ def get_policy_data(fw, name):
         if ingress:
             policy["ingress"] = list(ingress)
 
-        egress = settings.get('egress', [])
+        egress = settings.get('egress_zones', [])
         if egress:
             policy["egress"] = list(egress)
 
@@ -153,12 +170,12 @@ def get_policy_data(fw, name):
 def get_policies(fw):
     policies = []
     try:
-        fw = get_interface("org.fedoraproject.FirewallD1.policy")
-        if not fw:
+        fwp = get_interface("org.fedoraproject.FirewallD1.policy")
+        if not fwp:
             return policies
 
-        for name in fw.getPolicies():
-            data = get_policy_data(fw, name)
+        for name in fwp.getPolicies():
+            data = get_policy_data(fwp, name)
             if data:
                 policies.append(data)
 

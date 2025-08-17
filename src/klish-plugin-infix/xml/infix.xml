@@ -113,6 +113,27 @@
   <ACTION sym="STRING"/>
 </PTYPE>
 
+<PTYPE name="FIREWALL_ZONES">
+  <COMPL>
+    <ACTION sym="firewall_zones@infix"/>
+  </COMPL>
+  <ACTION sym="STRING"/>
+</PTYPE>
+
+<PTYPE name="FIREWALL_POLICIES">
+  <COMPL>
+    <ACTION sym="firewall_policies@infix"/>
+  </COMPL>
+  <ACTION sym="STRING"/>
+</PTYPE>
+
+<PTYPE name="FIREWALL_SERVICES">
+  <COMPL>
+    <ACTION sym="firewall_services@infix"/>
+  </COMPL>
+  <ACTION sym="STRING"/>
+</PTYPE>
+
 <VIEW name="main">
   <HOTKEY key="^D" cmd="exit"/>
 
@@ -489,6 +510,38 @@
 
   <COMMAND name="startup-config" help="Show startup-config">
     <ACTION sym="script" in="tty" out="tty" interrupt="true">jq -C . /cfg/startup-config.cfg |pager</ACTION>
+  </COMMAND>
+
+  <COMMAND name="firewall" help="Show firewall status and configuration">
+    <SWITCH name="optional" min="0" max="1">
+      <COMMAND name="zone" help="Show firewall zones">
+        <SWITCH name="optional" min="0">
+          <PARAM name="name" ptype="/FIREWALL_ZONES" help="Zone name"/>
+        </SWITCH>
+        <ACTION sym="script" in="tty" out="tty" interrupt="true">
+          sysrepocfg -X -d operational -x /infix-firewall:firewall -f json -t 60 | /usr/libexec/statd/cli-pretty show-firewall-zone "$KLISH_PARAM_name" |pager
+        </ACTION>
+      </COMMAND>
+      <COMMAND name="policy" help="Show firewall policies">
+        <SWITCH name="optional" min="0">
+          <PARAM name="name" ptype="/FIREWALL_POLICIES" help="Policy name"/>
+        </SWITCH>
+        <ACTION sym="script" in="tty" out="tty" interrupt="true">
+          sysrepocfg -X -d operational -x /infix-firewall:firewall -f json -t 60 | /usr/libexec/statd/cli-pretty show-firewall-policy "$KLISH_PARAM_name" |pager
+        </ACTION>
+      </COMMAND>
+      <COMMAND name="service" help="Show firewall services">
+        <SWITCH name="optional" min="0">
+          <PARAM name="name" ptype="/FIREWALL_SERVICES" help="Service name"/>
+        </SWITCH>
+        <ACTION sym="script" in="tty" out="tty" interrupt="true">
+          sysrepocfg -X -d operational -x /infix-firewall:firewall -f json -t 60 | /usr/libexec/statd/cli-pretty show-firewall-service "$KLISH_PARAM_name" |pager
+        </ACTION>
+      </COMMAND>
+    </SWITCH>
+    <ACTION sym="script" in="tty" out="tty" interrupt="true">
+      sysrepocfg -X -d operational -x /infix-firewall:firewall -f json -t 60 | /usr/libexec/statd/cli-pretty show-firewall |pager
+    </ACTION>
   </COMMAND>
 </COMMAND>
 
