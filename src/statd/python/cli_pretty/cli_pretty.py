@@ -1710,8 +1710,12 @@ def traffic_symbol(from_zone, to_zone, policy_map, zones, cell_width):
         # Create full-width colored cell
         return bg_func(f" {symbol:^{cell_width}} ")
 
+    # Check if forwarding is enabled for same-zone communication
     if from_zone == to_zone:
-        return make_cell("✓", Decore.green_bg)
+        zone = next((z for z in zones if z.get('name') == from_zone), None)
+        if zone and zone.get('forwarding'):
+            return make_cell("✓", Decore.green_bg)
+        return make_cell("✗", Decore.red_bg)
 
     key = (from_zone, to_zone)
     policy = policy_map.get(key)

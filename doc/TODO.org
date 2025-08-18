@@ -14,6 +14,8 @@
 - [X] A zone's action is for ingress, clarify this if missing!
 - [X] Any services/ports listed in a zone with policy:accept are a NO-OP
 - [X] =firwall-cmd --reload= takes fooooorever! :-(
+- [X] If forwarding is disabled in a zone then the zone matrix should
+  show deny for the same  zone-to-zone communication
 
 * TODO doc: User Guide
 
