@@ -103,20 +103,21 @@ class PadLldp:
 class PadFirewall:
     zone_name = 20
     zone_action = 9
-    zone_interfaces = 40
-    zone_services = 20
+    zone_interfaces = 30
+    zone_services = 30
 
     zone_pfwd_from = 20
     zone_pfwd_to = 69
 
     zone_flow_to = 20
-    zone_flow_action = 9
-    zone_flow_policy = 60
+    zone_flow_action = 14
+    zone_flow_policy = 20
+    zone_flow_services = 45
 
     policy_name = 20
     policy_action = 9
-    policy_ingress = 40
-    policy_egress = 20
+    policy_ingress = 30
+    policy_egress = 30
 
     service_name = 20
     service_ports = 69
@@ -1704,11 +1705,49 @@ def build_policy_map(policies):
     return policy_map
 
 
-def traffic_symbol(from_zone, to_zone, policy_map, zones, cell_width):
-    """Determine the symbol to show for zone-to-zone traffic"""
+def traffic_flow(from_zone, to_zone, policy_map, zones, cell_width):
+    """Apply heuristics to deterime traffic flows between zones
+    Args:
+        from_zone, to_zone : Names and direction of flow
+        policy_map         : Map of all policies
+        zones              : All the zone data
+        cell_width         : Table cell width for pretty printing
+
+    Returns: the symbol to show for zone-to-zone traffic
+    """
     def make_cell(symbol, bg_func):
         # Create full-width colored cell
         return bg_func(f" {symbol:^{cell_width}} ")
+
+    # Handle HOST zone specially
+    if from_zone == "HOST" and to_zone == "HOST":
+        # HOST-to-HOST communication (localhost) - not applicable
+        return make_cell("—", Decore.gray_bg)
+
+    # HOST-to-zone traffic: firewall input rules control this
+    if from_zone == "HOST":
+        # Traffic from firewall device to zones - typically allowed
+        return make_cell("✓", Decore.green_bg)
+
+    # zone-to-HOST traffic: firewall input rules control this
+    if to_zone == "HOST":
+        # Traffic to HOST depends on zone's input action and services
+        zone = next((z for z in zones if z.get('name') == from_zone), None)
+        if zone:
+            action = zone.get('action', 'reject')
+            services = zone.get('service', [])
+
+            if action == 'accept':
+                # Zone allows any input to HOST
+                return make_cell("✓", Decore.green_bg)
+            if services:
+                # Zone has specific services allowed to HOST
+                return make_cell("⚠", Decore.yellow_bg)
+
+            # Zone has drop/reject action and no services
+            return make_cell("✗", Decore.red_bg)
+
+        return make_cell("✗", Decore.red_bg)
 
     # Check if forwarding is enabled for same-zone communication
     if from_zone == to_zone:
@@ -1724,11 +1763,14 @@ def traffic_symbol(from_zone, to_zone, policy_map, zones, cell_width):
     cond = pfw_cond(zones)
     pfwd_overlap = any(from_zone in cond or to_zone in cond for cond in cond)
 
+    if (policy and policy['conditional']) or pfwd_overlap:
+        return make_cell("⚠", Decore.yellow_bg)
+
     if not policy or not policy['allow']:
         # Check if from_zone has port forwarding rules (makes it conditional)
         zone = next((z for z in zones if z.get('name') == from_zone), None)
         if zone:
-            action = zone.get('action', 'accept')
+            action = zone.get('action', 'reject')
             pfwd = zone.get('port-forward', [])
             if action in ['reject', 'drop'] and pfwd:
                 # Some traffic allowed via port forwarding
@@ -1740,9 +1782,6 @@ def traffic_symbol(from_zone, to_zone, policy_map, zones, cell_width):
 
         return make_cell("✗", Decore.red_bg)
 
-    if policy['conditional'] or pfwd_overlap:
-        return make_cell("⚠", Decore.yellow_bg)
-
     return make_cell("✓", Decore.green_bg)
 
 
@@ -1751,11 +1790,11 @@ def show_firewall_matrix(fw):
     zones = fw.get('zone', [])
     policies = fw.get('policy', [])
 
-    # No need for a matrix if there's only one zone
-    if len(zones) <= 1:
-        return None
-
     zone_names = [z['name'] for z in zones if z.get('interface')]
+
+    # Always add the implicit HOST zone
+    zone_names.insert(0, "HOST")
+
     if len(zone_names) <= 1:
         return None
 
@@ -1806,7 +1845,9 @@ def show_firewall_matrix(fw):
     for from_zone in zone_names:
         row = f"│ {from_zone:>{left_col_width}} │"
         for to_zone in zone_names:
-            symbol = traffic_symbol(from_zone, to_zone, policy_map, zones, col_width)
+            # Find symbol for this cell based on traffic flow
+            symbol = traffic_flow(from_zone, to_zone, policy_map,
+                                  zones, col_width)
             row += f"{symbol}│"
         print(f"{indent}{row}")
     print(f"{indent}{bottom_border}")
@@ -1850,7 +1891,7 @@ def show_firewall_zone(json, zone_name=None):
         services = zone.get('service', [])
         if not services:
             services = ""
-        action = zone.get('action', 'accept')
+        action = zone.get('action', 'reject')
         if action == 'accept':
             services_display = "(any)"
         else:
@@ -1869,7 +1910,7 @@ def show_firewall_zone(json, zone_name=None):
         if port_forwards:
             hdr = (f"{'FROM':<{PadFirewall.zone_pfwd_from}}"
                    f"{'TO':<{PadFirewall.zone_pfwd_to}}")
-            Decore.title("Port Forwards", len(hdr))
+            Decore.title(f"Port Forwards From {zone_name}", len(hdr))
             print(Decore.invert(hdr))
 
             for fwd in port_forwards:
@@ -1897,10 +1938,34 @@ def show_firewall_zone(json, zone_name=None):
 
         hdr = (f"{'TO ZONE':<{PadFirewall.zone_flow_to}}"
                f"{'ACTION':<{PadFirewall.zone_flow_action}}"
-               f"{'POLICY':<{PadFirewall.zone_flow_policy}}")
-        Decore.title("Traffic Flows", len(hdr))
+               f"{'POLICY':<{PadFirewall.zone_flow_policy}}"
+               f"{'SERVICES':<{PadFirewall.zone_flow_services}}")
+        Decore.title(f"Traffic Flows From {zone_name} →", len(hdr))
         print(Decore.invert(hdr))
 
+        # Add HOST zone first
+        current_zone = next((z for z in zones if z.get('name') == zone_name), None)
+        if current_zone:
+            # Zone-to-HOST traffic logic
+            action = current_zone.get('action', 'reject')
+            services = current_zone.get('service', [])
+
+            if action == 'accept':
+                host_action = "✓ allow"
+                host_services = "(any)"
+            elif services:
+                host_action = "⚠ conditional"
+                host_services = ", ".join(services)
+            else:
+                host_action = "✗ deny"
+                host_services = "(none)"
+
+            print(f"{'HOST':<{PadFirewall.zone_flow_to}}"
+                  f"{host_action:<{PadFirewall.zone_flow_action}}"
+                  f"{'(services)':<{PadFirewall.zone_flow_policy}}"
+                  f"{host_services}")
+
+        # Add other zones
         for other_zone in zones:
             if other_zone.get('name') == zone_name:
                 continue
@@ -1909,15 +1974,30 @@ def show_firewall_zone(json, zone_name=None):
             other_name = other_zone.get('name')
             policy_name = "(none)"
             action = "✗ deny"
+            services_display = "(none)"
+
             for policy in policies:
                 if zone_name in policy.get('ingress', []) and other_name \
                    in policy.get('egress', []):
                     policy_name = policy.get('name', 'unknown')
-                    action = "✓ allow"
+                    policy_action = policy.get('action', 'reject')
+                    policy_services = policy.get('service', [])
+
+                    if policy_action == 'accept':
+                        action = "✓ allow"
+                        services_display = "(any)"
+                    elif policy_services:
+                        action = "⚠ conditional"
+                        services_display = ", ".join(policy_services)
+                    else:
+                        action = "✗ deny"
+                        services_display = "(none)"
                     break
+
             print(f"{other_name:<{PadFirewall.zone_flow_to}}"
                   f"{action:<{PadFirewall.zone_flow_action}}"
-                  f"{policy_name}")
+                  f"{policy_name:<{PadFirewall.zone_flow_policy}}"
+                  f"{services_display}")
     else:
         hdr = (f"{'NAME':<{PadFirewall.zone_name}}"
                f"{'ACTION':<{PadFirewall.zone_action}}"
@@ -1927,7 +2007,7 @@ def show_firewall_zone(json, zone_name=None):
         print(Decore.invert(hdr))
         for zone in zones:
             name = zone.get('name', '')
-            action = zone.get('action', 'accept')
+            action = zone.get('action', 'reject')
             interfaces = ", ".join(zone.get('interface', []))
             if not interfaces:
                 interfaces = "(none)"

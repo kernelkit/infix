@@ -16,6 +16,12 @@
 - [X] =firwall-cmd --reload= takes fooooorever! :-(
 - [X] If forwarding is disabled in a zone then the zone matrix should
   show deny for the same  zone-to-zone communication
+- [X] We should show the implicit rules for communicating with the HOST
+- [ ] Investigate "padlock" on built-in policys (and zones?) and expose more?
+- [ ] Document established,related somewhere, fixed/padlocked policy?  Also,
+  document why this is a good idea to always have enabled.  See RH docs.
+- [ ] Podman published ports, <https://firewalld.org/2024/11/strict-forward-ports>
+- [ ] Software fastpath <https://firewalld.org/2023/05/nftables-flowtable>
 
 * TODO doc: User Guide
 
