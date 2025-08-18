@@ -181,6 +181,12 @@ module infix-firewall {
       type boolean;
     }
 */
+    leaf lockdown {
+      description "Current state of emergency lockdown mode.";
+      config false;
+      type boolean;
+    }
+
     leaf default {
       description "Default zone for interfaces.
 
@@ -413,6 +419,63 @@ module infix-firewall {
          description "Destination IP address/group to match this service to.";
          }
       */
+    }
+
+    action lockdown-mode {
+      description "Emergency lockdown mode blocks all network traffic.
+
+                   This action is effectively a kill switch for all network
+                   connections, immediately dropping all incoming and outgoing
+                   packets and terminating existing sessions. It is intended for
+                   emergency situations such as active security breaches where
+                   immediate network isolation is required.
+
+                   WARNING: Activating lockdown mode will sever all remote
+                   connections including SSH sessions. Physical console access
+                   will be required to deactivate lockdown mode and restore
+                   normal network operations.
+
+                   Implementation uses firewalld panic mode under the hood to
+                   achieve complete traffic blocking at the netfilter level.";
+      input {
+        leaf operation {
+          description "Lockdown operation to perform";
+          type enumeration {
+            enum now {
+              description "Enable lockdown mode immediately - block all traffic";
+            }
+            enum cancel {
+              description "Cancel lockdown mode - restore normal operation";
+            }
+          }
+          mandatory true;
+        }
+      }
+      /* ADVANCED FEATURE: Skipped for now, please see node lockdown-state, below.
+      output {
+        leaf status {
+          description "Current lockdown mode status after operation";
+          type enumeration {
+            enum active {
+              description "Lockdown mode is currently active";
+            }
+            enum inactive {
+              description "Lockdown mode is currently inactive";
+            }
+            enum error {
+              description "Operation failed";
+            }
+          }
+        }
+
+        leaf message {
+          description "Additional status or error information";
+          config false;
+          type string;
+        }
+      }
+      */
+
     }
   }
 }

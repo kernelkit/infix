@@ -552,6 +552,25 @@
     <ACTION sym="srp_rpc@sysrepo">/ietf-factory-default:factory-reset</ACTION>
   </COMMAND>
 
+  <COMMAND name="firewall" help="Control the firewall" mode="switch">
+    <COMMAND name="lockdown" help="Emergency lockdown mode">
+      <PARAM name="operation" ptype="/STRING" help="Lockdown commands.">
+        <COMPL>
+          <ACTION sym="printl">now</ACTION>
+          <ACTION sym="printl">cancel</ACTION>
+        </COMPL>
+      </PARAM>
+      <ACTION sym="script" in="tty" out="tty" interrupt="true">
+	if [ "${KLISH_PARAM_operation}" = "now" ]; then
+	  if ! firewall panic status; then
+            /bin/yorn -q "WARNING: This will block ALL network traffic and sever existing connections"
+	  fi
+	fi
+      </ACTION>
+      <ACTION sym="srp_rpc@sysrepo">/infix-firewall:firewall/lockdown-mode</ACTION>
+    </COMMAND>
+  </COMMAND>
+
   <COMMAND name="follow" help="Monitor a log file, use Ctrl-C to abort">
     <PARAM name="fn" ptype="/LOGFILES" help="Optional log file to monitor, default: syslog"/>
     <ACTION sym="script" in="tty" out="tty" interrupt="true">

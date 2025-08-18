@@ -559,12 +559,30 @@ static int cand(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
 	return SR_ERR_OK;
 }
 
+static int lockdown(sr_session_ctx_t *session, uint32_t sub_id, const char *xpath,
+		    const sr_val_t *input, const size_t input_cnt, sr_event_t event,
+		    uint32_t request_id, sr_val_t **output, size_t *output_cnt, void *priv)
+{
+	const char *operation = input->data.string_val;
+	int rc;
+
+	DEBUG("lockdown-mode: operation = %s", operation);
+	rc = systemf("firewall panic %s", strcmp(operation, "now") ? "off" : "on");
+	if (rc) {
+		ERROR("lockdown-mode: firewall command failed with exit code %d", rc);
+		return SR_ERR_OPERATION_FAILED;
+	}
+
+	return SR_ERR_OK;
+}
+
 int infix_firewall_init(struct confd *confd)
 {
 	int rc;
 
 	REGISTER_CHANGE(confd->session, MODULE, XPATH, 0, change, confd, &confd->sub);
 	REGISTER_CHANGE(confd->cand, MODULE, XPATH "//.", SR_SUBSCR_UPDATE, cand, confd, &confd->sub);
+	REGISTER_RPC(confd->session, XPATH "/lockdown-mode", lockdown, NULL, &confd->sub);
 
 	return SR_ERR_OK;
 fail:

@@ -6,6 +6,13 @@
 DEST="org.fedoraproject.FirewallD1"
 OBJECT="/org/fedoraproject/FirewallD1"
 INTERFACE="org.fedoraproject.FirewallD1"
+VERBOSE=0
+
+print() {
+    if [ "$VERBOSE" -eq 1 ]; then
+        printf '%s\n' "$*"
+    fi
+}
 
 check_firewalld()
 {
@@ -23,7 +30,7 @@ call_reload()
     if [ $ret -eq 0 ] && [ "$output" = "()" ]; then
         return 0
     else
-        echo "Error: Reload method failed (exit code: $ret, output: '$output')" >&2
+        print "Error: Reload method failed (exit code: $ret, output: '$output')" >&2
         return 1
     fi
 }
@@ -40,7 +47,7 @@ wait_for_reload()
         fi
     done
     
-    echo "Timeout waiting for firewall reload completion" >&2
+    print "Timeout waiting for firewall reload completion" >&2
     return 1
 }
 
@@ -76,7 +83,7 @@ panic_on()
 
     if ! gdbus call --system --dest "$DEST" --object-path "$OBJECT" \
 	    --method "$INTERFACE.enablePanicMode" >/dev/null 2>&1; then
-        echo "Error: Failed to activate lockdown mode" >&2
+        print "Error: Failed to activate lockdown mode" >&2
         return 1
     fi
 
@@ -89,7 +96,7 @@ panic_off()
 
     if ! gdbus call --system --dest "$DEST" --object-path "$OBJECT" \
 	    --method "$INTERFACE.disablePanicMode" >/dev/null 2>&1; then
-        echo "Error: Failed to deactivate lockdown mode" >&2
+        print "Error: Failed to deactivate lockdown mode" >&2
         return 1
     fi
 
@@ -99,43 +106,39 @@ panic_off()
 panic_status()
 {
     if is_panic_enabled; then
-        echo "Lockdown mode: ACTIVE"
-    else
-        echo "Lockdown mode: INACTIVE"
+        print "Lockdown mode: ACTIVE"
+	return 0
     fi
-    return 0
+
+    print "Lockdown mode: INACTIVE"
+    return 1
 }
 
 show_status()
 {
     echo "=== Firewall Status ==="
     
-    # Basic status
-    echo "Service Status:"
     if check_firewalld; then
-        echo "  Firewalld: RUNNING"
+        echo "  Firewalld     : RUNNING"
     else
-        echo "  Firewalld: NOT RUNNING"
+        echo "Firewalld NOT RUNNING"
         return 1
     fi
     
-    # Query lockdown status using helper
     if is_panic_enabled; then
-        lockdown_upper="TRUE"
+        panic="on"
     else
-        lockdown_upper="FALSE"
+        panic="off"
     fi
-    echo "  Lockdown Mode: $lockdown_upper"
+    echo "  Lockdown Mode : $panic"
     
-    # Default zone and logging using generic helper
     default_zone=$(gdbus_call "getDefaultZone" | sed "s/[']//g")
     logging=$(gdbus_call "getLogDenied" | sed "s/[']//g")
     
-    echo "  Default Zone: $default_zone"
-    echo "  Log Denied: $logging"
+    echo "  Default Zone  : $default_zone"
+    echo "  Log Denied    : $logging"
     echo
     
-    # Active zones
     echo "=== Active Zones ==="
     zones_output=$(gdbus call --system --dest "$DEST" --object-path "$OBJECT" \
                    --method org.fedoraproject.FirewallD1.zone.getActiveZones 2>/dev/null | \
@@ -148,7 +151,6 @@ show_status()
     fi
     echo
     
-    # Services
     echo "=== Available Services ==="
     services=$(gdbus call --system --dest "$DEST" --object-path "$OBJECT" \
                --method "$INTERFACE.listServices" 2>/dev/null | \
@@ -165,7 +167,6 @@ show_status()
     fi
     echo
     
-    # Policies
     echo "=== Policies ==="
     policies=$(gdbus call --system --dest "$DEST" --object-path "$OBJECT" \
                --method org.fedoraproject.FirewallD1.policy.getPolicies 2>/dev/null | \
@@ -179,52 +180,36 @@ show_status()
             echo "$policies" | jq -r '.[]' 2>/dev/null | while read policy_name; do
                 echo "    Policy: $policy_name"
                 
-                # Get policy details
                 policy_settings=$(gdbus call --system --dest "$DEST" --object-path "$OBJECT" \
                                 --method org.fedoraproject.FirewallD1.policy.getPolicySettings \
                                 "$policy_name" 2>/dev/null)
                 
                 if [ -n "$policy_settings" ] && [ "${policy_settings#*Error}" = "$policy_settings" ]; then
-                    # Parse D-Bus variant format
-                    
-                    # Extract target
                     target=$(echo "$policy_settings" | grep -o "'target': <'[^']*'" | cut -d"'" -f4)
-                    
-                    # Extract description
                     description=$(echo "$policy_settings" | grep -o "'description': <'[^']*'" | cut -d"'" -f4)
-                    
-                    # Extract masquerade
                     masquerade=$(echo "$policy_settings" | grep -o "'masquerade': <[^>]*>" | sed "s/.*<\([^>]*\)>.*/\1/")
-                    
-                    # Extract priority
                     priority=$(echo "$policy_settings" | grep -o "'priority': <[^>]*>" | sed "s/.*<\([^>]*\)>.*/\1/")
-                    
-                    # Extract ingress zones - handle the specific format from your example
                     if echo "$policy_settings" | grep -q "'ingress_zones'"; then
                         # Match: 'ingress_zones': <['internal']> or 'ingress_zones': <['dmz', 'internal']>
                         ingress_zones=$(echo "$policy_settings" | grep -o "'ingress_zones': <\[[^]]*\]>" | sed "s/'ingress_zones': <\[//; s/\]>//; s/'//g" | sed 's/, */, /g')
                     fi
                     
-                    # Extract egress zones - handle the specific format
                     if echo "$policy_settings" | grep -q "'egress_zones'"; then
                         # Match: 'egress_zones': <['external']> or 'egress_zones': <['HOST']>
                         egress_zones=$(echo "$policy_settings" | grep -o "'egress_zones': <\[[^]]*\]>" | sed "s/'egress_zones': <\[//; s/\]>//; s/'//g" | sed 's/, */, /g')
                     fi
                     
-                    # Extract rich rules - handle the complex nested quotes carefully
                     if echo "$policy_settings" | grep -q "'rich_rules'"; then
-                        # Extract the rich rules array content
                         rich_rules=$(echo "$policy_settings" | grep -o "'rich_rules': <\[[^]]*\]>" | sed "s/'rich_rules': <\[//; s/\]>//")
                     fi
                     
-                    echo "      Target: ${target:-unknown}"
-                    echo "      Description: ${description:-none}"
-                    echo "      Priority: ${priority:-unknown}"
-                    echo "      Ingress: ${ingress_zones:-none}"
-                    echo "      Egress: ${egress_zones:-none}"
-                    echo "      Masquerade: ${masquerade:-false}"
+                    echo "     Target     : ${target:-unknown}"
+                    echo "     Description: ${description:-none}"
+                    echo "     Priority   : ${priority:-unknown}"
+                    echo "     Ingress    : ${ingress_zones:-none}"
+                    echo "     Egress     : ${egress_zones:-none}"
+                    echo "     Masquerade : ${masquerade:-false}"
                     
-                    # Parse and display rich rules
                     if [ -n "$rich_rules" ] && [ "$rich_rules" != "" ]; then
                         rule_count=$(echo "$rich_rules" | grep -o "'" | wc -l)
                         rule_count=$((rule_count / 2))
@@ -269,6 +254,7 @@ Usage: $0 [OPTIONS] COMMAND
 
 OPTIONS:
     --wait SEC           Wait for reload completion signal (use with reload command)
+    -v, --verbose        Enable verbose output for error messages and status
     -h, --help           Show this help message
 
 COMMANDS:
@@ -289,25 +275,26 @@ This tool uses the FirewallD D-Bus API directly for reliable operation.
 EOF
 }
 
-# Main logic
 main()
 {
     wait_timeout=""
     
-    # Parse options using getopt
-    if ! parsed_args=$(getopt -o h --long wait:,help -- "$@"); then
+    if ! parsed_args=$(getopt -o hv --long wait:,help,verbose -- "$@"); then
         echo "Error parsing options" >&2
         exit 1
     fi
     
     eval set -- "$parsed_args"
     
-    # Process options
     while true; do
         case "$1" in
             --wait)
                 wait_timeout="$2"
                 shift 2
+                ;;
+            -v|--verbose)
+                VERBOSE=1
+                shift
                 ;;
             -h|--help)
                 show_help
@@ -324,31 +311,27 @@ main()
         esac
     done
     
-    # Process command
     case "${1:-}" in
         reload)
             if ! check_firewalld; then
-                echo "Error: firewalld is not running or not accessible" >&2
+                echo "Error: firewalld is not running or does not respond!" >&2
                 exit 1
             fi
             
-            # Call reload first
             if ! call_reload; then
                 exit 1
             fi
             
-            # Wait if --wait option was provided
             if [ -n "$wait_timeout" ]; then
                 if ! wait_for_reload "$wait_timeout"; then
                     echo "Firewall reload timed out" >&2
                     exit 1
                 fi
             fi
-            # Success - silent on UNIX principle
             ;;
         panic)
             if ! check_firewalld; then
-                echo "Error: firewalld is not running or not accessible" >&2
+                echo "Error: firewalld is not running or does not respond" >&2
                 exit 1
             fi
 

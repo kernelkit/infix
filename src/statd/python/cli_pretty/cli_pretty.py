@@ -167,6 +167,14 @@ class Decore():
         return Decore.decorate("33", txt, "39")
 
     @staticmethod
+    def bold_yellow(txt):
+        return Decore.decorate("1;33", txt, "0")
+
+    @staticmethod
+    def flashing_red(txt):
+        return Decore.decorate("5;31", txt, "0")
+
+    @staticmethod
     def underline(txt):
         return Decore.decorate("4", txt, "24")
 
@@ -1616,8 +1624,22 @@ def show_firewall(json):
         print("Firewall disabled.")
         return
 
-    # Adjust 20 + 8, where 8 is len(bold) + len(restore)
-    print(f"{Decore.bold('Firewall'):<28}: enabled")  # TODO: 'pause' RPC state
+    # Build firewall status with contextual alerts
+    lockdown_state = fw.get('lockdown', False)
+    logging_enabled = fw.get('logging', 'off') != 'off'
+
+    firewall_status = "active"
+    if lockdown_state:  # Lockdown mode takes priority
+        firewall_status += f" [ {Decore.flashing_red('LOCKDOWN MODE')} ]"
+    elif logging_enabled:
+        firewall_status += f" [ {Decore.bold_yellow('MONITORING')} ]"
+
+    # Adjust 20 + 8, where 8 is len(bold)
+    print(f"{Decore.bold('Firewall'):<28}: {firewall_status}")
+
+    lockdown_display = "active" if lockdown_state else "inactive"
+    print(f"{Decore.bold('Lockdown mode'):<28}: {lockdown_display}")
+
     print(f"{Decore.bold('Default zone'):<28}: {fw.get('default', 'unknown')}")
     print(f"{Decore.bold('Log denied traffic'):<28}: {fw.get('logging', 'off')}")
 
@@ -1633,7 +1655,6 @@ def show_firewall(json):
 def ip_in_network(ip_addr, network):
     """Check if an IP address falls within a CIDR network"""
     try:
-        import ipaddress
         ip = ipaddress.ip_address(ip_addr)
         net = ipaddress.ip_network(network, strict=False)
         return ip in net

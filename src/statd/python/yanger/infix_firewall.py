@@ -15,7 +15,7 @@ def get_interface(interface="org.fedoraproject.FirewallD1"):
         bus = dbus.SystemBus()
         obj = bus.get_object("org.fedoraproject.FirewallD1",
                              "/org/fedoraproject/FirewallD1")
-        return dbus.Interface(obj, interface)
+        return dbus.Interface(obj, dbus_interface=interface)
 
     except dbus.exceptions.DBusException as e:
         common.LOG.warning("Failed to connect to firewalld D-Bus: %s", e)
@@ -258,7 +258,8 @@ def operational():
     data = {
         "infix-firewall:firewall": {
             "default": fw.getDefaultZone(),
-            "logging": fw.getLogDenied()
+            "logging": fw.getLogDenied(),
+            "lockdown": bool(fw.queryPanicMode())
         }
     }
 
