@@ -176,7 +176,8 @@ static int generate_zone(struct lyd_node *cfg, const char *name, char **ifaces)
 		fprintf(fp, "  <service name=\"%s\"/>\n", lyd_get_value(node));
 
 	LYX_LIST_FOR_EACH(lyd_child(cfg), node, "port-forward") {
-		const char *port = lydx_get_cattr(node, "port");
+		const char *lower = lydx_get_cattr(node, "lower");
+		const char *upper = lydx_get_cattr(node, "upper");
 		const char *proto = lydx_get_cattr(node, "proto");
 		struct lyd_node *to = lydx_get_child(node, "to");
 
@@ -184,14 +185,33 @@ static int generate_zone(struct lyd_node *cfg, const char *name, char **ifaces)
 			const char *to_addr = lydx_get_cattr(to, "addr");
 			const char *to_port = lydx_get_cattr(to, "port");
 
-			fprintf(fp, "  <forward-port port=\"%s\" protocol=\"%s\"", port, proto);
+			if (upper) {
+				/* Port range: calculate destination upper port */
+				int lower_val = atoi(lower);
+				int upper_val = atoi(upper);
+				int to_port_val = to_port ? atoi(to_port) : lower_val;
+				int range_size = upper_val - lower_val;
+				int to_upper = to_port_val + range_size;
 
-			if (to_addr)
-				fprintf(fp, " to-addr=\"%s\"", to_addr);
-			if (to_port)
-				fprintf(fp, " to-port=\"%s\"", to_port);
+				fprintf(fp, "  <forward-port port=\"%s-%s\" protocol=\"%s\"", lower, upper, proto);
 
-			fprintf(fp, "/>\n");
+				if (to_addr)
+					fprintf(fp, " to-addr=\"%s\"", to_addr);
+				if (to_port)
+					fprintf(fp, " to-port=\"%d-%d\"", to_port_val, to_upper);
+
+				fprintf(fp, "/>\n");
+			} else {
+				/* Single port */
+				fprintf(fp, "  <forward-port port=\"%s\" protocol=\"%s\"", lower, proto);
+
+				if (to_addr)
+					fprintf(fp, " to-addr=\"%s\"", to_addr);
+				if (to_port)
+					fprintf(fp, " to-port=\"%s\"", to_port);
+
+				fprintf(fp, "/>\n");
+			}
 		}
 	}
 

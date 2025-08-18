@@ -258,11 +258,17 @@ module infix-firewall {
 
       list port-forward {
         description "Forward traffic another port and/or host (DNAT).";
-        key "port proto";
+        key "lower proto";
 
-        leaf port {
+        leaf lower {
           description "Local port to forward from.";
           type inet:port-number;
+        }
+
+        leaf upper {
+          description "Upper port when forwarding a range of ports.";
+          type inet:port-number;
+          must "../lower <= .";
         }
 
         leaf proto {
@@ -278,7 +284,10 @@ module infix-firewall {
           }
 
           leaf port {
-            description "Port to forward to.";
+            description "Port to forward to.
+
+                         When forwarding a range of ports this is the lower
+                         and the upper is then automatically calculated.";
             type inet:port-number;
           }
         }
@@ -375,14 +384,14 @@ module infix-firewall {
         key "lower proto";
 
         leaf lower {
-          type inet:port-number;
           description "Lower port in range.";
+          type inet:port-number;
         }
 
         leaf upper {
+          description "Upper port in range.";
           type inet:port-number;
           must "../lower <= .";
-          description "Upper port in range.";
         }
 
         leaf proto {

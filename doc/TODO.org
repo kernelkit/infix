@@ -1,12 +1,12 @@
 * TODO Add support for firewall
 - [X] Interfaces are not defaulting to the default zone, must handle bridge
   ports and changes to enslavement, so regenerate every time is a must!
-- [ ] Add missing upper to port forward since port ranges are supported, see services!
+- [X] Add missing upper to port forward since port ranges are supported, see services!
 - [X] =[do] show firewall= not available yet
 - [ ] Add RPC to pause firewall using =firewall-cmd --panic-on= and restart
   firewall again with =firewall-cmd --panic-off=.  The current state can
   be queried using =firewall-cmd --query-panic=, which returns =yes=
-- [ ] Remove debug log messages!
+- [X] Remove debug log messages!
 - [ ] Add "Log Messages" section to =show firewall= when =LogDenied ≠ off=
 - [1/2] Rename policy->policy to policy->action, and replace allow->forward
 - [X] Rename zone->sources to networks

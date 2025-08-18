@@ -60,27 +60,38 @@ def get_zone_data(fw, name):
                 if len(fwd) >= 4:
                     port, protocol, toport, toaddr = fwd[:4]  # Fixed field order!
 
-                    # TODO: extend YANG model with lower/upper
-                    fwd_data = {
-                        'port': int(port),  # TODO: Single port number now.
-                        'proto': str(protocol),
-                        'to': {
-                            'addr': str(toaddr)
+                    # Handle port ranges: port can be "80" or "8000-8080"
+                    if '-' in str(port):
+                        port_lower, port_upper = str(port).split('-', 1)
+                        fwd_data = {
+                            'lower': int(port_lower),
+                            'upper': int(port_upper),
+                            'proto': str(protocol),
+                            'to': {
+                                'addr': str(toaddr)
+                            }
                         }
-                    }
+                    else:
+                        fwd_data = {
+                            'lower': int(port),
+                            'proto': str(protocol),
+                            'to': {
+                                'addr': str(toaddr)
+                            }
+                        }
 
-                    # Handle destination port - might be empty or IP
+                    # Handle destination port - only store lower port, upper calculated by C code
                     if toport and str(toport).strip():
                         toport_str = str(toport).strip()
                         # Skip if toport looks like an IP address instead of port
                         if '.' not in toport_str and ':' not in toport_str:
                             fwd_data['to']['port'] = int(toport_str)
                         else:
-                            # If toport looks like IP, use the same port as source
-                            fwd_data['to']['port'] = int(port)
+                            # If toport looks like IP, use the same port as source lower
+                            fwd_data['to']['port'] = fwd_data['lower']
                     else:
-                        # No destination port specified, use same as source
-                        fwd_data['to']['port'] = int(port)
+                        # No destination port specified, use same as source lower
+                        fwd_data['to']['port'] = fwd_data['lower']
 
                     zone["port-forward"].append(fwd_data)
 

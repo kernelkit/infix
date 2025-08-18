@@ -1529,15 +1529,21 @@ def pfw_cond(zones):
         for pf in zone.get('port-forward', []):
             to = pf.get('to', {})
             if 'addr' in to:
-                pfwd.append((zone_name, to['addr']))
+                lower = pf.get('lower')
+                upper = pf.get('upper')
+                pfwd.append((zone_name, to['addr'], lower, upper))
 
     # Check each destination against all zone networks
     for zone in zones:
         zone_name = zone.get('name', '')
         for network in zone.get('network', []):
-            for pf_zone, dest_ip in pfwd:
+            for pf_zone, dest_ip, lower, upper in pfwd:
                 if ip_in_network(dest_ip, network):
-                    cond.append(f"Port-forward in {pf_zone} targets {dest_ip} in {zone_name} network {network}")
+                    if upper:
+                        port_desc = f"ports {lower}-{upper}"
+                    else:
+                        port_desc = f"port {lower}"
+                    cond.append(f"Port-forward in {pf_zone} ({port_desc}) targets {dest_ip} in {zone_name} network {network}")
     return cond
 
 
@@ -1741,12 +1747,24 @@ def show_firewall_zone(json, zone_name=None):
             print(Decore.invert(hdr))
 
             for fwd in port_forwards:
-                lower = fwd.get('port', {})
-                proto = fwd.get('proto', {})
-                from_port = f"{lower}/{proto}"
+                lower = fwd.get('lower')
+                upper = fwd.get('upper')
+                proto = fwd.get('proto', '')
+
+                if upper:
+                    from_port = f"{lower}-{upper}/{proto}"
+                else:
+                    from_port = f"{lower}/{proto}"
 
                 to = fwd.get('to', {})
-                to_str = f"{to.get('addr', '')}:{to.get('port', lower)}"
+                to_port = to.get('port', lower)
+
+                if upper:
+                    range_size = upper - lower
+                    to_upper = to_port + range_size
+                    to_str = f"{to.get('addr', '')}:{to_port}-{to_upper}"
+                else:
+                    to_str = f"{to.get('addr', '')}:{to_port}"
 
                 print(f"{from_port:<{PadFirewall.zone_pfwd_from}}"
                       f"{to_str:<{PadFirewall.zone_pfwd_to}}")
