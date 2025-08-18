@@ -4,9 +4,12 @@ import argparse
 import sys
 import re
 import textwrap
+import ipaddress
+from collections import deque
 from datetime import datetime, timezone
 
 UNIT_TEST = False
+
 
 class Pad:
     iface = 16
@@ -117,6 +120,14 @@ class PadFirewall:
 
     service_name = 20
     service_ports = 69
+
+    # Firewall log display formatting
+    log_time = 16      # ISO format: MM-DD HH:MM:SS
+    log_action = 7     # REJECT/DROP + small buffer
+    log_src = 25       # IPv6 addresses (shortened) or IPv4
+    log_dst = 25       # IPv6 addresses (shortened) or IPv4
+    log_proto = 6      # TCP/UDP/ICMP + small buffer
+    log_port = 5       # Port numbers + small buffer
 
     @classmethod
     def table_width(cls):
@@ -1490,6 +1501,113 @@ def show_lldp(json):
             entry.print()
 
 
+def parse_firewall_log_line(line):
+    """Parse a single firewall log line into structured data"""
+
+    # Look for kernel logs with netfilter IN=/OUT= fields
+    if not ('kernel' in line and 'IN=' in line and 'OUT=' in line):
+        return None
+
+    # Extract timestamp from syslog format: Aug 17 12:34:56
+    timestamp_match = re.match(r'^(\w{3}\s+\d{1,2}\s+\d{2}:\d{2}:\d{2})', line.strip())
+    if not timestamp_match:
+        return None
+
+    timestamp = timestamp_match.group(1)
+
+    # Look for action indicator in the log line
+    action = 'DROP'
+    if 'REJECT' in line:
+        action = 'REJECT'
+
+    # Extract key fields from netfilter log
+    patterns = {
+        'in_iface': r'IN=([^\s]*)',
+        'out_iface': r'OUT=([^\s]*)',
+        'src': r'SRC=([^\s]+)',
+        'dst': r'DST=([^\s]+)',
+        'proto': r'PROTO=([^\s]+)',
+        'spt': r'SPT=([^\s]+)',
+        'dpt': r'DPT=([^\s]+)',
+    }
+
+    parsed = {'timestamp': timestamp, 'action': action}
+
+    for key, pattern in patterns.items():
+        match = re.search(pattern, line)
+        value = match.group(1) if match else ''
+
+        # Compress any IPv6 addresses for src and dst
+        if key in ['src', 'dst'] and value:
+            try:
+                ip = ipaddress.ip_address(value)
+                if isinstance(ip, ipaddress.IPv6Address):
+                    value = str(ip.compressed)
+            except ValueError:
+                # Not a valid IP address, keep original value
+                pass
+
+        parsed[key] = value
+
+    return parsed
+
+
+def show_firewall_logs(limit=10):
+    """Show recent firewall log entries, tail -N equivalent"""
+    try:
+        hdr = (f"{'TIME':<{PadFirewall.log_time}} "
+               f"{'ACTION':<{PadFirewall.log_action}} "
+               f"{'SOURCE':<{PadFirewall.log_src}} "
+               f"{'DEST':<{PadFirewall.log_dst}} "
+               f"{'PROTO':<{PadFirewall.log_proto}} "
+               f"{'PORT':>{PadFirewall.log_port}}")
+
+        Decore.title("Recent Firewall Logs", len(hdr))
+
+        with open('/var/log/firewall.log', 'r', encoding='utf-8') as f:
+            lines = deque(f, maxlen=limit)
+
+        if not lines:
+            raise FileNotFoundError
+
+        print(Decore.invert(hdr))
+        for line in lines:
+            parsed = parse_firewall_log_line(line)
+            if not parsed:
+                continue
+
+            time_str = ''
+            if parsed['timestamp']:
+                try:
+                    ts = parsed['timestamp'].strip()
+                    if 'T' in ts:   # ISO format
+                        dt = datetime.fromisoformat(ts)
+                        time_str = dt.strftime("%b %d %H:%M:%S")
+                    else:           # syslog format
+                        dt = datetime.strptime(ts, "%b %d %H:%M:%S")
+                        time_str = dt.strftime("%b %d %H:%M:%S")
+                except Exception:
+                    time_str = parsed['timestamp'][:PadFirewall.log_time-1]
+
+            if parsed['action'] == 'REJECT':
+                action_color = Decore.red
+            else:
+                action_color = Decore.yellow
+            action = action_color(parsed['action'])
+
+            print(f"{time_str:<{PadFirewall.log_time}} "
+                  f"{action:<{PadFirewall.log_action + 10}} "
+                  f"{parsed['src']:<{PadFirewall.log_src}} "
+                  f"{parsed['dst']:<{PadFirewall.log_dst}} "
+                  f"{parsed['proto']:<{PadFirewall.log_proto}} "
+                  f"{parsed['dpt']:>{PadFirewall.log_port}}")
+
+    except FileNotFoundError:
+        print("No logs found (may be disabled or no denied traffic)")
+    except Exception as e:
+        print(f"Error reading firewall logs: {e}")
+
+
 def show_firewall(json):
     """Show firewall overview with matrix and tables"""
     fw = json.get('infix-firewall:firewall', {})
@@ -1505,6 +1623,10 @@ def show_firewall(json):
     show_firewall_matrix(fw)
     show_firewall_zone(json)
     show_firewall_policy(json)
+
+    # Add firewall logs at the bottom if logging is enabled
+    if fw.get('logging', 'off') != 'off':
+        show_firewall_logs()
 
 
 def ip_in_network(ip_addr, network):

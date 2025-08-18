@@ -7,7 +7,8 @@
   firewall again with =firewall-cmd --panic-off=.  The current state can
   be queried using =firewall-cmd --query-panic=, which returns =yes=
 - [X] Remove debug log messages!
-- [ ] Add "Log Messages" section to =show firewall= when =LogDenied ≠ off=
+- [X] Add "Log Messages" section to =show firewall= when =LogDenied ≠ off=
+- [ ] Investigate filtering out firewall log messages from other log files
 - [1/2] Rename policy->policy to policy->action, and replace allow->forward
 - [X] Rename zone->sources to networks
 - [X] A zone's action is for ingress, clarify this if missing!
