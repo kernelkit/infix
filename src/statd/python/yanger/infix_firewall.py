@@ -54,6 +54,9 @@ def get_zone_data(fw, name):
         zone["forwarding"] = bool(settings.get('forward', 0))
         zone["description"] = settings.get('description', 0)
 
+        short = settings.get('short', '')
+        zone["immutable"] = bool(short and "(immutable)" in short)
+
         forwards = settings.get('forward_ports', [])
         for fwd in forwards:
             try:
@@ -156,6 +159,9 @@ def get_policy_data(fw, name):
         description = settings.get('description', '')
         if description:
             policy["description"] = description
+
+        short = settings.get('short', '')
+        policy["immutable"] = bool(short and "(immutable)" in short)
 
         ingress = settings.get('ingress_zones', [])
         if ingress:

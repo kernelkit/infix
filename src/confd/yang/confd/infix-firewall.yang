@@ -228,6 +228,12 @@ module infix-firewall {
         type ident;
       }
 
+      leaf immutable {
+        description "Indicates if this zone is read-only/system-defined and cannot be modified.";
+        config false;
+        type boolean;
+      }
+
       leaf description {
         description "Free-form description of the zone.";
         type string;
@@ -329,6 +335,12 @@ module infix-firewall {
       leaf name {
         description "Unique identifier (filename) for this policy, e.g., LAN-to-WAN.";
         type ident;
+      }
+
+      leaf immutable {
+        description "Indicates if this policy is read-only/system-defined and cannot be modified.";
+        config false;
+        type boolean;
       }
 
       leaf description {

@@ -15,6 +15,8 @@ CONFD_AUTORECONF = YES
 CONFD_CONF_OPTS += --disable-silent-rules --with-crypt=$(BR2_PACKAGE_CONFD_DEFAULT_CRYPT)
 CONFD_SYSREPO_SHM_PREFIX = sr_buildroot$(subst /,_,$(CONFIG_DIR))_confd
 CONFD_FIREWALL_SERVICES_YANG = $(CONFD_SRCDIR)/yang/confd/infix-firewall-services.yang
+CONFD_FIREWALL_XML_FILES="$(TARGET_DIR)/usr/lib/firewalld/policies/*.xml \
+			  $(TARGET_DIR)/usr/lib/firewalld/zones/*.xml"
 
 define CONFD_CONF_ENV
 	CFLAGS="$(INFIX_CFLAGS)"
@@ -135,13 +137,31 @@ define CONFD_CLEANUP
 	done;											\
 	if [ $$MISSING -eq 1 ]; then								\
 		exit 1;										\
-	fi;											\
+	fi; 											\
 	cd $(TARGET_DIR)/usr/lib/firewalld/services/;						\
 	for xmlfile in *.xml; do								\
 		service=$${xmlfile%.xml};							\
 		if ! echo "$$ENUMS" | grep -q "^$$service$$"; then				\
 			rm "$$xmlfile";								\
 		fi;										\
+	done
+	for xmlfile in $$CONFD_FIREWALL_XML_FILES; do					\
+		[ -f "$$xmlfile" ] || continue;						\
+		if grep -q "(immutable)" "$$xmlfile"; then				\
+			continue;							\
+		fi;									\
+		if grep -q '<short>' "$$xmlfile"; then					\
+			sed -i 's|<short>\(.*\)</short>|<short>\1 (immutable)</short>|'	\
+				"$$xmlfile";						\
+		else									\
+			if echo "$$xmlfile" | grep -q "/policies/"; then		\
+				sed -i 's|<policy|<short>(immutable)</short>\n&|'	\
+					"$$xmlfile";					\
+			else								\
+				sed -i 's|<zone|<short>(immutable)</short>\n&|'		\
+					"$$xmlfile";					\
+			fi;								\
+		fi;									\
 	done
 endef
 CONFD_PRE_BUILD_HOOKS += CONFD_EMPTY_SYSREPO

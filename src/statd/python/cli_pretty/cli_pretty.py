@@ -101,6 +101,7 @@ class PadLldp:
 
 
 class PadFirewall:
+    zone_locked = 2
     zone_name = 20
     zone_action = 9
     zone_interfaces = 30
@@ -114,6 +115,7 @@ class PadFirewall:
     zone_flow_policy = 20
     zone_flow_services = 45
 
+    policy_locked = 2
     policy_name = 20
     policy_action = 9
     policy_ingress = 30
@@ -125,15 +127,15 @@ class PadFirewall:
     # Firewall log display formatting
     log_time = 16      # ISO format: MM-DD HH:MM:SS
     log_action = 7     # REJECT/DROP + small buffer
-    log_src = 25       # IPv6 addresses (shortened) or IPv4
-    log_dst = 25       # IPv6 addresses (shortened) or IPv4
+    log_src = 26       # IPv6 addresses (shortened) or IPv4
+    log_dst = 26       # IPv6 addresses (shortened) or IPv4
     log_proto = 6      # TCP/UDP/ICMP + small buffer
     log_port = 5       # Port numbers + small buffer
 
     @classmethod
     def table_width(cls):
         """Table width for zones/policies tables, used to center matrix"""
-        return cls.zone_name + cls.zone_action + cls.zone_interfaces \
+        return cls.zone_locked + cls.zone_name + cls.zone_action + cls.zone_interfaces \
             + cls.zone_services
 
 
@@ -2020,7 +2022,8 @@ def show_firewall_zone(json, zone_name=None):
                   f"{policy_name:<{PadFirewall.zone_flow_policy}}"
                   f"{services_display}")
     else:
-        hdr = (f"{'NAME':<{PadFirewall.zone_name}}"
+        hdr = (f"{'':<{PadFirewall.zone_locked}}"
+               f"{'NAME':<{PadFirewall.zone_name}}"
                f"{'ACTION':<{PadFirewall.zone_action}}"
                f"{'INTERFACES':<{PadFirewall.zone_interfaces}}"
                f"{'SERVICES':<{PadFirewall.zone_services}}")
@@ -2039,7 +2042,11 @@ def show_firewall_zone(json, zone_name=None):
                 else:
                     services = "(none)"
 
-            print(f"{name:<{PadFirewall.zone_name}}"
+            immutable = zone.get('immutable', False)
+            locked = "⚷" if immutable else " "
+
+            print(f"{locked:<{PadFirewall.zone_locked}}"
+                  f"{name:<{PadFirewall.zone_name}}"
                   f"{action:<{PadFirewall.zone_action}}"
                   f"{interfaces:<{PadFirewall.zone_interfaces}}"
                   f"{services}")
@@ -2075,7 +2082,8 @@ def show_firewall_policy(json, policy_name=None):
         print(f"{'masquerade':<20}: {masquerade}")
         print(f"{'services':<20}: {services_display}")
     else:
-        hdr = (f"{'NAME':<{PadFirewall.policy_name}}"
+        hdr = (f"{'':<{PadFirewall.policy_locked}}"
+               f"{'NAME':<{PadFirewall.policy_name}}"
                f"{'ACTION':<{PadFirewall.policy_action}}"
                f"{'INGRESS':<{PadFirewall.policy_ingress}}"
                f"{'EGRESS':<{PadFirewall.policy_egress}}")
@@ -2087,7 +2095,11 @@ def show_firewall_policy(json, policy_name=None):
             egress = ", ".join(policy.get('egress', []))
             action = policy.get('action', 'reject')
 
-            print(f"{name:<{PadFirewall.policy_name}}"
+            immutable = policy.get('immutable', False)
+            locked = "⚷" if immutable else " "
+
+            print(f"{locked:<{PadFirewall.policy_locked}}"
+                  f"{name:<{PadFirewall.policy_name}}"
                   f"{action:<{PadFirewall.policy_action}}"
                   f"{ingress:<{PadFirewall.policy_ingress}}"
                   f"{egress:<{PadFirewall.policy_egress}}")
