@@ -1,7 +1,7 @@
 From 03f21e47910e236ddd6c65429d1a049ddae10e66 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Mon, 4 Mar 2024 16:47:28 +0100
-Subject: [PATCH 19/28] net: bridge: avoid classifying unknown multicast as
+Subject: [PATCH 19/30] net: bridge: avoid classifying unknown multicast as
  mrouters_only
 Organization: Wires
 
@@ -27,7 +27,7 @@ Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
  7 files changed, 50 insertions(+), 11 deletions(-)
 
 diff --git a/include/uapi/linux/if_bridge.h b/include/uapi/linux/if_bridge.h
-index a5b743a2f775..3bffc39d7800 100644
+index a5b743a2f7750..3bffc39d78009 100644
 --- a/include/uapi/linux/if_bridge.h
 +++ b/include/uapi/linux/if_bridge.h
 @@ -830,6 +830,7 @@ enum br_boolopt_id {
@@ -39,7 +39,7 @@ index a5b743a2f775..3bffc39d7800 100644
  };
  
 diff --git a/net/bridge/br.c b/net/bridge/br.c
-index 2cab878e0a39..006fb2e5eafb 100644
+index 2cab878e0a39c..006fb2e5eafbf 100644
 --- a/net/bridge/br.c
 +++ b/net/bridge/br.c
 @@ -277,6 +277,9 @@ int br_boolopt_toggle(struct net_bridge *br, enum br_boolopt_id opt, bool on,
@@ -62,7 +62,7 @@ index 2cab878e0a39..006fb2e5eafb 100644
  		/* shouldn't be called with unsupported options */
  		WARN_ON(1);
 diff --git a/net/bridge/br_device.c b/net/bridge/br_device.c
-index 26b79feb385d..f3ecc70a47dc 100644
+index 26b79feb385d2..f3ecc70a47dc3 100644
 --- a/net/bridge/br_device.c
 +++ b/net/bridge/br_device.c
 @@ -87,10 +87,10 @@ netdev_tx_t br_dev_xmit(struct sk_buff *skb, struct net_device *dev)
@@ -102,7 +102,7 @@ index 26b79feb385d..f3ecc70a47dc 100644
  	br_stp_timer_init(br);
  	br_multicast_init(br);
 diff --git a/net/bridge/br_forward.c b/net/bridge/br_forward.c
-index e19b583ff2c6..1094364d96e0 100644
+index e19b583ff2c6d..1094364d96e0b 100644
 --- a/net/bridge/br_forward.c
 +++ b/net/bridge/br_forward.c
 @@ -198,14 +198,19 @@ static struct net_bridge_port *maybe_deliver(
@@ -140,7 +140,7 @@ index e19b583ff2c6..1094364d96e0 100644
  				continue;
  			break;
 diff --git a/net/bridge/br_input.c b/net/bridge/br_input.c
-index ceaa5a89b947..e54d648db7de 100644
+index ceaa5a89b947f..e54d648db7de8 100644
 --- a/net/bridge/br_input.c
 +++ b/net/bridge/br_input.c
 @@ -212,7 +212,7 @@ int br_handle_frame_finish(struct net *net, struct sock *sk, struct sk_buff *skb
@@ -153,7 +153,7 @@ index ceaa5a89b947..e54d648db7de 100644
  			br_multicast_flood(mdst, skb, brmctx, local_rcv, false);
  	}
 diff --git a/net/bridge/br_multicast.c b/net/bridge/br_multicast.c
-index 733ff6b758f6..b1799e03403f 100644
+index 733ff6b758f69..b1799e03403ff 100644
 --- a/net/bridge/br_multicast.c
 +++ b/net/bridge/br_multicast.c
 @@ -3835,6 +3835,11 @@ static void br_multicast_err_count(const struct net_bridge *br,
@@ -189,7 +189,7 @@ index 733ff6b758f6..b1799e03403f 100644
  		    ipv6_addr_is_all_snoopers(&ipv6_hdr(skb)->daddr))
  			br_ip6_multicast_mrd_rcv(brmctx, pmctx, skb);
 diff --git a/net/bridge/br_private.h b/net/bridge/br_private.h
-index 6a1bce8959af..ed5325c6add9 100644
+index 6a1bce8959afa..ed5325c6add97 100644
 --- a/net/bridge/br_private.h
 +++ b/net/bridge/br_private.h
 @@ -483,6 +483,7 @@ enum net_bridge_opts {

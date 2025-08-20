@@ -1,7 +1,7 @@
 From 54ead59e5b54be441ce6507132535873ba262674 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Wed, 27 Mar 2024 10:10:19 +0100
-Subject: [PATCH 18/28] net: phy: Do not resume PHY when attaching
+Subject: [PATCH 18/30] net: phy: Do not resume PHY when attaching
 Organization: Wires
 
 The PHY should not start negotiating with its link-partner until
@@ -20,7 +20,7 @@ administratively down.
  1 file changed, 1 deletion(-)
 
 diff --git a/drivers/net/phy/phy_device.c b/drivers/net/phy/phy_device.c
-index 834624a61060..d09872e1ac4e 100644
+index 834624a61060e..d09872e1ac4ee 100644
 --- a/drivers/net/phy/phy_device.c
 +++ b/drivers/net/phy/phy_device.c
 @@ -1661,7 +1661,6 @@ int phy_attach_direct(struct net_device *dev, struct phy_device *phydev,

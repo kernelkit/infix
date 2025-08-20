@@ -1,7 +1,7 @@
 From abe5d15c0d04f410c2a2696b5fb2aa895cca3826 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Thu, 16 Nov 2023 21:59:35 +0100
-Subject: [PATCH 06/28] net: dsa: mv88e6xxx: Add LED support for 6393X
+Subject: [PATCH 06/30] net: dsa: mv88e6xxx: Add LED support for 6393X
 Organization: Wires
 
 Trigger support:
@@ -17,7 +17,7 @@ Trigger support:
  5 files changed, 272 insertions(+)
 
 diff --git a/drivers/net/dsa/mv88e6xxx/chip.c b/drivers/net/dsa/mv88e6xxx/chip.c
-index f92b7d7d5780..c833b7e44d8b 100644
+index f92b7d7d57801..c833b7e44d8b4 100644
 --- a/drivers/net/dsa/mv88e6xxx/chip.c
 +++ b/drivers/net/dsa/mv88e6xxx/chip.c
 @@ -5691,6 +5691,7 @@ static const struct mv88e6xxx_ops mv88e6393x_ops = {
@@ -29,7 +29,7 @@ index f92b7d7d5780..c833b7e44d8b 100644
  	.pcs_ops = &mv88e6393x_pcs_ops,
  };
 diff --git a/drivers/net/dsa/mv88e6xxx/leds.c b/drivers/net/dsa/mv88e6xxx/leds.c
-index e3de10991f29..acdb5eca6647 100644
+index e3de10991f297..acdb5eca66472 100644
 --- a/drivers/net/dsa/mv88e6xxx/leds.c
 +++ b/drivers/net/dsa/mv88e6xxx/leds.c
 @@ -5,6 +5,13 @@
@@ -276,7 +276,7 @@ index e3de10991f29..acdb5eca6647 100644
  					enum led_brightness brightness)
  {
 diff --git a/drivers/net/dsa/mv88e6xxx/leds.h b/drivers/net/dsa/mv88e6xxx/leds.h
-index 8afa2a0c0527..542345d23dc5 100644
+index 8afa2a0c05278..542345d23dc5a 100644
 --- a/drivers/net/dsa/mv88e6xxx/leds.h
 +++ b/drivers/net/dsa/mv88e6xxx/leds.h
 @@ -7,6 +7,8 @@
@@ -289,7 +289,7 @@ index 8afa2a0c0527..542345d23dc5 100644
  
  #endif /* _MV88E6XXX_LEDS_H */
 diff --git a/drivers/net/dsa/mv88e6xxx/port.c b/drivers/net/dsa/mv88e6xxx/port.c
-index f25fb3214acb..aa5d312d8aa5 100644
+index f25fb3214acb9..aa5d312d8aa5e 100644
 --- a/drivers/net/dsa/mv88e6xxx/port.c
 +++ b/drivers/net/dsa/mv88e6xxx/port.c
 @@ -1558,6 +1558,39 @@ int mv88e6351_port_set_ether_type(struct mv88e6xxx_chip *chip, int port,
@@ -333,7 +333,7 @@ index f25fb3214acb..aa5d312d8aa5 100644
   * Offset 0x19: Port IEEE Priority Remapping Registers [4-7]
   */
 diff --git a/drivers/net/dsa/mv88e6xxx/port.h b/drivers/net/dsa/mv88e6xxx/port.h
-index ddadeb9bfdae..7157864dc20f 100644
+index ddadeb9bfdaee..7157864dc20fe 100644
 --- a/drivers/net/dsa/mv88e6xxx/port.h
 +++ b/drivers/net/dsa/mv88e6xxx/port.h
 @@ -309,6 +309,9 @@

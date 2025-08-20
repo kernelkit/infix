@@ -1,7 +1,7 @@
 From 4e22ecbdcb6609b9f2d00487ffbc166565261c23 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Sun, 11 Aug 2024 11:27:35 +0200
-Subject: [PATCH 27/28] net: usb: r8152: add r8153b support for link/activity
+Subject: [PATCH 27/30] net: usb: r8152: add r8153b support for link/activity
  LEDs
 Organization: Wires
 
@@ -19,7 +19,7 @@ Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
  1 file changed, 8 insertions(+)
 
 diff --git a/drivers/net/usb/r8152.c b/drivers/net/usb/r8152.c
-index 2cab046749a9..c9947ad320ff 100644
+index 2cab046749a92..c9947ad320ff9 100644
 --- a/drivers/net/usb/r8152.c
 +++ b/drivers/net/usb/r8152.c
 @@ -41,6 +41,11 @@

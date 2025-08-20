@@ -11,10 +11,12 @@ All notable changes to the project are documented in this file.
 - Upgrade Linux kernel to 6.12.42 (LTS)
 - Raspberry Pi 4 is now a part of the aarch64 image, as well as a SDcard
   image for initial deployments.
-
+- Add support for [Raspberry Pi touch display][RPI-TOUCH] on Raspberry Pi 4
 
 ### Fixes
 - containers: prune dangling images to reclaim disk space (#1098)
+
+[RPI-TOUCH]: https://www.raspberrypi.com/products/raspberry-pi-touch-display/
 
 [v25.06.0][] - 2025-07-01
 -------------------------

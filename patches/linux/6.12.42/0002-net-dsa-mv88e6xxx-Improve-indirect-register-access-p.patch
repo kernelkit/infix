@@ -1,7 +1,7 @@
 From a6289c5551cdfc4aa715e6ba66c9030e9dbbe9e1 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Wed, 27 Mar 2024 15:52:43 +0100
-Subject: [PATCH 02/28] net: dsa: mv88e6xxx: Improve indirect register access
+Subject: [PATCH 02/30] net: dsa: mv88e6xxx: Improve indirect register access
  perf on 6393
 Organization: Wires
 
@@ -22,7 +22,7 @@ other accesses use the regular indirect interface.
  5 files changed, 119 insertions(+)
 
 diff --git a/drivers/net/dsa/mv88e6xxx/chip.c b/drivers/net/dsa/mv88e6xxx/chip.c
-index d64c3eef4447..47138492885e 100644
+index d64c3eef4447a..47138492885e6 100644
 --- a/drivers/net/dsa/mv88e6xxx/chip.c
 +++ b/drivers/net/dsa/mv88e6xxx/chip.c
 @@ -6539,6 +6539,13 @@ static int mv88e6xxx_detect(struct mv88e6xxx_chip *chip)
@@ -40,7 +40,7 @@ index d64c3eef4447..47138492885e 100644
  		 chip->info->prod_num, chip->info->name, rev);
  
 diff --git a/drivers/net/dsa/mv88e6xxx/global1.h b/drivers/net/dsa/mv88e6xxx/global1.h
-index 3dbb7a1b8fe1..5ea956aadecc 100644
+index 3dbb7a1b8fe11..5ea956aadecc9 100644
 --- a/drivers/net/dsa/mv88e6xxx/global1.h
 +++ b/drivers/net/dsa/mv88e6xxx/global1.h
 @@ -218,6 +218,9 @@
@@ -54,7 +54,7 @@ index 3dbb7a1b8fe1..5ea956aadecc 100644
  #define MV88E6XXX_G1_CTL2			0x1c
  #define MV88E6185_G1_CTL2_CASCADE_PORT_MASK	0xf000
 diff --git a/drivers/net/dsa/mv88e6xxx/global2.h b/drivers/net/dsa/mv88e6xxx/global2.h
-index 82f9b410de0b..3663645621c9 100644
+index 82f9b410de0b8..3663645621c9d 100644
 --- a/drivers/net/dsa/mv88e6xxx/global2.h
 +++ b/drivers/net/dsa/mv88e6xxx/global2.h
 @@ -143,6 +143,9 @@
@@ -68,7 +68,7 @@ index 82f9b410de0b..3663645621c9 100644
  #define MV88E6XXX_G2_EEPROM_CMD			0x14
  #define MV88E6XXX_G2_EEPROM_CMD_BUSY		0x8000
 diff --git a/drivers/net/dsa/mv88e6xxx/smi.c b/drivers/net/dsa/mv88e6xxx/smi.c
-index a990271b7482..f54bb0e79030 100644
+index a990271b74823..f54bb0e79030c 100644
 --- a/drivers/net/dsa/mv88e6xxx/smi.c
 +++ b/drivers/net/dsa/mv88e6xxx/smi.c
 @@ -8,6 +8,8 @@
@@ -169,7 +169,7 @@ index a990271b7482..f54bb0e79030 100644
  		chip->smi_ops = &mv88e6xxx_smi_indirect_ops;
  	else
 diff --git a/drivers/net/dsa/mv88e6xxx/smi.h b/drivers/net/dsa/mv88e6xxx/smi.h
-index c6c71d5757f5..788cf68b7b33 100644
+index c6c71d5757f5d..788cf68b7b334 100644
 --- a/drivers/net/dsa/mv88e6xxx/smi.h
 +++ b/drivers/net/dsa/mv88e6xxx/smi.h
 @@ -31,6 +31,36 @@

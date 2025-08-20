@@ -1,7 +1,7 @@
 From 81649f0cb80310a46b9e081d198d9607c6b72554 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Mon, 29 Apr 2024 15:14:51 +0200
-Subject: [PATCH 24/28] usb: core: adjust log level for unauthorized devices
+Subject: [PATCH 24/30] usb: core: adjust log level for unauthorized devices
 Organization: Wires
 
 The fact that a USB device currently is not authorized is not an error,
@@ -15,7 +15,7 @@ Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
  2 files changed, 3 insertions(+), 3 deletions(-)
 
 diff --git a/drivers/usb/core/driver.c b/drivers/usb/core/driver.c
-index 0c3f12daac79..037f03aace9f 100644
+index 0c3f12daac79e..037f03aace9f9 100644
 --- a/drivers/usb/core/driver.c
 +++ b/drivers/usb/core/driver.c
 @@ -335,10 +335,10 @@ static int usb_probe_interface(struct device *dev)
@@ -32,7 +32,7 @@ index 0c3f12daac79..037f03aace9f 100644
  		return error;
  	}
 diff --git a/drivers/usb/core/generic.c b/drivers/usb/core/generic.c
-index b134bff5c3fe..60575a01a810 100644
+index b134bff5c3fe3..60575a01a8104 100644
 --- a/drivers/usb/core/generic.c
 +++ b/drivers/usb/core/generic.c
 @@ -247,7 +247,7 @@ int usb_generic_driver_probe(struct usb_device *udev)
