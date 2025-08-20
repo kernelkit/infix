@@ -14,6 +14,8 @@ All notable changes to the project are documented in this file.
 
 
 ### Fixes
+- containers: prune dangling images to reclaim disk space (#1098)
+
 [v25.06.0][] - 2025-07-01
 -------------------------
 

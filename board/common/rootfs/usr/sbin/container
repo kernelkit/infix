@@ -302,6 +302,9 @@ delete()
     log "$name: calling podman rm -vif ..."
     podman rm -vif "$name" >/dev/null 2>&1
     [ -n "$quiet" ] || log "Container $name has been removed."
+
+    cnt=$(podman image prune -f | wc -l)
+    log "Pruned $cnt image(s)"
 }
 
 waitfor()
@@ -757,6 +760,8 @@ case $cmd in
 	done
 
 	rm -f "$pidfile"
+	cnt=$(podman image prune -f | wc -l)
+	log "setup: pruned $cnt image(s)"
 	;;
     shell)
 	if [ -z "$name" ]; then
