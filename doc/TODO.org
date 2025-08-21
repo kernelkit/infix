@@ -22,6 +22,11 @@
   document why this is a good idea to always have enabled.  See RH docs.
 - [ ] Podman published ports, <https://firewalld.org/2024/11/strict-forward-ports>
 - [ ] Software fastpath <https://firewalld.org/2023/05/nftables-flowtable>
+- [ ] Allow overriding/editing immutable policies and zones
+- [ ] Add tests: basic (end device), wan-lan, wan-lan-dmz, hammer (stress)
+- [ ] Add documentation
+  - See <https://docs.rockylinux.org/guides/security/firewalld-beginners/>
+  - Add some tool tips: nc, nmap, ping, and socat to stress the firewall
 
 * TODO doc: User Guide
 
