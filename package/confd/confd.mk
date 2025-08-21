@@ -122,6 +122,11 @@ define CONFD_CLEANUP
 	mkdir -p $(TARGET_DIR)/etc/firewalld/policies
 	mkdir -p $(TARGET_DIR)/etc/firewalld/services
 	touch $(TARGET_DIR)/etc/firewalld/firewalld.conf
+	mkdir -p $(TARGET_DIR)/usr/lib/firewalld/services
+	cp $(CONFD_PKGDIR)/netconf.xml $(TARGET_DIR)/usr/lib/firewalld/services/
+	cp $(CONFD_PKGDIR)/restconf.xml $(TARGET_DIR)/usr/lib/firewalld/services/
+	# Find all pre-defined services in our YANG services model,
+	# drop firewalld service.xml that are *not* enumerated.
 	if [ ! -f "$(CONFD_FIREWALL_SERVICES_YANG)" ]; then					\
 		echo "ERROR: $(CONFD_FIREWALL_SERVICES_YANG) not found";			\
 		exit 1;										\

@@ -72,6 +72,9 @@ module infix-firewall-services {
       enum "netbios-ns" {
         description "137/udp — NetBIOS Name Service for Windows networking";
       }
+      enum "netconf" {
+        description "830/tcp — Network Configuration Protocol for network device management";
+      }
       enum "nfs" {
         description "2049/tcp+udp — Network File System for distributed file sharing";
       }
@@ -95,6 +98,9 @@ module infix-firewall-services {
       }
       enum "rdp" {
         description "3389/tcp — Remote Desktop Protocol for Windows remote access";
+      }
+      enum "restconf" {
+        description "443/tcp — RESTful Network Configuration Protocol for HTTP-based network management";
       }
       enum "samba" {
         description "445/tcp — Windows file and printer sharing";
