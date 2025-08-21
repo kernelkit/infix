@@ -40,6 +40,10 @@ include::../case/ietf_routing/Readme.adoc[]
 
 <<<
 
+include::../case/infix_firewall/Readme.adoc[]
+
+<<<
+
 include::../case/infix_containers/Readme.adoc[]
 
 <<<
