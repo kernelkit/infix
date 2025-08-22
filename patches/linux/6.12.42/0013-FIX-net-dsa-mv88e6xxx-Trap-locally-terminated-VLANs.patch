@@ -1,7 +1,7 @@
 From 5e9b1a8c14a625b3a96fbf84aed8d08b365ca31e Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Tue, 26 Nov 2024 19:45:59 +0100
-Subject: [PATCH 13/28] [FIX] net: dsa: mv88e6xxx: Trap locally terminated
+Subject: [PATCH 13/30] [FIX] net: dsa: mv88e6xxx: Trap locally terminated
  VLANs
 Organization: Wires
 
@@ -31,7 +31,7 @@ cause all packets assigned to these VLANs to properly terminated.
  3 files changed, 27 insertions(+), 14 deletions(-)
 
 diff --git a/drivers/net/dsa/mv88e6xxx/chip.c b/drivers/net/dsa/mv88e6xxx/chip.c
-index 1888ddd9bfa4..70eefc1b2140 100644
+index 1888ddd9bfa42..70eefc1b2140b 100644
 --- a/drivers/net/dsa/mv88e6xxx/chip.c
 +++ b/drivers/net/dsa/mv88e6xxx/chip.c
 @@ -2665,7 +2665,7 @@ static int mv88e6xxx_port_broadcast_sync(struct mv88e6xxx_chip *chip, int port,
@@ -118,7 +118,7 @@ index 1888ddd9bfa4..70eefc1b2140 100644
  		return err;
  
 diff --git a/include/net/switchdev.h b/include/net/switchdev.h
-index 8346b0d29542..764cd3dd4645 100644
+index 8346b0d29542c..764cd3dd46454 100644
 --- a/include/net/switchdev.h
 +++ b/include/net/switchdev.h
 @@ -104,6 +104,10 @@ struct switchdev_obj_port_vlan {
@@ -133,7 +133,7 @@ index 8346b0d29542..764cd3dd4645 100644
  
  #define SWITCHDEV_OBJ_PORT_VLAN(OBJ) \
 diff --git a/net/dsa/user.c b/net/dsa/user.c
-index e13fb22e2c2b..f45e313f1dd0 100644
+index e13fb22e2c2b6..f45e313f1dd07 100644
 --- a/net/dsa/user.c
 +++ b/net/dsa/user.c
 @@ -1754,6 +1754,8 @@ static int dsa_user_vlan_rx_add_vid(struct net_device *dev, __be16 proto,

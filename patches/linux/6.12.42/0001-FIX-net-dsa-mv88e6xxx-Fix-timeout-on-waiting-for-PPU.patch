@@ -1,7 +1,7 @@
 From 40a8201087967980260b7424bbbde69fea24a773 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Tue, 12 Mar 2024 10:27:24 +0100
-Subject: [PATCH 01/28] [FIX] net: dsa: mv88e6xxx: Fix timeout on waiting for
+Subject: [PATCH 01/30] [FIX] net: dsa: mv88e6xxx: Fix timeout on waiting for
  PPU on 6393X
 Organization: Wires
 
@@ -13,7 +13,7 @@ register 0, bit 15). Therefore, increase the timeout threshold to 1s.
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/drivers/net/dsa/mv88e6xxx/chip.c b/drivers/net/dsa/mv88e6xxx/chip.c
-index 211c219dd52d..d64c3eef4447 100644
+index 211c219dd52db..d64c3eef4447a 100644
 --- a/drivers/net/dsa/mv88e6xxx/chip.c
 +++ b/drivers/net/dsa/mv88e6xxx/chip.c
 @@ -86,7 +86,7 @@ int mv88e6xxx_write(struct mv88e6xxx_chip *chip, int addr, int reg, u16 val)

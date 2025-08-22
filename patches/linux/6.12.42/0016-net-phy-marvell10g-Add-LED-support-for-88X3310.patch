@@ -1,7 +1,7 @@
 From 3a1e59af27cb5f2d822b857be846e01825f68f5b Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Wed, 15 Nov 2023 20:58:42 +0100
-Subject: [PATCH 16/28] net: phy: marvell10g: Add LED support for 88X3310
+Subject: [PATCH 16/30] net: phy: marvell10g: Add LED support for 88X3310
 Organization: Wires
 
 Pickup the LEDs from the state in which the hardware reset or
@@ -22,7 +22,7 @@ Trigger support:
  1 file changed, 422 insertions(+)
 
 diff --git a/drivers/net/phy/marvell10g.c b/drivers/net/phy/marvell10g.c
-index 268484092776..9f8475b67ef7 100644
+index 2684840927769..9f8475b67ef74 100644
 --- a/drivers/net/phy/marvell10g.c
 +++ b/drivers/net/phy/marvell10g.c
 @@ -28,6 +28,7 @@

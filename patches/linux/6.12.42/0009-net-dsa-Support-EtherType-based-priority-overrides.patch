@@ -1,7 +1,7 @@
 From 3b5250872088b5f0451608e2f8ea06cd4a00177c Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Thu, 21 Mar 2024 19:12:15 +0100
-Subject: [PATCH 09/28] net: dsa: Support EtherType based priority overrides
+Subject: [PATCH 09/30] net: dsa: Support EtherType based priority overrides
 Organization: Wires
 
 ---
@@ -10,7 +10,7 @@ Organization: Wires
  2 files changed, 58 insertions(+), 2 deletions(-)
 
 diff --git a/include/net/dsa.h b/include/net/dsa.h
-index d7a6c2930277..db30c059b3c2 100644
+index d7a6c2930277e..db30c059b3c25 100644
 --- a/include/net/dsa.h
 +++ b/include/net/dsa.h
 @@ -968,6 +968,10 @@ struct dsa_switch_ops {
@@ -25,7 +25,7 @@ index d7a6c2930277..db30c059b3c2 100644
  	/*
  	 * Suspend and resume
 diff --git a/net/dsa/user.c b/net/dsa/user.c
-index 64f660d2334b..e13fb22e2c2b 100644
+index 64f660d2334b7..e13fb22e2c2b6 100644
 --- a/net/dsa/user.c
 +++ b/net/dsa/user.c
 @@ -2294,6 +2294,34 @@ dsa_user_dcbnl_add_dscp_prio(struct net_device *dev, struct dcb_app *app)

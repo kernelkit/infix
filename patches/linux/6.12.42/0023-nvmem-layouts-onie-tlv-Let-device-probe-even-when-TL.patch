@@ -1,7 +1,7 @@
 From 2ea43d917c5e65c7af20ea690adb4b7affc0b3a0 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Fri, 24 Nov 2023 23:29:55 +0100
-Subject: [PATCH 23/28] nvmem: layouts: onie-tlv: Let device probe even when
+Subject: [PATCH 23/30] nvmem: layouts: onie-tlv: Let device probe even when
  TLV is invalid
 Organization: Wires
 
@@ -18,7 +18,7 @@ simply refrain from registering any cells in those cases.
  1 file changed, 3 insertions(+), 3 deletions(-)
 
 diff --git a/drivers/nvmem/layouts/onie-tlv.c b/drivers/nvmem/layouts/onie-tlv.c
-index 0967a32319a2..48547d5bb502 100644
+index 0967a32319a28..48547d5bb5020 100644
 --- a/drivers/nvmem/layouts/onie-tlv.c
 +++ b/drivers/nvmem/layouts/onie-tlv.c
 @@ -197,7 +197,7 @@ static int onie_tlv_parse_table(struct nvmem_layout *layout)

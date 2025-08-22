@@ -1,7 +1,7 @@
 From 03609dd912ed2af88486f958098c7b7440ea27b6 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Tue, 16 Jan 2024 16:00:55 +0100
-Subject: [PATCH 08/28] net: dsa: Support MDB memberships whose L2 addresses
+Subject: [PATCH 08/30] net: dsa: Support MDB memberships whose L2 addresses
  overlap
 Organization: Wires
 
@@ -34,7 +34,7 @@ which previously skipped reference countung on user ports.
  1 file changed, 16 deletions(-)
 
 diff --git a/net/dsa/switch.c b/net/dsa/switch.c
-index 3d2feeea897b..628e8a884dde 100644
+index 3d2feeea897b6..628e8a884dde5 100644
 --- a/net/dsa/switch.c
 +++ b/net/dsa/switch.c
 @@ -164,14 +164,6 @@ static int dsa_port_do_mdb_add(struct dsa_port *dp,

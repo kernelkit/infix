@@ -1,15 +1,42 @@
 #include <arm64/broadcom/bcm2711-rpi-4-b.dts>
 
 / {
-	framebuffer@3e402000 {
-		compatible = "simple-framebuffer";
-		reg = <0x3e402000 0x1000>;
-		width = <800>;
-		height = <480>;
-		stride = <1600>;
-		format = "r5g6b5";
-		status = "okay";
+	memory@0 {
+		device_type = "memory";
+		reg = <0x0 0x0 0x0 0x30000000>; /* Reserve top 256MB for GPU */
 	};
+	reserved-memory {
+		#address-cells = <2>;
+		#size-cells = <2>;
+		ranges;
+		gpu_reserved: gpu@30000000 {
+			reg = <0x0 0x30000000 0x0 0x10000000>;
+			no-map;
+		};
+	};
+
+	panel_disp: panel_disp@1 {
+		reg = <1>;
+		compatible = "raspberrypi,7inch-dsi", "simple-panel";
+		backlight = <&reg_display>;
+		power-supply = <&reg_display>;
+		rotation = <180>;
+		port {
+			panel_in: endpoint {
+				remote-endpoint = <&bridge_out>;
+			};
+		};
+	};
+
+	reg_bridge: reg_bridge@1 {
+		reg = <1>;
+		compatible = "regulator-fixed";
+		regulator-name = "bridge_reg";
+		gpio = <&reg_display 0 0>;
+		vin-supply = <&reg_display>;
+		enable-active-high;
+	};
+
 	chosen {
 		/* 8250 auxiliary UART instead of pl011 */
 		stdout-path = "serial1:115200n8";
@@ -20,3 +47,73 @@
 		};
 	};
 };
+
+
+&vc4 {
+	status = "okay";
+};
+&i2c0mux {
+	status = "okay";
+};
+
+&i2c0 {
+	status = "okay";
+	reg_display: reg_display@45 {
+		compatible = "raspberrypi,7inch-touchscreen-panel-regulator";
+		reg = <0x45>;
+		gpio-controller;
+		#gpio-cells = <2>;
+	};
+
+	ft5406: ts@38 {
+		compatible = "edt,edt-ft5506";
+		reg = <0x38>;
+		touchscreen-size-x = < 800 >;
+		touchscreen-size-y = < 480 >;
+		touchscreen-inverted-y;
+		touchscreen-inverted-x;
+		vcc-supply = <&reg_display>;
+		reset-gpio = <&reg_display 1 1>;
+	};
+};
+
+
+&dsi1 {
+	status = "okay";
+	port {
+		dsi_out: endpoint {
+			remote-endpoint = <&bridge_in>;
+		};
+	};
+	bridge@0 {
+		reg = <0>;
+		compatible = "toshiba,tc358762";
+		vddc-supply = <&reg_bridge>;
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			port@0 {
+				reg = <0>;
+				bridge_in: endpoint {
+					remote-endpoint = <&dsi_out>;
+				};
+			};
+
+			port@1 {
+				reg = <1>;
+				bridge_out: endpoint {
+					remote-endpoint = <&panel_in>;
+				};
+			};
+		};
+	};
+};
+
+/*
+&hdmi0 {
+    status = "disabled";
+};
+&hdmi1 {
+    status = "disabled";
+};*/
