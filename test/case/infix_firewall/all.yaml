@@ -1,3 +1,6 @@
 ---
 - name: Basic Firewall for End Devices
   case: basic/test.py
+
+- name: LAN-WAN Firewall with Masquerading
+  case: lan-wan/test.py
