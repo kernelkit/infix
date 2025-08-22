@@ -4,8 +4,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <sys/stat.h>
 #include <errno.h>
+#include <dirent.h>
 
 #include <srx/common.h>
 #include <srx/lyx.h>
@@ -133,6 +133,43 @@ static int delete_file(const char *dir, const char *name)
 	if (erasef("%s/%s.xml", dir, name) && errno != ENOENT) {
 		ERRNO("Failed deleting %s/%s.xml: %s", dir, name, strerror(errno));
 		return SR_ERR_SYS;
+	}
+
+	return SR_ERR_OK;
+}
+
+static int cleanup_files(void)
+{
+	const char *dirs[] = {
+		FIREWALLD_ZONES_DIR,
+		FIREWALLD_SERVICES_DIR,
+		FIREWALLD_POLICIES_DIR,
+		NULL
+	};
+
+	if (erasef(FIREWALLD_CONF) && errno != ENOENT)
+		ERRNO("Failed removing %s: %s", FIREWALLD_CONF, strerror(errno));
+
+	for (int i = 0; dirs[i]; i++) {
+		struct dirent *entry;
+		DIR *d;
+
+		d = opendir(dirs[i]);
+		if (!d) {
+			DEBUG("Directory %s does not exist, skipping cleanup", dirs[i]);
+			continue;
+		}
+
+		while ((entry = readdir(d)) != NULL) {
+			if (entry->d_type != DT_REG)
+				continue;
+
+			DEBUG("Removing firewalld file: %s/%s", dirs[i], entry->d_name);
+			if (erasef("%s/%s", dirs[i], entry->d_name) && errno != ENOENT)
+				ERRNO("Failed removing %s/%s: %s", dirs[i], entry->d_name, strerror(errno));
+		}
+
+		closedir(d);
 	}
 
 	return SR_ERR_OK;
@@ -417,8 +454,11 @@ static int change(sr_session_ctx_t *session, uint32_t sub_id, const char *module
 	if (!diff)
 		goto err_release_data;
 
-	if (!global)
+	if (!global) {
+		/* Firewall is disabled - clean up all firewalld configuration files */
+		cleanup_files();
 		goto done;
+	}
 
 	if (lydx_get_descendant(diff, "firewall", "default", NULL) ||
 	    lydx_get_descendant(diff, "firewall", "logging", NULL)) {
@@ -431,7 +471,7 @@ static int change(sr_session_ctx_t *session, uint32_t sub_id, const char *module
 		const char *default_zone = lydx_get_cattr(global, "default");
 		struct lyd_node *list, *node;
 
-		/* First, handle deletions by removing files */
+		/* First, handle explicit deletions by removing files */
 		list = lydx_get_descendant(diff, "firewall", "zone", NULL);
 		LYX_LIST_FOR_EACH(list, node, "zone") {
 			if (lydx_get_op(node) == LYDX_OP_DELETE)
