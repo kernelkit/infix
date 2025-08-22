@@ -4,3 +4,7 @@
 <<<
 
 include::basic/Readme.adoc[]
+
+<<<
+
+include::lan-wan/Readme.adoc[]
