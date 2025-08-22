@@ -4,6 +4,7 @@ from .container import Container
 from .env import Env
 from .env import ArgumentParser
 from .env import test_argument
+from .firewall import Firewall
 from .furl import Furl
 from .netns import IsolatedMacVlan,IsolatedMacVlans
 from .portscanner import PortScanner

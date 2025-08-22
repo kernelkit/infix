@@ -4,3 +4,5 @@
 <<<
 
 include::basic/test.py[]
+
+include::lan-wan/test.py[]
