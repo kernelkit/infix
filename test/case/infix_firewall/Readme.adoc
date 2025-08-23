@@ -6,3 +6,5 @@
 include::basic/test.py[]
 
 include::lan-wan/test.py[]
+
+include::wan-dmz-lan/test.py[]

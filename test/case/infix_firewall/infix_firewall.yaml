@@ -3,3 +3,5 @@
   case: basic/test.py
 - name: lan-to-wan
   case: lan-wan/test.py
+- name: wan-dmz-lan
+  case: wan-dmz-lan/test.py
