@@ -8,6 +8,7 @@ behavior in automated tests. Supports:
 - Zone policy checks using targeted port scans
 - Positive and negative policy validation (allowed vs. blocked ports)
 """
+import subprocess
 import time
 from typing import Tuple, List
 from .sniffer import Sniffer
@@ -187,3 +188,44 @@ class Firewall:
                 filtered_ports.append(f"{name}({port})")
 
         return len(filtered_ports) == 0, filtered_ports
+
+    def verify_dnat(self, gateway_ip: str, forward_port: int, target_port: int,
+                    timeout: int = 5) -> Tuple[bool, str]:
+        """
+        Verify DNAT (port forwarding) by testing end-to-end connectivity
+
+        Args:
+            gateway_ip:   Gateway IP where port forwarding is configured
+            forward_port: External port being forwarded (e.g., 8080)
+            target_port:  Internal target port (e.g., 80)
+            timeout:      Connection timeout
+        Returns:
+            Tuple of (dnat_working: bool, details: str)
+        """
+        try:
+            # Use netcat to simulate a simple service on target port
+            cmd = f"nc -l -p {target_port} -e /bin/echo 'DNAT-TEST-OK'"
+            pid = self.dstns.popen(cmd.split(), stdout=subprocess.PIPE,
+                                   stderr=subprocess.PIPE)
+            time.sleep(1)  # Give server time to start
+
+            # Test connection from source to gateway:forward_port
+            cmd = f"nc -w {timeout} {gateway_ip} {forward_port}"
+            result = self.srcns.runsh(cmd)
+
+            try:
+                pid.terminate()
+                pid.wait(timeout=1)
+            except:
+                pid.kill()
+
+            # Check if we got the expected response
+            if "DNAT-TEST-OK" in result.stdout:
+                return True, f"DNAT working: {gateway_ip}:{forward_port} → target:{target_port}"
+            if result.returncode == 0:
+                return True, f"DNAT working: connection successful to {gateway_ip}:{forward_port}"
+
+            return False, f"DNAT failed: no response from {gateway_ip}:{forward_port}"
+
+        except Exception as e:
+            return False, f"DNAT verification failed with error: {e}"
