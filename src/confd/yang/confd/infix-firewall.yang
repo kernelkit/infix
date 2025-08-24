@@ -533,21 +533,15 @@ module infix-firewall {
           description "Layer 4 protocol.";
           type protocol-type;
         }
-
-        /* ADVANCED FEATURE: Commented out for simplicity - rarely needed
-           leaf match-source {
-           description "Match on source port(s) instead of default: destination.";
-           type boolean;
-           }
-        */
       }
 
-      /* ADVANCED FEATURE: Commented out for simplicity - service-specific destinations are complex
-         leaf destination {
-         type inet:ip-address;
-         description "Destination IP address/group to match this service to.";
-         }
-      */
+      leaf destination {
+        type union {
+          type inet:ip-address;
+          type inet:ip-prefix;
+        }
+        description "Destination IP address/group to match this service to.";
+      }
     }
 
     leaf lockdown {
