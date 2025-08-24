@@ -92,6 +92,18 @@ DESCRIPTION
 admin@example:/config/firewall/policy/lan-to-dmz/>
 ```
 
+### Symbolic Names
+
+The symbolic names `HOST` and `ANY` are available for use in both `ingress`
+and `egress` zones.  In fact, the CLI uses inference when first enabling the
+firewall to inject a default policy to allow an IPv6 autoconf address.
+
+### Custom Filters
+
+For more advanced firewall scenarios *custom filters* can be used.  The only
+support currently are various ICMP type traffic control.  Enough to support
+the default `allow-host-ipv6` policy.
+
 ## Services
 
 Several pre-defined services exist, that cover most use-cases, but you can
