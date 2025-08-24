@@ -8,7 +8,7 @@ All notable changes to the project are documented in this file.
 
 ### Changes
 - Upgrade Buildroot to 2025.02.5 (LTS)
-- Upgrade Linux kernel to 6.12.42 (LTS)
+- Upgrade Linux kernel to 6.12.43 (LTS)
 - Raspberry Pi 4 is now a part of the aarch64 image, as well as a SDcard
   image for initial deployments.
 - Add support for [Raspberry Pi touch display][RPI-TOUCH] on Raspberry Pi 4

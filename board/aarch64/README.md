@@ -40,7 +40,7 @@ Example of running Doom in Infix:
 	admin@example:/config/container/doom/mount/udev/> set target /run/udev/
 	admin@example:/config/container/doom/mount/udev/> set source /run/udev/
 	admin@example:/config/container/doom/mount/udev/> end
-	admin@example:/config/container/doom/mount/xorg.conf/> set content U2VjdGlvbiAiU2VydmVyTGF5b3V0IgogICAgSWRlbnRpZmllciAiRGVmYXVsdExheW91dCIKICAgIFNjcmVlbiAwICJTY3JlZW4wIiAwIDAKRW5kU2VjdGlvbgpTZWN0aW9uICJEZXZpY2UiCiAgICBJZGVudGlmaWVyICJpTVggTENEIgogICAgRHJpdmVyICJtb2Rlc2V0dGluZyIKICAgIEJ1c0lEICJwbGF0Zm9ybTozMmZjNjAwMC5kaXNwbGF5LWNvbnRyb2xsZXIiCiAgICBPcHRpb24gImttc2RldiIgIi9kZXYvZHJpL2NhcmQxIgpFbmRTZWN0aW9uCgpTZWN0aW9uICJTY3JlZW4iCiAgICBJZGVudGlmaWVyICJTY3JlZW4wIgogICAgRGV2aWNlICJpTVggTENEIgogICAgRGVmYXVsdERlcHRoIDI0CkVuZFNlY3Rpb24KCg==
+	admin@example:/config/container/doom/mount/xorg.conf/> set content U2VjdGlvbiAiT3V0cHV0Q2xhc3MiCiAgSWRlbnRpZmllciAidmM0IgogIE1hdGNoRHJpdmVyICJ2YzQiCiAgRHJpdmVyICJtb2Rlc2V0dGluZyIKICBPcHRpb24gIlByaW1hcnlHUFUiICJ0cnVlIgpFbmRTZWN0aW9uCg==
 	admin@example:/config/container/doom/mount/xorg.conf/> set target /etc/X11/xorg.conf
 	admin@example:/config/container/doom/mount/xorg.conf/> end
 	admin@example:/config/container/doom/> edit volume var

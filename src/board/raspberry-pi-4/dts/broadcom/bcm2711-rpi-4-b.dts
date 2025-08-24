@@ -1,18 +1,21 @@
 #include <arm64/broadcom/bcm2711-rpi-4-b.dts>
 
 / {
-	memory@0 {
-		device_type = "memory";
-		reg = <0x0 0x0 0x0 0x30000000>; /* Reserve top 256MB for GPU */
+	/* Dynamic GPU reservation */
+	gpu-reserved {
+		size = <0x0 0x10000000>; /* 256MB */
+		alignment = <0x0 0x1000000>; /* 16MB aligned */
+		alloc-ranges = <0x0 0x10000000 0x1 0x00000000>; /* Allow anywhere in RAM */
+		no-map;
 	};
-	reserved-memory {
-		#address-cells = <2>;
-		#size-cells = <2>;
-		ranges;
-		gpu_reserved: gpu@30000000 {
-			reg = <0x0 0x30000000 0x0 0x10000000>;
-			no-map;
-		};
+
+	/* CMA pool */
+	cma-reserved {
+		compatible = "shared-dma-pool";
+		size = <0x0 0x10000000>; /* 256MB */
+		alignment = <0x0 0x1000000>; /* 16MB aligned */
+		linux,cma-default;
+		reusable;
 	};
 
 	panel_disp: panel_disp@1 {
@@ -20,7 +23,6 @@
 		compatible = "raspberrypi,7inch-dsi", "simple-panel";
 		backlight = <&reg_display>;
 		power-supply = <&reg_display>;
-		rotation = <180>;
 		port {
 			panel_in: endpoint {
 				remote-endpoint = <&bridge_out>;
@@ -70,8 +72,6 @@
 		reg = <0x38>;
 		touchscreen-size-x = < 800 >;
 		touchscreen-size-y = < 480 >;
-		touchscreen-inverted-y;
-		touchscreen-inverted-x;
 		vcc-supply = <&reg_display>;
 		reset-gpio = <&reg_display 1 1>;
 	};
