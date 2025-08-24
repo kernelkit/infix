@@ -18,16 +18,16 @@
   show deny for the same  zone-to-zone communication
 - [X] We should show the implicit rules for communicating with the HOST
 - [X] Investigate "padlock" on built-in policys (and zones?) and expose more?
-- [ ] Document established,related somewhere, fixed/padlocked policy?  Also,
+- [X] Document established,related somewhere, fixed/padlocked policy?  Also,
   document why this is a good idea to always have enabled.  See RH docs.
 - [ ] Podman published ports, <https://firewalld.org/2024/11/strict-forward-ports>
 - [ ] Software fastpath <https://firewalld.org/2023/05/nftables-flowtable>
-- [ ] Allow overriding/editing immutable policies and zones
+- +[ ] Allow overriding/editing immutable policies and zones+
 - [X] Add tests: basic (end device), wan-lan, wan-lan-dmz, +hammer (stress)+
-- [ ] Add documentation
+- [X] Add documentation
   - See <https://docs.rockylinux.org/guides/security/firewalld-beginners/>
   - Add some tool tips: nc, nmap, ping, and socat to stress the firewall
-- [ ] Fix inference so we can remove defaults from factory-config!
+- [X] Fix inference so we can remove defaults from factory-config!
 
 * TODO doc: User Guide
 
