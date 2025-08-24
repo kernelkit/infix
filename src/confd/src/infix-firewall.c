@@ -399,10 +399,6 @@ static int infer_zone(sr_session_ctx_t *session, const char *name, const char *d
 
 	DEBUG("Inferring zone %s (%s), action %s forwarding %d", name, desc, action, forwarding);
 
-	rc = srx_set_str(session, name, 0, XPATH "/zone[name='%s']/name", name);
-	if (rc)
-		return rc;
-
 	rc = srx_set_str(session, desc, 0, XPATH "/zone[name='%s']/description", name);
 	if (rc)
 		return rc;
@@ -418,6 +414,67 @@ static int infer_zone(sr_session_ctx_t *session, const char *name, const char *d
 	for (int i = 0; services && services[i]; i++) {
 		rc = srx_set_str(session, services[i], 0, XPATH "/zone[name='%s']/service[.='%s']",
 				 name, services[i]);
+		if (rc)
+			return rc;
+	}
+
+	return SR_ERR_OK;
+}
+
+static int infer_policy(sr_session_ctx_t *session, const char *name, const char *desc,
+			const char *action, const char *ingress[], const char *egress[],
+			const char *icmp_types[][4])
+{
+	int rc;
+
+	DEBUG("Inferring policy %s (%s), action %s", name, desc, action);
+
+	rc = srx_set_str(session, desc, 0, XPATH "/policy[name='%s']/description", name);
+	if (rc)
+		return rc;
+
+	rc = srx_set_str(session, action, 0, XPATH "/policy[name='%s']/action", name);
+	if (rc)
+		return rc;
+
+	/* Set ingress zones */
+	for (int i = 0; ingress && ingress[i]; i++) {
+		rc = srx_set_str(session, ingress[i], 0, XPATH "/policy[name='%s']/ingress[.='%s']",
+				 name, ingress[i]);
+		if (rc)
+			return rc;
+	}
+
+	/* Set egress zones */
+	for (int i = 0; egress && egress[i]; i++) {
+		rc = srx_set_str(session, egress[i], 0, XPATH "/policy[name='%s']/egress[.='%s']",
+				 name, egress[i]);
+		if (rc)
+			return rc;
+	}
+
+	/* Set custom ICMP filters */
+	for (int i = 0; icmp_types && icmp_types[i][0]; i++) {
+		const char *family = icmp_types[i][0];
+		const char *filter = icmp_types[i][1];
+		const char *action = icmp_types[i][2];
+		const char *type = icmp_types[i][3];
+
+		rc = srx_set_str(session, family, 0,
+				 XPATH "/policy[name='%s']/custom/filter[name='%s']/family",
+				 name, filter);
+		if (rc)
+			return rc;
+
+		rc = srx_set_str(session, action, 0,
+				 XPATH "/policy[name='%s']/custom/filter[name='%s']/action",
+				 name, filter);
+		if (rc)
+			return rc;
+
+		rc = srx_set_str(session, type, 0,
+				 XPATH "/policy[name='%s']/custom/filter[name='%s']/icmp/type",
+				 name, filter);
 		if (rc)
 			return rc;
 	}
@@ -565,37 +622,51 @@ err_release_data:
 static int cand(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
 		const char *path, sr_event_t event, unsigned request_id, void *priv)
 {
-	const char *ext_svc[] = {"ssh", "dhcpv6-client", NULL};
-	const char *int_svc[] = { NULL};
+	const char *svc[] = {"ssh", "dhcpv6-client", NULL};
+	const char *any[] = {"ANY", NULL};
+	const char *host[] = {"HOST", NULL}; 
+	const char *icmp_types[][4] = {
+		{"ipv6", "na", "accept", "neighbour-advertisement"},
+		{"ipv6", "ns", "accept", "neighbour-solicitation"},
+		{"ipv6", "ra", "accept", "router-advertisement"},
+		{"ipv6", "re", "accept", "redirect"},
+		{NULL, NULL, NULL, NULL}
+	};
 	size_t cnt = 0;
 	int rc;
 
 	if (event != SR_EV_UPDATE && event != SR_EV_CHANGE)
 		return 0;
 
+	if (!srx_enabled(session, XPATH "/enabled")) {
+		DEBUG("Deleted, or not enabled, not inferring anything.");
+		return 0;
+	}
+
 	/* If unset, this is the first time we're called */
 	if (srx_get_str(session, XPATH "/default"))
 		return 0;
 
 	rc = srx_nitems(session, &cnt, XPATH "/zones");
-	if (rc || cnt) {
-		WARN("firewall has zones defined %zu, but no default zone for new interfaces! (rc %d)",
-		     cnt, rc);
+	if (rc == 0 || cnt) {
+		WARN("firewall has %zu zone(s) defined, but no default zone! (rc %d)", cnt, rc);
 		return 0;
 	}
 
-	rc = infer_zone(session, "external", "External untrusted network, only SSH and DHCPv6 client.",
-			"drop", true, ext_svc);
-	if (rc)
-		return rc;
-
-	rc = infer_zone(session, "internal", "Internal trusted network, forwarding between networks.",
-			"accept", true, int_svc);
+	rc = infer_zone(session, "public", "Public, unknown network. Only SSH and DHCPv6 client allowed.",
+			"reject", false, svc);
 	if (rc)
 		return rc;
 
 	/* Set up default zone for new networks */
-	rc = srx_set_str(session, "internal", 0, XPATH "/default");
+	rc = srx_set_str(session, "public", 0, XPATH "/default");
+	if (rc)
+		return rc;
+
+	/* Infer allow-host-ipv6 policy */
+	rc = infer_policy(session, "allow-host-ipv6", 
+			  "Allows basic IPv6 functionality for the host.",
+			  "continue", any, host, icmp_types);
 	if (rc)
 		return rc;
 
@@ -623,7 +694,7 @@ int infix_firewall_init(struct confd *confd)
 {
 	int rc;
 
-	REGISTER_CHANGE(confd->session, MODULE, XPATH, 0, change, confd, &confd->sub);
+	REGISTER_CHANGE(confd->session, MODULE, XPATH "//.", 0, change, confd, &confd->sub);
 	REGISTER_CHANGE(confd->cand, MODULE, XPATH "//.", SR_SUBSCR_UPDATE, cand, confd, &confd->sub);
 	REGISTER_RPC(confd->session, XPATH "/lockdown-mode", lockdown, NULL, &confd->sub);
 

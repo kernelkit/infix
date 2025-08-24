@@ -113,6 +113,7 @@ define CONFD_CLEANUP
 	rm -rf $(TARGET_DIR)/etc/firewall*
 	rm -f  $(TARGET_DIR)/usr/bin/firewall-applet
 	rm -rf $(TARGET_DIR)/usr/share/firewalld
+	rm -f $(TARGET_DIR)/usr/lib/firewalld/policies/*
 	find     $(TARGET_DIR)/usr/lib/firewalld/zones -type f \
 		! -name block.xml   \
 		! -name drop.xml    \
