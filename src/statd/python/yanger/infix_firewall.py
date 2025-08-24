@@ -139,7 +139,7 @@ def get_policy_data(fw, name):
         policy = {
             "name": name,
             "action": "reject",
-            # "priority": 32767,
+            "priority": 32767,
             "ingress": [],
             "egress": []
         }
@@ -153,9 +153,9 @@ def get_policy_data(fw, name):
         }
         policy["action"] = action.get(target, "reject")
 
-        # priority = settings.get('priority', 32767)
-        # if isinstance(priority, int):
-        #     policy["priority"] = priority
+        priority = settings.get('priority', 32767)
+        if isinstance(priority, int):
+            policy["priority"] = priority
 
         description = settings.get('description', '')
         if description:
@@ -192,6 +192,14 @@ def get_policy_data(fw, name):
 
             icmp_type = None
             action = None
+            prio = -1
+
+            if 'priority' in rule:
+                prio_match = re.search(r'.*priority=([^ ]+)', rule)
+                if prio_match:
+                    val = prio_match.group(1)
+                    if isinstance(val, int):
+                        prio = val
 
             if 'icmp-type' in rule and 'name=' in rule:
                 name_match = re.search(r'.*name="([^"]+)"', rule)
@@ -212,6 +220,7 @@ def get_policy_data(fw, name):
             if icmp_type and action:
                 filter_entry = {
                     "name": f"icmp-{icmp_type}",
+                    "priority": prio,
                     "family": family,
                     "action": action,
                     "icmp": {

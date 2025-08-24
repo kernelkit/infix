@@ -2163,7 +2163,9 @@ def show_firewall_policy(json, policy_name=None):
 
         if custom_filters:
             print(f"{'custom filters':<20}: {len(custom_filters)} filter(s)")
-            for _, filter_entry in enumerate(custom_filters):
+
+            sorted_filters = sorted(custom_filters, key=lambda f: f.get('priority', 32767))
+            for _, filter_entry in enumerate(sorted_filters):
                 action = filter_entry.get('action', 'accept')
                 family = filter_entry.get('family', 'both')
 
@@ -2181,7 +2183,9 @@ def show_firewall_policy(json, policy_name=None):
                f"{'EGRESS':<{PadFirewall.policy_egress}}")
         Decore.title("Policies", len(hdr))
         print(Decore.invert(hdr))
-        for policy in policies:
+
+        sorted_policies = sorted(policies, key=lambda p: p.get('priority', 32767))
+        for policy in sorted_policies:
             name = policy.get('name', '')
             ingress = ", ".join(policy.get('ingress', []))
             egress = ", ".join(policy.get('egress', []))

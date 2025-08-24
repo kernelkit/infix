@@ -496,6 +496,13 @@ module infix-firewall {
           }
         }
       }
+
+      leaf priority {
+        // Sorting order as read from firewalld
+        description "Effective priority of this filter.";
+        config false;
+        type int16;
+      }
    }
 
     list service {

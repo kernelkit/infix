@@ -298,12 +298,17 @@ static int generate_service(struct lyd_node *cfg, const char *name)
 	return close_file(fp);
 }
 
-static int generate_policy(struct lyd_node *cfg, const char *name)
+static int generate_policy(struct lyd_node *cfg, const char *name, int *priority)
 {
 	const char *desc, *action;
 	struct lyd_node *node;
 	bool masquerade;
 	FILE *fp;
+
+	if (*priority > 0) {
+		ERROR("Too many policies/filters - exceeded int16 range");
+		return SR_ERR_SYS;
+	}
 
 	fp = open_file(FIREWALLD_POLICIES_DIR, name);
 	if (!fp)
@@ -313,7 +318,8 @@ static int generate_policy(struct lyd_node *cfg, const char *name)
 	action = lydx_get_cattr(cfg, "action");
 	masquerade = lydx_is_enabled(cfg, "masquerade");
 
-	fprintf(fp, "<policy target=\"%s\">\n", policy_action_to_target(action));
+	fprintf(fp, "<policy target=\"%s\" priority=\"%d\">\n",
+		policy_action_to_target(action), (*priority)++);
 
 	if (desc)
 		fprintf(fp, "  <description>%s</description>\n", desc);
@@ -336,10 +342,18 @@ static int generate_policy(struct lyd_node *cfg, const char *name)
 			const char *family = lydx_get_cattr(filter, "family");
 			struct lyd_node *icmp;
 
+			if (*priority > 0) {
+				ERROR("Too many policies/filters - exceeded int16 range");
+				close_file(fp);
+				delete_file(FIREWALLD_POLICIES_DIR, name);
+				return SR_ERR_SYS;
+			}
+
 			if (strcmp(family, "both"))
-				fprintf(fp, "    <rule family=\"%s\">\n", family);
+				fprintf(fp, "    <rule family=\"%s\" priority=\"%d\">\n",
+					family, (*priority)++);
 			else
-				fprintf(fp, "    <rule>\n");
+				fprintf(fp, "    <rule priority=\"%d\">\n", (*priority)++);
 
 			action = lydx_get_cattr(filter, "action");
 			icmp = lydx_get_descendant(filter, "filter", "icmp", NULL);
@@ -541,6 +555,7 @@ static int change(sr_session_ctx_t *session, uint32_t sub_id, const char *module
 	if (lydx_get_descendant(diff, "firewall", NULL)) {
 		const char *default_zone = lydx_get_cattr(global, "default");
 		struct lyd_node *list, *node;
+		int priority = -32768;
 
 		/* First, handle explicit deletions by removing files */
 		list = lydx_get_descendant(diff, "firewall", "zone", NULL);
@@ -592,10 +607,16 @@ static int change(sr_session_ctx_t *session, uint32_t sub_id, const char *module
 		LYX_LIST_FOR_EACH(clist, cnode, "service")
 			generate_service(cnode, lydx_get_cattr(cnode, "name"));
 
-		/* Regenerate all policies */
+		/* Regenerate all policies with sequential priority allocation */
 		clist = lydx_get_descendant(tree, "firewall", "policy", NULL);
-		LYX_LIST_FOR_EACH(clist, cnode, "policy")
-			generate_policy(cnode, lydx_get_cattr(cnode, "name"));
+		LYX_LIST_FOR_EACH(clist, cnode, "policy") {
+			const char *name = lydx_get_cattr(cnode, "name");
+
+			if (generate_policy(cnode, name, &priority)) {
+				ERROR("Failed to generate policy %s", name);
+				goto err_release_data;
+			}
+		}
 
 		reload_needed = true;
 	}
