@@ -333,6 +333,37 @@ static int generate_policy(struct lyd_node *cfg, const char *name)
 	LYX_LIST_FOR_EACH(lyd_child(cfg), node, "service")
 		fprintf(fp, "  <service name=\"%s\"/>\n", lyd_get_value(node));
 
+	/* Handle custom filters */
+	node = lydx_get_descendant(cfg, "policy", "custom", NULL);
+	if (node) {
+		struct lyd_node *filter;
+
+		LYX_LIST_FOR_EACH(lyd_child(node), filter, "filter") {
+			const char *family = lydx_get_cattr(filter, "family");
+			struct lyd_node *icmp;
+
+			if (strcmp(family, "both"))
+				fprintf(fp, "    <rule family=\"%s\">\n", family);
+			else
+				fprintf(fp, "    <rule>\n");
+
+			action = lydx_get_cattr(filter, "action");
+			icmp = lydx_get_descendant(filter, "filter", "icmp", NULL);
+			if (icmp) {
+				const char *type = lydx_get_cattr(icmp, "type");
+
+				if (strcmp(action, "reject") == 0) {
+					fprintf(fp, "     <icmp-block name=\"%s\"/>\n", type);
+				} else {
+					fprintf(fp, "     <icmp-type name=\"%s\"/>\n", type);
+					fprintf(fp, "     <%s/>\n", action);
+				}
+			}
+
+			fprintf(fp, "   </rule>\n");
+		}
+	}
+
 	if (masquerade)
 		fprintf(fp, "  <masquerade/>\n");
 

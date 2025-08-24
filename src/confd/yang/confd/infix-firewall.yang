@@ -56,10 +56,10 @@ module infix-firewall {
   }
 
   typedef zone-ref {
-    description "Reference to a named zone or symbolic value: 'host' or 'any'.";
+    description "Reference to a named zone or symbolic value: 'HOST' or 'ANY'.";
     type union {
       type string {
-        pattern 'host|any';
+        pattern 'HOST|ANY';
       }
       type leafref {
         path "../../zone/name";
@@ -105,62 +105,147 @@ module infix-firewall {
   }
 
   /* firewall-cmd --get-icmptypes */
-  /* ADVANCED FEATURE: Commented out for simplicity - users rarely need granular ICMP control
   typedef icmp-type {
-    description "Available ICMP/ICMPv6 types for icmp-blocks.";
+    description "Available ICMP/ICMPv6 types.";
 
     type enumeration {
-      enum echo-reply {
-        description "Echo reply.";
+      enum address-unreachable {
+        description "Error sent when a packet cannot be delivered to its IPv6 destination address.";
+      }
+      enum bad-header {
+        description "IPv6 error indicating there is a problem with the packet header structure or format.";
+      }
+      enum beyond-scope {
+        description "IPv6 error sent when transmitting a packet would cross a zone boundary of the source address scope.";
+      }
+      enum communication-prohibited {
+        description "Error indicating that communication with the destination has been administratively blocked.";
       }
       enum destination-unreachable {
-        description "Destination unreachable.";
+        description "General error sent by hosts or gateways when a destination cannot be reached.";
       }
-      enum source-quench {
-        description "Source quench.";
-      }
-      enum redirect {
-        description "Redirect.";
+      enum echo-reply {
+        description "Response message sent back to acknowledge receipt of an echo request (ping response/pong).";
       }
       enum echo-request {
-        description "Echo request.";
+        description "Test message used to check if a host is reachable, commonly sent by the ping utility.";
       }
-      enum router-advertisement {
-        description "Router advertisement.";
+      enum failed-policy {
+        description "IPv6 error indicating the source address failed to meet ingress or egress policy requirements.";
       }
-      enum router-solicitation {
-        description "Router solicitation.";
+      enum fragmentation-needed {
+        description "IPv4 error sent when a packet needs fragmentation but the 'Don't Fragment' flag is set.";
       }
-      enum time-exceeded {
-        description "Time exceeded.";
+      enum host-precedence-violation {
+        description "IPv4 error sent when communication is administratively prohibited due to precedence rules.";
       }
-      enum parameter-problem {
-        description "Parameter problem.";
+      enum host-prohibited {
+        description "IPv4 error indicating that access from a specific host has been administratively blocked.";
       }
-      enum timestamp-request {
-        description "Timestamp request.";
+      enum host-redirect {
+        description "IPv4 message instructing to redirect packets to a different route for the specific host.";
       }
-      enum timestamp-reply {
-        description "Timestamp reply.";
+      enum host-unknown {
+        description "IPv4 error sent when the destination host cannot be identified or located.";
       }
-      enum address-mask-request {
-        description "Address mask request.";
+      enum host-unreachable {
+        description "IPv4 error sent when the destination host exists but cannot be reached.";
       }
-      enum address-mask-reply {
-        description "Address mask reply.";
+      enum ip-header-bad {
+        description "IPv4 error indicating malformed or corrupted IP header information.";
+      }
+      enum neighbour-advertisement {
+        description "IPv6 message sent in response to neighbor solicitation to propagate new network information.";
+      }
+      enum neighbour-solicitation {
+        description "IPv6 message used to discover link-layer addresses of neighbors and verify reachability.";
+      }
+      enum network-prohibited {
+        description "IPv4 error sent when access to an entire network has been administratively blocked.";
+      }
+      enum network-redirect {
+        description "IPv4 message instructing to redirect packets to a different route for the entire network.";
+      }
+      enum network-unknown {
+        description "IPv4 error sent when the destination network cannot be identified or located.";
+      }
+      enum network-unreachable {
+        description "IPv4 error sent when the destination network exists but cannot be reached.";
+      }
+      enum no-route {
+        description "IPv6 error sent when there is no routing table entry available for the destination.";
       }
       enum packet-too-big {
-        description "Packet too big.";
+        description "IPv6 error sent by routers when they cannot forward a packet because it exceeds the MTU.";
       }
-      enum neighbor-solicitation {
-        description "Neighbor solicitation.";
+      enum parameter-problem {
+        description "Error sent when IP header contains bad parameters or missing required options.";
       }
-      enum neighbor-advertisement {
-        description "Neighbor advertisement.";
+      enum port-unreachable {
+        description "Error sent when the destination port on a reachable host is not available or not listening.";
+      }
+      enum precedence-cutoff {
+        description "IPv4 error sent when the packet's precedence level is lower than the required minimum.";
+      }
+      enum protocol-unreachable {
+        description "IPv4 error sent when the specified protocol is not supported at the destination.";
+      }
+      enum redirect {
+        description "General message instructing a host to use a different route for future packets.";
+      }
+      enum reject-route {
+        description "IPv6 error sent when the routing table explicitly rejects the route to the destination.";
+      }
+      enum required-option-missing {
+        description "IPv4 error sent when a mandatory IP option is not present in the packet header.";
+      }
+      enum router-advertisement {
+        description "Message sent by routers to periodically announce their presence and network configuration.";
+      }
+      enum router-solicitation {
+        description "Message sent by hosts to request router advertisements and discover available routers.";
+      }
+      enum source-quench {
+        description "IPv4 flow control message telling a host to reduce its packet transmission rate.";
+      }
+      enum source-route-failed {
+        description "IPv4 error sent when source routing specified in the packet cannot be completed.";
+      }
+      enum time-exceeded {
+        description "Error sent when a packet's time-to-live expires during transit or reassembly.";
+      }
+      enum timestamp-reply {
+        description "IPv4 response message containing timestamp information for network time synchronization.";
+      }
+      enum timestamp-request {
+        description "IPv4 message requesting timestamp information from the destination for time synchronization.";
+      }
+      enum tos-host-redirect {
+        description "IPv4 message instructing to redirect packets based on both the type of service and specific host.";
+      }
+      enum tos-host-unreachable {
+        description "IPv4 error sent when a host is unreachable for the specific type of service requested.";
+      }
+      enum tos-network-redirect {
+        description "IPv4 message instructing to redirect packets based on both the type of service and network.";
+      }
+      enum tos-network-unreachable {
+        description "IPv4 error sent when a network is unreachable for the specific type of service requested.";
+      }
+      enum ttl-zero-during-reassembly {
+        description "Error sent when a host fails to completely reassemble fragmented packets within the time limit.";
+      }
+      enum ttl-zero-during-transit {
+        description "Error sent when a packet's time-to-live counter reaches zero while being forwarded.";
+      }
+      enum unknown-header-type {
+        description "IPv6 error sent when an unrecognized Next Header type is encountered in the packet.";
+      }
+      enum unknown-option {
+        description "IPv6 error sent when an unrecognized or unsupported IPv6 option is encountered.";
       }
     }
   }
-  */
 
   /*
    * Main container and configuration
@@ -311,6 +396,7 @@ module infix-firewall {
 
     list policy {
       description "Rules for filtering traffic forwarded between zones (inter-zone).";
+      ordered-by user;
       key "name";
 
       leaf name {
@@ -337,11 +423,11 @@ module infix-firewall {
 
       leaf-list ingress {
         type ifw:zone-ref;
-        description "List of zones traffic is entering. Use symbolic 'host' or 'any' as needed.";
+        description "List of zones traffic is entering. Use symbolic 'HOST' or 'ANY' as needed.";
       }
 
       leaf-list egress {
-        description "List of zones traffic is exiting from. Use symbolic 'host' or 'any' as needed.";
+        description "List of zones traffic is exiting from. Use symbolic 'HOST' or 'ANY' as needed.";
         type ifw:zone-ref;
       }
 
@@ -357,6 +443,56 @@ module infix-firewall {
             path "../../service/name";
           }
           type ifw-svc:well-known-service;
+        }
+      }
+
+      container custom {
+        description "Custom filters, prioritized over other policy elements.";
+
+        list filter {
+          description "Custom traffic filters with specific matching criteria.
+
+                       Evaluation order = list order.";
+          ordered-by user;
+          key "name";
+
+          leaf name {
+            description "Unique identifier for this filter within the policy.";
+            type ident;
+          }
+
+          leaf family {
+            description "Address family selector.";
+            type enumeration { enum ipv4; enum ipv6; enum both; }
+            default both;
+          }
+
+          choice type {
+            description "Type of traffic to match for this filter.";
+
+            case icmp {
+              container icmp {
+                leaf type {
+                  description "ICMP type to match.";
+                  type icmp-type;
+                }
+              }
+            }
+          }
+
+          leaf action {
+            description "How to handle filter matches.";
+            // XXX: Different from similar enums because we may add 'mark' later
+            type enumeration { enum accept; enum drop; enum reject; }
+            default accept;
+          }
+
+          leaf priority {
+            // Sorting order as read from firewalld
+            description "Effective priority of this filter.";
+            config false;
+            type int16;
+          }
         }
       }
    }

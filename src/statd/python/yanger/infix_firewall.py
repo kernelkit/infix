@@ -7,6 +7,7 @@ for the full API, see:
                     --object-path /org/fedoraproject/FirewallD1
 """
 import dbus
+import re
 from . import common
 
 
@@ -176,6 +177,53 @@ def get_policy_data(fw, name):
             policy["service"] = list(services)
 
         policy["masquerade"] = bool(settings.get('masquerade', 0))
+
+        # Handle custom filters from rich_rules
+        custom_filters = []
+        rich_rules = settings.get('rich_rules', [])
+
+        for rule in rich_rules:
+            # Extract family (default to both if not specified)
+            family = "both"
+            if 'family="ipv4"' in rule:
+                family = "ipv4"
+            elif 'family="ipv6"' in rule:
+                family = "ipv6"
+
+            icmp_type = None
+            action = None
+
+            if 'icmp-type' in rule and 'name=' in rule:
+                name_match = re.search(r'.*name="([^"]+)"', rule)
+                if name_match:
+                    icmp_type = name_match.group(1)
+
+                    action = "accept"
+                    if ' drop' in rule:
+                        action = "drop"
+                    elif ' reject' in rule:
+                        action = "reject"
+            elif 'icmp-block' in rule and 'name=' in rule:
+                name_match = re.search(r'.*name="([^"]+)"', rule)
+                if name_match:
+                    icmp_type = name_match.group(1)
+                    action = "reject"
+
+            if icmp_type and action:
+                filter_entry = {
+                    "name": f"icmp-{icmp_type}",
+                    "family": family,
+                    "action": action,
+                    "icmp": {
+                        "type": icmp_type
+                    }
+                }
+                custom_filters.append(filter_entry)
+
+        if custom_filters:
+            policy["custom"] = {
+                "filter": custom_filters
+            }
 
         return policy
 

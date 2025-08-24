@@ -11,6 +11,80 @@ from datetime import datetime, timezone
 UNIT_TEST = False
 
 
+def compress_interface_list(interfaces):
+    """Compress a list of interfaces into ranges where possible.
+
+    Examples:
+        ['e1', 'e2', 'e3', 'e4'] -> 'e1-e4'
+        ['e1', 'e2', 'e4', 'e5'] -> 'e1-e2, e4-e5'
+        ['e1', 'e3', 'e5'] -> 'e1, e3, e5'
+        ['eth0', 'eth1', 'br0'] -> 'eth0-eth1, br0'
+    """
+    if not interfaces:
+        return ""
+
+    if len(interfaces) == 1:
+        return interfaces[0]
+
+    # Group interfaces by their prefix (e.g., 'e', 'eth', 'br')
+    groups = {}
+    standalone = []
+
+    for iface in interfaces:
+        # Extract prefix and number using regex
+        match = re.match(r'^([a-zA-Z]+)(\d+)$', iface)
+        if match:
+            prefix = match.group(1)
+            number = int(match.group(2))
+            if prefix not in groups:
+                groups[prefix] = []
+            groups[prefix].append((number, iface))
+        else:
+            # Interface doesn't follow prefix+number pattern
+            standalone.append(iface)
+
+    # Process each group to find ranges
+    result_parts = []
+
+    for prefix in sorted(groups.keys()):
+        # Sort by number
+        numbers_and_ifaces = sorted(groups[prefix])
+        ranges = []
+        start = None
+        end = None
+
+        for number, iface in numbers_and_ifaces:
+            if start is None:
+                # Start new range
+                start = number
+                end = number
+            elif number == end + 1:
+                # Extend current range
+                end = number
+            else:
+                # End current range and start new one
+                if start == end:
+                    ranges.append(f"{prefix}{start}")
+                else:
+                    ranges.append(f"{prefix}{start}-{prefix}{end}")
+                start = number
+                end = number
+
+        # Add the final range
+        if start is not None:
+            if start == end:
+                ranges.append(f"{prefix}{start}")
+            else:
+                ranges.append(f"{prefix}{start}-{prefix}{end}")
+
+        result_parts.extend(ranges)
+
+    # Add standalone interfaces
+    result_parts.extend(sorted(standalone))
+
+    return ", ".join(result_parts)
+
+
 class Pad:
     iface = 16
     proto = 11
@@ -1924,7 +1998,7 @@ def show_firewall_zone(json, zone_name=None):
         print(format_description('description', description))
         print(f"{'name':<20}: {zone_name}")
         print(f"{'action':<20}: {action}")
-        print(f"{'interfaces':<20}: {', '.join(interfaces)}")
+        print(f"{'interfaces':<20}: {compress_interface_list(interfaces)}")
         print(f"{'networks':<20}: {', '.join(networks)}")
         print(f"{'forwarding':<20}: {forwarding}")
         print(f"{'services':<20}: {services_display}")
@@ -2032,9 +2106,11 @@ def show_firewall_zone(json, zone_name=None):
         for zone in zones:
             name = zone.get('name', '')
             action = zone.get('action', 'reject')
-            interfaces = ", ".join(zone.get('interface', []))
-            if not interfaces:
+            interface_list = zone.get('interface', [])
+            if not interface_list:
                 interfaces = "(none)"
+            else:
+                interfaces = compress_interface_list(interface_list)
             services = ", ".join(zone.get('service', []))
             if not services:
                 if action == "accept":
@@ -2069,6 +2145,9 @@ def show_firewall_policy(json, policy_name=None):
         masquerade = "yes" if policy.get('masquerade') else "no"
         description = policy.get('description', '')
         services = policy.get('service', [])
+        custom = policy.get('custom', {})
+        custom_filters = custom.get('filter', [])
+
         if policy == 'accept':
             services_display = "(all)"
         else:
@@ -2081,6 +2160,19 @@ def show_firewall_policy(json, policy_name=None):
         print(f"{'action':<20}: {action}")
         print(f"{'masquerade':<20}: {masquerade}")
         print(f"{'services':<20}: {services_display}")
+
+        if custom_filters:
+            print(f"{'custom filters':<20}: {len(custom_filters)} filter(s)")
+            for _, filter_entry in enumerate(custom_filters):
+                action = filter_entry.get('action', 'accept')
+                family = filter_entry.get('family', 'both')
+
+                icmp = filter_entry.get('icmp')
+                if icmp:
+                    icmp_type = icmp.get('type', 'unknown')
+                    print(f"{'  - ' + action:<6} {family} icmp-type {icmp_type}")
+                else:
+                    print(f"{'  - ' + action:<6} {family} (unknown type)")
     else:
         hdr = (f"{'':<{PadFirewall.policy_locked}}"
                f"{'NAME':<{PadFirewall.policy_name}}"
@@ -2094,6 +2186,12 @@ def show_firewall_policy(json, policy_name=None):
             ingress = ", ".join(policy.get('ingress', []))
             egress = ", ".join(policy.get('egress', []))
             action = policy.get('action', 'reject')
+
+            # Check for custom filters
+            # custom = policy.get('custom', {})
+            # custom_filters = custom.get('filter', [])
+            # if custom_filters:
+            #     name += f" ({len(custom_filters)} filter(s))"
 
             immutable = policy.get('immutable', False)
             locked = "⚷" if immutable else " "
