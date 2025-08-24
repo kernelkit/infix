@@ -181,7 +181,8 @@ with infamy.Test() as test:
         assert wan_zone["action"] == "drop"
         assert wan_if in wan_zone["interface"]
         assert len(wan_zone["port-forward"]) == 1
-        pf = wan_zone["port-forward"][0]
+        # Access port-forward by iterating over the keyed list
+        pf = next(iter(wan_zone["port-forward"]))
         assert pf["lower"] == 8080
         assert pf["to"]["addr"] == DMZ_SERVER_IP
         assert pf["to"]["port"] == 80
