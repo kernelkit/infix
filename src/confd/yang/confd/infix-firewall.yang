@@ -254,7 +254,7 @@ module infix-firewall {
   container firewall {
     description "Zone-based firewall configuration.";
     presence "Activte firewall.";
-/*
+
     leaf enabled {
       description "Enable or disable the firewall.
 
@@ -263,8 +263,9 @@ module infix-firewall {
                    remember to re-enable when done, and maybe remove connections to the Internet
                    before disabling.";
       type boolean;
+      default true;
     }
-*/
+
     leaf default {
       description "Default zone for interfaces.
 

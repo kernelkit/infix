@@ -603,6 +603,13 @@ static int change(sr_session_ctx_t *session, uint32_t sub_id, const char *module
 	if (reload_needed)
 		system("initctl -nbq touch firewalld");
 
+
+	/* We check 'enabled' here to allow us to debug generated files. */
+	if (!lydx_is_enabled(global, "enabled")) {
+		global = NULL;
+		goto done;
+	}
+
 done:
 	systemf("initctl -nbq %s firewalld", global ? "enable" : "disable");
 
