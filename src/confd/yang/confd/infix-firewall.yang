@@ -15,7 +15,7 @@ module infix-firewall {
 
   import infix-firewall-services {
     prefix ifw-svc;
-    reference "infix-firewall-services.yang";
+    reference "internal";
   }
 
   organization "KernelKit";
@@ -47,7 +47,7 @@ module infix-firewall {
         description "Accept all connections by default.";
       }
       enum reject {
-        description "Reject all connections by default.";
+        description "Reject all connections, except ICMP, by default.";
       }
       enum drop {
         description "Drop all connections by default.";
@@ -69,7 +69,6 @@ module infix-firewall {
 
   typedef policy-action {
     type enumeration {
-      /* ADVANCED FEATURE: Commented out - requires policy ordering/priority system */
       enum continue {
         description "Non-terminal policy. Matching traffic is accepted or allowed to proceed, and other policies continue to be evaluated.";
       }
@@ -169,7 +168,7 @@ module infix-firewall {
 
   container firewall {
     description "Zone-based firewall configuration.";
-    presence "Enable the firewall.";
+    presence "Activte firewall.";
 /*
     leaf enabled {
       description "Enable or disable the firewall.
@@ -181,12 +180,6 @@ module infix-firewall {
       type boolean;
     }
 */
-    leaf lockdown {
-      description "Current state of emergency lockdown mode.";
-      config false;
-      type boolean;
-    }
-
     leaf default {
       description "Default zone for interfaces.
 
@@ -228,6 +221,14 @@ module infix-firewall {
         type ident;
       }
 
+      leaf action {
+        description "Default for ingressing traffic not matching an explicit rule.
+
+                     Note, see also the 'forwarding' setting for this zone.";
+        type zone-action;
+        default reject;
+      }
+
       leaf immutable {
         description "Indicates if this zone is read-only/system-defined and cannot be modified.";
         config false;
@@ -237,14 +238,6 @@ module infix-firewall {
       leaf description {
         description "Free-form description of the zone.";
         type string;
-      }
-
-      leaf action {
-        description "Default for ingressing traffic not matching an explicit rule.
-
-                     Note, see also the 'forwarding' setting for this zone.";
-        type zone-action;
-        default reject;
       }
 
       leaf-list interface {
@@ -262,9 +255,9 @@ module infix-firewall {
       }
 
       leaf forwarding {
-        description "Allow forwarding between interfaces/networks in the same zone.
+        description "Allow forwarding between interfaces/networks in the same zone (intra-zone).
 
-                     Note, this setting applies regardless of (before) the zone action!";
+                     Note, this is a policy rule that applies before the zone action!";
         type boolean;
       }
 
@@ -314,27 +307,21 @@ module infix-firewall {
           type ifw-svc:well-known-service;
         }
       }
-
-      /* ADVANCED FEATURE: Commented out for simplicity - users rarely need granular ICMP control
-         list icmp-blocks {
-         description "ICMP and ICMPv6 types to block.";
-         key "icmp-type";
-
-         leaf icmp-type {
-         description "ICMP type.";
-         type icmp-type;
-         }
-         }
-      */
     }
 
     list policy {
-      description "Rules for filtering traffic forwarded between zones.";
+      description "Rules for filtering traffic forwarded between zones (inter-zone).";
       key "name";
 
       leaf name {
         description "Unique identifier (filename) for this policy, e.g., LAN-to-WAN.";
         type ident;
+      }
+
+      leaf action {
+        description "Action for non-matching traffic. All policies are terminal (accept/reject/drop).";
+        type policy-action;
+        default "reject";
       }
 
       leaf immutable {
@@ -361,12 +348,6 @@ module infix-firewall {
       leaf masquerade {
         description "Enable masquerading (SNAT) for traffic matching this policy.";
         type boolean;
-      }
-
-      leaf action {
-        description "Action for non-matching traffic. All policies are terminal (accept/reject/drop).";
-        type policy-action;
-        default "reject";
       }
 
       leaf-list service {
@@ -433,6 +414,12 @@ module infix-firewall {
       */
     }
 
+    leaf lockdown {
+      description "Current state of emergency lockdown mode.";
+      config false;
+      type boolean;
+    }
+
     action lockdown-mode {
       description "Emergency lockdown mode blocks all network traffic.
 
@@ -463,31 +450,6 @@ module infix-firewall {
           mandatory true;
         }
       }
-      /* ADVANCED FEATURE: Skipped for now, please see node lockdown-state, below.
-      output {
-        leaf status {
-          description "Current lockdown mode status after operation";
-          type enumeration {
-            enum active {
-              description "Lockdown mode is currently active";
-            }
-            enum inactive {
-              description "Lockdown mode is currently inactive";
-            }
-            enum error {
-              description "Operation failed";
-            }
-          }
-        }
-
-        leaf message {
-          description "Additional status or error information";
-          config false;
-          type string;
-        }
-      }
-      */
-
     }
   }
 }

@@ -252,19 +252,8 @@ static int generate_zone(struct lyd_node *cfg, const char *name, char **ifaces)
 		}
 	}
 
-#if 0 /* ADVANCED FEATURE: icmp-blocks removed from YANG model */
-	LYX_LIST_FOR_EACH(lyd_child(cfg), node, "icmp-blocks") {
-		const char *icmp_type = lydx_get_cattr(node, "icmp-type");
-		fprintf(fp, "  <icmp-block name=\"%s\"/>\n", icmp_type);
-	}
-#endif
-
 	if (lydx_is_enabled(cfg, "forwarding"))
 		fprintf(fp, "  <forward/>\n");
-#if 0 /* REMOVED: Zone-level masquerade - handled by policy rules instead */
-	if (lydx_is_enabled(cfg, "masquerade"))
-		fprintf(fp, "  <masquerade/>\n");
-#endif
 
 	fprintf(fp, "</zone>\n");
 
@@ -455,7 +444,7 @@ static int change(sr_session_ctx_t *session, uint32_t sub_id, const char *module
 		goto err_release_data;
 
 	if (!global) {
-		/* Firewall is disabled - clean up all firewalld configuration files */
+		/* Firewall is dactivated - clean up all firewalld configuration files */
 		cleanup_files();
 		goto done;
 	}
@@ -548,17 +537,6 @@ err_release_data:
 	return err;
 }
 
-/*
- * Set up default zones with sane defaults:
- *
- *  internal: This is the default zone, which trusts all ingressing traffic.
- *            It is used for internal trusted networks and allows forwarding
- *            between all interfaces and networks in the zone.
- *
- *  external: Untrusted zone, for WAN interfaces, only ssh and dhcpv6 client
- *            traffic is allowed to ingress.
- *
- */
 static int cand(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
 		const char *path, sr_event_t event, unsigned request_id, void *priv)
 {
