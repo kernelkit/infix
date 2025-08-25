@@ -3,9 +3,87 @@ import json
 import argparse
 import sys
 import re
+import textwrap
+import ipaddress
+from collections import deque
 from datetime import datetime, timezone
 
 UNIT_TEST = False
+
+
+def compress_interface_list(interfaces):
+    """Compress a list of interfaces into ranges where possible.
+
+    Examples:
+        ['e1', 'e2', 'e3', 'e4'] -> 'e1-e4'
+        ['e1', 'e2', 'e4', 'e5'] -> 'e1-e2, e4-e5'
+        ['e1', 'e3', 'e5'] -> 'e1, e3, e5'
+        ['eth0', 'eth1', 'br0'] -> 'eth0-eth1, br0'
+    """
+    if not interfaces:
+        return ""
+
+    if len(interfaces) == 1:
+        return interfaces[0]
+
+    # Group interfaces by their prefix (e.g., 'e', 'eth', 'br')
+    groups = {}
+    standalone = []
+
+    for iface in interfaces:
+        # Extract prefix and number using regex
+        match = re.match(r'^([a-zA-Z]+)(\d+)$', iface)
+        if match:
+            prefix = match.group(1)
+            number = int(match.group(2))
+            if prefix not in groups:
+                groups[prefix] = []
+            groups[prefix].append((number, iface))
+        else:
+            # Interface doesn't follow prefix+number pattern
+            standalone.append(iface)
+
+    # Process each group to find ranges
+    result_parts = []
+
+    for prefix in sorted(groups.keys()):
+        # Sort by number
+        numbers_and_ifaces = sorted(groups[prefix])
+        ranges = []
+        start = None
+        end = None
+
+        for number, iface in numbers_and_ifaces:
+            if start is None:
+                # Start new range
+                start = number
+                end = number
+            elif number == end + 1:
+                # Extend current range
+                end = number
+            else:
+                # End current range and start new one
+                if start == end:
+                    ranges.append(f"{prefix}{start}")
+                else:
+                    ranges.append(f"{prefix}{start}-{prefix}{end}")
+                start = number
+                end = number
+
+        # Add the final range
+        if start is not None:
+            if start == end:
+                ranges.append(f"{prefix}{start}")
+            else:
+                ranges.append(f"{prefix}{start}-{prefix}{end}")
+
+        result_parts.extend(ranges)
+
+    # Add standalone interfaces
+    result_parts.extend(sorted(standalone))
+
+    return ", ".join(result_parts)
+
 
 class Pad:
     iface = 16
@@ -96,6 +174,45 @@ class PadLldp:
     port_id = 20
 
 
+class PadFirewall:
+    zone_locked = 2
+    zone_name = 20
+    zone_action = 9
+    zone_interfaces = 30
+    zone_services = 30
+
+    zone_pfwd_from = 20
+    zone_pfwd_to = 69
+
+    zone_flow_to = 20
+    zone_flow_action = 14
+    zone_flow_policy = 20
+    zone_flow_services = 45
+
+    policy_locked = 2
+    policy_name = 20
+    policy_action = 9
+    policy_ingress = 30
+    policy_egress = 30
+
+    service_name = 20
+    service_ports = 69
+
+    # Firewall log display formatting
+    log_time = 16      # ISO format: MM-DD HH:MM:SS
+    log_action = 7     # REJECT/DROP + small buffer
+    log_src = 26       # IPv6 addresses (shortened) or IPv4
+    log_dst = 26       # IPv6 addresses (shortened) or IPv4
+    log_proto = 6      # TCP/UDP/ICMP + small buffer
+    log_port = 5       # Port numbers + small buffer
+
+    @classmethod
+    def table_width(cls):
+        """Table width for zones/policies tables, used to center matrix"""
+        return cls.zone_locked + cls.zone_name + cls.zone_action + cls.zone_interfaces \
+            + cls.zone_services
+
+
 class Decore():
     @staticmethod
     def decorate(sgr, txt, restore="0"):
@@ -126,12 +243,48 @@ class Decore():
         return Decore.decorate("33", txt, "39")
 
     @staticmethod
+    def bold_yellow(txt):
+        return Decore.decorate("1;33", txt, "0")
+
+    @staticmethod
+    def flashing_red(txt):
+        return Decore.decorate("5;31", txt, "0")
+
+    @staticmethod
     def underline(txt):
         return Decore.decorate("4", txt, "24")
 
     @staticmethod
     def gray_bg(txt):
         return Decore.decorate("100", txt)
+
+    @staticmethod
+    def red_bg(txt):
+        return Decore.decorate("41", txt, "49")
+
+    @staticmethod
+    def green_bg(txt):
+        return Decore.decorate("42", txt, "49")
+
+    @staticmethod
+    def yellow_bg(txt):
+        return Decore.decorate("43", txt, "49")
+
+    @staticmethod
+    def title(txt, len=None, bold=True):
+        """Print section header with horizontal bar line above it
+        Args:
+            txt: The header text to display
+            len: Length of horizontal bar line (defaults to len(txt))
+            bold: Whether to make the text bold
+        """
+        length = len if len is not None else len(txt)
+        underline = "─" * length
+        print(underline)
+        if bold:
+            print(Decore.bold(txt))
+        else:
+            print(txt)
 
 
 def rssi_to_status(rssi):
@@ -169,6 +322,24 @@ def remove_yang_prefix(key):
     if len(parts) > 1:
         return parts[1]
     return key
+
+
+def format_description(label, description, width=60):
+    """Format description text with proper line wrapping"""
+    if not description:
+        return f"{label:<20}:"
+
+    lines = textwrap.wrap(description, width=width)
+    if not lines:
+        return f"{label:<20}:"
+
+    # First line with label
+    result = f"{label:<20}: {lines[0]}"
+    # Subsequent lines indented
+    for line in lines[1:]:
+        result += f"\n{'':<20}  {line}"
+
+    return result
 
 
 class Date(datetime):
@@ -652,16 +823,15 @@ class Iface:
         print(row)
 
     def pr_wifi_ssids(self):
-        hdr =  (f"{'SSID':<{PadWifiScan.ssid}}"
-                f"{'ENCRYPTION':<{PadWifiScan.encryption}}"
-                f"{'SIGNAL':<{PadWifiScan.signal}}"
-                )
+        hdr = (f"{'SSID':<{PadWifiScan.ssid}}"
+               f"{'ENCRYPTION':<{PadWifiScan.encryption}}"
+               f"{'SIGNAL':<{PadWifiScan.signal}}")
 
         print(Decore.invert(hdr))
-        results=self.wifi.get("scan-results", {})
+        results = self.wifi.get("scan-results", {})
         for result in results:
-            encstr = ",".join(result["encryption"])
-            status=rssi_to_status(result["rssi"])
+            encstr = ", ".join(result["encryption"])
+            status = rssi_to_status(result["rssi"])
             row = f"{result['ssid']:<{PadWifiScan.ssid}}"
             row += f"{encstr:<{PadWifiScan.encryption}}"
             row += f"{status:<{PadWifiScan.signal}}"
@@ -1329,13 +1499,12 @@ def show_software(json, name):
 
 def show_hardware(json):
     if not json.get("ietf-hardware:hardware"):
-       print(f"Error, top level \"ietf-hardware:component\" missing")
-       sys.exit(1)
+        print("Error, top level \"ietf-hardware:component\" missing")
+        sys.exit(1)
 
-    hdr = (f"{'USB PORTS':<{PadUsbPort.title}}")
-    print(Decore.invert(hdr))
-    hdr =  (f"{'NAME':<{PadUsbPort.name}}"
-            f"{'STATE':<{PadUsbPort.state}}")
+    hdr = (f"{'NAME':<{PadUsbPort.name}}"
+           f"{'STATE':<{PadUsbPort.state}}")
+    Decore.title("USB PORTS", PadUsbPort.title)  # TODO: could be len(hdr)
     print(Decore.invert(hdr))
 
     components = get_json_data({}, json, "ietf-hardware:hardware", "component")
@@ -1417,6 +1586,675 @@ def show_lldp(json):
             entry.print()
 
 
+def parse_firewall_log_line(line):
+    """Parse a single firewall log line into structured data"""
+
+    # Look for kernel logs with netfilter IN=/OUT= fields
+    if not ('kernel' in line and 'IN=' in line and 'OUT=' in line):
+        return None
+
+    # Extract timestamp from syslog format: Aug 17 12:34:56
+    timestamp_match = re.match(r'^(\w{3}\s+\d{1,2}\s+\d{2}:\d{2}:\d{2})', line.strip())
+    if not timestamp_match:
+        return None
+
+    timestamp = timestamp_match.group(1)
+
+    # Look for action indicator in the log line
+    action = 'DROP'
+    if 'REJECT' in line:
+        action = 'REJECT'
+
+    # Extract key fields from netfilter log
+    patterns = {
+        'in_iface': r'IN=([^\s]*)',
+        'out_iface': r'OUT=([^\s]*)',
+        'src': r'SRC=([^\s]+)',
+        'dst': r'DST=([^\s]+)',
+        'proto': r'PROTO=([^\s]+)',
+        'spt': r'SPT=([^\s]+)',
+        'dpt': r'DPT=([^\s]+)',
+    }
+
+    parsed = {'timestamp': timestamp, 'action': action}
+
+    for key, pattern in patterns.items():
+        match = re.search(pattern, line)
+        value = match.group(1) if match else ''
+
+        # Compress any IPv6 addresses for src and dst
+        if key in ['src', 'dst'] and value:
+            try:
+                ip = ipaddress.ip_address(value)
+                if isinstance(ip, ipaddress.IPv6Address):
+                    value = str(ip.compressed)
+            except ValueError:
+                # Not a valid IP address, keep original value
+                pass
+
+        parsed[key] = value
+
+    return parsed
+
+
+def show_firewall_logs(limit=10):
+    """Show recent firewall log entries, tail -N equivalent"""
+    try:
+        hdr = (f"{'TIME':<{PadFirewall.log_time}} "
+               f"{'ACTION':<{PadFirewall.log_action}} "
+               f"{'SOURCE':<{PadFirewall.log_src}} "
+               f"{'DEST':<{PadFirewall.log_dst}} "
+               f"{'PROTO':<{PadFirewall.log_proto}} "
+               f"{'PORT':>{PadFirewall.log_port}}")
+
+        Decore.title("Recent Firewall Logs", len(hdr))
+
+        with open('/var/log/firewall.log', 'r', encoding='utf-8') as f:
+            lines = deque(f, maxlen=limit)
+
+        if not lines:
+            raise FileNotFoundError
+
+        print(Decore.invert(hdr))
+        for line in lines:
+            parsed = parse_firewall_log_line(line)
+            if not parsed:
+                continue
+
+            time_str = ''
+            if parsed['timestamp']:
+                try:
+                    ts = parsed['timestamp'].strip()
+                    if 'T' in ts:   # ISO format
+                        dt = datetime.fromisoformat(ts)
+                        time_str = dt.strftime("%b %d %H:%M:%S")
+                    else:           # syslog format
+                        dt = datetime.strptime(ts, "%b %d %H:%M:%S")
+                        time_str = dt.strftime("%b %d %H:%M:%S")
+                except Exception:
+                    time_str = parsed['timestamp'][:PadFirewall.log_time-1]
+
+            if parsed['action'] == 'REJECT':
+                action_color = Decore.red
+            else:
+                action_color = Decore.yellow
+            action = action_color(parsed['action'])
+
+            print(f"{time_str:<{PadFirewall.log_time}} "
+                  f"{action:<{PadFirewall.log_action + 10}} "
+                  f"{parsed['src']:<{PadFirewall.log_src}} "
+                  f"{parsed['dst']:<{PadFirewall.log_dst}} "
+                  f"{parsed['proto']:<{PadFirewall.log_proto}} "
+                  f"{parsed['dpt']:>{PadFirewall.log_port}}")
+
+    except FileNotFoundError:
+        print("No logs found (may be disabled or no denied traffic)")
+    except Exception as e:
+        print(f"Error reading firewall logs: {e}")
+
+
+def show_firewall(json):
+    """Show firewall overview with matrix and tables"""
+    fw = json.get('infix-firewall:firewall', {})
+    if not fw:
+        print("Firewall disabled.")
+        return
+
+    # Build firewall status with contextual alerts
+    lockdown_state = fw.get('lockdown', False)
+    logging_enabled = fw.get('logging', 'off') != 'off'
+
+    firewall_status = "active"
+    if lockdown_state:  # Lockdown mode takes priority
+        firewall_status += f" [ {Decore.flashing_red('LOCKDOWN MODE')} ]"
+    elif logging_enabled:
+        firewall_status += f" [ {Decore.bold_yellow('MONITORING')} ]"
+
+    # Adjust 20 + 8, where 8 is len(bold)
+    print(f"{Decore.bold('Firewall'):<28}: {firewall_status}")
+
+    lockdown_display = "active" if lockdown_state else "inactive"
+    print(f"{Decore.bold('Lockdown mode'):<28}: {lockdown_display}")
+
+    print(f"{Decore.bold('Default zone'):<28}: {fw.get('default', 'unknown')}")
+    print(f"{Decore.bold('Log denied traffic'):<28}: {fw.get('logging', 'off')}")
+
+    show_firewall_matrix(fw)
+    show_firewall_zone(json)
+    show_firewall_policy(json)
+
+    # Add firewall logs at the bottom if logging is enabled
+    if fw.get('logging', 'off') != 'off':
+        show_firewall_logs()
+
+
+def ip_in_network(ip_addr, network):
+    """Check if an IP address falls within a CIDR network"""
+    try:
+        ip = ipaddress.ip_address(ip_addr)
+        net = ipaddress.ip_network(network, strict=False)
+        return ip in net
+    except:
+        return False
+
+
+def pfw_cond(zones):
+    """Check for port-forwards that target IPs within zone networks"""
+    cond = []
+
+    # Collect all port-forwards with destinations
+    pfwd = []
+    for zone in zones:
+        zone_name = zone.get('name', '')
+        for pf in zone.get('port-forward', []):
+            to = pf.get('to', {})
+            if 'addr' in to:
+                lower = pf.get('lower')
+                upper = pf.get('upper')
+                pfwd.append((zone_name, to['addr'], lower, upper))
+
+    # Check each destination against all zone networks
+    for zone in zones:
+        zone_name = zone.get('name', '')
+        for network in zone.get('network', []):
+            for pf_zone, dest_ip, lower, upper in pfwd:
+                if ip_in_network(dest_ip, network):
+                    if upper:
+                        port_desc = f"ports {lower}-{upper}"
+                    else:
+                        port_desc = f"port {lower}"
+                    cond.append(f"Port-forward in {pf_zone} ({port_desc}) targets {dest_ip} in {zone_name} network {network}")
+    return cond
+
+
+def build_policy_map(policies):
+    """Build enhanced policy lookup with conditional detection"""
+    policy_map = {}
+
+    for policy in policies:
+        ingress_zones = policy.get('ingress', [])
+        egress_zones = policy.get('egress', [])
+        services = policy.get('service', [])
+        action = policy.get('action', 'reject')
+        policy_name = policy.get('name', 'unknown')
+
+        for ing in ingress_zones:
+            for egr in egress_zones:
+                if ing != 'ANY' and egr != 'ANY':
+                    key = (ing, egr)
+
+                    if key not in policy_map:
+                        policy_map[key] = {
+                            'allow': False,
+                            'conditional': False,
+                            'services': set(),
+                            'policies': []
+                        }
+
+                    if action in ['accept', 'continue']:
+                        policy_map[key]['allow'] = True
+
+                    if services:
+                        policy_map[key]['conditional'] = True
+                        policy_map[key]['services'].update(services)
+
+                    policy_map[key]['policies'].append(policy_name)
+    return policy_map
+
+
+def traffic_flow(from_zone, to_zone, policy_map, zones, cell_width):
+    """Apply heuristics to deterime traffic flows between zones
+    Args:
+        from_zone, to_zone : Names and direction of flow
+        policy_map         : Map of all policies
+        zones              : All the zone data
+        cell_width         : Table cell width for pretty printing
+
+    Returns: the symbol to show for zone-to-zone traffic
+    """
+    def make_cell(symbol, bg_func):
+        # Create full-width colored cell
+        return bg_func(f" {symbol:^{cell_width}} ")
+
+    # Handle HOST zone specially
+    if from_zone == "HOST" and to_zone == "HOST":
+        # HOST-to-HOST communication (localhost) - not applicable
+        return make_cell("—", Decore.gray_bg)
+
+    # HOST-to-zone traffic: firewall input rules control this
+    if from_zone == "HOST":
+        # Traffic from firewall device to zones - typically allowed
+        return make_cell("✓", Decore.green_bg)
+
+    # zone-to-HOST traffic: firewall input rules control this
+    if to_zone == "HOST":
+        # Traffic to HOST depends on zone's input action and services
+        zone = next((z for z in zones if z.get('name') == from_zone), None)
+        if zone:
+            action = zone.get('action', 'reject')
+            services = zone.get('service', [])
+
+            if action == 'accept':
+                # Zone allows any input to HOST
+                return make_cell("✓", Decore.green_bg)
+            if services:
+                # Zone has specific services allowed to HOST
+                return make_cell("⚠", Decore.yellow_bg)
+
+            # Zone has drop/reject action and no services
+            return make_cell("✗", Decore.red_bg)
+
+        return make_cell("✗", Decore.red_bg)
+
+    # Check if forwarding is enabled for same-zone communication
+    if from_zone == to_zone:
+        zone = next((z for z in zones if z.get('name') == from_zone), None)
+        if zone and zone.get('forwarding'):
+            return make_cell("✓", Decore.green_bg)
+        return make_cell("✗", Decore.red_bg)
+
+    key = (from_zone, to_zone)
+    policy = policy_map.get(key)
+
+    # Check for port-forward network overlap conditionals
+    cond = pfw_cond(zones)
+    pfwd_overlap = any(from_zone in cond or to_zone in cond for cond in cond)
+
+    if (policy and policy['conditional']) or pfwd_overlap:
+        return make_cell("⚠", Decore.yellow_bg)
+
+    if not policy or not policy['allow']:
+        # Check if from_zone has port forwarding rules (makes it conditional)
+        zone = next((z for z in zones if z.get('name') == from_zone), None)
+        if zone:
+            action = zone.get('action', 'reject')
+            pfwd = zone.get('port-forward', [])
+            if action in ['reject', 'drop'] and pfwd:
+                # Some traffic allowed via port forwarding
+                return make_cell("⚠", Decore.yellow_bg)
+
+        # Check for port-forward network overlap
+        if pfwd_overlap:
+            return make_cell("⚠", Decore.yellow_bg)
+
+        return make_cell("✗", Decore.red_bg)
+
+    return make_cell("✓", Decore.green_bg)
+
+
+def show_firewall_matrix(fw):
+    """Show zone-to-zone traffic matrix"""
+    zones = fw.get('zone', [])
+    policies = fw.get('policy', [])
+
+    zone_names = [z['name'] for z in zones if z.get('interface')]
+
+    # Always add the implicit HOST zone
+    zone_names.insert(0, "HOST")
+
+    if len(zone_names) <= 1:
+        return None
+
+    # Build enhanced policy lookup map
+    policy_map = build_policy_map(policies)
+
+    max_zone_len = max(len(zone) for zone in zone_names)
+    col_width = max(max_zone_len, 1)  # At least 1 char for symbols
+    left_col_width = max_zone_len
+
+    # Box drawing characters for proper borders, '+ 2' is for spacing
+    top_border = "┌" + "─" * left_col_width + "──" + "┬"
+    for _ in zone_names:
+        top_border += "─" * (col_width + 2) + "┬"
+    top_border = top_border[:-1] + "┐"  # Replace last ┬ with ┐
+
+    middle_border = "├" + "─" * left_col_width + "──" + "┼"
+    for _ in zone_names:
+        middle_border += "─" * (col_width + 2) + "┼"
+    middle_border = middle_border[:-1] + "┤"  # Replace last ┼ with ┤
+
+    bottom_border = "└" + "─" * left_col_width + "──" + "┴"
+    for _ in zone_names:
+        bottom_border += "─" * (col_width + 2) + "┴"
+    bottom_border = bottom_border[:-1] + "┘"  # Replace last ┴ with ┘
+
+    # Header with arrow in top-left cell
+    hdr = f"│ {'→':^{left_col_width}} │"
+    for zone in zone_names:
+        hdr += f" {zone:^{col_width}} │"
+
+    # Calculate centering relative to zones/policies table width
+    matrix_width = len(top_border)
+    target_width = PadFirewall.table_width()
+    padding = max(0, (target_width - matrix_width) // 2)
+    indent = " " * padding
+
+    # Center the title underline to match table width
+    title_padding = max(0, (target_width - len("Zone Matrix")) // 2)
+    title_underline = "─" * target_width
+
+    print(title_underline)
+    print(f"{'':<{title_padding}}{Decore.bold('Zone Matrix')}")
+    print(f"{indent}{top_border}")
+    print(f"{indent}{hdr}")
+    print(f"{indent}{middle_border}")
+
+    for from_zone in zone_names:
+        row = f"│ {from_zone:>{left_col_width}} │"
+        for to_zone in zone_names:
+            # Find symbol for this cell based on traffic flow
+            symbol = traffic_flow(from_zone, to_zone, policy_map,
+                                  zones, col_width)
+            row += f"{symbol}│"
+        print(f"{indent}{row}")
+    print(f"{indent}{bottom_border}")
+
+    # Center the legend - define parts first for length calculation
+    legend_data = [
+        ("✓ Allow", Decore.green_bg),
+        ("✗ Deny", Decore.red_bg),
+        ("⚠ Conditional", Decore.yellow_bg)
+    ]
+
+    # Calculate visible length, then colorize the parts
+    visible_parts = [f" {text} " for text, _ in legend_data]
+    visible_legend = "   ".join(visible_parts)
+    colorized_parts = [bg_func(f" {text} ") for text, bg_func in legend_data]
+    legend = "   ".join(colorized_parts)
+    # Depending on taste and number of zones, but +1 works for me
+    legend_padding = max(0, (target_width - len(visible_legend)) // 2) + 1
+    print(f"{' ' * legend_padding}{legend}")
+
+
+def show_firewall_zone(json, zone_name=None):
+    """Show firewall zones table or specific zone details"""
+    fw = json.get('infix-firewall:firewall', {})
+    zones = fw.get('zone', [])
+    policies = fw.get('policy', [])
+
+    if zone_name:
+        zone = next((z for z in zones if z.get('name') == zone_name), None)
+        if not zone:
+            print(f"Zone '{zone_name}' not found")
+            return
+
+        description = zone.get('description', '')
+        interfaces = zone.get('interface', [])
+        if not interfaces:
+            interfaces = ""
+        networks = zone.get('network', [])
+        if not networks:
+            networks = ""
+        services = zone.get('service', [])
+        if not services:
+            services = ""
+        action = zone.get('action', 'reject')
+        if action == 'accept':
+            services_display = "(any)"
+        else:
+            services_display = ", ".join(services) if services else "(none)"
+        forwarding = "yes" if zone.get('forwarding') else "no"
+
+        print(format_description('description', description))
+        print(f"{'name':<20}: {zone_name}")
+        print(f"{'action':<20}: {action}")
+        print(f"{'interfaces':<20}: {compress_interface_list(interfaces)}")
+        print(f"{'networks':<20}: {', '.join(networks)}")
+        print(f"{'forwarding':<20}: {forwarding}")
+        print(f"{'services':<20}: {services_display}")
+
+        port_forwards = zone.get('port-forward', [])
+        if port_forwards:
+            hdr = (f"{'FROM':<{PadFirewall.zone_pfwd_from}}"
+                   f"{'TO':<{PadFirewall.zone_pfwd_to}}")
+            Decore.title(f"Port Forwards From {zone_name}", len(hdr))
+            print(Decore.invert(hdr))
+
+            for fwd in port_forwards:
+                lower = fwd.get('lower')
+                upper = fwd.get('upper')
+                proto = fwd.get('proto', '')
+
+                if upper:
+                    from_port = f"{lower}-{upper}/{proto}"
+                else:
+                    from_port = f"{lower}/{proto}"
+
+                to = fwd.get('to', {})
+                to_port = to.get('port', lower)
+
+                if upper:
+                    range_size = upper - lower
+                    to_upper = to_port + range_size
+                    to_str = f"{to.get('addr', '')}:{to_port}-{to_upper}"
+                else:
+                    to_str = f"{to.get('addr', '')}:{to_port}"
+
+                print(f"{from_port:<{PadFirewall.zone_pfwd_from}}"
+                      f"{to_str:<{PadFirewall.zone_pfwd_to}}")
+
+        hdr = (f"{'TO ZONE':<{PadFirewall.zone_flow_to}}"
+               f"{'ACTION':<{PadFirewall.zone_flow_action}}"
+               f"{'POLICY':<{PadFirewall.zone_flow_policy}}"
+               f"{'SERVICES':<{PadFirewall.zone_flow_services}}")
+        Decore.title(f"Traffic Flows From {zone_name} →", len(hdr))
+        print(Decore.invert(hdr))
+
+        # Add HOST zone first
+        current_zone = next((z for z in zones if z.get('name') == zone_name), None)
+        if current_zone:
+            # Zone-to-HOST traffic logic
+            action = current_zone.get('action', 'reject')
+            services = current_zone.get('service', [])
+
+            if action == 'accept':
+                host_action = "✓ allow"
+                host_services = "(any)"
+            elif services:
+                host_action = "⚠ conditional"
+                host_services = ", ".join(services)
+            else:
+                host_action = "✗ deny"
+                host_services = "(none)"
+
+            print(f"{'HOST':<{PadFirewall.zone_flow_to}}"
+                  f"{host_action:<{PadFirewall.zone_flow_action}}"
+                  f"{'(services)':<{PadFirewall.zone_flow_policy}}"
+                  f"{host_services}")
+
+        # Add other zones
+        for other_zone in zones:
+            if other_zone.get('name') == zone_name:
+                continue
+
+            # Check if there's a policy allowing this flow
+            other_name = other_zone.get('name')
+            policy_name = "(none)"
+            action = "✗ deny"
+            services_display = "(none)"
+
+            for policy in policies:
+                if zone_name in policy.get('ingress', []) and other_name \
+                   in policy.get('egress', []):
+                    policy_name = policy.get('name', 'unknown')
+                    policy_action = policy.get('action', 'reject')
+                    policy_services = policy.get('service', [])
+
+                    if policy_action == 'accept':
+                        action = "✓ allow"
+                        services_display = "(any)"
+                    elif policy_services:
+                        action = "⚠ conditional"
+                        services_display = ", ".join(policy_services)
+                    else:
+                        action = "✗ deny"
+                        services_display = "(none)"
+                    break
+
+            print(f"{other_name:<{PadFirewall.zone_flow_to}}"
+                  f"{action:<{PadFirewall.zone_flow_action}}"
+                  f"{policy_name:<{PadFirewall.zone_flow_policy}}"
+                  f"{services_display}")
+    else:
+        hdr = (f"{'':<{PadFirewall.zone_locked}}"
+               f"{'NAME':<{PadFirewall.zone_name}}"
+               f"{'ACTION':<{PadFirewall.zone_action}}"
+               f"{'INTERFACES':<{PadFirewall.zone_interfaces}}"
+               f"{'SERVICES':<{PadFirewall.zone_services}}")
+        Decore.title("Zones", len(hdr))
+        print(Decore.invert(hdr))
+        for zone in zones:
+            name = zone.get('name', '')
+            action = zone.get('action', 'reject')
+            interface_list = zone.get('interface', [])
+            if not interface_list:
+                interfaces = "(none)"
+            else:
+                interfaces = compress_interface_list(interface_list)
+            services = ", ".join(zone.get('service', []))
+            if not services:
+                if action == "accept":
+                    services = "(any)"
+                else:
+                    services = "(none)"
+
+            immutable = zone.get('immutable', False)
+            locked = "⚷" if immutable else " "
+
+            print(f"{locked:<{PadFirewall.zone_locked}}"
+                  f"{name:<{PadFirewall.zone_name}}"
+                  f"{action:<{PadFirewall.zone_action}}"
+                  f"{interfaces:<{PadFirewall.zone_interfaces}}"
+                  f"{services}")
+
+
+def show_firewall_policy(json, policy_name=None):
+    """Show firewall policies table or specific policy details"""
+    fw = json.get('infix-firewall:firewall', {})
+    policies = fw.get('policy', [])
+
+    if policy_name:
+        policy = next((p for p in policies if p.get('name') == policy_name), None)
+        if not policy:
+            print(f"Policy '{policy_name}' not found")
+            return
+
+        ingress = policy.get('ingress', [])
+        egress = policy.get('egress', [])
+        action = policy.get('action', 'reject')
+        masquerade = "yes" if policy.get('masquerade') else "no"
+        description = policy.get('description', '')
+        services = policy.get('service', [])
+        custom = policy.get('custom', {})
+        custom_filters = custom.get('filter', [])
+
+        if policy == 'accept':
+            services_display = "(all)"
+        else:
+            services_display = ", ".join(services) if services else "(none)"
+
+        print(format_description('description', description))
+        print(f"{'name':<20}: {policy_name}")
+        print(f"{'ingress':<20}: {', '.join(ingress) if ingress else '(none)'}")
+        print(f"{'egress':<20}: {', '.join(egress) if egress else '(none)'}")
+        print(f"{'action':<20}: {action}")
+        print(f"{'masquerade':<20}: {masquerade}")
+        print(f"{'services':<20}: {services_display}")
+
+        if custom_filters:
+            print(f"{'custom filters':<20}: {len(custom_filters)} filter(s)")
+
+            sorted_filters = sorted(custom_filters, key=lambda f: f.get('priority', 32767))
+            for _, filter_entry in enumerate(sorted_filters):
+                action = filter_entry.get('action', 'accept')
+                family = filter_entry.get('family', 'both')
+
+                icmp = filter_entry.get('icmp')
+                if icmp:
+                    icmp_type = icmp.get('type', 'unknown')
+                    print(f"{'  - ' + action:<6} {family} icmp-type {icmp_type}")
+                else:
+                    print(f"{'  - ' + action:<6} {family} (unknown type)")
+    else:
+        hdr = (f"{'':<{PadFirewall.policy_locked}}"
+               f"{'NAME':<{PadFirewall.policy_name}}"
+               f"{'ACTION':<{PadFirewall.policy_action}}"
+               f"{'INGRESS':<{PadFirewall.policy_ingress}}"
+               f"{'EGRESS':<{PadFirewall.policy_egress}}")
+        Decore.title("Policies", len(hdr))
+        print(Decore.invert(hdr))
+
+        sorted_policies = sorted(policies, key=lambda p: p.get('priority', 32767))
+        for policy in sorted_policies:
+            name = policy.get('name', '')
+            ingress = ", ".join(policy.get('ingress', []))
+            egress = ", ".join(policy.get('egress', []))
+            action = policy.get('action', 'reject')
+
+            # Check for custom filters
+            # custom = policy.get('custom', {})
+            # custom_filters = custom.get('filter', [])
+            # if custom_filters:
+            #     name += f" ({len(custom_filters)} filter(s))"
+
+            immutable = policy.get('immutable', False)
+            locked = "⚷" if immutable else " "
+
+            print(f"{locked:<{PadFirewall.policy_locked}}"
+                  f"{name:<{PadFirewall.policy_name}}"
+                  f"{action:<{PadFirewall.policy_action}}"
+                  f"{ingress:<{PadFirewall.policy_ingress}}"
+                  f"{egress:<{PadFirewall.policy_egress}}")
+
+
+def format_port_list(ports):
+    """Format port list from YANG data"""
+    if not ports:
+        return "(none)"
+
+    formatted = []
+    for port in ports:
+        proto = port.get('proto', 'tcp')
+        lower = port.get('lower')
+        upper = port.get('upper')
+
+        if upper and upper != lower:
+            formatted.append(f"{lower}-{upper}/{proto}")
+        else:
+            formatted.append(f"{lower}/{proto}")
+
+    return ", ".join(formatted)
+
+
+def show_firewall_service(json, name=None):
+    """Show firewall services table or specific service details"""
+    fw = json.get('infix-firewall:firewall', {})
+    services = fw.get('service', [])
+
+    if name:
+        service = next((s for s in services if s.get('name') == name), None)
+        if not service:
+            print(f"Service '{name}' not found")
+            return
+
+        ports = format_port_list(service.get('port', []))
+        description = service.get('description', '')
+
+        print(f"{'name':<20}: {name}")
+        print(f"{'ports':<20}: {ports}")
+        print(format_description('description', description))
+    else:
+        hdr = (f"{'NAME':<{PadFirewall.service_name}}"
+               f"{'PORTS':<{PadFirewall.service_ports}}")
+        print(Decore.invert(hdr))
+        for service in services:
+            name = service.get('name', '')
+            ports = format_port_list(service.get('port', []))
+
+            print(f"{name:<{PadFirewall.service_name}}"
+                  f"{ports:<{PadFirewall.service_ports}}")
+
+
 def main():
     global UNIT_TEST
 
@@ -1449,6 +2287,13 @@ def main():
     .add_argument('-n', '--name', help='Interface name')
 
     subparsers.add_parser('show-lldp', help='Show LLDP neighbors')
+    subparsers.add_parser('show-firewall', help='Show firewall overview')
+    subparsers.add_parser('show-firewall-zone', help='Show firewall zones') \
+        .add_argument('name', nargs='?', help='Zone name')
+    subparsers.add_parser('show-firewall-policy', help='Show firewall policies') \
+        .add_argument('name', nargs='?', help='Policy name')
+    subparsers.add_parser('show-firewall-service', help='Show firewall services') \
+        .add_argument('name', nargs='?', help='Service name')
 
     subparsers.add_parser('show-ntp', help='Show NTP sources')
 
@@ -1473,6 +2318,14 @@ def main():
         show_interfaces(json_data, args.name)
     elif args.command == "show-lldp":
         show_lldp(json_data)
+    elif args.command == "show-firewall":
+        show_firewall(json_data)
+    elif args.command == "show-firewall-zone":
+        show_firewall_zone(json_data, args.name)
+    elif args.command == "show-firewall-policy":
+        show_firewall_policy(json_data, args.name)
+    elif args.command == "show-firewall-service":
+        show_firewall_service(json_data, args.name)
     elif args.command == "show-ntp":
         show_ntp(json_data)
     elif args.command == "show-routing-table":

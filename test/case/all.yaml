@@ -35,5 +35,8 @@
 - name:  infix-services
   suite: infix_services/infix_services.yaml
 
+- name:  infix-firewall
+  suite: infix_firewall/infix_firewall.yaml
+
 - name: use-cases
   suite: use_case/use_case.yml

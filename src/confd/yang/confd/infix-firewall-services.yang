@@ -1,0 +1,149 @@
+module infix-firewall-services {
+  yang-version 1.1;
+  namespace "urn:infix:firewall:services:ns:yang:1.0";
+  prefix ifw-svc;
+
+  organization "KernelKit";
+  contact      "kernelkit@googlegroups.com";
+  description  "Common well-defined network services.";
+
+  revision 2025-04-26 {
+    description "Initial revision.";
+    reference "internal";
+  }
+
+  typedef well-known-service {
+    description "Well-known network services, with standard port assignments from IANA.";
+    type enumeration {
+      enum "bgp" {
+        description "179/tcp — Border Gateway Protocol for internet routing";
+      }
+      enum "dhcp" {
+        description "67-68/udp — Dynamic Host Configuration Protocol for network configuration";
+      }
+      enum "dhcpv6" {
+        description "547/udp — Allow incoming DHCP for IPv6 requests from clients or relay agents.";
+      }
+      enum "dhcpv6-client" {
+        description "546/udp — Allow a DHCP for IPv6 client to obtain a lease.";
+      }
+      enum "dns" {
+        description "53/tcp+udp — Domain Name System for name resolution";
+      }
+      enum "ftp" {
+        description "20-21/tcp — File Transfer Protocol for file transfers";
+      }
+      enum "http" {
+        description "80/tcp — Hypertext Transfer Protocol for web traffic";
+      }
+      enum "https" {
+        description "443/tcp — Secure Hypertext Transfer Protocol for encrypted web traffic";
+      }
+      enum "imap" {
+        description "143/tcp — Internet Message Access Protocol for email access";
+      }
+      enum "imaps" {
+        description "993/tcp — Secure Internet Message Access Protocol for encrypted email access";
+      }
+      enum "ipp" {
+        description "631/tcp+udp — Internet Printing Protocol (IPP) is used for distributed printing.";
+      }
+       enum "kerberos" {
+        description "88/tcp+udp — Network authentication protocol";
+      }
+      enum "ldap" {
+        description "389/tcp — Lightweight Directory Access Protocol for directory services";
+      }
+      enum "mdns" {
+        description "5353/udp — Multicast DNS for local network service discovery";
+      }
+      enum "mongodb" {
+        description "27017/tcp — Document-oriented NoSQL database";
+      }
+      enum "mqtt" {
+        description "1883/tcp — Message Queuing Telemetry Transport for IoT";
+      }
+      enum "mssql" {
+        description "1433/tcp — Microsoft SQL Server database";
+      }
+      enum "mysql" {
+        description "3306/tcp — MySQL database server connections";
+      }
+      enum "netbios-ns" {
+        description "137/udp — NetBIOS Name Service for Windows networking";
+      }
+      enum "netconf" {
+        description "830/tcp — Network Configuration Protocol for network device management";
+      }
+      enum "nfs" {
+        description "2049/tcp+udp — Network File System for distributed file sharing";
+      }
+      enum "ntp" {
+        description "123/udp — Network Time Protocol for time synchronization";
+      }
+      enum "openvpn" {
+        description "1194/udp — OpenVPN secure tunnel for VPN connections";
+      }
+      enum "pop3" {
+        description "110/tcp — Post Office Protocol version 3 for email retrieval";
+      }
+      enum "pop3s" {
+        description "995/tcp — Secure Post Office Protocol version 3 for encrypted email retrieval";
+      }
+      enum "postgresql" {
+        description "5432/tcp — PostgreSQL database server connections";
+      }
+      enum "radius" {
+        description "1812-1813/tcp+udp — Remote Authentication Dial-in User Service";
+      }
+      enum "rdp" {
+        description "3389/tcp — Remote Desktop Protocol for Windows remote access";
+      }
+      enum "restconf" {
+        description "443/tcp — RESTful Network Configuration Protocol for HTTP-based network management";
+      }
+      enum "samba" {
+        description "445/tcp — Windows file and printer sharing";
+      }
+      enum "samba-client" {
+        description "138/udp — Windows file and printer sharing (client-only)";
+      }
+      enum "sip" {
+        description "5060/tcp+udp — Session Initiation Protocol for VoIP communications";
+      }
+      enum "sips" {
+        description "5061/tcp+udp — Secure Session Initiation Protocol for encrypted VoIP";
+      }
+      enum "smtp" {
+        description "25/tcp — Simple Mail Transfer Protocol for email transmission";
+      }
+      enum "snmp" {
+        description "161/udp — Simple Network Management Protocol for network monitoring";
+      }
+      enum "snmptrap" {
+        description "162/udp — Simple Network Management Protocol trap notifications";
+      }
+      enum "ssh" {
+        description "22/tcp — Secure Shell for remote login and command execution";
+      }
+      enum "ssdp" {
+        description "1900/udp — Simple Service Discovery Protocol for UPnP device discovery";
+      }
+      enum "telnet" {
+        description "23/tcp — Telnet protocol for remote terminal access";
+      }
+      enum "tftp" {
+        description "69/udp — Trivial File Transfer Protocol for simple file transfers";
+      }
+      enum "vnc-server" {
+        description "5900-5906/tcp — Virtual Network Computing server for remote desktop access";
+      }
+      enum "wireguard" {
+        description "51820/udp — Modern VPN tunnel for secure networking";
+      }
+      enum "xdmcp" {
+        description "177/tcp+udp — X Display Manager Control Protocol for remote X11 sessions";
+      }
+    }
+  }
+}
