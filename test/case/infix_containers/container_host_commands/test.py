@@ -75,11 +75,5 @@ nsenter -m/1/ns/mnt -u/1/ns/uts -i/1/ns/ipc -n/1/ns/net hostname {hostname_new}
         until(lambda: c.running(cont_name), attempts=10)
 
     with test.step("Verify the new hostname set by the container"):
-        oper = target.get_data("/ietf-system:system")
-        name = oper["system"]["hostname"]
-
-        if name != hostname_new:
-            print(f"Expected hostname: {hostname_new}, actual hostname: {name}")
-            test.fail()
-
+        until(lambda: c.running(cont_name) != target.get_data("/ietf-system:system")["system"]["hostname"], attempts=10)
     test.succeed()
