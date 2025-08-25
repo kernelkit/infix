@@ -2,12 +2,10 @@
 - settings:
     test-spec: Readme.adoc
 
-- case: meta/wait.py
-  infamy:
-    specification: False
 - case: meta/reproducible.py
   infamy:
     specification: False
+
 - name: Misc tests
   suite: misc/misc.yaml
 
