@@ -101,7 +101,6 @@ def restconf_reachable(neigh, password):
         response = requests_workaround_get(url, headers=headers, auth=auth,
                                            verify=False)
         if response.status_code == 200:
-            print(f"{neigh} answers to TCP connections on port 443 (RESTCONF)")
             return True
     except:
         return False
