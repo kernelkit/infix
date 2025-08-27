@@ -22,7 +22,6 @@ from . import env, netutil
 
 def netconf_syn(addr):
     if netutil.tcp_port_is_open(addr, 830):
-        print(f"{addr} answers to TCP connections on port 830 (NETCONF)")
         return True
     else:
         return False
