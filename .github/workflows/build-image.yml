@@ -1,0 +1,220 @@
+name: Create SD Card Images
+
+on:
+  workflow_dispatch:
+    inputs:
+      board:
+        description: 'Board to create image for'
+        type: choice
+        required: true
+        options:
+          - raspberry-pi-4
+        default: 'raspberry-pi-4'
+      use_latest_release:
+        description: 'Use latest release artifacts instead of workflow artifacts'
+        type: boolean
+        default: false
+
+jobs:
+  create-image:
+    name: Create SD Card Image for ${{ inputs.board }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          clean: true
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            genimage \
+            u-boot-tools \
+            parted \
+            gdisk \
+            qemu-utils \
+            dosfstools \
+            e2fsprogs \
+            genext2fs \
+            mtools \
+            jq
+
+      - name: Prepare build environment
+        run: |
+          # Set up directory structure similar to buildroot build
+          mkdir -p output/images
+          mkdir -p build
+
+      - name: Set bootloader and target based on board
+        run: |
+          case "${{ inputs.board }}" in
+            raspberry-pi-4)
+              echo "BOOTLOADER=rpi4_boot" >> $GITHUB_ENV
+              echo "TARGET=aarch64" >> $GITHUB_ENV
+              ;;
+            *)
+              echo "Error: Unknown board ${{ inputs.board }}"
+              exit 1
+              ;;
+          esac
+          echo "Using bootloader: $BOOTLOADER and target: $TARGET for board: ${{ inputs.board }}"
+
+      - name: Download bootloader artifacts
+        if: ${{ !inputs.use_latest_release }}
+        run: |
+          # Download from latest bootloader build workflow on main branch
+          gh run list --workflow=build-boot.yml --branch=main --limit=1 --status=success --json databaseId --jq '.[0].databaseId' > latest_boot_run_id
+          BOOT_RUN_ID=$(cat latest_boot_run_id)
+
+          gh run download ${BOOT_RUN_ID} --name artifact-${BOOTLOADER} --dir temp_bootloader/
+
+          # Extract bootloader directly to output/images
+          cd temp_bootloader/
+          tar -xzf *.tar.gz --strip-components=1 -C ../output/images/
+          cd ../
+          rm -rf temp_bootloader/
+
+          echo "Bootloader files extracted to output/images:"
+          ls -la output/images/
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download Infix artifacts
+        if: ${{ !inputs.use_latest_release }}
+        run: |
+          # Download from latest Kernelkit Trigger workflow for main branch
+          gh run list --workflow=164295764 --branch=main --limit=1 --status=success --json databaseId --jq '.[0].databaseId' > latest_infix_run_id
+          INFIX_RUN_ID=$(cat latest_infix_run_id)
+
+          gh run download ${INFIX_RUN_ID} --name artifact-${TARGET} --dir temp_infix/
+
+          # Extract Infix directly to output/images
+          cd temp_infix/
+          tar -xzf *.tar.gz --strip-components=1 -C ../output/images/
+          cd ../
+          rm -rf temp_infix/
+
+          echo "Infix files extracted to output/images:"
+          ls -la output/images/
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download from latest releases
+        if: ${{ inputs.use_latest_release }}
+        run: |
+          # Download latest bootloader release
+          gh release download latest-boot --pattern "*${BOOTLOADER}*" --dir temp_bootloader/
+          cd temp_bootloader/
+          tar -xzf *.tar.gz --strip-components=1 -C ../output/images/
+          cd ../
+          rm -rf temp_bootloader/
+
+          # Download latest Infix release
+          gh release download latest --pattern "*${TARGET}*" --dir temp_infix/
+          cd temp_infix/
+          tar -xzf *.tar.gz --strip-components=1 -C ../output/images/
+          cd ../
+          rm -rf temp_infix/
+
+          echo "All files extracted to output/images:"
+          ls -la output/images/
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify extracted files
+        run: |
+          echo "Files available for mkimage.sh:"
+          ls -la output/images/
+          echo ""
+          echo "File types:"
+          file output/images/* || true
+
+      - name: Create SD card image
+        run: |
+          export BINARIES_DIR=$PWD/output/images
+          export BUILD_DIR=$PWD/build
+          export BR2_EXTERNAL_INFIX_PATH=$PWD
+          export RELEASE=""
+          export INFIX_ID="infix"
+
+          # Use the standardized mkimage.sh path for the selected board
+          #          BOARD_SCRIPT="src/board/${{ inputs.board }}/mkimage.sh"
+          BOARD_SCRIPT="src/board/raspberry-pi-4/mkimage.sh"
+
+          if [ -f "$BOARD_SCRIPT" ]; then
+            echo "Using board-specific image creation script: $BOARD_SCRIPT"
+            chmod +x "$BOARD_SCRIPT"
+            "$BOARD_SCRIPT"
+          else
+            echo "Error: Board script $BOARD_SCRIPT not found!"
+            exit 1
+          fi
+
+      - name: Verify created image
+        run: |
+          echo "Contents of output/images after mkimage.sh:"
+          ls -lh output/images/
+
+          # Look for SD card image with pattern: *-sdcard.img
+          if ls output/images/*-sdcard.img 1> /dev/null 2>&1; then
+            echo "Found SD card image(s):"
+            for img in output/images/*-sdcard.img; do
+              echo "- $(basename $img)"
+              file "$img"
+              fdisk -l "$img" 2>/dev/null || true
+            done
+          else
+            echo "No SD card image found matching pattern: *-sdcard.img"
+            echo "Available files:"
+            ls -la output/images/
+            exit 1
+          fi
+
+      - name: Upload SD card image
+        uses: actions/upload-artifact@v4
+        with:
+          name: sdcard-image-${{ inputs.board }}-${{ env.BOOTLOADER }}
+          path: |
+            output/images/*-sdcard.img
+          retention-days: 30
+
+      - name: Create checksums
+        run: |
+          cd output/images/
+          for file in *-sdcard.img; do
+            if [ -f "$file" ]; then
+              sha256sum "$file" > "$file.sha256"
+            fi
+          done
+
+      - name: Upload to release
+        uses: ncipollo/release-action@v1
+        with:
+          allowUpdates: true
+          omitName: true
+          omitBody: true
+          omitBodyDuringUpdate: true
+          prerelease: true
+          tag: "latest-boot"
+          token: ${{ secrets.GITHUB_TOKEN }}
+          artifacts: "output/images/*-sdcard.img*"
+
+      - name: Generate summary
+        run: |
+          cat <<EOF >> $GITHUB_STEP_SUMMARY
+          # SD Card Image Build Complete! 🚀
+
+          **Board:** ${{ inputs.board }}
+          **Target:** ${{ env.TARGET }}
+          **Bootloader:** ${{ env.BOOTLOADER }}
+          **Artifact Source:** ${{ inputs.use_latest_release && 'Latest Release' || 'Latest Workflow Run' }}
+
+          ## Created Images
+          $(find output/images/ -name "*.img" -o -name "*.qcow2" -o -name "*.raw" | xargs ls -lh 2>/dev/null | sed 's/^/- /' || echo "- No images found")
+
+          ## Download
+          The SD card image is available as a workflow artifact above.
+          EOF
