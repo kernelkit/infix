@@ -1,4 +1,4 @@
-From e91de96cdc30f4bb7f1993d1bcade064dc408416 Mon Sep 17 00:00:00 2001
+From c0de0c952b98eea283925a7f15255a7501c7343c Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Thu, 4 Apr 2024 16:36:30 +0200
 Subject: [PATCH 21/30] net: bridge: drop delay for applying strict multicast
@@ -25,7 +25,7 @@ Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
  2 files changed, 8 insertions(+), 38 deletions(-)
 
 diff --git a/net/bridge/br_multicast.c b/net/bridge/br_multicast.c
-index b1799e03403ff..282105bdca85d 100644
+index 1ae021be0a7b1..dd815b0fa8f83 100644
 --- a/net/bridge/br_multicast.c
 +++ b/net/bridge/br_multicast.c
 @@ -1762,10 +1762,6 @@ static void br_ip6_multicast_querier_expired(struct timer_list *t)
@@ -164,10 +164,10 @@ index b1799e03403ff..282105bdca85d 100644
  #endif
  
 diff --git a/net/bridge/br_private.h b/net/bridge/br_private.h
-index 0afb886b9a303..5b5b2c2442a57 100644
+index 102d37f6e92d8..2b9d99d98aeff 100644
 --- a/net/bridge/br_private.h
 +++ b/net/bridge/br_private.h
-@@ -78,7 +78,6 @@ struct bridge_mcast_own_query {
+@@ -80,7 +80,6 @@ struct bridge_mcast_own_query {
  /* other querier */
  struct bridge_mcast_other_query {
  	struct timer_list		timer;
@@ -175,7 +175,7 @@ index 0afb886b9a303..5b5b2c2442a57 100644
  };
  
  /* selected querier */
-@@ -1166,8 +1165,7 @@ __br_multicast_querier_exists(struct net_bridge_mcast *brmctx,
+@@ -1168,8 +1167,7 @@ __br_multicast_querier_exists(struct net_bridge_mcast *brmctx,
  		own_querier_enabled = false;
  	}
  
