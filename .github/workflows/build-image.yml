@@ -90,7 +90,8 @@ jobs:
         if: ${{ !inputs.use_latest_release }}
         run: |
           # Download from latest Kernelkit Trigger workflow for main branch
-          gh run list --workflow=164295764 --branch=main --limit=1 --status=success --json databaseId --jq '.[0].databaseId' > latest_infix_run_id
+          #gh run list --workflow=164295764 --branch=main --limit=1 --status=success --json databaseId --jq '.[0].databaseId' > latest_infix_run_id
+          gh run list --workflow=164295764 --branch=create-sdcard --limit=1 --status=success --json databaseId --jq '.[0].databaseId' > latest_infix_run_id
           INFIX_RUN_ID=$(cat latest_infix_run_id)
 
           gh run download ${INFIX_RUN_ID} --name artifact-${TARGET} --dir temp_infix/
