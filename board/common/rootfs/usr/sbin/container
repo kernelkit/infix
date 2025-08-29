@@ -320,7 +320,6 @@ delete()
     fi
 
     # Should already be stopped, but if not ...
-    log "$name: should already be stopped, double checking ..."
     container stop "$name" >/dev/null
 
     while running "$name"; do
@@ -332,7 +331,6 @@ delete()
 	sleep 1
     done
 
-    log "$name: calling podman rm -vif ..."
     podman rm -vif "$name" >/dev/null 2>&1
     [ -n "$quiet" ] || log "Container $name has been removed."
 
@@ -478,7 +476,7 @@ options:
   -q, --quiet              Quiet operation, called from confd
   -r, --restart POLICY     One of "no", "always", or "on-failure:NUM"
   -s, --simple             Show output in simplified format
-  -t, --timeout SEC        Set timeout for delete/restart commands, default: 20
+  -t, --timeout SEC        Set timeout for delete/restart commands, default: 30
   -v, --volume NAME:PATH   Create named volume mounted inside container on PATH
 
 commands:
