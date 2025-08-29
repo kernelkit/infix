@@ -17,10 +17,6 @@ on:
       name:
         required: true
         type: string
-      flavor:
-        required: false
-        type: string
-        default: ''
       infix_repo:
         required: false
         type: string
@@ -35,14 +31,14 @@ on:
         default: 'test'
 
 env:
-  FLV: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.flavor || inputs.flavor }}
+  TARGET: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.target || inputs.target }}
   INFIX_REPO: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.infix_repo || inputs.infix_repo }}
   NINEPM_CONF: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.ninepm-conf || inputs.ninepm-conf }}
   TEST_PATH: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.test-path || inputs.test-path }}
 
 jobs:
   test:
-    name: Regression Test ${{ inputs.name }} ${{ inputs.target }}
+    name: Regression Test ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.name || inputs.name }} ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.target || inputs.target }}
     runs-on: [ self-hosted, regression ]
     steps:
       - name: Checkout infix repo
@@ -62,20 +58,18 @@ jobs:
                    >>$GITHUB_ENV
           fi
 
-          echo "flv=$FLV" >> $GITHUB_OUTPUT
-
-      - name: Configure ${{ inputs.target }}${{ steps.vars.outputs.flv }}
+      - name: Configure ${{ env.TARGET }}
         run: |
-          make ${{ inputs.target }}${{ steps.vars.outputs.flv }}_defconfig
+          make ${{ env.TARGET }}_defconfig
 
       - uses: actions/download-artifact@v4
         with:
           pattern: "artifact-*"
           merge-multiple: true
 
-      - name: Restore x86-64${{ steps.vars.outputs.flv }} output/
+      - name: Restore ${{ env.TARGET }} output/
         run: |
-          target=${{ inputs.target }}
+          target=${{ env.TARGET }}
           name=${{ inputs.name }}
 
           ls -l
@@ -85,7 +79,7 @@ jobs:
           tar xf ${name}-${target}.tar.gz
           ln -s ${name}-${target} images
 
-      - name: Regression Test x86_64${{ steps.vars.outputs.flv }}
+      - name: Regression Test ${{ env.TARGET }}
         run: |
           if [ -n "$NINEPM_CONF" ]; then
             export NINEPM_PROJ_CONFIG="${GITHUB_WORKSPACE}/$NINEPM_CONF"
@@ -93,12 +87,12 @@ jobs:
           fi
           make test
 
-      - name: Publish Test Result for x86_64${{ steps.vars.outputs.flv }}
+      - name: Publish Test Result for ${{ env.TARGET }} 
         # Ensure this runs even if Regression Test fails
         if: always()
         run: cat $TEST_PATH/.log/last/result-gh.md >> $GITHUB_STEP_SUMMARY
 
-      - name: Generate Test Report for x86_64${{ steps.vars.outputs.flv }}
+      - name: Generate Test Report for ${{ env.TARGET }}
         # Ensure this runs even if Regression Test fails
         if: always()
         run: |
