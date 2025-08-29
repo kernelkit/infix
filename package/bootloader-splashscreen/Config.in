@@ -1,0 +1,12 @@
+config BR2_PACKAGE_BOOTLOADER_SPLASHSCREEN
+	bool "bootloader-splashscreen"
+	help
+	  Install a BMP splash screen image for bootloader.
+
+config BR2_PACKAGE_BOOTLOADER_SPLASHSCREEN_PATH
+	string "Path to BMP image"
+	default "$(BR2_EXTERNAL_INFIX_PATH)/board/common/uboot/splash.bmp"
+	depends on BR2_PACKAGE_BOOTLOADER_SPLASHSCREEN
+	help
+	  Path to the BMP image file to be used as bootloader splash screen.
+	  The image will be installed to output/images/.

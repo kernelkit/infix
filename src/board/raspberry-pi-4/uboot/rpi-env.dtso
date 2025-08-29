@@ -11,7 +11,14 @@
 			bootmenu_delay = "10";
 			boot_targets = "mmc0";
 			ethprime = "eth0";
-			bootcmd = "run ixboot";
+
+			stdout = "serial";
+			stderr = "serial";
+			stdin = "serial";
+			splashpos = "m,m";
+			splashfile = "splash.bmp";
+			splashimage =" 0x10000000";
+			bootcmd = "fatload mmc 0:1 ${splashimage} ${splashfile}; bmp display ${splashimage}; run ixboot";
 
 			ixpreboot     = /incbin/("scripts/ixpreboot.sh");
 			ixbtn-devmode = "setenv dev_mode yes; echo Enabled";
