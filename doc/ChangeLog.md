@@ -14,6 +14,7 @@ All notable changes to the project are documented in this file.
 
 ### Fixes
 - Fix #1098: Prune dangling container images to reclaim disk space
+- Fix #1123: Disabling or removing a container may cause podman to hang
 
 [RPI-TOUCH]: https://www.raspberrypi.com/products/raspberry-pi-touch-display/
 

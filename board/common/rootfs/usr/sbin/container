@@ -8,7 +8,7 @@
 #
 DOWNLOADS=/var/lib/containers/oci
 BUILTIN=/lib/oci
-TMPDIR=/var/tmp
+BASEDIR=/var/tmp
 container=$0
 checksum=""
 extracted=
@@ -29,10 +29,10 @@ err()
     rc=$1; shift
     logger -I $PPID -t container -p local1.err -- "Error: $*"
 
-    if [ -n "$extracted" ]; then
-	if [ -d "$TMPDIR/$dir" ]; then
-	    log "Cleaning up extracted $dir"
-	    rm -rf "$dir"
+    if [ -n "$extracted" ] && [ -n "$tmpdir" ]; then
+	if [ -d "$tmpdir" ]; then
+	    log "Cleaning up temporary directory $tmpdir"
+	    rm -rf "$tmpdir"
 	fi
     fi
 
@@ -110,10 +110,11 @@ EOF
     return 1
 }
 
-# Unpacks a given oci-archive.tar[.gz] in the current directory.  Sanity
-# checks, at least one index.json in the top-level dir of the archive.
-# If there are more index files, this function does not handle them.
-unpack_archive()
+# Extracts an oci-archive.tar[.gz] in a temporary directory.  Finds and
+# sanity checks that at least one index.json exist in the archive. This
+# is the OCI directory fed to `podman load` and also used as repo name.
+# NOTE: if there are >1 index.json, this function does not handle them.
+load_archive()
 {
     uri=$1
     tag=$2
@@ -158,49 +159,81 @@ unpack_archive()
 	fi
     fi
 
+    file=$(realpath "$file")
     if [ -d "$file" ]; then
 	index=$(find "$file" -name index.json)
 	if [ -z "$index" ]; then
 	    err 1 "cannot find index.json in OCI image $file"
 	fi
     else
-	cd "$TMPDIR" || err 0 "failed cd $TMPDIR, wiill use $(pwd) for OCI archive extraction."
+	# Extract files in a temporary directory, because most OCI
+	# archives are flat/bare, all files in the root w/o a dir/
+	tmpdir=$(mktemp -d -p "$BASEDIR") || err 1 "failed creating temporary directory"
+	cd "$tmpdir" || err 1 "failed cd to temporary directory $tmpdir"
 
-	index=$(tar tf "$file" |grep index.json)
+	index="$tmpdir/$(tar tf "$file" |grep index.json)"
 	if [ -z "$index" ]; then
 	    err 1 "invalid OCI archive, cannot find index.json in $file"
 	fi
 
 	[ -n "$quiet" ] || log "Extracting OCI archive $file ..."
-        tar xf "$file"  || err 1 "failed unpacking $file in $(pwd)"
+        tar xf "$file"  || err 1 "failed unpacking $file in $tmpdir"
 	extracted=true
+	cd - >/dev/null || err 0 "failed cd -"
     fi
 
     dir=$(dirname "$index")
-    if echo "$dir" | grep -q ":"; then
+
+    # Handle flat tarballs without a sub-directory, because
+    # the $dir name is used as fallback when retagging below.
+    if [ -n "$extracted" ] && [ "$dir" = "$tmpdir" ]; then
+	parent=$(dirname "$dir")
+	dirnam=$(echo "$img" | sed 's/\(.*\)\.tar.*/\1/')
+	tmpdir="${parent}/${dirnam}"
+	mv "$dir" "$tmpdir"
+	dir="$tmpdir"
+    fi
+
+    if basename "$dir" | grep -q ":"; then
         if [ -z "$tag" ]; then
-            tag="$dir"
+            tag=$(basename "$dir")
         fi
+
         sanitized_dir=$(echo "$dir" | cut -d':' -f1)
         mv "$dir" "$sanitized_dir" || err 1 "failed renaming $dir to $sanitized_dir"
         dir="$sanitized_dir"
     fi
 
     [ -n "$quiet" ] || log "Loading OCI image $dir ..."
-    podman load -qi "$dir"        >/dev/null
+    output=$(podman load -qi "$dir")
+
+    # Extract image ID from podman load output:
+    # "Loaded image: sha256:cd9d0aaf81be..."
+    if echo "$output" | grep -q "sha256:"; then
+	img_id="${output##*sha256:}"
+    else
+	# Fallback to directory name if no SHA found
+	img_id="$dir"
+    fi
+
+    # On podman < 4.7.0 we had to retag images from default $dir:latest
+    # From >= 4.7.0 we always tag since loads come in as <none>:<none>
+    if [ -z "$tag" ]; then
+	tag=$(basename "$dir")
+    fi
+
+    # Repo names must be lowercase, and only '[a-z0-9._/-]+' and ':tag'
+    tag=$(printf "%s" "$tag" | tr '[:upper:]' '[:lower:]' | tr -c 'a-z0-9._/:-' '-')
+
+    [ -n "$quiet" ] || log "Tagging loaded image $img_id as $tag"
+    if ! podman tag "$img_id" "$tag"; then
+	err 1 "failed tagging image as $tag"
+    fi
 
     # Clean up after ourselves
     if [ -n "$extracted" ]; then
 	log "Cleaning up extracted $dir"
-	rm -rf "$dir"
-    fi
-
-    # Retag image from podman default $dir:latest
-    if [ -n "$tag" ]; then
-	podman tag "$dir" "$tag" >/dev/null
-	podman rmi "$dir"        >/dev/null
-    else
-	tag=$dir
+	rm -rf "$tmpdir"
     fi
 
     echo "$tag"
@@ -228,7 +261,7 @@ create()
 
     # Unpack and load docker-archive/oci/oci-archive, returning image
     # name, or return docker:// URL for download.
-    if ! image=$(unpack_archive "$image"); then
+    if ! image=$(load_archive "$image"); then
 	exit 1
     fi
 
@@ -666,7 +699,7 @@ case $cmd in
 	;;
     load)
 	# shellcheck disable=SC2086
-	name=$(unpack_archive "$1" $2)
+	name=$(load_archive "$1" $2)
 	[ -n "$name" ] || exit 1
 
 	# Show resulting image(s) matching $name
