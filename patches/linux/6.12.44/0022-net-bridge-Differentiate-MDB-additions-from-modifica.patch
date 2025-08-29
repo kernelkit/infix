@@ -1,4 +1,4 @@
-From 5460b5b66260cdd6eaaa63fbec87a17ff9a2c3c8 Mon Sep 17 00:00:00 2001
+From 778143529c0df2eeada5e2c682156d62103b92bc Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Thu, 16 May 2024 14:51:54 +0200
 Subject: [PATCH 22/30] net: bridge: Differentiate MDB additions from
@@ -63,7 +63,7 @@ index 7e1ad229e1330..3b1873e7c499a 100644
  	if (br_multicast_should_handle_mode(brmctx, cfg->group.proto))
  		br_multicast_star_g_handle_mode(pg, cfg->filter_mode);
 diff --git a/net/bridge/br_multicast.c b/net/bridge/br_multicast.c
-index 282105bdca85d..aa97b07ed528e 100644
+index dd815b0fa8f83..41ab527953da2 100644
 --- a/net/bridge/br_multicast.c
 +++ b/net/bridge/br_multicast.c
 @@ -619,7 +619,7 @@ static void br_multicast_fwd_src_handle(struct net_bridge_group_src *src)

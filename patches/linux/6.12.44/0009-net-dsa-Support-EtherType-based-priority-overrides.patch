@@ -1,4 +1,4 @@
-From 72b9b1b8d6f9a7860709bd7002ce4549d9e763af Mon Sep 17 00:00:00 2001
+From 8465eec4cbeccb7eb683820e8e4f4601ce05509f Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Thu, 21 Mar 2024 19:12:15 +0100
 Subject: [PATCH 09/30] net: dsa: Support EtherType based priority overrides
