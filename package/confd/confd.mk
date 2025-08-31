@@ -10,10 +10,13 @@ CONFD_SITE = $(BR2_EXTERNAL_INFIX_PATH)/src/confd
 CONFD_LICENSE = BSD-3-Clause
 CONFD_LICENSE_FILES = LICENSE
 CONFD_REDISTRIBUTE = NO
-CONFD_DEPENDENCIES = host-sysrepo sysrepo netopeer2 jansson libite sysrepo libsrx libglib2
+CONFD_DEPENDENCIES = host-sysrepo sysrepo netopeer2 jansson libite sysrepo libsrx libglib2 firewalld
 CONFD_AUTORECONF = YES
 CONFD_CONF_OPTS += --disable-silent-rules --with-crypt=$(BR2_PACKAGE_CONFD_DEFAULT_CRYPT)
 CONFD_SYSREPO_SHM_PREFIX = sr_buildroot$(subst /,_,$(CONFIG_DIR))_confd
+CONFD_FIREWALL_SERVICES_YANG = $(CONFD_SRCDIR)/yang/confd/infix-firewall-services.yang
+CONFD_FIREWALL_XML_FILES="$(TARGET_DIR)/usr/lib/firewalld/policies/*.xml \
+			  $(TARGET_DIR)/usr/lib/firewalld/zones/*.xml"
 
 define CONFD_CONF_ENV
 	CFLAGS="$(INFIX_CFLAGS)"
@@ -100,8 +103,72 @@ define CONFD_EMPTY_SYSREPO
 		rm -rf $(PER_PACKAGE_DIR)/host-sysrepo/target/etc/sysrepo/* $(PER_PACKAGE_DIR)/confd/target/etc/sysrepo/*; \
 	fi
 endef
+
+# The three zones that are *not* deleted from the default install
+# are required by firewalld (core/fw.py), in particular block.xml
+# Firewalld services cleanup: keep only services that match YANG enums,
+# remove all others, and validate that all enums have corresponding .xml files
 define CONFD_CLEANUP
 	rm -f /dev/shm/$(CONFD_SYSREPO_SHM_PREFIX)*
+	rm -rf $(TARGET_DIR)/etc/firewall*
+	rm -f  $(TARGET_DIR)/usr/bin/firewall-applet
+	rm -rf $(TARGET_DIR)/usr/share/firewalld
+	rm -f $(TARGET_DIR)/usr/lib/firewalld/policies/*
+	find     $(TARGET_DIR)/usr/lib/firewalld/zones -type f \
+		! -name block.xml   \
+		! -name drop.xml    \
+		! -name trusted.xml \
+		-delete
+	mkdir -p $(TARGET_DIR)/etc/firewalld/zones
+	mkdir -p $(TARGET_DIR)/etc/firewalld/policies
+	mkdir -p $(TARGET_DIR)/etc/firewalld/services
+	touch $(TARGET_DIR)/etc/firewalld/firewalld.conf
+	mkdir -p $(TARGET_DIR)/usr/lib/firewalld/services
+	cp $(CONFD_PKGDIR)/netconf.xml $(TARGET_DIR)/usr/lib/firewalld/services/
+	cp $(CONFD_PKGDIR)/restconf.xml $(TARGET_DIR)/usr/lib/firewalld/services/
+	# Find all pre-defined services in our YANG services model,
+	# drop firewalld service.xml that are *not* enumerated.
+	if [ ! -f "$(CONFD_FIREWALL_SERVICES_YANG)" ]; then					\
+		echo "ERROR: $(CONFD_FIREWALL_SERVICES_YANG) not found";			\
+		exit 1;										\
+	fi;											\
+	ENUMS=$$(grep 'enum "' $(CONFD_FIREWALL_SERVICES_YANG) |				\
+	         sed 's/.*enum "\([^"]*\)".*/\1/');						\
+	MISSING=0;										\
+	for service in $$ENUMS; do								\
+		if [ ! -f "$(TARGET_DIR)/usr/lib/firewalld/services/$$service.xml" ]; then	\
+			echo "Service $$service is not a firewalld pre-defined service";	\
+			MISSING=1;								\
+		fi;										\
+	done;											\
+	if [ $$MISSING -eq 1 ]; then								\
+		exit 1;										\
+	fi; 											\
+	cd $(TARGET_DIR)/usr/lib/firewalld/services/;						\
+	for xmlfile in *.xml; do								\
+		service=$${xmlfile%.xml};							\
+		if ! echo "$$ENUMS" | grep -q "^$$service$$"; then				\
+			rm "$$xmlfile";								\
+		fi;										\
+	done
+	for xmlfile in $$CONFD_FIREWALL_XML_FILES; do					\
+		[ -f "$$xmlfile" ] || continue;						\
+		if grep -q "(immutable)" "$$xmlfile"; then				\
+			continue;							\
+		fi;									\
+		if grep -q '<short>' "$$xmlfile"; then					\
+			sed -i 's|<short>\(.*\)</short>|<short>\1 (immutable)</short>|'	\
+				"$$xmlfile";						\
+		else									\
+			if echo "$$xmlfile" | grep -q "/policies/"; then		\
+				sed -i 's|<policy|<short>(immutable)</short>\n&|'	\
+					"$$xmlfile";					\
+			else								\
+				sed -i 's|<zone|<short>(immutable)</short>\n&|'		\
+					"$$xmlfile";					\
+			fi;								\
+		fi;									\
+	done
 endef
 CONFD_PRE_BUILD_HOOKS += CONFD_EMPTY_SYSREPO
 CONFD_PRE_BUILD_HOOKS += CONFD_CLEANUP

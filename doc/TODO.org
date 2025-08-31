@@ -1,3 +1,34 @@
+* TODO Add support for firewall
+- [X] Interfaces are not defaulting to the default zone, must handle bridge
+  ports and changes to enslavement, so regenerate every time is a must!
+- [X] Add missing upper to port forward since port ranges are supported, see services!
+- [X] =[do] show firewall= not available yet
+- [X] Add RPC to pause firewall using =firewall-cmd --panic-on= and restart
+  firewall again with =firewall-cmd --panic-off=.  The current state can
+  be queried using =firewall-cmd --query-panic=, which returns =yes=
+- [X] Remove debug log messages!
+- [X] Add "Log Messages" section to =show firewall= when =LogDenied ≠ off=
+- [ ] Investigate filtering out firewall log messages from other log files
+- [1/2] Rename policy->policy to policy->action, and replace allow->forward
+- [X] Rename zone->sources to networks
+- [X] A zone's action is for ingress, clarify this if missing!
+- [X] Any services/ports listed in a zone with policy:accept are a NO-OP
+- [X] =firwall-cmd --reload= takes fooooorever! :-(
+- [X] If forwarding is disabled in a zone then the zone matrix should
+  show deny for the same  zone-to-zone communication
+- [X] We should show the implicit rules for communicating with the HOST
+- [X] Investigate "padlock" on built-in policys (and zones?) and expose more?
+- [X] Document established,related somewhere, fixed/padlocked policy?  Also,
+  document why this is a good idea to always have enabled.  See RH docs.
+- [ ] Podman published ports, <https://firewalld.org/2024/11/strict-forward-ports>
+- [ ] Software fastpath <https://firewalld.org/2023/05/nftables-flowtable>
+- +[ ] Allow overriding/editing immutable policies and zones+
+- [X] Add tests: basic (end device), wan-lan, wan-lan-dmz, +hammer (stress)+
+- [X] Add documentation
+  - See <https://docs.rockylinux.org/guides/security/firewalld-beginners/>
+  - Add some tool tips: nc, nmap, ping, and socat to stress the firewall
+- [X] Fix inference so we can remove defaults from factory-config!
+
 * TODO doc: User Guide
 
 - Feature set and scope, e.g.
