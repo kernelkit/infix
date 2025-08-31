@@ -36,6 +36,7 @@ with infamy.Test() as test:
                         {
                             "name": f"{ifname}",
                             "ipv4": {
+                                "forwarding": True,
                                 "address": [{
                                     "ip": f"{DUTIP}",
                                     "prefix-length": 24
