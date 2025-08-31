@@ -782,7 +782,11 @@ case $cmd in
 
 	while ! "$script"; do
             log "${name}: setup failed, waiting for network changes ..."
-	    read -t 60 _ < <(ip monitor address route)
+
+	    # Timeout and retry after 60 seconds, on SIGTERM, or when
+	    # any network event is caught.
+	    timeout -s TERM -k 1 60 sh -c \
+		    'ip monitor address route 2>/dev/null | head -n1 >/dev/null' || true
 
 	    # On IP address/route changes, wait a few seconds more to ensure
 	    # the system has ample time to react and set things up for us.
