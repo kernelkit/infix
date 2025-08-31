@@ -14,6 +14,8 @@ Verifies Infix Docker container support:
 
 include::container_basic/Readme.adoc[]
 
+include::container_enabled/Readme.adoc[]
+
 include::container_bridge/Readme.adoc[]
 
 include::container_phys/Readme.adoc[]

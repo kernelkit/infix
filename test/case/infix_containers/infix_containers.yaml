@@ -3,6 +3,9 @@
 - name: container_basic
   case: container_basic/test.py
 
+- name: container_enabled
+  case: container_enabled/test.py
+
 - name: container_bridge
   case: container_bridge/test.py
 
@@ -20,4 +23,3 @@
 
 - name: container_host_commands
   case: container_host_commands/test.py
-
