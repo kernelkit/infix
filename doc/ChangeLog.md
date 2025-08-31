@@ -13,7 +13,7 @@ All notable changes to the project are documented in this file.
 - Add support for [Raspberry Pi touch display][RPI-TOUCH] on Raspberry Pi 4
 
 ### Fixes
-- containers: prune dangling images to reclaim disk space (#1098)
+- Fix #1098: Prune dangling container images to reclaim disk space
 
 [RPI-TOUCH]: https://www.raspberrypi.com/products/raspberry-pi-touch-display/
 

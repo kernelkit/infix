@@ -303,7 +303,7 @@ delete()
     podman rm -vif "$name" >/dev/null 2>&1
     [ -n "$quiet" ] || log "Container $name has been removed."
 
-    cnt=$(podman image prune -f | wc -l)
+    cnt=$(podman image prune -af | wc -l)
     log "Pruned $cnt image(s)"
 }
 
