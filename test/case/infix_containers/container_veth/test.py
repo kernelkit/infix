@@ -1,8 +1,4 @@
 #!/usr/bin/env python3
-#
-# Verify connectivity with a simple web server container from behind a
-# regular bridge, a VETH pair connects the container to the bridge.
-#
 r"""
 Container with VETH pair
 

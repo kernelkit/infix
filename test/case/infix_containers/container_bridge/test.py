@@ -1,9 +1,4 @@
 #!/usr/bin/env python3
-#
-# Verify connectivity with a simple web server container from behind a
-# docker0 bridge.  As an added twist, this test also verifies content
-# mounts, i.e., custom index.html from running-config.
-#
 """
 Container with bridge network
 
