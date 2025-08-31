@@ -35,7 +35,6 @@ jobs:
           echo "INFIX_BUILD_ID=${{ github.run_id }}" >> $GITHUB_OUTPUT
           echo "dir=Infix-x86_64" >> $GITHUB_OUTPUT
           echo "tgz=Infix-x86_64.tar.gz" >> $GITHUB_OUTPUT
-          echo "flv=_minimal" >> $GITHUB_OUTPUT
 
       - name: Configure x86_64_minimal
         run: |
