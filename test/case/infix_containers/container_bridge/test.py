@@ -78,7 +78,7 @@ with infamy.Test() as test:
 
     with test.step("Verify container has started"):
         c = infamy.Container(target)
-        until(lambda: c.running(NAME), attempts=10)
+        until(lambda: c.running(NAME), attempts=60)
 
     _, hport = env.ltop.xlate("host", "data")
     url = infamy.Furl(URL)

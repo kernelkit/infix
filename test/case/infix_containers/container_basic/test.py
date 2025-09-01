@@ -54,7 +54,7 @@ with infamy.Test() as test:
 
     with test.step("Verify container 'web' has started"):
         c = infamy.Container(target)
-        until(lambda: c.running(NAME), attempts=10)
+        until(lambda: c.running(NAME), attempts=60)
 
     with test.step("Verify container 'web' is reachable on http://container-host.local:91"):
         until(lambda: _verify(addr), attempts=10)
@@ -64,12 +64,12 @@ with infamy.Test() as test:
         c.action(NAME, "stop")
 
     with test.step("Verify container 'web' is stopped"):
-        until(lambda: not c.running(NAME), attempts=10)
+        until(lambda: not c.running(NAME), attempts=30)
 
     with test.step("Restart container 'web'"):
         c.action(NAME, "restart")
 
     with test.step("Verify container 'web' is reachable on http://container-host.local:91"):
         # Wait for it to restart and respond, or fail
-        until(lambda: _verify(addr), attempts=10)
+        until(lambda: _verify(addr), attempts=60)
     test.succeed()

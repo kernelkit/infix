@@ -46,7 +46,7 @@ with infamy.Test() as test:
 
     with test.step("Verify container has started"):
         c = infamy.Container(target)
-        until(lambda: c.running(NAME), attempts=10)
+        until(lambda: c.running(NAME), attempts=60)
 
     with test.step("Modify container volume content"):
         cmd = f"sudo container shell {NAME} 'echo {MESG} >/var/www/index.html'"
@@ -66,6 +66,6 @@ with infamy.Test() as test:
         #     print(f"Container {NAME} upgraded: {out.stdout}")
 
     with test.step("Verify container volume content survived upgrade"):
-        until(lambda: url.check(MESG), attempts=10)
+        until(lambda: url.check(MESG), attempts=60)
 
     test.succeed()

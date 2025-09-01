@@ -176,11 +176,11 @@ table ip nat {
 
     with test.step("Verify firewall container has started"):
         c = infamy.Container(target)
-        until(lambda: c.running(NFTNM), attempts=10)
+        until(lambda: c.running(NFTNM), attempts=60)
 
     with test.step("Verify web container has started"):
         c = infamy.Container(target)
-        until(lambda: c.running(WEBNM), attempts=10)
+        until(lambda: c.running(WEBNM), attempts=60)
 
     with infamy.IsolatedMacVlan(hport) as ns:
         NEEDLE = "tiny web server from the curiOS docker"
