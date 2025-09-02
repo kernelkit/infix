@@ -184,6 +184,7 @@ while getopts "b:cCDf:hiKp:q:rt:" opt; do
 	    kvm=
 	    ;;
 	p)
+	    version=$(unsquashfs -cat $OPTARG manifest.raucm | awk -F'=' '/^version=/ {print $2}')
 	    INFAMY_ARGS="$INFAMY_ARGS -p $OPTARG"
 	    ;;
 	q)
@@ -234,6 +235,7 @@ if [ "$containerize" ]; then
 	 --env NINEPM_PROJ_CONFIG="$NINEPM_PROJ_CONFIG" \
 	 --env QENETH_PATH="$testdir/templates:$testdir" \
 	 --env PS1="$(build_ps1)" \
+	 --env VERSION="$version" \
 	 $extra_env \
 	 --expose 9001-9010 --publish-all \
 	 -v "$HOME/.infix/.ash_history":/root/.ash_history \
