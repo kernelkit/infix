@@ -3,7 +3,7 @@ Change Log
 
 All notable changes to the project are documented in this file.
 
-[v25.08.0][UNRELEASED] -
+[v25.08.0][] - 2025-09-01
 -------------------------
 
 ### Changes
@@ -13,7 +13,11 @@ All notable changes to the project are documented in this file.
 - Add support for [Raspberry Pi touch display][RPI-TOUCH] on Raspberry Pi 4
 
 ### Fixes
-- containers: prune dangling images to reclaim disk space (#1098)
+- Fix #1098: Prune dangling container images to reclaim disk space
+- Fix #1123: Disabling or removing a container may cause podman to hang
+- Fix #1124: Container setup with unreachable remote image spawns
+  excessive `ip monitor` processes
+- Fix #1127: Silence libyang Obsolete schema node warnings in log
 
 [RPI-TOUCH]: https://www.raspberrypi.com/products/raspberry-pi-touch-display/
 
@@ -1608,7 +1612,8 @@ Supported YANG models in addition to those used by sysrepo and netopeer:
  - N/A
 
 [buildroot]:  https://buildroot.org/
-[UNRELEASED]: https://github.com/kernelkit/infix/compare/v25.06.1...HEAD
+[UNRELEASED]: https://github.com/kernelkit/infix/compare/v25.08.0...HEAD
+[v25.08.0]:   https://github.com/kernelkit/infix/compare/v25.06.1...v26.08.0
 [v25.06.0]:   https://github.com/kernelkit/infix/compare/v25.05.1...v26.06.0
 [v25.05.1]:   https://github.com/kernelkit/infix/compare/v25.05.0...v25.05.1
 [v25.05.0]:   https://github.com/kernelkit/infix/compare/v25.04.0...v25.05.0

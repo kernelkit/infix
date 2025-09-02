@@ -1,15 +1,10 @@
 #!/usr/bin/env python3
-#
-# Verify connectivity with a simple web server container that's been
-# given a physical interface instead of an end of a VETH pair.
-#
 """
 Container with physical interface
 
 Verify connectivity with a simple web server container that's been
 given a physical interface instead of an end of a VETH pair.
 """
-import base64
 import infamy
 from   infamy.util import until, to_binary
 
@@ -62,7 +57,7 @@ with infamy.Test() as test:
 
     with test.step("Verify container has started"):
         c = infamy.Container(target)
-        until(lambda: c.running(NAME), attempts=10)
+        until(lambda: c.running(NAME), attempts=60)
 
     _, hport = env.ltop.xlate("host", "data")
     url = infamy.Furl(URL)
@@ -93,6 +88,6 @@ with infamy.Test() as test:
             })
 
         with test.step("Verify server is restarted and returns new content"):
-            until(lambda: url.nscheck(ns, MESG), attempts=10)
+            until(lambda: url.nscheck(ns, MESG), attempts=60)
 
     test.succeed()

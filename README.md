@@ -2,58 +2,69 @@
 
 <img align="right" src="doc/logo.png" alt="Infix - Linux <3 NETCONF" width=480 border=10>
 
-Infix is a free, Linux-based, immutable operating system built around
-[Buildroot][1] and [sysrepo][2].  A powerful mix that ease porting to
-different platforms, simplify long-term maintenance, and provide
-made-easy management using NETCONF, RESTCONF[^2], or the built-in
-command line interface (CLI) from a console or SSH login.
+Turn any ARM or x86 device into a powerful, manageable network appliance
+in minutes. From $35 Raspberry Pi boards to enterprise switches — deploy
+routers, IoT gateways, edge devices, or custom network solutions that
+just work.
 
-> [!TIP]
-> _Curious how it works?_ Click the **▶ Example CLI Session** below to see
-> it in action  
-> — or jump into the comprehensive [Infix Documentation][4] to learn even more.
+## Our Values
 
-Geared for switches and routers — yet its core value fits plenty of
-other use cases:
+**🔒 Immutable**  
+Your system never breaks.  Read-only filesystem with atomic upgrades
+means no configuration drift, no corrupted updates, and instant rollback
+if something goes wrong.  Deploy once, trust forever.
 
-- Runs from a squashfs image on a read-only partition
-- Single configuration file on a separate partition
-- Built around YANG with standard IETF models
-- Linux switchdev provides open switch APIs
-- Atomic upgrades to secondary partition
-- Highly security focused
+**🤝 Friendly**  
+Actually easy to use. Auto-generated CLI from standard YANG models comes
+with built-in help for every command — just hit `?` or TAB for
+context-aware assistance.  Familiar NETCONF/RESTCONF APIs and
+[comprehensive documentation][4] mean you're never stuck.  Whether
+you're learning networking or managing enterprise infrastructure.
 
-An immutable[^1] operating system enhances security and inherently makes
-it maintenance-free.  Configuration and data, e.g, containers, is stored
-on separate partitions to ensure complete separation from system files
-and allow for seamless backup, restore, and provisioning.
+**🛡️ Secure**  
+Built with security as a foundation, not an afterthought.  Minimal
+attack surface, separation between system and data, and container
+isolation.  Sleep better knowing your infrastructure is protected.
 
-In itself, Infix is perfectly suited for dedicated networking tasks,
-such as routing, switching, and monitoring.  This is how it started, as
-a network focused operating system.  Now, with native support for Docker
-containers, it provides a versatile platform that can easily be adapted
-to any customer need.  Be it legacy applications, network protocols,
-process monitoring, or edge data analysis, it can run close to end
-equipment.  Either directly connected on dedicated Ethernet ports or
-indirectly using virtual network cables to exist on the same LAN as
-other connected equipment.
+## Why Choose Infix
 
-The simple design of Infix provides complete control over both system
-and data, minimal cognitive burden, and makes it incredibly easy to get
-started.
+**Hardware Flexibility**: Start with a $35 Raspberry Pi, scale to
+enterprise switching hardware.  Same OS, same tools, same reliability.
 
-<details><summary><b>Example CLI Session</b></summary>
+**Standards-Based**: Built around YANG models and IETF standards. Learn
+once, use everywhere - no vendor lock-in.
 
-The CLI configure context is automatically generated from the loaded
-YANG models and their corresponding [sysrepo][2] plugins.  The following
-is brief example of how to set the IP address of an interface:
+**Container Ready**: Run your applications alongside networking
+functions.  GPIO access, dedicated Ethernet ports, custom protocols —
+your device, your rules.
 
-```
+## Use Cases
+
+1. **Home Labs & Hobbyists**:  
+   Transform a Raspberry Pi into a full-featured router with WiFi  
+1. **IoT & Edge Computing**:  
+   Bridge devices to the cloud with reliable, updatable gateways  
+1. **Small Business Networks**:  
+   Enterprise-grade features without the complexity or cost  
+1. **Developers & Makers**:  
+   Test networking concepts, prototype IoT solutions, or build custom
+   appliances
+1. **Network Professionals**:  
+   Consistent tooling from development to production deployment.  
+   How about a digital twin using raw Qemu or [GNS3](https://gns3.com/infix)!
+
+## See It In Action
+
+Configure an interface in seconds - the CLI guides you with built-in help:
+
+<details><summary><b>Click Here for an example CLI Session</b></summary>
+
+```bash
 admin@infix-12-34-56:/> configure
 admin@infix-12-34-56:/config/> edit interface eth0
 admin@infix-12-34-56:/config/interface/eth0/> set ipv4 <TAB>
       address     autoconf bind-ni-name      enabled
-	  forwarding  mtu      neighbor
+      forwarding  mtu      neighbor
 admin@infix-12-34-56:/config/interface/eth0/> set ipv4 address 192.168.2.200 prefix-length 24
 admin@infix-12-34-56:/config/interface/eth0/> show
 type ethernet;
@@ -62,7 +73,6 @@ ipv4 {
     prefix-length 24;
   }
 }
-ipv6
 admin@infix-12-34-56:/config/interface/eth0/> diff
 interfaces {
   interface eth0 {
@@ -85,56 +95,64 @@ lo              ethernet   UP          00:00:00:00:00:00
 admin@infix-12-34-56:/> copy running-config startup-config
 ```
 
-[Click here][3] for more details.
+Notice how TAB completion shows available options, `show` displays
+current config, and `diff` shows exactly what changed before you
+commit your changes with the `leave` command.
+
 </details>
 
-Infix can run on many different types of architectures and boards, much
-thanks to Linux and Buildroot.  Currently the focus is on 64-bit ARM
-devices, optionally with switching fabric supported by Linux switchdev.
-The [following boards](board/aarch64/README.md) are fully supported:
+> [Full CLI documentation →][3]
 
- - Marvell CN9130 CRB
- - Marvell EspressoBIN
- - Microchip SparX-5i PCB135 (eMMC)
- - NXP i.MX8MP EVK
- - Raspberry Pi 4B
- - NanoPi R2S
+## Get Started
 
-Additionally, StarFive VisionFive2, a RISC-V based two-port router, and
-an x86_64 build is also available.  The latter is primarily intended for
-development and testing, but can also be used for evaluation and demo
-purposes.  For more information, see: [Infix in Virtual
-Environments](doc/virtual.md).
+Get [pre-built images][5] for your hardware.  Use the CLI, web
+interface, or standard NETCONF/RESTCONF tools, e.g., `curl`.  Add
+containers for any custom functionality you need.
 
-> See the [GitHub Releases](https://github.com/kernelkit/infix/releases)
-> page for our pre-built images.  The *[Latest Build][]* has bleeding
-> edge images, if possible we recommend using a versioned release.
->
-> For *customer specific builds* of Infix, see your product repository.
+### Supported Platforms
 
+- **Raspberry Pi 4B** - Perfect for home labs, learning, and prototyping
+- **NanoPi R2S** - Compact dual-port router in a tiny package  
+- **x86_64** - Run in VMs or on mini PCs for development and testing
+- **Marvell CN9130 CRB, EspressoBIN** - High-performance ARM platforms
+- **Microchip SparX-5i, NXP i.MX8MP EVK** - Enterprise switching capabilities
+- **StarFive VisionFive2** - RISC-V architecture support
 
-----
+*Why start with Raspberry Pi?* It's affordable, widely available, has
+built-in WiFi + Ethernet, and runs the exact same Infix OS you'd deploy
+in production. Perfect for learning, prototyping, or even small-scale
+deployments.
+
+> 📖 **[Complete documentation][4]** • 💬 **[Join our Discord][discord-url]**
+
+## Technical Details
+
+Built on proven open-source foundations ([Buildroot][1] + [sysrepo][2])
+for reliability you can trust:
+
+- **Immutable OS**: Read-only filesystem, atomic updates, instant rollback
+- **YANG Configuration**: Industry-standard models with auto-generated tooling
+- **Hardware Acceleration**: Linux switchdev support for wire-speed packet processing
+- **Container Integration**: Docker support with flexible network and hardware access
+- **Memory Efficient**: Runs comfortably on devices with as little as 256 MB RAM
+
+Perfect for everything from resource-constrained edge devices to
+high-throughput network appliances.
+
+> Check the *[Latest Build][]* for bleeding-edge features.
+
+---
 
 <div align="center">
-  <a href="https://github.com/wires-se"><img src="https://raw.githubusercontent.com/wires-se/.github/main/profile/logo.png" width=300></a>
-  <br />Infix development is sponsored by <a href="https://wires.se">Wires<a>
+  <a href="https://github.com/wires-se"><img src="https://raw.githubusercontent.com/wires-se/.github/main/profile/play.svg" width=300></a>
+  <br />Infix development is sponsored by <a href="https://wires.se">Wires</a>
 </div>
-
-----
-
-[^1]: An immutable operating system is one with read-only file systems,
-    atomic updates, rollbacks, declarative configuration, and workload
-    isolation.  All to improve reliability, scalability, and security.
-    For more information, see this [survey paper][5] and [article][6].
-[^2]: Partial RESTCONF support, features like HTTP PATCH, OPTIONS, HEAD,
-    and copying between datastores are still missing.
 
 [1]: https://buildroot.org/ "Buildroot Homepage"
 [2]: https://www.sysrepo.org/ "Sysrepo Homepage"
-[3]: doc/cli/introduction.md
-[4]: https://kernelkit.org/infix/ "Infix User's Guide"
-[5]: https://ceur-ws.org/Vol-3386/paper9.pdf "Immutable Operating Systems: A Survey"
-[6]: https://www.zdnet.com/article/what-is-immutable-linux-heres-why-youd-run-an-immutable-linux-distro/ "Why you should run an immutable Linux distro"
+[3]: https://kernelkit.org/infix/latest/cli/introduction/
+[4]: https://kernelkit.org/infix/
+[5]: https://github.com/kernelkit/infix/releases
 [Latest Build]:    https://github.com/kernelkit/infix/releases/tag/latest "Latest build"
 [License]:         https://en.wikipedia.org/wiki/GPL_license
 [License Badge]:   https://img.shields.io/badge/License-GPL%20v2-blue.svg

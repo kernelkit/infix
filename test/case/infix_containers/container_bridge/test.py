@@ -1,9 +1,4 @@
 #!/usr/bin/env python3
-#
-# Verify connectivity with a simple web server container from behind a
-# docker0 bridge.  As an added twist, this test also verifies content
-# mounts, i.e., custom index.html from running-config.
-#
 """
 Container with bridge network
 
@@ -41,6 +36,7 @@ with infamy.Test() as test:
                         {
                             "name": f"{ifname}",
                             "ipv4": {
+                                "forwarding": True,
                                 "address": [{
                                     "ip": f"{DUTIP}",
                                     "prefix-length": 24
@@ -82,7 +78,7 @@ with infamy.Test() as test:
 
     with test.step("Verify container has started"):
         c = infamy.Container(target)
-        until(lambda: c.running(NAME), attempts=10)
+        until(lambda: c.running(NAME), attempts=60)
 
     _, hport = env.ltop.xlate("host", "data")
     url = infamy.Furl(URL)

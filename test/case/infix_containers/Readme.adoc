@@ -4,6 +4,8 @@
 Verifies Infix Docker container support:
 
  - Basic web server container running in host network mode
+ - Container enable/disable functionality via configuration
+ - Container environment variable configuration and access
  - Common setup with a docker0 bridge, automatic VETH pairs to container(s)
  - Connecting a container with a VETH pair to a standard Linux bridge
  - Assigning a physical Ethernet interface to a container
@@ -13,6 +15,10 @@ Verifies Infix Docker container support:
 <<<
 
 include::container_basic/Readme.adoc[]
+
+include::container_enabled/Readme.adoc[]
+
+include::container_environment/Readme.adoc[]
 
 include::container_bridge/Readme.adoc[]
 

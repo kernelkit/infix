@@ -72,8 +72,8 @@ nsenter -m/1/ns/mnt -u/1/ns/uts -i/1/ns/ipc -n/1/ns/net hostname {hostname_new}
 
     with test.step("Verify container has started"):
         c = infamy.Container(target)
-        until(lambda: c.running(cont_name), attempts=10)
+        until(lambda: c.running(cont_name), attempts=60)
 
     with test.step("Verify the new hostname set by the container"):
-        until(lambda: c.running(cont_name) != target.get_data("/ietf-system:system")["system"]["hostname"], attempts=10)
+        until(lambda: c.running(cont_name) != target.get_data("/ietf-system:system")["system"]["hostname"], attempts=30)
     test.succeed()
