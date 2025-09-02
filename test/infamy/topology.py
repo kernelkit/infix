@@ -131,6 +131,13 @@ class Topology:
 
         return qstrip(password) if password is not None else "admin"
 
+    def get_expected_boot(self, node):
+        n = self.dotg.get_node(node)
+        b = n[0] if n else {}
+        boot = b.get("expected_boot")
+
+        return _qstrip(boot)
+
     def get_link(self, src, dst, flt=lambda _: True):
         es = self.g.get_edge_data(src, dst)
         for e in es.values():
@@ -149,7 +156,6 @@ class Topology:
 
     def get_infixen(self):
         return self.get_nodes(lambda _, attrs: compatible(attrs, {"requires": {"infix"}}))
-
 
     def get_attr(self, name, default=None):
         return _qstrip(self.dotg.get_attributes().get(name, default))
