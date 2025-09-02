@@ -15,21 +15,21 @@ jobs:
     uses: ./.github/workflows/build.yml
     with:
       name: "infix"
-      target: ${{ (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'ci:main')) && 'x86_64' || 'x86_64_minimal' }}
+      target: ${{ github.event_name == 'pull_request' && !contains(github.event.pull_request.labels.*.name, 'ci:main') && 'x86_64_minimal' || 'x86_64' }}
 
   build-aarch64:
     if: startsWith(github.repository, 'kernelkit/')
     uses: ./.github/workflows/build.yml
     with:
       name: "infix"
-      target: ${{ (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'ci:main')) && 'aarch64' || 'aarch64_minimal' }}
+      target: ${{ github.event_name == 'pull_request' && !contains(github.event.pull_request.labels.*.name, 'ci:main') && 'aarch64_minimal' || 'aarch64' }}
 
   test-run-x86_64:
     if: startsWith(github.repository, 'kernelkit/')
     needs: build-x86_64
     uses: ./.github/workflows/test.yml
     with:
-      target: ${{ (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'ci:main')) && 'x86_64' || 'x86_64_minimal' }}
+      target: ${{ github.event_name == 'pull_request' && !contains(github.event.pull_request.labels.*.name, 'ci:main') && 'x86_64_minimal' || 'x86_64' }}
       name: "infix"
 
   test-publish-x86_64:
