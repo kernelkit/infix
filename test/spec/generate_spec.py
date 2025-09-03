@@ -45,27 +45,26 @@ class TestStepVisitor(ast.NodeVisitor):
 
     """
     def __init__(self):
-        self.test_steps=[]
         self.name = ""
         self.description = ""
+        self.test_steps = []
 
     def visit_Module(self, node):
         """Extract docstring from a test."""
         docstring = ast.get_docstring(node)
         if docstring:
             lines = docstring.splitlines()
-
-            newline_parsed=False
+            newline_parsed = False
 
             for line in lines:
                 if self.name == "":
-                    self.name=line.strip()
+                    self.name = line.strip()
                 elif newline_parsed is False and line == "":
                     newline_parsed = True
-                    continue # Skip mandatory newline
+                    continue  # Skip mandatory newline
                 else:
-                    self.description=f"{self.description}\n{line}"
-            self.description=self.description.strip()
+                    self.description = f"{self.description}\n{line}"
+            self.description = self.description.strip()
         self.generic_visit(node)
 
     def _rebuild_fstring(self, node: ast.JoinedStr) -> str:
@@ -95,14 +94,6 @@ class TestStepVisitor(ast.NodeVisitor):
                         self.test_steps.append(fstring_value)
         self.generic_visit(node)  # Continue visiting other nodes
 
-def replace_in_steps(steps, variables):
-    result = []
-    for step in steps:
-        new_step = step
-        for k, v in variables.items():
-            new_step = new_step.replace("{" + k + "}", v)
-        result.append(new_step)
-    return result
 
 class TestCase:
     """All test specifcation resources for a test case"""
@@ -141,6 +132,15 @@ class TestCase:
             except UnboundLocalError:
                 print(f"Failed cleaning {svg_file}, empty or missing.")
 
+    def __replace_in(self, steps, variables):
+        result = []
+        for step in steps:
+            new_step = step
+            for k, v in variables.items():
+                new_step = new_step.replace("{" + k + "}", v)
+            result.append(new_step)
+        return result
+
     def generate_specification(self, name, case_path, spec_path, variables):
         """Generate a ASCIIDOC specification for the test case"""
         with open(case_path, 'r', encoding='utf-8') as file:
@@ -151,14 +151,17 @@ class TestCase:
         visitor.visit(parsed_script)
         description = visitor.description if visitor.description != "" else "Undefined"
         test_steps = visitor.test_steps
+
         if variables is not None:
             for k, v in variables.items():
                 if "{" + k + "}" in description:
                     description = description.replace("{" + k + "}", v)
 
-                test_steps=replace_in_steps(test_steps, variables)
+                test_steps = self.__replace_in(test_steps, variables)
+
         if name is None:
             name = visitor.name
+
         self.generate_topology()
         description = replace_image_tag(description, self.test_dir)
         with open(spec_path, "w") as spec:
@@ -187,7 +190,7 @@ def parse_suite(directory, root, suitefile):
     test_spec = None
     readme = None
 
-    with open(suitefile, "r") as f:
+    with open(suitefile, "r", encoding='utf-8') as f:
         data = yaml.safe_load(f)
     for entry in data:
         if entry.get("suite"):
@@ -204,7 +207,7 @@ def parse_suite(directory, root, suitefile):
                 test_title = entry["infamy"]["title"]
             path = os.path.dirname(entry["case"])
             if readme is None:
-                readme = open(f"{directory}/{path}/Readme.adoc.tmp", "w")
+                readme = open(f"{directory}/{path}/Readme.adoc.tmp", "w", encoding='utf-8')
             test_case_id = entry["name"]
 
             if "opts" in entry:
