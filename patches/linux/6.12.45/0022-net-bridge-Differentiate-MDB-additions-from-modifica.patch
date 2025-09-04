@@ -1,4 +1,4 @@
-From 778143529c0df2eeada5e2c682156d62103b92bc Mon Sep 17 00:00:00 2001
+From a1f922b3646af126da825a2dd0ba32d73abefd1c Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Thu, 16 May 2024 14:51:54 +0200
 Subject: [PATCH 22/30] net: bridge: Differentiate MDB additions from
