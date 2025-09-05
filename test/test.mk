@@ -14,8 +14,7 @@ mode-qeneth := -q $(test-dir)/virt/quad
 mode-host   := -t $(or $(TOPOLOGY),/etc/infamy.dot)
 mode-run    := -t $(BINARIES_DIR)/qemu.dot
 mode        := $(mode-$(TEST_MODE))
-
-INFIX_IMAGE_ID := $(call qstrip,$(INFIX_IMAGE_ID))
+INFIX_IMAGE_ID   := $(call qstrip,$(INFIX_IMAGE_ID))
 binaries-$(ARCH) := $(addprefix $(INFIX_IMAGE_ID),.img -disk.qcow2)
 pkg-$(ARCH)      := -p $(O)/images/$(addprefix $(INFIX_IMAGE_ID),.pkg)
 binaries-x86_64  += OVMF.fd
