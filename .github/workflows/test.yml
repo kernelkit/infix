@@ -39,7 +39,7 @@ env:
 jobs:
   test:
     name: Regression Test ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.name || inputs.name }} ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.target || inputs.target }}
-    runs-on: [ self-hosted, regression ]
+    runs-on: [self-hosted, regression]
     steps:
       - name: Checkout infix repo
         uses: actions/checkout@v4
@@ -87,7 +87,7 @@ jobs:
           fi
           make test
 
-      - name: Publish Test Result for ${{ env.TARGET }} 
+      - name: Publish Test Result for ${{ env.TARGET }}
         # Ensure this runs even if Regression Test fails
         if: always()
         run: cat $TEST_PATH/.log/last/result-gh.md >> $GITHUB_STEP_SUMMARY
@@ -96,15 +96,10 @@ jobs:
         # Ensure this runs even if Regression Test fails
         if: always()
         run: |
-          asciidoctor-pdf \
-          --theme $TEST_PATH/9pm/report/theme.yml \
-          -a pdf-fontsdir=$TEST_PATH/9pm/report/fonts \
-          $TEST_PATH/.log/last/report.adoc \
-          -o $TEST_PATH/.log/last/report.pdf
+          make test-dir="$(pwd)/$TEST_PATH" test-report
 
       - name: Upload Test Report as Artifact
         uses: actions/upload-artifact@v4
         with:
           name: test-report
-          path: ${{ env.TEST_PATH }}/.log/last/report.pdf
-
+          path: output/images/test-report.pdf

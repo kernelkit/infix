@@ -1,9 +1,10 @@
 base-dir           := $(lastword $(subst :, ,$(BR2_EXTERNAL)))
-test-dir           := $(BR2_EXTERNAL_INFIX_PATH)/test
+test-dir           ?= $(BR2_EXTERNAL_INFIX_PATH)/test
 ninepm             := $(BR2_EXTERNAL_INFIX_PATH)/test/9pm/9pm.py
+NINEPM_PROJ_CONF   ?= $(BR2_EXTERNAL_INFIX_PATH)/test/9pm-proj.yaml
 spec-dir           := $(test-dir)/spec
-test-specification := $(O)/images/test-specification.pdf
-
+test-specification := $(BINARIES_DIR)/test-specification.pdf
+test-report        := $(BINARIES_DIR)/test-report.pdf
 UNIT_TESTS         ?= $(test-dir)/case/all-repo.yaml $(test-dir)/case/all-unit.yaml
 TESTS              ?= $(test-dir)/case/all.yaml
 
@@ -33,9 +34,18 @@ test-sh:
 
 test-spec:
 	@esc_infix_name="$(echo $(INFIX_NAME) | sed 's/\//\\\//g')"; \
-	sed 's/{REPLACE}/$(subst ",,$(esc_infix_name)) $(INFIX_VERSION)/'  $(spec-dir)/Readme.adoc.in > $(spec-dir)/Readme.adoc
+	sed 's/{REPLACE}/$(subst ",,$(esc_infix_name)) $(INFIX_VERSION)/' \
+		$(spec-dir)/Readme.adoc.in > $(spec-dir)/Readme.adoc
 	@$(spec-dir)/generate_spec.py -s $(test-dir)/case/all.yaml -r $(BR2_EXTERNAL_INFIX_PATH)
-	@asciidoctor-pdf --failure-level INFO --theme $(spec-dir)/theme.yml -a pdf-fontsdir=$(spec-dir)/fonts -o $(test-specification) $(spec-dir)/Readme.adoc
+	@asciidoctor-pdf --failure-level INFO --theme $(spec-dir)/theme.yml \
+	 	-a pdf-fontsdir=$(spec-dir)/fonts \
+	 	-o $(test-specification) $(spec-dir)/Readme.adoc
+
+test-report:
+	asciidoctor-pdf --theme $(spec-dir)/theme.yml \
+		-a logo="image:$(LOGO)" \
+		-a pdf-fontsdir=$(spec-dir)/fonts \
+		-o $(test-report) $(test-dir)/.log/last/report.adoc
 
 # Unit tests run with random (-r) hostname and container name to
 # prevent race conditions when running in CI environments.
