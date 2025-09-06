@@ -1,3 +1,5 @@
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/infix_dhcp/client_basic]
+
 === DHCP Basic
 ==== Description
 This is a very basic DHCP test that requests an IPv4 lease
@@ -5,21 +7,10 @@ from a DHCP server and checks that the lease is set on the
 interface.
 
 ==== Topology
-ifdef::topdoc[]
-image::{topdoc}../../test/case/infix_dhcp/client_basic/topology.svg[DHCP Basic topology]
-endif::topdoc[]
-ifndef::topdoc[]
-ifdef::testgroup[]
-image::client_basic/topology.svg[DHCP Basic topology]
-endif::testgroup[]
-ifndef::testgroup[]
-image::topology.svg[DHCP Basic topology]
-endif::testgroup[]
-endif::topdoc[]
-==== Test sequence
+image::topology.svg[DHCP Basic topology, align=center, scaledwidth=75%]
+
+==== Sequence
 . Initialize
 . Verify client lease for 10.0.0.42
 
-
-<<<
 
