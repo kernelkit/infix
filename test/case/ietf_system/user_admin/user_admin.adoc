@@ -1,21 +1,14 @@
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/ietf_system/user_admin]
+
 === Add admin user
 ==== Description
 Test that a non-admin user is not an admin in Linux, and
 check that it when added as admin it is also the case in Linux.
 
 ==== Topology
-ifdef::topdoc[]
-image::{topdoc}../../test/case/ietf_system/user_admin/topology.svg[Add admin user topology]
-endif::topdoc[]
-ifndef::topdoc[]
-ifdef::testgroup[]
-image::user_admin/topology.svg[Add admin user topology]
-endif::testgroup[]
-ifndef::testgroup[]
-image::topology.svg[Add admin user topology]
-endif::testgroup[]
-endif::topdoc[]
-==== Test sequence
+image::topology.svg[Add admin user topology, align=center, scaledwidth=75%]
+
+==== Sequence
 . Set up topology and attach to target DUT
 . Add new user 'jacky' with no NACM access
 . Verify regular user jacky exists
@@ -28,6 +21,4 @@ endif::topdoc[]
 . Verify user jacky exists and has new password
 . Verify user jacky can log in with SSH
 
-
-<<<
 

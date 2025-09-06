@@ -1,3 +1,5 @@
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/infix_dhcp/server_basic]
+
 === DHCP Server Basic
 ==== Description
 Verify basic DHCP server functionality.  The server is set up to only
@@ -7,18 +9,9 @@ other options are sent by checking, e.g., that the client has not set up
 a default route to the server.
 
 ==== Topology
-ifdef::topdoc[]
-image::{topdoc}../../test/case/infix_dhcp/server_basic/topology.svg[DHCP Server Basic topology]
-endif::topdoc[]
-ifndef::topdoc[]
-ifdef::testgroup[]
-image::server_basic/topology.svg[DHCP Server Basic topology]
-endif::testgroup[]
-ifndef::testgroup[]
-image::topology.svg[DHCP Server Basic topology]
-endif::testgroup[]
-endif::topdoc[]
-==== Test sequence
+image::topology.svg[DHCP Server Basic topology, align=center, scaledwidth=75%]
+
+==== Sequence
 . Set up topology and attach to client and server DUTs
 . Configure DHCP server and client
 . Verify DHCP client's original hostname
@@ -26,6 +19,4 @@ endif::topdoc[]
 . Verify DHCP client's new hostname
 . Verify DHCP client has no default route
 
-
-<<<
 

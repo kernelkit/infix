@@ -12,32 +12,6 @@ from pathlib import Path
 import graphviz
 
 
-def replace_image_tag(text, test_dir):
-    """
-    Convert images added in the description and replace with the required ifdefs to work
-    generating the test specifcation as well.
-    """
-
-    pattern = r"image::(?P<image_name>\S+)\[(?P<label>[^\]]*)\]"
-
-    def repl(match):
-        image_name = match.group("image_name")
-        label = match.group("label")
-
-        return f"""ifdef::topdoc[]
-image::{{topdoc}}../../{test_dir}/{image_name}[{label}]
-endif::topdoc[]
-ifndef::topdoc[]
-ifdef::testgroup[]
-image::{'/'.join(Path(test_dir).parts[3:])}/{image_name}[{label}]
-endif::testgroup[]
-ifndef::testgroup[]
-image::{image_name}[{label}]
-endif::testgroup[]
-endif::topdoc[]"""
-
-    return re.sub(pattern, repl, text)
-
 class TestStepVisitor(ast.NodeVisitor):
     """
     A custom test step visitor to grab the test description (docstring)
@@ -163,32 +137,27 @@ class TestCase:
             name = visitor.name
 
         self.generate_topology()
-        description = replace_image_tag(description, self.test_dir)
-        with open(spec_path, "w") as spec:
-            spec.write(f"=== {name}\n")
+
+        with open(spec_path, "w", encoding='utf-8') as spec:
+            # When included in another document, e.g., the test-report.pdf,
+            # AsciiDoc needs to know where iamges are located.  For other
+            # use-cases, e.g., browsing in GitHub '.' is implied.
+            spec.write(f"ifdef::topdoc[:imagesdir: {{topdoc}}../../{self.test_dir}]\n")
+            spec.write(f"\n=== {name}\n")
             spec.write("==== Description\n")
             spec.write(description + "\n\n")
             spec.write("==== Topology\n")
-            spec.write("ifdef::topdoc[]\n")
-            spec.write(f"image::{{topdoc}}../../{self.test_dir}/topology.svg[{name} topology]\n")
-            spec.write("endif::topdoc[]\n")
-            spec.write("ifndef::topdoc[]\n")
-            spec.write("ifdef::testgroup[]\n")
-            spec.write(f"image::{Path(*self.test_dir.parts[3:])}/topology.svg[{name} topology]\n")
-            spec.write("endif::testgroup[]\n")
-            spec.write("ifndef::testgroup[]\n")
-            spec.write(f"image::topology.svg[{name} topology]\n")
-            spec.write("endif::testgroup[]\n")
-            spec.write("endif::topdoc[]\n")
-            spec.write("==== Test sequence\n")
+            spec.write(f"image::topology.svg[{name} topology, align=center, scaledwidth=75%]\n\n")
+            spec.write("==== Sequence\n")
             spec.writelines([f". {step}\n" for step in test_steps])
-            spec.write("\n\n<<<\n\n")  # need empty lines to pagebreak
+            spec.write("\n\n")
 
 
 def parse_suite(directory, root, suitefile):
     """Parse 9pm .yaml suite file"""
     test_spec = None
     readme = None
+    first_test = True
 
     with open(suitefile, "r", encoding='utf-8') as f:
         data = yaml.safe_load(f)
@@ -217,7 +186,12 @@ def parse_suite(directory, root, suitefile):
             test_spec = f"{directory}/{path}/{test_case_id}.adoc"
             test_case = TestCase(f"{directory}/{path}", root)
             test_case.generate_specification(test_title, test_file, test_spec, variables)
-            readme.write(f"include::{path}{test_case_id}.adoc[]\n\n")
+            if first_test:
+                readme.write(f"include::{path}{test_case_id}.adoc[]\n\n")
+                first_test = False
+            else:
+                readme.write(f"<<<\n\n")  # Page break before subsequent tests
+                readme.write(f"include::{path}{test_case_id}.adoc[]\n\n")
             if path != "":
                 lnk = f"{directory}/{path}/Readme.adoc"
                 readme.close()

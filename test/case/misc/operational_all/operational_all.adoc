@@ -1,24 +1,15 @@
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/misc/operational_all]
+
 === Get operational
 ==== Description
 Basic test just to get operational from test-config without errors.
 
 ==== Topology
-ifdef::topdoc[]
-image::{topdoc}../../test/case/misc/operational_all/topology.svg[Get operational topology]
-endif::topdoc[]
-ifndef::topdoc[]
-ifdef::testgroup[]
-image::operational_all/topology.svg[Get operational topology]
-endif::testgroup[]
-ifndef::testgroup[]
-image::topology.svg[Get operational topology]
-endif::testgroup[]
-endif::topdoc[]
-==== Test sequence
+image::topology.svg[Get operational topology, align=center, scaledwidth=75%]
+
+==== Sequence
 . Set up topology and attach to target DUT
 . Copy test-config to running configuration
 . Get all Operational data from 'target', verify there are no errors
 
-
-<<<
 

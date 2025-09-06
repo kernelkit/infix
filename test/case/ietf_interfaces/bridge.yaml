@@ -15,6 +15,9 @@
 - name: bridge_basic
   case: bridge_basic/test.py
 
+- name: dual_bridge
+  case: dual_bridge/test.py
+
 - name: bridge_veth
   case: bridge_veth/test.py
 

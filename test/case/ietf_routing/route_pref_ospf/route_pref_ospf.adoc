@@ -1,3 +1,5 @@
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/ietf_routing/route_pref_ospf]
+
 === Route preference: OSPF vs Static
 ==== Description
 This test configures a device with both an OSPF-acquired route on a
@@ -9,18 +11,9 @@ Initially, the device should prefer the OSPF route; if the OSPF route
 becomes unavailable, the static route should take over.
 
 ==== Topology
-ifdef::topdoc[]
-image::{topdoc}../../test/case/ietf_routing/route_pref_ospf/topology.svg[Route preference: OSPF vs Static topology]
-endif::topdoc[]
-ifndef::topdoc[]
-ifdef::testgroup[]
-image::route_pref_ospf/topology.svg[Route preference: OSPF vs Static topology]
-endif::testgroup[]
-ifndef::testgroup[]
-image::topology.svg[Route preference: OSPF vs Static topology]
-endif::testgroup[]
-endif::topdoc[]
-==== Test sequence
+image::topology.svg[Route preference: OSPF vs Static topology, align=center, scaledwidth=75%]
+
+==== Sequence
 . Set up topology and attach to target DUTs
 . Set up TPMR between R1ospf and R2ospf
 . Configure targets
@@ -30,6 +23,4 @@ endif::topdoc[]
 . Simulate OSPF route loss by blocking OSPF interface
 . Verify connectivity via static route after OSPF failover
 
-
-<<<
 

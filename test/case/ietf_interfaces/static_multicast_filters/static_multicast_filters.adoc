@@ -1,3 +1,5 @@
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/ietf_interfaces/static_multicast_filters]
+
 === Static multicast filters
 ==== Description
 Verify that static multicast filters work (remember that snooping needs to
@@ -19,18 +21,9 @@ enabled when using static multicast filters)
 ....
 
 ==== Topology
-ifdef::topdoc[]
-image::{topdoc}../../test/case/ietf_interfaces/static_multicast_filters/topology.svg[Static multicast filters topology]
-endif::topdoc[]
-ifndef::topdoc[]
-ifdef::testgroup[]
-image::static_multicast_filters/topology.svg[Static multicast filters topology]
-endif::testgroup[]
-ifndef::testgroup[]
-image::topology.svg[Static multicast filters topology]
-endif::testgroup[]
-endif::topdoc[]
-==== Test sequence
+image::topology.svg[Static multicast filters topology, align=center, scaledwidth=75%]
+
+==== Sequence
 . Set up topology and attach to target DUTs
 . Configure device without static filter
 . Start multicast sender on host:data1, group 224.1.1.1
@@ -44,6 +37,4 @@ endif::topdoc[]
 . Verify that the MAC group is still forwarded to host:data2
 . Verify that the MAC group is no longer forwarded to host:data3
 
-
-<<<
 

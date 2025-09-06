@@ -1,3 +1,5 @@
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/infix_dhcp/server_host]
+
 === DHCP Server Static Host
 ==== Description
 Verify DHCP server can hand out static host leases based on client-id,
@@ -5,18 +7,9 @@ both hexadecimal and a very long string, ensuring no pool address is
 handed out instead.
 
 ==== Topology
-ifdef::topdoc[]
-image::{topdoc}../../test/case/infix_dhcp/server_host/topology.svg[DHCP Server Static Host topology]
-endif::topdoc[]
-ifndef::topdoc[]
-ifdef::testgroup[]
-image::server_host/topology.svg[DHCP Server Static Host topology]
-endif::testgroup[]
-ifndef::testgroup[]
-image::topology.svg[DHCP Server Static Host topology]
-endif::testgroup[]
-endif::topdoc[]
-==== Test sequence
+image::topology.svg[DHCP Server Static Host topology, align=center, scaledwidth=75%]
+
+==== Sequence
 . Set up topology and attach to client and server DUTs
 . Configure DHCP client and server DUTs
 . Verify DHCP client1 static lease
@@ -26,6 +19,4 @@ endif::topdoc[]
 . Verify client2 hostname has changed
 . Verify DHCP client2 has default gateway
 
-
-<<<
 

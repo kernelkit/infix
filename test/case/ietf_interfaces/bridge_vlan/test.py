@@ -6,7 +6,7 @@ Verify VLAN filtering bridge, with a VLAN trunk to a neighboring device,
 which in turn untags one VLAN outisde a non-VLAN filtering bridge.
 
 .Logical network setup
-image::bridge-vlan.svg[]
+image::bridge-vlan.svg[align=center, scaledwidth=75%]
 
 """
 import infamy

@@ -1,16 +1,15 @@
 #!/usr/bin/env python3
-#
+"""Dual bridges on one device
 
-"""
-Dual bridges on one device
-
-Verify that it is possible to ping through a bridge to another bridge via VETH interfaces.
+Verify that it is possible to ping through a bridge to another bridge
+via a VETH pair connected to both.
 
 ....
  PING -->     br0             br1 10.0.0.2
              /   \\              /
 PC - target:data  veth0a - veth0b
 ....
+
 """
 import infamy
 
