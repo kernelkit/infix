@@ -1,12 +1,8 @@
 ---
-- name: gretap_bridged
+- name: GRETAP bridged with physical interface
   case: test.py
   opts: ["--type", "gretap"]
-  infamy:
-    title: GRETAP bridged with physical interface
 
-- name: vxlan_bridged
+- name: VXLAN bridged with physical interface
   case: test.py
   opts: ["--type", "vxlan"]
-  infamy:
-    title: VXLAN bridged with physical interface

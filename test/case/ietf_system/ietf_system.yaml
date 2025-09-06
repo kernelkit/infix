@@ -1,5 +1,5 @@
 ---
-- name: hostname
+- name: Set hostname
   case: hostname/test.py
 
 - name: add_delete_user
