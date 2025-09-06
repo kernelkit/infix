@@ -1,0 +1,132 @@
+diff --git a/cmd/Kconfig b/cmd/Kconfig
+index 1d7ddb4ed36..8572dc4353e 100644
+--- a/cmd/Kconfig
++++ b/cmd/Kconfig
+@@ -176,6 +176,20 @@ config CMD_CPU
+ 	  internal name) and clock frequency. Other information may be
+ 	  available depending on the CPU driver.
+ 
++config CMD_RPI_DISPLAY
++	bool "rpidisplay"
++	depends on ARCH_BCM283X
++	help
++	  Enable commands to detect Raspberry Pi 7" DSI display connection.
++
++	  This provides two commands:
++	  - rpidisplay: Shows detailed detection information
++	  - testrpidisplay: Silent test for use in boot scripts
++
++	  Detection is performed by querying the VideoCore GPU for the
++	  active display resolution. The official Raspberry Pi 7" DSI
++	  display uses 800x480 resolution.
++
+ config CMD_FWU_METADATA
+ 	bool "fwu metadata read"
+ 	depends on FWU_MULTI_BANK_UPDATE
+diff --git a/cmd/Makefile b/cmd/Makefile
+index d1f369deec0..033ea1312ed 100644
+--- a/cmd/Makefile
++++ b/cmd/Makefile
+@@ -48,6 +48,7 @@ obj-$(CONFIG_CMD_CLK) += clk.o
+ obj-$(CONFIG_CMD_CLS) += cls.o
+ obj-$(CONFIG_CMD_CONFIG) += config.o
+ obj-$(CONFIG_CMD_CONITRACE) += conitrace.o
++obj-$(CONFIG_CMD_RPI_DISPLAY) += rpi_display.o
+ obj-$(CONFIG_CMD_CONSOLE) += console.o
+ obj-$(CONFIG_CMD_CPU) += cpu.o
+ obj-$(CONFIG_CMD_DATE) += date.o
+@@ -201,7 +202,6 @@ obj-$(CONFIG_CMD_LZMADEC) += lzmadec.o
+ obj-$(CONFIG_CMD_UFS) += ufs.o
+ obj-$(CONFIG_CMD_USB) += usb.o disk.o
+ obj-$(CONFIG_CMD_VIDCONSOLE) += video.o
+-
+ obj-$(CONFIG_CMD_FASTBOOT) += fastboot.o
+ obj-$(CONFIG_CMD_FS_UUID) += fs_uuid.o
+ 
+diff --git a/cmd/rpi_display.c b/cmd/rpi_display.c
+new file mode 100644
+index 00000000000..07abdc08552
+--- /dev/null
++++ b/cmd/rpi_display.c
+@@ -0,0 +1,81 @@
++// SPDX-License-Identifier: GPL-2.0+
++/*
++ * Raspberry Pi 7" DSI Display Detection Command
++ * Detects if the official Raspberry Pi 7" DSI display is connected
++ */
++
++#include <command.h>
++#include <asm/arch/msg.h>
++
++static int do_rpi_display(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[])
++{
++	int width, height;
++	int ret;
++
++	printf("=== Raspberry Pi 7\" DSI Display Detection ===\n");
++
++	/* Use official VideoCore mailbox interface to get display resolution */
++	ret = bcm2835_get_video_size(&width, &height);
++	if (ret) {
++		printf("Failed to query VideoCore display size (ret=%d)\n", ret);
++		printf("Display Status: NOT DETECTED\n");
++		return 2;
++	}
++
++	printf("VideoCore reports display: %dx%d", width, height);
++
++	/* Official Raspberry Pi 7" DSI display is 800x480 */
++	if (width == 800 && height == 480) {
++		printf(" - RASPBERRY PI 7\" DSI DISPLAY DETECTED!\n");
++		printf("Display Status: CONNECTED\n");
++		return 0;
++	}
++	/* No resolution could indicate no display */
++	else if (width == 0 || height == 0) {
++		printf(" - No active display\n");
++		printf("Display Status: NOT DETECTED\n");
++		return 1;
++	}
++	else {
++		printf(" - Not Raspberry Pi DSI display (resolution %dx%d)\n", width, height);
++		printf("Display Status: NOT DETECTED\n");
++		return 1;
++	}
++}
++
++static int do_test_rpi_display(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[])
++{
++	int width, height;
++	int ret;
++
++	/* Silent test using VideoCore mailbox interface */
++	ret = bcm2835_get_video_size(&width, &height);
++	if (ret) {
++		return 2; /* Failed to query VideoCore */
++	}
++
++	/* Check for Raspberry Pi DSI display resolutions */
++	if ((width == 800 && height == 480)) {
++		return 0; /* DSI display found */
++	}
++
++	return 1; /* DSI display not found */
++}
++
++U_BOOT_CMD(
++	rpidisplay, 1, 1, do_rpi_display,
++	"detect Raspberry Pi DSI display",
++	"\n"
++	"Detects Raspberry Pi 7\" DSI display by checking resolution:\n"
++	"  - 800x480 = Official Raspberry Pi 7\" DSI display\n"
++	"Returns: 0=connected, 1=not detected, 2=no video"
++);
++
++U_BOOT_CMD(
++	testrpidisplay, 1, 1, do_test_rpi_display,
++	"silent test for Raspberry Pi DSI display",
++	"\n"
++	"Silent test for Raspberry Pi DSI display (for use in scripts):\n"
++	"Returns: 0=connected, 1=not detected, 2=no video\n"
++	"Usage: if testrpidisplay; then echo DSI found; fi"
++);
