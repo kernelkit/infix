@@ -1,7 +1,10 @@
 :testgroup:
 == ietf-hardware
 
-<<<
+Tests verifying IETF standard hardware monitoring and management:
+
+ - USB device detection and enumeration
+ - Multiple USB port management and device handling
 
 include::usb/Readme.adoc[]
 
