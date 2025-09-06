@@ -1,3 +1,5 @@
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/infix_services/ssh/ssh_server_config]
+
 === SSH server configuration
 ==== Description
 Test SSH server functionality with pre-defined key pair:
@@ -6,18 +8,9 @@ Test SSH server functionality with pre-defined key pair:
 3. Validate connectivity using static key pair.
 
 ==== Topology
-ifdef::topdoc[]
-image::{topdoc}../../test/case/infix_services/ssh/ssh_server_config/topology.svg[SSH server configuration topology]
-endif::topdoc[]
-ifndef::topdoc[]
-ifdef::testgroup[]
-image::ssh/ssh_server_config/topology.svg[SSH server configuration topology]
-endif::testgroup[]
-ifndef::testgroup[]
-image::topology.svg[SSH server configuration topology]
-endif::testgroup[]
-endif::topdoc[]
-==== Test sequence
+image::topology.svg[SSH server configuration topology, align=center, scaledwidth=75%]
+
+==== Sequence
 . Setup topology and attach to the target
 . Configure SSH server
 . Wait until SSH server is ready to accept connections
@@ -25,6 +18,4 @@ endif::topdoc[]
 . Verify it is not possible to access SSH on other IP address
 . Disable SSH server
 
-
-<<<
 

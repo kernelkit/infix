@@ -1,38 +1,19 @@
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/ietf_interfaces/bridge_vlan]
+
 === Bridge VLAN
 ==== Description
 Verify VLAN filtering bridge, with a VLAN trunk to a neighboring device,
 which in turn untags one VLAN outisde a non-VLAN filtering bridge.
 
 .Logical network setup
-ifdef::topdoc[]
-image::{topdoc}../../test/case/ietf_interfaces/bridge_vlan/bridge-vlan.svg[]
-endif::topdoc[]
-ifndef::topdoc[]
-ifdef::testgroup[]
-image::bridge_vlan/bridge-vlan.svg[]
-endif::testgroup[]
-ifndef::testgroup[]
-image::bridge-vlan.svg[]
-endif::testgroup[]
-endif::topdoc[]
+image::bridge-vlan.svg[align=center, scaledwidth=75%]
 
 ==== Topology
-ifdef::topdoc[]
-image::{topdoc}../../test/case/ietf_interfaces/bridge_vlan/topology.svg[Bridge VLAN topology]
-endif::topdoc[]
-ifndef::topdoc[]
-ifdef::testgroup[]
-image::bridge_vlan/topology.svg[Bridge VLAN topology]
-endif::testgroup[]
-ifndef::testgroup[]
-image::topology.svg[Bridge VLAN topology]
-endif::testgroup[]
-endif::topdoc[]
-==== Test sequence
+image::topology.svg[Bridge VLAN topology, align=center, scaledwidth=75%]
+
+==== Sequence
 . Set up topology and attach to target DUT
 . Configure DUTs
 . Verify ping from host:data to 10.0.0.2 and 10.0.0.3
 
-
-<<<
 

@@ -1,3 +1,5 @@
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/ietf_interfaces/igmp_vlan]
+
 === IGMP VLAN
 ==== Description
 Test tagged IGMP control traffic and that VLAN separation is respected for multicast
@@ -20,18 +22,9 @@ Test tagged IGMP control traffic and that VLAN separation is respected for multi
 ....
 
 ==== Topology
-ifdef::topdoc[]
-image::{topdoc}../../test/case/ietf_interfaces/igmp_vlan/topology.svg[IGMP VLAN topology]
-endif::topdoc[]
-ifndef::topdoc[]
-ifdef::testgroup[]
-image::igmp_vlan/topology.svg[IGMP VLAN topology]
-endif::testgroup[]
-ifndef::testgroup[]
-image::topology.svg[IGMP VLAN topology]
-endif::testgroup[]
-endif::topdoc[]
-==== Test sequence
+image::topology.svg[IGMP VLAN topology, align=center, scaledwidth=75%]
+
+==== Sequence
 . Set up topology and attach to target DUT
 . Configure device
 . Start multicast sender on host:data11, group 224.2.2.2
@@ -44,6 +37,4 @@ endif::topdoc[]
 . Verify group 224.2.2.2 is forwarded to host:data21
 . Verify group 224.1.1.1 is forwarded to host:data12
 
-
-<<<
 

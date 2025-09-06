@@ -1,3 +1,5 @@
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/infix_dhcp/server_subnets]
+
 === DHCP Server Multiple Subnets
 ==== Description
 Verify that the DHCP server is capble of acting on more than one subnet,
@@ -6,17 +8,7 @@ subnet, and host-specific options are honored and do not leak between
 subnets.
 
 .Internal network setup, client2 and client3 are on the same LAN
-ifdef::topdoc[]
-image::{topdoc}../../test/case/infix_dhcp/server_subnets/dhcp-subnets.svg[Internal networks]
-endif::topdoc[]
-ifndef::topdoc[]
-ifdef::testgroup[]
-image::server_subnets/dhcp-subnets.svg[Internal networks]
-endif::testgroup[]
-ifndef::testgroup[]
-image::dhcp-subnets.svg[Internal networks]
-endif::testgroup[]
-endif::topdoc[]
+image::dhcp-subnets.svg[align=center, scaledwidth=75%]
 
 To verify isolation of subnet settings, a few "decoys" are added to the
 configuration of each subnet.  These are then checked for on each of the
@@ -30,18 +22,9 @@ The test is concluded by the server trying to reach each client using
 ping of the hostname.
 
 ==== Topology
-ifdef::topdoc[]
-image::{topdoc}../../test/case/infix_dhcp/server_subnets/topology.svg[DHCP Server Multiple Subnets topology]
-endif::topdoc[]
-ifndef::topdoc[]
-ifdef::testgroup[]
-image::server_subnets/topology.svg[DHCP Server Multiple Subnets topology]
-endif::testgroup[]
-ifndef::testgroup[]
-image::topology.svg[DHCP Server Multiple Subnets topology]
-endif::testgroup[]
-endif::topdoc[]
-==== Test sequence
+image::topology.svg[DHCP Server Multiple Subnets topology, align=center, scaledwidth=75%]
+
+==== Sequence
 . Set up topology and attach to client and server DUTs
 . Configure DHCP server and clients
 . Verify DHCP client1 get correct lease
@@ -54,6 +37,4 @@ endif::topdoc[]
 . Verify DHCP client3 has default route via server
 . Verify DHCP client3 has correct DNS and NTP server(s)
 
-
-<<<
 

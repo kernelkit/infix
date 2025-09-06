@@ -1,3 +1,5 @@
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/infix_services/mdns/mdns_allow_deny]
+
 === mDNS allow/deny interfaces
 ==== Description
 Verify the mDNS responder interface allow/deny configuration.  Both
@@ -9,24 +11,13 @@ with three scenarios:
  3. Allow p1 and p3, deny p2 and p3, traffic only on p1
 
 ==== Topology
-ifdef::topdoc[]
-image::{topdoc}../../test/case/infix_services/mdns/mdns_allow_deny/topology.svg[mDNS allow/deny interfaces topology]
-endif::topdoc[]
-ifndef::topdoc[]
-ifdef::testgroup[]
-image::mdns/mdns_allow_deny/topology.svg[mDNS allow/deny interfaces topology]
-endif::testgroup[]
-ifndef::testgroup[]
-image::topology.svg[mDNS allow/deny interfaces topology]
-endif::testgroup[]
-endif::topdoc[]
-==== Test sequence
+image::topology.svg[mDNS allow/deny interfaces topology, align=center, scaledwidth=75%]
+
+==== Sequence
 . Set up topology and attach to target DUT
 . Configure device
 . Allow mDNS on a single interface: p2
 . Deny mDNS on a single interface: p2
 . Allow mDNS on p1, p3 deny on p2, p3
 
-
-<<<
 

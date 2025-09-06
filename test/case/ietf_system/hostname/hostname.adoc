@@ -1,3 +1,5 @@
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/ietf_system/hostname]
+
 === Set hostname
 ==== Description
 Verify that it is possible to change hostname both normal
@@ -9,18 +11,9 @@ where MAC is the last three bytes of the base MAC address.
 e.g. ix-01-01-01.
 
 ==== Topology
-ifdef::topdoc[]
-image::{topdoc}../../test/case/ietf_system/hostname/topology.svg[Set hostname topology]
-endif::topdoc[]
-ifndef::topdoc[]
-ifdef::testgroup[]
-image::hostname/topology.svg[Set hostname topology]
-endif::testgroup[]
-ifndef::testgroup[]
-image::topology.svg[Set hostname topology]
-endif::testgroup[]
-endif::topdoc[]
-==== Test sequence
+image::topology.svg[Set hostname topology, align=center, scaledwidth=75%]
+
+==== Sequence
 . Set up topology and attach to target DUT
 . Set hostname to 'h0stn4m3'
 . Verify new hostname 'h0stn4m3'
@@ -28,6 +21,4 @@ endif::topdoc[]
 . Verify hostname is  %h-%m in running configuration
 . Verify hostname format in operational
 
-
-<<<
 

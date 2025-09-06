@@ -1,3 +1,5 @@
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/ietf_interfaces/speed_duplex_copper]
+
 === Interface Speed Duplex (Copper)
 ==== Description
 Verify that the interface operates at the expected speed/duplex in two scenarios:
@@ -7,18 +9,9 @@ Verify that the interface operates at the expected speed/duplex in two scenarios
  to the highest common speed/duplex.
 
 ==== Topology
-ifdef::topdoc[]
-image::{topdoc}../../test/case/ietf_interfaces/speed_duplex_copper/topology.svg[Interface Speed Duplex (Copper) topology]
-endif::topdoc[]
-ifndef::topdoc[]
-ifdef::testgroup[]
-image::speed_duplex_copper/topology.svg[Interface Speed Duplex (Copper) topology]
-endif::testgroup[]
-ifndef::testgroup[]
-image::topology.svg[Interface Speed Duplex (Copper) topology]
-endif::testgroup[]
-endif::topdoc[]
-==== Test sequence
+image::topology.svg[Interface Speed Duplex (Copper) topology, align=center, scaledwidth=75%]
+
+==== Sequence
 . Set up topology and attach to target DUT
 . Enable target interface
 . Verify fixed 10/full
@@ -33,6 +26,4 @@ endif::topdoc[]
 . Verify auto-negotiation to 10/half + 10/full + 100/half
 . Verify auto-negotiation to 10/half + 10/full + 100/half + 100/full + 1000/full
 
-
-<<<
 

@@ -1,3 +1,5 @@
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/ietf_interfaces/vlan_qos]
+
 === VLAN Interface Ingress/Egress QoS
 ==== Description
 Inject different packets from the host and verify that the VLAN priority
@@ -15,18 +17,9 @@ correctly to PCP on egress ('from internal priority' or static '0..7').
     { "id": 6, "pcp": 6, "ingress": "from-pcp", "egress": "from-priority", "expect": 6 },
 
 ==== Topology
-ifdef::topdoc[]
-image::{topdoc}../../test/case/ietf_interfaces/vlan_qos/topology.svg[VLAN Interface Ingress/Egress QoS topology]
-endif::topdoc[]
-ifndef::topdoc[]
-ifdef::testgroup[]
-image::vlan_qos/topology.svg[VLAN Interface Ingress/Egress QoS topology]
-endif::testgroup[]
-ifndef::testgroup[]
-image::topology.svg[VLAN Interface Ingress/Egress QoS topology]
-endif::testgroup[]
-endif::topdoc[]
-==== Test sequence
+image::topology.svg[VLAN Interface Ingress/Egress QoS topology, align=center, scaledwidth=75%]
+
+==== Sequence
 . Set up topology and attach to target DUT
 . Apply initial config without priority mapping
 . Setup host VLANs
@@ -37,6 +30,4 @@ endif::topdoc[]
 . Verify that packet with id=5 egressed with pcp=5
 . Verify that packet with id=6 egressed with pcp=6
 
-
-<<<
 

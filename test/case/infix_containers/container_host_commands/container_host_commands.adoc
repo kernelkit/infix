@@ -1,3 +1,5 @@
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/infix_containers/container_host_commands]
+
 === Host Command Execution from Container
 ==== Description
 This test verifies that a container running on Infix can execute commands
@@ -5,18 +7,9 @@ that affect the host system. Specifically, it confirms that the container
 can change the hostname of the host.
 
 ==== Topology
-ifdef::topdoc[]
-image::{topdoc}../../test/case/infix_containers/container_host_commands/topology.svg[Host Command Execution from Container topology]
-endif::topdoc[]
-ifndef::topdoc[]
-ifdef::testgroup[]
-image::container_host_commands/topology.svg[Host Command Execution from Container topology]
-endif::testgroup[]
-ifndef::testgroup[]
-image::topology.svg[Host Command Execution from Container topology]
-endif::testgroup[]
-endif::topdoc[]
-==== Test sequence
+image::topology.svg[Host Command Execution from Container topology, align=center, scaledwidth=75%]
+
+==== Sequence
 . Set up topology and attach to target DUT
 . Set initial hostname
 . Verify initial hostname in operational
@@ -24,6 +17,4 @@ endif::topdoc[]
 . Verify container has started
 . Verify the new hostname set by the container
 
-
-<<<
 

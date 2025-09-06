@@ -7,7 +7,7 @@ subnet, and host-specific options are honored and do not leak between
 subnets.
 
 .Internal network setup, client2 and client3 are on the same LAN
-image::dhcp-subnets.svg[Internal networks]
+image::dhcp-subnets.svg[align=center, scaledwidth=75%]
 
 To verify isolation of subnet settings, a few "decoys" are added to the
 configuration of each subnet.  These are then checked for on each of the

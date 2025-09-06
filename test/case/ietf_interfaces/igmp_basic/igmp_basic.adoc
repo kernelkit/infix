@@ -1,3 +1,5 @@
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/ietf_interfaces/igmp_basic]
+
 === IGMP basic
 ==== Description
 Verify that all multicast get flooded when no IGMP join exists in the system and
@@ -17,18 +19,9 @@ the flooding stops as soon a join arrives
              HOST
 
 ==== Topology
-ifdef::topdoc[]
-image::{topdoc}../../test/case/ietf_interfaces/igmp_basic/topology.svg[IGMP basic topology]
-endif::topdoc[]
-ifndef::topdoc[]
-ifdef::testgroup[]
-image::igmp_basic/topology.svg[IGMP basic topology]
-endif::testgroup[]
-ifndef::testgroup[]
-image::topology.svg[IGMP basic topology]
-endif::testgroup[]
-endif::topdoc[]
-==== Test sequence
+image::topology.svg[IGMP basic topology, align=center, scaledwidth=75%]
+
+==== Sequence
 . Set up topology and attach to target DUTs
 . Configure device
 . Start multicast sender on host:data0, group 224.1.1.1
@@ -37,6 +30,4 @@ endif::topdoc[]
 . Verify group 224.1.1.1 is received on host:data2
 . Verify that the group 224.1.1.1 is no longer received on host:data3
 
-
-<<<
 

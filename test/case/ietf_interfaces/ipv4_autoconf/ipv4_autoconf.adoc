@@ -1,3 +1,5 @@
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/ietf_interfaces/ipv4_autoconf]
+
 === IPv4 link-local
 ==== Description
 Verifies that link-local (IPv4LL/ZeroConf) address assignment work as
@@ -5,18 +7,9 @@ expected.  Checks random address, the request-address setting, and
 address removal on autoconf disable.
 
 ==== Topology
-ifdef::topdoc[]
-image::{topdoc}../../test/case/ietf_interfaces/ipv4_autoconf/topology.svg[IPv4 link-local topology]
-endif::topdoc[]
-ifndef::topdoc[]
-ifdef::testgroup[]
-image::ipv4_autoconf/topology.svg[IPv4 link-local topology]
-endif::testgroup[]
-ifndef::testgroup[]
-image::topology.svg[IPv4 link-local topology]
-endif::testgroup[]
-endif::topdoc[]
-==== Test sequence
+image::topology.svg[IPv4 link-local topology, align=center, scaledwidth=75%]
+
+==== Sequence
 . Set up topology and attach to target DUT
 . Configure interface target:data with IPv4 ZeroConf IP
 . Verify link-local address exist on target:data
@@ -25,6 +18,4 @@ endif::topdoc[]
 . Remove IPv4 link-local addresses from target:data
 . Verify link-local addresses has been removed from target:data
 
-
-<<<
 

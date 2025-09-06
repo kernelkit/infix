@@ -1,3 +1,5 @@
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/ietf_interfaces/verify_all_interface_types]
+
 === Verify that all interface types can be created
 ==== Description
 This test verifies that all interface types can be created and also
@@ -15,18 +17,9 @@ slightly longer than sending the entire configuration at once.
 ....
 
 ==== Topology
-ifdef::topdoc[]
-image::{topdoc}../../test/case/ietf_interfaces/verify_all_interface_types/topology.svg[Verify that all interface types can be created topology]
-endif::topdoc[]
-ifndef::topdoc[]
-ifdef::testgroup[]
-image::verify_all_interface_types/topology.svg[Verify that all interface types can be created topology]
-endif::testgroup[]
-ifndef::testgroup[]
-image::topology.svg[Verify that all interface types can be created topology]
-endif::testgroup[]
-endif::topdoc[]
-==== Test sequence
+image::topology.svg[Verify that all interface types can be created topology, align=center, scaledwidth=75%]
+
+==== Sequence
 . Set up topology and attach to target DUT
 . Configure an empty bridge br-0
 . Configure bridge br-X and associated interfaces
@@ -43,6 +36,4 @@ endif::topdoc[]
 . Verify GRE interfaces 'gre-v4', 'gre-v6', 'gretap-v4' and 'gretap-v6'
 . Verify VxLAN interfaces 'vxlan-v4' and 'vxlan-v6'
 
-
-<<<
 

@@ -1,24 +1,15 @@
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/ietf_syslog/basic]
+
 === Syslog Basic
 ==== Description
 Add syslog actions to log to local files, then verify new log files have been created.
 
 ==== Topology
-ifdef::topdoc[]
-image::{topdoc}../../test/case/ietf_syslog/basic/topology.svg[Syslog Basic topology]
-endif::topdoc[]
-ifndef::topdoc[]
-ifdef::testgroup[]
-image::basic/topology.svg[Syslog Basic topology]
-endif::testgroup[]
-ifndef::testgroup[]
-image::topology.svg[Syslog Basic topology]
-endif::testgroup[]
-endif::topdoc[]
-==== Test sequence
+image::topology.svg[Syslog Basic topology, align=center, scaledwidth=75%]
+
+==== Sequence
 . Set up topology and attach to target DUT
 . Configure syslog on DUT to log to files '/log/bar.log' (absolute path) and 'foo' (non-absolute).
 . Verify log files /var/log/foo and /var/log/bar.log have been created
 
-
-<<<
 

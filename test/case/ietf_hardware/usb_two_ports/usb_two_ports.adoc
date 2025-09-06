@@ -1,27 +1,18 @@
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/ietf_hardware/usb_two_ports]
+
 === USB configuration with two USB ports
 ==== Description
 Test that the USB locked/unlocked configuration is consistent
 when having two USB ports.
 
 ==== Topology
-ifdef::topdoc[]
-image::{topdoc}../../test/case/ietf_hardware/usb_two_ports/topology.svg[USB configuration with two USB ports topology]
-endif::topdoc[]
-ifndef::topdoc[]
-ifdef::testgroup[]
-image::usb_two_ports/topology.svg[USB configuration with two USB ports topology]
-endif::testgroup[]
-ifndef::testgroup[]
-image::topology.svg[USB configuration with two USB ports topology]
-endif::testgroup[]
-endif::topdoc[]
-==== Test sequence
+image::topology.svg[USB configuration with two USB ports topology, align=center, scaledwidth=75%]
+
+==== Sequence
 . Set up topology and attach to target DUTs
 . Lock the first USB port and unlock the second USB port
 . Verify that the correct port is locked and the correct one is unlocked
 . Unlock the first USB port, and lock the second USB port
 . Verify that the correct port is locked and the correct one is unlocked
 
-
-<<<
 

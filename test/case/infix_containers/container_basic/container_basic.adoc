@@ -1,3 +1,5 @@
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/infix_containers/container_basic]
+
 === Container basic
 ==== Description
 Verify that a simple web server container can be configured to run
@@ -7,18 +9,9 @@ simple GET request for index.html and checking for a key phrase.
 The RPC actions: stop + start, and restart are also verified.
 
 ==== Topology
-ifdef::topdoc[]
-image::{topdoc}../../test/case/infix_containers/container_basic/topology.svg[Container basic topology]
-endif::topdoc[]
-ifndef::topdoc[]
-ifdef::testgroup[]
-image::container_basic/topology.svg[Container basic topology]
-endif::testgroup[]
-ifndef::testgroup[]
-image::topology.svg[Container basic topology]
-endif::testgroup[]
-endif::topdoc[]
-==== Test sequence
+image::topology.svg[Container basic topology, align=center, scaledwidth=75%]
+
+==== Sequence
 . Set up topology and attach to target DUT
 . Set hostname to 'container-host'
 . Create container 'web' from bundled OCI image
@@ -29,6 +22,4 @@ endif::topdoc[]
 . Restart container 'web'
 . Verify container 'web' is reachable on http://container-host.local:91
 
-
-<<<
 

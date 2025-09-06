@@ -1,4 +1,6 @@
 include::gretap_bridged.adoc[]
 
+<<<
+
 include::vxlan_bridged.adoc[]
 

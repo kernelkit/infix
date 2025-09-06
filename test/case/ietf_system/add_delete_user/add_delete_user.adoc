@@ -1,21 +1,14 @@
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/ietf_system/add_delete_user]
+
 === Add/delete user
 ==== Description
 Verify that it is possible to add/delete a user. The user password is hashed
 with yescrypt.
 
 ==== Topology
-ifdef::topdoc[]
-image::{topdoc}../../test/case/ietf_system/add_delete_user/topology.svg[Add/delete user topology]
-endif::topdoc[]
-ifndef::topdoc[]
-ifdef::testgroup[]
-image::add_delete_user/topology.svg[Add/delete user topology]
-endif::testgroup[]
-ifndef::testgroup[]
-image::topology.svg[Add/delete user topology]
-endif::testgroup[]
-endif::topdoc[]
-==== Test sequence
+image::topology.svg[Add/delete user topology, align=center, scaledwidth=75%]
+
+==== Sequence
 . Set up topology and attach to target DUT
 . Add new user 'newuser01' with password 'newuser01password'
 . Verify user 'newuser01' exist in operational
@@ -24,6 +17,4 @@ endif::topdoc[]
 . Verify erasure of user 'newuser01'
 . Verify that 'newuser01' is removed from /etc/passwd
 
-
-<<<
 

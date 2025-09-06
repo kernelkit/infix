@@ -1,3 +1,5 @@
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/ietf_routing/ospf_unnumbered_interface]
+
 === OSPF unnumbered interfaces
 ==== Description
 This test that a configuration expecting unnumbered interfaces
@@ -8,18 +10,9 @@ When this test pass, you can expect unnumbered interfaces, interface type
 configuration and passive to function
 
 ==== Topology
-ifdef::topdoc[]
-image::{topdoc}../../test/case/ietf_routing/ospf_unnumbered_interface/topology.svg[OSPF unnumbered interfaces topology]
-endif::topdoc[]
-ifndef::topdoc[]
-ifdef::testgroup[]
-image::ospf_unnumbered_interface/topology.svg[OSPF unnumbered interfaces topology]
-endif::testgroup[]
-ifndef::testgroup[]
-image::topology.svg[OSPF unnumbered interfaces topology]
-endif::testgroup[]
-endif::topdoc[]
-==== Test sequence
+image::topology.svg[OSPF unnumbered interfaces topology, align=center, scaledwidth=75%]
+
+==== Sequence
 . Set up topology and attach to target DUTs
 . Configure targets
 . Wait for OSPF routes
@@ -27,6 +20,4 @@ endif::topdoc[]
 . Verify there are no OSPF HELLO packets on PC:data
 . Test connectivity from PC:data to 192.168.200.1
 
-
-<<<
 

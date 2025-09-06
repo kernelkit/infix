@@ -1,3 +1,5 @@
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/ietf_routing/ospf_bfd]
+
 === OSPF BFD
 ==== Description
 Verify that a router running OSPF, with Bidirectional Forwarding
@@ -9,18 +11,9 @@ perspective, is made up of multiple physical links containing media
 converters without link fault forwarding.
 
 ==== Topology
-ifdef::topdoc[]
-image::{topdoc}../../test/case/ietf_routing/ospf_bfd/topology.svg[OSPF BFD topology]
-endif::topdoc[]
-ifndef::topdoc[]
-ifdef::testgroup[]
-image::ospf_bfd/topology.svg[OSPF BFD topology]
-endif::testgroup[]
-ifndef::testgroup[]
-image::topology.svg[OSPF BFD topology]
-endif::testgroup[]
-endif::topdoc[]
-==== Test sequence
+image::topology.svg[OSPF BFD topology, align=center, scaledwidth=75%]
+
+==== Sequence
 . Set up topology and attach to target DUTs
 . Setup TPMR between R1fast and R2fast
 . Configure R1 and R2
@@ -30,6 +23,4 @@ endif::topdoc[]
 . Disable forwarding between R1fast and R2fast to trigger fail-over
 . Verify connectivity from PC:src to PC:dst via slow link
 
-
-<<<
 

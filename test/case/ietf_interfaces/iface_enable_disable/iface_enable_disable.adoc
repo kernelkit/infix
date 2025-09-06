@@ -1,3 +1,5 @@
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/ietf_interfaces/iface_enable_disable]
+
 === Interface status
 ==== Description
 Verify interface status properly propagate changes when an interface
@@ -6,18 +8,9 @@ is disabled and then re-enabled.
 Both admin-status and oper-status are verified.
 
 ==== Topology
-ifdef::topdoc[]
-image::{topdoc}../../test/case/ietf_interfaces/iface_enable_disable/topology.svg[Interface status topology]
-endif::topdoc[]
-ifndef::topdoc[]
-ifdef::testgroup[]
-image::iface_enable_disable/topology.svg[Interface status topology]
-endif::testgroup[]
-ifndef::testgroup[]
-image::topology.svg[Interface status topology]
-endif::testgroup[]
-endif::topdoc[]
-==== Test sequence
+image::topology.svg[Interface status topology, align=center, scaledwidth=75%]
+
+==== Sequence
 . Set up topology and attach to target DUTs
 . Configure bridge and associated interfaces in target1
 . Disable interface in target2
@@ -26,6 +19,4 @@ endif::topdoc[]
 . Verify the interface is enabled
 . Verify it is possible to ping the interface
 
-
-<<<
 

@@ -1,3 +1,5 @@
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/ietf_interfaces/veth_delete]
+
 === Verify that VETH pairs can be deleted
 ==== Description
 ```
@@ -9,18 +11,9 @@ Each test step to create, add address, or delete an interace is distinct
 from any other step.  This to trigger a new configuration "generation".
 
 ==== Topology
-ifdef::topdoc[]
-image::{topdoc}../../test/case/ietf_interfaces/veth_delete/topology.svg[Verify that VETH pairs can be deleted topology]
-endif::topdoc[]
-ifndef::topdoc[]
-ifdef::testgroup[]
-image::veth_delete/topology.svg[Verify that VETH pairs can be deleted topology]
-endif::testgroup[]
-ifndef::testgroup[]
-image::topology.svg[Verify that VETH pairs can be deleted topology]
-endif::testgroup[]
-endif::topdoc[]
-==== Test sequence
+image::topology.svg[Verify that VETH pairs can be deleted topology, align=center, scaledwidth=75%]
+
+==== Sequence
 . Set up topology and attach to target DUT
 . Create VETH pair
 . Verify interfaces 'veth0a' and 'veth0b' exist
@@ -30,6 +23,4 @@ endif::topdoc[]
 . Verify target:data1 and target:data2 still exist
 . Verify VETH pair have been removed
 
-
-<<<
 

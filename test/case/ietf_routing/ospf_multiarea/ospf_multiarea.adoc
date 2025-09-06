@@ -1,3 +1,5 @@
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/ietf_routing/ospf_multiarea]
+
 === OSPF with multiple areas
 ==== Description
 This test evaluates various OSPF features across three areas (one NSSA area, with no summary)
@@ -23,18 +25,9 @@ explicit router-id.
 ....
 
 ==== Topology
-ifdef::topdoc[]
-image::{topdoc}../../test/case/ietf_routing/ospf_multiarea/topology.svg[OSPF with multiple areas topology]
-endif::topdoc[]
-ifndef::topdoc[]
-ifdef::testgroup[]
-image::ospf_multiarea/topology.svg[OSPF with multiple areas topology]
-endif::testgroup[]
-ifndef::testgroup[]
-image::topology.svg[OSPF with multiple areas topology]
-endif::testgroup[]
-endif::topdoc[]
-==== Test sequence
+image::topology.svg[OSPF with multiple areas topology, align=center, scaledwidth=75%]
+
+==== Sequence
 . Set up topology and attach to target DUTs
 . Configure targets
 . Wait for all neighbors to peer
@@ -48,6 +41,4 @@ endif::topdoc[]
 . Break link R1:ring2 --- R4:ring1
 . Verify that the route to 10.0.0.3 from PC:data4, go through 10.0.24.1
 
-
-<<<
 

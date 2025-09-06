@@ -1,3 +1,5 @@
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/ietf_interfaces/bridge_stp_basic]
+
 === Bridge STP Basic
 ==== Description
 First, verify that a fully connected mesh of 4 DUTs is pruned to a
@@ -12,18 +14,9 @@ that a spanning tree rooted at A is formed, with B, C, and D all
 directly connected to A.
 
 ==== Topology
-ifdef::topdoc[]
-image::{topdoc}../../test/case/ietf_interfaces/bridge_stp_basic/topology.svg[Bridge STP Basic topology]
-endif::topdoc[]
-ifndef::topdoc[]
-ifdef::testgroup[]
-image::bridge_stp_basic/topology.svg[Bridge STP Basic topology]
-endif::testgroup[]
-ifndef::testgroup[]
-image::topology.svg[Bridge STP Basic topology]
-endif::testgroup[]
-endif::topdoc[]
-==== Test sequence
+image::topology.svg[Bridge STP Basic topology, align=center, scaledwidth=75%]
+
+==== Sequence
 . Set up topology and attach to target DUT
 . Configure a bridge with spanning tree eneabled on dut a, b, c, and d
 . Add an IP address to each host interface in the 10.0.0.0/24 subnet
@@ -34,6 +27,4 @@ endif::topdoc[]
 . Verify that B, C and D all use their direct connection to on A
 . Verify that host:a can reach host:{b,c,d}
 
-
-<<<
 

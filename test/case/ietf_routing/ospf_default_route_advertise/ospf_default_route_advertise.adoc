@@ -1,3 +1,5 @@
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/ietf_routing/ospf_default_route_advertise]
+
 === OSPF Default route advertise
 ==== Description
 Verify _default-route-advertising_ in OSPF, sometimes called 'redistribute origin'. Verify both
@@ -28,18 +30,9 @@ unless _always_ is set for _default-route-advertising_.
 ....
 
 ==== Topology
-ifdef::topdoc[]
-image::{topdoc}../../test/case/ietf_routing/ospf_default_route_advertise/topology.svg[OSPF Default route advertise topology]
-endif::topdoc[]
-ifndef::topdoc[]
-ifdef::testgroup[]
-image::ospf_default_route_advertise/topology.svg[OSPF Default route advertise topology]
-endif::testgroup[]
-ifndef::testgroup[]
-image::topology.svg[OSPF Default route advertise topology]
-endif::testgroup[]
-endif::topdoc[]
-==== Test sequence
+image::topology.svg[OSPF Default route advertise topology, align=center, scaledwidth=75%]
+
+==== Sequence
 . Set up topology and attach to target DUTs
 . Configure targets
 . Verify R2 has a default route and 192.168.100.1/32 from OSPF
@@ -52,6 +45,4 @@ endif::topdoc[]
 . Verify R2 has a default route and 192.168.100.1/32 from OSPF
 . Verify connectivity from PC:data2 to 10.10.10.10
 
-
-<<<
 
