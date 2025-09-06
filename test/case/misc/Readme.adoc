@@ -1,6 +1,4 @@
 :testgroup:
-== Misc tests
-
-<<<
+== Miscellaneous Tests
 
 include::operational_all/Readme.adoc[]

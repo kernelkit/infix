@@ -1,33 +1,47 @@
 :testgroup:
 == infix-containers
 
-Verifies Infix Docker container support:
+Tests verifying Infix Docker container support:
 
  - Basic web server container running in host network mode
- - Container enable/disable functionality via configuration
+ - Container enable/disable functionality via configuration  
  - Container environment variable configuration and access
- - Common setup with a docker0 bridge, automatic VETH pairs to container(s)
- - Connecting a container with a VETH pair to a standard Linux bridge
- - Assigning a physical Ethernet interface to a container
- - Upgrading a container with a volume, verifying volume data is intact
- - Basic firewall container running in host network mode and full privileges
-
-<<<
+ - Common setup with docker0 bridge and automatic VETH pairs
+ - Connecting containers with VETH pairs to standard Linux bridges
+ - Assigning physical Ethernet interfaces to containers
+ - Container upgrades with persistent volume data
+ - Firewall container running in host network mode with full privileges
 
 include::container_basic/Readme.adoc[]
 
+<<<
+
 include::container_enabled/Readme.adoc[]
+
+<<<
 
 include::container_environment/Readme.adoc[]
 
+<<<
+
 include::container_bridge/Readme.adoc[]
+
+<<<
 
 include::container_phys/Readme.adoc[]
 
+<<<
+
 include::container_veth/Readme.adoc[]
+
+<<<
 
 include::container_volume/Readme.adoc[]
 
+<<<
+
 include::container_firewall_basic/Readme.adoc[]
+
+<<<
 
 include::container_host_commands/Readme.adoc[]
