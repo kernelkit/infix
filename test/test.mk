@@ -5,6 +5,7 @@ NINEPM_PROJ_CONF   ?= $(BR2_EXTERNAL_INFIX_PATH)/test/9pm-proj.yaml
 spec-dir           := $(test-dir)/spec
 test-specification := $(BINARIES_DIR)/test-specification.pdf
 test-report        := $(BINARIES_DIR)/test-report.pdf
+LOGO               ?= $(test-dir)/../doc/logo.png[top=40%, align=right, pdfwidth=10cm]
 UNIT_TESTS         ?= $(test-dir)/case/all-repo.yaml $(test-dir)/case/all-unit.yaml
 TESTS              ?= $(test-dir)/case/all.yaml
 
@@ -38,6 +39,7 @@ test-spec:
 		$(spec-dir)/Readme.adoc.in > $(spec-dir)/Readme.adoc
 	@$(spec-dir)/generate_spec.py -s $(test-dir)/case/all.yaml -r $(BR2_EXTERNAL_INFIX_PATH)
 	@asciidoctor-pdf --failure-level INFO --theme $(spec-dir)/theme.yml \
+		-a logo="image:$(LOGO)" \
 	 	-a pdf-fontsdir=$(spec-dir)/fonts \
 	 	-o $(test-specification) $(spec-dir)/Readme.adoc
 
