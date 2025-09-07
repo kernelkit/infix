@@ -1,4 +1,7 @@
 ---
+- settings:
+    test-spec: Readme.adoc
+
 - name: client_basic
   case: client_basic/test.py
 
