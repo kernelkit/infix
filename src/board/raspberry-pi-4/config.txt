@@ -13,9 +13,11 @@ device_tree=bcm2711-rpi-4-b.dtb
 dtoverlay=rpi-env
 dtoverlay=infix-key
 dtoverlay=vc4-kms-v3d-pi4
-dtoverlay=vc4-kms-dsi-7inch
+lcd_rotate=2
 
-#ignore_lcd=0
+
+# Prevent console on DSI
+console=map:0
 
 # To use an external initramfs file
 #initramfs rootfs.cpio.gz

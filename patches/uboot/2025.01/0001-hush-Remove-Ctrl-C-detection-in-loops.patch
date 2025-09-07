@@ -1,0 +1,41 @@
+From 989ef8436df2ee48d308981098c44b1b8257c23b Mon Sep 17 00:00:00 2001
+From: Tobias Waldekranz <tobias@waldekranz.com>
+Date: Mon, 10 Jun 2024 13:25:31 +0200
+Subject: [PATCH 8/8] hush: Remove Ctrl-C detection in loops
+Organization: Addiva Elektronik
+
+Assume that the original intent was to emulate SIGINT to a shell. This
+only works as expected if the loop in question is the ouermost, and
+last, statement. In all other cases, it completely breaks the expected
+execution flow. It more or less resurrects Visual Basic's "On Error
+Resume Next".
+
+Disable this behavior and delegate the problem of loop termination to
+the writer of the script instead.
+
+Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
+---
+ common/cli_hush.c | 7 -------
+ 1 file changed, 7 deletions(-)
+
+diff --git a/common/cli_hush.c b/common/cli_hush.c
+index 171069f5f4..d6d487893f 100644
+--- a/common/cli_hush.c
++++ b/common/cli_hush.c
+@@ -1796,13 +1796,6 @@ static int run_list_real(struct pipe *pi)
+ 	for (; pi; pi = (flag_restore != 0) ? rpipe : pi->next) {
+ 		if (pi->r_mode == RES_WHILE || pi->r_mode == RES_UNTIL ||
+ 			pi->r_mode == RES_FOR) {
+-#ifdef __U_BOOT__
+-				/* check Ctrl-C */
+-				ctrlc();
+-				if ((had_ctrlc())) {
+-					return 1;
+-				}
+-#endif
+ 				flag_restore = 0;
+ 				if (!rpipe) {
+ 					flag_rep = 0;
+-- 
+2.34.1
+

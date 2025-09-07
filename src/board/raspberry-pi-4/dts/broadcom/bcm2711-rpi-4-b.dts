@@ -18,27 +18,6 @@
 		reusable;
 	};
 
-	panel_disp: panel_disp@1 {
-		reg = <1>;
-		compatible = "raspberrypi,7inch-dsi", "simple-panel";
-		backlight = <&reg_display>;
-		power-supply = <&reg_display>;
-		port {
-			panel_in: endpoint {
-				remote-endpoint = <&bridge_out>;
-			};
-		};
-	};
-
-	reg_bridge: reg_bridge@1 {
-		reg = <1>;
-		compatible = "regulator-fixed";
-		regulator-name = "bridge_reg";
-		gpio = <&reg_display 0 0>;
-		vin-supply = <&reg_display>;
-		enable-active-high;
-	};
-
 	chosen {
 		/* 8250 auxiliary UART instead of pl011 */
 		stdout-path = "serial1:115200n8";
@@ -54,66 +33,3 @@
 &vc4 {
 	status = "okay";
 };
-&i2c0mux {
-	status = "okay";
-};
-
-&i2c0 {
-	status = "okay";
-	reg_display: reg_display@45 {
-		compatible = "raspberrypi,7inch-touchscreen-panel-regulator";
-		reg = <0x45>;
-		gpio-controller;
-		#gpio-cells = <2>;
-	};
-
-	ft5406: ts@38 {
-		compatible = "edt,edt-ft5506";
-		reg = <0x38>;
-		touchscreen-size-x = < 800 >;
-		touchscreen-size-y = < 480 >;
-		vcc-supply = <&reg_display>;
-		reset-gpio = <&reg_display 1 1>;
-	};
-};
-
-
-&dsi1 {
-	status = "okay";
-	port {
-		dsi_out: endpoint {
-			remote-endpoint = <&bridge_in>;
-		};
-	};
-	bridge@0 {
-		reg = <0>;
-		compatible = "toshiba,tc358762";
-		vddc-supply = <&reg_bridge>;
-		ports {
-			#address-cells = <1>;
-			#size-cells = <0>;
-
-			port@0 {
-				reg = <0>;
-				bridge_in: endpoint {
-					remote-endpoint = <&dsi_out>;
-				};
-			};
-
-			port@1 {
-				reg = <1>;
-				bridge_out: endpoint {
-					remote-endpoint = <&panel_in>;
-				};
-			};
-		};
-	};
-};
-
-/*
-&hdmi0 {
-    status = "disabled";
-};
-&hdmi1 {
-    status = "disabled";
-};*/

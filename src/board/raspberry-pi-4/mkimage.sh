@@ -1,15 +1,9 @@
 #!/bin/sh
 set -e
-#. "$BR2_CONFIG" 2>/dev/null
 
 BOARD_DIR=$(dirname "$0")
 GENIMAGE_CFG="${BUILD_DIR}/genimage.cfg"
 GENIMAGE_TMP="${BUILD_DIR}/genimage.tmp"
-
-# Device trees are installed for distro boot (syslinux.conf), but on RPi
-# we need them for the SPL, which feeds the TPL (U-Boot) for use instead
-# of the (built-in) control DT other platforms use.
-find "${TARGET_DIR}/boot" -type f -name '*.dtb' -exec cp '{}' "${BINARIES_DIR}/" \;
 
 # We've asked U-Boot previously to build overlays for us: Infix signing
 # key and our ixboot scripts.  Make sure here they are installed in the
@@ -26,15 +20,16 @@ for f in "${BINARIES_DIR}"/rpi-firmware/*; do
     echo "${FILES}" | grep -q `basename $f` && continue # If already exist it has been added by us.
     FILES="${FILES}\t\t\t\"${f#"${BINARIES_DIR}/"}\",\n"
 done
-
+FILES="${FILES}\t\t\t\"splash.bmp\",\n"
 echo $FILES
 KERNEL=$(sed -n 's/^kernel=//p' "${BINARIES_DIR}/rpi-firmware/config.txt")
 FILES="${FILES}\t\t\t\"${KERNEL}\""
 
 
 sed "s|#BOOT_FILES#|${FILES}|" "${BOARD_DIR}/genimage.cfg.in" | \
-sed "s|#VERSION#|${RELEASE}|"  | \
-sed "s|#INFIX_ID#|${INFIX_ID}|" > "${GENIMAGE_CFG}"
+sed "s|#INFIX_ID#|${INFIX_ID}|" | \
+sed "s|#VERSION#|${RELEASE}|" > "${GENIMAGE_CFG}"
+
 
 ROOTPATH_TMP=$(mktemp -d)
 trap 'rm -rf \"$ROOTPATH_TMP\"' EXIT

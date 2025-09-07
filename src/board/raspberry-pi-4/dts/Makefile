@@ -1,1 +1,1 @@
-dtb-y += broadcom/bcm2711-rpi-4-b.dtb
+dtb-y += broadcom/bcm2711-rpi-4-b.dtb broadcom/bcm2711-rpi-4-b-dsi.dtb
