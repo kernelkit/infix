@@ -273,6 +273,9 @@ static int del(const char *name)
 	erasef("%s/%s.sh", _PATH_CONT, name);
 	systemf("initctl -bnq disable container@%s.conf", name);
 
+	/* Schedule a cleanup job for this container as soon as it has stopped */
+	writesf(name, "a", "/run/containers/cleanup");
+
 	return SR_ERR_OK;
 }
 
