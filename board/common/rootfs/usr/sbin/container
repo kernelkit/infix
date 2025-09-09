@@ -6,18 +6,23 @@
 # NOTE: when creating/deleting containers, remember 'initctl reload' to
 #       activate the changes!  In confd this is already handled.
 #
+CLEANUP=/var/lib/containers/cleanup
 DOWNLOADS=/var/lib/containers/oci
 BUILTIN=/lib/oci
 BASEDIR=/var/tmp
 container=$0
 checksum=""
 extracted=
-timeout=30
+timeout=30		    # NOTE: matched with container@.conf
 dir=""
 all=""
 env=""
 port=""
 force=
+
+# Variable shared across subshells
+export meta_sha=""
+
 
 log()
 {
@@ -118,6 +123,7 @@ load_archive()
 {
     uri=$1
     tag=$2
+    tmp=$3
     img=$(basename "$uri")
 
     # Supported transports for load and create
@@ -230,7 +236,8 @@ load_archive()
 	err 1 "failed tagging image as $tag"
     fi
 
-    # Save archive SHA256 to sidecar file for local archives to enable optimization
+    # Save archive SHA256 to sidecar file to enable optimization
+    # This applies to both local archives and downloaded remote archives
     if [ -f "$file" ]; then
 	img_sha256=$(sha256sum "$file" | cut -f1 -d' ')
 	archive_basename=$(basename "$file")
@@ -239,6 +246,10 @@ load_archive()
 	mkdir -p "$DOWNLOADS"
 
 	echo "$img_sha256" > "$sha_file"
+	if [ -n "$tmp" ]; then
+	    echo "$img_sha256" > "$tmp"
+	fi
+
 	log "Saved archive checksum to $sha_file"
     fi
 
@@ -273,8 +284,14 @@ create()
 
     # Unpack and load docker-archive/oci/oci-archive, returning image
     # name, or return docker:// URL for download.
-    if ! image=$(load_archive "$image"); then
+    sha_file=$(mktemp -u)
+    if ! image=$(load_archive "$image" "" "$sha_file"); then
 	exit 1
+    fi
+
+    if [ -f "$sha_file" ]; then
+	meta_sha=$(cat "$sha_file" 2>/dev/null || echo "")
+	rm "$sha_file"
     fi
 
     if [ -z "$logging" ]; then
@@ -310,8 +327,10 @@ create()
     # Add optimization labels for meta-sha256 and config checksum
     script="/run/containers/${name}.sh"
     if [ -f "$script" ]; then
-	# Extract meta-sha256 from script if present
-	meta_sha=$(awk '/^# meta-sha256:/ {print $3}' "$script" 2>/dev/null)
+ 	if [ -z "$meta_sha" ]; then
+	    # Extract meta-sha256 from script if present
+	    meta_sha=$(awk '/^# meta-sha256:/ {print $3}' "$script" 2>/dev/null)
+	fi
 	if [ -n "$meta_sha" ]; then
 	    args="$args --label meta-sha256=$meta_sha"
 	fi
@@ -357,11 +376,90 @@ delete()
 	sleep 1
     done
 
+    # NOTE: -v does not remove *named volumes*
     podman rm -vif "$name" >/dev/null 2>&1
     [ -n "$quiet" ] || log "Container $name has been removed."
+}
 
-    cnt=$(podman image prune -af | wc -l)
-    log "Pruned $cnt image(s)"
+# Called by Finit cleanup:script when a container service is removed.
+# Processes all container instance IDs found in $CLEANUP/<name>/ directory
+# and removes them. This handles the case where a container with the same
+# name but different configuration replaces an old one.
+#
+# Note: Volumes are NOT automatically removed to prevent accidental data loss.
+#       Use 'admin-exec container prune' to clean up unused volumes manually.
+cleanup()
+{
+    if [ -z "$name" ]; then
+	log "cleanup: missing container name"
+	return 1
+    fi
+
+    cleanup_dir="$CLEANUP/$name"
+    if [ ! -d "$cleanup_dir" ]; then
+	log "cleanup: no cleanup directory for $name, nothing to do"
+	return 0
+    fi
+
+    log "Cleaning up container instances for: $name"
+
+    # Remove all container instances by ID from the cleanup directory
+    for id_file in "$cleanup_dir"/*; do
+	[ -f "$id_file" ] || continue
+	cid=$(basename "$id_file")
+
+	# Extract image name and meta-sha256 from the container instance labels
+	img=$(podman inspect "$cid" 2>/dev/null | jq -r '.[].ImageName' 2>/dev/null || echo "")
+	sha=$(podman inspect "$cid" --format '{{index .Config.Labels "meta-sha256"}}' 2>/dev/null || echo "")
+
+	log "Removing container instance with ID: ${cid:0:12}..."
+	podman rm -vif "$cid" >/dev/null 2>&1
+	rm -f "$id_file"
+
+	# Clean up the image if it exists and is not used by other containers
+	if [ -n "$img" ] && [ "$img" != "null" ]; then
+	    if ! podman ps -a --format "{{.Image}}" | grep -q "^${img}$"; then
+		log "Removing unused image: $img"
+		podman rmi "$img" 2>/dev/null || true
+
+		# Also remove archive and sidecar file from $DOWNLOADS for remote images
+		if [ -n "$sha" ] && [ -d "$DOWNLOADS" ]; then
+		    # Search for matching sidecar file containing this SHA
+		    for sha_file in "$DOWNLOADS"/*.sha256; do
+			[ -f "$sha_file" ] || continue
+			stored_sha=$(cat "$sha_file" 2>/dev/null || echo "")
+			if [ "$stored_sha" = "$sha" ]; then
+			    # Found matching sidecar - derive archive filename
+			    archive="${sha_file%.sha256}"
+
+			    if [ -f "$archive" ]; then
+				# Safety check: verify archive SHA matches before removing
+				archive_sha=$(sha256sum "$archive" 2>/dev/null | awk '{print $1}')
+				if [ "$archive_sha" = "$sha" ]; then
+				    log "Removing archive: $archive"
+				    rm -f "$archive"
+				else
+				    log "Warning: archive SHA mismatch for $archive, not removing"
+				fi
+			    fi
+
+			    log "Removing sidecar file: $sha_file"
+			    rm -f "$sha_file"
+			    break
+			fi
+		    done
+		fi
+	    else
+		log "Image $img still in use by other containers, not removing"
+	    fi
+	fi
+    done
+
+    # Remove the cleanup directory for this container, and parent if empty
+    rmdir "$cleanup_dir" 2>/dev/null
+    rmdir "$CLEANUP" 2>/dev/null
+
+    exit 0
 }
 
 waitfor()
@@ -466,7 +564,7 @@ netrestart()
     done
 }
 
-cleanup()
+atexit()
 {
     pidfile=$(pidfn "$name")
 
@@ -674,7 +772,7 @@ if [ -n "$cmd" ]; then
     shift
 fi
 
-trap cleanup INT HUP TERM
+trap atexit INT HUP TERM
 
 case $cmd in
     # Does not work atm., cannot attach to TTY because
@@ -682,6 +780,9 @@ case $cmd in
     # attach)
     # 	podman attach "$1"
     # 	;;
+    cleanup) # Hidden from public view, use remove or flush commands instead
+	cleanup "$@"
+	;;
     create)
 	[ -n "$quiet" ] || log "Got create args: $*"
 	create "$@"
@@ -920,7 +1021,7 @@ case $cmd in
 
 	rm -f "$pidfile"
 	cnt=$(podman image prune -f | wc -l)
-	log "setup: pruned $cnt image(s)"
+	log "Pruned $cnt image(s)"
 	;;
     shell)
 	if [ -z "$name" ]; then
@@ -1060,8 +1161,8 @@ case $cmd in
 		    ;;
 		cleanup)
 		    # Called as cleanup-script from Finit service
-		    log "Calling $container -n $SERVICE_ID delete"
-		    exec $container -q -n "$SERVICE_ID" delete
+		    log "Calling $container -n $SERVICE_ID cleanup"
+		    exec $container -q -n "$SERVICE_ID" cleanup
 		    ;;
 		*)
 		    false

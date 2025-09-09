@@ -82,8 +82,12 @@ int core_post_hook(sr_session_ctx_t *session, uint32_t sub_id, const char *modul
 		return SR_ERR_OK;
 	}
 
-	if (systemf("initctl -b reload"))
+	if (systemf("initctl -b reload")) {
+		EMERG("initctl reload: failed applying new configuration!");
 		return SR_ERR_SYS;
+	}
+
+	AUDIT("The new configuration has been applied.");
 
 	return SR_ERR_OK;
 }

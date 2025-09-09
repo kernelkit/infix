@@ -21,6 +21,7 @@
 #define  CFG_XPATH    "/infix-containers:containers"
 
 #define  _PATH_CONT   "/run/containers"
+#define  _PATH_CLEAN  "/var/lib/containers/cleanup"
 
 /*
  * Check if image is a local archive and return the offset to the file path.
@@ -302,8 +303,33 @@ static int add(const char *name, struct lyd_node *cif)
  */
 static int del(const char *name)
 {
+	char prune_dir[sizeof(_PATH_CLEAN) + strlen(name) + 3];
+	char buf[256];
+	FILE *pp;
+
 	erasef("%s/%s.sh", _PATH_CONT, name);
 	systemf("initctl -bnq disable container@%s.conf", name);
+
+	/* Schedule a cleanup job for this container as soon as it has stopped */
+	snprintf(prune_dir, sizeof(prune_dir), "%s/%s", _PATH_CLEAN, name);
+	systemf("mkdir -p %s", prune_dir);
+
+	/* Finit cleanup:script runs when container is deleted, it will remove any image by-ID */
+	pp = popenf("r", "podman inspect %s 2>/dev/null | jq -r '.[].Id' 2>/dev/null", name);
+	if (!pp) {
+		/* Nothing to do, if we can't get the Id we cannot safely remove anything */
+		ERROR("Cannot find any container instance named '%s' to delete", name);
+		rmdir(prune_dir);
+		return SR_ERR_OK;
+	}
+
+	if (fgets(buf, sizeof(buf), pp)) {
+		chomp(buf);
+		if (strlen(buf) > 2)
+			touchf("%s/%s", prune_dir, buf);
+	}
+
+	pclose(pp);
 
 	return SR_ERR_OK;
 }
