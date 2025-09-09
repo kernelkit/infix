@@ -38,16 +38,6 @@ static int add(const char *name, struct lyd_node *cif)
 	char script[strlen(name) + 5];
 	FILE *fp, *ap;
 
-	/*
-	 * If running already, disable the service, keeping the created
-	 * container and any volumes for later if the user re-enables
-	 * it again.
-	 */
-	if (!lydx_is_enabled(cif, "enabled")) {
-		systemf("initctl -bnq disable container@%s.conf", name);
-		return 0;
-	}
-
 	snprintf(script, sizeof(script), "%s.sh", name);
 	fp = fopenf("w", "%s/%s", _PATH_CONT, script);
 	if (!fp) {
@@ -256,9 +246,9 @@ static int add(const char *name, struct lyd_node *cif)
 	fchmod(fileno(fp), 0700);
 	fclose(fp);
 
-	/* Enable, or update, container -- both trigger container setup. */
-	systemf("initctl -bnq enable container@%s.conf", name);
 	systemf("initctl -bnq touch container@%s.conf", name);
+	systemf("initctl -bnq %s container@%s.conf", lydx_is_enabled(cif, "enabled")
+		? "enable" : "disable", name);
 
 	return 0;
 }
