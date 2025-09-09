@@ -790,19 +790,35 @@ case $cmd in
 	pidfile=$(pidfn "${name}")
 	echo $$ > "$pidfile"
 
-	while ! "$script"; do
-            log "${name}: setup failed, waiting for network changes ..."
+	# Try setup once first
+	if ! "$script"; then
+	    # Get image transport to decide if retries make sense
+	    image=$(awk '/^# meta-image:/ {print $3}' "$script" 2>/dev/null || echo "")
+	    case "$image" in
+		oci:* | oci-archive:* | docker-archive:* | docker-daemon:* | dir:* | containers-storage:* | ostree:* | sif:* | /*)
+		    # Local transport - exit immediately on failure
+		    log "${name}: setup failed for local image $image"
+		    rm -f "$pidfile"
+		    exit 1
+		    ;;
+		*)
+		    # Remote transport (docker://, ftp://, http://, https://, etc.) - retry on network changes
+		    while ! "$script"; do
+			log "${name}: setup failed, waiting for network changes ..."
 
-	    # Timeout and retry after 60 seconds, on SIGTERM, or when
-	    # any network event is caught.
-	    timeout -s TERM -k 1 60 sh -c \
-		    'ip monitor address route 2>/dev/null | head -n1 >/dev/null' || true
+			# Timeout and retry after 60 seconds, on SIGTERM, or when
+			# any network event is caught.
+			timeout -s TERM -k 1 60 sh -c \
+				'ip monitor address route 2>/dev/null | head -n1 >/dev/null' || true
 
-	    # On IP address/route changes, wait a few seconds more to ensure
-	    # the system has ample time to react and set things up for us.
-	    log "${name}: retrying ..."
-	    sleep 2
-	done
+			# On IP address/route changes, wait a few seconds more to ensure
+			# the system has ample time to react and set things up for us.
+			log "${name}: retrying ..."
+			sleep 2
+		    done
+		    ;;
+	    esac
+	fi
 
 	rm -f "$pidfile"
 	cnt=$(podman image prune -f | wc -l)
