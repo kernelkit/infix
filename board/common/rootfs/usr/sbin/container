@@ -375,6 +375,9 @@ stop()
     # Real work is done by wrap() courtesy of finit sysv emulation
 }
 
+# When called by Finit: `initctl stop foo`, the container script
+# is called as `container -n $foo stop`.  For the stop command
+# we want to bypass the default 10 second timeout.
 wrap()
 {
     name=$1
@@ -385,21 +388,28 @@ wrap()
 
     # The setup phase may run forever in the background trying to fetch
     # the image.  It saves its PID in /run/containers/${name}.pid
-    if [ "$cmd" = "stop" ] && [ -f "$pidfile" ]; then
-        pid=$(cat "$pidfile")
+    if [ "$cmd" = "stop" ]; then
+	if [ -f "$pidfile" ]; then
+            pid=$(cat "$pidfile")
 
-	# Check if setup is still running ...
-	if kill -0 "$pid" 2>/dev/null; then
-            kill "$pid"
-            wait "$pid" 2>/dev/null
-        fi
+	    # Check if setup is still running ...
+	    if kill -0 "$pid" 2>/dev/null; then
+		kill "$pid"
+		wait "$pid" 2>/dev/null
+            fi
 
-        rm -f "$pidfile"
-        return 0
+            rm -f "$pidfile"
+            return 0
+	fi
+
+	args="-i --timeout $timeout"
+    else
+	args=
     fi
 
     # Skip "echo $name" from podman start in log
-    podman "$cmd" "$name" >/dev/null
+    # shellcheck disable=SC2086
+    podman "$cmd" $args "$name" >/dev/null
 }
 
 # Removes network $1 from all containers
