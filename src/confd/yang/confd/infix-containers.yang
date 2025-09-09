@@ -22,6 +22,11 @@ module infix-containers {
     prefix infix-sys;
   }
 
+  revision 2025-09-09 {
+    description "Add dedicated 'ident' type for container and volume names.";
+    reference "internal";
+  }
+
   revision 2025-06-25 {
     description "Add file mode option to content mounts, allows creating scripts.";
     reference "internal";
@@ -61,6 +66,14 @@ module infix-containers {
   /*
    * Typedefs
    */
+
+  typedef ident {
+    description "Container name or volume identifiers may not contain spaces.";
+    type string {
+      length "2..64";
+      pattern '[a-zA-Z0-9][a-zA-Z0-9_.-]+';
+    }
+  }
 
   typedef mount-type {
     type enumeration {
@@ -128,7 +141,7 @@ module infix-containers {
 
       leaf name {
 	description "Name of the container";
-	type string;
+	type ident;
       }
 
       leaf id {
@@ -344,7 +357,7 @@ module infix-containers {
 
                        For persistent writable directories, *volumes* may be a
                        better fit for your container and easier to set up.";
-          type string;
+          type ident;
         }
 
         leaf type {
@@ -436,10 +449,7 @@ module infix-containers {
                        with the contents of the container's file system on first
                        use.  Hence, upgrading the container image will not update
                        the volume if the image has new/removed files at 'path'.";
-	  type string {
-            pattern '[a-zA-Z_][a-zA-Z0-9_]*';
-            length "1..64";
-          }
+	  type ident;
 	}
 
 	leaf target {
