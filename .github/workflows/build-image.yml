@@ -71,7 +71,7 @@ jobs:
         if: ${{ !inputs.use_latest_release }}
         run: |
           # Download from latest bootloader build workflow on main branch
-          gh run list --workflow=build-boot.yml --branch=main --limit=1 --status=success --json databaseId --jq '.[0].databaseId' > latest_boot_run_id
+          gh run list --workflow=build-boot.yml --branch=banana-pi --limit=1 --status=success --json databaseId --jq '.[0].databaseId' > latest_boot_run_id
           BOOT_RUN_ID=$(cat latest_boot_run_id)
 
           gh run download ${BOOT_RUN_ID} --name artifact-${BOOTLOADER} --dir temp_bootloader/
@@ -91,7 +91,7 @@ jobs:
         if: ${{ !inputs.use_latest_release }}
         run: |
           # Download from latest Kernelkit Trigger workflow for main branch
-          gh run list --workflow=164295764 --branch=main --limit=1 --status=success --json databaseId --jq '.[0].databaseId' > latest_infix_run_id
+          gh run list --workflow=164295764 --branch=banana-pi --limit=1 --status=success --json databaseId --jq '.[0].databaseId' > latest_infix_run_id
           INFIX_RUN_ID=$(cat latest_infix_run_id)
 
           gh run download ${INFIX_RUN_ID} --name artifact-${TARGET} --dir temp_infix/
