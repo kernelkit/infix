@@ -7,6 +7,7 @@ All notable changes to the project are documented in this file.
 -------------------------
 
 ### Changes
+- Upgrade Buildroot to 2025.02.6 (LTS)
 - Upgrade Linux kernel to 6.12.46 (LTS)
 
 ### Fixes
