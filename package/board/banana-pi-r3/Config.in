@@ -1,0 +1,10 @@
+config BR2_PACKAGE_BANANA_PI_R3
+	bool "Banana Pi R3"
+	depends on BR2_aarch64
+	select BR2_PACKAGE_FEATURE_WIFI
+	select BR2_PACKAGE_LINUX_FIRMWARE
+	select BR2_PACKAGE_LINUX_FIRMWARE_MEDIATEK
+	select BR2_PACKAGE_LINUX_FIRMWARE_MEDIATEK_MT7986
+	select SDCARD_AUX
+	help
+	  Build Banana PI R3 support

@@ -9,6 +9,7 @@ on:
         required: true
         options:
           - raspberry-pi-4
+          - banana-pi-r3
         default: 'raspberry-pi-4'
       use_latest_release:
         description: 'Use latest release artifacts instead of workflow artifacts'
@@ -55,6 +56,10 @@ jobs:
               echo "BOOTLOADER=rpi4_boot" >> $GITHUB_ENV
               echo "TARGET=aarch64" >> $GITHUB_ENV
               ;;
+            banana-pi-r3)
+              echo "BOOTLOADER=mt7986_sd_boot" >> $GITHUB_ENV
+              echo "TARGET=aarch64" >> $GITHUB_ENV
+              ;;
             *)
               echo "Error: Unknown board ${{ inputs.board }}"
               exit 1
@@ -66,7 +71,7 @@ jobs:
         if: ${{ !inputs.use_latest_release }}
         run: |
           # Download from latest bootloader build workflow on main branch
-          gh run list --workflow=build-boot.yml --branch=main --limit=1 --status=success --json databaseId --jq '.[0].databaseId' > latest_boot_run_id
+          gh run list --workflow=build-boot.yml --branch=banana-pi --limit=1 --status=success --json databaseId --jq '.[0].databaseId' > latest_boot_run_id
           BOOT_RUN_ID=$(cat latest_boot_run_id)
 
           gh run download ${BOOT_RUN_ID} --name artifact-${BOOTLOADER} --dir temp_bootloader/
@@ -86,7 +91,7 @@ jobs:
         if: ${{ !inputs.use_latest_release }}
         run: |
           # Download from latest Kernelkit Trigger workflow for main branch
-          gh run list --workflow=164295764 --branch=main --limit=1 --status=success --json databaseId --jq '.[0].databaseId' > latest_infix_run_id
+          gh run list --workflow=164295764 --branch=banana-pi --limit=1 --status=success --json databaseId --jq '.[0].databaseId' > latest_infix_run_id
           INFIX_RUN_ID=$(cat latest_infix_run_id)
 
           gh run download ${INFIX_RUN_ID} --name artifact-${TARGET} --dir temp_infix/
@@ -142,7 +147,7 @@ jobs:
 
           # Use the standardized mkimage.sh path for the selected board
           #          BOARD_SCRIPT="src/board/${{ inputs.board }}/mkimage.sh"
-          BOARD_SCRIPT="src/board/raspberry-pi-4/mkimage.sh"
+          BOARD_SCRIPT="src/board/${{ inputs.board }}/mkimage.sh"
 
           if [ -f "$BOARD_SCRIPT" ]; then
             echo "Using board-specific image creation script: $BOARD_SCRIPT"
