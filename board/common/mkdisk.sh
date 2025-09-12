@@ -83,7 +83,7 @@ genboot()
 {
     if [ -d "$bootdata" ]; then
 	bootimg=$(cat <<EOF
-image efi-part.vfat {
+image $BINARIES_DIR/efi-part.vfat {
 	size = $bootsize
 	vfat {
 		file EFI {
@@ -98,7 +98,7 @@ EOF
 		offset = $bootoffs
 		partition-type-uuid = U
 		bootable = true
-		image = efi-part.vfat
+		image = $BINARIES_DIR/efi-part.vfat
 	}
 EOF
 		  )
