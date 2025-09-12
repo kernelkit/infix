@@ -1,4 +1,7 @@
 ---
+- settings:
+    test-spec: Readme.adoc
+
 - name: server_basic
   case: server_basic/test.py
 

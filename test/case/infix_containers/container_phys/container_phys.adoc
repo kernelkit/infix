@@ -1,21 +1,14 @@
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/infix_containers/container_phys]
+
 === Container with physical interface
 ==== Description
 Verify connectivity with a simple web server container that's been
 given a physical interface instead of an end of a VETH pair.
 
 ==== Topology
-ifdef::topdoc[]
-image::{topdoc}../../test/case/infix_containers/container_phys/topology.svg[Container with physical interface topology]
-endif::topdoc[]
-ifndef::topdoc[]
-ifdef::testgroup[]
-image::container_phys/topology.svg[Container with physical interface topology]
-endif::testgroup[]
-ifndef::testgroup[]
-image::topology.svg[Container with physical interface topology]
-endif::testgroup[]
-endif::topdoc[]
-==== Test sequence
+image::topology.svg[Container with physical interface topology, align=center, scaledwidth=75%]
+
+==== Sequence
 . Set up topology and attach to target DUT
 . Create httpd container from bundled OCI image
 . Verify container has started
@@ -24,6 +17,4 @@ endif::topdoc[]
 . Add a content mount, overriding index.html
 . Verify server is restarted and returns new content
 
-
-<<<
 

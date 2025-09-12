@@ -1,14 +1,25 @@
-:topdoc:
-
-= Test specification
-{REPLACE}
 :title-page:
+:topdoc:
+ifdef::logo[]
+:title-logo-image: {logo}
+endif::[]
 :toc:
 :toclevels: 2
 :sectnums:
 :sectnumlevels: 2
+:pdfmark:
+:pdf-page-size: A4
+:pdf-page-layout: portrait
+:pdf-page-margin: [1in, 0.5in]
+:keywords: regression, test, testing
+:subject: Regression testing
+:autofit-option:
+
+= Test specification
+{REPLACE}
 
 <<<
+
 include::../case/misc/Readme.adoc[]
 
 <<<

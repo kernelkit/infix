@@ -1,8 +1,13 @@
 :testgroup:
 == ietf-syslog
 
-<<<
+Tests verifying IETF standard syslog configuration and operation:
+
+ - Basic local syslog functionality and log generation
+ - Remote syslog forwarding and network logging
 
 include::basic/Readme.adoc[]
+
+<<<
 
 include::remote/Readme.adoc[]

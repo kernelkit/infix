@@ -5,7 +5,7 @@ Verify communication over a link aggregate in static and LACP operating
 modes during basic failure scenarios.
 
 .Internal network setup, PC verifies connectivity with dut2 via dut1
-image::lag-basic.svg[Internal networks]
+image::lag-basic.svg[align=center, scaledwidth=75%]
 
 The host verifies connectivity with dut2 via dut1 over the aggregate for
 each test step using the `mon` interface.

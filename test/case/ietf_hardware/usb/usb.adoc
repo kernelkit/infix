@@ -1,3 +1,5 @@
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/ietf_hardware/usb]
+
 === USB configuration
 ==== Description
 This test checks if the configuration is consistent with hardware state,
@@ -11,18 +13,9 @@ If this pass you can be certain that the configuration of the USB
 port is handled correctly.
 
 ==== Topology
-ifdef::topdoc[]
-image::{topdoc}../../test/case/ietf_hardware/usb/topology.svg[USB configuration topology]
-endif::topdoc[]
-ifndef::topdoc[]
-ifdef::testgroup[]
-image::usb/topology.svg[USB configuration topology]
-endif::testgroup[]
-ifndef::testgroup[]
-image::topology.svg[USB configuration topology]
-endif::testgroup[]
-endif::topdoc[]
-==== Test sequence
+image::topology.svg[USB configuration topology, align=center, scaledwidth=75%]
+
+==== Sequence
 . Set up topology and attach to target DUT
 . Unlock all USB ports
 . Verify that all USB ports are unlocked
@@ -35,6 +28,4 @@ endif::topdoc[]
 . Save the configuration to startup configuration and reboot
 . Verify USB port remain unlocked after reboot
 
-
-<<<
 

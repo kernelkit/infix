@@ -150,7 +150,6 @@ class Device(Transport):
         url = f"{self.yang_url}/{schema_name}"
         data = self._get_raw(url=url, parse=False)
 
-        sys.stdout.write(f"Downloading YANG model {schema_name} ...\r\033[K")
         data = data.decode('utf-8')
         with open(f"{yangdir}/{schema_name}", 'w') as json_file:
             json_file.write(data)

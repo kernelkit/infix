@@ -1,3 +1,5 @@
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/ietf_interfaces/vlan_iface_termination]
+
 === VLAN Interface Termination
 ==== Description
 Verify that VLANs stacked on top of an interfaces that are also
@@ -26,18 +28,9 @@ both `data1` and `data2`, _bridging_ of packets from one to the other
 must _not_ be allowed.
 
 ==== Topology
-ifdef::topdoc[]
-image::{topdoc}../../test/case/ietf_interfaces/vlan_iface_termination/topology.svg[VLAN Interface Termination topology]
-endif::topdoc[]
-ifndef::topdoc[]
-ifdef::testgroup[]
-image::vlan_iface_termination/topology.svg[VLAN Interface Termination topology]
-endif::testgroup[]
-ifndef::testgroup[]
-image::topology.svg[VLAN Interface Termination topology]
-endif::testgroup[]
-endif::topdoc[]
-==== Test sequence
+image::topology.svg[VLAN Interface Termination topology, align=center, scaledwidth=75%]
+
+==== Sequence
 . Set up topology and attach to target
 . Configure bridge and VLAN interfaces on target
 . Configure IP addresses and VLAN interfaces on host
@@ -46,6 +39,4 @@ endif::topdoc[]
 . Verify that host:data1 can reach target on VLAN 10
 . Verify that host:data2 can reach target on VLAN 10
 
-
-<<<
 
