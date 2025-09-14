@@ -1,6 +1,6 @@
-include::gretap_bridged.adoc[]
+include::gretap.adoc[]
 
 <<<
 
-include::vxlan_bridged.adoc[]
+include::vxlan.adoc[]
 

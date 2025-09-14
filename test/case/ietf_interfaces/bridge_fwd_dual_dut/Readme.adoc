@@ -1,1 +1,1 @@
-bridge_fwd_dual_dut.adoc
+test.adoc

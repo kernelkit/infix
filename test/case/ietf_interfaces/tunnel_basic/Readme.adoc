@@ -1,10 +1,10 @@
-include::gre_basic.adoc[]
+include::gre.adoc[]
 
 <<<
 
-include::gretap_basic.adoc[]
+include::gretap.adoc[]
 
 <<<
 
-include::vxlan_basic.adoc[]
+include::vxlan.adoc[]
 

@@ -1,1 +1,1 @@
-verify_all_interface_types.adoc
+test.adoc

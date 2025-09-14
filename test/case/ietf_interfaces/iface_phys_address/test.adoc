@@ -1,0 +1,29 @@
+=== Custom MAC address on interface
+
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/ietf_interfaces/iface_phys_address]
+
+==== Description
+
+Verify support for setting and removing a custom MAC address on interfaces.
+Both static MAC address and derived from the chassis MAC with, or without,
+an offset applied.
+
+==== Topology
+
+image::topology.svg[Custom MAC address on interface topology, align=center, scaledwidth=75%]
+
+==== Sequence
+
+. Set up topology and attach to target DUT
+. Set target:data static MAC address '02:01:00:c0:ff:ee'
+. Verify target:data has MAC address '02:01:00:c0:ff:ee'
+. Reset target:data MAC address to default
+. Verify target:data MAC address is reset to default
+. Set target:data to chassis MAC
+. Verify target:data has chassis MAC
+. Set target:data to chassis MAC + offset
+. Verify target:data has chassis MAC + offset
+. Reset target:data MAC address to default
+. Verify target:data MAC address is reset to default
+
+

@@ -1,1 +1,1 @@
-igmp_basic.adoc
+test.adoc

@@ -1,1 +1,1 @@
-ifalias.adoc
+test.adoc

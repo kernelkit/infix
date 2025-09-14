@@ -1,1 +1,1 @@
-operational_all.adoc
+test.adoc

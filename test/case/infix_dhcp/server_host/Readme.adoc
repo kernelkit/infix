@@ -1,1 +1,1 @@
-server_host.adoc
+test.adoc

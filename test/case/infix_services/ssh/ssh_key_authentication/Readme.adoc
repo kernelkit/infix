@@ -1,1 +1,1 @@
-ssh_key_authentication.adoc
+test.adoc
