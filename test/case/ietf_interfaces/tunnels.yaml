@@ -1,6 +1,6 @@
 ---
-- name: tunnel_basic
+- name: Basic tunnel connectivity test
   suite: tunnel_basic/test.yaml
 
-- name: tunnel_bridged
+- name: Tunnel interface bridged with physical
   suite: tunnel_bridged/test.yaml

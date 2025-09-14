@@ -1,6 +1,6 @@
 ---
-- name: dhcp_client
+- name: DHCP Client Tests
   suite: dhcp_client.yaml
 
-- name: dhcp_server
+- name: DHCP Server Tests
   suite: dhcp_server.yaml

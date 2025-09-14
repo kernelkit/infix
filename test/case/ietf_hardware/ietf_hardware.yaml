@@ -1,6 +1,6 @@
 ---
-- name: usb
+- name: USB configuration
   case: usb/test.py
 
-- name: usb_two_ports
+- name: USB configuration with two USB ports
   case: usb_two_ports/test.py

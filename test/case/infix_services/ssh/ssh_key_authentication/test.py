@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Generate ssh key pair
+Generate SSH key pair
 
 Verify that 'guest' user can fetch data using only the 'public' key
 """

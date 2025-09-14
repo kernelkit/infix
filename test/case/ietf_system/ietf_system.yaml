@@ -2,20 +2,20 @@
 - name: Set hostname
   case: hostname/test.py
 
-- name: add_delete_user
+- name: Add/delete user
   case: add_delete_user/test.py
 
-- name: user_admin
+- name: Add admin user
   case: user_admin/test.py
 
-- name: timezone
+- name: Set timezone using timezone name
   case: timezone/test.py
 
-- name: timezone_utc_offset
+- name: Set timezone with UTC offset
   case: timezone_utc_offset/test.py
 
-- name: ntp_client
+- name: Basic NTP client test
   case: ntp_client/test.py
 
-- name: upgrade
+- name: System upgrade
   case: upgrade/test.py

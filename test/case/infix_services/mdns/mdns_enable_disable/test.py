@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""mDNS enable disable
+"""mDNS enable/disable
 
-Verify that mDNS can be enabled and disabled. 
+Verify that mDNS can be enabled and disabled.
 Operation and non-operation are confirmed using tcpdump.
 
 """

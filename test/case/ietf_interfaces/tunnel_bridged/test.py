@@ -2,36 +2,42 @@
 """
 Tunnel interface bridged with physical
 
-Test that {type} works as it should and that it possible to bridge it.
+Set up a layer-2 tunnel between two DUTs, host is connected to the first DUT.
+Bridge the interface connected to the host and the tunnel interface on the
+first DUT.  On host, verify connectivity with the second DUT through tunnel.
 
+- Tunnel types: GRETAP, and VxLAN
+- Connectivity: IPv4
 """
 
 import infamy
 
+
 class ArgumentParser(infamy.ArgumentParser):
     def __init__(self):
         super().__init__()
-        self.add_argument("--type")
+        self.add_argument("--tunnel")
+
 
 with infamy.Test() as test:
     with test.step("Set up topology and attach to target DUTs"):
-        args=ArgumentParser()
-        env = infamy.Env(args=args)
+        arg = ArgumentParser()
+        env = infamy.Env(args=arg)
         left = env.attach("left", "mgmt")
         right = env.attach("right", "mgmt")
-        type = env.args.type
+        tunnel = env.args.tunnel
 
-    with test.step("Configure DUTs"):
-        if type == "gretap":
-            container_name = "gre"
+    with test.step("Configure DUTs with tunnel {tunnel}"):
+        if tunnel == "gretap":
+            CONTAINER_TYPE = "gre"
         else:
-            container_name = type
+            CONTAINER_TYPE = tunnel
 
-        container_left =  {
+        container_left = {
             "local": "192.168.50.1",
             "remote": "192.168.50.2"
         }
-        container_right =  {
+        container_right = {
             "local": "192.168.50.2",
             "remote": "192.168.50.1"
         }
@@ -41,10 +47,10 @@ with infamy.Test() as test:
         container_right.update({
             "vni": 4
         })
-        left.put_config_dicts({ "ietf-interfaces": {
+
+        left.put_config_dicts({"ietf-interfaces": {
             "interfaces": {
-                "interface": [
-                {
+                "interface": [{
                     "name": left["link"],
                     "ipv4": {
                         "address": [{
@@ -53,36 +59,30 @@ with infamy.Test() as test:
                         }],
                         "forwarding": True
                     }
-                },
-                {
+                }, {
                     "name": left["data"],
                     "bridge-port": {
                         "bridge": "br0"
                     }
-                },
-                {
+                }, {
                     "name": "br0",
                     "type": "infix-if-type:bridge"
-                },
-                {
-                    "name": f"{type}0",
-                    "type": f"infix-if-type:{type}",
-                    container_name: container_left,
+                }, {
+                    "name": f"{tunnel}0",
+                    "type": f"infix-if-type:{tunnel}",
+                    CONTAINER_TYPE: container_left,
                     "bridge-port": {
                         "bridge": "br0"
                     }
 
-                }
-            ]
-        }
-        }
-    })
+                }]
+            }
+        }})
 
         right.put_config_dicts({
             "ietf-interfaces": {
                 "interfaces": {
-                    "interface": [
-                    {
+                    "interface": [{
                         "name": right["link"],
                         "ipv4": {
                             "address": [{
@@ -97,10 +97,9 @@ with infamy.Test() as test:
                                 "prefix-length": 64
                             }]
                         }
-                    },
-                    {
-                        "name": f"{type}0",
-                        "type": f"infix-if-type:{type}",
+                    }, {
+                        "name": f"{tunnel}0",
+                        "type": f"infix-if-type:{tunnel}",
                         "ipv4": {
                             "address": [{
                                 "ip": "192.168.10.2",
@@ -108,13 +107,14 @@ with infamy.Test() as test:
                             }],
                             "forwarding": True
                         },
-                        container_name: container_right,
+                        CONTAINER_TYPE: container_right,
                     }]
                 }
             }
         })
+
     _, hport = env.ltop.xlate("host", "data")
-    with test.step(f"Test connectivity host:data to right:{type}0 at 192.168.10.2"):
+    with test.step(f"Test connectivity host:data to right:{tunnel}0 at 192.168.10.2"):
         with infamy.IsolatedMacVlan(hport) as ns0:
             ns0.addip("192.168.10.1")
             ns0.must_reach("192.168.10.2")

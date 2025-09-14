@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""LLDP enable disable
+"""LLDP enable/disable
 
-Verify that LLDP can be enabled and disabled. 
+Verify that LLDP can be enabled and disabled.
 Operation and non-operation are confirmed using tcpdump.
 
 """

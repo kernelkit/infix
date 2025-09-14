@@ -1,5 +1,5 @@
 ---
-- name: lag_basic
+- name: Ling Aggregation Basic
   case: lag_basic/test.py
-- name: lag_failure
+- name: LACP Aggregate w/ Degraded Link
   case: lag_failure/test.py

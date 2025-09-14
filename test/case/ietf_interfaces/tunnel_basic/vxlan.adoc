@@ -1,0 +1,26 @@
+=== VXLAN point-to-point
+
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/ietf_interfaces/tunnel_basic]
+
+==== Description
+
+Set up a tunnel between two DUTs, host connected to the first DUT.  Enable
+IP forwarding on first DUT's interface to host and the tunnel interface to
+the second DUT.  On host, add route to IP network of second DUT and verify
+connectivity with the second DUT through the tunnel.
+
+- Tunnel types: GRE, GRETAP, and VxLAN
+- Connectivity: IPv4 and IPv6
+
+==== Topology
+
+image::topology.svg[VXLAN point-to-point topology, align=center, scaledwidth=75%]
+
+==== Sequence
+
+. Set up topology and attach to target DUTs
+. Configure DUTs with tunnel vxlan
+. Verify connectivity host:data to 10.0.0.2
+. Verify connectivity host:data to 2001:db8::c0a8:0a02
+
+

@@ -1,6 +1,6 @@
 ---
-- name: mdns_enable_disable
+- name: mDNS enable/disable
   case: mdns_enable_disable/test.py
 
-- name: mdns_allow_deny
+- name: mDNS allow/deny interfaces
   case: mdns_allow_deny/test.py

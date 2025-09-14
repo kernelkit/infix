@@ -14,38 +14,29 @@
   infamy:
     specification: False
 
-
 - name: Misc tests
   suite: misc/misc.yaml
-
-- name:  ietf-system
-  suite: ietf_system/ietf_system.yaml
 
 # Upgrade may leave wrong boot order
 - case: meta/bootorder.py
   infamy:
     specification: False
 
-- name:  ietf-syslog
+- name: "IETF System"
+  suite: ietf_system/ietf_system.yaml
+- name: "IETF Syslog"
   suite: ietf_syslog/ietf_syslog.yaml
-
-- name:  ietf-interfaces
+- name: "IETF Interfaces"
   suite: ietf_interfaces/ietf_interfaces.yaml
-
-- name:  ietf-routing
+- name: "IETF Routing"
   suite: ietf_routing/ietf_routing.yaml
-
-- name:  infix-containers
+- name: "Infix Containers"
   suite: infix_containers/infix_containers.yaml
-
-- name:  infix-dhcp
+- name: "Infix DHCP"
   suite: infix_dhcp/infix_dhcp.yaml
-
-- name:  ietf-hardware
+- name: "IETF Hardware"
   suite: ietf_hardware/ietf_hardware.yaml
-
-- name:  infix-services
+- name: "Infix Services"
   suite: infix_services/infix_services.yaml
-
-- name: use-cases
+- name: "Use Case Tests"
   suite: use_case/use_case.yml

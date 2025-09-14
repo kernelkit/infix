@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-Upgrade
+System upgrade
 
-Verify it is possible to upgrade.
+Verify system upgrade functionality.
 """
 # NOTE: THIS TEST IS HARDCODED TO NETCONF
 # There is a bug somewhere in the restconf-code (infamy or rousette)

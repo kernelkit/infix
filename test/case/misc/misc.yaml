@@ -1,5 +1,5 @@
 ---
-- name: operational_all
+- name: Get operational
   case: operational_all/test.py
 
 #- name: start_from_startup

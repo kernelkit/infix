@@ -1,9 +1,9 @@
 ---
-- name: lldp_enable_disable
+- name: LLDP enable/disable
   case: lldp_enable_disable/test.py
 
-- name: lldp_admin_status
+- name: LLDP admin status
   case: lldp_admin_status/test.py
 
-- name: lldp_ieee_group_forward
+- name: LLDP IEEE Group Forward
   case: lldp_ieee_group_forward/test.py
