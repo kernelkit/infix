@@ -9,8 +9,11 @@ All notable changes to the project are documented in this file.
 ### Changes
 - Upgrade Buildroot to 2025.02.6 (LTS)
 - Upgrade Linux kernel to 6.12.46 (LTS)
+- Add support for [Banana Pi R3][BPI-R3], a 7 port switch with 2 WiFi chip.
 
 ### Fixes
+
+[BPI-R3]: https://wiki.banana-pi.org/Banana_Pi_BPI-R3
 
 [v25.08.0][] - 2025-09-01
 -------------------------

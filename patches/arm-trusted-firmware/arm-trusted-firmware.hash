@@ -1,2 +1,5 @@
 # Locally calculated
 sha256  06d32acf42808b682859008292f0591d2d872f19aa1a8021bfcd1c1c626285e6  arm-trusted-firmware-v2.9.tar.gz
+sha256  42faea115c2f249ca47a8dd3b035591ff55482f267b64b84867521c8b021253d  arm-trusted-firmware-78a0dfd927bb00ce973a1f8eb4079df0f755887a-git4.tar.gz
+sha256  fb138bd3a4ad0bc0860896ebb8acd7f239c81e05cd4eb1aa1c59c440bfe66f24  arm-trusted-firmware-master-git4.tar.gz
+

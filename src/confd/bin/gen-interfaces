@@ -96,8 +96,8 @@ filter_iface_ports()
     iface_devs=""
     for phy in $ifaces; do
         found=""
+        [ -d "/sys/class/net/${phy}/wireless" ] && continue
         for port in $ports; do
-            [ -d "/sys/class/net/${port}/wireless" ] && continue
             if [ "$port" = "$phy" ]; then
                found=true
                break

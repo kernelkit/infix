@@ -7,5 +7,7 @@ source "$BR2_EXTERNAL_INFIX_PATH/package/board/marvell-espressobin/Config.in"
 source "$BR2_EXTERNAL_INFIX_PATH/package/board/microchip-sparx5-pcb135/Config.in"
 source "$BR2_EXTERNAL_INFIX_PATH/package/board/styx-dcp-sc-28p/Config.in"
 source "$BR2_EXTERNAL_INFIX_PATH/package/board/raspberry-pi-4/Config.in"
+source "$BR2_EXTERNAL_INFIX_PATH/package/board/banana-pi-r3/Config.in"
+
 
 endmenu

@@ -1,0 +1,46 @@
+# Raspberry Pi 4 b
+
+## Support level
+Full support for base board but not any extension board on the
+GPIOs.
+
+### Touch screen
+The [Raspberry Pi touch display v1][RPI-TOUCH] is supported, including
+touch functionality. There are multiple touchscreens on the market for
+Raspberry Pi, but only the official (first version with 800x480
+resolution) is currently supported. Infix supplies all drivers
+required to utilize the hardware, but you need to add the actual
+graphical application in a container.
+
+There are some important considerations you need to know about when
+using Infix for graphical applications. The container needs access to
+/dev/dri/ to be able to access the graphics card, and it also needs
+access to /run/udev to be able to find the input devices.
+
+Example of running Doom in Infix:
+
+```cli
+	admin@example:/> configure
+	admin@example:/config/> edit container doom
+	admin@example:/config/container/doom/> set image docker://mattiaswal/alpine-doom:latest
+	admin@example:/config/container/doom/> set privileged
+	admin@example:/config/container/doom/> edit mount udev
+	admin@example:/config/container/doom/mount/udev/> set type bind
+	admin@example:/config/container/doom/mount/udev/> set target /run/udev/
+	admin@example:/config/container/doom/mount/udev/> set source /run/udev/
+	admin@example:/config/container/doom/mount/udev/> end
+	admin@example:/config/container/doom/mount/xorg.conf/> set content U2VjdGlvbiAiT3V0cHV0Q2xhc3MiCiAgSWRlbnRpZmllciAidmM0IgogIE1hdGNoRHJpdmVyICJ2YzQiCiAgRHJpdmVyICJtb2Rlc2V0dGluZyIKICBPcHRpb24gIlByaW1hcnlHUFUiICJ0cnVlIgpFbmRTZWN0aW9uCg==
+	admin@example:/config/container/doom/mount/xorg.conf/> set target /etc/X11/xorg.conf
+	admin@example:/config/container/doom/mount/xorg.conf/> end
+	admin@example:/config/container/doom/> edit volume var
+	admin@example:/config/container/doom/volume/var/> set target /var
+	admin@example:/config/container/doom/volume/var/> leave
+	admin@example:/>
+
+```
+
+### Pre-built images
+SD card image: [infix-rpi4-sdcard.img](https://github.com/kernelkit/infix/releases/download/latest-boot/infix-rpi4-sdcard.img)
+
+
+[RPI-TOUCH]: https://www.raspberrypi.com/products/raspberry-pi-touch-display/
