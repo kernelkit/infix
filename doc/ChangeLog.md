@@ -9,9 +9,17 @@ All notable changes to the project are documented in this file.
 ### Changes
 - Upgrade Buildroot to 2025.02.6 (LTS)
 - Upgrade Linux kernel to 6.12.46 (LTS)
-- Add support for [Banana Pi R3][BPI-R3], a 7 port switch with 2 WiFi chip.
+- Add support for [Banana Pi R3][BPI-R3], a 7 port switch with 2 WiFi chip
+- Add neofetch system information tool for system introspection, issue #1143
+- Add mtr and iperf3 network diagnostic tools, issue #1144
+- Improve default bash settings with better history handling and tab completion
 
 ### Fixes
+- Fix #1100: Reduce DHCP client logging verbosity by 70% and include interface
+  names in log messages for easier troubleshooting
+- Fix #1119: CLI UX regression, restore proper behavior for `no enabled` command
+- Fix #1155: `show ospf` commands regression
+- Fix #1150: show-legacy wrapper permissions
 
 [BPI-R3]: https://wiki.banana-pi.org/Banana_Pi_BPI-R3
 
