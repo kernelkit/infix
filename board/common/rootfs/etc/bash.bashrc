@@ -15,6 +15,22 @@ export PROMPT_COMMAND=prompt_command
 # update the values of LINES and COLUMNS.
 shopt -s checkwinsize
 
+# don't put duplicate lines or lines starting with space in the history.
+export HISTCONTROL=ignoreboth
+
+# append to the history file, don't overwrite it
+shopt -s histappend
+
+# for setting history length see HISTSIZE and HISTFILESIZE in bash(1)
+export HISTSIZE=1000
+export HISTFILESIZE=2000
+
+# case-insensitive filename completion
+bind "set completion-ignore-case on"
+
+# show all completions immediately instead of ringing bell
+bind "set show-all-if-ambiguous on"
+
 log()
 {
     local fn="/var/log/syslog"
