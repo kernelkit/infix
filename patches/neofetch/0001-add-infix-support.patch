@@ -1,0 +1,91 @@
+Add Infix ASCII art support and adjust default info sets
+
+This patch adds Infix OS ASCII art and disables some info sets
+from the default output while enabling others.
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+
+--- a/neofetch	2025-09-07 21:18:44.631712703 +0200
++++ b/neofetch	2025-09-07 21:49:06.993228030 +0200
+@@ -53,21 +53,21 @@
+ # See this wiki page for more info:
+ # https://github.com/dylanaraps/neofetch/wiki/Customizing-Info
+ print_info() {
+-    info title
+-    info underline
++    # info title
++    # info underline
+ 
+     info "OS" distro
+     info "Host" model
+     info "Kernel" kernel
+     info "Uptime" uptime
+-    info "Packages" packages
++    # info "Packages" packages
+     info "Shell" shell
+     info "Resolution" resolution
+     info "DE" de
+-    info "WM" wm
+-    info "WM Theme" wm_theme
+-    info "Theme" theme
+-    info "Icons" icons
++    # info "WM" wm
++    # info "WM Theme" wm_theme
++    # info "Theme" theme
++    # info "Icons" icons
+     info "Terminal" term
+     info "Terminal Font" term_font
+     info "CPU" cpu
+@@ -76,17 +76,17 @@
+ 
+     # info "GPU Driver" gpu_driver  # Linux/macOS only
+     # info "CPU Usage" cpu_usage
+-    # info "Disk" disk
++    info "Disk" disk
+     # info "Battery" battery
+     # info "Font" font
+     # info "Song" song
+     # [[ "$player" ]] && prin "Music Player" "$player"
+-    # info "Local IP" local_ip
+-    # info "Public IP" public_ip
++    info "Local IP" local_ip
++    info "Public IP" public_ip
+     # info "Users" users
+     # info "Locale" locale  # This only works on glibc systems.
+ 
+-    info cols
++    # info cols
+ }
+ 
+ # Title
+@@ -113,7 +113,7 @@
+ # Example:
+ # on:  '4.8.9-1-ARCH'
+ # off: 'Linux 4.8.9-1-ARCH'
+-kernel_shorthand="on"
++kernel_shorthand="off"
+ 
+ 
+ # Distro
+@@ -7435,6 +7435,21 @@
+ EOF
+         ;;
+ 
++        "Infix"*)
++            set_colors 4 3
++            read -rd '' ascii_data <<'EOF'
++${c1}  .---------------.
++${c1}  |               |
++${c1}  |     ${c2}•   •${c1}     |
++${c1}  |       V       |
++${c1}  |---.       .---|
++${c1}  |${c2}▒▒▒${c1}|       |${c2}▒▒▒${c1}|
++${c1}  '---'-------'---'
++${c2}  Hi, I'm Jacky! :)
++
++EOF
++        ;;
++
+         "januslinux"*|"janus"*|"Ataraxia Linux"*|"Ataraxia"*)
+             set_colors 4 5 6 2
+             read -rd '' ascii_data <<'EOF'
