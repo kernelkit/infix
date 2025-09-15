@@ -15,7 +15,7 @@
     specification: False
 
 - name: Misc tests
-  suite: misc/misc.yaml
+  suite: misc/all.yaml
 
 # Upgrade may leave wrong boot order
 - case: meta/bootorder.py
@@ -23,20 +23,28 @@
     specification: False
 
 - name: "IETF System"
-  suite: ietf_system/ietf_system.yaml
+  suite: ietf_system/all.yaml
+
 - name: "IETF Syslog"
-  suite: ietf_syslog/ietf_syslog.yaml
+  suite: ietf_syslog/all.yaml
+
 - name: "IETF Interfaces"
-  suite: ietf_interfaces/ietf_interfaces.yaml
+  suite: ietf_interfaces/all.yaml
+
 - name: "IETF Routing"
-  suite: ietf_routing/ietf_routing.yaml
+  suite: ietf_routing/all.yaml
+
 - name: "Infix Containers"
-  suite: infix_containers/infix_containers.yaml
+  suite: infix_containers/all.yaml
+
 - name: "Infix DHCP"
-  suite: infix_dhcp/infix_dhcp.yaml
+  suite: infix_dhcp/all.yaml
+
 - name: "IETF Hardware"
-  suite: ietf_hardware/ietf_hardware.yaml
+  suite: ietf_hardware/all.yaml
+
 - name: "Infix Services"
-  suite: infix_services/infix_services.yaml
+  suite: infix_services/all.yaml
+
 - name: "Use Case Tests"
-  suite: use_case/use_case.yml
+  suite: use_case/all.yaml
