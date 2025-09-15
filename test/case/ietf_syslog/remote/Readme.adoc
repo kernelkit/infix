@@ -1,1 +1,1 @@
-remote.adoc
+test.adoc

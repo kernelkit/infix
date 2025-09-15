@@ -5,7 +5,7 @@ Verify communication over an LACP link aggregate when individual member
 links stop forwarding traffic, without carrier loss.
 
 .Logical network setup, link breakers (lb1 & lb2) here managed by host PC
-image::lag-failure.svg[]
+image::lag-failure.svg[align=center, scaledwidth=75%]
 
 The host verifies connectivity with dut2 via dut1 over the aggregate for
 each failure mode step using the `mon` interface.

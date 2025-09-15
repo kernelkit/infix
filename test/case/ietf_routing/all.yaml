@@ -1,0 +1,27 @@
+---
+- name: Static routing
+  case: static_routing/test.py
+
+- name: OSPF Basic
+  case: ospf_basic/test.py
+
+- name: OSPF unnumbered interfaces
+  case: ospf_unnumbered_interface/test.py
+
+- name: OSPF with multiple areas
+  case: ospf_multiarea/test.py
+
+- name: OSPF BFD
+  case: ospf_bfd/test.py
+
+- name: "Route preference: OSPF vs Static"
+  case: route_pref_ospf/test.py
+
+- name: "Route preference: DHCP vs Static"
+  case: route_pref_dhcp/test.py
+
+- name: "Route preference: Static Route Activation and Maximum Distance"
+  case: route_pref_255/test.py
+
+- name: OSPF Default route advertise
+  case: ospf_default_route_advertise/test.py

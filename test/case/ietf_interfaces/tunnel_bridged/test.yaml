@@ -1,12 +1,11 @@
 ---
-- name: gretap_bridged
-  case: test.py
-  opts: ["--type", "gretap"]
-  infamy:
-    title: GRETAP bridged with physical interface
+- settings:
+    test-spec: <case>.adoc
 
-- name: vxlan_bridged
-  case: test.py
-  opts: ["--type", "vxlan"]
-  infamy:
-    title: VXLAN bridged with physical interface
+- name: GRETAP bridged with physical interface
+  case: gretap.py
+  opts: ["--tunnel", "gretap"]
+
+- name: VXLAN bridged with physical interface
+  case: vxlan.py
+  opts: ["--tunnel", "vxlan"]

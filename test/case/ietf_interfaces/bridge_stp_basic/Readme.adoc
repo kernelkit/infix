@@ -1,1 +1,1 @@
-bridge_stp_basic.adoc
+test.adoc

@@ -1,3 +1,0 @@
----
-- name: ospf_container
-  case: ospf_container/test.py

@@ -1,6 +1,0 @@
----
-- name: dhcp_client
-  suite: dhcp_client.yaml
-
-- name: dhcp_server
-  suite: dhcp_server.yaml

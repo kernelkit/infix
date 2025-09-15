@@ -1,0 +1,25 @@
+=== Set hostname
+
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/ietf_system/hostname]
+
+==== Description
+
+Verify that it is possible to set hostname using both regular text and
+format specificers, like '%h-%m'.  These format specifiers expand to
+'<default hostname>-<MAC>', where MAC is the last three bytes of the
+base MAC address.  E.g., ix-01-01-01.
+
+==== Topology
+
+image::topology.svg[Set hostname topology, align=center, scaledwidth=75%]
+
+==== Sequence
+
+. Set up topology and attach to target DUT
+. Set hostname to 'h0stn4m3'
+. Verify new hostname 'h0stn4m3'
+. Set hostname to '%h-%m'
+. Verify hostname is  %h-%m in running configuration
+. Verify hostname format in operational
+
+

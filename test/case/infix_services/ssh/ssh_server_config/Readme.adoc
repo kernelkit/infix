@@ -1,1 +1,1 @@
-ssh_server_config.adoc
+test.adoc

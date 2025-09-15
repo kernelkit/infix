@@ -1,7 +1,7 @@
 graph "2x2" {
 	layout="neato";
 	overlap="false";
-	esep="+60";
+	esep="+80";
 
         node [shape=record, fontname="DejaVu Sans Mono, Book"];
 	edge [color="cornflowerblue", penwidth="2", fontname="DejaVu Serif, Book"];

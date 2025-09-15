@@ -1,0 +1,30 @@
+=== Verify that VETH pairs can be deleted
+
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/ietf_interfaces/veth_delete]
+
+==== Description
+
+```
+     veth0b       veth0a        data1    data2
+          `---------'
+```
+
+Each test step to create, add address, or delete an interace is distinct
+from any other step.  This to trigger a new configuration "generation".
+
+==== Topology
+
+image::topology.svg[Verify that VETH pairs can be deleted topology, align=center, scaledwidth=75%]
+
+==== Sequence
+
+. Set up topology and attach to target DUT
+. Create VETH pair
+. Verify interfaces 'veth0a' and 'veth0b' exist
+. Set IP address on target:data1 (dummy op)
+. Set IP address on target:data2 (dummy op)
+. Reset configuration
+. Verify target:data1 and target:data2 still exist
+. Verify VETH pair have been removed
+
+

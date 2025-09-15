@@ -1,18 +1,38 @@
 :testgroup:
 == infix-services
 
-<<<
+Tests verifying Infix network services configuration and operation:
+
+ - mDNS (Multicast DNS) service enable/disable functionality
+ - mDNS interface allow/deny access control
+ - LLDP (Link Layer Discovery Protocol) service control
+ - LLDP per-interface administrative status configuration
+ - LLDP IEEE group address forwarding behavior
+ - SSH server configuration and access control
+ - SSH public key authentication mechanisms
 
 include::mdns/mdns_enable_disable/Readme.adoc[]
 
+<<<
+
 include::mdns/mdns_allow_deny/Readme.adoc[]
+
+<<<
 
 include::lldp/lldp_enable_disable/Readme.adoc[]
 
+<<<
+
 include::lldp/lldp_admin_status/Readme.adoc[]
+
+<<<
 
 include::lldp/lldp_ieee_group_forward/Readme.adoc[]
 
+<<<
+
 include::ssh/ssh_server_config/Readme.adoc[]
+
+<<<
 
 include::ssh/ssh_key_authentication/Readme.adoc[]

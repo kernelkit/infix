@@ -1,1 +1,1 @@
-ntp_client.adoc
+test.adoc

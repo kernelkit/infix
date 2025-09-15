@@ -1,9 +1,12 @@
 ---
-- name: server_basic
+- settings:
+    test-spec: Readme.adoc
+
+- name: DHCP Server
   case: server_basic/test.py
 
-- name: server_host
+- name: DHCP Server Static Host
   case: server_host/test.py
 
-- name: server_subnets
+- name: DHCP Server Multiple Subnets
   case: server_subnets/test.py

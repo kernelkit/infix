@@ -10,22 +10,55 @@ with three scenarios:
  3. Allow p1 and p3, deny p2 and p3, traffic only on p1
 
 """
-
-import time
+import re
 import infamy
-from infamy.util import parallel
 
 
-def mdns_scan(tgt):
-    """Trigger Avahi to send traffic on allowed interfaces"""
-    time.sleep(2)
-    tgt.runsh("logger -t scan 'calling avahi-browse ...'")
-    tgt.runsh("avahi-browse -lat")
+def mdns_scan():
+    """Start packet captures, trigger mDNS scan, return capture results"""
+    pcap1 = ns1.pcap("host 10.0.1.1 and port 5353")
+    pcap2 = ns2.pcap("host 10.0.2.1 and port 5353")
+    pcap3 = ns3.pcap("host 10.0.3.1 and port 5353")
+
+    with pcap1, pcap2, pcap3:
+        ssh.runsh("logger -t scan 'calling avahi-browse ...'")
+        ssh.runsh("avahi-browse -lat")
+
+    def has_packets(output):
+        if not output:
+            return False
+        lines = output.strip().split('\n')
+        m = re.search(r'^(\d+) packets.*', lines[1])
+        if m and int(m.group(1)) > 0:
+            return True
+        return False
+
+    out1 = pcap1.tcpdump("--count")
+    out2 = pcap2.tcpdump("--count")
+    out3 = pcap3.tcpdump("--count")
+
+    return (has_packets(out1), has_packets(out2), has_packets(out3))
 
 
-def check(ns, expr, must):
-    """Wrap netns.must_receive() with common defaults"""
-    return ns.must_receive(expr, timeout=3, must=must)
+def check(expected, allow=None, deny=None):
+    """Execute complete mDNS test scenario"""
+    try:
+        dut.delete_xpath("/infix-services:mdns/interfaces")
+    except ValueError:
+        # Ignore if xpath doesn't exist (first run)
+        pass
+
+    mdns_config = {"mdns": {"interfaces": {}}}
+    if allow:
+        mdns_config["mdns"]["interfaces"]["allow"] = allow
+    if deny:
+        mdns_config["mdns"]["interfaces"]["deny"] = deny
+
+    dut.put_config_dict("infix-services", mdns_config)
+
+    actual = mdns_scan()
+    if actual != tuple(expected):
+        raise AssertionError(f"Expected {expected}, got {actual}")
 
 
 with infamy.Test() as test:
@@ -45,58 +78,41 @@ with infamy.Test() as test:
             {
                 "ietf-interfaces": {
                     "interfaces": {
-                         "interface": [
-                             {
-                                 "name": p1,
-                                 "enabled": True,
-                                 "ipv4": {
-                                     "address": [
-                                         {
-                                             "ip": "10.0.1.1",
-                                             "prefix-length": 24
-                                         }
-                                     ]
-                                 }
-
-                             },
-                             {
-                                 "name": p2,
-                                 "enabled": True,
-                                 "ipv4": {
-                                     "address": [
-                                         {
-                                             "ip": "10.0.2.1",
-                                             "prefix-length": 24
-                                         }
-                                     ]
-                                 }
-
-                             },
-                             {
-                                 "name": p3,
-                                 "enabled": True,
-                                 "ipv4": {
-                                     "address": [
-                                         {
-                                             "ip": "10.0.3.1",
-                                             "prefix-length": 24
-                                         }
-                                     ]
-                                 }
-
-                             },
-                         ]
-                     }
+                        "interface": [{
+                            "name": p1,
+                            "enabled": True,
+                            "ipv4": {
+                                "address": [{
+                                    "ip": "10.0.1.1",
+                                    "prefix-length": 24
+                                }]
+                            }
+                        }, {
+                            "name": p2,
+                            "enabled": True,
+                            "ipv4": {
+                                "address": [{
+                                    "ip": "10.0.2.1",
+                                    "prefix-length": 24
+                                }]
+                            }
+                        }, {
+                            "name": p3,
+                            "enabled": True,
+                            "ipv4": {
+                                "address": [{
+                                    "ip": "10.0.3.1",
+                                    "prefix-length": 24
+                                }]
+                            }
+                        }]
+                    }
                 },
                 "ietf-system": {
-                    "system": {
-                        "hostname": "dut"
-                    }
+                    "system": {"hostname": "dut"}
                 },
                 "infix-services": {
-                    "mdns": {
-                        "enabled": True
-                    }
+                    "mdns": {"enabled": True}
                 }
             }
         )
@@ -108,53 +124,16 @@ with infamy.Test() as test:
         ns2.addip("10.0.2.2")
         ns3.addip("10.0.3.2")
 
-        EXPR1 = "host 10.0.1.1 and port 5353"
-        EXPR2 = "host 10.0.2.1 and port 5353"
-        EXPR3 = "host 10.0.3.1 and port 5353"
-
         with test.step("Allow mDNS on a single interface: p2"):
-            dut.put_config_dict("infix-services", {
-                "mdns": {
-                    "interfaces": {
-                        "allow": [p2],
-                    }
-                }
-            })
-
-            parallel(lambda: mdns_scan(ssh),
-                     lambda: check(ns1, EXPR1, False),
-                     lambda: check(ns2, EXPR2, True),
-                     lambda: check(ns3, EXPR3, False))
+            # p1:no, p2:yes, p3:no
+            check([False, True, False], allow=[p2])
 
         with test.step("Deny mDNS on a single interface: p2"):
-            dut.delete_xpath("/infix-services:mdns/interfaces")
-            dut.put_config_dict("infix-services", {
-                "mdns": {
-                    "interfaces": {
-                        "deny": [p2],
-                    }
-                }
-            })
-
-            parallel(lambda: mdns_scan(ssh),
-                     lambda: check(ns1, EXPR1, True),
-                     lambda: check(ns2, EXPR2, False),
-                     lambda: check(ns3, EXPR3, True))
+            # p1:yes, p2:no, p3:yes
+            check([True, False, True], deny=[p2])
 
         with test.step("Allow mDNS on p1, p3 deny on p2, p3"):
-            dut.delete_xpath("/infix-services:mdns/interfaces")
-            dut.put_config_dict("infix-services", {
-                "mdns": {
-                    "interfaces": {
-                        "allow": [p1, p3],
-                        "deny":  [p2, p3],
-                    }
-                }
-            })
-
-            parallel(lambda: mdns_scan(ssh),
-                     lambda: check(ns1, EXPR1, True),
-                     lambda: check(ns2, EXPR2, False),
-                     lambda: check(ns3, EXPR3, False))
+            # p1:yes, p2:no, p3:no (deny overrides allow)
+            check([True, False, False], allow=[p1, p3], deny=[p2, p3])
 
     test.succeed()

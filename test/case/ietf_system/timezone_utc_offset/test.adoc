@@ -1,0 +1,19 @@
+=== Set timezone with UTC offset
+
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/ietf_system/timezone_utc_offset]
+
+==== Description
+
+Verify that it is possible to set timezone using UTC offset
+
+==== Topology
+
+image::topology.svg[Set timezone with UTC offset topology, align=center, scaledwidth=75%]
+
+==== Sequence
+
+. Set up topology and attach to target DUT
+. Set timezone UTC offset to +12
+. Verify current timezone is UTC+12:00
+
+

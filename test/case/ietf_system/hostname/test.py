@@ -1,14 +1,11 @@
 #!/usr/bin/env python3
-"""
-Set hostname
+"""Set hostname
 
-Verify that it is possible to change hostname both normal
-and using format %h-%m.
+Verify that it is possible to set hostname using both regular text and
+format specificers, like '%h-%m'.  These format specifiers expand to
+'<default hostname>-<MAC>', where MAC is the last three bytes of the
+base MAC address.  E.g., ix-01-01-01.
 
-The %h-%m format expands to <default hostname>-<MAC>,
-where MAC is the last three bytes of the base MAC address.
-
-e.g. ix-01-01-01.
 """
 import re
 import infamy

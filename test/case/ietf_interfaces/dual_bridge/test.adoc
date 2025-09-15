@@ -1,0 +1,26 @@
+=== Dual bridges on one device
+
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/ietf_interfaces/dual_bridge]
+
+==== Description
+
+Verify that it is possible to ping through a bridge to another bridge
+via a VETH pair connected to both.
+
+....
+ PING -->     br0             br1 10.0.0.2
+             /   \              /
+PC - target:data  veth0a - veth0b
+....
+
+==== Topology
+
+image::topology.svg[Dual bridges on one device topology, align=center, scaledwidth=75%]
+
+==== Sequence
+
+. Set up topology and attach to target DUTs
+. Configure two bridges linked and a veth pair
+. Verify ping from host:data to 10.0.0.2
+
+

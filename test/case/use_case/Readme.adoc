@@ -1,8 +1,8 @@
 :testgroup:
+== Use Case Tests
 
-== Use case tests
-Contains test of multiple parts of Infix together.
+Integration tests verifying multiple Infix components working together:
 
-<<<
+ - OSPF routing with containerized applications and network segmentation
 
 include::ospf_container/Readme.adoc[]

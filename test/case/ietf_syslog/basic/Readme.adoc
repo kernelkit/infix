@@ -1,1 +1,1 @@
-basic.adoc
+test.adoc

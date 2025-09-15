@@ -5,38 +5,16 @@ import argparse
 import io
 import sys
 import re
-import yaml
-
 from pathlib import Path
-
+import yaml
 import graphviz
 
 
-def replace_image_tag(text, test_dir):
-    """
-    Convert images added in the description and replace with the required ifdefs to work
-    generating the test specifcation as well.
-    """
+def log(msg):
+    """Log message if in debug mode"""
+    if args.debug:
+        print(msg)
 
-    pattern = r"image::(?P<image_name>\S+)\[(?P<label>[^\]]*)\]"
-
-    def repl(match):
-        image_name = match.group("image_name")
-        label = match.group("label")
-
-        return f"""ifdef::topdoc[]
-image::{{topdoc}}../../{test_dir}/{image_name}[{label}]
-endif::topdoc[]
-ifndef::topdoc[]
-ifdef::testgroup[]
-image::{'/'.join(Path(test_dir).parts[3:])}/{image_name}[{label}]
-endif::testgroup[]
-ifndef::testgroup[]
-image::{image_name}[{label}]
-endif::testgroup[]
-endif::topdoc[]"""
-
-    return re.sub(pattern, repl, text)
 
 class TestStepVisitor(ast.NodeVisitor):
     """
@@ -45,27 +23,26 @@ class TestStepVisitor(ast.NodeVisitor):
 
     """
     def __init__(self):
-        self.test_steps=[]
         self.name = ""
         self.description = ""
+        self.test_steps = []
 
     def visit_Module(self, node):
         """Extract docstring from a test."""
         docstring = ast.get_docstring(node)
         if docstring:
             lines = docstring.splitlines()
-
-            newline_parsed=False
+            newline_parsed = False
 
             for line in lines:
                 if self.name == "":
-                    self.name=line.strip()
+                    self.name = line.strip()
                 elif newline_parsed is False and line == "":
                     newline_parsed = True
-                    continue # Skip mandatory newline
+                    continue  # Skip mandatory newline
                 else:
-                    self.description=f"{self.description}\n{line}"
-            self.description=self.description.strip()
+                    self.description = f"{self.description}\n{line}"
+            self.description = self.description.strip()
         self.generic_visit(node)
 
     def _rebuild_fstring(self, node: ast.JoinedStr) -> str:
@@ -95,37 +72,29 @@ class TestStepVisitor(ast.NodeVisitor):
                         self.test_steps.append(fstring_value)
         self.generic_visit(node)  # Continue visiting other nodes
 
-def replace_in_steps(steps, variables):
-    result = []
-    for step in steps:
-        new_step = step
-        for k, v in variables.items():
-            new_step = new_step.replace("{" + k + "}", v)
-        result.append(new_step)
-    return result
 
 class TestCase:
-    """All test specifcation resources for a test case"""
-    def __init__(self, directory, rootdir=None):
+    """Test specifcation resources for a test case"""
+    def __init__(self, directory, name="test.py", rootdir=None):
         self.test_dir = Path(directory)
         if rootdir:
             rootdir = Path(f"{rootdir}")
             self.test_dir = self.test_dir.relative_to(rootdir)
-        self.topology_dot = f"{directory}/topology.dot"
-        self.topology_image = f"{directory}/topology"
-        self.test_case = f"{directory}/test.py"
-        self.specification = f"{directory}/Readme.adoc"
+        self.topo_dot = f"{directory}/topology.dot"
+        self.topo_img = f"{directory}/topology"
+        self.test_path = f"{directory}/{name}"
+        self.spec_path = f"{directory}/{os.path.splitext(name)[0]}.adoc"
+        log(f"TestCase({self.test_path})")
 
-    def generate_topology(self):
+    def gen_topology(self):
         """Generate SVG file from the topology.dot file"""
-        with open(self.topology_dot, 'r', encoding='utf-8') as dot_file:
-            svg_file = f"{self.topology_image}.svg"
+        with open(self.topo_dot, 'r', encoding='utf-8') as dot_file:
+            svg_file = f"{self.topo_img}.svg"
 
             try:
                 dot_graph = dot_file.read()
                 graph = graphviz.Source(dot_graph)
-                graph.render(self.topology_image, format='svg', cleanup=True,
-                             quiet=True)
+                graph.render(self.topo_img, format='svg', cleanup=True, quiet=True)
 
                 content = ""
                 with open(svg_file, 'r', encoding='utf-8') as f:
@@ -137,13 +106,22 @@ class TestCase:
                     f.write(mod_content)
             except graphviz.backend.execute.CalledProcessError as e:
                 msg = e.stderr.decode()
-                print(f"Failed rendering SVG from {self.topology_dot}: {msg}")
+                print(f"Failed rendering SVG from {self.topo_dot}: {msg}")
             except UnboundLocalError:
                 print(f"Failed cleaning {svg_file}, empty or missing.")
 
-    def generate_specification(self, name, case_path, spec_path, variables):
-        """Generate a ASCIIDOC specification for the test case"""
-        with open(case_path, 'r', encoding='utf-8') as file:
+    def __replace_in(self, steps, variables):
+        result = []
+        for step in steps:
+            new_step = step
+            for k, v in variables.items():
+                new_step = new_step.replace("{" + k + "}", v)
+            result.append(new_step)
+        return result
+
+    def gen_spec(self, title, variables):
+        """Generate a AsciiDoc specification for the test case"""
+        with open(self.test_path, 'r', encoding='utf-8') as file:
             script_content = file.read()
 
         parsed_script = ast.parse(script_content)
@@ -151,78 +129,99 @@ class TestCase:
         visitor.visit(parsed_script)
         description = visitor.description if visitor.description != "" else "Undefined"
         test_steps = visitor.test_steps
+
         if variables is not None:
             for k, v in variables.items():
                 if "{" + k + "}" in description:
                     description = description.replace("{" + k + "}", v)
 
-                test_steps=replace_in_steps(test_steps, variables)
-        if name is None:
-            name = visitor.name
-        self.generate_topology()
-        description = replace_image_tag(description, self.test_dir)
-        with open(spec_path, "w") as spec:
-            spec.write(f"=== {name}\n")
-            spec.write("==== Description\n")
+                test_steps = self.__replace_in(test_steps, variables)
+
+        if title is None:
+            title = visitor.name
+
+        self.gen_topology()
+
+        with open(self.spec_path, "w", encoding='utf-8') as spec:
+            # This is the test name/title  for the test-specification.pdf,
+            # it is replaced by 9PM with the 'name:' from the suite.yaml
+            # when it generates the test report.
+            spec.write(f"=== {title}\n\n")
+
+            # When included in another document, e.g., the test-report.pdf,
+            # AsciiDoc needs to know where iamges are located.  For other
+            # use-cases, e.g., browsing in GitHub '.' is implied.
+            spec.write(f"ifdef::topdoc[:imagesdir: {{topdoc}}../../{self.test_dir}]\n\n")
+
+            spec.write("==== Description\n\n")
             spec.write(description + "\n\n")
-            spec.write("==== Topology\n")
-            spec.write("ifdef::topdoc[]\n")
-            spec.write(f"image::{{topdoc}}../../{self.test_dir}/topology.svg[{name} topology]\n")
-            spec.write("endif::topdoc[]\n")
-            spec.write("ifndef::topdoc[]\n")
-            spec.write("ifdef::testgroup[]\n")
-            spec.write(f"image::{Path(*self.test_dir.parts[3:])}/topology.svg[{name} topology]\n")
-            spec.write("endif::testgroup[]\n")
-            spec.write("ifndef::testgroup[]\n")
-            spec.write(f"image::topology.svg[{name} topology]\n")
-            spec.write("endif::testgroup[]\n")
-            spec.write("endif::topdoc[]\n")
-            spec.write("==== Test sequence\n")
+
+            spec.write("==== Topology\n\n")
+            spec.write(f"image::topology.svg[{title} topology, align=center, scaledwidth=75%]\n\n")
+
+            spec.write("==== Sequence\n\n")
             spec.writelines([f". {step}\n" for step in test_steps])
-            spec.write("\n\n<<<\n\n")  # need empty lines to pagebreak
+            spec.write("\n\n")
 
 
 def parse_suite(directory, root, suitefile):
     """Parse 9pm .yaml suite file"""
-    test_spec = None
     readme = None
+    first_test = True
 
-    with open(suitefile, "r") as f:
+    log(f"Opening suite file {suitefile} ...")
+    with open(suitefile, "r", encoding='utf-8') as f:
         data = yaml.safe_load(f)
+
     for entry in data:
         if entry.get("suite"):
             path = os.path.dirname(entry["suite"])
             parse_suite(f"{directory}/{path}", root, f"{directory}/{entry['suite']}")
         elif entry.get("case"):
-            variables=None
-            if not entry.get("infamy"):
-                test_title = None  # Set from the docstring in the test case
-            else:
-                specification = entry["infamy"].get("specification", True);
+            name = os.path.basename(entry["case"])
+            base = os.path.splitext(name)[0]
+            path = os.path.dirname(entry["case"])
+            opts = None
+
+            log(f"Parsing test case {name} in {path} ...")
+            if entry.get("infamy"):
+                specification = entry["infamy"].get("specification", True)
                 if not specification:
                     continue
-                test_title = entry["infamy"]["title"]
-            path = os.path.dirname(entry["case"])
+
+            if entry.get("name"):
+                test_title = entry["name"]
+            else:
+                test_title = None  # Set from the docstring in the test case
+
             if readme is None:
-                readme = open(f"{directory}/{path}/Readme.adoc.tmp", "w")
-            test_case_id = entry["name"]
+                readme = open(f"{directory}/{path}/Readme.adoc.tmp", "w", encoding='utf-8')
 
             if "opts" in entry:
-                variables = dict((k[2:], v) for k, v in zip(entry["opts"][::2], entry["opts"][1::2]))
+                opts = dict((k[2:], v) for k, v in zip(entry["opts"][::2], entry["opts"][1::2]))
 
-            test_file = f"{directory}/{entry['case']}"
-            test_spec = f"{directory}/{path}/{test_case_id}.adoc"
-            test_case = TestCase(f"{directory}/{path}", root)
-            test_case.generate_specification(test_title, test_file, test_spec, variables)
-            readme.write(f"include::{path}{test_case_id}.adoc[]\n\n")
+            test_case = TestCase(f"{directory}/{path}", name, root)
+            test_case.gen_spec(test_title, opts)
+
+            if first_test:
+                first_test = False
+            else:
+                readme.write("<<<\n\n")  # Page break before subsequent tests
+            readme.write(f"include::{base}.adoc[]\n\n")
+
             if path != "":
                 lnk = f"{directory}/{path}/Readme.adoc"
                 readme.close()
+                log(f"Removing {directory}/{path}/Readme.adoc.tmp")
                 os.unlink(f"{directory}/{path}/Readme.adoc.tmp")
                 readme = None
-                if os.path.exists(lnk):
+                log(f"Checking if lnk {lnk} exists ...")
+                if os.path.lexists(lnk):
+                    log(f"Removing {lnk}")
                     os.unlink(lnk)
-                os.symlink(f"{test_case_id}.adoc", lnk)
+                log(f"Creating symlink {base}.adoc -> {lnk}")
+                os.symlink(f"{base}.adoc", lnk)
+
     if readme is not None:
         readme.close()
         os.rename(f"{directory}/Readme.adoc.tmp", f"{directory}/Readme.adoc")
@@ -234,22 +233,24 @@ parser.add_argument("-r", "--root-dir", required=True, help="Path that all paths
 parser.add_argument("-d", "--debug", help="Show debug output", action="store_true")
 args = parser.parse_args()
 
-error_string = ""
-# This is hacky, graphviz output error only to stdout and return successful(always).
-# If everything goes well, output shall be empty, fail on any output
+# This is hacky, graphviz output error only to stdout and *always*
+# return successful.  If everything goes well, output shall be empty,
+# fail on any output.
+ERROR_STRING = ""
 
 if not args.debug:
     output_capture = io.StringIO()
     sys.stderr = output_capture
     output_capture.truncate(0)
     output_capture.seek(0)
+
 parse_suite(os.path.dirname(args.suite), args.root_dir, args.suite)
 
 if not args.debug:
     sys.stdout = sys.__stdout__
 
-    if len(error_string) > 0:
-        print(error_string)
-        exit(1)
+    if len(ERROR_STRING) > 0:
+        print(ERROR_STRING)
+        sys.exit(1)
 
-exit(0)
+sys.exit(0)

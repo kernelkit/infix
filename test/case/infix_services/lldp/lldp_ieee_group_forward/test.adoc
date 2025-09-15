@@ -1,0 +1,22 @@
+=== LLDP IEEE Group Forward
+
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/infix_services/lldp/lldp_ieee_group_forward]
+
+==== Description
+
+Verify that LLDP packets can be flooded to all ports on a bridge.
+Operation and non-operation are confirmed using tcpdump.
+
+==== Topology
+
+image::topology.svg[LLDP IEEE Group Forward topology, align=center, scaledwidth=75%]
+
+==== Sequence
+
+. Set up topology and attach to target DUT
+. Configure interfaces and disable LLDP daemon
+. Verify LLDP absence on host:data2
+. Enable LLDP flooding by setting group forward
+. Verify LLDP arrival on host:data2
+
+

@@ -2,38 +2,82 @@ extends: default
 font:
   catalog:
     merge: true
+    Lato:
+      normal: Lato/Lato-Regular.ttf
+      bold: Lato/Lato-Bold.ttf
+      italic: Lato/Lato-Italic.ttf
+      bold_italic: Lato/Lato-BoldItalic.ttf
+    SourceSansPro:
+      normal: SourceSansPro/static/SourceSans3-Regular.ttf
+      bold: SourceSansPro/static/SourceSans3-Bold.ttf
+      italic: SourceSansPro/static/SourceSans3-Italic.ttf
+      bold_italic: SourceSansPro/static/SourceSans3-BoldItalic.ttf
     SourceCodePro:
-      normal: SourceCodePro-Regular.ttf
-      bold: SourceCodePro-Bold.ttf
-      italic: SourceCodePro-Italic.ttf
-      bold_italic: SourceCodePro-BoldItalic.ttf
+      normal: SourceCodePro/SourceCodePro-Regular.ttf
+      bold: SourceCodePro/SourceCodePro-Bold.ttf
+      italic: SourceCodePro/SourceCodePro-Italic.ttf
+      bold_italic: SourceCodePro/SourceCodePro-BoldItalic.ttf
 
 base:
-  font_family: SourceCodePro
-  font_size: 11
-  line_height_length: 1.3
+  font-family: SourceSansPro
+  font-size: 10
+  line-height-length: 1.3
+  font-color: #1f2937
 
 code:
+  font-family: SourceCodePro
+  font-size: 9
   background-color: #ffffff
   border-color: #ffffff
 
+codespan:
+  font-size: 9
+  background-color: #ffffff
+  font-color: #000000
+
 heading:
-  font_family: SourceCodePro
-  font_style: bold
+  font-family: Lato
+  font-kerning: normal
+
 role:
   underline:
-    text_decoration: underline
+    text-decoration: underline
+  pass:
+    font-color: #14532d
+    font-style: bold
+  fail:
+    font-color: #b91c1c
+    font-style: bold
+  skip:
+    font-color: #eab308
+    font-style: bold
 
-# Define custom sizes for each heading level
+link:
+  font-color: #2563eb
+  font-style: italic
+  text-decoration: underline
+
+image:
+  caption:
+    align: inherit
+
+table:
+  font-size: 9
+
 heading_h1:
-  font_size: 24  # Size for H1 headings
+  font-family: Lato
+  font_size: 24
 
-heading_h2: # Test class
-  font_size: 18  # Size for H2 headings
-heading_h3: # test case name
-  font_size: 12  # Size for H3 headings
-  text_decoration: underline
-  margin_top: 30
+# Test class
+heading_h2:
+  font-family: Lato
+  font_size: 20
+
+# Test case name
+heading_h3:
+  font-family: Lato
+  font_size: 18
 
 heading_h4:
-  font_size: 11  # Size for H4 headings
+  font-family: Lato
+  font_size: 12

@@ -1,0 +1,6 @@
+---
+- name: Syslog Basic
+  case: basic/test.py
+
+- name: Remote syslog
+  case: remote/test.py

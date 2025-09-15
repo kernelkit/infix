@@ -1,1 +1,1 @@
-server_basic.adoc
+test.adoc

@@ -1,0 +1,43 @@
+=== Verify that all interface types can be created
+
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/ietf_interfaces/verify_all_interface_types]
+
+==== Description
+
+This test verifies that all interface types can be created and also
+checks the configuration when applied sequentially. This method takes
+slightly longer than sending the entire configuration at once.
+
+....
+
+ lo     br-0                    br-Q.40            br-D         br-X
+  |       |                       |                  |            |
+  o       o        ethQ.10       br-Q            veth0a.20      ethX.30
+                          \     /    \               |            |
+                           ethQ       veth0b       veth0a        ethX
+                                          `---------'
+....
+
+==== Topology
+
+image::topology.svg[Verify that all interface types can be created topology, align=center, scaledwidth=75%]
+
+==== Sequence
+
+. Set up topology and attach to target DUT
+. Configure an empty bridge br-0
+. Configure bridge br-X and associated interfaces
+. Configure VETH pair
+. Configure bridge br-D and associated interfaces
+. Configure br-Q and associated interfaces
+. Configure GRE Tunnels
+. Configure VxLAN Tunnels
+. Verify interface 'lo' is of type loopback
+. Verify interfaces 'ethX' and 'ethQ' are of type 'ethernet' (or etherlike if running Qemu)
+. Verify interfaces 'br-0', 'br-X', 'br-D' and 'br-Q' are of type 'bridge'
+. Verify interfaces 'veth0a' and 'veth0b' are of type 'veth'
+. Verify interfaces 'veth0a.20', 'ethQ.10', 'ethX.30', 'ethQ.10' and 'br-Q.40' are of type 'vlan'
+. Verify GRE interfaces 'gre-v4', 'gre-v6', 'gretap-v4' and 'gretap-v6'
+. Verify VxLAN interfaces 'vxlan-v4' and 'vxlan-v6'
+
+

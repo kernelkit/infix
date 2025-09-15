@@ -1,9 +1,12 @@
 ---
-- name: client_basic
+- settings:
+    test-spec: Readme.adoc
+
+- name: DHCP Basic
   case: client_basic/test.py
 
-- name: client_default_gw
+- name: DHCP Router
   case: client_default_gw/test.py
 
-- name: client_routes
+- name: DHCP option 121 vs option 3
   case: client_routes/test.py
