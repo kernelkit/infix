@@ -9,6 +9,10 @@ on:
       - ci-work
   workflow_dispatch:
 
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build-x86_64:
     if: startsWith(github.repository, 'kernelkit/')

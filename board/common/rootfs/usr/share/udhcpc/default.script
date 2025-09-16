@@ -23,12 +23,22 @@ fi
 
 log()
 {
-    logger -I $$ -t udhcpc -p user.notice "$*"
+    logger -I $$ -t udhcpc -p user.notice "${interface}: $*"
+}
+
+dbg()
+{
+    logger -I $$ -t udhcpc -p user.debug "${interface}: $*"
+}
+
+err()
+{
+    logger -I $$ -t udhcpc -p user.err "${interface}: $*"
 }
 
 wait_for_ipv6_default_route()
 {
-    log "waiting for IPv6 default route to be installed."
+    dbg "waiting for IPv6 default route to be installed."
     while [ $IF_WAIT_DELAY -gt 0 ]; do
 	if ip -6 route list proto dhcp dev $interface | grep -q default; then
 	    return
@@ -37,7 +47,7 @@ wait_for_ipv6_default_route()
 	printf "."
 	: $((IF_WAIT_DELAY -= 1))
     done
-    log "Timed out witing for IPv6 default route!"
+    err "Timed out waiting for IPv6 default route!"
 }
 
 # RFC3442: If the DHCP server returns both a Classless
@@ -50,7 +60,7 @@ set_dhcp_routes()
 	# format: dest1/mask gw1 ... destn/mask gwn
 	set -- $staticroutes
 	while [ -n "$1" -a -n "$2" ]; do
-	    log "adding route $1 via $2 metric $metric tag 100"
+	    dbg "adding route $1 via $2 metric $metric tag 100"
 	    echo "ip route $1 $2 $metric tag 100" >> "$NEXT"
 	    shift 2
 	done
@@ -69,7 +79,7 @@ set_dhcp_routes()
 
 clr_dhcp_routes()
 {
-    log "deleting DHCP routes from $interface"
+    log "deleting DHCP routes"
     [ -f "$NAME" ] || return
     rm "$NAME"
 
@@ -84,7 +94,7 @@ clr_dhcp_addresses()
     for addr in $addrs; do
 	ip="$(echo "$addr" | jq -r '."local"')"
 	prefix="$(echo "$addr" | jq -r '."prefixlen"')"
-	log "removing $ip/$prefix from $interface"
+	log "removing $ip/$prefix"
 	ip addr del "$ip/$prefix" dev "$interface"
     done
 }
@@ -142,12 +152,12 @@ case "$ACTION" in
 	fi
 
 	if [ -n "$search_list" ]; then
-	    log "adding search $search_list"
+	    dbg "adding search $search_list"
 	    echo "search $search_list # $interface" >> $RESOLV_CONF
 	fi
 
 	for i in $dns ; do
-	    log "adding dns $i"
+	    dbg "adding dns $i"
 	    echo "nameserver $i # $interface" >> $RESOLV_CONF
 	    resolvconf -u
 	done
@@ -155,7 +165,7 @@ case "$ACTION" in
 	if [ -n "$ntpsrv" ]; then
 	    truncate -s 0 "$NTPFILE"
 	    for srv in $ntpsrv; do
-		log "got NTP server $srv"
+		dbg "got NTP server $srv"
 		echo "server $srv iburst" >> "$NTPFILE"
 	    done
 	    chronyc reload sources >/dev/null

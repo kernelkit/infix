@@ -1,0 +1,25 @@
+Source os-release in order
+
+As per https://www.freedesktop.org/software/systemd/man/latest/os-release.html
+
+> The file /etc/os-release takes precedence over /usr/lib/os-release.
+
+We also prioritize both of them over the legacy /etc/lsb_release file.
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+
+--- a/neofetch	2025-09-07 22:34:09.458848918 +0200
++++ b/neofetch	2025-09-07 22:35:14.458398622 +0200
+@@ -1001,9 +1001,9 @@
+                     -f /etc/openwrt_release || \
+                     -f /etc/lsb-release ]]; then
+ 
+-                # Source the os-release file
+-                for file in /etc/lsb-release /usr/lib/os-release \
+-                            /etc/os-release  /etc/openwrt_release; do
++                # Source the os-release file in priority order
++                for file in /etc/os-release  /usr/lib/os-release \
++                            /etc/lsb-release /etc/openwrt_release; do
+                     source "$file" && break
+                 done
+ 
