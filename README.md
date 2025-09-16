@@ -148,6 +148,8 @@ high-throughput network appliances.
   <br />Infix development is sponsored by <a href="https://wires.se">Wires</a>
 </div>
 
+![Alt](https://repobeats.axiom.co/api/embed/5ce7a2a67edc923823afa0f60c327a6e8575b6e9.svg "Repobeats analytics image")
+
 [1]: https://buildroot.org/ "Buildroot Homepage"
 [2]: https://www.sysrepo.org/ "Sysrepo Homepage"
 [3]: https://kernelkit.org/infix/latest/cli/introduction/
