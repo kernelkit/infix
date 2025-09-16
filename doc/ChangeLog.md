@@ -9,6 +9,10 @@ All notable changes to the project are documented in this file.
 ### Changes
 - Upgrade Buildroot to 2025.02.6 (LTS)
 - Upgrade Linux kernel to 6.12.46 (LTS)
+- Upgrade libyang to 3.13.5
+- Upgrade sysrepo to 3.7.11
+- Upgrade netopeer2 (NETCONF) to 2.4.5
+- Upgrade rousette (RESTCONF) to v2
 - Add support for [Banana Pi R3][BPI-R3], a 7 port switch with 2 WiFi chip
 - Add neofetch system information tool for system introspection, issue #1143
 - Add mtr and iperf3 network diagnostic tools, issue #1144

@@ -1,0 +1,64 @@
+From a4136d889237dadb9253ea7eb668a525dd779e6d Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan=20Kundr=C3=A1t?= <jan.kundrat@cesnet.cz>
+Date: Thu, 12 Jun 2025 10:33:42 +0100
+Subject: [PATCH 01/17] Log HTTP headers and the input data payload
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
+
+...so that we can debug the results of a nasty lockup that Michal
+Hažlinský just found.
+
+Change-Id: I2a930a02c7d30c051390fe73e6af9849edd580b4
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ src/restconf/Server.cpp | 10 ++++++++--
+ 1 file changed, 8 insertions(+), 2 deletions(-)
+
+diff --git a/src/restconf/Server.cpp b/src/restconf/Server.cpp
+index 272ecc1..9821495 100644
+--- a/src/restconf/Server.cpp
++++ b/src/restconf/Server.cpp
+@@ -44,6 +44,9 @@ void logRequest(const auto& request)
+ {
+     const auto& peer = http::peer_from_request(request);
+     spdlog::info("{}: {} {}", peer, request.method(), request.uri().raw_path);
++    for (const auto& hdr: request.header()) {
++        spdlog::trace("{}: header: {}: {}", peer, hdr.first, hdr.second.sensitive ? "<sensitive>"s : hdr.second.value);
++    }
+ }
+ 
+ template <typename T>
+@@ -1079,12 +1082,14 @@ Server::Server(sysrepo::Connection conn, const std::string& address, const std::
+ 
+                     auto requestCtx = std::make_shared<RequestContext>(req, res, dataFormat, sess, restconfRequest);
+ 
+-                    req.on_data([requestCtx, restconfRequest /* intentional copy */, timeout](const uint8_t* data, std::size_t length) {
++                    req.on_data([requestCtx, restconfRequest /* intentional copy */, timeout, peer=http::peer_from_request(req)](const uint8_t* data, std::size_t length) {
+                         if (length > 0) { // there are still some data to be read
+                             requestCtx->payload.append(reinterpret_cast<const char*>(data), length);
+                             return;
+                         }
+ 
++                        spdlog::trace("{}: HTTP payload: {}", peer, requestCtx->payload);
++
+                         if (restconfRequest.type == RestconfRequest::Type::CreateChildren) {
+                             WITH_RESTCONF_EXCEPTIONS(processPost, rejectWithError)(requestCtx, timeout);
+                         } else if (restconfRequest.type == RestconfRequest::Type::MergeData && isYangPatch(requestCtx->req)) {
+@@ -1143,10 +1148,11 @@ Server::Server(sysrepo::Connection conn, const std::string& address, const std::
+                 case RestconfRequest::Type::ExecuteInternal: {
+                     auto requestCtx = std::make_shared<RequestContext>(req, res, dataFormat, sess, restconfRequest);
+ 
+-                    req.on_data([requestCtx, timeout](const uint8_t* data, std::size_t length) {
++                    req.on_data([requestCtx, timeout, peer=http::peer_from_request(req)](const uint8_t* data, std::size_t length) {
+                         if (length > 0) {
+                             requestCtx->payload.append(reinterpret_cast<const char*>(data), length);
+                         } else {
++                            spdlog::trace("{}: HTTP payload: {}", peer, requestCtx->payload);
+                             WITH_RESTCONF_EXCEPTIONS(processActionOrRPC, rejectWithError)(requestCtx, timeout);
+                         }
+                     });
+-- 
+2.43.0
+

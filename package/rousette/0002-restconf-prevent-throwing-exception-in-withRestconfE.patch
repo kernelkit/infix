@@ -1,0 +1,140 @@
+From 6c5b482ea5c9fbc1149a0864b05d1bb1fa7100bf Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Tom=C3=A1=C5=A1=20Pecka?= <tomas.pecka@cesnet.cz>
+Date: Fri, 13 Jun 2025 10:47:55 +0200
+Subject: [PATCH 02/17] restconf: prevent throwing exception in
+ withRestconfExceptions wrapper
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
+
+In case the catch block of withRestconfExceptions is reached and an
+exception is thrown, rousette will start behaving in a strange way
+where no new connections are accepted and already connected clients are
+not receiving the content [1].
+
+This patch prevents throwing the exception that would slip through our
+catch handlers.
+An uncaught exception is a problem though, so expect a followup patch to
+handle such situations.
+
+[1] https://github.com/CESNET/rousette/issues/19
+
+Bug: https://github.com/CESNET/rousette/issues/19
+Change-Id: Ifbd74b9bdc0ca66c4e5449a7673ef2f12ae9215e
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ src/restconf/Server.cpp        |  2 +-
+ tests/restconf-plain-patch.cpp | 24 ++++++++++++++++++++++++
+ tests/restconf-reading.cpp     |  3 +++
+ tests/yang/example.yang        | 19 +++++++++++++++++++
+ 4 files changed, 47 insertions(+), 1 deletion(-)
+
+diff --git a/src/restconf/Server.cpp b/src/restconf/Server.cpp
+index 9821495..1c2123e 100644
+--- a/src/restconf/Server.cpp
++++ b/src/restconf/Server.cpp
+@@ -350,7 +350,7 @@ constexpr auto withRestconfExceptions(T func, U rejectWithError)
+             } else if (e.code() == sysrepo::ErrorCode::ItemAlreadyExists) {
+                 rejectWithError(requestCtx->sess.getContext(), requestCtx->dataFormat.response, requestCtx->req, requestCtx->res, 409, "application", "resource-denied", "Resource already exists.", std::nullopt);
+             } else if (e.code() == sysrepo::ErrorCode::ValidationFailed) {
+-                bool isAction = requestCtx->sess.getContext().findPath(requestCtx->restconfRequest.path).nodeType() == libyang::NodeType::Action;
++                bool isAction = requestCtx->restconfRequest.path != "/" && requestCtx->sess.getContext().findPath(requestCtx->restconfRequest.path).nodeType() == libyang::NodeType::Action;
+                 /*
+                  * FIXME: This happens on invalid input data (e.g., missing mandatory nodes) or missing action data node.
+                  * The former (invalid input data) should probably be validated by libyang's parseOp but it only parses.
+diff --git a/tests/restconf-plain-patch.cpp b/tests/restconf-plain-patch.cpp
+index b550f54..34813d1 100644
+--- a/tests/restconf-plain-patch.cpp
++++ b/tests/restconf-plain-patch.cpp
+@@ -179,5 +179,29 @@ TEST_CASE("Plain patch")
+     ]
+   }
+ }
++)"});
++
++    REQUIRE(patch(RESTCONF_ROOT_DS("running"), {AUTH_ROOT, CONTENT_TYPE_JSON}, R"({
++  "example:channel-plan": {
++    "channel": [
++      {
++        "name": "coriant",
++        "lower-frequency": 199999999,
++        "upper-frequency": 191500000
++      }
++    ]
++  }
++}
++)") == Response{400, jsonHeaders, R"({
++  "ietf-restconf:errors": {
++    "error": [
++      {
++        "error-type": "application",
++        "error-tag": "operation-failed",
++        "error-message": "Validation failed. Invalid input data."
++      }
++    ]
++  }
++}
+ )"});
+ }
+diff --git a/tests/restconf-reading.cpp b/tests/restconf-reading.cpp
+index f87c4f5..4f0d2ee 100644
+--- a/tests/restconf-reading.cpp
++++ b/tests/restconf-reading.cpp
+@@ -62,6 +62,7 @@ TEST_CASE("reading data")
+         // this relies on a NACM rule for anonymous access that filters out "a lot of stuff"
+         REQUIRE(get(RESTCONF_DATA_ROOT, {}) == Response{200, jsonHeaders, R"({
+   "example:top-level-leaf": "moo",
++  "example:channel-plan": {},
+   "example:tlc": {},
+   "example:a": {
+     "b": {
+@@ -119,6 +120,7 @@ TEST_CASE("reading data")
+ 
+         REQUIRE(get(RESTCONF_ROOT_DS("operational"), {}) == Response{200, jsonHeaders, R"({
+   "example:top-level-leaf": "moo",
++  "example:channel-plan": {},
+   "example:tlc": {},
+   "example:a": {
+     "b": {
+@@ -176,6 +178,7 @@ TEST_CASE("reading data")
+ 
+         REQUIRE(get(RESTCONF_ROOT_DS("running"), {}) == Response{200, jsonHeaders, R"({
+   "example:top-level-leaf": "moo",
++  "example:channel-plan": {},
+   "example:tlc": {},
+   "example:a": {
+     "b": {
+diff --git a/tests/yang/example.yang b/tests/yang/example.yang
+index 5d586a0..1cd12e3 100644
+--- a/tests/yang/example.yang
++++ b/tests/yang/example.yang
+@@ -27,6 +27,25 @@ module example {
+   }
+   leaf-list top-level-leaf-list { type int32; }
+ 
++  container channel-plan {
++    list channel {
++      key "name";
++      leaf name { type string; }
++      leaf lower-frequency {
++        type int32;
++        units "Hz";
++      }
++      leaf upper-frequency {
++        type int32;
++        units "Hz";
++      }
++
++      must "lower-frequency < upper-frequency" {
++        description "The lower frequency must be less than the upper frequency.";
++      }
++    }
++  }
++
+   container tlc {
+     if-feature f1;
+     list list {
+-- 
+2.43.0
+

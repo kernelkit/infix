@@ -1,0 +1,31 @@
+From 41c9d9cab47a88ee6c70ab8009b789226c0982fe Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan=20Kundr=C3=A1t?= <jan.kundrat@cesnet.cz>
+Date: Tue, 17 Jun 2025 12:46:27 +0200
+Subject: [PATCH 03/17] CI: switch to the new cloud's Swift URL
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
+
+Change-Id: I69f8351394262a2a9b691422592741bfb40a8e38
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ ci/build.sh | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/ci/build.sh b/ci/build.sh
+index d49bd56..59b31ab 100755
+--- a/ci/build.sh
++++ b/ci/build.sh
+@@ -67,7 +67,7 @@ if [[ -z "${ARTIFACT_URL}" ]]; then
+     # nothing ahead in the pipeline -> fallback to the latest promoted artifact
+     DEPSRCDIR=$(jq < ~/zuul-env.json -e -r ".projects[] | select(.name == \"CzechLight/dependencies\").src_dir")
+     DEP_SUBMODULE_COMMIT=$(git --git-dir ${HOME}/${DEPSRCDIR}/.git rev-parse HEAD)
+-    ARTIFACT_URL="https://object-store.cloud.muni.cz/swift/v1/ci-artifacts-${ZUUL_TENANT}/${ZUUL_GERRIT_HOSTNAME}/CzechLight/dependencies/deps-${ZUUL_JOB_NAME_NO_PROJECT%%-cover?(-previous)}/${DEP_SUBMODULE_COMMIT}.tar.zst"
++    ARTIFACT_URL="https://object-store.brno.openstack.cloud.e-infra.cz/swift/v1/KEY_b637b9c937414b29b3e277b4a85cc658/ci-artifacts-${ZUUL_TENANT}/${ZUUL_GERRIT_HOSTNAME}/CzechLight/dependencies/deps-${ZUUL_JOB_NAME_NO_PROJECT%%-cover?(-previous)}/${DEP_SUBMODULE_COMMIT}.tar.zst"
+ fi
+ 
+ curl ${ARTIFACT_URL} | unzstd --stdout | tar -C ${PREFIX} -xf -
+-- 
+2.43.0
+
