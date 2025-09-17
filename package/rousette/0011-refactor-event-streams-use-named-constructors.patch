@@ -1,0 +1,205 @@
+From ff4ff1c193083feca76d9f0f4485e4b175c373c2 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Tom=C3=A1=C5=A1=20Pecka?= <tomas.pecka@cesnet.cz>
+Date: Wed, 23 Jul 2025 14:27:26 +0200
+Subject: [PATCH 11/17] refactor: event streams use named constructors
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
+
+This commit refactors the EventStream and NotificationStream to use
+named constructors.
+Both of these classes are required to be initialized with invoking the
+constructor and then the activate method. The NotificationStream class
+also required to be passed with a newly constructed Event object.
+I find this pattern a bit confusing, so I refactored the code to use
+named constructors which perform the double initialization themselves.
+This way, the code is more readable and the intention should be clearer.
+
+Change-Id: Iac96c49c20670dfe924d7c8db33328ed9c2fc9dd
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ src/clock.cpp                       |  3 +--
+ src/http/EventStream.cpp            | 20 ++++++++++++++++++++
+ src/http/EventStream.h              | 22 +++++++++++++++-------
+ src/restconf/NotificationStream.cpp | 22 ++++++++++++++++++++++
+ src/restconf/NotificationStream.h   | 12 ++++++++++++
+ src/restconf/Server.cpp             | 10 ++--------
+ 6 files changed, 72 insertions(+), 17 deletions(-)
+
+diff --git a/src/clock.cpp b/src/clock.cpp
+index 24e9efb..aa72849 100644
+--- a/src/clock.cpp
++++ b/src/clock.cpp
+@@ -34,8 +34,7 @@ int main(int argc [[maybe_unused]], char** argv [[maybe_unused]])
+     server.num_threads(4);
+ 
+     server.handle("/events", [&shutdown, &sig](const auto& req, const auto& res) {
+-        auto client = std::make_shared<rousette::http::EventStream>(req, res, shutdown, sig, keepAlivePingInterval);
+-        client->activate();
++        rousette::http::EventStream::create(req, res, shutdown, sig, keepAlivePingInterval);
+     });
+ 
+     server.handle("/", [](const auto& req, const auto& resp) {
+diff --git a/src/http/EventStream.cpp b/src/http/EventStream.cpp
+index 82f8b38..0893653 100644
+--- a/src/http/EventStream.cpp
++++ b/src/http/EventStream.cpp
+@@ -173,4 +173,24 @@ void EventStream::start_ping()
+         client->start_ping();
+     });
+ }
++
++/** @brief Create a new EventStream instance and activate it immediately.
++ *
++ * The stream is created with the given parameters and activated as if the activate() method was called.
++ *   ```
++ *   auto a = make_shared<EventStream>(...);
++ *   a->activate();
++ *   ```
++ */
++std::shared_ptr<EventStream> EventStream::create(const nghttp2::asio_http2::server::request& req,
++                                                 const nghttp2::asio_http2::server::response& res,
++                                                 Termination& terminate,
++                                                 EventSignal& signal,
++                                                 const std::chrono::seconds keepAlivePingInterval,
++                                                 const std::optional<std::string>& initialEvent)
++{
++    auto stream = std::shared_ptr<EventStream>(new EventStream(req, res, terminate, signal, keepAlivePingInterval, initialEvent));
++    stream->activate();
++    return stream;
++}
+ }
+diff --git a/src/http/EventStream.h b/src/http/EventStream.h
+index 4b3578a..ef0a002 100644
+--- a/src/http/EventStream.h
++++ b/src/http/EventStream.h
+@@ -31,13 +31,12 @@ public:
+     using EventSignal = boost::signals2::signal<void(const std::string& message)>;
+     using Termination = boost::signals2::signal<void()>;
+ 
+-    EventStream(const nghttp2::asio_http2::server::request& req,
+-                const nghttp2::asio_http2::server::response& res,
+-                Termination& terminate,
+-                EventSignal& signal,
+-                const std::chrono::seconds keepAlivePingInterval,
+-                const std::optional<std::string>& initialEvent = std::nullopt);
+-    void activate();
++    static std::shared_ptr<EventStream> create(const nghttp2::asio_http2::server::request& req,
++                                               const nghttp2::asio_http2::server::response& res,
++                                               Termination& terminate,
++                                               EventSignal& signal,
++                                               const std::chrono::seconds keepAlivePingInterval,
++                                               const std::optional<std::string>& initialEvent = std::nullopt);
+ 
+ private:
+     const nghttp2::asio_http2::server::response& res;
+@@ -60,5 +59,14 @@ private:
+     ssize_t process(uint8_t* destination, std::size_t len, uint32_t* data_flags);
+     void enqueue(const std::string& fieldName, const std::string& what);
+     void start_ping();
++
++protected:
++    EventStream(const nghttp2::asio_http2::server::request& req,
++                const nghttp2::asio_http2::server::response& res,
++                Termination& terminate,
++                EventSignal& signal,
++                const std::chrono::seconds keepAlivePingInterval,
++                const std::optional<std::string>& initialEvent = std::nullopt);
++    void activate();
+ };
+ }
+diff --git a/src/restconf/NotificationStream.cpp b/src/restconf/NotificationStream.cpp
+index 5017f3e..fe21809 100644
+--- a/src/restconf/NotificationStream.cpp
++++ b/src/restconf/NotificationStream.cpp
+@@ -183,4 +183,26 @@ libyang::DataNode replaceStreamLocations(const std::optional<std::string>& schem
+ 
+     return node;
+ }
++
++/** @brief Create a new NotificationStream instance and activate it immediately.
++ *
++ * The stream is created with the given parameters and activated, which means it starts listening for
++ * NETCONF notifications and sending them to the client.
++ */
++std::shared_ptr<NotificationStream> NotificationStream::create(
++    const nghttp2::asio_http2::server::request& req,
++    const nghttp2::asio_http2::server::response& res,
++    rousette::http::EventStream::Termination& termination,
++    const std::chrono::seconds keepAlivePingInterval,
++    sysrepo::Session sess,
++    libyang::DataFormat dataFormat,
++    const std::optional<std::string>& filter,
++    const std::optional<sysrepo::NotificationTimeStamp>& startTime,
++    const std::optional<sysrepo::NotificationTimeStamp>& stopTime)
++{
++    auto signal = std::make_shared<rousette::http::EventStream::EventSignal>();
++    auto stream = std::shared_ptr<NotificationStream>(new NotificationStream(req, res, termination, signal, keepAlivePingInterval, std::move(sess), dataFormat, filter, startTime, stopTime));
++    stream->activate();
++    return stream;
++}
+ }
+diff --git a/src/restconf/NotificationStream.h b/src/restconf/NotificationStream.h
+index daa79d6..91c5dde 100644
+--- a/src/restconf/NotificationStream.h
++++ b/src/restconf/NotificationStream.h
+@@ -39,6 +39,18 @@ class NotificationStream : public rousette::http::EventStream {
+     std::optional<sysrepo::Subscription> m_notifSubs;
+ 
+ public:
++    static std::shared_ptr<NotificationStream> create(
++        const nghttp2::asio_http2::server::request& req,
++        const nghttp2::asio_http2::server::response& res,
++        rousette::http::EventStream::Termination& termination,
++        const std::chrono::seconds keepAlivePingInterval,
++        sysrepo::Session sess,
++        libyang::DataFormat dataFormat,
++        const std::optional<std::string>& filter,
++        const std::optional<sysrepo::NotificationTimeStamp>& startTime,
++        const std::optional<sysrepo::NotificationTimeStamp>& stopTime);
++
++protected:
+     NotificationStream(
+         const nghttp2::asio_http2::server::request& req,
+         const nghttp2::asio_http2::server::response& res,
+diff --git a/src/restconf/Server.cpp b/src/restconf/Server.cpp
+index 31b3d0f..8544210 100644
+--- a/src/restconf/Server.cpp
++++ b/src/restconf/Server.cpp
+@@ -934,8 +934,7 @@ Server::Server(sysrepo::Connection conn, const std::string& address, const std::
+     server->handle("/telemetry/optics", [this, keepAlivePingInterval](const auto& req, const auto& res) {
+         logRequest(req);
+ 
+-        auto client = std::make_shared<http::EventStream>(req, res, shutdownRequested, opticsChange, keepAlivePingInterval, as_restconf_push_update(dwdmEvents->currentData(), std::chrono::system_clock::now()));
+-        client->activate();
++        http::EventStream::create(req, res, shutdownRequested, opticsChange, keepAlivePingInterval, as_restconf_push_update(dwdmEvents->currentData(), std::chrono::system_clock::now()));
+     });
+ 
+     server->handle(netconfStreamRoot, [this, conn, keepAlivePingInterval](const auto& req, const auto& res) mutable {
+@@ -968,21 +967,16 @@ Server::Server(sysrepo::Connection conn, const std::string& address, const std::
+                 stopTime = libyang::fromYangTimeFormat<std::chrono::system_clock>(std::get<std::string>(it->second));
+             }
+ 
+-            // The signal is constructed outside NotificationStream class because it is required to be passed to
+-            // NotificationStream's parent (EventStream) constructor where it already must be constructed
+-            // Yes, this is a hack.
+-            auto client = std::make_shared<NotificationStream>(
++            NotificationStream::create(
+                 req,
+                 res,
+                 shutdownRequested,
+-                std::make_shared<rousette::http::EventStream::EventSignal>(),
+                 keepAlivePingInterval,
+                 sess,
+                 streamRequest.type.encoding,
+                 xpathFilter,
+                 startTime,
+                 stopTime);
+-            client->activate();
+         } catch (const auth::Error& e) {
+             processAuthError(req, res, e, [&res]() {
+                 res.write_head(401, {TEXT_PLAIN, CORS});
+-- 
+2.43.0
+

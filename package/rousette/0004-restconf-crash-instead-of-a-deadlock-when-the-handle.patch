@@ -1,0 +1,172 @@
+From ec8673126929b6459fcd99c84a79993a725b40e1 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Tom=C3=A1=C5=A1=20Pecka?= <tomas.pecka@cesnet.cz>
+Date: Fri, 13 Jun 2025 10:47:55 +0200
+Subject: [PATCH 04/17] restconf: crash instead of a deadlock when the handler
+ throws
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
+
+In case there is an exception thrown in the handler function and it is
+not caught by our code, rousette starts to behave in a strange way where
+no new connections are accepted and already connected clients are not
+receiving the content [1].
+
+It turns out, that nghttp2-asio starts the boost::asio::io_service
+wrapped inside std::async [2]. This means the thread terminated, and is
+waiting for somebody to get the result of the future [3]. But nobody
+did that in our code.
+
+Luckily, the (hot-)fix proposed by Jan is quite simple. Rousette uses
+only one io_service, so we can just call server.join() (which itself
+calls future::get) instead of the pause() in the main function. If the
+handler throws, we pick the result right away and rousette crashes.
+(The crash is intentional and in line with the behaviour of our other
+daemons in our systems. Daemon crashes, we log it and systemd restarts
+it).
+
+Note that to enable graceful shutdown, it was necessary to guard against
+double call to server->join(), because future::get does not like being
+called twice [3].
+
+[1] https://github.com/CESNET/rousette/issues/19
+[2] https://github.com/nghttp2/nghttp2-asio/blob/a057ffaa207fbe9584565ed503c2ee5c7e609747/lib/asio_io_service_pool.cc#L57
+[3] https://en.cppreference.com/w/cpp/thread/future/get
+
+Signed-off-by: Jan Kundrát <jan.kundrat@cesnet.cz>
+Bug: https://github.com/CESNET/rousette/issues/19
+Change-Id: I2c090b9a76b062101ba422a7d50e8e699779e203
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ src/restconf/Server.cpp | 28 ++++++++++++++++++++++++++++
+ src/restconf/Server.h   |  4 ++++
+ src/restconf/main.cpp   | 15 ++++++++++-----
+ 3 files changed, 42 insertions(+), 5 deletions(-)
+
+diff --git a/src/restconf/Server.cpp b/src/restconf/Server.cpp
+index 1c2123e..4255540 100644
+--- a/src/restconf/Server.cpp
++++ b/src/restconf/Server.cpp
+@@ -826,6 +826,15 @@ bool isYangPatch(const nghttp2::asio_http2::server::request& req)
+ }
+ 
+ Server::~Server()
++{
++    stop();
++
++    if (!joined) {
++        server->join();
++    }
++}
++
++void Server::stop()
+ {
+     // notification to stop has to go through the asio io_context
+     for (const auto& service : server->io_services()) {
+@@ -836,8 +845,25 @@ Server::~Server()
+                 });
+         t.cancel();
+     }
++}
++
++void Server::join()
++{
++    /* FIXME: nghttp2-asio is calling io.run() wrapped in std::async.
++     * In case the handler function throws, the exception is not propagated to the main thread *until* someone calls server.join() which calls future.get() on all io.run() wrappers.
++     * Thankfully, we have only one thread, so we can just call join() right away. Underlying future.get() blocks until io.run() finishes, either gracefully or upon uncaught exception.
++     *
++     * !!! Will not work server uses multiple threads !!!
++     */
+ 
++    // main thread waits here
+     server->join();
++    joined = true;
++}
++
++std::vector<std::shared_ptr<boost::asio::io_context>> Server::io_services() const
++{
++    return server->io_services();
+ }
+ 
+ Server::Server(sysrepo::Connection conn, const std::string& address, const std::string& port, const std::chrono::milliseconds timeout)
+@@ -846,6 +872,8 @@ Server::Server(sysrepo::Connection conn, const std::string& address, const std::
+     , server{std::make_unique<nghttp2::asio_http2::server::http2>()}
+     , dwdmEvents{std::make_unique<sr::OpticalEvents>(conn.sessionStart())}
+ {
++    server->num_threads(1); // we only use one thread for the server, so we can call join() right away
++
+     for (const auto& [module, version, features] : {
+              std::tuple<std::string, std::string, std::vector<std::string>>{"ietf-restconf", "2017-01-26", {}},
+              {"ietf-restconf-monitoring", "2017-01-26", {}},
+diff --git a/src/restconf/Server.h b/src/restconf/Server.h
+index d1b2187..ad53d4c 100644
+--- a/src/restconf/Server.h
++++ b/src/restconf/Server.h
+@@ -30,6 +30,9 @@ class Server {
+ public:
+     explicit Server(sysrepo::Connection conn, const std::string& address, const std::string& port, const std::chrono::milliseconds timeout = std::chrono::milliseconds{0});
+     ~Server();
++    void join();
++    void stop();
++    std::vector<std::shared_ptr<boost::asio::io_context>> io_services() const;
+ 
+ private:
+     sysrepo::Session m_monitoringSession;
+@@ -39,6 +42,7 @@ private:
+     std::unique_ptr<sr::OpticalEvents> dwdmEvents;
+     using JsonDiffSignal = boost::signals2::signal<void(const std::string& json)>;
+     JsonDiffSignal opticsChange;
++    bool joined = false; // true if the server has been joined, join twice is an error
+ };
+ }
+ }
+diff --git a/src/restconf/main.cpp b/src/restconf/main.cpp
+index 6029e08..477e846 100644
+--- a/src/restconf/main.cpp
++++ b/src/restconf/main.cpp
+@@ -5,13 +5,13 @@
+  *
+ */
+ 
+-#include <csignal>
+ #include <cstdio>
+ #include <cstdlib>
+ #include <inttypes.h>
+ 
+ #include "configure.cmake.h" /* Expose HAVE_SYSTEMD */
+ 
++#include <boost/asio.hpp>
+ #ifdef HAVE_SYSTEMD
+    #include <spdlog/sinks/systemd_sink.h>
+ #endif
+@@ -19,7 +19,6 @@
+ #include <spdlog/sinks/ansicolor_sink.h>
+ #include <sys/types.h>
+ #include <sys/stat.h>
+-#include <unistd.h>
+ #include <docopt.h>
+ #include <spdlog/spdlog.h>
+ #include <sysrepo-cpp/Session.hpp>
+@@ -106,9 +105,15 @@ int main(int argc, char* argv [])
+ 
+     auto conn = sysrepo::Connection{};
+     auto server = rousette::restconf::Server{conn, "::1", "10080", timeout};
+-    signal(SIGTERM, [](int) {});
+-    signal(SIGINT, [](int) {});
+-    pause();
++
++    // allow graceful shutdown
++    boost::asio::signal_set signals(*server.io_services()[0], SIGTERM, SIGINT);
++    signals.async_wait([&](const boost::system::error_code& ec, int) {
++        if (!ec) {
++            server.stop();
++        }
++    });
++    server.join();
+ 
+     return 0;
+ }
+-- 
+2.43.0
+

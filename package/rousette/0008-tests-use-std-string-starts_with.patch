@@ -1,0 +1,33 @@
+From 9961430bacdd8dbac64a01b2a2ffb6a4b7e806b6 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Tom=C3=A1=C5=A1=20Pecka?= <tomas.pecka@cesnet.cz>
+Date: Tue, 13 May 2025 13:48:35 +0200
+Subject: [PATCH 08/17] tests: use std::string::starts_with
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
+
+We are C++20, so we can use line, which is more readable.
+
+Change-Id: I40d4038b421f6bc1fcf320f609b50d5ce7018a45
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ tests/restconf_utils.cpp | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/tests/restconf_utils.cpp b/tests/restconf_utils.cpp
+index cbfce2c..08b9623 100644
+--- a/tests/restconf_utils.cpp
++++ b/tests/restconf_utils.cpp
+@@ -228,7 +228,7 @@ std::vector<std::string> SSEClient::parseEvents(const std::string& msg)
+     std::string event;
+ 
+     while (std::getline(iss, line)) {
+-        if (line.compare(0, prefix.size(), prefix) == 0) {
++        if (line.starts_with(prefix)) {
+             event += line.substr(prefix.size());
+         } else if (line.empty()) {
+             res.emplace_back(std::move(event));
+-- 
+2.43.0
+

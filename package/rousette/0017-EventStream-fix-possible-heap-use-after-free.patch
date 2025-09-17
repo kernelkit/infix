@@ -1,0 +1,102 @@
+From 1067e05674633b97d64b428686aff44822230c5f Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Tom=C3=A1=C5=A1=20Pecka?= <tomas.pecka@cesnet.cz>
+Date: Mon, 8 Sep 2025 20:24:15 +0200
+Subject: [PATCH 17/17] EventStream: fix possible heap-use-after-free
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
+
+I have started getting heap-use-after-free errors from sanitizers (see
+below). The problem is that EventStream::enqueue posted res.resume()
+call to the asio event loop, but sometimes when the function was called,
+the response object was already destroyed.
+The fix is to check if the response is still valid (and not closed)
+before actually resuming the response.
+
+  WARNING: ThreadSanitizer: heap-use-after-free (pid=633338)
+  Read of size 8 at 0x72080000f3d0 by thread T134:
+    #0 std::__uniq_ptr_impl<nghttp2::asio_http2::server::response_impl, std::default_delete<nghttp2::asio_http2::server::response_impl>>::_M_ptr() const /usr/bin/../lib64/gcc/x86_64-pc-linux-gnu/15.1.1/../../../../include/c++/15.1.1/bits/unique_ptr.h:193:51 (libnghttp2_asio.so.0+0x205011) (BuildId: d31f110d6b82f3b5923f6e08b6ae7d409d710cc4)
+    #1 std::unique_ptr<nghttp2::asio_http2::server::response_impl, std::default_delete<nghttp2::asio_http2::server::response_impl>>::get() const /usr/bin/../lib64/gcc/x86_64-pc-linux-gnu/15.1.1/../../../../include/c++/15.1.1/bits/unique_ptr.h:473:21 (libnghttp2_asio.so.0+0x204fc5) (BuildId: d31f110d6b82f3b5923f6e08b6ae7d409d710cc4)
+    #2 std::unique_ptr<nghttp2::asio_http2::server::response_impl, std::default_delete<nghttp2::asio_http2::server::response_impl>>::operator->() const /usr/bin/../lib64/gcc/x86_64-pc-linux-gnu/15.1.1/../../../../include/c++/15.1.1/bits/unique_ptr.h:466:9 (libnghttp2_asio.so.0+0x2046c5) (BuildId: d31f110d6b82f3b5923f6e08b6ae7d409d710cc4)
+    #3 nghttp2::asio_http2::server::response::resume() const /home/tomas/zdrojaky/cesnet/nghttp2-asio/lib/asio_server_response.cc:63:33 (libnghttp2_asio.so.0+0x204425) (BuildId: d31f110d6b82f3b5923f6e08b6ae7d409d710cc4)
+    #4 rousette::http::EventStream::enqueue(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char>> const&, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char>> const&)::$_1::operator()() const /home/tomas/zdrojaky/cesnet/rousette/src/http/EventStream.cpp:167:68 (test-restconf-subscribed-notifications+0x2a084d) (BuildId: 9270c9f5d6da566b5b7f223994c283ecf35f0e43)
+    #5 boost::asio::detail::binder0<rousette::http::EventStream::enqueue(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char>> const&, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char>> const&)::$_1>::operator()() /usr/include/boost/asio/detail/bind_handler.hpp:56:5 (test-restconf-subscribed-notifications+0x2a084d)
+    #6 boost::asio::detail::executor_op<boost::asio::detail::binder0<rousette::http::EventStream::enqueue(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char>> const&, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char>> const&)::$_1>, std::allocator<void>, boost::asio::detail::scheduler_operation>::do_complete(void*, boost::asio::detail::scheduler_operation*, boost::system::error_code const&, unsigned long) /usr/include/boost/asio/detail/executor_op.hpp:70:7 (test-restconf-subscribed-notifications+0x2a084d)
+    #7 boost::asio::detail::scheduler_operation::complete(void*, boost::system::error_code const&, unsigned long) /usr/include/boost/asio/detail/scheduler_operation.hpp:40:5 (test-restconf-subscribed-notifications+0x165ce9) (BuildId: 9270c9f5d6da566b5b7f223994c283ecf35f0e43)
+    #8 boost::asio::detail::scheduler::do_run_one(boost::asio::detail::conditionally_enabled_mutex::scoped_lock&, boost::asio::detail::scheduler_thread_info&, boost::system::error_code const&) /usr/include/boost/asio/detail/impl/scheduler.ipp:492:12 (test-restconf-subscribed-notifications+0x165ce9)
+    #9 boost::asio::detail::scheduler::run(boost::system::error_code&) /usr/include/boost/asio/detail/impl/scheduler.ipp:208:10 (test-restconf-subscribed-notifications+0x165292) (BuildId: 9270c9f5d6da566b5b7f223994c283ecf35f0e43)
+    #10 boost::asio::io_context::run() /usr/include/boost/asio/impl/io_context.ipp:71:24 (libnghttp2_asio.so.0+0x1675bf) (BuildId: d31f110d6b82f3b5923f6e08b6ae7d409d710cc4)
+    (...)
+
+  Previous write of size 8 at 0x72080000f3d0 by thread T134:
+    #0 operator delete(void*, unsigned long) <null> (test-restconf-subscribed-notifications+0x13f7d3) (BuildId: 9270c9f5d6da566b5b7f223994c283ecf35f0e43)
+    #1 std::default_delete<nghttp2::asio_http2::server::stream>::operator()(nghttp2::asio_http2::server::stream*) const /usr/bin/../lib64/gcc/x86_64-pc-linux-gnu/15.1.1/../../../../include/c++/15.1.1/bits/unique_ptr.h:93:2 (libnghttp2_asio.so.0+0x1fc71d) (BuildId: d31f110d6b82f3b5923f6e08b6ae7d409d710cc4)
+    #2 std::_Sp_counted_deleter<nghttp2::asio_http2::server::stream*, std::default_delete<nghttp2::asio_http2::server::stream>, std::allocator<void>, (__gnu_cxx::_Lock_policy)2>::_M_dispose() /usr/bin/../lib64/gcc/x86_64-pc-linux-gnu/15.1.1/../../../../include/c++/15.1.1/bits/shared_ptr_base.h:526:9 (libnghttp2_asio.so.0+0x1fddaf) (BuildId: d31f110d6b82f3b5923f6e08b6ae7d409d710cc4)
+    #3 std::_Sp_counted_base<(__gnu_cxx::_Lock_policy)2>::_M_release_last_use() /usr/bin/../lib64/gcc/x86_64-pc-linux-gnu/15.1.1/../../../../include/c++/15.1.1/bits/shared_ptr_base.h:174:2 (libnghttp2_asio.so.0+0x160e46) (BuildId: d31f110d6b82f3b5923f6e08b6ae7d409d710cc4)
+    #4 std::_Sp_counted_base<(__gnu_cxx::_Lock_policy)2>::_M_release() /usr/bin/../lib64/gcc/x86_64-pc-linux-gnu/15.1.1/../../../../include/c++/15.1.1/bits/shared_ptr_base.h:360:4 (libnghttp2_asio.so.0+0x160dfd) (BuildId: d31f110d6b82f3b5923f6e08b6ae7d409d710cc4)
+    #5 std::__shared_count<(__gnu_cxx::_Lock_policy)2>::~__shared_count() /usr/bin/../lib64/gcc/x86_64-pc-linux-gnu/15.1.1/../../../../include/c++/15.1.1/bits/shared_ptr_base.h:1069:11 (libnghttp2_asio.so.0+0x160d08) (BuildId: d31f110d6b82f3b5923f6e08b6ae7d409d710cc4)
+    #6 std::__shared_ptr<nghttp2::asio_http2::server::stream, (__gnu_cxx::_Lock_policy)2>::~__shared_ptr() /usr/bin/../lib64/gcc/x86_64-pc-linux-gnu/15.1.1/../../../../include/c++/15.1.1/bits/shared_ptr_base.h:1531:31 (libnghttp2_asio.so.0+0x1f82e9) (BuildId: d31f110d6b82f3b5923f6e08b6ae7d409d710cc4)
+    #7 std::shared_ptr<nghttp2::asio_http2::server::stream>::~shared_ptr() /usr/bin/../lib64/gcc/x86_64-pc-linux-gnu/15.1.1/../../../../include/c++/15.1.1/bits/shared_ptr.h:175:11 (libnghttp2_asio.so.0+0x1f82a5) (BuildId: d31f110d6b82f3b5923f6e08b6ae7d409d710cc4)
+    #8 std::pair<int const, std::shared_ptr<nghttp2::asio_http2::server::stream>>::~pair() /usr/bin/../lib64/gcc/x86_64-pc-linux-gnu/15.1.1/../../../../include/c++/15.1.1/bits/stl_pair.h:302:12 (libnghttp2_asio.so.0+0x1f8269) (BuildId: d31f110d6b82f3b5923f6e08b6ae7d409d710cc4)
+    #9 void std::__new_allocator<std::_Rb_tree_node<std::pair<int const, std::shared_ptr<nghttp2::asio_http2::server::stream>>>>::destroy<std::pair<int const, std::shared_ptr<nghttp2::asio_http2::server::stream>>>(std::pair<int const, std::shared_ptr<nghttp2::asio_http2::server::stream>>*) /usr/bin/../lib64/gcc/x86_64-pc-linux-gnu/15.1.1/../../../../include/c++/15.1.1/bits/new_allocator.h:198:10 (libnghttp2_asio.so.0+0x1f815d) (BuildId: d31f110d6b82f3b5923f6e08b6ae7d409d710cc4)
+    #10 void std::allocator_traits<std::allocator<std::_Rb_tree_node<std::pair<int const, std::shared_ptr<nghttp2::asio_http2::server::stream>>>>>::destroy<std::pair<int const, std::shared_ptr<nghttp2::asio_http2::server::stream>>>(std::allocator<std::_Rb_tree_node<std::pair<int const, std::shared_ptr<nghttp2::asio_http2::server::stream>>>>&, std::pair<int const, std::shared_ptr<nghttp2::asio_http2::server::stream>>*) /usr/bin/../lib64/gcc/x86_64-pc-linux-gnu/15.1.1/../../../../include/c++/15.1.1/bits/alloc_traits.h:696:8 (libnghttp2_asio.so.0+0x1f815d)
+    #11 std::_Rb_tree<int, std::pair<int const, std::shared_ptr<nghttp2::asio_http2::server::stream>>, std::_Select1st<std::pair<int const, std::shared_ptr<nghttp2::asio_http2::server::stream>>>, std::less<int>, std::allocator<std::pair<int const, std::shared_ptr<nghttp2::asio_http2::server::stream>>>>::_M_destroy_node(std::_Rb_tree_node<std::pair<int const, std::shared_ptr<nghttp2::asio_http2::server::stream>>>*) /usr/bin/../lib64/gcc/x86_64-pc-linux-gnu/15.1.1/../../../../include/c++/15.1.1/bits/stl_tree.h:1265:2 (libnghttp2_asio.so.0+0x1f815d)
+    #12 std::_Rb_tree<int, std::pair<int const, std::shared_ptr<nghttp2::asio_http2::server::stream>>, std::_Select1st<std::pair<int const, std::shared_ptr<nghttp2::asio_http2::server::stream>>>, std::less<int>, std::allocator<std::pair<int const, std::shared_ptr<nghttp2::asio_http2::server::stream>>>>::_M_drop_node(std::_Rb_tree_node<std::pair<int const, std::shared_ptr<nghttp2::asio_http2::server::stream>>>*) /usr/bin/../lib64/gcc/x86_64-pc-linux-gnu/15.1.1/../../../../include/c++/15.1.1/bits/stl_tree.h:1273:2 (libnghttp2_asio.so.0+0x1f80b9) (BuildId: d31f110d6b82f3b5923f6e08b6ae7d409d710cc4)
+    #13 std::_Rb_tree<int, std::pair<int const, std::shared_ptr<nghttp2::asio_http2::server::stream>>, std::_Select1st<std::pair<int const, std::shared_ptr<nghttp2::asio_http2::server::stream>>>, std::less<int>, std::allocator<std::pair<int const, std::shared_ptr<nghttp2::asio_http2::server::stream>>>>::_M_erase(std::_Rb_tree_node<std::pair<int const, std::shared_ptr<nghttp2::asio_http2::server::stream>>>*) /usr/bin/../lib64/gcc/x86_64-pc-linux-gnu/15.1.1/../../../../include/c++/15.1.1/bits/stl_tree.h:2590:4 (libnghttp2_asio.so.0+0x1f7e98) (BuildId: d31f110d6b82f3b5923f6e08b6ae7d409d710cc4)
+    #14 std::_Rb_tree<int, std::pair<int const, std::shared_ptr<nghttp2::asio_http2::server::stream>>, std::_Select1st<std::pair<int const, std::shared_ptr<nghttp2::asio_http2::server::stream>>>, std::less<int>, std::allocator<std::pair<int const, std::shared_ptr<nghttp2::asio_http2::server::stream>>>>::clear() /usr/bin/../lib64/gcc/x86_64-pc-linux-gnu/15.1.1/../../../../include/c++/15.1.1/bits/stl_tree.h:1878:2 (libnghttp2_asio.so.0+0x1ff035) (BuildId: d31f110d6b82f3b5923f6e08b6ae7d409d710cc4)
+    #15 std::_Rb_tree<int, std::pair<int const, std::shared_ptr<nghttp2::asio_http2::server::stream>>, std::_Select1st<std::pair<int const, std::shared_ptr<nghttp2::asio_http2::server::stream>>>, std::less<int>, std::allocator<std::pair<int const, std::shared_ptr<nghttp2::asio_http2::server::stream>>>>::_M_erase_aux(std::_Rb_tree_const_iterator<std::pair<int const, std::shared_ptr<nghttp2::asio_http2::server::stream>>>, std::_Rb_tree_const_iterator<std::pair<int const, std::shared_ptr<nghttp2::asio_http2::server::stream>>>) /usr/bin/../lib64/gcc/x86_64-pc-linux-gnu/15.1.1/../../../../include/c++/15.1.1/bits/stl_tree.h:3127:2 (libnghttp2_asio.so.0+0x1feca6) (BuildId: d31f110d6b82f3b5923f6e08b6ae7d409d710cc4)
+    #16 std::_Rb_tree<int, std::pair<int const, std::shared_ptr<nghttp2::asio_http2::server::stream>>, std::_Select1st<std::pair<int const, std::shared_ptr<nghttp2::asio_http2::server::stream>>>, std::less<int>, std::allocator<std::pair<int const, std::shared_ptr<nghttp2::asio_http2::server::stream>>>>::erase(int const&) /usr/bin/../lib64/gcc/x86_64-pc-linux-gnu/15.1.1/../../../../include/c++/15.1.1/bits/stl_tree.h:3141:7 (libnghttp2_asio.so.0+0x1fe8a3) (BuildId: d31f110d6b82f3b5923f6e08b6ae7d409d710cc4)
+    #17 std::map<int, std::shared_ptr<nghttp2::asio_http2::server::stream>, std::less<int>, std::allocator<std::pair<int const, std::shared_ptr<nghttp2::asio_http2::server::stream>>>>::erase(int const&) /usr/bin/../lib64/gcc/x86_64-pc-linux-gnu/15.1.1/../../../../include/c++/15.1.1/bits/stl_map.h:1159:21 (libnghttp2_asio.so.0+0x1f68d5) (BuildId: d31f110d6b82f3b5923f6e08b6ae7d409d710cc4)
+    #18 nghttp2::asio_http2::server::http2_handler::close_stream(int) /home/tomas/zdrojaky/cesnet/nghttp2-asio/lib/asio_server_http2_handler.cc:315:12 (libnghttp2_asio.so.0+0x1f34b0) (BuildId: d31f110d6b82f3b5923f6e08b6ae7d409d710cc4)
+    #19 nghttp2::asio_http2::server::(anonymous namespace)::on_stream_close_callback(nghttp2_session*, int, unsigned int, void*) /home/tomas/zdrojaky/cesnet/nghttp2-asio/lib/asio_server_http2_handler.cc:193:12 (libnghttp2_asio.so.0+0x1f3074) (BuildId: d31f110d6b82f3b5923f6e08b6ae7d409d710cc4)
+    #20 nghttp2_session_close_stream /usr/src/debug/libnghttp2/nghttp2/lib/nghttp2_session.c:1289:9 (libnghttp2.so.14+0x62ac) (BuildId: 8a424dc80fadd83dfdd8c51eebe47046c626d95e)
+    #21 nghttp2::asio_http2::server::connection<boost::asio::basic_stream_socket<boost::asio::ip::tcp, boost::asio::any_io_executor>>::do_write() /home/tomas/zdrojaky/cesnet/nghttp2-asio/lib/asio_server_connection.h:177:20 (libnghttp2_asio.so.0+0x1ebb1c) (BuildId: d31f110d6b82f3b5923f6e08b6ae7d409d710cc4)
+    #22 nghttp2::asio_http2::server::connection<boost::asio::basic_stream_socket<boost::asio::ip::tcp, boost::asio::any_io_executor>>::do_write()::'lambda'(boost::system::error_code const&, unsigned long)::operator()(boost::system::error_code const&, unsigned long) const /home/tomas/zdrojaky/cesnet/nghttp2-asio/lib/asio_server_connection.h:207:11 (libnghttp2_asio.so.0+0x1ec7a8) (BuildId: d31f110d6b82f3b5923f6e08b6ae7d409d710cc4)
+    #23 boost::asio::detail::write_op<boost::asio::basic_stream_socket<boost::asio::ip::tcp, boost::asio::any_io_executor>, boost::asio::mutable_buffer, boost::asio::mutable_buffer const*, boost::asio::detail::transfer_all_t, nghttp2::asio_http2::server::connection<boost::asio::basic_stream_socket<boost::asio::ip::tcp, boost::asio::any_io_executor>>::do_write()::'lambda'(boost::system::error_code const&, unsigned long)>::operator()(boost::system::error_code, unsigned long, int) /usr/include/boost/asio/impl/write.hpp:380:9 (libnghttp2_asio.so.0+0x1ec4e5) (BuildId: d31f110d6b82f3b5923f6e08b6ae7d409d710cc4)
+    #24 boost::asio::detail::binder2<boost::asio::detail::write_op<boost::asio::basic_stream_socket<boost::asio::ip::tcp, boost::asio::any_io_executor>, boost::asio::mutable_buffer, boost::asio::mutable_buffer const*, boost::asio::detail::transfer_all_t, nghttp2::asio_http2::server::connection<boost::asio::basic_stream_socket<boost::asio::ip::tcp, boost::asio::any_io_executor>>::do_write()::'lambda'(boost::system::error_code const&, unsigned long)>, boost::system::error_code, unsigned long>::operator()() /usr/include/boost/asio/detail/bind_handler.hpp:181:5 (libnghttp2_asio.so.0+0x1edd41) (BuildId: d31f110d6b82f3b5923f6e08b6ae7d409d710cc4)
+    #25 void boost::asio::detail::handler_work<boost::asio::detail::write_op<boost::asio::basic_stream_socket<boost::asio::ip::tcp, boost::asio::any_io_executor>, boost::asio::mutable_buffer, boost::asio::mutable_buffer const*, boost::asio::detail::transfer_all_t, nghttp2::asio_http2::server::connection<boost::asio::basic_stream_socket<boost::asio::ip::tcp, boost::asio::any_io_executor>>::do_write()::'lambda'(boost::system::error_code const&, unsigned long)>, boost::asio::any_io_executor, void>::complete<boost::asio::detail::binder2<boost::asio::detail::write_op<boost::asio::basic_stream_socket<boost::asio::ip::tcp, boost::asio::any_io_executor>, boost::asio::mutable_buffer, boost::asio::mutable_buffer const*, boost::asio::detail::transfer_all_t, nghttp2::asio_http2::server::connection<boost::asio::basic_stream_socket<boost::asio::ip::tcp, boost::asio::any_io_executor>>::do_write()::'lambda'(boost::system::error_code const&, unsigned long)>, boost::system::error_code, unsigned long>>(boost::asio::detail::binder2<boost::asio::detail::write_op<boost::asio::basic_stream_socket<boost::asio::ip::tcp, boost::asio::any_io_executor>, boost::asio::mutable_buffer, boost::asio::mutable_buffer const*, boost::asio::detail::transfer_all_t, nghttp2::asio_http2::server::connection<boost::asio::basic_stream_socket<boost::asio::ip::tcp, boost::asio::any_io_executor>>::do_write()::'lambda'(boost::system::error_code const&, unsigned long)>, boost::system::error_code, unsigned long>&, boost::asio::detail::write_op<boost::asio::basic_stream_socket<boost::asio::ip::tcp, boost::asio::any_io_executor>, boost::asio::mutable_buffer, boost::asio::mutable_buffer const*, boost::asio::detail::transfer_all_t, nghttp2::asio_http2::server::connection<boost::asio::basic_stream_socket<boost::asio::ip::tcp, boost::asio::any_io_executor>>::do_write()::'lambda'(boost::system::error_code const&, unsigned long)>&) /usr/include/boost/asio/detail/handler_work.hpp:470:7 (libnghttp2_asio.so.0+0x1edb2e) (BuildId: d31f110d6b82f3b5923f6e08b6ae7d409d710cc4)
+    #26 boost::asio::detail::reactive_socket_send_op<boost::asio::const_buffer, boost::asio::detail::write_op<boost::asio::basic_stream_socket<boost::asio::ip::tcp, boost::asio::any_io_executor>, boost::asio::mutable_buffer, boost::asio::mutable_buffer const*, boost::asio::detail::transfer_all_t, nghttp2::asio_http2::server::connection<boost::asio::basic_stream_socket<boost::asio::ip::tcp, boost::asio::any_io_executor>>::do_write()::'lambda'(boost::system::error_code const&, unsigned long)>, boost::asio::any_io_executor>::do_complete(void*, boost::asio::detail::scheduler_operation*, boost::system::error_code const&, unsigned long) /usr/include/boost/asio/detail/reactive_socket_send_op.hpp:154:9 (libnghttp2_asio.so.0+0x1ed66c) (BuildId: d31f110d6b82f3b5923f6e08b6ae7d409d710cc4)
+    #27 boost::asio::detail::scheduler_operation::complete(void*, boost::system::error_code const&, unsigned long) /usr/include/boost/asio/detail/scheduler_operation.hpp:40:5 (test-restconf-subscribed-notifications+0x165ce9) (BuildId: 9270c9f5d6da566b5b7f223994c283ecf35f0e43)
+    #28 boost::asio::detail::scheduler::do_run_one(boost::asio::detail::conditionally_enabled_mutex::scoped_lock&, boost::asio::detail::scheduler_thread_info&, boost::system::error_code const&) /usr/include/boost/asio/detail/impl/scheduler.ipp:492:12 (test-restconf-subscribed-notifications+0x165ce9)
+    #29 boost::asio::detail::scheduler::run(boost::system::error_code&) /usr/include/boost/asio/detail/impl/scheduler.ipp:208:10 (test-restconf-subscribed-notifications+0x165292) (BuildId: 9270c9f5d6da566b5b7f223994c283ecf35f0e43)
+    #30 boost::asio::io_context::run() /usr/include/boost/asio/impl/io_context.ipp:71:24 (libnghttp2_asio.so.0+0x1675bf) (BuildId: d31f110d6b82f3b5923f6e08b6ae7d409d710cc4)
+    (...)
+
+Change-Id: Ifdb1f8610cacffca3bb49da17aa9b1d267cdd472
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ src/http/EventStream.cpp | 17 ++++++++++++++++-
+ 1 file changed, 16 insertions(+), 1 deletion(-)
+
+diff --git a/src/http/EventStream.cpp b/src/http/EventStream.cpp
+index 0a974d4..f97d953 100644
+--- a/src/http/EventStream.cpp
++++ b/src/http/EventStream.cpp
+@@ -160,7 +160,22 @@ void EventStream::enqueue(const std::string& fieldName, const std::string& what)
+     spdlog::trace("{}: new event, ∑ queue size = {}", peer, len);
+     queue.push_back(buf);
+     state = HasEvents;
+-    boost::asio::post(res.io_service(), [&res = this->res]() { res.resume(); });
++    boost::asio::post(res.io_service(), [weak = weak_from_this()]() {
++        auto myself = weak.lock();
++        if (!myself) {
++            spdlog::trace("enqueue: already disconnected");
++            return;
++        }
++
++        std::lock_guard lock{myself->mtx};
++        // if state is Closed, then res.on_close() already finished, which means we must not use res anymore
++        if (myself->state == Closed) {
++            spdlog::trace("{}: enqueue: not resuming, the response's on_close handler already finished", myself->peer);
++            return;
++        }
++
++        myself->res.resume();
++    });
+ }
+ 
+ void EventStream::start_ping()
+-- 
+2.43.0
+

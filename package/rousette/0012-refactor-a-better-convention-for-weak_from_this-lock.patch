@@ -1,0 +1,104 @@
+From f4602a03adc9134a9b7a9d338e900b40557da6c4 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan=20Kundr=C3=A1t?= <jan.kundrat@cesnet.cz>
+Date: Thu, 7 Aug 2025 12:14:02 +0200
+Subject: [PATCH 12/17] refactor: a better convention for weak_from_this->lock
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
+
+It is not a "client", so let's stop calling it a "client". My bad.
+
+Change-Id: Id8dc4d92c3ade8d86697366d0102e84bd466f504
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ src/http/EventStream.cpp | 44 ++++++++++++++++++++--------------------
+ 1 file changed, 22 insertions(+), 22 deletions(-)
+
+diff --git a/src/http/EventStream.cpp b/src/http/EventStream.cpp
+index 0893653..3bdd55e 100644
+--- a/src/http/EventStream.cpp
++++ b/src/http/EventStream.cpp
+@@ -47,11 +47,11 @@ EventStream::EventStream(const server::request& req,
+         }
+ 
+         state = WantToClose;
+-        boost::asio::post(this->res.io_service(), [maybeClient = std::weak_ptr<EventStream>{shared_from_this()}]() {
+-            if (auto client = maybeClient.lock()) {
+-                std::lock_guard lock{client->mtx};
+-                if (client->state == WantToClose) { // resume unless somebody closed it before this was picked up by the event loop
+-                    client->res.resume();
++        boost::asio::post(this->res.io_service(), [weak = std::weak_ptr<EventStream>{shared_from_this()}]() {
++            if (auto myself = weak.lock()) {
++                std::lock_guard lock{myself->mtx};
++                if (myself->state == WantToClose) { // resume unless somebody closed it before this was picked up by the event loop
++                    myself->res.resume();
+                 }
+             }
+         });
+@@ -67,23 +67,23 @@ void EventStream::activate()
+ {
+     start_ping();
+ 
+-    auto client = shared_from_this();
++    auto myself = shared_from_this();
+     res.write_head(200, {
+         {"content-type", {"text/event-stream", false}},
+         {"access-control-allow-origin", {"*", false}},
+     });
+ 
+-    res.on_close([client](const auto ec) {
+-        spdlog::debug("{}: closed ({})", client->peer, nghttp2_http2_strerror(ec));
+-        std::lock_guard lock{client->mtx};
+-        client->ping.cancel();
+-        client->eventSub.disconnect();
+-        client->terminateSub.disconnect();
+-        client->state = Closed;
++    res.on_close([myself](const auto ec) {
++        spdlog::debug("{}: closed ({})", myself->peer, nghttp2_http2_strerror(ec));
++        std::lock_guard lock{myself->mtx};
++        myself->ping.cancel();
++        myself->eventSub.disconnect();
++        myself->terminateSub.disconnect();
++        myself->state = Closed;
+     });
+ 
+-    res.end([client](uint8_t* destination, std::size_t len, uint32_t* data_flags) {
+-        return client->process(destination, len, data_flags);
++    res.end([myself](uint8_t* destination, std::size_t len, uint32_t* data_flags) {
++        return myself->process(destination, len, data_flags);
+     });
+ }
+ 
+@@ -156,21 +156,21 @@ void EventStream::enqueue(const std::string& fieldName, const std::string& what)
+ void EventStream::start_ping()
+ {
+     ping.expires_from_now(boost::posix_time::seconds(m_keepAlivePingInterval.count()));
+-    ping.async_wait([maybeClient = weak_from_this()](const boost::system::error_code& ec) {
+-        auto client = maybeClient.lock();
+-        if (!client) {
++    ping.async_wait([weak = weak_from_this()](const boost::system::error_code& ec) {
++        auto myself = weak.lock();
++        if (!myself) {
+             spdlog::trace("ping: client already gone");
+             return;
+         }
+ 
+         if (ec == boost::asio::error::operation_aborted) {
+-            spdlog::trace("{}: ping scheduler cancelled", client->peer);
++            spdlog::trace("{}: ping scheduler cancelled", myself->peer);
+             return;
+         }
+ 
+-        client->enqueue("", "\n");
+-        spdlog::trace("{}: keep-alive ping enqueued", client->peer);
+-        client->start_ping();
++        myself->enqueue("", "\n");
++        spdlog::trace("{}: keep-alive ping enqueued", myself->peer);
++        myself->start_ping();
+     });
+ }
+ 
+-- 
+2.43.0
+

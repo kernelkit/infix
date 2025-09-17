@@ -3,7 +3,7 @@
 # Rousette RESTconf server
 #
 ################################################################################
-ROUSETTE_VERSION = v1
+ROUSETTE_VERSION = v2
 ROUSETTE_SITE = $(call github,CESNET,rousette,$(ROUSETTE_VERSION))
 ROUSETTE_LICENSE = Apache-2.0
 ROUSETTE_LICENSE_FILES = LICENSE

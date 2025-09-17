@@ -1,0 +1,29 @@
+From 37ca95c387d76c3f296a4e44b211772a1ca155ab Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan=20Kundr=C3=A1t?= <jan.kundrat@cesnet.cz>
+Date: Wed, 18 Jun 2025 12:01:04 +0200
+Subject: [PATCH 05/17] doc: let's stop calling this "an almost-RESTCONF
+ server"
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
+
+Change-Id: If55ace481c78d838a811ded76a564f8fb59f9233
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ README.md | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/README.md b/README.md
+index 0796dce..a42c64d 100644
+--- a/README.md
++++ b/README.md
+@@ -1,4 +1,4 @@
+-# An almost-RESTCONF server
++# A RESTCONF server for sysrepo
+ 
+ ![License](https://img.shields.io/github/license/cesnet/rousette)
+ [![Gerrit](https://img.shields.io/badge/patches-via%20Gerrit-blue)](https://gerrit.cesnet.cz/q/project:CzechLight/rousette)
+-- 
+2.43.0
+

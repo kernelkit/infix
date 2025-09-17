@@ -1,0 +1,176 @@
+From a190da4e967fb7ed65bc06794e8d775b4e1a7b84 Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Tue, 7 May 2024 15:41:53 +0200
+Subject: [PATCH 2/7] Allow SR_EV_DONE to return any error to sysrepocfg
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
+
+Importing a system configuration with sysrepocfg the model callbacks do
+their best to validate the configuration and prepare the transaction in
+SR_EV_CHANGE.  In cases when dealing with a complex system, like adding
+a route, address, or other change using iproute2, we may still get into
+trouble when actually sending off the transaction in SR_EV_DONE.
+
+If something does go wrong we'd like to know this by the exit code of
+sysrepocfg, not by inspecting logs or expected system state.
+
+This patch is a clumsy way of forcing the (first) error to bubble up to
+the surface and cause a non-zero exit code from sysrepocfg.
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ src/shm_sub.c | 40 +++++++++++++++++++++++++++++++---------
+ src/shm_sub.h |  2 +-
+ src/sysrepo.c |  4 ++--
+ 3 files changed, 34 insertions(+), 12 deletions(-)
+
+diff --git a/src/shm_sub.c b/src/shm_sub.c
+index 61aab4c6..6ba1cd4d 100644
+--- a/src/shm_sub.c
++++ b/src/shm_sub.c
+@@ -1832,7 +1832,7 @@ cleanup:
+ 
+ sr_error_info_t *
+ sr_shmsub_change_notify_change_done(struct sr_mod_info_s *mod_info, const char *orig_name, const void *orig_data,
+-        uint32_t timeout_ms)
++        uint32_t timeout_ms, sr_error_info_t **cb_err_info)
+ {
+     sr_error_info_t *err_info = NULL;
+     struct sr_mod_info_mod_s *mod = NULL;
+@@ -1980,12 +1980,19 @@ sr_shmsub_change_notify_change_done(struct sr_mod_info_s *mod_info, const char *
+             sr_rwunlock(&nsub->sub_shm->lock, 0, SR_LOCK_WRITE, cid, __func__);
+             nsub->lock = SR_LOCK_NONE;
+ 
+-            /* we do not care about an error */
+-            sr_errinfo_free(&nsub->cb_err_info);
+-
+             SR_LOG_DBG("EV ORIGIN: \"%s\" \"%s\" ID %" PRIu32 " priority %" PRIu32 " succeeded.",
+                     nsub->mod->ly_mod->name, sr_ev2str(SR_SUB_EV_DONE), mod_info->operation_id, nsub->cur_priority);
+ 
++            /*
++             * unexpected critical error, merge and cleanup, let
++             * sysrepocfg caller handle undefined system state.
++             */
++            if (nsub->cb_err_info) {
++                sr_errinfo_merge(cb_err_info, nsub->cb_err_info);
++                nsub->cb_err_info = NULL;
++                goto cleanup;
++            }
++
+             nsub->pending_event = 0;
+         }
+     } while (1);
+@@ -3557,7 +3564,7 @@ sr_shmsub_change_listen_relock(sr_sub_shm_t *sub_shm, sr_lock_mode_t mode, struc
+ sr_error_info_t *
+ sr_shmsub_change_listen_process_module_events(struct modsub_change_s *change_subs, sr_conn_ctx_t *conn)
+ {
+-    sr_error_info_t *err_info = NULL;
++    sr_error_info_t *err_info = NULL, *err_tmp;
+     uint32_t i, data_len = 0, valid_subscr_count, remaining_subs;
+     char *data = NULL, *shm_data_ptr;
+     int ret = SR_ERR_OK, filter_valid;
+@@ -3579,7 +3586,6 @@ sr_shmsub_change_listen_process_module_events(struct modsub_change_s *change_sub
+         }
+     }
+     if (i == change_subs->sub_count) {
+-        /* no new module event */
+         goto cleanup;
+     }
+ 
+@@ -3686,6 +3692,11 @@ process_event:
+                 }
+                 break;
+             }
++        } else if (sub_info.event == SR_SUB_EV_DONE) {
++            if (ret && err_code == SR_ERR_OK) {
++                /* unexpected, callback actually failed, save for later. */
++                err_code = ret;
++            }
+         }
+ 
+         /* subscription processed this event */
+@@ -3718,6 +3729,11 @@ process_event:
+         }
+         break;
+     case SR_SUB_EV_DONE:
++        if (err_code) {
++            /* prepare unexepected error from session to be written to SHM */
++            sr_errinfo_new(&err_info, err_code, "Oups, error detected in SR_EV_DONE");
++        }
++        break;
+     case SR_SUB_EV_ABORT:
+         /* nothing to do */
+         break;
+@@ -3742,14 +3758,20 @@ process_event:
+ 
+         /* SUB WRITE URGE LOCK */
+         if (sr_shmsub_change_listen_relock(sub_shm, SR_LOCK_WRITE_URGE, &sub_info, change_sub, change_subs->module_name,
+-                ret, filter_valid, ev_sess, &err_info)) {
++                ret, filter_valid, ev_sess, &err_tmp)) {
++	     if (err_tmp)
++		     err_info = err_tmp;
+             goto cleanup;
+         }
+         sub_lock = SR_LOCK_WRITE_URGE;
+ 
+         /* finish event */
+-        err_info = sr_shmsub_listen_write_event(sub_shm, remaining_subs ? valid_subscr_count : 0, err_code, &shm_data_sub, data,
++        err_tmp = sr_shmsub_listen_write_event(sub_shm, remaining_subs ? valid_subscr_count : 0, err_code, &shm_data_sub, data,
+                 data_len, change_subs->module_name, err_code ? "fail" : "success");
++
++	if (err_tmp)
++		err_info = err_tmp;
++	goto cleanup;
+     } else {
+         SR_LOG_DBG("EV LISTEN: \"%s\" \"%s\" ID %" PRIu32 " priority %" PRIu32 " success (remaining %" PRIu32 " subscribers).",
+                 change_subs->module_name, sr_ev2str(sub_info.event), sub_info.operation_id, sub_info.priority, remaining_subs);
+@@ -4164,7 +4186,7 @@ finish_iter:
+             sr_errinfo_free(&cb_err_info);
+ 
+             /* publish "done" event */
+-            if ((err_info = sr_shmsub_change_notify_change_done(&mod_info, NULL, NULL, SR_CHANGE_CB_TIMEOUT))) {
++            if ((err_info = sr_shmsub_change_notify_change_done(&mod_info, NULL, NULL, SR_CHANGE_CB_TIMEOUT, &cb_err_info))) {
+                 goto cleanup_unlock;
+             }
+ 
+diff --git a/src/shm_sub.h b/src/shm_sub.h
+index 0cd22884..bd697ccc 100644
+--- a/src/shm_sub.h
++++ b/src/shm_sub.h
+@@ -159,7 +159,7 @@ sr_error_info_t *sr_shmsub_change_notify_change(struct sr_mod_info_s *mod_info,
+  * @return err_info, NULL on success.
+  */
+ sr_error_info_t *sr_shmsub_change_notify_change_done(struct sr_mod_info_s *mod_info, const char *orig_name,
+-        const void *orig_data, uint32_t timeout_ms);
++        const void *orig_data, uint32_t timeout_ms, sr_error_info_t **cb_err_info);
+ 
+ /**
+  * @brief Notify about (generate) a change "abort" event.
+diff --git a/src/sysrepo.c b/src/sysrepo.c
+index 068585d7..72dad00c 100644
+--- a/src/sysrepo.c
++++ b/src/sysrepo.c
+@@ -4313,7 +4313,7 @@ sr_error_info_t *
+ sr_changes_notify_store(struct sr_mod_info_s *mod_info, sr_session_ctx_t *session, int shmmod_session_del,
+         uint32_t timeout_ms, sr_lock_mode_t has_change_sub_lock, sr_error_info_t **err_info2)
+ {
+-    sr_error_info_t *err_info = NULL;
++    sr_error_info_t *err_info = NULL, *cb_err_info = NULL;
+     struct sr_denied denied = {0};
+     sr_lock_mode_t change_sub_lock = has_change_sub_lock;
+     uint32_t sid = 0, err_count;
+@@ -4470,7 +4470,7 @@ store:
+     }
+ 
+     /* publish "done" event, all changes were applied */
+-    if ((err_info = sr_shmsub_change_notify_change_done(mod_info, orig_name, orig_data, timeout_ms))) {
++    if ((err_info = sr_shmsub_change_notify_change_done(mod_info, orig_name, orig_data, timeout_ms, &cb_err_info))) {
+         goto cleanup;
+     }
+ 
+-- 
+2.43.0
+

@@ -1,0 +1,377 @@
+From 4eae6200aa812950ebbac1660a1899f4edf41e11 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jan=20Kundr=C3=A1t?= <jan.kundrat@cesnet.cz>
+Date: Wed, 7 Aug 2024 19:07:35 +0200
+Subject: [PATCH 06/17] close long-lived connections on SIGTERM
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
+
+Without this patch, all the ongoing SSE streams would be left alive for
+about 50s, and only then killed. Fix that by a proper signalling -- once
+the intention to shutdown is known, all the EventStreams are
+(asynchronously) switched to a new state, and the HTTP2 state machine is
+restarted. Once the event loop gets around to processing them, the
+callback will just say EOF.
+
+The clock demo is different because it doesn't wrap the nghttp2 server
+like the restconf/Server.cpp does.
+
+I have no idea how well this works against a Slowloris attack, but I
+think that stuff like that should be solved at the HTTP library level (I
+hope it is).
+
+Change-Id: If442134783ba1d699de47c51a9068378f53e8339
+Co-authored-by: Tomas Pecka <tomas.pecka@cesnet.cz>
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ CMakeLists.txt                      |  1 +
+ src/clock.cpp                       |  7 +--
+ src/http/EventStream.cpp            | 30 +++++++++++--
+ src/http/EventStream.h              | 10 +++--
+ src/restconf/NotificationStream.cpp |  7 +--
+ src/restconf/NotificationStream.h   |  5 ++-
+ src/restconf/Server.cpp             |  5 ++-
+ src/restconf/Server.h               |  1 +
+ tests/restconf-eventstream.cpp      | 70 +++++++++++++++++++++++++++++
+ tests/restconf_utils.cpp            |  6 +++
+ 10 files changed, 124 insertions(+), 18 deletions(-)
+ create mode 100644 tests/restconf-eventstream.cpp
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index b99c577..c0304af 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -227,6 +227,7 @@ if(BUILD_TESTING)
+     rousette_test(NAME restconf-notifications LIBRARIES rousette-restconf FIXTURE common-models WRAP_PAM)
+     rousette_test(NAME restconf-plain-patch LIBRARIES rousette-restconf FIXTURE common-models WRAP_PAM)
+     rousette_test(NAME restconf-yang-patch LIBRARIES rousette-restconf FIXTURE common-models WRAP_PAM)
++    rousette_test(NAME restconf-eventstream LIBRARIES rousette-restconf FIXTURE common-models WRAP_PAM)
+     set(nested-models
+         ${common-models}
+         --install ${CMAKE_CURRENT_SOURCE_DIR}/tests/yang/root-mod.yang)
+diff --git a/src/clock.cpp b/src/clock.cpp
+index 7ac6c3e..c85be19 100644
+--- a/src/clock.cpp
++++ b/src/clock.cpp
+@@ -18,7 +18,8 @@ int main(int argc [[maybe_unused]], char** argv [[maybe_unused]])
+ {
+     spdlog::set_level(spdlog::level::trace);
+ 
+-    rousette::http::EventStream::Signal sig;
++    rousette::http::EventStream::Termination shutdown;
++    rousette::http::EventStream::EventSignal sig;
+     std::jthread timer{[&sig]() {
+         for (int i = 0; /* forever */; ++i) {
+             std::this_thread::sleep_for(666ms);
+@@ -30,8 +31,8 @@ int main(int argc [[maybe_unused]], char** argv [[maybe_unused]])
+     nghttp2::asio_http2::server::http2 server;
+     server.num_threads(4);
+ 
+-    server.handle("/events", [&sig](const auto& req, const auto& res) {
+-        auto client = std::make_shared<rousette::http::EventStream>(req, res, sig);
++    server.handle("/events", [&shutdown, &sig](const auto& req, const auto& res) {
++        auto client = std::make_shared<rousette::http::EventStream>(req, res, shutdown, sig);
+         client->activate();
+     });
+ 
+diff --git a/src/http/EventStream.cpp b/src/http/EventStream.cpp
+index 25dbf3f..77c282d 100644
+--- a/src/http/EventStream.cpp
++++ b/src/http/EventStream.cpp
+@@ -18,7 +18,7 @@ using namespace nghttp2::asio_http2;
+ namespace rousette::http {
+ 
+ /** @short After constructing, make sure to call activate() immediately. */
+-EventStream::EventStream(const server::request& req, const server::response& res, Signal& signal, const std::optional<std::string>& initialEvent)
++EventStream::EventStream(const server::request& req, const server::response& res, Termination& termination, EventSignal& signal, const std::optional<std::string>& initialEvent)
+     : res{res}
+     , peer{peer_from_request(req)}
+ {
+@@ -26,9 +26,27 @@ EventStream::EventStream(const server::request& req, const server::response& res
+         enqueue(*initialEvent);
+     }
+ 
+-    subscription = signal.connect([this](const auto& msg) {
++    eventSub = signal.connect([this](const auto& msg) {
+         enqueue(msg);
+     });
++
++    terminateSub = termination.connect([this]() {
++        spdlog::trace("{}: will terminate", peer);
++        std::lock_guard lock{mtx};
++        if (state == Closed) { // we are late to the party, res is already gone
++            return;
++        }
++
++        state = WantToClose;
++        boost::asio::post(this->res.io_service(), [maybeClient = std::weak_ptr<EventStream>{shared_from_this()}]() {
++            if (auto client = maybeClient.lock()) {
++                std::lock_guard lock{client->mtx};
++                if (client->state == WantToClose) { // resume unless somebody closed it before this was picked up by the event loop
++                    client->res.resume();
++                }
++            }
++        });
++    });
+ }
+ 
+ /** @short Start event processing and data delivery
+@@ -47,7 +65,8 @@ void EventStream::activate()
+     res.on_close([client](const auto ec) {
+         spdlog::debug("{}: closed ({})", client->peer, nghttp2_http2_strerror(ec));
+         std::lock_guard lock{client->mtx};
+-        client->subscription.disconnect();
++        client->eventSub.disconnect();
++        client->terminateSub.disconnect();
+         client->state = Closed;
+     });
+ 
+@@ -85,6 +104,9 @@ ssize_t EventStream::process(uint8_t* destination, std::size_t len, uint32_t* da
+     case WaitingForEvents:
+         spdlog::trace("{}: sleeping", peer);
+         return NGHTTP2_ERR_DEFERRED;
++    case WantToClose:
++        *data_flags |= NGHTTP2_DATA_FLAG_EOF;
++        return 0;
+     case Closed:
+         throw std::logic_error{"response already closed"};
+     }
+@@ -105,7 +127,7 @@ void EventStream::enqueue(const std::string& what)
+     buf += '\n';
+ 
+     std::lock_guard lock{mtx};
+-    if (state == Closed) {
++    if (state == Closed || state == WantToClose) {
+         spdlog::trace("{}: enqueue: already disconnected", peer);
+         return;
+     }
+diff --git a/src/http/EventStream.h b/src/http/EventStream.h
+index 735b69a..b427fb3 100644
+--- a/src/http/EventStream.h
++++ b/src/http/EventStream.h
+@@ -23,13 +23,14 @@ namespace rousette::http {
+ 
+ /** @short Event delivery via text/event-stream
+ 
+-Recieve data from a Signal, and deliver them to an HTTP client via a text/event-stream streamed response.
++Recieve data from an EventSignal, and deliver them to an HTTP client via a text/event-stream streamed response.
+ */
+ class EventStream : public std::enable_shared_from_this<EventStream> {
+ public:
+-    using Signal = boost::signals2::signal<void(const std::string& message)>;
++    using EventSignal = boost::signals2::signal<void(const std::string& message)>;
++    using Termination = boost::signals2::signal<void()>;
+ 
+-    EventStream(const nghttp2::asio_http2::server::request& req, const nghttp2::asio_http2::server::response& res, Signal& signal, const std::optional<std::string>& initialEvent = std::nullopt);
++    EventStream(const nghttp2::asio_http2::server::request& req, const nghttp2::asio_http2::server::response& res, Termination& terminate, EventSignal& signal, const std::optional<std::string>& initialEvent = std::nullopt);
+     void activate();
+ 
+ private:
+@@ -37,13 +38,14 @@ private:
+     enum State {
+         HasEvents,
+         WaitingForEvents,
++        WantToClose,
+         Closed,
+     };
+ 
+     State state = WaitingForEvents;
+     std::list<std::string> queue;
+     mutable std::mutex mtx; // for `state` and `queue`
+-    boost::signals2::scoped_connection subscription;
++    boost::signals2::scoped_connection eventSub, terminateSub;
+     const std::string peer;
+ 
+     size_t send_chunk(uint8_t* destination, std::size_t len, uint32_t* data_flags);
+diff --git a/src/restconf/NotificationStream.cpp b/src/restconf/NotificationStream.cpp
+index e00c39d..d0ba938 100644
+--- a/src/restconf/NotificationStream.cpp
++++ b/src/restconf/NotificationStream.cpp
+@@ -24,7 +24,7 @@ void subscribe(
+     std::optional<sysrepo::Subscription>& sub,
+     sysrepo::Session& session,
+     const std::string& moduleName,
+-    rousette::http::EventStream::Signal& signal,
++    rousette::http::EventStream::EventSignal& signal,
+     libyang::DataFormat dataFormat,
+     const std::optional<std::string>& filter,
+     const std::optional<sysrepo::NotificationTimeStamp>& startTime,
+@@ -87,13 +87,14 @@ namespace rousette::restconf {
+ NotificationStream::NotificationStream(
+     const nghttp2::asio_http2::server::request& req,
+     const nghttp2::asio_http2::server::response& res,
+-    std::shared_ptr<rousette::http::EventStream::Signal> signal,
++    rousette::http::EventStream::Termination& termination,
++    std::shared_ptr<rousette::http::EventStream::EventSignal> signal,
+     sysrepo::Session session,
+     libyang::DataFormat dataFormat,
+     const std::optional<std::string>& filter,
+     const std::optional<sysrepo::NotificationTimeStamp>& startTime,
+     const std::optional<sysrepo::NotificationTimeStamp>& stopTime)
+-    : EventStream(req, res, *signal)
++    : EventStream(req, res, termination, *signal)
+     , m_notificationSignal(signal)
+     , m_session(std::move(session))
+     , m_dataFormat(dataFormat)
+diff --git a/src/restconf/NotificationStream.h b/src/restconf/NotificationStream.h
+index 3029a0d..46f8416 100644
+--- a/src/restconf/NotificationStream.h
++++ b/src/restconf/NotificationStream.h
+@@ -30,7 +30,7 @@ namespace rousette::restconf {
+  * @see rousette::http::EventStream
+  * */
+ class NotificationStream : public rousette::http::EventStream {
+-    std::shared_ptr<rousette::http::EventStream::Signal> m_notificationSignal;
++    std::shared_ptr<rousette::http::EventStream::EventSignal> m_notificationSignal;
+     sysrepo::Session m_session;
+     libyang::DataFormat m_dataFormat;
+     std::optional<std::string> m_filter;
+@@ -42,7 +42,8 @@ public:
+     NotificationStream(
+         const nghttp2::asio_http2::server::request& req,
+         const nghttp2::asio_http2::server::response& res,
+-        std::shared_ptr<rousette::http::EventStream::Signal> signal,
++        rousette::http::EventStream::Termination& termination,
++        std::shared_ptr<rousette::http::EventStream::EventSignal> signal,
+         sysrepo::Session sess,
+         libyang::DataFormat dataFormat,
+         const std::optional<std::string>& filter,
+diff --git a/src/restconf/Server.cpp b/src/restconf/Server.cpp
+index 4255540..2f495f9 100644
+--- a/src/restconf/Server.cpp
++++ b/src/restconf/Server.cpp
+@@ -845,6 +845,7 @@ void Server::stop()
+                 });
+         t.cancel();
+     }
++    shutdownRequested();
+ }
+ 
+ void Server::join()
+@@ -935,7 +936,7 @@ Server::Server(sysrepo::Connection conn, const std::string& address, const std::
+     server->handle("/telemetry/optics", [this](const auto& req, const auto& res) {
+         logRequest(req);
+ 
+-        auto client = std::make_shared<http::EventStream>(req, res, opticsChange, as_restconf_push_update(dwdmEvents->currentData(), std::chrono::system_clock::now()));
++        auto client = std::make_shared<http::EventStream>(req, res, shutdownRequested, opticsChange, as_restconf_push_update(dwdmEvents->currentData(), std::chrono::system_clock::now()));
+         client->activate();
+     });
+ 
+@@ -972,7 +973,7 @@ Server::Server(sysrepo::Connection conn, const std::string& address, const std::
+             // The signal is constructed outside NotificationStream class because it is required to be passed to
+             // NotificationStream's parent (EventStream) constructor where it already must be constructed
+             // Yes, this is a hack.
+-            auto client = std::make_shared<NotificationStream>(req, res, std::make_shared<rousette::http::EventStream::Signal>(), sess, streamRequest.type.encoding, xpathFilter, startTime, stopTime);
++            auto client = std::make_shared<NotificationStream>(req, res, shutdownRequested, std::make_shared<rousette::http::EventStream::EventSignal>(), sess, streamRequest.type.encoding, xpathFilter, startTime, stopTime);
+             client->activate();
+         } catch (const auth::Error& e) {
+             processAuthError(req, res, e, [&res]() {
+diff --git a/src/restconf/Server.h b/src/restconf/Server.h
+index ad53d4c..112c943 100644
+--- a/src/restconf/Server.h
++++ b/src/restconf/Server.h
+@@ -43,6 +43,7 @@ private:
+     using JsonDiffSignal = boost::signals2::signal<void(const std::string& json)>;
+     JsonDiffSignal opticsChange;
+     bool joined = false; // true if the server has been joined, join twice is an error
++    boost::signals2::signal<void()> shutdownRequested;
+ };
+ }
+ }
+diff --git a/tests/restconf-eventstream.cpp b/tests/restconf-eventstream.cpp
+new file mode 100644
+index 0000000..3d7fc15
+--- /dev/null
++++ b/tests/restconf-eventstream.cpp
+@@ -0,0 +1,70 @@
++/*
++ * Copyright (C) 2025 CESNET, https://photonics.cesnet.cz/
++ *
++ * Written by Tomáš Pecka <tomas.pecka@cesnet.cz>
++ *
++ */
++
++#include "trompeloeil_doctest.h"
++static const auto SERVER_PORT = "10091";
++#include <latch>
++#include <libyang-cpp/Time.hpp>
++#include <nghttp2/asio_http2.h>
++#include <spdlog/spdlog.h>
++#include <sysrepo-cpp/utils/utils.hpp>
++#include "restconf/Server.h"
++#include "tests/aux-utils.h"
++#include "tests/event_watchers.h"
++#include "tests/pretty_printers.h"
++
++#define SEND_NOTIFICATION(DATA) notifSession.sendNotification(*ctx.parseOp(DATA, libyang::DataFormat::JSON, libyang::OperationType::NotificationYang).op, sysrepo::Wait::No);
++
++using namespace std::chrono_literals;
++
++TEST_CASE("Termination on server shutdown")
++{
++    trompeloeil::sequence seqMod1;
++    sysrepo::setLogLevelStderr(sysrepo::LogLevel::Information);
++    spdlog::set_level(spdlog::level::trace);
++
++    std::vector<std::unique_ptr<trompeloeil::expectation>> expectations;
++
++    auto srConn = sysrepo::Connection{};
++    auto srSess = srConn.sessionStart(sysrepo::Datastore::Running);
++    srSess.sendRPC(srSess.getContext().newPath("/ietf-factory-default:factory-reset"));
++
++    auto nacmGuard = manageNacm(srSess);
++    auto server = std::make_unique<rousette::restconf::Server>(srConn, SERVER_ADDRESS, SERVER_PORT);
++    setupRealNacm(srSess);
++
++    RestconfNotificationWatcher netconfWatcher(srConn.sessionStart().getContext());
++
++    const std::string notification(R"({"example:eventA":{"message":"blabla","progress":11}})");
++    EXPECT_NOTIFICATION(notification, seqMod1);
++    EXPECT_NOTIFICATION(notification, seqMod1);
++    EXPECT_NOTIFICATION(notification, seqMod1);
++
++    auto notifSession = sysrepo::Connection{}.sessionStart();
++    auto ctx = notifSession.getContext();
++
++    PREPARE_LOOP_WITH_EXCEPTIONS;
++    auto notificationThread = std::jthread(wrap_exceptions_and_asio(bg, io, [&]() {
++        auto notifSession = sysrepo::Connection{}.sessionStart();
++        auto ctx = notifSession.getContext();
++
++        WAIT_UNTIL_SSE_CLIENT_REQUESTS;
++        SEND_NOTIFICATION(notification);
++        SEND_NOTIFICATION(notification);
++        SEND_NOTIFICATION(notification);
++        waitForCompletionAndBitMore(seqMod1);
++
++        auto beforeShutdown = std::chrono::system_clock::now();
++        server.reset();
++        auto shutdownDuration = std::chrono::system_clock::now() - beforeShutdown;
++        REQUIRE(shutdownDuration < 5s);
++    }));
++
++    SSEClient client(io, SERVER_ADDRESS, SERVER_PORT, requestSent, netconfWatcher, "/streams/NETCONF/JSON", std::map<std::string, std::string>{AUTH_ROOT});
++
++    RUN_LOOP_WITH_EXCEPTIONS;
++}
+diff --git a/tests/restconf_utils.cpp b/tests/restconf_utils.cpp
+index a137463..cbfce2c 100644
+--- a/tests/restconf_utils.cpp
++++ b/tests/restconf_utils.cpp
+@@ -205,6 +205,12 @@ SSEClient::SSEClient(
+                 t.expires_from_now(silenceTimeout);
+             });
+         });
++
++        req->on_close([maybeClient = std::weak_ptr<ng_client::session>{client}](auto) {
++            if (auto client = maybeClient.lock()) {
++                client->shutdown();
++            }
++        });
+     });
+ 
+     client->on_error([&](const boost::system::error_code& ec) {
+-- 
+2.43.0
+

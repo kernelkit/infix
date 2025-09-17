@@ -1,0 +1,135 @@
+From 22b41e7ed8268b94ccc139138e2037c390a3a616 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Bed=C5=99ich=20Schindler?= <bedrich.schindler@gmail.com>
+Date: Thu, 10 Jul 2025 15:00:45 +0200
+Subject: [PATCH] Implement `SchemaNode::actionRpcs()`
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
+
+This function allows to access list of actions
+within schema node.
+
+It is implemented same as `Module::actionRpcs`
+to follow same approach, so there is no need to use
+collections.
+
+Change-Id: Ie99908cfdd334433fd9ae6f1a909f196e61139fd
+Signed-off-by: Jan Kundrát <jan.kundrat@cesnet.cz>
+Signed-off-by: Mattias Walström <lazzer@gmail.com>
+---
+ include/libyang-cpp/SchemaNode.hpp |  1 +
+ src/SchemaNode.cpp                 | 12 ++++++++++++
+ tests/example_schema.hpp           | 28 ++++++++++++++++++++++++++++
+ tests/schema_node.cpp              | 21 +++++++++++++++++++++
+ 4 files changed, 62 insertions(+)
+
+diff --git a/include/libyang-cpp/SchemaNode.hpp b/include/libyang-cpp/SchemaNode.hpp
+index 0f1a4c4..9f49fd7 100644
+--- a/include/libyang-cpp/SchemaNode.hpp
++++ b/include/libyang-cpp/SchemaNode.hpp
+@@ -79,6 +79,7 @@ public:
+     Collection<SchemaNode, IterationType::Sibling> siblings() const;
+     Collection<SchemaNode, IterationType::Sibling> immediateChildren() const;
+     std::vector<ExtensionInstance> extensionInstances() const;
++    std::vector<SchemaNode> actionRpcs() const;
+ 
+     std::vector<When> when() const;
+ 
+diff --git a/src/SchemaNode.cpp b/src/SchemaNode.cpp
+index 26b5099..ce24203 100644
+--- a/src/SchemaNode.cpp
++++ b/src/SchemaNode.cpp
+@@ -117,6 +117,18 @@ Collection<SchemaNode, IterationType::Sibling> SchemaNode::immediateChildren() c
+     return c ? c->siblings() : Collection<SchemaNode, IterationType::Sibling>{nullptr, nullptr};
+ }
+ 
++/**
++ * @brief Returns a collection of action nodes (not RPC nodes) as SchemaNode
++ */
++std::vector<SchemaNode> SchemaNode::actionRpcs() const
++{
++    std::vector<SchemaNode> res;
++    for (auto action = reinterpret_cast<const struct lysc_node*>(lysc_node_actions(m_node)); action; action = action->next) {
++        res.emplace_back(SchemaNode{action, m_ctx});
++    }
++    return res;
++}
++
+ /**
+  * Returns the YANG description of the node.
+  *
+diff --git a/tests/example_schema.hpp b/tests/example_schema.hpp
+index 0d8acb9..02d3d74 100644
+--- a/tests/example_schema.hpp
++++ b/tests/example_schema.hpp
+@@ -214,6 +214,34 @@ module example-schema {
+     }
+ 
+     container bigTree {
++        action firstAction {
++            input {
++                leaf inputLeaf1 {
++                    type string;
++                }
++            }
++
++            output {
++                leaf outputLeaf1 {
++                    type string;
++                }
++            }
++        }
++
++        action secondAction {
++            input {
++                leaf inputLeaf2 {
++                    type string;
++                }
++            }
++
++            output {
++                leaf outputLeaf2 {
++                    type string;
++                }
++            }
++        }
++
+         container one {
+             leaf myLeaf {
+                 type string;
+diff --git a/tests/schema_node.cpp b/tests/schema_node.cpp
+index 0001377..65ef462 100644
+--- a/tests/schema_node.cpp
++++ b/tests/schema_node.cpp
+@@ -544,6 +544,27 @@ TEST_CASE("SchemaNode")
+         REQUIRE(elem.extensionInstances()[2].argument() == "last-modified");
+     }
+ 
++    DOCTEST_SUBCASE("SchemaNode::actionRpcs")
++    {
++        DOCTEST_SUBCASE("no actions")
++        {
++            auto actions = ctx->findPath("/example-schema:presenceContainer").actionRpcs();
++            REQUIRE(actions.size() == 0);
++        }
++
++        DOCTEST_SUBCASE("two actions")
++        {
++            auto actions = ctx->findPath("/example-schema:bigTree").actionRpcs();
++            REQUIRE(actions.size() == 2);
++            REQUIRE(actions[0].asActionRpc().name() == "firstAction");
++            REQUIRE(actions[0].asActionRpc().input().child()->name() == "inputLeaf1");
++            REQUIRE(actions[0].asActionRpc().output().child()->name() == "outputLeaf1");
++            REQUIRE(actions[1].asActionRpc().name() == "secondAction");
++            REQUIRE(actions[1].asActionRpc().input().child()->name() == "inputLeaf2");
++            REQUIRE(actions[1].asActionRpc().output().child()->name() == "outputLeaf2");
++        }
++    }
++
+     DOCTEST_SUBCASE("SchemaNode::operator==")
+     {
+         auto a = ctx->findPath("/type_module:leafString");
+-- 
+2.43.0
+
