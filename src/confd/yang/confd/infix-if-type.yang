@@ -110,6 +110,12 @@ module infix-if-type {
     if-feature wifi;
     base infix-interface-type;
     base ianaift:ieee80211;
-    description "WiFi interface";
+    description "WiFi radio interface for station connections";
+  }
+  identity wifi-ap {
+    if-feature wifi;
+    base infix-interface-type;
+    base ianaift:ieee80211;
+    description "WiFi Access Point interface";
   }
 }
