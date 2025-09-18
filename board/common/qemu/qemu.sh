@@ -360,6 +360,7 @@ run_qemu()
 	  $(serial_args) \
 	  $(rw_args) \
 	  $(usb_args) \
+         -device usb-host,vendorid=0x0bda,productid=0xc820 \
 	  $(host_args) \
 	  $(net_args) \
 	  $(wdt_args) \
