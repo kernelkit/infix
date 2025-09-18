@@ -425,6 +425,8 @@ static int netdag_gen_afspec_add(sr_session_ctx_t *session, struct dagger *net, 
 		return vxlan_gen(NULL, cif, ip);
 	case IFT_WIFI:
 		return wifi_gen(NULL, cif, net);
+	case IFT_WIFI_AP:
+		return wifi_ap_add_iface(cif, net);
 	case IFT_ETH:
 		return netdag_gen_ethtool(net, cif, dif);
 	case IFT_LO:
@@ -455,6 +457,7 @@ static int netdag_gen_afspec_set(sr_session_ctx_t *session, struct dagger *net, 
 		return netdag_gen_ethtool(net, cif, dif);
 	case IFT_WIFI:
 		return wifi_gen(dif, cif, net);
+	case IFT_WIFI_AP:
 	case IFT_DUMMY:
 	case IFT_GRE:
 	case IFT_GRETAP:
@@ -481,6 +484,7 @@ static bool netdag_must_del(struct lyd_node *dif, struct lyd_node *cif)
 		break;
 
 	case IFT_WIFI:
+	case IFT_WIFI_AP:
 	case IFT_ETH:
 		return lydx_get_child(dif, "custom-phys-address");
 
@@ -572,9 +576,13 @@ static int netdag_gen_iface_del(struct dagger *net, struct lyd_node *dif,
 		eth_gen_del(dif, ip);
 		wifi_gen_del(dif, net);
 		break;
+	case IFT_WIFI_AP:
+		wifi_ap_del_iface(dif, net);
+		break;
 	case IFT_VETH:
 		veth_gen_del(dif, ip);
 		break;
+
 	case IFT_BRIDGE:
 	case IFT_DUMMY:
 	case IFT_GRE:
@@ -744,6 +752,7 @@ static int netdag_init_iface(struct lyd_node *cif)
 	case IFT_DUMMY:
 	case IFT_ETH:
 	case IFT_WIFI:
+	case IFT_WIFI_AP:
 	case IFT_GRE:
 	case IFT_GRETAP:
 	case IFT_LO:
@@ -897,18 +906,20 @@ static int keystorecb(sr_session_ctx_t *session, uint32_t sub_id, const char *mo
 
 		LYX_LIST_FOR_EACH(interfaces, interface, "interface") {
 			const char *name;
+			enum iftype itype = iftype_from_iface(interface);
 
-			if (iftype_from_iface(interface) != IFT_WIFI)
-				continue;
+			if (itype == IFT_WIFI) {
+				wifi = lydx_get_child(interface, "wifi");
+				if (!wifi)
+					continue;
 
-			wifi = lydx_get_child(interface, "wifi");
-			if (!wifi)
+				name = lydx_get_cattr(wifi, "secret");
+				if (!name || strcmp(name, secret_name))
+					continue;
+				wifi_station_gen(interface, &confd->netdag);
+			} else {
 				continue;
-
-			name = lydx_get_cattr(wifi, "secret");
-			if (!name || strcmp(name, secret_name))
-				continue;
-			wifi_gen(NULL, interface, &confd->netdag);
+			}
 		}
 	}
 

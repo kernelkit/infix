@@ -21,7 +21,7 @@ module infix-wifi-country-codes {
     description
       "Added missing 00 - World (Global regulatory domain)";
     reference
-	internal
+      "internal";
   }
   revision 2025-06-02 {
     description
