@@ -478,9 +478,10 @@ static bool netdag_must_del(struct lyd_node *dif, struct lyd_node *cif)
 		break;
 
 	case IFT_WIFI:
-	case IFT_WIFI_AP:
 	case IFT_ETH:
 		return lydx_get_child(dif, "custom-phys-address");
+	case IFT_WIFI_AP:
+		return lydx_get_child(dif, "custom-phys-address") || wifi_ap_must_delete(dif);
 
 	case IFT_GRE:
 	case IFT_GRETAP:

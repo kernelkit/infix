@@ -183,6 +183,11 @@ module infix-interfaces {
         base infix-ift:infix-interface-type;
       }
     }
+    deviate add {
+      must "not(derived-from-or-self(., 'infix-ift:wifi-ap')) or (../infix-if:custom-phys-address/infix-if:static or ../infix-if:custom-phys-address/infix-if:chassis)" {
+        error-message "WiFi AP interfaces must have a custom physical address configured.";
+      }
+    }
   }
 
   deviation "/if:interfaces/if:interface/if:name" {

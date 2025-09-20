@@ -129,6 +129,7 @@ int wifi_ap_add_iface(struct lyd_node *cif,struct dagger *net);
 int wifi_ap_del_iface(struct lyd_node *cif,struct dagger *net);
 int wifi_ap_gen(struct lyd_node *cif, struct dagger *net);
 int wifi_gen_del(struct lyd_node *iface,  struct dagger *net);
+bool wifi_ap_must_delete(struct lyd_node *dif);
 
 /* if-gre.c */
 int gre_gen(struct lyd_node *dif, struct lyd_node *cif, FILE *ip);
