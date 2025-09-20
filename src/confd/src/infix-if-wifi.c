@@ -163,7 +163,7 @@ int wifi_station_gen(struct lyd_node *cif, struct dagger *net)
 
 	/* Clean up any existing station configuration */
 	erasef(WPA_SUPPLICANT_CONF, ifname);
-	
+
 	country = lydx_get_cattr(wifi, "country-code");
 	if (!country)
 		country = "00";
@@ -221,6 +221,7 @@ int wifi_ap_add_iface(struct lyd_node *cif,struct dagger *net)
 		return SR_ERR_INVAL_ARG;
 	}
 
+	dagger_add_dep(&confd.netdag, ifname, radio);
 	iw = dagger_fopen_net_init(net, ifname, NETDAG_INIT_PRE, "init-iw.sh");
 	fprintf(iw, "iw dev %s interface add %s type __ap\n", radio, ifname);
 	fclose(iw);
@@ -254,7 +255,7 @@ int wifi_ap_gen(struct lyd_node *cif, struct dagger *net)
 	country = lydx_get_cattr(wifi, "country-code");
 	if (!country)
 		country = "00";
-	
+
 	band = lydx_get_cattr(wifi, "band");
 	channel = lydx_get_cattr(wifi, "channel");
 	freq_24GHz = !strcmp(band, "2.4GHz");
@@ -283,10 +284,39 @@ int wifi_ap_gen(struct lyd_node *cif, struct dagger *net)
 
 
 	/* Find all wifi-ap interfaces that reference this radio */
-	rc = lyd_find_xpath(cif, "../../interface[type='infix-if-type:wifi-ap' and wifi/radio = current()/name]", &ap_interfaces);
+	ERROR("Searching for wifi-ap interfaces referencing radio: %s", ifname);
+
+	/* First, let's see what interfaces exist at all */
+	rc = lyd_find_xpath(cif, "../interface", &ap_interfaces);
+	if (rc == LY_SUCCESS && ap_interfaces && ap_interfaces->count > 0) {
+		ERROR("Found %d total interfaces", ap_interfaces->count);
+		for (uint32_t i = 0; i < ap_interfaces->count; i++) {
+			struct lyd_node *iface = ap_interfaces->dnodes[i];
+			const char *iface_name = lydx_get_cattr(iface, "name");
+			const char *iface_type = lydx_get_cattr(iface, "type");
+			ERROR("  Interface: %s, type: %s", iface_name ? iface_name : "NULL", iface_type ? iface_type : "NULL");
+		}
+		ly_set_free(ap_interfaces, NULL);
+	}
+
+	rc = lyd_find_xpath(cif, "../interface[derived-from-or-self(type, 'infix-if-type:wifi-ap')]", &ap_interfaces);
+	if (rc == LY_SUCCESS && ap_interfaces && ap_interfaces->count > 0) {
+		ERROR("Found %d wifi-ap interfaces", ap_interfaces->count);
+		for (uint32_t i = 0; i < ap_interfaces->count; i++) {
+			struct lyd_node *ap_if = ap_interfaces->dnodes[i];
+			const char *ap_name = lydx_get_cattr(ap_if, "name");
+			struct lyd_node *ap_wifi = lydx_get_child(ap_if, "wifi");
+			const char *ap_radio = ap_wifi ? lydx_get_cattr(ap_wifi, "radio") : "NULL";
+			ERROR("  AP interface: %s, radio reference: %s", ap_name ? ap_name : "NULL", ap_radio);
+		}
+		ly_set_free(ap_interfaces, NULL);
+	}
+
+	rc = lyd_find_xpath(cif, "../interface[derived-from-or-self(type, 'infix-if-type:wifi-ap') and wifi/radio = current()/name]", &ap_interfaces);
 	if (rc != LY_SUCCESS || !ap_interfaces || ap_interfaces->count == 0) {
 		/* No AP interfaces found referencing this radio */
-		ERROR("No wifi-ap refence this radio device (%s)", ifname);
+		ERROR("No wifi-ap reference this radio device (%s)", ifname);
+		fclose(hostapd_conf);
 		return SR_ERR_OK;
 	}
 
@@ -347,6 +377,33 @@ int wifi_ap_gen(struct lyd_node *cif, struct dagger *net)
 	fclose(hostapd_finit);
 
 	return rc;
+}
+
+bool wifi_ap_must_delete(struct lyd_node *dif)
+{
+	struct lyd_node *cwifi;
+	const char *radio_name;
+	struct lyd_node *radio_dif;
+
+
+	/* Get the wifi container from the current interface */
+	cwifi = lydx_get_child(dif, "wifi");
+	if (!cwifi)
+		return false;
+
+	/* Get the radio reference */
+	radio_name = lydx_get_cattr(cwifi, "radio");
+	if (!radio_name)
+		return false;
+
+	/* Look for the radio interface in dif to see if it's being deleted */
+	radio_dif = lydx_get_xpathf(dif, "../interface[name='%s']", radio_name);
+	if (radio_dif) {
+		ERROR("%s must delete, radio change", lydx_get_cattr(dif, "name"));
+		return true;
+	}
+
+	return false;
 }
 
 int wifi_gen_del(struct lyd_node *iface,  struct dagger *net)
