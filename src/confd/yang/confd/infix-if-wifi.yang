@@ -112,6 +112,9 @@ submodule infix-if-wifi {
       description
         "Applies to interfaces of type 'wifi' or 'wifi-ap'.";
     }
+    
+    description
+      "WiFi interface extensions with MAC address validation for AP interfaces.";
 
     container wifi {
       if-feature wifi;
