@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-Container basic
+"""Container Basic
 
 Verify that a simple web server container can be configured to run
 with host networking, on port 80.  Operation is verified using a
