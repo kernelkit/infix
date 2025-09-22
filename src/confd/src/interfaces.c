@@ -451,7 +451,18 @@ static int netdag_gen_afspec_set(sr_session_ctx_t *session, struct dagger *net, 
 		return netdag_gen_ethtool(net, cif, dif);
 	case IFT_WIFI:
 		return wifi_gen(dif, cif, net);
-	case IFT_WIFI_AP:
+	case IFT_WIFI_AP: {
+		struct lyd_node *wifi = lydx_get_child(cif, "wifi");
+		if (wifi) {
+			const char *radio = lydx_get_cattr(wifi, "radio");
+			if (radio) {
+				struct lyd_node *radio_if = lydx_get_xpathf(cif, "../interface[name='%s']", radio);
+				if (radio_if)
+					return wifi_ap_gen(radio_if, net);
+			}
+		}
+		return 0;
+	}
 	case IFT_DUMMY:
 	case IFT_GRE:
 	case IFT_GRETAP:
