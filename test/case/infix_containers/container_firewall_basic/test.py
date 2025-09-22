@@ -2,7 +2,7 @@
 r"""Basic Firewall Container
 
 Verify that an nftables container can be used for IP masquerading and
-port forwarding to another container running a basic web server.
+port forwarding to another container.
 
 ....
                                                     <--- Docker containers --->
@@ -21,11 +21,9 @@ network, using a VETH pair, serving HTTP on port 91.
 The firewall container sets up a port forward with IP masquerding
 to/from `ext0:8080` to 10.0.0.2:91.
 
-Correct operation is verified using HTTP GET requests for internal port
-91 and external port 8080, to ensure the web page, with a known key
-phrase, is only reachable from the public interface `ext0`, on
-192.168.0.1:8080.
-
+Operation is verified using HTTP GET requests for internal port 91 and
+external port 8080 to ensure the web page, with a known key phrase, is
+only reachable from the public interface `ext0`, on 192.168.0.1:8080.
 """
 import infamy
 from infamy.util import until, to_binary

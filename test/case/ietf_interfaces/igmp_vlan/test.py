@@ -1,26 +1,20 @@
 #!/usr/bin/env python3
-r"""
-IGMP VLAN
+r"""IGMP VLAN
 
-Test tagged IGMP control traffic and that VLAN separation is respected for multicast
+Verify VLAN tagged IGMP control traffic and that VLAN separation is respected for multicast.
 
 ....
-       VLAN55             VLAN77                          VLAN55              VLAN77
-      10.0.1.1           10.0.2.1                       10.0.1.2            10.0.2.2
+vlan55 10.0.1.1     vlan77 10.0.2.1                  vlan55 10.0.1.2        vlan77 10.0.2.2
           \                /                               \                 /
-           \--------------/        VLAN 1,2 T               \---------------/
-           |    DUT1      +---------------------------------+      DUT2     |
-           |              |dut1:link               dut2:link|               |
-           +--------------+                                 +-----+---------+
- dut1:data1|              |dut1:data2                   dut2:data1|        |dut2:data2
-  VLAN55 U |              | VLAN77 U                     VLAN55 U |        | VLAN77 U
-           |              |                                       |        |
-+-------+  |             +----------+                 +------------+       +--------+
-| msend +--+             | mreceive |                 | mreceive   |       | msend  |
-+-------+                +----------+                 +------------+       +--------+
- 10.0.1.11                 10.0.2.11                      10.0.1.22         10.0.2.22
+           .--------------.          VLAN 1,2 T            .---------------.
+           | DUT1    link +--------------------------------+ link     DUT2 |
+           '-+----------+-'                                '-+-----------+-'
+       data1 | 55U  77U | data2                        data1 | 55U   77U | data2
+     .-------'          '---.                                |           '-------.
+.----+--.                 .-+--------.               .-------+--.             .--+----.
+| msend | 10.0.1.11       | mreceive | 10.0.2.11     | mreceive | 10.0.1.22   | msend | 10.0.2.22
+'-------'                 '----------'               '----------'             '-------'
 ....
-
 """
 
 import infamy
@@ -262,11 +256,9 @@ with infamy.Test() as test:
         d2send_ns.addip("10.0.2.22")
         d1send_ns.must_reach("10.0.1.2")
         d1receive_ns.must_reach("10.0.2.2")
-        with test.step("Start multicast sender on host:data11, group 224.2.2.2"):
+        with test.step("Start multicast senders on host:data11, group 224.2.2.2, and host:data22, group 224.1.1.1"):
             vlan55_sender = mcast.MCastSender(d2send_ns, "224.2.2.2")
-        with test.step("Start multicast sender on host:data22, group 224.1.1.1"):
-            vlan77_sender= mcast.MCastSender(d1send_ns, "224.1.1.1")
-
+            vlan77_sender = mcast.MCastSender(d1send_ns, "224.1.1.1")
 
         with vlan55_sender, vlan77_sender:
             with test.step("Verify group 224.2.2.2 is flooded to host:data21"):
