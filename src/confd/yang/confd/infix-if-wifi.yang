@@ -61,9 +61,9 @@ submodule infix-if-wifi {
   }
   typedef encryption {
     type enumeration {
-      enum auto {
+      enum mixed-wpa2-wpa3 {
         description
-          "Enables WPA/WPA2/WPA3 encryption with automatic protocol
+          "Enables WPA2/WPA3 mixed mode encryption with automatic protocol
            negotiation. The system uses the strongest supported variant supported by Access Point.";
       }
       enum disabled {
@@ -77,7 +77,7 @@ submodule infix-if-wifi {
     description
       "Encryption modes available for WiFi connections.
 
-       - auto: Secure connection using WPA3/WPA2/WPA (auto-selected)
+       - mixed-wpa2-wpa3: Secure connection using WPA2/WPA3 (auto-selected)
        - disabled: Open network (unencrypted)";
   }
 
@@ -189,7 +189,7 @@ submodule infix-if-wifi {
       }
 
       leaf encryption {
-        default auto;
+        default mixed-wpa2-wpa3;
         type encryption;
         when "(derived-from-or-self(../../if:type, 'infixift:wifi') and ../mode = 'station') or derived-from-or-self(../../if:type, 'infixift:wifi-ap')" {
           description "Available for wifi interfaces in station mode or wifi-ap interfaces.";
@@ -198,11 +198,11 @@ submodule infix-if-wifi {
           "WiFi encryption method.
 
            For station interfaces: 
-           - auto (default): Enables WPA2/WPA3 auto-negotiation
+           - mixed-wpa2-wpa3 (default): Enables WPA2/WPA3 auto-negotiation
            - disabled: Disables encryption (open network)
            
            For AP interfaces:
-           - auto: Enables WPA2/WPA3 encryption
+           - mixed-wpa2-wpa3: Enables WPA2/WPA3 encryption
            - disabled: Disables encryption (open network)";
       }
 
