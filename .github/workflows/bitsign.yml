@@ -1,0 +1,215 @@
+name: bitSign Infix Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_version:
+        description: 'Release version (e.g., v25.08.0)'
+        required: true
+        type: string
+  push:
+    branches: [ sign-with-bitsign ]
+
+jobs:
+  sign-infix-release:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Validate release version format
+      id: validate
+      run: |
+        # Use default version for push events, input version for manual dispatch
+        if [ "${{ github.event_name }}" = "push" ]; then
+          VERSION="v25.08.0"
+          echo "Using default version for push trigger: $VERSION"
+        else
+          VERSION="${{ inputs.release_version }}"
+          echo "Using input version for manual trigger: $VERSION"
+        fi
+
+        # Check if version starts with 'v' and has proper format
+        if ! echo "$VERSION" | grep -qE '^v[0-9]+\.[0-9]+(\.[0-9]+)?(-alpha[0-9]*|-beta[0-9]*|-rc[0-9]*)?$'; then
+          echo "❌ Invalid version format. Expected format: vYY.MM(.PP)(-alphaN|-betaN|-rcN)"
+          echo "Examples: v25.08.0, v25.08.0-alpha1, v25.08.0-rc1"
+          exit 1
+        fi
+
+        # Extract version without 'v' prefix for filename
+        FILE_VERSION="${VERSION#v}"
+        FILENAME="infix-x86_64-${FILE_VERSION}.tar.gz"
+        RELEASE_URL="https://github.com/kernelkit/infix/releases/download/${VERSION}/${FILENAME}"
+
+        echo "✅ Version format valid"
+        echo "file_version=${FILE_VERSION}" >> $GITHUB_OUTPUT
+        echo "filename=${FILENAME}" >> $GITHUB_OUTPUT
+        echo "release_url=${RELEASE_URL}" >> $GITHUB_OUTPUT
+
+    - name: Download Infix release
+      run: |
+        RELEASE_URL="${{ steps.validate.outputs.release_url }}"
+        FILENAME="${{ steps.validate.outputs.filename }}"
+
+        echo "Downloading Infix release: $FILENAME"
+        echo "From: $RELEASE_URL"
+
+        if ! curl -L "$RELEASE_URL" -o "$FILENAME" --fail --show-error --progress-bar; then
+          echo "❌ Failed to download release file from: $RELEASE_URL"
+          echo "Please verify that the release version exists and contains the x86_64 build."
+          echo "You can check available releases at: https://github.com/kernelkit/infix/releases"
+          exit 1
+        fi
+
+        # Verify download
+        if [ -f "$FILENAME" ] && [ -s "$FILENAME" ]; then
+          FILE_SIZE=$(ls -lh "$FILENAME" | awk '{print $5}')
+          echo "✅ Successfully downloaded: $FILENAME ($FILE_SIZE)"
+        else
+          echo "❌ Failed to download release file"
+          exit 1
+        fi
+
+    - name: Create signing request
+      id: create_request
+      run: |
+        FILENAME="${{ steps.validate.outputs.filename }}"
+        FILE_VERSION="${{ steps.validate.outputs.file_version }}"
+        RELEASE="infix-x86_64-${FILE_VERSION}"
+
+        echo "Creating signing request for $FILENAME..."
+        echo "RELEASE parameter: $RELEASE"
+
+        # Create signing request using bitSign API
+        RESPONSE=$(curl -s -X POST "https://portal.bitsign.se/api/v1/requests" \
+          -H "Authorization: Bearer ${{ secrets.BITSIGN_API_KEY }}" \
+          -F "file=@$FILENAME" \
+          -F "key=bit42-Demo1" \
+          -F "job=Infix-x86" \
+          -F "parameters={\"RELEASE\": \"$RELEASE\"}")
+
+        echo "API Response: $RESPONSE"
+
+        # Check if request was successful
+        if echo "$RESPONSE" | jq -e '.success == true' > /dev/null; then
+          REQUEST_ID=$(echo "$RESPONSE" | jq -r '.requestId')
+          echo "✅ Request created successfully with ID: $REQUEST_ID"
+          echo "request_id=$REQUEST_ID" >> $GITHUB_OUTPUT
+        else
+          echo "❌ Failed to create signing request"
+          echo "$RESPONSE" | jq -r '.error // .message // "Unknown error"'
+          exit 1
+        fi
+
+    - name: Wait for signing completion
+      id: wait_completion
+      run: |
+        REQUEST_ID="${{ steps.create_request.outputs.request_id }}"
+        echo "Waiting for signing completion for request: $REQUEST_ID"
+
+        # Poll status for up to 10 minutes (600 seconds) - longer timeout for larger files
+        MAX_WAIT=600
+        WAITED=0
+
+        while [ $WAITED -lt $MAX_WAIT ]; do
+          RESPONSE=$(curl -s -X GET "https://portal.bitsign.se/api/v1/requests/$REQUEST_ID/status" \
+            -H "Authorization: Bearer ${{ secrets.BITSIGN_API_KEY }}")
+
+          STATUS=$(echo "$RESPONSE" | jq -r '.status')
+          echo "Current status: $STATUS (waited ${WAITED}s)"
+
+          if [ "$STATUS" = "completed" ]; then
+            echo "✅ Signing completed successfully!"
+            break
+          elif [ "$STATUS" = "failed" ]; then
+            echo "❌ Signing failed"
+            echo "$RESPONSE" | jq -r '.error // .message // "Unknown error"'
+            exit 1
+          fi
+
+          sleep 10
+          WAITED=$((WAITED + 10))
+        done
+
+        if [ $WAITED -ge $MAX_WAIT ]; then
+          echo "❌ Timeout: Signing did not complete within ${MAX_WAIT} seconds"
+          exit 1
+        fi
+
+    - name: Download signed file
+      id: download_signed
+      run: |
+        REQUEST_ID="${{ steps.create_request.outputs.request_id }}"
+        FILENAME="${{ steps.validate.outputs.filename }}"
+        FILE_VERSION="${{ steps.validate.outputs.file_version }}"
+        SIGNED_FILENAME="infix-x86_64-${FILE_VERSION}-signed.tar.gz"
+
+        echo "Downloading signed file for request: $REQUEST_ID"
+        echo "Expected signed filename: $SIGNED_FILENAME"
+
+        # Download the signed file
+        curl -X GET "https://portal.bitsign.se/api/v1/requests/$REQUEST_ID/download" \
+          -H "Authorization: Bearer ${{ secrets.BITSIGN_API_KEY }}" \
+          -o "$SIGNED_FILENAME" \
+          --fail --show-error
+
+        if [ -f "$SIGNED_FILENAME" ] && [ -s "$SIGNED_FILENAME" ]; then
+          FILE_SIZE=$(ls -lh "$SIGNED_FILENAME" | awk '{print $5}')
+          echo "Successfully downloaded signed file: $SIGNED_FILENAME ($FILE_SIZE)"
+          echo "signed_filename=$SIGNED_FILENAME" >> $GITHUB_OUTPUT
+
+          # Calculate SHA256 checksums for both files
+          ORIGINAL_SHA256=$(sha256sum "$FILENAME" | cut -d' ' -f1)
+          SIGNED_SHA256=$(sha256sum "$SIGNED_FILENAME" | cut -d' ' -f1)
+          echo "original_sha256=$ORIGINAL_SHA256" >> $GITHUB_OUTPUT
+          echo "signed_sha256=$SIGNED_SHA256" >> $GITHUB_OUTPUT
+        else
+          echo "Failed to download signed file"
+          exit 1
+        fi
+
+    - name: Upload signed artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: signed-infix-${{ steps.validate.outputs.file_version }}
+        path: ${{ steps.download_signed.outputs.signed_filename }}
+        retention-days: 90
+
+    - name: Summary
+      run: |
+        # Determine the actual version used (could be from push or input)
+        if [ "${{ github.event_name }}" = "push" ]; then
+          ACTUAL_VERSION="v25.08.0"
+        else
+          ACTUAL_VERSION="${{ inputs.release_version }}"
+        fi
+
+        cat >> $GITHUB_STEP_SUMMARY << EOF
+        # bitSign Infix Release Signing Complete
+
+        The Infix release has been successfully signed using the bitSign API.
+
+        ## Signing Details
+
+        | Property | Value |
+        |----------|-------|
+        | 📦 **Original File** | \`${{ steps.validate.outputs.filename }}\` (\`${{ steps.download_signed.outputs.original_sha256 }}\`) |
+        | ✍️ **Signed File** | \`${{ steps.download_signed.outputs.signed_filename }}\` (\`${{ steps.download_signed.outputs.signed_sha256 }}\`) |
+        | 🔑 **Signing Key** | \`bit42-Demo1\` |
+        | ⚙️ **Job Type** | \`Infix-x86\` |
+        | 🆔 **Request ID** | \`${{ steps.create_request.outputs.request_id }}\` |
+        | 📋 **Release Version** | \`\$ACTUAL_VERSION\` |
+        | 🌐 **API Endpoint** | \`portal.bitsign.se\` |
+
+        ## Download Files
+
+        > **The signed release file is available as a workflow artifact:**
+        > **\`signed-infix-${{ steps.validate.outputs.file_version }}\`**
+        >
+        > The artifact contains the signed file: \`${{ steps.download_signed.outputs.signed_filename }}\`
+
+        ---
+
+        **Next Steps:** The signed release can now be distributed with cryptographic verification of authenticity.
+        EOF
