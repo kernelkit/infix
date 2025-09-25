@@ -60,8 +60,12 @@ class PortScanner:
         else:
             raise ValueError(f"Unsupported protocol: {protocol}")
 
-        cmd = f"nmap -n {proto} -Pn -p {port} --host-timeout={timeout} " \
-              f"--min-rate=1000 --max-retries=1 --disable-arp-ping {host}"
+        in6 = ""
+        if ":" in host:
+            in6 = "-6"
+
+        cmd = f"nmap -n {proto} {in6} -Pn -p {port} --host-timeout={timeout}" \
+              f" --min-rate=1000 --max-retries=1 --disable-arp-ping {host}"
         result = self.netns.runsh(cmd)
 
         # Parse nmap output to determine port state
