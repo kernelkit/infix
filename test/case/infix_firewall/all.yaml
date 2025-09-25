@@ -10,3 +10,6 @@
 
 - name: IPv6 LAN-WAN Firewall
   case: ipv6-lan-wan/test.py
+
+- name: IPv6 Zone Migration with Custom Services
+  case: ipv6-zone-migration/test.py

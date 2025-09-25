@@ -16,3 +16,7 @@ include::wan-dmz-lan/Readme.adoc[]
 <<<
 
 include::ipv6-lan-wan/Readme.adoc[]
+
+<<<
+
+include::ipv6-zone-migration/Readme.adoc[]
