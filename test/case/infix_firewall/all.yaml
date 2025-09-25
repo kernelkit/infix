@@ -7,3 +7,6 @@
 
 - name: WAN-DMZ-LAN Firewall with Port Forwarding
   case: wan-dmz-lan/test.py
+
+- name: IPv6 LAN-WAN Firewall
+  case: ipv6-lan-wan/test.py
