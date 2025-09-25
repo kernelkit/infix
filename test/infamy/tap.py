@@ -30,7 +30,7 @@ class Test:
         self.out.flush()
         return self
 
-    def __exit__(self, _, e, __):
+    def __exit__(self, t, e, tb):
         now = datetime.datetime.now().strftime("%F %T")
         self.out.write(f"# Exiting ({now})\n")
         self.out.flush()
@@ -40,12 +40,16 @@ class Test:
         if not e:
             self._not_ok("Missing explicit test result\n")
         else:
-            if type(e) in (TestPass, TestSkip):
+            if t in (TestPass, TestSkip):
                 self.out.write(f"{self.steps}..{self.steps}\n")
                 self.out.flush()
                 raise SystemExit(0)
-
-            traceback.print_exception(e, file=self.commenter)
+            if t is AssertionError:
+                traceback.print_tb(tb, file=self.commenter)
+                self.out.write(f"{str(e)}\n")
+                self.out.flush()
+            else:
+                traceback.print_exception(e, file=self.commenter)
 
             if type(e) is subprocess.CalledProcessError:
                 print("Failing subprocess stdout:\n", e.stdout)
