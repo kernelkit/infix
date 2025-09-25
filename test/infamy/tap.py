@@ -95,7 +95,10 @@ class Test:
     def skip(self):
         raise TestSkip()
 
-    def fail(self):
+    def fail(self, message=None):
+        if message:
+            self.out.write(f"# {message}\n")
+            self.out.flush()
         raise TestFail()
 
 
