@@ -14,12 +14,12 @@ def wifi(ifname):
                 if l[1] == "AP":
                     wifi_data["mode"] = "accesspoint"
                 else:
-                    wifi_data["mode"] = "client"
+                    wifi_data["mode"] = "station"
 
-        if wifi_data["mode"] == "client":
-            client_data=HOST.run(tuple(f"wpa_cli -i {ifname} status".split()), default="")
-            if client_data != "":
-                for line in client_data.splitlines():
+        if wifi_data["mode"] == "station":
+            station_data=HOST.run(tuple(f"wpa_cli -i {ifname} status".split()), default="")
+            if station_data != "":
+                for line in station_data.splitlines():
                     k,v = line.split("=")
                     if k == "ssid":
                         wifi_data["active-ssid"] = v
@@ -36,21 +36,8 @@ def wifi(ifname):
                 if data != "FAIL":
                     wifi_data["scan-results"] = parse_wpa_scan_result(data)
         elif wifi_data["mode"] == "accesspoint":
-            ap_data=HOST.run(tuple(f"hostapd_cli  -i {ifname} list_sta".split()), default="")
-            if ap_data != "":
-                stations=[]
-                for mac in ap_data.splitlines():
-                    station = {}
-                    status=HOST.run(tuple(f"hostapd_cli  -i {ifname} sta {mac}".split()), default="")
-                    if status != "":
-                        for line in status.splitlines()[1:]:
-                            k,v = line.split("=")
-                            if k == "signal":
-                                station["rssi"] = int(v)
-                        station["mac"] = mac
-                        stations.append(station)
-
-                wifi_data["connected-stations"] = stations
+            stations=HOST.run_json(tuple(f"/usr/libexec/infix/wifi-ap-stations {ifname}".split()), default=[])
+            wifi_data["connected-stations"] = stations
     return wifi_data
 
 
