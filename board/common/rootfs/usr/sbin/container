@@ -230,6 +230,18 @@ load_archive()
 	err 1 "failed tagging image as $tag"
     fi
 
+    # Save archive SHA256 to sidecar file for local archives to enable optimization
+    if [ -f "$file" ]; then
+	img_sha256=$(sha256sum "$file" | cut -f1 -d' ')
+	archive_basename=$(basename "$file")
+	sha_file="$DOWNLOADS/${archive_basename}.sha256"
+
+	mkdir -p "$DOWNLOADS"
+
+	echo "$img_sha256" > "$sha_file"
+	log "Saved archive checksum to $sha_file"
+    fi
+
     # Clean up after ourselves
     if [ -n "$extracted" ]; then
 	log "Cleaning up extracted $dir"
@@ -293,6 +305,20 @@ create()
 	done
     else
 	args="$args --network=none"
+    fi
+
+    # Add optimization labels for meta-sha256 and config checksum
+    script="/run/containers/${name}.sh"
+    if [ -f "$script" ]; then
+	# Extract meta-sha256 from script if present
+	meta_sha=$(awk '/^# meta-sha256:/ {print $3}' "$script" 2>/dev/null)
+	if [ -n "$meta_sha" ]; then
+	    args="$args --label meta-sha256=$meta_sha"
+	fi
+
+	# Add config checksum label
+	config_sha=$(sha256sum "$script" | cut -f1 -d' ')
+	args="$args --label config-sha256=$config_sha"
     fi
 
     # shellcheck disable=SC2048
@@ -784,6 +810,78 @@ case $cmd in
 	[ -n "$name" ] || err 1 "setup: missing container name."
 	script=/run/containers/${name}.sh
 	[ -x "$script" ] || err 1 "setup: $script does not exist or is not executable."
+
+	# Early exit optimization: check if container is already up-to-date
+	meta_sha=$(awk '/^# meta-sha256:/ {print $3}' "$script" 2>/dev/null)
+	if [ -n "$meta_sha" ]; then
+	    # Local image optimization: check if archive SHA matches stored sidecar file
+	    # Extract the image path from the script
+	    img=$(awk '/^# meta-image:/ {print $3}' "$script" 2>/dev/null)
+	    if [ -n "$img" ]; then
+		# Determine the archive file path
+		case "$img" in
+		    oci-archive:*)
+			archive_path="${img#oci-archive:}"
+			;;
+		    *)
+			archive_path="$img"
+			;;
+		esac
+
+		# Handle relative paths - check BUILTIN and DOWNLOADS
+		if [ ! -e "$archive_path" ]; then
+		    if [ -e "$DOWNLOADS/$(basename "$archive_path")" ]; then
+			archive_path="$DOWNLOADS/$(basename "$archive_path")"
+		    elif [ -e "$BUILTIN/$(basename "$archive_path")" ]; then
+			archive_path="$BUILTIN/$(basename "$archive_path")"
+		    fi
+		fi
+
+		# Check if the archive exists and compare SHA with sidecar file
+		if [ -f "$archive_path" ]; then
+		    archive_basename=$(basename "$archive_path")
+		    sha_file="$DOWNLOADS/${archive_basename}.sha256"
+
+		    # Check if sidecar file exists
+		    if [ -f "$sha_file" ]; then
+			stored_sha=$(cat "$sha_file" 2>/dev/null)
+			current_sha=$(sha256sum "$archive_path" | cut -f1 -d' ')
+
+			# If SHA matches, check container instance
+			if [ "$stored_sha" = "$current_sha" ]; then
+			    if podman container exists "$name"; then
+				# Check if container has matching labels
+				config_sha=$(sha256sum "$script" | cut -f1 -d' ')
+				container_meta=$(podman inspect "$name" --format '{{index .Config.Labels "meta-sha256"}}' 2>/dev/null)
+				container_config=$(podman inspect "$name" --format '{{index .Config.Labels "config-sha256"}}' 2>/dev/null)
+
+				if [ "$container_meta" = "$meta_sha" ] && [ "$container_config" = "$config_sha" ]; then
+				    log "Container $name is up-to-date (archive and config unchanged), skipping setup"
+				    exit 0
+				fi
+			    fi
+			else
+			    # Archive changed (e.g., rootfs upgrade) - need to reload
+			    log "Archive SHA changed, will reload image and recreate container"
+			fi
+		    fi
+		fi
+	    fi
+	else
+	    # Remote image optimization: check config-sha256 only
+	    if podman container exists "$name"; then
+		# Get current config checksum from script
+		config_sha=$(sha256sum "$script" | cut -f1 -d' ')
+
+		# Get container's stored config checksum
+		container_config=$(podman inspect "$name" --format '{{index .Config.Labels "config-sha256"}}' 2>/dev/null)
+
+		if [ -n "$container_config" ] && [ "$container_config" = "$config_sha" ]; then
+		    log "Container $name config unchanged, skipping setup"
+		    exit 0
+		fi
+	    fi
+	fi
 
 	# Save our PID in case we get stuck here and someone wants to
 	# stop us, e.g., due to reconfiguration or reboot.
