@@ -23,6 +23,30 @@
 #define  _PATH_CONT   "/run/containers"
 
 /*
+ * Check if image is a local archive and return the offset to the file path.
+ * Returns 0 if not a recognized local archive format.
+ */
+static int archive_offset(const char *image)
+{
+	static const struct {
+		const char *prefix;
+		int offset;
+	} prefixes[] = {
+		{ "docker-archive:", 15 },
+		{ "oci-archive:",    12 },
+		{ NULL, 0 }
+	};
+	int i;
+
+	for (i = 0; prefixes[i].prefix; i++) {
+		if (!strncmp(image, prefixes[i].prefix, prefixes[i].offset))
+			return prefixes[i].offset;
+	}
+
+	return 0;
+}
+
+/*
  * Create a setup/create/upgrade script and instantiate a new instance
  * that Finit will start when all networking and other dependencies are
  * out of the way.  Finit calls the `/usr/sbin/container` wrapper script
@@ -37,6 +61,7 @@ static int add(const char *name, struct lyd_node *cif)
 	struct lyd_node *node, *nets, *caps;
 	char script[strlen(name) + 5];
 	FILE *fp, *ap;
+	int offset;
 
 	snprintf(script, sizeof(script), "%s.sh", name);
 	fp = fopenf("w", "%s/%s", _PATH_CONT, script);
@@ -58,9 +83,26 @@ static int add(const char *name, struct lyd_node *cif)
 	image = lydx_get_cattr(cif, "image");
 	fprintf(fp, "#!/bin/sh\n"
 		"# meta-name: %s\n"
-		"# meta-image: %s\n"
-		"container --quiet delete %s >/dev/null\n"
-		"container --quiet", name, image, name);
+		"# meta-image: %s\n", name, image);
+
+	offset = archive_offset(image);
+	if (offset) {
+		const char *path = image + offset;
+		char sha256[65] = { 0 };
+		FILE *pp;
+
+		pp = popenf("r", "sha256sum %s | cut -f1 -d' '", path);
+		if (pp) {
+			if (fgets(sha256, sizeof(sha256), pp)) {
+				chomp(sha256);
+				fprintf(fp, "# meta-sha256: %s\n", sha256);
+			}
+			pclose(pp);
+		}
+	}
+
+	fprintf(fp, "container --quiet delete %s >/dev/null\n"
+		"container --quiet", name);
 
 	LYX_LIST_FOR_EACH(lyd_child(cif), node, "dns")
 		fprintf(fp, " --dns %s", lyd_get_value(node));
