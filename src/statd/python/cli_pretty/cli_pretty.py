@@ -980,7 +980,7 @@ class Iface:
         stations=self.wifi.get("connected-stations", {})
         for station in stations:
             status=rssi_to_status(station["rssi"])
-            row = f"{station['mac']:<{PadWifiStations.mac}}"
+            row = f"{station['mac-address']:<{PadWifiStations.mac}}"
             row += f"{status:<{PadWifiStations.signal}}"
             print(row)
 

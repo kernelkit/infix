@@ -7,6 +7,18 @@
 #define WPA_SUPPLICANT_CONF       "/etc/wpa_supplicant-%s.conf"
 #define HOSTAPD_SUPPLICANT_CONF   "/etc/hostapd-%s.conf"
 
+struct lyd_node *wifi_ap_get_radio(struct lyd_node *cif) {
+	struct lyd_node *wifi = lydx_get_child(cif, "wifi");
+	if (wifi) {
+		const char *radio = lydx_get_cattr(wifi, "radio");
+		if (radio) {
+			struct lyd_node *radio_if = lydx_get_xpathf(cif, "../interface[name='%s']", radio);
+			if (radio_if)
+				return radio_if;
+		}
+	}
+	return NULL;
+}
 static int wifi_gen_station_config(const char *ifname, const char *ssid, const char *country, const char *secret, const char* encryption, struct dagger *net, int counter)
 {
 	FILE *wpa_supplicant = NULL, *wpa = NULL;
@@ -191,24 +203,64 @@ out:
 
 int wifi_ap_del_iface(struct lyd_node *cif,struct dagger *net)
 {
-	const char *ifname/*, *radio */;
+	const char *ifname, *radio;
+	struct lyd_node *wifi;
+	struct ly_set *remaining_aps = NULL;
+	bool is_last_ap = false;
 	FILE *iw;
+	int rc;
 
 	ifname = lydx_get_cattr(cif, "name");
+	wifi = lydx_get_child(cif, "wifi");
+
+	if (wifi) {
+		radio = lydx_get_cattr(wifi, "radio");
+
+		/* Check if this is the last AP interface for this radio */
+		if (radio) {
+			rc = lyd_find_xpath(cif, "../interface[derived-from-or-self(type, 'infix-if-type:wifi-ap') and wifi/radio = current()/wifi/radio and name != current()/name]", &remaining_aps);
+			if (rc != LY_SUCCESS || !remaining_aps || remaining_aps->count == 0) {
+				is_last_ap = true;
+				ERROR("Interface %s is the last AP for radio %s - will restore radio name", ifname, radio);
+			} else {
+				ERROR("Interface %s removal leaves %d other APs for radio %s", ifname, remaining_aps->count, radio);
+			}
+
+			if (remaining_aps)
+				ly_set_free(remaining_aps, NULL);
+		}
+	}
+
 	iw = dagger_fopen_net_exit(net, ifname, NETDAG_EXIT, "exit-iw.sh");
-	fprintf(iw, "iw dev %s del\n", ifname);
+
+	if (is_last_ap && radio) {
+		/* Last AP interface: restore original radio name */
+		fprintf(iw, "# Restore radio name from %s back to %s\n", ifname, radio);
+		fprintf(iw, "ip link set dev %s name %s\n", ifname, radio);
+		fprintf(iw, "ip link property del dev %s altname %s\n", radio, radio);
+	} else {
+		/* Virtual AP interface: delete it */
+		fprintf(iw, "# Delete virtual AP interface %s\n", ifname);
+		fprintf(iw, "iw dev %s del\n", ifname);
+	}
+
 	fclose(iw);
 
 	return 0;
 }
 
+
 int wifi_ap_add_iface(struct lyd_node *cif,struct dagger *net)
 {
 	const char *ifname, *radio;
 	struct lyd_node *wifi;
+	struct ly_set *existing_aps = NULL;
+	bool is_first_ap = false;
 	FILE *iw;
+	int rc;
 
 	ifname = lydx_get_cattr(cif, "name");
+
 	wifi = lydx_get_child(cif, "wifi");
 	if (!wifi) {
 		ERROR("wifi-ap interface %s missing wifi configuration", ifname);
@@ -221,36 +273,72 @@ int wifi_ap_add_iface(struct lyd_node *cif,struct dagger *net)
 		return SR_ERR_INVAL_ARG;
 	}
 
+	/* Check if this is the first AP interface for this radio by finding all APs for this radio */
+	rc = lyd_find_xpath(cif, "../interface[derived-from-or-self(type, 'infix-if-type:wifi-ap') and wifi/radio = current()/wifi/radio]", &existing_aps);
+	if (rc == LY_SUCCESS && existing_aps && existing_aps->count > 0) {
+		/* Check if current interface is the first one in the list */
+		const char *first_ap_name = lydx_get_cattr(existing_aps->dnodes[0], "name");
+		if (!strcmp(ifname, first_ap_name)) {
+			is_first_ap = true;
+			ERROR("Interface %s is the first AP for radio %s - will rename radio", ifname, radio);
+		} else {
+			ERROR("Interface %s is additional AP for radio %s - will create virtual interface", ifname, radio);
+		}
+	} else {
+		/* Fallback: if we can't determine, assume first */
+		is_first_ap = true;
+		ERROR("Interface %s assumed to be first AP for radio %s", ifname, radio);
+	}
+
+	if (existing_aps)
+		ly_set_free(existing_aps, NULL);
+
 	dagger_add_dep(&confd.netdag, ifname, radio);
 	iw = dagger_fopen_net_init(net, ifname, NETDAG_INIT_PRE, "init-iw.sh");
-	fprintf(iw, "iw dev %s interface add %s type __ap\n", radio, ifname);
+
+	if (is_first_ap) {
+		/* First AP interface: rename radio interface to AP name */
+		fprintf(iw, "# Rename radio %s to first AP interface %s\n", radio, ifname);
+		fprintf(iw, "ip link set dev %s name %s\n", radio, ifname);
+		fprintf(iw, "ip link property add dev %s altname %s\n", ifname, radio);
+	} else {
+		/* Additional AP interfaces: create virtual interface as before */
+		fprintf(iw, "# Create virtual AP interface %s on radio %s\n", ifname, radio);
+		fprintf(iw, "iw dev %s interface add %s type __ap\n", radio, ifname);
+	}
+
 	fclose(iw);
 
 	return 0;
 }
 
+int wifi_is_accesspoint(struct lyd_node *cif) {
+	struct lyd_node *wifi;
+	const char *mode;
 
+	wifi = lydx_get_child(cif, "wifi");
+	if (wifi) {
+		mode = lydx_get_cattr(wifi, "mode");
+		ERROR("Accesspoint?: %d", !!strcmp(mode, "accesspoint"));
+		if (mode)
+			return !!strcmp(mode, "accesspoint");
+	}
+	ERROR("NOT ACCESSPOINT");
+	return 0;
+}
 int wifi_ap_gen(struct lyd_node *cif, struct dagger *net)
 {
 	struct lyd_node *wifi, *ap_interface;
 	struct ly_set *ap_interfaces = NULL;
 	FILE *hostapd_conf, *hostapd_finit;
 	const char *country, *band, *channel, *ifname;
+	const char *main_interface_name;
+	bool freq_24GHz;
 	int rc = SR_ERR_OK;
 
 	ERROR("GENERATE AP");
 	ifname = lydx_get_cattr(cif, "name");
 	wifi = lydx_get_child(cif, "wifi");
-
-	/* Clean up any existing AP configuration */
-	erasef(HOSTAPD_SUPPLICANT_CONF, ifname);
-	bool freq_24GHz;
-	hostapd_conf = fopenf("w", HOSTAPD_SUPPLICANT_CONF, ifname);
-	if (!hostapd_conf) {
-		return SR_ERR_INTERNAL;
-	}
-
-	fprintf(hostapd_conf, "# Generated by Infix confd\n");
 
 	country = lydx_get_cattr(wifi, "country-code");
 	band = lydx_get_cattr(wifi, "band");
@@ -260,21 +348,46 @@ int wifi_ap_gen(struct lyd_node *cif, struct dagger *net)
 	if (!channel || !strcmp(channel, "auto"))
 		channel = freq_24GHz ? "6" : "149";
 
+	/* Find all wifi-ap interfaces that reference this radio */
+	rc = lyd_find_xpath(cif, "../interface[derived-from-or-self(type, 'infix-if-type:wifi-ap') and wifi/radio = current()/name]", &ap_interfaces);
+	if (rc != LY_SUCCESS || !ap_interfaces || ap_interfaces->count == 0) {
+		ERROR("No wifi-ap interfaces reference radio %s", ifname);
+		return SR_ERR_OK;
+	}
+
+	/* The first AP interface becomes the main interface (radio gets renamed to this) */
+	ap_interface = ap_interfaces->dnodes[0];
+	main_interface_name = lydx_get_cattr(ap_interface, "name");
+
+	ERROR("Generating hostapd config for radio %s, main interface %s with %d total APs",
+		  ifname, ifname, ap_interfaces->count);
+
+	/* Clean up any existing AP configuration */
+	erasef(HOSTAPD_SUPPLICANT_CONF, ifname);
+
+	hostapd_conf = fopenf("w", HOSTAPD_SUPPLICANT_CONF, ifname);
+	if (!hostapd_conf) {
+		ly_set_free(ap_interfaces, NULL);
+		return SR_ERR_INTERNAL;
+	}
+
+	fprintf(hostapd_conf, "# Generated by Infix confd for radio %s (main interface %s)\n",
+			ifname, main_interface_name);
+
+	/* Basic hostapd configuration using the main AP interface name */
 	fprintf(hostapd_conf,
 		"interface=%s\n"
 		"driver=nl80211\n"
 		"hw_mode=%c\n"
-		"wmm_enabled=1\n"      /* QoS */
+		"wmm_enabled=1\n"
 		"channel=%s\n"
 		"logger_syslog=-1\n"
 		"logger_syslog_level=0\n"
 		"logger_stdout=0\n"
 		"ctrl_interface=/var/run/hostapd\n"
 		"ctrl_interface_group=0\n\n",
-		ifname, freq_24GHz ? 'g' : 'a', channel);
+		main_interface_name, freq_24GHz ? 'g' : 'a', channel);
 
-
-	ERROR("Country: %s", country);
 	if (strcmp(country, "00"))
 		fprintf(hostapd_conf, "country_code=%s\n", country);
 
@@ -283,55 +396,43 @@ int wifi_ap_gen(struct lyd_node *cif, struct dagger *net)
 	else
 		fprintf(hostapd_conf, "ieee80211ac=1\n");
 
+	/* Configure first AP interface as main SSID */
+	struct lyd_node *main_wifi = lydx_get_child(ap_interface, "wifi");
+	if (main_wifi) {
+		const char *ssid = lydx_get_cattr(main_wifi, "ssid");
+		const char *secret_name = lydx_get_cattr(main_wifi, "secret");
+		const char *encryption = lydx_get_cattr(main_wifi, "encryption");
+		const char *secret = NULL;
 
-	/* Find all wifi-ap interfaces that reference this radio */
-	ERROR("Searching for wifi-ap interfaces referencing radio: %s", ifname);
-
-	/* First, let's see what interfaces exist at all */
-	rc = lyd_find_xpath(cif, "../interface", &ap_interfaces);
-	if (rc == LY_SUCCESS && ap_interfaces && ap_interfaces->count > 0) {
-		ERROR("Found %d total interfaces", ap_interfaces->count);
-		for (uint32_t i = 0; i < ap_interfaces->count; i++) {
-			struct lyd_node *iface = ap_interfaces->dnodes[i];
-			const char *iface_name = lydx_get_cattr(iface, "name");
-			const char *iface_type = lydx_get_cattr(iface, "type");
-			ERROR("  Interface: %s, type: %s", iface_name ? iface_name : "NULL", iface_type ? iface_type : "NULL");
+		if (encryption && secret_name) {
+			struct lyd_node *secret_node = lydx_get_xpathf(ap_interface,
+				"../../keystore/symmetric-keys/symmetric-key[name='%s']", secret_name);
+			secret = lydx_get_cattr(secret_node, "cleartext-key");
 		}
-		ly_set_free(ap_interfaces, NULL);
-	}
 
-	rc = lyd_find_xpath(cif, "../interface[derived-from-or-self(type, 'infix-if-type:wifi-ap')]", &ap_interfaces);
-	if (rc == LY_SUCCESS && ap_interfaces && ap_interfaces->count > 0) {
-		ERROR("Found %d wifi-ap interfaces", ap_interfaces->count);
-		for (uint32_t i = 0; i < ap_interfaces->count; i++) {
-			struct lyd_node *ap_if = ap_interfaces->dnodes[i];
-			const char *ap_name = lydx_get_cattr(ap_if, "name");
-			struct lyd_node *ap_wifi = lydx_get_child(ap_if, "wifi");
-			const char *ap_radio = ap_wifi ? lydx_get_cattr(ap_wifi, "radio") : "NULL";
-			ERROR("  AP interface: %s, radio reference: %s", ap_name ? ap_name : "NULL", ap_radio);
+		fprintf(hostapd_conf, "\n# Main SSID: %s\n", ssid);
+		fprintf(hostapd_conf, "ssid=%s\n", ssid);
+
+		if (encryption && !strcmp(encryption, "mixed-wpa2-wpa3") && secret) {
+			fprintf(hostapd_conf, "wpa_key_mgmt=WPA-PSK SAE\n");
+			fprintf(hostapd_conf, "wpa_passphrase=%s\n", secret);
+			fprintf(hostapd_conf, "sae_password=%s\n", secret);
+			fputs("wpa_pairwise=CCMP\n", hostapd_conf);
+			fputs("rsn_pairwise=CCMP\n", hostapd_conf);
+			fputs("ieee80211w=1\n", hostapd_conf);
+			fputs("wpa=2\n", hostapd_conf);
 		}
-		ly_set_free(ap_interfaces, NULL);
+		fputs("ignore_broadcast_ssid=0\n", hostapd_conf);
 	}
 
-	rc = lyd_find_xpath(cif, "../interface[derived-from-or-self(type, 'infix-if-type:wifi-ap') and wifi/radio = current()/name]", &ap_interfaces);
-	if (rc != LY_SUCCESS || !ap_interfaces || ap_interfaces->count == 0) {
-		/* No AP interfaces found referencing this radio */
-		ERROR("No wifi-ap reference this radio device (%s)", ifname);
-		fclose(hostapd_conf);
-		return SR_ERR_OK;
-	}
-
-	/* Iterate through all AP interfaces that reference this radio */
-	for (uint32_t i = 0; i < ap_interfaces->count; i++) {
+	/* Add additional AP interfaces as BSS entries */
+	for (uint32_t i = 1; i < ap_interfaces->count; i++) {
 		ap_interface = ap_interfaces->dnodes[i];
-
 		const char *ap_ifname = lydx_get_cattr(ap_interface, "name");
-		ERROR("Adding %s", ap_ifname);
 		struct lyd_node *ap_wifi = lydx_get_child(ap_interface, "wifi");
 
 		if (!ap_wifi) continue;
 
-		/* Get AP configuration */
 		const char *ssid = lydx_get_cattr(ap_wifi, "ssid");
 		const char *secret_name = lydx_get_cattr(ap_wifi, "secret");
 		const char *encryption = lydx_get_cattr(ap_wifi, "encryption");
@@ -342,32 +443,35 @@ int wifi_ap_gen(struct lyd_node *cif, struct dagger *net)
 				"../../keystore/symmetric-keys/symmetric-key[name='%s']", secret_name);
 			secret = lydx_get_cattr(secret_node, "cleartext-key");
 			if (!secret) {
-				ERROR("Could not retrieve secret key '%s'", secret_name);
-				continue; /* Skip this AP but continue with others */
+				ERROR("Could not retrieve secret key '%s' for BSS %s", secret_name, ap_ifname);
+				continue;
 			}
 		}
 
-		/* SSID configuration */
-		fprintf(hostapd_conf, "bss=%s\n", ap_ifname);
+		/* Add as BSS entry */
+		fprintf(hostapd_conf, "\nbss=%s\n", ap_ifname);
 		fprintf(hostapd_conf, "# SSID: %s\n", ssid);
 		fprintf(hostapd_conf, "ssid=%s\n", ssid);
-		if (!strcmp(encryption, "mixed-wpa2-wpa3")) {
+
+		if (encryption && !strcmp(encryption, "mixed-wpa2-wpa3") && secret) {
 			fprintf(hostapd_conf, "wpa_key_mgmt=WPA-PSK SAE\n");
 			fprintf(hostapd_conf, "wpa_passphrase=%s\n", secret);
 			fprintf(hostapd_conf, "sae_password=%s\n", secret);
-			fputs("wpa_pairwise=CCMP\n",hostapd_conf);
+			fputs("wpa_pairwise=CCMP\n", hostapd_conf);
 			fputs("rsn_pairwise=CCMP\n", hostapd_conf);
-			fputs("ieee80211w=1\n",hostapd_conf); /* This to allow WPA2 stations */
-			fputs("wpa=2\n",hostapd_conf);
+			fputs("ieee80211w=1\n", hostapd_conf);
+			fputs("wpa=2\n", hostapd_conf);
 		}
 		fputs("ignore_broadcast_ssid=0\n", hostapd_conf);
 	}
+
 	ly_set_free(ap_interfaces, NULL);
 	fclose(hostapd_conf);
-	hostapd_finit = dagger_fopen_net_init(net, ifname, NETDAG_INIT_POST, "hostapd.sh");
-	if (!hostapd_finit)
-	       return SR_ERR_INTERNAL;
 
+	/* Generate init script for the main interface */
+	hostapd_finit = dagger_fopen_net_init(net, main_interface_name, NETDAG_INIT_POST, "hostapd.sh");
+	if (!hostapd_finit)
+		return SR_ERR_INTERNAL;
 
 	fprintf(hostapd_finit, "# Generated by Infix confd\n");
 	fprintf(hostapd_finit, "if [ -f '/etc/finit.d/enabled/hostapd@%s.conf' ];then\n", ifname);
