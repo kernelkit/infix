@@ -37,7 +37,7 @@ submodule infix-if-wifi {
      It supports WiFi station mode and enables comprehensive management of
      wireless connections, including encryption, country codes, and scanning.";
 
-  revision 2025-07-27 {
+  revision 2025-09-26 {
     description "Refactor module and add support for Accesspoint mode.";
     reference "internal";
   }
@@ -112,7 +112,7 @@ submodule infix-if-wifi {
       description
         "Applies to interfaces of type 'wifi' or 'wifi-ap'.";
     }
-    
+
     description
       "WiFi interface extensions with MAC address validation for AP interfaces.";
 
@@ -153,7 +153,7 @@ submodule infix-if-wifi {
         type mode;
         description
           "WiFi interface operating mode.
-           
+
            - station: Connect to external WiFi networks
            - accesspoint: Operate as WiFi access point radio";
       }
@@ -197,10 +197,10 @@ submodule infix-if-wifi {
         description
           "WiFi encryption method.
 
-           For station interfaces: 
+           For station interfaces:
            - mixed-wpa2-wpa3 (default): Enables WPA2/WPA3 auto-negotiation
            - disabled: Disables encryption (open network)
-           
+
            For AP interfaces:
            - mixed-wpa2-wpa3: Enables WPA2/WPA3 encryption
            - disabled: Disables encryption (open network)";
@@ -289,11 +289,11 @@ submodule infix-if-wifi {
           description "Only available for wifi-ap interfaces.";
         }
         config false;
-        key mac;
+        key mac-address;
         description
           "List of stations currently connected to this access point.";
 
-          leaf mac {
+          leaf mac-address {
             type yang:phys-address;
             description
               "MAC address of connected station.";
