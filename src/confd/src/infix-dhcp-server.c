@@ -240,7 +240,6 @@ static void del(const char *subnet, struct lyd_node *cfg)
 	int prefix_len;
 	char line[512];
 
-	systemf("initctl -nbq stop dnsmasq");
 	fremove(DNSMASQ_SUBNET_FMT, subnet_tag(subnet));
 
 	/* Parse subnet/prefix */
@@ -369,7 +368,6 @@ static int change(sr_session_ctx_t *session, uint32_t sub_id, const char *module
 		if (err)
 			goto err_done;
 	} else {
-		system("initctl -nbq stop dnsmasq"), deleted++;
 		erase(DNSMASQ_LEASES);
 		erase(DNSMASQ_GLOBAL_OPTS);
 
@@ -382,9 +380,7 @@ static int change(sr_session_ctx_t *session, uint32_t sub_id, const char *module
 	}
 
 err_done:
-	if (deleted)
-		system("initctl -nbq restart dnsmasq");
-	else
+	if (added || deleted)
 		system("initctl -nbq touch dnsmasq");
 
 	lyd_free_tree(diff);
