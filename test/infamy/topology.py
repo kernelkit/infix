@@ -98,7 +98,52 @@ class Topology:
                 self.mapping[lsrc][le[lsrc]] = pe[psrc]
                 self.mapping[ldst][le[ldst]] = pe[pdst]
 
+        self._map_unconnected_ports()
+
         return True
+
+    def _map_unconnected_ports(self):
+        """Map unconnected logical ports to physical interfaces"""
+        import re
+
+        # For each logical node that needs port mapping
+        for ln in self.g.nodes():
+            if ln not in self.mapping:
+                continue
+
+            # Extract logical port names from topology.dot, the labels with
+            # ports look like: { <mgmt> mgmt | <data> data | <unused> unused }
+            ports = []
+            for n in self.dotg.get_nodes():
+                if n.get_name() == ln:
+                    label = n.get_attributes().get('label', '')
+                    if label:
+                        ports = re.findall(r'<(\w+)>', _qstrip(label))
+                    break
+
+            if not ports:
+                continue
+
+            # Get corresponding physical node and already mapped interfaces
+            pn = self.mapping[ln][None]
+            mapped = set(self.mapping[ln].values()) - {None}
+
+            # Discover available interfaces on this physical node by
+            # scanning edges in the physical topology graph
+            available = set()
+            for src, dst in self.phy.g.edges():
+                for edge in self.phy.g.get_edge_data(src, dst).values():
+                    if pn in edge:
+                        available.add(edge[pn])
+
+            # Map unconnected logical ports to unused physical interfaces
+            unused = iter(available - mapped)
+            for lp in ports:
+                if lp not in self.mapping[ln]:
+                    try:
+                        self.mapping[ln][lp] = next(unused)
+                    except StopIteration:
+                        break
 
     def xlate(self, lnode, lport=None):
         assert self.mapping

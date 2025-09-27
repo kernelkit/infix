@@ -1,0 +1,22 @@
+:testgroup:
+== infix-firewall
+
+<<<
+
+include::basic/Readme.adoc[]
+
+<<<
+
+include::lan-wan/Readme.adoc[]
+
+<<<
+
+include::wan-dmz-lan/Readme.adoc[]
+
+<<<
+
+include::ipv6-lan-wan/Readme.adoc[]
+
+<<<
+
+include::ipv6-zone-migration/Readme.adoc[]

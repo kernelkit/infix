@@ -248,12 +248,31 @@ class IsolatedMacVlans:
                         stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                         input=f"while :; do {ping} && break; done")
 
+    def ping6(self, daddr, timeout=None):
+        timeout = timeout if timeout else self.ping_timeout
+        ping6 = f"ping6 -c1 -w1 {daddr}"
+
+        return self.run(["timeout", str(timeout), "/bin/sh"], text=True, check=True,
+                        stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                        input=f"while :; do {ping6} && break; done")
+
     def must_reach(self, *args, **kwargs):
         self.ping(*args, **kwargs)
 
     def must_not_reach(self, *args, **kwargs):
         try:
             res = self.ping(*args, **kwargs)
+        except subprocess.CalledProcessError as e:
+            return
+
+        raise Exception(res)
+
+    def must_reach6(self, *args, **kwargs):
+        self.ping6(*args, **kwargs)
+
+    def must_not_reach6(self, *args, **kwargs):
+        try:
+            res = self.ping6(*args, **kwargs)
         except subprocess.CalledProcessError as e:
             return
 

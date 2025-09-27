@@ -1,8 +1,12 @@
 FROM alpine:3.18.0
 
+# NOTE: please add packages alphabetically!
 RUN apk add --no-cache \
     busybox-extras \
+    curl \
     e2fsprogs \
+    e2tools \
+    ethtool \
     fakeroot \
     gcc \
     git \
@@ -13,7 +17,10 @@ RUN apk add --no-cache \
     libc-dev \
     libyang-dev \
     linux-headers \
+    make \
+    nmap \
     openssh-client \
+    openssl \
     python3-dev \
     qemu-img \
     qemu-system-x86_64 \
@@ -22,12 +29,7 @@ RUN apk add --no-cache \
     squashfs-tools \
     sshpass \
     tcpdump \
-    tshark \
-    openssl \
-    curl \
-    e2tools \
-    make \
-    ethtool
+    tshark
 
 ARG MTOOL_VERSION="3.0"
 RUN wget https://github.com/troglobit/mtools/releases/download/v3.0/mtools-$MTOOL_VERSION.tar.gz -O /tmp/mtools-$MTOOL_VERSION.tar.gz

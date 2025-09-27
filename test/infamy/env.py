@@ -117,13 +117,13 @@ class Env(object):
         return self.ptop.get_password(node)
 
     def is_reachable(self, node, port):
-       ip = neigh.ll6ping(port)
-       if not ip:
-           return False
+        ip = neigh.ll6ping(port)
+        if not ip:
+            return False
 
-       return util.is_reachable(ip, self, self.get_password(node))
+        return util.is_reachable(ip, self, self.get_password(node))
 
-    def attach(self, node, port="mgmt", protocol=None, test_reset=True, username = None, password = None):
+    def attach(self, node, port="mgmt", protocol=None, test_reset=True, username=None, password=None):
         """Attach to node on port using protocol."""
 
         name = node
@@ -132,7 +132,6 @@ class Env(object):
             node, port = self.ltop.xlate(node, port)
         else:
             mapping = None
-
 
         # Precedence:
         # 1. Caller specifies `protocol`
@@ -159,8 +158,10 @@ class Env(object):
 
         if protocol == "netconf":
             dev = netconf.Device(name,
-                                 location=netconf.Location(cport, mgmtip,
-                                                           username,password),
+                                 location=netconf.Location(cport,
+                                                           mgmtip,
+                                                           username,
+                                                           password),
                                  mapping=mapping,
                                  yangdir=self.args.yangdir)
             if test_reset:

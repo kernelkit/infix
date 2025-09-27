@@ -398,7 +398,7 @@ err_abandon:
 static int cand(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
 		const char *path, sr_event_t event, unsigned request_id, void *priv)
 {
-	const char *fmt = "/infix-dhcp-server:dhcp-server/option[id='%s']/address";
+	const char *fmt = CFG_XPATH "/option[id='%s']/address";
 	sr_val_t inferred = { .type = SR_STRING_T };
 	const char *opt[] = {
 		"router",
@@ -409,7 +409,7 @@ static int cand(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
 	if (event != SR_EV_UPDATE && event != SR_EV_CHANGE)
 		return 0;
 
-	if (srx_nitems(session, &cnt, "/infix-dhcp-server:dhcp-server/option") || cnt)
+	if (srx_nitems(session, &cnt, CFG_XPATH "/option") || cnt)
 		return 0;
 
 	for (i = 0; i < NELEMS(opt); i++) {
@@ -422,7 +422,7 @@ static int cand(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
 
 static int clear_stats(sr_session_ctx_t *session, uint32_t sub_id, const char *xpath,
 		       const sr_val_t *input, const size_t input_cnt, sr_event_t event,
-		       unsigned request_id, sr_val_t **output, size_t *output_cnt, void *priv)
+		       uint32_t request_id, sr_val_t **output, size_t *output_cnt, void *priv)
 {
 	if (systemf("dbus-send --system --dest=uk.org.thekelleys.dnsmasq "
 		    "/uk/org/thekelleys/dnsmasq uk.org.thekelleys.dnsmasq.ClearMetrics"))
@@ -436,7 +436,7 @@ int infix_dhcp_server_init(struct confd *confd)
 	int rc;
 
 	REGISTER_CHANGE(confd->session, MODULE, CFG_XPATH, 0, change, confd, &confd->sub);
-	REGISTER_CHANGE(confd->cand, MODULE, CFG_XPATH"//.", SR_SUBSCR_UPDATE, cand, confd, &confd->sub);
+	REGISTER_CHANGE(confd->cand, MODULE, CFG_XPATH "//.", SR_SUBSCR_UPDATE, cand, confd, &confd->sub);
 	REGISTER_RPC(confd->session, CFG_XPATH "/statistics/clear", clear_stats, NULL, &confd->sub);
 
 	return SR_ERR_OK;
