@@ -20,6 +20,10 @@ submodule infix-system-software {
   contact      "kernelkit@googlegroups.com";
   description  "Software status and upgrade.";
 
+  revision 2025-09-27 {
+    description "New optional arguments to install-bundle: verify-certificate and verify-compatible.";
+    reference "Internal";
+  }
   revision 2024-12-16 {
     description "Add boot-order operational data";
     reference "Internal";
@@ -211,6 +215,20 @@ submodule infix-system-software {
            "The location of the software bundle, specified as a Uniform
            Resource Locator (URL).  Currently supported protocols include
            FTP, HTTP(S) and SCP.";
+       }
+
+       leaf verify-certificate {
+         type boolean;
+         default true;
+         description
+           "Whether to verify the bundle's certificate during installation.";
+       }
+
+       leaf verify-compatible {
+         type boolean;
+         default true;
+         description
+           "Whether to verify bundle compatibility with the system.";
        }
      }
   }
