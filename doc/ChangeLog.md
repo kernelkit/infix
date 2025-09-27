@@ -19,6 +19,7 @@ All notable changes to the project are documented in this file.
 - Improve default bash settings with better history handling and tab completion
 
 ### Fixes
+- Fix #1080: Error message in log from rauc, deprecated 'Install' D-Bus method
 - Fix #1100: Reduce DHCP client logging verbosity by 70% and include interface
   names in log messages for easier troubleshooting
 - Fix #1119: CLI UX regression, restore proper behavior for `no enabled` command
