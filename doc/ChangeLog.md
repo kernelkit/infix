@@ -3,10 +3,11 @@ Change Log
 
 All notable changes to the project are documented in this file.
 
-[v25.09.0][UNRELEASED] - 
+[v25.09.0][] - 2025-09-30
 -------------------------
 
 ### Changes
+
 - Upgrade Buildroot to 2025.02.6 (LTS)
 - Upgrade Linux kernel to 6.12.46 (LTS)
 - Upgrade libyang to 3.13.5
@@ -20,12 +21,14 @@ All notable changes to the project are documented in this file.
 - cli: new `terminal reset` and `terminal resize` convenience commands
 
 ### Fixes
+
 - Fix #1080: Error message in log from rauc, deprecated 'Install' D-Bus method
 - Fix #1100: Reduce DHCP client logging verbosity by 70% and include interface
   names in log messages for easier troubleshooting
 - Fix #1119: CLI UX regression, restore proper behavior for `no enabled` command
 - Fix #1155: `show ospf` commands regression
-- Fix #1150: show-legacy wrapper permissions
+- Fix #1150: `show-legacy` wrapper permissions
+- Fix #1161: error in log during boot about unsupported command
 - Fixes for unicode translation in log and pager outputs as well as `syslogd`
 
 [BPI-R3]: https://wiki.banana-pi.org/Banana_Pi_BPI-R3
