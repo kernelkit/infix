@@ -31,6 +31,7 @@ static int infix_system_sw_install(sr_session_ctx_t *session, uint32_t sub_id,
 	sr_error_t srerr = SR_ERR_OK;
 	GError *raucerr = NULL;
 	RaucInstaller *rauc;
+	GVariant *args;
 
 	DEBUG("url:%s", url);
 
@@ -38,7 +39,10 @@ static int infix_system_sw_install(sr_session_ctx_t *session, uint32_t sub_id,
 	if (!rauc)
 		return SR_ERR_INTERNAL;
 
-	rauc_installer_call_install_sync(rauc, url, NULL, &raucerr);
+	/* Empty args dictionary for InstallBundle method, for now. */
+	args = g_variant_new("a{sv}", NULL);
+
+	rauc_installer_call_install_bundle_sync(rauc, url, args, NULL, &raucerr);
 	if (raucerr) {
 		sr_session_set_netconf_error(session, "application", "operation-failed",
 					     NULL, NULL, raucerr->message, 0);
