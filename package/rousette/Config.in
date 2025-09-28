@@ -13,4 +13,6 @@ config BR2_PACKAGE_ROUSETTE
 	select BR2_PACKAGE_SYSREPO_CPP
 	select BR2_PACKAGE_DATE
 	help
-	   RESTconf server
+	   A RESTCONF server for sysrepo
+
+	   https://github.com/CESNET/rousette

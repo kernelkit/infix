@@ -1,10 +1,7 @@
-From 5becffe8a1dd47c8836ce1800a1b72acdf86021f Mon Sep 17 00:00:00 2001
+From 086cfe1847e406df90852dc3cb52ece3d0cbe22b Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Tom=C3=A1=C5=A1=20Pecka?= <tomas.pecka@cesnet.cz>
 Date: Mon, 12 May 2025 14:56:54 +0200
-Subject: [PATCH 10/17] http: send keep-alive pings from EventStream
-MIME-Version: 1.0
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: 8bit
+Subject: [PATCH 06/13] http: send keep-alive pings from EventStream
 Organization: Wires
 
 The nghttp2-asio server disconnects client after 60 seconds of no
@@ -31,7 +28,7 @@ to the server when the server sends these "keep-alive comments".
 [3] https://html.spec.whatwg.org/multipage/server-sent-events.html#authoring-notes
 
 Change-Id: I57e510d0b61ac7ed032c582779780c64768b7d53
-Signed-off-by: Mattias Walström <lazzer@gmail.com>
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
 ---
  src/clock.cpp                       |  4 +-
  src/http/EventStream.cpp            | 44 +++++++++++++--

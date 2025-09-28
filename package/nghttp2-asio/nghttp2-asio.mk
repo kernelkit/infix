@@ -4,8 +4,8 @@
 #
 ################################################################################
 
-NGHTTP2_ASIO_VERSION = e877868abe06a83ed0a6ac6e245c07f6f20866b5
-NGHTTP2_ASIO_SITE = https://github.com/kernelkit/nghttp2-asio.git
+NGHTTP2_ASIO_VERSION = 2173b82e6caa85950c769eecc5da6809faadf61a
+NGHTTP2_ASIO_SITE = https://github.com/CESNET/nghttp2-asio
 NGHTTP2_ASIO_SITE_METHOD = git
 NGHTTP2_ASIO_LICENSE = MIT
 NGHTTP2_ASIO_LICENSE_FILES = COPYING

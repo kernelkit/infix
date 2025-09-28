@@ -1,15 +1,12 @@
-From 4e9b535a59861f25c0602eaa1fc39126d7cd9899 Mon Sep 17 00:00:00 2001
+From de7c55a1e8d3dda20ee3dc408612f2ddb309e888 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Jan=20Kundr=C3=A1t?= <jan.kundrat@cesnet.cz>
 Date: Thu, 7 Aug 2025 12:21:54 +0200
-Subject: [PATCH 13/17] fix a possible bad_weak_ptr exception
-MIME-Version: 1.0
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: 8bit
+Subject: [PATCH 09/13] fix a possible bad_weak_ptr exception
 Organization: Wires
 
 Change-Id: I8c7f7a943a1d848f15527988cb76c2a0a10089e6
 Fixes: 4eae6200 (close long-lived connections on SIGTERM)
-Signed-off-by: Mattias Walström <lazzer@gmail.com>
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
 ---
  src/http/EventStream.cpp | 2 +-
  1 file changed, 1 insertion(+), 1 deletion(-)

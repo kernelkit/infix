@@ -1,10 +1,7 @@
-From 1067e05674633b97d64b428686aff44822230c5f Mon Sep 17 00:00:00 2001
+From 86ea8a1fdc2cb8baa1edbd32bd4f8b45acdef816 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Tom=C3=A1=C5=A1=20Pecka?= <tomas.pecka@cesnet.cz>
 Date: Mon, 8 Sep 2025 20:24:15 +0200
-Subject: [PATCH 17/17] EventStream: fix possible heap-use-after-free
-MIME-Version: 1.0
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: 8bit
+Subject: [PATCH 12/13] EventStream: fix possible heap-use-after-free
 Organization: Wires
 
 I have started getting heap-use-after-free errors from sanitizers (see
@@ -64,7 +61,7 @@ before actually resuming the response.
     (...)
 
 Change-Id: Ifdb1f8610cacffca3bb49da17aa9b1d267cdd472
-Signed-off-by: Mattias Walström <lazzer@gmail.com>
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
 ---
  src/http/EventStream.cpp | 17 ++++++++++++++++-
  1 file changed, 16 insertions(+), 1 deletion(-)

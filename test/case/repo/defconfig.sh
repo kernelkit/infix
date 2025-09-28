@@ -23,21 +23,25 @@ disabled_root_login()
 # For all defconfigs
 check()
 {
-    local total=$#
-    local num=1
-    local base=
+    total=$#
+    num=1
+    base=
 
     echo "1..$total"
     for defconfig in "$@"; do
+	# Skip UNIX backup files
+	case "$defconfig" in
+	    *~|*.bak|'#'*'#'|.#*)
+		continue
+		;;
+	esac
 	base=$(basename "$defconfig")
-	if disabled_root_login "$defconfig"; then
+	if whitelist "$base"; then
+		echo "ok $num - $base is exempted # skip"
+	elif disabled_root_login "$defconfig"; then
 	    echo "ok $num - $base disables root logins"
 	else
-	    if whitelist "$base"; then
-		echo "ok $num - $base is exempted # skip"
-	    else
-		echo "not ok $num - $base has not disabled root login"
-	    fi
+	    echo "not ok $num - $base has not disabled root login"
 	fi
 	num=$((num + 1))
     done

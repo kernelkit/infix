@@ -317,8 +317,7 @@
   <COMMAND name="software" help="Show software info">
     <SWITCH name="optional" min="0" max="1">
       <COMMAND name="name" help="Show detailed info about a partition">
-        <PARAM name="name" ptype="/STRING" help="Partition name">
-        </PARAM>
+        <PARAM name="name" ptype="/STRING" help="Partition name" />
       </COMMAND>
     </SWITCH>
     <ACTION sym="script">
@@ -389,8 +388,7 @@
   <COMMAND name="interfaces" help="Show interface info">
     <SWITCH name="optional" min="0" max="1">
       <COMMAND name="name" help="Show detailed info about NAME">
-        <PARAM name="name" ptype="/IFACES" help="Interface.">
-        </PARAM>
+        <PARAM name="name" ptype="/IFACES" help="Interface." />
       </COMMAND>
     </SWITCH>
     <ACTION sym="script" in="tty" out="tty" interrupt="true">
@@ -553,6 +551,19 @@
       flood=${KLISH_PARAM_flood:+-f}
       ping $iface $flood $count $size $ttl $KLISH_PARAM_addr
     </ACTION>
+  </COMMAND>
+
+  <COMMAND name="terminal" help="Control the terminal (tty)" mode="switch">
+    <COMMAND name="reset" help="Reset terminal settings in case they are garbled">
+      <ACTION sym="script" in="tty" out="tty" interrupt="true">
+	reset
+      </ACTION>
+    </COMMAND>
+    <COMMAND name="resize" help="Force detect size change after terminal resize">
+      <ACTION sym="script" in="tty" out="tty" interrupt="true">
+	resize >/dev/null
+      </ACTION>
+    </COMMAND>
   </COMMAND>
 
   <COMMAND name="tcpdump" help="Capture network traffic">
