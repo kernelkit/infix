@@ -5,3 +5,8 @@ config BR2_PACKAGE_NGHTTP2_ASIO
 	select BR2_PACKAGE_BOOST
 	help
 	  C++ bindings for nghttp2
+
+	  This is the CESNET fork of nghttp2-asio, introduced here:
+	  https://github.com/CESNET/rousette/commit/fff3429
+
+	  https://github.com/CESNET/nghttp2-asio
