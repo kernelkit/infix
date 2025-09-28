@@ -1,10 +1,7 @@
-From 4eae6200aa812950ebbac1660a1899f4edf41e11 Mon Sep 17 00:00:00 2001
+From db64d7b3fc0a0373067e6c5ac9e41b93351778a1 Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Jan=20Kundr=C3=A1t?= <jan.kundrat@cesnet.cz>
 Date: Wed, 7 Aug 2024 19:07:35 +0200
-Subject: [PATCH 06/17] close long-lived connections on SIGTERM
-MIME-Version: 1.0
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: 8bit
+Subject: [PATCH 04/13] close long-lived connections on SIGTERM
 Organization: Wires
 
 Without this patch, all the ongoing SSE streams would be left alive for
@@ -23,7 +20,7 @@ hope it is).
 
 Change-Id: If442134783ba1d699de47c51a9068378f53e8339
 Co-authored-by: Tomas Pecka <tomas.pecka@cesnet.cz>
-Signed-off-by: Mattias Walström <lazzer@gmail.com>
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
 ---
  CMakeLists.txt                      |  1 +
  src/clock.cpp                       |  7 +--

@@ -1,10 +1,7 @@
-From ca2894d4888c673d227fc196a25f83ded20e8f04 Mon Sep 17 00:00:00 2001
+From 5c8a139d04d9b3dfb28b8c0e1a4aa7b945a1e8fc Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Tom=C3=A1=C5=A1=20Pecka?= <tomas.pecka@cesnet.cz>
 Date: Mon, 30 Jun 2025 15:38:02 +0200
-Subject: [PATCH 07/17] restconf: refactor server stop
-MIME-Version: 1.0
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: 8bit
+Subject: [PATCH 05/13] restconf: refactor server stop
 Organization: Wires
 
 In 94b24795 ("server: simplify listening/stopping") we needed to call
@@ -20,7 +17,7 @@ does not seem like it should be called from *every* io_service.)
 [2] https://www.boost.org/doc/libs/1_85_0/doc/html/boost_asio/reference/post.html
 
 Change-Id: I2f33c38a78dce4081a03326c9a9bb25817fc9d2f
-Signed-off-by: Mattias Walström <lazzer@gmail.com>
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
 ---
  src/restconf/Server.cpp | 13 +++++--------
  1 file changed, 5 insertions(+), 8 deletions(-)

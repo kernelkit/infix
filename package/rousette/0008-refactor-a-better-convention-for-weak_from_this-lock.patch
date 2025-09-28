@@ -1,16 +1,13 @@
-From f4602a03adc9134a9b7a9d338e900b40557da6c4 Mon Sep 17 00:00:00 2001
+From e98e079d0fdedf48facbfcf187950946c1ffed7a Mon Sep 17 00:00:00 2001
 From: =?UTF-8?q?Jan=20Kundr=C3=A1t?= <jan.kundrat@cesnet.cz>
 Date: Thu, 7 Aug 2025 12:14:02 +0200
-Subject: [PATCH 12/17] refactor: a better convention for weak_from_this->lock
-MIME-Version: 1.0
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: 8bit
+Subject: [PATCH 08/13] refactor: a better convention for weak_from_this->lock
 Organization: Wires
 
 It is not a "client", so let's stop calling it a "client". My bad.
 
 Change-Id: Id8dc4d92c3ade8d86697366d0102e84bd466f504
-Signed-off-by: Mattias Walström <lazzer@gmail.com>
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
 ---
  src/http/EventStream.cpp | 44 ++++++++++++++++++++--------------------
  1 file changed, 22 insertions(+), 22 deletions(-)
