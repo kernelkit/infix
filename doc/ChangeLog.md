@@ -17,6 +17,7 @@ All notable changes to the project are documented in this file.
 - Add neofetch system information tool for system introspection, issue #1143
 - Add mtr and iperf3 network diagnostic tools, issue #1144
 - Improve default bash settings with better history handling and tab completion
+- cli: new `terminal reset` and `terminal resize` convenience commands
 
 ### Fixes
 - Fix #1100: Reduce DHCP client logging verbosity by 70% and include interface
@@ -24,6 +25,7 @@ All notable changes to the project are documented in this file.
 - Fix #1119: CLI UX regression, restore proper behavior for `no enabled` command
 - Fix #1155: `show ospf` commands regression
 - Fix #1150: show-legacy wrapper permissions
+- Fixes for unicode translation in log and pager outputs as well as `syslogd`
 
 [BPI-R3]: https://wiki.banana-pi.org/Banana_Pi_BPI-R3
 
