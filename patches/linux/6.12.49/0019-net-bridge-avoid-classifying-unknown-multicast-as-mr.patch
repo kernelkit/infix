@@ -1,4 +1,4 @@
-From 9d1c784d94069a722001b8032380f3f3ff7278d7 Mon Sep 17 00:00:00 2001
+From f26cf1305fb0e412a42527d4f24cc1dbb29bf561 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Mon, 4 Mar 2024 16:47:28 +0100
 Subject: [PATCH 19/30] net: bridge: avoid classifying unknown multicast as
@@ -39,7 +39,7 @@ index a5b743a2f7750..3bffc39d78009 100644
  };
  
 diff --git a/net/bridge/br.c b/net/bridge/br.c
-index 2cab878e0a39c..006fb2e5eafbf 100644
+index ed08717541fe7..b2d3a3de2d72b 100644
 --- a/net/bridge/br.c
 +++ b/net/bridge/br.c
 @@ -277,6 +277,9 @@ int br_boolopt_toggle(struct net_bridge *br, enum br_boolopt_id opt, bool on,
