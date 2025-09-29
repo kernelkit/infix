@@ -26,16 +26,14 @@ class Location:
 
 def xpath_to_uri(xpath, extra=None):
     """Convert xpath to HTTP URI"""
-    # If the xpath has a
     pattern = r'\[(.*?)=["\'](.*?)["\']\]'
     matches = re.findall(pattern, xpath)
 
+    uri_path = xpath
     if matches:
         for key, value in matches:
             # replace [key=value] with =value
-            uri_path = re.sub(rf'\[{re.escape(key)}=["\']{re.escape(value)}["\']\]', f'={value}', xpath)
-    else:
-        uri_path = xpath
+            uri_path = re.sub(rf'\[{re.escape(key)}=["\']{re.escape(value)}["\']\]', f'={value}', uri_path)
 
     # Append extra if provided
     if extra is not None:
