@@ -40,6 +40,11 @@ def main():
     for ifname, iface in interfaces["interfaces"].items():
         iface["name"] = ifname
         iface["neighbors"] = []
+
+        # Skip interfaces that don't have OSPF enabled or area configured
+        if not iface.get("ospfEnabled", False) or not iface.get("area"):
+            continue
+
         for area_id in ospf["areas"]:
             area_type=""
 
