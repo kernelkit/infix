@@ -9,7 +9,7 @@ All notable changes to the project are documented in this file.
 ### Changes
 
 - Upgrade Buildroot to 2025.02.6 (LTS)
-- Upgrade Linux kernel to 6.12.46 (LTS)
+- Upgrade Linux kernel to 6.12.49 (LTS)
 - Upgrade libyang to 3.13.5
 - Upgrade sysrepo to 3.7.11
 - Upgrade netopeer2 (NETCONF) to 2.4.5
@@ -1642,7 +1642,7 @@ Supported YANG models in addition to those used by sysrepo and netopeer:
  - N/A
 
 [buildroot]:  https://buildroot.org/
-[UNRELEASED]: https://github.com/kernelkit/infix/compare/v25.08.0...HEAD
+[UNRELEASED]: https://github.com/kernelkit/infix/compare/v25.09.0...HEAD
 [v25.09.0]:   https://github.com/kernelkit/infix/compare/v25.08.0...v26.09.0
 [v25.08.0]:   https://github.com/kernelkit/infix/compare/v25.06.1...v26.08.0
 [v25.06.0]:   https://github.com/kernelkit/infix/compare/v25.05.1...v26.06.0
