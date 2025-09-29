@@ -112,10 +112,12 @@ containers for any custom functionality you need.
 ### Supported Platforms
 
 - **Raspberry Pi 4B** - Perfect for home labs, learning, and prototyping
-- **NanoPi R2S** - Compact dual-port router in a tiny package  
+- **Banana Pi-R3** - Your next home router and gateway
+- **NanoPi R2S** - Compact dual-port router in a tiny package
 - **x86_64** - Run in VMs or on mini PCs for development and testing
-- **Marvell CN9130 CRB, EspressoBIN** - High-performance ARM platforms
-- **Microchip SparX-5i, NXP i.MX8MP EVK** - Enterprise switching capabilities
+- **Marvell CN9130 CRB, EspressoBIN** - High-performance ARM64 platforms
+- **Microchip SparX-5i** - Enterprise switching capabilities
+- **NXP i.MX8MP EVK** - Highly capable ARM64 SoC
 - **StarFive VisionFive2** - RISC-V architecture support
 
 *Why start with Raspberry Pi?* It's affordable, widely available, has
