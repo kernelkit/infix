@@ -12,6 +12,7 @@ All notable changes to the project are documented in this file.
 ### Fixes
 - Fix #1150: `show-legacy` wrapper permissions
 - Fix #1155: `show ospf` commands regression
+- Fix #1169: Expected neighbors not shown in sysrepocfg
 
 [v25.08.0][] - 2025-09-01
 -------------------------
