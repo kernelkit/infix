@@ -6,11 +6,25 @@
   infamy:
     specification: False
 
+- case: meta/bootorder.py
+  infamy:
+    specification: False
+
+- case: meta/check-version.py
+  infamy:
+    specification: False
+
+
 - name: Misc tests
   suite: misc/misc.yaml
 
 - name:  ietf-system
   suite: ietf_system/ietf_system.yaml
+
+# Upgrade may leave wrong boot order
+- case: meta/bootorder.py
+  infamy:
+    specification: False
 
 - name:  ietf-syslog
   suite: ietf_syslog/ietf_syslog.yaml

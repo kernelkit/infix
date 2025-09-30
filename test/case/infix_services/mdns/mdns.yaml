@@ -2,6 +2,5 @@
 - name: mdns_enable_disable
   case: mdns_enable_disable/test.py
 
-# Disabled for v25.08, unstable
-# - name: mdns_allow_deny
-#   case: mdns_allow_deny/test.py
+- name: mdns_allow_deny
+  case: mdns_allow_deny/test.py
