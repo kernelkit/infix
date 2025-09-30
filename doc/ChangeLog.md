@@ -29,6 +29,7 @@ All notable changes to the project are documented in this file.
 - Fix #1155: `show ospf` commands regression
 - Fix #1150: `show-legacy` wrapper permissions
 - Fix #1161: error in log during boot about unsupported command
+- Fix #1169: Expected neighbors not shown in sysrepocfg
 - Fixes for unicode translation in log and pager outputs as well as `syslogd`
 
 [BPI-R3]: https://wiki.banana-pi.org/Banana_Pi_BPI-R3
