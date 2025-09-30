@@ -137,11 +137,20 @@ for reliability you can trust:
 - **Hardware Acceleration**: Linux switchdev support for wire-speed packet processing
 - **Container Integration**: Docker support with flexible network and hardware access
 - **Memory Efficient**: Runs comfortably on devices with as little as 256 MB RAM
+- **Code Signing**: All releases are cryptographically signed for integrity verification
 
 Perfect for everything from resource-constrained edge devices to
 high-throughput network appliances.
 
 > Check the *[Latest Build][]* for bleeding-edge features.
+
+<a href="https://bitsign.se">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://bitsign.se/assets/badges/bitsign-badge-dark-mode.png">
+    <source media="(prefers-color-scheme: light)" srcset="https://bitsign.se/assets/badges/bitsign-badge-light-mode.png">
+    <img alt="bitSign - Code Signing" src="https://bitsign.se/assets/badges/bitsign-badge-light-mode.png">
+  </picture>
+</a>
 
 ---
 
