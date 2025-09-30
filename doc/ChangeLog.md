@@ -3,6 +3,16 @@ Change Log
 
 All notable changes to the project are documented in this file.
 
+[v25.08.1][] - 2025-10-01
+-------------------------
+
+### Changes
+- N/A
+
+### Fixes
+- Fix #1150: `show-legacy` wrapper permissions
+- Fix #1155: `show ospf` commands regression
+
 [v25.08.0][] - 2025-09-01
 -------------------------
 
@@ -1613,6 +1623,7 @@ Supported YANG models in addition to those used by sysrepo and netopeer:
 
 [buildroot]:  https://buildroot.org/
 [UNRELEASED]: https://github.com/kernelkit/infix/compare/v25.08.0...HEAD
+[v25.08.1]:   https://github.com/kernelkit/infix/compare/v25.08.0...v26.08.1
 [v25.08.0]:   https://github.com/kernelkit/infix/compare/v25.06.1...v26.08.0
 [v25.06.0]:   https://github.com/kernelkit/infix/compare/v25.05.1...v26.06.0
 [v25.05.1]:   https://github.com/kernelkit/infix/compare/v25.05.0...v25.05.1
