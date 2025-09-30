@@ -3,7 +3,7 @@ Change Log
 
 All notable changes to the project are documented in this file.
 
-[v25.08.1][] - 2025-10-01
+[v25.08.1][] - 2025-09-30
 -------------------------
 
 ### Changes
@@ -13,6 +13,7 @@ All notable changes to the project are documented in this file.
 - Fix #1150: `show-legacy` wrapper permissions
 - Fix #1155: `show ospf` commands regression
 - Fix #1169: Expected neighbors not shown in sysrepocfg
+- Various test stability improvments
 
 [v25.08.0][] - 2025-09-01
 -------------------------
