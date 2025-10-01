@@ -25,6 +25,9 @@ jobs:
        github.event.action != 'labeled' ||
        github.event.label.name == 'ci:main')
     runs-on: ubuntu-latest
+    outputs:
+      x86_64_target: ${{ steps.set-targets.outputs.x86_64_target }}
+      aarch64_target: ${{ steps.set-targets.outputs.aarch64_target }}
     steps:
       - run: |
           echo "Triggering build ——————————————————————————————————————————————"
@@ -33,26 +36,37 @@ jobs:
           echo "Ref    : ${{ github.ref }}"
           echo "PR     : ${{ github.event.pull_request.number }}"
           echo "Label  : ${{ github.event.label.name }}"
+      - id: set-targets
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" ]] &&           \
+             ! echo '${{ toJSON(github.event.pull_request.labels.*.name) }}' \
+             | grep -q "ci:main"; then
+            echo "x86_64_target=x86_64_minimal" >> $GITHUB_OUTPUT
+            echo "aarch64_target=aarch64_minimal" >> $GITHUB_OUTPUT
+          else
+            echo "x86_64_target=x86_64" >> $GITHUB_OUTPUT
+            echo "aarch64_target=aarch64" >> $GITHUB_OUTPUT
+          fi
 
   build-x86_64:
     needs: check-trigger
     uses: ./.github/workflows/build.yml
     with:
       name: "infix"
-      target: ${{ github.event_name == 'pull_request' && !contains(github.event.pull_request.labels.*.name, 'ci:main') && 'x86_64_minimal' || 'x86_64' }}
+      target: ${{ needs.check-trigger.outputs.x86_64_target }}
 
   build-aarch64:
     needs: check-trigger
     uses: ./.github/workflows/build.yml
     with:
       name: "infix"
-      target: ${{ github.event_name == 'pull_request' && !contains(github.event.pull_request.labels.*.name, 'ci:main') && 'aarch64_minimal' || 'aarch64' }}
+      target: ${{ needs.check-trigger.outputs.aarch64_target }}
 
   test-run-x86_64:
-    needs: build-x86_64
+    needs: [check-trigger, build-x86_64]
     uses: ./.github/workflows/test.yml
     with:
-      target: ${{ github.event_name == 'pull_request' && !contains(github.event.pull_request.labels.*.name, 'ci:main') && 'x86_64_minimal' || 'x86_64' }}
+      target: ${{ needs.check-trigger.outputs.x86_64_target }}
       name: "infix"
 
   test-publish-x86_64:
