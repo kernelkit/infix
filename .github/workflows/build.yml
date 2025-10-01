@@ -35,7 +35,7 @@ on:
       parallel:
         required: false
         type: boolean
-        default: false
+        default: true
 
 env:
   NAME: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.name || inputs.name }}
