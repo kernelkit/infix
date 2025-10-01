@@ -9,27 +9,42 @@ on:
       - ci-work
   workflow_dispatch:
 
-concurrency:
-  group: ci-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
-
 jobs:
+  # Gate all builds through this check to prevent duplicate runs when a PR is
+  # created with the ci:main label already attached.  Without this, both the
+  # 'opened' and 'labeled' events would trigger separate builds.  Only run on
+  # 'labeled' events when the label is actually 'ci:main'.  See issue #1154.
+  check-trigger:
+    if: |
+      startsWith(github.repository, 'kernelkit/') &&
+      (github.event_name != 'pull_request' ||
+       github.event.action != 'labeled' ||
+       github.event.label.name == 'ci:main')
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo "Triggering build ——————————————————————————————————————————————"
+          echo "Event  : ${{ github.event_name }}"
+          echo "Action : ${{ github.event.action }}"
+          echo "Ref    : ${{ github.ref }}"
+          echo "PR     : ${{ github.event.pull_request.number }}"
+          echo "Label  : ${{ github.event.label.name }}"
+
   build-x86_64:
-    if: startsWith(github.repository, 'kernelkit/')
+    needs: check-trigger
     uses: ./.github/workflows/build.yml
     with:
       name: "infix"
       target: ${{ github.event_name == 'pull_request' && !contains(github.event.pull_request.labels.*.name, 'ci:main') && 'x86_64_minimal' || 'x86_64' }}
 
   build-aarch64:
-    if: startsWith(github.repository, 'kernelkit/')
+    needs: check-trigger
     uses: ./.github/workflows/build.yml
     with:
       name: "infix"
       target: ${{ github.event_name == 'pull_request' && !contains(github.event.pull_request.labels.*.name, 'ci:main') && 'aarch64_minimal' || 'aarch64' }}
 
   test-run-x86_64:
-    if: startsWith(github.repository, 'kernelkit/')
     needs: build-x86_64
     uses: ./.github/workflows/test.yml
     with:
@@ -37,6 +52,5 @@ jobs:
       name: "infix"
 
   test-publish-x86_64:
-    if: startsWith(github.repository, 'kernelkit/')
     needs: test-run-x86_64
     uses: ./.github/workflows/publish.yml
