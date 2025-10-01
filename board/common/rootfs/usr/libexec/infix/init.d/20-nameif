@@ -34,6 +34,12 @@ ports=$(devlink -j port | jq -r '.port[]
 				 | select(.flavour == "physical")
 				 | .netdev')
 for iface in $ports; do
+	# On systems with multiple switch trees, a port may be _both_
+	# a physical port, registered with devlink, _and_ a DSA
+	# port. In those cases, hold on to our initial "internal"
+	# classification.
+	[ $(ip -j link show dev "$iface" | jq -r '.[0].group') = internal ] && continue
+
 	ip link set "$iface" group port
 done
 
