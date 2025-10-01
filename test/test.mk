@@ -1,6 +1,7 @@
 base-dir           := $(lastword $(subst :, ,$(BR2_EXTERNAL)))
 test-dir           ?= $(BR2_EXTERNAL_INFIX_PATH)/test
 ninepm             := $(BR2_EXTERNAL_INFIX_PATH)/test/9pm/9pm.py
+ninepm_report      := $(BR2_EXTERNAL_INFIX_PATH)/test/9pm/report.py
 NINEPM_PROJ_CONF   ?= $(BR2_EXTERNAL_INFIX_PATH)/test/9pm-proj.yaml
 spec-dir           := $(test-dir)/spec
 test-specification := $(BINARIES_DIR)/test-specification.pdf
@@ -29,6 +30,8 @@ endif
 
 test:
 	$(test-dir)/env -r $(base) $(mode) $(binaries) $(pkg-$(ARCH)) $(ninepm) -v $(TESTS)
+	$(ninepm_report) github   $(test-dir)/.log/last/result.json
+	$(ninepm_report) asciidoc $(test-dir)/.log/last/result.json
 
 test-sh:
 	$(test-dir)/env $(base) $(mode) $(binaries) $(pkg-$(ARCH)) -i /bin/sh
