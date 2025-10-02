@@ -1741,13 +1741,18 @@ save the changes for the next reboot.</p>
 <a id="__codelineno-5-19" name="__codelineno-5-19" href="#__codelineno-5-19"></a>  }
 <a id="__codelineno-5-20" name="__codelineno-5-20" href="#__codelineno-5-20"></a>}
 <a id="__codelineno-5-21" name="__codelineno-5-21" href="#__codelineno-5-21"></a>admin@host-12-34-56:/config/interface/eth0/&gt; leave
-<a id="__codelineno-5-22" name="__codelineno-5-22" href="#__codelineno-5-22"></a>admin@host-12-34-56:/&gt; show interfaces brief
-<a id="__codelineno-5-23" name="__codelineno-5-23" href="#__codelineno-5-23"></a>lo               UNKNOWN        00:00:00:00:00:00 &lt;LOOPBACK,UP,LOWER_UP&gt;
-<a id="__codelineno-5-24" name="__codelineno-5-24" href="#__codelineno-5-24"></a>eth0             UP             52:54:00:12:34:56 &lt;BROADCAST,MULTICAST,UP,LOWER_UP&gt;
-<a id="__codelineno-5-25" name="__codelineno-5-25" href="#__codelineno-5-25"></a>admin@host-12-34-56:/&gt; show ip brief
-<a id="__codelineno-5-26" name="__codelineno-5-26" href="#__codelineno-5-26"></a>lo               UNKNOWN        127.0.0.1/8 ::1/128
-<a id="__codelineno-5-27" name="__codelineno-5-27" href="#__codelineno-5-27"></a>eth0             UP             192.168.2.200/24 fe80::5054:ff:fe12:3456/64
-<a id="__codelineno-5-28" name="__codelineno-5-28" href="#__codelineno-5-28"></a>admin@host-12-34-56:/&gt; copy running-config startup-config
+<a id="__codelineno-5-22" name="__codelineno-5-22" href="#__codelineno-5-22"></a>admin@host-12-34-56:/&gt; show interfaces
+<a id="__codelineno-5-23" name="__codelineno-5-23" href="#__codelineno-5-23"></a>INTERFACE       PROTOCOL   STATE       DATA
+<a id="__codelineno-5-24" name="__codelineno-5-24" href="#__codelineno-5-24"></a>lo              loopback   UNKNOWN     00:00:00:00:00:00
+<a id="__codelineno-5-25" name="__codelineno-5-25" href="#__codelineno-5-25"></a>                ipv4                   127.0.0.1/8 (static)
+<a id="__codelineno-5-26" name="__codelineno-5-26" href="#__codelineno-5-26"></a>                ipv6                   ::1/128 (static)
+<a id="__codelineno-5-27" name="__codelineno-5-27" href="#__codelineno-5-27"></a>eth0            ethernet   UP          52:54:00:12:34:56
+<a id="__codelineno-5-28" name="__codelineno-5-28" href="#__codelineno-5-28"></a>                ipv4                   192.168.2.200/24 (static)
+<a id="__codelineno-5-29" name="__codelineno-5-29" href="#__codelineno-5-29"></a>                ipv6                   fe80::5054:ff:fe12:3456/64 (link-layer)
+<a id="__codelineno-5-30" name="__codelineno-5-30" href="#__codelineno-5-30"></a>admin@host-12-34-56:/&gt; show ip brief
+<a id="__codelineno-5-31" name="__codelineno-5-31" href="#__codelineno-5-31"></a>lo               UNKNOWN        127.0.0.1/8 ::1/128
+<a id="__codelineno-5-32" name="__codelineno-5-32" href="#__codelineno-5-32"></a>eth0             UP             192.168.2.200/24 fe80::5054:ff:fe12:3456/64
+<a id="__codelineno-5-33" name="__codelineno-5-33" href="#__codelineno-5-33"></a>admin@host-12-34-56:/&gt; copy running-config startup-config
 </code></pre></div>
 <p>One of the ideas behind a separate running and startup configuration is
 to be able to verify a configuration change.  In case of an inadvertent

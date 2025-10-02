@@ -1706,14 +1706,16 @@ means that using the <code>hex</code> prefix will require the client to set the
 <p>When configuring, e.g., <code>dns-server</code>, or <code>router</code> options with the value
 <code>auto</code>, the system uses the IP address from the interface matching the
 subnet.  For example:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>admin@example:/&gt; show interfaces brief
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>Interface    Status  Address
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>eth0         UP      192.168.1.1/24
-<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>eth1         UP      192.168.2.1/24
-<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>
-<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>admin@example:/config/dhcp-server/subnet/192.168.1.0/24/&gt; edit option dns-server
-<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>admin@example:/config/dhcp-server/subnet/192.168.1.0/24/option/dns-server/&gt; set address auto
-<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>admin@example:/config/dhcp-server/subnet/192.168.1.0/24/option/dns-server/&gt; leave
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>admin@example:/&gt; show interfaces
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>INTERFACE       PROTOCOL   STATE       DATA
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>eth0            ethernet   UP          02:00:00:00:00:00
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>                ipv4                   192.168.1.1/24 (static)
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>eth1            ethernet   UP          02:00:00:00:00:01
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>                ipv4                   192.168.2.1/24 (static)
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>
+<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>admin@example:/config/dhcp-server/subnet/192.168.1.0/24/&gt; edit option dns-server
+<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a>admin@example:/config/dhcp-server/subnet/192.168.1.0/24/option/dns-server/&gt; set address auto
+<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a>admin@example:/config/dhcp-server/subnet/192.168.1.0/24/option/dns-server/&gt; leave
 </code></pre></div>
 <p>In this case, clients in subnet 192.168.1.0/24 will receive 192.168.1.1
 as their DNS server address.</p>
