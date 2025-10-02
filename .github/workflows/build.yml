@@ -110,6 +110,11 @@ jobs:
         run: |
           make ${{ env.TARGET }}_defconfig
 
+      - name: Cleanup stale containers and ports
+        run: |
+          podman rm -af || true
+          pkill -9 -f rootlessport || true
+
       - name: Unit Test ${{ env.TARGET }}
         run: |
           make test-unit
