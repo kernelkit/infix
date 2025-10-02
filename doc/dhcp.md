@@ -116,10 +116,12 @@ When configuring, e.g., `dns-server`, or `router` options with the value
 subnet.  For example:
 
 ```
-admin@example:/> show interfaces brief
-Interface    Status  Address
-eth0         UP      192.168.1.1/24
-eth1         UP      192.168.2.1/24
+admin@example:/> show interfaces
+INTERFACE       PROTOCOL   STATE       DATA
+eth0            ethernet   UP          02:00:00:00:00:00
+                ipv4                   192.168.1.1/24 (static)
+eth1            ethernet   UP          02:00:00:00:00:01
+                ipv4                   192.168.2.1/24 (static)
 
 admin@example:/config/dhcp-server/subnet/192.168.1.0/24/> edit option dns-server
 admin@example:/config/dhcp-server/subnet/192.168.1.0/24/option/dns-server/> set address auto
