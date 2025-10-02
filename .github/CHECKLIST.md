@@ -27,10 +27,17 @@ Pull Requests
 Releases
 --------
 
+Recommended checkpoints, use at your own discretion:
+
  - Make at least one -betaN release to verify the GitHub workflow well in time release day
    - Stuff happens, remember kernelkit/infix#735
  - Make at least one -rcN to flush out any issues in customer repos
    - Easy to forget adaptations/hacks in customer repos -- may need Infix change/support
+ - Verify release artifacts (checksums, completeness, no corrupted files)
+ - Test on actual hardware for at least one architecture
+ - Review ChangeLog for completeness
+ - Check for release-blocking issues
+ - Verify generated GNS3 appliance, no marketplace update on -rc builds
  - Ensure the markdown link for the release diff is updated
  - Ensure subrepos are tagged (can be automated, see kernelkit/infix#393)
  - Sync tags for all repo. sync activities
