@@ -90,7 +90,8 @@ jobs:
       - name: Publish Test Result for ${{ env.TARGET }}
         # Ensure this runs even if Regression Test fails
         if: always()
-        run: cat $TEST_PATH/.log/last/result-gh.md >> $GITHUB_STEP_SUMMARY
+        run: |
+          cat $TEST_PATH/.log/last/result-gh.md >> $GITHUB_STEP_SUMMARY
 
       - name: Generate Test Report for ${{ env.TARGET }}
         # Ensure this runs even if Regression Test fails

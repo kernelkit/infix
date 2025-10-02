@@ -169,9 +169,14 @@ interfaces {
   }
 }
 admin@host-12-34-56:/config/interface/eth0/> leave
-admin@host-12-34-56:/> show interfaces brief
-lo               UNKNOWN        00:00:00:00:00:00 <LOOPBACK,UP,LOWER_UP>
-eth0             UP             52:54:00:12:34:56 <BROADCAST,MULTICAST,UP,LOWER_UP>
+admin@host-12-34-56:/> show interfaces
+INTERFACE       PROTOCOL   STATE       DATA
+lo              loopback   UNKNOWN     00:00:00:00:00:00
+                ipv4                   127.0.0.1/8 (static)
+                ipv6                   ::1/128 (static)
+eth0            ethernet   UP          52:54:00:12:34:56
+                ipv4                   192.168.2.200/24 (static)
+                ipv6                   fe80::5054:ff:fe12:3456/64 (link-layer)
 admin@host-12-34-56:/> show ip brief
 lo               UNKNOWN        127.0.0.1/8 ::1/128
 eth0             UP             192.168.2.200/24 fe80::5054:ff:fe12:3456/64
