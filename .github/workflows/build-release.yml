@@ -1,0 +1,92 @@
+name: Build Release
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        required: true
+        type: string
+      use_cache:
+        required: false
+        type: boolean
+        default: true
+
+jobs:
+  build:
+    name: Build Infix ${{ inputs.version }} [${{ matrix.target }}]
+    runs-on: [ self-hosted, release ]
+    strategy:
+      matrix:
+        target: [aarch64, x86_64]
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          clean: true
+          submodules: recursive
+
+      - name: Set Release Variables
+        id: vars
+        run: |
+          ver=${{ inputs.version }}
+          echo "ver=${ver}" >> $GITHUB_OUTPUT
+          fver=${ver#v}
+          target=${{ matrix.target }}-${fver}
+          echo "dir=infix-$target"        >> $GITHUB_OUTPUT
+          echo "tgz=infix-$target.tar.gz" >> $GITHUB_OUTPUT
+
+      - name: Restore Cache of dl/
+        if: ${{ inputs.use_cache }}
+        uses: actions/cache@v4
+        with:
+          path: dl/
+          key: dl-${{ hashFiles('.git/modules/buildroot/HEAD', 'configs/*', 'package/*/*.hash') }}
+          restore-keys: |
+            dl-
+
+      - name: Restore Cache of .ccache/
+        if: ${{ inputs.use_cache }}
+        uses: actions/cache@v4
+        with:
+          path: .ccache/
+          key: ccache-${{ matrix.target }}-${{ hashFiles('.git/modules/buildroot/HEAD', 'package/*/*.hash') }}
+          restore-keys: |
+            ccache-${{ matrix.target }}-
+            ccache-
+
+      - name: Configure & Build
+        env:
+          INFIX_RELEASE: ${{ steps.vars.outputs.ver }}
+        run: |
+          target=${{ matrix.target }}_defconfig
+          echo "Building $target ..."
+          make $target
+          make
+
+      - name: Generate SBOM from Build
+        run: |
+          make legal-info
+
+      - name: Build test specification
+        run: |
+          make test-spec
+
+      - name: Prepare Artifacts
+        run: |
+          cd output/
+          mv images ${{ steps.vars.outputs.dir }}
+          ln -s ${{ steps.vars.outputs.dir }} images
+          tar cfz ${{ steps.vars.outputs.tgz }} ${{ steps.vars.outputs.dir }}
+
+          mv legal-info legal-info-${{ matrix.target }}-${{ steps.vars.outputs.ver }}
+          tar cfz legal-info-${{ matrix.target }}-${{ steps.vars.outputs.ver }}.tar.gz legal-info-${{ matrix.target }}-${{ steps.vars.outputs.ver }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: artifact-${{ matrix.target }}
+          path: output/*.tar.gz
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: artifact-disk-image-${{ matrix.target }}
+          path: output/images/*.qcow2

@@ -1,0 +1,68 @@
+# Weekly release build to catch flaky tests and verify clean builds.
+# Runs without caches (ccache) to ensure reproducibility. See issue #1003.
+name: Weekly Build
+
+on:
+  schedule:
+    - cron: '5 0 * * 6'  # Saturday at 00:05 UTC, same as Coverity
+  workflow_dispatch:
+
+jobs:
+  build:
+    if: github.repository == 'kernelkit/infix'
+    uses: ./.github/workflows/build-release.yml
+    with:
+      version: "latest"
+      use_cache: false
+
+  publish:
+    name: Publish Weekly Build
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: "artifact-*"
+          merge-multiple: true
+
+      - name: Create checksums
+        run: |
+          for file in *.tar.gz; do
+            sha256sum $file > $file.sha256
+          done
+          if ls *.qcow2 &>/dev/null; then
+            for file in *.qcow2; do
+              sha256sum "$file" > "$file.sha256"
+            done
+          fi
+
+      - uses: ncipollo/release-action@v1
+        with:
+          tag: latest
+          name: "Latest Weekly Build"
+          prerelease: true
+          makeLatest: false
+          allowUpdates: true
+          removeArtifacts: true
+          body: |
+            Automated weekly build from `${{ github.sha }}`.
+
+            This build runs without caches to catch potential flaky tests and build issues.
+            Not intended for production use - use official releases instead.
+
+            **Commit:** ${{ github.sha }}
+            **Built:** ${{ github.run_id }}
+          artifacts: "*.tar.gz*,*.qcow2*"
+
+      - name: Summary
+        run: |
+          cat <<EOF >> $GITHUB_STEP_SUMMARY
+          # Weekly Build Published! :package:
+
+          Latest artifacts uploaded to:
+           <https://github.com/kernelkit/infix/releases/tag/latest>
+
+          Built from commit: \`${{ github.sha }}\`
+          EOF
