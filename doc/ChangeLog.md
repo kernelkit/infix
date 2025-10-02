@@ -9,6 +9,8 @@ All notable changes to the project are documented in this file.
 ### Changes
 
 - Upgrade Linux kernel to 6.12.50 (LTS)
+- Extend NETCONF and RESTCONF scripting documentation with operational
+  data examples, discovery patterns, and common workflow examples, issue #1156
 
 ### Fixes
 

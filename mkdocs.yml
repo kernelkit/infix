@@ -47,7 +47,8 @@ nav:
       - Introduction: scripting.md
       - Legacy Scripting: scripting-sysrepocfg.md
       - Production Testing: scripting-prod.md
-      - Remote RESTCONF: scripting-restconf.md
+      - With NETCONF: scripting-netconf.md
+      - With RESTCONF: scripting-restconf.md
   - Developer's Corner:
       - Branding & Releases: branding.md
       - Developer's Guide: developers-guide.md
