@@ -96,6 +96,9 @@ jobs:
         run: |
           awk '/^-----*$/{if (x == 1) exit; x=1;next}x' doc/ChangeLog.md \
               |head -n -1 > release.md
+          echo "" >> release.md
+          echo "> [!TIP]" >> release.md
+          echo "> **Try Infix in GNS3!** Download the appliance from the [GNS3 Marketplace](https://gns3.com/marketplace/appliances/infix) to test Infix in a virtual network environment without hardware." >> release.md
           cat release.md
 
       - uses: ncipollo/release-action@v1
