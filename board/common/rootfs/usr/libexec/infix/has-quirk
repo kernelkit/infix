@@ -1,12 +1,49 @@
-#!/bin/sh
+#!/bin/bash
+
+IFQUIRKSFILE=${IFQUIRKSFILE:-/etc/product/interface-quirks.json}
+
 if [ $# -lt 2 ]; then
         echo "usage: $0 <quirk-name> <ifname>"
         exit 1
 fi
+
 quirk=$1
 ifname=$2
-if [ -f "/etc/product/interface-quirks.json" ]; then
-        echo "$(jq -r --arg iface "$ifname" --arg quirk "$quirk" '.[$iface][$quirk] // "false"' /etc/product/interface-quirks.json)"
-else
-        echo "false"
-fi
+
+[ -f "$IFQUIRKSFILE" ] || { echo false && exit; }
+
+match()
+{
+    jq -e  \
+       --arg quirk "$quirk" --arg pattern "$1" \
+       '.[$pattern][$quirk]' "$IFQUIRKSFILE" >/dev/null || return
+
+    echo true
+    exit 0
+}
+
+ethtoolmatch()
+{
+    local pattern="${1#@ethtool:}"
+
+    grep -qFxvf \
+	 <(ethtool -i "$ifname") \
+	 <(echo -n "$pattern" | awk -v FS="=" -v RS=";" '{ printf("%s: %s\n", $1, $2); }') \
+	&& return
+
+    match "@ethtool:$pattern"
+}
+
+
+for pattern in $(jq -r 'keys[]' "$IFQUIRKSFILE"); do
+    case "$pattern" in
+	@ethtool:*)
+	    ethtoolmatch "$pattern"
+	    ;;
+	"$ifname")
+	    match "$ifname"
+	    ;;
+    esac
+done
+
+echo "false"

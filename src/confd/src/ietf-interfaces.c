@@ -17,18 +17,8 @@
 
 bool iface_has_quirk(const char *ifname, const char *quirkname)
 {
-	struct json_t *iface, *quirk;
-
-	if (!confd.ifquirks)
-		return false;
-
-	iface = json_object_get(confd.ifquirks, ifname);
-	if (!iface)
-		return false;
-
-	quirk = json_object_get(iface, quirkname);
-
-	return quirk ? json_is_true(quirk) : false;
+	return systemf("[ $(/usr/libexec/infix/has-quirk %s %s) = true ]",
+		       quirkname, ifname) == 0;
 }
 
 static bool iface_is_phys(const char *ifname)
