@@ -1,14 +1,11 @@
 === Container environment variables
 ==== Description
 Verify that environment variables can be set in container configuration
-and are available inside the running container. Tests the 'env' list
-functionality by:
+and are available inside the running container.
 
-1. Creating a container with multiple environment variables
-2. Using a custom script to extract env vars and serve them via HTTP
-3. Fetching the served content to verify environment variables are set correctly
-
-Uses the nftables container image with custom rc.local script.
+1  Set up a container config with multiple environment variables
+2. Serve variables back to host using a CGI script in container
+3. Verify served content against environment variables
 
 ==== Topology
 ifdef::topdoc[]
@@ -25,11 +22,10 @@ endif::topdoc[]
 ==== Test sequence
 . Set up topology and attach to target DUT
 . Configure data interface with static IPv4
-. Create container with environment variables
+. Set up container with environment variables
 . Verify container has started
-. Verify environment variables are available via HTTP
 . Verify basic connectivity to data interface
-. Verify environment variables in HTTP response
+. Verify environment variables in CGI response
 
 
 <<<
