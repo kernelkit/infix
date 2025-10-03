@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<service>
+  <short>RESTCONF</short>
+  <description>
+    RESTCONF (RESTful Network Configuration Protocol) is a JSON over
+    HTTP-based protocol that provides a RESTful API for configuration
+    and operational data, as well as RPCs.  Like NETCONF, but it can
+    be managed using only curl.
+  </description>
+  <port protocol="tcp" port="443"/>
+  <port protocol="tcp" port="8443"/>
+</service>

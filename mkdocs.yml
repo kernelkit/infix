@@ -23,12 +23,13 @@ nav:
       - Keybindings: cli/keybindings.md
       - Network Calculator: cli/netcalc.md
       - Network Monitoring: cli/tcpdump.md
-      - Quickstart Guide:  cli/quick.md
+      - Quickstart Guide: cli/quick.md
       - Text Editor: cli/text-editor.md
       - Upgrading: cli/upgrade.md
   - Docker Containers: container.md
   - Networking:
       - Network Configuration: networking.md
+      - Firewall Configuration: firewall.md
       - Quality of Service: qos.md
       - RMON Counters: eth-counters.md
       - Tunneling (L2/L3): tunnels.md
@@ -98,10 +99,18 @@ theme:
         icon: material/weather-sunny
         name: Switch to light mode
 
+# https://squidfunk.github.io/mkdocs-material/reference/formatting/
 markdown_extensions:
   - admonition
   - attr_list
   - footnotes
+  - md_in_html
+  - pymdownx.blocks.caption
+  - pymdownx.critic
+  - pymdownx.caret
+  - pymdownx.keys
+  - pymdownx.mark
+  - pymdownx.tilde
   - pymdownx.details
   - pymdownx.superfences
   - pymdownx.highlight:
@@ -118,6 +127,23 @@ plugins:
   - search
   - callouts
   - mike
+  - glightbox:
+      touchNavigation: true
+      loop: false
+      effect: zoom
+      slide_effect: slide
+      width: 100%
+      height: auto
+      zoomable: true
+      draggable: true
+      skip_classes:
+        - custom-skip-class-name
+      auto_themed: true
+      auto_caption: false
+      caption_position: bottom
+      background: black
+      shadow: false
+      manual: false
   - to-pdf:
       cover: true
       enabled_if_env: PDF_EXPORT

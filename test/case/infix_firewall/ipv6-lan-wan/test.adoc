@@ -1,0 +1,31 @@
+=== IPv6 LAN-WAN Firewall
+
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/infix_firewall/ipv6-lan-wan]
+
+==== Description
+
+IPv6 version of the typical home/office router scenario where the DUT acts as
+a gateway with LAN-to-WAN traffic forwarding and IPv6 prefix delegation.
+
+image::lan-wan.svg[align=center, scaledwidth=50%]
+
+- DUT/Gateway with IPv6 firewall and forwarding
+- Test host has two interfaces: a LAN-side and a WAN-side (Internet)
+- Test host's LAN interface acts as an IPv6 client behind the router
+- Test host's WAN interface acts as an IPv6 Internet server/destination
+- Demonstrates IPv6 policy-based forwarding between zones
+
+==== Topology
+
+image::topology.svg[IPv6 LAN-WAN Firewall topology, align=center, scaledwidth=75%]
+
+==== Sequence
+
+. Set up topology and attach to gateway
+. Configure gateway with firewall and forwarding
+. Test connectivity to gateway
+. Test LAN-to-WAN forwarding
+. Test WAN-to-LAN blocking
+. Verify LAN services accessibility
+
+

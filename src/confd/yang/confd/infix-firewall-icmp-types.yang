@@ -1,0 +1,169 @@
+module infix-firewall-icmp-types {
+  yang-version 1.1;
+  namespace "urn:infix:firewall:icmp-types:ns:yang:1.0";
+  prefix ifw-icmp;
+
+  organization "KernelKit";
+  contact      "kernelkit@googlegroups.com";
+  description  "Common well-defined network services.";
+
+  revision 2025-04-26 {
+    description "Initial revision.";
+    reference "internal";
+  }
+
+  /* firewall-cmd --get-icmptypes */
+  typedef type {
+    description "Available ICMP/ICMPv6 types.";
+
+    type enumeration {
+      enum address-unreachable {
+        description "Error sent when a packet cannot be delivered to its IPv6 destination address.";
+      }
+      enum bad-header {
+        description "IPv6 error indicating there is a problem with the packet header structure or format.";
+      }
+      enum beyond-scope {
+        description "IPv6 error sent when transmitting a packet would cross a zone boundary of the source address scope.";
+      }
+      enum communication-prohibited {
+        description "Error indicating that communication with the destination has been administratively blocked.";
+      }
+      enum destination-unreachable {
+        description "General error sent by hosts or gateways when a destination cannot be reached.";
+      }
+      enum echo-reply {
+        description "Response message sent back to acknowledge receipt of an echo request (ping response/pong).";
+      }
+      enum echo-request {
+        description "Test message used to check if a host is reachable, commonly sent by the ping utility.";
+      }
+      enum failed-policy {
+        description "IPv6 error indicating the source address failed to meet ingress or egress policy requirements.";
+      }
+      enum fragmentation-needed {
+        description "IPv4 error sent when a packet needs fragmentation but the 'Don't Fragment' flag is set.";
+      }
+      enum host-precedence-violation {
+        description "IPv4 error sent when communication is administratively prohibited due to precedence rules.";
+      }
+      enum host-prohibited {
+        description "IPv4 error indicating that access from a specific host has been administratively blocked.";
+      }
+      enum host-redirect {
+        description "IPv4 message instructing to redirect packets to a different route for the specific host.";
+      }
+      enum host-unknown {
+        description "IPv4 error sent when the destination host cannot be identified or located.";
+      }
+      enum host-unreachable {
+        description "IPv4 error sent when the destination host exists but cannot be reached.";
+      }
+      enum ip-header-bad {
+        description "IPv4 error indicating malformed or corrupted IP header information.";
+      }
+      enum mld-listener-done {
+        description "IPv6 multicast message sent when a host leaves a multicast group.";
+      }
+      enum mld-listener-query {
+        description "IPv6 multicast router query to discover group membership information.";
+      }
+      enum mld-listener-report {
+        description "IPv6 multicast message sent by hosts to report group membership.";
+      }
+      enum mld2-listener-report {
+        description "IPv6 multicast listener report message for MLDv2 enhanced reporting.";
+      }
+      enum neighbour-advertisement {
+        description "IPv6 message sent in response to neighbor solicitation to propagate new network information.";
+      }
+      enum neighbour-solicitation {
+        description "IPv6 message used to discover link-layer addresses of neighbors and verify reachability.";
+      }
+      enum network-prohibited {
+        description "IPv4 error sent when access to an entire network has been administratively blocked.";
+      }
+      enum network-redirect {
+        description "IPv4 message instructing to redirect packets to a different route for the entire network.";
+      }
+      enum network-unknown {
+        description "IPv4 error sent when the destination network cannot be identified or located.";
+      }
+      enum network-unreachable {
+        description "IPv4 error sent when the destination network exists but cannot be reached.";
+      }
+      enum no-route {
+        description "IPv6 error sent when there is no routing table entry available for the destination.";
+      }
+      enum packet-too-big {
+        description "IPv6 error sent by routers when they cannot forward a packet because it exceeds the MTU.";
+      }
+      enum parameter-problem {
+        description "Error sent when IP header contains bad parameters or missing required options.";
+      }
+      enum port-unreachable {
+        description "Error sent when the destination port on a reachable host is not available or not listening.";
+      }
+      enum precedence-cutoff {
+        description "IPv4 error sent when the packet's precedence level is lower than the required minimum.";
+      }
+      enum protocol-unreachable {
+        description "IPv4 error sent when the specified protocol is not supported at the destination.";
+      }
+      enum redirect {
+        description "General message instructing a host to use a different route for future packets.";
+      }
+      enum reject-route {
+        description "IPv6 error sent when the routing table explicitly rejects the route to the destination.";
+      }
+      enum required-option-missing {
+        description "IPv4 error sent when a mandatory IP option is not present in the packet header.";
+      }
+      enum router-advertisement {
+        description "Message sent by routers to periodically announce their presence and network configuration.";
+      }
+      enum router-solicitation {
+        description "Message sent by hosts to request router advertisements and discover available routers.";
+      }
+      enum source-quench {
+        description "IPv4 flow control message telling a host to reduce its packet transmission rate.";
+      }
+      enum source-route-failed {
+        description "IPv4 error sent when source routing specified in the packet cannot be completed.";
+      }
+      enum time-exceeded {
+        description "Error sent when a packet's time-to-live expires during transit or reassembly.";
+      }
+      enum timestamp-reply {
+        description "IPv4 response message containing timestamp information for network time synchronization.";
+      }
+      enum timestamp-request {
+        description "IPv4 message requesting timestamp information from the destination for time synchronization.";
+      }
+      enum tos-host-redirect {
+        description "IPv4 message instructing to redirect packets based on both the type of service and specific host.";
+      }
+      enum tos-host-unreachable {
+        description "IPv4 error sent when a host is unreachable for the specific type of service requested.";
+      }
+      enum tos-network-redirect {
+        description "IPv4 message instructing to redirect packets based on both the type of service and network.";
+      }
+      enum tos-network-unreachable {
+        description "IPv4 error sent when a network is unreachable for the specific type of service requested.";
+      }
+      enum ttl-zero-during-reassembly {
+        description "Error sent when a host fails to completely reassemble fragmented packets within the time limit.";
+      }
+      enum ttl-zero-during-transit {
+        description "Error sent when a packet's time-to-live counter reaches zero while being forwarded.";
+      }
+      enum unknown-header-type {
+        description "IPv6 error sent when an unrecognized Next Header type is encountered in the packet.";
+      }
+      enum unknown-option {
+        description "IPv6 error sent when an unrecognized or unsupported IPv6 option is encountered.";
+      }
+    }
+  }
+}
