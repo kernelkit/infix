@@ -26,7 +26,6 @@ endif::topdoc[]
 . Set hostname to 'container-host'
 . Create enabled container from bundled OCI image
 . Verify container has started
-. Let container settle
 . Disable container
 . Verify container has stopped
 . Re-enable container

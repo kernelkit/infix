@@ -1,7 +1,13 @@
 === OSPF Basic
 ==== Description
-Very basic OSPF test just test that OSPF sends HELLO packets between the DUTs
-and that they exchange routes, ending with a simple connectivity check.
+Verifies basic OSPF functionality by configuring two routers (R1 and R2)
+with OSPF on their interconnecting link.  The test ensures OSPF
+neighbors are established, routes are exchanged between the routers, and
+end-to-end connectivity is achieved.
+
+An end-device (HOST) is connected to R2 on an interface without OSPF enabled.
+This verifies that OSPF status information remains accessible when a router
+has non-OSPF interfaces.
 
 ==== Topology
 ifdef::topdoc[]
@@ -19,6 +25,7 @@ endif::topdoc[]
 . Set up topology and attach to target DUTs
 . Configure targets
 . Wait for OSPF routes
+. Verify R2 OSPF neighbors with non-OSPF interface
 . Test connectivity from PC:data to 192.168.200.1
 
 
