@@ -114,3 +114,13 @@ def ospf_is_area_nssa(target, area_id):
         return True
 
     return False
+
+
+def ospf_has_neighbors(target):
+    ospf = _get_ospf_status(target)
+    for area in ospf.get("areas", {}).get("area", []):
+        for interface in area.get("interfaces", {}).get("interface", []):
+            if interface.get("neighbors"):
+                return True
+
+    return False
