@@ -82,8 +82,19 @@ int core_post_hook(sr_session_ctx_t *session, uint32_t sub_id, const char *modul
 		return SR_ERR_OK;
 	}
 
-	if (systemf("initctl -b reload"))
+	if (systemf("initctl -b reload")) {
+		EMERG("initctl reload: failed applying new configuration!");
 		return SR_ERR_SYS;
+	}
+
+	AUDIT("The new configuration has been applied.");
+
+	/* XXX: This should be weaved into Finit when it has absorbed the golden dagger */
+	if (fexist("/run/containers/cleanup")) {
+		char *const cmd[] = { "container", "cleanup", NULL };
+
+		runbg(cmd, 10 * 1000000); /* microseconds */
+	}
 
 	return SR_ERR_OK;
 }

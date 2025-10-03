@@ -12,7 +12,7 @@ BASEDIR=/var/tmp
 container=$0
 checksum=""
 extracted=
-timeout=30
+timeout=30		    # NOTE: matched with container@.conf
 dir=""
 all=""
 env=""
@@ -331,11 +331,56 @@ delete()
 	sleep 1
     done
 
+    # NOTE: -v does not remove *named volumes*
     podman rm -vif "$name" >/dev/null 2>&1
     [ -n "$quiet" ] || log "Container $name has been removed."
+}
 
-    cnt=$(podman image prune -af | wc -l)
-    log "Pruned $cnt image(s)"
+# Delete and clean up after containers removed from the running-configuration
+# May take container names as arguments, as '-n NAME', or a batch list from
+# confd in /run/containers/cleanup, one container name per line.
+cleanup()
+{
+    if [ -n "$name" ]; then
+	names="$name"
+    elif [ $# -gt 0 ]; then
+	names="$*"
+    elif [ -f "/run/containers/cleanup" ]; then
+	names=$(cat /run/containers/cleanup)
+	is_cleanup=true
+    else
+	log "cleanup: no containers specified and no cleanup file found"
+	return 0
+    fi
+
+    for name in $names; do
+	image_name=$(podman inspect "$name" 2>/dev/null | jq -r '.[].ImageName' 2>/dev/null || echo "")
+	log "Cleaning up container: $name, potentially also image: $image_name ..."
+
+	# Remove the container instance
+	delete "$name"
+
+	# Clean up associated named volumes (name-*)
+	for vol in $(podman volume ls --format "{{.Name}}" | grep "^${name}-"); do
+	    log "Removing volume: $vol"
+	    podman volume rm -f --time "$timeout" "$vol" 2>/dev/null || true
+	done
+
+	# Clean up the image if it exists and is not used by other containers
+	if [ -n "$image_name" ] && [ "$image_name" != "null" ]; then
+	    if ! podman ps -a --format "{{.Image}}" | grep -q "^${image_name}$"; then
+		log "Removing unused image: $image_name"
+		podman rmi "$image_name" 2>/dev/null || true
+	    else
+		log "Image $image_name still in use by other containers, not removing"
+	    fi
+	fi
+    done
+
+    if [ -n "$is_cleanup" ]; then
+	rm -f "/run/containers/cleanup"
+	log "Removed cleanup batch file"
+    fi
 }
 
 waitfor()
@@ -375,6 +420,9 @@ stop()
     # Real work is done by wrap() courtesy of finit sysv emulation
 }
 
+# When called by Finit: `initctl stop foo`, the container script
+# is called as `container -n $foo stop`.  For the stop command
+# we want to bypass the default 10 second timeout.
 wrap()
 {
     name=$1
@@ -385,21 +433,28 @@ wrap()
 
     # The setup phase may run forever in the background trying to fetch
     # the image.  It saves its PID in /run/containers/${name}.pid
-    if [ "$cmd" = "stop" ] && [ -f "$pidfile" ]; then
-        pid=$(cat "$pidfile")
+    if [ "$cmd" = "stop" ]; then
+	if [ -f "$pidfile" ]; then
+            pid=$(cat "$pidfile")
 
-	# Check if setup is still running ...
-	if kill -0 "$pid" 2>/dev/null; then
-            kill "$pid"
-            wait "$pid" 2>/dev/null
-        fi
+	    # Check if setup is still running ...
+	    if kill -0 "$pid" 2>/dev/null; then
+		kill "$pid"
+		wait "$pid" 2>/dev/null
+            fi
 
-        rm -f "$pidfile"
-        return 0
+            rm -f "$pidfile"
+            return 0
+	fi
+
+	args="-i --timeout $timeout"
+    else
+	args=
     fi
 
     # Skip "echo $name" from podman start in log
-    podman "$cmd" "$name" >/dev/null
+    # shellcheck disable=SC2086
+    podman "$cmd" $args "$name" >/dev/null
 }
 
 # Removes network $1 from all containers
@@ -430,7 +485,7 @@ netrestart()
     done
 }
 
-cleanup()
+atexit()
 {
     pidfile=$(pidfn "$name")
 
@@ -480,6 +535,7 @@ options:
   -v, --volume NAME:PATH   Create named volume mounted inside container on PATH
 
 commands:
+  cleanup [NAME [...]]     Clean up after a deleted container(s): images, volumes, ...
   create   NAME IMAGE NET  Create container NAME using IMAGE with networks NET
   delete  [network] NAME   Remove container NAME or network NAME from all containers
   exec     NAME CMD        Run a command inside a container
@@ -638,7 +694,7 @@ if [ -n "$cmd" ]; then
     shift
 fi
 
-trap cleanup INT HUP TERM
+trap atexit INT HUP TERM
 
 case $cmd in
     # Does not work atm., cannot attach to TTY because
@@ -646,6 +702,9 @@ case $cmd in
     # attach)
     # 	podman attach "$1"
     # 	;;
+    cleanup)
+	cleanup "$@"
+	;;
     create)
 	[ -n "$quiet" ] || log "Got create args: $*"
 	create "$@"
@@ -780,23 +839,37 @@ case $cmd in
 	pidfile=$(pidfn "${name}")
 	echo $$ > "$pidfile"
 
-	while ! "$script"; do
-            log "${name}: setup failed, waiting for network changes ..."
+	# Try setup once first
+	if ! "$script"; then
+	    # Get image transport to decide if retries make sense
+	    image=$(awk '/^# meta-image:/ {print $3}' "$script" 2>/dev/null || echo "")
+	    case "$image" in
+		oci:* | oci-archive:* | docker-archive:* | docker-daemon:* | dir:* | containers-storage:* | ostree:* | sif:* | /*)
+		    # Local transport - exit immediately on failure
+		    log "${name}: setup failed for local image $image"
+		    rm -f "$pidfile"
+		    exit 1
+		    ;;
+		*)
+		    # Remote transport (docker://, ftp://, http://, https://, etc.) - retry on network changes
+		    while ! "$script"; do
+			log "${name}: setup failed, waiting for network changes ..."
 
-	    # Timeout and retry after 60 seconds, on SIGTERM, or when
-	    # any network event is caught.
-	    timeout -s TERM -k 1 60 sh -c \
-		    'ip monitor address route 2>/dev/null | head -n1 >/dev/null' || true
+			# Timeout and retry after 60 seconds, on SIGTERM, or when
+			# any network event is caught.
+			timeout -s TERM -k 1 60 sh -c \
+				'ip monitor address route 2>/dev/null | head -n1 >/dev/null' || true
 
-	    # On IP address/route changes, wait a few seconds more to ensure
-	    # the system has ample time to react and set things up for us.
-	    log "${name}: retrying ..."
-	    sleep 2
-	done
+			# On IP address/route changes, wait a few seconds more to ensure
+			# the system has ample time to react and set things up for us.
+			log "${name}: retrying ..."
+			sleep 2
+		    done
+		    ;;
+	    esac
+	fi
 
 	rm -f "$pidfile"
-	cnt=$(podman image prune -f | wc -l)
-	log "setup: pruned $cnt image(s)"
 	;;
     shell)
 	if [ -z "$name" ]; then
