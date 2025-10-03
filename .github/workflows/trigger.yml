@@ -70,5 +70,6 @@ jobs:
       name: "infix"
 
   test-publish-x86_64:
+    if: ${{ github.repository_owner == 'kernelkit' && github.ref_name == 'main' }}
     needs: test-run-x86_64
     uses: ./.github/workflows/publish.yml
