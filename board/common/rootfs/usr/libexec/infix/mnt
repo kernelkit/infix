@@ -74,10 +74,116 @@ wait_mmc()
     return 1
 }
 
+# This early on we don't have the luxury of /dev/disk/by-label/$1
+find_partition_by_label()
+{
+    label="$1"
+
+    for diskpath in /sys/class/block/*; do
+	devname=$(basename "$diskpath")
+	[ -f "$diskpath/partition" ] && continue
+
+	disk="/dev/$devname"
+	result=$(sgdisk -p "$disk" 2>/dev/null | awk -v label="$label" -v devname="$devname" '
+	    /^  *[0-9]/ {
+		if ($7 == label) {
+		    if (devname ~ /^(mmcblk|nvme|loop)/) {
+			print devname "p" $1
+		    } else {
+			print devname $1
+		    }
+		    exit 0
+		}
+	    }
+	')
+
+	if [ -n "$result" ]; then
+	    echo "$result"
+	    return 0
+	fi
+    done
+    return 1
+}
+
+# Expand the given partition to fill up the rest of storage (sdcard)
+resize_by_label()
+{
+    label="$1"
+
+    devname=$(find_partition_by_label "$label")
+    if [ -z "$devname" ]; then
+	logger $opt -p user.err -t "$nm" "Label \"$label\" not found"
+	return 1
+    fi
+
+    part="/dev/$devname"
+    diskname=$(basename "$(readlink -f "/sys/class/block/$devname/..")")
+    disk="/dev/$diskname"
+    partnum="${devname##*[^0-9]}"
+
+    logger $opt -p user.notice -t "$nm" "Found partition $part (partition $partnum on $disk)"
+
+    start=$(sgdisk -i "$partnum" "$disk" 2>/dev/null | grep "First sector:" | awk '{print $3}')
+    if [ -z "$start" ]; then
+	logger $opt -p user.err -t "$nm" "Could not determine start sector for partition $partnum"
+	return 1
+    fi
+
+    printf "\r\033[K[ ⋯  ] Resizing /var partition on sdcard, please wait ..." > /dev/console
+    logger $opt -p user.notice -t "$nm" "Expanding partition $partnum from sector $start to end of disk"
+
+    if ! sgdisk -e "$disk" 2>&1 | logger $opt -p user.notice -t "$nm"; then
+	logger $opt -p user.warn -t "$nm" "Failed expanding GPT on $disk"
+	return 1
+    fi
+
+    if ! sgdisk -d "$partnum" "$disk" >/dev/null 2>&1; then
+	logger $opt -p user.warn -t "$nm" "Failed deleting partition $partnum on $disk"
+	return 1
+    fi
+
+    if ! sgdisk -n "$partnum:$start:0" "$disk" >/dev/null 2>&1; then
+	logger $opt -p user.warn -t "$nm" "Failed recreating partition $partnum on $disk"
+	return 1
+    fi
+
+    if ! sgdisk -t "$partnum:8300" "$disk" >/dev/null 2>&1; then
+	logger $opt -p user.warn -t "$nm" "Failed setting partition type on $disk"
+	return 1
+    fi
+
+    if ! sgdisk -c "$partnum:$label" "$disk" >/dev/null 2>&1; then
+	logger $opt -p user.warn -t "$nm" "Failed setting partition label on $disk"
+	return 1
+    fi
+
+    logger $opt -p user.notice -t "$nm" "Partition table updated on $disk"
+    partprobe "$disk" 2>/dev/null
+
+    logger $opt -p user.notice -t "$nm" "Resizing filesystem on $part"
+    if ! resize2fs "$part" 2>&1 | logger $opt -p user.notice -t "$nm"; then
+	logger $opt -p user.warn -t "$nm" "Failed resizing filesystem on $part"
+	return 1
+    fi
+
+    tune2fs -O resize_inode "$part" 2>/dev/null
+    printf "\r\033[K[ \033[32mOK\033[0m ] Resizing /var partition on sdcard, done. Rebooting ...\n" > /dev/console
+    logger $opt -p user.notice -t "$nm" "Partition expanded, rebooting to complete filesystem resize"
+
+    reboot -f
+}
+
 mount_rw()
 {
     # If something is already setup, leave it be.
     mountpoint -q "/$1" && return 0
+
+    if [ "$1" = "var" ]; then
+	if is_rpi && [ ! -e /mnt/aux/resized ] ; then
+	    touch /mnt/aux/resized
+	    resize_by_label "$1"
+	fi
+    fi
 
     # TODO: Also look for UBI partitions
     mount LABEL="$1" 2>/dev/null && return 0
