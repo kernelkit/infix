@@ -51,6 +51,29 @@ factory_reset()
     sync
 }
 
+is_rpi()
+{
+    [ -r /sys/firmware/devicetree/base/model ] || return 1
+
+    model=$(cat /sys/firmware/devicetree/base/model 2>/dev/null | tr -d '\0')
+    echo "$model" | grep -q "^Raspberry Pi"
+}
+
+wait_mmc()
+{
+    # Try up to 50 times with 0.2s sleep = 10 second timeout
+    for _ in $(seq 50); do
+        if ls /dev/mmcblk* >/dev/null 2>&1; then
+            logger $opt -p user.notice -t "$nm" "MMC device available after delay"
+            return 0
+        fi
+        sleep .2
+    done
+
+    logger $opt -p user.warn -t "$nm" "Timeout waiting for MMC device"
+    return 1
+}
+
 mount_rw()
 {
     # If something is already setup, leave it be.
@@ -103,6 +126,15 @@ if ! logger -? |grep -q "Log to kernel"; then
     opt="-c"
 fi
 
+
+# On Raspberry Pi, MMC controller may probe slowly, in particular if we
+# netboot (ram load) the devcice wait for it
+if is_rpi && ! ls /dev/mmcblk* >/dev/null 2>&1; then
+    wait_mmc
+fi
+
+# The aux partition must be mounted before everything else since it's used
+# for internal bookkeeping.
 if ! mount_rw aux >/dev/null 2>&1; then
     logger $opt -p user.warn -t "$nm" \
 	   "No auxiliary partition found, software updates not supported."
