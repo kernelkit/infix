@@ -34,6 +34,9 @@
 - name: "IETF Routing"
   suite: ietf_routing/all.yaml
 
+- name: "Infix Firewall"
+  suite: infix_firewall/all.yaml
+
 - name: "Infix Containers"
   suite: infix_containers/all.yaml
 

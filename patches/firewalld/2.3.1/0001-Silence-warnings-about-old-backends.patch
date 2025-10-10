@@ -1,0 +1,45 @@
+From 03f273fc540082d1eaa23bd9b5847e695afd8283 Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Thu, 25 Sep 2025 15:00:54 +0200
+Subject: [PATCH] Silence warnings about old backends
+Organization: Wires
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ src/firewall/core/fw.py | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/src/firewall/core/fw.py b/src/firewall/core/fw.py
+index bf7c109a..90d556de 100644
+--- a/src/firewall/core/fw.py
++++ b/src/firewall/core/fw.py
+@@ -281,7 +281,7 @@ class Firewall:
+                 )
+             else:
+                 if self.nftables_enabled:
+-                    log.info1(
++                    log.debug1(
+                         "iptables-restore and iptables are missing, "
+                         "IPv4 direct rules won't be usable."
+                     )
+@@ -311,7 +311,7 @@ class Firewall:
+                 )
+             else:
+                 if self.nftables_enabled:
+-                    log.info1(
++                    log.debug1(
+                         "ip6tables-restore and ip6tables are missing, "
+                         "IPv6 direct rules won't be usable."
+                     )
+@@ -341,7 +341,7 @@ class Firewall:
+                 )
+             else:
+                 if self.nftables_enabled:
+-                    log.info1(
++                    log.debug1(
+                         "ebtables-restore and ebtables are missing, "
+                         "eb direct rules won't be usable."
+                     )
+-- 
+2.43.0
+

@@ -41,6 +41,7 @@ jobs:
           pipx inject mkdocs mkdocs-callouts
           pipx inject mkdocs mike
           pipx inject mkdocs mkdocs-to-pdf
+          pipx inject mkdocs mkdocs-glightbox
           # Workaround, if pipx inject fails to install symlink
           ln -s "$(pipx environment -V PIPX_LOCAL_VENVS)/mkdocs/bin/mike" \
                 "$(pipx environment -V PIPX_BIN_DIR)/mike" || true

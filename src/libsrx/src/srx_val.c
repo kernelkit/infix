@@ -149,27 +149,58 @@ bool srx_isset(sr_session_ctx_t *session, const char *fmt, ...)
 	return isset;
 }
 
-int srx_set_item(sr_session_ctx_t *session, const sr_val_t *val, sr_edit_options_t opts,
-		 const char *fmt, ...)
+static int set_vaitem(sr_session_ctx_t *session, const sr_val_t *val, sr_edit_options_t opts,
+		      const char *fmt, va_list ap)
 {
+	va_list apdup;
 	char *xpath;
-	va_list ap;
 	size_t len;
 
-	va_start(ap, fmt);
-	len = vsnprintf(NULL, 0, fmt, ap) + 1;
-	va_end(ap);
+	va_copy(apdup, ap);
+	len = vsnprintf(NULL, 0, fmt, apdup) + 1;
+	va_end(apdup);
 
 	xpath = alloca(len);
 	if (!xpath)
 		return -1;
 
-	va_start(ap, fmt);
-	vsnprintf(xpath, len, fmt, ap);
-	va_end(ap);
+	va_copy(apdup, ap);
+	vsnprintf(xpath, len, fmt, apdup);
+	va_end(apdup);
 
 	return sr_set_item(session, xpath, val, opts);
 }
+
+int srx_set_item(sr_session_ctx_t *session, const sr_val_t *val, sr_edit_options_t opts,
+		 const char *fmt, ...)
+{
+	va_list ap;
+	int rc;
+
+	va_start(ap, fmt);
+	rc = set_vaitem(session, val, opts, fmt, ap);
+	va_end(ap);
+
+	return rc;
+}
+
+int srx_set_bool(sr_session_ctx_t *session, bool ena, sr_edit_options_t opts,
+		 const char *fmt, ...)
+{
+	sr_val_t val = {
+		.type = SR_BOOL_T,
+		.data.bool_val = ena
+	};
+	va_list ap;
+	int rc;
+
+	va_start(ap, fmt);
+	rc = set_vaitem(session, &val, opts, fmt, ap);
+	va_end(ap);
+
+	return rc;
+}
+
 
 int srx_set_str(sr_session_ctx_t *session, const char *str, sr_edit_options_t opts,
 		const char *fmt, ...)

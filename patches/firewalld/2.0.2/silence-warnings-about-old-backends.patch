@@ -1,0 +1,40 @@
+diff --git a/src/firewall/core/fw.py b/src/firewall/core/fw.py
+index 0a51cfff..8afd6113 100644
+--- a/src/firewall/core/fw.py
++++ b/src/firewall/core/fw.py
+@@ -223,7 +223,7 @@ class Firewall(object):
+             self.ipset_backend.set_list()
+         except ValueError:
+             if self.nftables_enabled:
+-                log.info1("ipset not usable, disabling ipset usage in firewall. Other set backends (nftables) remain usable.")
++                log.debug1("ipset not usable, disabling ipset usage in firewall. Other set backends (nftables) remain usable.")
+             else:
+                 log.warning("ipset not usable, disabling ipset usage in firewall.")
+                 self.ipset_supported_types = [ ]
+@@ -240,7 +240,7 @@ class Firewall(object):
+                             "individual calls for IPv4 firewall.")
+             else:
+                 if self.nftables_enabled:
+-                    log.info1("iptables-restore and iptables are missing, "
++                    log.debug1("iptables-restore and iptables are missing, "
+                               "IPv4 direct rules won't be usable.")
+                 else:
+                     log.warning("iptables-restore and iptables are missing, "
+@@ -260,7 +260,7 @@ class Firewall(object):
+                             "individual calls for IPv6 firewall.")
+             else:
+                 if self.nftables_enabled:
+-                    log.info1("ip6tables-restore and ip6tables are missing, "
++                    log.debug1("ip6tables-restore and ip6tables are missing, "
+                               "IPv6 direct rules won't be usable.")
+                 else:
+                     log.warning("ip6tables-restore and ip6tables are missing, "
+@@ -280,7 +280,7 @@ class Firewall(object):
+                             "individual calls for bridge firewall.")
+             else:
+                 if self.nftables_enabled:
+-                    log.info1("ebtables-restore and ebtables are missing, "
++                    log.debug1("ebtables-restore and ebtables are missing, "
+                               "eb direct rules won't be usable.")
+                 else:
+                     log.warning("ebtables-restore and ebtables are missing, "

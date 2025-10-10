@@ -113,6 +113,27 @@
   <ACTION sym="STRING"/>
 </PTYPE>
 
+<PTYPE name="FIREWALL_ZONES">
+  <COMPL>
+    <ACTION sym="firewall_zones@infix"/>
+  </COMPL>
+  <ACTION sym="STRING"/>
+</PTYPE>
+
+<PTYPE name="FIREWALL_POLICIES">
+  <COMPL>
+    <ACTION sym="firewall_policies@infix"/>
+  </COMPL>
+  <ACTION sym="STRING"/>
+</PTYPE>
+
+<PTYPE name="FIREWALL_SERVICES">
+  <COMPL>
+    <ACTION sym="firewall_services@infix"/>
+  </COMPL>
+  <ACTION sym="STRING"/>
+</PTYPE>
+
 <VIEW name="main">
   <HOTKEY key="^D" cmd="exit"/>
 
@@ -490,6 +511,43 @@
   <COMMAND name="startup-config" help="Show startup-config">
     <ACTION sym="script" in="tty" out="tty" interrupt="true">jq -C . /cfg/startup-config.cfg |pager</ACTION>
   </COMMAND>
+
+  <COMMAND name="firewall" help="Show firewall status and configuration">
+    <SWITCH name="optional" min="0" max="1">
+      <COMMAND name="log" help="Show firewall log (jumps to end), alias to 'show log firewall.log'">
+	<ACTION sym="script" in="tty" out="tty" interrupt="true">
+	  doas -u $USER cat /log/firewall.log |pager +G
+	</ACTION>
+      </COMMAND>
+      <COMMAND name="zone" help="Show firewall zones">
+        <SWITCH name="optional" min="0">
+          <PARAM name="name" ptype="/FIREWALL_ZONES" help="Zone name"/>
+        </SWITCH>
+        <ACTION sym="script" in="tty" out="tty" interrupt="true">
+          sysrepocfg -X -d operational -x /infix-firewall:firewall -f json -t 60 | /usr/libexec/statd/cli-pretty show-firewall-zone "$KLISH_PARAM_name" |pager
+        </ACTION>
+      </COMMAND>
+      <COMMAND name="policy" help="Show firewall policies">
+        <SWITCH name="optional" min="0">
+          <PARAM name="name" ptype="/FIREWALL_POLICIES" help="Policy name"/>
+        </SWITCH>
+        <ACTION sym="script" in="tty" out="tty" interrupt="true">
+          sysrepocfg -X -d operational -x /infix-firewall:firewall -f json -t 60 | /usr/libexec/statd/cli-pretty show-firewall-policy "$KLISH_PARAM_name" |pager
+        </ACTION>
+      </COMMAND>
+      <COMMAND name="service" help="Show firewall services">
+        <SWITCH name="optional" min="0">
+          <PARAM name="name" ptype="/FIREWALL_SERVICES" help="Service name"/>
+        </SWITCH>
+        <ACTION sym="script" in="tty" out="tty" interrupt="true">
+          sysrepocfg -X -d operational -x /infix-firewall:firewall -f json -t 60 | /usr/libexec/statd/cli-pretty show-firewall-service "$KLISH_PARAM_name" |pager
+        </ACTION>
+      </COMMAND>
+    </SWITCH>
+    <ACTION sym="script" in="tty" out="tty" interrupt="true">
+      sysrepocfg -X -d operational -x /infix-firewall:firewall -f json -t 60 | /usr/libexec/statd/cli-pretty show-firewall |pager
+    </ACTION>
+  </COMMAND>
 </COMMAND>
 
   <COMMAND name="factory-reset" help="Restore the system to factory default state">
@@ -497,6 +555,25 @@
       /bin/yorn "This will restore the device to factory defaults"
     </ACTION>
     <ACTION sym="srp_rpc@sysrepo">/ietf-factory-default:factory-reset</ACTION>
+  </COMMAND>
+
+  <COMMAND name="firewall" help="Control the firewall" mode="switch">
+    <COMMAND name="lockdown" help="Emergency lockdown mode">
+      <PARAM name="operation" ptype="/STRING" help="Lockdown commands.">
+        <COMPL>
+          <ACTION sym="printl">now</ACTION>
+          <ACTION sym="printl">cancel</ACTION>
+        </COMPL>
+      </PARAM>
+      <ACTION sym="script" in="tty" out="tty" interrupt="true">
+	if [ "${KLISH_PARAM_operation}" = "now" ]; then
+	  if ! firewall panic status; then
+            /bin/yorn -q "WARNING: This will block ALL network traffic and sever existing connections"
+	  fi
+	fi
+      </ACTION>
+      <ACTION sym="srp_rpc@sysrepo">/infix-firewall:firewall/lockdown-mode</ACTION>
+    </COMMAND>
   </COMMAND>
 
   <COMMAND name="follow" help="Monitor a log file, use Ctrl-C to abort">

@@ -1,6 +1,6 @@
 [![License Badge][]][License] [![GitHub Status][]][GitHub] [![Coverity Status][]][Coverity Scan] [![Discord][discord-badge]][discord-url]
 
-<img align="right" src="doc/logo.png" alt="Infix - Linux <3 NETCONF" width=480 border=10>
+<img align="right" src="doc/logo.png" alt="Infix — Immutable.Friendly.Secure" width=480 border=10>
 
 Turn any ARM or x86 device into a powerful, manageable network appliance
 in minutes. From $35 Raspberry Pi boards to enterprise switches — deploy

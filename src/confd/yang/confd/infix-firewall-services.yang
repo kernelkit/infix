@@ -1,0 +1,386 @@
+module infix-firewall-services {
+  yang-version 1.1;
+  namespace "urn:infix:firewall:services:ns:yang:1.0";
+  prefix ifw-svc;
+
+  organization "KernelKit";
+  contact      "kernelkit@googlegroups.com";
+  description  "Common well-defined network services.";
+
+  revision 2025-04-26 {
+    description "Initial revision.";
+    reference "internal";
+  }
+
+  typedef well-known-service {
+    description "Well-known network services, with standard port assignments from IANA.";
+    type enumeration {
+      enum "amqp" {
+        description "5672/tcp — Advanced Message Queuing Protocol for message-oriented middleware";
+      }
+      enum "amqps" {
+        description "5671/tcp — Secure Advanced Message Queuing Protocol over SSL";
+      }
+      enum "apcupsd" {
+        description "3551/tcp — APC uninterruptible power supply daemon protocol";
+      }
+      enum "audit" {
+        description "60/tcp — Linux audit subsystem for security event logging";
+      }
+      enum "bacula" {
+        description "9101-9103/tcp — Open source network backup tool";
+      }
+      enum "bacula-client" {
+        description "9102/tcp — Bacula client for backup operations";
+      }
+      enum "bgp" {
+        description "179/tcp — Border Gateway Protocol for internet routing";
+      }
+      enum "cockpit" {
+        description "9090/tcp — Web-based server administration interface";
+      }
+      enum "dhcp" {
+        description "67-68/udp — Dynamic Host Configuration Protocol for network configuration";
+      }
+      enum "dhcpv6" {
+        description "547/udp — Allow incoming DHCP for IPv6 requests from clients or relay agents.";
+      }
+      enum "dhcpv6-client" {
+        description "546/udp — Allow a DHCP for IPv6 client to obtain a lease.";
+      }
+      enum "dns" {
+        description "53/tcp+udp — Domain Name System for name resolution";
+      }
+      enum "dns-over-quic" {
+        description "853/udp — DNS over QUIC protocol for encrypted domain name resolution";
+      }
+      enum "dns-over-tls" {
+        description "853/tcp — DNS over TLS protocol for encrypted domain name resolution";
+      }
+      enum "elasticsearch" {
+        description "9300/tcp — Distributed search and analytics engine";
+      }
+      enum "ftp" {
+        description "20-21/tcp — File Transfer Protocol for file transfers";
+      }
+      enum "git" {
+        description "9418/tcp — Git daemon for version control repository access";
+      }
+      enum "grafana" {
+        description "3000/tcp — Analytics and monitoring dashboard platform";
+      }
+      enum "gpsd" {
+        description "2947/tcp — GPS daemon for location services";
+      }
+      enum "gre" {
+        description "47/ip — Generic Routing Encapsulation for tunneling";
+      }
+      enum "http" {
+        description "80/tcp — Hypertext Transfer Protocol for web traffic";
+      }
+      enum "https" {
+        description "443/tcp — Secure Hypertext Transfer Protocol for encrypted web traffic";
+      }
+      enum "http3" {
+        description "443/udp — HTTP/3 protocol over QUIC for faster web traffic";
+      }
+      enum "imap" {
+        description "143/tcp — Internet Message Access Protocol for email access";
+      }
+      enum "imaps" {
+        description "993/tcp — Secure Internet Message Access Protocol for encrypted email access";
+      }
+      enum "ipp" {
+        description "631/tcp+udp — Internet Printing Protocol (IPP) is used for distributed printing.";
+      }
+      enum "iperf2" {
+        description "5001/tcp — Network bandwidth measurement tool version 2";
+      }
+      enum "iperf3" {
+        description "5201/tcp — Network bandwidth measurement tool version 3";
+      }
+      enum "ipsec" {
+        description "500/udp — Internet Protocol Security for VPN connections";
+      }
+      enum "irc" {
+        description "6667/tcp — Internet Relay Chat for text messaging";
+      }
+      enum "ircs" {
+        description "6697/tcp — Secure Internet Relay Chat over SSL";
+      }
+      enum "jenkins" {
+        description "8080/tcp — Open source automation server for CI/CD";
+      }
+      enum "kerberos" {
+        description "88/tcp+udp — Network authentication protocol";
+      }
+      enum "kadmin" {
+        description "749/tcp — Kerberos administration server";
+      }
+      enum "kibana" {
+        description "5601/tcp — Data visualization dashboard for Elasticsearch";
+      }
+      enum "klogin" {
+        description "543/tcp — Kerberos remote login";
+      }
+      enum "kpasswd" {
+        description "464/tcp+udp — Kerberos password changing protocol";
+      }
+      enum "kprop" {
+        description "754/tcp — Kerberos database propagation";
+      }
+      enum "kshell" {
+        description "544/tcp — Kerberos remote shell";
+      }
+      enum "ldap" {
+        description "389/tcp — Lightweight Directory Access Protocol for directory services";
+      }
+      enum "ldaps" {
+        description "636/tcp — Lightweight Directory Access Protocol over SSL";
+      }
+      enum "libvirt" {
+        description "16509/tcp — Virtualization management daemon";
+      }
+      enum "libvirt-tls" {
+        description "16514/tcp — Secure virtualization management over TLS";
+      }
+      enum "llmnr" {
+        description "5355/tcp+udp — Link-Local Multicast Name Resolution";
+      }
+      enum "llmnr-client" {
+        description "5355/udp — LLMNR client for name resolution";
+      }
+      enum "llmnr-tcp" {
+        description "5355/tcp — LLMNR over TCP";
+      }
+      enum "llmnr-udp" {
+        description "5355/udp — LLMNR over UDP";
+      }
+      enum "matrix" {
+        description "8008/tcp — Matrix chat protocol server";
+      }
+      enum "mdns" {
+        description "5353/udp — Multicast DNS for local network service discovery";
+      }
+      enum "mongodb" {
+        description "27017/tcp — Document-oriented NoSQL database";
+      }
+      enum "minecraft" {
+        description "25565/tcp — Minecraft game server";
+      }
+      enum "minidlna" {
+        description "8200/tcp — Lightweight DLNA/UPnP media server";
+      }
+      enum "mndp" {
+        description "5678/udp — MikroTik Neighbor Discovery Protocol";
+      }
+      enum "mosh" {
+        description "60000-61000/udp — Mobile shell for remote terminal access";
+      }
+      enum "mpd" {
+        description "6600/tcp — Music Player Daemon";
+      }
+      enum "mqtt" {
+        description "1883/tcp — Message Queuing Telemetry Transport for IoT";
+      }
+      enum "mqtt-tls" {
+        description "8883/tcp — Secure MQTT over TLS for IoT";
+      }
+      enum "mssql" {
+        description "1433/tcp — Microsoft SQL Server database";
+      }
+      enum "mysql" {
+        description "3306/tcp — MySQL database server connections";
+      }
+      enum "nbd" {
+        description "10809/tcp — Network Block Device";
+      }
+      enum "netbios-ns" {
+        description "137/udp — NetBIOS Name Service for Windows networking";
+      }
+      enum "netconf" {
+        description "830/tcp — Network Configuration Protocol for network device management";
+      }
+      enum "nfs" {
+        description "2049/tcp+udp — Network File System for distributed file sharing";
+      }
+      enum "nfs3" {
+        description "2049/tcp+udp — Network File System version 3";
+      }
+      enum "nmea-0183" {
+        description "10110/tcp — Marine electronics data interface";
+      }
+      enum "nrpe" {
+        description "5666/tcp — Nagios Remote Plugin Executor";
+      }
+      enum "ntp" {
+        description "123/udp — Network Time Protocol for time synchronization";
+      }
+      enum "openvpn" {
+        description "1194/udp — OpenVPN secure tunnel for VPN connections";
+      }
+      enum "opentelemetry" {
+        description "4317/tcp — Open source observability framework";
+      }
+      enum "pop3" {
+        description "110/tcp — Post Office Protocol version 3 for email retrieval";
+      }
+      enum "pop3s" {
+        description "995/tcp — Secure Post Office Protocol version 3 for encrypted email retrieval";
+      }
+      enum "plex" {
+        description "32400/tcp — Plex media server";
+      }
+      enum "postgresql" {
+        description "5432/tcp — PostgreSQL database server connections";
+      }
+      enum "prometheus" {
+        description "9090/tcp — Monitoring system and time series database";
+      }
+      enum "proxy-dhcp" {
+        description "4011/udp — Proxy DHCP for PXE boot";
+      }
+      enum "ptp" {
+        description "319-320/udp — Precision Time Protocol";
+      }
+      enum "puppetmaster" {
+        description "8140/tcp — Puppet configuration management server";
+      }
+      enum "radius" {
+        description "1812-1813/tcp+udp — Remote Authentication Dial-in User Service";
+      }
+      enum "quassel" {
+        description "4242/tcp — Quassel IRC client-server protocol";
+      }
+      enum "radsec" {
+        description "2083/tcp — RADIUS over TLS";
+      }
+      enum "rdp" {
+        description "3389/tcp — Remote Desktop Protocol for Windows remote access";
+      }
+      enum "redis" {
+        description "6379/tcp — In-memory data structure store for database and cache";
+      }
+      enum "redis-sentinel" {
+        description "26379/tcp — Redis Sentinel for high availability";
+      }
+      enum "restconf" {
+        description "443/tcp — RESTful Network Configuration Protocol for HTTP-based network management";
+      }
+      enum "rsyncd" {
+        description "873/tcp — Rsync daemon for centralized file synchronization";
+      }
+      enum "rtsp" {
+        description "554/tcp — Real Time Streaming Protocol";
+      }
+      enum "samba" {
+        description "445/tcp — Windows file and printer sharing";
+      }
+      enum "samba-client" {
+        description "138/udp — Windows file and printer sharing (client-only)";
+      }
+      enum "samba-dc" {
+        description "389/tcp — Samba Active Directory Domain Controller";
+      }
+      enum "sane" {
+        description "6566/tcp — Scanner Access Now Easy network scanning";
+      }
+      enum "sip" {
+        description "5060/tcp+udp — Session Initiation Protocol for VoIP communications";
+      }
+      enum "sips" {
+        description "5061/tcp+udp — Secure Session Initiation Protocol for encrypted VoIP";
+      }
+      enum "smtp" {
+        description "25/tcp — Simple Mail Transfer Protocol for email transmission";
+      }
+      enum "smtps" {
+        description "465/tcp — Secure Simple Mail Transfer Protocol over SSL";
+      }
+      enum "slp" {
+        description "427/tcp+udp — Service Location Protocol";
+      }
+      enum "snmp" {
+        description "161/udp — Simple Network Management Protocol for network monitoring";
+      }
+      enum "snmptrap" {
+        description "162/udp — Simple Network Management Protocol trap notifications";
+      }
+      enum "snmptls" {
+        description "10161/tcp — SNMP over TLS";
+      }
+      enum "snmptls-trap" {
+        description "10162/tcp — SNMP trap over TLS";
+      }
+      enum "spotify-sync" {
+        description "57621/tcp — Spotify Connect synchronization";
+      }
+      enum "ssh" {
+        description "22/tcp — Secure Shell for remote login and command execution";
+      }
+      enum "stun" {
+        description "3478/tcp+udp — Session Traversal Utilities for NAT";
+      }
+      enum "stuns" {
+        description "5349/tcp — Secure STUN over TLS";
+      }
+      enum "supertuxkart" {
+        description "7321/tcp — SuperTuxKart racing game server";
+      }
+      enum "svn" {
+        description "3690/tcp — Subversion version control system";
+      }
+      enum "syslog" {
+        description "514/udp — System logging protocol for log message transmission";
+      }
+      enum "syslog-tls" {
+        description "6514/tcp — Secure system logging protocol over TLS";
+      }
+      enum "syncthing" {
+        description "22000/tcp — Continuous file synchronization";
+      }
+      enum "syncthing-gui" {
+        description "8384/tcp — Syncthing web interface";
+      }
+      enum "syncthing-relay" {
+        description "22067/tcp — Syncthing relay protocol";
+      }
+      enum "synergy" {
+        description "24800/tcp — Keyboard and mouse sharing";
+      }
+      enum "ssdp" {
+        description "1900/udp — Simple Service Discovery Protocol for UPnP device discovery";
+      }
+      enum "telnet" {
+        description "23/tcp — Telnet protocol for remote terminal access";
+      }
+      enum "tftp" {
+        description "69/udp — Trivial File Transfer Protocol for simple file transfers";
+      }
+      enum "turn" {
+        description "3478/tcp+udp — Traversal Using Relay NAT for firewall traversal";
+      }
+      enum "turns" {
+        description "5349/tcp — Secure TURN over TLS";
+      }
+      enum "vnc-server" {
+        description "5900-5906/tcp — Virtual Network Computing server for remote desktop access";
+      }
+      enum "vrrp" {
+        description "112/ip — Virtual Router Redundancy Protocol";
+      }
+      enum "warpinator" {
+        description "42000/tcp — File sharing tool by Linux Mint";
+      }
+      enum "wireguard" {
+        description "51820/udp — Modern VPN tunnel for secure networking";
+      }
+      enum "xdmcp" {
+        description "177/tcp+udp — X Display Manager Control Protocol for remote X11 sessions";
+      }
+      enum "zerotier" {
+        description "9993/udp — ZeroTier virtual network service";
+      }
+    }
+  }
+}

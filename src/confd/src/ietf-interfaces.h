@@ -102,6 +102,7 @@ int netdag_gen_ethtool(struct dagger *net, struct lyd_node *cif, struct lyd_node
 /* ietf-interfaces.c */
 const char *get_chassis_addr(void);
 int link_gen_address(struct lyd_node *cif, FILE *ip);
+int ietf_interfaces_get_all_l3(const struct lyd_node *tree, char ***ifaces);
 
 /* ietf-ip.c */
 int netdag_gen_ipv6_autoconf(struct dagger *net, struct lyd_node *cif,

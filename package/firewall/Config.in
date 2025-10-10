@@ -1,0 +1,8 @@
+config BR2_PACKAGE_FIREWALL
+	bool "firewall"
+	select BR2_PACKAGE_FIREWALLD
+	help
+	  Meta pacakge to select firewall related packages for the OS
+	  as well as adapt and integrate properly with the system.
+
+	  https://github.com/kernelkit/infix

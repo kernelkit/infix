@@ -908,6 +908,72 @@ cleanup:
 	return err;
 }
 
+int ietf_interfaces_get_all_l3(const struct lyd_node *tree, char ***ifaces)
+{
+	struct lyd_node *interfaces, *cif;
+	char **names = NULL;
+	size_t capacity = 0;
+	size_t num = 0;
+	const char *ifname;
+
+	if (!tree || !ifaces)
+		return -EINVAL;
+
+	*ifaces = NULL;
+
+	interfaces = lydx_get_descendant((struct lyd_node *)tree, "interfaces", "interface", NULL);
+	if (!interfaces) {
+		*ifaces = calloc(1, sizeof(char *));
+		return *ifaces ? 0 : -ENOMEM;
+	}
+
+	LYX_LIST_FOR_EACH(interfaces, cif, "interface") {
+		ifname = lydx_get_cattr(cif, "name");
+		if (!ifname)
+			continue;
+
+		if (is_member_port(cif))
+			continue;
+
+		if (iftype_from_iface(cif) == IFT_LO)
+			continue;
+
+		if (lydx_get_child(cif, "container-network"))
+			continue;
+
+		if (num + 1 >= capacity) {
+			capacity = capacity ? capacity * 2 : 8;
+			char **new_names = realloc(names, capacity * sizeof(char *));
+			if (!new_names) {
+				for (size_t i = 0; i < num; i++)
+					free(names[i]);
+				free(names);
+				return -ENOMEM;
+			}
+			names = new_names;
+		}
+
+		names[num] = strdup(ifname);
+		if (!names[num]) {
+			for (size_t i = 0; i < num; i++)
+				free(names[i]);
+			free(names);
+			return -ENOMEM;
+		}
+
+		num++;
+	}
+
+	if (num == 0) {
+		*ifaces = calloc(1, sizeof(char *));
+		return *ifaces ? 0 : -ENOMEM;
+	}
+
+	names[num] = NULL;
+	*ifaces = names;
+	return 0;
+}
+
 int ietf_interfaces_init(struct confd *confd)
 {
 	int rc;

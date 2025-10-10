@@ -1,0 +1,24 @@
+graph "lan-wan-v6" {
+    layout  = "neato";
+    overlap = false;
+    esep    = "+80";
+
+    node [shape=record, fontname="DejaVu Sans Mono, Book"];
+    edge [color="cornflowerblue", penwidth="2", fontname="DejaVu Serif, Book"];
+
+    host [
+        label="host | { <mgmt> mgmt | <lan> lan | <wan> wan }",
+        pos="1,1!",
+        requires="controller"
+    ];
+
+    gateway [
+        label="{ <mgmt> mgmt | <lan> lan | <wan> wan } | gateway",
+        pos="3,1!",
+        requires="infix",
+    ];
+
+    host:mgmt -- gateway:mgmt [requires="mgmt", color="lightgray"]
+    host:lan  -- gateway:lan  [color=green, fontcolor=green, taillabel="fd01:db8:1::/64"]
+    host:wan  -- gateway:wan  [color=red, fontcolor=red, taillabel="2001:db8:2::/64"]
+}

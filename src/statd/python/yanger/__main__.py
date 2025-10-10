@@ -78,6 +78,9 @@ def main():
     elif args.model == 'ieee802-dot1ab-lldp':
         from . import infix_lldp           
         yang_data = infix_lldp.operational()
+    elif args.model == 'infix-firewall':
+        from . import infix_firewall
+        yang_data = infix_firewall.operational()
     else:
         common.LOG.warning("Unsupported model %s", args.model)
         sys.exit(1)
