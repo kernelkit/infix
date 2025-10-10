@@ -1,0 +1,30 @@
+graph "1x3" {
+    layout  = "neato";
+    overlap = false;
+    esep    = "+80";
+
+    node [shape=record, fontname="DejaVu Sans Mono, Book"];
+    edge [color="cornflowerblue", penwidth="2", fontname="DejaVu Serif, Book"];
+
+    host [
+	  label="host | { <mgmt> mgmt | <data> data }",
+	  pos="1,1!",
+	  requires="controller"
+    ];
+
+    target [
+	    label="{ <mgmt> mgmt | <data> data | <unused> unused } | target",
+	    pos="3,1!",
+	    requires="infix",
+    ];
+
+    dummy [
+	    label="{ <link> link } | dummy",
+	    pos="5,1!",
+	    requires="infix",
+    ];
+
+    host:mgmt -- target:mgmt [requires="mgmt", color="lightgray"]
+    host:data -- target:data [color=black, fontcolor=black, taillabel="192.168.1.42/24"]
+    target:unused -- dummy:link [color="gray", style="dashed"]
+}

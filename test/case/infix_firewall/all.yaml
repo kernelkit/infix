@@ -1,0 +1,15 @@
+---
+- name: Basic Firewall for End Devices
+  case: basic/test.py
+
+- name: LAN-WAN Firewall with Masquerading
+  case: lan-wan/test.py
+
+- name: WAN-DMZ-LAN Firewall with Port Forwarding
+  case: wan-dmz-lan/test.py
+
+- name: IPv6 LAN-WAN Firewall
+  case: ipv6-lan-wan/test.py
+
+- name: IPv6 Zone Migration with Custom Services
+  case: ipv6-zone-migration/test.py

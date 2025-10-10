@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<service>
+  <short>NETCONF</short>
+  <description>
+    NETCONF (Network Configuration Protocol) is a protocol for configuration
+    and monitoring of networked devices.  Essentially it can be seen as XML
+    over SSH, for configuration and state/status, it also support RPC calls
+    (Remote Procedure Call), e.g., set date-time or reboot device.
+  </description>
+  <port protocol="tcp" port="830"/>
+</service>

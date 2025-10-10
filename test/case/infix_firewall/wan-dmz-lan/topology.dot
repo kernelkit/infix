@@ -1,0 +1,25 @@
+graph "1x4" {
+    layout  = "neato";
+    overlap = false;
+    esep    = "+80";
+
+    node [shape=record, fontname="DejaVu Sans Mono, Book"];
+    edge [color="cornflowerblue", penwidth="2", fontname="DejaVu Serif, Book"];
+
+    host [
+        label="host | { <mgmt> mgmt | <wan> wan | <dmz> dmz | <lan> lan }",
+        pos="1,1!",
+        requires="controller"  
+    ];
+
+    gateway [
+        label="{ <mgmt> mgmt | <wan> wan | <dmz> dmz | <lan> lan } | gateway",
+        pos="3,1!",
+        requires="infix",
+    ];
+
+    host:mgmt -- gateway:mgmt [requires="mgmt", color="lightgray"]
+    host:wan  -- gateway:wan  [color=red, fontcolor=red, taillabel="203.0.113.0/24"]
+    host:dmz  -- gateway:dmz  [color=orange, fontcolor=orange, taillabel="10.0.1.0/24"]
+    host:lan  -- gateway:lan  [color=black, fontcolor=black, taillabel="192.168.1.0/24"]
+}

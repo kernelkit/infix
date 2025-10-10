@@ -1,0 +1,403 @@
+#!/bin/sh
+# Firewall debug and management utility using D-Bus API
+#
+# SPDX-License-Identifier: BSD-3-Clause
+
+DEST="org.fedoraproject.FirewallD1"
+OBJECT="/org/fedoraproject/FirewallD1"
+INTERFACE="org.fedoraproject.FirewallD1"
+VERBOSE=0
+
+print() {
+    if [ "$VERBOSE" -eq 1 ]; then
+	printf '%s\n' "$*"
+    fi
+}
+
+check_firewalld()
+{
+    gdbus call --system --dest "$DEST" --object-path "$OBJECT" \
+	  --method "$INTERFACE.getDefaultZone" >/dev/null 2>&1
+}
+
+call_reload()
+{
+    output=$(gdbus call --system --dest "$DEST" --object-path "$OBJECT" \
+		   --method "$INTERFACE.reload" 2>&1)
+    ret=$?
+
+    # Validate both return code and output
+    if [ $ret -eq 0 ] && [ "$output" = "()" ]; then
+	return 0
+    else
+	print "Error: Reload method failed (exit code: $ret, output: '$output')" >&2
+	return 1
+    fi
+}
+
+wait_for_reload()
+{
+    timeout_val=$1
+
+    timeout "$timeout_val" gdbus monitor --system --dest "$DEST" \
+	    --object-path "$OBJECT" 2>/dev/null | \
+    while IFS= read line; do
+	if echo "$line" | grep -q "Reloaded"; then
+	    return 0
+	fi
+    done
+
+    print "Timeout waiting for firewall reload completion" >&2
+    return 1
+}
+
+gdbus_call()
+{
+    method=$1
+    result=$(gdbus call --system --dest "$DEST" --object-path "$OBJECT" \
+	     --method "$INTERFACE.$method" 2>/dev/null | \
+	     sed 's/^(//; s/,)$//; s/[(),]//g' | tr -d ' ')
+
+    # Check if call succeeded (non-empty result indicates success)
+    if [ -n "$result" ]; then
+	echo "$result"
+	return 0
+    else
+	return 1
+    fi
+}
+
+is_panic_enabled()
+{
+    result=$(gdbus_call "queryPanicMode")
+    if [ $? -eq 0 ] && [ "$result" = "true" ]; then
+	return 0
+    fi
+
+    return 1
+}
+
+panic_on()
+{
+    is_panic_enabled && return 0
+
+    if ! gdbus call --system --dest "$DEST" --object-path "$OBJECT" \
+	    --method "$INTERFACE.enablePanicMode" >/dev/null 2>&1; then
+	print "Error: Failed to activate lockdown mode" >&2
+	return 1
+    fi
+
+    logger -p user.emerg "LOCKDOWN MODE ACTIVATED - All network traffic blocked"
+}
+
+panic_off()
+{
+    is_panic_enabled || return 0
+
+    if ! gdbus call --system --dest "$DEST" --object-path "$OBJECT" \
+	    --method "$INTERFACE.disablePanicMode" >/dev/null 2>&1; then
+	print "Error: Failed to deactivate lockdown mode" >&2
+	return 1
+    fi
+
+    logger -p user.emerg "LOCKDOWN MODE DEACTIVATED - Normal network operation restored"
+}
+
+panic_status()
+{
+    if is_panic_enabled; then
+	print "Lockdown mode: ACTIVE"
+	return 0
+    fi
+
+    print "Lockdown mode: INACTIVE"
+    return 1
+}
+
+show_status()
+{
+    echo "=== Firewall Status ==="
+
+    if check_firewalld; then
+	echo "  Firewalld     : RUNNING"
+    else
+	echo "Firewalld NOT RUNNING"
+	return 1
+    fi
+
+    if is_panic_enabled; then
+	panic="on"
+    else
+	panic="off"
+    fi
+    echo "  Lockdown Mode : $panic"
+
+    default_zone=$(gdbus_call "getDefaultZone" | sed "s/[']//g")
+    logging=$(gdbus_call "getLogDenied" | sed "s/[']//g")
+
+    echo "  Default Zone  : $default_zone"
+    echo "  Log Denied    : $logging"
+    echo
+
+    echo "=== Active Zones ==="
+    zones_output=$(gdbus call --system --dest "$DEST" --object-path "$OBJECT" \
+		   --method org.fedoraproject.FirewallD1.zone.getActiveZones 2>/dev/null | \
+		   sed 's/^(//; s/,)$//' | tr "'" '"' | sed 's/@as \[\]/[]/g')
+
+    if echo "$zones_output" | jq -e . >/dev/null 2>&1; then
+	echo "$zones_output" | jq -r 'to_entries[] |
+	    "  \(.key):" +
+	    (if (.value.interfaces | length) > 0 then "\n    Interfaces: " + (.value.interfaces | join(", ")) else "" end) +
+	    (if (.value.sources | length) > 0 then "\n    Networks  : " + (.value.sources | join(", ")) else "" end) +
+	    (if (.value.interfaces | length) == 0 and (.value.sources | length) == 0 then "\n    Members   : (none)" else "" end)
+	' 2>/dev/null || echo "  Failed to parse zones"
+    else
+	echo "  No zones or failed to retrieve"
+    fi
+    echo
+
+    echo "=== Available Services ==="
+    services=$(gdbus call --system --dest "$DEST" --object-path "$OBJECT" \
+	       --method "$INTERFACE.listServices" 2>/dev/null | \
+	       sed 's/^(//; s/,)$//' | tr "'" '"')
+
+    if echo "$services" | jq -e . >/dev/null 2>&1; then
+	echo "$services" | jq -r '.[] | "  " + .' 2>/dev/null | head -20
+	count=$(echo "$services" | jq -r '. | length' 2>/dev/null)
+	if [ "$count" -gt 20 ]; then
+	    echo "  ... and $((count - 20)) more"
+	fi
+    else
+	echo "  Failed to retrieve services"
+    fi
+    echo
+
+    echo "=== Policies ==="
+    policies=$(gdbus call --system --dest "$DEST" --object-path "$OBJECT" \
+	       --method org.fedoraproject.FirewallD1.policy.getPolicies 2>/dev/null | \
+	       sed 's/^(//; s/,)$//' | tr "'" '"')
+
+    if echo "$policies" | jq -e . >/dev/null 2>&1; then
+	policy_count=$(echo "$policies" | jq -r '. | length' 2>/dev/null)
+	echo "  Total policies: $policy_count"
+
+	if [ "$policy_count" -gt 0 ]; then
+	    echo "$policies" | jq -r '.[]' 2>/dev/null | while read policy_name; do
+		echo "    Policy: $policy_name"
+
+		policy_settings=$(gdbus call --system --dest "$DEST" --object-path "$OBJECT" \
+				--method org.fedoraproject.FirewallD1.policy.getPolicySettings \
+				"$policy_name" 2>/dev/null)
+
+		if [ -n "$policy_settings" ] && [ "${policy_settings#*Error}" = "$policy_settings" ]; then
+		    target=$(echo "$policy_settings" | grep -o "'target': <'[^']*'" | cut -d"'" -f4)
+		    description=$(echo "$policy_settings" | grep -o "'description': <'[^']*'" | cut -d"'" -f4)
+		    masquerade=$(echo "$policy_settings" | grep -o "'masquerade': <[^>]*>" | sed "s/.*<\([^>]*\)>.*/\1/")
+		    priority=$(echo "$policy_settings" | grep -o "'priority': <[^>]*>" | sed "s/.*<\([^>]*\)>.*/\1/")
+		    if echo "$policy_settings" | grep -q "'ingress_zones'"; then
+			# Match: 'ingress_zones': <['internal']> or 'ingress_zones': <['dmz', 'internal']>
+			ingress_zones=$(echo "$policy_settings" | grep -o "'ingress_zones': <\[[^]]*\]>" | sed "s/'ingress_zones': <\[//; s/\]>//; s/'//g" | sed 's/, */, /g')
+		    fi
+
+		    if echo "$policy_settings" | grep -q "'egress_zones'"; then
+			# Match: 'egress_zones': <['external']> or 'egress_zones': <['HOST']>
+			egress_zones=$(echo "$policy_settings" | grep -o "'egress_zones': <\[[^]]*\]>" | sed "s/'egress_zones': <\[//; s/\]>//; s/'//g" | sed 's/, */, /g')
+		    fi
+
+		    if echo "$policy_settings" | grep -q "'rich_rules'"; then
+			rich_rules=$(echo "$policy_settings" | grep -o "'rich_rules': <\[[^]]*\]>" | sed "s/'rich_rules': <\[//; s/\]>//")
+		    fi
+
+		    # Extract port forwarding information
+		    if echo "$policy_settings" | grep -q "'forward_ports'"; then
+			forward_ports=$(echo "$policy_settings" | grep -o "'forward_ports': <\[[^]]*\]>" | sed "s/'forward_ports': <\[//; s/\]>//")
+		    fi
+
+		    echo "     Target     : ${target:-unknown}"
+		    echo "     Description: ${description:-none}"
+		    echo "     Priority   : ${priority:-unknown}"
+		    echo "     Ingress    : ${ingress_zones:-none}"
+		    echo "     Egress     : ${egress_zones:-none}"
+		    echo "     Masquerade : ${masquerade:-false}"
+
+		    if [ -n "$rich_rules" ] && [ "$rich_rules" != "" ]; then
+			rule_count=$(echo "$rich_rules" | grep -o "'" | wc -l)
+			rule_count=$((rule_count / 2))
+
+			if [ "$rule_count" -gt 0 ]; then
+			    echo "     Rich Rules ($rule_count):"
+			    # Extract individual rules
+			    echo "$rich_rules" | grep -o "'[^']*'" | sed "s/'//g" | while read rule; do
+				echo "       $rule"
+			    done
+			else
+			    echo "     Rich Rules: none"
+			fi
+		    else
+			echo "     Rich Rules: none"
+		    fi
+
+		    # Display port forwarding rules
+		    if [ -n "$forward_ports" ] && [ "$forward_ports" != "" ]; then
+			echo "     Port FWD   :"
+			# Parse forward_ports which contains tuples like ('8080', 'tcp', '80', '10.0.1.100')
+			# Extract individual port forward entries
+			echo "$forward_ports" | sed "s/), (/\n/g" | sed "s/^(//; s/)$//" | while IFS= read forward_rule; do
+			    if [ -n "$forward_rule" ]; then
+				# Parse the tuple: 'from_port', 'protocol', 'to_port', 'to_addr'
+				from_port=$(echo "$forward_rule" | cut -d',' -f1 | sed "s/'//g" | tr -d ' ')
+				protocol=$(echo "$forward_rule" | cut -d',' -f2 | sed "s/'//g" | tr -d ' ')
+				to_port=$(echo "$forward_rule" | cut -d',' -f3 | sed "s/'//g" | tr -d ' ')
+				to_addr=$(echo "$forward_rule" | cut -d',' -f4 | sed "s/'//g" | tr -d ' ')
+
+				if [ -n "$from_port" ] && [ -n "$protocol" ] && [ -n "$to_addr" ] && [ -n "$to_port" ]; then
+				    echo "       ${from_port}/${protocol} → ${to_addr}:${to_port}"
+				else
+				    echo "       $forward_rule (unparsed)"
+				fi
+			    fi
+			done
+		    else
+			echo "     Port FWD   : none"
+		    fi
+		else
+		    echo "     (Failed to get policy details)"
+		fi
+		echo
+	    done
+	fi
+    else
+	echo "  No policies or failed to retrieve"
+    fi
+
+    # Runtime info
+    echo "=== Runtime Information ==="
+    echo "  nftables rules:"
+    rule_count=$(nft list ruleset 2>/dev/null | grep -c "^[[:space:]]*[^#]" || echo "0")
+    echo "    Active rules: $rule_count"
+
+    table_count=$(nft list tables 2>/dev/null | wc -l || echo "0")
+    echo "    Active tables: $table_count"
+}
+
+# Function to show usage
+show_help()
+{
+    cat << EOF
+Usage: $0 [OPTIONS] COMMAND
+
+OPTIONS:
+    --wait SEC           Wait for reload completion signal (use with reload command)
+    -v, --verbose        Enable verbose output for error messages and status
+    -h, --help           Show this help message
+
+COMMANDS:
+    reload               Reload firewall configuration
+    panic OPERATION      Emergency panic mode: <on | off | status>
+    show                 Show comprehensive firewall status and configuration
+    help                 Show this help message
+
+EXAMPLES:
+    $0 reload            Reload firewall (returns immediately)
+    $0 --wait 30 reload  Reload firewall and wait up to 30s for completion
+    $0 panic on          Enable panic mode (blocks ALL traffic)
+    $0 panic off         Disable panic mode
+    $0 panic status      Query current panic status
+    $0 show              Display complete firewall status
+
+This tool uses the FirewallD D-Bus API directly for reliable operation.
+EOF
+}
+
+main()
+{
+    wait_timeout=""
+
+    if ! parsed_args=$(getopt -o hv --long wait:,help,verbose -- "$@"); then
+	echo "Error parsing options" >&2
+	exit 1
+    fi
+
+    eval set -- "$parsed_args"
+
+    while true; do
+	case "$1" in
+	    --wait)
+		wait_timeout="$2"
+		shift 2
+		;;
+	    -v|--verbose)
+		VERBOSE=1
+		shift
+		;;
+	    -h|--help)
+		show_help
+		exit 0
+		;;
+	    --)
+		shift
+		break
+		;;
+	    *)
+		echo "Error: Unknown option '$1'" >&2
+		exit 1
+		;;
+	esac
+    done
+
+    case "${1:-}" in
+	reload)
+	    if ! check_firewalld; then
+		echo "Error: firewalld is not running or does not respond!" >&2
+		exit 1
+	    fi
+
+	    if ! call_reload; then
+		exit 1
+	    fi
+
+	    if [ -n "$wait_timeout" ]; then
+		if ! wait_for_reload "$wait_timeout"; then
+		    echo "Firewall reload timed out" >&2
+		    exit 1
+		fi
+	    fi
+	    ;;
+	panic)
+	    if ! check_firewalld; then
+		echo "Error: firewalld is not running or does not respond" >&2
+		exit 1
+	    fi
+
+	    case "${2:-}" in
+		on)
+		    panic_on
+		    ;;
+		off)
+		    panic_off
+		    ;;
+		status)
+		    panic_status
+		    ;;
+		*)
+		    echo "Error: Invalid panic operation '$2'" >&2
+		    echo "Use: $0 panic {on|off|status}" >&2
+		    exit 1
+		    ;;
+	    esac
+	    ;;
+	show)
+	    show_status
+	    ;;
+	help)
+	    show_help
+	    ;;
+	*)
+	    echo "Error: Missing or unknown command '$1'" >&2
+	    echo "Use $0 help for usage information"
+	    exit 1
+	    ;;
+    esac
+}
+
+main "$@"
