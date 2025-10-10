@@ -1,7 +1,4 @@
-
-<!doctype html>
-<html lang="en" class="no-js">
-  <head>
+<!DOCTYPE html><html lang="en" class="no-js"><head>
     
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -16,7 +13,7 @@
         <link rel="prev" href="../container/">
       
       
-        <link rel="next" href="../qos/">
+        <link rel="next" href="../firewall/">
       
       
       <link rel="icon" href="../assets/images/favicon.png">
@@ -45,7 +42,7 @@
         
         
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&amp;display=fallback">
         <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
       
     
@@ -59,7 +56,18 @@
     
     
     
-  </head>
+  <link href="../assets/stylesheets/glightbox.min.css" rel="stylesheet"><script src="../assets/javascripts/glightbox.min.js"></script><style id="glightbox-style">
+            html.glightbox-open { overflow: initial; height: 100%; }
+            .gslide-title { margin-top: 0px; user-select: text; }
+            .gslide-desc { color: #666; user-select: text; }
+            .gslide-image img { background: black; }
+            .glightbox-clean .gslide-media { -webkit-box-shadow: none; box-shadow: none; }
+            .gscrollbar-fixer { padding-right: 15px; }
+            .gdesc-inner { font-size: 0.75rem; }
+            body[data-md-color-scheme="slate"] .gdesc-inner { background: var(--md-default-bg-color); }
+            body[data-md-color-scheme="slate"] .gslide-title { color: var(--md-default-fg-color); }
+            body[data-md-color-scheme="slate"] .gslide-desc { color: var(--md-default-fg-color); }
+        </style></head>
   
   
     
@@ -98,14 +106,14 @@
 
 <header class="md-header md-header--shadow" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="https://kernelkit.org/" title="User&#39;s Guide" class="md-header__button md-logo" aria-label="User's Guide" data-md-component="logo">
+    <a href="https://kernelkit.org/" title="User's Guide" class="md-header__button md-logo" aria-label="User's Guide" data-md-component="logo">
       
   <img src="../logo-plain.png" alt="logo">
 
     </a>
     <label class="md-header__button md-icon" for="__drawer">
       
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"></path></svg>
     </label>
     <div class="md-header__title" data-md-component="header-title">
       <div class="md-header__ellipsis">
@@ -130,20 +138,20 @@
     
     
     
-    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="orange" data-md-color-accent="orange"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="orange" data-md-color-accent="orange" aria-label="Switch to dark mode" type="radio" name="__palette" id="__palette_0">
     
       <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"></path></svg>
       </label>
     
   
     
     
     
-    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="black" data-md-color-accent="orange"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="black" data-md-color-accent="orange" aria-label="Switch to light mode" type="radio" name="__palette" id="__palette_1">
     
       <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"></path></svg>
       </label>
     
   
@@ -159,7 +167,7 @@
       
         <label class="md-header__button md-icon" for="__search">
           
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"></path></svg>
         </label>
         <div class="md-search" data-md-component="search" role="dialog">
   <label class="md-search__overlay" for="__search"></label>
@@ -168,20 +176,20 @@
       <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
       <label class="md-search__icon md-icon" for="__search">
         
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"></path></svg>
         
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"></path></svg>
       </label>
       <nav class="md-search__options" aria-label="Search">
         
           <a href="javascript:void(0)" class="md-search__icon md-icon" title="Share" aria-label="Share" data-clipboard data-clipboard-text="" data-md-component="search-share" tabindex="-1">
             
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9a3 3 0 0 0-3 3 3 3 0 0 0 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.15c-.05.21-.08.43-.08.66 0 1.61 1.31 2.91 2.92 2.91s2.92-1.3 2.92-2.91A2.92 2.92 0 0 0 18 16.08"/></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9a3 3 0 0 0-3 3 3 3 0 0 0 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.15c-.05.21-.08.43-.08.66 0 1.61 1.31 2.91 2.92 2.91s2.92-1.3 2.92-2.91A2.92 2.92 0 0 0 18 16.08"></path></svg>
           </a>
         
         <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
           
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg>
         </button>
       </nav>
       
@@ -205,7 +213,7 @@
         <a href="https://github.com/kernelkit/infix/" title="Go to repository" class="md-source" data-md-component="source">
   <div class="md-source__icon md-icon">
     
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.0.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.0.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"></path></svg>
   </div>
   <div class="md-source__repository">
     kernelkit/infix
@@ -229,7 +237,7 @@
           
             
               
-              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation">
                 <div class="md-sidebar__scrollwrap">
                   <div class="md-sidebar__inner">
                     
@@ -238,7 +246,7 @@
 
 <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="https://kernelkit.org/" title="User&#39;s Guide" class="md-nav__button md-logo" aria-label="User's Guide" data-md-component="logo">
+    <a href="https://kernelkit.org/" title="User's Guide" class="md-nav__button md-logo" aria-label="User's Guide" data-md-component="logo">
       
   <img src="../logo-plain.png" alt="logo">
 
@@ -250,7 +258,7 @@
       <a href="https://github.com/kernelkit/infix/" title="Go to repository" class="md-source" data-md-component="source">
   <div class="md-source__icon md-icon">
     
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.0.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.0.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"></path></svg>
   </div>
   <div class="md-source__repository">
     kernelkit/infix
@@ -315,7 +323,7 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2">
         
           
           <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
@@ -561,6 +569,8 @@
   
     
     
+      
+        
       
         
       
@@ -1200,6 +1210,29 @@
   
   
     <li class="md-nav__item">
+      <a href="../firewall/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Firewall Configuration
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../qos/" class="md-nav__link">
         
   
@@ -1313,7 +1346,7 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5">
         
           
           <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
@@ -1418,7 +1451,7 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6">
         
           
           <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
@@ -1499,7 +1532,7 @@
   
   
   <span class="md-ellipsis">
-    Hardware Info & Status
+    Hardware Info &amp; Status
     
   </span>
   
@@ -1613,7 +1646,7 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7">
         
           
           <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
@@ -1791,7 +1824,7 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8">
         
           
           <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
@@ -1826,7 +1859,7 @@
   
   
   <span class="md-ellipsis">
-    Branding & Releases
+    Branding &amp; Releases
     
   </span>
   
@@ -2017,7 +2050,7 @@
   
   
   <span class="md-ellipsis">
-    Origin & Licensing
+    Origin &amp; Licensing
     
   </span>
   
@@ -2035,7 +2068,7 @@
             
             
               
-              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc">
                 <div class="md-sidebar__scrollwrap">
                   <div class="md-sidebar__inner">
                     
@@ -2597,7 +2630,7 @@
   
 
 
-<h1 id="network-configuration">Network Configuration<a class="headerlink" href="#network-configuration" title="Permanent link">&para;</a></h1>
+<h1 id="network-configuration">Network Configuration<a class="headerlink" href="#network-configuration" title="Permanent link">¶</a></h1>
 <p>Infix aims to support all Linux Networking constructs.  The YANG models
 used to describe the system are chosen to fit well and leverage the
 underlying Linux kernel's capabilities.  The <a href="https://www.rfc-editor.org/rfc/rfc8343">ietf-interfaces.yang</a>
@@ -2610,10 +2643,10 @@ Infix to exploit the unique features not available in IEEE models.</p>
 your settings, <code>copy running-config startup-config</code>.  See the <a href="../cli/introduction/">CLI
 Introduction</a> for a background.</p>
 </div>
-<h2 id="interface-lego">Interface LEGO®<a class="headerlink" href="#interface-lego" title="Permanent link">&para;</a></h2>
+<h2 id="interface-lego">Interface LEGO®<a class="headerlink" href="#interface-lego" title="Permanent link">¶</a></h2>
 <p>The network building blocks available in Linux are akin to the popular
 LEGO® bricks.</p>
-<p><img alt="Linux Networking Blocks" src="../img/lego.svg" /></p>
+<p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/lego.svg" data-desc-position="bottom"><img alt="Linux Networking Blocks" src="../img/lego.svg"></a></p>
 <p>There are two types of relationships that can link two blocks together:</p>
 <ol>
 <li><strong>Lower-to-upper</strong>: Visually represented by an extruding square
@@ -2627,7 +2660,7 @@ LEGO® bricks.</p>
      from different upper blocks.  E.g., multiple VLANs and IP address
      blocks can be connected to the same lower interface</li>
 </ol>
-<p><img alt="Stacking order dependencies" src="../img/lego-relations.svg" /></p>
+<p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/lego-relations.svg" data-desc-position="bottom"><img alt="Stacking order dependencies" src="../img/lego-relations.svg"></a></p>
 <p>An interface may simultaneously have a <em>lower-to-upper</em> relation to some
 other interface, and be the target of one or more <em>upper-to-lower</em>
 relationships.  It is valid, for example, for a physical port to be
@@ -2696,11 +2729,11 @@ other traffic would be bridged as usual.</p>
 </tr>
 </tbody>
 </table>
-<h2 id="data-plane">Data Plane<a class="headerlink" href="#data-plane" title="Permanent link">&para;</a></h2>
+<h2 id="data-plane">Data Plane<a class="headerlink" href="#data-plane" title="Permanent link">¶</a></h2>
 <p>The blocks you choose, and how you connect them, defines your data plane.
 Here we see an example of how to bridge a virtual port with a physical
 LAN.</p>
-<p><img alt="Example of a 4-port switch with a link aggregate and a VETH pair to a container" src="../img/dataplane.svg" /></p>
+<p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/dataplane.svg" data-desc-position="bottom"><img alt="Example of a 4-port switch with a link aggregate and a VETH pair to a container" src="../img/dataplane.svg"></a></p>
 <p>Depending on the (optional) VLAN filtering of the bridge, the container
 may have full or limited connectivity with outside ports, as well as the
 internal CPU.</p>
@@ -2713,7 +2746,7 @@ separation and virtualization of all Ethernet layer properties are
 possible to share with a container.  Meaning, all the building blocks
 used on the left hand side can also be used freely on the right hand
 side as well.</p>
-<h3 id="general">General<a class="headerlink" href="#general" title="Permanent link">&para;</a></h3>
+<h3 id="general">General<a class="headerlink" href="#general" title="Permanent link">¶</a></h3>
 <p>General interface settings include <code>type</code>, <code>enable</code>, custom MAC address,
 and text <code>description</code>.  Other settings have their own sections, below.</p>
 <p>The <code>type</code> is important to set when configuring devices remotely because
@@ -2737,13 +2770,13 @@ using <code>custom-phys-address</code>.  In particular the <code>offset</code> v
 be dangerous to use -- pay attention to the meaning of bits in the
 upper-most octet: local bit, multicast/group, etc.</p>
 </div>
-<h4 id="fixed-custom-mac">Fixed custom MAC<a class="headerlink" href="#fixed-custom-mac" title="Permanent link">&para;</a></h4>
+<h4 id="fixed-custom-mac">Fixed custom MAC<a class="headerlink" href="#fixed-custom-mac" title="Permanent link">¶</a></h4>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>admin@example:/config/&gt; edit interface veth0a
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>admin@example:/config/interface/veth0a/&gt; set custom-phys-address static 00:ab:00:11:22:33
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
 <a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>=&gt; 00:ab:00:11:22:33
 </code></pre></div>
-<h4 id="chassis-mac">Chassis MAC<a class="headerlink" href="#chassis-mac" title="Permanent link">&para;</a></h4>
+<h4 id="chassis-mac">Chassis MAC<a class="headerlink" href="#chassis-mac" title="Permanent link">¶</a></h4>
 <p>Chassis MAC, sometimes also referred to as base MAC.  In these two
 examples it is <code>00:53:00:c0:ff:ee</code>.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>admin@example:/config/&gt; edit interface veth0a
@@ -2751,7 +2784,7 @@ examples it is <code>00:53:00:c0:ff:ee</code>.</p>
 <a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
 <a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>=&gt; 00:53:00:c0:ff:ee
 </code></pre></div>
-<h4 id="chassis-mac-with-offset">Chassis MAC, with offset<a class="headerlink" href="#chassis-mac-with-offset" title="Permanent link">&para;</a></h4>
+<h4 id="chassis-mac-with-offset">Chassis MAC, with offset<a class="headerlink" href="#chassis-mac-with-offset" title="Permanent link">¶</a></h4>
 <p>When constructing a derived address it is recommended to set the locally
 administered bit.  Same chassis MAC as before.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>admin@example:/config/&gt; edit interface veth0a
@@ -2759,12 +2792,12 @@ administered bit.  Same chassis MAC as before.</p>
 <a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
 <a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>=&gt; 02:53:00:c0:ff:f0
 </code></pre></div>
-<h3 id="bridging">Bridging<a class="headerlink" href="#bridging" title="Permanent link">&para;</a></h3>
+<h3 id="bridging">Bridging<a class="headerlink" href="#bridging" title="Permanent link">¶</a></h3>
 <p>This is the most central part of the system.  A bridge is a switch, and
 a switch is a bridge.  In Linux, setting up a bridge with ports
 connected to physical switch fabric, means you manage the actual switch
 fabric!</p>
-<h4 id="mac-bridge">MAC Bridge<a class="headerlink" href="#mac-bridge" title="Permanent link">&para;</a></h4>
+<h4 id="mac-bridge">MAC Bridge<a class="headerlink" href="#mac-bridge" title="Permanent link">¶</a></h4>
 <p>In Infix ports are by default not switch ports, unless the customer
 specific factory config sets it up this way.  To enable switching, with
 offloading if you have a switch chipset, between ports you create a
@@ -2788,12 +2821,12 @@ top of <code>ethN</code>, or <code>dockerN</code> for a IP masquerading containe
 <p>Note, this inference only works with the CLI, configuring networking
 over NETCONF or RESTCONF requires setting the type explicitly.</p>
 </div>
-<p><img alt="A MAC bridge with two ports" src="../img/mac-bridge.svg" /></p>
+<p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/mac-bridge.svg" data-desc-position="bottom"><img alt="A MAC bridge with two ports" src="../img/mac-bridge.svg"></a></p>
 <p>It is possible to create multiple MAC bridges, however, it is
 currently<sup id="fnref:5"><a class="footnote-ref" href="#fn:5">2</a></sup> <em>not recommended</em> to use more than one MAC bridge on
 products with Marvell LinkStreet switching ASICs. A VLAN filtering
 bridge should be used instead.</p>
-<h4 id="vlan-filtering-bridge">VLAN Filtering Bridge<a class="headerlink" href="#vlan-filtering-bridge" title="Permanent link">&para;</a></h4>
+<h4 id="vlan-filtering-bridge">VLAN Filtering Bridge<a class="headerlink" href="#vlan-filtering-bridge" title="Permanent link">¶</a></h4>
 <p>By default bridges in Linux do not filter based on VLAN tags.  This can
 be enabled when creating a bridge by adding a port to a VLAN as a tagged
 or untagged member.  Use the port default VID (PVID) setting to control
@@ -2812,7 +2845,7 @@ VLAN association for traffic ingressing a port untagged (default PVID:
 <p>This sets <code>eth0</code> as an untagged member of VLAN 10 and <code>eth1</code> as an
 untagged member of VLAN 20.  Switching between these ports is thus
 prohibited.</p>
-<p><img alt="A VLAN bridge with two VLANs" src="../img/vlan-bridge.svg" /></p>
+<p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/vlan-bridge.svg" data-desc-position="bottom"><img alt="A VLAN bridge with two VLANs" src="../img/vlan-bridge.svg"></a></p>
 <p>To terminate a VLAN in the switch itself, either for switch management
 or for routing, the bridge must become a (tagged) member of the VLAN.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>admin@example:/config/interface/br0/&gt; set bridge vlans vlan 10 tagged br0
@@ -2828,7 +2861,7 @@ For the example above, if the bridge itself is an untagged member only
 in VLAN 10, IP addresses can be set directly on the bridge without the
 need for dedicated VLAN interfaces on top of the bridge.</p>
 </div>
-<h4 id="multicast-filtering-and-snooping">Multicast Filtering and Snooping<a class="headerlink" href="#multicast-filtering-and-snooping" title="Permanent link">&para;</a></h4>
+<h4 id="multicast-filtering-and-snooping">Multicast Filtering and Snooping<a class="headerlink" href="#multicast-filtering-and-snooping" title="Permanent link">¶</a></h4>
 <p>Multicast filtering in the bridge is handled by the bridge itself.  It
 can filter both IP multicast and MAC multicast.  For IP multicast it
 also supports "snooping", i.e., IGMP and MLD, to automatically reduce
@@ -2916,7 +2949,7 @@ multicast bits only:</p>
 <p>In this setup we have a lot more going on.  Multiple multicast router
 ports have been detected, and behind the scenes someone has also added
 an IGMP/MLD fast-leave port.</p>
-<h5 id="terminology-abbreviations">Terminology &amp; Abbreviations<a class="headerlink" href="#terminology-abbreviations" title="Permanent link">&para;</a></h5>
+<h5 id="terminology-abbreviations">Terminology &amp; Abbreviations<a class="headerlink" href="#terminology-abbreviations" title="Permanent link">¶</a></h5>
 <ul>
 <li><strong>IGMP</strong>: Internet Group Membership Protocol, multicast subscription
    for IPv4, for details see <a href="https://www.rfc-editor.org/rfc/rfc3376.html">RFC3376</a></li>
@@ -2979,7 +3012,7 @@ because an IP multicast group maps to the same MAC address.  Please
 see <a href="https://www.rfc-editor.org/rfc/rfc1112.html">RFC 1112</a> for details.  Use static multicast router
 ports, or static multicast MAC filters, to mitigate.</p>
 </div>
-<h4 id="forwarding-of-ieee-reserved-group-addresses">Forwarding of IEEE Reserved Group Addresses<a class="headerlink" href="#forwarding-of-ieee-reserved-group-addresses" title="Permanent link">&para;</a></h4>
+<h4 id="forwarding-of-ieee-reserved-group-addresses">Forwarding of IEEE Reserved Group Addresses<a class="headerlink" href="#forwarding-of-ieee-reserved-group-addresses" title="Permanent link">¶</a></h4>
 <p>Addresses in the range <code>01:80:C2:00:00:0X</code> are used by various bridge
 signaling protocols, and are not forwarded by default.  Still, it is
 sometimes useful to let the bridge forward such packets, this can be
@@ -2998,7 +3031,7 @@ decimal value <code>0..15</code>:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>admin@example:/config/interface/br0/bridge/&gt; set ieee-group-forward lldp
 <a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>admin@example:/config/interface/br0/bridge/&gt;
 </code></pre></div>
-<h3 id="link-aggregation">Link Aggregation<a class="headerlink" href="#link-aggregation" title="Permanent link">&para;</a></h3>
+<h3 id="link-aggregation">Link Aggregation<a class="headerlink" href="#link-aggregation" title="Permanent link">¶</a></h3>
 <p>A link aggregate, or <em>lag</em>, allows multiple physical interfaces to be
 combined into a single logical interface, providing increased bandwidth
 (in some cases) and redundancy (primarily).  Two modes of qualifying lag
@@ -3022,7 +3055,7 @@ for communication between two specific devices.</p>
 <code>N</code> is a number, allows the CLI to automatically infer the interface
 type as LAG.</p>
 </div>
-<h4 id="basic-configuration">Basic Configuration<a class="headerlink" href="#basic-configuration" title="Permanent link">&para;</a></h4>
+<h4 id="basic-configuration">Basic Configuration<a class="headerlink" href="#basic-configuration" title="Permanent link">¶</a></h4>
 <p>Creating a link aggregate interface and adding member ports:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>admin@example:/&gt; configure
 <a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>admin@example:/config/&gt; edit interface lag0
@@ -3036,7 +3069,7 @@ type as LAG.</p>
 E.g., in this example egressing traffic is continuously distributed over
 the two links until link down on one link is detected, triggering all
 traffic to be steered to the sole remaining link.</p>
-<h4 id="lacp-configuration">LACP Configuration<a class="headerlink" href="#lacp-configuration" title="Permanent link">&para;</a></h4>
+<h4 id="lacp-configuration">LACP Configuration<a class="headerlink" href="#lacp-configuration" title="Permanent link">¶</a></h4>
 <p>LACP mode provides dynamic negotiation of the link aggregate.  Key
 settings include:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>admin@example:/&gt; configure
@@ -3060,14 +3093,14 @@ settings include:</p>
 <li><strong>slow:</strong> LACPDUs sent every 30 seconds, with 90 second timeout (default)</li>
 <li><strong>fast:</strong> LACPDUs sent every second, with 3 second timeout</li>
 </ul>
-<h4 id="link-flapping">Link Flapping<a class="headerlink" href="#link-flapping" title="Permanent link">&para;</a></h4>
+<h4 id="link-flapping">Link Flapping<a class="headerlink" href="#link-flapping" title="Permanent link">¶</a></h4>
 <p>To protect against link flapping, debounce timers can be configured to
 delay link qualification.  Usually only the <code>up</code> delay is needed:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>admin@example:/config/interface/lag0/lag/link-monitor/&gt; edit debounce
 <a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>admin@example:/config/interface/lag0/lag/link-monitor/debounce/&gt; set up 500
 <a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>admin@example:/config/interface/lag0/lag/link-monitor/debounce/&gt; set down 200
 </code></pre></div>
-<h4 id="operational-status-overview">Operational Status, Overview<a class="headerlink" href="#operational-status-overview" title="Permanent link">&para;</a></h4>
+<h4 id="operational-status-overview">Operational Status, Overview<a class="headerlink" href="#operational-status-overview" title="Permanent link">¶</a></h4>
 <p>Like other interfaces, link aggregates are also available in the general
 interfaces overview in the CLI admin-exec context.  Here is the above
 static mode aggregate:</p>
@@ -3098,7 +3131,7 @@ static mode aggregate:</p>
 <a id="__codelineno-16-11" name="__codelineno-16-11" href="#__codelineno-16-11"></a>├ eth7          lag        ACTIVE      active, short_timeout, aggregating, in_sync, collecting, distributing
 <a id="__codelineno-16-12" name="__codelineno-16-12" href="#__codelineno-16-12"></a>└ eth8          lag        ACTIVE      active, short_timeout, aggregating, in_sync, collecting, distributing
 </code></pre></div>
-<h4 id="operational-status-detail">Operational Status, Detail<a class="headerlink" href="#operational-status-detail" title="Permanent link">&para;</a></h4>
+<h4 id="operational-status-detail">Operational Status, Detail<a class="headerlink" href="#operational-status-detail" title="Permanent link">¶</a></h4>
 <p>In addition to basic status shown in the interface overview, detailed
 LAG status can be inspected:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>admin@example:/&gt; show interfaces name lag0
@@ -3174,7 +3207,7 @@ LAG status can be inspected:</p>
 <a id="__codelineno-19-15" name="__codelineno-19-15" href="#__codelineno-19-15"></a>in-octets           : 473244
 <a id="__codelineno-19-16" name="__codelineno-19-16" href="#__codelineno-19-16"></a>out-octets          : 499037
 </code></pre></div>
-<h4 id="example-switch-uplink-with-lacp">Example: Switch Uplink with LACP<a class="headerlink" href="#example-switch-uplink-with-lacp" title="Permanent link">&para;</a></h4>
+<h4 id="example-switch-uplink-with-lacp">Example: Switch Uplink with LACP<a class="headerlink" href="#example-switch-uplink-with-lacp" title="Permanent link">¶</a></h4>
 <p>LACP mode provides the most robust operation, automatically negotiating
 the link aggregate and detecting configuration mismatches.</p>
 <p>A common use case is connecting a switch to an upstream device:</p>
@@ -3202,12 +3235,12 @@ the link aggregate and detecting configuration mismatches.</p>
 <a id="__codelineno-24-2" name="__codelineno-24-2" href="#__codelineno-24-2"></a>admin@example:/config/&gt; set interface lag0 bridge-port bridge br0
 <a id="__codelineno-24-3" name="__codelineno-24-3" href="#__codelineno-24-3"></a>admin@example:/config/&gt; leave
 </code></pre></div>
-<h3 id="vlan-interfaces">VLAN Interfaces<a class="headerlink" href="#vlan-interfaces" title="Permanent link">&para;</a></h3>
+<h3 id="vlan-interfaces">VLAN Interfaces<a class="headerlink" href="#vlan-interfaces" title="Permanent link">¶</a></h3>
 <p>Creating a VLAN can be done in many ways.  This section assumes VLAN
 interfaces created atop another Linux interface.  E.g., the VLAN
 interfaces created on top of the Ethernet interface or bridge in the
 picture below.</p>
-<p><img alt="VLAN interface on top of Ethernet or Bridge interfaces" src="../img/interface-vlan-variants.svg" /></p>
+<p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/interface-vlan-variants.svg" data-desc-position="bottom"><img alt="VLAN interface on top of Ethernet or Bridge interfaces" src="../img/interface-vlan-variants.svg"></a></p>
 <p>A VLAN interface is basically a filtering abstraction. When you run
 <code>tcpdump</code> on a VLAN interface you will only see the frames matching the
 VLAN ID of the interface, compared to <em>all</em> the VLAN IDs if you run
@@ -3239,8 +3272,8 @@ top of a bridge interface <em>br0</em> is named <em>vlan10</em>.</p>
 <p>If you name your VLAN interface <code>foo0.N</code> or <code>vlanN</code>, where <code>N</code> is a
 number, the CLI infers the interface type automatically.</p>
 </div>
-<h3 id="physical-ethernet-interfaces">Physical Ethernet Interfaces<a class="headerlink" href="#physical-ethernet-interfaces" title="Permanent link">&para;</a></h3>
-<h4 id="ethernet-settings-and-status">Ethernet Settings and Status<a class="headerlink" href="#ethernet-settings-and-status" title="Permanent link">&para;</a></h4>
+<h3 id="physical-ethernet-interfaces">Physical Ethernet Interfaces<a class="headerlink" href="#physical-ethernet-interfaces" title="Permanent link">¶</a></h3>
+<h4 id="ethernet-settings-and-status">Ethernet Settings and Status<a class="headerlink" href="#ethernet-settings-and-status" title="Permanent link">¶</a></h4>
 <p>Physical Ethernet interfaces provide low-level settings for speed/duplex as
 well as packet status and <a href="#ethernet-statistics">statistics</a>.</p>
 <p>By default, Ethernet interfaces defaults to auto-negotiating
@@ -3248,7 +3281,7 @@ speed/duplex modes, advertising all speed and duplex modes available.
 In the example below, the switch would by default auto-negotiate speed
 1 Gbit/s on port eth1 and 100 Mbit/s on port eth4, as those are the
 highest speeds supported by H1 and H2 respectively.</p>
-<p><img alt="4-port Gbit/s switch connected to Gbit and Fast Ethernet Hosts" src="../img/ethernet-autoneg.svg" /></p>
+<p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/ethernet-autoneg.svg" data-desc-position="bottom"><img alt="4-port Gbit/s switch connected to Gbit and Fast Ethernet Hosts" src="../img/ethernet-autoneg.svg"></a></p>
 <p>The speed and duplex status for the links can be listed as shown
 below, assuming the link operational status is 'up'. </p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-27-1" name="__codelineno-27-1" href="#__codelineno-27-1"></a>admin@example:/&gt; show interfaces name eth1
@@ -3281,7 +3314,7 @@ below, assuming the link operational status is 'up'. </p>
 <a id="__codelineno-27-28" name="__codelineno-27-28" href="#__codelineno-27-28"></a>...
 <a id="__codelineno-27-29" name="__codelineno-27-29" href="#__codelineno-27-29"></a>admin@example:/&gt;
 </code></pre></div>
-<h4 id="configuring-fixed-speed-and-duplex">Configuring fixed speed and duplex<a class="headerlink" href="#configuring-fixed-speed-and-duplex" title="Permanent link">&para;</a></h4>
+<h4 id="configuring-fixed-speed-and-duplex">Configuring fixed speed and duplex<a class="headerlink" href="#configuring-fixed-speed-and-duplex" title="Permanent link">¶</a></h4>
 <p>Auto-negotiation of speed/duplex mode is desired in almost all
 use-cases, but it is possible to disable auto-negotiation and specify
 a fixed speed and duplex mode.</p>
@@ -3312,7 +3345,7 @@ half-duplex mode. </p>
 order for fixed speed/duplex to apply. Only speeds <code>0.1</code>(100 Mbit/s)
 and <code>0.01</code> (10 Mbit/s) can be specified. 1 Gbit/s and higher speeds
 require auto-negotiation to be enabled.</p>
-<h4 id="ethernet-statistics">Ethernet statistics<a class="headerlink" href="#ethernet-statistics" title="Permanent link">&para;</a></h4>
+<h4 id="ethernet-statistics">Ethernet statistics<a class="headerlink" href="#ethernet-statistics" title="Permanent link">¶</a></h4>
 <p>Ethernet packet statistics<sup id="fnref:6"><a class="footnote-ref" href="#fn:6">4</a></sup> can be listed as shown below.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-29-1" name="__codelineno-29-1" href="#__codelineno-29-1"></a>admin@example:/&gt; show interfaces name eth1
 <a id="__codelineno-29-2" name="__codelineno-29-2" href="#__codelineno-29-2"></a>name                : eth1
@@ -3340,7 +3373,7 @@ require auto-negotiation to be enabled.</p>
 <a id="__codelineno-29-24" name="__codelineno-29-24" href="#__codelineno-29-24"></a>eth-in-good-octets           : 60598
 <a id="__codelineno-29-25" name="__codelineno-29-25" href="#__codelineno-29-25"></a>admin@example:/&gt; 
 </code></pre></div>
-<h3 id="veth-pairs">VETH Pairs<a class="headerlink" href="#veth-pairs" title="Permanent link">&para;</a></h3>
+<h3 id="veth-pairs">VETH Pairs<a class="headerlink" href="#veth-pairs" title="Permanent link">¶</a></h3>
 <p>A Virtual Ethernet (VETH) pair is basically a virtual Ethernet cable.  A
 cable can be "plugged in" to a bridge and the other end can be given to
 a <a href="../container/">container</a>, or plugged into another bridge.</p>
@@ -3374,13 +3407,13 @@ but still want some way of communicating between these domains.</p>
 type from the name.  Any name can be used, but then you have to set
 the interface type to <code>veth</code> manually.</p>
 </div>
-<h2 id="management-plane">Management Plane<a class="headerlink" href="#management-plane" title="Permanent link">&para;</a></h2>
+<h2 id="management-plane">Management Plane<a class="headerlink" href="#management-plane" title="Permanent link">¶</a></h2>
 <p>This section details IP Addresses And Other Per-Interface IP settings.</p>
 <p>Infix support several network interface types, each can be assigned one
 or more IP addresses, both IPv4 and IPv6 are supported.  (There is no
 concept of a "primary" address.)</p>
-<p><img alt="IP on top of network interface examples" src="../img/ip-iface-examples.svg" /></p>
-<h3 id="ipv4-address-assignment">IPv4 Address Assignment<a class="headerlink" href="#ipv4-address-assignment" title="Permanent link">&para;</a></h3>
+<p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/ip-iface-examples.svg" data-desc-position="bottom"><img alt="IP on top of network interface examples" src="../img/ip-iface-examples.svg"></a></p>
+<h3 id="ipv4-address-assignment">IPv4 Address Assignment<a class="headerlink" href="#ipv4-address-assignment" title="Permanent link">¶</a></h3>
 <p>Multiple address assignment methods are available:</p>
 <table>
 <thead>
@@ -3526,7 +3559,7 @@ Client Configuration</a> section.</p>
 Routes option (121) and Router option (3), the DHCP client <em>must</em>
 ignore the latter.</p>
 </div>
-<h3 id="ipv6-address-assignment">IPv6 Address Assignment<a class="headerlink" href="#ipv6-address-assignment" title="Permanent link">&para;</a></h3>
+<h3 id="ipv6-address-assignment">IPv6 Address Assignment<a class="headerlink" href="#ipv6-address-assignment" title="Permanent link">¶</a></h3>
 <p>Multiple address assignment methods are available:</p>
 <table>
 <thead>
@@ -3557,8 +3590,8 @@ ignore the latter.</p>
 <p>Both for <em>link-local</em> and <em>global auto-configuration</em>, it is possible
 to auto-configure using a random suffix instead of the interface
 identifier.</p>
-<h3 id="examples">Examples<a class="headerlink" href="#examples" title="Permanent link">&para;</a></h3>
-<p><img alt="Switch example (eth0 and lo)" src="../img/ip-address-example-switch.svg" /></p>
+<h3 id="examples">Examples<a class="headerlink" href="#examples" title="Permanent link">¶</a></h3>
+<p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/ip-address-example-switch.svg" data-desc-position="bottom"><img alt="Switch example (eth0 and lo)" src="../img/ip-address-example-switch.svg"></a></p>
 <div class="highlight"><pre><span></span><code>admin@example:/&gt; show interfaces
 INTERFACE       PROTOCOL   STATE       DATA
 eth0            ethernet   UP          02:00:00:00:00:00
@@ -3573,8 +3606,8 @@ switch with a single Ethernet interface (eth0) and a loopback
 interface (lo). As shown above, these examples assume <em>eth0</em> has an
 IPv6 link-local address and <em>lo</em> has static IPv4 and IPv6 addresses by
 default.</p>
-<h4 id="static-and-link-local-ipv4-addresses">Static and link-local IPv4 addresses<a class="headerlink" href="#static-and-link-local-ipv4-addresses" title="Permanent link">&para;</a></h4>
-<p><img alt="Setting static IPv4 (and link-local IPv4)" src="../img/ip-address-example-ipv4-static.svg" /></p>
+<h4 id="static-and-link-local-ipv4-addresses">Static and link-local IPv4 addresses<a class="headerlink" href="#static-and-link-local-ipv4-addresses" title="Permanent link">¶</a></h4>
+<p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/ip-address-example-ipv4-static.svg" data-desc-position="bottom"><img alt="Setting static IPv4 (and link-local IPv4)" src="../img/ip-address-example-ipv4-static.svg"></a></p>
 <div class="highlight"><pre><span></span><code>admin@example:/&gt; configure
 admin@example:/config/&gt; edit interface eth0 ipv4
 admin@example:/config/interface/eth0/ipv4/&gt; set address 10.0.1.1 prefix-length 24
@@ -3612,8 +3645,8 @@ used to "seed" the client's starting address.  If the address is free it
 will be used, otherwise it falls back to the default algorithm.</p>
 <div class="highlight"><pre><span></span><code>admin@example:/config/interface/eth0/ipv4/&gt; set autoconf request-address 169.254.1.2
 </code></pre></div>
-<h4 id="use-of-dhcp-for-ipv4-address-assignment">Use of DHCP for IPv4 address assignment<a class="headerlink" href="#use-of-dhcp-for-ipv4-address-assignment" title="Permanent link">&para;</a></h4>
-<p><img alt="Using DHCP for IPv4 address assignment" src="../img/ip-address-example-ipv4-dhcp.svg" /></p>
+<h4 id="use-of-dhcp-for-ipv4-address-assignment">Use of DHCP for IPv4 address assignment<a class="headerlink" href="#use-of-dhcp-for-ipv4-address-assignment" title="Permanent link">¶</a></h4>
+<p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/ip-address-example-ipv4-dhcp.svg" data-desc-position="bottom"><img alt="Using DHCP for IPv4 address assignment" src="../img/ip-address-example-ipv4-dhcp.svg"></a></p>
 <div class="highlight"><pre><span></span><code>admin@example:/&gt; configure
 admin@example:/config/&gt; edit dhcp-client
 admin@example:/config/dhcp-client/&gt; set client-if eth0
@@ -3629,7 +3662,7 @@ lo              ethernet   UP          00:00:00:00:00:00
 admin@example:/&gt;
 </code></pre></div>
 <p>The resulting address (10.1.2.100/24) is of type <em>dhcp</em>.</p>
-<h4 id="disabling-ipv6-link-local-addresses">Disabling IPv6 link-local address(es)<a class="headerlink" href="#disabling-ipv6-link-local-addresses" title="Permanent link">&para;</a></h4>
+<h4 id="disabling-ipv6-link-local-addresses">Disabling IPv6 link-local address(es)<a class="headerlink" href="#disabling-ipv6-link-local-addresses" title="Permanent link">¶</a></h4>
 <p>The (only) way to disable IPv6 link-local addresses is by disabling IPv6
 on the interface.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-31-1" name="__codelineno-31-1" href="#__codelineno-31-1"></a>admin@example:/&gt; configure
@@ -3644,8 +3677,8 @@ on the interface.</p>
 <a id="__codelineno-31-10" name="__codelineno-31-10" href="#__codelineno-31-10"></a>                ipv6                   ::1/128 (static)
 <a id="__codelineno-31-11" name="__codelineno-31-11" href="#__codelineno-31-11"></a>admin@example:/&gt;
 </code></pre></div>
-<h4 id="static-ipv6-address">Static IPv6 address<a class="headerlink" href="#static-ipv6-address" title="Permanent link">&para;</a></h4>
-<p><img alt="Setting static IPv6" src="../img/ip-address-example-ipv6-static.svg" /></p>
+<h4 id="static-ipv6-address">Static IPv6 address<a class="headerlink" href="#static-ipv6-address" title="Permanent link">¶</a></h4>
+<p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/ip-address-example-ipv6-static.svg" data-desc-position="bottom"><img alt="Setting static IPv6" src="../img/ip-address-example-ipv6-static.svg"></a></p>
 <div class="highlight"><pre><span></span><code>admin@example:/&gt; configure
 admin@example:/config/&gt; edit interface eth0 ipv6
 admin@example:/config/interface/eth0/ipv6/&gt; set address 2001:db8::1 prefix-length 64
@@ -3660,8 +3693,8 @@ lo              ethernet   UP          00:00:00:00:00:00
                 ipv6                   ::1/128 (static)
 admin@example:/&gt;
 </code></pre></div>
-<h4 id="stateless-auto-configuration-of-global-ipv6-address">Stateless Auto-configuration of Global IPv6 Address<a class="headerlink" href="#stateless-auto-configuration-of-global-ipv6-address" title="Permanent link">&para;</a></h4>
-<p><img alt="Auto-configuration of global IPv6" src="../img/ip-address-example-ipv6-auto-global.svg" /></p>
+<h4 id="stateless-auto-configuration-of-global-ipv6-address">Stateless Auto-configuration of Global IPv6 Address<a class="headerlink" href="#stateless-auto-configuration-of-global-ipv6-address" title="Permanent link">¶</a></h4>
+<p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/ip-address-example-ipv6-auto-global.svg" data-desc-position="bottom"><img alt="Auto-configuration of global IPv6" src="../img/ip-address-example-ipv6-auto-global.svg"></a></p>
 <p>Stateless address auto-configuration of global addresses is enabled by
 default. The address is formed by concatenating the network prefix
 advertised by the router (here 2001:db8:0:1::0/64) and the interface
@@ -3692,8 +3725,8 @@ lo              ethernet   UP          00:00:00:00:00:00
                 ipv6                   ::1/128 (static)
 admin@example:/&gt;
 </code></pre></div>
-<h4 id="random-link-identifiers-for-ipv6-stateless-autoconfiguration">Random Link Identifiers for IPv6 Stateless Autoconfiguration<a class="headerlink" href="#random-link-identifiers-for-ipv6-stateless-autoconfiguration" title="Permanent link">&para;</a></h4>
-<p><img alt="Auto-configuration of global IPv6" src="../img/ip-address-example-ipv6-auto-global.svg" /></p>
+<h4 id="random-link-identifiers-for-ipv6-stateless-autoconfiguration">Random Link Identifiers for IPv6 Stateless Autoconfiguration<a class="headerlink" href="#random-link-identifiers-for-ipv6-stateless-autoconfiguration" title="Permanent link">¶</a></h4>
+<p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/ip-address-example-ipv6-auto-global.svg" data-desc-position="bottom"><img alt="Auto-configuration of global IPv6" src="../img/ip-address-example-ipv6-auto-global.svg"></a></p>
 <p>By default, the auto-configured link-local and global IPv6 addresses
 are formed from a link-identifier based on the MAC address.</p>
 <div class="highlight"><pre><span></span><code>admin@example:/&gt; show interfaces
@@ -3725,7 +3758,7 @@ admin@example:/&gt;
 </code></pre></div>
 <p>Both the link-local address (fe80::) and the global address (2001:)
 have changed type to <em>random</em>.</p>
-<h3 id="ipv4-forwarding">IPv4 forwarding<a class="headerlink" href="#ipv4-forwarding" title="Permanent link">&para;</a></h3>
+<h3 id="ipv4-forwarding">IPv4 forwarding<a class="headerlink" href="#ipv4-forwarding" title="Permanent link">¶</a></h3>
 <p>To be able to route (static or dynamic) on the interface it is
 required to enable forwarding. This setting controls if packets
 received on this interface can be forwarded.</p>
@@ -3734,7 +3767,7 @@ received on this interface can be forwarded.</p>
 <a id="__codelineno-32-3" name="__codelineno-32-3" href="#__codelineno-32-3"></a>admin@example:/config/interface/eth0/&gt; leave
 <a id="__codelineno-32-4" name="__codelineno-32-4" href="#__codelineno-32-4"></a>admin@example:/&gt;
 </code></pre></div>
-<h3 id="ipv6-forwarding">IPv6 forwarding<a class="headerlink" href="#ipv6-forwarding" title="Permanent link">&para;</a></h3>
+<h3 id="ipv6-forwarding">IPv6 forwarding<a class="headerlink" href="#ipv6-forwarding" title="Permanent link">¶</a></h3>
 <p>Due to how the Linux kernel manages IPv6 forwarding, we can not fully
 control it per interface via this setting like how IPv4 works.  Instead,
 IPv6 forwarding is globally enabled when at least one interface enable
@@ -3777,7 +3810,7 @@ setting control when it is <em>Enabled</em> or *Disabled:</p>
 <a id="__codelineno-33-3" name="__codelineno-33-3" href="#__codelineno-33-3"></a>admin@example:/config/interface/eth0/&gt; leave
 <a id="__codelineno-33-4" name="__codelineno-33-4" href="#__codelineno-33-4"></a>admin@example:/&gt;
 </code></pre></div>
-<h2 id="routing-support">Routing support<a class="headerlink" href="#routing-support" title="Permanent link">&para;</a></h2>
+<h2 id="routing-support">Routing support<a class="headerlink" href="#routing-support" title="Permanent link">¶</a></h2>
 <p>Currently supported YANG models:</p>
 <table>
 <thead>
@@ -3818,7 +3851,7 @@ the other models.</p>
 currently <em>only support one instance</em> per routing protocol!  In the
 examples presented here, the instance name <code>default</code> is used.</p>
 </div>
-<h3 id="ipv4-static-routes">IPv4 Static routes<a class="headerlink" href="#ipv4-static-routes" title="Permanent link">&para;</a></h3>
+<h3 id="ipv4-static-routes">IPv4 Static routes<a class="headerlink" href="#ipv4-static-routes" title="Permanent link">¶</a></h3>
 <p>The standard IETF model for static routes reside under the <code>static</code>
 control plane protocol.  For our examples we use the instance name
 <code>default</code>, you can use any name.</p>
@@ -3842,14 +3875,14 @@ admin@example:/&gt;
 <p>Remember to enable <a href="#ipv4-forwarding">IPv4 forwarding</a> for the
 interfaces you want to route between.</p>
 </div>
-<h3 id="ipv6-static-routes">IPv6 Static routes<a class="headerlink" href="#ipv6-static-routes" title="Permanent link">&para;</a></h3>
+<h3 id="ipv6-static-routes">IPv6 Static routes<a class="headerlink" href="#ipv6-static-routes" title="Permanent link">¶</a></h3>
 <div class="highlight"><pre><span></span><code>admin@example:/&gt; configure
 admin@example:/config/&gt; edit routing control-plane-protocol static name default
 admin@example:/config/routing/control-plane-protocol/static/name/default/&gt; set ipv6 route 2001:db8:3c4d:200::/64 next-hop next-hop-address 2001:db8:3c4d:1::1
 admin@example:/config/routing/control-plane-protocol/static/name/default/&gt; leave
 admin@example:/&gt;
 </code></pre></div>
-<h3 id="ospfv2-routing">OSPFv2 Routing<a class="headerlink" href="#ospfv2-routing" title="Permanent link">&para;</a></h3>
+<h3 id="ospfv2-routing">OSPFv2 Routing<a class="headerlink" href="#ospfv2-routing" title="Permanent link">¶</a></h3>
 <p>The system supports OSPF dynamic routing for IPv4, i.e., OSPFv2.  To
 enable OSPF and set one active interface in area 0:</p>
 <div class="highlight"><pre><span></span><code>admin@example:/config/&gt; edit routing control-plane-protocol ospfv2 name default
@@ -3862,7 +3895,7 @@ admin@example:/&gt;
 <p>Remember to enable <a href="#ipv4-forwarding">IPv4 forwarding</a> for all the
 interfaces you want to route between.</p>
 </div>
-<h4 id="ospf-area-types">OSPF area types<a class="headerlink" href="#ospf-area-types" title="Permanent link">&para;</a></h4>
+<h4 id="ospf-area-types">OSPF area types<a class="headerlink" href="#ospf-area-types" title="Permanent link">¶</a></h4>
 <p>In addition to <em>regular</em> OSPF areas, area types <em>NSSA</em> and <em>Stub</em> are
 also supported.  To configure an NSSA area with summary routes:</p>
 <div class="highlight"><pre><span></span><code>admin@example:/config/&gt; edit routing control-plane-protocol ospfv2 name default
@@ -3871,7 +3904,7 @@ admin@example:/config/routing/control-plane-protocol/ospfv2/name/default/&gt; se
 admin@example:/config/routing/control-plane-protocol/ospfv2/name/default/&gt; leave
 admin@example:/&gt;
 </code></pre></div>
-<h4 id="bidirectional-forwarding-detection-bfd">Bidirectional Forwarding Detection (BFD)<a class="headerlink" href="#bidirectional-forwarding-detection-bfd" title="Permanent link">&para;</a></h4>
+<h4 id="bidirectional-forwarding-detection-bfd">Bidirectional Forwarding Detection (BFD)<a class="headerlink" href="#bidirectional-forwarding-detection-bfd" title="Permanent link">¶</a></h4>
 <p>It is possible to enable BFD per OSPF interface to speed up detection of
 link loss.</p>
 <div class="highlight"><pre><span></span><code>admin@example:/config/&gt; edit routing control-plane-protocol ospfv2 name default
@@ -3879,7 +3912,7 @@ admin@example:/config/routing/control-plane-protocol/ospfv2/name/default/ospf/&g
 admin@example:/config/routing/control-plane-protocol/ospfv2/name/default/&gt; leave
 admin@example:/&gt;
 </code></pre></div>
-<h4 id="ospf-interface-settings">OSPF interface settings<a class="headerlink" href="#ospf-interface-settings" title="Permanent link">&para;</a></h4>
+<h4 id="ospf-interface-settings">OSPF interface settings<a class="headerlink" href="#ospf-interface-settings" title="Permanent link">¶</a></h4>
 <p>We have already seen how to enable OSPF per interface (<em>enabled true</em>)
 and BFD for OSPF per interface (<em>bfd enabled true</em>).  These and other
 OSPF interface settings are done in context of an OSFP area, e.g., <em>area
@@ -3888,7 +3921,7 @@ OSPF interface settings are done in context of an OSFP area, e.g., <em>area
 admin@example:/config/routing/control-plane-protocol/ospfv2/name/default/ospf/area/0.0.0.0/&gt; edit interface e0
 admin@example:/config/routing/control-plane-protocol/ospfv2/name/default/ospf/area/0.0.0.0/interface/e0/&gt; set ?
   bfd                  BFD interface configuration.
-  cost                 Interface&#39;s cost.
+  cost                 Interface's cost.
   dead-interval        Interval after which a neighbor is declared down
   enabled              Enables/disables the OSPF protocol on the interface.
   hello-interval       Interval between Hello packets (seconds).  It must
@@ -3903,7 +3936,7 @@ an Ethernet interface can be done as follows.</p>
 <div class="highlight"><pre><span></span><code>admin@example:/config/routing/control-plane-protocol/ospfv2/name/default/ospf/area/0.0.0.0/interface/e0/&gt; set interface-type point-to-point
 admin@example:/config/routing/control-plane-protocol/ospfv2/name/default/ospf/area/0.0.0.0/interface/e0/&gt;
 </code></pre></div>
-<h4 id="ospf-global-settings">OSPF global settings<a class="headerlink" href="#ospf-global-settings" title="Permanent link">&para;</a></h4>
+<h4 id="ospf-global-settings">OSPF global settings<a class="headerlink" href="#ospf-global-settings" title="Permanent link">¶</a></h4>
 <p>In addition to <em>area</em> and <em>interface</em> specific settings, OSPF provides
 global settings for route redistribution and OSPF router identifier.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-34-1" name="__codelineno-34-1" href="#__codelineno-34-1"></a>admin@example:/config/&gt; edit routing control-plane-protocol ospfv2 name default ospf
@@ -3932,7 +3965,7 @@ global settings for route redistribution and OSPF router identifier.</p>
   route. The default route will be distributed as an <em>external type-2</em>
   (E2) route.</li>
 </ul>
-<h4 id="debug-ospfv2">Debug OSPFv2<a class="headerlink" href="#debug-ospfv2" title="Permanent link">&para;</a></h4>
+<h4 id="debug-ospfv2">Debug OSPFv2<a class="headerlink" href="#debug-ospfv2" title="Permanent link">¶</a></h4>
 <p>Using NETCONF and the YANG model <em>ietf-routing</em> it is possible to read
 the OSPF routing table, neighbors and more, that may be useful for
 debugging the OSPFv2 setup. The CLI has various OSPF status commands
@@ -3946,10 +3979,10 @@ Neighbor ID     Pri State           Up Time         Dead Time Address         In
 
 admin@example:/&gt;
 </code></pre></div>
-<h3 id="view-routing-table">View routing table<a class="headerlink" href="#view-routing-table" title="Permanent link">&para;</a></h3>
+<h3 id="view-routing-table">View routing table<a class="headerlink" href="#view-routing-table" title="Permanent link">¶</a></h3>
 <p>The routing table can be inspected from the operational datastore, XPath
 <code>/routing/ribs</code>, using sysrepocfg, NETCONF/RESTCONF, or using the CLI.</p>
-<h4 id="ipv4-routing-table">IPv4 routing table<a class="headerlink" href="#ipv4-routing-table" title="Permanent link">&para;</a></h4>
+<h4 id="ipv4-routing-table">IPv4 routing table<a class="headerlink" href="#ipv4-routing-table" title="Permanent link">¶</a></h4>
 <p>This CLI example shows the IPv4 routing table with a few connected
 routes and some routes learned from OSPF.  See the next section for
 an explanation of route preferences (PREF).</p>
@@ -3971,7 +4004,7 @@ the kernel FIB (the YANG model refers to this as <em>installed</em>).</p>
 &gt;* 192.168.3.0/24          0/0 e2               direct   4h2m58s
 admin@example:/&gt;
 </code></pre></div>
-<h4 id="ipv6-routing-table">IPv6 routing table<a class="headerlink" href="#ipv6-routing-table" title="Permanent link">&para;</a></h4>
+<h4 id="ipv6-routing-table">IPv6 routing table<a class="headerlink" href="#ipv6-routing-table" title="Permanent link">¶</a></h4>
 <p>This CLI example show the IPv6 routing table.</p>
 <div class="highlight"><pre><span></span><code>admin@example:/&gt; show ipv6 route
    DESTINATION                      PREF NEXT-HOP              PROTO     UPTIME
@@ -3987,7 +4020,7 @@ admin@example:/&gt;
 &gt;* fe80::/64                         0/0 e1                    direct   0h1m20s
 admin@example:/&gt;
 </code></pre></div>
-<h4 id="route-preference">Route Preference<a class="headerlink" href="#route-preference" title="Permanent link">&para;</a></h4>
+<h4 id="route-preference">Route Preference<a class="headerlink" href="#route-preference" title="Permanent link">¶</a></h4>
 <p>The operating system leverages FRRouting (<a href="https://frrouting.org/">Frr</a>) as routing engine
 for both static and dynamic routing.  Even routes injected from a DHCP
 client, and IPv4 link-local (IPv4) routes, are injected into Frr to let
@@ -4046,7 +4079,7 @@ setting a different <em>routing preference</em> value.</p>
 back to the kernel FIB this way, only selected routes are candidates
 to be installed in the FIB by Frr.</p>
 </div>
-<h4 id="source-protocol">Source protocol<a class="headerlink" href="#source-protocol" title="Permanent link">&para;</a></h4>
+<h4 id="source-protocol">Source protocol<a class="headerlink" href="#source-protocol" title="Permanent link">¶</a></h4>
 <p>The source protocol describes the origin of the route.</p>
 <table>
 <thead>
@@ -4073,37 +4106,37 @@ to be installed in the FIB by Frr.</p>
 <p>The YANG model <em>ietf-routing</em> support multiple ribs but only two are
 currently supported, namely <code>ipv4</code> and <code>ipv6</code>.</p>
 <div class="footnote">
-<hr />
+<hr>
 <ol>
 <li id="fn:4">
 <p>A YANG deviation was previously used to make it possible to set
 <code>phys-address</code>, but this has been replaced with the more flexible
-<code>custom-phys-address</code>.&#160;<a class="footnote-backref" href="#fnref:4" title="Jump back to footnote 1 in the text">&#8617;</a></p>
+<code>custom-phys-address</code>.&nbsp;<a class="footnote-backref" href="#fnref:4" title="Jump back to footnote 1 in the text">↩</a></p>
 </li>
 <li id="fn:5">
 <p>MAC bridges on Marvell Linkstreet devices are currently limited to
 a single MAC database, this may be a problem if the same MAC address
-appears in different MAC bridges.&#160;<a class="footnote-backref" href="#fnref:5" title="Jump back to footnote 2 in the text">&#8617;</a></p>
+appears in different MAC bridges.&nbsp;<a class="footnote-backref" href="#fnref:5" title="Jump back to footnote 2 in the text">↩</a></p>
 </li>
 <li id="fn:1">
-<p><code>(source MAC XOR destination MAC XOR EtherType) MODULO num_links</code>&#160;<a class="footnote-backref" href="#fnref:1" title="Jump back to footnote 3 in the text">&#8617;</a></p>
+<p><code>(source MAC XOR destination MAC XOR EtherType) MODULO num_links</code>&nbsp;<a class="footnote-backref" href="#fnref:1" title="Jump back to footnote 3 in the text">↩</a></p>
 </li>
 <li id="fn:6">
 <p>Ethernet counters are described in <em>ieee802-ethernet-interface.yang</em>
 and <em>infix-ethernet-interface.yang</em>.  There is a dedicated document on
 <a href="../eth-counters/">Ethernet Counters</a> that provide additional details
-on the statistics support.&#160;<a class="footnote-backref" href="#fnref:6" title="Jump back to footnote 4 in the text">&#8617;</a></p>
+on the statistics support.&nbsp;<a class="footnote-backref" href="#fnref:6" title="Jump back to footnote 4 in the text">↩</a></p>
 </li>
 <li id="fn:3">
 <p>For example, IPv4 groups are mapped to MAC multicast addresses by
 mapping the low-order 23-bits of the IP address in the low-order 23
 bits of the Ethernet address 01:00:5E:00:00:00.  Meaning, more than
-one IP multicast group maps to the same MAC multicast group.&#160;<a class="footnote-backref" href="#fnref:3" title="Jump back to footnote 5 in the text">&#8617;</a></p>
+one IP multicast group maps to the same MAC multicast group.&nbsp;<a class="footnote-backref" href="#fnref:3" title="Jump back to footnote 5 in the text">↩</a></p>
 </li>
 <li id="fn:2">
 <p>Link-local IPv6 addresses are implicitly enabled when enabling
 IPv6.  IPv6 can be enabled/disabled per interface in the
-<a href="https://www.rfc-editor.org/rfc/rfc8344">ietf-ip</a> YANG model.&#160;<a class="footnote-backref" href="#fnref:2" title="Jump back to footnote 6 in the text">&#8617;</a></p>
+<a href="https://www.rfc-editor.org/rfc/rfc8344">ietf-ip</a> YANG model.&nbsp;<a class="footnote-backref" href="#fnref:2" title="Jump back to footnote 6 in the text">↩</a></p>
 </li>
 </ol>
 </div>
@@ -4136,7 +4169,7 @@ IPv6.  IPv6 can be enabled/disabled per interface in the
       <div class="md-copyright">
   
     <div class="md-copyright__highlight">
-      Copyright &copy; 2022-2025 The KernelKit Team
+      Copyright © 2022-2025 The KernelKit Team
     </div>
   
   
@@ -4162,5 +4195,7 @@ IPv6.  IPv6 can be enabled/disabled per interface in the
       <script src="../assets/javascripts/bundle.f55a23d4.min.js"></script>
       
     
-  </body>
-</html>
+  
+<script id="init-glightbox">const lightbox = GLightbox({"touchNavigation": true, "loop": false, "zoomable": true, "draggable": true, "openEffect": "zoom", "closeEffect": "zoom", "slideEffect": "slide"});
+document$.subscribe(()=>{ lightbox.reload(); });
+</script></body></html>

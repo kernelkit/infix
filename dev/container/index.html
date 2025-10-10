@@ -1,7 +1,4 @@
-
-<!doctype html>
-<html lang="en" class="no-js">
-  <head>
+<!DOCTYPE html><html lang="en" class="no-js"><head>
     
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -45,7 +42,7 @@
         
         
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&amp;display=fallback">
         <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
       
     
@@ -59,7 +56,18 @@
     
     
     
-  </head>
+  <link href="../assets/stylesheets/glightbox.min.css" rel="stylesheet"><script src="../assets/javascripts/glightbox.min.js"></script><style id="glightbox-style">
+            html.glightbox-open { overflow: initial; height: 100%; }
+            .gslide-title { margin-top: 0px; user-select: text; }
+            .gslide-desc { color: #666; user-select: text; }
+            .gslide-image img { background: black; }
+            .glightbox-clean .gslide-media { -webkit-box-shadow: none; box-shadow: none; }
+            .gscrollbar-fixer { padding-right: 15px; }
+            .gdesc-inner { font-size: 0.75rem; }
+            body[data-md-color-scheme="slate"] .gdesc-inner { background: var(--md-default-bg-color); }
+            body[data-md-color-scheme="slate"] .gslide-title { color: var(--md-default-fg-color); }
+            body[data-md-color-scheme="slate"] .gslide-desc { color: var(--md-default-fg-color); }
+        </style></head>
   
   
     
@@ -98,14 +106,14 @@
 
 <header class="md-header md-header--shadow" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="https://kernelkit.org/" title="User&#39;s Guide" class="md-header__button md-logo" aria-label="User's Guide" data-md-component="logo">
+    <a href="https://kernelkit.org/" title="User's Guide" class="md-header__button md-logo" aria-label="User's Guide" data-md-component="logo">
       
   <img src="../logo-plain.png" alt="logo">
 
     </a>
     <label class="md-header__button md-icon" for="__drawer">
       
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"></path></svg>
     </label>
     <div class="md-header__title" data-md-component="header-title">
       <div class="md-header__ellipsis">
@@ -130,20 +138,20 @@
     
     
     
-    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="orange" data-md-color-accent="orange"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="orange" data-md-color-accent="orange" aria-label="Switch to dark mode" type="radio" name="__palette" id="__palette_0">
     
       <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"></path></svg>
       </label>
     
   
     
     
     
-    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="black" data-md-color-accent="orange"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="black" data-md-color-accent="orange" aria-label="Switch to light mode" type="radio" name="__palette" id="__palette_1">
     
       <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"></path></svg>
       </label>
     
   
@@ -159,7 +167,7 @@
       
         <label class="md-header__button md-icon" for="__search">
           
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"></path></svg>
         </label>
         <div class="md-search" data-md-component="search" role="dialog">
   <label class="md-search__overlay" for="__search"></label>
@@ -168,20 +176,20 @@
       <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
       <label class="md-search__icon md-icon" for="__search">
         
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"></path></svg>
         
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"></path></svg>
       </label>
       <nav class="md-search__options" aria-label="Search">
         
           <a href="javascript:void(0)" class="md-search__icon md-icon" title="Share" aria-label="Share" data-clipboard data-clipboard-text="" data-md-component="search-share" tabindex="-1">
             
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9a3 3 0 0 0-3 3 3 3 0 0 0 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.15c-.05.21-.08.43-.08.66 0 1.61 1.31 2.91 2.92 2.91s2.92-1.3 2.92-2.91A2.92 2.92 0 0 0 18 16.08"/></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9a3 3 0 0 0-3 3 3 3 0 0 0 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.15c-.05.21-.08.43-.08.66 0 1.61 1.31 2.91 2.92 2.91s2.92-1.3 2.92-2.91A2.92 2.92 0 0 0 18 16.08"></path></svg>
           </a>
         
         <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
           
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg>
         </button>
       </nav>
       
@@ -205,7 +213,7 @@
         <a href="https://github.com/kernelkit/infix/" title="Go to repository" class="md-source" data-md-component="source">
   <div class="md-source__icon md-icon">
     
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.0.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.0.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"></path></svg>
   </div>
   <div class="md-source__repository">
     kernelkit/infix
@@ -229,7 +237,7 @@
           
             
               
-              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation">
                 <div class="md-sidebar__scrollwrap">
                   <div class="md-sidebar__inner">
                     
@@ -238,7 +246,7 @@
 
 <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="https://kernelkit.org/" title="User&#39;s Guide" class="md-nav__button md-logo" aria-label="User's Guide" data-md-component="logo">
+    <a href="https://kernelkit.org/" title="User's Guide" class="md-nav__button md-logo" aria-label="User's Guide" data-md-component="logo">
       
   <img src="../logo-plain.png" alt="logo">
 
@@ -250,7 +258,7 @@
       <a href="https://github.com/kernelkit/infix/" title="Go to repository" class="md-source" data-md-component="source">
   <div class="md-source__icon md-icon">
     
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.0.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.0.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"></path></svg>
   </div>
   <div class="md-source__repository">
     kernelkit/infix
@@ -315,7 +323,7 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2">
         
           
           <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
@@ -861,6 +869,8 @@
       
         
       
+        
+      
     
     
     
@@ -869,7 +879,7 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4">
         
           
           <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
@@ -905,6 +915,29 @@
   
   <span class="md-ellipsis">
     Network Configuration
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../firewall/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Firewall Configuration
     
   </span>
   
@@ -1035,7 +1068,7 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5">
         
           
           <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
@@ -1140,7 +1173,7 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6">
         
           
           <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
@@ -1221,7 +1254,7 @@
   
   
   <span class="md-ellipsis">
-    Hardware Info & Status
+    Hardware Info &amp; Status
     
   </span>
   
@@ -1335,7 +1368,7 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7">
         
           
           <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
@@ -1513,7 +1546,7 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8">
         
           
           <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
@@ -1548,7 +1581,7 @@
   
   
   <span class="md-ellipsis">
-    Branding & Releases
+    Branding &amp; Releases
     
   </span>
   
@@ -1739,7 +1772,7 @@
   
   
   <span class="md-ellipsis">
-    Origin & Licensing
+    Origin &amp; Licensing
     
   </span>
   
@@ -1757,7 +1790,7 @@
             
             
               
-              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc">
                 <div class="md-sidebar__scrollwrap">
                   <div class="md-sidebar__inner">
                     
@@ -2043,8 +2076,8 @@
   
 
 
-<h1 id="docker-container-support">Docker Container Support<a class="headerlink" href="#docker-container-support" title="Permanent link">&para;</a></h1>
-<p><img align="right" alt="Docker whale" src="../img/docker.webp" width="360" /></p>
+<h1 id="docker-container-support">Docker Container Support<a class="headerlink" href="#docker-container-support" title="Permanent link">¶</a></h1>
+<p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/docker.webp" data-desc-position="bottom"><img align="right" alt="Docker whale" src="../img/docker.webp" width="360"></a></p>
 <p>Infix comes with native support for Docker containers using <a href="https://podman.io">podman</a>.
 The <a href="https://github.com/kernelkit/infix/blob/main/src/confd/yang/infix-containers.yang">YANG model</a> describes the current level of support, complete
 enough to run both system and application containers.</p>
@@ -2061,7 +2094,7 @@ prompt, we strongly recommend using the CLI commands instead.  They
 employ the services of a wrapper <code>container</code> script which handles the
 integration of Docker containers in the system.</p>
 </div>
-<h2 id="caution">Caution<a class="headerlink" href="#caution" title="Permanent link">&para;</a></h2>
+<h2 id="caution">Caution<a class="headerlink" href="#caution" title="Permanent link">¶</a></h2>
 <p>A word of warning.  Containers can run on your system in privileged
 mode, as <code>root</code>, giving them full access to devices on your system.
 Even though containers are fenced from the host with Linux namespaces,
@@ -2084,7 +2117,7 @@ valid use-cases) and instead use <a href="#capabilities">capabilities</a>.</p>
 <p>This being said, a system suspected of being compromised can always be
 restored to a safe state with a factory reset.  Provided, of course,
 that it has secure boot enabled.</p>
-<h2 id="getting-started">Getting Started<a class="headerlink" href="#getting-started" title="Permanent link">&para;</a></h2>
+<h2 id="getting-started">Getting Started<a class="headerlink" href="#getting-started" title="Permanent link">¶</a></h2>
 <p>In the CLI, containers can be run in one of two ways:</p>
 <ol>
 <li><code>container run IMAGE [COMMAND]</code>, or</li>
@@ -2115,8 +2148,8 @@ your container image and application to run.</p>
 support the CPU architecture of your host system.  Remember, unlike
 virtualization, containers reuse the host's CPU and kernel.</p>
 </div>
-<p><img align="right" alt="Hello World" src="../img/docker-hello-world.svg" width="200" /></p>
-<h3 id="example-hello-world">Example: Hello World<a class="headerlink" href="#example-hello-world" title="Permanent link">&para;</a></h3>
+<p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/docker-hello-world.svg" data-desc-position="bottom"><img align="right" alt="Hello World" src="../img/docker-hello-world.svg" width="200"></a></p>
+<h3 id="example-hello-world">Example: Hello World<a class="headerlink" href="#example-hello-world" title="Permanent link">¶</a></h3>
 <p>Classic Hello World:</p>
 <div class="highlight"><pre><span></span><code>admin@example:/&gt; container run docker://hello-world
 Starting docker://hello-world :: use Ctrl-p Ctrl-q to detach
@@ -2130,7 +2163,7 @@ Storing signatures
 Hello from Docker!
 This message shows that your installation appears to be working correctly.
 </code></pre></div>
-<h3 id="example-web-server">Example: Web Server<a class="headerlink" href="#example-web-server" title="Permanent link">&para;</a></h3>
+<h3 id="example-web-server">Example: Web Server<a class="headerlink" href="#example-web-server" title="Permanent link">¶</a></h3>
 <p>A web server with <a href="https://hub.docker.com/_/nginx">nginx</a>, using standard docker bridge.  Podman will
 automatically create a VETH pair for us, connecting the container to the
 <code>docker0</code> bridge:</p>
@@ -2153,7 +2186,7 @@ to your device's IP address using your browser:</p>
 <p>or connect to port 8080 of your running Infix system with a browser.
 See the following sections for how to add more interfaces and manage
 your container at runtime.</p>
-<h2 id="container-images">Container Images<a class="headerlink" href="#container-images" title="Permanent link">&para;</a></h2>
+<h2 id="container-images">Container Images<a class="headerlink" href="#container-images" title="Permanent link">¶</a></h2>
 <p>The underlying <code>podman</code> project supports importing and fetching images in
 a variety of ways, the most common ones are also supported by Infix.  In
 this section we present how to use them and in the next section we show
@@ -2175,7 +2208,7 @@ DESCRIPTION
                                     May be in .tar or .tar.gz format
 
     Additionally, the following URIs are also supported for setups
-    that do not use a HUB or similar.  Recommend using &#39;checksum&#39;!
+    that do not use a HUB or similar.  Recommend using 'checksum'!
 
     ftp://addr/path/to/archive   -- Downloaded using wget
     http://addr/path/to/archive  -- Downloaded using curl
@@ -2183,7 +2216,7 @@ DESCRIPTION
 
     Note: if a remote repository cannot be reached, the creation of the
           container will be put on a queue that retries pull every time
-          there is a route change in the host&#39;s system.
+          there is a route change in the host's system.
 </code></pre></div>
 <div class="admonition tip">
 <p class="admonition-title">Tip</p>
@@ -2215,9 +2248,9 @@ admin@example:/var/tmp$ sudo wget https://github.com/kernelkit/curiOS/releases/d
 Connecting to github.com (140.82.121.3:443)
 wget: note: TLS certificate validation not implemented
 Connecting to objects.githubusercontent.com (185.199.109.133:443)
-saving to &#39;curios-oci-amd64.tar.gz&#39;
+saving to 'curios-oci-amd64.tar.gz'
 curios-oci-amd64.tar 100% |*********************************| 7091k  0:00:00 ETA
-&#39;curios-oci-amd64.tar.gz&#39; saved
+'curios-oci-amd64.tar.gz' saved
 admin@example:/var/tmp$ ll
 total 7104
 drwxr-xr-x    3 root     root          4096 Mar 27 14:22 ./
@@ -2263,8 +2296,8 @@ Nov 20 07:24:57 infix container[5040]: Cleaning up extracted curios-oci-amd64-v2
 Nov 20 07:24:57 infix container[5040]: podman create --name sys --conmon-pidfile=/run/container:sys.pid --read-only --replace --quiet --cgroup-parent=containers  --restart=always --systemd=false --tz=local --hostname sys --log-driver k8s-file --log-opt path=/run/containers/sys.fifo --network=none curios-oci-amd64-v24.05.0
 Nov 20 07:24:57 infix container[3556]: b02e945c43c9bce2c4be88e31d6f63cfdb1a3c8bdd02179376eb059a49ae05e4
 </code></pre></div>
-<h2 id="upgrading-a-container-image">Upgrading a Container Image<a class="headerlink" href="#upgrading-a-container-image" title="Permanent link">&para;</a></h2>
-<p><img align="right" alt="Up-to-date Shield" src="../img/shield-checkmark.svg" width="100" /></p>
+<h2 id="upgrading-a-container-image">Upgrading a Container Image<a class="headerlink" href="#upgrading-a-container-image" title="Permanent link">¶</a></h2>
+<p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/shield-checkmark.svg" data-desc-position="bottom"><img align="right" alt="Up-to-date Shield" src="../img/shield-checkmark.svg" width="100"></a></p>
 <p>The applications in your container are an active part of the system as a
 whole, so make it a routine to keep your container images up-to-date!</p>
 <p>Containers are created at first setup and at every boot.  If the image
@@ -2320,7 +2353,7 @@ same directory, which is what the Infix regression tests use in the
 image configuration of the container.  This is what enables easy
 upgrades of the container along with the system itself.</p>
 </div>
-<h2 id="capabilities">Capabilities<a class="headerlink" href="#capabilities" title="Permanent link">&para;</a></h2>
+<h2 id="capabilities">Capabilities<a class="headerlink" href="#capabilities" title="Permanent link">¶</a></h2>
 <p>An unprivileged container works for almost all use-cases, but there are
 occasions where they are too restricted and users start looking for the
 <code>privileged</code> flag.  Capabilities offers a middle ground.</p>
@@ -2339,7 +2372,7 @@ capabilities {
 containers.  Please note, that this is an advanced topic that require
 time and analysis of your container application to figure out which
 capabilities you need.</p>
-<h2 id="networking-and-containers">Networking and Containers<a class="headerlink" href="#networking-and-containers" title="Permanent link">&para;</a></h2>
+<h2 id="networking-and-containers">Networking and Containers<a class="headerlink" href="#networking-and-containers" title="Permanent link">¶</a></h2>
 <p>By default, unlike other systems, persistent<sup id="fnref:1"><a class="footnote-ref" href="#fn:1">1</a></sup> containers have no
 networking enabled.  All network access has to be set up explicitly.
 Currently two types of of container networks are supported:</p>
@@ -2356,9 +2389,9 @@ the bridge (see the next section).</p>
 <p class="admonition-title">Tip</p>
 <p>For more information on VETH pairs, see the <a href="../networking/">Networking Guide</a>.</p>
 </div>
-<h3 id="container-bridge">Container Bridge<a class="headerlink" href="#container-bridge" title="Permanent link">&para;</a></h3>
+<h3 id="container-bridge">Container Bridge<a class="headerlink" href="#container-bridge" title="Permanent link">¶</a></h3>
 <p>A container bridge is what most container setups use and users want.</p>
-<p><img alt="IP Masquerading Container Bridge" src="../img/cni-bridge-firewall.svg" /></p>
+<p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/cni-bridge-firewall.svg" data-desc-position="bottom"><img alt="IP Masquerading Container Bridge" src="../img/cni-bridge-firewall.svg"></a></p>
 <p>The difference from a regular bridge is that the container runtime fully
 manages them -- connecting containers with automatically created VETH
 pairs (look at the bridge port names) and setting up firewall rules
@@ -2440,7 +2473,7 @@ admin@example:/config/container/ntpd/network/interface/docker0/&gt; set option i
 admin@example:/config/container/ntpd/network/interface/docker0/&gt; set option interface_name=wan
 admin@example:/config/container/ntpd/network/interface/docker0/&gt; leave
 </code></pre></div>
-<h3 id="container-host-interface">Container Host Interface<a class="headerlink" href="#container-host-interface" title="Permanent link">&para;</a></h3>
+<h3 id="container-host-interface">Container Host Interface<a class="headerlink" href="#container-host-interface" title="Permanent link">¶</a></h3>
 <p>Another common use-case is to move network interfaces into the network
 namespace of a container<sup id="fnref:3"><a class="footnote-ref" href="#fn:3">2</a></sup>.  This of course works with plain Ethernet
 interfaces as well, but here we will use one end of a VETH pair as an
@@ -2453,10 +2486,10 @@ set:</p>
 <li>MAC address, to use the <code>custom-phys-address</code> in the interface settings</li>
 </ul>
 <p>For an example of both, see the next section.</p>
-<h4 id="routed-setup">Routed Setup<a class="headerlink" href="#routed-setup" title="Permanent link">&para;</a></h4>
+<h4 id="routed-setup">Routed Setup<a class="headerlink" href="#routed-setup" title="Permanent link">¶</a></h4>
 <p>In this routed setup we reserve 192.168.0.0/24 for the network between
 the host and the <code>ntpd</code> container.</p>
-<p><img alt="Basic VETH pair connecting ntpd container." src="../img/cni-ntpd-routed.svg" /></p>
+<p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/cni-ntpd-routed.svg" data-desc-position="bottom"><img alt="Basic VETH pair connecting ntpd container." src="../img/cni-ntpd-routed.svg"></a></p>
 <p>Configuration is a straight-forward VETH pair setup where we name the
 container-end of pair <code>ntpd</code>.  This is just a convenience for us when
 reading the configuration later.  The <em>real action</em> happens on the last
@@ -2488,11 +2521,11 @@ the name of the interface inside the container to <code>foo0</code>.</p>
 <p>The point of the routed case is that port forwarding from the container
 in this case is limited to a single interface, not <em>all interfaces</em> as
 is the default in the masquerading container bridge setup.</p>
-<h4 id="bridged-setup">Bridged Setup<a class="headerlink" href="#bridged-setup" title="Permanent link">&para;</a></h4>
+<h4 id="bridged-setup">Bridged Setup<a class="headerlink" href="#bridged-setup" title="Permanent link">¶</a></h4>
 <p>A perhaps more common case is to bridge the other end of the VETH pair
 with other physical ports.  In this section we show how to add a new
 pair to give our container two interfaces:</p>
-<p><img alt="Bridged setup with ntpd container." src="../img/cni-ntpd-bridged.svg" /></p>
+<p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/cni-ntpd-bridged.svg" data-desc-position="bottom"><img alt="Bridged setup with ntpd container." src="../img/cni-ntpd-bridged.svg"></a></p>
 <p>We start by adding the second VETH pair:</p>
 <div class="highlight"><pre><span></span><code>admin@example:/config/&gt; edit interface veth1a
 admin@example:/config/interface/veth1a/&gt; set veth peer veth1
@@ -2523,14 +2556,14 @@ admin@example:/config/&gt; set interface veth1 bridge-port bridge br1
 <p>Please note, container network routes require the base interface also
 have a static IP address set.  Setting only the route, but no address,
 means the route is skipped.</p>
-<h3 id="host-networking">Host Networking<a class="headerlink" href="#host-networking" title="Permanent link">&para;</a></h3>
+<h3 id="host-networking">Host Networking<a class="headerlink" href="#host-networking" title="Permanent link">¶</a></h3>
 <p>The third use-case is host networking, this is where a container share
 the network namespace of the host.  An example here could be a nftables
 or ntpd container -- single applications which add core functionality to
 the host operating system.</p>
 <p>The host networking setup cannot be combined with any other network.</p>
 <p>For an example, <a href="#application-container-nftables">see below</a>.</p>
-<h2 id="mounts-and-volumes">Mounts and Volumes<a class="headerlink" href="#mounts-and-volumes" title="Permanent link">&para;</a></h2>
+<h2 id="mounts-and-volumes">Mounts and Volumes<a class="headerlink" href="#mounts-and-volumes" title="Permanent link">¶</a></h2>
 <p>It is possible to mount files, directories, and even files matching a
 glob, into a container.  This gives precise control over the container's
 file system:</p>
@@ -2564,7 +2597,7 @@ empty: then rsync".</p>
 volume between containers.  All the tricks possible with volumes may
 be added in a later release.</p>
 </div>
-<h3 id="content-mounts">Content Mounts<a class="headerlink" href="#content-mounts" title="Permanent link">&para;</a></h3>
+<h3 id="content-mounts">Content Mounts<a class="headerlink" href="#content-mounts" title="Permanent link">¶</a></h3>
 <p>Content mounts are a special type of file mount where the file contents
 is stored with the container configuration.  This can be very useful
 when deploying similar systems at multiple sites.  When the host loads
@@ -2588,8 +2621,8 @@ host's startup-config.</p>
 </div>
 <p>Infix has three different text editors available.  For more information,
 see <a href="../cli/text-editor/">CLI Text Editor</a>.</p>
-<h2 id="example-containers">Example Containers<a class="headerlink" href="#example-containers" title="Permanent link">&para;</a></h2>
-<h3 id="system-container">System Container<a class="headerlink" href="#system-container" title="Permanent link">&para;</a></h3>
+<h2 id="example-containers">Example Containers<a class="headerlink" href="#example-containers" title="Permanent link">¶</a></h2>
+<h3 id="system-container">System Container<a class="headerlink" href="#system-container" title="Permanent link">¶</a></h3>
 <p>Let's try out what we've learned by setting up a system container, a
 container providing multiple services, using the <code>docker0</code> interface
 we created previously:</p>
@@ -2641,7 +2674,7 @@ specifiers as the host's <code>hostname</code> setting:</p>
 </ul>
 <p>The most useful combination is probably <code>"container-name-%m"</code>, which in
 this example give the container hostname <code>container-name-c0-ff-ee</code>.</p>
-<h3 id="application-container-nftables">Application Container: nftables<a class="headerlink" href="#application-container-nftables" title="Permanent link">&para;</a></h3>
+<h3 id="application-container-nftables">Application Container: nftables<a class="headerlink" href="#application-container-nftables" title="Permanent link">¶</a></h3>
 <p>Infix currently does not have a native firewall configuration, and even
 when it does it will never expose the full capabilities of <code>nftables</code>.
 For advanced setups, the following is an interesting alternative.</p>
@@ -2659,7 +2692,7 @@ admin@example:/config/container/nftables/mount/nftables.conf/&gt; leave
 <p>Notice how we <code>set network host</code>, so the container can see and act on
 all the host's interfaces, and that we also have to run the container
 in <em>privileged</em> mode.</p>
-<h3 id="application-container-ntpd">Application Container: ntpd<a class="headerlink" href="#application-container-ntpd" title="Permanent link">&para;</a></h3>
+<h3 id="application-container-ntpd">Application Container: ntpd<a class="headerlink" href="#application-container-ntpd" title="Permanent link">¶</a></h3>
 <p>The default NTP server/client in Infix is Chrony, a fully working and
 capable workhorse for most use-cases.  However, it does not support a
 feature like multicasting, for that you need ISC ntpd.</p>
@@ -2685,10 +2718,10 @@ admin@example:/&gt; copy running-config startup-config
 <p>The <code>ntp.conf</code> file is stored in the host's <code>startup-config</code> and any
 state data in the container's <code>/var/lib</code> is retained between reboots
 and across image upgrades.</p>
-<h2 id="advanced">Advanced<a class="headerlink" href="#advanced" title="Permanent link">&para;</a></h2>
+<h2 id="advanced">Advanced<a class="headerlink" href="#advanced" title="Permanent link">¶</a></h2>
 <p>This section covers advanced, and sometimes dangerous, topics.  Please
 read any warnings and always consider the security aspects.</p>
-<h3 id="running-host-commands-from-container">Running Host Commands From Container<a class="headerlink" href="#running-host-commands-from-container" title="Permanent link">&para;</a></h3>
+<h3 id="running-host-commands-from-container">Running Host Commands From Container<a class="headerlink" href="#running-host-commands-from-container" title="Permanent link">¶</a></h3>
 <p>SSH login with keys is very handy, both remote scripting friendly <em>and
 secure</em>, but it does require a few extra configuration steps.  The way
 to set it up is covered in part in <a href="../system/#ssh-authorized-key">SSH Authorized Key</a>.</p>
@@ -2728,20 +2761,20 @@ example
 <p>One use-case for this method is when extending Infix with a management
 container that connects to other systems.  For some tips on how to
 control an Infix system this way, see <a href="../scripting/">Scripting Infix</a>.</p>
-<h2 id="container-requirements">Container Requirements<a class="headerlink" href="#container-requirements" title="Permanent link">&para;</a></h2>
+<h2 id="container-requirements">Container Requirements<a class="headerlink" href="#container-requirements" title="Permanent link">¶</a></h2>
 <p>In addition to general <a href="https://docs.docker.com/build/building/best-practices/"><em>best practices</em></a> for container images, there
 are a few more things to consider when targeting embedded systems:</p>
 <ul>
-<li>Ensure the image targets the CPU architecture of the target system,<br />
+<li>Ensure the image targets the CPU architecture of the target system,<br>
    learn more about <a href="https://docs.docker.com/build/building/multi-platform/">Multi-platform Builds</a></li>
 <li>Follow <a href="https://docs.docker.com/get-started/docker-concepts/building-images/build-tag-and-publish-an-image/#tagging-images">best practices for naming and tagging</a>, e.g., <code>:latest</code> vs <code>:1.0</code></li>
-<li>Follow <a href="https://github.com/opencontainers/image-spec/blob/main/image-layout.md">OCI recommendations and layout</a>,<br />
+<li>Follow <a href="https://github.com/opencontainers/image-spec/blob/main/image-layout.md">OCI recommendations and layout</a>,<br>
    learn more about <a href="https://man7.org/linux/man-pages/man7/capabilities.7.html">OCI and Docker Exporters</a></li>
 </ul>
 <p>If the <a href="https://www.docker.com/blog/multi-arch-images/">Docker documentation</a> is not enough, there are plenty of
 <a href="https://lemariva.com/blog/2018/05/tutorial-docker-on-embedded-systems-raspberry-pi-beagleboard">guides online</a> with examples on how to create your own container
 image.  For the more advanced, please see the next section.</p>
-<h3 id="advanced-users">Advanced Users<a class="headerlink" href="#advanced-users" title="Permanent link">&para;</a></h3>
+<h3 id="advanced-users">Advanced Users<a class="headerlink" href="#advanced-users" title="Permanent link">¶</a></h3>
 <p>Most people prefer their system containers small, often based on Alpine
 Linux, or similar, with only a few small applications, including their
 own, and an SSH server perhaps.  For some developers, even this is too
@@ -2772,22 +2805,22 @@ tarballs with SHA256 checksums for integrity checking.</p>
 in the system image, then see the tip at the end of <a href="#upgrading-a-container-image">Upgrading a
 Container Image</a> (above).</p>
 <div class="footnote">
-<hr />
+<hr>
 <ol>
 <li id="fn:1">
 <p>this does not apply to the admin-exec command <code>container run</code>.
 This command is intended to be used for testing and evaluating
 container images.  Such containers are given a private network
-behind an IP masquerading bridge.&#160;<a class="footnote-backref" href="#fnref:1" title="Jump back to footnote 1 in the text">&#8617;</a></p>
+behind an IP masquerading bridge.&nbsp;<a class="footnote-backref" href="#fnref:1" title="Jump back to footnote 1 in the text">↩</a></p>
 </li>
 <li id="fn:3">
 <p>Something which the container bridge network type does behind the
-scenes with one end of an automatically created VETH pair.&#160;<a class="footnote-backref" href="#fnref:3" title="Jump back to footnote 2 in the text">&#8617;</a></p>
+scenes with one end of an automatically created VETH pair.&nbsp;<a class="footnote-backref" href="#fnref:3" title="Jump back to footnote 2 in the text">↩</a></p>
 </li>
 <li id="fn:2">
 <p>The <code>nsenter</code> program is available from either the util-linux
 package in Debian/Ubuntu/Mint, or in BusyBox.  Note, however,
-it may not be enabled by default in BusyBox.&#160;<a class="footnote-backref" href="#fnref:2" title="Jump back to footnote 3 in the text">&#8617;</a></p>
+it may not be enabled by default in BusyBox.&nbsp;<a class="footnote-backref" href="#fnref:2" title="Jump back to footnote 3 in the text">↩</a></p>
 </li>
 </ol>
 </div>
@@ -2820,7 +2853,7 @@ it may not be enabled by default in BusyBox.&#160;<a class="footnote-backref" hr
       <div class="md-copyright">
   
     <div class="md-copyright__highlight">
-      Copyright &copy; 2022-2025 The KernelKit Team
+      Copyright © 2022-2025 The KernelKit Team
     </div>
   
   
@@ -2846,5 +2879,7 @@ it may not be enabled by default in BusyBox.&#160;<a class="footnote-backref" hr
       <script src="../assets/javascripts/bundle.f55a23d4.min.js"></script>
       
     
-  </body>
-</html>
+  
+<script id="init-glightbox">const lightbox = GLightbox({"touchNavigation": true, "loop": false, "zoomable": true, "draggable": true, "openEffect": "zoom", "closeEffect": "zoom", "slideEffect": "slide"});
+document$.subscribe(()=>{ lightbox.reload(); });
+</script></body></html>

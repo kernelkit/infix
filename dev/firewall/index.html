@@ -1,0 +1,2552 @@
+<!DOCTYPE html><html lang="en" class="no-js"><head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Infix Documentation">
+      
+      
+      
+        <link rel="canonical" href="https://kernelkit.github.io/infix/dev/firewall/">
+      
+      
+        <link rel="prev" href="../networking/">
+      
+      
+        <link rel="next" href="../qos/">
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.21">
+    
+    
+      
+        <title>Firewall Configuration - User's Guide</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.2a3383ac.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.06af60db.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&amp;display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../extra.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  <link href="../assets/stylesheets/glightbox.min.css" rel="stylesheet"><script src="../assets/javascripts/glightbox.min.js"></script><style id="glightbox-style">
+            html.glightbox-open { overflow: initial; height: 100%; }
+            .gslide-title { margin-top: 0px; user-select: text; }
+            .gslide-desc { color: #666; user-select: text; }
+            .gslide-image img { background: black; }
+            .glightbox-clean .gslide-media { -webkit-box-shadow: none; box-shadow: none; }
+            .gscrollbar-fixer { padding-right: 15px; }
+            .gdesc-inner { font-size: 0.75rem; }
+            body[data-md-color-scheme="slate"] .gdesc-inner { background: var(--md-default-bg-color); }
+            body[data-md-color-scheme="slate"] .gslide-title { color: var(--md-default-fg-color); }
+            body[data-md-color-scheme="slate"] .gslide-desc { color: var(--md-default-fg-color); }
+        </style></head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="orange" data-md-color-accent="orange">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#firewall-documentation" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="https://kernelkit.org/" title="User's Guide" class="md-header__button md-logo" aria-label="User's Guide" data-md-component="logo">
+      
+  <img src="../logo-plain.png" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"></path></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            User's Guide
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Firewall Configuration
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="orange" data-md-color-accent="orange" aria-label="Switch to dark mode" type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"></path></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="black" data-md-color-accent="orange" aria-label="Switch to light mode" type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"></path></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"></path></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"></path></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"></path></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+          <a href="javascript:void(0)" class="md-search__icon md-icon" title="Share" aria-label="Share" data-clipboard data-clipboard-text="" data-md-component="search-share" tabindex="-1">
+            
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9a3 3 0 0 0-3 3 3 3 0 0 0 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.15c-.05.21-.08.43-.08.66 0 1.61 1.31 2.91 2.92 2.91s2.92-1.3 2.92-2.91A2.92 2.92 0 0 0 18 16.08"></path></svg>
+          </a>
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/kernelkit/infix/" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.0.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"></path></svg>
+  </div>
+  <div class="md-source__repository">
+    kernelkit/infix
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation">
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="https://kernelkit.org/" title="User's Guide" class="md-nav__button md-logo" aria-label="User's Guide" data-md-component="logo">
+      
+  <img src="../logo-plain.png" alt="logo">
+
+    </a>
+    User's Guide
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/kernelkit/infix/" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.0.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"></path></svg>
+  </div>
+  <div class="md-source__repository">
+    kernelkit/infix
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Introduction
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2">
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    CLI
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            CLI
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/introduction/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Introduction
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/configure/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Configuration
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/keybindings/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Keybindings
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/netcalc/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Network Calculator
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/tcpdump/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Network Monitoring
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/quick/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Quickstart Guide
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/text-editor/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Text Editor
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/upgrade/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Upgrading
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../container/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Docker Containers
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Networking
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            Networking
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../networking/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Network Configuration
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    Firewall Configuration
+    
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    Firewall Configuration
+    
+  </span>
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#introduction" class="md-nav__link">
+    <span class="md-ellipsis">
+      Introduction
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#visual-overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      Visual Overview
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#zones" class="md-nav__link">
+    <span class="md-ellipsis">
+      Zones
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Zones">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#default-zone" class="md-nav__link">
+    <span class="md-ellipsis">
+      Default Zone
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#intra-zone-traffic" class="md-nav__link">
+    <span class="md-ellipsis">
+      Intra-Zone Traffic
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#port-forwarding" class="md-nav__link">
+    <span class="md-ellipsis">
+      Port Forwarding
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#policies" class="md-nav__link">
+    <span class="md-ellipsis">
+      Policies
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Policies">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#symbolic-names" class="md-nav__link">
+    <span class="md-ellipsis">
+      Symbolic Names
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#custom-filters" class="md-nav__link">
+    <span class="md-ellipsis">
+      Custom Filters
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#default-behavior" class="md-nav__link">
+    <span class="md-ellipsis">
+      Default Behavior
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#services" class="md-nav__link">
+    <span class="md-ellipsis">
+      Services
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      Examples
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Examples">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#end-device-protection" class="md-nav__link">
+    <span class="md-ellipsis">
+      End Device Protection
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#homeoffice-router" class="md-nav__link">
+    <span class="md-ellipsis">
+      Home/Office Router
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#enterprise-gateway" class="md-nav__link">
+    <span class="md-ellipsis">
+      Enterprise Gateway
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#logging-and-monitoring" class="md-nav__link">
+    <span class="md-ellipsis">
+      Logging and Monitoring
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#netfilter-integration" class="md-nav__link">
+    <span class="md-ellipsis">
+      Netfilter Integration
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Netfilter Integration">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#packet-flow" class="md-nav__link">
+    <span class="md-ellipsis">
+      Packet Flow
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Packet Flow">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#prerouting-hook" class="md-nav__link">
+    <span class="md-ellipsis">
+      PREROUTING Hook
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#input-hook" class="md-nav__link">
+    <span class="md-ellipsis">
+      INPUT Hook
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#forward-hook" class="md-nav__link">
+    <span class="md-ellipsis">
+      FORWARD Hook
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#postrouting-hook" class="md-nav__link">
+    <span class="md-ellipsis">
+      POSTROUTING Hook
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#emergency-lockdown" class="md-nav__link">
+    <span class="md-ellipsis">
+      Emergency Lockdown
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../qos/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Quality of Service
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../eth-counters/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    RMON Counters
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tunnels/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Tunneling (L2/L3)
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../wifi/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Wireless LAN (WiFi)
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5">
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Services
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            Services
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../discovery/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Device Discovery
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../dhcp/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    DHCP Server
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6">
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    System
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            System
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../boot/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Boot Procedure
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../system/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Configuration
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../hardware/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Hardware Info &amp; Status
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../management/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Management
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../syslog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Syslog Support
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../upgrade/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Upgrade
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7">
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Scripting
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            Scripting
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../scripting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Introduction
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../scripting-sysrepocfg/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Legacy Scripting
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../scripting-prod/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Production Testing
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../scripting-netconf/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    With NETCONF
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../scripting-restconf/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    With RESTCONF
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8">
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Developer's Corner
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            Developer's Corner
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../branding/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Branding &amp; Releases
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../developers-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Developer's Guide
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../override-package/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Developing with Buildroot
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../netboot/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Netboot HowTo
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../testing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Regression Testing
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../test-arch/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Test System Architecture
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../virtual/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Virtual Environments
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../vpd/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Vital Product Data (VPD)
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../license/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Origin &amp; Licensing
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc">
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#introduction" class="md-nav__link">
+    <span class="md-ellipsis">
+      Introduction
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#visual-overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      Visual Overview
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#zones" class="md-nav__link">
+    <span class="md-ellipsis">
+      Zones
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Zones">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#default-zone" class="md-nav__link">
+    <span class="md-ellipsis">
+      Default Zone
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#intra-zone-traffic" class="md-nav__link">
+    <span class="md-ellipsis">
+      Intra-Zone Traffic
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#port-forwarding" class="md-nav__link">
+    <span class="md-ellipsis">
+      Port Forwarding
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#policies" class="md-nav__link">
+    <span class="md-ellipsis">
+      Policies
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Policies">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#symbolic-names" class="md-nav__link">
+    <span class="md-ellipsis">
+      Symbolic Names
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#custom-filters" class="md-nav__link">
+    <span class="md-ellipsis">
+      Custom Filters
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#default-behavior" class="md-nav__link">
+    <span class="md-ellipsis">
+      Default Behavior
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#services" class="md-nav__link">
+    <span class="md-ellipsis">
+      Services
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      Examples
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Examples">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#end-device-protection" class="md-nav__link">
+    <span class="md-ellipsis">
+      End Device Protection
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#homeoffice-router" class="md-nav__link">
+    <span class="md-ellipsis">
+      Home/Office Router
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#enterprise-gateway" class="md-nav__link">
+    <span class="md-ellipsis">
+      Enterprise Gateway
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#logging-and-monitoring" class="md-nav__link">
+    <span class="md-ellipsis">
+      Logging and Monitoring
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#netfilter-integration" class="md-nav__link">
+    <span class="md-ellipsis">
+      Netfilter Integration
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Netfilter Integration">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#packet-flow" class="md-nav__link">
+    <span class="md-ellipsis">
+      Packet Flow
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Packet Flow">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#prerouting-hook" class="md-nav__link">
+    <span class="md-ellipsis">
+      PREROUTING Hook
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#input-hook" class="md-nav__link">
+    <span class="md-ellipsis">
+      INPUT Hook
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#forward-hook" class="md-nav__link">
+    <span class="md-ellipsis">
+      FORWARD Hook
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#postrouting-hook" class="md-nav__link">
+    <span class="md-ellipsis">
+      POSTROUTING Hook
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#emergency-lockdown" class="md-nav__link">
+    <span class="md-ellipsis">
+      Emergency Lockdown
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/firewall.svg" data-desc-position="bottom"><img align="left" alt="Firewall" src="../img/firewall.svg" width="60"></a></p>
+<h1 id="firewall-documentation">Firewall Documentation<a class="headerlink" href="#firewall-documentation" title="Permanent link">¶</a></h1>
+<h2 id="introduction">Introduction<a class="headerlink" href="#introduction" title="Permanent link">¶</a></h2>
+<p>A zone-based firewall aims to <em>simplify network security</em>.  Instead of complex
+per-interface rules, you work with <strong>zones</strong> and <strong>policies</strong>.  Briefly, <ins>zones
+define a level of trust</ins> for all interfaces or networks assigned to it, and
+<ins>policies regulate the traffic flow</ins> between zones.</p>
+<figure id="__figure-caption_1">
+<p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/fw-concept.svg" data-desc-position="bottom"><img alt="Zone based concept" src="../img/fw-concept.svg" width="600"></a></p>
+<figcaption>
+<p><span class="caption-prefix">Figure 1.</span> Zones group interfaces, policies control traffic flows.</p>
+</figcaption>
+</figure>
+<p>Three distinct traffic flows exist: traffic destined for the host itself,
+traffic between interfaces within the same zone (intra-zone), and traffic
+between different zones (inter-zones).</p>
+<hr>
+<p>The zone approach is not just more intuitive and maintainable, it allows you
+to think more in terms of trust relationships:</p>
+<ul>
+<li>"internal networks can access the Internet"</li>
+<li>"Internet cannot access my internal network, except this port forward"</li>
+</ul>
+<p>When you add new interfaces to existing zones, they automatically inherit the
+established security policies.  The amount of actual rules <em>that matter to
+you</em> is kept to a minimum.</p>
+<div class="admonition tip">
+<p class="admonition-title">Impatient and ready to get going?</p>
+<p><a href="#examples">Fast forward to the Examples: End Device, Home/Office Router, Enterprise Gateway</a></p>
+</div>
+<h2 id="visual-overview">Visual Overview<a class="headerlink" href="#visual-overview" title="Permanent link">¶</a></h2>
+<p>Use the <strong>zone matrix</strong> to quickly audit your firewall configuration and
+identify potential security gaps.  It provides an overview and shows the
+relationship between zones and the policies that connect them.  Each cell in
+the matrix represents a potential traffic flow, with rows indicating the
+ingress zone and columns the egress zone.</p>
+<figure id="__figure-caption_2">
+<p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/fw-matrix.png" data-desc-position="bottom"><img alt="Firewall Matrix" src="../img/fw-matrix.png"></a></p>
+<figcaption>
+<p><span class="caption-prefix">Figure 2.</span> Example output from <kbd>show firewall</kbd> command.</p>
+</figcaption>
+</figure>
+<p>The matrix uses visual indicators to show the status of each zone and policy:</p>
+<p><strong>✓ Green checkmark</strong> — traffic is explicitly allowed by policy<br>
+<strong>✗ Red cross</strong> — traffic is blocked (default behavior)<br>
+<strong>⚠ Yellow warning</strong> — watch out! Some traffic allowed, such as port forwarding rules</p>
+<p>This visualization helps you quickly understand your firewall's behavior and
+identify any unintended gaps or overly permissive rules in your configuration.</p>
+<div class="admonition tip">
+<p class="admonition-title">Use the <span class="keys"><kbd class="key-question">?</kbd></span> key in the CLI</p>
+<p>This admin-exec (top-level) CLI command has sub-commands that you can use to
+drill down on the operational data.  Tap the <span class="keys"><kbd class="key-question">?</kbd></span> key once to see an
+overview after <kbd>show firewall</kbd>, or just use the classic UNIX <span class="keys"><kbd class="key-tab">Tab</kbd></span> key to
+complete everything until you've found your command.</p>
+</div>
+<h2 id="zones">Zones<a class="headerlink" href="#zones" title="Permanent link">¶</a></h2>
+<p>Zones are logical groupings of network interfaces or IP networks that share
+the same trust level.  Each zone has a <em>default action</em> that determines what
+happens to traffic destined for the host itself (INPUT chain).  A LAN zone may
+have this set to <em>accept</em>, while a DMZ zone may be set to <em>reject</em> by default
+and only allow a subset of available <em>services</em> (e.g., DHCP, DNS, SSH) that
+devices in the DMZ can use to reach the host.</p>
+<div class="admonition tip">
+<p class="admonition-title">Important</p>
+<p>Interfaces and networks are mutually exclusive in zones — attempting to
+configure both will result in a validation error.  When setting up
+<a href="#port-forwarding"><em>port forwarding</em></a> from one zone to another, the
+destination network must be declared in a zone.</p>
+</div>
+<h3 id="default-zone">Default Zone<a class="headerlink" href="#default-zone" title="Permanent link">¶</a></h3>
+<p>You must specify a default zone.  This serves as a safety net: any interface
+not explicitly assigned to a zone automatically belongs to the default zone,
+ensuring network interfaces remain protected by the firewall.  This automatic
+assignment is particularly useful when configuring new interfaces (e.g.,
+VLANs, bridges, or hotplugged devices).</p>
+<p>Choose your default zone carefully — it should be the most restrictive zone
+appropriate for unmanaged interfaces.  For routers, this is typically the
+<code>wan</code> zone, but you can of course also set up a dedicated <code>block</code> zone. In the
+CLI, when first enabling the firewall, a <code>public</code> zone is created.  See more
+about this in the <a href="#end-device-protection">example below</a>.</p>
+<div class="admonition tip">
+<p class="admonition-title">Remember IP forwarding on interfaces!</p>
+<p>Firewall policies only control whether traffic is allowed on input, to be
+forwarded, or blocked (default).  For the actual routing between interfaces
+to work, you must also enable <a href="../networking/#ipv4-forwarding">IP forwarding</a>
+on the relevant interfaces.</p>
+</div>
+<h3 id="intra-zone-traffic">Intra-Zone Traffic<a class="headerlink" href="#intra-zone-traffic" title="Permanent link">¶</a></h3>
+<p>Traffic between different interfaces, or networks, in the same zone is not
+forwarded by default.  In most cases, if devices on separate interfaces need
+to communicate, they should be in different zones with a policy between them.
+Alternatively, if you want true LAN-like behavior, <a href="../networking/#bridging">bridge the interfaces</a>
+at layer-2 instead of routing between them at layer-3.</p>
+<p><em>Intra-zone</em> forwarding — routing traffic within a single zone — is rarely
+needed.  But if you do require it, create a policy where both ingress and
+egress are set to the same zone, e.g., <code>lan</code> → <code>lan</code>.</p>
+<h3 id="port-forwarding">Port Forwarding<a class="headerlink" href="#port-forwarding" title="Permanent link">¶</a></h3>
+<p>Port forwarding, also known as destination NAT (DNAT), redirects inbound
+traffic to another address and/or port.  This allows external access to
+internal services.  See <a href="#enterprise-gateway">Enterprise Gateway</a> for an
+example.</p>
+<p>Each zone can have port forwarding rules that apply to traffic arriving at
+that zone's interfaces or matching its networks.  The forwarded traffic must
+then be allowed by appropriate policies to reach the destination zone.</p>
+<p>The <em>Zone Matrix</em> shows a ⚠ conditional warning flag, coloring the cell
+yellow, when exceptions like port forwarding are active.</p>
+<h2 id="policies">Policies<a class="headerlink" href="#policies" title="Permanent link">¶</a></h2>
+<p>In short, policy rules control traffic <strong>between</strong> zones.  By default all
+inter-zone (and intra-zone) traffic is rejected.  Meaning you must explicitly
+allow the traffic flows you intend.</p>
+<figure id="__figure-caption_3">
+<p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/fw-zones.svg" data-desc-position="bottom"><img alt="Zone based firewall" src="../img/fw-zones.svg" width="600"></a></p>
+<figcaption>
+<p><span class="caption-prefix">Figure 3.</span> Example of common traffic flows (policies) between zones.</p>
+</figcaption>
+</figure>
+<p>IP masquerading (SNAT) is a policy setting that applies to traffic egressing
+a target zone.  (Essential for Internet access from private networks.)</p>
+<p>A policy, like zones, have a default action.  If it is <em>not</em> set to <code>accept</code>
+you must specify which services on the host any zone interface and network are
+allowed access to.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Policy rules apply in-order, the first matching rule with action <code>drop</code> will
+terminate the traffic flow.  Use action <code>continue</code> to allow processing to go
+to the next rule, until the last (implicit) default-drop rule at the end.</p>
+<p>The CLI currently does not support reordering rules.  As a workaround, save
+your <code>running-config</code> to <code>startup-config</code>, then exit to the shell and edit
+the file with <code>edit /cfg/startup-config.cfg</code>.</p>
+</div>
+<p>See the <a href="#enterprise-gateway">examples below</a> for how to set up a policy.  The
+built-in help system can also be useful:
+<code></code></p><pre><code>admin@example:/config/firewall/policy/lan-to-dmz/&gt; <b>help masquerade</b>
+<b>NAME</b>
+        masquerade <true false><br>
+<b>DESCRIPTION</b>
+        Enable masquerading (SNAT) for traffic matching this policy.<br>
+        Matching traffic will have their source IP address changed on egress,
+        using the IP address of the interface the traffic egresses.";<br>
+admin@example:/config/firewall/policy/lan-to-dmz/&gt;
+</true></code></pre><p></p>
+<h3 id="symbolic-names">Symbolic Names<a class="headerlink" href="#symbolic-names" title="Permanent link">¶</a></h3>
+<p>The symbolic names <code>HOST</code> and <code>ANY</code> are available for use in both <code>ingress</code>
+and <code>egress</code> zones.  In fact, the CLI uses inference when first enabling the
+firewall to inject a default policy to allow automatic IPv6 address
+assignment.</p>
+<ul>
+<li><code>HOST</code> → <code>ANY</code>: Control device to any outbound connection (default: allowed)</li>
+<li><code>ANY</code> → <code>HOST</code>: Control what can reach device services (uncommon, usually per-zone)</li>
+<li>Zone → <code>HOST</code>: Allow specific zone to access device services</li>
+</ul>
+<h3 id="custom-filters">Custom Filters<a class="headerlink" href="#custom-filters" title="Permanent link">¶</a></h3>
+<p>For more advanced firewall scenarios <em>custom filters</em> can be used.  Currently
+only various ICMP type traffic control is supported.  Enough to support the
+built-in <code>allow-host-ipv6</code> policy and allow certain ICMP types on input or
+forward.</p>
+<p>You can inspect this built-in (locked) policy from admin-exec level with the
+command: <kbd>show firewall policy allow-host-ipv6</kbd>.</p>
+<h3 id="default-behavior">Default Behavior<a class="headerlink" href="#default-behavior" title="Permanent link">¶</a></h3>
+<p>ICMP messages (particularly <code>echo-request</code> and <code>echo-reply</code>) can be used to
+reveal network information for malicious purposes. Therefore, the firewall
+blocks ICMP requests by default. This applies unless the zone's default
+action is <code>accept</code>.</p>
+<p>To enable <code>echo-request</code> (IPv4) for any interface, or per zone when action is
+set to drop or reject, set up a dedicated policy with <code>ingress ANY</code> and <code>egress
+HOST</code> that use a custom filter to accept that ICMP type.  Make this policy the
+first rule in your list of policies, and remember to use <code>continue</code> for
+non-matching traffic.</p>
+<p>Another built-in behavior is automatically allowing "established,related"
+return traffic flows. This uses connection tracking - the firewall remembers
+outbound connections you initiate and automatically allows the corresponding
+inbound response traffic. This means you only need to configure rules for
+new connections; the firewall handles return traffic automatically without
+additional rules.</p>
+<h2 id="services">Services<a class="headerlink" href="#services" title="Permanent link">¶</a></h2>
+<p>Several pre-defined services exist, that cover most use-cases, but you can
+also define custom services for applications not covered by the built-in ones.</p>
+<p>The firewall includes over 100 pre-defined services, such as:</p>
+<ul>
+<li><strong><code>ssh</code></strong> — Secure Shell (port 22/tcp)</li>
+<li><strong><code>http</code></strong> — Web traffic (port 80/tcp)</li>
+<li><strong><code>https</code></strong> — Secure web traffic (port 443/tcp)</li>
+<li><strong><code>dns</code></strong> — Domain Name System (port 53/tcp and 53/udp)</li>
+<li><strong><code>dhcp</code></strong> — DHCP server (port 67/udp)</li>
+<li><strong><code>dhcpv6-client</code></strong> — DHCPv6 client traffic</li>
+<li><strong><code>netconf</code></strong> — Network Configuration Protocol (port 830/tcp)</li>
+<li><strong><code>restconf</code></strong> — REST-based Network Configuration Protocol (port 443/tcp)</li>
+</ul>
+<div class="admonition tip">
+<p class="admonition-title">Use the <span class="keys"><kbd class="key-question">?</kbd></span> key in the CLI</p>
+<p>See the YANG model for the full list, or tap the <span class="keys"><kbd class="key-question">?</kbd></span> key
+when setting up an allowed host service in a zone <code>set service</code></p>
+</div>
+<h2 id="examples">Examples<a class="headerlink" href="#examples" title="Permanent link">¶</a></h2>
+<h3 id="end-device-protection">End Device Protection<a class="headerlink" href="#end-device-protection" title="Permanent link">¶</a></h3>
+<p>This is the default firewall setup, useful for end devices on untrusted
+networks.  It provides maximum protection while allowing essential
+connectivity.
+<code></code></p><pre><code>admin@example:/&gt; <b>configure</b>
+admin@example:/config/&gt; <b>edit firewall</b>
+admin@example:/config/firewall/&gt; <b>show</b>
+default public;
+zone public {
+  action reject;
+  description "Public, unknown network. Only SSH and DHCPv6 client allowed.";
+  service dhcpv6-client;
+  service ssh;
+}
+admin@example:/config/firewall/&gt; <b>leave</b>
+</code></pre><p></p>
+<p>The <code>reject</code> action differs from <code>drop</code> in that it responds to ICMP messages,
+although maybe not how you may think.  Pinging the device we may<sup id="fnref:1"><a class="footnote-ref" href="#fn:1">1</a></sup> see this:
+<code></code></p><pre><code><b>$</b> ping 192.168.122.161
+From 192.168.122.161 icmp_seq=1 <u>Packet filtered</u>
+</code></pre><p></p>
+<p>If we run <code>tcpdump</code> it shows us why:
+<code></code></p><pre><code><b>$</b> tcpdump -lni eth0
+20:10:40.245707 IP 192.168.122.1 &gt; 192.168.122.161: ICMP echo request, id 56838, seq 1, length 64
+20:10:40.245961 IP 192.168.122.161 &gt; 192.168.122.1: ICMP <u>host 192.168.122.161 unreachable - admin prohibited filter</u>, length 92
+</code></pre><p></p>
+<p>The key here is that, yes the device responds, but not with <code>ICMP reply</code> but
+<code>ICMP unreachable</code>, and a little helpful message.</p>
+<p>The default zone is <code>public</code>, so all interfaces that are not explicitly
+assigned to another zone will be operationally placed in this zone as a
+safeguard.  Inspect this from admin-exec context with <kbd>show firewall</kbd>, as can
+be seen in the below screenshot, the only interface <code>e1</code> has been assigned
+automatically to the public zone.  This information is also saved to the
+system log.</p>
+<figure id="__figure-caption_4">
+<p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/fw-default.png" data-desc-position="bottom"><img alt="Initial firewall setup with default zone" src="../img/fw-default.png"></a></p>
+<figcaption>
+<p><span class="caption-prefix">Figure 4.</span> Zone matrix and firewall overview from <kbd>show firewall</kbd>.</p>
+</figcaption>
+</figure>
+<div class="admonition tip">
+<p class="admonition-title">Important</p>
+<p>These defaults are <em>inferred</em> for interactive CLI users.  Enabling the
+firewall using NETCONF/RESTCONF will not yield the same results.</p>
+</div>
+<h3 id="homeoffice-router">Home/Office Router<a class="headerlink" href="#homeoffice-router" title="Permanent link">¶</a></h3>
+<p>For typical routers that need to protect internal devices while providing
+internet access.  The LAN zone trusts internal devices, while the WAN zone
+blocks external threats.
+<code></code></p><pre><code>admin@example:/&gt; <b>configure</b>
+admin@example:/config/&gt; <b>edit firewall</b>
+admin@example:/config/firewall/&gt; <b>set default wan</b>
+admin@example:/config/firewall/&gt; <b>edit zone lan</b>
+admin@example:/config/firewall/zone/lan/&gt; <b>set description "Internal LAN network - trusted"</b>
+admin@example:/config/firewall/zone/lan/&gt; <b>set action accept</b>
+admin@example:/config/firewall/zone/lan/&gt; <b>set interface eth1</b>
+admin@example:/config/firewall/zone/lan/&gt; <b>set service ssh</b>
+admin@example:/config/firewall/zone/lan/&gt; <b>set service dhcp</b>
+admin@example:/config/firewall/zone/lan/&gt; <b>set service dns</b>
+admin@example:/config/firewall/zone/lan/&gt; <b>end</b>
+admin@example:/config/firewall/&gt; <b>edit zone wan</b>
+admin@example:/config/firewall/zone/wan/&gt; <b>set description "External WAN interface - untrusted"</b>
+admin@example:/config/firewall/zone/wan/&gt; <b>set action drop</b>
+admin@example:/config/firewall/zone/wan/&gt; <b>set interface eth0</b>
+admin@example:/config/firewall/zone/wan/&gt; <b>end</b>
+admin@example:/config/firewall/&gt; <b>edit policy loc-to-wan</b>
+admin@example:/config/firewall/policy/loc-to-wan/&gt; <b>set description "Allow LAN traffic to WAN with SNAT"</b>
+admin@example:/config/firewall/policy/loc-to-wan/&gt; <b>set ingress lan</b>
+admin@example:/config/firewall/policy/loc-to-wan/&gt; <b>set egress wan</b>
+admin@example:/config/firewall/policy/loc-to-wan/&gt; <b>set action accept</b>
+admin@example:/config/firewall/policy/loc-to-wan/&gt; <b>set masquerade</b>
+admin@example:/config/firewall/policy/loc-to-wan/&gt; <b>leave</b>
+</code></pre><p></p>
+<h3 id="enterprise-gateway">Enterprise Gateway<a class="headerlink" href="#enterprise-gateway" title="Permanent link">¶</a></h3>
+<p>For businesses that need to host public services while protecting internal
+resources.  We can build upon the Home/Office Router example above and add
+a DMZ zone with additional policies for controlled access.
+<code></code></p><pre><code>admin@example:/&gt; <b>configure</b>
+admin@example:/config/&gt; <b>edit firewall zone dmz</b>
+admin@example:/config/firewall/zone/dmz/&gt; <b>set description "Semi-trusted public services"</b>
+admin@example:/config/firewall/zone/dmz/&gt; <b>set action drop</b>
+admin@example:/config/firewall/zone/dmz/&gt; <b>set interface eth1</b>
+admin@example:/config/firewall/zone/dmz/&gt; <b>set service ssh</b>
+admin@example:/config/firewall/zone/dmz/&gt; <b>end</b>
+admin@example:/config/firewall/&gt; <b>edit policy loc-to-wan</b>
+admin@example:/config/firewall/policy/loc-to-wan/&gt; <b>set description "Allow local networks (LAN+DMZ) to WAN with SNAT"</b>
+admin@example:/config/firewall/policy/loc-to-wan/&gt; <b>set ingress dmz</b>
+admin@example:/config/firewall/policy/loc-to-wan/&gt; <b>set egress wan</b>
+admin@example:/config/firewall/policy/loc-to-wan/&gt; <b>set action accept</b>
+admin@example:/config/firewall/policy/loc-to-wan/&gt; <b>set masquerade</b>
+admin@example:/config/firewall/policy/loc-to-wan/&gt; <b>end</b>
+admin@example:/config/firewall/&gt; <b>edit policy lan-to-dmz</b>
+admin@example:/config/firewall/policy/lan-to-dmz/&gt; <b>set description "Allow LAN to manage DMZ services"</b>
+admin@example:/config/firewall/policy/lan-to-dmz/&gt; <b>set ingress lan</b>
+admin@example:/config/firewall/policy/lan-to-dmz/&gt; <b>set egress dmz</b>
+admin@example:/config/firewall/policy/lan-to-dmz/&gt; <b>set action accept</b>
+admin@example:/config/firewall/policy/lan-to-dmz/&gt; <b>end</b>
+admin@example:/config/firewall/&gt; <b>edit zone wan port-forward 8080 tcp</b>
+admin@example:/config/firewall/zone/wan/port-forward/8080/tcp/&gt; <b>set to addr 192.168.2.10</b>
+admin@example:/config/firewall/zone/wan/port-forward/8080/tcp/&gt; <b>set to port 80</b>
+admin@example:/config/firewall/zone/wan/port-forward/8080/tcp/&gt; <b>leave</b>
+</code></pre><p></p>
+<p>This adds a DMZ zone for public services, updates the internet access policy
+to include DMZ traffic, allows LAN management of DMZ services, and forwards
+external web traffic to the DMZ server.</p>
+<h2 id="logging-and-monitoring">Logging and Monitoring<a class="headerlink" href="#logging-and-monitoring" title="Permanent link">¶</a></h2>
+<p>Different log levels are available to monitor and debug firewall behavior.
+Configure logging using the CLI:
+<code></code></p><pre><code>admin@example:/&gt; <b>configure</b>
+admin@example:/config/&gt; <b>edit firewall</b>
+admin@example:/config/firewall/&gt; <b>set logging all</b>
+admin@example:/config/firewall/&gt; <b>leave</b>
+</code></pre><p></p>
+<p>Firewall logs help you understand traffic patterns and security events.  The
+CLI admin-exec command <kbd>show firewall</kbd> shows the last 10 log messages in the
+overview:</p>
+<figure id="__figure-caption_5">
+<p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/fw-logs.png" data-desc-position="bottom"><img alt="Firewall logs" src="../img/fw-logs.png" width="100%"></a></p>
+<figcaption>
+<p><span class="caption-prefix">Figure 5.</span> Summary of recent logs at the end of <kbd>show firewall</kbd>.</p>
+</figcaption>
+</figure>
+<p>Use the command <kbd>show log firewall.log</kbd> to display the full logfile
+(remember, the syslog daemon rotates and zips too big log files).  You can
+also use the <kbd>follow firewall.log</kbd> command to continuously monitor
+firewall log messages.</p>
+<h2 id="netfilter-integration">Netfilter Integration<a class="headerlink" href="#netfilter-integration" title="Permanent link">¶</a></h2>
+<p>The Infix firewall operates through Linux netfilter hooks.  Understanding how
+the <em>zones</em> and <em>policy</em> concepts map to these hooks will hopefully help you
+understand the firewall's behavior and ease troubleshooting.</p>
+<h3 id="packet-flow">Packet Flow<a class="headerlink" href="#packet-flow" title="Permanent link">¶</a></h3>
+<figure id="__figure-caption_6">
+<p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/fw-netfilter.svg" data-desc-position="bottom"><img alt="Netfilter hooks" src="../img/fw-netfilter.svg" width="750"></a></p>
+<figcaption>
+<p><span class="caption-prefix">Figure 6.</span> Linux netfilter hooks in layer-3 traffic flow.</p>
+</figcaption>
+</figure>
+<table>
+<thead>
+<tr>
+<th><strong>Netfilter Hook</strong></th>
+<th><strong>Function</strong></th>
+<th><strong>Description</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>prerouting</code></td>
+<td>ZONE</td>
+<td>Classification of incoming traffic, match interfaces/networks with zones</td>
+</tr>
+<tr>
+<td><code>prerouting</code></td>
+<td>ZONE</td>
+<td>Port forwarding (DNAT) from zone configuration</td>
+</tr>
+<tr>
+<td><code>input</code></td>
+<td>ZONE</td>
+<td>Host input filtering (<code>services</code>)</td>
+</tr>
+<tr>
+<td><code>input</code></td>
+<td>ZONE</td>
+<td>Default action for non-matching services (<code>action</code>)</td>
+</tr>
+<tr>
+<td><code>forward</code></td>
+<td>POLICY</td>
+<td>Allow traffic between zones (inter-zone rules)</td>
+</tr>
+<tr>
+<td><code>postrouting</code></td>
+<td>POLICY</td>
+<td>Masquerade (SNAT) when traffic egresses a zone</td>
+</tr>
+</tbody>
+</table>
+<h4 id="prerouting-hook">PREROUTING Hook<a class="headerlink" href="#prerouting-hook" title="Permanent link">¶</a></h4>
+<ul>
+<li><strong>Zone Classification</strong>: Traffic is tagged based on ingress interface or
+  source network</li>
+<li><strong>Port Forwarding</strong>: DNAT from zone configuration occurs before routing decisions</li>
+<li><strong>Connection Tracking</strong>: Early state establishment for stateful filtering</li>
+</ul>
+<h4 id="input-hook">INPUT Hook<a class="headerlink" href="#input-hook" title="Permanent link">¶</a></h4>
+<ul>
+<li><strong>ANY-to-HOST Policies</strong>: Enforces policy rules for traffic destined to the
+  host itself</li>
+<li><strong>Zone Services</strong>: Allows configured services (SSH, HTTP, etc.) based on
+  zone trust level</li>
+<li><strong>Zone Action</strong>: Applies a default action (accept/reject/drop) for
+  unmatched traffic</li>
+</ul>
+<h4 id="forward-hook">FORWARD Hook<a class="headerlink" href="#forward-hook" title="Permanent link">¶</a></h4>
+<ul>
+<li><strong>Policy Enforcement</strong>: Primary location for inter-zone traffic filtering</li>
+<li><strong>Custom Filters</strong>: ICMP and other protocol-specific rules within policies</li>
+<li><strong>Service Matching</strong>: Allows or denies services based on policy configuration</li>
+</ul>
+<h4 id="postrouting-hook">POSTROUTING Hook<a class="headerlink" href="#postrouting-hook" title="Permanent link">¶</a></h4>
+<ul>
+<li><strong>Masquerading</strong>: Source NAT for outbound traffic when policies enable masquerading</li>
+</ul>
+<h2 id="emergency-lockdown">Emergency Lockdown<a class="headerlink" href="#emergency-lockdown" title="Permanent link">¶</a></h2>
+<p>For security emergencies (active breaches, suspicious activity), the firewall
+supports an immediate lockdown mode that blocks ALL traffic.</p>
+<div class="admonition danger">
+<p class="admonition-title">Danger</p>
+<p>This will immediately terminate all network connections, including SSH.
+Physical console access is required to restore normal operation.  It is
+also possible to restore normal operation by power-cycling the device.</p>
+</div>
+<p>To activate emergency lockdown:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="err">~$</span><span class="w"> </span><span class="err">curl</span><span class="w"> </span><span class="mi">-</span><span class="err">kX</span><span class="w"> </span><span class="err">POST</span><span class="w"> </span><span class="mi">-</span><span class="err">u</span><span class="w"> </span><span class="err">admi</span><span class="kc">n</span><span class="p">:</span><span class="err">admi</span><span class="kc">n</span><span class="w"> </span><span class="mi">-</span><span class="err">H</span><span class="w"> </span><span class="s2">"Content-Type: application/yang-data+json"</span><span class="w"> </span><span class="err">\</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">        </span><span class="mi">-</span><span class="err">d</span><span class="w"> </span><span class="err">'</span><span class="p">{</span><span class="nt">"infix-firewall:input"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">"operation"</span><span class="p">:</span><span class="w"> </span><span class="s2">"now"</span><span class="p">}}</span><span class="err">'</span><span class="w">                   </span><span class="err">\</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">        </span><span class="err">h</span><span class="kc">tt</span><span class="err">ps</span><span class="p">:</span><span class="c1">//example.local/restconf/operations/infix-firewall:firewall/lockdown-mode</span>
+</code></pre></div>
+<p>To cancel lockdown mode (requires console access):</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="err">~$</span><span class="w"> </span><span class="err">curl</span><span class="w"> </span><span class="mi">-</span><span class="err">kX</span><span class="w"> </span><span class="err">POST</span><span class="w"> </span><span class="mi">-</span><span class="err">u</span><span class="w"> </span><span class="err">admi</span><span class="kc">n</span><span class="p">:</span><span class="err">admi</span><span class="kc">n</span><span class="w"> </span><span class="mi">-</span><span class="err">H</span><span class="w"> </span><span class="s2">"Content-Type: application/yang-data+json"</span><span class="w"> </span><span class="err">\</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">        </span><span class="mi">-</span><span class="err">d</span><span class="w"> </span><span class="err">'</span><span class="p">{</span><span class="nt">"infix-firewall:input"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">"operation"</span><span class="p">:</span><span class="w"> </span><span class="s2">"cancel"</span><span class="p">}}</span><span class="err">'</span><span class="w">                </span><span class="err">\</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">        </span><span class="err">h</span><span class="kc">tt</span><span class="err">ps</span><span class="p">:</span><span class="c1">//example.local/restconf/operations/infix-firewall:firewall/lockdown-mode</span>
+</code></pre></div>
+<p>You can check the current lockdown state:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="err">~$</span><span class="w"> </span><span class="err">curl</span><span class="w"> </span><span class="mi">-</span><span class="err">kX</span><span class="w"> </span><span class="err">GET</span><span class="w"> </span><span class="mi">-</span><span class="err">u</span><span class="w"> </span><span class="err">admi</span><span class="kc">n</span><span class="p">:</span><span class="err">admi</span><span class="kc">n</span><span class="w"> </span><span class="mi">-</span><span class="err">H</span><span class="w"> </span><span class="err">'Accep</span><span class="kc">t</span><span class="p">:</span><span class="w"> </span><span class="err">applica</span><span class="kc">t</span><span class="err">io</span><span class="kc">n</span><span class="err">/ya</span><span class="kc">n</span><span class="err">g</span><span class="mi">-</span><span class="err">da</span><span class="kc">ta</span><span class="err">+jso</span><span class="kc">n</span><span class="err">'</span><span class="w"> </span><span class="err">\</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">        </span><span class="err">h</span><span class="kc">tt</span><span class="err">ps</span><span class="p">:</span><span class="c1">//example.local/restconf/data/infix-firewall:firewall/lockdown</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="p">{</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">  </span><span class="nt">"infix-firewall:firewall"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">    </span><span class="nt">"lockdown"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">  </span><span class="p">}</span>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="p">}</span>
+</code></pre></div>
+<div class="footnote">
+<hr>
+<ol>
+<li id="fn:1">
+<p>The output from ping clients differ A LOT.  Some do not consider ICMP
+unreachable to be a proper response and it will appear as if the device is
+not responding at all.  Use <code>tcpdump</code> or <code>wireshark</code> to get to the bottom
+of network mysteries.&nbsp;<a class="footnote-backref" href="#fnref:1" title="Jump back to footnote 1 in the text">↩</a></p>
+</li>
+</ol>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright © 2022-2025 The KernelKit Team
+    </div>
+  
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+      <div class="md-progress" data-md-component="progress" role="progressbar"></div>
+    
+    
+    
+      
+      <script id="__config" type="application/json">{"base": "..", "features": ["toc.follow", "navigation.path", "navigation.instant", "navigation.instant.progress", "navigation.tracking", "navigation.indexes", "search.highlight", "search.share", "content.code.copy", "content.code.annotate", "content.footnote.tooltips"], "search": "../assets/javascripts/workers/search.973d3a69.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.f55a23d4.min.js"></script>
+      
+    
+  
+<script id="init-glightbox">const lightbox = GLightbox({"touchNavigation": true, "loop": false, "zoomable": true, "draggable": true, "openEffect": "zoom", "closeEffect": "zoom", "slideEffect": "slide"});
+document$.subscribe(()=>{ lightbox.reload(); });
+</script></body></html>
