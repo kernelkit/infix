@@ -18,7 +18,7 @@ regular bridge, a VETH pair connects the container to the bridge.
 """
 import base64
 import infamy
-from   infamy.util import until
+from   infamy.util import until, curl
 
 with infamy.Test() as test:
     NAME  = "web-br0-veth"
