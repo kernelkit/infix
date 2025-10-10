@@ -211,7 +211,7 @@ load_archive()
     fi
 
     [ -n "$quiet" ] || log "Loading OCI image $dir ..."
-    output=$(podman load -qi "$dir")
+    output=$(nice podman load -qi "$dir")
 
     # Extract image ID from podman load output:
     # "Loaded image: sha256:cd9d0aaf81be..."
@@ -342,7 +342,7 @@ create()
 
     # shellcheck disable=SC2048
     log "podman create --name $name --conmon-pidfile=$pidfile $args $image $*"
-    if podman create --name "$name" --conmon-pidfile="$pidfile" $args "$image" $*; then
+    if nice podman create --name "$name" --conmon-pidfile="$pidfile" $args "$image" $*; then
 	[ -n "$quiet"  ] || log "Successfully created container $name from $image"
 	[ -n "$manual" ] || start "$name"
 
