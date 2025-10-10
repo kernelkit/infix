@@ -116,4 +116,4 @@ def curl(url, timeout=10):
             return response.read().decode('utf-8', errors='replace')
     except (urllib.error.URLError, ConnectionResetError, UnicodeEncodeError) as e:
         print(f"[WARN] curl: failed to fetch {url}: {e}")
-        return None
+        return ""

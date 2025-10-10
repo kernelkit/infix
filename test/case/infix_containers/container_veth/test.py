@@ -25,6 +25,7 @@ with infamy.Test() as test:
     DUTIP = "10.0.0.2"
     OURIP = "10.0.0.1"
     URL   = f"http://{DUTIP}:91/index.html"
+    MESG  = "It works"
 
     with test.step("Set up topology and attach to target DUT"):
         env = infamy.Env()
@@ -97,13 +98,12 @@ with infamy.Test() as test:
         until(lambda: c.running(NAME), attempts=60)
 
     _, hport = env.ltop.xlate("host", "data")
-    url = infamy.Furl(URL)
 
     with infamy.IsolatedMacVlan(hport) as ns:
         ns.addip(OURIP)
         with test.step("Verify basic DUT connectivity, host:data can ping DUT 10.0.0.2"):
             ns.must_reach(DUTIP)
         with test.step("Verify container 'web-br0-veth' is reachable on http://10.0.0.2:91"):
-            until(lambda: url.nscheck(ns, "It works"), attempts=10)
+            until(lambda: MESG in ns.call(lambda: curl(URL)), attempts=10)
 
     test.succeed()

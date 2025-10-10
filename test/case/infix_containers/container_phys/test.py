@@ -6,14 +6,15 @@ Verify connectivity with a simple web server container that's been
 given a physical interface instead of an end of a VETH pair.
 """
 import infamy
-from   infamy.util import until, to_binary
+from   infamy.util import until, to_binary, curl
 
 with infamy.Test() as test:
     NAME  = "web-phys"
     DUTIP = "10.0.0.2"
     OURIP = "10.0.0.1"
-    MESG  = "Kilroy was here"
-    BODY  = f"<html><body><p>{MESG}</p></body></html>"
+    MESG1 = "It works"
+    MESG2  = "Kilroy was here"
+    BODY  = f"<html><body><p>{MESG2}</p></body></html>"
     URL   = f"http://{DUTIP}:91/index.html"
 
     with test.step("Set up topology and attach to target DUT"):
@@ -60,7 +61,6 @@ with infamy.Test() as test:
         until(lambda: c.running(NAME), attempts=60)
 
     _, hport = env.ltop.xlate("host", "data")
-    url = infamy.Furl(URL)
 
     with infamy.IsolatedMacVlan(hport) as ns:
         ns.addip(OURIP)
@@ -68,7 +68,7 @@ with infamy.Test() as test:
             ns.must_reach(DUTIP)
 
         with test.step("Verify container is reachable on http://10.0.0.2:91"):
-            until(lambda: url.nscheck(ns, "It works"), attempts=10)
+            until(lambda: MESG1 in ns.call(lambda: curl(URL)), attempts=10)
 
         with test.step("Add a content mount, overriding index.html"):
             # Verify modifying a running container takes, issue #930
@@ -88,6 +88,6 @@ with infamy.Test() as test:
             })
 
         with test.step("Verify server is restarted and returns new content"):
-            until(lambda: url.nscheck(ns, MESG), attempts=60)
+            until(lambda: MESG2 in ns.call(lambda: curl(URL)), attempts=60)
 
     test.succeed()
