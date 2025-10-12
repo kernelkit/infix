@@ -584,7 +584,7 @@ usage:
   container [opt] cmd [arg]
 
 options:
-  -a, --all                Show all, of something
+  -a, --all                Show all, do all, remove all, of something
       --dns NAMESERVER     Set nameserver(s) when creating a container
       --dns-search LIST    Set host lookup search list when creating container
       --cap-add CAP        Add capability to unprivileged container
@@ -624,7 +624,7 @@ commands:
   list    [image | oci]    List names (only) of containers, images, or OCI archives
   load    [NAME | URL] NM  Load OCI tarball fileNAME or URL to image NM
   locate                   Find container that currently owns '--net IFNAME'
-  remove   IMAGE           Remove an (unused) container image
+  remove  [IMAGE]          Remove an image, or prune unused images including OCI archives
   restart [network] NAME   Restart a (crashed) container or container(s) using network
   run      NAME [CMD]      Run a container interactively, with an optional command
   save     IMAGE FILE      Save a container image to an OCI tarball FILE[.tar.gz]
@@ -876,7 +876,14 @@ case $cmd in
 	podman pull "$@"
 	;;
     remove)
-	podman rmi $all $force -i "$1"
+	if [ -n "$all" ]; then
+	    log "Removing all OCI archives from $DOWNLOADS directory ..."
+	    find "${DOWNLOADS:?}" -mindepth 1 -exec rm -rf {} +
+	    log "Removing all unused container images ..."
+	    podman image prune $all $force
+	else
+	    podman rmi $force -i "$1"
+	fi
 	;;
     run)
 	img=$1
