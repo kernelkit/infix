@@ -614,6 +614,50 @@ empty: then rsync".
 > volume between containers.  All the tricks possible with volumes may
 > be added in a later release.
 
+### Volume Management
+
+Volumes are persistent storage that survive container restarts and image
+upgrades, making them ideal for application data. However, this also means
+they **are not automatically removed** when a container is deleted from the
+configuration.
+
+This design choice prevents accidental data loss, especially in scenarios
+where:
+
+ - A container is temporarily removed and re-added with the same name
+ - A container is replaced with a different configuration but same name
+ - System upgrades or configuration changes affect container definitions
+
+To clean up unused volumes and reclaim disk space, use the admin-exec
+command:
+
+    admin@example:/> container prune
+    Deleted Images
+    ...
+    Deleted Volumes
+    ntpd-varlib
+    system-data
+
+    Total reclaimed space: 45.2MB
+
+The `container prune` command safely removes:
+
+ - Unused container images
+ - Volumes not attached to any container (running or stopped)
+ - Other unused container resources
+
+> [!TIP]
+> You can monitor container resource usage with the command:
+>
+>     admin@example:/> show container usage
+>
+> This displays disk space used by images, containers, and volumes,
+> helping you decide when to run the prune command.
+>
+> To see which volumes exist and which containers use them:
+>
+>     admin@example:/> show container volumes
+
 ### Content Mounts
 
 Content mounts are a special type of file mount where the file contents
