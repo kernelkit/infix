@@ -80,10 +80,15 @@ fetch()
 
     cd "$DOWNLOADS" || return
     if [ -e "$file" ]; then
-	log "$file already available."
-	if check "$file"; then
-	    echo "$dst"
-	    return 0
+	if [ -n "$force" ]; then
+	    log "Force flag set, removing cached $file and re-downloading."
+	    rm -f "$file"
+	else
+	    log "$file already available."
+	    if check "$file"; then
+		echo "$dst"
+		return 0
+	    fi
 	fi
     fi
 
@@ -140,7 +145,8 @@ load_archive()
 	    fi
             ;;
 	*)			# docker://*, docker-archive:*, or URL
-	    if podman image exists "$img"; then
+	    # Skip existence check if force flag is set (e.g., for upgrade command)
+	    if [ -z "$force" ] && podman image exists "$img"; then
 		echo "$img"
 		return 0
 	    fi
@@ -594,7 +600,7 @@ options:
   -d, --detach             Detach a container started with 'run IMG [CMD]'
   -e, --env FILE           Environment variables when creating container
       --entrypoint         Disable container image's ENTRYPOINT, run cmd + arg
-  -f, --force              Force operation, e.g. remove
+  -f, --force              Force operation, e.g. remove, or force image re-fetch
   -h, --help               Show this help text
       --hostname NAME      Set hostname when creating container
       --net NETWORK        Network interface(s) when creating or finding container
@@ -1120,32 +1126,89 @@ case $cmd in
 	podman stats -i 2
 	;;
     upgrade)
-	# Start script used to initially create container
-	script=/run/containers/${1}.sh
-
-	# Find container image
-	img=$(podman inspect "$1" | jq -r .[].ImageName)
-	if [ -z "$img" ]; then
-	    echo "No such container ($1), or invalid ImageName.  Cannot upgrade."
-	    exit 1;
+	if [ -z "$name" ]; then
+	    name="$1"
 	fi
+	script=/run/containers/${name}.sh
 
-	# Likely an OCI archive, or local directory, assume user has updated image.
-	if echo "$img" | grep -Eq '^localhost/'; then
-	    file=$(awk '/^# meta-image:/ {print $3}' "$script")
-	    echo ">> Upgrading container $1 using $file ..."
-	else
-	    printf ">> Stopping ... "
-	    podman stop "$1"
-	    printf ">> "
-	    podman pull "$img" || (echo "Failed fetching $img, check your network (settings)."; exit 1)
-	    echo ">> Starting $1 ..."
-	fi
-	if ! "$script"; then
-	    echo ">> Failed recreating container $1"
+	# Verify container exists
+	if ! podman container exists "$name"; then
+	    echo "No such container: $name"
 	    exit 1
 	fi
-	echo ">> Done."
+
+	# Check if container uses a mutable tag (e.g., :latest)
+	# Get the actual image name from the running container
+	image_name=$(podman inspect "$name" | jq -r '.[].ImageName')
+	if [ -z "$image_name" ]; then
+	    echo "Cannot determine ImageName for container $name"
+	    exit 1
+	fi
+
+	# Check if image uses :latest or other mutable tag
+	# Images with immutable digests (@sha256:...) don't benefit from upgrade
+	if echo "$image_name" | grep -qE '@sha256:'; then
+	    echo "Container $name uses an immutable image digest ($image_name)"
+	    echo "Upgrade will have no effect. Update the configuration to use a mutable tag."
+	    exit 1
+	fi
+
+	# Get image URI from the container script
+	img=$(awk '/^# meta-image:/ {print $3}' "$script")
+	if [ -z "$img" ]; then
+	    echo "Cannot determine image for container $name"
+	    exit 1
+	fi
+
+	echo ">> Upgrading container $name from image $img ..."
+
+	# Capture the current image ID before upgrade so we can remove it after
+	old_image_id=$(podman inspect "$name" --format '{{.ImageID}}' 2>/dev/null)
+
+	# Stop container using proper command (goes through Finit)
+	printf ">> Stopping container ... "
+	container stop "$name"
+	echo "done"
+
+	# Set force flag to ensure fresh pull/fetch of image
+	force="-f"
+
+	# For remote images, force re-pull
+	case "$img" in
+	    docker://* | ftp://* | http://* | https://*)
+		printf ">> Pulling latest image ... "
+		if ! load_archive "$img" >/dev/null 2>&1; then
+		    echo "failed"
+		    echo "Failed fetching $img, check your network settings."
+		    exit 1
+		fi
+		echo "done"
+		;;
+	    *)
+		# Local archives - user must update the file manually
+		echo ">> Using local image $img (ensure file is updated) ..."
+		;;
+	esac
+
+	# Recreate container by running the script
+	echo ">> Recreating container ..."
+	if ! "$script"; then
+	    echo ">> Failed recreating container $name"
+	    exit 1
+	fi
+
+	# Remove the old image if it's not used by any other containers
+	if [ -n "$old_image_id" ]; then
+	    # Check if the old image is still in use by any containers
+	    if ! podman ps -a --format '{{.ImageID}}' | grep -q "^${old_image_id}$"; then
+		log "Removing old image $old_image_id"
+		podman rmi "$old_image_id" 2>/dev/null || true
+	    else
+		log "Old image $old_image_id still in use by other containers, keeping it"
+	    fi
+	fi
+
+	echo ">> Container $name upgraded successfully."
 	;;
     volume)
 	cmd=$1
