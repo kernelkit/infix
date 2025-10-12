@@ -22,8 +22,10 @@ module infix-containers {
     prefix infix-sys;
   }
 
-  revision 2025-09-09 {
-    description "Add dedicated 'ident' type for container and volume names.";
+  revision 2025-10-12 {
+    description "Two major changes:
+                  - Add dedicated 'ident' type for container and volume names.
+                  - New upgrade action (RPC) for containers with :latest image.";
     reference "internal";
   }
 
@@ -483,6 +485,18 @@ module infix-containers {
 
       action restart {
         description "Restart a running, or start, a stopped container.";
+      }
+
+      action upgrade {
+        description "Upgrade container to latest version of its image.
+
+                     This action fetches the latest version of the container's image
+                     and recreates the container with the new image. Any named volumes
+                     are preserved.
+
+                     Note: This action is primarily for containers using mutable tags
+                           like ':latest'.  For containers using immutable tags (e.g.,
+                           ':25.06.0'), the upgrade action will have no effect.";
       }
     }
   }
