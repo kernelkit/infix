@@ -21,6 +21,9 @@
 - name: Container Volume Persistence
   case: container_volume/test.py
 
+- name: Container Upgrade
+  case: upgrade/test.py
+
 - name: Basic Firewall Container
   case: container_firewall_basic/test.py
 

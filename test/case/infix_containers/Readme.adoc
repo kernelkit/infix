@@ -10,6 +10,7 @@ Tests verifying Infix Docker container support:
  - Connecting containers with VETH pairs to standard Linux bridges
  - Assigning physical Ethernet interfaces to containers
  - Container upgrades with persistent volume data
+ - Container upgrade using RPC with cleanup of old image
  - Firewall container running in host network mode with full privileges
 
 include::container_basic/Readme.adoc[]
