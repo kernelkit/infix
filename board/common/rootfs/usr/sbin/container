@@ -997,6 +997,12 @@ case $cmd in
 	    fi
 	fi
 
+	# Capture old image ID before recreation (for surgical cleanup after)
+	old_image_id=""
+	if podman container exists "$name"; then
+	    old_image_id=$(podman inspect "$name" --format '{{.ImageID}}' 2>/dev/null)
+	fi
+
 	# Save our PID in case we get stuck here and someone wants to
 	# stop us, e.g., due to reconfiguration or reboot.
 	pidfile=$(pidfn "${name}")
@@ -1033,8 +1039,17 @@ case $cmd in
 	fi
 
 	rm -f "$pidfile"
-	cnt=$(podman image prune -f | wc -l)
-	log "Pruned $cnt image(s)"
+
+	# Remove the old image if it's not used by any other containers
+	if [ -n "$old_image_id" ]; then
+	    # Check if the old image is still in use by any containers
+	    if ! podman ps -a --format '{{.ImageID}}' | grep -q "^${old_image_id}$"; then
+		log "Removing old image $old_image_id"
+		podman rmi "$old_image_id" 2>/dev/null || true
+	    else
+		log "Old image $old_image_id still in use by other containers, keeping it"
+	    fi
+	fi
 	;;
     shell)
 	if [ -z "$name" ]; then
