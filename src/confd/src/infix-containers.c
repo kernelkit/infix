@@ -492,6 +492,7 @@ int infix_containers_init(struct confd *confd)
 	REGISTER_RPC(confd->session, CFG_XPATH "/container/start",   action, NULL, &confd->sub);
 	REGISTER_RPC(confd->session, CFG_XPATH "/container/stop",    action, NULL, &confd->sub);
 	REGISTER_RPC(confd->session, CFG_XPATH "/container/restart", action, NULL, &confd->sub);
+	REGISTER_RPC(confd->session, CFG_XPATH "/container/upgrade", action, NULL, &confd->sub);
 	REGISTER_RPC(confd->session, "/infix-containers:oci-load", oci_load, NULL, &confd->sub);
 
 	return SR_ERR_OK;
