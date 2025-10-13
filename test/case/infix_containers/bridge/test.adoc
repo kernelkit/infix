@@ -1,6 +1,6 @@
 === Container with bridge network
 
-ifdef::topdoc[:imagesdir: {topdoc}../../test/case/infix_containers/container_bridge]
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/infix_containers/bridge]
 
 ==== Description
 

@@ -1,6 +1,6 @@
 === Container enabled/disabled
 
-ifdef::topdoc[:imagesdir: {topdoc}../../test/case/infix_containers/container_enabled]
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/infix_containers/enabled]
 
 ==== Description
 
