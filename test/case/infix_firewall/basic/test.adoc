@@ -11,7 +11,7 @@ image::basic.svg[align=center, scaledwidth=50%]
 - Single zone configuration, "public", with action=drop
 - Allowed services: SSH (port 22), DHCPv6-client, mySSH (custom, port 222)
 - All other ports (HTTP, HTTPS, Telnet, etc.) blocked
-- Verifies unused interfaces automatically assigned to default zone
+- Check that unused interfaces are automatically assigned to default zone
 
 ==== Topology
 
@@ -26,6 +26,7 @@ image::topology.svg[Basic Firewall for End Devices topology, align=center, scale
 . Verify ICMPv6 is dropped
 . Verify SSH service is allowed
 . Verify custom mySSH service is allowed
+. Verify HTTP service override (8080 allowed, 80 blocked)
 . Verify other ports are blocked
 
 
