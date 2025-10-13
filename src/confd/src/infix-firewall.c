@@ -542,10 +542,10 @@ static int change(sr_session_ctx_t *session, uint32_t sub_id, const char *module
 
 	err = srx_get_diff(session, &diff);
 	if (err)
-		goto err_release_data;
+		goto done;
 
 	if (!diff)
-		goto err_release_data;
+		goto done;
 
 	/* Create /etc/firewalld+ directory structure */
 	if (fmkpath(0755, FIREWALLD_DIR_NEXT) ||
@@ -554,7 +554,7 @@ static int change(sr_session_ctx_t *session, uint32_t sub_id, const char *module
 	    fmkpath(0755, FIREWALLD_POLICIES_DIR)) {
 		ERROR("Failed creating " FIREWALLD_DIR_NEXT " directory structure");
 		err = SR_ERR_SYS;
-		goto err_release_data;
+		goto done;
 	}
 
 	if (lydx_get_descendant(diff, "firewall", "default", NULL) ||
@@ -630,7 +630,7 @@ static int change(sr_session_ctx_t *session, uint32_t sub_id, const char *module
 
 			if (generate_policy(cnode, name, &priority)) {
 				ERROR("Failed to generate policy %s", name);
-				goto err_release_data;
+				goto done;
 			}
 		}
 	}
@@ -644,7 +644,7 @@ done:
 
 	if (diff)
 		lyd_free_tree(diff);
-err_release_data:
+
 	if (cfg)
 		sr_release_data(cfg);
 
