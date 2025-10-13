@@ -1,6 +1,6 @@
 === Container with physical interface
 
-ifdef::topdoc[:imagesdir: {topdoc}../../test/case/infix_containers/container_phys]
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/infix_containers/phys]
 
 ==== Description
 

@@ -1,6 +1,6 @@
 === Container basic
 
-ifdef::topdoc[:imagesdir: {topdoc}../../test/case/infix_containers/container_basic]
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/infix_containers/basic]
 
 ==== Description
 

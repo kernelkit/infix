@@ -1,6 +1,6 @@
 === Container with VETH pair
 
-ifdef::topdoc[:imagesdir: {topdoc}../../test/case/infix_containers/container_veth]
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/infix_containers/veth]
 
 ==== Description
 

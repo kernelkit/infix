@@ -13,36 +13,36 @@ Tests verifying Infix Docker container support:
  - Container upgrade using RPC with cleanup of old image
  - Firewall container running in host network mode with full privileges
 
-include::container_basic/Readme.adoc[]
+include::basic/Readme.adoc[]
 
 <<<
 
-include::container_enabled/Readme.adoc[]
+include::enabled/Readme.adoc[]
 
 <<<
 
-include::container_environment/Readme.adoc[]
+include::environment/Readme.adoc[]
 
 <<<
 
-include::container_bridge/Readme.adoc[]
+include::bridge/Readme.adoc[]
 
 <<<
 
-include::container_phys/Readme.adoc[]
+include::phys/Readme.adoc[]
 
 <<<
 
-include::container_veth/Readme.adoc[]
+include::veth/Readme.adoc[]
 
 <<<
 
-include::container_volume/Readme.adoc[]
+include::volume/Readme.adoc[]
 
 <<<
 
-include::container_firewall_basic/Readme.adoc[]
+include::firewall_basic/Readme.adoc[]
 
 <<<
 
-include::container_host_commands/Readme.adoc[]
+include::host_commands/Readme.adoc[]

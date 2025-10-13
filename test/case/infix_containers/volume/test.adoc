@@ -1,6 +1,6 @@
 === Container Volume Persistence
 
-ifdef::topdoc[:imagesdir: {topdoc}../../test/case/infix_containers/container_volume]
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/infix_containers/volume]
 
 ==== Description
 
