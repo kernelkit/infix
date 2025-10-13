@@ -26,7 +26,7 @@ external port 8080 to ensure the web page, with a known key phrase, is
 only reachable from the public interface `ext0`, on 192.168.0.1:8080.
 """
 import infamy
-from infamy.util import until, to_binary
+from infamy.util import until, to_binary, curl
 
 
 with infamy.Test() as test:
@@ -181,15 +181,14 @@ table ip nat {
         until(lambda: c.running(WEBNM), attempts=60)
 
     with infamy.IsolatedMacVlan(hport) as ns:
-        NEEDLE = "tiny web server from the curiOS docker"
+        MESG = "tiny web server from the curiOS docker"
         ns.addip(OURIP)
         with test.step("Verify connectivity, host can reach target:ext0"):
             ns.must_reach(EXTIP)
         with test.step("Verify 'web' is NOT reachable on http://container-host.local:91"):
-            url = infamy.Furl(BAD_URL)
-            until(lambda: not url.nscheck(ns, NEEDLE))
+            until(lambda: not ns.call(lambda: curl(BAD_URL)))
         with test.step("Verify 'web' is reachable on http://container-host.local:8080"):
-            url = infamy.Furl(GOOD_URL)
-            until(lambda: url.nscheck(ns, NEEDLE))
+            until(lambda: MESG in ns.call(lambda: curl(GOOD_URL)))
+
 
     test.succeed()

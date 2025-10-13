@@ -7,7 +7,7 @@ content in the volume on restart.
 
 """
 import infamy
-from infamy.util import until
+from infamy.util import until, curl
 
 with infamy.Test() as test:
     NAME = "web-volume"
@@ -19,7 +19,7 @@ with infamy.Test() as test:
         target = env.attach("target", "mgmt")
         tgtssh = env.attach("target", "mgmt", "ssh")
         addr = target.get_mgmt_ip()
-        url = infamy.Furl(f"http://[{addr}]:{PORT}/index.html")
+        URL = f"http://[{addr}]:{PORT}/index.html"
 
         if not target.has_model("infix-containers"):
             test.skip()
@@ -53,7 +53,7 @@ with infamy.Test() as test:
         tgtssh.runsh(cmd)
 
     with test.step("Verify container volume content"):
-        until(lambda: url.check(MESG), attempts=10)
+        until(lambda: MESG in curl(URL), attempts=10)
 
     with test.step("Upgrade container"):
         out = tgtssh.runsh(f"sudo container upgrade {NAME}")
@@ -66,6 +66,6 @@ with infamy.Test() as test:
         #     print(f"Container {NAME} upgraded: {out.stdout}")
 
     with test.step("Verify container volume content survived upgrade"):
-        until(lambda: url.check(MESG), attempts=60)
+        until(lambda: MESG in curl(URL), attempts=60)
 
     test.succeed()
