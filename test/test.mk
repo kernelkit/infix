@@ -36,11 +36,18 @@ test:
 test-sh:
 	$(test-dir)/env $(base) $(mode) $(binaries) $(pkg-$(ARCH)) -i /bin/sh
 
+SPEC_DEBUG :=
+SPEC_Q := @
+ifeq ($(V),1)
+SPEC_DEBUG := -d
+SPEC_Q :=
+endif
+
 test-spec:
 	@esc_infix_name="$(echo $(INFIX_NAME) | sed 's/\//\\\//g')"; \
 	sed 's/{REPLACE}/$(subst ",,$(esc_infix_name)) $(INFIX_VERSION)/' \
 		$(spec-dir)/Readme.adoc.in > $(spec-dir)/Readme.adoc
-	@$(spec-dir)/generate_spec.py -s $(test-dir)/case/all.yaml -r $(BR2_EXTERNAL_INFIX_PATH)
+	$(SPEC_Q)$(spec-dir)/generate_spec.py -s $(test-dir)/case/all.yaml -r $(BR2_EXTERNAL_INFIX_PATH) $(SPEC_DEBUG)
 	@asciidoctor-pdf --failure-level INFO --theme $(spec-dir)/theme.yml \
 		-a logo="image:$(LOGO)" \
 	 	-a pdf-fontsdir=$(spec-dir)/fonts \
