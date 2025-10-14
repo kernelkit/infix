@@ -246,80 +246,221 @@ archive, which helps greatly with container upgrades (see below):
 
     admin@example:/> show log
     ...
-    Nov 20 07:24:56 infix container[5040]: Fetching ftp://192.168.122.1/curios-oci-amd64-v24.05.0.tar.gz
-    Nov 20 07:24:56 infix container[5040]: curios-oci-amd64-v24.05.0.tar.gz downloaded successfully.
-    Nov 20 07:24:56 infix container[5040]: curios-oci-amd64-v24.05.0.tar.gz checksum verified OK.
-    Nov 20 07:24:57 infix container[5040]: Cleaning up extracted curios-oci-amd64-v24.05.0
-    Nov 20 07:24:57 infix container[5040]: podman create --name sys --conmon-pidfile=/run/container:sys.pid --read-only --replace --quiet --cgroup-parent=containers  --restart=always --systemd=false --tz=local --hostname sys --log-driver k8s-file --log-opt path=/run/containers/sys.fifo --network=none curios-oci-amd64-v24.05.0
-    Nov 20 07:24:57 infix container[3556]: b02e945c43c9bce2c4be88e31d6f63cfdb1a3c8bdd02179376eb059a49ae05e4
+    Nov 20 07:24:56 example container[5040]: Fetching ftp://192.168.122.1/curios-oci-amd64-v24.05.0.tar.gz
+    Nov 20 07:24:56 example container[5040]: curios-oci-amd64-v24.05.0.tar.gz downloaded successfully.
+    Nov 20 07:24:56 example container[5040]: curios-oci-amd64-v24.05.0.tar.gz checksum verified OK.
+    Nov 20 07:24:57 example container[5040]: Cleaning up extracted curios-oci-amd64-v24.05.0
+    Nov 20 07:24:57 example container[5040]: podman create --name sys --conmon-pidfile=/run/container:sys.pid --read-only --replace --quiet --cgroup-parent=containers  --restart=always --systemd=false --tz=local --hostname sys --log-driver k8s-file --log-opt path=/run/containers/sys.fifo --network=none curios-oci-amd64-v24.05.0
+    Nov 20 07:24:57 example container[3556]: b02e945c43c9bce2c4be88e31d6f63cfdb1a3c8bdd02179376eb059a49ae05e4
 
 
-Upgrading a Container Image
+Understanding Image Tags
+------------------------
+
+Docker images use tags to identify different versions of the same image.
+Understanding the difference between *mutable* and *immutable* tags is
+important for managing container upgrades effectively.
+
+### Mutable Tags
+
+Tags like `:latest`, `:edge`, or `:stable` are *mutable* — they point to
+different images over time as new versions are published to the registry.
+
+**Advantages:**
+
+ - Convenient: upgrade without changing configuration
+ - Simple: use the CLI command `container upgrade NAME` to get the latest version,  
+   there is even a convenient RPC for controlling the remotely
+ - Good for: development, testing, and systems that auto-update
+
+**Trade-offs:**
+
+ - Less reproducible: different systems may run different versions
+ - Less predictable: upgrades happen when you pull, not when you plan
+ - Harder to rollback: previous version may no longer be available
+
+**Example mutable tags:**
+
+```
+docker://nginx:latest          # Always points to newest release
+docker://myapp:edge            # Development/bleeding edge version
+oci-archive:/var/tmp/app.tar   # Local archive that may be replaced
+```
+
+### Immutable Tags
+
+Version-specific tags like `:v1.0.1`, `:24.11.0`, or digest references
+like `@sha256:abc123...` are *immutable* — they always reference the
+exact same image content.
+
+**Advantages:**
+
+ - Reproducible: all systems run identical versions
+ - Predictable: upgrades only happen when you change configuration
+ - Auditable: clear history of what ran when
+ - Good for: production, compliance, and controlled deployments
+
+**Trade-offs:**
+
+ - More explicit: must update configuration to upgrade
+ - Requires planning: need to know which version to use
+
+**Example immutable tags:**
+
+```
+docker://nginx:1.25.3          # Specific version number
+docker://myapp:v2.1.0          # Semantic version tag
+docker://nginx@sha256:abc123   # Cryptographic digest (most immutable)
+```
+
+> [!TIP]
+> **Best practice for production:** Use specific version tags (`:v1.0.1`)
+> rather than mutable tags (`:latest`). This ensures all your systems run
+> identical software and upgrades happen only when you decide.
+
+Upgrading Container Images
 ---------------------------
+
 ![Up-to-date Shield](img/shield-checkmark.svg){ align=right width="100" }
 
 The applications in your container are an active part of the system as a
 whole, so make it a routine to keep your container images up-to-date!
 
-Containers are created at first setup and at every boot.  If the image
-exists in the file system it is reused -- i.e., an image pulled from a
-remote registry is not fetched again.
+### How Container Lifecycle Works
 
-To upgrade a versioned image:
- - update your `running-config` to use the new `image:tag`
- - `leave` to activate the change, if you are in the CLI
- - Podman pulls the new image in the background
- - Your container is recreated with the new image
- - The container is started
+Infix intelligently manages container lifecycles to provide a smooth
+experience while minimizing unnecessary work:
 
-For "unversioned" images, e.g., images using a `:latest` or `:edge` tag,
-use the following CLI command (`NAME` is the name of your container):
+**At first setup:** When you configure a container for the first time,
+Infix fetches the image (if needed) and creates the container instance.
 
-    admin@example:/> container upgrade NAME
+**At boot time:** Infix checks if the container needs to be recreated by
+comparing checksums for:
 
-This stops the container, does `container pull IMAGE`, and recreates it
-with the new image.  Upgraded containers are automatically restarted.
+ - The image archive that the container was built from
+ - The container configuration script
+
+**When configuration changes:** If you modify any container settings
+(network, volumes, environment, etc.), the container is automatically
+recreated with the new configuration.
+
+**When explicitly upgraded:** Using the `container upgrade` command forces
+a fresh pull of the image and recreates the container.
+
+This means that in most cases, **containers persist across reboots** and
+are only recreated when actually necessary. Your container's state stored
+in volumes is preserved across recreations.  Since Infix containers use a
+read-only root filesystem, any changes written outside of volumes or the
+writable paths provided by Podman (`/dev`, `/dev/shm`, `/run`, `/tmp`,
+`/var/tmp`) will be lost when the container is recreated.
+
+### Method 1: Upgrading Immutable Tags
+
+When using version-specific tags, you upgrade by explicitly changing the
+image reference in your configuration:
+
+```
+admin@example:/> configure
+admin@example:/config/> edit container web
+admin@example:/config/container/web/> set image docker://nginx:1.25.3
+admin@example:/config/container/web/> leave
+```
+
+**What happens:**
+
+ 1. Podman pulls the new image in the background (if not already present)
+ 2. Your container is automatically stopped
+ 3. The container is recreated with the new image
+ 4. The container is started with your existing volumes intact
+
+**Example:** Upgrading from one version to another:
+
+```
+admin@example:/> configure
+admin@example:/config/> edit container system
+admin@example:/config/container/system/> show image
+image ghcr.io/kernelkit/curios:v24.11.0;
+admin@example:/config/container/system/> set image ghcr.io/kernelkit/curios:v24.12.0
+admin@example:/config/container/system/> leave
+admin@example:/> show log
+...
+Dec 13 14:32:15 example container[1523]: Pulling ghcr.io/kernelkit/curios:v24.12.0...
+Dec 13 14:32:18 example container[1523]: Stopping old container instance...
+Dec 13 14:32:19 example container[1523]: Creating new container with updated image...
+Dec 13 14:32:20 example container[1523]: Container system started successfully
+```
+
+### Method 2: Upgrading Mutable Tags
+
+For images using mutable tags like `:latest` or `:edge`, use the
+`container upgrade` command:
+
+```
+admin@example:/> container upgrade NAME
+```
+
+This command:
+
+ 1. Stops the running container
+ 2. Pulls the latest version of the image from the registry
+ 3. Recreates the container with the new image
+ 4. Starts the container automatically
 
 **Example using registry:**
 
-	admin@example:/> container upgrade system
-	system
-	Trying to pull ghcr.io/kernelkit/curios:edge...
-	Getting image source signatures
-	Copying blob 07bfba95fe93 done
-	Copying config 0cb6059c0f done
-	Writing manifest to image destination
-	Storing signatures
-	0cb6059c0f4111650ddbc7dbc4880c64ab8180d4bdbb7269c08034defc348f17
-	system: not running.
-	59618cc3c84bef341c1f5251a62be1592e459cc990f0b8864bc0f5be70e60719
+```
+admin@example:/> container upgrade system
+system
+Trying to pull ghcr.io/kernelkit/curios:edge...
+Getting image source signatures
+Copying blob 07bfba95fe93 done
+Copying config 0cb6059c0f done
+Writing manifest to image destination
+Storing signatures
+0cb6059c0f4111650ddbc7dbc4880c64ab8180d4bdbb7269c08034defc348f17
+system: not running.
+59618cc3c84bef341c1f5251a62be1592e459cc990f0b8864bc0f5be70e60719
+```
 
-An OCI archive image can be upgraded in a similar manner, the first step
-is of course to get the new archive onto the system (see above), and
-then, provided the `oci-archive:/path/to/archive` format is used, call
-the upgrade command as
+**Example using local OCI archive:**
 
-	admin@example:/> container upgrade system
-	Upgrading container system with local archive: oci-archive:/var/tmp/curios-oci-amd64.tar.gz ...
-	7ab4a07ee0c6039837419b7afda4da1527a70f0c60c0f0ac21cafee05ba24b52
+An OCI archive image can be upgraded in a similar manner. First, get the
+new archive onto the system (see Container Images section above), then,
+provided the `oci-archive:/path/to/archive` format is used in your
+configuration, call the upgrade command:
 
-OCI archives can also be fetched from ftp/http/https URL, in that case
-the upgrade can be done the same way as a registry image (above).
+```
+admin@example:/> container upgrade system
+Upgrading container system with local archive: oci-archive:/var/tmp/curios-oci-amd64.tar.gz ...
+7ab4a07ee0c6039837419b7afda4da1527a70f0c60c0f0ac21cafee05ba24b52
+```
+
+OCI archives can also be fetched from ftp/http/https URLs. In that case,
+the upgrade works the same way as a registry image — Infix downloads the
+new archive and recreates the container.
+
+### Embedded Container Images
 
 > [!TIP]
 > Containers running from OCI images embedded in the operating system,
-> e.g., `/lib/oci/mycontainer.tar.gz`, always run from the version in
-> the operating system.  To upgrade, install the new container image at
-> build time, after system upgrade the container is also upgraded.  The
-> system unpacks and loads the OCI images into Podman every boot, which
-> ensures the running container always has known starting state.
+> e.g., `/lib/oci/mycontainer.tar.gz`, are automatically kept in sync
+> with the Infix system image version.
+>
+> **How it works:** When you build a custom Infix image with embedded OCI
+> archives, those containers will be upgraded whenever you upgrade the
+> Infix operating system itself. At boot, Infix checks if the embedded
+> image has changed and automatically recreates the container if needed.
 >
 > **Example:** default builds of Infix include a couple of OCI images
 > for reference, one is `/lib/oci/curios-nftables-v24.11.0.tar.gz`, but
 > there is also a symlink called `curios-nftables-latest.tar.gz` in the
 > same directory, which is what the Infix regression tests use in the
-> image configuration of the container.  This is what enables easy
-> upgrades of the container along with the system itself.
+> image configuration of the container. When the system is upgraded and
+> the embedded image changes, the test containers are automatically
+> recreated with the new version.
+>
+> This approach ensures your embedded containers always match your system
+> version without any manual intervention.
 
 
 Capabilities
