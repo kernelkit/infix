@@ -1,6 +1,6 @@
-[![License Badge][]][License] [![GitHub Status][]][GitHub] [![Coverity Status][]][Coverity Scan] [![Discord][discord-badge]][discord-url]
+[![License Badge][]][License] [![Release Badge][]][Release] [![GitHub Status][]][GitHub] [![Coverity Status][]][Coverity Scan] [![Discord][discord-badge]][discord-url]
 
-<img align="right" src="doc/logo.png" alt="Infix — Immutable.Friendly.Secure" width=480 border=10>
+<img align="right" src="doc/logo.png" alt="Infix — Immutable.Friendly.Secure" width=480 padding=10>
 
 Turn any ARM or x86 device into a powerful, manageable network appliance
 in minutes. From $35 Raspberry Pi boards to enterprise switches — deploy
@@ -129,28 +129,34 @@ deployments.
 
 ## Technical Details
 
-Built on proven open-source foundations ([Buildroot][1] + [sysrepo][2])
-for reliability you can trust:
+<a href="https://bitsign.se">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://bitsign.se/assets/badges/bitsign-badge-dark-mode.png">
+    <source media="(prefers-color-scheme: light)" srcset="https://bitsign.se/assets/badges/bitsign-badge-light-mode.png">
+    <img alt="bitSign - Code Signing" src="https://bitsign.se/assets/badges/bitsign-badge-light-mode.png" align="right" width=150 padding=10>
+  </picture>
+</a>
+
+Built on proven open-source foundations: [Linux][0], [Buildroot][1], and
+[sysrepo][2] — for reliability you can trust:
 
 - **Immutable OS**: Read-only filesystem, atomic updates, instant rollback
 - **YANG Configuration**: Industry-standard models with auto-generated tooling
 - **Hardware Acceleration**: Linux switchdev support for wire-speed packet processing
 - **Container Integration**: Docker support with flexible network and hardware access
 - **Memory Efficient**: Runs comfortably on devices with as little as 256 MB RAM
-- **Code Signing**: All releases are cryptographically signed for integrity verification
+- **Code Signing**: Releases are cryptographically signed for integrity verification
 
 Perfect for everything from resource-constrained edge devices to
 high-throughput network appliances.
 
-> Check the *[Latest Build][]* for bleeding-edge features.
+With the entire system modeled in YANG, scalability is no longer an
+issue, be it in development, testing, or end users deploying and
+monitoring their devices.  All knobs and dials are accessible from the
+CLI (console/SSH), or remotely using the native NETCONF or RESTCONF
+APIs.
 
-<a href="https://bitsign.se">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://bitsign.se/assets/badges/bitsign-badge-dark-mode.png">
-    <source media="(prefers-color-scheme: light)" srcset="https://bitsign.se/assets/badges/bitsign-badge-light-mode.png">
-    <img alt="bitSign - Code Signing" src="https://bitsign.se/assets/badges/bitsign-badge-light-mode.png">
-  </picture>
-</a>
+> Check the *[Latest Build][]* for bleeding-edge features.
 
 ---
 
@@ -161,6 +167,7 @@ high-throughput network appliances.
 
 ![Alt](https://repobeats.axiom.co/api/embed/5ce7a2a67edc923823afa0f60c327a6e8575b6e9.svg "Repobeats analytics image")
 
+[0]: https://www.kernel.org
 [1]: https://buildroot.org/ "Buildroot Homepage"
 [2]: https://www.sysrepo.org/ "Sysrepo Homepage"
 [3]: https://kernelkit.org/infix/latest/cli/introduction/
@@ -169,6 +176,8 @@ high-throughput network appliances.
 [Latest Build]:    https://github.com/kernelkit/infix/releases/tag/latest "Latest build"
 [License]:         https://en.wikipedia.org/wiki/GPL_license
 [License Badge]:   https://img.shields.io/badge/License-GPL%20v2-blue.svg
+[Release]:         https://github.com/kernelkit/infix/releases
+[Release Badge]:   https://img.shields.io/github/v/release/kernelkit/infix 
 [GitHub]:          https://github.com/kernelkit/infix/actions/workflows/build.yml/
 [GitHub Status]:   https://github.com/kernelkit/infix/actions/workflows/build.yml/badge.svg
 [Coverity Scan]:   https://scan.coverity.com/projects/29393
