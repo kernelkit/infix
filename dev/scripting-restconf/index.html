@@ -2223,31 +2223,91 @@ operational data over HTTPS.  This guide shows practical examples using
 <h2 id="helper-script">Helper Script<a class="headerlink" href="#helper-script" title="Permanent link">¶</a></h2>
 <p>To simplify RESTCONF operations, create a <code>curl.sh</code> wrapper script:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="ch">#!/bin/sh</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="nv">AUTH</span><span class="o">=</span><span class="si">${</span><span class="nv">AUTH</span><span class="k">:-</span><span class="nv">admin</span><span class="p">:</span><span class="nv">admin</span><span class="si">}</span>
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="nv">HOST</span><span class="o">=</span><span class="si">${</span><span class="nv">HOST</span><span class="k">:-</span><span class="nv">infix</span><span class="p">.local</span><span class="si">}</span>
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>
-<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="nv">method</span><span class="o">=</span><span class="nv">$1</span>
-<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="nv">path</span><span class="o">=</span><span class="nv">$2</span>
-<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="nb">shift</span><span class="w"> </span><span class="m">2</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="c1"># RESTCONF CLI wrapper for curl</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="c1"># Show usage and exit</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>usage<span class="o">()</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="o">{</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">    </span>cat<span class="w"> </span><span class="s">&lt;&lt;-EOF &gt;&amp;2</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="s">    Usage: $0 [-h HOST] [-d DATASTORE] [-u USER:PASS] METHOD PATH [CURL_ARGS...]</span>
 <a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>
-<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="nb">set</span><span class="w"> </span>-x
-<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="nb">exec</span><span class="w"> </span>curl<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="w">     </span>--insecure<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="w">     </span>--user<span class="w"> </span><span class="si">${</span><span class="nv">AUTH</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="w">     </span>--request<span class="w"> </span><span class="si">${</span><span class="nv">method</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a><span class="w">     </span>--header<span class="w"> </span><span class="s2">"Content-Type: application/yang-data+json"</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a><span class="w">     </span>--header<span class="w"> </span><span class="s2">"Accept: application/yang-data+json"</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a><span class="w">     </span><span class="s2">"</span><span class="nv">$@</span><span class="s2">"</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a><span class="w">     </span>https://<span class="si">${</span><span class="nv">HOST</span><span class="si">}</span>/restconf/ds/ietf-datastores:<span class="si">${</span><span class="nv">path</span><span class="si">}</span>
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="s">    Options:</span>
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="s">      -h HOST    Target host (default: infix.local)</span>
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="s">      -d DS      Datastore: running, operational, startup (default: running)</span>
+<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="s">      -u CREDS   Credentials as user:pass (default: admin:admin)</span>
+<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>
+<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a><span class="s">    Methods: GET, POST, PUT, PATCH, DELETE</span>
+<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a><span class="s">    EOF</span>
+<a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a><span class="w">    </span><span class="nb">exit</span><span class="w"> </span><span class="s2">"</span><span class="nv">$1</span><span class="s2">"</span>
+<a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a><span class="o">}</span>
+<a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>
+<a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a><span class="c1"># Default values</span>
+<a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a><span class="nv">HOST</span><span class="o">=</span><span class="si">${</span><span class="nv">HOST</span><span class="k">:-</span><span class="nv">infix</span><span class="p">.local</span><span class="si">}</span>
+<a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a><span class="nv">DATASTORE</span><span class="o">=</span>running
+<a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a><span class="nv">AUTH</span><span class="o">=</span>admin:admin
+<a id="__codelineno-0-24" name="__codelineno-0-24" href="#__codelineno-0-24"></a>
+<a id="__codelineno-0-25" name="__codelineno-0-25" href="#__codelineno-0-25"></a><span class="c1"># Parse options</span>
+<a id="__codelineno-0-26" name="__codelineno-0-26" href="#__codelineno-0-26"></a><span class="k">while</span><span class="w"> </span><span class="nb">getopts</span><span class="w"> </span><span class="s2">"h:d:u:"</span><span class="w"> </span>opt<span class="p">;</span><span class="w"> </span><span class="k">do</span>
+<a id="__codelineno-0-27" name="__codelineno-0-27" href="#__codelineno-0-27"></a><span class="w">    </span><span class="k">case</span><span class="w"> </span><span class="nv">$opt</span><span class="w"> </span><span class="k">in</span>
+<a id="__codelineno-0-28" name="__codelineno-0-28" href="#__codelineno-0-28"></a><span class="w">        </span>h<span class="o">)</span><span class="w"> </span><span class="nv">HOST</span><span class="o">=</span><span class="s2">"</span><span class="nv">$OPTARG</span><span class="s2">"</span><span class="w"> </span><span class="p">;;</span>
+<a id="__codelineno-0-29" name="__codelineno-0-29" href="#__codelineno-0-29"></a><span class="w">        </span>d<span class="o">)</span><span class="w"> </span><span class="nv">DATASTORE</span><span class="o">=</span><span class="s2">"</span><span class="nv">$OPTARG</span><span class="s2">"</span><span class="w"> </span><span class="p">;;</span>
+<a id="__codelineno-0-30" name="__codelineno-0-30" href="#__codelineno-0-30"></a><span class="w">        </span>u<span class="o">)</span><span class="w"> </span><span class="nv">AUTH</span><span class="o">=</span><span class="s2">"</span><span class="nv">$OPTARG</span><span class="s2">"</span><span class="w"> </span><span class="p">;;</span>
+<a id="__codelineno-0-31" name="__codelineno-0-31" href="#__codelineno-0-31"></a><span class="w">        </span>*<span class="o">)</span><span class="w"> </span>usage<span class="w"> </span><span class="m">1</span><span class="w"> </span><span class="p">;;</span>
+<a id="__codelineno-0-32" name="__codelineno-0-32" href="#__codelineno-0-32"></a><span class="w">    </span><span class="k">esac</span>
+<a id="__codelineno-0-33" name="__codelineno-0-33" href="#__codelineno-0-33"></a><span class="k">done</span>
+<a id="__codelineno-0-34" name="__codelineno-0-34" href="#__codelineno-0-34"></a><span class="nb">shift</span><span class="w"> </span><span class="k">$((</span><span class="nv">OPTIND</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="m">1</span><span class="k">))</span>
+<a id="__codelineno-0-35" name="__codelineno-0-35" href="#__codelineno-0-35"></a>
+<a id="__codelineno-0-36" name="__codelineno-0-36" href="#__codelineno-0-36"></a><span class="c1"># Validate required arguments</span>
+<a id="__codelineno-0-37" name="__codelineno-0-37" href="#__codelineno-0-37"></a><span class="k">if</span><span class="w"> </span><span class="o">[</span><span class="w"> </span><span class="nv">$#</span><span class="w"> </span>-lt<span class="w"> </span><span class="m">2</span><span class="w"> </span><span class="o">]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<a id="__codelineno-0-38" name="__codelineno-0-38" href="#__codelineno-0-38"></a><span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">"Error: METHOD and PATH are required"</span><span class="w"> </span>&gt;<span class="p">&amp;</span><span class="m">2</span>
+<a id="__codelineno-0-39" name="__codelineno-0-39" href="#__codelineno-0-39"></a><span class="w">    </span>usage<span class="w"> </span><span class="m">1</span>
+<a id="__codelineno-0-40" name="__codelineno-0-40" href="#__codelineno-0-40"></a><span class="k">fi</span>
+<a id="__codelineno-0-41" name="__codelineno-0-41" href="#__codelineno-0-41"></a>
+<a id="__codelineno-0-42" name="__codelineno-0-42" href="#__codelineno-0-42"></a><span class="nv">METHOD</span><span class="o">=</span><span class="nv">$1</span>
+<a id="__codelineno-0-43" name="__codelineno-0-43" href="#__codelineno-0-43"></a><span class="nv">PATH</span><span class="o">=</span><span class="nv">$2</span>
+<a id="__codelineno-0-44" name="__codelineno-0-44" href="#__codelineno-0-44"></a><span class="nb">shift</span><span class="w"> </span><span class="m">2</span>
+<a id="__codelineno-0-45" name="__codelineno-0-45" href="#__codelineno-0-45"></a>
+<a id="__codelineno-0-46" name="__codelineno-0-46" href="#__codelineno-0-46"></a><span class="c1"># Ensure PATH starts with /</span>
+<a id="__codelineno-0-47" name="__codelineno-0-47" href="#__codelineno-0-47"></a><span class="k">case</span><span class="w"> </span><span class="s2">"</span><span class="nv">$PATH</span><span class="s2">"</span><span class="w"> </span><span class="k">in</span>
+<a id="__codelineno-0-48" name="__codelineno-0-48" href="#__codelineno-0-48"></a><span class="w">    </span>/*<span class="o">)</span><span class="w"> </span><span class="p">;;</span>
+<a id="__codelineno-0-49" name="__codelineno-0-49" href="#__codelineno-0-49"></a><span class="w">    </span>*<span class="o">)</span><span class="w"> </span><span class="nv">PATH</span><span class="o">=</span><span class="s2">"/</span><span class="nv">$PATH</span><span class="s2">"</span><span class="w"> </span><span class="p">;;</span>
+<a id="__codelineno-0-50" name="__codelineno-0-50" href="#__codelineno-0-50"></a><span class="k">esac</span>
+<a id="__codelineno-0-51" name="__codelineno-0-51" href="#__codelineno-0-51"></a>
+<a id="__codelineno-0-52" name="__codelineno-0-52" href="#__codelineno-0-52"></a><span class="c1"># Build URL based on datastore</span>
+<a id="__codelineno-0-53" name="__codelineno-0-53" href="#__codelineno-0-53"></a><span class="k">case</span><span class="w"> </span><span class="s2">"</span><span class="nv">$DATASTORE</span><span class="s2">"</span><span class="w"> </span><span class="k">in</span>
+<a id="__codelineno-0-54" name="__codelineno-0-54" href="#__codelineno-0-54"></a><span class="w">    </span>running<span class="p">|</span>startup<span class="o">)</span>
+<a id="__codelineno-0-55" name="__codelineno-0-55" href="#__codelineno-0-55"></a><span class="w">        </span><span class="nv">URL</span><span class="o">=</span><span class="s2">"https://</span><span class="si">${</span><span class="nv">HOST</span><span class="si">}</span><span class="s2">/restconf/data</span><span class="si">${</span><span class="nv">PATH</span><span class="si">}</span><span class="s2">"</span>
+<a id="__codelineno-0-56" name="__codelineno-0-56" href="#__codelineno-0-56"></a><span class="w">        </span><span class="p">;;</span>
+<a id="__codelineno-0-57" name="__codelineno-0-57" href="#__codelineno-0-57"></a><span class="w">    </span>operational<span class="o">)</span>
+<a id="__codelineno-0-58" name="__codelineno-0-58" href="#__codelineno-0-58"></a><span class="w">        </span><span class="nv">URL</span><span class="o">=</span><span class="s2">"https://</span><span class="si">${</span><span class="nv">HOST</span><span class="si">}</span><span class="s2">/restconf/data</span><span class="si">${</span><span class="nv">PATH</span><span class="si">}</span><span class="s2">"</span>
+<a id="__codelineno-0-59" name="__codelineno-0-59" href="#__codelineno-0-59"></a><span class="w">        </span><span class="p">;;</span>
+<a id="__codelineno-0-60" name="__codelineno-0-60" href="#__codelineno-0-60"></a><span class="w">    </span>*<span class="o">)</span>
+<a id="__codelineno-0-61" name="__codelineno-0-61" href="#__codelineno-0-61"></a><span class="w">        </span><span class="nb">echo</span><span class="w"> </span><span class="s2">"Error: Invalid datastore '</span><span class="nv">$DATASTORE</span><span class="s2">'. Use: running, operational, or startup"</span><span class="w"> </span>&gt;<span class="p">&amp;</span><span class="m">2</span>
+<a id="__codelineno-0-62" name="__codelineno-0-62" href="#__codelineno-0-62"></a><span class="w">        </span><span class="nb">exit</span><span class="w"> </span><span class="m">1</span>
+<a id="__codelineno-0-63" name="__codelineno-0-63" href="#__codelineno-0-63"></a><span class="w">        </span><span class="p">;;</span>
+<a id="__codelineno-0-64" name="__codelineno-0-64" href="#__codelineno-0-64"></a><span class="k">esac</span>
+<a id="__codelineno-0-65" name="__codelineno-0-65" href="#__codelineno-0-65"></a>
+<a id="__codelineno-0-66" name="__codelineno-0-66" href="#__codelineno-0-66"></a><span class="c1"># Execute curl with all remaining arguments passed through</span>
+<a id="__codelineno-0-67" name="__codelineno-0-67" href="#__codelineno-0-67"></a><span class="nb">exec</span><span class="w"> </span>/usr/bin/curl<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-0-68" name="__codelineno-0-68" href="#__codelineno-0-68"></a><span class="w">    </span>--insecure<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-0-69" name="__codelineno-0-69" href="#__codelineno-0-69"></a><span class="w">    </span>--user<span class="w"> </span><span class="s2">"</span><span class="si">${</span><span class="nv">AUTH</span><span class="si">}</span><span class="s2">"</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-0-70" name="__codelineno-0-70" href="#__codelineno-0-70"></a><span class="w">    </span>--request<span class="w"> </span><span class="s2">"</span><span class="si">${</span><span class="nv">METHOD</span><span class="si">}</span><span class="s2">"</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-0-71" name="__codelineno-0-71" href="#__codelineno-0-71"></a><span class="w">    </span>--header<span class="w"> </span><span class="s2">"Content-Type: application/yang-data+json"</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-0-72" name="__codelineno-0-72" href="#__codelineno-0-72"></a><span class="w">    </span>--header<span class="w"> </span><span class="s2">"Accept: application/yang-data+json"</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-0-73" name="__codelineno-0-73" href="#__codelineno-0-73"></a><span class="w">    </span><span class="s2">"</span><span class="nv">$@</span><span class="s2">"</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-0-74" name="__codelineno-0-74" href="#__codelineno-0-74"></a><span class="w">    </span><span class="s2">"</span><span class="si">${</span><span class="nv">URL</span><span class="si">}</span><span class="s2">"</span>
 </code></pre></div>
 <p>Make it executable:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>~$<span class="w"> </span>chmod<span class="w"> </span>+x<span class="w"> </span>curl.sh
 </code></pre></div>
-<p>This wrapper handles authentication, headers, and the base URL construction,
-making commands much cleaner. You can override defaults with environment
-variables:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>~$<span class="w"> </span><span class="nv">HOST</span><span class="o">=</span><span class="m">192</span>.168.1.10<span class="w"> </span><span class="nv">AUTH</span><span class="o">=</span>admin:secret<span class="w"> </span>./curl.sh<span class="w"> </span>GET<span class="w"> </span>running/...
+<p>This wrapper handles authentication, headers, SSL certificates, and URL
+construction, making commands much cleaner. You can override defaults with
+command-line options or environment variables:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># Using command-line options</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>~$<span class="w"> </span>./curl.sh<span class="w"> </span>-h<span class="w"> </span><span class="m">192</span>.168.1.10<span class="w"> </span>-d<span class="w"> </span>operational<span class="w"> </span>-u<span class="w"> </span>admin:secret<span class="w"> </span>GET<span class="w"> </span>/ietf-interfaces:interfaces
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="c1"># Using environment variables</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>~$<span class="w"> </span><span class="nv">HOST</span><span class="o">=</span><span class="m">192</span>.168.1.10<span class="w"> </span>./curl.sh<span class="w"> </span>GET<span class="w"> </span>/ietf-system:system
 </code></pre></div>
 <p>The examples below show both raw <code>curl</code> commands and the equivalent using
 <code>curl.sh</code> where applicable.</p>
@@ -2257,7 +2317,7 @@ what exists on the system. This section shows common discovery patterns and
 practical workflows.</p>
 <h3 id="discovering-available-interfaces">Discovering Available Interfaces<a class="headerlink" href="#discovering-available-interfaces" title="Permanent link">¶</a></h3>
 <p><strong>List all interface names:</strong></p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>~$<span class="w"> </span>./curl.sh<span class="w"> </span>example.local<span class="w"> </span>GET<span class="w"> </span>operational/ietf-interfaces:interfaces<span class="w"> </span><span class="m">2</span>&gt;/dev/null<span class="w"> </span><span class="p">|</span><span class="w"> </span>jq<span class="w"> </span>-r<span class="w"> </span><span class="s1">'.["ietf-interfaces:interfaces"]["interface"][].name'</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>~$<span class="w"> </span>./curl.sh<span class="w"> </span>-h<span class="w"> </span>example.local<span class="w"> </span>-d<span class="w"> </span>operational<span class="w"> </span>GET<span class="w"> </span>/ietf-interfaces:interfaces<span class="w"> </span><span class="m">2</span>&gt;/dev/null<span class="w"> </span><span class="p">|</span><span class="w"> </span>jq<span class="w"> </span>-r<span class="w"> </span><span class="s1">'.["ietf-interfaces:interfaces"]["interface"][].name'</span>
 <a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>lo
 <a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>e0
 <a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>e1
@@ -2273,20 +2333,20 @@ e1, enp0s3, etc.), so scripts should discover them rather than hardcode.</p>
 <p>This returns all supported YANG modules, revisions, and features.</p>
 <h3 id="get-entire-running-configuration">Get Entire Running Configuration<a class="headerlink" href="#get-entire-running-configuration" title="Permanent link">¶</a></h3>
 <p>Useful for exploration or backup:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>~$<span class="w"> </span>./curl.sh<span class="w"> </span>example.local<span class="w"> </span>GET<span class="w"> </span>running<span class="w"> </span>-o<span class="w"> </span>backup.json
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>~$<span class="w"> </span>./curl.sh<span class="w"> </span>-h<span class="w"> </span>example.local<span class="w"> </span>GET<span class="w"> </span>/<span class="w"> </span>-o<span class="w"> </span>backup.json
 </code></pre></div>
 <h3 id="common-workflow-patterns">Common Workflow Patterns<a class="headerlink" href="#common-workflow-patterns" title="Permanent link">¶</a></h3>
 <h4 id="pattern-1-find-interface-by-ip-address">Pattern 1: Find interface by IP address<a class="headerlink" href="#pattern-1-find-interface-by-ip-address" title="Permanent link">¶</a></h4>
 <p>Get all interfaces with IPs and search:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>~$<span class="w"> </span>./curl.sh<span class="w"> </span>example.local<span class="w"> </span>GET<span class="w"> </span>operational/ietf-interfaces:interfaces<span class="w"> </span><span class="m">2</span>&gt;/dev/null<span class="w"> </span><span class="se">\</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>~$<span class="w"> </span>./curl.sh<span class="w"> </span>-h<span class="w"> </span>example.local<span class="w"> </span>-d<span class="w"> </span>operational<span class="w"> </span>GET<span class="w"> </span>/ietf-interfaces:interfaces<span class="w"> </span><span class="m">2</span>&gt;/dev/null<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">     </span><span class="p">|</span><span class="w"> </span>jq<span class="w"> </span>-r<span class="w"> </span><span class="s1">'.["ietf-interfaces:interfaces"]["interface"][] | select(.["ietf-ip:ipv4"]["address"][]?.ip == "192.168.1.100") | .name'</span>
 </code></pre></div>
 <h4 id="pattern-2-list-all-interfaces-that-are-down">Pattern 2: List all interfaces that are down<a class="headerlink" href="#pattern-2-list-all-interfaces-that-are-down" title="Permanent link">¶</a></h4>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>~$<span class="w"> </span>./curl.sh<span class="w"> </span>example.local<span class="w"> </span>GET<span class="w"> </span>operational/ietf-interfaces:interfaces<span class="w"> </span><span class="m">2</span>&gt;/dev/null<span class="w"> </span><span class="se">\</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>~$<span class="w"> </span>./curl.sh<span class="w"> </span>-h<span class="w"> </span>example.local<span class="w"> </span>-d<span class="w"> </span>operational<span class="w"> </span>GET<span class="w"> </span>/ietf-interfaces:interfaces<span class="w"> </span><span class="m">2</span>&gt;/dev/null<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">     </span><span class="p">|</span><span class="w"> </span>jq<span class="w"> </span>-r<span class="w"> </span><span class="s1">'.["ietf-interfaces:interfaces"]["interface"][] | select(.["oper-status"] == "down") | .name'</span>
 </code></pre></div>
 <h4 id="pattern-3-get-statistics-for-all-interfaces">Pattern 3: Get statistics for all interfaces<a class="headerlink" href="#pattern-3-get-statistics-for-all-interfaces" title="Permanent link">¶</a></h4>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>~$<span class="w"> </span>./curl.sh<span class="w"> </span>example.local<span class="w"> </span>GET<span class="w"> </span>operational/ietf-interfaces:interfaces<span class="w"> </span><span class="m">2</span>&gt;/dev/null<span class="w"> </span><span class="se">\</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>~$<span class="w"> </span>./curl.sh<span class="w"> </span>-h<span class="w"> </span>example.local<span class="w"> </span>-d<span class="w"> </span>operational<span class="w"> </span>GET<span class="w"> </span>/ietf-interfaces:interfaces<span class="w"> </span><span class="m">2</span>&gt;/dev/null<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">     </span><span class="p">|</span><span class="w"> </span>jq<span class="w"> </span>-r<span class="w"> </span><span class="s1">'.["ietf-interfaces:interfaces"]["interface"][] | "\(.name): RX \(.statistics["in-octets"]) TX \(.statistics["out-octets"])"'</span>
 </code></pre></div>
 <p>Output:</p>
@@ -2295,7 +2355,7 @@ e1, enp0s3, etc.), so scripts should discover them rather than hardcode.</p>
 <a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>e1: RX 0 TX 0
 </code></pre></div>
 <h4 id="pattern-4-check-if-interface-exists-before-configuring">Pattern 4: Check if interface exists before configuring<a class="headerlink" href="#pattern-4-check-if-interface-exists-before-configuring" title="Permanent link">¶</a></h4>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>~$<span class="w"> </span><span class="k">if</span><span class="w"> </span>./curl.sh<span class="w"> </span>example.local<span class="w"> </span>GET<span class="w"> </span>running/ietf-interfaces:interfaces/interface<span class="o">=</span>eth0<span class="w"> </span><span class="m">2</span>&gt;/dev/null<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>-q<span class="w"> </span><span class="s2">"ietf-interfaces:interface"</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>~$<span class="w"> </span><span class="k">if</span><span class="w"> </span>./curl.sh<span class="w"> </span>-h<span class="w"> </span>example.local<span class="w"> </span>GET<span class="w"> </span>/ietf-interfaces:interfaces/interface<span class="o">=</span>eth0<span class="w"> </span><span class="m">2</span>&gt;/dev/null<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>-q<span class="w"> </span><span class="s2">"ietf-interfaces:interface"</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
 <a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="w">     </span><span class="nb">echo</span><span class="w"> </span><span class="s2">"Interface eth0 exists"</span>
 <a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="w">   </span><span class="k">else</span>
 <a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="w">     </span><span class="nb">echo</span><span class="w"> </span><span class="s2">"Interface eth0 not found"</span>
@@ -2315,7 +2375,7 @@ e1, enp0s3, etc.), so scripts should discover them rather than hardcode.</p>
 <a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a><span class="o">}</span>
 </code></pre></div>
 <p><strong>Using curl.sh:</strong></p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>~$<span class="w"> </span>./curl.sh<span class="w"> </span>example.local<span class="w"> </span>GET<span class="w"> </span>running/ietf-system:system/hostname
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>~$<span class="w"> </span>./curl.sh<span class="w"> </span>-h<span class="w"> </span>example.local<span class="w"> </span>GET<span class="w"> </span>/ietf-system:system/hostname
 <a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="o">{</span>
 <a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="w">  </span><span class="s2">"ietf-system:system"</span>:<span class="w"> </span><span class="o">{</span>
 <a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="w">    </span><span class="s2">"hostname"</span>:<span class="w"> </span><span class="s2">"foo"</span>
@@ -2331,19 +2391,19 @@ e1, enp0s3, etc.), so scripts should discover them rather than hardcode.</p>
 <a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="w">     </span>https://example.local/restconf/data/ietf-system:system
 </code></pre></div>
 <p><strong>Using curl.sh:</strong></p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>~$<span class="w"> </span>./curl.sh<span class="w"> </span>example.local<span class="w"> </span>PATCH<span class="w"> </span>running/ietf-system:system<span class="w"> </span><span class="se">\</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>~$<span class="w"> </span>./curl.sh<span class="w"> </span>-h<span class="w"> </span>example.local<span class="w"> </span>PATCH<span class="w"> </span>/ietf-system:system<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="w">     </span>-d<span class="w"> </span><span class="s1">'{"ietf-system:system":{"hostname":"bar"}}'</span>
 </code></pre></div>
 <h3 id="add-ip-address-to-interface">Add IP Address to Interface<a class="headerlink" href="#add-ip-address-to-interface" title="Permanent link">¶</a></h3>
 <p>Add an IP address to the loopback interface:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>~$<span class="w"> </span>./curl.sh<span class="w"> </span>example.local<span class="w"> </span>POST<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="w">     </span>running/ietf-interfaces:interfaces/interface<span class="o">=</span>lo/ietf-ip:ipv4/address<span class="o">=</span><span class="m">192</span>.168.254.254<span class="w"> </span><span class="se">\</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>~$<span class="w"> </span>./curl.sh<span class="w"> </span>-h<span class="w"> </span>example.local<span class="w"> </span>POST<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="w">     </span>/ietf-interfaces:interfaces/interface<span class="o">=</span>lo/ietf-ip:ipv4/address<span class="o">=</span><span class="m">192</span>.168.254.254<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a><span class="w">     </span>-d<span class="w"> </span><span class="s1">'{ "prefix-length": 32 }'</span>
 </code></pre></div>
 <h3 id="delete-ip-address-from-interface">Delete IP Address from Interface<a class="headerlink" href="#delete-ip-address-from-interface" title="Permanent link">¶</a></h3>
 <p>Remove an IP address from the loopback interface:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>~$<span class="w"> </span>./curl.sh<span class="w"> </span>example.local<span class="w"> </span>DELETE<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="w">     </span>running/ietf-interfaces:interfaces/interface<span class="o">=</span>lo/ietf-ip:ipv4/address<span class="o">=</span><span class="m">192</span>.168.254.254
+<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>~$<span class="w"> </span>./curl.sh<span class="w"> </span>-h<span class="w"> </span>example.local<span class="w"> </span>DELETE<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="w">     </span>/ietf-interfaces:interfaces/interface<span class="o">=</span>lo/ietf-ip:ipv4/address<span class="o">=</span><span class="m">192</span>.168.254.254
 </code></pre></div>
 <h3 id="copy-running-to-startup">Copy Running to Startup<a class="headerlink" href="#copy-running-to-startup" title="Permanent link">¶</a></h3>
 <p>No copy command available yet to copy between datastores, and the
@@ -2361,39 +2421,39 @@ and then update startup with it:</p>
 <a id="__codelineno-17-7" name="__codelineno-17-7" href="#__codelineno-17-7"></a><span class="w">        </span>https://example.local/restconf/ds/ietf-datastores:startup
 </code></pre></div>
 <p><strong>Using curl.sh:</strong></p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a>~$<span class="w"> </span>./curl.sh<span class="w"> </span>example.local<span class="w"> </span>GET<span class="w"> </span>running<span class="w"> </span>-o<span class="w"> </span>running-config.json
-<a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a>~$<span class="w"> </span>./curl.sh<span class="w"> </span>example.local<span class="w"> </span>PUT<span class="w"> </span>startup<span class="w"> </span>-d<span class="w"> </span>@running-config.json
+<div class="highlight"><pre><span></span><code><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a>~$<span class="w"> </span>./curl.sh<span class="w"> </span>-h<span class="w"> </span>example.local<span class="w"> </span>GET<span class="w"> </span>/<span class="w"> </span>-o<span class="w"> </span>running-config.json
+<a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a>~$<span class="w"> </span>./curl.sh<span class="w"> </span>-h<span class="w"> </span>example.local<span class="w"> </span>-d<span class="w"> </span>startup<span class="w"> </span>PUT<span class="w"> </span>/<span class="w"> </span>-d<span class="w"> </span>@running-config.json
 </code></pre></div>
 <h2 id="operational-data">Operational Data<a class="headerlink" href="#operational-data" title="Permanent link">¶</a></h2>
 <h3 id="read-interface-configuration">Read Interface Configuration<a class="headerlink" href="#read-interface-configuration" title="Permanent link">¶</a></h3>
 <p>Get the running configuration for the loopback interface:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a>~$<span class="w"> </span>./curl.sh<span class="w"> </span>example.local<span class="w"> </span>GET<span class="w"> </span>running/ietf-interfaces:interfaces/interface<span class="o">=</span>lo
+<div class="highlight"><pre><span></span><code><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a>~$<span class="w"> </span>./curl.sh<span class="w"> </span>-h<span class="w"> </span>example.local<span class="w"> </span>GET<span class="w"> </span>/ietf-interfaces:interfaces/interface<span class="o">=</span>lo
 </code></pre></div>
 <h3 id="read-interface-operational-state">Read Interface Operational State<a class="headerlink" href="#read-interface-operational-state" title="Permanent link">¶</a></h3>
 <p>Get operational data (state, statistics, etc.) for an interface:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a>~$<span class="w"> </span>./curl.sh<span class="w"> </span>example.local<span class="w"> </span>GET<span class="w"> </span>operational/ietf-interfaces:interfaces/interface<span class="o">=</span>lo
+<div class="highlight"><pre><span></span><code><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a>~$<span class="w"> </span>./curl.sh<span class="w"> </span>-h<span class="w"> </span>example.local<span class="w"> </span>-d<span class="w"> </span>operational<span class="w"> </span>GET<span class="w"> </span>/ietf-interfaces:interfaces/interface<span class="o">=</span>lo
 </code></pre></div>
 <p>This includes administrative and operational state, MAC address, MTU, and
 statistics counters.</p>
 <h3 id="read-interface-statistics">Read Interface Statistics<a class="headerlink" href="#read-interface-statistics" title="Permanent link">¶</a></h3>
 <p>Extract specific statistics using <code>jq</code>:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a>~$<span class="w"> </span>./curl.sh<span class="w"> </span>example.local<span class="w"> </span>GET<span class="w"> </span>operational/ietf-interfaces:interfaces/interface<span class="o">=</span>eth0<span class="w"> </span><span class="m">2</span>&gt;/dev/null<span class="w"> </span><span class="se">\</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a>~$<span class="w"> </span>./curl.sh<span class="w"> </span>-h<span class="w"> </span>example.local<span class="w"> </span>-d<span class="w"> </span>operational<span class="w"> </span>GET<span class="w"> </span>/ietf-interfaces:interfaces/interface<span class="o">=</span>eth0<span class="w"> </span><span class="m">2</span>&gt;/dev/null<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a><span class="w">     </span><span class="p">|</span><span class="w"> </span>jq<span class="w"> </span>-r<span class="w"> </span><span class="s1">'.["ietf-interfaces:interfaces"]["interface"][0]["statistics"]["in-octets"]'</span>
 </code></pre></div>
 <h3 id="list-all-interfaces">List All Interfaces<a class="headerlink" href="#list-all-interfaces" title="Permanent link">¶</a></h3>
 <p>Get operational data for all interfaces:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a>~$<span class="w"> </span>./curl.sh<span class="w"> </span>example.local<span class="w"> </span>GET<span class="w"> </span>operational/ietf-interfaces:interfaces
+<div class="highlight"><pre><span></span><code><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a>~$<span class="w"> </span>./curl.sh<span class="w"> </span>-h<span class="w"> </span>example.local<span class="w"> </span>-d<span class="w"> </span>operational<span class="w"> </span>GET<span class="w"> </span>/ietf-interfaces:interfaces
 </code></pre></div>
 <h3 id="read-routing-table">Read Routing Table<a class="headerlink" href="#read-routing-table" title="Permanent link">¶</a></h3>
 <p>Get the IPv4 routing table:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a>~$<span class="w"> </span>./curl.sh<span class="w"> </span>example.local<span class="w"> </span>GET<span class="w"> </span>operational/ietf-routing:routing/ribs/rib<span class="o">=</span>ipv4-default
+<div class="highlight"><pre><span></span><code><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a>~$<span class="w"> </span>./curl.sh<span class="w"> </span>-h<span class="w"> </span>example.local<span class="w"> </span>-d<span class="w"> </span>operational<span class="w"> </span>GET<span class="w"> </span>/ietf-routing:routing/ribs/rib<span class="o">=</span>ipv4-default
 </code></pre></div>
 <h3 id="read-ospf-state">Read OSPF State<a class="headerlink" href="#read-ospf-state" title="Permanent link">¶</a></h3>
 <p>Get OSPF operational data (neighbors, routes, etc.):</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a>~$<span class="w"> </span>./curl.sh<span class="w"> </span>example.local<span class="w"> </span>GET<span class="w"> </span>operational/ietf-routing:routing/control-plane-protocols/control-plane-protocol<span class="o">=</span>ietf-ospf:ospfv2,default
+<div class="highlight"><pre><span></span><code><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a>~$<span class="w"> </span>./curl.sh<span class="w"> </span>-h<span class="w"> </span>example.local<span class="w"> </span>-d<span class="w"> </span>operational<span class="w"> </span>GET<span class="w"> </span>/ietf-routing:routing/control-plane-protocols/control-plane-protocol<span class="o">=</span>ietf-ospf:ospfv2,default
 </code></pre></div>
 <p>Or get just the neighbor information:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a>~$<span class="w"> </span>./curl.sh<span class="w"> </span>example.local<span class="w"> </span>GET<span class="w"> </span>operational/ietf-routing:routing/control-plane-protocols/control-plane-protocol<span class="o">=</span>ietf-ospf:ospfv2,default/ietf-ospf:ospf/areas/area<span class="o">=</span><span class="m">0</span>.0.0.0/interfaces
+<div class="highlight"><pre><span></span><code><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a>~$<span class="w"> </span>./curl.sh<span class="w"> </span>-h<span class="w"> </span>example.local<span class="w"> </span>-d<span class="w"> </span>operational<span class="w"> </span>GET<span class="w"> </span>/ietf-routing:routing/control-plane-protocols/control-plane-protocol<span class="o">=</span>ietf-ospf:ospfv2,default/ietf-ospf:ospf/areas/area<span class="o">=</span><span class="m">0</span>.0.0.0/interfaces
 </code></pre></div>
 <h2 id="system-operations-rpcs">System Operations (RPCs)<a class="headerlink" href="#system-operations-rpcs" title="Permanent link">¶</a></h2>
 <h3 id="factory-reset">Factory Reset<a class="headerlink" href="#factory-reset" title="Permanent link">¶</a></h3>
@@ -2429,22 +2489,22 @@ statistics counters.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-30-1" name="__codelineno-30-1" href="#__codelineno-30-1"></a><span class="nv">HOST</span><span class="w"> </span><span class="o">?=</span><span class="w"> </span>infix.local
 <a id="__codelineno-30-2" name="__codelineno-30-2" href="#__codelineno-30-2"></a>
 <a id="__codelineno-30-3" name="__codelineno-30-3" href="#__codelineno-30-3"></a><span class="nf">lo-running</span><span class="o">:</span>
-<a id="__codelineno-30-4" name="__codelineno-30-4" href="#__codelineno-30-4"></a><span class="w">    </span>./curl.sh<span class="w"> </span><span class="k">$(</span>HOST<span class="k">)</span><span class="w"> </span>GET<span class="w"> </span>running/ietf-interfaces:interfaces/interface<span class="o">=</span>lo
+<a id="__codelineno-30-4" name="__codelineno-30-4" href="#__codelineno-30-4"></a><span class="w">    </span>./curl.sh<span class="w"> </span>-h<span class="w"> </span><span class="k">$(</span>HOST<span class="k">)</span><span class="w"> </span>GET<span class="w"> </span>/ietf-interfaces:interfaces/interface<span class="o">=</span>lo
 <a id="__codelineno-30-5" name="__codelineno-30-5" href="#__codelineno-30-5"></a>
 <a id="__codelineno-30-6" name="__codelineno-30-6" href="#__codelineno-30-6"></a><span class="nf">lo-operational</span><span class="o">:</span>
-<a id="__codelineno-30-7" name="__codelineno-30-7" href="#__codelineno-30-7"></a><span class="w">    </span>./curl.sh<span class="w"> </span><span class="k">$(</span>HOST<span class="k">)</span><span class="w"> </span>GET<span class="w"> </span>operational/ietf-interfaces:interfaces/interface<span class="o">=</span>lo
+<a id="__codelineno-30-7" name="__codelineno-30-7" href="#__codelineno-30-7"></a><span class="w">    </span>./curl.sh<span class="w"> </span>-h<span class="w"> </span><span class="k">$(</span>HOST<span class="k">)</span><span class="w"> </span>-d<span class="w"> </span>operational<span class="w"> </span>GET<span class="w"> </span>/ietf-interfaces:interfaces/interface<span class="o">=</span>lo
 <a id="__codelineno-30-8" name="__codelineno-30-8" href="#__codelineno-30-8"></a>
 <a id="__codelineno-30-9" name="__codelineno-30-9" href="#__codelineno-30-9"></a><span class="nf">lo-add-ip</span><span class="o">:</span>
-<a id="__codelineno-30-10" name="__codelineno-30-10" href="#__codelineno-30-10"></a><span class="w">    </span>./curl.sh<span class="w"> </span><span class="k">$(</span>HOST<span class="k">)</span><span class="w"> </span>POST<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-30-11" name="__codelineno-30-11" href="#__codelineno-30-11"></a><span class="w">        </span>running/ietf-interfaces:interfaces/interface<span class="o">=</span>lo/ietf-ip:ipv4/address<span class="o">=</span><span class="m">192</span>.168.254.254<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-30-10" name="__codelineno-30-10" href="#__codelineno-30-10"></a><span class="w">    </span>./curl.sh<span class="w"> </span>-h<span class="w"> </span><span class="k">$(</span>HOST<span class="k">)</span><span class="w"> </span>POST<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-30-11" name="__codelineno-30-11" href="#__codelineno-30-11"></a><span class="w">        </span>/ietf-interfaces:interfaces/interface<span class="o">=</span>lo/ietf-ip:ipv4/address<span class="o">=</span><span class="m">192</span>.168.254.254<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-30-12" name="__codelineno-30-12" href="#__codelineno-30-12"></a><span class="w">        </span>-d<span class="w"> </span><span class="s1">'{ "prefix-length": 32 }'</span>
 <a id="__codelineno-30-13" name="__codelineno-30-13" href="#__codelineno-30-13"></a>
 <a id="__codelineno-30-14" name="__codelineno-30-14" href="#__codelineno-30-14"></a><span class="nf">lo-del-ip</span><span class="o">:</span>
-<a id="__codelineno-30-15" name="__codelineno-30-15" href="#__codelineno-30-15"></a><span class="w">    </span>./curl.sh<span class="w"> </span><span class="k">$(</span>HOST<span class="k">)</span><span class="w"> </span>DELETE<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-30-16" name="__codelineno-30-16" href="#__codelineno-30-16"></a><span class="w">        </span>running/ietf-interfaces:interfaces/interface<span class="o">=</span>lo/ietf-ip:ipv4/address<span class="o">=</span><span class="m">192</span>.168.254.254
+<a id="__codelineno-30-15" name="__codelineno-30-15" href="#__codelineno-30-15"></a><span class="w">    </span>./curl.sh<span class="w"> </span>-h<span class="w"> </span><span class="k">$(</span>HOST<span class="k">)</span><span class="w"> </span>DELETE<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-30-16" name="__codelineno-30-16" href="#__codelineno-30-16"></a><span class="w">        </span>/ietf-interfaces:interfaces/interface<span class="o">=</span>lo/ietf-ip:ipv4/address<span class="o">=</span><span class="m">192</span>.168.254.254
 <a id="__codelineno-30-17" name="__codelineno-30-17" href="#__codelineno-30-17"></a>
 <a id="__codelineno-30-18" name="__codelineno-30-18" href="#__codelineno-30-18"></a><span class="nf">%-stats</span><span class="o">:</span>
-<a id="__codelineno-30-19" name="__codelineno-30-19" href="#__codelineno-30-19"></a><span class="w">    </span>@./curl.sh<span class="w"> </span><span class="k">$(</span>HOST<span class="k">)</span><span class="w"> </span>GET<span class="w"> </span>operational/ietf-interfaces:interfaces/interface<span class="o">=</span><span class="nv">$*</span><span class="w"> </span><span class="m">2</span>&gt;/dev/null<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-30-19" name="__codelineno-30-19" href="#__codelineno-30-19"></a><span class="w">    </span>@./curl.sh<span class="w"> </span>-h<span class="w"> </span><span class="k">$(</span>HOST<span class="k">)</span><span class="w"> </span>-d<span class="w"> </span>operational<span class="w"> </span>GET<span class="w"> </span>/ietf-interfaces:interfaces/interface<span class="o">=</span><span class="nv">$*</span><span class="w"> </span><span class="m">2</span>&gt;/dev/null<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-30-20" name="__codelineno-30-20" href="#__codelineno-30-20"></a><span class="w">        </span><span class="p">|</span><span class="w"> </span>jq<span class="w"> </span>-r<span class="w"> </span><span class="s1">'.["ietf-interfaces:interfaces"]["interface"][0]["statistics"]["in-octets"]'</span>
 <a id="__codelineno-30-21" name="__codelineno-30-21" href="#__codelineno-30-21"></a>
 <a id="__codelineno-30-22" name="__codelineno-30-22" href="#__codelineno-30-22"></a><span class="nf">%-monitor</span><span class="o">:</span>
