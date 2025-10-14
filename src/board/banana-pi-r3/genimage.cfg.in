@@ -1,4 +1,3 @@
-
 image cfg.ext4 {
         empty = true
         temporary = true
@@ -27,19 +26,19 @@ image #INFIX_ID##VERSION#-bpi-r3-sdcard.img {
 	partition bl2 {
 		  image = "bl2.img"
 		  offset = 1024s   # 0x80000 = sector 1024
-		  size = 4M       # 0x400000
+		  size = 4M        # 0x400000
 		  bootable = true
-    }
+	}
 
-    # Factory/calibration data (sectors 9216-13311)
-    partition factory {
-        offset = 4608K  # 0x480000
-        size = 2M       # 0x200000
-    }
+	# Factory/calibration data (sectors 9216-13311)
+	partition factory {
+		offset = 4608K  # 0x480000
+		size = 2M       # 0x200000
+	}
 
-# FIP partition - BL31 + U-Boot (sectors 13312-17407)
+	# FIP partition - BL31 + U-Boot (sectors 13312-17407)
         partition fip {
-	 #       partition-type = 0x83  # Linux filesystem
+#		partition-type = 0x83  # Linux filesystem
                 image = "fip.bin"
                 offset = 13312s
                 size = 4096s

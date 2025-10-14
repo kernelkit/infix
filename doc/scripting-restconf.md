@@ -16,23 +16,79 @@ To simplify RESTCONF operations, create a `curl.sh` wrapper script:
 
 ```bash
 #!/bin/sh
+# RESTCONF CLI wrapper for curl
 
-AUTH=${AUTH:-admin:admin}
+# Show usage and exit
+usage()
+{
+	cat <<-EOF >&2
+	Usage: $0 [-h HOST] [-d DATASTORE] [-u USER:PASS] METHOD PATH [CURL_ARGS...]
+
+	Options:
+	  -h HOST    Target host (default: infix.local)
+	  -d DS      Datastore: running, operational, startup (default: running)
+	  -u CREDS   Credentials as user:pass (default: admin:admin)
+
+	Methods: GET, POST, PUT, PATCH, DELETE
+	EOF
+	exit "$1"
+}
+
+# Default values
 HOST=${HOST:-infix.local}
+DATASTORE=running
+AUTH=admin:admin
 
-method=$1
-path=$2
+# Parse options
+while getopts "h:d:u:" opt; do
+	case $opt in
+		h) HOST="$OPTARG" ;;
+		d) DATASTORE="$OPTARG" ;;
+		u) AUTH="$OPTARG" ;;
+		*) usage 1 ;;
+	esac
+done
+shift $((OPTIND - 1))
+
+# Validate required arguments
+if [ $# -lt 2 ]; then
+	echo "Error: METHOD and PATH are required" >&2
+	usage 1
+fi
+
+METHOD=$1
+PATH=$2
 shift 2
 
-set -x
-exec curl \
-     --insecure \
-     --user ${AUTH} \
-     --request ${method} \
-     --header "Content-Type: application/yang-data+json" \
-     --header "Accept: application/yang-data+json" \
-     "$@" \
-     https://${HOST}/restconf/ds/ietf-datastores:${path}
+# Ensure PATH starts with /
+case "$PATH" in
+	/*) ;;
+	*) PATH="/$PATH" ;;
+esac
+
+# Build URL based on datastore
+case "$DATASTORE" in
+	running|startup)
+		URL="https://${HOST}/restconf/data${PATH}"
+		;;
+	operational)
+		URL="https://${HOST}/restconf/data${PATH}"
+		;;
+	*)
+		echo "Error: Invalid datastore '$DATASTORE'. Use: running, operational, or startup" >&2
+		exit 1
+		;;
+esac
+
+# Execute curl with all remaining arguments passed through
+exec /usr/bin/curl \
+	--insecure \
+	--user "${AUTH}" \
+	--request "${METHOD}" \
+	--header "Content-Type: application/yang-data+json" \
+	--header "Accept: application/yang-data+json" \
+	"$@" \
+	"${URL}"
 ```
 
 Make it executable:
@@ -41,12 +97,16 @@ Make it executable:
 ~$ chmod +x curl.sh
 ```
 
-This wrapper handles authentication, headers, and the base URL construction,
-making commands much cleaner. You can override defaults with environment
-variables:
+This wrapper handles authentication, headers, SSL certificates, and URL
+construction, making commands much cleaner. You can override defaults with
+command-line options or environment variables:
 
 ```bash
-~$ HOST=192.168.1.10 AUTH=admin:secret ./curl.sh GET running/...
+# Using command-line options
+~$ ./curl.sh -h 192.168.1.10 -d operational -u admin:secret GET /ietf-interfaces:interfaces
+
+# Using environment variables
+~$ HOST=192.168.1.10 ./curl.sh GET /ietf-system:system
 ```
 
 The examples below show both raw `curl` commands and the equivalent using
@@ -63,7 +123,7 @@ practical workflows.
 **List all interface names:**
 
 ```bash
-~$ ./curl.sh example.local GET operational/ietf-interfaces:interfaces 2>/dev/null | jq -r '.["ietf-interfaces:interfaces"]["interface"][].name'
+~$ ./curl.sh -h example.local -d operational GET /ietf-interfaces:interfaces 2>/dev/null | jq -r '.["ietf-interfaces:interfaces"]["interface"][].name'
 lo
 e0
 e1
@@ -89,7 +149,7 @@ This returns all supported YANG modules, revisions, and features.
 Useful for exploration or backup:
 
 ```bash
-~$ ./curl.sh example.local GET running -o backup.json
+~$ ./curl.sh -h example.local GET / -o backup.json
 ```
 
 ### Common Workflow Patterns
@@ -99,21 +159,21 @@ Useful for exploration or backup:
 Get all interfaces with IPs and search:
 
 ```bash
-~$ ./curl.sh example.local GET operational/ietf-interfaces:interfaces 2>/dev/null \
+~$ ./curl.sh -h example.local -d operational GET /ietf-interfaces:interfaces 2>/dev/null \
      | jq -r '.["ietf-interfaces:interfaces"]["interface"][] | select(.["ietf-ip:ipv4"]["address"][]?.ip == "192.168.1.100") | .name'
 ```
 
 #### Pattern 2: List all interfaces that are down
 
 ```bash
-~$ ./curl.sh example.local GET operational/ietf-interfaces:interfaces 2>/dev/null \
+~$ ./curl.sh -h example.local -d operational GET /ietf-interfaces:interfaces 2>/dev/null \
      | jq -r '.["ietf-interfaces:interfaces"]["interface"][] | select(.["oper-status"] == "down") | .name'
 ```
 
 #### Pattern 3: Get statistics for all interfaces
 
 ```bash
-~$ ./curl.sh example.local GET operational/ietf-interfaces:interfaces 2>/dev/null \
+~$ ./curl.sh -h example.local -d operational GET /ietf-interfaces:interfaces 2>/dev/null \
      | jq -r '.["ietf-interfaces:interfaces"]["interface"][] | "\(.name): RX \(.statistics["in-octets"]) TX \(.statistics["out-octets"])"'
 ```
 
@@ -128,7 +188,7 @@ e1: RX 0 TX 0
 #### Pattern 4: Check if interface exists before configuring
 
 ```bash
-~$ if ./curl.sh example.local GET running/ietf-interfaces:interfaces/interface=eth0 2>/dev/null | grep -q "ietf-interfaces:interface"; then
+~$ if ./curl.sh -h example.local GET /ietf-interfaces:interfaces/interface=eth0 2>/dev/null | grep -q "ietf-interfaces:interface"; then
      echo "Interface eth0 exists"
    else
      echo "Interface eth0 not found"
@@ -157,7 +217,7 @@ Example of fetching JSON configuration data:
 **Using curl.sh:**
 
 ```bash
-~$ ./curl.sh example.local GET running/ietf-system:system/hostname
+~$ ./curl.sh -h example.local GET /ietf-system:system/hostname
 {
   "ietf-system:system": {
     "hostname": "foo"
@@ -181,7 +241,7 @@ Example of updating configuration with inline JSON data:
 **Using curl.sh:**
 
 ```bash
-~$ ./curl.sh example.local PATCH running/ietf-system:system \
+~$ ./curl.sh -h example.local PATCH /ietf-system:system \
      -d '{"ietf-system:system":{"hostname":"bar"}}'
 ```
 
@@ -190,8 +250,8 @@ Example of updating configuration with inline JSON data:
 Add an IP address to the loopback interface:
 
 ```bash
-~$ ./curl.sh example.local POST \
-     running/ietf-interfaces:interfaces/interface=lo/ietf-ip:ipv4/address=192.168.254.254 \
+~$ ./curl.sh -h example.local POST \
+     /ietf-interfaces:interfaces/interface=lo/ietf-ip:ipv4/address=192.168.254.254 \
      -d '{ "prefix-length": 32 }'
 ```
 
@@ -200,8 +260,8 @@ Add an IP address to the loopback interface:
 Remove an IP address from the loopback interface:
 
 ```bash
-~$ ./curl.sh example.local DELETE \
-     running/ietf-interfaces:interfaces/interface=lo/ietf-ip:ipv4/address=192.168.254.254
+~$ ./curl.sh -h example.local DELETE \
+     /ietf-interfaces:interfaces/interface=lo/ietf-ip:ipv4/address=192.168.254.254
 ```
 
 ### Copy Running to Startup
@@ -228,8 +288,8 @@ and then update startup with it:
 **Using curl.sh:**
 
 ```bash
-~$ ./curl.sh example.local GET running -o running-config.json
-~$ ./curl.sh example.local PUT startup -d @running-config.json
+~$ ./curl.sh -h example.local GET / -o running-config.json
+~$ ./curl.sh -h example.local -d startup PUT / -d @running-config.json
 ```
 
 ## Operational Data
@@ -239,7 +299,7 @@ and then update startup with it:
 Get the running configuration for the loopback interface:
 
 ```bash
-~$ ./curl.sh example.local GET running/ietf-interfaces:interfaces/interface=lo
+~$ ./curl.sh -h example.local GET /ietf-interfaces:interfaces/interface=lo
 ```
 
 ### Read Interface Operational State
@@ -247,7 +307,7 @@ Get the running configuration for the loopback interface:
 Get operational data (state, statistics, etc.) for an interface:
 
 ```bash
-~$ ./curl.sh example.local GET operational/ietf-interfaces:interfaces/interface=lo
+~$ ./curl.sh -h example.local -d operational GET /ietf-interfaces:interfaces/interface=lo
 ```
 
 This includes administrative and operational state, MAC address, MTU, and
@@ -258,7 +318,7 @@ statistics counters.
 Extract specific statistics using `jq`:
 
 ```bash
-~$ ./curl.sh example.local GET operational/ietf-interfaces:interfaces/interface=eth0 2>/dev/null \
+~$ ./curl.sh -h example.local -d operational GET /ietf-interfaces:interfaces/interface=eth0 2>/dev/null \
      | jq -r '.["ietf-interfaces:interfaces"]["interface"][0]["statistics"]["in-octets"]'
 ```
 
@@ -267,7 +327,7 @@ Extract specific statistics using `jq`:
 Get operational data for all interfaces:
 
 ```bash
-~$ ./curl.sh example.local GET operational/ietf-interfaces:interfaces
+~$ ./curl.sh -h example.local -d operational GET /ietf-interfaces:interfaces
 ```
 
 ### Read Routing Table
@@ -275,7 +335,7 @@ Get operational data for all interfaces:
 Get the IPv4 routing table:
 
 ```bash
-~$ ./curl.sh example.local GET operational/ietf-routing:routing/ribs/rib=ipv4-default
+~$ ./curl.sh -h example.local -d operational GET /ietf-routing:routing/ribs/rib=ipv4-default
 ```
 
 ### Read OSPF State
@@ -283,13 +343,13 @@ Get the IPv4 routing table:
 Get OSPF operational data (neighbors, routes, etc.):
 
 ```bash
-~$ ./curl.sh example.local GET operational/ietf-routing:routing/control-plane-protocols/control-plane-protocol=ietf-ospf:ospfv2,default
+~$ ./curl.sh -h example.local -d operational GET /ietf-routing:routing/control-plane-protocols/control-plane-protocol=ietf-ospf:ospfv2,default
 ```
 
 Or get just the neighbor information:
 
 ```bash
-~$ ./curl.sh example.local GET operational/ietf-routing:routing/control-plane-protocols/control-plane-protocol=ietf-ospf:ospfv2,default/ietf-ospf:ospf/areas/area=0.0.0.0/interfaces
+~$ ./curl.sh -h example.local -d operational GET /ietf-routing:routing/control-plane-protocols/control-plane-protocol=ietf-ospf:ospfv2,default/ietf-ospf:ospf/areas/area=0.0.0.0/interfaces
 ```
 
 ## System Operations (RPCs)
@@ -345,22 +405,22 @@ Create a `Makefile` to simplify common operations:
 HOST ?= infix.local
 
 lo-running:
-	./curl.sh $(HOST) GET running/ietf-interfaces:interfaces/interface=lo
+	./curl.sh -h $(HOST) GET /ietf-interfaces:interfaces/interface=lo
 
 lo-operational:
-	./curl.sh $(HOST) GET operational/ietf-interfaces:interfaces/interface=lo
+	./curl.sh -h $(HOST) -d operational GET /ietf-interfaces:interfaces/interface=lo
 
 lo-add-ip:
-	./curl.sh $(HOST) POST \
-	    running/ietf-interfaces:interfaces/interface=lo/ietf-ip:ipv4/address=192.168.254.254 \
+	./curl.sh -h $(HOST) POST \
+	    /ietf-interfaces:interfaces/interface=lo/ietf-ip:ipv4/address=192.168.254.254 \
 	    -d '{ "prefix-length": 32 }'
 
 lo-del-ip:
-	./curl.sh $(HOST) DELETE \
-	    running/ietf-interfaces:interfaces/interface=lo/ietf-ip:ipv4/address=192.168.254.254
+	./curl.sh -h $(HOST) DELETE \
+	    /ietf-interfaces:interfaces/interface=lo/ietf-ip:ipv4/address=192.168.254.254
 
 %-stats:
-	@./curl.sh $(HOST) GET operational/ietf-interfaces:interfaces/interface=$* 2>/dev/null \
+	@./curl.sh -h $(HOST) -d operational GET /ietf-interfaces:interfaces/interface=$* 2>/dev/null \
 	    | jq -r '.["ietf-interfaces:interfaces"]["interface"][0]["statistics"]["in-octets"]'
 
 %-monitor:

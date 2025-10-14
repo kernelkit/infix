@@ -11,9 +11,13 @@ All notable changes to the project are documented in this file.
 - Upgrade Linux kernel to 6.12.50 (LTS)
 - Extend NETCONF and RESTCONF scripting documentation with operational
   data examples, discovery patterns, and common workflow examples, issue #1156
+- Initial support for a zone-based firewall, based on `firewalld`, issue #448
+- Automatically expand `/var` partition on SD card at first boot on RPi
 
 ### Fixes
 
+- Fix #1194: CLI `text-editor` command does not do proper input sanitation
+- Fix #1197: RPi4 no longer boots after BPi-R3 merge, introduced in v25.09
 
 [v25.09.0][] - 2025-09-30
 -------------------------
@@ -1656,6 +1660,7 @@ Supported YANG models in addition to those used by sysrepo and netopeer:
 
 [buildroot]:  https://buildroot.org/
 [UNRELEASED]: https://github.com/kernelkit/infix/compare/v25.09.0...HEAD
+[v25.10.0]:   https://github.com/kernelkit/infix/compare/v25.09.0...v26.10.0
 [v25.09.0]:   https://github.com/kernelkit/infix/compare/v25.08.0...v26.09.0
 [v25.08.0]:   https://github.com/kernelkit/infix/compare/v25.06.1...v26.08.0
 [v25.06.0]:   https://github.com/kernelkit/infix/compare/v25.05.1...v26.06.0
