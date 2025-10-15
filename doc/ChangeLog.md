@@ -9,7 +9,7 @@ All notable changes to the project are documented in this file.
 ### Changes
 
 - Upgrade Buildroot to 2025.02.7 (LTS)
-- Upgrade Linux kernel to 6.12.52 (LTS)
+- Upgrade Linux kernel to 6.12.53 (LTS)
 - Extend NETCONF and RESTCONF scripting documentation with operational
   data examples, discovery patterns, and common workflow examples, issue #1156
 - Initial support for a zone-based firewall, based on `firewalld`, issue #448
