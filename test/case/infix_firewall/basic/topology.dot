@@ -1,26 +1,26 @@
 graph "1x3" {
     layout  = "neato";
     overlap = false;
-    esep    = "+80";
+    esep    = "+30";
 
     node [shape=record, fontname="DejaVu Sans Mono, Book"];
     edge [color="cornflowerblue", penwidth="2", fontname="DejaVu Serif, Book"];
 
     host [
 	  label="host | { <mgmt> mgmt | <data> data }",
-	  pos="1,1!",
+	  pos="10,10.95!",
 	  requires="controller"
     ];
 
     target [
 	    label="{ <mgmt> mgmt | <data> data | <unused> unused } | target",
-	    pos="3,1!",
+	    pos="30,10!",
 	    requires="infix",
     ];
 
     dummy [
 	    label="{ <link> link } | dummy",
-	    pos="5,1!",
+	    pos="29.8,00!",
 	    requires="infix",
     ];
 

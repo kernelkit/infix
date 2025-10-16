@@ -1,6 +1,6 @@
 === Host Command Execution from Container
 
-ifdef::topdoc[:imagesdir: {topdoc}../../test/case/infix_containers/container_host_commands]
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/infix_containers/host_commands]
 
 ==== Description
 

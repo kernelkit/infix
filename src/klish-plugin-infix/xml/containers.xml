@@ -102,9 +102,14 @@
   </COMMAND>
 
   <COMMAND name="remove" help="Remove a container image from local storage">
-    <PARAM name="name" ptype="/IMAGES" help="Image name" />
+    <SWITCH name="optional" min="0">
+      <PARAM name="name" ptype="/IMAGES" help="Image name" />
+    </SWITCH>
     <ACTION sym="script" in="tty" out="tty" interrupt="true">
-      doas container remove $KLISH_PARAM_name
+      if [ -n "$KLISH_PARAM_name" ]; then
+        all=-a
+      fi
+      doas container $all remove $KLISH_PARAM_name
     </ACTION>
   </COMMAND>
 

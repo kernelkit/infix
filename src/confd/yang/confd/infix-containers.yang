@@ -22,6 +22,13 @@ module infix-containers {
     prefix infix-sys;
   }
 
+  revision 2025-10-12 {
+    description "Two major changes:
+                  - Add dedicated 'ident' type for container and volume names.
+                  - New upgrade action (RPC) for containers with :latest image.";
+    reference "internal";
+  }
+
   revision 2025-06-25 {
     description "Add file mode option to content mounts, allows creating scripts.";
     reference "internal";
@@ -61,6 +68,14 @@ module infix-containers {
   /*
    * Typedefs
    */
+
+  typedef ident {
+    description "Container name or volume identifiers may not contain spaces.";
+    type string {
+      length "2..64";
+      pattern '[a-zA-Z0-9][a-zA-Z0-9_.-]+';
+    }
+  }
 
   typedef mount-type {
     type enumeration {
@@ -128,7 +143,7 @@ module infix-containers {
 
       leaf name {
 	description "Name of the container";
-	type string;
+	type ident;
       }
 
       leaf id {
@@ -344,7 +359,7 @@ module infix-containers {
 
                        For persistent writable directories, *volumes* may be a
                        better fit for your container and easier to set up.";
-          type string;
+          type ident;
         }
 
         leaf type {
@@ -436,10 +451,7 @@ module infix-containers {
                        with the contents of the container's file system on first
                        use.  Hence, upgrading the container image will not update
                        the volume if the image has new/removed files at 'path'.";
-	  type string {
-            pattern '[a-zA-Z_][a-zA-Z0-9_]*';
-            length "1..64";
-          }
+	  type ident;
 	}
 
 	leaf target {
@@ -473,6 +485,18 @@ module infix-containers {
 
       action restart {
         description "Restart a running, or start, a stopped container.";
+      }
+
+      action upgrade {
+        description "Upgrade container to latest version of its image.
+
+                     This action fetches the latest version of the container's image
+                     and recreates the container with the new image. Any named volumes
+                     are preserved.
+
+                     Note: This action is primarily for containers using mutable tags
+                           like ':latest'.  For containers using immutable tags (e.g.,
+                           ':25.06.0'), the upgrade action will have no effect.";
       }
     }
   }

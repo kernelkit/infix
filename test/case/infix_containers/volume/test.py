@@ -57,7 +57,7 @@ with infamy.Test() as test:
 
     with test.step("Upgrade container"):
         out = tgtssh.runsh(f"sudo container upgrade {NAME}")
-        if ">> Done." not in out.stdout:
+        if f">> Container {NAME} upgraded successfully." not in out.stdout:
             msg = f"Failed upgrading container {NAME}:\n" \
                 f"STDOUT:\n{out.stdout}\n" \
                 f"STDERR:\n{out.stderr}"

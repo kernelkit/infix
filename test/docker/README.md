@@ -16,7 +16,8 @@ the image, e.g., with missing Alpine packages.
     here: <https://github.com/kernelkit/infix/pkgs/container/infix-test>
 	in this example we use version 0.4:
 
-        docker build -t ghcr.io/kernelkit/infix-test:0.4 .
+        cd test/
+        docker build -f docker/Dockerfile -t ghcr.io/kernelkit/infix-test:0.4 .
 
  3. Update the `test/.env` file to use the new version
  4. Verify your new image works properly (remember to remove your `~/.infix/venv`)

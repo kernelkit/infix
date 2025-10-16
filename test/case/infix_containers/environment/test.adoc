@@ -1,6 +1,6 @@
 === Container environment variables
 
-ifdef::topdoc[:imagesdir: {topdoc}../../test/case/infix_containers/container_environment]
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/infix_containers/environment]
 
 ==== Description
 
