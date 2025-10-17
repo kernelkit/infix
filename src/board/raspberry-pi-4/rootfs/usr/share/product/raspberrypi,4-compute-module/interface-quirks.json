@@ -1,0 +1,8 @@
+{
+    "eth0": {
+	"phy-detached-when-down": true
+    },
+    "eth1": {
+	"phy-detached-when-down": true
+    }
+}

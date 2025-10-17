@@ -1,0 +1,9 @@
+#include <arm/broadcom/bcm2711-rpi-cm4.dtsi>
+#include "infix.dtsi"
+
+/ {
+	chosen {
+		/* 8250 auxiliary UART instead of pl011 */
+		stdout-path = "serial1:115200n8";
+	};
+};
