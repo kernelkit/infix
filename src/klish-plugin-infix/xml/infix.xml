@@ -353,6 +353,12 @@
     </ACTION>
   </COMMAND>
 
+  <COMMAND name="system" help="Show system overview">
+    <ACTION sym="script" in="tty" out="tty" interrupt="true">
+      show system |pager
+    </ACTION>
+  </COMMAND>
+
   <COMMAND name="ospf" help="Show OSPF status">
     <PARAM name="name" ptype="/STRING" help="neighbor, interfaces or bfd" min="0" max="1">
       <COMPL>

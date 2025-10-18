@@ -193,6 +193,19 @@ class PadLldp:
     port_id = 20
 
 
+class PadDiskUsage:
+    mount = 18
+    size = 12
+    used = 12
+    avail = 12
+    percent = 6
+
+    @classmethod
+    def table_width(cls):
+        """Total width of disk usage table"""
+        return cls.mount + cls.size + cls.used + cls.avail + cls.percent
+
+
 class PadFirewall:
     zone_locked = 2
     zone_name = 21
@@ -1589,6 +1602,121 @@ def show_ntp(json):
         print(row)
 
 
+def show_system(json):
+    """System information overivew"""
+    if not json.get("ietf-system:system-state"):
+        print("Error: No system data available.")
+        sys.exit(1)
+
+    system_state = json["ietf-system:system-state"]
+    platform = system_state.get("platform", {})
+    clock = system_state.get("clock", {})
+    software = system_state.get("infix-system:software", {})
+    runtime = json.get("runtime", {})
+
+    # Calculate uptime
+    uptime_str = "Unknown"
+    if clock.get("current-datetime") and clock.get("boot-datetime"):
+        try:
+            current = datetime.fromisoformat(clock["current-datetime"].replace("Z", "+00:00"))
+            boot = datetime.fromisoformat(clock["boot-datetime"].replace("Z", "+00:00"))
+            uptime = current - boot
+            days = uptime.days
+            hours, remainder = divmod(uptime.seconds, 3600)
+            minutes, seconds = divmod(remainder, 60)
+            uptime_str = f"{days}d {hours:02d}:{minutes:02d}:{seconds:02d}"
+        except (ValueError, KeyError):
+            pass
+
+    width = PadDiskUsage.table_width()
+    print(Decore.invert(f"{'SYSTEM INFORMATION':<{width}}"))
+    print(f"{'OS Name':<20}: {platform.get('os-name', 'Unknown')}")
+    print(f"{'OS Version':<20}: {platform.get('os-version', 'Unknown')}")
+    print(f"{'Architecture':<20}: {platform.get('machine', 'Unknown')}")
+
+    booted = software.get("booted", "Unknown")
+    slots = software.get("slot", [])
+    booted_slot = None
+    for slot in slots:
+        if slot.get("state") == "booted":
+            booted_slot = slot
+            break
+
+    if booted_slot:
+        bundle = booted_slot.get("bundle", {})
+        print(f"{'Boot Partition':<20}: {booted} ({bundle.get('version', 'Unknown')})")
+    else:
+        print(f"{'Boot Partition':<20}: {booted}")
+
+    # Format current time more readably: "2025-10-18 13:23:47 +00:00"
+    current_time = clock.get('current-datetime', 'Unknown')
+    if current_time != 'Unknown':
+        try:
+            dt = datetime.fromisoformat(current_time.replace("Z", "+00:00"))
+            # Format as "YYYY-MM-DD HH:MM:SS +HH:MM" (keep UTC offset)
+            current_time = dt.strftime('%Y-%m-%d %H:%M:%S %z')
+            # Insert colon in timezone offset: +0000 -> +00:00
+            if len(current_time) >= 5 and current_time[-5] in ['+', '-']:
+                current_time = current_time[:-2] + ':' + current_time[-2:]
+        except (ValueError, AttributeError):
+            pass
+
+    print(f"{'Current Time':<20}: {current_time}")
+    print(f"{'Uptime':<20}: {uptime_str}")
+
+    Decore.title("Status", width)
+
+    load = runtime.get("load", {})
+    if load:
+        print(f"{'Load Average':<20}: {load.get('1min', '?')}, {load.get('5min', '?')}, {load.get('15min', '?')}")
+
+    memory = runtime.get("memory", {})
+    if memory:
+        total = memory.get("MemTotal", 0)
+        available = memory.get("MemAvailable", 0)
+        used = total - available
+        percent = int((used / total * 100)) if total > 0 else 0
+        print(f"{'Memory':<20}: {used} / {total} MB ({percent}% used)")
+
+    thermal = runtime.get("thermal", [])
+    if thermal:
+        for zone in thermal:
+            zone_type = zone.get("type", "Unknown").replace("-thermal", "")
+            temp = zone.get("temp", 0)
+            # Color code temperature: green < 60, yellow 60-75, red > 75
+            temp_str = f"{temp:.1f}°C"
+            if temp < 60:
+                temp_colored = Decore.green(temp_str)
+            elif temp < 75:
+                temp_colored = Decore.yellow(temp_str)
+            else:
+                temp_colored = Decore.red(temp_str)
+            print(f"{'Temperature':<20}: {temp_colored} ({zone_type})")
+
+    disk = runtime.get("disk", [])
+    # Filter out root partition (/) - it's read-only and shows confusing 100% usage
+    disk_filtered = [d for d in disk if d.get("mount") != "/"]
+    if disk_filtered:
+        Decore.title("Disk Usage", width)
+        hdr = (f"{'MOUNTPOINT':<{PadDiskUsage.mount}}"
+               f"{'SIZE':>{PadDiskUsage.size}}"
+               f"{'USED':>{PadDiskUsage.used}}"
+               f"{'AVAIL':>{PadDiskUsage.avail}}"
+               f"{'USE%':>{PadDiskUsage.percent}}")
+        print(Decore.invert(hdr))
+        for d in disk_filtered:
+            mount = d.get("mount", "?")
+            size = d.get("size", "?")
+            used = d.get("used", "?")
+            avail = d.get("available", "?")
+            percent = d.get("percent", "?")
+            print(f"{mount:<{PadDiskUsage.mount}}"
+                  f"{size:>{PadDiskUsage.size}}"
+                  f"{used:>{PadDiskUsage.used}}"
+                  f"{avail:>{PadDiskUsage.avail}}"
+                  f"{percent:>{PadDiskUsage.percent}}")
+
+
 def show_dhcp_server(json, stats):
     data = json.get("infix-dhcp-server:dhcp-server")
     if not data:
@@ -2518,31 +2646,33 @@ def main():
     subparsers.add_parser('show-bridge-stp', help='Show spanning tree state')
 
     subparsers.add_parser('show-dhcp-server', help='Show DHCP server') \
-    .add_argument("-s", "--stats", action="store_true", help="Show server statistics")
+              .add_argument("-s", "--stats", action="store_true", help="Show server statistics")
 
     subparsers.add_parser('show-hardware', help='Show USB ports')
 
     subparsers.add_parser('show-interfaces', help='Show interfaces') \
-    .add_argument('-n', '--name', help='Interface name')
+              .add_argument('-n', '--name', help='Interface name')
 
     subparsers.add_parser('show-lldp', help='Show LLDP neighbors')
     subparsers.add_parser('show-firewall', help='Show firewall overview')
     subparsers.add_parser('show-firewall-zone', help='Show firewall zones') \
-        .add_argument('name', nargs='?', help='Zone name')
+              .add_argument('name', nargs='?', help='Zone name')
     subparsers.add_parser('show-firewall-policy', help='Show firewall policies') \
-        .add_argument('name', nargs='?', help='Policy name')
+              .add_argument('name', nargs='?', help='Policy name')
     subparsers.add_parser('show-firewall-service', help='Show firewall services') \
-        .add_argument('name', nargs='?', help='Service name')
+              .add_argument('name', nargs='?', help='Service name')
 
     subparsers.add_parser('show-ntp', help='Show NTP sources')
 
     subparsers.add_parser('show-routing-table', help='Show the routing table') \
-    .add_argument('-i', '--ip', required=True, help='IPv4 or IPv6 address')
+              .add_argument('-i', '--ip', required=True, help='IPv4 or IPv6 address')
 
     subparsers.add_parser('show-services', help='Show system services')
 
     subparsers.add_parser('show-software', help='Show software versions') \
-    .add_argument('-n', '--name', help='Slotname')
+              .add_argument('-n', '--name', help='Slotname')
+
+    subparsers.add_parser('show-system', help='Show system overview')
 
     args = parser.parse_args()
     UNIT_TEST = args.test
@@ -2575,6 +2705,8 @@ def main():
         show_software(json_data, args.name)
     elif args.command == "show-services":
         show_services(json_data)
+    elif args.command == "show-system":
+        show_system(json_data)
 
     else:
         print(f"Error, unknown command '{args.command}'")

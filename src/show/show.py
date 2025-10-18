@@ -190,6 +190,96 @@ def wifi(args: List[str]):
     else:
         print(f"Invalid interface name: {iface}")
 
+def system(args: List[str]) -> None:
+    # Get system state from sysrepo
+    data = run_sysrepocfg("/ietf-system:system-state")
+    if not data:
+        print("No system data retrieved.")
+        return
+
+    # Augment with runtime data
+    runtime = {}
+
+    # Get thermal zones
+    thermal_zones = []
+    try:
+        for zone in os.listdir("/sys/class/thermal"):
+            if zone.startswith("thermal_zone"):
+                try:
+                    with open(f"/sys/class/thermal/{zone}/type") as f:
+                        zone_type = f.read().strip()
+                    with open(f"/sys/class/thermal/{zone}/temp") as f:
+                        temp = int(f.read().strip()) / 1000.0
+                    thermal_zones.append({"type": zone_type, "temp": temp})
+                except (FileNotFoundError, ValueError):
+                    pass
+    except FileNotFoundError:
+        pass
+
+    if thermal_zones:
+        runtime["thermal"] = thermal_zones
+
+    # Get disk usage for /, /var, /cfg
+    disk_usage = []
+    for mount in ["/", "/var", "/cfg"]:
+        try:
+            result = subprocess.run(["df", "-h", mount],
+                                    capture_output=True, text=True, check=True)
+            lines = result.stdout.strip().split("\n")
+            if len(lines) > 1:
+                parts = lines[1].split()
+                if len(parts) >= 5:
+                    disk_usage.append({
+                        "mount": mount,
+                        "size": parts[1],
+                        "used": parts[2],
+                        "available": parts[3],
+                        "percent": parts[4]
+                    })
+        except subprocess.CalledProcessError:
+            pass
+
+    if disk_usage:
+        runtime["disk"] = disk_usage
+
+    # Get memory info
+    try:
+        with open("/proc/meminfo") as f:
+            mem_info = {}
+            for line in f:
+                parts = line.split(":")
+                if len(parts) == 2:
+                    key = parts[0].strip()
+                    value = parts[1].strip()
+                    if key in ["MemTotal", "MemFree", "MemAvailable"]:
+                        # Convert from kB to MB
+                        mem_info[key] = int(value.split()[0]) // 1024
+            runtime["memory"] = mem_info
+    except FileNotFoundError:
+        pass
+
+    # Get load average
+    try:
+        with open("/proc/loadavg") as f:
+            load_parts = f.read().strip().split()
+            if len(load_parts) >= 3:
+                runtime["load"] = {
+                    "1min": load_parts[0],
+                    "5min": load_parts[1],
+                    "15min": load_parts[2]
+                }
+    except FileNotFoundError:
+        pass
+
+    # Add runtime data to main data structure
+    data["runtime"] = runtime
+
+    if RAW_OUTPUT:
+        print(json.dumps(data, indent=2))
+        return
+
+    cli_pretty(data, "show-system")
+
 def execute_command(command: str, args: List[str]):
     command_mapping = {
         'dhcp': dhcp,
@@ -201,6 +291,7 @@ def execute_command(command: str, args: List[str]):
         'services' : services,
         'software' : software,
         'stp': stp,
+        'system': system,
         'wifi': wifi
     }
 
