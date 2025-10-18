@@ -680,12 +680,18 @@
 
   <COMMAND name="upgrade" help="Install a software update bundle from remote or local file">
     <PARAM name="URI" ptype="/STRING" help="[(ftp|tftp|http|https|sftp)://(dns.name | ip.address)/path/to/]upgrade-bundle.pkg"/>
-    <SWITCH name="optional" min="0" max="1">
+    <SWITCH name="optional" min="0" max="2">
       <COMMAND name="force" help="Force upgrade, ignoring compatibility check."/>
+      <COMMAND name="reboot" help="Reboot system after successful upgrade."/>
     </SWITCH>
     <ACTION sym="script" in="tty" out="tty" interrupt="true">
       force=${KLISH_PARAM_force:+--ignore-compatible}
       rauc install $force $KLISH_PARAM_URI
+      if [ $? -eq 0 -a -n "$KLISH_PARAM_reboot" ]; then
+        echo "Upgrade successful, rebooting..."
+        sleep 2
+        reboot
+      fi
     </ACTION>
   </COMMAND>
 </VIEW>
