@@ -31,41 +31,41 @@ image var.ext4 {
 
 image #INFIX_ID##VERSION#-rpi4-sdcard.img {
 	hdimage {
-		partition-table-type = "gpt"
+		partition-table-type = "hybrid"
 	}
 
 	partition boot {
-		partition-type-uuid = EBD0A0A2-B9E5-4433-87C0-68B6B72699C7
+		partition-type = 0xc
 		bootable = "true"
 		image = "boot.vfat"
 	}
 
 	partition aux {
-		partition-uuid = D4EF35A0-0652-45A1-B3DE-D63339C82035
+		partition-type-uuid = srv
 		image = "aux.ext4"
 	}
 
 	partition primary {
-		partition-type-uuid = 0FC63DAF-8483-4772-8E79-3D69D8477DE4
-		bootable = true
+		partition-type-uuid = linux
+		bootable = "true"
 		size = 250M
 		image = "rootfs.squashfs"
 	}
 
 	partition secondary {
-		partition-type-uuid = 0FC63DAF-8483-4772-8E79-3D69D8477DE4
-		bootable = true
+		partition-type-uuid = linux
+		bootable = "true"
 		size = 250M
 		image = "rootfs.squashfs"
 	}
 
 	partition cfg {
-		partition-uuid = 7aa497f0-73b5-47e5-b2ab-8752d8a48105
+		partition-type-uuid = srv
 		image = "cfg.ext4"
 	}
 
 	partition var {
-		partition-uuid = 8046A06A-E45A-4A14-A6AD-6684704A393F
+		partition-type-uuid = var
 		image = "var.ext4"
 	}
 }

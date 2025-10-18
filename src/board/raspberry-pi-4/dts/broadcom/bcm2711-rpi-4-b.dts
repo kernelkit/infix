@@ -1,4 +1,5 @@
 #include <arm64/broadcom/bcm2711-rpi-4-b.dts>
+#include "infix.dtsi"
 
 / {
 	/* Dynamic GPU reservation */
@@ -21,11 +22,6 @@
 	chosen {
 		/* 8250 auxiliary UART instead of pl011 */
 		stdout-path = "serial1:115200n8";
-
-		infix {
-			/* Default admin user password: 'admin' */
-			factory-password-hash = "$5$mI/zpOAqZYKLC2WU$i7iPzZiIjOjrBF3NyftS9CCq8dfYwHwrmUK097Jca9A";
-		};
 	};
 };
 

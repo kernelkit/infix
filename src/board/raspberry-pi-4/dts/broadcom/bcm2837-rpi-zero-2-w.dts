@@ -1,0 +1,9 @@
+#include <arm64/broadcom/bcm2837-rpi-zero-2-w.dts>
+#include "infix.dtsi"
+
+/ {
+	chosen {
+		/* 8250 auxiliary UART instead of pl011 */
+		stdout-path = "serial1:115200n8";
+	};
+};

@@ -17,7 +17,7 @@
 			stdin = "serial";
 			splashpos = "m,m";
 			splashfile = "splash.bmp";
-			checkdisplay = "if testrpidisplay; then; setenv fdtfile broadcom/bcm2711-rpi-4-b-dsi.dtb; else; setenv fdtfile broadcom/bcm2711-rpi-4-b.dtb; fi";
+			checkdisplay = "if testrpidisplay; then; setenv fdtfile broadcom/bcm2711-rpi-4-b-dsi.dtb; fi";
 			bootcmd = "fatload mmc 0:1 ${loadaddr} ${splashfile}; bmp display ${loadaddr}; run checkdisplay; run ixboot";
 
 			ixpreboot     = /incbin/("scripts/ixpreboot.sh");
