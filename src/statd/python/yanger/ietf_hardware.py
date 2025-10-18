@@ -1,7 +1,8 @@
 import datetime
 import os
+import glob
 
-from .common import insert
+from .common import insert, YangDate
 from .host import HOST
 
 
@@ -75,6 +76,63 @@ def usb_port_components(systemjson):
     return ports
 
 
+def thermal_sensor_components():
+    """
+    Discover thermal zones and create sensor components.
+    Returns a list of hardware components with sensor-data.
+    """
+    components = []
+
+    try:
+        # Find all thermal zones
+        thermal_zones = glob.glob("/sys/class/thermal/thermal_zone*")
+
+        for zone_path in thermal_zones:
+            try:
+                # Read zone type (e.g., "cpu-thermal", "gpu-thermal")
+                type_path = os.path.join(zone_path, "type")
+                if not HOST.exists(type_path):
+                    continue
+
+                zone_type = HOST.read(type_path).strip()
+
+                # Read temperature in millidegrees Celsius
+                temp_path = os.path.join(zone_path, "temp")
+                if not HOST.exists(temp_path):
+                    continue
+
+                temp_millidegrees = int(HOST.read(temp_path).strip())
+
+                # Create component with sensor-data
+                # Component name: strip "-thermal" suffix for cleaner display
+                component_name = zone_type.replace("-thermal", "")
+
+                component = {
+                    "name": component_name,
+                    "class": "iana-hardware:sensor",
+                    "sensor-data": {
+                        "value": temp_millidegrees,
+                        "value-type": "celsius",
+                        "value-scale": "milli",
+                        "value-precision": 0,
+                        "value-timestamp": str(YangDate()),
+                        "oper-status": "ok"
+                    }
+                }
+
+                components.append(component)
+
+            except (FileNotFoundError, ValueError, IOError):
+                # Skip this thermal zone if we can't read it
+                continue
+
+    except Exception:
+        # If we can't access /sys/class/thermal at all, just return empty list
+        pass
+
+    return components
+
+
 def operational():
     systemjson = HOST.read_json("/run/system.json")
 
@@ -83,6 +141,7 @@ def operational():
             "component":
             vpd_components(systemjson) +
             usb_port_components(systemjson) +
+            thermal_sensor_components() +
             [],
         },
     }

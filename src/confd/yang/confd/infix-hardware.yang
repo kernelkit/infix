@@ -17,6 +17,10 @@ module infix-hardware {
   contact      "kernelkit@googlegroups.com";
   description  "Vital Product Data augmentation of ieee-hardware and deviations.";
 
+  revision 2025-10-18 {
+    description "Enable sensor support, starting with hwmon temperature sensors.";
+    reference "internal";
+  }
   revision 2024-04-25 {
     description "Spellcheck leaf: coutry-code -> country-code";
     reference "internal";
@@ -34,25 +38,13 @@ module infix-hardware {
     description "A two-letter country code.";
   }
 
-  identity hardware-class {
-    description "infix hardware base class";
-  }
-
   identity usb {
-    base hardware-class;
+    base iahw:hardware-class;
     description "This identity is used to describe a USB port";
   }
   identity vpd {
-    base hardware-class;
+    base iahw:hardware-class;
     description "This identity is used to a VPD memory on the device.";
-  }
-
-  deviation "/iehw:hardware/iehw:component/iehw:class" {
-    deviate replace {
-      type identityref {
-        base hardware-class;
-      }
-    }
   }
 
   deviation "/iehw:hardware/iehw:component/iehw:state/iehw:admin-state" {
@@ -64,9 +56,6 @@ module infix-hardware {
   }
 
   deviation "/iehw:hardware/iehw:component/iehw:state/iehw:standby-state" {
-    deviate not-supported;
-  }
-  deviation "/iehw:hardware/iehw:component/iehw:sensor-data" {
     deviate not-supported;
   }
   deviation "/iehw:hardware/iehw:component/iehw:parent" {

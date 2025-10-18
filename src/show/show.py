@@ -197,24 +197,27 @@ def system(args: List[str]) -> None:
         print("No system data retrieved.")
         return
 
+    # Get hardware data (including thermal sensors)
+    hardware_data = run_sysrepocfg("/ietf-hardware:hardware")
+
     # Augment with runtime data
     runtime = {}
 
-    # Get thermal zones
+    # Extract thermal sensors from hardware components
     thermal_zones = []
-    try:
-        for zone in os.listdir("/sys/class/thermal"):
-            if zone.startswith("thermal_zone"):
-                try:
-                    with open(f"/sys/class/thermal/{zone}/type") as f:
-                        zone_type = f.read().strip()
-                    with open(f"/sys/class/thermal/{zone}/temp") as f:
-                        temp = int(f.read().strip()) / 1000.0
-                    thermal_zones.append({"type": zone_type, "temp": temp})
-                except (FileNotFoundError, ValueError):
-                    pass
-    except FileNotFoundError:
-        pass
+    if hardware_data and "ietf-hardware:hardware" in hardware_data:
+        components = hardware_data.get("ietf-hardware:hardware", {}).get("component", [])
+        for component in components:
+            sensor_data = component.get("sensor-data", {})
+            if sensor_data and sensor_data.get("value-type") == "celsius":
+                # Convert from millidegrees to degrees
+                temp_millidegrees = sensor_data.get("value", 0)
+                temp_celsius = temp_millidegrees / 1000.0
+
+                thermal_zones.append({
+                    "type": component.get("name", "unknown"),
+                    "temp": temp_celsius
+                })
 
     if thermal_zones:
         runtime["thermal"] = thermal_zones

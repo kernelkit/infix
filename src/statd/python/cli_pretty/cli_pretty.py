@@ -162,6 +162,24 @@ class PadUsbPort:
     title = 30
     name = 20
     state = 10
+    oper = 10
+
+    @classmethod
+    def table_width(cls):
+        """Total width of USB port table"""
+        return cls.name + cls.state + cls.oper
+
+
+class PadSensor:
+    name = 20
+    type = 15
+    value = 15
+    status = 10
+
+    @classmethod
+    def table_width(cls):
+        """Total width of sensor table"""
+        return cls.name + cls.type + cls.value + cls.status
 
 
 class PadNtpSource:
@@ -567,11 +585,54 @@ class USBport:
         self.data = data
         self.name = data.get('name', '')
         self.state = get_json_data('', self.data, 'state', 'admin-state')
+        self.oper = get_json_data('', self.data, 'state', 'oper-state')
 
     def print(self):
-        #print(self.name)
         row = f"{self.name:<{PadUsbPort.name}}"
         row += f"{self.state:<{PadUsbPort.state}}"
+        row += f"{self.oper:<{PadUsbPort.oper}}"
+        print(row)
+
+
+class Sensor:
+    def __init__(self, data):
+        self.data = data
+        self.name = data.get('name', 'unknown')
+        sensor_data = data.get('sensor-data', {})
+        self.value_type = sensor_data.get('value-type', 'unknown')
+        self.value = sensor_data.get('value', 0)
+        self.value_scale = sensor_data.get('value-scale', 'units')
+        self.oper_status = sensor_data.get('oper-status', 'unknown')
+
+    def get_formatted_value(self):
+        """Convert sensor value based on scale and type"""
+        if self.value_type == 'celsius':
+            if self.value_scale == 'milli':
+                temp_celsius = self.value / 1000.0
+                # Color code like in show system
+                if temp_celsius < 60:
+                    return Decore.green(f"{temp_celsius:.1f}°C")
+                elif temp_celsius < 75:
+                    return Decore.yellow(f"{temp_celsius:.1f}°C")
+                else:
+                    return Decore.red(f"{temp_celsius:.1f}°C")
+            else:
+                return f"{self.value}°C"
+        else:
+            # For other sensor types, just show raw value
+            return f"{self.value} {self.value_type}"
+
+    def print(self):
+        import re
+        row = f"{self.name:<{PadSensor.name}}"
+        row += f"{self.value_type:<{PadSensor.type}}"
+        # For colored value, pad manually to account for ANSI codes
+        value_str = self.get_formatted_value()
+        # Count visible characters (strip ANSI codes for length calculation)
+        visible_len = len(re.sub(r'\x1b\[[0-9;]*m', '', value_str))
+        padding = PadSensor.value - visible_len
+        row += value_str + (' ' * padding)
+        row += f"{self.oper_status:<{PadSensor.status}}"
         print(row)
 
 
@@ -1568,17 +1629,46 @@ def show_hardware(json):
         print("Error, top level \"ietf-hardware:component\" missing")
         sys.exit(1)
 
-    hdr = (f"{'NAME':<{PadUsbPort.name}}"
-           f"{'STATE':<{PadUsbPort.state}}")
-    Decore.title("USB PORTS", PadUsbPort.title)  # TODO: could be len(hdr)
-    print(Decore.invert(hdr))
-
     components = get_json_data({}, json, "ietf-hardware:hardware", "component")
 
-    for component in components:
-        if component.get("class") == "infix-hardware:usb":
+    # Separate components by type
+    usb_ports = [c for c in components if c.get("class") == "infix-hardware:usb"]
+    sensors = [c for c in components if c.get("class") == "iana-hardware:sensor"]
+
+    # Determine overall width (use the wider of the two sections)
+    width = max(PadUsbPort.table_width(), PadSensor.table_width())
+
+    # Display full-width inverted heading
+    print(Decore.invert(f"{'HARDWARE COMPONENTS':<{width}}"))
+    print()
+
+    # USB Ports section
+    if usb_ports:
+        Decore.title("USB Ports", width)
+        hdr = (f"{'NAME':<{PadUsbPort.name}}"
+               f"{'STATE':<{PadUsbPort.state}}"
+               f"{'OPER':<{PadUsbPort.oper}}")
+        # Pad header to full width
+        hdr = f"{hdr:<{width}}"
+        print(Decore.invert(hdr))
+
+        for component in usb_ports:
             port = USBport(component)
             port.print()
+        print()
+
+    # Sensors section
+    if sensors:
+        Decore.title("Sensors", width)
+        hdr = (f"{'NAME':<{PadSensor.name}}"
+               f"{'TYPE':<{PadSensor.type}}"
+               f"{'VALUE':<{PadSensor.value}}"
+               f"{'STATUS':<{PadSensor.status}}")
+        print(Decore.invert(hdr))
+
+        for component in sensors:
+            sensor = Sensor(component)
+            sensor.print()
 
 
 def show_ntp(json):
