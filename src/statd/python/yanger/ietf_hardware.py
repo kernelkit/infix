@@ -52,28 +52,61 @@ def vpd_components(systemjson):
 def usb_port_components(systemjson):
     usb_ports = systemjson.get("usb-ports", [])
 
-    ports=[]
-    names=[]
+    ports = []
     for usb_port in usb_ports:
-        port={}
+        port = {}
         if usb_port.get("path"):
-            if usb_port["name"] in names:
-                continue
+            # Path now points to the USB device directory, not the attribute
+            base_path = usb_port["path"]
+            authorized_default_path = os.path.join(base_path, "authorized_default")
 
-            path = usb_port["path"]
-            if os.path.basename(path) == "authorized_default":
-                if HOST.exists(path):
-                    names.append(usb_port["name"])
-                    data = int(HOST.read(path))
-                    enabled = "unlocked" if data == 1 else "locked"
-                    port["state"] = {}
-                    port["state"]["admin-state"] = enabled
-                    port["name"] = usb_port["name"]
-                    port["class"] = "infix-hardware:usb"
-                    port["state"]["oper-state"] = "enabled"
-                    ports.append(port)
+            if HOST.exists(authorized_default_path):
+                data = int(HOST.read(authorized_default_path))
+                enabled = "unlocked" if data == 1 else "locked"
+                port["state"] = {}
+                port["state"]["admin-state"] = enabled
+                port["name"] = usb_port["name"]
+                port["class"] = "infix-hardware:usb"
+                port["state"]["oper-state"] = "enabled"
+                ports.append(port)
 
     return ports
+
+
+def motherboard_component(systemjson):
+    """
+    Create a mainboard/chassis component from system.json data.
+    This provides a standard ietf-hardware representation of the main board.
+    """
+    component = {
+        "name": "mainboard",
+        "class": "iana-hardware:chassis",
+    }
+
+    # Add manufacturer if available (from VPD or defaults)
+    if systemjson.get("vendor"):
+        component["mfg-name"] = systemjson["vendor"]
+
+    # Add model name (from device tree or VPD)
+    if systemjson.get("product-name"):
+        component["model-name"] = systemjson["product-name"]
+
+    # Add serial number if available (from VPD)
+    if systemjson.get("serial-number"):
+        component["serial-num"] = systemjson["serial-number"]
+
+    # Add part number as hardware revision if available
+    if systemjson.get("part-number"):
+        component["hardware-rev"] = systemjson["part-number"]
+
+    # Set state - admin-state is "unknown" since chassis cannot be
+    # administratively controlled (locked/unlocked)
+    component["state"] = {
+        "admin-state": "unknown",
+        "oper-state": "enabled"
+    }
+
+    return [component]
 
 
 def thermal_sensor_components():
@@ -139,6 +172,7 @@ def operational():
     return {
         "ietf-hardware:hardware": {
             "component":
+            motherboard_component(systemjson) +
             vpd_components(systemjson) +
             usb_port_components(systemjson) +
             thermal_sensor_components() +

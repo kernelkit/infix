@@ -1631,7 +1631,7 @@ def show_hardware(json):
 
     components = get_json_data({}, json, "ietf-hardware:hardware", "component")
 
-    # Separate components by type
+    motherboard = [c for c in components if c.get("class") == "iana-hardware:chassis"]
     usb_ports = [c for c in components if c.get("class") == "infix-hardware:usb"]
     sensors = [c for c in components if c.get("class") == "iana-hardware:sensor"]
 
@@ -1640,9 +1640,20 @@ def show_hardware(json):
 
     # Display full-width inverted heading
     print(Decore.invert(f"{'HARDWARE COMPONENTS':<{width}}"))
-    print()
 
-    # USB Ports section
+    if motherboard:
+        board = motherboard[0]  # Should only be one
+        Decore.title("Board Information", width)
+
+        if board.get("model-name"):
+            print(f"Model               : {board['model-name']}")
+        if board.get("mfg-name"):
+            print(f"Manufacturer        : {board['mfg-name']}")
+        if board.get("serial-num"):
+            print(f"Serial Number       : {board['serial-num']}")
+        if board.get("hardware-rev"):
+            print(f"Hardware Revision   : {board['hardware-rev']}")
+
     if usb_ports:
         Decore.title("USB Ports", width)
         hdr = (f"{'NAME':<{PadUsbPort.name}}"
@@ -1655,9 +1666,7 @@ def show_hardware(json):
         for component in usb_ports:
             port = USBport(component)
             port.print()
-        print()
 
-    # Sensors section
     if sensors:
         Decore.title("Sensors", width)
         hdr = (f"{'NAME':<{PadSensor.name}}"
