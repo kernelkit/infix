@@ -28,11 +28,12 @@ module infix-system {
   contact      "kernelkit@googlegroups.com";
   description  "Infix augments and deviations to ietf-system.";
 
-  revision 2025-04-29 {
-    description "Add services status.";
+  revision 2025-10-18 {
+    description "New system-state status:
+                   - Add system resource usage: memory, loadavg, filesystem usage
+                   - Add services status";
     reference "internal";
   }
-
   revision 2025-01-25 {
     description "Add DNS resolver status.";
     reference "internal";
@@ -506,6 +507,86 @@ module infix-system {
           }
           description
             "Detailed current status of the process.";
+        }
+      }
+    }
+
+    container resource-usage {
+      description "Runtime system resource usage information";
+      config false;
+
+      container memory {
+        description "System memory usage";
+
+        leaf total {
+          description "Total system memory in kibibytes";
+          type uint64;
+          units "KiB";
+        }
+
+        leaf free {
+          description "Free memory in kibibytes";
+          type uint64;
+          units "KiB";
+        }
+
+        leaf available {
+          description "Available memory in kibibytes (includes cache that can be reclaimed)";
+          type uint64;
+          units "KiB";
+        }
+      }
+
+      container load-average {
+        description "System load average";
+
+        leaf load-1min {
+          description "1-minute load average";
+          type decimal64 {
+            fraction-digits 2;
+          }
+        }
+
+        leaf load-5min {
+          description "5-minute load average";
+          type decimal64 {
+            fraction-digits 2;
+          }
+        }
+
+        leaf load-15min {
+          description "15-minute load average";
+          type decimal64 {
+            fraction-digits 2;
+          }
+        }
+      }
+
+      list filesystem {
+        key "mount-point";
+        description "Filesystem usage for mounted filesystems";
+
+        leaf mount-point {
+          description "Filesystem mount point (e.g., /, /var, /cfg)";
+          type string;
+        }
+
+        leaf size {
+          description "Total filesystem size in kibibytes";
+          type uint64;
+          units "KiB";
+        }
+
+        leaf used {
+          description "Used space in kibibytes";
+          type uint64;
+          units "KiB";
+        }
+
+        leaf available {
+          description "Available space in kibibytes";
+          type uint64;
+          units "KiB";
         }
       }
     }

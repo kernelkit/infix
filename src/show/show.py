@@ -222,57 +222,60 @@ def system(args: List[str]) -> None:
     if thermal_zones:
         runtime["thermal"] = thermal_zones
 
-    # Get disk usage for /, /var, /cfg
-    disk_usage = []
-    for mount in ["/", "/var", "/cfg"]:
-        try:
-            result = subprocess.run(["df", "-h", mount],
-                                    capture_output=True, text=True, check=True)
-            lines = result.stdout.strip().split("\n")
-            if len(lines) > 1:
-                parts = lines[1].split()
-                if len(parts) >= 5:
-                    disk_usage.append({
-                        "mount": mount,
-                        "size": parts[1],
-                        "used": parts[2],
-                        "available": parts[3],
-                        "percent": parts[4]
-                    })
-        except subprocess.CalledProcessError:
-            pass
+    # Extract resource usage from system-state
+    system_state = data.get("ietf-system:system-state", {})
+    resource_usage = system_state.get("infix-system:resource-usage", {})
 
-    if disk_usage:
+    # Memory info - convert KiB to MiB for display
+    memory_kib = resource_usage.get("memory", {})
+    if memory_kib:
+        memory = {}
+        if "total" in memory_kib:
+            memory["MemTotal"] = int(memory_kib["total"]) // 1024
+        if "free" in memory_kib:
+            memory["MemFree"] = int(memory_kib["free"]) // 1024
+        if "available" in memory_kib:
+            memory["MemAvailable"] = int(memory_kib["available"]) // 1024
+        runtime["memory"] = memory
+
+    # Load average
+    load_avg = resource_usage.get("load-average", {})
+    if load_avg:
+        runtime["load"] = {
+            "1min": str(load_avg.get("load-1min", "0.00")),
+            "5min": str(load_avg.get("load-5min", "0.00")),
+            "15min": str(load_avg.get("load-15min", "0.00"))
+        }
+
+    # Filesystem usage - convert KiB to human-readable format
+    filesystems = resource_usage.get("filesystem", [])
+    if filesystems:
+        disk_usage = []
+        for fs in filesystems:
+            mount = fs.get("mount-point", "")
+            size_kib = int(fs.get("size", 0))
+            used_kib = int(fs.get("used", 0))
+            avail_kib = int(fs.get("available", 0))
+
+            # Convert KiB to human-readable format (similar to df -h)
+            def human_readable(kib_val):
+                for unit in ['K', 'M', 'G', 'T']:
+                    if kib_val < 1024.0:
+                        return f"{kib_val:.1f}{unit}"
+                    kib_val /= 1024.0
+                return f"{kib_val:.1f}P"
+
+            # Calculate percentage
+            percent = f"{int((used_kib / size_kib * 100) if size_kib > 0 else 0)}%"
+
+            disk_usage.append({
+                "mount": mount,
+                "size": human_readable(size_kib),
+                "used": human_readable(used_kib),
+                "available": human_readable(avail_kib),
+                "percent": percent
+            })
         runtime["disk"] = disk_usage
-
-    # Get memory info
-    try:
-        with open("/proc/meminfo") as f:
-            mem_info = {}
-            for line in f:
-                parts = line.split(":")
-                if len(parts) == 2:
-                    key = parts[0].strip()
-                    value = parts[1].strip()
-                    if key in ["MemTotal", "MemFree", "MemAvailable"]:
-                        # Convert from kB to MB
-                        mem_info[key] = int(value.split()[0]) // 1024
-            runtime["memory"] = mem_info
-    except FileNotFoundError:
-        pass
-
-    # Get load average
-    try:
-        with open("/proc/loadavg") as f:
-            load_parts = f.read().strip().split()
-            if len(load_parts) >= 3:
-                runtime["load"] = {
-                    "1min": load_parts[0],
-                    "5min": load_parts[1],
-                    "15min": load_parts[2]
-                }
-    except FileNotFoundError:
-        pass
 
     # Add runtime data to main data structure
     data["runtime"] = runtime
