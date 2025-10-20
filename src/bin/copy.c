@@ -503,13 +503,23 @@ static int usage(int rc)
 	printf("Usage: %s [OPTIONS] SRC DST\n"
 	       "\n"
 	       "Options:\n"
-	       "  -h         This help text\n"
-	       "  -n         Dry-run, validate configuration without applying\n"
-	       "  -q         Quiet mode, suppress informational messages\n"
-	       "  -s         Sanitize paths for CLI use (restrict path traversal)\n"
-	       "  -u USER    Username for remote commands, like scp\n"
-	       "  -t SEEC    Timeout for the operation, or default %d sec\n"
-	       "  -v         Show version\n", prognm, timeout);
+	       "  -h              This help text\n"
+	       "  -n              Dry-run, validate configuration without applying\n"
+	       "  -q              Quiet mode, suppress informational messages\n"
+	       "  -s              Sanitize paths for CLI use (restrict path traversal)\n"
+	       "  -t SEC          Timeout for the operation, or default %d sec\n"
+	       "  -u USER         Username for remote commands, like scp\n"
+	       "  -v              Show version\n"
+	       "\n"
+	       "Files:\n"
+	       "  SRC             JSON configuration file, or a datastore\n"
+	       "  DST             A file or datastore, except factory-config\n"
+	       "\n"
+	       "Datastores:\n"
+	       "  running-config  The running datastore, current active config\n"
+	       "  startup-config  The non-volatile config used at startup\n"
+	       "  factory-config  The device's factory default configuration\n"
+	       "\n", prognm, timeout);
 
 	return rc;
 }

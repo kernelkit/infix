@@ -3,6 +3,10 @@ ACLOCAL_AMFLAGS  = -I m4
 
 bin_PROGRAMS     = copy erase files
 
+# Bash completion
+bashcompdir      = $(datadir)/bash-completion/completions
+dist_bashcomp_DATA = copy.bash
+
 copy_SOURCES     = copy.c util.c util.h
 copy_CPPFLAGS    = -D_DEFAULT_SOURCE -D_GNU_SOURCE
 copy_CFLAGS      = -W -Wall -Wextra
