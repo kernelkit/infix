@@ -72,7 +72,7 @@ done
 if [ "$STANDALONE" -eq 1 ] || [ $# -gt 0 ]; then
     STANDALONE=1
 
-    # Find BR2_EXTERNAL_INFIX_PATH (current script is in src/board/raspberry-pi-4/)
+    # Find BR2_EXTERNAL_INFIX_PATH (current script is in src/board/raspberry-pi64/)
     SCRIPT_DIR=$(dirname "$0")
     BR2_EXTERNAL_INFIX_PATH=$(cd "$SCRIPT_DIR/../../.." && pwd)
 

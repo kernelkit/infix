@@ -8,9 +8,9 @@ on:
         type: choice
         required: true
         options:
-          - raspberry-pi-4
+          - raspberry-pi64
           - banana-pi-r3
-        default: 'raspberry-pi-4'
+        default: 'raspberry-pi64'
       use_latest_release:
         description: 'Use latest release artifacts instead of workflow artifacts'
         type: boolean
@@ -52,7 +52,7 @@ jobs:
       - name: Set bootloader and target based on board
         run: |
           case "${{ inputs.board }}" in
-            raspberry-pi-4)
+            raspberry-pi64)
               echo "BOOTLOADER=rpi4_boot" >> $GITHUB_ENV
               echo "TARGET=aarch64" >> $GITHUB_ENV
               ;;
