@@ -286,10 +286,18 @@ static int copy(const char *src, const char *dst, const char *remote_user)
 			} else {
 				/* Direct copy for other datastores (no callbacks needed) */
 				rc = sr_copy_config(sess, NULL, srcds->datastore, timeout * 1000);
-				if (rc)
+				if (rc) {
 					emsg(sess, ERRMSG "unable to copy configuration, err %d: %s\n", rc, sr_strerror(rc));
-				else
-					set_owner(dstds->path, user);
+				} else {
+					/* Export datastore to backing file if it has one */
+					if (dstds->path) {
+						rc = systemf("sysrepocfg -d %s -X%s -f json", dstds->sysrepocfg, dstds->path);
+						if (rc)
+							fprintf(stderr, ERRMSG "failed saving %s to %s\n", srcds->name, dstds->path);
+						else
+							set_owner(dstds->path, user);
+					}
+				}
 			}
 		}
 		rc = sr_disconnect(conn);
@@ -397,7 +405,15 @@ static int copy(const char *src, const char *dst, const char *remote_user)
 			} else {
 				rc = systemf("sysrepocfg -d %s -I%s -f json", dstds->sysrepocfg, fn);
 				if (rc)
-					fprintf(stderr, ERRMSG "failed loading %s from %s", dst, src);
+					fprintf(stderr, ERRMSG "failed loading %s from %s\n", dst, src);
+				else if (dstds->path) {
+					rc = systemf("sysrepocfg -d %s -X%s -f json", dstds->sysrepocfg, dstds->path);
+					if (rc)
+						fprintf(stderr, ERRMSG "failed saving %s\n", dstds->path);
+					else
+						set_owner(dstds->path, user);
+				}
+
 			}
 		}
 	} else {
