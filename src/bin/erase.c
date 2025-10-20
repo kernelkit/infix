@@ -4,40 +4,38 @@
 #include <alloca.h>
 #include <errno.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
 #include "util.h"
 
 static const char *prognm = "erase";
+static int sanitize;
 
-
-static int do_erase(const char *path)
+static int do_erase(const char *name)
 {
-	char *fn;
+	char *path;
+	int rc = 0;
 
-	if (access(path, F_OK)) {
-		size_t len = strlen(path) + 10;
-
-		fn = alloca(len);
-		if (!fn) {
-			fprintf(stderr, ERRMSG "failed allocating memory.\n");
-			return -1;
-		}
-
-		cfg_adjust(path, NULL, fn, len);
-	} else
-		fn = (char *)path;
-
-	if (!yorn("Remove %s, are you sure", fn))
-		return 0;
-
-	if (remove(fn)) {
-		fprintf(stderr, ERRMSG "failed removing %s: %s\n", fn, strerror(errno));
-		return -1;
+	path = cfg_adjust(name, NULL, sanitize);
+	if (!path) {
+		fprintf(stderr, ERRMSG "file not found.\n");
+		rc = 1;
+		goto out;
 	}
 
-	return 0;
+	if (!yorn("Remove %s, are you sure?", path))
+		goto out;
+
+	if (remove(path)) {
+		fprintf(stderr, ERRMSG "failed removing %s: %s\n", path, strerror(errno));
+		rc = 11;
+	}
+
+out:
+	free(path);
+	return rc;
 }
 
 static int usage(int rc)
@@ -46,6 +44,7 @@ static int usage(int rc)
 	       "\n"
 	       "Options:\n"
 	       "  -h         This help text\n"
+	       "  -s         Sanitize paths for CLI use (restrict path traversal)\n"
 	       "  -v         Show version\n", prognm);
 
 	return rc;
@@ -55,10 +54,13 @@ int main(int argc, char *argv[])
 {
 	int c;
 
-	while ((c = getopt(argc, argv, "hv")) != EOF) {
+	while ((c = getopt(argc, argv, "hsv")) != EOF) {
 		switch(c) {
 		case 'h':
 			return usage(0);
+		case 's':
+			sanitize = 1;
+			break;
 		case 'v':
 			puts(PACKAGE_VERSION);
 			return 0;
