@@ -1,4 +1,4 @@
-From b828dfb99a8e2dab22588f949a476fea06da3c4e Mon Sep 17 00:00:00 2001
+From b33d0a95084d0ec13aac1c831ba06ab91f2796d5 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Tue, 28 May 2024 11:04:22 +0200
 Subject: [PATCH 11/30] net: dsa: mv88e6xxx: Add mqprio qdisc support

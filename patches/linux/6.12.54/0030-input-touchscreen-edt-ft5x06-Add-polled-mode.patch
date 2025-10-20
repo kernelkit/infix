@@ -1,4 +1,4 @@
-From 546eb6b54b2bf6ca2f7d69cb0e2bbabd13473081 Mon Sep 17 00:00:00 2001
+From 9674b6eb79d683a2d67ded43a9a0579a59b6e4aa Mon Sep 17 00:00:00 2001
 From: Mattias Walström <lazzer@gmail.com>
 Date: Thu, 21 Aug 2025 11:20:23 +0200
 Subject: [PATCH 30/30] input:touchscreen:edt-ft5x06: Add polled mode
