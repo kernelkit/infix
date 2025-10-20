@@ -34,6 +34,8 @@ struct infix_ds infix_config[] = {
 
 static const char *prognm = "copy";
 static int timeout;
+static int dry_run;
+static int quiet;
 
 
 /*
@@ -180,11 +182,12 @@ static const char *infix_ds(const char *text, struct infix_ds **ds)
 /*
  * Load configuration from a file and replace running datastore.
  * This triggers all sysrepo change callbacks, unlike sr_copy_config().
+ * In dry-run mode, only validates the configuration without applying.
  */
 static int replace_running(sr_conn_ctx_t *conn, sr_session_ctx_t *sess,
 			   const char *file, int timeout)
 {
-	uint32_t flags = LYD_PARSE_NO_STATE | LYD_PARSE_ONLY;
+	uint32_t flags = LYD_PARSE_NO_STATE | LYD_PARSE_ONLY | LYD_PARSE_STORE_ONLY | LYD_PARSE_STRICT;
 	struct lyd_node *data = NULL;
 	const struct ly_ctx *ctx;
 	LY_ERR err;
@@ -199,17 +202,25 @@ static int replace_running(sr_conn_ctx_t *conn, sr_session_ctx_t *sess,
 		return 1;
 	}
 
-	/* Replace running config (triggers callbacks, takes ownership on success) */
-	rc = sr_replace_config(sess, NULL, data, timeout * 1000);
-	if (rc) {
-		emsg(sess, ERRMSG "unable to replace configuration, err %d: %s\n",
-		     rc, sr_strerror(rc));
+	if (dry_run) {
+		if (!quiet) {
+			printf("Configuration validated, %s: OK\n", file);
+			fflush(stdout);
+		}
 		lyd_free_all(data);
+		rc = 0;
+	} else {
+		/* Replace running config, assumes ownership of 'data' */
+		rc = sr_replace_config(sess, NULL, data, timeout * 1000);
+		if (rc) {
+			emsg(sess, ERRMSG "unable to replace configuration, err %d: %s\n",
+			     rc, sr_strerror(rc));
+			lyd_free_all(data);
+		}
 	}
 
 	return rc;
 }
-
 
 static int copy(const char *src, const char *dst, const char *remote_user)
 {
@@ -450,6 +461,8 @@ static int usage(int rc)
 	       "\n"
 	       "Options:\n"
 	       "  -h         This help text\n"
+	       "  -n         Dry-run, validate configuration without applying\n"
+	       "  -q         Quiet mode, suppress informational messages\n"
 	       "  -u USER    Username for remote commands, like scp\n"
 	       "  -t SEEC    Timeout for the operation, or default %d sec\n"
 	       "  -v         Show version\n", prognm, timeout);
@@ -464,10 +477,16 @@ int main(int argc, char *argv[])
 
 	timeout = fgetint("/etc/default/confd", "=", "CONFD_TIMEOUT");
 
-	while ((c = getopt(argc, argv, "ht:u:v")) != EOF) {
+	while ((c = getopt(argc, argv, "hnqt:u:v")) != EOF) {
 		switch(c) {
 		case 'h':
 			return usage(0);
+		case 'n':
+			dry_run = 1;
+			break;
+		case 'q':
+			quiet = 1;
+			break;
 		case 't':
 			timeout = atoi(optarg);
 			break;
