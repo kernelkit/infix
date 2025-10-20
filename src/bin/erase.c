@@ -10,31 +10,25 @@
 #include "util.h"
 
 static const char *prognm = "erase";
-
+static int sanitize;
 
 static int do_erase(const char *path)
 {
-	char *fn;
+	char buf[PATH_MAX];
+	const char *fn;
 
-	if (access(path, F_OK)) {
-		size_t len = strlen(path) + 10;
+	fn = cfg_adjust(path, NULL, buf, sizeof(buf), sanitize);
+	if (!fn) {
+		fprintf(stderr, ERRMSG "file not found.\n");
+		return 1;
+	}
 
-		fn = alloca(len);
-		if (!fn) {
-			fprintf(stderr, ERRMSG "failed allocating memory.\n");
-			return -1;
-		}
-
-		cfg_adjust(path, NULL, fn, len);
-	} else
-		fn = (char *)path;
-
-	if (!yorn("Remove %s, are you sure", fn))
+	if (!yorn("Remove %s, are you sure", path))
 		return 0;
 
 	if (remove(fn)) {
-		fprintf(stderr, ERRMSG "failed removing %s: %s\n", fn, strerror(errno));
-		return -1;
+		fprintf(stderr, ERRMSG "failed removing %s: %s\n", path, strerror(errno));
+		return 11;
 	}
 
 	return 0;
@@ -46,6 +40,7 @@ static int usage(int rc)
 	       "\n"
 	       "Options:\n"
 	       "  -h         This help text\n"
+	       "  -s         Sanitize paths for CLI use (restrict path traversal)\n"
 	       "  -v         Show version\n", prognm);
 
 	return rc;
@@ -55,10 +50,13 @@ int main(int argc, char *argv[])
 {
 	int c;
 
-	while ((c = getopt(argc, argv, "hv")) != EOF) {
+	while ((c = getopt(argc, argv, "hsv")) != EOF) {
 		switch(c) {
 		case 'h':
 			return usage(0);
+		case 's':
+			sanitize = 1;
+			break;
 		case 'v':
 			puts(PACKAGE_VERSION);
 			return 0;

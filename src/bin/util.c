@@ -5,6 +5,7 @@
 #include <errno.h>
 #include <stdarg.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <termios.h>
 
@@ -67,7 +68,7 @@ int has_ext(const char *fn, const char *ext)
 	return 0;
 }
 
-static const char *basenm(const char *fn)
+const char *basenm(const char *fn)
 {
 	const char *ptr;
 
@@ -75,44 +76,65 @@ static const char *basenm(const char *fn)
 		return "";
 
 	ptr = strrchr(fn, '/');
-	if (!ptr)
+	if (ptr)
+		ptr++;
+	else
 		ptr = fn;
 
 	return ptr;
 }
 
-char *cfg_adjust(const char *fn, const char *tmpl, char *buf, size_t len)
+static int path_allowed(const char *path)
 {
-	if (strstr(fn, "../"))
-		return NULL;	/* relative paths not allowed */
+	const char *accepted[] = {
+		"/media/",
+		"/cfg/",
+		getenv("HOME"),
+		NULL
+	};
 
-	if (fn[0] == '/') {
-		strlcpy(buf, fn, len);
-		return buf;	/* allow absolute paths */
+	for (int i = 0; accepted[i]; i++) {
+		if (!strncmp(path, accepted[i], strlen(accepted[i])))
+			return 1;
 	}
 
-	/* Files in /cfg must end in .cfg */
-	if (!strncmp(fn, "/cfg/", 5)) {
-		strlcpy(buf, fn, len);
-		if (!has_ext(fn, ".cfg"))
-			strlcat(buf, ".cfg", len);
+	return 0;
+}
 
-		return buf;
+char *cfg_adjust(const char *fn, const char *tmpl, char *buf, size_t len, int sanitize)
+{
+	char tmp[256], resolved[PATH_MAX];
+
+	if (strlen(basenm(fn)) == 0) {
+		if (!tmpl)
+			return NULL;
+
+		fn = basenm(tmpl);
+		/* Fall through */
 	}
 
-	/* Files ending with .cfg belong in /cfg */
-	if (has_ext(fn, ".cfg")) {
-		snprintf(buf, len, "/cfg/%s", fn);
-		return buf;
+	if (sanitize) {
+		if (strstr(fn, "../"))
+			return NULL;
+
+		if (fn[0] == '/') {
+			if (!path_allowed(fn))
+				return NULL;
+		} else {
+			snprintf(tmp, sizeof(tmp), "/cfg/%s", fn);
+			if (!has_ext(tmp, ".cfg"))
+				strlcat(tmp, ".cfg", sizeof(tmp));
+			fn = tmp;
+		}
+
+		/* If file exists, resolve symlinks and verify still in whitelist */
+		if (!access(fn, F_OK) && realpath(fn, resolved)) {
+			if (!path_allowed(resolved))
+				return NULL;
+			fn = resolved;
+		}
 	}
 
-	if (strlen(fn) > 0 && fn[0] == '.' && tmpl) {
-		if (fn[1] == '/' && fn[2] != 0)
-			strlcpy(buf, fn, len);
-		else
-			strlcpy(buf, basenm(tmpl), len);
-	} else
-		strlcpy(buf, fn, len);
-
+	strlcpy(buf, fn, len);
 	return buf;
 }

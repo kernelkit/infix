@@ -36,6 +36,7 @@ static const char *prognm = "copy";
 static int timeout;
 static int dry_run;
 static int quiet;
+static int sanitize;
 
 
 /*
@@ -204,7 +205,7 @@ static int replace_running(sr_conn_ctx_t *conn, sr_session_ctx_t *sess,
 
 	if (dry_run) {
 		if (!quiet) {
-			printf("Configuration validated, %s: OK\n", file);
+			printf("Configuration validated, %s OK\n", file);
 			fflush(stdout);
 		}
 		lyd_free_all(data);
@@ -334,10 +335,10 @@ static int copy(const char *src, const char *dst, const char *remote_user)
 		if (dstds && dstds->path)
 			fn = dstds->path;
 		else
-			fn = cfg_adjust(dst, src, adjust, sizeof(adjust));
+			fn = cfg_adjust(dst, src, adjust, sizeof(adjust), sanitize);
 
 		if (!fn) {
-			fprintf(stderr, ERRMSG "invalid destination path.\n");
+			fprintf(stderr, ERRMSG "file not found.\n");
 			rc = -1;
 			goto err;
 		}
@@ -371,9 +372,9 @@ static int copy(const char *src, const char *dst, const char *remote_user)
 			tmpfn = mktemp(temp_file);
 			fn = tmpfn;
 		} else {
-			fn = cfg_adjust(src, NULL, adjust, sizeof(adjust));
+			fn = cfg_adjust(src, NULL, adjust, sizeof(adjust), sanitize);
 			if (!fn) {
-				fprintf(stderr, ERRMSG "invalid source file location.\n");
+				fprintf(stderr, ERRMSG "file not found.\n");
 				rc = 1;
 				goto err;
 			}
@@ -423,9 +424,9 @@ static int copy(const char *src, const char *dst, const char *remote_user)
 		}
 
 		if (strstr(src, "://")) {
-			fn = cfg_adjust(dst, src, adjust, sizeof(adjust));
+			fn = cfg_adjust(dst, src, adjust, sizeof(adjust), sanitize);
 			if (!fn) {
-				fprintf(stderr, ERRMSG "invalid destination file location.\n");
+				fprintf(stderr, ERRMSG "file not found.\n");
 				rc = 1;
 				goto err;
 			}
@@ -439,9 +440,9 @@ static int copy(const char *src, const char *dst, const char *remote_user)
 
 			rc = systemf("curl %s -Lo %s %s", remote_user, fn, src);
 		} else if (strstr(dst, "://")) {
-			fn = cfg_adjust(src, NULL, adjust, sizeof(adjust));
+			fn = cfg_adjust(src, NULL, adjust, sizeof(adjust), sanitize);
 			if (!fn) {
-				fprintf(stderr, ERRMSG "invalid source file location.\n");
+				fprintf(stderr, ERRMSG "file not found.\n");
 				rc = 1;
 				goto err;
 			}
@@ -479,6 +480,7 @@ static int usage(int rc)
 	       "  -h         This help text\n"
 	       "  -n         Dry-run, validate configuration without applying\n"
 	       "  -q         Quiet mode, suppress informational messages\n"
+	       "  -s         Sanitize paths for CLI use (restrict path traversal)\n"
 	       "  -u USER    Username for remote commands, like scp\n"
 	       "  -t SEEC    Timeout for the operation, or default %d sec\n"
 	       "  -v         Show version\n", prognm, timeout);
@@ -493,7 +495,7 @@ int main(int argc, char *argv[])
 
 	timeout = fgetint("/etc/default/confd", "=", "CONFD_TIMEOUT");
 
-	while ((c = getopt(argc, argv, "hnqt:u:v")) != EOF) {
+	while ((c = getopt(argc, argv, "hnqst:u:v")) != EOF) {
 		switch(c) {
 		case 'h':
 			return usage(0);
@@ -502,6 +504,9 @@ int main(int argc, char *argv[])
 			break;
 		case 'q':
 			quiet = 1;
+			break;
+		case 's':
+			sanitize = 1;
 			break;
 		case 't':
 			timeout = atoi(optarg);

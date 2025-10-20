@@ -120,7 +120,7 @@ int infix_erase(kcontext_t *ctx)
 
 	cd_home(ctx);
 
-	return systemf("erase %s", path);
+	return systemf("erase -s %s", path);
 }
 
 int infix_files(kcontext_t *ctx)
@@ -221,7 +221,7 @@ int infix_copy(kcontext_t *ctx)
 		strlcpy(validate, "-n", sizeof(validate));
 
 	/* Ensure we run the copy command as the logged-in user, not root (klishd) */
-	return systemf("doas -u %s copy %s %s %s %s", cd_home(ctx), validate, user, src, dst);
+	return systemf("doas -u %s copy -s %s %s %s %s", cd_home(ctx), validate, user, src, dst);
 }
 
 int infix_shell(kcontext_t *ctx)
