@@ -177,6 +177,39 @@ static const char *infix_ds(const char *text, struct infix_ds **ds)
 	return text;
 }
 
+/*
+ * Load configuration from a file and replace running datastore.
+ * This triggers all sysrepo change callbacks, unlike sr_copy_config().
+ */
+static int replace_running(sr_conn_ctx_t *conn, sr_session_ctx_t *sess,
+			   const char *file, int timeout)
+{
+	uint32_t flags = LYD_PARSE_NO_STATE | LYD_PARSE_ONLY;
+	struct lyd_node *data = NULL;
+	const struct ly_ctx *ctx;
+	LY_ERR err;
+	int rc;
+
+	ctx = sr_acquire_context(conn);
+	err = lyd_parse_data_path(ctx, file, LYD_JSON, flags, 0, &data);
+	sr_release_context(conn);
+
+	if (err) {
+		fprintf(stderr, ERRMSG "unable to load %s, error %d: %s\n", file, err, ly_errmsg(ctx));
+		return 1;
+	}
+
+	/* Replace running config (triggers callbacks, takes ownership on success) */
+	rc = sr_replace_config(sess, NULL, data, timeout * 1000);
+	if (rc) {
+		emsg(sess, ERRMSG "unable to replace configuration, err %d: %s\n",
+		     rc, sr_strerror(rc));
+		lyd_free_all(data);
+	}
+
+	return rc;
+}
+
 
 static int copy(const char *src, const char *dst, const char *remote_user)
 {
@@ -229,12 +262,24 @@ static int copy(const char *src, const char *dst, const char *remote_user)
 			fprintf(stderr, ERRMSG "unable to open transaction to %s\n", dst);
 		} else {
 			sr_nacm_set_user(sess, user);
-			rc = sr_copy_config(sess, NULL, srcds->datastore, timeout * 1000);
-			if (rc)
-				emsg(sess, ERRMSG "unable to copy configuration, err %d: %s\n",
-				     rc, sr_strerror(rc));
-			else
-				set_owner(dstds->path, user);
+
+			/*
+			 * When copying TO running-config, use sr_replace_config()
+			 * to trigger change callbacks. Otherwise use sr_copy_config()
+			 * for direct datastore copy without callbacks.
+			 */
+			if (dstds->datastore == SR_DS_RUNNING && srcds->path) {
+				rc = replace_running(conn, sess, srcds->path, timeout);
+				if (!rc)
+					set_owner(dstds->path, user);
+			} else {
+				/* Direct copy for other datastores (no callbacks needed) */
+				rc = sr_copy_config(sess, NULL, srcds->datastore, timeout * 1000);
+				if (rc)
+					emsg(sess, ERRMSG "unable to copy configuration, err %d: %s\n", rc, sr_strerror(rc));
+				else
+					set_owner(dstds->path, user);
+			}
 		}
 		rc = sr_disconnect(conn);
 
@@ -320,9 +365,29 @@ static int copy(const char *src, const char *dst, const char *remote_user)
 		if (rc) {
 			fprintf(stderr, ERRMSG "failed downloading %s", src);
 		} else {
-			rc = systemf("sysrepocfg -d %s -I%s -f json", dstds->sysrepocfg, fn);
-			if (rc)
-				fprintf(stderr, ERRMSG "failed loading %s from %s", dst, src);
+			/* Use replace_config() for running-config (triggers callbacks), sysrepocfg for others */
+			if (dstds->datastore == SR_DS_RUNNING) {
+				if (sr_connect(SR_CONN_DEFAULT, &conn)) {
+					fprintf(stderr, ERRMSG "connection to datastore failed\n");
+					rc = 1;
+				} else {
+					sr_log_syslog("klishd", SR_LL_WRN);
+					if (sr_session_start(conn, SR_DS_RUNNING, &sess)) {
+						fprintf(stderr, ERRMSG "unable to open transaction to %s\n", dst);
+						rc = 1;
+					} else {
+						sr_nacm_set_user(sess, user);
+						rc = replace_running(conn, sess, fn, timeout);
+						if (!rc)
+							set_owner(dstds->path, user);
+					}
+					sr_disconnect(conn);
+				}
+			} else {
+				rc = systemf("sysrepocfg -d %s -I%s -f json", dstds->sysrepocfg, fn);
+				if (rc)
+					fprintf(stderr, ERRMSG "failed loading %s from %s", dst, src);
+			}
 		}
 	} else {
 		if (strstr(src, "://") && strstr(dst, "://")) {
