@@ -24,27 +24,42 @@
 #define  _PATH_CLEAN  "/var/lib/containers/cleanup"
 
 /*
- * Check if image is a local archive and return the offset to the file path.
- * Returns 0 if not a recognized local archive format.
+ * Check if image is a local archive and return the file path.
+ * Returns NULL if not a recognized local archive format.
  */
-static int archive_offset(const char *image)
+static const char *local_path(const char *image)
 {
-	static const struct {
-		const char *prefix;
-		int offset;
-	} prefixes[] = {
-		{ "docker-archive:", 15 },
-		{ "oci-archive:",    12 },
-		{ NULL, 0 }
+	const char *prefixes[] = {
+		"docker-archive:",
+		"oci-archive:",
+		NULL,
 	};
-	int i;
 
-	for (i = 0; prefixes[i].prefix; i++) {
-		if (!strncmp(image, prefixes[i].prefix, prefixes[i].offset))
-			return prefixes[i].offset;
+	for (int i = 0; prefixes[i]; i++) {
+		size_t len = strlen(prefixes[i]);
+
+		if (!strncmp(image, prefixes[i], len))
+			return image + len;
 	}
 
-	return 0;
+	return NULL;
+}
+
+static int calc_sha(const char *path, char *sha256, size_t len)
+{
+	int rc = 1;
+	FILE *pp;
+
+	pp = popenf("r", "sha256sum \"%s\" 2>/dev/null | awk '{print $1}'", path);
+	if (pp) {
+		if (fgets(sha256, len, pp)) {
+			chomp(sha256);
+			rc = 0;
+		}
+		pclose(pp);
+	}
+
+	return rc;
 }
 
 /*
@@ -61,8 +76,8 @@ static int add(const char *name, struct lyd_node *cif)
 	const char *restart_policy, *string, *image;
 	struct lyd_node *node, *nets, *caps;
 	char script[strlen(name) + 5];
+	const char *path;
 	FILE *fp, *ap;
-	int offset;
 
 	snprintf(script, sizeof(script), "%s.sh", name);
 	fp = fopenf("w", "%s/%s", _PATH_CONT, script);
@@ -82,24 +97,23 @@ static int add(const char *name, struct lyd_node *cif)
 	 * a running container instance.
 	 */
 	image = lydx_get_cattr(cif, "image");
+
+	/*
+	 * TODO: this script should be refactored to be a .cfg file to
+	 *       the container helper script, or in the future, even a
+	 *       .cfg file to another runtime/engine. For details, see
+	 *       https://github.com/kernelkit/infix/pull/1151#discussion_r2444851292
+	 */
 	fprintf(fp, "#!/bin/sh\n"
 		"# meta-name: %s\n"
 		"# meta-image: %s\n", name, image);
 
-	offset = archive_offset(image);
-	if (offset) {
-		const char *path = image + offset;
+	path = local_path(image);
+	if (path) {
 		char sha256[65] = { 0 };
-		FILE *pp;
 
-		pp = popenf("r", "sha256sum %s | cut -f1 -d' '", path);
-		if (pp) {
-			if (fgets(sha256, sizeof(sha256), pp)) {
-				chomp(sha256);
-				fprintf(fp, "# meta-sha256: %s\n", sha256);
-			}
-			pclose(pp);
-		}
+		if (!calc_sha(path, sha256, sizeof(sha256)))
+			fprintf(fp, "# meta-image-sha256: %s\n", sha256);
 	}
 
 	fprintf(fp, "container --quiet delete %s >/dev/null\n"
@@ -325,7 +339,8 @@ static int del(const char *name)
 
 	if (fgets(buf, sizeof(buf), pp)) {
 		chomp(buf);
-		if (strlen(buf) > 2)
+		/* The return sha should be at least 64 chars long (sha256) */
+		if (strlen(buf) >= 64)
 			touchf("%s/%s", prune_dir, buf);
 	}
 

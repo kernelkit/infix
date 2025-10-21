@@ -6,6 +6,11 @@
 # NOTE: when creating/deleting containers, remember 'initctl reload' to
 #       activate the changes!  In confd this is already handled.
 #
+# TODO: this script should be refactored to take a .cfg file instead for
+#       each container.  For details, see this pull request discussion:
+#       https://github.com/kernelkit/infix/pull/1151#discussion_r2444851292
+#
+# shellcheck disable=SC1001
 CLEANUP=/var/lib/containers/cleanup
 DOWNLOADS=/var/lib/containers/oci
 BUILTIN=/lib/oci
@@ -23,6 +28,10 @@ force=
 # Variable shared across subshells
 export meta_sha=""
 
+dbg()
+{
+    logger -I $PPID -t container -p local1.debug -- "$*"
+}
 
 log()
 {
@@ -47,6 +56,104 @@ err()
 pidfn()
 {
     echo "/run/containers/${1}.pid"
+}
+
+calc_sha()
+{
+    sha256sum "$1" 2>/dev/null | awk '{print $1}'
+}
+
+# Check image transport, return 0 if remote, 1 if local
+is_remote()
+{
+    image=$(awk '/^# meta-image:/ {print $3}' "$1" 2>/dev/null || echo "")
+    echo "$image"
+
+    case "$image" in
+	oci\:* | oci-archive\:* | docker-archive\:* | docker-daemon\:* | \
+	    dir\:* | containers-storage\:* | ostree\:* | sif\:* | /*)
+	    return 1
+	    ;;
+	*)
+	    return 0
+	    ;;
+    esac
+}
+
+# Check loaded image in container store vs archive, as well as verifying
+# the container instance vs. the configuration.
+#
+# This is an optimization to cut down startup times.
+is_uptodate()
+{
+    img_sha=$(awk '/^# meta-image-sha256:/ {print $3}' "$script" 2>/dev/null)
+    if [ -n "$img_sha" ]; then
+	# Local image optimization: check if archive SHA matches stored sidecar file
+	img=$(awk '/^# meta-image:/ {print $3}' "$script" 2>/dev/null)
+	if [ -n "$img" ]; then
+	    case "$img" in
+		docker-archive\:*)
+		    archive_path="${img#docker-archive:}"
+		    ;;
+		oci-archive\:*)
+		    archive_path="${img#oci-archive:}"
+		    ;;
+		*)
+		    archive_path="$img"
+		    ;;
+	    esac
+
+ 	    # Handle relative paths - check BUILTIN and DOWNLOADS
+	    if [ ! -f "$archive_path" ]; then
+		if [ -f "$DOWNLOADS/$(basename "$archive_path")" ]; then
+		    archive_path="$DOWNLOADS/$(basename "$archive_path")"
+		elif [ -f "$BUILTIN/$(basename "$archive_path")" ]; then
+		    archive_path="$BUILTIN/$(basename "$archive_path")"
+		fi
+	    fi
+
+	    # Check if the archive exists and compare SHA with sidecar file
+	    if [ -f "$archive_path" ]; then
+		archive_basename=$(basename "$archive_path")
+		sha_file="$DOWNLOADS/${archive_basename}.sha256"
+
+		if [ -f "$sha_file" ]; then
+		    stored_sha=$(cat "$sha_file" 2>/dev/null)
+		    current_sha=$(calc_sha "$archive_path")
+
+		    # If SHA matches, check container instance
+		    if [ "$stored_sha" = "$current_sha" ]; then
+			if podman container exists "$name"; then
+			    config_sha=$(calc_sha "$script")
+			    container_sha=$(podman inspect "$name" --format '{{index .Config.Labels "config-sha256"}}' 2>/dev/null)
+			    container_img_sha=$(podman inspect "$name" --format '{{index .Config.Labels "meta-image-sha256"}}' 2>/dev/null)
+
+			    if [ "$container_img_sha" = "$img_sha" ] && [ "$container_sha" = "$config_sha" ]; then
+				# Unmodified local image and configuration
+				return 0
+			    fi
+			fi
+		    else
+			# Archive changed (e.g., rootfs upgrade) - need to reload
+			dbg "Archive SHA changed, will reload image and recreate container"
+		    fi
+		fi
+	    fi
+	fi
+    else
+	# Remote image optimization: check config-sha256 only
+	if podman container exists "$name"; then
+	    config_sha=$(calc_sha "$script")
+	    container_sha=$(podman inspect "$name" --format '{{index .Config.Labels "config-sha256"}}' 2>/dev/null)
+
+	    if [ "$container_sha" = "$config_sha" ]; then
+		# Unmodified local image and configuration
+		return 0
+	    fi
+	fi
+    fi
+
+    return 1
 }
 
 check()
@@ -79,7 +186,7 @@ fetch()
     dst="$DOWNLOADS/$file"
 
     cd "$DOWNLOADS" || return
-    if [ -e "$file" ]; then
+    if [ -f "$file" ]; then
 	if [ -n "$force" ]; then
 	    log "Force flag set, removing cached $file and re-downloading."
 	    rm -f "$file"
@@ -161,10 +268,10 @@ load_archive()
 	    ;;
     esac
 
-    if [ ! -e "$file" ]; then
-	if [ -e "$DOWNLOADS/$file" ]; then
+    if [ ! -f "$file" ]; then
+	if [ -f "$DOWNLOADS/$file" ]; then
 	    file="$DOWNLOADS/$file"
-	elif [ -e "$BUILTIN/$file" ]; then
+	elif [ -f "$BUILTIN/$file" ]; then
 	    file="$BUILTIN/$file"
 	else
 	    err 1 "cannot find OCI archive $file in URI $uri"
@@ -245,7 +352,7 @@ load_archive()
     # Save archive SHA256 to sidecar file to enable optimization
     # This applies to both local archives and downloaded remote archives
     if [ -f "$file" ]; then
-	img_sha256=$(sha256sum "$file" | cut -f1 -d' ')
+	img_sha256=$(calc_sha "$file")
 	archive_basename=$(basename "$file")
 	sha_file="$DOWNLOADS/${archive_basename}.sha256"
 
@@ -290,13 +397,13 @@ create()
 
     # Unpack and load docker-archive/oci/oci-archive, returning image
     # name, or return docker:// URL for download.
-    sha_file=$(mktemp -u)
+    sha_file=$(mktemp)
     if ! image=$(load_archive "$image" "" "$sha_file"); then
 	exit 1
     fi
 
-    if [ -f "$sha_file" ]; then
-	meta_sha=$(cat "$sha_file" 2>/dev/null || echo "")
+    if [ -s "$sha_file" ]; then
+	img_sha=$(cat "$sha_file" 2>/dev/null || echo "")
 	rm "$sha_file"
     fi
 
@@ -330,20 +437,19 @@ create()
 	args="$args --network=none"
     fi
 
-    # Add optimization labels for meta-sha256 and config checksum
+    # Add optimization labels for meta-image-sha256 and config checksum
     script="/run/containers/${name}.sh"
     if [ -f "$script" ]; then
- 	if [ -z "$meta_sha" ]; then
-	    # Extract meta-sha256 from script if present
-	    meta_sha=$(awk '/^# meta-sha256:/ {print $3}' "$script" 2>/dev/null)
+ 	if [ -z "$img_sha" ]; then
+	    # Extract meta-image-sha256 from script if present
+	    img_sha=$(awk '/^# meta-image-sha256:/ {print $3}' "$script" 2>/dev/null)
 	fi
-	if [ -n "$meta_sha" ]; then
-	    args="$args --label meta-sha256=$meta_sha"
+	if [ -n "$img_sha" ]; then
+	    args="$args --label meta-image-sha256=$img_sha"
 	fi
 
 	# Add config checksum label
-	config_sha=$(sha256sum "$script" | cut -f1 -d' ')
-	args="$args --label config-sha256=$config_sha"
+	args="$args --label config-sha256=$(calc_sha "$script")"
     fi
 
     # shellcheck disable=SC2048
@@ -414,9 +520,10 @@ cleanup()
 	[ -f "$id_file" ] || continue
 	cid=$(basename "$id_file")
 
-	# Extract image name and meta-sha256 from the container instance labels
+	# Extract image name and meta-image-sha256 from the container instance labels
+	# These are the image in container store and the trace to an oci-archive.tar.gz
 	img=$(podman inspect "$cid" 2>/dev/null | jq -r '.[].ImageName' 2>/dev/null || echo "")
-	sha=$(podman inspect "$cid" --format '{{index .Config.Labels "meta-sha256"}}' 2>/dev/null || echo "")
+	sha=$(podman inspect "$cid" --format '{{index .Config.Labels "meta-image-sha256"}}' 2>/dev/null || echo "")
 
 	log "Removing container instance with ID: ${cid:0:12}..."
 	podman rm -vif "$cid" >/dev/null 2>&1
@@ -428,20 +535,19 @@ cleanup()
 		log "Removing unused image: $img"
 		podman rmi "$img" 2>/dev/null || true
 
-		# Also remove archive and sidecar file from $DOWNLOADS for remote images
+		# Also remove archive and sidecar checksum file from $DOWNLOADS for remote images
+		# I.e., $DOWNLOADS/oci-archive.tar.gz and $DOWNLOADS/oci-archive.tar.gz.sha256
 		if [ -n "$sha" ] && [ -d "$DOWNLOADS" ]; then
 		    # Search for matching sidecar file containing this SHA
 		    for sha_file in "$DOWNLOADS"/*.sha256; do
 			[ -f "$sha_file" ] || continue
 			stored_sha=$(cat "$sha_file" 2>/dev/null || echo "")
 			if [ "$stored_sha" = "$sha" ]; then
-			    # Found matching sidecar - derive archive filename
+			    # Found matching sidecar - derive archive filename by stripping .sha256
 			    archive="${sha_file%.sha256}"
-
 			    if [ -f "$archive" ]; then
 				# Safety check: verify archive SHA matches before removing
-				archive_sha=$(sha256sum "$archive" 2>/dev/null | awk '{print $1}')
-				if [ "$archive_sha" = "$sha" ]; then
+				if [ "$(calc_sha "$archive")" = "$sha" ]; then
 				    log "Removing archive: $archive"
 				    rm -f "$archive"
 				else
@@ -508,17 +614,19 @@ stop()
 # When called by Finit: `initctl stop foo`, the container script
 # is called as `container -n $foo stop`.  For the stop command
 # we want to bypass the default 10 second timeout.
+#
+# NOTE: containers have three phases: setup, running, and teardown.
+#       the setup phase is this script trying to fetch the image.
 wrap()
 {
     name=$1
     cmd=$2
+    args=
     pidfile=$(pidfn "$name")
 
-    # Containers have three phases: setup, running, and teardown.
-
-    # The setup phase may run forever in the background trying to fetch
-    # the image.  It saves its PID in /run/containers/${name}.pid
     if [ "$cmd" = "stop" ]; then
+	# The setup phase may run forever in the background trying to fetch
+	# the image.  It saves its PID in /run/containers/${name}.pid
 	if [ -f "$pidfile" ]; then
             pid=$(cat "$pidfile")
 
@@ -532,9 +640,8 @@ wrap()
             return 0
 	fi
 
+	# Only the 'podman stop' command takes -i and --timeout
 	args="-i --timeout $timeout"
-    else
-	args=
     fi
 
     # Skip "echo $name" from podman start in log
@@ -925,76 +1032,9 @@ case $cmd in
 	script=/run/containers/${name}.sh
 	[ -x "$script" ] || err 1 "setup: $script does not exist or is not executable."
 
-	# Early exit optimization: check if container is already up-to-date
-	meta_sha=$(awk '/^# meta-sha256:/ {print $3}' "$script" 2>/dev/null)
-	if [ -n "$meta_sha" ]; then
-	    # Local image optimization: check if archive SHA matches stored sidecar file
-	    # Extract the image path from the script
-	    img=$(awk '/^# meta-image:/ {print $3}' "$script" 2>/dev/null)
-	    if [ -n "$img" ]; then
-		# Determine the archive file path
-		case "$img" in
-		    oci-archive:*)
-			archive_path="${img#oci-archive:}"
-			;;
-		    *)
-			archive_path="$img"
-			;;
-		esac
-
-		# Handle relative paths - check BUILTIN and DOWNLOADS
-		if [ ! -e "$archive_path" ]; then
-		    if [ -e "$DOWNLOADS/$(basename "$archive_path")" ]; then
-			archive_path="$DOWNLOADS/$(basename "$archive_path")"
-		    elif [ -e "$BUILTIN/$(basename "$archive_path")" ]; then
-			archive_path="$BUILTIN/$(basename "$archive_path")"
-		    fi
-		fi
-
-		# Check if the archive exists and compare SHA with sidecar file
-		if [ -f "$archive_path" ]; then
-		    archive_basename=$(basename "$archive_path")
-		    sha_file="$DOWNLOADS/${archive_basename}.sha256"
-
-		    # Check if sidecar file exists
-		    if [ -f "$sha_file" ]; then
-			stored_sha=$(cat "$sha_file" 2>/dev/null)
-			current_sha=$(sha256sum "$archive_path" | cut -f1 -d' ')
-
-			# If SHA matches, check container instance
-			if [ "$stored_sha" = "$current_sha" ]; then
-			    if podman container exists "$name"; then
-				# Check if container has matching labels
-				config_sha=$(sha256sum "$script" | cut -f1 -d' ')
-				container_meta=$(podman inspect "$name" --format '{{index .Config.Labels "meta-sha256"}}' 2>/dev/null)
-				container_config=$(podman inspect "$name" --format '{{index .Config.Labels "config-sha256"}}' 2>/dev/null)
-
-				if [ "$container_meta" = "$meta_sha" ] && [ "$container_config" = "$config_sha" ]; then
-				    log "Container $name is up-to-date (archive and config unchanged), skipping setup"
-				    exit 0
-				fi
-			    fi
-			else
-			    # Archive changed (e.g., rootfs upgrade) - need to reload
-			    log "Archive SHA changed, will reload image and recreate container"
-			fi
-		    fi
-		fi
-	    fi
-	else
-	    # Remote image optimization: check config-sha256 only
-	    if podman container exists "$name"; then
-		# Get current config checksum from script
-		config_sha=$(sha256sum "$script" | cut -f1 -d' ')
-
-		# Get container's stored config checksum
-		container_config=$(podman inspect "$name" --format '{{index .Config.Labels "config-sha256"}}' 2>/dev/null)
-
-		if [ -n "$container_config" ] && [ "$container_config" = "$config_sha" ]; then
-		    log "Container $name config unchanged, skipping setup"
-		    exit 0
-		fi
-	    fi
+	if is_uptodate "$script"; then
+	    log "Container $name config unchanged, skipping setup"
+	    exit 0
 	fi
 
 	# Capture old image ID before recreation (for surgical cleanup after)
@@ -1008,34 +1048,24 @@ case $cmd in
 	pidfile=$(pidfn "${name}")
 	echo $$ > "$pidfile"
 
-	# Try setup once first
-	if ! "$script"; then
-	    # Get image transport to decide if retries make sense
-	    image=$(awk '/^# meta-image:/ {print $3}' "$script" 2>/dev/null || echo "")
-	    case "$image" in
-		oci:* | oci-archive:* | docker-archive:* | docker-daemon:* | dir:* | containers-storage:* | ostree:* | sif:* | /*)
-		    # Local transport - exit immediately on failure
-		    log "${name}: setup failed for local image $image"
-		    rm -f "$pidfile"
-		    exit 1
-		    ;;
-		*)
-		    # Remote transport (docker://, ftp://, http://, https://, etc.) - retry on network changes
-		    while ! "$script"; do
-			log "${name}: setup failed, waiting for network changes ..."
+	if image=$(is_remote "$script"); then
+	    while ! "$script"; do
+		log "${name}: setup failed, waiting for network changes ..."
 
-			# Timeout and retry after 60 seconds, on SIGTERM, or when
-			# any network event is caught.
-			timeout -s TERM -k 1 60 sh -c \
-				'ip monitor address route 2>/dev/null | head -n1 >/dev/null' || true
+		# Timeout and retry after 60 seconds, on SIGTERM, or when
+		# any network event is caught.
+		timeout -s TERM -k 1 60 sh -c \
+			'ip monitor address route 2>/dev/null | head -n1 >/dev/null' || true
 
-			# On IP address/route changes, wait a few seconds more to ensure
-			# the system has ample time to react and set things up for us.
-			log "${name}: retrying ..."
-			sleep 2
-		    done
-		    ;;
-	    esac
+		# On IP address/route changes, wait a few seconds more to ensure
+		# the system has ample time to react and set things up for us.
+		log "${name}: retrying ..."
+		sleep 2
+	    done
+	elif ! "$script"; then
+	    log "${name}: setup failed for local image $image"
+	    rm -f "$pidfile"
+	    exit 1
 	fi
 
 	rm -f "$pidfile"
