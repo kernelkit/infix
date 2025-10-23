@@ -1,4 +1,4 @@
-From 8fc0783e15dbadb4d3427b594e8794a9884f43e2 Mon Sep 17 00:00:00 2001
+From 10334fa97b79df7806b856b0031d68fc7c29abdd Mon Sep 17 00:00:00 2001
 From: Mattias Walström <lazzer@gmail.com>
 Date: Wed, 20 Aug 2025 21:38:24 +0200
 Subject: [PATCH 29/30] drm/panel-simple: Add a timing for the Raspberry Pi 7"
@@ -47,7 +47,7 @@ Signed-off-by: Dave Stevenson <dave.stevenson@raspberrypi.com>
  1 file changed, 30 insertions(+), 1 deletion(-)
 
 diff --git a/drivers/gpu/drm/panel/panel-simple.c b/drivers/gpu/drm/panel/panel-simple.c
-index 82db3daf4f81a..3699cef24ea6f 100644
+index 82db3daf4f81..3699cef24ea6 100644
 --- a/drivers/gpu/drm/panel/panel-simple.c
 +++ b/drivers/gpu/drm/panel/panel-simple.c
 @@ -391,7 +391,8 @@ static int panel_simple_get_modes(struct drm_panel *panel,
