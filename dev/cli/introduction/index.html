@@ -1817,7 +1817,15 @@ to be able to verify a configuration change.  In case of an inadvertent
 change that, e.g., breaks networking, it is trivial to revert back by:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>admin@host-12-34-56:/&gt; copy startup-config running-config
 </code></pre></div>
-<p>Or restarting the device.</p>
+<p>Or restart the device, for example if the change to the configuration
+caused you to lose contact with the system (it happens to the best of
+us).  The system will start up from the last "save gave".</p>
+<blockquote>
+<p><strong>Tip:</strong> when restoring a backup of a configuration, or having manually
+edited a config file, you can validate it using system's YANG models,
+it is <em>not</em> applied if validation is successful:</p>
+<p><code>copy /media/backup/old.cfg running-config validate</code></p>
+</blockquote>
 
 
 

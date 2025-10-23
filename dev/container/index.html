@@ -645,11 +645,86 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#upgrading-a-container-image" class="md-nav__link">
+  <a href="#understanding-image-tags" class="md-nav__link">
     <span class="md-ellipsis">
-      Upgrading a Container Image
+      Understanding Image Tags
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="Understanding Image Tags">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#mutable-tags" class="md-nav__link">
+    <span class="md-ellipsis">
+      Mutable Tags
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#immutable-tags" class="md-nav__link">
+    <span class="md-ellipsis">
+      Immutable Tags
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#upgrading-container-images" class="md-nav__link">
+    <span class="md-ellipsis">
+      Upgrading Container Images
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Upgrading Container Images">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#how-container-lifecycle-works" class="md-nav__link">
+    <span class="md-ellipsis">
+      How Container Lifecycle Works
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#method-1-upgrading-immutable-tags" class="md-nav__link">
+    <span class="md-ellipsis">
+      Method 1: Upgrading Immutable Tags
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#method-2-upgrading-mutable-tags" class="md-nav__link">
+    <span class="md-ellipsis">
+      Method 2: Upgrading Mutable Tags
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#embedded-container-images" class="md-nav__link">
+    <span class="md-ellipsis">
+      Embedded Container Images
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -737,6 +812,15 @@
   
     <nav class="md-nav" aria-label="Mounts and Volumes">
       <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#volume-management" class="md-nav__link">
+    <span class="md-ellipsis">
+      Volume Management
+    </span>
+  </a>
+  
+</li>
         
           <li class="md-nav__item">
   <a href="#content-mounts" class="md-nav__link">
@@ -1860,11 +1944,86 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#upgrading-a-container-image" class="md-nav__link">
+  <a href="#understanding-image-tags" class="md-nav__link">
     <span class="md-ellipsis">
-      Upgrading a Container Image
+      Understanding Image Tags
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="Understanding Image Tags">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#mutable-tags" class="md-nav__link">
+    <span class="md-ellipsis">
+      Mutable Tags
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#immutable-tags" class="md-nav__link">
+    <span class="md-ellipsis">
+      Immutable Tags
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#upgrading-container-images" class="md-nav__link">
+    <span class="md-ellipsis">
+      Upgrading Container Images
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Upgrading Container Images">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#how-container-lifecycle-works" class="md-nav__link">
+    <span class="md-ellipsis">
+      How Container Lifecycle Works
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#method-1-upgrading-immutable-tags" class="md-nav__link">
+    <span class="md-ellipsis">
+      Method 1: Upgrading Immutable Tags
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#method-2-upgrading-mutable-tags" class="md-nav__link">
+    <span class="md-ellipsis">
+      Method 2: Upgrading Mutable Tags
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#embedded-container-images" class="md-nav__link">
+    <span class="md-ellipsis">
+      Embedded Container Images
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -1952,6 +2111,15 @@
   
     <nav class="md-nav" aria-label="Mounts and Volumes">
       <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#volume-management" class="md-nav__link">
+    <span class="md-ellipsis">
+      Volume Management
+    </span>
+  </a>
+  
+</li>
         
           <li class="md-nav__item">
   <a href="#content-mounts" class="md-nav__link">
@@ -2289,69 +2457,176 @@ b02e945c43c9  localhost/curios-oci-amd64-v24.05.0:latest                        
 
 admin@example:/&gt; show log
 ...
-Nov 20 07:24:56 infix container[5040]: Fetching ftp://192.168.122.1/curios-oci-amd64-v24.05.0.tar.gz
-Nov 20 07:24:56 infix container[5040]: curios-oci-amd64-v24.05.0.tar.gz downloaded successfully.
-Nov 20 07:24:56 infix container[5040]: curios-oci-amd64-v24.05.0.tar.gz checksum verified OK.
-Nov 20 07:24:57 infix container[5040]: Cleaning up extracted curios-oci-amd64-v24.05.0
-Nov 20 07:24:57 infix container[5040]: podman create --name sys --conmon-pidfile=/run/container:sys.pid --read-only --replace --quiet --cgroup-parent=containers  --restart=always --systemd=false --tz=local --hostname sys --log-driver k8s-file --log-opt path=/run/containers/sys.fifo --network=none curios-oci-amd64-v24.05.0
-Nov 20 07:24:57 infix container[3556]: b02e945c43c9bce2c4be88e31d6f63cfdb1a3c8bdd02179376eb059a49ae05e4
+Nov 20 07:24:56 example container[5040]: Fetching ftp://192.168.122.1/curios-oci-amd64-v24.05.0.tar.gz
+Nov 20 07:24:56 example container[5040]: curios-oci-amd64-v24.05.0.tar.gz downloaded successfully.
+Nov 20 07:24:56 example container[5040]: curios-oci-amd64-v24.05.0.tar.gz checksum verified OK.
+Nov 20 07:24:57 example container[5040]: Cleaning up extracted curios-oci-amd64-v24.05.0
+Nov 20 07:24:57 example container[5040]: podman create --name sys --conmon-pidfile=/run/container:sys.pid --read-only --replace --quiet --cgroup-parent=containers  --restart=always --systemd=false --tz=local --hostname sys --log-driver k8s-file --log-opt path=/run/containers/sys.fifo --network=none curios-oci-amd64-v24.05.0
+Nov 20 07:24:57 example container[3556]: b02e945c43c9bce2c4be88e31d6f63cfdb1a3c8bdd02179376eb059a49ae05e4
 </code></pre></div>
-<h2 id="upgrading-a-container-image">Upgrading a Container Image<a class="headerlink" href="#upgrading-a-container-image" title="Permanent link">¶</a></h2>
+<h2 id="understanding-image-tags">Understanding Image Tags<a class="headerlink" href="#understanding-image-tags" title="Permanent link">¶</a></h2>
+<p>Docker images use tags to identify different versions of the same image.
+Understanding the difference between <em>mutable</em> and <em>immutable</em> tags is
+important for managing container upgrades effectively.</p>
+<h3 id="mutable-tags">Mutable Tags<a class="headerlink" href="#mutable-tags" title="Permanent link">¶</a></h3>
+<p>Tags like <code>:latest</code>, <code>:edge</code>, or <code>:stable</code> are <em>mutable</em> — they point to
+different images over time as new versions are published to the registry.</p>
+<p><strong>Advantages:</strong></p>
+<ul>
+<li>Convenient: upgrade without changing configuration</li>
+<li>Simple: use the CLI command <code>container upgrade NAME</code> to get the latest version,<br>
+   there is even a convenient RPC for controlling the remotely</li>
+<li>Good for: development, testing, and systems that auto-update</li>
+</ul>
+<p><strong>Trade-offs:</strong></p>
+<ul>
+<li>Less reproducible: different systems may run different versions</li>
+<li>Less predictable: upgrades happen when you pull, not when you plan</li>
+<li>Harder to rollback: previous version may no longer be available</li>
+</ul>
+<p><strong>Example mutable tags:</strong></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>docker://nginx:latest          # Always points to newest release
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>docker://myapp:edge            # Development/bleeding edge version
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>oci-archive:/var/tmp/app.tar   # Local archive that may be replaced
+</code></pre></div>
+<h3 id="immutable-tags">Immutable Tags<a class="headerlink" href="#immutable-tags" title="Permanent link">¶</a></h3>
+<p>Version-specific tags like <code>:v1.0.1</code>, <code>:24.11.0</code>, or digest references
+like <code>@sha256:abc123...</code> are <em>immutable</em> — they always reference the
+exact same image content.</p>
+<p><strong>Advantages:</strong></p>
+<ul>
+<li>Reproducible: all systems run identical versions</li>
+<li>Predictable: upgrades only happen when you change configuration</li>
+<li>Auditable: clear history of what ran when</li>
+<li>Good for: production, compliance, and controlled deployments</li>
+</ul>
+<p><strong>Trade-offs:</strong></p>
+<ul>
+<li>More explicit: must update configuration to upgrade</li>
+<li>Requires planning: need to know which version to use</li>
+</ul>
+<p><strong>Example immutable tags:</strong></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>docker://nginx:1.25.3          # Specific version number
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>docker://myapp:v2.1.0          # Semantic version tag
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>docker://nginx@sha256:abc123   # Cryptographic digest (most immutable)
+</code></pre></div>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p><strong>Best practice for production:</strong> Use specific version tags (<code>:v1.0.1</code>)
+rather than mutable tags (<code>:latest</code>). This ensures all your systems run
+identical software and upgrades happen only when you decide.</p>
+</div>
+<h2 id="upgrading-container-images">Upgrading Container Images<a class="headerlink" href="#upgrading-container-images" title="Permanent link">¶</a></h2>
 <p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/shield-checkmark.svg" data-desc-position="bottom"><img align="right" alt="Up-to-date Shield" src="../img/shield-checkmark.svg" width="100"></a></p>
 <p>The applications in your container are an active part of the system as a
 whole, so make it a routine to keep your container images up-to-date!</p>
-<p>Containers are created at first setup and at every boot.  If the image
-exists in the file system it is reused -- i.e., an image pulled from a
-remote registry is not fetched again.</p>
-<p>To upgrade a versioned image:
- - update your <code>running-config</code> to use the new <code>image:tag</code>
- - <code>leave</code> to activate the change, if you are in the CLI
- - Podman pulls the new image in the background
- - Your container is recreated with the new image
- - The container is started</p>
-<p>For "unversioned" images, e.g., images using a <code>:latest</code> or <code>:edge</code> tag,
-use the following CLI command (<code>NAME</code> is the name of your container):</p>
-<div class="highlight"><pre><span></span><code>admin@example:/&gt; container upgrade NAME
+<h3 id="how-container-lifecycle-works">How Container Lifecycle Works<a class="headerlink" href="#how-container-lifecycle-works" title="Permanent link">¶</a></h3>
+<p>Infix intelligently manages container lifecycles to provide a smooth
+experience while minimizing unnecessary work:</p>
+<p><strong>At first setup:</strong> When you configure a container for the first time,
+Infix fetches the image (if needed) and creates the container instance.</p>
+<p><strong>At boot time:</strong> Infix checks if the container needs to be recreated by
+comparing checksums for:</p>
+<ul>
+<li>The image archive that the container was built from</li>
+<li>The container configuration script</li>
+</ul>
+<p><strong>When configuration changes:</strong> If you modify any container settings
+(network, volumes, environment, etc.), the container is automatically
+recreated with the new configuration.</p>
+<p><strong>When explicitly upgraded:</strong> Using the <code>container upgrade</code> command forces
+a fresh pull of the image and recreates the container.</p>
+<p>This means that in most cases, <strong>containers persist across reboots</strong> and
+are only recreated when actually necessary. Your container's state stored
+in volumes is preserved across recreations.  Since Infix containers use a
+read-only root filesystem, any changes written outside of volumes or the
+writable paths provided by Podman (<code>/dev</code>, <code>/dev/shm</code>, <code>/run</code>, <code>/tmp</code>,
+<code>/var/tmp</code>) will be lost when the container is recreated.</p>
+<h3 id="method-1-upgrading-immutable-tags">Method 1: Upgrading Immutable Tags<a class="headerlink" href="#method-1-upgrading-immutable-tags" title="Permanent link">¶</a></h3>
+<p>When using version-specific tags, you upgrade by explicitly changing the
+image reference in your configuration:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>admin@example:/&gt; configure
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>admin@example:/config/&gt; edit container web
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>admin@example:/config/container/web/&gt; set image docker://nginx:1.25.3
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>admin@example:/config/container/web/&gt; leave
 </code></pre></div>
-<p>This stops the container, does <code>container pull IMAGE</code>, and recreates it
-with the new image.  Upgraded containers are automatically restarted.</p>
+<p><strong>What happens:</strong></p>
+<ol>
+<li>Podman pulls the new image in the background (if not already present)</li>
+<li>Your container is automatically stopped</li>
+<li>The container is recreated with the new image</li>
+<li>The container is started with your existing volumes intact</li>
+</ol>
+<p><strong>Example:</strong> Upgrading from one version to another:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>admin@example:/&gt; configure
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>admin@example:/config/&gt; edit container system
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>admin@example:/config/container/system/&gt; show image
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>image ghcr.io/kernelkit/curios:v24.11.0;
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>admin@example:/config/container/system/&gt; set image ghcr.io/kernelkit/curios:v24.12.0
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>admin@example:/config/container/system/&gt; leave
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>admin@example:/&gt; show log
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>...
+<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>Dec 13 14:32:15 example container[1523]: Pulling ghcr.io/kernelkit/curios:v24.12.0...
+<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>Dec 13 14:32:18 example container[1523]: Stopping old container instance...
+<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>Dec 13 14:32:19 example container[1523]: Creating new container with updated image...
+<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a>Dec 13 14:32:20 example container[1523]: Container system started successfully
+</code></pre></div>
+<h3 id="method-2-upgrading-mutable-tags">Method 2: Upgrading Mutable Tags<a class="headerlink" href="#method-2-upgrading-mutable-tags" title="Permanent link">¶</a></h3>
+<p>For images using mutable tags like <code>:latest</code> or <code>:edge</code>, use the
+<code>container upgrade</code> command:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>admin@example:/&gt; container upgrade NAME
+</code></pre></div>
+<p>This command:</p>
+<ol>
+<li>Stops the running container</li>
+<li>Pulls the latest version of the image from the registry</li>
+<li>Recreates the container with the new image</li>
+<li>Starts the container automatically</li>
+</ol>
 <p><strong>Example using registry:</strong></p>
-<div class="highlight"><pre><span></span><code>admin@example:/&gt; container upgrade system
-system
-Trying to pull ghcr.io/kernelkit/curios:edge...
-Getting image source signatures
-Copying blob 07bfba95fe93 done
-Copying config 0cb6059c0f done
-Writing manifest to image destination
-Storing signatures
-0cb6059c0f4111650ddbc7dbc4880c64ab8180d4bdbb7269c08034defc348f17
-system: not running.
-59618cc3c84bef341c1f5251a62be1592e459cc990f0b8864bc0f5be70e60719
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>admin@example:/&gt; container upgrade system
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>system
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>Trying to pull ghcr.io/kernelkit/curios:edge...
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>Getting image source signatures
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>Copying blob 07bfba95fe93 done
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>Copying config 0cb6059c0f done
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>Writing manifest to image destination
+<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>Storing signatures
+<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a>0cb6059c0f4111650ddbc7dbc4880c64ab8180d4bdbb7269c08034defc348f17
+<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a>system: not running.
+<a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a>59618cc3c84bef341c1f5251a62be1592e459cc990f0b8864bc0f5be70e60719
 </code></pre></div>
-<p>An OCI archive image can be upgraded in a similar manner, the first step
-is of course to get the new archive onto the system (see above), and
-then, provided the <code>oci-archive:/path/to/archive</code> format is used, call
-the upgrade command as</p>
-<div class="highlight"><pre><span></span><code>admin@example:/&gt; container upgrade system
-Upgrading container system with local archive: oci-archive:/var/tmp/curios-oci-amd64.tar.gz ...
-7ab4a07ee0c6039837419b7afda4da1527a70f0c60c0f0ac21cafee05ba24b52
+<p><strong>Example using local OCI archive:</strong></p>
+<p>An OCI archive image can be upgraded in a similar manner. First, get the
+new archive onto the system (see Container Images section above), then,
+provided the <code>oci-archive:/path/to/archive</code> format is used in your
+configuration, call the upgrade command:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>admin@example:/&gt; container upgrade system
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>Upgrading container system with local archive: oci-archive:/var/tmp/curios-oci-amd64.tar.gz ...
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>7ab4a07ee0c6039837419b7afda4da1527a70f0c60c0f0ac21cafee05ba24b52
 </code></pre></div>
-<p>OCI archives can also be fetched from ftp/http/https URL, in that case
-the upgrade can be done the same way as a registry image (above).</p>
+<p>OCI archives can also be fetched from ftp/http/https URLs. In that case,
+the upgrade works the same way as a registry image — Infix downloads the
+new archive and recreates the container.</p>
+<h3 id="embedded-container-images">Embedded Container Images<a class="headerlink" href="#embedded-container-images" title="Permanent link">¶</a></h3>
 <div class="admonition tip">
 <p class="admonition-title">Tip</p>
 <p>Containers running from OCI images embedded in the operating system,
-e.g., <code>/lib/oci/mycontainer.tar.gz</code>, always run from the version in
-the operating system.  To upgrade, install the new container image at
-build time, after system upgrade the container is also upgraded.  The
-system unpacks and loads the OCI images into Podman every boot, which
-ensures the running container always has known starting state.</p>
+e.g., <code>/lib/oci/mycontainer.tar.gz</code>, are automatically kept in sync
+with the Infix system image version.</p>
+<p><strong>How it works:</strong> When you build a custom Infix image with embedded OCI
+archives, those containers will be upgraded whenever you upgrade the
+Infix operating system itself. At boot, Infix checks if the embedded
+image has changed and automatically recreates the container if needed.</p>
 <p><strong>Example:</strong> default builds of Infix include a couple of OCI images
 for reference, one is <code>/lib/oci/curios-nftables-v24.11.0.tar.gz</code>, but
 there is also a symlink called <code>curios-nftables-latest.tar.gz</code> in the
 same directory, which is what the Infix regression tests use in the
-image configuration of the container.  This is what enables easy
-upgrades of the container along with the system itself.</p>
+image configuration of the container. When the system is upgraded and
+the embedded image changes, the test containers are automatically
+recreated with the new version.</p>
+<p>This approach ensures your embedded containers always match your system
+version without any manual intervention.</p>
 </div>
 <h2 id="capabilities">Capabilities<a class="headerlink" href="#capabilities" title="Permanent link">¶</a></h2>
 <p>An unprivileged container works for almost all use-cases, but there are
@@ -2596,6 +2871,46 @@ empty: then rsync".</p>
 <p>Infix support named volumes (only), and it is not possible to share a
 volume between containers.  All the tricks possible with volumes may
 be added in a later release.</p>
+</div>
+<h3 id="volume-management">Volume Management<a class="headerlink" href="#volume-management" title="Permanent link">¶</a></h3>
+<p>Volumes are persistent storage that survive container restarts and image
+upgrades, making them ideal for application data. However, this also means
+they <strong>are not automatically removed</strong> when a container is deleted from the
+configuration.</p>
+<p>This design choice prevents accidental data loss, especially in scenarios
+where:</p>
+<ul>
+<li>A container is temporarily removed and re-added with the same name</li>
+<li>A container is replaced with a different configuration but same name</li>
+<li>System upgrades or configuration changes affect container definitions</li>
+</ul>
+<p>To clean up unused volumes and reclaim disk space, use the admin-exec
+command:</p>
+<div class="highlight"><pre><span></span><code>admin@example:/&gt; container prune
+Deleted Images
+...
+Deleted Volumes
+ntpd-varlib
+system-data
+
+Total reclaimed space: 45.2MB
+</code></pre></div>
+<p>The <code>container prune</code> command safely removes:</p>
+<ul>
+<li>Unused container images</li>
+<li>Volumes not attached to any container (running or stopped)</li>
+<li>Other unused container resources</li>
+</ul>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>You can monitor container resource usage with the command:</p>
+<div class="highlight"><pre><span></span><code>admin@example:/&gt; show container usage
+</code></pre></div>
+<p>This displays disk space used by images, containers, and volumes,
+helping you decide when to run the prune command.</p>
+<p>To see which volumes exist and which containers use them:</p>
+<div class="highlight"><pre><span></span><code>admin@example:/&gt; show container volumes
+</code></pre></div>
 </div>
 <h3 id="content-mounts">Content Mounts<a class="headerlink" href="#content-mounts" title="Permanent link">¶</a></h3>
 <p>Content mounts are a special type of file mount where the file contents
