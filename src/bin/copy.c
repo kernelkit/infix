@@ -34,6 +34,9 @@ struct infix_ds infix_config[] = {
 
 static const char *prognm = "copy";
 static int timeout;
+static int dry_run;
+static int quiet;
+static int sanitize;
 
 
 /*
@@ -177,11 +180,52 @@ static const char *infix_ds(const char *text, struct infix_ds **ds)
 	return text;
 }
 
+/*
+ * Load configuration from a file and replace running datastore.
+ * This triggers all sysrepo change callbacks, unlike sr_copy_config().
+ * In dry-run mode, only validates the configuration without applying.
+ */
+static int replace_running(sr_conn_ctx_t *conn, sr_session_ctx_t *sess,
+			   const char *file, int timeout)
+{
+	uint32_t flags = LYD_PARSE_NO_STATE | LYD_PARSE_ONLY | LYD_PARSE_STORE_ONLY | LYD_PARSE_STRICT;
+	struct lyd_node *data = NULL;
+	const struct ly_ctx *ctx;
+	LY_ERR err;
+	int rc;
+
+	ctx = sr_acquire_context(conn);
+	err = lyd_parse_data_path(ctx, file, LYD_JSON, flags, 0, &data);
+	sr_release_context(conn);
+
+	if (err) {
+		fprintf(stderr, ERRMSG "unable to load %s, error %d: %s\n", file, err, ly_errmsg(ctx));
+		return 1;
+	}
+
+	if (dry_run) {
+		if (!quiet) {
+			printf("Configuration validated, %s OK\n", file);
+			fflush(stdout);
+		}
+		lyd_free_all(data);
+		rc = 0;
+	} else {
+		/* Replace running config, assumes ownership of 'data' */
+		rc = sr_replace_config(sess, NULL, data, timeout * 1000);
+		if (rc) {
+			emsg(sess, ERRMSG "unable to replace configuration, err %d: %s\n",
+			     rc, sr_strerror(rc));
+			lyd_free_all(data);
+		}
+	}
+
+	return rc;
+}
 
 static int copy(const char *src, const char *dst, const char *remote_user)
 {
 	struct infix_ds *srcds = NULL, *dstds = NULL;
-	char temp_file[20] = "/tmp/copy.XXXXXX";
 	const char *tmpfn = NULL;
 	sr_session_ctx_t *sess;
 	const char *fn = NULL;
@@ -208,9 +252,8 @@ static int copy(const char *src, const char *dst, const char *remote_user)
 
 	user = getuser();
 
-	/* 1. Regular ds copy */
+	/* 1. Regular ds to ds copy */
 	if (srcds && dstds) {
-		/* Ensure the dst ds is writable */
 		if (!dstds->rw) {
 			fprintf(stderr, ERRMSG "not possible to write to \"%s\", skipping.\n", dst);
 			rc = 1;
@@ -229,12 +272,32 @@ static int copy(const char *src, const char *dst, const char *remote_user)
 			fprintf(stderr, ERRMSG "unable to open transaction to %s\n", dst);
 		} else {
 			sr_nacm_set_user(sess, user);
-			rc = sr_copy_config(sess, NULL, srcds->datastore, timeout * 1000);
-			if (rc)
-				emsg(sess, ERRMSG "unable to copy configuration, err %d: %s\n",
-				     rc, sr_strerror(rc));
-			else
-				set_owner(dstds->path, user);
+
+			/*
+			 * When copying TO running-config, use sr_replace_config()
+			 * to trigger change callbacks. Otherwise use sr_copy_config()
+			 * for direct datastore copy without callbacks.
+			 */
+			if (dstds->datastore == SR_DS_RUNNING && srcds->path) {
+				rc = replace_running(conn, sess, srcds->path, timeout);
+				if (!rc)
+					set_owner(dstds->path, user);
+			} else {
+				/* Direct copy for other datastores (no callbacks needed) */
+				rc = sr_copy_config(sess, NULL, srcds->datastore, timeout * 1000);
+				if (rc) {
+					emsg(sess, ERRMSG "unable to copy configuration, err %d: %s\n", rc, sr_strerror(rc));
+				} else {
+					/* Export datastore to backing file if it has one */
+					if (dstds->path) {
+						rc = systemf("sysrepocfg -d %s -X%s -f json", dstds->sysrepocfg, dstds->path);
+						if (rc)
+							fprintf(stderr, ERRMSG "failed saving %s to %s\n", srcds->name, dstds->path);
+						else
+							set_owner(dstds->path, user);
+					}
+				}
+			}
 		}
 		rc = sr_disconnect(conn);
 
@@ -246,12 +309,14 @@ static int copy(const char *src, const char *dst, const char *remote_user)
 
 	if (srcds) {
 		/* 2. Export from a datastore somewhere else */
+
 		if (strstr(dst, "://")) {
 			if (srcds->path)
 				fn = srcds->path;
 			else {
 				snprintf(adjust, sizeof(adjust), "/tmp/%s.cfg", srcds->name);
 				fn = tmpfn = adjust;
+				remove(tmpfn);
 				rc = systemf("sysrepocfg -d %s -X%s -f json", srcds->sysrepocfg, fn);
 			}
 
@@ -270,10 +335,10 @@ static int copy(const char *src, const char *dst, const char *remote_user)
 		if (dstds && dstds->path)
 			fn = dstds->path;
 		else
-			fn = cfg_adjust(dst, src, adjust, sizeof(adjust));
+			fn = cfg_adjust(dst, src, adjust, sizeof(adjust), sanitize);
 
 		if (!fn) {
-			fprintf(stderr, ERRMSG "invalid destination path.\n");
+			fprintf(stderr, ERRMSG "file not found.\n");
 			rc = -1;
 			goto err;
 		}
@@ -292,6 +357,8 @@ static int copy(const char *src, const char *dst, const char *remote_user)
 		else
 			set_owner(fn, user);
 	} else if (dstds) {
+		/* 3. Import from somewhere to a datastore */
+
 		if (!dstds->sysrepocfg) {
 			fprintf(stderr, ERRMSG "not possible to import to this datastore.\n");
 			rc = 1;
@@ -302,14 +369,20 @@ static int copy(const char *src, const char *dst, const char *remote_user)
 			goto err;
 		}
 
-		/* 3. Import from somewhere to a datastore */
 		if (strstr(src, "://")) {
-			tmpfn = mktemp(temp_file);
-			fn = tmpfn;
+			fn = basenm(src);
+			if (fn[0] == 0) {
+				fprintf(stderr, ERRMSG "missing filename in sorce URI.\n");
+				rc = 1;
+				goto err;
+			}
+			snprintf(adjust, sizeof(adjust), "/tmp/%s", fn);
+			fn = tmpfn = adjust;
+			remove(tmpfn);
 		} else {
-			fn = cfg_adjust(src, NULL, adjust, sizeof(adjust));
+			fn = cfg_adjust(src, NULL, adjust, sizeof(adjust), sanitize);
 			if (!fn) {
-				fprintf(stderr, ERRMSG "invalid source file location.\n");
+				fprintf(stderr, ERRMSG "file not found.\n");
 				rc = 1;
 				goto err;
 			}
@@ -320,20 +393,49 @@ static int copy(const char *src, const char *dst, const char *remote_user)
 		if (rc) {
 			fprintf(stderr, ERRMSG "failed downloading %s", src);
 		} else {
-			rc = systemf("sysrepocfg -d %s -I%s -f json", dstds->sysrepocfg, fn);
-			if (rc)
-				fprintf(stderr, ERRMSG "failed loading %s from %s", dst, src);
+			if (dstds->datastore == SR_DS_RUNNING) {
+				if (sr_connect(SR_CONN_DEFAULT, &conn)) {
+					fprintf(stderr, ERRMSG "connection to datastore failed\n");
+					rc = 1;
+				} else {
+					sr_log_syslog("klishd", SR_LL_WRN);
+					if (sr_session_start(conn, SR_DS_RUNNING, &sess)) {
+						fprintf(stderr, ERRMSG "unable to open transaction to %s\n", dst);
+						rc = 1;
+					} else {
+						sr_nacm_set_user(sess, user);
+						rc = replace_running(conn, sess, fn, timeout);
+						if (!rc)
+							set_owner(dstds->path, user);
+					}
+					sr_disconnect(conn);
+				}
+			} else {
+				rc = systemf("sysrepocfg -d %s -I%s -f json", dstds->sysrepocfg, fn);
+				if (rc)
+					fprintf(stderr, ERRMSG "failed loading %s from %s\n", dst, src);
+				else if (dstds->path) {
+					rc = systemf("sysrepocfg -d %s -X%s -f json", dstds->sysrepocfg, dstds->path);
+					if (rc)
+						fprintf(stderr, ERRMSG "failed saving %s\n", dstds->path);
+					else
+						set_owner(dstds->path, user);
+				}
+
+			}
 		}
 	} else {
+		/* 4. regular copy file -> file, either may be remote */
+
 		if (strstr(src, "://") && strstr(dst, "://")) {
 			fprintf(stderr, ERRMSG "copy from remote to remote is not supported.\n");
 			goto err;
 		}
 
 		if (strstr(src, "://")) {
-			fn = cfg_adjust(dst, src, adjust, sizeof(adjust));
+			fn = cfg_adjust(dst, src, adjust, sizeof(adjust), sanitize);
 			if (!fn) {
-				fprintf(stderr, ERRMSG "invalid destination file location.\n");
+				fprintf(stderr, ERRMSG "file not found.\n");
 				rc = 1;
 				goto err;
 			}
@@ -347,25 +449,42 @@ static int copy(const char *src, const char *dst, const char *remote_user)
 
 			rc = systemf("curl %s -Lo %s %s", remote_user, fn, src);
 		} else if (strstr(dst, "://")) {
-			fn = cfg_adjust(src, NULL, adjust, sizeof(adjust));
+			fn = cfg_adjust(src, NULL, adjust, sizeof(adjust), sanitize);
 			if (!fn) {
-				fprintf(stderr, ERRMSG "invalid source file location.\n");
+				fprintf(stderr, ERRMSG "file not found.\n");
 				rc = 1;
 				goto err;
 			}
 
 			if (access(fn, F_OK))
-				fprintf(stderr, ERRMSG "no such file %s, aborting.", fn);
+				fprintf(stderr, ERRMSG "no such file %s.", fn);
 			else
 				rc = systemf("curl %s -LT %s %s", remote_user, fn, dst);
 		} else {
-			if (!access(dst, F_OK)) {
-				if (!yorn("Overwrite existing file %s", dst)) {
+			char bufa[256], bufb[256];
+			const char *from, *to;
+
+			from = cfg_adjust(src, NULL, bufa, sizeof(bufa), sanitize);
+			if (!from) {
+				fprintf(stderr, ERRMSG "no such file %s.", src);
+				rc = 1;
+				goto err;
+			}
+
+			to = cfg_adjust(dst, src, bufb, sizeof(bufb), sanitize);
+			if (!to) {
+				fprintf(stderr, ERRMSG "no such file %s.", dst);
+				rc = 1;
+				goto err;
+			}
+
+			if (!access(to, F_OK)) {
+				if (!yorn("Overwrite existing file %s", to)) {
 					fprintf(stderr, "OK, aborting.\n");
 					return 0;
 				}
 			}
-			rc = systemf("cp %s %s", src, dst);
+			rc = systemf("cp %s %s", from, to);
 		}
 	}
 
@@ -384,10 +503,23 @@ static int usage(int rc)
 	printf("Usage: %s [OPTIONS] SRC DST\n"
 	       "\n"
 	       "Options:\n"
-	       "  -h         This help text\n"
-	       "  -u USER    Username for remote commands, like scp\n"
-	       "  -t SEEC    Timeout for the operation, or default %d sec\n"
-	       "  -v         Show version\n", prognm, timeout);
+	       "  -h              This help text\n"
+	       "  -n              Dry-run, validate configuration without applying\n"
+	       "  -q              Quiet mode, suppress informational messages\n"
+	       "  -s              Sanitize paths for CLI use (restrict path traversal)\n"
+	       "  -t SEC          Timeout for the operation, or default %d sec\n"
+	       "  -u USER         Username for remote commands, like scp\n"
+	       "  -v              Show version\n"
+	       "\n"
+	       "Files:\n"
+	       "  SRC             JSON configuration file, or a datastore\n"
+	       "  DST             A file or datastore, except factory-config\n"
+	       "\n"
+	       "Datastores:\n"
+	       "  running-config  The running datastore, current active config\n"
+	       "  startup-config  The non-volatile config used at startup\n"
+	       "  factory-config  The device's factory default configuration\n"
+	       "\n", prognm, timeout);
 
 	return rc;
 }
@@ -399,10 +531,19 @@ int main(int argc, char *argv[])
 
 	timeout = fgetint("/etc/default/confd", "=", "CONFD_TIMEOUT");
 
-	while ((c = getopt(argc, argv, "ht:u:v")) != EOF) {
+	while ((c = getopt(argc, argv, "hnqst:u:v")) != EOF) {
 		switch(c) {
 		case 'h':
 			return usage(0);
+		case 'n':
+			dry_run = 1;
+			break;
+		case 'q':
+			quiet = 1;
+			break;
+		case 's':
+			sanitize = 1;
+			break;
 		case 't':
 			timeout = atoi(optarg);
 			break;

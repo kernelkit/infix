@@ -8,6 +8,7 @@ RUN apk add --no-cache \
     e2tools \
     ethtool \
     fakeroot \
+    file \
     gcc \
     git \
     graphviz \
@@ -25,6 +26,7 @@ RUN apk add --no-cache \
     qemu-img \
     qemu-system-x86_64 \
     ruby-mustache \
+    skopeo \
     socat \
     squashfs-tools \
     sshpass \
@@ -38,20 +40,24 @@ RUN cd /tmp/mtools-$MTOOL_VERSION && make && make install
 
 # Alpine's QEMU package does not bundle this for some reason, copied
 # from Ubuntu
-COPY qemu-ifup /etc
+COPY docker/qemu-ifup /etc
 
 # Needed to let qeneth find mustache(1)
 ENV PATH="${PATH}:/usr/lib/ruby/gems/3.2.0/bin"
 
 # Install all python packages used by the tests
-COPY init-venv.sh /root
-COPY pip-requirements.txt /root
+COPY docker/init-venv.sh /root
+COPY docker/pip-requirements.txt /root
 
 # Add bootstrap YANG models, the rest will be downloaded from the device
-ADD yang /root/yang
+ADD docker/yang /root/yang
 
 RUN ~/init-venv.sh ~/pip-requirements.txt
 
-COPY entrypoint.sh /entrypoint.sh
+# Download container images for upgrade testing
+COPY case/infix_containers/upgrade/download.sh /tmp/download.sh
+RUN /tmp/download.sh /srv && rm /tmp/download.sh
+
+COPY docker/entrypoint.sh /entrypoint.sh
 ENTRYPOINT ["/entrypoint.sh"]
 CMD ["/bin/sh"]

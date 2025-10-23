@@ -21,6 +21,46 @@
 #define  CFG_XPATH    "/infix-containers:containers"
 
 #define  _PATH_CONT   "/run/containers"
+#define  _PATH_CLEAN  "/var/lib/containers/cleanup"
+
+/*
+ * Check if image is a local archive and return the file path.
+ * Returns NULL if not a recognized local archive format.
+ */
+static const char *local_path(const char *image)
+{
+	const char *prefixes[] = {
+		"docker-archive:",
+		"oci-archive:",
+		NULL,
+	};
+
+	for (int i = 0; prefixes[i]; i++) {
+		size_t len = strlen(prefixes[i]);
+
+		if (!strncmp(image, prefixes[i], len))
+			return image + len;
+	}
+
+	return NULL;
+}
+
+static int calc_sha(const char *path, char *sha256, size_t len)
+{
+	int rc = 1;
+	FILE *pp;
+
+	pp = popenf("r", "sha256sum \"%s\" 2>/dev/null | awk '{print $1}'", path);
+	if (pp) {
+		if (fgets(sha256, len, pp)) {
+			chomp(sha256);
+			rc = 0;
+		}
+		pclose(pp);
+	}
+
+	return rc;
+}
 
 /*
  * Create a setup/create/upgrade script and instantiate a new instance
@@ -36,17 +76,8 @@ static int add(const char *name, struct lyd_node *cif)
 	const char *restart_policy, *string, *image;
 	struct lyd_node *node, *nets, *caps;
 	char script[strlen(name) + 5];
+	const char *path;
 	FILE *fp, *ap;
-
-	/*
-	 * If running already, disable the service, keeping the created
-	 * container and any volumes for later if the user re-enables
-	 * it again.
-	 */
-	if (!lydx_is_enabled(cif, "enabled")) {
-		systemf("initctl -bnq disable container@%s.conf", name);
-		return 0;
-	}
 
 	snprintf(script, sizeof(script), "%s.sh", name);
 	fp = fopenf("w", "%s/%s", _PATH_CONT, script);
@@ -66,11 +97,27 @@ static int add(const char *name, struct lyd_node *cif)
 	 * a running container instance.
 	 */
 	image = lydx_get_cattr(cif, "image");
+
+	/*
+	 * TODO: this script should be refactored to be a .cfg file to
+	 *       the container helper script, or in the future, even a
+	 *       .cfg file to another runtime/engine. For details, see
+	 *       https://github.com/kernelkit/infix/pull/1151#discussion_r2444851292
+	 */
 	fprintf(fp, "#!/bin/sh\n"
 		"# meta-name: %s\n"
-		"# meta-image: %s\n"
-		"container --quiet delete %s >/dev/null\n"
-		"container --quiet", name, image, name);
+		"# meta-image: %s\n", name, image);
+
+	path = local_path(image);
+	if (path) {
+		char sha256[65] = { 0 };
+
+		if (!calc_sha(path, sha256, sizeof(sha256)))
+			fprintf(fp, "# meta-image-sha256: %s\n", sha256);
+	}
+
+	fprintf(fp, "container --quiet delete %s >/dev/null\n"
+		"container --quiet", name);
 
 	LYX_LIST_FOR_EACH(lyd_child(cif), node, "dns")
 		fprintf(fp, " --dns %s", lyd_get_value(node));
@@ -256,9 +303,9 @@ static int add(const char *name, struct lyd_node *cif)
 	fchmod(fileno(fp), 0700);
 	fclose(fp);
 
-	/* Enable, or update, container -- both trigger container setup. */
-	systemf("initctl -bnq enable container@%s.conf", name);
 	systemf("initctl -bnq touch container@%s.conf", name);
+	systemf("initctl -bnq %s container@%s.conf", lydx_is_enabled(cif, "enabled")
+		? "enable" : "disable", name);
 
 	return 0;
 }
@@ -270,8 +317,34 @@ static int add(const char *name, struct lyd_node *cif)
  */
 static int del(const char *name)
 {
+	char prune_dir[sizeof(_PATH_CLEAN) + strlen(name) + 3];
+	char buf[256];
+	FILE *pp;
+
 	erasef("%s/%s.sh", _PATH_CONT, name);
 	systemf("initctl -bnq disable container@%s.conf", name);
+
+	/* Schedule a cleanup job for this container as soon as it has stopped */
+	snprintf(prune_dir, sizeof(prune_dir), "%s/%s", _PATH_CLEAN, name);
+	systemf("mkdir -p %s", prune_dir);
+
+	/* Finit cleanup:script runs when container is deleted, it will remove any image by-ID */
+	pp = popenf("r", "podman inspect %s 2>/dev/null | jq -r '.[].Id' 2>/dev/null", name);
+	if (!pp) {
+		/* Nothing to do, if we can't get the Id we cannot safely remove anything */
+		ERROR("Cannot find any container instance named '%s' to delete", name);
+		rmdir(prune_dir);
+		return SR_ERR_OK;
+	}
+
+	if (fgets(buf, sizeof(buf), pp)) {
+		chomp(buf);
+		/* The return sha should be at least 64 chars long (sha256) */
+		if (strlen(buf) >= 64)
+			touchf("%s/%s", prune_dir, buf);
+	}
+
+	pclose(pp);
 
 	return SR_ERR_OK;
 }
@@ -419,6 +492,7 @@ int infix_containers_init(struct confd *confd)
 	REGISTER_RPC(confd->session, CFG_XPATH "/container/start",   action, NULL, &confd->sub);
 	REGISTER_RPC(confd->session, CFG_XPATH "/container/stop",    action, NULL, &confd->sub);
 	REGISTER_RPC(confd->session, CFG_XPATH "/container/restart", action, NULL, &confd->sub);
+	REGISTER_RPC(confd->session, CFG_XPATH "/container/upgrade", action, NULL, &confd->sub);
 	REGISTER_RPC(confd->session, "/infix-containers:oci-load", oci_load, NULL, &confd->sub);
 
 	return SR_ERR_OK;

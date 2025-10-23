@@ -191,4 +191,12 @@ change that, e.g., breaks networking, it is trivial to revert back by:
 admin@host-12-34-56:/> copy startup-config running-config
 ```
 
-Or restarting the device.
+Or restart the device, for example if the change to the configuration
+caused you to lose contact with the system (it happens to the best of
+us).  The system will start up from the last "save gave".
+
+> **Tip:** when restoring a backup of a configuration, or having manually
+> edited a config file, you can validate it using system's YANG models,
+> it is *not* applied if validation is successful:
+>
+> `copy /media/backup/old.cfg running-config validate`

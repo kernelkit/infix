@@ -1,6 +1,6 @@
 === Basic Firewall Container
 
-ifdef::topdoc[:imagesdir: {topdoc}../../test/case/infix_containers/container_firewall_basic]
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/infix_containers/firewall_basic]
 
 ==== Description
 

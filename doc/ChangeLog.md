@@ -13,12 +13,40 @@ All notable changes to the project are documented in this file.
 - Extend NETCONF and RESTCONF scripting documentation with operational
   data examples, discovery patterns, and common workflow examples, issue #1156
 - Initial support for a zone-based firewall, based on `firewalld`, issue #448
+- Add `validate` option to CLI `copy` command.  This can be used before doing a
+  restore of a backup, or when having edited configuration files manually. With
+  the validate flag (`-n` from the shell) the file is only loaded and validated
+  against the YANG models, it is *not* rolled in if validation is successful.
+  Example: `copy /media/backup/old.cfg running-config validate`, issue #373
 - Automatically expand `/var` partition on SD card at first boot on RPi
+- New `upgrade` RPC (action) for containers using images with mutable tags
+- Optimize startup of preexisting containers by adding metadata to track all
+  OCI archives loaded into container store, and all container configurations
+  used to create container instances.  Instances are now only recreated when
+  metadata from an existing instance does not match either the configuration
+  or the image — because of configuration changes or image upgrades
+- Updated container documentation on volumes, image tags, and image upgrade
 
 ### Fixes
 
+- Fix #981: copying any file, including `running-config`, to the persistent
+  back-end store for `startup-config`, does not take
+- Fix #1146: Possible to set longer containers names than the system supports.
+  Root cause, a limit of 15 characters implicitly imposed by the service mgmt
+  daemon, Finit.  The length has not been increased to 64 characters (min: 2)
+  and the YANG model now properly warns if the name is outside of these limits
+- Fix #1147: Use container metadata to clean up lingering old container images
+  instead of using the too broad `podman image prune -af` command
+- Fix #1148: Only retry container instance create on remote images
+- Fix #1149: Increase `podman stop` timeout, from 10 to 30 seconds, needed with
+  bigger containers on heavily loaded systems
 - Fix #1194: CLI `text-editor` command does not do proper input sanitation
 - Fix #1197: RPi4 no longer boots after BPi-R3 merge, introduced in v25.09
+- Upgrade fixes for containers with mutable images, e.g., `:latest`.  Infix now
+  always tries to fetch a new version of the OCI archive, for remote images,
+  regardless of the transport.  After upgrade the old image is pruned
+- Fix #1203: copying any file, including `startup-config`, to `running-config`
+  does not take
 
 [v25.09.0][] - 2025-09-30
 -------------------------

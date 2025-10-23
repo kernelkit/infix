@@ -7,11 +7,12 @@
 #define ERRMSG "Error: "
 #define INFMSG "Note: "
 
-int   yorn       (const char *fmt, ...);
+int         yorn       (const char *fmt, ...);
 
-int   files      (const char *path, const char *stripext);
+int         files      (const char *path, const char *stripext);
 
-int   has_ext    (const char *fn, const char *ext);
-char *cfg_adjust (const char *fn, const char *tmpl, char *buf, size_t len);
+const char *basenm     (const char *fn);
+int         has_ext    (const char *fn, const char *ext);
+char       *cfg_adjust (const char *fn, const char *tmpl, char *buf, size_t len, int sanitize);
 
 #endif /* BIN_UTIL_H_ */

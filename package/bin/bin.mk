@@ -11,7 +11,7 @@ BIN_LICENSE = BSD-3-Clause
 BIN_LICENSE_FILES = LICENSE
 BIN_REDISTRIBUTE = NO
 BIN_DEPENDENCIES = sysrepo libite
-BIN_CONF_OPTS = --prefix= --disable-silent-rules
+BIN_CONF_OPTS = --disable-silent-rules
 BIN_AUTORECONF = YES
 
 define BIN_CONF_ENV

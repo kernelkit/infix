@@ -6,18 +6,32 @@
 # NOTE: when creating/deleting containers, remember 'initctl reload' to
 #       activate the changes!  In confd this is already handled.
 #
+# TODO: this script should be refactored to take a .cfg file instead for
+#       each container.  For details, see this pull request discussion:
+#       https://github.com/kernelkit/infix/pull/1151#discussion_r2444851292
+#
+# shellcheck disable=SC1001
+CLEANUP=/var/lib/containers/cleanup
 DOWNLOADS=/var/lib/containers/oci
 BUILTIN=/lib/oci
 BASEDIR=/var/tmp
 container=$0
 checksum=""
 extracted=
-timeout=30
+timeout=30		    # NOTE: matched with container@.conf
 dir=""
 all=""
 env=""
 port=""
 force=
+
+# Variable shared across subshells
+export meta_sha=""
+
+dbg()
+{
+    logger -I $PPID -t container -p local1.debug -- "$*"
+}
 
 log()
 {
@@ -42,6 +56,104 @@ err()
 pidfn()
 {
     echo "/run/containers/${1}.pid"
+}
+
+calc_sha()
+{
+    sha256sum "$1" 2>/dev/null | awk '{print $1}'
+}
+
+# Check image transport, return 0 if remote, 1 if local
+is_remote()
+{
+    image=$(awk '/^# meta-image:/ {print $3}' "$1" 2>/dev/null || echo "")
+    echo "$image"
+
+    case "$image" in
+	oci\:* | oci-archive\:* | docker-archive\:* | docker-daemon\:* | \
+	    dir\:* | containers-storage\:* | ostree\:* | sif\:* | /*)
+	    return 1
+	    ;;
+	*)
+	    return 0
+	    ;;
+    esac
+}
+
+# Check loaded image in container store vs archive, as well as verifying
+# the container instance vs. the configuration.
+#
+# This is an optimization to cut down startup times.
+is_uptodate()
+{
+    img_sha=$(awk '/^# meta-image-sha256:/ {print $3}' "$script" 2>/dev/null)
+    if [ -n "$img_sha" ]; then
+	# Local image optimization: check if archive SHA matches stored sidecar file
+	img=$(awk '/^# meta-image:/ {print $3}' "$script" 2>/dev/null)
+	if [ -n "$img" ]; then
+	    case "$img" in
+		docker-archive\:*)
+		    archive_path="${img#docker-archive:}"
+		    ;;
+		oci-archive\:*)
+		    archive_path="${img#oci-archive:}"
+		    ;;
+		*)
+		    archive_path="$img"
+		    ;;
+	    esac
+
+ 	    # Handle relative paths - check BUILTIN and DOWNLOADS
+	    if [ ! -f "$archive_path" ]; then
+		if [ -f "$DOWNLOADS/$(basename "$archive_path")" ]; then
+		    archive_path="$DOWNLOADS/$(basename "$archive_path")"
+		elif [ -f "$BUILTIN/$(basename "$archive_path")" ]; then
+		    archive_path="$BUILTIN/$(basename "$archive_path")"
+		fi
+	    fi
+
+	    # Check if the archive exists and compare SHA with sidecar file
+	    if [ -f "$archive_path" ]; then
+		archive_basename=$(basename "$archive_path")
+		sha_file="$DOWNLOADS/${archive_basename}.sha256"
+
+		if [ -f "$sha_file" ]; then
+		    stored_sha=$(cat "$sha_file" 2>/dev/null)
+		    current_sha=$(calc_sha "$archive_path")
+
+		    # If SHA matches, check container instance
+		    if [ "$stored_sha" = "$current_sha" ]; then
+			if podman container exists "$name"; then
+			    config_sha=$(calc_sha "$script")
+			    container_sha=$(podman inspect "$name" --format '{{index .Config.Labels "config-sha256"}}' 2>/dev/null)
+			    container_img_sha=$(podman inspect "$name" --format '{{index .Config.Labels "meta-image-sha256"}}' 2>/dev/null)
+
+			    if [ "$container_img_sha" = "$img_sha" ] && [ "$container_sha" = "$config_sha" ]; then
+				# Unmodified local image and configuration
+				return 0
+			    fi
+			fi
+		    else
+			# Archive changed (e.g., rootfs upgrade) - need to reload
+			dbg "Archive SHA changed, will reload image and recreate container"
+		    fi
+		fi
+	    fi
+	fi
+    else
+	# Remote image optimization: check config-sha256 only
+	if podman container exists "$name"; then
+	    config_sha=$(calc_sha "$script")
+	    container_sha=$(podman inspect "$name" --format '{{index .Config.Labels "config-sha256"}}' 2>/dev/null)
+
+	    if [ "$container_sha" = "$config_sha" ]; then
+		# Unmodified local image and configuration
+		return 0
+	    fi
+	fi
+    fi
+
+    return 1
 }
 
 check()
@@ -74,11 +186,16 @@ fetch()
     dst="$DOWNLOADS/$file"
 
     cd "$DOWNLOADS" || return
-    if [ -e "$file" ]; then
-	log "$file already available."
-	if check "$file"; then
-	    echo "$dst"
-	    return 0
+    if [ -f "$file" ]; then
+	if [ -n "$force" ]; then
+	    log "Force flag set, removing cached $file and re-downloading."
+	    rm -f "$file"
+	else
+	    log "$file already available."
+	    if check "$file"; then
+		echo "$dst"
+		return 0
+	    fi
 	fi
     fi
 
@@ -118,6 +235,7 @@ load_archive()
 {
     uri=$1
     tag=$2
+    tmp=$3
     img=$(basename "$uri")
 
     # Supported transports for load and create
@@ -134,7 +252,8 @@ load_archive()
 	    fi
             ;;
 	*)			# docker://*, docker-archive:*, or URL
-	    if podman image exists "$img"; then
+	    # Skip existence check if force flag is set (e.g., for upgrade command)
+	    if [ -z "$force" ] && podman image exists "$img"; then
 		echo "$img"
 		return 0
 	    fi
@@ -149,10 +268,10 @@ load_archive()
 	    ;;
     esac
 
-    if [ ! -e "$file" ]; then
-	if [ -e "$DOWNLOADS/$file" ]; then
+    if [ ! -f "$file" ]; then
+	if [ -f "$DOWNLOADS/$file" ]; then
 	    file="$DOWNLOADS/$file"
-	elif [ -e "$BUILTIN/$file" ]; then
+	elif [ -f "$BUILTIN/$file" ]; then
 	    file="$BUILTIN/$file"
 	else
 	    err 1 "cannot find OCI archive $file in URI $uri"
@@ -205,7 +324,7 @@ load_archive()
     fi
 
     [ -n "$quiet" ] || log "Loading OCI image $dir ..."
-    output=$(podman load -qi "$dir")
+    output=$(nice podman load -qi "$dir")
 
     # Extract image ID from podman load output:
     # "Loaded image: sha256:cd9d0aaf81be..."
@@ -228,6 +347,23 @@ load_archive()
     [ -n "$quiet" ] || log "Tagging loaded image $img_id as $tag"
     if ! podman tag "$img_id" "$tag"; then
 	err 1 "failed tagging image as $tag"
+    fi
+
+    # Save archive SHA256 to sidecar file to enable optimization
+    # This applies to both local archives and downloaded remote archives
+    if [ -f "$file" ]; then
+	img_sha256=$(calc_sha "$file")
+	archive_basename=$(basename "$file")
+	sha_file="$DOWNLOADS/${archive_basename}.sha256"
+
+	mkdir -p "$DOWNLOADS"
+
+	echo "$img_sha256" > "$sha_file"
+	if [ -n "$tmp" ]; then
+	    echo "$img_sha256" > "$tmp"
+	fi
+
+	log "Saved archive checksum to $sha_file"
     fi
 
     # Clean up after ourselves
@@ -261,8 +397,14 @@ create()
 
     # Unpack and load docker-archive/oci/oci-archive, returning image
     # name, or return docker:// URL for download.
-    if ! image=$(load_archive "$image"); then
+    sha_file=$(mktemp)
+    if ! image=$(load_archive "$image" "" "$sha_file"); then
 	exit 1
+    fi
+
+    if [ -s "$sha_file" ]; then
+	img_sha=$(cat "$sha_file" 2>/dev/null || echo "")
+	rm "$sha_file"
     fi
 
     if [ -z "$logging" ]; then
@@ -295,9 +437,24 @@ create()
 	args="$args --network=none"
     fi
 
+    # Add optimization labels for meta-image-sha256 and config checksum
+    script="/run/containers/${name}.sh"
+    if [ -f "$script" ]; then
+ 	if [ -z "$img_sha" ]; then
+	    # Extract meta-image-sha256 from script if present
+	    img_sha=$(awk '/^# meta-image-sha256:/ {print $3}' "$script" 2>/dev/null)
+	fi
+	if [ -n "$img_sha" ]; then
+	    args="$args --label meta-image-sha256=$img_sha"
+	fi
+
+	# Add config checksum label
+	args="$args --label config-sha256=$(calc_sha "$script")"
+    fi
+
     # shellcheck disable=SC2048
     log "podman create --name $name --conmon-pidfile=$pidfile $args $image $*"
-    if podman create --name "$name" --conmon-pidfile="$pidfile" $args "$image" $*; then
+    if nice podman create --name "$name" --conmon-pidfile="$pidfile" $args "$image" $*; then
 	[ -n "$quiet"  ] || log "Successfully created container $name from $image"
 	[ -n "$manual" ] || start "$name"
 
@@ -331,11 +488,90 @@ delete()
 	sleep 1
     done
 
+    # NOTE: -v does not remove *named volumes*
     podman rm -vif "$name" >/dev/null 2>&1
     [ -n "$quiet" ] || log "Container $name has been removed."
+}
 
-    cnt=$(podman image prune -af | wc -l)
-    log "Pruned $cnt image(s)"
+# Called by Finit cleanup:script when a container service is removed.
+# Processes all container instance IDs found in $CLEANUP/<name>/ directory
+# and removes them. This handles the case where a container with the same
+# name but different configuration replaces an old one.
+#
+# Note: Volumes are NOT automatically removed to prevent accidental data loss.
+#       Use 'admin-exec container prune' to clean up unused volumes manually.
+cleanup()
+{
+    if [ -z "$name" ]; then
+	log "cleanup: missing container name"
+	return 1
+    fi
+
+    cleanup_dir="$CLEANUP/$name"
+    if [ ! -d "$cleanup_dir" ]; then
+	log "cleanup: no cleanup directory for $name, nothing to do"
+	return 0
+    fi
+
+    log "Cleaning up container instances for: $name"
+
+    # Remove all container instances by ID from the cleanup directory
+    for id_file in "$cleanup_dir"/*; do
+	[ -f "$id_file" ] || continue
+	cid=$(basename "$id_file")
+
+	# Extract image name and meta-image-sha256 from the container instance labels
+	# These are the image in container store and the trace to an oci-archive.tar.gz
+	img=$(podman inspect "$cid" 2>/dev/null | jq -r '.[].ImageName' 2>/dev/null || echo "")
+	sha=$(podman inspect "$cid" --format '{{index .Config.Labels "meta-image-sha256"}}' 2>/dev/null || echo "")
+
+	log "Removing container instance with ID: ${cid:0:12}..."
+	podman rm -vif "$cid" >/dev/null 2>&1
+	rm -f "$id_file"
+
+	# Clean up the image if it exists and is not used by other containers
+	if [ -n "$img" ] && [ "$img" != "null" ]; then
+	    if ! podman ps -a --format "{{.Image}}" | grep -q "^${img}$"; then
+		log "Removing unused image: $img"
+		podman rmi "$img" 2>/dev/null || true
+
+		# Also remove archive and sidecar checksum file from $DOWNLOADS for remote images
+		# I.e., $DOWNLOADS/oci-archive.tar.gz and $DOWNLOADS/oci-archive.tar.gz.sha256
+		if [ -n "$sha" ] && [ -d "$DOWNLOADS" ]; then
+		    # Search for matching sidecar file containing this SHA
+		    for sha_file in "$DOWNLOADS"/*.sha256; do
+			[ -f "$sha_file" ] || continue
+			stored_sha=$(cat "$sha_file" 2>/dev/null || echo "")
+			if [ "$stored_sha" = "$sha" ]; then
+			    # Found matching sidecar - derive archive filename by stripping .sha256
+			    archive="${sha_file%.sha256}"
+			    if [ -f "$archive" ]; then
+				# Safety check: verify archive SHA matches before removing
+				if [ "$(calc_sha "$archive")" = "$sha" ]; then
+				    log "Removing archive: $archive"
+				    rm -f "$archive"
+				else
+				    log "Warning: archive SHA mismatch for $archive, not removing"
+				fi
+			    fi
+
+			    log "Removing sidecar file: $sha_file"
+			    rm -f "$sha_file"
+			    break
+			fi
+		    done
+		fi
+	    else
+		log "Image $img still in use by other containers, not removing"
+	    fi
+	fi
+    done
+
+    # Remove the cleanup directory for this container, and parent if empty
+    rmdir "$cleanup_dir" 2>/dev/null
+    rmdir "$CLEANUP" 2>/dev/null
+
+    exit 0
 }
 
 waitfor()
@@ -375,31 +611,42 @@ stop()
     # Real work is done by wrap() courtesy of finit sysv emulation
 }
 
+# When called by Finit: `initctl stop foo`, the container script
+# is called as `container -n $foo stop`.  For the stop command
+# we want to bypass the default 10 second timeout.
+#
+# NOTE: containers have three phases: setup, running, and teardown.
+#       the setup phase is this script trying to fetch the image.
 wrap()
 {
     name=$1
     cmd=$2
+    args=
     pidfile=$(pidfn "$name")
 
-    # Containers have three phases: setup, running, and teardown.
+    if [ "$cmd" = "stop" ]; then
+	# The setup phase may run forever in the background trying to fetch
+	# the image.  It saves its PID in /run/containers/${name}.pid
+	if [ -f "$pidfile" ]; then
+            pid=$(cat "$pidfile")
 
-    # The setup phase may run forever in the background trying to fetch
-    # the image.  It saves its PID in /run/containers/${name}.pid
-    if [ "$cmd" = "stop" ] && [ -f "$pidfile" ]; then
-        pid=$(cat "$pidfile")
+	    # Check if setup is still running ...
+	    if kill -0 "$pid" 2>/dev/null; then
+		kill "$pid"
+		wait "$pid" 2>/dev/null
+            fi
 
-	# Check if setup is still running ...
-	if kill -0 "$pid" 2>/dev/null; then
-            kill "$pid"
-            wait "$pid" 2>/dev/null
-        fi
+            rm -f "$pidfile"
+            return 0
+	fi
 
-        rm -f "$pidfile"
-        return 0
+	# Only the 'podman stop' command takes -i and --timeout
+	args="-i --timeout $timeout"
     fi
 
     # Skip "echo $name" from podman start in log
-    podman "$cmd" "$name" >/dev/null
+    # shellcheck disable=SC2086
+    podman "$cmd" $args "$name" >/dev/null
 }
 
 # Removes network $1 from all containers
@@ -430,7 +677,7 @@ netrestart()
     done
 }
 
-cleanup()
+atexit()
 {
     pidfile=$(pidfn "$name")
 
@@ -450,7 +697,7 @@ usage:
   container [opt] cmd [arg]
 
 options:
-  -a, --all                Show all, of something
+  -a, --all                Show all, do all, remove all, of something
       --dns NAMESERVER     Set nameserver(s) when creating a container
       --dns-search LIST    Set host lookup search list when creating container
       --cap-add CAP        Add capability to unprivileged container
@@ -460,7 +707,7 @@ options:
   -d, --detach             Detach a container started with 'run IMG [CMD]'
   -e, --env FILE           Environment variables when creating container
       --entrypoint         Disable container image's ENTRYPOINT, run cmd + arg
-  -f, --force              Force operation, e.g. remove
+  -f, --force              Force operation, e.g. remove, or force image re-fetch
   -h, --help               Show this help text
       --hostname NAME      Set hostname when creating container
       --net NETWORK        Network interface(s) when creating or finding container
@@ -490,7 +737,7 @@ commands:
   list    [image | oci]    List names (only) of containers, images, or OCI archives
   load    [NAME | URL] NM  Load OCI tarball fileNAME or URL to image NM
   locate                   Find container that currently owns '--net IFNAME'
-  remove   IMAGE           Remove an (unused) container image
+  remove  [IMAGE]          Remove an image, or prune unused images including OCI archives
   restart [network] NAME   Restart a (crashed) container or container(s) using network
   run      NAME [CMD]      Run a container interactively, with an optional command
   save     IMAGE FILE      Save a container image to an OCI tarball FILE[.tar.gz]
@@ -638,7 +885,7 @@ if [ -n "$cmd" ]; then
     shift
 fi
 
-trap cleanup INT HUP TERM
+trap atexit INT HUP TERM
 
 case $cmd in
     # Does not work atm., cannot attach to TTY because
@@ -646,6 +893,9 @@ case $cmd in
     # attach)
     # 	podman attach "$1"
     # 	;;
+    cleanup) # Hidden from public view, use remove or flush commands instead
+	cleanup "$@"
+	;;
     create)
 	[ -n "$quiet" ] || log "Got create args: $*"
 	create "$@"
@@ -739,7 +989,14 @@ case $cmd in
 	podman pull "$@"
 	;;
     remove)
-	podman rmi $all $force -i "$1"
+	if [ -n "$all" ]; then
+	    log "Removing all OCI archives from $DOWNLOADS directory ..."
+	    find "${DOWNLOADS:?}" -mindepth 1 -exec rm -rf {} +
+	    log "Removing all unused container images ..."
+	    podman image prune $all $force
+	else
+	    podman rmi $force -i "$1"
+	fi
 	;;
     run)
 	img=$1
@@ -775,28 +1032,54 @@ case $cmd in
 	script=/run/containers/${name}.sh
 	[ -x "$script" ] || err 1 "setup: $script does not exist or is not executable."
 
+	if is_uptodate "$script"; then
+	    log "Container $name config unchanged, skipping setup"
+	    exit 0
+	fi
+
+	# Capture old image ID before recreation (for surgical cleanup after)
+	old_image_id=""
+	if podman container exists "$name"; then
+	    old_image_id=$(podman inspect "$name" --format '{{.ImageID}}' 2>/dev/null)
+	fi
+
 	# Save our PID in case we get stuck here and someone wants to
 	# stop us, e.g., due to reconfiguration or reboot.
 	pidfile=$(pidfn "${name}")
 	echo $$ > "$pidfile"
 
-	while ! "$script"; do
-            log "${name}: setup failed, waiting for network changes ..."
+	if image=$(is_remote "$script"); then
+	    while ! "$script"; do
+		log "${name}: setup failed, waiting for network changes ..."
 
-	    # Timeout and retry after 60 seconds, on SIGTERM, or when
-	    # any network event is caught.
-	    timeout -s TERM -k 1 60 sh -c \
-		    'ip monitor address route 2>/dev/null | head -n1 >/dev/null' || true
+		# Timeout and retry after 60 seconds, on SIGTERM, or when
+		# any network event is caught.
+		timeout -s TERM -k 1 60 sh -c \
+			'ip monitor address route 2>/dev/null | head -n1 >/dev/null' || true
 
-	    # On IP address/route changes, wait a few seconds more to ensure
-	    # the system has ample time to react and set things up for us.
-	    log "${name}: retrying ..."
-	    sleep 2
-	done
+		# On IP address/route changes, wait a few seconds more to ensure
+		# the system has ample time to react and set things up for us.
+		log "${name}: retrying ..."
+		sleep 2
+	    done
+	elif ! "$script"; then
+	    log "${name}: setup failed for local image $image"
+	    rm -f "$pidfile"
+	    exit 1
+	fi
 
 	rm -f "$pidfile"
-	cnt=$(podman image prune -f | wc -l)
-	log "setup: pruned $cnt image(s)"
+
+	# Remove the old image if it's not used by any other containers
+	if [ -n "$old_image_id" ]; then
+	    # Check if the old image is still in use by any containers
+	    if ! podman ps -a --format '{{.ImageID}}' | grep -q "^${old_image_id}$"; then
+		log "Removing old image $old_image_id"
+		podman rmi "$old_image_id" 2>/dev/null || true
+	    else
+		log "Old image $old_image_id still in use by other containers, keeping it"
+	    fi
+	fi
 	;;
     shell)
 	if [ -z "$name" ]; then
@@ -888,32 +1171,89 @@ case $cmd in
 	podman stats -i 2
 	;;
     upgrade)
-	# Start script used to initially create container
-	script=/run/containers/${1}.sh
-
-	# Find container image
-	img=$(podman inspect "$1" | jq -r .[].ImageName)
-	if [ -z "$img" ]; then
-	    echo "No such container ($1), or invalid ImageName.  Cannot upgrade."
-	    exit 1;
+	if [ -z "$name" ]; then
+	    name="$1"
 	fi
+	script=/run/containers/${name}.sh
 
-	# Likely an OCI archive, or local directory, assume user has updated image.
-	if echo "$img" | grep -Eq '^localhost/'; then
-	    file=$(awk '/^# meta-image:/ {print $3}' "$script")
-	    echo ">> Upgrading container $1 using $file ..."
-	else
-	    printf ">> Stopping ... "
-	    podman stop "$1"
-	    printf ">> "
-	    podman pull "$img" || (echo "Failed fetching $img, check your network (settings)."; exit 1)
-	    echo ">> Starting $1 ..."
-	fi
-	if ! "$script"; then
-	    echo ">> Failed recreating container $1"
+	# Verify container exists
+	if ! podman container exists "$name"; then
+	    echo "No such container: $name"
 	    exit 1
 	fi
-	echo ">> Done."
+
+	# Check if container uses a mutable tag (e.g., :latest)
+	# Get the actual image name from the running container
+	image_name=$(podman inspect "$name" | jq -r '.[].ImageName')
+	if [ -z "$image_name" ]; then
+	    echo "Cannot determine ImageName for container $name"
+	    exit 1
+	fi
+
+	# Check if image uses :latest or other mutable tag
+	# Images with immutable digests (@sha256:...) don't benefit from upgrade
+	if echo "$image_name" | grep -qE '@sha256:'; then
+	    echo "Container $name uses an immutable image digest ($image_name)"
+	    echo "Upgrade will have no effect. Update the configuration to use a mutable tag."
+	    exit 1
+	fi
+
+	# Get image URI from the container script
+	img=$(awk '/^# meta-image:/ {print $3}' "$script")
+	if [ -z "$img" ]; then
+	    echo "Cannot determine image for container $name"
+	    exit 1
+	fi
+
+	echo ">> Upgrading container $name from image $img ..."
+
+	# Capture the current image ID before upgrade so we can remove it after
+	old_image_id=$(podman inspect "$name" --format '{{.ImageID}}' 2>/dev/null)
+
+	# Stop container using proper command (goes through Finit)
+	printf ">> Stopping container ... "
+	container stop "$name"
+	echo "done"
+
+	# Set force flag to ensure fresh pull/fetch of image
+	force="-f"
+
+	# For remote images, force re-pull
+	case "$img" in
+	    docker://* | ftp://* | http://* | https://*)
+		printf ">> Pulling latest image ... "
+		if ! load_archive "$img" >/dev/null 2>&1; then
+		    echo "failed"
+		    echo "Failed fetching $img, check your network settings."
+		    exit 1
+		fi
+		echo "done"
+		;;
+	    *)
+		# Local archives - user must update the file manually
+		echo ">> Using local image $img (ensure file is updated) ..."
+		;;
+	esac
+
+	# Recreate container by running the script
+	echo ">> Recreating container ..."
+	if ! "$script"; then
+	    echo ">> Failed recreating container $name"
+	    exit 1
+	fi
+
+	# Remove the old image if it's not used by any other containers
+	if [ -n "$old_image_id" ]; then
+	    # Check if the old image is still in use by any containers
+	    if ! podman ps -a --format '{{.ImageID}}' | grep -q "^${old_image_id}$"; then
+		log "Removing old image $old_image_id"
+		podman rmi "$old_image_id" 2>/dev/null || true
+	    else
+		log "Old image $old_image_id still in use by other containers, keeping it"
+	    fi
+	fi
+
+	echo ">> Container $name upgraded successfully."
 	;;
     volume)
 	cmd=$1
@@ -936,8 +1276,8 @@ case $cmd in
 		    ;;
 		cleanup)
 		    # Called as cleanup-script from Finit service
-		    log "Calling $container -n $SERVICE_ID delete"
-		    exec $container -q -n "$SERVICE_ID" delete
+		    log "Calling $container -n $SERVICE_ID cleanup"
+		    exec $container -q -n "$SERVICE_ID" cleanup
 		    ;;
 		*)
 		    false
