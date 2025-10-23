@@ -11,7 +11,7 @@ port accessed from the host.
 """
 import base64
 import infamy
-from   infamy.util import until, to_binary
+from   infamy.util import until, to_binary, curl
 
 with infamy.Test() as test:
     NAME  = "web-docker0"
@@ -81,7 +81,6 @@ with infamy.Test() as test:
         until(lambda: c.running(NAME), attempts=60)
 
     _, hport = env.ltop.xlate("host", "data")
-    url = infamy.Furl(URL)
 
     with infamy.IsolatedMacVlan(hport) as ns:
         ns.addip(OURIP)
@@ -90,6 +89,6 @@ with infamy.Test() as test:
             ns.must_reach(DUTIP)
 
         with test.step("Verify container is reachable on http://10.0.0.2:8080"):
-            until(lambda: url.nscheck(ns, MESG), attempts=10)
+            until(lambda: MESG in ns.call(lambda: curl(URL)), attempts=10)
 
     test.succeed()

@@ -10,7 +10,7 @@ and are available inside the running container.
 3. Verify served content against environment variables
 """
 import infamy
-from infamy.util import until, to_binary
+from infamy.util import until, to_binary, curl
 
 
 with infamy.Test() as test:
@@ -23,7 +23,7 @@ with infamy.Test() as test:
     NAME = "web-env"
     DUTIP = "10.0.0.2"
     OURIP = "10.0.0.1"
-    url = infamy.Furl(f"http://{DUTIP}:8080/cgi-bin/env.cgi")
+    URL =f"http://{DUTIP}:8080/cgi-bin/env.cgi"
 
     with test.step("Set up topology and attach to target DUT"):
         env = infamy.Env()
@@ -103,6 +103,6 @@ with infamy.Test() as test:
             for var in ENV_VARS:
                 expected_strings.append(f'{var["key"]}={var["value"]}')
 
-            until(lambda: url.nscheck(ns, expected_strings))
+            until(lambda: all(string in ns.call(lambda: curl(URL)) for string in expected_strings))
 
     test.succeed()
