@@ -1,4 +1,4 @@
-From ea15c57ab036135e2168e49796c355c9c64bb205 Mon Sep 17 00:00:00 2001
+From 97e3384bea3c0cc553c6158c35759e3cc60b9f70 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Wed, 24 Apr 2024 22:41:04 +0200
 Subject: [PATCH 04/30] net: dsa: mv88e6xxx: Limit rsvd2cpu policy to user
@@ -34,7 +34,7 @@ forwarded like any other.
  1 file changed, 25 insertions(+), 6 deletions(-)
 
 diff --git a/drivers/net/dsa/mv88e6xxx/port.c b/drivers/net/dsa/mv88e6xxx/port.c
-index 04053fdc6489a..f25fb3214acb9 100644
+index 04053fdc6489..f25fb3214acb 100644
 --- a/drivers/net/dsa/mv88e6xxx/port.c
 +++ b/drivers/net/dsa/mv88e6xxx/port.c
 @@ -1432,6 +1432,23 @@ static int mv88e6393x_port_policy_write_all(struct mv88e6xxx_chip *chip,

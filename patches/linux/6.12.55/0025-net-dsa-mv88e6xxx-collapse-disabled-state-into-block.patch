@@ -1,4 +1,4 @@
-From 92f3aab1d2223100fa88025c376ec846a58fdff9 Mon Sep 17 00:00:00 2001
+From d1d4c3defdcd9add91e47b6a11e0b789486144b1 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Thu, 16 Jan 2025 12:35:12 +0100
 Subject: [PATCH 25/30] net: dsa: mv88e6xxx: collapse disabled state into
@@ -23,7 +23,7 @@ Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
  1 file changed, 2 deletions(-)
 
 diff --git a/drivers/net/dsa/mv88e6xxx/port.c b/drivers/net/dsa/mv88e6xxx/port.c
-index 84900814c4562..91e58297594cb 100644
+index 84900814c456..91e58297594c 100644
 --- a/drivers/net/dsa/mv88e6xxx/port.c
 +++ b/drivers/net/dsa/mv88e6xxx/port.c
 @@ -791,8 +791,6 @@ int mv88e6xxx_port_set_state(struct mv88e6xxx_chip *chip, int port, u8 state)

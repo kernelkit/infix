@@ -1,4 +1,4 @@
-From 09d9548a1636008ece7d5f32d9a8d8a6e3c10047 Mon Sep 17 00:00:00 2001
+From 87d133136a92bd905373ad4ea5be943dc3fa423e Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Thu, 16 Nov 2023 19:44:32 +0100
 Subject: [PATCH 05/30] net: dsa: mv88e6xxx: Add LED infrastructure
@@ -17,7 +17,7 @@ though no actual implementations exist yet.
  create mode 100644 drivers/net/dsa/mv88e6xxx/leds.h
 
 diff --git a/drivers/net/dsa/mv88e6xxx/Makefile b/drivers/net/dsa/mv88e6xxx/Makefile
-index a9a9651187db7..6720d93039148 100644
+index a9a9651187db..6720d9303914 100644
 --- a/drivers/net/dsa/mv88e6xxx/Makefile
 +++ b/drivers/net/dsa/mv88e6xxx/Makefile
 @@ -9,6 +9,7 @@ mv88e6xxx-objs += global2.o
@@ -29,7 +29,7 @@ index a9a9651187db7..6720d93039148 100644
  mv88e6xxx-objs += pcs-6352.o
  mv88e6xxx-objs += pcs-639x.o
 diff --git a/drivers/net/dsa/mv88e6xxx/chip.c b/drivers/net/dsa/mv88e6xxx/chip.c
-index b96bc12dc6a86..f92b7d7d57801 100644
+index b96bc12dc6a8..f92b7d7d5780 100644
 --- a/drivers/net/dsa/mv88e6xxx/chip.c
 +++ b/drivers/net/dsa/mv88e6xxx/chip.c
 @@ -37,6 +37,7 @@
@@ -52,7 +52,7 @@ index b96bc12dc6a86..f92b7d7d57801 100644
  
  static void mv88e6xxx_port_teardown(struct dsa_switch *ds, int port)
 diff --git a/drivers/net/dsa/mv88e6xxx/chip.h b/drivers/net/dsa/mv88e6xxx/chip.h
-index a546822408396..32c87ab754d1f 100644
+index a54682240839..32c87ab754d1 100644
 --- a/drivers/net/dsa/mv88e6xxx/chip.h
 +++ b/drivers/net/dsa/mv88e6xxx/chip.h
 @@ -207,6 +207,7 @@ struct mv88e6xxx_avb_ops;
@@ -102,7 +102,7 @@ index a546822408396..32c87ab754d1f 100644
  static inline bool mv88e6xxx_has_stu(struct mv88e6xxx_chip *chip)
 diff --git a/drivers/net/dsa/mv88e6xxx/leds.c b/drivers/net/dsa/mv88e6xxx/leds.c
 new file mode 100644
-index 0000000000000..e3de10991f297
+index 000000000000..e3de10991f29
 --- /dev/null
 +++ b/drivers/net/dsa/mv88e6xxx/leds.c
 @@ -0,0 +1,185 @@
@@ -293,7 +293,7 @@ index 0000000000000..e3de10991f297
 +}
 diff --git a/drivers/net/dsa/mv88e6xxx/leds.h b/drivers/net/dsa/mv88e6xxx/leds.h
 new file mode 100644
-index 0000000000000..8afa2a0c05278
+index 000000000000..8afa2a0c0527
 --- /dev/null
 +++ b/drivers/net/dsa/mv88e6xxx/leds.h
 @@ -0,0 +1,12 @@

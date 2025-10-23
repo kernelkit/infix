@@ -1,4 +1,4 @@
-From 7603244610f86436ea43cf30216a559348e9824c Mon Sep 17 00:00:00 2001
+From 031a462116a4e9c7fb467fe015db6fcfda40832e Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Tue, 19 Sep 2023 18:38:10 +0200
 Subject: [PATCH 14/30] net: phy: marvell10g: Support firmware loading on
@@ -16,7 +16,7 @@ fall back.
  1 file changed, 161 insertions(+)
 
 diff --git a/drivers/net/phy/marvell10g.c b/drivers/net/phy/marvell10g.c
-index 6642eb642d4bd..79d9483419c05 100644
+index 6642eb642d4b..79d9483419c0 100644
 --- a/drivers/net/phy/marvell10g.c
 +++ b/drivers/net/phy/marvell10g.c
 @@ -25,6 +25,7 @@

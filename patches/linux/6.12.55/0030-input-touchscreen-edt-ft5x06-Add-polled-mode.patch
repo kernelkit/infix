@@ -1,4 +1,4 @@
-From 9674b6eb79d683a2d67ded43a9a0579a59b6e4aa Mon Sep 17 00:00:00 2001
+From 3a755a156023b1388e5bdc132306513e8f6c61a8 Mon Sep 17 00:00:00 2001
 From: Mattias Walström <lazzer@gmail.com>
 Date: Thu, 21 Aug 2025 11:20:23 +0200
 Subject: [PATCH 30/30] input:touchscreen:edt-ft5x06: Add polled mode
@@ -11,7 +11,7 @@ to poll the touchscreen.
  1 file changed, 58 insertions(+), 16 deletions(-)
 
 diff --git a/drivers/input/touchscreen/edt-ft5x06.c b/drivers/input/touchscreen/edt-ft5x06.c
-index 85c6d8ce003f3..e615199151375 100644
+index 85c6d8ce003f..e61519915137 100644
 --- a/drivers/input/touchscreen/edt-ft5x06.c
 +++ b/drivers/input/touchscreen/edt-ft5x06.c
 @@ -77,6 +77,9 @@
