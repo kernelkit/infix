@@ -26,6 +26,12 @@ submodule infix-if-bridge {
   contact      "kernelkit@googlegroups.com";
   description  "Linux bridge extension for ietf-interfaces.";
 
+
+  revision 2025-10-23 {
+    description "Add WiFi interfaces to be able to be added to a bridge.";
+    reference "internal";
+  }
+
   revision 2025-01-08 {
     description "Add Spanning Tree Protocol (STP) support.
 
@@ -901,6 +907,7 @@ submodule infix-if-bridge {
          "derived-from-or-self(if:type,'ianaift:l2vlan') or "+
          "derived-from-or-self(if:type,'ianaift:ilan') or "+
          "derived-from-or-self(if:type,'infix-ift:gretap') or "+
+         "derived-from-or-self(if:type,'infix-ift:wifi') or "+
          "derived-from-or-self(if:type,'infix-ift:vxlan')" {
       description "Applies when a Bridge interface exists.";
     }
