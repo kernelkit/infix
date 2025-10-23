@@ -226,7 +226,6 @@ static int replace_running(sr_conn_ctx_t *conn, sr_session_ctx_t *sess,
 static int copy(const char *src, const char *dst, const char *remote_user)
 {
 	struct infix_ds *srcds = NULL, *dstds = NULL;
-	char temp_file[20] = "/tmp/copy.XXXXXX";
 	const char *tmpfn = NULL;
 	sr_session_ctx_t *sess;
 	const char *fn = NULL;
@@ -253,9 +252,8 @@ static int copy(const char *src, const char *dst, const char *remote_user)
 
 	user = getuser();
 
-	/* 1. Regular ds copy */
+	/* 1. Regular ds to ds copy */
 	if (srcds && dstds) {
-		/* Ensure the dst ds is writable */
 		if (!dstds->rw) {
 			fprintf(stderr, ERRMSG "not possible to write to \"%s\", skipping.\n", dst);
 			rc = 1;
@@ -311,12 +309,14 @@ static int copy(const char *src, const char *dst, const char *remote_user)
 
 	if (srcds) {
 		/* 2. Export from a datastore somewhere else */
+
 		if (strstr(dst, "://")) {
 			if (srcds->path)
 				fn = srcds->path;
 			else {
 				snprintf(adjust, sizeof(adjust), "/tmp/%s.cfg", srcds->name);
 				fn = tmpfn = adjust;
+				remove(tmpfn);
 				rc = systemf("sysrepocfg -d %s -X%s -f json", srcds->sysrepocfg, fn);
 			}
 
@@ -357,6 +357,8 @@ static int copy(const char *src, const char *dst, const char *remote_user)
 		else
 			set_owner(fn, user);
 	} else if (dstds) {
+		/* 3. Import from somewhere to a datastore */
+
 		if (!dstds->sysrepocfg) {
 			fprintf(stderr, ERRMSG "not possible to import to this datastore.\n");
 			rc = 1;
@@ -367,10 +369,16 @@ static int copy(const char *src, const char *dst, const char *remote_user)
 			goto err;
 		}
 
-		/* 3. Import from somewhere to a datastore */
 		if (strstr(src, "://")) {
-			tmpfn = mktemp(temp_file);
-			fn = tmpfn;
+			fn = basenm(src);
+			if (fn[0] == 0) {
+				fprintf(stderr, ERRMSG "missing filename in sorce URI.\n");
+				rc = 1;
+				goto err;
+			}
+			snprintf(adjust, sizeof(adjust), "/tmp/%s", fn);
+			fn = tmpfn = adjust;
+			remove(tmpfn);
 		} else {
 			fn = cfg_adjust(src, NULL, adjust, sizeof(adjust), sanitize);
 			if (!fn) {
@@ -385,7 +393,6 @@ static int copy(const char *src, const char *dst, const char *remote_user)
 		if (rc) {
 			fprintf(stderr, ERRMSG "failed downloading %s", src);
 		} else {
-			/* Use replace_config() for running-config (triggers callbacks), sysrepocfg for others */
 			if (dstds->datastore == SR_DS_RUNNING) {
 				if (sr_connect(SR_CONN_DEFAULT, &conn)) {
 					fprintf(stderr, ERRMSG "connection to datastore failed\n");
@@ -418,6 +425,8 @@ static int copy(const char *src, const char *dst, const char *remote_user)
 			}
 		}
 	} else {
+		/* 4. regular copy file -> file, either may be remote */
+
 		if (strstr(src, "://") && strstr(dst, "://")) {
 			fprintf(stderr, ERRMSG "copy from remote to remote is not supported.\n");
 			goto err;
@@ -448,17 +457,34 @@ static int copy(const char *src, const char *dst, const char *remote_user)
 			}
 
 			if (access(fn, F_OK))
-				fprintf(stderr, ERRMSG "no such file %s, aborting.", fn);
+				fprintf(stderr, ERRMSG "no such file %s.", fn);
 			else
 				rc = systemf("curl %s -LT %s %s", remote_user, fn, dst);
 		} else {
-			if (!access(dst, F_OK)) {
-				if (!yorn("Overwrite existing file %s", dst)) {
+			char bufa[256], bufb[256];
+			const char *from, *to;
+
+			from = cfg_adjust(src, NULL, bufa, sizeof(bufa), sanitize);
+			if (!from) {
+				fprintf(stderr, ERRMSG "no such file %s.", src);
+				rc = 1;
+				goto err;
+			}
+
+			to = cfg_adjust(dst, src, bufb, sizeof(bufb), sanitize);
+			if (!to) {
+				fprintf(stderr, ERRMSG "no such file %s.", dst);
+				rc = 1;
+				goto err;
+			}
+
+			if (!access(to, F_OK)) {
+				if (!yorn("Overwrite existing file %s", to)) {
 					fprintf(stderr, "OK, aborting.\n");
 					return 0;
 				}
 			}
-			rc = systemf("cp %s %s", src, dst);
+			rc = systemf("cp %s %s", from, to);
 		}
 	}
 
