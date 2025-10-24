@@ -1,4 +1,4 @@
-config BR2_PACKAGE_BANANA_PI_R3
+config BR2_PACKAGE_BANANAPI_BPI_R3
 	bool "Banana Pi R3"
 	depends on BR2_aarch64
 	select BR2_PACKAGE_FEATURE_WIFI

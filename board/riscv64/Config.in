@@ -1,0 +1,5 @@
+if BR2_riscv
+
+# No boards yet in tree, visionfive2 is not integrated
+
+endif

@@ -1,6 +1,6 @@
 # The CONFIG_REGULATOR_GPIO=y is load bearing for booting the RPi4 from
 # SD card, see regulator-sd-io-1v8 in bcm2711-rpi-4-b.dts for details.
-define RASPBERRY_PI_4_LINUX_CONFIG_FIXUPS
+define RASPBERRYPI_RPI64_LINUX_CONFIG_FIXUPS
 	$(call KCONFIG_ENABLE_OPT,CONFIG_SOUND)
 	$(call KCONFIG_ENABLE_OPT,CONFIG_SND)
 	$(call KCONFIG_ENABLE_OPT,CONFIG_SND_SOC)
@@ -62,5 +62,6 @@ define RASPBERRY_PI_4_LINUX_CONFIG_FIXUPS
 
 	$(call KCONFIG_ENABLE_OPT,CONFIG_BACKLIGHT_CLASS_DEVICE)
 endef
+
 $(eval $(ix-board))
 $(eval $(generic-package))

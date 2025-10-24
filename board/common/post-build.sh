@@ -1,6 +1,8 @@
-#!/bin/sh
-# shellcheck disable=SC1090,SC1091
+#!/usr/bin/env bash
+# shellcheck disable=SC1090,SC1091,SC3053
+
 common=$(dirname "$(readlink -f "$0")")
+. "$common/lib.sh"
 . "$BR2_CONFIG" 2>/dev/null
 . "$TARGET_DIR/usr/lib/os-release"
 
@@ -30,27 +32,21 @@ EOF
     # Ignore a few top-level oddballs not used by core Infix
     cmd="$cmd -x supported-algorithms"
 
-    # Execute the command
-    echo "Calling: $cmd"
+    ixmsg "Calling $cmd"
     $cmd
 }
-
-if [ -n "${ID_LIKE}" ]; then
-    ID="${ID} ${ID_LIKE}"
-fi
-
-if [ -n "$INFIX_IMAGE_ID" ]; then
-    NAME="$INFIX_IMAGE_ID"
-else
-    NAME="$INFIX_ID"-$(echo "$BR2_ARCH" | tr _ - | sed 's/x86-64/x86_64/')
-fi
 
 if [ -f "$TARGET_DIR/etc/rauc/system.conf" ]; then
     sed -i "s/compatible=.*/compatible=$INFIX_COMPATIBLE/" "$TARGET_DIR/etc/rauc/system.conf"
 fi
 
+if [ -n "${ID_LIKE}" ]; then
+    ID="${ID} ${ID_LIKE}"
+fi
+
 # This is a symlink to /usr/lib/os-release, so we remove this to keep
 # original Buildroot information.
+ixmsg "Creating /etc/os-release"
 rm -f "$TARGET_DIR/etc/os-release"
 {
     echo "NAME=\"$INFIX_NAME\""
@@ -87,6 +83,7 @@ rm -f "$TARGET_DIR/etc/os-release"
 } > "$TARGET_DIR/etc/os-release"
 
 echo "$INFIX_TAGLINE $INFIX_VERSION -- $(date +"%b %e %H:%M %Z %Y")" > "$TARGET_DIR/etc/version"
+ixmsg "Creating /etc/version: $(cat "$TARGET_DIR/etc/version")"
 
 # In case of ambguities, this is what the image was built from
 cp "$BR2_CONFIG" "$TARGET_DIR/usr/share/infix/config"
@@ -101,12 +98,9 @@ fi
 # Drop Buildroot default pam_lastlog.so from login chain
 sed -i '/^[^#]*pam_lastlog.so/s/^/# /' "$TARGET_DIR/etc/pam.d/login"
 
-# Allow pdmenu (setup) and bash to be login shells, bash is added
-# automatically when selected in menuyconfig, but not when BusyBox
-# provides a symlink (for ash).  The /bin/{true,false} are old UNIX
-# beart means of disabling a user.
-grep -qsE '^/usr/bin/pdmenu$$' "$TARGET_DIR/etc/shells" \
-        || echo "/usr/bin/pdmenu" >> "$TARGET_DIR/etc/shells"
+# Allow bash to be login shells, it is added automatically when selected
+# in menuyconfig, but not when BusyBox provides a symlink (for ash).
+# The /bin/{true,false} are old UNIX beart means of disabling a user.
 grep -qsE '^/bin/bash$$' "$TARGET_DIR/etc/shells" \
         || echo "/bin/bash" >> "$TARGET_DIR/etc/shells"
 grep -qsE '^/bin/true$$' "$TARGET_DIR/etc/shells" \
@@ -114,12 +108,6 @@ grep -qsE '^/bin/true$$' "$TARGET_DIR/etc/shells" \
 grep -qsE '^/bin/false$$' "$TARGET_DIR/etc/shells" \
         || echo "/bin/false" >> "$TARGET_DIR/etc/shells"
 
-boards=$(${BR2_EXTERNAL_INFIX_PATH}/board/common/selected-boards.sh ${BR2_EXTERNAL_INFIX_PATH} ${O})
-
-for board in $boards; do
-	[ ! -f "${BR2_EXTERNAL_INFIX_PATH}/src/board/${board}/post-build.sh" ] && continue
-	${BR2_EXTERNAL_INFIX_PATH}/src/board/${board}/post-build.sh
-done
 # Allow clish (symlink to /usr/bin/klish) to be a login shell
 grep -qsE '^/bin/clish$$' "$TARGET_DIR/etc/shells" \
         || echo "/bin/clish" >> "$TARGET_DIR/etc/shells"

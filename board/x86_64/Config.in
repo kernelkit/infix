@@ -1,0 +1,5 @@
+if BR2_x86_64
+
+# No boards yet in tree
+
+endif

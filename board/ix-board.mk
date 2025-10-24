@@ -4,7 +4,7 @@ $(2)_VERSION = ix-board
 $(2)_LICENSE = BSD-3-Clause
 $(2)_LICENSE_FILES = LICENSE
 $(2)_SITE_METHOD = local
-$(2)_SITE = $$(BR2_EXTERNAL_INFIX_PATH)/src/board/$(1)
+$(2)_SITE ?= $$(BR2_EXTERNAL_INFIX_PATH)/board/$(3)
 $(2)_REDISTRIBUTE = NO
 
 # The kernel must be built first.
@@ -31,7 +31,7 @@ $(2)_POST_BUILD_HOOKS += $(2)_DTBS_BUILD
 define $(2)_DTBS_INSTALL_TARGET
 	@$$(call MESSAGE,"Installing device tree blob(s)")
 	$$(TARGET_MAKE_ENV) $$(TARGET_CONFIGURE_OPTS) $$($$(PKG)_MAKE) \
-		-f $$(BR2_EXTERNAL_INFIX_PATH)/package/board/dtb-inst.makefile \
+		-f $$(BR2_EXTERNAL_INFIX_PATH)/board/dtb-inst.makefile \
 		-C $$(@D)/dts \
 		DESTDIR="$$(TARGET_DIR)" \
 		install
@@ -48,4 +48,4 @@ $(2)_POST_INSTALL_TARGET_HOOKS += $(2)_OVERLAY_INSTALL_TARGET
 
 endef
 
-ix-board = $(call inner-ix-board,$(pkgname),$(call UPPERCASE,$(pkgname)))
+ix-board = $(call inner-ix-board,$(pkgname),$(call UPPERCASE,$(pkgname)),$(patsubst $(BR2_EXTERNAL_INFIX_PATH)/board/%,%,$(pkgdir)))
