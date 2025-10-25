@@ -133,6 +133,7 @@ uint32_t core_hook_prio    (void);
 int      core_pre_hook     (sr_session_ctx_t *, uint32_t, const char *, const char *, sr_event_t, unsigned, void *);
 int      core_post_hook    (sr_session_ctx_t *, uint32_t, const char *, const char *, sr_event_t, unsigned, void *);
 int      core_startup_save (sr_session_ctx_t *, uint32_t, const char *, const char *, sr_event_t, unsigned, void *);
+int      core_wait_change  (sr_session_ctx_t *, uint32_t, const char *, const char *, sr_event_t, unsigned, void *);
 
 static inline int register_change(sr_session_ctx_t *session, const char *module, const char *xpath,
 	int flags, sr_module_change_cb cb, void *arg, sr_subscription_ctx_t **sub)
@@ -206,57 +207,70 @@ static inline int register_rpc(sr_session_ctx_t *session, const char *xpath,
 	return rc;
 }
 
+
 /* ietf-interfaces.c */
-int ietf_interfaces_init(struct confd *confd);
+int ietf_interfaces_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd);
+int ietf_interfaces_cand_init(struct confd *confd);
 
 /* ietf-syslog.c */
-int ietf_syslog_init(struct confd *confd);
+int ietf_syslog_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd);
 
 /* ietf-system.c */
-int ietf_system_init (struct confd *confd);
+int ietf_system_rpc_init (struct confd *confd);
 int hostnamefmt      (struct confd *confd, const char *fmt, char *hostnm, size_t hostlen, char *domain, size_t domlen);
+int ietf_system_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd);
 
 /* infix-containers.c */
 #ifdef CONTAINERS
-int infix_containers_init(struct confd *confd);
+int infix_containers_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd);
+int infix_containers_rpc_init(struct confd *confd);
 #else
-static inline int infix_containers_init(struct confd *confd) { return 0; }
+static inline int infix_containers_rpc_init(struct confd *confd) { return 0; }
+static inline int infix_containers_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd) { return 0; }
 #endif
 
 /* infix-dhcp-common.c */
 int dhcp_option_lookup(const struct lyd_node *id);
 
 /* infix-dhcp-client.c */
-int infix_dhcp_client_init(struct confd *confd);
+int infix_dhcp_client_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd);
+int infix_dhcp_client_candidate_init(struct confd *confd);
 
 /* infix-dhcp-server.c */
-int infix_dhcp_server_init(struct confd *confd);
-
-/* ietf-factory-default */
-int ietf_factory_default_init(struct confd *confd);
+int infix_dhcp_server_candidate_init(struct confd *confd);
+int infix_dhcp_server_rpc_init(struct confd *confd);
+int infix_dhcp_server_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd);
 
 /* ietf-routing */
-int ietf_routing_init(struct confd *confd);
+int ietf_routing_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd);
 
 /* infix-factory.c */
-int infix_factory_init(struct confd *confd);
+int infix_factory_rpc_init(struct confd *confd);
 
-/* infix-factory.c */
-int infix_meta_init(struct confd *confd);
+/* ietf-factory-default */
+int ietf_factory_default_rpc_init(struct confd *confd);
+
+/* infix-meta.c */
+int infix_meta_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd);
 
 /* infix-system-software.c */
-int infix_system_sw_init(struct confd *confd);
+int infix_system_sw_rpc_init(struct confd *confd);
 
 /* infix-services.c */
-int infix_services_init(struct confd *confd);
+int infix_services_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd);
 
 /* ietf-hardware.c */
-int ietf_hardware_init(struct confd *confd);
+int ietf_hardware_candidate_init(struct confd *confd);
+int ietf_hardware_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd);
 
 /* ietf-keystore.c */
-int ietf_keystore_init(struct confd *confd);
+#define SSH_HOSTKEYS "/etc/ssh/hostkeys"
+#define SSH_HOSTKEYS_NEXT SSH_HOSTKEYS"+"
+int ietf_keystore_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd);
 
 /* infix-firewall.c */
-int infix_firewall_init(struct confd *confd);
+int infix_firewall_rpc_init(struct confd *confd);
+int infix_firewall_candidate_init(struct confd *confd);
+int infix_firewall_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd);
 
 #endif	/* CONFD_CORE_H_ */

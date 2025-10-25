@@ -21,12 +21,18 @@
 #include "base64.h"
 #include "core.h"
 
-#define NACM_BASE_     "/ietf-netconf-acm:nacm"
-#define XPATH_BASE_    "/ietf-system:system"
-#define XPATH_AUTH_    XPATH_BASE_"/authentication"
-#define CLOCK_PATH_    "/ietf-system:system-state/clock"
-#define PLATFORM_PATH_ "/ietf-system:system-state/platform"
-#define PASSWORD_PATH  "/ietf-system:system/authentication/user/password"
+#define NACM_BASE_         "/ietf-netconf-acm:nacm"
+#define XPATH_BASE_        "/ietf-system:system"
+#define XPATH_AUTH_        XPATH_BASE_"/authentication"
+#define XPATH_NTP_         XPATH_BASE_"/ntp"
+#define XPATH_DNS_         XPATH_BASE_"/dns-resolver"
+#define XPATH_HOSTNAME_    XPATH_BASE_"/hostname"
+#define XPATH_MOTD_BANNER_ XPATH_BASE_"/infix-system:motd-banner"
+#define XPATH_MOTD_        XPATH_BASE_"/infix-system:motd"
+#define XPATH_EDITOR_      XPATH_BASE_"/infix-system:text-editor"
+#define CLOCK_PATH_       "/ietf-system:system-state/clock"
+#define PLATFORM_PATH_    "/ietf-system:system-state/platform"
+#define PASSWORD_PATH     "/ietf-system:system/authentication/user/password"
 
 #define _PATH_PASSWD   "/etc/passwd"
 #define _PATH_HOSTNAME "/etc/hostname"
@@ -210,12 +216,13 @@ static int sys_reload_services(void)
 #define TIMEZONE_PREV TIMEZONE_CONF "-"
 #define TIMEZONE_NEXT TIMEZONE_CONF "+"
 
-static int change_clock(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
-	const char *xpath, sr_event_t event, unsigned request_id, void *priv)
+static int change_clock(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd)
 {
 	char *tz_utc_offset, *timezone;
 	int rc = SR_ERR_OK;
 
+	if (diff && !lydx_get_xpathf(diff, XPATH_BASE_"/clock"))
+		return SR_ERR_OK;
 	switch (event) {
 	case SR_EV_ENABLED:	/* first time, on register. */
 	case SR_EV_CHANGE:	/* regular change (copy cand running) */
@@ -280,8 +287,7 @@ err:
 	return rc;
 }
 
-static int change_ntp(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
-		      const char *_, sr_event_t event, unsigned request_id, void *priv)
+static int change_ntp(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd)
 {
 	sr_change_iter_t *iter = NULL;
 	int rc, err = SR_ERR_OK;
@@ -289,6 +295,8 @@ static int change_ntp(sr_session_ctx_t *session, uint32_t sub_id, const char *mo
 	sr_val_t *val;
 	size_t cnt;
 
+	if (diff && !lydx_get_xpathf(diff, XPATH_NTP_))
+		return SR_ERR_OK;
 	switch (event) {
 	case SR_EV_ENABLED:	/* first time, on register. */
 	case SR_EV_CHANGE:	/* regular change (copy cand running) */
@@ -299,7 +307,7 @@ static int change_ntp(sr_session_ctx_t *session, uint32_t sub_id, const char *mo
 		return SR_ERR_OK;
 
 	case SR_EV_DONE:
-		if (!srx_enabled(session, XPATH_BASE_"/ntp/enabled")) {
+		if (!srx_enabled(session, XPATH_NTP_"/enabled")) {
 			systemf("rm -rf /etc/chrony/conf.d/* /etc/chrony/sources.d/*");
 			systemf("initctl -nbq disable chronyd");
 			return SR_ERR_OK;
@@ -411,8 +419,7 @@ static int change_ntp(sr_session_ctx_t *session, uint32_t sub_id, const char *mo
 #define RESOLV_PREV RESOLV_CONF "-"
 #define RESOLV_NEXT RESOLV_CONF "+"
 
-static int change_dns(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
-	const char *xpath, sr_event_t event, unsigned request_id, void *priv)
+static int change_dns(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd)
 {
 	const char *fn = RESOLV_NEXT;
 	int timeout = 0, attempts = 0;
@@ -420,6 +427,9 @@ static int change_dns(sr_session_ctx_t *session, uint32_t sub_id, const char *mo
 	sr_val_t *val;
 	size_t cnt;
 	FILE *fp;
+
+	if (diff && !lydx_get_xpathf(diff, XPATH_DNS_))
+		return SR_ERR_OK;
 
 	switch (event) {
 	case SR_EV_ENABLED:	/* first time, on register. */
@@ -453,8 +463,8 @@ static int change_dns(sr_session_ctx_t *session, uint32_t sub_id, const char *mo
 		return SR_ERR_SYS;
 	}
 
-	SRX_GET_UINT8(session, timeout, XPATH_BASE_"/dns-resolver/options/timeout");
-	SRX_GET_UINT8(session, attempts, XPATH_BASE_"/dns-resolver/options/attempts");
+	SRX_GET_UINT8(session, timeout, XPATH_DNS_"/options/timeout");
+	SRX_GET_UINT8(session, attempts, XPATH_DNS_"/dns-resolver/options/attempts");
 	if (timeout || attempts) {
 		fprintf(fp, "options");
 		if (timeout)
@@ -1288,11 +1298,10 @@ cleanup:
 	return err;
 }
 
-static int change_auth(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
-		       const char *xpath, sr_event_t event, unsigned request_id, void *priv)
+static int change_auth(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd)
 {
-	struct confd *confd = (struct confd *)priv;
-
+	if (diff && !lydx_get_xpathf(diff, XPATH_AUTH_))
+		return SR_ERR_OK;
 	switch (event) {
 	case SR_EV_UPDATE:
 		return change_auth_ctp(confd, session);
@@ -1307,14 +1316,13 @@ static int change_auth(sr_session_ctx_t *session, uint32_t sub_id, const char *m
 	return SR_ERR_OK;
 }
 
-static int change_nacm(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
-		       const char *_, sr_event_t event, unsigned request_id, void *priv)
+static int change_nacm(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd)
 {
 	sr_val_t *users = NULL;
 	size_t user_count = 0;
 	int rc;
 
-	if (event != SR_EV_DONE)
+	if (event != SR_EV_DONE ||!lydx_get_xpathf(diff, NACM_BASE_))
 		return SR_ERR_OK;
 
 	/* Fetch all users from ietf-system */
@@ -1346,18 +1354,18 @@ cleanup:
 	return 0;
 }
 
-static int change_motd(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
-		       const char *xpath, sr_event_t event, unsigned request_id, void *priv)
+static int change_motd(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd)
 {
 	const char *fn = "/etc/motd";
 	char *message;
 	int rc = 0;
 
+
 	/* Ignore all events except SR_EV_DONE */
-	if (event != SR_EV_DONE)
+	if (event != SR_EV_DONE || !lydx_get_xpathf(diff, XPATH_MOTD_))
 		return SR_ERR_OK;
 
-	message = srx_get_str(session, "%s", xpath);
+	message = srx_get_str(session, "%s", XPATH_MOTD_);
 	if (message) {
 		rc = writesf(message, "w", "%s", fn);
 		free(message);
@@ -1371,8 +1379,7 @@ static int change_motd(sr_session_ctx_t *session, uint32_t sub_id, const char *m
 	return SR_ERR_OK;
 }
 
-static int change_motd_banner(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
-		       const char *xpath, sr_event_t event, unsigned request_id, void *priv)
+static int change_motd_banner(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd)
 {
 	const char *fn = "/etc/motd";
 	unsigned char *raw;
@@ -1380,24 +1387,24 @@ static int change_motd_banner(sr_session_ctx_t *session, uint32_t sub_id, const 
 	int rc = 0;
 
 	/* Ignore all events except SR_EV_DONE */
-	if (event != SR_EV_DONE)
+	if (event != SR_EV_DONE || !lydx_get_xpathf(diff, XPATH_MOTD_BANNER_))
 		return SR_ERR_OK;
 
-	legacy = srx_get_str(session, "/ietf-system:system/infix-system:motd");
+	legacy = srx_get_str(session, XPATH_MOTD_);
 	if (legacy) {
-		NOTE("Legacy /system/motd exists, skipping %s", xpath);
+		NOTE("Legacy /system/motd exists, skipping %s", XPATH_MOTD_BANNER_);
 		free(legacy);
 		return SR_ERR_OK;
 	}
 
-	raw = (unsigned char *)srx_get_str(session, "%s", xpath);
+	raw = (unsigned char *)srx_get_str(session, "%s", XPATH_BASE_"/infix-system:motd-banner");
 	if (raw) {
 		unsigned char *txt;
 		size_t txt_len;
 
 		txt = base64_decode(raw, strlen((char *)raw), &txt_len);
 		if (!txt) {
-			ERRNO("failed base64 decoding of %s", xpath);
+			ERRNO("failed base64 decoding of %s", XPATH_BASE_"/infix-system:motd-banner");
 			rc = -1;
 		} else {
 			FILE *fp = fopen(fn, "w");
@@ -1431,8 +1438,7 @@ static int change_motd_banner(sr_session_ctx_t *session, uint32_t sub_id, const 
 	return SR_ERR_OK;
 }
 
-static int change_editor(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
-			 const char *xpath, sr_event_t event, unsigned request_id, void *priv)
+static int change_editor(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd)
 {
 	const char *alt = "/etc/alternatives/editor";
 	struct { const char *editor, *path; } map[] = {
@@ -1444,10 +1450,10 @@ static int change_editor(sr_session_ctx_t *session, uint32_t sub_id, const char 
 	int rc = 0;
 
 	/* Ignore all events except SR_EV_DONE */
-	if (event != SR_EV_DONE)
+	if (event != SR_EV_DONE || !lydx_get_xpathf(diff, XPATH_EDITOR_))
 		return SR_ERR_OK;
 
-	editor = srx_get_str(session, "%s", xpath);
+	editor = srx_get_str(session, "%s", XPATH_BASE_"/infix-system:text-editor");
 	if (!editor)
 		return SR_ERR_OK;
 
@@ -1550,20 +1556,18 @@ int hostnamefmt(struct confd *confd, const char *fmt, char *hostnm, size_t hostl
 	return 0;
 }
 
-static int change_hostname(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
-	const char *xpath, sr_event_t event, unsigned request_id, void *priv)
+static int change_hostname(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd)
 {
-	struct confd *confd = (struct confd *)priv;
 	const char *hostip = "127.0.1.1";
 	char  hostnm[65], domain[65];
 	char buf[256], *fmt;
 	FILE *nfp, *fp;
 	int err, fd;
 
-	if (event != SR_EV_DONE)
+	if (event != SR_EV_DONE || !lydx_get_xpathf(diff, XPATH_HOSTNAME_))
 		return SR_ERR_OK;
 
-	fmt = srx_get_str(session, "%s", xpath);
+	fmt = srx_get_str(session, "%s", XPATH_BASE_"/hostname");
 	if (!fmt)
 		fmt = strdup(nm);
 
@@ -1648,23 +1652,37 @@ err:
 	return SR_ERR_OK;
 }
 
-int ietf_system_init(struct confd *confd)
+
+int ietf_system_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd)
+{
+	int rc = SR_ERR_OK;
+	if ((rc = change_auth(session, config, diff, event, confd)))
+		return rc;
+	if ((rc = change_ntp(session, config, diff, event, confd)))
+		return rc;
+	if ((rc = change_dns(session, config, diff, event, confd)))
+		return rc;
+	if ((rc = change_editor(session,config, diff, event, confd)))
+		return rc;
+	if ((rc = change_clock(session, config, diff, event, confd)))
+		return rc;
+	if ((rc = change_hostname(session, config, diff, event, confd)))
+		return rc;
+	if ((rc = change_motd(session, config, diff, event, confd)))
+		return rc;
+	if ((rc = change_motd_banner(session, config, diff, event, confd)))
+		return rc;
+	if ((rc = change_nacm(session, config, diff, event, confd))) /* Must be called after ietf_system_change_auth, which create the users */
+		return rc;
+
+	return SR_ERR_OK;
+}
+
+int ietf_system_rpc_init(struct confd *confd)
 {
 	int rc;
 
 	os_init();
-
-	REGISTER_CHANGE(confd->session, "ietf-system", XPATH_AUTH_, 0, change_auth, confd, &confd->sub);
-	REGISTER_MONITOR(confd->session, "ietf-netconf-acm", "/ietf-netconf-acm:nacm//.",
-			 0, change_nacm, confd, &confd->sub);
-
-	REGISTER_CHANGE(confd->session, "ietf-system", XPATH_BASE_"/hostname", 0, change_hostname, confd, &confd->sub);
-	REGISTER_CHANGE(confd->session, "ietf-system", XPATH_BASE_"/infix-system:motd", 0, change_motd, confd, &confd->sub);
-	REGISTER_CHANGE(confd->session, "ietf-system", XPATH_BASE_"/infix-system:motd-banner", 0, change_motd_banner, confd, &confd->sub);
-	REGISTER_CHANGE(confd->session, "ietf-system", XPATH_BASE_"/infix-system:text-editor", 0, change_editor, confd, &confd->sub);
-	REGISTER_CHANGE(confd->session, "ietf-system", XPATH_BASE_"/clock", 0, change_clock, confd, &confd->sub);
-	REGISTER_CHANGE(confd->session, "ietf-system", XPATH_BASE_"/ntp", 0, change_ntp, confd, &confd->sub);
-	REGISTER_CHANGE(confd->session, "ietf-system", XPATH_BASE_"/dns-resolver", 0, change_dns, confd, &confd->sub);
 
 	REGISTER_RPC(confd->session, "/ietf-system:system-restart",  rpc_exec, "reboot", &confd->sub);
 	REGISTER_RPC(confd->session, "/ietf-system:system-shutdown", rpc_exec, "poweroff", &confd->sub);
