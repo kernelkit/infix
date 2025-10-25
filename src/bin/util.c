@@ -128,7 +128,7 @@ char *cfg_adjust(const char *fn, const char *tmpl, char *buf, size_t len, int sa
 		}
 
 		/* If file exists, resolve symlinks and verify still in whitelist */
-		if (!access(fn, F_OK) && realpath(fn, resolved)) {
+		if (realpath(fn, resolved)) {
 			if (!path_allowed(resolved))
 				return NULL;
 			fn = resolved;
