@@ -316,7 +316,7 @@ static int copy(const char *src, const char *dst, const char *remote_user)
 			else {
 				snprintf(adjust, sizeof(adjust), "/tmp/%s.cfg", srcds->name);
 				fn = tmpfn = adjust;
-				remove(tmpfn);
+				(void)remove(tmpfn);
 				rc = systemf("sysrepocfg -d %s -X%s -f json", srcds->sysrepocfg, fn);
 			}
 
@@ -378,7 +378,7 @@ static int copy(const char *src, const char *dst, const char *remote_user)
 			}
 			snprintf(adjust, sizeof(adjust), "/tmp/%s", fn);
 			fn = tmpfn = adjust;
-			remove(tmpfn);
+			(void)remove(tmpfn);
 		} else {
 			fn = cfg_adjust(src, NULL, adjust, sizeof(adjust), sanitize);
 			if (!fn) {
