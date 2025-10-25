@@ -17,13 +17,14 @@
 - name: Misc tests
   suite: misc/all.yaml
 
+
+- name: "IETF System"
+  suite: ietf_system/all.yaml
+
 # Upgrade may leave wrong boot order
 - case: meta/bootorder.py
   infamy:
     specification: False
-
-- name: "IETF System"
-  suite: ietf_system/all.yaml
 
 - name: "IETF Syslog"
   suite: ietf_syslog/all.yaml
