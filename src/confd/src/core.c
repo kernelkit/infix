@@ -81,6 +81,125 @@ int core_post_hook(sr_session_ctx_t *session, uint32_t sub_id, const char *modul
 	return SR_ERR_OK;
 }
 
+static confd_dependency_t add_dependencies(struct lyd_node **diff, const char *xpath, const char *value)
+{
+	struct lyd_node *new_node = NULL;
+	struct lyd_node *target = NULL;
+	struct lyd_node *root = NULL;
+	int rc;
+
+	if (!lydx_get_xpathf(*diff, "%s", xpath)) {
+		/* Create the path, potentially creating a new tree */
+		rc = lyd_new_path(NULL, LYD_CTX(*diff), xpath, value, LYD_NEW_PATH_UPDATE, &new_node);
+		if (rc != LY_SUCCESS || !new_node) {
+			ERROR("lyd_new_path failed with rc=%d", rc);
+			return CONFD_DEP_ERROR;
+		}
+
+		root = new_node;
+		while (root->parent)
+			root = lyd_parent(root);
+
+		rc = lyd_merge_siblings(diff, root, LYD_MERGE_DESTRUCT);
+		if (rc != LY_SUCCESS) {
+			ERROR("lyd_merge_siblings failed with rc=%d", rc);
+			lyd_free_tree(root);
+			return CONFD_DEP_ERROR;
+		}
+
+		target = lydx_get_xpathf(*diff, "%s", xpath);
+		if (target) {
+			lyd_new_meta(LYD_CTX(target), target, NULL,
+				     "yang:operation", "replace", false, NULL);
+		} else {
+			return CONFD_DEP_ERROR;
+		}
+
+		return CONFD_DEP_ADDED;
+	}
+
+	return CONFD_DEP_DONE;
+}
+
+static confd_dependency_t handle_dependencies(struct lyd_node **diff, struct lyd_node *config)
+{
+	struct lyd_node *dkeys, *dkey, *hostname;
+	confd_dependency_t result = CONFD_DEP_DONE;
+	const char *key_name;
+
+	dkeys = lydx_get_descendant(*diff, "keystore", "symmetric-keys", "symmetric-key", NULL);
+
+	LYX_LIST_FOR_EACH(dkeys, dkey, "symmetric-key") {
+		struct ly_set *ifaces;
+		uint32_t i;
+
+		key_name = lydx_get_cattr(dkey, "name");
+		ifaces = lydx_find_xpathf(config, "/ietf-interfaces:interfaces/interface[infix-interfaces:wifi/secret='%s']", key_name);
+		if (ifaces && ifaces->count > 0) {
+			for (i = 0; i < ifaces->count; i++) {
+				struct lyd_node *iface = ifaces->dnodes[i];
+				const char *ifname;
+				char xpath[256];
+				ifname = lydx_get_cattr(iface, "name");
+				snprintf(xpath, sizeof(xpath), "/ietf-interfaces:interfaces/interface[name='%s']/infix-interfaces:wifi/secret", ifname);
+				result = add_dependencies(diff, xpath, key_name);
+				if (result == CONFD_DEP_ERROR) {
+					ERROR("Failed to add wifi node to diff for interface %s", ifname);
+					ly_set_free(ifaces, NULL);
+					return result;
+				}
+			}
+			ly_set_free(ifaces, NULL);
+		}
+	}
+
+	dkeys = lydx_get_descendant(*diff, "keystore", "asymmetric-keys", "asymmetric-key", NULL);
+	LYX_LIST_FOR_EACH(dkeys, dkey, "asymmetric-key") {
+		struct ly_set *hostkeys;
+		uint32_t i;
+
+		key_name = lydx_get_cattr(dkey, "name");
+		hostkeys = lydx_find_xpathf(config, "/infix-services:ssh/hostkey[.='%s']", key_name);
+		if (hostkeys && hostkeys->count > 0) {
+			for (i = 0; i < hostkeys->count; i++) {
+				char xpath[256];
+				snprintf(xpath, sizeof(xpath), "/infix-services:ssh/hostkey[.='%s']", key_name);
+				result = add_dependencies(diff, xpath, key_name);
+				if (result == CONFD_DEP_ERROR) {
+					ERROR("Failed to add ssh hostkey to diff for key %s", key_name);
+					ly_set_free(hostkeys, NULL);
+					return result;
+				}
+			}
+			ly_set_free(hostkeys, NULL);
+		}
+	}
+
+	hostname = lydx_get_xpathf(*diff, "/ietf-system:system/hostname");
+	if (hostname) {
+		struct lyd_node *mdns, *dhcp_server;
+
+		dhcp_server = lydx_get_xpathf(config, "/infix-dhcp-server:dhcp-server/enabled");
+		if(dhcp_server && lydx_is_enabled(dhcp_server, "enabled")) {
+			result = add_dependencies(diff, "/infix-dhcp-server:dhcp-server/enabled", "true");
+			if (result == CONFD_DEP_ERROR) {
+				ERROR("Failed to add dhcp-server to diff on hostname change");
+				return result;
+			}
+		}
+		mdns = lydx_get_xpathf(config, "/infix-services:mdns");
+		if (mdns && lydx_is_enabled(mdns, "enabled")) {
+			result = add_dependencies(diff, "/infix-services:mdns/enabled", "true");
+			if (result == CONFD_DEP_ERROR) {
+				ERROR("Failed to add mdns to diff on hostname change");
+				return result;
+			}
+		}
+	}
+
+	return result;
+}
+
 static int change_cb(sr_session_ctx_t *session, uint32_t sub_id, const char *module_name,
 		     const char *xpath, sr_event_t event, uint32_t request_id, void *_confd)
 {
@@ -91,6 +210,7 @@ static int change_cb(sr_session_ctx_t *session, uint32_t sub_id, const char *mod
 	confd_dependency_t result;
 	sr_data_t *cfg = NULL;
 	int rc = SR_ERR_OK;
+	int max_dep = 10;
 
 	if (request_id == last_id && last_event == event)
 		return SR_ERR_OK;
@@ -108,6 +228,17 @@ static int change_cb(sr_session_ctx_t *session, uint32_t sub_id, const char *mod
 			goto free_diff;
 
 		config = cfg->tree;
+		while ((result = handle_dependencies(&diff, config)) != CONFD_DEP_DONE) {
+			if (max_dep == 0) {
+				ERROR("Max dependency depth reached");
+				return SR_ERR_INTERNAL;
+			}
+			if (result == CONFD_DEP_ERROR) {
+				ERROR("Failed to add dependencies");
+				return SR_ERR_INTERNAL;
+			}
+			max_dep--;
+		}
 #if 0
 		/* Debug: print diff to file */
 		FILE *f = fopen("/tmp/confd-diff.json", "w");

@@ -24,6 +24,7 @@
 
 #include <jansson.h>
 
+#include <srx/lyx.h>
 #include <srx/common.h>
 #include <srx/helpers.h>
 #include <srx/systemv.h>
@@ -100,6 +101,11 @@ static inline char *xpath_base(const char *xpath)
 
 	return path;
 }
+typedef enum {
+	CONFD_DEP_DONE = 0,
+	CONFD_DEP_ADDED = 1,
+	CONFD_DEP_ERROR = 2
+} confd_dependency_t;
 
 #define REGISTER_CHANGE(s,m,x,f,c,a,u)				\
 	if ((rc = register_change(s, m, x, f, c, a, u)))	\

@@ -187,13 +187,7 @@ static void svc_enadis(int ena, svc type, const char *svc)
 	systemf("initctl -nbq touch avahi");
 	systemf("initctl -nbq touch nginx");
 }
-/* TODO Handle in dependency tracking
-static int hostname_change(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
-	const char *xpath, sr_event_t event, unsigned request_id, void *_confd)
-{
-	return mdns_records("update", all);
-}
-*/
+
 static void fput_list(FILE *fp, struct lyd_node *cfg, const char *list, const char *heading)
 {
 	const char *prefix = heading;
