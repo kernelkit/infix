@@ -223,10 +223,12 @@ static void add(const char *subnet, struct lyd_node *cfg)
 		start = lydx_get_cattr(node, "start-address");
 		end   = lydx_get_cattr(node, "end-address");
 
-		fprintf(fp, "\n# Subnet pool %s - %s\n", start, end);
-		fprintf(fp, "dhcp-range=%s%sset:%s,%s,%s,%s\n",
-			ifname ?: "", ifname ? "," : "", tag,
-			start, end, lydx_get_cattr(node, "lease-time"));
+		if (start && end) {
+			fprintf(fp, "\n# Subnet pool %s - %s\n", start, end);
+			fprintf(fp, "dhcp-range=%s%sset:%s,%s,%s,%s\n",
+				ifname ?: "", ifname ? "," : "", tag,
+				start, end, lydx_get_cattr(node, "lease-time"));
+		}
 	}
 
 err:
@@ -400,6 +402,7 @@ static int cand(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
 		"router",
 		"dns-server",
 	};
+	sr_val_t *subnets = NULL;
 	size_t i, cnt = 0;
 
 	if (event != SR_EV_UPDATE && event != SR_EV_CHANGE)
@@ -411,6 +414,37 @@ static int cand(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
 	for (i = 0; i < NELEMS(opt); i++) {
 		inferred.data.string_val = "auto";
 		srx_set_item(session, &inferred, 0, fmt, opt[i]);
+	}
+
+	/* Infer pool: .100 to .250 for /24 networks */
+	if (sr_get_items(session, CFG_XPATH "/subnet/subnet", 0, 0, &subnets, &cnt) == 0) {
+		for (i = 0; i < cnt; i++) {
+			const char *pool_xpathfmt = CFG_XPATH "/subnet[subnet='%s']/pool";
+			const char *host_xpathfmt = CFG_XPATH "/subnet[subnet='%s']/host";
+			const char *subnet = subnets[i].data.string_val;
+			sr_val_t pool_val = { .type = SR_STRING_T };
+			char start_addr[16], end_addr[16];
+			unsigned int a, b, c, d, len;
+			size_t pool_cnt = 0, host_cnt = 0;
+
+			if (sscanf(subnet, "%u.%u.%u.%u/%u", &a, &b, &c, &d, &len) != 5 || len != 24)
+				continue;
+
+			/* Don't auto-infer if pool or static hosts already exist */
+			if (!srx_nitems(session, &pool_cnt, pool_xpathfmt, subnet) && pool_cnt)
+				continue;
+			if (!srx_nitems(session, &host_cnt, host_xpathfmt, subnet) && host_cnt)
+				continue;
+
+			snprintf(start_addr, sizeof(start_addr), "%u.%u.%u.100", a, b, c);
+			snprintf(end_addr, sizeof(end_addr), "%u.%u.%u.250", a, b, c);
+
+			pool_val.data.string_val = start_addr;
+			srx_set_item(session, &pool_val, 0, CFG_XPATH "/subnet[subnet='%s']/pool/start-address", subnet);
+			pool_val.data.string_val = end_addr;
+			srx_set_item(session, &pool_val, 0, CFG_XPATH "/subnet[subnet='%s']/pool/end-address", subnet);
+		}
+		sr_free_values(subnets, cnt);
 	}
 
 	return 0;

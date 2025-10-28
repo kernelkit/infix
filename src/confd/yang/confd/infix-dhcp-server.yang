@@ -20,6 +20,13 @@ module infix-dhcp-server {
   contact      "kernelkit@googlegroups.com";
   description  "This module implements a DHCPv4 server";
 
+  revision 2025-10-28 {
+    description "Make pool a presence container and add pool validation.
+                 Also, require each subnet to have either a pool or
+                 at least one static host entry.";
+    reference   "internal";
+  }
+
   revision 2025-01-29 {
     description "Initial revision adapted for Infix from DHCPv6 model.";
     reference   "internal";
@@ -132,6 +139,10 @@ module infix-dhcp-server {
       description "Subnet specific settings, including static host entries.";
       key "subnet";
 
+      must "pool or host" {
+        error-message "Subnet must have either a pool or at least one static host entry.";
+      }
+
       leaf subnet {
         description "Subnet to serve DHCP leases from.";
         type inet:ipv4-prefix;
@@ -160,7 +171,12 @@ module infix-dhcp-server {
       }
 
       container pool {
+        presence "Enable dynamic DHCP address pool for this subnet.";
         description "IP address pool for this subnet.";
+
+        must "start-address and end-address" {
+          error-message "Both start-address and end-address must be set if pool is configured.";
+        }
 
         leaf start-address {
           description "The start address of the DHCP address pool.";
