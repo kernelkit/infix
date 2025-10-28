@@ -6,4 +6,8 @@ pydot==1.4.2
 pyyaml==6.0.1
 passlib==1.7.4
 requests~=2.32.4
+# GHSA-cq46-m9x9-j8w2: scapy <=2.6.1 has pickle deserialization vuln in session
+# loading (-s flag). Low risk: test framework only uses packet crafting (Ether,
+# sendp, LLDP), not session loading. Update to 2.7.0+ when available on PyPI.
+# https://github.com/advisories/GHSA-cq46-m9x9-j8w2
 scapy==2.6.1
