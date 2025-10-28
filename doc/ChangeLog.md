@@ -35,6 +35,9 @@ All notable changes to the project are documented in this file.
   change infers a pool range (only) for /24 networks, and only when a pool is
   enabled.  YANG validation for this and other use-cases is also included.  As
   an unforeseen bonus, Infix now also support non-pool (static lease) setups
+- Fix #1122: Add YANG validation for consistency, IP addresses are not allowed
+  on bridge port (interfaces).  Even though Infix previously allowed this, but
+  disregarded it operationally, it is no longer supported in the configuration
 - Fix #1146: Possible to set longer containers names than the system supports.
   Root cause, a limit of 15 characters implicitly imposed by the service mgmt
   daemon, Finit.  The length has not been increased to 64 characters (min: 2)

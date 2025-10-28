@@ -15,6 +15,9 @@ submodule infix-if-bridge {
   import ietf-interfaces {
     prefix if;
   }
+  import ietf-ip {
+    prefix ip;
+  }
   import ieee802-dot1q-types {
     prefix dot1q-types;
   }
@@ -26,6 +29,10 @@ submodule infix-if-bridge {
   contact      "kernelkit@googlegroups.com";
   description  "Linux bridge extension for ietf-interfaces.";
 
+  revision 2025-10-28 {
+    description "Prevent IP addresses on bridge ports.";
+    reference "internal";
+  }
 
   revision 2025-10-23 {
     description "Add WiFi interfaces to be able to be added to a bridge.";
@@ -918,6 +925,9 @@ submodule infix-if-bridge {
       description "Extension of the IETF Interfaces model (RFC7223).";
 
       container bridge-port {
+        must "not(../ip:ipv4/ip:address or ../ip:ipv6/ip:address)" {
+          error-message "Bridge ports cannot have IP addresses configured.";
+        }
         description "Bridge association and port specific settings.";
         uses bridge-port-common;
         uses bridge-port-lower {
