@@ -8,75 +8,22 @@
 struct confd confd;
 
 
-uint32_t core_hook_prio(void)
-{
-	static uint32_t hook_prio = CB_PRIO_PASSIVE;
-
-	return hook_prio--;
-}
-
 int core_startup_save(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
 		      const char *xpath, sr_event_t event, unsigned request_id, void *priv)
 {
+	sr_event_t last_event = -1;
+	static unsigned int last_request = -1;
+	if (last_event == event && last_request == request_id)
+		return SR_ERR_OK;
+	last_event = event;
+	last_request = request_id;
+
 	/* skip in bootstrap, triggered by load script to initialize startup datastore */
 	if (systemf("runlevel >/dev/null 2>&1"))
 		return SR_ERR_OK;
 
 	if (systemf("sysrepocfg -X/cfg/startup-config.cfg -d startup -f json"))
 		return SR_ERR_SYS;
-
-	return SR_ERR_OK;
-}
-
-static const char *ev2str(sr_event_t ev)
-{
-	switch (ev) {
-	case SR_EV_UPDATE:  return "UPDATE";
-	case SR_EV_CHANGE:  return "CHANGE";
-	case SR_EV_DONE:    return "DONE";
-	case SR_EV_ABORT:   return "ABORT";
-	case SR_EV_ENABLED: return "ENABLED";
-	case SR_EV_RPC:     return "ABORT";
-	default:
-		break;
-	}
-
-	return "UNKNOWN";
-}
-
-int core_pre_hook(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
-		  const char *xpath, sr_event_t event, unsigned request_id, void *priv)
-{
-	return 0;
-}
-
-/*
- * Run on UPDATE to see how many modules have changes in the inbound changeset
- * Run on DONE, after the last module callback has run, to activate changes.
- * For details, see https://github.com/sysrepo/sysrepo/issues/2188
- */
-int core_post_hook(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
-		   const char *xpath, sr_event_t event, unsigned request_id, void *priv)
-{
-	static size_t num_changes = 0;
-
-	switch (event) {
-	case SR_EV_CHANGE:
-		num_changes++;
-		return SR_ERR_OK;
-	case SR_EV_ABORT:
-		num_changes = 0;
-		return SR_ERR_OK;
-	case SR_EV_DONE:
-		num_changes--;
-		if (num_changes > 0)
-			return SR_ERR_OK;
-		break;
-	default:
-		ERROR("core_post_hook() should not be called with event %s", ev2str(event));
-		return SR_ERR_SYS;
-	}
-
 
 	return SR_ERR_OK;
 }
@@ -204,17 +151,17 @@ static int change_cb(sr_session_ctx_t *session, uint32_t sub_id, const char *mod
 		     const char *xpath, sr_event_t event, uint32_t request_id, void *_confd)
 {
 	struct lyd_node *diff = NULL, *config = NULL;
-	static uint32_t last_event = -1;
+	static sr_event_t last_event = -1;
 	struct confd *confd = _confd;
-	static uint32_t last_id = 0;
+	static uint32_t last_request = 0;
 	confd_dependency_t result;
 	sr_data_t *cfg = NULL;
 	int rc = SR_ERR_OK;
 	int max_dep = 10;
 
-	if (request_id == last_id && last_event == event)
+	if (request_id == last_request && last_event == event)
 		return SR_ERR_OK;
-	last_id = request_id;
+	last_request = request_id;
 	last_event = event;
 
 	if (event == SR_EV_CHANGE || event == SR_EV_DONE) {
@@ -316,8 +263,11 @@ free_diff:
       return rc;
 }
 
-static int subscribe_module(char *model, struct confd *confd, int flags) {
-	return sr_module_change_subscribe(confd->session, model, "//.", change_cb, confd, CB_PRIO_PRIMARY, SR_SUBSCR_CHANGE_ALL_MODULES | SR_SUBSCR_DEFAULT | flags, &confd->sub);
+static inline int subscribe_module(char *model, struct confd *confd, int flags) {
+	return sr_module_change_subscribe(confd->session, model, "//.", change_cb, confd,
+					  CB_PRIO_PRIMARY, SR_SUBSCR_CHANGE_ALL_MODULES | SR_SUBSCR_DEFAULT | flags, &confd->sub) &&
+		sr_module_change_subscribe(confd->startup, model, "//.", core_startup_save, NULL,
+					   CB_PRIO_PASSIVE, SR_SUBSCR_PASSIVE | SR_SUBSCR_CHANGE_ALL_MODULES, &confd->sub);
 }
 
 int sr_plugin_init_cb(sr_session_ctx_t *session, void **priv)

@@ -135,46 +135,16 @@ struct confd {
 	struct dagger		netdag;
 };
 
-uint32_t core_hook_prio    (void);
-int      core_pre_hook     (sr_session_ctx_t *, uint32_t, const char *, const char *, sr_event_t, unsigned, void *);
-int      core_post_hook    (sr_session_ctx_t *, uint32_t, const char *, const char *, sr_event_t, unsigned, void *);
 int      core_startup_save (sr_session_ctx_t *, uint32_t, const char *, const char *, sr_event_t, unsigned, void *);
-int      core_wait_change  (sr_session_ctx_t *, uint32_t, const char *, const char *, sr_event_t, unsigned, void *);
 
 static inline int register_change(sr_session_ctx_t *session, const char *module, const char *xpath,
 	int flags, sr_module_change_cb cb, void *arg, sr_subscription_ctx_t **sub)
 {
-	struct confd *ptr = (struct confd *)arg;
-	bool need_core_hooks;
-	int rc;
-
-	/*
-	 * For standard subscribtions we hook into the callback chain
-	 * for all modules to figure out, per changeset, which of the
-	 * callbacks is the last one.  This is where we want to call the
-	 * global commit-done hook for candidate -> running changes and
-	 * the startup-save hook for running -> startup copying.
-	 */
-
-	need_core_hooks = !(flags & SR_SUBSCR_UPDATE);
-
-	if (need_core_hooks) {
-		sr_module_change_subscribe(ptr->session, module, xpath, core_pre_hook, NULL,
-				0, SR_SUBSCR_PASSIVE, sub);
-	}
-
-	rc = sr_module_change_subscribe(session, module, xpath, cb, arg,
+	int rc = sr_module_change_subscribe(session, module, xpath, cb, arg,
 				CB_PRIO_PRIMARY, flags | SR_SUBSCR_DEFAULT, sub);
 	if (rc) {
 		ERROR("failed subscribing to changes of %s: %s", xpath, sr_strerror(rc));
 		return rc;
-	}
-
-	if (need_core_hooks) {
-		sr_module_change_subscribe(ptr->session, module, xpath, core_post_hook, NULL,
-				core_hook_prio(), SR_SUBSCR_PASSIVE, sub);
-		sr_module_change_subscribe(ptr->startup, module, xpath, core_startup_save, NULL,
-				core_hook_prio(), SR_SUBSCR_PASSIVE, sub);
 	}
 
 	return 0;
