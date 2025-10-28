@@ -423,7 +423,6 @@ module infix-system {
       config false;
 
       list service {
-        key "pid";
         description "Tracked system service processes.";
 
         leaf pid {
