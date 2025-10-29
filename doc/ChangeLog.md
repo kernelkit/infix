@@ -6,19 +6,38 @@ All notable changes to the project are documented in this file.
 [v25.10.0][] - 2025-10-31
 -------------------------
 
+> [!NOTE]
+> Noteworthy changes and additions in this release:
+>
+> **🛡️ Zone-Based Firewall (ZBF):** Protect your network with our zone-based
+> firewall powered by [firewalld][].  Define security zones, set policies
+> between them, and enable masquerading.
+>
+> **📊 System & Hardware Monitoring:** CLI `show system`, `show services`, and
+> `show hardware` now give you instant visibility into CPU temperature, fan
+> speeds, memory, running services, and sensor data from SFP modules, WiFi radios,
+> and more.  All operational data also available over NETCONF and RESTCONF.
+>
+> **🚀 Expanded Hardware Support:** The NanoPi R2S is now included in the
+> default Aarch64 build, which also adds support for Raspberry Pi 3B, and
+> Raspberry Pi CM4 variants.  All boards now benefit from automatic `/var`
+> partition expansion on first boot.
+
+[firewalld]: https://firewalld.org
+
 ### Changes
 
 - Upgrade Buildroot to 2025.02.7 (LTS)
 - Upgrade Linux kernel to 6.12.56 (LTS)
-- Extend NETCONF and RESTCONF scripting documentation with operational
-  data examples, discovery patterns, and common workflow examples, issue #1156
+- Extend NETCONF and RESTCONF scripting documentation with operational data
+  examples, discovery patterns, and common workflow examples, issue #1156
 - Initial support for a zone-based firewall, based on `firewalld`, issue #448
 - Add `validate` option to CLI `copy` command.  This can be used before doing a
   restore of a backup, or when having edited configuration files manually. With
   the validate flag (`-n` from the shell) the file is only loaded and validated
   against the YANG models, it is *not* rolled in if validation is successful.
   Example: `copy /media/backup/old.cfg running-config validate`, issue #373
-- Automatically expand `/var` partition on SD card at first boot on RPi
+- Automatically expand `/var` partition at first boot on all MMC-based devices
 - New `upgrade` RPC (action) for containers using images with mutable tags
 - Optimize startup of preexisting containers by adding metadata to track all
   OCI archives loaded into container store, and all container configurations
@@ -26,6 +45,17 @@ All notable changes to the project are documented in this file.
   metadata from an existing instance does not match either the configuration
   or the image — because of configuration changes or image upgrades
 - Updated container documentation on volumes, image tags, and image upgrade
+- Add new `show services` command to display running system services
+- Add new `show system` command with comprehensive system overview including
+  hostname, uptime, load average, CPU/fan temperatures, memory, disk usage
+- Add hardware sensor monitoring support in `show hardware` with hierarchical
+  display of temperature, fan, voltage, current, and power sensors
+- Add support for NanoPi R2S router platform to the default Aarch64 build,
+  bumping it to Tier 2 support (SD-card images built separately)
+- Add support for Raspberry Pi 3B (BCM2837)
+- Add support for Raspberry Pi Compute Module 4 IoT Router Board Mini
+- Add support for Raspberry Pi Compute Module 4 NVME NAS box
+- Add `reboot` option to CLI `upgrade` command for automatic system restart
 
 ### Fixes
 
