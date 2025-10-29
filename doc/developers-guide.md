@@ -349,55 +349,9 @@ kernel is available.
 
 #### Repo locally cloned already
 
-1. Navigate to the Linux kernel directory
-
-        cd linux
-
-1. Get latest changes from KernelKit
-
-        git pull
-
-1. Fetch the latest tags from upstream
-
-        git fetch upstream --tags
-
-#### No local repo yet
-
-1. Clone the KernelKit Linux kernel repository
-
-        git clone git@github.com:kernelkit/linux.git
-
-1. Add the upstream remote
-
-        git remote add upstream git://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git
-
-1. Checkout correct kernel branch
-
-        git checkout kkit-linux-6.12.y
-
-#### Continue Here
-
-1. Rebase on the upstream release
-
-        git rebase v6.12.29
-
-1. Push changes and the tags
- 
-        git push -f origin kkit-linux-6.12.y --tags
-
-**Move to your Infix source tree**
-
-> [!NOTE] 
-> See help of `kernel-refresh.sh` script for more information.
-
-1. Generate patches
-
-        make x86_64_defconfig
-        cd output
-        ../utils/kernel-refresh.sh -k /path/to/linux -o 6.12.28 -t v6.12.29
-
-1. Commit and push the changes.  Remember to update the ChangeLog
-1. Create a pull request
+- ./utils/kernel-upgrade.sh /path/to/linux/tree
+- Update Changelog
+- push and create a pull request
 
 > [!NOTE] 
 > Remember to set the pull request label to `ci:main` to ensure full CI
