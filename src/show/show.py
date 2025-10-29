@@ -142,6 +142,18 @@ def software(args: List[str]) -> None:
     else:
         print("Too many arguments provided. Only one name is expected.")
 
+def services(args: List[str]) -> None:
+    data = run_sysrepocfg("/ietf-system:system-state/infix-system:services")
+    if not data:
+        print("No service data retrieved.")
+        return
+
+    if RAW_OUTPUT:
+        print(json.dumps(data, indent=2))
+        return
+
+    cli_pretty(data, f"show-services")
+
 def routes(args: List[str]):
     ip_version = args[0] if args and args[0] in ["ipv4", "ipv6"] else "ipv4"
 
@@ -186,6 +198,7 @@ def execute_command(command: str, args: List[str]):
         'ntp': ntp,
         'routes': routes,
         'lldp': lldp,
+        'services' : services,
         'software' : software,
         'stp': stp,
         'wifi': wifi

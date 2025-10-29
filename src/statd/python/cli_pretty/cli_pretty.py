@@ -172,6 +172,13 @@ class PadNtpSource:
     poll = 14
 
 
+class PadService:
+    name = 16
+    status = 8
+    pid = 8
+    description = 40
+
+
 class PadWifiScan:
     ssid  = 40
     encryption = 30
@@ -1507,6 +1514,42 @@ def show_software(json, name):
                 slot.print()
 
 
+def show_services(json):
+    if not json.get("ietf-system:system-state", "infix-system:services"):
+        print("Error, cannot find infix-system:services")
+        sys.exit(1)
+
+    services_data = get_json_data({}, json, 'ietf-system:system-state', 'infix-system:services')
+    services = services_data.get("service", [])
+
+    hdr = (f"{'NAME':<{PadService.name}}"
+           f"{'STATUS':<{PadService.status}}"
+           f"{'PID':>{PadService.pid -1}}"
+           f"  {'DESCRIPTION'}")
+    print(Decore.invert(hdr))
+
+    for svc in services:
+        name = svc.get('name', '')
+        status = svc.get('status', '')
+        pid = svc.get('pid', 0)
+        description = svc.get('description', '')
+
+        if status in ('running', 'active', 'done'):
+            status_str = Decore.green(status)
+        elif status in ('crashed', 'failed', 'halted', 'missing', 'dead', 'conflict'):
+            status_str = Decore.red(status)
+        else:
+            status_str = Decore.yellow(status)
+
+        pid_str = str(pid) if pid > 0 else '-'
+
+        row  = f"{name:<{PadService.name}}"
+        row += f"{status_str:<{PadService.status + 9}}"
+        row += f"{pid_str:>{PadService.pid}}"
+        row += f"  {description}"
+        print(row)
+
+
 def show_hardware(json):
     if not json.get("ietf-hardware:hardware"):
         print("Error, top level \"ietf-hardware:component\" missing")
@@ -2496,6 +2539,8 @@ def main():
     subparsers.add_parser('show-routing-table', help='Show the routing table') \
     .add_argument('-i', '--ip', required=True, help='IPv4 or IPv6 address')
 
+    subparsers.add_parser('show-services', help='Show system services')
+
     subparsers.add_parser('show-software', help='Show software versions') \
     .add_argument('-n', '--name', help='Slotname')
 
@@ -2528,6 +2573,8 @@ def main():
         show_routing_table(json_data, args.ip)
     elif args.command == "show-software":
         show_software(json_data, args.name)
+    elif args.command == "show-services":
+        show_services(json_data)
 
     else:
         print(f"Error, unknown command '{args.command}'")
