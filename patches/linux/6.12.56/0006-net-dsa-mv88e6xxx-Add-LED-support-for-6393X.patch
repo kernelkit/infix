@@ -1,4 +1,4 @@
-From 16af56495fc5a5fad53d1bd53dc47f64a0eafb9e Mon Sep 17 00:00:00 2001
+From 63ac127dd444ce8afc9e37181d42ed9e438b8de3 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Thu, 16 Nov 2023 21:59:35 +0100
 Subject: [PATCH 06/30] net: dsa: mv88e6xxx: Add LED support for 6393X

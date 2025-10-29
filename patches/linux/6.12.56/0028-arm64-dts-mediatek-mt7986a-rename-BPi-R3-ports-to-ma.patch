@@ -1,4 +1,4 @@
-From 73e0938b78281d8adf4caf18e4f46b29d9069042 Mon Sep 17 00:00:00 2001
+From 59a1759daebd34b11055e122630765904b11c407 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Sun, 10 Aug 2025 18:52:54 +0200
 Subject: [PATCH 28/30] arm64: dts: mediatek: mt7986a: rename BPi R3 ports to
