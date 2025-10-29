@@ -171,15 +171,14 @@ class PadUsbPort:
 
 
 class PadSensor:
-    name = 20
-    type = 15
-    value = 15
+    name = 30
+    value = 20
     status = 10
 
     @classmethod
     def table_width(cls):
-        """Total width of sensor table"""
-        return cls.name + cls.type + cls.value + cls.status
+        """Total width of sensor table (matches show system width)"""
+        return cls.name + cls.value + cls.status
 
 
 class PadNtpSource:
@@ -598,6 +597,8 @@ class Sensor:
     def __init__(self, data):
         self.data = data
         self.name = data.get('name', 'unknown')
+        self.description = data.get('description')  # Human-readable description
+        self.parent = data.get('parent')  # Parent component name
         sensor_data = data.get('sensor-data', {})
         self.value_type = sensor_data.get('value-type', 'unknown')
         self.value = sensor_data.get('value', 0)
@@ -606,26 +607,77 @@ class Sensor:
 
     def get_formatted_value(self):
         """Convert sensor value based on scale and type"""
+        # Handle temperature sensors
         if self.value_type == 'celsius':
             if self.value_scale == 'milli':
                 temp_celsius = self.value / 1000.0
-                # Color code like in show system
+                # Color code based on temperature thresholds
                 if temp_celsius < 60:
-                    return Decore.green(f"{temp_celsius:.1f}°C")
+                    return Decore.green(f"{temp_celsius:.1f} °C")
                 elif temp_celsius < 75:
-                    return Decore.yellow(f"{temp_celsius:.1f}°C")
+                    return Decore.yellow(f"{temp_celsius:.1f} °C")
                 else:
-                    return Decore.red(f"{temp_celsius:.1f}°C")
+                    return Decore.red(f"{temp_celsius:.1f} °C")
             else:
-                return f"{self.value}°C"
+                return f"{self.value} °C"
+
+        # Handle fan speed sensors
+        elif self.value_type == 'rpm':
+            return f"{self.value} RPM"
+
+        # Handle voltage sensors
+        elif self.value_type == 'volts-DC':
+            if self.value_scale == 'milli':
+                volts = self.value / 1000.0
+                return f"{volts:.2f} VDC"
+            else:
+                return f"{self.value} VDC"
+
+        # Handle current sensors
+        elif self.value_type == 'amperes':
+            if self.value_scale == 'milli':
+                amps = self.value / 1000.0
+                return f"{amps:.3f} A"
+            else:
+                return f"{self.value} A"
+
+        # Handle power sensors
+        elif self.value_type == 'watts':
+            if self.value_scale == 'micro':
+                watts = self.value / 1000000.0
+                return f"{watts:.3f} W"
+            elif self.value_scale == 'milli':
+                watts = self.value / 1000.0
+                return f"{watts:.2f} W"
+            else:
+                return f"{self.value} W"
+
+        # For unknown sensor types, show raw value
         else:
-            # For other sensor types, just show raw value
             return f"{self.value} {self.value_type}"
 
-    def print(self):
+    def print(self, indent=0):
         import re
-        row = f"{self.name:<{PadSensor.name}}"
-        row += f"{self.value_type:<{PadSensor.type}}"
+        # Add indentation for child sensors
+        indent_str = "  " * indent
+
+        # Determine display name: prefer description, fallback to name
+        if self.description:
+            # Use description if available (e.g., "WiFi Radio wlan0 (2.4 GHz)")
+            display_name = self.description
+        elif indent > 0 and self.parent:
+            # Child sensor: strip parent prefix from name
+            # "sfp1-RX_power" -> "RX_power" -> "Rx Power"
+            display_name = self.name
+            if display_name.startswith(self.parent + "-"):
+                display_name = display_name[len(self.parent) + 1:]
+            # Format: "RX_power" -> "Rx Power"
+            display_name = display_name.replace('_', ' ').replace('-', ' ').title()
+        else:
+            # Standalone sensor without description: use name as-is
+            display_name = self.name
+
+        row = f"{indent_str}{display_name:<{PadSensor.name - len(indent_str)}}"
         # For colored value, pad manually to account for ANSI codes
         value_str = self.get_formatted_value()
         # Count visible characters (strip ANSI codes for length calculation)
@@ -1669,15 +1721,46 @@ def show_hardware(json):
 
     if sensors:
         Decore.title("Sensors", width)
+
+        # Print header
         hdr = (f"{'NAME':<{PadSensor.name}}"
-               f"{'TYPE':<{PadSensor.type}}"
                f"{'VALUE':<{PadSensor.value}}"
                f"{'STATUS':<{PadSensor.status}}")
         print(Decore.invert(hdr))
 
+        # Build parent-child map
+        children = {}  # parent_name -> [child_components]
+        standalone = []  # components without parents
+
         for component in sensors:
-            sensor = Sensor(component)
-            sensor.print()
+            parent = component.get("parent")
+            if parent:
+                if parent not in children:
+                    children[parent] = []
+                children[parent].append(component)
+            else:
+                standalone.append(component)
+
+        # Get all parent modules (non-sensor components)
+        modules = [c for c in components if c.get("class") == "iana-hardware:module"]
+
+        # Display modules with their child sensors (indented)
+        for module in sorted(modules, key=lambda m: m.get("name", "")):
+            module_name = module.get("name", "unknown")
+            print(f"\n{module_name}:")
+
+            if module_name in children:
+                for child in sorted(children[module_name], key=lambda c: c.get("name", "")):
+                    sensor = Sensor(child)
+                    sensor.print(indent=1)
+
+        # Display standalone sensors (no parent)
+        if standalone:
+            if modules:
+                print()  # Add blank line between modules and standalone
+            for component in sorted(standalone, key=lambda c: c.get("name", "")):
+                sensor = Sensor(component)
+                sensor.print()
 
 
 def show_ntp(json):
@@ -1777,20 +1860,33 @@ def show_system(json):
         percent = int((used / total * 100)) if total > 0 else 0
         print(f"{'Memory':<20}: {used} / {total} MB ({percent}% used)")
 
-    thermal = runtime.get("thermal", [])
-    if thermal:
-        for zone in thermal:
-            zone_type = zone.get("type", "Unknown").replace("-thermal", "")
-            temp = zone.get("temp", 0)
-            # Color code temperature: green < 60, yellow 60-75, red > 75
-            temp_str = f"{temp:.1f}°C"
-            if temp < 60:
+    # Show CPU temperature and fan speed on one line
+    cpu_temp = runtime.get("cpu_temp")
+    fan_rpm = runtime.get("fan_rpm")
+
+    if cpu_temp is not None or fan_rpm is not None:
+        status_line = ""
+
+        # Add CPU temperature with color coding
+        if cpu_temp is not None:
+            temp_str = f"{cpu_temp:.1f} °C"
+            if cpu_temp < 60:
                 temp_colored = Decore.green(temp_str)
-            elif temp < 75:
+            elif cpu_temp < 75:
                 temp_colored = Decore.yellow(temp_str)
             else:
                 temp_colored = Decore.red(temp_str)
-            print(f"{'Temperature':<20}: {temp_colored} ({zone_type})")
+            status_line = f"CPU: {temp_colored}"
+
+        # Add fan speed if available
+        if fan_rpm is not None:
+            if status_line:
+                status_line += f", Fan: {fan_rpm} RPM"
+            else:
+                status_line = f"Fan: {fan_rpm} RPM"
+
+        if status_line:
+            print(f"{'Hardware':<20}: {status_line}")
 
     disk = runtime.get("disk", [])
     # Filter out root partition (/) - it's read-only and shows confusing 100% usage

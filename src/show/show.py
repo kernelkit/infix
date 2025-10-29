@@ -203,24 +203,32 @@ def system(args: List[str]) -> None:
     # Augment with runtime data
     runtime = {}
 
-    # Extract thermal sensors from hardware components
-    thermal_zones = []
+    # Extract CPU temperature and fan speed from hardware components
+    cpu_temp = None
+    fan_rpm = None
     if hardware_data and "ietf-hardware:hardware" in hardware_data:
         components = hardware_data.get("ietf-hardware:hardware", {}).get("component", [])
         for component in components:
             sensor_data = component.get("sensor-data", {})
-            if sensor_data and sensor_data.get("value-type") == "celsius":
-                # Convert from millidegrees to degrees
+            if not sensor_data:
+                continue
+
+            name = component.get("name", "")
+            value_type = sensor_data.get("value-type")
+
+            # Only capture CPU temperature (ignore phy, sfp, etc.)
+            if value_type == "celsius" and name == "cpu" and cpu_temp is None:
                 temp_millidegrees = sensor_data.get("value", 0)
-                temp_celsius = temp_millidegrees / 1000.0
+                cpu_temp = temp_millidegrees / 1000.0
 
-                thermal_zones.append({
-                    "type": component.get("name", "unknown"),
-                    "temp": temp_celsius
-                })
+            # Capture fan speed if available
+            elif value_type == "rpm" and fan_rpm is None:
+                fan_rpm = sensor_data.get("value", 0)
 
-    if thermal_zones:
-        runtime["thermal"] = thermal_zones
+    if cpu_temp is not None:
+        runtime["cpu_temp"] = cpu_temp
+    if fan_rpm is not None:
+        runtime["fan_rpm"] = fan_rpm
 
     # Extract resource usage from system-state
     system_state = data.get("ietf-system:system-state", {})

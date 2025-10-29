@@ -46,6 +46,10 @@ module infix-hardware {
     base iahw:hardware-class;
     description "This identity is used to a VPD memory on the device.";
   }
+  identity wifi {
+    base iahw:hardware-class;
+    description "This identity is used to describe a WiFi radio/PHY";
+  }
 
   deviation "/iehw:hardware/iehw:component/iehw:state/iehw:admin-state" {
     deviate add {
@@ -56,12 +60,6 @@ module infix-hardware {
   }
 
   deviation "/iehw:hardware/iehw:component/iehw:state/iehw:standby-state" {
-    deviate not-supported;
-  }
-  deviation "/iehw:hardware/iehw:component/iehw:parent" {
-    deviate not-supported;
-  }
-  deviation "/iehw:hardware/iehw:component/iehw:parent-rel-pos" {
     deviate not-supported;
   }
   deviation "/iehw:hardware/iehw:component/iehw:alias" {
