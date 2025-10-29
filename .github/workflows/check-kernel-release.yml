@@ -1,0 +1,112 @@
+name: Check Kernel 6.12 Release
+
+on:
+  workflow_dispatch: # Allow manual triggering
+
+jobs:
+  check-kernel:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out infix repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.KERNEL_UPDATE_TOKEN }}
+
+      - name: Check out linux repository
+        uses: actions/checkout@v4
+        with:
+          repository: kernelkit/linux
+          path: linux
+          fetch-depth: 0
+          token: ${{ secrets.KERNEL_UPDATE_TOKEN }}
+
+      - name: Fetch kernel.org and check for 6.12 release
+        id: check
+        run: |
+          # Fetch the kernel.org frontpage and extract 6.12 version
+          CURRENT_VERSION=$(curl -s https://www.kernel.org/ | grep -oP '6\.12\.\d+' | head -n1)
+
+          if [ -z "$CURRENT_VERSION" ]; then
+            echo "Failed to fetch kernel version"
+            exit 1
+          fi
+
+          echo "current_version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+          echo "Current 6.12 kernel version: $CURRENT_VERSION"
+
+          # Get the latest tag from our linux tree
+          cd linux
+          git fetch origin
+          LATEST_TAG=$(git tag -l "v6.12.*" | sort -V | tail -n1 | sed 's/^v//')
+          cd ..
+
+          echo "latest_tag=$LATEST_TAG" >> $GITHUB_OUTPUT
+          echo "Latest tag in our tree: $LATEST_TAG"
+
+          if [ "$CURRENT_VERSION" != "$LATEST_TAG" ]; then
+            echo "new_release=true" >> $GITHUB_OUTPUT
+            echo "🎉 New 6.12 kernel released: $CURRENT_VERSION (our version: $LATEST_TAG)"
+          else
+            echo "new_release=false" >> $GITHUB_OUTPUT
+            echo "No change - still at $CURRENT_VERSION"
+          fi
+
+      - name: Set up git credentials
+        if: steps.check.outputs.new_release == 'true'
+        run: |
+          git config --global user.email "ael-bot@users.noreply.github.com"
+          git config --global user.name "ael-bot"
+
+          # Configure git to use the token for HTTPS operations
+          git config --global url."https://ael-bot:${{ secrets.KERNEL_UPDATE_TOKEN }}@github.com/".insteadOf "git@github.com:"
+          git config --global url."https://ael-bot:${{ secrets.KERNEL_UPDATE_TOKEN }}@github.com/".insteadOf "https://github.com/"
+
+      - name: Run kernel upgrade script
+        if: steps.check.outputs.new_release == 'true'
+        env:
+          GIT_TERMINAL_PROMPT: 0
+        run: |
+          ./utils/kernel-upgrade.sh linux
+
+      - name: Create pull request
+        if: steps.check.outputs.new_release == 'true'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.KERNEL_UPDATE_TOKEN }}
+          script: |
+            // Check if PR already exists
+            const { data: pulls } = await github.rest.pulls.list({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              head: `${context.repo.owner}:kernel-upgrade`,
+              state: 'open'
+            });
+
+            if (pulls.length === 0) {
+              const { data: pr } = await github.rest.pulls.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: `Upgrade to kernel ${{ steps.check.outputs.current_version }}`,
+                head: 'kernel-upgrade',
+                base: 'main',
+                body: `Automated kernel upgrade to version ${{ steps.check.outputs.current_version }}.\n\n**Previous version:** ${{ steps.check.outputs.latest_tag }}\n**New version:** ${{ steps.check.outputs.current_version }}\n**Source:** https://www.kernel.org/\n\nThis PR was automatically created by the kernel release monitoring workflow.`
+              });
+
+              // Add label
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: pr.number,
+                labels: ['ci:main']
+              });
+
+              // Request reviews
+              await github.rest.pulls.requestReviewers({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: pr.number,
+                reviewers: ['troglobit', 'wkz', 'mattiaswal']
+              });
+            }

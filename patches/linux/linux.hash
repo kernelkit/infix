@@ -1,2 +1,2 @@
-# Calculated with ../utils/kernel-refresh.sh
-sha256   328f8f4608a653063a5fd82d29b17163faab2825fa419fa85b961740a342fb9f  linux-6.12.55.tar.xz
+# Calculated with utils/kernel-refresh.sh
+sha256   55432b2af352f7bf3053c348d8549df2f2deeaa4a361c65d638c2f3b2ca7ec96  linux-6.12.56.tar.xz
