@@ -432,7 +432,7 @@ static int get(const char *src, const struct infix_ds *ds, const char *path)
 {
 	int err = 0;
 
-	if (ds && !ds->path)
+	if (ds)
 		err = sysrepo_export(ds, path);
 	else if (is_uri(src))
 		err = curl_download(src, path);
@@ -444,18 +444,13 @@ static int resolve_src(const char **src, const struct infix_ds **ds, char **path
 {
 	*src = infix_ds(*src, ds);
 
-	if ((*ds && !(*ds)->path) || is_uri(*src)) {
+	if (*ds || is_uri(*src)) {
 		*path = tempnam(NULL, NULL);
 		if (!*path)
 			return 1;
 
 		*rm = true;
 		return 0;
-	} else if (*ds) {
-		/* TODO: This means that a luser can access the
-		 * entirety of startup, without NACM filtering.
-		 */
-		*path = strdup((*ds)->path);
 	} else {
 		*path = cfg_adjust(*src, NULL, sanitize);
 	}
