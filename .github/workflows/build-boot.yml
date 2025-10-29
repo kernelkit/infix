@@ -20,7 +20,7 @@ jobs:
           - cn9130_crb_boot
           - aarch64_qemu_boot
           - rpi4_boot
-          - mt7986_sd_boot
+          - bpi_r3_boot
     env:
       MAKEFLAGS: -j5
     steps:

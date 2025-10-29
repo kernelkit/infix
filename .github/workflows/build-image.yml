@@ -58,7 +58,7 @@ jobs:
               echo "TARGET=aarch64" >> $GITHUB_ENV
               ;;
             bananapi-bpi-r3)
-              echo "BOOTLOADER=mt7986_sd_boot" >> $GITHUB_ENV
+              echo "BOOTLOADER=bpi_r3_boot" >> $GITHUB_ENV
               echo "TARGET=aarch64" >> $GITHUB_ENV
               ;;
             friendlyarm-nanopi-r2s)
