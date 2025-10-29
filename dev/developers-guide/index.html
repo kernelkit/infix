@@ -1529,24 +1529,6 @@
   
 </li>
         
-          <li class="md-nav__item">
-  <a href="#no-local-repo-yet_1" class="md-nav__link">
-    <span class="md-ellipsis">
-      No local repo yet
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#continue-here_1" class="md-nav__link">
-    <span class="md-ellipsis">
-      Continue Here
-    </span>
-  </a>
-  
-</li>
-        
       </ul>
     </nav>
   
@@ -1956,24 +1938,6 @@
   
 </li>
         
-          <li class="md-nav__item">
-  <a href="#no-local-repo-yet_1" class="md-nav__link">
-    <span class="md-ellipsis">
-      No local repo yet
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#continue-here_1" class="md-nav__link">
-    <span class="md-ellipsis">
-      Continue Here
-    </span>
-  </a>
-  
-</li>
-        
       </ul>
     </nav>
   
@@ -2323,72 +2287,11 @@ and updates.  The upgrade of LTS minor releases is expected to have low
 impact and should be done as soon as a patch release of the LTS Linux
 kernel is available.</p>
 <h4 id="repo-locally-cloned-already_1">Repo locally cloned already<a class="headerlink" href="#repo-locally-cloned-already_1" title="Permanent link">¶</a></h4>
-<ol>
-<li>
-<p>Navigate to the Linux kernel directory</p>
-<div class="highlight"><pre><span></span><code>cd linux
-</code></pre></div>
-</li>
-<li>
-<p>Get latest changes from KernelKit</p>
-<div class="highlight"><pre><span></span><code>git pull
-</code></pre></div>
-</li>
-<li>
-<p>Fetch the latest tags from upstream</p>
-<div class="highlight"><pre><span></span><code>git fetch upstream --tags
-</code></pre></div>
-</li>
-</ol>
-<h4 id="no-local-repo-yet_1">No local repo yet<a class="headerlink" href="#no-local-repo-yet_1" title="Permanent link">¶</a></h4>
-<ol>
-<li>
-<p>Clone the KernelKit Linux kernel repository</p>
-<div class="highlight"><pre><span></span><code>git clone git@github.com:kernelkit/linux.git
-</code></pre></div>
-</li>
-<li>
-<p>Add the upstream remote</p>
-<div class="highlight"><pre><span></span><code>git remote add upstream git://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git
-</code></pre></div>
-</li>
-<li>
-<p>Checkout correct kernel branch</p>
-<div class="highlight"><pre><span></span><code>git checkout kkit-linux-6.12.y
-</code></pre></div>
-</li>
-</ol>
-<h4 id="continue-here_1">Continue Here<a class="headerlink" href="#continue-here_1" title="Permanent link">¶</a></h4>
-<ol>
-<li>
-<p>Rebase on the upstream release</p>
-<div class="highlight"><pre><span></span><code>git rebase v6.12.29
-</code></pre></div>
-</li>
-<li>
-<p>Push changes and the tags</p>
-<div class="highlight"><pre><span></span><code>git push -f origin kkit-linux-6.12.y --tags
-</code></pre></div>
-</li>
-</ol>
-<p><strong>Move to your Infix source tree</strong></p>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>See help of <code>kernel-refresh.sh</code> script for more information.</p>
-</div>
-<ol>
-<li>
-<p>Generate patches</p>
-<div class="highlight"><pre><span></span><code>make x86_64_defconfig
-cd output
-../utils/kernel-refresh.sh -k /path/to/linux -o 6.12.28 -t v6.12.29
-</code></pre></div>
-</li>
-<li>
-<p>Commit and push the changes.  Remember to update the ChangeLog</p>
-</li>
-<li>Create a pull request</li>
-</ol>
+<ul>
+<li>./utils/kernel-upgrade.sh /path/to/linux/tree</li>
+<li>Update Changelog</li>
+<li>push and create a pull request</li>
+</ul>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>Remember to set the pull request label to <code>ci:main</code> to ensure full CI
