@@ -2,6 +2,16 @@
   "ietf-hardware:hardware": {
     "component": [
       {
+        "name": "mainboard",
+        "class": "iana-hardware:chassis",
+        "mfg-name": "QEMU",
+        "model-name": "VM",
+        "state": {
+          "admin-state": "unknown",
+          "oper-state": "enabled"
+        }
+      },
+      {
         "infix-hardware:vpd-data": {},
         "name": "product"
       },
