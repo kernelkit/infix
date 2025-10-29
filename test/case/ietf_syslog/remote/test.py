@@ -6,6 +6,11 @@ Verify logging to remote, acting as a remote, and RFC5424 log format.
 """
 import infamy
 
+def syslog_check(clientssh, serverssh):
+    clientssh.runsh("logger -t test -m client -p security.notice TestMessage")
+    return serverssh.runsh("tail -n10 /log/security |grep 'test - client - TestMessage'").returncode == 0
+
+
 with infamy.Test() as test:
     with test.step("Set up topology and attach to client and server DUTs"):
         env = infamy.Env()
@@ -142,11 +147,8 @@ with infamy.Test() as test:
         }
     })
 
-    with test.step("Send security:notice log message from client"):
-        clientssh.runsh("logger -t test -m client -p security.notice TestMessage")
+    with test.step("Send security:notice log message from client and verify reception of client log message, incl. sorting to /log/security on server"):
+       infamy.until(lambda: syslog_check(clientssh, serverssh) == True)
 
-    with test.step("Verify reception of client log message, incl. sorting to /log/security on server"):
-        infamy.until(lambda: serverssh.runsh(
-            "grep 'test - client - TestMessage' /log/security").returncode == 0)
 
     test.succeed()
