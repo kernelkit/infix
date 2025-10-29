@@ -51,12 +51,20 @@ factory_reset()
     sync
 }
 
-is_rpi()
+is_mmc()
 {
-    [ -r /sys/firmware/devicetree/base/model ] || return 1
-
-    model=$(cat /sys/firmware/devicetree/base/model 2>/dev/null | tr -d '\0')
-    echo "$model" | grep -q "^Raspberry Pi"
+    # Check if primary or secondary partition (our rootfs) is on MMC
+    for label in primary secondary; do
+        devname=$(find_partition_by_label "$label" 2>/dev/null)
+        if [ -n "$devname" ]; then
+            case "$devname" in
+                mmcblk*)
+                    return 0
+                    ;;
+            esac
+        fi
+    done
+    return 1
 }
 
 wait_mmc()
@@ -249,7 +257,7 @@ mount_rw()
     mountpoint -q "/$1" && return 0
 
     # Check if /var has been resized to fill the sdcard/eMMC
-    if [ "$1" = "var" ] && is_rpi; then
+    if [ "$1" = "var" ] && is_mmc; then
 	if [ -f /mnt/aux/resized ] || [ -f /mnt/aux/resized.failed ]; then
 	    :
 	elif [ -f /mnt/aux/resized.pending ]; then
@@ -306,10 +314,9 @@ if ! logger -? |grep -q "Log to kernel"; then
     opt="-c"
 fi
 
-
-# On Raspberry Pi, MMC controller may probe slowly, in particular if we
-# netboot (ram load) the devcice wait for it
-if is_rpi && ! ls /dev/mmcblk* >/dev/null 2>&1; then
+# On boards with MMC/SD cards, the controller may probe slowly, in particular
+# if we netboot (ram load) the device - wait for it if not already available
+if is_mmc && ! ls /dev/mmcblk* >/dev/null 2>&1; then
     wait_mmc
 fi
 
