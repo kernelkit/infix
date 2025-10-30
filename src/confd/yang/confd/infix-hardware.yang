@@ -17,8 +17,8 @@ module infix-hardware {
   contact      "kernelkit@googlegroups.com";
   description  "Vital Product Data augmentation of ieee-hardware and deviations.";
 
-  revision 2025-10-18 {
-    description "Enable sensor support, starting with hwmon temperature sensors.";
+  revision 2025-10-30 {
+    description "Add phys-address leaf for hardware components and enable sensor support.";
     reference "internal";
   }
   revision 2024-04-25 {
@@ -72,6 +72,18 @@ module infix-hardware {
     deviate not-supported;
   }
   augment "/iehw:hardware/iehw:component" {
+    leaf phys-address {
+      type yang:phys-address;
+      config false;
+      description
+        "The physical address of the hardware component. For chassis components,
+         this represents the base MAC address used for the system. This is
+         typically sourced from VPD data on enterprise hardware, or derived from
+         the first physical interface on single-board computers (SBCs) without
+         VPD. May be used as the base for generating addresses for virtual
+         interfaces. For other component types, this could represent various
+         physical layer addresses (e.g., Fibre Channel WWN, InfiniBand GUID).";
+    }
     container vpd-data {
       config false;
       leaf product-name {

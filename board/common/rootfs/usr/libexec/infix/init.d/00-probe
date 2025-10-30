@@ -277,8 +277,12 @@ def vpd_inject(out, vpds):
             break
 
 
-def qemu_base_mac():
-    """Find MAC address of first non-loopback interface, subtract with 1"""
+def fallback_base_mac():
+    """Find MAC address of first suitable non-loopback interface.
+
+    Prefers real (globally unique) MACs over locally administered ones.
+    Prioritizes interface types: eth* > wan > wifi* > others.
+    """
     base_path = '/sys/class/net'
     interfaces = []
 
@@ -290,13 +294,41 @@ def qemu_base_mac():
             fn = os.path.join(base_path, iface, 'address')
             with open(fn, 'r', encoding='ascii') as f:
                 mac = f.read().strip()
-            interfaces.append((mac, iface))
+
+            # Check if locally administered (bit 1 of first octet is set)
+            first_byte = int(mac.split(':')[0], 16)
+            is_local = bool(first_byte & 0x02)
+
+            # Prefer: eth* > wan > wifi* > others, then real MACs > local MACs
+            priority = 0
+            if iface.startswith('eth'):
+                priority = 400
+            elif iface == 'wan':
+                priority = 300
+            elif iface.startswith('wifi'):
+                priority = 200
+            else:
+                priority = 100
+
+            # Real MACs get +100 bonus
+            if not is_local:
+                priority += 100
+
+            interfaces.append((priority, iface, mac))
         except FileNotFoundError:
             continue
 
     if interfaces:
-        interfaces.sort()
-        mac  = interfaces[0][0]
+        interfaces.sort(reverse=True)  # Highest priority first
+        return interfaces[0][2]  # Return MAC
+
+    return None
+
+
+def qemu_base_mac():
+    """Find MAC address of first non-loopback interface, subtract with 1"""
+    mac = fallback_base_mac()
+    if mac:
         mac  = int(mac.replace(':', ''), 16)
         mac -= 1
         mac %= 1 << 48
@@ -386,6 +418,11 @@ def probe_dtsystem(out):
         out["factory-password-hash"] = staticpw
 
     vpd_inject(out, vpds)
+
+    # Fallback to interface MAC if VPD doesn't provide one (e.g., SBCs)
+    if not out["mac-address"]:
+        out["mac-address"] = fallback_base_mac()
+
     return 0
 
 

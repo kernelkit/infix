@@ -1703,6 +1703,8 @@ def show_hardware(json):
             print(f"Manufacturer        : {board['mfg-name']}")
         if board.get("serial-num"):
             print(f"Serial Number       : {board['serial-num']}")
+        if board.get("infix-hardware:phys-address"):
+            print(f"Base MAC Address    : {board['infix-hardware:phys-address']}")
         if board.get("hardware-rev"):
             print(f"Hardware Revision   : {board['hardware-rev']}")
 

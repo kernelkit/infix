@@ -6,6 +6,7 @@
         "class": "iana-hardware:chassis",
         "mfg-name": "QEMU",
         "model-name": "VM",
+        "infix-hardware:phys-address": "00:a0:85:00:03:00",
         "state": {
           "admin-state": "unknown",
           "oper-state": "enabled"

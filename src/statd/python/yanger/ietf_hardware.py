@@ -99,6 +99,10 @@ def motherboard_component(systemjson):
     if systemjson.get("part-number"):
         component["hardware-rev"] = systemjson["part-number"]
 
+    # Add chassis physical address (MAC) if available (from VPD or interface fallback)
+    if systemjson.get("mac-address"):
+        component["infix-hardware:phys-address"] = systemjson["mac-address"]
+
     # Set state - admin-state is "unknown" since chassis cannot be
     # administratively controlled (locked/unlocked)
     component["state"] = {
