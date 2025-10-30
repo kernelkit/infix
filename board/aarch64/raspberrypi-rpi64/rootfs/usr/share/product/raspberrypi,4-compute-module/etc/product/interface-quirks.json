@@ -1,8 +1,10 @@
 {
     "eth0": {
+	"comment": "Primary Ethernet controller, native BCM2711",
 	"phy-detached-when-down": true
     },
     "eth1": {
+	"comment": "Second Ethernet controller on CM4 boards, attached over PCIe",
 	"phy-detached-when-down": true
     }
 }

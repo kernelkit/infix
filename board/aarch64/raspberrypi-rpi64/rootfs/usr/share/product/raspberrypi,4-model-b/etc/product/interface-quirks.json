@@ -1,5 +1,10 @@
 {
     "eth0": {
+	"comment": "Primary Ethernet controller, native on BCM2711, and smsc95xx on BCM2837",
 	"phy-detached-when-down": true
+    },
+    "@ethtool:driver=smsc95xx": {
+	"comment": "BCM2837 smsc95xx driver does not support disabling flow control",
+        "broken-flow-control": true
     }
 }

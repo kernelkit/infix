@@ -38,26 +38,23 @@ static int netdag_gen_ethtool_flow_control(struct dagger *net, struct lyd_node *
 	enum netdag_init phase = NETDAG_INIT_PHYS;
 	FILE *fp;
 
+	/* Skip flow control configuration for NICs with broken support */
+	if (iface_has_quirk(ifname, "broken-flow-control"))
+		return 0;
+
 	if (iface_has_quirk(ifname, "phy-detached-when-down"))
 		phase = NETDAG_INIT_POST;
 
 	fp = dagger_fopen_net_init(net, ifname, phase, "ethtool-flow-control.sh");
 	if (!fp)
 		return -EIO;
+
+	/* Check if the NIC supports pause frames at all */
 	fprintf(fp, "[[ -n $(ethtool --json %s | jq '.[] | select(.\"supported-pause-frame-use\" == \"No\")') ]] && exit 0\n", ifname);
 
-	/*
-	 * Some NICs report "supported-pause-frame-use": "Symmetric Receive-only", like
-	 * RPi 3B's LAN78xx USB to Ethernet controller, but the drivers do not support
-	 * disabling it.  This call is best effort after all, so we capture and check
-	 * the error.  If the operation is not supported, we log it and exit cleanly.
-	 */
-	fprintf(fp,
-		"if ! err=$(ethtool --pause %s autoneg %s rx off tx off 2>&1); then\n"
-		"    logger -it confd -p daemon.error \"%s: failed disabling flow-control\"\n"
-		"    echo \"$err\" | grep -q \"Operation not supported\" && exit 0\n"
-		"fi\n",
-		ifname, iface_uses_autoneg(cif) ? "on" : "off", ifname);
+	/* Disable flow control */
+	fprintf(fp, "ethtool --pause %s autoneg %s rx off tx off\n",
+		ifname, iface_uses_autoneg(cif) ? "on" : "off");
 	fclose(fp);
 
 	return 0;
