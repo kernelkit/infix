@@ -4,6 +4,7 @@
 #include <alloca.h>
 #include <errno.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
@@ -12,26 +13,31 @@
 static const char *prognm = "erase";
 static int sanitize;
 
-static int do_erase(const char *path)
+static int do_erase(const char *name)
 {
-	char buf[PATH_MAX];
-	const char *fn;
+	char *path;
+	int rc;
 
-	fn = cfg_adjust(path, NULL, buf, sizeof(buf), sanitize);
-	if (!fn) {
+	path = cfg_adjust(name, NULL, sanitize);
+	if (!path) {
 		fprintf(stderr, ERRMSG "file not found.\n");
-		return 1;
+		rc = 1;
+		goto out;
 	}
 
-	if (!yorn("Remove %s, are you sure", path))
-		return 0;
+	if (!yorn("Remove %s, are you sure?", path)) {
+		rc = 0;
+		goto out;
+	}
 
-	if (remove(fn)) {
+	if (remove(path)) {
 		fprintf(stderr, ERRMSG "failed removing %s: %s\n", path, strerror(errno));
-		return 11;
+		rc = 11;
 	}
 
-	return 0;
+out:
+	free(path);
+	return rc;
 }
 
 static int usage(int rc)

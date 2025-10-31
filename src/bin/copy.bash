@@ -12,7 +12,7 @@ _copy_completion()
     opts="-h -n -q -s -t -u -v"
 
     local datastores_dst="running-config startup-config"
-    local datastores_src="running-config startup-config factory-config"
+    local datastores_src="factory-config operational-state running-config"
 
     case "${prev}" in
         -t)

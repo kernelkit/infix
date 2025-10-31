@@ -68,20 +68,29 @@ int has_ext(const char *fn, const char *ext)
 	return 0;
 }
 
-const char *basenm(const char *fn)
+int dirlen(const char *path)
 {
-	const char *ptr;
+	const char *slash;
 
-	if (!fn)
-		return "";
+	slash = strrchr(path, '/');
+	if (slash)
+		return slash - path;
 
-	ptr = strrchr(fn, '/');
-	if (ptr)
-		ptr++;
-	else
-		ptr = fn;
+	return 0;
+}
 
-	return ptr;
+const char *basenm(const char *path)
+{
+	const char *slash;
+
+	if (!path)
+		return NULL;
+
+	slash = strrchr(path, '/');
+	if (slash)
+		return slash[1] ? slash + 1 : NULL;
+
+	return path;
 }
 
 static int path_allowed(const char *path)
@@ -101,40 +110,48 @@ static int path_allowed(const char *path)
 	return 0;
 }
 
-char *cfg_adjust(const char *fn, const char *tmpl, char *buf, size_t len, int sanitize)
+char *cfg_adjust(const char *path, const char *template, bool sanitize)
 {
-	char tmp[256], resolved[PATH_MAX];
+	char *expanded = NULL, *resolved = NULL;
+	const char *basename;
+	int dlen;
 
-	if (strlen(basenm(fn)) == 0) {
-		if (!tmpl)
-			return NULL;
-
-		fn = basenm(tmpl);
-		/* Fall through */
-	}
+	dlen = dirlen(path);
+	basename = basenm(path) ? : basenm(template);
+	if (!basename)
+		goto err;
 
 	if (sanitize) {
-		if (strstr(fn, "../"))
-			return NULL;
+		if (strstr(path, "../"))
+			goto err;
 
-		if (fn[0] == '/') {
-			if (!path_allowed(fn))
-				return NULL;
-		} else {
-			snprintf(tmp, sizeof(tmp), "/cfg/%s", fn);
-			if (!has_ext(tmp, ".cfg"))
-				strlcat(tmp, ".cfg", sizeof(tmp));
-			fn = tmp;
-		}
-
-		/* If file exists, resolve symlinks and verify still in whitelist */
-		if (realpath(fn, resolved)) {
-			if (!path_allowed(resolved))
-				return NULL;
-			fn = resolved;
+		if (path[0] == '/') {
+			if (!path_allowed(path))
+				goto err;
 		}
 	}
 
-	strlcpy(buf, fn, len);
-	return buf;
+	if (asprintf(&expanded, "%s%.*s/%s%s",
+		     path[0] == '/' ? "" : "/cfg/",
+		     dlen, path,
+		     basename,
+		     strchr(basename, '.') ? "" : ".cfg") < 0)
+		goto err;
+
+	/* If file exists, resolve symlinks and verify still in whitelist */
+	if (sanitize && !access(expanded, F_OK)) {
+		resolved = realpath(expanded, NULL);
+		if (!resolved || !path_allowed(resolved))
+			goto err;
+
+		free(expanded);
+		expanded = resolved;
+	}
+
+	return expanded;
+
+err:
+	free(resolved);
+	free(expanded);
+	return NULL;
 }

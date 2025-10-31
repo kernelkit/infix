@@ -10,6 +10,7 @@
 
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <sys/wait.h>
 
 #include <sysrepo.h>
 #include <sysrepo/netconf_acm.h>
@@ -18,61 +19,29 @@
 
 struct infix_ds {
 	char *name;		/* startup-config, etc.  */
-	char *sysrepocfg;	/* ds name in sysrepocfg */
 	int   datastore;	/* sr_datastore_t and -1 */
-	int   rw;		/* read-write:1 or not:0 */
+	bool  rw;		/* read-write:1 or not:0 */
 	char *path;		/* local path or NULL    */
 };
 
-struct infix_ds infix_config[] = {
-	{ "startup-config",     "startup",          SR_DS_STARTUP,         1, "/cfg/startup-config.cfg" },
-	{ "running-config",     "running",          SR_DS_RUNNING,         1, NULL },
-	{ "candidate-config",   "candidate",        SR_DS_CANDIDATE,       1, NULL },
-	{ "operational-config", "operational",      SR_DS_OPERATIONAL,     1, NULL },
-	{ "factory-config",     "factory-default",  SR_DS_FACTORY_DEFAULT, 0, NULL }
+const struct infix_ds infix_config[] = {
+	{ "startup-config",    SR_DS_STARTUP,         true, "/cfg/startup-config.cfg" },
+	{ "running-config",    SR_DS_RUNNING,         true, NULL },
+	/* { "candidate-config",  SR_DS_CANDIDATE,       true, NULL }, */
+	{ "operational-state", SR_DS_OPERATIONAL,     false, NULL },
+	{ "factory-config",    SR_DS_FACTORY_DEFAULT, false, NULL }
 };
 
 static const char *prognm = "copy";
+static const char *remote_user;
 static int timeout;
 static int dry_run;
-static int quiet;
 static int sanitize;
-
-
-/*
- * Print sysrepo session errors followed by an optional string.
- */
-static void emsg(sr_session_ctx_t *sess, const char *fmt, ...)
-{
-	const sr_error_info_t *err = NULL;
-	va_list ap;
-	size_t i;
-	int rc;
-
-	if (!sess)
-		goto end;
-
-	rc = sr_session_get_error(sess, &err);
-	if ((rc != SR_ERR_OK) || !err)
-		goto end;
-
-	// Show the first error only. Because probably next errors are
-	// originated from internal sysrepo code but is not from subscribers.
-//	for (i = 0; i < err->err_count; i++)
-	for (i = 0; i < (err->err_count < 1 ? err->err_count : 1); i++)
-		fprintf(stderr, ERRMSG "%s\n", err->err[i].message);
-end:
-	if (fmt) {
-		va_start(ap, fmt);
-		vfprintf(stderr, fmt, ap);
-		va_end(ap);
-	}
-}
 
 /*
  * Current system user, same as sysrepo user
  */
-static char *getuser(void)
+static const char *getuser(void)
 {
 	const struct passwd *pw;
 	uid_t uid;
@@ -166,7 +135,7 @@ static void set_owner(const char *fn, const char *user)
 	}
 }
 
-static const char *infix_ds(const char *text, struct infix_ds **ds)
+static const char *infix_ds(const char *text, const struct infix_ds **ds)
 {
 	size_t i, len = strlen(text);
 
@@ -177,325 +146,397 @@ static const char *infix_ds(const char *text, struct infix_ds **ds)
 		}
 	}
 
+	*ds = NULL;
 	return text;
 }
 
-/*
- * Load configuration from a file and replace running datastore.
- * This triggers all sysrepo change callbacks, unlike sr_copy_config().
- * In dry-run mode, only validates the configuration without applying.
- */
-static int replace_running(sr_conn_ctx_t *conn, sr_session_ctx_t *sess,
-			   const char *file, int timeout)
+static bool is_uri(const char *str)
 {
-	uint32_t flags = LYD_PARSE_NO_STATE | LYD_PARSE_ONLY | LYD_PARSE_STORE_ONLY | LYD_PARSE_STRICT;
-	struct lyd_node *data = NULL;
-	const struct ly_ctx *ctx;
-	LY_ERR err;
-	int rc;
+	return strstr(str, "://") != NULL;
+}
 
-	ctx = sr_acquire_context(conn);
-	err = lyd_parse_data_path(ctx, file, LYD_JSON, flags, 0, &data);
-	sr_release_context(conn);
+static void rmtmp(const char *path)
+{
+	if (remove(path)) {
+		if (errno == ENOENT)
+			return;
 
+		fprintf(stderr, ERRMSG "removal of temporary file %s failed\n", path);
+	}
+}
+
+
+static void sysrepo_print_error(sr_session_ctx_t *sess)
+{
+	const sr_error_info_t *erri = NULL;
+	int err;
+
+	err = sr_session_get_error(sess, &erri);
+	if (err || !erri || !erri->err_count)
+		return;
+
+	fprintf(stderr, ERRMSG "%s (%d)\n", erri->err->message, erri->err->err_code);
+}
+
+static sr_session_ctx_t *sysrepo_session(const struct infix_ds *ds)
+{
+	static sr_session_ctx_t *sess;
+
+	sr_subscription_ctx_t *sub = NULL;
+	const char *user = getuser();
+	sr_conn_ctx_t *conn = NULL;
+	int err;
+
+	if (!ds) {
+		if (!sess)
+			return NULL;
+
+		conn = sr_session_get_connection(sess);
+		sr_session_stop(sess);
+		sr_disconnect(conn);
+		return NULL;
+	}
+
+	if (!sess) {
+		err = sr_connect(0, &conn);
+		if (err != SR_ERR_OK) {
+			sysrepo_print_error(sess);
+			fprintf(stderr, ERRMSG "could not connect to %s\n", ds->name);
+			goto err;
+		}
+
+		/* Always open running, because sr_nacm_init() does not work
+		 * against the factory DS.
+		 */
+		err = sr_session_start(conn, SR_DS_RUNNING, &sess);
+		if (err != SR_ERR_OK) {
+			sysrepo_print_error(sess);
+			fprintf(stderr, ERRMSG "%s session setup failed\n", ds->name);
+			goto err_disconnect;
+		}
+
+		err = sr_nacm_init(sess, 0, &sub);
+		if (err != SR_ERR_OK) {
+			sysrepo_print_error(sess);
+			fprintf(stderr, ERRMSG "%s NACM setup failed\n", ds->name);
+			goto err_stop;
+		}
+
+		err = sr_nacm_set_user(sess, user);
+		if (err != SR_ERR_OK) {
+			sysrepo_print_error(sess);
+			fprintf(stderr, ERRMSG "%s NACM setup for %s failed\n", ds->name, user);
+			goto err_nacm_destroy;
+		}
+	}
+
+	err = sr_session_switch_ds(sess, ds->datastore);
 	if (err) {
-		fprintf(stderr, ERRMSG "unable to load %s, error %d: %s\n", file, err, ly_errmsg(ctx));
+		sysrepo_print_error(sess);
+		fprintf(stderr, ERRMSG "%s activation failed\n", ds->name);
+		return NULL;
+	}
+
+	return sess;
+
+err_nacm_destroy:
+	sr_nacm_destroy();
+err_stop:
+	sr_session_stop(sess);
+err_disconnect:
+	sr_disconnect(conn);
+err:
+	sess = NULL;
+	return NULL;
+}
+
+static int sysrepo_export(const struct infix_ds *ds, const char *path)
+{
+	sr_session_ctx_t *sess;
+	sr_data_t *data;
+	int err;
+
+	sess = sysrepo_session(ds);
+	if (!sess)
+		return 1;
+
+	err = sr_get_data(sess, "/*", 0, timeout * 1000, SR_OPER_DEFAULT, &data);
+	if (err) {
+		sysrepo_print_error(sess);
+		fprintf(stderr, ERRMSG "retrieval of %s data failed\n", ds->name);
+		return err;
+	}
+
+	err = lyd_print_path(path, data->tree, LYD_JSON, LYD_PRINT_WITHSIBLINGS);
+	sr_release_data(data);
+	if (err) {
+		sysrepo_print_error(sess);
+		fprintf(stderr, ERRMSG "failed to store %s data\n", ds->name);
+		return err;
+	}
+
+	return 0;
+}
+
+static int sysrepo_import(const struct infix_ds *ds, const char *path)
+{
+	const struct ly_ctx *ly;
+	sr_session_ctx_t *sess;
+	struct lyd_node *data;
+	int err;
+
+	sess = sysrepo_session(ds);
+	if (!sess)
+		return 1;
+
+	ly = sr_acquire_context(sr_session_get_connection(sess));
+
+	err = lyd_parse_data_path(ly, path, LYD_JSON,
+				  LYD_PARSE_NO_STATE | LYD_PARSE_ONLY |
+				  LYD_PARSE_STORE_ONLY | LYD_PARSE_STRICT, 0, &data);
+	if (err) {
+		fprintf(stderr, ERRMSG "failed to parse %s data\n", ds->name);
+		goto out;
+	}
+
+	err = dry_run ? 0 : sr_replace_config(sess, NULL, data, timeout * 1000);
+	if (err) {
+		sysrepo_print_error(sess);
+		fprintf(stderr, ERRMSG "failed import %s data\n", ds->name);
+	}
+
+out:
+	sr_release_context(sr_session_get_connection(sess));
+	return err ? 1 : 0;
+	/* return sysrepo_do(sysrepo_import_op, ds, path) ? 1 : 0; */
+}
+
+static int subprocess(char * const *argv)
+{
+	int pid, status;
+
+	pid = fork();
+	if (!pid) {
+		execvp(argv[0], argv);
+		exit(1);
+	}
+
+	if (pid < 0)
+		return 1;
+
+	if (waitpid(pid, &status, 0) < 0)
+		return 1;
+
+	if (!WIFEXITED(status))
+		return 1;
+
+	return WEXITSTATUS(status);
+}
+
+static int curl(char *op, const char *path, const char *uri)
+{
+	char *argv[] =  {
+		"curl", "-L", op, NULL, NULL, NULL, NULL, NULL,
+	};
+	int err;
+
+	argv[3] = strdup(path);
+	argv[4] = strdup(uri);
+	if (!(argv[3] && argv[4]))
+		goto out;
+
+	if (remote_user) {
+		argv[5] = strdup("-u");
+		argv[6] = strdup(remote_user);
+		if (!(argv[5] && argv[6]))
+			goto out;
+	}
+	err = subprocess(argv);
+
+out:
+	free(argv[6]);
+	free(argv[5]);
+	free(argv[4]);
+	free(argv[3]);
+	return err;
+}
+
+static int curl_upload(const char *srcpath, const char *uri)
+{
+	char upload[] = "-T";
+
+	if (curl(upload, srcpath, uri)) {
+		fprintf(stderr, ERRMSG "upload to %s failed\n", uri);
 		return 1;
 	}
 
-	if (dry_run) {
-		if (!quiet) {
-			printf("Configuration validated, %s OK\n", file);
-			fflush(stdout);
-		}
-		lyd_free_all(data);
-		rc = 0;
-	} else {
-		/* Replace running config, assumes ownership of 'data' */
-		rc = sr_replace_config(sess, NULL, data, timeout * 1000);
-		if (rc) {
-			emsg(sess, ERRMSG "unable to replace configuration, err %d: %s\n",
-			     rc, sr_strerror(rc));
-			lyd_free_all(data);
-		}
-	}
-
-	return rc;
+	return 0;
 }
 
-static int copy(const char *src, const char *dst, const char *remote_user)
+static int curl_download(const char *uri, const char *dstpath)
 {
-	struct infix_ds *srcds = NULL, *dstds = NULL;
-	const char *tmpfn = NULL;
-	sr_session_ctx_t *sess;
-	const char *fn = NULL;
-	sr_conn_ctx_t *conn;
-	const char *user;
-	char adjust[256];
+	char download[] = "-o";
+
+	if (curl(download, dstpath, uri)) {
+		fprintf(stderr, ERRMSG "download of %s failed\n", uri);
+		return 1;
+	}
+
+	return 0;
+}
+
+static int cp(const char *srcpath, const char *dstpath)
+{
+	char *argv[] =  {
+		"cp", NULL, NULL, NULL,
+	};
+	int err;
+
+	argv[1] = strdup(srcpath);
+	argv[2] = strdup(dstpath);
+	if (!(argv[1] && argv[2]))
+		goto out;
+
+	err = subprocess(argv);
+	if (err)
+		fprintf(stderr, ERRMSG "failed to save %s\n", dstpath);
+out:
+	free(argv[2]);
+	free(argv[1]);
+	return err;
+}
+
+static int put(const char *srcpath, const char *dst,
+	       const struct infix_ds *ds, const char *path)
+{
+	int err = 0;
+
+	if (ds)
+		err = sysrepo_import(ds, srcpath);
+	else if (is_uri(dst))
+		err = curl_upload(srcpath, dst);
+
+	if (err)
+		return err;
+
+	if (path) {
+		err = cp(srcpath, path);
+		if (!err)
+			set_owner(path, getuser());
+	}
+
+	return 0;
+}
+
+static int get(const char *src, const struct infix_ds *ds, const char *path)
+{
+	int err = 0;
+
+	if (ds)
+		err = sysrepo_export(ds, path);
+	else if (is_uri(src))
+		err = curl_download(src, path);
+
+	return err;
+}
+
+static int resolve_src(const char **src, const struct infix_ds **ds, char **path, bool *rm)
+{
+	*src = infix_ds(*src, ds);
+
+	if (*ds || is_uri(*src)) {
+		*path = tempnam(NULL, NULL);
+		if (!*path)
+			return 1;
+
+		*rm = true;
+		return 0;
+	} else {
+		*path = cfg_adjust(*src, NULL, sanitize);
+	}
+
+	if (!*path) {
+		fprintf(stderr, ERRMSG "no such file %s.", *src);
+		return 1;
+	}
+
+	*rm = false;
+	return 0;
+}
+
+static int resolve_dst(const char **dst, const struct infix_ds **ds, char **path)
+{
+	*dst = infix_ds(*dst, ds);
+
+	if (*ds) {
+		if (!(*ds)->rw) {
+			fprintf(stderr, ERRMSG "%s is not writable", (*ds)->name);
+			return 1;
+		}
+
+		if (!(*ds)->path)
+			return 0;
+
+		*path = (*ds)->path;
+	} else if (is_uri(*dst)) {
+		return 0;
+	} else {
+		*path = cfg_adjust(*dst, NULL, sanitize);
+	}
+
+	if (!*path) {
+		fprintf(stderr, ERRMSG "no such file: %s", *dst);
+		return 1;
+	}
+
+	if (!*ds && !access(*path, F_OK) && !yorn("Overwrite existing file %s", *path)) {
+		fprintf(stderr, "OK, aborting.\n");
+		return 1;
+	}
+
+	return 0;
+}
+
+static int copy(const char *src, const char *dst)
+{
+	const struct infix_ds *srcds, *dstds;
+	char *srcpath, *dstpath;
+	bool rmsrc = false;
 	mode_t oldmask;
-	int rc = 0;
+	int err = 1;
 
 	/* rw for user and group only */
 	oldmask = umask(0006);
-
-	src = infix_ds(src, &srcds);
-	if (!src)
-		goto err;
-	dst = infix_ds(dst, &dstds);
-	if (!dst)
-		goto err;
 
 	if (!strcmp(src, dst)) {
 		fprintf(stderr, ERRMSG "source and destination are the same, aborting.\n");
 		goto err;
 	}
 
-	user = getuser();
+	err = resolve_src(&src, &srcds, &srcpath, &rmsrc);
+	if (err)
+		goto err;
 
-	/* 1. Regular ds to ds copy */
-	if (srcds && dstds) {
-		if (!dstds->rw) {
-			fprintf(stderr, ERRMSG "not possible to write to \"%s\", skipping.\n", dst);
-			rc = 1;
-			goto err;
-		}
+	err = resolve_dst(&dst, &dstds, &dstpath);
+	if (err)
+		goto err;
 
-		if (sr_connect(SR_CONN_DEFAULT, &conn)) {
-			fprintf(stderr, ERRMSG "connection to datastore failed\n");
-			rc = 1;
-			goto err;
-		}
+	err = get(src, srcds, srcpath);
+	if (err)
+		goto err;
 
-		sr_log_syslog("klishd", SR_LL_WRN);
-
-		if (sr_session_start(conn, dstds->datastore, &sess)) {
-			fprintf(stderr, ERRMSG "unable to open transaction to %s\n", dst);
-		} else {
-			sr_nacm_set_user(sess, user);
-
-			/*
-			 * When copying TO running-config, use sr_replace_config()
-			 * to trigger change callbacks. Otherwise use sr_copy_config()
-			 * for direct datastore copy without callbacks.
-			 */
-			if (dstds->datastore == SR_DS_RUNNING && srcds->path) {
-				rc = replace_running(conn, sess, srcds->path, timeout);
-				if (!rc)
-					set_owner(dstds->path, user);
-			} else {
-				/* Direct copy for other datastores (no callbacks needed) */
-				rc = sr_copy_config(sess, NULL, srcds->datastore, timeout * 1000);
-				if (rc) {
-					emsg(sess, ERRMSG "unable to copy configuration, err %d: %s\n", rc, sr_strerror(rc));
-				} else {
-					/* Export datastore to backing file if it has one */
-					if (dstds->path) {
-						rc = systemf("sysrepocfg -d %s -X%s -f json", dstds->sysrepocfg, dstds->path);
-						if (rc)
-							fprintf(stderr, ERRMSG "failed saving %s to %s\n", srcds->name, dstds->path);
-						else
-							set_owner(dstds->path, user);
-					}
-				}
-			}
-		}
-		rc = sr_disconnect(conn);
-
-		if (!srcds->path || !dstds->path)
-			goto err; /* done, not an error */
-
-		/* allow copy factory startup */
-	}
-
-	if (srcds) {
-		/* 2. Export from a datastore somewhere else */
-
-		if (strstr(dst, "://")) {
-			if (srcds->path)
-				fn = srcds->path;
-			else {
-				snprintf(adjust, sizeof(adjust), "/tmp/%s.cfg", srcds->name);
-				fn = tmpfn = adjust;
-				(void)remove(tmpfn);
-				rc = systemf("sysrepocfg -d %s -X%s -f json", srcds->sysrepocfg, fn);
-			}
-
-			if (rc)
-				fprintf(stderr, ERRMSG "failed exporting %s to %s\n", src, fn);
-			else {
-				rc = systemf("curl %s -LT %s %s", remote_user, fn, dst);
-				if (rc)
-					fprintf(stderr, ERRMSG "failed uploading %s to %s\n", src, dst);
-				else
-					set_owner(dst, user);
-			}
-			goto err;
-		}
-
-		if (dstds && dstds->path)
-			fn = dstds->path;
-		else
-			fn = cfg_adjust(dst, src, adjust, sizeof(adjust), sanitize);
-
-		if (!fn) {
-			fprintf(stderr, ERRMSG "file not found.\n");
-			rc = -1;
-			goto err;
-		}
-
-		if (!access(fn, F_OK) && !yorn("Overwrite existing file %s", fn)) {
-			fprintf(stderr, "OK, aborting.\n");
-			return 0;
-		}
-
-		if (srcds->path)
-			rc = systemf("cp %s %s", srcds->path, fn);
-		else
-			rc = systemf("sysrepocfg -d %s -X%s -f json", srcds->sysrepocfg, fn);
-		if (rc)
-			fprintf(stderr, ERRMSG "failed copy %s to %s\n", src, fn);
-		else
-			set_owner(fn, user);
-	} else if (dstds) {
-		/* 3. Import from somewhere to a datastore */
-
-		if (!dstds->sysrepocfg) {
-			fprintf(stderr, ERRMSG "not possible to import to this datastore.\n");
-			rc = 1;
-			goto err;
-		}
-		if (!dstds->rw) {
-			fprintf(stderr, ERRMSG "not possible to write to %s", dst);
-			goto err;
-		}
-
-		if (strstr(src, "://")) {
-			fn = basenm(src);
-			if (fn[0] == 0) {
-				fprintf(stderr, ERRMSG "missing filename in sorce URI.\n");
-				rc = 1;
-				goto err;
-			}
-			snprintf(adjust, sizeof(adjust), "/tmp/%s", fn);
-			fn = tmpfn = adjust;
-			(void)remove(tmpfn);
-		} else {
-			fn = cfg_adjust(src, NULL, adjust, sizeof(adjust), sanitize);
-			if (!fn) {
-				fprintf(stderr, ERRMSG "file not found.\n");
-				rc = 1;
-				goto err;
-			}
-		}
-
-		if (tmpfn)
-			rc = systemf("curl %s -Lo %s %s", remote_user, fn, src);
-		if (rc) {
-			fprintf(stderr, ERRMSG "failed downloading %s", src);
-		} else {
-			if (dstds->datastore == SR_DS_RUNNING) {
-				if (sr_connect(SR_CONN_DEFAULT, &conn)) {
-					fprintf(stderr, ERRMSG "connection to datastore failed\n");
-					rc = 1;
-				} else {
-					sr_log_syslog("klishd", SR_LL_WRN);
-					if (sr_session_start(conn, SR_DS_RUNNING, &sess)) {
-						fprintf(stderr, ERRMSG "unable to open transaction to %s\n", dst);
-						rc = 1;
-					} else {
-						sr_nacm_set_user(sess, user);
-						rc = replace_running(conn, sess, fn, timeout);
-						if (!rc)
-							set_owner(dstds->path, user);
-					}
-					sr_disconnect(conn);
-				}
-			} else {
-				rc = systemf("sysrepocfg -d %s -I%s -f json", dstds->sysrepocfg, fn);
-				if (rc)
-					fprintf(stderr, ERRMSG "failed loading %s from %s\n", dst, src);
-				else if (dstds->path) {
-					rc = systemf("sysrepocfg -d %s -X%s -f json", dstds->sysrepocfg, dstds->path);
-					if (rc)
-						fprintf(stderr, ERRMSG "failed saving %s\n", dstds->path);
-					else
-						set_owner(dstds->path, user);
-				}
-
-			}
-		}
-	} else {
-		/* 4. regular copy file -> file, either may be remote */
-
-		if (strstr(src, "://") && strstr(dst, "://")) {
-			fprintf(stderr, ERRMSG "copy from remote to remote is not supported.\n");
-			goto err;
-		}
-
-		if (strstr(src, "://")) {
-			fn = cfg_adjust(dst, src, adjust, sizeof(adjust), sanitize);
-			if (!fn) {
-				fprintf(stderr, ERRMSG "file not found.\n");
-				rc = 1;
-				goto err;
-			}
-
-			if (!access(fn, F_OK)) {
-				if (!yorn("Overwrite existing file %s", fn)) {
-					fprintf(stderr, "OK, aborting.\n");
-					return 0;
-				}
-			}
-
-			rc = systemf("curl %s -Lo %s %s", remote_user, fn, src);
-		} else if (strstr(dst, "://")) {
-			fn = cfg_adjust(src, NULL, adjust, sizeof(adjust), sanitize);
-			if (!fn) {
-				fprintf(stderr, ERRMSG "file not found.\n");
-				rc = 1;
-				goto err;
-			}
-
-			if (access(fn, F_OK))
-				fprintf(stderr, ERRMSG "no such file %s.", fn);
-			else
-				rc = systemf("curl %s -LT %s %s", remote_user, fn, dst);
-		} else {
-			char bufa[256], bufb[256];
-			const char *from, *to;
-
-			from = cfg_adjust(src, NULL, bufa, sizeof(bufa), sanitize);
-			if (!from) {
-				fprintf(stderr, ERRMSG "no such file %s.", src);
-				rc = 1;
-				goto err;
-			}
-
-			to = cfg_adjust(dst, src, bufb, sizeof(bufb), sanitize);
-			if (!to) {
-				fprintf(stderr, ERRMSG "no such file %s.", dst);
-				rc = 1;
-				goto err;
-			}
-
-			if (!access(to, F_OK)) {
-				if (!yorn("Overwrite existing file %s", to)) {
-					fprintf(stderr, "OK, aborting.\n");
-					return 0;
-				}
-			}
-			rc = systemf("cp %s %s", from, to);
-		}
-	}
+	err = put(srcpath, dst, dstds, dstpath);
 
 err:
-	if (tmpfn)
-		rc = remove(tmpfn);
+	/* If either src or dst came from sysrepo, close the session */
+	sysrepo_session(NULL);
 
-	sync();			/* ensure command is flushed to disk */
+	if (rmsrc)
+		rmtmp(srcpath);
+
+	sync();
 	umask(oldmask);
-
-	return rc;
+	return err;
 }
 
 static int usage(int rc)
@@ -505,7 +546,6 @@ static int usage(int rc)
 	       "Options:\n"
 	       "  -h              This help text\n"
 	       "  -n              Dry-run, validate configuration without applying\n"
-	       "  -q              Quiet mode, suppress informational messages\n"
 	       "  -s              Sanitize paths for CLI use (restrict path traversal)\n"
 	       "  -t SEC          Timeout for the operation, or default %d sec\n"
 	       "  -u USER         Username for remote commands, like scp\n"
@@ -526,20 +566,17 @@ static int usage(int rc)
 
 int main(int argc, char *argv[])
 {
-	const char *user = NULL, *src = NULL, *dst = NULL;
+	const char *src = NULL, *dst = NULL;
 	int c;
 
 	timeout = fgetint("/etc/default/confd", "=", "CONFD_TIMEOUT");
 
-	while ((c = getopt(argc, argv, "hnqst:u:v")) != EOF) {
+	while ((c = getopt(argc, argv, "hnst:u:v")) != EOF) {
 		switch(c) {
 		case 'h':
 			return usage(0);
 		case 'n':
 			dry_run = 1;
-			break;
-		case 'q':
-			quiet = 1;
 			break;
 		case 's':
 			sanitize = 1;
@@ -548,7 +585,7 @@ int main(int argc, char *argv[])
 			timeout = atoi(optarg);
 			break;
 		case 'u':
-			user = optarg;
+			remote_user = optarg;
 			break;
 		case 'v':
 			puts(PACKAGE_VERSION);
@@ -565,5 +602,5 @@ int main(int argc, char *argv[])
 	src = argv[optind++];
 	dst = argv[optind++];
 
-	return copy(src, dst, user);
+	return copy(src, dst);
 }
