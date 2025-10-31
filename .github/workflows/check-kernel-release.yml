@@ -53,6 +53,14 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.KERNEL_UPDATE_TOKEN }}
 
+      - name: Generate branch name
+        if: steps.check.outputs.new_release == 'true'
+        id: branch
+        run: |
+          BRANCH_NAME="kernel-upgrade-$(uuidgen | tr '[:upper:]' '[:lower:]')"
+          echo "name=$BRANCH_NAME" >> $GITHUB_OUTPUT
+          echo "Branch name: $BRANCH_NAME"
+
       - name: Set up git credentials
         if: steps.check.outputs.new_release == 'true'
         run: |
@@ -68,9 +76,10 @@ jobs:
         if: steps.check.outputs.new_release == 'true'
         env:
           GIT_TERMINAL_PROMPT: 0
+          BRANCH_NAME: ${{ steps.branch.outputs.name }}
         run: |
           set -e -o pipefail
-          ./utils/kernel-upgrade.sh linux
+          ./utils/kernel-upgrade.sh linux "$BRANCH_NAME"
 
       - name: Create pull request
         if: steps.check.outputs.new_release == 'true'
@@ -91,7 +100,7 @@ jobs:
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 title: `Upgrade to kernel ${{ steps.check.outputs.current_version }}`,
-                head: 'kernel-upgrade',
+                head: '${{ steps.branch.outputs.name }}',
                 base: 'main',
                 body: `Automated kernel upgrade to version ${{ steps.check.outputs.current_version }}.\n\n**Previous version:** ${{ steps.check.outputs.infix_version }}\n**New version:** ${{ steps.check.outputs.current_version }}\n**Source:** https://www.kernel.org/\n\nThis PR was automatically created by the kernel release monitoring workflow.`
               });

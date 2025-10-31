@@ -9,16 +9,16 @@
 set -e -o pipefail
 
 # Parse arguments
-if [ $# -ne 1 ]; then
-    echo "Usage: $0 <path-to-linux-dir>"
+if [ $# -lt 1 ] || [ $# -gt 2 ]; then
+    echo "Usage: $0 <path-to-linux-dir> [branch-name]"
     exit 1
 fi
 
 LINUX_DIR="$1"
+INFIX_BRANCH="${2:-kernel-upgrade}"
 
 # Configuration
 INFIX_DIR="$(dirname "$(dirname "$(readlink -f "$0")")")"
-INFIX_BRANCH="kernel-upgrade"
 LINUX_BRANCH="kkit-linux-6.12.y"
 UPSTREAM_REMOTE="upstream"
 UPSTREAM_URL="https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git"
