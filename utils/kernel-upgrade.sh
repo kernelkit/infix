@@ -6,7 +6,7 @@
 # Usage: ./utils/kernel-upgrade.sh <path-to-linux-dir>
 #
 
-set -e
+set -e -o pipefail
 
 # Parse arguments
 if [ $# -ne 1 ]; then
@@ -139,15 +139,6 @@ rebase_kernel() {
         log_info "Run 'git rebase --abort' to cancel or resolve conflicts manually"
         exit 1
     fi
-
-    # Push rebased branch to kkit remote
-    log_info "Pushing rebased branch to $KKIT_REMOTE..."
-    if git -C "$LINUX_DIR" push "$KKIT_REMOTE" "$LINUX_BRANCH" --force-with-lease; then
-        log_info "Successfully pushed to $KKIT_REMOTE"
-    else
-        log_error "Push failed"
-        exit 1
-    fi
 }
 
 # Update infix and run kernel refresh
@@ -195,8 +186,8 @@ update_infix() {
 
     # Check if versions are the same
     if [ "$OLD_VERSION" = "$NEW_VERSION" ]; then
-        log_info "Kernel version unchanged ($OLD_VERSION), skipping refresh"
-        return 0
+        log_info "Kernel version unchanged ($OLD_VERSION), nothing to do"
+        exit 0
     fi
 
     # Run kernel refresh script
@@ -231,6 +222,16 @@ update_infix() {
     else
         log_warn "doc/ChangeLog.md not found, skipping changelog update"
     fi
+
+    # Commit all changes
+    log_info "Committing changes to infix..."
+    git -C "$INFIX_DIR" add -A
+    if git -C "$INFIX_DIR" diff-index --quiet HEAD --; then
+        log_info "No changes to commit"
+    else
+        git -C "$INFIX_DIR" commit -m "Upgrade Linux kernel to $NEW_VERSION"
+        log_info "Changes committed"
+    fi
 }
 
 # Check for uncommitted changes
@@ -254,6 +255,29 @@ check_clean_working_tree() {
     log_info "Working tree is clean"
 }
 
+# Push changes to remotes
+push_changes() {
+    log_info "Pushing changes to remotes..."
+
+    # Push rebased linux branch to kkit remote
+    log_info "Pushing rebased linux branch to $KKIT_REMOTE..."
+    if git -C "$LINUX_DIR" push "$KKIT_REMOTE" "$LINUX_BRANCH" --force-with-lease; then
+        log_info "Successfully pushed linux branch to $KKIT_REMOTE"
+    else
+        log_error "Push to linux remote failed"
+        exit 1
+    fi
+
+    # Push infix branch to origin
+    log_info "Pushing infix branch to origin..."
+    if git -C "$INFIX_DIR" push origin "$INFIX_BRANCH"; then
+        log_info "Successfully pushed infix branch to origin"
+    else
+        log_error "Push to infix remote failed"
+        exit 1
+    fi
+}
+
 # Main execution
 main() {
     log_info "Starting automated kernel upgrade test..."
@@ -265,6 +289,7 @@ main() {
     update_linux_kernel
     rebase_kernel
     update_infix
+    push_changes
 
     log_info "Kernel upgrade completed successfully!"
 }

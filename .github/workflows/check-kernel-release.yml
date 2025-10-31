@@ -25,6 +25,7 @@ jobs:
       - name: Fetch kernel.org and check for 6.12 release
         id: check
         run: |
+          set -e -o pipefail
           # Fetch the kernel.org frontpage and extract 6.12 version
           CURRENT_VERSION=$(curl -s https://www.kernel.org/ | grep -oP '6\.12\.\d+' | head -n1)
 
@@ -56,6 +57,7 @@ jobs:
       - name: Set up git credentials
         if: steps.check.outputs.new_release == 'true'
         run: |
+          set -e -o pipefail
           git config --global user.email "ael-bot@users.noreply.github.com"
           git config --global user.name "ael-bot"
 
@@ -68,6 +70,7 @@ jobs:
         env:
           GIT_TERMINAL_PROMPT: 0
         run: |
+          set -e -o pipefail
           ./utils/kernel-upgrade.sh linux
 
       - name: Create pull request
