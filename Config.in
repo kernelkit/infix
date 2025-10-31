@@ -1,3 +1,5 @@
+source "$BR2_EXTERNAL_INFIX_PATH/board/Config.in"
+
 menu "Branding"
 
 config INFIX_VENDOR

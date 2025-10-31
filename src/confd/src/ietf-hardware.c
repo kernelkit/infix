@@ -40,41 +40,43 @@ static bool usb_authorize(struct json_t *root, const char *name, int enabled)
 		return 0;
 
 	json_array_foreach(usb_ports, index, usb_port) {
-		struct json_t *jname, *jpath;
-		const char *path;
+		struct json_t *jname;
+
 		jname = json_object_get(usb_port, "name");
 		if (!jname || !json_is_string(jname)) {
 			ERROR("Did not find USB hardware port (name) for %s", name);
 			continue;
 		}
 		if (!strcmp(name, json_string_value(jname))) {
-			jpath = json_object_get(usb_port, "path");
+			struct json_t *jpath = json_object_get(usb_port, "path");
+			char authorized_default_path[PATH_MAX];
+			const char *path;
+
 			if (!jpath || !json_is_string(jpath)) {
 				ERROR("Did not find USB hardware port (path) for %s", name);
 				continue;
 			}
+
+			/* Path now points to USB device directory, not the attribute file */
 			path = json_string_value(jpath);
+			snprintf(authorized_default_path, sizeof(authorized_default_path),
+				 "%s/authorized_default", path);
+
 			if (!enabled) {
-				if (fexist(path)) {
-					if (writedf(0, "w", "%s", path)) {
-						ERROR("Failed to unauthorize %s", path);
+				if (fexist(authorized_default_path)) {
+					if (writedf(0, "w", "%s", authorized_default_path)) {
+						ERROR("Failed to unauthorize %s", authorized_default_path);
 						return 1;
 					}
 				}
 			} else {
-				char *rpath, *path_dup, *dir;
-				path_dup = strdup(path);
-				if (!path_dup) {
-					ERROR("Failed to allocate memory.");
-					return 1;
-				}
-				dir = dirname((char *)path_dup);
-				rpath = realpath(dir, NULL);
+				char *rpath;
+
+				rpath = realpath(path, NULL);
 				if (rpath) {
 					nftw(rpath, dir_cb, 0, FTW_DEPTH | FTW_PHYS);
 					free(rpath);
 				}
-				free(path_dup);
 			}
 		}
 	}

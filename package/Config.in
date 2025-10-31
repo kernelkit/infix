@@ -1,7 +1,6 @@
 menu "Packages"
 
 comment "Hardware Support"
-source "$BR2_EXTERNAL_INFIX_PATH/package/board/Config.in"
 source "$BR2_EXTERNAL_INFIX_PATH/package/feature-wifi/Config.in"
 
 comment "Software Packages"

@@ -1,0 +1,23 @@
+#include <arm64/rockchip/rk3328-nanopi-r2s.dts>
+#include "infix.dtsi"
+
+&rtl8153 {
+	/*
+	 * Fix port number: device is on port 1, not port 2
+	 *
+	 * The kernel's usb_of_get_connect_type() function checks for child
+	 * nodes with a 'reg' property matching the physical port number to
+	 * determine if a USB port is "hard-wired" (internal) vs external.
+	 * With authorized_default=2, only hard-wired ports are automatically
+	 * authorized. The RTL8153 shows up as device 3-1 (hub 3, port 1), so
+	 * reg must be <1> for the kernel to mark it as USB_PORT_CONNECT_TYPE_HARD_WIRED
+	 * and authorize it automatically at boot.
+	 */
+	reg = <1>;
+};
+
+&{/chosen/infix} {
+	/* Expose only the external USB 2.0 port for user management */
+	usb-ports = <&usb_host0_ehci>;
+	usb-port-names = "USB";
+};

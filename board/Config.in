@@ -1,0 +1,7 @@
+menu "Board Support"
+
+source "$BR2_EXTERNAL_INFIX_PATH/board/aarch64/Config.in"
+source "$BR2_EXTERNAL_INFIX_PATH/board/riscv64/Config.in"
+source "$BR2_EXTERNAL_INFIX_PATH/board/x86_64/Config.in"
+
+endmenu

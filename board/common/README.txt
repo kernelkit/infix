@@ -94,10 +94,9 @@ If you see the following line printed one or more times, don't panic.
 
     LABEL=var: Can't lookup blockdev
 
-See the Customizing section above.  To silence the error you need to
-create another writable partition for Infix to store logs, container
-images, etc.  Look for the 'var' keyword, you can adjust the size of
-the partition.
+See the Customizing section above.  Silence the error by selecting one
+more writable partition (/var) in menuconfig for log files, container
+images, etc.  The size can also be adjusted there.
 
 
 Graphical Network Simulator 3 (GNS3)
@@ -105,12 +104,11 @@ Graphical Network Simulator 3 (GNS3)
 
 GNS3 is a very powerful front-end to Qemu which takes care of creating
 virtual links between network devices running in Qemu.  This README is
-only link to the material you need.  This directory holds the appliance
-file, .gns3a, that references image files also in this directory, that
-you need to load into GNS3.
+all you need to get going, alongisde it is the appliance file (.gns3a)
+that reference image files in this directory needed to load into GNS3.
 
-The necessary extra packages are available through the offical PPA.  If
-you don't know what a PPA is, read up on that first:
+Necessary Ubuntu packages are available through the offical GNS3 PPA.
+If you don't know what a PPA is, read up on that first:
 
  - https://launchpad.net/~gns3/+archive/ubuntu/ppa
 
@@ -122,9 +120,8 @@ There's a lot of tutorials and guides online, start here:
 About
 -----
 
-Infix is a free, Linux-based, immutable operating system built around
+Infix is a free, Linux-based, immutable operating system, built around
 Buildroot, and sysrepo.  A powerful mix that ease porting to different
 platforms, simplify long-term maintenance, and provide easy management
-using NETCONF, RESTCONF, or the built-in command line interface (CLI)
+using NETCONF, RESTCONF, or the built-in, command line interface (CLI)
 from a console or SSH login.
-

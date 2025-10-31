@@ -162,6 +162,23 @@ class PadUsbPort:
     title = 30
     name = 20
     state = 10
+    oper = 10
+
+    @classmethod
+    def table_width(cls):
+        """Total width of USB port table"""
+        return cls.name + cls.state + cls.oper
+
+
+class PadSensor:
+    name = 30
+    value = 20
+    status = 10
+
+    @classmethod
+    def table_width(cls):
+        """Total width of sensor table (matches show system width)"""
+        return cls.name + cls.value + cls.status
 
 
 class PadNtpSource:
@@ -191,6 +208,19 @@ class PadLldp:
     time = 12
     chassis_id = 20
     port_id = 20
+
+
+class PadDiskUsage:
+    mount = 18
+    size = 12
+    used = 12
+    avail = 12
+    percent = 6
+
+    @classmethod
+    def table_width(cls):
+        """Total width of disk usage table"""
+        return cls.mount + cls.size + cls.used + cls.avail + cls.percent
 
 
 class PadFirewall:
@@ -554,11 +584,107 @@ class USBport:
         self.data = data
         self.name = data.get('name', '')
         self.state = get_json_data('', self.data, 'state', 'admin-state')
+        self.oper = get_json_data('', self.data, 'state', 'oper-state')
 
     def print(self):
-        #print(self.name)
         row = f"{self.name:<{PadUsbPort.name}}"
         row += f"{self.state:<{PadUsbPort.state}}"
+        row += f"{self.oper:<{PadUsbPort.oper}}"
+        print(row)
+
+
+class Sensor:
+    def __init__(self, data):
+        self.data = data
+        self.name = data.get('name', 'unknown')
+        self.description = data.get('description')  # Human-readable description
+        self.parent = data.get('parent')  # Parent component name
+        sensor_data = data.get('sensor-data', {})
+        self.value_type = sensor_data.get('value-type', 'unknown')
+        self.value = sensor_data.get('value', 0)
+        self.value_scale = sensor_data.get('value-scale', 'units')
+        self.oper_status = sensor_data.get('oper-status', 'unknown')
+
+    def get_formatted_value(self):
+        """Convert sensor value based on scale and type"""
+        # Handle temperature sensors
+        if self.value_type == 'celsius':
+            if self.value_scale == 'milli':
+                temp_celsius = self.value / 1000.0
+                # Color code based on temperature thresholds
+                if temp_celsius < 60:
+                    return Decore.green(f"{temp_celsius:.1f} °C")
+                elif temp_celsius < 75:
+                    return Decore.yellow(f"{temp_celsius:.1f} °C")
+                else:
+                    return Decore.red(f"{temp_celsius:.1f} °C")
+            else:
+                return f"{self.value} °C"
+
+        # Handle fan speed sensors
+        elif self.value_type == 'rpm':
+            return f"{self.value} RPM"
+
+        # Handle voltage sensors
+        elif self.value_type == 'volts-DC':
+            if self.value_scale == 'milli':
+                volts = self.value / 1000.0
+                return f"{volts:.2f} VDC"
+            else:
+                return f"{self.value} VDC"
+
+        # Handle current sensors
+        elif self.value_type == 'amperes':
+            if self.value_scale == 'milli':
+                amps = self.value / 1000.0
+                return f"{amps:.3f} A"
+            else:
+                return f"{self.value} A"
+
+        # Handle power sensors
+        elif self.value_type == 'watts':
+            if self.value_scale == 'micro':
+                watts = self.value / 1000000.0
+                return f"{watts:.3f} W"
+            elif self.value_scale == 'milli':
+                watts = self.value / 1000.0
+                return f"{watts:.2f} W"
+            else:
+                return f"{self.value} W"
+
+        # For unknown sensor types, show raw value
+        else:
+            return f"{self.value} {self.value_type}"
+
+    def print(self, indent=0):
+        import re
+        # Add indentation for child sensors
+        indent_str = "  " * indent
+
+        # Determine display name: prefer description, fallback to name
+        if self.description:
+            # Use description if available (e.g., "WiFi Radio wlan0 (2.4 GHz)")
+            display_name = self.description
+        elif indent > 0 and self.parent:
+            # Child sensor: strip parent prefix from name
+            # "sfp1-RX_power" -> "RX_power" -> "Rx Power"
+            display_name = self.name
+            if display_name.startswith(self.parent + "-"):
+                display_name = display_name[len(self.parent) + 1:]
+            # Format: "RX_power" -> "Rx Power"
+            display_name = display_name.replace('_', ' ').replace('-', ' ').title()
+        else:
+            # Standalone sensor without description: use name as-is
+            display_name = self.name
+
+        row = f"{indent_str}{display_name:<{PadSensor.name - len(indent_str)}}"
+        # For colored value, pad manually to account for ANSI codes
+        value_str = self.get_formatted_value()
+        # Count visible characters (strip ANSI codes for length calculation)
+        visible_len = len(re.sub(r'\x1b\[[0-9;]*m', '', value_str))
+        padding = PadSensor.value - visible_len
+        row += value_str + (' ' * padding)
+        row += f"{self.oper_status:<{PadSensor.status}}"
         print(row)
 
 
@@ -1555,17 +1681,88 @@ def show_hardware(json):
         print("Error, top level \"ietf-hardware:component\" missing")
         sys.exit(1)
 
-    hdr = (f"{'NAME':<{PadUsbPort.name}}"
-           f"{'STATE':<{PadUsbPort.state}}")
-    Decore.title("USB PORTS", PadUsbPort.title)  # TODO: could be len(hdr)
-    print(Decore.invert(hdr))
-
     components = get_json_data({}, json, "ietf-hardware:hardware", "component")
 
-    for component in components:
-        if component.get("class") == "infix-hardware:usb":
+    motherboard = [c for c in components if c.get("class") == "iana-hardware:chassis"]
+    usb_ports = [c for c in components if c.get("class") == "infix-hardware:usb"]
+    sensors = [c for c in components if c.get("class") == "iana-hardware:sensor"]
+
+    # Determine overall width (use the wider of the two sections)
+    width = max(PadUsbPort.table_width(), PadSensor.table_width())
+
+    # Display full-width inverted heading
+    print(Decore.invert(f"{'HARDWARE COMPONENTS':<{width}}"))
+
+    if motherboard:
+        board = motherboard[0]  # Should only be one
+        Decore.title("Board Information", width)
+
+        if board.get("model-name"):
+            print(f"Model               : {board['model-name']}")
+        if board.get("mfg-name"):
+            print(f"Manufacturer        : {board['mfg-name']}")
+        if board.get("serial-num"):
+            print(f"Serial Number       : {board['serial-num']}")
+        if board.get("infix-hardware:phys-address"):
+            print(f"Base MAC Address    : {board['infix-hardware:phys-address']}")
+        if board.get("hardware-rev"):
+            print(f"Hardware Revision   : {board['hardware-rev']}")
+
+    if usb_ports:
+        Decore.title("USB Ports", width)
+        hdr = (f"{'NAME':<{PadUsbPort.name}}"
+               f"{'STATE':<{PadUsbPort.state}}"
+               f"{'OPER':<{PadUsbPort.oper}}")
+        # Pad header to full width
+        hdr = f"{hdr:<{width}}"
+        print(Decore.invert(hdr))
+
+        for component in usb_ports:
             port = USBport(component)
             port.print()
+
+    if sensors:
+        Decore.title("Sensors", width)
+
+        # Print header
+        hdr = (f"{'NAME':<{PadSensor.name}}"
+               f"{'VALUE':<{PadSensor.value}}"
+               f"{'STATUS':<{PadSensor.status}}")
+        print(Decore.invert(hdr))
+
+        # Build parent-child map
+        children = {}  # parent_name -> [child_components]
+        standalone = []  # components without parents
+
+        for component in sensors:
+            parent = component.get("parent")
+            if parent:
+                if parent not in children:
+                    children[parent] = []
+                children[parent].append(component)
+            else:
+                standalone.append(component)
+
+        # Get all parent modules (non-sensor components)
+        modules = [c for c in components if c.get("class") == "iana-hardware:module"]
+
+        # Display modules with their child sensors (indented)
+        for module in sorted(modules, key=lambda m: m.get("name", "")):
+            module_name = module.get("name", "unknown")
+            print(f"\n{module_name}:")
+
+            if module_name in children:
+                for child in sorted(children[module_name], key=lambda c: c.get("name", "")):
+                    sensor = Sensor(child)
+                    sensor.print(indent=1)
+
+        # Display standalone sensors (no parent)
+        if standalone:
+            if modules:
+                print()  # Add blank line between modules and standalone
+            for component in sorted(standalone, key=lambda c: c.get("name", "")):
+                sensor = Sensor(component)
+                sensor.print()
 
 
 def show_ntp(json):
@@ -1587,6 +1784,134 @@ def show_ntp(json):
         row += f"{source['stratum']:>{PadNtpSource.stratum}}"
         row += f"{source['poll']:>{PadNtpSource.poll}}"
         print(row)
+
+
+def show_system(json):
+    """System information overivew"""
+    if not json.get("ietf-system:system-state"):
+        print("Error: No system data available.")
+        sys.exit(1)
+
+    system_state = json["ietf-system:system-state"]
+    platform = system_state.get("platform", {})
+    clock = system_state.get("clock", {})
+    software = system_state.get("infix-system:software", {})
+    runtime = json.get("runtime", {})
+
+    # Calculate uptime
+    uptime_str = "Unknown"
+    if clock.get("current-datetime") and clock.get("boot-datetime"):
+        try:
+            current = datetime.fromisoformat(clock["current-datetime"].replace("Z", "+00:00"))
+            boot = datetime.fromisoformat(clock["boot-datetime"].replace("Z", "+00:00"))
+            uptime = current - boot
+            days = uptime.days
+            hours, remainder = divmod(uptime.seconds, 3600)
+            minutes, seconds = divmod(remainder, 60)
+            uptime_str = f"{days}d {hours:02d}:{minutes:02d}:{seconds:02d}"
+        except (ValueError, KeyError):
+            pass
+
+    width = PadDiskUsage.table_width()
+    print(Decore.invert(f"{'SYSTEM INFORMATION':<{width}}"))
+    print(f"{'OS Name':<20}: {platform.get('os-name', 'Unknown')}")
+    print(f"{'OS Version':<20}: {platform.get('os-version', 'Unknown')}")
+    print(f"{'Architecture':<20}: {platform.get('machine', 'Unknown')}")
+
+    booted = software.get("booted", "Unknown")
+    slots = software.get("slot", [])
+    booted_slot = None
+    for slot in slots:
+        if slot.get("state") == "booted":
+            booted_slot = slot
+            break
+
+    if booted_slot:
+        bundle = booted_slot.get("bundle", {})
+        print(f"{'Boot Partition':<20}: {booted} ({bundle.get('version', 'Unknown')})")
+    else:
+        print(f"{'Boot Partition':<20}: {booted}")
+
+    # Format current time more readably: "2025-10-18 13:23:47 +00:00"
+    current_time = clock.get('current-datetime', 'Unknown')
+    if current_time != 'Unknown':
+        try:
+            dt = datetime.fromisoformat(current_time.replace("Z", "+00:00"))
+            # Format as "YYYY-MM-DD HH:MM:SS +HH:MM" (keep UTC offset)
+            current_time = dt.strftime('%Y-%m-%d %H:%M:%S %z')
+            # Insert colon in timezone offset: +0000 -> +00:00
+            if len(current_time) >= 5 and current_time[-5] in ['+', '-']:
+                current_time = current_time[:-2] + ':' + current_time[-2:]
+        except (ValueError, AttributeError):
+            pass
+
+    print(f"{'Current Time':<20}: {current_time}")
+    print(f"{'Uptime':<20}: {uptime_str}")
+
+    Decore.title("Status", width)
+
+    load = runtime.get("load", {})
+    if load:
+        print(f"{'Load Average':<20}: {load.get('1min', '?')}, {load.get('5min', '?')}, {load.get('15min', '?')}")
+
+    memory = runtime.get("memory", {})
+    if memory:
+        total = memory.get("MemTotal", 0)
+        available = memory.get("MemAvailable", 0)
+        used = total - available
+        percent = int((used / total * 100)) if total > 0 else 0
+        print(f"{'Memory':<20}: {used} / {total} MB ({percent}% used)")
+
+    # Show CPU temperature and fan speed on one line
+    cpu_temp = runtime.get("cpu_temp")
+    fan_rpm = runtime.get("fan_rpm")
+
+    if cpu_temp is not None or fan_rpm is not None:
+        status_line = ""
+
+        # Add CPU temperature with color coding
+        if cpu_temp is not None:
+            temp_str = f"{cpu_temp:.1f} °C"
+            if cpu_temp < 60:
+                temp_colored = Decore.green(temp_str)
+            elif cpu_temp < 75:
+                temp_colored = Decore.yellow(temp_str)
+            else:
+                temp_colored = Decore.red(temp_str)
+            status_line = f"CPU: {temp_colored}"
+
+        # Add fan speed if available
+        if fan_rpm is not None:
+            if status_line:
+                status_line += f", Fan: {fan_rpm} RPM"
+            else:
+                status_line = f"Fan: {fan_rpm} RPM"
+
+        if status_line:
+            print(f"{'Hardware':<20}: {status_line}")
+
+    disk = runtime.get("disk", [])
+    # Filter out root partition (/) - it's read-only and shows confusing 100% usage
+    disk_filtered = [d for d in disk if d.get("mount") != "/"]
+    if disk_filtered:
+        Decore.title("Disk Usage", width)
+        hdr = (f"{'MOUNTPOINT':<{PadDiskUsage.mount}}"
+               f"{'SIZE':>{PadDiskUsage.size}}"
+               f"{'USED':>{PadDiskUsage.used}}"
+               f"{'AVAIL':>{PadDiskUsage.avail}}"
+               f"{'USE%':>{PadDiskUsage.percent}}")
+        print(Decore.invert(hdr))
+        for d in disk_filtered:
+            mount = d.get("mount", "?")
+            size = d.get("size", "?")
+            used = d.get("used", "?")
+            avail = d.get("available", "?")
+            percent = d.get("percent", "?")
+            print(f"{mount:<{PadDiskUsage.mount}}"
+                  f"{size:>{PadDiskUsage.size}}"
+                  f"{used:>{PadDiskUsage.used}}"
+                  f"{avail:>{PadDiskUsage.avail}}"
+                  f"{percent:>{PadDiskUsage.percent}}")
 
 
 def show_dhcp_server(json, stats):
@@ -2518,31 +2843,33 @@ def main():
     subparsers.add_parser('show-bridge-stp', help='Show spanning tree state')
 
     subparsers.add_parser('show-dhcp-server', help='Show DHCP server') \
-    .add_argument("-s", "--stats", action="store_true", help="Show server statistics")
+              .add_argument("-s", "--stats", action="store_true", help="Show server statistics")
 
     subparsers.add_parser('show-hardware', help='Show USB ports')
 
     subparsers.add_parser('show-interfaces', help='Show interfaces') \
-    .add_argument('-n', '--name', help='Interface name')
+              .add_argument('-n', '--name', help='Interface name')
 
     subparsers.add_parser('show-lldp', help='Show LLDP neighbors')
     subparsers.add_parser('show-firewall', help='Show firewall overview')
     subparsers.add_parser('show-firewall-zone', help='Show firewall zones') \
-        .add_argument('name', nargs='?', help='Zone name')
+              .add_argument('name', nargs='?', help='Zone name')
     subparsers.add_parser('show-firewall-policy', help='Show firewall policies') \
-        .add_argument('name', nargs='?', help='Policy name')
+              .add_argument('name', nargs='?', help='Policy name')
     subparsers.add_parser('show-firewall-service', help='Show firewall services') \
-        .add_argument('name', nargs='?', help='Service name')
+              .add_argument('name', nargs='?', help='Service name')
 
     subparsers.add_parser('show-ntp', help='Show NTP sources')
 
     subparsers.add_parser('show-routing-table', help='Show the routing table') \
-    .add_argument('-i', '--ip', required=True, help='IPv4 or IPv6 address')
+              .add_argument('-i', '--ip', required=True, help='IPv4 or IPv6 address')
 
     subparsers.add_parser('show-services', help='Show system services')
 
     subparsers.add_parser('show-software', help='Show software versions') \
-    .add_argument('-n', '--name', help='Slotname')
+              .add_argument('-n', '--name', help='Slotname')
+
+    subparsers.add_parser('show-system', help='Show system overview')
 
     args = parser.parse_args()
     UNIT_TEST = args.test
@@ -2575,6 +2902,8 @@ def main():
         show_software(json_data, args.name)
     elif args.command == "show-services":
         show_services(json_data)
+    elif args.command == "show-system":
+        show_system(json_data)
 
     else:
         print(f"Error, unknown command '{args.command}'")

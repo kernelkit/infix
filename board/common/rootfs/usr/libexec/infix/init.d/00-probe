@@ -98,13 +98,45 @@ class DTSystem:
         data = dict(zip(names, phs))
         if data != {}:
             out["usb-ports"] = []
+
+        name_counts = {}  # Track how many times each name has been used
+
         for name, ph in data.items():
-            [out["usb-ports"].extend([{
-                "name": name,
-                "path": dev.attrpath("authorized")}, {
-                    "name": name,
-                    "path": dev.attrpath("authorized_default")
-                }]) for dev in self.devices_from_ph(ph)]
+            for dev in self.devices_from_ph(ph):
+                # Filter to only USB bus devices (usbN) that have authorized_default
+                # This avoids duplicate entries for platform devices and hub interfaces
+                if not dev.hasattr("authorized_default"):
+                    continue
+
+                # Convert platform path to /sys/bus/usb/devices/usbN path
+                # by finding the matching symlink in /sys/bus/usb/devices/
+                usb_path = dev.syspath
+                try:
+                    real_device = os.path.realpath(dev.syspath)
+                    usb_bus_dir = "/sys/bus/usb/devices"
+                    if os.path.exists(usb_bus_dir):
+                        for entry in os.listdir(usb_bus_dir):
+                            if not entry.startswith("usb"):
+                                continue
+                            candidate = os.path.join(usb_bus_dir, entry)
+                            if os.path.realpath(candidate) == real_device:
+                                usb_path = candidate
+                                break
+                except:
+                    pass  # Fall back to original path if resolution fails
+
+                # Handle name deduplication: first use gets bare name, subsequent get numbers
+                if name not in name_counts:
+                    name_counts[name] = 1
+                    final_name = name
+                else:
+                    name_counts[name] += 1
+                    final_name = f"{name}{name_counts[name]}"
+
+                out["usb-ports"].append({
+                    "name": final_name,
+                    "path": usb_path
+                })
 
     def infix_devices(self, kind):
         phs = self.__get_phandle_array(kind)
@@ -140,20 +172,13 @@ class QEMUSystem:
         return [self.product_vpd()]
 
     def usb_ports(self):
-        ports = [
-            {
-                "name": "USB",
-                "path": "/sys/bus/usb/devices/usb1/authorized"
-            }, {
-                "name": "USB",
-                "path": "/sys/bus/usb/devices/usb1/authorized_default"
-            }, {
-                "name": "USB2",
-                "path": "/sys/bus/usb/devices/usb2/authorized"
-            }, {
-                "name": "USB2",
-                "path": "/sys/bus/usb/devices/usb2/authorized_default"
-            }]
+        ports = [{
+            "name": "USB1",
+            "path": "/sys/bus/usb/devices/usb1"
+        }, {
+            "name": "USB2",
+            "path": "/sys/bus/usb/devices/usb2"
+        }]
         return ports
 
 
@@ -252,8 +277,12 @@ def vpd_inject(out, vpds):
             break
 
 
-def qemu_base_mac():
-    """Find MAC address of first non-loopback interface, subtract with 1"""
+def fallback_base_mac():
+    """Find MAC address of first suitable non-loopback interface.
+
+    Prefers real (globally unique) MACs over locally administered ones.
+    Prioritizes interface types: eth* > wan > wifi* > others.
+    """
     base_path = '/sys/class/net'
     interfaces = []
 
@@ -265,13 +294,41 @@ def qemu_base_mac():
             fn = os.path.join(base_path, iface, 'address')
             with open(fn, 'r', encoding='ascii') as f:
                 mac = f.read().strip()
-            interfaces.append((mac, iface))
+
+            # Check if locally administered (bit 1 of first octet is set)
+            first_byte = int(mac.split(':')[0], 16)
+            is_local = bool(first_byte & 0x02)
+
+            # Prefer: eth* > wan > wifi* > others, then real MACs > local MACs
+            priority = 0
+            if iface.startswith('eth'):
+                priority = 400
+            elif iface == 'wan':
+                priority = 300
+            elif iface.startswith('wifi'):
+                priority = 200
+            else:
+                priority = 100
+
+            # Real MACs get +100 bonus
+            if not is_local:
+                priority += 100
+
+            interfaces.append((priority, iface, mac))
         except FileNotFoundError:
             continue
 
     if interfaces:
-        interfaces.sort()
-        mac  = interfaces[0][0]
+        interfaces.sort(reverse=True)  # Highest priority first
+        return interfaces[0][2]  # Return MAC
+
+    return None
+
+
+def qemu_base_mac():
+    """Find MAC address of first non-loopback interface, subtract with 1"""
+    mac = fallback_base_mac()
+    if mac:
         mac  = int(mac.replace(':', ''), 16)
         mac -= 1
         mac %= 1 << 48
@@ -308,37 +365,37 @@ def probe_qemusystem(out):
     subprocess.run("initctl -nbq cond set qemu".split(), check=False)
     return 0
 
-def rasberry_pi_4_usb_ports(out):
-    out["usb-ports"] = [
-        {
-            "name": "USB",
-            "path": "/sys/devices/platform/scb/fd500000.pcie/pci0000:00/0000:00:00.0/0000:01:00.0/usb1/authorized"
-        },
-        {
-            "name": "USB",
-            "path": "/sys/devices/platform/scb/fd500000.pcie/pci0000:00/0000:00:00.0/0000:01:00.0/usb1/authorized_default"
-        },
-        {
-            "name": "USB",
-            "path": "/sys/devices/platform/scb/fd500000.pcie/pci0000:00/0000:00:00.0/0000:01:00.0/usb1/1-1/authorized",
-        },
-        {
-            "name": "USB",
-            "path": "/sys/devices/platform/scb/fd500000.pcie/pci0000:00/0000:00:00.0/0000:01:00.0/usb1/1-0:1.0/authorized"
-        },
-        {
-            "name": "USB",
-            "path": "/sys/devices/platform/scb/fd500000.pcie/pci0000:00/0000:00:00.0/0000:01:00.0/usb2/authorized"
-        },
-        {
-            "name": "USB",
-            "path": "/sys/devices/platform/scb/fd500000.pcie/pci0000:00/0000:00:00.0/0000:01:00.0/usb2/authorized_default"
-        },
-        {
-            "name": "USB3",
-            "path": "/sys/devices/platform/scb/fd500000.pcie/pci0000:00/0000:00:00.0/0000:01:00.0/usb2/2-0:1.0/authorized"
-        }
-    ]
+
+def generic_usb_ports(out):
+    """Generic USB port discovery - works for all systems"""
+    ports = []
+    usb_base = "/sys/bus/usb/devices"
+
+    if not os.path.exists(usb_base):
+        return
+
+    for entry in sorted(os.listdir(usb_base)):
+        # Only look at root hubs (usbN)
+        if not entry.startswith("usb"):
+            continue
+
+        device_path = os.path.join(usb_base, entry)
+        # Check if this is a root hub (has authorized files)
+        if os.path.exists(os.path.join(device_path, "authorized")):
+            # Extract number from usbN
+            num = entry.replace("usb", "")
+            ports.append({
+                "num": num,
+                "path": device_path
+            })
+
+    # Name ports: "USB" for single port, "USB1", "USB2", etc. for multiple
+    if ports:
+        if len(ports) == 1:
+            out["usb-ports"] = [{"name": "USB", "path": ports[0]["path"]}]
+        else:
+            out["usb-ports"] = [{"name": f"USB{p['num']}", "path": p["path"]} for p in ports]
+
 
 def probe_dtsystem(out):
     """Probe DTS based system, expects a VPD in ONIE PROM format."""
@@ -349,11 +406,11 @@ def probe_dtsystem(out):
     if model:
         out["product-name"] = model
 
-    # Since rpi4 has USB on PCIe, there is no phandle reference
-    if model and model.startswith("Raspberry Pi 4"):
-        rasberry_pi_4_usb_ports(out)
-    else:
-        dtsys.infix_usb_devices(out)
+    # Try devicetree-based USB discovery first, fallback to generic
+    dtsys.infix_usb_devices(out)
+    if "usb-ports" not in out or not out["usb-ports"]:
+        generic_usb_ports(out)
+
     out["compatible"] = dtsys.base.str_array("compatible")
 
     staticpw = dtsys.infix.str("factory-password-hash")
@@ -361,6 +418,11 @@ def probe_dtsystem(out):
         out["factory-password-hash"] = staticpw
 
     vpd_inject(out, vpds)
+
+    # Fallback to interface MAC if VPD doesn't provide one (e.g., SBCs)
+    if not out["mac-address"]:
+        out["mac-address"] = fallback_base_mac()
+
     return 0
 
 

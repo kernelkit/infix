@@ -17,6 +17,10 @@ module infix-hardware {
   contact      "kernelkit@googlegroups.com";
   description  "Vital Product Data augmentation of ieee-hardware and deviations.";
 
+  revision 2025-10-30 {
+    description "Add phys-address leaf for hardware components and enable sensor support.";
+    reference "internal";
+  }
   revision 2024-04-25 {
     description "Spellcheck leaf: coutry-code -> country-code";
     reference "internal";
@@ -34,25 +38,17 @@ module infix-hardware {
     description "A two-letter country code.";
   }
 
-  identity hardware-class {
-    description "infix hardware base class";
-  }
-
   identity usb {
-    base hardware-class;
+    base iahw:hardware-class;
     description "This identity is used to describe a USB port";
   }
   identity vpd {
-    base hardware-class;
+    base iahw:hardware-class;
     description "This identity is used to a VPD memory on the device.";
   }
-
-  deviation "/iehw:hardware/iehw:component/iehw:class" {
-    deviate replace {
-      type identityref {
-        base hardware-class;
-      }
-    }
+  identity wifi {
+    base iahw:hardware-class;
+    description "This identity is used to describe a WiFi radio/PHY";
   }
 
   deviation "/iehw:hardware/iehw:component/iehw:state/iehw:admin-state" {
@@ -66,15 +62,6 @@ module infix-hardware {
   deviation "/iehw:hardware/iehw:component/iehw:state/iehw:standby-state" {
     deviate not-supported;
   }
-  deviation "/iehw:hardware/iehw:component/iehw:sensor-data" {
-    deviate not-supported;
-  }
-  deviation "/iehw:hardware/iehw:component/iehw:parent" {
-    deviate not-supported;
-  }
-  deviation "/iehw:hardware/iehw:component/iehw:parent-rel-pos" {
-    deviate not-supported;
-  }
   deviation "/iehw:hardware/iehw:component/iehw:alias" {
     deviate not-supported;
   }
@@ -85,6 +72,18 @@ module infix-hardware {
     deviate not-supported;
   }
   augment "/iehw:hardware/iehw:component" {
+    leaf phys-address {
+      type yang:phys-address;
+      config false;
+      description
+        "The physical address of the hardware component. For chassis components,
+         this represents the base MAC address used for the system. This is
+         typically sourced from VPD data on enterprise hardware, or derived from
+         the first physical interface on single-board computers (SBCs) without
+         VPD. May be used as the base for generating addresses for virtual
+         interfaces. For other component types, this could represent various
+         physical layer addresses (e.g., Fibre Channel WWN, InfiniBand GUID).";
+    }
     container vpd-data {
       config false;
       leaf product-name {

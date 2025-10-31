@@ -55,7 +55,7 @@ def get_zone_data(fw, name):
             "name": name,
             "short": short,
             "immutable": immutable,
-            "description": settings.get('description', 0),
+            "description": settings.get('description', ''),
             "interface": list(settings.get('interfaces', [])),
             "network": list(settings.get('sources', [])),
             "action": action.get(target, "accept"),

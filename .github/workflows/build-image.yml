@@ -8,9 +8,10 @@ on:
         type: choice
         required: true
         options:
-          - raspberry-pi-4
-          - banana-pi-r3
-        default: 'raspberry-pi-4'
+          - raspberrypi-rpi64
+          - bananapi-bpi-r3
+          - friendlyarm-nanopi-r2s
+        default: 'raspberrypi-rpi64'
       use_latest_release:
         description: 'Use latest release artifacts instead of workflow artifacts'
         type: boolean
@@ -52,12 +53,16 @@ jobs:
       - name: Set bootloader and target based on board
         run: |
           case "${{ inputs.board }}" in
-            raspberry-pi-4)
+            raspberrypi-rpi64)
               echo "BOOTLOADER=rpi4_boot" >> $GITHUB_ENV
               echo "TARGET=aarch64" >> $GITHUB_ENV
               ;;
-            banana-pi-r3)
-              echo "BOOTLOADER=mt7986_sd_boot" >> $GITHUB_ENV
+            bananapi-bpi-r3)
+              echo "BOOTLOADER=bpi_r3_boot" >> $GITHUB_ENV
+              echo "TARGET=aarch64" >> $GITHUB_ENV
+              ;;
+            friendlyarm-nanopi-r2s)
+              echo "BOOTLOADER=nanopi_r2s_boot" >> $GITHUB_ENV
               echo "TARGET=aarch64" >> $GITHUB_ENV
               ;;
             *)
@@ -144,19 +149,7 @@ jobs:
           export BR2_EXTERNAL_INFIX_PATH=$PWD
           export RELEASE=""
           export INFIX_ID="infix"
-
-          # Use the standardized mkimage.sh path for the selected board
-          #          BOARD_SCRIPT="src/board/${{ inputs.board }}/mkimage.sh"
-          BOARD_SCRIPT="src/board/${{ inputs.board }}/mkimage.sh"
-
-          if [ -f "$BOARD_SCRIPT" ]; then
-            echo "Using board-specific image creation script: $BOARD_SCRIPT"
-            chmod +x "$BOARD_SCRIPT"
-            "$BOARD_SCRIPT"
-          else
-            echo "Error: Board script $BOARD_SCRIPT not found!"
-            exit 1
-          fi
+          ./utils/mkimage.sh ${{ inputs.board }}
 
       - name: Verify created image
         run: |
@@ -183,7 +176,7 @@ jobs:
         with:
           name: sdcard-image-${{ inputs.board }}-${{ env.BOOTLOADER }}
           path: |
-            output/images/*-sdcard.img
+            output/images/*-sdcard.img*
           retention-days: 30
 
       - name: Create checksums
@@ -218,7 +211,7 @@ jobs:
           **Artifact Source:** ${{ inputs.use_latest_release && 'Latest Release' || 'Latest Workflow Run' }}
 
           ## Created Images
-          $(find output/images/ -name "*.img" -o -name "*.qcow2" -o -name "*.raw" | xargs ls -lh 2>/dev/null | sed 's/^/- /' || echo "- No images found")
+          $(find output/images/ -name "*.img*" -o -name "*.qcow2" -o -name "*.raw" | xargs ls -lh 2>/dev/null | sed 's/^/- /' || echo "- No images found")
 
           ## Download
           The SD card image is available as a workflow artifact above.

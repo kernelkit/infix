@@ -292,6 +292,74 @@ def add_clock(out):
     clock["current-datetime"] = str(clock_now)
     insert(out, "clock", clock)
 
+def add_resource_usage(out):
+    """Add system resource usage (memory, load average, filesystem) to system-state"""
+    resource = {}
+
+    # Memory usage
+    try:
+        meminfo = HOST.read("/proc/meminfo")
+        if not meminfo:
+            return
+        mem_info = {}
+        for line in meminfo.splitlines():
+            parts = line.split(":")
+            if len(parts) == 2:
+                key = parts[0].strip()
+                value = parts[1].strip()
+                if key in ["MemTotal", "MemFree", "MemAvailable"]:
+                    # Store in KiB (as provided by /proc/meminfo, mislabeled as kB)
+                    mem_info[key] = int(value.split()[0])
+
+        if mem_info:
+            memory = {}
+            if "MemTotal" in mem_info:
+                memory["total"] = str(mem_info["MemTotal"])
+            if "MemFree" in mem_info:
+                memory["free"] = str(mem_info["MemFree"])
+            if "MemAvailable" in mem_info:
+                memory["available"] = str(mem_info["MemAvailable"])
+            resource["memory"] = memory
+    except (FileNotFoundError, ValueError):
+        pass
+
+    # Load average
+    try:
+        loadavg = HOST.read("/proc/loadavg")
+        load_parts = loadavg.strip().split()
+        if len(load_parts) >= 3:
+            load = {
+                "load-1min": load_parts[0],
+                "load-5min": load_parts[1],
+                "load-15min": load_parts[2]
+            }
+            resource["load-average"] = load
+    except (FileNotFoundError, ValueError):
+        pass
+
+    # Filesystem usage
+    filesystems = []
+    for mount in ["/", "/var", "/cfg"]:
+        try:
+            result = HOST.run_multiline(["df", "-k", mount], [])
+            if len(result) > 1:
+                parts = result[1].split()
+                if len(parts) >= 4:
+                    filesystems.append({
+                        "mount-point": mount,
+                        "size": str(parts[1]),
+                        "used": str(parts[2]),
+                        "available": str(parts[3])
+                    })
+        except (subprocess.CalledProcessError, ValueError, IndexError):
+            pass
+
+    if filesystems:
+        resource["filesystem"] = filesystems
+
+    if resource:
+        insert(out, "infix-system:resource-usage", resource)
+
 def operational():
     out = {
         "ietf-system:system": {
@@ -310,5 +378,6 @@ def operational():
     add_clock(out_state)
     add_platform(out_state)
     add_services(out_state)
+    add_resource_usage(out_state)
 
     return out

@@ -1,0 +1,34 @@
+/dts-v1/;
+/plugin/;
+
+&{/} {
+	config {
+		environment {
+			vendor = "infix";
+			preboot = "run ixpreboot";
+			ixbootdelay = "0.5";
+			bootdelay = "-2";
+			bootmenu_delay = "10";
+			boot_targets = "mmc0";
+			ethprime = "eth0";
+
+			stdout = "serial";
+			stderr = "serial";
+			stdin = "serial";
+			splashpos = "m,m";
+			splashfile = "splash.bmp";
+			checkdisplay = "if testrpidisplay; then; setenv fdtfile broadcom/bcm2711-rpi-4-b-dsi.dtb; fi";
+			bootcmd = "fatload mmc 0:1 ${loadaddr} ${splashfile}; bmp display ${loadaddr}; run checkdisplay; run ixboot";
+
+			ixpreboot     = /incbin/("scripts/ixpreboot.sh");
+			ixbtn-devmode = "setenv dev_mode yes; echo Enabled";
+			ixbtn-factory = "echo \"No button available, use bootmenu\"";
+			ixfactory     = /incbin/("scripts/ixfactory.sh");
+
+			ixboot      = /incbin/("scripts/ixboot.sh");
+			ixbootslot  = /incbin/("scripts/ixbootslot.sh");
+			ixprepblk   = /incbin/("scripts/ixprepblk.sh");
+			ixprepdhcp  = /incbin/("scripts/ixprepdhcp.sh");
+		};
+	};
+};

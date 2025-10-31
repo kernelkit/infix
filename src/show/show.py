@@ -190,6 +190,110 @@ def wifi(args: List[str]):
     else:
         print(f"Invalid interface name: {iface}")
 
+def system(args: List[str]) -> None:
+    # Get system state from sysrepo
+    data = run_sysrepocfg("/ietf-system:system-state")
+    if not data:
+        print("No system data retrieved.")
+        return
+
+    # Get hardware data (including thermal sensors)
+    hardware_data = run_sysrepocfg("/ietf-hardware:hardware")
+
+    # Augment with runtime data
+    runtime = {}
+
+    # Extract CPU temperature and fan speed from hardware components
+    cpu_temp = None
+    fan_rpm = None
+    if hardware_data and "ietf-hardware:hardware" in hardware_data:
+        components = hardware_data.get("ietf-hardware:hardware", {}).get("component", [])
+        for component in components:
+            sensor_data = component.get("sensor-data", {})
+            if not sensor_data:
+                continue
+
+            name = component.get("name", "")
+            value_type = sensor_data.get("value-type")
+
+            # Only capture CPU temperature (ignore phy, sfp, etc.)
+            if value_type == "celsius" and name == "cpu" and cpu_temp is None:
+                temp_millidegrees = sensor_data.get("value", 0)
+                cpu_temp = temp_millidegrees / 1000.0
+
+            # Capture fan speed if available
+            elif value_type == "rpm" and fan_rpm is None:
+                fan_rpm = sensor_data.get("value", 0)
+
+    if cpu_temp is not None:
+        runtime["cpu_temp"] = cpu_temp
+    if fan_rpm is not None:
+        runtime["fan_rpm"] = fan_rpm
+
+    # Extract resource usage from system-state
+    system_state = data.get("ietf-system:system-state", {})
+    resource_usage = system_state.get("infix-system:resource-usage", {})
+
+    # Memory info - convert KiB to MiB for display
+    memory_kib = resource_usage.get("memory", {})
+    if memory_kib:
+        memory = {}
+        if "total" in memory_kib:
+            memory["MemTotal"] = int(memory_kib["total"]) // 1024
+        if "free" in memory_kib:
+            memory["MemFree"] = int(memory_kib["free"]) // 1024
+        if "available" in memory_kib:
+            memory["MemAvailable"] = int(memory_kib["available"]) // 1024
+        runtime["memory"] = memory
+
+    # Load average
+    load_avg = resource_usage.get("load-average", {})
+    if load_avg:
+        runtime["load"] = {
+            "1min": str(load_avg.get("load-1min", "0.00")),
+            "5min": str(load_avg.get("load-5min", "0.00")),
+            "15min": str(load_avg.get("load-15min", "0.00"))
+        }
+
+    # Filesystem usage - convert KiB to human-readable format
+    filesystems = resource_usage.get("filesystem", [])
+    if filesystems:
+        disk_usage = []
+        for fs in filesystems:
+            mount = fs.get("mount-point", "")
+            size_kib = int(fs.get("size", 0))
+            used_kib = int(fs.get("used", 0))
+            avail_kib = int(fs.get("available", 0))
+
+            # Convert KiB to human-readable format (similar to df -h)
+            def human_readable(kib_val):
+                for unit in ['K', 'M', 'G', 'T']:
+                    if kib_val < 1024.0:
+                        return f"{kib_val:.1f}{unit}"
+                    kib_val /= 1024.0
+                return f"{kib_val:.1f}P"
+
+            # Calculate percentage
+            percent = f"{int((used_kib / size_kib * 100) if size_kib > 0 else 0)}%"
+
+            disk_usage.append({
+                "mount": mount,
+                "size": human_readable(size_kib),
+                "used": human_readable(used_kib),
+                "available": human_readable(avail_kib),
+                "percent": percent
+            })
+        runtime["disk"] = disk_usage
+
+    # Add runtime data to main data structure
+    data["runtime"] = runtime
+
+    if RAW_OUTPUT:
+        print(json.dumps(data, indent=2))
+        return
+
+    cli_pretty(data, "show-system")
+
 def execute_command(command: str, args: List[str]):
     command_mapping = {
         'dhcp': dhcp,
@@ -201,6 +305,7 @@ def execute_command(command: str, args: List[str]):
         'services' : services,
         'software' : software,
         'stp': stp,
+        'system': system,
         'wifi': wifi
     }
 

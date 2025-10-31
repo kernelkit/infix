@@ -1,0 +1,13 @@
+if BR2_aarch64
+
+source "$BR2_EXTERNAL_INFIX_PATH/board/aarch64/alder-alder/Config.in"
+source "$BR2_EXTERNAL_INFIX_PATH/board/aarch64/bananapi-bpi-r3/Config.in"
+source "$BR2_EXTERNAL_INFIX_PATH/board/aarch64/freescale-imx8mp-evk/Config.in"
+source "$BR2_EXTERNAL_INFIX_PATH/board/aarch64/friendlyarm-nanopi-r2s/Config.in"
+source "$BR2_EXTERNAL_INFIX_PATH/board/aarch64/marvell-cn9130-crb/Config.in"
+source "$BR2_EXTERNAL_INFIX_PATH/board/aarch64/marvell-espressobin/Config.in"
+source "$BR2_EXTERNAL_INFIX_PATH/board/aarch64/microchip-sparx5-pcb135/Config.in"
+source "$BR2_EXTERNAL_INFIX_PATH/board/aarch64/raspberrypi-rpi64/Config.in"
+source "$BR2_EXTERNAL_INFIX_PATH/board/aarch64/styx-dcp-sc-28p/Config.in"
+
+endif

@@ -1,0 +1,31 @@
+#include <arm64/broadcom/bcm2711-rpi-4-b.dts>
+#include "infix.dtsi"
+
+/ {
+	/* Dynamic GPU reservation */
+	gpu-reserved {
+		size = <0x0 0x10000000>; /* 256MB */
+		alignment = <0x0 0x1000000>; /* 16MB aligned */
+		alloc-ranges = <0x0 0x10000000 0x1 0x00000000>; /* Allow anywhere in RAM */
+		no-map;
+	};
+
+	/* CMA pool */
+	cma-reserved {
+		compatible = "shared-dma-pool";
+		size = <0x0 0x10000000>; /* 256MB */
+		alignment = <0x0 0x1000000>; /* 16MB aligned */
+		linux,cma-default;
+		reusable;
+	};
+
+	chosen {
+		/* 8250 auxiliary UART instead of pl011 */
+		stdout-path = "serial1:115200n8";
+	};
+};
+
+
+&vc4 {
+	status = "okay";
+};

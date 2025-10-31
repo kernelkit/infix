@@ -59,6 +59,15 @@ jobs:
           rm -rf ./* || true
           rm -rf ./.??* || true
           ls -la ./
+      - name: Cleanup podman state
+        run: |
+          set -x
+          podman ps -a              || true
+          podman stop -a            || true
+          podman rm -a -f           || true
+          podman volume prune -f    || true
+          podman system prune -a -f || true
+          podman system migrate     || true
 
       - name: Checkout infix repo
         uses: actions/checkout@v4

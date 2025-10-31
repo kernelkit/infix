@@ -43,11 +43,21 @@ jobs:
   release:
     name: Release Infix ${{ github.ref_name }}
     needs: build
-    runs-on: [ self-hosted, release ]
+    runs-on: [self-hosted, release]
     permissions:
       contents: write
       discussions: write
     steps:
+      - name: Cleanup podman state
+        run: |
+          set -x
+          podman ps -a              || true
+          podman stop -a            || true
+          podman rm -a -f           || true
+          podman volume prune -f    || true
+          podman system prune -a -f || true
+          podman system migrate     || true
+
       - uses: actions/checkout@v4
         with:
           submodules: 'true'

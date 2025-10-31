@@ -51,12 +51,20 @@ factory_reset()
     sync
 }
 
-is_rpi()
+is_mmc()
 {
-    [ -r /sys/firmware/devicetree/base/model ] || return 1
-
-    model=$(cat /sys/firmware/devicetree/base/model 2>/dev/null | tr -d '\0')
-    echo "$model" | grep -q "^Raspberry Pi"
+    # Check if primary or secondary partition (our rootfs) is on MMC
+    for label in primary secondary; do
+        devname=$(find_partition_by_label "$label" 2>/dev/null)
+        if [ -n "$devname" ]; then
+            case "$devname" in
+                mmcblk*)
+                    return 0
+                    ;;
+            esac
+        fi
+    done
+    return 1
 }
 
 wait_mmc()
@@ -105,16 +113,71 @@ find_partition_by_label()
     return 1
 }
 
-# Expand the given partition to fill up the rest of storage (sdcard)
-resize_by_label()
+status()
+{
+    GREEN="$(printf '\033[1;32m')"
+    RED="$(printf '\033[1;31m')"
+    YELLOW="$(printf '\033[1;33m')"
+    BOLD="$(printf '\033[1m')"
+    RESET="$(printf '\033[0m')"
+
+    case $1 in
+        0) color=$GREEN; text=' OK ' ;;
+        1) color=$RED;   text='FAIL' ;;
+        2) color=$YELLOW;text='WARN' ;;
+        *) color=$YELLOW;text=' ⋯  ' ;;
+    esac
+
+    printf '%s[%s%s%s%s]%s ' "$BOLD" "$color" "$text" "$RESET" "$BOLD" "$RESET"
+}
+
+print_start()
+{
+    printf '\r%s%s' "$(status 3)" "$*" > /dev/console
+}
+
+print_end()
+{
+    rc=$1; shift
+    if [ $# -gt 0 ]; then
+        printf '\r\033[K%s%s\n' "$(status "$rc")" "$*" > /dev/console
+    else
+        printf '\r%s\n' "$(status "$rc")" > /dev/console
+    fi
+}
+
+# Helper to log resize error and create failure marker (stage 1)
+resize_err()
+{
+    print_end 1
+    logger $opt -p user.err -t "$nm" "$1"
+    echo "1" > /mnt/aux/resized.failed
+
+    return 1
+}
+
+# Helper to log filesystem resize error and rename pending marker (stage 2)
+resize_fs_err()
+{
+    print_end 1
+    logger $opt -p user.err -t "$nm" "$1"
+    rm -f /mnt/aux/resized.pending
+    echo "1" > /mnt/aux/resized.failed
+
+    return 1
+}
+
+# Stage 1: Expand the given partition to fill up the rest of storage
+# On success, creates "resized.pending" marker and reboots.
+# On failure, creates "resized.failed" marker and returns 1.
+resize_partition()
 {
     label="$1"
 
+    print_start "Resizing /var partition on sdcard, please wait ..."
+
     devname=$(find_partition_by_label "$label")
-    if [ -z "$devname" ]; then
-	logger $opt -p user.err -t "$nm" "Label \"$label\" not found"
-	return 1
-    fi
+    [ -z "$devname" ] && resize_err "Label \"$label\" not found"
 
     part="/dev/$devname"
     diskname=$(basename "$(readlink -f "/sys/class/block/$devname/..")")
@@ -124,53 +187,68 @@ resize_by_label()
     logger $opt -p user.notice -t "$nm" "Found partition $part (partition $partnum on $disk)"
 
     start=$(sgdisk -i "$partnum" "$disk" 2>/dev/null | grep "First sector:" | awk '{print $3}')
-    if [ -z "$start" ]; then
-	logger $opt -p user.err -t "$nm" "Could not determine start sector for partition $partnum"
-	return 1
-    fi
+    [ -z "$start" ] && resize_err "Could not determine start sector for partition $partnum"
 
-    printf "\r\033[K[ ⋯  ] Resizing /var partition on sdcard, please wait ..." > /dev/console
     logger $opt -p user.notice -t "$nm" "Expanding partition $partnum from sector $start to end of disk"
 
-    if ! sgdisk -e "$disk" 2>&1 | logger $opt -p user.notice -t "$nm"; then
-	logger $opt -p user.warn -t "$nm" "Failed expanding GPT on $disk"
-	return 1
-    fi
+    sgdisk -e "$disk" 2>&1 | logger $opt -p user.notice -t "$nm" || \
+	resize_err "Failed expanding GPT on $disk"
 
-    if ! sgdisk -d "$partnum" "$disk" >/dev/null 2>&1; then
-	logger $opt -p user.warn -t "$nm" "Failed deleting partition $partnum on $disk"
-	return 1
-    fi
+    sgdisk -d "$partnum" "$disk" >/dev/null 2>&1 || \
+	resize_err "Failed deleting partition $partnum on $disk"
 
-    if ! sgdisk -n "$partnum:$start:0" "$disk" >/dev/null 2>&1; then
-	logger $opt -p user.warn -t "$nm" "Failed recreating partition $partnum on $disk"
-	return 1
-    fi
+    sgdisk -n "$partnum:$start:0" "$disk" >/dev/null 2>&1 || \
+	resize_err "Failed recreating partition $partnum on $disk"
 
-    if ! sgdisk -t "$partnum:8300" "$disk" >/dev/null 2>&1; then
-	logger $opt -p user.warn -t "$nm" "Failed setting partition type on $disk"
-	return 1
-    fi
+    sgdisk -t "$partnum:8300" "$disk" >/dev/null 2>&1 || \
+	resize_err "Failed setting partition type on $disk"
 
-    if ! sgdisk -c "$partnum:$label" "$disk" >/dev/null 2>&1; then
-	logger $opt -p user.warn -t "$nm" "Failed setting partition label on $disk"
-	return 1
-    fi
+    sgdisk -c "$partnum:$label" "$disk" >/dev/null 2>&1 || \
+	resize_err "Failed setting partition label on $disk"
 
     logger $opt -p user.notice -t "$nm" "Partition table updated on $disk"
     partprobe "$disk" 2>/dev/null
 
-    logger $opt -p user.notice -t "$nm" "Resizing filesystem on $part"
-    if ! resize2fs "$part" 2>&1 | logger $opt -p user.notice -t "$nm"; then
-	logger $opt -p user.warn -t "$nm" "Failed resizing filesystem on $part"
-	return 1
-    fi
+    # Mark stage 1 complete, stage 2 will happen after reboot
+    echo "1" > /mnt/aux/resized.pending
+    sync
 
-    tune2fs -O resize_inode "$part" 2>/dev/null
-    printf "\r\033[K[ \033[32mOK\033[0m ] Resizing /var partition on sdcard, done. Rebooting ...\n" > /dev/console
-    logger $opt -p user.notice -t "$nm" "Partition expanded, rebooting to complete filesystem resize"
+    print_end 0 "Resizing /var partition on sdcard, done. Rebooting ..."
+    logger $opt -p user.notice -t "$nm" "Partition expanded, rebooting to resize filesystem"
 
     reboot -f
+}
+
+# Stage 2: Complete filesystem resize after partition table has been expanded
+# On success, renames "resized.pending" to "resized".
+# On failure, renames "resized.pending" to "resized.failed" and returns 1.
+resize_filesystem()
+{
+    label="$1"
+
+    print_start "Expanding /var filesystem, please wait ..."
+
+    devname=$(find_partition_by_label "$label")
+    [ -z "$devname" ] && resize_fs_err "Label \"$label\" not found for filesystem resize"
+
+    part="/dev/$devname"
+
+    logger $opt -p user.notice -t "$nm" "Resizing filesystem on $part"
+    resize2fs "$part" 2>&1 | logger $opt -p user.notice -t "$nm" || \
+	resize_fs_err "Failed resizing filesystem on $part"
+
+    tune2fs -O resize_inode "$part" 2>/dev/null
+    print_end 0 "Expanding /var filesystem, done."
+    logger $opt -p user.notice -t "$nm" "Filesystem resize complete"
+
+    # Mark resize complete successfully
+    mv /mnt/aux/resized.pending /mnt/aux/resized
+    sync
+
+    # Restore Finit's original progress message so its [ OK ] appears correctly
+    print_start "Mounting filesystems from /etc/fstab"
+
+    return 0
 }
 
 mount_rw()
@@ -178,10 +256,14 @@ mount_rw()
     # If something is already setup, leave it be.
     mountpoint -q "/$1" && return 0
 
-    if [ "$1" = "var" ]; then
-	if is_rpi && [ ! -e /mnt/aux/resized ] ; then
-	    touch /mnt/aux/resized
-	    resize_by_label "$1"
+    # Check if /var has been resized to fill the sdcard/eMMC
+    if [ "$1" = "var" ] && is_mmc; then
+	if [ -f /mnt/aux/resized ] || [ -f /mnt/aux/resized.failed ]; then
+	    :
+	elif [ -f /mnt/aux/resized.pending ]; then
+	    resize_filesystem "$1"
+	else
+	    resize_partition "$1"
 	fi
     fi
 
@@ -232,10 +314,9 @@ if ! logger -? |grep -q "Log to kernel"; then
     opt="-c"
 fi
 
-
-# On Raspberry Pi, MMC controller may probe slowly, in particular if we
-# netboot (ram load) the devcice wait for it
-if is_rpi && ! ls /dev/mmcblk* >/dev/null 2>&1; then
+# On boards with MMC/SD cards, the controller may probe slowly, in particular
+# if we netboot (ram load) the device - wait for it if not already available
+if is_mmc && ! ls /dev/mmcblk* >/dev/null 2>&1; then
     wait_mmc
 fi
 
