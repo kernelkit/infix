@@ -51,9 +51,9 @@ admin@example:/>
 
 ### Pre-built images
 
-Pre-built SD card images are available here: [infix-rpi4-sdcard.img][sdcard]
+Pre-built SD card images are available here: [infix-rpi64-sdcard.img][sdcard]
 
 [0]: https://www.raspberrypi.com/products/raspberry-pi-touch-display/
-[1]: https://github.com/kernelkit/infix/releases/download/latest-boot/infix-rpi4-sdcard.img
+[1]: https://github.com/kernelkit/infix/releases/download/latest-boot/infix-rpi64-sdcard.img
 [2]: https://kernelkit.org/infix/latest/container/#content-mounts
 [3]: https://kernelkit.org/infix/latest/scripting-restconf/

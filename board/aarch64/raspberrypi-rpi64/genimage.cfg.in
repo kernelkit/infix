@@ -29,7 +29,7 @@ image var.ext4 {
 	}
 }
 
-image #INFIX_ID##VERSION#-rpi4-sdcard.img {
+image #INFIX_ID##VERSION#-rpi64-sdcard.img {
 	hdimage {
 		partition-table-type = "hybrid"
 	}
