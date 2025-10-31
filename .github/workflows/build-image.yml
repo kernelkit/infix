@@ -54,7 +54,7 @@ jobs:
         run: |
           case "${{ inputs.board }}" in
             raspberrypi-rpi64)
-              echo "BOOTLOADER=rpi4_boot" >> $GITHUB_ENV
+              echo "BOOTLOADER=rpi64_boot" >> $GITHUB_ENV
               echo "TARGET=aarch64" >> $GITHUB_ENV
               ;;
             bananapi-bpi-r3)

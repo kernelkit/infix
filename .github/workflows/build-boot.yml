@@ -16,11 +16,12 @@ jobs:
       fail-fast: false
       matrix:
         defconfig:
-          - fireant_boot
-          - cn9130_crb_boot
           - aarch64_qemu_boot
-          - rpi4_boot
           - bpi_r3_boot
+          - cn9130_crb_boot
+          - fireant_boot
+          - nanopi_r2s_boot
+          - rpi64_boot
     env:
       MAKEFLAGS: -j5
     steps:
