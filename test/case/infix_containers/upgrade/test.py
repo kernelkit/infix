@@ -40,9 +40,11 @@ with infamy.Test() as test:
 
         # Map kernel arch to our image naming
         arch_map = {
+            "amd64": "amd64",
             "x86_64": "amd64",
+            "arm64": "arm64",
             "aarch64": "arm64",
-            "armv7l": "arm64",  # Fallback for ARM variants
+            "armv7l": "arm64",
         }
         image_arch = arch_map.get(arch, "amd64")
         print(f"Detected architecture: {arch} -> using {image_arch} images")
