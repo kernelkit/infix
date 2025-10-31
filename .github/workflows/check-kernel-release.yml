@@ -36,12 +36,22 @@ jobs:
           echo "Infix kernel version: $INFIX_VERSION"
 
           if [ "$CURRENT_VERSION" != "$INFIX_VERSION" ]; then
-            echo "new_release=true" >> $GITHUB_OUTPUT
-            echo "🎉 New 6.12 kernel released: $CURRENT_VERSION (infix version: $INFIX_VERSION)"
+            # Check if there's already an open PR for this version
+            PR_EXISTS=$(gh pr list --state open --search "Upgrade to kernel $CURRENT_VERSION in:title" --json number --jq 'length')
+
+            if [ "$PR_EXISTS" -gt 0 ]; then
+              echo "new_release=false" >> $GITHUB_OUTPUT
+              echo "PR already exists for kernel $CURRENT_VERSION, skipping"
+            else
+              echo "new_release=true" >> $GITHUB_OUTPUT
+              echo "🎉 New 6.12 kernel released: $CURRENT_VERSION (infix version: $INFIX_VERSION)"
+            fi
           else
             echo "new_release=false" >> $GITHUB_OUTPUT
             echo "No change - still at $CURRENT_VERSION"
           fi
+        env:
+          GH_TOKEN: ${{ secrets.KERNEL_UPDATE_TOKEN }}
 
       - name: Set up git credentials
         if: steps.check.outputs.new_release == 'true'
