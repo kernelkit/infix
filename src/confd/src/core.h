@@ -24,6 +24,7 @@
 
 #include <jansson.h>
 
+#include <srx/lyx.h>
 #include <srx/common.h>
 #include <srx/helpers.h>
 #include <srx/systemv.h>
@@ -100,6 +101,11 @@ static inline char *xpath_base(const char *xpath)
 
 	return path;
 }
+typedef enum {
+	CONFD_DEP_DONE = 0,
+	CONFD_DEP_ADDED = 1,
+	CONFD_DEP_ERROR = 2
+} confd_dependency_t;
 
 #define REGISTER_CHANGE(s,m,x,f,c,a,u)				\
 	if ((rc = register_change(s, m, x, f, c, a, u)))	\
@@ -129,45 +135,16 @@ struct confd {
 	struct dagger		netdag;
 };
 
-uint32_t core_hook_prio    (void);
-int      core_pre_hook     (sr_session_ctx_t *, uint32_t, const char *, const char *, sr_event_t, unsigned, void *);
-int      core_post_hook    (sr_session_ctx_t *, uint32_t, const char *, const char *, sr_event_t, unsigned, void *);
 int      core_startup_save (sr_session_ctx_t *, uint32_t, const char *, const char *, sr_event_t, unsigned, void *);
 
 static inline int register_change(sr_session_ctx_t *session, const char *module, const char *xpath,
 	int flags, sr_module_change_cb cb, void *arg, sr_subscription_ctx_t **sub)
 {
-	struct confd *ptr = (struct confd *)arg;
-	bool need_core_hooks;
-	int rc;
-
-	/*
-	 * For standard subscribtions we hook into the callback chain
-	 * for all modules to figure out, per changeset, which of the
-	 * callbacks is the last one.  This is where we want to call the
-	 * global commit-done hook for candidate -> running changes and
-	 * the startup-save hook for running -> startup copying.
-	 */
-
-	need_core_hooks = !(flags & SR_SUBSCR_UPDATE);
-
-	if (need_core_hooks) {
-		sr_module_change_subscribe(ptr->session, module, xpath, core_pre_hook, NULL,
-				0, SR_SUBSCR_PASSIVE, sub);
-	}
-
-	rc = sr_module_change_subscribe(session, module, xpath, cb, arg,
+	int rc = sr_module_change_subscribe(session, module, xpath, cb, arg,
 				CB_PRIO_PRIMARY, flags | SR_SUBSCR_DEFAULT, sub);
 	if (rc) {
 		ERROR("failed subscribing to changes of %s: %s", xpath, sr_strerror(rc));
 		return rc;
-	}
-
-	if (need_core_hooks) {
-		sr_module_change_subscribe(ptr->session, module, xpath, core_post_hook, NULL,
-				core_hook_prio(), SR_SUBSCR_PASSIVE, sub);
-		sr_module_change_subscribe(ptr->startup, module, xpath, core_startup_save, NULL,
-				core_hook_prio(), SR_SUBSCR_PASSIVE, sub);
 	}
 
 	return 0;
@@ -206,57 +183,70 @@ static inline int register_rpc(sr_session_ctx_t *session, const char *xpath,
 	return rc;
 }
 
+
 /* ietf-interfaces.c */
-int ietf_interfaces_init(struct confd *confd);
+int ietf_interfaces_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd);
+int ietf_interfaces_cand_init(struct confd *confd);
 
 /* ietf-syslog.c */
-int ietf_syslog_init(struct confd *confd);
+int ietf_syslog_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd);
 
 /* ietf-system.c */
-int ietf_system_init (struct confd *confd);
+int ietf_system_rpc_init (struct confd *confd);
 int hostnamefmt      (struct confd *confd, const char *fmt, char *hostnm, size_t hostlen, char *domain, size_t domlen);
+int ietf_system_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd);
 
 /* infix-containers.c */
 #ifdef CONTAINERS
-int infix_containers_init(struct confd *confd);
+int infix_containers_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd);
+int infix_containers_rpc_init(struct confd *confd);
 #else
-static inline int infix_containers_init(struct confd *confd) { return 0; }
+static inline int infix_containers_rpc_init(struct confd *confd) { return 0; }
+static inline int infix_containers_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd) { return 0; }
 #endif
 
 /* infix-dhcp-common.c */
 int dhcp_option_lookup(const struct lyd_node *id);
 
 /* infix-dhcp-client.c */
-int infix_dhcp_client_init(struct confd *confd);
+int infix_dhcp_client_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd);
+int infix_dhcp_client_candidate_init(struct confd *confd);
 
 /* infix-dhcp-server.c */
-int infix_dhcp_server_init(struct confd *confd);
-
-/* ietf-factory-default */
-int ietf_factory_default_init(struct confd *confd);
+int infix_dhcp_server_candidate_init(struct confd *confd);
+int infix_dhcp_server_rpc_init(struct confd *confd);
+int infix_dhcp_server_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd);
 
 /* ietf-routing */
-int ietf_routing_init(struct confd *confd);
+int ietf_routing_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd);
 
 /* infix-factory.c */
-int infix_factory_init(struct confd *confd);
+int infix_factory_rpc_init(struct confd *confd);
 
-/* infix-factory.c */
-int infix_meta_init(struct confd *confd);
+/* ietf-factory-default */
+int ietf_factory_default_rpc_init(struct confd *confd);
+
+/* infix-meta.c */
+int infix_meta_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd);
 
 /* infix-system-software.c */
-int infix_system_sw_init(struct confd *confd);
+int infix_system_sw_rpc_init(struct confd *confd);
 
 /* infix-services.c */
-int infix_services_init(struct confd *confd);
+int infix_services_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd);
 
 /* ietf-hardware.c */
-int ietf_hardware_init(struct confd *confd);
+int ietf_hardware_candidate_init(struct confd *confd);
+int ietf_hardware_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd);
 
 /* ietf-keystore.c */
-int ietf_keystore_init(struct confd *confd);
+#define SSH_HOSTKEYS "/etc/ssh/hostkeys"
+#define SSH_HOSTKEYS_NEXT SSH_HOSTKEYS"+"
+int ietf_keystore_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd);
 
 /* infix-firewall.c */
-int infix_firewall_init(struct confd *confd);
+int infix_firewall_rpc_init(struct confd *confd);
+int infix_firewall_candidate_init(struct confd *confd);
+int infix_firewall_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd);
 
 #endif	/* CONFD_CORE_H_ */

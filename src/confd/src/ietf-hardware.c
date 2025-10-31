@@ -185,26 +185,15 @@ static int hardware_cand(sr_session_ctx_t *session, uint32_t sub_id, const char 
 	return err;
 }
 
-static int change_hardware(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
-			   const char *xpath, sr_event_t event, unsigned request_id, void *priv)
+int ietf_hardware_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd)
 {
-	struct lyd_node *diff, *difs = NULL, *dif = NULL, *cifs = NULL, *cif = NULL;
-	sr_data_t *cfg;
+	struct lyd_node  *difs = NULL, *dif = NULL, *cifs = NULL, *cif = NULL;
 	int rc = SR_ERR_OK;
-	struct confd *confd = (struct confd *)priv;
 
-	if (event != SR_EV_DONE)
+	if (event != SR_EV_DONE || !lydx_find_xpathf(diff, XPATH_BASE_))
 		return SR_ERR_OK;
 
-	rc = sr_get_data(session, XPATH_BASE_ "//.", 0, 0, 0, &cfg);
-	if (rc || !cfg)
-		goto err;
-
-	rc = srx_get_diff(session, &diff);
-	if (rc)
-		goto err_release_data;
-
-	cifs = lydx_get_descendant(cfg->tree, "hardware", "component", NULL);
+	cifs = lydx_get_descendant(config, "hardware", "component", NULL);
 	difs = lydx_get_descendant(diff, "hardware", "component", NULL);
 
 	LYX_LIST_FOR_EACH(difs, dif, "component") {
@@ -218,7 +207,7 @@ static int change_hardware(sr_session_ctx_t *session, uint32_t sub_id, const cha
 		if (op == LYDX_OP_DELETE) {
 			if (usb_authorize(confd->root, name, 0)) {
 				rc = SR_ERR_INTERNAL;
-				goto err_release_diff;
+				goto err;;
 			}
 			continue;
 		}
@@ -235,23 +224,18 @@ static int change_hardware(sr_session_ctx_t *session, uint32_t sub_id, const cha
 			admin_state = lydx_get_cattr(state, "admin-state");
 			if (usb_authorize(confd->root, name, !strcmp(admin_state, "unlocked"))) {
 				rc = SR_ERR_INTERNAL;
-				goto err_release_diff;
+				goto err;;
 			}
 		}
 	}
 
-err_release_diff:
-	lyd_free_tree(diff);
-err_release_data:
-	sr_release_data(cfg);
 err:
 	return rc;
 }
-int ietf_hardware_init(struct confd *confd)
+int ietf_hardware_candidate_init(struct confd *confd)
 {
 	int rc = 0;
 
-	REGISTER_CHANGE(confd->session, "ietf-hardware", XPATH_BASE_, 0, change_hardware, confd, &confd->sub);
 	REGISTER_CHANGE(confd->cand, "ietf-hardware", XPATH_BASE_,
 			SR_SUBSCR_UPDATE, hardware_cand, confd, &confd->sub);
 

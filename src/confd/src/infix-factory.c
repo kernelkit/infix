@@ -33,7 +33,7 @@ static int rpc(sr_session_ctx_t *session, uint32_t sub_id, const char *xpath,
 	return rc;
 }
 
-int infix_factory_init(struct confd *confd)
+int infix_factory_rpc_init(struct confd *confd)
 {
 	int rc;
 	REGISTER_RPC(confd->session, "/infix-factory-default:factory-default", rpc, NULL, &confd->fsub);

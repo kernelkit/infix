@@ -16,7 +16,7 @@ static int factory_reset(sr_session_ctx_t *session, uint32_t sub_id, const char 
 	return 0;
 }
 
-int ietf_factory_default_init(struct confd *confd)
+int ietf_factory_default_rpc_init(struct confd *confd)
 {
 	int rc;
 

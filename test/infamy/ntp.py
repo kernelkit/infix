@@ -10,7 +10,7 @@ def _get_ntp(target):
     if data is None:
         return None
 
-    return data["system-state"].get("infix-system:ntp", None) or data["system-state"].get("ntp", None)
+    return data.get("system-state", {}).get("infix-system:ntp", None) or data.get("system-state", {}).get("ntp", None)
 
 
 def _get_ntp_sources(target):

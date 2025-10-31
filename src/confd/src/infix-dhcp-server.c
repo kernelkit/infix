@@ -294,13 +294,14 @@ static void del(const char *subnet, struct lyd_node *cfg)
 		ERRNO("Failed switching to new %s", DNSMASQ_LEASES);
 }
 
-static int change(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
-		  const char *xpath, sr_event_t event, unsigned request_id, void *_confd)
+int infix_dhcp_server_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd)
 {
-	struct lyd_node *global, *diff, *cifs, *difs, *cif, *dif;
+	struct lyd_node *global, *cifs, *difs, *cif, *dif;
 	int enabled = 0, added = 0, deleted = 0;
 	sr_error_t err = 0;
-	sr_data_t *cfg;
+
+	if (!lydx_get_xpathf(diff, CFG_XPATH))
+		return SR_ERR_OK;
 
 	switch (event) {
 	case SR_EV_DONE:
@@ -311,18 +312,10 @@ static int change(sr_session_ctx_t *session, uint32_t sub_id, const char *module
 		return SR_ERR_OK;
 	}
 
-	err = sr_get_data(session, "//.", 0, 0, 0, &cfg);
-	if (err || !cfg)
-		goto err_abandon;
-
-	err = srx_get_diff(session, &diff);
-	if (err)
-		goto err_release_data;
-
-	global = lydx_get_descendant(cfg->tree, "dhcp-server", NULL);
+	global = lydx_get_descendant(config, "dhcp-server", NULL);
 	enabled = lydx_is_enabled(global, "enabled");
 
-	cifs = lydx_get_descendant(cfg->tree, "dhcp-server", "subnet", NULL);
+	cifs = lydx_get_descendant(config, "dhcp-server", "subnet", NULL);
 	difs = lydx_get_descendant(diff, "dhcp-server", "subnet", NULL);
 
 	/* find the modified one, delete or recreate only that */
@@ -356,7 +349,7 @@ static int change(sr_session_ctx_t *session, uint32_t sub_id, const char *module
 		if (!fp)
 			goto err_done;
 
-		node = lydx_get_xpathf(cfg->tree, "/ietf-system:system/hostname");
+		node = lydx_get_xpathf(config, "/ietf-system:system/hostname");
 		if (node) {
 			const char *hostname = lyd_get_value(node);
 			const char *ptr = hostname ? strchr(hostname, '.') : NULL;
@@ -384,11 +377,6 @@ static int change(sr_session_ctx_t *session, uint32_t sub_id, const char *module
 err_done:
 	if (added || deleted)
 		system("initctl -nbq touch dnsmasq");
-
-	lyd_free_tree(diff);
-err_release_data:
-	sr_release_data(cfg);
-err_abandon:
 
 	return err;
 }
@@ -461,12 +449,22 @@ static int clear_stats(sr_session_ctx_t *session, uint32_t sub_id, const char *x
 	return SR_ERR_OK;
 }
 
-int infix_dhcp_server_init(struct confd *confd)
+int infix_dhcp_server_candidate_init(struct confd *confd)
 {
 	int rc;
 
-	REGISTER_CHANGE(confd->session, MODULE, CFG_XPATH, 0, change, confd, &confd->sub);
 	REGISTER_CHANGE(confd->cand, MODULE, CFG_XPATH "//.", SR_SUBSCR_UPDATE, cand, confd, &confd->sub);
+
+	return SR_ERR_OK;
+fail:
+	ERROR("init failed: %s", sr_strerror(rc));
+	return rc;
+}
+
+int infix_dhcp_server_rpc_init(struct confd *confd)
+{
+	int rc;
+
 	REGISTER_RPC(confd->session, CFG_XPATH "/statistics/clear", clear_stats, NULL, &confd->sub);
 
 	return SR_ERR_OK;

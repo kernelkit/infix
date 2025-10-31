@@ -218,13 +218,12 @@ static const char *getnm(struct lyd_node *node, char *xpath, size_t len)
 	return name;
 }
 
-static int file_change(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
-		       const char *xpath, sr_event_t event, unsigned request_id, void *priv)
+static int file_change(sr_session_ctx_t *session, struct lyd_node *config,struct lyd_node *diff, sr_event_t event, struct confd *confd)
 {
 	struct lyd_node *files, *file, *tree;
 	int err;
 
-	if (SR_EV_DONE != event)
+	if (SR_EV_DONE != event || !lydx_get_xpathf(diff, XPATH_FILE_))
 		return SR_ERR_OK;
 
 	err = srx_get_diff(session, &tree);
@@ -253,21 +252,15 @@ static int file_change(sr_session_ctx_t *session, uint32_t sub_id, const char *m
 	return SR_ERR_OK;
 }
 
-static int remote_change(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
-			 const char *xpath, sr_event_t event, unsigned request_id, void *priv)
+static int remote_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd)
 {
-	struct lyd_node *remotes, *remote, *tree;
-	int err;
+	struct lyd_node *dremotes, *remote;
 
-	if (SR_EV_DONE != event)
+	if (SR_EV_DONE != event || !lydx_get_xpathf(diff, XPATH_REMOTE_))
 		return SR_ERR_OK;
 
-	err = srx_get_diff(session, &tree);
-	if (err)
-		return SR_ERR_OK;
-
-	remotes = lydx_get_descendant(tree, "syslog", "actions", "remote", "destination", NULL);
-	LYX_LIST_FOR_EACH(remotes, remote, "destination") {
+	dremotes = lydx_get_descendant(diff, "syslog", "actions", "remote", "destination", NULL);
+	LYX_LIST_FOR_EACH(dremotes, remote, "destination") {
 		struct lyd_node *node = lydx_get_child(remote, "name");
 		enum lydx_op op = lydx_get_op(node);
 		char path[512] = XPATH_REMOTE_;
@@ -283,23 +276,22 @@ static int remote_change(sr_session_ctx_t *session, uint32_t sub_id, const char 
 			addr.address = srx_get_str(session, "%s/udp/address", path);
 			srx_get_int(session, &addr.port, SR_UINT16_T, "%s/udp/port", path);
 
-			action(session, name, xpath, &addr);
+			action(session, name, path, &addr);
 		}
 	}
 
-	srx_free_changes(tree);
 	systemf("initctl -nbq touch sysklogd");
 
 	return SR_ERR_OK;
 }
 
-static int rotate_change(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
-			 const char *xpath, sr_event_t event, unsigned request_id, void *priv)
+static int rotate_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd)
 {
+	char path[512] = XPATH_ROTATE_;
 	char *sz, *cnt;
 	FILE *fp;
 
-	if (SR_EV_DONE != event)
+	if (SR_EV_DONE != event || !lydx_get_xpathf(diff, XPATH_ROTATE_))
 		return SR_ERR_OK;
 
 	fp = fopen(SYSLOG_ROTATE, "w");
@@ -308,13 +300,13 @@ static int rotate_change(sr_session_ctx_t *session, uint32_t sub_id, const char 
 		return SR_ERR_SYS;
 	}
 
-	sz  = srx_get_str(session, "%s/max-file-size", xpath);
+	sz  = srx_get_str(session, "%s/max-file-size", path);
 	if (sz) {
 		fprintf(fp, "rotate_size %sk\n", sz);
 		free(sz);
 	}
 
-	cnt = srx_get_str(session, "%s/number-of-files", xpath);
+	cnt = srx_get_str(session, "%s/number-of-files", path);
 	if (cnt) {
 		fprintf(fp, "rotate_count %s\n", cnt);
 		free(cnt);
@@ -326,18 +318,18 @@ static int rotate_change(sr_session_ctx_t *session, uint32_t sub_id, const char 
 	return SR_ERR_OK;
 }
 
-static int server_change(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
-			 const char *xpath, sr_event_t event, unsigned request_id, void *priv)
+static int server_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd)
 {
+	char path[512] = XPATH_SERVER_;
 	sr_val_t *list = NULL;
 	size_t count;
 	FILE *fp;
 
-	if (SR_EV_DONE != event)
+	if (SR_EV_DONE != event || !lydx_get_xpathf(diff, XPATH_SERVER_))
 		return SR_ERR_OK;
 
-	if (!srx_enabled(session, "%s/enabled", xpath)) {
-		if (remove(SYSLOG_SERVER))
+	if (!srx_enabled(session, "%s/enabled", path)) {
+		if (erase(SYSLOG_SERVER))
 			ERRNO("failed disabling syslog server");
 		goto done;
 	}
@@ -351,7 +343,7 @@ static int server_change(sr_session_ctx_t *session, uint32_t sub_id, const char 
 	/* Allow listening on port 514, or custom listen below */
 	fprintf(fp, "secure_mode 0\n");
 
-	if (!srx_get_items(session, &list, &count, "%s/listen/udp", xpath)) {
+	if (!srx_get_items(session, &list, &count, "%s/listen/udp", path)) {
 		for (size_t i = 0; i < count; ++i) {
 			sr_val_t *entry = &list[i];
 			char *address, *port;
@@ -373,21 +365,17 @@ done:
 
 	return SR_ERR_OK;
 }
-
-int ietf_syslog_init(struct confd *confd)
+int ietf_syslog_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd)
 {
-	int rc = SR_ERR_SYS;
-
-	if (!confd)
-		goto fail;
-
-	REGISTER_CHANGE(confd->session, "ietf-syslog", XPATH_FILE_"//.", 0, file_change, confd, &confd->sub);
-	REGISTER_CHANGE(confd->session, "ietf-syslog", XPATH_REMOTE_"//.", 0, remote_change, confd, &confd->sub);
-	REGISTER_CHANGE(confd->session, "ietf-syslog", XPATH_ROTATE_"//.", 0, rotate_change, confd, &confd->sub);
-	REGISTER_CHANGE(confd->session, "ietf-syslog", XPATH_SERVER_"//.", 0, server_change, confd, &confd->sub);
+	int rc = SR_ERR_OK;
+	if ((rc = file_change(session, config, diff, event, confd)))
+		return rc;
+	if ((rc = remote_change(session, config, diff, event, confd)))
+		return rc;
+	if ((rc = rotate_change(session, config, diff, event, confd)))
+		return rc;
+	if ((rc = server_change(session, config, diff, event, confd)))
+		return rc;
 
 	return SR_ERR_OK;
-fail:
-	ERROR("%s failed: %s", __func__, sr_strerror(rc));
-	return rc;
 }

@@ -18,23 +18,10 @@ static int set_version(sr_session_ctx_t *session)
 	return SR_ERR_OK;
 }
 
-static int change_cb(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
-		       const char *xpath, sr_event_t event, unsigned request_id, void *priv)
+int infix_meta_change_cb(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd)
 {
 	if (event == SR_EV_UPDATE)
 		return set_version(session);
 
 	return SR_ERR_OK;
-}
-
-int infix_meta_init(struct confd *confd)
-{
-	int rc;
-
-	REGISTER_CHANGE(confd->session, "infix-meta", META_XPATH, SR_SUBSCR_UPDATE,
-			change_cb, confd, &confd->sub);
-	return SR_ERR_OK;
-fail:
-	ERROR("%s(): failed. %s", __func__, sr_strerror(rc));
-	return rc;
 }

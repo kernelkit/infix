@@ -477,15 +477,15 @@ static int infer_policy(sr_session_ctx_t *session, const char *name, const char 
 }
 #endif
 
-static int change(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
-		  const char *xpath, sr_event_t event, unsigned request_id, void *_confd)
+int infix_firewall_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd)
 {
 	struct lyd_node *tree, *global;
 	struct lyd_node *clist, *cnode;
-	struct lyd_node *diff = NULL;
 	sr_error_t err = SR_ERR_OK;
-	sr_data_t *cfg = NULL;
 	char **ifaces = NULL;
+
+	if (diff && !lydx_get_xpathf(diff, XPATH))
+		return SR_ERR_OK;
 
 	switch (event) {
 	case SR_EV_CHANGE:
@@ -518,11 +518,7 @@ static int change(sr_session_ctx_t *session, uint32_t sub_id, const char *module
 		return SR_ERR_OK;
 	}
 
-	err = sr_get_data(session, "//.", 0, 0, 0, &cfg);
-	if (err || !cfg)
-		return SR_ERR_INTERNAL;
-
-	tree = cfg->tree;
+	tree = config;
 	global = lydx_get_descendant(tree, "firewall", NULL);
 
 	/* Clean up any stale /etc/firewalld+ first */
@@ -539,13 +535,6 @@ static int change(sr_session_ctx_t *session, uint32_t sub_id, const char *module
 		ERROR("Failed to get L3 interfaces");
 		ifaces = NULL;
 	}
-
-	err = srx_get_diff(session, &diff);
-	if (err)
-		goto done;
-
-	if (!diff)
-		goto done;
 
 	/* Create /etc/firewalld+ directory structure */
 	if (fmkpath(0755, FIREWALLD_DIR_NEXT) ||
@@ -642,12 +631,6 @@ done:
 		free(ifaces);
 	}
 
-	if (diff)
-		lyd_free_tree(diff);
-
-	if (cfg)
-		sr_release_data(cfg);
-
 	return err;
 }
 
@@ -699,7 +682,7 @@ static int cand(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
 
 #if INFER_POLICY
 	/* Infer allow-host-ipv6 policy */
-	rc = infer_policy(session, "allow-host-ipv6", 
+	rc = infer_policy(session, "allow-host-ipv6",
 			  "Allows basic IPv6 functionality for the host.",
 			  "continue", any, host, icmp_types);
 	if (rc)
@@ -725,13 +708,24 @@ static int lockdown(sr_session_ctx_t *session, uint32_t sub_id, const char *xpat
 	return SR_ERR_OK;
 }
 
-int infix_firewall_init(struct confd *confd)
+int infix_firewall_rpc_init(struct confd *confd)
 {
 	int rc;
 
-	REGISTER_CHANGE(confd->session, MODULE, XPATH "//.", 0, change, confd, &confd->sub);
-	REGISTER_CHANGE(confd->cand, MODULE, XPATH "//.", SR_SUBSCR_UPDATE, cand, confd, &confd->sub);
 	REGISTER_RPC(confd->session, XPATH "/lockdown-mode", lockdown, NULL, &confd->sub);
+
+	return SR_ERR_OK;
+fail:
+	ERROR("init failed: %s", sr_strerror(rc));
+	return rc;
+}
+
+
+int infix_firewall_candidate_init(struct confd *confd)
+{
+	int rc;
+
+	REGISTER_CHANGE(confd->cand, MODULE, XPATH "//.", SR_SUBSCR_UPDATE, cand, confd, &confd->sub);
 
 	return SR_ERR_OK;
 fail:

@@ -278,12 +278,10 @@ static void del(const char *ifname)
 	systemf("initctl -bfq delete dhcp-client-%s", ifname);
 }
 
-static int change(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
-		  const char *xpath, sr_event_t event, unsigned request_id, void *_confd)
+int infix_dhcp_client_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd)
 {
-	struct lyd_node *global, *diff, *cifs, *difs, *cif, *dif;
+	struct lyd_node *global, *cifs, *difs, *cif, *dif;
 	sr_error_t err = 0;
-	sr_data_t *cfg;
 	int ena = 0;
 
 	switch (event) {
@@ -295,18 +293,10 @@ static int change(sr_session_ctx_t *session, uint32_t sub_id, const char *module
 		return SR_ERR_OK;
 	}
 
-	err = sr_get_data(session, "//.", 0, 0, 0, &cfg);
-	if (err || !cfg)
-		goto err_abandon;
-
-	err = srx_get_diff(session, &diff);
-	if (err)
-		goto err_release_data;
-
-	global = lydx_get_descendant(cfg->tree, "dhcp-client", NULL);
+	global = lydx_get_descendant(config, "dhcp-client", NULL);
 	ena    = lydx_is_enabled(global, "enabled");
 
-	cifs = lydx_get_descendant(cfg->tree, "dhcp-client", "client-if", NULL);
+	cifs = lydx_get_descendant(config, "dhcp-client", "client-if", NULL);
 	difs = lydx_get_descendant(diff, "dhcp-client", "client-if", NULL);
 
 	/* find the modified one, delete or recreate only that */
@@ -338,11 +328,6 @@ static int change(sr_session_ctx_t *session, uint32_t sub_id, const char *module
 			del(ifname);
 		}
 	}
-
-	lyd_free_tree(diff);
-err_release_data:
-	sr_release_data(cfg);
-err_abandon:
 
 	return err;
 }
@@ -421,11 +406,10 @@ static int cand(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
 	return SR_ERR_OK;
 }
 
-int infix_dhcp_client_init(struct confd *confd)
+int infix_dhcp_client_candidate_init(struct confd *confd)
 {
 	int rc;
 
-	REGISTER_CHANGE(confd->session, MODULE, XPATH, 0, change, confd, &confd->sub);
 	REGISTER_CHANGE(confd->cand, MODULE, XPATH"//.", SR_SUBSCR_UPDATE, cand, confd, &confd->sub);
 
 	return SR_ERR_OK;

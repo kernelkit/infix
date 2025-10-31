@@ -349,23 +349,19 @@ static int del(const char *name)
 	return SR_ERR_OK;
 }
 
-static int change(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
-		  const char *xpath, sr_event_t event, unsigned request_id, void *_confd)
+int infix_containers_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd)
 {
-	struct lyd_node *diff, *cifs, *difs, *cif, *dif;
+	struct lyd_node *cifs, *difs, *cif, *dif;
 	sr_error_t       err = 0;
-	sr_data_t       *cfg;
 
+	if (diff && !lydx_get_xpathf(diff, CFG_XPATH))
+		return SR_ERR_OK;
 	switch (event) {
 	case SR_EV_DONE:
 		break;
 
 	case SR_EV_CHANGE:
-		err = sr_get_data(session, CFG_XPATH "//.", 0, 0, 0, &cfg);
-		if (err || !cfg)
-			return SR_ERR_INTERNAL;
-
-		cifs = lydx_get_descendant(cfg->tree, "containers", "container", NULL);
+		cifs = lydx_get_descendant(config, "containers", "container", NULL);
 		LYX_LIST_FOR_EACH(cifs, cif, "container") {
 			struct lyd_node *mount;
 			LYX_LIST_FOR_EACH(lyd_child(cif), mount, "mount") {
@@ -379,13 +375,10 @@ static int change(sr_session_ctx_t *session, uint32_t sub_id, const char *module
 				             	"Container '%s': mount '%s' source file '%s' is invalid: %s",
 				             	lydx_get_cattr(cif, "name"), id, src, reason);
 				    	sr_session_set_error_message(session, errmsg);
-				    	sr_release_data(cfg);
 				    	return SR_ERR_VALIDATION_FAILED;
 				}
 			}
 		}
-
-		sr_release_data(cfg);
 		return SR_ERR_OK;
 
 	case SR_EV_ABORT:
@@ -393,15 +386,7 @@ static int change(sr_session_ctx_t *session, uint32_t sub_id, const char *module
 		return SR_ERR_OK;
 	}
 
-	err = sr_get_data(session, CFG_XPATH "//.", 0, 0, 0, &cfg);
-	if (err || !cfg)
-		goto err_abandon;
-
-	err = srx_get_diff(session, &diff);
-	if (err)
-		goto err_release_data;
-
-	cifs = lydx_get_descendant(cfg->tree, "containers", "container", NULL);
+	cifs = lydx_get_descendant(config, "containers", "container", NULL);
 	difs = lydx_get_descendant(diff, "containers", "container", NULL);
 
 	/* find the modified one, delete or recreate only that */
@@ -421,11 +406,6 @@ static int change(sr_session_ctx_t *session, uint32_t sub_id, const char *module
 			break;
 		}
 	}
-
-	lyd_free_tree(diff);
-err_release_data:
-	sr_release_data(cfg);
-err_abandon:
 
 	return err;
 }
@@ -484,11 +464,10 @@ static int oci_load(sr_session_ctx_t *session, uint32_t sub_id, const char *xpat
 	return SR_ERR_OK;
 }
 
-int infix_containers_init(struct confd *confd)
+int infix_containers_rpc_init(struct confd *confd)
 {
 	int rc;
 
-	REGISTER_CHANGE(confd->session, MODULE, CFG_XPATH, 0, change, confd, &confd->sub);
 	REGISTER_RPC(confd->session, CFG_XPATH "/container/start",   action, NULL, &confd->sub);
 	REGISTER_RPC(confd->session, CFG_XPATH "/container/stop",    action, NULL, &confd->sub);
 	REGISTER_RPC(confd->session, CFG_XPATH "/container/restart", action, NULL, &confd->sub);

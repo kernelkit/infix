@@ -787,12 +787,9 @@ static sr_error_t ifchange_post(sr_session_ctx_t *session, struct dagger *net,
 	return err ? SR_ERR_INTERNAL : SR_ERR_OK;
 }
 
-static int ifchange(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
-		    const char *xpath, sr_event_t event, unsigned request_id, void *_confd)
+int ietf_interfaces_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd)
 {
-	struct lyd_node *diff, *cifs, *difs, *cif, *dif;
-	struct confd *confd = _confd;
-	sr_data_t *cfg;
+	struct lyd_node *cifs, *difs, *cif, *dif;
 	sr_error_t err;
 
 	switch (event) {
@@ -814,19 +811,11 @@ static int ifchange(sr_session_ctx_t *session, uint32_t sub_id, const char *modu
 	if (err)
 		return err;
 
-	err = sr_get_data(session, "//.", 0, 0, 0, &cfg);
-	if (err || !cfg)
-		goto err_abandon;
-
-	err = srx_get_diff(session, (struct lyd_node **)&diff);
-	if (err)
-		goto err_release_data;
-
-	cifs = lydx_get_descendant(cfg->tree, "interfaces", "interface", NULL);
+	cifs = lydx_get_descendant(config, "interfaces", "interface", NULL);
 	difs = lydx_get_descendant(diff, "interfaces", "interface", NULL);
 	err = netdag_init(session, &confd->netdag, cifs, difs);
 	if (err)
-		goto err_free_diff;
+		goto err_out;
 
 	LYX_LIST_FOR_EACH(difs, dif, "interface") {
 		LYX_LIST_FOR_EACH(cifs, cif, "interface")
@@ -840,71 +829,9 @@ static int ifchange(sr_session_ctx_t *session, uint32_t sub_id, const char *modu
 	}
 
 	err = err ? : ifchange_post(session, &confd->netdag, cifs, difs);
-
-err_free_diff:
-	lyd_free_tree(diff);
-err_release_data:
-	sr_release_data(cfg);
-err_abandon:
 	if (err)
 		dagger_abandon(&confd->netdag);
-
-	return err;
-}
-
-static int keystorecb(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
-		    const char *xpath, sr_event_t event, unsigned request_id, void *_confd)
-{
-	const struct lyd_node *diff;
-	const char *secret_name;
-	struct confd *confd = _confd;
-	struct lyd_node *interfaces, *interface, *dkeys, *dkey, *wifi;
-	sr_data_t *cfg = NULL;
-        int err = SR_ERR_OK;
-
-	switch (event) {
-	case SR_EV_CHANGE:
-		break;
-	default:
-		return SR_ERR_OK;
-	}
-
-	err = sr_get_data(session, "/interfaces/interface", 0, 0, 0, &cfg);
-	if (err || !cfg)
-		return err;
-
-	diff = sr_get_change_diff(session);
-	if (!diff)
-		goto cleanup;
-
-	interfaces = lydx_get_descendant(cfg->tree, "interfaces", "interface", NULL);
-	dkeys = lydx_get_descendant((struct lyd_node*) diff, "keystore", "symmetric-keys", "symmetric-key", NULL);
-
-	LYX_LIST_FOR_EACH(dkeys, dkey, "symmetric-key") {
-		secret_name = lydx_get_cattr(dkey, "name");
-		if (!secret_name)
-			continue;
-
-		LYX_LIST_FOR_EACH(interfaces, interface, "interface") {
-			const char *name;
-
-			if (iftype_from_iface(interface) != IFT_WIFI)
-				continue;
-
-			wifi = lydx_get_child(interface, "wifi");
-			if (!wifi)
-				continue;
-
-			name = lydx_get_cattr(wifi, "secret");
-			if (!name || strcmp(name, secret_name))
-				continue;
-			wifi_gen(NULL, interface, &confd->netdag);
-		}
-	}
-
-cleanup:
-	if (cfg)
-		sr_release_data(cfg);
+err_out:
 	return err;
 }
 
@@ -974,18 +901,16 @@ int ietf_interfaces_get_all_l3(const struct lyd_node *tree, char ***ifaces)
 	return 0;
 }
 
-int ietf_interfaces_init(struct confd *confd)
+int ietf_interfaces_cand_init(struct confd *confd)
 {
-	int rc;
+	int rc = SR_ERR_OK;
 
-	REGISTER_CHANGE(confd->session, "ietf-interfaces", "/ietf-interfaces:interfaces//.",
-			SR_SUBSCR_CHANGE_ALL_MODULES, ifchange, confd, &confd->sub);
-	REGISTER_CHANGE(confd->session, "ietf-keystore", "//*",
-			SR_SUBSCR_CHANGE_ALL_MODULES, keystorecb, confd, &confd->sub);
 	REGISTER_CHANGE(confd->cand, "ietf-interfaces", "/ietf-interfaces:interfaces//.",
 			SR_SUBSCR_UPDATE, ifchange_cand, confd, &confd->sub);
 	return SR_ERR_OK;
 fail:
 	ERROR("failed, error %d: %s", rc, sr_strerror(rc));
+
 	return rc;
+
 }

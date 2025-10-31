@@ -244,16 +244,17 @@ static int parse_static_routes(sr_session_ctx_t *session, struct lyd_node *paren
 	return num_routes;
 }
 
-static int change_control_plane_protocols(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
-                                          const char *xpath, sr_event_t event, unsigned request_id, void *priv)
+int ietf_routing_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd)
 {
 	int staticd_enabled = 0, ospfd_enabled = 0, bfdd_enabled = 0;
+	struct lyd_node *cplane, *cplanes;
 	bool ospfd_running, bfdd_running;
-	struct lyd_node *cplane, *tmp;
 	bool restart_zebra = false;
 	int rc = SR_ERR_OK;
-	sr_data_t *cfg;
 	FILE *fp;
+
+	if (diff && !lydx_get_xpathf(diff, "/ietf-routing:routing"))
+		return SR_ERR_OK;
 
 	switch (event) {
 	case SR_EV_ENABLED: /* first time, on register. */
@@ -351,44 +352,22 @@ static int change_control_plane_protocols(sr_session_ctx_t *session, uint32_t su
 		return SR_ERR_OK;
 	}
 
-	rc = sr_get_data(session, "/ietf-routing:routing/control-plane-protocols//.", 0, 0, 0, &cfg);
-	if (rc || !cfg) {
-		NOTE("No control-plane-protocols available.");
-		goto err_close;
-	}
+	cplanes = lydx_get_descendant(config, "routing", "control-plane-protocols", "control-plane-protocol", NULL);
+	LYX_LIST_FOR_EACH(cplanes, cplane, "control-plane-protocol") {
+		const char *type;
 
-	LY_LIST_FOR(lyd_child(cfg->tree), tmp) {
-		LY_LIST_FOR(lyd_child(tmp), cplane) {
-			const char *type;
-
-			type = lydx_get_cattr(cplane, "type");
-			if (!strcmp(type, "infix-routing:static")) {
-				staticd_enabled = parse_static_routes(session, lydx_get_child(cplane, "static-routes"), fp);
-			} else if (!strcmp(type, "infix-routing:ospfv2")) {
-				parse_ospf(session, lydx_get_child(cplane, "ospf"));
-			}
+		type = lydx_get_cattr(cplane, "type");
+		if (!strcmp(type, "infix-routing:static")) {
+			staticd_enabled = parse_static_routes(session, lydx_get_child(cplane, "static-routes"), fp);
+		} else if (!strcmp(type, "infix-routing:ospfv2")) {
+			parse_ospf(session, lydx_get_child(cplane, "ospf"));
 		}
 	}
-	sr_release_data(cfg);
 
-err_close:
 	fclose(fp);
 	if (!staticd_enabled)
 		(void)remove(STATICD_CONF_NEXT);
 
 err_abandon:
-	return rc;
-}
-
-int ietf_routing_init(struct confd *confd)
-{
-	int rc = 0;
-
-	REGISTER_CHANGE(confd->session, "ietf-routing", "/ietf-routing:routing/control-plane-protocols",
-			0, change_control_plane_protocols, confd, &confd->sub);
-
-	return SR_ERR_OK;
-fail:
-	ERROR("Init routing failed: %s", sr_strerror(rc));
 	return rc;
 }

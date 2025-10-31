@@ -19,9 +19,6 @@
 #define GENERATE_ENUM(ENUM)      ENUM,
 #define GENERATE_STRING(STRING) #STRING,
 
-#define SSH_HOSTKEYS "/etc/ssh/hostkeys"
-#define SSH_HOSTKEYS_NEXT SSH_HOSTKEYS"+"
-
 #define LLDP_CONFIG "/etc/lldpd.d/confd.conf"
 #define LLDP_CONFIG_NEXT LLDP_CONFIG"+"
 
@@ -39,7 +36,13 @@
 #define SSHD_CONFIG_BASE    SSH_BASE "/sshd_config.d"
 #define SSHD_CONFIG_LISTEN  SSHD_CONFIG_BASE "/listen.conf"
 #define SSHD_CONFIG_HOSTKEY SSHD_CONFIG_BASE "/host-keys.conf"
-
+#define LLDP_XPATH          "/ieee802-dot1ab-lldp:lldp"
+#define SSH_XPATH           "/infix-services:ssh"
+#define MDNS_XPATH          "/infix-services:mdns"
+#define WEB_XPATH           "/infix-services:web"
+#define WEB_RESTCONF_XPATH  WEB_XPATH"/restconf"
+#define WEB_NETBROWSE_XPATH WEB_XPATH"/netbrowse"
+#define WEB_CONSOLE_XPATH   WEB_XPATH"/console"
 typedef enum {
     FOREACH_SVC(GENERATE_ENUM)
 } svc;
@@ -185,12 +188,6 @@ static void svc_enadis(int ena, svc type, const char *svc)
 	systemf("initctl -nbq touch nginx");
 }
 
-static int hostname_change(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
-	const char *xpath, sr_event_t event, unsigned request_id, void *_confd)
-{
-	return mdns_records("update", all);
-}
-
 static void fput_list(FILE *fp, struct lyd_node *cfg, const char *list, const char *heading)
 {
 	const char *prefix = heading;
@@ -279,14 +276,16 @@ static void mdns_cname(sr_session_ctx_t *session)
 	svc_enadis(ena, none, "mdns-alias");
 }
 
-static int mdns_change(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
-	const char *xpath, sr_event_t event, unsigned request_id, void *_confd)
+static int mdns_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd)
 {
 	struct lyd_node *srv = NULL;
 	sr_data_t *cfg;
 	int ena;
 
-	cfg = get(session, event, xpath, &srv, "mdns", NULL);
+	if (event != SR_EV_DONE || !lydx_get_xpathf(diff, MDNS_XPATH))
+		return SR_ERR_OK;
+
+	cfg = get(session, event, MDNS_XPATH, &srv, "mdns", NULL);
 	if (!cfg)
 		return SR_ERR_OK;
 
@@ -305,20 +304,18 @@ static int mdns_change(sr_session_ctx_t *session, uint32_t sub_id, const char *m
 	return put(cfg);
 }
 
-static int lldp_change(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
-	const char *xpath, sr_event_t event, unsigned request_id, void *_confd)
+static int lldp_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd)
 {
 	struct lyd_node *node = NULL;
-	sr_data_t *cfg;
 	struct lyd_node *subnode;
+
+	if (diff && !lydx_get_xpathf(diff, LLDP_XPATH))
+		return SR_ERR_OK;
 
 	switch (event) {
 	case SR_EV_ENABLED:
 	case SR_EV_CHANGE:
-		if (sr_get_data(session, xpath, 0, 0, 0, &cfg) || !cfg)
-			break;
-
-		node = cfg->tree;
+		node = lydx_get_xpathf(config, LLDP_XPATH);
 		if (lydx_is_enabled(node, "enabled")){
 			const char *tx_interval = lydx_get_cattr(node, "message-tx-interval");
 			FILE *fp = fopen(LLDP_CONFIG_NEXT, "w");
@@ -342,7 +339,7 @@ static int lldp_change(sr_session_ctx_t *session, uint32_t sub_id, const char *m
 			fclose(fp);
 		}
 
-		return put(cfg);
+		return SR_ERR_OK;
 
 	case SR_EV_DONE:
 		if (fexist(LLDP_CONFIG_NEXT)){
@@ -356,7 +353,7 @@ static int lldp_change(sr_session_ctx_t *session, uint32_t sub_id, const char *m
 			if (erase(LLDP_CONFIG))
 				ERRNO("Failed to remove old %s", LLDP_CONFIG);
 
-		svc_change(session, event, xpath, "lldp", "lldpd");
+		svc_change(session, event, LLDP_XPATH, "lldp", "lldpd");
 		break;
 
 	case SR_EV_ABORT:
@@ -370,13 +367,15 @@ static int lldp_change(sr_session_ctx_t *session, uint32_t sub_id, const char *m
 	return SR_ERR_OK;
 }
 
-static int ttyd_change(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
-	const char *xpath, sr_event_t event, unsigned request_id, void *_confd)
+static int ttyd_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd)
 {
 	struct lyd_node *srv = NULL;
 	sr_data_t *cfg;
 
-	cfg = get(session, event, xpath, &srv, "web", "console", NULL);
+	if (event != SR_EV_DONE || !lydx_get_xpathf(diff, WEB_CONSOLE_XPATH))
+		return SR_ERR_OK;
+
+	cfg = get(session, event, WEB_XPATH, &srv, "web", "console", NULL);
 	if (!cfg)
 		return SR_ERR_OK;
 
@@ -385,13 +384,15 @@ static int ttyd_change(sr_session_ctx_t *session, uint32_t sub_id, const char *m
 	return put(cfg);
 }
 
-static int netbrowse_change(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
-	const char *xpath, sr_event_t event, unsigned request_id, void *_confd)
+static int netbrowse_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd)
 {
 	struct lyd_node *srv = NULL;
 	sr_data_t *cfg;
 
-	cfg = get(session, event, xpath, &srv, "web", "netbrowse", NULL);
+	if (event != SR_EV_DONE || !lydx_get_xpathf(diff, WEB_NETBROWSE_XPATH))
+		return SR_ERR_OK;
+
+	cfg = get(session, event, WEB_XPATH, &srv, "web", "netbrowse", NULL);
 	if (!cfg)
 		return SR_ERR_OK;
 
@@ -401,13 +402,19 @@ static int netbrowse_change(sr_session_ctx_t *session, uint32_t sub_id, const ch
 	return put(cfg);
 }
 
-static int restconf_change(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
-	const char *xpath, sr_event_t event, unsigned request_id, void *_confd)
+static int restconf_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd)
 {
 	struct lyd_node *srv = NULL;
 	sr_data_t *cfg;
+	char *out;
+	if (event != SR_EV_DONE  || !lydx_get_xpathf(diff, WEB_RESTCONF_XPATH))
+		return SR_ERR_OK;
 
-	cfg = get(session, event, xpath, &srv, "web", "restconf", NULL);
+	ERROR("RESTCONF CHANGES DETECTED");
+	lyd_print_mem(&out, diff, LYD_JSON,
+		       LYD_PRINT_WITHSIBLINGS | LYD_PRINT_WD_ALL);
+	ERROR("%s", out);
+	cfg = get(session, event, WEB_XPATH, &srv, "web", "restconf", NULL);
 	if (!cfg)
 		return SR_ERR_OK;
 
@@ -416,17 +423,18 @@ static int restconf_change(sr_session_ctx_t *session, uint32_t sub_id, const cha
 	return put(cfg);
 }
 
-static int ssh_change(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
-		      const char *xpath, sr_event_t event, unsigned request_id, void *_confd)
+static int ssh_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd)
 {
 	struct lyd_node *ssh = NULL, *listen, *host_key;
 	sr_error_t rc = SR_ERR_OK;
-	sr_data_t *cfg;
 	FILE *fp;
+
+	if (diff && !lydx_get_xpathf(diff, SSH_XPATH))
+		return SR_ERR_OK;
 
 	switch (event) {
 	case SR_EV_DONE:
-		return svc_change(session, event, xpath, "ssh", "sshd");
+		return svc_change(session, event, SSH_XPATH, "ssh", "sshd");
 	case SR_EV_ENABLED:
 	case SR_EV_CHANGE:
 		break;
@@ -436,10 +444,7 @@ static int ssh_change(sr_session_ctx_t *session, uint32_t sub_id, const char *mo
 		return SR_ERR_OK;
 	}
 
-	if (sr_get_data(session, xpath, 0, 0, 0, &cfg) || !cfg) {
-		return SR_ERR_OK;
-	}
-	ssh = cfg->tree;
+	ssh = lydx_get_xpathf(config, SSH_XPATH);
 
 	if (!lydx_is_enabled(ssh, "enabled")) {
 		goto out;
@@ -479,27 +484,29 @@ static int ssh_change(sr_session_ctx_t *session, uint32_t sub_id, const char *mo
 	fclose(fp);
 
 out:
-	sr_release_data(cfg);
 
 	return rc;
 }
 
-static int web_change(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
-		      const char *xpath, sr_event_t event, unsigned request_id, void *_confd)
+
+static int web_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd)
 {
 	struct lyd_node *srv = NULL;
 	sr_data_t *cfg;
 	int ena;
 
-	cfg = get(session, event, xpath, &srv, "web", NULL);
+	if (event != SR_EV_DONE || !lydx_get_xpathf(diff, WEB_XPATH))
+		return SR_ERR_OK;
+
+	cfg = get(session, event, WEB_XPATH, &srv, "web", NULL);
 	if (!cfg)
 		return SR_ERR_OK;
 
 	ena = lydx_is_enabled(srv, "enabled");
 	if (ena) {
-		svc_enadis(srx_enabled(session, "%s/console/enabled", xpath), ttyd, "ttyd");
-		svc_enadis(srx_enabled(session, "%s/netbrowse/enabled", xpath), netbrowse, "netbrowse");
-		svc_enadis(srx_enabled(session, "%s/restconf/enabled", xpath), restconf, "restconf");
+		svc_enadis(srx_enabled(session, "%s/enabled", WEB_CONSOLE_XPATH), ttyd, "ttyd");
+		svc_enadis(srx_enabled(session, "%s/enabled", WEB_NETBROWSE_XPATH), netbrowse, "netbrowse");
+		svc_enadis(srx_enabled(session, "%s/enabled", WEB_RESTCONF_XPATH), restconf, "restconf");
 	} else {
 		svc_enadis(0, ttyd, NULL);
 		svc_enadis(0, netbrowse, NULL);
@@ -512,104 +519,30 @@ static int web_change(sr_session_ctx_t *session, uint32_t sub_id, const char *mo
 	return put(cfg);
 }
 
-/* Store SSH public/private keys */
-static int change_keystore_cb(sr_session_ctx_t *session, uint32_t sub_id, const char *module_name,
-		     const char *xpath, sr_event_t event, uint32_t request_id, void *_)
-{
-	int rc = SR_ERR_OK;
-	sr_data_t *cfg;
-	struct lyd_node *changes, *change;
-
-	switch (event) {
-	case SR_EV_CHANGE:
-	case SR_EV_ENABLED:
-		break;
-	case SR_EV_ABORT:
-		rmrf(SSH_HOSTKEYS_NEXT);
-		return SR_ERR_OK;
-	case SR_EV_DONE:
-		if(fexist(SSH_HOSTKEYS_NEXT)) {
-			if(rmrf(SSH_HOSTKEYS)) {
-				ERRNO("Failed to remove old SSH hostkeys: %d", errno);
-			}
-
-			if (rename(SSH_HOSTKEYS_NEXT, SSH_HOSTKEYS))
-				ERRNO("Failed switching to new %s", SSH_HOSTKEYS);
-
-			svc_change(session, event, "/infix-services:ssh", "ssh", "sshd");
-		}
-		return SR_ERR_OK;
-
-	default:
-		return SR_ERR_OK;
-	}
-
-	if (sr_get_data(session, "/ietf-keystore:keystore/asymmetric-keys//.", 0, 0, 0, &cfg) || !cfg) {
-		return SR_ERR_OK;
-	}
-	changes = lydx_get_descendant(cfg->tree, "keystore", "asymmetric-keys", "asymmetric-key", NULL);
-
-	LYX_LIST_FOR_EACH(changes, change, "asymmetric-key") {
-		const char *name, *private_key_type, *public_key_type;
-		const char *private_key, *public_key;
-
-		name = lydx_get_cattr(change, "name");
-		private_key_type = lydx_get_cattr(change, "private-key-format");
-		public_key_type = lydx_get_cattr(change, "public-key-format");
-
-		if (strcmp(private_key_type, "infix-crypto-types:rsa-private-key-format")) {
-			INFO("Private key %s is not of SSH type", name);
-			continue;
-		}
-
-		if (strcmp(public_key_type, "infix-crypto-types:ssh-public-key-format")) {
-			INFO("Public key %s is not of SSH type", name);
-			continue;
-		}
-		private_key = lydx_get_cattr(change, "cleartext-private-key");
-		public_key = lydx_get_cattr(change, "public-key");
-
-		if (mkdir(SSH_HOSTKEYS_NEXT, 0600) && (errno != EEXIST)) {
-			ERRNO("Failed creating %s", SSH_HOSTKEYS_NEXT);
-			rc = SR_ERR_INTERNAL;
-		}
-
-		if(systemf("/usr/libexec/infix/mksshkey %s %s %s %s", name, SSH_HOSTKEYS_NEXT, public_key, private_key))
-			rc = SR_ERR_INTERNAL;
-       }
-
-	sr_release_data(cfg);
-
-	return rc;
-}
-
-int infix_services_init(struct confd *confd)
+int infix_services_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd)
 {
 	int rc;
 
-	REGISTER_CHANGE(confd->session, "infix-services", "/infix-services:mdns",
-			0, mdns_change, confd, &confd->sub);
-	REGISTER_MONITOR(confd->session, "ietf-system", "/ietf-system:system/hostname",
-			 0, hostname_change, confd, &confd->sub);
-	REGISTER_CHANGE(confd->session, "infix-services", "/infix-services:ssh",
-			0, ssh_change, confd, &confd->sub);
-	REGISTER_CHANGE(confd->session, "infix-services", "/infix-services:web",
-			0, web_change, confd, &confd->sub);
-	REGISTER_CHANGE(confd->session, "infix-services", "/infix-services:web/infix-services:console",
-			0, ttyd_change, confd, &confd->sub);
-	REGISTER_CHANGE(confd->session, "infix-services", "/infix-services:web/infix-services:netbrowse",
-			0, netbrowse_change, confd, &confd->sub);
-	REGISTER_CHANGE(confd->session, "infix-services", "/infix-services:web/infix-services:restconf",
-			0, restconf_change, confd, &confd->sub);
-	REGISTER_CHANGE(confd->session, "ieee802-dot1ab-lldp", "/ieee802-dot1ab-lldp:lldp",
-			0, lldp_change, confd, &confd->sub);
-
-        /* Store SSH keys */
-	REGISTER_CHANGE(confd->session, "ietf-keystore", "/ietf-keystore:keystore//.",
-			0, change_keystore_cb, confd, &confd->sub);
-
+	rc = lldp_change(session, config, diff, event, confd);
+	if (rc)
+		return rc;
+	rc = mdns_change(session, config, diff, event, confd); /* TODO: Depends on hostname changes */
+	if (rc)
+		return rc;
+	rc = ssh_change(session, config, diff, event, confd); /* TODO: Depends on keystore changes*/
+	if (rc)
+		return rc;
+	rc = web_change(session, config, diff, event, confd);
+	if (rc)
+		return rc;
+	rc = ttyd_change(session, config, diff, event, confd);
+	if (rc)
+		return rc;
+	rc = restconf_change(session, config, diff, event, confd);
+	if (rc)
+		return rc;
+	rc = netbrowse_change(session, config, diff, event, confd);
+	if (rc)
+		return rc;
 	return SR_ERR_OK;
-fail:
-	ERROR("init failed: %s", sr_strerror(rc));
-	return rc;
 }
