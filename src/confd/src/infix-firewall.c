@@ -68,6 +68,9 @@ static void mark_interfaces_used(struct lyd_node *cfg, char **ifaces)
 {
 	struct lyd_node *node;
 
+	if (!ifaces)
+		return;
+
 	LYX_LIST_FOR_EACH(lyd_child(cfg), node, "interface") {
 		const char *ifname = lyd_get_value(node);
 
