@@ -14,14 +14,6 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.KERNEL_UPDATE_TOKEN }}
 
-      - name: Check out linux repository
-        uses: actions/checkout@v4
-        with:
-          repository: kernelkit/linux
-          path: linux
-          fetch-depth: 0
-          token: ${{ secrets.KERNEL_UPDATE_TOKEN }}
-
       - name: Fetch kernel.org and check for 6.12 release
         id: check
         run: |
@@ -37,18 +29,15 @@ jobs:
           echo "current_version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
           echo "Current 6.12 kernel version: $CURRENT_VERSION"
 
-          # Get the latest tag from our linux tree
-          cd linux
-          git fetch origin
-          LATEST_TAG=$(git tag -l "v6.12.*" | sort -V | tail -n1 | sed 's/^v//')
-          cd ..
+          # Get the version from infix defconfig
+          INFIX_VERSION=$(grep 'BR2_LINUX_KERNEL_CUSTOM_VERSION_VALUE=' configs/aarch64_defconfig | cut -d'"' -f2)
 
-          echo "latest_tag=$LATEST_TAG" >> $GITHUB_OUTPUT
-          echo "Latest tag in our tree: $LATEST_TAG"
+          echo "infix_version=$INFIX_VERSION" >> $GITHUB_OUTPUT
+          echo "Infix kernel version: $INFIX_VERSION"
 
-          if [ "$CURRENT_VERSION" != "$LATEST_TAG" ]; then
+          if [ "$CURRENT_VERSION" != "$INFIX_VERSION" ]; then
             echo "new_release=true" >> $GITHUB_OUTPUT
-            echo "🎉 New 6.12 kernel released: $CURRENT_VERSION (our version: $LATEST_TAG)"
+            echo "🎉 New 6.12 kernel released: $CURRENT_VERSION (infix version: $INFIX_VERSION)"
           else
             echo "new_release=false" >> $GITHUB_OUTPUT
             echo "No change - still at $CURRENT_VERSION"
@@ -94,7 +83,7 @@ jobs:
                 title: `Upgrade to kernel ${{ steps.check.outputs.current_version }}`,
                 head: 'kernel-upgrade',
                 base: 'main',
-                body: `Automated kernel upgrade to version ${{ steps.check.outputs.current_version }}.\n\n**Previous version:** ${{ steps.check.outputs.latest_tag }}\n**New version:** ${{ steps.check.outputs.current_version }}\n**Source:** https://www.kernel.org/\n\nThis PR was automatically created by the kernel release monitoring workflow.`
+                body: `Automated kernel upgrade to version ${{ steps.check.outputs.current_version }}.\n\n**Previous version:** ${{ steps.check.outputs.infix_version }}\n**New version:** ${{ steps.check.outputs.current_version }}\n**Source:** https://www.kernel.org/\n\nThis PR was automatically created by the kernel release monitoring workflow.`
               });
 
               // Add label
