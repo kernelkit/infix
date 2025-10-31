@@ -21,7 +21,7 @@ jobs:
           - cn9130_crb_boot
           - fireant_boot
           - nanopi_r2s_boot
-          - rpi4_boot
+          - rpi64_boot
     env:
       MAKEFLAGS: -j5
     steps:
