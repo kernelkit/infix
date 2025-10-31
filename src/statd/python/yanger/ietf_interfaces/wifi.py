@@ -3,29 +3,54 @@ import json
 import re
 
 def wifi(ifname):
-    data=HOST.run(tuple(f"wpa_cli -i {ifname} status".split()), default="")
     wifi_data={}
 
-    if data != "":
-        for line in data.splitlines():
-            k,v = line.split("=")
-            if k == "ssid":
-                wifi_data["ssid"] = v
-            if k == "wpa_state" and v == "DISCONNECTED": # wpa_suppicant has most likely restarted, restart scanning
-                HOST.run(tuple(f"wpa_cli -i {ifname} scan".split()), default="")
+    try:
+        data=HOST.run(tuple(f"wpa_cli -i {ifname} status".split()), default="")
 
-        data=HOST.run(tuple(f"wpa_cli -i {ifname} signal_poll".split()), default="FAIL")
-
-        # signal_poll return FAIL not connected
-        if data.strip() != "FAIL":
+        if data != "":
             for line in data.splitlines():
-                k,v = line.strip().split("=")
-                if k == "RSSI":
-                    wifi_data["rssi"]=int(v)
-    data=HOST.run(tuple(f"wpa_cli -i {ifname} scan_result".split()), default="FAIL")
+                try:
+                    if "=" not in line:
+                        continue
+                    k,v = line.split("=", 1)
+                    if k == "ssid":
+                        wifi_data["ssid"] = v
+                    if k == "wpa_state" and v == "DISCONNECTED": # wpa_suppicant has most likely restarted, restart scanning
+                        HOST.run(tuple(f"wpa_cli -i {ifname} scan".split()), default="")
+                except ValueError:
+                    # Skip malformed lines
+                    continue
 
-    if data != "FAIL":
-        wifi_data["scan-results"] = parse_wpa_scan_result(data)
+            try:
+                data=HOST.run(tuple(f"wpa_cli -i {ifname} signal_poll".split()), default="FAIL")
+
+                # signal_poll return FAIL not connected
+                if data.strip() != "FAIL":
+                    for line in data.splitlines():
+                        try:
+                            if "=" not in line:
+                                continue
+                            k,v = line.strip().split("=", 1)
+                            if k == "RSSI":
+                                wifi_data["rssi"]=int(v)
+                        except (ValueError, KeyError):
+                            # Skip malformed lines or invalid integers
+                            continue
+            except Exception:
+                # If signal_poll fails, continue without RSSI
+                pass
+    except Exception:
+        # If status query fails entirely, continue with scan results
+        pass
+
+    try:
+        data=HOST.run(tuple(f"wpa_cli -i {ifname} scan_result".split()), default="FAIL")
+        if data != "FAIL":
+            wifi_data["scan-results"] = parse_wpa_scan_result(data)
+    except Exception:
+        # If scan results fail, just omit them
+        pass
 
     return wifi_data
 
@@ -36,39 +61,49 @@ def parse_wpa_scan_result(scan_output):
 
     # Skip header line and any empty lines
     for line in lines:
-        line = line.strip()
-        if not line or 'bssid / frequency' in line.lower():
-            continue
-
-        # Split by tabs or multiple spaces
-        parts = re.split(r'\t+|\s{2,}', line)
-
-        if len(parts) >= 5:
-            bssid = parts[0].strip()
-            frequency = int(parts[1].strip())
-            rssi = int(parts[2].strip())
-            flags = parts[3].strip()
-            ssid = parts[4].strip() if len(parts) > 4 else ""
-
-            # Skip hidden SSIDs (empty or whitespace only)
-            if not ssid or ssid.isspace() or  '\\x00' in ssid:
+        try:
+            line = line.strip()
+            if not line or 'bssid / frequency' in line.lower():
                 continue
 
-            # Extract encryption information from flags
-            encryption = extract_encryption(flags)
+            # Split by tabs or multiple spaces
+            parts = re.split(r'\t+|\s{2,}', line)
 
-            # Convert frequency to channel
-            channel = frequency_to_channel(frequency)
+            if len(parts) >= 5:
+                bssid = parts[0].strip()
+                try:
+                    frequency = int(parts[1].strip())
+                    rssi = int(parts[2].strip())
+                except ValueError:
+                    # Skip lines with invalid frequency or RSSI
+                    continue
 
-            # Keep only the network with best (highest) RSSI per SSID
-            if ssid not in networks or rssi < networks[ssid]['rssi']:
-                networks[ssid] = {
-                    'bssid': bssid,
-                    'ssid': ssid,
-                    'rssi': rssi,
-                    'encryption': encryption,
-                    'channel': channel
-                }
+                flags = parts[3].strip()
+                ssid = parts[4].strip() if len(parts) > 4 else ""
+
+                # Skip hidden SSIDs (empty or whitespace only)
+                if not ssid or ssid.isspace() or  '\\x00' in ssid:
+                    continue
+
+                # Extract encryption information from flags
+                encryption = extract_encryption(flags)
+
+                # Convert frequency to channel
+                channel = frequency_to_channel(frequency)
+
+                # Keep only the network with best (highest) RSSI per SSID
+                if ssid not in networks or rssi < networks[ssid]['rssi']:
+                    networks[ssid] = {
+                        'bssid': bssid,
+                        'ssid': ssid,
+                        'rssi': rssi,
+                        'encryption': encryption,
+                        'channel': channel
+                    }
+        except Exception:
+            # Skip any malformed scan result lines
+            continue
+
     # Convert to list and sort by RSSI (best first)
     result = list(networks.values())
     result.sort(key=lambda x: x['rssi'], reverse=False)
