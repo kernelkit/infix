@@ -19,6 +19,7 @@ set -e
 
 nm=$(basename "$0")
 err=0
+mmc=""
 opt="-k"
 
 # External button or bootloader changed kernel command line
@@ -53,17 +54,22 @@ factory_reset()
 
 is_mmc()
 {
+    [ -n "$mmc" ] && return $mmc
+
     # Check if primary or secondary partition (our rootfs) is on MMC
     for label in primary secondary; do
         devname=$(find_partition_by_label "$label" 2>/dev/null)
         if [ -n "$devname" ]; then
             case "$devname" in
                 mmcblk*)
+		    mmc=0
                     return 0
                     ;;
             esac
         fi
     done
+
+    mmc=1
     return 1
 }
 
@@ -89,7 +95,14 @@ find_partition_by_label()
 
     for diskpath in /sys/class/block/*; do
 	devname=$(basename "$diskpath")
+
+	# Skip partitions, only check whole disks
 	[ -f "$diskpath/partition" ] && continue
+
+	# Skip ram, loop, and other virtual devices
+	case "$devname" in
+	    ram*|loop*|nullb*|dm-*) continue ;;
+	esac
 
 	disk="/dev/$devname"
 	result=$(sgdisk -p "$disk" 2>/dev/null | awk -v label="$label" -v devname="$devname" '
@@ -275,6 +288,9 @@ mount_rw()
     fi
 
     # TODO: Also look for UBI partitions
+
+    # 
+    tune2fs -c 0 -i 0 LABEL="$1" 2>/dev/null 
     mount LABEL="$1" 2>/dev/null && return 0
 
     return 1
