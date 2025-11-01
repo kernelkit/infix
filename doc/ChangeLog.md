@@ -3,6 +3,25 @@ Change Log
 
 All notable changes to the project are documented in this file.
 
+[v25.11.0][UNRELEASED]
+-------------------------
+
+### Changes
+
+- Improvements to `sdcard.img` generation, useful for developers mostly:
+   - The NanoPi R2S bootloader is now automatically built and uploaded to
+     the [`latest-boot` release][lastest-boot] tag
+   - The `utils/mkimage.sh` script now supports fetching the bootloader
+   - The raspberrypi-rpi64 board's bootloader is now aptly named rpi64
+
+### Fixes
+
+- Fix #855: User admin sometimes fails to be added to `wheel` group
+- Fix serious regression in boot time, introduced in v25.10, delays the
+  boot step "Mounting filesystems ..." with up to 30 seconds!
+
+[lastest-boot]: https://github.com/kernelkit/infix/releases/latest-boot
+
 [v25.10.0][] - 2025-10-31
 -------------------------
 
@@ -1725,7 +1744,8 @@ Supported YANG models in addition to those used by sysrepo and netopeer:
  - N/A
 
 [buildroot]:  https://buildroot.org/
-[UNRELEASED]: https://github.com/kernelkit/infix/compare/v25.09.0...HEAD
+[UNRELEASED]: https://github.com/kernelkit/infix/compare/v25.10.0...HEAD
+[v25.11.0]:   https://github.com/kernelkit/infix/compare/v25.10.0...v26.11.0
 [v25.10.0]:   https://github.com/kernelkit/infix/compare/v25.09.0...v26.10.0
 [v25.09.0]:   https://github.com/kernelkit/infix/compare/v25.08.0...v26.09.0
 [v25.08.0]:   https://github.com/kernelkit/infix/compare/v25.06.1...v26.08.0

@@ -18,10 +18,12 @@ Usage:
   $0 [OPTIONS] <board-name>
 
 Options:
+  -b boot-dir     Path to bootloader build directory (default: O= or output/)
+  -d              Download bootloader files from latest-boot release
+  -f              Force re-download of bootloader even if cached
   -h              This help text
   -l              List available boards
   -o              Override auto-detection of genimage.sh, use host installed version
-  -b boot-dir     Path to bootloader build directory (default: O= or output/)
   -r root-dir     Path to rootfs build directory or rootfs.squashfs file (default: O= or output/)
 
 Arguments:
@@ -44,8 +46,11 @@ Examples:
   # Standalone with separate boot/rootfs builds:
   $0 -b x-boot -r output raspberrypi-rpi64
 
-  # With downloaded rootfs:
-  $0 -b x-boot -r ~/Downloads/rootfs.squashfs friendlyarm-nanopi-r2s
+  # With downloaded rootfs and bootloader:
+  $0 -d -r ~/Downloads/rootfs.squashfs friendlyarm-nanopi-r2s
+
+  # Download bootloader and compose with Linux image in output directory:
+  $0 -od bananapi-bpi-r3
 
 EOF
 }
@@ -153,6 +158,83 @@ find_build_dir()
     return 1
 }
 
+# Map board name to bootloader identifier
+# Returns bootloader name used in artifact naming
+get_bootloader_name()
+{
+    board="$1"
+    case "$board" in
+        raspberrypi-rpi64)
+            echo "rpi64_boot"
+            ;;
+        bananapi-bpi-r3)
+            echo "bpi_r3_boot"
+            ;;
+        friendlyarm-nanopi-r2s)
+            echo "nanopi_r2s_boot"
+            ;;
+        *)
+            err "Unknown bootloader for board: $board"
+            return 1
+            ;;
+    esac
+}
+
+# Download and extract bootloader from latest-boot release
+# Downloads to dl/bootloader/ cache and extracts to temporary build directory
+# Returns the temporary directory path in SDCARD_TEMP_DIR variable
+download_bootloader()
+{
+    board="$1"
+    build_dir="$2"
+
+    bootloader=$(get_bootloader_name "$board") || return 1
+
+    if ! command -v gh >/dev/null 2>&1; then
+        die "gh CLI not found. Install it or build bootloader locally."
+    fi
+
+    # Set up download cache directory
+    dl_dir="${BR2_EXTERNAL_INFIX_PATH}/dl/bootloader"
+    mkdir -p "$dl_dir"
+
+    # Convert underscores to dashes for filename pattern matching
+    bootloader_pattern=$(echo "$bootloader" | tr '_' '-')
+
+    # Find or download bootloader tarball
+    tarball=$(ls "$dl_dir"/${bootloader_pattern}*.tar.gz 2>/dev/null | head -n1)
+
+    if [ -z "$tarball" ] || [ -n "$FORCE_DOWNLOAD" ]; then
+        if [ -n "$FORCE_DOWNLOAD" ] && [ -n "$tarball" ]; then
+            log "Force re-downloading bootloader..."
+            rm -f "$tarball" "$tarball.sha256"
+        else
+            log "Downloading bootloader $bootloader from latest-boot release..."
+        fi
+
+        if ! gh release download latest-boot \
+             --repo kernelkit/infix \
+             --pattern "*${bootloader_pattern}*.tar.gz" \
+             --dir "$dl_dir"; then
+            die "Failed downloading bootloader from latest-boot release. Check gh authentication and network connectivity."
+        fi
+
+        tarball=$(ls "$dl_dir"/${bootloader_pattern}*.tar.gz 2>/dev/null | head -n1)
+        [ -n "$tarball" ] || die "Downloaded tarball not found in $dl_dir"
+    else
+        log "Using cached bootloader: $(basename "$tarball")"
+    fi
+
+    # Create temporary directory for SD card composition
+    SDCARD_TEMP_DIR="${build_dir}/sdcard-${board}-$$"
+    mkdir -p "$SDCARD_TEMP_DIR"
+
+    log "Extracting bootloader to $SDCARD_TEMP_DIR..."
+    tar -xzf "$tarball" --strip-components=1 -C "$SDCARD_TEMP_DIR/"
+
+    log "Bootloader ready in temporary directory"
+}
+
 # Discover boot files for Raspberry Pi boot partition
 # Scans rpi-firmware directory and builds file list for genimage
 discover_rpi_boot_files()
@@ -189,8 +271,19 @@ discover_rpi_boot_files()
     echo "$files"
 }
 
-while getopts "hlob:r:" opt; do
+while getopts "hldfob:r:" opt; do
     case $opt in
+        b)
+	    BOOT_DIR="$OPTARG"
+	    STANDALONE=1
+	    ;;
+	d)
+	    DOWNLOAD_BOOT=1
+	    STANDALONE=1
+	    ;;
+	f)
+	    FORCE_DOWNLOAD=1
+	    ;;
         h)
 	    usage
 	    exit 0
@@ -198,10 +291,6 @@ while getopts "hlob:r:" opt; do
         l)
 	    list_boards
 	    exit 0
-	    ;;
-        b)
-	    BOOT_DIR="$OPTARG"
-	    STANDALONE=1
 	    ;;
 	o)
 	    OVERRIDE=1
@@ -225,12 +314,19 @@ fi
 
 # Standalone mode: set up environment from build directories
 if [ -n "$STANDALONE" ]; then
-    if [ -z "$BOOT_DIR" ]; then
-        BOOT_DIR=$(find_build_dir) || die "Could not find boot directory. Use -b option"
-    fi
+    # In download mode without explicit dirs, default to same location for both
+    if [ -n "$DOWNLOAD_BOOT" ]; then
+        default_dir=$(find_build_dir) || die "Could not find build directory. Set O= or use -b/-r option"
+        : "${BOOT_DIR:=$default_dir}"
+        : "${ROOT_DIR:=$default_dir}"
+    else
+        if [ -z "$BOOT_DIR" ]; then
+            BOOT_DIR=$(find_build_dir) || die "Could not find boot directory. Use -b option"
+        fi
 
-    if [ -z "$ROOT_DIR" ]; then
-        ROOT_DIR=$(find_build_dir) || die "Could not find rootfs directory. Set O= or use -r option"
+        if [ -z "$ROOT_DIR" ]; then
+            ROOT_DIR=$(find_build_dir) || die "Could not find rootfs directory. Set O= or use -r option"
+        fi
     fi
 
     # Set up environment variables, some required by genimage.sh
@@ -248,22 +344,33 @@ if [ -n "$STANDALONE" ]; then
         fi
     done
 
-    # Copy rootfs and partition images to BINARIES_DIR
+    # Copy rootfs and partition images to BINARIES_DIR (skip if same directory)
     mkdir -p "$BINARIES_DIR"
+
+    # Normalize paths for comparison
+    boot_images=$(cd "$BOOT_DIR" && pwd)/images
+    root_images=""
+
     if [ -f "$ROOT_DIR" ]; then
         # Direct path to rootfs.squashfs file
         log "Copying rootfs from $ROOT_DIR to $BINARIES_DIR/rootfs.squashfs"
         cp "$ROOT_DIR" "$BINARIES_DIR/rootfs.squashfs"
     elif [ -f "$ROOT_DIR/images/rootfs.squashfs" ]; then
-        # Build directory with images/ - copy rootfs and partition images
-        log "Copying artifacts from $ROOT_DIR/images/ to $BINARIES_DIR/"
-        cp "$ROOT_DIR/images/rootfs.squashfs" "$BINARIES_DIR/"
-        # Copy partition images if they exist
-        for img in aux.ext4 cfg.ext4 var.ext4; do
-            if [ -f "$ROOT_DIR/images/$img" ]; then
-                cp "$ROOT_DIR/images/$img" "$BINARIES_DIR/"
-            fi
-        done
+        root_images=$(cd "$ROOT_DIR" && pwd)/images
+        # Only copy if different directories
+        if [ "$boot_images" != "$root_images" ]; then
+            # Build directory with images/ - copy rootfs and partition images
+            log "Copying artifacts from $ROOT_DIR/images/ to $BINARIES_DIR/"
+            cp "$ROOT_DIR/images/rootfs.squashfs" "$BINARIES_DIR/"
+            # Copy partition images if they exist
+            for img in aux.ext4 cfg.ext4 var.ext4; do
+                if [ -f "$ROOT_DIR/images/$img" ]; then
+                    cp "$ROOT_DIR/images/$img" "$BINARIES_DIR/"
+                fi
+            done
+        else
+            log "Rootfs already in place at $BINARIES_DIR/"
+        fi
     elif [ -f "$ROOT_DIR/rootfs.squashfs" ]; then
         # Directory directly containing rootfs.squashfs
         log "Copying rootfs from $ROOT_DIR/rootfs.squashfs"
@@ -291,6 +398,42 @@ fi
 # Set defaults for optional variables
 : "${RELEASE:=""}"
 : "${INFIX_ID:="infix"}"
+
+# Download bootloader if requested
+if [ -n "$DOWNLOAD_BOOT" ]; then
+    # Save original output location
+    ORIGINAL_BINARIES_DIR="$BINARIES_DIR"
+
+    download_bootloader "$BOARD" "$BUILD_DIR"
+
+    # Now use the temporary directory for composition
+    BINARIES_DIR="$SDCARD_TEMP_DIR"
+
+    log "Linking rootfs files to $BINARIES_DIR..."
+    # Link rootfs and partition images to temp directory
+    if [ -f "$ROOT_DIR" ]; then
+        # Direct path to rootfs.squashfs file
+        ln -sf "$(realpath "$ROOT_DIR")" "$BINARIES_DIR/rootfs.squashfs"
+    elif [ -f "$ROOT_DIR/images/rootfs.squashfs" ]; then
+        ln -sf "$(realpath "$ROOT_DIR/images/rootfs.squashfs")" "$BINARIES_DIR/rootfs.squashfs"
+        # Link partition images if they exist
+        for img in aux.ext4 cfg.ext4 var.ext4; do
+            if [ -f "$ROOT_DIR/images/$img" ]; then
+                ln -sf "$(realpath "$ROOT_DIR/images/$img")" "$BINARIES_DIR/$img"
+            fi
+        done
+    elif [ -f "$ROOT_DIR/rootfs.squashfs" ]; then
+        ln -sf "$(realpath "$ROOT_DIR/rootfs.squashfs")" "$BINARIES_DIR/rootfs.squashfs"
+        # Link partition images if they exist
+        for img in aux.ext4 cfg.ext4 var.ext4; do
+            if [ -f "$ROOT_DIR/$img" ]; then
+                ln -sf "$(realpath "$ROOT_DIR/$img")" "$BINARIES_DIR/$img"
+            fi
+        done
+    else
+        die "Could not find rootfs.squashfs in $ROOT_DIR"
+    fi
+fi
 
 # Template expansion
 log "Generating genimage configuration for $BOARD..."
@@ -341,6 +484,25 @@ if [ -z "$OVERRIDE" ] && command -v "$GENIMAGE_WRAPPER" >/dev/null 2>&1; then
 else
     log "Creating SD card image ..."
     run_genimage "$GENIMAGE_CFG"
+fi
+
+# Post-processing: move images and cleanup if using download mode
+if [ -n "$DOWNLOAD_BOOT" ]; then
+    log "Moving SD card images to $ORIGINAL_BINARIES_DIR..."
+    mkdir -p "$ORIGINAL_BINARIES_DIR"
+
+    for img in "${BINARIES_DIR}"/*-sdcard.img*; do
+        if [ -f "$img" ]; then
+            mv "$img" "$ORIGINAL_BINARIES_DIR/"
+            log "  $(basename "$img")"
+        fi
+    done
+
+    log "Cleaning up temporary directory..."
+    rm -rf "$SDCARD_TEMP_DIR"
+
+    # Update BINARIES_DIR for final output message
+    BINARIES_DIR="$ORIGINAL_BINARIES_DIR"
 fi
 
 log "SD card image created successfully:"
