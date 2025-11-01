@@ -406,14 +406,10 @@ static int restconf_change(sr_session_ctx_t *session, struct lyd_node *config, s
 {
 	struct lyd_node *srv = NULL;
 	sr_data_t *cfg;
-	char *out;
+
 	if (event != SR_EV_DONE  || !lydx_get_xpathf(diff, WEB_RESTCONF_XPATH))
 		return SR_ERR_OK;
 
-	ERROR("RESTCONF CHANGES DETECTED");
-	lyd_print_mem(&out, diff, LYD_JSON,
-		       LYD_PRINT_WITHSIBLINGS | LYD_PRINT_WD_ALL);
-	ERROR("%s", out);
 	cfg = get(session, event, WEB_XPATH, &srv, "web", "restconf", NULL);
 	if (!cfg)
 		return SR_ERR_OK;
