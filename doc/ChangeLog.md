@@ -1,12 +1,21 @@
 Change Log
+- Upgrade Linux kernel to 6.12.57 (LTS)
 ==========
+- Upgrade Linux kernel to 6.12.57 (LTS)
 
+- Upgrade Linux kernel to 6.12.57 (LTS)
 All notable changes to the project are documented in this file.
+- Upgrade Linux kernel to 6.12.57 (LTS)
 
+- Upgrade Linux kernel to 6.12.57 (LTS)
 [v25.11.0][UNRELEASED]
+- Upgrade Linux kernel to 6.12.57 (LTS)
 -------------------------
+- Upgrade Linux kernel to 6.12.57 (LTS)
 
+- Upgrade Linux kernel to 6.12.57 (LTS)
 ### Changes
+- Upgrade Linux kernel to 6.12.57 (LTS)
 
 - Improvements to `sdcard.img` generation, useful for developers mostly:
    - The NanoPi R2S bootloader is now automatically built and uploaded to
