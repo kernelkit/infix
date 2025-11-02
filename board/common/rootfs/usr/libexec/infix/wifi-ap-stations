@@ -4,92 +4,58 @@ import sys
 import subprocess
 import json
 import re
-import os
 
-def check_interface_exists(interface):
-    """Check if the network interface exists"""
+def get_stations(interface):
+    """Get connected stations for an AP interface"""
     try:
-        result = subprocess.run(['ip', 'link', 'show', interface],
-                              capture_output=True, check=True)
-        return True
-    except subprocess.CalledProcessError:
-        return False
-
-def parse_iw_station_dump(interface):
-    """Parse iw station dump output and return JSON"""
-    try:
-        result = subprocess.run(['sudo', 'iw', 'dev', interface, 'station', 'dump'],
+        result = subprocess.run(['iw', 'dev', interface, 'station', 'dump'],
                               capture_output=True, text=True, check=True)
-        output = result.stdout
-    except subprocess.CalledProcessError as e:
-        print(f"Error running iw command: {e}", file=sys.stderr)
-        return []
-    except FileNotFoundError:
-        print("Error: 'iw' command not found", file=sys.stderr)
+    except (subprocess.CalledProcessError, FileNotFoundError):
         return []
 
     stations = []
-    current_station = {}
+    station = None
 
-    for line in output.split('\n'):
+    for line in result.stdout.split('\n'):
         line = line.strip()
 
         if line.startswith('Station'):
-            if current_station:
-                stations.append(current_station)
-
-            mac_match = re.search(r'Station ([a-fA-F0-9:]{17})', line)
-            current_station = {
-                'mac-address': mac_match.group(1) if mac_match else 'unknown',
+            if station:
+                stations.append(station)
+            mac = re.search(r'([a-fA-F0-9:]{17})', line)
+            station = {
+                'mac-address': mac.group(1) if mac else 'unknown',
+                'rssi': 0,
                 'tx-speed': 'unknown',
                 'rx-speed': 'unknown',
-                'rssi': 0,
                 'connected-time': 'unknown'
             }
 
-        elif 'tx bitrate:' in line:
-            bitrate_match = re.search(r'tx bitrate:\s*(\d+\.?\d*)\s*(MBit/s|Gbit/s)', line)
-            if bitrate_match:
-                speed = bitrate_match.group(1)
-                unit = bitrate_match.group(2)
-                current_station['tx-speed'] = f"{speed} {unit.replace('Bit/s', 'bps')}"
+        elif station:
+            if 'signal:' in line and 'avg' not in line:
+                sig = re.search(r'signal:\s*(-?\d+)', line)
+                if sig:
+                    station['rssi'] = int(sig.group(1))
+            elif 'tx bitrate:' in line:
+                bitrate = re.search(r'tx bitrate:\s*(\d+\.?\d*)\s*(MBit/s|Gbit/s)', line)
+                if bitrate:
+                    station['tx-speed'] = f"{bitrate.group(1)} {bitrate.group(2).replace('Bit/s', 'bps')}"
+            elif 'rx bitrate:' in line:
+                bitrate = re.search(r'rx bitrate:\s*(\d+\.?\d*)\s*(MBit/s|Gbit/s)', line)
+                if bitrate:
+                    station['rx-speed'] = f"{bitrate.group(1)} {bitrate.group(2).replace('Bit/s', 'bps')}"
+            elif 'connected time:' in line:
+                time = re.search(r'connected time:\s*(\d+\s+\w+)', line)
+                if time:
+                    station['connected-time'] = time.group(1)
 
-        elif 'rx bitrate:' in line:
-            bitrate_match = re.search(r'rx bitrate:\s*(\d+\.?\d*)\s*(MBit/s|Gbit/s)', line)
-            if bitrate_match:
-                speed = bitrate_match.group(1)
-                unit = bitrate_match.group(2)
-                current_station['rx-speed'] = f"{speed} {unit.replace('Bit/s', 'bps')}"
-
-        elif 'signal:' in line and 'avg' not in line:
-            signal_match = re.search(r'signal:\s*(-?\d+)', line)
-            if signal_match:
-                current_station['rssi'] = int(f"{signal_match.group(1)}")
-
-        elif 'connected time:' in line:
-            time_match = re.search(r'connected time:\s*(\d+\s+\w+)', line)
-            if time_match:
-                current_station['connected-time'] = time_match.group(1)
-
-    if current_station:
-        stations.append(current_station)
+    if station:
+        stations.append(station)
 
     return stations
 
-def main():
-    if len(sys.argv) != 2:
-        print("Usage: python3 wifi_station_parser.py <interface>")
-        print("Example: python3 wifi_station_parser.py wifi0_ap2")
-        sys.exit(1)
-
-    interface = sys.argv[1]
-
-    if not check_interface_exists(interface):
-        print(f"Error: Interface '{interface}' not found", file=sys.stderr)
-        sys.exit(1)
-
-    stations = parse_iw_station_dump(interface)
-    print(json.dumps(stations, indent=2))
-
 if __name__ == "__main__":
-    main()
+    if len(sys.argv) != 2:
+        sys.exit(1)
+
+    print(json.dumps(get_stations(sys.argv[1]), indent=2))
