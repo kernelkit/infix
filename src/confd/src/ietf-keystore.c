@@ -51,89 +51,122 @@ static char *filerd(const char *fn, size_t len)
 	return buf;
 }
 
-int ietf_keystore_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd)
+static int gen_hostkey(const char *name, struct lyd_node *change)
+{
+	const char *private_key, *public_key;
+	int rc = SR_ERR_OK;
+
+	private_key = lydx_get_cattr(change, "cleartext-private-key");
+	public_key = lydx_get_cattr(change, "public-key");
+
+	if (mkdir(SSH_HOSTKEYS_NEXT, 0600) && (errno != EEXIST)) {
+		ERRNO("Failed creating %s", SSH_HOSTKEYS_NEXT);
+		rc = SR_ERR_INTERNAL;
+	}
+
+	if (systemf("/usr/libexec/infix/mksshkey %s %s %s %s", name, SSH_HOSTKEYS_NEXT, public_key, private_key))
+		rc = SR_ERR_INTERNAL;
+
+	return rc;
+}
+
+static int keystore_update(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff)
+{
+	const char *xpath = "/ietf-keystore:keystore/asymmetric-keys/asymmetric-key";
+	sr_val_t *list = NULL;
+        size_t count = 0;
+	int rc;
+
+	rc = sr_get_items(session, xpath, 0, 0, &list, &count);
+	if (rc != SR_ERR_OK) {
+		ERROR("Cannot find any asymmetric keys in configuration");
+		return 0;
+	}
+
+	for (size_t i = 0; i < count; i++) {
+		char *name = srx_get_str(session, "%s/name", list[i].xpath);
+		char *public_key_format, *private_key_format;
+		char *pub_key = NULL, *priv_key = NULL;
+		sr_val_t *entry = &list[i];
+
+		if (srx_isset(session, "%s/cleartext-private-key", entry->xpath) ||
+		    srx_isset(session, "%s/public-key", entry->xpath))
+			continue;
+
+		public_key_format = srx_get_str(session, "%s/public-key-format", entry->xpath);
+		if (!public_key_format)
+			continue;
+
+		private_key_format = srx_get_str(session, "%s/private-key-format", entry->xpath);
+		if (!private_key_format) {
+			free(public_key_format);
+			continue;
+		}
+
+		if (strcmp(private_key_format, "infix-crypto-types:rsa-private-key-format") ||
+		    strcmp(public_key_format, "infix-crypto-types:ssh-public-key-format"))
+			continue;
+
+		NOTE("SSH key (%s) does not exist, generating...", name);
+		if (systemf("/usr/libexec/infix/mkkeys %s %s", SSH_PRIVATE_KEY, SSH_PUBLIC_KEY)) {
+			ERROR("Failed generating SSH keys for %s", name);
+			goto next;
+		}
+
+		priv_key = filerd(SSH_PRIVATE_KEY, filesz(SSH_PRIVATE_KEY));
+		if (!priv_key)
+			goto next;
+
+		pub_key = filerd(SSH_PUBLIC_KEY, filesz(SSH_PUBLIC_KEY));
+		if (!pub_key)
+			goto next;
+
+		rc = srx_set_str(session, priv_key, 0, "%s/cleartext-private-key", entry->xpath);
+		if (rc) {
+			ERROR("Failed setting private key for %s... rc: %d", name, rc);
+			goto next;
+		}
+
+		rc = srx_set_str(session, pub_key, 0, "%s/public-key", entry->xpath);
+		if (rc != SR_ERR_OK) {
+			ERROR("Failed setting public key for %s... rc: %d", name, rc);
+			goto next;
+		}
+	next:
+		if (erase(SSH_PRIVATE_KEY))
+			ERRNO("Failed removing SSH server private key");
+		if (erase(SSH_PUBLIC_KEY))
+			ERRNO("Failed removing SSH server public key");
+
+		if (priv_key)
+			free(priv_key);
+
+		if (pub_key)
+			free(pub_key);
+
+		free(name);
+		free(public_key_format);
+		free(private_key_format);
+	}
+
+	if (list)
+		sr_free_values(list, count);
+
+	return 0;
+}
+
+int ietf_keystore_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff,
+			 sr_event_t event, struct confd *confd)
 {
 	struct lyd_node *changes, *change;
-	sr_val_t *list = NULL;
 	int rc = SR_ERR_OK;
-        size_t count = 0;
+
 	if (diff && !lydx_find_xpathf(diff, XPATH_KEYSTORE_))
 		return SR_ERR_OK;
 
 	switch (event) {
 	case SR_EV_UPDATE:
-		rc = sr_get_items(session, "/ietf-keystore:keystore/asymmetric-keys/asymmetric-key", 0, 0, &list, &count);
-		if (rc != SR_ERR_OK) {
-			ERROR("Cannot find any asymmetric keys in configuration");
-			return 0;
-		}
-
-
-		for (size_t i = 0; i < count; ++i) {
-			sr_val_t *entry = &list[i];
-
-			if (!srx_isset(session, "%s/cleartext-private-key", entry->xpath) && !srx_isset(session, "%s/public-key", entry->xpath)) {
-				char *private_key_format, *public_key_format;
-
-				public_key_format = srx_get_str(session, "%s/public-key-format", entry->xpath);
-				if (!public_key_format)
-					continue;
-				private_key_format = srx_get_str(session, "%s/private-key-format", entry->xpath);
-				if (!private_key_format) {
-					free(public_key_format);
-					continue;
-				}
-
-				if (!strcmp(private_key_format, "infix-crypto-types:rsa-private-key-format") &&
-				    !strcmp(public_key_format, "infix-crypto-types:ssh-public-key-format")) {
-					char *pub_key = NULL, *priv_key = NULL, *name;
-
-					name = srx_get_str(session, "%s/name", entry->xpath);
-					NOTE("SSH key (%s) does not exist, generating...", name);
-					if (systemf("/usr/libexec/infix/mkkeys %s %s", SSH_PRIVATE_KEY, SSH_PUBLIC_KEY)) {
-						ERROR("Failed to generate SSH keys for %s", name);
-						goto next;
-					}
-
-					priv_key = filerd(SSH_PRIVATE_KEY, filesz(SSH_PRIVATE_KEY));
-					if (!priv_key)
-						goto next;
-
-					pub_key = filerd(SSH_PUBLIC_KEY, filesz(SSH_PUBLIC_KEY));
-					if (!pub_key)
-						goto next;
-
-					rc = srx_set_str(session, priv_key, 0, "%s/cleartext-private-key", entry->xpath);
-					if (rc) {
-						ERROR("Failed setting private key for %s... rc: %d", name, rc);
-						goto next;
-					}
-					rc = srx_set_str(session, pub_key, 0, "%s/public-key", entry->xpath);
-					if (rc != SR_ERR_OK) {
-						ERROR("Failed setting public key for %s... rc: %d", name, rc);
-						goto next;
-					}
-				next:
-					if (erase(SSH_PRIVATE_KEY))
-						ERRNO("Failed removing SSH server private key");
-					if (erase(SSH_PUBLIC_KEY))
-						ERRNO("Failed removing SSH server public key");
-
-					if (priv_key)
-						free(priv_key);
-
-					if (pub_key)
-						free(pub_key);
-
-					free(name);
-				}
-				free(public_key_format);
-				free(private_key_format);
-			}
-		}
-		if (list)
-			sr_free_values(list, count);
-
+		rc = keystore_update(session, config, diff);
 		break;
 	case SR_EV_CHANGE:
 	case SR_EV_ENABLED:
@@ -142,49 +175,35 @@ int ietf_keystore_change(sr_session_ctx_t *session, struct lyd_node *config, str
 		rmrf(SSH_HOSTKEYS_NEXT);
 		return SR_ERR_OK;
 	case SR_EV_DONE:
-		if(fexist(SSH_HOSTKEYS_NEXT)) {
-			if(rmrf(SSH_HOSTKEYS)) {
+		if (fexist(SSH_HOSTKEYS_NEXT)) {
+			if (rmrf(SSH_HOSTKEYS))
 				ERRNO("Failed to remove old SSH hostkeys: %d", errno);
-			}
-
 			if (rename(SSH_HOSTKEYS_NEXT, SSH_HOSTKEYS))
 				ERRNO("Failed switching to new %s", SSH_HOSTKEYS);
 		}
 		return SR_ERR_OK;
-
 	default:
 		return SR_ERR_OK;
 	}
 
 	changes = lydx_get_descendant(config, "keystore", "asymmetric-keys", "asymmetric-key", NULL);
-
 	LYX_LIST_FOR_EACH(changes, change, "asymmetric-key") {
-		const char *name, *private_key_type, *public_key_type;
-		const char *private_key, *public_key;
+		const char *name = lydx_get_cattr(change, "name");
+		const char *type;
 
-		name = lydx_get_cattr(change, "name");
-		private_key_type = lydx_get_cattr(change, "private-key-format");
-		public_key_type = lydx_get_cattr(change, "public-key-format");
-
-		if (strcmp(private_key_type, "infix-crypto-types:rsa-private-key-format")) {
-			INFO("Private key %s is not of SSH type", name);
+		type = lydx_get_cattr(change, "private-key-format");
+		if (strcmp(type, "infix-crypto-types:rsa-private-key-format")) {
+			INFO("Private key %s is not of SSH type (%s)", name, type);
 			continue;
 		}
 
-		if (strcmp(public_key_type, "infix-crypto-types:ssh-public-key-format")) {
-			INFO("Public key %s is not of SSH type", name);
+		type = lydx_get_cattr(change, "public-key-format");
+		if (strcmp(type, "infix-crypto-types:ssh-public-key-format")) {
+			INFO("Public key %s is not of SSH type (%s)", name, type);
 			continue;
 		}
-		private_key = lydx_get_cattr(change, "cleartext-private-key");
-		public_key = lydx_get_cattr(change, "public-key");
 
-		if (mkdir(SSH_HOSTKEYS_NEXT, 0600) && (errno != EEXIST)) {
-			ERRNO("Failed creating %s", SSH_HOSTKEYS_NEXT);
-			rc = SR_ERR_INTERNAL;
-		}
-
-		if(systemf("/usr/libexec/infix/mksshkey %s %s %s %s", name, SSH_HOSTKEYS_NEXT, public_key, private_key))
-			rc = SR_ERR_INTERNAL;
+		gen_hostkey(name, change);
 	}
 
 	return rc;

@@ -8,8 +8,8 @@
 struct confd confd;
 
 
-int core_startup_save(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
-		      const char *xpath, sr_event_t event, unsigned request_id, void *priv)
+static int core_startup_save(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
+			     const char *xpath, sr_event_t event, unsigned request_id, void *priv)
 {
 	sr_event_t last_event = -1;
 	static unsigned int last_request = -1;
@@ -260,16 +260,21 @@ static int change_cb(sr_session_ctx_t *session, uint32_t sub_id, const char *mod
 
 		AUDIT("The new configuration has been applied.");
 	}
+
 free_diff:
-      lyd_free_tree(diff);
-      return rc;
+	lyd_free_tree(diff);
+	return rc;
 }
 
-static inline int subscribe_module(char *model, struct confd *confd, int flags) {
-	return sr_module_change_subscribe(confd->session, model, "//.", change_cb, confd,
-					  CB_PRIO_PRIMARY, SR_SUBSCR_CHANGE_ALL_MODULES | SR_SUBSCR_DEFAULT | flags, &confd->sub) &&
+static inline int subscribe_module(char *model, struct confd *confd, int flags)
+{
+	ERROR("core: subscribing to models");
+	return  sr_module_change_subscribe(confd->session, model, "//.", change_cb, confd,
+					   CB_PRIO_PRIMARY, SR_SUBSCR_CHANGE_ALL_MODULES |
+					   SR_SUBSCR_DEFAULT | flags, &confd->sub) &&
 		sr_module_change_subscribe(confd->startup, model, "//.", core_startup_save, NULL,
-					   CB_PRIO_PASSIVE, SR_SUBSCR_PASSIVE | SR_SUBSCR_CHANGE_ALL_MODULES, &confd->sub);
+					   CB_PRIO_PASSIVE, SR_SUBSCR_CHANGE_ALL_MODULES |
+					   SR_SUBSCR_PASSIVE, &confd->sub);
 }
 
 int sr_plugin_init_cb(sr_session_ctx_t *session, void **priv)
