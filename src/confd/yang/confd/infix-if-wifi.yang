@@ -305,6 +305,24 @@ submodule infix-if-wifi {
             description
               "Signal strength for connected station.";
           }
+
+          leaf tx-speed {
+            type string;
+            description
+              "Transmit bitrate (e.g., '65.0 Mbps', '1.2 Gbps').";
+          }
+
+          leaf rx-speed {
+            type string;
+            description
+              "Receive bitrate (e.g., '65.0 Mbps', '1.2 Gbps').";
+          }
+
+          leaf connected-time {
+            type string;
+            description
+              "Time since station connected (e.g., '120 seconds', '5 minutes').";
+          }
         }
     }
   }
