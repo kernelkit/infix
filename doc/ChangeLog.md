@@ -9,6 +9,10 @@ All notable changes to the project are documented in this file.
 ### Changes
 
 - Upgrade Linux kernel to 6.12.57 (LTS)
+- The DHCP client configuration has moved from `/infix-dhcp-client:dhcp-client`
+  to `/interfaces/interface[name]/ipv4/infix-dhcp-client:dhcp`, issue #1109.
+  The configuration is automatically migrated on upgrade.  The DHCP client is
+  now enabled using a presence container instead of a separate `enabled` leaf
 - Improvements to `sdcard.img` generation, useful for developers mostly:
    - The NanoPi R2S bootloader is now automatically built and uploaded to
      the [`latest-boot` release][lastest-boot] tag

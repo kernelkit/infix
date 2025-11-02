@@ -200,17 +200,21 @@ with infamy.Test() as test:
         # the server is behaving correctly.
 
         client1.put_config_dicts({
-            "infix-dhcp-client": {
-                "dhcp-client": {
-                    "client-if": [{
-                        "if-name": client1["server"],
-                        "option": [
-                            {"id": "hostname", "value": "auto"},
-                            {"id": "router"},
-                            {"id": "dns-server"},
-                            {"id": "ntp-server"},
-                            {"id": 121}
-                        ]
+            "ietf-interfaces": {
+                "interfaces": {
+                    "interface": [{
+                        "name": client1["server"],
+                        "ipv4": {
+                            "infix-dhcp-client:dhcp": {
+                                "option": [
+                                    {"id": "hostname", "value": "auto"},
+                                    {"id": "router"},
+                                    {"id": "dns-server"},
+                                    {"id": "ntp-server"},
+                                    {"id": 121}
+                                ]
+                            }
+                        }
                     }]
                 }
             },
@@ -222,17 +226,21 @@ with infamy.Test() as test:
             }})
 
         client2.put_config_dicts({
-            "infix-dhcp-client": {
-                "dhcp-client": {
-                    "client-if": [{
-                        "if-name": client2["server"],
-                        "option": [
-                            {"id": "hostname", "value": "auto"},
-                            {"id": "router"},
-                            {"id": "dns-server"},
-                            {"id": "ntp-server"},
-                            {"id": 121}
-                        ]
+            "ietf-interfaces": {
+                "interfaces": {
+                    "interface": [{
+                        "name": client2["server"],
+                        "ipv4": {
+                            "infix-dhcp-client:dhcp": {
+                                "option": [
+                                    {"id": "hostname", "value": "auto"},
+                                    {"id": "router"},
+                                    {"id": "dns-server"},
+                                    {"id": "ntp-server"},
+                                    {"id": 121}
+                                ]
+                            }
+                        }
                     }]
                 }
             },
@@ -244,17 +252,21 @@ with infamy.Test() as test:
             }})
 
         client3.put_config_dicts({
-            "infix-dhcp-client": {
-                "dhcp-client": {
-                    "client-if": [{
-                        "if-name": client3["server"],
-                        "option": [
-                            {"id": "hostname", "value": "auto"},
-                            {"id": "router"},
-                            {"id": "dns-server"},
-                            {"id": "ntp-server"},
-                            {"id": 121}
-                        ]
+            "ietf-interfaces": {
+                "interfaces": {
+                    "interface": [{
+                        "name": client3["server"],
+                        "ipv4": {
+                            "infix-dhcp-client:dhcp": {
+                                "option": [
+                                    {"id": "hostname", "value": "auto"},
+                                    {"id": "router"},
+                                    {"id": "dns-server"},
+                                    {"id": "ntp-server"},
+                                    {"id": 121}
+                                ]
+                            }
+                        }
                     }]
                 }
             },

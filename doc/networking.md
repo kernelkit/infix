@@ -1038,9 +1038,9 @@ will be used, otherwise it falls back to the default algorithm.
 ![Using DHCP for IPv4 address assignment](img/ip-address-example-ipv4-dhcp.svg)
 
     admin@example:/> configure
-    admin@example:/config/> edit dhcp-client
-    admin@example:/config/dhcp-client/> set client-if eth0
-    admin@example:/config/dhcp-client/> leave
+    admin@example:/config/> edit interface eth0 ipv4
+    admin@example:/config/interface/eth0/ipv4/> set dhcp
+    admin@example:/config/interface/eth0/ipv4/> leave
     admin@example:/> show interfaces
     INTERFACE       PROTOCOL   STATE       DATA
     eth0            ethernet   UP          02:00:00:00:00:00
@@ -1053,6 +1053,31 @@ will be used, otherwise it falls back to the default algorithm.
 
 The resulting address (10.1.2.100/24) is of type *dhcp*.
 
+To configure DHCP client options, such as sending a specific hostname to the
+server, you can specify options with values:
+
+```
+admin@example:/> configure
+admin@example:/config/> edit interface eth0 ipv4 dhcp
+admin@example:/config/interface/eth0/ipv4/dhcp/> set option hostname value myhost
+admin@example:/config/interface/eth0/ipv4/dhcp/> show
+option hostname {
+  value myhost;
+}
+admin@example:/config/interface/eth0/ipv4/dhcp/> leave
+admin@example:/>
+```
+
+> [!TIP]
+> The special value `auto` can be used with the hostname option to
+> automatically use the configured system hostname.
+
+Other useful DHCP options include:
+
+- `client-id` - Send a specific client identifier to the server
+- `route-preference` - Set the administrative distance for DHCP-learned routes (default: 5)
+
+For advanced usage with vendor-specific options, see the YANG model.
 
 #### Disabling IPv6 link-local address(es)
 

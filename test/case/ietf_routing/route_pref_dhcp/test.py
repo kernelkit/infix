@@ -17,7 +17,7 @@ import infamy.dhcp
 from infamy.util import until, parallel
 from infamy.netns import IsolatedMacVlans
 
-def configure_interface(name, ip=None, prefix_length=None, forwarding=True):
+def configure_interface(name, ip=None, prefix_length=None, forwarding=True, dhcp=False):
     interface_config = {
         "name": name,
         "enabled": True,
@@ -28,6 +28,19 @@ def configure_interface(name, ip=None, prefix_length=None, forwarding=True):
     }
     if ip and prefix_length:
         interface_config["ipv4"]["address"].append({"ip": ip, "prefix-length": prefix_length})
+    if dhcp:
+        interface_config["ipv4"]["infix-dhcp-client:dhcp"] = {
+            "option": [
+                {"id": "broadcast"},
+                {"id": "dns-server"},
+                {"id": "domain"},
+                {"id": "hostname"},
+                {"id": "ntp-server"},
+                {"id": "router"},
+                {"id": "netmask"}
+            ],
+            "route-preference": 5
+        }
     return interface_config
 
 def config_target1(target, data1, data2, link):
@@ -35,7 +48,7 @@ def config_target1(target, data1, data2, link):
         "ietf-interfaces": {
             "interfaces": {
                 "interface": [
-                    configure_interface(data1),
+                    configure_interface(data1, dhcp=True),
                     configure_interface(data2, "192.168.30.1", 24),
                     configure_interface(link, "192.168.50.1", 24)
                 ]
@@ -60,27 +73,6 @@ def config_target1(target, data1, data2, link):
                         }
                     ]
                 }
-            }
-        },
-        "infix-dhcp-client": {
-            "dhcp-client": {
-                "enabled": True,
-                "client-if": [
-                    {
-                        "if-name": data1,
-                        "enabled": True,
-                        "option": [
-                            {"id": "broadcast"},
-                            {"id": "dns-server"},
-                            {"id": "domain"},
-                            {"id": "hostname"},
-                            {"id": "ntp-server"},
-                            {"id": "router"},
-                            {"id": "netmask"}
-                        ],
-                        "route-preference": 5
-                    }
-                ]
             }
         }
     })
