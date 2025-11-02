@@ -1,9 +1,8 @@
-From fb833dce120667cf104f1ce91683635964f35c1d Mon Sep 17 00:00:00 2001
+From fa9f48fb62b9b8c5a0558af9ef98fa37dfa685df Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Tue, 21 Nov 2023 20:15:24 +0100
 Subject: [PATCH 15/30] net: phy: marvell10g: Fix power-up when strapped to
  start powered down
-Organization: Wires
 
 On devices which are hardware strapped to start powered down (PDSTATE
 == 1), make sure that we clear the power-down bit on all units
