@@ -300,9 +300,6 @@ int infix_dhcp_server_change(sr_session_ctx_t *session, struct lyd_node *config,
 	int enabled = 0, added = 0, deleted = 0;
 	sr_error_t err = 0;
 
-	if (!lydx_get_xpathf(diff, CFG_XPATH))
-		return SR_ERR_OK;
-
 	switch (event) {
 	case SR_EV_DONE:
 		break;
@@ -311,6 +308,9 @@ int infix_dhcp_server_change(sr_session_ctx_t *session, struct lyd_node *config,
 	default:
 		return SR_ERR_OK;
 	}
+
+	if (!lydx_get_xpathf(diff, CFG_XPATH))
+		return SR_ERR_OK;
 
 	global = lydx_get_descendant(config, "dhcp-server", NULL);
 	enabled = lydx_is_enabled(global, "enabled");
