@@ -44,12 +44,15 @@ check_factory()
 factory_reset()
 {
     find /sys/class/leds/ -type l -exec sh -c 'echo 100 > $0/brightness' {} \;
-    logger $opt -p user.crit -t "$nm" "Resetting to factory defaults."
+    print_start "Resetting to factory defaults."
+    logger $opt -p user.notice -t "$nm" "Resetting to factory defaults."
 
     rm -rf /mnt/cfg/* /mnt/var/*
-
-    logger $opt -p user.crit -t "$nm" "Factory reset complete."
     sync
+
+    logger $opt -p user.notice -t "$nm" "Factory reset complete."
+    print_end 0 "Factory reset complete."
+    print_restore
 }
 
 is_mmc()
