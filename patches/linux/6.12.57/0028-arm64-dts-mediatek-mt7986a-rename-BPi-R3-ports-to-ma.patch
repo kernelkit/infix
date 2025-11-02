@@ -1,9 +1,8 @@
-From 59a1759daebd34b11055e122630765904b11c407 Mon Sep 17 00:00:00 2001
+From 695707e1e9370f93a22db87d6da0018771a4802b Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Sun, 10 Aug 2025 18:52:54 +0200
 Subject: [PATCH 28/30] arm64: dts: mediatek: mt7986a: rename BPi R3 ports to
  match case
-Organization: Wires
 
 For ref. see: https://wiki.banana-pi.org/File:Bpi-r3_Metal_case.jpg
 

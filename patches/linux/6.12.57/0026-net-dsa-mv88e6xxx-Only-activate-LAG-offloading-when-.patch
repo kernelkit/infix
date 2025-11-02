@@ -1,9 +1,8 @@
-From bb360d78aa68ecf435e5b51b9e10ba710f964ace Mon Sep 17 00:00:00 2001
+From 5fec934d59c701d30d49a763e8b06f99621e046b Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Wed, 12 Feb 2025 22:03:14 +0100
 Subject: [PATCH 26/30] net: dsa: mv88e6xxx: Only activate LAG offloading when
  bridged
-Organization: Wires
 
 The current port isolation scheme for mv88e6xxx is detailed here:
 https://lore.kernel.org/netdev/20220203101657.990241-1-tobias@waldekranz.com/
