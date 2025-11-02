@@ -35,6 +35,10 @@ def iplink2yang_type(iplink):
         case "ether":
             data = HOST.run(tuple(f"ls /sys/class/net/{ifname}/wireless/".split()), default="no")
             if data != "no":
+                iw_data=HOST.run(tuple(f"iw dev {ifname} info".split()), default="")
+                for line in iw_data.splitlines():
+                    if line.strip() == "type AP":
+                        return "infix-if-type:wifi-ap"
                 return "infix-if-type:wifi"
         case _:
             return "infix-if-type:other"
@@ -138,7 +142,7 @@ def interface(iplink, ipaddr):
         case "infix-if-type:vlan":
             if v := vlan.vlan(iplink):
                 interface["infix-interfaces:vlan"] = v
-        case "infix-if-type:wifi":
+        case "infix-if-type:wifi-ap" |  "infix-if-type:wifi":
             if w := wifi.wifi(iplink["ifname"]):
                 interface["infix-interfaces:wifi"] = w
 
