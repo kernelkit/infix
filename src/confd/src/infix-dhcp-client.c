@@ -14,7 +14,7 @@
 #include "core.h"
 #define  ARPING_MSEC    1000
 #define  MODULE         "infix-dhcp-client"
-#define  XPATH          "/infix-dhcp-client:dhcp-client"
+#define  XPATH          "/ietf-interfaces:interfaces/interface/ietf-ip:ipv4/infix-dhcp-client:dhcp"
 #define  CACHE_TEMPLATE "/var/lib/misc/%s.cache"
 
 static char *ip_cache(const char *ifname, char *str, size_t len)
@@ -278,54 +278,58 @@ static void del(const char *ifname)
 	systemf("initctl -bfq delete dhcp-client-%s", ifname);
 }
 
-int infix_dhcp_client_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd)
+int infix_dhcp_client_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff,
+			     sr_event_t event, struct confd *confd)
 {
-	struct lyd_node *global, *cifs, *difs, *cif, *dif;
+	struct lyd_node *ifaces, *difaces, *iface, *diface, *ipv4, *dhcp, *ddhcp;
 	sr_error_t err = 0;
-	int ena = 0;
 
-	switch (event) {
-	case SR_EV_DONE:
-		break;
-	case SR_EV_CHANGE:
-	case SR_EV_ABORT:
-	default:
+	if (event != SR_EV_DONE)
 		return SR_ERR_OK;
-	}
 
-	global = lydx_get_descendant(config, "dhcp-client", NULL);
-	ena    = lydx_is_enabled(global, "enabled");
+	ifaces  = lydx_get_descendant(config, "interfaces", "interface", NULL);
+	difaces = lydx_get_descendant(diff, "interfaces", "interface", NULL);
 
-	cifs = lydx_get_descendant(config, "dhcp-client", "client-if", NULL);
-	difs = lydx_get_descendant(diff, "dhcp-client", "client-if", NULL);
+	/* find the modified interfaces */
+	LYX_LIST_FOR_EACH(difaces, diface, "interface") {
+		const char *ifname = lydx_get_cattr(diface, "name");
+		struct lyd_node *dipv4;
+		char *out;
 
-	/* find the modified one, delete or recreate only that */
-	LYX_LIST_FOR_EACH(difs, dif, "client-if") {
-		const char *ifname = lydx_get_cattr(dif, "if-name");
+		lyd_print_mem(&out, diface, LYD_JSON,
+			      LYD_PRINT_WITHSIBLINGS | LYD_PRINT_WD_ALL);
 
-		if (lydx_get_op(dif) == LYDX_OP_DELETE) {
+		dipv4 = lydx_get_descendant(lyd_child(diface), "ipv4", NULL);
+		if (!dipv4)
+			continue;
+
+		ddhcp = lydx_get_descendant(lyd_child(dipv4), "dhcp", NULL);
+		if (!ddhcp)
+			continue;
+
+		/* Check if dhcp container was deleted */
+		if (lydx_get_op(ddhcp) == LYDX_OP_DELETE) {
 			del(ifname);
 			continue;
 		}
 
-		LYX_LIST_FOR_EACH(cifs, cif, "client-if") {
-			if (strcmp(ifname, lydx_get_cattr(cif, "if-name")))
+		/* Find corresponding interface in config to check if dhcp is present */
+		LYX_LIST_FOR_EACH(ifaces, iface, "interface") {
+			if (strcmp(ifname, lydx_get_cattr(iface, "name")))
 				continue;
 
-			if (!ena || !lydx_is_enabled(cif, "enabled"))
+			ipv4 = lydx_get_descendant(lyd_child(iface), "ipv4", NULL);
+			if (!ipv4) {
+				del(ifname);
+				break;
+			}
+
+			dhcp = lydx_get_descendant(lyd_child(ipv4), "dhcp", NULL);
+			if (!dhcp)
 				del(ifname);
 			else
-				add(ifname, cif);
+				add(ifname, dhcp);
 			break;
-		}
-	}
-
-	if (!ena) {
-		LYX_LIST_FOR_EACH(cifs, cif, "client-if") {
-			const char *ifname = lydx_get_cattr(cif, "if-name");
-
-			INFO("DHCP client globally disabled, stopping client on %s ...", ifname);
-			del(ifname);
 		}
 	}
 
@@ -368,7 +372,7 @@ static int cand(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
 		return SR_ERR_OK;
 	}
 
-	err = sr_dup_changes_iter(session, XPATH "/client-if//*", &iter);
+	err = sr_dup_changes_iter(session, XPATH "//*", &iter);
 	if (err)
 		return err;
 

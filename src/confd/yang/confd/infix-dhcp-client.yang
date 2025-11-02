@@ -6,6 +6,9 @@ module infix-dhcp-client {
   import ietf-interfaces {
     prefix if;
   }
+  import ietf-ip {
+    prefix ip;
+  }
   import infix-dhcp-common {
     prefix dhcp;
   }
@@ -13,6 +16,14 @@ module infix-dhcp-client {
   contact      "kernelkit@googlegroups.com";
   description  "This module implements a DHCPv4 client";
 
+  revision 2025-11-02 {
+    description   "Migrate DHCP client to ietf-ip augment.
+                      - Relocate from /dhcp-client to /interfaces/interface/ipv4/dhcp
+                      - Presence container instead of enabled leaf, matching autoconf
+                      - Drop client-if list wrapper, not needed anymore
+                      - Drop global enabled flag";
+    reference     "internal, issue #1109";
+  }
   revision 2025-01-29 {
     description   "Consolidate DHCP options between client and server models.
                       - Rename option attribute 'name' -> 'id'
@@ -51,30 +62,10 @@ module infix-dhcp-client {
    * Data Nodes
    */
 
-  container dhcp-client {
-    description "DHCPv4 client configuration";
-
-    leaf enabled {
-      type boolean;
-      default "true";
-      description "Globally enables the DHCP client function.";
-    }
-
-    list client-if {
-      description "List of interfaces requesting DHCPv4 configuration.";
-      key "if-name";
-
-      leaf if-name {
-        type if:interface-ref;
-        mandatory true;
-        description "Name of the interface.";
-      }
-
-      leaf enabled {
-        type boolean;
-        default "true";
-        description "Enable DHCP client for this interface.";
-      }
+  augment "/if:interfaces/if:interface/ip:ipv4" {
+    container dhcp {
+      presence "Enable DHCP client for this interface.";
+      description "DHCPv4 client configuration";
 
       leaf client-id {
         type string;

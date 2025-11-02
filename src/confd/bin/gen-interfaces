@@ -172,6 +172,14 @@ if [ -n "$bridge" ]; then
             "infix-ip:autoconf": {
                 "enabled": $ipv4
             }
+EOF
+    if [ "$dhcp" = "true" ]; then
+        cat <<EOF
+            ,
+            "infix-dhcp-client:dhcp": {}
+EOF
+    fi
+    cat <<EOF
         },
         "ietf-ip:ipv6": {
             "enabled": true,
@@ -195,18 +203,6 @@ $(for iface in $ifaces; do gen_iface_json "$iface"; done)
 $(for iface in $ports;  do gen_iface_json "$iface" "$bridge"; done)
       ]
 EOF
-if [ "$dhcp" = "true" ] && [ -n "$bridge" ]; then
-cat <<EOF
-  },
-  "infix-dhcp-client:dhcp-client": {
-    "enabled": true,
-    "client-if": [
-      {
-        "if-name": "$bridge"
-      }
-    ]
-EOF
-fi
 cat <<EOF
   }
 }

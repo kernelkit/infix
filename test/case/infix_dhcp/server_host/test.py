@@ -116,15 +116,19 @@ with infamy.Test() as test:
             "ietf-system": {
                 "system": {"hostname": HOSTNM1}
             },
-            "infix-dhcp-client": {
-                "dhcp-client": {
-                    "client-if": [{
-                        "if-name": client1["link"],
-                        "option": [
-                            {"id": "router"},
-                            {"id": "client-id", "hex": HOSTCID1},
-                            {"id": 121}
-                        ]
+            "ietf-interfaces": {
+                "interfaces": {
+                    "interface": [{
+                        "name": client1["link"],
+                        "ipv4": {
+                            "infix-dhcp-client:dhcp": {
+                                "option": [
+                                    {"id": "router"},
+                                    {"id": "client-id", "hex": HOSTCID1},
+                                    {"id": 121}
+                                ]
+                            }
+                        }
                     }]
                 }
             },
@@ -134,16 +138,20 @@ with infamy.Test() as test:
             "ietf-system": {
                 "system": {"hostname": HOSTNM2}
             },
-            "infix-dhcp-client": {
-                "dhcp-client": {
-                    "client-if": [{
-                        "if-name": client2["link"],
-                        "client-id": HOSTCID2,
-                        "option": [
-                            {"id": "router"},
-                            {"id": "hostname"},
-                            {"id": 121}
-                        ]
+            "ietf-interfaces": {
+                "interfaces": {
+                    "interface": [{
+                        "name": client2["link"],
+                        "ipv4": {
+                            "infix-dhcp-client:dhcp": {
+                                "client-id": HOSTCID2,
+                                "option": [
+                                    {"id": "router"},
+                                    {"id": "hostname"},
+                                    {"id": 121}
+                                ]
+                            }
+                        }
                     }]
                 }
             },

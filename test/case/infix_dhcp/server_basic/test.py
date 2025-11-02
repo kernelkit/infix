@@ -68,14 +68,18 @@ with infamy.Test() as test:
             }})
 
         client.put_config_dicts({
-            "infix-dhcp-client": {
-                "dhcp-client": {
-                    "client-if": [{
-                        "if-name": client["link"],
-                        "option": [
-                            {"id": "hostname"},
-                            {"id": "domain"}
-                        ]
+            "ietf-interfaces": {
+                "interfaces": {
+                    "interface": [{
+                        "name": client["link"],
+                        "ipv4": {
+                            "infix-dhcp-client:dhcp": {
+                                "option": [
+                                    {"id": "hostname"},
+                                    {"id": "domain"}
+                                ]
+                            }
+                        }
                     }]
                 }
             },

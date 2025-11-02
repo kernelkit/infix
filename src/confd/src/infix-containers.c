@@ -356,6 +356,7 @@ int infix_containers_change(sr_session_ctx_t *session, struct lyd_node *config, 
 
 	if (diff && !lydx_get_xpathf(diff, CFG_XPATH))
 		return SR_ERR_OK;
+
 	switch (event) {
 	case SR_EV_DONE:
 		break;

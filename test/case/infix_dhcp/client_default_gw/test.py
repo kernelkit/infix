@@ -26,16 +26,20 @@ with infamy.Test() as test:
         with infamy.dhcp.Server(netns, router=ROUTER):
             _, port = env.ltop.xlate("client", "data")
             config = {
-                "dhcp-client": {
-                    "client-if": [{
-                        "if-name": f"{port}",
-                        "option": [
-                            {"id": "router"}
-                        ]
+                "interfaces": {
+                    "interface": [{
+                        "name": f"{port}",
+                        "ipv4": {
+                            "infix-dhcp-client:dhcp": {
+                                "option": [
+                                    {"id": "router"}
+                                ]
+                            }
+                        }
                     }]
                 }
             }
-            client.put_config_dict("infix-dhcp-client", config)
+            client.put_config_dict("ietf-interfaces", config)
 
             with test.step("Verify DHCP client has default route via 192.168.0.254"):
                 until(lambda: route.ipv4_route_exist(client, "0.0.0.0/0", ROUTER))
