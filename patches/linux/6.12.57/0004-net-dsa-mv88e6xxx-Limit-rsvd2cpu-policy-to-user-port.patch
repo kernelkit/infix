@@ -1,9 +1,8 @@
-From f94a92a11b277a3a398b2611024b523bb5188c77 Mon Sep 17 00:00:00 2001
+From 1863c3b6e78fd3a48f144383cd3e950a5078ad9c Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Wed, 24 Apr 2024 22:41:04 +0200
 Subject: [PATCH 04/30] net: dsa: mv88e6xxx: Limit rsvd2cpu policy to user
  ports on 6393X
-Organization: Wires
 
 For packets with a DA in the IEEE reserved L2 group range, originating
 from a CPU, forward it as normal, rather than classifying it as
