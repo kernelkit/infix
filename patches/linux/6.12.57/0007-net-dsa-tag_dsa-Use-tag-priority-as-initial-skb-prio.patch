@@ -1,9 +1,8 @@
-From e3c18f05aadb3ef936f427b04ada5cec8f640dc5 Mon Sep 17 00:00:00 2001
+From 1e3a276bb5d7c774cc179f73cbfb6bf86c2dcb9d Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Tue, 28 May 2024 10:38:42 +0200
 Subject: [PATCH 07/30] net: dsa: tag_dsa: Use tag priority as initial
  skb->priority
-Organization: Wires
 
 Use the 3-bit priority field from the DSA tag as the initial packet
 priority on ingress to the CPU.

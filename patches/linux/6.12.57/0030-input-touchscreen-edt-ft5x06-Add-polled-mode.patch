@@ -1,8 +1,7 @@
-From 955d2182c5476d86dd54656922e91f4539a6009d Mon Sep 17 00:00:00 2001
+From d078130536761de8a86b8fbd82de2337a6017749 Mon Sep 17 00:00:00 2001
 From: Mattias Walström <lazzer@gmail.com>
 Date: Thu, 21 Aug 2025 11:20:23 +0200
 Subject: [PATCH 30/30] input:touchscreen:edt-ft5x06: Add polled mode
-Organization: Wires
 
 Not all hardware has interrupts therefore we need
 to poll the touchscreen.
