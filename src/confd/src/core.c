@@ -8,16 +8,9 @@
 struct confd confd;
 
 
-int core_startup_save(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
-		      const char *xpath, sr_event_t event, unsigned request_id, void *priv)
+static int startup_save(sr_session_ctx_t *session, uint32_t sub_id, const char *model,
+			const char *xpath, sr_event_t event, unsigned request_id, void *priv)
 {
-	sr_event_t last_event = -1;
-	static unsigned int last_request = -1;
-	if (last_event == event && last_request == request_id)
-		return SR_ERR_OK;
-	last_event = event;
-	last_request = request_id;
-
 	/* skip in bootstrap, triggered by load script to initialize startup datastore */
 	if (systemf("runlevel >/dev/null 2>&1"))
 		return SR_ERR_OK;
@@ -33,9 +26,10 @@ static confd_dependency_t add_dependencies(struct lyd_node **diff, const char *x
 	struct lyd_node *new_node = NULL;
 	struct lyd_node *target = NULL;
 	struct lyd_node *root = NULL;
-	int rc;
 
 	if (!lydx_get_xpathf(*diff, "%s", xpath)) {
+		int rc;
+
 		/* Create the path, potentially creating a new tree */
 		rc = lyd_new_path(NULL, LYD_CTX(*diff), xpath, value, LYD_NEW_PATH_UPDATE, &new_node);
 		if (rc != LY_SUCCESS || !new_node) {
@@ -147,7 +141,7 @@ static confd_dependency_t handle_dependencies(struct lyd_node **diff, struct lyd
 	return result;
 }
 
-static int change_cb(sr_session_ctx_t *session, uint32_t sub_id, const char *module_name,
+static int change_cb(sr_session_ctx_t *session, uint32_t sub_id, const char *model_name,
 		     const char *xpath, sr_event_t event, uint32_t request_id, void *_confd)
 {
 	struct lyd_node *diff = NULL, *config = NULL;
@@ -258,16 +252,20 @@ static int change_cb(sr_session_ctx_t *session, uint32_t sub_id, const char *mod
 
 		AUDIT("The new configuration has been applied.");
 	}
+
 free_diff:
-      lyd_free_tree(diff);
-      return rc;
+	lyd_free_tree(diff);
+	return rc;
 }
 
-static inline int subscribe_module(char *model, struct confd *confd, int flags) {
-	return sr_module_change_subscribe(confd->session, model, "//.", change_cb, confd,
-					  CB_PRIO_PRIMARY, SR_SUBSCR_CHANGE_ALL_MODULES | SR_SUBSCR_DEFAULT | flags, &confd->sub) &&
+static inline int subscribe_model(char *model, struct confd *confd, int flags)
+{
+	return  sr_module_change_subscribe(confd->session, model, "//.", change_cb, confd,
+					   CB_PRIO_PRIMARY, SR_SUBSCR_CHANGE_ALL_MODULES |
+					   SR_SUBSCR_DEFAULT | flags, &confd->sub) &&
 		sr_module_change_subscribe(confd->startup, model, "//.", core_startup_save, NULL,
-					   CB_PRIO_PASSIVE, SR_SUBSCR_PASSIVE | SR_SUBSCR_CHANGE_ALL_MODULES, &confd->sub);
+					   CB_PRIO_PASSIVE, SR_SUBSCR_CHANGE_ALL_MODULES |
+					   SR_SUBSCR_PASSIVE, &confd->sub);
 }
 
 int sr_plugin_init_cb(sr_session_ctx_t *session, void **priv)
@@ -295,7 +293,7 @@ int sr_plugin_init_cb(sr_session_ctx_t *session, void **priv)
 	if (!confd.conn)
 		goto err;
 
-	/* The startup datastore is used for the core_startup_save() hook */
+	/* The startup datastore is used for the startup_save() hook */
 	rc = sr_session_start(confd.conn, SR_DS_STARTUP, &confd.startup);
 	if (rc)
 		goto err;
@@ -314,69 +312,69 @@ int sr_plugin_init_cb(sr_session_ctx_t *session, void **priv)
 	 */
 	confd.ifquirks = json_load_file("/etc/product/interface-quirks.json", 0, NULL);
 
-	rc = subscribe_module("ietf-interfaces", &confd, 0);
+	rc = subscribe_model("ietf-interfaces", &confd, 0);
 	if (rc) {
 		ERROR("Failed to subscribe to ietf-interfaces");
 		goto err;
 	}
-	rc = subscribe_module("ietf-netconf-acm", &confd, 0);
+	rc = subscribe_model("ietf-netconf-acm", &confd, 0);
 	if (rc) {
 		ERROR("Failed to subscribe to ietf-netconf-acm");
 		goto err;
 	}
-	rc = subscribe_module("infix-dhcp-client", &confd, 0);
+	rc = subscribe_model("infix-dhcp-client", &confd, 0);
 	if (rc) {
 		ERROR("Failed to subscribe to infix-dhcp-client");
 		goto err;
 	}
-	rc = subscribe_module("ietf-keystore", &confd, SR_SUBSCR_UPDATE);
+	rc = subscribe_model("ietf-keystore", &confd, SR_SUBSCR_UPDATE);
 	if (rc) {
 		ERROR("Failed to subscribe to ietf-keystore");
 		goto err;
 	}
-	rc = subscribe_module("infix-services", &confd, 0);
+	rc = subscribe_model("infix-services", &confd, 0);
 	if (rc) {
 		ERROR("Failed to subscribe to infix-services");
 		goto err;
 	}
-	rc = subscribe_module("ietf-system", &confd, 0);
+	rc = subscribe_model("ietf-system", &confd, 0);
 	if (rc) {
 		ERROR("Failed to subscribe to ietf-system");
 		goto err;
 	}
-	rc = subscribe_module("ieee802-dot1ab-lldp", &confd, 0);
+	rc = subscribe_model("ieee802-dot1ab-lldp", &confd, 0);
 	if (rc) {
 		ERROR("Failed to subscribe to ieee802-dot1ab-lldp");
 		goto err;
 	}
 #ifdef CONTAINERS
-	rc = subscribe_module("infix-containers", &confd, 0);
+	rc = subscribe_model("infix-containers", &confd, 0);
 	if (rc) {
 		ERROR("Failed to subscribe to infix-containers");
 		goto err;
 	}
 #endif
-	rc = subscribe_module("infix-dhcp-server", &confd, 0);
+	rc = subscribe_model("infix-dhcp-server", &confd, 0);
 	if (rc) {
 		ERROR("Failed to subscribe to infix-dhcp-server");
 		goto err;
 	}
-	rc = subscribe_module("ietf-routing", &confd, 0);
+	rc = subscribe_model("ietf-routing", &confd, 0);
 	if (rc) {
 		ERROR("Failed to subscribe to ietf-routing");
 		goto err;
 	}
-	rc = subscribe_module("ietf-hardware", &confd, 0);
+	rc = subscribe_model("ietf-hardware", &confd, 0);
 	if (rc) {
 		ERROR("Failed to subscribe to ietf-hardware");
 		goto err;
 	}
-	rc = subscribe_module("infix-firewall", &confd, 0);
+	rc = subscribe_model("infix-firewall", &confd, 0);
 	if (rc) {
 		ERROR("Failed to subscribe to infix-firewall");
 		goto err;
 	}
-	rc = subscribe_module("infix-meta", &confd, SR_SUBSCR_UPDATE);
+	rc = subscribe_model("infix-meta", &confd, SR_SUBSCR_UPDATE);
 	if (rc) {
 		ERROR("Failed to subscribe to infix-meta");
 		goto err;
