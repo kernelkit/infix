@@ -5,17 +5,24 @@ image cfg.ext4 {
 
 	ext4 {
 		label = "cfg"
+                use-mke2fs = true
+                features = "uninit_bg"
+                extraargs = "-m 0 -i 4096"
 	}
 }
 
+# The /var partition will be expanded automatically at first boot
+# to use the full size of the SD-card or eMMC media.
 image var.ext4 {
 	empty = true
 	temporary = true
-	size = 512M
+	size = 128M
 
 	ext4 {
 		label = "var"
-		use-mke2fs = true
+                use-mke2fs = true
+                features = "uninit_bg"
+                extraargs = "-m 0 -i 4096"
 	}
 }
 
