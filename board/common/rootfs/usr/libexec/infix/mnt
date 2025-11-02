@@ -292,8 +292,10 @@ mount_rw()
 
     # TODO: Also look for UBI partitions
 
-    # 
-    tune2fs -c 0 -i 0 LABEL="$1" 2>/dev/null 
+    # Disable periodic fsck, yet keeping safety checks on ext4
+    if grep "LABEL=$label" /etc/fstab |grep -q ext4; then
+	tune2fs -c 0 -i 0 LABEL="$1" 2>/dev/null
+    fi
     mount LABEL="$1" 2>/dev/null && return 0
 
     return 1
