@@ -1,9 +1,8 @@
-From cb5f94c0fedcf97fc7d6a52b64b534150bffa82a Mon Sep 17 00:00:00 2001
+From 80a9ba5efce93eb9a9379467697b175aa17698ee Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Mon, 22 Apr 2024 23:18:01 +0200
 Subject: [PATCH 03/30] net: dsa: mv88e6xxx: Honor ports being managed via
  in-band-status
-Organization: Wires
 
 Keep all link parameters in their unforced states when the port is
 declared as being managed via in-band-status, and let the MAC

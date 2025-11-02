@@ -1,9 +1,8 @@
-From 5452847c502df7e9fbf8b5c63ee82cb5be8530c2 Mon Sep 17 00:00:00 2001
+From 79dd9220b9ce300db61af49d166dac9564e03ba8 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Tue, 12 Dec 2023 09:51:05 +0100
 Subject: [PATCH 17/30] net: phy: marvell10g: Support LEDs tied to a single
  media side
-Organization: Wires
 
 In a combo-port setup, i.e. where both the copper and fiber interface
 are available to the user, the LEDs may be physically located either

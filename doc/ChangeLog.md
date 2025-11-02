@@ -8,6 +8,8 @@ All notable changes to the project are documented in this file.
 
 ### Changes
 
+- Upgrade Linux kernel to 6.12.57 (LTS)
+
 - Improvements to `sdcard.img` generation, useful for developers mostly:
    - The NanoPi R2S bootloader is now automatically built and uploaded to
      the [`latest-boot` release][lastest-boot] tag
