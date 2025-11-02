@@ -169,13 +169,19 @@ if [ -n "$bridge" ]; then
         "name": "$bridge",
         "type": "infix-if-type:bridge",
         "ietf-ip:ipv4": {
-            "infix-ip:autoconf": {
-                "enabled": $ipv4
-            }
 EOF
-    if [ "$dhcp" = "true" ]; then
+    if [ "$ipv4" = "true" ]; then
         cat <<EOF
+            "infix-ip:autoconf": {}
+EOF
+        if [ "$dhcp" = "true" ]; then
+            cat <<EOF
             ,
+            "infix-dhcp-client:dhcp": {}
+EOF
+        fi
+    elif [ "$dhcp" = "true" ]; then
+        cat <<EOF
             "infix-dhcp-client:dhcp": {}
 EOF
     fi

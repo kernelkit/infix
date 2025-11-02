@@ -12,6 +12,8 @@ All notable changes to the project are documented in this file.
   to `/interfaces/interface[name]/ipv4/infix-dhcp-client:dhcp`, issue #1109.
   The configuration is automatically migrated on upgrade.  The DHCP client is
   now enabled using a presence container instead of a separate `enabled` leaf
+- The `enabled` nore for IPv4 autoconf (ZeroConf) has been dropped, `autoconf`
+  is now a presence container.  Configuration automatically migrated on upgrade
 - Improvements to `sdcard.img` generation, useful for developers mostly:
    - The NanoPi R2S bootloader is now automatically built and uploaded to
      the [`latest-boot` release][lastest-boot] tag
