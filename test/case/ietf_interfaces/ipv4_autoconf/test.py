@@ -57,9 +57,7 @@ with infamy.Test() as test:
                         "name": tport,
                         "enabled": True,
                         "ipv4": {
-                            "autoconf": {
-                                "enabled": True
-                            }
+                            "infix-ip:autoconf": {}
                         }
                     }
                 ]
@@ -79,8 +77,7 @@ with infamy.Test() as test:
                         "name": tport,
                         "enabled": True,
                         "ipv4": {
-                            "autoconf": {
-                                "enabled": True,
+                            "infix-ip:autoconf": {
                                 "request-address": "169.254.42.42"
                             }
                         }

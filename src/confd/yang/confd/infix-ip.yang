@@ -18,6 +18,10 @@ module infix-ip {
 
   description "This module augments ietf-ip with Infix extensions and deviations.";
 
+  revision 2025-11-02 {
+    description "Change autoconf to presence container, removing enabled leaf.";
+    reference "Internal, issue #1109.";
+  }
   revision 2024-09-16 {
     description "Add support for IPv4LL request-address.";
     reference "Internal.";
@@ -36,13 +40,9 @@ module infix-ip {
    */
   augment "/if:interfaces/if:interface/ip:ipv4" {
     container autoconf {
+      presence "Enable IPv4 link-local address autoconfiguration for this interface.";
       description "Parameters to control the autoconfiguration of IPv4 address.";
       reference "RFC 3927: Dynamic Configuration of IPv4 Link-Local Addresses";
-
-      leaf enabled {
-        description "Use a ZeroConf/IPv4LL agent to retrieve an 169.254/16 address.";
-        type boolean;
-      }
 
       leaf request-address {
         description "Try to acquire the specified IP address, if available.
