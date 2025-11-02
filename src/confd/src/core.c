@@ -215,8 +215,10 @@ static int change_cb(sr_session_ctx_t *session, uint32_t sub_id, const char *mod
 		goto free_diff;
 
 	/* infix-containers */
+#ifdef CONTAINERS
 	if ((rc = infix_containers_change(session, config, diff, event, confd)))
 		goto free_diff;
+#endif
 
 	/* ietf-hardware */
 	if ((rc = ietf_hardware_change(session, config, diff, event, confd)))
@@ -383,9 +385,11 @@ int sr_plugin_init_cb(sr_session_ctx_t *session, void **priv)
 	rc = ietf_system_rpc_init(&confd);
 	if (rc)
 		goto err;
+#ifdef CONTAINERS
 	rc = infix_containers_rpc_init(&confd);
 	if (rc)
 		goto err;
+#endif
 	rc = infix_dhcp_server_rpc_init(&confd);
 	if (rc)
 		goto err;
