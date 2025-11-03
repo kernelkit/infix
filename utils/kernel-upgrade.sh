@@ -9,21 +9,28 @@
 set -e -o pipefail
 
 # Parse arguments
-if [ $# -ne 1 ]; then
-    echo "Usage: $0 <path-to-linux-dir>"
+if [ $# -lt 1 ] || [ $# -gt 2 ]; then
+    echo "Usage: $0 <path-to-linux-dir> [branch-name]"
     exit 1
 fi
 
 LINUX_DIR="$1"
+INFIX_BRANCH="${2:-kernel-upgrade}"
 
 # Configuration
 INFIX_DIR="$(dirname "$(dirname "$(readlink -f "$0")")")"
-INFIX_BRANCH="kernel-upgrade"
 LINUX_BRANCH="kkit-linux-6.12.y"
 UPSTREAM_REMOTE="upstream"
 UPSTREAM_URL="https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git"
 KKIT_REMOTE="origin"
-KKIT_URL="git@github.com:kernelkit/linux.git"
+
+# Detect if running in CI (GitHub Actions sets CI=true)
+if [ "${CI:-false}" = "true" ]; then
+    KKIT_URL="https://github.com/kernelkit/linux.git"
+else
+    KKIT_URL="git@github.com:kernelkit/linux.git"
+fi
+
 KERNEL_VERSION_PATTERN="6.12"
 
 # Colors for output
@@ -50,8 +57,18 @@ check_directories() {
 
     if [ ! -d "$LINUX_DIR" ]; then
         log_info "Linux directory '$LINUX_DIR' not found, cloning..."
-        if git clone "$KKIT_URL" "$LINUX_DIR"; then
+        # Clone to parent directory if LINUX_DIR is a relative path without slashes
+        if [[ "$LINUX_DIR" != */* ]]; then
+            CLONE_TARGET="../$LINUX_DIR"
+            log_info "Cloning to $CLONE_TARGET (parent directory)"
+        else
+            CLONE_TARGET="$LINUX_DIR"
+        fi
+
+        if git clone "$KKIT_URL" "$CLONE_TARGET"; then
             log_info "Successfully cloned linux repository"
+            # Update LINUX_DIR to the actual path
+            LINUX_DIR="$CLONE_TARGET"
         else
             log_error "Failed to clone linux repository"
             exit 1
@@ -204,24 +221,8 @@ update_infix() {
         exit 1
     fi
 
-    # Update ChangeLog.md with new kernel version
-    log_info "Updating ChangeLog.md..."
-    if [ -f "doc/ChangeLog.md" ]; then
-        # Check if there's already a kernel upgrade entry in the latest release
-        if grep -q "^- Upgrade Linux kernel to" doc/ChangeLog.md | head -20; then
-            # Find and update the existing kernel upgrade line
-            sed -i "0,/^- Upgrade Linux kernel to.*/{s/^- Upgrade Linux kernel to.*/- Upgrade Linux kernel to $NEW_VERSION (LTS)/}" doc/ChangeLog.md
-            log_info "Updated existing kernel version entry to $NEW_VERSION"
-        else
-            # Add new kernel upgrade entry after the first "### Changes" section
-            sed -i "0,/^### Changes/a\\
-\\
-- Upgrade Linux kernel to $NEW_VERSION (LTS)" doc/ChangeLog.md
-            log_info "Added new kernel version entry: $NEW_VERSION"
-        fi
-    else
-        log_warn "doc/ChangeLog.md not found, skipping changelog update"
-    fi
+    # Update changelog
+    update_changelog "$NEW_VERSION"
 
     # Commit all changes
     log_info "Committing changes to infix..."
@@ -231,6 +232,50 @@ update_infix() {
     else
         git -C "$INFIX_DIR" commit -m "Upgrade Linux kernel to $NEW_VERSION"
         log_info "Changes committed"
+    fi
+}
+
+# Update ChangeLog.md with new kernel version
+update_changelog() {
+    local NEW_VERSION="$1"
+
+    log_info "Updating ChangeLog.md..."
+    if [ ! -f "doc/ChangeLog.md" ]; then
+        log_warn "doc/ChangeLog.md not found, skipping changelog update"
+        return 0
+    fi
+
+    # Check if the latest release is UNRELEASED (first release header in file)
+    FIRST_RELEASE=$(grep -m1 "^\[v" doc/ChangeLog.md)
+    if ! echo "$FIRST_RELEASE" | grep -q "\[UNRELEASED\]"; then
+        log_error "First release section in ChangeLog.md is not UNRELEASED"
+        log_error "Please create an UNRELEASED section first before running this script"
+        exit 1
+    fi
+
+    # Extract just the UNRELEASED section (from start until next version header)
+    UNRELEASED_SECTION=$(sed -n '1,/^\[v[0-9]/p' doc/ChangeLog.md | head -n -1)
+
+    # Check if there's already a kernel upgrade entry in the UNRELEASED section
+    if echo "$UNRELEASED_SECTION" | grep -q "^- Upgrade Linux kernel to"; then
+        # Update existing kernel upgrade line (only first occurrence)
+        sed -i "0,/^- Upgrade Linux kernel to.*/{s|^- Upgrade Linux kernel to.*|- Upgrade Linux kernel to $NEW_VERSION (LTS)|}" doc/ChangeLog.md
+        log_info "Updated existing kernel version entry to $NEW_VERSION"
+    else
+        # Add new kernel upgrade entry after first "### Changes"
+        # Use awk to insert at the right place
+        awk -v new_line="- Upgrade Linux kernel to $NEW_VERSION (LTS)" '
+            /^### Changes/ && !done {
+                print
+                getline
+                if (NF == 0) print
+                print new_line
+                done=1
+                next
+            }
+            {print}
+        ' doc/ChangeLog.md > doc/ChangeLog.md.tmp && mv doc/ChangeLog.md.tmp doc/ChangeLog.md
+        log_info "Added new kernel version entry: $NEW_VERSION"
     fi
 }
 
@@ -255,12 +300,10 @@ check_clean_working_tree() {
     log_info "Working tree is clean"
 }
 
-# Push changes to remotes
+# Push changes to both repositories
 push_changes() {
-    log_info "Pushing changes to remotes..."
-
-    # Push rebased linux branch to kkit remote
-    log_info "Pushing rebased linux branch to $KKIT_REMOTE..."
+    # Push rebased linux branch
+    log_info "Pushing linux branch to $KKIT_REMOTE..."
     if git -C "$LINUX_DIR" push "$KKIT_REMOTE" "$LINUX_BRANCH" --force-with-lease; then
         log_info "Successfully pushed linux branch to $KKIT_REMOTE"
     else
@@ -268,7 +311,7 @@ push_changes() {
         exit 1
     fi
 
-    # Push infix branch to origin
+    # Push infix changes
     log_info "Pushing infix branch to origin..."
     if git -C "$INFIX_DIR" push origin "$INFIX_BRANCH"; then
         log_info "Successfully pushed infix branch to origin"

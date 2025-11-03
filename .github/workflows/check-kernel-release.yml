@@ -1,7 +1,9 @@
 name: Check Kernel 6.12 Release
 
 on:
-  workflow_dispatch: # Allow manual triggering
+  schedule:
+    - cron: '0 3 * * *'
+  workflow_dispatch:
 
 jobs:
   check-kernel:
@@ -11,14 +13,6 @@ jobs:
       - name: Check out infix repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
-          token: ${{ secrets.KERNEL_UPDATE_TOKEN }}
-
-      - name: Check out linux repository
-        uses: actions/checkout@v4
-        with:
-          repository: kernelkit/linux
-          path: linux
           fetch-depth: 0
           token: ${{ secrets.KERNEL_UPDATE_TOKEN }}
 
@@ -37,22 +31,52 @@ jobs:
           echo "current_version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
           echo "Current 6.12 kernel version: $CURRENT_VERSION"
 
-          # Get the latest tag from our linux tree
-          cd linux
-          git fetch origin
-          LATEST_TAG=$(git tag -l "v6.12.*" | sort -V | tail -n1 | sed 's/^v//')
-          cd ..
+          # Get the version from infix defconfig
+          INFIX_VERSION=$(grep 'BR2_LINUX_KERNEL_CUSTOM_VERSION_VALUE=' configs/aarch64_defconfig | cut -d'"' -f2)
 
-          echo "latest_tag=$LATEST_TAG" >> $GITHUB_OUTPUT
-          echo "Latest tag in our tree: $LATEST_TAG"
+          echo "infix_version=$INFIX_VERSION" >> $GITHUB_OUTPUT
+          echo "Infix kernel version: $INFIX_VERSION"
 
-          if [ "$CURRENT_VERSION" != "$LATEST_TAG" ]; then
-            echo "new_release=true" >> $GITHUB_OUTPUT
-            echo "🎉 New 6.12 kernel released: $CURRENT_VERSION (our version: $LATEST_TAG)"
+          if [ "$CURRENT_VERSION" != "$INFIX_VERSION" ]; then
+            # Check if there's already an open PR for this version
+            PR_EXISTS=$(gh pr list --state open --search "Upgrade to kernel $CURRENT_VERSION in:title" --json number --jq 'length')
+
+            if [ "$PR_EXISTS" -gt 0 ]; then
+              echo "new_release=false" >> $GITHUB_OUTPUT
+              echo "PR already exists for kernel $CURRENT_VERSION, skipping"
+            else
+              echo "new_release=true" >> $GITHUB_OUTPUT
+              echo "🎉 New 6.12 kernel released: $CURRENT_VERSION (infix version: $INFIX_VERSION)"
+            fi
           else
             echo "new_release=false" >> $GITHUB_OUTPUT
             echo "No change - still at $CURRENT_VERSION"
           fi
+        env:
+          GH_TOKEN: ${{ secrets.KERNEL_UPDATE_TOKEN }}
+
+      - name: Generate branch name
+        if: steps.check.outputs.new_release == 'true'
+        id: branch
+        run: |
+          BRANCH_NAME="kernel-upgrade-$(uuidgen | tr '[:upper:]' '[:lower:]')"
+          echo "name=$BRANCH_NAME" >> $GITHUB_OUTPUT
+          echo "Branch name: $BRANCH_NAME"
+
+      - name: Import GPG key
+        if: steps.check.outputs.new_release == 'true'
+        run: |
+          # Import the GPG key
+          echo "${{ secrets.AEL_BOT_GPG_PRIVATE_KEY }}" | gpg --batch --import
+
+          # Get the key ID
+          GPG_KEY_ID=$(gpg --list-secret-keys --keyid-format=long | grep '^sec' | head -1 | awk '{print $2}' | cut -d'/' -f2)
+          echo "GPG_KEY_ID=$GPG_KEY_ID" >> $GITHUB_ENV
+
+          # Configure GPG agent for non-interactive use
+          echo "allow-loopback-pinentry" >> ~/.gnupg/gpg-agent.conf
+          echo "pinentry-mode loopback" >> ~/.gnupg/gpg.conf
+          gpg-connect-agent reloadagent /bye || true
 
       - name: Set up git credentials
         if: steps.check.outputs.new_release == 'true'
@@ -60,6 +84,8 @@ jobs:
           set -e -o pipefail
           git config --global user.email "ael-bot@users.noreply.github.com"
           git config --global user.name "ael-bot"
+          git config --global commit.gpgsign true
+          git config --global user.signingkey ${{ env.GPG_KEY_ID }}
 
           # Configure git to use the token for HTTPS operations
           git config --global url."https://ael-bot:${{ secrets.KERNEL_UPDATE_TOKEN }}@github.com/".insteadOf "git@github.com:"
@@ -69,9 +95,10 @@ jobs:
         if: steps.check.outputs.new_release == 'true'
         env:
           GIT_TERMINAL_PROMPT: 0
+          BRANCH_NAME: ${{ steps.branch.outputs.name }}
         run: |
           set -e -o pipefail
-          ./utils/kernel-upgrade.sh linux
+          ./utils/kernel-upgrade.sh linux "$BRANCH_NAME"
 
       - name: Create pull request
         if: steps.check.outputs.new_release == 'true'
@@ -79,7 +106,6 @@ jobs:
         with:
           github-token: ${{ secrets.KERNEL_UPDATE_TOKEN }}
           script: |
-            // Check if PR already exists
             const { data: pulls } = await github.rest.pulls.list({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -92,12 +118,11 @@ jobs:
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 title: `Upgrade to kernel ${{ steps.check.outputs.current_version }}`,
-                head: 'kernel-upgrade',
+                head: '${{ steps.branch.outputs.name }}',
                 base: 'main',
-                body: `Automated kernel upgrade to version ${{ steps.check.outputs.current_version }}.\n\n**Previous version:** ${{ steps.check.outputs.latest_tag }}\n**New version:** ${{ steps.check.outputs.current_version }}\n**Source:** https://www.kernel.org/\n\nThis PR was automatically created by the kernel release monitoring workflow.`
+                body: `Automated kernel upgrade to version ${{ steps.check.outputs.current_version }}.\n\n**Previous version:** ${{ steps.check.outputs.infix_version }}\n**New version:** ${{ steps.check.outputs.current_version }}\n**Source:** https://www.kernel.org/\n\nThis PR was automatically created by the kernel release monitoring workflow.`
               });
 
-              // Add label
               await github.rest.issues.addLabels({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
@@ -105,7 +130,6 @@ jobs:
                 labels: ['ci:main']
               });
 
-              // Request reviews
               await github.rest.pulls.requestReviewers({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
