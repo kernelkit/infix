@@ -138,16 +138,26 @@ char *cfg_adjust(const char *path, const char *template, bool sanitize)
 		     strchr(basename, '.') ? "" : ".cfg") < 0)
 		goto err;
 
-	/* If file exists, resolve symlinks and verify still in whitelist */
-	if (sanitize && !access(expanded, F_OK)) {
+	if (sanitize) {
 		resolved = realpath(expanded, NULL);
-		if (!resolved || !path_allowed(resolved))
+		if (!resolved) {
+			if (errno == ENOENT)
+				goto out;
+			else
+				goto err;
+		}
+
+		/* File exists, make sure that the resolved symlink
+		 * still matches the whitelist.
+		 */
+		if (!path_allowed(resolved))
 			goto err;
 
 		free(expanded);
 		expanded = resolved;
 	}
 
+out:
 	return expanded;
 
 err:
