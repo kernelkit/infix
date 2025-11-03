@@ -58,7 +58,6 @@ image::internal-network.svg[Internal networks]
 import infamy
 import infamy.util as util
 import infamy.route as route
-from infamy.furl import Furl
 
 BODY  = "<html><body><p>Router responding</p></body></html>"
 
@@ -647,12 +646,13 @@ with infamy.Test() as test:
             ns.addroute("0.0.0.0/0", "192.168.100.1")
             # breakpoint()
             with test.step("Verify ABR:data can access container A on R1 (10.1.1.101)"):
-                furl = Furl("http://10.1.1.101:8080")
-                util.until(lambda: furl.nscheck(ns, BODY))
+                URL = "http://10.1.1.101:8080"
+                util.until(lambda: BODY in ns.call(lambda: util.curl(URL)))
             with test.step("Verify ABR:data can access container A on R2 (10.1.2.101)"):
-                furl = Furl("http://10.1.2.101:8080")
-                util.until(lambda: furl.nscheck(ns, BODY))
+                URL = "http://10.1.2.101:8080"
+                util.until(lambda: BODY in ns.call(lambda: util.curl(URL)))
             with test.step("Verify ABR:data can access container A on R3 (10.1.3.101)"):
-                furl = Furl("http://10.1.3.101:8080")
-                util.until(lambda: furl.nscheck(ns, BODY))
+                URL = "http://10.1.3.101:8080"
+                util.until(lambda: BODY in ns.call(lambda: util.curl(URL)))
+
     test.succeed()

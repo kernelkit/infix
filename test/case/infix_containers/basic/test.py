@@ -8,13 +8,14 @@ simple GET request for index.html and checking for a key phrase.
 The RPC actions: stop + start, and restart are also verified.
 """
 import infamy
-from infamy.util import until
+from infamy.util import until, curl
 
 
 def _verify(server):
     # TODO: Should really use mDNS here....
-    url = infamy.Furl(f"http://[{server}]:91/index.html")
-    return url.check("It works")
+    url = f"http://[{server}]:91/index.html"
+    response = curl(url)
+    return response is not None and "It works" in response
 
 
 with infamy.Test() as test:
