@@ -1,8 +1,7 @@
-From 653b6302a6a7af6ace66edcc14d93d2b0af3c784 Mon Sep 17 00:00:00 2001
+From 28a94184521ace0eaddb9a5717db073b8b567c18 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Wed, 27 Mar 2024 10:10:19 +0100
 Subject: [PATCH 18/30] net: phy: Do not resume PHY when attaching
-Organization: Wires
 
 The PHY should not start negotiating with its link-partner until
 explicitly instructed to do so.
