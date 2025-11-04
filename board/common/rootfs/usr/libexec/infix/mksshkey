@@ -18,6 +18,7 @@ echo -e "$PUBLIC" >> "$TMP"
 echo -e "-----END RSA PUBLIC KEY-----" >> "$TMP"
 
 ssh-keygen -i -m PKCS8 -f "$TMP" > "$DIR/$NAME.pub"
+rm "$TMP"
 chmod 0600 "$DIR/$NAME.pub"
 chmod 0600 "$DIR/$NAME"
 chown sshd:sshd "$DIR/$NAME.pub"
