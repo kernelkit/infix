@@ -5,6 +5,7 @@ import json
 import re
 import shutil
 import sys
+import urllib.error
 import urllib.request
 from datetime import datetime
 
@@ -16,30 +17,63 @@ def check_version_format(ver):
         sys.exit("Error: version must be full form like 25.08.0")
     return ver
 
-def compute_md5_and_size(url):
-    md5 = hashlib.md5()
-    size = 0
+def download_file(url):
+    """Download file from URL, yielding chunks.
+
+    Args:
+        url: URL of the file to download
+
+    Yields:
+        bytes: 1MB chunks of the file
+
+    Raises:
+        urllib.error.HTTPError: If the URL returns an error (e.g., 404)
+        urllib.error.URLError: If there's a network error
+    """
     with urllib.request.urlopen(url) as resp:
         while True:
             chunk = resp.read(1024 * 1024)
             if not chunk:
                 break
-            md5.update(chunk)
-            size += len(chunk)
+            yield chunk
+
+def compute_md5_and_size(chunks):
+    """Compute MD5 hash and total size from data chunks.
+
+    Args:
+        chunks: Iterable of byte chunks
+
+    Returns:
+        tuple: (md5_hexdigest, size_in_bytes)
+    """
+    md5 = hashlib.md5()
+    size = 0
+    for chunk in chunks:
+        md5.update(chunk)
+        size += len(chunk)
     return md5.hexdigest(), size
 
 def main():
-    parser = argparse.ArgumentParser(description="Add a new Infix version to a GNS3 appliance file")
+    parser = argparse.ArgumentParser(
+        description="Add a new Infix version to a GNS3 appliance file",
+        epilog="The .gns3a appliance files are typically found in the appliances/ "
+               "directory of the gns3-registry project."
+    )
     parser.add_argument("version", help="Infix version (e.g. 25.08.0)")
-    parser.add_argument("appliance", help="Path to appliance JSON (.gns3a)")
+    parser.add_argument("appliance", help="Path to appliance JSON file (.gns3a)")
     args = parser.parse_args()
 
     version = check_version_format(args.version)
     appliance_path = args.appliance
 
     # Load JSON
-    with open(appliance_path, "r", encoding="utf-8") as f:
-        data = json.load(f)
+    try:
+        with open(appliance_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+    except FileNotFoundError:
+        sys.exit(f"Error: Appliance file not found: {appliance_path}")
+    except json.JSONDecodeError as e:
+        sys.exit(f"Error: Invalid JSON in appliance file: {e}")
 
     # Skip if version already exists
     for v in data.get("versions", []):
@@ -52,7 +86,18 @@ def main():
     url = f"{REPO}/releases/download/v{version}/{filename}"
 
     print(f"Downloading {url} to compute MD5 and size...")
-    md5sum, size = compute_md5_and_size(url)
+    try:
+        chunks = download_file(url)
+        md5sum, size = compute_md5_and_size(chunks)
+    except urllib.error.HTTPError as e:
+        if e.code == 404:
+            sys.exit(f"Error: Version {version} not found. "
+                    f"The release v{version} does not exist or the disk image is not available.\n"
+                    f"URL: {url}")
+        else:
+            sys.exit(f"Error: HTTP {e.code} when downloading: {e.reason}\nURL: {url}")
+    except urllib.error.URLError as e:
+        sys.exit(f"Error: Network error while downloading: {e.reason}\nURL: {url}")
 
     # Add image entry
     image_entry = {
