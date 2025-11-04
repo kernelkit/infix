@@ -168,7 +168,7 @@ get_bootloader_name()
             echo "rpi64_boot"
             ;;
         bananapi-bpi-r3)
-            echo "bpi_r3_boot"
+            echo "bpi_r3_sd_boot"
             ;;
         friendlyarm-nanopi-r2s)
             echo "nanopi_r2s_boot"
