@@ -20,10 +20,11 @@ All notable changes to the project are documented in this file.
 > - WiFi Access Point (AP) mode support with multi-SSID capability
 > - RIPv2 routing support
 > - WireGuard support
+> - New major version of linux kernel 6.18, previous 6.12
 
 ### Changes
 
-- Upgrade Linux kernel to 6.12.65 (LTS)
+- Upgrade Linux kernel to 6.18.5 (LTS)
 - Upgrade libyang to 4.2.2
 - Upgrade sysrepo to 4.2.10
 - Upgrade netopeer2 (NETCONF) to 2.7.0
