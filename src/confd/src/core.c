@@ -262,8 +262,8 @@ static inline int subscribe_model(char *model, struct confd *confd, int flags)
 {
 	return  sr_module_change_subscribe(confd->session, model, "//.", change_cb, confd,
 					   CB_PRIO_PRIMARY, SR_SUBSCR_CHANGE_ALL_MODULES |
-					   SR_SUBSCR_DEFAULT | flags, &confd->sub) &&
-		sr_module_change_subscribe(confd->startup, model, "//.", core_startup_save, NULL,
+					   SR_SUBSCR_DEFAULT | flags, &confd->sub) ||
+		sr_module_change_subscribe(confd->startup, model, "//.", startup_save, NULL,
 					   CB_PRIO_PASSIVE, SR_SUBSCR_CHANGE_ALL_MODULES |
 					   SR_SUBSCR_PASSIVE, &confd->sub);
 }
