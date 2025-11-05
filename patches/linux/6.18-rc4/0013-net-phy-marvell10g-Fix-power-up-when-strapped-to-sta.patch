@@ -1,8 +1,9 @@
-From fa9f48fb62b9b8c5a0558af9ef98fa37dfa685df Mon Sep 17 00:00:00 2001
+From 838cafc454a4b3a8bd160c2c7e245b4739f00c42 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Tue, 21 Nov 2023 20:15:24 +0100
-Subject: [PATCH 15/30] net: phy: marvell10g: Fix power-up when strapped to
+Subject: [PATCH 13/27] net: phy: marvell10g: Fix power-up when strapped to
  start powered down
+Organization: Wires
 
 On devices which are hardware strapped to start powered down (PDSTATE
 == 1), make sure that we clear the power-down bit on all units
@@ -12,10 +13,10 @@ affected by this setting.
  1 file changed, 15 insertions(+), 3 deletions(-)
 
 diff --git a/drivers/net/phy/marvell10g.c b/drivers/net/phy/marvell10g.c
-index 79d9483419c0..268484092776 100644
+index 44294519231e..40439db49601 100644
 --- a/drivers/net/phy/marvell10g.c
 +++ b/drivers/net/phy/marvell10g.c
-@@ -342,11 +342,23 @@ static int mv3310_power_down(struct phy_device *phydev)
+@@ -322,11 +322,23 @@ static int mv3310_power_down(struct phy_device *phydev)
  
  static int mv3310_power_up(struct phy_device *phydev)
  {

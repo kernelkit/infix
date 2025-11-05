@@ -1,7 +1,8 @@
-From d078130536761de8a86b8fbd82de2337a6017749 Mon Sep 17 00:00:00 2001
+From ddaac8bb4ed4b25222a9644a1885c6df9fe5eb22 Mon Sep 17 00:00:00 2001
 From: Mattias Walström <lazzer@gmail.com>
 Date: Thu, 21 Aug 2025 11:20:23 +0200
-Subject: [PATCH 30/30] input:touchscreen:edt-ft5x06: Add polled mode
+Subject: [PATCH 27/27] input:touchscreen:edt-ft5x06: Add polled mode
+Organization: Wires
 
 Not all hardware has interrupts therefore we need
 to poll the touchscreen.
@@ -10,7 +11,7 @@ to poll the touchscreen.
  1 file changed, 58 insertions(+), 16 deletions(-)
 
 diff --git a/drivers/input/touchscreen/edt-ft5x06.c b/drivers/input/touchscreen/edt-ft5x06.c
-index 85c6d8ce003f..e61519915137 100644
+index bf498bd4dea9..f171a763317e 100644
 --- a/drivers/input/touchscreen/edt-ft5x06.c
 +++ b/drivers/input/touchscreen/edt-ft5x06.c
 @@ -77,6 +77,9 @@
@@ -23,7 +24,7 @@ index 85c6d8ce003f..e61519915137 100644
  #define M06_REG_CMD(factory) ((factory) ? 0xf3 : 0xfc)
  #define M06_REG_ADDR(factory, addr) ((factory) ? (addr) & 0x7f : (addr) & 0x3f)
  
-@@ -139,6 +142,7 @@ struct edt_ft5x06_ts_data {
+@@ -138,6 +141,7 @@ struct edt_ft5x06_ts_data {
  	u8 tdata_cmd;
  	int tdata_len;
  	int tdata_offset;
@@ -31,7 +32,7 @@ index 85c6d8ce003f..e61519915137 100644
  
  	char name[EDT_NAME_LEN];
  	char fw_version[EDT_NAME_LEN];
-@@ -147,6 +151,9 @@ struct edt_ft5x06_ts_data {
+@@ -146,6 +150,9 @@ struct edt_ft5x06_ts_data {
  	enum edt_ver version;
  	unsigned int crc_errors;
  	unsigned int header_errors;
@@ -41,7 +42,7 @@ index 85c6d8ce003f..e61519915137 100644
  };
  
  struct edt_i2c_chip_data {
-@@ -582,6 +589,22 @@ static struct attribute *edt_ft5x06_attrs[] = {
+@@ -581,6 +588,22 @@ static struct attribute *edt_ft5x06_attrs[] = {
  };
  ATTRIBUTE_GROUPS(edt_ft5x06);
  
@@ -64,7 +65,7 @@ index 85c6d8ce003f..e61519915137 100644
  static void edt_ft5x06_restore_reg_parameters(struct edt_ft5x06_ts_data *tsdata)
  {
  	struct edt_reg_addr *reg_addr = &tsdata->reg_addr;
-@@ -614,7 +637,9 @@ static int edt_ft5x06_factory_mode(struct edt_ft5x06_ts_data *tsdata)
+@@ -613,7 +636,9 @@ static int edt_ft5x06_factory_mode(struct edt_ft5x06_ts_data *tsdata)
  		return -EINVAL;
  	}
  
@@ -75,7 +76,7 @@ index 85c6d8ce003f..e61519915137 100644
  
  	if (!tsdata->raw_buffer) {
  		tsdata->raw_bufsize = tsdata->num_x * tsdata->num_y *
-@@ -657,7 +682,8 @@ static int edt_ft5x06_factory_mode(struct edt_ft5x06_ts_data *tsdata)
+@@ -656,7 +681,8 @@ static int edt_ft5x06_factory_mode(struct edt_ft5x06_ts_data *tsdata)
  	kfree(tsdata->raw_buffer);
  	tsdata->raw_buffer = NULL;
  	tsdata->factory_mode = false;
@@ -85,7 +86,7 @@ index 85c6d8ce003f..e61519915137 100644
  
  	return error;
  }
-@@ -698,7 +724,8 @@ static int edt_ft5x06_work_mode(struct edt_ft5x06_ts_data *tsdata)
+@@ -697,7 +723,8 @@ static int edt_ft5x06_work_mode(struct edt_ft5x06_ts_data *tsdata)
  	tsdata->raw_buffer = NULL;
  
  	edt_ft5x06_restore_reg_parameters(tsdata);
@@ -95,7 +96,7 @@ index 85c6d8ce003f..e61519915137 100644
  
  	return 0;
  }
-@@ -1331,18 +1358,27 @@ static int edt_ft5x06_ts_probe(struct i2c_client *client)
+@@ -1327,18 +1354,27 @@ static int edt_ft5x06_ts_probe(struct i2c_client *client)
  		dev_err(&client->dev, "Unable to init MT slots.\n");
  		return error;
  	}
@@ -135,7 +136,7 @@ index 85c6d8ce003f..e61519915137 100644
  	}
  
  	error = input_register_device(input);
-@@ -1364,6 +1400,11 @@ static void edt_ft5x06_ts_remove(struct i2c_client *client)
+@@ -1360,6 +1396,11 @@ static void edt_ft5x06_ts_remove(struct i2c_client *client)
  {
  	struct edt_ft5x06_ts_data *tsdata = i2c_get_clientdata(client);
  
@@ -147,7 +148,7 @@ index 85c6d8ce003f..e61519915137 100644
  	edt_ft5x06_ts_teardown_debugfs(tsdata);
  }
  
-@@ -1395,7 +1436,8 @@ static int edt_ft5x06_ts_suspend(struct device *dev)
+@@ -1391,7 +1432,8 @@ static int edt_ft5x06_ts_suspend(struct device *dev)
  	 * settings. Disable the irq to avoid adjusting each host till the
  	 * device is back in a full functional state.
  	 */

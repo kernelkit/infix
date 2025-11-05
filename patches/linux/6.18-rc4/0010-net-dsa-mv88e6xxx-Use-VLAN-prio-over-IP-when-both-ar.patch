@@ -1,8 +1,9 @@
-From fc08e35c5088d5c56a0e03205948d7411e24c61d Mon Sep 17 00:00:00 2001
+From b9b18c7ee54abc8387208698aca00e4cee8f0984 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Wed, 29 May 2024 13:20:41 +0200
-Subject: [PATCH 12/30] net: dsa: mv88e6xxx: Use VLAN prio over IP when both
+Subject: [PATCH 10/27] net: dsa: mv88e6xxx: Use VLAN prio over IP when both
  are available
+Organization: Wires
 
 Switch the priority sourcing precdence to prefer VLAN PCP over IP
 DSCP, when both are available.
@@ -26,10 +27,10 @@ main reasons for choosing the new default:
  1 file changed, 8 insertions(+), 3 deletions(-)
 
 diff --git a/drivers/net/dsa/mv88e6xxx/chip.c b/drivers/net/dsa/mv88e6xxx/chip.c
-index 050a89c1b7e1..1888ddd9bfa4 100644
+index 2b17a3eef2c6..2ca4cc38fb8c 100644
 --- a/drivers/net/dsa/mv88e6xxx/chip.c
 +++ b/drivers/net/dsa/mv88e6xxx/chip.c
-@@ -3443,9 +3443,13 @@ static int mv88e6xxx_setup_port(struct mv88e6xxx_chip *chip, int port)
+@@ -3424,9 +3424,13 @@ static int mv88e6xxx_setup_port(struct mv88e6xxx_chip *chip, int port)
  
  	/* Port Control: disable Drop-on-Unlock, disable Drop-on-Lock,
  	 * disable Header mode, enable IGMP/MLD snooping, disable VLAN
@@ -46,7 +47,7 @@ index 050a89c1b7e1..1888ddd9bfa4 100644
  	 *
  	 * If this is the CPU link, use DSA or EDSA tagging depending
  	 * on which tagging mode was configured.
-@@ -3456,6 +3460,7 @@ static int mv88e6xxx_setup_port(struct mv88e6xxx_chip *chip, int port)
+@@ -3437,6 +3441,7 @@ static int mv88e6xxx_setup_port(struct mv88e6xxx_chip *chip, int port)
  	 * forwarding of unknown unicasts and multicasts.
  	 */
  	reg = MV88E6185_PORT_CTL0_USE_TAG | MV88E6185_PORT_CTL0_USE_IP |

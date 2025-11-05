@@ -1,8 +1,9 @@
-From 81dfd91b9be895fa456dcf675098b0bb80b1ed19 Mon Sep 17 00:00:00 2001
+From 7ddbbaded86621e602762f74e0b5f367cd41915a Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Tue, 5 Mar 2024 06:44:41 +0100
-Subject: [PATCH 20/30] net: bridge: Ignore router ports when forwarding L2
+Subject: [PATCH 18/27] net: bridge: Ignore router ports when forwarding L2
  multicast
+Organization: Wires
 
 Multicast router ports are either statically configured or learned from
 control protocol traffic (IGMP/MLD/PIM).  These protocols regulate IP
@@ -12,14 +13,27 @@ of unknown multicast or using permanent MDB entries.
 Signed-off-by: Tobias Waldekranz <tobias@waldekranz.com>
 Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
 ---
+ net/bridge/br.c         | 1 +
  net/bridge/br_private.h | 5 ++++-
- 1 file changed, 4 insertions(+), 1 deletion(-)
+ 2 files changed, 5 insertions(+), 1 deletion(-)
 
+diff --git a/net/bridge/br.c b/net/bridge/br.c
+index ae09ed3f8d9d..0759bc37d6f0 100644
+--- a/net/bridge/br.c
++++ b/net/bridge/br.c
+@@ -311,6 +311,7 @@ int br_boolopt_toggle(struct net_bridge *br, enum br_boolopt_id opt, bool on,
+ 		break;
+ 	case BR_BOOLOPT_FDB_LOCAL_VLAN_0:
+ 		err = br_toggle_fdb_local_vlan_0(br, on, extack);
++		break;
+ 	case BR_BOOLOPT_MCAST_FLOOD_ALWAYS:
+ 		br_opt_toggle(br, BROPT_MCAST_FLOOD_ALWAYS, on);
+ 		break;
 diff --git a/net/bridge/br_private.h b/net/bridge/br_private.h
-index db6903b288af..102d37f6e92d 100644
+index d2e9ee93a8d7..393212bb3d05 100644
 --- a/net/bridge/br_private.h
 +++ b/net/bridge/br_private.h
-@@ -1090,7 +1090,10 @@ br_multicast_get_first_rport_node(struct net_bridge_mcast *brmctx,
+@@ -1096,7 +1096,10 @@ br_multicast_get_first_rport_node(struct net_bridge_mcast *brmctx,
  	if (skb->protocol == htons(ETH_P_IPV6))
  		return rcu_dereference(hlist_first_rcu(&brmctx->ip6_mc_router_list));
  #endif

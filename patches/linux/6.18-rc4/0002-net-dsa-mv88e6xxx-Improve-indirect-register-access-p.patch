@@ -1,8 +1,9 @@
-From dfdfe4261ef01baa9952ec157e73a7823623a8f5 Mon Sep 17 00:00:00 2001
+From 1e269d5ee6fb294b833ff59b71af11ef63619fe0 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Wed, 27 Mar 2024 15:52:43 +0100
-Subject: [PATCH 02/30] net: dsa: mv88e6xxx: Improve indirect register access
+Subject: [PATCH 02/27] net: dsa: mv88e6xxx: Improve indirect register access
  perf on 6393
+Organization: Wires
 
 When operating in multi-chip mode, the 6393 family maps a subset of
 commonly used global registers to the outermost address space (in
@@ -21,10 +22,10 @@ other accesses use the regular indirect interface.
  5 files changed, 119 insertions(+)
 
 diff --git a/drivers/net/dsa/mv88e6xxx/chip.c b/drivers/net/dsa/mv88e6xxx/chip.c
-index d64c3eef4447..47138492885e 100644
+index 73264c1c1565..2a27e41a2dea 100644
 --- a/drivers/net/dsa/mv88e6xxx/chip.c
 +++ b/drivers/net/dsa/mv88e6xxx/chip.c
-@@ -6539,6 +6539,13 @@ static int mv88e6xxx_detect(struct mv88e6xxx_chip *chip)
+@@ -6566,6 +6566,13 @@ static int mv88e6xxx_detect(struct mv88e6xxx_chip *chip)
  	/* Update the compatible info with the probed one */
  	chip->info = info;
  

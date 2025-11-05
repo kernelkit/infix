@@ -1,8 +1,9 @@
-From 34723fa51d70a2e32c057977f0321ed3f9c22692 Mon Sep 17 00:00:00 2001
+From b496d342e3bb7048b81cedbc64a74a20bdb4f5cf Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Sun, 11 Aug 2024 11:27:35 +0200
-Subject: [PATCH 27/30] net: usb: r8152: add r8153b support for link/activity
+Subject: [PATCH 24/27] net: usb: r8152: add r8153b support for link/activity
  LEDs
+Organization: Wires
 
 This patch adds support for the link/activity LEDs on the NanoPi R2S
 and OrangePi R1 Plus.
@@ -18,7 +19,7 @@ Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
  1 file changed, 8 insertions(+)
 
 diff --git a/drivers/net/usb/r8152.c b/drivers/net/usb/r8152.c
-index 3fcd2b736c5e..531712943118 100644
+index a22d4bb2cf3b..ae89323ade06 100644
 --- a/drivers/net/usb/r8152.c
 +++ b/drivers/net/usb/r8152.c
 @@ -41,6 +41,11 @@
@@ -33,7 +34,7 @@ index 3fcd2b736c5e..531712943118 100644
  #define R8152_PHY_ID		32
  
  #define PLA_IDR			0xc000
-@@ -7307,6 +7312,9 @@ static void r8153b_init(struct r8152 *tp)
+@@ -7277,6 +7282,9 @@ static void r8153b_init(struct r8152 *tp)
  	ocp_data &= ~(RX_AGG_DISABLE | RX_ZERO_EN);
  	ocp_write_word(tp, MCU_TYPE_USB, USB_USB_CTRL, ocp_data);
  

@@ -1,2 +1,2 @@
-# Calculated with utils/kernel-refresh.sh
-sha256   165ca1c37c4607b90e731996b7c1e3311285167d13deeedf08f3f1f0b9d2541a  linux-6.12.57.tar.xz
+# Calculated with ./utils/kernel-refresh.sh
+0ed47cb05c1ec56cb3a277664575da49b1d9ed6fd02b674cc29ff37e0f93b0a1  linux-6.18-rc4.tar.gz

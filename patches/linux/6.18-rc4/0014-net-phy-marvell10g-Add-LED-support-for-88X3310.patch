@@ -1,7 +1,8 @@
-From 6c070382a3584fc5196afc0e42c5696a0e58318f Mon Sep 17 00:00:00 2001
+From ee158a4d0b4ea5f6a2bc9b8b30c6617000efbe78 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Wed, 15 Nov 2023 20:58:42 +0100
-Subject: [PATCH 16/30] net: phy: marvell10g: Add LED support for 88X3310
+Subject: [PATCH 14/27] net: phy: marvell10g: Add LED support for 88X3310
+Organization: Wires
 
 Pickup the LEDs from the state in which the hardware reset or
 bootloader left them, but also support further configuration via
@@ -21,7 +22,7 @@ Trigger support:
  1 file changed, 422 insertions(+)
 
 diff --git a/drivers/net/phy/marvell10g.c b/drivers/net/phy/marvell10g.c
-index 268484092776..9f8475b67ef7 100644
+index 40439db49601..7ae4744f147b 100644
 --- a/drivers/net/phy/marvell10g.c
 +++ b/drivers/net/phy/marvell10g.c
 @@ -28,6 +28,7 @@
@@ -477,7 +478,7 @@ index 268484092776..9f8475b67ef7 100644
  #ifdef CONFIG_HWMON
  static umode_t mv3310_hwmon_is_visible(const void *data,
  				       enum hwmon_sensor_types type,
-@@ -733,6 +1144,10 @@ static int mv3310_probe(struct phy_device *phydev)
+@@ -712,6 +1123,10 @@ static int mv3310_probe(struct phy_device *phydev)
  	if (ret)
  		return ret;
  
@@ -488,7 +489,7 @@ index 268484092776..9f8475b67ef7 100644
  	chip->init_supported_interfaces(priv->supported_interfaces);
  
  	return phy_sfp_probe(phydev, &mv3310_sfp_ops);
-@@ -1385,6 +1800,7 @@ static void mv2111_init_supported_interfaces(unsigned long *mask)
+@@ -1364,6 +1779,7 @@ static void mv2111_init_supported_interfaces(unsigned long *mask)
  static const struct mv3310_chip mv3310_type = {
  	.has_downshift = mv3310_has_downshift,
  	.init_supported_interfaces = mv3310_init_supported_interfaces,
@@ -496,7 +497,7 @@ index 268484092776..9f8475b67ef7 100644
  	.get_mactype = mv3310_get_mactype,
  	.set_mactype = mv3310_set_mactype,
  	.select_mactype = mv3310_select_mactype,
-@@ -1594,6 +2010,12 @@ static struct phy_driver mv3310_drivers[] = {
+@@ -1577,6 +1993,12 @@ static struct phy_driver mv3310_drivers[] = {
  		.set_loopback	= genphy_c45_loopback,
  		.get_wol	= mv3110_get_wol,
  		.set_wol	= mv3110_set_wol,
