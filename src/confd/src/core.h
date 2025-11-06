@@ -135,7 +135,6 @@ struct confd {
 	struct dagger		netdag;
 };
 
-int      core_startup_save (sr_session_ctx_t *, uint32_t, const char *, const char *, sr_event_t, unsigned, void *);
 
 static inline int register_change(sr_session_ctx_t *session, const char *module, const char *xpath,
 	int flags, sr_module_change_cb cb, void *arg, sr_subscription_ctx_t **sub)

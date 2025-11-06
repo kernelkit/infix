@@ -44,12 +44,15 @@ check_factory()
 factory_reset()
 {
     find /sys/class/leds/ -type l -exec sh -c 'echo 100 > $0/brightness' {} \;
-    logger $opt -p user.crit -t "$nm" "Resetting to factory defaults."
+    print_start "Resetting to factory defaults."
+    logger $opt -p user.notice -t "$nm" "Resetting to factory defaults."
 
     rm -rf /mnt/cfg/* /mnt/var/*
-
-    logger $opt -p user.crit -t "$nm" "Factory reset complete."
     sync
+
+    logger $opt -p user.notice -t "$nm" "Factory reset complete."
+    print_end 0 "Factory reset complete."
+    print_restore
 }
 
 is_mmc()
@@ -105,15 +108,18 @@ find_partition_by_label()
 	esac
 
 	disk="/dev/$devname"
+
+	#
+	# 1. Try GPT/MBR partition label using sgdisk
+	#
 	result=$(sgdisk -p "$disk" 2>/dev/null | awk -v label="$label" -v devname="$devname" '
-	    /^  *[0-9]/ {
+	    /^ *[0-9]/ {
 		if ($7 == label) {
-		    if (devname ~ /^(mmcblk|nvme|loop)/) {
-			print devname "p" $1
-		    } else {
-			print devname $1
-		    }
-		    exit 0
+		    if (devname ~ /^(mmcblk|nvme|loop)/)
+			print devname "p" $1;
+		    else
+			print devname $1;
+		    exit 0;
 		}
 	    }
 	')
@@ -122,7 +128,30 @@ find_partition_by_label()
 	    echo "$result"
 	    return 0
 	fi
+
+	#
+	# 2. Fallback: Check if the whole disk is an ext4/ext2/ext3 filesystem
+	#
+
+	# Check for ext4/ext2/ext3 magic number (0xEF53) at offset 1080 (1024+56).
+	magic_number=$(dd if="$disk" bs=1 skip=1080 count=2 2>/dev/null | od -t x2 -A n | tr -d ' \n')
+
+	# Check for both Little-Endian ('53ef') and Big-Endian ('ef53') interpretations of 0xEF53.
+	# This supports bi-endian architectures like MIPS that may run in BE mode,
+	# as well as the LE mode which is standard for RISC-V and ext filesystems.
+	if [ "$magic_number" = "ef53" ] || [ "$magic_number" = "53ef" ]; then
+
+	    # Read the volume label from offset 1144 (1024+120)
+	    fslabel=$(dd if="$disk" bs=1 skip=1144 count=16 2>/dev/null | tr -d '\000')
+	    logger $opt -p user.notice -t "$nm" "Found label $fslabel on disk $disk ..."
+
+	    if [ "$fslabel" = "$label" ]; then
+		echo "$devname"
+		return 0
+	    fi
+	fi
     done
+
     return 1
 }
 
@@ -273,6 +302,9 @@ mount_rw()
     # If something is already setup, leave it be.
     mountpoint -q "/$1" && return 0
 
+    # If partition doesn't exist (var is optional), signal caller.
+    find_partition_by_label "$1" >/dev/null || return 1
+
     # Check if /var has been resized to fill the sdcard/eMMC
     if [ "$1" = "var" ] && is_mmc; then
 	if [ -f /mnt/aux/resized ] || [ -f /mnt/aux/resized.failed ]; then
@@ -289,8 +321,10 @@ mount_rw()
 
     # TODO: Also look for UBI partitions
 
-    # 
-    tune2fs -c 0 -i 0 LABEL="$1" 2>/dev/null 
+    # Disable periodic fsck, yet keeping safety checks on ext4
+    if grep "LABEL=$label" /etc/fstab |grep -q ext4; then
+	tune2fs -c 0 -i 0 LABEL="$1" 2>/dev/null
+    fi
     mount LABEL="$1" 2>/dev/null && return 0
 
     return 1
