@@ -173,11 +173,13 @@ Enabling DHCPv4 client on interface *e0*, with current default options.
 ```
 ~$ cat /tmp/file.json
 {
-  "infix-dhcp-client:dhcp-client": {
-    "enabled": true,
-    "client-if": [
+  "ietf-interfaces:interfaces": {
+    "interface": [
       {
-        "if-name": "e0"
+        "name": "e0",
+        "ietf-ip:ipv4": {
+          "infix-dhcp-client:dhcp": {}
+        }
       }
     ]
   }
@@ -187,13 +189,18 @@ Enabling DHCPv4 client on interface *e0*, with current default options.
 ~$
 ```
 
-Disabling DHCPv4 client.
+Disabling DHCPv4 client on interface *e0* (remove the dhcp container).
 
 ```
 ~$ cat /tmp/file.json
 {
-  "infix-dhcp-client:dhcp-client": {
-    "enabled": false
+  "ietf-interfaces:interfaces": {
+    "interface": [
+      {
+        "name": "e0",
+        "ietf-ip:ipv4": {}
+      }
+    ]
   }
 }
 ~$ scp file.json admin@example.local:/tmp/file.json
@@ -201,27 +208,8 @@ Disabling DHCPv4 client.
 ~$
 ```
 
-Configuration for client interface *e0* remains, but does not apply as
-DHCPv4 is disabled.
-
-```
-admin@example:~$ sysrepocfg -X -fjson -d running -x "/infix-dhcp-client:dhcp-client"
-{
-  "infix-dhcp-client:dhcp-client": {
-    "enabled": false,
-    "client-if": [
-      {
-        "if-name": "e0"
-      }
-    ]
-  }
-}
-admin@example:~$
-```
-
-To fully remove the DHCPv4 client configuration or a specific
-*client-if* with sysrepocfg, one would need to read out the full
-configuration, remove relevant parts and read back.
+To fully remove the DHCPv4 client configuration, remove the `infix-dhcp-client:dhcp`
+container from the interface's ipv4 configuration.
 
 ## Enable/Disable IPv6
 

@@ -59,14 +59,18 @@ with infamy.Test() as test:
     with test.step("Enabling DHCP client, allow option 3 and 121"):
         _, port = env.ltop.xlate("client", "data")
 
-        client.put_config_dict("infix-dhcp-client", {
-            "dhcp-client": {
-                "client-if": [{
-                    "if-name": f"{port}",
-                    "option": [
-                        {"id": "router"},
-                        {"id": "classless-static-route"}
-                    ]
+        client.put_config_dict("ietf-interfaces", {
+            "interfaces": {
+                "interface": [{
+                    "name": f"{port}",
+                    "ipv4": {
+                        "infix-dhcp-client:dhcp": {
+                            "option": [
+                                {"id": "router"},
+                                {"id": "classless-static-route"}
+                            ]
+                        }
+                    }
                 }]
             }
         })

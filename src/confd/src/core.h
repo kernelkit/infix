@@ -226,7 +226,7 @@ int infix_factory_rpc_init(struct confd *confd);
 int ietf_factory_default_rpc_init(struct confd *confd);
 
 /* infix-meta.c */
-int infix_meta_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd);
+int infix_meta_change_cb(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd);
 
 /* infix-system-software.c */
 int infix_system_sw_rpc_init(struct confd *confd);

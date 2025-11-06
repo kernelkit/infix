@@ -94,7 +94,7 @@ int netdag_gen_ipv4_autoconf(struct dagger *net, struct lyd_node *cif,
 	 * for various reasons: was bridge port, ipv4 was disabled...
 	 */
 	zcip = lydx_get_child(ipconf, "autoconf");
-	if (zcip && lydx_is_enabled(zcip, "enabled")) {
+	if (zcip) {
 		struct lyd_node *node;
 		const char *addr;
 		int diff = 0;
@@ -105,9 +105,8 @@ int netdag_gen_ipv4_autoconf(struct dagger *net, struct lyd_node *cif,
 		if (node) {
 			const struct lyd_node *tmp;
 
-			tmp = lydx_get_child(node, "enabled");
-			if (tmp)
-				diff++;
+			/* presence container created or deleted */
+			diff++;
 			tmp = lydx_get_child(node, "request-address");
 			if (tmp)
 				diff++;

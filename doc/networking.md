@@ -996,7 +996,7 @@ default.
     admin@example:/> configure
     admin@example:/config/> edit interface eth0 ipv4
     admin@example:/config/interface/eth0/ipv4/> set address 10.0.1.1 prefix-length 24
-    admin@example:/config/interface/eth0/ipv4/> set autoconf enabled true
+    admin@example:/config/interface/eth0/ipv4/> set autoconf
 	admin@example:/config/interface/eth0/ipv4/> diff
     +interfaces {
     +  interface eth0 {
@@ -1004,9 +1004,7 @@ default.
     +      address 10.0.1.1 {
     +        prefix-length 24;
     +      }
-    +      autoconf {
-    +        enabled true;
-    +      }
+    +      autoconf;
     +    }
     +  }
     +}
@@ -1022,15 +1020,18 @@ default.
                     ipv6                   ::1/128 (static)
     admin@example:/>
 
-As shown, the link-local IPv4 address is configured with `set autconf
-enabled true`.  The resulting address (169.254.1.3/16) is of type
-*random* ([ietf-ip.yang][2]).
+As shown, the link-local IPv4 address is configured with `set autoconf`.
+The presence of the `autoconf` container enables IPv4 link-local address
+assignment. The resulting address (169.254.1.3/16) is of type *random*
+([ietf-ip.yang][2]).
 
 The IPv4LL client also supports a `request-address` setting which can be
 used to "seed" the client's starting address.  If the address is free it
 will be used, otherwise it falls back to the default algorithm.
 
-    admin@example:/config/interface/eth0/ipv4/> set autoconf request-address 169.254.1.2
+    admin@example:/config/interface/eth0/ipv4/> edit autoconf
+    admin@example:/config/interface/eth0/ipv4/autoconf/> set request-address 169.254.1.2
+    admin@example:/config/interface/eth0/ipv4/autoconf/> leave
 
 
 #### Use of DHCP for IPv4 address assignment
@@ -1038,9 +1039,9 @@ will be used, otherwise it falls back to the default algorithm.
 ![Using DHCP for IPv4 address assignment](img/ip-address-example-ipv4-dhcp.svg)
 
     admin@example:/> configure
-    admin@example:/config/> edit dhcp-client
-    admin@example:/config/dhcp-client/> set client-if eth0
-    admin@example:/config/dhcp-client/> leave
+    admin@example:/config/> edit interface eth0 ipv4
+    admin@example:/config/interface/eth0/ipv4/> set dhcp
+    admin@example:/config/interface/eth0/ipv4/> leave
     admin@example:/> show interfaces
     INTERFACE       PROTOCOL   STATE       DATA
     eth0            ethernet   UP          02:00:00:00:00:00
@@ -1053,6 +1054,31 @@ will be used, otherwise it falls back to the default algorithm.
 
 The resulting address (10.1.2.100/24) is of type *dhcp*.
 
+To configure DHCP client options, such as sending a specific hostname to the
+server, you can specify options with values:
+
+```
+admin@example:/> configure
+admin@example:/config/> edit interface eth0 ipv4 dhcp
+admin@example:/config/interface/eth0/ipv4/dhcp/> set option hostname value myhost
+admin@example:/config/interface/eth0/ipv4/dhcp/> show
+option hostname {
+  value myhost;
+}
+admin@example:/config/interface/eth0/ipv4/dhcp/> leave
+admin@example:/>
+```
+
+> [!TIP]
+> The special value `auto` can be used with the hostname option to
+> automatically use the configured system hostname.
+
+Other useful DHCP options include:
+
+- `client-id` - Send a specific client identifier to the server
+- `route-preference` - Set the administrative distance for DHCP-learned routes (default: 5)
+
+For advanced usage with vendor-specific options, see the YANG model.
 
 #### Disabling IPv6 link-local address(es)
 

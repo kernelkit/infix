@@ -24,13 +24,16 @@ with infamy.Test() as test:
         with infamy.dhcp.Server(netns, ip=ADDRESS):
             _, port = env.ltop.xlate("client", "data")
             config = {
-                "dhcp-client": {
-                    "client-if": [{
-                        "if-name": f"{port}"
+                "interfaces": {
+                    "interface": [{
+                        "name": f"{port}",
+                        "ipv4": {
+                            "infix-dhcp-client:dhcp": {}
+                        }
                     }]
                 }
             }
-            client.put_config_dict("infix-dhcp-client", config)
+            client.put_config_dict("ietf-interfaces", config)
 
             with test.step("Verify client lease for 10.0.0.42"):
                 until(lambda: iface.address_exist(client, port, ADDRESS))

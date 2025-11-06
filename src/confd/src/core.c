@@ -158,7 +158,7 @@ static int change_cb(sr_session_ctx_t *session, uint32_t sub_id, const char *mod
 	last_request = request_id;
 	last_event = event;
 
-	if (event == SR_EV_CHANGE || event == SR_EV_DONE) {
+	if (event == SR_EV_UPDATE || event == SR_EV_CHANGE || event == SR_EV_DONE) {
 		rc = srx_get_diff(session, &diff);
 		if (rc != SR_ERR_OK) {
 			ERROR("Failed to get diff: %d", rc);
@@ -215,8 +215,10 @@ static int change_cb(sr_session_ctx_t *session, uint32_t sub_id, const char *mod
 		goto free_diff;
 
 	/* infix-containers */
+#ifdef CONTAINERS
 	if ((rc = infix_containers_change(session, config, diff, event, confd)))
 		goto free_diff;
+#endif
 
 	/* ietf-hardware */
 	if ((rc = ietf_hardware_change(session, config, diff, event, confd)))
@@ -232,6 +234,10 @@ static int change_cb(sr_session_ctx_t *session, uint32_t sub_id, const char *mod
 
 	/* infix-firewall */
 	if ((rc = infix_firewall_change(session, config, diff, event, confd)))
+		goto free_diff;
+
+	/* infix-meta */
+	if ((rc = infix_meta_change_cb(session, config, diff, event, confd)))
 		goto free_diff;
 
 	if (cfg)
@@ -383,9 +389,11 @@ int sr_plugin_init_cb(sr_session_ctx_t *session, void **priv)
 	rc = ietf_system_rpc_init(&confd);
 	if (rc)
 		goto err;
+#ifdef CONTAINERS
 	rc = infix_containers_rpc_init(&confd);
 	if (rc)
 		goto err;
+#endif
 	rc = infix_dhcp_server_rpc_init(&confd);
 	if (rc)
 		goto err;
@@ -407,6 +415,10 @@ int sr_plugin_init_cb(sr_session_ctx_t *session, void **priv)
 		goto err;
 
 	/* Candidate infer configurations */
+	rc = ietf_interfaces_cand_init(&confd);
+	if (rc)
+		goto err;
+
 	rc = ietf_hardware_candidate_init(&confd);
 	if (rc)
 		goto err;

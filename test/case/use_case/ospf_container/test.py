@@ -211,7 +211,6 @@ table ip nat {
                     "enabled": True,
                     "forwarding": True,
                     "infix-ip:autoconf": {
-                        "enabled": True,
                         "request-address": "169.254.1.1"
                     }
                 },
