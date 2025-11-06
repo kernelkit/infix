@@ -7,6 +7,7 @@ on:
 
 jobs:
   check-kernel:
+    if: github.repository == 'kernelkit/infix'
     runs-on: ubuntu-latest
 
     steps:
