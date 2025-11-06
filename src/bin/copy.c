@@ -155,6 +155,30 @@ static bool is_uri(const char *str)
 	return strstr(str, "://") != NULL;
 }
 
+static char *mktmp(void)
+{
+	mode_t oldmask;
+	char *path;
+	int fd;
+
+	path = strdup("/tmp/copy-XXXXXX");
+	if (!path)
+		goto err;
+
+	oldmask = umask(0077);
+	fd = mkstemp(path);
+	umask(oldmask);
+
+	if (fd < 0)
+		goto err;
+
+	close(fd);
+	return path;
+err:
+	free(path);
+	return NULL;
+}
+
 static void rmtmp(const char *path)
 {
 	if (remove(path)) {
@@ -338,7 +362,7 @@ static int curl(char *op, const char *path, const char *uri)
 	char *argv[] =  {
 		"curl", "-L", op, NULL, NULL, NULL, NULL, NULL,
 	};
-	int err;
+	int err = 1;
 
 	argv[3] = strdup(path);
 	argv[4] = strdup(uri);
@@ -390,7 +414,7 @@ static int cp(const char *srcpath, const char *dstpath)
 	char *argv[] =  {
 		"cp", NULL, NULL, NULL,
 	};
-	int err;
+	int err = 1;
 
 	argv[1] = strdup(srcpath);
 	argv[2] = strdup(dstpath);
@@ -445,7 +469,7 @@ static int resolve_src(const char **src, const struct infix_ds **ds, char **path
 	*src = infix_ds(*src, ds);
 
 	if (*ds || is_uri(*src)) {
-		*path = tempnam(NULL, NULL);
+		*path = mktmp();
 		if (!*path)
 			return 1;
 
@@ -477,7 +501,7 @@ static int resolve_dst(const char **dst, const struct infix_ds **ds, char **path
 		if (!(*ds)->path)
 			return 0;
 
-		*path = (*ds)->path;
+		*path = strdup((*ds)->path);
 	} else if (is_uri(*dst)) {
 		return 0;
 	} else {
@@ -499,8 +523,8 @@ static int resolve_dst(const char **dst, const struct infix_ds **ds, char **path
 
 static int copy(const char *src, const char *dst)
 {
+	char *srcpath = NULL, *dstpath = NULL;
 	const struct infix_ds *srcds, *dstds;
-	char *srcpath, *dstpath;
 	bool rmsrc = false;
 	mode_t oldmask;
 	int err = 1;
@@ -533,6 +557,9 @@ err:
 
 	if (rmsrc)
 		rmtmp(srcpath);
+
+	free(dstpath);
+	free(srcpath);
 
 	sync();
 	umask(oldmask);

@@ -16,7 +16,7 @@ static int sanitize;
 static int do_erase(const char *name)
 {
 	char *path;
-	int rc;
+	int rc = 0;
 
 	path = cfg_adjust(name, NULL, sanitize);
 	if (!path) {
@@ -25,10 +25,8 @@ static int do_erase(const char *name)
 		goto out;
 	}
 
-	if (!yorn("Remove %s, are you sure?", path)) {
-		rc = 0;
+	if (!yorn("Remove %s, are you sure?", path))
 		goto out;
-	}
 
 	if (remove(path)) {
 		fprintf(stderr, ERRMSG "failed removing %s: %s\n", path, strerror(errno));
