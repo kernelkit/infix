@@ -289,25 +289,25 @@ blocks external threats.
 admin@example:/config/> <b>edit firewall</b>
 admin@example:/config/firewall/> <b>set default wan</b>
 admin@example:/config/firewall/> <b>edit zone lan</b>
-admin@example:/config/firewall/zone/lan/> <b>set description "Internal LAN network - trusted"</b>
-admin@example:/config/firewall/zone/lan/> <b>set action accept</b>
-admin@example:/config/firewall/zone/lan/> <b>set interface eth1</b>
-admin@example:/config/firewall/zone/lan/> <b>set service ssh</b>
-admin@example:/config/firewall/zone/lan/> <b>set service dhcp</b>
-admin@example:/config/firewall/zone/lan/> <b>set service dns</b>
-admin@example:/config/firewall/zone/lan/> <b>end</b>
+admin@example:/config/firewall/…/lan/> <b>set description "Internal LAN network - trusted"</b>
+admin@example:/config/firewall/…/lan/> <b>set action accept</b>
+admin@example:/config/firewall/…/lan/> <b>set interface eth1</b>
+admin@example:/config/firewall/…/lan/> <b>set service ssh</b>
+admin@example:/config/firewall/…/lan/> <b>set service dhcp</b>
+admin@example:/config/firewall/…/lan/> <b>set service dns</b>
+admin@example:/config/firewall/…/lan/> <b>end</b>
 admin@example:/config/firewall/> <b>edit zone wan</b>
-admin@example:/config/firewall/zone/wan/> <b>set description "External WAN interface - untrusted"</b>
-admin@example:/config/firewall/zone/wan/> <b>set action drop</b>
-admin@example:/config/firewall/zone/wan/> <b>set interface eth0</b>
-admin@example:/config/firewall/zone/wan/> <b>end</b>
+admin@example:/config/firewall/…/wan/> <b>set description "External WAN interface - untrusted"</b>
+admin@example:/config/firewall/…/wan/> <b>set action drop</b>
+admin@example:/config/firewall/…/wan/> <b>set interface eth0</b>
+admin@example:/config/firewall/…/wan/> <b>end</b>
 admin@example:/config/firewall/> <b>edit policy loc-to-wan</b>
-admin@example:/config/firewall/policy/loc-to-wan/> <b>set description "Allow LAN traffic to WAN with SNAT"</b>
-admin@example:/config/firewall/policy/loc-to-wan/> <b>set ingress lan</b>
-admin@example:/config/firewall/policy/loc-to-wan/> <b>set egress wan</b>
-admin@example:/config/firewall/policy/loc-to-wan/> <b>set action accept</b>
-admin@example:/config/firewall/policy/loc-to-wan/> <b>set masquerade</b>
-admin@example:/config/firewall/policy/loc-to-wan/> <b>leave</b>
+admin@example:/config/firewall/…/loc-to-wan/> <b>set description "Allow LAN traffic to WAN with SNAT"</b>
+admin@example:/config/firewall/…/loc-to-wan/> <b>set ingress lan</b>
+admin@example:/config/firewall/…/loc-to-wan/> <b>set egress wan</b>
+admin@example:/config/firewall/…/loc-to-wan/> <b>set action accept</b>
+admin@example:/config/firewall/…/loc-to-wan/> <b>set masquerade</b>
+admin@example:/config/firewall/…/loc-to-wan/> <b>leave</b>
 </pre></code>
 
 ### Enterprise Gateway
@@ -317,28 +317,28 @@ resources.  We can build upon the Home/Office Router example above and add
 a DMZ zone with additional policies for controlled access.
 <code><pre>admin@example:/> <b>configure</b>
 admin@example:/config/> <b>edit firewall zone dmz</b>
-admin@example:/config/firewall/zone/dmz/> <b>set description "Semi-trusted public services"</b>
-admin@example:/config/firewall/zone/dmz/> <b>set action drop</b>
-admin@example:/config/firewall/zone/dmz/> <b>set interface eth1</b>
-admin@example:/config/firewall/zone/dmz/> <b>set service ssh</b>
-admin@example:/config/firewall/zone/dmz/> <b>end</b>
+admin@example:/config/firewall/…/dmz/> <b>set description "Semi-trusted public services"</b>
+admin@example:/config/firewall/…/dmz/> <b>set action drop</b>
+admin@example:/config/firewall/…/dmz/> <b>set interface eth1</b>
+admin@example:/config/firewall/…/dmz/> <b>set service ssh</b>
+admin@example:/config/firewall/…/dmz/> <b>end</b>
 admin@example:/config/firewall/> <b>edit policy loc-to-wan</b>
-admin@example:/config/firewall/policy/loc-to-wan/> <b>set description "Allow local networks (LAN+DMZ) to WAN with SNAT"</b>
-admin@example:/config/firewall/policy/loc-to-wan/> <b>set ingress dmz</b>
-admin@example:/config/firewall/policy/loc-to-wan/> <b>set egress wan</b>
-admin@example:/config/firewall/policy/loc-to-wan/> <b>set action accept</b>
-admin@example:/config/firewall/policy/loc-to-wan/> <b>set masquerade</b>
-admin@example:/config/firewall/policy/loc-to-wan/> <b>end</b>
+admin@example:/config/firewall/…/loc-to-wan/> <b>set description "Allow local networks (LAN+DMZ) to WAN with SNAT"</b>
+admin@example:/config/firewall/…/loc-to-wan/> <b>set ingress dmz</b>
+admin@example:/config/firewall/…/loc-to-wan/> <b>set egress wan</b>
+admin@example:/config/firewall/…/loc-to-wan/> <b>set action accept</b>
+admin@example:/config/firewall/…/loc-to-wan/> <b>set masquerade</b>
+admin@example:/config/firewall/…/loc-to-wan/> <b>end</b>
 admin@example:/config/firewall/> <b>edit policy lan-to-dmz</b>
-admin@example:/config/firewall/policy/lan-to-dmz/> <b>set description "Allow LAN to manage DMZ services"</b>
-admin@example:/config/firewall/policy/lan-to-dmz/> <b>set ingress lan</b>
-admin@example:/config/firewall/policy/lan-to-dmz/> <b>set egress dmz</b>
-admin@example:/config/firewall/policy/lan-to-dmz/> <b>set action accept</b>
-admin@example:/config/firewall/policy/lan-to-dmz/> <b>end</b>
+admin@example:/config/firewall/…/lan-to-dmz/> <b>set description "Allow LAN to manage DMZ services"</b>
+admin@example:/config/firewall/…/lan-to-dmz/> <b>set ingress lan</b>
+admin@example:/config/firewall/…/lan-to-dmz/> <b>set egress dmz</b>
+admin@example:/config/firewall/…/lan-to-dmz/> <b>set action accept</b>
+admin@example:/config/firewall/…/lan-to-dmz/> <b>end</b>
 admin@example:/config/firewall/> <b>edit zone wan port-forward 8080 tcp</b>
-admin@example:/config/firewall/zone/wan/port-forward/8080/tcp/> <b>set to addr 192.168.2.10</b>
-admin@example:/config/firewall/zone/wan/port-forward/8080/tcp/> <b>set to port 80</b>
-admin@example:/config/firewall/zone/wan/port-forward/8080/tcp/> <b>leave</b>
+admin@example:/config/firewall/…/tcp/> <b>set to addr 192.168.2.10</b>
+admin@example:/config/firewall/…/tcp/> <b>set to port 80</b>
+admin@example:/config/firewall/…/tcp/> <b>leave</b>
 </pre></code>
 
 This adds a DMZ zone for public services, updates the internet access policy

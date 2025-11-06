@@ -21,10 +21,9 @@ with an address pool:
 
 ```
 admin@example:/> configure
-admin@example:/config/> edit dhcp-server
-admin@example:/config/dhcp-server/> edit subnet 192.168.2.0/24
-admin@example:/config/dhcp-server/subnet/192.168.2.0/24/> set pool start-address 192.168.2.100 end-address 192.168.2.200
-admin@example:/config/dhcp-server/subnet/192.168.2.0/24/> leave
+admin@example:/config/> edit dhcp-server subnet 192.168.2.0/24
+admin@example:/config/dhcp-server/…/192.168.2.0/24/> set pool start-address 192.168.2.100 end-address 192.168.2.200
+admin@example:/config/dhcp-server/…/192.168.2.0/24/> leave
 ```
 
 When setting up the server from the CLI, the system automatically adds a
@@ -70,21 +69,21 @@ To reserve specific IP addresses for clients based on their MAC address,
 hostname, or client ID:
 
 ```
-admin@example:/config/dhcp-server/subnet/192.168.2.0/24/> edit host 192.168.2.10
-admin@example:/config/dhcp-server/subnet/192.168.2.0/24/host/192.168.2.10/> set match mac-address 00:11:22:33:44:55
-admin@example:/config/dhcp-server/subnet/192.168.2.0/24/host/192.168.2.10/> set hostname printer
-admin@example:/config/dhcp-server/subnet/192.168.2.0/24/host/192.168.2.10/> leave
+admin@example:/config/dhcp-server/…/192.168.2.0/24/> edit host 192.168.2.10
+admin@example:/config/dhcp-server/…/192.168.2.10/> set match mac-address 00:11:22:33:44:55
+admin@example:/config/dhcp-server/…/192.168.2.10/> set hostname printer
+admin@example:/config/dhcp-server/…/192.168.2.10/> leave
 ```
 
 Match hosts using a client identifier instead of MAC address:
 
 ```
-admin@example:/config/dhcp-server/subnet/192.168.1.0/24/> edit host 192.168.1.50
-admin@example:/config/dhcp-server/subnet/192.168.1.0/24/host/192.168.1.50/> edit match
-admin@example:/config/dhcp-server/subnet/192.168.1.0/24/host/192.168.1.50/match/> set client-id hex c0:ff:ee
-admin@example:/config/dhcp-server/subnet/192.168.1.0/24/host/192.168.1.50/match/> leave
-admin@example:/config/dhcp-server/subnet/192.168.1.0/24/host/192.168.1.50/> set lease-time infinite
-admin@example:/config/dhcp-server/subnet/192.168.1.0/24/host/192.168.1.50/> leave
+admin@example:/config/dhcp-server/…/192.168.1.0/24/> edit host 192.168.1.50
+admin@example:/config/dhcp-server/…/192.168.1.50/> edit match
+admin@example:/config/dhcp-server/…/match/> set client-id hex c0:ff:ee
+admin@example:/config/dhcp-server/…/match/> leave
+admin@example:/config/dhcp-server/…/192.168.1.50/> set lease-time infinite
+admin@example:/config/dhcp-server/…/192.168.1.50/> leave
 ```
 
 The `hex` prefix here ensures matching of client ID is done using the
