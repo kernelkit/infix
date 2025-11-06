@@ -2758,7 +2758,7 @@ nodes <code>admin-state</code> and <code>oper-state</code> show the status, .  P
 are listed in the YANG model.</p>
 <p>The <code>custom-phys-address</code> can be used to set an interface's MAC address.
 This is an extension to the ietf-interfaces YANG model, which defines
-<code>phys-address</code> as read-only<sup id="fnref:4"><a class="footnote-ref" href="#fn:4">1</a></sup>.  The following shows the different
+<code>phys-address</code> as read-only<sup id="fnref:4"><a class="footnote-ref" href="#fn:4">4</a></sup>.  The following shows the different
 configuration options.</p>
 <p>The <code>description</code> is saved as Linux <code>ifalias</code> on an interface.  It is a
 free-form string, useful for describing purpose or just adding comments
@@ -2823,7 +2823,7 @@ over NETCONF or RESTCONF requires setting the type explicitly.</p>
 </div>
 <p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/mac-bridge.svg" data-desc-position="bottom"><img alt="A MAC bridge with two ports" src="../img/mac-bridge.svg"></a></p>
 <p>It is possible to create multiple MAC bridges, however, it is
-currently<sup id="fnref:5"><a class="footnote-ref" href="#fn:5">2</a></sup> <em>not recommended</em> to use more than one MAC bridge on
+currently<sup id="fnref:5"><a class="footnote-ref" href="#fn:5">5</a></sup> <em>not recommended</em> to use more than one MAC bridge on
 products with Marvell LinkStreet switching ASICs. A VLAN filtering
 bridge should be used instead.</p>
 <h4 id="vlan-filtering-bridge">VLAN Filtering Bridge<a class="headerlink" href="#vlan-filtering-bridge" title="Permanent link">¶</a></h4>
@@ -2971,7 +2971,7 @@ an IGMP/MLD fast-leave port.</p>
    consist of multiple "join" and "leave" operations on groups.  They
    can also, per group, list which senders to allow or block.  Switches
    usually only support the group subscription, and even more common
-   also only support filtering on the MAC level<sup id="fnref:3"><a class="footnote-ref" href="#fn:3">5</a></sup></li>
+   also only support filtering on the MAC level<sup id="fnref:3"><a class="footnote-ref" href="#fn:3">3</a></sup></li>
 <li><strong>Querier election</strong>: the process of determining who is the elected
    IGMP/MLD querier on a LAN.  Lowest numerical IP address wins, the
    special address 0.0.0.0 (proxy querier) never wins</li>
@@ -3044,7 +3044,7 @@ member ports are available:</p>
 lag member, while in static mode only carrier is used.  This additional
 exchange in LACP ensures traffic can be forwarded in both directions.</p>
 <p>Traffic distribution, for both modes, across the active lag member ports
-is determined by the hash policy<sup id="fnref:1"><a class="footnote-ref" href="#fn:1">3</a></sup>.  It uses an XOR of the source,
+is determined by the hash policy<sup id="fnref:1"><a class="footnote-ref" href="#fn:1">1</a></sup>.  It uses an XOR of the source,
 destination MAC addresses and the EtherType field.  This, IEEE
 802.3ad-compliant, algorithm will place all traffic to a particular
 network peer on the same link.  Meaning there is no increased bandwidth
@@ -3346,7 +3346,7 @@ order for fixed speed/duplex to apply. Only speeds <code>0.1</code>(100 Mbit/s)
 and <code>0.01</code> (10 Mbit/s) can be specified. 1 Gbit/s and higher speeds
 require auto-negotiation to be enabled.</p>
 <h4 id="ethernet-statistics">Ethernet statistics<a class="headerlink" href="#ethernet-statistics" title="Permanent link">¶</a></h4>
-<p>Ethernet packet statistics<sup id="fnref:6"><a class="footnote-ref" href="#fn:6">4</a></sup> can be listed as shown below.</p>
+<p>Ethernet packet statistics<sup id="fnref:6"><a class="footnote-ref" href="#fn:6">6</a></sup> can be listed as shown below.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-29-1" name="__codelineno-29-1" href="#__codelineno-29-1"></a>admin@example:/&gt; show interfaces name eth1
 <a id="__codelineno-29-2" name="__codelineno-29-2" href="#__codelineno-29-2"></a>name                : eth1
 <a id="__codelineno-29-3" name="__codelineno-29-3" href="#__codelineno-29-3"></a>index               : 2
@@ -3577,7 +3577,7 @@ ignore the latter.</p>
 </tr>
 <tr>
 <td style="text-align: left;">link-local</td>
-<td style="text-align: left;">ietf-ip<sup id="fnref:2"><a class="footnote-ref" href="#fn:2">6</a></sup></td>
+<td style="text-align: left;">ietf-ip<sup id="fnref:2"><a class="footnote-ref" href="#fn:2">2</a></sup></td>
 <td style="text-align: left;">(RFC4862) Auto-configured link-local IPv6 address (<em>fe80::0</em> prefix + interface identifier, e.g., <em>fe80::ccd2:82ff:fe52:728b/64</em>)</td>
 </tr>
 <tr>
@@ -3611,7 +3611,7 @@ default.</p>
 <div class="highlight"><pre><span></span><code>admin@example:/&gt; configure
 admin@example:/config/&gt; edit interface eth0 ipv4
 admin@example:/config/interface/eth0/ipv4/&gt; set address 10.0.1.1 prefix-length 24
-admin@example:/config/interface/eth0/ipv4/&gt; set autoconf enabled true
+admin@example:/config/interface/eth0/ipv4/&gt; set autoconf
 admin@example:/config/interface/eth0/ipv4/&gt; diff
 +interfaces {
 +  interface eth0 {
@@ -3619,9 +3619,7 @@ admin@example:/config/interface/eth0/ipv4/&gt; diff
 +      address 10.0.1.1 {
 +        prefix-length 24;
 +      }
-+      autoconf {
-+        enabled true;
-+      }
++      autoconf;
 +    }
 +  }
 +}
@@ -3637,20 +3635,23 @@ lo              ethernet   UP          00:00:00:00:00:00
                 ipv6                   ::1/128 (static)
 admin@example:/&gt;
 </code></pre></div>
-<p>As shown, the link-local IPv4 address is configured with <code>set autconf
-enabled true</code>.  The resulting address (169.254.1.3/16) is of type
-<em>random</em> (<a href="https://www.rfc-editor.org/rfc/rfc8344">ietf-ip.yang</a>).</p>
+<p>As shown, the link-local IPv4 address is configured with <code>set autoconf</code>.
+The presence of the <code>autoconf</code> container enables IPv4 link-local address
+assignment. The resulting address (169.254.1.3/16) is of type <em>random</em>
+(<a href="https://www.rfc-editor.org/rfc/rfc8344">ietf-ip.yang</a>).</p>
 <p>The IPv4LL client also supports a <code>request-address</code> setting which can be
 used to "seed" the client's starting address.  If the address is free it
 will be used, otherwise it falls back to the default algorithm.</p>
-<div class="highlight"><pre><span></span><code>admin@example:/config/interface/eth0/ipv4/&gt; set autoconf request-address 169.254.1.2
+<div class="highlight"><pre><span></span><code>admin@example:/config/interface/eth0/ipv4/&gt; edit autoconf
+admin@example:/config/interface/eth0/ipv4/autoconf/&gt; set request-address 169.254.1.2
+admin@example:/config/interface/eth0/ipv4/autoconf/&gt; leave
 </code></pre></div>
 <h4 id="use-of-dhcp-for-ipv4-address-assignment">Use of DHCP for IPv4 address assignment<a class="headerlink" href="#use-of-dhcp-for-ipv4-address-assignment" title="Permanent link">¶</a></h4>
 <p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/ip-address-example-ipv4-dhcp.svg" data-desc-position="bottom"><img alt="Using DHCP for IPv4 address assignment" src="../img/ip-address-example-ipv4-dhcp.svg"></a></p>
 <div class="highlight"><pre><span></span><code>admin@example:/&gt; configure
-admin@example:/config/&gt; edit dhcp-client
-admin@example:/config/dhcp-client/&gt; set client-if eth0
-admin@example:/config/dhcp-client/&gt; leave
+admin@example:/config/&gt; edit interface eth0 ipv4
+admin@example:/config/interface/eth0/ipv4/&gt; set dhcp
+admin@example:/config/interface/eth0/ipv4/&gt; leave
 admin@example:/&gt; show interfaces
 INTERFACE       PROTOCOL   STATE       DATA
 eth0            ethernet   UP          02:00:00:00:00:00
@@ -3662,20 +3663,43 @@ lo              ethernet   UP          00:00:00:00:00:00
 admin@example:/&gt;
 </code></pre></div>
 <p>The resulting address (10.1.2.100/24) is of type <em>dhcp</em>.</p>
+<p>To configure DHCP client options, such as sending a specific hostname to the
+server, you can specify options with values:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-31-1" name="__codelineno-31-1" href="#__codelineno-31-1"></a>admin@example:/&gt; configure
+<a id="__codelineno-31-2" name="__codelineno-31-2" href="#__codelineno-31-2"></a>admin@example:/config/&gt; edit interface eth0 ipv4 dhcp
+<a id="__codelineno-31-3" name="__codelineno-31-3" href="#__codelineno-31-3"></a>admin@example:/config/interface/eth0/ipv4/dhcp/&gt; set option hostname value myhost
+<a id="__codelineno-31-4" name="__codelineno-31-4" href="#__codelineno-31-4"></a>admin@example:/config/interface/eth0/ipv4/dhcp/&gt; show
+<a id="__codelineno-31-5" name="__codelineno-31-5" href="#__codelineno-31-5"></a>option hostname {
+<a id="__codelineno-31-6" name="__codelineno-31-6" href="#__codelineno-31-6"></a>  value myhost;
+<a id="__codelineno-31-7" name="__codelineno-31-7" href="#__codelineno-31-7"></a>}
+<a id="__codelineno-31-8" name="__codelineno-31-8" href="#__codelineno-31-8"></a>admin@example:/config/interface/eth0/ipv4/dhcp/&gt; leave
+<a id="__codelineno-31-9" name="__codelineno-31-9" href="#__codelineno-31-9"></a>admin@example:/&gt;
+</code></pre></div>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>The special value <code>auto</code> can be used with the hostname option to
+automatically use the configured system hostname.</p>
+</div>
+<p>Other useful DHCP options include:</p>
+<ul>
+<li><code>client-id</code> - Send a specific client identifier to the server</li>
+<li><code>route-preference</code> - Set the administrative distance for DHCP-learned routes (default: 5)</li>
+</ul>
+<p>For advanced usage with vendor-specific options, see the YANG model.</p>
 <h4 id="disabling-ipv6-link-local-addresses">Disabling IPv6 link-local address(es)<a class="headerlink" href="#disabling-ipv6-link-local-addresses" title="Permanent link">¶</a></h4>
 <p>The (only) way to disable IPv6 link-local addresses is by disabling IPv6
 on the interface.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-31-1" name="__codelineno-31-1" href="#__codelineno-31-1"></a>admin@example:/&gt; configure
-<a id="__codelineno-31-2" name="__codelineno-31-2" href="#__codelineno-31-2"></a>admin@example:/config/&gt; edit interface eth0 ipv6
-<a id="__codelineno-31-3" name="__codelineno-31-3" href="#__codelineno-31-3"></a>admin@example:/config/interface/eth0/ipv6/&gt; set enabled false
-<a id="__codelineno-31-4" name="__codelineno-31-4" href="#__codelineno-31-4"></a>admin@example:/config/interface/eth0/ipv6/&gt; leave
-<a id="__codelineno-31-5" name="__codelineno-31-5" href="#__codelineno-31-5"></a>admin@example:/&gt; show interfaces
-<a id="__codelineno-31-6" name="__codelineno-31-6" href="#__codelineno-31-6"></a>INTERFACE       PROTOCOL   STATE       DATA
-<a id="__codelineno-31-7" name="__codelineno-31-7" href="#__codelineno-31-7"></a>eth0            ethernet   UP          02:00:00:00:00:00
-<a id="__codelineno-31-8" name="__codelineno-31-8" href="#__codelineno-31-8"></a>lo              ethernet   UP          00:00:00:00:00:00
-<a id="__codelineno-31-9" name="__codelineno-31-9" href="#__codelineno-31-9"></a>                ipv4                   127.0.0.1/8 (static)
-<a id="__codelineno-31-10" name="__codelineno-31-10" href="#__codelineno-31-10"></a>                ipv6                   ::1/128 (static)
-<a id="__codelineno-31-11" name="__codelineno-31-11" href="#__codelineno-31-11"></a>admin@example:/&gt;
+<div class="highlight"><pre><span></span><code><a id="__codelineno-32-1" name="__codelineno-32-1" href="#__codelineno-32-1"></a>admin@example:/&gt; configure
+<a id="__codelineno-32-2" name="__codelineno-32-2" href="#__codelineno-32-2"></a>admin@example:/config/&gt; edit interface eth0 ipv6
+<a id="__codelineno-32-3" name="__codelineno-32-3" href="#__codelineno-32-3"></a>admin@example:/config/interface/eth0/ipv6/&gt; set enabled false
+<a id="__codelineno-32-4" name="__codelineno-32-4" href="#__codelineno-32-4"></a>admin@example:/config/interface/eth0/ipv6/&gt; leave
+<a id="__codelineno-32-5" name="__codelineno-32-5" href="#__codelineno-32-5"></a>admin@example:/&gt; show interfaces
+<a id="__codelineno-32-6" name="__codelineno-32-6" href="#__codelineno-32-6"></a>INTERFACE       PROTOCOL   STATE       DATA
+<a id="__codelineno-32-7" name="__codelineno-32-7" href="#__codelineno-32-7"></a>eth0            ethernet   UP          02:00:00:00:00:00
+<a id="__codelineno-32-8" name="__codelineno-32-8" href="#__codelineno-32-8"></a>lo              ethernet   UP          00:00:00:00:00:00
+<a id="__codelineno-32-9" name="__codelineno-32-9" href="#__codelineno-32-9"></a>                ipv4                   127.0.0.1/8 (static)
+<a id="__codelineno-32-10" name="__codelineno-32-10" href="#__codelineno-32-10"></a>                ipv6                   ::1/128 (static)
+<a id="__codelineno-32-11" name="__codelineno-32-11" href="#__codelineno-32-11"></a>admin@example:/&gt;
 </code></pre></div>
 <h4 id="static-ipv6-address">Static IPv6 address<a class="headerlink" href="#static-ipv6-address" title="Permanent link">¶</a></h4>
 <p><a class="glightbox" data-type="image" data-width="100%" data-height="auto" href="../img/ip-address-example-ipv6-static.svg" data-desc-position="bottom"><img alt="Setting static IPv6" src="../img/ip-address-example-ipv6-static.svg"></a></p>
@@ -3762,10 +3786,10 @@ have changed type to <em>random</em>.</p>
 <p>To be able to route (static or dynamic) on the interface it is
 required to enable forwarding. This setting controls if packets
 received on this interface can be forwarded.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-32-1" name="__codelineno-32-1" href="#__codelineno-32-1"></a>admin@example:/config/&gt; edit interface eth0
-<a id="__codelineno-32-2" name="__codelineno-32-2" href="#__codelineno-32-2"></a>admin@example:/config/interface/eth0/&gt; set ipv4 forwarding
-<a id="__codelineno-32-3" name="__codelineno-32-3" href="#__codelineno-32-3"></a>admin@example:/config/interface/eth0/&gt; leave
-<a id="__codelineno-32-4" name="__codelineno-32-4" href="#__codelineno-32-4"></a>admin@example:/&gt;
+<div class="highlight"><pre><span></span><code><a id="__codelineno-33-1" name="__codelineno-33-1" href="#__codelineno-33-1"></a>admin@example:/config/&gt; edit interface eth0
+<a id="__codelineno-33-2" name="__codelineno-33-2" href="#__codelineno-33-2"></a>admin@example:/config/interface/eth0/&gt; set ipv4 forwarding
+<a id="__codelineno-33-3" name="__codelineno-33-3" href="#__codelineno-33-3"></a>admin@example:/config/interface/eth0/&gt; leave
+<a id="__codelineno-33-4" name="__codelineno-33-4" href="#__codelineno-33-4"></a>admin@example:/&gt;
 </code></pre></div>
 <h3 id="ipv6-forwarding">IPv6 forwarding<a class="headerlink" href="#ipv6-forwarding" title="Permanent link">¶</a></h3>
 <p>Due to how the Linux kernel manages IPv6 forwarding, we can not fully
@@ -3805,10 +3829,10 @@ setting control when it is <em>Enabled</em> or *Disabled:</p>
 </tr>
 </tbody>
 </table>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-33-1" name="__codelineno-33-1" href="#__codelineno-33-1"></a>admin@example:/config/&gt; edit interface eth0
-<a id="__codelineno-33-2" name="__codelineno-33-2" href="#__codelineno-33-2"></a>admin@example:/config/interface/eth0/&gt; set ipv6 forwarding
-<a id="__codelineno-33-3" name="__codelineno-33-3" href="#__codelineno-33-3"></a>admin@example:/config/interface/eth0/&gt; leave
-<a id="__codelineno-33-4" name="__codelineno-33-4" href="#__codelineno-33-4"></a>admin@example:/&gt;
+<div class="highlight"><pre><span></span><code><a id="__codelineno-34-1" name="__codelineno-34-1" href="#__codelineno-34-1"></a>admin@example:/config/&gt; edit interface eth0
+<a id="__codelineno-34-2" name="__codelineno-34-2" href="#__codelineno-34-2"></a>admin@example:/config/interface/eth0/&gt; set ipv6 forwarding
+<a id="__codelineno-34-3" name="__codelineno-34-3" href="#__codelineno-34-3"></a>admin@example:/config/interface/eth0/&gt; leave
+<a id="__codelineno-34-4" name="__codelineno-34-4" href="#__codelineno-34-4"></a>admin@example:/&gt;
 </code></pre></div>
 <h2 id="routing-support">Routing support<a class="headerlink" href="#routing-support" title="Permanent link">¶</a></h2>
 <p>Currently supported YANG models:</p>
@@ -3939,13 +3963,13 @@ admin@example:/config/routing/control-plane-protocol/ospfv2/name/default/ospf/ar
 <h4 id="ospf-global-settings">OSPF global settings<a class="headerlink" href="#ospf-global-settings" title="Permanent link">¶</a></h4>
 <p>In addition to <em>area</em> and <em>interface</em> specific settings, OSPF provides
 global settings for route redistribution and OSPF router identifier.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-34-1" name="__codelineno-34-1" href="#__codelineno-34-1"></a>admin@example:/config/&gt; edit routing control-plane-protocol ospfv2 name default ospf
-<a id="__codelineno-34-2" name="__codelineno-34-2" href="#__codelineno-34-2"></a>admin@example:/config/routing/control-plane-protocol/ospfv2/name/default/ospf/&gt; set ?
-<a id="__codelineno-34-3" name="__codelineno-34-3" href="#__codelineno-34-3"></a>  area                     List of OSPF areas.
-<a id="__codelineno-34-4" name="__codelineno-34-4" href="#__codelineno-34-4"></a>  default-route-advertise  Distribute default route to network
-<a id="__codelineno-34-5" name="__codelineno-34-5" href="#__codelineno-34-5"></a>  explicit-router-id       Defined in RFC 2328.  A 32-bit number
-<a id="__codelineno-34-6" name="__codelineno-34-6" href="#__codelineno-34-6"></a>  redistribute             Redistribute protocols into OSPF
-<a id="__codelineno-34-7" name="__codelineno-34-7" href="#__codelineno-34-7"></a>admin@example:/config/routing/control-plane-protocol/ospfv2/name/default/ospf/&gt; set
+<div class="highlight"><pre><span></span><code><a id="__codelineno-35-1" name="__codelineno-35-1" href="#__codelineno-35-1"></a>admin@example:/config/&gt; edit routing control-plane-protocol ospfv2 name default ospf
+<a id="__codelineno-35-2" name="__codelineno-35-2" href="#__codelineno-35-2"></a>admin@example:/config/routing/control-plane-protocol/ospfv2/name/default/ospf/&gt; set ?
+<a id="__codelineno-35-3" name="__codelineno-35-3" href="#__codelineno-35-3"></a>  area                     List of OSPF areas.
+<a id="__codelineno-35-4" name="__codelineno-35-4" href="#__codelineno-35-4"></a>  default-route-advertise  Distribute default route to network
+<a id="__codelineno-35-5" name="__codelineno-35-5" href="#__codelineno-35-5"></a>  explicit-router-id       Defined in RFC 2328.  A 32-bit number
+<a id="__codelineno-35-6" name="__codelineno-35-6" href="#__codelineno-35-6"></a>  redistribute             Redistribute protocols into OSPF
+<a id="__codelineno-35-7" name="__codelineno-35-7" href="#__codelineno-35-7"></a>admin@example:/config/routing/control-plane-protocol/ospfv2/name/default/ospf/&gt; set
 </code></pre></div>
 <ul>
 <li>Explicit router ID: By default the router will pick an IP address
@@ -4108,35 +4132,35 @@ currently supported, namely <code>ipv4</code> and <code>ipv6</code>.</p>
 <div class="footnote">
 <hr>
 <ol>
-<li id="fn:4">
-<p>A YANG deviation was previously used to make it possible to set
-<code>phys-address</code>, but this has been replaced with the more flexible
-<code>custom-phys-address</code>.&nbsp;<a class="footnote-backref" href="#fnref:4" title="Jump back to footnote 1 in the text">↩</a></p>
-</li>
-<li id="fn:5">
-<p>MAC bridges on Marvell Linkstreet devices are currently limited to
-a single MAC database, this may be a problem if the same MAC address
-appears in different MAC bridges.&nbsp;<a class="footnote-backref" href="#fnref:5" title="Jump back to footnote 2 in the text">↩</a></p>
-</li>
 <li id="fn:1">
-<p><code>(source MAC XOR destination MAC XOR EtherType) MODULO num_links</code>&nbsp;<a class="footnote-backref" href="#fnref:1" title="Jump back to footnote 3 in the text">↩</a></p>
+<p><code>(source MAC XOR destination MAC XOR EtherType) MODULO num_links</code>&nbsp;<a class="footnote-backref" href="#fnref:1" title="Jump back to footnote 1 in the text">↩</a></p>
 </li>
-<li id="fn:6">
-<p>Ethernet counters are described in <em>ieee802-ethernet-interface.yang</em>
-and <em>infix-ethernet-interface.yang</em>.  There is a dedicated document on
-<a href="../eth-counters/">Ethernet Counters</a> that provide additional details
-on the statistics support.&nbsp;<a class="footnote-backref" href="#fnref:6" title="Jump back to footnote 4 in the text">↩</a></p>
+<li id="fn:2">
+<p>Link-local IPv6 addresses are implicitly enabled when enabling
+IPv6.  IPv6 can be enabled/disabled per interface in the
+<a href="https://www.rfc-editor.org/rfc/rfc8344">ietf-ip</a> YANG model.&nbsp;<a class="footnote-backref" href="#fnref:2" title="Jump back to footnote 2 in the text">↩</a></p>
 </li>
 <li id="fn:3">
 <p>For example, IPv4 groups are mapped to MAC multicast addresses by
 mapping the low-order 23-bits of the IP address in the low-order 23
 bits of the Ethernet address 01:00:5E:00:00:00.  Meaning, more than
-one IP multicast group maps to the same MAC multicast group.&nbsp;<a class="footnote-backref" href="#fnref:3" title="Jump back to footnote 5 in the text">↩</a></p>
+one IP multicast group maps to the same MAC multicast group.&nbsp;<a class="footnote-backref" href="#fnref:3" title="Jump back to footnote 3 in the text">↩</a></p>
 </li>
-<li id="fn:2">
-<p>Link-local IPv6 addresses are implicitly enabled when enabling
-IPv6.  IPv6 can be enabled/disabled per interface in the
-<a href="https://www.rfc-editor.org/rfc/rfc8344">ietf-ip</a> YANG model.&nbsp;<a class="footnote-backref" href="#fnref:2" title="Jump back to footnote 6 in the text">↩</a></p>
+<li id="fn:4">
+<p>A YANG deviation was previously used to make it possible to set
+<code>phys-address</code>, but this has been replaced with the more flexible
+<code>custom-phys-address</code>.&nbsp;<a class="footnote-backref" href="#fnref:4" title="Jump back to footnote 4 in the text">↩</a></p>
+</li>
+<li id="fn:5">
+<p>MAC bridges on Marvell Linkstreet devices are currently limited to
+a single MAC database, this may be a problem if the same MAC address
+appears in different MAC bridges.&nbsp;<a class="footnote-backref" href="#fnref:5" title="Jump back to footnote 5 in the text">↩</a></p>
+</li>
+<li id="fn:6">
+<p>Ethernet counters are described in <em>ieee802-ethernet-interface.yang</em>
+and <em>infix-ethernet-interface.yang</em>.  There is a dedicated document on
+<a href="../eth-counters/">Ethernet Counters</a> that provide additional details
+on the statistics support.&nbsp;<a class="footnote-backref" href="#fnref:6" title="Jump back to footnote 6 in the text">↩</a></p>
 </li>
 </ol>
 </div>

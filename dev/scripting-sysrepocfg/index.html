@@ -1922,85 +1922,76 @@ be shown as <code>true</code> is default.</p>
 <p>Enabling DHCPv4 client on interface <em>e0</em>, with current default options.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>~$ cat /tmp/file.json
 <a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>{
-<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>  "infix-dhcp-client:dhcp-client": {
-<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>    "enabled": true,
-<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>    "client-if": [
-<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>      {
-<a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a>        "if-name": "e0"
-<a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a>      }
-<a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a>    ]
-<a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a>  }
-<a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a>}
-<a id="__codelineno-8-12" name="__codelineno-8-12" href="#__codelineno-8-12"></a>~$ scp file.json admin@example.local:/tmp/file.json
-<a id="__codelineno-8-13" name="__codelineno-8-13" href="#__codelineno-8-13"></a>~$ ssh admin@example.local 'sysrepocfg -E /tmp/file.json -fjson -d running'
-<a id="__codelineno-8-14" name="__codelineno-8-14" href="#__codelineno-8-14"></a>~$
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>  "ietf-interfaces:interfaces": {
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>    "interface": [
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>      {
+<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>        "name": "e0",
+<a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a>        "ietf-ip:ipv4": {
+<a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a>          "infix-dhcp-client:dhcp": {}
+<a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a>        }
+<a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a>      }
+<a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a>    ]
+<a id="__codelineno-8-12" name="__codelineno-8-12" href="#__codelineno-8-12"></a>  }
+<a id="__codelineno-8-13" name="__codelineno-8-13" href="#__codelineno-8-13"></a>}
+<a id="__codelineno-8-14" name="__codelineno-8-14" href="#__codelineno-8-14"></a>~$ scp file.json admin@example.local:/tmp/file.json
+<a id="__codelineno-8-15" name="__codelineno-8-15" href="#__codelineno-8-15"></a>~$ ssh admin@example.local 'sysrepocfg -E /tmp/file.json -fjson -d running'
+<a id="__codelineno-8-16" name="__codelineno-8-16" href="#__codelineno-8-16"></a>~$
 </code></pre></div>
-<p>Disabling DHCPv4 client.</p>
+<p>Disabling DHCPv4 client on interface <em>e0</em> (remove the dhcp container).</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>~$ cat /tmp/file.json
 <a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>{
-<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>  "infix-dhcp-client:dhcp-client": {
-<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>    "enabled": false
-<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>  }
-<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a>}
-<a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a>~$ scp file.json admin@example.local:/tmp/file.json
-<a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a>~$ ssh admin@example.local 'sysrepocfg -E /tmp/file.json -fjson -d running'
-<a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a>~$
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>  "ietf-interfaces:interfaces": {
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>    "interface": [
+<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>      {
+<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a>        "name": "e0",
+<a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a>        "ietf-ip:ipv4": {}
+<a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a>      }
+<a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a>    ]
+<a id="__codelineno-9-10" name="__codelineno-9-10" href="#__codelineno-9-10"></a>  }
+<a id="__codelineno-9-11" name="__codelineno-9-11" href="#__codelineno-9-11"></a>}
+<a id="__codelineno-9-12" name="__codelineno-9-12" href="#__codelineno-9-12"></a>~$ scp file.json admin@example.local:/tmp/file.json
+<a id="__codelineno-9-13" name="__codelineno-9-13" href="#__codelineno-9-13"></a>~$ ssh admin@example.local 'sysrepocfg -E /tmp/file.json -fjson -d running'
+<a id="__codelineno-9-14" name="__codelineno-9-14" href="#__codelineno-9-14"></a>~$
 </code></pre></div>
-<p>Configuration for client interface <em>e0</em> remains, but does not apply as
-DHCPv4 is disabled.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>admin@example:~$ sysrepocfg -X -fjson -d running -x "/infix-dhcp-client:dhcp-client"
-<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>{
-<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>  "infix-dhcp-client:dhcp-client": {
-<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>    "enabled": false,
-<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a>    "client-if": [
-<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a>      {
-<a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a>        "if-name": "e0"
-<a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a>      }
-<a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a>    ]
-<a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a>  }
-<a id="__codelineno-10-11" name="__codelineno-10-11" href="#__codelineno-10-11"></a>}
-<a id="__codelineno-10-12" name="__codelineno-10-12" href="#__codelineno-10-12"></a>admin@example:~$
-</code></pre></div>
-<p>To fully remove the DHCPv4 client configuration or a specific
-<em>client-if</em> with sysrepocfg, one would need to read out the full
-configuration, remove relevant parts and read back.</p>
+<p>To fully remove the DHCPv4 client configuration, remove the <code>infix-dhcp-client:dhcp</code>
+container from the interface's ipv4 configuration.</p>
 <h2 id="enabledisable-ipv6">Enable/Disable IPv6<a class="headerlink" href="#enabledisable-ipv6" title="Permanent link">¶</a></h2>
 <p>IPv6 is typically enabled on all interfaces by default. The example
 below shows IPv4 and IPv6 addresses assigned on <em>e0</em>.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>~$ ssh admin@example.local 'ip addr show dev e0'
-<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>2: e0: &lt;BROADCAST,MULTICAST,UP,LOWER_UP&gt; mtu 1500 qdisc pfifo_fast state UP group default qlen 1000
-<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>    link/ether 02:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff
-<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a>    inet 10.0.2.15/24 scope global proto dhcp e0
-<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a>       valid_lft forever preferred_lft forever
-<a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a>    inet6 fec0::ff:fe00:0/64 scope site dynamic mngtmpaddr proto kernel_ra
-<a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a>       valid_lft 86380sec preferred_lft 14380sec
-<a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a>    inet6 fe80::ff:fe00:0/64 scope link proto kernel_ll
-<a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a>       valid_lft forever preferred_lft forever
-<a id="__codelineno-11-10" name="__codelineno-11-10" href="#__codelineno-11-10"></a>~$
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>~$ ssh admin@example.local 'ip addr show dev e0'
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>2: e0: &lt;BROADCAST,MULTICAST,UP,LOWER_UP&gt; mtu 1500 qdisc pfifo_fast state UP group default qlen 1000
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>    link/ether 02:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff
+<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>    inet 10.0.2.15/24 scope global proto dhcp e0
+<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a>       valid_lft forever preferred_lft forever
+<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a>    inet6 fec0::ff:fe00:0/64 scope site dynamic mngtmpaddr proto kernel_ra
+<a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a>       valid_lft 86380sec preferred_lft 14380sec
+<a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a>    inet6 fe80::ff:fe00:0/64 scope link proto kernel_ll
+<a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a>       valid_lft forever preferred_lft forever
+<a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a>~$
 </code></pre></div>
 <p>IPv6 is enabled/disabled per interface. The example below disables IPv6
 on interface <em>e0</em>.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>~$ cat /tmp/file.json
-<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>{
-<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>  "ietf-interfaces:interfaces": {
-<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a>    "interface": [
-<a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a>      {
-<a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a>        "name": "e0",
-<a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a>        "ietf-ip:ipv6": {
-<a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a>          "enabled": false
-<a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a>        }
-<a id="__codelineno-12-10" name="__codelineno-12-10" href="#__codelineno-12-10"></a>      }
-<a id="__codelineno-12-11" name="__codelineno-12-11" href="#__codelineno-12-11"></a>    ]
-<a id="__codelineno-12-12" name="__codelineno-12-12" href="#__codelineno-12-12"></a>  }
-<a id="__codelineno-12-13" name="__codelineno-12-13" href="#__codelineno-12-13"></a>}
-<a id="__codelineno-12-14" name="__codelineno-12-14" href="#__codelineno-12-14"></a>~$ scp file.json admin@example.local:/tmp/file.json
-<a id="__codelineno-12-15" name="__codelineno-12-15" href="#__codelineno-12-15"></a>~$ ssh admin@example.local 'sysrepocfg -E /tmp/file.json -fjson -d running'
-<a id="__codelineno-12-16" name="__codelineno-12-16" href="#__codelineno-12-16"></a>~$ ssh admin@example.local 'ip addr show dev e0'
-<a id="__codelineno-12-17" name="__codelineno-12-17" href="#__codelineno-12-17"></a>2: e0: &lt;BROADCAST,MULTICAST,UP,LOWER_UP&gt; mtu 1500 qdisc pfifo_fast state UP group default qlen 1000
-<a id="__codelineno-12-18" name="__codelineno-12-18" href="#__codelineno-12-18"></a>    link/ether 02:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff
-<a id="__codelineno-12-19" name="__codelineno-12-19" href="#__codelineno-12-19"></a>    inet 10.0.2.15/24 scope global proto dhcp e0
-<a id="__codelineno-12-20" name="__codelineno-12-20" href="#__codelineno-12-20"></a>       valid_lft forever preferred_lft forever
-<a id="__codelineno-12-21" name="__codelineno-12-21" href="#__codelineno-12-21"></a>~$
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>~$ cat /tmp/file.json
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>{
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>  "ietf-interfaces:interfaces": {
+<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a>    "interface": [
+<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a>      {
+<a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a>        "name": "e0",
+<a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a>        "ietf-ip:ipv6": {
+<a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a>          "enabled": false
+<a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a>        }
+<a id="__codelineno-11-10" name="__codelineno-11-10" href="#__codelineno-11-10"></a>      }
+<a id="__codelineno-11-11" name="__codelineno-11-11" href="#__codelineno-11-11"></a>    ]
+<a id="__codelineno-11-12" name="__codelineno-11-12" href="#__codelineno-11-12"></a>  }
+<a id="__codelineno-11-13" name="__codelineno-11-13" href="#__codelineno-11-13"></a>}
+<a id="__codelineno-11-14" name="__codelineno-11-14" href="#__codelineno-11-14"></a>~$ scp file.json admin@example.local:/tmp/file.json
+<a id="__codelineno-11-15" name="__codelineno-11-15" href="#__codelineno-11-15"></a>~$ ssh admin@example.local 'sysrepocfg -E /tmp/file.json -fjson -d running'
+<a id="__codelineno-11-16" name="__codelineno-11-16" href="#__codelineno-11-16"></a>~$ ssh admin@example.local 'ip addr show dev e0'
+<a id="__codelineno-11-17" name="__codelineno-11-17" href="#__codelineno-11-17"></a>2: e0: &lt;BROADCAST,MULTICAST,UP,LOWER_UP&gt; mtu 1500 qdisc pfifo_fast state UP group default qlen 1000
+<a id="__codelineno-11-18" name="__codelineno-11-18" href="#__codelineno-11-18"></a>    link/ether 02:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff
+<a id="__codelineno-11-19" name="__codelineno-11-19" href="#__codelineno-11-19"></a>    inet 10.0.2.15/24 scope global proto dhcp e0
+<a id="__codelineno-11-20" name="__codelineno-11-20" href="#__codelineno-11-20"></a>       valid_lft forever preferred_lft forever
+<a id="__codelineno-11-21" name="__codelineno-11-21" href="#__codelineno-11-21"></a>~$
 </code></pre></div>
 <h2 id="change-a-binary-setting">Change a Binary Setting<a class="headerlink" href="#change-a-binary-setting" title="Permanent link">¶</a></h2>
 <p>A YANG <code>binary</code> type setting is Base64 encoded and requires a little bit
@@ -2009,92 +2000,92 @@ more tricks.  We take the opportunity to showcase a shell script helper:
 in the CLI, but this one takes an XPath argument to the binary leaf to
 edit.</p>
 <p>Stripped down, it looks something like this:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="k">if</span><span class="w"> </span><span class="nv">tmp</span><span class="o">=</span><span class="k">$(</span>sysrepocfg<span class="w"> </span>-G<span class="w"> </span><span class="s2">"</span><span class="nv">$xpath</span><span class="s2">"</span><span class="k">)</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
-<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="w">    </span><span class="nv">file</span><span class="o">=</span><span class="k">$(</span>mktemp<span class="k">)</span>
-<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>
-<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">"</span><span class="nv">$tmp</span><span class="s2">"</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>base64<span class="w"> </span>-d<span class="w"> </span>&gt;<span class="w"> </span><span class="s2">"</span><span class="nv">$file</span><span class="s2">"</span>
-<a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span>edit<span class="w"> </span><span class="s2">"</span><span class="nv">$file</span><span class="s2">"</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
-<a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a><span class="w">        </span><span class="nv">tmp</span><span class="o">=</span><span class="k">$(</span>base64<span class="w"> </span>-w0<span class="w"> </span>&lt;<span class="w"> </span><span class="s2">"</span><span class="nv">$file</span><span class="s2">"</span><span class="k">)</span>
-<a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a><span class="w">        </span>sysrepocfg<span class="w"> </span>-S<span class="w"> </span><span class="s2">"</span><span class="nv">$xpath</span><span class="s2">"</span><span class="w"> </span>-u<span class="w"> </span><span class="s2">"</span><span class="nv">$tmp</span><span class="s2">"</span>
-<a id="__codelineno-13-8" name="__codelineno-13-8" href="#__codelineno-13-8"></a><span class="w">    </span><span class="k">fi</span>
-<a id="__codelineno-13-9" name="__codelineno-13-9" href="#__codelineno-13-9"></a>
-<a id="__codelineno-13-10" name="__codelineno-13-10" href="#__codelineno-13-10"></a><span class="w">    </span>rm<span class="w"> </span>-f<span class="w"> </span><span class="s2">"</span><span class="nv">$file</span><span class="s2">"</span>
-<a id="__codelineno-13-11" name="__codelineno-13-11" href="#__codelineno-13-11"></a><span class="k">else</span>
-<a id="__codelineno-13-12" name="__codelineno-13-12" href="#__codelineno-13-12"></a><span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">"Failed to retrieve value for </span><span class="nv">$xpath</span><span class="s2">"</span>
-<a id="__codelineno-13-13" name="__codelineno-13-13" href="#__codelineno-13-13"></a><span class="w">    </span><span class="nb">exit</span><span class="w"> </span><span class="m">1</span>
-<a id="__codelineno-13-14" name="__codelineno-13-14" href="#__codelineno-13-14"></a><span class="k">fi</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="k">if</span><span class="w"> </span><span class="nv">tmp</span><span class="o">=</span><span class="k">$(</span>sysrepocfg<span class="w"> </span>-G<span class="w"> </span><span class="s2">"</span><span class="nv">$xpath</span><span class="s2">"</span><span class="k">)</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="w">    </span><span class="nv">file</span><span class="o">=</span><span class="k">$(</span>mktemp<span class="k">)</span>
+<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>
+<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">"</span><span class="nv">$tmp</span><span class="s2">"</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>base64<span class="w"> </span>-d<span class="w"> </span>&gt;<span class="w"> </span><span class="s2">"</span><span class="nv">$file</span><span class="s2">"</span>
+<a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span>edit<span class="w"> </span><span class="s2">"</span><span class="nv">$file</span><span class="s2">"</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a><span class="w">        </span><span class="nv">tmp</span><span class="o">=</span><span class="k">$(</span>base64<span class="w"> </span>-w0<span class="w"> </span>&lt;<span class="w"> </span><span class="s2">"</span><span class="nv">$file</span><span class="s2">"</span><span class="k">)</span>
+<a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a><span class="w">        </span>sysrepocfg<span class="w"> </span>-S<span class="w"> </span><span class="s2">"</span><span class="nv">$xpath</span><span class="s2">"</span><span class="w"> </span>-u<span class="w"> </span><span class="s2">"</span><span class="nv">$tmp</span><span class="s2">"</span>
+<a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a><span class="w">    </span><span class="k">fi</span>
+<a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a>
+<a id="__codelineno-12-10" name="__codelineno-12-10" href="#__codelineno-12-10"></a><span class="w">    </span>rm<span class="w"> </span>-f<span class="w"> </span><span class="s2">"</span><span class="nv">$file</span><span class="s2">"</span>
+<a id="__codelineno-12-11" name="__codelineno-12-11" href="#__codelineno-12-11"></a><span class="k">else</span>
+<a id="__codelineno-12-12" name="__codelineno-12-12" href="#__codelineno-12-12"></a><span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">"Failed to retrieve value for </span><span class="nv">$xpath</span><span class="s2">"</span>
+<a id="__codelineno-12-13" name="__codelineno-12-13" href="#__codelineno-12-13"></a><span class="w">    </span><span class="nb">exit</span><span class="w"> </span><span class="m">1</span>
+<a id="__codelineno-12-14" name="__codelineno-12-14" href="#__codelineno-12-14"></a><span class="k">fi</span>
 </code></pre></div>
 <p>An example container configuration, with an embedded file that is
 mounted to <code>/var/www/index.html</code> can look like this:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="w">  </span><span class="nt">"infix-containers:containers"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="w">    </span><span class="nt">"container"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-<a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="w">      </span><span class="p">{</span>
-<a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="w">        </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"web"</span><span class="p">,</span>
-<a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a><span class="w">        </span><span class="nt">"image"</span><span class="p">:</span><span class="w"> </span><span class="s2">"oci-archive:/lib/oci/curios-httpd-latest.tar.gz"</span><span class="p">,</span>
-<a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a><span class="w">        </span><span class="nt">"hostname"</span><span class="p">:</span><span class="w"> </span><span class="s2">"web"</span><span class="p">,</span>
-<a id="__codelineno-14-7" name="__codelineno-14-7" href="#__codelineno-14-7"></a><span class="w">        </span><span class="nt">"network"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-14-8" name="__codelineno-14-8" href="#__codelineno-14-8"></a><span class="w">          </span><span class="nt">"interface"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-<a id="__codelineno-14-9" name="__codelineno-14-9" href="#__codelineno-14-9"></a><span class="w">            </span><span class="p">{</span>
-<a id="__codelineno-14-10" name="__codelineno-14-10" href="#__codelineno-14-10"></a><span class="w">              </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"veth-sys0"</span>
-<a id="__codelineno-14-11" name="__codelineno-14-11" href="#__codelineno-14-11"></a><span class="w">            </span><span class="p">}</span>
-<a id="__codelineno-14-12" name="__codelineno-14-12" href="#__codelineno-14-12"></a><span class="w">          </span><span class="p">]</span>
-<a id="__codelineno-14-13" name="__codelineno-14-13" href="#__codelineno-14-13"></a><span class="w">        </span><span class="p">},</span>
-<a id="__codelineno-14-14" name="__codelineno-14-14" href="#__codelineno-14-14"></a><span class="w">        </span><span class="nt">"mount"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-<a id="__codelineno-14-15" name="__codelineno-14-15" href="#__codelineno-14-15"></a><span class="w">          </span><span class="p">{</span>
-<a id="__codelineno-14-16" name="__codelineno-14-16" href="#__codelineno-14-16"></a><span class="w">            </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"index.html"</span><span class="p">,</span>
-<a id="__codelineno-14-17" name="__codelineno-14-17" href="#__codelineno-14-17"></a><span class="w">            </span><span class="nt">"content"</span><span class="p">:</span><span class="w"> </span><span class="s2">"PCFET0NUWVBFIGh0bWwjibberish.shortened.down=="</span><span class="p">,</span>
-<a id="__codelineno-14-18" name="__codelineno-14-18" href="#__codelineno-14-18"></a><span class="w">            </span><span class="nt">"target"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/var/www/index.html"</span>
-<a id="__codelineno-14-19" name="__codelineno-14-19" href="#__codelineno-14-19"></a><span class="w">          </span><span class="p">}</span>
-<a id="__codelineno-14-20" name="__codelineno-14-20" href="#__codelineno-14-20"></a><span class="w">        </span><span class="p">]</span>
-<a id="__codelineno-14-21" name="__codelineno-14-21" href="#__codelineno-14-21"></a><span class="w">      </span><span class="p">}</span>
-<a id="__codelineno-14-22" name="__codelineno-14-22" href="#__codelineno-14-22"></a><span class="w">    </span><span class="p">]</span>
-<a id="__codelineno-14-23" name="__codelineno-14-23" href="#__codelineno-14-23"></a><span class="w">  </span><span class="p">}</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="w">  </span><span class="nt">"infix-containers:containers"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="w">    </span><span class="nt">"container"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="w">      </span><span class="p">{</span>
+<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="w">        </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"web"</span><span class="p">,</span>
+<a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a><span class="w">        </span><span class="nt">"image"</span><span class="p">:</span><span class="w"> </span><span class="s2">"oci-archive:/lib/oci/curios-httpd-latest.tar.gz"</span><span class="p">,</span>
+<a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a><span class="w">        </span><span class="nt">"hostname"</span><span class="p">:</span><span class="w"> </span><span class="s2">"web"</span><span class="p">,</span>
+<a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a><span class="w">        </span><span class="nt">"network"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-13-8" name="__codelineno-13-8" href="#__codelineno-13-8"></a><span class="w">          </span><span class="nt">"interface"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<a id="__codelineno-13-9" name="__codelineno-13-9" href="#__codelineno-13-9"></a><span class="w">            </span><span class="p">{</span>
+<a id="__codelineno-13-10" name="__codelineno-13-10" href="#__codelineno-13-10"></a><span class="w">              </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"veth-sys0"</span>
+<a id="__codelineno-13-11" name="__codelineno-13-11" href="#__codelineno-13-11"></a><span class="w">            </span><span class="p">}</span>
+<a id="__codelineno-13-12" name="__codelineno-13-12" href="#__codelineno-13-12"></a><span class="w">          </span><span class="p">]</span>
+<a id="__codelineno-13-13" name="__codelineno-13-13" href="#__codelineno-13-13"></a><span class="w">        </span><span class="p">},</span>
+<a id="__codelineno-13-14" name="__codelineno-13-14" href="#__codelineno-13-14"></a><span class="w">        </span><span class="nt">"mount"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<a id="__codelineno-13-15" name="__codelineno-13-15" href="#__codelineno-13-15"></a><span class="w">          </span><span class="p">{</span>
+<a id="__codelineno-13-16" name="__codelineno-13-16" href="#__codelineno-13-16"></a><span class="w">            </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"index.html"</span><span class="p">,</span>
+<a id="__codelineno-13-17" name="__codelineno-13-17" href="#__codelineno-13-17"></a><span class="w">            </span><span class="nt">"content"</span><span class="p">:</span><span class="w"> </span><span class="s2">"PCFET0NUWVBFIGh0bWwjibberish.shortened.down=="</span><span class="p">,</span>
+<a id="__codelineno-13-18" name="__codelineno-13-18" href="#__codelineno-13-18"></a><span class="w">            </span><span class="nt">"target"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/var/www/index.html"</span>
+<a id="__codelineno-13-19" name="__codelineno-13-19" href="#__codelineno-13-19"></a><span class="w">          </span><span class="p">}</span>
+<a id="__codelineno-13-20" name="__codelineno-13-20" href="#__codelineno-13-20"></a><span class="w">        </span><span class="p">]</span>
+<a id="__codelineno-13-21" name="__codelineno-13-21" href="#__codelineno-13-21"></a><span class="w">      </span><span class="p">}</span>
+<a id="__codelineno-13-22" name="__codelineno-13-22" href="#__codelineno-13-22"></a><span class="w">    </span><span class="p">]</span>
+<a id="__codelineno-13-23" name="__codelineno-13-23" href="#__codelineno-13-23"></a><span class="w">  </span><span class="p">}</span>
 </code></pre></div>
 <p>The command to edit this file, and restart the container with the new
 contents, look like this:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>admin@infix:~$ cfg edit "/infix-containers:containers/container[name='web']/mount[name='index.html']/content"
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>admin@infix:~$ cfg edit "/infix-containers:containers/container[name='web']/mount[name='index.html']/content"
 </code></pre></div>
 <h2 id="backup-configuration">Backup Configuration<a class="headerlink" href="#backup-configuration" title="Permanent link">¶</a></h2>
 <p>Displaying running or startup configuration is possible with
 <code>sysrepocfg -X</code>, as shown below.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>~$ ssh admin@example.local 'sysrepocfg -X -fjson -d running'
-<a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a>{
-<a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a>  "ieee802-dot1ab-lldp:lldp": {
-<a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a>    "infix-lldp:enabled": true
-<a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a>...
-<a id="__codelineno-16-6" name="__codelineno-16-6" href="#__codelineno-16-6"></a>~$
+<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>~$ ssh admin@example.local 'sysrepocfg -X -fjson -d running'
+<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>{
+<a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>  "ieee802-dot1ab-lldp:lldp": {
+<a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a>    "infix-lldp:enabled": true
+<a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a>...
+<a id="__codelineno-15-6" name="__codelineno-15-6" href="#__codelineno-15-6"></a>~$
 </code></pre></div>
 <p>An example for backing up startup configuration from remote PC.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>~$ ssh admin@example.local 'sysrepocfg -X -fjson -d startup &gt; /tmp/backup.json'
-<a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a>~$ scp admin@example.local:/tmp/backup.json .
-<a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a>~$
+<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>~$ ssh admin@example.local 'sysrepocfg -X -fjson -d startup &gt; /tmp/backup.json'
+<a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a>~$ scp admin@example.local:/tmp/backup.json .
+<a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a>~$
 </code></pre></div>
 <p>Or possibly skip intermediate storage of file</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a>~$ ssh admin@example.local 'sysrepocfg -X -fjson -d startup' &gt; backup.json
-<a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a>~$
+<div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>~$ ssh admin@example.local 'sysrepocfg -X -fjson -d startup' &gt; backup.json
+<a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a>~$
 </code></pre></div>
 <p>A final example is to only use <code>scp</code>. This is simpler, but only works to
 backup the startup configuration (not running).</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a>~$ scp admin@example.local:/cfg/startup-config.cfg backup.json
-<a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a>~$
+<div class="highlight"><pre><span></span><code><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a>~$ scp admin@example.local:/cfg/startup-config.cfg backup.json
+<a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a>~$
 </code></pre></div>
 <h2 id="restore-configuration">Restore Configuration<a class="headerlink" href="#restore-configuration" title="Permanent link">¶</a></h2>
 <p>To restore a backup configuration to startup, the simplest way is to use
 <code>scp</code> and reboot as shown below</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a>~$ scp admin@example.local:/cfg/startup-config.cfg backup.json
-<a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a>~$ ssh admin@example.local 'reboot'
-<a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a>Connection to switch.local closed by remote host.
-<a id="__codelineno-20-4" name="__codelineno-20-4" href="#__codelineno-20-4"></a>~$
+<div class="highlight"><pre><span></span><code><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a>~$ scp admin@example.local:/cfg/startup-config.cfg backup.json
+<a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a>~$ ssh admin@example.local 'reboot'
+<a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a>Connection to switch.local closed by remote host.
+<a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a>~$
 </code></pre></div>
 <p>An alternative method to restore a backup configuration is to use the
 <code>sysrepocfg -I FILE</code> (import) command.</p>
 <p>The example below imports the backup configuration to startup, and
 reboots the unit.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a>~$ scp backup.json admin@example.local:/tmp/
-<a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a>~$ ssh admin@example.local 'sudo sysrepocfg -I /tmp/backup.json -fjson -d startup'
-<a id="__codelineno-21-3" name="__codelineno-21-3" href="#__codelineno-21-3"></a>~$ ssh admin@example.local 'reboot'
-<a id="__codelineno-21-4" name="__codelineno-21-4" href="#__codelineno-21-4"></a>Connection to switch.local closed by remote host.
-<a id="__codelineno-21-5" name="__codelineno-21-5" href="#__codelineno-21-5"></a>~$
+<div class="highlight"><pre><span></span><code><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a>~$ scp backup.json admin@example.local:/tmp/
+<a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a>~$ ssh admin@example.local 'sudo sysrepocfg -I /tmp/backup.json -fjson -d startup'
+<a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a>~$ ssh admin@example.local 'reboot'
+<a id="__codelineno-20-4" name="__codelineno-20-4" href="#__codelineno-20-4"></a>Connection to switch.local closed by remote host.
+<a id="__codelineno-20-5" name="__codelineno-20-5" href="#__codelineno-20-5"></a>~$
 </code></pre></div>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
@@ -2106,53 +2097,53 @@ replacement unit will also change.</p>
 <h2 id="copy-running-to-startup">Copy Running to Startup<a class="headerlink" href="#copy-running-to-startup" title="Permanent link">¶</a></h2>
 <p>The following command reads out the running config via <code>sysrepocfg -X</code>
 and writes the result to the startup configuration.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a>~$ ssh admin@example.local 'sysrepocfg -X -fjson -d running &gt; /cfg/startup-config.cfg'
-<a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a>~$
+<div class="highlight"><pre><span></span><code><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a>~$ ssh admin@example.local 'sysrepocfg -X -fjson -d running &gt; /cfg/startup-config.cfg'
+<a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a>~$
 </code></pre></div>
 <p>An alternative is to write it to a temporary file, and use <code>sysrepocfg
 -I</code> to import it to startup.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a>~$ ssh admin@example.local 'sysrepocfg -X -fjson -d running &gt; /tmp/running.json'
-<a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a>~$ ssh admin@example.local 'sysrepocfg -I /tmp/running.json -fjson -d startup'
-<a id="__codelineno-23-3" name="__codelineno-23-3" href="#__codelineno-23-3"></a>~$
+<div class="highlight"><pre><span></span><code><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a>~$ ssh admin@example.local 'sysrepocfg -X -fjson -d running &gt; /tmp/running.json'
+<a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a>~$ ssh admin@example.local 'sysrepocfg -I /tmp/running.json -fjson -d startup'
+<a id="__codelineno-22-3" name="__codelineno-22-3" href="#__codelineno-22-3"></a>~$
 </code></pre></div>
 <h2 id="read-hardware-information">Read Hardware Information<a class="headerlink" href="#read-hardware-information" title="Permanent link">¶</a></h2>
 <p>The IETF Hardware YANG model has been augmented for ONIE formatted
 production data stored in EEPROMs, if available.  For details, see the
 <a href="../vpd/">VPD documentation</a> and the <em>ietf-hardware</em> and <em>infix-hardware</em>
 YANG models.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a>~$ ssh admin@example.local 'sysrepocfg -X -fjson -d operational -x /ietf-hardware:hardware'
-<a id="__codelineno-24-2" name="__codelineno-24-2" href="#__codelineno-24-2"></a>{
-<a id="__codelineno-24-3" name="__codelineno-24-3" href="#__codelineno-24-3"></a>  "ietf-hardware:hardware": {
-<a id="__codelineno-24-4" name="__codelineno-24-4" href="#__codelineno-24-4"></a>    "component": [
-<a id="__codelineno-24-5" name="__codelineno-24-5" href="#__codelineno-24-5"></a>      {
-<a id="__codelineno-24-6" name="__codelineno-24-6" href="#__codelineno-24-6"></a>        "name": "product",
-<a id="__codelineno-24-7" name="__codelineno-24-7" href="#__codelineno-24-7"></a>        "class": "infix-hardware:vpd",
-<a id="__codelineno-24-8" name="__codelineno-24-8" href="#__codelineno-24-8"></a>        "serial-num": "12345",
-<a id="__codelineno-24-9" name="__codelineno-24-9" href="#__codelineno-24-9"></a>        "model-name": "Switch2010",
-<a id="__codelineno-24-10" name="__codelineno-24-10" href="#__codelineno-24-10"></a>        "mfg-date": "2024-01-30T16:42:37+00:00",
-<a id="__codelineno-24-11" name="__codelineno-24-11" href="#__codelineno-24-11"></a>        "infix-hardware:vpd-data": {
-<a id="__codelineno-24-12" name="__codelineno-24-12" href="#__codelineno-24-12"></a>          "product-name": "Switch2010",
-<a id="__codelineno-24-13" name="__codelineno-24-13" href="#__codelineno-24-13"></a>          "part-number": "ABC123-001",
-<a id="__codelineno-24-14" name="__codelineno-24-14" href="#__codelineno-24-14"></a>          "serial-number": "007",
-<a id="__codelineno-24-15" name="__codelineno-24-15" href="#__codelineno-24-15"></a>          "mac-address": "00:53:00:01:23:45",
-<a id="__codelineno-24-16" name="__codelineno-24-16" href="#__codelineno-24-16"></a>          "manufacture-date": "01/30/2024 16:42:37",
-<a id="__codelineno-24-17" name="__codelineno-24-17" href="#__codelineno-24-17"></a>          "num-macs": 11,
-<a id="__codelineno-24-18" name="__codelineno-24-18" href="#__codelineno-24-18"></a>          "manufacturer": "ACME Production",
-<a id="__codelineno-24-19" name="__codelineno-24-19" href="#__codelineno-24-19"></a>          "vendor": "SanFran Networks"
-<a id="__codelineno-24-20" name="__codelineno-24-20" href="#__codelineno-24-20"></a>        }
-<a id="__codelineno-24-21" name="__codelineno-24-21" href="#__codelineno-24-21"></a>      },
-<a id="__codelineno-24-22" name="__codelineno-24-22" href="#__codelineno-24-22"></a>      {
-<a id="__codelineno-24-23" name="__codelineno-24-23" href="#__codelineno-24-23"></a>        "name": "USB",
-<a id="__codelineno-24-24" name="__codelineno-24-24" href="#__codelineno-24-24"></a>        "class": "infix-hardware:usb",
-<a id="__codelineno-24-25" name="__codelineno-24-25" href="#__codelineno-24-25"></a>        "state": {
-<a id="__codelineno-24-26" name="__codelineno-24-26" href="#__codelineno-24-26"></a>          "admin-state": "unlocked",
-<a id="__codelineno-24-27" name="__codelineno-24-27" href="#__codelineno-24-27"></a>          "oper-state": "enabled"
-<a id="__codelineno-24-28" name="__codelineno-24-28" href="#__codelineno-24-28"></a>        }
-<a id="__codelineno-24-29" name="__codelineno-24-29" href="#__codelineno-24-29"></a>      }
-<a id="__codelineno-24-30" name="__codelineno-24-30" href="#__codelineno-24-30"></a>    ]
-<a id="__codelineno-24-31" name="__codelineno-24-31" href="#__codelineno-24-31"></a>  }
-<a id="__codelineno-24-32" name="__codelineno-24-32" href="#__codelineno-24-32"></a>}
-<a id="__codelineno-24-33" name="__codelineno-24-33" href="#__codelineno-24-33"></a>~$
+<div class="highlight"><pre><span></span><code><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a>~$ ssh admin@example.local 'sysrepocfg -X -fjson -d operational -x /ietf-hardware:hardware'
+<a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a>{
+<a id="__codelineno-23-3" name="__codelineno-23-3" href="#__codelineno-23-3"></a>  "ietf-hardware:hardware": {
+<a id="__codelineno-23-4" name="__codelineno-23-4" href="#__codelineno-23-4"></a>    "component": [
+<a id="__codelineno-23-5" name="__codelineno-23-5" href="#__codelineno-23-5"></a>      {
+<a id="__codelineno-23-6" name="__codelineno-23-6" href="#__codelineno-23-6"></a>        "name": "product",
+<a id="__codelineno-23-7" name="__codelineno-23-7" href="#__codelineno-23-7"></a>        "class": "infix-hardware:vpd",
+<a id="__codelineno-23-8" name="__codelineno-23-8" href="#__codelineno-23-8"></a>        "serial-num": "12345",
+<a id="__codelineno-23-9" name="__codelineno-23-9" href="#__codelineno-23-9"></a>        "model-name": "Switch2010",
+<a id="__codelineno-23-10" name="__codelineno-23-10" href="#__codelineno-23-10"></a>        "mfg-date": "2024-01-30T16:42:37+00:00",
+<a id="__codelineno-23-11" name="__codelineno-23-11" href="#__codelineno-23-11"></a>        "infix-hardware:vpd-data": {
+<a id="__codelineno-23-12" name="__codelineno-23-12" href="#__codelineno-23-12"></a>          "product-name": "Switch2010",
+<a id="__codelineno-23-13" name="__codelineno-23-13" href="#__codelineno-23-13"></a>          "part-number": "ABC123-001",
+<a id="__codelineno-23-14" name="__codelineno-23-14" href="#__codelineno-23-14"></a>          "serial-number": "007",
+<a id="__codelineno-23-15" name="__codelineno-23-15" href="#__codelineno-23-15"></a>          "mac-address": "00:53:00:01:23:45",
+<a id="__codelineno-23-16" name="__codelineno-23-16" href="#__codelineno-23-16"></a>          "manufacture-date": "01/30/2024 16:42:37",
+<a id="__codelineno-23-17" name="__codelineno-23-17" href="#__codelineno-23-17"></a>          "num-macs": 11,
+<a id="__codelineno-23-18" name="__codelineno-23-18" href="#__codelineno-23-18"></a>          "manufacturer": "ACME Production",
+<a id="__codelineno-23-19" name="__codelineno-23-19" href="#__codelineno-23-19"></a>          "vendor": "SanFran Networks"
+<a id="__codelineno-23-20" name="__codelineno-23-20" href="#__codelineno-23-20"></a>        }
+<a id="__codelineno-23-21" name="__codelineno-23-21" href="#__codelineno-23-21"></a>      },
+<a id="__codelineno-23-22" name="__codelineno-23-22" href="#__codelineno-23-22"></a>      {
+<a id="__codelineno-23-23" name="__codelineno-23-23" href="#__codelineno-23-23"></a>        "name": "USB",
+<a id="__codelineno-23-24" name="__codelineno-23-24" href="#__codelineno-23-24"></a>        "class": "infix-hardware:usb",
+<a id="__codelineno-23-25" name="__codelineno-23-25" href="#__codelineno-23-25"></a>        "state": {
+<a id="__codelineno-23-26" name="__codelineno-23-26" href="#__codelineno-23-26"></a>          "admin-state": "unlocked",
+<a id="__codelineno-23-27" name="__codelineno-23-27" href="#__codelineno-23-27"></a>          "oper-state": "enabled"
+<a id="__codelineno-23-28" name="__codelineno-23-28" href="#__codelineno-23-28"></a>        }
+<a id="__codelineno-23-29" name="__codelineno-23-29" href="#__codelineno-23-29"></a>      }
+<a id="__codelineno-23-30" name="__codelineno-23-30" href="#__codelineno-23-30"></a>    ]
+<a id="__codelineno-23-31" name="__codelineno-23-31" href="#__codelineno-23-31"></a>  }
+<a id="__codelineno-23-32" name="__codelineno-23-32" href="#__codelineno-23-32"></a>}
+<a id="__codelineno-23-33" name="__codelineno-23-33" href="#__codelineno-23-33"></a>~$
 </code></pre></div>
 
 
