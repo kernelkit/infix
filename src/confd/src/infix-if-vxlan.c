@@ -6,6 +6,7 @@
 int vxlan_gen(struct lyd_node *dif, struct lyd_node *cif, FILE *ip)
 {
 	struct lyd_node *vxlan = NULL;
+	const char *ttl, *tos;
 
 	vxlan = lydx_get_descendant(lyd_child(cif), "vxlan", NULL);
 	if (!vxlan)
@@ -17,6 +18,14 @@ int vxlan_gen(struct lyd_node *dif, struct lyd_node *cif, FILE *ip)
 		lydx_get_cattr(vxlan, "local"),
 		lydx_get_cattr(vxlan, "remote"),
 		lydx_get_cattr(vxlan, "remote-port"));
+
+	ttl = lydx_get_cattr(vxlan, "ttl");
+	if (ttl)
+		fprintf(ip, " ttl %s", ttl);
+
+	tos = lydx_get_cattr(vxlan, "tos");
+	if (tos)
+		fprintf(ip, " tos %s", tos);
 
 	link_gen_address(cif, ip);
 

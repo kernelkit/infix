@@ -106,6 +106,60 @@ configuration, see [Routing Configuration](routing.md).
 > overhead (typically 24 bytes for IPv4, 44 bytes for IPv6) to avoid
 > fragmentation issues.
 
+
+### Advanced Tunnel Settings
+
+All tunnel types support common parameters for controlling tunnel behavior
+and performance.
+
+#### Time To Live (TTL)
+
+The TTL setting controls the Time To Live value for the outer tunnel packets.
+By default, tunnels use a fixed TTL of 64, which allows packets to traverse
+multiple hops between tunnel endpoints.
+
+```
+admin@example:/config/> edit interface gre0
+admin@example:/config/interface/gre0/> set gre ttl 255
+admin@example:/config/interface/gre0/> leave
+```
+
+Valid values are 1-255, or the special value `inherit` which copies the TTL
+from the encapsulated packet.
+
+> [!IMPORTANT]
+> The `inherit` mode can cause problems with routing protocols like OSPF
+> that use TTL=1 for their packets.  For tunnels carrying routing protocols,
+> always use a fixed TTL value (typically 64 or 255).
+
+#### Type of Service (ToS)
+
+The ToS setting controls QoS marking for tunnel traffic:
+
+```
+admin@example:/config/> edit interface gre0
+admin@example:/config/interface/gre0/> set gre tos 0x10
+admin@example:/config/interface/gre0/> leave
+```
+
+Valid values are 0-255 for fixed ToS/DSCP marking, or `inherit` (default)
+to copy the ToS value from the encapsulated packet.
+
+#### Path MTU Discovery (GRE only)
+
+The `pmtu-discovery` setting can be used to control the Path MTU Discovery on
+GRE tunnels.  When enabled (default), the tunnel respects the Don't Fragment
+(DF) bit and performs PMTU discovery:
+
+```
+admin@example:/config/> edit interface gre0
+admin@example:/config/interface/gre0/> set gre pmtudisc false
+admin@example:/config/interface/gre0/> leave
+```
+
+Disabling PMTU discovery may be necessary in networks with broken ICMP
+filtering but can lead to suboptimal performance and fragmentation.
+
 ## Virtual eXtensible Local Area Network (VXLAN)
 
 VXLAN is a network virtualization technology that encapsulates Layer 2
@@ -116,6 +170,10 @@ isolated networks.
 Infix supports both IPv4 and IPv6 for VXLAN tunnel endpoints.
 
 ### Basic VXLAN Configuration
+
+> [!TIP]
+> If you name your VXLAN interface `vxlanN`, where `N` is a number, the
+> CLI infers the interface type automatically.
 
 ```
 admin@example:/> configure
@@ -149,6 +207,6 @@ admin@example:/>
 The remote-port setting allows interoperability with systems using
 non-standard VXLAN ports.
 
-> [!TIP]
-> If you name your VXLAN interface `vxlanN`, where `N` is a number, the
-> CLI infers the interface type automatically.
+> [!NOTE]
+> VXLAN tunnels also support the `ttl` and `tos` settings described in
+> the [Advanced Tunnel Settings](#advanced-tunnel-settings) section above.
