@@ -20,6 +20,10 @@ All notable changes to the project are documented in this file.
      the [`latest-boot` release][lastest-boot] tag
    - The `utils/mkimage.sh` script now supports fetching the bootloader
    - The raspberrypi-rpi64 board's bootloader is now aptly named rpi64
+- Add support for configuring TTL, ToS/DSCP, and Path MTU Discovery on GRE and
+  VXLAN tunnels.  This also changes the default TTL of tunnels to 64, from the
+  kernel default (*inherit*), which in turn fixes reported issues with dropped
+  OSPF Hello frames in GRE tunnels
 
 ### Fixes
 
