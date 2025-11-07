@@ -6,6 +6,7 @@
 int gre_gen(struct lyd_node *dif, struct lyd_node *cif, FILE *ip)
 {
 	const char *local, *remote, *ttl, *tos, *pmtudisc;
+	const char *ifname = lydx_get_cattr(cif, "name");
 	struct lyd_node *gre;
 	int ipv6;
 
@@ -15,8 +16,7 @@ int gre_gen(struct lyd_node *dif, struct lyd_node *cif, FILE *ip)
 
 	ipv6 = !!strstr(local, ":");
 
-	fprintf(ip, "link add name %s",
-		lydx_get_cattr(cif, "name"));
+	fprintf(ip, "link add name %s", ifname);
 
 	switch (iftype_from_iface(cif)) {
 	case IFT_GRE:
@@ -45,5 +45,9 @@ int gre_gen(struct lyd_node *dif, struct lyd_node *cif, FILE *ip)
 		fprintf(ip, " nopmtudisc");
 
 	fputc('\n', ip);
+
+	/* GRE interfaces don't have IFF_MULTICAST by default */
+	fprintf(ip, "link set dev %s multicast on\n", ifname);
+
 	return 0;
 }
