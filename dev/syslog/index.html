@@ -1719,18 +1719,17 @@ E.g., a USB stick with a log partition (named/labeled: "log").  Below is
 an example.</p>
 <p>For a list of available log facilities, see the table in a later section.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>admin@example:/&gt; configure
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>admin@example:/config/&gt; edit syslog
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>admin@example:/config/syslog/&gt; edit actions log-file file:/media/log/mylog
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>admin@example:/config/syslog/actions/log-file/file:/media/log/mylog/&gt; set facility-list
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>      all    audit     auth authpriv  console     cron    cron2   daemon      ftp     kern
-<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>   local0   local1   local2   local3   local4   local5   local6   local7      lpr     mail
-<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>     news      ntp   syslog     user     uucp
-<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>admin@example:/config/syslog/actions/log-file/file:/media/log/mylog/&gt; set facility-list all severity
-<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>     alert       all  critical     debug emergency     error      info      none    notice   warning
-<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>admin@example:/config/syslog/actions/log-file/file:/media/log/mylog/&gt; set facility-list all severity critical
-<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>admin@example:/config/syslog/actions/log-file/file:/media/log/mylog/&gt; set facility-list mail severity warning
-<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>admin@example:/config/syslog/actions/log-file/file:/media/log/mylog/&gt; leave
-<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>admin@example:/&gt;
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>admin@example:/config/&gt; edit syslog actions log-file file:/media/log/mylog
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>admin@example:/config/syslog/…/file:/media/log/mylog/&gt; set facility-list
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>      all    audit     auth authpriv  console     cron    cron2   daemon      ftp     kern
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>   local0   local1   local2   local3   local4   local5   local6   local7      lpr     mail
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>     news      ntp   syslog     user     uucp
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>admin@example:/config/syslog/…/file:/media/log/mylog/&gt; set facility-list all severity
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>     alert       all  critical     debug emergency     error      info      none    notice   warning
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>admin@example:/config/syslog/…/file:/media/log/mylog/&gt; set facility-list all severity critical
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>admin@example:/config/syslog/…/file:/media/log/mylog/&gt; set facility-list mail severity warning
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>admin@example:/config/syslog/…/file:/media/log/mylog/&gt; leave
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>admin@example:/&gt;
 </code></pre></div>
 <div class="admonition tip">
 <p class="admonition-title">Important</p>
@@ -1813,11 +1812,11 @@ default for compatibility reasons, and is recommended since the device
 may not have proper time, making it better for the remote log server to
 perform time stamping at the time of arrival.</p>
 <p>Configuring the log format is the same for log files and remotes:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>admin@example:/config/&gt; edit syslog actions log-file file:foobar 
-<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>admin@example:/config/syslog/actions/log-file/file:foobar/&gt; set log-format 
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>admin@example:/config/&gt; edit syslog actions log-file file:foobar
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>admin@example:/config/syslog/…/file:foobar/&gt; set log-format
 <a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>                  bsd               rfc3164              rfc5424
-<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>admin@example:/config/syslog/actions/log-file/file:foobar/&gt; set log-format rfc5424 
-<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>admin@example:/config/syslog/actions/log-file/file:foobar/&gt; leave
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>admin@example:/config/syslog/…/file:foobar/&gt; set log-format rfc5424
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>admin@example:/config/syslog/…/file:foobar/&gt; leave
 <a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>admin@example:/&gt;
 </code></pre></div>
 <h2 id="log-to-remote-server">Log to Remote Server<a class="headerlink" href="#log-to-remote-server" title="Permanent link">¶</a></h2>
@@ -1834,13 +1833,13 @@ up, as well as local policy.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>admin@example:/config/&gt; edit syslog
 <a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>       actions file-rotation        server
 <a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>admin@example:/config/&gt; edit syslog actions destination moon
-<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>admin@example:/config/syslog/actions/destination/moon/&gt; set
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>admin@example:/config/syslog/…/moon/&gt; set
 <a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a> facility-list    log-format           udp
-<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>admin@example:/config/syslog/actions/destination/moon/&gt; set udp
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>admin@example:/config/syslog/…/moon/&gt; set udp
 <a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a> address    port
-<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>admin@example:/config/syslog/actions/destination/moon/&gt; set udp address 192.168.0.12
-<a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a>admin@example:/config/syslog/actions/destination/moon/&gt; set facility-list container severity all
-<a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a>admin@example:/config/syslog/actions/destination/moon/&gt; leave
+<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>admin@example:/config/syslog/…/moon/&gt; set udp address 192.168.0.12
+<a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a>admin@example:/config/syslog/…/moon/&gt; set facility-list container severity all
+<a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a>admin@example:/config/syslog/…/moon/&gt; leave
 <a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a>admin@example:/&gt;
 </code></pre></div>
 <div class="admonition tip">

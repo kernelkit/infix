@@ -1687,10 +1687,9 @@ at any level: global, subnet, or per-host.</p>
 <p>The following example configures a DHCP server for subnet 192.168.2.0/24
 with an address pool:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>admin@example:/&gt; configure
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>admin@example:/config/&gt; edit dhcp-server
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>admin@example:/config/dhcp-server/&gt; edit subnet 192.168.2.0/24
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>admin@example:/config/dhcp-server/subnet/192.168.2.0/24/&gt; set pool start-address 192.168.2.100 end-address 192.168.2.200
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>admin@example:/config/dhcp-server/subnet/192.168.2.0/24/&gt; leave
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>admin@example:/config/&gt; edit dhcp-server subnet 192.168.2.0/24
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>admin@example:/config/dhcp-server/…/192.168.2.0/24/&gt; set pool start-address 192.168.2.100 end-address 192.168.2.200
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>admin@example:/config/dhcp-server/…/192.168.2.0/24/&gt; leave
 </code></pre></div>
 <p>When setting up the server from the CLI, the system automatically adds a
 few default DHCP options that will be sent to clients: both DNS server
@@ -1729,18 +1728,18 @@ may also want to set up routing.</p>
 <h2 id="static-host-assignment">Static Host Assignment<a class="headerlink" href="#static-host-assignment" title="Permanent link">¶</a></h2>
 <p>To reserve specific IP addresses for clients based on their MAC address,
 hostname, or client ID:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>admin@example:/config/dhcp-server/subnet/192.168.2.0/24/&gt; edit host 192.168.2.10
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>admin@example:/config/dhcp-server/subnet/192.168.2.0/24/host/192.168.2.10/&gt; set match mac-address 00:11:22:33:44:55
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>admin@example:/config/dhcp-server/subnet/192.168.2.0/24/host/192.168.2.10/&gt; set hostname printer
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>admin@example:/config/dhcp-server/subnet/192.168.2.0/24/host/192.168.2.10/&gt; leave
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>admin@example:/config/dhcp-server/…/192.168.2.0/24/&gt; edit host 192.168.2.10
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>admin@example:/config/dhcp-server/…/192.168.2.10/&gt; set match mac-address 00:11:22:33:44:55
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>admin@example:/config/dhcp-server/…/192.168.2.10/&gt; set hostname printer
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>admin@example:/config/dhcp-server/…/192.168.2.10/&gt; leave
 </code></pre></div>
 <p>Match hosts using a client identifier instead of MAC address:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>admin@example:/config/dhcp-server/subnet/192.168.1.0/24/&gt; edit host 192.168.1.50
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>admin@example:/config/dhcp-server/subnet/192.168.1.0/24/host/192.168.1.50/&gt; edit match
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>admin@example:/config/dhcp-server/subnet/192.168.1.0/24/host/192.168.1.50/match/&gt; set client-id hex c0:ff:ee
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>admin@example:/config/dhcp-server/subnet/192.168.1.0/24/host/192.168.1.50/match/&gt; leave
-<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>admin@example:/config/dhcp-server/subnet/192.168.1.0/24/host/192.168.1.50/&gt; set lease-time infinite
-<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>admin@example:/config/dhcp-server/subnet/192.168.1.0/24/host/192.168.1.50/&gt; leave
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>admin@example:/config/dhcp-server/…/192.168.1.0/24/&gt; edit host 192.168.1.50
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>admin@example:/config/dhcp-server/…/192.168.1.50/&gt; edit match
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>admin@example:/config/dhcp-server/…/match/&gt; set client-id hex c0:ff:ee
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>admin@example:/config/dhcp-server/…/match/&gt; leave
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>admin@example:/config/dhcp-server/…/192.168.1.50/&gt; set lease-time infinite
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>admin@example:/config/dhcp-server/…/192.168.1.50/&gt; leave
 </code></pre></div>
 <p>The <code>hex</code> prefix here ensures matching of client ID is done using the
 hexadecimal octets <code>c0:ff:ee</code>, three bytes.  Without the prefix the

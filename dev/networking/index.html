@@ -3881,17 +3881,17 @@ control plane protocol.  For our examples we use the instance name
 <code>default</code>, you can use any name.</p>
 <p>For a route with destination 192.168.200.0/24 via 192.168.1.1:</p>
 <div class="highlight"><pre><span></span><code>admin@example:/&gt; configure
-admin@example:/config/&gt; edit routing control-plane-protocol static name default
-admin@example:/config/routing/control-plane-protocol/static/name/default/&gt; set ipv4 route 192.168.200.0/24 next-hop next-hop-address 192.168.1.1
-admin@example:/config/routing/control-plane-protocol/static/name/default/&gt; leave
+admin@example:/config/&gt; edit routing control-plane-protocol static name default ipv4
+admin@example:/config/routing/…/ipv4/&gt; set route 192.168.200.0/24 next-hop next-hop-address 192.168.1.1
+admin@example:/config/routing/…/ipv4/&gt; leave
 admin@example:/&gt;
 </code></pre></div>
 <p>For a "floating" static route with destination 10.0.0.0/16 via a backup
 router 192.168.1.1, using the highest possible distance:</p>
 <div class="highlight"><pre><span></span><code>admin@example:/&gt; configure
-admin@example:/config/&gt; edit routing control-plane-protocol static name default
-admin@example:/config/routing/control-plane-protocol/static/name/default/&gt; set ipv4 route 10.0.0.0/16 next-hop next-hop-address 192.168.1.1 route-preference 254
-admin@example:/config/routing/control-plane-protocol/static/name/default/&gt; leave
+admin@example:/config/&gt; edit routing control-plane-protocol static name default ipv4
+admin@example:/config/routing/…/ipv4/&gt; set route 10.0.0.0/16 next-hop next-hop-address 192.168.1.1 route-preference 254
+admin@example:/config/routing/…/ipv4/&gt; leave
 admin@example:/&gt;
 </code></pre></div>
 <div class="admonition tip">
@@ -3901,17 +3901,17 @@ interfaces you want to route between.</p>
 </div>
 <h3 id="ipv6-static-routes">IPv6 Static routes<a class="headerlink" href="#ipv6-static-routes" title="Permanent link">¶</a></h3>
 <div class="highlight"><pre><span></span><code>admin@example:/&gt; configure
-admin@example:/config/&gt; edit routing control-plane-protocol static name default
-admin@example:/config/routing/control-plane-protocol/static/name/default/&gt; set ipv6 route 2001:db8:3c4d:200::/64 next-hop next-hop-address 2001:db8:3c4d:1::1
-admin@example:/config/routing/control-plane-protocol/static/name/default/&gt; leave
+admin@example:/config/&gt; edit routing control-plane-protocol static name default ipv6
+admin@example:/config/routing/…/ipv6/&gt; set route 2001:db8:3c4d:200::/64 next-hop next-hop-address 2001:db8:3c4d:1::1
+admin@example:/config/routing/…/ipv6/&gt; leave
 admin@example:/&gt;
 </code></pre></div>
 <h3 id="ospfv2-routing">OSPFv2 Routing<a class="headerlink" href="#ospfv2-routing" title="Permanent link">¶</a></h3>
 <p>The system supports OSPF dynamic routing for IPv4, i.e., OSPFv2.  To
 enable OSPF and set one active interface in area 0:</p>
-<div class="highlight"><pre><span></span><code>admin@example:/config/&gt; edit routing control-plane-protocol ospfv2 name default
-admin@example:/config/routing/control-plane-protocol/ospfv2/name/default/&gt; set ospf area 0.0.0.0 interface e0 enabled
-admin@example:/config/routing/control-plane-protocol/ospfv2/name/default/&gt; leave
+<div class="highlight"><pre><span></span><code>admin@example:/config/&gt; edit routing control-plane-protocol ospfv2 name default ospf
+admin@example:/config/routing/…/ospf/&gt; set area 0.0.0.0 interface e0 enabled
+admin@example:/config/routing/…/ospf/&gt; leave
 admin@example:/&gt;
 </code></pre></div>
 <div class="admonition tip">
@@ -3922,18 +3922,18 @@ interfaces you want to route between.</p>
 <h4 id="ospf-area-types">OSPF area types<a class="headerlink" href="#ospf-area-types" title="Permanent link">¶</a></h4>
 <p>In addition to <em>regular</em> OSPF areas, area types <em>NSSA</em> and <em>Stub</em> are
 also supported.  To configure an NSSA area with summary routes:</p>
-<div class="highlight"><pre><span></span><code>admin@example:/config/&gt; edit routing control-plane-protocol ospfv2 name default
-admin@example:/config/routing/control-plane-protocol/ospfv2/name/default/&gt; set ospf area 0.0.0.1 area-type nssa-area
-admin@example:/config/routing/control-plane-protocol/ospfv2/name/default/&gt; set ospf area 0.0.0.1 summary true
-admin@example:/config/routing/control-plane-protocol/ospfv2/name/default/&gt; leave
+<div class="highlight"><pre><span></span><code>admin@example:/config/&gt; edit routing control-plane-protocol ospfv2 name default ospf
+admin@example:/config/routing/…/ospf/&gt; set area 0.0.0.1 area-type nssa-area
+admin@example:/config/routing/…/ospf/&gt; set area 0.0.0.1 summary true
+admin@example:/config/routing/…/ospf/&gt; leave
 admin@example:/&gt;
 </code></pre></div>
 <h4 id="bidirectional-forwarding-detection-bfd">Bidirectional Forwarding Detection (BFD)<a class="headerlink" href="#bidirectional-forwarding-detection-bfd" title="Permanent link">¶</a></h4>
 <p>It is possible to enable BFD per OSPF interface to speed up detection of
 link loss.</p>
-<div class="highlight"><pre><span></span><code>admin@example:/config/&gt; edit routing control-plane-protocol ospfv2 name default
-admin@example:/config/routing/control-plane-protocol/ospfv2/name/default/ospf/&gt; set area 0.0.0.0 interface e0 bfd enabled true
-admin@example:/config/routing/control-plane-protocol/ospfv2/name/default/&gt; leave
+<div class="highlight"><pre><span></span><code>admin@example:/config/&gt; edit routing control-plane-protocol ospfv2 name default ospf
+admin@example:/config/routing/…/ospf/&gt; set area 0.0.0.0 interface e0 bfd enabled true
+admin@example:/config/routing/…/ospf/&gt; leave
 admin@example:/&gt;
 </code></pre></div>
 <h4 id="ospf-interface-settings">OSPF interface settings<a class="headerlink" href="#ospf-interface-settings" title="Permanent link">¶</a></h4>
@@ -3941,9 +3941,9 @@ admin@example:/&gt;
 and BFD for OSPF per interface (<em>bfd enabled true</em>).  These and other
 OSPF interface settings are done in context of an OSFP area, e.g., <em>area
 0.0.0.0</em>.  Available commands can be listed using the <code>?</code> mark.</p>
-<div class="highlight"><pre><span></span><code>admin@example:/config/routing/control-plane-protocol/ospfv2/name/default/&gt; edit ospf area 0.0.0.0
-admin@example:/config/routing/control-plane-protocol/ospfv2/name/default/ospf/area/0.0.0.0/&gt; edit interface e0
-admin@example:/config/routing/control-plane-protocol/ospfv2/name/default/ospf/area/0.0.0.0/interface/e0/&gt; set ?
+<div class="highlight"><pre><span></span><code>admin@example:/config/routing/…/&gt; edit ospf area 0.0.0.0
+admin@example:/config/routing/…/ospf/area/0.0.0.0/&gt; edit interface e0
+admin@example:/config/routing/…/ospf/area/0.0.0.0/interface/e0/&gt; set ?
   bfd                  BFD interface configuration.
   cost                 Interface's cost.
   dead-interval        Interval after which a neighbor is declared down
@@ -3953,23 +3953,23 @@ admin@example:/config/routing/control-plane-protocol/ospfv2/name/default/ospf/ar
   passive              Enables/disables a passive interface.  A passive
   retransmit-interval  Interval between retransmitting unacknowledged Link
   transmit-delay       Estimated time needed to transmit Link State Update
-admin@example:/config/routing/control-plane-protocol/ospfv2/name/default/ospf/area/0.0.0.0/interface/e0/&gt; set
+admin@example:/config/routing/…/ospf/area/0.0.0.0/interface/e0/&gt; set
 </code></pre></div>
 <p>For example, setting the OSPF <em>interface type</em> to <em>point-to-point</em> for
 an Ethernet interface can be done as follows.</p>
-<div class="highlight"><pre><span></span><code>admin@example:/config/routing/control-plane-protocol/ospfv2/name/default/ospf/area/0.0.0.0/interface/e0/&gt; set interface-type point-to-point
-admin@example:/config/routing/control-plane-protocol/ospfv2/name/default/ospf/area/0.0.0.0/interface/e0/&gt;
+<div class="highlight"><pre><span></span><code>admin@example:/config/routing/…/ospf/area/0.0.0.0/interface/e0/&gt; set interface-type point-to-point
+admin@example:/config/routing/…/ospf/area/0.0.0.0/interface/e0/&gt;
 </code></pre></div>
 <h4 id="ospf-global-settings">OSPF global settings<a class="headerlink" href="#ospf-global-settings" title="Permanent link">¶</a></h4>
 <p>In addition to <em>area</em> and <em>interface</em> specific settings, OSPF provides
 global settings for route redistribution and OSPF router identifier.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-35-1" name="__codelineno-35-1" href="#__codelineno-35-1"></a>admin@example:/config/&gt; edit routing control-plane-protocol ospfv2 name default ospf
-<a id="__codelineno-35-2" name="__codelineno-35-2" href="#__codelineno-35-2"></a>admin@example:/config/routing/control-plane-protocol/ospfv2/name/default/ospf/&gt; set ?
+<a id="__codelineno-35-2" name="__codelineno-35-2" href="#__codelineno-35-2"></a>admin@example:/config/routing/…/ospf/&gt; set ?
 <a id="__codelineno-35-3" name="__codelineno-35-3" href="#__codelineno-35-3"></a>  area                     List of OSPF areas.
 <a id="__codelineno-35-4" name="__codelineno-35-4" href="#__codelineno-35-4"></a>  default-route-advertise  Distribute default route to network
 <a id="__codelineno-35-5" name="__codelineno-35-5" href="#__codelineno-35-5"></a>  explicit-router-id       Defined in RFC 2328.  A 32-bit number
 <a id="__codelineno-35-6" name="__codelineno-35-6" href="#__codelineno-35-6"></a>  redistribute             Redistribute protocols into OSPF
-<a id="__codelineno-35-7" name="__codelineno-35-7" href="#__codelineno-35-7"></a>admin@example:/config/routing/control-plane-protocol/ospfv2/name/default/ospf/&gt; set
+<a id="__codelineno-35-7" name="__codelineno-35-7" href="#__codelineno-35-7"></a>admin@example:/config/routing/…/ospf/&gt; set
 </code></pre></div>
 <ul>
 <li>Explicit router ID: By default the router will pick an IP address
