@@ -1,6 +1,0 @@
-cat <<EOF
-   {
-        "name": "wifi0",
-        "type": "infix-if-type:wifi",
-   }
-EOF
