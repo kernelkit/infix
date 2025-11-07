@@ -36,6 +36,15 @@ on:
         required: false
         type: boolean
         default: true
+      pre_build_script:
+        required: false
+        type: string
+        default: ''
+        description: 'Optional script to run after checkout (for spin customization)'
+    secrets:
+      CHECKOUT_TOKEN:
+        required: false
+        description: 'Token for cross-repository access'
 
 env:
   NAME: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.name || inputs.name }}
@@ -77,6 +86,16 @@ jobs:
           clean: true
           fetch-depth: 0
           submodules: recursive
+          token: ${{ secrets.CHECKOUT_TOKEN || github.token }}
+
+      - name: Run pre-build script
+        if: ${{ inputs.pre_build_script != '' }}
+        run: |
+          cat > ./pre-build.sh << 'EOF'
+          ${{ inputs.pre_build_script }}
+          EOF
+          chmod +x ./pre-build.sh
+          bash ./pre-build.sh
 
       - name: Set Build Variables
         id: vars

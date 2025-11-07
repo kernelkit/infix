@@ -29,6 +29,10 @@ on:
         required: false
         type: string
         default: 'test'
+    secrets:
+      CHECKOUT_TOKEN:
+        required: false
+        description: 'Token for cross-repository access'
 
 env:
   TARGET: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.target || inputs.target }}
@@ -59,6 +63,7 @@ jobs:
           clean: true
           fetch-depth: 0
           submodules: recursive
+          token: ${{ secrets.CHECKOUT_TOKEN || github.token }}
 
       - name: Set Build Variables
         id: vars
