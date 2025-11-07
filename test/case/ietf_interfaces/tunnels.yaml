@@ -4,3 +4,6 @@
 
 - name: Tunnel interface bridged with physical
   suite: tunnel_bridged/test.yaml
+
+- name: Tunnel TTL verification
+  suite: tunnel_ttl/test.yaml

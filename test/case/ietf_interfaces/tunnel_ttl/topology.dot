@@ -1,0 +1,41 @@
+graph "tunnel-ttl-3dut" {
+	layout="neato";
+	overlap="false";
+	esep="+60";
+
+	node [shape=record, fontname="DejaVu Sans Mono, Book"];
+	edge [color="cornflowerblue", penwidth="2", fontname="DejaVu Serif, Book"];
+
+	PC [
+	    label="<mgmt1> mgmt1 | <west> west | <mgmt2> mgmt2 | <mgmt3> mgmt3 | <east> east | { PC }"
+	    pos="10,0!",
+	    requires="controller",
+	];
+
+	R1 [
+	    label="R1 | <mgmt> mgmt | <west> west | <east> east",
+	    pos="0, -5!",
+	    requires="infix",
+	];
+
+	R2 [
+	    label="<west> west |  R2 | <mgmt> mgmt | <east> east",
+	    pos="10, -5!",
+	    requires="infix",
+	];
+
+	R3 [
+	    label="<west> west |  R3 | <mgmt> mgmt | <east> east",
+	    pos="20, -5!",
+	    requires="infix",
+	];
+
+	PC:mgmt1 -- R1:mgmt [requires="mgmt", color="lightgray"]
+	PC:mgmt2 -- R2:mgmt [requires="mgmt", color="lightgray"]
+	PC:mgmt3 -- R3:mgmt [requires="mgmt", color="lightgray"]
+
+	PC:west -- R1:west [headlabel=".1", label="192.168.10.0/24", taillabel=".2", labeldistance=2, fontcolor="black", color="black"]
+	R1:east -- R2:west [headlabel=".1", label="192.168.50.0/24", taillabel=".2", labeldistance=2, fontcolor="black", color="blue"]
+	R2:east -- R3:west [headlabel=".1", label="192.168.60.0/24", taillabel=".2", labeldistance=2, fontcolor="black", color="blue"]
+	R3:east -- PC:east [headlabel=".1", label="192.168.70.0/24", taillabel=".2", labeldistance=2, fontcolor="black", color="black"]
+}
