@@ -20,6 +20,11 @@ submodule infix-if-vxlan {
   contact      "kernelkit@googlegroups.com";
   description  "VXLAN tunnel extension for ietf-interfaces";
 
+  revision 2025-11-06 {
+    description "Use new tunnel-common grouping for local, remote, ttl, and tos.";
+    reference "internal";
+  }
+
   revision 2025-01-13 {
    description "Initial revision.";
     reference "internal";
@@ -36,18 +41,19 @@ submodule infix-if-vxlan {
     }
     description "Augments the interface model with VXLAN tunnels.";
     container vxlan {
-      uses local-remote;
+      uses tunnel-common;
+
       leaf remote-port {
         type inet-types:port-number;
         default 4789;
         description
-          "VXLAN destination UDP port. Valid range: 0..65535. Default is 4789 (IANA-assigned VXLAN UDP port).";
+          "VXLAN destination UDP port, valid range: 0..65535.";
       }
       leaf vni {
         type vni;
         mandatory true;
         description
-          "VXLAN Network Identifier (VNI), valid values are 0 to 16777215.";
+          "VXLAN Network Identifier (VNI), valid range: 0..16777215.";
       }
     }
   }

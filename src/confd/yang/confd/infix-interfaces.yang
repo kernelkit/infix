@@ -33,6 +33,11 @@ module infix-interfaces {
   contact      "kernelkit@googlegroups.com";
   description  "Linux bridge and lag extensions for ietf-interfaces.";
 
+  revision 2025-11-06 {
+    description "Use new tunnel-common grouping for local, remote, ttl, and tos.";
+    reference "internal";
+  }
+
   revision 2025-06-17 {
     description "Add support for Wi-Fi client.";
     reference "internal";
@@ -106,14 +111,16 @@ module infix-interfaces {
     reference "internal";
   }
 
-  grouping local-remote {
-    description "Local address to use as source address";
+  grouping tunnel-common {
+    description "Common tunnel parameters applicable to all tunnel types.";
+
     leaf local {
       type inet:ip-address;
       mandatory true;
+      description "Local address to use as source address for the tunnel.";
     }
+
     leaf remote {
-      description "Peer address";
       type inet:ip-address;
       must "(contains(../local, ':') and contains(., ':'))
             or (not(contains(../local, ':')) and not(contains(., ':')))" {
@@ -121,6 +128,48 @@ module infix-interfaces {
           "Local and remote must be both IPv4 or both IPv6 addresses.";
       }
       mandatory true;
+      description "Remote peer address for the tunnel.";
+    }
+
+    leaf ttl {
+      type union {
+        type uint8 {
+          range "1..255";
+        }
+        type enumeration {
+          enum inherit {
+            description
+              "Copy TTL from inner packet (default kernel behavior).
+               WARNING: This can cause issues with protocols like OSPF
+               that use TTL=1 for their packets.";
+          }
+        }
+      }
+      default 64;
+      description
+        "Time To Live (TTL) for IPv4 or Hop Limit for IPv6 tunnel packets.
+         A fixed value (1-255) sets the outer packet TTL regardless of inner
+         packet TTL. The 'inherit' mode copies TTL from the encapsulated packet.
+
+         For OSPF and other routing protocols over tunnels, a fixed value
+         (typically 64 or 255) should be used to ensure packets can traverse
+         multiple hops between tunnel endpoints.";
+    }
+
+    leaf tos {
+      type union {
+        type uint8;
+        type enumeration {
+          enum inherit {
+            description "Copy ToS/DSCP from inner packet.";
+          }
+        }
+      }
+      default "inherit";
+      description
+        "Type of Service (IPv4) or Traffic Class (IPv6) for tunnel packets.
+         Can be a fixed value (0-255) for QoS marking, or 'inherit' to copy
+         from the encapsulated packet.";
     }
   }
 

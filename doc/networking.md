@@ -1264,18 +1264,18 @@ control plane protocol.  For our examples we use the instance name
 For a route with destination 192.168.200.0/24 via 192.168.1.1:
 
     admin@example:/> configure
-    admin@example:/config/> edit routing control-plane-protocol static name default
-    admin@example:/config/routing/control-plane-protocol/static/name/default/> set ipv4 route 192.168.200.0/24 next-hop next-hop-address 192.168.1.1
-    admin@example:/config/routing/control-plane-protocol/static/name/default/> leave
+    admin@example:/config/> edit routing control-plane-protocol static name default ipv4
+    admin@example:/config/routing/…/ipv4/> set route 192.168.200.0/24 next-hop next-hop-address 192.168.1.1
+    admin@example:/config/routing/…/ipv4/> leave
     admin@example:/>
 
 For a "floating" static route with destination 10.0.0.0/16 via a backup
 router 192.168.1.1, using the highest possible distance:
 
     admin@example:/> configure
-    admin@example:/config/> edit routing control-plane-protocol static name default
-    admin@example:/config/routing/control-plane-protocol/static/name/default/> set ipv4 route 10.0.0.0/16 next-hop next-hop-address 192.168.1.1 route-preference 254
-    admin@example:/config/routing/control-plane-protocol/static/name/default/> leave
+    admin@example:/config/> edit routing control-plane-protocol static name default ipv4
+    admin@example:/config/routing/…/ipv4/> set route 10.0.0.0/16 next-hop next-hop-address 192.168.1.1 route-preference 254
+    admin@example:/config/routing/…/ipv4/> leave
     admin@example:/>
 
 > [!TIP]
@@ -1286,9 +1286,9 @@ router 192.168.1.1, using the highest possible distance:
 ### IPv6 Static routes
 
     admin@example:/> configure
-    admin@example:/config/> edit routing control-plane-protocol static name default
-    admin@example:/config/routing/control-plane-protocol/static/name/default/> set ipv6 route 2001:db8:3c4d:200::/64 next-hop next-hop-address 2001:db8:3c4d:1::1
-    admin@example:/config/routing/control-plane-protocol/static/name/default/> leave
+    admin@example:/config/> edit routing control-plane-protocol static name default ipv6
+    admin@example:/config/routing/…/ipv6/> set route 2001:db8:3c4d:200::/64 next-hop next-hop-address 2001:db8:3c4d:1::1
+    admin@example:/config/routing/…/ipv6/> leave
     admin@example:/>
 
 
@@ -1297,9 +1297,9 @@ router 192.168.1.1, using the highest possible distance:
 The system supports OSPF dynamic routing for IPv4, i.e., OSPFv2.  To
 enable OSPF and set one active interface in area 0:
 
-    admin@example:/config/> edit routing control-plane-protocol ospfv2 name default
-    admin@example:/config/routing/control-plane-protocol/ospfv2/name/default/> set ospf area 0.0.0.0 interface e0 enabled
-    admin@example:/config/routing/control-plane-protocol/ospfv2/name/default/> leave
+    admin@example:/config/> edit routing control-plane-protocol ospfv2 name default ospf
+    admin@example:/config/routing/…/ospf/> set area 0.0.0.0 interface e0 enabled
+    admin@example:/config/routing/…/ospf/> leave
     admin@example:/>
 
 > [!TIP]
@@ -1312,10 +1312,10 @@ enable OSPF and set one active interface in area 0:
 In addition to *regular* OSPF areas, area types *NSSA* and *Stub* are
 also supported.  To configure an NSSA area with summary routes:
 
-    admin@example:/config/> edit routing control-plane-protocol ospfv2 name default
-    admin@example:/config/routing/control-plane-protocol/ospfv2/name/default/> set ospf area 0.0.0.1 area-type nssa-area
-    admin@example:/config/routing/control-plane-protocol/ospfv2/name/default/> set ospf area 0.0.0.1 summary true
-    admin@example:/config/routing/control-plane-protocol/ospfv2/name/default/> leave
+    admin@example:/config/> edit routing control-plane-protocol ospfv2 name default ospf
+    admin@example:/config/routing/…/ospf/> set area 0.0.0.1 area-type nssa-area
+    admin@example:/config/routing/…/ospf/> set area 0.0.0.1 summary true
+    admin@example:/config/routing/…/ospf/> leave
     admin@example:/>
 
 
@@ -1324,9 +1324,9 @@ also supported.  To configure an NSSA area with summary routes:
 It is possible to enable BFD per OSPF interface to speed up detection of
 link loss.
 
-    admin@example:/config/> edit routing control-plane-protocol ospfv2 name default
-    admin@example:/config/routing/control-plane-protocol/ospfv2/name/default/ospf/> set area 0.0.0.0 interface e0 bfd enabled true
-    admin@example:/config/routing/control-plane-protocol/ospfv2/name/default/> leave
+    admin@example:/config/> edit routing control-plane-protocol ospfv2 name default ospf
+    admin@example:/config/routing/…/ospf/> set area 0.0.0.0 interface e0 bfd enabled true
+    admin@example:/config/routing/…/ospf/> leave
     admin@example:/>
 
 
@@ -1337,9 +1337,9 @@ and BFD for OSPF per interface (*bfd enabled true*).  These and other
 OSPF interface settings are done in context of an OSFP area, e.g., *area
 0.0.0.0*.  Available commands can be listed using the `?` mark.
 
-    admin@example:/config/routing/control-plane-protocol/ospfv2/name/default/> edit ospf area 0.0.0.0
-    admin@example:/config/routing/control-plane-protocol/ospfv2/name/default/ospf/area/0.0.0.0/> edit interface e0
-    admin@example:/config/routing/control-plane-protocol/ospfv2/name/default/ospf/area/0.0.0.0/interface/e0/> set ?
+    admin@example:/config/routing/…/> edit ospf area 0.0.0.0
+    admin@example:/config/routing/…/ospf/area/0.0.0.0/> edit interface e0
+    admin@example:/config/routing/…/ospf/area/0.0.0.0/interface/e0/> set ?
       bfd                  BFD interface configuration.
       cost                 Interface's cost.
       dead-interval        Interval after which a neighbor is declared down
@@ -1349,13 +1349,13 @@ OSPF interface settings are done in context of an OSFP area, e.g., *area
       passive              Enables/disables a passive interface.  A passive
       retransmit-interval  Interval between retransmitting unacknowledged Link
       transmit-delay       Estimated time needed to transmit Link State Update
-    admin@example:/config/routing/control-plane-protocol/ospfv2/name/default/ospf/area/0.0.0.0/interface/e0/> set
+    admin@example:/config/routing/…/ospf/area/0.0.0.0/interface/e0/> set
 
 For example, setting the OSPF *interface type* to *point-to-point* for
 an Ethernet interface can be done as follows.
 
-    admin@example:/config/routing/control-plane-protocol/ospfv2/name/default/ospf/area/0.0.0.0/interface/e0/> set interface-type point-to-point
-    admin@example:/config/routing/control-plane-protocol/ospfv2/name/default/ospf/area/0.0.0.0/interface/e0/>
+    admin@example:/config/routing/…/ospf/area/0.0.0.0/interface/e0/> set interface-type point-to-point
+    admin@example:/config/routing/…/ospf/area/0.0.0.0/interface/e0/>
 
 #### OSPF global settings
 
@@ -1364,12 +1364,12 @@ global settings for route redistribution and OSPF router identifier.
 
 ```
 admin@example:/config/> edit routing control-plane-protocol ospfv2 name default ospf
-admin@example:/config/routing/control-plane-protocol/ospfv2/name/default/ospf/> set ?
+admin@example:/config/routing/…/ospf/> set ?
   area                     List of OSPF areas.
   default-route-advertise  Distribute default route to network
   explicit-router-id       Defined in RFC 2328.  A 32-bit number
   redistribute             Redistribute protocols into OSPF
-admin@example:/config/routing/control-plane-protocol/ospfv2/name/default/ospf/> set
+admin@example:/config/routing/…/ospf/> set
 ```
 
 - Explicit router ID: By default the router will pick an IP address

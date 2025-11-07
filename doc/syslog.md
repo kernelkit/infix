@@ -23,17 +23,16 @@ For a list of available log facilities, see the table in a later section.
 
 ```
 admin@example:/> configure
-admin@example:/config/> edit syslog
-admin@example:/config/syslog/> edit actions log-file file:/media/log/mylog
-admin@example:/config/syslog/actions/log-file/file:/media/log/mylog/> set facility-list
+admin@example:/config/> edit syslog actions log-file file:/media/log/mylog
+admin@example:/config/syslog/…/file:/media/log/mylog/> set facility-list
       all    audit     auth authpriv  console     cron    cron2   daemon      ftp     kern
    local0   local1   local2   local3   local4   local5   local6   local7      lpr     mail
      news      ntp   syslog     user     uucp
-admin@example:/config/syslog/actions/log-file/file:/media/log/mylog/> set facility-list all severity
+admin@example:/config/syslog/…/file:/media/log/mylog/> set facility-list all severity
      alert       all  critical     debug emergency     error      info      none    notice   warning
-admin@example:/config/syslog/actions/log-file/file:/media/log/mylog/> set facility-list all severity critical
-admin@example:/config/syslog/actions/log-file/file:/media/log/mylog/> set facility-list mail severity warning
-admin@example:/config/syslog/actions/log-file/file:/media/log/mylog/> leave
+admin@example:/config/syslog/…/file:/media/log/mylog/> set facility-list all severity critical
+admin@example:/config/syslog/…/file:/media/log/mylog/> set facility-list mail severity warning
+admin@example:/config/syslog/…/file:/media/log/mylog/> leave
 admin@example:/>
 ```
 
@@ -137,11 +136,11 @@ perform time stamping at the time of arrival.
 Configuring the log format is the same for log files and remotes:
 
 ```
-admin@example:/config/> edit syslog actions log-file file:foobar 
-admin@example:/config/syslog/actions/log-file/file:foobar/> set log-format 
+admin@example:/config/> edit syslog actions log-file file:foobar
+admin@example:/config/syslog/…/file:foobar/> set log-format
                   bsd               rfc3164              rfc5424
-admin@example:/config/syslog/actions/log-file/file:foobar/> set log-format rfc5424 
-admin@example:/config/syslog/actions/log-file/file:foobar/> leave
+admin@example:/config/syslog/…/file:foobar/> set log-format rfc5424
+admin@example:/config/syslog/…/file:foobar/> leave
 admin@example:/>
 ```
 
@@ -163,13 +162,13 @@ up, as well as local policy.
 admin@example:/config/> edit syslog
        actions file-rotation        server
 admin@example:/config/> edit syslog actions destination moon
-admin@example:/config/syslog/actions/destination/moon/> set
+admin@example:/config/syslog/…/moon/> set
  facility-list    log-format           udp
-admin@example:/config/syslog/actions/destination/moon/> set udp
+admin@example:/config/syslog/…/moon/> set udp
  address    port
-admin@example:/config/syslog/actions/destination/moon/> set udp address 192.168.0.12
-admin@example:/config/syslog/actions/destination/moon/> set facility-list container severity all
-admin@example:/config/syslog/actions/destination/moon/> leave
+admin@example:/config/syslog/…/moon/> set udp address 192.168.0.12
+admin@example:/config/syslog/…/moon/> set facility-list container severity all
+admin@example:/config/syslog/…/moon/> leave
 admin@example:/>
 ```
 

@@ -16,6 +16,12 @@ submodule infix-if-gre {
   contact      "kernelkit@googlegroups.com";
   description  "GRE and GRETAP tunnel extension for ietf-interfaces";
 
+  revision 2025-11-06 {
+    description "Use tunnel-common grouping for local, remote, TTL, and TOS/DSCP.
+                 Add GRE-specific pmtu-discovery setting.";
+    reference "internal";
+  }
+
   revision 2024-12-20 {
    description "Initial revision.";
     reference "internal";
@@ -29,7 +35,21 @@ submodule infix-if-gre {
 
     description "Augments the interface model with GRE tunnels.";
     container gre {
-      uses local-remote;
+      uses tunnel-common;
+
+      leaf pmtu-discovery {
+        type boolean;
+        default true;
+        description
+          "Enable or disable Path MTU Discovery on the tunnel.
+
+           When enabled (default), the tunnel respects the Don't Fragment (DF)
+           bit and performs PMTU discovery. When disabled, the tunnel will
+           fragment packets as needed.
+
+           Disabling PMTU discovery may be necessary in networks with broken
+           ICMP filtering but can lead to suboptimal performance.";
+      }
     }
   }
 }
