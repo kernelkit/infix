@@ -313,8 +313,35 @@ gdb_args()
     echo -n "-gdb chardev:gdbqemu"
 }
 
+extract_squashfs()
+{
+    # Extract rootfs.squashfs from rootfs.itb if missing
+    # The .itb file is rootfs.itbh (4096 bytes) + rootfs.squashfs
+    input="${1:-rootfs.itb}"
+    output="${2:-rootfs.squashfs}"
+
+    [ -f "$input" ] || die "Cannot extract $output: $input not found"
+
+    echo "Extracting $output from $input (skipping 4096-byte FIT header)..."
+    dd if="$input" of="$output" bs=4096 skip=1 2>/dev/null \
+        || die "Failed to extract $output from $input"
+
+    echo "Successfully created $output"
+}
+
 run_qemu()
 {
+    # Auto-extract rootfs.squashfs from rootfs.itb if needed for initrd mode
+    if [ "$CONFIG_QEMU_ROOTFS_INITRD" = "y" ]; then
+	if [ "$CONFIG_QEMU_ROOTFS" = "rootfs.squashfs" ] && [ ! -f "rootfs.squashfs" ]; then
+	    if [ -f "rootfs.itb" ]; then
+		extract_squashfs "rootfs.itb" "rootfs.squashfs"
+	    else
+		die "Missing rootfs.squashfs and cannot find rootfs.itb to extract it from"
+	    fi
+	fi
+    fi
+
     if [ "$CONFIG_QEMU_ROOTFS_VSCSI" = "y" ]; then
 	if ! qemu-img check "qemu.qcow2"; then
 	    rm -f "qemu.qcow2"
