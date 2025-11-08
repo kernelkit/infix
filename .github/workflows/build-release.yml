@@ -1,3 +1,6 @@
+# Needed for make pkg-stats
+# sudo apt install python3-aiohttp
+---
 name: Build Release
 
 on:
@@ -75,7 +78,12 @@ jobs:
 
       - name: Generate SBOM from Build
         run: |
+          # Generate manifest files in CSV format for CycloneDX
           make legal-info
+          # Generate cpe.json for CycloneDX
+          make -s show-info > output/cpe.json
+          # Generate pkg-stats.{json,html} for humans
+          make pkg-stats
 
       - name: Build test specification
         run: |
@@ -84,12 +92,17 @@ jobs:
       - name: Prepare Artifacts
         run: |
           cd output/
+
+          # Collect relevant files for SBOM and CPE info. for more info, see:
+          # https://github.com/CycloneDX/cyclonedx-buildroot
+          mkdir               images/sbom
+          mv pkg-stats.*      images/sbom/
+          mv cpe.json         images/sbom/
+          mv legal-info/*.csv images/sbom/
+
           mv images ${{ steps.vars.outputs.dir }}
           ln -s ${{ steps.vars.outputs.dir }} images
           tar cfz ${{ steps.vars.outputs.tgz }} ${{ steps.vars.outputs.dir }}
-
-          mv legal-info legal-info-${{ matrix.target }}-${{ steps.vars.outputs.ver }}
-          tar cfz legal-info-${{ matrix.target }}-${{ steps.vars.outputs.ver }}.tar.gz legal-info-${{ matrix.target }}-${{ steps.vars.outputs.ver }}
 
       - uses: actions/upload-artifact@v4
         with:

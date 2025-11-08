@@ -117,7 +117,7 @@ jobs:
           prerelease: ${{ steps.rel.outputs.pre }}
           makeLatest: ${{ steps.rel.outputs.latest }}
           discussionCategory: ${{ steps.rel.outputs.cat }}
-          bodyFile:  release.md
+          bodyFile: release.md
           artifacts: "*.tar.gz*,*.qcow2*"
 
       - name: Summary
