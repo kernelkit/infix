@@ -100,6 +100,10 @@ jobs:
           mv cpe.json         images/sbom/
           mv legal-info/*.csv images/sbom/
 
+          # Remove rootfs.squashfs from release (can be extracted from rootfs.itb)
+          # Saves ~131MB per architecture. See issue #858
+          rm -f images/rootfs.squashfs
+
           mv images ${{ steps.vars.outputs.dir }}
           ln -s ${{ steps.vars.outputs.dir }} images
           tar cfz ${{ steps.vars.outputs.tgz }} ${{ steps.vars.outputs.dir }}
