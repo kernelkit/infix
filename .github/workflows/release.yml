@@ -75,7 +75,7 @@ jobs:
           if echo $ver | grep -qE 'v[0-9.]+(-alpha|-beta|-rc)[0-9]*'; then
             echo "pre=true"     >> $GITHUB_OUTPUT
             echo "latest=false" >> $GITHUB_OUTPUT
-          elif echo $ver | grep -qE '^v[0-9.]+\.[0-9.]+(\.[0-9]+)?$'; then
+          elif echo $ver | grep -qE '^v[0-9]+\.[0-9]+(\.0)?$'; then
             echo "pre=false"    >> $GITHUB_OUTPUT
             echo "latest=true"  >> $GITHUB_OUTPUT
             echo "cat=Releases" >> $GITHUB_OUTPUT
