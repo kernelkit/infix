@@ -10,3 +10,9 @@
 
 - name: DHCP option 121 vs option 3
   case: client_routes/test.py
+
+- name: DHCPv6 Basic
+  case: client6_basic/test.py
+
+- name: DHCPv6 Prefix Delegation
+  case: client6_prefix_delegation/test.py
