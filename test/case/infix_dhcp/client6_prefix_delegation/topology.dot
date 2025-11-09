@@ -1,0 +1,23 @@
+graph "1x2" {
+	layout="neato";
+	overlap="false";
+	esep="+100";
+
+        node [shape=record, fontname="DejaVu Sans Mono, Book"];
+	edge [color="cornflowerblue", penwidth="2", fontname="DejaVu Serif, Book"];
+
+	host [
+	    label="host | { <mgmt> mgmt | <data> data }",
+	    pos="0,20!",
+	    requires="controller",
+	];
+
+        client [
+	    label="{ <mgmt> mgmt | <data> data } | client",
+	    pos="200,20!",
+	    requires="infix",
+	];
+
+	host:mgmt -- client:mgmt [requires="mgmt", color=lightgrey]
+	host:data -- client:data [color=black, taillabel="2001:db8::1/64", headlabel="DHCPv6-PD: 2001:db8:1::/48"]
+}
