@@ -198,6 +198,10 @@ static int change_cb(sr_session_ctx_t *session, uint32_t sub_id, const char *mod
 	if ((rc = infix_dhcp_client_change(session, config, diff, event, confd)))
 		goto free_diff;
 
+	/* infix-dhcpv6-client*/
+	if ((rc = infix_dhcpv6_client_change(session, config, diff, event, confd)))
+		goto free_diff;
+
 	/* ietf-keystore */
 	if ((rc = ietf_keystore_change(session, config, diff, event, confd)))
 		goto free_diff;
@@ -428,10 +432,6 @@ int sr_plugin_init_cb(sr_session_ctx_t *session, void **priv)
 		goto err;
 
 	rc = infix_dhcp_server_candidate_init(&confd);
-	if (rc)
-		goto err;
-
-	rc = infix_dhcp_client_candidate_init(&confd);
 	if (rc)
 		goto err;
 	/* YOUR_INIT GOES HERE */

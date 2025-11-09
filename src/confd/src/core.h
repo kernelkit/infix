@@ -204,12 +204,11 @@ static inline int infix_containers_rpc_init(struct confd *confd) { return 0; }
 static inline int infix_containers_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd) { return 0; }
 #endif
 
-/* infix-dhcp-common.c */
-int dhcp_option_lookup(const struct lyd_node *id);
-
 /* infix-dhcp-client.c */
 int infix_dhcp_client_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd);
-int infix_dhcp_client_candidate_init(struct confd *confd);
+
+/* infix-dhcpv6-client.c */
+int infix_dhcpv6_client_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd);
 
 /* infix-dhcp-server.c */
 int infix_dhcp_server_candidate_init(struct confd *confd);
