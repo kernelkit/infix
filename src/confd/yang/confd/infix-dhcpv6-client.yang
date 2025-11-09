@@ -1,0 +1,140 @@
+module infix-dhcpv6-client {
+  yang-version 1.1;
+  namespace "urn:infix:params:xml:ns:yang:dhcpv6-client";
+  prefix dhcpv6-client;
+
+  import ietf-interfaces {
+    prefix if;
+  }
+  import ietf-ip {
+    prefix ip;
+  }
+  import infix-dhcp-common {
+    prefix dhcp;
+  }
+
+  organization "KernelKit";
+  contact      "kernelkit@googlegroups.com";
+  description  "This module implements a DHCPv6 client";
+
+  revision 2025-11-09 {
+    description   "Initial revision:
+                    - Augment for /interfaces/interface/ipv6/dhcp
+                    - Support for DHCPv6 options, DUID, prefix delegation";
+    reference     "rfc8415";
+  }
+
+  /*
+   * Typedefs
+   */
+
+  typedef route-preference {
+    type uint32;
+    description "This type is used for selecting route preference (distance).";
+  }
+
+  /*
+   * DHCPv6 Client Configuration
+   */
+
+  augment "/if:interfaces/if:interface/ip:ipv6" {
+    container dhcp {
+      presence "Enable DHCPv6 client for this interface.";
+      description "DHCPv6 client configuration";
+
+      leaf duid {
+        type dhcp:duid;
+        description "Optional DHCPv6 Unique Identifier (DUID), option 1, RFC 8415.
+
+                     When omitted, the client automatically generates a DUID
+                     based on link-layer address plus time (DUID-LLT) or link-layer
+                     address only (DUID-LL), depending on the implementation.
+
+                     This setting allows manual configuration of the DUID in
+                     hexadecimal format. The DUID type and content are encoded
+                     as defined in RFC 8415 section 11.
+
+                     For full control of the DUID format, use the generic option
+                     list instead, which supports entering raw HEX data.
+
+                     Example: 00:03:00:01:08:00:27:fe:8c:2a
+                              (DUID-LL with Ethernet address)";
+      }
+
+      leaf information-only {
+        type boolean;
+        must "not(. = 'true') or ../../ip:autoconf/ip:create-global-addresses    = 'true' " +
+                             "or ../../ip:autoconf/ip:create-temporary-addresses = 'true'" {
+          error-message "IPv6 autoconf (SLAAC) must be enabled when information-only is true";
+          error-app-tag "invalid-dhcpv6-config";
+        }
+        description "Use stateless DHCPv6 (information-request mode).
+
+                     When enabled, the client requests configuration information
+                     (like DNS servers) but does not request IPv6 addresses or
+                     prefixes. This is used with SLAAC (Stateless Address
+                     Autoconfiguration) when only additional configuration is
+                     needed from DHCPv6.";
+      }
+
+      list option {
+        key "id";
+        description "List of DHCPv6 options to request (and accept).
+
+           The default is an empty list, meaning all supported options. To
+           request specific options, add them here. For prefix delegation,
+           include the ia-pd option in the list.";
+
+        must "not(id = 'client-fqdn' and hex)" {
+          error-message "Client FQDN option must use string format";
+          error-app-tag "invalid-fqdn-format";
+        }
+
+        leaf id {
+          type dhcp:options-v6;
+          description "DHCPv6 option to request from, or inform server of.";
+        }
+
+        choice value {
+          case value {
+            leaf value {
+              description "Optional string value to send to server.
+
+                           Example:
+                                option:client-fqdn, value:host.example.com
+
+                           This will send option 39 with the specified FQDN,
+                           requesting the server to update DNS records.";
+              type string;
+            }
+          }
+          case hex {
+            leaf hex {
+              description "Optional binary value in hexadecimal format.
+
+                           This allows full control over the option payload,
+                           useful for vendor-specific options or custom data.
+
+                           Example:
+                                option:client-id, hex:00:03:00:01:08:00:27:fe:8c:2a
+
+                           This would set a DUID-LL (type 3) with the specified
+                           link-layer address.";
+              type dhcp:octet-string;
+            }
+          }
+        }
+      }
+
+      leaf route-preference {
+        type route-preference;
+        default 5;
+        description
+          "The preference (administrative distance) that all DHCPv6 routes
+           are installed with. The default preference (5) is higher (less worth)
+           than static routes, but lower than those learned via dynamic routing
+           protocols, like OSPF.";
+      }
+    }
+  }
+}

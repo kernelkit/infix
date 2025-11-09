@@ -2,13 +2,14 @@
 
 #include <assert.h>
 #include <ctype.h>
+#include <ifaddrs.h>
 
 #include <srx/common.h>
 #include <srx/lyx.h>
 #include <srx/srx_val.h>
 
 #include "core.h"
-#include <ifaddrs.h>
+#include "infix-dhcp-common.h"
 
 #define MODULE			"infix-dhcp-server"
 #define ROOT_XPATH		"/infix-dhcp-server:"

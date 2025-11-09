@@ -1,0 +1,112 @@
+#!/bin/sh
+# This script expects a system with resolvconf (openresolv) and iproute2
+
+[ -z "$1" ] && echo "Error: should be called from udhcpc6" && exit 1
+
+ACTION="$1"
+RESOLV_CONF="/run/resolvconf/interfaces/${interface}-ipv6.conf"
+NTPFILE="/run/chrony/dhcp-sources.d/${interface}-ipv6.sources"
+
+[ -n "$metric" ] || metric=5
+
+if [ -z "${IF_WAIT_DELAY}" ]; then
+	IF_WAIT_DELAY=10
+fi
+
+log()
+{
+    logger -I $$ -t udhcpc6 -p user.notice "${interface}: $*"
+}
+
+dbg()
+{
+    logger -I $$ -t udhcpc6 -p user.debug "${interface}: $*"
+}
+
+err()
+{
+    logger -I $$ -t udhcpc6 -p user.err "${interface}: $*"
+}
+
+clr_dhcpv6_addresses()
+{
+    addrs=$(ip -j addr show dev $interface \
+		| jq -c '.[0].addr_info[] | select(.family == "inet6") | select(.protocol == "dhcp")')
+
+    for addr in $addrs; do
+	ip="$(echo "$addr" | jq -r '."local"')"
+	prefix="$(echo "$addr" | jq -r '."prefixlen"')"
+	log "removing $ip/$prefix"
+	ip addr del "$ip/$prefix" dev "$interface"
+    done
+}
+
+log "action $ACTION"
+case "$ACTION" in
+    deconfig)
+	clr_dhcpv6_addresses
+	/bin/ip link set dev $interface up
+
+	# drop info from this interface
+	rm -f "$RESOLV_CONF"
+	rm -f "$NTPFILE"
+	;;
+
+    leasefail|nak)
+	# DHCPv6 lease failed - log it
+	err "DHCPv6 lease failed"
+	;;
+
+    renew|bound)
+	# Add IPv6 address if provided (stateful DHCPv6)
+	if [ -n "$ipv6" ]; then
+	    if /bin/ip addr add dev $interface $ipv6 proto dhcp; then
+		log "assigned address $ipv6"
+	    fi
+	fi
+
+	# Handle delegated prefix (prefix delegation)
+	if [ -n "$ipv6prefix" ]; then
+	    log "received delegated prefix $ipv6prefix"
+	    # Prefix delegation handling could be added here
+	    # For now, just log it - actual routing/distribution
+	    # would need additional configuration
+	fi
+
+	# drop info from this interface
+	truncate -s 0 "$RESOLV_CONF"
+
+	# DHCPv6 domain search list (option 24)
+	if [ -n "$search" ]; then
+	    dbg "adding search $search"
+	    echo "search $search # $interface" >> $RESOLV_CONF
+	fi
+
+	# DHCPv6 DNS servers (option 23)
+	if [ -n "$dns" ]; then
+	    for i in $dns ; do
+		dbg "adding dns $i"
+		echo "nameserver $i # $interface" >> $RESOLV_CONF
+	    done
+	    resolvconf -u
+	fi
+
+	# NTP servers (option 56)
+	if [ -n "$ntpsrv" ]; then
+	    truncate -s 0 "$NTPFILE"
+	    for srv in $ntpsrv; do
+		dbg "got NTP server $srv"
+		echo "server $srv iburst" >> "$NTPFILE"
+	    done
+	    chronyc reload sources >/dev/null
+	fi
+	;;
+esac
+
+HOOK_DIR="$0.d"
+for hook in "${HOOK_DIR}/"*; do
+    [ -f "${hook}" -a -x "${hook}" ] || continue
+    "${hook}" "$ACTION"
+done
+
+exit 0

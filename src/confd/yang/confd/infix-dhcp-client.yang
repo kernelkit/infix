@@ -1,6 +1,6 @@
 module infix-dhcp-client {
   yang-version 1.1;
-  namespace "urn:ietf:params:xml:ns:yang:dhcp-client";
+  namespace "urn:infix:params:xml:ns:yang:dhcp-client";
   prefix dhcp-client;
 
   import ietf-interfaces {
@@ -16,6 +16,10 @@ module infix-dhcp-client {
   contact      "kernelkit@googlegroups.com";
   description  "This module implements a DHCPv4 client";
 
+  revision 2025-11-09 {
+    description   "Fix namespace to use infix instead of ietf.";
+    reference     "internal";
+  }
   revision 2025-11-02 {
     description   "Migrate DHCP client to ietf-ip augment.
                       - Relocate from /dhcp-client to /interfaces/interface/ipv4/dhcp

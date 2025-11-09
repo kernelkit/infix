@@ -144,6 +144,9 @@ int ifchange_cand_infer_vlan(sr_session_ctx_t *session, const char *path);
 int vlan_gen(struct lyd_node *dif, struct lyd_node *cif, FILE *ip);
 int vlan_add_deps(struct lyd_node *cif);
 
+/* infix-dhcp-common.c */
+int ifchange_cand_infer_dhcp(sr_session_ctx_t *session, const char *path);
+
 /* infix-if-vxlan.c */
 int vxlan_gen(struct lyd_node *dif, struct lyd_node *cif, FILE *ip);
 
