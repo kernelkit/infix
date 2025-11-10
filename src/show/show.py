@@ -154,6 +154,134 @@ def services(args: List[str]) -> None:
 
     cli_pretty(data, f"show-services")
 
+def bfd(args: List[str]) -> None:
+    """Handle show bfd [subcommand] [peer] [brief]
+
+    Subcommands:
+        (none)      - Show BFD status summary (default)
+        peers       - Show BFD peer sessions
+        peers brief - Show BFD peers in brief format
+        peer <addr> - Show specific BFD peer details
+    """
+    # Fetch operational data from sysrepocfg
+    data = run_sysrepocfg("/ietf-routing:routing/control-plane-protocols/control-plane-protocol")
+    if not data:
+        print("No BFD data retrieved.")
+        return
+
+    if RAW_OUTPUT:
+        print(json.dumps(data, indent=2))
+        return
+
+    # Parse arguments: [subcommand] [peer_addr] [brief]
+    subcommand = ""
+    peer_addr = None
+    brief_flag = False
+
+    for arg in args:
+        if arg == "brief":
+            brief_flag = True
+        elif arg in ["peers", "peer"]:
+            subcommand = arg
+        elif arg:  # Must be peer address
+            peer_addr = arg
+
+    # Default to empty string for general status
+    if not subcommand and not peer_addr:
+        subcommand = ""
+
+    # Add metadata to data
+    if peer_addr:
+        data['_peer_addr'] = peer_addr
+    if brief_flag:
+        data['_brief'] = True
+
+    # For brief view, fetch interface data to show interface:ip format
+    if brief_flag:
+        ifaces_data = run_sysrepocfg("/ietf-interfaces:interfaces")
+        if ifaces_data:
+            data['_interfaces'] = ifaces_data
+
+    # Route to appropriate formatter
+    if subcommand == "":
+        cli_pretty(data, "show-bfd-status")
+    elif subcommand == "peers":
+        if brief_flag:
+            cli_pretty(data, "show-bfd-peers-brief")
+        else:
+            cli_pretty(data, "show-bfd-peers")
+    elif subcommand == "peer":
+        cli_pretty(data, "show-bfd-peer")
+    else:
+        print(f"Unknown BFD subcommand: {subcommand}")
+
+def ospf(args: List[str]) -> None:
+    """Handle show ospf [subcommand] [ifname] [detail]
+
+    Subcommands:
+        (none)      - General OSPF instance information
+        neighbor    - OSPF neighbor table
+        interfaces  - OSPF interface details (optionally for specific interface)
+        routes      - OSPF routing table (local-rib)
+
+    Optional:
+        ifname      - Interface name (for interfaces subcommand)
+        detail      - Show detailed information (Cisco-style)
+    """
+    # Fetch operational data from sysrepocfg
+    data = run_sysrepocfg("/ietf-routing:routing/control-plane-protocols/control-plane-protocol")
+    if not data:
+        print("No OSPF data retrieved.")
+        return
+
+    if RAW_OUTPUT:
+        print(json.dumps(data, indent=2))
+        return
+
+    # Parse arguments: subcommand, optional interface name, optional detail flag
+    subcommand = args[0] if len(args) > 0 and args[0] else ""
+
+    # Determine if second arg is interface name or detail flag
+    ifname = None
+    detail_flag = False
+
+    if len(args) > 1:
+        if args[1] == "detail":
+            detail_flag = True
+        else:
+            ifname = args[1]
+            # Check if third arg is detail
+            if len(args) > 2 and args[2] == "detail":
+                detail_flag = True
+
+    # Add metadata to data for formatters
+    if detail_flag:
+        data['_detail'] = True
+    if ifname:
+        data['_ifname'] = ifname
+        # For detailed interface view, fetch additional data (interfaces and BFD)
+        if subcommand == "interface" or subcommand == "interfaces":
+            ifaces_data = run_sysrepocfg("/ietf-interfaces:interfaces")
+            if ifaces_data:
+                data['_interfaces'] = ifaces_data
+
+            # Fetch BFD data for per-interface status
+            routing_data = run_sysrepocfg("/ietf-routing:routing/control-plane-protocols/control-plane-protocol")
+            if routing_data:
+                data['_routing'] = routing_data
+
+    # Route to appropriate formatter
+    if subcommand == "":
+        cli_pretty(data, "show-ospf")
+    elif subcommand == "neighbor":
+        cli_pretty(data, "show-ospf-neighbor")
+    elif subcommand == "interface" or subcommand == "interfaces":
+        cli_pretty(data, "show-ospf-interfaces")
+    elif subcommand == "route" or subcommand == "routes":
+        cli_pretty(data, "show-ospf-routes")
+    else:
+        print(f"Unknown OSPF subcommand: {subcommand}")
+
 def routes(args: List[str]):
     ip_version = args[0] if args and args[0] in ["ipv4", "ipv6"] else "ipv4"
 
@@ -296,12 +424,14 @@ def system(args: List[str]) -> None:
 
 def execute_command(command: str, args: List[str]):
     command_mapping = {
+        'bfd': bfd,
         'dhcp': dhcp,
         'hardware': hardware,
         'interface': interface,
-        'ntp': ntp,
-        'routes': routes,
         'lldp': lldp,
+        'ntp': ntp,
+        'ospf': ospf,
+        'routes': routes,
         'services' : services,
         'software' : software,
         'stp': stp,

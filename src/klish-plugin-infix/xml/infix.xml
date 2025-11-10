@@ -359,34 +359,62 @@
     </ACTION>
   </COMMAND>
 
-  <COMMAND name="ospf" help="Show OSPF status">
-    <PARAM name="name" ptype="/STRING" help="neighbor, interfaces or bfd" min="0" max="1">
+  <COMMAND name="bfd" help="Show BFD information">
+    <PARAM name="subcommand" ptype="/STRING" help="peers or peer" min="0" max="1">
       <COMPL>
-        <ACTION sym="printl">neighbor</ACTION>
-        <ACTION sym="printl">interfaces</ACTION>
-        <ACTION sym="printl">routes</ACTION>
-        <ACTION sym="printl">database</ACTION>
-        <ACTION sym="printl">bfd</ACTION>
+        <ACTION sym="printl">peers</ACTION>
+        <ACTION sym="printl">peer</ACTION>
       </COMPL>
     </PARAM>
+    <PARAM name="peer_addr" ptype="/STRING" help="Peer IP address" min="0" max="1"/>
+    <SWITCH name="optional" min="0">
+      <COMMAND name="brief" help="Show brief output" mode="switch"/>
+    </SWITCH>
     <ACTION sym="script" in="tty" out="tty" interrupt="true">
-    if [ -z "$KLISH_PARAM_name" ]; then
-       doas vtysh -c "show ip ospf" |pager
-    elif [ "$KLISH_PARAM_name" == "neighbor" ];then
-       doas vtysh -c "show ip ospf neighbor" |pager
-    elif [ "$KLISH_PARAM_name" == "interfaces" ];then
-       doas vtysh -c "show ip ospf interface" |pager
-    elif [ "$KLISH_PARAM_name" == "routes" ];then
-       doas vtysh -c "show ip ospf route" |pager
-    elif [ "$KLISH_PARAM_name" == "database" ];then
-       doas vtysh -c "show ip ospf database" |pager
-    elif [ "$KLISH_PARAM_name" == "bfd" ];then
-       doas vtysh -c "show bfd peers" |pager
-    fi
+      BRIEF_ARG=""
+      if [ -n "$KLISH_COMMAND_brief" ]; then
+        BRIEF_ARG="brief"
+      fi
+      # Pass subcommand, optional peer address, and brief flag
+      show bfd ${KLISH_PARAM_subcommand:+"$KLISH_PARAM_subcommand"} ${KLISH_PARAM_peer_addr:+"$KLISH_PARAM_peer_addr"} ${BRIEF_ARG:+"$BRIEF_ARG"} |pager
     </ACTION>
   </COMMAND>
 
-  <COMMAND name="routes" help="Show routing table">
+  <COMMAND name="ospf" help="Show OSPF status">
+    <ACTION sym="script" in="tty" out="tty" interrupt="true">
+      show ospf |pager
+      # Deprecated in favor of Cisco likeness, consider future 'show ipv6 ospf'
+      printf "\n\e[1mNOTE:\e[0m this command is deprecated, please use 'show ip ospf' instead.\n"
+    </ACTION>
+
+    <SWITCH name="optional" min="0">
+      <COMMAND name="neighbor" help="Show OSPF neighbors">
+        <ACTION sym="script" in="tty" out="tty" interrupt="true">
+          show ospf neighbor |pager
+          printf "\n\e[1mNOTE:\e[0m this command is deprecated, please use 'show ip ospf neighbor' instead.\n"
+        </ACTION>
+      </COMMAND>
+
+      <COMMAND name="interface" help="Show OSPF interfaces">
+        <SWITCH name="optional" min="0" max="1">
+          <PARAM name="ifname" ptype="/IFACES" help="Interface name" />
+        </SWITCH>
+        <ACTION sym="script" in="tty" out="tty" interrupt="true">
+          show ospf interface "$KLISH_PARAM_ifname" |pager
+          printf "\n\e[1mNOTE:\e[0m this command is deprecated, please use 'show ip ospf interface' instead.\n"
+        </ACTION>
+      </COMMAND>
+
+      <COMMAND name="route" help="Show OSPF routing table">
+        <ACTION sym="script" in="tty" out="tty" interrupt="true">
+          show ospf route |pager
+          printf "\n\e[1mNOTE:\e[0m this command is deprecated, please use 'show ip ospf route' instead.\n"
+        </ACTION>
+      </COMMAND>
+    </SWITCH>
+  </COMMAND>
+
+  <COMMAND name="route" help="Show routing table">
     <PARAM name="ip" ptype="/STRING" help="ipv4 or ipv6" min="0" max="1">
       <COMPL>
         <ACTION sym="printl">ipv4</ACTION>
@@ -458,6 +486,35 @@
         <ACTION sym="script" in="tty" out="tty" interrupt="true">
           show-legacy -p ip route |pager
         </ACTION>
+      </COMMAND>
+
+      <COMMAND name="ospf" help="Show OSPF status">
+        <ACTION sym="script" in="tty" out="tty" interrupt="true">
+          show ospf |pager
+        </ACTION>
+
+        <SWITCH name="optional" min="0">
+          <COMMAND name="neighbor" help="Show OSPF neighbors">
+            <ACTION sym="script" in="tty" out="tty" interrupt="true">
+              show ospf neighbor |pager
+            </ACTION>
+          </COMMAND>
+
+          <COMMAND name="interface" help="Show OSPF interfaces">
+            <SWITCH name="optional" min="0" max="1">
+              <PARAM name="ifname" ptype="/IFACES" help="Interface name" />
+            </SWITCH>
+            <ACTION sym="script" in="tty" out="tty" interrupt="true">
+              show ospf interface "$KLISH_PARAM_ifname" |pager
+            </ACTION>
+          </COMMAND>
+
+          <COMMAND name="route" help="Show OSPF routing table">
+            <ACTION sym="script" in="tty" out="tty" interrupt="true">
+              show ospf route |pager
+            </ACTION>
+          </COMMAND>
+        </SWITCH>
       </COMMAND>
     </SWITCH>
   </COMMAND>

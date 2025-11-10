@@ -15,14 +15,33 @@ module infix-routing {
   import ietf-ospf {
     prefix ospf;
   }
+  import ietf-bfd-types {
+    prefix bfd-types;
+  }
 
   organization "KernelKit";
   contact      "kernelkit@googlegroups.com";
   description  "Deviations and augments for ietf-routing and ietf-ospf.";
 
+  revision 2025-11-12 {
+    description "Add area-id augmentation to OSPF local-rib routes.
+                 Add uptime, role, and interface-name augmentations to OSPF neighbor state.
+                 Allows displaying which area a route was learned from,
+                 how long neighbors have been up, their DR/BDR role, and
+                 the interface with local address.";
+    reference "Issue #1190";
+  }
+
+  revision 2025-11-11 {
+    description "Add BFD IP single-hop support (RFC 9127).
+                 Deviate session-statistics (not implemented yet).";
+    reference "RFC 9127, Issue #1190";
+  }
   revision 2025-11-10 {
-    description "Add must constraint to prevent backbone area as stub/NSSA";
-    reference "RFC 2328, RFC 3101";
+    description "Add must constraint to prevent backbone area as stub/NSSA.
+                 Enable OSPF operational data for CLI: un-deviate priority,
+                 hello-timer, wait-timer, route metric and route-tag fields.";
+    reference "RFC 2328, RFC 3101, Issue #1190";
   }
   revision 2024-11-27 {
     description "Deviate address-family in OSPF";
@@ -124,6 +143,11 @@ module infix-routing {
     base ospf:ospfv2;
     base infix-routing-type;
     description "OSPv2 (IPv4) routing protocol";
+  }
+  identity bfdv1 {
+    base bfd-types:bfdv1;
+    base infix-routing-type;
+    description "BFD protocol version 1";
   }
   identity static {
     base rt:static;
@@ -385,13 +409,6 @@ module infix-routing {
     deviate not-supported;
   }
 
-  /* OSPF Local RIB */
-  deviation "/rt:routing/rt:control-plane-protocols/rt:control-plane-protocol/ospf:ospf/ospf:local-rib/ospf:route/ospf:metric" {
-    deviate not-supported;
-  }
-  deviation "/rt:routing/rt:control-plane-protocols/rt:control-plane-protocol/ospf:ospf/ospf:local-rib/ospf:route/ospf:route-tag" {
-    deviate not-supported;
-  }
   /* OSPF Area Interface */
   deviation "/rt:routing/rt:control-plane-protocols/rt:control-plane-protocol/ospf:ospf/ospf:areas/ospf:area/ospf:interfaces/ospf:interface/ospf:static-neighbors"
   {
@@ -408,10 +425,6 @@ module infix-routing {
     deviate not-supported;
   }
   deviation "/rt:routing/rt:control-plane-protocols/rt:control-plane-protocol/ospf:ospf/ospf:areas/ospf:area/ospf:interfaces/ospf:interface/ospf:bfd/ospf:interval-config-type"
-  {
-    deviate not-supported;
-  }
-  deviation "/rt:routing/rt:control-plane-protocols/rt:control-plane-protocol/ospf:ospf/ospf:areas/ospf:area/ospf:interfaces/ospf:interface/ospf:priority"
   {
     deviate not-supported;
   }
@@ -474,14 +487,6 @@ module infix-routing {
   {
     deviate not-supported;
   }
-  deviation "/rt:routing/rt:control-plane-protocols/rt:control-plane-protocol/ospf:ospf/ospf:areas/ospf:area/ospf:interfaces/ospf:interface/ospf:hello-timer"
-  {
-    deviate not-supported;
-  }
-  deviation "/rt:routing/rt:control-plane-protocols/rt:control-plane-protocol/ospf:ospf/ospf:areas/ospf:area/ospf:interfaces/ospf:interface/ospf:wait-timer"
-  {
-    deviate not-supported;
-  }
 
   /* OSPF RPCs */
   deviation "/ospf:clear-neighbor" {
@@ -527,6 +532,86 @@ module infix-routing {
 
   deviation "/ospf:restart-status-change" {
     deviate not-supported;
+  }
+
+  /*
+   * Augmentations
+   */
+
+  /* Add area-id to OSPF local-rib routes
+   * The standard ietf-ospf model doesn't include area information in routes,
+   * but FRR provides this and it's useful for operators to see which area
+   * a route was learned from.
+   */
+  augment "/rt:routing/rt:control-plane-protocols/rt:control-plane-protocol/"
+        + "ospf:ospf/ospf:local-rib/ospf:route" {
+    when "derived-from-or-self(../../rt:type, 'infix-routing:ospfv2')" {
+      description
+        "This augmentation is only valid for OSPFv2.";
+    }
+    description
+      "Infix extension to add area information to OSPF routes.";
+
+    leaf area-id {
+      type ospf:area-id-type;
+      config false;
+      description
+        "Area ID from which this route was learned. Not applicable
+         for inter-area routes learned from area border routers or
+         external routes.";
+    }
+  }
+
+  /* Add uptime to OSPF neighbor operational state
+   * The standard ietf-ospf model doesn't include neighbor uptime,
+   * but FRR provides this and it's useful for monitoring neighbor stability.
+   */
+  augment "/rt:routing/rt:control-plane-protocols/rt:control-plane-protocol/"
+        + "ospf:ospf/ospf:areas/ospf:area/ospf:interfaces/ospf:interface/"
+        + "ospf:neighbors/ospf:neighbor" {
+    when "derived-from-or-self(../../../../../../../rt:type, 'infix-routing:ospfv2')" {
+      description
+        "This augmentation is only valid for OSPFv2.";
+    }
+    description
+      "Infix extension to add uptime information to OSPF neighbors.";
+
+    leaf uptime {
+      type uint32;
+      units "seconds";
+      config false;
+      description
+        "Time since the neighbor transitioned to the Full state.
+         Reported in seconds for consistency with other timers.";
+    }
+
+    leaf role {
+      type enumeration {
+        enum DR {
+          description "Designated Router";
+        }
+        enum BDR {
+          description "Backup Designated Router";
+        }
+        enum DROther {
+          description "Neither DR nor BDR";
+        }
+      }
+      config false;
+      description
+        "OSPF neighbor's role on the network segment (DR, BDR, or DROther).
+         This is derived from the neighbor's priority and router ID during
+         the DR/BDR election process.";
+    }
+
+    leaf interface-name {
+      type string;
+      config false;
+      description
+        "Interface name with local address in format 'interface:address'.
+         Example: 'e5:10.0.23.1' indicates interface e5 with local address 10.0.23.1.
+         This is useful for networks where multiple addresses exist on an interface.";
+    }
   }
 
 }
