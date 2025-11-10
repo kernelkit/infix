@@ -138,6 +138,83 @@ static confd_dependency_t handle_dependencies(struct lyd_node **diff, struct lyd
 		}
 	}
 
+	/* Check if any wifi-ap interface changed, add all wifi-ap interfaces and their radios to diff */
+	struct ly_set *diff_ifaces = lydx_find_xpathf(*diff, "/ietf-interfaces:interfaces/interface");
+	if (diff_ifaces && diff_ifaces->count > 0) {
+		bool has_wifi_ap_change = false;
+		uint32_t i;
+
+		/* Check if any changed interface is a wifi-ap interface */
+		for (i = 0; i < diff_ifaces->count; i++) {
+			struct lyd_node *diff_iface = diff_ifaces->dnodes[i];
+			const char *ifname = lydx_get_cattr(diff_iface, "name");
+			struct lyd_node *config_iface;
+
+			if (!ifname)
+				continue;
+
+			/* Look up the interface in config to check its type */
+			config_iface = lydx_get_xpathf(config, "/ietf-interfaces:interfaces/interface[name='%s']", ifname);
+			if (config_iface) {
+				const char *type = lydx_get_cattr(config_iface, "type");
+				if (type && strstr(type, "wifi-ap")) {
+					has_wifi_ap_change = true;
+					break;
+				}
+			}
+		}
+
+		if (has_wifi_ap_change) {
+			/* Add all wifi-ap interfaces from config to diff */
+			struct ly_set *wifi_ap_ifaces = lydx_find_xpathf(config, "/ietf-interfaces:interfaces/interface[type='infix-if-type:wifi-ap']");
+			for (i = 0; wifi_ap_ifaces && i < wifi_ap_ifaces->count; i++) {
+				struct lyd_node *iface = wifi_ap_ifaces->dnodes[i];
+				struct lyd_node *wifi_node, *radio_node;
+				const char *ifname, *radio_name;
+				char xpath[256];
+
+				ifname = lydx_get_cattr(iface, "name");
+				wifi_node = lydx_get_child(iface, "wifi");
+
+				if (wifi_node) {
+					/* Add wifi node to trigger reprocessing of all wifi-ap interfaces */
+					snprintf(xpath, sizeof(xpath),
+						"/ietf-interfaces:interfaces/interface[name='%s']/infix-interfaces:wifi",
+						ifname);
+					result = add_dependencies(diff, xpath, "");
+					if (result == CONFD_DEP_ERROR) {
+						ERROR("Failed to add wifi-ap %s to diff", ifname);
+						ly_set_free(wifi_ap_ifaces, NULL);
+						ly_set_free(diff_ifaces, NULL);
+						return result;
+					}
+
+					/* Add the referenced radio interface (type wifi) to diff */
+					radio_node = lydx_get_child(wifi_node, "radio");
+					if (radio_node) {
+						radio_name = lyd_get_value(radio_node);
+						if (radio_name) {
+							snprintf(xpath, sizeof(xpath),
+								"/ietf-interfaces:interfaces/interface[name='%s']/infix-interfaces:wifi",
+								radio_name);
+							result = add_dependencies(diff, xpath, "");
+							if (result == CONFD_DEP_ERROR) {
+								ERROR("Failed to add radio interface %s to diff", radio_name);
+								ly_set_free(wifi_ap_ifaces, NULL);
+								ly_set_free(diff_ifaces, NULL);
+								return result;
+							}
+						}
+					}
+				}
+			}
+			if (wifi_ap_ifaces)
+				ly_set_free(wifi_ap_ifaces, NULL);
+		}
+
+		ly_set_free(diff_ifaces, NULL);
+	}
+
 	return result;
 }
 
@@ -180,7 +257,7 @@ static int change_cb(sr_session_ctx_t *session, uint32_t sub_id, const char *mod
 			}
 			max_dep--;
 		}
-#if 0
+#if 1
 		/* Debug: print diff to file */
 		FILE *f = fopen("/tmp/confd-diff.json", "w");
 		if (f) {

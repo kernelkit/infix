@@ -1,2 +1,3 @@
-# Only rename physical interfaces, skip virtual ones created by hostapd
-SUBSYSTEM=="net", ACTION=="add", TEST=="/sys/class/net/$name/wireless", TEST=="/sys/class/net/$name/device", KERNEL!="*_*", NAME="wifi%n"
+# Only rename physical interfaces, skip virtual ones created by hostapd/iw
+# Virtual interfaces created by iw have name_assign_type=3 (userspace assigned)
+SUBSYSTEM=="net", ACTION=="add", TEST=="/sys/class/net/$name/wireless", ATTR{name_assign_type}!="3", NAME="wifi%n"

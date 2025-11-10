@@ -25,7 +25,6 @@ def wifi(ifname):
                             wifi_data["active-ssid"] = v
 
                     data=HOST.run(tuple(f"wpa_cli -i {ifname} signal_poll".split()), default="FAIL")
-
                     # signal_poll return FAIL not connected
                     if data.strip() != "FAIL":
                         for line in data.splitlines():

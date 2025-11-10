@@ -105,7 +105,6 @@ int wifi_gen(struct lyd_node *dif, struct lyd_node *cif, struct dagger *net) {
 		return SR_ERR_OK;
         cmode = lydx_get_child(cwifi, "mode");
 
-	ERROR("NOW GENERATE WIFI");
 	fp = dagger_fopen_net_init(net, ifname, NETDAG_INIT_POST, "disable-wifi.sh");
 	if (dif) {
 		dwifi = lydx_get_child(dif, "wifi");
@@ -113,7 +112,6 @@ int wifi_gen(struct lyd_node *dif, struct lyd_node *cif, struct dagger *net) {
 			dmode = lydx_get_child(dwifi, "mode");
 	}
 	if (!lydx_get_cattr(cif, "enabled")) {
-		ERROR("INTERFACE DISSABLED");
 		if (dwifi) {
 			if (dmode && !strcmp(lyd_get_value(dmode), "accesspoint"))
 				disable_wifi_ap(ifname, fp);
@@ -124,13 +122,11 @@ int wifi_gen(struct lyd_node *dif, struct lyd_node *cif, struct dagger *net) {
 	}
 
 	if (cmode && !strcmp(lyd_get_value(cmode), "accesspoint")) {
-		ERROR("Should now configure AP");
 		if (dmode && strcmp(lyd_get_value(dmode), "accesspoint"))
 			disable_wifi_station(ifname, fp);
 		wifi_ap_gen(cif, net);
 
 	} else {
-		ERROR("Should now configure station");
 		if (dmode && strcmp(lyd_get_value(dmode), "station"))
 			disable_wifi_ap(ifname, fp);
 		/* Client */
@@ -149,7 +145,6 @@ int wifi_station_gen(struct lyd_node *cif, struct dagger *net)
         int counter = 0;
 	FILE *fp;
 
-	ERROR("GENERATE STATION");
 	ifname      = lydx_get_cattr(cif, "name");
 	fp = dagger_fopen_net_init(net, ifname, NETDAG_INIT_POST, "disable-wifi.sh");
 
@@ -203,61 +198,33 @@ out:
 
 int wifi_ap_del_iface(struct lyd_node *cif,struct dagger *net)
 {
-	const char *ifname, *radio;
-	struct lyd_node *wifi;
-	struct ly_set *remaining_aps = NULL;
-	bool is_last_ap = false;
+	const char *ifname;
 	FILE *iw;
-	int rc;
 
 	ifname = lydx_get_cattr(cif, "name");
-	wifi = lydx_get_child(cif, "wifi");
-
-	if (wifi) {
-		radio = lydx_get_cattr(wifi, "radio");
-
-		/* Check if this is the last AP interface for this radio */
-		if (radio) {
-			rc = lyd_find_xpath(cif, "../interface[derived-from-or-self(type, 'infix-if-type:wifi-ap') and wifi/radio = current()/wifi/radio and name != current()/name]", &remaining_aps);
-			if (rc != LY_SUCCESS || !remaining_aps || remaining_aps->count == 0) {
-				is_last_ap = true;
-				ERROR("Interface %s is the last AP for radio %s - will restore radio name", ifname, radio);
-			} else {
-				ERROR("Interface %s removal leaves %d other APs for radio %s", ifname, remaining_aps->count, radio);
-			}
-
-			if (remaining_aps)
-				ly_set_free(remaining_aps, NULL);
-		}
-	}
-
 	iw = dagger_fopen_net_exit(net, ifname, NETDAG_EXIT, "exit-iw.sh");
 
-	if (is_last_ap && radio) {
-		/* Last AP interface: restore original radio name */
-		fprintf(iw, "# Restore radio name from %s back to %s\n", ifname, radio);
-		fprintf(iw, "ip link set dev %s name %s\n", ifname, radio);
-		fprintf(iw, "ip link property del dev %s altname %s\n", radio, radio);
-	} else {
-		/* Virtual AP interface: delete it */
-		fprintf(iw, "# Delete virtual AP interface %s\n", ifname);
-		fprintf(iw, "iw dev %s del\n", ifname);
-	}
+	fprintf(iw, "# Check if interface has altname, if so restore it, else delete interface\n");
+	fprintf(iw, "ALTNAME=$(ip -j link show dev %s | jq -r '.[0].altnames[0] // empty')\n", ifname);
+	fprintf(iw, "if [ -n \"$ALTNAME\" ]; then\n");
+	fprintf(iw, "  # Restore original radio name\n");
+	fprintf(iw, "  ip link set dev %s name \"$ALTNAME\"\n", ifname);
+	fprintf(iw, "  ip link property del dev \"$ALTNAME\" altname \"$ALTNAME\"\n");
+	fprintf(iw, "else\n");
+	fprintf(iw, "  # Delete virtual AP interface\n");
+	fprintf(iw, "  iw dev %s del\n", ifname);
+	fprintf(iw, "fi\n");
 
 	fclose(iw);
 
 	return 0;
 }
 
-
 int wifi_ap_add_iface(struct lyd_node *cif,struct dagger *net)
 {
 	const char *ifname, *radio;
 	struct lyd_node *wifi;
-	struct ly_set *existing_aps = NULL;
-	bool is_first_ap = false;
 	FILE *iw;
-	int rc;
 
 	ifname = lydx_get_cattr(cif, "name");
 
@@ -273,39 +240,22 @@ int wifi_ap_add_iface(struct lyd_node *cif,struct dagger *net)
 		return SR_ERR_INVAL_ARG;
 	}
 
-	/* Check if this is the first AP interface for this radio by finding all APs for this radio */
-	rc = lyd_find_xpath(cif, "../interface[derived-from-or-self(type, 'infix-if-type:wifi-ap') and wifi/radio = current()/wifi/radio]", &existing_aps);
-	if (rc == LY_SUCCESS && existing_aps && existing_aps->count > 0) {
-		/* Check if current interface is the first one in the list */
-		const char *first_ap_name = lydx_get_cattr(existing_aps->dnodes[0], "name");
-		if (!strcmp(ifname, first_ap_name)) {
-			is_first_ap = true;
-			ERROR("Interface %s is the first AP for radio %s - will rename radio", ifname, radio);
-		} else {
-			ERROR("Interface %s is additional AP for radio %s - will create virtual interface", ifname, radio);
-		}
-	} else {
-		/* Fallback: if we can't determine, assume first */
-		is_first_ap = true;
-		ERROR("Interface %s assumed to be first AP for radio %s", ifname, radio);
-	}
-
-	if (existing_aps)
-		ly_set_free(existing_aps, NULL);
-
 	dagger_add_dep(&confd.netdag, ifname, radio);
 	iw = dagger_fopen_net_init(net, ifname, NETDAG_INIT_PRE, "init-iw.sh");
 
-	if (is_first_ap) {
-		/* First AP interface: rename radio interface to AP name */
-		fprintf(iw, "# Rename radio %s to first AP interface %s\n", radio, ifname);
-		fprintf(iw, "ip link set dev %s name %s\n", radio, ifname);
-		fprintf(iw, "ip link property add dev %s altname %s\n", ifname, radio);
-	} else {
-		/* Additional AP interfaces: create virtual interface as before */
-		fprintf(iw, "# Create virtual AP interface %s on radio %s\n", ifname, radio);
-		fprintf(iw, "iw dev %s interface add %s type __ap\n", radio, ifname);
-	}
+	fprintf(iw, "# Check if radio has altname, if so create virtual interface, else rename radio\n");
+	fprintf(iw, "ALTNAME=$(ip -j link show dev %s | jq -r '.[0].altnames[0] // empty')\n", radio);
+	fprintf(iw, "if [ -n \"$ALTNAME\" ]; then\n");
+	fprintf(iw, "  # Radio already renamed, create virtual AP interface\n");
+	fprintf(iw, "  logger -t confd -p daemon.info \"Creating virtual AP interface %s on radio %s\"\n", ifname, radio);
+	fprintf(iw, "  iw dev %s interface add %s type __ap\n", radio, ifname);
+	fprintf(iw, "else\n");
+	fprintf(iw, "  # First AP interface, rename radio to AP name\n");
+	fprintf(iw, "  logger -t confd -p daemon.info \"Renaming radio %s to AP interface %s\"\n", radio, ifname);
+	fprintf(iw, "  ip link set dev %s down\n", radio);
+	fprintf(iw, "  ip link set dev %s name %s\n", radio, ifname);
+	fprintf(iw, "  ip link property add dev %s altname %s\n", ifname, radio);
+	fprintf(iw, "fi\n");
 
 	fclose(iw);
 
@@ -348,6 +298,7 @@ int wifi_ap_gen(struct lyd_node *cif, struct dagger *net)
 	if (!channel || !strcmp(channel, "auto"))
 		channel = freq_24GHz ? "6" : "149";
 
+	ERROR("Searching radio");
 	/* Find all wifi-ap interfaces that reference this radio */
 	rc = lyd_find_xpath(cif, "../interface[derived-from-or-self(type, 'infix-if-type:wifi-ap') and wifi/radio = current()/name]", &ap_interfaces);
 	if (rc != LY_SUCCESS || !ap_interfaces || ap_interfaces->count == 0) {
