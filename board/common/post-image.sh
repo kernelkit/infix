@@ -38,9 +38,6 @@ if [ "$SIGN_ENABLED" = "y" ]; then
     load_cfg BR2_ARCH
     load_cfg SIGN_KEY
 
-    ixmsg "Signing SquashFS Image"
-    $common/sign.sh $BR2_ARCH $SIGN_KEY
-
     ixmsg "Creating RAUC Update Bundle"
     $common/mkrauc.sh "$NAME$(ver)" $INFIX_COMPATIBLE $SIGN_KEY
 fi

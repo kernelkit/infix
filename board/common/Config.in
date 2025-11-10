@@ -1,3 +1,9 @@
+menu "Images"
+
+source "$BR2_EXTERNAL_INFIX_PATH/board/common/image/image-itb-rootfs/Config.in"
+
+endmenu
+
 menuconfig SIGN_ENABLED
 	bool "Image Signing"
 	default y
@@ -166,3 +172,4 @@ config SDCARD_AUX
 	help
 	  Create and populate aux.ext4 with rootfs.itbh and rauc.status
 	  For use with a static genimage.cfg for, e.g., SD-cards.
+

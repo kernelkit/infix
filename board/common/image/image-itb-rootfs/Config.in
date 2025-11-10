@@ -1,0 +1,20 @@
+menuconfig IMAGE_ITB_ROOTFS
+	bool "rootfs.itb+.itbh"
+	select BR2_TARGET_ROOTFS_SQUASHFS
+	select BR2_PACKAGE_HOST_UBOOT_TOOLS
+	help
+	  Create a signed ITB image containing a SquashFS of rootfs
+	  and extract detached header (.itbh) for U-Boot based
+	  targets.
+
+config IMAGE_ITB_ROOTFS_KEY
+	string "signing key"
+	depends on IMAGE_ITB_ROOTFS
+	default "${BR2_EXTERNAL_INFIX_PATH}/board/common/signing-keys/development/infix.key"
+	help
+	  Path to the private RSA key, in PKCS#8 format, used to sign
+	  the root filesystem.
+
+	  If the path is prefixed with "<hint>:", then that used as
+	  the "key-name-hint" in the resulting ITB, otherwise the
+	  basename of the path, with any extension removed, is used.
