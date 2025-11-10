@@ -20,6 +20,10 @@ module infix-routing {
   contact      "kernelkit@googlegroups.com";
   description  "Deviations and augments for ietf-routing and ietf-ospf.";
 
+  revision 2025-11-10 {
+    description "Add must constraint to prevent backbone area as stub/NSSA";
+    reference "RFC 2328, RFC 3101";
+  }
   revision 2024-11-27 {
     description "Deviate address-family in OSPF";
     reference "internal";
@@ -348,6 +352,19 @@ module infix-routing {
   }
 
   /* OSPF Area */
+  deviation "/rt:routing/rt:control-plane-protocols/rt:control-plane-protocol/ospf:ospf/ospf:areas/ospf:area/ospf:area-type" {
+    deviate add {
+      must "(../ospf:area-id != '0.0.0.0') or "
+         + "(derived-from-or-self(., 'ospf:normal-area'))" {
+        error-message "Area 0.0.0.0 (backbone) cannot be configured as "
+                    + "stub or NSSA.";
+        description
+          "The backbone area (area 0.0.0.0) must be a normal area. "
+        + "It cannot be configured as a stub area or NSSA as per "
+        + "RFC 2328 and RFC 3101.";
+      }
+    }
+  }
   deviation "/rt:routing/rt:control-plane-protocols/rt:control-plane-protocol/ospf:ospf/ospf:areas/ospf:area/ospf:virtual-links" {
     deviate not-supported;
   }
