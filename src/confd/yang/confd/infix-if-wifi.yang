@@ -131,6 +131,9 @@ submodule infix-if-wifi {
         must "derived-from-or-self(/if:interfaces/if:interface[if:name=current()]/if:type, 'infixift:wifi')" {
           error-message "Referenced interface must be of type 'wifi'.";
         }
+        must "/if:interfaces/if:interface[if:name=current()]/infix-if:wifi/mode = 'accesspoint'" {
+          error-message "Referenced wifi interface must be in accesspoint mode.";
+        }
         mandatory true;
         description
           "Reference to the underlying WiFi radio interface.
@@ -151,6 +154,9 @@ submodule infix-if-wifi {
 
       leaf mode {
         type mode;
+        must "not(. = 'accesspoint' and derived-from-or-self(../../if:type, 'infixift:wifi')) or ../band" {
+          error-message "Band must be specified when mode is accesspoint for wifi interfaces.";
+        }
         description
           "WiFi interface operating mode.
 
@@ -161,9 +167,6 @@ submodule infix-if-wifi {
         type band;
         when "derived-from-or-self(../../if:type, 'infixift:wifi') and ../mode = 'accesspoint'" {
           description "Only available for wifi interfaces in accesspoint mode.";
-        }
-        must "not(derived-from-or-self(../../if:type, 'infixift:wifi') and ../mode = 'accesspoint') or ." {
-          error-message "Band is mandatory for WiFi interfaces in accesspoint mode.";
         }
         description
           "WiFi frequency band for radio operation.
