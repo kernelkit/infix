@@ -37,28 +37,61 @@ def exist(target, iface):
     """Verify that the target interface exists"""
     return get_param(target, iface, "name") is not None
 
-def address_exist(target, iface, address, prefix_length = 24, proto="dhcp"):
+
+def address_exist(target, iface, address, prefix_length=None, proto="dhcp"):
     """Check if 'address' is set on iface"""
+    if not prefix_length:
+        if ':' in address:
+            prefix_length = 64
+        else:
+            prefix_length = 24
+
     addrs = get_ipv4_address(target, iface)
-    if not addrs:
-        return False
-    for addr in addrs:
-        if addr['origin'] == proto and addr['ip'] == address and addr['prefix-length'] == prefix_length:
-            return True
+    if addrs:
+        for addr in addrs:
+            if addr['origin'] == proto and addr['ip'] == address and\
+               addr['prefix-length'] == prefix_length:
+                return True
+
+    addrs = get_ipv6_address(target, iface)
+    if addrs:
+        for addr in addrs:
+            if addr['origin'] == proto and addr['ip'] == address and\
+               addr['prefix-length'] == prefix_length:
+                return True
+
+    return False
+
 
 def get_ipv4_address(target, iface):
-    """Fetch interface IPv4 addresses from (operational status)"""
-    # The interface array is different in restconf/netconf, netconf has a keyed list but
-    # restconf has a numbered list, i think i read that this was a bug in rousette, but
-    # have not found it.
-    interface=target.get_iface(iface)
+    """Fetch interface IPv4 addresses from operational"""
+    # The interface array is different in restconf/netconf, netconf has
+    # a keyed list but restconf has a numbered list, i think i read that
+    # this was a bug in rousette, but have not found it.
+    interface = target.get_iface(iface)
     if interface is None:
         raise "Interface not found"
 
-    ipv4 = interface.get("ipv4") or interface.get("ietf-ip:ipv4")
-    if ipv4 is None or 'address' not in ipv4:
+    ip = interface.get("ipv4") or interface.get("ietf-ip:ipv4")
+    if ip is None or 'address' not in ip:
         return None
-    return ipv4['address']
+    return ip['address']
+
+
+def get_ipv6_address(target, iface):
+    """Fetch interface IPv6 addresses from operational"""
+    # The interface array is different in restconf/netconf, netconf has
+    # a keyed list but restconf has a numbered list, i think i read that
+    # this was a bug in rousette, but have not found it.
+    interface = target.get_iface(iface)
+    if interface is None:
+        raise "Interface not found"
+
+    ip = interface.get("ipv6") or interface.get("ietf-ip:ipv6")
+    if ip is None or 'address' not in ip:
+        return None
+    return ip['address']
+
 
 def get_phys_address(target, iface):
     """Fetch interface MAC address (operational status)"""
