@@ -2,12 +2,14 @@
 Fetch interface status from remote device.
 """
 
+
 def get_xpath(iface, path=None):
     """Compose complete XPath to a YANG node in /ietf-interfaces"""
-    xpath=f"/ietf-interfaces:interfaces/interface[name='{iface}']"
-    if not path is None:
-        xpath=f"{xpath}/{path}"
+    xpath = f"/ietf-interfaces:interfaces/interface[name='{iface}']"
+    if path is not None:
+        xpath = f"{xpath}/{path}"
     return xpath
+
 
 def _extract_param(json_content, param):
     """Returns (extracted) value for parameter 'param'"""
@@ -22,12 +24,14 @@ def _extract_param(json_content, param):
 
     return None
 
+
 def get_param(target, iface, param=None):
     """Fetch target dict for iface and extract param from JSON"""
     content = target.get_data(get_xpath(iface, param))
     if content is None:
         return None
     return _extract_param(content, param)
+
 
 def exist(target, iface):
     """Verify that the target interface exists"""
@@ -60,11 +64,13 @@ def get_phys_address(target, iface):
     """Fetch interface MAC address (operational status)"""
     return get_param(target, iface, "phys-address")
 
+
 def exist_bridge_multicast_filter(target, group, iface, bridge):
-    # The interface array is different in restconf/netconf, netconf has a keyed list but
-    # restconf has a numbered list, i think i read that this was a bug in rousette, but
-    # have not found it.
-    interface=target.get_iface(bridge)
+    """Check if a bridge has a multicast filter for group with iface"""
+    # The interface array is different in restconf/netconf, netconf has
+    # a keyed list but restconf has a numbered list, i think i read that
+    # this was a bug in rousette, but have not found it.
+    interface = target.get_iface(bridge)
     if interface is None:
         raise "Interface not found"
 
@@ -72,9 +78,9 @@ def exist_bridge_multicast_filter(target, group, iface, bridge):
     if brif is None:
         return False
 
-    for filter in brif.get("multicast-filters", {}).get("multicast-filter", {}):
-        if filter.get("group") == group:
-            for p in filter.get("ports"):
+    for f in brif.get("multicast-filters", {}).get("multicast-filter", {}):
+        if f.get("group") == group:
+            for p in f.get("ports"):
                 if p["port"] == iface:
                     return True
 
