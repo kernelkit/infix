@@ -1,0 +1,27 @@
+menuconfig IMAGE_ITB_RAUC
+	bool "RAUC upgrade bundle (ITB)"
+	select IMAGE_ITB_ROOTFS
+	select BR2_PACKAGE_HOST_RAUC
+	help
+	  Create RAUC upgrade bundle, for targets using ITB images,
+	  that can be used to upgrade a running system to this version
+	  of Infix.
+
+config IMAGE_ITB_RAUC_KEY
+	string "signing key"
+	depends on IMAGE_ITB_RAUC
+	default "${BR2_EXTERNAL_INFIX_PATH}/board/common/signing-keys/development/infix.key"
+	help
+	  Path to the private key, in PKCS#8 format, used to sign
+	  the RAUC bundle; or a PKCS#11 URI.
+
+config IMAGE_ITB_RAUC_CERT
+	string "signing certificate"
+	depends on IMAGE_ITB_RAUC
+	default "${BR2_EXTERNAL_INFIX_PATH}/board/common/signing-keys/development/infix.crt"
+	help
+	  Path to the X509 certificate which will be associated with
+	  the bundle signature.
+
+	  NOTE: This cert MUST be included in the trust store of the
+	        system on which this bundle is to be installed.
