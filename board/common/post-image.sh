@@ -33,15 +33,6 @@ ver()
     fi
 }
 
-load_cfg SIGN_ENABLED
-if [ "$SIGN_ENABLED" = "y" ]; then
-    load_cfg BR2_ARCH
-    load_cfg SIGN_KEY
-
-    ixmsg "Creating RAUC Update Bundle"
-    $common/mkrauc.sh "$NAME$(ver)" $INFIX_COMPATIBLE $SIGN_KEY
-fi
-
 load_cfg DISK_IMAGE
 if [ "$DISK_IMAGE" = "y" ]; then
     ixmsg "Creating Disk Image"
