@@ -1,4 +1,4 @@
-name: Create SD Card Images
+name: Create SD Card & eMMC Images
 
 on:
   workflow_dispatch:
@@ -56,21 +56,33 @@ jobs:
             raspberrypi-rpi64)
               echo "BOOTLOADER=rpi64_boot" >> $GITHUB_ENV
               echo "TARGET=aarch64" >> $GITHUB_ENV
+              echo "BUILD_EMMC=false" >> $GITHUB_ENV
               ;;
             bananapi-bpi-r3)
-              echo "BOOTLOADER=bpi_r3_boot" >> $GITHUB_ENV
+              echo "BOOTLOADER_SD=bpi_r3_sd_boot" >> $GITHUB_ENV
+              echo "BOOTLOADER_EMMC=bpi_r3_emmc_boot" >> $GITHUB_ENV
               echo "TARGET=aarch64" >> $GITHUB_ENV
+              echo "BUILD_EMMC=true" >> $GITHUB_ENV
               ;;
             friendlyarm-nanopi-r2s)
               echo "BOOTLOADER=nanopi_r2s_boot" >> $GITHUB_ENV
               echo "TARGET=aarch64" >> $GITHUB_ENV
+              echo "BUILD_EMMC=false" >> $GITHUB_ENV
               ;;
             *)
               echo "Error: Unknown board ${{ inputs.board }}"
               exit 1
               ;;
           esac
-          echo "Using bootloader: $BOOTLOADER and target: $TARGET for board: ${{ inputs.board }}"
+          echo "Target: $TARGET for board: ${{ inputs.board }}"
+          if [ "$BUILD_EMMC" = "true" ]; then
+            echo "Building both SD and eMMC images"
+            echo "SD Bootloader: $BOOTLOADER_SD"
+            echo "eMMC Bootloader: $BOOTLOADER_EMMC"
+          else
+            echo "Building SD image only"
+            echo "Bootloader: $BOOTLOADER"
+          fi
 
       - name: Download bootloader artifacts
         if: ${{ !inputs.use_latest_release }}
@@ -79,16 +91,41 @@ jobs:
           gh run list --workflow=build-boot.yml --branch=main --limit=1 --status=success --json databaseId --jq '.[0].databaseId' > latest_boot_run_id
           BOOT_RUN_ID=$(cat latest_boot_run_id)
 
-          gh run download ${BOOT_RUN_ID} --name artifact-${BOOTLOADER} --dir temp_bootloader/
+          if [ "$BUILD_EMMC" = "true" ]; then
+            # Download both SD and eMMC bootloaders for boards that support both
+            echo "Downloading SD bootloader: ${BOOTLOADER_SD}"
+            gh run download ${BOOT_RUN_ID} --name artifact-${BOOTLOADER_SD} --dir temp_bootloader_sd/
+            mkdir -p output_sd/images
+            cd temp_bootloader_sd/
+            tar -xzf *.tar.gz --strip-components=1 -C ../output_sd/images/
+            cd ../
+            rm -rf temp_bootloader_sd/
 
-          # Extract bootloader directly to output/images
-          cd temp_bootloader/
-          tar -xzf *.tar.gz --strip-components=1 -C ../output/images/
-          cd ../
-          rm -rf temp_bootloader/
+            echo "Downloading eMMC bootloader: ${BOOTLOADER_EMMC}"
+            gh run download ${BOOT_RUN_ID} --name artifact-${BOOTLOADER_EMMC} --dir temp_bootloader_emmc/
+            mkdir -p output_emmc/images
+            cd temp_bootloader_emmc/
+            tar -xzf *.tar.gz --strip-components=1 -C ../output_emmc/images/
+            cd ../
+            rm -rf temp_bootloader_emmc/
 
-          echo "Bootloader files extracted to output/images:"
-          ls -la output/images/
+            echo "SD bootloader files:"
+            ls -la output_sd/images/
+            echo "eMMC bootloader files:"
+            ls -la output_emmc/images/
+          else
+            # Single bootloader for boards that only support SD
+            gh run download ${BOOT_RUN_ID} --name artifact-${BOOTLOADER} --dir temp_bootloader/
+
+            # Extract bootloader directly to output/images
+            cd temp_bootloader/
+            tar -xzf *.tar.gz --strip-components=1 -C ../output/images/
+            cd ../
+            rm -rf temp_bootloader/
+
+            echo "Bootloader files extracted to output/images:"
+            ls -la output/images/
+          fi
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -99,90 +136,193 @@ jobs:
           gh run list --workflow=164295764 --branch=main --limit=1 --status=success --json databaseId --jq '.[0].databaseId' > latest_infix_run_id
           INFIX_RUN_ID=$(cat latest_infix_run_id)
 
-          gh run download ${INFIX_RUN_ID} --name artifact-${TARGET} --dir temp_infix/
+          if [ "$BUILD_EMMC" = "true" ]; then
+            # Copy Infix artifacts to both SD and eMMC output directories
+            gh run download ${INFIX_RUN_ID} --name artifact-${TARGET} --dir temp_infix/
 
-          # Extract Infix directly to output/images
-          cd temp_infix/
-          tar -xzf *.tar.gz --strip-components=1 -C ../output/images/
-          cd ../
-          rm -rf temp_infix/
+            cd temp_infix/
+            tar -xzf *.tar.gz --strip-components=1 -C ../output_sd/images/
+            tar -xzf *.tar.gz --strip-components=1 -C ../output_emmc/images/
+            cd ../
+            rm -rf temp_infix/
 
-          echo "Infix files extracted to output/images:"
-          ls -la output/images/
+            echo "Infix files extracted to output_sd/images:"
+            ls -la output_sd/images/
+            echo "Infix files extracted to output_emmc/images:"
+            ls -la output_emmc/images/
+          else
+            # Single output directory for SD-only boards
+            gh run download ${INFIX_RUN_ID} --name artifact-${TARGET} --dir temp_infix/
+
+            # Extract Infix directly to output/images
+            cd temp_infix/
+            tar -xzf *.tar.gz --strip-components=1 -C ../output/images/
+            cd ../
+            rm -rf temp_infix/
+
+            echo "Infix files extracted to output/images:"
+            ls -la output/images/
+          fi
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Download from latest releases
         if: ${{ inputs.use_latest_release }}
         run: |
-          # Download latest bootloader release
-          gh release download latest-boot --pattern "*${BOOTLOADER}*" --dir temp_bootloader/
-          cd temp_bootloader/
-          tar -xzf *.tar.gz --strip-components=1 -C ../output/images/
-          cd ../
-          rm -rf temp_bootloader/
+          if [ "$BUILD_EMMC" = "true" ]; then
+            # Download both SD and eMMC bootloaders
+            gh release download latest-boot --pattern "*${BOOTLOADER_SD}*" --dir temp_bootloader_sd/
+            mkdir -p output_sd/images
+            cd temp_bootloader_sd/
+            tar -xzf *.tar.gz --strip-components=1 -C ../output_sd/images/
+            cd ../
+            rm -rf temp_bootloader_sd/
 
-          # Download latest Infix release
-          gh release download latest --pattern "*${TARGET}*" --dir temp_infix/
-          cd temp_infix/
-          tar -xzf *.tar.gz --strip-components=1 -C ../output/images/
-          cd ../
-          rm -rf temp_infix/
+            gh release download latest-boot --pattern "*${BOOTLOADER_EMMC}*" --dir temp_bootloader_emmc/
+            mkdir -p output_emmc/images
+            cd temp_bootloader_emmc/
+            tar -xzf *.tar.gz --strip-components=1 -C ../output_emmc/images/
+            cd ../
+            rm -rf temp_bootloader_emmc/
 
-          echo "All files extracted to output/images:"
-          ls -la output/images/
+            # Download Infix once and extract to both directories
+            gh release download latest --pattern "*${TARGET}*" --dir temp_infix/
+            cd temp_infix/
+            tar -xzf *.tar.gz --strip-components=1 -C ../output_sd/images/
+            tar -xzf *.tar.gz --strip-components=1 -C ../output_emmc/images/
+            cd ../
+            rm -rf temp_infix/
+
+            echo "SD files extracted to output_sd/images:"
+            ls -la output_sd/images/
+            echo "eMMC files extracted to output_emmc/images:"
+            ls -la output_emmc/images/
+          else
+            # Download latest bootloader release
+            gh release download latest-boot --pattern "*${BOOTLOADER}*" --dir temp_bootloader/
+            cd temp_bootloader/
+            tar -xzf *.tar.gz --strip-components=1 -C ../output/images/
+            cd ../
+            rm -rf temp_bootloader/
+
+            # Download latest Infix release
+            gh release download latest --pattern "*${TARGET}*" --dir temp_infix/
+            cd temp_infix/
+            tar -xzf *.tar.gz --strip-components=1 -C ../output/images/
+            cd ../
+            rm -rf temp_infix/
+
+            echo "All files extracted to output/images:"
+            ls -la output/images/
+          fi
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Verify extracted files
         run: |
-          echo "Files available for mkimage.sh:"
-          ls -la output/images/
-          echo ""
-          echo "File types:"
-          file output/images/* || true
+          if [ "$BUILD_EMMC" = "true" ]; then
+            echo "Files available for SD image:"
+            ls -la output_sd/images/
+            echo ""
+            echo "Files available for eMMC image:"
+            ls -la output_emmc/images/
+          else
+            echo "Files available for mkimage.sh:"
+            ls -la output/images/
+            echo ""
+            echo "File types:"
+            file output/images/* || true
+          fi
 
       - name: Create SD card image
         run: |
-          export BINARIES_DIR=$PWD/output/images
+          if [ "$BUILD_EMMC" = "true" ]; then
+            export BINARIES_DIR=$PWD/output_sd/images
+            export BUILD_DIR=$PWD/build
+            export BR2_EXTERNAL_INFIX_PATH=$PWD
+            export RELEASE=""
+            export INFIX_ID="infix"
+            ./utils/mkimage.sh -t sdcard ${{ inputs.board }}
+          else
+            export BINARIES_DIR=$PWD/output/images
+            export BUILD_DIR=$PWD/build
+            export BR2_EXTERNAL_INFIX_PATH=$PWD
+            export RELEASE=""
+            export INFIX_ID="infix"
+            ./utils/mkimage.sh ${{ inputs.board }}
+          fi
+
+      - name: Create eMMC image
+        if: ${{ env.BUILD_EMMC == 'true' }}
+        run: |
+          export BINARIES_DIR=$PWD/output_emmc/images
           export BUILD_DIR=$PWD/build
           export BR2_EXTERNAL_INFIX_PATH=$PWD
           export RELEASE=""
           export INFIX_ID="infix"
-          ./utils/mkimage.sh ${{ inputs.board }}
+          ./utils/mkimage.sh -t emmc ${{ inputs.board }}
 
-      - name: Verify created image
+      - name: Verify created images
         run: |
-          echo "Contents of output/images after mkimage.sh:"
-          ls -lh output/images/
+          if [ "$BUILD_EMMC" = "true" ]; then
+            echo "SD card image:"
+            ls -lh output_sd/images/*-sdcard.img* 2>/dev/null || true
+            if ls output_sd/images/*-sdcard.img 1> /dev/null 2>&1; then
+              for img in output_sd/images/*-sdcard.img; do
+                echo "- $(basename $img)"
+                file "$img"
+                fdisk -l "$img" 2>/dev/null | head -20
+              done
+            fi
 
-          # Look for SD card image with pattern: *-sdcard.img
-          if ls output/images/*-sdcard.img 1> /dev/null 2>&1; then
-            echo "Found SD card image(s):"
-            for img in output/images/*-sdcard.img; do
-              echo "- $(basename $img)"
-              file "$img"
-              fdisk -l "$img" 2>/dev/null || true
-            done
+            echo ""
+            echo "eMMC image:"
+            ls -lh output_emmc/images/*-emmc.img* 2>/dev/null || true
+            if ls output_emmc/images/*-emmc.img 1> /dev/null 2>&1; then
+              for img in output_emmc/images/*-emmc.img; do
+                echo "- $(basename $img)"
+                file "$img"
+                fdisk -l "$img" 2>/dev/null | head -20
+              done
+            fi
+
+            # Copy both images to output/images for artifact upload
+            mkdir -p output/images
+            cp output_sd/images/*-sdcard.img* output/images/ 2>/dev/null || true
+            cp output_emmc/images/*-emmc.img* output/images/ 2>/dev/null || true
           else
-            echo "No SD card image found matching pattern: *-sdcard.img"
-            echo "Available files:"
-            ls -la output/images/
-            exit 1
+            echo "Contents of output/images after mkimage.sh:"
+            ls -lh output/images/
+
+            # Look for SD card image with pattern: *-sdcard.img
+            if ls output/images/*-sdcard.img 1> /dev/null 2>&1; then
+              echo "Found SD card image(s):"
+              for img in output/images/*-sdcard.img; do
+                echo "- $(basename $img)"
+                file "$img"
+                fdisk -l "$img" 2>/dev/null || true
+              done
+            else
+              echo "No SD card image found matching pattern: *-sdcard.img"
+              echo "Available files:"
+              ls -la output/images/
+              exit 1
+            fi
           fi
 
-      - name: Upload SD card image
+      - name: Upload images as artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: sdcard-image-${{ inputs.board }}-${{ env.BOOTLOADER }}
+          name: images-${{ inputs.board }}
           path: |
             output/images/*-sdcard.img*
+            output/images/*-emmc.img*
           retention-days: 30
 
       - name: Create checksums
         run: |
           cd output/images/
-          for file in *-sdcard.img; do
+          for file in *-sdcard.img *-emmc.img; do
             if [ -f "$file" ]; then
               sha256sum "$file" > "$file.sha256"
             fi
@@ -198,11 +338,28 @@ jobs:
           prerelease: true
           tag: "latest-boot"
           token: ${{ secrets.GITHUB_TOKEN }}
-          artifacts: "output/images/*-sdcard.img*"
+          artifacts: "output/images/*-sdcard.img*,output/images/*-emmc.img*"
 
       - name: Generate summary
         run: |
-          cat <<EOF >> $GITHUB_STEP_SUMMARY
+          if [ "$BUILD_EMMC" = "true" ]; then
+            cat <<EOF >> $GITHUB_STEP_SUMMARY
+          # SD Card & eMMC Image Build Complete! 🚀
+
+          **Board:** ${{ inputs.board }}
+          **Target:** ${{ env.TARGET }}
+          **SD Bootloader:** ${{ env.BOOTLOADER_SD }}
+          **eMMC Bootloader:** ${{ env.BOOTLOADER_EMMC }}
+          **Artifact Source:** ${{ inputs.use_latest_release && 'Latest Release' || 'Latest Workflow Run' }}
+
+          ## Created Images
+          $(find output/images/ -name "*.img" -o -name "*.img.bmap" | xargs ls -lh 2>/dev/null | awk '{print "- " $9 " (" $5 ")"}' || echo "- No images found")
+
+          ## Download
+          Both SD card and eMMC images are available as workflow artifacts above and in the latest-boot release.
+          EOF
+          else
+            cat <<EOF >> $GITHUB_STEP_SUMMARY
           # SD Card Image Build Complete! 🚀
 
           **Board:** ${{ inputs.board }}
@@ -211,8 +368,9 @@ jobs:
           **Artifact Source:** ${{ inputs.use_latest_release && 'Latest Release' || 'Latest Workflow Run' }}
 
           ## Created Images
-          $(find output/images/ -name "*.img*" -o -name "*.qcow2" -o -name "*.raw" | xargs ls -lh 2>/dev/null | sed 's/^/- /' || echo "- No images found")
+          $(find output/images/ -name "*.img" -o -name "*.img.bmap" | xargs ls -lh 2>/dev/null | awk '{print "- " $9 " (" $5 ")"}' || echo "- No images found")
 
           ## Download
           The SD card image is available as a workflow artifact above.
           EOF
+          fi
