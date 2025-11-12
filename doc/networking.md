@@ -562,7 +562,7 @@ In addition to basic status shown in the interface overview, detailed
 LAG status can be inspected:
 
 ```
-admin@example:/> show interfaces name lag0
+admin@example:/> show interface lag0
 name                : lag0
 index               : 25
 mtu                 : 1500
@@ -582,7 +582,7 @@ out-octets          : 2142
 Same aggregate, but in LACP mode:
 
 ```
-admin@example:/> show interfaces name lag0
+admin@example:/> show interface lag0
 name                : lag0
 index               : 24
 mtu                 : 1500
@@ -624,7 +624,7 @@ Member ports provide additional status information:
 Example member port status:
 
 ```
-admin@example:/> show interfaces name eth7
+admin@example:/> show interface eth7
 name                : eth7
 index               : 8
 mtu                 : 1500
@@ -755,7 +755,7 @@ The speed and duplex status for the links can be listed as shown
 below, assuming the link operational status is 'up'. 
 
 ```
-admin@example:/> show interfaces name eth1
+admin@example:/> show interface eth1
 name                : eth1
 index               : 2
 mtu                 : 1500
@@ -769,7 +769,7 @@ ipv6 addresses      :
 in-octets           : 75581
 out-octets          : 43130
 ...
-admin@example:/> show interfaces name eth4
+admin@example:/> show interface eth4
 name                : eth4
 index               : 5
 mtu                 : 1500
@@ -827,7 +827,7 @@ require auto-negotiation to be enabled.
 Ethernet packet statistics[^6] can be listed as shown below.
 
 ```
-admin@example:/> show interfaces name eth1
+admin@example:/> show interface eth1
 name                : eth1
 index               : 2
 mtu                 : 1500
@@ -1525,10 +1525,10 @@ currently supported, namely `ipv4` and `ipv6`.
 [^3]: For example, IPv4 groups are mapped to MAC multicast addresses by
     mapping the low-order 23-bits of the IP address in the low-order 23
     bits of the Ethernet address 01:00:5E:00:00:00.  Meaning, more than
-	one IP multicast group maps to the same MAC multicast group.
+    one IP multicast group maps to the same MAC multicast group.
 [^4]: A YANG deviation was previously used to make it possible to set
     `phys-address`, but this has been replaced with the more flexible
-	`custom-phys-address`.
+    `custom-phys-address`.
 [^5]: MAC bridges on Marvell Linkstreet devices are currently limited to
     a single MAC database, this may be a problem if the same MAC address
     appears in different MAC bridges.

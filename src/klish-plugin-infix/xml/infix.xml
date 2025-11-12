@@ -441,14 +441,12 @@
   </COMMAND>
 
   <!-- https://www.cisco.com/c/en/us/td/docs/wireless/access_point/mob_exp/83/cmd-ref/me_cr_book/me_ports_and_interfaces_cli.html -->
-  <COMMAND name="interfaces" help="Show interface info">
+  <COMMAND name="interface" help="Show interface info, default an overview of all">
     <SWITCH name="optional" min="0" max="1">
-      <COMMAND name="name" help="Show detailed info about NAME">
-        <PARAM name="name" ptype="/IFACES" help="Interface." />
-      </COMMAND>
+      <PARAM name="ifname" ptype="/IFACES" help="Interface name" />
     </SWITCH>
     <ACTION sym="script" in="tty" out="tty" interrupt="true">
-        show interface "$KLISH_PARAM_name" |pager
+      show interface "$KLISH_PARAM_ifname" |pager
     </ACTION>
   </COMMAND>
 
