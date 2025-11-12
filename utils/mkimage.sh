@@ -25,6 +25,7 @@ Options:
   -l              List available boards
   -o              Override auto-detection of genimage.sh, use host installed version
   -r root-dir     Path to rootfs build directory or rootfs.squashfs file (default: O= or output/)
+  -t target       Image target type: sdcard or emmc (default: sdcard)
 
 Arguments:
   board-name      Board identifier (must come after options)
@@ -37,7 +38,7 @@ Description:
   from separate boot and rootfs sources. Useful for CI or manual image creation.
 
 Output:
-  SD card image saved to \$BINARIES_DIR/*-sdcard.img
+  Image saved to \$BINARIES_DIR/*-sdcard.img or *-emmc.img
 
 Examples:
   # From Buildroot build:
@@ -51,6 +52,9 @@ Examples:
 
   # Download bootloader and compose with Linux image in output directory:
   $0 -od bananapi-bpi-r3
+
+  # Create eMMC image instead of SD card:
+  $0 -t emmc bananapi-bpi-r3
 
 EOF
 }
@@ -107,7 +111,7 @@ run_genimage()
         --config     "$genimage_cfg"
 
     if command -v bmaptool >/dev/null 2>&1; then
-        for img in "${BINARIES_DIR}"/*-sdcard.img; do
+        for img in "${BINARIES_DIR}"/*-sdcard.img "${BINARIES_DIR}"/*-emmc.img; do
             [ -f "$img" ] || continue
             log "Generating block map for $(basename "$img")..."
             bmaptool create -o "${img}.bmap" "$img"
@@ -163,12 +167,17 @@ find_build_dir()
 get_bootloader_name()
 {
     board="$1"
+    target="$2"
     case "$board" in
         raspberrypi-rpi64)
             echo "rpi64_boot"
             ;;
         bananapi-bpi-r3)
-            echo "bpi_r3_sd_boot"
+            if [ "$target" = "emmc" ]; then
+                echo "bpi_r3_emmc_boot"
+            else
+                echo "bpi_r3_sd_boot"
+            fi
             ;;
         friendlyarm-nanopi-r2s)
             echo "nanopi_r2s_boot"
@@ -187,8 +196,9 @@ download_bootloader()
 {
     board="$1"
     build_dir="$2"
+    target="$3"
 
-    bootloader=$(get_bootloader_name "$board") || return 1
+    bootloader=$(get_bootloader_name "$board" "$target") || return 1
 
     if ! command -v gh >/dev/null 2>&1; then
         die "gh CLI not found. Install it or build bootloader locally."
@@ -271,7 +281,7 @@ discover_rpi_boot_files()
     echo "$files"
 }
 
-while getopts "hldfob:r:" opt; do
+while getopts "hldfob:r:t:" opt; do
     case $opt in
         b)
 	    BOOT_DIR="$OPTARG"
@@ -299,6 +309,9 @@ while getopts "hldfob:r:" opt; do
 	    ROOT_DIR="$OPTARG"
 	    STANDALONE=1
 	    ;;
+	t)
+	    TARGET="$OPTARG"
+	    ;;
         *)
 	    usage
 	    exit 1
@@ -311,6 +324,22 @@ if ! validate_board "$1"; then
     usage
     exit 1
 fi
+
+# Validate and set default target
+: "${TARGET:=sdcard}"
+case "$TARGET" in
+    sd|sdcard)
+        TARGET="sdcard"
+        ;;
+    emmc)
+        TARGET="emmc"
+        ;;
+    *)
+        err "Invalid target: $TARGET. Must be 'sdcard' or 'emmc'"
+        usage
+        exit 1
+        ;;
+esac
 
 # Standalone mode: set up environment from build directories
 if [ -n "$STANDALONE" ]; then
@@ -404,7 +433,7 @@ if [ -n "$DOWNLOAD_BOOT" ]; then
     # Save original output location
     ORIGINAL_BINARIES_DIR="$BINARIES_DIR"
 
-    download_bootloader "$BOARD" "$BUILD_DIR"
+    download_bootloader "$BOARD" "$BUILD_DIR" "$TARGET"
 
     # Now use the temporary directory for composition
     BINARIES_DIR="$SDCARD_TEMP_DIR"
@@ -458,7 +487,7 @@ fi
 # Epxand template variables
 sed "s|#VERSION#|${RELEASE}|" "$GENIMAGE_TEMPLATE" | \
 sed "s|#INFIX_ID#|${INFIX_ID}|" | \
-sed "s|#TARGET#|sd|" > "$GENIMAGE_CFG"
+sed "s|#TARGET#|${TARGET}|" > "$GENIMAGE_CFG"
 
 # Clean up temp file if created
 rm -f "${GENIMAGE_CFG}.tmp"
@@ -479,19 +508,19 @@ else
 fi
 
 if [ -z "$OVERRIDE" ] && command -v "$GENIMAGE_WRAPPER" >/dev/null 2>&1; then
-    log "Creating SD card image using Buildroot $(basename "$GENIMAGE_WRAPPER") ..."
+    log "Creating $TARGET image using Buildroot $(basename "$GENIMAGE_WRAPPER") ..."
     "$GENIMAGE_WRAPPER" -c "$GENIMAGE_CFG"
 else
-    log "Creating SD card image ..."
+    log "Creating $TARGET image ..."
     run_genimage "$GENIMAGE_CFG"
 fi
 
 # Post-processing: move images and cleanup if using download mode
 if [ -n "$DOWNLOAD_BOOT" ]; then
-    log "Moving SD card images to $ORIGINAL_BINARIES_DIR..."
+    log "Moving $TARGET images to $ORIGINAL_BINARIES_DIR..."
     mkdir -p "$ORIGINAL_BINARIES_DIR"
 
-    for img in "${BINARIES_DIR}"/*-sdcard.img*; do
+    for img in "${BINARIES_DIR}"/*-sdcard.img* "${BINARIES_DIR}"/*-emmc.img*; do
         if [ -f "$img" ]; then
             mv "$img" "$ORIGINAL_BINARIES_DIR/"
             log "  $(basename "$img")"
@@ -505,8 +534,8 @@ if [ -n "$DOWNLOAD_BOOT" ]; then
     BINARIES_DIR="$ORIGINAL_BINARIES_DIR"
 fi
 
-log "SD card image created successfully:"
-for img in "${BINARIES_DIR}"/*-sdcard.img*; do
+log "$TARGET image created successfully:"
+for img in "${BINARIES_DIR}"/*-sdcard.img* "${BINARIES_DIR}"/*-emmc.img*; do
     if [ -f "$img" ]; then
         if [ -n "$STANDALONE" ]; then
             # Show relative path in standalone mode
