@@ -519,6 +519,18 @@
     </ACTION>
 
     <SWITCH name="optional" min="0">
+      <COMMAND name="brief" help="Simplified (human-readable) output" mode="switch">
+        <ACTION sym="script" in="tty" out="tty" interrupt="true">
+          ip -color -6 -br addr | sort -V | sed 's/@dsa[0-9]/     /' |pager
+        </ACTION>
+      </COMMAND>
+
+      <COMMAND name="detailed" help="Detailed (full) output" mode="switch">
+        <ACTION sym="script" in="tty" out="tty" interrupt="true">
+          ip -color -6 -d addr |pager
+        </ACTION>
+      </COMMAND>
+
       <COMMAND name="route" help="Show IPv6 routing table" mode="switch">
         <ACTION sym="script" in="tty" out="tty" interrupt="true">
           show routes ipv6 |pager
