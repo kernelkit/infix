@@ -38,7 +38,7 @@ int parse_ospf_interfaces(sr_session_ctx_t *session, struct lyd_node *areas, FIL
 		area_id = lydx_get_cattr(area, "area-id");
 
 		LY_LIST_FOR(lyd_child(interfaces), interface) {
-			const char *hello, *dead, *retransmit, *transmit, *interface_type, *cost;
+			const char *hello, *dead, *retransmit, *transmit, *interface_type, *cost, *priority;
 
 			if (lydx_get_bool(interface, "enabled")) {
 				int passive = 0, bfd_enabled = 0;
@@ -57,6 +57,7 @@ int parse_ospf_interfaces(sr_session_ctx_t *session, struct lyd_node *areas, FIL
 				transmit = lydx_get_cattr(interface, "transmit-delay");
 				interface_type = lydx_get_cattr(interface, "interface-type");
 				cost = lydx_get_cattr(interface, "cost");
+				priority = lydx_get_cattr(interface, "priority");
 
 				fprintf(fp, "  ip ospf area %s\n", area_id);
 				if (dead)
@@ -67,6 +68,8 @@ int parse_ospf_interfaces(sr_session_ctx_t *session, struct lyd_node *areas, FIL
 					fprintf(fp, "  ip ospf retransmit-interval %s\n", retransmit);
 				if (transmit)
 					fprintf(fp, "  ip ospf transmit-delay %s\n", transmit);
+				if (priority)
+					fprintf(fp, "  ip ospf priority %s\n", priority);
 				if (bfd_enabled)
 					fputs("  ip ospf bfd\n", fp);
 				if (passive)

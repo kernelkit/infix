@@ -428,6 +428,15 @@ module infix-routing {
   {
     deviate not-supported;
   }
+  deviation "/rt:routing/rt:control-plane-protocols/rt:control-plane-protocol/ospf:ospf/ospf:areas/ospf:area/ospf:interfaces/ospf:interface/ospf:priority"
+  {
+    deviate add {
+      default "1";
+    }
+    description
+      "FRR uses a default priority of 1 for DR/BDR election.
+       Setting default to match FRR behavior.";
+  }
   deviation "/rt:routing/rt:control-plane-protocols/rt:control-plane-protocol/ospf:ospf/ospf:areas/ospf:area/ospf:interfaces/ospf:interface/ospf:fast-reroute"
   {
     deviate not-supported;
