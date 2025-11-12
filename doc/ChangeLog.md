@@ -31,6 +31,10 @@ All notable changes to the project are documented in this file.
   now enabled using a presence container instead of a separate `enabled` leaf
 - The `enabled` nore for IPv4 autoconf (ZeroConf) has been dropped, `autoconf`
   is now a presence container.  Configuration automatically migrated on upgrade
+- Add DHCPv6 client support for per-interface IPv6 configuration, augmenting
+  `/interfaces/interface[name]/ipv6/infix-dhcpv6-client:dhcp`, issue #1110
+- Fix namespace for DHCPv4 client YANG module from `urn:ietf:params:xml:ns:yang`
+  to `urn:infix:params:xml:ns:yang` to properly reflect custom implementation
 - Improvements to `sdcard.img` generation, useful for developers mostly:
    - The NanoPi R2S bootloader is now automatically built and uploaded to
      the [`latest-boot` release][lastest-boot] tag
