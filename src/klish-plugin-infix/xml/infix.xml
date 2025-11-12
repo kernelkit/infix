@@ -422,15 +422,9 @@
       </COMPL>
     </PARAM>
     <ACTION sym="script" in="tty" out="tty" interrupt="true">
-      case $KLISH_PARAM_ip in
-        ipv4)
-          KLISH_PARAM_ip=ip
-          ;;
-        ipv6)
-          KLISH_PARAM_ip=ipv6
-          ;;
-      esac
-      show-legacy -p $KLISH_PARAM_ip route |pager
+      show routes $KLISH_PARAM_ip route |pager
+      # Deprecated in favor of Cisco likeness
+      printf "\n\e[1mNOTE:\e[0m this command is deprecated, please use 'show ip route' instead.\n"
     </ACTION>
   </COMMAND>
 
@@ -482,9 +476,9 @@
         </ACTION>
       </COMMAND>
 
-      <COMMAND name="route" help="Show IPv4 routing table" mode="switch">
+      <COMMAND name="route" help="Show routing table">
         <ACTION sym="script" in="tty" out="tty" interrupt="true">
-          show-legacy -p ip route |pager
+	  show routes ipv4 |pager
         </ACTION>
       </COMMAND>
 
@@ -527,7 +521,7 @@
     <SWITCH name="optional" min="0">
       <COMMAND name="route" help="Show IPv6 routing table" mode="switch">
         <ACTION sym="script" in="tty" out="tty" interrupt="true">
-          show-legacy -p ipv6 route |pager
+          show routes ipv6 |pager
         </ACTION>
       </COMMAND>
     </SWITCH>
