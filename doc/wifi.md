@@ -27,10 +27,10 @@ Wi-Fi support is primarily tested with Realtek chipset-based adapters.
 ## Configuration
 
 Add a supported Wi-Fi network device. To verify that it has been
-detected, look for `wifi0` in `show interfaces`
+detected, look for `wifi0` in `show interface`
 
 ```
-admin@example:/>  show interfaces
+admin@example:/>  show interface
 INTERFACE       PROTOCOL   STATE       DATA
 lo              loopback   UP
                 ipv4                   127.0.0.1/8 (static)
@@ -52,7 +52,7 @@ see the result read the operational datastore for interface `wifi0` or
 use the CLI
 
 ```
-admin@infix-00-00-00:/> show interfaces name wifi0
+admin@infix-00-00-00:/> show interface wifi0
 name                : wifi0
 type                : wifi
 index               : 3
@@ -119,11 +119,11 @@ admin@example:/config/interface/wifi0/> leave
 
 The Wi-Fi negotiation should now start immediately, provided that the
 SSID and pre-shared key are correct. You can verify the connection by
-running `show interfaces` again.
+running `show interface` again.
 
 
 ```
-admin@example:/> show interfaces
+admin@example:/> show interface
 INTERFACE       PROTOCOL   STATE       DATA
 lo              loopback   UP
                 ipv4                   127.0.0.1/8 (static)
@@ -139,7 +139,7 @@ admin@example:/>
 
 ## Troubleshooting Connection Issues
 
-Use `show wifi scan wifi0` and `show interfaces` to verify signal strength
+Use `show wifi scan wifi0` and `show interface` to verify signal strength
 and connection status. If issues arise, try the following
 troubleshooting steps:
 
@@ -147,6 +147,6 @@ troubleshooting steps:
 2. **Check credentials**: Verify the preshared key in `ietf-keystore`
 3. **Review logs**: Check system logs with `show log` for Wi-Fi related errors
 4. **Regulatory compliance**: Ensure the country-code matches your location
-5. **Hardware detection**: Confirm the adapter appears in `show interfaces`
+5. **Hardware detection**: Confirm the adapter appears in `show interface`
 
 If issues persist, check the system log for specific error messages that can help identify the root cause.

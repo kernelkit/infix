@@ -9,6 +9,19 @@ All notable changes to the project are documented in this file.
 ### Changes
 
 - Upgrade Linux kernel to 6.12.57 (LTS)
+- Major improvements to OSPF and BFD operational data and CLI commands:
+   - CLI commands now use data from the operational datastore instead of
+     calling vtysh directly, providing better integration and consistency
+   - New `show ip ospf` command family (neighbor, interface, route) to align
+     with industry standard CLI conventions. Legacy `show ospf` commands are
+     deprecated but still work with warnings
+   - The `show ip ospf database` subcommand has been dropped for now, the
+     advanced user can still use `vtysh` from Bash if necessary, issue #1253
+   - Extended BFD commands: `show bfd` (status), `show bfd peers` (detailed),
+     `show bfd peers brief` (table format), and `show bfd peer <address>`
+   - All command names now use singular form (interface, route, neighbor)
+     matching Cisco/FRR conventions, as well as configure context naming
+   - New support for configuring OSPF interface priority for DR/BDR election
 - The DHCP client configuration has moved from `/infix-dhcp-client:dhcp-client`
   to `/interfaces/interface[name]/ipv4/infix-dhcp-client:dhcp`, issue #1109.
   The configuration is automatically migrated on upgrade.  The DHCP client is
@@ -28,6 +41,9 @@ All notable changes to the project are documented in this file.
 ### Fixes
 
 - Fix #855: User admin sometimes fails to be added to `wheel` group
+- Fix #1247: Prevent invalid configuration of OSPF backbone area (0.0.0.0) as
+  stub or NSSA. The backbone must always be a normal area per RFC 2328. Any
+  existing invalid configurations are automatically corrected during upgrade
 - Fix serious regression in boot time, introduced in v25.10, delays the
   boot step "Mounting filesystems ..." with up to 30 seconds!
 

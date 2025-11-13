@@ -10,6 +10,14 @@ def frr_to_ietf_neighbor_state(state):
     return state.lower()
 
 
+def frr_to_ietf_neighbor_role(role):
+    """Translate FRR neighbor role to YANG enumeration values"""
+    if role == "Backup":
+        return "BDR"
+    # DR and DROther are already correct
+    return role
+
+
 def add_routes(ospf):
     """Fetch OSPF routes from Frr"""
     cmd = ['vtysh', '-c', "show ip ospf route json"]
@@ -37,6 +45,22 @@ def add_routes(ospf):
                 route["route-type"] = "inter-area"
         elif routetype[0] == "N":
             route["route-type"] = "intra-area"
+
+        # Add area information if available
+        # Note: augmented by infix-routing.yang since standard ietf-ospf doesn't include it
+        # Must use the augmenting module's prefix
+        if info.get("area") is not None:
+            route["infix-routing:area-id"] = info["area"]
+
+        # Add metric (cost) if available
+        if info.get("cost") is not None:
+            route["metric"] = info["cost"]
+        elif info.get("metric") is not None:
+            route["metric"] = info["metric"]
+
+        # Add route-tag for external routes
+        if info.get("tag") is not None:
+            route["route-tag"] = info["tag"]
 
         for hop in info["nexthops"]:
             nexthop = {}
@@ -119,13 +143,85 @@ def add_areas(control_protocols):
                 val = xlate.get(iface["state"], "unknown")
                 interface["state"] = val
 
+            # Interface priority (for DR/BDR election)
+            if iface.get("priority") is not None:
+                interface["priority"] = iface["priority"]
+
+            # Interface cost
+            if iface.get("cost") is not None:
+                interface["cost"] = iface["cost"]
+
+            # Configuration timers (in seconds)
+            if iface.get("timerDeadSecs") is not None:
+                interface["dead-interval"] = iface["timerDeadSecs"]
+
+            if iface.get("timerRetransmitSecs") is not None:
+                interface["retransmit-interval"] = iface["timerRetransmitSecs"]
+
+            if iface.get("transmitDelaySecs") is not None:
+                interface["transmit-delay"] = iface["transmitDelaySecs"]
+
+            # Hello interval - convert from milliseconds to seconds
+            if iface.get("timerMsecs") is not None:
+                hello_sec = iface["timerMsecs"] // 1000
+                # timer-value-seconds16 requires range 1..65535, use max(1, value)
+                if hello_sec >= 1:
+                    interface["hello-interval"] = hello_sec
+
+            # Operational state timers (config false)
+            # Hello timer - time remaining until next Hello (convert ms to seconds)
+            if iface.get("timerHelloInMsecs") is not None:
+                hello_timer_sec = iface["timerHelloInMsecs"] // 1000
+                # timer-value-seconds16 requires range 1..65535, use max(1, value)
+                if hello_timer_sec >= 1:
+                    interface["hello-timer"] = hello_timer_sec
+
+            # Wait timer - time until interface exits Waiting state
+            if iface.get("timerWaitSecs") is not None:
+                wait_sec = iface["timerWaitSecs"]
+                # timer-value-seconds16 requires range 1..65535
+                if wait_sec >= 1:
+                    interface["wait-timer"] = wait_sec
+
             neighbors = []
             for neigh in iface["neighbors"]:
                 neighbor = {}
                 neighbor["neighbor-router-id"] = neigh["neighborIp"]
                 neighbor["address"] = neigh["ifaceAddress"]
-                neighbor["dead-timer"] = neigh["routerDeadIntervalTimerDueMsec"]
+
+                # Priority - use existing YANG leaf for operational data
+                if neigh.get("nbrPriority") is not None:
+                    neighbor["priority"] = neigh["nbrPriority"]
+
+                # Uptime - convert from milliseconds to seconds
+                # Note: augmented by infix-routing.yang
+                # Use lastPrgrsvChangeMsec from detail output (time since last progressive state change)
+                if neigh.get("lastPrgrsvChangeMsec") is not None:
+                    uptime_sec = neigh["lastPrgrsvChangeMsec"] // 1000
+                    neighbor["infix-routing:uptime"] = uptime_sec
+
+                # Dead timer - convert from milliseconds to seconds
+                # timer-value-seconds16 requires range 1..65535
+                if neigh.get("routerDeadIntervalTimerDueMsec") is not None:
+                    dead_timer_sec = neigh["routerDeadIntervalTimerDueMsec"] // 1000
+                    if dead_timer_sec >= 1:
+                        neighbor["dead-timer"] = dead_timer_sec
+
                 neighbor["state"] = frr_to_ietf_neighbor_state(neigh["nbrState"])
+
+                # Store role (DR/BDR/DROther) for display
+                # Note: augmented by infix-routing.yang
+                if neigh.get("role"):
+                    neighbor["infix-routing:role"] = frr_to_ietf_neighbor_role(neigh["role"])
+
+                # Store interface name with local address (e.g., "e5:10.0.23.1")
+                # Note: augmented by infix-routing.yang
+                # Compose from ifaceName and localIfaceAddress
+                if neigh.get("ifaceName") and neigh.get("localIfaceAddress"):
+                    neighbor["infix-routing:interface-name"] = f"{neigh['ifaceName']}:{neigh['localIfaceAddress']}"
+                elif neigh.get("ifaceName"):
+                    neighbor["infix-routing:interface-name"] = neigh["ifaceName"]
+
                 if neigh.get("routerDesignatedId"):
                     neighbor["dr-router-id"] = neigh["routerDesignatedId"]
                 if neigh.get("routerDesignatedBackupId"):

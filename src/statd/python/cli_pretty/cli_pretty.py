@@ -2819,6 +2819,670 @@ def show_firewall_service(json, name=None):
                   f"{ports:<{PadFirewall.service_ports}}")
 
 
+def show_ospf(json_data):
+    """Show OSPF general instance information"""
+    routing = json_data.get('ietf-routing:routing', {})
+    protocols = routing.get('control-plane-protocols', {}).get('control-plane-protocol', [])
+
+    ospf_instance = None
+    for protocol in protocols:
+        if 'ietf-ospf:ospf' in protocol:
+            ospf_instance = protocol
+            break
+
+    if not ospf_instance:
+        print("OSPF is not configured or running")
+        return
+
+    ospf = ospf_instance.get('ietf-ospf:ospf', {})
+    router_id = ospf.get('router-id', '0.0.0.0')
+    areas = ospf.get('areas', {}).get('area', [])
+
+    # OSPF Process header
+    print(f" OSPF Routing Process, Router ID: {router_id}")
+    print(f" Number of areas attached to this router: {len(areas)}")
+    print()
+
+    if not areas:
+        print("No areas configured")
+        return
+
+    # Display detailed area information
+    for area in areas:
+        area_id = area.get('area-id', '0.0.0.0')
+        area_type = area.get('area-type', 'ietf-ospf:normal-area')
+
+        # Determine area type display
+        if area_id == "0.0.0.0":
+            area_label = f" Area ID: {area_id} (Backbone)"
+        else:
+            if 'nssa' in area_type.lower():
+                area_label = f" Area ID: {area_id} (NSSA)"
+            elif 'stub' in area_type.lower():
+                area_label = f" Area ID: {area_id} (Stub)"
+            else:
+                area_label = f" Area ID: {area_id}"
+
+        print(area_label)
+
+        interfaces = area.get('interfaces', {}).get('interface', [])
+        interface_count = len(interfaces)
+
+        # Count active interfaces and neighbors
+        active_count = 0
+        neighbor_count = 0
+        fully_adjacent = 0
+
+        for iface in interfaces:
+            # Count active interfaces (enabled and up)
+            if iface.get('enabled', False):
+                state = iface.get('state', 'down')
+                if state != 'down':
+                    active_count += 1
+
+            # Count neighbors
+            neighbors = iface.get('neighbors', {}).get('neighbor', [])
+            neighbor_count += len(neighbors)
+
+            # Count fully adjacent neighbors (full state)
+            for neighbor in neighbors:
+                if neighbor.get('state', '') == 'full':
+                    fully_adjacent += 1
+
+        print(f"   Number of interfaces in this area: Total: {interface_count}, Active: {active_count}")
+        print(f"   Number of fully adjacent neighbors in this area: {fully_adjacent}")
+        print()
+
+
+def show_ospf_interfaces(json_data):
+    """Show OSPF interface information"""
+    routing = json_data.get('ietf-routing:routing', {})
+    protocols = routing.get('control-plane-protocols', {}).get('control-plane-protocol', [])
+
+    ospf_instance = None
+    for protocol in protocols:
+        if 'ietf-ospf:ospf' in protocol:
+            ospf_instance = protocol
+            break
+
+    if not ospf_instance:
+        print("OSPF is not configured or running")
+        return
+
+    ospf = ospf_instance.get('ietf-ospf:ospf', {})
+    router_id = ospf.get('router-id', '0.0.0.0')
+    areas = ospf.get('areas', {}).get('area', [])
+
+    if not areas:
+        print("No OSPF interfaces configured")
+        return
+
+    # Check if specific interface requested
+    requested_ifname = json_data.get('_ifname')
+
+    # Collect all interfaces from all areas
+    all_interfaces = []
+    for area in areas:
+        area_id = area.get('area-id', '0.0.0.0')
+        interfaces = area.get('interfaces', {}).get('interface', [])
+        for iface in interfaces:
+            iface['_area_id'] = area_id  # Add area context
+            all_interfaces.append(iface)
+
+    if not all_interfaces:
+        print("No OSPF interfaces found")
+        return
+
+    # If specific interface requested, show detailed view
+    if requested_ifname:
+        target_iface = None
+        for iface in all_interfaces:
+            if iface.get('name') == requested_ifname:
+                target_iface = iface
+                break
+
+        if not target_iface:
+            print(f"Interface {requested_ifname} not found in OSPF")
+            return
+
+        # Display detailed interface information (vtysh-style)
+        name = target_iface.get('name', 'unknown')
+        area_id = target_iface.get('_area_id', '0.0.0.0')
+        state = target_iface.get('state', 'down')
+        cost = target_iface.get('cost', 0)
+        priority = target_iface.get('priority', 1)
+        iface_type = target_iface.get('interface-type', 'unknown')
+        hello_interval = target_iface.get('hello-interval', 10)
+        dead_interval = target_iface.get('dead-interval', 40)
+        retransmit_interval = target_iface.get('retransmit-interval', 5)
+        transmit_delay = target_iface.get('transmit-delay', 1)
+        dr_id = target_iface.get('dr-router-id', '-')
+        dr_addr = target_iface.get('dr-ip-addr', '-')
+        bdr_id = target_iface.get('bdr-router-id', '-')
+        bdr_addr = target_iface.get('bdr-ip-addr', '-')
+        neighbors = target_iface.get('neighbors', {}).get('neighbor', [])
+
+        # Get interface IP address from interfaces data
+        ip_address = None
+        broadcast = None
+        if json_data.get('_interfaces'):
+            interfaces = json_data['_interfaces'].get('ietf-interfaces:interfaces', {}).get('interface', [])
+            for iface in interfaces:
+                if iface.get('name') == name:
+                    # Get IPv4 address
+                    ipv4 = iface.get('ietf-ip:ipv4', {})
+                    addresses = ipv4.get('address', [])
+                    if addresses:
+                        addr = addresses[0]
+                        ip = addr.get('ip', '')
+                        prefix_len = addr.get('prefix-length', 0)
+                        if ip and prefix_len:
+                            ip_address = f"{ip}/{prefix_len}"
+                            # Calculate broadcast (simple approximation for /30 networks)
+                            import ipaddress
+                            try:
+                                net = ipaddress.IPv4Network(ip_address, strict=False)
+                                broadcast = str(net.broadcast_address)
+                            except:
+                                broadcast = None
+                    break
+
+        # Get BFD information from routing data
+        bfd_detect_mult = None
+        bfd_rx_interval = None
+        bfd_tx_interval = None
+        bfd_state = None
+        if json_data.get('_routing'):
+            routing = json_data['_routing'].get('ietf-routing:routing', {})
+            protocols = routing.get('control-plane-protocols', {}).get('control-plane-protocol', [])
+            for proto in protocols:
+                if proto.get('type') == 'infix-routing:bfdv1':
+                    bfd = proto.get('ietf-bfd:bfd', {})
+                    ip_sh = bfd.get('ietf-bfd-ip-sh:ip-sh', {})
+                    sessions_container = ip_sh.get('sessions', {})
+                    sessions = sessions_container.get('session', [])
+                    # Find BFD session for this interface
+                    for session in sessions:
+                        if session.get('interface') == name:
+                            session_running = session.get('session-running', {})
+                            # Get session state
+                            bfd_state = session_running.get('local-state', 'down')
+                            # Get detection multiplier and intervals
+                            rx_interval = session_running.get('negotiated-rx-interval', 0)
+                            tx_interval = session_running.get('negotiated-tx-interval', 0)
+                            detection_time = session_running.get('detection-time', 0)
+                            if rx_interval and detection_time:
+                                bfd_detect_mult = detection_time // rx_interval
+                            bfd_rx_interval = rx_interval // 1000 if rx_interval else 0  # Convert μs to ms
+                            bfd_tx_interval = tx_interval // 1000 if tx_interval else 0
+                            break
+                    break
+
+        # State display
+        state_display = state.upper() if state in ['dr', 'bdr'] else state.capitalize()
+        if state == 'dr-other':
+            state_display = 'DROther'
+
+        # Network type display (match FRR/Cisco format)
+        network_type_map = {
+            'point-to-point': 'POINTOPOINT',
+            'broadcast': 'BROADCAST',
+            'non-broadcast': 'NBMA'
+        }
+        network_type = network_type_map.get(iface_type, iface_type.upper())
+
+        print(f"{name} is up")
+        if ip_address:
+            broadcast_str = f", Broadcast {broadcast}" if broadcast else ""
+            print(f"  Internet Address {ip_address}{broadcast_str}, Area {area_id}")
+        else:
+            print(f"  Internet Address (not available), Area {area_id}")
+        print(f"  Router ID {router_id}, Network Type {network_type}, Cost: {cost}")
+        print(f"  Transmit Delay is {transmit_delay} sec, State {state_display}, Priority {priority}")
+
+        if dr_id != '-':
+            print(f"  Designated Router (ID) {dr_id}, Interface Address {dr_addr}")
+        if bdr_id != '-':
+            print(f"  Backup Designated Router (ID) {bdr_id}, Interface Address {bdr_addr}")
+
+        print(f"  Timer intervals configured, Hello {hello_interval}s, Dead {dead_interval}s, Retransmit {retransmit_interval}")
+
+        # Count adjacent neighbors
+        adjacent_count = sum(1 for n in neighbors if n.get('state') == 'full')
+        print(f"  Neighbor Count is {len(neighbors)}, Adjacent neighbor count is {adjacent_count}")
+
+        # Show BFD status if available
+        if bfd_detect_mult is not None and bfd_rx_interval is not None and bfd_tx_interval is not None:
+            # Format state for display
+            state_display_map = {
+                'up': 'Up (two-way connection established)',
+                'down': 'Down (no connection)',
+                'init': 'Init (initializing, no two-way yet)',
+                'adminDown': 'AdminDown (administratively disabled)'
+            }
+            bfd_state_display = state_display_map.get(bfd_state, bfd_state.capitalize() if bfd_state else 'Unknown')
+            print(f"  BFD: Status: {bfd_state_display}")
+            print(f"       Detect Multiplier: {bfd_detect_mult}, Min Rx interval: {bfd_rx_interval}, Min Tx interval: {bfd_tx_interval}")
+        else:
+            print(f"  BFD: Disabled")
+
+        return
+
+    # Display table view (no specific interface)
+    hdr = f"{'INTERFACE':<12} {'AREA':<12} {'STATE':<10} {'COST':<6} {'PRI':<4} {'DR':<15} {'BDR':<15} {'NBRS':<5}"
+    print(Decore.invert(hdr))
+
+    for iface in all_interfaces:
+        name = iface.get('name', 'unknown')
+        area_id = iface.get('_area_id', '0.0.0.0')
+        state = iface.get('state', 'down')
+        cost = iface.get('cost', 0)
+        priority = iface.get('priority', 1)
+        dr_id = iface.get('dr-router-id', '-')
+        bdr_id = iface.get('bdr-router-id', '-')
+        neighbors = iface.get('neighbors', {}).get('neighbor', [])
+        nbr_count = len(neighbors)
+
+        # Capitalize state nicely
+        state_display = state.upper() if state in ['dr', 'bdr'] else state.capitalize()
+        if state == 'dr-other':
+            state_display = 'DROther'
+
+        # Shorten router IDs for display
+        dr_display = dr_id if dr_id != '-' else '-'
+        bdr_display = bdr_id if bdr_id != '-' else '-'
+
+        print(f"{name:<12} {area_id:<12} {state_display:<10} {cost:<6} {priority:<4} {dr_display:<15} {bdr_display:<15} {nbr_count:<5}")
+
+
+def show_ospf_neighbor(json_data):
+    """Show OSPF neighbor information"""
+    routing = json_data.get('ietf-routing:routing', {})
+    protocols = routing.get('control-plane-protocols', {}).get('control-plane-protocol', [])
+
+    ospf_instance = None
+    for protocol in protocols:
+        if 'ietf-ospf:ospf' in protocol:
+            ospf_instance = protocol
+            break
+
+    if not ospf_instance:
+        print("OSPF is not configured or running")
+        return
+
+    ospf = ospf_instance.get('ietf-ospf:ospf', {})
+    areas = ospf.get('areas', {}).get('area', [])
+
+    if not areas:
+        print("No OSPF areas configured")
+        return
+
+    # Collect all neighbors from all interfaces in all areas
+    all_neighbors = []
+    for area in areas:
+        area_id = area.get('area-id', '0.0.0.0')
+        interfaces = area.get('interfaces', {}).get('interface', [])
+        for iface in interfaces:
+            iface_name = iface.get('name', 'unknown')
+            neighbors = iface.get('neighbors', {}).get('neighbor', [])
+            for neighbor in neighbors:
+                neighbor['_interface'] = iface_name
+                neighbor['_area_id'] = area_id
+                all_neighbors.append(neighbor)
+
+    if not all_neighbors:
+        print("No OSPF neighbors found")
+        return
+
+    # Display table header with PRI and UPTIME columns
+    hdr = f"{'NEIGHBOR ID':<16} {'PRI':<4} {'STATE':<12} {'UPTIME':<10} {'DEAD TIME':<10} {'ADDRESS':<16} {'INTERFACE':<18} {'AREA':<12}"
+    print(Decore.invert(hdr))
+
+    for neighbor in all_neighbors:
+        neighbor_id = neighbor.get('neighbor-router-id', '0.0.0.0')
+        address = neighbor.get('address', '0.0.0.0')
+        state = neighbor.get('state', 'down')
+        priority = neighbor.get('priority', 1)  # Default priority is 1
+        uptime = neighbor.get('infix-routing:uptime', 0)
+        dead_timer = neighbor.get('dead-timer', 0)
+        # Use interface-name (e.g., "e5:10.0.23.1") if available, fallback to interface name
+        interface = neighbor.get('infix-routing:interface-name', neighbor.get('_interface', 'unknown'))
+        area_id = neighbor.get('_area_id', '0.0.0.0')
+        role = neighbor.get('infix-routing:role', '')
+
+        # Capitalize state and add role if present
+        state_base = state.capitalize() if state != '2-way' else '2-Way'
+        if role and state_base == 'Full':
+            state_display = f"{state_base}/{role}"
+        else:
+            state_display = state_base
+
+        # Format uptime (convert seconds to human-readable format)
+        if uptime > 0:
+            days = uptime // 86400
+            hours = (uptime % 86400) // 3600
+            minutes = (uptime % 3600) // 60
+            seconds = uptime % 60
+
+            if days > 0:
+                uptime_display = f"{days}d{hours:02d}h{minutes:02d}m"
+            elif hours > 0:
+                uptime_display = f"{hours}h{minutes:02d}m{seconds:02d}s"
+            elif minutes > 0:
+                uptime_display = f"{minutes}m{seconds:02d}s"
+            else:
+                uptime_display = f"{seconds}s"
+        else:
+            uptime_display = "-"
+
+        # Format dead timer
+        dead_display = f"{dead_timer}s" if dead_timer > 0 else "-"
+
+        print(f"{neighbor_id:<16} {priority:<4} {state_display:<12} {uptime_display:<10} {dead_display:<10} {address:<16} {interface:<18} {area_id:<12}")
+
+
+def show_ospf_routes(json_data):
+    """Show OSPF routing table (local-rib)"""
+    routing = json_data.get('ietf-routing:routing', {})
+    protocols = routing.get('control-plane-protocols', {}).get('control-plane-protocol', [])
+
+    ospf_instance = None
+    for protocol in protocols:
+        if 'ietf-ospf:ospf' in protocol:
+            ospf_instance = protocol
+            break
+
+    if not ospf_instance:
+        print("OSPF is not configured or running")
+        return
+
+    ospf = ospf_instance.get('ietf-ospf:ospf', {})
+    local_rib = ospf.get('local-rib', {})
+    routes = local_rib.get('route', [])
+
+    if not routes:
+        print("No OSPF routes in local RIB")
+        return
+
+    # Display table header (AREA column from infix-routing augmentation)
+    hdr = f"{'DESTINATION':<20} {'TYPE':<10} {'AREA':<12} {'METRIC':<8} {'NEXT HOP':<16} {'INTERFACE':<12}"
+    print(Decore.invert(hdr))
+
+    for route in routes:
+        prefix = route.get('prefix', '0.0.0.0/0')
+        route_type = route.get('route-type', 'unknown')
+        # Check for area-id with infix-routing prefix (augmented field)
+        area_id = route.get('infix-routing:area-id', route.get('area-id', '-'))
+        metric = route.get('metric', 0)
+
+        # Simplify route type display
+        type_map = {
+            'intra-area': 'Intra',
+            'inter-area': 'Inter',
+            'external-1': 'Ext-1',
+            'external-2': 'Ext-2',
+            'nssa-1': 'NSSA-1',
+            'nssa-2': 'NSSA-2'
+        }
+        type_display = type_map.get(route_type, route_type)
+
+        # Get next hops
+        next_hops_data = route.get('next-hops', {})
+        next_hops = next_hops_data.get('next-hop', [])
+
+        if not next_hops:
+            print(f"{prefix:<20} {type_display:<10} {area_id:<12} {metric:<8} {'-':<16} {'-':<12}")
+        else:
+            # Display first next hop on same line as route
+            first_hop = next_hops[0]
+            next_hop_addr = first_hop.get('next-hop', '-')
+            outgoing_iface = first_hop.get('outgoing-interface', '-')
+
+            print(f"{prefix:<20} {type_display:<10} {area_id:<12} {metric:<8} {next_hop_addr:<16} {outgoing_iface:<12}")
+
+            # Display additional next hops indented
+            for hop in next_hops[1:]:
+                next_hop_addr = hop.get('next-hop', '-')
+                outgoing_iface = hop.get('outgoing-interface', '-')
+                print(f"{'':<52} {next_hop_addr:<16} {outgoing_iface:<12}")
+
+
+def show_bfd_status(json_data):
+    """Show BFD status summary"""
+    routing = json_data.get('ietf-routing:routing', {})
+    protocols = routing.get('control-plane-protocols', {})
+    protocol_list = protocols.get('control-plane-protocol', [])
+
+    bfd_protocol = None
+    for proto in protocol_list:
+        if proto.get('type') == 'infix-routing:bfdv1':
+            bfd_protocol = proto
+            break
+
+    if not bfd_protocol:
+        print("BFD is not enabled")
+        return
+
+    print("Is enabled, single-hop (ospf)")
+
+
+def show_bfd_peers(json_data):
+    """Show BFD peer sessions in detailed format"""
+    routing = json_data.get('ietf-routing:routing', {})
+    protocols = routing.get('control-plane-protocols', {})
+    protocol_list = protocols.get('control-plane-protocol', [])
+
+    bfd_protocol = None
+    for proto in protocol_list:
+        if proto.get('type') == 'infix-routing:bfdv1':
+            bfd_protocol = proto
+            break
+
+    if not bfd_protocol:
+        print("BFD is not enabled")
+        return
+
+    bfd = bfd_protocol.get('ietf-bfd:bfd', {})
+    ip_sh = bfd.get('ietf-bfd-ip-sh:ip-sh', {})
+    sessions_container = ip_sh.get('sessions', {})
+    sessions = sessions_container.get('session', [])
+
+    if not sessions:
+        print("No BFD sessions found")
+        return
+
+    print("BFD Peers:")
+    for session in sessions:
+        peer = session.get('dest-addr', 'unknown')
+        interface = session.get('interface', 'unknown')
+        local_disc = session.get('local-discriminator', 0)
+        remote_disc = session.get('remote-discriminator', 0)
+
+        # Get session running state
+        session_running = session.get('session-running', {})
+        local_state = session_running.get('local-state', 'unknown')
+        remote_state = session_running.get('remote-state', 'unknown')
+        local_diag = session_running.get('local-diagnostic', 'unknown')
+        detection_mode = session_running.get('detection-mode', 'unknown')
+        detection_time = session_running.get('detection-time', 0)
+        rx_interval = session_running.get('negotiated-rx-interval', 0)
+        tx_interval = session_running.get('negotiated-tx-interval', 0)
+
+        # Convert microseconds to milliseconds for display
+        rx_ms = rx_interval // 1000 if rx_interval else 0
+        tx_ms = tx_interval // 1000 if tx_interval else 0
+        detect_mult = detection_time // rx_interval if rx_interval and detection_time else 0
+
+        print(f"        peer {peer}")
+        print(f"                ID: {local_disc}")
+        print(f"                Remote ID: {remote_disc}")
+        print(f"                Status: {local_state}")
+        print(f"                Diagnostics: {local_diag}")
+        print(f"                Remote diagnostics: {local_diag}")
+        print(f"                Peer Type: dynamic")
+        print(f"                Local timers:")
+        print(f"                        Detect-multiplier: {detect_mult}")
+        print(f"                        Receive interval: {rx_ms}ms")
+        print(f"                        Transmission interval: {tx_ms}ms")
+        print(f"                        Echo transmission interval: disabled")
+        print(f"                Remote timers:")
+        print(f"                        Detect-multiplier: {detect_mult}")
+        print(f"                        Receive interval: {rx_ms}ms")
+        print(f"                        Transmission interval: {tx_ms}ms")
+        print(f"                        Echo transmission interval: disabled")
+        print()
+
+
+def show_bfd_peers_brief(json_data):
+    """Show BFD peers in brief table format"""
+    routing = json_data.get('ietf-routing:routing', {})
+    protocols = routing.get('control-plane-protocols', {})
+    protocol_list = protocols.get('control-plane-protocol', [])
+
+    # Find BFD protocol instance
+    bfd_protocol = None
+    for proto in protocol_list:
+        if proto.get('type') == 'infix-routing:bfdv1':
+            bfd_protocol = proto
+            break
+
+    if not bfd_protocol:
+        print("BFD is not enabled")
+        return
+
+    bfd = bfd_protocol.get('ietf-bfd:bfd', {})
+    ip_sh = bfd.get('ietf-bfd-ip-sh:ip-sh', {})
+    sessions_container = ip_sh.get('sessions', {})
+    sessions = sessions_container.get('session', [])
+
+    if not sessions:
+        print("No BFD sessions found")
+        return
+
+    # Build interface to IP mapping by looking up from peer address
+    # We need to extract the local IP from the same subnet as the peer
+    ifaces_data = json_data.get('_interfaces', {})
+    if_ip_map = {}
+
+    if ifaces_data:
+        interfaces = ifaces_data.get('ietf-interfaces:interfaces', {}).get('interface', [])
+        for iface in interfaces:
+            ifname = iface.get('name', '')
+            ipv4 = iface.get('ietf-ip:ipv4', {})
+            addresses = ipv4.get('address', [])
+            for addr_entry in addresses:
+                ip = addr_entry.get('ip', '')
+                prefix_len = addr_entry.get('prefix-length', 0)
+                if ip and ifname:
+                    if_ip_map[ifname] = ip
+
+    print(f"Session count: {len(sessions)}")
+    hdr = f"{'SESSION ID':<16} {'LOCAL':<22} {'PEER':<22} {'STATE':<10}"
+    print(Decore.invert(hdr))
+
+    for session in sessions:
+        local_disc = session.get('local-discriminator', 0)
+        interface = session.get('interface', '-')
+        peer = session.get('dest-addr', '-')
+
+        # Get session running state
+        session_running = session.get('session-running', {})
+        local_state = session_running.get('local-state', 'unknown')
+
+        # Format local address as interface:ip
+        local_ip = if_ip_map.get(interface, '')
+        if local_ip:
+            local_addr = f"{interface}:{local_ip}"
+        else:
+            local_addr = interface
+
+        print(f"{local_disc:<16} {local_addr:<22} {peer:<22} {local_state:<10}")
+
+
+def show_bfd_peer(json_data):
+    """Show specific BFD peer details"""
+    peer_addr = json_data.get('_peer_addr')
+    if not peer_addr:
+        print("Error: No peer address specified")
+        return
+
+    routing = json_data.get('ietf-routing:routing', {})
+    protocols = routing.get('control-plane-protocols', {})
+    protocol_list = protocols.get('control-plane-protocol', [])
+
+    # Find BFD protocol instance
+    bfd_protocol = None
+    for proto in protocol_list:
+        if proto.get('type') == 'infix-routing:bfdv1':
+            bfd_protocol = proto
+            break
+
+    if not bfd_protocol:
+        print("BFD is not enabled")
+        return
+
+    bfd = bfd_protocol.get('ietf-bfd:bfd', {})
+    ip_sh = bfd.get('ietf-bfd-ip-sh:ip-sh', {})
+    sessions_container = ip_sh.get('sessions', {})
+    sessions = sessions_container.get('session', [])
+
+    # Find the specific peer
+    target_session = None
+    for session in sessions:
+        if session.get('dest-addr') == peer_addr:
+            target_session = session
+            break
+
+    if not target_session:
+        print(f"BFD peer {peer_addr} not found")
+        return
+
+    # Display single peer details
+    peer = target_session.get('dest-addr', 'unknown')
+    interface = target_session.get('interface', 'unknown')
+    local_disc = target_session.get('local-discriminator', 0)
+    remote_disc = target_session.get('remote-discriminator', 0)
+
+    # Get session running state
+    session_running = target_session.get('session-running', {})
+    local_state = session_running.get('local-state', 'unknown')
+    remote_state = session_running.get('remote-state', 'unknown')
+    local_diag = session_running.get('local-diagnostic', 'unknown')
+    detection_mode = session_running.get('detection-mode', 'unknown')
+    detection_time = session_running.get('detection-time', 0)
+    rx_interval = session_running.get('negotiated-rx-interval', 0)
+    tx_interval = session_running.get('negotiated-tx-interval', 0)
+
+    # Convert microseconds to milliseconds for display
+    rx_ms = rx_interval // 1000 if rx_interval else 0
+    tx_ms = tx_interval // 1000 if tx_interval else 0
+    detect_mult = detection_time // rx_interval if rx_interval and detection_time else 0
+
+    print("BFD Peer:")
+    print(f"            peer {peer}")
+    print(f"                ID: {local_disc}")
+    print(f"                Remote ID: {remote_disc}")
+    print(f"                Status: {local_state}")
+    print(f"                Diagnostics: {local_diag}")
+    print(f"                Remote diagnostics: {local_diag}")
+    print(f"                Peer Type: dynamic")
+    print(f"                Local timers:")
+    print(f"                        Detect-multiplier: {detect_mult}")
+    print(f"                        Receive interval: {rx_ms}ms")
+    print(f"                        Transmission interval: {tx_ms}ms")
+    print(f"                        Echo transmission interval: disabled")
+    print(f"                Remote timers:")
+    print(f"                        Detect-multiplier: {detect_mult}")
+    print(f"                        Receive interval: {rx_ms}ms")
+    print(f"                        Transmission interval: {tx_ms}ms")
+    print(f"                        Echo transmission interval: disabled")
+
+
+def show_bfd(json_data):
+    """Legacy function - redirect to show_bfd_peers_brief for backward compatibility"""
+    show_bfd_peers_brief(json_data)
+
+
 def main():
     global UNIT_TEST
 
@@ -2861,6 +3525,17 @@ def main():
 
     subparsers.add_parser('show-ntp', help='Show NTP sources')
 
+    subparsers.add_parser('show-bfd', help='Show BFD sessions')
+    subparsers.add_parser('show-bfd-status', help='Show BFD status')
+    subparsers.add_parser('show-bfd-peers', help='Show BFD peers')
+    subparsers.add_parser('show-bfd-peers-brief', help='Show BFD peers brief')
+    subparsers.add_parser('show-bfd-peer', help='Show BFD peer')
+
+    subparsers.add_parser('show-ospf', help='Show OSPF instance information')
+    subparsers.add_parser('show-ospf-interfaces', help='Show OSPF interfaces')
+    subparsers.add_parser('show-ospf-neighbor', help='Show OSPF neighbors')
+    subparsers.add_parser('show-ospf-routes', help='Show OSPF routing table')
+
     subparsers.add_parser('show-routing-table', help='Show the routing table') \
               .add_argument('-i', '--ip', required=True, help='IPv4 or IPv6 address')
 
@@ -2896,6 +3571,24 @@ def main():
         show_firewall_service(json_data, args.name)
     elif args.command == "show-ntp":
         show_ntp(json_data)
+    elif args.command == "show-bfd":
+        show_bfd(json_data)
+    elif args.command == "show-bfd-status":
+        show_bfd_status(json_data)
+    elif args.command == "show-bfd-peers":
+        show_bfd_peers(json_data)
+    elif args.command == "show-bfd-peers-brief":
+        show_bfd_peers_brief(json_data)
+    elif args.command == "show-bfd-peer":
+        show_bfd_peer(json_data)
+    elif args.command == "show-ospf":
+        show_ospf(json_data)
+    elif args.command == "show-ospf-interfaces":
+        show_ospf_interfaces(json_data)
+    elif args.command == "show-ospf-neighbor":
+        show_ospf_neighbor(json_data)
+    elif args.command == "show-ospf-routes":
+        show_ospf_routes(json_data)
     elif args.command == "show-routing-table":
         show_routing_table(json_data, args.ip)
     elif args.command == "show-software":
