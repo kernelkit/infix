@@ -1,0 +1,10 @@
+config IMAGE_ITB_AUX
+	bool "aux partition"
+	depends on IMAGE_ITB_ROOTFS
+	select BR2_PACKAGE_HOST_UBOOT_TOOLS
+	select BR2_PACKAGE_HOST_GENIMAGE
+	help
+	  Create and populate auxiliary partition, aux.ext4, with
+	  metadata needed by U-Boot and RAUC to operate properly on
+	  systems using ITB images. This may then be included as a
+	  partition in a larger disk image.
