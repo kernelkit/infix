@@ -1,1 +1,1 @@
-dtb-y += mediatek/mt7986a-bananapi-bpi-r3-sd.dtb
+dtb-y += mediatek/mt7986a-bananapi-bpi-r3-sd.dtb mediatek/mt7986a-bananapi-bpi-r3-emmc.dtb

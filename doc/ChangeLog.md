@@ -37,6 +37,7 @@ All notable changes to the project are documented in this file.
   VXLAN tunnels.  This also changes the default TTL of tunnels to 64, from the
   kernel default (*inherit*), which in turn fixes reported issues with dropped
   OSPF Hello frames in GRE tunnels
+- [Document][bpi-r3-emmc-documentation] how to go from SD card to eMMC on bpi-r3
 
 ### Fixes
 
@@ -48,6 +49,7 @@ All notable changes to the project are documented in this file.
   boot step "Mounting filesystems ..." with up to 30 seconds!
 
 [lastest-boot]: https://github.com/kernelkit/infix/releases/latest-boot
+[bpi-r3-emmc-documentation]: https://github.com/kernelkit/infix/blob/main/board/aarch64/bananapi-bpi-r3/README.md
 
 [v25.10.0][] - 2025-10-31
 -------------------------

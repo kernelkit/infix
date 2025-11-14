@@ -1,0 +1,2 @@
+#include "mt7986a-bananapi-bpi-r3.dtsi"
+#include "mt7986a-bananapi-bpi-r3-emmc.dtsi"

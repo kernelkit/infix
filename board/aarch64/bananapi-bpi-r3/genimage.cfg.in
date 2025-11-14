@@ -24,7 +24,7 @@ image var.ext4 {
         }
 }
 
-image #INFIX_ID##VERSION#-bpi-r3-sdcard.img {
+image #INFIX_ID##VERSION#-bpi-r3-#TARGET#.img {
         hdimage {
                 partition-table-type = "gpt"
 
