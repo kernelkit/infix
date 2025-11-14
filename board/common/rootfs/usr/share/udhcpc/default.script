@@ -108,6 +108,10 @@ case "$ACTION" in
 	# drop info from this interface
 	rm -f "$RESOLV_CONF"
 	rm -f "$NTPFILE"
+	if [ -f "/etc/hostname.d/90-dhcp-${interface}" ]; then
+	    rm -f "/etc/hostname.d/90-dhcp-${interface}"
+	    /usr/libexec/infix/hostname dhcp
+	fi
 	if [ -x /usr/sbin/avahi-autoipd ]; then
 	    /usr/sbin/avahi-autoipd -c $interface && /usr/sbin/avahi-autoipd -k $interface
 	fi
@@ -135,9 +139,10 @@ case "$ACTION" in
 
 	# set hostname if given
 	if [ -n "$hostname" ]; then
-	    log "setting new hostname: $hostname"
-	    hostname "$hostname"
-	    sed -i -E "s/^(127\.0\.1\.1\s+).*/\1$hostname/" /etc/hosts
+	    log "received DHCP hostname: $hostname"
+	    mkdir -p /etc/hostname.d
+	    echo "$hostname" > "/etc/hostname.d/90-dhcp-${interface}"
+	    /usr/libexec/infix/hostname dhcp
 	fi
 
 	# drop info from this interface
