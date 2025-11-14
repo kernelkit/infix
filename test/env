@@ -228,6 +228,7 @@ if [ "$containerize" ]; then
 	 --cap-add=NET_ADMIN \
 	 --device=/dev/net/tun \
 	 --env PYTHONHASHSEED=${PYTHONHASHSEED:-$(shuf -i 0-$(((1 << 32) - 1)) -n 1)} \
+	 --env PYTHONPYCACHEDIR=/tmp/__pycache__ \
 	 --env VIRTUAL_ENV_DISABLE_PROMPT=yes \
 	 --env INFAMY_ARGS="$INFAMY_ARGS" \
 	 --env INFAMY_EXTRA_ARGS="$INFAMY_EXTRA_ARGS" \
