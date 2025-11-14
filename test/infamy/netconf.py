@@ -297,14 +297,21 @@ class Device(Transport):
             xml = xml.replace(f"yang:operation=\"{src}\"",
                               f"nc:operation=\"{dst}\"" if dst else "")
 
+        last_error = None
         for _ in range(0, 3):
             try:
                 self.ncc.edit_config(xml, default_operation='merge')
+                last_error = None
+                break
             except RpcError as _e:
+                last_error = _e
                 print(f"Failed sending edit-config RPC: {_e}  Retrying ...")
                 time.sleep(1)
                 continue
-            break
+
+        # If we exhausted all retries, raise the last error
+        if last_error is not None:
+            raise last_error
 
     def put_config_dicts(self, models):
         """PUT full configuration of all models to running-config"""
