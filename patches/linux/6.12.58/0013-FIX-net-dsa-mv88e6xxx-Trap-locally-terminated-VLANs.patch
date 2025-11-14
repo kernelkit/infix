@@ -1,4 +1,4 @@
-From 8f1c1d9e853065cd7b80208be3d5a7fbe88a4826 Mon Sep 17 00:00:00 2001
+From f3fc21e9a4f0a11d317a4b310ad1a6c019581e67 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Tue, 26 Nov 2024 19:45:59 +0100
 Subject: [PATCH 13/30] [FIX] net: dsa: mv88e6xxx: Trap locally terminated
