@@ -55,7 +55,7 @@ The BPI-R3 has a 4-position DIP switch that controls boot media:
 |----------|-------------|---------------------------------------|
 | 0000     | SD card     | Boot from microSD card (recommended)  |
 | 0110     | eMMC        | Boot from internal eMMC storage       |
-| 0101     | SPI NAND    | Boot from SPI NAND (advanced users)   |
+| 1010     | SPI NAND    | Boot from SPI NAND (advanced users)   |
 
 > [!NOTE]
 > Switch position is read from left to right: "0" = OFF, "1" = ON.  
@@ -130,7 +130,7 @@ mtd write spi-nand0 0x50000000 0x380000 0x200000
 #### Step 3: Boot from NAND
 
 1. Power off the board
-2. Set boot switches to **0101** (NAND mode)
+2. Set boot switches to **1010** (NAND mode)
 3. Power on - you should boot into U-Boot again
 
 #### Step 4: Write Infix image to eMMC
@@ -156,7 +156,6 @@ mmc erase 0x0 0x400
 fatload usb 0:1 0x50000000 bl2.img
 mmc write 0x50000000 0x0 0x400
 mmc partconf 0 1 1 0
-mmc bootbus 0 0 0 0
 ```
 
 #### Step 6: Boot from eMMC
@@ -184,7 +183,7 @@ Your BPI-R3 should now boot Infix from internal eMMC storage!
 
 ### eMMC boot fails after installation
 
-- Boot from NAND (**0101**) and verify eMMC image was written
+- Boot from NAND (**1010**) and verify eMMC image was written
 - Check USB drive contents - ensure all files are present
 - Re-run Step 5 (eMMC boot configuration)
 
