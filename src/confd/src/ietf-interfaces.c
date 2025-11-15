@@ -80,6 +80,8 @@ static int ifchange_cand_infer_type(sr_session_ctx_t *session, const char *path)
 
 	if (!fnmatch("wifi+([0-9])", ifname, FNM_EXTMATCH))
 		inferred.data.string_val = "infix-if-type:wifi";
+	if (!fnmatch("wifi([0-9])-ap+([0-9])", ifname, FNM_EXTMATCH))
+		inferred.data.string_val = "infix-if-type:wifi-ap";
 	else if (iface_is_phys(ifname))
 		inferred.data.string_val = "infix-if-type:ethernet";
 	else if (!fnmatch("br+([0-9])", ifname, FNM_EXTMATCH))
@@ -415,6 +417,8 @@ static int netdag_gen_afspec_add(sr_session_ctx_t *session, struct dagger *net, 
 		return vxlan_gen(NULL, cif, ip);
 	case IFT_WIFI:
 		return wifi_gen(NULL, cif, net);
+	case IFT_WIFI_AP:
+		return wifi_ap_add_iface(cif, net);
 	case IFT_ETH:
 		return netdag_gen_ethtool(net, cif, dif);
 	case IFT_LO:
@@ -445,6 +449,7 @@ static int netdag_gen_afspec_set(sr_session_ctx_t *session, struct dagger *net, 
 		return netdag_gen_ethtool(net, cif, dif);
 	case IFT_WIFI:
 		return wifi_gen(dif, cif, net);
+	case IFT_WIFI_AP: /* Is generated from radio interface */
 	case IFT_DUMMY:
 	case IFT_GRE:
 	case IFT_GRETAP:
@@ -473,7 +478,8 @@ static bool netdag_must_del(struct lyd_node *dif, struct lyd_node *cif)
 	case IFT_WIFI:
 	case IFT_ETH:
 		return lydx_get_child(dif, "custom-phys-address");
-
+	case IFT_WIFI_AP:
+		return lydx_get_child(dif, "custom-phys-address") || lydx_get_child((dif), "wifi");
 	case IFT_GRE:
 	case IFT_GRETAP:
 		return lydx_get_descendant(lyd_child(dif), "gre", NULL);
@@ -562,9 +568,13 @@ static int netdag_gen_iface_del(struct dagger *net, struct lyd_node *dif,
 		eth_gen_del(dif, ip);
 		wifi_gen_del(dif, net);
 		break;
+	case IFT_WIFI_AP:
+		wifi_ap_del_iface(dif, net);
+		break;
 	case IFT_VETH:
 		veth_gen_del(dif, ip);
 		break;
+
 	case IFT_BRIDGE:
 	case IFT_DUMMY:
 	case IFT_GRE:
@@ -605,10 +615,12 @@ static sr_error_t netdag_gen_iface(sr_session_ctx_t *session, struct dagger *net
 	int err = 0;
 	FILE *ip;
 
-
 	err = netdag_gen_iface_timeout(net, ifname, iftype);
 	if (err)
 		goto err;
+
+	if (!strcmp(iftype, "infix-if-type:wifi") && wifi_is_accesspoint(cif))
+		return SR_ERR_OK;
 
 	if ((err = cni_netdag_gen_iface(net, ifname, dif, cif))) {
 		/* error or managed by CNI/podman */
@@ -734,6 +746,7 @@ static int netdag_init_iface(struct lyd_node *cif)
 	case IFT_DUMMY:
 	case IFT_ETH:
 	case IFT_WIFI:
+	case IFT_WIFI_AP:
 	case IFT_GRE:
 	case IFT_GRETAP:
 	case IFT_LO:

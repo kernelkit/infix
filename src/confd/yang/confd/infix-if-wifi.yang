@@ -31,26 +31,39 @@ submodule infix-if-wifi {
     "WiFi-specific extensions to the standard IETF interfaces model.
 
      This submodule defines configuration and operational data relevant to
-     WiFi interfaces, including security settings, network
+     WiFi radio interfaces, including security settings, network
      discovery, and regulatory compliance.
 
-     It supports WiFi client mode and enables comprehensive management of
+     It supports WiFi station mode and enables comprehensive management of
      wireless connections, including encryption, country codes, and scanning.";
 
+  revision 2025-09-26 {
+    description "Refactor module and add support for Accesspoint mode.";
+    reference "internal";
+  }
   revision 2025-05-27 {
     description "Initial revision.";
     reference "internal";
   }
 
   feature wifi {
-    description "WiFi support is an optional build-time feature in Infix.";
+    description
+      "WiFi support is an optional build-time feature in Infix.";
   }
 
+  typedef mode {
+    type enumeration {
+      enum station {
+      }
+      enum accesspoint {
+      }
+    }
+  }
   typedef encryption {
     type enumeration {
-      enum auto {
+      enum mixed-wpa2-wpa3 {
         description
-          "Enables WPA/WPA2/WPA3 encryption with automatic protocol
+          "Enables WPA2/WPA3 mixed mode encryption with automatic protocol
            negotiation. The system uses the strongest supported variant supported by Access Point.";
       }
       enum disabled {
@@ -64,45 +77,135 @@ submodule infix-if-wifi {
     description
       "Encryption modes available for WiFi connections.
 
-       - auto: Secure connection using WPA3/WPA2/WPA (auto-selected)
+       - mixed-wpa2-wpa3: Secure connection using WPA2/WPA3 (auto-selected)
        - disabled: Open network (unencrypted)";
   }
 
+  typedef band {
+    type enumeration {
+      enum "2.4GHz" {
+        description "2.4 GHz frequency band.";
+      }
+      enum "5GHz" {
+        description "5 GHz frequency band.";
+      }
+    }
+    description "WiFi frequency bands.";
+  }
+
+  typedef channel {
+    type union {
+      type enumeration {
+        enum "auto" {
+          description "Automatic channel selection (recommended).";
+        }
+      }
+      type uint8 {
+        range "1..14 | 36 | 40 | 44 | 48 | 149 | 153 | 157 | 161 | 165";
+      }
+    }
+    description "WiFi channel: 'auto' for automatic selection or specific channel number.";
+  }
 
   augment "/if:interfaces/if:interface" {
-    when "derived-from-or-self(if:type, 'infixift:wifi')" {
+    when "derived-from-or-self(if:type, 'infixift:wifi') or derived-from-or-self(if:type, 'infixift:wifi-ap')" {
       description
-        "Applies only to interfaces of type 'wifi'.";
+        "Applies to interfaces of type 'wifi' or 'wifi-ap'.";
     }
+
+    description
+      "WiFi interface extensions with MAC address validation for AP interfaces.";
 
     container wifi {
       if-feature wifi;
       presence "Configure Wi-Fi settings";
 
       description
-        "WiFi-specific configuration and operational data.";
+        "WiFi radio configuration and operational data.";
+
+      leaf radio {
+        when "derived-from-or-self(../../if:type, 'infixift:wifi-ap')" {
+          description "Only available for wifi-ap interfaces.";
+        }
+        type if:interface-ref;
+        must "derived-from-or-self(/if:interfaces/if:interface[if:name=current()]/if:type, 'infixift:wifi')" {
+          error-message "Referenced interface must be of type 'wifi'.";
+        }
+        must "/if:interfaces/if:interface[if:name=current()]/infix-if:wifi/mode = 'accesspoint'" {
+          error-message "Referenced wifi interface must be in accesspoint mode.";
+        }
+        mandatory true;
+        description
+          "Reference to the underlying WiFi radio interface.
+
+           Example: 'wifi0' - the radio interface this AP uses.";
+      }
 
       leaf country-code {
         type iwcc:country-code;
-        mandatory true;
+        default '00';
         description
           "Two-letter ISO 3166-1 country code for regulatory compliance.
 
-           Examples: 'US', 'DE', 'JP'.
+           Examples: 'SE', 'US', 'DE', 'JP'.
 
            WARNING: Incorrect values may violate local laws.";
+      }
 
+      leaf mode {
+        type mode;
+        must "not(. = 'accesspoint' and derived-from-or-self(../../if:type, 'infixift:wifi')) or ../band" {
+          error-message "Band must be specified when mode is accesspoint for wifi interfaces.";
+        }
+        description
+          "WiFi interface operating mode.
 
+           - station: Connect to external WiFi networks
+           - accesspoint: Operate as WiFi access point radio";
+      }
+      leaf band {
+        type band;
+        when "derived-from-or-self(../../if:type, 'infixift:wifi') and ../mode = 'accesspoint'" {
+          description "Only available for wifi interfaces in accesspoint mode.";
+        }
+        description
+          "WiFi frequency band for radio operation.
+
+           If not specified, radio supports all available bands.";
+      }
+
+      leaf channel {
+        type channel;
+        default "auto";
+        when "derived-from-or-self(../../if:type, 'infixift:wifi') and ../mode = 'accesspoint'" {
+          description "Only available for wifi interfaces in accesspoint mode.";
+        }
+        must ". = 'auto' or not(../band) or " +
+          "(../band = '2.4GHz' and . >= 1 and . <= 14) or " +
+          "(../band = '5GHz' and (. = 36 or . = 40 or . = 44 or . = 48 or . >= 149 and . <= 165))" {
+          error-message "Channel must be valid for selected band or use 'auto'.";
+        }
+        description
+          "WiFi channel selection for radio.
+           'auto' (default) - automatic channel selection
+           Manual selection available for common channels.";
       }
 
       leaf encryption {
-        default auto;
+        default mixed-wpa2-wpa3;
         type encryption;
-
+        when "(derived-from-or-self(../../if:type, 'infixift:wifi') and ../mode = 'station') or derived-from-or-self(../../if:type, 'infixift:wifi-ap')" {
+          description "Available for wifi interfaces in station mode or wifi-ap interfaces.";
+        }
         description
           "WiFi encryption method.
 
-           - auto (default): Enables WPA2/WPA3 auto-negotiation
+           For station interfaces:
+           - mixed-wpa2-wpa3 (default): Enables WPA2/WPA3 auto-negotiation
+           - disabled: Disables encryption (open network)
+
+           For AP interfaces:
+           - mixed-wpa2-wpa3: Enables WPA2/WPA3 encryption
            - disabled: Disables encryption (open network)";
       }
 
@@ -110,24 +213,27 @@ submodule infix-if-wifi {
         type string {
           length "1..32";
         }
-        mandatory true;
-
+        when "(derived-from-or-self(../../if:type, 'infixift:wifi') and ../mode = 'station') or derived-from-or-self(../../if:type, 'infixift:wifi-ap')" {
+          description "Available for wifi interfaces in station mode or wifi-ap interfaces.";
+        }
         description
           "WiFi network name (SSID).
 
-           Case-sensitive, must match the target network.
+           For station interfaces: SSID to connect to (must match target network)
+           For AP interfaces: SSID to broadcast
 
-           Length: 1–32 characters.";
+           Case-sensitive. Length: 1–32 characters.";
       }
 
       leaf secret {
         type ks:symmetric-key-ref;
-        mandatory true;
+        when "(derived-from-or-self(../../if:type, 'infixift:wifi') and ../mode = 'station') or derived-from-or-self(../../if:type, 'infixift:wifi-ap')" {
+          description "Available for wifi interfaces in station mode or wifi-ap interfaces.";
+        }
         must "../encryption != 'disabled'" {
            error-message
             "Pre-shared key required unless encryption is disabled.";
         }
-
         description
           "Pre-shared key (PSK) for WPA-secured networks.";
       }
@@ -137,7 +243,7 @@ submodule infix-if-wifi {
         type int16;
         units "dBm";
         description
-          "Current received signal strength (RSSI) in dBm.
+          "Current received signal strength (RSSI) in dBm for station connection.
 
            Lower (more negative) values indicate stronger signals.";
       }
@@ -180,6 +286,47 @@ submodule infix-if-wifi {
             "Human-readable description of the detected security.";
         }
       }
+
+      list connected-stations {
+        when "derived-from-or-self(../../../if:type, 'infixift:wifi-ap')" {
+          description "Only available for wifi-ap interfaces.";
+        }
+        config false;
+        key mac-address;
+        description
+          "List of stations currently connected to this access point.";
+
+          leaf mac-address {
+            type yang:phys-address;
+            description
+              "MAC address of connected station.";
+          }
+
+          leaf rssi {
+            type int16;
+            units "dBm";
+            description
+              "Signal strength for connected station.";
+          }
+
+          leaf tx-speed {
+            type string;
+            description
+              "Transmit bitrate (e.g., '65.0 Mbps', '1.2 Gbps').";
+          }
+
+          leaf rx-speed {
+            type string;
+            description
+              "Receive bitrate (e.g., '65.0 Mbps', '1.2 Gbps').";
+          }
+
+          leaf connected-time {
+            type string;
+            description
+              "Time since station connected (e.g., '120 seconds', '5 minutes').";
+          }
+        }
     }
   }
 }
