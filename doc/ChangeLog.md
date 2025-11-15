@@ -8,6 +8,7 @@ All notable changes to the project are documented in this file.
 
 ### Changes
 
+- Upgrade Linux kernel to 6.12.58 (LTS)
 - Upgrade Linux kernel to 6.12.57 (LTS)
 - Major improvements to OSPF and BFD operational data and CLI commands:
    - CLI commands now use data from the operational datastore instead of
