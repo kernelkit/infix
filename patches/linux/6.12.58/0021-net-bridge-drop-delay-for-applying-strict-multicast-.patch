@@ -1,4 +1,4 @@
-From c7c541aea1a2204101d89e83fcff443d09743421 Mon Sep 17 00:00:00 2001
+From 3b70f7859f720efb9fb275bc2da52bd30400cf52 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Thu, 4 Apr 2024 16:36:30 +0200
 Subject: [PATCH 21/30] net: bridge: drop delay for applying strict multicast
@@ -163,7 +163,7 @@ index 1ae021be0a7b..dd815b0fa8f8 100644
  #endif
  
 diff --git a/net/bridge/br_private.h b/net/bridge/br_private.h
-index 102d37f6e92d..2b9d99d98aef 100644
+index 54a60e645f38..a33ea3c998b4 100644
 --- a/net/bridge/br_private.h
 +++ b/net/bridge/br_private.h
 @@ -80,7 +80,6 @@ struct bridge_mcast_own_query {
