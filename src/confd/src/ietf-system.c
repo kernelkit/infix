@@ -206,11 +206,6 @@ done:
 	return rc;
 }
 
-static int sys_reload_services(void)
-{
-	return systemf("initctl -nbq touch sysklogd");
-}
-
 
 #define TIMEZONE_CONF "/etc/timezone"
 #define TIMEZONE_PREV TIMEZONE_CONF "-"
@@ -1558,11 +1553,10 @@ int hostnamefmt(struct confd *confd, const char *fmt, char *hostnm, size_t hostl
 
 static int change_hostname(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd)
 {
-	const char *hostip = "127.0.1.1";
 	char  hostnm[65], domain[65];
-	char buf[256], *fmt;
-	FILE *nfp, *fp;
-	int err, fd;
+	int   rc = SR_ERR_OK;
+	char *fmt;
+	FILE *fp;
 
 	if (event != SR_EV_DONE || !lydx_get_xpathf(diff, XPATH_HOSTNAME_))
 		return SR_ERR_OK;
@@ -1572,82 +1566,36 @@ static int change_hostname(sr_session_ctx_t *session, struct lyd_node *config, s
 		fmt = strdup(nm);
 
 	if (hostnamefmt(confd, fmt, hostnm, sizeof(hostnm), domain, sizeof(domain))) {
-		err = SR_ERR_SYS;
-		goto err;
+		rc = SR_ERR_SYS;
+		goto failed;
 	}
 
-	err = sethostname(hostnm, strlen(hostnm));
-	if (err) {
-		ERROR("failed setting hostname");
-		err = SR_ERR_SYS;
-		goto err;
-	}
+	/* Use hostname.d for deterministic hostname management */
+	systemf("mkdir -p /etc/hostname.d");
 
+	fp = fopen("/etc/hostname.d/50-configured", "w");
+	if (!fp)
+		goto failed;
+
+	fprintf(fp, "%s\n", hostnm);
+	fclose(fp);
+
+	/* Handle domain name if present */
 	if (domain[0] && setdomainname(domain, strlen(domain))) {
 		ERROR("failed setting domain name");
 		/* Not cause for failing this function */
 	}
 
-	fp = fopen(_PATH_HOSTNAME, "w");
-	if (!fp) {
-		err = SR_ERR_INTERNAL;
-		goto err;
+	if (systemf("/usr/libexec/infix/hostname")) {
+	failed:
+		ERROR("failed setting hostname");
+		rc = SR_ERR_SYS;
 	}
 
-	fprintf(fp, "%s\n", hostnm);
-	fclose(fp);
-
-	nfp = fopen(_PATH_HOSTS "+", "w");
-	if (!nfp) {
-		err = SR_ERR_INTERNAL;
-		goto err;
-	}
-	fd = fileno(nfp);
-	if (fd == -1 || fchown(fd, 0, 0) || fchmod(fd, 0644)) {
-		fclose(nfp);
-		goto err;
-	}
-
-	fp = fopen(_PATH_HOSTS, "r");
-	if (!fp) {
-		err = SR_ERR_INTERNAL;
-		fclose(nfp);
-		goto err;
-	}
-
-	while (fgets(buf, sizeof(buf), fp)) {
-		if (!strncmp(buf, hostip, strlen(hostip))) {
-			if (domain[0])
-				snprintf(buf, sizeof(buf), "%s\t%s.%s %s\n", hostip, hostnm, domain, hostnm);
-			else
-				snprintf(buf, sizeof(buf), "%s\t%s\n", hostip, hostnm);
-		}
-		fputs(buf, nfp);
-	}
-
-	fclose(fp);
-	fclose(nfp);
-	if (rename(_PATH_HOSTS "+", _PATH_HOSTS))
-		ERRNO("Failed activating changes to "_PATH_HOSTS);
-
-	/* skip in bootstrap, lldpd and avahi have not started yet */
-	if (systemf("runlevel >/dev/null 2>&1"))
-		goto err;
-
-	/* Inform any running lldpd and avahi of the change ... */
-	systemf("initctl -bq status lldpd && lldpcli configure system hostname %s", hostnm);
-	systemf("initctl -bq status mdns  && avahi-set-host-name %s", hostnm);
-	systemf("initctl -bq touch netbrowse");
-err:
 	if (fmt)
 		free(fmt);
-
-	if (err) {
-		ERROR("Failed activating changes.");
-		return err;
-	}
-	if (sys_reload_services())
-		return SR_ERR_SYS;
+	if (rc)
+		return rc;
 
 	return SR_ERR_OK;
 }
@@ -1656,6 +1604,7 @@ err:
 int ietf_system_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd)
 {
 	int rc = SR_ERR_OK;
+
 	if ((rc = change_auth(session, config, diff, event, confd)))
 		return rc;
 	if ((rc = change_ntp(session, config, diff, event, confd)))

@@ -42,6 +42,8 @@ All notable changes to the project are documented in this file.
 ### Fixes
 
 - Fix #855: User admin sometimes fails to be added to `wheel` group
+- Fix #1112: setting hostname via DHCP client sometimes gets overridden by the
+  configured system hostname
 - Fix #1247: Prevent invalid configuration of OSPF backbone area (0.0.0.0) as
   stub or NSSA. The backbone must always be a normal area per RFC 2328. Any
   existing invalid configurations are automatically corrected during upgrade
