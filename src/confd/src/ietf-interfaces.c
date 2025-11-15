@@ -160,6 +160,10 @@ static int ifchange_cand(sr_session_ctx_t *session, uint32_t sub_id, const char 
 		if (err)
 			break;
 
+		err = ifchange_cand_infer_dhcp(session, new->xpath);
+		if (err)
+			break;
+
 		err = cni_ifchange_cand_infer_type(session, new->xpath);
 		if (err)
 			break;

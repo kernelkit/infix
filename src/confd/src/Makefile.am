@@ -45,6 +45,7 @@ confd_plugin_la_SOURCES =			\
 	ietf-routing.c				\
 	infix-dhcp-common.c			\
 	infix-dhcp-client.c			\
+	infix-dhcpv6-client.c			\
 	infix-dhcp-server.c			\
 	infix-factory.c				\
 	infix-firewall.c			\
