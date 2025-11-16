@@ -1,4 +1,4 @@
-From 61989106a177054cfc284418c2d97a6a0fbc999b Mon Sep 17 00:00:00 2001
+From d2b6e4c88bb3817ed5e561941e8f065d3976d69f Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Mon, 4 Mar 2024 16:47:28 +0100
 Subject: [PATCH 19/30] net: bridge: avoid classifying unknown multicast as
@@ -38,10 +38,10 @@ index a5b743a2f775..3bffc39d7800 100644
  };
  
 diff --git a/net/bridge/br.c b/net/bridge/br.c
-index ed08717541fe..b2d3a3de2d72 100644
+index 35e9842f4203..921781a83589 100644
 --- a/net/bridge/br.c
 +++ b/net/bridge/br.c
-@@ -277,6 +277,9 @@ int br_boolopt_toggle(struct net_bridge *br, enum br_boolopt_id opt, bool on,
+@@ -282,6 +282,9 @@ int br_boolopt_toggle(struct net_bridge *br, enum br_boolopt_id opt, bool on,
  	case BR_BOOLOPT_MST_ENABLE:
  		err = br_mst_set_enabled(br, on, extack);
  		break;
@@ -51,7 +51,7 @@ index ed08717541fe..b2d3a3de2d72 100644
  	default:
  		/* shouldn't be called with unsupported options */
  		WARN_ON(1);
-@@ -295,6 +298,8 @@ int br_boolopt_get(const struct net_bridge *br, enum br_boolopt_id opt)
+@@ -300,6 +303,8 @@ int br_boolopt_get(const struct net_bridge *br, enum br_boolopt_id opt)
  		return br_opt_get(br, BROPT_MCAST_VLAN_SNOOPING_ENABLED);
  	case BR_BOOLOPT_MST_ENABLE:
  		return br_opt_get(br, BROPT_MST_ENABLED);
@@ -101,10 +101,10 @@ index 26b79feb385d..f3ecc70a47dc 100644
  	br_stp_timer_init(br);
  	br_multicast_init(br);
 diff --git a/net/bridge/br_forward.c b/net/bridge/br_forward.c
-index e19b583ff2c6..1094364d96e0 100644
+index e9f09cdb9848..acca5cabec15 100644
 --- a/net/bridge/br_forward.c
 +++ b/net/bridge/br_forward.c
-@@ -198,14 +198,19 @@ static struct net_bridge_port *maybe_deliver(
+@@ -199,14 +199,19 @@ static struct net_bridge_port *maybe_deliver(
  
  /* called under rcu_read_lock */
  void br_flood(struct net_bridge *br, struct sk_buff *skb,
@@ -126,7 +126,7 @@ index e19b583ff2c6..1094364d96e0 100644
  	list_for_each_entry_rcu(p, &br->port_list, list) {
  		/* Do not flood unicast traffic to ports that turn it off, nor
  		 * other traffic if flood off, except for traffic we originate
-@@ -216,6 +221,11 @@ void br_flood(struct net_bridge *br, struct sk_buff *skb,
+@@ -217,6 +222,11 @@ void br_flood(struct net_bridge *br, struct sk_buff *skb,
  				continue;
  			break;
  		case BR_PKT_MULTICAST:
@@ -139,7 +139,7 @@ index e19b583ff2c6..1094364d96e0 100644
  				continue;
  			break;
 diff --git a/net/bridge/br_input.c b/net/bridge/br_input.c
-index ceaa5a89b947..e54d648db7de 100644
+index 2eb2bb664388..dd6a5d2c1351 100644
 --- a/net/bridge/br_input.c
 +++ b/net/bridge/br_input.c
 @@ -212,7 +212,7 @@ int br_handle_frame_finish(struct net *net, struct sock *sk, struct sk_buff *skb
@@ -188,7 +188,7 @@ index 0a00c3f57815..1ae021be0a7b 100644
  		    ipv6_addr_is_all_snoopers(&ipv6_hdr(skb)->daddr))
  			br_ip6_multicast_mrd_rcv(brmctx, pmctx, skb);
 diff --git a/net/bridge/br_private.h b/net/bridge/br_private.h
-index 5026a256bf92..db6903b288af 100644
+index 741b0b8c4bab..ef4c44a6a32c 100644
 --- a/net/bridge/br_private.h
 +++ b/net/bridge/br_private.h
 @@ -485,6 +485,7 @@ enum net_bridge_opts {
