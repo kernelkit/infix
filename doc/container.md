@@ -1053,8 +1053,7 @@ tarballs with SHA256 checksums for integrity checking.
 
 Finally, if you build your own version of Infix, and embed OCI tarballs
 in the system image, then see the tip at the end of [Upgrading a
-Container Image](#upgrading-a-container-image) (above).
-
+Container Image](#embedded-container-images) (above).
 
 [0]:      networking.md
 [1]:      https://github.com/kernelkit/infix/blob/main/src/confd/yang/infix-containers.yang
