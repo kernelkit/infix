@@ -4,3 +4,9 @@
 
 - name: Remote syslog
   case: remote/test.py
+
+- name: Syslog Pattern Matching
+  case: pattern_match/test.py
+
+- name: Syslog Advanced Compare
+  case: advanced_compare/test.py
