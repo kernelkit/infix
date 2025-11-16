@@ -23,6 +23,79 @@ YANG support for upgrading Infix, inspecting and _modifying_ the
 boot-order, is defined in [infix-system-software][2].
 
 
+## Changing Boot Order
+
+The boot order can be manually changed using the `set boot-order` command.
+This is useful for rolling back to a previous version or changing the
+preferred boot source.
+
+The command accepts one to three boot targets as separate arguments, in the
+desired boot order. Valid boot targets are:
+
+- `primary` - The primary partition
+- `secondary` - The secondary partition
+- `net` - Network boot (if supported by bootloader)
+
+The CLI provides tab-completion for boot targets, making it easy to enter
+valid values.
+
+Example: View current boot order and change it:
+
+```
+admin@example:/> show boot-order
+primary secondary net
+admin@example:/> set boot-order secondary primary net
+admin@example:/> show boot-order
+secondary primary net
+admin@example:/>
+```
+
+Example: Set boot order to only try primary partition:
+
+```
+admin@example:/> show boot-order
+secondary primary net
+admin@example:/> set boot-order primary
+admin@example:/> show boot-order
+primary
+admin@example:/>
+```
+
+Example: Using tab-completion (press TAB to see available options):
+
+```
+admin@example:/> set boot-order <TAB>
+net        primary    secondary
+admin@example:/> set boot-order secondary <TAB>
+net        primary    secondary
+admin@example:/> set boot-order secondary primary
+admin@example:/> show boot-order
+secondary primary
+admin@example:/>
+```
+
+The new boot order takes effect on the next reboot and can be verified
+with `show boot-order` or `show software`:
+
+```
+admin@example:/> show software
+BOOT ORDER
+secondary primary
+
+NAME      STATE     VERSION                DATE
+primary   booted    v25.01.0               2025-04-25T10:15:00+00:00
+secondary inactive  v25.01.0               2025-04-25T10:07:20+00:00
+admin@example:/>
+```
+
+> [!NOTE]
+> The boot order is automatically updated when performing an upgrade.
+> The newly installed image will be set as the first boot target.
+>
+> Duplicate boot targets are not allowed. The CLI will reject attempts to
+> specify the same target multiple times.
+
+
 ## Upgrading
 
 Upgrading Infix is done one partition at a time. If the system has

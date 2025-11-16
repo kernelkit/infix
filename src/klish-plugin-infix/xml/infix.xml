@@ -134,6 +134,13 @@
   <ACTION sym="STRING"/>
 </PTYPE>
 
+<PTYPE name="BOOT_TARGET">
+  <COMPL>
+    <ACTION sym="boot_targets@infix"/>
+  </COMPL>
+  <ACTION sym="STRING"/>
+</PTYPE>
+
 <VIEW name="main">
   <HOTKEY key="^D" cmd="exit"/>
 
@@ -243,6 +250,13 @@
     <PARAM name="current-datetime" ptype="/STRING" help="yyyy-mm-ddThh:mm:ss(Z|+/-hh:mm)"/>
     <ACTION sym="srp_rpc@sysrepo">/ietf-system:set-current-datetime</ACTION>
   </COMMAND>
+
+  <COMMAND name="boot-order" help="Set boot partition order">
+    <PARAM name="first" ptype="/BOOT_TARGET" help="First boot target"/>
+    <PARAM name="second" ptype="/BOOT_TARGET" help="Second boot target" min="0"/>
+    <PARAM name="third" ptype="/BOOT_TARGET" help="Third boot target" min="0"/>
+    <ACTION sym="set_boot_order@infix"/>
+  </COMMAND>
 </COMMAND>
 
 <COMMAND name="dhcp-server" help="DHCP server tools" mode="switch">
@@ -350,6 +364,12 @@
     </SWITCH>
     <ACTION sym="script">
       show software "$KLISH_PARAM_name"
+    </ACTION>
+  </COMMAND>
+
+  <COMMAND name="boot-order" help="Show boot partition order">
+    <ACTION sym="script">
+      show boot-order
     </ACTION>
   </COMMAND>
 

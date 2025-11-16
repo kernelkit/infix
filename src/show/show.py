@@ -142,6 +142,19 @@ def software(args: List[str]) -> None:
     else:
         print("Too many arguments provided. Only one name is expected.")
 
+def boot_order(args: List[str]) -> None:
+    data = run_sysrepocfg("/ietf-system:system-state/infix-system:software")
+    if not data:
+        print("No software data retrieved.")
+        return
+
+    try:
+        boot_order_list = data.get("ietf-system:system-state", {}).get("infix-system:software", {}).get("boot-order", [])
+        if boot_order_list:
+            print(" ".join(boot_order_list))
+    except (KeyError, TypeError):
+        print("No boot order data available.")
+
 def services(args: List[str]) -> None:
     data = run_sysrepocfg("/ietf-system:system-state/infix-system:services")
     if not data:
@@ -425,6 +438,7 @@ def system(args: List[str]) -> None:
 def execute_command(command: str, args: List[str]):
     command_mapping = {
         'bfd': bfd,
+        'boot-order': boot_order,
         'dhcp': dhcp,
         'hardware': hardware,
         'interface': interface,

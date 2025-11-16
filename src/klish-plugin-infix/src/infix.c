@@ -263,6 +263,89 @@ int infix_shell(kcontext_t *ctx)
 	return rc;
 }
 
+static const char *boot_targets[] = {
+	"primary",
+	"secondary",
+	"net",
+	NULL
+};
+
+int infix_boot_targets(kcontext_t *ctx)
+{
+	size_t i;
+
+	(void)ctx;
+
+	for (i = 0; boot_targets[i]; i++)
+		puts(boot_targets[i]);
+
+	return 0;
+}
+
+static const char *valid_boot_target(const kparg_t *parg)
+{
+	const char *target;
+	size_t i;
+
+	if (!parg)
+		return NULL;
+
+	target = kparg_value(parg);
+	for (i = 0; boot_targets[i]; i++) {
+		if (!strcmp(target, boot_targets[i]))
+			return target;
+	}
+
+	return NULL;
+}
+
+int infix_set_boot_order(kcontext_t *ctx)
+{
+	char tmpfile[] = "/tmp/boot-order-XXXXXX";
+	kpargv_t *pargv = kcontext_pargv(ctx);
+	const char *targets[3];
+	int fd, rc = 0;
+	FILE *fp;
+
+	targets[0] = valid_boot_target(kpargv_find(pargv, "first"));
+	targets[1] = valid_boot_target(kpargv_find(pargv, "second"));
+	targets[2] = valid_boot_target(kpargv_find(pargv, "third"));
+
+	if (!targets[0]) {
+		fprintf(stderr, ERRMSG "missing boot target\n");
+		return -1;
+	}
+
+	fd = mkstemp(tmpfile);
+	if (fd == -1)
+		goto fail;
+
+	fp = fdopen(fd, "w");
+	if (!fp) {
+		close(fd);
+		unlink(tmpfile);
+	fail:
+		fprintf(stderr, ERRMSG "failed creating temporary file\n");
+		return -1;
+	}
+
+	fputs("{\"infix-system:set-boot-order\":{\"boot-order\":[", fp);
+	for (size_t i = 0; i < NELEMS(targets); i++) {
+		if (!targets[i])
+			continue;
+
+		fprintf(fp, "%s\"%s\"", i > 0 ? "," : "", targets[i]);
+	}
+	fputs("]}}", fp);
+
+	fclose(fp);
+
+	rc = systemf("sysrepocfg -R %s -fjson 2>&1", tmpfile);
+	unlink(tmpfile);
+
+	return rc;
+}
+
 int kplugin_infix_fini(kcontext_t *ctx)
 {
 	(void)ctx;
@@ -274,6 +357,7 @@ int kplugin_infix_init(kcontext_t *ctx)
 {
 	kplugin_t *plugin = kcontext_plugin(ctx);
 
+	kplugin_add_syms(plugin, ksym_new("boot_targets", infix_boot_targets));
 	kplugin_add_syms(plugin, ksym_new("copy", infix_copy));
 	kplugin_add_syms(plugin, ksym_new("datastore", infix_datastore));
 	kplugin_add_syms(plugin, ksym_new("erase", infix_erase));
@@ -282,6 +366,7 @@ int kplugin_infix_init(kcontext_t *ctx)
 	kplugin_add_syms(plugin, ksym_new("firewall_zones", infix_firewall_zones));
 	kplugin_add_syms(plugin, ksym_new("firewall_policies", infix_firewall_policies));
 	kplugin_add_syms(plugin, ksym_new("firewall_services", infix_firewall_services));
+	kplugin_add_syms(plugin, ksym_new("set_boot_order", infix_set_boot_order));
 	kplugin_add_syms(plugin, ksym_new("shell", infix_shell));
 
 	return 0;

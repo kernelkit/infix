@@ -38,6 +38,9 @@ All notable changes to the project are documented in this file.
   kernel default (*inherit*), which in turn fixes reported issues with dropped
   OSPF Hello frames in GRE tunnels
 - [Document][bpi-r3-emmc-documentation] how to go from SD card to eMMC on bpi-r3
+- Add CLI commands for managing boot partition order: `show boot-order` and
+  `set boot-order` allow viewing and changing the boot order from the CLI,
+  complementing the existing YANG RPC support, issue #1032
 
 ### Fixes
 
