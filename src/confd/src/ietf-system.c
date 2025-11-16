@@ -218,6 +218,7 @@ static int change_clock(sr_session_ctx_t *session, struct lyd_node *config, stru
 
 	if (diff && !lydx_get_xpathf(diff, XPATH_BASE_"/clock"))
 		return SR_ERR_OK;
+
 	switch (event) {
 	case SR_EV_ENABLED:	/* first time, on register. */
 	case SR_EV_CHANGE:	/* regular change (copy cand running) */

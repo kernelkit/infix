@@ -18,7 +18,7 @@ MODULES=(
 	"iana-if-type@2023-01-26.yang"
         # NOTE: ietf-tls-client must be version matched with ietf-tls-server, used by netopeer2!
 	"ietf-tls-client@2023-12-28.yang"
-	"ietf-syslog@2024-03-21.yang -e file-action -e file-limit-size -e remote-action"
+	"ietf-syslog@2024-03-21.yang -e file-action -e file-limit-size -e remote-action -e select-adv-compare -e select-match"
 	"infix-syslog@2024-07-19.yang"
 	"iana-hardware@2018-03-13.yang"
 	"ietf-hardware@2018-03-13.yang -e hardware-state -e hardware-sensor"
