@@ -301,10 +301,11 @@ class IsolatedMacVlan(IsolatedMacVlans):
     """
     def __init__(self, parent, ifname="iface", lo=True, set_up=True):
         self._ifname = ifname
-        return super().__init__(ifmap={ parent: ifname }, lo=lo, set_up=set_up)
+        return super().__init__(ifmap={parent: ifname}, lo=lo, set_up=set_up)
 
     def addip(self, addr, prefix_length=24, proto="ipv4"):
-        return super().addip(ifname=self._ifname, addr=addr, prefix_length=prefix_length, proto=proto)
+        return super().addip(ifname=self._ifname, addr=addr,
+                             prefix_length=prefix_length, proto=proto)
 
     def must_receive(self, expr, timeout=None, ifname=None, must=True):
         ifname = ifname if ifname else self._ifname
