@@ -118,6 +118,40 @@ static size_t selector(sr_session_ctx_t *session, struct action *act)
 		count = 0;
 	}
 
+	/* Check for property-filter (infix-syslog augment) */
+	char *property = srx_get_str(session, "%s/infix-syslog:property-filter/property", act->xpath);
+	if (property) {
+		char *operator = srx_get_str(session, "%s/infix-syslog:property-filter/operator", act->xpath);
+		char *value = srx_get_str(session, "%s/infix-syslog:property-filter/value", act->xpath);
+		char *case_str = srx_get_str(session, "%s/infix-syslog:property-filter/case-insensitive", act->xpath);
+		char *negate_str = srx_get_str(session, "%s/infix-syslog:property-filter/negate", act->xpath);
+
+		if (operator && value) {
+			/* Build operator prefix: [!][icase_]operator */
+			char op_prefix[32] = "";
+
+			/* Only apply negate if explicitly set to true */
+			if (negate_str && !strcmp(negate_str, "true"))
+				strlcat(op_prefix, "!", sizeof(op_prefix));
+
+			/* Only apply icase_ if explicitly set to true */
+			if (case_str && !strcmp(case_str, "true"))
+				strlcat(op_prefix, "icase_", sizeof(op_prefix));
+
+			strlcat(op_prefix, operator, sizeof(op_prefix));
+
+			/* Property-based filter: :property, [!][icase_]operator, "value" */
+			fprintf(act->fp, ":%s, %s, \"%s\"\n", property, op_prefix, value);
+			has_pattern = true;
+		}
+
+		free(property);
+		free(operator);
+		free(value);
+		free(case_str);
+		free(negate_str);
+	}
+
 	/* Check for pattern-match (select-match feature) */
 	pattern = srx_get_str(session, "%s/pattern-match", act->xpath);
 	if (pattern) {
