@@ -10,3 +10,6 @@
 
 - name: Syslog Advanced Compare
   case: advanced_compare/test.py
+
+- name: Syslog Hostname Filtering
+  case: hostname_filter/test.py
