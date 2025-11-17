@@ -1,5 +1,7 @@
-# -l      :: Keep kernel looging to console
+# -H      :: Log remote messages using hostname from the message
+# -l      :: Keep kernel logging to console
 # -m0     :: Disable periodic syslog MARK entries
+# -n      :: Disable DNS query for every request, trust hostname in message
 # -s      :: Enable secure mode, don't listen to remote logs
 # -r 1M:5 :: Log rotation every 1 MiB and keep 5 rotated ones
-SYSLOGD_ARGS="-l -m0"
+SYSLOGD_ARGS="-H -l -m0"

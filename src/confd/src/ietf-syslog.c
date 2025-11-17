@@ -104,6 +104,20 @@ static size_t selector(sr_session_ctx_t *session, struct action *act)
 	char *pattern;
 	int rc;
 
+	/* Check for hostname-filter (infix-syslog augment) */
+	snprintf(xpath, sizeof(xpath), "%s/infix-syslog:hostname-filter", act->xpath);
+	rc = sr_get_items(session, xpath, 0, 0, &list, &count);
+	if (rc == SR_ERR_OK && count > 0) {
+		fprintf(act->fp, "+");
+		for (size_t i = 0; i < count; i++)
+			fprintf(act->fp, "%s%s", i ? "," : "", list[i].data.string_val);
+		fprintf(act->fp, "\n");
+
+		sr_free_values(list, count);
+		list = NULL;
+		count = 0;
+	}
+
 	/* Check for pattern-match (select-match feature) */
 	pattern = srx_get_str(session, "%s/pattern-match", act->xpath);
 	if (pattern) {
