@@ -1,0 +1,15 @@
+diff --git a/src/server_config.c b/src/server_config.c
+index 905f6aa..a893eb5 100644
+--- a/src/server_config.c
++++ b/src/server_config.c
+@@ -1851,8 +1851,8 @@ nc_server_config_private_key_format(const struct lyd_node *node, enum nc_operati
+ 
+     privkey_type = nc_server_config_get_private_key_type(format);
+     if (privkey_type == NC_PRIVKEY_FORMAT_UNKNOWN) {
+-        ERR(NULL, "Unknown private key format.");
+-        ret = 1;
++        DBG(NULL, "Unknown private key format.");
++        ret = 0;
+         goto cleanup;
+     }
+ 
