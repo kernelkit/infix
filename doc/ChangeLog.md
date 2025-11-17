@@ -9,6 +9,9 @@ All notable changes to the project are documented in this file.
 ### Changes
 
 - Upgrade Linux kernel to 6.12.58 (LTS)
+- Enable MVEBU SafeXcel Crypto Engine firmware for Marvell Armada SOCs (37xx,
+  7k, 8k, and CN913x series). Fixes kernel warnings about firmware load failures
+  and crypto-safexcel probe errors on affected boards
 - Major improvements to OSPF and BFD operational data and CLI commands:
    - CLI commands now use data from the operational datastore instead of
      calling vtysh directly, providing better integration and consistency
@@ -38,6 +41,9 @@ All notable changes to the project are documented in this file.
   kernel default (*inherit*), which in turn fixes reported issues with dropped
   OSPF Hello frames in GRE tunnels
 - [Document][bpi-r3-emmc-documentation] how to go from SD card to eMMC on bpi-r3
+- Add CLI commands for managing boot partition order: `show boot-order` and
+  `set boot-order` allow viewing and changing the boot order from the CLI,
+  complementing the existing YANG RPC support, issue #1032
 
 ### Fixes
 
@@ -47,6 +53,7 @@ All notable changes to the project are documented in this file.
   existing invalid configurations are automatically corrected during upgrade
 - Fix serious regression in boot time, introduced in v25.10, delays the
   boot step "Mounting filesystems ..." with up to 30 seconds!
+- Fix broken intra-document links in container and tunnel documentation
 
 [lastest-boot]: https://github.com/kernelkit/infix/releases/latest-boot
 [bpi-r3-emmc-documentation]: https://github.com/kernelkit/infix/blob/main/board/aarch64/bananapi-bpi-r3/README.md

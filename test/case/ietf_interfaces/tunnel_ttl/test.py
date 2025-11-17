@@ -247,14 +247,14 @@ with infamy.Test() as test:
                     west_ns.addip(PC_WEST_HOST)
                     west_ns.addroute("default", PC_WEST_R1)
 
-                    # Send 3 pings with TTL=3, TTL is decremented before each
+                    # Send 10 pings with TTL=3, TTL is decremented before each
                     # router hop.  So at PC:west (TTL=3) -> R1 routed to GRE
                     # tunnel (TTL=2) -> frame egresses tunnel -> R3 where it
                     # is routed to PC:east (TTL=1).
                     #
                     # If outer TTL was inherited (TTL=2), packet would be
                     # dropped at R3.
-                    west_ns.runsh(f"ping -c 3 -t {TEST_TTL} {PC_EAST_HOST}")
+                    west_ns.runsh(f"ping -c 10 -t {TEST_TTL} {PC_EAST_HOST}")
 
     with test.step("Verify packets arrived at PC:east"):
         packets = pcap.tcpdump()
