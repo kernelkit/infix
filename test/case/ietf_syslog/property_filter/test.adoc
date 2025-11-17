@@ -1,0 +1,25 @@
+=== Syslog Property Filtering
+
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/ietf_syslog/property_filter]
+
+==== Description
+
+Verify property-filter feature: filtering syslog messages based on various
+message properties with different operators, case-insensitivity, and negation.
+
+==== Topology
+
+image::topology.svg[Syslog Property Filtering topology, align=center, scaledwidth=75%]
+
+==== Sequence
+
+. Set up topology and attach to target DUT
+. Clean up old log files
+. Configure syslog with property filters
+. Send test messages
+. Verify myapp log contains only myapp messages
+. Verify not-error log excludes ERROR messages
+. Verify case-test log matches case-insensitive 'warning'
+. Verify baseline log contains all messages
+
+
