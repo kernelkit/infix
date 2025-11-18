@@ -45,7 +45,6 @@ log "action $ACTION"
 case "$ACTION" in
     deconfig)
 	clr_dhcpv6_addresses
-	/bin/ip link set dev $interface up
 
 	# drop info from this interface
 	rm -f "$RESOLV_CONF"
