@@ -14,7 +14,6 @@ load_cfg BR2_DEFCONFIG
 load_cfg BR2_EXTERNAL_INFIX_PATH
 load_cfg BR2_TARGET_ROOTFS
 load_cfg INFIX_ID
-load_cfg INFIX_COMPATIBLE
 
 # The default IMAGE_ID is infix-$BR2_ARCH but can be overridden
 # for imaage names, and compat strings, like infix-r2s
@@ -23,7 +22,6 @@ if [ -n "$IMAGE_ID" ]; then
 else
     NAME="$INFIX_ID"-$(echo "$BR2_ARCH" | tr _ - | sed 's/x86-64/x86_64/')
 fi
-diskimg=disk.qcow2
 
 ver()
 {
@@ -33,26 +31,7 @@ ver()
     fi
 }
 
-load_cfg DISK_IMAGE
-if [ "$DISK_IMAGE" = "y" ]; then
-    ixmsg "Creating Disk Image"
-    diskimg="${NAME}-disk$(ver).qcow2"
-    bootcfg=
-    if [ "$DISK_IMAGE_BOOT_DATA" ]; then
-	bootcfg="-b $DISK_IMAGE_BOOT_DATA -B $DISK_IMAGE_BOOT_OFFSET"
-    fi
-
-    if [ "$BR2_TARGET_ROOTFS_SQUASHFS" != "y" ] && \
-       [ ! -f "$BINARIES_DIR/rootfs.squashfs" ]; then
-	ixmsg "  Injecting $DISK_IMAGE_RELEASE_URL"
-	archive="$BINARIES_DIR/$(basename $DISK_IMAGE_RELEASE_URL)"
-	[ -f "$archive" ] || wget -O"$archive" "$DISK_IMAGE_RELEASE_URL"
-	tar -xa --strip-components=1 -C "$BINARIES_DIR" -f "$archive"
-    fi
-
-    $common/mkrauc-status.sh "$BINARIES_DIR/${NAME}.pkg" >"$BINARIES_DIR/rauc.status"
-    $common/mkdisk.sh -a $BR2_ARCH -n $diskimg -s $DISK_IMAGE_SIZE $bootcfg
-fi
+diskimg="${NAME}$(ver).qcow2"
 
 load_cfg GNS3_APPLIANCE
 if [ "$GNS3_APPLIANCE" = "y" ]; then

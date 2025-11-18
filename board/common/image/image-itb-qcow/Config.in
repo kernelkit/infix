@@ -1,0 +1,80 @@
+menuconfig IMAGE_ITB_QCOW
+	bool "QEMU disk image (ITB)"
+	default y
+	select IMAGE_ITB_ROOTFS
+	select IMAGE_ITB_AUX
+	select BR2_PACKAGE_HOST_GENIMAGE
+	help
+	  Compose a full disk image with redundant Linux OS partitions,
+	  configuration partition, etc., for systems using ITB images.
+
+	  This is useful when:
+	  - Bringing up a blank system during manufacturing
+	  - Creating a GNS3 appliance
+	  - Developing/debugging issues in the boot process in QEMU
+
+menuconfig IMAGE_ITB_QCOW_SIZE
+	string "Image size"
+	depends on IMAGE_ITB_QCOW
+	default "512M"
+	help
+	  Create a disk image of this size.  A K/M/G suffix may be used
+	  to multiply by powers of 1024.  Suffixes like KB/MB/GB may be
+	  used to multiply by powers of 1000.  The image will be split
+	  proportionally to fit the two rootfs, a kernel, a writable
+	  /cfg and /var partiotions.
+
+	  Minimum supported size is 512M.
+
+choice
+	prompt "Bootloader"
+	depends on IMAGE_ITB_QCOW
+	default IMAGE_ITB_QCOW_BOOT_EFI if BR2_x86_64
+	default IMAGE_ITB_QCOW_BOOT_NONE
+
+config IMAGE_ITB_QCOW_BOOT_NONE
+	bool "None"
+	help
+	  Do not create any bootloader partition in the disk image.
+
+config IMAGE_ITB_QCOW_BOOT_EFI
+	bool "EFI"
+	help
+	  Create a boot partition from a directory containing an EFI
+	  boot application, e.g. GRUB.
+
+config IMAGE_ITB_QCOW_BOOT_BIN
+	bool "Binary"
+	help
+	  Create a boot partition from a raw image containing the boot
+	  application, e.g. U-Boot.
+
+endchoice
+
+config IMAGE_ITB_QCOW_BOOT_DATA
+	string "Bootloader data"
+	depends on IMAGE_ITB_QCOW
+	depends on IMAGE_ITB_QCOW_BOOT_EFI || IMAGE_ITB_QCOW_BOOT_BIN
+	default "${BINARIES_DIR}/efi-part/EFI" if BR2_x86_64
+	help
+	  Path to the directory or file holding the bootloader data.
+
+config IMAGE_ITB_QCOW_BOOT_OFFSET
+	hex "Bootloader offset"
+	depends on IMAGE_ITB_QCOW
+	depends on IMAGE_ITB_QCOW_BOOT_EFI || IMAGE_ITB_QCOW_BOOT_BIN
+	default 0x8000
+	help
+	  Offset at which the bootloader partition is placed. Remember
+	  to make sure that the GPT still fits at the start of the
+	  image.
+
+config IMAGE_ITB_QCOW_RELEASE_URL
+	string "Infix URL"
+	depends on IMAGE_ITB_QCOW
+	depends on !BR2_TARGET_ROOTFS_SQUASHFS
+	default "https://github.com/kernelkit/infix/releases/download/latest/infix-${BR2_ARCH}.tar.gz"
+	help
+	  In situations where Infix itself is not being built, but a
+	  disk image is, i.e. when building a bootloader: place this
+	  Infix release in the primary and secondary partitions.
