@@ -48,24 +48,3 @@ config GNS3_APPLIANCE_IFNUM
 	default "1"
 	help
 	  Number of Ethernet interfaces to create for an appliance instance.
-
-menuconfig FIT_IMAGE
-	bool "Traditional FIT image"
-	help
-	  Create a "regular" FIT image where the kernel and DTBs are
-	  stored in the FIT rather than inside the rootfs (like it
-	  normally is in Infix).
-
-	  This is useful when trying out Infix on targets whose
-	  bootloader might not be capable of booting a raw Squash, but
-	  is able to handle an FIT.
-
-config FIT_ARCH
-	string
-	depends on FIT_IMAGE
-	default "arm64" if BR2_aarch64
-
-config FIT_KERNEL_LOAD_ADDR
-	string "Kernel load address"
-	depends on FIT_IMAGE
-

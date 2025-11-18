@@ -39,12 +39,6 @@ if [ "$GNS3_APPLIANCE" = "y" ]; then
     $common/mkgns3a.sh $BR2_ARCH $NAME $diskimg $GNS3_APPLIANCE_RAM $GNS3_APPLIANCE_IFNUM
 fi
 
-load_cfg FIT_IMAGE
-if [ "$FIT_IMAGE" = "y" ]; then
-    ixmsg "Creating Traditional FIT Image"
-    $common/mkfit.sh
-fi
-
 # Only for regular builds, not bootloader-only builds
 if [ "$BR2_TARGET_ROOTFS_SQUASHFS" = "y" ]; then
     rel=$(ver)
