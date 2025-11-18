@@ -12,6 +12,8 @@
 #include <srx/srx_val.h>
 
 #include "core.h"
+#include "infix-dhcp-common.h"
+
 #define  ARPING_MSEC    1000
 #define  MODULE         "infix-dhcp-client"
 #define  XPATH          "/ietf-interfaces:interfaces/interface/ietf-ip:ipv4/infix-dhcp-client:dhcp"
@@ -48,140 +50,6 @@ static char *ip_cache(const char *ifname, char *str, size_t len)
 	return str;
 }
 
-static char *hostname(struct lyd_node *cfg, char *str, size_t len)
-{
-	struct lyd_node *node;
-	const char *hostname;
-	char *ptr;
-
-	node = lydx_get_xpathf(cfg, "/ietf-system:system/hostname");
-	if (!node)
-		return NULL;
-
-	hostname = lyd_get_value(node);
-	if (!hostname || hostname[0] == 0)
-		return NULL;
-
-	ptr = strchr(hostname, '.');
-	if (ptr)
-		*ptr = 0;
-
-	snprintf(str, len, "-x hostname:%s ", hostname);
-
-	return str;
-}
-
-static char *fqdn(const char *val, char *str, size_t len)
-{
-	snprintf(str, len, "-F \"%s\" ", val);
-	return str;
-}
-
-static char *os_name_version(char *str, size_t len)
-{
-	char *val;
-
-	if (!str || !len)
-		return NULL;
-
-	str[0] = 0;
-
-	val = fgetkey("/etc/os-release", "NAME");
-	if (val)
-		snprintf(str, len, "-V \"%.32s ", val);
-
-	val = fgetkey("/etc/os-release", "VERSION");
-	if (val) {
-		strlcat(str, val, len);
-		strlcat(str, "\"", len);
-	}
-
-	if (strlen(str) > 0 && str[strlen(str) - 1] != '"') {
-		str[0] = 0;
-		return NULL;
-	}
-
-	return str;
-}
-
-static char *compose_option(struct lyd_node *cfg, const char *ifname, struct lyd_node *id,
-			    const char *val, const char *hex, char *option, size_t len)
-{
-	const char *name = lyd_get_value(id);
-	int num = dhcp_option_lookup(id);
-
-	if (num == -1) {
-		ERROR("Failed looking up DHCP client %s option %s, skipping.", ifname, name);
-		return NULL;
-	}
-
-	if (val || hex) {
-		switch (num) {
-		case 81: /* fqdn */
-			if (!val)
-				return NULL;
-			return fqdn(val, option, len);
-		case 12: /* hostname */
-			if (val && !strcmp(val, "auto"))
-				return hostname(cfg, option, len);
-			/* fallthrough */
-		default:
-			if (hex) {
-				snprintf(option, len, "-x %d:", num);
-				strlcat(option, hex, len);
-				strlcat(option, " ", len);
-			} else {
-				/* string value */
-				snprintf(option, len, "-x %d:'\"%s\"' ", num, val);
-			}
-			break;
-		}
-	} else {
-		struct { int num; char *(*cb)(const char *, char *, size_t); } opt[] = {
-			{ 50, ip_cache }, /* address */
-			{ 81, NULL     }, /* fqdn */
-		};
-
-		for (size_t i = 0; i < NELEMS(opt); i++) {
-			if (num != opt[i].num)
-				continue;
-
-			if (!opt[i].cb || !opt[i].cb(ifname, option, len))
-				return NULL;
-
-			return option;
-		}
-
-		snprintf(option, len, "-O %d ", num);
-	}
-
-	return option;
-}
-
-static char *compose_options(struct lyd_node *cfg, const char *ifname, char **options,
-			     struct lyd_node *id, const char *val, const char *hex)
-{
-	char opt[300];
-
-	if (!compose_option(cfg, ifname, id, val, hex, opt, sizeof(opt)))
-		return *options;
-
-	if (*options) {
-		char *opts;
-
-		opts = realloc(*options, strlen(*options) + strlen(opt) + 1);
-		if (!opts) {
-			ERROR("failed reallocating options: %s", strerror(errno));
-			free(*options);
-			return NULL;
-		}
-
-		*options = strcat(opts, opt);
-	} else
-		*options = strdup(opt);
-
-	return *options;
-}
 
 static char *fallback_options(const char *ifname)
 {
@@ -206,7 +74,7 @@ static char *dhcp_options(const char *ifname, struct lyd_node *cfg)
 		const char *val = lydx_get_cattr(option, "value");
 		const char *hex = lydx_get_cattr(option, "hex");
 
-		options = compose_options(cfg, ifname, &options, id, val, hex);
+		options = dhcp_compose_options(cfg, ifname, &options, id, val, hex, ip_cache);
 	}
 
 	return options ?: fallback_options(ifname);
@@ -244,7 +112,7 @@ static void add(const char *ifname, struct lyd_node *cfg)
 
 	options = dhcp_options(ifname, cfg);
 
-	os_name_version(vendor, sizeof(vendor));
+	dhcp_os_name_version(vendor, sizeof(vendor));
 
 	fp = fopenf("w", "/etc/finit.d/available/dhcp-client-%s.conf", ifname);
 	if (!fp) {
@@ -330,90 +198,4 @@ int infix_dhcp_client_change(sr_session_ctx_t *session, struct lyd_node *config,
 	}
 
 	return err;
-}
-
-/*
- * Default DHCP options for udhcpc, from networking/udhcp/common.c OPTION_REQ
- */
-static void infer_options(sr_session_ctx_t *session, const char *xpath)
-{
-	const char *opt[] = {
-		"netmask",
-		"broadcast",
-		"router",
-		"domain",
-		"hostname", /* server may use this to register our current name */
-		"dns-server",
-		"ntp-server" /* will not be activated unless ietf-system also is */
-	};
-	size_t i;
-
-	for (i = 0; i < NELEMS(opt); i++)
-		srx_set_item(session, NULL, 0, "%s/option[id='%s']", xpath, opt[i]);
-}
-
-static int cand(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
-		const char *xpath, sr_event_t event, unsigned request_id, void *priv)
-{
-	sr_change_iter_t *iter;
-	sr_change_oper_t op;
-	sr_val_t *old, *new;
-	sr_error_t err;
-
-	switch (event) {
-	case SR_EV_UPDATE:
-	case SR_EV_CHANGE:
-		break;
-	default:
-		return SR_ERR_OK;
-	}
-
-	err = sr_dup_changes_iter(session, XPATH "//*", &iter);
-	if (err)
-		return err;
-
-	while (sr_get_change_next(session, iter, &op, &old, &new) == SR_ERR_OK) {
-		char *xpath, *ptr;
-		size_t cnt = 0;
-
-		switch (op) {
-		case SR_OP_CREATED:
-		case SR_OP_MODIFIED:
-			break;
-		default:
-			continue;
-		}
-
-		xpath = strdupa(new->xpath);
-		if (!xpath) {
-			ERRNO("Failed strdupa()");
-			return SR_ERR_SYS;
-		}
-
-		if ((ptr = strstr(xpath, "]/")) == NULL)
-			continue;
-		ptr[1] = 0;
-
-		err = srx_nitems(session, &cnt, "%s/option", xpath);
-		if (err || cnt) {
-			continue;
-		}
-
-		infer_options(session, xpath);
-	}
-
-	sr_free_change_iter(iter);
-	return SR_ERR_OK;
-}
-
-int infix_dhcp_client_candidate_init(struct confd *confd)
-{
-	int rc;
-
-	REGISTER_CHANGE(confd->cand, MODULE, XPATH"//.", SR_SUBSCR_UPDATE, cand, confd, &confd->sub);
-
-	return SR_ERR_OK;
-fail:
-	ERROR("init failed: %s", sr_strerror(rc));
-	return rc;
 }

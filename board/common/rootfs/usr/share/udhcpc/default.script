@@ -104,7 +104,6 @@ case "$ACTION" in
     deconfig)
 	clr_dhcp_addresses
 	clr_dhcp_routes
-	/bin/ip link set dev $interface up
 
 	# drop info from this interface
 	rm -f "$RESOLV_CONF"
