@@ -33,12 +33,6 @@ ver()
 
 diskimg="${NAME}$(ver).qcow2"
 
-load_cfg GNS3_APPLIANCE
-if [ "$GNS3_APPLIANCE" = "y" ]; then
-    ixmsg "Creating GNS3 Appliance, $GNS3_APPLIANCE_RAM MiB with $GNS3_APPLIANCE_IFNUM ports"
-    $common/mkgns3a.sh $BR2_ARCH $NAME $diskimg $GNS3_APPLIANCE_RAM $GNS3_APPLIANCE_IFNUM
-fi
-
 # Only for regular builds, not bootloader-only builds
 if [ "$BR2_TARGET_ROOTFS_SQUASHFS" = "y" ]; then
     rel=$(ver)
