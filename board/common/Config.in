@@ -8,6 +8,14 @@ source "$BR2_EXTERNAL_INFIX_PATH/board/common/image/image-itb-rauc/Config.in"
 
 endmenu
 
+config QEMU_SCRIPTS
+	bool "QEMU scripts"
+	default y
+	help
+	  Install QEMU scripts and related files in the images
+	  directory, which can be used to launch virtual Infix
+	  instances.
+
 menuconfig TRUSTED_KEYS
 	bool "Trusted keys for image"
 	help
