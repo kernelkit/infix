@@ -189,11 +189,24 @@ static confd_dependency_t handle_dependencies(struct lyd_node **diff, struct lyd
 						return result;
 					}
 
-					/* Add the referenced radio interface (type wifi) to diff */
+					/* Add the radio attribute to the diff */
 					radio_node = lydx_get_child(wifi_node, "radio");
 					if (radio_node) {
 						radio_name = lyd_get_value(radio_node);
 						if (radio_name) {
+							/* Add radio attribute to wifi-ap interface in diff */
+							snprintf(xpath, sizeof(xpath),
+								"/ietf-interfaces:interfaces/interface[name='%s']/infix-interfaces:wifi/radio",
+								ifname);
+							result = add_dependencies(diff, xpath, radio_name);
+							if (result == CONFD_DEP_ERROR) {
+								ERROR("Failed to add radio attribute to wifi-ap %s in diff", ifname);
+								ly_set_free(wifi_ap_ifaces, NULL);
+								ly_set_free(diff_ifaces, NULL);
+								return result;
+							}
+
+							/* Add the referenced radio interface (type wifi) to diff */
 							snprintf(xpath, sizeof(xpath),
 								"/ietf-interfaces:interfaces/interface[name='%s']/infix-interfaces:wifi",
 								radio_name);
