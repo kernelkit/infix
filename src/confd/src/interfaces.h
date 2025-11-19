@@ -126,7 +126,7 @@ int bridge_port_gen(struct lyd_node *dif, struct lyd_node *cif, FILE *ip);
 int wifi_gen(struct lyd_node *dif, struct lyd_node *cif, struct dagger *net);
 int wifi_station_gen(struct lyd_node *cif, struct dagger *net);
 int wifi_ap_add_iface(struct lyd_node *cif,struct dagger *net);
-int wifi_ap_del_iface(struct lyd_node *cif,struct dagger *net);
+int wifi_ap_del_iface(struct lyd_node *dif, struct lyd_node *cif, struct dagger *net);
 int wifi_ap_gen(struct lyd_node *cif, struct dagger *net);
 int wifi_gen_del(struct lyd_node *iface,  struct dagger *net);
 int wifi_is_accesspoint(struct lyd_node *cif);

@@ -529,6 +529,7 @@ static int eth_gen_del(struct lyd_node *dif, FILE *ip)
 
 static int link_gen_del(struct lyd_node *dif, FILE *ip)
 {
+	ERROR("%s: Called with %s", __func__, lydx_get_cattr(dif, "name"));
 	fprintf(ip, "link del dev %s\n", lydx_get_cattr(dif, "name"));
 	return 0;
 }
@@ -573,7 +574,7 @@ static int netdag_gen_iface_del(struct dagger *net, struct lyd_node *dif,
 		wifi_gen_del(dif, net);
 		break;
 	case IFT_WIFI_AP:
-		wifi_ap_del_iface(dif, net);
+		wifi_ap_del_iface(dif, cif, net);
 		break;
 	case IFT_VETH:
 		veth_gen_del(dif, ip);
