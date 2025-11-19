@@ -1,3 +1,4 @@
+include $(sort $(wildcard $(BR2_EXTERNAL_INFIX_PATH)/board/aarch64/*/*.mk))
 
 .PHONY: board-enable-qemu-uboot
 board-enable-qemu-uboot:
