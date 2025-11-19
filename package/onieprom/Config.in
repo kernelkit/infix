@@ -1,0 +1,15 @@
+menuconfig BR2_PACKAGE_ONIEPROM
+	bool "onieprom"
+	select BR2_PACKAGE_HOST_PYTHON3
+	help
+         ONIE EEPROM parser/generator
+
+config BR2_PACKAGE_ONIEPROM_INSTALL_IMAGES
+	bool "install onieprom in images"
+	depends on BR2_PACKAGE_ONIEPROM
+	default y
+	help
+         Install the onieprom script in the images direcory. Useful
+         when the release is destined for someone who will have to
+         create ONIE EEPROM binaries for deployment during
+         manufacturing.
