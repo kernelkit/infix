@@ -8,15 +8,6 @@ local.mk:
 	@$(call IXMSG,"Installing local override for certain packages")
 	@(cd $O && ln -s $(BR2_EXTERNAL_INFIX_PATH)/local.mk .)
 
-.PHONY: run
-run:
-	@$(BINARIES_DIR)/qemu.sh
-
-.PHONY: run-menuconfig
-run-menuconfig: $(BUILD_DIR)/buildroot-config/mconf
-	CONFIG_="CONFIG_" BR2_CONFIG="$(BINARIES_DIR)/.config" \
-		$(BUILD_DIR)/buildroot-config/mconf $(BINARIES_DIR)/Config.in
-
 #
 # Buildroot package extensions
 #

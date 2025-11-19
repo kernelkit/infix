@@ -43,17 +43,6 @@ if [ "$BR2_TARGET_ROOTFS_SQUASHFS" = "y" ]; then
 
     cp "$BR2_EXTERNAL_INFIX_PATH/board/common/rootfs/usr/bin/onieprom" "$BINARIES_DIR/"
 
-    # Menuconfig support for modifying Qemu args in release tarballs
-    cp "$BR2_EXTERNAL_INFIX_PATH/board/common/qemu/qemu.sh" "$BINARIES_DIR/"
-    sed -e "s/@ARCH@/QEMU_$BR2_ARCH/" \
-	-e "s/@DISK_IMG@/$diskimg/"   \
-	< "$BR2_EXTERNAL_INFIX_PATH/board/common/qemu/Config.in.in" \
-	> "$BINARIES_DIR/Config.in"
-    rm -f "$BINARIES_DIR/qemu.cfg"
-    CONFIG_="CONFIG_" BR2_CONFIG="$BINARIES_DIR/qemu.cfg" \
-	   "$O/build/buildroot-config/conf" --olddefconfig "$BINARIES_DIR/Config.in"
-    rm -f "$BINARIES_DIR/qemu.cfg.old" "$BINARIES_DIR/.config.old"
-
     # Quick intro for beginners, with links to more information
     cp "$BR2_EXTERNAL_INFIX_PATH/board/common/README.txt" "$BINARIES_DIR/"
 fi
