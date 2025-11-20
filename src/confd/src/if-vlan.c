@@ -10,7 +10,7 @@
 #include <srx/lyx.h>
 #include <srx/srx_val.h>
 
-#include "ietf-interfaces.h"
+#include "interfaces.h"
 
 int ifchange_cand_infer_vlan(sr_session_ctx_t *session, const char *path)
 {

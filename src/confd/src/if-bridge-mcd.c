@@ -10,7 +10,7 @@
 #include <srx/lyx.h>
 #include <srx/srx_val.h>
 
-#include "ietf-interfaces.h"
+#include "interfaces.h"
 
 static int gen_vlan(struct lyd_node *cif, struct lyd_node *vlan, FILE *conf)
 {

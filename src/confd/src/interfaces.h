@@ -99,12 +99,12 @@ bool iface_has_quirk(const char *ifname, const char *quirkname);
 /* ieee802-ethernet-interface.c */
 int netdag_gen_ethtool(struct dagger *net, struct lyd_node *cif, struct lyd_node *dif);
 
-/* ietf-interfaces.c */
+/* interfaces.c */
 const char *get_chassis_addr(void);
 int link_gen_address(struct lyd_node *cif, FILE *ip);
 int ietf_interfaces_get_all_l3(const struct lyd_node *tree, char ***ifaces);
 
-/* ietf-ip.c */
+/* ip.c */
 int netdag_gen_ipv6_autoconf(struct dagger *net, struct lyd_node *cif,
 			     struct lyd_node *dif, FILE *ip);
 int netdag_gen_ipv4_autoconf(struct dagger *net, struct lyd_node *cif,
@@ -112,42 +112,42 @@ int netdag_gen_ipv4_autoconf(struct dagger *net, struct lyd_node *cif,
 int netdag_gen_ip_addrs(struct dagger *net, FILE *ip, const char *proto,
 			struct lyd_node *cif, struct lyd_node *dif);
 
-/* infix-if-bridge.c */
+/* if-bridge.c */
 int bridge_mstpd_gen(struct lyd_node *cifs);
 int bridge_gen(struct lyd_node *dif, struct lyd_node *cif, FILE *ip, int add);
 int bridge_add_deps(struct lyd_node *cif);
-/* infix-if-bridge-mcd.c */
+/* if-bridge-mcd.c */
 int bridge_mcd_gen(struct lyd_node *cifs);
-/* infix-if-bridge-port.c */
+/* if-bridge-port.c */
 int bridge_port_gen(struct lyd_node *dif, struct lyd_node *cif, FILE *ip);
 
-/* infix-if-wifi.c */
+/* if-wifi.c */
 int wifi_gen(struct lyd_node *dif, struct lyd_node *cif, struct dagger *net);
 int wifi_gen_del(struct lyd_node *dif,  struct dagger *net);
 
-/* infix-if-gre.c */
+/* if-gre.c */
 int gre_gen(struct lyd_node *dif, struct lyd_node *cif, FILE *ip);
 
-/* infix-if-lag.c */
+/* if-lag.c */
 int lag_port_gen(struct lyd_node *dif, struct lyd_node *cif);
 int lag_gen(struct lyd_node *dif, struct lyd_node *cif, FILE *ip, int add);
 int lag_add_deps(struct lyd_node *cif);
 
-/* infix-if-veth.c */
+/* if-veth.c */
 bool veth_is_primary(struct lyd_node *cif);
 int ifchange_cand_infer_veth(sr_session_ctx_t *session, const char *path);
 int veth_gen(struct lyd_node *dif, struct lyd_node *cif, FILE *ip);
 int veth_add_deps(struct lyd_node *cif);
 
-/* infix-if-vlan.c */
+/* if-vlan.c */
 int ifchange_cand_infer_vlan(sr_session_ctx_t *session, const char *path);
 int vlan_gen(struct lyd_node *dif, struct lyd_node *cif, FILE *ip);
 int vlan_add_deps(struct lyd_node *cif);
 
-/* infix-dhcp-common.c */
+/* dhcp-common.c */
 int ifchange_cand_infer_dhcp(sr_session_ctx_t *session, const char *path);
 
-/* infix-if-vxlan.c */
+/* if-vxlan.c */
 int vxlan_gen(struct lyd_node *dif, struct lyd_node *cif, FILE *ip);
 
 #endif /* CONFD_IETF_INTERFACES_H_ */

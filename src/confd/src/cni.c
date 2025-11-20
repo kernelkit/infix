@@ -6,7 +6,7 @@
 
 #include "core.h"
 #include "cni.h"
-#include "ietf-interfaces.h"
+#include "interfaces.h"
 
 #define CNI_NAME "/etc/cni/net.d/%s.conflist"
 

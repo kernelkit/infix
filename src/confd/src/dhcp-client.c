@@ -12,7 +12,7 @@
 #include <srx/srx_val.h>
 
 #include "core.h"
-#include "infix-dhcp-common.h"
+#include "dhcp-common.h"
 
 #define  ARPING_MSEC    1000
 #define  MODULE         "infix-dhcp-client"

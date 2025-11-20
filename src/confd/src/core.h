@@ -183,19 +183,19 @@ static inline int register_rpc(sr_session_ctx_t *session, const char *xpath,
 }
 
 
-/* ietf-interfaces.c */
+/* interfaces.c */
 int ietf_interfaces_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd);
 int ietf_interfaces_cand_init(struct confd *confd);
 
-/* ietf-syslog.c */
+/* syslog.c */
 int ietf_syslog_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd);
 
-/* ietf-system.c */
+/* system.c */
 int ietf_system_rpc_init (struct confd *confd);
 int hostnamefmt      (struct confd *confd, const char *fmt, char *hostnm, size_t hostlen, char *domain, size_t domlen);
 int ietf_system_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd);
 
-/* infix-containers.c */
+/* containers.c */
 #ifdef CONTAINERS
 int infix_containers_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd);
 int infix_containers_rpc_init(struct confd *confd);
@@ -204,13 +204,13 @@ static inline int infix_containers_rpc_init(struct confd *confd) { return 0; }
 static inline int infix_containers_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd) { return 0; }
 #endif
 
-/* infix-dhcp-client.c */
+/* dhcp-client.c */
 int infix_dhcp_client_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd);
 
-/* infix-dhcpv6-client.c */
+/* dhcpv6-client.c */
 int infix_dhcpv6_client_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd);
 
-/* infix-dhcp-server.c */
+/* dhcp-server.c */
 int infix_dhcp_server_candidate_init(struct confd *confd);
 int infix_dhcp_server_rpc_init(struct confd *confd);
 int infix_dhcp_server_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd);
@@ -218,31 +218,31 @@ int infix_dhcp_server_change(sr_session_ctx_t *session, struct lyd_node *config,
 /* ietf-routing */
 int ietf_routing_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd);
 
-/* infix-factory.c */
+/* factory.c */
 int infix_factory_rpc_init(struct confd *confd);
 
 /* ietf-factory-default */
 int ietf_factory_default_rpc_init(struct confd *confd);
 
-/* infix-meta.c */
+/* meta.c */
 int infix_meta_change_cb(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd);
 
-/* infix-system-software.c */
+/* system-software.c */
 int infix_system_sw_rpc_init(struct confd *confd);
 
-/* infix-services.c */
+/* services.c */
 int infix_services_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd);
 
-/* ietf-hardware.c */
+/* hardware.c */
 int ietf_hardware_candidate_init(struct confd *confd);
 int ietf_hardware_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd);
 
-/* ietf-keystore.c */
+/* keystore.c */
 #define SSH_HOSTKEYS "/etc/ssh/hostkeys"
 #define SSH_HOSTKEYS_NEXT SSH_HOSTKEYS"+"
 int ietf_keystore_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd);
 
-/* infix-firewall.c */
+/* firewall.c */
 int infix_firewall_rpc_init(struct confd *confd);
 int infix_firewall_candidate_init(struct confd *confd);
 int infix_firewall_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd);

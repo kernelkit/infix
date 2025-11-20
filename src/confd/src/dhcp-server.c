@@ -9,7 +9,7 @@
 #include <srx/srx_val.h>
 
 #include "core.h"
-#include "infix-dhcp-common.h"
+#include "dhcp-common.h"
 
 #define MODULE			"infix-dhcp-server"
 #define ROOT_XPATH		"/infix-dhcp-server:"

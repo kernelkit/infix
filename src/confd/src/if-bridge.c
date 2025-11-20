@@ -10,7 +10,7 @@
 #include <srx/lyx.h>
 #include <srx/srx_val.h>
 
-#include "ietf-interfaces.h"
+#include "interfaces.h"
 
 struct ixif_br {
 	const char *name;

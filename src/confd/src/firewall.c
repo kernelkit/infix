@@ -13,7 +13,7 @@
 #include <libyang/libyang.h>
 
 #include "core.h"
-#include "ietf-interfaces.h"
+#include "interfaces.h"
 
 #define MODULE                 "infix-firewall"
 #define XPATH                  "/infix-firewall:firewall"

@@ -11,7 +11,7 @@
 #include <srx/srx_val.h>
 #include <libyang/libyang.h>
 
-#include "ietf-interfaces.h"
+#include "interfaces.h"
 #define  IFACE_PROBE_TIMEOUT 40
 
 

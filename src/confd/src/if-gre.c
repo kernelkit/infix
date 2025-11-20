@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: BSD-3-Clause */
 #include <srx/lyx.h>
 
-#include "ietf-interfaces.h"
+#include "interfaces.h"
 
 int gre_gen(struct lyd_node *dif, struct lyd_node *cif, FILE *ip)
 {

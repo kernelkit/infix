@@ -12,7 +12,7 @@
 #include <srx/srx_val.h>
 
 #include "core.h"
-#include "infix-dhcp-common.h"
+#include "dhcp-common.h"
 
 #define MODULE "infix-dhcpv6-client"
 #define XPATH  "/ietf-interfaces:interfaces/interface/ietf-ip:ipv6/infix-dhcpv6-client:dhcp"

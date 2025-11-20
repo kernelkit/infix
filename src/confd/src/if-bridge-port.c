@@ -10,7 +10,7 @@
 #include <srx/lyx.h>
 #include <srx/srx_val.h>
 
-#include "ietf-interfaces.h"
+#include "interfaces.h"
 
 static const char *mstpd_cost_str(struct lyd_node *cost)
 {

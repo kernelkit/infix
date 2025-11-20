@@ -10,7 +10,7 @@
 #include <srx/lyx.h>
 #include <srx/srx_val.h>
 
-#include "ietf-interfaces.h"
+#include "interfaces.h"
 
 int netdag_gen_ipv6_autoconf(struct dagger *net, struct lyd_node *cif,
 			     struct lyd_node *dif, FILE *ip)

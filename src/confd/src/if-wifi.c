@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: BSD-3-Clause */
 #include <srx/lyx.h>
 
-#include "ietf-interfaces.h"
+#include "interfaces.h"
 
 #define WPA_SUPPLICANT_FINIT_CONF "/etc/finit.d/available/wpa_supplicant-%s.conf"
 #define WPA_SUPPLICANT_CONF       "/etc/wpa_supplicant-%s.conf"

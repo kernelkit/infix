@@ -12,7 +12,7 @@
 
 #include <libyang/libyang.h>
 #include "core.h"
-#include "infix-dhcp-common.h"
+#include "dhcp-common.h"
 
 int dhcp_option_lookup(const struct lyd_node *id)
 {
@@ -230,7 +230,7 @@ static void infer_options_v6(sr_session_ctx_t *session, const char *xpath)
 }
 
 /*
- * Called from ietf-interfaces.c ifchange_cand() to infer DHCP options
+ * Called from interfaces.c ifchange_cand() to infer DHCP options
  * for both DHCPv4 and DHCPv6 client configurations
  */
 int ifchange_cand_infer_dhcp(sr_session_ctx_t *session, const char *xpath)
