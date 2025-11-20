@@ -191,8 +191,114 @@ admin@example:/>
 ```
 
 See the above [Log to File](#log-to-file) section on how to set up
-filtering of received logs to local files.  Please note, filtering based
-on property, e.g., hostname, is not supported yet.
+filtering of received logs to local files.  Advanced filtering based
+on hostname and message properties is also available, see the next
+section for details.
+
+## Advanced Filtering
+
+The syslog subsystem supports several advanced filtering options that
+allow fine-grained control over which messages are logged.  These can
+be combined with facility and severity filters to create sophisticated
+logging rules.
+
+### Pattern Matching
+
+Messages can be filtered using regular expressions (POSIX extended regex)
+on the message content.  This is useful when you want to log only messages
+containing specific keywords or patterns:
+
+```
+admin@example:/config/> edit syslog actions log-file file:errors
+admin@example:/config/syslog/…/file:errors/> set pattern-match "ERROR|CRITICAL|FATAL"
+admin@example:/config/syslog/…/file:errors/> set facility-list all severity info
+admin@example:/config/syslog/…/file:errors/> leave
+admin@example:/>
+```
+
+This will log all messages containing ERROR, CRITICAL, or FATAL.
+
+### Advanced Severity Comparison
+
+By default, severity filtering uses "equals-or-higher" comparison,
+meaning a severity of `error` will match error, critical, alert, and
+emergency messages.  You can change this behavior:
+
+```
+admin@example:/config/> edit syslog actions log-file file:daemon-errors
+admin@example:/config/syslog/…/file:daemon-errors/> set facility-list daemon
+admin@example:/config/syslog/…/daemon/> set severity error
+admin@example:/config/syslog/…/daemon/> set advanced-compare compare equals
+admin@example:/config/syslog/…/daemon/> leave
+admin@example:/>
+```
+
+This will log only `error` severity messages, not higher severities.
+
+You can also block specific severities:
+
+```
+admin@example:/config/syslog/…/daemon/> set advanced-compare action block
+```
+
+This will exclude `error` messages from the log.
+
+### Hostname Filtering
+
+When acting as a log server, you can filter messages by hostname.  This
+is useful for directing logs from different devices to separate files:
+
+```
+admin@example:/config/> edit syslog actions log-file file:router1
+admin@example:/config/syslog/…/file:router1/> set hostname-filter router1
+admin@example:/config/syslog/…/file:router1/> set facility-list all severity info
+admin@example:/config/syslog/…/file:router1/> leave
+admin@example:/>
+```
+
+Multiple hostnames can be added to the filter list.
+
+### Property-Based Filtering
+
+For more advanced filtering, you can match on specific message properties
+using various comparison operators:
+
+```
+admin@example:/config/> edit syslog actions log-file file:myapp
+admin@example:/config/syslog/…/file:myapp/> edit property-filter
+admin@example:/config/syslog/…/property-filter/> set property programname
+admin@example:/config/syslog/…/property-filter/> set operator isequal
+admin@example:/config/syslog/…/property-filter/> set value myapp
+admin@example:/config/syslog/…/property-filter/> leave
+admin@example:/>
+```
+
+Available properties:
+- `msg`: Message body
+- `msgid`: RFC5424 message identifier
+- `programname`: Program/tag name
+- `hostname`: Source hostname
+- `source`: Alias for hostname
+- `data`: RFC5424 structured data
+
+Available operators:
+- `contains`: Substring match
+- `isequal`: Exact equality
+- `startswith`: Prefix match
+- `regex`: Basic regular expression
+- `ereregex`: Extended regular expression (POSIX ERE)
+
+The comparison can be made case-insensitive:
+
+```
+admin@example:/config/syslog/…/property-filter/> set case-insensitive true
+```
+
+Or negated to exclude matching messages:
+
+```
+admin@example:/config/syslog/…/property-filter/> set negate true
+```
 
 ### Facilities
 

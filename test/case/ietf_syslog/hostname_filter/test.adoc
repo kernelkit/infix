@@ -1,0 +1,25 @@
+=== Syslog Hostname Filtering
+
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/ietf_syslog/hostname_filter]
+
+==== Description
+
+Verify hostname-filter feature: filtering incoming syslog messages based
+on the hostname.  Tests log sink scenario with multiple remote clients.
+
+==== Topology
+
+image::topology.svg[Syslog Hostname Filtering topology, align=center, scaledwidth=75%]
+
+==== Sequence
+
+. Set up topology and attach to DUTs
+. Clean up old log files on server
+. Configure server as syslog sink with hostname filtering
+. Configure client to forward logs to server
+. Send log messages with different hostnames
+. Verify router1 log contains only router1 messages
+. Verify router2 log contains only router2 messages
+. Verify all-hosts log contains all messages
+
+

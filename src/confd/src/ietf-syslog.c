@@ -6,17 +6,19 @@
 
 #include "core.h"
 
-#define XPATH_BASE_    "/ietf-syslog:syslog"
-#define XPATH_FILE_    XPATH_BASE_"/actions/file/log-file"
-#define XPATH_REMOTE_  XPATH_BASE_"/actions/remote/destination"
-#define XPATH_ROTATE_  XPATH_BASE_"/infix-syslog:file-rotation"
-#define XPATH_SERVER_  XPATH_BASE_"/infix-syslog:server"
+#define XPATH_BASE_       "/ietf-syslog:syslog"
+#define XPATH_FILE_       XPATH_BASE_"/actions/file"
+#define XPATH_LOG_FILE    XPATH_BASE_"/actions/file/log-file"
+#define XPATH_REMOTE_     XPATH_BASE_"/actions/remote"
+#define XPATH_REMOTE_DST  XPATH_BASE_"/actions/remote/destination"
+#define XPATH_ROTATE_     XPATH_BASE_"/infix-syslog:file-rotation"
+#define XPATH_SERVER_     XPATH_BASE_"/infix-syslog:server"
 
-#define SYSLOG_D_      "/etc/syslog.d"
-#define SYSLOG_FILE    SYSLOG_D_"/log-file-%s.conf"
-#define SYSLOG_REMOTE  SYSLOG_D_"/remote-%s.conf"
-#define SYSLOG_ROTATE  SYSLOG_D_"/rotate.conf"
-#define SYSLOG_SERVER  SYSLOG_D_"/server.conf"
+#define SYSLOG_D_         "/etc/syslog.d"
+#define SYSLOG_FILE       SYSLOG_D_"/log-file-%s.conf"
+#define SYSLOG_REMOTE     SYSLOG_D_"/remote-%s.conf"
+#define SYSLOG_ROTATE     SYSLOG_D_"/rotate.conf"
+#define SYSLOG_SERVER     SYSLOG_D_"/server.conf"
 
 struct addr {
 	char *address;
@@ -94,22 +96,86 @@ static const char *sxlate(const char *severity)
 
 static size_t selector(sr_session_ctx_t *session, struct action *act)
 {
-	char xpath[strlen(act->xpath) + 32];
+	char xpath[strlen(act->xpath) + 64];
+	bool has_pattern = false;
 	sr_val_t *list = NULL;
 	size_t count = 0;
 	size_t num = 0;
+	char *pattern;
 	int rc;
+
+	/* Check for hostname-filter (infix-syslog augment) */
+	snprintf(xpath, sizeof(xpath), "%s/infix-syslog:hostname-filter", act->xpath);
+	rc = sr_get_items(session, xpath, 0, 0, &list, &count);
+	if (rc == SR_ERR_OK && count > 0) {
+		fprintf(act->fp, "+");
+		for (size_t i = 0; i < count; i++)
+			fprintf(act->fp, "%s%s", i ? "," : "", list[i].data.string_val);
+		fprintf(act->fp, "\n");
+
+		sr_free_values(list, count);
+		list = NULL;
+		count = 0;
+	}
+
+	/* Check for property-filter (infix-syslog augment) */
+	char *property = srx_get_str(session, "%s/infix-syslog:property-filter/property", act->xpath);
+	if (property) {
+		char *operator = srx_get_str(session, "%s/infix-syslog:property-filter/operator", act->xpath);
+		char *value = srx_get_str(session, "%s/infix-syslog:property-filter/value", act->xpath);
+		char *case_str = srx_get_str(session, "%s/infix-syslog:property-filter/case-insensitive", act->xpath);
+		char *negate_str = srx_get_str(session, "%s/infix-syslog:property-filter/negate", act->xpath);
+
+		if (operator && value) {
+			/* Build operator prefix: [!][icase_]operator */
+			char op_prefix[32] = "";
+
+			/* Only apply negate if explicitly set to true */
+			if (negate_str && !strcmp(negate_str, "true"))
+				strlcat(op_prefix, "!", sizeof(op_prefix));
+
+			/* Only apply icase_ if explicitly set to true */
+			if (case_str && !strcmp(case_str, "true"))
+				strlcat(op_prefix, "icase_", sizeof(op_prefix));
+
+			strlcat(op_prefix, operator, sizeof(op_prefix));
+
+			/* Property-based filter: :property, [!][icase_]operator, "value" */
+			fprintf(act->fp, ":%s, %s, \"%s\"\n", property, op_prefix, value);
+			has_pattern = true;
+		}
+
+		free(property);
+		free(operator);
+		free(value);
+		free(case_str);
+		free(negate_str);
+	}
+
+	/* Check for pattern-match (select-match feature) */
+	pattern = srx_get_str(session, "%s/pattern-match", act->xpath);
+	if (pattern) {
+		/* Property-based filter: :msg, ereregex, "pattern" */
+		fprintf(act->fp, ":msg, ereregex, \"%s\"\n", pattern);
+		has_pattern = true;
+		free(pattern);
+	}
 
 	snprintf(xpath, sizeof(xpath), "%s/facility-filter/facility-list", act->xpath);
 	rc = sr_get_items(session, xpath, 0, 0, &list, &count);
-	if (rc != SR_ERR_OK) {
-		ERROR("Cannot find facility-list for syslog file:%s: %s\n", act->name, sr_strerror(rc));
+	if (rc || !count) {
+		if (has_pattern) {
+			fprintf(act->fp, "*.*");
+			return 1;
+		}
+
 		return 0;
 	}
 
 	for (size_t i = 0; i < count; ++i) {
 		sr_val_t *entry = &list[i];
-		char *facility, *severity;
+		char *facility, *severity, *compare, *action_str;
+		const char *prefix = "";
 
 		facility = srx_get_str(session, "%s/facility", entry->xpath);
 		if (!facility)
@@ -120,16 +186,45 @@ static size_t selector(sr_session_ctx_t *session, struct action *act)
 			continue;
 		}
 
-		fprintf(act->fp, "%s%s.%s", i ? ";" : "", fxlate(facility), sxlate(severity));
+		/* Check for advanced-compare (select-adv-compare feature) */
+		compare = srx_get_str(session, "%s/advanced-compare/compare", entry->xpath);
+		action_str = srx_get_str(session, "%s/advanced-compare/action", entry->xpath);
+
+		/*
+		 * Handle compare + action combinations:
+		 * - compare: equals -> use '=' after dot (facility.=severity)
+		 * - compare: equals-or-higher (default) -> no prefix
+		 * - action: block/stop -> use '!' after dot (facility.!severity)
+		 * - action: log (default) -> no prefix modification
+		 *
+		 * Note: action block/stop takes precedence over compare equals
+		 */
+		/* First check compare */
+		if (compare && strstr(compare, "equals") && !strstr(compare, "equals-or-higher")) {
+			prefix = "=";
+		}
+
+		/* Then check action (can override compare) */
+		if (action_str) {
+			const char *a = action_str;
+			if (strstr(a, "block") || strstr(a, "stop")) {
+				prefix = "!";
+			}
+			free(action_str);
+		}
+
+		fprintf(act->fp, "%s%s.%s%s", i ? ";" : "", fxlate(facility), prefix, sxlate(severity));
 		num++;
 
 		free(facility);
 		free(severity);
+		free(compare);
 	}
 
 	sr_free_values(list, count);
 
-	return num;
+	/* Return non-zero if we have either pattern or facilities */
+	return has_pattern ? (num > 0 ? num : 1) : num;
 }
 
 static void action(sr_session_ctx_t *session, const char *name, const char *xpath, struct addr *addr)
@@ -142,10 +237,12 @@ static void action(sr_session_ctx_t *session, const char *name, const char *xpat
 	char *sz, *cnt, *fmt;
 	char opts[80] = "\t";
 	char *sep = ";";
+	const char *fn;
 
-	act.fp = fopen(filename(name, addr ? true : false, act.path, sizeof(act.path)), "w");
+	fn = filename(name, addr ? true : false, act.path, sizeof(act.path));
+	act.fp = fopen(fn, "w");
 	if (!act.fp) {
-		ERRNO("Failed opening %s", act.path);
+		ERRNO("Failed opening %s", fn);
 		return;
 	}
 
@@ -234,7 +331,7 @@ static int file_change(sr_session_ctx_t *session, struct lyd_node *config,struct
 	LYX_LIST_FOR_EACH(files, file, "log-file") {
 		struct lyd_node *node = lydx_get_child(file, "name");
 		enum lydx_op op = lydx_get_op(node);
-		char path[512] = XPATH_FILE_;
+		char path[512] = XPATH_LOG_FILE;
 		const char *name;
 
 		name = getnm(node, path, sizeof(path));
@@ -263,7 +360,7 @@ static int remote_change(sr_session_ctx_t *session, struct lyd_node *config, str
 	LYX_LIST_FOR_EACH(dremotes, remote, "destination") {
 		struct lyd_node *node = lydx_get_child(remote, "name");
 		enum lydx_op op = lydx_get_op(node);
-		char path[512] = XPATH_REMOTE_;
+		char path[512] = XPATH_REMOTE_DST;
 		const char *name;
 
 		name = getnm(node, path, sizeof(path));
@@ -365,9 +462,11 @@ done:
 
 	return SR_ERR_OK;
 }
+
 int ietf_syslog_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd)
 {
 	int rc = SR_ERR_OK;
+
 	if ((rc = file_change(session, config, diff, event, confd)))
 		return rc;
 	if ((rc = remote_change(session, config, diff, event, confd)))

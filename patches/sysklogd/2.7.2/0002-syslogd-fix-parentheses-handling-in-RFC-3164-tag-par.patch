@@ -1,0 +1,78 @@
+From f9b6531430c6485af4697a5868a6f43c93d20419 Mon Sep 17 00:00:00 2001
+From: Joachim Wiberg <troglobit@gmail.com>
+Date: Fri, 26 Sep 2025 08:42:57 +0200
+Subject: [PATCH 2/4] syslogd: fix parentheses handling in RFC 3164 tag parsing
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+Organization: Wires
+
+Some applications use tag names like "(polkit-agent)" which sysklogd do
+not handle well.  This patch aims to address this and also add a bit of
+logic to normalize such tags:
+
+- Allow parentheses in tag character set for broader compatibility
+- Smart parsing: strip surrounding parentheses from complete tags like
+  "(polkit-agent):" → "polkit-agent", while preserving partial parentheses
+  like "app(version):" unchanged
+- Maintain RFC compliance: both RFC3164 and RFC5424 allow parentheses
+- Preserve all existing functionality and edge case handling
+
+Fixes #104
+
+Signed-off-by: Joachim Wiberg <troglobit@gmail.com>
+---
+ src/syslogd.c | 35 ++++++++++++++++++++++++++++-------
+ 1 file changed, 28 insertions(+), 7 deletions(-)
+
+diff --git a/src/syslogd.c b/src/syslogd.c
+index fa82d98..37e1920 100644
+--- a/src/syslogd.c
++++ b/src/syslogd.c
+@@ -1309,15 +1309,36 @@ parsemsg_rfc3164_app_name_procid(char **msg, char **app_name, char **procid)
+ 	m = *msg;
+ 
+ 	/* Application name. */
+-	app_name_begin = m;
+-	app_name_length = strspn(m,
+-	    "abcdefghijklmnopqrstuvwxyz"
+-	    "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+-	    "0123456789"
+-	    "._-/");
++	/* Check if tag is surrounded by parentheses like (polkit-agent) */
++	if (*m == '(') {
++		char *closing = strchr(m + 1, ')');
++		if (closing && (closing[1] == ':' || closing[1] == '[' || isblank(closing[1]) || closing[1] == '\0')) {
++			/* Found complete parenthetical tag, strip parentheses */
++			app_name_begin = m + 1;
++			app_name_length = closing - (m + 1);
++			m = closing + 1;
++		} else {
++			/* Incomplete or malformed, treat normally */
++			app_name_begin = m;
++			app_name_length = strspn(m,
++			    "abcdefghijklmnopqrstuvwxyz"
++			    "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
++			    "0123456789"
++			    "._-/()");
++			m += app_name_length;
++		}
++	} else {
++		app_name_begin = m;
++		app_name_length = strspn(m,
++		    "abcdefghijklmnopqrstuvwxyz"
++		    "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
++		    "0123456789"
++		    "._-/()");
++		m += app_name_length;
++	}
++
+ 	if (app_name_length == 0)
+ 		goto bad;
+-	m += app_name_length;
+ 
+ 	/* Process identifier (optional). */
+ 	if (*m == '[') {
+-- 
+2.43.0
+

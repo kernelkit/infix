@@ -16,6 +16,11 @@ module infix-syslog {
   contact      "kernelkit@googlegroups.com";
   description  "Infix augments and deviations to ietf-syslog, draft 32.";
 
+  revision 2025-11-17 {
+    description "Add hostname-filter support.";
+    reference "internal";
+  }
+
   revision 2024-07-19 {
     description "Initial revision, based on IETF syslog YANG draft 32.
                  The following changes have been made in this model:
@@ -162,6 +167,89 @@ module infix-syslog {
         must "not(../log-format = 'infix-syslog:bsd')" {
           error-message "BSD log format is not applicable to file logging, only remote.";
         }
+      }
+    }
+
+    leaf-list hostname-filter {
+      type inet:domain-name;
+      description "Filter messages by hostname. Messages from the listed
+                   hostnames will be logged to this file.";
+    }
+
+    container property-filter {
+      presence "Enable property-based filtering";
+      description "Advanced property-based message filtering. Allows filtering
+                   on specific message fields with various comparison operators.";
+
+      leaf property {
+        type enumeration {
+          enum msg {
+            description "The message body (SYSLOG-MSG field).";
+          }
+          enum msgid {
+            description "The RFC5424 message identifier (MSGID field).";
+          }
+          enum programname {
+            description "The originating program or tag name.";
+          }
+          enum hostname {
+            description "The message source hostname.";
+          }
+          enum source {
+            description "The message source (alias for hostname).";
+          }
+          enum data {
+            description "The RFC5424 structured data (SD field).";
+          }
+        }
+        mandatory true;
+        description "The message property to match against.";
+      }
+
+      leaf operator {
+        type enumeration {
+          enum contains {
+            description "Substring match (case-sensitive).";
+          }
+          enum isequal {
+            description "Exact equality match.";
+          }
+          enum startswith {
+            description "Prefix match.";
+          }
+          enum regex {
+            description "Basic regular expression match.";
+          }
+          enum ereregex {
+            description "Extended regular expression match (POSIX ERE).";
+          }
+        }
+        mandatory true;
+        description "The comparison operator to use.";
+      }
+
+      leaf value {
+        type string;
+        mandatory true;
+        description "The value to compare against.";
+      }
+
+      leaf case-insensitive {
+        type boolean;
+        description "Perform case-insensitive comparison.";
+      }
+
+      leaf negate {
+        type boolean;
+        description "Negate the comparison result. When set to true, the
+                     filter matches messages that do NOT satisfy the
+                     specified condition.
+
+                     For example:
+                     - operator: contains, value: 'ERROR', negate: false
+                       → matches messages containing 'ERROR'
+                     - operator: contains, value: 'ERROR', negate: true
+                       → matches messages NOT containing 'ERROR'";
       }
     }
   }

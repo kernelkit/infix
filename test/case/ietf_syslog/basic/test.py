@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
-"""
-Syslog Basic
+"""Syslog Basic
 
-Add syslog actions to log to local files, then verify new log files have been created.
+Add syslog actions matching on different facility and severity levels to
+log to local files, then verify new log files have been created.  In one
+case we use an absolute `file:/path/to/bar.log` and in another a relative
+path `file:foo`.
+
 """
 
 import infamy
@@ -16,51 +19,42 @@ with infamy.Test() as test:
         factory = env.get_password("target")
         address = target.get_mgmt_ip()
 
-    with test.step("Configure syslog on DUT to log to files '/log/bar.log' (absolute path) and 'foo' (non-absolute)."):
+    with test.step("Configure syslog on DUT to log to files '/log/bar.log' and 'foo'"):
         target.put_config_dicts({
             "ietf-syslog": {
                 "syslog": {
                     "actions": {
                         "file": {
-                            "log-file": [
-                            {
+                            "log-file": [{
                                 "name": "file:foo",
                                 "facility-filter": {
-                                    "facility-list": [
-                                        {
-                                            "facility": "auth",
-                                            "severity": "info"
-                                        },
-                                        {
-                                            "facility": "authpriv",
-                                            "severity": "debug"
-                                        }
-                                    ]
+                                    "facility-list": [{
+                                        "facility": "auth",
+                                        "severity": "info"
+                                    }, {
+                                        "facility": "authpriv",
+                                        "severity": "debug"
+                                    }]
                                 }
-                            },
-                            {
+                            }, {
                                 "name": "file:/log/bar.log",
                                 "facility-filter": {
-                                    "facility-list": [
-                                        {
-                                            "facility": "all",
-                                            "severity": "critical"
-                                        },
-                                        {
-                                            "facility": "mail",
-                                            "severity": "warning"
-                                        }
-                                    ]
+                                    "facility-list": [{
+                                        "facility": "all",
+                                        "severity": "critical"
+                                    }, {
+                                        "facility": "mail",
+                                        "severity": "warning"
+                                    }]
                                 }
-                            }
-                            ]
+                            }]
                         }
                     }
                 }
             }
         })
 
-    with test.step("Verify log files /var/log/foo and /var/log/bar.log have been created"):
+    with test.step("Verify log files have been created"):
         user = tgtssh.runsh("ls /var/log/{foo,bar.log}").stdout
         if "/var/log/foo" not in user:
             test.fail()

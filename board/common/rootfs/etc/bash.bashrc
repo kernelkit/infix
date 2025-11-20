@@ -31,6 +31,8 @@ bind "set completion-ignore-case on"
 # show all completions immediately instead of ringing bell
 bind "set show-all-if-ambiguous on"
 
+export LANG=C.UTF-8
+
 log()
 {
     local fn="/var/log/syslog"

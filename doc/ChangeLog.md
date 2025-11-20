@@ -48,6 +48,17 @@ All notable changes to the project are documented in this file.
 - Add CLI commands for managing boot partition order: `show boot-order` and
   `set boot-order` allow viewing and changing the boot order from the CLI,
   complementing the existing YANG RPC support, issue #1032
+- Extended syslog filtering capabilities, issue #1091:
+   - Add support for pattern matching using POSIX extended regular expressions
+     on message content (IETF `select-match` feature)
+   - Add support for advanced severity comparison: exact match (`equals`) and
+     exclusion (`block`/`stop`) in addition to the default equals-or-higher
+     (IETF `select-adv-compare` feature)
+   - Add support for hostname-based filtering, useful when acting as a log
+     server to route messages from different devices to separate log files
+   - Add support for property-based filtering with operators (contains, isequal,
+     startswith, regex, ereregex) on message properties (msg, msgid, programname,
+     hostname, source, data), with optional case-insensitive and negate modifiers
 
 ### Fixes
 
