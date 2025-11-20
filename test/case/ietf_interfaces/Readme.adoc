@@ -15,6 +15,7 @@ Tests verifying IETF standard interface configuration and management:
  - Interface enable/disable state management
  - Virtual Ethernet (VETH) pair lifecycle management
  - GRE tunneling configuration and data plane operation
+ - Tunnel TTL (Time-To-Live) and hop-limit verification
 
 include::vlan_ping/Readme.adoc[]
 
@@ -125,3 +126,7 @@ include::tunnel_basic/Readme.adoc[]
 <<<
 
 include::tunnel_bridged/Readme.adoc[]
+
+<<<
+
+include::tunnel_ttl/Readme.adoc[]
