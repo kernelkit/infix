@@ -3,6 +3,7 @@ alias la='ls -A'
 alias ll='ls -alF'
 alias ls='ls --color=auto'
 
+export LANG=C.UTF-8
 export EDITOR=/usr/bin/edit
 export VISUAL=/usr/bin/edit
 export LESS="-P %f (press h for help or q to quit)"
