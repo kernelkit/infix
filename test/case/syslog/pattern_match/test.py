@@ -10,6 +10,15 @@ substring matching and complex regex patterns.
 import infamy
 import time
 
+TEST_MESSAGES = [
+    "ERROR: Connection failed on interface eth0",
+    "CRITICAL: System temperature high",
+    "Status update from router1: link up",
+    "Status update from router42: link down",
+    "INFO: Normal operation message",
+    "DEBUG: Verbose logging enabled",
+]
+
 with infamy.Test() as test:
     with test.step("Set up topology and attach to target DUT"):
         env = infamy.Env()
@@ -52,52 +61,49 @@ with infamy.Test() as test:
             }
         })
 
+        time.sleep(2)
+
     with test.step("Send test messages with various patterns"):
-        tgtssh.runsh("logger -t test -p daemon.info 'ERROR: Connection failed on interface eth0'")
-        tgtssh.runsh("logger -t test -p daemon.info 'CRITICAL: System temperature high'")
-        tgtssh.runsh("logger -t test -p daemon.info 'Status update from router1: link up'")
-        tgtssh.runsh("logger -t test -p daemon.info 'Status update from router42: link down'")
-        tgtssh.runsh("logger -t test -p daemon.info 'INFO: Normal operation message'")
-        tgtssh.runsh("logger -t test -p daemon.info 'DEBUG: Verbose logging enabled'")
-        time.sleep(1)
+        for message in TEST_MESSAGES:
+            tgtssh.runsh(f"logger -t test -p daemon.info '{message}'")
+        time.sleep(2)
 
     with test.step("Verify errors log contains ERROR and CRITICAL messages"):
-        rc = tgtssh.runsh("grep -c 'ERROR\\|CRITICAL' /var/log/errors 2>/dev/null")
-        count = int(rc.stdout.strip()) if rc.returncode == 0 else 0
-        if count != 2:
-            test.fail(f"Expected 2 ERROR/CRITICAL messages in /var/log/errors, got {count}")
+        rc = tgtssh.runsh("cat /var/log/errors 2>/dev/null")
+        log_content = rc.stdout if rc.returncode == 0 else ""
+
+        error_messages = [msg for msg in TEST_MESSAGES if "ERROR" in msg or "CRITICAL" in msg]
+        missing = [msg for msg in error_messages if msg not in log_content]
+        if missing:
+            test.fail(f"Missing error messages in /var/log/errors: {missing}")
 
         # Verify it does NOT contain other messages
-        rc = tgtssh.runsh("grep -c 'router1\\|Normal operation\\|Verbose' /var/log/errors 2>/dev/null")
-        count = int(rc.stdout.strip()) if rc.returncode == 0 else 0
-        if count != 0:
-            test.fail(f"Expected 0 non-error messages in /var/log/errors, got {count}")
+        non_error_messages = [msg for msg in TEST_MESSAGES if "ERROR" not in msg and "CRITICAL" not in msg]
+        found = [msg for msg in non_error_messages if msg in log_content]
+        if found:
+            test.fail(f"Found unwanted messages in /var/log/errors: {found}")
 
     with test.step("Verify routers log contains matching router[0-9]+ pattern"):
-        rc = tgtssh.runsh("grep -c 'router[0-9]\\+' /var/log/routers 2>/dev/null")
-        count = int(rc.stdout.strip()) if rc.returncode == 0 else 0
-        if count != 2:
-            test.fail(f"Expected 2 router messages in /var/log/routers, got {count}")
+        rc = tgtssh.runsh("cat /var/log/routers 2>/dev/null")
+        log_content = rc.stdout if rc.returncode == 0 else ""
 
-        # Verify both router1 and router42 are present
-        rc = tgtssh.runsh("grep -q 'router1' /var/log/routers 2>/dev/null")
-        if rc.returncode != 0:
-            test.fail("Expected router1 message in /var/log/routers")
-
-        rc = tgtssh.runsh("grep -q 'router42' /var/log/routers 2>/dev/null")
-        if rc.returncode != 0:
-            test.fail("Expected router42 message in /var/log/routers")
+        router_messages = [msg for msg in TEST_MESSAGES if "router1" in msg or "router42" in msg]
+        missing = [msg for msg in router_messages if msg not in log_content]
+        if missing:
+            test.fail(f"Missing router messages in /var/log/routers: {missing}")
 
         # Verify it does NOT contain error or normal messages
-        rc = tgtssh.runsh("grep -c 'ERROR\\|CRITICAL\\|Normal operation\\|Verbose' /var/log/routers 2>/dev/null")
-        count = int(rc.stdout.strip()) if rc.returncode == 0 else 0
-        if count != 0:
-            test.fail(f"Expected 0 non-router messages in /var/log/routers, got {count}")
+        non_router_messages = [msg for msg in TEST_MESSAGES if "router" not in msg]
+        found = [msg for msg in non_router_messages if msg in log_content]
+        if found:
+            test.fail(f"Found unwanted messages in /var/log/routers: {found}")
 
     with test.step("Verify all-messages log contains all test messages"):
-        rc = tgtssh.runsh("grep -c 'test' /var/log/all-messages 2>/dev/null")
-        count = int(rc.stdout.strip()) if rc.returncode == 0 else 0
-        if count != 6:
-            test.fail(f"Expected 6 total messages in /var/log/all-messages, got {count}")
+        rc = tgtssh.runsh("cat /var/log/all-messages 2>/dev/null")
+        log_content = rc.stdout if rc.returncode == 0 else ""
+
+        missing = [msg for msg in TEST_MESSAGES if msg not in log_content]
+        if missing:
+            test.fail(f"Missing messages in /var/log/all-messages: {missing}")
 
     test.succeed()

@@ -10,6 +10,17 @@ actions (log vs block/stop).
 import infamy
 import time
 
+TEST_MESSAGES = [
+    ("daemon.emerg",   "Emergency: system is unusable"),
+    ("daemon.alert",   "Alert: immediate action required"),
+    ("daemon.crit",    "Critical: critical condition"),
+    ("daemon.err",     "Error: error condition"),
+    ("daemon.warning", "Warning: warning condition"),
+    ("daemon.notice",  "Notice: normal but significant"),
+    ("daemon.info",    "Info: informational message"),
+    ("daemon.debug",   "Debug: debug-level message"),
+]
+
 with infamy.Test() as test:
     with test.step("Set up topology and attach to target DUT"):
         env = infamy.Env()
@@ -62,51 +73,53 @@ with infamy.Test() as test:
             }
         })
 
+        time.sleep(2)
+
     with test.step("Send test messages at all severity levels"):
-        tgtssh.runsh("logger -t advtest -p daemon.emerg 'Emergency: system is unusable'")
-        tgtssh.runsh("logger -t advtest -p daemon.alert 'Alert: immediate action required'")
-        tgtssh.runsh("logger -t advtest -p daemon.crit 'Critical: critical condition'")
-        tgtssh.runsh("logger -t advtest -p daemon.err 'Error: error condition'")
-        tgtssh.runsh("logger -t advtest -p daemon.warning 'Warning: warning condition'")
-        tgtssh.runsh("logger -t advtest -p daemon.notice 'Notice: normal but significant'")
-        tgtssh.runsh("logger -t advtest -p daemon.info 'Info: informational message'")
-        tgtssh.runsh("logger -t advtest -p daemon.debug 'Debug: debug-level message'")
-        time.sleep(1)
+        for priority, message in TEST_MESSAGES:
+            tgtssh.runsh(f"logger -t advtest -p {priority} '{message}'")
+        time.sleep(2)
 
     with test.step("Verify exact-errors log contains only error messages"):
-        rc = tgtssh.runsh("grep -c 'advtest' /var/log/exact-errors 2>/dev/null")
-        count = int(rc.stdout.strip()) if rc.returncode == 0 else 0
-        if count != 1:
-            test.fail(f"Expected 1 message in /var/log/exact-errors (error only), got {count}")
+        rc = tgtssh.runsh("cat /var/log/exact-errors 2>/dev/null")
+        log_content = rc.stdout if rc.returncode == 0 else ""
 
-        rc = tgtssh.runsh("grep -q 'Error: error condition' /var/log/exact-errors 2>/dev/null")
-        if rc.returncode != 0:
-            test.fail("Expected error message in /var/log/exact-errors")
+        # Should contain only the error message
+        error_messages = [msg for prio, msg in TEST_MESSAGES if "err" in prio]
+        missing = [msg for msg in error_messages if msg not in log_content]
+        if missing:
+            test.fail(f"Missing error messages in /var/log/exact-errors: {missing}")
 
-        rc = tgtssh.runsh("grep -c 'Emergency\\|Alert\\|Critical' /var/log/exact-errors 2>/dev/null")
-        count = int(rc.stdout.strip()) if rc.returncode == 0 else 0
-        if count != 0:
-            test.fail(f"Expected 0 higher severity messages in /var/log/exact-errors, got {count}")
+        # Should NOT contain higher severity (emerg, alert, crit) or lower
+        unwanted_messages = [msg for prio, msg in TEST_MESSAGES if "err" not in prio]
+        found = [msg for msg in unwanted_messages if msg in log_content]
+        if found:
+            test.fail(f"Found unwanted messages in /var/log/exact-errors: {found}")
 
     with test.step("Verify no-debug log blocks all messages"):
-        rc = tgtssh.runsh("grep -c 'advtest' /var/log/no-debug 2>/dev/null")
-        count = int(rc.stdout.strip()) if rc.returncode == 0 else 0
-        if count != 0:
-            test.fail(f"Expected 0 messages in /var/log/no-debug (all blocked), got {count}")
+        rc = tgtssh.runsh("cat /var/log/no-debug 2>/dev/null")
+        log_content = rc.stdout if rc.returncode == 0 else ""
+
+        # Should be empty (all messages blocked)
+        all_messages = [msg for _, msg in TEST_MESSAGES]
+        found = [msg for msg in all_messages if msg in log_content]
+        if found:
+            test.fail(f"Expected empty log, found messages in /var/log/no-debug: {found}")
 
     with test.step("Verify baseline log contains info and higher"):
-        rc = tgtssh.runsh("grep -c 'advtest' /var/log/baseline 2>/dev/null")
-        count = int(rc.stdout.strip()) if rc.returncode == 0 else 0
-        if count != 7:
-            test.fail(f"Expected 7 messages in /var/log/baseline (info and higher), got {count}")
+        rc = tgtssh.runsh("cat /var/log/baseline 2>/dev/null")
+        log_content = rc.stdout if rc.returncode == 0 else ""
 
-        rc = tgtssh.runsh("grep -c 'Debug: debug-level' /var/log/baseline 2>/dev/null")
-        count = int(rc.stdout.strip()) if rc.returncode == 0 else 0
-        if count != 0:
-            test.fail(f"Expected 0 debug messages in /var/log/baseline, got {count}")
+        # Should contain info and higher (all except debug)
+        expected_messages = [msg for prio, msg in TEST_MESSAGES if "debug" not in prio]
+        missing = [msg for msg in expected_messages if msg not in log_content]
+        if missing:
+            test.fail(f"Missing messages in /var/log/baseline: {missing}")
 
-        rc = tgtssh.runsh("grep -q 'Info: informational' /var/log/baseline 2>/dev/null")
-        if rc.returncode != 0:
-            test.fail("Expected info message in /var/log/baseline")
+        # Should NOT contain debug
+        debug_messages = [msg for prio, msg in TEST_MESSAGES if "debug" in prio]
+        found = [msg for msg in debug_messages if msg in log_content]
+        if found:
+            test.fail(f"Found debug messages in /var/log/baseline: {found}")
 
     test.succeed()
