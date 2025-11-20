@@ -146,6 +146,87 @@ class DTSystem:
         flat_devices = [device for sublist in self.infix_devices("vpds") for device in sublist]
         return [self.into_vpd(device) for device in flat_devices]
 
+    def vendor_name(self):
+        """Extract vendor name from devicetree compatible property"""
+        compatible = self.base.str_array("compatible")
+        if not compatible or len(compatible) == 0:
+            return None
+
+        # Map of common devicetree vendor prefixes to proper names
+        vendor_map = {
+            "raspberrypi": "Raspberry Pi Foundation",
+            "brcm": "Broadcom Inc.",
+            "marvell": "Marvell Technology, Inc.",
+            "fsl": "NXP Semiconductors N.V.",
+            "nxp": "NXP Semiconductors N.V.",
+            "ti": "Texas Instruments Inc.",
+            "qcom": "Qualcomm Inc.",
+            "rockchip": "Rockchip Electronics Co., Ltd.",
+            "amlogic": "Amlogic Inc.",
+            "allwinner": "Allwinner Technology Co., Ltd.",
+            "mediatek": "MediaTek Inc.",
+            "st": "STMicroelectronics N.V.",
+            "xlnx": "Xilinx, Inc.",
+            "intel": "Intel Corporation",
+            "amd": "Advanced Micro Devices, Inc.",
+            "nvidia": "NVIDIA Corporation",
+            "bananapi": "SinoVoip Co., Ltd.",
+            "sinovoip": "SinoVoip Co., Ltd.",
+            "friendlyarm": "FriendlyElec",
+            "friendlyelec": "FriendlyElec",
+            "microchip": "Microchip Technology Inc.",
+            "atmel": "Microchip Technology Inc.",
+        }
+
+        # Get the first (most specific) compatible string
+        compat = compatible[0]
+
+        # Extract vendor prefix (part before comma)
+        if ',' in compat:
+            prefix = compat.split(',')[0].lower()
+            # Return mapped name or capitalized prefix
+            return vendor_map.get(prefix, prefix.capitalize())
+
+        return None
+
+
+class DMISystem:
+    BASE = "/sys/class/dmi/id"
+
+    def read_dmi(self, attr):
+        """Read DMI attribute from /sys/class/dmi/id/"""
+        path = os.path.join(DMISystem.BASE, attr)
+        if not os.path.exists(path):
+            return None
+        try:
+            with open(path, 'r', encoding='utf-8') as f:
+                value = f.read().strip()
+                return value if value else None
+        except:
+            return None
+
+    def populate(self, out):
+        """Read DMI/SMBIOS data and populate output dictionary"""
+        vendor = self.read_dmi("sys_vendor")
+        if vendor:
+            out["vendor"] = vendor
+
+        product_name = self.read_dmi("product_name")
+        if product_name:
+            out["product-name"] = product_name
+
+        serial = self.read_dmi("product_serial")
+        if serial:
+            out["serial-number"] = serial
+
+        version = self.read_dmi("product_version")
+        if version:
+            out["product-version"] = version
+
+    def vpds(self):
+        """DMI systems don't have VPD in the traditional sense"""
+        return []
+
 
 class QEMUSystem:
     BASE = "/sys/firmware/qemu_fw_cfg"
@@ -355,6 +436,9 @@ def probe_qemusystem(out):
         if not out[attr]:
             out[attr] = default
 
+    if os.path.exists(DMISystem.BASE):
+        DMISystem().populate(out)
+
     if not out["factory-password-hash"] and \
        not out["vpd"]["product"]["available"]:
         # Virtual instance without VPD emulation, fallback to
@@ -397,6 +481,21 @@ def generic_usb_ports(out):
             out["usb-ports"] = [{"name": f"USB{p['num']}", "path": p["path"]} for p in ports]
 
 
+def probe_dmisystem(out):
+    """Probe DMI/SMBIOS based system (x86/AMD64)"""
+    dmisys = DMISystem()
+
+    dmisys.populate(out)
+    generic_usb_ports(out)
+
+    if not out["mac-address"]:
+        out["mac-address"] = fallback_base_mac()
+
+    vpd_inject(out, dmisys.vpds())
+
+    return 0
+
+
 def probe_dtsystem(out):
     """Probe DTS based system, expects a VPD in ONIE PROM format."""
     dtsys = DTSystem()
@@ -413,11 +512,23 @@ def probe_dtsystem(out):
 
     out["compatible"] = dtsys.base.str_array("compatible")
 
+    # Extract vendor from compatible string if not already set
+    if not out["vendor"]:
+        vendor = dtsys.vendor_name()
+        if vendor:
+            out["vendor"] = vendor
+
     staticpw = dtsys.infix.str("factory-password-hash")
     if not out["factory-password-hash"]:
         out["factory-password-hash"] = staticpw
 
     vpd_inject(out, vpds)
+
+    # Fallback to devicetree serial-number if VPD doesn't provide one
+    if not out["serial-number"]:
+        serial = dtsys.base.str("serial-number")
+        if serial:
+            out["serial-number"] = serial
 
     # Fallback to interface MAC if VPD doesn't provide one (e.g., SBCs)
     if not out["mac-address"]:
@@ -430,6 +541,7 @@ def main():
     out = {
         "vendor": None,
         "product-name": None,
+        "product-version": None,
         "part-number": None,
         "serial-number": None,
         "mac-address": None,
@@ -440,6 +552,8 @@ def main():
 
     if os.path.exists(QEMUSystem.REV):
         err = probe_qemusystem(out)
+    elif os.path.exists(DMISystem.BASE):
+        err = probe_dmisystem(out)
     elif os.path.exists(DTSystem.BASE):
         err = probe_dtsystem(out)
     else:
