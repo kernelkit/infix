@@ -97,33 +97,6 @@ char *dhcp_fqdn(const char *val, char *str, size_t len)
 	return str;
 }
 
-char *dhcp_os_name_version(char *str, size_t len)
-{
-	char *val;
-
-	if (!str || !len)
-		return NULL;
-
-	str[0] = 0;
-
-	val = fgetkey("/etc/os-release", "NAME");
-	if (val)
-		snprintf(str, len, "-V \"%.32s ", val);
-
-	val = fgetkey("/etc/os-release", "VERSION");
-	if (val) {
-		strlcat(str, val, len);
-		strlcat(str, "\"", len);
-	}
-
-	if (strlen(str) > 0 && str[strlen(str) - 1] != '"') {
-		str[0] = 0;
-		return NULL;
-	}
-
-	return str;
-}
-
 char *dhcp_compose_option(struct lyd_node *cfg, const char *ifname, struct lyd_node *id,
 			  const char *val, const char *hex, char *option, size_t len,
 			  char *(*ip_cache_cb)(const char *, char *, size_t))
@@ -135,6 +108,10 @@ char *dhcp_compose_option(struct lyd_node *cfg, const char *ifname, struct lyd_n
 		ERROR("Failed looking up DHCP client %s option %s, skipping.", ifname, name);
 		return NULL;
 	}
+
+	/* Skip option 60 (vendor-class) - handled separately via -V flag */
+	if (num == 60)
+		return NULL;
 
 	if (val || hex) {
 		switch (num) {
@@ -210,6 +187,8 @@ char *dhcp_compose_options(struct lyd_node *cfg, const char *ifname, char **opti
  */
 static void infer_options_v4(sr_session_ctx_t *session, const char *xpath)
 {
+	sr_val_t val = { .type = SR_STRING_T };
+	struct json_t *product_name;
 	const char *opt[] = {
 		"netmask",
 		"broadcast",
@@ -223,6 +202,12 @@ static void infer_options_v4(sr_session_ctx_t *session, const char *xpath)
 
 	for (i = 0; i < NELEMS(opt); i++)
 		srx_set_item(session, NULL, 0, "%s/option[id='%s']", xpath, opt[i]);
+
+	product_name = json_object_get(confd.root, "product-name");
+	if (product_name) {
+		val.data.string_val = (char *)json_string_value(product_name);
+		srx_set_item(session, &val, 0, "%s/option[id='vendor-class']/value", xpath);
+	}
 }
 
 /*

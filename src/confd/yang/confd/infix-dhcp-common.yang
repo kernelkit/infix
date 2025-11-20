@@ -8,7 +8,7 @@ module infix-dhcp-common {
   description  "Shared types between DHCP server and client.";
 
   revision 2025-11-09 {
-    description "Add DHCPv6 options typedef.";
+    description "Add DHCPv6 options typedef and DHCPv4 vendor-class option.";
     reference "internal";
   }
   revision 2025-01-29 {
@@ -78,6 +78,10 @@ module infix-dhcp-common {
         enum address {
           value 50;
           description "Request (previously cached) address";
+        }
+        enum vendor-class {
+          value 60;
+          description "Vendor class, e.g., product name, type/model";
         }
         enum client-id {
           value 61;
