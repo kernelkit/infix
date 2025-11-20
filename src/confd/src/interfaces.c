@@ -791,7 +791,7 @@ static sr_error_t ifchange_post(sr_session_ctx_t *session, struct dagger *net,
 	return err ? SR_ERR_INTERNAL : SR_ERR_OK;
 }
 
-int ietf_interfaces_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd)
+int interfaces_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd)
 {
 	struct lyd_node *cifs, *difs, *cif, *dif;
 	sr_error_t err;
@@ -839,7 +839,7 @@ err_out:
 	return err;
 }
 
-int ietf_interfaces_get_all_l3(const struct lyd_node *tree, char ***ifaces)
+int interfaces_get_all_l3(const struct lyd_node *tree, char ***ifaces)
 {
 	struct lyd_node *interfaces, *cif;
 	char **names = NULL;
@@ -905,7 +905,7 @@ int ietf_interfaces_get_all_l3(const struct lyd_node *tree, char ***ifaces)
 	return 0;
 }
 
-int ietf_interfaces_cand_init(struct confd *confd)
+int interfaces_cand_init(struct confd *confd)
 {
 	int rc = SR_ERR_OK;
 

@@ -112,7 +112,7 @@ static void del_v6(const char *ifname)
 	systemf("initctl -bfq delete dhcpv6-client-%s", ifname);
 }
 
-int infix_dhcpv6_client_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff,
+int dhcpv6_client_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff,
 			       sr_event_t event, struct confd *confd)
 {
 	struct lyd_node *ifaces, *difaces, *iface, *diface, *ipv6, *dhcp, *ddhcp;

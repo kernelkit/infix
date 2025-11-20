@@ -185,7 +185,7 @@ static int hardware_cand(sr_session_ctx_t *session, uint32_t sub_id, const char 
 	return err;
 }
 
-int ietf_hardware_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd)
+int hardware_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd)
 {
 	struct lyd_node  *difs = NULL, *dif = NULL, *cifs = NULL, *cif = NULL;
 	int rc = SR_ERR_OK;
@@ -232,7 +232,7 @@ int ietf_hardware_change(sr_session_ctx_t *session, struct lyd_node *config, str
 err:
 	return rc;
 }
-int ietf_hardware_candidate_init(struct confd *confd)
+int hardware_candidate_init(struct confd *confd)
 {
 	int rc = 0;
 

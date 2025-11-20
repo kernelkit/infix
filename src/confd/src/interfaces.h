@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: BSD-3-Clause */
 
-#ifndef CONFD_IETF_INTERFACES_H_
-#define CONFD_IETF_INTERFACES_H_
+#ifndef CONFD_INTERFACES_H_
+#define CONFD_INTERFACES_H_
 
 #include "core.h"
 #include "cni.h"
@@ -102,7 +102,7 @@ int netdag_gen_ethtool(struct dagger *net, struct lyd_node *cif, struct lyd_node
 /* interfaces.c */
 const char *get_chassis_addr(void);
 int link_gen_address(struct lyd_node *cif, FILE *ip);
-int ietf_interfaces_get_all_l3(const struct lyd_node *tree, char ***ifaces);
+int interfaces_get_all_l3(const struct lyd_node *tree, char ***ifaces);
 
 /* ip.c */
 int netdag_gen_ipv6_autoconf(struct dagger *net, struct lyd_node *cif,
@@ -150,4 +150,4 @@ int ifchange_cand_infer_dhcp(sr_session_ctx_t *session, const char *path);
 /* if-vxlan.c */
 int vxlan_gen(struct lyd_node *dif, struct lyd_node *cif, FILE *ip);
 
-#endif /* CONFD_IETF_INTERFACES_H_ */
+#endif /* CONFD_INTERFACES_H_ */

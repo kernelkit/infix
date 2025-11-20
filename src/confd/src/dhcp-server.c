@@ -295,7 +295,7 @@ static void del(const char *subnet, struct lyd_node *cfg)
 		ERRNO("Failed switching to new %s", DNSMASQ_LEASES);
 }
 
-int infix_dhcp_server_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd)
+int dhcp_server_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd)
 {
 	struct lyd_node *global, *cifs, *difs, *cif, *dif;
 	int enabled = 0, added = 0, deleted = 0;
@@ -450,7 +450,7 @@ static int clear_stats(sr_session_ctx_t *session, uint32_t sub_id, const char *x
 	return SR_ERR_OK;
 }
 
-int infix_dhcp_server_candidate_init(struct confd *confd)
+int dhcp_server_candidate_init(struct confd *confd)
 {
 	int rc;
 
@@ -462,7 +462,7 @@ fail:
 	return rc;
 }
 
-int infix_dhcp_server_rpc_init(struct confd *confd)
+int dhcp_server_rpc_init(struct confd *confd)
 {
 	int rc;
 

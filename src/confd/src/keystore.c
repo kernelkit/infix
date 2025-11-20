@@ -155,7 +155,7 @@ static int keystore_update(sr_session_ctx_t *session, struct lyd_node *config, s
 	return 0;
 }
 
-int ietf_keystore_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff,
+int keystore_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff,
 			 sr_event_t event, struct confd *confd)
 {
 	struct lyd_node *changes, *change;

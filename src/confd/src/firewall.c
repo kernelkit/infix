@@ -480,7 +480,7 @@ static int infer_policy(sr_session_ctx_t *session, const char *name, const char 
 }
 #endif
 
-int infix_firewall_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd)
+int firewall_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd)
 {
 	struct lyd_node *tree, *global;
 	struct lyd_node *clist, *cnode;
@@ -534,7 +534,7 @@ int infix_firewall_change(sr_session_ctx_t *session, struct lyd_node *config, st
 	}
 
 	/* Get L3 interfaces for default zone assignment */
-	if (ietf_interfaces_get_all_l3(tree, &ifaces) != 0) {
+	if (interfaces_get_all_l3(tree, &ifaces) != 0) {
 		ERROR("Failed to get L3 interfaces");
 		ifaces = NULL;
 	}
@@ -711,7 +711,7 @@ static int lockdown(sr_session_ctx_t *session, uint32_t sub_id, const char *xpat
 	return SR_ERR_OK;
 }
 
-int infix_firewall_rpc_init(struct confd *confd)
+int firewall_rpc_init(struct confd *confd)
 {
 	int rc;
 
@@ -724,7 +724,7 @@ fail:
 }
 
 
-int infix_firewall_candidate_init(struct confd *confd)
+int firewall_candidate_init(struct confd *confd)
 {
 	int rc;
 

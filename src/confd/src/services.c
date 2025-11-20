@@ -515,7 +515,7 @@ static int web_change(sr_session_ctx_t *session, struct lyd_node *config, struct
 	return put(cfg);
 }
 
-int infix_services_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd)
+int services_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd)
 {
 	int rc;
 

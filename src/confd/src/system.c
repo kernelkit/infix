@@ -1602,7 +1602,7 @@ static int change_hostname(sr_session_ctx_t *session, struct lyd_node *config, s
 }
 
 
-int ietf_system_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd)
+int system_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd)
 {
 	int rc = SR_ERR_OK;
 
@@ -1628,7 +1628,7 @@ int ietf_system_change(sr_session_ctx_t *session, struct lyd_node *config, struc
 	return SR_ERR_OK;
 }
 
-int ietf_system_rpc_init(struct confd *confd)
+int system_rpc_init(struct confd *confd)
 {
 	int rc;
 

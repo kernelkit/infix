@@ -18,7 +18,7 @@ static int set_version(sr_session_ctx_t *session)
 	return SR_ERR_OK;
 }
 
-int infix_meta_change_cb(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd)
+int meta_change_cb(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd)
 {
 	if (event == SR_EV_UPDATE)
 		return set_version(session);

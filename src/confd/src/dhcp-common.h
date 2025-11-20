@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: BSD-3-Clause */
 
-#ifndef INFIX_DHCP_COMMON_H_
-#define INFIX_DHCP_COMMON_H_
+#ifndef DHCP_COMMON_H_
+#define DHCP_COMMON_H_
 
 #include <libyang/libyang.h>
 
@@ -16,4 +16,4 @@ char *dhcp_compose_options(struct lyd_node *cfg, const char *ifname, char **opti
 			   struct lyd_node *id, const char *val, const char *hex,
 			   char *(*ip_cache_cb)(const char *, char *, size_t));
 
-#endif /* INFIX_DHCP_COMMON_H_ */
+#endif /* DHCP_COMMON_H_ */

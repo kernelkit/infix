@@ -349,7 +349,7 @@ static int del(const char *name)
 	return SR_ERR_OK;
 }
 
-int infix_containers_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd)
+int containers_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd)
 {
 	struct lyd_node *cifs, *difs, *cif, *dif;
 	sr_error_t       err = 0;
@@ -465,7 +465,7 @@ static int oci_load(sr_session_ctx_t *session, uint32_t sub_id, const char *xpat
 	return SR_ERR_OK;
 }
 
-int infix_containers_rpc_init(struct confd *confd)
+int containers_rpc_init(struct confd *confd)
 {
 	int rc;
 

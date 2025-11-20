@@ -247,7 +247,7 @@ static int parse_static_routes(sr_session_ctx_t *session, struct lyd_node *paren
 	return num_routes;
 }
 
-int ietf_routing_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd)
+int routing_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd)
 {
 	int staticd_enabled = 0, ospfd_enabled = 0, bfdd_enabled = 0;
 	struct lyd_node *cplane, *cplanes;

@@ -167,7 +167,7 @@ static void del(const char *ifname)
 	systemf("initctl -bfq delete dhcp-client-%s", ifname);
 }
 
-int infix_dhcp_client_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff,
+int dhcp_client_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff,
 			     sr_event_t event, struct confd *confd)
 {
 	struct lyd_node *ifaces, *difaces, *iface, *diface, *ipv4, *dhcp, *ddhcp;

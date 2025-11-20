@@ -89,7 +89,7 @@ static int infix_system_sw_set_boot_order(sr_session_ctx_t *session, uint32_t su
 	return SR_ERR_OK;
 }
 
-int infix_system_sw_rpc_init(struct confd *confd)
+int system_sw_rpc_init(struct confd *confd)
 {
 	int rc = 0;
 
