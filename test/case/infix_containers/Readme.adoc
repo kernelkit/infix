@@ -41,6 +41,10 @@ include::volume/Readme.adoc[]
 
 <<<
 
+include::upgrade/Readme.adoc[]
+
+<<<
+
 include::firewall_basic/Readme.adoc[]
 
 <<<

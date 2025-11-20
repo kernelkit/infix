@@ -9,7 +9,6 @@
 int dhcp_option_lookup(const struct lyd_node *id);
 char *dhcp_hostname(struct lyd_node *cfg, char *str, size_t len);
 char *dhcp_fqdn(const char *val, char *str, size_t len);
-char *dhcp_os_name_version(char *str, size_t len);
 char *dhcp_compose_option(struct lyd_node *cfg, const char *ifname, struct lyd_node *id,
 			  const char *val, const char *hex, char *option, size_t len,
 			  char *(*ip_cache_cb)(const char *, char *, size_t));

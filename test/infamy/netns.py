@@ -28,6 +28,17 @@ class IsolatedMacVlans:
     NOTE: For the simple case when only one interface needs to be
     mapped, see IsolatedMacVlan below.
 
+    Args:
+        ifmap: Dictionary mapping parent interface names to MACVLAN names
+        lo: Enable loopback interface in the namespace (default: True)
+        set_up: Automatically bring up the interfaces (default: True)
+        mode: MACVLAN mode to use (default: "passthru")
+            - "passthru": Exclusive access, single MACVLAN per parent.
+                          Parent interface becomes promiscuous.
+            - "bridge": Shared access, allows multiple MACVLANs to
+                        communicate. Required for layer-2 tests that
+                        need full control of all frames.
+
     Example:
 
     netns = IsolatedMacVlans({ "eth2": "a", "eth3": "b" })
@@ -46,9 +57,10 @@ class IsolatedMacVlans:
         for ns in list(IsolatedMacVlans.Instances):
             ns.stop()
 
-    def __init__(self, ifmap, lo=True, set_up=True):
+    def __init__(self, ifmap, lo=True, set_up=True, mode="passthru"):
         self.sleeper = None
         self.ifmap, self.lo, self.set_up = ifmap, lo, set_up
+        self.mode = mode
         self.ping_timeout = env.ENV.attr("ping_timeout", 5)
 
     def start(self):
@@ -64,7 +76,8 @@ class IsolatedMacVlans:
                                 "link", parent,
                                 "address", self._stable_mac(parent),
                                 "netns", str(self.sleeper.pid),
-                                "type", "macvlan", "mode", "passthru"], check=True)
+                                "type", "macvlan", "mode", self.mode],
+                               check=True)
                 self.runsh(f"""
                 while ! ip link show dev {ifname}; do
                     sleep 0.1
@@ -287,6 +300,17 @@ class IsolatedMacVlan(IsolatedMacVlans):
     moves that interface to a separate namespace, isolating it from
     all other interfaces.
 
+    Args:
+        parent: Name of the parent interface on the controller
+        ifname: Name of the MACVLAN interface in the namespace (default: "iface")
+        lo: Enable loopback interface in the namespace (default: True)
+        set_up: Automatically bring up the interface (default: True)
+        mode: MACVLAN mode to use (default: "passthru")
+            - "passthru": Exclusive access, single MACVLAN per parent.
+            - "bridge": Shared access, required for layer-2 tests that
+                        need to communicate with other MACVLANs on the
+                        same parent or control all frames.
+
     Example:
 
     netns = IsolatedMacVlan("eth3")
@@ -298,13 +322,19 @@ class IsolatedMacVlan(IsolatedMacVlans):
                     |
     eth0 eth1 eth2 eth3
 
+    Example with bridge mode:
+
+    netns = IsolatedMacVlan("eth3", mode="bridge")
+
     """
-    def __init__(self, parent, ifname="iface", lo=True, set_up=True):
+    def __init__(self, parent, ifname="iface", lo=True, set_up=True, mode="passthru"):
         self._ifname = ifname
-        return super().__init__(ifmap={ parent: ifname }, lo=lo, set_up=set_up)
+        return super().__init__(ifmap={parent: ifname}, lo=lo, set_up=set_up,
+                                mode=mode)
 
     def addip(self, addr, prefix_length=24, proto="ipv4"):
-        return super().addip(ifname=self._ifname, addr=addr, prefix_length=prefix_length, proto=proto)
+        return super().addip(ifname=self._ifname, addr=addr,
+                             prefix_length=prefix_length, proto=proto)
 
     def must_receive(self, expr, timeout=None, ifname=None, must=True):
         ifname = ifname if ifname else self._ifname
@@ -387,10 +417,19 @@ class TPMR(IsolatedMacVlans):
 
     This is useful to verify the correctness of fail-over behavior in
     various protocols. See ospf_bfd for a usage example.
+
+    Args:
+        a: Name of the first parent interface on the controller
+        b: Name of the second parent interface on the controller
+        mode: MACVLAN mode to use (default: "passthru")
+            - "passthru": Exclusive access (default)
+            - "bridge": Shared access, allows communication between MACVLANs
+                        and full control of all frames. May be required for
+                        proper layer-2 relay functionality in some tests.
     """
 
-    def __init__(self, a, b):
-        super().__init__(ifmap={ a: "a", b: "b" }, lo=False)
+    def __init__(self, a, b, mode="passthru"):
+        super().__init__(ifmap={ a: "a", b: "b" }, lo=False, mode=mode)
 
     def start(self, forward=True):
         ret = super().start()

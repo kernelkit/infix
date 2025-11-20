@@ -1,14 +1,17 @@
 :testgroup:
 == infix-dhcp
 
-Tests verifying DHCP client and server functionality in Infix:
+Tests verifying DHCPv4/DHCPv6 client and server functionality in Infix:
 
- - Basic DHCP client lease acquisition and configuration
- - DHCP client with default gateway assignment
- - DHCP client with static route configuration
- - Basic DHCP server operation and lease assignment
- - DHCP server with host-specific IP reservations
- - DHCP server with multiple subnet configurations
+ - Basic DHCPv4 client lease acquisition and configuration
+ - DHCPv4 client with default gateway assignment
+ - DHCPv4 client with static route configuration
+ - DHCPv4 client hostname management and priority
+ - Basic DHCPv6 client operation with address assignment
+ - DHCPv6 client with prefix delegation (IA_PD)
+ - Basic DHCPv4 server operation and lease assignment
+ - DHCPv4 server with host-specific IP reservations
+ - DHCPv4 server with multiple subnet configurations
 
 include::client_basic/Readme.adoc[]
 
@@ -19,6 +22,18 @@ include::client_default_gw/Readme.adoc[]
 <<<
 
 include::client_routes/Readme.adoc[]
+
+<<<
+
+include::client_hostname/Readme.adoc[]
+
+<<<
+
+include::client6_basic/Readme.adoc[]
+
+<<<
+
+include::client6_prefix_delegation/Readme.adoc[]
 
 <<<
 

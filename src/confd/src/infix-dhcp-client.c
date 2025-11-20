@@ -50,6 +50,20 @@ static char *ip_cache(const char *ifname, char *str, size_t len)
 	return str;
 }
 
+static const char *get_vendor_class(struct lyd_node *cfg)
+{
+	struct lyd_node *option;
+
+	LYX_LIST_FOR_EACH(lyd_child(cfg), option, "option") {
+		struct lyd_node *id = lydx_get_child(option, "id");
+		const char *name = lyd_get_value(id);
+
+		if (strcmp(name, "vendor-class") == 0 || strcmp(name, "60") == 0)
+			return lydx_get_cattr(option, "value");
+	}
+
+	return NULL;
+}
 
 static char *fallback_options(const char *ifname)
 {
@@ -84,9 +98,11 @@ static void add(const char *ifname, struct lyd_node *cfg)
 {
 	const char *metric = lydx_get_cattr(cfg, "route-preference");
 	const char *client_id = lydx_get_cattr(cfg, "client-id");
-	char vendor[128] = { 0 }, do_arp[20] = { 0 };
 	char *cid = NULL, *options = NULL;
 	const char *action = "disable";
+	const char *vendor_class;
+	char vendor[128] = { 0 };
+	char do_arp[20] = { 0 };
 	bool arping;
 	FILE *fp;
 
@@ -112,7 +128,12 @@ static void add(const char *ifname, struct lyd_node *cfg)
 
 	options = dhcp_options(ifname, cfg);
 
-	dhcp_os_name_version(vendor, sizeof(vendor));
+	/* Check for vendor-class option (option 60) */
+	vendor_class = get_vendor_class(cfg);
+	if (vendor_class)
+		snprintf(vendor, sizeof(vendor), "-V \"%s\"", vendor_class);
+	else
+		snprintf(vendor, sizeof(vendor), "-V \"\"");
 
 	fp = fopenf("w", "/etc/finit.d/available/dhcp-client-%s.conf", ifname);
 	if (!fp) {
