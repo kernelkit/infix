@@ -1,0 +1,26 @@
+We create the interfaces on our own, and set their MAC addresses
+remove this check (which are for hostapd created ap interfaces)
+
+diff --git a/src/ap/hostapd.c b/src/ap/hostapd.c
+index a57a151fa..43d31d16c 100644
+--- a/src/ap/hostapd.c
++++ b/src/ap/hostapd.c
+@@ -940,18 +940,6 @@ skip_mask_ext:
+ 	if (!auto_addr)
+ 		return 0;
+ 
+-	for (i = 0; i < ETH_ALEN; i++) {
+-		if ((hapd->own_addr[i] & mask[i]) != hapd->own_addr[i]) {
+-			wpa_printf(MSG_ERROR, "Invalid BSSID mask " MACSTR
+-				   " for start address " MACSTR ".",
+-				   MAC2STR(mask), MAC2STR(hapd->own_addr));
+-			wpa_printf(MSG_ERROR, "Start address must be the "
+-				   "first address in the block (i.e., addr "
+-				   "AND mask == addr).");
+-			return -1;
+-		}
+-	}
+-
+ 	return 0;
+ }
+ 
