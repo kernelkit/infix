@@ -1,0 +1,24 @@
+=== Route preference: Static Route Activation and Maximum Distance
+
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/routing/route_pref_255]
+
+==== Description
+
+This test configures a device with a static route to a destination with 
+a moderate routing preference (254), verifying that it becomes active. 
+Then, the routing preference is increased to the maximum value (255), 
+which should prevent the route from becoming active.
+
+==== Topology
+
+image::topology.svg[Route preference: Static Route Activation and Maximum Distance topology, align=center, scaledwidth=75%]
+
+==== Sequence
+
+. Set up topology and attach to target DUTs
+. Configure targets with active static route
+. Verify that static route with preference 254 is active
+. Update static route preference to 255
+. Verify that high-preference static route (255) does not become active
+
+

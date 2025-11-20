@@ -1,7 +1,8 @@
 :testgroup:
 == Use Case Tests
 
-Integration tests verifying multiple Infix components working together:
+Integration tests verifying multiple software components working
+together:
 
  - OSPF routing with containerized applications and network segmentation
 

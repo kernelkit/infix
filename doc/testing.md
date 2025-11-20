@@ -93,14 +93,14 @@ Each test case is a separate executable, which can be run without
 arguments:
 
 ```
-11:42:53 infamy0:test # ./case/infix_dhcp/dhcp_basic.py
+11:42:53 infamy0:test # ./case/dhcp/dhcp_basic.py
 ```
 
 To run a suite of tests, e.g., only the DHCP client tests, pass the
 suite as an argument to [9PM][]:
 
 ```
-11:42:53 infamy0:test # ./9pm/9pm.py case/infix_dhcp/infix_dhcp.yaml
+11:42:53 infamy0:test # ./9pm/9pm.py case/dhcp/dhcp.yaml
 ```
 
 To run the suite of all tests:
@@ -234,12 +234,12 @@ your test and run it as normal. Once Python executes the call, it will
 drop you into the Python debugger:
 
 ```
-11:42:58 infamy0:test # ./case/infix_dhcp/dhcp_basic.py
+11:42:58 infamy0:test # ./case/dhcp/dhcp_basic.py
 # Starting (2024-02-10 11:42:59)
 # Probing dut1 on port d1a for IPv6LL mgmt address ...
 # Connecting to mgmt IP fe80::ff:fe00:0%d1a:830 ...
 ok 1 - Initialize
-> /home/jocke/src/infix/test/case/infix_dhcp/dhcp_basic.py(44)<module>()
+> /home/jocke/src/infix/test/case/dhcp/dhcp_basic.py(44)<module>()
 (Pdb)
 ```
 
@@ -252,7 +252,7 @@ want to setup breakpoints without modifying the source, or simply step
 through the code:
 
 ```
-11:42:58 infamy0:test # python -m pdb case/infix_dhcp/dhcp_basic.py
+11:42:58 infamy0:test # python -m pdb case/dhcp/dhcp_basic.py
 ```
 
 ### Deterministic Topology Mappings
@@ -296,7 +296,7 @@ This is useful because this value can then be used to rerun a test (or
 the whole suite) with identical topology mappings:
 
 ```
-$ make PYTHONHASHSEED=3773822171 TESTS=case/ietf_system/hostname.py test
+$ make PYTHONHASHSEED=3773822171 TESTS=case/system/hostname.py test
 ```
 
 ### Deterministic Transport Protocol
@@ -307,14 +307,14 @@ you get the same protocol used for that hash.  But if you want to choose
 the protocol, add extra arguments to Infamy:
 
 ```
-$ make INFAMY_EXTRA_ARGS="--transport=restconf" TESTS=case/ietf_system/hostname.py test
+$ make INFAMY_EXTRA_ARGS="--transport=restconf" TESTS=case/system/hostname.py test
 ```
 
 or, when running interactively:
 
 ```
 $ make test-sh
-09:08:17 infamy0:test # ./9pm/9pm.py -o"--transport=restconf" case/ietf_system/hostname.py
+09:08:17 infamy0:test # ./9pm/9pm.py -o"--transport=restconf" case/system/hostname.py
 ```
 
 ### Test specification
@@ -360,7 +360,7 @@ to start by reviewing an existing test case.
 
 All tests are located in the `infix/test/case` repository and are
 grouped by the features they verify. For example,
-`infix/test/case/infix_services` contains tests for various Infix
+`infix/test/case/services` contains tests for various Infix
 services, such as LLDP and mDNS.
 
 While test grouping is flexible, each test should be placed in a
@@ -372,12 +372,12 @@ suite](#running-subsets-of-tests):
 
 ```
 - name:  infix-services
-  suite: infix_services/infix_services.yaml
+  suite: services/services.yaml
 ```
 
 A new test (e.g., lldp_enable_disable) should be added to the
 corresponding test group .yaml file, such as
-`infix/test/cases/infix_services.yaml`:
+`infix/test/cases/services.yaml`:
 
 ```
 - name: lldp_enable_disable
@@ -385,7 +385,7 @@ corresponding test group .yaml file, such as
 ```
 
 It is necessary to include the test in
-`infix/test/case/infix_services/Readme.adoc` to ensure proper test
+`infix/test/case/services/Readme.adoc` to ensure proper test
 specification generation:
 
 ```
@@ -393,7 +393,7 @@ include::lldp_enable_disable/Readme.adoc[]
 ```
 
 Each test case should have its own directory under,
-`infix/test/case/infix_services`, containing:
+`infix/test/case/services`, containing:
 
 - `test.py` - the test script
 - `topology.dot` - the logical topology definition.

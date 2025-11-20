@@ -18,37 +18,37 @@
   suite: misc/all.yaml
 
 
-- name: "IETF System"
-  suite: ietf_system/all.yaml
+- name: "System"
+  suite: system/all.yaml
 
 # Upgrade may leave wrong boot order
 - case: meta/bootorder.py
   infamy:
     specification: False
 
-- name: "IETF Syslog"
-  suite: ietf_syslog/all.yaml
+- name: "Syslog"
+  suite: syslog/all.yaml
 
-- name: "IETF Interfaces"
-  suite: ietf_interfaces/all.yaml
+- name: "Interfaces"
+  suite: interfaces/all.yaml
 
-- name: "IETF Routing"
-  suite: ietf_routing/all.yaml
+- name: "Routing"
+  suite: routing/all.yaml
 
-- name: "Infix Firewall"
-  suite: infix_firewall/all.yaml
+- name: "Firewall"
+  suite: firewall/all.yaml
 
-- name: "Infix Containers"
-  suite: infix_containers/all.yaml
+- name: "Containers"
+  suite: containers/all.yaml
 
-- name: "Infix DHCP"
-  suite: infix_dhcp/all.yaml
+- name: "DHCP"
+  suite: dhcp/all.yaml
 
-- name: "IETF Hardware"
-  suite: ietf_hardware/all.yaml
+- name: "Hardware"
+  suite: hardware/all.yaml
 
-- name: "Infix Services"
-  suite: infix_services/all.yaml
+- name: "Services"
+  suite: services/all.yaml
 
 - name: "Use Case Tests"
   suite: use_case/all.yaml

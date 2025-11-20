@@ -1,0 +1,23 @@
+=== LLDP enable/disable
+
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/services/lldp/lldp_enable_disable]
+
+==== Description
+
+Verify that LLDP can be enabled and disabled.
+Operation and non-operation are confirmed using tcpdump.
+
+==== Topology
+
+image::topology.svg[LLDP enable/disable topology, align=center, scaledwidth=75%]
+
+==== Sequence
+
+. Set up topology and attach to target DUT
+. Enable target interface and disable LLDP
+. Enable LLDP
+. Verify LLDP packets arrival on host:data
+. Disable LLDP
+. Verify no LLDP packets on host:data
+
+

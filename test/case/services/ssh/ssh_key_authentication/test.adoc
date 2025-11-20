@@ -1,0 +1,21 @@
+=== Generate ssh key pair
+
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/services/ssh/ssh_key_authentication]
+
+==== Description
+
+Verify that 'guest' user can fetch data using only the 'public' key
+
+==== Topology
+
+image::topology.svg[Generate ssh key pair topology, align=center, scaledwidth=75%]
+
+==== Sequence
+
+. Connect to the target device
+. Create a guest user on the target device
+. Wait until SSH server is ready to accept connections
+. Write private key to a temporary file
+. Verify it is possible to fetch syslog data using public key
+
+

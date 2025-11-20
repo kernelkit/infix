@@ -1,0 +1,33 @@
+=== LAN-WAN Firewall with Masquerading
+
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/firewall/lan-wan]
+
+==== Description
+
+Typical home/office router scenario where the DUT acts as a gateway with
+LAN-to-WAN traffic forwarding and masquerading (SNAT).
+
+image::lan-wan.svg[align=center, scaledwidth=50%]
+
+- DUT/Gateway with firewall and NAT
+- Test host has two interfaces: a LAN-side and a WAN-side (Internet)
+- Test host's LAN interface acts as a client behind the router
+- Test host's WAN interface acts as an Internet server/destination
+
+==== Topology
+
+image::topology.svg[LAN-WAN Firewall with Masquerading topology, align=center, scaledwidth=75%]
+
+==== Sequence
+
+. Set up topology and attach to gateway
+. Configure gateway with firewall and SNAT
+. Verify LAN access to router
+. Verify LAN services accessibility
+. Verify WAN access to router is blocked
+. Verify WAN blocks all well-known ports
+. Verify LAN-to-WAN connectivity (outbound)
+. Verify LAN-to-WAN masquerading
+. Verify WAN-to-LAN blocking (inbound)
+
+

@@ -1,0 +1,46 @@
+=== VLAN Interface Termination
+
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/interfaces/vlan_iface_termination]
+
+==== Description
+
+Verify that VLANs stacked on top of an interfaces that are also
+attached to a VLAN filtering bridge are always locally terminated.
+
+....
+.---------------------------.
+|           target          |
+|                           |
+|  data1.10  br0  data2.10  |
+|      \    /   \    /      |
+'------data1-----data2------'
+         |         |
+         |         |
+.------data1-----data2------.
+|      /      :     \       |
+|  data1.10   :   data2.10  |
+|             :             |
+|           host            |
+|             :             |
+'---------------------------'
+....
+
+In this setup, even though VLAN 10 is allowed to ingress and egress on
+both `data1` and `data2`, _bridging_ of packets from one to the other
+must _not_ be allowed.
+
+==== Topology
+
+image::topology.svg[VLAN Interface Termination topology, align=center, scaledwidth=75%]
+
+==== Sequence
+
+. Set up topology and attach to target
+. Configure bridge and VLAN interfaces on target
+. Configure IP addresses and VLAN interfaces on host
+. Verify that host:data1 reaches host:data2 with untagged packets
+. Verify that traffic on VLAN 10 from host:data1 does not reach host:data2
+. Verify that host:data1 can reach target on VLAN 10
+. Verify that host:data2 can reach target on VLAN 10
+
+

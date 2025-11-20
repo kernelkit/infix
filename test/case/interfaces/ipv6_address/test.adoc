@@ -1,0 +1,20 @@
+=== Interface IPv6 autoconf for bridges
+
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/interfaces/ipv6_address]
+
+==== Description
+
+Verify IPv6 autoconf on a bridge is properly set up for global prefix.
+See issue #473 for details.
+
+==== Topology
+
+image::topology.svg[Interface IPv6 autoconf for bridges topology, align=center, scaledwidth=75%]
+
+==== Sequence
+
+. Set up topology and attach to target DUT
+. Setting up bridge with IPv6 SLAAC for global prefix on target:data
+. Verify using sysctl that 'net.ipv6.conf.br0.autoconf' is 1 on target
+
+

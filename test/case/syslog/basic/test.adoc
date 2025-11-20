@@ -1,0 +1,22 @@
+=== Syslog Basic
+
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/syslog/basic]
+
+==== Description
+
+Add syslog actions matching on different facility and severity levels to
+log to local files, then verify new log files have been created.  In one
+case we use an absolute `file:/path/to/bar.log` and in another a relative
+path `file:foo`.
+
+==== Topology
+
+image::topology.svg[Syslog Basic topology, align=center, scaledwidth=75%]
+
+==== Sequence
+
+. Set up topology and attach to target DUT
+. Configure syslog on DUT to log to files '/log/bar.log' and 'foo'
+. Verify log files have been created
+
+

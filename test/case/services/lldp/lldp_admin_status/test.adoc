@@ -1,0 +1,22 @@
+=== LLDP admin status
+
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/services/lldp/lldp_admin_status]
+
+==== Description
+
+Verify that LLDP admin status is set properly by lldpd
+
+==== Topology
+
+image::topology.svg[LLDP admin status topology, align=center, scaledwidth=75%]
+
+==== Sequence
+
+. Set up topology and attach to target DUT
+. Enable target interface and enable LLDP
+. Verify admin-status: 'rx-only'
+. Verify admin-status: 'tx-only'
+. Verify admin-status: 'disabled'
+. Verify admin-status: 'tx-and-rx'
+
+

@@ -1,0 +1,32 @@
+=== Basic Firewall for End Devices
+
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/firewall/basic]
+
+==== Description
+
+Firewall configuration suitable for end devices on untrusted networks.
+
+image::basic.svg[align=center, scaledwidth=50%]
+
+- Single zone configuration, "public", with action=drop
+- Allowed services: SSH (port 22), DHCPv6-client, mySSH (custom, port 222)
+- All other ports (HTTP, HTTPS, Telnet, etc.) blocked
+- Check that unused interfaces are automatically assigned to default zone
+
+==== Topology
+
+image::topology.svg[Basic Firewall for End Devices topology, align=center, scaledwidth=75%]
+
+==== Sequence
+
+. Set up topology and attach to target
+. Configure basic end-device firewall
+. Verify unused interface assigned to default zone
+. Verify ICMP is dropped
+. Verify ICMPv6 is dropped
+. Verify SSH service is allowed
+. Verify custom mySSH service is allowed
+. Verify HTTP service override (8080 allowed, 80 blocked)
+. Verify other ports are blocked
+
+
