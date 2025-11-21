@@ -69,10 +69,10 @@ jobs:
           (cd libite && ./autogen.sh && ./configure && make && sudo make install)
           make dep
 
-      - name: Check applications
+      - name: Build applications for Coverity
         run: |
           export PATH=`pwd`/coverity/bin:$PATH
-          cov-build --dir cov-int make check
+          cov-build --dir cov-int make coverity-build
 
       - name: Submit results to Coverity Scan
         env:
