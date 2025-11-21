@@ -1,0 +1,34 @@
+=== Container Upgrade
+
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/containers/upgrade]
+
+==== Description
+
+Verify container upgrade functionality by testing the optimization
+that skips recreation when the container configuration hasn't changed.
+
+This test uses two versions of curios-httpd (24.05.0 and 24.11.0) served
+over HTTP with :latest tag. The test verifies that:
+1. Container starts successfully from the :latest image
+2. When the :latest tag points to a new version, upgrade is triggered
+3. The container runs the new version after upgrade
+
+==== Topology
+
+image::topology.svg[Container Upgrade topology, align=center, scaledwidth=75%]
+
+==== Sequence
+
+. Set up topology and attach to target DUT
+. Detect target architecture
+. Set up isolated network and file server
+. Create symlink for curios-httpd:latest -> 24.05.0
+. Create container 'web' from curios-httpd:latest (24.05.0)
+. Verify container 'web' has started with version 24.05.0
+. Update symlink to point to curios-httpd:24.11.0
+. Trigger container upgrade by calling upgrade action
+. Wait for container 'web' to complete uprgade
+. Verify container 'web' is running new version 24.11.0
+. Verify old image was pruned and disk usage is reasonable
+
+

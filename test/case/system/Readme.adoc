@@ -1,0 +1,38 @@
+:testgroup:
+== System
+
+Tests verifying system configuration and management:
+
+ - System hostname configuration and persistence
+ - User account creation, modification, and deletion
+ - Administrative user privilege management
+ - System timezone configuration and handling
+ - UTC offset timezone configuration
+ - System upgrade and firmware management
+ - NTP client configuration and time synchronization
+
+include::hostname/Readme.adoc[]
+
+<<<
+
+include::add_delete_user/Readme.adoc[]
+
+<<<
+
+include::user_admin/Readme.adoc[]
+
+<<<
+
+include::timezone/Readme.adoc[]
+
+<<<
+
+include::timezone_utc_offset/Readme.adoc[]
+
+<<<
+
+include::upgrade/Readme.adoc[]
+
+<<<
+
+include::ntp_client/Readme.adoc[]

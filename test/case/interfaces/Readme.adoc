@@ -1,0 +1,132 @@
+:testgroup:
+== Interfaces
+
+Tests verifying interface configuration and management:
+
+ - VLAN interface configuration and connectivity
+ - IPv4 and IPv6 address assignment and management
+ - IPv4 address auto-configuration mechanisms  
+ - Interface aliases and physical address configuration
+ - Basic routing table configuration and operation
+ - Linux bridge creation, STP, and VLAN handling
+ - Link aggregation (LAG) setup and failover behavior
+ - IGMP multicast group management and forwarding
+ - QoS traffic classification and priority handling
+ - Interface enable/disable state management
+ - Virtual Ethernet (VETH) pair lifecycle management
+ - GRE tunneling configuration and data plane operation
+ - Tunnel TTL (Time-To-Live) and hop-limit verification
+
+include::vlan_ping/Readme.adoc[]
+
+<<<
+
+include::ipv4_address/Readme.adoc[]
+
+<<<
+
+include::ipv6_address/Readme.adoc[]
+
+<<<
+
+include::ipv4_autoconf/Readme.adoc[]
+
+<<<
+
+include::ifalias/Readme.adoc[]
+
+<<<
+
+include::iface_phys_address/Readme.adoc[]
+
+<<<
+
+include::routing_basic/Readme.adoc[]
+
+<<<
+
+include::bridge_basic/Readme.adoc[]
+
+<<<
+
+include::bridge_fwd_dual_dut/Readme.adoc[]
+
+<<<
+
+include::bridge_fwd_sgl_dut/Readme.adoc[]
+
+<<<
+
+include::bridge_stp_basic/Readme.adoc[]
+
+<<<
+
+include::bridge_veth/Readme.adoc[]
+
+<<<
+
+include::bridge_vlan/Readme.adoc[]
+
+<<<
+
+include::speed_duplex_copper/Readme.adoc[]
+
+<<<
+
+include::bridge_vlan_separation/Readme.adoc[]
+
+<<<
+
+include::dual_bridge/Readme.adoc[]
+
+<<<
+
+include::lag_basic/Readme.adoc[]
+
+<<<
+
+include::lag_failure/Readme.adoc[]
+
+<<<
+
+include::igmp_basic/Readme.adoc[]
+
+<<<
+
+include::igmp_vlan/Readme.adoc[]
+
+<<<
+
+include::static_multicast_filters/Readme.adoc[]
+
+<<<
+
+include::vlan_qos/Readme.adoc[]
+
+<<<
+
+include::verify_all_interface_types/Readme.adoc[]
+
+<<<
+
+include::iface_enable_disable/Readme.adoc[]
+
+<<<
+
+include::veth_delete/Readme.adoc[]
+
+<<<
+
+include::vlan_iface_termination/Readme.adoc[]
+
+<<<
+
+include::tunnel_basic/Readme.adoc[]
+
+<<<
+
+include::tunnel_bridged/Readme.adoc[]
+
+<<<
+
+include::tunnel_ttl/Readme.adoc[]

@@ -1,0 +1,33 @@
+:testgroup:
+== Syslog
+
+Tests verifying syslog configuration and operation:
+
+ - Basic local syslog functionality and log generation
+ - Remote syslog forwarding and network logging
+ - Pattern matching using POSIX regex on message content
+ - Advanced comparison operators and actions
+ - Hostname-based filtering for incoming messages
+ - Property-based filtering with operators and negation
+
+include::basic/Readme.adoc[]
+
+<<<
+
+include::remote/Readme.adoc[]
+
+<<<
+
+include::pattern_match/Readme.adoc[]
+
+<<<
+
+include::advanced_compare/Readme.adoc[]
+
+<<<
+
+include::hostname_filter/Readme.adoc[]
+
+<<<
+
+include::property_filter/Readme.adoc[]

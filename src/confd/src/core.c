@@ -191,57 +191,57 @@ static int change_cb(sr_session_ctx_t *session, uint32_t sub_id, const char *mod
 	}
 
 	/* ietf-interfaces */
-	if ((rc = ietf_interfaces_change(session, config, diff, event, confd)))
+	if ((rc = interfaces_change(session, config, diff, event, confd)))
 		goto free_diff;
 
 	/* infix-dhcp-client*/
-	if ((rc = infix_dhcp_client_change(session, config, diff, event, confd)))
+	if ((rc = dhcp_client_change(session, config, diff, event, confd)))
 		goto free_diff;
 
 	/* infix-dhcpv6-client*/
-	if ((rc = infix_dhcpv6_client_change(session, config, diff, event, confd)))
+	if ((rc = dhcpv6_client_change(session, config, diff, event, confd)))
 		goto free_diff;
 
 	/* ietf-keystore */
-	if ((rc = ietf_keystore_change(session, config, diff, event, confd)))
+	if ((rc = keystore_change(session, config, diff, event, confd)))
 		goto free_diff;
 
 	/* infix-services */
-	if ((rc = infix_services_change(session, config, diff, event, confd)))
+	if ((rc = services_change(session, config, diff, event, confd)))
 		goto free_diff;
 
 	/* ietf-syslog*/
-	if ((rc = ietf_syslog_change(session, config, diff, event, confd)))
+	if ((rc = syslog_change(session, config, diff, event, confd)))
 		goto free_diff;
 
 	/* ietf-system */
-	if ((rc = ietf_system_change(session, config, diff, event, confd)))
+	if ((rc = system_change(session, config, diff, event, confd)))
 		goto free_diff;
 
 	/* infix-containers */
 #ifdef CONTAINERS
-	if ((rc = infix_containers_change(session, config, diff, event, confd)))
+	if ((rc = containers_change(session, config, diff, event, confd)))
 		goto free_diff;
 #endif
 
 	/* ietf-hardware */
-	if ((rc = ietf_hardware_change(session, config, diff, event, confd)))
+	if ((rc = hardware_change(session, config, diff, event, confd)))
 		goto free_diff;
 
 	/* ietf-routing */
-	if ((rc = ietf_routing_change(session, config, diff, event, confd)))
+	if ((rc = routing_change(session, config, diff, event, confd)))
 		goto free_diff;
 
 	/* infix-dhcp-server */
-	if ((rc = infix_dhcp_server_change(session, config, diff, event, confd)))
+	if ((rc = dhcp_server_change(session, config, diff, event, confd)))
 		goto free_diff;
 
 	/* infix-firewall */
-	if ((rc = infix_firewall_change(session, config, diff, event, confd)))
+	if ((rc = firewall_change(session, config, diff, event, confd)))
 		goto free_diff;
 
 	/* infix-meta */
-	if ((rc = infix_meta_change_cb(session, config, diff, event, confd)))
+	if ((rc = meta_change_cb(session, config, diff, event, confd)))
 		goto free_diff;
 
 	if (cfg)
@@ -390,48 +390,48 @@ int sr_plugin_init_cb(sr_session_ctx_t *session, void **priv)
 		goto err;
 	}
 
-	rc = ietf_system_rpc_init(&confd);
+	rc = system_rpc_init(&confd);
 	if (rc)
 		goto err;
 #ifdef CONTAINERS
-	rc = infix_containers_rpc_init(&confd);
+	rc = containers_rpc_init(&confd);
 	if (rc)
 		goto err;
 #endif
-	rc = infix_dhcp_server_rpc_init(&confd);
+	rc = dhcp_server_rpc_init(&confd);
 	if (rc)
 		goto err;
 
-	rc = infix_factory_rpc_init(&confd);
+	rc = factory_rpc_init(&confd);
 	if (rc)
 		goto err;
 
-	rc = ietf_factory_default_rpc_init(&confd);
+	rc = factory_default_rpc_init(&confd);
 	if (rc)
 		goto err;
 
-	rc = infix_firewall_rpc_init(&confd);
+	rc = firewall_rpc_init(&confd);
 	if (rc)
 		goto err;
 
-	rc = infix_system_sw_rpc_init(&confd);
+	rc = system_sw_rpc_init(&confd);
 	if (rc)
 		goto err;
 
 	/* Candidate infer configurations */
-	rc = ietf_interfaces_cand_init(&confd);
+	rc = interfaces_cand_init(&confd);
 	if (rc)
 		goto err;
 
-	rc = ietf_hardware_candidate_init(&confd);
+	rc = hardware_candidate_init(&confd);
 	if (rc)
 		goto err;
 
-	rc = infix_firewall_candidate_init(&confd);
+	rc = firewall_candidate_init(&confd);
 	if (rc)
 		goto err;
 
-	rc = infix_dhcp_server_candidate_init(&confd);
+	rc = dhcp_server_candidate_init(&confd);
 	if (rc)
 		goto err;
 	/* YOUR_INIT GOES HERE */

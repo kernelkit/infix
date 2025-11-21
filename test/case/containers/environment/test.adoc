@@ -1,0 +1,27 @@
+=== Container environment variables
+
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/containers/environment]
+
+==== Description
+
+Verify that environment variables can be set in container configuration
+and are available inside the running container.
+
+1  Set up a container config with multiple environment variables
+2. Serve variables back to host using a CGI script in container
+3. Verify served content against environment variables
+
+==== Topology
+
+image::topology.svg[Container environment variables topology, align=center, scaledwidth=75%]
+
+==== Sequence
+
+. Set up topology and attach to target DUT
+. Configure data interface with static IPv4
+. Set up container with environment variables
+. Verify container has started
+. Verify basic connectivity to data interface
+. Verify environment variables in CGI response
+
+

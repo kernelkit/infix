@@ -1,0 +1,48 @@
+:testgroup:
+== Routing
+
+Tests verifying standard routing protocols and configuration:
+
+ - Static routing configuration and forwarding behavior
+ - OSPF basic neighbor discovery and LSA exchange
+ - OSPF unnumbered interface configuration
+ - OSPF multi-area configuration and inter-area routing
+ - OSPF with BFD (Bidirectional Forwarding Detection) 
+ - OSPF default route advertisement and propagation
+ - Route preference handling for OSPF routes
+ - Route preference handling for DHCP-learned routes
+ - Administrative distance configuration (route preference 255)
+
+include::static_routing/Readme.adoc[]
+
+<<<
+
+include::ospf_basic/Readme.adoc[]
+
+<<<
+
+include::ospf_unnumbered_interface/Readme.adoc[]
+
+<<<
+
+include::ospf_multiarea/Readme.adoc[]
+
+<<<
+
+include::ospf_bfd/Readme.adoc[]
+
+<<<
+
+include::ospf_default_route_advertise/Readme.adoc[]
+
+<<<
+
+include::route_pref_ospf/Readme.adoc[]
+
+<<<
+
+include::route_pref_dhcp/Readme.adoc[]
+
+<<<
+
+include::route_pref_255/Readme.adoc[]

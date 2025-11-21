@@ -1,0 +1,25 @@
+=== Syslog Pattern Matching
+
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/syslog/pattern_match]
+
+==== Description
+
+Verify the select-match feature: filtering syslog messages based on
+pattern-match (POSIX regex) on message content.  Tests both simple
+substring matching and complex regex patterns.
+
+==== Topology
+
+image::topology.svg[Syslog Pattern Matching topology, align=center, scaledwidth=75%]
+
+==== Sequence
+
+. Set up topology and attach to target DUT
+. Clean up old log files from previous test runs
+. Configure syslog with pattern-match filters
+. Send test messages with various patterns
+. Verify errors log contains ERROR and CRITICAL messages
+. Verify routers log contains matching router[0-9]+ pattern
+. Verify all-messages log contains all test messages
+
+
