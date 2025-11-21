@@ -8,6 +8,7 @@ All notable changes to the project are documented in this file.
 
 ### Changes
 
+- Upgrade Buildroot to 2025.02.8 (LTS)
 - Upgrade Linux kernel to 6.12.58 (LTS)
 - Enable MVEBU SafeXcel Crypto Engine firmware for Marvell Armada SOCs (37xx,
   7k, 8k, and CN913x series). Fixes kernel warnings about firmware load failures
