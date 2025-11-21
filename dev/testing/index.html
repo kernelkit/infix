@@ -2278,11 +2278,11 @@ devices, and <em>step</em> your code.</p>
 <h3 id="running-subsets-of-tests">Running Subsets of Tests<a class="headerlink" href="#running-subsets-of-tests" title="Permanent link">¶</a></h3>
 <p>Each test case is a separate executable, which can be run without
 arguments:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>11:42:53 infamy0:test # ./case/infix_dhcp/dhcp_basic.py
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>11:42:53 infamy0:test # ./case/dhcp/dhcp_basic.py
 </code></pre></div>
 <p>To run a suite of tests, e.g., only the DHCP client tests, pass the
 suite as an argument to <a href="https://github.com/rical/9pm">9PM</a>:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>11:42:53 infamy0:test # ./9pm/9pm.py case/infix_dhcp/infix_dhcp.yaml
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>11:42:53 infamy0:test # ./9pm/9pm.py case/dhcp/dhcp.yaml
 </code></pre></div>
 <p>To run the suite of all tests:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>11:42:53 infamy0:test # ./9pm/9pm.py case/all.yaml
@@ -2379,12 +2379,12 @@ interactively inspect either the test's or the device's state.</p>
 <p>Simply insert a call to <code>breakpoint()</code> at the point of interest in
 your test and run it as normal. Once Python executes the call, it will
 drop you into the Python debugger:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>11:42:58 infamy0:test # ./case/infix_dhcp/dhcp_basic.py
+<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>11:42:58 infamy0:test # ./case/dhcp/dhcp_basic.py
 <a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a># Starting (2024-02-10 11:42:59)
 <a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a># Probing dut1 on port d1a for IPv6LL mgmt address ...
 <a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a># Connecting to mgmt IP fe80::ff:fe00:0%d1a:830 ...
 <a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a>ok 1 - Initialize
-<a id="__codelineno-16-6" name="__codelineno-16-6" href="#__codelineno-16-6"></a>&gt; /home/jocke/src/infix/test/case/infix_dhcp/dhcp_basic.py(44)&lt;module&gt;()
+<a id="__codelineno-16-6" name="__codelineno-16-6" href="#__codelineno-16-6"></a>&gt; /home/jocke/src/infix/test/case/dhcp/dhcp_basic.py(44)&lt;module&gt;()
 <a id="__codelineno-16-7" name="__codelineno-16-7" href="#__codelineno-16-7"></a>(Pdb)
 </code></pre></div>
 <p>At this point you have full access to the test's state, but it is also
@@ -2393,7 +2393,7 @@ console or over SSH).</p>
 <p>It is also possible to run a test under Pdb from the get-go, if you
 want to setup breakpoints without modifying the source, or simply step
 through the code:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>11:42:58 infamy0:test # python -m pdb case/infix_dhcp/dhcp_basic.py
+<div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>11:42:58 infamy0:test # python -m pdb case/dhcp/dhcp_basic.py
 </code></pre></div>
 <h3 id="deterministic-topology-mappings">Deterministic Topology Mappings<a class="headerlink" href="#deterministic-topology-mappings" title="Permanent link">¶</a></h3>
 <p>By default, mappings from logical to physical topologies are not
@@ -2427,18 +2427,18 @@ suite:</p>
 </code></pre></div>
 <p>This is useful because this value can then be used to rerun a test (or
 the whole suite) with identical topology mappings:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a>$ make PYTHONHASHSEED=3773822171 TESTS=case/ietf_system/hostname.py test
+<div class="highlight"><pre><span></span><code><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a>$ make PYTHONHASHSEED=3773822171 TESTS=case/system/hostname.py test
 </code></pre></div>
 <h3 id="deterministic-transport-protocol">Deterministic Transport Protocol<a class="headerlink" href="#deterministic-transport-protocol" title="Permanent link">¶</a></h3>
 <p>By default, the communication transport protocol (NETCONF/RESTCONF) is
 chosen randomly.  If you supply a <code>PYTHONHASHSEED</code> as described above,
 you get the same protocol used for that hash.  But if you want to choose
 the protocol, add extra arguments to Infamy:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a>$ make INFAMY_EXTRA_ARGS="--transport=restconf" TESTS=case/ietf_system/hostname.py test
+<div class="highlight"><pre><span></span><code><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a>$ make INFAMY_EXTRA_ARGS="--transport=restconf" TESTS=case/system/hostname.py test
 </code></pre></div>
 <p>or, when running interactively:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a>$ make test-sh
-<a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a>09:08:17 infamy0:test # ./9pm/9pm.py -o"--transport=restconf" case/ietf_system/hostname.py
+<a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a>09:08:17 infamy0:test # ./9pm/9pm.py -o"--transport=restconf" case/system/hostname.py
 </code></pre></div>
 <h3 id="test-specification">Test specification<a class="headerlink" href="#test-specification" title="Permanent link">¶</a></h3>
 <p>The test specification is automaticly generated from the test cases,
@@ -2469,7 +2469,7 @@ and the description of the test. For example:</p>
 to start by reviewing an existing test case.</p>
 <p>All tests are located in the <code>infix/test/case</code> repository and are
 grouped by the features they verify. For example,
-<code>infix/test/case/infix_services</code> contains tests for various Infix
+<code>infix/test/case/services</code> contains tests for various Infix
 services, such as LLDP and mDNS.</p>
 <p>While test grouping is flexible, each test should be placed in a
 logically relevant category.</p>
@@ -2477,21 +2477,21 @@ logically relevant category.</p>
 enable it to run as a <a href="#running-subsets-of-tests">subset of the test
 suite</a>:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a>- name:  infix-services
-<a id="__codelineno-26-2" name="__codelineno-26-2" href="#__codelineno-26-2"></a>  suite: infix_services/infix_services.yaml
+<a id="__codelineno-26-2" name="__codelineno-26-2" href="#__codelineno-26-2"></a>  suite: services/services.yaml
 </code></pre></div>
 <p>A new test (e.g., lldp_enable_disable) should be added to the
 corresponding test group .yaml file, such as
-<code>infix/test/cases/infix_services.yaml</code>:</p>
+<code>infix/test/cases/services.yaml</code>:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-27-1" name="__codelineno-27-1" href="#__codelineno-27-1"></a>- name: lldp_enable_disable
 <a id="__codelineno-27-2" name="__codelineno-27-2" href="#__codelineno-27-2"></a>  case: lldp_enable_disable/test.py
 </code></pre></div>
 <p>It is necessary to include the test in
-<code>infix/test/case/infix_services/Readme.adoc</code> to ensure proper test
+<code>infix/test/case/services/Readme.adoc</code> to ensure proper test
 specification generation:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-28-1" name="__codelineno-28-1" href="#__codelineno-28-1"></a>include::lldp_enable_disable/Readme.adoc[]
 </code></pre></div>
 <p>Each test case should have its own directory under,
-<code>infix/test/case/infix_services</code>, containing:</p>
+<code>infix/test/case/services</code>, containing:</p>
 <ul>
 <li><code>test.py</code> - the test script</li>
 <li><code>topology.dot</code> - the logical topology definition.</li>
