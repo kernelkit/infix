@@ -16,8 +16,7 @@ bmake   = $(MAKE) -C buildroot O=$(O) $1
 all: $(config) buildroot/Makefile
 	@+$(call bmake,$@)
 
-check dep:
-	@echo "Starting local check, stage $@ ..."
+check dep coverity:
 	@make -C src $@
 
 $(config):
@@ -40,4 +39,4 @@ test:
 buildroot/Makefile:
 	@git submodule update --init
 
-.PHONY: all check test
+.PHONY: all check coverity dep test
