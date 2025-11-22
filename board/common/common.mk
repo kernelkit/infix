@@ -1,4 +1,7 @@
-ifeq ($(SIGN_ENABLED),y)
+include $(BR2_EXTERNAL_INFIX_PATH)/board/common/image/image.mk
+include $(BR2_EXTERNAL_INFIX_PATH)/board/common/qemu/qemu.mk
+
+ifeq ($(TRUSTED_KEYS),y)
 include $(BR2_EXTERNAL_INFIX_PATH)/board/common/uboot/uboot.mk
 
 TRUSTED_KEYS=$(TRUSTED_KEYS_DEVELOPMENT_PATH) $(TRUSTED_KEYS_EXTRA_PATH)

@@ -1,0 +1,7 @@
+config IMAGE_README
+	bool "Install README.md in images"
+	default y
+	help
+	  Install a README.md with useful information about getting
+	  started with Infix in the images directory (thereby also
+	  including it in the resulting release tarball).

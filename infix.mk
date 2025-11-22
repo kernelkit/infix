@@ -8,5 +8,6 @@ INFIX_TOPDIR = $(if $(oem-dir),$(oem-dir),$(BR2_EXTERNAL_INFIX_PATH))
 # release is being built.
 export INFIX_BUILD_ID ?= $(shell git -C $(INFIX_TOPDIR) describe --dirty --always --tags)
 export INFIX_VERSION = $(if $(INFIX_RELEASE),$(INFIX_RELEASE),$(INFIX_BUILD_ID))
+export INFIX_ARTIFACT = $(call qstrip,$(INFIX_IMAGE_ID)$(if $(INFIX_RELEASE),-$(INFIX_RELEASE)))
 
 INFIX_CFLAGS:=-Wall -Werror -Wextra -Wno-unused-parameter -Wformat=2 -Wformat-overflow=2 -Winit-self -Wstrict-overflow=4 -Wno-format-truncation -Wno-format-nonliteral

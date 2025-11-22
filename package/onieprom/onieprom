@@ -1,0 +1,4 @@
+#!/bin/sh
+
+PYTHONPATH=$(readlink -f $(dirname $0)/..) \
+   exec python3 -m onieprom "$@"
