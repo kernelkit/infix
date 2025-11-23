@@ -72,7 +72,7 @@ jobs:
       - name: Build applications for Coverity
         run: |
           export PATH=`pwd`/coverity/bin:$PATH
-          cov-build --dir cov-int make coverity-build
+          cov-build --dir cov-int make coverity
 
       - name: Submit results to Coverity Scan
         env:
