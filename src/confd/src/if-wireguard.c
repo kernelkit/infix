@@ -97,7 +97,7 @@ int wireguard_gen(struct lyd_node *dif, struct lyd_node *cif, FILE *ip, struct d
 	fprintf(wg_sh, "wg setconf %s ", ifname);
 	fprintf(wg_sh, WIREGUARD_CONFIG, ifname);
 	fprintf(wg_sh, "\n");
-#if 0
+#if 1
 	/* Add routes for allowed IPs (wg setconf doesn't add routes automatically) */
 	LYX_LIST_FOR_EACH(lyd_child(wg), peer, "peer") {
 		struct lyd_node *allowed_ip;
