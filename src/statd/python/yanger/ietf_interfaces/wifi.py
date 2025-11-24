@@ -6,50 +6,39 @@ def wifi(ifname):
     wifi_data={}
 
     try:
-        data=HOST.run(tuple(f"wpa_cli -i {ifname} status".split()), default="")
+        iw_data=HOST.run(tuple(f"iw dev {ifname} info".split()), default="")
+        if iw_data != "":
+            for line in iw_data.splitlines():
+                line=line.strip() # Fix crazy output from iw.
+                if line == "type AP":
+                    wifi_data["mode"] = "accesspoint"
+                    break
+                else:
+                    wifi_data["mode"] = "station"
 
-        if data != "":
-            for line in data.splitlines():
-                try:
-                    if "=" not in line:
-                        continue
-                    k,v = line.split("=", 1)
-                    if k == "ssid":
-                        wifi_data["ssid"] = v
-                    if k == "wpa_state" and v == "DISCONNECTED": # wpa_suppicant has most likely restarted, restart scanning
-                        HOST.run(tuple(f"wpa_cli -i {ifname} scan".split()), default="")
-                except ValueError:
-                    # Skip malformed lines
-                    continue
+            if wifi_data["mode"] == "station":
+                client_data=HOST.run(tuple(f"wpa_cli -i {ifname} status".split()), default="")
+                if client_data != "":
+                    for line in client_data.splitlines():
+                        k,v = line.split("=")
+                        if k == "ssid":
+                            wifi_data["active-ssid"] = v
 
-            try:
-                data=HOST.run(tuple(f"wpa_cli -i {ifname} signal_poll".split()), default="FAIL")
-
-                # signal_poll return FAIL not connected
-                if data.strip() != "FAIL":
-                    for line in data.splitlines():
-                        try:
-                            if "=" not in line:
-                                continue
-                            k,v = line.strip().split("=", 1)
+                    data=HOST.run(tuple(f"wpa_cli -i {ifname} signal_poll".split()), default="FAIL")
+                    # signal_poll return FAIL not connected
+                    if data.strip() != "FAIL":
+                        for line in data.splitlines():
+                            k,v = line.strip().split("=")
                             if k == "RSSI":
-                                wifi_data["rssi"]=int(v)
-                        except (ValueError, KeyError):
-                            # Skip malformed lines or invalid integers
-                            continue
-            except Exception:
-                # If signal_poll fails, continue without RSSI
-                pass
+                                wifi_data["active-rssi"]=int(v)
+                        data=HOST.run(tuple(f"wpa_cli -i {ifname} scan_result".split()), default="FAIL")
+                        if data != "FAIL":
+                            wifi_data["scan-results"] = parse_wpa_scan_result(data)
+            elif wifi_data["mode"] == "accesspoint":
+                stations=HOST.run_json(tuple(f"/usr/libexec/infix/wifi-ap-stations {ifname}".split()), default=[])
+                wifi_data["connected-stations"] = stations
     except Exception:
         # If status query fails entirely, continue with scan results
-        pass
-
-    try:
-        data=HOST.run(tuple(f"wpa_cli -i {ifname} scan_result".split()), default="FAIL")
-        if data != "FAIL":
-            wifi_data["scan-results"] = parse_wpa_scan_result(data)
-    except Exception:
-        # If scan results fail, just omit them
         pass
 
     return wifi_data

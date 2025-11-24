@@ -138,6 +138,55 @@ static confd_dependency_t handle_dependencies(struct lyd_node **diff, struct lyd
 		}
 	}
 
+	/* Check if any wifi-ap interface changed, add all wifi-ap interfaces and their radios to diff */
+	struct ly_set *diff_ifaces = lydx_find_xpathf(*diff, "/ietf-interfaces:interfaces/interface[type='infix-if-type:wifi-ap']");
+	if (diff_ifaces) {
+		struct ly_set *wifi_ap_ifaces = lydx_find_xpathf(config, "/ietf-interfaces:interfaces/interface[type='infix-if-type:wifi-ap']");
+		size_t i;
+
+		for (i = 0; wifi_ap_ifaces && i < wifi_ap_ifaces->count; i++) {
+			struct lyd_node *iface = wifi_ap_ifaces->dnodes[i];
+			struct lyd_node *wifi_node, *radio_node;
+			const char *ifname, *radio_name;
+			char xpath[256];
+
+			ifname = lydx_get_cattr(iface, "name");
+			wifi_node = lydx_get_child(iface, "wifi");
+
+			if (wifi_node) {
+				/* Add the radio attribute to the diff */
+				radio_node = lydx_get_child(wifi_node, "radio");
+				radio_name = lyd_get_value(radio_node);
+				/* Add radio attribute to wifi-ap interface in diff */
+				snprintf(xpath, sizeof(xpath),
+					 "/ietf-interfaces:interfaces/interface[name='%s']/infix-interfaces:wifi/radio",
+					 ifname);
+				result = add_dependencies(diff, xpath, radio_name);
+				if (result == CONFD_DEP_ERROR) {
+					ERROR("Failed to add radio attribute to wifi-ap %s in diff", ifname);
+					ly_set_free(wifi_ap_ifaces, NULL);
+					goto err;
+				}
+
+				/* Add the referenced radio interface (type wifi) to diff */
+				snprintf(xpath, sizeof(xpath),
+					 "/ietf-interfaces:interfaces/interface[name='%s']/infix-interfaces:wifi",
+					 radio_name);
+				result = add_dependencies(diff, xpath, "");
+				if (result == CONFD_DEP_ERROR) {
+					ERROR("Failed to add radio interface %s to diff", radio_name);
+					ly_set_free(wifi_ap_ifaces, NULL);
+					goto err;
+				}
+			}
+		}
+
+		if (wifi_ap_ifaces)
+			ly_set_free(wifi_ap_ifaces, NULL);
+	}
+err:
+	ly_set_free(diff_ifaces, NULL);
+
 	return result;
 }
 
@@ -180,7 +229,7 @@ static int change_cb(sr_session_ctx_t *session, uint32_t sub_id, const char *mod
 			}
 			max_dep--;
 		}
-#if 0
+#if 1
 		/* Debug: print diff to file */
 		FILE *f = fopen("/tmp/confd-diff.json", "w");
 		if (f) {
