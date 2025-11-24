@@ -29,6 +29,11 @@ on:
         required: false
         type: string
         default: 'test'
+      pre_test_script:
+        required: false
+        type: string
+        default: ''
+        description: 'Optional script to run after checkout (for spin customization)'
     secrets:
       CHECKOUT_TOKEN:
         required: false
@@ -64,6 +69,15 @@ jobs:
           fetch-depth: 0
           submodules: recursive
           token: ${{ secrets.CHECKOUT_TOKEN || github.token }}
+
+      - name: Run pre-test script
+        if: ${{ inputs.pre_test_script != '' }}
+        run: |
+          cat > ./pre-test.sh << 'EOF'
+          ${{ inputs.pre_test_script }}
+          EOF
+          chmod +x ./pre-test.sh
+          bash ./pre-test.sh
 
       - name: Set Build Variables
         id: vars
