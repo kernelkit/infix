@@ -3,8 +3,15 @@ Change Log
 
 All notable changes to the project are documented in this file.
 
-[v25.11.0][UNRELEASED]
+[v25.11.0][] - 2025-11-28
 -------------------------
+
+> [!NOTE]
+> Noteworthy changes and additions in this release:
+>
+> - DHCPv6 client support
+> - Configurable support for TTL in GRE/VXLAN tunnels
+> - Extensive filtering support for syslog messages
 
 ### Changes
 
@@ -38,7 +45,7 @@ All notable changes to the project are documented in this file.
   to `urn:infix:params:xml:ns:yang` to properly reflect custom implementation
 - Improvements to `sdcard.img` generation, useful for developers mostly:
    - The NanoPi R2S bootloader is now automatically built and uploaded to
-     the [`latest-boot` release][lastest-boot] tag
+     the [`latest-boot` release][latest-boot] tag
    - The `utils/mkimage.sh` script now supports fetching the bootloader
    - The raspberrypi-rpi64 board's bootloader is now aptly named rpi64
 - Add support for configuring TTL, ToS/DSCP, and Path MTU Discovery on GRE and
@@ -73,7 +80,7 @@ All notable changes to the project are documented in this file.
   boot step "Mounting filesystems ...", from 30 seconds up to five minutes!
 - Fix broken intra-document links in container and tunnel documentation
 
-[lastest-boot]: https://github.com/kernelkit/infix/releases/latest-boot
+[latest-boot]: https://github.com/kernelkit/infix/releases/latest-boot
 [bpi-r3-emmc-documentation]: https://github.com/kernelkit/infix/blob/main/board/aarch64/bananapi-bpi-r3/README.md
 
 [v25.10.0][] - 2025-10-31
@@ -1799,7 +1806,8 @@ Supported YANG models in addition to those used by sysrepo and netopeer:
 
 [buildroot]:  https://buildroot.org/
 [UNRELEASED]: https://github.com/kernelkit/infix/compare/v25.10.0...HEAD
-[v25.11.0]:   https://github.com/kernelkit/infix/compare/v25.10.0...v26.11.0
+[v26.01.0]:   https://github.com/kernelkit/infix/compare/v25.11.0...v26.01.0
+[v25.11.0]:   https://github.com/kernelkit/infix/compare/v25.10.0...v25.11.0
 [v25.10.0]:   https://github.com/kernelkit/infix/compare/v25.09.0...v26.10.0
 [v25.09.0]:   https://github.com/kernelkit/infix/compare/v25.08.0...v26.09.0
 [v25.08.0]:   https://github.com/kernelkit/infix/compare/v25.06.1...v26.08.0
