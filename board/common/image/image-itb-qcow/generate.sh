@@ -1,8 +1,6 @@
 #!/bin/sh
 set -e
 
-. $BR2_EXTERNAL_INFIX_PATH/board/common/rootfs/etc/partition-uuid
-
 K=10
 M=20
 G=30
@@ -47,43 +45,37 @@ dimension()
 	exit 1
     fi
 
-    # Size var to fit whatever is left over. Also reserve another 32K
-    # at the end to make room for the backup GPT.
+    # Size var to fit whatever is left over by subtracting all other
+    # images...
     varsize=$(($total - $auxsize - 2 * $imgsize - $cfgsize))
-    if [ "$bootoffs" ]; then
-	varsize=$(($varsize - $bootsize))
-    fi
-    varsize=$(($varsize - (32 << K)))
 
+    # ...any space needed by bootloader + GPT...
     if [ "$bootoffs" ]; then
 	# Align the end of the boot partition to an even MiB. E.g. if
 	# boot was dimensioned to 4M, and bootoffs is 32K, then the
 	# final bootsize becomes 4M - 32K, meaning aux will start on
 	# exactly 4M.
+	varsize=$(($varsize - $bootsize))
 	auxoffs=$bootsize
 	bootsize=$(($bootsize - $bootoffs))
     else
 	# No bootloader, place aux after GPT, resize it to end on an
 	# even MiB (as is done for boot above).
+	varsize=$(($varsize - (32 << K)))
 	auxoffs=$((32 << K))
 	auxsize=$(($auxsize - $auxoffs))
     fi
-}
 
-probeboot()
-{
-    # If we have built an EFI app, typically grub, make sure to
-    # include it.
-    if [ -d $BINARIES_DIR/efi-part/EFI ]; then
-	bootoffs=$((32 << K))
-    fi
+    # ...plus another 32K at the end to make room for the backup GPT
+    varsize=$(($varsize - (32 << K)))
 }
 
 genboot()
 {
     if [ -d "$bootdata" ]; then
 	bootimg=$(cat <<EOF
-image $BINARIES_DIR/efi-part.vfat {
+image efi-part.vfat {
+	temporary = true
 	size = $bootsize
 	vfat {
 		file EFI {
@@ -98,7 +90,7 @@ EOF
 		offset = $bootoffs
 		partition-type-uuid = U
 		bootable = true
-		image = $BINARIES_DIR/efi-part.vfat
+		image = efi-part.vfat
 	}
 EOF
 		  )
@@ -117,43 +109,28 @@ EOF
     fi
 }
 
-common=$(dirname $(readlink -f "$0"))
-root=$BUILD_DIR/genimage.root
-tmp=$BUILD_DIR/genimage.tmp
+mkdir -p "${WORKDIR}"/root
+rm -rf   "${WORKDIR}"/tmp
+mkdir -p "${WORKDIR}"/tmp
 
-total=$((512 << M))
-bootoffs=$((32 << K))
-bootdata=
-diskimg=disk.img
+qcowimg="${ARTIFACT}.qcow2"
+total=$(size2int $SIZE)
+bootoffs=
+bootdata=$BOOT_DATA
 bootimg=
 bootpart=
-tmpimage=$(mktemp)
-while getopts "a:b:B:n:s:" opt; do
-    case ${opt} in
-	a)
-	    arch=$OPTARG
-	    ;;
-	b)
-	    bootdata=$OPTARG
-	    ;;
-	B)
-	    bootoffs=$(($OPTARG))
-	    ;;
-	n)
-	    diskimg=${OPTARG}
-	    ;;
-	s)
-	    total=$(size2int $OPTARG)
-	    ;;
-    esac
-done
-shift $((OPTIND - 1))
 
-mkdir -p $root
+if [ -n "${BOOT_OFFSET}" ]; then
+    bootoffs=$(($BOOT_OFFSET))
+fi
 
-probeboot
 dimension
 genboot
+
+. $BR2_EXTERNAL_INFIX_PATH/board/common/rootfs/etc/partition-uuid
+[ -n "${AUX_UUID}" ]
+[ -n "${PRIMARY_UUID}" ]
+[ -n "${SECONDARY_UUID}" ]
 
 # Use awk over sed because replacement text may contain newlines,
 # which sed does not approve of.
@@ -166,7 +143,7 @@ awk \
 	  -vimgsize=$imgsize \
 	  -vcfgsize=$cfgsize \
 	  -vvarsize=$varsize \
-	  -vdiskimg=$tmpimage \
+	  -vqcowimg=$qcowimg \
 	  -vbootimg="$bootimg" -vbootpart="$bootpart" \
 	  '{
 		sub(/@TOTALSIZE@/, total);
@@ -175,7 +152,7 @@ awk \
 		sub(/@IMGSIZE@/, imgsize);
 		sub(/@CFGSIZE@/, cfgsize);
 		sub(/@VARSIZE@/, varsize);
-		sub(/@DISKIMG@/, diskimg);
+		sub(/@QCOWIMG@/, qcowimg);
 		sub(/@BOOTIMG@/, bootimg);
 		sub(/@BOOTPART@/, bootpart);
 		sub(/@AUXUUID@/, auxuuid);
@@ -183,35 +160,11 @@ awk \
 		sub(/@SECONDARYUUID@/, secondaryuuid);
 
 	  }1' \
-	      < $common/genimage.cfg.in >$root/genimage.cfg
-
-mkdir -p $root/aux
-cp -f $BINARIES_DIR/rootfs.itbh $root/aux/primary.itbh
-cp -f $BINARIES_DIR/rootfs.itbh $root/aux/secondary.itbh
-cp -f $BINARIES_DIR/rauc.status $root/aux/rauc.status
-
-case "$arch" in
-    aarch64)
-	mkenvimage -s 0x4000 -o "$root/aux/uboot.env" \
-		   "$BR2_EXTERNAL_INFIX_PATH/board/common/uboot/aux-env.txt"
-	;;
-    x86_64)
-	mkdir -p "$root/aux/grub"
-	cp -f "$BR2_EXTERNAL_INFIX_PATH/board/$arch/grub.cfg" \
-	      "$BR2_EXTERNAL_INFIX_PATH/board/$arch/grubenv"  \
-	      "$root/aux/grub/"
-	;;
-    *)
-	;;
-esac
-
-rm -rf "$tmp"
+	      < $PKGDIR/genimage.cfg.in >$WORKDIR/genimage.cfg
 
 genimage \
-    --rootpath "$root" \
-    --tmppath  "$tmp" \
-    --inputpath "$BINARIES_DIR" \
-    --config "$root/genimage.cfg"
-
-qemu-img convert -c -O qcow2 "$tmpimage" "$BINARIES_DIR/$diskimg"
-rm "$tmpimage"
+    --tmppath    "${WORKDIR}"/tmp  \
+    --rootpath   "${WORKDIR}"/root \
+    --inputpath  "$BINARIES_DIR"   \
+    --outputpath "$BINARIES_DIR"   \
+    --config "${WORKDIR}"/genimage.cfg
