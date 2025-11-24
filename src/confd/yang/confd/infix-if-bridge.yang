@@ -915,6 +915,7 @@ submodule infix-if-bridge {
          "derived-from-or-self(if:type,'ianaift:ilan') or "+
          "derived-from-or-self(if:type,'infix-ift:gretap') or "+
          "derived-from-or-self(if:type,'infix-ift:wifi') or "+
+      "derived-from-or-self(if:type,'infix-ift:wireguard') or "+
          "derived-from-or-self(if:type,'infix-ift:vxlan')" {
       description "Applies when a Bridge interface exists.";
     }

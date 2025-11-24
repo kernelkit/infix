@@ -25,7 +25,6 @@
 	_map(IFT_BRIDGE, "infix-if-type:bridge")	\
 	_map(IFT_DUMMY,  "infix-if-type:dummy")		\
 	_map(IFT_ETH,    "infix-if-type:ethernet")	\
-	_map(IFT_WIFI,   "infix-if-type:wifi")	        \
 	_map(IFT_GRE,    "infix-if-type:gre")		\
 	_map(IFT_GRETAP, "infix-if-type:gretap")	\
 	_map(IFT_LAG,    "infix-if-type:lag")	\
@@ -33,6 +32,8 @@
 	_map(IFT_VETH,   "infix-if-type:veth")		\
 	_map(IFT_VLAN,   "infix-if-type:vlan")		\
 	_map(IFT_VXLAN,  "infix-if-type:vxlan")		\
+	_map(IFT_WIFI,   "infix-if-type:wifi")	        \
+	_map(IFT_WIREGUARD,"infix-if-type:wireguard")	\
 	/*  */
 
 enum iftype {
@@ -149,5 +150,8 @@ int ifchange_cand_infer_dhcp(sr_session_ctx_t *session, const char *path);
 
 /* if-vxlan.c */
 int vxlan_gen(struct lyd_node *dif, struct lyd_node *cif, FILE *ip);
+
+/* infix-if-wireguard */
+int wireguard_gen(struct lyd_node *dif, struct lyd_node *cif, FILE *ip,  struct dagger *net);
 
 #endif /* CONFD_INTERFACES_H_ */

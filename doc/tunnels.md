@@ -210,3 +210,334 @@ non-standard VXLAN ports.
 > [!NOTE]
 > VXLAN tunnels also support the `ttl` and `tos` settings described in
 > the [Advanced Tunnel Settings](#advanced-tunnel-settings) section above.
+
+## WireGuard VPN
+
+WireGuard is a modern, high-performance VPN protocol that uses state-of-the-art
+cryptography.  It is significantly simpler and faster than traditional VPN
+solutions like IPsec or OpenVPN, while maintaining strong security guarantees.
+
+Key features of WireGuard:
+
+- **Simple Configuration:** Minimal settings required compared to IPsec
+- **High Performance:** Runs in kernel space with efficient cryptography
+- **Strong Cryptography:** Uses Curve25519, ChaCha20, Poly1305, and BLAKE2
+- **Roaming Support:** Seamlessly handles endpoint IP address changes
+- **Dual-Stack:** Supports IPv4 and IPv6 for both tunnel endpoints and traffic
+
+> [!TIP]
+> If you name your WireGuard interface `wgN`, where `N` is a number, the
+> CLI infers the interface type automatically.
+
+### Key Management
+
+WireGuard uses public-key cryptography similar to SSH.  Each WireGuard interface
+requires a private key, and each peer is identified by its public key.
+
+**Generate a WireGuard key pair using the `wg` command:**
+
+```bash
+admin@example:~$ wg genkey | tee privatekey | wg pubkey > publickey
+admin@example:~$ cat privatekey
+aMqBvZqkSP5JrqBvZqkSP5JrqBvZqkSP5JrqBvZqkSP=
+admin@example:~$ cat publickey
+bN1CwZ1lTP6KsrCwZ1lTP6KsrCwZ1lTP6KsrCwZ1lTP=
+```
+
+This generates a private key, saves it to `privatekey`, derives the public key,
+and saves it to `publickey`.
+
+**Import the private key into the keystore:**
+
+```
+admin@example:/> configure
+admin@example:/config/> edit keystore asymmetric-key wg-site-a
+admin@example:/config/keystore/asymmetric-key/wg-site-a/> set public-key-format x25519-public-key-format
+admin@example:/config/keystore/asymmetric-key/wg-site-a/> set private-key-format x25519-private-key-format
+admin@example:/config/keystore/asymmetric-key/wg-site-a/> set public-key bN1CwZ1lTP6KsrCwZ1lTP6KsrCwZ1lTP6KsrCwZ1lTP=
+admin@example:/config/keystore/asymmetric-key/wg-site-a/> set private-key aMqBvZqkSP5JrqBvZqkSP5JrqBvZqkSP5JrqBvZqkSP=
+admin@example:/config/keystore/asymmetric-key/wg-site-a/> leave
+admin@example:/>
+```
+
+**Import peer public keys into the truststore:**
+
+```
+admin@example:/> configure
+admin@example:/config/> edit truststore public-key-bag wg-peers public-key peer-b
+admin@example:/config/truststore/…/peer-b/> set public-key-format x25519-public-key-format
+admin@example:/config/truststore/…/peer-b/> set public-key PEER_PUBLIC_KEY_HERE
+admin@example:/config/truststore/…/peer-b/> leave
+admin@example:/>
+```
+
+> [!IMPORTANT]
+> Keep private keys secure!  Never share your private key.  Only exchange
+> public keys with peers.  Delete the `privatekey` file after importing it
+> into the keystore.
+
+### Point-to-Point Configuration
+
+A basic WireGuard tunnel between two sites:
+
+**Site A configuration:**
+
+```
+admin@siteA:/> configure
+admin@siteA:/config/> edit interface wg0
+admin@siteA:/config/interface/wg0/> set wireguard listen-port 51820
+admin@siteA:/config/interface/wg0/> set wireguard private-key wg-site-a
+admin@siteA:/config/interface/wg0/> set ipv4 address 10.0.0.1 prefix-length 24
+admin@siteA:/config/interface/wg0/> edit wireguard peer wg-peers peer-b
+admin@siteA:/config/interface/wg0/wireguard/peer/…/> set endpoint 203.0.113.2
+admin@siteA:/config/interface/wg0/wireguard/peer/…/> set endpoint-port 51820
+admin@siteA:/config/interface/wg0/wireguard/peer/…/> set allowed-ips 10.0.0.2/32
+admin@siteA:/config/interface/wg0/wireguard/peer/…/> set persistent-keepalive 25
+admin@siteA:/config/interface/wg0/wireguard/peer/…/> leave
+admin@siteA:/>
+```
+
+**Site B configuration:**
+
+```
+admin@siteB:/> configure
+admin@siteB:/config/> edit interface wg0
+admin@siteB:/config/interface/wg0/> set wireguard listen-port 51820
+admin@siteB:/config/interface/wg0/> set wireguard private-key wg-site-b
+admin@siteB:/config/interface/wg0/> set ipv4 address 10.0.0.2 prefix-length 24
+admin@siteB:/config/interface/wg0/> edit wireguard peer wg-peers peer-a
+admin@siteB:/config/interface/wg0/wireguard/peer/…/> set endpoint 203.0.113.1
+admin@siteB:/config/interface/wg0/wireguard/peer/…/> set endpoint-port 51820
+admin@siteB:/config/interface/wg0/wireguard/peer/…/> set allowed-ips 10.0.0.1/32
+admin@siteB:/config/interface/wg0/wireguard/peer/…/> set persistent-keepalive 25
+admin@siteB:/config/interface/wg0/wireguard/peer/…/> leave
+admin@siteB:/>
+```
+
+This creates an encrypted tunnel with Site A at 10.0.0.1 and Site B at 10.0.0.2.
+
+### Understanding Allowed IPs
+
+The `allowed-ips` setting in WireGuard serves two critical purposes:
+
+1. **Ingress Filtering:** Only packets with source IPs in the allowed list
+   are accepted from the peer
+2. **Cryptokey Routing:** Determines which peer receives outbound packets
+   for a given destination
+
+Think of `allowed-ips` as a combination of firewall rules and routing table.
+
+For a simple point-to-point tunnel, you typically allow only the peer's
+tunnel IP address (e.g., `10.0.0.2/32`).  For site-to-site VPNs connecting
+entire networks, include the remote network prefixes:
+
+```
+admin@siteA:/config/interface/wg0/wireguard/peer/…/> set allowed-ips 10.0.0.2/32
+admin@siteA:/config/interface/wg0/wireguard/peer/…/> set allowed-ips 192.168.2.0/24
+```
+
+This allows traffic to/from the peer at 10.0.0.2 and routes traffic destined
+for 192.168.2.0/24 through this peer.
+
+> [!NOTE]
+> When routing traffic to networks behind WireGuard peers, you also need
+> to configure static routes pointing to the WireGuard interface.  See
+> [Static Routes](networking.md#static-routes) for more information.
+
+### Hub-and-Spoke Topology
+
+WireGuard excels at hub-and-spoke (star) topologies where multiple remote
+sites connect to a central hub.
+
+**Hub configuration:**
+
+```
+admin@hub:/> configure
+admin@hub:/config/> edit interface wg0
+admin@hub:/config/interface/wg0/> set wireguard listen-port 51820
+admin@hub:/config/interface/wg0/> set wireguard private-key wg-hub
+admin@hub:/config/interface/wg0/> set ipv4 address 10.0.0.1 prefix-length 24
+admin@hub:/config/interface/wg0/> end
+
+# Spoke 1
+admin@hub:/config/> edit interface wg0 wireguard peer wg-peers spoke1
+admin@hub:/config/interface/wg0/wireguard/peer/…/> set allowed-ips 10.0.0.2/32
+admin@hub:/config/interface/wg0/wireguard/peer/…/> set allowed-ips 192.168.1.0/24
+admin@hub:/config/interface/wg0/wireguard/peer/…/> end
+
+# Spoke 2
+admin@hub:/config/> edit interface wg0 wireguard peer wg-peers spoke2
+admin@hub:/config/interface/wg0/wireguard/peer/…/> set allowed-ips 10.0.0.3/32
+admin@hub:/config/interface/wg0/wireguard/peer/…/> set allowed-ips 192.168.2.0/24
+admin@hub:/config/interface/wg0/wireguard/peer/…/> leave
+admin@hub:/>
+
+# Add routes for spoke networks
+admin@hub:/> configure
+admin@hub:/config/> edit routing control-plane-protocol static name default
+admin@hub:/config/routing/…/static/> set ipv4 route 192.168.1.0/24 wg0
+admin@hub:/config/routing/…/static/> set ipv4 route 192.168.2.0/24 wg0
+admin@hub:/config/routing/…/static/> leave
+admin@hub:/>
+```
+
+**Spoke 1 configuration:**
+
+```
+admin@spoke1:/> configure
+admin@spoke1:/config/> edit interface wg0
+admin@spoke1:/config/interface/wg0/> set wireguard listen-port 51820
+admin@spoke1:/config/interface/wg0/> set wireguard private-key wg-spoke1
+admin@spoke1:/config/interface/wg0/> set ipv4 address 10.0.0.2 prefix-length 24
+admin@spoke1:/config/interface/wg0/> edit wireguard peer wg-peers hub
+admin@spoke1:/config/interface/wg0/wireguard/peer/…/> set endpoint 203.0.113.1
+admin@spoke1:/config/interface/wg0/wireguard/peer/…/> set endpoint-port 51820
+admin@spoke1:/config/interface/wg0/wireguard/peer/…/> set allowed-ips 10.0.0.1/32
+admin@spoke1:/config/interface/wg0/wireguard/peer/…/> set allowed-ips 10.0.0.3/32
+admin@spoke1:/config/interface/wg0/wireguard/peer/…/> set allowed-ips 192.168.0.0/24
+admin@spoke1:/config/interface/wg0/wireguard/peer/…/> set allowed-ips 192.168.2.0/24
+admin@spoke1:/config/interface/wg0/wireguard/peer/…/> set persistent-keepalive 25
+admin@spoke1:/config/interface/wg0/wireguard/peer/…/> end
+admin@spoke1:/config/> edit routing control-plane-protocol static name default
+admin@spoke1:/config/routing/…/static/> set ipv4 route 192.168.0.0/24 wg0
+admin@spoke1:/config/routing/…/static/> set ipv4 route 192.168.2.0/24 wg0
+admin@spoke1:/config/routing/…/static/> leave
+admin@spoke1:/>
+```
+
+This configuration allows Spoke 1 to reach both the hub network (192.168.0.0/24)
+and Spoke 2's network (192.168.2.0/24) via the hub, enabling spoke-to-spoke
+communication through the central hub.
+
+### Persistent Keepalive
+
+The `persistent-keepalive` setting sends periodic packets to keep the tunnel
+active through NAT devices and firewalls:
+
+```
+admin@example:/config/interface/wg0/wireguard/peer/…/> set persistent-keepalive 25
+```
+
+This is particularly important when:
+
+- The peer is behind NAT
+- Intermediate firewalls have connection timeouts
+- You need the tunnel to remain ready for bidirectional traffic
+
+A value of 25 seconds is recommended for most scenarios.  Omit this setting
+for peers with public static IPs that initiate connections.
+
+> [!NOTE]
+> Only the peer behind NAT needs `persistent-keepalive` configured.  The
+> peer with a public IP learns the NAT endpoint from incoming packets.
+
+### IPv6 Endpoints
+
+WireGuard fully supports IPv6 for tunnel endpoints:
+
+```
+admin@example:/> configure
+admin@example:/config/> edit interface wg0
+admin@example:/config/interface/wg0/> set wireguard listen-port 51820
+admin@example:/config/interface/wg0/> set wireguard private-key wg-key
+admin@example:/config/interface/wg0/> set ipv4 address 10.0.0.1 prefix-length 24
+admin@example:/config/interface/wg0/> set ipv6 address fd00::1 prefix-length 64
+admin@example:/config/interface/wg0/> edit wireguard peer wg-peers remote
+admin@example:/config/interface/wg0/wireguard/peer/…/> set endpoint 2001:db8::2
+admin@example:/config/interface/wg0/wireguard/peer/…/> set endpoint-port 51820
+admin@example:/config/interface/wg0/wireguard/peer/…/> set allowed-ips 10.0.0.2/32
+admin@example:/config/interface/wg0/wireguard/peer/…/> set allowed-ips fd00::2/128
+admin@example:/config/interface/wg0/wireguard/peer/…/> leave
+admin@example:/>
+```
+
+WireGuard can carry both IPv4 and IPv6 traffic regardless of whether the
+tunnel endpoints use IPv4 or IPv6.
+
+### Dynamic Endpoints (Road Warriors)
+
+For mobile clients or peers without fixed IPs, omit the `endpoint` setting.
+WireGuard learns the peer's endpoint from authenticated incoming packets:
+
+```
+admin@hub:/> configure
+admin@hub:/config/> edit interface wg0 wireguard peer wg-peers mobile-client
+admin@hub:/config/interface/wg0/wireguard/peer/…/> set allowed-ips 10.0.0.10/32
+admin@hub:/config/interface/wg0/wireguard/peer/…/> leave
+admin@hub:/>
+```
+
+The mobile client configures the hub's endpoint normally.  The hub learns
+and tracks the mobile client's changing IP address automatically.
+
+### Monitoring WireGuard Status
+
+Check WireGuard interface status and peer connections:
+
+```
+admin@example:/> show interfaces
+wg0             wireguard  UP          2 peers (1 up)
+                ipv4                   10.0.0.1/24 (static)
+                ipv6                   fd00::1/64 (static)
+
+admin@example:/> show interfaces wg0
+name                : wg0
+type                : wireguard
+index               : 12
+operational status  : up
+peers               : 2
+
+  Peer 1:
+    status            : UP
+    endpoint          : 203.0.113.2:51820
+    latest handshake  : 2025-12-09T10:23:45+0000
+    transfer tx       : 125648 bytes
+    transfer rx       : 98432 bytes
+
+  Peer 2:
+    status            : DOWN
+    endpoint          : 203.0.113.3:51820
+    latest handshake  : 2025-12-09T09:15:22+0000
+    transfer tx       : 45120 bytes
+    transfer rx       : 32768 bytes
+```
+
+The connection status shows `UP` if a handshake occurred within the last 3
+minutes, indicating an active tunnel.  The `latest handshake` timestamp shows
+when the peers last successfully authenticated and exchanged keys.
+
+### Post-Quantum Security (Preshared Keys)
+
+For additional security against future quantum computers, WireGuard supports
+preshared keys that provide post-quantum resistance.
+
+**Generate a preshared key using `wg genpsk`:**
+
+```bash
+admin@example:~$ wg genpsk > preshared.key
+admin@example:~$ cat preshared.key
+cO2DxZ2mUQ7LtsrDxZ2mUQ7LtsrDxZ2mUQ7LtsrDxZ2m=
+```
+
+**Import the preshared key into the keystore:**
+
+```
+admin@example:/> configure
+admin@example:/config/> edit keystore symmetric-key wg-psk
+admin@example:/config/keystore/symmetric-key/wg-psk/> set key-format wireguard-symmetric-key-format
+admin@example:/config/keystore/symmetric-key/wg-psk/> set key cO2DxZ2mUQ7LtsrDxZ2mUQ7LtsrDxZ2mUQ7LtsrDxZ2m=
+admin@example:/config/keystore/symmetric-key/wg-psk/> end
+admin@example:/config/> edit interface wg0 wireguard peer wg-peers remote
+admin@example:/config/interface/wg0/wireguard/peer/…/> set preshared-key wg-psk
+admin@example:/config/interface/wg0/wireguard/peer/…/> leave
+admin@example:/>
+```
+
+The preshared key must be securely shared between both peers and configured
+on both sides.  This provides an additional layer of symmetric encryption
+alongside the Curve25519 key exchange.
+
+> [!IMPORTANT]
+> Preshared keys must be kept secret and exchanged through a secure channel,
+> just like passwords.  Delete the `preshared.key` file after importing it
+> into both peer keystores.
