@@ -25,7 +25,7 @@ Topology:
                                          \\ Tunnel  /
                                           \\      /
                                    left:wg0    right:wg0
-                                   10.0.0.1    10.0.0.2
+                                 10.0.0.1/32  10.0.0.2/32
 
 ....
 
@@ -42,11 +42,11 @@ with infamy.Test() as test:
     with test.step("Generate WireGuard keys"):
         # WireGuard X25519 keys (base64-encoded 32-byte keys)
         # These are example keys - in production, use `wg genkey` to generate
-        left_private_key = "YAnz5TF+lXXJte14tji3zlMNftqL/HOWl7MkEqpB/UU="
-        left_public_key = "HIgo9xNzJMWLKASShiTqIybxZ0U3wGLiUeJ1PKf8ykw="
+        left_private_key = "EJPoi0BnccsfjEhKk0IWwNzJKXZKgS6XaKt+InYITVA="
+        left_public_key = "xWVOEFUZZ5VI6t1fhZeISNyw7Ma/bY8INzIoaSSLlz8="
 
-        right_private_key = "qFCcgJZWKPVhBdl0KcJheFPQS8CRB62S5lMfPIxtZ3Q="
-        right_public_key = "qjWlT5j8MhHZXbLGzX0Cq2J5pKVqEVOlvZTqrXKr1nY="
+        right_private_key = "UEaX13FTGhiIrnnKRd20KWh/vG6zqRIMSTzOP3hNs2s="
+        right_public_key = "2pytpunN+e3V9e5asMXP+UqKoerFm08KWzcFYoWP41k="
 
     with test.step("Configure WireGuard tunnel on left DUT"):
         left.put_config_dicts({
@@ -117,14 +117,14 @@ with infamy.Test() as test:
                         "ipv4": {
                             "address": [{
                                 "ip": "10.0.0.1",
-                                "prefix-length": 24
+                                "prefix-length": 32
                             }],
                             "forwarding": True
                         },
                         "ipv6": {
                             "address": [{
                                 "ip": "fd00::1",
-                                "prefix-length": 64
+                                "prefix-length": 128
                             }],
                             "forwarding": True
                         },
@@ -136,7 +136,7 @@ with infamy.Test() as test:
                                 "public-key": "right-wg-pubkey",
                                 "endpoint": "192.168.50.2",
                                 "endpoint-port": 51820,
-                                "allowed-ips": ["10.0.0.0/24", "fd00::/64"]
+                                "allowed-ips": ["10.0.0.0/24", "fd00::/64", "192.168.10.0/24"]
                             }]
                         }
                     }]
@@ -196,14 +196,14 @@ with infamy.Test() as test:
                         "ipv4": {
                             "address": [{
                                 "ip": "10.0.0.2",
-                                "prefix-length": 24
+                                "prefix-length": 32
                             }],
                             "forwarding": True
                         },
                         "ipv6": {
                             "address": [{
                                 "ip": "fd00::2",
-                                "prefix-length": 64
+                                "prefix-length": 128
                             }]
                         },
                         "wireguard": {
@@ -214,12 +214,12 @@ with infamy.Test() as test:
                                 "public-key": "left-wg-pubkey",
                                 "endpoint": "192.168.50.1",
                                 "endpoint-port": 51820,
-                                "allowed-ips": ["10.0.0.0/24", "fd00::/64"]
+                                "allowed-ips": ["10.0.0.0/24", "fd00::/64", "192.168.10.0/24"]
                             }]
                         }
                     }]
                 }
-            },
+            }
             "ietf-routing": {
                 "routing": {
                     "control-plane-protocols": {
@@ -255,6 +255,7 @@ with infamy.Test() as test:
         with infamy.IsolatedMacVlan(hport) as ns0:
             ns0.addip("192.168.10.2")
             ns0.addroute("10.0.0.0/24", "192.168.10.1")
+            breakpoint()
             ns0.must_reach("10.0.0.2")
 
     with test.step("Verify IPv6 connectivity through WireGuard tunnel"):

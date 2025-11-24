@@ -27,6 +27,7 @@ int wireguard_gen(struct lyd_node *dif, struct lyd_node *cif, FILE *ip, struct d
 	key_node = lydx_get_xpathf(cif, "../../keystore/asymmetric-keys/asymmetric-key[name='%s']", private_key_ref);
 	private_key_data = lydx_get_cattr(key_node, "cleartext-private-key");
 
+	fprintf(ip, "link add dev %s type wireguard\n", ifname);
 	wg_fp = fopenf("w", WIREGUARD_CONFIG, ifname);
 	if (!wg_fp)
 		return -errno;
@@ -70,10 +71,18 @@ int wireguard_gen(struct lyd_node *dif, struct lyd_node *cif, FILE *ip, struct d
 			fprintf(wg_fp, "Endpoint = %s:%s\n", endpoint, endpoint_port);
 		}
 
-		LYX_LIST_FOR_EACH(lyd_child(peer), allowed_ip, "allowed-ips") {
-			const char *ip_prefix = lydx_get_cattr(allowed_ip, ".");
-			if (ip_prefix)
-				fprintf(wg_fp, "AllowedIPs = %s\n", ip_prefix);
+		/* Output all allowed IPs on a single line, comma-separated */
+		{
+			int first = 1;
+			LYX_LIST_FOR_EACH(lyd_child(peer), allowed_ip, "allowed-ips") {
+				const char *ip_prefix = lyd_get_value(allowed_ip);
+				if (ip_prefix) {
+					fprintf(wg_fp, "%s%s", first ? "AllowedIPs = " : ", ", ip_prefix);
+					first = 0;
+				}
+			}
+			if (!first)
+				fprintf(wg_fp, "\n");
 		}
 
 		keepalive = lydx_get_cattr(peer, "persistent-keepalive");
@@ -88,10 +97,20 @@ int wireguard_gen(struct lyd_node *dif, struct lyd_node *cif, FILE *ip, struct d
 	fprintf(wg_sh, "wg setconf %s ", ifname);
 	fprintf(wg_sh, WIREGUARD_CONFIG, ifname);
 	fprintf(wg_sh, "\n");
-
-	fprintf(wg_sh, "rm -f ");
-	fprintf(wg_sh, WIREGUARD_CONFIG, ifname);
-	fprintf(wg_sh, "\n");
+#if 0
+	/* Add routes for allowed IPs (wg setconf doesn't add routes automatically) */
+	LYX_LIST_FOR_EACH(lyd_child(wg), peer, "peer") {
+		struct lyd_node *allowed_ip;
+		LYX_LIST_FOR_EACH(lyd_child(peer), allowed_ip, "allowed-ips") {
+			const char *ip_prefix = lyd_get_value(allowed_ip);
+			if (ip_prefix)
+				fprintf(wg_sh, "ip route add %s dev %s 2>/dev/null || true\n", ip_prefix, ifname);
+		}
+	}
+#endif
+//	fprintf(wg_sh, "rm -f ");
+//	fprintf(wg_sh, WIREGUARD_CONFIG, ifname);
+//	fprintf(wg_sh, "\n");
 	fclose(wg_sh);
 
 	return 0;
