@@ -1,0 +1,43 @@
+graph "wireguard-multipoint" {
+	layout="neato";
+	overlap="false";
+	esep="+40";
+
+        node [shape=record, fontname="DejaVu Sans Mono, Book"];
+	edge [color="cornflowerblue", penwidth="2", fontname="DejaVu Serif, Book"];
+
+	host [
+	    label=" { <data1> data1 } | { <mgmt2> mgmt2 } | { <mgmt1> mgmt1 } | host | { <data2> data2 } |  { <mgmt3> mgmt3 }"
+	    pos="6,0!",
+	    requires="controller",
+	];
+
+        server [
+	    label=" { <link1> link1 } | { server } | { <mgmt> mgmt } | { <data> data } | { <link2> link2 }"
+	    pos="6, -6!",
+	    requires="infix",
+	];
+
+        client1 [
+	    label="{ { <data> data } | { <mgmt> mgmt } |  { client1 } | <link> link } ",
+	    pos="0, -6!",
+	    requires="infix",
+	];
+
+        client2 [
+            label="{ { <data> data } | { <mgmt> mgmt } |  { client2 } | <link> link } ",
+	    pos="12,-6!",
+	    requires="infix",
+	];
+
+	host:mgmt1 -- server:mgmt [requires="mgmt", color="lightgray"]
+	host:mgmt2 -- client1:mgmt [requires="mgmt", color="lightgray"]
+	host:mgmt3 -- client2:mgmt [requires="mgmt", color="lightgray"]
+
+	host:data1 -- client1:data [headlabel=".1", label="192.168.1.0/24" taillabel=".2&nbsp;", labeldistance=1, fontcolor="black", color="black"]
+	host:data2 -- server:data [headlabel=".1", label="192.168.0.0/24" taillabel=".2&nbsp;", labeldistance=1, fontcolor="black", color="black"]
+
+	server:link1 -- client1:link [headlabel=".1", label="192.168.10.0/24", taillabel=".10&nbsp;", labeldistance=1, fontcolor="black", color="black"]
+	server:link2 -- client2:link [headlabel=".2\n\n", label="192.168.20.0/24", taillabel="\n.20", labeldistance=1, fontcolor="black", color="black"]
+
+}

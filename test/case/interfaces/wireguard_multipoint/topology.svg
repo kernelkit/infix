@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
+ "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+
+<!-- Title: wireguard&#45;multipoint Pages: 1 -->
+<svg width="638pt" height="351pt"
+ viewBox="0.00 0.00 638.06 351.03" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(4 347.03)">
+<title>wireguard&#45;multipoint</title>
+<polygon fill="white" stroke="transparent" points="-4,4 -4,-347.03 634.06,-347.03 634.06,4 -4,4"/>
+<!-- host -->
+<g id="node1" class="node">
+<title>host</title>
+<polygon fill="none" stroke="black" points="145.03,-306.53 145.03,-342.53 485.03,-342.53 485.03,-306.53 145.03,-306.53"/>
+<text text-anchor="middle" x="174.03" y="-320.83" font-family="DejaVu Sans Mono, Book" font-size="14.00">data1</text>
+<polyline fill="none" stroke="black" points="203.03,-306.53 203.03,-342.53 "/>
+<text text-anchor="middle" x="232.03" y="-320.83" font-family="DejaVu Sans Mono, Book" font-size="14.00">mgmt2</text>
+<polyline fill="none" stroke="black" points="261.03,-306.53 261.03,-342.53 "/>
+<text text-anchor="middle" x="290.03" y="-320.83" font-family="DejaVu Sans Mono, Book" font-size="14.00">mgmt1</text>
+<polyline fill="none" stroke="black" points="319.03,-306.53 319.03,-342.53 "/>
+<text text-anchor="middle" x="344.03" y="-320.83" font-family="DejaVu Sans Mono, Book" font-size="14.00">host</text>
+<polyline fill="none" stroke="black" points="369.03,-306.53 369.03,-342.53 "/>
+<text text-anchor="middle" x="398.03" y="-320.83" font-family="DejaVu Sans Mono, Book" font-size="14.00">data2</text>
+<polyline fill="none" stroke="black" points="427.03,-306.53 427.03,-342.53 "/>
+<text text-anchor="middle" x="456.03" y="-320.83" font-family="DejaVu Sans Mono, Book" font-size="14.00">mgmt3</text>
+</g>
+<!-- server -->
+<g id="node2" class="node">
+<title>server</title>
+<polygon fill="none" stroke="black" points="174.03,-28.5 174.03,-64.5 456.03,-64.5 456.03,-28.5 174.03,-28.5"/>
+<text text-anchor="middle" x="203.03" y="-42.8" font-family="DejaVu Sans Mono, Book" font-size="14.00">link1</text>
+<polyline fill="none" stroke="black" points="232.03,-28.5 232.03,-64.5 "/>
+<text text-anchor="middle" x="265.03" y="-42.8" font-family="DejaVu Sans Mono, Book" font-size="14.00">server</text>
+<polyline fill="none" stroke="black" points="298.03,-28.5 298.03,-64.5 "/>
+<text text-anchor="middle" x="323.03" y="-42.8" font-family="DejaVu Sans Mono, Book" font-size="14.00">mgmt</text>
+<polyline fill="none" stroke="black" points="348.03,-28.5 348.03,-64.5 "/>
+<text text-anchor="middle" x="373.03" y="-42.8" font-family="DejaVu Sans Mono, Book" font-size="14.00">data</text>
+<polyline fill="none" stroke="black" points="398.03,-28.5 398.03,-64.5 "/>
+<text text-anchor="middle" x="427.03" y="-42.8" font-family="DejaVu Sans Mono, Book" font-size="14.00">link2</text>
+</g>
+<!-- host&#45;&#45;server -->
+<g id="edge1" class="edge">
+<title>host:mgmt1&#45;&#45;server:mgmt</title>
+<path fill="none" stroke="lightgray" stroke-width="2" d="M290.03,-306.53C290.03,-306.53 323.03,-64.5 323.03,-64.5"/>
+</g>
+<!-- host&#45;&#45;server -->
+<g id="edge5" class="edge">
+<title>host:data2&#45;&#45;server:data</title>
+<path fill="none" stroke="black" stroke-width="2" d="M398.03,-306.53C398.03,-306.53 373.03,-64.5 373.03,-64.5"/>
+<text text-anchor="middle" x="331.03" y="-189.31" font-family="DejaVu Serif, Book" font-size="14.00">192.168.0.0/24</text>
+<text text-anchor="middle" x="378.16" y="-69.38" font-family="DejaVu Serif, Book" font-size="14.00">.1</text>
+<text text-anchor="middle" x="392.89" y="-294.25" font-family="DejaVu Serif, Book" font-size="14.00">.2 </text>
+</g>
+<!-- client1 -->
+<g id="node3" class="node">
+<title>client1</title>
+<polygon fill="none" stroke="black" points="0,-0.5 0,-92.5 74,-92.5 74,-0.5 0,-0.5"/>
+<text text-anchor="middle" x="37" y="-77.3" font-family="DejaVu Sans Mono, Book" font-size="14.00">data</text>
+<polyline fill="none" stroke="black" points="0,-69.5 74,-69.5 "/>
+<text text-anchor="middle" x="37" y="-54.3" font-family="DejaVu Sans Mono, Book" font-size="14.00">mgmt</text>
+<polyline fill="none" stroke="black" points="0,-46.5 74,-46.5 "/>
+<text text-anchor="middle" x="37" y="-31.3" font-family="DejaVu Sans Mono, Book" font-size="14.00">client1</text>
+<polyline fill="none" stroke="black" points="0,-23.5 74,-23.5 "/>
+<text text-anchor="middle" x="37" y="-8.3" font-family="DejaVu Sans Mono, Book" font-size="14.00">link</text>
+</g>
+<!-- host&#45;&#45;client1 -->
+<g id="edge2" class="edge">
+<title>host:mgmt2&#45;&#45;client1:mgmt</title>
+<path fill="none" stroke="lightgray" stroke-width="2" d="M232.03,-306.53C232.03,-306.53 74,-58.5 74,-58.5"/>
+</g>
+<!-- host&#45;&#45;client1 -->
+<g id="edge4" class="edge">
+<title>host:data1&#45;&#45;client1:data</title>
+<path fill="none" stroke="black" stroke-width="2" d="M174.03,-306.53C174.03,-306.53 74,-81.5 74,-81.5"/>
+<text text-anchor="middle" x="69.51" y="-197.81" font-family="DejaVu Serif, Book" font-size="14.00">192.168.1.0/24</text>
+<text text-anchor="middle" x="81.54" y="-84.37" font-family="DejaVu Serif, Book" font-size="14.00">.1</text>
+<text text-anchor="middle" x="166.48" y="-296.26" font-family="DejaVu Serif, Book" font-size="14.00">.2 </text>
+</g>
+<!-- client2 -->
+<g id="node4" class="node">
+<title>client2</title>
+<polygon fill="none" stroke="black" points="556.06,-0.5 556.06,-92.5 630.06,-92.5 630.06,-0.5 556.06,-0.5"/>
+<text text-anchor="middle" x="593.06" y="-77.3" font-family="DejaVu Sans Mono, Book" font-size="14.00">data</text>
+<polyline fill="none" stroke="black" points="556.06,-69.5 630.06,-69.5 "/>
+<text text-anchor="middle" x="593.06" y="-54.3" font-family="DejaVu Sans Mono, Book" font-size="14.00">mgmt</text>
+<polyline fill="none" stroke="black" points="556.06,-46.5 630.06,-46.5 "/>
+<text text-anchor="middle" x="593.06" y="-31.3" font-family="DejaVu Sans Mono, Book" font-size="14.00">client2</text>
+<polyline fill="none" stroke="black" points="556.06,-23.5 630.06,-23.5 "/>
+<text text-anchor="middle" x="593.06" y="-8.3" font-family="DejaVu Sans Mono, Book" font-size="14.00">link</text>
+</g>
+<!-- host&#45;&#45;client2 -->
+<g id="edge3" class="edge">
+<title>host:mgmt3&#45;&#45;client2:mgmt</title>
+<path fill="none" stroke="lightgray" stroke-width="2" d="M456.03,-306.53C456.03,-306.53 556.06,-58.5 556.06,-58.5"/>
+</g>
+<!-- server&#45;&#45;client1 -->
+<g id="edge6" class="edge">
+<title>server:link1&#45;&#45;client1:link</title>
+<path fill="none" stroke="black" stroke-width="2" d="M174.03,-46.5C174.03,-46.5 74,-11.5 74,-11.5"/>
+<text text-anchor="middle" x="153.51" y="-17.8" font-family="DejaVu Serif, Book" font-size="14.00">192.168.10.0/24</text>
+<text text-anchor="middle" x="83.95" y="-6.8" font-family="DejaVu Serif, Book" font-size="14.00">.1</text>
+<text text-anchor="middle" x="164.08" y="-43.8" font-family="DejaVu Serif, Book" font-size="14.00">.10 </text>
+</g>
+<!-- server&#45;&#45;client2 -->
+<g id="edge7" class="edge">
+<title>server:link2&#45;&#45;client2:link</title>
+<path fill="none" stroke="black" stroke-width="2" d="M456.03,-46.5C456.03,-46.5 556.06,-11.5 556.06,-11.5"/>
+<text text-anchor="middle" x="447.04" y="-17.8" font-family="DejaVu Serif, Book" font-size="14.00">192.168.20.0/24</text>
+<text text-anchor="middle" x="548.9" y="-22.78" font-family="DejaVu Serif, Book" font-size="14.00">.2</text>
+<text text-anchor="middle" x="463.19" y="-27.82" font-family="DejaVu Serif, Book" font-size="14.00">.20</text>
+</g>
+</g>
+</svg>
