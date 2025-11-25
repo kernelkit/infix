@@ -19,6 +19,10 @@ on:
         description: 'Repo to checkout (for spin overrides)'
         default: kernelkit/infix
         type: string
+      infix_branch:
+        description: 'Branch/tag/commit to checkout (for spin overrides)'
+        default: ''
+        type: string
 
   workflow_call:
     inputs:
@@ -32,6 +36,11 @@ on:
         required: false
         type: string
         default: kernelkit/infix
+      infix_branch:
+        required: false
+        type: string
+        default: ''
+        description: 'Branch/tag/commit to checkout (for spin overrides). Defaults to github.ref if not specified'
       parallel:
         required: false
         type: boolean
@@ -50,6 +59,7 @@ env:
   NAME: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.name || inputs.name }}
   TARGET: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.target || inputs.target }}
   INFIX_REPO: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.infix_repo || inputs.infix_repo }}
+  INFIX_BRANCH: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.infix_branch || inputs.infix_branch }}
 
 jobs:
   build:
@@ -82,7 +92,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: ${{ env.INFIX_REPO }}
-          ref: ${{ github.ref }}
+          ref: ${{ env.INFIX_BRANCH != '' && env.INFIX_BRANCH || github.ref }}
           clean: true
           fetch-depth: 0
           submodules: recursive
