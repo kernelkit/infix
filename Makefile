@@ -32,6 +32,11 @@ $(config):
 legal-info: | buildroot/Makefile
 	$(call bmake,legal-info LINUX_LICENSE_FILES=COPYING)
 
+cyclonedx: | buildroot/Makefile
+	@echo "Generating package information..."
+	@$(MAKE) --no-print-directory -C buildroot O=$(O) show-info | ./buildroot/utils/generate-cyclonedx > $(O)/cyclonedx-sbom.json
+	@echo "CycloneDX SBOM generated: $(O)/cyclonedx-sbom.json"
+
 # Workaround, see board/x86_64/board.mk
 test:
 	@+$(call bmake,$@)
@@ -39,4 +44,4 @@ test:
 buildroot/Makefile:
 	@git submodule update --init
 
-.PHONY: all check coverity dep test
+.PHONY: all check coverity dep test cyclonedx
