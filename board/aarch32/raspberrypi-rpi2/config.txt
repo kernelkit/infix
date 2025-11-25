@@ -1,0 +1,19 @@
+# Raspberry Pi bootloader (start.elf) configuration
+#
+# uart_2ndstage=1 - Enable early boot debug output from the bootloader
+#                   Useful for debugging boot failures before Barebox starts
+#                   Comment out for production to reduce boot noise
+
+[all]
+kernel=barebox-raspberry-pi-2.img
+
+disable_overscan=1
+
+enable_uart=1
+#uart_2ndstage=1
+
+[pi2]
+start_file=start.elf
+fixup_file=fixup.dat
+
+gpu_mem=100

@@ -1,5 +1,11 @@
 mainmenu "QEMU Virtualization"
 
+config QEMU_ARCH_IS_32
+	bool
+
+config QEMU_ARCH_IS_64
+	bool
+
 choice
 	prompt "Target Architecture"
 	default @ARCH@
@@ -11,6 +17,10 @@ config QEMU_riscv64
 config QEMU_x86_64
 	bool "x86_64"
 	select QEMU_ARCH_IS_64
+
+config QEMU_arm
+	bool "AArch32 (little endian)"
+	select QEMU_ARCH_IS_32
 
 config QEMU_aarch64
 	bool "AArch64 (little endian)"
@@ -54,6 +64,7 @@ endchoice
 
 choice
      prompt "Console"
+     default QEMU_CONSOLE_SERIAL if QEMU_arm
      default QEMU_CONSOLE_VIRTIO
 
 config QEMU_CONSOLE_VIRTIO
@@ -66,6 +77,7 @@ endchoice
 
 config QEMU_MACHINE
 	string "Select emulated machine"
+	default "qemu-system-arm     -M virt,accel=kvm:tcg -cpu max" if QEMU_arm
 	default "qemu-system-aarch64 -M virt,accel=kvm:tcg -cpu max,pauth-impdef=on" if QEMU_aarch64
 	default "qemu-system-x86_64  -M pc,accel=kvm:tcg   -cpu max" if QEMU_x86_64
 	help
@@ -73,8 +85,8 @@ config QEMU_MACHINE
 	  want to tweak it, or change the acceleration.
 
 	  The default is based on the Buildroot architecture, selected by
-	  the defconfig you started with.  Currently Infix supports only
-	  aarch64 (ARM64) and x86_64 (AMD64).
+	  the defconfig you started with.  Currently Infix supports
+	  arm (AArch32), aarch64 (ARM64), and x86_64 (AMD64).
 
 config QEMU_MACHINE_RAM
 	string "RAM size (k/M/G)"
@@ -87,6 +99,7 @@ config QEMU_MACHINE_RAM
 config QEMU_KERNEL
 	string
 	depends on QEMU_LOADER_KERNEL
+	default "zImage"  if QEMU_arm
 	default "Image"   if QEMU_aarch64
 	default "bzImage" if QEMU_x86_64
 
@@ -211,11 +224,14 @@ endchoice
 
 config QEMU_NET_MODEL
 	string "Interface model"
+	default "virtio-net-device" if QEMU_arm
 	default "virtio-net-pci"
 	help
 	  The default, virtio-net-pci, NIC works for most use-cases, but
 	  if you want to play with low-level stuff like ethtool, you
 	  might want to test the Intel 82545EM driver, e1000.
+
+	  Note: ARM32 uses virtio-net-device (MMIO) by default.
 
 config QEMU_NET_BRIDGE_DEV
 	string "Bridge device"

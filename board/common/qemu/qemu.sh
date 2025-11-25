@@ -84,7 +84,10 @@ loader_args()
 
 append_args()
 {
-    if [ "$CONFIG_QEMU_CONSOLE_VIRTIO" ]; then
+    # ARM32 doesn't support virtio console properly, always use serial
+    if [ "$CONFIG_QEMU_arm" ]; then
+	echo -n "console=ttyAMA0 "
+    elif [ "$CONFIG_QEMU_CONSOLE_VIRTIO" ]; then
 	echo -n "console=hvc0 "
     elif [ "$CONFIG_QEMU_x86_64" ]; then
 	echo -n "console=ttyS0 "
@@ -120,7 +123,13 @@ rootfs_args()
 	echo -n "-device sd-card,drive=mmc "
 	echo -n "-drive id=mmc,file=$CONFIG_QEMU_ROOTFS,if=none,format=raw "
     elif [ "$CONFIG_QEMU_ROOTFS_VSCSI" = "y" ]; then
-	echo -n "-drive file=qemu.qcow2,if=virtio,format=qcow2,bus=0,unit=0 "
+	# ARM32 virt machine uses MMIO virtio devices, not PCI
+	if [ "$CONFIG_QEMU_arm" ]; then
+	    echo -n "-drive file=qemu.qcow2,if=none,format=qcow2,id=rootfs "
+	    echo -n "-device virtio-blk-device,drive=rootfs "
+	else
+	    echo -n "-drive file=qemu.qcow2,if=virtio,format=qcow2,bus=0,unit=0 "
+	fi
     fi
 }
 
@@ -173,22 +182,38 @@ rw_args()
 	dd if=/dev/zero of="aux.ext4" bs=1M count=1 >/dev/null 2>&1
 	mkfs.ext4 -L aux "aux.ext4" >/dev/null 2>&1
     fi
-    echo -n "-drive file=aux.ext4,if=virtio,format=raw,bus=0,unit=3 "
 
     if ! [ -f "$CONFIG_QEMU_RW" ]; then
 	dd if=/dev/zero of="$CONFIG_QEMU_RW" bs=16M count=1 >/dev/null 2>&1
 	mkfs.ext4 -L cfg "$CONFIG_QEMU_RW" >/dev/null 2>&1
     fi
 
-    echo -n "-drive file=$CONFIG_QEMU_RW,if=virtio,format=raw,bus=0,unit=1 "
+    # ARM32 virt machine uses MMIO virtio devices, not PCI
+    if [ "$CONFIG_QEMU_arm" ]; then
+	echo -n "-drive file=aux.ext4,if=none,format=raw,id=aux "
+	echo -n "-device virtio-blk-device,drive=aux "
+	echo -n "-drive file=$CONFIG_QEMU_RW,if=none,format=raw,id=cfg "
+	echo -n "-device virtio-blk-device,drive=cfg "
 
-    if [ "$CONFIG_QEMU_RW_VAR_OPT" ]; then
-	if ! [ -f "$CONFIG_QEMU_RW_VAR" ]; then
-	    dd if=/dev/zero of="$CONFIG_QEMU_RW_VAR" bs=$CONFIG_QEMU_RW_VAR_SIZE count=1 >/dev/null 2>&1
-	    mkfs.ext4 -L var "$CONFIG_QEMU_RW_VAR" >/dev/null 2>&1
+	if [ "$CONFIG_QEMU_RW_VAR_OPT" ]; then
+	    if ! [ -f "$CONFIG_QEMU_RW_VAR" ]; then
+		dd if=/dev/zero of="$CONFIG_QEMU_RW_VAR" bs=$CONFIG_QEMU_RW_VAR_SIZE count=1 >/dev/null 2>&1
+		mkfs.ext4 -L var "$CONFIG_QEMU_RW_VAR" >/dev/null 2>&1
+	    fi
+	    echo -n "-drive file=$CONFIG_QEMU_RW_VAR,if=none,format=raw,id=var "
+	    echo -n "-device virtio-blk-device,drive=var "
 	fi
+    else
+	echo -n "-drive file=aux.ext4,if=virtio,format=raw,bus=0,unit=3 "
+	echo -n "-drive file=$CONFIG_QEMU_RW,if=virtio,format=raw,bus=0,unit=1 "
 
-	echo -n "-drive file=$CONFIG_QEMU_RW_VAR,if=virtio,format=raw,bus=0,unit=2 "
+	if [ "$CONFIG_QEMU_RW_VAR_OPT" ]; then
+	    if ! [ -f "$CONFIG_QEMU_RW_VAR" ]; then
+		dd if=/dev/zero of="$CONFIG_QEMU_RW_VAR" bs=$CONFIG_QEMU_RW_VAR_SIZE count=1 >/dev/null 2>&1
+		mkfs.ext4 -L var "$CONFIG_QEMU_RW_VAR" >/dev/null 2>&1
+	    fi
+	    echo -n "-drive file=$CONFIG_QEMU_RW_VAR,if=virtio,format=raw,bus=0,unit=2 "
+	fi
     fi
 }
 

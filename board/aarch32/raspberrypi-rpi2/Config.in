@@ -1,0 +1,15 @@
+config BR2_PACKAGE_RASPBERRYPI_RPI2
+	bool "Raspberry Pi 2 Model B (32-bit ARMv7)"
+	depends on BR2_arm
+	select SDCARD_AUX
+	select BR2_PACKAGE_FEATURE_WIFI
+	select BR2_PACKAGE_BRCMFMAC_SDIO_FIRMWARE_RPI
+	select BR2_PACKAGE_BRCMFMAC_SDIO_FIRMWARE_RPI_WIFI
+
+	help
+	  Support for the 32-bit ARMv7 Raspberry Pi 2B single-board computer
+	  (SBC) with BCM2836 quad-core Cortex-A7 processor.
+
+	  This was the only Raspberry Pi model with the BCM2836 and the 2B
+	  actually got a BCM2837 (Cortex-A53) underclocked an w/o wifi in
+	  the v1.2 board revision.
