@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-
 import importlib.machinery
 import json
 import os
@@ -359,49 +358,32 @@ def vpd_inject(out, vpds):
 
 
 def fallback_base_mac():
-    """Find MAC address of first suitable non-loopback interface.
-
-    Prefers real (globally unique) MACs over locally administered ones.
-    Prioritizes interface types: eth* > wan > wifi* > others.
-    """
+    """Find lowest valid MAC address from all interfaces."""
     base_path = '/sys/class/net'
-    interfaces = []
+    macs = []
 
     for iface in os.listdir(base_path):
-        if iface == 'lo':
-            continue
         try:
-            # pylint: disable=invalid-name
             fn = os.path.join(base_path, iface, 'address')
             with open(fn, 'r', encoding='ascii') as f:
                 mac = f.read().strip()
 
-            # Check if locally administered (bit 1 of first octet is set)
-            first_byte = int(mac.split(':')[0], 16)
-            is_local = bool(first_byte & 0x02)
+            # Skip invalid/empty/unset MAC addresses
+            if not mac or len(mac) < 17 or mac == '00:00:00:00:00:00':
+                continue
 
-            # Prefer: eth* > wan > wifi* > others, then real MACs > local MACs
-            priority = 0
-            if iface.startswith('eth'):
-                priority = 400
-            elif iface == 'wan':
-                priority = 300
-            elif iface.startswith('wifi'):
-                priority = 200
-            else:
-                priority = 100
+            # Validate MAC address format
+            parts = mac.split(':')
+            if len(parts) != 6:
+                continue
 
-            # Real MACs get +100 bonus
-            if not is_local:
-                priority += 100
-
-            interfaces.append((priority, iface, mac))
-        except FileNotFoundError:
+            macs.append(mac)
+        except (FileNotFoundError, ValueError):
             continue
 
-    if interfaces:
-        interfaces.sort(reverse=True)  # Highest priority first
-        return interfaces[0][2]  # Return MAC
+    if macs:
+        macs.sort()
+        return macs[0]
 
     return None
 
