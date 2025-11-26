@@ -1,0 +1,78 @@
+image boot.vfat {
+	vfat {
+		files = {
+#BOOT_FILES#
+		}
+	}
+
+	size = 32M
+}
+
+image cfg.ext4 {
+	empty = true
+	temporary = true
+	size = 16M
+
+	ext4 {
+		label = "cfg"
+                use-mke2fs = true
+                features = "uninit_bg"
+                extraargs = "-m 0 -i 4096"
+	}
+}
+
+# The /var partition will be expanded automatically at first boot
+# to use the full size of the SD-card or eMMC media.
+image var.ext4 {
+	empty = true
+	temporary = true
+	size = 128M
+
+	ext4 {
+		label = "var"
+                use-mke2fs = true
+                features = "uninit_bg"
+                extraargs = "-m 0 -i 4096"
+	}
+}
+
+image #INFIX_ID##VERSION#-rpi2-sdcard.img {
+	hdimage {
+		partition-table-type = "hybrid"
+	}
+
+	partition boot {
+		partition-type = 0xc
+		bootable = "true"
+		image = "boot.vfat"
+	}
+
+	partition aux {
+		partition-type-uuid = srv
+		image = "aux.ext4"
+	}
+
+	partition primary {
+		partition-type-uuid = linux
+		bootable = "true"
+		size = 250M
+		image = "rootfs.squashfs"
+	}
+
+	partition secondary {
+		partition-type-uuid = linux
+		bootable = "true"
+		size = 250M
+		image = "rootfs.squashfs"
+	}
+
+	partition cfg {
+		partition-type-uuid = srv
+		image = "cfg.ext4"
+	}
+
+	partition var {
+		partition-type-uuid = var
+		image = "var.ext4"
+	}
+}

@@ -17,6 +17,7 @@ All notable changes to the project are documented in this file.
 
 - Upgrade Buildroot to 2025.02.8 (LTS)
 - Upgrade Linux kernel to 6.12.59 (LTS)
+- Initial support for 32-bit ARM systems, reference board: Raspberry Pi 2B
 - Enable MVEBU SafeXcel Crypto Engine firmware for Marvell Armada SOCs (37xx,
   7k, 8k, and CN913x series). Fixes kernel warnings about firmware load failures
   and crypto-safexcel probe errors on affected boards

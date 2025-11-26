@@ -130,7 +130,7 @@ validate_board()
     fi
 
     board_underscore=$(echo "$BOARD" | tr '-' '_')
-    for arch in aarch64 x86_64 riscv64; do
+    for arch in aarch32 aarch64 x86_64 riscv64; do
         for variant in "$BOARD" "$board_underscore"; do
             candidate="$BR2_EXTERNAL_INFIX_PATH/board/$arch/$variant"
             if [ -d "$candidate" ]; then
@@ -169,6 +169,9 @@ get_bootloader_name()
     board="$1"
     target="$2"
     case "$board" in
+        raspberrypi-rpi2)
+            echo "rpi2_boot"
+            ;;
         raspberrypi-rpi64)
             echo "rpi64_boot"
             ;;
@@ -269,8 +272,10 @@ discover_rpi_boot_files()
         files="${files}\t\t\t\"${f#"${binaries_dir}/"}\",\n"
     done
 
-    # Add splash screen
-    files="${files}\t\t\t\"splash.bmp\",\n"
+    # Add splash screen if it exists
+    if [ -f "${binaries_dir}/splash.bmp" ]; then
+        files="${files}\t\t\t\"splash.bmp\",\n"
+    fi
 
     # Add kernel (extract name from config.txt)
     if [ -f "${binaries_dir}/rpi-firmware/config.txt" ]; then
@@ -472,7 +477,7 @@ GENIMAGE_TEMPLATE="$BOARD_DIR/genimage.cfg.in"
 [ -f "$GENIMAGE_TEMPLATE" ] || die "genimage.cfg.in not found in $BOARD_DIR"
 
 # Check if board needs special boot file discovery (Raspberry Pi)
-if [ "$BOARD" = "raspberrypi-rpi64" ] && grep -q '#BOOT_FILES#' "$GENIMAGE_TEMPLATE"; then
+if { [ "$BOARD" = "raspberrypi-rpi2" ] || [ "$BOARD" = "raspberrypi-rpi64" ]; } && grep -q '#BOOT_FILES#' "$GENIMAGE_TEMPLATE"; then
     log "Discovering Raspberry Pi boot files..."
     BOOT_FILES=$(discover_rpi_boot_files "$BINARIES_DIR")
     # Create temp file with interpreted escape sequences

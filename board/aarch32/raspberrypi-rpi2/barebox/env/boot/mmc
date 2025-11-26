@@ -1,0 +1,11 @@
+#!/bin/sh
+
+mkdir /mnt/primary
+mount /dev/disk0.primary /mnt/primary
+
+global.bootm.image="/mnt/primary/boot/zImage"
+global.bootm.oftree="/mnt/primary/boot/broadcom/bcm2836-rpi-2-b.dtb"
+global.linux.bootargs.base="quiet console=ttyAMA0,115200 console=tty1 rauc.slot=primary"
+global.linux.bootargs.dyn.root="root=PARTLABEL=primary rootwait ro"
+
+bootm

@@ -1,0 +1,4 @@
+#!/bin/sh
+
+# Set boot order: try mmc first, then network
+global.boot.default="mmc net"

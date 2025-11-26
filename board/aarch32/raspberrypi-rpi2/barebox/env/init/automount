@@ -1,0 +1,5 @@
+#!/bin/sh
+
+# Automount MMC partitions
+mkdir -p /mnt/mmc
+automount /mnt/mmc 'mci0.probe=1 && mount /dev/disk0.0 /mnt/mmc'

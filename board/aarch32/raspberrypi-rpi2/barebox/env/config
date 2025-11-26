@@ -1,0 +1,12 @@
+#!/bin/sh
+
+# Barebox configuration for Raspberry Pi 2
+
+# Boot timeout (seconds)
+global autoboot_timeout=3
+
+# Default boot order
+global boot.default="mmc net"
+
+# Enable colored output if supported
+global allow_color=true

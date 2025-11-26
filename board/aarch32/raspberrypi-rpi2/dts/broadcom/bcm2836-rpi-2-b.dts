@@ -1,0 +1,19 @@
+#include <arm/broadcom/bcm2836-rpi-2-b.dts>
+#include "infix.dtsi"
+
+/ {
+	/* CMA pool for GPU and video */
+	reserved-memory {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ranges;
+
+		cma-reserved {
+			compatible = "shared-dma-pool";
+			size = <0x4000000>; /* 64MB */
+			alignment = <0x1000000>; /* 16MB aligned */
+			linux,cma-default;
+			reusable;
+		};
+	};
+};
