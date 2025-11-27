@@ -162,6 +162,10 @@ def interfaces(ifname=None):
         if iplink.get("group") == "internal":
             continue
 
+        link_type = iplink.get("link_type")
+        if link_type in ("can", "vcan"):
+            continue
+
         ipaddr = addrs.get(ifname, {})
 
         interfaces.append(interface(iplink, ipaddr))
