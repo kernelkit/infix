@@ -1,0 +1,635 @@
+#!/bin/sh
+# Support utilities for troubleshooting Infix systems
+
+# Program name for usage messages (supports being renamed by users)
+prognm=$(basename "$0")
+
+#
+# The collect command gathers system information and outputs a tarball.
+# Data is collected to /var/lib/support (or $HOME as fallback) and then
+# streamed to stdout. The temporary directory is cleaned up automatically.
+#
+# The following text is primarily intended for users of older Infix
+# systems that do not yet have this script in the root fileystems.
+#
+#   1. Copy this script to the target device's home directory:
+#
+#          scp support user@device:
+#
+#   2. SSH to the device and make it executable:
+#
+#          ssh user@device chmod +x support
+#
+#   3. Run the script from your home directory:
+#
+#          ./support collect > support-data.tar.gz
+#
+#      Or directly via SSH from your workstation:
+#
+#          ssh user@device './support collect' > support-data.tar.gz
+#
+# Optionally, the output can be encrypted with GPG using a password for
+# secure transmission to support personnel, see below.
+#
+# Examples:
+#   ./support collect                           > support-data.tar.gz
+#   ./support collect -s 5                      > support-data.tar.gz
+#   ./support collect -p                        > support-data.tar.gz.gpg
+#   ./support collect -p mypass                 > support-data.tar.gz.gpg
+#
+#   ssh user@device ./support collect           > support-data.tar.gz
+#   ssh user@device ./support collect -p mypass > support-data.tar.gz.gpg
+#
+# Note, interactive password prompt (-p without argument) may echo characters
+# over SSH due to local terminal echo.  Use -p PASSWORD for remote execution,
+# or pipe the password: echo "password" | ssh user@device ./support collect -p
+# meaning you can even: echo "$SECRET_VARIABLE" | ... which in some cases can
+# come in handy.
+#
+# TODO:
+#   Add more commands, e.g., verify (run health checks), upload <file>,
+#   test <network|disk|routing>, backup, watch (dashboard view), diff
+#
+
+cmd_collect()
+{
+    # Default values
+    LOG_TAIL_SEC=30
+    PASSWORD=""
+
+    # Parse options
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --log-sec|-s)
+                if [ -z "$2" ] || [ "$2" -le 0 ] 2>/dev/null; then
+                    echo "Error: --log-sec requires a positive number" >&2
+                    exit 1
+                fi
+                LOG_TAIL_SEC="$2"
+                shift 2
+                ;;
+            --password|-p)
+                # If next arg exists and doesn't start with -, use it as password
+                if [ -n "$2" ] && [ "${2#-}" = "$2" ]; then
+                    PASSWORD="$2"
+                    shift 2
+                else
+                    # Prompt for password interactively from stdin, no echo!
+                    # Disable echo BEFORE printing the prompt
+                    old_stty=$(stty -g 2>/dev/null)
+                    stty -echo 2>/dev/null || true
+                    printf "Enter encryption password: " >&2
+                    read -r PASSWORD
+                    echo "" >&2
+                    # Restore terminal settings
+                    if [ -n "$old_stty" ]; then
+                        stty "$old_stty" 2>/dev/null || true
+                    else
+                        stty echo 2>/dev/null || true
+                    fi
+                    if [ -z "$PASSWORD" ]; then
+                        echo "Error: Empty password not allowed" >&2
+                        exit 1
+                    fi
+                    shift
+                fi
+                ;;
+            *)
+                echo "Error: Unknown option '$1'" >&2
+                echo "Usage: $prognm collect [-s N] [-p PASSWORD]" >&2
+                exit 1
+                ;;
+        esac
+    done
+
+    # If WORK_DIR not set globally, try /var/lib/support first (more space,
+    # persistent across user sessions). Fall back to $HOME if we can't create/write there
+    if [ -z "$WORK_DIR" ]; then
+        if [ -w /var/lib/support ] 2>/dev/null; then
+            # Already writable, use it
+            WORK_DIR="/var/lib/support"
+        elif [ ! -e /var/lib/support ]; then
+            # Doesn't exist, try to create it
+            if mkdir -p /var/lib/support 2>/dev/null; then
+                WORK_DIR="/var/lib/support"
+            fi
+        elif [ -d /var/lib/support ]; then
+            # Exists but not writable, try to fix permissions (requires root)
+            # Try chmod first (might just be permission issue), then chown if needed
+            if chmod 755 /var/lib/support 2>/dev/null && \
+               chown "$(id -u):$(id -g)" /var/lib/support 2>/dev/null; then
+                # Verify it's actually writable now
+                if [ -w /var/lib/support ] 2>/dev/null; then
+                    WORK_DIR="/var/lib/support"
+                fi
+            fi
+        fi
+
+        # Fall back to $HOME if we couldn't set up /var/lib/support
+        if [ -z "$WORK_DIR" ]; then
+            WORK_DIR="${HOME}"
+            echo "Warning: Cannot write to /var/lib/support, using home directory instead." >&2
+            echo "         (This may fill up your home directory on systems with limited space)" >&2
+        fi
+    fi
+
+    # Create unique collection directory
+    COLLECT_DIR="${WORK_DIR}/support-$(hostname -s)-$(date -Iseconds)"
+    EXEC_LOG="${COLLECT_DIR}/collection.log"
+
+    # Cleanup on exit
+    cleanup()
+    {
+        echo "[$(date -Iseconds)] Cleanup called (signal: ${1:-EXIT})" >> "${EXEC_LOG}" 2>&1 || echo "[$(date -Iseconds)] Cleanup called (signal: ${1:-EXIT})" >&2
+        if [ -d "${COLLECT_DIR}" ]; then
+            echo "[$(date -Iseconds)] Removing collection directory: ${COLLECT_DIR}" >> "${EXEC_LOG}" 2>&1 || echo "[$(date -Iseconds)] Removing: ${COLLECT_DIR}" >&2
+            rm -rf "${COLLECT_DIR}"
+        else
+            echo "[$(date -Iseconds)] Collection directory already gone: ${COLLECT_DIR}" >> "${EXEC_LOG}" 2>&1 || echo "[$(date -Iseconds)] Already gone: ${COLLECT_DIR}" >&2
+        fi
+    }
+    trap cleanup EXIT INT TERM
+
+    # Create collection directory
+    if ! mkdir -p "${COLLECT_DIR}"; then
+        echo "Error: Cannot create collection directory: ${COLLECT_DIR}" >&2
+        echo "       Check permissions for ${WORK_DIR}" >&2
+        exit 1
+    fi
+
+    # Helper function to run commands with output to specific file
+    collect()
+    {
+        output_file="$1"
+        shift
+        cmd_desc="$*"
+
+	mkdir -p "${COLLECT_DIR}/$(dirname "$output_file")"
+        echo "[$(date -Iseconds)] Collecting: $cmd_desc -> ${output_file}" >> "${EXEC_LOG}" 2>&1
+        if "$@" > "${COLLECT_DIR}/${output_file}" 2>> "${EXEC_LOG}"; then
+            echo "[$(date -Iseconds)] Success: ${output_file}" >> "${EXEC_LOG}" 2>&1
+        else
+            exit_code=$?
+            echo "[$(date -Iseconds)] Failed (exit ${exit_code}): ${output_file}" >> "${EXEC_LOG}" 2>&1
+            # Create placeholder file indicating failure
+            echo "Command failed with exit code ${exit_code}: $cmd_desc" > "${COLLECT_DIR}/${output_file}"
+        fi
+    }
+
+    # Start collection log
+    echo "=== Infix Support Data Collection ==="   > "${EXEC_LOG}"
+    echo "Started: $(date -Iseconds)"             >> "${EXEC_LOG}"
+    echo "Hostname: $(hostname)"                  >> "${EXEC_LOG}"
+    echo "Work directory: ${WORK_DIR}"            >> "${EXEC_LOG}"
+    echo "Collection directory: ${COLLECT_DIR}"   >> "${EXEC_LOG}"
+    echo ""                                       >> "${EXEC_LOG}"
+
+    # Inform user that collection is starting (to stderr for SSH visibility)
+    echo "Starting support data collection from $(hostname)..." >&2
+    echo "Collecting to: ${WORK_DIR}" >&2
+    echo "This may take up to a minute. Please wait..." >&2
+
+    # System identification
+    collect system-info.txt uname -a
+    collect hostname.txt hostname
+    collect uptime.txt uptime
+
+    # Configuration files
+    collect running-config.json sysrepocfg -f json -d running -X
+    collect operational-config.json sysrepocfg -f json -d operational -X
+
+    # Sysrepo YANG modules
+    if command -v sysrepoctl >/dev/null 2>&1; then
+        collect sysrepo-modules.txt sysrepoctl -l
+    fi
+
+    # Startup config (may not exist on first boot)
+    if [ -f /cfg/startup-config.cfg ]; then
+        cp /cfg/startup-config.cfg "${COLLECT_DIR}/startup-config.cfg" 2>> "${EXEC_LOG}"
+    else
+        echo "No startup-config.cfg found" > "${COLLECT_DIR}/startup-config.cfg"
+    fi
+
+    # System logs and runtime data
+    if [ -d /var/log ]; then
+        if ls -A /var/log >/dev/null 2>&1; then
+            tar czf "${COLLECT_DIR}/logs.tar.gz" -C / var/log 2>> "${EXEC_LOG}" || \
+                echo "Failed to collect /var/log" > "${COLLECT_DIR}/logs.tar.gz.error"
+        else
+            echo "No logs in /var/log" > "${COLLECT_DIR}/logs.tar.gz.error"
+        fi
+    fi
+
+    # Collect crash dumps if they exist
+    if [ -d /var/crash ]; then
+        if ls -A /var/crash >/dev/null 2>&1; then
+            tar czf "${COLLECT_DIR}/crash.tar.gz" -C / var/crash 2>> "${EXEC_LOG}" || \
+                echo "Failed to collect /var/crash" > "${COLLECT_DIR}/crash.tar.gz.error"
+        else
+            echo "No crash dumps in /var/crash" > "${COLLECT_DIR}/crash.tar.gz.error"
+        fi
+    fi
+
+    # Tail /var/log/messages to capture live logging
+    if [ -f /var/log/messages ]; then
+        echo "Tailing /var/log/messages for ${LOG_TAIL_SEC} seconds (please wait)..." >&2
+        {
+            echo "=== Starting tail of /var/log/messages for ${LOG_TAIL_SEC} seconds ==="
+            timeout "${LOG_TAIL_SEC}" tail -F /var/log/messages 2>/dev/null || true
+            echo ""
+            echo "=== End of ${LOG_TAIL_SEC}-second tail ==="
+        } > "${COLLECT_DIR}/logs-tail-${LOG_TAIL_SEC}s.txt" 2>> "${EXEC_LOG}"
+        echo "Log tail complete." >&2
+    fi
+
+    if [ -d /run/net ]; then
+        if ls -A /run/net >/dev/null 2>&1; then
+            tar czf "${COLLECT_DIR}/run-net.tar.gz" -C / run/net 2>> "${EXEC_LOG}" || \
+                echo "Failed to collect /run/net" > "${COLLECT_DIR}/run-net.tar.gz.error"
+        else
+            echo "No data in /run/net" > "${COLLECT_DIR}/run-net.tar.gz.error"
+        fi
+    fi
+
+    if [ -d /run/finit ]; then
+        if ls -A /run/finit >/dev/null 2>&1; then
+            tar czf "${COLLECT_DIR}/run-finit.tar.gz" -C / run/finit 2>> "${EXEC_LOG}" || \
+                echo "Failed to collect /run/finit" > "${COLLECT_DIR}/run-finit.tar.gz.error"
+        else
+            echo "No data in /run/finit" > "${COLLECT_DIR}/run-finit.tar.gz.error"
+        fi
+    fi
+
+    # Kernel and system state
+    collect system/dmesg.txt    dmesg
+    collect system/free.txt     free -h
+    collect system/stat.txt     cat /proc/stat
+    collect system/softirqs.txt cat /proc/softirqs
+    collect system/locks.txt    cat /proc/locks
+    collect system/meminfo.txt  cat /proc/meminfo
+    collect system/file-nr.txt  cat /proc/sys/fs/file-nr
+    collect system/ps.txt       ps -o pid,rss,comm
+    collect system/df.txt       df -h
+
+    # Finit/init state
+    if command -v initctl >/dev/null 2>&1; then
+        collect initctl/cgroup.txt initctl cgroup
+        collect initctl/status.txt initctl status
+    fi
+
+    # CPU statistics
+    if command -v mpstat >/dev/null 2>&1; then
+        collect system/mpstat.txt mpstat -P ALL 1 1
+    else
+        echo "mpstat not available" > "${COLLECT_DIR}/mpstat.txt"
+    fi
+
+    # Top output (two samples)
+    collect system/top.txt sh -c 'top -b -n 2 -d 2'
+
+    # Interrupt statistics (before and after 2 second delay)
+    collect system/interrupts1.txt cat /proc/interrupts
+    sleep 2
+    collect system/interrupts2.txt cat /proc/interrupts
+
+    # Network information
+    collect network/ip/addr.json  ip -s -d -j addr  show
+    collect network/ip/route.json ip -s -d -j route show
+    collect network/ip/link.json  ip -s -d -j link  show
+    collect network/ip/neigh.json ip -s -d -j neigh show
+    collect network/ifconfig.txt ifconfig -a
+
+    # Collect ethtool information for all ethernet interfaces
+    if command -v ethtool >/dev/null 2>&1; then
+        # Get list of ethernet interfaces (any interface with link/ether)
+        ip -o link show | grep 'link/ether' | awk -F': ' '{print $2}' > "${COLLECT_DIR}/.iface-list" 2>> "${EXEC_LOG}"
+        if [ -s "${COLLECT_DIR}/.iface-list" ]; then
+            while IFS= read -r iface; do
+                # ethtool typically needs root
+                collect "network/ethtool/${iface}.txt"        ethtool    "$iface"
+                collect "network/ethtool/stats-${iface}.txt"  ethtool -S "$iface"
+                collect "network/ethtool/module-${iface}.txt" ethtool -m "$iface"
+            done < "${COLLECT_DIR}/.iface-list"
+        fi
+        rm -f "${COLLECT_DIR}/.iface-list"
+    fi
+
+    if command -v bridge >/dev/null 2>&1; then
+        collect network/bridge/link.json bridge -d -s -j link show
+        collect network/bridge/fdb.json bridge -d -s -j fdb show
+    fi
+
+    # Firewall rules
+    if command -v nft >/dev/null 2>&1; then
+        collect network/nftables.txt nft list ruleset
+    fi
+
+    # FRR routing information
+    if command -v vtysh >/dev/null 2>&1; then
+        collect frr/running-config.txt  vtysh -c "show running-config"
+        collect frr/ip-route.txt        vtysh -c "show ip route"
+        collect frr/ospf-interfaces.txt vtysh -c "show ip ospf interfaces"
+        collect frr/ospf-neighbor.txt   vtysh -c "show ip ospf neighbor"
+        collect frr/ospf-routes.txt     vtysh -c "show ip ospf routes"
+        collect frr/bgp-summary.txt     vtysh -c "show ip bgp summary"
+        collect frr/bfd-peers.txt       vtysh -c "show bfd peers"
+    fi
+
+    # Container information
+    if command -v podman >/dev/null 2>&1; then
+        # List all containers
+        collect podman/ps.txt podman ps -a
+
+        # Collect podman system info
+        collect podman/info.json podman info --format=json
+
+        # Get list of containers and inspect each
+        if podman ps -a --format '{{.Names}}' > "${COLLECT_DIR}/.container-list" 2>> "${EXEC_LOG}"; then
+            while IFS= read -r container; do
+                if [ -n "$container" ]; then
+                    safe_name=$(echo "$container" | tr '/' '_')
+                    collect "podman/inspect-${safe_name}.json" podman inspect "$container"
+                fi
+            done < "${COLLECT_DIR}/.container-list"
+            rm -f "${COLLECT_DIR}/.container-list"
+        fi
+    fi
+
+    # Additional system information
+    collect system/lsmod.txt lsmod
+    if command -v lspci >/dev/null 2>&1; then
+        collect system/lspci.txt lspci -v
+    else
+        echo "lspci not available" > "${COLLECT_DIR}/lspci.txt"
+    fi
+
+    if command -v lsusb >/dev/null 2>&1; then
+        collect system/lsusb.txt lsusb -v
+    else
+        echo "lsusb not available" > "${COLLECT_DIR}/lsusb.txt"
+    fi
+
+    # Disk I/O stats
+    if command -v iostat >/dev/null 2>&1; then
+        collect system/iostat.txt iostat -x 1 2
+    else
+        echo "iostat not available" > "${COLLECT_DIR}/iostat.txt"
+    fi
+
+    # Process resource usage
+    if command -v pstree >/dev/null 2>&1; then
+        collect system/pstree.txt pstree -p
+    else
+        collect system/pstree.txt ps fax
+    fi
+
+    # Environment and versions
+    collect system/env.txt env
+
+    # Network sockets
+    if command -v netstat >/dev/null 2>&1; then
+        collect system/netstat.txt netstat -tunlp
+    else
+        collect system/netstat.txt ss -tunlp
+    fi
+
+    for script in $(find "/etc/support.d" -type f -executable 2>/dev/null | sort); do
+        echo "[$(date -Iseconds)] Running ${script}..." >> "${EXEC_LOG}" 2>&1
+
+	if "${script}" "${COLLECT_DIR}" >> "${EXEC_LOG}" 2>&1; then
+            echo "[$(date -Iseconds)] Success: ${script}" >> "${EXEC_LOG}" 2>&1
+        else
+            exit_code=$?
+            echo "[$(date -Iseconds)] Failed (exit ${exit_code}): ${script}" >> "${EXEC_LOG}" 2>&1
+        fi
+    done
+
+    # Completion timestamp in log
+    echo "" >> "${EXEC_LOG}"
+    echo "Completed: $(date -Iseconds)" >> "${EXEC_LOG}"
+
+    # Notify user that collection is done
+    echo "Collection complete. Creating archive..." >&2
+
+    # Create final tar.gz and output to stdout
+    # Use -C to change to parent directory so paths in archive don't include full path
+    echo "[$(date -Iseconds)] Changing to work directory: ${WORK_DIR}" >> "${EXEC_LOG}" 2>&1
+    if ! cd "${WORK_DIR}"; then
+        echo "[$(date -Iseconds)] ERROR: Failed to cd to ${WORK_DIR}" >> "${EXEC_LOG}" 2>&1
+        echo "Error: Cannot change to work directory ${WORK_DIR}" >&2
+        exit 1
+    fi
+    echo "[$(date -Iseconds)] Successfully changed to: $(pwd)" >> "${EXEC_LOG}" 2>&1
+    echo "[$(date -Iseconds)] Creating archive from: $(basename "${COLLECT_DIR}")" >> "${EXEC_LOG}" 2>&1
+
+    # Check if password encryption is requested
+    if [ -n "$PASSWORD" ]; then
+        if ! command -v gpg >/dev/null 2>&1; then
+            echo "Error: --password specified but gpg is not available" >&2
+            exit 1
+        fi
+        echo "Encrypting with GPG..." >&2
+        echo "[$(date -Iseconds)] Starting tar with GPG encryption" >> "${EXEC_LOG}" 2>&1
+        tar czf - "$(basename "${COLLECT_DIR}")" 2>> "${EXEC_LOG}" | \
+            gpg --batch --yes --passphrase "$PASSWORD" --pinentry-mode loopback -c 2>> "${EXEC_LOG}"
+        tar_exit=$?
+        echo "[$(date -Iseconds)] tar+gpg pipeline exit code: $tar_exit" >> "${EXEC_LOG}" 2>&1
+        echo "" >&2
+        echo "WARNING: Remember to share the encryption password out-of-band!" >&2
+        echo "         Do not send it in the same email as the encrypted file." >&2
+        if [ $tar_exit -ne 0 ]; then
+            echo "[$(date -Iseconds)] ERROR: tar+gpg failed with exit code $tar_exit" >> "${EXEC_LOG}" 2>&1
+            exit $tar_exit
+        fi
+    else
+        echo "[$(date -Iseconds)] Starting tar (no encryption)" >> "${EXEC_LOG}" 2>&1
+        tar czf - "$(basename "${COLLECT_DIR}")" 2>> "${EXEC_LOG}"
+        tar_exit=$?
+        echo "[$(date -Iseconds)] tar exit code: $tar_exit" >> "${EXEC_LOG}" 2>&1
+        if [ $tar_exit -ne 0 ]; then
+            echo "[$(date -Iseconds)] ERROR: tar failed with exit code $tar_exit" >> "${EXEC_LOG}" 2>&1
+            exit $tar_exit
+        fi
+    fi
+    echo "[$(date -Iseconds)] Archive creation completed successfully" >> "${EXEC_LOG}" 2>&1
+}
+
+cmd_clean()
+{
+    dry_run=0
+    days=7
+
+    # Parse options
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --dry-run|-n)
+                dry_run=1
+                shift
+                ;;
+            --days|-d)
+                if [ -z "$2" ] || [ "$2" -le 0 ] 2>/dev/null; then
+                    echo "Error: --days requires a positive number" >&2
+                    exit 1
+                fi
+                days="$2"
+                shift 2
+                ;;
+            *)
+                echo "Error: Unknown option '$1'" >&2
+                echo "Usage: $prognm clean [--dry-run] [--days N]" >&2
+                exit 1
+                ;;
+        esac
+    done
+
+    if [ "$dry_run" -eq 1 ]; then
+        echo "Dry run - no files will be deleted"
+        echo ""
+    fi
+
+    echo "Looking for support directories older than ${days} days..."
+    echo ""
+
+    # If WORK_DIR is set globally, only search there
+    # Otherwise search in both /var/lib/support and $HOME
+    if [ -n "$WORK_DIR" ]; then
+        search_dirs="$WORK_DIR"
+    else
+        search_dirs="/var/lib/support ${HOME}"
+    fi
+    total_count=0
+
+    for search_dir in $search_dirs; do
+        if [ ! -d "$search_dir" ]; then
+            continue
+        fi
+
+        # Use find to locate old support directories
+        # The pattern matches: support-YYYY-MM-DD* format
+        find "$search_dir" -maxdepth 1 -type d -name "support-*-20*" -mtime "+${days}" 2>/dev/null | while IFS= read -r dir; do
+            size=$(du -sh "$dir" 2>/dev/null | awk '{print $1}')
+            mtime=$(stat -c %y "$dir" 2>/dev/null | cut -d' ' -f1)
+
+            if [ "$dry_run" -eq 1 ]; then
+                echo "Would remove: $dir ($size, modified: $mtime)"
+            else
+                echo "Removing: $dir ($size, modified: $mtime)"
+                rm -rf "$dir"
+            fi
+        done
+
+        # Count directories found in this location
+        count=$(find "$search_dir" -maxdepth 1 -type d -name "support-*-20*" -mtime "+${days}" 2>/dev/null | wc -l)
+        total_count=$((total_count + count))
+    done
+
+    echo ""
+    if [ "$total_count" -eq 0 ]; then
+        echo "No support directories older than ${days} days found in /var/lib/support or home directory."
+    elif [ "$dry_run" -eq 1 ]; then
+        echo "Found ${total_count} directories. Run without --dry-run to remove them."
+    else
+        echo "Removed ${total_count} directories."
+    fi
+}
+
+usage()
+{
+    echo "Usage: $prognm [global-options] <command> [options]"
+    echo ""
+    echo "Note: Run with 'sudo' for complete data collection (dmesg, ethtool, etc.)"
+    echo ""
+    echo "Global options:"
+    echo "  -u, --unprivileged     Allow running without root (some data will be missing)"
+    echo "  -w, --work-dir PATH    Use PATH as working directory for collection/cleanup"
+    echo "                         (default: /var/lib/support with fallback to \$HOME)"
+    echo ""
+    echo "Commands:"
+    echo "  collect [options]      Collect system information for support/troubleshooting"
+    echo "                         NOTE: may take up to a minute to finish, please wait!"
+    echo "  clean [options]        Remove old support collection directories"
+    echo ""
+    echo "Options for collect:"
+    echo "  -s, --log-sec SEC      Tail /var/log/messages for SEC seconds (default: 30)"
+    echo "  -p, --password [PASS]  Encrypt output with GPG. If PASS is omitted, prompts"
+    echo "                         interactively or reads from stdin, so possible to do"
+    echo "                         echo "\$MYSECRET" | ...   (recommended for security)"
+    echo ""
+    echo "Options for clean:"
+    echo "  -n, --dry-run          Show what would be deleted without deleting"
+    echo "  -d, --days N           Remove directories older than N days (default: 7)"
+    echo ""
+    echo "Examples:"
+    echo "  sudo $prognm collect                        > support-data.tar.gz"
+    echo "  sudo $prognm collect -p                     > support-data.tar.gz.gpg"
+    echo "  sudo $prognm collect --password mypass      > support-data.tar.gz.gpg"
+    echo "  sudo $prognm --work-dir /tmp/ram collect    > support-data.tar.gz"
+    echo "  ssh user@device 'sudo $prognm collect'      > support-data.tar.gz"
+    echo "  $prognm -u collect                          > support-data.tar.gz (degraded)"
+    echo "  sudo $prognm clean --dry-run"
+    echo "  sudo $prognm clean --days 30"
+    echo "  sudo $prognm --work-dir /tmp/ram clean"
+    exit 1
+}
+
+# Main command dispatcher
+# Parse global options first
+WORK_DIR=""
+ALLOW_UNPRIVILEGED=0
+
+while [ $# -gt 0 ]; do
+    case "$1" in
+        -u|--unprivileged)
+            ALLOW_UNPRIVILEGED=1
+            shift
+            ;;
+        -w|--work-dir)
+            if [ -z "$2" ]; then
+                echo "Error: --work-dir requires a path argument" >&2
+                exit 1
+            fi
+            WORK_DIR="$2"
+            shift 2
+            ;;
+        -*)
+            # Unknown option - might be a command-specific option
+            break
+            ;;
+        *)
+            # Not an option, must be the command
+            break
+            ;;
+    esac
+done
+
+if [ $# -lt 1 ]; then
+    usage
+fi
+
+command="$1"
+shift
+
+case "$command" in
+    collect|clean)
+        # Check if running as root (uid 0)
+        if [ "$(id -u)" -ne 0 ] && [ "$ALLOW_UNPRIVILEGED" -eq 0 ]; then
+            echo "Error: This command should be run with 'sudo' for complete data collection." >&2
+            echo "       Use -u/--unprivileged to run as a regular user in degraded mode." >&2
+            exit 1
+        fi
+
+        if [ "$command" = "collect" ]; then
+            cmd_collect "$@"
+        else
+            cmd_clean "$@"
+        fi
+        ;;
+    help|--help|-h)
+        usage
+        ;;
+    *)
+        echo "Error: Unknown command '$command'" >&2
+        echo "" >&2
+        usage
+        ;;
+esac
