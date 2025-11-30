@@ -1,0 +1,24 @@
+=== Support data collection
+
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/misc/support_collect]
+
+==== Description
+
+Verify that the support collect command works and produces a valid tarball
+with expected content. Tests both the --work-dir global option and GPG
+encryption (when available on target).
+
+==== Topology
+
+image::topology.svg[Support data collection topology, align=center, scaledwidth=75%]
+
+==== Sequence
+
+. Set up topology and attach to target DUT
+. Check for GPG availability on target
+. Run support collect with --work-dir and short log tail
+. Verify tarball was created and is valid
+. Run support collect with GPG encryption
+. Verify encrypted file and decrypt it
+
+
