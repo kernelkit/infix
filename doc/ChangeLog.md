@@ -15,6 +15,10 @@ All notable changes to the project are documented in this file.
 
 ### Changes
 
+- New `support` command for collecting system diagnostics to aid in both
+  troubleshooting and support.  Run `support collect > data.tar.gz`
+  locally or remotely via SSH to gather configuration, logs, network state,
+  and system information
 - Upgrade Buildroot to 2025.02.8 (LTS)
 - Upgrade Linux kernel to 6.12.59 (LTS)
 - Initial support for 32-bit ARM systems, reference board: Raspberry Pi 2B
