@@ -154,7 +154,7 @@ class PadDhcpServer:
     ip = 17
     mac = 19
     host = 21
-    cid = 19
+    cid = 22
     exp = 10
 
 
@@ -720,11 +720,11 @@ class DhcpServer:
         now = datetime.now(timezone.utc)
         for lease in get_json_data([], self.data, 'leases', 'lease'):
             if lease["expires"] == "never":
-                exp = " never"
+                exp = "never"
             else:
                 dt = datetime.strptime(lease['expires'], '%Y-%m-%dT%H:%M:%S%z')
                 seconds = int((dt - now).total_seconds())
-                exp = f" {self.format_duration(seconds)}"
+                exp = self.format_duration(seconds)
             self.leases.append({
                "ip": lease["address"],
                "mac": lease["phys-address"],
@@ -775,7 +775,7 @@ class DhcpServer:
             row += f"{mac:<{PadDhcpServer.mac}}"
             row += f"{host:<{PadDhcpServer.host}}"
             row += f"{cid:<{PadDhcpServer.cid}}"
-            row += f"{exp:>{PadDhcpServer.exp - 1}}"
+            row += f"{exp:>{PadDhcpServer.exp}}"
             print(row)
 
     def print_stats(self):
