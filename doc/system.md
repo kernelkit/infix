@@ -323,6 +323,53 @@ reference ID, stratum, time offsets, frequency, and root delay.
 > The system uses `chronyd` Network Time Protocol (NTP) daemon.  The
 > output shown here is best explained in the [Chrony documentation][4].
 
+## Support Data Collection
+
+When troubleshooting issues or seeking support, the `support` command
+provides a convenient way to collect comprehensive system diagnostics.
+This command gathers configuration files, logs, network state, and other
+system information into a single compressed archive.
+
+### Collecting Support Data
+
+To collect support data and save it to a file:
+
+```bash
+admin@host:~$ support collect > support-data.tar.gz
+(admin@host) Password: ***********
+Starting support data collection from host...
+This may take up to a minute. Please wait...
+Tailing /var/log/messages for 30 seconds (please wait)...
+Log tail complete.
+Collection complete. Creating archive...
+admin@host:~$ ls -l support-data.tar.gz
+-rw-rw-r-- 1 admin admin 508362 nov 30 13:05 support-data.tar.gz
+```
+
+The command can also be run remotely via SSH from your workstation:
+
+```bash
+$ ssh admin@host support collect > support-data.tar.gz
+...
+```
+
+The collection process may take up to a minute depending on system load
+and the amount of logging data. Progress messages are shown during the
+collection process.
+
+### What is Collected
+
+The support archive includes:
+
+ - System identification (hostname, uptime, kernel version)
+ - Running and operational configuration (sysrepo datastores)
+ - System logs (`/var/log` directory and live tail of messages log)
+ - Network configuration and state (interfaces, routes, neighbors, bridges)
+ - FRRouting information (OSPF, BFD status)
+ - Container information (podman containers and their configuration)
+ - System resource usage (CPU, memory, disk, processes)
+ - Hardware information (PCI, USB devices, network interfaces)
+
 [1]: https://www.rfc-editor.org/rfc/rfc7317
 [2]: https://github.com/kernelkit/infix/blob/main/src/confd/yang/infix-system%402024-02-29.yang
 [3]: https://www.rfc-editor.org/rfc/rfc8341
