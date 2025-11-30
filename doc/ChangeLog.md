@@ -68,6 +68,9 @@ All notable changes to the project are documented in this file.
    - Add support for property-based filtering with operators (contains, isequal,
      startswith, regex, ereregex) on message properties (msg, msgid, programname,
      hostname, source, data), with optional case-insensitive and negate modifiers
+- Update factory configuration for BPi-R3 and NanoPi R2S boards to enable
+  DHCPv6 client on WAN interface and allow traffic forwarding from LAN to WAN
+  zone in the firewall (this is what most users expect)
 
 ### Fixes
 
@@ -80,6 +83,12 @@ All notable changes to the project are documented in this file.
 - Fix #1255: serious regression in boot time, introduced in v25.10, delays the
   boot step "Mounting filesystems ...", from 30 seconds up to five minutes!
 - Fix broken intra-document links in container and tunnel documentation
+- Fix `show dhcp-server` command crashing with invalid timestamp format.
+  DHCP lease expiry timestamps had double timezone suffix causing libyang
+  validation errors
+- Fix `show dhcp-server` output alignment. The EXPIRES column was misaligned
+  when CLIENT ID field was empty, and CLIENT ID column was too narrow for
+  typical 20-character client IDs
 
 [latest-boot]: https://github.com/kernelkit/infix/releases/latest-boot
 [bpi-r3-emmc-documentation]: https://github.com/kernelkit/infix/blob/main/board/aarch64/bananapi-bpi-r3/README.md
