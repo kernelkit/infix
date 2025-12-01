@@ -3,7 +3,7 @@ Change Log
 
 All notable changes to the project are documented in this file.
 
-[v25.11.0][] - 2025-11-28
+[v25.11.0][UNRELEASED]
 -------------------------
 
 > [!NOTE]
@@ -79,6 +79,7 @@ All notable changes to the project are documented in this file.
   existing invalid configurations are automatically corrected during upgrade
 - Fix #1255: serious regression in boot time, introduced in v25.10, delays the
   boot step "Mounting filesystems ...", from 30 seconds up to five minutes!
+- Fix #1289: SSH host key generation warning at boot after factory reset
 - Fix broken intra-document links in container and tunnel documentation
 
 [latest-boot]: https://github.com/kernelkit/infix/releases/latest-boot

@@ -8,7 +8,8 @@ PUB=$2
 
 mkdir -p "$(dirname "$KEY")" "$(dirname "$PUB")"
 
+# openssl genpkey -quiet -algorithm EC -pkeyopt ec_paramgen_curve:P-256 -outform PEM
 openssl genpkey -quiet -algorithm RSA -pkeyopt rsa_keygen_bits:$BIT -outform PEM > "$KEY"
-openssl rsa -RSAPublicKey_out < "$KEY" > "$PUB"
+openssl rsa -RSAPublicKey_out < "$KEY" 2>/dev/null > "$PUB"
 
 exit 0

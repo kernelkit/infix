@@ -59,12 +59,17 @@ static int gen_hostkey(const char *name, struct lyd_node *change)
 	private_key = lydx_get_cattr(change, "cleartext-private-key");
 	public_key = lydx_get_cattr(change, "public-key");
 
+	/* Validate keys before use */
+	if (!private_key || !public_key || !*private_key || !*public_key)
+		return SR_ERR_OK;
+
 	if (mkdir(SSH_HOSTKEYS_NEXT, 0600) && (errno != EEXIST)) {
 		ERRNO("Failed creating %s", SSH_HOSTKEYS_NEXT);
 		rc = SR_ERR_INTERNAL;
 	}
 
-	if (systemf("/usr/libexec/infix/mksshkey %s %s %s %s", name, SSH_HOSTKEYS_NEXT, public_key, private_key))
+	if (systemf("/usr/libexec/infix/mksshkey %s %s %s %s", name,
+		    SSH_HOSTKEYS_NEXT, public_key, private_key))
 		rc = SR_ERR_INTERNAL;
 
 	return rc;
@@ -156,7 +161,7 @@ static int keystore_update(sr_session_ctx_t *session, struct lyd_node *config, s
 }
 
 int keystore_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff,
-			 sr_event_t event, struct confd *confd)
+		    sr_event_t event, struct confd *confd)
 {
 	struct lyd_node *changes, *change;
 	int rc = SR_ERR_OK;
