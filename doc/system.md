@@ -357,6 +357,47 @@ The collection process may take up to a minute depending on system load
 and the amount of logging data. Progress messages are shown during the
 collection process.
 
+### Encrypted Collection
+
+For secure transmission of support data, the archive can be encrypted
+with GPG using a password:
+
+```bash
+admin@host:~$ support collect -p mypassword > support-data.tar.gz.gpg
+Starting support data collection from host...
+This may take up to a minute. Please wait...
+...
+Collection complete. Creating archive...
+Encrypting with GPG...
+```
+
+The `support collect` command even supports omitting `mypassword` and
+will then prompt interactively for the password.  This works over SSH too,
+but the local ssh client may then echo the password.
+
+> [!TIP]
+> To hide the encryption password for an SSH session, the script supports reading from stdin:  
+> `echo "$MYSECRET" | ssh user@device support collect -p > file.tar.gz.gpg`
+
+After transferring the resulting file to your workstation, decrypt it
+with the password:
+
+```bash
+$ gpg -d support-data.tar.gz.gpg > support-data.tar.gz
+$ tar xzf support-data.tar.gz
+```
+
+or
+
+```bash
+$ gpg -d support-data.tar.gz.gpg | tar xz
+```
+
+> [!IMPORTANT]
+> Make sure to share `mypassword` out-of-band from the encrypted data
+> with the recipient of the data.  I.e., avoid sending both in the same
+> plain-text email for example.
+
 ### What is Collected
 
 The support archive includes:
