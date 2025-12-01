@@ -23,7 +23,7 @@ def leases(leases_file):
                 else:
                     dt = datetime.fromtimestamp(int(tokens[0]),
                                                 tz=timezone.utc)
-                    expires = dt.isoformat() + "+00:00"
+                    expires = dt.isoformat()
 
                 row = {
                     "expires": expires,

@@ -154,7 +154,7 @@ class PadDhcpServer:
     ip = 17
     mac = 19
     host = 21
-    cid = 19
+    cid = 22
     exp = 10
 
 
@@ -652,7 +652,20 @@ class Sensor:
             else:
                 return f"{self.value} W"
 
+        # Handle PWM fan sensors (reported as "other" type with milli scale)
+        # PWM duty cycle is reported as percentage (0-100)
+        elif self.value_type == 'other' and self.value_scale == 'milli':
+            # Check if this is likely a PWM sensor based on description or name
+            name_lower = self.name.lower()
+            desc_lower = (self.description or "").lower()
+            if 'pwm' in desc_lower or 'fan' in name_lower or 'fan' in desc_lower:
+                percent = self.value / 1000.0
+                return f"{percent:.1f}%"
+            # Fall through for other "other" type sensors
+
         # For unknown sensor types, show raw value
+        if self.value_type in ['other', 'unknown']:
+            return f"{self.value}"
         else:
             return f"{self.value} {self.value_type}"
 
@@ -720,11 +733,11 @@ class DhcpServer:
         now = datetime.now(timezone.utc)
         for lease in get_json_data([], self.data, 'leases', 'lease'):
             if lease["expires"] == "never":
-                exp = " never"
+                exp = "never"
             else:
                 dt = datetime.strptime(lease['expires'], '%Y-%m-%dT%H:%M:%S%z')
                 seconds = int((dt - now).total_seconds())
-                exp = f" {self.format_duration(seconds)}"
+                exp = self.format_duration(seconds)
             self.leases.append({
                "ip": lease["address"],
                "mac": lease["phys-address"],
@@ -775,7 +788,7 @@ class DhcpServer:
             row += f"{mac:<{PadDhcpServer.mac}}"
             row += f"{host:<{PadDhcpServer.host}}"
             row += f"{cid:<{PadDhcpServer.cid}}"
-            row += f"{exp:>{PadDhcpServer.exp - 1}}"
+            row += f"{exp:>{PadDhcpServer.exp}}"
             print(row)
 
     def print_stats(self):

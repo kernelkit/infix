@@ -297,7 +297,7 @@ def hwmon_sensor_components():
                     except (FileNotFoundError, ValueError, IOError):
                         continue
 
-                # Fan sensors
+                # Fan sensors (RPM from tachometer)
                 for fan_file in glob.glob(os.path.join(hwmon_path, "fan*_input")):
                     try:
                         sensor_num = os.path.basename(fan_file).split('_')[0].replace('fan', '')
@@ -313,6 +313,36 @@ def hwmon_sensor_components():
                         add_sensor(base_name, create_sensor(sensor_name, value, "rpm", "units", raw_label))
                     except (FileNotFoundError, ValueError, IOError):
                         continue
+
+                # PWM fan sensors (duty cycle percentage)
+                # Only add if no fan*_input exists for this device (avoid duplicates)
+                has_rpm_sensor = bool(glob.glob(os.path.join(hwmon_path, "fan*_input")))
+                if not has_rpm_sensor:
+                    for pwm_file in glob.glob(os.path.join(hwmon_path, "pwm[0-9]*")):
+                        # Skip pwm*_enable, pwm*_mode, etc. - only process pwm1, pwm2, etc.
+                        pwm_basename = os.path.basename(pwm_file)
+                        if not pwm_basename.replace('pwm', '').isdigit():
+                            continue
+                        try:
+                            sensor_num = pwm_basename.replace('pwm', '')
+                            pwm_raw = int(HOST.read(pwm_file).strip())
+                            # Convert PWM duty cycle (0-255) to percentage (0-100)
+                            # Note: Some devices are inverted (255=off, 0=max), but we report as-is
+                            # The value represents duty cycle, not necessarily fan speed
+                            # Use "other" value-type since PWM duty cycle isn't a standard IETF type
+                            value = int((pwm_raw / 255.0) * 100 * 1000)  # Convert to milli-percent (0-100000)
+                            label_file = os.path.join(hwmon_path, f"pwm{sensor_num}_label")
+                            raw_label = None
+                            if HOST.exists(label_file):
+                                raw_label = HOST.read(label_file).strip()
+                                label = normalize_sensor_name(raw_label)
+                                sensor_name = f"{base_name}-{label}"
+                            else:
+                                sensor_name = base_name if sensor_num == '1' else f"{base_name}{sensor_num}"
+                            # Use "PWM Fan" as description so it displays nicely in show hardware
+                            add_sensor(base_name, create_sensor(sensor_name, value, "other", "milli", raw_label or "PWM Fan"))
+                        except (FileNotFoundError, ValueError, IOError):
+                            continue
 
                 # Voltage sensors
                 for voltage_file in glob.glob(os.path.join(hwmon_path, "in*_input")):
