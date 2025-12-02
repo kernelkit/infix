@@ -1,7 +1,7 @@
-#!/bin/bash
-# Store and convert RSA PUBLIC/PRIVATE KEYs to be able to use them in
-# OpenSSHd.
+#!/bin/sh
+# Generate OpenSSH host key pair from same keys as NETCONF
 set -e
+umask 0077
 
 NAME="$1"
 DIR="$2"
@@ -9,16 +9,21 @@ PUBLIC="$3"
 PRIVATE="$4"
 TMP="$(mktemp)"
 
-echo -e '-----BEGIN RSA PRIVATE KEY-----' > "$DIR/$NAME"
-echo "$PRIVATE" >> "$DIR/$NAME"
-echo -e '-----END RSA PRIVATE KEY-----' >> "$DIR/$NAME"
+{
+	echo '-----BEGIN PRIVATE KEY-----'
+	printf '%s\n' "$PRIVATE" | fold -w 64
+	echo '-----END PRIVATE KEY-----'
+} > "$DIR/$NAME"
 
-echo -e "-----BEGIN RSA PUBLIC KEY-----" > "$TMP"
-echo -e "$PUBLIC" >> "$TMP"
-echo -e "-----END RSA PUBLIC KEY-----" >> "$TMP"
+{
+	echo "-----BEGIN RSA PUBLIC KEY-----"
+	printf '%s\n' "$PUBLIC" | fold -w 64
+	echo "-----END RSA PUBLIC KEY-----"
+} > "$TMP"
 
-ssh-keygen -i -m PKCS8 -f "$TMP" > "$DIR/$NAME.pub"
+ssh-keygen -i -f "$TMP" -m PKCS8 > "$DIR/$NAME.pub"
 rm "$TMP"
+
 chmod 0600 "$DIR/$NAME.pub"
 chmod 0600 "$DIR/$NAME"
 chown sshd:sshd "$DIR/$NAME.pub"
