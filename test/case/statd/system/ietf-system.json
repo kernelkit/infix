@@ -135,139 +135,254 @@
           "pid": 1185,
           "name": "udevd",
           "status": "running",
-          "description": "Device event daemon (udev)"
+          "description": "Device event daemon (udev)",
+          "statistics": {
+            "memory-usage": "0",
+            "uptime": "1390",
+            "restart-count": 0
+          }
         },
         {
           "pid": 2248,
           "name": "dbus",
           "status": "running",
-          "description": "D-Bus message bus daemon"
+          "description": "D-Bus message bus daemon",
+          "statistics": {
+            "memory-usage": "0",
+            "uptime": "1390",
+            "restart-count": 0
+          }
         },
         {
           "pid": 3039,
           "name": "confd",
           "status": "running",
-          "description": "Configuration daemon"
+          "description": "Configuration daemon",
+          "statistics": {
+            "memory-usage": "0",
+            "uptime": "1390",
+            "restart-count": 0
+          }
         },
         {
           "pid": 3548,
           "name": "netopeer",
           "status": "running",
-          "description": "NETCONF server"
+          "description": "NETCONF server",
+          "statistics": {
+            "memory-usage": "0",
+            "uptime": "1388",
+            "restart-count": 0
+          }
         },
         {
           "pid": 2249,
           "name": "dnsmasq",
           "status": "running",
-          "description": "DHCP/DNS proxy"
+          "description": "DHCP/DNS proxy",
+          "statistics": {
+            "memory-usage": "0",
+            "uptime": "1390",
+            "restart-count": 0
+          }
         },
         {
           "pid": 3559,
           "name": "tty:hvc0",
           "status": "running",
-          "description": "Getty on hvc0"
+          "description": "Getty on hvc0",
+          "statistics": {
+            "memory-usage": "0",
+            "uptime": "1388",
+            "restart-count": 0
+          }
         },
         {
           "pid": 2340,
           "name": "iitod",
           "status": "running",
-          "description": "LED daemon"
+          "description": "LED daemon",
+          "statistics": {
+            "memory-usage": "0",
+            "uptime": "1390",
+            "restart-count": 0
+          }
         },
         {
           "pid": 3560,
           "name": "klishd",
           "status": "running",
-          "description": "CLI backend daemon"
+          "description": "CLI backend daemon",
+          "statistics": {
+            "memory-usage": "0",
+            "uptime": "1388",
+            "restart-count": 0
+          }
         },
         {
           "pid": 3617,
           "name": "mdns-alias",
           "status": "running",
-          "description": "mDNS alias advertiser "
+          "description": "mDNS alias advertiser ",
+          "statistics": {
+            "memory-usage": "0",
+            "uptime": "1388",
+            "restart-count": 0
+          }
         },
         {
           "pid": 0,
           "name": "mstpd",
           "status": "stopped",
-          "description": "Spanning Tree daemon"
+          "description": "Spanning Tree daemon",
+          "statistics": {
+            "memory-usage": "0",
+            "uptime": "0",
+            "restart-count": 0
+          }
         },
         {
           "pid": 3564,
           "name": "rauc",
           "status": "running",
-          "description": "Software update service"
+          "description": "Software update service",
+          "statistics": {
+            "memory-usage": "0",
+            "uptime": "1388",
+            "restart-count": 0
+          }
         },
         {
           "pid": 0,
           "name": "resolvconf",
           "status": "done",
-          "description": "Update DNS configuration"
+          "description": "Update DNS configuration",
+          "statistics": {
+            "memory-usage": "0",
+            "uptime": "0",
+            "restart-count": 2
+          }
         },
         {
           "pid": 3472,
           "name": "statd",
           "status": "running",
-          "description": "Status daemon"
+          "description": "Status daemon",
+          "statistics": {
+            "memory-usage": "0",
+            "uptime": "1389",
+            "restart-count": 0
+          }
         },
         {
           "pid": 3653,
           "name": "staticd",
           "status": "running",
-          "description": "Static routing daemon"
+          "description": "Static routing daemon",
+          "statistics": {
+            "memory-usage": "0",
+            "uptime": "1388",
+            "restart-count": 0
+          }
         },
         {
           "pid": 2241,
           "name": "syslogd",
           "status": "running",
-          "description": "System log daemon"
+          "description": "System log daemon",
+          "statistics": {
+            "memory-usage": "0",
+            "uptime": "1390",
+            "restart-count": 0
+          }
         },
         {
           "pid": 2242,
           "name": "watchdogd",
           "status": "running",
-          "description": "System watchdog daemon"
+          "description": "System watchdog daemon",
+          "statistics": {
+            "memory-usage": "0",
+            "uptime": "1390",
+            "restart-count": 0
+          }
         },
         {
           "pid": 3587,
           "name": "zebra",
           "status": "running",
-          "description": "Zebra routing daemon"
+          "description": "Zebra routing daemon",
+          "statistics": {
+            "memory-usage": "0",
+            "uptime": "1388",
+            "restart-count": 0
+          }
         },
         {
           "pid": 3616,
           "name": "mdns",
           "status": "running",
-          "description": "Avahi mDNS-SD daemon"
+          "description": "Avahi mDNS-SD daemon",
+          "statistics": {
+            "memory-usage": "0",
+            "uptime": "1388",
+            "restart-count": 0
+          }
         },
         {
           "pid": 3618,
           "name": "chronyd",
           "status": "running",
-          "description": "Chrony NTP v3/v4 daemon"
+          "description": "Chrony NTP v3/v4 daemon",
+          "statistics": {
+            "memory-usage": "0",
+            "uptime": "1388",
+            "restart-count": 0
+          }
         },
         {
           "pid": 3633,
           "name": "lldpd",
           "status": "running",
-          "description": "LLDP daemon (IEEE 802.1ab)"
+          "description": "LLDP daemon (IEEE 802.1ab)",
+          "statistics": {
+            "memory-usage": "0",
+            "uptime": "1388",
+            "restart-count": 0
+          }
         },
         {
           "pid": 3635,
           "name": "nginx",
           "status": "running",
-          "description": "Web server"
+          "description": "Web server",
+          "statistics": {
+            "memory-usage": "0",
+            "uptime": "1388",
+            "restart-count": 0
+          }
         },
         {
           "pid": 3636,
           "name": "rousette",
           "status": "running",
-          "description": "RESTCONF server"
+          "description": "RESTCONF server",
+          "statistics": {
+            "memory-usage": "0",
+            "uptime": "1388",
+            "restart-count": 0
+          }
         },
         {
           "pid": 3641,
           "name": "sshd",
           "status": "running",
-          "description": "OpenSSH daemon"
+          "description": "OpenSSH daemon",
+          "statistics": {
+            "memory-usage": "0",
+            "uptime": "1388",
+            "restart-count": 0
+          }
         }
       ]
     }
