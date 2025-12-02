@@ -28,6 +28,11 @@ module infix-system {
   contact      "kernelkit@googlegroups.com";
   description  "Infix augments and deviations to ietf-system.";
 
+  revision 2025-12-02 {
+    description "Extend services with runtime statistics:
+                   - Add statistics container with memory-usage, uptime, restart-count";
+    reference "internal";
+  }
   revision 2025-10-18 {
     description "New system-state status:
                    - Add system resource usage: memory, loadavg, filesystem usage
@@ -507,6 +512,28 @@ module infix-system {
           }
           description
             "Detailed current status of the process.";
+        }
+
+        container statistics {
+          description "Service resource usage and runtime statistics";
+          config false;
+
+          leaf memory-usage {
+            type uint64;
+            units "bytes";
+            description "Current memory usage in bytes";
+          }
+
+          leaf uptime {
+            type uint64;
+            units "seconds";
+            description "Time service has been running";
+          }
+
+          leaf restart-count {
+            type uint32;
+            description "Number of service restarts";
+          }
         }
       }
     }
