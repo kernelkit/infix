@@ -1,6 +1,6 @@
 === DHCPv6 Prefix Delegation
 
-ifdef::topdoc[:imagesdir: {topdoc}../../test/case/infix_dhcp/client6_prefix_delegation]
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/dhcp/client6_prefix_delegation]
 
 ==== Description
 

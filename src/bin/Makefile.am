@@ -2,6 +2,7 @@ DISTCLEANFILES   = *~ *.d
 ACLOCAL_AMFLAGS  = -I m4
 
 bin_PROGRAMS     = copy erase files
+sbin_SCRIPTS     = support
 
 # Bash completion
 bashcompdir      = $(datadir)/bash-completion/completions

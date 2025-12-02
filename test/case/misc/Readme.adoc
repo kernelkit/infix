@@ -1,4 +1,13 @@
 :testgroup:
 == Miscellaneous Tests
 
+Tests verifying system utilities and operational features:
+
+ - Operational datastore query for all configuration
+ - Support data collection with work-dir and GPG encryption
+
 include::operational_all/Readme.adoc[]
+
+<<<
+
+include::support_collect/Readme.adoc[]

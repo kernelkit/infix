@@ -1,0 +1,442 @@
+#!/usr/bin/env python3
+"""
+Support data analysis tool for Infix
+
+Analyze support data collected from Infix devices. Provides TUI for exploring
+logs, comparing between devices or time periods, and generating summaries.
+
+Installation:
+    This tool requires Python 3.10+ and the 'textual' library.
+
+    Option 1: Using a virtual environment (recommended):
+        python3 -m venv ~/.venv/support
+        source ~/.venv/support/bin/activate
+        pip install textual rich
+        ./support analyze ~/support/
+
+        # To use later, just activate the venv again:
+        source ~/.venv/support/bin/activate
+
+    Option 2: Using uvx (if you have uv installed):
+        uvx --from textual --with rich ./support analyze ~/support/
+
+    Option 3: System-wide installation:
+        pip install --user textual rich
+        ./support analyze ~/support/
+
+    Note: System packages (apt-get/apt) often have outdated versions.
+          Use pip with venv for the latest textual version.
+
+Usage:
+    support analyze <directory>           # Single device TUI browser
+    support analyze <dir1> <dir2>         # Comparison view (auto-detect)
+    support diff <dir1> <dir2> [--file]   # Focused diff view
+    support summary <directory...>        # Quick CLI summary
+"""
+
+import argparse
+import sys
+from pathlib import Path
+
+
+class SupportArchive:
+    """Represents a single support collection directory."""
+
+    def __init__(self, path: Path):
+        self.path = path
+        self.name = path.name
+
+        # Parse directory name: support-<hostname>-<timestamp>
+        # e.g., support-infix-00-00-00-2025-11-30T06:40:58+00:00
+        # Timestamp is ISO 8601: YYYY-MM-DDTHH:MM:SS+TZ
+        # So we look for the pattern YYYY-MM-DD (last occurrence of date pattern)
+
+        if self.name.startswith('support-'):
+            remainder = self.name[8:]  # Remove 'support-' prefix
+
+            # Find the timestamp by looking for ISO 8601 date pattern
+            # Pattern: YYYY-MM-DDTHH:MM:SS
+            import re
+            match = re.search(r'(\d{4}-\d{2}-\d{2}T[\d:+-]+)$', remainder)
+
+            if match:
+                # Everything before the timestamp is the hostname
+                timestamp_start = match.start()
+                # hostname is everything up to (but not including) the last dash before timestamp
+                hostname_part = remainder[:timestamp_start].rstrip('-')
+                self.hostname = hostname_part
+                self.timestamp = match.group(1)
+            else:
+                # No timestamp found
+                self.hostname = remainder
+                self.timestamp = None
+        else:
+            # Doesn't start with 'support-'
+            self.hostname = self.name
+            self.timestamp = None
+
+        self.collection_log = path / "collection.log"
+        self.is_valid = self.collection_log.exists()
+
+    def get_file(self, relative_path: str) -> Path:
+        """Get path to a file within the archive."""
+        return self.path / relative_path
+
+    def list_files(self, pattern: str = "*") -> list[Path]:
+        """List all files matching pattern (recursive)."""
+        return sorted(self.path.rglob(pattern))
+
+    def get_structure(self) -> dict:
+        """Get organized structure of collected data."""
+        structure = {
+            "system": [],
+            "network": [],
+            "frr": [],
+            "podman": [],
+            "config": [],
+            "logs": [],
+            "other": [],
+        }
+
+        for file in self.path.rglob("*"):
+            if file.is_file():
+                rel_path = file.relative_to(self.path)
+                parts = rel_path.parts
+
+                if len(parts) > 0:
+                    category = parts[0] if parts[0] in structure else "other"
+                    structure[category].append(rel_path)
+
+        return structure
+
+    def get_summary_data(self) -> dict:
+        """Parse key files and extract summary information."""
+        summary = {
+            "uptime": "unknown",
+            "uptime_seconds": -1,  # -1 means unknown, 0 is valid (just booted)
+            "memory_percent": 0,
+            "memory_used_mb": 0,
+            "memory_total_mb": 0,
+            "load_avg": "unknown",
+            "dmesg_errors": 0,
+            "dmesg_warnings": 0,
+        }
+
+        # Parse uptime
+        uptime_file = self.get_file("uptime.txt")
+        if uptime_file.exists():
+            try:
+                uptime_text = uptime_file.read_text().strip()
+                # Format: " 06:41:19 up 1 min,  1 users,  load average: 0.00, 0.00, 0.00"
+                summary["uptime"] = uptime_text
+
+                # Extract load average
+                if "load average:" in uptime_text:
+                    load_part = uptime_text.split("load average:")[1].strip()
+                    summary["load_avg"] = load_part
+
+                # Extract uptime seconds (rough estimate from days/hours/minutes)
+                import re
+                if " day" in uptime_text:
+                    days = int(re.search(r'(\d+)\s+day', uptime_text).group(1))
+                    summary["uptime_seconds"] = days * 86400
+                elif " min" in uptime_text:
+                    mins = int(re.search(r'(\d+)\s+min', uptime_text).group(1))
+                    summary["uptime_seconds"] = mins * 60
+                elif ":" in uptime_text and "up" in uptime_text:
+                    # Format like "up 1:23" (hours:minutes)
+                    time_match = re.search(r'up\s+(\d+):(\d+)', uptime_text)
+                    if time_match:
+                        hours, mins = int(time_match.group(1)), int(time_match.group(2))
+                        summary["uptime_seconds"] = hours * 3600 + mins * 60
+            except:
+                pass
+
+        # Parse memory from meminfo
+        meminfo_file = self.get_file("system/meminfo.txt")
+        if meminfo_file.exists():
+            try:
+                meminfo = meminfo_file.read_text()
+                mem_total = 0
+                mem_available = 0
+
+                for line in meminfo.splitlines():
+                    if line.startswith("MemTotal:"):
+                        mem_total = int(line.split()[1])  # in KB
+                    elif line.startswith("MemAvailable:"):
+                        mem_available = int(line.split()[1])  # in KB
+
+                if mem_total > 0:
+                    mem_used = mem_total - mem_available
+                    summary["memory_total_mb"] = mem_total // 1024
+                    summary["memory_used_mb"] = mem_used // 1024
+                    summary["memory_percent"] = int((mem_used / mem_total) * 100)
+            except:
+                pass
+
+        # Count errors/warnings in dmesg
+        dmesg_file = self.get_file("system/dmesg.txt")
+        if dmesg_file.exists():
+            try:
+                dmesg = dmesg_file.read_text().lower()
+                # Count lines with error/warning (case insensitive)
+                for line in dmesg.splitlines():
+                    if 'error' in line or 'fail' in line:
+                        summary["dmesg_errors"] += 1
+                    elif 'warn' in line:
+                        summary["dmesg_warnings"] += 1
+            except:
+                pass
+
+        return summary
+
+    def __repr__(self):
+        return f"SupportArchive({self.hostname}@{self.timestamp})"
+
+
+def discover_archives(directory: Path) -> list[SupportArchive]:
+    """
+    Discover all support collection directories in the given path.
+
+    Handles both:
+    - Direct path to a support directory
+    - Parent directory containing multiple support directories
+    """
+    archives = []
+
+    if not directory.exists():
+        print(f"Error: Directory not found: {directory}", file=sys.stderr)
+        return archives
+
+    # Check if directory itself is a support archive
+    if (directory / "collection.log").exists():
+        archives.append(SupportArchive(directory))
+        return archives
+
+    # Otherwise, scan for support directories
+    for item in directory.iterdir():
+        if item.is_dir() and item.name.startswith("support-"):
+            archive = SupportArchive(item)
+            if archive.is_valid:
+                archives.append(archive)
+            else:
+                print(f"Warning: Invalid archive (no collection.log): {item}",
+                      file=sys.stderr)
+
+    return sorted(archives, key=lambda a: (a.hostname, a.timestamp or ""))
+
+
+def detect_mode(archives: list[SupportArchive]) -> str:
+    """
+    Auto-detect analysis mode based on archives.
+
+    Returns:
+        - "analyze": One archive (single archive browser)
+        - "compare": Two archives
+        - "summary": Multiple archives (fleet view)
+    """
+    if len(archives) == 0:
+        return "summary"
+    elif len(archives) == 1:
+        return "analyze"  # Single archive -> analyze mode
+    elif len(archives) == 2:
+        return "compare"
+    else:
+        return "summary"  # Multiple archives -> summary/fleet view
+
+
+def cmd_analyze(args):
+    """Main TUI analysis command."""
+    # Collect all archives from provided paths
+    all_archives = []
+    for path_str in args.directories:
+        path = Path(path_str).resolve()
+        archives = discover_archives(path)
+        all_archives.extend(archives)
+
+    if not all_archives:
+        print("Error: No valid support archives found", file=sys.stderr)
+        return 1
+
+    # Auto-detect or use explicit mode
+    mode = args.mode or detect_mode(all_archives)
+
+    # Launch TUI
+    try:
+        from support_tui import launch_tui
+        launch_tui(all_archives, mode)
+        return 0
+    except ImportError as e:
+        print(f"Error: TUI dependencies not available: {e}", file=sys.stderr)
+        print("Please install: pip install textual", file=sys.stderr)
+        return 1
+    except Exception as e:
+        print(f"Error launching TUI: {e}", file=sys.stderr)
+        return 1
+
+
+def cmd_diff(args):
+    """Diff command for comparing two archives."""
+    dir1 = Path(args.dir1).resolve()
+    dir2 = Path(args.dir2).resolve()
+
+    archives1 = discover_archives(dir1)
+    archives2 = discover_archives(dir2)
+
+    if not archives1 or not archives2:
+        print("Error: Could not find valid archives in provided paths",
+              file=sys.stderr)
+        return 1
+
+    archive1 = archives1[0]
+    archive2 = archives2[0]
+
+    print(f"Comparing:")
+    print(f"  {archive1.name}")
+    print(f"  {archive2.name}")
+
+    if args.file:
+        print(f"\nFile: {args.file}")
+
+    print("\nDiff view not yet implemented - coming next!")
+
+    # TODO: Launch diff TUI
+    return 0
+
+
+def cmd_summary(args):
+    """Generate quick summary of archives."""
+    for path_str in args.directories:
+        path = Path(path_str).resolve()
+        archives = discover_archives(path)
+
+        for archive in archives:
+            print(f"\n{archive.hostname} @ {archive.timestamp or 'unknown'}")
+            print("─" * 60)
+
+            # Try to read some basic info
+            hostname_file = archive.get_file("hostname.txt")
+            if hostname_file.exists():
+                hostname = hostname_file.read_text().strip()
+                print(f"Hostname: {hostname}")
+
+            uptime_file = archive.get_file("uptime.txt")
+            if uptime_file.exists():
+                uptime = uptime_file.read_text().strip()
+                print(f"Uptime: {uptime}")
+
+            # Show structure
+            structure = archive.get_structure()
+            print("\nCollected data:")
+            for category, files in structure.items():
+                if files:
+                    print(f"  {category}: {len(files)} files")
+
+    return 0
+
+
+def main():
+    # Special handling: if no args or first arg doesn't look like a command, treat as TUI launch
+    if len(sys.argv) > 1 and sys.argv[1] not in ['analyze', 'diff', 'summary', '-h', '--help']:
+        # Looks like directories were provided without a command - launch TUI
+        all_archives = []
+        for path_str in sys.argv[1:]:
+            if path_str.startswith('-'):
+                print(f"Error: Unknown option: {path_str}", file=sys.stderr)
+                print("Usage: support <directory> [directory...]", file=sys.stderr)
+                print("   or: support <command> [options]", file=sys.stderr)
+                return 1
+            path = Path(path_str).resolve()
+            archives = discover_archives(path)
+            all_archives.extend(archives)
+
+        if not all_archives:
+            print("Error: No valid support archives found", file=sys.stderr)
+            return 1
+
+        # Launch TUI with summary as default
+        try:
+            from support_tui import launch_tui
+            launch_tui(all_archives, mode="summary")
+            return 0
+        except ImportError as e:
+            print(f"Error: TUI dependencies not available: {e}", file=sys.stderr)
+            print("Please install: pip install textual rich", file=sys.stderr)
+            return 1
+        except Exception as e:
+            print(f"Error launching TUI: {e}", file=sys.stderr)
+            import traceback
+            traceback.print_exc()
+            return 1
+
+    # Otherwise, parse as normal with subcommands
+    parser = argparse.ArgumentParser(
+        description="Analyze support data from Infix devices",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  %(prog)s ~/support/                            # Launch TUI (default: summary view)
+  %(prog)s ~/support/support-router1-*           # Launch TUI with specific archives
+  %(prog)s analyze ~/support/ --mode compare     # Force compare mode
+  %(prog)s diff archive1/ archive2/
+  %(prog)s summary ~/support/
+        """
+    )
+
+    subparsers = parser.add_subparsers(dest="command", required=True)
+
+    # analyze command
+    analyze_parser = subparsers.add_parser(
+        "analyze",
+        help="Interactive TUI for exploring support data"
+    )
+    analyze_parser.add_argument(
+        "directories",
+        nargs="+",
+        help="Support archive directories to analyze"
+    )
+    analyze_parser.add_argument(
+        "--mode",
+        choices=["analyze", "compare", "summary"],
+        help="Force specific analysis mode (auto-detected by default)"
+    )
+
+    # diff command
+    diff_parser = subparsers.add_parser(
+        "diff",
+        help="Compare two support archives"
+    )
+    diff_parser.add_argument("dir1", help="First archive directory")
+    diff_parser.add_argument("dir2", help="Second archive directory")
+    diff_parser.add_argument(
+        "--file",
+        help="Specific file to compare (relative path within archive)"
+    )
+
+    # summary command
+    summary_parser = subparsers.add_parser(
+        "summary",
+        help="Generate quick text summary of archive(s)"
+    )
+    summary_parser.add_argument(
+        "directories",
+        nargs="+",
+        help="Support archive directories to summarize"
+    )
+
+    args = parser.parse_args()
+
+    # Dispatch to appropriate command handler
+    if args.command == "analyze":
+        return cmd_analyze(args)
+    elif args.command == "diff":
+        return cmd_diff(args)
+    elif args.command == "summary":
+        return cmd_summary(args)
+    else:
+        parser.print_help()
+        return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

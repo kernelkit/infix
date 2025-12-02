@@ -16,7 +16,13 @@ image::topology.svg[Syslog Hostname Filtering topology, align=center, scaledwidt
 . Set up topology and attach to DUTs
 . Clean up old log files on server
 . Configure server as syslog sink with hostname filtering
+. Wait for server interface to be operational
+. Verify server IP address is configured
+. Verify syslog server is listening on UDP port 514
 . Configure client to forward logs to server
+. Wait for client interface to be operational
+. Verify client IP address is configured
+. Verify network connectivity between client and server
 . Send log messages with different hostnames
 . Verify router1 log contains only router1 messages
 . Verify router2 log contains only router2 messages
