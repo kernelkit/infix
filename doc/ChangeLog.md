@@ -3,7 +3,7 @@ Change Log
 
 All notable changes to the project are documented in this file.
 
-[v25.11.0][UNRELEASED]
+[v25.11.0][] - 2025-12-02
 -------------------------
 
 > [!NOTE]
@@ -15,10 +15,6 @@ All notable changes to the project are documented in this file.
 
 ### Changes
 
-- New `support` command for collecting system diagnostics to aid in both
-  troubleshooting and support.  Run `support collect > data.tar.gz`
-  locally or remotely via SSH to gather configuration, logs, network state,
-  and system information
 - Upgrade Buildroot to 2025.02.8 (LTS)
 - Upgrade Linux kernel to 6.12.60 (LTS)
 - Initial support for 32-bit ARM systems, reference board: Raspberry Pi 2B
@@ -42,7 +38,7 @@ All notable changes to the project are documented in this file.
   to `/interfaces/interface[name]/ipv4/infix-dhcp-client:dhcp`, issue #1109.
   The configuration is automatically migrated on upgrade.  The DHCP client is
   now enabled using a presence container instead of a separate `enabled` leaf
-- The `enabled` nore for IPv4 autoconf (ZeroConf) has been dropped, `autoconf`
+- The `enabled` node for IPv4 autoconf (ZeroConf) has been dropped, `autoconf`
   is now a presence container.  Configuration automatically migrated on upgrade
 - Add DHCPv6 client support for per-interface IPv6 configuration, augmenting
   `/interfaces/interface[name]/ipv6/infix-dhcpv6-client:dhcp`, issue #1110
@@ -57,7 +53,7 @@ All notable changes to the project are documented in this file.
   VXLAN tunnels.  This also changes the default TTL of tunnels to 64, from the
   kernel default (*inherit*), which in turn fixes reported issues with dropped
   OSPF Hello frames in GRE tunnels
-- [Document][bpi-r3-emmc-documentation] how to go from SD card to eMMC on bpi-r3
+- [Document][bpi-r3-emmc-documentation] how to go from SD card to eMMC on BPi-R3
 - Add CLI commands for managing boot partition order: `show boot-order` and
   `set boot-order` allow viewing and changing the boot order from the CLI,
   complementing the existing YANG RPC support, issue #1032
@@ -75,6 +71,10 @@ All notable changes to the project are documented in this file.
 - Update factory configuration for BPi-R3 and NanoPi R2S boards to enable
   DHCPv6 client on WAN interface and allow traffic forwarding from LAN to WAN
   zone in the firewall (this is what most users expect)
+- New `support` command for collecting system diagnostics to aid in both
+  troubleshooting and support.  Run `support collect > data.tar.gz`
+  locally or remotely via SSH to gather configuration, logs, network state,
+  and system information (encryption using `gpg` available too)
 
 ### Fixes
 
@@ -1820,7 +1820,7 @@ Supported YANG models in addition to those used by sysrepo and netopeer:
  - N/A
 
 [buildroot]:  https://buildroot.org/
-[UNRELEASED]: https://github.com/kernelkit/infix/compare/v25.10.0...HEAD
+[UNRELEASED]: https://github.com/kernelkit/infix/compare/v25.11.0...HEAD
 [v26.01.0]:   https://github.com/kernelkit/infix/compare/v25.11.0...v26.01.0
 [v25.11.0]:   https://github.com/kernelkit/infix/compare/v25.10.0...v25.11.0
 [v25.10.0]:   https://github.com/kernelkit/infix/compare/v25.09.0...v26.10.0
