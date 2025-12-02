@@ -1,6 +1,10 @@
 #!/bin/sh
 # Support utilities for troubleshooting Infix systems
 #
+# The collect command gathers system information and outputs a tarball.
+# Data is collected to /var/lib/support (or $HOME as fallback) and then
+# streamed to stdout. The temporary directory is cleaned up automatically.
+#
 # The following text is primarily intended for users of older Infix
 # systems that do not yet have this script in the root fileystems.
 #
@@ -93,9 +97,33 @@ cmd_collect()
         esac
     done
 
-    # Create unique collection directory in user's home directory
-    # (avoids /tmp which may be full)
-    COLLECT_DIR="${HOME}/support-$(hostname -s)-$(date -Iseconds)"
+    # Determine if we need sudo and if it's available
+    SUDO=""
+    if [ "$(id -u)" -ne 0 ]; then
+        if command -v sudo >/dev/null 2>&1; then
+            SUDO="sudo"
+        fi
+    fi
+
+    # If WORK_DIR not set globally, try /var/lib/support first (more space,
+    # persistent across user sessions). Fall back to $HOME if we can't create/write there
+    if [ -z "$WORK_DIR" ]; then
+        if [ -w /var/lib/support ] 2>/dev/null; then
+            WORK_DIR="/var/lib/support"
+        elif mkdir -p /var/lib/support 2>/dev/null; then
+            WORK_DIR="/var/lib/support"
+        elif [ -n "$SUDO" ] && $SUDO mkdir -p /var/lib/support 2>/dev/null && \
+             $SUDO chown "$(id -u):$(id -g)" /var/lib/support 2>/dev/null; then
+            WORK_DIR="/var/lib/support"
+        else
+            WORK_DIR="${HOME}"
+            echo "Warning: Cannot write to /var/lib/support, using home directory instead." >&2
+            echo "         (This may fill up your home directory on systems with limited space)" >&2
+        fi
+    fi
+
+    # Create unique collection directory
+    COLLECT_DIR="${WORK_DIR}/support-$(hostname -s)-$(date -Iseconds)"
     EXEC_LOG="${COLLECT_DIR}/collection.log"
 
     # Cleanup on exit
@@ -109,14 +137,6 @@ cmd_collect()
 
     # Create collection directory
     mkdir -p "${COLLECT_DIR}"
-
-    # Determine if we need sudo and if it's available
-    SUDO=""
-    if [ "$(id -u)" -ne 0 ]; then
-        if command -v sudo >/dev/null 2>&1; then
-            SUDO="sudo"
-        fi
-    fi
 
     # Helper function to run commands with output to specific file
     collect()
@@ -141,11 +161,13 @@ cmd_collect()
     echo "=== Infix Support Data Collection ==="   > "${EXEC_LOG}"
     echo "Started: $(date -Iseconds)"             >> "${EXEC_LOG}"
     echo "Hostname: $(hostname)"                  >> "${EXEC_LOG}"
+    echo "Work directory: ${WORK_DIR}"            >> "${EXEC_LOG}"
     echo "Collection directory: ${COLLECT_DIR}"   >> "${EXEC_LOG}"
     echo ""                                       >> "${EXEC_LOG}"
 
     # Inform user that collection is starting (to stderr for SSH visibility)
     echo "Starting support data collection from $(hostname)..." >&2
+    echo "Collecting to: ${WORK_DIR}" >&2
     echo "This may take up to a minute. Please wait..." >&2
 
     # System identification
@@ -252,10 +274,10 @@ cmd_collect()
     collect system/interrupts2.txt cat /proc/interrupts
 
     # Network information
-    collect network/ip/addr.txt  ip -s -d -j addr  show
-    collect network/ip/route.txt ip -s -d -j route show
-    collect network/ip/link.txt  ip -s -d -j link  show
-    collect network/ip/neigh.txt ip -s -d -j neigh show
+    collect network/ip/addr.json  ip -s -d -j addr  show
+    collect network/ip/route.json ip -s -d -j route show
+    collect network/ip/link.json  ip -s -d -j link  show
+    collect network/ip/neigh.json ip -s -d -j neigh show
     collect network/ifconfig.txt ifconfig -a
 
     # Collect ethtool information for all ethernet interfaces
@@ -274,8 +296,8 @@ cmd_collect()
     fi
 
     if command -v bridge >/dev/null 2>&1; then
-        collect network/bridge/link.txt bridge -d -s -j link show
-        collect network/bridge/fdb.txt bridge -d -s -j fdb show
+        collect network/bridge/link.json bridge -d -s -j link show
+        collect network/bridge/fdb.json bridge -d -s -j fdb show
     fi
 
     # Firewall rules
@@ -360,8 +382,8 @@ cmd_collect()
     echo "Collection complete. Creating archive..." >&2
 
     # Create final tar.gz and output to stdout
-    # Use -C to change to parent directory so paths in archive don't include full home path
-    cd "${HOME}"
+    # Use -C to change to parent directory so paths in archive don't include full path
+    cd "${WORK_DIR}"
 
     # Check if password encryption is requested
     if [ -n "$PASSWORD" ]; then
@@ -408,11 +430,6 @@ cmd_clean()
         esac
     done
 
-    # Find support collection directories in user's home
-    pattern="${HOME}/support-20*"
-    found=0
-    total_size=0
-
     if [ "$dry_run" -eq 1 ]; then
         echo "Dry run - no files will be deleted"
         echo ""
@@ -421,11 +438,23 @@ cmd_clean()
     echo "Looking for support directories older than ${days} days..."
     echo ""
 
-    # Use find to locate old support directories
-    # The pattern matches: support-YYYY-MM-DD* format
-    if [ -d "${HOME}" ]; then
-        find "${HOME}" -maxdepth 1 -type d -name "support-20*" -mtime "+${days}" 2>/dev/null | while IFS= read -r dir; do
-            found=1
+    # If WORK_DIR is set globally, only search there
+    # Otherwise search in both /var/lib/support and $HOME
+    if [ -n "$WORK_DIR" ]; then
+        search_dirs="$WORK_DIR"
+    else
+        search_dirs="/var/lib/support ${HOME}"
+    fi
+    total_count=0
+
+    for search_dir in $search_dirs; do
+        if [ ! -d "$search_dir" ]; then
+            continue
+        fi
+
+        # Use find to locate old support directories
+        # The pattern matches: support-YYYY-MM-DD* format
+        find "$search_dir" -maxdepth 1 -type d -name "support-*-20*" -mtime "+${days}" 2>/dev/null | while IFS= read -r dir; do
             size=$(du -sh "$dir" 2>/dev/null | awk '{print $1}')
             mtime=$(stat -c %y "$dir" 2>/dev/null | cut -d' ' -f1)
 
@@ -437,24 +466,28 @@ cmd_clean()
             fi
         done
 
-        # Check if we found anything (find runs in subshell, so we check differently)
-        count=$(find "${HOME}" -maxdepth 1 -type d -name "support-20*" -mtime "+${days}" 2>/dev/null | wc -l)
+        # Count directories found in this location
+        count=$(find "$search_dir" -maxdepth 1 -type d -name "support-*-20*" -mtime "+${days}" 2>/dev/null | wc -l)
+        total_count=$((total_count + count))
+    done
 
-        if [ "$count" -eq 0 ]; then
-            echo "No support directories older than ${days} days found."
-        elif [ "$dry_run" -eq 1 ]; then
-            echo ""
-            echo "Found ${count} directories. Run without --dry-run to remove them."
-        else
-            echo ""
-            echo "Removed ${count} directories."
-        fi
+    echo ""
+    if [ "$total_count" -eq 0 ]; then
+        echo "No support directories older than ${days} days found in /var/lib/support or home directory."
+    elif [ "$dry_run" -eq 1 ]; then
+        echo "Found ${total_count} directories. Run without --dry-run to remove them."
+    else
+        echo "Removed ${total_count} directories."
     fi
 }
 
 usage()
 {
-    echo "Usage: support <command> [options]"
+    echo "Usage: support [global-options] <command> [options]"
+    echo ""
+    echo "Global options:"
+    echo "  -w, --work-dir PATH    Use PATH as working directory for collection/cleanup"
+    echo "                         (default: /var/lib/support with fallback to \$HOME)"
     echo ""
     echo "Commands:"
     echo "  collect [options]      Collect system information for support/troubleshooting"
@@ -472,16 +505,42 @@ usage()
     echo "  -d, --days N           Remove directories older than N days (default: 7)"
     echo ""
     echo "Examples:"
-    echo "  support collect                   > support-data.tar.gz"
-    echo "  support collect -p                > support-data.tar.gz.gpg"
-    echo "  support collect --password mypass > support-data.tar.gz.gpg"
-    echo "  ssh user@device support collect   > support-data.tar.gz"
+    echo "  support collect                     > support-data.tar.gz"
+    echo "  support collect -p                  > support-data.tar.gz.gpg"
+    echo "  support collect --password mypass   > support-data.tar.gz.gpg"
+    echo "  support --work-dir /tmp/ram collect > support-data.tar.gz"
+    echo "  ssh user@device support collect     > support-data.tar.gz"
     echo "  support clean --dry-run"
     echo "  support clean --days 30"
+    echo "  support --work-dir /tmp/ram clean"
     exit 1
 }
 
 # Main command dispatcher
+# Parse global options first
+WORK_DIR=""
+
+while [ $# -gt 0 ]; do
+    case "$1" in
+        -w|--work-dir)
+            if [ -z "$2" ]; then
+                echo "Error: --work-dir requires a path argument" >&2
+                exit 1
+            fi
+            WORK_DIR="$2"
+            shift 2
+            ;;
+        -*)
+            # Unknown option - might be a command-specific option
+            break
+            ;;
+        *)
+            # Not an option, must be the command
+            break
+            ;;
+    esac
+done
+
 if [ $# -lt 1 ]; then
     usage
 fi
