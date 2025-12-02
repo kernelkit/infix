@@ -19,7 +19,8 @@ def get_interface(interface="org.fedoraproject.FirewallD1"):
         return dbus.Interface(obj, dbus_interface=interface)
 
     except dbus.exceptions.DBusException as e:
-        common.LOG.warning("Failed to connect to firewalld D-Bus: %s", e)
+        # Firewall service may not be running, this is not an error
+        common.LOG.debug("Firewalld not available: %s", e)
         return None
 
 
