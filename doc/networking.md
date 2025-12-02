@@ -1502,6 +1502,48 @@ routes`.
 
     admin@example:/>
 
+For more detailed troubleshooting, OSPF debug logging can be enabled to
+capture specific protocol events. Debug messages are written to the
+routing log file (`/var/log/routing`).
+
+> [!CAUTION]
+> Debug logging significantly increases log output and may impact
+> performance. Only enable debug categories needed for troubleshooting,
+> and disable them when done.
+
+To enable specific OSPF debug categories:
+
+    admin@example:/> configure
+    admin@example:/config/> edit routing control-plane-protocol ospfv2 name default ospf debug
+    admin@example:/config/routing/…/ospf/debug/> set bfd true
+    admin@example:/config/routing/…/ospf/debug/> set nsm true
+    admin@example:/config/routing/…/ospf/debug/> leave
+    admin@example:/>
+
+Available debug categories include:
+
+- `bfd`: BFD (Bidirectional Forwarding Detection) events
+- `packet`: Detailed packet debugging (all OSPF packets)
+- `ism`: Interface State Machine events
+- `nsm`: Neighbor State Machine events
+- `default-information`: Default route origination
+- `nssa`: Not-So-Stubby Area events
+
+All debug options are disabled by default. Refer to the `infix-routing`
+YANG model for the complete list of available debug options.
+
+To view current debug settings:
+
+    admin@example:/> show running-config routing control-plane-protocol
+
+To disable all debug logging, simply delete the debug settings or set
+all options back to `false`:
+
+    admin@example:/> configure
+    admin@example:/config/> delete routing control-plane-protocol ospfv2 name default ospf debug
+    admin@example:/config/> leave
+    admin@example:/>
+
 
 ### View routing table
 
