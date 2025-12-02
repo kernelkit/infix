@@ -3,6 +3,16 @@ Change Log
 
 All notable changes to the project are documented in this file.
 
+[v26.01.0][UNRELEASED]
+-------------------------
+
+### Changes
+
+- Add support for configurable OSPF debug logging, issue #1281. Debug options
+  can now be enabled per category (bfd, packet, ism, nsm, default-information,
+  nssa). All debug options are disabled by default to prevent log flooding in
+  production environments. See the documentation for usage examples
+
 [v25.11.0][] - 2025-12-02
 -------------------------
 
