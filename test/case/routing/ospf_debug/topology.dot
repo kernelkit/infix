@@ -1,0 +1,32 @@
+graph "ospf_debug" {
+	layout="neato";
+	overlap="false";
+	esep="+20";
+	size=10
+
+        node [shape=record, fontname="DejaVu Sans Mono, Book"];
+	edge [color="cornflowerblue", penwidth="2", fontname="DejaVu Serif, Book"];
+
+	PC [
+	    label="PC | { <mgmt1> mgmt1 | <mgmt2> mgmt2 }",
+	    pos="20,30!",
+	    requires="controller",
+	];
+
+        R1 [
+	    label="{ <mgmt> mgmt | <link> link} | R1 \n 192.168.100.1/32 \n(lo)",
+	    pos="160,60!",
+
+	    requires="infix",
+	];
+	R2 [
+	    label="{ <link> link | <mgmt> mgmt } | R2 \n 192.168.200.1/32 \n(lo)",
+	    pos="160,30!",
+
+	    requires="infix",
+	];
+
+	PC:mgmt1 -- R1:mgmt [requires="mgmt", color="lightgray"]
+	PC:mgmt2 -- R2:mgmt [requires="mgmt", color="lightgray"]
+	R1:link -- R2:link  [headlabel="192.168.50.2/24", taillabel="192.168.50.1/24", labeldistance=1, fontcolor="black", color="black"]
+}

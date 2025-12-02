@@ -25,3 +25,6 @@
 
 - name: OSPF Default route advertise
   case: ospf_default_route_advertise/test.py
+
+- name: OSPF Debug Logging
+  case: ospf_debug/test.py
