@@ -1,4 +1,4 @@
-From 77e1d4b59a475eb02b8531789f0be9fc9da9d9eb Mon Sep 17 00:00:00 2001
+From b9e507bb66c93910a1ee2576b6073e807d0dee2e Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Wed, 27 Mar 2024 15:52:43 +0100
 Subject: [PATCH 02/30] net: dsa: mv88e6xxx: Improve indirect register access

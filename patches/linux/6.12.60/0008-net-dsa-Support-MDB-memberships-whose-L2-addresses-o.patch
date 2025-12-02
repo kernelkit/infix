@@ -1,4 +1,4 @@
-From fc6a495e7359a56ba5c56fe03cc844d44953e75e Mon Sep 17 00:00:00 2001
+From fc24a53ab2703e39b375e9db1a6c4db25829d4fe Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Tue, 16 Jan 2024 16:00:55 +0100
 Subject: [PATCH 08/30] net: dsa: Support MDB memberships whose L2 addresses

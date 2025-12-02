@@ -1,4 +1,4 @@
-From 9e89b47aa5781c24d8391fe54f5940ad5e5274f5 Mon Sep 17 00:00:00 2001
+From 04ccd2a915847aff9cbb8592c725726269656e60 Mon Sep 17 00:00:00 2001
 From: Joachim Wiberg <troglobit@gmail.com>
 Date: Mon, 4 Mar 2024 16:47:28 +0100
 Subject: [PATCH 19/30] net: bridge: avoid classifying unknown multicast as
