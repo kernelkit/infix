@@ -1,6 +1,6 @@
 === DHCPv6 Basic
 
-ifdef::topdoc[:imagesdir: {topdoc}../../test/case/infix_dhcp/client6_basic]
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/dhcp/client6_basic]
 
 ==== Description
 

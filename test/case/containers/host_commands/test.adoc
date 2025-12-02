@@ -4,10 +4,9 @@ ifdef::topdoc[:imagesdir: {topdoc}../../test/case/containers/host_commands]
 
 ==== Description
 
-This test verifies that a container in privileged mode can break out of
-the container to execute commands that affect the host system.
-Specifically, it confirms that the container can change the hostname of
-the host.
+This test verifies that a container running on Infix can execute commands
+that affect the host system. Specifically, it confirms that the container
+can change the hostname of the host.
 
 ==== Topology
 
