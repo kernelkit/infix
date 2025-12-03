@@ -1,0 +1,15 @@
+ONIEPROM_VERSION = 1.0
+ONIEPROM_SITE_METHOD = local
+ONIEPROM_SITE = $(BR2_EXTERNAL_INFIX_PATH)/src/onieprom
+ONIEPROM_LICENSE = GPLv2
+ONIEPROM_LICENSE_FILES = COPYING
+ONIEPROM_DEPENDENCIES = host-python3 python3 host-python-poetry-core
+ONIEPROM_SETUP_TYPE = pep517 # poetry
+ONIEPROM_INSTALL_IMAGES = $(if $(BR2_PACKAGE_ONIEPROM_INSTALL_IMAGES),YES,NO)
+
+define ONIEPROM_INSTALL_IMAGES_CMDS
+	@cp -a $(@D)/onieprom $(BINARIES_DIR)/onieprom
+	@cp $(ONIEPROM_PKGDIR)/onieprom $(BINARIES_DIR)/onieprom/
+endef
+
+$(eval $(python-package))

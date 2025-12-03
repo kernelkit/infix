@@ -1,16 +1,5 @@
 @BOOTIMG@
 
-image aux.ext4 {
-	mountpoint = "/aux"
-	temporary = true
-	size = @AUXSIZE@
-
-	ext4 {
-		label = "aux"
-		use-mke2fs = true
-	}
-}
-
 image cfg.ext4 {
 	empty = true
 	temporary = true
@@ -33,7 +22,8 @@ image var.ext4 {
 	}
 }
 
-image @DISKIMG@ {
+image disk.img {
+	temporary = true
 	size = @TOTALSIZE@
 	hdimage {
 		partition-table-type = "gpt"
@@ -65,6 +55,16 @@ image @DISKIMG@ {
 
 	partition var {
 		image = "var.ext4"
+	}
+}
+
+image @QCOWIMG@ {
+	qemu {
+		format = "qcow2"
+	}
+
+	partition disk {
+		image = "disk.img"
 	}
 }
 

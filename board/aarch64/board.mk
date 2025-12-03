@@ -1,3 +1,4 @@
+include $(sort $(wildcard $(BR2_EXTERNAL_INFIX_PATH)/board/aarch64/*/*.mk))
 
 .PHONY: board-enable-qemu-uboot
 board-enable-qemu-uboot:
@@ -18,13 +19,6 @@ board-enable-qemu-uboot:
 		--set-str TARGET_UBOOT_CONFIG_FRAGMENT_FILES \
 			'$$(BR2_EXTERNAL_INFIX_PATH)/board/common/uboot/extras.config' \
 		--enable TARGET_UBOOT_FORMAT_DTB
-
-.PHONY: board-enable-sparx-fit
-board-enable-sparx-fit:
-	@$(call IXMSG,"Enabling SparX-5i compatible FIT options")
-	@BR2_PREFIX= ./utils/config --file $(BR2_CONFIG) \
-	 	--enable FIT_IMAGE \
-	 	--set-str FIT_KERNEL_LOAD_ADDR "0x7 0x00000000"
 
 .PHONY: board-sparx-flash-uboot
 board-sparx-flash-uboot: $(BINARIES_DIR)/u-boot.bin

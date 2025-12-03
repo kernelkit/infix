@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
-import importlib.machinery
+
 import json
+import onieprom
 import os
 import shutil
 import struct
 import subprocess
 import sys
 
-onieprom = importlib.machinery.SourceFileLoader("onieprom", "/bin/onieprom").load_module()
 SYSTEM_JSON = "/run/system.json"
 KKIT_IANA_PEM = 61046
 

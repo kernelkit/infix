@@ -17,11 +17,11 @@ mode-qeneth := -q $(test-dir)/virt/quad
 mode-host   := -t $(or $(TOPOLOGY),/etc/infamy.dot)
 mode-run    := -t $(BINARIES_DIR)/qemu.dot
 mode        := $(mode-$(TEST_MODE))
-INFIX_IMAGE_ID   := $(call qstrip,$(INFIX_IMAGE_ID))
-binaries-$(ARCH) := $(addprefix $(INFIX_IMAGE_ID),.img -disk.qcow2)
-pkg-$(ARCH)      := -p $(O)/images/$(addprefix $(INFIX_IMAGE_ID),.pkg)
+
+pkg-$(ARCH)      := -p $(O)/images/$(INFIX_ARTIFACT).pkg
+binaries-$(ARCH) := $(INFIX_ARTIFACT).qcow2
 binaries-x86_64  += OVMF.fd
-binaries := $(foreach bin,$(binaries-$(ARCH)),-f $(BINARIES_DIR)/$(bin))
+binaries         := $(foreach bin,$(binaries-$(ARCH)),-f $(BINARIES_DIR)/$(bin))
 
 # Common transport override for minimal defconfigs
 ifneq ($(BR2_PACKAGE_ROUSETTE),y)

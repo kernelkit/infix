@@ -19,8 +19,8 @@
 #
 # shellcheck disable=SC3037
 
-# Local variables
-imgdir=$(readlink -f "$(dirname "$0")")
+qdir=$(dirname "$(readlink -f "$0")")
+imgdir=$(readlink -f "${qdir}/..")
 prognm=$(basename "$0")
 
 usage()
@@ -56,12 +56,8 @@ die()
 
 load_qemucfg()
 {
-    tmp=$(mktemp -p /tmp)
-
-    grep ^CONFIG_QEMU_ "$1" >"$tmp"
     # shellcheck disable=SC1090
-    .  "$tmp"
-    rm "$tmp"
+    .  "./.config"
 
     [ "$CONFIG_QEMU_MACHINE" ] || die "Missing QEMU_MACHINE"
     [ "$CONFIG_QEMU_ROOTFS"  ] || die "Missing QEMU_ROOTFS"
@@ -247,7 +243,7 @@ rocker_port_args()
 net_args()
 {
     # Infix will pick up this file via fwcfg and install it to /etc
-    mactab=${imgdir}/mactab
+    mactab=${qdir}/mactab
     :> "$mactab"
     echo -n "-fw_cfg name=opt/mactab,file=$mactab "
 
@@ -286,7 +282,7 @@ vpd_args()
 {
     [ "$CONFIG_QEMU_VPD" = "y" ] || return
 
-    vpd_file="${imgdir}/vpd"
+    vpd_file="${qdir}/vpd"
 
     if ! [ -f "$vpd_file" ]; then
 	onieprom="${imgdir}/onieprom"
@@ -430,7 +426,7 @@ dtb_args()
 
 	# Extend it with the environment and signing information in
 	# u-boot.dtb.
-	echo "qemu.dtb u-boot.dtb" | \
+	echo "qemu.dtb ../u-boot.dtb" | \
 	    xargs -n 1 dtc -I dtb -O dts | \
 	    { echo "/dts-v1/;"; sed  -e 's:/dts-v[0-9]\+/;::'; } | \
 	    dtc >qemu-extended.dtb 2>/dev/null
@@ -439,7 +435,7 @@ dtb_args()
 	echo -n "-dtb qemu-extended.dtb "
     else
 	# Otherwise we just use the unmodified one
-	echo -n "-dtb u-boot.dtb "
+	echo -n "-dtb ../u-boot.dtb "
     fi
 }
 
@@ -485,13 +481,12 @@ EOF
 
 menuconfig()
 {
-    grep -q QEMU_MACHINE Config.in || die "$prognm: must be run from the output/images directory"
+    grep -q QEMU_MACHINE Config.in || die "$prognm: must be run from the $$O/images/qemu directory"
     command -v kconfig-mconf >/dev/null || die "$prognm: cannot find kconfig-mconf for menuconfig"
     exec kconfig-mconf Config.in
 }
 
-scriptdir=$(dirname "$(readlink -f "$0")")
-cd "$scriptdir" || (echo "Failed cd to $scriptdir"; exit 1)
+cd "$qdir" || (echo "Failed cd to $qdir"; exit 1)
 
 while [ "$1" != "" ]; do
     case $1 in
@@ -510,13 +505,7 @@ while [ "$1" != "" ]; do
     shift
 done
 
-if [ -f .config ]; then
-    # Customized settings from 'qemu.sh -c'
-    load_qemucfg .config
-else
-    # Shipped defaults from release tarball
-    load_qemucfg qemu.cfg
-fi
+load_qemucfg
 
 if [ -z "$QEMU_EXTRA_APPEND" ]; then
     QEMU_EXTRA_APPEND="$*"
