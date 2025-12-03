@@ -266,7 +266,12 @@ class Device(Transport):
         running = self.get_running()
 
         for model in models.keys():
-            mod = self.lyctx.get_module(model)
+            try:
+                mod = self.lyctx.get_module(model)
+            except libyang.util.LibyangError:
+                raise Exception(f"YANG model '{model}' not found on device. "
+                               f"Model may not be installed or enabled. "
+                               f"Available models can be checked with get_schema_list()") from None
             lyd = mod.parse_data_dict(models[model], no_state=True, validate=False)
             running.merge(lyd)
 
@@ -279,7 +284,12 @@ class Device(Transport):
 
         # This is hacky, refactor when rousette have PATCH support.
         running = self.get_running()
-        mod = self.lyctx.get_module(modname)
+        try:
+            mod = self.lyctx.get_module(modname)
+        except libyang.util.LibyangError:
+            raise Exception(f"YANG model '{modname}' not found on device. "
+                           f"Model may not be installed or enabled. "
+                           f"Available models can be checked with get_schema_list()") from None
 
         for k, _ in edit.items():
             module = modname + ":" + k
