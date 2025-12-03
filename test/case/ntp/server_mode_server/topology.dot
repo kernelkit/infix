@@ -1,0 +1,36 @@
+graph "ntp-upstream-downstream" {
+	layout="neato";
+	overlap="false";
+	esep="+22";
+
+        node [shape=record, fontname="DejaVu Sans Mono, Book"];
+	edge [color="cornflowerblue", penwidth="2", fontname="DejaVu Serif, Book"];
+
+	host [
+	    label="host | { <mgmt1> mgmt1 | <data1> data1 | <> \n\n\n | <mgmt2> mgmt2 | <data2> data2 }",
+	    pos="0,15!",
+	    requires="controller",
+	];
+
+        upstream [
+	    label="{ <mgmt> mgmt | <data1> data1 } | { \n upstream \n\n |  <conn> conn }",
+	    pos="2,15.25!",
+	    fontsize=12,
+	    requires="infix",
+	];
+
+        downstream [
+		label="{ <mgmt> mgmt | <data2> data2 } | { <conn> conn | \n downstream \n\n }",
+	    pos="2,14.75!",
+	    fontsize=12,
+	    requires="infix",
+	];
+
+	host:mgmt1 -- upstream:mgmt [requires="mgmt", color="lightgray"]
+	host:data1 -- upstream:data1 [taillabel="192.168.1.2", headlabel="192.168.1.1"]
+
+	host:mgmt2 -- downstream:mgmt [requires="mgmt" color="lightgrey"]
+	host:data2 -- downstream:data2 [taillabel="192.168.2.2", headlabel="192.168.2.1"]
+
+	upstream:conn -- downstream:conn [label="Client/Server\n192.168.3.x"]
+}

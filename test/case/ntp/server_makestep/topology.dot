@@ -1,0 +1,22 @@
+graph "1x1" {
+    layout  = "neato";
+    overlap = false;
+    esep    = "+80";
+
+    node [shape=record, fontname="DejaVu Sans Mono, Book"];
+    edge [color="cornflowerblue", penwidth="2", fontname="DejaVu Serif, Book"];
+
+    host [
+        label="host | { <mgmt> mgmt }",
+        pos="1,1!",
+        requires="controller"
+    ];
+
+    target [
+        label="{ <mgmt> mgmt } | target",
+        pos="3,1!",
+        requires="infix",
+    ];
+
+    host:mgmt -- target:mgmt [requires="mgmt", color="lightgray"]
+}

@@ -32,6 +32,9 @@
 - name: "Interfaces"
   suite: interfaces/all.yaml
 
+- name: "NTP Server"
+  suite: ntp/all.yaml
+
 - name: "Routing"
   suite: routing/all.yaml
 

@@ -1,0 +1,27 @@
+=== NTP server makestep configuration
+
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/ntp/server_makestep]
+
+==== Description
+
+Verify makestep directive works properly for initial sync.
+
+The makestep directive is critical for embedded systems that boot with
+epoch time (no RTC), allowing immediate clock correction instead of the
+default slow slewing over several hours.
+
+==== Topology
+
+image::topology.svg[NTP server makestep configuration topology, align=center, scaledwidth=75%]
+
+==== Sequence
+
+. Set up topology and attach to target DUT
+. Configure NTP server with makestep defaults
+. Verify makestep operational state
+. Configure custom makestep values
+. Verify custom makestep operational state
+. Delete makestep configuration
+. Verify makestep removed from operational state
+
+

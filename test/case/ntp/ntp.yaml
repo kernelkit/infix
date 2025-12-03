@@ -1,0 +1,5 @@
+name: ntp
+description: NTP server and client tests
+tests:
+  - server_basic
+  - server_mutual_exclusion
