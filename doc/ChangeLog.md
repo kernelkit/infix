@@ -27,6 +27,7 @@ All notable changes to the project are documented in this file.
 - Upgrade sysrepo to 4.2.10
 - Upgrade netopeer2 (NETCONF) to 2.7.0
 - Add RIPv2 routing support, issue #582
+- Add NTP server support, issue #904
 - Add support for configurable OSPF debug logging, issue #1281. Debug options
   can now be enabled per category (bfd, packet, ism, nsm, default-information,
   nssa). All debug options are disabled by default to prevent log flooding in
