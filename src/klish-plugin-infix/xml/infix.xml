@@ -324,15 +324,19 @@
     </ACTION>
   </COMMAND>
 
-  <COMMAND name="ntp" help="Show NTP (client) status">
-    <ACTION sym="script">
-      show ntp
-    </ACTION>
-    <SWITCH name="optional" min="0">
+  <COMMAND name="ntp" help="Show NTP status">
+    <SWITCH name="subcommands" min="0">
+      <COMMAND name="source" help="Show NTP source(s)">
+	<SWITCH name="optional" min="0" max="1">
+	  <PARAM name="address" ptype="/STRING" help="Show details for specific source address"/>
+	</SWITCH>
+        <ACTION sym="script">show ntp source $KLISH_PARAM_address</ACTION>
+      </COMMAND>
       <COMMAND name="tracking" help="Show NTP tracking">
-        <ACTION sym="script">doas ntp tracking</ACTION>
+        <ACTION sym="script">show ntp tracking</ACTION>
       </COMMAND>
     </SWITCH>
+    <ACTION sym="script">show ntp</ACTION>
   </COMMAND>
 
   <COMMAND name="dhcp-server" help="Show DHCP server status">

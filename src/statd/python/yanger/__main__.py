@@ -78,6 +78,9 @@ def main():
     elif args.model == 'ietf-system':
         from . import ietf_system
         yang_data = ietf_system.operational()
+    elif args.model == 'ietf-ntp':
+        from . import ietf_ntp
+        yang_data = ietf_ntp.operational()
     elif args.model == 'ieee802-dot1ab-lldp':
         from . import infix_lldp           
         yang_data = infix_lldp.operational()

@@ -328,6 +328,10 @@ static int change_cb(sr_session_ctx_t *session, uint32_t sub_id, const char *mod
 	if ((rc = keystore_change(session, config, diff, event, confd)))
 		goto free_diff;
 
+	/* ietf-ntp */
+	if ((rc = ntp_change(session, config, diff, event, confd)))
+		goto free_diff;
+
 	/* infix-services */
 	if ((rc = services_change(session, config, diff, event, confd)))
 		goto free_diff;
@@ -365,6 +369,20 @@ static int change_cb(sr_session_ctx_t *session, uint32_t sub_id, const char *mod
 	/* infix-meta */
 	if ((rc = meta_change_cb(session, config, diff, event, confd)))
 		goto free_diff;
+
+	/*
+	 * Manage chronyd service enable/disable state.  Must be done
+	 * after both ietf-system:ntp and ietf-ntp have are done.
+	 */
+	if (event == SR_EV_DONE && config) {
+		bool client = false;
+		bool server = false;
+
+		client = srx_enabled(session, "/ietf-system:system/ntp/enabled");
+		server = lydx_get_xpathf(config, "/ietf-ntp:ntp") != NULL;
+
+		systemf("initctl -nbq %s chronyd", client || server ? "enable" : "disable");
+	}
 
 	if (cfg)
 		sr_release_data(cfg);
@@ -452,6 +470,11 @@ int sr_plugin_init_cb(sr_session_ctx_t *session, void **priv)
 	rc = subscribe_model("ietf-netconf-acm", &confd, 0);
 	if (rc) {
 		ERROR("Failed to subscribe to ietf-netconf-acm");
+		goto err;
+	}
+	rc = subscribe_model("ietf-ntp", &confd, 0);
+	if (rc) {
+		ERROR("Failed to subscribe to ietf-ntp");
 		goto err;
 	}
 	rc = subscribe_model("infix-dhcp-client", &confd, 0);
@@ -554,6 +577,10 @@ int sr_plugin_init_cb(sr_session_ctx_t *session, void **priv)
 		goto err;
 
 	rc = dhcp_server_candidate_init(&confd);
+	if (rc)
+		goto err;
+
+	rc = ntp_candidate_init(&confd);
 	if (rc)
 		goto err;
 	/* YOUR_INIT GOES HERE */

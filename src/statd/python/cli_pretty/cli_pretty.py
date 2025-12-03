@@ -2387,24 +2387,461 @@ def show_container_detail(json, name):
         print(f"CPU Usage       : {cpu_usage}%")
 
 
-def show_ntp(json):
-    if not json.get("ietf-system:system-state"):
-        print("NTP client not enabled.")
+def show_ntp_source_detail_single(source, is_association=False):
+    """Display detailed information for a single NTP source (auto-detected single source)"""
+    print(f"{'Server address':<20}: {source.get('address', 'N/A')}")
+
+    # State
+    if is_association:
+        prefer = source.get("prefer", False)
+        state_desc = "Selected sync source" if prefer else "Candidate"
+    else:
+        state = source.get('state', 'unknown')
+        state_desc = {
+            'selected': 'Selected sync source',
+            'candidate': 'Candidate',
+            'unreach': 'Unreachable',
+            'not-combined': 'Not combined'
+        }.get(state, state)
+    print(f"{'State':<20}: {state_desc}")
+
+    # Stratum
+    stratum = source.get('stratum')
+    if stratum is not None:
+        print(f"{'Stratum':<20}: {stratum}")
+
+    # Poll interval
+    poll = source.get('poll')
+    if poll is not None:
+        poll_seconds = 2 ** poll
+        print(f"{'Poll interval':<20}: {poll} (2^{poll} seconds = {poll_seconds}s)")
+
+def show_ntp(json, address=None):
+    """Unified NTP status display for both client and server modes"""
+    ntp_data = json.get("ietf-ntp:ntp", {})
+    port = ntp_data.get("port")
+    is_server = port is not None
+
+    sources = []
+    if is_server:
+        associations = ntp_data.get("associations", {}).get("association", [])
+        sources = associations
+    else:
+        system_state = json.get("ietf-system:system-state", {})
+        if system_state:
+            sources = get_json_data({}, json, 'ietf-system:system-state', 'infix-system:ntp', 'sources', 'source')
+
+    if address:
+        matching = [s for s in sources if s.get('address') == address]
+        if not matching:
+            print(f"No NTP source found with address: {address}")
+            return
+        if is_server:
+            show_ntp_association_detail(matching[0])
+        else:
+            show_ntp_source_detail_single(matching[0], False)
         return
-    hdr =  (f"{'ADDRESS':<{PadNtpSource.address}}"
-            f"{'MODE':<{PadNtpSource.mode}}"
-            f"{'STATE':<{PadNtpSource.state}}"
-            f"{'STRATUM':>{PadNtpSource.stratum}}"
-            f"{'POLL-INTERVAL':>{PadNtpSource.poll}}"
-            )
+
+    if is_server:
+        if sources:
+            print(f"{'Mode':<20}: Relay (no local reference clock)")
+        else:
+            print(f"{'Mode':<20}: Server (local reference clock)")
+        print(f"{'Port':<20}: {port}")
+
+        # Show operational stratum
+        refclock = ntp_data.get("refclock-master")
+        if refclock:
+            stratum = refclock.get("master-stratum")
+            if stratum is not None:
+                print(f"{'Stratum':<20}: {stratum}")
+
+        # Show reference time
+        clock_state = ntp_data.get("clock-state", {}).get("system-status", {})
+        ref_time = clock_state.get("reference-time")
+        if ref_time:
+            from datetime import datetime
+            try:
+                dt = datetime.fromisoformat(ref_time.replace("Z", "+00:00"))
+                ref_time_str = dt.strftime("%a %b %d %H:%M:%S %Y")
+                print(f"{'Ref time (UTC)':<20}: {ref_time_str}")
+            except (ValueError, AttributeError):
+                pass
+
+        interfaces = ntp_data.get("interfaces", {}).get("interface", [])
+        if interfaces:
+            print(f"{'Interfaces':<20}: {', '.join([iface.get('name', '?') for iface in interfaces])}")
+        else:
+            print(f"{'Interfaces':<20}: All")
+
+        stats = ntp_data.get("ntp-statistics")
+        if stats:
+            print(f"{'Packets Received':<20}: {stats.get('packet-received', 0):,}")
+            print(f"{'Packets Sent':<20}: {stats.get('packet-sent', 0):,}")
+            print(f"{'Packets Dropped':<20}: {stats.get('packet-dropped', 0):,}")
+            print(f"{'Send Failures':<20}: {stats.get('packet-sent-fail', 0):,}")
+    else:
+        print(f"{'Mode':<20}: Client")
+
+        # Show local clock state in client mode
+        clock_state = ntp_data.get("clock-state", {}).get("system-status", {})
+
+        # Show local operational stratum
+        stratum = clock_state.get("clock-stratum")
+        if stratum is not None:
+            print(f"{'Stratum':<20}: {stratum}")
+
+        # Show reference time
+        ref_time = clock_state.get("reference-time")
+        if ref_time:
+            from datetime import datetime
+            try:
+                dt = datetime.fromisoformat(ref_time.replace("Z", "+00:00"))
+                ref_time_str = dt.strftime("%a %b %d %H:%M:%S %Y")
+                print(f"{'Ref time (UTC)':<20}: {ref_time_str}")
+            except (ValueError, AttributeError):
+                pass
+
+    if len(sources) == 0:
+        return
+    if len(sources) == 1:
+        show_ntp_source_detail_single(sources[0], is_server)
+        return
+    print()
+    hdr = (f"{'ADDRESS':<{PadNtpSource.address}}"
+           f"{'MODE':<{PadNtpSource.mode}}"
+           f"{'STATE':<{PadNtpSource.state}}"
+           f"{'STRATUM':>{PadNtpSource.stratum}}"
+           f"{'POLL':>{PadNtpSource.poll}}")
     print(Decore.invert(hdr))
-    sources = get_json_data({}, json, 'ietf-system:system-state', 'infix-system:ntp', 'sources', 'source')
     for source in sources:
-        row = f"{source['address']:<{PadNtpSource.address}}"
-        row += f"{source['mode']:<{PadNtpSource.mode}}"
-        row += f"{source['state'] if source['state'] != 'not-combined' else 'not combined':<{PadNtpSource.state}}"
-        row += f"{source['stratum']:>{PadNtpSource.stratum}}"
-        row += f"{source['poll']:>{PadNtpSource.poll}}"
+        # Extract fields - handle both association and ietf-system format
+        address = source.get('address', 'N/A')
+
+        if is_server:
+            # Association format
+            local_mode = source.get("local-mode", "")
+            if ":" in local_mode:
+                local_mode = local_mode.split(":")[-1]
+            mode_str = local_mode
+            prefer = source.get("prefer", False)
+            state_str = "selected" if prefer else "candidate"
+        else:
+            # ietf-system format
+            mode_str = source.get('mode', 'unknown')
+            state_str = source.get('state', 'unknown')
+            if state_str == 'not-combined':
+                state_str = 'not combined'
+
+        stratum = source.get('stratum', 0)
+        poll = source.get('poll', 0)
+        poll_str = f"{2**poll}s" if poll else "-"
+
+        row = f"{address:<{PadNtpSource.address}}"
+        row += f"{mode_str:<{PadNtpSource.mode}}"
+        row += f"{state_str:<{PadNtpSource.state}}"
+        row += f"{stratum:>{PadNtpSource.stratum}}"
+        row += f"{poll_str:>{PadNtpSource.poll}}"
+        print(row)
+
+
+def show_ntp_tracking(json):
+    """Display NTP clock tracking state using YANG operational data"""
+    ntp_data = json.get("ietf-ntp:ntp")
+    if not ntp_data:
+        print("NTP server not enabled.")
+        return
+
+    clock_state = ntp_data.get("clock-state", {}).get("system-status", {})
+    if not clock_state:
+        print("No clock state data available.")
+        return
+
+    # Reference ID
+    refid = clock_state.get("clock-refid", "N/A")
+    print(f"{'Reference ID':<20}: {refid}")
+
+    # Stratum
+    stratum = clock_state.get("clock-stratum", 16)
+    print(f"{'Stratum':<20}: {stratum}")
+
+    # Reference time (show epoch if not set)
+    ref_time = clock_state.get("reference-time")
+    if ref_time:
+        from datetime import datetime
+        try:
+            dt = datetime.fromisoformat(ref_time.replace("Z", "+00:00"))
+            ref_time_str = dt.strftime("%a %b %d %H:%M:%S %Y")
+        except (ValueError, AttributeError):
+            ref_time_str = ref_time
+    else:
+        ref_time_str = "Thu Jan 01 00:00:00 1970"
+    print(f"{'Ref time (UTC)':<20}: {ref_time_str}")
+
+    # System time offset (3 fraction-digits in ms = microsecond precision)
+    offset = clock_state.get("clock-offset")
+    if offset is not None:
+        offset_sec = float(offset) / 1000.0
+        sign = "slow" if offset_sec >= 0 else "fast"
+        print(f"{'System time':<20}: {abs(offset_sec):.6f} seconds {sign} of NTP time")
+
+    # Last offset (infix-ntp augment)
+    last_offset = clock_state.get("infix-ntp:last-offset")
+    if last_offset is not None:
+        last_offset_sec = float(last_offset)
+        sign = "+" if last_offset_sec >= 0 else ""
+        print(f"{'Last offset':<20}: {sign}{last_offset_sec:.9f} seconds")
+    else:
+        print(f"{'Last offset':<20}: N/A")
+
+    # RMS offset (infix-ntp augment)
+    rms_offset = clock_state.get("infix-ntp:rms-offset")
+    if rms_offset is not None:
+        print(f"{'RMS offset':<20}: {float(rms_offset):.9f} seconds")
+    else:
+        print(f"{'RMS offset':<20}: N/A")
+
+    # Frequency (convert from Hz difference to ppm)
+    nominal_freq = clock_state.get("nominal-freq")
+    actual_freq = clock_state.get("actual-freq")
+    if nominal_freq and actual_freq:
+        freq_diff_hz = float(actual_freq) - float(nominal_freq)
+        freq_ppm = (freq_diff_hz / float(nominal_freq)) * 1000000.0
+        if freq_ppm == 0.0:
+            direction = "slow"
+        else:
+            direction = "slow" if freq_ppm < 0 else "fast"
+        print(f"{'Frequency':<20}: {abs(freq_ppm):.3f} ppm {direction}")
+
+    # Residual freq (infix-ntp augment)
+    residual_freq = clock_state.get("infix-ntp:residual-freq")
+    if residual_freq is not None:
+        residual_freq_val = float(residual_freq)
+        sign = "+" if residual_freq_val >= 0 else ""
+        print(f"{'Residual freq':<20}: {sign}{residual_freq_val:.3f} ppm")
+    else:
+        print(f"{'Residual freq':<20}: N/A")
+
+    # Skew (infix-ntp augment)
+    skew = clock_state.get("infix-ntp:skew")
+    if skew is not None:
+        print(f"{'Skew':<20}: {float(skew):.3f} ppm")
+    else:
+        print(f"{'Skew':<20}: N/A")
+
+    # Root delay (3 fraction-digits in ms = microsecond precision)
+    root_delay = clock_state.get("root-delay")
+    if root_delay is not None:
+        root_delay_sec = float(root_delay) / 1000.0
+        print(f"{'Root delay':<20}: {root_delay_sec:.6f} seconds")
+
+    # Root dispersion (3 fraction-digits in ms = microsecond precision)
+    root_disp = clock_state.get("root-dispersion")
+    if root_disp is not None:
+        root_disp_sec = float(root_disp) / 1000.0
+        print(f"{'Root dispersion':<20}: {root_disp_sec:.6f} seconds")
+
+    # Update interval (infix-ntp augment)
+    update_interval = clock_state.get("infix-ntp:update-interval")
+    if update_interval is not None:
+        print(f"{'Update interval':<20}: {float(update_interval):.1f} seconds")
+    else:
+        print(f"{'Update interval':<20}: N/A")
+
+    # Leap status
+    sync_state = clock_state.get("sync-state", "")
+    if "clock-synchronized" in sync_state:
+        leap_status = "Normal"
+    elif "clock-never-set" in sync_state:
+        leap_status = "Not synchronised"
+    else:
+        leap_status = "Unknown"
+    print(f"{'Leap status':<20}: {leap_status}")
+
+
+def show_ntp_association_detail(assoc):
+    """Display detailed information for a single NTP association"""
+    print(f"{'Address':<20}: {assoc.get('address', 'N/A')}")
+
+    # Mode
+    local_mode = assoc.get("local-mode", "")
+    if ":" in local_mode:
+        local_mode = local_mode.split(":")[-1]
+
+    mode_desc = {
+        'client': 'Server (client mode) [^]',
+        'active': 'Peer (symmetric active) [=]',
+        'broadcast-client': 'Broadcast/Local refclock [#]'
+    }.get(local_mode, local_mode)
+    print(f"{'Mode':<20}: {mode_desc}")
+
+    # State/Prefer
+    prefer = assoc.get("prefer", False)
+    state_desc = "Selected sync source [*]" if prefer else "Candidate [+]"
+    print(f"{'State':<20}: {state_desc}")
+
+    # Configured
+    isconfigured = assoc.get("isconfigured", False)
+    print(f"{'Configured':<20}: {'Yes' if isconfigured else 'No (dynamic)'}")
+
+    # Stratum
+    stratum = assoc.get("stratum")
+    if stratum is not None:
+        print(f"{'Stratum':<20}: {stratum}")
+
+    # Poll interval
+    poll = assoc.get("poll")
+    if poll is not None:
+        print(f"{'Poll interval':<20}: {poll} (2^{poll} seconds = {2**poll}s)")
+
+    # Reachability
+    reach = assoc.get("reach")
+    if reach is not None:
+        print(f"{'Reachability':<20}: {reach:03o} (octal) = {reach:08b}b")
+
+    # Time since last packet
+    now = assoc.get("now")
+    if now is not None:
+        print(f"{'Last RX':<20}: {now}s ago")
+
+    # Offset
+    offset = assoc.get("offset")
+    if offset is not None:
+        offset_ms = float(offset)
+        if abs(offset_ms) < 1.0:
+            offset_str = f"{offset_ms * 1000.0:+.1f}us ({offset_ms:+.6f}ms)"
+        else:
+            offset_str = f"{offset_ms:+.3f}ms ({offset_ms / 1000.0:+.6f}s)"
+        print(f"{'Offset':<20}: {offset_str}")
+
+    # Delay
+    delay = assoc.get("delay")
+    if delay is not None:
+        delay_ms = float(delay)
+        if abs(delay_ms) < 1.0:
+            delay_str = f"{delay_ms * 1000.0:.1f}us ({delay_ms:.6f}ms)"
+        else:
+            delay_str = f"{delay_ms:.3f}ms ({delay_ms / 1000.0:.6f}s)"
+        print(f"{'Delay':<20}: {delay_str}")
+
+    # Dispersion
+    dispersion = assoc.get("dispersion")
+    if dispersion is not None:
+        disp_ms = float(dispersion)
+        if abs(disp_ms) < 1.0:
+            disp_str = f"{disp_ms * 1000.0:.1f}us ({disp_ms:.6f}ms)"
+        else:
+            disp_str = f"{disp_ms:.3f}ms ({disp_ms / 1000.0:.6f}s)"
+        print(f"{'Dispersion':<20}: {disp_str}")
+
+def show_ntp_source(json, address=None):
+    """Display NTP associations/sources"""
+    ntp_data = json.get("ietf-ntp:ntp")
+    if not ntp_data:
+        print("NTP server not enabled.")
+        return
+
+    associations = ntp_data.get("associations", {}).get("association", [])
+    if not associations:
+        print("No NTP associations found.")
+        return
+
+    # If address specified, show detailed view for that association
+    if address:
+        matching = [a for a in associations if a.get('address') == address]
+        if not matching:
+            print(f"No NTP association found with address: {address}")
+            return
+        show_ntp_association_detail(matching[0])
+        return
+
+    # If single association, show detailed view automatically
+    if len(associations) == 1:
+        show_ntp_association_detail(associations[0])
+        return
+
+    # First pass: determine maximum address width needed
+    max_addr_len = len("Name/IP address")  # Minimum width to match chronyc header
+    for assoc in associations:
+        addr_len = len(assoc.get("address", ""))
+        if addr_len > max_addr_len:
+            max_addr_len = addr_len
+
+    # Cap at reasonable maximum (IPv6 can be up to 39 chars uncompressed)
+    max_addr_len = min(max_addr_len, 39)
+
+    # Table header - similar to chronyc sources
+    hdr = f"{'MS':<3}{f'Name/IP address':<{max_addr_len}} {'Stratum':>7} {'Poll':>4} {'Reach':>5} {'LastRx':>6} {'Last sample':>24}"
+    print(Decore.invert(hdr))
+
+    # Display each association
+    for assoc in associations:
+        # State indicator: * = prefer (sync source), + = candidate
+        prefer = assoc.get("prefer", False)
+        state = "*" if prefer else "+"
+
+        # Mode indicator
+        local_mode = assoc.get("local-mode", "")
+        if ":" in local_mode:
+            local_mode = local_mode.split(":")[-1]
+        # Map to chronyc-style mode indicators
+        mode_indicator = "^"  # Default to server mode
+        if local_mode == "active":
+            mode_indicator = "="
+        elif local_mode == "broadcast-client":
+            mode_indicator = "#"
+
+        address = assoc.get("address", "N/A")
+        stratum = assoc.get("stratum", 0)
+
+        # Poll interval (log2 seconds)
+        poll = assoc.get("poll")
+        poll_str = str(poll) if poll is not None else "-"
+
+        # Reachability register (display as octal)
+        reach = assoc.get("reach")
+        if reach is not None:
+            reach_str = f"{reach:03o}"
+        else:
+            reach_str = "-"
+
+        # Time since last packet (LastRx)
+        now = assoc.get("now")
+        now_str = str(now) if now is not None else "-"
+
+        # Offset (in milliseconds, convert to microseconds for display)
+        offset = assoc.get("offset")
+        if offset is not None:
+            offset_ms = float(offset)
+            if abs(offset_ms) < 1.0:
+                # Show in microseconds if less than 1ms
+                offset_str = f"{offset_ms * 1000.0:+.0f}us"
+            else:
+                # Show in milliseconds
+                offset_str = f"{offset_ms:+.3f}ms"
+        else:
+            offset_str = "-"
+
+        # Delay (in milliseconds) - show as +/- similar to chronyc
+        delay = assoc.get("delay")
+        if delay is not None:
+            delay_ms = float(delay)
+            if abs(delay_ms) < 1.0:
+                delay_str = f"+/- {delay_ms * 1000.0:.0f}us"
+            else:
+                delay_str = f"+/- {delay_ms:.3f}ms"
+        else:
+            delay_str = ""
+
+        # Last sample column combines offset and delay like chronyc
+        if offset_str != "-":
+            last_sample = f"{offset_str:>12} {delay_str}"
+        else:
+            last_sample = "-"
+
+        # Format row
+        ms_col = f"{mode_indicator}{state}"
+        row = f"{ms_col:<3}{address:<{max_addr_len}} {stratum:>7} {poll_str:>4} {reach_str:>5} {now_str:>6} {last_sample:>24}"
         print(row)
 
 
@@ -4392,7 +4829,11 @@ def main():
     subparsers.add_parser('show-firewall-log', help='Show firewall log') \
               .add_argument('limit', nargs='?', help='Last N lines, default: all')
 
-    subparsers.add_parser('show-ntp', help='Show NTP sources')
+    subparsers.add_parser('show-ntp', help='Show NTP status') \
+              .add_argument('-a', '--address', help='Show details for specific address')
+    subparsers.add_parser('show-ntp-tracking', help='Show NTP tracking status')
+    subparsers.add_parser('show-ntp-source', help='Show NTP associations/sources') \
+              .add_argument('-a', '--address', help='Show details for specific source')
 
     subparsers.add_parser('show-bfd', help='Show BFD sessions')
     subparsers.add_parser('show-bfd-status', help='Show BFD status')
@@ -4452,7 +4893,11 @@ def main():
     elif args.command == "show-firewall-log":
         show_firewall_logs(args.limit)
     elif args.command == "show-ntp":
-        show_ntp(json_data)
+        show_ntp(json_data, args.address)
+    elif args.command == "show-ntp-tracking":
+        show_ntp_tracking(json_data)
+    elif args.command == "show-ntp-source":
+        show_ntp_source(json_data, args.address)
     elif args.command == "show-wifi-radio":
         show_wifi_radio(json_data)
     elif args.command == "show-bfd":

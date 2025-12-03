@@ -40,6 +40,7 @@ confd_plugin_la_SOURCES =			\
 	  if-wifi.c				\
 	keystore.c				\
 	system.c				\
+	ntp.c					\
 	syslog.c				\
 	factory-default.c			\
 	routing.c				\
