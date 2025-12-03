@@ -52,6 +52,10 @@ include::../case/dhcp/Readme.adoc[]
 
 <<<
 
+include::../case/ntp/Readme.adoc[]
+
+<<<
+
 include::../case/hardware/Readme.adoc[]
 
 <<<

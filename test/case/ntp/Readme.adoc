@@ -1,0 +1,28 @@
+:testgroup:
+== NTP Server Tests
+
+Tests for NTP server functionality across different operational modes:
+
+ - Standalone mode: local reference clock only
+ - Server mode: sync from upstream while serving clients
+ - Peer mode: bidirectional synchronization between peers
+ - Server and client interoperability
+ - Client stratum selection between multiple servers
+
+include::server_mode_standalone/Readme.adoc[]
+
+<<<
+
+include::server_mode_server/Readme.adoc[]
+
+<<<
+
+include::server_mode_peer/Readme.adoc[]
+
+<<<
+
+include::server_client/Readme.adoc[]
+
+<<<
+
+include::client_stratum_selection/Readme.adoc[]
