@@ -1,8 +1,6 @@
 menuconfig IMAGE_ITB_QCOW
 	bool "QEMU disk image (ITB)"
-	default y
-	select IMAGE_ITB_ROOTFS
-	select IMAGE_ITB_AUX
+	depends on (IMAGE_ITB_ROOTFS && IMAGE_ITB_AUX) || IMAGE_ITB_DL_RELEASE
 	select BR2_PACKAGE_HOST_GENIMAGE
 	help
 	  Compose a full disk image with redundant Linux OS partitions,
@@ -68,13 +66,3 @@ config IMAGE_ITB_QCOW_BOOT_OFFSET
 	  Offset at which the bootloader partition is placed. Remember
 	  to make sure that the GPT still fits at the start of the
 	  image.
-
-config IMAGE_ITB_QCOW_RELEASE_URL
-	string "Infix URL"
-	depends on IMAGE_ITB_QCOW
-	depends on !BR2_TARGET_ROOTFS_SQUASHFS
-	default "https://github.com/kernelkit/infix/releases/download/latest/infix-${BR2_ARCH}.tar.gz"
-	help
-	  In situations where Infix itself is not being built, but a
-	  disk image is, i.e. when building a bootloader: place this
-	  Infix release in the primary and secondary partitions.

@@ -5,6 +5,7 @@ source "$BR2_EXTERNAL_INFIX_PATH/board/common/image/image-itb-aux/Config.in"
 source "$BR2_EXTERNAL_INFIX_PATH/board/common/image/image-itb-qcow/Config.in"
 source "$BR2_EXTERNAL_INFIX_PATH/board/common/image/image-itb-gns3a/Config.in"
 source "$BR2_EXTERNAL_INFIX_PATH/board/common/image/image-itb-rauc/Config.in"
+source "$BR2_EXTERNAL_INFIX_PATH/board/common/image/image-itb-dl-release/Config.in"
 source "$BR2_EXTERNAL_INFIX_PATH/board/common/image/image-readme/Config.in"
 
 endmenu
