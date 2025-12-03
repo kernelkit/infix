@@ -4677,6 +4677,44 @@ Neighbor ID     Pri State           Up Time         Dead Time Address         In
 
 admin@example:/&gt;
 </code></pre></div>
+<p>For more detailed troubleshooting, OSPF debug logging can be enabled to
+capture specific protocol events. Debug messages are written to the
+routing log file (<code>/var/log/routing</code>).</p>
+<div class="admonition warning">
+<p class="admonition-title">Caution</p>
+<p>Debug logging significantly increases log output and may impact
+performance. Only enable debug categories needed for troubleshooting,
+and disable them when done.</p>
+</div>
+<p>To enable specific OSPF debug categories:</p>
+<div class="highlight"><pre><span></span><code>admin@example:/&gt; configure
+admin@example:/config/&gt; edit routing control-plane-protocol ospfv2 name default ospf debug
+admin@example:/config/routing/…/ospf/debug/&gt; set bfd true
+admin@example:/config/routing/…/ospf/debug/&gt; set nsm true
+admin@example:/config/routing/…/ospf/debug/&gt; leave
+admin@example:/&gt;
+</code></pre></div>
+<p>Available debug categories include:</p>
+<ul>
+<li><code>bfd</code>: BFD (Bidirectional Forwarding Detection) events</li>
+<li><code>packet</code>: Detailed packet debugging (all OSPF packets)</li>
+<li><code>ism</code>: Interface State Machine events</li>
+<li><code>nsm</code>: Neighbor State Machine events</li>
+<li><code>default-information</code>: Default route origination</li>
+<li><code>nssa</code>: Not-So-Stubby Area events</li>
+</ul>
+<p>All debug options are disabled by default. Refer to the <code>infix-routing</code>
+YANG model for the complete list of available debug options.</p>
+<p>To view current debug settings:</p>
+<div class="highlight"><pre><span></span><code>admin@example:/&gt; show running-config routing control-plane-protocol
+</code></pre></div>
+<p>To disable all debug logging, simply delete the debug settings or set
+all options back to <code>false</code>:</p>
+<div class="highlight"><pre><span></span><code>admin@example:/&gt; configure
+admin@example:/config/&gt; delete routing control-plane-protocol ospfv2 name default ospf debug
+admin@example:/config/&gt; leave
+admin@example:/&gt;
+</code></pre></div>
 <h3 id="view-routing-table">View routing table<a class="headerlink" href="#view-routing-table" title="Permanent link">¶</a></h3>
 <p>The routing table can be inspected from the operational datastore, XPath
 <code>/routing/ribs</code>, using sysrepocfg, NETCONF/RESTCONF, or using the CLI.</p>
