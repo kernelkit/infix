@@ -247,4 +247,10 @@ int firewall_rpc_init(struct confd *confd);
 int firewall_candidate_init(struct confd *confd);
 int firewall_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd);
 
+/* ntp.c */
+int ntp_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd);
+int ntp_cand(sr_session_ctx_t *session, uint32_t sub_id, const char *module,
+	     const char *path, sr_event_t event, unsigned request_id, void *priv);
+int ntp_candidate_init(struct confd *confd);
+
 #endif	/* CONFD_CORE_H_ */

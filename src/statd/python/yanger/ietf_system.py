@@ -63,6 +63,7 @@ def add_ntp(out):
 
     insert(out, "infix-system:ntp", "sources", "source", source)
 
+
 def add_dns(out):
     options = {}
     servers = []
