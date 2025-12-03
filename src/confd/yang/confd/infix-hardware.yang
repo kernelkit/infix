@@ -13,6 +13,10 @@ module infix-hardware {
     prefix yang;
   }
 
+  import infix-wifi-country-codes {
+    prefix iwcc;
+  }
+
   organization "KernelKit";
   contact      "kernelkit@googlegroups.com";
   description  "Vital Product Data augmentation of ieee-hardware and deviations.";
@@ -37,6 +41,105 @@ module infix-hardware {
     }
     description "A two-letter country code.";
   }
+
+  /*
+   * WiFi-specific typedefs
+   */
+
+  typedef wifi-radio-ref {
+    type leafref {
+      path "/iehw:hardware/iehw:component/iehw:name";
+    }
+    description
+      "Reference to a WiFi radio hardware component.
+       WiFi radios are hardware components with class 'ih:wifi'.";
+  }
+
+  typedef channel-width {
+    type enumeration {
+      enum "20" {
+        description "20 MHz channel width (legacy, maximum compatibility)";
+      }
+      enum "40" {
+        description "40 MHz channel width (802.11n HT40)";
+      }
+      enum "80" {
+        description "80 MHz channel width (802.11ac VHT80)";
+      }
+      enum "160" {
+        description "160 MHz channel width (802.11ac VHT160/802.11ax HE160)";
+      }
+    }
+    description
+      "Channel width for WiFi transmissions.
+       Wider channels provide higher throughput but reduced range.";
+  }
+
+  typedef wifi-band {
+    type enumeration {
+      enum "2.4GHz" {
+        description "2.4 GHz band (channels 1-14, maximum compatibility)";
+      }
+      enum "5GHz" {
+        description "5 GHz band (less congestion, higher throughput)";
+      }
+      enum "6GHz" {
+        description "6 GHz band (WiFi 6E, requires compatible hardware)";
+      }
+      enum "auto" {
+        description "Automatic band selection based on hardware capabilities";
+      }
+    }
+    description "WiFi frequency band selection.";
+  }
+
+  /*
+   * WiFi PHY mode identities
+   */
+
+  identity phy-mode {
+    description
+      "Base identity for WiFi PHY modes (802.11 standards).";
+  }
+
+  identity ieee80211b {
+    base phy-mode;
+    description "802.11b (2.4 GHz, up to 11 Mbps, legacy)";
+  }
+
+  identity ieee80211g {
+    base phy-mode;
+    description "802.11g (2.4 GHz, up to 54 Mbps)";
+  }
+
+  identity ieee80211a {
+    base phy-mode;
+    description "802.11a (5 GHz, up to 54 Mbps)";
+  }
+
+  identity ieee80211n {
+    base phy-mode;
+    description "802.11n / WiFi 4 (HT, 2.4/5 GHz, up to 600 Mbps)";
+  }
+
+  identity ieee80211ac {
+    base phy-mode;
+    description "802.11ac / WiFi 5 (VHT, 5 GHz, up to 6.9 Gbps)";
+  }
+
+  identity ieee80211ax {
+    base phy-mode;
+    description "802.11ax / WiFi 6/6E (HE, 2.4/5/6 GHz, up to 9.6 Gbps)";
+  }
+
+  identity phy-mode-auto {
+    base phy-mode;
+    description "Automatic PHY mode selection (driver chooses best mode)";
+  }
+
+  /*
+   * Hardware class identities
+   */
 
   identity usb {
     base iahw:hardware-class;
@@ -141,6 +244,230 @@ module infix-hardware {
 	leaf extension-data {
 	  type string;
 	}
+      }
+    }
+
+    /*
+     * WiFi Radio configuration (when class = 'ih:wifi')
+     */
+
+    container wifi-radio {
+      when "derived-from-or-self(../iehw:class, 'ih:wifi')";
+      presence "WiFi radio configuration";
+      description
+        "WiFi radio/PHY configuration and operational data.
+
+         This container is present when the hardware component represents
+         a WiFi radio (class 'ih:wifi'). WiFi radios are physical devices
+         that can host multiple virtual WiFi interfaces (APs or Stations).";
+
+      leaf country-code {
+        type iwcc:country-code;
+        mandatory true;
+        description
+          "Two-letter ISO 3166-1 country code for regulatory compliance.
+
+           Sets the regulatory domain for this radio, determining:
+           - Allowed channels and frequencies
+           - Maximum transmit power
+           - DFS (Dynamic Frequency Selection) requirements
+
+           Examples: 'US', 'DE', 'JP'.
+
+           WARNING: Incorrect values may violate local laws and regulations.";
+      }
+
+      leaf channel {
+        type union {
+          type uint16 {
+            range "1..196";
+          }
+          type enumeration {
+            enum "auto" {
+              description "Automatic channel selection (ACS)";
+            }
+          }
+        }
+        default "auto";
+        description
+          "Operating channel number.
+
+           Channel availability depends on:
+           - Configured band (2.4/5/6 GHz)
+           - Regulatory domain (country-code)
+           - Hardware capabilities
+
+           Common channels:
+           - 2.4 GHz: 1-14 (channels 12-14 restricted in some countries)
+           - 5 GHz: 36, 40, 44, 48, 149, 153, 157, 161, 165 (varies by region)
+           - 6 GHz: 1-233 (WiFi 6E, where permitted)
+
+           Set to 'auto' for automatic channel selection.";
+      }
+
+      leaf channel-width {
+        type channel-width;
+        default "20";
+        description
+          "Channel bandwidth.
+
+           Wider channels provide higher throughput but:
+           - Reduce range
+           - Increase interference susceptibility
+           - May not be supported in all regulatory domains
+
+           Recommendations:
+           - 2.4 GHz: 20 MHz (40 MHz rarely practical due to congestion)
+           - 5 GHz: 40 or 80 MHz
+           - 6 GHz: 80 or 160 MHz";
+      }
+
+      leaf band {
+        type wifi-band;
+        default "auto";
+        description
+          "Frequency band selection.
+
+           Constraints:
+           - Hardware must support the selected band
+           - Regulatory domain affects channel availability
+
+           Auto mode selects based on:
+           - Hardware capabilities
+           - Configured channel (if not 'auto')
+           - Regulatory constraints";
+      }
+
+      leaf txpower {
+        type union {
+          type uint8 {
+            range "1..30";
+          }
+          type enumeration {
+            enum "auto" {
+              description "Maximum power allowed by regulatory domain";
+            }
+          }
+        }
+        units "dBm";
+        default "auto";
+        description
+          "Transmit power in dBm.
+
+           Must not exceed regulatory limits for the configured
+           country-code and channel.
+
+           Typical values:
+           - 10 dBm: Low power (indoor, short range)
+           - 20 dBm: Medium power
+           - 27-30 dBm: High power (outdoor, regulatory permitting)
+
+           Set to 'auto' to use maximum allowed power.";
+      }
+
+      leaf phy-mode {
+        type identityref {
+          base phy-mode;
+        }
+        default "ih:phy-mode-auto";
+        description
+          "WiFi PHY mode (802.11 standard).
+
+           Determines supported data rates, modulation schemes,
+           and features (MIMO, beamforming, etc.).
+
+           Newer modes (802.11ax) provide:
+           - Higher throughput
+           - Better efficiency
+           - Improved multi-user performance
+
+           But require:
+           - Compatible hardware
+           - Client support for full performance
+
+           Auto mode selects the best supported standard.";
+      }
+
+      /*
+       * Operational state
+       */
+
+      leaf frequency {
+        config false;
+        type uint32;
+        units "MHz";
+        description
+          "Current operating frequency in MHz.
+
+           Derived from the configured channel and band.
+
+           Example values:
+           - 2412 MHz (channel 1, 2.4 GHz)
+           - 5180 MHz (channel 36, 5 GHz)
+           - 5955 MHz (channel 1, 6 GHz)";
+      }
+
+      leaf noise {
+        config false;
+        type int16;
+        units "dBm";
+        description
+          "Background noise level on current channel in dBm.
+
+           Lower (more negative) values indicate a cleaner RF environment.
+
+           Typical values:
+           - -95 to -100 dBm: Very low noise (excellent)
+           - -85 to -95 dBm: Low noise (good)
+           - -75 to -85 dBm: Moderate noise
+           - -65 to -75 dBm: High noise (congested)";
+      }
+
+      leaf-list supported-channels {
+        config false;
+        type uint16;
+        description
+          "List of channels supported by this radio in the current
+           regulatory domain.
+
+           Channels depend on:
+           - Hardware capabilities
+           - Configured country-code
+           - Band selection
+
+           This list reflects actual usable channels after applying
+           regulatory constraints.";
+      }
+
+      leaf max-txpower {
+        config false;
+        type uint8;
+        units "dBm";
+        description
+          "Maximum transmit power allowed by the regulatory domain
+           for the current channel.
+
+           This is the upper limit; actual configured txpower must
+           not exceed this value.";
+      }
+
+      leaf current-phy-mode {
+        config false;
+        type identityref {
+          base phy-mode;
+        }
+        description
+          "Currently active PHY mode.
+
+           When phy-mode is 'auto', this shows the selected mode.";
+      }
+
+      leaf num-virtual-interfaces {
+        config false;
+        type uint8;
+        description
+          "Number of virtual interfaces (AP/Station) currently
+           configured on this radio.";
       }
     }
   }

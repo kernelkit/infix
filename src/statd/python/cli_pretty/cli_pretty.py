@@ -202,6 +202,16 @@ class PadWifiScan:
     signal = 9
 
 
+class PadWifiRadio:
+    name = 10
+    phy_mode = 14
+    channel = 9
+    frequency = 12
+    max_txpower = 12
+    noise = 8
+    num_ifaces = 12
+
+
 class PadLldp:
     interface = 16
     rem_idx = 10
@@ -1796,6 +1806,72 @@ def show_ntp(json):
         row += f"{source['state'] if source['state'] != 'not-combined' else 'not combined':<{PadNtpSource.state}}"
         row += f"{source['stratum']:>{PadNtpSource.stratum}}"
         row += f"{source['poll']:>{PadNtpSource.poll}}"
+        print(row)
+
+
+def show_wifi_radio(json):
+    """Display WiFi radio operational status"""
+    radios_data = json.get("infix-wifi-radio:wifi-radios", {})
+    radios = radios_data.get("wifi-radio", [])
+
+    if not radios:
+        print("No WiFi radios found.")
+        return
+
+    # Header
+    hdr = (f"{'NAME':<{PadWifiRadio.name}}"
+           f"{'PHY MODE':<{PadWifiRadio.phy_mode}}"
+           f"{'CHANNEL':<{PadWifiRadio.channel}}"
+           f"{'FREQUENCY':<{PadWifiRadio.frequency}}"
+           f"{'MAX POWER':<{PadWifiRadio.max_txpower}}"
+           f"{'NOISE':<{PadWifiRadio.noise}}"
+           f"{'INTERFACES':<{PadWifiRadio.num_ifaces}}")
+    print(Decore.invert(hdr))
+
+    # Rows
+    for radio in radios:
+        name = radio.get('name', 'N/A')
+
+        # PHY mode - extract just the mode name after colon
+        phy_mode = radio.get('current-phy-mode', 'N/A')
+        if ':' in phy_mode:
+            phy_mode = phy_mode.split(':')[-1]  # e.g., "ieee80211ac"
+
+        # Channel calculation from frequency (if frequency available)
+        frequency = radio.get('frequency', None)
+        if frequency:
+            freq_str = f"{frequency} MHz"
+            # Calculate channel from frequency
+            if 2412 <= frequency <= 2484:
+                channel = (frequency - 2407) // 5
+            elif 5170 <= frequency <= 5825:
+                channel = (frequency - 5000) // 5
+            else:
+                channel = "?"
+        else:
+            freq_str = "N/A"
+            channel = "N/A"
+
+        # Power
+        max_power = radio.get('max-txpower', None)
+        power_str = f"{max_power} dBm" if max_power is not None else "N/A"
+
+        # Noise
+        noise = radio.get('noise', None)
+        noise_str = f"{noise} dBm" if noise is not None else "N/A"
+
+        # Number of interfaces
+        num_ifaces = radio.get('num-virtual-interfaces', 0)
+
+        # Build row
+        row = f"{name:<{PadWifiRadio.name}}"
+        row += f"{phy_mode:<{PadWifiRadio.phy_mode}}"
+        row += f"{str(channel):<{PadWifiRadio.channel}}"
+        row += f"{freq_str:<{PadWifiRadio.frequency}}"
+        row += f"{power_str:<{PadWifiRadio.max_txpower}}"
+        row += f"{noise_str:<{PadWifiRadio.noise}}"
+        row += f"{num_ifaces:<{PadWifiRadio.num_ifaces}}"
+
         print(row)
 
 
@@ -3584,6 +3660,8 @@ def main():
         show_firewall_service(json_data, args.name)
     elif args.command == "show-ntp":
         show_ntp(json_data)
+    elif args.command == "show-wifi-radio":
+        show_wifi_radio(json_data)
     elif args.command == "show-bfd":
         show_bfd(json_data)
     elif args.command == "show-bfd-status":

@@ -138,6 +138,51 @@ static confd_dependency_t handle_dependencies(struct lyd_node **diff, struct lyd
 		}
 	}
 
+	/* When WiFi interfaces change, add their radios to the diff */
+	struct lyd_node *difs = lydx_get_descendant(*diff, "interfaces", "interface", NULL);
+	if (difs) {
+		struct lyd_node *dif;
+
+		LYX_LIST_FOR_EACH(difs, dif, "interface") {
+			struct lyd_node *dwifi, *cwifi, *cif;
+			const char *ifname, *radio_name;
+			char xpath[256];
+
+			/* Check if this interface has a wifi container in the diff */
+			dwifi = lydx_get_child(dif, "wifi");
+			if (!dwifi)
+				continue;
+
+			/* Get the interface name and find it in config */
+			ifname = lydx_get_cattr(dif, "name");
+			if (!ifname)
+				continue;
+
+			cif = lydx_get_xpathf(config, "/ietf-interfaces:interfaces/interface[name='%s']", ifname);
+			if (!cif)
+				continue;
+
+			/* Get the radio name from config */
+			cwifi = lydx_get_child(cif, "wifi");
+			if (!cwifi)
+				continue;
+
+			radio_name = lydx_get_cattr(cwifi, "radio");
+			if (!radio_name)
+				continue;
+
+			/* Add the radio to the diff */
+			snprintf(xpath, sizeof(xpath), "/ietf-hardware:hardware/component[name='%s']/infix-hardware:wifi-radio", radio_name);
+			result = add_dependencies(diff, xpath, radio_name);
+			if (result == CONFD_DEP_ERROR) {
+				ERROR("Failed to add radio %s to diff for WiFi interface %s", radio_name, ifname);
+				return result;
+			}
+
+			DEBUG("Added radio %s to diff for WiFi interface %s", radio_name, ifname);
+		}
+	}
+
 	return result;
 }
 
@@ -180,7 +225,7 @@ static int change_cb(sr_session_ctx_t *session, uint32_t sub_id, const char *mod
 			}
 			max_dep--;
 		}
-#if 0
+#if 1
 		/* Debug: print diff to file */
 		FILE *f = fopen("/tmp/confd-diff.json", "w");
 		if (f) {
@@ -243,6 +288,8 @@ static int change_cb(sr_session_ctx_t *session, uint32_t sub_id, const char *mod
 	/* infix-meta */
 	if ((rc = meta_change_cb(session, config, diff, event, confd)))
 		goto free_diff;
+
+	/* Note: WiFi radio handling is now integrated into hardware_change() */
 
 	if (cfg)
 		sr_release_data(cfg);
@@ -387,6 +434,11 @@ int sr_plugin_init_cb(sr_session_ctx_t *session, void **priv)
 	rc = subscribe_model("infix-meta", &confd, SR_SUBSCR_UPDATE);
 	if (rc) {
 		ERROR("Failed to subscribe to infix-meta");
+		goto err;
+	}
+	rc = subscribe_model("infix-wifi-radio", &confd, 0);
+	if (rc) {
+		ERROR("Failed to subscribe to infix-wifi-radio");
 		goto err;
 	}
 
