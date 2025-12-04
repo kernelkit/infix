@@ -1,0 +1,34 @@
+graph "2x2" {
+	layout="neato";
+	overlap="false";
+	esep="+40";
+	size=10
+
+        node [shape=record, fontname="DejaVu Sans Mono, Book"];
+	edge [color="cornflowerblue", penwidth="2", fontname="DejaVu Serif, Book"];
+
+	PC [
+	    label="PC | { <mgmt1> mgmt1 | <data1> data1 | \n\n\n\n\n\n\n\n | <mgmt2> mgmt2 | <data2> data2 }",
+	    pos="20,50!",
+	    requires="controller",
+	];
+
+        R1 [
+	    label="{ <mgmt> mgmt | <data> data | <link> link} | R1 \n 192.168.100.1/32 \n(lo)",
+	    pos="190,85!",
+
+	    requires="infix",
+	];
+	R2 [
+	    label="{ <link> link | <mgmt> mgmt | <data> data  } | R2 \n 192.168.200.1/32 \n(lo)",
+	    pos="190,15!",
+
+	    requires="infix",
+	];
+
+	PC:mgmt1 -- R1:mgmt [requires="mgmt", color="lightgray"]
+	PC:mgmt2 -- R2:mgmt [requires="mgmt", color="lightgray"]
+	PC:data1 -- R1:data  [color="black", label="192.168.10.0/24", headlabel=".1", taillabel=".2", labeldistance=2, fontcolor="black"]
+	R1:link -- R2:link  [label="192.168.50.0/24", headlabel=".2", taillabel=".1", labeldistance=2, fontcolor="black", color="black"]
+	PC:data2 -- R2:data  [label="192.168.60.0/24", headlabel=".1", taillabel=".2", labeldistance=2, fontcolor="black", color="black"]
+}

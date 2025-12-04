@@ -7,9 +7,13 @@ Tests verifying standard routing protocols and configuration:
  - OSPF basic neighbor discovery and LSA exchange
  - OSPF unnumbered interface configuration
  - OSPF multi-area configuration and inter-area routing
- - OSPF with BFD (Bidirectional Forwarding Detection) 
+ - OSPF with BFD (Bidirectional Forwarding Detection)
  - OSPF default route advertisement and propagation
  - OSPF debug logging configuration and verification
+ - RIP basic neighbor discovery and route exchange
+ - RIP passive interface configuration
+ - RIP route redistribution (connected, static, and OSPF)
+ - RIP multi-hop routing with multiple neighbors
  - Route preference handling for OSPF routes
  - Route preference handling for DHCP-learned routes
  - Administrative distance configuration (route preference 255)
@@ -39,6 +43,22 @@ include::ospf_default_route_advertise/Readme.adoc[]
 <<<
 
 include::ospf_debug/Readme.adoc[]
+
+<<<
+
+include::rip_basic/Readme.adoc[]
+
+<<<
+
+include::rip_passive_interface/Readme.adoc[]
+
+<<<
+
+include::rip_redistribute/Readme.adoc[]
+
+<<<
+
+include::rip_multihop/Readme.adoc[]
 
 <<<
 
