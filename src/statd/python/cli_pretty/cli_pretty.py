@@ -1009,7 +1009,8 @@ class Iface:
 
         print("\nAVAILABLE NETWORKS:")
         print(Decore.invert(hdr))
-        results = self.wifi.get("scan-results", {})
+        station = self.wifi.get("station", {})
+        results = station.get("scan-results", {})
         for result in results:
             encstr = ", ".join(result.get("encryption", ["Unknown"]))
             status = rssi_to_status(result.get("rssi", -100))
@@ -1094,7 +1095,7 @@ class Iface:
             if ap:
                 ssid = ap.get("ssid", "------")
                 mode = "AP"
-                stations_data = self.wifi.get("stations", {})
+                stations_data = ap.get("stations", {})
                 stations = stations_data.get("station", [])
                 station_count = len(stations)
                 data_str = f"{mode}, ssid: {ssid}, stations: {station_count}"
@@ -1372,12 +1373,12 @@ class Iface:
                 print(f"{'ipv6 addresses':<{20}}:")
 
         if self.wifi:
-            ssid = self.wifi.get('ssid', "----")
-
             # Detect mode: AP has "stations", Station has "rssi" or "scan-results"
-            if "stations" in self.wifi:
+            ap = self.wifi.get('access-point')
+            if ap:
                 mode = "access-point"
-                stations_data = self.wifi.get("stations", {})
+                ssid = ap.get('ssid', "----")
+                stations_data = ap.get("stations", {})
                 stations = stations_data.get("station", [])
                 print(f"{'mode':<{20}}: {mode}")
                 print(f"{'ssid':<{20}}: {ssid}")
@@ -1385,13 +1386,15 @@ class Iface:
                 self.pr_wifi_stations()
             else:
                 mode = "station"
-                rssi = self.wifi.get('rssi')
+                station = self.wifi.get('station', {})
+                rssi = station.get('rssi')
+                ssid = station.get('ssid', "----")
                 print(f"{'mode':<{20}}: {mode}")
                 print(f"{'ssid':<{20}}: {ssid}")
                 if rssi is not None:
                     signal_status = rssi_to_status(rssi)
                     print(f"{'signal':<{20}}: {rssi} dBm ({signal_status})")
-                if "scan-results" in self.wifi:
+                if "scan-results" in station:
                     self.pr_wifi_ssids()
 
         if self.gre:

@@ -21,28 +21,82 @@ def detect_wifi_mode(ifname):
     return 'station'
 
 
+def find_primary_interface_from_config(ifname):
+    """Find primary interface by reading hostapd config files"""
+    try:
+        import glob
+        # Search all hostapd config files
+        for config_file in glob.glob("/etc/hostapd-*.conf"):
+            try:
+                with open(config_file, 'r') as f:
+                    content = f.read()
+                    # Check if our interface is in this config
+                    if f"interface={ifname}" in content or f"bss={ifname}" in content:
+                        # Extract primary interface
+                        for line in content.splitlines():
+                            if line.startswith("interface="):
+                                return line.split("=", 1)[1].strip()
+            except (IOError, OSError):
+                continue
+    except Exception:
+        pass
+    return None
+
+
 def wifi_ap(ifname):
     """Get operational data for AP mode using hostapd_cli"""
     ap_data = {}
 
     try:
-        # Get AP status from hostapd_cli
-        data = HOST.run(tuple(f"hostapd_cli -i {ifname} status".split()), default="")
+        # Always find primary interface from config
+        primary_if = find_primary_interface_from_config(ifname)
+        if not primary_if:
+            return {}
 
-        if data != "":
+        # Query using primary interface
+        data = HOST.run(tuple(f"hostapd_cli -i {primary_if} status".split()), default="")
+        if not data:
+            return {}
+
+        # Find our interface's SSID
+        if ifname == primary_if:
+            # Primary interface - get ssid[0] or ssid
             for line in data.splitlines():
-                try:
-                    if "=" not in line:
+                if "=" in line:
+                    try:
+                        k, v = line.split("=", 1)
+                        if k in ("ssid[0]", "ssid"):
+                            ap_data["ssid"] = v
+                            break
+                    except ValueError:
                         continue
-                    k, v = line.split("=", 1)
-                    if k == "ssid[0]" or k == "ssid":  # Primary SSID
-                        ap_data["ssid"] = v
-                except ValueError:
-                    continue
+        else:
+            # Secondary BSS - find in BSS array
+            bss_idx = None
+            for line in data.splitlines():
+                if "=" in line:
+                    try:
+                        k, v = line.split("=", 1)
+                        if v == ifname and k.startswith("bss["):
+                            bss_idx = k[4:-1]  # Extract index from bss[N]
+                            break
+                    except ValueError:
+                        continue
 
-        # Get list of connected stations
-        stations_data = HOST.run(tuple(f"hostapd_cli -i {ifname} all_sta".split()), default="")
-        stations = parse_hostapd_stations(stations_data)
+            if bss_idx:
+                for line in data.splitlines():
+                    if "=" in line:
+                        try:
+                            k, v = line.split("=", 1)
+                            if k == f"ssid[{bss_idx}]":
+                                ap_data["ssid"] = v
+                                break
+                        except ValueError:
+                            continue
+
+        # Get list of connected stations using iw
+        stations_data = HOST.run(tuple(f"iw dev {ifname} station dump".split()), default="")
+        stations = parse_iw_stations(stations_data)
 
         if stations:
             ap_data["stations"] = {
@@ -58,45 +112,60 @@ def wifi_ap(ifname):
     } if ap_data else {}
 
 
-def parse_hostapd_stations(output):
-    """Parse hostapd_cli all_sta output to get connected stations"""
+def parse_iw_stations(output):
+    """Parse iw station dump output to get connected stations"""
     stations = []
     current_station = None
 
     for line in output.splitlines():
         line = line.strip()
 
-        # Station MAC address line (starts with MAC address format)
-        if re.match(r'^[0-9a-f]{2}:[0-9a-f]{2}:[0-9a-f]{2}:[0-9a-f]{2}:[0-9a-f]{2}:[0-9a-f]{2}$',
-                    line.lower()):
+        # Station line: "Station aa:bb:cc:dd:ee:ff (on wifiX)"
+        if line.startswith("Station "):
             if current_station:
                 stations.append(current_station)
-            current_station = {
-                "mac-address": line.lower()
-            }
-        elif current_station and "=" in line:
+            # Extract MAC address
+            parts = line.split()
+            if len(parts) >= 2:
+                current_station = {
+                    "mac-address": parts[1].lower()
+                }
+        elif current_station:
             # Parse station attributes
             try:
-                k, v = line.split("=", 1)
+                # Lines are in format "key: value" with tabs
+                if ":" not in line:
+                    continue
 
-                # Map hostapd fields to YANG model fields
-                if k == "signal":
-                    current_station["rssi"] = int(v)
-                elif k == "connected_time":
-                    current_station["connected-time"] = int(v)
-                elif k == "rx_packets":
-                    current_station["rx-packets"] = int(v)
-                elif k == "tx_packets":
-                    current_station["tx-packets"] = int(v)
-                elif k == "rx_bytes":
-                    current_station["rx-bytes"] = int(v)
-                elif k == "tx_bytes":
-                    current_station["tx-bytes"] = int(v)
-                elif k == "rx_rate":
-                    current_station["rx-speed"] = int(v)
-                elif k == "tx_rate":
-                    current_station["tx-speed"] = int(v)
-            except (ValueError, KeyError):
+                parts = line.split(":", 1)
+                key = parts[0].strip()
+                value = parts[1].strip()
+
+                if key == "signal":
+                    # Format: "-42 dBm" or "-42 [-44] dBm"
+                    rssi = int(value.split()[0])
+                    current_station["rssi"] = rssi
+                elif key == "connected time":
+                    # Format: "123 seconds"
+                    seconds = int(value.split()[0])
+                    current_station["connected-time"] = seconds
+                elif key == "rx packets":
+                    current_station["rx-packets"] = int(value)
+                elif key == "tx packets":
+                    current_station["tx-packets"] = int(value)
+                elif key == "rx bytes":
+                    current_station["rx-bytes"] = int(value)
+                elif key == "tx bytes":
+                    current_station["tx-bytes"] = int(value)
+                elif key == "tx bitrate":
+                    # Format: "866.7 MBit/s ..." - extract speed and convert to 100kbit/s units
+                    speed_mbps = float(value.split()[0])
+                    current_station["tx-speed"] = int(speed_mbps * 10)
+                elif key == "rx bitrate":
+                    # Format: "780.0 MBit/s ..." - extract speed and convert to 100kbit/s units
+                    speed_mbps = float(value.split()[0])
+                    current_station["rx-speed"] = int(speed_mbps * 10)
+            except (ValueError, KeyError, IndexError):
                 # Skip invalid values
                 continue
 
