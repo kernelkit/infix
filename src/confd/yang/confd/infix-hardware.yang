@@ -21,6 +21,10 @@ module infix-hardware {
   contact      "kernelkit@googlegroups.com";
   description  "Vital Product Data augmentation of ieee-hardware and deviations.";
 
+  revision 2025-12-04 {
+    description "Add WiFi radio survey container for channel utilization data.";
+    reference "internal";
+  }
   revision 2025-10-30 {
     description "Add phys-address leaf for hardware components and enable sensor support.";
     reference "internal";
@@ -468,6 +472,103 @@ module infix-hardware {
         description
           "Number of virtual interfaces (AP/Station) currently
            configured on this radio.";
+      }
+
+      /*
+       * Channel survey data (operational state)
+       */
+
+      container survey {
+        config false;
+        description
+          "WiFi channel survey data providing channel utilization
+           and interference information.
+
+           This data is collected from the WiFi driver and provides
+           insights into channel occupancy, noise levels, and RF activity.";
+
+        list channel {
+          key "frequency";
+          description
+            "Per-channel survey information.
+
+             Includes utilization metrics for all channels scanned by
+             the radio, not just the currently active channel.";
+
+          leaf frequency {
+            type uint32;
+            units "MHz";
+            description
+              "Channel center frequency in MHz.
+
+               Examples:
+               - 2412 MHz (2.4 GHz channel 1)
+               - 5180 MHz (5 GHz channel 36)
+               - 5955 MHz (6 GHz channel 1)";
+          }
+
+          leaf in-use {
+            type boolean;
+            description
+              "Whether this channel is currently in use by the radio.
+
+               Only one channel will have this set to true at a time.";
+          }
+
+          leaf noise {
+            type int16;
+            units "dBm";
+            description
+              "Background noise level on this channel in dBm.
+
+               Lower (more negative) values indicate cleaner RF environment.
+
+               Typical values:
+               - -95 to -100 dBm: Very low noise (excellent)
+               - -85 to -95 dBm: Low noise (good)
+               - -75 to -85 dBm: Moderate noise
+               - -65 to -75 dBm: High noise (congested)";
+          }
+
+          leaf active-time {
+            type uint32;
+            units "milliseconds";
+            description
+              "Total time the radio was active on this channel.
+
+               This is the survey measurement period for this channel.";
+          }
+
+          leaf busy-time {
+            type uint32;
+            units "milliseconds";
+            description
+              "Time the channel was detected as busy.
+
+               Includes time spent receiving frames, transmitting frames,
+               and time the channel was busy due to other sources.
+
+               Channel utilization = (busy-time / active-time) * 100%";
+          }
+
+          leaf receive-time {
+            type uint32;
+            units "milliseconds";
+            description
+              "Time spent receiving frames on this channel.
+
+               Subset of busy-time spent on frame reception.";
+          }
+
+          leaf transmit-time {
+            type uint32;
+            units "milliseconds";
+            description
+              "Time spent transmitting frames on this channel.
+
+               Subset of busy-time spent on frame transmission.";
+          }
+        }
       }
     }
   }

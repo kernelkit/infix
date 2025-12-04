@@ -144,7 +144,7 @@ static confd_dependency_t handle_dependencies(struct lyd_node **diff, struct lyd
 		struct lyd_node *dif;
 
 		LYX_LIST_FOR_EACH(difs, dif, "interface") {
-			struct lyd_node *dwifi, *cwifi;
+			struct lyd_node *dwifi, *radio_node;
 			const char *ifname, *radio_name;
 			char xpath[256];
 
@@ -158,12 +158,14 @@ static confd_dependency_t handle_dependencies(struct lyd_node **diff, struct lyd
 			if (!ifname)
 				continue;
 
-			/* Get radio reference directly from the diff */
-			cwifi = lydx_get_child(dif, "wifi");
-			if (!cwifi)
+			/* Get radio reference from config tree using xpath */
+			radio_node = lydx_get_xpathf(config,
+				"/ietf-interfaces:interfaces/interface[name='%s']/infix-interfaces:wifi/radio",
+				ifname);
+			if (!radio_node)
 				continue;
 
-			radio_name = lydx_get_cattr(cwifi, "radio");
+			radio_name = lyd_get_value(radio_node);
 			if (!radio_name)
 				continue;
 
@@ -484,11 +486,6 @@ int sr_plugin_init_cb(sr_session_ctx_t *session, void **priv)
 	rc = subscribe_model("infix-meta", &confd, SR_SUBSCR_UPDATE);
 	if (rc) {
 		ERROR("Failed to subscribe to infix-meta");
-		goto err;
-	}
-	rc = subscribe_model("infix-wifi-radio", &confd, 0);
-	if (rc) {
-		ERROR("Failed to subscribe to infix-wifi-radio");
 		goto err;
 	}
 
