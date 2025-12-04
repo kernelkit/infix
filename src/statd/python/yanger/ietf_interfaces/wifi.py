@@ -35,7 +35,7 @@ def wifi_ap(ifname):
                     if "=" not in line:
                         continue
                     k, v = line.split("=", 1)
-                    if k == "ssid[0]":  # Primary SSID
+                    if k == "ssid[0]" or k == "ssid":  # Primary SSID
                         ap_data["ssid"] = v
                 except ValueError:
                     continue
@@ -52,7 +52,10 @@ def wifi_ap(ifname):
     except Exception:
         pass
 
-    return ap_data
+    # Nest data inside access-point container to match YANG schema
+    return {
+        "access-point": ap_data
+    } if ap_data else {}
 
 
 def parse_hostapd_stations(output):
@@ -75,9 +78,26 @@ def parse_hostapd_stations(output):
             # Parse station attributes
             try:
                 k, v = line.split("=", 1)
-                # We mainly care about MAC address for now
-                # Could add more fields like signal strength, rx/tx stats if needed
-            except ValueError:
+
+                # Map hostapd fields to YANG model fields
+                if k == "signal":
+                    current_station["rssi"] = int(v)
+                elif k == "connected_time":
+                    current_station["connected-time"] = int(v)
+                elif k == "rx_packets":
+                    current_station["rx-packets"] = int(v)
+                elif k == "tx_packets":
+                    current_station["tx-packets"] = int(v)
+                elif k == "rx_bytes":
+                    current_station["rx-bytes"] = int(v)
+                elif k == "tx_bytes":
+                    current_station["tx-bytes"] = int(v)
+                elif k == "rx_rate":
+                    current_station["rx-speed"] = int(v)
+                elif k == "tx_rate":
+                    current_station["tx-speed"] = int(v)
+            except (ValueError, KeyError):
+                # Skip invalid values
                 continue
 
     # Add last station
@@ -139,7 +159,10 @@ def wifi_station(ifname):
         # If scan results fail, just omit them
         pass
 
-    return wifi_data
+    # Nest data inside station container to match YANG schema
+    return {
+        "station": wifi_data
+    } if wifi_data else {}
 
 
 def wifi(ifname):
@@ -203,7 +226,7 @@ def parse_wpa_scan_result(scan_output):
 
     # Convert to list and sort by RSSI (best first)
     result = list(networks.values())
-    result.sort(key=lambda x: x['rssi'], reverse=False)
+    result.sort(key=lambda x: x['rssi'], reverse=True)
 
     return result
 

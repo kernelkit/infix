@@ -200,6 +200,7 @@ class PadWifiScan:
     ssid  = 40
     encryption = 30
     signal = 9
+    channel = 8
 
 
 class PadWifiRadio:
@@ -210,6 +211,18 @@ class PadWifiRadio:
     max_txpower = 12
     noise = 8
     num_ifaces = 12
+
+
+class PadWifiStations:
+    mac = 18
+    signal = 8
+    time = 8
+    rx_packets = 12
+    tx_packets = 12
+    rx_bytes = 12
+    tx_bytes = 12
+    rx_speed = 10
+    tx_speed = 10
 
 
 class PadLldp:
@@ -991,16 +1004,79 @@ class Iface:
     def pr_wifi_ssids(self):
         hdr = (f"{'SSID':<{PadWifiScan.ssid}}"
                f"{'ENCRYPTION':<{PadWifiScan.encryption}}"
-               f"{'SIGNAL':<{PadWifiScan.signal}}")
+               f"{'SIGNAL':<{PadWifiScan.signal}}"
+               f"{'CHANNEL':<{PadWifiScan.channel}}")
 
+        print("\nAVAILABLE NETWORKS:")
         print(Decore.invert(hdr))
         results = self.wifi.get("scan-results", {})
         for result in results:
-            encstr = ", ".join(result["encryption"])
-            status = rssi_to_status(result["rssi"])
-            row = f"{result['ssid']:<{PadWifiScan.ssid}}"
+            encstr = ", ".join(result.get("encryption", ["Unknown"]))
+            status = rssi_to_status(result.get("rssi", -100))
+            channel = result.get("channel", "?")
+
+            row = f"{result.get('ssid', 'Hidden'):<{PadWifiScan.ssid}}"
             row += f"{encstr:<{PadWifiScan.encryption}}"
             row += f"{status:<{PadWifiScan.signal}}"
+            row += f"{channel:<{PadWifiScan.channel}}"
+
+            print(row)
+
+    def pr_wifi_stations(self):
+        """Display connected stations for AP mode"""
+        if not self.wifi:
+            return
+
+        stations_data = self.wifi.get("stations", {})
+        stations = stations_data.get("station", [])
+
+        if not stations:
+            print("No connected stations")
+            return
+
+        # Header
+        hdr = (f"{'MAC':<{PadWifiStations.mac}}"
+               f"{'SIGNAL':<{PadWifiStations.signal}}"
+               f"{'TIME':<{PadWifiStations.time}}"
+               f"{'RX PKT':<{PadWifiStations.rx_packets}}"
+               f"{'TX PKT':<{PadWifiStations.tx_packets}}"
+               f"{'RX BYTES':<{PadWifiStations.rx_bytes}}"
+               f"{'TX BYTES':<{PadWifiStations.tx_bytes}}"
+               f"{'RX SPEED':<{PadWifiStations.rx_speed}}"
+               f"{'TX SPEED':<{PadWifiStations.tx_speed}}")
+
+        print("\nCONNECTED STATIONS:")
+        print(Decore.invert(hdr))
+
+        # Station rows
+        for station in stations:
+            mac = station.get("mac-address", "unknown")
+            rssi = station.get("rssi")
+            signal_str = rssi_to_status(rssi) if rssi is not None else "------"
+
+            conn_time = station.get("connected-time", 0)
+            time_str = f"{conn_time}s"
+
+            rx_pkt = station.get("rx-packets", 0)
+            tx_pkt = station.get("tx-packets", 0)
+            rx_bytes = station.get("rx-bytes", 0)
+            tx_bytes = station.get("tx-bytes", 0)
+
+            # Speed in 100 kbit/s units, convert to Mbps for display
+            rx_speed = station.get("rx-speed", 0)
+            tx_speed = station.get("tx-speed", 0)
+            rx_speed_str = f"{rx_speed / 10:.1f}" if rx_speed else "-"
+            tx_speed_str = f"{tx_speed / 10:.1f}" if tx_speed else "-"
+
+            row = (f"{mac:<{PadWifiStations.mac}}"
+                   f"{signal_str:<{PadWifiStations.signal}}"
+                   f"{time_str:<{PadWifiStations.time}}"
+                   f"{rx_pkt:<{PadWifiStations.rx_packets}}"
+                   f"{tx_pkt:<{PadWifiStations.tx_packets}}"
+                   f"{rx_bytes:<{PadWifiStations.rx_bytes}}"
+                   f"{tx_bytes:<{PadWifiStations.tx_bytes}}"
+                   f"{rx_speed_str:<{PadWifiStations.rx_speed}}"
+                   f"{tx_speed_str:<{PadWifiStations.tx_speed}}")
 
             print(row)
 
@@ -1010,18 +1086,30 @@ class Iface:
         print(row)
         ssid = None
         rssi = None
+        mode = None
 
         if self.wifi:
-            rssi=self.wifi.get("rssi")
-            ssid=self.wifi.get("ssid")
-        if ssid is None:
-            ssid="------"
-
-        if rssi is None:
-            signal="------"
+            # Detect mode: AP has "stations", Station has "rssi" or "scan-results"
+            ap=self.wifi.get("access-point", {})
+            if ap:
+                ssid = ap.get("ssid", "------")
+                mode = "AP"
+                stations_data = self.wifi.get("stations", {})
+                stations = stations_data.get("station", [])
+                station_count = len(stations)
+                data_str = f"{mode}, ssid: {ssid}, stations: {station_count}"
+            else:
+                station=self.wifi.get("station", {})
+                ssid = station.get("ssid", "------")
+                rssi = station.get("rssi")
+                mode = "Station"
+                if rssi is not None:
+                    signal = rssi_to_status(rssi)
+                    data_str = f"{mode}, ssid: {ssid}, signal: {signal}"
+                else:
+                    data_str = f"{mode}, ssid: {ssid}"
         else:
-            signal=rssi_to_status(rssi)
-        data_str = f"ssid: {ssid}, signal: {signal}"
+            data_str = "ssid: ------"
 
         row =  f"{'':<{Pad.iface}}"
         row += f"{'wifi':<{Pad.proto}}"
@@ -1284,12 +1372,27 @@ class Iface:
                 print(f"{'ipv6 addresses':<{20}}:")
 
         if self.wifi:
-            ssid=self.wifi.get('ssid', "----")
-            rssi=self.wifi.get('rssi', "----")
-            print(f"{'SSID':<{20}}: {ssid}")
-            print(f"{'Signal':<{20}}: {rssi}")
-            print("")
-            self.pr_wifi_ssids()
+            ssid = self.wifi.get('ssid', "----")
+
+            # Detect mode: AP has "stations", Station has "rssi" or "scan-results"
+            if "stations" in self.wifi:
+                mode = "access-point"
+                stations_data = self.wifi.get("stations", {})
+                stations = stations_data.get("station", [])
+                print(f"{'mode':<{20}}: {mode}")
+                print(f"{'ssid':<{20}}: {ssid}")
+                print(f"{'connected stations':<{20}}: {len(stations)}")
+                self.pr_wifi_stations()
+            else:
+                mode = "station"
+                rssi = self.wifi.get('rssi')
+                print(f"{'mode':<{20}}: {mode}")
+                print(f"{'ssid':<{20}}: {ssid}")
+                if rssi is not None:
+                    signal_status = rssi_to_status(rssi)
+                    print(f"{'signal':<{20}}: {rssi} dBm ({signal_status})")
+                if "scan-results" in self.wifi:
+                    self.pr_wifi_ssids()
 
         if self.gre:
             print(f"{'local address':<{20}}: {self.gre['local']}")
