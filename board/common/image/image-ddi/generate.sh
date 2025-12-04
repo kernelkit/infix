@@ -1,0 +1,109 @@
+#!/bin/sh
+
+# Generate the DDI in two phases. First we create the verity hash tree
+# and signature, then we collect them together with the rootfs in the
+# ddi. The reason for this is that genimage (at least up to v19) can
+# not infer the size of a partition if the image to be placed in it is
+# created by the same genimage instance. With the two-phase approach,
+# we work around that problem and can create a DDI without any wasted
+# space.
+
+set -e
+
+uuidfmt()
+{
+    echo $1 | \
+	sed -E 's/^([0-9a-fA-F]{8})([0-9a-fA-F]{4})([0-9a-fA-F]{4})([0-9a-fA-F]{4})([0-9a-fA-F]{12})$/\1-\2-\3-\4-\5/'
+}
+
+rm -rf   "${WORKDIR}"/tmp
+mkdir -p "${WORKDIR}"/tmp "${WORKDIR}"/verity
+
+cat <<EOF >"${WORKDIR}"/genimage-verity.cfg
+image rootfs.verity {
+	verity {
+        	image = "rootfs.squashfs"
+	}
+}
+
+image rootfs.verity-sig {
+	verity-sig {
+        	image = "rootfs.verity"
+		cert = "${CERT}"
+		key = "${KEY}"
+	}
+}
+
+config {}
+EOF
+
+genimage \
+    --loglevel 1 \
+    --tmppath    "${WORKDIR}"/tmp \
+    --rootpath   "${WORKDIR}" \
+    --inputpath  "${BINARIES_DIR}" \
+    --outputpath "${WORKDIR}"/verity \
+    --config     "${WORKDIR}"/genimage-verity.cfg
+
+case "${BR2_ARCH}" in
+    "x86_64")
+	arch=x86-64
+	;;
+    *)
+	echo "ERROR: missing mapping from ${BR2_ARCH} to genimage arch" >&2
+	exit 1
+	;;
+esac
+
+# As described in the DPS spec, setting the data partition's UUID to
+# the first 128 bits of the roothash and the verity partition's UUID
+# to the last 128 bits of the roothash allows for auto-discovery of
+# the partitions based only on the roothash.
+roothash=$(tr -d '\000' <"${WORKDIR}"/verity/rootfs.verity-sig | jq -r .rootHash)
+rootuuid=$(uuidfmt $(echo $roothash | cut -c -32))
+hashuuid=$(uuidfmt $(echo $roothash | rev | cut -c -32 | rev))
+
+# Make sure that the final image size is aligned to a 32k byte
+# boundary. This lines up with the extent size used by lvm-mkinternal,
+# which means that we won't get GPT location warnings from Barebox
+# when we activate the LV.
+ALIGN_K=32
+blks=$((2+32+32))
+blks=$((blks + (($(stat -c%s "${BINARIES_DIR}"/rootfs.squashfs) + 511) >> 9)))
+blks=$((blks + (($(stat -c%s "${WORKDIR}"/verity/rootfs.verity) + 511) >> 9)))
+blks=$((blks + (($(stat -c%s "${WORKDIR}"/verity/rootfs.verity-sig) + 511) >> 9)))
+size=$((((blks << 9) + ((ALIGN_K << 10) - 1)) & ~((ALIGN_K << 10) - 1)))
+
+cat <<EOF >"${WORKDIR}"/genimage-ddi.cfg
+image ${ARTIFACT}.raw {
+	size = ${size}
+	hdimage {
+		partition-table-type = "gpt"
+	}
+
+	partition root {
+		partition-type-uuid = "root-${arch}"
+		partition-uuid = "$rootuuid"
+		image = "rootfs.squashfs"
+	}
+	partition root-verity {
+		partition-type-uuid = "root-${arch}-verity"
+		partition-uuid = "$hashuuid"
+		image = "${WORKDIR}/verity/rootfs.verity"
+	}
+	partition root-verity-sig {
+		partition-type-uuid = "root-${arch}-verity-sig"
+		image = "${WORKDIR}/verity/rootfs.verity-sig"
+	}
+}
+
+config {}
+EOF
+
+genimage \
+    --loglevel 1 \
+    --tmppath    "${WORKDIR}"/tmp \
+    --rootpath   "${WORKDIR}" \
+    --inputpath  "${BINARIES_DIR}" \
+    --outputpath "${BINARIES_DIR}" \
+    --config     "${WORKDIR}"/genimage-ddi.cfg
