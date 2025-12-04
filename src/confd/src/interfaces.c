@@ -589,8 +589,7 @@ static int netdag_gen_iface_del(struct dagger *net, struct lyd_node *dif,
 
 static sr_error_t netdag_gen_iface_timeout(struct dagger *net, const char *ifname, const char *iftype)
 {
-	if (!strcmp(iftype, "infix-if-type:ethernet") ||
-	    !strcmp(iftype, "infix-if-type:wifi")) {
+	if (!strcmp(iftype, "infix-if-type:ethernet")) {
 		FILE *wait = dagger_fopen_net_init(net, ifname, NETDAG_INIT_TIMEOUT, "wait-interface.sh");
 		if (!wait) {
 			return -EIO;

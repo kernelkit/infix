@@ -144,7 +144,7 @@ static confd_dependency_t handle_dependencies(struct lyd_node **diff, struct lyd
 		struct lyd_node *dif;
 
 		LYX_LIST_FOR_EACH(difs, dif, "interface") {
-			struct lyd_node *dwifi, *cwifi, *cif;
+			struct lyd_node *dwifi, *cwifi;
 			const char *ifname, *radio_name;
 			char xpath[256];
 
@@ -153,17 +153,13 @@ static confd_dependency_t handle_dependencies(struct lyd_node **diff, struct lyd
 			if (!dwifi)
 				continue;
 
-			/* Get the interface name and find it in config */
+			/* Get the interface name */
 			ifname = lydx_get_cattr(dif, "name");
 			if (!ifname)
 				continue;
 
-			cif = lydx_get_xpathf(config, "/ietf-interfaces:interfaces/interface[name='%s']", ifname);
-			if (!cif)
-				continue;
-
-			/* Get the radio name from config */
-			cwifi = lydx_get_child(cif, "wifi");
+			/* Get radio reference directly from the diff */
+			cwifi = lydx_get_child(dif, "wifi");
 			if (!cwifi)
 				continue;
 
@@ -181,6 +177,60 @@ static confd_dependency_t handle_dependencies(struct lyd_node **diff, struct lyd
 
 			DEBUG("Added radio %s to diff for WiFi interface %s", radio_name, ifname);
 		}
+	}
+
+	/* When WiFi radios change, add all interfaces using that radio to the diff */
+	struct ly_set *radios = lydx_find_xpathf(*diff,
+		"/ietf-hardware:hardware/component[infix-hardware:wifi-radio]");
+	if (radios && radios->count > 0) {
+		for (uint32_t i = 0; i < radios->count; i++) {
+			struct lyd_node *hradio = radios->dnodes[i];
+			const char *radio_name = lydx_get_cattr(hradio, "name");
+			struct ly_set *ifaces;
+			uint32_t j;
+			char xpath[256];
+
+			if (!radio_name)
+				continue;
+
+			/* Find all interfaces that reference this radio */
+			ifaces = lydx_find_xpathf(config,
+				"/ietf-interfaces:interfaces/interface[infix-interfaces:wifi/radio='%s']",
+				radio_name);
+			if (ifaces && ifaces->count > 0) {
+				for (j = 0; j < ifaces->count; j++) {
+					const char *ifname = lydx_get_cattr(ifaces->dnodes[j], "name");
+
+					/* Add the wifi container */
+					snprintf(xpath, sizeof(xpath),
+						"/ietf-interfaces:interfaces/interface[name='%s']/infix-interfaces:wifi",
+						ifname);
+					result = add_dependencies(diff, xpath, ifname);
+					if (result == CONFD_DEP_ERROR) {
+						ERROR("Failed to add interface wifi for %s (radio %s)", ifname, radio_name);
+						ly_set_free(ifaces, NULL);
+						ly_set_free(radios, NULL);
+						return result;
+					}
+
+					/* Add the radio leaf */
+					snprintf(xpath, sizeof(xpath),
+						"/ietf-interfaces:interfaces/interface[name='%s']/infix-interfaces:wifi/radio",
+						ifname);
+					result = add_dependencies(diff, xpath, radio_name);
+					if (result == CONFD_DEP_ERROR) {
+						ERROR("Failed to add radio leaf for interface %s (radio %s)", ifname, radio_name);
+						ly_set_free(ifaces, NULL);
+						ly_set_free(radios, NULL);
+						return result;
+					}
+
+					DEBUG("Added interface %s to diff for radio %s", ifname, radio_name);
+				}
+				ly_set_free(ifaces, NULL);
+			}
+		}
+		ly_set_free(radios, NULL);
 	}
 
 	return result;

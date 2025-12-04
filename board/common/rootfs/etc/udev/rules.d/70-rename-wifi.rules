@@ -1,4 +1,8 @@
 # Remove kernel-created WiFi interfaces
 # All WiFi interfaces are now virtual interfaces created by confd
 # based on configuration referencing the underlying PHY (phy0, phy1, etc.)
-SUBSYSTEM=="net", ACTION=="add", TEST=="/sys/class/net/$name/wireless", RUN+="/usr/sbin/iw dev $name del"
+SUBSYSTEM=="net", ACTION=="add", KERNEL=="wlan*", \
+  TEST=="/sys/class/net/$name/phy80211/name", \
+  PROGRAM="/bin/cat /sys/class/net/%k/phy80211/name", \
+  TEST!="/run/wifi-cleaned-%c", \
+  RUN+="/bin/sh -c '/usr/sbin/iw dev %k del && touch /run/wifi-cleaned-%c'"

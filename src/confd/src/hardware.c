@@ -444,7 +444,7 @@ static int wifi_gen_aps_on_radio(const char *radio_name, struct lyd_node *cifs,
 	char hostapd_conf[256];
 	char **ap_list = NULL;
 	int ap_count = 0;
-	FILE *hostapd = NULL, *init = NULL;
+	FILE *hostapd = NULL;
 	int rc = SR_ERR_OK;
 
 	/* Find all APs on this radio */
@@ -669,29 +669,12 @@ int hardware_change(sr_session_ctx_t *session, struct lyd_node *config, struct l
 
 	LYX_LIST_FOR_EACH(difs, dif, "component") {
 		enum lydx_op op;
-		struct lyd_node *state, *dwifi_radio, *cif;
+		struct lyd_node *state, *cif;
 		const char *admin_state;
 		const char *class, *name;
 
 		op = lydx_get_op(dif);
 		name = lydx_get_cattr(dif, "name");
-
-		if (op == LYDX_OP_DELETE) {
-			/* Handle USB deletion */
-			if (usb_authorize(confd->root, name, 0)) {
-				rc = SR_ERR_INTERNAL;
-				goto err;
-			}
-
-			/* Handle WiFi radio deletion */
-			dwifi_radio = lydx_get_child(dif, "wifi-radio");
-			if (dwifi_radio) {
-				DEBUG("WiFi radio %s deleted, cleaning up", name);
-				//wifi_del_aps_on_radio(name, &confd->netdag);
-				/* Station cleanup will be handled per-interface */
-			}
-			continue;
-		}
 
 		/* Get the current config node for this component */
 		cif = lydx_get_xpathf(config, "/hardware/component[name='%s']", name);
@@ -704,6 +687,15 @@ int hardware_change(sr_session_ctx_t *session, struct lyd_node *config, struct l
 		if (!strcmp(class, "infix-hardware:usb")) {
 			if (event != SR_EV_DONE)
 				continue;
+
+			if (op == LYDX_OP_DELETE) {
+				/* Handle USB deletion */
+				if (usb_authorize(confd->root, name, 0)) {
+					rc = SR_ERR_INTERNAL;
+					goto err;
+				}
+				continue;
+			}
 			state = lydx_get_child(dif, "state");
 			admin_state = lydx_get_cattr(state, "admin-state");
 			if (usb_authorize(confd->root, name, !strcmp(admin_state, "unlocked"))) {
@@ -714,8 +706,8 @@ int hardware_change(sr_session_ctx_t *session, struct lyd_node *config, struct l
 
 		/* Handle WiFi radio components */
 		if (!strcmp(class, "infix-hardware:wifi")) {
+			struct lyd_node *interfaces_config, *interfaces_diff;
 			struct lyd_node **wifi_iface_list = NULL;
-			struct lyd_node *interfaces_config;
 			struct lyd_node *station;
 			int wifi_iface_count = 0;
 
@@ -725,6 +717,58 @@ int hardware_change(sr_session_ctx_t *session, struct lyd_node *config, struct l
 			case SR_EV_CHANGE:
 				break;
 			case SR_EV_DONE:
+				char src[40], dst[40];
+
+				/* Get interfaces configuration */
+				interfaces_diff = lydx_get_descendant(diff, "interfaces", "interface", NULL);
+
+				wifi_find_interfaces_on_radio(interfaces_diff, name,
+							      &wifi_iface_list, &wifi_iface_count);
+				ERROR("DONE: Found %d WiFi interfaces on radio %s", wifi_iface_count, name);
+				if (wifi_iface_count > 0) {
+					bool running, enabled;
+					station = lydx_get_descendant(wifi_iface_list[0], "interface", "wifi", "station", NULL);
+					if (station) {
+						const char *ifname = lydx_get_cattr(wifi_iface_list[0], "name");
+						snprintf(src, sizeof(src), WPA_SUPPLICANT_CONF_NEXT, ifname);
+						snprintf(dst, sizeof(dst), WPA_SUPPLICANT_CONF, ifname);
+						running = !systemf("initctl -bfq status wifi@%s", ifname);
+						enabled = fexistf(WPA_SUPPLICANT_CONF_NEXT, ifname);
+
+						if (enabled && lydx_get_xpathf(config, "/ietf-interfaces:interfaces/interface[name='%s']", ifname)) { /* if enabled and not removed */
+							rename(src, dst);
+
+							ERROR("WPA SUPPLICANT RUNNING: %s", running ? "YES" : "NO");
+							if (running)
+								systemf("initctl -bfq touch wifi@%s", ifname);
+							else
+								systemf("initctl -bfq enable wifi@%s", ifname);
+						} else {
+							erase(dst);
+							systemf("initctl -bfq disable wifi@%s", ifname);
+						}
+					} else if (wifi_iface_count > 0) {
+						/* AP mode - activate hostapd for radio */
+						snprintf(src, sizeof(src), HOSTAPD_CONF_NEXT, name);
+						snprintf(dst, sizeof(dst), HOSTAPD_CONF, name);
+
+						running = !systemf("initctl -bfq status hostapd@%s", name);
+						enabled = fexistf(HOSTAPD_CONF_NEXT, name);
+
+						if (enabled) {
+							rename(src, dst);
+							ERROR("HOSTAPD for radio %s: config activated", name);
+
+							if (running)
+								systemf("initctl -bfq touch hostapd@%s", name);
+							else
+								systemf("initctl -bfq enable hostapd@%s", name);
+						} else {
+							erase(dst);
+							systemf("initctl -bfq disable hostapd@%s", name);
+						}
+					}
+				}
 				continue;
 			default:
 				continue;
@@ -746,7 +790,7 @@ int hardware_change(sr_session_ctx_t *session, struct lyd_node *config, struct l
 			wifi_find_interfaces_on_radio(interfaces_config, name,
 						       &wifi_iface_list, &wifi_iface_count);
 
-			ERROR("Found %d WiFi interfaces on radio %s", wifi_iface_count, name);
+			ERROR("CHANGE: Found %d WiFi interfaces on radio %s", wifi_iface_count, name);
 
 			if (!wifi_iface_count)
 				continue;
@@ -757,7 +801,7 @@ int hardware_change(sr_session_ctx_t *session, struct lyd_node *config, struct l
 			 *
 			 * Check for station first - there can be at most one per radio.
 			 */
-			station = lydx_get_descendant(wifi_iface_list[0], "wifi", "station", NULL);
+			station = lydx_get_descendant(wifi_iface_list[0], "interface", "wifi", "station", NULL);
 			if (wifi_iface_count == 1 && station) {
 				struct lyd_node *iface = wifi_iface_list[0];
 				if (station && lydx_is_enabled(iface, "enabled")) {
