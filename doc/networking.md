@@ -1339,6 +1339,7 @@ Currently supported YANG models:
 | ietf-ipv4-unicast-routing | Static IPv4 unicast routing     |
 | ietf-ipv6-unicast-routing | Static IPv6 unicast routing     |
 | ietf-ospf                 | OSPF routing                    |
+| ietf-rip                  | RIP routing                     |
 | infix-routing             | Infix deviations and extensions |
 
 The base model, ietf-routing, is where all the other models hook in.  It
@@ -1541,6 +1542,121 @@ all options back to `false`:
 
     admin@example:/> configure
     admin@example:/config/> delete routing control-plane-protocol ospfv2 name default ospf debug
+    admin@example:/config/> leave
+    admin@example:/>
+
+
+### RIP Routing
+
+The system supports RIP dynamic routing for IPv4, i.e., RIPv2.  To enable
+RIP and set active interfaces:
+
+    admin@example:/config/> edit routing control-plane-protocol ripv2 name default rip
+    admin@example:/config/routing/…/rip/> set interfaces interface e0
+    admin@example:/config/routing/…/rip/> set interfaces interface e1
+    admin@example:/config/routing/…/rip/> leave
+    admin@example:/>
+
+> [!TIP]
+> Remember to enable [IPv4 forwarding](#ipv4-forwarding) for all the
+> interfaces you want to route between.
+
+
+#### RIP interface settings
+
+By default, interfaces send and receive RIPv2 packets.  To control the
+RIP version per interface:
+
+    admin@example:/config/routing/…/rip/> edit interfaces interface e0
+    admin@example:/config/routing/…/rip/interfaces/interface/e0/> set send-version 1
+    admin@example:/config/routing/…/rip/interfaces/interface/e0/> set receive-version 1-2
+    admin@example:/config/routing/…/rip/interfaces/interface/e0/> leave
+    admin@example:/>
+
+Valid version values are `1`, `2`, or `1-2` (both versions).
+
+To configure a passive interface (advertise network but don't send/receive
+RIP updates):
+
+    admin@example:/config/routing/…/rip/> edit interfaces interface e0
+    admin@example:/config/routing/…/rip/interfaces/interface/e0/> set passive
+    admin@example:/config/routing/…/rip/interfaces/interface/e0/> leave
+    admin@example:/>
+
+
+#### RIP global settings
+
+RIP supports redistribution of connected and static routes:
+
+    admin@example:/config/routing/…/rip/> set redistribute connected
+    admin@example:/config/routing/…/rip/> set redistribute static
+    admin@example:/config/routing/…/rip/> leave
+    admin@example:/>
+
+
+#### Debug RIPv2
+
+The CLI provides various RIP status commands:
+
+    admin@example:/> show ip rip
+
+    Default version control: send version 2, receive version 2
+      Interface        Send  Recv   Key-chain
+      e0               2     2
+      e1               2     2
+
+    Routing for Networks:
+      e0
+      e1
+
+    Routing Information Sources:
+      Gateway          BadPackets BadRoutes  Distance Last Update
+      10.0.1.2                  0         0       120   00:00:16
+    Distance: (default is 120)
+
+    admin@example:/> show ip rip neighbor
+
+    ADDRESS          BAD-PACKETS    BAD-ROUTES
+    10.0.1.2         0              0
+
+    admin@example:/>
+
+For more detailed troubleshooting, RIP debug logging can be enabled to
+capture specific protocol events. Debug messages are written to the
+routing log file (`/var/log/routing`).
+
+> [!CAUTION]
+> Debug logging significantly increases log output and may impact
+> performance. Only enable debug categories needed for troubleshooting,
+> and disable them when done.
+
+To enable specific RIP debug categories:
+
+    admin@example:/> configure
+    admin@example:/config/> edit routing control-plane-protocol ripv2 name default rip debug
+    admin@example:/config/routing/…/rip/debug/> set events true
+    admin@example:/config/routing/…/rip/debug/> set packet true
+    admin@example:/config/routing/…/rip/debug/> leave
+    admin@example:/>
+
+Available debug categories include:
+
+- `events`: RIP events (sending/receiving packets, timers, interface changes)
+- `packet`: Detailed packet debugging (packet dumps with origin and port)
+- `kernel`: Kernel routing table updates (route add/delete, interface updates)
+
+All debug options are disabled by default. Refer to the `infix-routing`
+YANG model for the complete list of available debug options.
+
+To view current debug settings:
+
+    admin@example:/> show running-config routing control-plane-protocol
+
+To disable all debug logging, simply delete the debug settings or set
+all options back to `false`:
+
+    admin@example:/> configure
+    admin@example:/config/> delete routing control-plane-protocol ripv2 name default rip debug
     admin@example:/config/> leave
     admin@example:/>
 
