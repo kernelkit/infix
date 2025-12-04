@@ -1,0 +1,25 @@
+=== NTP server standalone mode
+
+ifdef::topdoc[:imagesdir: {topdoc}../../test/case/ntp/server_mode_standalone]
+
+==== Description
+
+Verify NTP server operating in standalone mode with only a local reference clock.
+
+This test validates the basic standalone mode where the NTP server uses only
+its local reference clock (stratum 8) to serve time to clients, without
+syncing from any upstream sources.
+
+==== Topology
+
+image::topology.svg[NTP server standalone mode topology, align=center, scaledwidth=75%]
+
+==== Sequence
+
+. Set up topology and attach to target DUT
+. Configure interface and NTP server
+. Verify network connectivity with NTP server
+. Query time from NTP server
+. Verify NTP server statistics
+
+

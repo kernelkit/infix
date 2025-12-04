@@ -283,7 +283,7 @@ err:
 	return rc;
 }
 
-static int change_ntp(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd)
+static int change_ntp_client(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd)
 {
 	sr_change_iter_t *iter = NULL;
 	int rc, err = SR_ERR_OK;
@@ -305,7 +305,8 @@ static int change_ntp(sr_session_ctx_t *session, struct lyd_node *config, struct
 	case SR_EV_DONE:
 		if (!srx_enabled(session, XPATH_NTP_"/enabled")) {
 			systemf("rm -rf /etc/chrony/conf.d/* /etc/chrony/sources.d/*");
-			systemf("initctl -nbq disable chronyd");
+			/* Note: chronyd enable/disable is managed centrally in core.c */
+			systemf("initctl -nbq touch chronyd");
 			return SR_ERR_OK;
 		}
 
@@ -314,7 +315,8 @@ static int change_ntp(sr_session_ctx_t *session, struct lyd_node *config, struct
 			erase("/run/chrony/.changes");
 		}
 
-		systemf("initctl -nbq enable chronyd");
+		/* Note: chronyd enable/disable is managed centrally in core.c */
+		systemf("initctl -nbq touch chronyd");
 		return SR_ERR_OK;
 
 	default:
@@ -1608,7 +1610,7 @@ int system_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd
 
 	if ((rc = change_auth(session, config, diff, event, confd)))
 		return rc;
-	if ((rc = change_ntp(session, config, diff, event, confd)))
+	if ((rc = change_ntp_client(session, config, diff, event, confd)))
 		return rc;
 	if ((rc = change_dns(session, config, diff, event, confd)))
 		return rc;

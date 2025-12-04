@@ -79,6 +79,17 @@ def ntp(args: List[str]) -> None:
         return
     cli_pretty(data, "show-ntp")
 
+def ntp_server(args: List[str]) -> None:
+    data = run_sysrepocfg("/ietf-ntp:ntp")
+    if not data:
+        print("No ntp server data retrieved.")
+        return
+
+    if RAW_OUTPUT:
+        print(json.dumps(data, indent=2))
+        return
+    cli_pretty(data, "show-ntp-server")
+
 def is_valid_interface_name(interface_name: str) -> bool:
     """
     Validates a Linux network interface name.
@@ -444,6 +455,7 @@ def execute_command(command: str, args: List[str]):
         'interface': interface,
         'lldp': lldp,
         'ntp': ntp,
+        'ntp-server': ntp_server,
         'ospf': ospf,
         'routes': routes,
         'services' : services,

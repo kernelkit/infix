@@ -329,6 +329,9 @@
       show ntp
     </ACTION>
     <SWITCH name="optional" min="0">
+      <COMMAND name="server" help="Show NTP server status">
+        <ACTION sym="script">show ntp-server</ACTION>
+      </COMMAND>
       <COMMAND name="tracking" help="Show NTP tracking">
         <ACTION sym="script">doas ntp tracking</ACTION>
       </COMMAND>

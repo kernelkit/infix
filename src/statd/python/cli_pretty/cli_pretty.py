@@ -1799,6 +1799,47 @@ def show_ntp(json):
         print(row)
 
 
+def show_ntp_server(json):
+    """Display NTP server status and statistics"""
+    ntp_data = json.get("ietf-ntp:ntp")
+    if not ntp_data:
+        print("NTP server not enabled.")
+        return
+
+    # Server configuration
+    print(Decore.invert("NTP SERVER CONFIGURATION"))
+
+    refclock = ntp_data.get("refclock-master")
+    if refclock:
+        stratum = refclock.get("master-stratum", 10)
+        print(f"{'Local Stratum':<20}: {stratum}")
+    else:
+        print(f"{'Mode':<20}: Relay (no local reference clock)")
+
+    port = ntp_data.get("port", 123)
+    print(f"{'Port':<20}: {port}")
+
+    # Interface bindings (if configured)
+    interfaces = ntp_data.get("interfaces", {}).get("interface", [])
+    if interfaces:
+        print(f"{'Interfaces':<20}: {', '.join([iface.get('name', '?') for iface in interfaces])}")
+    else:
+        print(f"{'Interfaces':<20}: All")
+
+    # Server statistics
+    stats = ntp_data.get("ntp-statistics")
+    if stats:
+        print()
+        print(Decore.invert("SERVER STATISTICS"))
+        print(f"{'Packets Received':<20}: {stats.get('packet-received', 0):,}")
+        print(f"{'Packets Sent':<20}: {stats.get('packet-sent', 0):,}")
+        print(f"{'Packets Dropped':<20}: {stats.get('packet-dropped', 0):,}")
+        print(f"{'Send Failures':<20}: {stats.get('packet-sent-fail', 0):,}")
+    else:
+        print()
+        print("No server statistics available.")
+
+
 def show_system(json):
     """System information overivew"""
     if not json.get("ietf-system:system-state"):
@@ -3537,6 +3578,7 @@ def main():
               .add_argument('name', nargs='?', help='Service name')
 
     subparsers.add_parser('show-ntp', help='Show NTP sources')
+    subparsers.add_parser('show-ntp-server', help='Show NTP server status')
 
     subparsers.add_parser('show-bfd', help='Show BFD sessions')
     subparsers.add_parser('show-bfd-status', help='Show BFD status')
@@ -3584,6 +3626,8 @@ def main():
         show_firewall_service(json_data, args.name)
     elif args.command == "show-ntp":
         show_ntp(json_data)
+    elif args.command == "show-ntp-server":
+        show_ntp_server(json_data)
     elif args.command == "show-bfd":
         show_bfd(json_data)
     elif args.command == "show-bfd-status":

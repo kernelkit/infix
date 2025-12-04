@@ -1,0 +1,33 @@
+graph "ntp-peer-mode" {
+	layout="neato";
+	overlap="false";
+	esep="+22";
+
+        node [shape=record, fontname="DejaVu Sans Mono, Book"];
+	edge [color="cornflowerblue", penwidth="2", fontname="DejaVu Serif, Book"];
+
+	host [
+	    label="{ <mgmt1> mgmt1 | <host> \n\nhost\n\n\n | <mgmt2> mgmt2 }",
+	    pos="0,15!",
+	    requires="controller",
+	];
+
+        peer1 [
+	    label="{ <mgmt> mgmt | <data> data } | { peer1 }",
+	    pos="2,15.25!",
+	    fontsize=12,
+	    requires="infix",
+	];
+
+        peer2 [
+		label="{ <data> data | <mgmt> mgmt } | { peer2 }",
+	    pos="2,14.75!",
+	    fontsize=12,
+	    requires="infix",
+	];
+
+	host:mgmt1 -- peer1:mgmt [requires="mgmt", color="lightgray"]
+	host:mgmt2 -- peer2:mgmt [requires="mgmt" color="lightgrey"]
+
+	peer1:data -- peer2:data [label="\n\n192.168.3.0/24  ", dir="both"]
+}

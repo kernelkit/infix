@@ -8,6 +8,7 @@ All notable changes to the project are documented in this file.
 
 ### Changes
 
+- Add NTP server support, issue #904
 - Add support for configurable OSPF debug logging, issue #1281. Debug options
   can now be enabled per category (bfd, packet, ism, nsm, default-information,
   nssa). All debug options are disabled by default to prevent log flooding in

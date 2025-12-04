@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
+ "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+
+<!-- Title: ntp&#45;peer&#45;mode Pages: 1 -->
+<svg width="480pt" height="149pt"
+ viewBox="0.00 0.00 479.54 149.01" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(4 145.01)">
+<title>ntp&#45;peer&#45;mode</title>
+<polygon fill="white" stroke="transparent" points="-4,4 -4,-145.01 475.54,-145.01 475.54,4 -4,4"/>
+<!-- host -->
+<g id="node1" class="node">
+<title>host</title>
+<polygon fill="none" stroke="black" points="0,-4 0,-137 58,-137 58,-4 0,-4"/>
+<text text-anchor="middle" x="29" y="-121.8" font-family="DejaVu Sans Mono, Book" font-size="14.00">mgmt1</text>
+<polyline fill="none" stroke="black" points="0,-114 58,-114 "/>
+<text text-anchor="middle" x="29" y="-66.8" font-family="DejaVu Sans Mono, Book" font-size="14.00">host</text>
+<polyline fill="none" stroke="black" points="0,-27 58,-27 "/>
+<text text-anchor="middle" x="29" y="-11.8" font-family="DejaVu Sans Mono, Book" font-size="14.00">mgmt2</text>
+</g>
+<!-- peer1 -->
+<g id="node2" class="node">
+<title>peer1</title>
+<polygon fill="none" stroke="black" points="370.54,-98.51 370.54,-140.51 471.54,-140.51 471.54,-98.51 370.54,-98.51"/>
+<text text-anchor="middle" x="394.04" y="-126.91" font-family="DejaVu Sans Mono, Book" font-size="12.00">mgmt</text>
+<polyline fill="none" stroke="black" points="370.54,-119.51 417.54,-119.51 "/>
+<text text-anchor="middle" x="394.04" y="-105.91" font-family="DejaVu Sans Mono, Book" font-size="12.00">data</text>
+<polyline fill="none" stroke="black" points="417.54,-98.51 417.54,-140.51 "/>
+<text text-anchor="middle" x="444.54" y="-116.41" font-family="DejaVu Sans Mono, Book" font-size="12.00">peer1</text>
+</g>
+<!-- host&#45;&#45;peer1 -->
+<g id="edge1" class="edge">
+<title>host:mgmt1&#45;&#45;peer1:mgmt</title>
+<path fill="none" stroke="lightgray" stroke-width="2" d="M58,-125.5C58,-125.5 370.04,-130.51 370.04,-130.51"/>
+</g>
+<!-- peer2 -->
+<g id="node3" class="node">
+<title>peer2</title>
+<polygon fill="none" stroke="black" points="370.54,-0.5 370.54,-42.5 471.54,-42.5 471.54,-0.5 370.54,-0.5"/>
+<text text-anchor="middle" x="394.04" y="-28.9" font-family="DejaVu Sans Mono, Book" font-size="12.00">data</text>
+<polyline fill="none" stroke="black" points="370.54,-21.5 417.54,-21.5 "/>
+<text text-anchor="middle" x="394.04" y="-7.9" font-family="DejaVu Sans Mono, Book" font-size="12.00">mgmt</text>
+<polyline fill="none" stroke="black" points="417.54,-0.5 417.54,-42.5 "/>
+<text text-anchor="middle" x="444.54" y="-18.4" font-family="DejaVu Sans Mono, Book" font-size="12.00">peer2</text>
+</g>
+<!-- host&#45;&#45;peer2 -->
+<g id="edge2" class="edge">
+<title>host:mgmt2&#45;&#45;peer2:mgmt</title>
+<path fill="none" stroke="lightgrey" stroke-width="2" d="M58,-15.5C58,-15.5 370.04,-10.5 370.04,-10.5"/>
+</g>
+<!-- peer1&#45;&#45;peer2 -->
+<g id="edge3" class="edge">
+<title>peer1:data&#45;&#45;peer2:data</title>
+<path fill="none" stroke="cornflowerblue" stroke-width="2" d="M394.04,-88.5C394.04,-78.43 394.04,-62.98 394.04,-52.81"/>
+<polygon fill="cornflowerblue" stroke="cornflowerblue" stroke-width="2" points="390.54,-88.51 394.04,-98.51 397.54,-88.51 390.54,-88.51"/>
+<polygon fill="cornflowerblue" stroke="cornflowerblue" stroke-width="2" points="397.54,-52.5 394.04,-42.5 390.54,-52.5 397.54,-52.5"/>
+<text text-anchor="middle" x="335.04" y="-74.45" font-family="DejaVu Serif, Book" font-size="14.00">192.168.3.0/24 &#160;</text>
+</g>
+</g>
+</svg>
