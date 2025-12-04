@@ -10,7 +10,13 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
-#define RESETME    "/mnt/cfg/infix/.reset"
+#define stringify(_x) #_x
+#define xstringify(_x) stringify(_x)
+
+#ifndef RESETME_PATH
+#error "RESETME_PATH must be specified"
+#endif
+#define RESETME xstringify(RESETME_PATH)
 
 #define BOARDCHECK "/usr/libexec/infix/check-factory"
 
