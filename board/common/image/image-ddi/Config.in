@@ -1,0 +1,33 @@
+menuconfig IMAGE_DDI
+	bool "Discoverable Disk Image (DDI)"
+	select BR2_TARGET_ROOTFS_SQUASHFS
+	select BR2_PACKAGE_HOST_GENIMAGE
+	help
+	  Create a Discoverable Disk Image containing:
+	  - SquashFS of the root filesystem
+	  - dm-verity hash tree of the root filesystem
+	  - DDI compliant JSON signature object of the hash tree
+
+	  https://uapi-group.org/specifications/specs/discoverable_disk_image/
+
+config IMAGE_DDI_KEY
+	string "signing key"
+	depends on IMAGE_DDI
+	default "${BR2_EXTERNAL_INFIX_PATH}/board/common/signing-keys/development/infix.key"
+	help
+	  Path to the private RSA key, in PKCS#8 format, used to sign
+	  the dm-verity hash tree.
+
+config IMAGE_DDI_CERT
+	string "signing cert"
+	depends on IMAGE_DDI
+	default "${BR2_EXTERNAL_INFIX_PATH}/board/common/signing-keys/development/infix.crt"
+	help
+	  Path to the X509 certificate whose associated public key can
+	  validate the authenticity of the generated signature.
+
+	  The SHA256 fingerprint of this certificate is recorded
+	  alongside the standard PKCS#7 signature in the JSON object,
+	  which can be useful to locate corresponding key on systems
+	  that lack full X509 parsing capabilities.
+
