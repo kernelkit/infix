@@ -189,7 +189,12 @@ def add_services(out):
             "pid": d["pid"],
             "name": d["identity"],
             "status": d["status"],
-            "description": d["description"]
+            "description": d["description"],
+            "statistics": {
+                "memory-usage": str(d.get("memory", 0)),
+                "uptime": str(d.get("uptime", 0)),
+                "restart-count": int(d.get("restarts", 0))
+            }
         }
         services.append(entry)
 
