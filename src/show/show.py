@@ -295,6 +295,47 @@ def ospf(args: List[str]) -> None:
     else:
         print(f"Unknown OSPF subcommand: {subcommand}")
 
+def rip(args: List[str]) -> None:
+    """Handle show rip [subcommand] [ifname]
+
+    Subcommands:
+        (none)      - General RIP instance information
+        route       - RIP routing table
+        interface   - RIP interface details (optionally for specific interface)
+        neighbor    - RIP neighbor information
+
+    Optional:
+        ifname      - Interface name (for interface subcommand)
+    """
+    # Fetch operational data from sysrepocfg
+    data = run_sysrepocfg("/ietf-routing:routing/control-plane-protocols/control-plane-protocol")
+    if not data:
+        data = {}
+
+    if RAW_OUTPUT:
+        print(json.dumps(data, indent=2))
+        return
+
+    # Parse arguments: subcommand, optional interface name
+    subcommand = args[0] if len(args) > 0 and args[0] else ""
+    ifname = args[1] if len(args) > 1 else None
+
+    # Add metadata to data for formatters
+    if ifname:
+        data['_ifname'] = ifname
+
+    # Route to appropriate formatter
+    if subcommand == "":
+        cli_pretty(data, "show-rip")
+    elif subcommand == "route" or subcommand == "routes":
+        cli_pretty(data, "show-rip-routes")
+    elif subcommand == "interface" or subcommand == "interfaces":
+        cli_pretty(data, "show-rip-interfaces")
+    elif subcommand == "neighbor" or subcommand == "neighbors":
+        cli_pretty(data, "show-rip-neighbors")
+    else:
+        print(f"Unknown RIP subcommand: {subcommand}")
+
 def routes(args: List[str]):
     ip_version = args[0] if args and args[0] in ["ipv4", "ipv6"] else "ipv4"
 
@@ -445,9 +486,10 @@ def execute_command(command: str, args: List[str]):
         'lldp': lldp,
         'ntp': ntp,
         'ospf': ospf,
+        'rip': rip,
         'routes': routes,
-        'services' : services,
-        'software' : software,
+        'services': services,
+        'software': software,
         'stp': stp,
         'system': system,
         'wifi': wifi

@@ -51,6 +51,7 @@ def add_protocol(routes, proto):
         'static': 'static',
         'ospf': 'ietf-ospf:ospfv2',
         'ospf6': 'ietf-ospf:ospfv3',
+        'rip': 'ietf-rip:rip',
     }
 
     out = {}
@@ -75,9 +76,11 @@ def add_protocol(routes, proto):
             new['source-protocol'] = pmap.get(frr, 'infix-routing:kernel')
             new['route-preference'] = route.get('distance', 0)
 
-            # Metric only available in the model for OSPF routes
+            # Metric only available in the model for OSPF and RIP routes
             if 'ospf' in frr:
                 new['ietf-ospf:metric'] = route.get('metric', 0)
+            elif 'rip' in frr:
+                new['ietf-rip:metric'] = route.get('metric', 0)
 
             # See https://datatracker.ietf.org/doc/html/rfc7951#section-6.9
             # for details on how presence leaves are encoded in JSON: [null]

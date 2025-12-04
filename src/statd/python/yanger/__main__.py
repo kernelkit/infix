@@ -63,6 +63,9 @@ def main():
     elif args.model == 'ietf-ospf':
         from . import ietf_ospf
         yang_data = ietf_ospf.operational()
+    elif args.model == 'ietf-rip':
+        from . import ietf_rip
+        yang_data = ietf_rip.operational()
     elif args.model == 'ietf-hardware':
         from . import ietf_hardware
         yang_data = ietf_hardware.operational()

@@ -528,6 +528,35 @@
           </COMMAND>
         </SWITCH>
       </COMMAND>
+
+      <COMMAND name="rip" help="Show RIP status">
+        <ACTION sym="script" in="tty" out="tty" interrupt="true">
+          show rip |pager
+        </ACTION>
+
+        <SWITCH name="optional" min="0">
+          <COMMAND name="route" help="Show RIP routing table">
+            <ACTION sym="script" in="tty" out="tty" interrupt="true">
+              show rip route |pager
+            </ACTION>
+          </COMMAND>
+
+          <COMMAND name="interface" help="Show RIP interfaces">
+            <SWITCH name="optional" min="0" max="1">
+              <PARAM name="ifname" ptype="/IFACES" help="Interface name" />
+            </SWITCH>
+            <ACTION sym="script" in="tty" out="tty" interrupt="true">
+              show rip interface "$KLISH_PARAM_ifname" |pager
+            </ACTION>
+          </COMMAND>
+
+          <COMMAND name="neighbor" help="Show RIP neighbors">
+            <ACTION sym="script" in="tty" out="tty" interrupt="true">
+              show rip neighbor |pager
+            </ACTION>
+          </COMMAND>
+        </SWITCH>
+      </COMMAND>
     </SWITCH>
   </COMMAND>
 

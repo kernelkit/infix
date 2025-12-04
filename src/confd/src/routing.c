@@ -14,6 +14,9 @@
 #define OSPFD_CONF "/etc/frr/ospfd.conf"
 #define OSPFD_CONF_NEXT OSPFD_CONF "+"
 #define OSPFD_CONF_PREV OSPFD_CONF "-"
+#define RIPD_CONF "/etc/frr/ripd.conf"
+#define RIPD_CONF_NEXT RIPD_CONF "+"
+#define RIPD_CONF_PREV RIPD_CONF "-"
 #define BFDD_CONF "/etc/frr/bfd_enabled" /* Just signal that bfd should be enabled*/
 #define BFDD_CONF_NEXT BFDD_CONF "+"
 
@@ -25,6 +28,219 @@ enable password zebra\n\
 no log unique-id\n\
 log syslog informational\n\
 log facility local2\n"
+
+int parse_rip_redistribute(sr_session_ctx_t *session, struct lyd_node *redistributes, FILE *fp)
+{
+	struct lyd_node *tmp;
+
+	LY_LIST_FOR(lyd_child(redistributes), tmp) {
+		const char *protocol = lydx_get_cattr(tmp, "protocol");
+
+		fprintf(fp, "  redistribute %s\n", protocol);
+	}
+
+	return 0;
+}
+
+int parse_rip_interfaces(sr_session_ctx_t *session, struct lyd_node *interfaces, FILE *fp)
+{
+	struct lyd_node *interface, *neighbors_node, *neighbor;
+	int num_interfaces = 0;
+
+	/* First pass: network and passive-interface statements (inside router rip block) */
+	LY_LIST_FOR(lyd_child(interfaces), interface) {
+		const char *name;
+		int passive;
+
+		name = lydx_get_cattr(interface, "interface");
+		if (!name)
+			continue;
+
+		passive = lydx_get_bool(interface, "passive");
+
+		/* Enable RIP on the interface by adding it to the network statement */
+		fprintf(fp, "  network %s\n", name);
+
+		if (passive)
+			fprintf(fp, "  passive-interface %s\n", name);
+
+		num_interfaces++;
+	}
+
+	/* Handle explicit neighbors (inside router rip block) */
+	LY_LIST_FOR(lyd_child(interfaces), interface) {
+		neighbors_node = lydx_get_child(interface, "neighbors");
+		if (neighbors_node) {
+			LY_LIST_FOR(lyd_child(neighbors_node), neighbor) {
+				const char *address = lydx_get_cattr(neighbor, "address");
+				if (address)
+					fprintf(fp, "  neighbor %s\n", address);
+			}
+		}
+	}
+
+	/* Second pass: interface-specific settings (outside router rip block) */
+	LY_LIST_FOR(lyd_child(interfaces), interface) {
+		const char *name, *split_horizon, *cost, *send_version, *recv_version;
+
+		name = lydx_get_cattr(interface, "interface");
+		if (!name)
+			continue;
+
+		split_horizon = lydx_get_cattr(interface, "split-horizon");
+		cost = lydx_get_cattr(interface, "cost");
+		send_version = lydx_get_cattr(interface, "send-version");
+		recv_version = lydx_get_cattr(interface, "receive-version");
+
+		/* Only create interface block if there are per-interface settings */
+		if (split_horizon || cost || send_version || recv_version) {
+			fprintf(fp, "interface %s\n", name);
+
+			if (split_horizon) {
+				if (!strcmp(split_horizon, "poison-reverse"))
+					fputs(" ip rip split-horizon poisoned-reverse\n", fp);
+				else if (!strcmp(split_horizon, "disabled"))
+					fputs(" no ip rip split-horizon\n", fp);
+				/* "simple" is default, no need to configure */
+			}
+
+			/* Configure send version */
+			if (send_version) {
+				if (!strcmp(send_version, "1"))
+					fputs(" ip rip send version 1\n", fp);
+				else if (!strcmp(send_version, "1-2"))
+					fputs(" ip rip send version 1 2\n", fp);
+				/* "2" is default in augmentation, explicit config if needed */
+				else if (!strcmp(send_version, "2"))
+					fputs(" ip rip send version 2\n", fp);
+			}
+
+			/* Configure receive version */
+			if (recv_version) {
+				if (!strcmp(recv_version, "1"))
+					fputs(" ip rip receive version 1\n", fp);
+				else if (!strcmp(recv_version, "1-2"))
+					fputs(" ip rip receive version 1 2\n", fp);
+				/* "2" is default in augmentation, explicit config if needed */
+				else if (!strcmp(recv_version, "2"))
+					fputs(" ip rip receive version 2\n", fp);
+			}
+
+			if (cost) {
+				/* FRR uses offset-list for per-interface cost adjustment */
+				/* Note: offset-list is configured globally, not per-interface */
+				/* This is just a placeholder - actual implementation would need
+				   access lists and global offset-list configuration */
+			}
+		}
+	}
+
+	return num_interfaces;
+}
+
+int parse_rip_timers(sr_session_ctx_t *session, struct lyd_node *timers, FILE *fp)
+{
+	const char *update, *invalid, *holddown, *flush;
+
+	if (!timers)
+		return 0;
+
+	update = lydx_get_cattr(timers, "update-interval");
+	invalid = lydx_get_cattr(timers, "invalid-interval");
+	holddown = lydx_get_cattr(timers, "holddown-interval");
+	flush = lydx_get_cattr(timers, "flush-interval");
+
+	/* FRR timers basic: UPDATE TIMEOUT GARBAGE
+	 * TIMEOUT = invalid-interval (when route becomes invalid)
+	 * GARBAGE = flush-interval (when route is flushed)
+	 * Note: holddown-interval is used between invalid and flush
+	 */
+	DEBUG("Ignoring 'holddown interval %s' for now", holddown);
+	if (update || invalid || flush) {
+		fprintf(fp, "  timers basic %s %s %s\n",
+			update ? update : "30",
+			invalid ? invalid : "180",
+			flush ? flush : "240");
+	}
+
+	return 0;
+}
+
+int parse_rip(sr_session_ctx_t *session, struct lyd_node *rip)
+{
+	struct lyd_node *interfaces, *timers, *default_route, *debug;
+	const char *default_metric, *distance;
+	int num_interfaces = 0;
+	FILE *fp;
+
+	fp = fopen(RIPD_CONF_NEXT, "w");
+	if (!fp) {
+		ERROR("Failed to open %s", RIPD_CONF_NEXT);
+		return SR_ERR_INTERNAL;
+	}
+
+	fputs(FRR_STATIC_CONFIG, fp);
+
+	/* Handle RIP debug configuration */
+	debug = lydx_get_child(rip, "debug");
+	if (debug) {
+		int any_debug = 0;
+
+		if (lydx_get_bool(debug, "events")) {
+			fputs("debug rip events\n", fp);
+			any_debug = 1;
+		}
+		if (lydx_get_bool(debug, "packet")) {
+			fputs("debug rip packet\n", fp);
+			any_debug = 1;
+		}
+		if (lydx_get_bool(debug, "kernel")) {
+			fputs("debug rip zebra\n", fp);
+			any_debug = 1;
+		}
+
+		if (any_debug)
+			fputs("!\n", fp);
+	}
+
+	fputs("router rip\n", fp);
+	fputs("  version 2\n", fp);
+
+	/* Global RIP parameters */
+	default_metric = lydx_get_cattr(rip, "default-metric");
+	if (default_metric)
+		fprintf(fp, "  default-metric %s\n", default_metric);
+
+	distance = lydx_get_cattr(rip, "distance");
+	if (distance)
+		fprintf(fp, "  distance %s\n", distance);
+
+	/* Timers */
+	timers = lydx_get_child(rip, "timers");
+	parse_rip_timers(session, timers, fp);
+
+	/* Default route origination */
+	default_route = lydx_get_child(rip, "originate-default-route");
+	if (default_route && lydx_get_bool(default_route, "enabled"))
+		fputs("  default-information originate\n", fp);
+
+	/* Redistribution */
+	parse_rip_redistribute(session, lydx_get_child(rip, "redistribute"), fp);
+
+	/* Interfaces - must be done after router rip block and before interface blocks */
+	interfaces = lydx_get_child(rip, "interfaces");
+	if (interfaces)
+		num_interfaces = parse_rip_interfaces(session, interfaces, fp);
+
+	fclose(fp);
+
+	if (!num_interfaces) {
+		(void)remove(RIPD_CONF_NEXT);
+		return 0;
+	}
+
+	return 0;
+}
 
 int parse_ospf_interfaces(sr_session_ctx_t *session, struct lyd_node *areas, FILE *fp)
 {
@@ -274,9 +490,9 @@ static int parse_static_routes(sr_session_ctx_t *session, struct lyd_node *paren
 
 int routing_change(sr_session_ctx_t *session, struct lyd_node *config, struct lyd_node *diff, sr_event_t event, struct confd *confd)
 {
-	int staticd_enabled = 0, ospfd_enabled = 0, bfdd_enabled = 0;
+	int staticd_enabled = 0, ospfd_enabled = 0, ripd_enabled = 0, bfdd_enabled = 0;
 	struct lyd_node *cplane, *cplanes;
-	bool ospfd_running, bfdd_running;
+	bool ospfd_running, ripd_running, bfdd_running;
 	bool restart_zebra = false;
 	int rc = SR_ERR_OK;
 	FILE *fp;
@@ -303,8 +519,10 @@ int routing_change(sr_session_ctx_t *session, struct lyd_node *config, struct ly
 		/* Check if passed validation in previous event */
 		staticd_enabled = fexist(STATICD_CONF_NEXT);
 		ospfd_enabled = fexist(OSPFD_CONF_NEXT);
+		ripd_enabled = fexist(RIPD_CONF_NEXT);
 		bfdd_enabled = fexist(BFDD_CONF_NEXT);
 		ospfd_running = !systemf("initctl -bfq status ospfd");
+		ripd_running = !systemf("initctl -bfq status ripd");
 		bfdd_running = !systemf("initctl -bfq status bfdd");
 
 		if (bfdd_running && !bfdd_enabled) {
@@ -327,6 +545,16 @@ int routing_change(sr_session_ctx_t *session, struct lyd_node *config, struct ly
 			(void)remove(OSPFD_CONF);
 		}
 
+		if (ripd_running && !ripd_enabled) {
+			if (systemf("initctl -bfq disable ripd")) {
+				ERROR("Failed to disable RIP routing daemon");
+				rc = SR_ERR_INTERNAL;
+				goto err_abandon;
+			}
+			/* Remove all generated files */
+			(void)remove(RIPD_CONF);
+		}
+
 		if (bfdd_enabled) {
 			(void)rename(BFDD_CONF_NEXT, BFDD_CONF);
 			if (!bfdd_running) {
@@ -345,6 +573,21 @@ int routing_change(sr_session_ctx_t *session, struct lyd_node *config, struct ly
 			if (!ospfd_running) {
 				if (systemf("initctl -bnq enable ospfd")) {
 					ERROR("Failed to enable OSPF routing daemon");
+					rc = SR_ERR_INTERNAL;
+					goto err_abandon;
+				}
+			} else {
+				restart_zebra = true;
+			}
+		}
+
+		if (ripd_enabled) {
+			(void)remove(RIPD_CONF_PREV);
+			(void)rename(RIPD_CONF, RIPD_CONF_PREV);
+			(void)rename(RIPD_CONF_NEXT, RIPD_CONF);
+			if (!ripd_running) {
+				if (systemf("initctl -bnq enable ripd")) {
+					ERROR("Failed to enable RIP routing daemon");
 					rc = SR_ERR_INTERNAL;
 					goto err_abandon;
 				}
@@ -389,6 +632,8 @@ int routing_change(sr_session_ctx_t *session, struct lyd_node *config, struct ly
 			staticd_enabled = parse_static_routes(session, lydx_get_child(cplane, "static-routes"), fp);
 		} else if (!strcmp(type, "infix-routing:ospfv2")) {
 			parse_ospf(session, lydx_get_child(cplane, "ospf"));
+		} else if (!strcmp(type, "infix-routing:ripv2")) {
+			parse_rip(session, lydx_get_child(cplane, "rip"));
 		}
 	}
 
