@@ -306,7 +306,7 @@ class Decore():
 
     @staticmethod
     def bright_green(txt):
-        return Decore.decorate("1;32", txt, "39")
+        return Decore.decorate("1;32", txt, "0")
 
     @staticmethod
     def yellow(txt):
@@ -1028,7 +1028,9 @@ class Iface:
         if not self.wifi:
             return
 
-        stations_data = self.wifi.get("stations", {})
+        # Get stations from access-point container
+        ap = self.wifi.get("access-point", {})
+        stations_data = ap.get("stations", {})
         stations = stations_data.get("station", [])
 
         if not stations:
