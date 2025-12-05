@@ -43,6 +43,7 @@ nav:
       - Hardware Info & Status: hardware.md
       - Management: management.md
       - Syslog Support: syslog.md
+      - Support Data: support.md
       - Upgrade: upgrade.md
   - Scripting:
       - Introduction: scripting.md
