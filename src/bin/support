@@ -1,5 +1,9 @@
 #!/bin/sh
 # Support utilities for troubleshooting Infix systems
+
+# Program name for usage messages (supports being renamed by users)
+prognm=$(basename "$0")
+
 #
 # The collect command gathers system information and outputs a tarball.
 # Data is collected to /var/lib/support (or $HOME as fallback) and then
@@ -9,35 +13,36 @@
 # systems that do not yet have this script in the root fileystems.
 #
 #   1. Copy this script to the target device's home directory:
-#      scp support user@device:
+#
+#          scp support user@device:
 #
 #   2. SSH to the device and make it executable:
-#      ssh user@device
-#      chmod +x ~/support
+#
+#          ssh user@device chmod +x support
 #
 #   3. Run the script from your home directory:
 #
-#          ~/support collect > support-data.tar.gz
+#          ./support collect > support-data.tar.gz
 #
 #      Or directly via SSH from your workstation:
 #
-#          ssh user@device '~/support collect' > support-data.tar.gz
+#          ssh user@device './support collect' > support-data.tar.gz
 #
 # Optionally, the output can be encrypted with GPG using a password for
 # secure transmission to support personnel, see below.
 #
 # Examples:
-#   support collect                           > support-data.tar.gz
-#   support collect -s 5                      > support-data.tar.gz
-#   support collect -p                        > support-data.tar.gz.gpg
-#   support collect -p mypass                 > support-data.tar.gz.gpg
+#   ./support collect                           > support-data.tar.gz
+#   ./support collect -s 5                      > support-data.tar.gz
+#   ./support collect -p                        > support-data.tar.gz.gpg
+#   ./support collect -p mypass                 > support-data.tar.gz.gpg
 #
-#   ssh user@device support collect           > support-data.tar.gz
-#   ssh user@device support collect -p mypass > support-data.tar.gz.gpg
+#   ssh user@device ./support collect           > support-data.tar.gz
+#   ssh user@device ./support collect -p mypass > support-data.tar.gz.gpg
 #
 # Note, interactive password prompt (-p without argument) may echo characters
 # over SSH due to local terminal echo.  Use -p PASSWORD for remote execution,
-# or pipe the password: echo "password" | ssh user@device support collect -p
+# or pipe the password: echo "password" | ssh user@device ./support collect -p
 # meaning you can even: echo "$SECRET_VARIABLE" | ... which in some cases can
 # come in handy.
 #
@@ -91,7 +96,7 @@ cmd_collect()
                 ;;
             *)
                 echo "Error: Unknown option '$1'" >&2
-                echo "Usage: support collect [--log-sec|-s N] [--password|-p PASSWORD]" >&2
+                echo "Usage: $prognm collect [--log-sec|-s N] [--password|-p PASSWORD]" >&2
                 exit 1
                 ;;
         esac
@@ -450,7 +455,7 @@ cmd_clean()
                 ;;
             *)
                 echo "Error: Unknown option '$1'" >&2
-                echo "Usage: support clean [--dry-run] [--days N]" >&2
+                echo "Usage: $prognm clean [--dry-run] [--days N]" >&2
                 exit 1
                 ;;
         esac
@@ -509,7 +514,7 @@ cmd_clean()
 
 usage()
 {
-    echo "Usage: support [global-options] <command> [options]"
+    echo "Usage: $prognm [global-options] <command> [options]"
     echo ""
     echo "Global options:"
     echo "  -w, --work-dir PATH    Use PATH as working directory for collection/cleanup"
@@ -531,14 +536,14 @@ usage()
     echo "  -d, --days N           Remove directories older than N days (default: 7)"
     echo ""
     echo "Examples:"
-    echo "  support collect                     > support-data.tar.gz"
-    echo "  support collect -p                  > support-data.tar.gz.gpg"
-    echo "  support collect --password mypass   > support-data.tar.gz.gpg"
-    echo "  support --work-dir /tmp/ram collect > support-data.tar.gz"
-    echo "  ssh user@device support collect     > support-data.tar.gz"
-    echo "  support clean --dry-run"
-    echo "  support clean --days 30"
-    echo "  support --work-dir /tmp/ram clean"
+    echo "  $prognm collect                     > support-data.tar.gz"
+    echo "  $prognm collect -p                  > support-data.tar.gz.gpg"
+    echo "  $prognm collect --password mypass   > support-data.tar.gz.gpg"
+    echo "  $prognm --work-dir /tmp/ram collect > support-data.tar.gz"
+    echo "  ssh user@device $prognm collect     > support-data.tar.gz"
+    echo "  $prognm clean --dry-run"
+    echo "  $prognm clean --days 30"
+    echo "  $prognm --work-dir /tmp/ram clean"
     exit 1
 }
 
