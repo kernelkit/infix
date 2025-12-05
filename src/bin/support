@@ -129,8 +129,12 @@ cmd_collect()
     # Cleanup on exit
     cleanup()
     {
+        echo "[$(date -Iseconds)] Cleanup called (signal: ${1:-EXIT})" >> "${EXEC_LOG}" 2>&1 || echo "[$(date -Iseconds)] Cleanup called (signal: ${1:-EXIT})" >&2
         if [ -d "${COLLECT_DIR}" ]; then
+            echo "[$(date -Iseconds)] Removing collection directory: ${COLLECT_DIR}" >> "${EXEC_LOG}" 2>&1 || echo "[$(date -Iseconds)] Removing: ${COLLECT_DIR}" >&2
             rm -rf "${COLLECT_DIR}"
+        else
+            echo "[$(date -Iseconds)] Collection directory already gone: ${COLLECT_DIR}" >> "${EXEC_LOG}" 2>&1 || echo "[$(date -Iseconds)] Already gone: ${COLLECT_DIR}" >&2
         fi
     }
     trap cleanup EXIT INT TERM
@@ -383,7 +387,14 @@ cmd_collect()
 
     # Create final tar.gz and output to stdout
     # Use -C to change to parent directory so paths in archive don't include full path
-    cd "${WORK_DIR}"
+    echo "[$(date -Iseconds)] Changing to work directory: ${WORK_DIR}" >> "${EXEC_LOG}" 2>&1
+    if ! cd "${WORK_DIR}"; then
+        echo "[$(date -Iseconds)] ERROR: Failed to cd to ${WORK_DIR}" >> "${EXEC_LOG}" 2>&1
+        echo "Error: Cannot change to work directory ${WORK_DIR}" >&2
+        exit 1
+    fi
+    echo "[$(date -Iseconds)] Successfully changed to: $(pwd)" >> "${EXEC_LOG}" 2>&1
+    echo "[$(date -Iseconds)] Creating archive from: $(basename "${COLLECT_DIR}")" >> "${EXEC_LOG}" 2>&1
 
     # Check if password encryption is requested
     if [ -n "$PASSWORD" ]; then
@@ -392,14 +403,29 @@ cmd_collect()
             exit 1
         fi
         echo "Encrypting with GPG..." >&2
+        echo "[$(date -Iseconds)] Starting tar with GPG encryption" >> "${EXEC_LOG}" 2>&1
         tar czf - "$(basename "${COLLECT_DIR}")" 2>> "${EXEC_LOG}" | \
             gpg --batch --yes --passphrase "$PASSWORD" --pinentry-mode loopback -c 2>> "${EXEC_LOG}"
+        tar_exit=$?
+        echo "[$(date -Iseconds)] tar+gpg pipeline exit code: $tar_exit" >> "${EXEC_LOG}" 2>&1
         echo "" >&2
         echo "WARNING: Remember to share the encryption password out-of-band!" >&2
         echo "         Do not send it in the same email as the encrypted file." >&2
+        if [ $tar_exit -ne 0 ]; then
+            echo "[$(date -Iseconds)] ERROR: tar+gpg failed with exit code $tar_exit" >> "${EXEC_LOG}" 2>&1
+            exit $tar_exit
+        fi
     else
+        echo "[$(date -Iseconds)] Starting tar (no encryption)" >> "${EXEC_LOG}" 2>&1
         tar czf - "$(basename "${COLLECT_DIR}")" 2>> "${EXEC_LOG}"
+        tar_exit=$?
+        echo "[$(date -Iseconds)] tar exit code: $tar_exit" >> "${EXEC_LOG}" 2>&1
+        if [ $tar_exit -ne 0 ]; then
+            echo "[$(date -Iseconds)] ERROR: tar failed with exit code $tar_exit" >> "${EXEC_LOG}" 2>&1
+            exit $tar_exit
+        fi
     fi
+    echo "[$(date -Iseconds)] Archive creation completed successfully" >> "${EXEC_LOG}" 2>&1
 }
 
 cmd_clean()
