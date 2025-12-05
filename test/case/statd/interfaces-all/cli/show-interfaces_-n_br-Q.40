@@ -3,6 +3,7 @@ type                : vlan
 index               : 17
 mtu                 : 1500
 operational status  : up
+ip forwarding       : disabled
 lower-layer-if      : br-Q
 physical address    : 00:a0:85:00:03:00
 ipv4 addresses      :
