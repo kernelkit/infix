@@ -124,9 +124,37 @@ def add_protocol(routes, proto):
     insert(routes, 'routes', out)
 
 
+def get_routing_interfaces():
+    """Get list of interfaces with IPv4 forwarding enabled"""
+    import json
+
+    # Get all interfaces
+    links_json = HOST.run(tuple(['ip', '-j', 'link', 'show']), default="[]")
+    links = json.loads(links_json)
+
+    routing_ifaces = []
+    for link in links:
+        ifname = link.get('ifname')
+        if not ifname:
+            continue
+
+        # Check if IPv4 forwarding is enabled
+        # Note: We only check IPv4 forwarding. IPv6 forwarding behaves differently
+        # and will be handled separately when Linux 6.17+ force_forwarding is available.
+        ipv4_fwd = HOST.run(tuple(['sysctl', '-n', f'net.ipv4.conf.{ifname}.forwarding']), default="0").strip()
+
+        if ipv4_fwd == "1":
+            routing_ifaces.append(ifname)
+
+    return routing_ifaces
+
+
 def operational():
     out = {
         "ietf-routing:routing": {
+            "interfaces": {
+                "interface": get_routing_interfaces()
+            },
             "ribs":  {
                 "rib": [{
                     "name": "ipv4",

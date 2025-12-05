@@ -95,6 +95,12 @@ def interface(args: List[str]) -> None:
         print("No interface data retrieved.")
         return
 
+    # Also fetch routing interface list for forwarding indication
+    routing_data = run_sysrepocfg("/ietf-routing:routing")
+    if routing_data:
+        # Merge routing data into the main data structure
+        data.update(routing_data)
+
     if RAW_OUTPUT:
         print(json.dumps(data, indent=2))
         return

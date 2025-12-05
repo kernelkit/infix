@@ -111,10 +111,6 @@ module infix-routing {
   }
 
   /* General routing */
-  deviation "/rt:routing/rt:interfaces" {
-    description "Initial limitation";
-    deviate not-supported;
-  }
 
   deviation "/rt:routing/rt:router-id" {
     description "Set in OSPF";
