@@ -2560,7 +2560,7 @@ sysrepo <code>operational</code> datastore. Like <code>confd</code>, it uses XPa
 but unlike <code>confd</code>, it relies entirely on <code>yanger</code>, a Python script that
 gathers data from local linux services and feeds it into sysrepo.</p>
 <p>To apply changes, rebuild the image:</p>
-<div class="highlight"><pre><span></span><code>make python-statd-rebuild statd-rebuild all
+<div class="highlight"><pre><span></span><code>make statd-rebuild all
 </code></pre></div>
 <p>Rebuilding the image and testing on target for every change during
 development process can be tedious. Instead, <code>yanger</code> allows remote
