@@ -1,4 +1,4 @@
-From 8fb81be5838aacbfb32f2c947826a8917a14f673 Mon Sep 17 00:00:00 2001
+From 764be1a05c3411b8e369d089d4302f7b670602e8 Mon Sep 17 00:00:00 2001
 From: Tobias Waldekranz <tobias@waldekranz.com>
 Date: Thu, 16 Nov 2023 19:44:32 +0100
 Subject: [PATCH 05/30] net: dsa: mv88e6xxx: Add LED infrastructure
