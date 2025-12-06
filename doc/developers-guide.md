@@ -217,7 +217,7 @@ gathers data from local linux services and feeds it into sysrepo.
 
 To apply changes, rebuild the image:
 
-    make python-statd-rebuild statd-rebuild all
+    make statd-rebuild all
 
 Rebuilding the image and testing on target for every change during
 development process can be tedious. Instead, `yanger` allows remote

@@ -5,7 +5,8 @@ config BR2_PACKAGE_STATD
 	select BR2_PACKAGE_SYSREPO
 	select BR2_PACKAGE_LIBSRX
 	select BR2_PACKAGE_LIBITE
-	select BR2_PACKAGE_PYTHON_STATD
+	select BR2_PACKAGE_HOST_PYTHON3
+	select BR2_PACKAGE_DBUS_PYTHON
 	help
 	  Operational Status Daemon. Responsible for handling sysrepo
 	  operational run-time info. Such as interface state and address.
