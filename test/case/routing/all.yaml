@@ -28,3 +28,15 @@
 
 - name: OSPF Debug Logging
   case: ospf_debug/test.py
+
+- name: RIP Basic
+  case: rip_basic/test.py
+
+- name: RIP Passive Interface
+  case: rip_passive_interface/test.py
+
+- name: RIP Redistribution
+  case: rip_redistribute/test.py
+
+- name: RIP Multi-hop
+  case: rip_multihop/test.py

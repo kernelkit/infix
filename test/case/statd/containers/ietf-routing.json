@@ -1,5 +1,8 @@
 {
   "ietf-routing:routing": {
+    "interfaces": {
+      "interface": []
+    },
     "ribs": {
       "rib": [
         {

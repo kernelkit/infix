@@ -40,6 +40,7 @@
 #define XPATH_HARDWARE_BASE "/ietf-hardware:hardware"
 #define XPATH_SYSTEM_BASE "/ietf-system"
 #define XPATH_ROUTING_OSPF XPATH_ROUTING_BASE "/ospf"
+#define XPATH_ROUTING_RIP XPATH_ROUTING_BASE "/rip"
 #define XPATH_ROUTING_BFD XPATH_ROUTING_BASE "/bfd"
 #define XPATH_CONTAIN_BASE  "/infix-containers:containers"
 #define XPATH_DHCP_SERVER_BASE  "/infix-dhcp-server:dhcp-server"
@@ -260,6 +261,42 @@ static int sr_ospf_cb(sr_session_ctx_t *session, uint32_t, const char *,
 	return err;
 }
 
+static int sr_rip_cb(sr_session_ctx_t *session, uint32_t, const char *,
+		     const char *, const char *xpath, uint32_t,
+		     struct lyd_node **parent, __attribute__((unused)) void *priv)
+{
+	char *yanger_args[5] = {
+		YANGER_BINPATH,
+		"ietf-rip",
+		NULL
+	};
+	const struct ly_ctx *ctx;
+	sr_conn_ctx_t *con;
+	sr_error_t err;
+
+	DEBUG("Incoming rip query for xpath: %s", xpath);
+
+	con = sr_session_get_connection(session);
+	if (!con) {
+		ERROR("Error, getting sr connection");
+		return SR_ERR_INTERNAL;
+	}
+
+	ctx = sr_acquire_context(con);
+	if (!ctx) {
+		ERROR("Error, acquiring context");
+		return SR_ERR_INTERNAL;
+	}
+
+	err = ly_add_yanger_data(ctx, parent, yanger_args);
+	if (err)
+		ERROR("Error adding yanger data");
+
+	sr_release_context(con);
+
+	return err;
+}
+
 static int sr_bfd_cb(sr_session_ctx_t *session, uint32_t, const char *,
 		     const char *, const char *xpath, uint32_t,
 		     struct lyd_node **parent, __attribute__((unused)) void *priv)
@@ -379,6 +416,8 @@ static int subscribe_to_all(struct statd *statd)
 	if (subscribe(statd, "ietf-interfaces", XPATH_IFACE_BASE, sr_iface_cb))
 		return SR_ERR_INTERNAL;
 	if (subscribe(statd, "ietf-routing", XPATH_ROUTING_OSPF, sr_ospf_cb))
+		return SR_ERR_INTERNAL;
+	if (subscribe(statd, "ietf-routing", XPATH_ROUTING_RIP, sr_rip_cb))
 		return SR_ERR_INTERNAL;
 	if (subscribe(statd, "ietf-routing", XPATH_ROUTING_BFD, sr_bfd_cb))
 		return SR_ERR_INTERNAL;

@@ -3,6 +3,7 @@ type                : gre
 index               : 20
 mtu                 : 1448
 operational status  : up
+ip forwarding       : disabled
 ipv4 addresses      : 192.168.50.2/16 (static)
 ipv6 addresses      :
 local address       : 2001:db8::1

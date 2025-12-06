@@ -98,6 +98,7 @@ def compress_interface_list(interfaces):
 
 
 class Pad:
+    flags = 2
     iface = 16
     proto = 11
     state = 12
@@ -803,6 +804,9 @@ class DhcpServer:
 
 
 class Iface:
+    # Class variable to hold routing-enabled interfaces for the current display session
+    _routing_ifaces = set()
+
     def __init__(self, data):
         self.data = data
         self.name = data.get('name', '')
@@ -915,13 +919,16 @@ class Iface:
         return self.oper_status
 
     def pr_name(self, pipe=""):
+        flag = "⇅" if self.name in Iface._routing_ifaces else " "
+        print(f"{flag:<{Pad.flags}}", end="")
         print(f"{pipe}{self.name:<{Pad.iface - len(pipe)}}", end="")
 
     def pr_proto_ipv4(self, pipe=''):
         for addr in self.ipv4_addr:
             origin = f"({addr['origin']})" if addr.get('origin') else ""
 
-            row =  f"{pipe:<{Pad.iface}}"
+            row =  f"{'':<{Pad.flags}}"
+            row += f"{pipe:<{Pad.iface}}"
             row += f"{'ipv4':<{Pad.proto}}"
             row += f"{'':<{Pad.state}}{addr['ip']}/{addr['prefix-length']} {origin}"
             print(row)
@@ -930,7 +937,8 @@ class Iface:
         for addr in self.ipv6_addr:
             origin = f"({addr['origin']})" if addr.get('origin') else ""
 
-            row =  f"{pipe:<{Pad.iface}}"
+            row =  f"{'':<{Pad.flags}}"
+            row += f"{pipe:<{Pad.iface}}"
             row += f"{'ipv6':<{Pad.proto}}"
             row += f"{'':<{Pad.state}}{addr['ip']}/{addr['prefix-length']} {origin}"
             print(row)
@@ -938,7 +946,8 @@ class Iface:
     def _pr_proto_common(self, name, phys_address, pipe=''):
         row = ""
         if len(pipe) > 0:
-            row =  f"{pipe:<{Pad.iface}}"
+            row =  f"{'':<{Pad.flags}}"
+            row += f"{pipe:<{Pad.iface}}"
 
         row += f"{name:<{Pad.proto}}"
         dec = Decore.green if self.oper() == "up" else Decore.red
@@ -1184,6 +1193,11 @@ class Iface:
         parent.pr_proto_eth()
 
     def pr_container(self):
+        # Add ⇅ flag for interfaces with IP forwarding enabled
+        flag = "⇅" if self.name in Iface._routing_ifaces else " "
+        # Flag column is outside the gray background
+        print(f"{flag:<{Pad.flags}}", end="")
+
         row = f"{self.name:<{Pad.iface}}"
         row += f"{'container':<{Pad.proto}}"
         row += f"{'':<{Pad.state}}"
@@ -1203,6 +1217,9 @@ class Iface:
             print(f"{'mtu':<{20}}: {self.mtu}")
         if self.oper():
             print(f"{'operational status':<{20}}: {self.oper(detail=True)}")
+
+        forwarding = "enabled" if self.name in Iface._routing_ifaces else "disabled"
+        print(f"{'ip forwarding':<{20}}: {forwarding}")
 
         if self.lower_if:
             print(f"{'lower-layer-if':<{20}}: {self.lower_if}")
@@ -1407,12 +1424,20 @@ def print_interface(iface):
 
 
 def pr_interface_list(json):
-    hdr = (f"{'INTERFACE':<{Pad.iface}}"
+    hdr = (f"{'⚑':<{Pad.flags}}"
+           f"{'INTERFACE':<{Pad.iface}}"
            f"{'PROTOCOL':<{Pad.proto}}"
            f"{'STATE':<{Pad.state}}"
            f"{'DATA':<{Pad.data}}")
 
     print(Decore.invert(hdr))
+
+    # Set class variable with routing-enabled interfaces (with IP forwarding)
+    if "ietf-routing:routing" in json:
+        routing_data = json["ietf-routing:routing"].get("interfaces", {})
+        Iface._routing_ifaces = set(routing_data.get("interface", []))
+    else:
+        Iface._routing_ifaces = set()
 
     ifaces = sorted(json["ietf-interfaces:interfaces"]["interface"],
                     key=ifname_sort)
@@ -1472,6 +1497,13 @@ def pr_interface_list(json):
 
 
 def show_interfaces(json, name):
+    # Set class variable with routing-enabled interfaces (with IP forwarding)
+    if "ietf-routing:routing" in json:
+        routing_data = json["ietf-routing:routing"].get("interfaces", {})
+        Iface._routing_ifaces = set(routing_data.get("interface", []))
+    else:
+        Iface._routing_ifaces = set()
+
     if name:
         if not json.get("ietf-interfaces:interfaces"):
             print(f"No interface data found for \"{name}\"")
@@ -3260,6 +3292,165 @@ def show_ospf_routes(json_data):
                 print(f"{'':<52} {next_hop_addr:<16} {outgoing_iface:<12}")
 
 
+def show_rip(json_data):
+    """Show RIP general instance information"""
+    routing = json_data.get('ietf-routing:routing', {})
+    protocols = routing.get('control-plane-protocols', {}).get('control-plane-protocol', [])
+
+    rip_instance = None
+    for protocol in protocols:
+        if 'ietf-rip:rip' in protocol:
+            rip_instance = protocol
+            break
+
+    if not rip_instance:
+        print("RIP is not configured or running")
+        return
+
+    rip = rip_instance.get('ietf-rip:rip', {})
+
+    # Display RIP configuration
+    print(" RIP Routing Process")
+    print()
+
+    distance = rip.get('distance', 120)
+    default_metric = rip.get('default-metric', 1)
+    num_routes = rip.get('num-of-routes', 0)
+
+    print(f" Administrative distance: {distance}")
+    print(f" Default metric: {default_metric}")
+    print(f" Number of RIP routes: {num_routes}")
+    print()
+
+    # Display timers if available
+    timers = rip.get('timers', {})
+    if timers:
+        update = timers.get('update-interval', 30)
+        invalid = timers.get('invalid-interval', 180)
+        flush = timers.get('flush-interval', 240)
+        print(" Timers:")
+        print(f"   Update interval:  {update} seconds")
+        print(f"   Invalid interval: {invalid} seconds")
+        print(f"   Flush interval:   {flush} seconds")
+        print()
+
+    # Display interfaces
+    interfaces = rip.get('interfaces', {}).get('interface', [])
+    if interfaces:
+        print(f" Number of interfaces: {len(interfaces)}")
+        for iface in interfaces:
+            iface_name = iface.get('interface', 'unknown')
+            print(f"   {iface_name}")
+        print()
+
+
+def show_rip_routes(json_data):
+    """Show RIP routing table"""
+    routing = json_data.get('ietf-routing:routing', {})
+    protocols = routing.get('control-plane-protocols', {}).get('control-plane-protocol', [])
+
+    rip_instance = None
+    for protocol in protocols:
+        if 'ietf-rip:rip' in protocol:
+            rip_instance = protocol
+            break
+
+    if not rip_instance:
+        print("RIP is not configured or running")
+        return
+
+    rip = rip_instance.get('ietf-rip:rip', {})
+    routes = rip.get('ipv4', {}).get('routes', {}).get('route', [])
+
+    if not routes:
+        print("No RIP routes")
+        return
+
+    # Header
+    hdr = f"{'PREFIX':<20} {'METRIC':<8} {'NEXT-HOP':<16} {'INTERFACE':<12}"
+    print(Decore.invert(hdr))
+
+    for route in routes:
+        prefix = route.get('ipv4-prefix', 'unknown')
+        metric = route.get('metric', 0)
+        next_hop = route.get('next-hop', '-')
+        interface = route.get('interface', '-')
+
+        print(f"{prefix:<20} {metric:<8} {next_hop:<16} {interface:<12}")
+
+
+def show_rip_interfaces(json_data):
+    """Show RIP interface information"""
+    routing = json_data.get('ietf-routing:routing', {})
+    protocols = routing.get('control-plane-protocols', {}).get('control-plane-protocol', [])
+
+    rip_instance = None
+    for protocol in protocols:
+        if 'ietf-rip:rip' in protocol:
+            rip_instance = protocol
+            break
+
+    if not rip_instance:
+        print("RIP is not configured or running")
+        return
+
+    rip = rip_instance.get('ietf-rip:rip', {})
+    interfaces = rip.get('interfaces', {}).get('interface', [])
+
+    if not interfaces:
+        print("No RIP interfaces")
+        return
+
+    # Header
+    hdr = f"{'INTERFACE':<12} {'STATUS':<10} {'SEND':<6} {'RECV':<6} {'SPLIT-HORIZON':<20} {'PASSIVE':<10}"
+    print(Decore.invert(hdr))
+
+    for iface in interfaces:
+        iface_name = iface.get('interface', 'unknown')
+        oper_status = iface.get('oper-status', 'down')
+        send_ver = iface.get('send-version', '-')
+        recv_ver = iface.get('receive-version', '-')
+        split_horizon = iface.get('split-horizon', 'simple')
+        passive = 'Yes' if iface.get('passive', False) else 'No'
+
+        print(f"{iface_name:<12} {oper_status:<10} {send_ver:<6} {recv_ver:<6} {split_horizon:<20} {passive:<10}")
+
+
+def show_rip_neighbors(json_data):
+    """Show RIP neighbor information"""
+    routing = json_data.get('ietf-routing:routing', {})
+    protocols = routing.get('control-plane-protocols', {}).get('control-plane-protocol', [])
+
+    rip_instance = None
+    for protocol in protocols:
+        if 'ietf-rip:rip' in protocol:
+            rip_instance = protocol
+            break
+
+    if not rip_instance:
+        print("RIP is not configured or running")
+        return
+
+    rip = rip_instance.get('ietf-rip:rip', {})
+    ipv4 = rip.get('ipv4', {})
+    neighbors = ipv4.get('neighbors', {}).get('neighbor', [])
+
+    if not neighbors:
+        print("No RIP neighbors")
+        return
+
+    # Header
+    hdr = f"{'ADDRESS':<16} {'BAD-PACKETS':<14} {'BAD-ROUTES':<12}"
+    print(Decore.invert(hdr))
+
+    for neighbor in neighbors:
+        address = neighbor.get('ipv4-address', 'unknown')
+        bad_packets = neighbor.get('bad-packets-rcvd', 0)
+        bad_routes = neighbor.get('bad-routes-rcvd', 0)
+
+        print(f"{address:<16} {bad_packets:<14} {bad_routes:<12}")
+
+
 def show_bfd_status(json_data):
     """Show BFD status summary"""
     routing = json_data.get('ietf-routing:routing', {})
@@ -3549,6 +3740,11 @@ def main():
     subparsers.add_parser('show-ospf-neighbor', help='Show OSPF neighbors')
     subparsers.add_parser('show-ospf-routes', help='Show OSPF routing table')
 
+    subparsers.add_parser('show-rip', help='Show RIP instance information')
+    subparsers.add_parser('show-rip-routes', help='Show RIP routing table')
+    subparsers.add_parser('show-rip-interfaces', help='Show RIP interfaces')
+    subparsers.add_parser('show-rip-neighbors', help='Show RIP neighbors')
+
     subparsers.add_parser('show-routing-table', help='Show the routing table') \
               .add_argument('-i', '--ip', required=True, help='IPv4 or IPv6 address')
 
@@ -3602,6 +3798,14 @@ def main():
         show_ospf_neighbor(json_data)
     elif args.command == "show-ospf-routes":
         show_ospf_routes(json_data)
+    elif args.command == "show-rip":
+        show_rip(json_data)
+    elif args.command == "show-rip-routes":
+        show_rip_routes(json_data)
+    elif args.command == "show-rip-interfaces":
+        show_rip_interfaces(json_data)
+    elif args.command == "show-rip-neighbors":
+        show_rip_neighbors(json_data)
     elif args.command == "show-routing-table":
         show_routing_table(json_data, args.ip)
     elif args.command == "show-software":

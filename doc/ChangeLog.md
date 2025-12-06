@@ -8,10 +8,17 @@ All notable changes to the project are documented in this file.
 
 ### Changes
 
+- Add RIPv2 routing support, issue #582
 - Add support for configurable OSPF debug logging, issue #1281. Debug options
   can now be enabled per category (bfd, packet, ism, nsm, default-information,
   nssa). All debug options are disabled by default to prevent log flooding in
   production environments. See the documentation for usage examples
+- Add support for "routing interfaces", issue #647.  Lists interfaces with IP
+  forwarding.  Inspect from CLI using `show interface`, look for `⇅` flag
+
+### Fixes
+
+N/A
 
 [v25.11.0][] - 2025-12-02
 -------------------------

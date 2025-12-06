@@ -3,6 +3,7 @@ type                : gretap
 index               : 21
 mtu                 : 1462
 operational status  : up
+ip forwarding       : disabled
 physical address    : f6:d4:96:d8:9f:96
 ipv4 addresses      :
 ipv6 addresses      :

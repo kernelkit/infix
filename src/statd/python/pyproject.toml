@@ -6,7 +6,8 @@ license = "MIT"
 packages = [
     { include = "yanger" },
     { include = "cli_pretty" },
-    { include = "ospf_status" }
+    { include = "ospf_status" },
+    { include = "rip_status" }
 ]
 authors = [
   "KernelKit developers"
@@ -21,3 +22,4 @@ build-backend = "poetry.core.masonry.api"
 yanger = "yanger.__main__:main"
 cli-pretty = "cli_pretty:main"
 ospf-status = "ospf_status:main"
+rip-status = "rip_status.rip_status:main"

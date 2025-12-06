@@ -18,17 +18,18 @@ module infix-routing {
   import ietf-bfd-types {
     prefix bfd-types;
   }
+  import ietf-rip {
+    prefix rip;
+  }
 
   organization "KernelKit";
   contact      "kernelkit@googlegroups.com";
-  description  "Deviations and augments for ietf-routing and ietf-ospf.";
+  description  "Deviations and augments for ietf-routing, ietf-ospf, and ietf-rip.";
 
   revision 2025-12-02 {
     description "Add configurable OSPF debug logging container.
-                 Allows users to enable specific OSPF debug categories
-                 (bfd, packet, ism, nsm, default-information, nssa) for troubleshooting.
-                 All debug options default to disabled to prevent log flooding.";
-    reference "Issue #1281";
+                 Add RIP (Routing Information Protocol) support.";
+    reference "RFC 8695";
   }
 
   revision 2025-11-12 {
@@ -110,10 +111,6 @@ module infix-routing {
   }
 
   /* General routing */
-  deviation "/rt:routing/rt:interfaces" {
-    description "Initial limitation";
-    deviate not-supported;
-  }
 
   deviation "/rt:routing/rt:router-id" {
     description "Set in OSPF";
@@ -133,7 +130,10 @@ module infix-routing {
   typedef infix-distribute-protocol {
     type enumeration {
       enum ospf {
-        description "Redistribute Ospf";
+        description "Redistribute OSPF routes";
+      }
+      enum rip {
+        description "Redistribute RIP routes";
       }
       enum static {
         description "Redistribute Static routes";
@@ -150,7 +150,12 @@ module infix-routing {
   identity ospfv2 {
     base ospf:ospfv2;
     base infix-routing-type;
-    description "OSPv2 (IPv4) routing protocol";
+    description "OSPFv2 (IPv4) routing protocol";
+  }
+  identity ripv2 {
+    base rip:ripv2;
+    base infix-routing-type;
+    description "RIPv2 (IPv4) routing protocol";
   }
   identity bfdv1 {
     base bfd-types:bfdv1;
@@ -588,6 +593,190 @@ module infix-routing {
 
   deviation "/ospf:restart-status-change" {
     deviate not-supported;
+  }
+
+  /* RIP */
+  /* RIP features not supported in Infix/FRR */
+  deviation "/rt:routing/rt:control-plane-protocols/rt:control-plane-protocol/rip:rip/rip:originate-default-route/rip:route-policy" {
+    deviate not-supported;
+    description "Route policies are not supported.";
+  }
+
+  deviation "/rt:routing/rt:control-plane-protocols/rt:control-plane-protocol/rip:rip/rip:triggered-update-threshold" {
+    deviate not-supported;
+    description "Triggered update threshold is not supported in FRR.";
+  }
+
+  deviation "/rt:routing/rt:control-plane-protocols/rt:control-plane-protocol/rip:rip/rip:maximum-paths" {
+    deviate not-supported;
+    description "Maximum paths configuration is not supported in FRR.";
+  }
+
+  deviation "/rt:routing/rt:control-plane-protocols/rt:control-plane-protocol/rip:rip/rip:output-delay" {
+    deviate not-supported;
+    description "Output delay configuration is not supported in FRR.";
+  }
+
+  deviation "/rt:routing/rt:control-plane-protocols/rt:control-plane-protocol/rip:rip/rip:distribute-list" {
+    deviate not-supported;
+    description "Distribute lists are not supported.";
+  }
+
+  deviation "/rt:routing/rt:control-plane-protocols/rt:control-plane-protocol/rip:rip/rip:redistribute" {
+    deviate not-supported;
+    description "Use Infix-specific redistribute container instead.";
+  }
+
+  /* RIP Interface features not supported */
+  deviation "/rt:routing/rt:control-plane-protocols/rt:control-plane-protocol/rip:rip/rip:interfaces/rip:interface/rip:authentication" {
+    deviate not-supported;
+    description "RIP authentication is not supported.";
+  }
+
+  deviation "/rt:routing/rt:control-plane-protocols/rt:control-plane-protocol/rip:rip/rip:interfaces/rip:interface/rip:bfd" {
+    deviate not-supported;
+    description "BFD support for RIP is not available in FRR.";
+  }
+
+  deviation "/rt:routing/rt:control-plane-protocols/rt:control-plane-protocol/rip:rip/rip:interfaces/rip:interface/rip:no-listen" {
+    deviate not-supported;
+    description "No-listen mode is not supported.";
+  }
+
+  deviation "/rt:routing/rt:control-plane-protocols/rt:control-plane-protocol/rip:rip/rip:interfaces/rip:interface/rip:originate-default-route" {
+    deviate not-supported;
+    description "Per-interface default route origination is not supported.";
+  }
+
+  deviation "/rt:routing/rt:control-plane-protocols/rt:control-plane-protocol/rip:rip/rip:interfaces/rip:interface/rip:summary-address" {
+    deviate not-supported;
+    description "Summary addresses are not supported.";
+  }
+
+  deviation "/rt:routing/rt:control-plane-protocols/rt:control-plane-protocol/rip:rip/rip:interfaces/rip:interface/rip:timers" {
+    deviate not-supported;
+    description "Per-interface timers are not supported in FRR.";
+  }
+
+  /* RIP Operational state not supported */
+  deviation "/rt:routing/rt:control-plane-protocols/rt:control-plane-protocol/rip:rip/rip:interfaces/rip:interface/rip:statistics" {
+    deviate not-supported;
+    description "Per-interface statistics are not collected.";
+  }
+
+  deviation "/rt:routing/rt:control-plane-protocols/rt:control-plane-protocol/rip:rip/rip:next-triggered-update" {
+    deviate not-supported;
+    description "Next triggered update information is not available.";
+  }
+
+  deviation "/rt:routing/rt:control-plane-protocols/rt:control-plane-protocol/rip:rip/rip:num-of-routes" {
+    deviate not-supported;
+    description "Number of routes is not tracked separately.";
+  }
+
+  deviation "/rt:routing/rt:control-plane-protocols/rt:control-plane-protocol/rip:rip/rip:ipv6" {
+    deviate not-supported;
+    description "RIPng (IPv6) is not currently supported in Infix.";
+  }
+
+  deviation "/rt:routing/rt:control-plane-protocols/rt:control-plane-protocol/rip:rip/rip:statistics" {
+    deviate not-supported;
+    description "Global statistics are not collected.";
+  }
+
+  /* RIP RPC */
+  deviation "/rip:clear-rip-route" {
+    deviate not-supported;
+    description "Clear RIP route RPC is not supported.";
+  }
+
+  /* RIP Augmentations */
+  augment "/rt:routing/rt:control-plane-protocols/rt:control-plane-protocol/rip:rip" {
+    description "Infix-specific redistribute container for RIP.
+                 The standard ietf-rip redistribute container has complex protocol-specific
+                 lists (bgp, isis, ospfv2, etc.), but Infix uses a simpler model similar to OSPF.";
+    container redistribute {
+      list redistribute {
+        key "protocol";
+        description "Redistribute protocols into RIP";
+        leaf protocol {
+          type infix-distribute-protocol;
+          description "Set protocol to redistribute";
+        }
+      }
+    }
+  }
+
+  augment "/rt:routing/rt:control-plane-protocols/rt:control-plane-protocol/rip:rip" {
+    description "Add support for configurable RIP debug logging.
+                 Allows users to enable specific RIP debug categories for troubleshooting.
+                 All debug options default to disabled to prevent log flooding in
+                 production environments.";
+    container debug {
+      description "RIP debug logging configuration";
+      leaf events {
+        type boolean;
+        default false;
+        description "Enable RIP events debug messages (sending/receiving packets, timers, interface changes)";
+      }
+      leaf packet {
+        type boolean;
+        default false;
+        description "Enable detailed RIP packet debug messages (packet dumps with origin and port)";
+      }
+      leaf kernel {
+        type boolean;
+        default false;
+        description "Enable kernel routing table debug messages (route add/delete, interface updates)";
+      }
+    }
+  }
+
+  /* Add send/receive version control per RIP interface
+   * The standard ietf-rip model doesn't include version control,
+   * but FRR supports this and it's useful for controlling RIP protocol versions
+   * on a per-interface basis (e.g., for NBMA links or mixed networks).
+   */
+  augment "/rt:routing/rt:control-plane-protocols/rt:control-plane-protocol/"
+        + "rip:rip/rip:interfaces/rip:interface" {
+    when "derived-from-or-self(../../../rt:type, 'infix-routing:ripv2')" {
+      description
+        "This augmentation is only valid for RIPv2.";
+    }
+    description
+      "Infix extension to add RIP version control per interface.";
+
+    leaf send-version {
+      type enumeration {
+        enum "1" {
+          description "Send RIPv1 packets";
+        }
+        enum "2" {
+          description "Send RIPv2 packets";
+        }
+        enum "1-2" {
+          description "Send both RIPv1 and RIPv2 packets";
+        }
+      }
+      description
+        "RIP version to send on this interface. If not configured, FRR defaults to version 2.";
+    }
+
+    leaf receive-version {
+      type enumeration {
+        enum "1" {
+          description "Receive RIPv1 packets";
+        }
+        enum "2" {
+          description "Receive RIPv2 packets";
+        }
+        enum "1-2" {
+          description "Receive both RIPv1 and RIPv2 packets";
+        }
+      }
+      description
+        "RIP version to receive on this interface. If not configured, FRR defaults to version 2.";
+    }
   }
 
   /*
