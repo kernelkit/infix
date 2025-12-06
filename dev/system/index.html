@@ -995,6 +995,8 @@
       
         
       
+        
+      
     
     
     
@@ -1290,56 +1292,6 @@
   
 </li>
       
-        <li class="md-nav__item">
-  <a href="#support-data-collection" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Support Data Collection
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Support Data Collection">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#collecting-support-data" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Collecting Support Data
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#encrypted-collection" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Encrypted Collection
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#what-is-collected" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        What is Collected
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
     </ul>
   
 </nav>
@@ -1420,6 +1372,34 @@
     
   
     Syslog Support
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../support/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Support Data
   
 
     
@@ -2184,56 +2164,6 @@
   
 </li>
       
-        <li class="md-nav__item">
-  <a href="#support-data-collection" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Support Data Collection
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Support Data Collection">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#collecting-support-data" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Collecting Support Data
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#encrypted-collection" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Encrypted Collection
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#what-is-collected" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        What is Collected
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
     </ul>
   
 </nav>
@@ -2559,74 +2489,6 @@ reference ID, stratum, time offsets, frequency, and root delay.</p>
 <p>The system uses <code>chronyd</code> Network Time Protocol (NTP) daemon.  The
 output shown here is best explained in the <a href="https://chrony-project.org/doc/4.6.1/chronyc.html">Chrony documentation</a>.</p>
 </div>
-<h2 id="support-data-collection">Support Data Collection<a class="headerlink" href="#support-data-collection" title="Permanent link">¶</a></h2>
-<p>When troubleshooting issues or seeking support, the <code>support</code> command
-provides a convenient way to collect comprehensive system diagnostics.
-This command gathers configuration files, logs, network state, and other
-system information into a single compressed archive.</p>
-<h3 id="collecting-support-data">Collecting Support Data<a class="headerlink" href="#collecting-support-data" title="Permanent link">¶</a></h3>
-<p>To collect support data and save it to a file:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>admin@host:~$<span class="w"> </span>support<span class="w"> </span>collect<span class="w"> </span>&gt;<span class="w"> </span>support-data.tar.gz
-<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="o">(</span>admin@host<span class="o">)</span><span class="w"> </span>Password:<span class="w"> </span>***********
-<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>Starting<span class="w"> </span>support<span class="w"> </span>data<span class="w"> </span>collection<span class="w"> </span>from<span class="w"> </span>host...
-<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a>This<span class="w"> </span>may<span class="w"> </span>take<span class="w"> </span>up<span class="w"> </span>to<span class="w"> </span>a<span class="w"> </span>minute.<span class="w"> </span>Please<span class="w"> </span>wait...
-<a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a>Tailing<span class="w"> </span>/var/log/messages<span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="m">30</span><span class="w"> </span>seconds<span class="w"> </span><span class="o">(</span>please<span class="w"> </span><span class="nb">wait</span><span class="o">)</span>...
-<a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a>Log<span class="w"> </span>tail<span class="w"> </span>complete.
-<a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a>Collection<span class="w"> </span>complete.<span class="w"> </span>Creating<span class="w"> </span>archive...
-<a id="__codelineno-13-8" name="__codelineno-13-8" href="#__codelineno-13-8"></a>admin@host:~$<span class="w"> </span>ls<span class="w"> </span>-l<span class="w"> </span>support-data.tar.gz
-<a id="__codelineno-13-9" name="__codelineno-13-9" href="#__codelineno-13-9"></a>-rw-rw-r--<span class="w"> </span><span class="m">1</span><span class="w"> </span>admin<span class="w"> </span>admin<span class="w"> </span><span class="m">508362</span><span class="w"> </span>nov<span class="w"> </span><span class="m">30</span><span class="w"> </span><span class="m">13</span>:05<span class="w"> </span>support-data.tar.gz
-</code></pre></div>
-<p>The command can also be run remotely via SSH from your workstation:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>$<span class="w"> </span>ssh<span class="w"> </span>admin@host<span class="w"> </span>support<span class="w"> </span>collect<span class="w"> </span>&gt;<span class="w"> </span>support-data.tar.gz
-<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>...
-</code></pre></div>
-<p>The collection process may take up to a minute depending on system load
-and the amount of logging data. Progress messages are shown during the
-collection process.</p>
-<h3 id="encrypted-collection">Encrypted Collection<a class="headerlink" href="#encrypted-collection" title="Permanent link">¶</a></h3>
-<p>For secure transmission of support data, the archive can be encrypted
-with GPG using a password:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>admin@host:~$<span class="w"> </span>support<span class="w"> </span>collect<span class="w"> </span>-p<span class="w"> </span>mypassword<span class="w"> </span>&gt;<span class="w"> </span>support-data.tar.gz.gpg
-<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>Starting<span class="w"> </span>support<span class="w"> </span>data<span class="w"> </span>collection<span class="w"> </span>from<span class="w"> </span>host...
-<a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>This<span class="w"> </span>may<span class="w"> </span>take<span class="w"> </span>up<span class="w"> </span>to<span class="w"> </span>a<span class="w"> </span>minute.<span class="w"> </span>Please<span class="w"> </span>wait...
-<a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a>...
-<a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a>Collection<span class="w"> </span>complete.<span class="w"> </span>Creating<span class="w"> </span>archive...
-<a id="__codelineno-15-6" name="__codelineno-15-6" href="#__codelineno-15-6"></a>Encrypting<span class="w"> </span>with<span class="w"> </span>GPG...
-</code></pre></div>
-<p>The <code>support collect</code> command even supports omitting <code>mypassword</code> and
-will then prompt interactively for the password.  This works over SSH too,
-but the local ssh client may then echo the password.</p>
-<div class="admonition tip">
-<p class="admonition-title">Tip</p>
-<p>To hide the encryption password for an SSH session, the script supports reading from stdin:<br>
-<code>echo "$MYSECRET" | ssh user@device support collect -p &gt; file.tar.gz.gpg</code></p>
-</div>
-<p>After transferring the resulting file to your workstation, decrypt it
-with the password:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>$<span class="w"> </span>gpg<span class="w"> </span>-d<span class="w"> </span>support-data.tar.gz.gpg<span class="w"> </span>&gt;<span class="w"> </span>support-data.tar.gz
-<a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a>$<span class="w"> </span>tar<span class="w"> </span>xzf<span class="w"> </span>support-data.tar.gz
-</code></pre></div>
-<p>or</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>$<span class="w"> </span>gpg<span class="w"> </span>-d<span class="w"> </span>support-data.tar.gz.gpg<span class="w"> </span><span class="p">|</span><span class="w"> </span>tar<span class="w"> </span>xz
-</code></pre></div>
-<div class="admonition tip">
-<p class="admonition-title">Important</p>
-<p>Make sure to share <code>mypassword</code> out-of-band from the encrypted data
-with the recipient of the data.  I.e., avoid sending both in the same
-plain-text email for example.</p>
-</div>
-<h3 id="what-is-collected">What is Collected<a class="headerlink" href="#what-is-collected" title="Permanent link">¶</a></h3>
-<p>The support archive includes:</p>
-<ul>
-<li>System identification (hostname, uptime, kernel version)</li>
-<li>Running and operational configuration (sysrepo datastores)</li>
-<li>System logs (<code>/var/log</code> directory and live tail of messages log)</li>
-<li>Network configuration and state (interfaces, routes, neighbors, bridges)</li>
-<li>FRRouting information (OSPF, BFD status)</li>
-<li>Container information (podman containers and their configuration)</li>
-<li>System resource usage (CPU, memory, disk, processes)</li>
-<li>Hardware information (PCI, USB devices, network interfaces)</li>
-</ul>
 
 
 
