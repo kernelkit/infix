@@ -48,6 +48,21 @@ with infamy.Test() as test:
             stderr_output = result.stderr.decode('utf-8') if result.stderr else ""
             print(f"support collect failed with return code {result.returncode}")
             print(f"stderr: {stderr_output}")
+
+            # Try to retrieve the collection.log for debugging
+            print("\n=== Attempting to retrieve collection.log for debugging ===")
+            try:
+                log_result = tgtssh.run("find /tmp -name 'support-*' -type d -exec cat {}/collection.log \\; 2>/dev/null || echo 'No collection.log found'",
+                                       stdout=subprocess.PIPE,
+                                       stderr=subprocess.PIPE,
+                                       timeout=10,
+                                       check=False)
+                if log_result.stdout:
+                    log_output = log_result.stdout.decode('utf-8')
+                    print(f"collection.log contents:\n{log_output}")
+            except Exception as e:
+                print(f"Could not retrieve collection.log: {e}")
+
             raise Exception("support collect command failed")
 
     with test.step("Verify tarball was created and is valid"):
@@ -110,6 +125,21 @@ with infamy.Test() as test:
             if result.returncode != 0:
                 stderr_output = result.stderr.decode('utf-8') if result.stderr else ""
                 print(f"support collect with encryption failed: {stderr_output}")
+
+                # Try to retrieve the collection.log for debugging
+                print("\n=== Attempting to retrieve collection.log for debugging ===")
+                try:
+                    log_result = tgtssh.run("find /tmp -name 'support-*' -type d -exec cat {}/collection.log \\; 2>/dev/null || echo 'No collection.log found'",
+                                           stdout=subprocess.PIPE,
+                                           stderr=subprocess.PIPE,
+                                           timeout=10,
+                                           check=False)
+                    if log_result.stdout:
+                        log_output = log_result.stdout.decode('utf-8')
+                        print(f"collection.log contents:\n{log_output}")
+                except Exception as e:
+                    print(f"Could not retrieve collection.log: {e}")
+
                 raise Exception("support collect with --password failed")
 
         with test.step("Verify encrypted file and decrypt it"):
